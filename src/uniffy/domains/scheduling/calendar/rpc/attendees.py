@@ -51,6 +51,7 @@ class AttendeeHandlers:
                 await CalendarEventOperations(
                     session,
                     self.search_indexer,
+                    self.call_lifecycle,
                 ).update_attendee_status(
                     user_id=user_id,
                     organization_id=organization_id,
@@ -75,7 +76,9 @@ class AttendeeHandlers:
 
         try:
             async with open_session() as session:
-                operations = CalendarEventOperations(session, self.search_indexer)
+                operations = CalendarEventOperations(
+                    session, self.search_indexer, self.call_lifecycle
+                )
                 event = await operations.update_attendee_role(
                     user_id=user_id,
                     organization_id=organization_id,
@@ -111,7 +114,9 @@ class AttendeeHandlers:
 
         try:
             async with open_session() as session:
-                operations = CalendarEventOperations(session, self.search_indexer)
+                operations = CalendarEventOperations(
+                    session, self.search_indexer, self.call_lifecycle
+                )
                 event = await operations.add_attendees(
                     user_id=user_id,
                     organization_id=organization_id,
@@ -147,7 +152,9 @@ class AttendeeHandlers:
 
         try:
             async with open_session() as session:
-                operations = CalendarEventOperations(session, self.search_indexer)
+                operations = CalendarEventOperations(
+                    session, self.search_indexer, self.call_lifecycle
+                )
                 event = await operations.remove_attendees(
                     user_id=user_id,
                     organization_id=organization_id,
@@ -192,6 +199,7 @@ class AttendeeHandlers:
                 activities, total = await CalendarEventOperations(
                     session,
                     self.search_indexer,
+                    self.call_lifecycle,
                 ).list_activities(
                     user_id=user_id,
                     organization_id=organization_id,

@@ -11,6 +11,7 @@ from uniffy.core.audit.actions import Action
 from uniffy.core.errors import (
     NotFoundError,
 )
+from uniffy.core.events.realtime import ContentAccessAction
 from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.calendar.reminder import EventReminder
 from uniffy.core.search.indexer import build_content_urn
@@ -74,6 +75,8 @@ class EventDeleteOperations:
 
         await self.events._require_delete(user_id, organization_id, event)
 
+        attendee_ids = await self.events._get_search_attendee_user_ids(event) or []
+
         await self.session.execute(delete(EventReminder).where(EventReminder.event_id == event_id))
 
         await EventBookingOperations(self.session).cancel(event_id)
@@ -108,5 +111,11 @@ class EventDeleteOperations:
             },
         )
         await self.session.commit()
+
+        await self.events._publish_attendee_access_change(
+            event,
+            [attendee_id for attendee_id in attendee_ids if attendee_id != user_id],
+            ContentAccessAction.REVOKED,
+        )
 
         return True

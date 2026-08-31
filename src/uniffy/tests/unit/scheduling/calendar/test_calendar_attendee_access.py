@@ -8,11 +8,12 @@ explicit BLOCKED grant still beats the invitation.
 
 from collections.abc import Iterator
 from datetime import UTC, datetime
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from uniffy.core.errors import PermissionDeniedError
+from uniffy.core.events.realtime import ContentAccessAction
 from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.search.engine import SearchAll, SearchAny, SearchFilter, SearchNot, SearchTerm
 from uniffy.core.search.policy import build_permission_filter
@@ -184,6 +185,41 @@ class TestSearchAttendeeIds:
         ops._get_search_attendee_user_ids = AsyncMock(return_value=[])
         # A search-side failure must not fail the attendee mutation.
         await ops._refresh_search_attendees(_make_event())
+
+
+class TestAttendeeAccessFanout:
+    async def test_targets_affected_attendees_after_commit(self) -> None:
+        ops = CalendarEventOperations.__new__(CalendarEventOperations)
+        event = _make_event()
+        attendee = generate_id()
+
+        with patch(
+            "uniffy.domains.scheduling.calendar.events.content.publish_content_access_changed",
+            AsyncMock(),
+        ) as publish:
+            await ops._publish_attendee_access_change(
+                event,
+                [attendee, attendee],
+                ContentAccessAction.GRANTED,
+            )
+
+        assert publish.await_args.kwargs["content_id"] == event.id
+        assert publish.await_args.kwargs["organization_id"] == event.organization_id
+        assert publish.await_args.kwargs["target_user_ids"] == [attendee]
+        assert publish.await_args.kwargs["action"] == ContentAccessAction.GRANTED
+
+    async def test_pubsub_failure_does_not_roll_back_the_mutation(self) -> None:
+        ops = CalendarEventOperations.__new__(CalendarEventOperations)
+
+        with patch(
+            "uniffy.domains.scheduling.calendar.events.content.publish_content_access_changed",
+            AsyncMock(side_effect=RuntimeError("valkey down")),
+        ):
+            await ops._publish_attendee_access_change(
+                _make_event(),
+                [generate_id()],
+                ContentAccessAction.REVOKED,
+            )
 
 
 class TestSearchCandidateFilter:

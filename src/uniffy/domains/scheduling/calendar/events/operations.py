@@ -18,6 +18,7 @@ from uniffy.core.types import (
     RecurrenceEditScope,
     RecurrencePattern,
 )
+from uniffy.domains.chat.lifecycle import ChannelCallLifecycle
 from uniffy.domains.scheduling.calendar.events.activity import EventActivityOperations
 from uniffy.domains.scheduling.calendar.events.attendees import AttendeeOperations
 from uniffy.domains.scheduling.calendar.events.channels import ChannelBindingOperations
@@ -44,9 +45,17 @@ class CalendarEventOperations(EventContentOperations):
         self,
         session: AsyncSession,
         search_indexer: SearchIndexer | None = None,
+        call_lifecycle: ChannelCallLifecycle | None = None,
     ) -> None:
         register_calendar_content()
         super().__init__(session, search_indexer)
+        self._call_lifecycle = call_lifecycle
+
+    @property
+    def call_lifecycle(self) -> ChannelCallLifecycle:
+        if self._call_lifecycle is None:
+            raise RuntimeError("Call lifecycle is required for meeting room membership removals")
+        return self._call_lifecycle
 
     async def create(
         self,

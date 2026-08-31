@@ -8,6 +8,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import InstrumentedAttribute
 
 from uniffy.core.content.base_operations import BaseContentOperations
+from uniffy.core.converters.common_proto import content_type_to_proto
+from uniffy.core.events.realtime import ContentAccessAction, publish_content_access_changed
 from uniffy.core.models.calendar.attendee import EventAttendee
 from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.search.indexer import SearchIndexer, build_content_urn
@@ -189,3 +191,26 @@ class EventContentOperations(BaseContentOperations[CalendarEvent]):
             )
         except Exception:
             logger.opt(exception=True).warning("Failed to refresh attendee search sharing")
+
+    async def _publish_attendee_access_change(
+        self,
+        event: CalendarEvent,
+        attendee_ids: list[UUID],
+        action: ContentAccessAction,
+    ) -> None:
+        if not attendee_ids:
+            return
+        try:
+            await publish_content_access_changed(
+                content_type=content_type_to_proto(self.content_type),
+                content_id=event.id,
+                action=action,
+                organization_id=event.organization_id,
+                target_user_ids=list(dict.fromkeys(attendee_ids)),
+            )
+        except Exception:
+            logger.opt(exception=True).warning(
+                "Failed to publish calendar attendee access change",
+                event_id=str(event.id),
+                action=action,
+            )

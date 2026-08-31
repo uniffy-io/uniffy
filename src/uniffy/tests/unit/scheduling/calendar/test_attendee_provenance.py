@@ -2,6 +2,7 @@
 
 from unittest.mock import AsyncMock, MagicMock, patch
 
+from uniffy.core.events.realtime import ContentAccessAction
 from uniffy.core.models.calendar.attendee import EventAttendee
 from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.types import generate_id
@@ -78,6 +79,7 @@ async def test_add_attendees_stamps_new_rows_with_source_group() -> None:
         title="Standup",
     )
     ops = _ops([_result(rows=[])])  # no existing attendee rows
+    fanout = AsyncMock()
     with (
         patch.object(CalendarEventOperations, "_fetch_by_id", AsyncMock(return_value=event)),
         patch.object(CalendarEventOperations, "_require_edit", AsyncMock()),
@@ -88,6 +90,7 @@ async def test_add_attendees_stamps_new_rows_with_source_group() -> None:
         ),
         patch.object(CalendarEventOperations, "_log_activity", AsyncMock()),
         patch.object(CalendarEventOperations, "_refresh_search_attendees", AsyncMock()),
+        patch.object(CalendarEventOperations, "_publish_attendee_access_change", fanout),
         patch.object(CalendarEventOperations, "_sync_auto_created_room_members", AsyncMock()),
         patch("uniffy.domains.scheduling.calendar.events.attendees.emit_notification", AsyncMock()),
     ):
@@ -101,3 +104,4 @@ async def test_add_attendees_stamps_new_rows_with_source_group() -> None:
     assert len(added) == 1
     assert added[0].user_id == user
     assert added[0].invited_via_group_id == group_id
+    fanout.assert_awaited_once_with(event, [user], ContentAccessAction.GRANTED)

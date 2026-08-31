@@ -15,8 +15,11 @@ from uniffy.core.events import (
     NotificationEvent,
     emit_notification,
 )
+from uniffy.core.events.realtime import ContentAccessAction
 from uniffy.core.models.calendar.attendee import EventAttendee
 from uniffy.core.models.calendar.event import CalendarEvent
+from uniffy.core.models.login.group import Group
+from uniffy.core.models.login.group_member import GroupMember
 from uniffy.core.models.login.organization import Organization
 from uniffy.core.models.login.organization_member import (
     OrganizationMember,
@@ -30,6 +33,7 @@ from uniffy.core.types import (
     EventStatus,
     NotificationType,
 )
+from uniffy.domains.chat.rooms import RoomMembership
 
 logger = logger.bind(component="scheduling.calendar.events.attendees")
 
@@ -94,6 +98,11 @@ class AttendeeOperations:
 
         if added_ids:
             await self.events._refresh_search_attendees(event)
+            await self.events._publish_attendee_access_change(
+                event,
+                added_ids,
+                ContentAccessAction.GRANTED,
+            )
             await emit_notification(
                 NotificationEvent(
                     notification_type=NotificationType.CALENDAR_INVITE,
@@ -204,6 +213,11 @@ class AttendeeOperations:
 
         if removed_ids:
             await self.events._refresh_search_attendees(event)
+            await self.events._publish_attendee_access_change(
+                event,
+                removed_ids,
+                ContentAccessAction.REVOKED,
+            )
 
         await self.events._sync_auto_created_room_members(event, added=[], removed=removed_ids)
 
@@ -295,9 +309,6 @@ class AttendeeOperations:
         """
         if not attendee_ids:
             return [], {}
-
-        from uniffy.core.models.login.group import Group
-        from uniffy.core.models.login.group_member import GroupMember
 
         result = await self.session.execute(
             select(Group.id, Group.is_private).where(
@@ -399,18 +410,19 @@ class AttendeeOperations:
         if not add and not remove:
             return
 
-        from uniffy.domains.chat.channels.operations import ChatChannelOperations
-
-        chat_ops = ChatChannelOperations(self.session)
         try:
-            if add:
-                await chat_ops.add_members(
-                    event.organizer_id, event.organization_id, event.channel_id, add
-                )
-            if remove:
-                await chat_ops.remove_members(
-                    event.organizer_id, event.organization_id, event.channel_id, remove
-                )
+            membership = RoomMembership(
+                self.session,
+                search_indexer=self.events.search_indexer,
+                call_lifecycle=self.events.call_lifecycle,
+            )
+            await membership.sync(
+                event.organizer_id,
+                event.organization_id,
+                event.channel_id,
+                added_user_ids=add,
+                removed_user_ids=remove,
+            )
         except Exception:
             logger.opt(exception=True).warning(
                 "auto-created meeting room member sync failed",

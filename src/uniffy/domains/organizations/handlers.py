@@ -372,7 +372,11 @@ class OrganizationsHandlers:
 
         try:
             async with open_session() as session:
-                ops = OrganizationOperations(session, search_indexer=self.search_indexer)
+                ops = OrganizationOperations(
+                    session,
+                    search_indexer=self.search_indexer,
+                    call_lifecycle=self.call_lifecycle,
+                )
 
                 await ops.remove_member(
                     admin_user_id=user_id,

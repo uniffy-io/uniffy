@@ -43,7 +43,9 @@ class EventQueryHandlers:
 
         try:
             async with open_session() as session:
-                operations = CalendarEventOperations(session, self.search_indexer)
+                operations = CalendarEventOperations(
+                    session, self.search_indexer, self.call_lifecycle
+                )
                 event, attendees = await operations.get_event_with_attendees(
                     user_id, organization_id, event_id
                 )
@@ -97,7 +99,9 @@ class EventQueryHandlers:
 
         try:
             async with open_session() as session:
-                operations = CalendarEventOperations(session, self.search_indexer)
+                operations = CalendarEventOperations(
+                    session, self.search_indexer, self.call_lifecycle
+                )
                 events, total = await operations.list_events(
                     user_id=user_id,
                     organization_id=organization_id,
@@ -180,7 +184,9 @@ class EventQueryHandlers:
 
         try:
             async with open_session() as session:
-                operations = CalendarEventOperations(session, self.search_indexer)
+                operations = CalendarEventOperations(
+                    session, self.search_indexer, self.call_lifecycle
+                )
                 events = await operations.get_events_in_range(
                     user_id=user_id,
                     organization_id=organization_id,

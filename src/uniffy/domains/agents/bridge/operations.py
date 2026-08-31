@@ -47,9 +47,11 @@ from uniffy.domains.agents.runtime.streams import (
     set_run_state,
     touch_run_state,
 )
-from uniffy.domains.chat.messages.operations import bump_channel_message_stats
-from uniffy.domains.chat.streaming import events as chat_evt
-from uniffy.domains.chat.streaming.publisher import publish_channel_event_to_members
+from uniffy.domains.chat import agents as chat_evt
+from uniffy.domains.chat.agents import (
+    bump_channel_message_stats,
+    publish_channel_event_to_members,
+)
 from uniffy.domains.files.attachments.operations import AttachmentOperations
 from uniffy.domains.settings.operations import get_user_timezone
 

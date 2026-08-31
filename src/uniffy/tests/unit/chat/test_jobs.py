@@ -32,7 +32,7 @@ async def test_committed_message_enqueues_owner_post_send_job() -> None:
     operations._maybe_trigger_agents = AsyncMock()
     enqueue = AsyncMock()
 
-    with patch("uniffy.domains.chat.messages.operations.enqueue_job", enqueue):
+    with patch("uniffy.domains.chat.messages.sending.enqueue_job", enqueue):
         await operations._post_commit_send(
             message,
             channel,
@@ -79,7 +79,7 @@ async def test_post_send_uses_worker_composed_dependencies() -> None:
 
     search_indexer = MagicMock()
     operations = MagicMock()
-    operations._background_post_send = AsyncMock()
+    operations.background_post_send = AsyncMock()
     with patch(
         "uniffy.domains.chat.jobs.jobs.ChatMessageOperations",
         return_value=operations,
@@ -99,7 +99,7 @@ async def test_post_send_uses_worker_composed_dependencies() -> None:
 
     assert result == {"status": "success", "message_id": str(message_id)}
     operations_factory.assert_called_once_with(session, search_indexer=search_indexer)
-    operations._background_post_send.assert_awaited_once_with(
+    operations.background_post_send.assert_awaited_once_with(
         message,
         channel,
         user_id,

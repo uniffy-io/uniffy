@@ -20,6 +20,7 @@ from uniffy.core.events import (
     extract_mentioned_team_ids,
     extract_mentioned_user_ids,
 )
+from uniffy.core.events.realtime import ContentAccessAction
 from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.calendar.attendee import EventAttendee
 from uniffy.core.models.calendar.event import CalendarEvent
@@ -351,6 +352,11 @@ class EventUpdateOperations:
                 )
 
         if newly_invited_ids:
+            await self.events._publish_attendee_access_change(
+                event,
+                newly_invited_ids,
+                ContentAccessAction.GRANTED,
+            )
             await emit_notification(
                 NotificationEvent(
                     notification_type=NotificationType.CALENDAR_INVITE,
@@ -360,6 +366,13 @@ class EventUpdateOperations:
                     source_urn=build_content_urn(ContentType.CALENDAR_EVENT, event.id),
                     target_user_ids=newly_invited_ids,
                 )
+            )
+
+        if removed_attendee_ids:
+            await self.events._publish_attendee_access_change(
+                event,
+                removed_attendee_ids,
+                ContentAccessAction.REVOKED,
             )
 
         if became_cancelled:

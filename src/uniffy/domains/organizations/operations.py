@@ -31,17 +31,15 @@ from uniffy.domains.agents.bootstrap import (
     finish_default_agent_after_commit,
     stage_default_agent,
 )
-from uniffy.domains.calls.operations import kick_user_from_active_call
 from uniffy.domains.chat.cache import (
     invalidate_cached_dm_peers,
     invalidate_cached_member_ids,
 )
 from uniffy.domains.chat.channels import stage_default_channel_memberships
-from uniffy.domains.chat.channels.operations import (
-    ChatChannelOperations,
-    StagedChatChannelCreate,
-)
+from uniffy.domains.chat.channels.operations import ChatChannelOperations
+from uniffy.domains.chat.channels.state import StagedChatChannelCreate
 from uniffy.domains.chat.cleanup import cleanup_chat_membership_for_organization
+from uniffy.domains.chat.lifecycle import ChannelCallLifecycle
 from uniffy.domains.chat.search import enqueue_chat_search_acl_refresh
 from uniffy.domains.directory.projection import UserDirectoryProjection
 from uniffy.domains.files.attachments import stage_personal_attachments_folder
@@ -79,10 +77,12 @@ class OrganizationOperations:
         session: AsyncSession,
         storage: ObjectStorage | None = None,
         search_indexer: SearchIndexer | None = None,
+        call_lifecycle: ChannelCallLifecycle | None = None,
     ) -> None:
         self._session = session
         self._storage = storage
         self._search_indexer = search_indexer
+        self._call_lifecycle = call_lifecycle
 
         self._directory_projection = (
             UserDirectoryProjection(session, search_indexer) if search_indexer is not None else None
@@ -99,6 +99,12 @@ class OrganizationOperations:
         if self._directory_projection is None:
             raise RuntimeError("Search indexing is required for organization mutations")
         return self._directory_projection
+
+    @property
+    def call_lifecycle(self) -> ChannelCallLifecycle:
+        if self._call_lifecycle is None:
+            raise RuntimeError("Call lifecycle is required for organization member removal")
+        return self._call_lifecycle
 
     async def get_by_id(self, org_id: UUID) -> Organization:
         result = await self._session.execute(select(Organization).where(Organization.id == org_id))
@@ -687,7 +693,7 @@ class OrganizationOperations:
                     ),
                 )
             for channel_id in chat_cleanup.channel_ids:
-                await kick_user_from_active_call(
+                await self.call_lifecycle.remove_member(
                     self._session,
                     channel_id,
                     target_user_id,

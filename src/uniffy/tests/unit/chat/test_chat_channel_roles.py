@@ -56,6 +56,8 @@ def _make_ops(channel: ChatChannel) -> ChatChannelOperations:
     ops.access.invalidate_membership = MagicMock()
     ops.get_by_id = AsyncMock(return_value=channel)
     ops._publish_member_role_changed = AsyncMock()
+    ops._call_lifecycle = MagicMock()
+    ops._call_lifecycle.remove_member = AsyncMock()
     return ops
 
 
@@ -69,7 +71,7 @@ def _result(scalar_one_or_none=None, scalar_one=None, one=None):
 
 def _patch_side_effects():
     return patch.multiple(
-        "uniffy.domains.chat.channels.operations",
+        "uniffy.domains.chat.channels.members",
         write_audit_event=AsyncMock(),
         invalidate_cached_member_ids=AsyncMock(),
     )
@@ -231,10 +233,9 @@ class TestLeaveChannelOwnerGuard:
 
     def _leave_patches(self):
         return patch.multiple(
-            "uniffy.domains.chat.channels.operations",
+            "uniffy.domains.chat.channels.lifecycle",
             invalidate_cached_member_ids=AsyncMock(),
             invalidate_cached_dm_peers=AsyncMock(),
-            kick_user_from_active_call=AsyncMock(),
         )
 
     async def test_sole_owner_with_other_members_blocked(self) -> None:
@@ -292,10 +293,9 @@ class TestLeaveChannelOwnerGuard:
         ops.session.execute.side_effect = [_result(), _result()]
         peers_mock = AsyncMock()
         with patch.multiple(
-            "uniffy.domains.chat.channels.operations",
+            "uniffy.domains.chat.channels.lifecycle",
             invalidate_cached_member_ids=AsyncMock(),
             invalidate_cached_dm_peers=peers_mock,
-            kick_user_from_active_call=AsyncMock(),
         ):
             await ops.leave_channel(user_id, channel.organization_id, channel.id)
         ops._refresh_group_dm_name.assert_awaited_once()

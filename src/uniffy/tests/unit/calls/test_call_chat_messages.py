@@ -4,7 +4,7 @@ from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from uniffy.core.models.calls import Call, CallEndReason, CallType
-from uniffy.core.models.chat.message import ChatMessageMetadataKind, SenderType
+from uniffy.core.models.chat.message import ChatMessageMetadataKind
 from uniffy.core.types import generate_id
 from uniffy.domains.calls.operations import _format_call_duration
 
@@ -48,20 +48,17 @@ def _call(host_id, started_minutes_ago: int = 10) -> Call:
 
 
 async def _run_summary(ops, call, reason, actor_user_id, profiles):
-    with (
-        patch.object(type(ops), "resolve_profiles", AsyncMock(return_value=profiles)),
-        patch("uniffy.domains.calls.operations.ChatMessageOperations") as msg_ops_cls,
-    ):
-        msg_ops_cls.return_value.send_message = AsyncMock()
+    send = AsyncMock()
+    with patch.object(type(ops), "resolve_profiles", AsyncMock(return_value=profiles)):
+        ops.chat.post_system_message = send
         await ops._post_call_ended_summary(call, reason, actor_user_id, datetime.now(UTC))
-        send = msg_ops_cls.return_value.send_message
     return send
 
 
 def test_format_call_duration() -> None:
-    assert _format_call_duration(42) == "42s"
-    assert _format_call_duration(754) == "12m 34s"
-    assert _format_call_duration(3900) == "1h 05m"
+    cases = ((42, "42s"), (754, "12m 34s"), (3900, "1h 05m"))
+    for seconds, expected in cases:
+        assert _format_call_duration(seconds) == expected
 
 
 async def test_all_left_summary_lists_participants() -> None:
@@ -82,13 +79,13 @@ async def test_all_left_summary_lists_participants() -> None:
     )
 
     kwargs = send.call_args.kwargs
-    assert kwargs["sender_type"] == SenderType.SYSTEM
     assert kwargs["channel_id"] == call.channel_id
     assert kwargs["user_id"] == host_id
-    assert kwargs["message_metadata"] == {"kind": ChatMessageMetadataKind.CALL_ENDED.value}
+    assert kwargs["kind"] is ChatMessageMetadataKind.CALL_ENDED
     content = kwargs["content"]
+    expected_duration = "10m 00s"
     assert content.startswith("Call ended - ")
-    assert "10m 00s" in content
+    assert expected_duration in content
     assert f"[[[Alice|urn:uniffy:content:USER:{host_id}]]]" in content
     assert f"[[[Bob|urn:uniffy:content:USER:{other_id}]]]" in content
 
@@ -129,8 +126,9 @@ async def test_summary_caps_mentions_with_overflow() -> None:
     )
 
     content = send.call_args.kwargs["content"]
+    expected_overflow = "and 2 more"
     assert content.count("urn:uniffy:content:USER:") == 6
-    assert "and 2 more" in content
+    assert expected_overflow in content
 
 
 async def test_summary_failure_never_raises() -> None:
@@ -138,15 +136,13 @@ async def test_summary_failure_never_raises() -> None:
     session = _build_session()
     ops = _build_ops(session)
 
-    with (
-        patch.object(
-            type(ops), "resolve_profiles", AsyncMock(side_effect=RuntimeError("resolver down"))
-        ),
-        patch("uniffy.domains.calls.operations.ChatMessageOperations") as msg_ops_cls,
+    send = AsyncMock()
+    ops.chat.post_system_message = send
+    with patch.object(
+        type(ops), "resolve_profiles", AsyncMock(side_effect=RuntimeError("resolver down"))
     ):
-        msg_ops_cls.return_value.send_message = AsyncMock()
         await ops._post_call_ended_summary(call, CallEndReason.ALL_LEFT, None, datetime.now(UTC))
-        msg_ops_cls.return_value.send_message.assert_not_called()
+        send.assert_not_called()
 
 
 async def test_system_message_failure_is_swallowed() -> None:
@@ -154,11 +150,10 @@ async def test_system_message_failure_is_swallowed() -> None:
     session = _build_session()
     ops = _build_ops(session)
 
-    with patch("uniffy.domains.calls.operations.ChatMessageOperations") as msg_ops_cls:
-        msg_ops_cls.return_value.send_message = AsyncMock(side_effect=RuntimeError("chat down"))
-        await ops._post_call_system_message(
-            call, "Call ended", call.host_user_id, ChatMessageMetadataKind.CALL_ENDED
-        )
+    ops.chat.post_system_message = AsyncMock(side_effect=RuntimeError("chat down"))
+    await ops._post_call_system_message(
+        call, "Call ended", call.host_user_id, ChatMessageMetadataKind.CALL_ENDED
+    )
 
 
 async def test_start_message_carries_kind_metadata() -> None:
@@ -166,11 +161,9 @@ async def test_start_message_carries_kind_metadata() -> None:
     session = _build_session()
     ops = _build_ops(session)
 
-    with patch("uniffy.domains.calls.operations.ChatMessageOperations") as msg_ops_cls:
-        msg_ops_cls.return_value.send_message = AsyncMock()
-        await ops._post_call_system_message(
-            call, "Alice started a call", call.host_user_id, ChatMessageMetadataKind.CALL_STARTED
-        )
-        kwargs = msg_ops_cls.return_value.send_message.call_args.kwargs
-    assert kwargs["sender_type"] == SenderType.SYSTEM
-    assert kwargs["message_metadata"] == {"kind": ChatMessageMetadataKind.CALL_STARTED.value}
+    ops.chat.post_system_message = AsyncMock()
+    await ops._post_call_system_message(
+        call, "Alice started a call", call.host_user_id, ChatMessageMetadataKind.CALL_STARTED
+    )
+    kwargs = ops.chat.post_system_message.call_args.kwargs
+    assert kwargs["kind"] is ChatMessageMetadataKind.CALL_STARTED

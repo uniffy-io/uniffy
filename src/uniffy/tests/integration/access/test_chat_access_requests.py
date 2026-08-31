@@ -79,7 +79,7 @@ async def test_private_message_request_grants_canonical_channel_access(session, 
     assert channel_duplicate.view.request.id == created.view.request.id
 
     with patch(
-        "uniffy.domains.chat.channels.operations.enqueue_chat_search_acl_refresh",
+        "uniffy.domains.chat.channels.members.enqueue_chat_search_acl_refresh",
         new=AsyncMock(),
     ):
         approved = await operations.respond(

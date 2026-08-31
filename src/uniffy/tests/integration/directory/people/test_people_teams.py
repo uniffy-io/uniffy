@@ -21,8 +21,8 @@ from uniffy.domains.directory.groups.teams import (
     search_team_nodes,
     teams_for_users,
     update_team,
-    user_team_ids,
 )
+from uniffy.domains.directory.membership import user_team_ids
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 

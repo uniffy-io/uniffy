@@ -19,8 +19,8 @@ from uniffy.core.models.people.identity import IdentitySource
 from uniffy.core.models.permissions.org_permission_defaults import OrganizationPermissionDefaults
 from uniffy.core.models.tags.saved_filter import SavedTagFilter
 from uniffy.core.types import generate_id
-from uniffy.infrastructure.database import open_session
 from uniffy.domains.organizations.operations import OrganizationOperations
+from uniffy.infrastructure.database import open_session
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
@@ -77,7 +77,7 @@ async def test_organization_bootstrap_rolls_back_every_fact_when_audit_fails(
     slug = f"rollback-org-{generate_id().hex[:12]}"
     with (
         patch(
-            "uniffy.domains.chat.channels.operations.check_chat_mutation_limit",
+            "uniffy.domains.chat.channels.creation.check_chat_mutation_limit",
             new=AsyncMock(),
         ),
         patch(
@@ -109,7 +109,7 @@ async def test_organization_bootstrap_commits_required_rows_and_audits_once(
     operations = OrganizationOperations(session, search_indexer=search_indexer)
     with (
         patch(
-            "uniffy.domains.chat.channels.operations.check_chat_mutation_limit",
+            "uniffy.domains.chat.channels.creation.check_chat_mutation_limit",
             new=AsyncMock(),
         ),
         patch.object(
@@ -225,7 +225,7 @@ async def test_organization_creation_survives_starter_content_failure(
     operations._directory_projection.index_for_organization = AsyncMock()
     with (
         patch(
-            "uniffy.domains.chat.channels.operations.check_chat_mutation_limit",
+            "uniffy.domains.chat.channels.creation.check_chat_mutation_limit",
             new=AsyncMock(),
         ),
         patch(

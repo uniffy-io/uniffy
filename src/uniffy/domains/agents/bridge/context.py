@@ -26,6 +26,7 @@ from uniffy.core.models.chat.message import (
     ChatMessageVisibility,
     SenderType,
 )
+from uniffy.core.models.login.user import User
 from uniffy.core.types import SubjectType
 from uniffy.domains.agents.cache import fetch_agent_row
 from uniffy.domains.agents.providers.catalog import (
@@ -42,6 +43,13 @@ from uniffy.domains.agents.runtime.models.window import resolve_context_window
 from uniffy.domains.agents.sessions.operations import (
     DEFAULT_CONTEXT_TOKEN_BUDGET_RATIO,
     FALLBACK_CONTEXT_WINDOW,
+)
+from uniffy.domains.chat.access import ChatAccessChecker
+from uniffy.domains.chat.agents import (
+    MESSAGE_CREATED,
+    SenderResolver,
+    build_message_payload,
+    publish_channel_event_to_members,
 )
 
 MAX_AGENT_IDS_PER_BATCH = 100
@@ -74,13 +82,6 @@ def _format_chat_entry(
     name = senders.get(msg.sender_id, "Unknown") if msg.sender_id else "Unknown"
     return (f"[{name}]", content)
 
-
-from uniffy.domains.chat.access import ChatAccessChecker
-from uniffy.domains.chat.streaming.events import (
-    MESSAGE_CREATED,
-    build_message_payload,
-)
-from uniffy.domains.chat.streaming.publisher import publish_channel_event_to_members
 
 logger = logger.bind(component="agents.bridge.context")
 
@@ -545,8 +546,6 @@ class ChatAgentContextOperations:
         self,
         rows: list[ChatMessage],
     ) -> dict[UUID, str]:
-        from uniffy.domains.chat.senders import SenderResolver
-
         resolver = SenderResolver(self._session)
         refs = [(m.sender_type, m.sender_id) for m in rows if m.sender_id]
         if not refs:
@@ -556,8 +555,6 @@ class ChatAgentContextOperations:
 
     async def _resolve_user_display_name(self, user_id: UUID) -> str:
         """Best-effort display name; falls back to a placeholder."""
-        from uniffy.core.models.login.user import User
-
         result = await self._session.execute(
             select(User.full_name, User.username, User.email).where(User.id == user_id)
         )

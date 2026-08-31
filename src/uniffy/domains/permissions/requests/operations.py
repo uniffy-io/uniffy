@@ -22,10 +22,8 @@ from uniffy.core.models.permissions.content_access_request import (
 from uniffy.core.rate_limit import check_rate_limit
 from uniffy.core.search import SearchIndexer
 from uniffy.core.types import AccessMode, ContentRole, ContentType, SubjectType, generate_id
-from uniffy.domains.chat.channels.operations import (
-    ChatChannelOperations,
-    StagedChatMembersAdd,
-)
+from uniffy.domains.chat.channels.operations import ChatChannelOperations
+from uniffy.domains.chat.channels.state import StagedChatMembersAdd
 from uniffy.domains.permissions.access import AccessGrantKind
 from uniffy.domains.permissions.access.targets import (
     AccessRequestTarget,

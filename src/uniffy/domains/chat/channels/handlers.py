@@ -602,7 +602,10 @@ class ChannelHandlers:
         try:
             async with open_session() as session:
                 ops = ChatChannelOperations(
-                    session, storage=self.storage, search_indexer=self.search_indexer
+                    session,
+                    storage=self.storage,
+                    search_indexer=self.search_indexer,
+                    call_lifecycle=self.call_lifecycle,
                 )
                 await ops.archive_channel(user_id, org_id, channel_id)
                 return ArchiveChannelResponse()
@@ -625,7 +628,10 @@ class ChannelHandlers:
         try:
             async with open_session() as session:
                 ops = ChatChannelOperations(
-                    session, storage=self.storage, search_indexer=self.search_indexer
+                    session,
+                    storage=self.storage,
+                    search_indexer=self.search_indexer,
+                    call_lifecycle=self.call_lifecycle,
                 )
                 await ops.delete_channel(user_id, org_id, channel_id)
                 return DeleteChannelResponse()
@@ -798,7 +804,10 @@ class ChannelHandlers:
         try:
             async with open_session() as session:
                 ops = ChatChannelOperations(
-                    session, storage=self.storage, search_indexer=self.search_indexer
+                    session,
+                    storage=self.storage,
+                    search_indexer=self.search_indexer,
+                    call_lifecycle=self.call_lifecycle,
                 )
                 await ops.leave_channel(user_id, org_id, channel_id)
                 return LeaveChannelResponse()
@@ -851,7 +860,10 @@ class ChannelHandlers:
         try:
             async with open_session() as session:
                 ops = ChatChannelOperations(
-                    session, storage=self.storage, search_indexer=self.search_indexer
+                    session,
+                    storage=self.storage,
+                    search_indexer=self.search_indexer,
+                    call_lifecycle=self.call_lifecycle,
                 )
                 await ops.remove_members_with_subjects(
                     user_id,

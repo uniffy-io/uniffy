@@ -58,6 +58,8 @@ def _make_event(
 def _make_ops() -> CalendarEventOperations:
     ops = CalendarEventOperations.__new__(CalendarEventOperations)
     ops.session = MagicMock()
+    ops._call_lifecycle = MagicMock()
+    ops._search_indexer = MagicMock()
     return ops
 
 
@@ -87,7 +89,7 @@ def _patch_checker(
     """
 
     class _FakeChecker:
-        def __init__(self, session) -> None:
+        def __init__(self, session, **_kwargs) -> None:
             self.session = session
 
         async def get_channel(self, channel_id, organization_id):
@@ -257,32 +259,41 @@ class TestApplyChannelBindingUpdate:
         assert event.channel_auto_created is False
 
 
-def _patch_chat_ops(
+def _patch_room_membership(
     monkeypatch: pytest.MonkeyPatch,
     *,
     add_error: Exception | None = None,
 ) -> dict[str, list]:
-    """Swap ``ChatChannelOperations`` for a recorder; imported at call time."""
     calls: dict[str, list] = {"add": [], "remove": []}
 
-    class _FakeChatOps:
-        def __init__(self, session) -> None:
+    class _FakeRoomMembership:
+        def __init__(self, session, **_kwargs) -> None:
             self.session = session
 
-        async def add_members(self, user_id, organization_id, channel_id, member_user_ids):
+        async def sync(
+            self,
+            owner_id,
+            organization_id,
+            channel_id,
+            *,
+            added_user_ids,
+            removed_user_ids,
+        ) -> None:
             if add_error is not None:
                 raise add_error
-            calls["add"].append((user_id, organization_id, channel_id, list(member_user_ids)))
-            return []
-
-        async def remove_members(
-            self, user_id, organization_id, channel_id, member_user_ids
-        ) -> None:
-            calls["remove"].append((user_id, organization_id, channel_id, list(member_user_ids)))
+            if added_user_ids:
+                calls["add"].append((owner_id, organization_id, channel_id, list(added_user_ids)))
+            if removed_user_ids:
+                calls["remove"].append((
+                    owner_id,
+                    organization_id,
+                    channel_id,
+                    list(removed_user_ids),
+                ))
 
     monkeypatch.setattr(
-        "uniffy.domains.chat.channels.operations.ChatChannelOperations",
-        _FakeChatOps,
+        "uniffy.domains.scheduling.calendar.events.attendees.RoomMembership",
+        _FakeRoomMembership,
         raising=True,
     )
     return calls
@@ -290,7 +301,7 @@ def _patch_chat_ops(
 
 class TestAutoCreatedRoomSync:
     async def test_skips_picked_channel(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        calls = _patch_chat_ops(monkeypatch)
+        calls = _patch_room_membership(monkeypatch)
         ops = _make_ops()
         event = _make_event(channel_id=generate_id(), channel_auto_created=False)
         await ops._sync_auto_created_room_members(event, added=[generate_id()], removed=[])
@@ -298,14 +309,14 @@ class TestAutoCreatedRoomSync:
         assert calls["remove"] == []
 
     async def test_skips_when_no_channel(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        calls = _patch_chat_ops(monkeypatch)
+        calls = _patch_room_membership(monkeypatch)
         ops = _make_ops()
         event = _make_event(channel_auto_created=True)
         await ops._sync_auto_created_room_members(event, added=[generate_id()], removed=[])
         assert calls["add"] == []
 
     async def test_mirrors_add_and_remove(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        calls = _patch_chat_ops(monkeypatch)
+        calls = _patch_room_membership(monkeypatch)
         ops = _make_ops()
         cid = generate_id()
         event = _make_event(channel_id=cid, channel_auto_created=True)
@@ -315,7 +326,7 @@ class TestAutoCreatedRoomSync:
         assert calls["remove"] == [(event.organizer_id, event.organization_id, cid, [u_rm])]
 
     async def test_excludes_organizer(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        calls = _patch_chat_ops(monkeypatch)
+        calls = _patch_room_membership(monkeypatch)
         ops = _make_ops()
         event = _make_event(channel_id=generate_id(), channel_auto_created=True)
         # The organizer owns the room; never re-add or remove them.
@@ -326,8 +337,15 @@ class TestAutoCreatedRoomSync:
         assert calls["remove"] == []
 
     async def test_best_effort_swallows_chat_failure(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        _patch_chat_ops(monkeypatch, add_error=RuntimeError("chat down"))
+        _patch_room_membership(monkeypatch, add_error=RuntimeError("chat down"))
         ops = _make_ops()
         event = _make_event(channel_id=generate_id(), channel_auto_created=True)
         # A chat-side failure must not fail the calendar operation.
+        await ops._sync_auto_created_room_members(event, added=[generate_id()], removed=[])
+
+    async def test_best_effort_swallows_missing_chat_dependencies(self) -> None:
+        ops = _make_ops()
+        ops._search_indexer = None
+        event = _make_event(channel_id=generate_id(), channel_auto_created=True)
+
         await ops._sync_auto_created_room_members(event, added=[generate_id()], removed=[])

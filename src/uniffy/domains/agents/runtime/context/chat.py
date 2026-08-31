@@ -16,7 +16,7 @@ from uniffy.domains.agents.runtime.prompt import (
     build_chat_context_section,
     build_thread_turn_note,
 )
-from uniffy.domains.chat.senders import SenderResolver
+from uniffy.domains.chat.agents import SenderResolver
 
 logger = logger.bind(component="agents.runtime.context.chat")
 

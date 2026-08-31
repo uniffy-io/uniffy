@@ -14,10 +14,6 @@ from uniffy.core.models.login.group import Group, GroupKind
 from uniffy.core.models.login.group_member import GroupMember
 from uniffy.core.models.login.organization_member import OrganizationMember
 from uniffy.core.search import SearchIndexer
-from uniffy.domains.directory.groups.cache import (
-    get_cached_user_team_ids,
-    set_cached_user_team_ids,
-)
 from uniffy.domains.directory.groups.lifecycle import GroupOperations
 from uniffy.domains.directory.groups.projection import TeamSearchIndexer
 from uniffy.domains.directory.projection import invalidate_directory
@@ -50,28 +46,6 @@ async def teams_for_users(
             "lead_user_id": str(lead_user_id) if lead_user_id else None,
         })
     return teams
-
-
-async def user_team_ids(session: AsyncSession, organization_id: UUID, user_id: UUID) -> list[UUID]:
-    """TEAM ids the user actively belongs to; cached because the chat unread
-    aggregate reads it on every bootstrap."""
-    cached = await get_cached_user_team_ids(organization_id, user_id)
-    if cached is not None:
-        return [UUID(value) for value in cached]
-
-    result = await session.execute(
-        select(Group.id)
-        .join(GroupMember, GroupMember.group_id == Group.id)
-        .where(
-            Group.organization_id == organization_id,
-            Group.kind == GroupKind.TEAM,
-            GroupMember.user_id == user_id,
-            GroupMember.is_active.is_(True),
-        )
-    )
-    team_ids = [row[0] for row in result.all()]
-    await set_cached_user_team_ids(organization_id, user_id, [str(tid) for tid in team_ids])
-    return team_ids
 
 
 def _team_node(group: Group) -> dict[str, Any]:

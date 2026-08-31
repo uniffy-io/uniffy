@@ -56,7 +56,7 @@ async def post_send_chat_message(
         channel = await session.get(ChatChannel, cid)
         if message is None or channel is None:
             return {"status": "skipped", "reason": "message_or_channel_missing"}
-        await ChatMessageOperations(session, search_indexer=search_indexer)._background_post_send(
+        await ChatMessageOperations(session, search_indexer=search_indexer).background_post_send(
             message,
             channel,
             uid,

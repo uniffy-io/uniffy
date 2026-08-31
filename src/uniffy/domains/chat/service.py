@@ -1,5 +1,6 @@
 """Chat service wrapper for ConnectRPC mounting."""
 
+from uniffy.core.search import SearchIndexer
 from uniffy.core.storage import ObjectStorage
 from uniffy.domains.agents.bridge.contexts import (
     ChannelAgentContextHandlers,
@@ -11,6 +12,7 @@ from uniffy.domains.chat.categories.handlers import CategoryHandlers
 from uniffy.domains.chat.channels.handlers import ChannelHandlers
 from uniffy.domains.chat.drafts.handlers import DraftHandlers
 from uniffy.domains.chat.folders.handlers import AgentFolderHandlers
+from uniffy.domains.chat.lifecycle import ChannelCallLifecycle
 from uniffy.domains.chat.messages.handlers import MessageHandlers
 from uniffy.domains.chat.policies.handlers import ChatPolicyHandlers
 from uniffy.domains.chat.reactions.handlers import ReactionHandlers
@@ -29,9 +31,12 @@ class ChatServiceImpl(
     AgentConfirmationHandlers,
     ChannelAgentContextHandlers,
 ):
-    def __init__(self, storage: ObjectStorage, search_indexer: SearchIndexer) -> None:
+    def __init__(
+        self,
+        storage: ObjectStorage,
+        search_indexer: SearchIndexer,
+        call_lifecycle: ChannelCallLifecycle,
+    ) -> None:
         self.storage = storage
         self.search_indexer = search_indexer
-
-
-from uniffy.core.search import SearchIndexer
+        self.call_lifecycle = call_lifecycle

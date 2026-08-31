@@ -116,6 +116,7 @@ from uniffy.domains.auth.interceptors import AuthenticationInterceptor
 from uniffy.domains.auth.mfa.handlers import MfaHandlers
 from uniffy.domains.auth.mfa.operations import MfaOperations
 from uniffy.domains.bookmarks.service import BookmarksServiceImpl
+from uniffy.domains.calls.channels import CallsChannelLifecycle
 from uniffy.domains.calls.config import LiveKitConfigError
 from uniffy.domains.calls.handlers import CallHandlers
 from uniffy.domains.calls.webhook import LiveKitWebhookProvider
@@ -560,6 +561,8 @@ def _create_api_dispatcher(
             StreamDisconnectMiddleware(StreamRevokeWatchMiddleware(application)),
         )
 
+    call_lifecycle = CallsChannelLifecycle()
+
     add_rpc("/auth.v1.AuthService", AuthServiceASGIApplication, AuthHandlers())
     add_rpc("/auth.v1.MfaService", MfaServiceASGIApplication, MfaHandlers())
     add_rpc(
@@ -578,7 +581,7 @@ def _create_api_dispatcher(
     add_rpc(
         "/chat.v1.ChatService",
         ChatServiceASGIApplication,
-        ChatServiceImpl(storage, search_indexer),
+        ChatServiceImpl(storage, search_indexer, call_lifecycle),
     )
     add_streaming_rpc(
         "/chat.v1.ChatStreamService",
@@ -599,7 +602,7 @@ def _create_api_dispatcher(
     add_rpc(
         "/organizations.v1.OrganizationsService",
         OrganizationsServiceASGIApplication,
-        OrganizationsServiceImpl(search_indexer),
+        OrganizationsServiceImpl(search_indexer, call_lifecycle),
     )
     add_rpc(
         "/groups.v1.GroupsService",
@@ -614,7 +617,7 @@ def _create_api_dispatcher(
     add_rpc(
         "/cal.v1.CalendarService",
         CalendarServiceASGIApplication,
-        CalendarServiceImpl(search_indexer),
+        CalendarServiceImpl(search_indexer, call_lifecycle),
     )
     add_rpc(
         "/files.v1.FilesService",

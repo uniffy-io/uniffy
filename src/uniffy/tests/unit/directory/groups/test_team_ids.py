@@ -3,7 +3,7 @@
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from uniffy.core.types import generate_id
-from uniffy.domains.directory.groups.teams import user_team_ids
+from uniffy.domains.directory.membership import user_team_ids
 
 ORG = generate_id()
 USER = generate_id()
@@ -20,10 +20,10 @@ def _session(rows=()):
 def _cache(cached=None):
     return (
         patch(
-            "uniffy.domains.directory.groups.teams.get_cached_user_team_ids",
+            "uniffy.domains.directory.membership.get_cached_user_team_ids",
             AsyncMock(return_value=cached),
         ),
-        patch("uniffy.domains.directory.groups.teams.set_cached_user_team_ids", AsyncMock()),
+        patch("uniffy.domains.directory.membership.set_cached_user_team_ids", AsyncMock()),
     )
 
 

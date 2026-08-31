@@ -14,7 +14,7 @@ from uniffy.core.errors import NotFoundError, ValidationError
 from uniffy.core.models.chat.draft import ChatDraft
 from uniffy.core.models.chat.message import ChatMessage
 from uniffy.domains.chat.access import ChatAccessChecker
-from uniffy.domains.chat.messages.operations import MAX_MESSAGE_LENGTH
+from uniffy.domains.chat.messages.limits import MAX_MESSAGE_LENGTH
 from uniffy.domains.chat.streaming.events import (
     DRAFT_CHANGED,
     build_draft_changed_payload,

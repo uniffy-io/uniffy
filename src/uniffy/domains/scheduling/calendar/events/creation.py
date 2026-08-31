@@ -15,6 +15,7 @@ from uniffy.core.events import (
     extract_mentioned_team_ids,
     extract_mentioned_user_ids,
 )
+from uniffy.core.events.realtime import ContentAccessAction
 from uniffy.core.models.calendar.attendee import EventAttendee
 from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.search.indexer import build_content_urn
@@ -242,6 +243,11 @@ class EventCreateOperations:
             attendee_id for attendee_id in staged.attendee_ids if attendee_id != event.owner_id
         ]
         if invited:
+            await self.events._publish_attendee_access_change(
+                event,
+                invited,
+                ContentAccessAction.GRANTED,
+            )
             try:
                 await emit_notification(
                     NotificationEvent(
