@@ -28,7 +28,8 @@ paths:
 Uniffy uses **domain-driven vertical slices**. Each feature is self-contained:
 
 - **Backend**: `src/uniffy/domains/{feature}/` or
-  `src/uniffy/domains/{context}/{subdomain}/` with operations, handlers, service, converters
+  `src/uniffy/domains/{context}/{subdomain}/`, decomposed by owned use case rather than a required
+  flat set of layer files
 - **Frontend**: `src/ui/src/features/{feature}/` with api, store, components, pages, hooks
 - **Proto**: `src/proto/{service}/v1/{service}.proto` defines the API contract
 
@@ -39,10 +40,88 @@ Uniffy uses **domain-driven vertical slices**. Each feature is self-contained:
 **Permission system**: Every content row carries an `access_mode` + optional `baseline_role`, resolved by `PermissionChecker.effective_role`. Personal content is private until shared - org/domain admins get no content bypass. Full model, enforcement points, caching, search/tag filtering, chat's separate model, and the hard rules live in **`.agents/rules/permissions.md`** (the single source of truth - do not duplicate it here).
 
 **Background jobs:** The domain that owns the state and invariants also owns its typed contracts and
-handlers under `domains/{feature}/jobs/contracts.py` and `domains/{feature}/jobs/jobs.py`. Large job
-surfaces may keep additional focused, one-word collaborators beside those canonical files.
+handlers under its `jobs/contracts.py` and `jobs/jobs.py`. Large job surfaces may keep additional
+focused, one-word collaborators beside those canonical files.
 `core/jobs/` is the generic type and dispatch boundary, while `workers/` only composes owner-defined
 jobs into the validated core and egress ARQ fleets and manages their process lifecycle.
+
+---
+
+## Backend Ownership Map
+
+Parent contexts group cohesive child domains without erasing their ownership:
+
+```text
+domains/
+├── organizations/
+│   ├── invitations/
+│   ├── security/
+│   └── starter/
+├── platform/
+│   ├── audit/
+│   ├── config/
+│   ├── directory/
+│   ├── encryption/
+│   ├── jobs/
+│   ├── mfa/
+│   └── support/
+├── directory/
+│   ├── groups/
+│   ├── people/
+│   ├── sync/
+│   ├── access.py
+│   └── projection.py
+├── scheduling/
+│   ├── calendar/
+│   ├── rooms/
+│   └── intervals.py
+├── agents/
+├── audit/
+├── auth/
+├── bookmarks/
+├── calls/
+├── chat/
+├── comments/
+├── files/
+├── integrations/
+├── mail/
+├── notes/
+├── notifications/
+├── permissions/
+├── presence/
+├── projects/
+├── search/
+├── settings/
+├── tags/
+└── users/
+```
+
+`users` owns global accounts, self-profile preferences, avatars, and platform-role facts. Tenant
+profiles, groups, identity synchronization, and USER/TEAM search projection belong to `directory`.
+`scheduling/calendar` and `scheduling/rooms` remain separate child domains; only pure interval
+algebra belongs to their parent. Tenant audit behavior remains distinct from the operator-facing
+`platform/audit` surface.
+
+## Backend Dependency Direction
+
+- `core` is the shared application kernel and never imports `domains`.
+- `infrastructure` owns generic technical construction, configuration, and lifecycle and never
+  imports `domains`. It may implement stable core contracts.
+- `transport` owns generic HTTP/ConnectRPC delivery mechanics. Core, domains, and infrastructure do
+  not import it, and transport does not import product domains.
+- Domains consume core and narrow owner-defined boundaries from other domains. Another domain's
+  handlers, services, converters, caches, queries, and general operations are private.
+- `main.py`, `factory.py`, worker lifecycle/registry modules, and explicit scripts are composition
+  roots. They select adapters, install genuine extension points, and inject dependencies; reusable
+  layers never import process roots, and package imports do not perform registration as a side effect.
+- Search and object storage are replaceable capabilities with core-owned ports and
+  infrastructure-owned adapters. PostgreSQL/SQLAlchemy, Valkey, and Prometheus are selected platform
+  dependencies and do not receive speculative abstraction layers.
+
+An externally callable mutation owns its authoritative transaction. Domain rows and required audit
+facts commit together through focused `stage_*` collaborators; search, cache, realtime, mail, and
+queue effects run after commit or through an owner-defined durable recovery path. Detailed backend
+rules and executable boundaries live in `backend.md` and root `pyproject.toml`.
 
 ---
 
@@ -57,9 +136,9 @@ uniffy/
 │   │   ├── typescript/   # TypeScript package: @uniffy/proto (pnpm workspace member)
 │   │   └── go/           # Go module: github.com/uniffy-io/uniffy-proto-go
 │   ├── uniffy/           # Python backend (Granian + FastAPI + ConnectRPC)
-│   │   ├── core/         # Core models, auth, search, types, errors
-│   │   ├── domains/      # Domain modules (vertical slices)
-│   │   ├── infrastructure/ # Generic database, storage, cache, search, observability adapters
+│   │   ├── core/         # Shared application kernel, contracts, models, auth, search policy
+│   │   ├── domains/      # Product/capability contexts and owned vertical use cases
+│   │   ├── infrastructure/ # Generic database, storage, Valkey, search, observability adapters
 │   │   ├── transport/      # Application HTTP and ConnectRPC middleware/instrumentation
 │   │   ├── data/         # Shipped content: agent templates, skills, prompts, model catalog, assets
 │   │   ├── migrations/   # Alembic application-schema history
@@ -94,7 +173,8 @@ Uniffy uses URNs to uniquely identify all content. This enables universal `@` me
 **Requirements:**
 - All content models carry a `urn` property
 - All content is indexed in search so `@` mention lookup works everywhere
-- `BaseContentOperations` handles URN generation and search indexing automatically - extending it is the easiest way to get both right
+- `BaseContentOperations` centralizes URN generation, permission gates, and search-projection hooks;
+  mutation composition supplies the search writer explicitly, while read paths stay writer-independent
 
 ## Markdown Content Standard
 

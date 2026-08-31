@@ -9,7 +9,7 @@ paths:
 
 # Agents Domain
 
-LLM-powered assistants (Anthropic, OpenAI, Google, OpenRouter, xAI) that act on other domains through a built-in tool system. Sub-domains, each its own ConnectRPC service mounted in `factory.py`: `agents/` (CRUD), `providers/`, `runtime/` (also hosts `RuntimeSettingsService`), `sessions/`, `skills/`, `memories/`, `cron/`, `budgets/`, and `limits/`; `bridge/` mounts its handlers on the chat service, and `tools/` (registry + builtin executors) has no service. Models in `core/models/agents/`, protos in `src/proto/agents/v1/`.
+LLM-powered assistants (Anthropic, OpenAI, Google, OpenRouter, xAI) that act on other domains through a built-in tool system. Sub-domains, each its own ConnectRPC service mounted in `factory.py`: `agents/agents/` (CRUD), `providers/`, `runtime/` (also hosts `RuntimeSettingsService`), `sessions/`, `skills/`, `memories/`, `cron/`, `budgets/`, and `limits/`; `bridge/` mounts its handlers on the chat service, and `tools/` (registry + builtin executors) has no service. Models in `core/models/agents/`, protos in `src/proto/agents/v1/`.
 
 This is one of the two performance-critical domains - the backend rules' "Performance-critical domains" section applies to every change here.
 
@@ -33,7 +33,7 @@ Old `/agents/chat` links redirect to `/chat`. There is no user-facing session li
 
 `DeleteAgent` retires: the row keeps `is_deleted=true` forever because it is also the display record for every chat message the agent sent (`SenderResolver` resolves agents by id and deliberately does NOT filter deletion). Never hard-delete an agent row outside an org purge - it would strip the name and avatar off history that users still read.
 
-`delete_agent` fans out in one transaction: clears `is_default`, disables the agent's cron tasks (`is_enabled=false`, rows kept), deletes the org-for-one-agent memory tier (`agents_memories.agent_id = id`) and invalidates its bucket, drops the search row and the agent caches. Deliberately kept: `AgentChannelBinding` rows (per-conversation model/param config, so a restore comes back configured), agent DM channels, sessions, run logs, spend, skill usage, feedback, the S3 avatar, and memories the agent merely WROTE elsewhere (`created_by_agent_id` is provenance, the audience owns the entry).
+`delete_agent` fans out in one transaction: clears `is_default`, disables the agent's cron tasks (`is_enabled=false`, rows kept), deletes the org-for-one-agent memory tier (`agents_memories.agent_id = id`) and invalidates its bucket, drops the search row and the agent caches. Deliberately kept: `AgentChannelBinding` rows (per-conversation model/param config, so a restore comes back configured), agent DM channels, sessions, run logs, spend, skill usage, feedback, the stored avatar object, and memories the agent merely WROTE elsewhere (`created_by_agent_id` is provenance, the audience owns the entry).
 
 **Soft delete is enforced where the agent ACTS, not only where it is listed.** Four gates, all required: `bridge/mentions.py` joins the agent row so a deleted agent yields no invocation (no run, no typing indicator); `bridge/operations.py::respond_to_chat_message` re-checks for the explicit-invoke path; `CronTaskOperations.get_due_tasks` joins the agent row and `trigger_now` refuses; `ChatMessageOperations.send_message` refuses a send into an agent DM whose agent is gone. A new path that makes an agent act needs the same check.
 
@@ -82,7 +82,15 @@ Adding a tool: executor in `tools/builtin/{domain}.py` -> module-level `ToolDefi
 
 ### People tools
 
-People tools read the canonical People domain through `PeopleReader`, never `OrganizationOperations.list_members` or agent-specific SQL. That keeps local, SCIM, LDAP, and OIDC-projected profiles identical and preserves the human actor's active-org-membership gate. `people.list_members` returns active members only and honors `directory_enabled` exactly like `ListPeople`; it can combine free-text, job-title, department, org-role, team, and manager filters. `people.get_person` mirrors the direct `GetPerson` exception: a known active member can still be resolved when directory browsing is disabled so mention-backed workflows keep working. `people.list_teams` is member-open like `ListTeams` and never exposes ACCESS groups.
+People tools read the tenant directory's people child through
+`domains/directory/people/reader.py::PeopleReader`, never
+`OrganizationOperations.list_members` or agent-specific SQL. That keeps local, SCIM, LDAP, and
+OIDC-projected profiles identical and preserves the human actor's active-org-membership gate.
+`people.list_members` returns active members only and honors `directory_enabled` exactly like
+`ListPeople`; it can combine free-text, job-title, department, org-role, team, and manager filters.
+`people.get_person` mirrors the direct `GetPerson` exception: a known active member can still be
+resolved when directory browsing is disabled so mention-backed workflows keep working.
+`people.list_teams` is member-open like `ListTeams` and never exposes ACCESS groups.
 
 Tool results intentionally project work context, not the entire readable profile row. They may include work email/phone, title, department, org role, office, timezone, pronouns, bio, manager, teams, and direct-report count; they do not send birthday, mobile phone, start date, personal links, or directory-management metadata to the model. Reads stay `read_only=True`, bounded, and emit USER/TEAM URNs so results remain navigable.
 

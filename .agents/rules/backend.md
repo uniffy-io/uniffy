@@ -15,14 +15,20 @@ Each bounded context is self-contained at `src/uniffy/domains/{feature}/` or, wh
 subdomains share a parent context, `src/uniffy/domains/{context}/{subdomain}/`:
 
 ```
-domains/{feature}/
-├── converters.py     # Proto <-> domain mapping
-├── queries.py        # Complex SQL (optional)
-├── operations.py     # Business logic (extend BaseContentOperations for content)
-├── handlers.py       # Thin RPC handlers
-├── service.py        # Service class
-└── __init__.py
+domains/{owner}/
+├── {usecase}/        # Cohesive operations, queries, projections, or RPC handlers
+├── jobs/
+│   ├── contracts.py  # Typed producer-facing job contract
+│   └── jobs.py       # Canonical owner-defined handlers
+├── operations.py     # Optional meaningful public content/use-case façade
+├── service.py        # Optional service composition boundary
+└── __init__.py       # Lightweight; no registration side effects
 ```
+
+The shape is illustrative, not a required layer checklist. Small owners stay small; larger owners
+split by aggregate or use case. Keep an `operations.py`, `handlers.py`, or `service.py` façade only
+when it preserves a real public contract or composes behavior. Do not add a forwarding wrapper merely
+to retain an internal import path.
 
 Adding a new domain:
 
@@ -40,11 +46,15 @@ Adding a new domain:
   modules; web, worker, and explicit script roots select those implementations. PostgreSQL/SQLAlchemy,
   Valkey, and owner-local Prometheus instrumentation are selected platform dependencies, so application
   owners may consume their public capabilities without speculative wrapper layers. Import Linter
-  enforces all five live package-graph rules from `pyproject.toml` with no exceptions. Additional
+  enforces the live package-graph rules from `pyproject.toml` with no exceptions. Additional
   dependency rules land only when they describe a universal ownership boundary.
-- Domain-to-domain imports use an owner-approved package export or a narrow `context`, `http`,
-  `contracts`, `ports`, `policy`, `projection`, or `types` module. Another domain's handlers,
-  services, converters, queries, caches, and operations are implementation details.
+- Transport is a generic delivery layer: core, domains, and infrastructure never import it, and it
+  never imports product domains. `main.py`, `factory.py`, and `workers/` are process roots; reusable
+  core, domain, infrastructure, and transport modules never import them.
+- Domain-to-domain imports target a narrow owner-defined capability boundary named for what it
+  provides, not a filename allowlist. Current examples include `directory.projection`,
+  `scheduling.rooms.events`, and `chat.access`. Another domain's handlers, services, converters,
+  caches, queries, and general operations are implementation details.
 - Web and worker entry points perform explicit composition. Importing a package solely to trigger
   registration is not a supported integration mechanism.
 - Parent namespaces group cohesive bounded contexts without flattening their subdomains. Package
@@ -53,11 +63,20 @@ Adding a new domain:
 ## Core patterns
 
 - **Async everywhere.** Database I/O goes through `AsyncSession`; the rest of the stack composes around it.
-- **`BaseContentOperations`** (`core/content/base_operations.py`): extending it for content gets permission checking and search indexing for free.
+- **`BaseContentOperations`** (`core/content/base_operations.py`): extending it centralizes content
+  permission gates and search-projection hooks. Mutation composition supplies a `SearchIndexer`
+  explicitly when it writes a projection; read-only construction must not resolve a writer.
 - **Permission checks live inside domain operations.** The full model is in `.agents/rules/permissions.md` - the single source of truth; do not re-explain it.
 - **Multi-tenancy:** all content scoped to `organization_id`; users are global, memberships org-scoped. Verifying org access is part of every domain operation's contract.
 - **Raise domain errors (`core/errors.py`), never leak exception text to clients.** `transport/rpc.py::DOMAIN_ERROR_CODES` maps every `UNIFFYError` subclass to its Connect code for ALL unary RPCs, so a handler without local mapping still returns the right code. Handlers may map locally for precision, but an `except Exception` block must respond with the literal `"Internal server error"` - `str(e)` in a client-facing message is a leak (the `logger.exception` line keeps the details server-side).
 - **Imports at the top.** The one exception is the circular-import case in agent tool executors.
+- **Dangerous APIs are lint failures.** Backend code rejects executable code, unsafe
+  pickle/marshal/YAML/XML deserialization, weak cryptography, insecure TLS/SSH/network behavior,
+  direct `subprocess`, shell execution, logging socket configuration, and unsafe template APIs.
+  Backend lint repeats every selected Bandit rule and banned-API check with Ruff's source-level
+  suppressions disabled, so inline and file-level `noqa` directives cannot waive these boundaries.
+  When an external process is unavoidable, use `asyncio.create_subprocess_exec` with a fixed
+  executable and separate arguments; never construct a shell command.
 - **Content we ship is a file, not a literal.** Prompts, templates, catalogs and the like go in `src/uniffy/data/` (see "Shipped content"), never in a triple-quoted string or a hand-written python catalog.
 - **File size:** target 300-400 lines, soft cap 500; split into sub-modules past that.
 - **Type hints** on all functions; docstring discipline per `comment-discipline.md`.
@@ -247,11 +266,12 @@ Attachments link a file to content via a generic `(content_type, content_id)` ro
 ## Background jobs (ARQ + Valkey)
 
 Job behavior and producer-facing contracts belong to the domain or core subsystem whose state and
-invariants they operate on. Every domain uses `domains/{feature}/jobs/contracts.py` and
-`domains/{feature}/jobs/jobs.py`; a large surface may keep additional focused, one-word collaborators
-beside those files rather than breaching the 500-line soft cap. `core/jobs/` owns only the generic
-contract types and dispatch helpers; `workers/` is the composition root that validates registrations,
-builds the core and egress fleets, manages their resources, and renders the executable inventory.
+invariants they operate on. Every domain owner uses its `jobs/contracts.py` and `jobs/jobs.py`; a
+parent-context child such as `scheduling/calendar` keeps the same shape below that child. A large
+surface may keep additional focused, one-word collaborators beside those files rather than breaching
+the 500-line soft cap. `core/jobs/` owns only the generic contract types and dispatch helpers;
+`workers/` is the composition root that validates registrations, builds the core and egress fleets,
+manages their resources, and renders the executable inventory.
 
 ### Creating a job
 

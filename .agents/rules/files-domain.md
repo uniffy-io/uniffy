@@ -69,13 +69,14 @@ NO service-worker auth proxy.
   asset_read-in-header are both 401). Permission gating stays in the route handler (`FileOperations.get_by_id`) -
   the dep only resolves identity.
 - Media: `/api/media/{org}/{file}` (`media_router`, `domains/files/routes.py`) is a native HTTP Range route -
-  `_parse_range` -> `s3.download_range` -> `206` / `Content-Range`. This is what lets `<video>` seek.
+  `_parse_range` -> `ObjectStorage.download_range` -> `206` / `Content-Range`. This is what lets `<video>` seek.
 - Frontend: build URLs with `buildFileUrl` / `buildThumbnailUrl` / `buildMediaUrl` / `getMediaUrl` /
   `buildAvatarUrl` (`shared/utils/fileUrls.ts`); same-origin requests carry the cookie automatically. A single
   global capture-phase `error` listener (`shared/utils/assetAuthRetry.ts`, installed in `main.tsx`) refreshes
   the cookie and retries an asset once when it 401s (idle past the cookie TTL).
 - Mobile: no cookie jar - the app keeps the body pair in memory (`src/mobile/src/core/auth/auth.ts`) and
-  attaches it as an explicit `Cookie` header via `assetAuthHeaders()` (`core/auth/assetAuth.ts`) on every
+  attaches it as an explicit `Cookie` header via `assetAuthHeaders()`
+  (`src/mobile/src/core/auth/assetAuth.ts`) on every
   asset request (expo-image, WebView PDFs, downloads, audio). Image error handlers use `assetAuthStale()` +
   `refreshSession()` to recover from an expired pair. Same rule as web: the pair is GET-read-only.
 
@@ -90,5 +91,6 @@ NO service-worker auth proxy.
 - `getUploadStatus` is the authority on completed parts during resume - never re-POST a completed part.
 - Both products: same-origin cookie, no `Domain`; `Secure` env-gated so self-host http LAN works.
 
-Guard tests: `tests/test_asset_cookie.py`, `tests/test_media_range.py`;
+Guard tests: `src/uniffy/tests/unit/core/auth/test_cookie.py`,
+`src/uniffy/tests/unit/files/test_media_range.py`;
 `features/files/upload/__tests__/uploadService.test.ts`, `shared/utils/__tests__/fileUrls.test.ts`.
