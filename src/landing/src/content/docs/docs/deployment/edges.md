@@ -23,8 +23,8 @@ The friendliest edge is a layer 4 passthrough: it preserves everything above by 
 
 ## Cloudflare
 
-:::caution[We do not recommend the Cloudflare proxy]
-Proxied mode means Cloudflare terminates your TLS. Every request is decrypted on their servers before it reaches you: every note, every message, every file, every credential. That is not a Cloudflare flaw. It is what an HTTP proxy is. It also puts a third party inside a product you chose to run on your own hardware. Turn it on only if you accept that Cloudflare can read everything your organization puts in Uniffy. DNS only mode avoids all of this and still gives you Cloudflare DNS.
+:::caution
+We do not recommend the Cloudflare proxy. Proxied mode means Cloudflare terminates your TLS. Every request is decrypted on their servers before it reaches you: every note, every message, every file, every credential. That is not a Cloudflare flaw. It is what an HTTP proxy is. It also puts a third party inside a product you chose to run on your own hardware. Turn it on only if you accept that Cloudflare can read everything your organization puts in Uniffy. DNS only mode avoids all of this and still gives you Cloudflare DNS.
 :::
 
 If you accept that tradeoff, the proxy works in front of Uniffy with the settings below. Anything not mentioned is fine at its default.
