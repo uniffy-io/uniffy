@@ -284,7 +284,7 @@ class AuthHandlers:
                     domain_admin_domains=_domain_admins_to_proto(result),
                     asset_cookie=asset_cookie,
                 )
-        except TokenError as e:
+        except (AuthenticationError, TokenError) as e:
             logger.warning(f"Token refresh failed: {e}")
             raise ConnectError(Code.UNAUTHENTICATED, str(e))
         except Exception as e:

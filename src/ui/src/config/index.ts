@@ -2,6 +2,7 @@ export { env } from "@/config/env";
 export {
   transport,
   unaryTransport,
+  publicUnaryTransport,
   rehydrateAuth,
   setMemoryAccessToken,
   clearMemoryAccessToken,
