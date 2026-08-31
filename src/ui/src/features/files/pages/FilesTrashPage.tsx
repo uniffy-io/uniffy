@@ -34,6 +34,7 @@ import { toggleSidebar, deleteFile, restoreFile } from "@/features/files/store/f
 import { deleteFolder, fetchFilesTree } from "@/features/files/store/filesTreeSlice";
 import {
   fetchTrash,
+  clearTrash,
   removeTrashFile,
   removeTrashFolder,
   setTrashFolderId,
@@ -307,8 +308,13 @@ function TrashView() {
     setDeleteLoading(true);
     try {
       if (pendingPermanentDelete.kind === "empty") {
-        await filesApi.emptyTrash({ organizationId });
-        dispatch(fetchTrash());
+        dispatch(clearTrash());
+        try {
+          await filesApi.emptyTrash({ organizationId });
+        } catch (error) {
+          dispatch(fetchTrash());
+          throw error;
+        }
         dispatch(fetchFilesTree({ includeFiles: false }));
       } else if (pendingPermanentDelete.kind === "file") {
         await dispatch(deleteFile({ fileId: pendingPermanentDelete.id, permanent: true })).unwrap();
