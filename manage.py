@@ -10,6 +10,7 @@ import os
 import shlex
 import subprocess
 import sys
+import tomllib
 from pathlib import Path
 
 import click
@@ -696,14 +697,19 @@ def clean():
     "--service", "-s", type=click.Choice(["all", "backend", "ui", "mobile", "cli"]), default="all"
 )
 @stack_option
-def lint(service, stack):
+@click.option("--fix/--check", default=True, help="Apply safe fixes or only report violations.")
+def lint(service, stack, fix):
     """Run linters (all = backend + ui + cli, matching pre-commit expectations)."""
     if service in ("backend", "all"):
         workspace_cmd("backend", stack, ["run", "lint-imports"])
+        _lint_backend_security(stack)
+        ruff_args = ["run", "ruff", "check", "src/uniffy/", "--exclude", "src/gen"]
+        if fix:
+            ruff_args.append("--fix")
         workspace_cmd(
             "backend",
             stack,
-            ["run", "ruff", "check", "src/uniffy/", "--exclude", "src/gen", "--fix"],
+            ruff_args,
         )
         workspace_cmd(
             "backend",
@@ -718,6 +724,54 @@ def lint(service, stack):
         workspace_cmd("mobile", stack, ["format:check"])
     if service in ("cli", "all"):
         sh(["go", "vet", "./..."], cwd=ROOT / "src/unictl")
+
+
+def _ruff_security_selectors() -> list[str]:
+    config = tomllib.loads((ROOT / "pyproject.toml").read_text())
+    lint_config = config["tool"]["ruff"]["lint"]
+    configured_selectors = [lint_config["select"], lint_config.get("extend-select", [])]
+    if any(
+        not isinstance(values, list) or not all(isinstance(value, str) for value in values)
+        for values in configured_selectors
+    ):
+        raise click.ClickException("Ruff select settings must be lists of rule selectors")
+    selectors = [selector for values in configured_selectors for selector in values]
+
+    security_selectors = [
+        selector
+        for selector in selectors
+        if selector == "S"
+        or (selector.startswith("S") and selector[1:].isdigit())
+        or (selector.startswith("TID") and selector[3:].isdigit())
+    ]
+    if not security_selectors:
+        raise click.ClickException("No Ruff security selectors are enabled in pyproject.toml")
+    return security_selectors
+
+
+def _lint_backend_security(stack: str) -> None:
+    workspace_cmd(
+        "backend",
+        stack,
+        [
+            "run",
+            "ruff",
+            "check",
+            "src/uniffy/",
+            "--exclude",
+            "src/gen",
+            "--select",
+            ",".join(_ruff_security_selectors()),
+            "--ignore-noqa",
+        ],
+    )
+
+
+@cli.command("lint-security")
+@stack_option
+def lint_security(stack: str) -> None:
+    """Run security lint without honoring source-level suppressions."""
+    _lint_backend_security(stack)
 
 
 @cli.command()
@@ -747,7 +801,8 @@ def format_cmd(service, stack):
         workspace_cmd("mobile", stack, ["format"])
 
 
-@cli.command()
+@cli.command(context_settings=PASSTHROUGH)
+@click.argument("args", nargs=-1, type=click.UNPROCESSED)
 @click.option(
     "--service",
     "-s",
@@ -756,21 +811,24 @@ def format_cmd(service, stack):
     show_default=True,
 )
 @stack_option
-def test(service, stack):
+def test(args, service, stack):
     """Run tests for a service (integration needs live services; the provider suite costs money)."""
     if service == "backend":
-        workspace_cmd("backend", stack, ["run", "pytest", "src/uniffy/tests/unit/"])
+        workspace_cmd("backend", stack, ["run", "pytest", "src/uniffy/tests/unit/", *args])
     elif service == "integration":
-        workspace_cmd("backend", stack, ["run", "pytest", "src/uniffy/tests/integration/", "-v"])
+        workspace_cmd(
+            "backend", stack, ["run", "pytest", "src/uniffy/tests/integration/", "-v", *args]
+        )
     elif service == "ui":
-        workspace_cmd("ui", stack, ["test"])
+        workspace_cmd("ui", stack, ["test", *args])
     else:
-        sh(["go", "test", "./..."], cwd=ROOT / "src/unictl")
+        sh(["go", "test", "./...", *args], cwd=ROOT / "src/unictl")
 
 
-@cli.command()
+@cli.command(context_settings=PASSTHROUGH)
+@click.argument("args", nargs=-1, type=click.UNPROCESSED)
 @stack_option
-def bench(stack):
+def bench(args, stack):
     """Run backend performance benchmarks."""
     workspace_cmd(
         "backend",
@@ -783,6 +841,7 @@ def bench(stack):
             "--benchmark-group-by=func",
             "--benchmark-sort=mean",
             "--benchmark-columns=min,max,mean,stddev,rounds",
+            *args,
         ],
     )
 

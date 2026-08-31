@@ -156,6 +156,40 @@ select = [
   "I",
   # Product-owned comparison values use enums or named constants.
   "PLR2004",
+  # flake8-bandit: reject unsafe code, permissions, transport, parser, process, and template APIs.
+  # manage.py repeats selected Bandit and banned-API rules with source suppressions disabled.
+  "S102",
+  "S103",
+  "S113",
+  "S2",
+  "S30",
+  "S310",
+  "S312",
+  "S313",
+  "S314",
+  "S315",
+  "S316",
+  "S317",
+  "S318",
+  "S319",
+  "S321",
+  "S323",
+  "S324",
+  "S4",
+  "S5",
+  "S601",
+  "S602",
+  "S603",
+  "S604",
+  "S605",
+  "S606",
+  "S607",
+  "S609",
+  "S610",
+  "S611",
+  "S612",
+  "S702",
+  "S704",
   # Backend JSON goes through the shared orjson codec.
   "TID251",
 ]
@@ -164,6 +198,7 @@ select = [
 allow-magic-value-types = ["int", "float", "bytes"]
 
 [tool.ruff.lint.flake8-tidy-imports.banned-api]
+"asyncio.create_subprocess_shell".msg = "Shell execution is forbidden; use asyncio.create_subprocess_exec with a fixed executable and separate arguments."
 "json".msg = "Use uniffy.core.json_codec instead of the stdlib json module."
 
 [tool.ruff.format]
@@ -194,6 +229,27 @@ name = "Infrastructure must not import domains"
 type = "forbidden"
 source_modules = ["uniffy.infrastructure"]
 forbidden_modules = ["uniffy.domains"]
+allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
+name = "Reusable application layers must not import transport"
+type = "forbidden"
+source_modules = ["uniffy.core", "uniffy.domains", "uniffy.infrastructure"]
+forbidden_modules = ["uniffy.transport"]
+allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
+name = "Transport must not import domains"
+type = "forbidden"
+source_modules = ["uniffy.transport"]
+forbidden_modules = ["uniffy.domains"]
+allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
+name = "Reusable layers must not import process roots"
+type = "forbidden"
+source_modules = ["uniffy.core", "uniffy.domains", "uniffy.infrastructure", "uniffy.transport"]
+forbidden_modules = ["uniffy.factory", "uniffy.main", "uniffy.workers"]
 allow_indirect_imports = true
 
 [[tool.importlinter.contracts]]
