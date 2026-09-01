@@ -95,9 +95,7 @@ class EventMutationHandlers:
 
         try:
             async with open_session() as session:
-                operations = CalendarEventOperations(
-                    session, self.search_indexer, self.call_lifecycle
-                )
+                operations = CalendarEventOperations(session, self.search_indexer)
 
                 calendar_id = None
                 if request.calendar_id:
@@ -231,14 +229,13 @@ class EventMutationHandlers:
 
         try:
             async with open_session() as session:
-                operations = CalendarEventOperations(
-                    session, self.search_indexer, self.call_lifecycle
-                )
+                operations = CalendarEventOperations(session, self.search_indexer)
                 event = await operations.update(
                     user_id=user_id,
                     organization_id=organization_id,
                     event_id=event_id,
                     **kwargs,
+                    call_lifecycle=self.call_lifecycle,
                 )
                 attendees = await queries.get_event_attendees(session, event.id)
                 room_info = await get_event_room_info(session, event.id)
@@ -281,9 +278,7 @@ class EventMutationHandlers:
 
         try:
             async with open_session() as session:
-                await CalendarEventOperations(
-                    session, self.search_indexer, self.call_lifecycle
-                ).delete(
+                await CalendarEventOperations(session, self.search_indexer).delete(
                     user_id=user_id,
                     organization_id=organization_id,
                     event_id=event_id,

@@ -39,6 +39,7 @@ from uniffy.domains.agents.runtime.streams import (
     stream_delete,
 )
 from uniffy.domains.agents.sessions.operations import SessionOperations
+from uniffy.domains.chat.lifecycle import CALL_LIFECYCLE_CTX_KEY, ChannelCallLifecycle
 from uniffy.infrastructure.valkey.ops import get_ops_client
 
 logger = logger.bind(component="agents.runtime.jobs.jobs")
@@ -167,6 +168,7 @@ async def run_agent_session(
                 storage,
                 ctx[SEARCH_INDEXER_CTX_KEY],
                 session_factory,
+                cast(ChannelCallLifecycle, ctx[CALL_LIFECYCLE_CTX_KEY]),
             )
             runtime_settings = await get_runtime_settings(session, oid)
             destination = SessionDestination(session_id=sid)

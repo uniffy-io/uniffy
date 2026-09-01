@@ -6,7 +6,7 @@ import pytest
 
 from uniffy.core.types import generate_id
 from uniffy.domains.projects.projects import ProjectOperations
-from uniffy.domains.projects.tasks.operations import TaskOperations
+from uniffy.domains.projects.tasks.reader import TaskReader
 
 
 async def test_list_tasks_does_not_require_search_writer(
@@ -22,7 +22,7 @@ async def test_list_tasks_does_not_require_search_writer(
     get_project = AsyncMock(return_value=MagicMock())
     monkeypatch.setattr(ProjectOperations, "get_by_id", get_project)
 
-    operations = TaskOperations(session)
+    operations = TaskReader(session)
     tasks, total = await operations.list_tasks(
         user_id=generate_id(),
         organization_id=generate_id(),

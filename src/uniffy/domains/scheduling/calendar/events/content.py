@@ -18,7 +18,7 @@ from uniffy.core.types import (
     ContentType,
 )
 from uniffy.domains.scheduling.calendar.events.state import _master_event_id
-from uniffy.domains.tags.operations import TagOperations
+from uniffy.domains.tags.reader import TagReader
 
 logger = logger.bind(component="scheduling.calendar.events.content")
 
@@ -60,7 +60,7 @@ class EventContentOperations(BaseContentOperations[CalendarEvent]):
     async def _get_search_tags_async(self, model: CalendarEvent) -> list[str] | None:
         # Recurring instances inherit the master's tag set; resolve to master.
         urn = build_content_urn(self.content_type, _master_event_id(model))
-        tag_ops = TagOperations(self.session)
+        tag_ops = TagReader(self.session)
         bulk = await tag_ops.get_for_urns(
             organization_id=model.organization_id,
             content_urns=[urn],

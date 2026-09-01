@@ -30,6 +30,7 @@ async def _scoped_update(ops: CalendarEventOperations, scope: RecurrenceEditScop
         event_id=generate_id(),
         recurrence_edit_scope=scope,
         occurrence_date=OCCURRENCE,
+        call_lifecycle=AsyncMock(),
         **kwargs,
     )
 

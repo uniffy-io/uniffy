@@ -6,6 +6,7 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 from uuid import UUID
 
+from loguru import logger
 from sqlalchemy import select
 
 from uniffy.core.audit import write_audit_event
@@ -17,10 +18,12 @@ from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import ContentType, NodeType
 from uniffy.domains.files.attachments.purge import purge_attachments_for_content
 from uniffy.domains.notes import queries
-from uniffy.domains.tags.context import ContentTagContext
+from uniffy.domains.tags.context import ContentTagMutations
 
 if TYPE_CHECKING:
     from uniffy.domains.notes.operations import NoteOperations
+
+logger = logger.bind(component="notes.hierarchy.operations")
 
 _MAX_TREE_DEPTH = 64
 
@@ -68,7 +71,21 @@ class NoteHierarchy:
 
         parent_folder_id = note.parent_id
         removed_ids = await self.operations._collect_descendant_ids(note)
+        tags = None
+        staged_tag_removals = []
         if permanent:
+            tags = ContentTagMutations(
+                self.operations.session,
+                self.operations.search_indexer,
+            )
+            for removed_id in removed_ids:
+                staged_tag_removals.append(
+                    await tags.stage_unassign_all_for_urn(
+                        actor_id=user_id,
+                        organization_id=organization_id,
+                        content_urn=build_content_urn(ContentType.NOTE, removed_id),
+                    )
+                )
             await purge_attachments_for_content(
                 self.operations.session,
                 self.operations.storage,
@@ -80,20 +97,6 @@ class NoteHierarchy:
             await queries.permanent_delete_recursive(self.operations.session, note)
         else:
             await queries.soft_delete_recursive(self.operations.session, note)
-
-        if permanent:
-            tags = ContentTagContext(self.operations.session)
-            for removed_id in removed_ids:
-                await tags.unassign_all_for_urn(
-                    actor_id=user_id,
-                    organization_id=organization_id,
-                    content_urn=build_content_urn(ContentType.NOTE, removed_id),
-                )
-
-        for removed_id in removed_ids:
-            await self.operations.search_indexer.remove(
-                build_content_urn(ContentType.NOTE, removed_id)
-            )
 
         await write_audit_event(
             self.operations.session,
@@ -109,6 +112,25 @@ class NoteHierarchy:
             },
         )
         await self.operations.session.commit()
+        if tags is not None:
+            for staged in staged_tag_removals:
+                try:
+                    await tags.finish_unassign_all_after_commit(staged)
+                except Exception:
+                    logger.opt(exception=True).warning(
+                        "Note deleted with stale tag projections",
+                        note_id=str(note_id),
+                    )
+        for removed_id in removed_ids:
+            try:
+                await self.operations.search_indexer.remove(
+                    build_content_urn(ContentType.NOTE, removed_id)
+                )
+            except Exception:
+                logger.opt(exception=True).warning(
+                    "Note deleted with a stale search projection",
+                    note_id=str(removed_id),
+                )
         await self.operations._refresh_parent_folder(parent_folder_id, organization_id)
         return True
 
@@ -174,21 +196,26 @@ class NoteHierarchy:
             content_type=ContentType.NOTE,
             content_ids=trash_ids,
         )
+        tags = ContentTagMutations(
+            self.operations.session,
+            self.operations.search_indexer,
+        )
+        staged_tag_removals = []
+        for note_id in trash_ids:
+            staged_tag_removals.append(
+                await tags.stage_unassign_all_for_urn(
+                    actor_id=user_id,
+                    organization_id=organization_id,
+                    content_urn=build_content_urn(ContentType.NOTE, note_id),
+                )
+            )
         count = await queries.empty_trash(
             self.operations.session,
             organization_id,
             trash_ids,
         )
 
-        tags = ContentTagContext(self.operations.session)
         for note_id in trash_ids:
-            urn = build_content_urn(ContentType.NOTE, note_id)
-            await tags.unassign_all_for_urn(
-                actor_id=user_id,
-                organization_id=organization_id,
-                content_urn=urn,
-            )
-            await self.operations.search_indexer.remove(urn)
             await write_audit_event(
                 self.operations.session,
                 organization_id=organization_id,
@@ -199,6 +226,24 @@ class NoteHierarchy:
                 details={"source": "empty_trash"},
             )
         await self.operations.session.commit()
+        for staged in staged_tag_removals:
+            try:
+                await tags.finish_unassign_all_after_commit(staged)
+            except Exception:
+                logger.opt(exception=True).warning(
+                    "Trash emptied with stale tag projections",
+                    note_id=str(staged.content_urn),
+                )
+        for note_id in trash_ids:
+            try:
+                await self.operations.search_indexer.remove(
+                    build_content_urn(ContentType.NOTE, note_id)
+                )
+            except Exception:
+                logger.opt(exception=True).warning(
+                    "Trash emptied with a stale search projection",
+                    note_id=str(note_id),
+                )
         return count
 
     async def collect_descendant_ids(self, note: Note) -> list[UUID]:

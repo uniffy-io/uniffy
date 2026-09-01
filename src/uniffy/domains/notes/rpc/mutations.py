@@ -38,7 +38,7 @@ from uniffy.domains.notes.rpc.support import (
     resolve_note_policy,
     resolve_user_role,
 )
-from uniffy.domains.tags.context import ContentTagContext
+from uniffy.domains.tags.context import ContentTagReader
 from uniffy.infrastructure.database import open_session
 
 
@@ -49,7 +49,7 @@ async def _note_proto(
     note: Note,
 ) -> Any:
     urn = f"urn:uniffy:content:NOTE:{note.id}"
-    tags_by_urn = await ContentTagContext(session).get_for_urns(
+    tags_by_urn = await ContentTagReader(session).get_for_urns(
         organization_id=organization_id,
         content_urns=[urn],
     )

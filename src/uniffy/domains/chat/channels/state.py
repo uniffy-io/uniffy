@@ -16,6 +16,14 @@ class StagedChatMembersAdd:
 
 
 @dataclass(frozen=True)
+class StagedChatMembersRemove:
+    channel: ChatChannel
+    actor_user_id: UUID
+    organization_id: UUID
+    removed_user_ids: tuple[UUID, ...]
+
+
+@dataclass(frozen=True)
 class StagedChatChannelCreate:
     channel: ChatChannel
     actor_user_id: UUID

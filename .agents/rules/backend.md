@@ -83,6 +83,37 @@ Adding a new domain:
 - **Internal and domain vocabularies use enums or typed constants colocated with their owner.** States, actions, event kinds, selectors, and job or queue names must not be passed or compared as raw strings.
 - **Raw string comparisons are boundary-only:** external protocol values, parser tokens, MIME/schema metadata, and CLI or environment inputs. Mark an intentional comparison with a narrow `# noqa: PLR2004` and a short reason; never suppress the whole file.
 
+## Read and mutation collaborators
+
+A `Reader` is an explicit read-side façade, not a required layer for every aggregate. Introduce
+`{Aggregate}Reader` when one public operations class would otherwise mix database/permission reads
+with mutations that need search writing, object-storage cleanup, call lifecycle, queues, or other
+external effects. Small domains and focused query modules stay as they are when the split adds no
+meaningful contract.
+
+- A reader exposes only observation: get/list/search-candidate hydration, permission resolution, and
+  pure presentation or projection metadata derivation. It never changes authoritative rows, commits
+  or rolls back, writes search/storage projections, publishes realtime events, enqueues work, or calls
+  a mutation lifecycle. Read-through population of a non-authoritative cache is allowed; its matching
+  invalidation remains owned by mutations.
+- Construct the reader with only capabilities its reads intrinsically use. Ordinary PostgreSQL content
+  readers take `AsyncSession`; they do not require `SearchIndexer` or mutation-only storage/lifecycle
+  dependencies. A genuine asset read may receive a read capability such as `ObjectStorage`, but that
+  does not justify adding mutation methods to the reader.
+- Mutation façades may inherit or compose the reader to reuse access gates and query helpers. Their
+  constructor or use-case method declares every required mutation capability as a non-optional typed
+  argument. Do not use `None` defaults plus a guarded property that raises after the transaction has
+  started.
+- Split a projection collaborator separately when post-commit search/realtime repair needs a writer
+  but not the full storage-backed mutation façade. Callers use the narrowest valid collaborator:
+  reader for reads, projection operations for projection work, mutation operations for writes.
+- Use `reader.py` only for a meaningful aggregate read façade. Focused owner-internal query modules may
+  remain beside their use case. Naming a class `Reader` does not make it a public cross-domain API;
+  the narrow owner-defined boundary rule still applies.
+- Tests construct readers with their minimal read dependencies and exercise mutations through their
+  real required signatures. Backend `ty` lint enforces missing arguments dynamically; never add a
+  call-site allowlist or suppression to make invalid mutation composition pass.
+
 ## Transaction boundaries
 
 - An externally callable mutation owns its authoritative transaction. Domain rows and every required

@@ -36,6 +36,7 @@ from uniffy.core.types import (
     RecurrenceEditScope,
     RecurrencePattern,
 )
+from uniffy.domains.chat.lifecycle import ChannelCallLifecycle
 from uniffy.domains.scheduling.rooms.events import EventBookingOperations
 from uniffy.domains.search.rename import propagate_rename
 from uniffy.domains.tags.operations import TagOperations
@@ -77,6 +78,8 @@ class EventUpdateOperations:
         visibility: EventVisibility | None = None,
         transparency: EventTransparency | None = None,
         is_out_of_office: bool | None = None,
+        *,
+        call_lifecycle: ChannelCallLifecycle,
     ) -> CalendarEvent:
         """Update an existing event.
 
@@ -320,6 +323,13 @@ class EventUpdateOperations:
                 previous_value=",".join(str(uid) for uid in removed_attendee_ids),
             )
 
+        staged_room = await self.events._stage_auto_created_room_members(
+            event,
+            added=newly_invited_ids,
+            removed=removed_attendee_ids,
+            call_lifecycle=call_lifecycle,
+        )
+
         await self.events.session.commit()
         await self.events.session.refresh(event)
 
@@ -474,8 +484,6 @@ class EventUpdateOperations:
             )
             await self.events.session.commit()
 
-        await self.events._sync_auto_created_room_members(
-            event, added=newly_invited_ids, removed=removed_attendee_ids
-        )
+        await self.events._finish_auto_created_room_members(event, staged_room)
 
         return event

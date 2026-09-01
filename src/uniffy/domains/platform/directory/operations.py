@@ -35,6 +35,7 @@ from uniffy.core.models.settings.deployment_setting import DeploymentSetting
 from uniffy.core.models.settings.org_setting import OrgSetting
 from uniffy.core.rate_limit import check_rate_limit
 from uniffy.core.realtime.publisher import publish_token_revoke
+from uniffy.core.search import SearchIndexer
 from uniffy.core.storage import ObjectStorage
 from uniffy.core.types import slugify
 from uniffy.core.users.cache import invalidate_user_profile
@@ -238,16 +239,15 @@ def _purge_at_from(deleted_at: datetime | None) -> datetime | None:
     return deleted_at + timedelta(days=PURGE_GRACE_DAYS)
 
 
+def _audit_user_ids(user_ids: list[UUID]) -> list[str]:
+    return [str(user_id) for user_id in user_ids]
+
+
 class PlatformDirectoryOperations:
     """Platform-operator org + user directory; gated on ``is_system_admin``."""
 
-    def __init__(
-        self,
-        session: AsyncSession,
-        storage: ObjectStorage | None = None,
-    ) -> None:
+    def __init__(self, session: AsyncSession) -> None:
         self._session = session
-        self._storage = storage
         self._user_ops = UserOperations(session)
 
     async def list_organizations(
@@ -378,6 +378,8 @@ class PlatformDirectoryOperations:
         owner_email: str,
         domain: str = "",
         plan: str = "",
+        storage: ObjectStorage,
+        search_indexer: SearchIndexer,
     ) -> PlatformOrgDetail:
         """Full tenant bootstrap via ``OrganizationOperations.create``:
         owner membership, org cipher, default channel/agent/presets.
@@ -409,13 +411,15 @@ class PlatformDirectoryOperations:
         if existing is not None:
             raise ValidationError("slug", "Slug is already in use")
 
-        org = await OrganizationOperations(self._session, self._storage).create(
+        org = await OrganizationOperations(self._session).create(
             name=name,
             slug=slug,
             owner_user_id=owner.id,
             domain=domain_value,
             plan=plan,
             actor_user_id=user_id,
+            storage=storage,
+            search_indexer=search_indexer,
         )
         return await self.get_organization(user_id=user_id, organization_id=org.id)
 
@@ -538,7 +542,10 @@ class PlatformDirectoryOperations:
             action=Action.ORGANIZATION_SUSPENDED,
             resource_type=AuditResourceType.ORGANIZATION,
             resource_id=org.id,
-            details={"reason": reason, "member_token_versions_bumped": bumped_user_ids},
+            details={
+                "reason": reason,
+                "member_token_versions_bumped": _audit_user_ids(bumped_user_ids),
+            },
         )
         await self._session.commit()
 
@@ -628,7 +635,7 @@ class PlatformDirectoryOperations:
             details={
                 "reason": reason,
                 "purge_at": _purge_at_from(org.deleted_at).isoformat() if org.deleted_at else None,
-                "member_token_versions_bumped": bumped_user_ids,
+                "member_token_versions_bumped": _audit_user_ids(bumped_user_ids),
             },
         )
         await self._session.commit()
@@ -757,6 +764,7 @@ class PlatformDirectoryOperations:
         organization_id: UUID | None = None,
         organization_role: str = "",
         reason: str = "",
+        search_indexer: SearchIndexer,
     ) -> PlatformUserDetail:
         """Direct provisioning path for operators; no invitation email,
         the password is handed over out of band.
@@ -877,7 +885,8 @@ class PlatformDirectoryOperations:
 
         if staged_membership is not None:
             await OrganizationOperations(self._session).finish_member_add_after_commit(
-                staged_membership
+                staged_membership,
+                search_indexer=search_indexer,
             )
 
         return await self.get_user(user_id=user_id, target_user_id=target_id)

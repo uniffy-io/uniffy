@@ -30,6 +30,7 @@ from uniffy.core.models.login.organization_member import (
 )
 from uniffy.core.models.login.user import User
 from uniffy.core.rate_limit import check_rate_limit
+from uniffy.core.search import SearchIndexer
 from uniffy.domains.auth.contracts import (
     stage_invitation_authentication,
     stage_invited_user,
@@ -126,6 +127,8 @@ class InvitationOperations:
         email: str,
         role: OrganizationRole,
         inviter_id: UUID,
+        *,
+        search_indexer: SearchIndexer,
     ) -> InviteResult:
         """Invite ``email``; auto-promote if user exists, else create a pending row."""
         normalized = email.strip().lower()
@@ -164,7 +167,10 @@ class InvitationOperations:
                 await self._session.rollback()
                 raise
             await self._session.refresh(staged_membership.membership)
-            await org_ops.finish_member_add_after_commit(staged_membership)
+            await org_ops.finish_member_add_after_commit(
+                staged_membership,
+                search_indexer=search_indexer,
+            )
             await self._enqueue_added_email(
                 recipient=existing.email,
                 user=existing,
@@ -356,6 +362,8 @@ class InvitationOperations:
         password: str,
         full_name: str | None,
         user_agent: str,
+        *,
+        search_indexer: SearchIndexer,
     ) -> AuthResult | MfaEnrollmentRequired:
         """Consume ``raw_token``, create user + membership, return tokens.
 
@@ -447,7 +455,10 @@ class InvitationOperations:
             await self._session.rollback()
             raise
 
-        await org_ops.finish_member_add_after_commit(staged_membership)
+        await org_ops.finish_member_add_after_commit(
+            staged_membership,
+            search_indexer=search_indexer,
+        )
         return staged_auth.outcome
 
     async def _revoke_pending_for_email(

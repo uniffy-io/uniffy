@@ -152,7 +152,7 @@ async def _hidden_event_master_ids(ctx: ToolContext, events: list) -> set[UUID]:
 
 async def _execute_list_events(ctx: ToolContext, args: dict) -> ToolResult:
     """List calendar events in a date range."""
-    from uniffy.domains.scheduling.calendar.operations import CalendarEventOperations
+    from uniffy.domains.scheduling.calendar.operations import CalendarEventReader
 
     start_str = args.get("start_date", "")
     end_str = args.get("end_date", "")
@@ -189,7 +189,7 @@ async def _execute_list_events(ctx: ToolContext, args: dict) -> ToolResult:
         if err:
             return ToolResult(success=False, data="", error=err)
 
-    ops = CalendarEventOperations(ctx.session, ctx.search_indexer)
+    ops = CalendarEventReader(ctx.session)
     events = await ops.get_events_in_range(
         user_id=ctx.user_id,
         organization_id=ctx.organization_id,
@@ -236,7 +236,7 @@ async def _execute_list_events(ctx: ToolContext, args: dict) -> ToolResult:
 
 async def _execute_read_event(ctx: ToolContext, args: dict) -> ToolResult:
     """Read a single calendar event with full details including attendees."""
-    from uniffy.domains.scheduling.calendar.operations import CalendarEventOperations
+    from uniffy.domains.scheduling.calendar.operations import CalendarEventReader
 
     event_id_str = args.get("event_id", "")
     if not event_id_str:
@@ -246,7 +246,7 @@ async def _execute_read_event(ctx: ToolContext, args: dict) -> ToolResult:
     if err:
         return ToolResult(success=False, data="", error=err)
 
-    ops = CalendarEventOperations(ctx.session, ctx.search_indexer)
+    ops = CalendarEventReader(ctx.session)
     event, attendees = await ops.get_event_with_attendees(
         user_id=ctx.user_id,
         organization_id=ctx.organization_id,
@@ -410,7 +410,7 @@ async def _execute_create_event(ctx: ToolContext, args: dict) -> ToolResult:
         ctx.user_id,
     )
 
-    ops = CalendarEventOperations(ctx.session, ctx.search_indexer)
+    ops = CalendarEventOperations(ctx.session, ctx.required_search)
     event = await ops.create(
         user_id=ctx.user_id,
         organization_id=ctx.organization_id,
@@ -503,12 +503,13 @@ async def _execute_update_event(ctx: ToolContext, args: dict) -> ToolResult:
             error="At least one field to update is required",
         )
 
-    ops = CalendarEventOperations(ctx.session, ctx.search_indexer)
+    ops = CalendarEventOperations(ctx.session, ctx.required_search)
     event = await ops.update(
         user_id=ctx.user_id,
         organization_id=ctx.organization_id,
         event_id=event_id,  # type: ignore[arg-type]
         **kwargs,
+        call_lifecycle=ctx.required_call_lifecycle,
     )
 
     return ToolResult(
@@ -529,7 +530,7 @@ async def _execute_delete_event(ctx: ToolContext, args: dict) -> ToolResult:
     if err:
         return ToolResult(success=False, data="", error=err)
 
-    ops = CalendarEventOperations(ctx.session, ctx.search_indexer)
+    ops = CalendarEventOperations(ctx.session, ctx.required_search)
     await ops.delete(
         user_id=ctx.user_id,
         organization_id=ctx.organization_id,
@@ -578,13 +579,14 @@ async def _execute_add_attendees(ctx: ToolContext, args: dict) -> ToolResult:
             )
         role = AttendeeRole(role_upper)
 
-    ops = CalendarEventOperations(ctx.session, ctx.search_indexer)
+    ops = CalendarEventOperations(ctx.session, ctx.required_search)
     event = await ops.add_attendees(
         user_id=ctx.user_id,
         organization_id=ctx.organization_id,
         event_id=event_id,  # type: ignore[arg-type]
         attendee_ids=att_ids,  # type: ignore[arg-type]
         role=role,
+        call_lifecycle=ctx.required_call_lifecycle,
     )
 
     urn = f"urn:uniffy:content:CALENDAR_EVENT:{event.id}"
@@ -620,12 +622,13 @@ async def _execute_remove_attendees(ctx: ToolContext, args: dict) -> ToolResult:
     if att_err:
         return ToolResult(success=False, data="", error=att_err)
 
-    ops = CalendarEventOperations(ctx.session, ctx.search_indexer)
+    ops = CalendarEventOperations(ctx.session, ctx.required_search)
     event = await ops.remove_attendees(
         user_id=ctx.user_id,
         organization_id=ctx.organization_id,
         event_id=event_id,  # type: ignore[arg-type]
         attendee_ids=att_ids,  # type: ignore[arg-type]
+        call_lifecycle=ctx.required_call_lifecycle,
     )
 
     urn = f"urn:uniffy:content:CALENDAR_EVENT:{event.id}"
@@ -662,7 +665,7 @@ async def _execute_rsvp(ctx: ToolContext, args: dict) -> ToolResult:
             error=f"Invalid status: {raw_status}. Must be one of: {', '.join(_RSVP_VALUES)}",
         )
 
-    ops = CalendarEventOperations(ctx.session, ctx.search_indexer)
+    ops = CalendarEventOperations(ctx.session, ctx.required_search)
     await ops.update_attendee_status(
         user_id=ctx.user_id,
         organization_id=ctx.organization_id,

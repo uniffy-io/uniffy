@@ -71,6 +71,7 @@ from uniffy.core.converters import (
 )
 from uniffy.core.errors import RateLimitExceededError, ValidationError
 from uniffy.core.models.shared import DomainType
+from uniffy.core.search import SearchIndexer
 from uniffy.domains.auth.converters import session_to_proto, user_to_proto
 from uniffy.domains.auth.errors import (
     AuthenticationError,
@@ -182,6 +183,9 @@ def _login_outcome_to_proto(
 
 class AuthHandlers:
     """Auth RPC handlers - authentication only."""
+
+    def __init__(self, search_indexer: SearchIndexer) -> None:
+        self.search_indexer = search_indexer
 
     async def register(
         self,
@@ -571,6 +575,7 @@ class AuthHandlers:
                     password=request.password,
                     full_name=(request.full_name if request.HasField("full_name") else None),
                     user_agent=user_agent,
+                    search_indexer=self.search_indexer,
                 )
                 if isinstance(outcome, MfaEnrollmentRequired):
                     enrollment = EnrollmentRequiredProto(

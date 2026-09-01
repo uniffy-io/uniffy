@@ -37,6 +37,8 @@ async def test_empty_deployment_passes_runtime_dependencies_to_organization_owne
     monkeypatch.setenv("INITIAL_ADMIN_PASSWORD", "password")
     monkeypatch.setenv("INITIAL_ADMIN_EMAIL", "admin@example.com")
     monkeypatch.setenv("INITIAL_PLATFORM_ADMIN_EMAIL", "admin@example.com")
+    monkeypatch.setenv("DEFAULT_ORG_NAME", "Default")
+    monkeypatch.setenv("DEFAULT_ORG_SLUG", "default")
 
     created_org = MagicMock(name="Default", slug="default")
     operations = MagicMock()
@@ -49,5 +51,13 @@ async def test_empty_deployment_passes_runtime_dependencies_to_organization_owne
     search_indexer = MagicMock(spec=SearchIndexer)
     await bootstrap._bootstrap_deployment_locked(storage, search_indexer)
 
-    constructor.assert_called_once_with(session, storage, search_indexer)
+    constructor.assert_called_once_with(session)
+    operations.create.assert_awaited_once_with(
+        name="Default",
+        slug="default",
+        owner_user_id=session.add.call_args_list[0].args[0].id,
+        plan="enterprise",
+        storage=storage,
+        search_indexer=search_indexer,
+    )
     operations.create.assert_awaited_once()

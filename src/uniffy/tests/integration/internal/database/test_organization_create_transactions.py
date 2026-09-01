@@ -86,10 +86,12 @@ async def test_organization_bootstrap_rolls_back_every_fact_when_audit_fails(
         ),
         pytest.raises(RuntimeError, match="organization audit unavailable"),
     ):
-        await OrganizationOperations(session, search_indexer=search_indexer).create(
+        await OrganizationOperations(session).create(
             name="Rollback organization",
             slug=slug,
             owner_user_id=env.admin_id,
+            storage=AsyncMock(),
+            search_indexer=search_indexer,
         )
 
     async with open_session() as isolated:
@@ -106,7 +108,7 @@ async def test_organization_bootstrap_commits_required_rows_and_audits_once(
     search_indexer,
 ) -> None:
     slug = f"atomic-org-{generate_id().hex[:12]}"
-    operations = OrganizationOperations(session, search_indexer=search_indexer)
+    operations = OrganizationOperations(session)
     with (
         patch(
             "uniffy.domains.chat.channels.creation.check_chat_mutation_limit",
@@ -122,6 +124,8 @@ async def test_organization_bootstrap_commits_required_rows_and_audits_once(
             name="Atomic organization",
             slug=slug,
             owner_user_id=env.admin_id,
+            storage=AsyncMock(),
+            search_indexer=search_indexer,
         )
 
     try:
@@ -221,8 +225,7 @@ async def test_organization_creation_survives_starter_content_failure(
     search_indexer,
 ) -> None:
     slug = f"degraded-org-{generate_id().hex[:12]}"
-    operations = OrganizationOperations(session, search_indexer=search_indexer)
-    operations._directory_projection.index_for_organization = AsyncMock()
+    operations = OrganizationOperations(session)
     with (
         patch(
             "uniffy.domains.chat.channels.creation.check_chat_mutation_limit",
@@ -230,6 +233,10 @@ async def test_organization_creation_survives_starter_content_failure(
         ),
         patch(
             "uniffy.domains.organizations.operations.ChatChannelOperations.finish_channel_create_after_commit",
+            new=AsyncMock(),
+        ),
+        patch(
+            "uniffy.domains.organizations.operations.UserDirectoryProjection.index_for_organization",
             new=AsyncMock(),
         ),
         patch(
@@ -253,6 +260,8 @@ async def test_organization_creation_survives_starter_content_failure(
             name="Degraded organization",
             slug=slug,
             owner_user_id=env.admin_id,
+            storage=AsyncMock(),
+            search_indexer=search_indexer,
         )
 
     try:

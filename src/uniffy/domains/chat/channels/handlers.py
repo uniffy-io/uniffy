@@ -95,7 +95,7 @@ from uniffy.domains.chat.subjects import ChatSubject
 from uniffy.domains.notifications.operations import NotificationOperations
 from uniffy.domains.search.operations import SearchOperations
 from uniffy.domains.search.queries import UrnAvailability
-from uniffy.domains.tags.operations import TagOperations
+from uniffy.domains.tags.reader import TagReader
 from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="chat.channels.handlers")
@@ -171,11 +171,11 @@ async def _hydrate_channel_tags(
     organization_id: UUID,
     channel_ids: list[UUID],
 ) -> dict[UUID, list[Tag]]:
-    """Bulk-fetch tag rows for a batch of channel ids in one TagOperations call."""
+    """Bulk-fetch tag rows for a batch of channel ids."""
     if not channel_ids:
         return {}
     urn_to_id = {build_content_urn(ContentType.CHAT, cid): cid for cid in channel_ids}
-    tag_ops = TagOperations(session)
+    tag_ops = TagReader(session)
     bulk = await tag_ops.get_for_urns(
         organization_id=organization_id,
         content_urns=list(urn_to_id),

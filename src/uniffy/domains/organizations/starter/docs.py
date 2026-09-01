@@ -294,7 +294,7 @@ async def seed_workspace_docs(
     # item so the org tree pre-populates the tag filters new orgs use.
     from uniffy.domains.tags.operations import TagOperations
 
-    tag_ops = TagOperations(session)
+    tag_ops = TagOperations(session, search_indexer)
     doc_tag = await tag_ops.create(
         actor_id=admin_user.id,
         organization_id=org.id,

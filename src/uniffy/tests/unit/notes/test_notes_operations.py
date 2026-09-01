@@ -53,7 +53,7 @@ def _make_note(*, version: int = 3, content: str = "old content") -> Note:
 
 def _make_ops(note: Note) -> NoteOperations:
     ops = NoteOperations.__new__(NoteOperations)
-    ops._storage = MagicMock()
+    ops.storage = MagicMock()
     ops._search_indexer = MagicMock()
     ops.session = MagicMock()
     ops.session.execute = AsyncMock()

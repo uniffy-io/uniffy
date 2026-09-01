@@ -22,7 +22,7 @@ from uniffy.core.search.indexer import SEARCH_INDEXER_CTX_KEY, SearchIndexer, bu
 from uniffy.core.storage import OBJECT_STORAGE_CTX_KEY, ObjectStorage
 from uniffy.core.types import ContentType
 from uniffy.domains.files.attachments.folders import is_attachment_staging_folder
-from uniffy.domains.tags.operations import TagOperations
+from uniffy.domains.tags.reader import TagReader
 from uniffy.infrastructure.database.session import open_session
 from uniffy.vendor.arq import Retry
 
@@ -196,7 +196,7 @@ async def _reindex_file(
 
         keywords = " ".join(filter(None, parts))
 
-        tag_ops = TagOperations(session)
+        tag_ops = TagReader(session)
         tags_by_urn = await tag_ops.get_for_urns(
             organization_id=file.organization_id,
             content_urns=[urn],

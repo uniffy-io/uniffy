@@ -14,10 +14,8 @@ from uniffy.domains.tags.events import (
     publish_tag_event,
 )
 from uniffy.domains.tags.normalize import slugify_tag
-from uniffy.domains.tags.operations import (
-    SOURCE_INLINE,
-    _content_type_from_urn,
-)
+from uniffy.domains.tags.operations import _content_type_from_urn
+from uniffy.domains.tags.reader import SOURCE_INLINE
 
 
 @dataclass(frozen=True)

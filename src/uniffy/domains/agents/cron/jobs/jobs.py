@@ -12,6 +12,7 @@ from uniffy.core.models.agents.run_log import AgentRunKind, AgentRunStatus
 from uniffy.core.models.agents.session import AgentSessionKind
 from uniffy.core.search import SEARCH_INDEXER_CTX_KEY
 from uniffy.core.storage import OBJECT_STORAGE_CTX_KEY, ObjectStorage
+from uniffy.domains.chat.lifecycle import CALL_LIFECYCLE_CTX_KEY, ChannelCallLifecycle
 
 logger = logger.bind(component="agents.cron.jobs.jobs")
 
@@ -127,6 +128,7 @@ async def execute_agent_cron_tasks(ctx: dict[str, Any]) -> dict[str, Any]:
                         storage,
                         ctx[SEARCH_INDEXER_CTX_KEY],
                         session_factory,
+                        cast(ChannelCallLifecycle, ctx[CALL_LIFECYCLE_CTX_KEY]),
                     )
                     await ops.mark_completed(task.id, status=AgentCronRunStatus.SUCCESS)
                     executed += 1
@@ -231,6 +233,7 @@ async def execute_single_agent_cron_task(
                     storage,
                     ctx[SEARCH_INDEXER_CTX_KEY],
                     session_factory,
+                    cast(ChannelCallLifecycle, ctx[CALL_LIFECYCLE_CTX_KEY]),
                 )
                 await runtime_ops.send_message(
                     user_id=task.execution_user_id,
@@ -282,6 +285,7 @@ async def _execute_single_cron_task(
     storage: ObjectStorage,
     search_indexer,
     session_factory: SessionFactory,
+    call_lifecycle: ChannelCallLifecycle,
 ) -> None:
     """Execute one cron task; its run log rows land in ``agents_run_logs``."""
     from uniffy.domains.agents.runtime.operations import RuntimeOperations
@@ -315,6 +319,7 @@ async def _execute_single_cron_task(
             storage,
             search_indexer,
             session_factory,
+            call_lifecycle,
         )
         await runtime_ops.send_message(
             user_id=task.execution_user_id,

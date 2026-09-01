@@ -52,6 +52,7 @@ from uniffy.domains.agents.skills.usage import record_skill_injections
 from uniffy.domains.agents.tools.deferral import plan_tool_advertisement
 from uniffy.domains.agents.tools.definitions import ToolContext
 from uniffy.domains.agents.tools.registry import get_tool_registry
+from uniffy.domains.chat.lifecycle import ChannelCallLifecycle
 from uniffy.domains.integrations.tools import (
     filter_integration_tool_schemas,
     has_advertised_integration_tools,
@@ -69,11 +70,13 @@ class MessageSender:
         storage: ObjectStorage,
         search_indexer: SearchIndexer,
         session_factory: SessionFactory,
+        call_lifecycle: ChannelCallLifecycle,
     ) -> None:
         self._session = session
         self._storage = storage
         self._search_indexer = search_indexer
-        self._org_operations = OrganizationOperations(session, search_indexer=search_indexer)
+        self._call_lifecycle = call_lifecycle
+        self._org_operations = OrganizationOperations(session)
         self._user_operations = UserOperations(session, search_indexer)
         self._session_operations = SessionOperations(session)
         self._agent_operations = AgentOperations(session, search_indexer)
@@ -290,6 +293,7 @@ class MessageSender:
             organization_id=organization_id,
             storage=self._storage,
             search_indexer=self._search_indexer,
+            call_lifecycle=self._call_lifecycle,
             agent_id=agent_session.agent_id,
             session_id=session_id,
             user_timezone=user_timezone,

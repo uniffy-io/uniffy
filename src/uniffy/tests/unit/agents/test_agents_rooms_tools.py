@@ -340,7 +340,7 @@ class TestCalendarRoomAtomicityPrecheck:
         session.flush = AsyncMock()
         session.refresh = AsyncMock()
 
-        ops = CalendarEventOperations(session)
+        ops = CalendarEventOperations(session, MagicMock())
         ops._resolve_access_policy = AsyncMock(return_value=(None, None))
         ops._expand_group_attendees = AsyncMock(side_effect=lambda ids: ids)
 
@@ -390,7 +390,7 @@ class TestCalendarRoomAtomicityPrecheck:
         session.commit = AsyncMock()
         session.flush = AsyncMock()
 
-        ops = CalendarEventOperations(session)
+        ops = CalendarEventOperations(session, MagicMock())
         ops._resolve_access_policy = AsyncMock(return_value=(None, None))
         ops._expand_group_attendees = AsyncMock(side_effect=lambda ids: ids)
 

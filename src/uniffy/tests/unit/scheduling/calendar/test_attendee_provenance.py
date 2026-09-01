@@ -1,5 +1,6 @@
 """Invited-via provenance: snapshot at insert, first group wins, direct stays bare."""
 
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from uniffy.core.events.realtime import ContentAccessAction
@@ -71,12 +72,15 @@ async def test_direct_invite_beats_group_provenance() -> None:
 async def test_add_attendees_stamps_new_rows_with_source_group() -> None:
     group_id = generate_id()
     user = generate_id()
+    start_time = datetime.now(UTC)
     event = CalendarEvent(
         id=generate_id(),
         organization_id=ORG,
         organizer_id=ACTOR,
         calendar_id=generate_id(),
         title="Standup",
+        start_time=start_time,
+        end_time=start_time + timedelta(hours=1),
     )
     ops = _ops([_result(rows=[])])  # no existing attendee rows
     fanout = AsyncMock()
@@ -91,10 +95,21 @@ async def test_add_attendees_stamps_new_rows_with_source_group() -> None:
         patch.object(CalendarEventOperations, "_log_activity", AsyncMock()),
         patch.object(CalendarEventOperations, "_refresh_search_attendees", AsyncMock()),
         patch.object(CalendarEventOperations, "_publish_attendee_access_change", fanout),
-        patch.object(CalendarEventOperations, "_sync_auto_created_room_members", AsyncMock()),
+        patch.object(
+            CalendarEventOperations,
+            "_stage_auto_created_room_members",
+            AsyncMock(return_value=None),
+        ),
+        patch.object(CalendarEventOperations, "_finish_auto_created_room_members", AsyncMock()),
         patch("uniffy.domains.scheduling.calendar.events.attendees.emit_notification", AsyncMock()),
     ):
-        await ops.add_attendees(ACTOR, ORG, event.id, [group_id])
+        await ops.add_attendees(
+            ACTOR,
+            ORG,
+            event.id,
+            [group_id],
+            call_lifecycle=MagicMock(),
+        )
 
     added = [
         call.args[0]

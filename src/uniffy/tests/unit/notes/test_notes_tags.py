@@ -20,11 +20,8 @@ from uniffy.core.models.notes.note import Note
 from uniffy.core.models.tags.tag import TagAssignment
 from uniffy.core.types import NodeType, generate_id
 from uniffy.domains.notes.operations import NoteOperations
-from uniffy.domains.tags.operations import (
-    SOURCE_INLINE,
-    SOURCE_MANUAL,
-    TagOperations,
-)
+from uniffy.domains.tags.operations import TagOperations
+from uniffy.domains.tags.reader import SOURCE_INLINE, SOURCE_MANUAL
 
 
 def _make_note(*, content: str = "", canvas: dict | None = None) -> Note:

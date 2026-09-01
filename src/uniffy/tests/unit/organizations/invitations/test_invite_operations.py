@@ -160,6 +160,7 @@ class TestInviteExistingUser:
                 email="MEMBER@acme.io",
                 role=OrganizationRole.MEMBER,
                 inviter_id=inviter_id,
+                search_indexer=MagicMock(),
             )
 
         assert result.outcome is InviteOutcome.ADDED
@@ -195,6 +196,7 @@ class TestInviteNewEmail:
                 email="new@acme.io",
                 role=OrganizationRole.MEMBER,
                 inviter_id=inviter_id,
+                search_indexer=MagicMock(),
             )
 
         assert result.outcome is InviteOutcome.INVITED
@@ -220,6 +222,7 @@ class TestRejectsObviouslyBadEmail:
                     email="not-an-email",
                     role=OrganizationRole.MEMBER,
                     inviter_id=generate_id(),
+                    search_indexer=MagicMock(),
                 )
 
 
@@ -291,4 +294,5 @@ class TestAcceptRejectsConflict:
                 password="Passw0rd!ok",
                 full_name=None,
                 user_agent="pytest",
+                search_indexer=MagicMock(),
             )

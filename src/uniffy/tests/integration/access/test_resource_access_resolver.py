@@ -31,7 +31,7 @@ from uniffy.core.types import (
     SubjectType,
     generate_id,
 )
-from uniffy.domains.notes.operations import NoteOperations
+from uniffy.domains.notes.reader import NoteReader
 from uniffy.domains.permissions.access import (
     ResourceAccessPurpose,
     ResourceAccessResolver,
@@ -163,7 +163,7 @@ async def test_search_sharing_snapshot_omits_expired_allow_and_blocked_rows(
     ])
     await session.commit()
 
-    shared_users, shared_groups, blocked_users, blocked_groups = await NoteOperations(
+    shared_users, shared_groups, blocked_users, blocked_groups = await NoteReader(
         session
     )._get_member_id_lists(
         access.org_id,

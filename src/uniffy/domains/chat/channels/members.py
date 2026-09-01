@@ -28,7 +28,7 @@ from uniffy.domains.chat.cache import (
     invalidate_cached_dm_peers,
     invalidate_cached_member_ids,
 )
-from uniffy.domains.chat.channels.state import StagedChatMembersAdd
+from uniffy.domains.chat.channels.state import StagedChatMembersAdd, StagedChatMembersRemove
 from uniffy.domains.chat.limits import (
     MEMBER_ADD,
     check_chat_mutation_limit,
@@ -164,11 +164,24 @@ class ChannelMembers:
         channel_id: UUID,
         member_user_ids: list[UUID],
     ) -> None:
-        """Remove members; requires admin/owner role.
+        staged = await self.stage_members_remove(
+            user_id,
+            organization_id,
+            channel_id,
+            member_user_ids,
+        )
+        if not staged.removed_user_ids:
+            return
+        await self.session.commit()
+        await self.finish_members_remove_after_commit(staged)
 
-        Group DMs: the conversation owner can remove others; anyone can remove
-        themselves (leave). 1:1 DMs stay immutable.
-        """
+    async def stage_members_remove(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        channel_id: UUID,
+        member_user_ids: list[UUID],
+    ) -> StagedChatMembersRemove:
         channel = await self.get_by_id(user_id, organization_id, channel_id)
 
         if channel.channel_type == ChannelType.DIRECT:
@@ -193,8 +206,11 @@ class ChannelMembers:
         )
         members = list(members_result.scalars().all())
 
-        # Owners can never be removed.
-        removable_ids = [m.user_id for m in members if m.role != ChannelRole.OWNER]
+        removable_ids = tuple(
+            member.user_id
+            for member in members
+            if member.role != ChannelRole.OWNER and member.user_id is not None
+        )
 
         if removable_ids:
             await self.session.execute(
@@ -210,8 +226,6 @@ class ChannelMembers:
             )
 
             for removed_id in removable_ids:
-                if removed_id is None:
-                    continue
                 self_removal = removed_id == user_id
                 await write_audit_event(
                     self.session,
@@ -235,28 +249,42 @@ class ChannelMembers:
                     organization_id=organization_id,
                     channel_id=channel_id,
                 )
-            await self.session.commit()
+            await self.session.flush()
 
-            if channel.channel_type != ChannelType.PUBLIC:
-                await enqueue_chat_search_acl_refresh(channel_id)
+        return StagedChatMembersRemove(
+            channel=channel,
+            actor_user_id=user_id,
+            organization_id=organization_id,
+            removed_user_ids=removable_ids,
+        )
 
-            await invalidate_cached_member_ids(channel_id)
-            if channel.channel_type == ChannelType.GROUP_DM:
-                await invalidate_cached_dm_peers(channel_id)
+    async def finish_members_remove_after_commit(self, staged: StagedChatMembersRemove) -> None:
+        if not staged.removed_user_ids:
+            return
 
-            for removed_id in removable_ids:
-                if removed_id is not None:
-                    await self.call_lifecycle.remove_member(self.session, channel_id, removed_id)
+        channel_id = staged.channel.id
+        if staged.channel.channel_type != ChannelType.PUBLIC:
+            await enqueue_chat_search_acl_refresh(channel_id)
 
-            await self._publish_members_changed(channel_id, removable_ids, added=False)
-            await self._notify_membership_changed(
-                channel,
-                actor_user_id=user_id,
-                target_user_ids=[uid for uid in removable_ids if uid is not None],
-                added=False,
-            )
+        await invalidate_cached_member_ids(channel_id)
+        if staged.channel.channel_type == ChannelType.GROUP_DM:
+            await invalidate_cached_dm_peers(channel_id)
 
-            await self._refresh_channel_live_state(channel)
+        for removed_id in staged.removed_user_ids:
+            await self.call_lifecycle.remove_member(self.session, channel_id, removed_id)
+
+        await self._publish_members_changed(
+            channel_id,
+            list(staged.removed_user_ids),
+            added=False,
+        )
+        await self._notify_membership_changed(
+            staged.channel,
+            actor_user_id=staged.actor_user_id,
+            target_user_ids=list(staged.removed_user_ids),
+            added=False,
+        )
+        await self._refresh_channel_live_state(staged.channel)
 
     _MUTED_UNTIL_UNSET = object()
 

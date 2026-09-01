@@ -25,6 +25,8 @@ from uniffy.domains.agents.providers.clients import (
     init_provider_invalidation_subscriber,
 )
 from uniffy.domains.audit.jobs.jobs import provision_audit_partitions
+from uniffy.domains.calls.channels import CallsChannelLifecycle
+from uniffy.domains.chat.lifecycle import CALL_LIFECYCLE_CTX_KEY
 from uniffy.domains.files.registration import register_file_content
 from uniffy.domains.integrations.clients import (
     close_integration_invalidation_subscriber,
@@ -137,6 +139,7 @@ async def _on_startup_shared(
     ctx[WORKSPACE_SEARCH_CTX_KEY] = search
     search_indexer = SearchIndexer(search)
     ctx[SEARCH_INDEXER_CTX_KEY] = search_indexer
+    ctx[CALL_LIFECYCLE_CTX_KEY] = CallsChannelLifecycle()
     register_note_realtime_adapter(search_indexer)
     logger.info("Worker: Search engine initialized")
 
@@ -183,6 +186,7 @@ async def _on_shutdown_shared(ctx: dict[str, Any]) -> None:
             logger.warning(f"Failed to close object storage during shutdown: {exc}")
 
     ctx.pop(SEARCH_INDEXER_CTX_KEY, None)
+    ctx.pop(CALL_LIFECYCLE_CTX_KEY, None)
     ctx.pop(SESSION_FACTORY_CTX_KEY, None)
     search: WorkspaceSearch | None = ctx.pop(WORKSPACE_SEARCH_CTX_KEY, None)
     if search is not None:

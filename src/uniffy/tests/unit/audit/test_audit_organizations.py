@@ -169,11 +169,7 @@ async def test_remove_member_emits_member_removed_with_previous_role() -> None:
     session.add = MagicMock()
     session.delete = AsyncMock()
     session.commit = AsyncMock()
-    indexer = MagicMock()
-    indexer.remove_from_organization = AsyncMock(return_value=None)
-
     ops = OrganizationOperations(session)
-    ops._directory_projection = indexer
 
     with (
         patch.object(OrganizationOperations, "require_org_admin", AsyncMock(return_value=None)),
@@ -182,8 +178,18 @@ async def test_remove_member_emits_member_removed_with_previous_role() -> None:
             "get_membership",
             AsyncMock(return_value=membership),
         ),
+        patch(
+            "uniffy.domains.organizations.operations.UserDirectoryProjection.remove_from_organization",
+            AsyncMock(),
+        ),
     ):
-        await ops.remove_member(admin, org_id, target)
+        await ops.remove_member(
+            admin,
+            org_id,
+            target,
+            search_indexer=MagicMock(),
+            call_lifecycle=AsyncMock(),
+        )
 
     rows = _audit_rows(session)
     removed = [r for r in rows if r.action == Action.ORGANIZATION_MEMBER_REMOVED]

@@ -15,7 +15,7 @@ from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import AccessMode, ContentType, NodeType
 from uniffy.domains.notes.content.fields import extract_canvas_text, strip_markdown
 from uniffy.domains.search.rename import propagate_rename
-from uniffy.domains.tags.context import ContentTagContext
+from uniffy.domains.tags.context import ContentTagReader
 
 if TYPE_CHECKING:
     from uniffy.domains.notes.operations import NoteOperations
@@ -46,7 +46,7 @@ class NoteProjections:
 
     async def get_search_tags(self, note: Note) -> list[str] | None:
         urn = build_content_urn(ContentType.NOTE, note.id)
-        bulk = await ContentTagContext(self.operations.session).get_for_urns(
+        bulk = await ContentTagReader(self.operations.session).get_for_urns(
             organization_id=note.organization_id,
             content_urns=[urn],
         )

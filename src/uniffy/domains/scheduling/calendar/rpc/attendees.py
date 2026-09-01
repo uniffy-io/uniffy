@@ -27,6 +27,7 @@ from uniffy.domains.scheduling.calendar.converters import (
     event_to_proto,
 )
 from uniffy.domains.scheduling.calendar.events.operations import CalendarEventOperations
+from uniffy.domains.scheduling.calendar.events.reader import CalendarEventReader
 from uniffy.domains.scheduling.calendar.rpc.support import (
     hydrate_event_tags,
     map_domain_error,
@@ -48,11 +49,7 @@ class AttendeeHandlers:
 
         try:
             async with open_session() as session:
-                await CalendarEventOperations(
-                    session,
-                    self.search_indexer,
-                    self.call_lifecycle,
-                ).update_attendee_status(
+                await CalendarEventOperations(session, self.search_indexer).update_attendee_status(
                     user_id=user_id,
                     organization_id=organization_id,
                     event_id=event_id,
@@ -76,9 +73,7 @@ class AttendeeHandlers:
 
         try:
             async with open_session() as session:
-                operations = CalendarEventOperations(
-                    session, self.search_indexer, self.call_lifecycle
-                )
+                operations = CalendarEventOperations(session, self.search_indexer)
                 event = await operations.update_attendee_role(
                     user_id=user_id,
                     organization_id=organization_id,
@@ -114,15 +109,14 @@ class AttendeeHandlers:
 
         try:
             async with open_session() as session:
-                operations = CalendarEventOperations(
-                    session, self.search_indexer, self.call_lifecycle
-                )
+                operations = CalendarEventOperations(session, self.search_indexer)
                 event = await operations.add_attendees(
                     user_id=user_id,
                     organization_id=organization_id,
                     event_id=event_id,
                     attendee_ids=[parse_uuid(value, "user_id") for value in request.user_ids],
                     role=attendee_role_from_proto(request.role),
+                    call_lifecycle=self.call_lifecycle,
                 )
                 attendees = await queries.get_event_attendees(session, event.id)
                 tags_by_urn = await hydrate_event_tags(session, organization_id, [event.id])
@@ -152,14 +146,13 @@ class AttendeeHandlers:
 
         try:
             async with open_session() as session:
-                operations = CalendarEventOperations(
-                    session, self.search_indexer, self.call_lifecycle
-                )
+                operations = CalendarEventOperations(session, self.search_indexer)
                 event = await operations.remove_attendees(
                     user_id=user_id,
                     organization_id=organization_id,
                     event_id=event_id,
                     attendee_ids=[parse_uuid(value, "user_id") for value in request.user_ids],
+                    call_lifecycle=self.call_lifecycle,
                 )
                 attendees = await queries.get_event_attendees(session, event.id)
                 tags_by_urn = await hydrate_event_tags(session, organization_id, [event.id])
@@ -196,11 +189,7 @@ class AttendeeHandlers:
 
         try:
             async with open_session() as session:
-                activities, total = await CalendarEventOperations(
-                    session,
-                    self.search_indexer,
-                    self.call_lifecycle,
-                ).list_activities(
+                activities, total = await CalendarEventReader(session).list_activities(
                     user_id=user_id,
                     organization_id=organization_id,
                     event_id=event_id,

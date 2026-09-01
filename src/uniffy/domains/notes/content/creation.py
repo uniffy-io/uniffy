@@ -18,7 +18,7 @@ from uniffy.domains.permissions.members import (
     ContentMembersOperations,
     StagedContentMemberAdd,
 )
-from uniffy.domains.tags.context import ContentTagContext, StagedManualTagReplacement
+from uniffy.domains.tags.context import ContentTagMutations, StagedManualTagReplacement
 from uniffy.domains.tags.sync import (
     StagedInlineTagSync,
     finish_inline_tags_after_commit,
@@ -105,8 +105,9 @@ class NoteCreation:
 
             note_urn = build_content_urn(ContentType.NOTE, note.id)
             if tag_ids is not None:
-                staged_manual_tags = await ContentTagContext(
-                    self.operations.session
+                staged_manual_tags = await ContentTagMutations(
+                    self.operations.session,
+                    self.operations.search_indexer,
                 ).stage_manual_tags(
                     actor_id=user_id,
                     organization_id=organization_id,
@@ -153,9 +154,10 @@ class NoteCreation:
 
         if staged.manual_tags is not None:
             try:
-                await ContentTagContext(self.operations.session).finish_manual_tags_after_commit(
-                    staged.manual_tags
-                )
+                await ContentTagMutations(
+                    self.operations.session,
+                    self.operations.search_indexer,
+                ).finish_manual_tags_after_commit(staged.manual_tags)
             except Exception:
                 logger.opt(exception=True).warning(
                     "Note created with degraded manual-tag projection",

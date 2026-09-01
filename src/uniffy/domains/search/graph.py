@@ -13,7 +13,7 @@ from uniffy.core.models.projects.project import Project
 from uniffy.core.models.projects.task import Task
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import ContentType
-from uniffy.domains.scheduling.calendar.operations import CalendarEventOperations
+from uniffy.domains.scheduling.calendar.operations import CalendarEventReader
 
 GRAPH_MAX_ROWS_PER_TYPE = 1000
 GRAPH_MAX_REFERENCES_PER_SOURCE = 50
@@ -140,7 +140,7 @@ async def build_content_graph(
             access_mode_column=CalendarEvent.access_mode,
             baseline_role_column=CalendarEvent.baseline_role,
         )
-        attendee_filter = await CalendarEventOperations(session).attendee_access_filter(
+        attendee_filter = await CalendarEventReader(session).attendee_access_filter(
             user_id, organization_id
         )
         event_rows = (

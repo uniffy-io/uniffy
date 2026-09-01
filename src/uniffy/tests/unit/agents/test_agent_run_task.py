@@ -19,6 +19,7 @@ from uniffy.core.types import generate_id
 from uniffy.domains.agents.providers.base import EventType, StreamEvent
 from uniffy.domains.agents.runtime.jobs import jobs as agent_run_mod
 from uniffy.domains.agents.runtime.jobs.contracts import DELETE_RUN_STREAM
+from uniffy.domains.chat.lifecycle import CALL_LIFECYCLE_CTX_KEY
 
 
 @pytest.fixture(autouse=True)
@@ -117,6 +118,7 @@ def _install_runtime_stub(
             _storage: Any,
             _search_indexer: Any,
             _session_factory: Any,
+            _call_lifecycle: Any,
         ) -> None:
             captured.append(self)
             self.invocations: list[dict[str, Any]] = []
@@ -198,6 +200,7 @@ def _worker_ctx(valkey: _FakeValkey | None = None) -> dict[str, Any]:
         SESSION_FACTORY_CTX_KEY: session_factory,
         OBJECT_STORAGE_CTX_KEY: object(),
         SEARCH_INDEXER_CTX_KEY: object(),
+        CALL_LIFECYCLE_CTX_KEY: object(),
     }
 
 
@@ -218,6 +221,7 @@ class TestRunAgentSession:
                 _storage: Any,
                 _search_indexer: Any,
                 _session_factory: Any,
+                _call_lifecycle: Any,
             ) -> None:
                 pass
 

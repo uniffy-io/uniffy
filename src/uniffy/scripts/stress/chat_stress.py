@@ -184,7 +184,7 @@ async def run_chat_stress(config: ChatStressConfig) -> None:
     from uniffy.core.models.chat.message import ChatMessage, SenderType
     from uniffy.core.models.chat.reaction import ChatReaction
     from uniffy.core.search import SearchIndexer, WorkspaceSearch
-    from uniffy.core.types import generate_id
+    from uniffy.core.types import SubjectType, generate_id
     from uniffy.infrastructure.database.session import close_db, init_db, open_session
     from uniffy.infrastructure.search import MeiliSearchEngine
 
@@ -275,6 +275,8 @@ async def run_chat_stress(config: ChatStressConfig) -> None:
             for i, user in enumerate(users):
                 member = ChatChannelMember(
                     channel_id=channel.id,
+                    subject_type=SubjectType.USER,
+                    subject_id=user.id,
                     user_id=user.id,
                     role=ChannelRole.OWNER if i == 0 else ChannelRole.MEMBER,
                 )

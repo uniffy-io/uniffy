@@ -1,4 +1,4 @@
-"""Content-domain boundary for tag assignment and hydration."""
+"""Content-domain boundaries for tag assignment and hydration."""
 
 from collections.abc import Iterable
 from uuid import UUID
@@ -6,12 +6,18 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.models.tags.tag import Tag, TagAssignment
-from uniffy.domains.tags.operations import StagedManualTagReplacement, TagOperations
+from uniffy.core.search.indexer import SearchIndexer
+from uniffy.domains.tags.operations import (
+    StagedManualTagReplacement,
+    StagedTagRemoval,
+    TagOperations,
+)
+from uniffy.domains.tags.reader import TagReader
 
 
-class ContentTagContext:
+class ContentTagReader:
     def __init__(self, session: AsyncSession) -> None:
-        self.operations = TagOperations(session)
+        self.reader = TagReader(session)
 
     async def get_for_urns(
         self,
@@ -19,10 +25,15 @@ class ContentTagContext:
         organization_id: UUID,
         content_urns: Iterable[str],
     ) -> dict[str, list[Tag]]:
-        return await self.operations.get_for_urns(
+        return await self.reader.get_for_urns(
             organization_id=organization_id,
             content_urns=content_urns,
         )
+
+
+class ContentTagMutations:
+    def __init__(self, session: AsyncSession, search_indexer: SearchIndexer) -> None:
+        self.operations = TagOperations(session, search_indexer)
 
     async def stage_manual_tags(
         self,
@@ -73,5 +84,26 @@ class ContentTagContext:
             content_urn=content_urn,
         )
 
+    async def stage_unassign_all_for_urn(
+        self,
+        *,
+        actor_id: UUID,
+        organization_id: UUID,
+        content_urn: str,
+    ) -> StagedTagRemoval:
+        return await self.operations.stage_unassign_all_for_urn(
+            actor_id=actor_id,
+            organization_id=organization_id,
+            content_urn=content_urn,
+        )
 
-__all__ = ["ContentTagContext", "StagedManualTagReplacement"]
+    async def finish_unassign_all_after_commit(self, staged: StagedTagRemoval) -> list[UUID]:
+        return await self.operations.finish_unassign_all_after_commit(staged)
+
+
+__all__ = [
+    "ContentTagMutations",
+    "ContentTagReader",
+    "StagedManualTagReplacement",
+    "StagedTagRemoval",
+]

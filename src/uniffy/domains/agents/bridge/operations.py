@@ -52,6 +52,7 @@ from uniffy.domains.chat.agents import (
     bump_channel_message_stats,
     publish_channel_event_to_members,
 )
+from uniffy.domains.chat.lifecycle import ChannelCallLifecycle
 from uniffy.domains.files.attachments.operations import AttachmentOperations
 from uniffy.domains.settings.operations import get_user_timezone
 
@@ -91,13 +92,9 @@ class AgentChatBridge:
         self,
         session: AsyncSession,
         session_factory: SessionFactory,
-        storage: ObjectStorage | None = None,
-        search_indexer: SearchIndexer | None = None,
     ) -> None:
         self._session = session
         self._session_factory = session_factory
-        self._storage = storage
-        self._search_indexer = search_indexer
 
     async def respond_to_chat_message(
         self,
@@ -105,6 +102,10 @@ class AgentChatBridge:
         trigger_message_id: UUID,
         agent_id: UUID,
         trigger_rule: str | None = None,
+        *,
+        storage: ObjectStorage,
+        search_indexer: SearchIndexer,
+        call_lifecycle: ChannelCallLifecycle,
     ) -> None:
         """Invoke the agent in response to a user chat message.
 
@@ -197,15 +198,12 @@ class AgentChatBridge:
                 await set_chat_active_run(channel_id, agent_id, run_id)
 
         async def _drive_stream() -> None:
-            if self._storage is None:
-                raise RuntimeError("Object storage is required for agent runtime")
-            if self._search_indexer is None:
-                raise RuntimeError("Search indexing is required for agent runtime")
             runtime_ops = RuntimeOperations(
                 self._session,
-                self._storage,
-                self._search_indexer,
+                storage,
+                search_indexer,
                 self._session_factory,
+                call_lifecycle,
             )
             destination = ChatDestination(
                 channel_id=channel_id,

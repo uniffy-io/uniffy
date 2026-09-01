@@ -22,7 +22,7 @@ from uniffy.domains.tags.filters.converters import (
 )
 from uniffy.domains.tags.filters.operations import SavedTagFilterOperations
 from uniffy.domains.tags.filters.presets import DEFAULT_TAG_FILTER_PRESETS
-from uniffy.domains.tags.operations import SOURCE_INLINE, SOURCE_MANUAL
+from uniffy.domains.tags.reader import SOURCE_INLINE, SOURCE_MANUAL
 
 
 def _make_filter(

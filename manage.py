@@ -703,6 +703,12 @@ def lint(service, stack, fix):
     if service in ("backend", "all"):
         workspace_cmd("backend", stack, ["run", "lint-imports"])
         _lint_backend_security(stack)
+        workspace_cmd(
+            "backend",
+            stack,
+            ["run", "python", "lint/capabilities.py", "src/uniffy"],
+        )
+        workspace_cmd("backend", stack, ["run", "ty", "check", "src/uniffy"])
         ruff_args = ["run", "ruff", "check", "src/uniffy/", "--exclude", "src/gen"]
         if fix:
             ruff_args.append("--fix")

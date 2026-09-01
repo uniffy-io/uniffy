@@ -122,7 +122,7 @@ async def seed_welcome_canvas(
 
     from uniffy.domains.tags.operations import TagOperations
 
-    tag_ops = TagOperations(session)
+    tag_ops = TagOperations(session, search_indexer)
     await tag_ops.assign(
         actor_id=admin_user.id,
         organization_id=org.id,

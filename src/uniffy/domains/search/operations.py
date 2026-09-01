@@ -43,7 +43,7 @@ from uniffy.domains.search.queries import (
     execute_search,
     get_raw_documents_by_urns,
 )
-from uniffy.domains.tags.operations import TagOperations
+from uniffy.domains.tags.reader import TagReader
 
 logger = logger.bind(component="search.operations")
 
@@ -144,7 +144,7 @@ class SearchOperations:
         notes = list(result.scalars().all())
 
         urn_for = lambda n: f"urn:uniffy:content:NOTE:{n.id}"  # noqa: E731
-        tags_by_urn = await TagOperations(self.session).get_for_urns(
+        tags_by_urn = await TagReader(self.session).get_for_urns(
             organization_id=organization_id,
             content_urns=[urn_for(n) for n in notes],
         )
@@ -690,7 +690,7 @@ class SearchOperations:
             org_id = note_rows[0].organization_id if note_rows else None
             tags_by_urn: dict[str, list] = {}
             if urns and org_id is not None:
-                tags_by_urn = await TagOperations(self.session).get_for_urns(
+                tags_by_urn = await TagReader(self.session).get_for_urns(
                     organization_id=org_id,
                     content_urns=urns,
                 )

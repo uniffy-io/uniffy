@@ -117,9 +117,16 @@ class TestUpsertUser:
         ])
         org_ops = MagicMock()
         org_ops.get_membership = AsyncMock(return_value=None)
-        org_ops.add_member = AsyncMock()
+        org_ops.stage_member = AsyncMock()
+        staged_memberships = []
         with patch.object(records, "OrganizationOperations", return_value=org_ops):
-            user_id = await records.upsert_user(session, source, _record(), report=report)
+            user_id = await records.upsert_user(
+                session,
+                source,
+                _record(),
+                report=report,
+                staged_memberships=staged_memberships,
+            )
 
         assert user_id is not None
         assert report.users_created == 1
@@ -127,7 +134,8 @@ class TestUpsertUser:
         assert len(created) == 1
         assert created[0].hashed_password is None
         assert created[0].email == "jane@example.com"
-        org_ops.add_member.assert_awaited_once()
+        org_ops.stage_member.assert_awaited_once()
+        assert staged_memberships == [org_ops.stage_member.return_value]
 
     async def test_linked_user_never_gets_global_writes(self) -> None:
         source = _source()
@@ -140,24 +148,34 @@ class TestUpsertUser:
         session = _session([_result(scalar=link), _result(scalar=user), _result()])
         org_ops = MagicMock()
         org_ops.get_membership = AsyncMock(return_value=membership)
-        org_ops.add_member = AsyncMock()
+        org_ops.stage_member = AsyncMock()
         with patch.object(records, "OrganizationOperations", return_value=org_ops):
             user_id = await records.upsert_user(
-                session, source, _record(email="new@example.com"), report=report
+                session,
+                source,
+                _record(email="new@example.com"),
+                report=report,
+                staged_memberships=[],
             )
 
         assert user_id == user.id
         assert user.email == "old@example.com"
         assert report.users_updated == 1
         assert report.skipped_global_changes == 1
-        org_ops.add_member.assert_not_awaited()
+        org_ops.stage_member.assert_not_awaited()
 
     async def test_email_match_on_inactive_account_skips(self) -> None:
         source = _source()
         report = ReconcileReport()
         inactive = User(email="jane@example.com", username="jane", is_active=False)
         session = _session([_result(scalar=None), _result(scalar=inactive)])
-        user_id = await records.upsert_user(session, source, _record(), report=report)
+        user_id = await records.upsert_user(
+            session,
+            source,
+            _record(),
+            report=report,
+            staged_memberships=[],
+        )
         assert user_id is None
         assert report.users_skipped == 1
 
@@ -165,7 +183,13 @@ class TestUpsertUser:
         source = _source()
         report = ReconcileReport()
         session = _session([_result(scalar=None)])
-        user_id = await records.upsert_user(session, source, _record(email=None), report=report)
+        user_id = await records.upsert_user(
+            session,
+            source,
+            _record(email=None),
+            report=report,
+            staged_memberships=[],
+        )
         assert user_id is None
         assert report.users_skipped == 1
 
@@ -173,7 +197,13 @@ class TestUpsertUser:
         source = _source()
         report = ReconcileReport()
         session = _session([_result(scalar=None), _result(scalar=None)])
-        user_id = await records.upsert_user(session, source, _record(active=False), report=report)
+        user_id = await records.upsert_user(
+            session,
+            source,
+            _record(active=False),
+            report=report,
+            staged_memberships=[],
+        )
         assert user_id is None
         assert report.users_skipped == 1
 

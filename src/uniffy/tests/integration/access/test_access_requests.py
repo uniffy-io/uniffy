@@ -21,7 +21,7 @@ from uniffy.core.models.projects.task import Task
 from uniffy.core.search import SearchIndexer
 from uniffy.core.types import AccessMode, ContentRole, ContentType, SubjectType
 from uniffy.infrastructure.database import open_session
-from uniffy.domains.notes.operations import NoteOperations
+from uniffy.domains.notes.reader import NoteReader
 from uniffy.domains.permissions.requests.operations import (
     AccessRequestDecision,
     ContentAccessRequestOperations,
@@ -29,7 +29,7 @@ from uniffy.domains.permissions.requests.operations import (
 )
 from uniffy.domains.permissions.members import ContentMembersOperations
 from uniffy.domains.projects.jobs import jobs as project_search_acl
-from uniffy.domains.projects.operations import TaskOperations
+from uniffy.domains.projects.operations import TaskReader
 from uniffy.domains.projects.search.access import record_project_search_acl_refresh
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
@@ -48,7 +48,7 @@ async def test_owner_approval_uses_canonical_member_operations(session, access) 
     urn = _note_urn(access.private_note_id)
 
     with pytest.raises(PermissionDeniedError):
-        await NoteOperations(session).get_by_id(
+        await NoteReader(session).get_by_id(
             access.peer_id,
             access.org_id,
             access.private_note_id,
@@ -124,7 +124,7 @@ async def test_owner_approval_uses_canonical_member_operations(session, access) 
     assert approved_statuses[0].state == ContentAccessRequestState.APPROVED
     assert approved_statuses[0].requester_has_access is True
 
-    note = await NoteOperations(session).get_by_id(
+    note = await NoteReader(session).get_by_id(
         access.peer_id,
         access.org_id,
         access.private_note_id,
@@ -226,7 +226,7 @@ async def test_approval_rolls_back_grant_when_request_audit_fails(session, acces
                 )
             )
         ).scalar_one_or_none()
-        note = await isolated.get(NoteOperations.model_class, access.private_note_id)
+        note = await isolated.get(NoteReader.model_class, access.private_note_id)
 
     assert request is not None
     assert request.state == ContentAccessRequestState.PENDING
@@ -471,7 +471,7 @@ async def test_task_request_grants_its_canonical_project(session, access) -> Non
         decision_note="",
     )
     assert approved.request.state == ContentAccessRequestState.APPROVED
-    visible_task = await TaskOperations(session).get_by_id(
+    visible_task = await TaskReader(session).get_by_id(
         access.peer_id,
         access.org_id,
         task.id,

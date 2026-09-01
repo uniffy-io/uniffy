@@ -49,7 +49,7 @@ def _build_session() -> MagicMock:
 async def test_soft_delete_emits_note_deleted_with_descendant_count() -> None:
     note = _make_note()
     session = _build_session()
-    ops = NoteOperations(session, AsyncMock())
+    ops = NoteOperations(session, AsyncMock(), MagicMock())
 
     with (
         patch.object(NoteOperations, "_fetch_by_id", AsyncMock(return_value=note)),
@@ -85,11 +85,13 @@ async def test_soft_delete_emits_note_deleted_with_descendant_count() -> None:
 async def test_permanent_delete_emits_note_permanently_deleted() -> None:
     note = _make_note()
     session = _build_session()
-    ops = NoteOperations(session, AsyncMock())
+    ops = NoteOperations(session, AsyncMock(), MagicMock())
     ops.search_indexer = MagicMock(remove=AsyncMock())
 
+    staged_tag_removal = MagicMock()
     tag_ops_mock = MagicMock()
-    tag_ops_mock.unassign_all_for_urn = AsyncMock()
+    tag_ops_mock.stage_unassign_all_for_urn = AsyncMock(return_value=staged_tag_removal)
+    tag_ops_mock.finish_unassign_all_after_commit = AsyncMock(return_value=[])
 
     with (
         patch.object(NoteOperations, "_fetch_by_id", AsyncMock(return_value=note)),
@@ -104,7 +106,7 @@ async def test_permanent_delete_emits_note_permanently_deleted() -> None:
             AsyncMock(return_value=None),
         ),
         patch(
-            "uniffy.domains.notes.hierarchy.operations.ContentTagContext",
+            "uniffy.domains.notes.hierarchy.operations.ContentTagMutations",
             MagicMock(return_value=tag_ops_mock),
         ),
         patch(
@@ -122,7 +124,7 @@ async def test_permanent_delete_emits_note_permanently_deleted() -> None:
 async def test_restore_emits_note_restored() -> None:
     note = _make_note(is_deleted=True)
     session = _build_session()
-    ops = NoteOperations(session, search_indexer=MagicMock())
+    ops = NoteOperations(session, AsyncMock(), MagicMock())
 
     with (
         patch.object(NoteOperations, "_fetch_by_id", AsyncMock(return_value=note)),

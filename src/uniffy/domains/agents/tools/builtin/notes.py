@@ -22,6 +22,8 @@ from uniffy.domains.agents.tools.builtin.content import (
     space_for_access_mode,
 )
 from uniffy.domains.agents.tools.definitions import ToolContext, ToolDefinition, ToolResult
+from uniffy.domains.notes.operations import NoteOperations
+from uniffy.domains.notes.reader import NoteReader
 from uniffy.domains.tags.operations import TagOperations
 
 _MAX_NOTE_CONTENT_CHARS = 50_000
@@ -103,7 +105,6 @@ async def _resolve_folder_arg(
     A write must land where the user can already reach, and it must land in a
     FOLDER - a note id here would silently nest content under a document.
     """
-    from uniffy.domains.notes.operations import NoteOperations
 
     if raw.strip().lower() in _ROOT_VALUES:
         return None, None
@@ -112,7 +113,7 @@ async def _resolve_folder_arg(
     if err:
         return None, err
 
-    ops = NoteOperations(ctx.session, search_indexer=ctx.search_indexer)
+    ops = NoteReader(ctx.session)
     try:
         folder = await ops.get_by_id(ctx.user_id, ctx.organization_id, folder_id)  # type: ignore[arg-type]
     except NotFoundError, PermissionDeniedError:
@@ -199,7 +200,6 @@ async def _execute_search_notes(ctx: ToolContext, args: dict) -> ToolResult:
 
 async def _execute_list_notes(ctx: ToolContext, args: dict) -> ToolResult:
     """List notes, optionally scoped to one folder. Never returns folders."""
-    from uniffy.domains.notes.operations import NoteOperations
 
     limit = clamp_int(args.get("limit", 20), 20, 1, 50)
     page = clamp_page(args.get("page", 1))
@@ -218,7 +218,7 @@ async def _execute_list_notes(ctx: ToolContext, args: dict) -> ToolResult:
             parent_id = folder_id
             scope = "this folder"
 
-    ops = NoteOperations(ctx.session, search_indexer=ctx.search_indexer)
+    ops = NoteReader(ctx.session)
     notes, total = await ops.list_notes(
         user_id=ctx.user_id,
         organization_id=ctx.organization_id,
@@ -251,7 +251,6 @@ async def _execute_list_notes(ctx: ToolContext, args: dict) -> ToolResult:
 
 async def _execute_list_folders(ctx: ToolContext, args: dict) -> ToolResult:
     """List notes folders - the containers, not the notes inside them."""
-    from uniffy.domains.notes.operations import NoteOperations
 
     limit = clamp_int(args.get("limit", 50), 50, 1, 100)
     page = clamp_page(args.get("page", 1))
@@ -270,7 +269,7 @@ async def _execute_list_folders(ctx: ToolContext, args: dict) -> ToolResult:
             parent_id = folder_id
             scope = "this folder"
 
-    ops = NoteOperations(ctx.session, search_indexer=ctx.search_indexer)
+    ops = NoteReader(ctx.session)
     folders, total = await ops.list_notes(
         user_id=ctx.user_id,
         organization_id=ctx.organization_id,
@@ -311,7 +310,6 @@ async def _execute_list_folders(ctx: ToolContext, args: dict) -> ToolResult:
 
 async def _execute_read_note(ctx: ToolContext, args: dict) -> ToolResult:
     """Read a note's full content."""
-    from uniffy.domains.notes.operations import NoteOperations
 
     note_id_str = args.get("note_id", "")
     if not note_id_str:
@@ -321,7 +319,7 @@ async def _execute_read_note(ctx: ToolContext, args: dict) -> ToolResult:
     if err:
         return ToolResult(success=False, data="", error=err)
 
-    ops = NoteOperations(ctx.session, search_indexer=ctx.search_indexer)
+    ops = NoteReader(ctx.session)
     note = await ops.get_by_id(ctx.user_id, ctx.organization_id, note_id)  # type: ignore[arg-type]
 
     if note.node_type == NodeType.FOLDER:
@@ -374,7 +372,6 @@ async def _execute_read_note(ctx: ToolContext, args: dict) -> ToolResult:
 
 
 async def _execute_create_note(ctx: ToolContext, args: dict) -> ToolResult:
-    from uniffy.domains.notes.operations import NoteOperations
 
     title = args.get("title", "")
     if not title:
@@ -392,7 +389,7 @@ async def _execute_create_note(ctx: ToolContext, args: dict) -> ToolResult:
         if err:
             return ToolResult(success=False, data="", error=err)
 
-    ops = NoteOperations(ctx.session, search_indexer=ctx.search_indexer)
+    ops = NoteOperations(ctx.session, ctx.required_storage, ctx.required_search)
     if parent_id is not None:
         parent = await ops.get_by_id(ctx.user_id, ctx.organization_id, parent_id)
         access_mode, err = await resolve_parent_access_mode(
@@ -428,7 +425,6 @@ async def _execute_create_note(ctx: ToolContext, args: dict) -> ToolResult:
 
 
 async def _execute_create_folder(ctx: ToolContext, args: dict) -> ToolResult:
-    from uniffy.domains.notes.operations import NoteOperations
 
     name = args.get("name", "")
     if not name:
@@ -446,7 +442,7 @@ async def _execute_create_folder(ctx: ToolContext, args: dict) -> ToolResult:
         if err:
             return ToolResult(success=False, data="", error=err)
 
-    ops = NoteOperations(ctx.session, search_indexer=ctx.search_indexer)
+    ops = NoteOperations(ctx.session, ctx.required_storage, ctx.required_search)
     if parent_id is not None:
         parent = await ops.get_by_id(ctx.user_id, ctx.organization_id, parent_id)
         access_mode, err = await resolve_parent_access_mode(
@@ -483,7 +479,6 @@ async def _execute_create_folder(ctx: ToolContext, args: dict) -> ToolResult:
 
 async def _execute_update_note(ctx: ToolContext, args: dict) -> ToolResult:
     """Update an existing note."""
-    from uniffy.domains.notes.operations import NoteOperations
 
     note_id_str = args.get("note_id", "")
     if not note_id_str:
@@ -503,7 +498,7 @@ async def _execute_update_note(ctx: ToolContext, args: dict) -> ToolResult:
             error="At least one of title or content must be provided",
         )
 
-    ops = NoteOperations(ctx.session, search_indexer=ctx.search_indexer)
+    ops = NoteOperations(ctx.session, ctx.required_storage, ctx.required_search)
     note = await ops.update(
         user_id=ctx.user_id,
         organization_id=ctx.organization_id,
@@ -520,7 +515,6 @@ async def _execute_update_note(ctx: ToolContext, args: dict) -> ToolResult:
 
 async def _execute_move_note(ctx: ToolContext, args: dict) -> ToolResult:
     """Move a note or folder into another folder."""
-    from uniffy.domains.notes.operations import NoteOperations
 
     note_id_str = args.get("note_id", "")
     if not note_id_str:
@@ -542,7 +536,7 @@ async def _execute_move_note(ctx: ToolContext, args: dict) -> ToolResult:
     if err:
         return ToolResult(success=False, data="", error=err)
 
-    ops = NoteOperations(ctx.session, search_indexer=ctx.search_indexer)
+    ops = NoteOperations(ctx.session, ctx.required_storage, ctx.required_search)
     note = await ops.update(
         user_id=ctx.user_id,
         organization_id=ctx.organization_id,
@@ -564,7 +558,6 @@ async def _execute_move_note(ctx: ToolContext, args: dict) -> ToolResult:
 
 async def _execute_delete_note(ctx: ToolContext, args: dict) -> ToolResult:
     """Delete a note by ID."""
-    from uniffy.domains.notes.operations import NoteOperations
 
     note_id_str = args.get("note_id", "")
     if not note_id_str:
@@ -574,7 +567,7 @@ async def _execute_delete_note(ctx: ToolContext, args: dict) -> ToolResult:
     if err:
         return ToolResult(success=False, data="", error=err)
 
-    ops = NoteOperations(ctx.session, search_indexer=ctx.search_indexer)
+    ops = NoteOperations(ctx.session, ctx.required_storage, ctx.required_search)
     note = await ops.get_by_id(ctx.user_id, ctx.organization_id, note_id)  # type: ignore[arg-type]
     is_folder = note.node_type == NodeType.FOLDER
 

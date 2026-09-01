@@ -19,7 +19,7 @@ from uniffy.core.auth.principal import current_user_id
 from uniffy.core.converters.common_proto import access_mode_from_proto
 from uniffy.core.types import ContentType, ParentSelection, SortOrder
 from uniffy.domains.notes.converters import note_to_proto, note_to_reference
-from uniffy.domains.notes.operations import NoteOperations
+from uniffy.domains.notes.reader import NoteReader
 from uniffy.domains.notes.rpc.support import (
     map_domain_error,
     parse_tag_ids,
@@ -28,7 +28,7 @@ from uniffy.domains.notes.rpc.support import (
     resolve_user_role,
 )
 from uniffy.domains.permissions.access import ResourceAccessResolver, ResourceKey
-from uniffy.domains.tags.context import ContentTagContext
+from uniffy.domains.tags.context import ContentTagReader
 from uniffy.infrastructure.database import open_session
 
 
@@ -47,10 +47,10 @@ class NoteQueryHandlers:
         note_id = parse_uuid(request.note_id, "note_id")
         try:
             async with open_session() as session:
-                operations = NoteOperations(session, self.storage, self.search_indexer)
+                operations = NoteReader(session)
                 note = await operations.get_by_id(user_id, organization_id, note_id)
                 sharing = (await operations.get_notes_sharing_info([note], user_id)).get(note.id)
-                tags_by_urn = await ContentTagContext(session).get_for_urns(
+                tags_by_urn = await ContentTagReader(session).get_for_urns(
                     organization_id=organization_id,
                     content_urns=[_note_urn(note.id)],
                 )
@@ -98,7 +98,7 @@ class NoteQueryHandlers:
 
         try:
             async with open_session() as session:
-                operations = NoteOperations(session, self.storage, self.search_indexer)
+                operations = NoteReader(session)
                 notes, total = await operations.list_notes(
                     user_id=user_id,
                     organization_id=organization_id,
@@ -114,7 +114,7 @@ class NoteQueryHandlers:
                     sort_order=SortOrder(request.sort_order or SortOrder.DESCENDING),
                 )
                 sharing = await operations.get_notes_sharing_info(notes, user_id)
-                tags_by_urn = await ContentTagContext(session).get_for_urns(
+                tags_by_urn = await ContentTagReader(session).get_for_urns(
                     organization_id=organization_id,
                     content_urns=[_note_urn(note.id) for note in notes],
                 )
@@ -173,11 +173,7 @@ class NoteQueryHandlers:
         note_id = parse_uuid(request.note_id, "note_id")
         try:
             async with open_session() as session:
-                backlinks = await NoteOperations(
-                    session,
-                    self.storage,
-                    self.search_indexer,
-                ).get_backlinks(
+                backlinks = await NoteReader(session).get_backlinks(
                     user_id,
                     organization_id,
                     note_id,

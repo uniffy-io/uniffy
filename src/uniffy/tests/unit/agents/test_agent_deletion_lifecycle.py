@@ -229,7 +229,14 @@ class TestChatInvocationRefusesDeletedAgent:
             side_effect=AssertionError("run started for a deleted agent")
         )
 
-        await bridge.respond_to_chat_message(channel_id, trigger_id, agent.id)
+        await bridge.respond_to_chat_message(
+            channel_id,
+            trigger_id,
+            agent.id,
+            storage=MagicMock(),
+            search_indexer=MagicMock(),
+            call_lifecycle=MagicMock(),
+        )
 
 
 class TestFrozenAgentDm:

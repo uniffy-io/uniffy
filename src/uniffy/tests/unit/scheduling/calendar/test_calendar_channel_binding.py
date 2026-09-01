@@ -262,15 +262,16 @@ class TestApplyChannelBindingUpdate:
 def _patch_room_membership(
     monkeypatch: pytest.MonkeyPatch,
     *,
-    add_error: Exception | None = None,
+    stage_error: Exception | None = None,
+    finish_error: Exception | None = None,
 ) -> dict[str, list]:
-    calls: dict[str, list] = {"add": [], "remove": []}
+    calls: dict[str, list] = {"add": [], "remove": [], "finish": []}
 
     class _FakeRoomMembership:
         def __init__(self, session, **_kwargs) -> None:
             self.session = session
 
-        async def sync(
+        async def stage_sync(
             self,
             owner_id,
             organization_id,
@@ -278,9 +279,9 @@ def _patch_room_membership(
             *,
             added_user_ids,
             removed_user_ids,
-        ) -> None:
-            if add_error is not None:
-                raise add_error
+        ) -> MagicMock:
+            if stage_error is not None:
+                raise stage_error
             if added_user_ids:
                 calls["add"].append((owner_id, organization_id, channel_id, list(added_user_ids)))
             if removed_user_ids:
@@ -290,6 +291,12 @@ def _patch_room_membership(
                     channel_id,
                     list(removed_user_ids),
                 ))
+            return MagicMock()
+
+        async def finish_sync_after_commit(self, staged) -> None:
+            calls["finish"].append(staged)
+            if finish_error is not None:
+                raise finish_error
 
     monkeypatch.setattr(
         "uniffy.domains.scheduling.calendar.events.attendees.RoomMembership",
@@ -299,12 +306,18 @@ def _patch_room_membership(
     return calls
 
 
-class TestAutoCreatedRoomSync:
+class TestAutoCreatedRoomMembership:
     async def test_skips_picked_channel(self, monkeypatch: pytest.MonkeyPatch) -> None:
         calls = _patch_room_membership(monkeypatch)
         ops = _make_ops()
         event = _make_event(channel_id=generate_id(), channel_auto_created=False)
-        await ops._sync_auto_created_room_members(event, added=[generate_id()], removed=[])
+        staged = await ops._stage_auto_created_room_members(
+            event,
+            added=[generate_id()],
+            removed=[],
+            call_lifecycle=MagicMock(),
+        )
+        assert staged is None
         assert calls["add"] == []
         assert calls["remove"] == []
 
@@ -312,7 +325,13 @@ class TestAutoCreatedRoomSync:
         calls = _patch_room_membership(monkeypatch)
         ops = _make_ops()
         event = _make_event(channel_auto_created=True)
-        await ops._sync_auto_created_room_members(event, added=[generate_id()], removed=[])
+        staged = await ops._stage_auto_created_room_members(
+            event,
+            added=[generate_id()],
+            removed=[],
+            call_lifecycle=MagicMock(),
+        )
+        assert staged is None
         assert calls["add"] == []
 
     async def test_mirrors_add_and_remove(self, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -321,7 +340,13 @@ class TestAutoCreatedRoomSync:
         cid = generate_id()
         event = _make_event(channel_id=cid, channel_auto_created=True)
         u_add, u_rm = generate_id(), generate_id()
-        await ops._sync_auto_created_room_members(event, added=[u_add], removed=[u_rm])
+        staged = await ops._stage_auto_created_room_members(
+            event,
+            added=[u_add],
+            removed=[u_rm],
+            call_lifecycle=MagicMock(),
+        )
+        assert staged is not None
         assert calls["add"] == [(event.organizer_id, event.organization_id, cid, [u_add])]
         assert calls["remove"] == [(event.organizer_id, event.organization_id, cid, [u_rm])]
 
@@ -330,22 +355,54 @@ class TestAutoCreatedRoomSync:
         ops = _make_ops()
         event = _make_event(channel_id=generate_id(), channel_auto_created=True)
         # The organizer owns the room; never re-add or remove them.
-        await ops._sync_auto_created_room_members(
-            event, added=[event.organizer_id], removed=[event.organizer_id]
+        staged = await ops._stage_auto_created_room_members(
+            event,
+            added=[event.organizer_id],
+            removed=[event.organizer_id],
+            call_lifecycle=MagicMock(),
         )
+        assert staged is None
         assert calls["add"] == []
         assert calls["remove"] == []
 
-    async def test_best_effort_swallows_chat_failure(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        _patch_room_membership(monkeypatch, add_error=RuntimeError("chat down"))
+    async def test_stage_failure_prevents_calendar_commit(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        _patch_room_membership(monkeypatch, stage_error=RuntimeError("chat down"))
         ops = _make_ops()
         event = _make_event(channel_id=generate_id(), channel_auto_created=True)
-        # A chat-side failure must not fail the calendar operation.
-        await ops._sync_auto_created_room_members(event, added=[generate_id()], removed=[])
+        with pytest.raises(RuntimeError, match="chat down"):
+            await ops._stage_auto_created_room_members(
+                event,
+                added=[generate_id()],
+                removed=[],
+                call_lifecycle=MagicMock(),
+            )
 
-    async def test_best_effort_swallows_missing_chat_dependencies(self) -> None:
+    async def test_missing_search_dependency_fails_during_staging(self) -> None:
         ops = _make_ops()
         ops._search_indexer = None
         event = _make_event(channel_id=generate_id(), channel_auto_created=True)
 
-        await ops._sync_auto_created_room_members(event, added=[generate_id()], removed=[])
+        with pytest.raises(RuntimeError, match="SearchIndexer"):
+            await ops._stage_auto_created_room_members(
+                event,
+                added=[generate_id()],
+                removed=[],
+                call_lifecycle=MagicMock(),
+            )
+
+    async def test_post_commit_failure_is_degraded(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        calls = _patch_room_membership(
+            monkeypatch,
+            finish_error=RuntimeError("fanout down"),
+        )
+        ops = _make_ops()
+        event = _make_event(channel_id=generate_id(), channel_auto_created=True)
+        staged = await ops._stage_auto_created_room_members(
+            event,
+            added=[generate_id()],
+            removed=[],
+            call_lifecycle=MagicMock(),
+        )
+
+        await ops._finish_auto_created_room_members(event, staged)
+        assert len(calls["finish"]) == 1

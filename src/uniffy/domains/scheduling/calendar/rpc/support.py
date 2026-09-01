@@ -14,7 +14,7 @@ from uniffy.core.models.calendar.template import EventTemplate
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import ContentType
 from uniffy.domains.scheduling.calendar.recurrence import OCCURRENCE_ID_SEPARATOR
-from uniffy.domains.tags.operations import TagOperations
+from uniffy.domains.tags.reader import TagReader
 
 logger = logger.bind(component="scheduling.calendar.rpc.support")
 
@@ -42,7 +42,7 @@ async def hydrate_event_tags(
     if not event_ids:
         return {}
     urns = [build_content_urn(ContentType.CALENDAR_EVENT, event_id) for event_id in event_ids]
-    return await TagOperations(session).get_for_urns(
+    return await TagReader(session).get_for_urns(
         organization_id=organization_id,
         content_urns=urns,
     )

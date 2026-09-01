@@ -12,7 +12,7 @@ from uniffy.core.models.files.file import File
 from uniffy.core.models.files.folder import Folder
 from uniffy.core.models.tags.tag import Tag
 from uniffy.core.types import AccessMode, ContentRole, ContentType
-from uniffy.domains.tags.operations import TagOperations
+from uniffy.domains.tags.reader import TagReader
 
 
 def _file_urn(file_id: str | UUID) -> str:
@@ -36,7 +36,7 @@ async def _hydrate_file_tags(
 ) -> dict[str, list[Tag]]:
     if not files:
         return {}
-    return await TagOperations(session).get_for_urns(
+    return await TagReader(session).get_for_urns(
         organization_id=organization_id,
         content_urns=[_file_urn(file.id) for file in files],
     )

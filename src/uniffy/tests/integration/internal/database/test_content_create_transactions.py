@@ -20,10 +20,10 @@ from uniffy.core.models.projects.view_config import ViewConfig
 from uniffy.core.models.rooms.booking import RoomBooking
 from uniffy.core.models.rooms.room import Room
 from uniffy.core.types import AccessMode, BookingStatus, ContentRole, RoomType, generate_id
-from uniffy.domains.scheduling.calendar.operations import CalendarEventOperations
 from uniffy.domains.files.operations import FileOperations
 from uniffy.domains.notes.operations import NoteOperations
 from uniffy.domains.projects.operations import ProjectOperations
+from uniffy.domains.scheduling.calendar.operations import CalendarEventOperations
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
@@ -98,7 +98,7 @@ async def test_note_create_rolls_back_when_tag_validation_fails(
 
     try:
         with pytest.raises(NotFoundError):
-            await NoteOperations(session, search_indexer=search_indexer).create(
+            await NoteOperations(session, AsyncMock(), search_indexer).create(
                 user_id=env.admin_id,
                 organization_id=env.org_id,
                 title=title,
@@ -350,6 +350,7 @@ async def test_calendar_event_replaces_and_cancels_room_bookings(
             organization_id=env.org_id,
             event_id=event.id,
             room_id=str(rooms[1].id),
+            call_lifecycle=MagicMock(),
         )
         await session.refresh(first_booking)
         replacement = await session.scalar(

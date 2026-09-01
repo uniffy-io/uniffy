@@ -9,6 +9,7 @@ from uniffy.core.database import SESSION_FACTORY_CTX_KEY, SessionFactory
 from uniffy.core.search import SEARCH_INDEXER_CTX_KEY
 from uniffy.core.storage import OBJECT_STORAGE_CTX_KEY, ObjectStorage
 from uniffy.domains.agents.bridge.operations import AgentChatBridge
+from uniffy.domains.chat.lifecycle import CALL_LIFECYCLE_CTX_KEY, ChannelCallLifecycle
 
 logger = logger.bind(component="agents.bridge.jobs.jobs")
 
@@ -35,17 +36,15 @@ async def respond_to_chat_message(
         session_factory = cast(SessionFactory, ctx[SESSION_FACTORY_CTX_KEY])
         async with session_factory() as session:
             storage = cast(ObjectStorage, ctx[OBJECT_STORAGE_CTX_KEY])
-            bridge = AgentChatBridge(
-                session,
-                session_factory,
-                storage,
-                ctx[SEARCH_INDEXER_CTX_KEY],
-            )
+            bridge = AgentChatBridge(session, session_factory)
             await bridge.respond_to_chat_message(
                 channel_id=cid,
                 trigger_message_id=tmid,
                 agent_id=aid,
                 trigger_rule=trigger_rule,
+                storage=storage,
+                search_indexer=ctx[SEARCH_INDEXER_CTX_KEY],
+                call_lifecycle=cast(ChannelCallLifecycle, ctx[CALL_LIFECYCLE_CTX_KEY]),
             )
             return {
                 "status": "success",

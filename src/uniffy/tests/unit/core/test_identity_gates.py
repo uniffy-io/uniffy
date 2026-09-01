@@ -17,7 +17,7 @@ from connectrpc.errors import ConnectError
 
 from uniffy.core.errors import PermissionDeniedError
 from uniffy.core.types import generate_id
-from uniffy.domains.chat.categories.operations import ChatCategoryOperations
+from uniffy.domains.chat.categories.reader import ChatCategoryReader
 
 ORG = generate_id()
 ACTOR = generate_id()
@@ -68,7 +68,7 @@ async def test_list_categories_requires_active_membership(_membership_state) -> 
     access.require_org_member = AsyncMock(
         side_effect=PermissionDeniedError("access", "organization")
     )
-    ops = ChatCategoryOperations(session, access=access)
+    ops = ChatCategoryReader(session, access=access)
 
     with pytest.raises(PermissionDeniedError):
         await ops.list_categories(ACTOR, ORG)
@@ -81,7 +81,7 @@ async def test_list_categories_allows_a_plain_member() -> None:
     session.execute = AsyncMock(return_value=MagicMock(scalars=lambda: MagicMock(all=lambda: [])))
     access = MagicMock()
     access.require_org_member = AsyncMock()
-    ops = ChatCategoryOperations(session, access=access)
+    ops = ChatCategoryReader(session, access=access)
 
     assert await ops.list_categories(ACTOR, ORG) == []
 

@@ -2,7 +2,8 @@
 
 from uniffy.domains.projects.projects import ProjectOperations
 from uniffy.domains.projects.sprints import SprintOperations
-from uniffy.domains.projects.tasks.operations import ProjectTagFilterMode, TaskOperations
+from uniffy.domains.projects.tasks.operations import TaskOperations
+from uniffy.domains.projects.tasks.reader import ProjectTagFilterMode, TaskReader
 from uniffy.domains.projects.watchers import WatcherOperations
 
 __all__ = [
@@ -10,5 +11,6 @@ __all__ = [
     "ProjectTagFilterMode",
     "SprintOperations",
     "TaskOperations",
+    "TaskReader",
     "WatcherOperations",
 ]

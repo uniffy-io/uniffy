@@ -13,7 +13,7 @@ from uniffy.core.models.notes.note import Note
 from uniffy.core.realtime.adapter import register_realtime_adapter
 from uniffy.core.search import SearchIndexer
 from uniffy.core.types import ContentRole, ContentType, NodeType
-from uniffy.domains.notes.operations import NoteOperations
+from uniffy.domains.notes.projection import NoteProjectionOperations
 
 LOGGER_COMPONENT = "realtime.notes_adapter"
 
@@ -122,7 +122,7 @@ class NoteRealtimeAdapter:
             content = _render_markdown(ydoc)
             canvas_content = None
 
-        saved = await NoteOperations(session, search_indexer=self.search_indexer).realtime_save(
+        saved = await NoteProjectionOperations(session, self.search_indexer).realtime_save(
             organization_id=organization_id,
             note_id=content_id,
             content=content,

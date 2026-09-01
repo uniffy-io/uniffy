@@ -58,11 +58,11 @@ from uniffy.domains.tags.converters import (
 from uniffy.domains.tags.filters.converters import criteria_from_proto
 from uniffy.domains.tags.jobs.contracts import REINDEX_TAG_URNS
 from uniffy.domains.tags.operations import (
-    SOURCE_MANUAL,
     TagLimitExceededError,
     TagOperations,
     TagSlugCollisionError,
 )
+from uniffy.domains.tags.reader import SOURCE_MANUAL
 from uniffy.domains.tags.targets import TagTargetAccess
 from uniffy.infrastructure.database import open_session
 

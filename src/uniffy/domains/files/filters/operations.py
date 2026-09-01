@@ -62,7 +62,7 @@ class SavedFilterOperations:
         saved_filter = result.scalars().first()
 
         if not saved_filter:
-            raise NotFoundError("Saved filter not found")
+            raise NotFoundError("Saved filter", filter_id)
 
         if saved_filter.user_id != user_id and not saved_filter.is_preset:
             raise PermissionDeniedError("You don't have access to this filter")

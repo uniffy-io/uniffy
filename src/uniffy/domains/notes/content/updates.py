@@ -23,7 +23,7 @@ from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import AccessMode, ContentType, NodeType, NotificationType
 from uniffy.domains.files.attachments.inline import reconcile_inline_attachments
 from uniffy.domains.notes.content.fields import extract_content_fields, referenced_file_ids
-from uniffy.domains.tags.context import ContentTagContext
+from uniffy.domains.tags.context import ContentTagMutations
 from uniffy.domains.tags.sync import sync_inline_tags
 
 if TYPE_CHECKING:
@@ -223,7 +223,10 @@ class NoteUpdates:
     ) -> None:
         urn = build_content_urn(ContentType.NOTE, note.id)
         if tag_ids is not None:
-            await ContentTagContext(self.operations.session).replace_manual_tags(
+            await ContentTagMutations(
+                self.operations.session,
+                self.operations.search_indexer,
+            ).replace_manual_tags(
                 actor_id=user_id,
                 organization_id=organization_id,
                 content_urn=urn,

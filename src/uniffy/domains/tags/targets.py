@@ -9,9 +9,9 @@ from uniffy.core.types import ContentType
 from uniffy.domains.agents.agents.operations import AgentOperations
 from uniffy.domains.chat.access import ChatAccessChecker
 from uniffy.domains.files.operations import FileOperations, FolderOperations
-from uniffy.domains.notes.operations import NoteOperations
-from uniffy.domains.projects.operations import ProjectOperations, TaskOperations
-from uniffy.domains.scheduling.calendar.operations import CalendarEventOperations
+from uniffy.domains.notes.reader import NoteReader
+from uniffy.domains.projects.operations import ProjectOperations, TaskReader
+from uniffy.domains.scheduling.calendar.operations import CalendarEventReader
 from uniffy.domains.scheduling.rooms.lifecycle import RoomOperations
 
 
@@ -27,15 +27,33 @@ class TagTargetAccess:
         content_id: UUID,
     ) -> None:
         operations_by_type = {
-            ContentType.NOTE: NoteOperations,
             ContentType.FILE: FileOperations,
-            ContentType.CALENDAR_EVENT: CalendarEventOperations,
             ContentType.PROJECT: ProjectOperations,
-            ContentType.TASK: TaskOperations,
             ContentType.AGENT: AgentOperations,
             ContentType.ROOM: RoomOperations,
         }
         operations_type = operations_by_type.get(content_type)
+        if content_type == ContentType.NOTE:
+            await NoteReader(self.session).get_for_edit(
+                actor_id,
+                organization_id,
+                content_id,
+            )
+            return
+        if content_type == ContentType.TASK:
+            await TaskReader(self.session).get_for_edit(
+                actor_id,
+                organization_id,
+                content_id,
+            )
+            return
+        if content_type == ContentType.CALENDAR_EVENT:
+            await CalendarEventReader(self.session).get_for_edit(
+                actor_id,
+                organization_id,
+                content_id,
+            )
+            return
         if operations_type is not None:
             await operations_type(self.session).get_for_edit(
                 actor_id,

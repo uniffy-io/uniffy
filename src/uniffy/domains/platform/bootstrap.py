@@ -116,12 +116,14 @@ async def _bootstrap_deployment_locked(
 
                 org_slug = slugify(org_name)
 
-            org_ops = OrganizationOperations(session, storage, search_indexer)
+            org_ops = OrganizationOperations(session)
             default_org = await org_ops.create(
                 name=org_name,
                 slug=org_slug,
                 owner_user_id=admin_user.id,
                 plan="enterprise",
+                storage=storage,
+                search_indexer=search_indexer,
             )
             logger.info(f"Created default organization: {default_org.name} ({default_org.slug})")
 

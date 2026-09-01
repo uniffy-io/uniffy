@@ -111,7 +111,7 @@ async def _action_count(session, org_id, action: Action) -> int:
 
 
 async def test_invitation_creation_is_committed_before_email_enqueue(
-    session, invitation_env, monkeypatch
+    session, invitation_env, search_indexer, monkeypatch
 ) -> None:
     email = f"new-{invitation_env.suffix}@test.local"
     observed: list[tuple[int, int]] = []
@@ -149,6 +149,7 @@ async def test_invitation_creation_is_committed_before_email_enqueue(
         email,
         OrganizationRole.MEMBER,
         invitation_env.admin_id,
+        search_indexer=search_indexer,
     )
 
     assert result.invitation is not None
@@ -156,7 +157,7 @@ async def test_invitation_creation_is_committed_before_email_enqueue(
 
 
 async def test_invitation_creation_rolls_back_when_audit_fails(
-    session, invitation_env, monkeypatch
+    session, invitation_env, search_indexer, monkeypatch
 ) -> None:
     email = f"rollback-{invitation_env.suffix}@test.local"
     monkeypatch.setattr(
@@ -170,6 +171,7 @@ async def test_invitation_creation_rolls_back_when_audit_fails(
             email,
             OrganizationRole.MEMBER,
             invitation_env.admin_id,
+            search_indexer=search_indexer,
         )
 
     invitation_count = (
@@ -187,7 +189,7 @@ async def test_invitation_creation_rolls_back_when_audit_fails(
 
 @pytest.mark.parametrize("failure_point", list(AcceptanceFailurePoint))
 async def test_acceptance_failure_rolls_back_every_authoritative_fact(
-    session, invitation_env, monkeypatch, failure_point
+    session, invitation_env, search_indexer, monkeypatch, failure_point
 ) -> None:
     monkeypatch.setattr(
         "uniffy.domains.organizations.invitations.operations.check_rate_limit",
@@ -218,6 +220,7 @@ async def test_acceptance_failure_rolls_back_every_authoritative_fact(
             password="Strong invitation password",
             full_name="Invited User",
             user_agent="pytest",
+            search_indexer=search_indexer,
         )
 
     user_count = (
@@ -263,7 +266,7 @@ async def test_acceptance_failure_rolls_back_every_authoritative_fact(
 
 
 async def test_concurrent_token_consumption_has_exactly_one_success(
-    session, invitation_env, monkeypatch
+    session, invitation_env, search_indexer, monkeypatch
 ) -> None:
     monkeypatch.setattr(
         "uniffy.domains.organizations.invitations.operations.check_rate_limit",
@@ -280,6 +283,7 @@ async def test_concurrent_token_consumption_has_exactly_one_success(
                     password="Strong invitation password",
                     full_name="Invited User",
                     user_agent="pytest",
+                    search_indexer=search_indexer,
                 )
             except InvitationAlreadyUsedError as exc:
                 return exc

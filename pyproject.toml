@@ -93,10 +93,13 @@ members = ["src/gen/python"]
 [tool.uv.sources]
 uniffy-proto = { workspace = true }
 
-# Relax rules for test files
-[[tool.ty.overrides]]
-include = ["tests/**", "**/test_*.py"]
-exclude = ["*.proto"]
+[tool.ty.analysis]
+respect-type-ignore-comments = false
+
+[tool.ty.rules]
+all = "ignore"
+blanket-ignore-comment = "error"
+missing-argument = "error"
 
 [tool.pytest.ini_options]
 # Coroutine tests run without a marker; a test that forgets one is a silent

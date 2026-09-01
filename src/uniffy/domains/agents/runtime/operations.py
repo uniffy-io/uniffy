@@ -14,6 +14,7 @@ from uniffy.domains.agents.runtime.destinations import RuntimeDestination
 from uniffy.domains.agents.runtime.files import FileContext
 from uniffy.domains.agents.runtime.send import MessageSender
 from uniffy.domains.agents.runtime.stream import MessageStreamer
+from uniffy.domains.chat.lifecycle import ChannelCallLifecycle
 
 
 class RuntimeOperations:
@@ -25,18 +26,21 @@ class RuntimeOperations:
         storage: ObjectStorage,
         search_indexer: SearchIndexer,
         session_factory: SessionFactory,
+        call_lifecycle: ChannelCallLifecycle,
     ) -> None:
         self._sender = MessageSender(
             session,
             storage,
             search_indexer,
             session_factory,
+            call_lifecycle,
         )
         self._streamer = MessageStreamer(
             session,
             storage,
             search_indexer,
             session_factory,
+            call_lifecycle,
         )
 
     async def send_message(

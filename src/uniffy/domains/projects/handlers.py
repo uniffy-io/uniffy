@@ -108,10 +108,11 @@ from uniffy.domains.projects.operations import (
     ProjectTagFilterMode,
     SprintOperations,
     TaskOperations,
+    TaskReader,
     WatcherOperations,
 )
 from uniffy.domains.projects.statuses import parse_task_status_semantics
-from uniffy.domains.tags.operations import TagOperations
+from uniffy.domains.tags.reader import TagReader
 from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="projects.handlers")
@@ -142,7 +143,7 @@ async def _hydrate_task_tags(
     if not task_ids:
         return {}
     urn_to_id = {build_content_urn(ContentType.TASK, tid): tid for tid in task_ids}
-    tag_ops = TagOperations(session)
+    tag_ops = TagReader(session)
     bulk = await tag_ops.get_for_urns(
         organization_id=organization_id,
         content_urns=list(urn_to_id),
@@ -158,7 +159,7 @@ async def _hydrate_project_tags(
     if not project_ids:
         return {}
     urn_to_id = {build_content_urn(ContentType.PROJECT, pid): pid for pid in project_ids}
-    tag_ops = TagOperations(session)
+    tag_ops = TagReader(session)
     bulk = await tag_ops.get_for_urns(
         organization_id=organization_id,
         content_urns=list(urn_to_id),
@@ -640,7 +641,7 @@ class ProjectsHandlers:
 
         try:
             async with open_session() as session:
-                ops = TaskOperations(session)
+                ops = TaskReader(session)
                 task = await ops.get_by_id(user_id, organization_id, task_id)
                 user_role = await ops._resolve_role(user_id, organization_id, task)
 
@@ -1000,7 +1001,7 @@ class ProjectsHandlers:
 
         try:
             async with open_session() as session:
-                ops = TaskOperations(session)
+                ops = TaskReader(session)
                 tasks, total = await ops.list_tasks(
                     user_id=user_id,
                     organization_id=organization_id,
@@ -1330,7 +1331,7 @@ class ProjectsHandlers:
 
         try:
             async with open_session() as session:
-                task_ops = TaskOperations(session)
+                task_ops = TaskReader(session)
                 await task_ops.get_by_id(user_id, organization_id, task_id)
 
                 activities, total = await queries.get_activities_for_task(
@@ -1532,7 +1533,7 @@ class WatcherHandlers:
 
         try:
             async with open_session() as session:
-                task_ops = TaskOperations(session)
+                task_ops = TaskReader(session)
                 await task_ops.get_by_id(user_id, organization_id, task_id)
 
                 ops = WatcherOperations(session)
@@ -1555,7 +1556,7 @@ class WatcherHandlers:
 
         try:
             async with open_session() as session:
-                task_ops = TaskOperations(session)
+                task_ops = TaskReader(session)
                 await task_ops.get_by_id(user_id, organization_id, task_id)
 
                 ops = WatcherOperations(session)

@@ -28,7 +28,7 @@ from uniffy.core.converters.common_proto import (
 from uniffy.core.models.tags.saved_filter import SavedTagFilter
 from uniffy.core.models.tags.tag import Tag
 from uniffy.core.types import AccessMode, ContentType
-from uniffy.domains.tags.operations import SOURCE_INLINE, SOURCE_MANUAL
+from uniffy.domains.tags.reader import SOURCE_INLINE, SOURCE_MANUAL
 
 _VALID_SOURCES = frozenset({SOURCE_MANUAL, SOURCE_INLINE})
 

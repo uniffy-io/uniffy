@@ -27,6 +27,7 @@ from uniffy.core.auth.principal import (
 )
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.domains.chat.categories.operations import ChatCategoryOperations
+from uniffy.domains.chat.categories.reader import ChatCategoryReader
 from uniffy.domains.chat.channels.converters import category_to_proto, channel_to_proto
 from uniffy.infrastructure.database import open_session
 
@@ -58,7 +59,7 @@ class CategoryHandlers:
 
         try:
             async with open_session() as session:
-                ops = ChatCategoryOperations(session)
+                ops = ChatCategoryOperations(session, self.search_indexer)
                 cat = await ops.create(user_id, org_id, request.name)
                 return CreateCategoryResponse(category=category_to_proto(cat))
         except (PermissionDeniedError, ValidationError) as e:
@@ -80,7 +81,7 @@ class CategoryHandlers:
 
         try:
             async with open_session() as session:
-                ops = ChatCategoryOperations(session)
+                ops = ChatCategoryOperations(session, self.search_indexer)
                 cat = await ops.update(user_id, org_id, cat_id, name=name)
                 return UpdateCategoryResponse(category=category_to_proto(cat))
         except (NotFoundError, PermissionDeniedError) as e:
@@ -100,7 +101,7 @@ class CategoryHandlers:
 
         try:
             async with open_session() as session:
-                ops = ChatCategoryOperations(session)
+                ops = ChatCategoryOperations(session, self.search_indexer)
                 await ops.delete(user_id, org_id, cat_id)
                 return DeleteCategoryResponse()
         except (NotFoundError, PermissionDeniedError) as e:
@@ -116,7 +117,7 @@ class CategoryHandlers:
 
         try:
             async with open_session() as session:
-                ops = ChatCategoryOperations(session)
+                ops = ChatCategoryReader(session)
                 cats = await ops.list_categories(user_id, org_id)
                 return ListCategoriesResponse(categories=[category_to_proto(c) for c in cats])
         except (NotFoundError, PermissionDeniedError) as e:
@@ -136,7 +137,7 @@ class CategoryHandlers:
 
         try:
             async with open_session() as session:
-                ops = ChatCategoryOperations(session)
+                ops = ChatCategoryOperations(session, self.search_indexer)
                 cats = await ops.reorder(user_id, org_id, cat_ids)
                 return ReorderCategoriesResponse(categories=[category_to_proto(c) for c in cats])
         except PermissionDeniedError as e:
@@ -159,7 +160,7 @@ class CategoryHandlers:
 
         try:
             async with open_session() as session:
-                ops = ChatCategoryOperations(session)
+                ops = ChatCategoryOperations(session, self.search_indexer)
                 await ops.move_channel_to_category(user_id, org_id, channel_id, cat_id)
 
                 from uniffy.domains.chat.channels.operations import ChatChannelOperations

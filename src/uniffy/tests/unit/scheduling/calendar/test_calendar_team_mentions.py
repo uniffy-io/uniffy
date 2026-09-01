@@ -1,5 +1,6 @@
 """Team mentions on calendar events: attendees and the actor never double-notify."""
 
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from uniffy.core.content.team_mentions import TeamExpansion
@@ -12,13 +13,15 @@ ACTOR = generate_id()
 
 
 def _event() -> CalendarEvent:
+    start_time = datetime.now(UTC)
     return CalendarEvent(
         id=generate_id(),
         organization_id=ORG,
-        owner_id=ACTOR,
+        organizer_id=ACTOR,
+        calendar_id=generate_id(),
         title="Quarterly review",
-        start_time=None,
-        end_time=None,
+        start_time=start_time,
+        end_time=start_time + timedelta(hours=1),
     )
 
 

@@ -10,7 +10,7 @@ from uniffy.core.models.files.file import File
 from uniffy.core.models.files.folder import Folder
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import ContentType
-from uniffy.domains.tags.operations import TagOperations
+from uniffy.domains.tags.reader import TagReader
 
 
 class FileSearchOperations(BaseContentOperations[File]):
@@ -42,7 +42,7 @@ class FileSearchOperations(BaseContentOperations[File]):
 
     async def _get_search_tags_async(self, model: File) -> list[str] | None:
         urn = build_content_urn(self.content_type, model.id)
-        bulk = await TagOperations(self.session).get_for_urns(
+        bulk = await TagReader(self.session).get_for_urns(
             organization_id=model.organization_id,
             content_urns=[urn],
         )

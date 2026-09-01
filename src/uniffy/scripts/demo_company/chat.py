@@ -157,7 +157,7 @@ async def _ensure_categories(
     names: tuple[str, ...],
     result: DomainResult,
 ) -> dict[str, UUID | None]:
-    ops = ChatCategoryOperations(ctx.session)
+    ops = ChatCategoryOperations(ctx.session, ctx.search_indexer)
     category_ids: dict[str, UUID | None] = {}
 
     for name in names:

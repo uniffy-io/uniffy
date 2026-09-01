@@ -15,12 +15,14 @@ from uniffy.core.errors import ValidationError
 from uniffy.core.models.tags.tag import Tag, TagAssignment
 from uniffy.core.types import ContentType, generate_id
 from uniffy.domains.tags.operations import (
-    MAX_MANUAL_TAGS_PER_CONTENT,
-    SOURCE_INLINE,
-    SOURCE_MANUAL,
     TagLimitExceededError,
     TagOperations,
     _content_type_from_urn,
+)
+from uniffy.domains.tags.reader import (
+    MAX_MANUAL_TAGS_PER_CONTENT,
+    SOURCE_INLINE,
+    SOURCE_MANUAL,
 )
 
 

@@ -229,6 +229,57 @@ class TestUpdateUserAuditAndRevocation:
         session.commit.assert_not_awaited()
 
 
+class TestOrganizationDeletion:
+    async def test_member_ids_are_serialized_in_the_audit_payload(self) -> None:
+        actor_id = generate_id()
+        organization_id = generate_id()
+        member_id = generate_id()
+        session = MagicMock()
+        session.add = MagicMock()
+        session.commit = AsyncMock()
+
+        ops = PlatformDirectoryOperations(session)
+        ops._user_ops.require_system_admin = AsyncMock(return_value=_make_user())
+        org = MagicMock(
+            id=organization_id,
+            slug="e2e-tenant",
+            deleted_at=None,
+        )
+        ops._require_org = AsyncMock(return_value=org)
+        ops._bump_member_token_versions = AsyncMock(return_value=[member_id])
+        ops._publish_member_token_revokes = AsyncMock()
+        ops._enqueue_org_deleted_emails = AsyncMock()
+        ops.get_organization = AsyncMock(return_value="detail")
+        audit = AsyncMock()
+
+        with (
+            patch(
+                "uniffy.domains.platform.directory.operations.check_rate_limit",
+                AsyncMock(),
+            ),
+            patch(
+                "uniffy.domains.platform.directory.operations.write_audit_event",
+                audit,
+            ),
+            patch(
+                "uniffy.domains.platform.directory.operations.invalidate_user_profile",
+                AsyncMock(),
+            ),
+        ):
+            result = await ops.delete_organization(
+                user_id=actor_id,
+                organization_id=organization_id,
+                confirm_slug=org.slug,
+                reason="E2E cleanup",
+            )
+
+        assert result == "detail"
+        assert audit.await_args.kwargs["details"]["member_token_versions_bumped"] == [
+            str(member_id)
+        ]
+        session.commit.assert_awaited_once()
+
+
 class TestCreateUserTransaction:
     async def test_membership_failure_rolls_back_the_account(self) -> None:
         actor = _make_user(is_system_admin=True)
@@ -275,6 +326,7 @@ class TestCreateUserTransaction:
                 is_system_admin=False,
                 organization_id=generate_id(),
                 reason="new hire",
+                search_indexer=MagicMock(),
             )
 
         session.rollback.assert_awaited_once()
@@ -300,6 +352,7 @@ class TestCreateUserTransaction:
                 email_verified=True,
                 is_system_admin=False,
                 reason="",
+                search_indexer=MagicMock(),
             )
 
 
@@ -319,7 +372,11 @@ class TestMemberCapIsEnforced:
         ops.get_membership = AsyncMock(return_value=None)
 
         with pytest.raises(ValidationError):
-            await ops.add_member(user_id=generate_id(), org_id=org_id)
+            await ops.add_member(
+                user_id=generate_id(),
+                org_id=org_id,
+                search_indexer=MagicMock(),
+            )
 
     async def test_uncapped_org_passes(self) -> None:
         ops = OrganizationOperations(MagicMock())

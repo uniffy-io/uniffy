@@ -134,7 +134,7 @@ async def test_staged_membership_and_audit_roll_back_together(session, membershi
 
 
 async def test_member_cap_is_serialized_across_concurrent_adds(
-    session, membership_env, monkeypatch
+    session, membership_env, search_indexer, monkeypatch
 ) -> None:
     monkeypatch.setattr(UserDirectoryProjection, "index_for_organization", AsyncMock())
     org = await session.get(Organization, membership_env.org_id)
@@ -148,6 +148,7 @@ async def test_member_cap_is_serialized_across_concurrent_adds(
                     target_id,
                     membership_env.org_id,
                     actor_user_id=membership_env.admin_id,
+                    search_indexer=search_indexer,
                 )
             except ValidationError:
                 await transaction.rollback()
@@ -184,7 +185,7 @@ async def test_member_cap_is_serialized_across_concurrent_adds(
 
 
 async def test_reactivation_provisions_defaults_idempotently(
-    session, membership_env, monkeypatch
+    session, membership_env, search_indexer, monkeypatch
 ) -> None:
     monkeypatch.setattr(UserDirectoryProjection, "index_for_organization", AsyncMock())
     org = await session.get(Organization, membership_env.org_id)
@@ -215,12 +216,14 @@ async def test_reactivation_provisions_defaults_idempotently(
         membership_env.org_id,
         OrganizationRole.ADMIN,
         membership_env.admin_id,
+        search_indexer=search_indexer,
     )
     second = await operations.add_member(
         target_id,
         membership_env.org_id,
         OrganizationRole.MEMBER,
         membership_env.admin_id,
+        search_indexer=search_indexer,
     )
 
     member_rows = list(
@@ -263,7 +266,7 @@ async def test_reactivation_provisions_defaults_idempotently(
 
 
 async def test_search_failure_after_commit_keeps_authoritative_membership(
-    session, membership_env, monkeypatch
+    session, membership_env, search_indexer, monkeypatch
 ) -> None:
     monkeypatch.setattr(
         UserDirectoryProjection,
@@ -276,6 +279,7 @@ async def test_search_failure_after_commit_keeps_authoritative_membership(
         target_id,
         membership_env.org_id,
         actor_user_id=membership_env.admin_id,
+        search_indexer=search_indexer,
     )
 
     assert membership.is_active is True

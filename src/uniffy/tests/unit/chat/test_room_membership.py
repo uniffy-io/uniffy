@@ -10,8 +10,21 @@ from uniffy.domains.chat.rooms import RoomMembership
 async def test_sync_uses_injected_dependencies_and_preserves_order(monkeypatch) -> None:
     order: list[str] = []
     operations = MagicMock()
-    operations.add_members = AsyncMock(side_effect=lambda *_args: order.append("add"))
-    operations.remove_members = AsyncMock(side_effect=lambda *_args: order.append("remove"))
+    staged_add = MagicMock()
+    staged_remove = MagicMock()
+    operations.stage_members = AsyncMock(
+        side_effect=lambda *_args: (order.append("stage_add"), staged_add)[1]
+    )
+    operations.stage_members_remove = AsyncMock(
+        side_effect=lambda *_args: (order.append("stage_remove"), staged_remove)[1]
+    )
+    operations.finish_members_add_after_commit = AsyncMock(
+        side_effect=lambda *_args: order.append("finish_add")
+    )
+    operations.finish_members_remove_after_commit = AsyncMock(
+        side_effect=lambda *_args: order.append("finish_remove")
+    )
+    operations.session.commit = AsyncMock()
     constructor = MagicMock(return_value=operations)
     monkeypatch.setattr(rooms_module, "ChatChannelOperations", constructor)
     session = MagicMock()
@@ -37,25 +50,29 @@ async def test_sync_uses_injected_dependencies_and_preserves_order(monkeypatch) 
         search_indexer=search_indexer,
         call_lifecycle=call_lifecycle,
     )
-    operations.add_members.assert_awaited_once_with(
+    operations.stage_members.assert_awaited_once_with(
         owner_id,
         organization_id,
         channel_id,
         [added_user_id],
     )
-    operations.remove_members.assert_awaited_once_with(
+    operations.stage_members_remove.assert_awaited_once_with(
         owner_id,
         organization_id,
         channel_id,
         [removed_user_id],
     )
-    assert order == ["add", "remove"]
+    operations.session.commit.assert_awaited_once_with()
+    operations.finish_members_add_after_commit.assert_awaited_once_with(staged_add)
+    operations.finish_members_remove_after_commit.assert_awaited_once_with(staged_remove)
+    assert order == ["stage_add", "stage_remove", "finish_add", "finish_remove"]
 
 
 async def test_sync_skips_empty_changes(monkeypatch) -> None:
     operations = MagicMock()
-    operations.add_members = AsyncMock()
-    operations.remove_members = AsyncMock()
+    operations.stage_members = AsyncMock()
+    operations.stage_members_remove = AsyncMock()
+    operations.session.commit = AsyncMock()
     monkeypatch.setattr(rooms_module, "ChatChannelOperations", MagicMock(return_value=operations))
 
     await RoomMembership(MagicMock(), MagicMock(), MagicMock()).sync(
@@ -66,5 +83,6 @@ async def test_sync_skips_empty_changes(monkeypatch) -> None:
         removed_user_ids=[],
     )
 
-    operations.add_members.assert_not_awaited()
-    operations.remove_members.assert_not_awaited()
+    operations.stage_members.assert_not_awaited()
+    operations.stage_members_remove.assert_not_awaited()
+    operations.session.commit.assert_not_awaited()

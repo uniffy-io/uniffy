@@ -19,7 +19,10 @@ from uniffy.domains.directory.sync.types import (
     DirectoryUser,
     ReconcileReport,
 )
-from uniffy.domains.organizations.operations import OrganizationOperations
+from uniffy.domains.organizations.operations import (
+    OrganizationOperations,
+    StagedOrganizationMembership,
+)
 
 logger = logger.bind(component="directory.sync.records")
 
@@ -136,6 +139,7 @@ async def upsert_user(
     record: DirectoryUser,
     *,
     report: ReconcileReport,
+    staged_memberships: list[StagedOrganizationMembership],
 ) -> UUID | None:
     org_id = source.organization_id
     link = await get_identity_link(session, source, SubjectType.USER, record.external_id)
@@ -205,7 +209,7 @@ async def upsert_user(
         organization = OrganizationOperations(session)
         membership = await organization.get_membership(user.id, org_id)
         if membership is None or not membership.is_active:
-            await organization.add_member(user.id, org_id)
+            staged_memberships.append(await organization.stage_member(user.id, org_id))
 
     await _write_profile(session, org_id, user.id, record)
     return user.id

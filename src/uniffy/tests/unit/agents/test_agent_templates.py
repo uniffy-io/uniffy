@@ -83,9 +83,6 @@ async def _org_create(skill_rows: list[tuple[UUID, str]]):
 
     ops = OrganizationOperations.__new__(OrganizationOperations)
     ops._session = session
-    ops._search_indexer = MagicMock()
-    ops._directory_projection = MagicMock()
-    ops._directory_projection.index_for_organization = AsyncMock()
 
     cipher = MagicMock()
     cipher.provision = AsyncMock()
@@ -124,11 +121,21 @@ async def _org_create(skill_rows: list[tuple[UUID, str]]):
             finish_default_agent,
         ),
         patch(
+            "uniffy.domains.organizations.operations.UserDirectoryProjection.index_for_organization",
+            AsyncMock(),
+        ),
+        patch(
             "uniffy.domains.organizations.operations.starter_content_enabled",
             return_value=False,
         ),
     ):
-        org = await ops.create(name="Acme", slug="acme", owner_user_id=owner_id)
+        org = await ops.create(
+            name="Acme",
+            slug="acme",
+            owner_user_id=owner_id,
+            storage=MagicMock(),
+            search_indexer=MagicMock(),
+        )
 
     agents = [call.args[0] for call in session.add.call_args_list if isinstance(call.args[0], Agent)]
     return org, owner_id, agents, finish_default_agent

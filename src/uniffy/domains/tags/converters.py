@@ -21,7 +21,7 @@ from uniffy.core.converters import datetime_to_timestamp, optional_timestamp
 from uniffy.core.converters.common_proto import content_type_to_proto
 from uniffy.core.models.tags.tag import Tag, TagAssignment
 from uniffy.core.types import ContentType
-from uniffy.domains.tags.operations import SOURCE_INLINE, SOURCE_MANUAL, TagSort
+from uniffy.domains.tags.reader import SOURCE_INLINE, SOURCE_MANUAL, TagSort
 
 _SORT_FROM_PROTO: dict[int, TagSort] = {
     ProtoTagSort.TAG_SORT_UNSPECIFIED: TagSort.RECENT_DESC,

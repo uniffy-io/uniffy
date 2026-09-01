@@ -1,17 +1,13 @@
-"""Unit tests for the calendar event activity log.
-
-Field edits, attendee changes and RSVP responses each land as their own entry,
-occurrence ids resolve to the series master, and long or structured values are
-recorded without a before/after pair.
-"""
+"""Calendar event activity behavior."""
 
 from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock
 
 from uniffy.core.models.calendar.activity import EventActivity
 from uniffy.core.models.calendar.event import CalendarEvent
-from uniffy.core.types import AccessMode, AttendeeStatus, generate_id
+from uniffy.core.types import AccessMode, AttendeeStatus, ContentRole, generate_id
 from uniffy.domains.scheduling.calendar.operations import (
+    CalendarEventReader,
     CalendarEventOperations,
     _activity_value,
 )
@@ -95,6 +91,36 @@ class TestLogActivity:
         await ops._log_activity(f"{master_id}__occurrence__2026-08-05", generate_id(), "created")
 
         assert added[0].event_id == master_id
+
+
+class TestListActivities:
+    async def test_reader_loads_activity_for_an_occurrence(self) -> None:
+        session = MagicMock()
+        session.scalar = AsyncMock(return_value=1)
+        activity_result = MagicMock()
+        activity = EventActivity(
+            event_id=generate_id(),
+            actor_id=generate_id(),
+            action="title_changed",
+        )
+        activity_result.scalars.return_value.all.return_value = [activity]
+        session.execute = AsyncMock(return_value=activity_result)
+
+        reader = CalendarEventReader(session)
+        event = _make_event()
+        reader._fetch_by_id = AsyncMock(return_value=event)
+        reader._resolve_role = AsyncMock(return_value=ContentRole.VIEWER)
+        reader._is_attendee = AsyncMock(return_value=False)
+
+        activities, total = await reader.list_activities(
+            user_id=generate_id(),
+            organization_id=event.organization_id,
+            event_id=f"{event.id}__occurrence__2026-08-05",
+        )
+
+        reader._fetch_by_id.assert_awaited_once_with(event.id, event.organization_id)
+        assert activities == [activity]
+        assert total == 1
 
 
 class TestLogFieldChanges:

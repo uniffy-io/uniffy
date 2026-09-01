@@ -17,8 +17,12 @@ from sqlalchemy import select
 from uniffy.core.auth.passwords.crypto import hash_password
 from uniffy.core.models import Organization, User
 from uniffy.core.models.login.organization_member import OrganizationRole
+from uniffy.core.search import SearchIndexer, WorkspaceSearch
+from uniffy.core.storage import ObjectStorage
 from uniffy.domains.organizations.operations import OrganizationOperations
 from uniffy.infrastructure.database.session import close_db, init_db, open_session
+from uniffy.infrastructure.search import MeiliSearchEngine
+from uniffy.infrastructure.storage import S3Storage
 
 _PLANS = ["free", "pro", "team", "business", "enterprise"]
 _FIRST_NAMES = [
@@ -152,6 +156,8 @@ async def _provision_org(
     password_hash: str,
     prefix: str,
     rng: random.Random,
+    storage: ObjectStorage,
+    search_indexer: SearchIndexer,
 ) -> tuple[UUID, str, int]:
     name, slug = _org_name(org_idx, rng)
 
@@ -173,6 +179,8 @@ async def _provision_org(
             slug=slug,
             owner_user_id=owner.id,
             plan=rng.choice(_PLANS),
+            storage=storage,
+            search_indexer=search_indexer,
         )
 
         added = 1
@@ -189,6 +197,7 @@ async def _provision_org(
                 org_id=org.id,
                 role=role,
                 actor_user_id=owner.id,
+                search_indexer=search_indexer,
             )
             added += 1
 
@@ -202,6 +211,11 @@ async def stress_seed(
     password_hash = hash_password(password)
 
     await init_db(skip_migrations=True)
+    storage = S3Storage()
+    search = WorkspaceSearch(MeiliSearchEngine())
+    search_indexer = SearchIndexer(search)
+    await storage.startup()
+    await search.startup()
 
     logger.info(
         f"Stress seeding {orgs} orgs x {users_per_org} members "
@@ -218,7 +232,13 @@ async def stress_seed(
             t0 = time.monotonic()
             try:
                 _org_id, slug, added = await _provision_org(
-                    i, users_per_org, password_hash, prefix, rng
+                    i,
+                    users_per_org,
+                    password_hash,
+                    prefix,
+                    rng,
+                    storage,
+                    search_indexer,
                 )
             except Exception:
                 logger.exception(f"Org #{i} failed; continuing")
@@ -233,6 +253,8 @@ async def stress_seed(
                 elapsed = time.monotonic() - t0
                 logger.info(f"[{i}/{orgs}] {slug} +{added} members in {elapsed:.1f}s")
     finally:
+        await storage.shutdown()
+        await search.shutdown()
         await close_db()
 
     total = time.monotonic() - started

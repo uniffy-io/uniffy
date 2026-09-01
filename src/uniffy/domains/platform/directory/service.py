@@ -32,6 +32,7 @@ from uniffy_proto.superadmin.v1.system_directory_pb2 import (
     UpdateUserResponse,
 )
 
+from uniffy.core.search import SearchIndexer
 from uniffy.core.storage import ObjectStorage
 from uniffy.domains.platform.directory.handlers import (
     SystemOrganizationsHandlers,
@@ -40,8 +41,8 @@ from uniffy.domains.platform.directory.handlers import (
 
 
 class SystemOrganizationsServiceImpl:
-    def __init__(self, storage: ObjectStorage) -> None:
-        self._handlers = SystemOrganizationsHandlers(storage)
+    def __init__(self, storage: ObjectStorage, search_indexer: SearchIndexer) -> None:
+        self._handlers = SystemOrganizationsHandlers(storage, search_indexer)
 
     async def list_organizations(
         self, request: ListOrganizationsRequest, ctx: RequestContext
@@ -85,8 +86,8 @@ class SystemOrganizationsServiceImpl:
 
 
 class SystemUsersServiceImpl:
-    def __init__(self) -> None:
-        self._handlers = SystemUsersHandlers()
+    def __init__(self, search_indexer: SearchIndexer) -> None:
+        self._handlers = SystemUsersHandlers(search_indexer)
 
     async def list_users(self, request: ListUsersRequest, ctx: RequestContext) -> ListUsersResponse:
         return await self._handlers.list_users(request, ctx)

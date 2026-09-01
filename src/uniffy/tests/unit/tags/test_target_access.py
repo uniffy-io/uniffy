@@ -13,7 +13,7 @@ from uniffy.domains.tags.targets import TagTargetAccess
 async def test_standard_target_uses_domain_edit_gate(monkeypatch: pytest.MonkeyPatch) -> None:
     operations = MagicMock()
     operations.get_for_edit = AsyncMock()
-    monkeypatch.setattr(access_module, "NoteOperations", lambda _: operations)
+    monkeypatch.setattr(access_module, "NoteReader", lambda _: operations)
 
     await TagTargetAccess(AsyncMock()).require_edit(
         generate_id(),

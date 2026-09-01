@@ -381,6 +381,9 @@ class TestAgentChatBridgeStub:
             channel_id=generate_id(),
             trigger_message_id=generate_id(),
             agent_id=generate_id(),
+            storage=MagicMock(),
+            search_indexer=MagicMock(),
+            call_lifecycle=MagicMock(),
         )
 
     async def test_handle_confirmation_decision_raises_when_state_missing(self) -> None:

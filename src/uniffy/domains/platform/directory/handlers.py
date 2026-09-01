@@ -43,6 +43,7 @@ from uniffy_proto.superadmin.v1.system_directory_pb2 import (
 
 from uniffy.core.auth.principal import current_user_id
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
+from uniffy.core.search import SearchIndexer
 from uniffy.core.storage import ObjectStorage
 from uniffy.domains.platform.directory.converters import (
     org_detail_to_proto,
@@ -81,8 +82,9 @@ def _map_domain_error(exc: Exception) -> ConnectError:
 
 
 class SystemOrganizationsHandlers:
-    def __init__(self, storage: ObjectStorage) -> None:
+    def __init__(self, storage: ObjectStorage, search_indexer: SearchIndexer) -> None:
         self.storage = storage
+        self.search_indexer = search_indexer
 
     async def list_organizations(
         self, request: ListOrganizationsRequest, ctx: RequestContext
@@ -131,15 +133,15 @@ class SystemOrganizationsHandlers:
         user_id = current_user_id()
         try:
             async with open_session() as session:
-                detail = await PlatformDirectoryOperations(
-                    session, self.storage
-                ).create_organization(
+                detail = await PlatformDirectoryOperations(session).create_organization(
                     user_id=user_id,
                     name=request.name,
                     slug=request.slug,
                     owner_email=request.owner_email,
                     domain=request.domain,
                     plan=request.plan,
+                    storage=self.storage,
+                    search_indexer=self.search_indexer,
                 )
         except ConnectError:
             raise
@@ -245,6 +247,9 @@ class SystemOrganizationsHandlers:
 
 
 class SystemUsersHandlers:
+    def __init__(self, search_indexer: SearchIndexer) -> None:
+        self.search_indexer = search_indexer
+
     async def list_users(self, request: ListUsersRequest, ctx: RequestContext) -> ListUsersResponse:
         user_id = current_user_id()
         try:
@@ -304,6 +309,7 @@ class SystemUsersHandlers:
                     organization_id=org_id,
                     organization_role=request.organization_role,
                     reason=request.reason,
+                    search_indexer=self.search_indexer,
                 )
         except ConnectError:
             raise

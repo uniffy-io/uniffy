@@ -10,6 +10,7 @@ from sqlalchemy import select
 
 from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.models.rooms.room import Room
+from uniffy.domains.calls.channels import CallsChannelLifecycle
 from uniffy.domains.scheduling.calendar import queries as calendar_queries
 from uniffy.domains.scheduling.calendar.operations import CalendarEventOperations
 from uniffy.scripts.demo_company.context import (
@@ -119,6 +120,7 @@ async def apply_event_mentions(
             organization_id=ctx.organization_id,
             event_id=event_id,
             description=linked,
+            call_lifecycle=CallsChannelLifecycle(),
         )
         updated += 1
         logger.info(f"Linked mentions in event {spec.title!r}")

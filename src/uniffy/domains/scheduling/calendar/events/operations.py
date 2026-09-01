@@ -20,42 +20,35 @@ from uniffy.core.types import (
 )
 from uniffy.domains.chat.lifecycle import ChannelCallLifecycle
 from uniffy.domains.scheduling.calendar.events.activity import EventActivityOperations
-from uniffy.domains.scheduling.calendar.events.attendees import AttendeeOperations
+from uniffy.domains.scheduling.calendar.events.attendees import (
+    AttendeeOperations,
+    StagedCalendarRoomMembership,
+)
 from uniffy.domains.scheduling.calendar.events.channels import ChannelBindingOperations
-from uniffy.domains.scheduling.calendar.events.content import EventContentOperations
 from uniffy.domains.scheduling.calendar.events.creation import EventCreateOperations
 from uniffy.domains.scheduling.calendar.events.deletion import EventDeleteOperations
 from uniffy.domains.scheduling.calendar.events.notifications import EventNotifications
 from uniffy.domains.scheduling.calendar.events.queries import EventQueryOperations
+from uniffy.domains.scheduling.calendar.events.reader import CalendarEventReader
 from uniffy.domains.scheduling.calendar.events.recurrence.mutations import (
     RecurrenceMutationOperations,
 )
 from uniffy.domains.scheduling.calendar.events.recurrence.queries import RecurrenceQueryOperations
-from uniffy.domains.scheduling.calendar.events.registration import register_calendar_content
 from uniffy.domains.scheduling.calendar.events.reminders import ReminderStagingOperations
 from uniffy.domains.scheduling.calendar.events.state import _StagedCalendarEventCreate
 from uniffy.domains.scheduling.calendar.events.tags import EventTagOperations
 from uniffy.domains.scheduling.calendar.events.updates import EventUpdateOperations
 
 
-class CalendarEventOperations(EventContentOperations):
+class CalendarEventOperations(CalendarEventReader):
     """Stable event API composed from focused calendar workflows."""
 
     def __init__(
         self,
         session: AsyncSession,
-        search_indexer: SearchIndexer | None = None,
-        call_lifecycle: ChannelCallLifecycle | None = None,
+        search_indexer: SearchIndexer,
     ) -> None:
-        register_calendar_content()
-        super().__init__(session, search_indexer)
-        self._call_lifecycle = call_lifecycle
-
-    @property
-    def call_lifecycle(self) -> ChannelCallLifecycle:
-        if self._call_lifecycle is None:
-            raise RuntimeError("Call lifecycle is required for meeting room membership removals")
-        return self._call_lifecycle
+        super().__init__(session, _search_indexer=search_indexer)
 
     async def create(
         self,
@@ -153,6 +146,8 @@ class CalendarEventOperations(EventContentOperations):
         visibility: EventVisibility | None = None,
         transparency: EventTransparency | None = None,
         is_out_of_office: bool | None = None,
+        *,
+        call_lifecycle: ChannelCallLifecycle,
     ) -> CalendarEvent:
         return await EventUpdateOperations(self).update(
             user_id=user_id,
@@ -183,6 +178,7 @@ class CalendarEventOperations(EventContentOperations):
             visibility=visibility,
             transparency=transparency,
             is_out_of_office=is_out_of_office,
+            call_lifecycle=call_lifecycle,
         )
 
     async def delete(
@@ -222,10 +218,6 @@ class CalendarEventOperations(EventContentOperations):
             category_ids,
             channel_id,
         )
-
-    @staticmethod
-    def _parse_master_event_id(event_id: UUID | str) -> UUID:
-        return RecurrenceQueryOperations._parse_master_event_id(event_id)
 
     @staticmethod
     def _collect_update_kwargs(**fields: object) -> dict:
@@ -338,6 +330,8 @@ class CalendarEventOperations(EventContentOperations):
         event_id: UUID,
         attendee_ids: list[UUID],
         role: AttendeeRole = AttendeeRole.REQUIRED,
+        *,
+        call_lifecycle: ChannelCallLifecycle,
     ) -> CalendarEvent:
         return await AttendeeOperations(self).add_attendees(
             user_id,
@@ -345,6 +339,7 @@ class CalendarEventOperations(EventContentOperations):
             event_id,
             attendee_ids,
             role,
+            call_lifecycle=call_lifecycle,
         )
 
     async def update_attendee_role(
@@ -369,12 +364,15 @@ class CalendarEventOperations(EventContentOperations):
         organization_id: UUID,
         event_id: UUID,
         attendee_ids: list[UUID],
+        *,
+        call_lifecycle: ChannelCallLifecycle,
     ) -> CalendarEvent:
         return await AttendeeOperations(self).remove_attendees(
             user_id,
             organization_id,
             event_id,
             attendee_ids,
+            call_lifecycle=call_lifecycle,
         )
 
     async def update_attendee_status(
@@ -403,18 +401,27 @@ class CalendarEventOperations(EventContentOperations):
             attendee_ids,
         )
 
-    async def _sync_auto_created_room_members(
+    async def _stage_auto_created_room_members(
         self,
         event: CalendarEvent,
         *,
         added: list[UUID],
         removed: list[UUID],
-    ) -> None:
-        await AttendeeOperations(self)._sync_auto_created_room_members(
+        call_lifecycle: ChannelCallLifecycle,
+    ) -> StagedCalendarRoomMembership | None:
+        return await AttendeeOperations(self)._stage_auto_created_room_members(
             event,
             added=added,
             removed=removed,
+            call_lifecycle=call_lifecycle,
         )
+
+    async def _finish_auto_created_room_members(
+        self,
+        event: CalendarEvent,
+        staged: StagedCalendarRoomMembership | None,
+    ) -> None:
+        await AttendeeOperations(self)._finish_auto_created_room_members(event, staged)
 
     async def list_activities(
         self,

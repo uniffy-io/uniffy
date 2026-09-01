@@ -70,7 +70,7 @@ from uniffy.domains.agents.tools.registry import get_tool_registry
 from uniffy.domains.integrations.tools import filter_integration_tool_schemas
 from uniffy.domains.organizations.operations import OrganizationOperations
 from uniffy.domains.permissions.access import ResourceAccessResolver, ResourceKey
-from uniffy.domains.tags.operations import TagOperations
+from uniffy.domains.tags.reader import TagReader
 from uniffy.domains.users.operations import UserOperations
 from uniffy.infrastructure.database import open_session
 
@@ -120,14 +120,14 @@ async def _hydrate_agent_tags(
 ) -> dict[UUID, list[Tag]]:
     """Bulk-fetch unified-tag rows for a batch of agent ids.
 
-    Single ``TagOperations.get_for_urns`` round-trip per request batch
+    Single ``TagReader.get_for_urns`` round-trip per request batch
     (no N+1). Returns a mapping keyed on agent id with an empty list
     for agents that have no tags.
     """
     if not agent_ids:
         return {}
     urn_to_id = {build_content_urn(ContentType.AGENT, aid): aid for aid in agent_ids}
-    tag_ops = TagOperations(session)
+    tag_ops = TagReader(session)
     bulk = await tag_ops.get_for_urns(
         organization_id=organization_id,
         content_urns=list(urn_to_id),

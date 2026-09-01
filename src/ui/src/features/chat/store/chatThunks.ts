@@ -38,6 +38,7 @@ import {
   updateUnreadCounts,
   setActiveChannel,
   setOrgChatPolicy,
+  clearChannelCategory,
   type OrgChatPolicy,
 } from "@/features/chat/store/chatChannelsSlice";
 import {
@@ -1315,6 +1316,7 @@ export const deleteCategoryThunk = createAsyncThunk<
   try {
     const organizationId = getOrganizationId(getState());
     await chatApi.deleteCategory({ organizationId, categoryId });
+    dispatch(clearChannelCategory(categoryId));
     dispatch(fetchCategories());
   } catch (error) {
     return rejectWithValue(error instanceof Error ? error.message : "Failed to delete category");

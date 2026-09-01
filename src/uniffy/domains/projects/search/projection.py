@@ -6,7 +6,7 @@ from uniffy.core.content.mentions import publish_mention_state
 from uniffy.core.models.projects.task import Task
 from uniffy.core.search.indexer import SearchIndexer
 from uniffy.domains.projects.tasks.notifications import TaskNotifications
-from uniffy.domains.projects.tasks.operations import TaskOperations
+from uniffy.domains.projects.tasks.reader import TaskReader
 
 
 async def refresh_task_search_projection(
@@ -14,7 +14,7 @@ async def refresh_task_search_projection(
     task: Task,
     search_indexer: SearchIndexer,
 ) -> None:
-    operations = TaskOperations(session, search_indexer=search_indexer)
+    operations = TaskReader(session, search_indexer=search_indexer)
     await operations._index_for_search(task)
     labels = await TaskNotifications(session).resolve_field_option_labels(
         task.project_id,

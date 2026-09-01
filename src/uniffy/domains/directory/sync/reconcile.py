@@ -34,7 +34,10 @@ from uniffy.domains.directory.sync.records import (
     upsert_user,
 )
 from uniffy.domains.directory.sync.types import DirectoryGroup, DirectoryUser, ReconcileReport
-from uniffy.domains.organizations.operations import OrganizationOperations
+from uniffy.domains.organizations.operations import (
+    OrganizationOperations,
+    StagedOrganizationMembership,
+)
 
 logger = logger.bind(component="directory.sync.reconcile")
 
@@ -80,10 +83,18 @@ async def provision_from_login(
     search_indexer: SearchIndexer,
 ) -> User:
     report = ReconcileReport()
-    user_id = await upsert_user(session, source, record, report=report)
+    staged_memberships: list[StagedOrganizationMembership] = []
+    user_id = await upsert_user(
+        session,
+        source,
+        record,
+        report=report,
+        staged_memberships=staged_memberships,
+    )
     if user_id is None:
         raise ValidationError("record", "record cannot be provisioned")
     await session.commit()
+    await _finish_membership_effects(session, staged_memberships)
     await invalidate_person(source.organization_id, user_id)
     await sync_people_search(session, search_indexer, source.organization_id, [user_id])
     result = await session.execute(select(User).where(User.id == user_id))
@@ -105,6 +116,16 @@ async def _resolve_sync_actor(session: AsyncSession, organization_id: UUID) -> U
     if owner_id is None:
         raise ValidationError("organization", "organization has no active owner")
     return owner_id
+
+
+async def _finish_membership_effects(
+    session: AsyncSession,
+    staged_memberships: list[StagedOrganizationMembership],
+) -> None:
+    operations = OrganizationOperations(session)
+    for staged in staged_memberships:
+        await operations.finish_member_add_cache_after_commit(staged)
+    staged_memberships.clear()
 
 
 async def _deprovision_pass(
@@ -187,10 +208,17 @@ async def run_full_sync(
     touched: set[UUID] = set()
     seen_active: set[str] = set()
     manager_refs: list[tuple[UUID, str | None, str | None]] = []
+    staged_memberships: list[StagedOrganizationMembership] = []
 
     processed = 0
     async for record in provider.fetch_users():
-        user_id = await upsert_user(session, source, record, report=report)
+        user_id = await upsert_user(
+            session,
+            source,
+            record,
+            report=report,
+            staged_memberships=staged_memberships,
+        )
         if user_id is not None:
             touched.add(user_id)
             if record.active:
@@ -204,7 +232,9 @@ async def run_full_sync(
         processed += 1
         if processed % CHUNK_SIZE == 0:
             await session.commit()
+            await _finish_membership_effects(session, staged_memberships)
     await session.commit()
+    await _finish_membership_effects(session, staged_memberships)
 
     for user_id, external_id, external_dn in manager_refs:
         if not await resolve_manager(

@@ -247,13 +247,13 @@ async def _bench_list_tags(
     *,
     label: str,
 ) -> dict[str, float]:
-    from uniffy.domains.tags.operations import TagOperations
+    from uniffy.domains.tags.reader import TagReader
     from uniffy.infrastructure.database.session import open_session
 
     samples: list[float] = []
     for _ in range(iterations):
         async with open_session() as session:
-            ops = TagOperations(session)
+            ops = TagReader(session)
             start = time.perf_counter()
             tags, counts, token = await ops.list_tags(
                 organization_id=org_id,
@@ -272,13 +272,13 @@ async def _bench_list_content(
     *,
     label: str,
 ) -> dict[str, float]:
-    from uniffy.domains.tags.operations import TagOperations
+    from uniffy.domains.tags.reader import TagReader
     from uniffy.infrastructure.database.session import open_session
 
     samples: list[float] = []
     for _ in range(iterations):
         async with open_session() as session:
-            ops = TagOperations(session)
+            ops = TagReader(session)
             start = time.perf_counter()
             assignments, token = await ops.list_content(
                 organization_id=org_id,

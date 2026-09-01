@@ -25,7 +25,7 @@ async def test_revoked_organization_membership_is_unauthenticated() -> None:
         patch("uniffy.domains.auth.handlers.AuthOperations", return_value=operations),
         pytest.raises(ConnectError) as exc_info,
     ):
-        await AuthHandlers().refresh_token(
+        await AuthHandlers(AsyncMock()).refresh_token(
             RefreshTokenRequest(refresh_token="revoked-membership-token"),
             AsyncMock(),
         )

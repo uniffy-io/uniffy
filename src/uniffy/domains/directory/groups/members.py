@@ -33,7 +33,7 @@ class GroupMemberOperations:
     ) -> None:
         self._session = session
         self._search_indexer = search_indexer
-        self._org_ops = OrganizationOperations(session, search_indexer=search_indexer)
+        self._org_ops = OrganizationOperations(session)
 
     @property
     def search_indexer(self) -> SearchIndexer:

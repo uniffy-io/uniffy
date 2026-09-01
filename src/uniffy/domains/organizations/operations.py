@@ -72,39 +72,8 @@ class StagedOrganizationCreate:
 
 
 class OrganizationOperations:
-    def __init__(
-        self,
-        session: AsyncSession,
-        storage: ObjectStorage | None = None,
-        search_indexer: SearchIndexer | None = None,
-        call_lifecycle: ChannelCallLifecycle | None = None,
-    ) -> None:
+    def __init__(self, session: AsyncSession) -> None:
         self._session = session
-        self._storage = storage
-        self._search_indexer = search_indexer
-        self._call_lifecycle = call_lifecycle
-
-        self._directory_projection = (
-            UserDirectoryProjection(session, search_indexer) if search_indexer is not None else None
-        )
-
-    @property
-    def search_indexer(self) -> SearchIndexer:
-        if self._search_indexer is None:
-            raise RuntimeError("Search indexing is required for organization mutations")
-        return self._search_indexer
-
-    @property
-    def directory_projection(self) -> UserDirectoryProjection:
-        if self._directory_projection is None:
-            raise RuntimeError("Search indexing is required for organization mutations")
-        return self._directory_projection
-
-    @property
-    def call_lifecycle(self) -> ChannelCallLifecycle:
-        if self._call_lifecycle is None:
-            raise RuntimeError("Call lifecycle is required for organization member removal")
-        return self._call_lifecycle
 
     async def get_by_id(self, org_id: UUID) -> Organization:
         result = await self._session.execute(select(Organization).where(Organization.id == org_id))
@@ -121,6 +90,9 @@ class OrganizationOperations:
         domain: str | None = None,
         plan: str = "free",
         actor_user_id: UUID | None = None,
+        *,
+        storage: ObjectStorage,
+        search_indexer: SearchIndexer,
     ) -> Organization:
         try:
             staged = await self.stage_organization(
@@ -137,7 +109,11 @@ class OrganizationOperations:
             raise
 
         await self._session.refresh(staged.organization)
-        await self.finish_organization_create_after_commit(staged)
+        await self.finish_organization_create_after_commit(
+            staged,
+            storage=storage,
+            search_indexer=search_indexer,
+        )
         await self._session.refresh(staged.organization)
         return staged.organization
 
@@ -217,11 +193,17 @@ class OrganizationOperations:
     async def finish_organization_create_after_commit(
         self,
         staged: StagedOrganizationCreate,
+        *,
+        storage: ObjectStorage,
+        search_indexer: SearchIndexer,
     ) -> None:
         org = staged.organization
         organization_id = org.id
         try:
-            await self.directory_projection.index_for_organization(staged.owner, organization_id)
+            await UserDirectoryProjection(
+                self._session,
+                search_indexer,
+            ).index_for_organization(staged.owner, organization_id)
         except Exception:
             await self._session.rollback()
             logger.opt(exception=True).warning(
@@ -233,7 +215,7 @@ class OrganizationOperations:
         try:
             await ChatChannelOperations(
                 self._session,
-                search_indexer=self.search_indexer,
+                search_indexer=search_indexer,
             ).finish_channel_create_after_commit(staged.default_channel)
         except Exception:
             await self._session.rollback()
@@ -247,7 +229,7 @@ class OrganizationOperations:
             await finish_default_agent_after_commit(
                 self._session,
                 staged.default_agent,
-                self.search_indexer,
+                search_indexer,
             )
         except Exception:
             await self._session.rollback()
@@ -257,7 +239,11 @@ class OrganizationOperations:
             )
             await self._refresh_staged_organization(staged)
 
-        await self._provision_starter_content_after_commit(staged)
+        await self._provision_starter_content_after_commit(
+            staged,
+            storage=storage,
+            search_indexer=search_indexer,
+        )
 
     async def _refresh_staged_organization(self, staged: StagedOrganizationCreate) -> None:
         await self._session.refresh(staged.organization)
@@ -268,6 +254,9 @@ class OrganizationOperations:
     async def _provision_starter_content_after_commit(
         self,
         staged: StagedOrganizationCreate,
+        *,
+        storage: ObjectStorage,
+        search_indexer: SearchIndexer,
     ) -> None:
         organization_id = staged.organization.id
         if not starter_content_enabled():
@@ -280,8 +269,8 @@ class OrganizationOperations:
                 session=self._session,
                 org=staged.organization,
                 admin_user=staged.owner,
-                search_indexer=self.search_indexer,
-                storage=self._storage,
+                search_indexer=search_indexer,
+                storage=storage,
             )
             await self._session.commit()
         except Exception:
@@ -546,6 +535,8 @@ class OrganizationOperations:
     async def finish_member_add_after_commit(
         self,
         staged: StagedOrganizationMembership,
+        *,
+        search_indexer: SearchIndexer,
     ) -> None:
         user_id = staged.membership.user_id
         org_id = staged.organization_id
@@ -553,12 +544,21 @@ class OrganizationOperations:
             result = await self._session.execute(select(User).where(User.id == user_id))
             user = result.scalar_one_or_none()
             if user:
-                await self.directory_projection.index_for_organization(user, org_id)
+                await UserDirectoryProjection(
+                    self._session,
+                    search_indexer,
+                ).index_for_organization(user, org_id)
         except Exception:
             logger.opt(exception=True).warning(
                 f"Failed to index organization member {user_id} in {org_id}"
             )
 
+        await self.finish_member_add_cache_after_commit(staged)
+
+    async def finish_member_add_cache_after_commit(
+        self,
+        staged: StagedOrganizationMembership,
+    ) -> None:
         for channel_id in staged.default_channel_ids:
             try:
                 await invalidate_cached_member_ids(channel_id)
@@ -573,11 +573,13 @@ class OrganizationOperations:
         org_id: UUID,
         role: OrganizationRole = OrganizationRole.MEMBER,
         actor_user_id: UUID | None = None,
+        *,
+        search_indexer: SearchIndexer,
     ) -> OrganizationMember:
         staged = await self.stage_member(user_id, org_id, role, actor_user_id)
         await self._session.commit()
         await self._session.refresh(staged.membership)
-        await self.finish_member_add_after_commit(staged)
+        await self.finish_member_add_after_commit(staged, search_indexer=search_indexer)
         return staged.membership
 
     async def update_member_role(
@@ -633,6 +635,9 @@ class OrganizationOperations:
         admin_user_id: UUID,
         org_id: UUID,
         target_user_id: UUID,
+        *,
+        search_indexer: SearchIndexer,
+        call_lifecycle: ChannelCallLifecycle,
     ) -> bool:
         await self.require_org_admin(admin_user_id, org_id)
 
@@ -671,7 +676,10 @@ class OrganizationOperations:
         await self._session.commit()
 
         try:
-            await self.directory_projection.remove_from_organization(target_user_id, org_id)
+            await UserDirectoryProjection(
+                self._session,
+                search_indexer,
+            ).remove_from_organization(target_user_id, org_id)
         except Exception:
             logger.opt(exception=True).warning(
                 "Organization member removal committed with stale search projection",
@@ -693,7 +701,7 @@ class OrganizationOperations:
                     ),
                 )
             for channel_id in chat_cleanup.channel_ids:
-                await self.call_lifecycle.remove_member(
+                await call_lifecycle.remove_member(
                     self._session,
                     channel_id,
                     target_user_id,

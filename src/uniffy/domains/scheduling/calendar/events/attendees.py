@@ -1,5 +1,6 @@
 """Calendar operations."""
 
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from uuid import UUID
 
@@ -33,9 +34,16 @@ from uniffy.core.types import (
     EventStatus,
     NotificationType,
 )
-from uniffy.domains.chat.rooms import RoomMembership
+from uniffy.domains.chat.lifecycle import ChannelCallLifecycle
+from uniffy.domains.chat.rooms import RoomMembership, StagedRoomMembershipSync
 
 logger = logger.bind(component="scheduling.calendar.events.attendees")
+
+
+@dataclass(frozen=True)
+class StagedCalendarRoomMembership:
+    membership: RoomMembership
+    sync: StagedRoomMembershipSync
 
 
 class AttendeeOperations:
@@ -50,6 +58,8 @@ class AttendeeOperations:
         event_id: UUID,
         attendee_ids: list[UUID],
         role: AttendeeRole = AttendeeRole.REQUIRED,
+        *,
+        call_lifecycle: ChannelCallLifecycle,
     ) -> CalendarEvent:
         """Add attendees to an existing event."""
         event = await self.events._fetch_by_id(event_id, organization_id)
@@ -93,6 +103,13 @@ class AttendeeOperations:
                 new_value=",".join(str(uid) for uid in added_ids),
             )
 
+        staged_room = await self.events._stage_auto_created_room_members(
+            event,
+            added=added_ids,
+            removed=[],
+            call_lifecycle=call_lifecycle,
+        )
+
         await self.session.commit()
         await self.session.refresh(event)
 
@@ -114,7 +131,7 @@ class AttendeeOperations:
                 )
             )
 
-        await self.events._sync_auto_created_room_members(event, added=added_ids, removed=[])
+        await self.events._finish_auto_created_room_members(event, staged_room)
 
         return event
 
@@ -172,6 +189,8 @@ class AttendeeOperations:
         organization_id: UUID,
         event_id: UUID,
         attendee_ids: list[UUID],
+        *,
+        call_lifecycle: ChannelCallLifecycle,
     ) -> CalendarEvent:
         """Remove attendees from an event."""
         event = await self.events._fetch_by_id(event_id, organization_id)
@@ -208,6 +227,13 @@ class AttendeeOperations:
                 previous_value=",".join(str(uid) for uid in removed_ids),
             )
 
+        staged_room = await self.events._stage_auto_created_room_members(
+            event,
+            added=[],
+            removed=removed_ids,
+            call_lifecycle=call_lifecycle,
+        )
+
         await self.session.commit()
         await self.session.refresh(event)
 
@@ -219,7 +245,7 @@ class AttendeeOperations:
                 ContentAccessAction.REVOKED,
             )
 
-        await self.events._sync_auto_created_room_members(event, added=[], removed=removed_ids)
+        await self.events._finish_auto_created_room_members(event, staged_room)
 
         return event
 
@@ -387,42 +413,44 @@ class AttendeeOperations:
             {uid: gid for uid, gid in provenance.items() if uid in active_ids},
         )
 
-    async def _sync_auto_created_room_members(
+    async def _stage_auto_created_room_members(
         self,
         event: CalendarEvent,
         *,
         added: list[UUID],
         removed: list[UUID],
-    ) -> None:
-        """Mirror attendee changes into a room the editor auto-created.
-
-        Only auto-created rooms are synced; a channel the organizer merely
-        picked is never mutated by the calendar. The organizer owns the room,
-        so the chat member ops run as the organizer. Best-effort: a chat-side
-        failure leaves the event saved and logs, since join is gated per user
-        at call time. Auto-created rooms are always PRIVATE channels (GROUP_DM
-        membership is immutable), so add/remove always apply.
-        """
+        call_lifecycle: ChannelCallLifecycle,
+    ) -> StagedCalendarRoomMembership | None:
         if not (event.channel_auto_created and event.channel_id):
-            return
+            return None
         add = [uid for uid in added if uid != event.organizer_id]
         remove = [uid for uid in removed if uid != event.organizer_id]
         if not add and not remove:
-            return
+            return None
 
+        membership = RoomMembership(
+            self.session,
+            search_indexer=self.events.search_indexer,
+            call_lifecycle=call_lifecycle,
+        )
+        staged = await membership.stage_sync(
+            event.organizer_id,
+            event.organization_id,
+            event.channel_id,
+            added_user_ids=add,
+            removed_user_ids=remove,
+        )
+        return StagedCalendarRoomMembership(membership=membership, sync=staged)
+
+    async def _finish_auto_created_room_members(
+        self,
+        event: CalendarEvent,
+        staged: StagedCalendarRoomMembership | None,
+    ) -> None:
+        if staged is None:
+            return
         try:
-            membership = RoomMembership(
-                self.session,
-                search_indexer=self.events.search_indexer,
-                call_lifecycle=self.events.call_lifecycle,
-            )
-            await membership.sync(
-                event.organizer_id,
-                event.organization_id,
-                event.channel_id,
-                added_user_ids=add,
-                removed_user_ids=remove,
-            )
+            await staged.membership.finish_sync_after_commit(staged.sync)
         except Exception:
             logger.opt(exception=True).warning(
                 "auto-created meeting room member sync failed",

@@ -563,7 +563,11 @@ def _create_api_dispatcher(
 
     call_lifecycle = CallsChannelLifecycle()
 
-    add_rpc("/auth.v1.AuthService", AuthServiceASGIApplication, AuthHandlers())
+    add_rpc(
+        "/auth.v1.AuthService",
+        AuthServiceASGIApplication,
+        AuthHandlers(search_indexer),
+    )
     add_rpc("/auth.v1.MfaService", MfaServiceASGIApplication, MfaHandlers())
     add_rpc(
         "/notes.v1.NotesService",
@@ -649,12 +653,12 @@ def _create_api_dispatcher(
     add_rpc(
         "/superadmin.v1.SystemOrganizationsService",
         SystemOrganizationsServiceASGIApplication,
-        SystemOrganizationsServiceImpl(storage),
+        SystemOrganizationsServiceImpl(storage, search_indexer),
     )
     add_rpc(
         "/superadmin.v1.SystemUsersService",
         SystemUsersServiceASGIApplication,
-        SystemUsersServiceImpl(),
+        SystemUsersServiceImpl(search_indexer),
     )
     add_rpc(
         "/superadmin.v1.SupportService",

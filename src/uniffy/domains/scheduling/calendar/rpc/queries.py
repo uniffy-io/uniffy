@@ -18,7 +18,7 @@ from uniffy.core.types import ContentType
 from uniffy.domains.permissions.access import ResourceAccessResolver, ResourceKey
 from uniffy.domains.scheduling.calendar import queries
 from uniffy.domains.scheduling.calendar.converters import event_to_proto
-from uniffy.domains.scheduling.calendar.events.operations import CalendarEventOperations
+from uniffy.domains.scheduling.calendar.events.reader import CalendarEventReader
 from uniffy.domains.scheduling.calendar.events.state import event_details_hidden
 from uniffy.domains.scheduling.calendar.rpc.support import (
     hydrate_event_tags,
@@ -43,9 +43,7 @@ class EventQueryHandlers:
 
         try:
             async with open_session() as session:
-                operations = CalendarEventOperations(
-                    session, self.search_indexer, self.call_lifecycle
-                )
+                operations = CalendarEventReader(session)
                 event, attendees = await operations.get_event_with_attendees(
                     user_id, organization_id, event_id
                 )
@@ -99,9 +97,7 @@ class EventQueryHandlers:
 
         try:
             async with open_session() as session:
-                operations = CalendarEventOperations(
-                    session, self.search_indexer, self.call_lifecycle
-                )
+                operations = CalendarEventReader(session)
                 events, total = await operations.list_events(
                     user_id=user_id,
                     organization_id=organization_id,
@@ -184,9 +180,7 @@ class EventQueryHandlers:
 
         try:
             async with open_session() as session:
-                operations = CalendarEventOperations(
-                    session, self.search_indexer, self.call_lifecycle
-                )
+                operations = CalendarEventReader(session)
                 events = await operations.get_events_in_range(
                     user_id=user_id,
                     organization_id=organization_id,

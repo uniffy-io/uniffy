@@ -113,11 +113,12 @@ async def _ensure_person(ctx: DemoContext, spec: PersonSpec, result: DomainResul
 
     # add_member is the whole onboarding path (membership, user search index,
     # attachments folder, default channel joins, audit row) and is idempotent.
-    await OrganizationOperations(ctx.session, search_indexer=ctx.search_indexer).add_member(
+    await OrganizationOperations(ctx.session).add_member(
         user_id=user.id,
         org_id=ctx.organization_id,
         role=OrganizationRole.MEMBER,
         actor_user_id=ctx.actor_id,
+        search_indexer=ctx.search_indexer,
     )
     return user.id
 
@@ -333,11 +334,12 @@ async def ensure_demo_user(
 
     # add_member is the whole onboarding path: membership, user search index,
     # attachments folder, default channel joins, audit row, cache invalidation.
-    await OrganizationOperations(ctx.session, search_indexer=ctx.search_indexer).add_member(
+    await OrganizationOperations(ctx.session).add_member(
         user_id=user.id,
         org_id=ctx.organization_id,
         role=OrganizationRole.MEMBER,
         actor_user_id=ctx.actor_id,
+        search_indexer=ctx.search_indexer,
     )
 
     # The password stays out of the log: --password exists so a deployment can
