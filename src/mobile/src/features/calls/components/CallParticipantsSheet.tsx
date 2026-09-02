@@ -32,6 +32,9 @@ export function CallParticipantsSheet({
   participants: Participant[];
   isHost: boolean;
 }) {
+  // Reads mutable livekit state (mute flags, publications) during render; opt
+  // out of React Compiler memoization or a row never follows a mute or a share.
+  "use no memo";
   const T = useTheme();
   const { organizationId } = useAuth();
   const { session } = useCall();

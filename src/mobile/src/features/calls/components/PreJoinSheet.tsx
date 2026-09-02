@@ -50,8 +50,13 @@ export function PreJoinSheet({
   onClose: () => void;
 }) {
   const { user } = useAuth();
-  const { joinChannelCall, joinCallById } = useCall();
+  const { joinChannelCall, joinCallById, session } = useCall();
   const activeCall = useActiveCall(channelId);
+  // While a call is live it owns the audio session and the camera, so the sheet
+  // must not start a preview of either; a different channel cannot be joined at
+  // all until that call is left.
+  const inCall = session.status !== "idle";
+  const busyElsewhere = inCall && session.channelId !== channelId;
 
   const [micOn, setMicOn] = useState(false);
   const [cameraOn, setCameraOn] = useState(false);
@@ -86,7 +91,7 @@ export function PreJoinSheet({
   }
 
   useEffect(() => {
-    if (!visible) return;
+    if (!visible || inCall) return;
     joinedRef.current = false;
     let cancelled = false;
     void startPreviewAudio()
@@ -99,10 +104,14 @@ export function PreJoinSheet({
       setAudioReady(false);
       if (!joinedRef.current) void stopPreviewAudio().catch(() => {});
     };
-  }, [visible]);
+  }, [visible, inCall]);
 
+  // The preview is released as soon as a join starts, before the call opens its
+  // own camera: a device holds one capture at a time, and losing that race puts
+  // the user in the call with no camera and no message. A failed join brings
+  // the preview back.
   useEffect(() => {
-    if (!visible || !cameraOn) return;
+    if (!visible || !cameraOn || inCall || joining) return;
     let cancelled = false;
     let created: LocalVideoTrack | null = null;
     void (async () => {
@@ -127,12 +136,12 @@ export function PreJoinSheet({
       void created?.stop();
       setPreviewTrack(null);
     };
-  }, [visible, cameraOn, facing]);
+  }, [visible, cameraOn, facing, inCall, joining]);
 
   const others = (activeCall?.participants ?? []).filter((p) => p.userId !== user?.id);
 
   const join = async () => {
-    if (joining) return;
+    if (joining || busyElsewhere) return;
     setJoining(true);
     setError(null);
     try {
@@ -140,6 +149,7 @@ export function PreJoinSheet({
       const media = {
         mic: micOn && granted.micGranted,
         camera: cameraOn && granted.cameraGranted,
+        facing,
       };
       if (micOn && !granted.micGranted) {
         setError("Microphone permission denied - joining listen-only");
@@ -324,14 +334,20 @@ export function PreJoinSheet({
         </View>
       ) : null}
 
+      {busyElsewhere ? (
+        <Text style={[styles.error, { color: T.textDim }]}>
+          Leave the current call before joining another
+        </Text>
+      ) : null}
       {error ? <Text style={[styles.error, { color: T.red }]}>{error}</Text> : null}
 
       <TouchableOpacity
-        style={[styles.joinButton, { backgroundColor: T.green }]}
+        style={[styles.joinButton, { backgroundColor: T.green, opacity: busyElsewhere ? 0.5 : 1 }]}
         onPress={() => void join()}
-        disabled={joining}
+        disabled={joining || busyElsewhere}
         activeOpacity={0.85}
         accessibilityRole="button"
+        accessibilityState={{ disabled: joining || busyElsewhere }}
         accessibilityLabel="Join call"
       >
         {joining ? (

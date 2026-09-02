@@ -90,6 +90,8 @@ export interface CallEndedInfo {
 export interface JoinMediaOptions {
   mic: boolean;
   camera: boolean;
+  /** Which lens the call opens with; the front camera when unset. */
+  facing?: "user" | "environment";
 }
 
 interface CallContextValue {
@@ -301,7 +303,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     if (rejoiningRef.current || !s.callId || !s.channelId || !org) return;
     rejoiningRef.current = true;
     rejoinCancelledRef.current = false;
-    const { callId, channelId, micEnabled, cameraEnabled } = s;
+    const { callId, channelId, micEnabled, cameraEnabled, cameraFacing } = s;
     setSession((prev) => ({ ...prev, status: "reconnecting" }));
     await teardownRoom();
 
@@ -337,7 +339,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
             iceTransportPolicy: response.iceTransportPolicy,
             screenShareQualityCap: response.screenShareQualityCap,
           },
-          { mic: micEnabled, camera: cameraEnabled },
+          { mic: micEnabled, camera: cameraEnabled, facing: cameraFacing },
         );
         rejoiningRef.current = false;
         return;
@@ -506,12 +508,16 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       // A second device joins force-muted server-side; honor it on connect.
       const effectiveMic = media.mic && join.serverMicEnabled !== false;
       const secondDeviceMuted = media.mic && join.serverMicEnabled === false;
+      // The lens chosen before joining is opened here; the Room's capture
+      // defaults (resolution) merge underneath the per-call facing.
+      const facing = media.facing ?? "user";
       try {
         if (effectiveMic) await r.localParticipant.setMicrophoneEnabled(true);
-        if (media.camera) await r.localParticipant.setCameraEnabled(true);
+        if (media.camera) await r.localParticipant.setCameraEnabled(true, { facingMode: facing });
       } catch {
         // Permission or device failure: stay in the call listen-only.
       }
+      facingModeRef.current = facing;
 
       setRoom(r);
       setSession({
@@ -524,18 +530,22 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
         secondDeviceMuted,
         connectedAtMs: Date.now(),
         screenShareQualityCap: join.screenShareQualityCap,
-        cameraFacing: "user",
+        cameraFacing: facing,
       });
       scheduleMediaReport();
       // Continuity marker: the process can be killed without any teardown running,
       // so the marker is what a cold start has to go on.
-      void writeCallMarker({
-        callId: join.callId,
-        channelId: join.channelId,
-        micEnabled: r.localParticipant.isMicrophoneEnabled,
-        cameraEnabled: r.localParticipant.isCameraEnabled,
-        ts: Date.now(),
-      });
+      const org = orgRef.current;
+      if (org) {
+        void writeCallMarker({
+          organizationId: org,
+          callId: join.callId,
+          channelId: join.channelId,
+          micEnabled: r.localParticipant.isMicrophoneEnabled,
+          cameraEnabled: r.localParticipant.isCameraEnabled,
+          ts: Date.now(),
+        });
+      }
     },
     [handleDisconnected, scheduleMediaReport, scheduleTokenRefresh],
   );
@@ -689,7 +699,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     // A lost connection parks the session at "disconnected" on the same channel,
     // which startJoin reads as "already in this call" and returns early from. The
     // media intent has to be captured before the reset clears it.
-    const { micEnabled, cameraEnabled } = sessionRef.current;
+    const { micEnabled, cameraEnabled, cameraFacing } = sessionRef.current;
     sessionRef.current = IDLE_SESSION;
     setSession(IDLE_SESSION);
     setMinimized(false);
@@ -697,6 +707,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       await joinCallById(info.callId, info.channelId, {
         mic: micEnabled,
         camera: cameraEnabled,
+        facing: cameraFacing,
       });
     } catch {
       // startJoin already resets to idle and surfaces any disabled-call message.
@@ -849,11 +860,18 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       setRestorable(null);
       const marker = await readCallMarker();
       if (!marker || sessionRef.current.status !== "idle") return;
+      // A marker from another organization is left alone rather than looked up
+      // here: the channel is not reachable from this org, and the user may switch
+      // back to the one that can still offer the rejoin.
+      if (marker.organizationId !== organizationId) return;
       try {
         const response = await callsApi.getActiveCall({
           organizationId,
           channelId: marker.channelId,
         });
+        // A join made while the lookup was in flight must not get a rejoin
+        // prompt laid over the call it is already in.
+        if (sessionRef.current.status !== "idle") return;
         if (response.call?.id === marker.callId) {
           setRestorable(marker);
           return;
@@ -871,10 +889,12 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       if (state !== "background") return;
       const r = roomRef.current;
       const s = sessionRef.current;
+      const org = orgRef.current;
       // Backgrounding is the moment before the OS may kill the process, and it is
       // also where the marker's age starts mattering, so refresh its timestamp.
-      if (r && s.status === "connected" && s.callId && s.channelId) {
+      if (r && org && s.status === "connected" && s.callId && s.channelId) {
         void writeCallMarker({
+          organizationId: org,
           callId: s.callId,
           channelId: s.channelId,
           micEnabled: r.localParticipant.isMicrophoneEnabled,

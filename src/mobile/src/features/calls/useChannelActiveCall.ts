@@ -29,6 +29,11 @@ export function useChannelActiveCall(channelId: string | undefined): void {
     refetchOnMount: "always",
     queryFn: async () => {
       if (!organizationId || !channelId) return null;
+      // Captured before the request: an empty answer only disproves the call
+      // known at send time, not one the stream announced during the round trip.
+      const known = queryClient.getQueryData<ActiveCallsMap>(activeCallsKey(organizationId))?.[
+        channelId
+      ];
       const response = await callsApi.getActiveCall({ organizationId, channelId });
       if (response.call) {
         const call = callToPlain(response.call);
@@ -37,9 +42,7 @@ export function useChannelActiveCall(channelId: string | undefined): void {
       }
       // The map is keyed by channel, so a channel with no call has to be cleared
       // explicitly or a call that ended while the app was away lingers.
-      const known = queryClient.getQueryData<ActiveCallsMap>(activeCallsKey(organizationId));
-      const stale = known?.[channelId];
-      if (stale) removeActiveCall(queryClient, organizationId, channelId, stale.id);
+      if (known) removeActiveCall(queryClient, organizationId, channelId, known.id);
       return null;
     },
   });

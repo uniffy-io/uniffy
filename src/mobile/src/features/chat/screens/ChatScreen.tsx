@@ -1010,7 +1010,7 @@ export function ChatConversationScreen() {
           }
           rightActions={
             <>
-              {channel && !channel.isAgentDm ? (
+              {(callsAvailable || callsDisabledMessage) && channel && !channel.isAgentDm ? (
                 <TouchableOpacity
                   onPress={() => {
                     // The button stays put when calls are off so there is

@@ -1,6 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export interface CallSessionMarker {
+  organizationId: string;
   callId: string;
   channelId: string;
   micEnabled: boolean;
@@ -28,7 +29,14 @@ export async function readCallMarker(): Promise<CallSessionMarker | null> {
     const raw = await AsyncStorage.getItem(MARKER_KEY);
     if (!raw) return null;
     const marker = JSON.parse(raw) as CallSessionMarker;
-    if (!marker.callId || !marker.channelId || typeof marker.ts !== "number") return null;
+    if (
+      !marker.organizationId ||
+      !marker.callId ||
+      !marker.channelId ||
+      typeof marker.ts !== "number"
+    ) {
+      return null;
+    }
     if (Date.now() - marker.ts > MARKER_TTL_MS) return null;
     return marker;
   } catch {
