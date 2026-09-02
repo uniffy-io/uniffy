@@ -66,10 +66,9 @@ import {
 import { useChatStream } from "@features/chat/useChatStream";
 import { useAgents, useCreateAgentChat } from "@features/agents/useAgents";
 import type { SerializedAgent } from "@features/agents/agentSerializer";
-import { useActiveCall, useActiveCalls } from "@features/calls/useCallsState";
+import { useActiveCall } from "@features/calls/useCallsState";
 import { useActiveCallsSnapshot } from "@features/calls/useChannelActiveCall";
 import { useCall } from "@features/calls/CallContext";
-import { PreJoinSheet } from "@features/calls/components/PreJoinSheet";
 import { useDirectory } from "@shared/directory/useDirectory";
 import { usePresences } from "@shared/presence/usePresence";
 import { useAuth } from "@core/providers/AuthContext";
@@ -110,7 +109,6 @@ export function ChatListScreen() {
   const [newCategoryOpen, setNewCategoryOpen] = useState(false);
   const [newDmOpen, setNewDmOpen] = useState(false);
   const [newAgentChatOpen, setNewAgentChatOpen] = useState(false);
-  const [callTarget, setCallTarget] = useState<SerializedChannel | null>(null);
 
   useChatStream();
   useActiveCallsSnapshot();
@@ -161,19 +159,13 @@ export function ChatListScreen() {
 
   const openChannel = useCallback((id: string) => router.push(`/chat/${id}` as any), []);
 
-  const { session: callSession, setMinimized, available: callsAvailable } = useCall();
-  const activeCalls = useActiveCalls();
+  const { available: callsAvailable, openPrejoin } = useCall();
   // Tapping the live pill acts on the call rather than opening the channel and
   // leaving the user to find it again.
   const joinCallOn = useCallback(
-    (channel: SerializedChannel) => {
-      if (callSession.channelId === channel.id && callSession.status !== "idle") {
-        setMinimized(false);
-        return;
-      }
-      setCallTarget(channel);
-    },
-    [callSession.channelId, callSession.status, setMinimized],
+    (channel: SerializedChannel) =>
+      openPrejoin({ channelId: channel.id, channelName: channel.displayName }),
+    [openPrejoin],
   );
 
   // Agent chats arrive via both ListChannels (is_agent_dm) and ListAgentChats; merge + dedupe.
@@ -703,16 +695,6 @@ export function ChatListScreen() {
           })
         }
       />
-      {callTarget ? (
-        <PreJoinSheet
-          visible
-          T={T}
-          channelId={callTarget.id}
-          channelName={callTarget.displayName}
-          callId={activeCalls[callTarget.id]?.id}
-          onClose={() => setCallTarget(null)}
-        />
-      ) : null}
     </View>
   );
 }

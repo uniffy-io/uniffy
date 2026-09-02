@@ -58,7 +58,7 @@ import { SheetHeader } from "@shared/components/SheetHeader";
 import { ReminderChips, reminderLabel } from "@features/calendar/components/ReminderChips";
 import { EventActivityList } from "@features/calendar/components/EventActivityList";
 import { useIsBookmarked, useToggleBookmark } from "@features/bookmarks/useBookmarks";
-import { PreJoinSheet } from "@features/calls/components/PreJoinSheet";
+import { useCall } from "@features/calls/CallContext";
 import { useActiveCall } from "@features/calls/useCallsState";
 
 export function EventDetailScreen() {
@@ -68,7 +68,6 @@ export function EventDetailScreen() {
   const bottomPad =
     Platform.OS === "web" ? BOTTOM_NAV_HEIGHT + 34 : BOTTOM_NAV_HEIGHT + insets.bottom;
   const [sheetOpen, setSheetOpen] = useState(false);
-  const [prejoinOpen, setPrejoinOpen] = useState(false);
   const [invitePickerOpen, setInvitePickerOpen] = useState(false);
   const [scopeAction, setScopeAction] = useState<"edit" | "delete" | null>(null);
   const [reminderSheetOpen, setReminderSheetOpen] = useState(false);
@@ -84,6 +83,16 @@ export function EventDetailScreen() {
   const updateEvent = useUpdateEvent();
   const createTemplate = useCreateEventTemplate();
   const activeMeetingCall = useActiveCall(eventQuery.data?.channelId ?? undefined);
+  const { openPrejoin } = useCall();
+  const openMeetingPrejoin = () => {
+    const meeting = eventQuery.data;
+    if (!meeting?.channelId) return;
+    openPrejoin({
+      channelId: meeting.channelId,
+      channelName: meeting.title,
+      callId: activeMeetingCall?.id,
+    });
+  };
 
   // The route param is the only place the occurrence survives: GetEvent parses
   // the suffix off and answers with the series row, so nothing in the response
@@ -364,7 +373,7 @@ export function EventDetailScreen() {
                 <View style={[styles.infoIcon, { backgroundColor: "#40C05720" }]}>
                   <Video size={14} color="#40C057" weight="duotone" />
                 </View>
-                <TouchableOpacity onPress={() => setPrejoinOpen(true)}>
+                <TouchableOpacity onPress={openMeetingPrejoin}>
                   <Text
                     style={[styles.infoMain, { color: activeMeetingCall ? "#F43F5E" : T.accent }]}
                   >
@@ -603,7 +612,7 @@ export function EventDetailScreen() {
                   color: "#40C057",
                   onPress: () => {
                     setSheetOpen(false);
-                    setPrejoinOpen(true);
+                    openMeetingPrejoin();
                   },
                 },
               ]
@@ -722,17 +731,6 @@ export function EventDetailScreen() {
           ) : null}
         </View>
       </BottomSheet>
-
-      {event.channelId ? (
-        <PreJoinSheet
-          visible={prejoinOpen}
-          T={T}
-          channelId={event.channelId}
-          channelName={event.title}
-          callId={activeMeetingCall?.id}
-          onClose={() => setPrejoinOpen(false)}
-        />
-      ) : null}
     </View>
   );
 }

@@ -43,9 +43,9 @@ export function CallControls({
   } = useCall();
   const [qualityOpen, setQualityOpen] = useState(false);
   const [routeOpen, setRouteOpen] = useState(false);
-  // iOS has no Broadcast Upload Extension in this app, and an Android client
-  // built before the media-projection permission crashes on capture, so the
-  // control is gated on what the installed binary can actually do.
+  // Gated on what the installed binary can actually do: an Android client built
+  // before the media-projection permission crashes on capture, and an iOS client
+  // without the broadcast extension would publish a share that never gets a frame.
   const [canShareScreen, setCanShareScreen] = useState(false);
   const { outputs, selected } = useAudioOutputs(!compact);
   const activeRoute = outputs.find((route) => route.id === selected) ?? outputs[0];

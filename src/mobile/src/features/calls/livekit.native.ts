@@ -59,6 +59,33 @@ type CallForegroundService = { start(): void; stop(): void };
 const foregroundService =
   requireOptionalNativeModule<CallForegroundService>("CallForegroundService");
 
+type ScreenSharePicker = {
+  isAvailable(): boolean;
+  present(timeoutMs: number): Promise<void>;
+};
+
+// iOS only: presents the system broadcast picker and reports the extension
+// starting. Absent on Android, and on a dev client built before the module
+// existed, so a null here means "no screen share on this binary".
+const screenSharePicker = requireOptionalNativeModule<ScreenSharePicker>("ScreenSharePicker");
+
+// Long enough to read the picker, pick Uniffy, and tap Start.
+const SCREEN_SHARE_PICKER_TIMEOUT_MS = 30_000;
+
+/** Whether the installed binary ships the broadcast extension the picker needs. */
+export function isScreenShareAvailable(): boolean {
+  return screenSharePicker?.isAvailable() ?? false;
+}
+
+/**
+ * Resolves once the broadcast extension reports it has started; rejects when
+ * the picker is dismissed, the broadcast stops first, or nothing happens in time.
+ */
+export async function presentScreenSharePicker(): Promise<void> {
+  if (!screenSharePicker) throw new Error("Screen share picker unavailable");
+  await screenSharePicker.present(SCREEN_SHARE_PICKER_TIMEOUT_MS);
+}
+
 export async function startCallAudio(videoEnabled: boolean, micEnabled: boolean): Promise<void> {
   const lk = loadSdk();
   if (!lk) return;
@@ -124,6 +151,13 @@ export async function selectAudioOutput(deviceId: string): Promise<void> {
   const lk = loadSdk();
   if (!lk) return;
   await lk.AudioSession.selectAudioOutput(deviceId);
+}
+
+/** iOS only: the system route picker for headsets, Bluetooth and AirPlay. */
+export async function showAudioRoutePicker(): Promise<void> {
+  const lk = loadSdk();
+  if (!lk) return;
+  await lk.AudioSession.showAudioRoutePicker();
 }
 
 // Plain .ts on purpose: Metro resolves extensions in sourceExts order (ts

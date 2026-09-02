@@ -10,10 +10,15 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.uniffy.app",
+      "entitlements": {
+        "com.apple.security.application-groups": ["group.com.uniffy.app"]
+      },
       "infoPlist": {
         "UIBackgroundModes": ["audio"],
         "NSPhotoLibraryUsageDescription": "Uniffy uses your photo library so you can attach images to messages, notes, and files.",
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "RTCAppGroupIdentifier": "group.com.uniffy.app",
+        "RTCScreenSharingExtension": "com.uniffy.app.broadcast"
       }
     },
     "android": {
@@ -59,6 +64,7 @@
           "microphonePermission": "Uniffy uses your microphone for calls."
         }
       ],
+      "@bacons/apple-targets",
       [
         "expo-splash-screen",
         {

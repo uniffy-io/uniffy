@@ -7,7 +7,7 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { AppState } from "react-native";
+import { AppState, Platform } from "react-native";
 import { useQueryClient } from "@tanstack/react-query";
 import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake";
 import { ConnectError, Code } from "@connectrpc/connect";
@@ -24,6 +24,7 @@ import {
   startCallMicService,
   stopCallAudio,
   selectAudioOutput,
+  presentScreenSharePicker,
 } from "@features/calls/livekit";
 import { callToPlain, type CallEndReason } from "@features/calls/callsSerializer";
 import { callErrorMessage } from "@features/calls/callErrors";
@@ -94,6 +95,15 @@ export interface JoinMediaOptions {
   facing?: "user" | "environment";
 }
 
+/** What the pre-join is asking about. One at a time, owned here like the call itself. */
+export interface PrejoinTarget {
+  channelId: string;
+  /** Shown in the header; the pre-join falls back to the channel list when unset. */
+  channelName?: string;
+  /** Join this specific call (ring accept); otherwise start or join via the channel. */
+  callId?: string;
+}
+
 interface CallContextValue {
   available: boolean;
   callsDisabledMessage: string | null;
@@ -102,6 +112,11 @@ interface CallContextValue {
   endedInfo: CallEndedInfo | null;
   minimized: boolean;
   setMinimized: (value: boolean) => void;
+  prejoinTarget: PrejoinTarget | null;
+  /** Whether the pre-join currently takes the shell; false while an expanded call does. */
+  prejoinOpen: boolean;
+  openPrejoin: (target: PrejoinTarget) => void;
+  closePrejoin: () => void;
   /** A call this device was in that is still live after a cold start. */
   restorable: CallSessionMarker | null;
   restoreCall: () => Promise<void>;
@@ -162,6 +177,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   const [minimized, setMinimized] = useState(false);
   const [callsDisabledMessage, setCallsDisabledMessage] = useState<string | null>(null);
   const [restorable, setRestorable] = useState<CallSessionMarker | null>(null);
+  const [prejoinTarget, setPrejoinTarget] = useState<PrejoinTarget | null>(null);
 
   const roomRef = useRef<Room | null>(null);
   const sessionRef = useRef<CallSession>(IDLE_SESSION);
@@ -755,6 +771,17 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       sessionRef.current.screenShareQualityCap,
     );
     const config = screenShareConfig(tier);
+    if (next && Platform.OS === "ios") {
+      // iOS captures in a separate broadcast extension that only starts once the
+      // user taps Start in the system picker. getDisplayMedia resolves regardless,
+      // so publishing before that point would send a track that never gets a frame.
+      try {
+        await presentScreenSharePicker();
+      } catch {
+        // Picker dismissed, or the broadcast never started.
+        return;
+      }
+    }
     try {
       // No capture options: React Native's getDisplayMedia takes no arguments, so
       // the org limit can only be applied to what gets published, not to what the
@@ -820,12 +847,27 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const openPrejoin = useCallback((target: PrejoinTarget) => {
+    const s = sessionRef.current;
+    // Already in this channel's call: there is nothing to ask, so expand it.
+    if (s.status !== "idle" && s.channelId === target.channelId) {
+      setMinimized(false);
+      return;
+    }
+    setPrejoinTarget(target);
+  }, []);
+
+  const closePrejoin = useCallback(() => setPrejoinTarget(null), []);
+
   // The provider never unmounts, so identity and org teardown are explicit: a
   // room left connected keeps transmitting the mic behind stale UI.
   useEffect(() => {
-    if (wasAuthedRef.current && !isAuthenticated && sessionRef.current.status !== "idle") {
-      void resetToIdle();
-      setEndedInfo(null);
+    if (wasAuthedRef.current && !isAuthenticated) {
+      if (sessionRef.current.status !== "idle") {
+        void resetToIdle();
+        setEndedInfo(null);
+      }
+      setPrejoinTarget(null);
     }
     wasAuthedRef.current = isAuthenticated;
   }, [isAuthenticated, resetToIdle]);
@@ -841,11 +883,14 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       setEndedInfo(null);
     }
     prevOrgForTeardownRef.current = organizationId;
-    // The banner records why THIS org refused a call, so switching orgs has to
-    // drop it. The provider deliberately never unmounts, so a remount key is not
-    // available here and the reset has to be explicit.
+    // The banner records why THIS org refused a call, and a pre-join names a
+    // channel in it, so switching orgs has to drop both. The provider
+    // deliberately never unmounts, so a remount key is not available here and
+    // the reset has to be explicit.
     // eslint-disable-next-line react/react-compiler
     setCallsDisabledMessage(null);
+    // eslint-disable-next-line react/react-compiler
+    setPrejoinTarget(null);
   }, [organizationId, resetToIdle]);
 
   // Cold start after the process was killed mid-call. The marker names a call and
@@ -931,6 +976,15 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     };
   }, [resetToIdle]);
 
+  // An expanded call takes the whole shell, so a pre-join left open beneath it
+  // reads as closed until the call is minimised or ends.
+  const callTakesShell =
+    !minimized &&
+    (session.status === "connecting" ||
+      session.status === "connected" ||
+      session.status === "reconnecting");
+  const prejoinOpen = prejoinTarget !== null && !callTakesShell;
+
   const value = useMemo<CallContextValue>(
     () => ({
       available: callsSupported && !callsDisabledMessage,
@@ -940,6 +994,10 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       endedInfo,
       minimized,
       setMinimized,
+      prejoinTarget,
+      prejoinOpen,
+      openPrejoin,
+      closePrejoin,
       restorable,
       restoreCall,
       dismissRestore,
@@ -960,6 +1018,10 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       room,
       endedInfo,
       minimized,
+      prejoinTarget,
+      prejoinOpen,
+      openPrejoin,
+      closePrejoin,
       restorable,
       restoreCall,
       dismissRestore,

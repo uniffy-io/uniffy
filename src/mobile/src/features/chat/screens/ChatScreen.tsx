@@ -62,7 +62,6 @@ import { AgentContextSheet } from "@features/agents/components/AgentContextSheet
 import { memorySubjectForChannel } from "@features/agents/memorySerializer";
 import { AgentModelSheet } from "@features/chat/components/AgentModelSheet";
 import { ChannelDetailsSheet } from "@features/chat/components/ChannelDetailsSheet";
-import { PreJoinSheet } from "@features/calls/components/PreJoinSheet";
 import { useCall } from "@features/calls/CallContext";
 import { useActiveCall } from "@features/calls/useCallsState";
 import { useChannelActiveCall } from "@features/calls/useChannelActiveCall";
@@ -344,18 +343,23 @@ export function ChatConversationScreen() {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [modelSheetOpen, setModelSheetOpen] = useState(false);
   const [contextAgentId, setContextAgentId] = useState<string | null>(null);
-  const [prejoinOpen, setPrejoinOpen] = useState(false);
-  const openPrejoin = useCallback(() => setPrejoinOpen(true), []);
-  useJoinCallParam(channelId, openPrejoin);
   const {
     session: callSession,
     setMinimized,
     available: callsAvailable,
     callsDisabledMessage,
+    openPrejoin,
   } = useCall();
   useChannelActiveCall(channelId);
   const activeCall = useActiveCall(channelId);
   const inCallHere = callSession.channelId === channelId && callSession.status !== "idle";
+  // The pre-join resolves the channel name and the live call itself, so every
+  // entry point here only has to say which channel.
+  const openChannelPrejoin = useCallback(
+    () => openPrejoin({ channelId }),
+    [openPrejoin, channelId],
+  );
+  useJoinCallParam(channelId, openChannelPrejoin);
   const attachments = useComposerAttachments();
   const screenFocused = useScreenFocusRef();
 
@@ -1020,7 +1024,7 @@ export function ChatConversationScreen() {
                       return;
                     }
                     if (inCallHere) setMinimized(false);
-                    else setPrejoinOpen(true);
+                    else openChannelPrejoin();
                   }}
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   accessibilityRole="button"
@@ -1197,7 +1201,7 @@ export function ChatConversationScreen() {
         {callsAvailable && activeCall && !inCallHere ? (
           <TouchableOpacity
             style={[styles.stopPill, { backgroundColor: T.surface, borderColor: T.green }]}
-            onPress={() => setPrejoinOpen(true)}
+            onPress={openChannelPrejoin}
             activeOpacity={0.7}
             accessibilityRole="button"
             accessibilityLabel="Join the live call"
@@ -1415,15 +1419,6 @@ export function ChatConversationScreen() {
           onClose={() => setContextAgentId(null)}
         />
       ) : null}
-
-      <PreJoinSheet
-        visible={prejoinOpen}
-        T={T}
-        channelId={channelId}
-        channelName={title}
-        callId={activeCall?.id}
-        onClose={() => setPrejoinOpen(false)}
-      />
     </View>
   );
 }

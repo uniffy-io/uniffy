@@ -1,6 +1,7 @@
 import React from "react";
-import { Text, StyleSheet } from "react-native";
-import { Bluetooth, Headphones, Phone, SpeakerHigh } from "phosphor-react-native";
+import { Text, StyleSheet, Platform } from "react-native";
+import { Bluetooth, DotsThree, Headphones, Phone, SpeakerHigh } from "phosphor-react-native";
+import { showAudioRoutePicker } from "@features/calls/livekit";
 import { useAudioOutputs } from "@features/calls/useAudioOutputs";
 import { BottomSheet } from "@shared/components/BottomSheet";
 import { SheetHeader } from "@shared/components/SheetHeader";
@@ -58,6 +59,19 @@ export function AudioRouteSheet({ visible, onClose }: { visible: boolean; onClos
           }}
         />
       ))}
+      {/* iOS only ever reports two routes of its own; headsets, Bluetooth and
+          AirPlay are chosen through the system picker. */}
+      {Platform.OS === "ios" ? (
+        <SheetRow
+          leading={<DotsThree size={18} color={T.textDim} weight="bold" />}
+          title="More outputs"
+          subtitle="AirPods, Bluetooth, AirPlay"
+          onPress={() => {
+            onClose();
+            void showAudioRoutePicker().catch(() => {});
+          }}
+        />
+      ) : null}
     </BottomSheet>
   );
 }
