@@ -66,8 +66,8 @@ function toAuditEvent(row: PlatformAuditEvent): AuditEvent {
     resourceType: row.resourceType || null,
     resourceId: row.resourceId || null,
     detailsJson: row.detailsJson || "{}",
-    ipAddress: null,
-    userAgent: null,
+    ipAddress: row.ipAddress || null,
+    userAgent: row.userAgent || null,
     onBehalfOfUserId: null,
   };
 }

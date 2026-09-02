@@ -36,7 +36,9 @@ type PlatformAuditEvent struct {
 	ResourceId       *string                `protobuf:"bytes,10,opt,name=resource_id,json=resourceId,proto3,oneof" json:"resource_id,omitempty"`
 	// JSON-encoded details blob. UI renders selected keys; the full
 	// blob is shown collapsed by default.
-	DetailsJson   string `protobuf:"bytes,11,opt,name=details_json,json=detailsJson,proto3" json:"details_json,omitempty"`
+	DetailsJson   string  `protobuf:"bytes,11,opt,name=details_json,json=detailsJson,proto3" json:"details_json,omitempty"`
+	IpAddress     *string `protobuf:"bytes,12,opt,name=ip_address,json=ipAddress,proto3,oneof" json:"ip_address,omitempty"`
+	UserAgent     *string `protobuf:"bytes,13,opt,name=user_agent,json=userAgent,proto3,oneof" json:"user_agent,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -144,6 +146,20 @@ func (x *PlatformAuditEvent) GetResourceId() string {
 func (x *PlatformAuditEvent) GetDetailsJson() string {
 	if x != nil {
 		return x.DetailsJson
+	}
+	return ""
+}
+
+func (x *PlatformAuditEvent) GetIpAddress() string {
+	if x != nil && x.IpAddress != nil {
+		return *x.IpAddress
+	}
+	return ""
+}
+
+func (x *PlatformAuditEvent) GetUserAgent() string {
+	if x != nil && x.UserAgent != nil {
+		return *x.UserAgent
 	}
 	return ""
 }
@@ -451,7 +467,7 @@ var File_superadmin_v1_platform_audit_proto protoreflect.FileDescriptor
 
 const file_superadmin_v1_platform_audit_proto_rawDesc = "" +
 	"\n" +
-	"\"superadmin/v1/platform_audit.proto\x12\rsuperadmin.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xc5\x04\n" +
+	"\"superadmin/v1/platform_audit.proto\x12\rsuperadmin.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xab\x05\n" +
 	"\x12PlatformAuditEvent\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x129\n" +
 	"\n" +
@@ -467,14 +483,20 @@ const file_superadmin_v1_platform_audit_proto_rawDesc = "" +
 	"\vresource_id\x18\n" +
 	" \x01(\tH\x06R\n" +
 	"resourceId\x88\x01\x01\x12!\n" +
-	"\fdetails_json\x18\v \x01(\tR\vdetailsJsonB\x12\n" +
+	"\fdetails_json\x18\v \x01(\tR\vdetailsJson\x12\"\n" +
+	"\n" +
+	"ip_address\x18\f \x01(\tH\aR\tipAddress\x88\x01\x01\x12\"\n" +
+	"\n" +
+	"user_agent\x18\r \x01(\tH\bR\tuserAgent\x88\x01\x01B\x12\n" +
 	"\x10_organization_idB\x14\n" +
 	"\x12_organization_nameB\x10\n" +
 	"\x0e_actor_user_idB\x0e\n" +
 	"\f_actor_emailB\x11\n" +
 	"\x0f_actor_org_roleB\x10\n" +
 	"\x0e_resource_typeB\x0e\n" +
-	"\f_resource_id\"\xb8\x02\n" +
+	"\f_resource_idB\r\n" +
+	"\v_ip_addressB\r\n" +
+	"\v_user_agent\"\xb8\x02\n" +
 	"\x18ListPlatformAuditRequest\x12\x12\n" +
 	"\x04page\x18\x01 \x01(\x05R\x04page\x12\x1b\n" +
 	"\tpage_size\x18\x02 \x01(\x05R\bpageSize\x12'\n" +

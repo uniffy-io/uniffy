@@ -10,7 +10,7 @@ from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 DESCRIPTOR: _descriptor.FileDescriptor
 
 class PlatformAuditEvent(_message.Message):
-    __slots__ = ("id", "created_at", "action", "organization_id", "organization_name", "actor_user_id", "actor_email", "actor_org_role", "resource_type", "resource_id", "details_json")
+    __slots__ = ("id", "created_at", "action", "organization_id", "organization_name", "actor_user_id", "actor_email", "actor_org_role", "resource_type", "resource_id", "details_json", "ip_address", "user_agent")
     ID_FIELD_NUMBER: _ClassVar[int]
     CREATED_AT_FIELD_NUMBER: _ClassVar[int]
     ACTION_FIELD_NUMBER: _ClassVar[int]
@@ -22,6 +22,8 @@ class PlatformAuditEvent(_message.Message):
     RESOURCE_TYPE_FIELD_NUMBER: _ClassVar[int]
     RESOURCE_ID_FIELD_NUMBER: _ClassVar[int]
     DETAILS_JSON_FIELD_NUMBER: _ClassVar[int]
+    IP_ADDRESS_FIELD_NUMBER: _ClassVar[int]
+    USER_AGENT_FIELD_NUMBER: _ClassVar[int]
     id: str
     created_at: _timestamp_pb2.Timestamp
     action: str
@@ -33,7 +35,9 @@ class PlatformAuditEvent(_message.Message):
     resource_type: str
     resource_id: str
     details_json: str
-    def __init__(self, id: _Optional[str] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., action: _Optional[str] = ..., organization_id: _Optional[str] = ..., organization_name: _Optional[str] = ..., actor_user_id: _Optional[str] = ..., actor_email: _Optional[str] = ..., actor_org_role: _Optional[str] = ..., resource_type: _Optional[str] = ..., resource_id: _Optional[str] = ..., details_json: _Optional[str] = ...) -> None: ...
+    ip_address: str
+    user_agent: str
+    def __init__(self, id: _Optional[str] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., action: _Optional[str] = ..., organization_id: _Optional[str] = ..., organization_name: _Optional[str] = ..., actor_user_id: _Optional[str] = ..., actor_email: _Optional[str] = ..., actor_org_role: _Optional[str] = ..., resource_type: _Optional[str] = ..., resource_id: _Optional[str] = ..., details_json: _Optional[str] = ..., ip_address: _Optional[str] = ..., user_agent: _Optional[str] = ...) -> None: ...
 
 class ListPlatformAuditRequest(_message.Message):
     __slots__ = ("page", "page_size", "organization_id", "actor_user_id", "actions", "from_ts", "to_ts")

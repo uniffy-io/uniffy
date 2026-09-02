@@ -38,6 +38,8 @@ class PlatformAuditView(NamedTuple):
     resource_type: AuditResourceType | None
     resource_id: UUID | None
     details_json: str
+    ip_address: str | None
+    user_agent: str | None
 
 
 class PlatformAuditPage(NamedTuple):
@@ -172,6 +174,8 @@ class PlatformAuditOperations:
                 resource_type=e.resource_type,
                 resource_id=e.resource_id,
                 details_json=dumps_str(e.details or {}, default=str),
+                ip_address=str(e.ip_address) if e.ip_address is not None else None,
+                user_agent=e.user_agent,
             )
             for e in events
         ]

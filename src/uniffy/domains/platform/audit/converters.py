@@ -44,6 +44,10 @@ def event_to_proto(view: PlatformAuditView) -> PlatformAuditEvent:
         msg.resource_type = view.resource_type
     if view.resource_id is not None:
         msg.resource_id = str(view.resource_id)
+    if view.ip_address is not None:
+        msg.ip_address = view.ip_address
+    if view.user_agent is not None:
+        msg.user_agent = view.user_agent
     return msg
 
 
