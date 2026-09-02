@@ -11,8 +11,10 @@ public class ScreenSharePickerModule: Module {
   private static let startedNotification = "iOS_BroadcastStarted"
   private static let stoppedNotification = "iOS_BroadcastStopped"
   // Written into the app's Info.plist by app.json; react-native-webrtc reads the
-  // same key to know which extension the picker should offer.
+  // same keys to know which extension the picker should offer and where the
+  // frame socket lives.
   private static let extensionKey = "RTCScreenSharingExtension"
+  private static let appGroupKey = "RTCAppGroupIdentifier"
 
   private var pending: Promise?
   private var timeout: DispatchWorkItem?
@@ -23,7 +25,7 @@ public class ScreenSharePickerModule: Module {
     Name("ScreenSharePicker")
 
     Function("isAvailable") { () -> Bool in
-      return Self.preferredExtension != nil
+      return Self.preferredExtension != nil && Self.appGroupReachable
     }
 
     AsyncFunction("present") { (timeoutMs: Int, promise: Promise) in
@@ -39,9 +41,23 @@ public class ScreenSharePickerModule: Module {
     return Bundle.main.object(forInfoDictionaryKey: extensionKey) as? String
   }
 
+  // The plist keys travel with the app config, but the shared container only
+  // exists when the binary was signed with the App Group entitlement. A build
+  // without it (a Personal Team, for one) would still start the extension and
+  // publish a share that never receives a frame, so the container is part of
+  // "available".
+  private static var appGroupReachable: Bool {
+    guard let group = Bundle.main.object(forInfoDictionaryKey: appGroupKey) as? String,
+      let container = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: group)
+    else {
+      return false
+    }
+    return FileManager.default.fileExists(atPath: container.path)
+  }
+
   private func present(timeoutMs: Int, promise: Promise) {
-    guard let preferredExtension = Self.preferredExtension else {
-      promise.reject("E_UNAVAILABLE", "This build ships no broadcast extension")
+    guard let preferredExtension = Self.preferredExtension, Self.appGroupReachable else {
+      promise.reject("E_UNAVAILABLE", "This build cannot share its screen")
       return
     }
     if pending != nil {
