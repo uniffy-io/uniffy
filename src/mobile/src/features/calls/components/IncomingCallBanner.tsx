@@ -12,7 +12,6 @@ import { useRingtoneEnabled } from "@features/calls/callPrefs";
 import { callsApi } from "@features/calls/callsApi";
 import type { RingInvite } from "@features/calls/callsSerializer";
 import { Avatar } from "@shared/components/Avatar";
-import { PreJoinSheet } from "@features/calls/components/PreJoinSheet";
 import { useTheme } from "@shared/hooks/useTheme";
 import { FONT } from "@theme/typography";
 
@@ -23,11 +22,10 @@ export function IncomingCallBanner() {
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const { organizationId } = useAuth();
-  const { session, available } = useCall();
+  const { session, available, openPrejoin } = useCall();
   const invites = useRingInvites();
   const [ringtoneEnabled] = useRingtoneEnabled();
   const [nowSeconds, setNowSeconds] = useState(() => Math.floor(Date.now() / 1000));
-  const [accepted, setAccepted] = useState<RingInvite | null>(null);
 
   const player = useAudioPlayer(require("../../../../assets/sounds/ringtone.wav"));
 
@@ -86,64 +84,54 @@ export function IncomingCallBanner() {
 
   const accept = (invite: RingInvite) => {
     if (organizationId) dismissRingInvite(queryClient, organizationId, invite.callId);
-    setAccepted(invite);
+    openPrejoin({
+      channelId: invite.channelId,
+      channelName: invite.channelName,
+      callId: invite.callId,
+    });
   };
 
-  if (!available) return null;
+  if (!available || live.length === 0) return null;
 
   return (
-    <>
-      {live.length > 0 ? (
-        <View style={[styles.wrap, { top: insets.top + 8 }]} pointerEvents="box-none">
-          {live.map((invite) => (
-            <View
-              key={invite.callId}
-              style={[styles.card, { backgroundColor: T.surface, borderColor: T.border }]}
-            >
-              <Avatar
-                name={invite.callerName}
-                avatarUrl={invite.callerAvatarUrl ?? undefined}
-                size={38}
-              />
-              <View style={styles.labels}>
-                <Text style={[styles.caller, { color: T.textBright }]} numberOfLines={1}>
-                  {invite.callerName}
-                </Text>
-                <Text style={[styles.channel, { color: T.textDim }]} numberOfLines={1}>
-                  {invite.callType === "DIRECT" ? "Incoming call" : invite.channelName}
-                </Text>
-              </View>
-              <TouchableOpacity
-                style={[styles.roundButton, { backgroundColor: T.red }]}
-                onPress={() => decline(invite)}
-                accessibilityRole="button"
-                accessibilityLabel="Decline call"
-              >
-                <PhoneSlash size={18} color="#ffffff" weight="fill" />
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.roundButton, { backgroundColor: T.green }]}
-                onPress={() => accept(invite)}
-                accessibilityRole="button"
-                accessibilityLabel="Accept call"
-              >
-                <Phone size={18} color="#ffffff" weight="fill" />
-              </TouchableOpacity>
-            </View>
-          ))}
+    <View style={[styles.wrap, { top: insets.top + 8 }]} pointerEvents="box-none">
+      {live.map((invite) => (
+        <View
+          key={invite.callId}
+          style={[styles.card, { backgroundColor: T.surface, borderColor: T.border }]}
+        >
+          <Avatar
+            name={invite.callerName}
+            avatarUrl={invite.callerAvatarUrl ?? undefined}
+            size={38}
+          />
+          <View style={styles.labels}>
+            <Text style={[styles.caller, { color: T.textBright }]} numberOfLines={1}>
+              {invite.callerName}
+            </Text>
+            <Text style={[styles.channel, { color: T.textDim }]} numberOfLines={1}>
+              {invite.callType === "DIRECT" ? "Incoming call" : invite.channelName}
+            </Text>
+          </View>
+          <TouchableOpacity
+            style={[styles.roundButton, { backgroundColor: T.red }]}
+            onPress={() => decline(invite)}
+            accessibilityRole="button"
+            accessibilityLabel="Decline call"
+          >
+            <PhoneSlash size={18} color="#ffffff" weight="fill" />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.roundButton, { backgroundColor: T.green }]}
+            onPress={() => accept(invite)}
+            accessibilityRole="button"
+            accessibilityLabel="Accept call"
+          >
+            <Phone size={18} color="#ffffff" weight="fill" />
+          </TouchableOpacity>
         </View>
-      ) : null}
-      {accepted ? (
-        <PreJoinSheet
-          visible
-          T={T}
-          channelId={accepted.channelId}
-          channelName={accepted.channelName}
-          callId={accepted.callId}
-          onClose={() => setAccepted(null)}
-        />
-      ) : null}
-    </>
+      ))}
+    </View>
   );
 }
 

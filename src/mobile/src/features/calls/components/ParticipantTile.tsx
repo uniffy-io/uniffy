@@ -21,12 +21,15 @@ export function ParticipantTile({
   source,
   style,
   compact = false,
+  fit,
 }: {
   participant: Participant;
   T: ThemeColors;
   source?: Track.Source;
   style?: StyleProp<ViewStyle>;
   compact?: boolean;
+  /** Overrides the default crop; the local view honours the camera-fit preference. */
+  fit?: "cover" | "contain";
 }) {
   // Reads mutable livekit state (publications, mute flags, speaking) during
   // render; opt out of React Compiler memoization or the tile never updates.
@@ -45,9 +48,18 @@ export function ParticipantTile({
   const micMuted = !isScreen && participant.isMicrophoneEnabled === false;
   const poorConnection = participant.connectionQuality === livekit.ConnectionQuality.Poor;
   const name = participantLabel(participant);
+  const who = participant.isLocal ? "You" : name;
+  const state = [
+    isScreen ? "sharing screen" : null,
+    !isScreen && !hasVideo ? "camera off" : null,
+    micMuted ? "muted" : null,
+    poorConnection ? "poor connection" : null,
+  ].filter(Boolean);
 
   return (
     <View
+      accessible
+      accessibilityLabel={state.length > 0 ? `${who}, ${state.join(", ")}` : who}
       style={[
         styles.tile,
         { backgroundColor: T.surface, borderColor: speaking ? T.green : T.border },
@@ -65,7 +77,7 @@ export function ParticipantTile({
           style={styles.video}
           // Camera fills its tile; only a shared screen is letterboxed so no
           // content is cropped away.
-          objectFit={isScreen ? "contain" : "cover"}
+          objectFit={fit ?? (isScreen ? "contain" : "cover")}
           // Only the front (selfie) camera is mirrored; the back camera shows the
           // world the right way round.
           mirror={participant.isLocal && !isScreen && session.cameraFacing === "user"}
@@ -75,7 +87,11 @@ export function ParticipantTile({
           <Avatar name={name} size={compact ? 36 : 56} />
         </View>
       )}
-      <View style={styles.badgeRow} pointerEvents="none">
+      <View
+        style={styles.badgeRow}
+        pointerEvents="none"
+        importantForAccessibility="no-hide-descendants"
+      >
         <Text
           style={[styles.name, { color: "#ffffff" }, compact && styles.nameCompact]}
           numberOfLines={1}

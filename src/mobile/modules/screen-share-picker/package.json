@@ -1,0 +1,6 @@
+{
+  "name": "screen-share-picker",
+  "version": "0.1.0",
+  "private": true,
+  "description": "iOS system broadcast picker that reports when the screen-share extension has started"
+}

@@ -1,8 +1,8 @@
 import { createElement } from "react";
-import { NativeModules, Platform } from "react-native";
+import { NativeModules } from "react-native";
 import { requireOptionalNativeModule } from "expo";
 import type { ComponentType } from "react";
-import type { VideoTrackViewProps } from "@features/calls/livekitTypes";
+import type { LocalVideoPreviewProps, VideoTrackViewProps } from "@features/calls/livekitTypes";
 
 // The JS bundle can be newer than the installed dev client (Metro serves new
 // code to an old binary). The SDK crashes at import time when its native
@@ -59,6 +59,33 @@ type CallForegroundService = { start(): void; stop(): void };
 const foregroundService =
   requireOptionalNativeModule<CallForegroundService>("CallForegroundService");
 
+type ScreenSharePicker = {
+  isAvailable(): boolean;
+  present(timeoutMs: number): Promise<void>;
+};
+
+// iOS only: presents the system broadcast picker and reports the extension
+// starting. Absent on Android, and on a dev client built before the module
+// existed, so a null here means "no screen share on this binary".
+const screenSharePicker = requireOptionalNativeModule<ScreenSharePicker>("ScreenSharePicker");
+
+// Long enough to read the picker, pick Uniffy, and tap Start.
+const SCREEN_SHARE_PICKER_TIMEOUT_MS = 30_000;
+
+/** Whether the installed binary ships the broadcast extension the picker needs. */
+export function isScreenShareAvailable(): boolean {
+  return screenSharePicker?.isAvailable() ?? false;
+}
+
+/**
+ * Resolves once the broadcast extension reports it has started; rejects when
+ * the picker is dismissed, the broadcast stops first, or nothing happens in time.
+ */
+export async function presentScreenSharePicker(): Promise<void> {
+  if (!screenSharePicker) throw new Error("Screen share picker unavailable");
+  await screenSharePicker.present(SCREEN_SHARE_PICKER_TIMEOUT_MS);
+}
+
 export async function startCallAudio(videoEnabled: boolean, micEnabled: boolean): Promise<void> {
   const lk = loadSdk();
   if (!lk) return;
@@ -94,14 +121,43 @@ export async function stopCallAudio(): Promise<void> {
   await lk.AudioSession.stopAudioSession();
 }
 
-export async function setSpeakerphoneOn(on: boolean): Promise<void> {
+/**
+ * getAudioOutputs only reports routes once a session is running, and the call's
+ * own session does not start until the join. Pre-join borrows one to populate the
+ * route list, without the microphone service a real call would need.
+ */
+export async function startPreviewAudio(): Promise<void> {
   const lk = loadSdk();
   if (!lk) return;
-  if (Platform.OS === "ios") {
-    await lk.AudioSession.selectAudioOutput(on ? "force_speaker" : "default");
-  } else {
-    await lk.AudioSession.selectAudioOutput(on ? "speaker" : "earpiece");
-  }
+  await lk.AudioSession.configureAudio({
+    android: { audioTypeOptions: lk.AndroidAudioTypePresets.communication },
+  });
+  await lk.AudioSession.startAudioSession();
+}
+
+export async function stopPreviewAudio(): Promise<void> {
+  const lk = loadSdk();
+  if (!lk) return;
+  await lk.AudioSession.stopAudioSession();
+}
+
+export async function getAudioOutputs(): Promise<string[]> {
+  const lk = loadSdk();
+  if (!lk) return [];
+  return lk.AudioSession.getAudioOutputs();
+}
+
+export async function selectAudioOutput(deviceId: string): Promise<void> {
+  const lk = loadSdk();
+  if (!lk) return;
+  await lk.AudioSession.selectAudioOutput(deviceId);
+}
+
+/** iOS only: the system route picker for headsets, Bluetooth and AirPlay. */
+export async function showAudioRoutePicker(): Promise<void> {
+  const lk = loadSdk();
+  if (!lk) return;
+  await lk.AudioSession.showAudioRoutePicker();
 }
 
 // Plain .ts on purpose: Metro resolves extensions in sourceExts order (ts
@@ -113,4 +169,16 @@ export const VideoTrackView: ComponentType<VideoTrackViewProps> = (props) => {
   if (!lk) return null;
   const Video = lk.VideoTrack as unknown as ComponentType<VideoTrackViewProps>;
   return createElement(Video, props);
+};
+
+// VideoTrack needs a participant and a publication, which a pre-join track has
+// neither of. VideoView is deprecated but it is the only component that renders a
+// bare track, so it stays until the SDK offers a replacement.
+export const LocalVideoPreview: ComponentType<LocalVideoPreviewProps> = ({ track, ...rest }) => {
+  const lk = loadSdk();
+  if (!lk || !track) return null;
+  const Video = lk.VideoView as unknown as ComponentType<
+    Omit<LocalVideoPreviewProps, "track"> & { videoTrack: LocalVideoPreviewProps["track"] }
+  >;
+  return createElement(Video, { ...rest, videoTrack: track });
 };

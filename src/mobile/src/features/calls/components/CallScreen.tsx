@@ -1,7 +1,15 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { View, Text, StyleSheet, ScrollView, Pressable, Alert } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Pressable,
+  TouchableOpacity,
+  Alert,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { MicrophoneSlash, PushPinSlash } from "phosphor-react-native";
+import { MicrophoneSlash, PushPinSlash, Users } from "phosphor-react-native";
 import type { Participant } from "livekit-client";
 import { loadLivekitClient } from "@features/calls/livekit";
 import { useCall } from "@features/calls/CallContext";
@@ -9,11 +17,14 @@ import { useAuth } from "@core/providers/AuthContext";
 import { useActiveCall } from "@features/calls/useCallsState";
 import { useRoomParticipants } from "@features/calls/useRoomParticipants";
 import { useChannels } from "@features/chat/useChat";
+import { useCameraFit } from "@features/calls/callPrefs";
 import { callsApi } from "@features/calls/callsApi";
 import { formatCallDuration } from "@features/calls/callsSerializer";
 import { ParticipantTile, participantLabel } from "@features/calls/components/ParticipantTile";
 import { DraggablePip } from "@features/calls/components/DraggablePip";
 import { CallControls } from "@features/calls/components/CallControls";
+import { CallParticipantsSheet } from "@features/calls/components/CallParticipantsSheet";
+import { ZoomableStage } from "@features/calls/components/ZoomableStage";
 import { DomainHeader } from "@shared/components/DomainHeader";
 import { GlassSurface } from "@shared/components/GlassSurface";
 import { useTheme } from "@shared/hooks/useTheme";
@@ -55,11 +66,16 @@ export function CallScreen() {
   const [gridSize, setGridSize] = useState({ width: 0, height: 0 });
   const [pipStage, setPipStage] = useState({ width: 0, height: 0 });
   const [pinned, setPinned] = useState<FocusTarget | null>(null);
+  const [rosterOpen, setRosterOpen] = useState(false);
   const { user, organizationId } = useAuth();
   const { session, room, setMinimized } = useCall();
   const activeCall = useActiveCall(session.channelId ?? undefined);
   const participants = useRoomParticipants(room);
   const { channels } = useChannels();
+  const [cameraFit] = useCameraFit();
+  // Only the local view follows the preference; a remote tile is framed by
+  // whoever is sending it.
+  const localFit = cameraFit === "fit" ? "contain" : "cover";
 
   const [nowMs, setNowMs] = useState(() => Date.now());
 
@@ -204,17 +220,35 @@ export function CallScreen() {
         color={T.green}
         icon="chat"
         onBack={() => setMinimized(true)}
+        rightActions={
+          <TouchableOpacity
+            style={styles.rosterButton}
+            onPress={() => setRosterOpen(true)}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            accessibilityRole="button"
+            accessibilityLabel={`Participants, ${participants.length}`}
+          >
+            <Users size={18} color={T.textDim} weight="bold" />
+            <Text style={[styles.rosterCount, { color: T.textDim }]}>{participants.length}</Text>
+          </TouchableOpacity>
+        }
       />
 
       {session.status === "reconnecting" ? (
-        <View style={[styles.banner, { backgroundColor: T.surface, borderColor: T.border }]}>
+        <View
+          style={[styles.banner, { backgroundColor: T.surface, borderColor: T.border }]}
+          accessibilityLiveRegion="polite"
+        >
           <Text style={[styles.bannerText, { color: T.textDim }]}>
             Connection lost - reconnecting
           </Text>
         </View>
       ) : null}
       {session.secondDeviceMuted ? (
-        <View style={[styles.banner, { backgroundColor: T.surface, borderColor: T.border }]}>
+        <View
+          style={[styles.banner, { backgroundColor: T.surface, borderColor: T.border }]}
+          accessibilityLiveRegion="polite"
+        >
           <MicrophoneSlash size={13} color={T.textDim} weight="fill" />
           <Text style={[styles.bannerText, { color: T.textDim }]}>
             Joined on a second device - mic muted
@@ -226,12 +260,18 @@ export function CallScreen() {
         {focus && focusedParticipant ? (
           <View style={styles.focusLayout}>
             <View style={styles.focusStage}>
-              <ParticipantTile
-                participant={focusedParticipant}
-                T={T}
-                source={focus.source === "screen" ? livekit?.Track.Source.ScreenShare : undefined}
-                style={styles.fillTile}
-              />
+              {focus.source === "screen" ? (
+                <ZoomableStage trackKey={`${focus.identity}:screen`}>
+                  <ParticipantTile
+                    participant={focusedParticipant}
+                    T={T}
+                    source={livekit?.Track.Source.ScreenShare}
+                    style={styles.fillTile}
+                  />
+                </ZoomableStage>
+              ) : (
+                <ParticipantTile participant={focusedParticipant} T={T} style={styles.fillTile} />
+              )}
               {pinnedValid ? (
                 <Pressable
                   style={styles.unpinChip}
@@ -256,6 +296,10 @@ export function CallScreen() {
                   key={`${target.identity}:${target.source}`}
                   onPress={() => togglePin(target)}
                   onLongPress={() => hostActionsFor(participant)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${sameTarget(focus, target) ? "Unpin" : "Pin"} ${participantLabel(participant)}${
+                    target.source === "screen" ? "'s screen" : ""
+                  }`}
                 >
                   <ParticipantTile
                     participant={participant}
@@ -287,8 +331,14 @@ export function CallScreen() {
               <Pressable
                 style={styles.fillTile}
                 onLongPress={() => hostActionsFor(heroParticipant)}
+                accessibilityLabel={participantLabel(heroParticipant)}
               >
-                <ParticipantTile participant={heroParticipant} T={T} style={styles.fillTile} />
+                <ParticipantTile
+                  participant={heroParticipant}
+                  T={T}
+                  style={styles.fillTile}
+                  fit={heroParticipant.isLocal ? localFit : undefined}
+                />
               </Pressable>
             ) : null}
             {remoteParticipant && localParticipant ? (
@@ -303,6 +353,7 @@ export function CallScreen() {
                   T={T}
                   compact
                   style={styles.fillTile}
+                  fit={localFit}
                 />
               </DraggablePip>
             ) : null}
@@ -324,8 +375,15 @@ export function CallScreen() {
                 style={gridTile ?? styles.gridTilePending}
                 onPress={() => togglePin({ identity: p.identity, source: "camera" })}
                 onLongPress={() => hostActionsFor(p)}
+                accessibilityRole="button"
+                accessibilityLabel={`Pin ${participantLabel(p)}`}
               >
-                <ParticipantTile participant={p} T={T} style={styles.fillTile} />
+                <ParticipantTile
+                  participant={p}
+                  T={T}
+                  style={styles.fillTile}
+                  fit={p.isLocal ? localFit : undefined}
+                />
               </Pressable>
             ))}
           </ScrollView>
@@ -351,6 +409,13 @@ export function CallScreen() {
         />
         <CallControls T={T} isHost={isHost} />
       </View>
+
+      <CallParticipantsSheet
+        visible={rosterOpen}
+        onClose={() => setRosterOpen(false)}
+        participants={participants}
+        isHost={isHost}
+      />
     </View>
   );
 }
@@ -401,6 +466,8 @@ const styles = StyleSheet.create({
   unpinLabel: { fontSize: 11, fontFamily: FONT.medium, color: "#ffffff" },
   soloWrap: { alignItems: "center", paddingVertical: 6 },
   soloText: { fontSize: 12, fontFamily: FONT.regular },
+  rosterButton: { flexDirection: "row", alignItems: "center", gap: 4 },
+  rosterCount: { fontSize: 12, fontFamily: FONT.semibold, fontVariant: ["tabular-nums"] },
   controls: {
     marginHorizontal: 14,
     marginTop: 10,

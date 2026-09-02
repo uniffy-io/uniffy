@@ -35,6 +35,7 @@ import {
   X,
   Gauge,
   Phone,
+  PhoneSlash,
   ThumbsUp,
   ThumbsDown,
 } from "phosphor-react-native";
@@ -61,9 +62,10 @@ import { AgentContextSheet } from "@features/agents/components/AgentContextSheet
 import { memorySubjectForChannel } from "@features/agents/memorySerializer";
 import { AgentModelSheet } from "@features/chat/components/AgentModelSheet";
 import { ChannelDetailsSheet } from "@features/chat/components/ChannelDetailsSheet";
-import { PreJoinSheet } from "@features/calls/components/PreJoinSheet";
 import { useCall } from "@features/calls/CallContext";
 import { useActiveCall } from "@features/calls/useCallsState";
+import { useChannelActiveCall } from "@features/calls/useChannelActiveCall";
+import { showCallsUnavailable } from "@features/calls/callsUnavailable";
 import { usePresences } from "@shared/presence/usePresence";
 import { useTheme } from "@shared/hooks/useTheme";
 import type { ThemeColors } from "@theme/theme";
@@ -341,12 +343,23 @@ export function ChatConversationScreen() {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [modelSheetOpen, setModelSheetOpen] = useState(false);
   const [contextAgentId, setContextAgentId] = useState<string | null>(null);
-  const [prejoinOpen, setPrejoinOpen] = useState(false);
-  const openPrejoin = useCallback(() => setPrejoinOpen(true), []);
-  useJoinCallParam(channelId, openPrejoin);
-  const { session: callSession, setMinimized, available: callsAvailable } = useCall();
+  const {
+    session: callSession,
+    setMinimized,
+    available: callsAvailable,
+    callsDisabledMessage,
+    openPrejoin,
+  } = useCall();
+  useChannelActiveCall(channelId);
   const activeCall = useActiveCall(channelId);
   const inCallHere = callSession.channelId === channelId && callSession.status !== "idle";
+  // The pre-join resolves the channel name and the live call itself, so every
+  // entry point here only has to say which channel.
+  const openChannelPrejoin = useCallback(
+    () => openPrejoin({ channelId }),
+    [openPrejoin, channelId],
+  );
+  useJoinCallParam(channelId, openChannelPrejoin);
   const attachments = useComposerAttachments();
   const screenFocused = useScreenFocusRef();
 
@@ -1001,14 +1014,32 @@ export function ChatConversationScreen() {
           }
           rightActions={
             <>
-              {callsAvailable && channel && !channel.isAgentDm ? (
+              {(callsAvailable || callsDisabledMessage) && channel && !channel.isAgentDm ? (
                 <TouchableOpacity
-                  onPress={() => (inCallHere ? setMinimized(false) : setPrejoinOpen(true))}
+                  onPress={() => {
+                    // The button stays put when calls are off so there is
+                    // something to tap that says why.
+                    if (callsDisabledMessage) {
+                      showCallsUnavailable(callsDisabledMessage);
+                      return;
+                    }
+                    if (inCallHere) setMinimized(false);
+                    else openChannelPrejoin();
+                  }}
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   accessibilityRole="button"
-                  accessibilityLabel={activeCall ? "Join live call" : "Start call"}
+                  accessibilityState={{ disabled: !callsAvailable }}
+                  accessibilityLabel={
+                    callsDisabledMessage
+                      ? "Calls unavailable"
+                      : activeCall
+                        ? "Join live call"
+                        : "Start call"
+                  }
                 >
-                  {activeCall ? (
+                  {callsDisabledMessage ? (
+                    <PhoneSlash size={18} color={T.textDim} weight="bold" />
+                  ) : activeCall ? (
                     <View style={styles.liveCallAction}>
                       <Phone size={18} color={T.green} weight="fill" />
                       <Text style={[styles.liveCallCount, { color: T.green }]}>
@@ -1170,7 +1201,7 @@ export function ChatConversationScreen() {
         {callsAvailable && activeCall && !inCallHere ? (
           <TouchableOpacity
             style={[styles.stopPill, { backgroundColor: T.surface, borderColor: T.green }]}
-            onPress={() => setPrejoinOpen(true)}
+            onPress={openChannelPrejoin}
             activeOpacity={0.7}
             accessibilityRole="button"
             accessibilityLabel="Join the live call"
@@ -1388,15 +1419,6 @@ export function ChatConversationScreen() {
           onClose={() => setContextAgentId(null)}
         />
       ) : null}
-
-      <PreJoinSheet
-        visible={prejoinOpen}
-        T={T}
-        channelId={channelId}
-        channelName={title}
-        callId={activeCall?.id}
-        onClose={() => setPrejoinOpen(false)}
-      />
     </View>
   );
 }

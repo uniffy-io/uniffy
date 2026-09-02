@@ -283,6 +283,97 @@ direct media), nothing changes anywhere.
 - [ ] VM/compose mode with TURN env unset: calls still connect via LiveKit's embedded TURN,
       responses carry no ice_servers, and webrtc-internals shows the usual candidate mix.
 
+## Calls: mobile client
+
+The phone carries the controls a phone can reasonably offer. Needs a dev build on each platform
+(the Android screen-share service and the iOS broadcast extension are native changes, so a JS
+reload is not enough), a second participant on web for the screen-share and roster halves, and a
+Bluetooth or wired headset for the routing steps. (both products)
+
+Screen sharing
+
+- [ ] Android: share the screen from the in-call controls: the system capture consent dialog
+      appears, the other participant sees the screen, and the ongoing-capture notification is in
+      the shade.
+- [ ] Android: declining the consent dialog leaves the call running with no error modal.
+- [ ] Android: stopping the share from the notification shade updates the button and the roster,
+      not just the remote side.
+- [ ] iOS: share the screen from the in-call controls: the system broadcast picker lists Uniffy,
+      Start Broadcast starts the share, the red status pill appears, and the other participant
+      sees the screen within a few seconds.
+- [ ] iOS: dismissing the picker without starting publishes nothing: the button stays off and the
+      roster shows no share (the control waits for the extension to report it started).
+- [ ] iOS: stopping from the red status pill, or from the button, updates the button and the
+      roster; the system shows "Screen sharing stopped" rather than an error.
+- [ ] Backgrounding the app while sharing keeps the share and the audio alive; the camera stops.
+- [ ] As an org admin, drop the max screen-share quality in `/admin/calls`, rejoin, and confirm
+      the picker (long-press the share button) offers no tier above the cap.
+- [ ] Deliberate difference: the cap limits what the phone PUBLISHES (bitrate and simulcast
+      layers), not what it captures - React Native's getDisplayMedia takes no capture constraints.
+- [ ] A dev client built without the native pieces (the Android permission, the iOS extension)
+      shows no share button at all rather than a broken one.
+
+Before joining
+
+- [ ] The pre-join replaces the current screen rather than sliding up as a sheet (the camera
+      preview cannot paint inside a native modal on iOS); the header back returns to where you
+      were, and so does the Android back button.
+- [ ] The pre-join shows a live camera preview when the camera is on, mirrored for the front
+      lens, and the front/back switch flips it. The lens chosen here is the one the call opens
+      with.
+- [ ] Leaving the pre-join with the camera on releases the camera (the OS indicator clears).
+- [ ] Tapping Join with the camera on releases the preview before the call opens its own camera:
+      the call comes up with video rather than listen-only.
+- [ ] The audio-output row lists the real routes (Android: speaker, phone, wired headset,
+      Bluetooth; iOS: Automatic and Speaker, plus a More outputs row that opens the system
+      picker for AirPods, Bluetooth and AirPlay); choosing one is remembered and applied on the
+      next call.
+- [ ] iOS: after the system picker closes, the camera preview still paints (nothing is stacked
+      over the pre-join by the app itself; the system sheet is the one exception to verify).
+- [ ] Deliberate difference: there is no microphone picker - on a phone the input follows the
+      selected audio route.
+- [ ] The preview opens in Fit (the whole captured frame, letterboxed); the chip beside the flip
+      switches to Fill (edge to edge, sides cropped) and the choice sticks into the call and the
+      next one. Pinch magnifies, double tap returns to the start.
+- [ ] Deliberate difference: this is presentation only. The lens has no zoom control - the WebRTC
+      layer exposes no zoom constraint - and remote participants always receive the full captured
+      frame regardless of the local setting.
+- [ ] While in a call, tap the live pill of a different channel on the chat list: the pre-join
+      says to leave the current call first, Join is disabled, and closing it leaves the running
+      call's audio untouched.
+
+While the call runs
+
+- [ ] Minimise the call: the banner carries mute, camera, and hang up, and using them does not
+      expand the call.
+- [ ] Connect a headset mid-call: it appears in the route sheet (iOS: through More outputs) and
+      selecting it moves the audio.
+- [ ] A shared screen on the stage pinches to zoom and pans; double tap returns it to fit.
+      Ending the share resets the zoom.
+- [ ] The participants button in the call header opens a roster; as host, a remote row offers
+      Mute microphone and Remove from call without a long press.
+
+Recovery and state
+
+- [ ] Force-stop the app mid-call and reopen it: a prompt offers to rejoin, and Rejoin puts you
+      back in the call muted with the camera off.
+- [ ] Dismissing that prompt does not offer it again on the next launch.
+- [ ] Lose the network mid-call until "Lost connection to the call" appears, restore it, and tap
+      Rejoin: the call reconnects with the lens you had before.
+- [ ] Open a channel with a call already running, straight from a cold start: the live pill is
+      there on first paint rather than after the chat stream reconnects.
+- [ ] Tap the live pill on a chat-list row: the pre-join opens for THAT channel and the list does
+      not navigate.
+- [ ] Accept a ring: the pre-join opens for the ringing call, and Join lands in that call.
+- [ ] Against a backend with LiveKit unconfigured, the call button stays put and tapping it says
+      why instead of the button silently disappearing.
+
+Accessibility
+
+- [ ] With TalkBack or VoiceOver on, every in-call control is named, participant tiles read as
+      "<name>, camera off, muted", and the host actions are reachable without a long press.
+- [ ] The reconnecting and second-device banners are announced when they appear.
+
 ## Calendar inline event editing
 
 The event detail modal is the only event surface and edits every field in place; there is no

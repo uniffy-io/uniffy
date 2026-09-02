@@ -3,6 +3,7 @@ import { View, Text, Pressable, StyleSheet } from "react-native";
 import { Phone, CaretUp } from "phosphor-react-native";
 import { GlassSurface } from "@shared/components/GlassSurface";
 import { useCall } from "@features/calls/CallContext";
+import { CallControls } from "@features/calls/components/CallControls";
 import { useChannels } from "@features/chat/useChat";
 import { formatCallDuration } from "@features/calls/callsSerializer";
 import { useTheme } from "@shared/hooks/useTheme";
@@ -66,6 +67,9 @@ export function CallIndicator() {
         {title}
       </Text>
       <Text style={[styles.status, { color: T.green }]}>{status}</Text>
+      {/* Mute, camera and hang up without expanding - the moment you most want a
+          mute button is the moment the call is out of the way. */}
+      <CallControls T={T} isHost={false} compact />
       <CaretUp size={14} color={T.textDim} weight="bold" />
     </Pressable>
   );
@@ -75,7 +79,7 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    gap: 8,
     marginHorizontal: 14,
     marginBottom: 8,
     paddingHorizontal: 12,
@@ -91,6 +95,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  title: { flex: 1, fontSize: 13, fontFamily: FONT.semibold },
+  title: { flex: 1, minWidth: 0, fontSize: 13, fontFamily: FONT.semibold },
   status: { fontSize: 12, fontFamily: FONT.medium, fontVariant: ["tabular-nums"] },
 });

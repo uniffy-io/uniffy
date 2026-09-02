@@ -32,8 +32,10 @@ import { KeyboardSpacer } from "@shared/components/KeyboardSpacer";
 import { AtOverlay } from "@features/mentions/AtOverlay";
 import { CallIndicator } from "@features/calls/components/CallIndicator";
 import { CallScreen } from "@features/calls/components/CallScreen";
+import { PreJoinScreen } from "@features/calls/components/PreJoinScreen";
 import { IncomingCallBanner } from "@features/calls/components/IncomingCallBanner";
 import { CallEndedNotice } from "@features/calls/components/CallEndedNotice";
+import { CallRestorePrompt } from "@features/calls/components/CallRestorePrompt";
 import { LoginSplash } from "@shared/components/LoginSplash";
 import { BRAND } from "@theme/theme";
 
@@ -96,7 +98,13 @@ function RootLayoutNav() {
   } = useAuth();
   const pathname = usePathname();
   const prevPathnameRef = useRef(pathname);
-  const { session: callSession, minimized: callMinimized, setMinimized } = useCall();
+  const {
+    session: callSession,
+    minimized: callMinimized,
+    setMinimized,
+    prejoinOpen,
+    closePrejoin,
+  } = useCall();
 
   usePresenceHeartbeat();
   useNotificationStream();
@@ -132,15 +140,19 @@ function RootLayoutNav() {
     (callSession.status === "connecting" ||
       callSession.status === "connected" ||
       callSession.status === "reconnecting");
-  const showBar = showAppChrome && !callExpanded && !immersive;
+  const showBar = showAppChrome && !callExpanded && !prejoinOpen && !immersive;
 
-  // Hardware back button: minimize the call overlay or close the @ overlay
-  // before letting navigation handle it.
+  // Hardware back button: minimize the call overlay, close the pre-join, or
+  // close the @ overlay before letting navigation handle it.
   useEffect(() => {
     if (Platform.OS === "web") return;
     const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
       if (callExpanded) {
         setMinimized(true);
+        return true;
+      }
+      if (prejoinOpen) {
+        closePrejoin();
         return true;
       }
       if (atOpen) {
@@ -150,7 +162,7 @@ function RootLayoutNav() {
       return false;
     });
     return () => subscription.remove();
-  }, [atOpen, closeAt, callExpanded, setMinimized]);
+  }, [atOpen, closeAt, callExpanded, setMinimized, prejoinOpen, closePrejoin]);
 
   useEffect(() => {
     const prevDepth = prevPathnameRef.current.split("/").filter(Boolean).length;
@@ -168,14 +180,15 @@ function RootLayoutNav() {
           bar so its glass has real content to refract; screens inset their
           scrollables (BOTTOM_NAV_HEIGHT + insets.bottom, or
           bottomBarBlockHeight for exact flushness) to clear the bar. While a
-          call is expanded the CallScreen flow child replaces this wrapper
-          (display none keeps navigation state mounted); RTCView cannot render
-          in a modal and absolute overlays flow-collapse on iOS 26 Fabric. */}
+          call is expanded, or a pre-join is open, the CallScreen or PreJoinScreen
+          flow child replaces this wrapper (display none keeps navigation state
+          mounted); RTCView cannot render in a modal and absolute overlays
+          flow-collapse on iOS 26 Fabric. */}
       <View
         style={[
           styles.content,
           showAppChrome && !immersive && { marginBottom: -bottomBarBlockHeight(insets.bottom) },
-          callExpanded && styles.contentHidden,
+          (callExpanded || prejoinOpen) && styles.contentHidden,
         ]}
       >
         <Stack
@@ -222,6 +235,7 @@ function RootLayoutNav() {
           above the keyboard. Overlay stacking comes from sibling order, not
           zIndex - zIndex on a fully inset-positioned sibling triggers the
           same flow-layout bug. */}
+      {showAppChrome && prejoinOpen && <PreJoinScreen />}
       {showAppChrome && callExpanded && <CallScreen />}
       {showAppChrome && !callExpanded && <CallIndicator />}
       {showBar && <AppBottomNav />}
@@ -229,6 +243,7 @@ function RootLayoutNav() {
       {showAppChrome && <AtOverlay />}
       {showAppChrome && <IncomingCallBanner />}
       {showAppChrome && <CallEndedNotice />}
+      {showAppChrome && <CallRestorePrompt />}
       {loginSplashVisible && (
         <LoginSplash
           onReveal={() => setHoldNavigation(false)}

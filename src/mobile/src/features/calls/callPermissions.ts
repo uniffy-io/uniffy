@@ -1,4 +1,5 @@
 import { PermissionsAndroid, Platform, type Permission } from "react-native";
+import { isScreenShareAvailable } from "@features/calls/livekit";
 
 export interface CallPermissionResult {
   micGranted: boolean;
@@ -6,6 +7,28 @@ export interface CallPermissionResult {
 }
 
 const ANDROID_NOTIFICATION_PERMISSION_SDK = 33;
+
+const FOREGROUND_SERVICE_MEDIA_PROJECTION =
+  "android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" as Permission;
+
+/**
+ * Whether the installed binary can share its screen; a platform check is not
+ * enough on either side. Android: screen capture starts react-native-webrtc's
+ * mediaProjection foreground service, and Android kills the process outright
+ * when the manifest does not carry this permission - a SecurityException on the
+ * service thread, which no JS catch can reach. iOS: without the broadcast
+ * extension, getDisplayMedia still resolves, with a track that never gets a
+ * frame. A dev client built before either change runs this same bundle.
+ */
+export async function isScreenSharePermitted(): Promise<boolean> {
+  if (Platform.OS === "ios") return isScreenShareAvailable();
+  if (Platform.OS !== "android") return false;
+  try {
+    return await PermissionsAndroid.check(FOREGROUND_SERVICE_MEDIA_PROJECTION);
+  } catch {
+    return false;
+  }
+}
 
 // iOS prompts natively from getUserMedia inside the WebRTC stack; Android
 // requires an explicit runtime request before capture starts.

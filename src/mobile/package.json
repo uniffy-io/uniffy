@@ -13,6 +13,7 @@
     "ios": "expo run:ios"
   },
   "dependencies": {
+    "@bacons/apple-targets": "^5.0.0",
     "@bufbuild/protobuf": "2.12.0",
     "@callstack/liquid-glass": "^0.8.0",
     "@config-plugins/react-native-webrtc": "^13.0.0",
