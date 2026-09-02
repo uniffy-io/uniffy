@@ -27,10 +27,8 @@ from uniffy_proto.permissions.v1.permissions_pb2 import (
 
 from uniffy.core.auth.permissions.checker import PermissionChecker
 from uniffy.core.auth.permissions.defaults import resolve_effective_policy
-from uniffy.core.content.members import (
-    ContentMembersOperations,
-    get_content_loader,
-)
+from uniffy.core.auth.principal import current_user_id
+from uniffy.core.content.registry import get_content_loader
 from uniffy.core.converters.common_proto import (
     access_mode_from_proto,
     content_member_action_from_proto,
@@ -52,14 +50,14 @@ from uniffy.core.types import (
     ContentType,
     SubjectType,
 )
-from uniffy.db import open_session
-from uniffy.domains.auth.context import get_user_id_from_context
 from uniffy.domains.permissions.converters import (
     audit_action_for_member_action,
     audit_event_to_content_member_event_proto,
     content_access_policy_to_proto,
     content_member_to_proto,
 )
+from uniffy.domains.permissions.members import ContentMembersOperations
+from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="permissions.handlers")
 
@@ -154,14 +152,14 @@ class MembersHandlers:
         request: ListMembersRequest,
         ctx: RequestContext,
     ) -> ListMembersResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         content_id = _parse_uuid(request.content_id, "content_id")
         content_type = _resolve_content_type(request.content_type)
 
         try:
             async with open_session() as session:
-                ops = ContentMembersOperations(session)
+                ops = ContentMembersOperations(session, self.search_indexer)
                 members = await ops.list_members(
                     actor_user_id=user_id,
                     organization_id=organization_id,
@@ -189,7 +187,7 @@ class MembersHandlers:
         request: AddMemberRequest,
         ctx: RequestContext,
     ) -> AddMemberResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         content_id = _parse_uuid(request.content_id, "content_id")
         subject_id = _parse_uuid(request.subject_id, "subject_id")
@@ -203,7 +201,7 @@ class MembersHandlers:
 
         try:
             async with open_session() as session:
-                ops = ContentMembersOperations(session)
+                ops = ContentMembersOperations(session, self.search_indexer)
                 member = await ops.add_member(
                     actor_user_id=user_id,
                     organization_id=organization_id,
@@ -226,7 +224,7 @@ class MembersHandlers:
         request: UpdateMemberRoleRequest,
         ctx: RequestContext,
     ) -> UpdateMemberRoleResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         content_id = _parse_uuid(request.content_id, "content_id")
         subject_id = _parse_uuid(request.subject_id, "subject_id")
@@ -236,7 +234,7 @@ class MembersHandlers:
 
         try:
             async with open_session() as session:
-                ops = ContentMembersOperations(session)
+                ops = ContentMembersOperations(session, self.search_indexer)
                 member = await ops.update_member_role(
                     actor_user_id=user_id,
                     organization_id=organization_id,
@@ -258,7 +256,7 @@ class MembersHandlers:
         request: RemoveMemberRequest,
         ctx: RequestContext,
     ) -> RemoveMemberResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         content_id = _parse_uuid(request.content_id, "content_id")
         subject_id = _parse_uuid(request.subject_id, "subject_id")
@@ -267,7 +265,7 @@ class MembersHandlers:
 
         try:
             async with open_session() as session:
-                ops = ContentMembersOperations(session)
+                ops = ContentMembersOperations(session, self.search_indexer)
                 await ops.remove_member(
                     actor_user_id=user_id,
                     organization_id=organization_id,
@@ -291,7 +289,7 @@ class MembersHandlers:
         """Proto ``ACCESS_MODE_UNSPECIFIED`` clears the per-item override;
         the row inherits from org defaults.
         """
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         content_id = _parse_uuid(request.content_id, "content_id")
         content_type = _resolve_content_type(request.content_type)
@@ -304,7 +302,7 @@ class MembersHandlers:
 
         try:
             async with open_session() as session:
-                ops = ContentMembersOperations(session)
+                ops = ContentMembersOperations(session, self.search_indexer)
                 await ops.set_access_mode(
                     actor_user_id=user_id,
                     organization_id=organization_id,
@@ -335,7 +333,7 @@ class MembersHandlers:
         request: TransferOwnershipRequest,
         ctx: RequestContext,
     ) -> TransferOwnershipResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         content_id = _parse_uuid(request.content_id, "content_id")
         new_owner_user_id = _parse_uuid(request.new_owner_user_id, "new_owner_user_id")
@@ -343,7 +341,7 @@ class MembersHandlers:
 
         try:
             async with open_session() as session:
-                ops = ContentMembersOperations(session)
+                ops = ContentMembersOperations(session, self.search_indexer)
                 await ops.transfer_ownership(
                     actor_user_id=user_id,
                     organization_id=organization_id,
@@ -372,7 +370,7 @@ class MembersHandlers:
         request: ListMemberEventsRequest,
         ctx: RequestContext,
     ) -> ListMemberEventsResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         content_id = _parse_uuid(request.content_id, "content_id")
         content_type = _resolve_content_type(request.content_type)
@@ -406,7 +404,7 @@ class MembersHandlers:
 
         try:
             async with open_session() as session:
-                ops = ContentMembersOperations(session)
+                ops = ContentMembersOperations(session, self.search_indexer)
                 events = await ops.list_member_events(
                     actor_user_id=user_id,
                     organization_id=organization_id,

@@ -591,6 +591,7 @@ class TestCronTransferOwnership:
         ops.session.execute = AsyncMock(return_value=_result(task))
         ops.session.commit = AsyncMock()
         ops.session.refresh = AsyncMock()
+        ops._search_indexer = MagicMock()
         ops._index_for_search = AsyncMock()
         return ops
 
@@ -635,7 +636,7 @@ class TestCronTransferOwnership:
     async def test_owner_transfer_moves_execution_identity(self) -> None:
         # The generic content transfer runs the registered ownership hook
         # inside its transaction; simulate that wiring on the mock.
-        from uniffy.core.content.members import _ownership_transfer_hooks
+        from uniffy.core.content.registry import find_ownership_transfer_hook
         from uniffy.core.types import ContentType
 
         old_owner = generate_id()
@@ -644,7 +645,8 @@ class TestCronTransferOwnership:
         ops = self._ops(task)
         agent_ops = MagicMock()
         agent_ops.get_by_id = AsyncMock(return_value=NS(id=task.agent_id))
-        hook = _ownership_transfer_hooks[ContentType.AGENT_CRON_TASK]
+        hook = find_ownership_transfer_hook(ContentType.AGENT_CRON_TASK)
+        assert hook is not None
 
         async def run_hook(**kwargs):
             await hook(ops.session, task.organization_id, kwargs["content_id"], new_owner)
@@ -672,10 +674,10 @@ class TestCronTransferOwnership:
 
     def test_cron_hook_is_registered(self) -> None:
         import uniffy.domains.agents.cron.operations  # noqa: F401  (registers the hook)
-        from uniffy.core.content.members import _ownership_transfer_hooks
+        from uniffy.core.content.registry import find_ownership_transfer_hook
         from uniffy.core.types import ContentType
 
-        assert ContentType.AGENT_CRON_TASK in _ownership_transfer_hooks
+        assert find_ownership_transfer_hook(ContentType.AGENT_CRON_TASK) is not None
 
 
 class TestCronExecutionIdentity:
@@ -872,7 +874,12 @@ class TestCronExecutionIdentity:
 
         ops = MagicMock(spec=CronTaskOperations)
         ops.delete_cron_task = AsyncMock()
-        ctx = NS(session=MagicMock(), user_id=generate_id(), organization_id=generate_id())
+        ctx = NS(
+            session=MagicMock(),
+            user_id=generate_id(),
+            organization_id=generate_id(),
+            search_indexer=MagicMock(),
+        )
         with patch(
             "uniffy.domains.agents.cron.operations.CronTaskOperations",
             return_value=ops,
@@ -887,10 +894,10 @@ class TestCronExecutionIdentity:
         sharing-dialog override would also cover the ownership-bound surfaces."""
         import uniffy.domains.agents.agents.operations  # noqa: F401
         import uniffy.domains.agents.cron.operations  # noqa: F401
-        from uniffy.core.content.members import _manage_overrides
+        from uniffy.core.content.registry import find_manage_override
         from uniffy.core.types import ContentType
 
-        assert ContentType.AGENT_CRON_TASK not in _manage_overrides
+        assert find_manage_override(ContentType.AGENT_CRON_TASK) is None
 
 
 class TestAgentToolAuthorization:
@@ -898,12 +905,12 @@ class TestAgentToolAuthorization:
     ``effective_role``."""
 
     def test_allowed_set_is_derived_from_the_resolved_schemas(self) -> None:
-        from uniffy.domains.agents.runtime.operations import _allowed_tool_names
+        from uniffy.domains.agents.runtime.tooling import allowed_tool_names
 
         # Post-filter schemas carry API names; the executor compares internal ones.
-        allowed = _allowed_tool_names([{"name": "notes-read_note"}, {"name": "github-list_issues"}])
+        allowed = allowed_tool_names([{"name": "notes-read_note"}, {"name": "github-list_issues"}])
         assert allowed == frozenset({"notes.read_note", "github.list_issues"})
-        assert _allowed_tool_names(None) == frozenset()
+        assert allowed_tool_names(None) == frozenset()
 
 
 def test_access_mode_enum_present() -> None:

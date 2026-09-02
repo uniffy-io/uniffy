@@ -1,22 +1,4 @@
-"""Runtime stream publishers.
-
-Two surfaces consume agent runtime events: chat (multi-subscriber
-fan-out, no replay) and the direct RPC handler (single subscriber per
-``run_id``, replay-required). The ``RuntimeStreamPublisher`` Protocol
-abstracts both so the runtime drives one shape regardless of where
-events land.
-
-- :class:`ChatStreamPublisher` -- pubsub fan-out via the existing
-  per-member channel pipe. Translates each :class:`StreamEvent`
-  into the matching chat event, plus DB side-effects (placeholder
-  announcement, error-message persistence) that the chat surface
-  requires.
-- :class:`RunStreamPublisher` -- Valkey Streams XADD keyed on
-  ``agent:run:{run_id}`` with monotonic per-run sequence numbers.
-  Token bursts are coalesced (default 30ms) before each XADD so the
-  per-token publish overhead stays bounded under the LLM's streaming
-  rate.
-"""
+"""Publish runtime streams to chat fanout or replayable run streams."""
 
 from __future__ import annotations
 
@@ -31,9 +13,12 @@ from sqlalchemy import select
 
 from uniffy.core.json_codec import dumps_str
 from uniffy.core.models.agents.message import AgentMessageRole
+from uniffy.core.models.agents.skill_draft import AgentSkillDraft
 from uniffy.core.models.chat.message import ChatMessage, SenderType
 from uniffy.core.models.chat.thread import ChatThreadStats
-from uniffy.core.valkey.streams import (
+from uniffy.domains.agents.providers.base import EventType, StreamEvent
+from uniffy.domains.agents.runtime.converters import runtime_stream_event_to_json
+from uniffy.domains.agents.runtime.streams import (
     RUN_STATE_TTL_SECONDS,
     RUN_STREAM_DEFAULT_MAXLEN,
     run_state_key,
@@ -41,16 +26,14 @@ from uniffy.core.valkey.streams import (
     set_run_state,
     stream_xadd,
 )
-from uniffy.domains.agents.providers.base import EventType, StreamEvent
-from uniffy.domains.agents.runtime.converters import runtime_stream_event_to_json
-from uniffy.domains.chat.messages.operations import (
+from uniffy.domains.chat import agents as chat_evt
+from uniffy.domains.chat.agents import (
     bump_channel_message_stats,
     counts_as_thread_reply,
     drop_thread_reply,
+    publish_channel_event_to_members,
     record_thread_reply,
 )
-from uniffy.domains.chat.streaming import events as chat_evt
-from uniffy.domains.chat.streaming.publisher import publish_channel_event_to_members
 
 logger = logger.bind(component="agents.runtime.publishers")
 
@@ -347,8 +330,6 @@ class ChatStreamPublisher:
         Metadata values are strings (the chat metadata wire type is
         ``map<string,string>``).
         """
-        from uniffy.core.models.agents.skill_draft import AgentSkillDraft
-
         display = draft.display_name or draft.name or "Untitled skill"
         summary = (draft.description or "").strip()
         body = f"Proposed skill: {display}"

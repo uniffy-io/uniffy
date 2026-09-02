@@ -1,7 +1,7 @@
 """Chat policy blob resolution: defaults win over malformed stored values."""
 
 from uniffy.core.types import generate_id
-from uniffy.domains.chat.policy import (
+from uniffy.domains.chat.policies.operations import (
     DEFAULT_BROADCAST_CONFIRM_THRESHOLD,
     DEFAULT_EDIT_WINDOW_MINUTES,
     MAX_EDIT_WINDOW_MINUTES,

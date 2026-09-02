@@ -401,6 +401,13 @@ export const unaryTransport = createConnectTransport({
   defaultTimeoutMs: 10_000,
 });
 
+/** Unary transport for pre-authentication RPCs whose 401 responses belong to the form. */
+export const publicUnaryTransport = createConnectTransport({
+  baseUrl: env.apiBaseUrl,
+  useBinaryFormat: true,
+  defaultTimeoutMs: 10_000,
+});
+
 export { setMemoryAccessToken };
 export { clearMemoryAccessToken };
 export { setEnrollmentToken };

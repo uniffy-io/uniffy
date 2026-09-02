@@ -21,14 +21,15 @@ from uniffy_proto.chat.v1.chat_pb2 import (
     UpdateCategoryResponse,
 )
 
-from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
-from uniffy.db import open_session
-from uniffy.domains.auth.context import (
-    get_user_id_from_context,
+from uniffy.core.auth.principal import (
+    current_user_id,
     resolve_organization_id,
 )
+from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.domains.chat.categories.operations import ChatCategoryOperations
+from uniffy.domains.chat.categories.reader import ChatCategoryReader
 from uniffy.domains.chat.channels.converters import category_to_proto, channel_to_proto
+from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="chat.categories.handlers")
 
@@ -50,15 +51,15 @@ class CategoryHandlers:
         request: CreateCategoryRequest,
         ctx: RequestContext,
     ) -> CreateCategoryResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         try:
-            org_id = resolve_organization_id(ctx, request.organization_id)
+            org_id = resolve_organization_id(request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
 
         try:
             async with open_session() as session:
-                ops = ChatCategoryOperations(session)
+                ops = ChatCategoryOperations(session, self.search_indexer)
                 cat = await ops.create(user_id, org_id, request.name)
                 return CreateCategoryResponse(category=category_to_proto(cat))
         except (PermissionDeniedError, ValidationError) as e:
@@ -69,9 +70,9 @@ class CategoryHandlers:
         request: UpdateCategoryRequest,
         ctx: RequestContext,
     ) -> UpdateCategoryResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         try:
-            org_id = resolve_organization_id(ctx, request.organization_id)
+            org_id = resolve_organization_id(request.organization_id)
             cat_id = UUID(request.category_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
@@ -80,7 +81,7 @@ class CategoryHandlers:
 
         try:
             async with open_session() as session:
-                ops = ChatCategoryOperations(session)
+                ops = ChatCategoryOperations(session, self.search_indexer)
                 cat = await ops.update(user_id, org_id, cat_id, name=name)
                 return UpdateCategoryResponse(category=category_to_proto(cat))
         except (NotFoundError, PermissionDeniedError) as e:
@@ -91,16 +92,16 @@ class CategoryHandlers:
         request: DeleteCategoryRequest,
         ctx: RequestContext,
     ) -> DeleteCategoryResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         try:
-            org_id = resolve_organization_id(ctx, request.organization_id)
+            org_id = resolve_organization_id(request.organization_id)
             cat_id = UUID(request.category_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
 
         try:
             async with open_session() as session:
-                ops = ChatCategoryOperations(session)
+                ops = ChatCategoryOperations(session, self.search_indexer)
                 await ops.delete(user_id, org_id, cat_id)
                 return DeleteCategoryResponse()
         except (NotFoundError, PermissionDeniedError) as e:
@@ -111,12 +112,12 @@ class CategoryHandlers:
         request: ListCategoriesRequest,
         ctx: RequestContext,
     ) -> ListCategoriesResponse:
-        user_id = get_user_id_from_context(ctx)
-        org_id = resolve_organization_id(ctx, request.organization_id)
+        user_id = current_user_id()
+        org_id = resolve_organization_id(request.organization_id)
 
         try:
             async with open_session() as session:
-                ops = ChatCategoryOperations(session)
+                ops = ChatCategoryReader(session)
                 cats = await ops.list_categories(user_id, org_id)
                 return ListCategoriesResponse(categories=[category_to_proto(c) for c in cats])
         except (NotFoundError, PermissionDeniedError) as e:
@@ -127,16 +128,16 @@ class CategoryHandlers:
         request: ReorderCategoriesRequest,
         ctx: RequestContext,
     ) -> ReorderCategoriesResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         try:
-            org_id = resolve_organization_id(ctx, request.organization_id)
+            org_id = resolve_organization_id(request.organization_id)
             cat_ids = [UUID(c) for c in request.category_ids]
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
 
         try:
             async with open_session() as session:
-                ops = ChatCategoryOperations(session)
+                ops = ChatCategoryOperations(session, self.search_indexer)
                 cats = await ops.reorder(user_id, org_id, cat_ids)
                 return ReorderCategoriesResponse(categories=[category_to_proto(c) for c in cats])
         except PermissionDeniedError as e:
@@ -147,9 +148,9 @@ class CategoryHandlers:
         request: MoveChannelToCategoryRequest,
         ctx: RequestContext,
     ) -> MoveChannelToCategoryResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         try:
-            org_id = resolve_organization_id(ctx, request.organization_id)
+            org_id = resolve_organization_id(request.organization_id)
             channel_id = UUID(request.channel_id)
             cat_id = None
             if request.HasField("category_id") and request.category_id:
@@ -159,12 +160,16 @@ class CategoryHandlers:
 
         try:
             async with open_session() as session:
-                ops = ChatCategoryOperations(session)
+                ops = ChatCategoryOperations(session, self.search_indexer)
                 await ops.move_channel_to_category(user_id, org_id, channel_id, cat_id)
 
                 from uniffy.domains.chat.channels.operations import ChatChannelOperations
 
-                ch_ops = ChatChannelOperations(session)
+                ch_ops = ChatChannelOperations(
+                    session,
+                    storage=self.storage,
+                    search_indexer=self.search_indexer,
+                )
                 channel = await ch_ops.get_by_id(user_id, org_id, channel_id)
                 from uniffy.domains.chat.channels.handlers import _hydrate_channel_tags
 

@@ -23,10 +23,10 @@ from uniffy_proto.audit.v1.audit_pb2 import (
     ListEventsResponse,
 )
 
+from uniffy.core.auth.principal import current_user_id
 from uniffy.core.converters.proto import timestamp_to_datetime
 from uniffy.core.errors import PermissionDeniedError, ValidationError
 from uniffy.core.models.audit.event import AuditResourceType
-from uniffy.db import open_session
 from uniffy.domains.audit.converters import audit_event_to_proto
 from uniffy.domains.audit.export import ExportFilter, ExportFormat, ExportOperations
 from uniffy.domains.audit.operations import (
@@ -34,7 +34,7 @@ from uniffy.domains.audit.operations import (
     ListEventsFilter,
     SortOrder,
 )
-from uniffy.domains.auth.context import get_user_id_from_context
+from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="audit.handlers")
 
@@ -73,7 +73,7 @@ class AuditHandlers:
         ctx: RequestContext,
     ) -> ListEventsResponse:
         """Page through audit events scoped to a single organization."""
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
 
         actor_user_id = (
@@ -131,7 +131,7 @@ class AuditHandlers:
         ctx: RequestContext,
     ) -> AsyncIterator[ExportEventsResponse]:
         """Stream a CSV / NDJSON dump of every row matching the filter."""
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         filter_msg = request.filter
 
         if request.format == EXPORT_FORMAT_CSV:

@@ -6,6 +6,7 @@ from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
+from sqlalchemy import select
 from uniffy_proto.files.v1.files_pb2 import (
     AttachFileRequest,
     AttachFileResponse,
@@ -20,14 +21,16 @@ from uniffy_proto.files.v1.files_pb2 import (
     ListAttachmentsResponse,
 )
 
+from uniffy.core.auth.principal import current_user_id, resolve_organization_id
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
-from uniffy.db import open_session
-from uniffy.domains.auth.context import get_user_id_from_context, resolve_organization_id
+from uniffy.core.models.files.file import File
+from uniffy.core.models.login.user import User
 from uniffy.domains.files.attachments.converters import (
     attachment_to_proto,
     content_type_from_proto,
 )
 from uniffy.domains.files.attachments.operations import AttachmentOperations
+from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="files.attachments.handlers")
 
@@ -42,7 +45,7 @@ class AttachmentsHandlersMixin:
     ) -> AttachFileResponse:
         """Attach a file to content."""
         try:
-            organization_id = resolve_organization_id(ctx, request.organization_id)
+            organization_id = resolve_organization_id(request.organization_id)
             source_file_id = UUID(request.source_file_id)
             content_id = UUID(request.content_id)
         except ValueError as e:
@@ -52,11 +55,11 @@ class AttachmentsHandlersMixin:
         if not content_type:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid content_type")
 
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
 
         try:
             async with open_session() as session:
-                ops = AttachmentOperations(session)
+                ops = AttachmentOperations(session, self.storage, self.search_indexer)
                 attachment = await ops.attach_file(
                     user_id=user_id,
                     organization_id=organization_id,
@@ -64,12 +67,6 @@ class AttachmentsHandlersMixin:
                     content_id=content_id,
                     source_file_id=source_file_id,
                 )
-
-                # Get the file and owner info
-                from sqlalchemy import select
-
-                from uniffy.core.models.files.file import File
-                from uniffy.core.models.login.user import User
 
                 result = await session.execute(
                     select(File, User)
@@ -109,16 +106,16 @@ class AttachmentsHandlersMixin:
     ) -> DetachFileResponse:
         """Detach a file from content."""
         try:
-            organization_id = resolve_organization_id(ctx, request.organization_id)
+            organization_id = resolve_organization_id(request.organization_id)
             attachment_id = UUID(request.attachment_id)
         except ValueError as e:
             raise ConnectError(Code.INVALID_ARGUMENT, f"Invalid UUID: {e}")
 
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
 
         try:
             async with open_session() as session:
-                ops = AttachmentOperations(session)
+                ops = AttachmentOperations(session, self.storage, self.search_indexer)
                 success = await ops.detach_file(
                     user_id=user_id,
                     organization_id=organization_id,
@@ -146,7 +143,7 @@ class AttachmentsHandlersMixin:
     ) -> ListAttachmentsResponse:
         """List attachments for a piece of content."""
         try:
-            organization_id = resolve_organization_id(ctx, request.organization_id)
+            organization_id = resolve_organization_id(request.organization_id)
             content_id = UUID(request.content_id)
         except ValueError as e:
             raise ConnectError(Code.INVALID_ARGUMENT, f"Invalid UUID: {e}")
@@ -155,11 +152,11 @@ class AttachmentsHandlersMixin:
         if not content_type:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid content_type")
 
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
 
         try:
             async with open_session() as session:
-                ops = AttachmentOperations(session)
+                ops = AttachmentOperations(session, self.storage, self.search_indexer)
                 attachments = await ops.list_attachments(
                     user_id=user_id,
                     organization_id=organization_id,
@@ -198,7 +195,7 @@ class AttachmentsHandlersMixin:
     ) -> BatchListAttachmentsResponse:
         """List attachments for many content rows in one call."""
         try:
-            organization_id = resolve_organization_id(ctx, request.organization_id)
+            organization_id = resolve_organization_id(request.organization_id)
         except ValueError as e:
             raise ConnectError(Code.INVALID_ARGUMENT, f"Invalid UUID: {e}")
 
@@ -214,11 +211,11 @@ class AttachmentsHandlersMixin:
         except ValueError as e:
             raise ConnectError(Code.INVALID_ARGUMENT, f"Invalid content_id: {e}")
 
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
 
         try:
             async with open_session() as session:
-                ops = AttachmentOperations(session)
+                ops = AttachmentOperations(session, self.storage, self.search_indexer)
                 grouped = await ops.batch_list_attachments(
                     user_id=user_id,
                     organization_id=organization_id,
@@ -261,15 +258,15 @@ class AttachmentsHandlersMixin:
     ) -> GetAttachmentsFolderResponse:
         """Get the user's Attachments folder ID."""
         try:
-            organization_id = resolve_organization_id(ctx, request.organization_id)
+            organization_id = resolve_organization_id(request.organization_id)
         except ValueError as e:
             raise ConnectError(Code.INVALID_ARGUMENT, f"Invalid UUID: {e}")
 
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
 
         try:
             async with open_session() as session:
-                ops = AttachmentOperations(session)
+                ops = AttachmentOperations(session, self.storage, self.search_indexer)
                 folder = await ops.get_or_create_attachments_folder(
                     user_id=user_id,
                     organization_id=organization_id,

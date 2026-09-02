@@ -18,6 +18,7 @@ from uniffy.core.avatars import (
 from uniffy.core.avatars import (
     upload_avatar as _core_upload_avatar,
 )
+from uniffy.core.storage import ObjectStorage
 
 __all__ = [
     "ALLOWED_MIME_TYPES",
@@ -31,5 +32,10 @@ __all__ = [
 ]
 
 
-async def upload_avatar(user_id: UUID, image_data: bytes, filename: str) -> str:
-    return await _core_upload_avatar(user_id, image_data, filename, prefix="avatars")
+async def upload_avatar(
+    storage: ObjectStorage,
+    user_id: UUID,
+    image_data: bytes,
+    filename: str,
+) -> str:
+    return await _core_upload_avatar(storage, user_id, image_data, filename, prefix="avatars")

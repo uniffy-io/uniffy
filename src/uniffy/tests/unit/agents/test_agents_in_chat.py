@@ -26,25 +26,24 @@ from uniffy.core.models.agents.memory import MemoryScope
 from uniffy.core.models.chat.channel import ChannelType
 from uniffy.core.models.chat.message import SenderType
 from uniffy.core.types import SubjectType, generate_id
-from uniffy.domains.agents.chat_integration import (
-    context_handlers as context_handlers_mod,
+from uniffy.domains.agents.bridge import (
+    contexts as context_handlers_mod,
 )
-from uniffy.domains.agents.chat_integration.context import (
+from uniffy.domains.agents.bridge.context import (
     ChatAgentContextOperations,
     ContextStats,
     _format_chat_entry,
 )
-from uniffy.domains.agents.chat_integration.context_handlers import (
+from uniffy.domains.agents.bridge.contexts import (
     _parse_ids,
     _stats_to_proto,
 )
-from uniffy.domains.agents.chat_integration.mention_detector import (
+from uniffy.domains.agents.bridge.mentions import (
     detect_agent_mentions,
 )
-from uniffy.domains.agents.chat_integration.operations import AgentChatBridge
+from uniffy.domains.agents.bridge.operations import AgentChatBridge
 from uniffy.domains.agents.memories.scope import MemoryScopeRef
-from uniffy.domains.agents.runtime import model_resolver as model_resolver_mod
-from uniffy.domains.agents.runtime import operations as runtime_ops_mod
+from uniffy.domains.agents.runtime import stream as runtime_stream_mod
 from uniffy.domains.agents.runtime.approvals import ApprovalStore
 from uniffy.domains.agents.runtime.compactor import (
     SummaryResult,
@@ -52,14 +51,15 @@ from uniffy.domains.agents.runtime.compactor import (
     summarise_conversation,
 )
 from uniffy.domains.agents.runtime.destinations import ChatDestination
-from uniffy.domains.agents.runtime.operations import RuntimeOperations
+from uniffy.domains.agents.runtime.models import resolver as model_resolver_mod
+from uniffy.domains.agents.runtime.stream import MessageStreamer
 from uniffy.domains.agents.runtime.writers import (
     ChatChannelMessageWriter,
     SessionMessageWriter,
     _metadata_kind_for,
 )
-from uniffy.domains.chat.policy import _from_blob
-from uniffy.domains.chat.sender_resolver import SenderInfo, SenderResolver
+from uniffy.domains.chat.policies.operations import _from_blob
+from uniffy.domains.chat.senders import SenderInfo, SenderResolver
 from uniffy.domains.chat.subjects import ChatSubject
 
 
@@ -128,7 +128,7 @@ def _bridge_with_missing_trigger() -> AgentChatBridge:
     """Bridge whose session returns None for any `get(...)` - exercises the missing-trigger guard."""
     session = MagicMock()
     session.get = AsyncMock(return_value=None)
-    return AgentChatBridge(session)
+    return AgentChatBridge(session, MagicMock())
 
 
 class TestChatSubject:
@@ -381,10 +381,13 @@ class TestAgentChatBridgeStub:
             channel_id=generate_id(),
             trigger_message_id=generate_id(),
             agent_id=generate_id(),
+            storage=MagicMock(),
+            search_indexer=MagicMock(),
+            call_lifecycle=MagicMock(),
         )
 
     async def test_handle_confirmation_decision_raises_when_state_missing(self) -> None:
-        bridge = AgentChatBridge(MagicMock())
+        bridge = AgentChatBridge(MagicMock(), MagicMock())
         with pytest.raises(NotFoundError):
             await bridge.handle_confirmation_decision(
                 request_id=generate_id(),
@@ -869,8 +872,8 @@ def _install_config_handler_env(
     monkeypatch.setattr(context_handlers_mod, "is_chat_agents_enabled", fake_flag)
     monkeypatch.setattr(
         context_handlers_mod,
-        "get_user_id_from_context",
-        lambda _ctx: user_id or generate_id(),
+        "current_user_id",
+        lambda: user_id or generate_id(),
     )
     monkeypatch.setattr(context_handlers_mod, "ChatAgentContextOperations", lambda _session: ops)
     return ops
@@ -1010,7 +1013,7 @@ class TestChannelAgentConfigHandlers:
 
 
 class _StopFlow(Exception):
-    """Sentinel aborting stream_send_message right after param resolution."""
+    """Sentinel aborting the stream immediately after parameter resolution."""
 
 
 def _stream_agent(
@@ -1031,10 +1034,9 @@ def _stream_agent(
 
 
 def _stream_runtime_ops(monkeypatch, *, binding_row, agent):
-    """RuntimeOperations shim capturing model/params resolution for a chat run."""
     captured: dict = {}
 
-    ops = object.__new__(RuntimeOperations)
+    ops = object.__new__(MessageStreamer)
     session = MagicMock()
 
     async def fake_execute(_stmt):
@@ -1042,14 +1044,14 @@ def _stream_runtime_ops(monkeypatch, *, binding_row, agent):
 
     session.execute = AsyncMock(side_effect=fake_execute)
     ops._session = session
-    ops._org_ops = SimpleNamespace(
+    ops._org_operations = SimpleNamespace(
         require_org_member=AsyncMock(return_value=SimpleNamespace(role="member")),
         get_by_id=AsyncMock(return_value=SimpleNamespace(name="Org")),
     )
-    ops._user_ops = SimpleNamespace(
+    ops._user_operations = SimpleNamespace(
         get_by_id=AsyncMock(return_value=SimpleNamespace(full_name="Alice", username="alice"))
     )
-    ops._agent_ops = SimpleNamespace(get_for_runtime=AsyncMock(return_value=agent))
+    ops._agent_operations = SimpleNamespace(get_for_runtime=AsyncMock(return_value=agent))
     provider = SimpleNamespace(name="anthropic")
     provider_key = SimpleNamespace(id=generate_id())
 
@@ -1057,19 +1059,18 @@ def _stream_runtime_ops(monkeypatch, *, binding_row, agent):
         captured["provider_lookup_model"] = model_id
         return provider, provider_key
 
-    ops._provider_ops = SimpleNamespace(
+    ops._provider_operations = SimpleNamespace(
         get_provider_for_key=AsyncMock(return_value=(provider, provider_key)),
         get_key_and_provider_for_model=AsyncMock(side_effect=fake_key_and_provider_for_model),
     )
-    ops._session_ops = MagicMock()
-    ops._skill_ops = MagicMock()
-    ops._resolve_invoked_skill = AsyncMock(return_value=None)
-    ops._resolve_memory_scope = AsyncMock(
-        return_value=MemoryScopeRef(MemoryScope.CHANNEL, generate_id())
+    ops._session_operations = MagicMock()
+    ops._skill_operations = MagicMock()
+    ops._memory = SimpleNamespace(
+        resolve_scope=AsyncMock(return_value=MemoryScopeRef(MemoryScope.CHANNEL, generate_id())),
+        resolve_bridge=AsyncMock(return_value=None),
+        build_context=AsyncMock(return_value=None),
     )
-    ops._resolve_memory_bridge = AsyncMock(return_value=None)
-    ops._build_memory_context = AsyncMock(return_value=None)
-    ops._build_chat_context_for_destination = AsyncMock(return_value=None)
+    ops._chat = SimpleNamespace(build_channel=AsyncMock(return_value=None))
 
     async def fake_fetch_skills(_skill_ops, **_kwargs):
         return []
@@ -1090,12 +1091,13 @@ def _stream_runtime_ops(monkeypatch, *, binding_row, agent):
         }
         raise _StopFlow()
 
-    monkeypatch.setattr(runtime_ops_mod, "fetch_agent_skills", fake_fetch_skills)
-    monkeypatch.setattr(runtime_ops_mod, "record_skill_injections", fake_record_injections)
-    monkeypatch.setattr(runtime_ops_mod, "build_system_prompt", lambda **_kwargs: "sys")
-    monkeypatch.setattr(runtime_ops_mod, "get_tool_registry", lambda: MagicMock())
+    monkeypatch.setattr(runtime_stream_mod, "fetch_agent_skills", fake_fetch_skills)
+    monkeypatch.setattr(runtime_stream_mod, "record_skill_injections", fake_record_injections)
+    monkeypatch.setattr(runtime_stream_mod, "resolve_invoked_skill", AsyncMock(return_value=None))
+    monkeypatch.setattr(runtime_stream_mod, "build_system_prompt", lambda **_kwargs: "sys")
+    monkeypatch.setattr(runtime_stream_mod, "get_tool_registry", lambda: MagicMock())
     monkeypatch.setattr(model_resolver_mod, "resolve_model", fake_resolve_model)
-    monkeypatch.setattr(runtime_ops_mod, "resolve_request_params", fake_resolve_request_params)
+    monkeypatch.setattr(runtime_stream_mod, "resolve_request_params", fake_resolve_request_params)
     return ops, session, captured
 
 
@@ -1105,7 +1107,7 @@ async def _run_chat_stream_until_params(ops) -> None:
     )
 
     async def go() -> None:
-        agen = ops.stream_send_message(
+        agen = ops.stream(
             user_id=generate_id(),
             organization_id=generate_id(),
             destination=destination,
@@ -1138,7 +1140,7 @@ class TestChatStreamBindingOverrides:
 
     def test_binding_params_merge_over_agent_params(self) -> None:
         # gpt-4o accepts both knobs; the binding value must win on collision.
-        merged = runtime_ops_mod.resolve_request_params(
+        merged = runtime_stream_mod.resolve_request_params(
             {"temperature": 0.7, "top_p": 0.9},
             {"temperature": 0.1},
             "openai",

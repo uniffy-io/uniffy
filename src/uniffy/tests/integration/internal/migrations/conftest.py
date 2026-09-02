@@ -12,7 +12,7 @@ import psycopg2
 import pytest
 
 from uniffy.core.types import generate_id
-from uniffy.db.session import _build_sync_db_url, get_database_url
+from uniffy.infrastructure.database.session import _build_sync_db_url, get_database_url
 
 
 def _maintenance_connection():

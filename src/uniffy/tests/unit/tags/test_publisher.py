@@ -1,15 +1,10 @@
-"""Smoke test for the tag realtime publisher.
-
-Mocks the pubsub client and verifies that ``publish_tag_event`` writes
-to the right channel with a JSON-serialisable payload, and that an
-unknown event type is rejected without touching Valkey.
-"""
+"""Tag realtime publisher payload and validation tests."""
 
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from uniffy.core.json_codec import loads
 from uniffy.core.types import generate_id
-from uniffy.core.valkey import tags as tags_pubsub
+from uniffy.domains.tags import events as tags_pubsub
 
 
 async def test_publish_emits_to_org_channel() -> None:
@@ -20,7 +15,7 @@ async def test_publish_emits_to_org_channel() -> None:
     with patch.object(tags_pubsub, "ops_call") as ctx:
         ctx.return_value.__aenter__ = AsyncMock(return_value=None)
         ctx.return_value.__aexit__ = AsyncMock(return_value=None)
-        with patch("uniffy.core.valkey.pubsub._pubsub_client", fake_client):
+        with patch.object(tags_pubsub, "publish_bytes", fake_client.publish):
             await tags_pubsub.publish_tag_event(
                 org_id,
                 tags_pubsub.EVENT_TAG_CREATED,
@@ -39,14 +34,16 @@ async def test_publish_skips_unknown_event_type() -> None:
     fake_client = MagicMock()
     fake_client.publish = AsyncMock(return_value=1)
 
-    with patch("uniffy.core.valkey.pubsub._pubsub_client", fake_client):
+    with patch.object(tags_pubsub, "publish_bytes", fake_client.publish):
         await tags_pubsub.publish_tag_event(generate_id(), "tag.unknown", {})
 
     fake_client.publish.assert_not_awaited()
 
 
-async def test_publish_no_op_when_pubsub_unavailable() -> None:
-    with patch("uniffy.core.valkey.pubsub._pubsub_client", None):
+async def test_publish_delegates_transport_failure() -> None:
+    publish = AsyncMock()
+    with patch.object(tags_pubsub, "publish_bytes", publish):
         await tags_pubsub.publish_tag_event(
             generate_id(), tags_pubsub.EVENT_TAG_DELETED, {"tag_id": "x"}
         )
+    publish.assert_awaited_once()

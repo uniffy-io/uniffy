@@ -25,25 +25,21 @@ from uniffy_proto.auth.v1.mfa_pb2 import (
     VerifyMfaResponse,
 )
 
+from uniffy.core.auth.cookies import attach_asset_cookie
+from uniffy.core.auth.devices import request_user_agent
+from uniffy.core.auth.principal import current_user_id, resolve_organization_id
 from uniffy.core.converters import datetime_to_timestamp, domain_type_to_proto
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
 from uniffy.core.models.shared import DomainType
-from uniffy.db import open_session
-from uniffy.domains.auth.context import (
-    get_organization_id_from_enrollment_context,
-    get_user_agent_from_context,
-    get_user_id_from_context,
-    get_user_id_from_enrollment_context,
-    resolve_organization_id,
-)
-from uniffy.domains.auth.cookies import attach_asset_cookie
 from uniffy.domains.auth.errors import (
     AuthenticationError,
     MfaRateLimitedError,
     TokenError,
 )
 from uniffy.domains.auth.mfa.challenge import ENROLLMENT_ALLOWED_RPCS
+from uniffy.domains.auth.mfa.context import enrollment_organization_id, enrollment_user_id
 from uniffy.domains.auth.mfa.operations import MfaOperations
+from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="auth.mfa.handlers")
 
@@ -101,8 +97,8 @@ class MfaHandlers:
         ctx: RequestContext,
     ) -> ConfirmEnrollmentResponse:
         user_id = _user_for_enrollment(ctx, rpc="ConfirmEnrollment")
-        user_agent = get_user_agent_from_context(ctx)
-        pending_org_id = get_organization_id_from_enrollment_context(ctx)
+        user_agent = request_user_agent(ctx)
+        pending_org_id = enrollment_organization_id(ctx)
         try:
             async with open_session() as session:
                 ops = MfaOperations(session)
@@ -147,7 +143,7 @@ class MfaHandlers:
         request: VerifyMfaRequest,
         ctx: RequestContext,
     ) -> VerifyMfaResponse:
-        user_agent = get_user_agent_from_context(ctx)
+        user_agent = request_user_agent(ctx)
         try:
             async with open_session() as session:
                 ops = MfaOperations(session)
@@ -198,7 +194,7 @@ class MfaHandlers:
         request: DisableMfaRequest,
         ctx: RequestContext,
     ) -> DisableMfaResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         try:
             async with open_session() as session:
                 ops = MfaOperations(session)
@@ -217,7 +213,7 @@ class MfaHandlers:
         request: RegenerateRecoveryCodesRequest,
         ctx: RequestContext,
     ) -> RegenerateRecoveryCodesResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         try:
             async with open_session() as session:
                 ops = MfaOperations(session)
@@ -259,13 +255,13 @@ class MfaHandlers:
         request: AdminResetMfaRequest,
         ctx: RequestContext,
     ) -> AdminResetMfaResponse:
-        actor_id = get_user_id_from_context(ctx)
+        actor_id = current_user_id()
         try:
             async with open_session() as session:
                 ops = MfaOperations(session)
                 await ops.admin_reset_mfa(
                     actor_user_id=actor_id,
-                    organization_id=resolve_organization_id(ctx, request.organization_id),
+                    organization_id=resolve_organization_id(request.organization_id),
                     target_user_id=UUID(request.target_user_id),
                     reason=request.reason,
                 )
@@ -292,8 +288,8 @@ def _user_for_enrollment(ctx: RequestContext, *, rpc: str) -> UUID:
     token and require a real access token instead.
     """
     try:
-        return get_user_id_from_context(ctx)
+        return current_user_id()
     except ConnectError:
         if rpc not in ENROLLMENT_ALLOWED_RPCS:
             raise
-        return get_user_id_from_enrollment_context(ctx)
+        return enrollment_user_id(ctx)

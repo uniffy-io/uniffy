@@ -15,15 +15,15 @@ from uniffy_proto.superadmin.v1.platform_audit_pb2 import (
     ListPlatformAuditResponse,
 )
 
+from uniffy.core.auth.principal import current_user_id
 from uniffy.core.converters.proto import timestamp_to_datetime
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
-from uniffy.db import open_session
-from uniffy.domains.auth.context import get_user_id_from_context
 from uniffy.domains.platform.audit.converters import (
     action_entry_to_proto,
     event_to_proto,
 )
 from uniffy.domains.platform.audit.operations import PlatformAuditOperations
+from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="platform.audit.handlers")
 
@@ -54,7 +54,7 @@ class PlatformAuditHandlers:
     async def list_platform_audit(
         self, request: ListPlatformAuditRequest, ctx: RequestContext
     ) -> ListPlatformAuditResponse:
-        actor_id = get_user_id_from_context(ctx)
+        actor_id = current_user_id()
         org_id = _parse_optional_uuid(request.organization_id, "organization_id")
         actor_filter = _parse_optional_uuid(request.actor_user_id, "actor_user_id")
         from_ts = timestamp_to_datetime(request.from_ts) if request.HasField("from_ts") else None
@@ -86,7 +86,7 @@ class PlatformAuditHandlers:
         self, request: ListPlatformActionsRequest, ctx: RequestContext
     ) -> ListPlatformActionsResponse:
         del request
-        actor_id = get_user_id_from_context(ctx)
+        actor_id = current_user_id()
         try:
             async with open_session() as session:
                 entries = await PlatformAuditOperations(session).list_actions(actor_user_id=actor_id)

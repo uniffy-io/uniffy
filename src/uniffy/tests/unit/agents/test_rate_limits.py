@@ -4,9 +4,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from uniffy.core.errors import RateLimitExceededError, ValidationError
+from uniffy.core.errors import ValidationError
 from uniffy.core.types import generate_id
-from uniffy.core.valkey.rate_limit import (
+from uniffy.domains.agents.limits.policy import (
     AGENT_MSG_AGENT,
     AGENT_MSG_ORG,
     AGENT_MSG_USER,
@@ -17,33 +17,9 @@ from uniffy.core.valkey.rate_limit import (
     LimitConfig,
     check_agent_message_limits,
     check_image_generation_limits,
-    check_rate_limit,
     invalidate_overrides_cache,
     resolve_limit,
 )
-
-
-def _counting_client(
-    counters: dict[str, int],
-    ttl_seconds: int = 30,
-) -> MagicMock:
-    """Build a MagicMock Valkey client that simulates INCR/EXPIRE/TTL."""
-    client = MagicMock()
-
-    async def incr(key: str) -> int:
-        counters[key] = counters.get(key, 0) + 1
-        return counters[key]
-
-    async def expire(key: str, seconds: int) -> None:
-        return None
-
-    async def ttl(key: str) -> int:
-        return ttl_seconds
-
-    client.incr = incr
-    client.expire = expire
-    client.ttl = ttl
-    return client
 
 
 class TestDefaultsAndResolve:
@@ -66,36 +42,11 @@ class TestDefaultsAndResolve:
         assert cfg == DEFAULT_LIMITS[AGENT_MSG_AGENT]
 
 
-class TestValkeyUnavailable:
-    """Rate limiting degrades gracefully when Valkey is not connected."""
-
-    async def test_check_rate_limit_noop_when_client_none(self) -> None:
-        with patch("uniffy.core.valkey.rate_limit._get_client", return_value=None):
-            await check_rate_limit(
-                key="rl:test",
-                limit=1,
-                window_seconds=60,
-                resource="test",
-            )
-
-    async def test_check_rate_limit_swallows_valkey_errors(self) -> None:
-        client = MagicMock()
-        client.incr = AsyncMock(side_effect=RuntimeError("valkey oops"))
-        with patch("uniffy.core.valkey.rate_limit._get_client", return_value=client):
-            await check_rate_limit(
-                key="rl:test",
-                limit=1,
-                window_seconds=60,
-                resource="test",
-            )
-
-
 class TestBucketIsolation:
     """Text and image buckets use distinct Valkey keys."""
 
     async def test_agent_message_uses_three_separate_buckets(self) -> None:
-        counters: dict[str, int] = {}
-        client = _counting_client(counters)
+        check = AsyncMock()
         session = MagicMock()
         user_id = generate_id()
         org_id = generate_id()
@@ -103,9 +54,9 @@ class TestBucketIsolation:
 
         async def run() -> None:
             with (
-                patch("uniffy.core.valkey.rate_limit._get_client", return_value=client),
+                patch("uniffy.domains.agents.limits.policy.check_rate_limit", check),
                 patch(
-                    "uniffy.core.valkey.rate_limit.load_org_overrides",
+                    "uniffy.domains.agents.limits.policy.load_org_overrides",
                     AsyncMock(return_value={}),
                 ),
             ):
@@ -117,22 +68,24 @@ class TestBucketIsolation:
                 )
 
         await run()
-        assert f"rl:agent_msg:user:{user_id}" in counters
-        assert f"rl:agent_msg:org:{org_id}" in counters
-        assert f"rl:agent_msg:agent:{user_id}:{agent_id}" in counters
+        keys = {call.kwargs["key"] for call in check.await_args_list}
+        assert keys == {
+            f"rl:agent_msg:user:{user_id}",
+            f"rl:agent_msg:org:{org_id}",
+            f"rl:agent_msg:agent:{user_id}:{agent_id}",
+        }
 
     async def test_image_generation_does_not_touch_text_buckets(self) -> None:
-        counters: dict[str, int] = {}
-        client = _counting_client(counters)
+        check = AsyncMock()
         session = MagicMock()
         user_id = generate_id()
         org_id = generate_id()
 
         async def run() -> None:
             with (
-                patch("uniffy.core.valkey.rate_limit._get_client", return_value=client),
+                patch("uniffy.domains.agents.limits.policy.check_rate_limit", check),
                 patch(
-                    "uniffy.core.valkey.rate_limit.load_org_overrides",
+                    "uniffy.domains.agents.limits.policy.load_org_overrides",
                     AsyncMock(return_value={}),
                 ),
             ):
@@ -143,78 +96,44 @@ class TestBucketIsolation:
                 )
 
         await run()
-        assert f"rl:image_gen:user:{user_id}" in counters
-        assert f"rl:image_gen:org:{org_id}" in counters
-        assert not any(k.startswith("rl:agent_msg") for k in counters)
+        keys = {call.kwargs["key"] for call in check.await_args_list}
+        assert keys == {
+            f"rl:image_gen:user:{user_id}",
+            f"rl:image_gen:org:{org_id}",
+        }
 
 
 class TestOverrideApplied:
-    """Per-org overrides win over module defaults when present."""
-
-    async def test_override_shrinks_limit(self) -> None:
-        counters: dict[str, int] = {}
-        client = _counting_client(counters)
+    async def test_override_is_passed_to_shared_policy(self) -> None:
+        check = AsyncMock()
         session = MagicMock()
         user_id = generate_id()
         org_id = generate_id()
         agent_id = generate_id()
 
-        # Tight override: 1 message per 60s per user.
         override = {AGENT_MSG_USER: LimitConfig(limit=1, window_seconds=60)}
 
         async def run() -> None:
             with (
-                patch("uniffy.core.valkey.rate_limit._get_client", return_value=client),
+                patch("uniffy.domains.agents.limits.policy.check_rate_limit", check),
                 patch(
-                    "uniffy.core.valkey.rate_limit.load_org_overrides",
+                    "uniffy.domains.agents.limits.policy.load_org_overrides",
                     AsyncMock(return_value=override),
                 ),
             ):
-                # First call OK
                 await check_agent_message_limits(
                     session,
                     user_id=user_id,
                     organization_id=org_id,
                     agent_id=agent_id,
                 )
-                # Second call on the same user bucket trips immediately.
-                with pytest.raises(RateLimitExceededError) as excinfo:
-                    await check_agent_message_limits(
-                        session,
-                        user_id=user_id,
-                        organization_id=org_id,
-                        agent_id=agent_id,
-                    )
-                assert "per user" in excinfo.value.resource
-                assert excinfo.value.limit == 1
 
         await run()
-
-
-class TestRetryAfter:
-    """RateLimitExceededError carries the window TTL so callers can back off."""
-
-    async def test_retry_after_populated_from_ttl(self) -> None:
-        client = _counting_client({}, ttl_seconds=42)
-
-        async def run() -> None:
-            with patch("uniffy.core.valkey.rate_limit._get_client", return_value=client):
-                await check_rate_limit(
-                    key="rl:retry_test",
-                    limit=1,
-                    window_seconds=60,
-                    resource="test",
-                )
-                with pytest.raises(RateLimitExceededError) as excinfo:
-                    await check_rate_limit(
-                        key="rl:retry_test",
-                        limit=1,
-                        window_seconds=60,
-                        resource="test",
-                    )
-                assert excinfo.value.retry_after == 42
-
-        await run()
+        user_call = next(
+            call for call in check.await_args_list if call.kwargs["key"].startswith("rl:agent_msg:user")
+        )
+        assert user_call.kwargs["limit"] == 1
+        assert user_call.kwargs["window_seconds"] == 60
 
 
 class TestCacheInvalidation:
@@ -229,7 +148,7 @@ class TestRateLimitsOperationsValidation:
     """Input validation on RateLimitsOperations.upsert."""
 
     def _make_ops(self):
-        from uniffy.domains.agents.rate_limits.operations import RateLimitsOperations
+        from uniffy.domains.agents.limits.operations import RateLimitsOperations
 
         session = MagicMock()
         ops = RateLimitsOperations(session)
@@ -287,7 +206,7 @@ class TestConverters:
     """Proto round-trip for RateLimitKind and RateLimitRow."""
 
     def test_kind_round_trip_all_values(self) -> None:
-        from uniffy.domains.agents.rate_limits.converters import (
+        from uniffy.domains.agents.limits.converters import (
             rate_limit_kind_from_proto,
             rate_limit_kind_to_proto,
         )
@@ -305,15 +224,15 @@ class TestConverters:
     def test_unspecified_returns_none(self) -> None:
         from uniffy_proto.common.v1.common_pb2 import RATE_LIMIT_KIND_UNSPECIFIED
 
-        from uniffy.domains.agents.rate_limits.converters import (
+        from uniffy.domains.agents.limits.converters import (
             rate_limit_kind_from_proto,
         )
 
         assert rate_limit_kind_from_proto(RATE_LIMIT_KIND_UNSPECIFIED) is None
 
     def test_row_to_proto_default_row(self) -> None:
-        from uniffy.domains.agents.rate_limits.converters import rate_limit_row_to_proto
-        from uniffy.domains.agents.rate_limits.operations import RateLimitRow
+        from uniffy.domains.agents.limits.converters import rate_limit_row_to_proto
+        from uniffy.domains.agents.limits.operations import RateLimitRow
 
         row = RateLimitRow(
             kind=AGENT_MSG_USER,

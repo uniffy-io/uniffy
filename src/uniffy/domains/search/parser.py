@@ -1,11 +1,4 @@
-"""Google-style keyword search parser.
-
-Type keywords (`note:`, `file:`, `message:`, ...) and `my:` are bare
-prefixes: they only toggle a filter and the text after them stays in the
-free-text query. Only `tag:` / `owner:` / `type:` consume a value
-(`tag:work`, `tag:"project alpha"`). Standalone quoted phrases are left
-in the residual text so Meilisearch enforces the exact match.
-"""
+"""Parse workspace search text into free text and typed filters."""
 
 import re
 
@@ -144,8 +137,7 @@ def parse_search_query(query: str) -> ParsedSearchQuery:
 
     result.text = re.sub(r"\s+", " ", "".join(pieces)).strip()
 
-    # Quotes stay inside the residual text so Meilisearch can use them; we only
-    # capture phrases here for analytics.
+    # The engine receives quotes unchanged; phrase extraction is only for analytics.
     for phrase_match in PHRASE_PATTERN.finditer(result.text):
         phrase = phrase_match.group(1).strip()
         if phrase and phrase not in result.exact_phrases:

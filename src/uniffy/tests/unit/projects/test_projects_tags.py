@@ -41,12 +41,14 @@ def _make_task() -> Task:
 def _make_task_ops() -> TaskOperations:
     ops = TaskOperations.__new__(TaskOperations)
     ops.session = MagicMock()
+    ops._search_indexer = MagicMock()
     return ops
 
 
 def _make_project_ops() -> ProjectOperations:
     ops = ProjectOperations.__new__(ProjectOperations)
     ops.session = MagicMock()
+    ops._search_indexer = MagicMock()
     return ops
 
 

@@ -1,6 +1,6 @@
 from unittest.mock import AsyncMock, MagicMock
 
-from uniffy.core.valkey.queue import QueueName
+from uniffy.core.jobs import QueueName
 from uniffy.vendor.arq.typing import JobRejectionReason
 from uniffy.vendor.arq.utils import timestamp_ms
 from uniffy.vendor.arq.worker import Worker, func

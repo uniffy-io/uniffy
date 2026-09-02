@@ -1,11 +1,14 @@
 """initiate_upload validates the destination folder; stats never cross tenants."""
 
+from unittest.mock import MagicMock
+
 import pytest
 from sqlalchemy import delete
 
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
 from uniffy.core.models.files.file import File
 from uniffy.core.models.files.folder import Folder
+from uniffy.core.storage import ObjectStorage
 from uniffy.core.types import AccessMode, generate_id
 from uniffy.domains.files.operations import FileOperations, FolderOperations
 
@@ -20,7 +23,7 @@ async def _cleanup(session, org_ids) -> None:
 
 
 async def test_initiate_upload_rejects_foreign_and_unviewable_folders(
-    session, env, second_env
+    session, env, second_env, search_indexer
 ) -> None:
     folder = Folder(
         organization_id=env.org_id,
@@ -31,7 +34,11 @@ async def test_initiate_upload_rejects_foreign_and_unviewable_folders(
     session.add(folder)
     await session.commit()
 
-    file_ops = FileOperations(session)
+    file_ops = FileOperations(
+        session,
+        storage=MagicMock(spec=ObjectStorage),
+        search_indexer=search_indexer,
+    )
     try:
         with pytest.raises(NotFoundError):
             await file_ops.initiate_upload(
@@ -66,7 +73,9 @@ async def test_initiate_upload_rejects_foreign_and_unviewable_folders(
         await _cleanup(session, [env.org_id, second_env.org_id])
 
 
-async def test_child_stats_ignore_rows_from_other_orgs(session, env, second_env) -> None:
+async def test_child_stats_ignore_rows_from_other_orgs(
+    session, env, second_env, search_indexer
+) -> None:
     folder = Folder(
         organization_id=env.org_id,
         owner_id=env.admin_id,
@@ -93,7 +102,9 @@ async def test_child_stats_ignore_rows_from_other_orgs(session, env, second_env)
     await session.commit()
 
     try:
-        stats = await FolderOperations(session)._child_stats(folder, AccessMode.OPEN_TO_ORG)
+        stats = await FolderOperations(session, search_indexer=search_indexer)._child_stats(
+            folder, AccessMode.OPEN_TO_ORG
+        )
         assert stats == {"file_count": "0", "folder_count": "0", "total_size": "0"}
     finally:
         await _cleanup(session, [env.org_id, second_env.org_id])

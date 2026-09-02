@@ -2,7 +2,7 @@
 
 import base64
 import io
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 import mutagen
@@ -11,12 +11,12 @@ from PIL import Image
 from PIL.ExifTags import GPSTAGS, IFD, TAGS
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
+from uniffy.core.events.realtime import NotificationPayloadType, publish_notification
 from uniffy.core.models.files.file import ExtractionStatus, File
 from uniffy.core.models.files.media_info import FileMediaInfo
-from uniffy.core.storage.s3_client import get_s3_client
-from uniffy.core.valkey import NotificationPayloadType, publish_notification
-from uniffy.db.session import open_session
+from uniffy.core.storage import OBJECT_STORAGE_CTX_KEY, ObjectStorage
 from uniffy.domains.files.jobs.thumbnails import _create_thumbnail, get_thumbnail_key
+from uniffy.infrastructure.database.session import open_session
 from uniffy.vendor.arq import Retry
 
 logger = logger.bind(component="files.jobs.metadata")
@@ -34,7 +34,7 @@ async def extract_image_metadata(
     log.info("Started")
 
     file_uuid = UUID(file_id)
-    s3 = get_s3_client()
+    storage = cast(ObjectStorage, ctx[OBJECT_STORAGE_CTX_KEY])
 
     async with open_session() as session:
         file = await session.get(File, file_uuid)
@@ -49,7 +49,7 @@ async def extract_image_metadata(
         await session.commit()
 
         try:
-            image_bytes = await s3.download_bytes(file.storage_key)
+            image_bytes = await storage.download_bytes(file.storage_key)
             log.info(f"downloaded image bytes: {len(image_bytes)}")
 
             metadata = _extract_image_metadata(image_bytes)
@@ -189,7 +189,7 @@ async def extract_audio_metadata(
 
     file_uuid = UUID(file_id)
     org_uuid = UUID(organization_id)
-    s3 = get_s3_client()
+    storage = cast(ObjectStorage, ctx[OBJECT_STORAGE_CTX_KEY])
 
     async with open_session() as session:
         file = await session.get(File, file_uuid)
@@ -204,7 +204,7 @@ async def extract_audio_metadata(
         await session.commit()
 
         try:
-            audio_bytes = await s3.download_bytes(file.storage_key)
+            audio_bytes = await storage.download_bytes(file.storage_key)
             log.info("Downloaded audio", bytes=len(audio_bytes))
 
             audio = mutagen.File(io.BytesIO(audio_bytes))
@@ -250,7 +250,7 @@ async def extract_audio_metadata(
                 try:
                     thumb_bytes, thumb_w, thumb_h = _create_thumbnail(album_art_bytes)
                     thumb_key = get_thumbnail_key(org_uuid, file_uuid)
-                    await s3.upload_bytes(
+                    await storage.upload_bytes(
                         key=thumb_key,
                         data=thumb_bytes,
                         content_type="image/jpeg",

@@ -11,11 +11,14 @@ from uuid import UUID
 
 from loguru import logger
 from sqlalchemy import and_, func, or_, select
-from sqlalchemy import delete as sql_delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.audit import email_hash, write_audit_event
 from uniffy.core.audit.actions import Action
+from uniffy.core.auth.emails import normalize_email
+from uniffy.core.auth.passwords.crypto import hash_password
+from uniffy.core.auth.passwords.policy import validate_password
+from uniffy.core.auth.revocation import mark_token_version_revoked
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.jobs import enqueue_job
 from uniffy.core.json_codec import dumps_str
@@ -30,14 +33,13 @@ from uniffy.core.models.login.organization_member import (
 from uniffy.core.models.login.user import User
 from uniffy.core.models.settings.deployment_setting import DeploymentSetting
 from uniffy.core.models.settings.org_setting import OrgSetting
+from uniffy.core.rate_limit import check_rate_limit
 from uniffy.core.realtime.publisher import publish_token_revoke
+from uniffy.core.search import SearchIndexer
+from uniffy.core.storage import ObjectStorage
 from uniffy.core.types import slugify
 from uniffy.core.users.cache import invalidate_user_profile
-from uniffy.core.valkey.rate_limit import check_rate_limit
-from uniffy.domains.auth.password_policy import validate_password
-from uniffy.domains.auth.passwords import hash_password, normalize_email
-from uniffy.domains.auth.revocation import mark_token_version_revoked
-from uniffy.domains.mail.job_contracts import SEND_EMAIL
+from uniffy.domains.mail.jobs.contracts import SEND_EMAIL
 from uniffy.domains.organizations.operations import OrganizationOperations
 from uniffy.domains.users.operations import UserOperations
 
@@ -237,6 +239,10 @@ def _purge_at_from(deleted_at: datetime | None) -> datetime | None:
     return deleted_at + timedelta(days=PURGE_GRACE_DAYS)
 
 
+def _audit_user_ids(user_ids: list[UUID]) -> list[str]:
+    return [str(user_id) for user_id in user_ids]
+
+
 class PlatformDirectoryOperations:
     """Platform-operator org + user directory; gated on ``is_system_admin``."""
 
@@ -372,6 +378,8 @@ class PlatformDirectoryOperations:
         owner_email: str,
         domain: str = "",
         plan: str = "",
+        storage: ObjectStorage,
+        search_indexer: SearchIndexer,
     ) -> PlatformOrgDetail:
         """Full tenant bootstrap via ``OrganizationOperations.create``:
         owner membership, org cipher, default channel/agent/presets.
@@ -410,6 +418,8 @@ class PlatformDirectoryOperations:
             domain=domain_value,
             plan=plan,
             actor_user_id=user_id,
+            storage=storage,
+            search_indexer=search_indexer,
         )
         return await self.get_organization(user_id=user_id, organization_id=org.id)
 
@@ -532,7 +542,10 @@ class PlatformDirectoryOperations:
             action=Action.ORGANIZATION_SUSPENDED,
             resource_type=AuditResourceType.ORGANIZATION,
             resource_id=org.id,
-            details={"reason": reason, "member_token_versions_bumped": bumped_user_ids},
+            details={
+                "reason": reason,
+                "member_token_versions_bumped": _audit_user_ids(bumped_user_ids),
+            },
         )
         await self._session.commit()
 
@@ -622,7 +635,7 @@ class PlatformDirectoryOperations:
             details={
                 "reason": reason,
                 "purge_at": _purge_at_from(org.deleted_at).isoformat() if org.deleted_at else None,
-                "member_token_versions_bumped": bumped_user_ids,
+                "member_token_versions_bumped": _audit_user_ids(bumped_user_ids),
             },
         )
         await self._session.commit()
@@ -751,6 +764,7 @@ class PlatformDirectoryOperations:
         organization_id: UUID | None = None,
         organization_role: str = "",
         reason: str = "",
+        search_indexer: SearchIndexer,
     ) -> PlatformUserDetail:
         """Direct provisioning path for operators; no invitation email,
         the password is handed over out of band.
@@ -825,79 +839,57 @@ class PlatformDirectoryOperations:
             is_system_admin=is_system_admin,
         )
         self._session.add(target)
-        await self._session.flush()
-        await self._session.commit()
-        target_id = target.id
+        staged_membership = None
+        try:
+            await self._session.flush()
+            target_id = target.id
 
-        # ``add_member`` commits internally and reaches Meilisearch, so it
-        # cannot join the transaction above. A failure there would otherwise
-        # strand a loginable account with no membership, which no operator
-        # RPC could then clean up.
-        if org is not None:
-            try:
-                await OrganizationOperations(self._session).add_member(
+            if org is not None:
+                staged_membership = await OrganizationOperations(self._session).stage_member(
                     user_id=target_id,
                     org_id=org.id,
                     role=role,
                     actor_user_id=user_id,
                 )
-            except Exception:
-                logger.exception(
-                    "platform create_user: membership failed, removing the account",
-                    user_id=str(target_id),
-                    org_id=str(org.id),
-                )
-                await self._discard_partial_user(target_id)
-                raise
-
-        await write_audit_event(
-            self._session,
-            organization_id=org.id if org else None,
-            actor_user_id=user_id,
-            action=Action.USER_CREATED,
-            resource_type=AuditResourceType.USER,
-            resource_id=target_id,
-            details={
-                "reason": reason,
-                "email_hash": email_hash(email),
-                "username": username,
-                "email_verified": email_verified,
-                "is_system_admin": is_system_admin,
-                "organization_id": str(org.id) if org else None,
-                "organization_role": role.value if org else None,
-            },
-        )
-        if is_system_admin:
             await write_audit_event(
                 self._session,
-                organization_id=None,
+                organization_id=org.id if org else None,
                 actor_user_id=user_id,
-                action=Action.USER_SYSTEM_ADMIN_GRANTED,
+                action=Action.USER_CREATED,
                 resource_type=AuditResourceType.USER,
                 resource_id=target_id,
-                details={"reason": reason, "granted_at": "account_creation"},
+                details={
+                    "reason": reason,
+                    "email_hash": email_hash(email),
+                    "username": username,
+                    "email_verified": email_verified,
+                    "is_system_admin": is_system_admin,
+                    "organization_id": str(org.id) if org else None,
+                    "organization_role": role.value if org else None,
+                },
             )
-        await self._session.commit()
-
-        return await self.get_user(user_id=user_id, target_user_id=target_id)
-
-    async def _discard_partial_user(self, target_user_id: UUID) -> None:
-        """Undo a half-provisioned account. Best effort: the caller is already
-        raising, so a cleanup failure must not mask the original error.
-        """
-        try:
-            await self._session.rollback()
-            await self._session.execute(
-                sql_delete(OrganizationMember).where(OrganizationMember.user_id == target_user_id)
-            )
-            await self._session.execute(sql_delete(User).where(User.id == target_user_id))
+            if is_system_admin:
+                await write_audit_event(
+                    self._session,
+                    organization_id=None,
+                    actor_user_id=user_id,
+                    action=Action.USER_SYSTEM_ADMIN_GRANTED,
+                    resource_type=AuditResourceType.USER,
+                    resource_id=target_id,
+                    details={"reason": reason, "granted_at": "account_creation"},
+                )
             await self._session.commit()
         except Exception:
-            logger.exception(
-                "platform create_user: cleanup failed, account left orphaned",
-                user_id=str(target_user_id),
-            )
             await self._session.rollback()
+            raise
+
+        if staged_membership is not None:
+            await OrganizationOperations(self._session).finish_member_add_after_commit(
+                staged_membership,
+                search_indexer=search_indexer,
+            )
+
+        return await self.get_user(user_id=user_id, target_user_id=target_id)
 
     async def get_user(self, *, user_id: UUID, target_user_id: UUID) -> PlatformUserDetail:
         await self._user_ops.require_system_admin(user_id)

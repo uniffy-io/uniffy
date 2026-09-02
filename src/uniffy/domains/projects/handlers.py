@@ -78,6 +78,7 @@ from uniffy_proto.projects.v1.projects_pb2 import (
 
 from uniffy.core.auth.permissions import resolve_effective_policy
 from uniffy.core.auth.permissions.checker import PermissionChecker
+from uniffy.core.auth.principal import current_user_id
 from uniffy.core.converters.common_proto import (
     access_mode_from_proto,
     content_role_from_proto,
@@ -90,9 +91,7 @@ from uniffy.core.models.projects.view_config import ViewConfig
 from uniffy.core.models.tags.tag import Tag
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import ContentType
-from uniffy.db import open_session
-from uniffy.domains.auth.context import get_user_id_from_context
-from uniffy.domains.permissions.resource_access import ResourceAccessResolver, ResourceKey
+from uniffy.domains.permissions.access import ResourceAccessResolver, ResourceKey
 from uniffy.domains.projects import queries
 from uniffy.domains.projects.converters import (
     activity_to_proto,
@@ -109,10 +108,12 @@ from uniffy.domains.projects.operations import (
     ProjectTagFilterMode,
     SprintOperations,
     TaskOperations,
+    TaskReader,
     WatcherOperations,
 )
 from uniffy.domains.projects.statuses import parse_task_status_semantics
-from uniffy.domains.tags import TagOperations
+from uniffy.domains.tags.reader import TagReader
+from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="projects.handlers")
 
@@ -142,7 +143,7 @@ async def _hydrate_task_tags(
     if not task_ids:
         return {}
     urn_to_id = {build_content_urn(ContentType.TASK, tid): tid for tid in task_ids}
-    tag_ops = TagOperations(session)
+    tag_ops = TagReader(session)
     bulk = await tag_ops.get_for_urns(
         organization_id=organization_id,
         content_urns=list(urn_to_id),
@@ -158,7 +159,7 @@ async def _hydrate_project_tags(
     if not project_ids:
         return {}
     urn_to_id = {build_content_urn(ContentType.PROJECT, pid): pid for pid in project_ids}
-    tag_ops = TagOperations(session)
+    tag_ops = TagReader(session)
     bulk = await tag_ops.get_for_urns(
         organization_id=organization_id,
         content_urns=list(urn_to_id),
@@ -242,7 +243,7 @@ class ProjectsHandlers:
         request: CreateProjectRequest,
         ctx: RequestContext,
     ) -> CreateProjectResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
 
         access_mode = access_mode_from_proto(request.access_mode) if request.access_mode else None
@@ -255,7 +256,7 @@ class ProjectsHandlers:
 
         try:
             async with open_session() as session:
-                ops = ProjectOperations(session)
+                ops = ProjectOperations(session, self.storage, self.search_indexer)
                 project = await ops.create(
                     user_id=user_id,
                     organization_id=organization_id,
@@ -298,13 +299,13 @@ class ProjectsHandlers:
         request: GetProjectRequest,
         ctx: RequestContext,
     ) -> GetProjectResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         project_id = _parse_uuid(request.project_id, "project_id")
 
         try:
             async with open_session() as session:
-                ops = ProjectOperations(session)
+                ops = ProjectOperations(session, self.storage, self.search_indexer)
                 project = await ops.get_by_id(user_id, organization_id, project_id)
                 user_role = await ops._resolve_role(user_id, organization_id, project)
 
@@ -346,7 +347,7 @@ class ProjectsHandlers:
         request: UpdateProjectRequest,
         ctx: RequestContext,
     ) -> UpdateProjectResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         project_id = _parse_uuid(request.project_id, "project_id")
 
@@ -376,7 +377,7 @@ class ProjectsHandlers:
 
         try:
             async with open_session() as session:
-                ops = ProjectOperations(session)
+                ops = ProjectOperations(session, self.storage, self.search_indexer)
                 try:
                     project = await ops.update(user_id, organization_id, project_id, **updates)
                 except IntegrityError as exc:
@@ -423,13 +424,13 @@ class ProjectsHandlers:
         request: DeleteProjectRequest,
         ctx: RequestContext,
     ) -> DeleteProjectResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         project_id = _parse_uuid(request.project_id, "project_id")
 
         try:
             async with open_session() as session:
-                ops = ProjectOperations(session)
+                ops = ProjectOperations(session, self.storage, self.search_indexer)
                 await ops.delete(user_id, organization_id, project_id, permanent=request.permanent)
                 return DeleteProjectResponse(success=True, message="Project deleted successfully")
         except ConnectError:
@@ -442,7 +443,7 @@ class ProjectsHandlers:
         request: ListProjectsRequest,
         ctx: RequestContext,
     ) -> ListProjectsResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
 
         page = 1
@@ -458,7 +459,7 @@ class ProjectsHandlers:
 
         try:
             async with open_session() as session:
-                ops = ProjectOperations(session)
+                ops = ProjectOperations(session, self.storage, self.search_indexer)
                 projects, total = await ops.list_projects(
                     user_id=user_id,
                     organization_id=organization_id,
@@ -537,7 +538,7 @@ class ProjectsHandlers:
         request: CreateTaskRequest,
         ctx: RequestContext,
     ) -> CreateTaskResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         project_id = _parse_uuid(request.project_id, "project_id")
 
@@ -585,7 +586,11 @@ class ProjectsHandlers:
 
         try:
             async with open_session() as session:
-                ops = TaskOperations(session)
+                ops = TaskOperations(
+                    session,
+                    storage=self.storage,
+                    search_indexer=self.search_indexer,
+                )
                 task = await ops.create(
                     user_id=user_id,
                     organization_id=organization_id,
@@ -630,13 +635,13 @@ class ProjectsHandlers:
         request: GetTaskRequest,
         ctx: RequestContext,
     ) -> GetTaskResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         task_id = _parse_uuid(request.task_id, "task_id")
 
         try:
             async with open_session() as session:
-                ops = TaskOperations(session)
+                ops = TaskReader(session)
                 task = await ops.get_by_id(user_id, organization_id, task_id)
                 user_role = await ops._resolve_role(user_id, organization_id, task)
 
@@ -659,7 +664,7 @@ class ProjectsHandlers:
         request: UpdateTaskRequest,
         ctx: RequestContext,
     ) -> UpdateTaskResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         task_id = _parse_uuid(request.task_id, "task_id")
 
@@ -713,7 +718,11 @@ class ProjectsHandlers:
 
         try:
             async with open_session() as session:
-                ops = TaskOperations(session)
+                ops = TaskOperations(
+                    session,
+                    storage=self.storage,
+                    search_indexer=self.search_indexer,
+                )
                 task, spawned_task = await ops.update(user_id, organization_id, task_id, **updates)
 
                 user_role = await ops._resolve_role(user_id, organization_id, task)
@@ -768,13 +777,17 @@ class ProjectsHandlers:
         request: MoveTaskRequest,
         ctx: RequestContext,
     ) -> MoveTaskResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         task_id = _parse_uuid(request.task_id, "task_id")
 
         try:
             async with open_session() as session:
-                ops = TaskOperations(session)
+                ops = TaskOperations(
+                    session,
+                    storage=self.storage,
+                    search_indexer=self.search_indexer,
+                )
                 task, spawned_task = await ops.move(
                     user_id,
                     organization_id,
@@ -835,7 +848,7 @@ class ProjectsHandlers:
         request: BulkUpdateTasksRequest,
         ctx: RequestContext,
     ) -> BulkUpdateTasksResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
 
         changes: dict = {}
@@ -852,7 +865,11 @@ class ProjectsHandlers:
 
         try:
             async with open_session() as session:
-                ops = TaskOperations(session)
+                ops = TaskOperations(
+                    session,
+                    storage=self.storage,
+                    search_indexer=self.search_indexer,
+                )
                 tasks = await ops.bulk_update(
                     user_id,
                     organization_id,
@@ -882,13 +899,17 @@ class ProjectsHandlers:
         request: DeleteTaskRequest,
         ctx: RequestContext,
     ) -> DeleteTaskResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         task_id = _parse_uuid(request.task_id, "task_id")
 
         try:
             async with open_session() as session:
-                ops = TaskOperations(session)
+                ops = TaskOperations(
+                    session,
+                    storage=self.storage,
+                    search_indexer=self.search_indexer,
+                )
                 await ops.delete(user_id, organization_id, task_id, permanent=request.permanent)
                 return DeleteTaskResponse(success=True, message="Task deleted successfully")
         except ConnectError:
@@ -901,12 +922,16 @@ class ProjectsHandlers:
         request: DeleteTasksRequest,
         ctx: RequestContext,
     ) -> DeleteTasksResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
 
         try:
             async with open_session() as session:
-                ops = TaskOperations(session)
+                ops = TaskOperations(
+                    session,
+                    storage=self.storage,
+                    search_indexer=self.search_indexer,
+                )
                 count = 0
                 for task_id_str in request.task_ids:
                     try:
@@ -928,7 +953,7 @@ class ProjectsHandlers:
         request: ListTasksRequest,
         ctx: RequestContext,
     ) -> ListTasksResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         project_id = _parse_uuid(request.project_id, "project_id")
 
@@ -976,7 +1001,7 @@ class ProjectsHandlers:
 
         try:
             async with open_session() as session:
-                ops = TaskOperations(session)
+                ops = TaskReader(session)
                 tasks, total = await ops.list_tasks(
                     user_id=user_id,
                     organization_id=organization_id,
@@ -1000,7 +1025,7 @@ class ProjectsHandlers:
 
                 total_pages = (total + page_size - 1) // page_size
 
-                project_ops = ProjectOperations(session)
+                project_ops = ProjectOperations(session, self.storage, self.search_indexer)
                 project = await project_ops.get_by_id(user_id, organization_id, project_id)
                 user_role = await project_ops._resolve_role(user_id, organization_id, project)
 
@@ -1040,7 +1065,7 @@ class ProjectsHandlers:
         request: CreateFieldRequest,
         ctx: RequestContext,
     ) -> CreateFieldResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         project_id = _parse_uuid(request.project_id, "project_id")
 
@@ -1053,7 +1078,7 @@ class ProjectsHandlers:
 
         try:
             async with open_session() as session:
-                project_ops = ProjectOperations(session)
+                project_ops = ProjectOperations(session, self.storage, self.search_indexer)
                 project = await project_ops.get_by_id(user_id, organization_id, project_id)
                 await project_ops._require_manage(user_id, organization_id, project)
 
@@ -1083,13 +1108,13 @@ class ProjectsHandlers:
         request: UpdateFieldRequest,
         ctx: RequestContext,
     ) -> UpdateFieldResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         project_id = _parse_uuid(request.project_id, "project_id")
 
         try:
             async with open_session() as session:
-                project_ops = ProjectOperations(session)
+                project_ops = ProjectOperations(session, self.storage, self.search_indexer)
                 project = await project_ops.get_by_id(user_id, organization_id, project_id)
                 await project_ops._require_manage(user_id, organization_id, project)
 
@@ -1134,13 +1159,13 @@ class ProjectsHandlers:
         request: DeleteFieldRequest,
         ctx: RequestContext,
     ) -> DeleteFieldResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         project_id = _parse_uuid(request.project_id, "project_id")
 
         try:
             async with open_session() as session:
-                project_ops = ProjectOperations(session)
+                project_ops = ProjectOperations(session, self.storage, self.search_indexer)
                 project = await project_ops.get_by_id(user_id, organization_id, project_id)
                 await project_ops._require_manage(user_id, organization_id, project)
 
@@ -1171,7 +1196,7 @@ class ProjectsHandlers:
         request: CreateViewRequest,
         ctx: RequestContext,
     ) -> CreateViewResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         project_id = _parse_uuid(request.project_id, "project_id")
 
@@ -1184,7 +1209,7 @@ class ProjectsHandlers:
 
         try:
             async with open_session() as session:
-                project_ops = ProjectOperations(session)
+                project_ops = ProjectOperations(session, self.storage, self.search_indexer)
                 project = await project_ops.get_by_id(user_id, organization_id, project_id)
                 await project_ops._require_manage(user_id, organization_id, project)
 
@@ -1212,13 +1237,13 @@ class ProjectsHandlers:
         request: UpdateViewRequest,
         ctx: RequestContext,
     ) -> UpdateViewResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         project_id = _parse_uuid(request.project_id, "project_id")
 
         try:
             async with open_session() as session:
-                project_ops = ProjectOperations(session)
+                project_ops = ProjectOperations(session, self.storage, self.search_indexer)
                 project = await project_ops.get_by_id(user_id, organization_id, project_id)
                 await project_ops._require_manage(user_id, organization_id, project)
 
@@ -1257,13 +1282,13 @@ class ProjectsHandlers:
         request: DeleteViewRequest,
         ctx: RequestContext,
     ) -> DeleteViewResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         project_id = _parse_uuid(request.project_id, "project_id")
 
         try:
             async with open_session() as session:
-                project_ops = ProjectOperations(session)
+                project_ops = ProjectOperations(session, self.storage, self.search_indexer)
                 project = await project_ops.get_by_id(user_id, organization_id, project_id)
                 await project_ops._require_manage(user_id, organization_id, project)
 
@@ -1291,7 +1316,7 @@ class ProjectsHandlers:
         request: ListActivitiesRequest,
         ctx: RequestContext,
     ) -> ListActivitiesResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         task_id = _parse_uuid(request.task_id, "task_id")
 
@@ -1306,7 +1331,7 @@ class ProjectsHandlers:
 
         try:
             async with open_session() as session:
-                task_ops = TaskOperations(session)
+                task_ops = TaskReader(session)
                 await task_ops.get_by_id(user_id, organization_id, task_id)
 
                 activities, total = await queries.get_activities_for_task(
@@ -1339,7 +1364,7 @@ class SprintHandlers:
         request: CreateSprintRequest,
         ctx: RequestContext,
     ) -> CreateSprintResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         project_id = _parse_uuid(request.project_id, "project_id")
 
@@ -1366,7 +1391,7 @@ class SprintHandlers:
         request: UpdateSprintRequest,
         ctx: RequestContext,
     ) -> UpdateSprintResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         sprint_id = _parse_uuid(request.sprint_id, "sprint_id")
 
@@ -1393,7 +1418,7 @@ class SprintHandlers:
         request: StartSprintRequest,
         ctx: RequestContext,
     ) -> StartSprintResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         sprint_id = _parse_uuid(request.sprint_id, "sprint_id")
 
@@ -1418,7 +1443,7 @@ class SprintHandlers:
         request: CompleteSprintRequest,
         ctx: RequestContext,
     ) -> CompleteSprintResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         sprint_id = _parse_uuid(request.sprint_id, "sprint_id")
 
@@ -1441,7 +1466,7 @@ class SprintHandlers:
         request: DeleteSprintRequest,
         ctx: RequestContext,
     ) -> DeleteSprintResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         sprint_id = _parse_uuid(request.sprint_id, "sprint_id")
 
@@ -1464,7 +1489,7 @@ class SprintHandlers:
         request: ListSprintsRequest,
         ctx: RequestContext,
     ) -> ListSprintsResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         project_id = _parse_uuid(request.project_id, "project_id")
 
@@ -1502,13 +1527,13 @@ class WatcherHandlers:
         request: ToggleTaskWatcherRequest,
         ctx: RequestContext,
     ) -> ToggleTaskWatcherResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         task_id = _parse_uuid(request.task_id, "task_id")
 
         try:
             async with open_session() as session:
-                task_ops = TaskOperations(session)
+                task_ops = TaskReader(session)
                 await task_ops.get_by_id(user_id, organization_id, task_id)
 
                 ops = WatcherOperations(session)
@@ -1525,13 +1550,13 @@ class WatcherHandlers:
         request: ListTaskWatchersRequest,
         ctx: RequestContext,
     ) -> ListTaskWatchersResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         task_id = _parse_uuid(request.task_id, "task_id")
 
         try:
             async with open_session() as session:
-                task_ops = TaskOperations(session)
+                task_ops = TaskReader(session)
                 await task_ops.get_by_id(user_id, organization_id, task_id)
 
                 ops = WatcherOperations(session)
@@ -1552,7 +1577,7 @@ class WatcherHandlers:
         request: BulkCheckTaskWatchersRequest,
         ctx: RequestContext,
     ) -> BulkCheckTaskWatchersResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         _parse_uuid(request.organization_id, "organization_id")
 
         try:

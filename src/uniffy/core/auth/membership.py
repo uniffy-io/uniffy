@@ -46,7 +46,7 @@ async def is_active_member(
     if session is not None:
         return await get_active_membership(session, user_id, organization_id) is not None
 
-    from uniffy.db import open_session
+    from uniffy.infrastructure.database import open_session
 
     async with open_session() as owned:
         return await get_active_membership(owned, user_id, organization_id) is not None

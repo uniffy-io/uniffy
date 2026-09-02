@@ -1,11 +1,11 @@
 """Direct grants pierce inaccessible parent folders in list paths; BLOCKED never does."""
 
-from unittest.mock import AsyncMock
+from unittest.mock import MagicMock
 
 import pytest
 from sqlalchemy import delete
 
-from uniffy.core.content.members import ContentMembersOperations
+from uniffy.domains.permissions.members import ContentMembersOperations
 from uniffy.core.models.files.file import File
 from uniffy.core.models.files.folder import Folder
 from uniffy.core.models.permissions.content_member import ContentMember
@@ -24,9 +24,8 @@ pytestmark = pytest.mark.asyncio(loop_scope="session")
 
 
 @pytest.fixture
-def quiet_search(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(SearchIndexer, "index", AsyncMock())
-    monkeypatch.setattr(SearchIndexer, "update_sharing", AsyncMock())
+def quiet_search() -> SearchIndexer:
+    return MagicMock(spec=SearchIndexer)
 
 
 def _folder(env, *, access_mode, baseline_role=None, parent_id=None) -> Folder:
@@ -75,7 +74,7 @@ async def test_direct_file_grant_pierces_inaccessible_folder(session, env, quiet
         session.add_all([granted, sibling])
         await session.commit()
 
-        await ContentMembersOperations(session).add_member(
+        await ContentMembersOperations(session, quiet_search).add_member(
             actor_user_id=env.admin_id,
             organization_id=env.org_id,
             content_type=ContentType.FILE,
@@ -85,7 +84,7 @@ async def test_direct_file_grant_pierces_inaccessible_folder(session, env, quiet
             role=ContentRole.VIEWER,
         )
 
-        files, _ = await FileOperations(session).list_files(
+        files, _ = await FileOperations(session, search_indexer=quiet_search).list_files(
             env.member_id,
             env.org_id,
             folder_id=ParentSelection.ALL,
@@ -94,7 +93,7 @@ async def test_direct_file_grant_pierces_inaccessible_folder(session, env, quiet
         assert granted.id in listed_ids
         assert sibling.id not in listed_ids
 
-        root_folders = await FolderOperations(session).list_folders(
+        root_folders = await FolderOperations(session, search_indexer=quiet_search).list_folders(
             env.member_id, env.org_id, parent_id=None
         )
         assert private_folder.id not in {f.id for f in root_folders}
@@ -107,13 +106,11 @@ async def test_direct_folder_grant_reaches_nested_folder(session, env, quiet_sea
         private_parent = _folder(env, access_mode=AccessMode.OWNER_ONLY)
         session.add(private_parent)
         await session.flush()
-        nested = _folder(
-            env, access_mode=AccessMode.EXPLICIT_MEMBERS, parent_id=private_parent.id
-        )
+        nested = _folder(env, access_mode=AccessMode.EXPLICIT_MEMBERS, parent_id=private_parent.id)
         session.add(nested)
         await session.commit()
 
-        await ContentMembersOperations(session).add_member(
+        await ContentMembersOperations(session, quiet_search).add_member(
             actor_user_id=env.admin_id,
             organization_id=env.org_id,
             content_type=ContentType.FOLDER,
@@ -123,7 +120,9 @@ async def test_direct_folder_grant_reaches_nested_folder(session, env, quiet_sea
             role=ContentRole.VIEWER,
         )
 
-        accessible = await FolderOperations(session).list_accessible_folders(
+        accessible = await FolderOperations(
+            session, search_indexer=quiet_search
+        ).list_accessible_folders(
             env.member_id, env.org_id
         )
         accessible_ids = {f.id for f in accessible}
@@ -157,7 +156,7 @@ async def test_blocked_member_row_hides_file_in_accessible_folder(
         session.add_all([blocked_file, control_file])
         await session.commit()
 
-        await ContentMembersOperations(session).add_member(
+        await ContentMembersOperations(session, quiet_search).add_member(
             actor_user_id=env.admin_id,
             organization_id=env.org_id,
             content_type=ContentType.FILE,
@@ -167,7 +166,7 @@ async def test_blocked_member_row_hides_file_in_accessible_folder(
             role=ContentRole.BLOCKED,
         )
 
-        files, _ = await FileOperations(session).list_files(
+        files, _ = await FileOperations(session, search_indexer=quiet_search).list_files(
             env.member_id,
             env.org_id,
             folder_id=ParentSelection.ALL,

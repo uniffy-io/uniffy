@@ -17,9 +17,9 @@ from uuid import UUID
 from loguru import logger
 from starlette.types import ASGIApp, Receive, Scope, Send
 
+from uniffy.core.auth.tokens import decode_access_token
+from uniffy.core.streaming.disconnect import get_disconnect_event
 from uniffy.core.streaming.revoke_coordinator import coordinator
-from uniffy.domains.auth.tokens import decode_access_token
-from uniffy.domains.notifications.middleware import get_disconnect_event
 
 LOGGER_COMPONENT = "streaming.revoke.middleware"
 

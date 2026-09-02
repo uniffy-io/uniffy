@@ -3,7 +3,7 @@ title: Configure Uniffy
 description: Reference for every environment variable Uniffy reads at startup. What each setting does, its default, and when to override it.
 sidebar:
   label: Configure Uniffy
-  order: 1
+  order: 5
 ---
 
 Uniffy is configured through environment variables. The backend, workers, and supporting services all read from the same set. A working starting point lives at `.env.example` in the repository; copy it to `.env` and edit before running the stack.
@@ -16,9 +16,10 @@ This page documents every variable.
 |---|---|---|
 | `HOST` | `0.0.0.0` | Bind address for the HTTP server. |
 | `PORT` | `8000` | TCP port the backend listens on. |
-| `WORKERS` | `1` | Number of Granian worker processes. Use `1` for Kubernetes and Docker deployments since pods and containers scale horizontally. Use `NUM_CPU / 2` if the backend runs on VM instances. |
-| `LOG_LEVEL` | `debug` | One of `debug`, `info`, `warning`, `error`, `critical`. |
-| `ENVIRONMENT` | `development` | One of `development`, `staging`, `production`. Used by logging and observability. |
+| `WORKERS` | `1` | Number of Granian worker processes. Use `1` for Kubernetes deployments since pods scale horizontally. Use `NUM_CPU / 2` if the backend runs on VM instances. |
+| `LOG_LEVEL` | `info` | One of `debug`, `info`, `warning`, `error`, `critical`. |
+| `LOG_FORMAT` | `console` | Use `console` for human readable output or `json` for structured logs. |
+| `ENVIRONMENT` | `development` | One of `development`, `staging`, `production`. Controls deployment sensitive safety defaults. |
 | `CORS_ORIGINS` | `*` | Comma-separated list of allowed origins, or `*`. Use `*` only in development. |
 
 ## PostgreSQL
@@ -139,7 +140,7 @@ Stores user file uploads, attachments, and generated thumbnails. Any S3-compatib
 
 ## Calls (LiveKit)
 
-LiveKit is the SFU for audio and video calls. Container config is inlined in `.docker/compose/calls.yaml`; only the credentials and URLs come from the env.
+LiveKit is the SFU for audio and video calls. Server config lives in LiveKit's own config file; only the credentials and URLs come from the env.
 
 | Variable | Default | Purpose |
 |---|---|---|
@@ -149,18 +150,15 @@ LiveKit is the SFU for audio and video calls. Container config is inlined in `.d
 | `LIVEKIT_API_SECRET` | `devsecret-...` | Shared secret. Minimum 32 characters in production. |
 | `LIVEKIT_VALKEY_DATABASE` | `1` | Valkey logical DB used by LiveKit for its room registry. Kept separate from the app's DB (`VALKEY_DATABASE`) to avoid eviction or pub/sub cross-impact. |
 
-## TURN relay (coturn)
+## TURN relay
 
-Optional. Off by default in compose (profile `calls-turn`); most local dev does not need TURN. Bring up with `docker compose --profile calls-turn up -d`.
+Optional. By default media flows directly to LiveKit and NAT traversal uses LiveKit's embedded TURN; nothing to configure. Set these only when all media must relay through an external TURN gateway.
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `COTURN_STUN_URL` | `stun:localhost:3478` | STUN URL the browser puts in its ICE servers list. |
-| `COTURN_TURN_URL` | `turn:localhost:3478?transport=udp` | TURN URL (UDP). |
-| `COTURN_TURNS_URL` | `turns:localhost:5349?transport=tcp` | TURN over TLS URL. |
-| `COTURN_SHARED_SECRET` | `uniffy-coturn-dev` | Shared secret for TURN REST API ephemeral credentials. The backend mints `username=<expiry_ts>:<user_id>` and `password=base64(HMAC-SHA1(secret, username))`. |
-| `COTURN_REALM` | `turn.localhost` | TURN realm. |
-| `COTURN_CREDENTIAL_TTL_SECONDS` | `21600` | TTL of minted TURN credentials. Should match the LiveKit JWT TTL. |
+| `TURN_SERVER_URLS` | empty | Comma-separated TURN URIs advertised to clients. Empty means direct media mode. |
+| `TURN_SHARED_SECRET` | empty | Shared secret for ephemeral TURN credentials (TURN REST spec). Must match the relay. Required when `TURN_SERVER_URLS` is set. |
+| `TURN_CREDENTIAL_TTL_SECONDS` | `28800` | Lifetime of minted TURN credentials. Must exceed the longest expected call; ICE servers cannot be rotated mid connection. |
 
 ## Cache controls
 
@@ -177,7 +175,7 @@ Optional. Off by default in compose (profile `calls-turn`); most local dev does 
 
 ## Prometheus metrics
 
-Granian forks `WORKERS` children. Without multiprocess mode, each child owns a private metrics registry and a `/metrics` scrape returns one child's slice only. The bootstrap helper in `uniffy._metrics_bootstrap` manages a per-component subdir under `PROMETHEUS_MULTIPROC_BASE_DIR` so backend and worker each get their own clean directory on startup.
+Granian forks `WORKERS` children. Without multiprocess mode, each child owns a private metrics registry and a `/metrics` scrape returns one child's slice only. The bootstrap helper in `uniffy.infrastructure.observability.bootstrap` manages a per-component subdir under `PROMETHEUS_MULTIPROC_BASE_DIR` so backend and worker each get their own clean directory on startup.
 
 | Variable | Default | Purpose |
 |---|---|---|

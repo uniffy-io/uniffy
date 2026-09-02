@@ -1,6 +1,7 @@
 """Unified search and reference resolution."""
 
 import asyncio
+from functools import partial
 from uuid import UUID
 
 from loguru import logger
@@ -25,30 +26,32 @@ from uniffy.core.models.projects.project import Project
 from uniffy.core.models.projects.task import Task
 from uniffy.core.models.shared import EventVisibility
 from uniffy.core.models.tags.tag import TagAssignment
-from uniffy.core.search.meilisearch import SearchCandidateScope
+from uniffy.core.search.policy import SearchCandidateScope
+from uniffy.core.search.workspace import WorkspaceSearch
 from uniffy.core.types import AccessMode, ContentType
-from uniffy.domains.permissions.resource_access import (
+from uniffy.domains.permissions.access import (
     ResourceAccessPurpose,
     ResourceAccessResolver,
     ResourceKey,
     ResourceRowState,
 )
-from uniffy.domains.search.authorized_search import AuthorizedSearch, AuthorizedSearchQuery
-from uniffy.domains.search.content_graph import GRAPH_MAX_ROWS_PER_TYPE, build_content_graph
+from uniffy.domains.search.authorization import AuthorizedSearch, AuthorizedSearchQuery
+from uniffy.domains.search.graph import GRAPH_MAX_ROWS_PER_TYPE, build_content_graph
 from uniffy.domains.search.queries import (
     SearchResult,
     UrnAvailability,
     execute_search,
     get_raw_documents_by_urns,
 )
-from uniffy.domains.tags import TagOperations
+from uniffy.domains.tags.reader import TagReader
 
 logger = logger.bind(component="search.operations")
 
 
 class SearchOperations:
-    def __init__(self, session: AsyncSession) -> None:
+    def __init__(self, session: AsyncSession, search: WorkspaceSearch) -> None:
         self.session = session
+        self.search_engine = search
         self.access_query = ContentAccessQuery(session)
         self.resource_access = ResourceAccessResolver(session)
 
@@ -79,7 +82,10 @@ class SearchOperations:
             if subject.is_active_member
             else SearchCandidateScope.ORGANIZATION
         )
-        return await AuthorizedSearch(self.resource_access, execute_search).run(
+        return await AuthorizedSearch(
+            self.resource_access,
+            partial(execute_search, self.search_engine),
+        ).run(
             AuthorizedSearchQuery(
                 user_id=user_id,
                 organization_id=organization_id,
@@ -138,7 +144,7 @@ class SearchOperations:
         notes = list(result.scalars().all())
 
         urn_for = lambda n: f"urn:uniffy:content:NOTE:{n.id}"  # noqa: E731
-        tags_by_urn = await TagOperations(self.session).get_for_urns(
+        tags_by_urn = await TagReader(self.session).get_for_urns(
             organization_id=organization_id,
             content_urns=[urn_for(n) for n in notes],
         )
@@ -212,7 +218,11 @@ class SearchOperations:
             return {}
 
         raw_result, decisions_result = await asyncio.gather(
-            get_raw_documents_by_urns(list(key_by_urn), organization_id),
+            get_raw_documents_by_urns(
+                self.search_engine,
+                list(key_by_urn),
+                organization_id,
+            ),
             self.resource_access.resolve(
                 actor_id=user_id,
                 organization_id=organization_id,
@@ -233,7 +243,7 @@ class SearchOperations:
             }
         decisions = decisions_result
         if isinstance(raw_result, BaseException):
-            logger.opt(exception=raw_result).warning("Meilisearch URN preview lookup failed")
+            logger.opt(exception=raw_result).warning("Search preview lookup failed")
             return {
                 urn: _build_reference_result(
                     urn,
@@ -680,7 +690,7 @@ class SearchOperations:
             org_id = note_rows[0].organization_id if note_rows else None
             tags_by_urn: dict[str, list] = {}
             if urns and org_id is not None:
-                tags_by_urn = await TagOperations(self.session).get_for_urns(
+                tags_by_urn = await TagReader(self.session).get_for_urns(
                     organization_id=org_id,
                     content_urns=urns,
                 )

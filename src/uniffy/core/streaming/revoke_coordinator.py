@@ -1,6 +1,6 @@
 """Process-wide watcher that kicks streaming RPCs on token / session revoke.
 
-ConnectRPC's ``AuthRevocationInterceptor`` runs once at stream open. A
+ConnectRPC's authentication interceptor runs once at stream open. A
 long-lived server-streaming method (chat stream, notifications, agent
 runtime) authenticates there and then runs until the client disconnects
 - a mid-stream ``token_version`` bump or per-session revoke never kicks
@@ -33,7 +33,7 @@ from loguru import logger
 
 from uniffy.core.realtime.identity import replica_id
 from uniffy.core.realtime.publisher import RealtimeChannelKind, RealtimeChannelNamespace
-from uniffy.core.valkey.pubsub import subscribe_patterns
+from uniffy.infrastructure.valkey.pubsub import subscribe_patterns
 
 LOGGER_COMPONENT = "streaming.revoke"
 

@@ -31,8 +31,8 @@ async def seed_projects(
     if not projects:
         return result
 
-    project_ops = ProjectOperations(ctx.session)
-    task_ops = TaskOperations(ctx.session)
+    project_ops = ProjectOperations(ctx.session, ctx.storage, ctx.search_indexer)
+    task_ops = TaskOperations(ctx.session, ctx.storage, ctx.search_indexer)
 
     for spec in projects:
         existing = (

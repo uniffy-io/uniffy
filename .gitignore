@@ -231,6 +231,8 @@ src/unictl/unictl
 src/unictl/dist/
 # Local-only Claude Code workspace (presentations, sales notes, scratch)
 .claude/local/
+# Throwaway git worktrees created for agent runs
+.claude/worktrees/
 
 .pnpm-store/
 /core

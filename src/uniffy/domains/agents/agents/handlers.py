@@ -35,6 +35,7 @@ from uniffy_proto.common.v1.common_pb2 import PaginationResponse
 
 from uniffy.core.auth.permissions import resolve_effective_policy
 from uniffy.core.auth.permissions.checker import PermissionChecker
+from uniffy.core.auth.principal import current_user_id
 from uniffy.core.converters.common_proto import (
     access_mode_from_proto,
     content_role_from_proto,
@@ -42,9 +43,9 @@ from uniffy.core.converters.common_proto import (
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.json_codec import JSONDecodeError, loads
 from uniffy.core.models.agents.agent import Agent
+from uniffy.core.models.tags.tag import Tag
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import ContentType
-from uniffy.db import open_session
 from uniffy.domains.agents.access import require_agents_builder
 from uniffy.domains.agents.agents.converters import (
     agent_template_to_proto,
@@ -66,12 +67,12 @@ from uniffy.domains.agents.templates import AGENT_TEMPLATES
 from uniffy.domains.agents.tools.catalog import list_tool_catalog
 from uniffy.domains.agents.tools.deferral import plan_tool_advertisement
 from uniffy.domains.agents.tools.registry import get_tool_registry
-from uniffy.domains.auth.context import get_user_id_from_context
-from uniffy.domains.integrations.tool_gate import filter_integration_tool_schemas
+from uniffy.domains.integrations.tools import filter_integration_tool_schemas
 from uniffy.domains.organizations.operations import OrganizationOperations
-from uniffy.domains.permissions.resource_access import ResourceAccessResolver, ResourceKey
-from uniffy.domains.tags import Tag, TagOperations
+from uniffy.domains.permissions.access import ResourceAccessResolver, ResourceKey
+from uniffy.domains.tags.reader import TagReader
 from uniffy.domains.users.operations import UserOperations
+from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="agents.agents.handlers")
 
@@ -119,14 +120,14 @@ async def _hydrate_agent_tags(
 ) -> dict[UUID, list[Tag]]:
     """Bulk-fetch unified-tag rows for a batch of agent ids.
 
-    Single ``TagOperations.get_for_urns`` round-trip per request batch
+    Single ``TagReader.get_for_urns`` round-trip per request batch
     (no N+1). Returns a mapping keyed on agent id with an empty list
     for agents that have no tags.
     """
     if not agent_ids:
         return {}
     urn_to_id = {build_content_urn(ContentType.AGENT, aid): aid for aid in agent_ids}
-    tag_ops = TagOperations(session)
+    tag_ops = TagReader(session)
     bulk = await tag_ops.get_for_urns(
         organization_id=organization_id,
         content_urns=list(urn_to_id),
@@ -174,7 +175,7 @@ class AgentsHandlers:
         ctx: RequestContext,
     ) -> CreateAgentResponse:
         """Create a new agent."""
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         org_id = _parse_uuid(request.organization_id, "organization_id")
 
         soul_prompt = request.soul_prompt if request.HasField("soul_prompt") else ""
@@ -228,7 +229,7 @@ class AgentsHandlers:
 
         try:
             async with open_session() as session:
-                ops = AgentOperations(session)
+                ops = AgentOperations(session, search_indexer=self.search_indexer)
                 agent = await ops.create_agent(
                     user_id=user_id,
                     organization_id=org_id,
@@ -279,13 +280,13 @@ class AgentsHandlers:
         ctx: RequestContext,
     ) -> GetAgentResponse:
         """Get an agent by ID."""
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         org_id = _parse_uuid(request.organization_id, "organization_id")
         agent_id = _parse_uuid(request.agent_id, "agent_id")
 
         try:
             async with open_session() as session:
-                ops = AgentOperations(session)
+                ops = AgentOperations(session, search_indexer=self.search_indexer)
                 agent = await ops.get_by_id(user_id, org_id, agent_id)
                 user_role = await ops.resolve_role(user_id, org_id, agent)
                 tags_by_id = await _hydrate_agent_tags(session, org_id, [agent.id])
@@ -314,7 +315,7 @@ class AgentsHandlers:
         ctx: RequestContext,
     ) -> ListAgentsResponse:
         """List agents with filters and pagination."""
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         org_id = _parse_uuid(request.organization_id, "organization_id")
 
         access_mode = access_mode_from_proto(request.access_mode) if request.access_mode else None
@@ -332,7 +333,7 @@ class AgentsHandlers:
 
         try:
             async with open_session() as session:
-                ops = AgentOperations(session)
+                ops = AgentOperations(session, search_indexer=self.search_indexer)
                 if request.deleted_only:
                     await require_agents_builder(session, user_id, org_id)
                 agents, total = await ops.list_agents(
@@ -395,7 +396,7 @@ class AgentsHandlers:
         ctx: RequestContext,
     ) -> ListAgentTemplatesResponse:
         """List the shipped templates with their bundled skills resolved to ids."""
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         org_id = _parse_uuid(request.organization_id, "organization_id")
 
         try:
@@ -433,7 +434,7 @@ class AgentsHandlers:
         with no tenant data in it, and the chat tool-activity pane labels tool
         steps for every member, not just builders.
         """
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         org_id = _parse_uuid(request.organization_id, "organization_id")
 
         try:
@@ -454,7 +455,7 @@ class AgentsHandlers:
         ctx: RequestContext,
     ) -> UpdateAgentResponse:
         """Update an agent configuration."""
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         org_id = _parse_uuid(request.organization_id, "organization_id")
         agent_id = _parse_uuid(request.agent_id, "agent_id")
 
@@ -515,7 +516,7 @@ class AgentsHandlers:
 
         try:
             async with open_session() as session:
-                ops = AgentOperations(session)
+                ops = AgentOperations(session, search_indexer=self.search_indexer)
                 agent = await ops.update_agent(
                     user_id=user_id,
                     organization_id=org_id,
@@ -567,13 +568,13 @@ class AgentsHandlers:
         ctx: RequestContext,
     ) -> DeleteAgentResponse:
         """Delete an agent."""
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         org_id = _parse_uuid(request.organization_id, "organization_id")
         agent_id = _parse_uuid(request.agent_id, "agent_id")
 
         try:
             async with open_session() as session:
-                ops = AgentOperations(session)
+                ops = AgentOperations(session, search_indexer=self.search_indexer)
                 await ops.delete_agent(
                     user_id=user_id,
                     organization_id=org_id,
@@ -591,13 +592,13 @@ class AgentsHandlers:
         ctx: RequestContext,
     ) -> RestoreAgentResponse:
         """Bring a deleted agent back; its automations stay disabled."""
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         org_id = _parse_uuid(request.organization_id, "organization_id")
         agent_id = _parse_uuid(request.agent_id, "agent_id")
 
         try:
             async with open_session() as session:
-                ops = AgentOperations(session)
+                ops = AgentOperations(session, search_indexer=self.search_indexer)
                 agent = await ops.restore_agent(
                     user_id=user_id,
                     organization_id=org_id,
@@ -630,7 +631,7 @@ class AgentsHandlers:
         ctx: RequestContext,
     ) -> UploadAgentAvatarResponse:
         """Upload and set an agent avatar."""
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
 
         if not request.image_data:
             raise ConnectError(Code.INVALID_ARGUMENT, "Image data is required")
@@ -642,8 +643,9 @@ class AgentsHandlers:
 
         try:
             async with open_session() as session:
-                ops = AgentOperations(session)
+                ops = AgentOperations(session, search_indexer=self.search_indexer)
                 agent = await ops.upload_avatar(
+                    storage=self.storage,
                     user_id=user_id,
                     organization_id=org_id,
                     agent_id=agent_id,
@@ -679,14 +681,15 @@ class AgentsHandlers:
         ctx: RequestContext,
     ) -> DeleteAgentAvatarResponse:
         """Delete an agent avatar."""
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         org_id = _parse_uuid(request.organization_id, "organization_id")
         agent_id = _parse_uuid(request.agent_id, "agent_id")
 
         try:
             async with open_session() as session:
-                ops = AgentOperations(session)
+                ops = AgentOperations(session, search_indexer=self.search_indexer)
                 agent = await ops.delete_avatar(
+                    storage=self.storage,
                     user_id=user_id,
                     organization_id=org_id,
                     agent_id=agent_id,
@@ -718,13 +721,13 @@ class AgentsHandlers:
         ctx: RequestContext,
     ) -> PreviewSystemPromptResponse:
         """Assemble the runtime system prompt for an agent."""
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         org_id = _parse_uuid(request.organization_id, "organization_id")
         agent_id = _parse_uuid(request.agent_id, "agent_id")
 
         try:
             async with open_session() as session:
-                agent_ops = AgentOperations(session)
+                agent_ops = AgentOperations(session, search_indexer=self.search_indexer)
                 org_ops = OrganizationOperations(session)
                 user_ops = UserOperations(session)
                 skill_ops = SkillOperations(session)

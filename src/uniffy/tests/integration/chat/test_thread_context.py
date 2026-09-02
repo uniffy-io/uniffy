@@ -10,11 +10,14 @@ from uniffy.core.models.chat.thread import ChatThreadParticipant, ChatThreadStat
 from uniffy.core.models.chat.thread_follow import ChatThreadFollow
 from uniffy.core.types import SubjectType
 from uniffy.domains.agents.runtime.writers import ChatChannelMessageWriter
-from uniffy.domains.chat.messages.operations import drop_thread_reply, record_thread_reply
+from uniffy.domains.chat.threads.replies import drop_thread_reply, record_thread_reply
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
 NOW = datetime(2026, 8, 4, 10, 0, tzinfo=UTC)
+ASSISTANT_ROLE = "assistant"
+USER_ROLE = "user"
+AGENT_REPLY_CONTENT = "answer in A"
 
 
 def _writer(session, threads, *, thread_root_id=None) -> ChatChannelMessageWriter:
@@ -76,11 +79,11 @@ class TestThreadScopedContext:
         by_id = {e.id: e for e in envelopes}
 
         agent_reply = by_id[threads.reply_a_agent_id]
-        assert agent_reply.role == "assistant"
-        assert agent_reply.content == "answer in A"
+        assert agent_reply.role == ASSISTANT_ROLE
+        assert agent_reply.content == AGENT_REPLY_CONTENT
 
         user_reply = by_id[threads.reply_a_user_id]
-        assert user_reply.role == "user"
+        assert user_reply.role == USER_ROLE
         assert user_reply.content.startswith("[Thread Tester]:")
 
 

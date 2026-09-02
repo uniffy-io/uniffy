@@ -12,6 +12,7 @@ from uniffy.core.models.notifications.email_delivery import (
 )
 from uniffy.core.types import NotificationType, generate_id
 from uniffy.domains.notifications.delivery.email import EmailAdapter
+from uniffy.infrastructure.database import open_session
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
@@ -26,7 +27,7 @@ async def test_staging_is_idempotent_per_event_and_recipient(session, env) -> No
         source_urn=f"urn:uniffy:content:CHAT:{generate_id()}",
         metadata={"channel_id": str(generate_id()), "message_id": str(generate_id())},
     )
-    adapter = EmailAdapter()
+    adapter = EmailAdapter(open_session)
     now = datetime(2026, 8, 21, 12, 0, tzinfo=UTC)
 
     first = await adapter.stage_with_session(

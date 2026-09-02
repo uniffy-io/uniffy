@@ -7,7 +7,7 @@ from sqlalchemy import select
 
 from uniffy.core.models.rooms.room import Room
 from uniffy.core.types import AccessMode, ContentRole, RoomType
-from uniffy.domains.rooms.operations import RoomOperations
+from uniffy.domains.scheduling.rooms.lifecycle import RoomOperations
 from uniffy.scripts.demo_company.context import DemoContext, DomainResult
 from uniffy.scripts.demo_company.loader import RoomSpec
 from uniffy.scripts.demo_company.mentions import ROOM, MentionRegistry
@@ -24,7 +24,7 @@ async def seed_rooms(
     if not rooms:
         return result
 
-    ops = RoomOperations(ctx.session)
+    ops = RoomOperations(ctx.session, ctx.search_indexer)
     existing_ids = {
         row.name: row.id
         for row in (

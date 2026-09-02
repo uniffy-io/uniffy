@@ -24,7 +24,7 @@ async def test_added_members_receive_one_deduplicated_invite() -> None:
     operations = ChatChannelOperations(MagicMock())
 
     with patch(
-        "uniffy.domains.chat.channels.operations.emit_notification",
+        "uniffy.domains.chat.channels.events.emit_notification",
         new=AsyncMock(),
     ) as emit:
         await operations._notify_membership_changed(
@@ -51,7 +51,7 @@ async def test_removed_members_receive_a_removal_notification() -> None:
     operations = ChatChannelOperations(MagicMock())
 
     with patch(
-        "uniffy.domains.chat.channels.operations.emit_notification",
+        "uniffy.domains.chat.channels.events.emit_notification",
         new=AsyncMock(),
     ) as emit:
         await operations._notify_membership_changed(
@@ -73,7 +73,7 @@ async def test_actor_only_membership_change_emits_nothing() -> None:
     operations = ChatChannelOperations(MagicMock())
 
     with patch(
-        "uniffy.domains.chat.channels.operations.emit_notification",
+        "uniffy.domains.chat.channels.events.emit_notification",
         new=AsyncMock(),
     ) as emit:
         await operations._notify_membership_changed(

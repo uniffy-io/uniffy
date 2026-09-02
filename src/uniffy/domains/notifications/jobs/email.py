@@ -23,16 +23,13 @@ from uniffy.core.models.notifications.email_delivery import (
     NotificationEmailDelivery,
     NotificationEmailStatus,
 )
-from uniffy.core.valkey.presence import presence_get_bulk
-from uniffy.db import open_session
-from uniffy.domains.notifications.delivery.timing import quiet_hours_end_at, resolve_timezone
-from uniffy.domains.notifications.email_content import (
+from uniffy.domains.notifications.delivery.content import (
     notification_action_url,
     notification_preferences_url,
     notification_preview,
     notifications_url,
 )
-from uniffy.domains.notifications.email_outbox import (
+from uniffy.domains.notifications.delivery.outbox import (
     NotificationEmailTerminalReason,
     RecipientContext,
     claim_email_delivery,
@@ -44,11 +41,14 @@ from uniffy.domains.notifications.email_outbox import (
     release_email_delivery,
     terminal_email_delivery,
 )
+from uniffy.domains.notifications.delivery.timing import quiet_hours_end_at, resolve_timezone
 from uniffy.domains.notifications.jobs.contracts import (
     SEND_NOTIFICATION_DIGEST,
     SEND_NOTIFICATION_EMAIL,
 )
+from uniffy.domains.presence.state import presence_get_bulk
 from uniffy.domains.settings.defaults import EmailFrequency
+from uniffy.infrastructure.database import open_session
 from uniffy.vendor.arq import Retry
 
 logger = logger.bind(component="notifications.jobs.email")

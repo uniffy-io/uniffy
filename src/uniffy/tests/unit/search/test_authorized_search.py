@@ -4,9 +4,10 @@ from uuid import UUID
 
 import pytest
 
-from uniffy.core.search.meilisearch import SearchCandidateScope
+from uniffy.core.search.policy import SearchCandidateScope
+from uniffy.core.search.workspace import WorkspaceSearch
 from uniffy.core.types import AccessMode, ContentRole, ContentType, generate_id
-from uniffy.domains.permissions.resource_access import (
+from uniffy.domains.permissions.access import (
     ResourceAccessDecision,
     ResourceKey,
     ResourceRowState,
@@ -55,7 +56,7 @@ def _decision(result: SearchResult, can_view: bool) -> ResourceAccessDecision:
 
 
 def _operations(*, active_member: bool = True, support: bool = False) -> SearchOperations:
-    operations = SearchOperations(MagicMock())
+    operations = SearchOperations(MagicMock(), MagicMock(spec=WorkspaceSearch))
     operations.resource_access = MagicMock()
     operations.resource_access.subject = AsyncMock(
         return_value=SimpleNamespace(
@@ -122,7 +123,7 @@ async def test_support_session_uses_org_candidates_then_postgres_gate(monkeypatc
 async def test_search_stops_after_three_hundred_denied_candidates(monkeypatch) -> None:
     organization_id = generate_id()
 
-    async def candidate_page(**kwargs):
+    async def candidate_page(_search, **kwargs):
         rows = [_result() for _ in range(kwargs["limit"])]
         for row in rows:
             row.organization_id = organization_id
@@ -219,7 +220,7 @@ async def test_type_priority_fetches_only_missing_tier(monkeypatch) -> None:
     for result in (*notes, *files):
         result.organization_id = organization_id
 
-    async def candidates(**kwargs):
+    async def candidates(_search, **kwargs):
         if kwargs["type_filters"] == ["note"]:
             return notes, 2
         return files, 2

@@ -12,7 +12,6 @@ from uniffy.core.types import SubjectType, generate_id
 from uniffy.domains.chat import access as access_module
 from uniffy.domains.chat.access import ChatAccessChecker
 from uniffy.domains.chat.channels.operations import ChatChannelOperations
-from uniffy.domains.chat.streaming import publisher as streaming_publisher
 from uniffy.domains.chat.subjects import ChatSubject
 
 
@@ -266,6 +265,7 @@ def _denied_operations() -> tuple[ChatChannelOperations, tuple[UUID, UUID]]:
     operations = ChatChannelOperations.__new__(ChatChannelOperations)
     operations.session = MagicMock()
     operations.session.execute = AsyncMock()
+    operations.session.rollback = AsyncMock()
     operations.access = access
     return operations, (user_id, organization_id)
 
@@ -282,6 +282,7 @@ async def test_non_member_cannot_create_channel() -> None:
         )
 
     operations.session.execute.assert_not_awaited()
+    operations.session.rollback.assert_awaited_once()
 
 
 async def test_non_member_cannot_create_user_dm() -> None:
@@ -328,7 +329,10 @@ async def test_member_removal_event_reaches_removed_user(
     operations = ChatChannelOperations.__new__(ChatChannelOperations)
     operations._get_all_member_ids = AsyncMock(return_value=[remaining_user_id])
     publish = AsyncMock()
-    monkeypatch.setattr(streaming_publisher, "publish_channel_event_to_members", publish)
+    monkeypatch.setattr(
+        "uniffy.domains.chat.channels.events.publish_channel_event_to_members",
+        publish,
+    )
 
     await operations._publish_members_changed(
         channel_id,

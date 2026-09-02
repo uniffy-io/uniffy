@@ -72,6 +72,7 @@ class TestListCronTasksAccessFilter:
         ops = CronTaskOperations.__new__(CronTaskOperations)
         ops.session = session
         ops.access_query = ContentAccessQuery(session)
+        ops._search_indexer = MagicMock()
 
         agent_ops = MagicMock()
         agent_ops.get_by_id = AsyncMock()
@@ -110,6 +111,7 @@ class TestCronGetRunsTool:
             user_id=generate_id(),
             organization_id=generate_id(),
             agent_id=generate_id(),
+            search_indexer=MagicMock(),
         )
         ops = MagicMock()
         ops.get_run_logs = AsyncMock(return_value=(logs, total if total is not None else len(logs)))
@@ -158,7 +160,7 @@ class TestCronGetRunsTool:
 
 class TestStampRunLogs:
     async def _stamp(self):
-        from uniffy.domains.agents.cron.jobs import _stamp_run_logs
+        from uniffy.domains.agents.cron.jobs.jobs import _stamp_run_logs
 
         session, captured = _capture_session()
         session_id = generate_id()
@@ -210,7 +212,7 @@ class TestStampRunLogs:
 
 class TestSweepStalePendingRuns:
     async def test_only_old_pending_cron_rows_are_swept(self) -> None:
-        from uniffy.domains.agents.cron.jobs import (
+        from uniffy.domains.agents.cron.jobs.jobs import (
             STALE_PENDING_CUTOFF,
             _sweep_stale_pending_runs,
         )
@@ -232,7 +234,7 @@ class TestSweepStalePendingRuns:
         assert swept == 1
 
     async def test_sweep_marks_rows_as_error(self) -> None:
-        from uniffy.domains.agents.cron.jobs import _sweep_stale_pending_runs
+        from uniffy.domains.agents.cron.jobs.jobs import _sweep_stale_pending_runs
 
         session, captured = _capture_session()
         await _sweep_stale_pending_runs(session)

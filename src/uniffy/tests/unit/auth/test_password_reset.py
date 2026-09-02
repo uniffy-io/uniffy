@@ -14,14 +14,19 @@ import pytest
 
 from uniffy.core.audit.actions import Action
 from uniffy.core.types import generate_id
-from uniffy.domains.auth.password_reset import (
+from uniffy.domains.auth.passwords.reset import (
     PasswordResetOperations,
     PasswordResetTokenExpiredError,
     PasswordResetTokenNotFoundError,
     PasswordResetTokenUsedError,
     _hash_token,
 )
-from uniffy.domains.security.operations import SecuritySettings
+from uniffy.domains.organizations.security import SecuritySettings
+
+_NO_USER_OUTCOME = "no_user"
+_RESET_TEMPLATE = "auth/password_reset"
+_ENV_CONFIG_SOURCE = "env"
+_NEW_PASSWORD_HASH = "new-hash"
 
 
 @dataclass
@@ -78,7 +83,9 @@ def _session(results: list[Any]):
     session.execute = execute
     session.add = MagicMock()
     session.commit = AsyncMock()
+    session.flush = AsyncMock()
     session.refresh = AsyncMock()
+    session.rollback = AsyncMock()
     return session
 
 
@@ -86,7 +93,7 @@ def _patch_queue():
     queue = MagicMock()
     queue.enqueue_job = AsyncMock()
     return patch(
-        "uniffy.domains.auth.password_reset.enqueue_job",
+        "uniffy.domains.auth.passwords.reset.enqueue_job",
         new=queue.enqueue_job,
     ), queue
 
@@ -101,7 +108,7 @@ def _patch_security(*, password_reset_enabled: bool):
         ),
     )
     return patch(
-        "uniffy.domains.auth.password_reset.SecurityOperations",
+        "uniffy.domains.auth.passwords.reset.SecurityOperations",
         return_value=inner,
     )
 
@@ -113,13 +120,13 @@ class TestRequest:
         queue_patch, queue = _patch_queue()
         with (
             queue_patch,
-            patch("uniffy.domains.auth.password_reset.write_audit_event", new=AsyncMock()) as audit,
+            patch("uniffy.domains.auth.passwords.reset.write_audit_event", new=AsyncMock()) as audit,
         ):
             await PasswordResetOperations(session).request("ghost@example.com")
         queue.enqueue_job.assert_not_awaited()
         audit.assert_awaited_once()
         details = audit.call_args.kwargs["details"]
-        assert details["outcome"] == "no_user"
+        assert details["outcome"] == _NO_USER_OUTCOME
 
     async def test_disabled_for_org_writes_blocked_audit(self) -> None:
         user_id = generate_id()
@@ -136,7 +143,7 @@ class TestRequest:
         with (
             queue_patch,
             _patch_security(password_reset_enabled=False),
-            patch("uniffy.domains.auth.password_reset.write_audit_event", new=AsyncMock()) as audit,
+            patch("uniffy.domains.auth.passwords.reset.write_audit_event", new=AsyncMock()) as audit,
         ):
             await PasswordResetOperations(session).request("x@y.com")
         queue.enqueue_job.assert_not_awaited()
@@ -159,12 +166,12 @@ class TestRequest:
         with (
             queue_patch,
             _patch_security(password_reset_enabled=True),
-            patch("uniffy.domains.auth.password_reset.write_audit_event", new=AsyncMock()) as audit,
+            patch("uniffy.domains.auth.passwords.reset.write_audit_event", new=AsyncMock()) as audit,
         ):
             await PasswordResetOperations(session).request("x@y.com")
         queue.enqueue_job.assert_awaited_once()
         call = queue.enqueue_job.await_args
-        assert call.args[2] == "auth/password_reset"
+        assert call.args[2] == _RESET_TEMPLATE
         actions = [c.kwargs["action"] for c in audit.call_args_list]
         assert Action.AUTH_PASSWORD_RESET_REQUESTED in actions
 
@@ -178,7 +185,7 @@ class TestRequest:
         queue_patch, queue = _patch_queue()
         with (
             queue_patch,
-            patch("uniffy.domains.auth.password_reset.write_audit_event", new=AsyncMock()) as audit,
+            patch("uniffy.domains.auth.passwords.reset.write_audit_event", new=AsyncMock()) as audit,
         ):
             await PasswordResetOperations(session).request("orgless@x.com")
         # Skips the security check (no org), enqueues with organization_id=None
@@ -192,7 +199,7 @@ class TestRequest:
             if c.kwargs["action"] == Action.AUTH_PASSWORD_RESET_REQUESTED
         ]
         assert request_audits, "expected at least one request audit row"
-        assert request_audits[-1].kwargs["details"]["config_source"] == "env"
+        assert request_audits[-1].kwargs["details"]["config_source"] == _ENV_CONFIG_SOURCE
 
 
 class TestVerifyAndConsume:
@@ -241,14 +248,14 @@ class TestVerifyAndConsume:
             _result(first=None),
         ])
         with (
-            patch("uniffy.domains.auth.password_reset.write_audit_event", new=AsyncMock()) as audit,
+            patch("uniffy.domains.auth.passwords.reset.write_audit_event", new=AsyncMock()) as audit,
             patch(
-                "uniffy.domains.auth.password_reset.hash_password",
-                return_value="new-hash",
+                "uniffy.domains.auth.passwords.reset.hash_password",
+                return_value=_NEW_PASSWORD_HASH,
             ),
         ):
             updated = await PasswordResetOperations(session).consume("raw-token", "newpassword1")
-        assert updated.hashed_password == "new-hash"
+        assert updated.hashed_password == _NEW_PASSWORD_HASH
         assert updated.token_version == 1
         assert token.used_at is not None
         actions = [c.kwargs["action"] for c in audit.call_args_list]

@@ -5,7 +5,7 @@ from uuid import UUID
 
 from uniffy.core.data_files import DATA_DIR, load_documents
 from uniffy.core.models.agents.skill import AgentSkill
-from uniffy.db.bundled_skills import _sync_locked
+from uniffy.domains.agents.skills.bundled import _sync_locked
 
 
 def _shipped() -> list[dict[str, str]]:

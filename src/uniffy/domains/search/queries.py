@@ -1,21 +1,17 @@
-"""Meilisearch search execution.
-
-Permission filtering combines `access_mode` / `baseline_role` with explicit
-`ContentMember` grants so accessible documents are returned to the user.
-"""
+"""Search execution and result conversion."""
 
 import contextlib
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from enum import StrEnum
-from typing import Any
 from uuid import UUID
 
 from loguru import logger
 
 from uniffy.core.content.references import parse_urn
-from uniffy.core.search import get_meilisearch_client
-from uniffy.core.search.meilisearch import SearchCandidateScope
+from uniffy.core.search.engine import SearchHit
+from uniffy.core.search.policy import SearchCandidateScope
+from uniffy.core.search.workspace import WorkspaceSearch
 
 logger = logger.bind(component="search.queries")
 
@@ -29,7 +25,7 @@ class UrnAvailability(StrEnum):
 
 @dataclass
 class SearchResult:
-    """Meilisearch hit with the fields used for display and navigation."""
+    """Search hit with the fields used for display and navigation."""
 
     urn: str
     organization_id: UUID
@@ -44,9 +40,8 @@ class SearchResult:
     metadata: dict[str, str] | None
     updated_at: datetime | None
     rank_score: float
-    search_score: float | None  # Meilisearch ranking score
+    search_score: float | None
 
-    # _formatted variants; matched spans wrapped in HIGHLIGHT_PRE/POST_TAG.
     title_highlighted: str | None = None
     description_highlighted: str | None = None
 
@@ -109,34 +104,34 @@ class SearchResult:
     content_tags: list[str] | None = None
 
     @classmethod
-    def from_meilisearch_hit(cls, hit: dict[str, Any]) -> SearchResult:
+    def from_search_hit(cls, hit: SearchHit) -> SearchResult:
+        document = hit.document
         updated_at = None
-        if hit.get("updated_at"):
+        if document.get("updated_at"):
             with contextlib.suppress(ValueError, TypeError):
                 # Aware UTC, so isoformat() carries an offset - a bare timestamp
                 # string gets parsed as LOCAL time by `new Date()` in the browser.
-                updated_at = datetime.fromtimestamp(hit["updated_at"], UTC)
+                updated_at = datetime.fromtimestamp(document["updated_at"], UTC)
 
-        formatted = hit.get("_formatted") or {}
-        metadata = hit.get("metadata") or {}
+        metadata = document.get("metadata") or {}
 
         return cls(
-            urn=hit.get("urn", ""),
-            organization_id=UUID(hit["organization_id"]),
-            title=hit.get("title", ""),
-            description=hit.get("description"),
-            title_highlighted=formatted.get("title"),
-            description_highlighted=formatted.get("description"),
-            entity_type=hit.get("entity_type", ""),
-            url_path=hit.get("url_path", ""),
-            access_mode=hit.get("access_mode", "OWNER_ONLY"),
-            baseline_role=hit.get("baseline_role"),
-            owner_id=UUID(hit["owner_id"]),
-            tags=hit.get("tags"),
-            metadata=hit.get("metadata"),
+            urn=document.get("urn", ""),
+            organization_id=UUID(document["organization_id"]),
+            title=document.get("title", ""),
+            description=document.get("description"),
+            title_highlighted=hit.formatted.get("title"),
+            description_highlighted=hit.formatted.get("description"),
+            entity_type=document.get("entity_type", ""),
+            url_path=document.get("url_path", ""),
+            access_mode=document.get("access_mode", "OWNER_ONLY"),
+            baseline_role=document.get("baseline_role"),
+            owner_id=UUID(document["owner_id"]),
+            tags=document.get("tags"),
+            metadata=document.get("metadata"),
             updated_at=updated_at,
-            rank_score=hit.get("rank_score", 1.0),
-            search_score=hit.get("_rankingScore"),
+            rank_score=document.get("rank_score", 1.0),
+            search_score=hit.score,
             # User docs denormalize these at index time, tier-gated there;
             # resolve must not re-read them from the database.
             user_avatar_url=metadata.get("avatar_url"),
@@ -164,10 +159,7 @@ def apply_type_priority(
     results: list[SearchResult],
     type_priority: list[str],
 ) -> list[SearchResult]:
-    """Stable re-rank: match-strength bucket, then the caller's type tier,
-    then the original Meilisearch order. Types not listed rank after all
-    listed types within their bucket.
-    """
+    """Preserve engine order within each match-strength and requested-type tier."""
     if not type_priority or not results:
         return results
 
@@ -188,6 +180,7 @@ def apply_type_priority(
 
 
 async def execute_search(
+    search: WorkspaceSearch,
     query_text: str,
     organization_id: UUID,
     user_id: UUID,
@@ -202,9 +195,7 @@ async def execute_search(
     name_matches_only: bool = False,
     candidate_scope: SearchCandidateScope = SearchCandidateScope.MEMBER_HINT,
 ) -> tuple[list[SearchResult], int]:
-    client = get_meilisearch_client()
-
-    results = await client.search(
+    results = await search.search(
         query=query_text,
         organization_id=organization_id,
         user_id=user_id,
@@ -220,12 +211,13 @@ async def execute_search(
         candidate_scope=candidate_scope,
     )
 
-    search_results = [SearchResult.from_meilisearch_hit(hit) for hit in results.hits]
+    search_results = [SearchResult.from_search_hit(hit) for hit in results.hits]
 
-    return search_results, results.estimated_total_hits or len(search_results)
+    return search_results, results.estimated_total_hits
 
 
 async def get_raw_documents_by_urns(
+    search: WorkspaceSearch,
     urns: list[str],
     organization_id: UUID,
 ) -> UrnLookupResult:
@@ -233,11 +225,11 @@ async def get_raw_documents_by_urns(
     if not valid_urns:
         return UrnLookupResult(documents={}, failed_urns=frozenset())
 
-    client = get_meilisearch_client()
-    lookup = await client.get_documents_by_urns(valid_urns, organization_id)
+    lookup = await search.get_documents_by_urns(valid_urns, organization_id)
     return UrnLookupResult(
         documents={
-            urn: SearchResult.from_meilisearch_hit(doc) for urn, doc in lookup.documents.items()
+            urn: SearchResult.from_search_hit(SearchHit(document=doc, formatted={}, score=None))
+            for urn, doc in lookup.documents.items()
         },
         failed_urns=lookup.failed_urns,
     )

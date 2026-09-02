@@ -1,6 +1,7 @@
 """Organization CRUD, membership, and permission defaults."""
 
 import asyncio
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from uuid import UUID
 
@@ -12,34 +13,67 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import Action
 from uniffy.core.auth.membership import get_active_membership
+from uniffy.core.auth.permissions.defaults import ORG_PERMISSION_DEFAULTS
 from uniffy.core.crypto import OrgCipher
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.jobs import enqueue_job
 from uniffy.core.models import Group, Organization, OrganizationPermissionDefaults, User
 from uniffy.core.models.audit.event import AuditResourceType
+from uniffy.core.models.chat.channel import ChannelType
 from uniffy.core.models.login.organization_member import OrganizationMember, OrganizationRole
 from uniffy.core.models.people.identity import IdentitySource, IdentitySourceKind
 from uniffy.core.models.permissions.domain_admin import DomainAdmin
+from uniffy.core.search.indexer import SearchIndexer
+from uniffy.core.storage import ObjectStorage
 from uniffy.core.types import AccessMode, ContentRole, ContentType, DomainType
-from uniffy.domains.calls.operations import kick_user_from_active_call
+from uniffy.domains.agents.bootstrap import (
+    StagedDefaultAgent,
+    finish_default_agent_after_commit,
+    stage_default_agent,
+)
 from uniffy.domains.chat.cache import (
     invalidate_cached_dm_peers,
     invalidate_cached_member_ids,
 )
+from uniffy.domains.chat.channels import stage_default_channel_memberships
+from uniffy.domains.chat.channels.operations import ChatChannelOperations
+from uniffy.domains.chat.channels.state import StagedChatChannelCreate
 from uniffy.domains.chat.cleanup import cleanup_chat_membership_for_organization
-from uniffy.domains.chat.search_acl import enqueue_chat_search_acl_refresh
-from uniffy.domains.permissions.job_contracts import REINDEX_ORG_CONTENT_FOR_DEFAULTS
+from uniffy.domains.chat.lifecycle import ChannelCallLifecycle
+from uniffy.domains.chat.search import enqueue_chat_search_acl_refresh
+from uniffy.domains.directory.projection import UserDirectoryProjection
+from uniffy.domains.files.attachments import stage_personal_attachments_folder
+from uniffy.domains.files.filters.presets import create_default_presets
+from uniffy.domains.organizations.starter.docs import (
+    seed_workspace_docs,
+    starter_content_enabled,
+    workspace_docs_available,
+)
+from uniffy.domains.permissions.jobs.contracts import REINDEX_ORG_CONTENT_FOR_DEFAULTS
+from uniffy.domains.tags.filters.presets import create_default_tag_filter_presets
 
 logger = logger.bind(component="organizations.operations")
+
+
+@dataclass(frozen=True)
+class StagedOrganizationMembership:
+    membership: OrganizationMember
+    organization_id: UUID
+    organization_slug: str
+    default_channel_ids: tuple[UUID, ...]
+
+
+@dataclass(frozen=True)
+class StagedOrganizationCreate:
+    organization: Organization
+    owner: User
+    default_channel: StagedChatChannelCreate
+    default_agent: StagedDefaultAgent
 
 
 class OrganizationOperations:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
-
-        from uniffy.domains.users.search import UserSearchIndexer
-
-        self._user_indexer = UserSearchIndexer(session)
 
     async def get_by_id(self, org_id: UUID) -> Organization:
         result = await self._session.execute(select(Organization).where(Organization.id == org_id))
@@ -56,7 +90,42 @@ class OrganizationOperations:
         domain: str | None = None,
         plan: str = "free",
         actor_user_id: UUID | None = None,
+        *,
+        storage: ObjectStorage,
+        search_indexer: SearchIndexer,
     ) -> Organization:
+        try:
+            staged = await self.stage_organization(
+                name=name,
+                slug=slug,
+                owner_user_id=owner_user_id,
+                domain=domain,
+                plan=plan,
+                actor_user_id=actor_user_id,
+            )
+            await self._session.commit()
+        except Exception:
+            await self._session.rollback()
+            raise
+
+        await self._session.refresh(staged.organization)
+        await self.finish_organization_create_after_commit(
+            staged,
+            storage=storage,
+            search_indexer=search_indexer,
+        )
+        await self._session.refresh(staged.organization)
+        return staged.organization
+
+    async def stage_organization(
+        self,
+        name: str,
+        slug: str,
+        owner_user_id: UUID,
+        domain: str | None = None,
+        plan: str = "free",
+        actor_user_id: UUID | None = None,
+    ) -> StagedOrganizationCreate:
         org = Organization(
             name=name,
             slug=slug,
@@ -66,58 +135,30 @@ class OrganizationOperations:
         self._session.add(org)
         await self._session.flush()
 
-        membership = OrganizationMember(
-            user_id=owner_user_id,
-            organization_id=org.id,
-            role=OrganizationRole.OWNER,
-        )
-        self._session.add(membership)
+        result = await self._session.execute(select(User).where(User.id == owner_user_id))
+        owner = result.scalar_one_or_none()
+        if owner is None:
+            raise NotFoundError("User", str(owner_user_id))
 
-        # Every org carries a LOCAL identity source so identity links always
-        # have a source row; existing orgs got theirs from the backfill.
-        self._session.add(
+        self._session.add_all([
+            OrganizationMember(
+                user_id=owner_user_id,
+                organization_id=org.id,
+                role=OrganizationRole.OWNER,
+            ),
             IdentitySource(
                 organization_id=org.id,
                 kind=IdentitySourceKind.LOCAL,
                 name="Local",
-            )
-        )
-
-        await self._session.commit()
-        await self._session.refresh(org)
+            ),
+        ])
 
         await OrgCipher(self._session).provision(org.id, owner_user_id)
-        await self._session.commit()
-
-        result = await self._session.execute(select(User).where(User.id == owner_user_id))
-        owner = result.scalar_one_or_none()
-        if owner:
-            await self._user_indexer.index_for_organization(owner, org.id)
-            await self._session.commit()
-
-        from uniffy.domains.files.attachments.operations import AttachmentOperations
-
-        attachment_ops = AttachmentOperations(self._session)
-        await attachment_ops.get_or_create_attachments_folder(owner_user_id, org.id)
-        await self._session.commit()
-
-        from uniffy.domains.files.filters.presets import create_default_presets
-
+        await stage_personal_attachments_folder(self._session, owner_user_id, org.id)
         await create_default_presets(self._session, org.id, owner_user_id)
-        await self._session.commit()
-
-        from uniffy.domains.tags.filters.presets import (
-            create_default_tag_filter_presets,
-        )
-
         await create_default_tag_filter_presets(self._session, org.id, owner_user_id)
-        await self._session.commit()
 
-        from uniffy.core.models.chat.channel import ChannelType
-        from uniffy.domains.chat.channels.operations import ChatChannelOperations
-
-        chat_ops = ChatChannelOperations(self._session)
-        await chat_ops.create_channel(
+        default_channel = await ChatChannelOperations(self._session).stage_channel(
             user_id=owner_user_id,
             organization_id=org.id,
             name="general",
@@ -125,40 +166,7 @@ class OrganizationOperations:
             description="Organization-wide discussions",
             is_default=True,
         )
-        await self._session.commit()
-
-        from uniffy.core.models.agents.agent import Agent
-        from uniffy.domains.agents.skills.operations import SkillOperations
-        from uniffy.domains.agents.templates import get_default_template
-
-        template = get_default_template()
-        enabled_skills = await SkillOperations(self._session).resolve_bundled_skill_ids(
-            template.bundled_skill_names
-        )
-
-        default_agent = Agent(
-            organization_id=org.id,
-            owner_id=owner_user_id,
-            name=template.name,
-            soul_prompt=template.soul_prompt,
-            enabled_tools=list(template.enabled_tools),
-            enabled_skills=enabled_skills,
-            avatar_emoji=template.emoji,
-            is_default=True,
-            # Org-visible; NULL baseline inherits the org's AGENT default.
-            access_mode=AccessMode.OPEN_TO_ORG,
-        )
-        self._session.add(default_agent)
-        await self._session.commit()
-
-        from uniffy.domains.agents.agents.operations import AgentOperations
-
-        await AgentOperations(self._session)._index_for_search(
-            default_agent, skip_member_lookup=True
-        )
-        await self._session.commit()
-
-        from uniffy.domains.organizations.defaults import ORG_PERMISSION_DEFAULTS
+        default_agent = await stage_default_agent(self._session, org.id, owner_user_id)
 
         for ct, flags in ORG_PERMISSION_DEFAULTS.items():
             self._session.add(
@@ -169,27 +177,6 @@ class OrganizationOperations:
                     **flags,
                 )
             )
-        await self._session.commit()
-
-        from uniffy.db.seed_docs import (
-            seed_workspace_docs,
-            starter_content_enabled,
-            workspace_docs_available,
-        )
-
-        if owner and starter_content_enabled():
-            if workspace_docs_available():
-                from uniffy.core.search.indexer import SearchIndexer
-
-                await seed_workspace_docs(
-                    session=self._session,
-                    org=org,
-                    admin_user=owner,
-                    search_indexer=SearchIndexer(self._session),
-                )
-                await self._session.commit()
-            else:
-                logger.warning("Starter docs skipped: docs tree not present in this deployment")
 
         await write_audit_event(
             self._session,
@@ -200,9 +187,98 @@ class OrganizationOperations:
             resource_id=org.id,
             details={"name": name, "slug": slug, "plan": plan},
         )
-        await self._session.commit()
+        await self._session.flush()
+        return StagedOrganizationCreate(org, owner, default_channel, default_agent)
 
-        return org
+    async def finish_organization_create_after_commit(
+        self,
+        staged: StagedOrganizationCreate,
+        *,
+        storage: ObjectStorage,
+        search_indexer: SearchIndexer,
+    ) -> None:
+        org = staged.organization
+        organization_id = org.id
+        try:
+            await UserDirectoryProjection(
+                self._session,
+                search_indexer,
+            ).index_for_organization(staged.owner, organization_id)
+        except Exception:
+            await self._session.rollback()
+            logger.opt(exception=True).warning(
+                "Organization created with stale owner search projection",
+                organization_id=str(organization_id),
+            )
+            await self._refresh_staged_organization(staged)
+
+        try:
+            await ChatChannelOperations(
+                self._session,
+                search_indexer=search_indexer,
+            ).finish_channel_create_after_commit(staged.default_channel)
+        except Exception:
+            await self._session.rollback()
+            logger.opt(exception=True).warning(
+                "Organization created with degraded default-channel fanout",
+                organization_id=str(organization_id),
+            )
+            await self._refresh_staged_organization(staged)
+
+        try:
+            await finish_default_agent_after_commit(
+                self._session,
+                staged.default_agent,
+                search_indexer,
+            )
+        except Exception:
+            await self._session.rollback()
+            logger.opt(exception=True).warning(
+                "Organization created with stale default-agent search projection",
+                organization_id=str(organization_id),
+            )
+            await self._refresh_staged_organization(staged)
+
+        await self._provision_starter_content_after_commit(
+            staged,
+            storage=storage,
+            search_indexer=search_indexer,
+        )
+
+    async def _refresh_staged_organization(self, staged: StagedOrganizationCreate) -> None:
+        await self._session.refresh(staged.organization)
+        await self._session.refresh(staged.owner)
+        await self._session.refresh(staged.default_channel.channel)
+        await self._session.refresh(staged.default_agent.agent)
+
+    async def _provision_starter_content_after_commit(
+        self,
+        staged: StagedOrganizationCreate,
+        *,
+        storage: ObjectStorage,
+        search_indexer: SearchIndexer,
+    ) -> None:
+        organization_id = staged.organization.id
+        if not starter_content_enabled():
+            return
+        if not workspace_docs_available():
+            logger.warning("Starter docs skipped: docs tree not present in this deployment")
+            return
+        try:
+            await seed_workspace_docs(
+                session=self._session,
+                org=staged.organization,
+                admin_user=staged.owner,
+                search_indexer=search_indexer,
+                storage=storage,
+            )
+            await self._session.commit()
+        except Exception:
+            await self._session.rollback()
+            logger.opt(exception=True).warning(
+                "Organization created without complete starter content",
+                organization_id=str(organization_id),
+            )
 
     async def update(
         self,
@@ -377,22 +453,18 @@ class OrganizationOperations:
 
         return (members, total)
 
-    async def _require_member_capacity(self, org_id: UUID) -> None:
+    async def _require_member_capacity(self, org: Organization) -> None:
         """``Organization.max_members`` is a hard cap on active members.
         ``None`` means uncapped; the platform surface owns the value.
         """
-        cap = (
-            await self._session.execute(
-                select(Organization.max_members).where(Organization.id == org_id)
-            )
-        ).scalar_one_or_none()
+        cap = org.max_members
         if cap is None:
             return
         active = (
             await self._session.execute(
                 select(func.count())
                 .select_from(OrganizationMember)
-                .where(OrganizationMember.organization_id == org_id)
+                .where(OrganizationMember.organization_id == org.id)
                 .where(OrganizationMember.is_active.is_(True))
             )
         ).scalar_one()
@@ -402,21 +474,37 @@ class OrganizationOperations:
                 f"Organization has reached its member cap of {cap}",
             )
 
-    async def add_member(
+    async def stage_member(
         self,
         user_id: UUID,
         org_id: UUID,
         role: OrganizationRole = OrganizationRole.MEMBER,
         actor_user_id: UUID | None = None,
-    ) -> OrganizationMember:
+    ) -> StagedOrganizationMembership:
+        org = (
+            await self._session.execute(
+                select(Organization).where(Organization.id == org_id).with_for_update()
+            )
+        ).scalar_one_or_none()
+        if org is None:
+            raise NotFoundError("Organization", str(org_id))
+
         existing = await self.get_membership(user_id, org_id)
-        if existing:
-            if existing.is_active:
-                return existing
-            await self._require_member_capacity(org_id)
-            existing.is_active = True
-            existing.role = role
-            existing.updated_at = datetime.now(UTC)
+        if existing is None or not existing.is_active:
+            await self._require_member_capacity(org)
+
+            if existing is None:
+                membership = OrganizationMember(
+                    user_id=user_id,
+                    organization_id=org_id,
+                    role=role,
+                )
+                self._session.add(membership)
+            else:
+                membership = existing
+                membership.is_active = True
+                membership.role = role
+                membership.updated_at = datetime.now(UTC)
 
             await write_audit_event(
                 self._session,
@@ -427,52 +515,72 @@ class OrganizationOperations:
                 resource_id=user_id,
                 details={"role": role.value},
             )
-            await self._session.commit()
-            await self._session.refresh(existing)
+            await self._session.flush()
+        else:
+            membership = existing
 
-            return existing
-
-        await self._require_member_capacity(org_id)
-
-        membership = OrganizationMember(
-            user_id=user_id,
-            organization_id=org_id,
-            role=role,
-        )
-        self._session.add(membership)
-        await self._session.commit()
-        await self._session.refresh(membership)
-
-        result = await self._session.execute(select(User).where(User.id == user_id))
-        user = result.scalar_one_or_none()
-        if user:
-            await self._user_indexer.index_for_organization(user, org_id)
-            await self._session.commit()
-
-        from uniffy.domains.files.attachments.operations import AttachmentOperations
-
-        attachment_ops = AttachmentOperations(self._session)
-        await attachment_ops.get_or_create_attachments_folder(user_id, org_id)
-        await self._session.commit()
-
-        from uniffy.domains.chat.channels.operations import ChatChannelOperations
-
-        chat_ops = ChatChannelOperations(self._session)
-        await chat_ops.join_default_channels(user_id, org_id)
-        await self._session.commit()
-
-        await write_audit_event(
+        await stage_personal_attachments_folder(self._session, user_id, org_id)
+        default_channel_ids = await stage_default_channel_memberships(
             self._session,
-            organization_id=org_id,
-            actor_user_id=actor_user_id,
-            action=Action.ORGANIZATION_MEMBER_ADDED,
-            resource_type=AuditResourceType.USER,
-            resource_id=user_id,
-            details={"role": role.value},
+            user_id,
+            org_id,
         )
-        await self._session.commit()
+        return StagedOrganizationMembership(
+            membership,
+            org_id,
+            org.slug,
+            tuple(default_channel_ids),
+        )
 
-        return membership
+    async def finish_member_add_after_commit(
+        self,
+        staged: StagedOrganizationMembership,
+        *,
+        search_indexer: SearchIndexer,
+    ) -> None:
+        user_id = staged.membership.user_id
+        org_id = staged.organization_id
+        try:
+            result = await self._session.execute(select(User).where(User.id == user_id))
+            user = result.scalar_one_or_none()
+            if user:
+                await UserDirectoryProjection(
+                    self._session,
+                    search_indexer,
+                ).index_for_organization(user, org_id)
+        except Exception:
+            logger.opt(exception=True).warning(
+                f"Failed to index organization member {user_id} in {org_id}"
+            )
+
+        await self.finish_member_add_cache_after_commit(staged)
+
+    async def finish_member_add_cache_after_commit(
+        self,
+        staged: StagedOrganizationMembership,
+    ) -> None:
+        for channel_id in staged.default_channel_ids:
+            try:
+                await invalidate_cached_member_ids(channel_id)
+            except Exception:
+                logger.opt(exception=True).warning(
+                    f"Failed to invalidate member cache for default channel {channel_id}"
+                )
+
+    async def add_member(
+        self,
+        user_id: UUID,
+        org_id: UUID,
+        role: OrganizationRole = OrganizationRole.MEMBER,
+        actor_user_id: UUID | None = None,
+        *,
+        search_indexer: SearchIndexer,
+    ) -> OrganizationMember:
+        staged = await self.stage_member(user_id, org_id, role, actor_user_id)
+        await self._session.commit()
+        await self._session.refresh(staged.membership)
+        await self.finish_member_add_after_commit(staged, search_indexer=search_indexer)
+        return staged.membership
 
     async def update_member_role(
         self,
@@ -527,6 +635,9 @@ class OrganizationOperations:
         admin_user_id: UUID,
         org_id: UUID,
         target_user_id: UUID,
+        *,
+        search_indexer: SearchIndexer,
+        call_lifecycle: ChannelCallLifecycle,
     ) -> bool:
         await self.require_org_admin(admin_user_id, org_id)
 
@@ -564,8 +675,17 @@ class OrganizationOperations:
 
         await self._session.commit()
 
-        await self._user_indexer.remove_from_organization(target_user_id, org_id)
-        await self._session.commit()
+        try:
+            await UserDirectoryProjection(
+                self._session,
+                search_indexer,
+            ).remove_from_organization(target_user_id, org_id)
+        except Exception:
+            logger.opt(exception=True).warning(
+                "Organization member removal committed with stale search projection",
+                organization_id=str(org_id),
+                user_id=str(target_user_id),
+            )
 
         if chat_cleanup.channel_ids:
             private_channel_ids = set(chat_cleanup.private_channel_ids)
@@ -581,7 +701,7 @@ class OrganizationOperations:
                     ),
                 )
             for channel_id in chat_cleanup.channel_ids:
-                await kick_user_from_active_call(
+                await call_lifecycle.remove_member(
                     self._session,
                     channel_id,
                     target_user_id,
@@ -630,7 +750,7 @@ class OrganizationOperations:
             defaults.updated_by_user_id = user_id
             defaults.updated_at = datetime.now(UTC)
         else:
-            from uniffy.domains.organizations.defaults import ORG_PERMISSION_DEFAULTS
+            from uniffy.core.auth.permissions.defaults import ORG_PERMISSION_DEFAULTS
 
             base = ORG_PERMISSION_DEFAULTS.get(content_type, {})
             mode = default_access_mode or base.get("default_access_mode", AccessMode.OWNER_ONLY)
@@ -650,29 +770,35 @@ class OrganizationOperations:
             )
             self._session.add(defaults)
 
-        await self._session.commit()
+        try:
+            await write_audit_event(
+                self._session,
+                organization_id=org_id,
+                actor_user_id=user_id,
+                action=Action.ORGANIZATION_PERMISSION_DEFAULTS_CHANGED,
+                resource_type=AuditResourceType.CONTENT_TYPE,
+                resource_id=None,
+                details={
+                    "content_type": content_type.value,
+                    "previous_access_mode": (
+                        previous_access_mode.value if previous_access_mode else None
+                    ),
+                    "new_access_mode": defaults.default_access_mode.value,
+                    "previous_baseline_role": (
+                        previous_baseline_role.value if previous_baseline_role else None
+                    ),
+                    "new_baseline_role": (
+                        defaults.default_baseline_role.value
+                        if defaults.default_baseline_role
+                        else None
+                    ),
+                },
+            )
+            await self._session.commit()
+        except Exception:
+            await self._session.rollback()
+            raise
         await self._session.refresh(defaults)
-
-        await write_audit_event(
-            self._session,
-            organization_id=org_id,
-            actor_user_id=user_id,
-            action=Action.ORGANIZATION_PERMISSION_DEFAULTS_CHANGED,
-            resource_type=AuditResourceType.CONTENT_TYPE,
-            resource_id=None,
-            details={
-                "content_type": content_type.value,
-                "previous_access_mode": previous_access_mode.value if previous_access_mode else None,
-                "new_access_mode": defaults.default_access_mode.value,
-                "previous_baseline_role": previous_baseline_role.value
-                if previous_baseline_role
-                else None,
-                "new_baseline_role": defaults.default_baseline_role.value
-                if defaults.default_baseline_role
-                else None,
-            },
-        )
-        await self._session.commit()
 
         # Include the row revision so retained ARQ results cannot suppress a
         # later defaults mutation.
@@ -745,7 +871,7 @@ class OrganizationOperations:
         await self._session.commit()
         await self._session.refresh(da)
 
-        from uniffy.core.valkey.pubsub import NotificationPayloadType, publish_notification
+        from uniffy.core.events.realtime import NotificationPayloadType, publish_notification
 
         await publish_notification(
             target_user_id,
@@ -795,7 +921,7 @@ class OrganizationOperations:
 
         await self._session.commit()
 
-        from uniffy.core.valkey.pubsub import NotificationPayloadType, publish_notification
+        from uniffy.core.events.realtime import NotificationPayloadType, publish_notification
 
         await publish_notification(
             target_user_id,

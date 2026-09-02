@@ -14,11 +14,11 @@ from uuid import UUID
 from loguru import logger
 from sqlalchemy import select
 
+from uniffy.core.audit.metrics import AUDIT_ROLE_LOOKUP_SECONDS
 from uniffy.core.audit.request_context import audit_ip_var, audit_user_agent_var
 from uniffy.core.models.audit.event import AuditActorKind, AuditEvent, AuditResourceType
 from uniffy.core.models.login.organization_member import OrganizationMember
-from uniffy.core.valkey.ops import _get_ops_client, ops_call
-from uniffy.observability.metrics import AUDIT_ROLE_LOOKUP_SECONDS
+from uniffy.infrastructure.valkey.ops import get_ops_client, ops_call
 
 logger = logger.bind(component="audit.writer")
 
@@ -93,7 +93,7 @@ def _merge_support_session_tag(details: dict, organization_id: UUID | None) -> N
     fact about the request, not a hint the caller can drop. The caller's prior
     value (if any) moves to ``actor_kind_pre`` so no information is lost.
     """
-    from uniffy.domains.platform.support_session.context import (
+    from uniffy.core.auth.support_session import (
         get_active_support_session,
     )
 
@@ -142,7 +142,7 @@ async def _acquire_dedupe_lock(
     ttl_seconds: int,
 ) -> bool:
     """Acquire a debounce lock via Valkey ``SET NX``; fail-open when Valkey is unavailable."""
-    client = _get_ops_client()
+    client = get_ops_client()
     if client is None:
         return True
 

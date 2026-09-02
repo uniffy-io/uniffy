@@ -11,8 +11,8 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from uniffy.core.config.settings.organization import OrgSettingsOperations
 from uniffy.core.models.calls import ScreenShareQuality
-from uniffy.domains.org_settings.operations import OrgSettingsOperations
 
 CALLS_NAMESPACE = "calls"
 POLICY_KEY = "policy"

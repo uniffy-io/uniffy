@@ -1,6 +1,7 @@
 """FastAPI application factory wiring ConnectRPC services and HTTP routes."""
 
 import os
+from collections.abc import Callable
 from contextlib import asynccontextmanager
 
 from dotenv import load_dotenv
@@ -81,109 +82,106 @@ from uniffy.core.crypto import (
     subscribe_dek_invalidations,
     subscribe_deployment_dek_invalidations,
 )
+from uniffy.core.jobs import QueueName
 from uniffy.core.realtime import realtime_router
 from uniffy.core.realtime.router import router as realtime_pubsub_router
-from uniffy.core.search import close_meilisearch, init_meilisearch
-from uniffy.core.storage.s3_client import close_s3, init_s3
+from uniffy.core.search import SearchIndexer, WorkspaceSearch
+from uniffy.core.search.engine import SearchEngine
+from uniffy.core.storage import ObjectStorage
+from uniffy.core.streaming.disconnect import StreamDisconnectMiddleware
 from uniffy.core.streaming.middleware import StreamRevokeWatchMiddleware
 from uniffy.core.streaming.revoke_coordinator import coordinator as stream_revoke_coordinator
-from uniffy.core.valkey import (
-    QueueName,
-    close_ops_client,
-    close_pubsub,
-    close_queue,
-    close_streams_client,
-    init_ops_client,
-    init_pubsub,
-    init_queue,
-    init_streams_client,
-    signal_pubsub_shutdown,
-)
 from uniffy.core.webhooks import register_webhook_provider, webhooks_router
-from uniffy.db import (
-    close_db,
-    init_db,
-    open_session,
-    seed_initial_data,
-    sync_bundled_skills,
-)
-from uniffy.domains.agents.agents.http_routes import agent_avatars_router
+from uniffy.domains.agents.agents.routes import create_agent_avatars_router
 from uniffy.domains.agents.agents.service import AgentsServiceImpl
-from uniffy.domains.agents.budgets.service import BudgetsServiceImpl
+from uniffy.domains.agents.budgets.handlers import BudgetsHandlers
 from uniffy.domains.agents.cron.service import CronServiceImpl
-from uniffy.domains.agents.memories.service import MemoriesServiceImpl
-from uniffy.domains.agents.providers.client_cache import (
+from uniffy.domains.agents.limits.handlers import RateLimitsHandlers
+from uniffy.domains.agents.memories.handlers import MemoriesHandlers
+from uniffy.domains.agents.providers.clients import (
     close_provider_invalidation_subscriber,
     init_provider_invalidation_subscriber,
 )
-from uniffy.domains.agents.providers.service import ProvidersServiceImpl
-from uniffy.domains.agents.rate_limits.service import RateLimitsServiceImpl
+from uniffy.domains.agents.providers.handlers import ProvidersHandlers
 from uniffy.domains.agents.runtime.service import RuntimeServiceImpl
-from uniffy.domains.agents.runtime.settings_handlers import (
+from uniffy.domains.agents.runtime.settings.handlers import (
     RuntimeSettingsServiceImpl,
 )
-from uniffy.domains.agents.sessions.service import SessionsServiceImpl
-from uniffy.domains.agents.skills.service import SkillsServiceImpl
+from uniffy.domains.agents.sessions.handlers import SessionsHandlers
+from uniffy.domains.agents.skills.bundled import sync_bundled_skills
+from uniffy.domains.agents.skills.handlers import SkillsHandlers
 from uniffy.domains.audit.service import AuditServiceImpl
-from uniffy.domains.auth.interceptors import (
-    AuthenticationInterceptor,
-    AuthRevocationInterceptor,
-)
-from uniffy.domains.auth.mfa.service import MfaServiceImpl
-from uniffy.domains.auth.service import AuthServiceImpl
+from uniffy.domains.auth.handlers import AuthHandlers
+from uniffy.domains.auth.interceptors import AuthenticationInterceptor
+from uniffy.domains.auth.mfa.handlers import MfaHandlers
+from uniffy.domains.auth.mfa.operations import MfaOperations
 from uniffy.domains.bookmarks.service import BookmarksServiceImpl
-from uniffy.domains.calendar.service import CalendarServiceImpl
+from uniffy.domains.calls.channels import CallsChannelLifecycle
 from uniffy.domains.calls.config import LiveKitConfigError
-from uniffy.domains.calls.service import CallServiceImpl
+from uniffy.domains.calls.handlers import CallHandlers
 from uniffy.domains.calls.webhook import LiveKitWebhookProvider
 from uniffy.domains.chat.service import ChatServiceImpl
-from uniffy.domains.chat.streaming.service import ChatStreamServiceImpl
-from uniffy.domains.comments.service import CommentsServiceImpl
-from uniffy.domains.files.http_routes import (
-    files_router,
-    media_router,
-    thumbnails_router,
-)
+from uniffy.domains.chat.streaming.handlers import ChatStreamHandlers
+from uniffy.domains.comments.handlers import CommentsHandlers
+from uniffy.domains.directory.groups.service import GroupsServiceImpl
+from uniffy.domains.directory.people.service import PeopleServiceImpl
+from uniffy.domains.files.registration import register_file_content
+from uniffy.domains.files.routes import create_file_routers
 from uniffy.domains.files.service import FilesServiceImpl
-from uniffy.domains.groups.service import GroupsServiceImpl
-from uniffy.domains.integrations.client_cache import (
+from uniffy.domains.integrations.clients import (
     close_integration_invalidation_subscriber,
     init_integration_invalidation_subscriber,
 )
-from uniffy.domains.integrations.service import IntegrationsServiceImpl
+from uniffy.domains.integrations.handlers import IntegrationsHandlers
 from uniffy.domains.mail.service import OrgMailServiceImpl
-from uniffy.domains.mail.system_service import SystemMailServiceImpl
+from uniffy.domains.mail.system.service import SystemMailServiceImpl
+from uniffy.domains.notes.adapter import register_note_realtime_adapter
+from uniffy.domains.notes.registration import register_note_content
 from uniffy.domains.notes.service import NotesServiceImpl
-from uniffy.domains.notifications.middleware import StreamDisconnectMiddleware
-from uniffy.domains.notifications.service import NotificationsServiceImpl
+from uniffy.domains.notifications.handlers import NotificationsHandlers
 from uniffy.domains.organizations.service import OrganizationsServiceImpl
-from uniffy.domains.people.service import PeopleServiceImpl
 from uniffy.domains.permissions.service import MembersServiceImpl
 from uniffy.domains.platform.audit.service import PlatformAuditServiceImpl
+from uniffy.domains.platform.bootstrap import bootstrap_deployment
+from uniffy.domains.platform.config.service import SystemConfigServiceImpl
 from uniffy.domains.platform.directory.service import (
     SystemOrganizationsServiceImpl,
     SystemUsersServiceImpl,
 )
-from uniffy.domains.platform.mfa.service import SystemMfaServiceImpl
-from uniffy.domains.platform.support_session.consent_service import (
+from uniffy.domains.platform.encryption.service import SystemEncryptionServiceImpl
+from uniffy.domains.platform.mfa.handlers import SystemMfaHandlers
+from uniffy.domains.platform.support.consent import (
     SupportConsentServiceImpl,
 )
-from uniffy.domains.platform.support_session.service import SupportServiceImpl
-from uniffy.domains.presence.service import PresenceServiceImpl
+from uniffy.domains.platform.support.service import SupportServiceImpl
+from uniffy.domains.presence.handlers import PresenceHandlers
+from uniffy.domains.projects.registration import register_project_content
 from uniffy.domains.projects.service import ProjectsServiceImpl
-from uniffy.domains.rooms.service import RoomsServiceImpl
+from uniffy.domains.scheduling.calendar.events.registration import register_calendar_content
+from uniffy.domains.scheduling.calendar.service import CalendarServiceImpl
+from uniffy.domains.scheduling.rooms.service import RoomsServiceImpl
 from uniffy.domains.search.service import SearchServiceImpl
-from uniffy.domains.settings.service import SettingsServiceImpl
-from uniffy.domains.system_config.service import SystemConfigServiceImpl
-from uniffy.domains.system_encryption.service import SystemEncryptionServiceImpl
+from uniffy.domains.settings.handlers import SettingsHandlers
 from uniffy.domains.tags.service import TagsServiceImpl
-from uniffy.domains.users.http_routes import avatars_router
+from uniffy.domains.users.routes import create_avatars_router
 from uniffy.domains.users.service import UsersServiceImpl
-from uniffy.observability import ObservabilityConfig, setup_observability
-from uniffy.observability.crpc import LoggingInterceptor, http_version_var, strict_request_codecs
-from uniffy.observability.fastapi.logger import setup_request_logging
-from uniffy.observability.metrics import get_metrics
-from uniffy.observability.otel import instrument_fastapi
+from uniffy.infrastructure.database import close_db, init_db, open_session
+from uniffy.infrastructure.database.metrics import update_pool_metrics
+from uniffy.infrastructure.observability.config import LoggingConfig
+from uniffy.infrastructure.observability.logger import configure_logging
+from uniffy.infrastructure.observability.prometheus import get_metrics
+from uniffy.infrastructure.search import MeiliSearchEngine
+from uniffy.infrastructure.storage import S3Storage
+from uniffy.infrastructure.valkey.ops import close_ops_client, init_ops_client
+from uniffy.infrastructure.valkey.pubsub import (
+    close_pubsub,
+    init_pubsub,
+    signal_pubsub_shutdown,
+)
+from uniffy.infrastructure.valkey.queue import close_queue, init_queue
+from uniffy.infrastructure.valkey.streams import close_streams_client, init_streams_client
+from uniffy.transport.http import setup_request_logging
+from uniffy.transport.rpc import LoggingInterceptor, http_version_var, strict_request_codecs
 
 
 class HttpVersionMiddleware:
@@ -241,6 +239,8 @@ class ConnectRPCDispatcher:
         self.fallback: ASGIApp | None = None
 
     def add_service(self, prefix: str, app: ASGIApp) -> None:
+        if any(registered_prefix == prefix for registered_prefix, _ in self.services):
+            raise ValueError(f"Duplicate service prefix: {prefix}")
         self.services.append((prefix, app))
 
     def set_fallback(self, app: ASGIApp) -> None:
@@ -258,7 +258,7 @@ class ConnectRPCDispatcher:
             path = path[len(root_path) :] or "/"
 
         for prefix, service_app in self.services:
-            if path.startswith(prefix):
+            if path == prefix or path.startswith(f"{prefix}/"):
                 service_scope = dict(scope)
                 service_scope["path"] = path
                 await service_app(service_scope, receive, send)
@@ -275,15 +275,13 @@ class ConnectRPCDispatcher:
             await send({"type": "http.response.body", "body": b"Not Found"})
 
 
-def _setup_observability() -> None:
-    environment = os.getenv("ENVIRONMENT", "development")
+def _setup_logging() -> None:
     log_level = os.getenv("LOG_LEVEL", "info").upper()
 
-    setup_observability(
-        config=ObservabilityConfig(
+    configure_logging(
+        config=LoggingConfig(
             app_name="uniffy",
             app_version="0.1.0",
-            environment=environment,
             console_log_level=log_level,
             console_log_type=os.getenv("LOG_FORMAT", "console").lower(),
         )
@@ -320,6 +318,9 @@ def _get_cors_origins() -> list[str]:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    storage: ObjectStorage = app.state.object_storage
+    search: WorkspaceSearch = app.state.workspace_search
+    search_indexer: SearchIndexer = app.state.search_indexer
     logger.info("Starting UNIFFY application...")
 
     try:
@@ -330,14 +331,14 @@ async def lifespan(app: FastAPI):
         raise
 
     try:
-        await init_meilisearch()
-        logger.info("Meilisearch initialized successfully")
+        await search.startup()
+        logger.info("Search engine initialized successfully")
     except Exception as e:
-        logger.exception(f"Failed to initialize Meilisearch: {e}")
+        logger.exception(f"Failed to initialize search engine: {e}")
         raise
 
     try:
-        await init_s3()
+        await storage.startup()
         logger.info("S3 storage initialized successfully")
     except Exception as e:
         logger.exception(f"Failed to initialize S3 storage: {e}")
@@ -408,8 +409,8 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"Stream revoke coordinator not available: {e}")
 
-    # Ahead of the seed: the bootstrapped default agent resolves bundled skills
-    # by id, so the rows have to exist before the first organization is created.
+    # The bootstrapped default agent resolves bundled skills by id, so those
+    # rows must exist before the first organization is created.
     try:
         await sync_bundled_skills()
     except Exception as e:
@@ -417,10 +418,10 @@ async def lifespan(app: FastAPI):
         raise
 
     try:
-        await seed_initial_data()
-        logger.info("Initial data seeded successfully")
+        await bootstrap_deployment(storage, search_indexer)
+        logger.info("Deployment bootstrap completed successfully")
     except Exception as e:
-        logger.exception(f"Failed to seed initial data: {e}")
+        logger.exception(f"Deployment bootstrap failed: {e}")
         raise
 
     try:
@@ -453,20 +454,34 @@ async def lifespan(app: FastAPI):
     await close_pubsub()
     await close_queue(QueueName.CORE)
     await close_queue(QueueName.EGRESS)
-    await close_s3()
-    await close_meilisearch()
+    await storage.shutdown()
+    await search.shutdown()
     await close_db()
 
 
-def create_app() -> FastAPI:
-    _setup_observability()
+def create_app(
+    storage: ObjectStorage | None = None,
+    search_engine: SearchEngine | None = None,
+) -> FastAPI:
+    storage = storage or S3Storage()
+    search = WorkspaceSearch(search_engine or MeiliSearchEngine())
+    search_indexer = SearchIndexer(search)
+    register_note_realtime_adapter(search_indexer)
+    register_note_content()
+    register_calendar_content()
+    register_file_content()
+    register_project_content()
+    _setup_logging()
 
     app = FastAPI(
-        title="UNIFFY - Unified Work Operating System",
-        description="The Operating System for Work",
+        title="Uniffy",
+        description="",
         version="0.1.0",
         lifespan=lifespan,
     )
+    app.state.object_storage = storage
+    app.state.workspace_search = search
+    app.state.search_indexer = search_indexer
 
     cors_origins = _get_cors_origins()
     app.add_middleware(
@@ -481,7 +496,7 @@ def create_app() -> FastAPI:
     app.add_middleware(SecurityHeadersMiddleware)
     app.add_middleware(AuditRequestContextMiddleware)
 
-    api_dispatcher = _create_api_dispatcher()
+    api_dispatcher = _create_api_dispatcher(storage, search, search_indexer)
     app.mount("/api", api_dispatcher)
 
     # Signature-verified inbound webhooks; reached directly on the internal
@@ -498,278 +513,226 @@ def create_app() -> FastAPI:
 
     @app.get("/metrics")
     async def metrics():
-        return Response(content=get_metrics(), media_type="text/plain; version=0.0.4; charset=utf-8")
-
-    instrument_fastapi(app=app, exclude_paths=["/healthz", "/metrics"])
+        return Response(
+            content=get_metrics((update_pool_metrics,)),
+            media_type="text/plain; version=0.0.4; charset=utf-8",
+        )
 
     logger.info(f"CORS allowed origins: {cors_origins}")
     return app
 
 
-def _create_api_dispatcher() -> ConnectRPCDispatcher:
+def _create_api_dispatcher(
+    storage: ObjectStorage,
+    search: WorkspaceSearch,
+    search_indexer: SearchIndexer,
+) -> ConnectRPCDispatcher:
     logging_interceptor = LoggingInterceptor()
-    # AuthenticationInterceptor runs FIRST and denies by default, so a handler
-    # that forgets its own identity check is not reachable without a token.
-    # Revocation follows, so a revoked access token never reaches handler code.
-    # LoggingInterceptor still gets the access log line because ConnectRPC
-    # unwinds interceptors in reverse order on raise.
     authentication_interceptor = AuthenticationInterceptor()
-    auth_revocation_interceptor = AuthRevocationInterceptor()
     interceptors = [
         authentication_interceptor,
-        auth_revocation_interceptor,
         logging_interceptor,
     ]
     codecs = strict_request_codecs()
     dispatcher = ConnectRPCDispatcher()
 
-    dispatcher.add_service(
+    def add_rpc(
+        prefix: str,
+        application_factory: Callable[..., ASGIApp],
+        implementation: object,
+    ) -> None:
+        dispatcher.add_service(
+            prefix,
+            application_factory(implementation, interceptors=interceptors, codecs=codecs),
+        )
+
+    def add_streaming_rpc(
+        prefix: str,
+        application_factory: Callable[..., ASGIApp],
+        implementation: object,
+    ) -> None:
+        application = application_factory(
+            implementation,
+            interceptors=interceptors,
+            codecs=codecs,
+        )
+        dispatcher.add_service(
+            prefix,
+            StreamDisconnectMiddleware(StreamRevokeWatchMiddleware(application)),
+        )
+
+    call_lifecycle = CallsChannelLifecycle()
+
+    add_rpc(
         "/auth.v1.AuthService",
-        AuthServiceASGIApplication(AuthServiceImpl(), interceptors=interceptors, codecs=codecs),
+        AuthServiceASGIApplication,
+        AuthHandlers(search_indexer),
     )
-    dispatcher.add_service(
-        "/auth.v1.MfaService",
-        MfaServiceASGIApplication(MfaServiceImpl(), interceptors=interceptors, codecs=codecs),
-    )
-    dispatcher.add_service(
+    add_rpc("/auth.v1.MfaService", MfaServiceASGIApplication, MfaHandlers())
+    add_rpc(
         "/notes.v1.NotesService",
-        NotesServiceASGIApplication(NotesServiceImpl(), interceptors=interceptors, codecs=codecs),
+        NotesServiceASGIApplication,
+        NotesServiceImpl(storage, search_indexer),
     )
-    dispatcher.add_service(
-        "/search.v1.SearchService",
-        SearchServiceASGIApplication(SearchServiceImpl(), interceptors=interceptors, codecs=codecs),
-    )
-    dispatcher.add_service(
-        "/settings.v1.SettingsService",
-        SettingsServiceASGIApplication(
-            SettingsServiceImpl(), interceptors=interceptors, codecs=codecs
-        ),
-    )
-    dispatcher.add_service(
+    add_rpc("/search.v1.SearchService", SearchServiceASGIApplication, SearchServiceImpl(search))
+    add_rpc("/settings.v1.SettingsService", SettingsServiceASGIApplication, SettingsHandlers())
+    add_rpc(
         "/bookmarks.v1.BookmarksService",
-        BookmarksServiceASGIApplication(
-            BookmarksServiceImpl(), interceptors=interceptors, codecs=codecs
-        ),
+        BookmarksServiceASGIApplication,
+        BookmarksServiceImpl(search_indexer),
     )
-    dispatcher.add_service(
-        "/tags.v1.TagsService",
-        TagsServiceASGIApplication(TagsServiceImpl(), interceptors=interceptors, codecs=codecs),
-    )
-    dispatcher.add_service(
+    add_rpc("/tags.v1.TagsService", TagsServiceASGIApplication, TagsServiceImpl(search_indexer))
+    add_rpc(
         "/chat.v1.ChatService",
-        ChatServiceASGIApplication(ChatServiceImpl(), interceptors=interceptors, codecs=codecs),
+        ChatServiceASGIApplication,
+        ChatServiceImpl(storage, search_indexer, call_lifecycle),
     )
-    dispatcher.add_service(
+    add_streaming_rpc(
         "/chat.v1.ChatStreamService",
-        StreamDisconnectMiddleware(
-            StreamRevokeWatchMiddleware(
-                ChatStreamServiceASGIApplication(
-                    ChatStreamServiceImpl(), interceptors=interceptors, codecs=codecs
-                )
-            )
-        ),
+        ChatStreamServiceASGIApplication,
+        ChatStreamHandlers(),
     )
-    dispatcher.add_service(
+    add_rpc(
         "/permissions.v1.MembersService",
-        MembersServiceASGIApplication(
-            MembersServiceImpl(), interceptors=interceptors, codecs=codecs
-        ),
+        MembersServiceASGIApplication,
+        MembersServiceImpl(search_indexer),
     )
-    dispatcher.add_service(
-        "/presence.v1.PresenceService",
-        PresenceServiceASGIApplication(
-            PresenceServiceImpl(), interceptors=interceptors, codecs=codecs
-        ),
-    )
-    dispatcher.add_service(
+    add_rpc("/presence.v1.PresenceService", PresenceServiceASGIApplication, PresenceHandlers())
+    add_rpc(
         "/users.v1.UsersService",
-        UsersServiceASGIApplication(UsersServiceImpl(), interceptors=interceptors, codecs=codecs),
+        UsersServiceASGIApplication,
+        UsersServiceImpl(storage, search_indexer),
     )
-    dispatcher.add_service(
+    add_rpc(
         "/organizations.v1.OrganizationsService",
-        OrganizationsServiceASGIApplication(
-            OrganizationsServiceImpl(), interceptors=interceptors, codecs=codecs
-        ),
+        OrganizationsServiceASGIApplication,
+        OrganizationsServiceImpl(search_indexer, call_lifecycle),
     )
-    dispatcher.add_service(
+    add_rpc(
         "/groups.v1.GroupsService",
-        GroupsServiceASGIApplication(GroupsServiceImpl(), interceptors=interceptors, codecs=codecs),
+        GroupsServiceASGIApplication,
+        GroupsServiceImpl(search_indexer),
     )
-    dispatcher.add_service(
+    add_rpc(
         "/people.v1.PeopleService",
-        PeopleServiceASGIApplication(PeopleServiceImpl(), interceptors=interceptors, codecs=codecs),
+        PeopleServiceASGIApplication,
+        PeopleServiceImpl(search_indexer),
     )
-    dispatcher.add_service(
+    add_rpc(
         "/cal.v1.CalendarService",
-        CalendarServiceASGIApplication(
-            CalendarServiceImpl(), interceptors=interceptors, codecs=codecs
-        ),
+        CalendarServiceASGIApplication,
+        CalendarServiceImpl(search_indexer, call_lifecycle),
     )
-    dispatcher.add_service(
+    add_rpc(
         "/files.v1.FilesService",
-        FilesServiceASGIApplication(FilesServiceImpl(), interceptors=interceptors, codecs=codecs),
+        FilesServiceASGIApplication,
+        FilesServiceImpl(storage, search_indexer),
     )
-    dispatcher.add_service(
-        "/audit.v1.AuditService",
-        AuditServiceASGIApplication(AuditServiceImpl(), interceptors=interceptors, codecs=codecs),
-    )
-    dispatcher.add_service(
-        "/mail.v1.OrgMailService",
-        OrgMailServiceASGIApplication(
-            OrgMailServiceImpl(), interceptors=interceptors, codecs=codecs
-        ),
-    )
-    dispatcher.add_service(
+    add_rpc("/audit.v1.AuditService", AuditServiceASGIApplication, AuditServiceImpl())
+    add_rpc("/mail.v1.OrgMailService", OrgMailServiceASGIApplication, OrgMailServiceImpl())
+    add_rpc(
         "/support.v1.SupportConsentService",
-        SupportConsentServiceASGIApplication(
-            SupportConsentServiceImpl(), interceptors=interceptors, codecs=codecs
-        ),
+        SupportConsentServiceASGIApplication,
+        SupportConsentServiceImpl(),
     )
-    dispatcher.add_service(
+    add_rpc(
         "/superadmin.v1.SystemMailService",
-        SystemMailServiceASGIApplication(
-            SystemMailServiceImpl(), interceptors=interceptors, codecs=codecs
-        ),
+        SystemMailServiceASGIApplication,
+        SystemMailServiceImpl(),
     )
-    dispatcher.add_service(
+    add_rpc(
         "/superadmin.v1.SystemEncryptionService",
-        SystemEncryptionServiceASGIApplication(
-            SystemEncryptionServiceImpl(), interceptors=interceptors, codecs=codecs
-        ),
+        SystemEncryptionServiceASGIApplication,
+        SystemEncryptionServiceImpl(),
     )
-    dispatcher.add_service(
+    add_rpc(
         "/superadmin.v1.SystemConfigService",
-        SystemConfigServiceASGIApplication(
-            SystemConfigServiceImpl(), interceptors=interceptors, codecs=codecs
-        ),
+        SystemConfigServiceASGIApplication,
+        SystemConfigServiceImpl(),
     )
-    dispatcher.add_service(
+    add_rpc(
         "/superadmin.v1.SystemOrganizationsService",
-        SystemOrganizationsServiceASGIApplication(
-            SystemOrganizationsServiceImpl(), interceptors=interceptors, codecs=codecs
-        ),
+        SystemOrganizationsServiceASGIApplication,
+        SystemOrganizationsServiceImpl(storage, search_indexer),
     )
-    dispatcher.add_service(
+    add_rpc(
         "/superadmin.v1.SystemUsersService",
-        SystemUsersServiceASGIApplication(
-            SystemUsersServiceImpl(), interceptors=interceptors, codecs=codecs
-        ),
+        SystemUsersServiceASGIApplication,
+        SystemUsersServiceImpl(search_indexer),
     )
-    dispatcher.add_service(
+    add_rpc(
         "/superadmin.v1.SupportService",
-        SupportServiceASGIApplication(
-            SupportServiceImpl(), interceptors=interceptors, codecs=codecs
-        ),
+        SupportServiceASGIApplication,
+        SupportServiceImpl(),
     )
-    dispatcher.add_service(
+    add_rpc(
         "/superadmin.v1.SystemMfaService",
-        SystemMfaServiceASGIApplication(
-            SystemMfaServiceImpl(), interceptors=interceptors, codecs=codecs
-        ),
+        SystemMfaServiceASGIApplication,
+        SystemMfaHandlers(MfaOperations),
     )
-    dispatcher.add_service(
+    add_rpc(
         "/superadmin.v1.PlatformAuditService",
-        PlatformAuditServiceASGIApplication(
-            PlatformAuditServiceImpl(), interceptors=interceptors, codecs=codecs
-        ),
+        PlatformAuditServiceASGIApplication,
+        PlatformAuditServiceImpl(),
     )
-    dispatcher.add_service(
-        "/comments.v1.CommentsService",
-        CommentsServiceASGIApplication(
-            CommentsServiceImpl(), interceptors=interceptors, codecs=codecs
-        ),
-    )
-    dispatcher.add_service(
+    add_rpc("/comments.v1.CommentsService", CommentsServiceASGIApplication, CommentsHandlers())
+    add_streaming_rpc(
         "/notifications.v1.NotificationsService",
-        StreamDisconnectMiddleware(
-            StreamRevokeWatchMiddleware(
-                NotificationsServiceASGIApplication(
-                    NotificationsServiceImpl(), interceptors=interceptors, codecs=codecs
-                )
-            )
-        ),
+        NotificationsServiceASGIApplication,
+        NotificationsHandlers(),
     )
-    dispatcher.add_service(
+    add_rpc(
         "/projects.v1.ProjectsService",
-        ProjectsServiceASGIApplication(
-            ProjectsServiceImpl(), interceptors=interceptors, codecs=codecs
-        ),
+        ProjectsServiceASGIApplication,
+        ProjectsServiceImpl(storage, search_indexer),
     )
-    dispatcher.add_service(
-        "/rooms.v1.RoomsService",
-        RoomsServiceASGIApplication(RoomsServiceImpl(), interceptors=interceptors, codecs=codecs),
-    )
-    dispatcher.add_service(
-        "/calls.v1.CallService",
-        CallServiceASGIApplication(CallServiceImpl(), interceptors=interceptors, codecs=codecs),
-    )
-    dispatcher.add_service(
+    add_rpc("/rooms.v1.RoomsService", RoomsServiceASGIApplication, RoomsServiceImpl(search_indexer))
+    add_rpc("/calls.v1.CallService", CallServiceASGIApplication, CallHandlers())
+    add_rpc(
         "/integrations.v1.IntegrationsService",
-        IntegrationsServiceASGIApplication(
-            IntegrationsServiceImpl(), interceptors=interceptors, codecs=codecs
-        ),
+        IntegrationsServiceASGIApplication,
+        IntegrationsHandlers(),
     )
-    dispatcher.add_service(
+    add_rpc(
         "/agents.v1.ProvidersService",
-        ProvidersServiceASGIApplication(
-            ProvidersServiceImpl(), interceptors=interceptors, codecs=codecs
-        ),
+        ProvidersServiceASGIApplication,
+        ProvidersHandlers(),
     )
-    dispatcher.add_service(
-        "/agents.v1.SessionsService",
-        SessionsServiceASGIApplication(
-            SessionsServiceImpl(), interceptors=interceptors, codecs=codecs
-        ),
-    )
-    dispatcher.add_service(
+    add_rpc("/agents.v1.SessionsService", SessionsServiceASGIApplication, SessionsHandlers())
+    add_rpc(
         "/agents.v1.AgentsService",
-        AgentsServiceASGIApplication(AgentsServiceImpl(), interceptors=interceptors, codecs=codecs),
+        AgentsServiceASGIApplication,
+        AgentsServiceImpl(storage, search_indexer),
     )
-    dispatcher.add_service(
-        "/agents.v1.SkillsService",
-        SkillsServiceASGIApplication(SkillsServiceImpl(), interceptors=interceptors, codecs=codecs),
-    )
-    dispatcher.add_service(
-        "/agents.v1.MemoriesService",
-        MemoriesServiceASGIApplication(
-            MemoriesServiceImpl(), interceptors=interceptors, codecs=codecs
-        ),
-    )
-    dispatcher.add_service(
+    add_rpc("/agents.v1.SkillsService", SkillsServiceASGIApplication, SkillsHandlers())
+    add_rpc("/agents.v1.MemoriesService", MemoriesServiceASGIApplication, MemoriesHandlers())
+    add_rpc(
         "/agents.v1.CronService",
-        CronServiceASGIApplication(CronServiceImpl(), interceptors=interceptors, codecs=codecs),
+        CronServiceASGIApplication,
+        CronServiceImpl(search_indexer),
     )
-    dispatcher.add_service(
-        "/agents.v1.BudgetsService",
-        BudgetsServiceASGIApplication(
-            BudgetsServiceImpl(), interceptors=interceptors, codecs=codecs
-        ),
-    )
-    dispatcher.add_service(
+    add_rpc("/agents.v1.BudgetsService", BudgetsServiceASGIApplication, BudgetsHandlers())
+    add_rpc(
         "/agents.v1.RateLimitsService",
-        RateLimitsServiceASGIApplication(
-            RateLimitsServiceImpl(), interceptors=interceptors, codecs=codecs
-        ),
+        RateLimitsServiceASGIApplication,
+        RateLimitsHandlers(),
     )
-    dispatcher.add_service(
+    add_streaming_rpc(
         "/agents.v1.RuntimeService",
-        StreamDisconnectMiddleware(
-            StreamRevokeWatchMiddleware(
-                RuntimeServiceASGIApplication(
-                    RuntimeServiceImpl(), interceptors=interceptors, codecs=codecs
-                )
-            )
-        ),
+        RuntimeServiceASGIApplication,
+        RuntimeServiceImpl(storage, search_indexer),
     )
-    dispatcher.add_service(
+    add_rpc(
         "/agents.v1.RuntimeSettingsService",
-        RuntimeSettingsServiceASGIApplication(
-            RuntimeSettingsServiceImpl(), interceptors=interceptors, codecs=codecs
-        ),
+        RuntimeSettingsServiceASGIApplication,
+        RuntimeSettingsServiceImpl(),
     )
 
     http_app = FastAPI()
     setup_request_logging(http_app)
+    thumbnails_router, files_router, media_router = create_file_routers(storage)
+    avatars_router = create_avatars_router(storage)
+    agent_avatars_router = create_agent_avatars_router(storage)
     http_app.include_router(thumbnails_router)
     http_app.include_router(files_router)
     http_app.include_router(media_router)

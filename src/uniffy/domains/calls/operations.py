@@ -29,15 +29,14 @@ from uniffy.core.models.calls import (
 )
 from uniffy.core.models.chat.channel import ChannelType, ChatChannel
 from uniffy.core.models.chat.channel_member import ChatChannelMember
-from uniffy.core.models.chat.message import ChatMessageMetadataKind, SenderType
+from uniffy.core.models.chat.message import ChatMessageMetadataKind
 from uniffy.core.types import SubjectType
 from uniffy.domains.calls.config import (
-    LiveKitConfigError,
     default_screen_share_quality,
     get_livekit_config,
 )
 from uniffy.domains.calls.converters import call_to_event_dict, participant_to_event_dict
-from uniffy.domains.calls.livekit_client import LiveKitApiError, get_livekit_admin_client
+from uniffy.domains.calls.livekit import LiveKitApiError, get_livekit_admin_client
 from uniffy.domains.calls.policy import (
     DEFAULT_MAX_PARTICIPANTS,
     ResolvedCallPolicy,
@@ -50,12 +49,9 @@ from uniffy.domains.calls.tokens import (
     livekit_room_name,
     participant_identity,
 )
+from uniffy.domains.chat import calls as chat_events
 from uniffy.domains.chat.access import ChatAccessChecker
-from uniffy.domains.chat.cache import fetch_channel_members
-from uniffy.domains.chat.messages.operations import ChatMessageOperations
-from uniffy.domains.chat.sender_resolver import SenderInfo, SenderResolver
-from uniffy.domains.chat.streaming import events as evt
-from uniffy.domains.chat.streaming.publisher import publish_channel_event_to_members
+from uniffy.domains.chat.calls import CallChat, SenderInfo
 
 logger = logger.bind(component="calls.operations")
 
@@ -100,7 +96,7 @@ class CallOperations:
         self.session = session
         self.access = ChatAccessChecker(session)
         self._minter = LiveKitTokenMinter(get_livekit_config())
-        self._resolver = SenderResolver(session)
+        self.chat = CallChat(session)
 
     async def initiate_call(
         self,
@@ -234,7 +230,7 @@ class CallOperations:
         channel = await self.access.get_channel(call.channel_id, organization_id)
         await self.access.check_access(user_id, organization_id, channel)
 
-        info = await self._resolver.resolve_one(SenderType.USER, user_id)
+        info = await self.chat.resolve_profile(user_id)
         token = self._minter.mint_user_token(
             organization_id=organization_id,
             call_id=call.id,
@@ -426,7 +422,7 @@ class CallOperations:
         return list(result.scalars().all())
 
     async def resolve_profiles(self, user_ids: list[UUID]) -> dict[UUID, SenderInfo]:
-        return await self._resolver.resolve_many([(SenderType.USER, uid) for uid in user_ids])
+        return await self.chat.resolve_profiles(user_ids)
 
     async def call_recipient_ids(
         self, call: Call, active: list[CallParticipant] | None = None
@@ -451,10 +447,10 @@ class CallOperations:
         member_ids = await self.call_recipient_ids(call, active)
         profiles = await self.resolve_profiles([participant.user_id])
         info = profiles.get(participant.user_id)
-        await publish_channel_event_to_members(
+        await self.chat.publish(
             member_ids,
-            evt.CALL_PARTICIPANT_STATE,
-            evt.build_call_participant_payload(
+            chat_events.CALL_PARTICIPANT_STATE,
+            chat_events.build_call_participant_payload(
                 call.id,
                 participant_to_event_dict(
                     participant,
@@ -517,10 +513,10 @@ class CallOperations:
         remaining = await self.list_active_participants(call.id)
         member_ids = await self.call_recipient_ids(call, remaining)
         info = (await self.resolve_profiles([participant.user_id])).get(participant.user_id)
-        await publish_channel_event_to_members(
+        await self.chat.publish(
             member_ids,
-            evt.CALL_PARTICIPANT_LEFT,
-            evt.build_call_participant_payload(
+            chat_events.CALL_PARTICIPANT_LEFT,
+            chat_events.build_call_participant_payload(
                 call.id,
                 participant_to_event_dict(
                     participant,
@@ -535,6 +531,26 @@ class CallOperations:
             await self.end_call_internal(call, CallEndReason.ALL_LEFT)
             return
         await self.reassign_host_if_absent(call)
+
+    async def remove_channel_member(self, call: Call, user_id: UUID) -> None:
+        """Remove every active device after chat membership is revoked."""
+        rows = await self.session.execute(
+            select(CallParticipant).where(
+                CallParticipant.call_id == call.id,
+                CallParticipant.user_id == user_id,
+                CallParticipant.left_at.is_(None),
+            )
+        )
+        client = get_livekit_admin_client()
+        for participant in rows.scalars().all():
+            try:
+                await client.remove_participant(call.livekit_room_name, participant.identity)
+            except LiveKitApiError as exc:
+                if exc.status_code != 404:
+                    logger.warning(
+                        f"call kick remove_participant failed for {participant.identity}: {exc}"
+                    )
+            await self.mark_participant_left(call, participant)
 
     async def end_call_internal(
         self, call: Call, reason: CallEndReason, actor_user_id: UUID | None = None
@@ -585,10 +601,10 @@ class CallOperations:
         # Include the just-closed participants: a PUBLIC-channel joiner has no
         # member row but must still receive CALL_ENDED to clear its indicator.
         member_ids = list(set(await self.member_user_ids(call.channel_id)) | set(closed_user_ids))
-        await publish_channel_event_to_members(
+        await self.chat.publish(
             member_ids,
-            evt.CALL_ENDED,
-            evt.build_call_lifecycle_payload(call_to_event_dict(call, [])),
+            chat_events.CALL_ENDED,
+            chat_events.build_call_lifecycle_payload(call_to_event_dict(call, [])),
             channel_id=call.channel_id,
         )
 
@@ -644,13 +660,12 @@ class CallOperations:
         """Lifecycle breadcrumbs ride the normal message pipeline as SYSTEM posts;
         a failure here must never break the call lifecycle."""
         try:
-            await ChatMessageOperations(self.session).send_message(
+            await self.chat.post_system_message(
                 user_id=sender_user_id,
                 organization_id=call.organization_id,
                 channel_id=call.channel_id,
                 content=content,
-                message_metadata={"kind": kind.value},
-                sender_type=SenderType.SYSTEM,
+                kind=kind,
             )
         except Exception:
             logger.opt(exception=True).warning(
@@ -688,10 +703,10 @@ class CallOperations:
         set_committed_value(call, "host_user_id", new_host)
         await self.session.commit()
         member_ids = await self.call_recipient_ids(call)
-        await publish_channel_event_to_members(
+        await self.chat.publish(
             member_ids,
-            evt.CALL_HOST_CHANGED,
-            evt.build_call_host_changed_payload(call.id, new_host),
+            chat_events.CALL_HOST_CHANGED,
+            chat_events.build_call_host_changed_payload(call.id, new_host),
             channel_id=call.channel_id,
         )
 
@@ -752,7 +767,7 @@ class CallOperations:
         is_start: bool = False,
     ) -> tuple[MintedToken, list[CallParticipant]]:
         identity = participant_identity(user_id, device_id)
-        info = await self._resolver.resolve_one(SenderType.USER, user_id)
+        info = await self.chat.resolve_profile(user_id)
 
         existing_row = await self.get_active_participant(call.id, identity)
         user_devices = await self._count_active_devices(call.id, user_id)
@@ -809,17 +824,19 @@ class CallOperations:
         member_ids = await self.call_recipient_ids(call, participants)
         if is_start:
             profiles = await self.resolve_profiles([p.user_id for p in participants])
-            await publish_channel_event_to_members(
+            await self.chat.publish(
                 member_ids,
-                evt.CALL_STARTED,
-                evt.build_call_lifecycle_payload(call_to_event_dict(call, participants, profiles)),
+                chat_events.CALL_STARTED,
+                chat_events.build_call_lifecycle_payload(
+                    call_to_event_dict(call, participants, profiles)
+                ),
                 channel_id=call.channel_id,
             )
         else:
-            await publish_channel_event_to_members(
+            await self.chat.publish(
                 member_ids,
-                evt.CALL_PARTICIPANT_JOINED,
-                evt.build_call_participant_payload(
+                chat_events.CALL_PARTICIPANT_JOINED,
+                chat_events.build_call_participant_payload(
                     call.id,
                     participant_to_event_dict(
                         participant,
@@ -839,8 +856,8 @@ class CallOperations:
             return
         if call.call_type == CallType.CHANNEL and len(member_ids) >= SILENT_JOIN_MEMBER_THRESHOLD:
             return
-        info = await self._resolver.resolve_one(SenderType.USER, caller_id)
-        payload = evt.build_call_ring_payload(
+        info = await self.chat.resolve_profile(caller_id)
+        payload = chat_events.build_call_ring_payload(
             call_id=call.id,
             channel_name=channel.effective_name,
             call_type=call.call_type.value,
@@ -849,9 +866,7 @@ class CallOperations:
             caller_avatar_url=info.avatar_url or None,
             expires_at=datetime.now(UTC) + timedelta(seconds=RING_TIMEOUT_SECONDS),
         )
-        await publish_channel_event_to_members(
-            callees, evt.CALL_RING, payload, channel_id=channel.id
-        )
+        await self.chat.publish(callees, chat_events.CALL_RING, payload, channel_id=channel.id)
 
     async def _get_call(
         self, call_id: UUID, organization_id: UUID, *, require_active: bool = False
@@ -983,70 +998,4 @@ class CallOperations:
         return policy
 
     async def member_user_ids(self, channel_id: UUID) -> list[UUID]:
-        members = await fetch_channel_members(self.session, channel_id)
-        ids: list[UUID] = []
-        for member in members:
-            if member.get("subject_type") != SubjectType.USER.value:
-                continue
-            uid = member.get("user_id")
-            if not uid:
-                continue
-            try:
-                ids.append(UUID(uid))
-            except ValueError:
-                continue
-        return ids
-
-
-async def end_active_call_for_channel(
-    session: AsyncSession, channel_id: UUID, reason: CallEndReason
-) -> bool:
-    """Chat-side hook (archive / delete): end the channel's active call, if any."""
-    result = await session.execute(
-        select(Call).where(Call.channel_id == channel_id, Call.ended_at.is_(None))
-    )
-    call = result.scalar_one_or_none()
-    if call is None:
-        return False
-    try:
-        ops = CallOperations(session)
-    except LiveKitConfigError:
-        logger.warning(
-            f"Active call {call.id} in channel {channel_id} but LiveKit is not configured"
-        )
-        return False
-    await ops.end_call_internal(call, reason)
-    return True
-
-
-async def kick_user_from_active_call(session: AsyncSession, channel_id: UUID, user_id: UUID) -> None:
-    """Chat-side hook (member removed / left): drop every device of the user
-    from the channel's active call, SFU first, then DB state."""
-    result = await session.execute(
-        select(Call).where(Call.channel_id == channel_id, Call.ended_at.is_(None))
-    )
-    call = result.scalar_one_or_none()
-    if call is None:
-        return
-    try:
-        ops = CallOperations(session)
-    except LiveKitConfigError:
-        return
-
-    rows = await session.execute(
-        select(CallParticipant).where(
-            CallParticipant.call_id == call.id,
-            CallParticipant.user_id == user_id,
-            CallParticipant.left_at.is_(None),
-        )
-    )
-    client = get_livekit_admin_client()
-    for participant in rows.scalars().all():
-        try:
-            await client.remove_participant(call.livekit_room_name, participant.identity)
-        except LiveKitApiError as exc:
-            if exc.status_code != 404:
-                logger.warning(
-                    f"call kick remove_participant failed for {participant.identity}: {exc}"
-                )
-        await ops.mark_participant_left(call, participant)
+        return await self.chat.member_user_ids(channel_id)

@@ -171,6 +171,14 @@ export const chatChannelsSlice = createSlice({
     setCategories: (state, action: PayloadAction<ChatChannelCategory[]>) => {
       state.categories = action.payload;
     },
+    clearChannelCategory: (state, action: PayloadAction<string>) => {
+      for (const id of state.ids) {
+        const channel = state.byId[id];
+        if (channel?.categoryId === action.payload) {
+          channel.categoryId = null;
+        }
+      }
+    },
     setAgentFolders: (state, action: PayloadAction<ChatAgentFolder[]>) => {
       state.agentFolders = action.payload;
     },
@@ -249,6 +257,7 @@ export const {
   setChannelPreferences,
   updateChannelPreference,
   setCategories,
+  clearChannelCategory,
   setAgentFolders,
   upsertAgentFolder,
   removeAgentFolder,

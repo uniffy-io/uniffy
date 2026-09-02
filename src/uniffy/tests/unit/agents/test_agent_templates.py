@@ -1,5 +1,4 @@
-"""Agent template catalog and default-agent bootstrap tests."""
-
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import UUID
 
@@ -65,35 +64,33 @@ class TestCatalogIntegrity:
 
 
 async def _org_create(skill_rows: list[tuple[UUID, str]]):
-    """Run OrganizationOperations.create on a mocked session; return captured state."""
     from uniffy.domains.organizations.operations import OrganizationOperations
 
     session = MagicMock()
     session.add = MagicMock()
+    session.add_all = MagicMock()
     session.flush = AsyncMock()
     session.commit = AsyncMock()
+    session.rollback = AsyncMock()
     session.refresh = AsyncMock()
 
+    owner_id = generate_id()
     owner_lookup = MagicMock()
-    owner_lookup.scalar_one_or_none.return_value = None
+    owner_lookup.scalar_one_or_none.return_value = SimpleNamespace(id=owner_id)
     skill_lookup = MagicMock()
     skill_lookup.all.return_value = skill_rows
     session.execute = AsyncMock(side_effect=[owner_lookup, skill_lookup])
 
     ops = OrganizationOperations.__new__(OrganizationOperations)
     ops._session = session
-    ops._user_indexer = MagicMock()
 
     cipher = MagicMock()
     cipher.provision = AsyncMock()
-    attachment_ops = MagicMock()
-    attachment_ops.get_or_create_attachments_folder = AsyncMock()
     chat_ops = MagicMock()
-    chat_ops.create_channel = AsyncMock()
-    agent_ops = MagicMock()
-    agent_ops._index_for_search = AsyncMock()
+    chat_ops.stage_channel = AsyncMock(return_value=SimpleNamespace(channel=SimpleNamespace()))
+    chat_ops.finish_channel_create_after_commit = AsyncMock()
+    finish_default_agent = AsyncMock()
 
-    owner_id = generate_id()
     with (
         patch(
             "uniffy.domains.organizations.operations.OrgCipher",
@@ -104,37 +101,51 @@ async def _org_create(skill_rows: list[tuple[UUID, str]]):
             AsyncMock(),
         ),
         patch(
-            "uniffy.domains.files.attachments.operations.AttachmentOperations",
-            return_value=attachment_ops,
-        ),
-        patch(
-            "uniffy.domains.files.filters.presets.create_default_presets",
+            "uniffy.domains.organizations.operations.stage_personal_attachments_folder",
             AsyncMock(),
         ),
         patch(
-            "uniffy.domains.tags.filters.presets.create_default_tag_filter_presets",
+            "uniffy.domains.organizations.operations.create_default_presets",
             AsyncMock(),
         ),
         patch(
-            "uniffy.domains.chat.channels.operations.ChatChannelOperations",
+            "uniffy.domains.organizations.operations.create_default_tag_filter_presets",
+            AsyncMock(),
+        ),
+        patch(
+            "uniffy.domains.organizations.operations.ChatChannelOperations",
             return_value=chat_ops,
         ),
         patch(
-            "uniffy.domains.agents.agents.operations.AgentOperations",
-            return_value=agent_ops,
+            "uniffy.domains.organizations.operations.finish_default_agent_after_commit",
+            finish_default_agent,
+        ),
+        patch(
+            "uniffy.domains.organizations.operations.UserDirectoryProjection.index_for_organization",
+            AsyncMock(),
+        ),
+        patch(
+            "uniffy.domains.organizations.operations.starter_content_enabled",
+            return_value=False,
         ),
     ):
-        org = await ops.create(name="Acme", slug="acme", owner_user_id=owner_id)
+        org = await ops.create(
+            name="Acme",
+            slug="acme",
+            owner_user_id=owner_id,
+            storage=MagicMock(),
+            search_indexer=MagicMock(),
+        )
 
     agents = [call.args[0] for call in session.add.call_args_list if isinstance(call.args[0], Agent)]
-    return org, owner_id, agents, agent_ops
+    return org, owner_id, agents, finish_default_agent
 
 
 class TestDefaultAgentBootstrap:
     async def test_seeds_one_default_agent_from_default_template(self) -> None:
         template = get_default_template()
         skill_id = generate_id()
-        org, owner_id, agents, agent_ops = await _org_create([
+        org, owner_id, agents, finish_default_agent = await _org_create([
             (skill_id, template.bundled_skill_names[0])
         ])
 
@@ -152,7 +163,8 @@ class TestDefaultAgentBootstrap:
         assert agent.enabled_skills == [str(skill_id)]
         assert agent.primary_provider_key_id is None
         assert agent.image_provider_key_id is None
-        agent_ops._index_for_search.assert_awaited_once_with(agent, skip_member_lookup=True)
+        finish_default_agent.assert_awaited_once()
+        assert finish_default_agent.await_args.args[1].agent is agent
 
     async def test_bootstrap_tolerates_missing_bundled_skills(self) -> None:
         _, _, agents, _ = await _org_create([])

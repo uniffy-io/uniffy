@@ -13,7 +13,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.models.tags.saved_filter import SavedTagFilter
-from uniffy.domains.tags.operations import SOURCE_INLINE, SOURCE_MANUAL
+from uniffy.domains.tags.reader import SOURCE_INLINE, SOURCE_MANUAL
 
 
 def _recent_days_ago(days: int) -> str:

@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 from uniffy.core.content.references import BROADCAST_URNS
 from uniffy.core.types import generate_id
-from uniffy.domains.chat.read_state.operations import ChatReadStateOperations
+from uniffy.domains.chat.reads.operations import ChatReadStateOperations
 
 ORG = generate_id()
 USER = generate_id()
@@ -24,14 +24,14 @@ def _ops(aggregate_rows=()):
 
 def _no_valkey():
     return patch(
-        "uniffy.domains.chat.read_state.operations._get_valkey_client",
+        "uniffy.domains.chat.reads.operations._get_valkey_client",
         MagicMock(return_value=None),
     )
 
 
 def _teams(team_ids):
     return patch(
-        "uniffy.domains.chat.read_state.operations.user_team_ids",
+        "uniffy.domains.chat.reads.operations.user_team_ids",
         AsyncMock(return_value=list(team_ids)),
     )
 

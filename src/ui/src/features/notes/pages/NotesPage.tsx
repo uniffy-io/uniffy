@@ -1,5 +1,5 @@
 import { useEffect, useCallback, useRef } from "react";
-import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { NotesLayout } from "@/features/notes/components/NotesLayout";
@@ -18,8 +18,18 @@ import {
   toggleMetadataPanel,
 } from "@/features/notes/store/editorSlice";
 import type { EditorMode } from "@/features/notes/store/editorSlice";
-import { setCurrentNote, fetchNote, initializeNotesData } from "@/features/notes/store/notesSlice";
-import { saveLastOpenedNote, clearLastOpenedNote } from "@/features/notes/utils/lastOpenedNote";
+import {
+  setCurrentNote,
+  fetchNote,
+  initializeNotesData,
+  removeNote,
+} from "@/features/notes/store/notesSlice";
+import {
+  saveLastOpenedNote,
+  loadLastOpenedNote,
+  clearLastOpenedNote,
+} from "@/features/notes/utils/lastOpenedNote";
+import { chooseNotesLanding } from "@/features/notes/utils/landing";
 import { useShortcutHandler, useAppearanceSettings } from "@/features/settings";
 import { useNotesCacheSync } from "@/features/notes/hooks/useNotesCacheSync";
 import { recordRecentItem } from "@/features/search/utils/recentItems";
@@ -28,7 +38,6 @@ import { SearchResultType } from "@uniffy/proto/search/v1/search_pb";
 export function NotesPage() {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
-  const location = useLocation();
   const { noteId } = useParams<{ noteId: string }>();
 
   const notesState = useAppSelector((state) => state.notes);
@@ -43,10 +52,6 @@ export function NotesPage() {
   const currentNoteId = notesState?.currentNoteId;
   const isSidebarOpen = editorState?.isSidebarOpen ?? true;
   const isMetadataPanelOpen = editorState?.isMetadataPanelOpen ?? false;
-
-  const fromLastOpened = Boolean(
-    (location.state as { fromLastOpened?: boolean } | null)?.fromLastOpened,
-  );
 
   const currentNote = currentNoteId ? notesState?.notes[currentNoteId] : null;
   useDocumentTitle(currentNote?.title || "Notes");
@@ -98,26 +103,52 @@ export function NotesPage() {
     dispatch(initializeNotesData());
   }, [dispatch, organizationId, treeLoaded]);
 
+  useEffect(() => {
+    if (noteId || !treeLoaded || !organizationId || !userId) return;
+
+    const lastOpenedId = loadLastOpenedNote(organizationId, userId);
+    const landingId = chooseNotesLanding(notesState.notes, lastOpenedId);
+    if (lastOpenedId && landingId !== lastOpenedId) {
+      clearLastOpenedNote(organizationId, userId);
+    }
+    if (landingId) {
+      navigate(`/notes/${landingId}`, { replace: true });
+    }
+  }, [noteId, treeLoaded, organizationId, userId, notesState.notes, navigate]);
+
   // Always refetch on noteId change or remount - returning from /chat would serve stale content and autosave could clobber concurrent edits.
+  const loadedRouteNoteRef = useRef<string | null>(null);
   useEffect(() => {
     if (!noteId) return;
 
+    loadedRouteNoteRef.current = null;
     dispatch(setCurrentNote(noteId));
     dispatch(fetchNote(noteId))
       .unwrap()
       .then(() => {
+        loadedRouteNoteRef.current = noteId;
         if (organizationId && userId) {
           saveLastOpenedNote(organizationId, userId, noteId);
         }
       })
       .catch(() => {
-        // A stale last-opened pointer (deleted note, revoked access) must not trap /notes in a dead redirect.
-        if (fromLastOpened && organizationId && userId) {
+        if (organizationId && userId && loadLastOpenedNote(organizationId, userId) === noteId) {
           clearLastOpenedNote(organizationId, userId);
-          navigate("/library/graph", { replace: true });
         }
+        dispatch(removeNote(noteId));
+        dispatch(initializeNotesData({ forceRefresh: true }));
+        navigate("/notes", { replace: true });
       });
-  }, [noteId, fromLastOpened, organizationId, userId, dispatch, navigate]);
+  }, [noteId, organizationId, userId, dispatch, navigate]);
+
+  useEffect(() => {
+    if (!noteId || loadedRouteNoteRef.current !== noteId || notesState.notes[noteId]) return;
+    if (organizationId && userId && loadLastOpenedNote(organizationId, userId) === noteId) {
+      clearLastOpenedNote(organizationId, userId);
+    }
+    loadedRouteNoteRef.current = null;
+    navigate("/notes", { replace: true });
+  }, [noteId, notesState.notes, organizationId, userId, navigate]);
 
   return (
     <>

@@ -11,8 +11,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.models.settings.settings_profile import SettingsProfile
-from uniffy.core.valkey.presence import PRESENCE_STATUS_DND, presence_get_bulk
 from uniffy.domains.notifications.delivery.timing import quiet_hours_end_at
+from uniffy.domains.presence.state import PRESENCE_STATUS_DND, presence_get_bulk
 
 _PRESENCE_BATCH_SIZE = 200
 _TIMEZONE_BATCH_SIZE = 500

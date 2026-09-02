@@ -1,6 +1,5 @@
 """Authentication operations - login, register, refresh token, session management."""
 
-import hashlib
 import os
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
@@ -11,6 +10,21 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.audit import audit_ip_var, client_ip_for_rate_limit, write_audit_event
 from uniffy.core.audit.actions import Action
+from uniffy.core.auth.devices import parse_device_label
+from uniffy.core.auth.emails import normalize_email
+from uniffy.core.auth.passwords.crypto import hash_password, verify_password
+from uniffy.core.auth.passwords.policy import validate_password
+from uniffy.core.auth.revocation import (
+    mark_session_revoked,
+    mark_sessions_revoked,
+    mark_token_version_revoked,
+)
+from uniffy.core.auth.tokens import (
+    create_access_token,
+    create_refresh_token,
+    decode_refresh_token,
+)
+from uniffy.core.config.registration import public_registration_enabled
 from uniffy.core.errors import RateLimitExceededError
 from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.login.organization import Organization
@@ -18,9 +32,10 @@ from uniffy.core.models.login.organization_member import OrganizationMember
 from uniffy.core.models.login.user import User
 from uniffy.core.models.login.user_mfa import UserMfa
 from uniffy.core.models.login.user_session import UserSession
-from uniffy.core.valkey.rate_limit import check_rate_limit
-from uniffy.domains.auth.context import parse_device_label
+from uniffy.core.rate_limit import check_rate_limit
+from uniffy.domains.auth.contracts import hash_refresh_token
 from uniffy.domains.auth.errors import AuthenticationError, RegistrationError, TokenError
+from uniffy.domains.auth.metrics import AUTH_ATTEMPTS_TOTAL
 from uniffy.domains.auth.mfa.challenge import (
     create_enrollment_only_token,
     create_mfa_challenge_token,
@@ -29,30 +44,12 @@ from uniffy.domains.auth.mfa.enforcement import (
     MfaRequirement,
     evaluate_mfa_requirement,
 )
-from uniffy.domains.auth.password_policy import validate_password
-from uniffy.domains.auth.passwords import (
-    hash_password,
-    normalize_email,
-    verify_password,
-)
-from uniffy.domains.auth.revocation import (
-    mark_session_revoked,
-    mark_sessions_revoked,
-    mark_token_version_revoked,
-)
-from uniffy.domains.auth.tokens import (
-    create_access_token,
-    create_refresh_token,
-    decode_refresh_token,
-)
 from uniffy.domains.auth.types import (
     AuthOutcome,
     AuthResult,
     MfaChallengeRequired,
     MfaEnrollmentRequired,
 )
-from uniffy.domains.system_config.operations import public_registration_enabled
-from uniffy.observability.metrics import AUTH_ATTEMPTS_TOTAL
 
 logger = logger.bind(component="auth.operations")
 
@@ -65,11 +62,6 @@ LOGIN_RATE_LIMIT_WINDOW_SECONDS = 15 * 60
 # tabs hit RefreshToken back-to-back and one tab reads the rotated token from
 # localStorage a moment after the other tab rotated.
 REFRESH_GRACE_SECONDS = 30
-
-
-def _hash_refresh_token(raw: str) -> str:
-    """SHA256 hex digest used as the at-rest fingerprint for rotation tracking."""
-    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
 
 async def _publish_session_revoke_safe(user_id: UUID, session_id: UUID) -> None:
@@ -89,15 +81,6 @@ async def _publish_session_revoke_safe(user_id: UUID, session_id: UUID) -> None:
             user_id=str(user_id),
             session_id=str(session_id),
         )
-
-
-async def is_public_registration_enabled(session: AsyncSession) -> bool:
-    """Return True when the public `Register` RPC is allowed to create users.
-
-    Resolution chain: deployment_settings row -> `ALLOW_PUBLIC_REGISTRATION`
-    env -> coded default `False`.
-    """
-    return await public_registration_enabled(session)
 
 
 class AuthOperations:
@@ -200,7 +183,7 @@ class AuthOperations:
                     grace_expires_at=None,
                 )
 
-            session_record = await self._create_session(
+            session_record = await self._stage_session(
                 user.id, user_agent, organization_id=organization_id
             )
 
@@ -217,7 +200,7 @@ class AuthOperations:
                 token_version=user.token_version,
                 session_id=session_record.id,
             )
-            session_record.refresh_token_hash = _hash_refresh_token(refresh_token)
+            session_record.refresh_token_hash = hash_refresh_token(refresh_token)
 
             await write_audit_event(
                 self._session,
@@ -298,7 +281,7 @@ class AuthOperations:
         """
         email = normalize_email(email)
         try:
-            if not await is_public_registration_enabled(self._session):
+            if not await public_registration_enabled(self._session):
                 await self._audit_register_rejected(
                     email=email, reason="public_registration_disabled"
                 )
@@ -335,42 +318,44 @@ class AuthOperations:
                 hashed_password=hashed_password,
                 full_name=full_name,
             )
-            self._session.add(user)
-            await self._session.commit()
-            await self._session.refresh(user)
+            try:
+                self._session.add(user)
+                await self._session.flush()
+
+                session_record = await self._stage_session(user.id, user_agent)
+
+                access_token = create_access_token(
+                    user.id,
+                    token_version=user.token_version,
+                    session_id=session_record.id,
+                    full_name=user.full_name,
+                    avatar_key=user.avatar_key,
+                )
+                refresh_token = create_refresh_token(
+                    user.id,
+                    token_version=user.token_version,
+                    session_id=session_record.id,
+                )
+                session_record.refresh_token_hash = hash_refresh_token(refresh_token)
+                await write_audit_event(
+                    self._session,
+                    organization_id=None,
+                    actor_user_id=user.id,
+                    action=Action.AUTH_REGISTER_SUCCESS,
+                    resource_type=AuditResourceType.USER,
+                    resource_id=user.id,
+                    details={
+                        "email": user.email,
+                        "username": user.username,
+                        "session_id": str(session_record.id),
+                    },
+                )
+                await self._session.commit()
+            except Exception:
+                await self._session.rollback()
+                raise
 
             logger.info(f"User {user.email} registered successfully")
-
-            session_record = await self._create_session(user.id, user_agent)
-
-            access_token = create_access_token(
-                user.id,
-                token_version=user.token_version,
-                session_id=session_record.id,
-                full_name=user.full_name,
-                avatar_key=user.avatar_key,
-            )
-            refresh_token = create_refresh_token(
-                user.id,
-                token_version=user.token_version,
-                session_id=session_record.id,
-            )
-            session_record.refresh_token_hash = _hash_refresh_token(refresh_token)
-            await write_audit_event(
-                self._session,
-                organization_id=None,
-                actor_user_id=user.id,
-                action=Action.AUTH_REGISTER_SUCCESS,
-                resource_type=AuditResourceType.USER,
-                resource_id=user.id,
-                details={
-                    "email": user.email,
-                    "username": user.username,
-                    "session_id": str(session_record.id),
-                },
-            )
-            await self._session.commit()
-
             AUTH_ATTEMPTS_TOTAL.labels(operation="register", outcome="success").inc()
 
             return AuthResult(
@@ -478,7 +463,7 @@ class AuthOperations:
                 now = datetime.now(UTC)
                 session_record.previous_refresh_token_hash = session_record.refresh_token_hash
                 session_record.previous_refresh_rotated_at = now
-                session_record.refresh_token_hash = _hash_refresh_token(new_refresh_token)
+                session_record.refresh_token_hash = hash_refresh_token(new_refresh_token)
 
             AUTH_ATTEMPTS_TOTAL.labels(operation="refresh", outcome="success").inc()
 
@@ -563,7 +548,7 @@ class AuthOperations:
                 old_session.is_revoked = True
                 old_session.revoked_at = datetime.now(UTC)
 
-            new_session = await self._create_session(
+            new_session = await self._stage_session(
                 user_id, user_agent, organization_id=organization_id
             )
 
@@ -580,7 +565,7 @@ class AuthOperations:
                 token_version=user.token_version,
                 session_id=new_session.id,
             )
-            new_session.refresh_token_hash = _hash_refresh_token(new_refresh)
+            new_session.refresh_token_hash = hash_refresh_token(new_refresh)
 
             await write_audit_event(
                 self._session,
@@ -625,7 +610,7 @@ class AuthOperations:
         incoming_refresh: str,
     ) -> None:
         """Refuse stolen-token replay; tolerate the brief cross-tab race."""
-        incoming_hash = _hash_refresh_token(incoming_refresh)
+        incoming_hash = hash_refresh_token(incoming_refresh)
         current = session_record.refresh_token_hash
         previous = session_record.previous_refresh_token_hash
         rotated_at = session_record.previous_refresh_rotated_at
@@ -949,13 +934,13 @@ class AuthOperations:
             await mark_sessions_revoked(session_ids)
         return session_ids
 
-    async def _create_session(
+    async def _stage_session(
         self,
         user_id: UUID,
         user_agent: str,
         organization_id: UUID | None = None,
     ) -> UserSession:
-        """Create a new session record.
+        """Stage a session in the caller's authoritative transaction.
 
         ``organization_id`` pins the session to a tenant; later refreshes
         re-mint access tokens against this org so a forgotten slug on the
@@ -972,8 +957,7 @@ class AuthOperations:
             ip_address=(audit_ip_var.get() or "")[:45],
         )
         self._session.add(session_record)
-        await self._session.commit()
-        await self._session.refresh(session_record)
+        await self._session.flush()
         return session_record
 
     async def _validate_and_touch_session(

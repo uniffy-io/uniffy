@@ -21,14 +21,14 @@ from uniffy.domains.agents.tools.builtin.args import (
     parse_uuid,
     parse_uuid_list,
 )
-from uniffy.domains.agents.tools.builtin.content_space import (
+from uniffy.domains.agents.tools.builtin.content import (
     creation_space_schema,
     parse_creation_space,
     resolve_parent_access_mode,
     space_for_access_mode,
 )
 from uniffy.domains.agents.tools.definitions import ToolContext, ToolDefinition, ToolResult
-from uniffy.domains.tags import TagOperations
+from uniffy.domains.tags.operations import TagOperations
 
 # Maximum bytes to download for on-demand extraction (10 MB).
 _MAX_DOWNLOAD_BYTES = 10 * 1024 * 1024
@@ -118,7 +118,7 @@ async def _resolve_folder_arg(ctx: ToolContext, raw: str) -> tuple[UUID | None, 
     if err:
         return None, err
 
-    ops = FolderOperations(ctx.session)
+    ops = FolderOperations(ctx.session, ctx.storage, ctx.search_indexer)
     folder = await ops.get_by_id(folder_id, ctx.organization_id)  # type: ignore[arg-type]
     if not folder or folder.is_deleted:
         return None, f"No folder with id {raw}."
@@ -142,7 +142,7 @@ async def _execute_search_files(ctx: ToolContext, args: dict) -> ToolResult:
 
     limit = clamp_int(args.get("limit", 10), 10, 1, 20)
 
-    ops = SearchOperations(ctx.session)
+    ops = SearchOperations(ctx.session, ctx.search)
     results, _has_more, _next_offset = await ops.search(
         user_id=ctx.user_id,
         organization_id=ctx.organization_id,
@@ -185,7 +185,7 @@ async def _execute_list_files(ctx: ToolContext, args: dict) -> ToolResult:
             folder_id = resolved
             scope = "this folder"
 
-    ops = FileOperations(ctx.session)
+    ops = FileOperations(ctx.session, ctx.storage, ctx.search_indexer)
     files, total = await ops.list_files(
         user_id=ctx.user_id,
         organization_id=ctx.organization_id,
@@ -233,7 +233,7 @@ async def _execute_list_folders(ctx: ToolContext, args: dict) -> ToolResult:
             return ToolResult(success=False, data="", error=err)
         scope = "this folder"
 
-    ops = FolderOperations(ctx.session)
+    ops = FolderOperations(ctx.session, ctx.storage, ctx.search_indexer)
     # One extra row is the cheapest way to know whether another page exists;
     # list_folders does not count, and counting a 50k-folder org per call would.
     folders = await ops.list_folders(
@@ -291,7 +291,7 @@ async def _execute_create_folder(ctx: ToolContext, args: dict) -> ToolResult:
         if err:
             return ToolResult(success=False, data="", error=err)
 
-    ops = FolderOperations(ctx.session)
+    ops = FolderOperations(ctx.session, ctx.storage, ctx.search_indexer)
     if parent_id is not None:
         parent = await ops.get_by_id(parent_id, ctx.organization_id)
         if parent is None:
@@ -351,7 +351,7 @@ async def _execute_move_file(ctx: ToolContext, args: dict) -> ToolResult:
     if err:
         return ToolResult(success=False, data="", error=err)
 
-    ops = FileOperations(ctx.session)
+    ops = FileOperations(ctx.session, ctx.storage, ctx.search_indexer)
     file = await ops.move_file(
         user_id=ctx.user_id,
         organization_id=ctx.organization_id,
@@ -383,11 +383,11 @@ async def _execute_get_file_info(ctx: ToolContext, args: dict) -> ToolResult:
     if err:
         return ToolResult(success=False, data="", error=err)
 
-    ops = FileOperations(ctx.session)
+    ops = FileOperations(ctx.session, ctx.storage, ctx.search_indexer)
     file = await ops.get_by_id(ctx.user_id, ctx.organization_id, file_id)  # type: ignore[arg-type]
 
     urn = f"urn:uniffy:content:FILE:{file.id}"
-    tag_ops = TagOperations(ctx.session)
+    tag_ops = TagOperations(ctx.session, ctx.search_indexer)
     tags_by_urn = await tag_ops.get_for_urns(
         organization_id=ctx.organization_id,
         content_urns=[urn],
@@ -440,7 +440,7 @@ async def _execute_read_file_content(ctx: ToolContext, args: dict) -> ToolResult
 
     max_chars = min(args.get("max_length", _DEFAULT_MAX_CHARS), _DEFAULT_MAX_CHARS)
 
-    ops = FileOperations(ctx.session)
+    ops = FileOperations(ctx.session, ctx.storage, ctx.search_indexer)
     file = await ops.get_by_id(ctx.user_id, ctx.organization_id, file_id)  # type: ignore[arg-type]
 
     mime = file.mime_type or ""
@@ -465,10 +465,9 @@ async def _execute_read_file_content(ctx: ToolContext, args: dict) -> ToolResult
 
     # Fall back to on-demand extraction
     if can_extract(mime):
-        from uniffy.core.storage import get_s3_client
-
-        s3 = get_s3_client()
-        data = await s3.download_bytes(file.storage_key)
+        if ctx.storage is None:
+            return ToolResult(success=False, data="", error="Object storage is unavailable")
+        data = await ctx.storage.download_bytes(file.storage_key)
 
         if len(data) > _MAX_DOWNLOAD_BYTES:
             data = data[:_MAX_DOWNLOAD_BYTES]
@@ -536,7 +535,7 @@ async def _execute_update_file(ctx: ToolContext, args: dict) -> ToolResult:
             error="At least one of filename, tag_ids, or description must be provided",
         )
 
-    ops = FileOperations(ctx.session)
+    ops = FileOperations(ctx.session, ctx.storage, ctx.search_indexer)
     file = await ops.update(
         user_id=ctx.user_id,
         organization_id=ctx.organization_id,
@@ -565,7 +564,7 @@ async def _execute_delete_file(ctx: ToolContext, args: dict) -> ToolResult:
     if err:
         return ToolResult(success=False, data="", error=err)
 
-    ops = FileOperations(ctx.session)
+    ops = FileOperations(ctx.session, ctx.storage, ctx.search_indexer)
     await ops.delete(
         user_id=ctx.user_id,
         organization_id=ctx.organization_id,

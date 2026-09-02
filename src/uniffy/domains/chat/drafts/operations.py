@@ -14,14 +14,14 @@ from uniffy.core.errors import NotFoundError, ValidationError
 from uniffy.core.models.chat.draft import ChatDraft
 from uniffy.core.models.chat.message import ChatMessage
 from uniffy.domains.chat.access import ChatAccessChecker
-from uniffy.domains.chat.messages.operations import MAX_MESSAGE_LENGTH
+from uniffy.domains.chat.messages.limits import MAX_MESSAGE_LENGTH
 from uniffy.domains.chat.streaming.events import (
     DRAFT_CHANGED,
     build_draft_changed_payload,
 )
 from uniffy.domains.chat.streaming.publisher import publish_user_chat_event
 
-logger = logger.bind(component="chat.drafts")
+logger = logger.bind(component="chat.drafts.operations")
 
 MAX_CLIENT_SESSION_ID_LENGTH = 64
 LIST_DRAFTS_LIMIT = 200

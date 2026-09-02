@@ -53,10 +53,12 @@ def expand_series(
     messages: list[MessageSpec] = []
     for index, moment in enumerate(occurrences):
         variant = spec.variants[index % len(spec.variants)]
-        values = _values_for(spec, index, moment)
         base_minutes = int((now_local - moment).total_seconds() // 60)
+        message_count = spec.messages_per_occurrence or len(variant.messages)
 
-        for position, (sender, text) in enumerate(variant.messages):
+        for position in range(message_count):
+            sender, text = variant.messages[position % len(variant.messages)]
+            values = _values_for(spec, index * message_count + position, moment)
             messages.append(
                 MessageSpec(
                     sender=sender,

@@ -24,7 +24,6 @@ from uniffy.core.models.agents.skill_draft import (
 )
 from uniffy.core.models.agents.skill_usage import AgentSkillUsage
 from uniffy.core.models.chat.message import ChatMessageMetadataKind, ChatMessageVisibility
-from uniffy.core.valkey.ops import _get_ops_client
 from uniffy.domains.agents.skills.operations import SkillOperations
 from uniffy.domains.agents.skills.validation import (
     SKILL_DESCRIPTION_MAX,
@@ -35,6 +34,7 @@ from uniffy.domains.agents.skills.validation import (
     has_hard_injection,
     sanitize_skill_text,
 )
+from uniffy.infrastructure.valkey.ops import get_ops_client
 
 logger = logger.bind(component="agents.skills.analysis")
 
@@ -100,7 +100,7 @@ async def is_skill_evolution_enabled(session, organization_id: UUID) -> bool:
     Off by default so self-hosted/air-gapped deployments never call an LLM for
     background analysis without the operator turning it on.
     """
-    from uniffy.domains.org_settings.operations import OrgSettingsOperations
+    from uniffy.core.config.settings.organization import OrgSettingsOperations
 
     settings = await OrgSettingsOperations(session).get_namespace(organization_id, _OPT_IN_NAMESPACE)
     row = settings.get(_OPT_IN_KEY)
@@ -115,7 +115,7 @@ async def consume_analysis_budget(organization_id: UUID) -> bool:
     Returns False when the org is over budget or Valkey is unavailable (fail
     closed - a missing budget counter must not let the analyzer run unbounded).
     """
-    client = _get_ops_client()
+    client = get_ops_client()
     if client is None:
         return False
     try:

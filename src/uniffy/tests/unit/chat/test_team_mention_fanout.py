@@ -11,6 +11,8 @@ from uniffy.core.types import generate_id
 from uniffy.domains.chat.messages.operations import ChatMessageOperations
 
 ORG = generate_id()
+TEAM_NAME = "Engineering"
+TEAM_TITLE = "Mentioned Engineering in #general"
 
 
 def _channel(channel_type: ChannelType = ChannelType.PUBLIC) -> ChatChannel:
@@ -127,10 +129,13 @@ def _emit_patches(emit_mock, stream_mock):
             await stream_mock(user_id, event_type, payload)
 
     return (
-        patch("uniffy.core.events.bus.emit_notification", emit_mock),
-        patch("uniffy.domains.chat.streaming.publisher.publish_user_chat_event", stream_mock),
+        patch("uniffy.domains.chat.messages.notifications.emit_notification", emit_mock),
         patch(
-            "uniffy.domains.chat.streaming.publisher.publish_user_chat_events",
+            "uniffy.domains.chat.messages.notifications.publish_user_chat_event",
+            stream_mock,
+        ),
+        patch(
+            "uniffy.domains.chat.messages.notifications.publish_user_chat_events",
             AsyncMock(side_effect=_fan_out),
         ),
     )
@@ -160,7 +165,7 @@ class TestEmitSendNotifications:
         sender, member = generate_id(), generate_id()
         channel = _channel()
         team_id = generate_id()
-        expansion = TeamExpansion(team_id, "Engineering", (member,))
+        expansion = TeamExpansion(team_id, TEAM_NAME, (member,))
 
         emitted, stream = await self._emit(
             channel, sender, [sender, member], set(), [(expansion, [member])]
@@ -169,16 +174,16 @@ class TestEmitSendNotifications:
         assert len(emitted) == 1
         event = emitted[0]
         assert event.notification_type is NotificationType.CHAT_MENTION
-        assert event.title == "Mentioned Engineering in #general"
+        assert event.title == TEAM_TITLE
         assert event.target_user_ids == [member]
         assert event.metadata["team_id"] == str(team_id)
-        assert event.metadata["team_name"] == "Engineering"
+        assert event.metadata["team_name"] == TEAM_NAME
         assert stream.await_count == 1
 
     async def test_direct_mention_wins_copy_and_is_excluded_from_team(self) -> None:
         sender, both, only_team = generate_id(), generate_id(), generate_id()
         channel = _channel()
-        expansion = TeamExpansion(generate_id(), "Engineering", (both, only_team))
+        expansion = TeamExpansion(generate_id(), TEAM_NAME, (both, only_team))
 
         emitted, _ = await self._emit(
             channel, sender, [sender, both, only_team], {both}, [(expansion, [both, only_team])]
@@ -186,7 +191,7 @@ class TestEmitSendNotifications:
 
         assert [e.title for e in emitted] == [
             "Mentioned you in #general",
-            "Mentioned Engineering in #general",
+            TEAM_TITLE,
         ]
         assert emitted[0].target_user_ids == [both]
         assert emitted[1].target_user_ids == [only_team]
@@ -194,7 +199,7 @@ class TestEmitSendNotifications:
     async def test_sender_never_notified_by_own_team_ping(self) -> None:
         sender, other = generate_id(), generate_id()
         channel = _channel()
-        expansion = TeamExpansion(generate_id(), "Engineering", (sender, other))
+        expansion = TeamExpansion(generate_id(), TEAM_NAME, (sender, other))
 
         emitted, _ = await self._emit(
             channel, sender, [sender, other], set(), [(expansion, [sender, other])]
@@ -206,7 +211,7 @@ class TestEmitSendNotifications:
     async def test_two_teams_notify_once_under_the_first(self) -> None:
         sender, shared = generate_id(), generate_id()
         channel = _channel()
-        first = TeamExpansion(generate_id(), "Engineering", (shared,))
+        first = TeamExpansion(generate_id(), TEAM_NAME, (shared,))
         second = TeamExpansion(generate_id(), "Design", (shared,))
 
         emitted, stream = await self._emit(
@@ -218,7 +223,7 @@ class TestEmitSendNotifications:
         )
 
         assert len(emitted) == 1
-        assert emitted[0].title == "Mentioned Engineering in #general"
+        assert emitted[0].title == TEAM_TITLE
         assert stream.await_count == 1
 
     async def test_no_team_mentions_leaves_the_chain_untouched(self) -> None:
@@ -233,7 +238,7 @@ class TestEmitSendNotifications:
     async def test_dm_recipients_exclude_team_notified_users(self) -> None:
         sender, peer = generate_id(), generate_id()
         channel = _channel(ChannelType.GROUP_DM)
-        expansion = TeamExpansion(generate_id(), "Engineering", (peer,))
+        expansion = TeamExpansion(generate_id(), TEAM_NAME, (peer,))
 
         emitted, _ = await self._emit(channel, sender, [sender, peer], set(), [(expansion, [peer])])
 
@@ -245,9 +250,7 @@ class TestPublishUnreadNotifications:
         sender, mentioned, quiet = generate_id(), generate_id(), generate_id()
         ops = _ops()
         batch = AsyncMock()
-        with patch(
-            "uniffy.domains.chat.streaming.publisher.publish_user_chat_events", batch
-        ):
+        with patch("uniffy.domains.chat.messages.notifications.publish_user_chat_events", batch):
             await ops._publish_unread_notifications(
                 _channel(ChannelType.PRIVATE),
                 sender,
@@ -278,7 +281,7 @@ class TestBackgroundPostSendFanout:
         sender = message.sender_id
         with (
             patch(
-                "uniffy.domains.chat.messages.operations.expand_team_mentions",
+                "uniffy.domains.chat.messages.delivery.expand_team_mentions",
                 AsyncMock(return_value=expansions),
             ),
             patch(
@@ -286,7 +289,7 @@ class TestBackgroundPostSendFanout:
                 AsyncMock(),
             ),
         ):
-            await ops._background_post_send(message, channel, sender, None, "Ada", member_ids)
+            await ops.background_post_send(message, channel, sender, None, "Ada", member_ids)
         return ops
 
     async def test_team_recipients_reach_both_notification_paths(self) -> None:

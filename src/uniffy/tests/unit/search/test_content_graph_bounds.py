@@ -1,7 +1,7 @@
 from uuid import UUID
 
 from uniffy.core.types import ContentType, generate_id
-from uniffy.domains.search.content_graph import GraphEdgeCollector
+from uniffy.domains.search.graph import GraphEdgeCollector
 
 
 def _urn(content_type: ContentType, content_id: UUID) -> str:

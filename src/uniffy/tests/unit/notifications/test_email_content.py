@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 
 from uniffy.core.models.notifications.email_delivery import NotificationEmailDelivery
 from uniffy.core.types import ContentType, NotificationType, generate_id
-from uniffy.domains.notifications.email_content import (
+from uniffy.domains.notifications.delivery.content import (
     notification_action_path,
     notification_preview,
 )

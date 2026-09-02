@@ -4,8 +4,8 @@ from unittest.mock import AsyncMock, patch
 from uniffy_proto.permissions.v1.permissions_pb2 import ACCESS_REQUEST_STATE_DENIED
 from uniffy_proto.notifications.v1.notifications_pb2 import NotificationType as ProtoNotificationType
 
-from uniffy.core.valkey import pubsub
-from uniffy.core.valkey.pubsub import NotificationPayloadType
+from uniffy.core.events import realtime
+from uniffy.core.events.realtime import NotificationPayloadType
 from uniffy.core.types import NotificationType, generate_id
 from uniffy.domains.notifications.converters import (
     notification_type_from_proto,
@@ -34,8 +34,8 @@ async def test_access_request_stream_publisher_targets_requester() -> None:
     retry_at = datetime(2026, 8, 17, 12, 0, tzinfo=UTC)
     publish = AsyncMock()
 
-    with patch.object(pubsub, "publish_to_channel", publish):
-        await pubsub.publish_access_request_changed(
+    with patch.object(realtime, "publish_to_channel", publish):
+        await realtime.publish_access_request_changed(
             user_id=requester_id,
             request_id=request_id,
             requested_urn="urn:uniffy:content:NOTE:019fc01f-12b6-7c82-bb38-2849821c22cb",

@@ -4,7 +4,7 @@ import pytest
 
 from uniffy.core.models.files.file_version import FileVersion
 from uniffy.core.types import generate_id
-from uniffy.domains.files.version_policy import (
+from uniffy.domains.files.versions.policy import (
     DEFAULT_KEEP_VERSIONS,
     MAX_KEEP_VERSIONS,
     MIN_KEEP_VERSIONS,

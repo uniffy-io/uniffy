@@ -25,9 +25,9 @@ from uuid import UUID
 
 from loguru import logger
 
+from uniffy.core.cache.operations import cache_delete, cache_get, cache_set
 from uniffy.core.models.agents.approval_audit import AgentApprovalStatus
-from uniffy.core.valkey.cache import cache_delete, cache_get, cache_set
-from uniffy.observability.metrics import (
+from uniffy.domains.agents.metrics import (
     APPROVAL_STORE_PENDING_SIZE,
     APPROVAL_STORE_VALKEY_UNREACHABLE_TOTAL,
 )
@@ -276,9 +276,9 @@ class ApprovalStore:
         ``request_id`` field extracted from the key. Absent/unreadable rows
         are silently skipped; Valkey failure returns an empty list.
         """
-        from uniffy.core.valkey.ops import _get_ops_client
+        from uniffy.infrastructure.valkey.ops import get_ops_client
 
-        client = _get_ops_client()
+        client = get_ops_client()
         if client is None:
             return []
 

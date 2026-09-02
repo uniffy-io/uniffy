@@ -3,13 +3,17 @@ import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   deleteChannel: vi.fn(),
+  deleteCategory: vi.fn(),
   getMessages: vi.fn(),
+  listCategories: vi.fn(),
 }));
 
 vi.mock("@/features/chat/api/chatApi", () => ({
   chatApi: {
     deleteChannel: mocks.deleteChannel,
+    deleteCategory: mocks.deleteCategory,
     getMessages: mocks.getMessages,
+    listCategories: mocks.listCategories,
   },
 }));
 
@@ -24,7 +28,11 @@ import {
 } from "@/features/chat/store/chatChannelsSlice";
 import { chatMessagesSlice, setMessages } from "@/features/chat/store/chatMessagesSlice";
 import { chatThreadsSlice } from "@/features/chat/store/chatThreadsSlice";
-import { deleteChannel, fetchMessages } from "@/features/chat/store/chatThunks";
+import {
+  deleteCategoryThunk,
+  deleteChannel,
+  fetchMessages,
+} from "@/features/chat/store/chatThunks";
 import type { RootState } from "@/app/store";
 import type { ChatChannel, ChatMessage } from "@/features/chat/types";
 
@@ -79,6 +87,8 @@ const removeItem = vi.fn();
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.deleteChannel.mockResolvedValue({});
+  mocks.deleteCategory.mockResolvedValue({});
+  mocks.listCategories.mockResolvedValue({ categories: [] });
   Object.defineProperty(globalThis, "localStorage", {
     configurable: true,
     value: { removeItem },
@@ -177,5 +187,30 @@ describe("removeChannel", () => {
       undefined,
     );
     expect(mocks.getMessages).not.toHaveBeenCalled();
+  });
+
+  it("moves channels out of a deleted category without a reload", async () => {
+    const store = configureStore({
+      reducer: {
+        auth: () => ({
+          currentOrganizationId: "organization-1",
+          user: { id: "user-1" },
+        }),
+        chatChannels: chatChannelsSlice.reducer,
+      },
+    });
+    store.dispatch(addChannel({ ...channel, categoryId: "category-1" }));
+
+    await deleteCategoryThunk("category-1")(
+      store.dispatch,
+      () => store.getState() as unknown as RootState,
+      undefined,
+    );
+
+    expect(mocks.deleteCategory).toHaveBeenCalledWith({
+      organizationId: "organization-1",
+      categoryId: "category-1",
+    });
+    expect(store.getState().chatChannels.byId[channel.id]?.categoryId).toBeNull();
   });
 });

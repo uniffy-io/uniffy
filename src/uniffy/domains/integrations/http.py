@@ -18,7 +18,7 @@ from uniffy.domains.integrations.base import (
     IntegrationAuthError,
     IntegrationUnavailableError,
 )
-from uniffy.observability.metrics import (
+from uniffy.domains.integrations.metrics import (
     INTEGRATION_HTTP_DURATION,
     INTEGRATION_HTTP_REQUESTS_TOTAL,
 )

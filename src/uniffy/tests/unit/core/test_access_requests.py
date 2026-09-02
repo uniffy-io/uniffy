@@ -14,18 +14,18 @@ from uniffy.core.models.permissions.content_access_request import (
     ContentAccessRequestState,
 )
 from uniffy.core.types import AccessMode, ContentRole, ContentType, generate_id
-from uniffy.domains.permissions.resource_access.targets import (
+from uniffy.domains.permissions.access.targets import (
     AccessGrantKind,
     AccessRequestTarget,
     AccessRequestTargetResolver,
 )
-from uniffy.domains.permissions.resource_access.types import (
+from uniffy.domains.permissions.access.types import (
     RequestTarget,
     ResourceAccessDecision,
     ResourceKey,
     ResourceRowState,
 )
-from uniffy.domains.permissions.access_requests import (
+from uniffy.domains.permissions.requests.operations import (
     AccessRequestDecision,
     ContentAccessRequestOperations,
     RequestAccessOutcome,
@@ -96,7 +96,7 @@ async def test_task_request_maps_to_project() -> None:
     )
 
     with patch(
-        "uniffy.domains.permissions.resource_access.targets.get_content_loader",
+        "uniffy.domains.permissions.access.targets.get_content_loader",
         return_value=loader,
     ):
         target = await resolver.resolve(
@@ -155,7 +155,9 @@ async def test_private_message_request_maps_to_channel() -> None:
     assert target.grant_kind == AccessGrantKind.CHAT
 
 
-@pytest.mark.parametrize("channel_type", [ChannelType.PUBLIC, ChannelType.DIRECT, ChannelType.GROUP_DM])
+@pytest.mark.parametrize(
+    "channel_type", [ChannelType.PUBLIC, ChannelType.DIRECT, ChannelType.GROUP_DM]
+)
 async def test_non_private_chat_targets_are_rejected(channel_type: ChannelType) -> None:
     channel = ChatChannel(
         organization_id=generate_id(),
@@ -193,43 +195,45 @@ async def test_non_private_chat_targets_are_rejected(channel_type: ChannelType) 
         )
 
 
-async def test_standard_approval_delegates_mode_and_member_mutations() -> None:
+async def test_standard_approval_stages_mode_and_member_mutations() -> None:
     request = _request()
     target = _standard_target(request)
     target.canonical_row.access_mode = AccessMode.OWNER_ONLY
     session = MagicMock()
-    operations = ContentAccessRequestOperations(session)
+    operations = ContentAccessRequestOperations(session, MagicMock())
 
     checker = MagicMock()
     checker.get_org_defaults = AsyncMock(return_value=(AccessMode.OWNER_ONLY, None))
     members = MagicMock()
-    members.set_access_mode = AsyncMock()
-    members.add_member = AsyncMock()
+    members.stage_access_mode = AsyncMock()
+    members.stage_member = AsyncMock()
 
     with (
         patch(
-            "uniffy.domains.permissions.access_requests.PermissionChecker",
+            "uniffy.domains.permissions.requests.operations.PermissionChecker",
             return_value=checker,
         ),
         patch(
-            "uniffy.domains.permissions.access_requests.ContentMembersOperations",
+            "uniffy.domains.permissions.requests.operations.ContentMembersOperations",
             return_value=members,
         ),
     ):
-        await operations._grant_access(
+        staged = await operations._stage_access_grant(
             request,
             target,
             actor_user_id=target.canonical_row.owner_id,
             approved_role=ContentRole.VIEWER,
         )
 
-    members.set_access_mode.assert_awaited_once()
-    members.add_member.assert_awaited_once()
-    assert members.add_member.await_args.kwargs["subject_id"] == request.requester_id
-    assert members.add_member.await_args.kwargs["role"] == ContentRole.VIEWER
+    members.stage_access_mode.assert_awaited_once()
+    members.stage_member.assert_awaited_once()
+    assert members.stage_member.await_args.kwargs["subject_id"] == request.requester_id
+    assert members.stage_member.await_args.kwargs["role"] == ContentRole.VIEWER
+    assert staged.access_mode is members.stage_access_mode.return_value
+    assert staged.content_member is members.stage_member.return_value
 
 
-async def test_chat_approval_delegates_channel_membership() -> None:
+async def test_chat_approval_stages_channel_membership() -> None:
     request = _request()
     channel = SimpleNamespace(id=generate_id())
     target = AccessRequestTarget(
@@ -242,21 +246,22 @@ async def test_chat_approval_delegates_channel_membership() -> None:
         canonical_row=channel,
     )
     channels = MagicMock()
-    channels.add_members = AsyncMock()
+    channels.stage_members = AsyncMock()
 
     with patch(
-        "uniffy.domains.permissions.access_requests.ChatChannelOperations",
+        "uniffy.domains.permissions.requests.operations.ChatChannelOperations",
         return_value=channels,
     ):
-        await ContentAccessRequestOperations(MagicMock())._grant_access(
+        staged = await ContentAccessRequestOperations(MagicMock(), MagicMock())._stage_access_grant(
             request,
             target,
             actor_user_id=generate_id(),
             approved_role=None,
         )
 
-    channels.add_members.assert_awaited_once()
-    assert channels.add_members.await_args.args[-1] == [request.requester_id]
+    channels.stage_members.assert_awaited_once()
+    assert channels.stage_members.await_args.args[-1] == [request.requester_id]
+    assert staged.chat_members is channels.stage_members.return_value
 
 
 async def test_approval_remains_pending_when_grant_does_not_provide_view_access() -> None:
@@ -264,14 +269,15 @@ async def test_approval_remains_pending_when_grant_does_not_provide_view_access(
     target = _standard_target(request)
     session = MagicMock()
     session.commit = AsyncMock()
-    operations = ContentAccessRequestOperations(session)
+    session.rollback = AsyncMock()
+    operations = ContentAccessRequestOperations(session, MagicMock())
     operations.targets = MagicMock()
     operations.targets.require_active_member = AsyncMock()
     operations.targets.resolve_request = AsyncMock(return_value=target)
     operations.targets.reviewer_can_manage = AsyncMock(return_value=True)
     operations.targets.requester_has_access = AsyncMock(return_value=False)
     operations.queries.get_request = AsyncMock(return_value=request)
-    operations._grant_access = AsyncMock()
+    operations._stage_access_grant = AsyncMock()
     operations._close_request = AsyncMock()
 
     refreshed = MagicMock()
@@ -280,7 +286,7 @@ async def test_approval_remains_pending_when_grant_does_not_provide_view_access(
 
     with (
         patch(
-            "uniffy.domains.permissions.access_requests.AccessRequestTargetResolver",
+            "uniffy.domains.permissions.requests.operations.AccessRequestTargetResolver",
             return_value=refreshed,
         ),
         pytest.raises(ConflictError, match="remains pending"),
@@ -294,16 +300,17 @@ async def test_approval_remains_pending_when_grant_does_not_provide_view_access(
             decision_note="",
         )
 
-    operations._grant_access.assert_awaited_once()
+    operations._stage_access_grant.assert_awaited_once()
     operations._close_request.assert_not_awaited()
     session.commit.assert_not_awaited()
+    session.rollback.assert_awaited_once()
     assert request.state == ContentAccessRequestState.PENDING
 
 
 async def test_existing_access_repairs_without_inserting_request() -> None:
     request = _request()
     target = _standard_target(request)
-    operations = ContentAccessRequestOperations(MagicMock())
+    operations = ContentAccessRequestOperations(MagicMock(), MagicMock())
     operations.targets = MagicMock()
     operations.targets.require_active_member = AsyncMock()
     operations.targets.resolve = AsyncMock(return_value=target)
@@ -325,7 +332,7 @@ async def test_rate_limit_stops_request_before_insert() -> None:
     target = _standard_target(request)
     session = MagicMock()
     session.execute = AsyncMock()
-    operations = ContentAccessRequestOperations(session)
+    operations = ContentAccessRequestOperations(session, MagicMock())
     operations.targets = MagicMock()
     operations.targets.require_active_member = AsyncMock()
     operations.targets.resolve = AsyncMock(return_value=target)
@@ -335,7 +342,7 @@ async def test_rate_limit_stops_request_before_insert() -> None:
 
     with (
         patch(
-            "uniffy.domains.permissions.access_requests.check_rate_limit",
+            "uniffy.domains.permissions.requests.operations.check_rate_limit",
             new=AsyncMock(
                 side_effect=RateLimitExceededError(
                     "access requests",
@@ -362,7 +369,7 @@ async def test_retry_closes_pending_request_after_independent_grant() -> None:
     session = MagicMock()
     session.add = MagicMock()
     session.commit = AsyncMock()
-    operations = ContentAccessRequestOperations(session)
+    operations = ContentAccessRequestOperations(session, MagicMock())
     operations.targets = MagicMock()
     operations.targets.require_active_member = AsyncMock()
     operations.targets.resolve_request = AsyncMock(return_value=target)
@@ -375,7 +382,7 @@ async def test_retry_closes_pending_request_after_independent_grant() -> None:
             requester_has_access=True,
         )
     )
-    operations._grant_access = AsyncMock()
+    operations._stage_access_grant = AsyncMock()
     operations._write_audit = AsyncMock()
 
     result = await operations.respond(
@@ -387,7 +394,6 @@ async def test_retry_closes_pending_request_after_independent_grant() -> None:
         decision_note="",
     )
 
-    operations._grant_access.assert_not_awaited()
+    operations._stage_access_grant.assert_not_awaited()
     assert request.state == ContentAccessRequestState.APPROVED
     assert result.requester_has_access is True
-    session.commit.assert_awaited_once()

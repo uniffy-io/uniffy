@@ -11,6 +11,7 @@ from sqlalchemy import delete, select
 
 from uniffy.core.events.bus import _event_to_json
 from uniffy.core.events.types import NotificationEvent
+from uniffy.core.database import SESSION_FACTORY_CTX_KEY
 from uniffy.core.mail import MailConfig, MailSender
 from uniffy.core.models.login.organization import Organization
 from uniffy.core.models.login.user import User
@@ -20,12 +21,13 @@ from uniffy.core.models.notifications.email_delivery import (
 )
 from uniffy.core.models.notifications.notification import Notification
 from uniffy.core.types import NotificationType
-from uniffy.domains.notifications.delivery import DELIVERY_ADAPTERS
+from uniffy.domains.notifications.delivery import DELIVERY_ADAPTERS_CTX_KEY
 from uniffy.domains.notifications.delivery.base import NotificationChannel
 from uniffy.domains.notifications.delivery.email import EmailAdapter
-from uniffy.domains.notifications.delivery.in_app import InAppAdapter
-from uniffy.domains.notifications.jobs.delivery import process_notification_event
+from uniffy.domains.notifications.delivery.app import InAppAdapter
+from uniffy.domains.notifications.jobs.jobs import process_notification_event
 from uniffy.domains.notifications.jobs.email import send_notification_email
+from uniffy.infrastructure.database import open_session
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
@@ -96,18 +98,17 @@ async def test_event_outbox_worker_and_smtp_rendering(session, env) -> None:
     enqueue = AsyncMock(return_value=True)
     try:
         async with server:
-            with (
-                patch.dict(
-                    DELIVERY_ADAPTERS,
+            with patch.object(EmailAdapter, "enqueue_if_due", enqueue):
+                processed = await process_notification_event(
                     {
-                        NotificationChannel.IN_APP: InAppAdapter(),
-                        NotificationChannel.EMAIL: EmailAdapter(),
+                        SESSION_FACTORY_CTX_KEY: open_session,
+                        DELIVERY_ADAPTERS_CTX_KEY: {
+                            NotificationChannel.IN_APP: InAppAdapter(),
+                            NotificationChannel.EMAIL: EmailAdapter(open_session),
+                        },
                     },
-                    clear=True,
-                ),
-                patch.object(EmailAdapter, "enqueue_if_due", enqueue),
-            ):
-                processed = await process_notification_event({}, _event_to_json(event))
+                    _event_to_json(event),
+                )
 
             delivery = (
                 await session.execute(

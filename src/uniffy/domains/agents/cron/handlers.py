@@ -27,6 +27,7 @@ from uniffy_proto.common.v1.common_pb2 import PaginationResponse
 
 from uniffy.core.auth.permissions import resolve_effective_policy
 from uniffy.core.auth.permissions.checker import PermissionChecker
+from uniffy.core.auth.principal import current_user_id
 from uniffy.core.converters.common_proto import (
     access_mode_from_proto,
     content_role_from_proto,
@@ -34,14 +35,13 @@ from uniffy.core.converters.common_proto import (
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models.agents.cron_task import AgentCronTask
 from uniffy.core.types import ContentType
-from uniffy.db import open_session
 from uniffy.domains.agents.cron.converters import (
     cron_run_log_to_proto,
     cron_task_to_proto,
 )
 from uniffy.domains.agents.cron.operations import CronTaskOperations
-from uniffy.domains.auth.context import get_user_id_from_context
-from uniffy.domains.permissions.resource_access import ResourceAccessResolver, ResourceKey
+from uniffy.domains.permissions.access import ResourceAccessResolver, ResourceKey
+from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="agents.cron.handlers")
 
@@ -95,7 +95,7 @@ class CronHandlers:
         ctx: RequestContext,
     ) -> CreateCronTaskResponse:
         """Create a new cron task."""
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         org_id = _parse_uuid(request.organization_id, "organization_id")
         agent_id = _parse_uuid(request.agent_id, "agent_id")
 
@@ -108,7 +108,7 @@ class CronHandlers:
 
         try:
             async with open_session() as session:
-                ops = CronTaskOperations(session)
+                ops = CronTaskOperations(session, search_indexer=self.search_indexer)
                 task = await ops.create_cron_task(
                     user_id=user_id,
                     organization_id=org_id,
@@ -146,13 +146,13 @@ class CronHandlers:
         ctx: RequestContext,
     ) -> GetCronTaskResponse:
         """Get a cron task by ID."""
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         org_id = _parse_uuid(request.organization_id, "organization_id")
         task_id = _parse_uuid(request.task_id, "task_id")
 
         try:
             async with open_session() as session:
-                ops = CronTaskOperations(session)
+                ops = CronTaskOperations(session, search_indexer=self.search_indexer)
                 task = await ops.get_by_id(user_id, org_id, task_id)
                 eff_mode, eff_baseline = await _resolve_effective_policy(
                     session,
@@ -179,7 +179,7 @@ class CronHandlers:
         ctx: RequestContext,
     ) -> ListCronTasksResponse:
         """List cron tasks."""
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         org_id = _parse_uuid(request.organization_id, "organization_id")
 
         agent_id = None
@@ -194,7 +194,7 @@ class CronHandlers:
 
         try:
             async with open_session() as session:
-                ops = CronTaskOperations(session)
+                ops = CronTaskOperations(session, search_indexer=self.search_indexer)
                 tasks, total = await ops.list_cron_tasks(
                     user_id=user_id,
                     organization_id=org_id,
@@ -249,7 +249,7 @@ class CronHandlers:
         ctx: RequestContext,
     ) -> UpdateCronTaskResponse:
         """Update a cron task."""
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         org_id = _parse_uuid(request.organization_id, "organization_id")
         task_id = _parse_uuid(request.task_id, "task_id")
 
@@ -272,7 +272,7 @@ class CronHandlers:
 
         try:
             async with open_session() as session:
-                ops = CronTaskOperations(session)
+                ops = CronTaskOperations(session, search_indexer=self.search_indexer)
                 task = await ops.update_cron_task(
                     user_id=user_id,
                     organization_id=org_id,
@@ -304,13 +304,13 @@ class CronHandlers:
         ctx: RequestContext,
     ) -> DeleteCronTaskResponse:
         """Delete a cron task."""
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         org_id = _parse_uuid(request.organization_id, "organization_id")
         task_id = _parse_uuid(request.task_id, "task_id")
 
         try:
             async with open_session() as session:
-                ops = CronTaskOperations(session)
+                ops = CronTaskOperations(session, search_indexer=self.search_indexer)
                 await ops.delete_cron_task(
                     user_id=user_id,
                     organization_id=org_id,
@@ -328,7 +328,7 @@ class CronHandlers:
         ctx: RequestContext,
     ) -> ListCronRunLogsResponse:
         """List cron run logs for a task."""
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         org_id = _parse_uuid(request.organization_id, "organization_id")
         task_id = _parse_uuid(request.task_id, "task_id")
 
@@ -340,7 +340,7 @@ class CronHandlers:
 
         try:
             async with open_session() as session:
-                ops = CronTaskOperations(session)
+                ops = CronTaskOperations(session, search_indexer=self.search_indexer)
                 logs, total = await ops.get_run_logs(
                     user_id=user_id,
                     organization_id=org_id,
@@ -369,13 +369,13 @@ class CronHandlers:
         ctx: RequestContext,
     ) -> TriggerCronTaskResponse:
         """Trigger immediate execution of a scheduled task."""
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         org_id = _parse_uuid(request.organization_id, "organization_id")
         task_id = _parse_uuid(request.task_id, "task_id")
 
         try:
             async with open_session() as session:
-                ops = CronTaskOperations(session)
+                ops = CronTaskOperations(session, search_indexer=self.search_indexer)
                 task, run_log = await ops.trigger_now(
                     user_id=user_id,
                     organization_id=org_id,

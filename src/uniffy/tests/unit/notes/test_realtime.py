@@ -10,14 +10,17 @@ is covered separately by the live-stack harness.
 import asyncio
 import base64
 import time
-from unittest.mock import AsyncMock, patch
+from contextlib import asynccontextmanager
+from unittest.mock import AsyncMock, MagicMock, patch
 from urllib.parse import quote
 from uuid import UUID
 
 import pycrdt
 import pytest
+from sqlalchemy.sql.dml import Delete
 
 from uniffy.core.jobs import JobEnqueueOutcome, JobEnqueueResult
+from uniffy.core.models.realtime.yjs_snapshot import RealtimeYjsSnapshot
 from uniffy.core.realtime import ydoc_manager as ydoc_manager_module
 from uniffy.core.realtime.adapter import (
     _adapters,
@@ -32,7 +35,8 @@ from uniffy.core.realtime.auth import (
     origin_is_allowed,
 )
 from uniffy.core.realtime.job_contracts import SAVE_REALTIME_SNAPSHOT
-from uniffy.core.realtime.snapshot import SNAPSHOT_MAX_DELAY, SnapshotWriter
+from uniffy.core.realtime.metrics import REALTIME_SNAPSHOT_DROPPED_TOTAL
+from uniffy.core.realtime.snapshot import SNAPSHOT_MAX_DELAY, SnapshotWriter, persist_snapshot
 from uniffy.core.realtime.wire import (
     YMessageType,
     YSyncMessageType,
@@ -49,7 +53,7 @@ from uniffy.core.realtime.ydoc_manager import (
     YDocSession,
 )
 from uniffy.core.types import ContentRole, ContentType, NodeType, generate_id
-from uniffy.observability.metrics import REALTIME_SNAPSHOT_DROPPED_TOTAL
+from uniffy.domains.notes.adapter import register_note_realtime_adapter
 
 _conn_id_seq = 0
 
@@ -201,7 +205,7 @@ class _DummyAdapter:
         return None
 
     async def render_and_persist(self, *args, **kwargs):  # type: ignore[no-untyped-def]
-        return None
+        return True
 
 
 class TestAdapterRegistry:
@@ -410,6 +414,38 @@ class TestSnapshotForceFlush:
 
         await go()
 
+    async def test_missing_target_removes_snapshot_written_by_a_stale_job(self) -> None:
+        ydoc = pycrdt.Doc()
+        ydoc["markdown"] = pycrdt.Text("stale")
+        session = MagicMock()
+        session.execute = AsyncMock()
+        session.commit = AsyncMock()
+        adapter = MagicMock()
+        adapter.render_and_persist = AsyncMock(return_value=False)
+
+        @asynccontextmanager
+        async def fake_open_session():
+            yield session
+
+        with (
+            patch("uniffy.core.realtime.snapshot.open_session", fake_open_session),
+            patch("uniffy.core.realtime.snapshot.get_realtime_adapter", return_value=adapter),
+        ):
+            rendered = await persist_snapshot(
+                ContentType.NOTE,
+                generate_id(),
+                generate_id(),
+                ydoc.get_update(),
+                ydoc.get_state(),
+            )
+
+        assert rendered is False
+        assert session.execute.await_count == 2
+        cleanup = session.execute.await_args_list[1].args[0]
+        assert isinstance(cleanup, Delete)
+        assert cleanup.table.name == RealtimeYjsSnapshot.__tablename__
+        assert session.commit.await_count == 2
+
     async def test_non_force_flush_enqueues(self) -> None:
         async def go() -> None:
             writer = SnapshotWriter(debounce_seconds=60.0)
@@ -490,7 +526,7 @@ class TestCanvasRender:
     """``_render_canvas_content`` round-trip via ``pycrdt`` Y types."""
 
     def test_canvas_render_emits_expected_shape(self) -> None:
-        from uniffy.domains.notes.realtime_adapter import _render_canvas_content
+        from uniffy.domains.notes.adapter import _render_canvas_content
 
         ydoc = pycrdt.Doc()
         ydoc["nodes"] = pycrdt.Map({
@@ -512,7 +548,7 @@ class TestCanvasRender:
         assert "order" not in result
 
     def test_canvas_render_returns_none_when_roots_missing(self) -> None:
-        from uniffy.domains.notes.realtime_adapter import _render_canvas_content
+        from uniffy.domains.notes.adapter import _render_canvas_content
 
         ydoc = pycrdt.Doc()
         assert _render_canvas_content(ydoc) is None
@@ -520,7 +556,7 @@ class TestCanvasRender:
 
 class TestMarkdownRender:
     def test_markdown_render_reads_y_text(self) -> None:
-        from uniffy.domains.notes.realtime_adapter import _render_markdown
+        from uniffy.domains.notes.adapter import _render_markdown
 
         ydoc = pycrdt.Doc()
         ydoc["markdown"] = pycrdt.Text("# hello\n\nworld")
@@ -528,7 +564,7 @@ class TestMarkdownRender:
         assert _render_markdown(ydoc) == "# hello\n\nworld"
 
     def test_markdown_render_returns_empty_when_root_missing(self) -> None:
-        from uniffy.domains.notes.realtime_adapter import _render_markdown
+        from uniffy.domains.notes.adapter import _render_markdown
 
         ydoc = pycrdt.Doc()
         assert _render_markdown(ydoc) == ""
@@ -543,7 +579,7 @@ class TestCanvasHydration:
     """
 
     def test_seed_canvas_ydoc_populates_y_types_from_content(self) -> None:
-        from uniffy.domains.notes.realtime_adapter import (
+        from uniffy.domains.notes.adapter import (
             _render_canvas_content,
             _seed_canvas_ydoc,
         )
@@ -584,7 +620,7 @@ class TestCanvasHydration:
         """Per-node text field seeds as ``pycrdt.Text`` so concurrent
         same-cell typing merges char-by-char; the render path coerces
         back to ``str`` via ``pycrdt.Map.to_py``."""
-        from uniffy.domains.notes.realtime_adapter import (
+        from uniffy.domains.notes.adapter import (
             _render_canvas_content,
             _seed_canvas_ydoc,
         )
@@ -636,7 +672,7 @@ class TestCanvasHydration:
     def test_seed_skips_text_wrap_for_non_text_nodes(self) -> None:
         """Nodes without a text field upgrade ``data`` to ``pycrdt.Map``
         for structural merges but leave no field as ``pycrdt.Text``."""
-        from uniffy.domains.notes.realtime_adapter import _seed_canvas_ydoc
+        from uniffy.domains.notes.adapter import _seed_canvas_ydoc
 
         existing = {
             "version": 1,
@@ -674,7 +710,7 @@ class TestCanvasHydration:
         renders as ``None`` so the snapshot pipeline preserves disk
         state instead of clobbering ``canvas_content``.
         """
-        from uniffy.domains.notes.realtime_adapter import (
+        from uniffy.domains.notes.adapter import (
             _render_canvas_content,
             _seed_canvas_ydoc,
         )
@@ -1210,7 +1246,7 @@ class TestContentReplaceGraft:
 
     async def test_graft_replaces_markdown_and_fans_out(self) -> None:
         async def go() -> None:
-            from uniffy.domains.notes import realtime_adapter  # noqa: F401  (registers NOTE)
+            register_note_realtime_adapter(MagicMock())
 
             manager = YDocManager()
             session = _make_router_session()
@@ -1238,7 +1274,7 @@ class TestContentReplaceGraft:
 
     async def test_graft_is_noop_when_content_matches(self) -> None:
         async def go() -> None:
-            from uniffy.domains.notes import realtime_adapter  # noqa: F401
+            register_note_realtime_adapter(MagicMock())
 
             manager = YDocManager()
             session = _make_router_session()
@@ -1265,7 +1301,7 @@ class TestContentReplaceGraft:
         snapshot instead of wiping it (CRDT delete-by-id, not by index)."""
 
         async def go() -> None:
-            from uniffy.domains.notes import realtime_adapter  # noqa: F401
+            register_note_realtime_adapter(MagicMock())
 
             manager = YDocManager()
             session = _make_router_session()

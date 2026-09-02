@@ -17,6 +17,13 @@ from pycrdt import Decoder
 from uniffy.core.auth.permissions import role_can_edit, role_can_view
 from uniffy.core.realtime.adapter import get_realtime_adapter
 from uniffy.core.realtime.auth import WS_CLOSE_FORBIDDEN, WS_CLOSE_UNSUPPORTED_TYPE
+from uniffy.core.realtime.metrics import (
+    REALTIME_AWARENESS_MESSAGES_TOTAL,
+    REALTIME_FRAMES_DROPPED_TOTAL,
+    REALTIME_PERMISSION_REJECTIONS_TOTAL,
+    REALTIME_REAUTH_CLOSES_TOTAL,
+    REALTIME_UPDATE_MESSAGES_TOTAL,
+)
 from uniffy.core.realtime.multiplex import encode_doc_frame, peek_var_string
 from uniffy.core.realtime.reauth import (
     REAUTH_INTERVAL_SECONDS,
@@ -39,14 +46,7 @@ from uniffy.core.realtime.wire import (
     peek_sync_sub_type,
 )
 from uniffy.core.realtime.ydoc_manager import ydoc_manager
-from uniffy.db.session import open_session
-from uniffy.observability.metrics import (
-    REALTIME_AWARENESS_MESSAGES_TOTAL,
-    REALTIME_FRAMES_DROPPED_TOTAL,
-    REALTIME_PERMISSION_REJECTIONS_TOTAL,
-    REALTIME_REAUTH_CLOSES_TOTAL,
-    REALTIME_UPDATE_MESSAGES_TOTAL,
-)
+from uniffy.infrastructure.database.session import open_session
 
 # No server-side awareness map; a query is relayed so live peers re-announce.
 MSG_QUERY_AWARENESS = 3

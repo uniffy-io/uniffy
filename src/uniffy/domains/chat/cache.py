@@ -9,7 +9,7 @@ from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from uniffy.core.valkey.cache import (
+from uniffy.core.cache.operations import (
     CACHE_MISS,
     cache_delete,
     cache_get,
@@ -18,7 +18,7 @@ from uniffy.core.valkey.cache import (
     cache_set,
 )
 
-logger = logger.bind(component="chat-cache")
+logger = logger.bind(component="chat.cache")
 
 _MEMBER_LIST_TTL_SECONDS = 300
 _DM_PEERS_TTL_SECONDS = 3600

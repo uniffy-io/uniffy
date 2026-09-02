@@ -2,6 +2,7 @@
   "company": "Uniffy",
   "root_folder": "Uniffy HQ",
   "timezone": "Europe/Sofia",
+  "history_days": 730,
   "demo_user": {
     "email": "maria@uniffy.io",
     "username": "maria",
@@ -19,6 +20,7 @@
     { "name": "plovdiv-office", "color": "#0ea5e9" },
     { "name": "onboarding", "color": "#eab308" },
     { "name": "people", "color": "#ec4899" },
-    { "name": "infra", "color": "#14b8a6" }
+    { "name": "infra", "color": "#14b8a6" },
+    { "name": "archive", "color": "#64748b" }
   ]
 }

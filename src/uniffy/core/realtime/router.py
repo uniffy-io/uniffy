@@ -19,6 +19,10 @@ from uuid import UUID
 from loguru import logger
 
 from uniffy.core.realtime.identity import replica_id
+from uniffy.core.realtime.metrics import (
+    REALTIME_PUBSUB_LATENCY,
+    REALTIME_PUBSUB_RECONNECTS_TOTAL,
+)
 from uniffy.core.realtime.publisher import (
     RealtimeChannelKind,
     RealtimeChannelNamespace,
@@ -26,11 +30,7 @@ from uniffy.core.realtime.publisher import (
 )
 from uniffy.core.realtime.state import ClientHandle, DocKey, YDocSession
 from uniffy.core.types import ContentType
-from uniffy.core.valkey.pubsub import subscribe_patterns
-from uniffy.observability.metrics import (
-    REALTIME_PUBSUB_LATENCY,
-    REALTIME_PUBSUB_RECONNECTS_TOTAL,
-)
+from uniffy.infrastructure.valkey.pubsub import subscribe_patterns
 
 LOGGER_COMPONENT = "realtime.router"
 

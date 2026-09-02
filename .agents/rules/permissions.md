@@ -88,7 +88,7 @@ Gate operations with these predicates, never with raw role comparisons:
 
 ## Mutating access - `ContentMembersOperations` only
 
-All member and access-mode changes go through `ContentMembersOperations` (`core/content/members.py`), surfaced as `permissions.v1.MembersService`:
+All member and access-mode changes go through `ContentMembersOperations` (`domains/permissions/members.py`), surfaced as `permissions.v1.MembersService`:
 
 | RPC | Effect |
 |---|---|
@@ -109,7 +109,7 @@ Valkey remains appropriate for queues, realtime, rate limits, search candidate h
 
 ## Search and tags
 
-- **Meilisearch** (`core/search/meilisearch.py::_build_permission_filter`): filters on `owner_id` / `shared_user_ids` / `shared_group_ids` / `OPEN_TO_ORG` minus `blocked_*`. It is a candidate-reduction hint only; every returned candidate passes the PostgreSQL resource resolver before preview metadata is exposed. It has **no admin bypass and must keep none.** Sharing fields are denormalised into the index by `BaseContentOperations._index_for_search` and refreshed by `update_document_sharing` on every member mutation.
+- **Search candidate policy** (`core/search/policy.py::build_candidate_filter`): filters on `owner_id` / `shared_user_ids` / `shared_group_ids` / `OPEN_TO_ORG` minus `blocked_*`. It is a candidate-reduction hint only; every returned candidate passes the PostgreSQL resource resolver before preview metadata is exposed. It has **no admin bypass and must keep none.** Sharing fields are denormalised into the index by `BaseContentOperations._index_for_search` and refreshed by `update_document_sharing` on every member mutation. `WorkspaceSearch` owns this application policy; infrastructure adapters only render its typed filter tree for their engine.
 - **`visible_sets.py`** (tag visibility + content-type id sets, drives the tag search post-filter and tag-filter UI): admins are filtered like members, with one exception - a `chat_moderator` (org admin or chat domain admin) sees all `CHAT` assignments, mirroring chat moderation.
 
 ## Domain admin (`DomainAdmin`)
@@ -117,13 +117,13 @@ Valkey remains appropriate for queues, realtime, rate limits, search candidate h
 `DomainAdmin` grants elevated **domain-level operations** (per `(organization_id, user_id, domain)`), checked via `is_domain_admin` (`core/auth/domain_admin.py`). It does **not** grant access to other members' content - `effective_role` ignores it. Live consumers:
 
 - **Chat moderation** - org admins + chat domain admins via `ChatAccessChecker`.
-- **Agents builders** - org admins + AGENTS domain admins (`is_agents_builder`, `domains/agents/access.py`) manage the org-wide agent surface: agent/skill/automation CRUD, the skill-draft inbox, and org-scope agent memories all gate on `require_agents_builder` instead of content roles. Agents/automations remain ordinary content rows for READS (`effective_role`, `build_accessible_filter`, Meili - all unchanged); only management is domain-level. Cron tasks additionally move their execution identity to whoever rewrites the prompt (see `agents.md`) - a domain-level manage power must never become a way to run code as another user.
+- **Agents builders** - org admins + AGENTS domain admins (`is_agents_builder`, `domains/agents/access.py`) manage the org-wide agent surface: agent/skill/automation CRUD, the skill-draft inbox, and org-scope agent memories all gate on `require_agents_builder` instead of content roles. Agents/automations remain ordinary content rows for READS (`effective_role`, `build_accessible_filter`, search candidates - all unchanged); only management is domain-level. Cron tasks additionally move their execution identity to whoever rewrites the prompt (see `agents.md`) - a domain-level manage power must never become a way to run code as another user.
 
 Granting or revoking a `DomainAdmin` row commits the PostgreSQL fact and publishes the existing audit/realtime effects. The grant is conditional on an active `OrganizationMember` row (see "Deactivation").
 
 ### Manage override (`register_manage_override`)
 
-`ContentMembersOperations._require_manage` consults a per-content-type override when the actor's content role fails: `register_manage_override(content_type, check)` in `core/content/members.py`. A passing check yields `ContentRole.ADMIN` for that mutation only - member CRUD, `SetAccessMode` - never for transfer, and never inside `effective_role`, so reads/lists/search stay unaffected. Registered: `AGENT` -> `is_agents_builder`. This is the sanctioned shape for domain-level management powers; adding an override for personal-content types would re-introduce god-mode - don't.
+`ContentMembersOperations._require_manage` consults a per-content-type override when the actor's content role fails: `register_manage_override(content_type, check)` in `core/content/registry.py`. A passing check yields `ContentRole.ADMIN` for that mutation only - member CRUD, `SetAccessMode` - never for transfer, and never inside `effective_role`, so reads/lists/search stay unaffected. Registered: `AGENT` -> `is_agents_builder`. This is the sanctioned shape for domain-level management powers; adding an override for personal-content types would re-introduce god-mode - don't.
 
 ## Chat (separate access model)
 
@@ -131,9 +131,9 @@ Chat uses channel membership, not `access_mode`. `ChatAccessChecker` (`domains/c
 
 ## People profiles (member-record data, not content)
 
-A `people_profiles` row - job title, department, manager edge, phones, bio - is **member-record data governed by org role, not content**. It carries no `access_mode`, no `baseline_role` and no `ContentMember` rows, and it never routes through `PermissionChecker`. Reads gate on `require_org_member` and writes on `require_org_admin` (org facts) or self (personal fields); `ViewerRelation` / `relation_for` (`domains/people/access.py`) decides edit affordances only, never what a viewer may read - every field a member fills in is readable by the whole org, and the only privacy knobs are the org-level `directory_enabled` / `org_chart_enabled` toggles plus leaving a field empty.
+A `people_profiles` row - job title, department, manager edge, phones, bio - is **member-record data governed by org role, not content**. It carries no `access_mode`, no `baseline_role` and no `ContentMember` rows, and it never routes through `PermissionChecker`. Reads gate on `require_org_member` and writes on `require_org_admin` (org facts) or self (personal fields); `ViewerRelation` / `relation_for` (`domains/directory/people/access.py`) decides edit affordances only, never what a viewer may read - every field a member fills in is readable by the whole org, and the only privacy knobs are the org-level `directory_enabled` / `org_chart_enabled` toggles plus leaving a field empty.
 
-The consequence that matters here: an org admin editing someone's profile gains **zero** content access. Nothing in the people domain may add a branch to `effective_role` or `build_accessible_filter`, touch `_build_permission_filter` / `visible_sets.py`, or register a `register_manage_override`. `tests/unit/people/test_people_access.py` asserts both halves - the admin still resolves to `None` on that member's `OWNER_ONLY` note, and an AST walk over `domains/people/` fails the build if any of those names appears there.
+The consequence that matters here: an org admin editing someone's profile gains **zero** content access. Nothing in the people domain may add a branch to `effective_role` or `build_accessible_filter`, touch `build_candidate_filter` / `visible_sets.py`, or register a `register_manage_override`. `tests/unit/directory/people/test_people_access.py` asserts both halves - the admin still resolves to `None` on that member's `OWNER_ONLY` note, and an AST walk over `domains/directory/people/` fails the build if any of those names appears there.
 
 ## Frontend mirror (advisory only)
 
@@ -141,13 +141,13 @@ The consequence that matters here: an org admin editing someone's profile gains 
 
 ## Hard rules
 
-- Never add an org/domain admin content bypass anywhere - not in `effective_role`, list methods, the Meili filter, or `visible_sets`. This is the single most important invariant here.
+- Never add an org/domain admin content bypass anywhere - not in `effective_role`, list methods, the search candidate filter, or `visible_sets`. This is the single most important invariant here.
 - Apply `build_accessible_filter` for everyone in any list/sidebar/tree path.
 - Permission checks live inside domain operations (the access policy is well-typed there).
 - Change `access_mode` / members only through `ContentMembersOperations` (audit + fanout + cache invalidation ride along).
 - `BLOCKED` always wins, even over ownership-of-content and even for admins.
-- Adding a content type to the system: extend `BaseContentOperations`, register a loader with `ContentMembersOperations`, add it to `_CONTENT_TYPE_TO_DOMAIN` in `checker.py` if it has a domain admin, seed `ORG_PERMISSION_DEFAULTS`, and index the sharing fields.
+- Adding a content type to the system: extend `BaseContentOperations`, register its loader in `core/content/registry.py`, add it to `_CONTENT_TYPE_TO_DOMAIN` in `checker.py` if it has a domain admin, seed `ORG_PERMISSION_DEFAULTS`, and index the sharing fields.
 
-Guard tests, unit: `tests/unit/core/test_effective_role.py`, `tests/unit/core/test_access_query.py`, `tests/unit/core/test_visible_sets.py`, `tests/unit/core/test_member_ops.py`, `tests/unit/people/test_people_access.py`.
+Guard tests, unit: `tests/unit/core/test_effective_role.py`, `tests/unit/core/test_access_query.py`, `tests/unit/core/test_visible_sets.py`, `tests/unit/permissions/test_member_ops.py`, `tests/unit/directory/people/test_people_access.py`.
 
 Guard tests, integration (`tests/integration/access/`, real Postgres): the filters are asserted on the ROWS they return, never on the text of the generated SQL - a query string can read correct and still leak. `test_notes_access_filter.py` proves an org admin's `list_notes` excludes another member's `OWNER_ONLY` note; `test_deactivated_membership.py` proves a deactivated member reaches nothing.

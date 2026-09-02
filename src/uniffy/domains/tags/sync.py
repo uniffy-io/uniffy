@@ -1,24 +1,7 @@
-"""Inline-tag reconciliation helpers.
-
-Notes parse ``[[[tag|name]]]`` markers out of markdown / canvas content.
-This module reconciles those parsed names with the central tags store
-so the same tag namespace serves both the inline source (notes) and
-the manual source (every other domain).
-
-Reconciliation rules
---------------------
-- Each parsed name normalizes to a slug. Unknown slugs spawn new
-  ``Tag`` rows with ``created_by = actor_id``.
-- For each name we add ``inline`` to the assignment's ``sources``.
-- Assignments that previously carried ``inline`` but whose tag is no
-  longer parsed have ``inline`` stripped. If the resulting ``sources``
-  is empty, the row is deleted; otherwise the row stays alive (the
-  manual side still references it).
-- The 20-tag manual cap does not apply to inline syncing — exceeding
-  the cap should never break a note save.
-"""
+"""Reconcile note inline-tag markers with the central tag store."""
 
 from collections.abc import Iterable
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from uuid import UUID
 
@@ -26,15 +9,22 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.models.tags.tag import Tag, TagAssignment
-from uniffy.core.valkey.tags import (
+from uniffy.domains.tags.events import (
     EVENT_TAG_ASSIGNMENT_CHANGED,
     publish_tag_event,
 )
 from uniffy.domains.tags.normalize import slugify_tag
-from uniffy.domains.tags.operations import (
-    SOURCE_INLINE,
-    _content_type_from_urn,
-)
+from uniffy.domains.tags.operations import _content_type_from_urn
+from uniffy.domains.tags.reader import SOURCE_INLINE
+
+
+@dataclass(frozen=True)
+class StagedInlineTagSync:
+    organization_id: UUID
+    content_urn: str
+    content_type: str
+    added_tag_ids: tuple[UUID, ...]
+    removed_tag_ids: tuple[UUID, ...]
 
 
 async def sync_inline_tags(
@@ -45,13 +35,32 @@ async def sync_inline_tags(
     actor_id: UUID,
     parsed_names: Iterable[str],
 ) -> tuple[list[UUID], list[UUID]]:
-    """Reconcile inline-source assignments for a content URN.
+    """Reconcile and publish inline-source assignments for a content URN."""
+    staged = await stage_inline_tags(
+        session,
+        content_urn=content_urn,
+        organization_id=organization_id,
+        actor_id=actor_id,
+        parsed_names=parsed_names,
+    )
+    try:
+        await session.commit()
+    except Exception:
+        await session.rollback()
+        raise
+    await finish_inline_tags_after_commit(staged)
+    return list(staged.added_tag_ids), list(staged.removed_tag_ids)
 
-    Returns ``(added_tag_ids, removed_tag_ids)`` for diagnostic and
-    realtime purposes. The caller is responsible for committing
-    upstream context (the surrounding note save) -- this helper writes
-    its own commit before publishing.
-    """
+
+async def stage_inline_tags(
+    session: AsyncSession,
+    *,
+    content_urn: str,
+    organization_id: UUID,
+    actor_id: UUID,
+    parsed_names: Iterable[str],
+) -> StagedInlineTagSync:
+    """Reconcile inline assignments without committing the caller's transaction."""
     content_type = _content_type_from_urn(content_urn)
 
     desired_slugs: dict[str, str] = {}
@@ -120,22 +129,29 @@ async def sync_inline_tags(
             update(Tag).where(Tag.id.in_([t.id for t in tags_for_slugs])).values(last_used_at=now)
         )
 
-    await session.commit()
+    await session.flush()
+    return StagedInlineTagSync(
+        organization_id=organization_id,
+        content_urn=content_urn,
+        content_type=content_type.value,
+        added_tag_ids=tuple(added_tag_ids),
+        removed_tag_ids=tuple(removed_tag_ids),
+    )
 
-    if added_tag_ids or removed_tag_ids:
+
+async def finish_inline_tags_after_commit(staged: StagedInlineTagSync) -> None:
+    if staged.added_tag_ids or staged.removed_tag_ids:
         await publish_tag_event(
-            organization_id,
+            staged.organization_id,
             EVENT_TAG_ASSIGNMENT_CHANGED,
             {
-                "content_urn": content_urn,
-                "content_type": content_type.value,
-                "added": [str(tid) for tid in added_tag_ids],
-                "removed": [str(tid) for tid in removed_tag_ids],
+                "content_urn": staged.content_urn,
+                "content_type": staged.content_type,
+                "added": [str(tid) for tid in staged.added_tag_ids],
+                "removed": [str(tid) for tid in staged.removed_tag_ids],
                 "source": SOURCE_INLINE,
             },
         )
-
-    return added_tag_ids, removed_tag_ids
 
 
 async def _ensure_tags(

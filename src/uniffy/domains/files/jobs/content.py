@@ -1,6 +1,6 @@
 """Download a file, extract its text, persist to FileMediaInfo, and re-index it."""
 
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 from loguru import logger
@@ -12,16 +12,18 @@ from uniffy.core.auth.permissions.defaults import (
     resolve_content_defaults,
     resolve_effective_policy,
 )
+from uniffy.core.events.realtime import NotificationPayloadType, publish_notification
 from uniffy.core.extraction import UnsupportedFormatError, extract_text
+from uniffy.core.models.files.attachment import Attachment
 from uniffy.core.models.files.file import ExtractionStatus, File
 from uniffy.core.models.files.folder import Folder
 from uniffy.core.models.files.media_info import FileMediaInfo
-from uniffy.core.search.indexer import SearchIndexer, build_content_urn
-from uniffy.core.storage.s3_client import get_s3_client
+from uniffy.core.search.indexer import SEARCH_INDEXER_CTX_KEY, SearchIndexer, build_content_urn
+from uniffy.core.storage import OBJECT_STORAGE_CTX_KEY, ObjectStorage
 from uniffy.core.types import ContentType
-from uniffy.core.valkey import NotificationPayloadType, publish_notification
-from uniffy.db.session import open_session
-from uniffy.domains.tags import TagOperations
+from uniffy.domains.files.attachments.folders import is_attachment_staging_folder
+from uniffy.domains.tags.reader import TagReader
+from uniffy.infrastructure.database.session import open_session
 from uniffy.vendor.arq import Retry
 
 logger = logger.bind(component="files.jobs.content")
@@ -41,7 +43,7 @@ async def extract_document_content(
     log.info("Started")
 
     file_uuid = UUID(file_id)
-    s3 = get_s3_client()
+    storage = cast(ObjectStorage, ctx[OBJECT_STORAGE_CTX_KEY])
 
     async with open_session() as session:
         file = await session.get(
@@ -62,7 +64,7 @@ async def extract_document_content(
         mime_type = file.mime_type or ""
 
         try:
-            data = await s3.download_bytes(file.storage_key)
+            data = await storage.download_bytes(file.storage_key)
             log.info("Downloaded file", bytes=len(data))
 
             if len(data) > _MAX_DOWNLOAD_BYTES:
@@ -101,7 +103,12 @@ async def extract_document_content(
             file.extraction_status = ExtractionStatus.COMPLETED
             await session.commit()
 
-            await _reindex_file(session, file, result.text)
+            await _reindex_file(
+                session,
+                file,
+                result.text,
+                ctx[SEARCH_INDEXER_CTX_KEY],
+            )
 
             try:
                 await publish_notification(
@@ -155,9 +162,6 @@ async def _is_staged_attachment(session: Any, file: File) -> bool:
     """Unclaimed upload in a staging folder - attached files DO carry a doc."""
     if file.folder_id is None:
         return False
-    from uniffy.core.models.files.attachment import Attachment
-    from uniffy.domains.files.attachments.operations import is_attachment_staging_folder
-
     folder = (
         await session.execute(select(Folder).where(Folder.id == file.folder_id))
     ).scalar_one_or_none()
@@ -169,8 +173,12 @@ async def _is_staged_attachment(session: Any, file: File) -> bool:
     return claimed is None
 
 
-async def _reindex_file(session: Any, file: File, extracted_text: str) -> None:
-    """Re-index the file in Meilisearch with extracted text added to the keywords."""
+async def _reindex_file(
+    session: Any,
+    file: File,
+    extracted_text: str,
+    search_indexer: SearchIndexer,
+) -> None:
     try:
         if await _is_staged_attachment(session, file):
             # Staged/private attachment uploads have no search document;
@@ -188,7 +196,7 @@ async def _reindex_file(session: Any, file: File, extracted_text: str) -> None:
 
         keywords = " ".join(filter(None, parts))
 
-        tag_ops = TagOperations(session)
+        tag_ops = TagReader(session)
         tags_by_urn = await tag_ops.get_for_urns(
             organization_id=file.organization_id,
             content_urns=[urn],
@@ -210,8 +218,7 @@ async def _reindex_file(session: Any, file: File, extracted_text: str) -> None:
             default_baseline,
         )
 
-        indexer = SearchIndexer()
-        await indexer.index(
+        await search_indexer.index(
             urn=urn,
             organization_id=file.organization_id,
             title=file.filename,

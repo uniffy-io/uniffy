@@ -12,13 +12,13 @@ import time
 from dataclasses import dataclass
 
 from uniffy.core.auth.membership import is_active_member
+from uniffy.core.auth.revocation import is_access_token_revoked, is_session_revoked
 from uniffy.core.realtime.auth import (
     WS_CLOSE_FORBIDDEN,
     WS_CLOSE_REAUTH_REQUIRED,
     WS_CLOSE_TOKEN_REVOKED,
 )
 from uniffy.core.realtime.state import WSSession
-from uniffy.domains.auth.revocation import is_access_token_revoked, is_session_revoked
 
 REAUTH_INTERVAL_SECONDS = 30
 

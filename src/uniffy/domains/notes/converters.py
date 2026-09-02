@@ -26,8 +26,8 @@ from uniffy.core.converters.common_proto import (
 )
 from uniffy.core.json_codec import dumps_str
 from uniffy.core.models.notes.note import Note
+from uniffy.core.models.tags.tag import Tag
 from uniffy.core.types import AccessMode, ContentRole, NodeType
-from uniffy.domains.tags import Tag
 from uniffy.domains.tags.converters import tag_to_proto
 
 NODE_TYPE_TO_PROTO: dict[NodeType, ProtoNodeType.ValueType] = {

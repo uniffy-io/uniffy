@@ -23,18 +23,17 @@ from uniffy_proto.integrations.v1.integrations_pb2 import (
     ValidateConnectionResponse,
 )
 
+from uniffy.core.auth.principal import (
+    current_user_id,
+    resolve_organization_id,
+)
 from uniffy.core.errors import (
     ConflictError,
     NotFoundError,
     PermissionDeniedError,
     ValidationError,
 )
-from uniffy.db import open_session
 from uniffy.domains.agents.access import is_org_admin
-from uniffy.domains.auth.context import (
-    get_user_id_from_context,
-    resolve_organization_id,
-)
 from uniffy.domains.integrations.converters import (
     connection_to_proto,
     provider_info_to_proto,
@@ -42,6 +41,7 @@ from uniffy.domains.integrations.converters import (
 from uniffy.domains.integrations.operations import ConnectionOperations
 from uniffy.domains.integrations.registry import get_integration_registry
 from uniffy.domains.organizations.operations import OrganizationOperations
+from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="integrations.handlers")
 
@@ -74,8 +74,8 @@ class IntegrationsHandlers:
         request: ListIntegrationProvidersRequest,
         ctx: RequestContext,
     ) -> ListIntegrationProvidersResponse:
-        user_id = get_user_id_from_context(ctx)
-        org_id = resolve_organization_id(ctx, request.organization_id)
+        user_id = current_user_id()
+        org_id = resolve_organization_id(request.organization_id)
 
         try:
             async with open_session() as session:
@@ -96,8 +96,8 @@ class IntegrationsHandlers:
         request: ListConnectionsRequest,
         ctx: RequestContext,
     ) -> ListConnectionsResponse:
-        user_id = get_user_id_from_context(ctx)
-        org_id = resolve_organization_id(ctx, request.organization_id)
+        user_id = current_user_id()
+        org_id = resolve_organization_id(request.organization_id)
 
         provider = request.provider if request.HasField("provider") else None
 
@@ -125,8 +125,8 @@ class IntegrationsHandlers:
         request: AddConnectionRequest,
         ctx: RequestContext,
     ) -> AddConnectionResponse:
-        user_id = get_user_id_from_context(ctx)
-        org_id = resolve_organization_id(ctx, request.organization_id)
+        user_id = current_user_id()
+        org_id = resolve_organization_id(request.organization_id)
 
         try:
             async with open_session() as session:
@@ -154,8 +154,8 @@ class IntegrationsHandlers:
         request: UpdateConnectionRequest,
         ctx: RequestContext,
     ) -> UpdateConnectionResponse:
-        user_id = get_user_id_from_context(ctx)
-        org_id = resolve_organization_id(ctx, request.organization_id)
+        user_id = current_user_id()
+        org_id = resolve_organization_id(request.organization_id)
         connection_id = _parse_uuid(request.connection_id, "connection_id")
 
         kwargs: dict = {}
@@ -190,8 +190,8 @@ class IntegrationsHandlers:
         request: RemoveConnectionRequest,
         ctx: RequestContext,
     ) -> RemoveConnectionResponse:
-        user_id = get_user_id_from_context(ctx)
-        org_id = resolve_organization_id(ctx, request.organization_id)
+        user_id = current_user_id()
+        org_id = resolve_organization_id(request.organization_id)
         connection_id = _parse_uuid(request.connection_id, "connection_id")
 
         try:
@@ -213,8 +213,8 @@ class IntegrationsHandlers:
         request: ValidateConnectionRequest,
         ctx: RequestContext,
     ) -> ValidateConnectionResponse:
-        user_id = get_user_id_from_context(ctx)
-        org_id = resolve_organization_id(ctx, request.organization_id)
+        user_id = current_user_id()
+        org_id = resolve_organization_id(request.organization_id)
         connection_id = _parse_uuid(request.connection_id, "connection_id")
 
         try:
@@ -242,8 +242,8 @@ class IntegrationsHandlers:
         request: ToggleConnectionRequest,
         ctx: RequestContext,
     ) -> ToggleConnectionResponse:
-        user_id = get_user_id_from_context(ctx)
-        org_id = resolve_organization_id(ctx, request.organization_id)
+        user_id = current_user_id()
+        org_id = resolve_organization_id(request.organization_id)
         connection_id = _parse_uuid(request.connection_id, "connection_id")
 
         try:

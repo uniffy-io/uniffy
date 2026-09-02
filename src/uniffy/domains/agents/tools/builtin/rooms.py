@@ -130,7 +130,7 @@ def _parse_booking_status(raw: str) -> tuple[BookingStatus | None, str | None]:
 
 async def _execute_list_rooms(ctx: ToolContext, args: dict) -> ToolResult:
     """List rooms available to the user, with optional filters."""
-    from uniffy.domains.rooms.operations import RoomOperations
+    from uniffy.domains.scheduling.rooms.lifecycle import RoomOperations
 
     kwargs: dict = {}
 
@@ -183,7 +183,8 @@ async def _execute_list_rooms(ctx: ToolContext, args: dict) -> ToolResult:
 
 async def _execute_get_room(ctx: ToolContext, args: dict) -> ToolResult:
     """Get a room's details and a 7-day window of upcoming bookings."""
-    from uniffy.domains.rooms.operations import BookingOperations, RoomOperations
+    from uniffy.domains.scheduling.rooms.bookings import BookingOperations
+    from uniffy.domains.scheduling.rooms.lifecycle import RoomOperations
 
     room_id_str = args.get("room_id", "")
     if not room_id_str:
@@ -224,7 +225,7 @@ async def _execute_get_room(ctx: ToolContext, args: dict) -> ToolResult:
 
 async def _execute_list_bookings(ctx: ToolContext, args: dict) -> ToolResult:
     """List upcoming bookings, optionally filtered by room and date range."""
-    from uniffy.domains.rooms.operations import BookingOperations
+    from uniffy.domains.scheduling.rooms.bookings import BookingOperations
 
     kwargs: dict = {}
     raw_room = args.get("room_id")
@@ -278,7 +279,7 @@ async def _execute_list_bookings(ctx: ToolContext, args: dict) -> ToolResult:
 
 async def _execute_find_available(ctx: ToolContext, args: dict) -> ToolResult:
     """Find rooms free over a time window with optional filters."""
-    from uniffy.domains.rooms.operations import BookingOperations
+    from uniffy.domains.scheduling.rooms.bookings import BookingOperations
 
     tz = ctx.user_timezone
     start_str = args.get("start_time", "")
@@ -336,7 +337,7 @@ async def _execute_find_available(ctx: ToolContext, args: dict) -> ToolResult:
 
 async def _execute_book_room(ctx: ToolContext, args: dict) -> ToolResult:
     """Reserve a room for a time slot."""
-    from uniffy.domains.rooms.operations import BookingOperations
+    from uniffy.domains.scheduling.rooms.bookings import BookingOperations
 
     room_id_str = args.get("room_id", "")
     if not room_id_str:
@@ -394,7 +395,7 @@ async def _execute_book_room(ctx: ToolContext, args: dict) -> ToolResult:
 
 async def _execute_cancel_booking(ctx: ToolContext, args: dict) -> ToolResult:
     """Cancel an existing room booking."""
-    from uniffy.domains.rooms.operations import BookingOperations
+    from uniffy.domains.scheduling.rooms.bookings import BookingOperations
 
     booking_id_str = args.get("booking_id", "")
     if not booking_id_str:

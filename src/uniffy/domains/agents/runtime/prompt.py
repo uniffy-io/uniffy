@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from uuid import UUID
 
-from uniffy.domains.agents.runtime.workspace_prompt import WORKSPACE_PROMPT
+from uniffy.domains.agents.runtime.workspace import WORKSPACE_PROMPT
 from uniffy.domains.agents.tools.deferral import LOAD_GROUP_TOOL
 from uniffy.domains.agents.tools.registry import to_api_name
 

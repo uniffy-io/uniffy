@@ -1,4 +1,4 @@
-"""Unit tests for :mod:`uniffy.domains.mail.system_operations`.
+"""Unit tests for :mod:`uniffy.domains.mail.system.operations`.
 
 Hits the pure / validation paths with mocked dependencies so the suite
 stays fast and doesn't require a live database. The integration path
@@ -15,7 +15,7 @@ import pytest
 from uniffy.core.audit.actions import Action
 from uniffy.core.errors import ValidationError
 from uniffy.core.types import generate_id
-from uniffy.domains.mail.system_operations import (
+from uniffy.domains.mail.system.operations import (
     SystemMailOperations,
     _flatten_delivery,
     _outcome_actions,
@@ -146,9 +146,9 @@ class TestRemoveSuppressionValidation:
     def _build_ops(self) -> SystemMailOperations:
         session = MagicMock()
         with (
-            patch("uniffy.domains.mail.system_operations.UserOperations"),
-            patch("uniffy.domains.mail.system_operations.OrgSettingsOperations"),
-            patch("uniffy.domains.mail.system_operations.SuppressionRepository"),
+            patch("uniffy.domains.mail.system.operations.UserOperations"),
+            patch("uniffy.domains.mail.system.operations.OrgSettingsOperations"),
+            patch("uniffy.domains.mail.system.operations.SuppressionRepository"),
         ):
             ops = SystemMailOperations(session)
         ops._user_ops.require_system_admin = AsyncMock()
@@ -177,9 +177,9 @@ class TestForceClearOrgConfigValidation:
     def _build_ops(self) -> SystemMailOperations:
         session = MagicMock()
         with (
-            patch("uniffy.domains.mail.system_operations.UserOperations"),
-            patch("uniffy.domains.mail.system_operations.OrgSettingsOperations"),
-            patch("uniffy.domains.mail.system_operations.SuppressionRepository"),
+            patch("uniffy.domains.mail.system.operations.UserOperations"),
+            patch("uniffy.domains.mail.system.operations.OrgSettingsOperations"),
+            patch("uniffy.domains.mail.system.operations.SuppressionRepository"),
         ):
             ops = SystemMailOperations(session)
         ops._user_ops.require_system_admin = AsyncMock()

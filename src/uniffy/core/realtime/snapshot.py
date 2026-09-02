@@ -10,19 +10,20 @@ from uuid import UUID
 
 import pycrdt
 from loguru import logger
+from sqlalchemy import delete
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from uniffy.core.jobs import JobEnqueueOutcome, enqueue_job_reconnecting
 from uniffy.core.models.realtime.yjs_snapshot import RealtimeYjsSnapshot
 from uniffy.core.realtime.adapter import get_realtime_adapter
 from uniffy.core.realtime.job_contracts import SAVE_REALTIME_SNAPSHOT
-from uniffy.core.realtime.state import DocKey, YDocSession
-from uniffy.core.types import ContentType
-from uniffy.db.session import open_session
-from uniffy.observability.metrics import (
+from uniffy.core.realtime.metrics import (
     REALTIME_SNAPSHOT_DROPPED_TOTAL,
     REALTIME_SNAPSHOT_DURATION,
 )
+from uniffy.core.realtime.state import DocKey, YDocSession
+from uniffy.core.types import ContentType
+from uniffy.infrastructure.database.session import open_session
 
 DEBOUNCE_SECONDS = 5.0
 # Continuous edits re-arm the debounce forever; cap how long a doc may stay unflushed.
@@ -80,7 +81,25 @@ async def persist_snapshot(
             return False
 
         try:
-            await adapter.render_and_persist(session, ydoc, content_id, organization_id)
+            target_exists = await adapter.render_and_persist(
+                session,
+                ydoc,
+                content_id,
+                organization_id,
+            )
+            if not target_exists:
+                await session.execute(
+                    delete(RealtimeYjsSnapshot).where(
+                        RealtimeYjsSnapshot.content_type == content_type,
+                        RealtimeYjsSnapshot.content_id == content_id,
+                    )
+                )
+                await session.commit()
+                REALTIME_SNAPSHOT_DROPPED_TOTAL.labels(
+                    content_type=content_type.value,
+                    reason="target_missing",
+                ).inc()
+                return False
             await session.commit()
         except Exception:
             REALTIME_SNAPSHOT_DROPPED_TOTAL.labels(

@@ -12,7 +12,7 @@ from uniffy.core.models.files.file import (
     TranscodeStatus,
 )
 from uniffy.core.types import generate_id
-from uniffy.domains.files.jobs import recovery
+from uniffy.domains.files.jobs import jobs as recovery
 from uniffy.domains.files.jobs.contracts import (
     EXTRACT_DOCUMENT_CONTENT,
     GENERATE_PDF_THUMBNAIL,
@@ -29,7 +29,7 @@ class _Result:
     def __init__(self, rows: list[File]) -> None:
         self._rows = rows
 
-    def scalars(self) -> "_Result":
+    def scalars(self) -> _Result:
         return self
 
     def all(self) -> list[File]:
@@ -79,7 +79,7 @@ async def test_pending_file_is_recovered_after_initial_enqueue_failure(
 ) -> None:
     file = _pending_file()
     initial_enqueue = AsyncMock(side_effect=RuntimeError("queue unavailable"))
-    monkeypatch.setattr("uniffy.domains.files.operations.enqueue_job", initial_enqueue)
+    monkeypatch.setattr("uniffy.domains.files.uploads.enqueue_job", initial_enqueue)
 
     operations = FileOperations.__new__(FileOperations)
     await operations._enqueue_processing_jobs(file)
@@ -172,7 +172,7 @@ async def test_recovery_deduplicates_against_the_initial_enqueue(
     ) -> object | None:
         return await queue.enqueue_job(ref.name, *args, **kwargs)
 
-    monkeypatch.setattr("uniffy.domains.files.operations.enqueue_job", enqueue_through_queue)
+    monkeypatch.setattr("uniffy.domains.files.uploads.enqueue_job", enqueue_through_queue)
     operations = FileOperations.__new__(FileOperations)
     await operations._enqueue_processing_jobs(file)
 

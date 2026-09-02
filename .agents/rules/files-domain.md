@@ -4,8 +4,8 @@ paths:
   - "src/uniffy/core/storage/**/*.py"
   - "src/uniffy/core/models/files/**/*.py"
   - "src/proto/files/**/*.proto"
-  - "src/uniffy/domains/auth/cookies.py"
-  - "src/uniffy/domains/auth/http_deps.py"
+  - "src/uniffy/core/auth/cookies.py"
+  - "src/uniffy/core/auth/http.py"
   - "src/ui/src/features/files/**/*.ts"
   - "src/ui/src/features/files/**/*.tsx"
   - "src/ui/src/shared/utils/fileUrls.ts"
@@ -56,26 +56,27 @@ Secure/HttpOnly/SameSite=Strict cookie named `uniffy_asset` (`__Secure-uniffy_as
 read-only JWT whose type claim is `asset_read`, a distinct type, NOT the access token (least privilege). There is
 NO service-worker auth proxy.
 
-- Cookie: minted by `create_asset_read_token` (`domains/auth/tokens.py`); built + configured + attached by
-  `domains/auth/cookies.py::attach_asset_cookie` (env `ASSET_COOKIE_SECURE` / `SAMESITE` / `TTL_MINUTES`;
+- Cookie: minted by `create_asset_read_token` (`core/auth/tokens.py`); built + configured + attached by
+  `core/auth/cookies.py::attach_asset_cookie` (env `ASSET_COOKIE_SECURE` / `SAMESITE` / `TTL_MINUTES`;
   `__Secure-` name prefix when secure; self-host http LAN sets Secure off). Set on every session-issuing RPC -
   Login/Register/RefreshToken/SwitchOrg/AcceptInvitation/VerifyMfa/ConfirmEnrollment - cleared on Logout
   (ConnectRPC CAN set response headers). TTL ~1h, refreshed every RefreshToken; carries `tkv`/`sid` so it
   rides the same revocation watermark. The same `name=value` pair rides in the auth response body
   (`asset_cookie` field) for native clients; browsers ignore it and use the HttpOnly Set-Cookie.
-- Routes: `get_current_user_id` (`domains/auth/http_deps.py`) accepts Bearer access OR the `uniffy_asset` cookie,
+- Routes: `get_current_user_id` (`core/auth/http.py`) accepts Bearer access OR the `uniffy_asset` cookie,
   both through the same revocation checks. One shared dep covers `/api/files`, `/api/thumbnails`, `/api/media`,
   `/api/avatars`, `/api/agents/avatars`. The type-claim decoders keep the paths separate (access-in-cookie and
   asset_read-in-header are both 401). Permission gating stays in the route handler (`FileOperations.get_by_id`) -
   the dep only resolves identity.
-- Media: `/api/media/{org}/{file}` (`media_router`, `domains/files/http_routes.py`) is a native HTTP Range route -
-  `_parse_range` -> `s3.download_range` -> `206` / `Content-Range`. This is what lets `<video>` seek.
+- Media: `/api/media/{org}/{file}` (`media_router`, `domains/files/routes.py`) is a native HTTP Range route -
+  `_parse_range` -> `ObjectStorage.download_range` -> `206` / `Content-Range`. This is what lets `<video>` seek.
 - Frontend: build URLs with `buildFileUrl` / `buildThumbnailUrl` / `buildMediaUrl` / `getMediaUrl` /
   `buildAvatarUrl` (`shared/utils/fileUrls.ts`); same-origin requests carry the cookie automatically. A single
   global capture-phase `error` listener (`shared/utils/assetAuthRetry.ts`, installed in `main.tsx`) refreshes
   the cookie and retries an asset once when it 401s (idle past the cookie TTL).
 - Mobile: no cookie jar - the app keeps the body pair in memory (`src/mobile/src/core/auth/auth.ts`) and
-  attaches it as an explicit `Cookie` header via `assetAuthHeaders()` (`core/auth/assetAuth.ts`) on every
+  attaches it as an explicit `Cookie` header via `assetAuthHeaders()`
+  (`src/mobile/src/core/auth/assetAuth.ts`) on every
   asset request (expo-image, WebView PDFs, downloads, audio). Image error handlers use `assetAuthStale()` +
   `refreshSession()` to recover from an expired pair. Same rule as web: the pair is GET-read-only.
 
@@ -84,11 +85,12 @@ NO service-worker auth proxy.
 - The upload engine stays framework-agnostic. Only `reduxMirror` knows Redux, and only for the files/editor
   tray. Chat NEVER uses the Redux upload path.
 - Uploads (write) stay on Bearer in the worker pool. The `uniffy_asset` cookie (an `asset_read`-type JWT) is
-  GET-read-only, never accepted for mutations; `get_user_id_from_context` (the RPC path) is never taught the cookie.
+  GET-read-only, never accepted for mutations; the RPC principal path is never taught the cookie.
 - Asset-route permission checks are unchanged by the cookie - it proves the session, never access.
 - Media is a plain HTTP Range route. Do NOT reintroduce a ConnectRPC media stream or a service-worker auth proxy.
 - `getUploadStatus` is the authority on completed parts during resume - never re-POST a completed part.
 - Both products: same-origin cookie, no `Domain`; `Secure` env-gated so self-host http LAN works.
 
-Guard tests: `tests/test_asset_cookie.py`, `tests/test_media_range.py`;
+Guard tests: `src/uniffy/tests/unit/core/auth/test_cookie.py`,
+`src/uniffy/tests/unit/files/test_media_range.py`;
 `features/files/upload/__tests__/uploadService.test.ts`, `shared/utils/__tests__/fileUrls.test.ts`.

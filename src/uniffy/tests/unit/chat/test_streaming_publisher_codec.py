@@ -2,9 +2,9 @@ from datetime import UTC, datetime
 
 from uniffy.core.json_codec import loads
 from uniffy.core.types import generate_id
-from uniffy.core.valkey import pubsub
 from uniffy.domains.chat.streaming import events
 from uniffy.domains.chat.streaming.handlers import _payload_to_channel_event
+from uniffy.domains.chat.streaming import publisher as publisher_module
 from uniffy.domains.chat.streaming.publisher import publish_user_chat_event
 
 
@@ -20,7 +20,7 @@ class _Publisher:
 
 async def test_chat_datetime_payload_round_trips_through_handler(monkeypatch) -> None:
     publisher = _Publisher()
-    monkeypatch.setattr(pubsub, "_pubsub_client", publisher)
+    monkeypatch.setattr(publisher_module, "publish_bytes", publisher.publish)
     user_id = generate_id()
     created_at = datetime(2026, 8, 15, 12, 30, tzinfo=UTC)
 
@@ -53,7 +53,7 @@ async def test_chat_datetime_payload_round_trips_through_handler(monkeypatch) ->
 
 async def test_forward_context_round_trips_through_live_event(monkeypatch) -> None:
     publisher = _Publisher()
-    monkeypatch.setattr(pubsub, "_pubsub_client", publisher)
+    monkeypatch.setattr(publisher_module, "publish_bytes", publisher.publish)
     user_id = generate_id()
     created_at = datetime(2026, 8, 22, 14, 30, tzinfo=UTC)
     source_message_id = generate_id()
@@ -101,7 +101,7 @@ async def test_forward_context_round_trips_through_live_event(monkeypatch) -> No
 
 async def test_restricted_forward_live_event_contains_no_snapshot(monkeypatch) -> None:
     publisher = _Publisher()
-    monkeypatch.setattr(pubsub, "_pubsub_client", publisher)
+    monkeypatch.setattr(publisher_module, "publish_bytes", publisher.publish)
 
     await publish_user_chat_event(
         generate_id(),

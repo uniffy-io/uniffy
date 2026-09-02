@@ -12,6 +12,9 @@ from uniffy.core.types import generate_id
 from uniffy.domains.organizations.operations import OrganizationOperations
 from uniffy.domains.platform.directory.operations import PlatformDirectoryOperations
 
+_OLD_EMAIL = "old@example.com"
+_NEW_EMAIL = "new@example.com"
+
 
 def _make_user(**overrides) -> User:
     defaults = {
@@ -150,7 +153,7 @@ class TestUpdateUserAuditAndRevocation:
 
     async def test_email_change_hashes_both_addresses(self) -> None:
         actor = _make_user(is_system_admin=True)
-        target = _make_user(email="old@example.com")
+        target = _make_user(email=_OLD_EMAIL)
         session = MagicMock()
         session.execute = AsyncMock(return_value=MagicMock(scalar_one_or_none=lambda: None))
         session.add = MagicMock()
@@ -186,7 +189,7 @@ class TestUpdateUserAuditAndRevocation:
                 email="New@Example.com",
             )
 
-        assert target.email == "new@example.com"
+        assert target.email == _NEW_EMAIL
         # A new address is unproven, so verification resets.
         assert target.email_verified is False
         rows = [
@@ -195,9 +198,9 @@ class TestUpdateUserAuditAndRevocation:
             if getattr(call.args[0], "action", None) == Action.USER_EMAIL_CHANGED
         ]
         assert len(rows) == 1
-        assert rows[0].details["previous_email_hash"] == email_hash("old@example.com")
-        assert rows[0].details["new_email_hash"] == email_hash("new@example.com")
-        assert "old@example.com" not in str(rows[0].details)
+        assert rows[0].details["previous_email_hash"] == email_hash(_OLD_EMAIL)
+        assert rows[0].details["new_email_hash"] == email_hash(_NEW_EMAIL)
+        assert _OLD_EMAIL not in str(rows[0].details)
 
     async def test_no_changes_skips_the_write_entirely(self) -> None:
         actor = _make_user(is_system_admin=True)
@@ -226,22 +229,73 @@ class TestUpdateUserAuditAndRevocation:
         session.commit.assert_not_awaited()
 
 
-class TestCreateUserCleansUpAfterItself:
-    async def test_membership_failure_discards_the_account(self) -> None:
+class TestOrganizationDeletion:
+    async def test_member_ids_are_serialized_in_the_audit_payload(self) -> None:
+        actor_id = generate_id()
+        organization_id = generate_id()
+        member_id = generate_id()
+        session = MagicMock()
+        session.add = MagicMock()
+        session.commit = AsyncMock()
+
+        ops = PlatformDirectoryOperations(session)
+        ops._user_ops.require_system_admin = AsyncMock(return_value=_make_user())
+        org = MagicMock(
+            id=organization_id,
+            slug="e2e-tenant",
+            deleted_at=None,
+        )
+        ops._require_org = AsyncMock(return_value=org)
+        ops._bump_member_token_versions = AsyncMock(return_value=[member_id])
+        ops._publish_member_token_revokes = AsyncMock()
+        ops._enqueue_org_deleted_emails = AsyncMock()
+        ops.get_organization = AsyncMock(return_value="detail")
+        audit = AsyncMock()
+
+        with (
+            patch(
+                "uniffy.domains.platform.directory.operations.check_rate_limit",
+                AsyncMock(),
+            ),
+            patch(
+                "uniffy.domains.platform.directory.operations.write_audit_event",
+                audit,
+            ),
+            patch(
+                "uniffy.domains.platform.directory.operations.invalidate_user_profile",
+                AsyncMock(),
+            ),
+        ):
+            result = await ops.delete_organization(
+                user_id=actor_id,
+                organization_id=organization_id,
+                confirm_slug=org.slug,
+                reason="E2E cleanup",
+            )
+
+        assert result == "detail"
+        assert audit.await_args.kwargs["details"]["member_token_versions_bumped"] == [
+            str(member_id)
+        ]
+        session.commit.assert_awaited_once()
+
+
+class TestCreateUserTransaction:
+    async def test_membership_failure_rolls_back_the_account(self) -> None:
         actor = _make_user(is_system_admin=True)
         session = MagicMock()
         session.execute = AsyncMock(return_value=MagicMock(scalar_one_or_none=lambda: None))
         session.add = MagicMock()
         session.flush = AsyncMock()
         session.commit = AsyncMock()
+        session.rollback = AsyncMock()
 
         ops = PlatformDirectoryOperations(session)
         ops._user_ops.require_system_admin = AsyncMock(return_value=actor)
         ops._require_org = AsyncMock(return_value=MagicMock(id=generate_id(), deleted_at=None))
-        ops._discard_partial_user = AsyncMock()
 
         failing = MagicMock()
-        failing.add_member = AsyncMock(side_effect=RuntimeError("search index down"))
+        failing.stage_member = AsyncMock(side_effect=RuntimeError("membership write failed"))
 
         with (
             patch(
@@ -272,10 +326,10 @@ class TestCreateUserCleansUpAfterItself:
                 is_system_admin=False,
                 organization_id=generate_id(),
                 reason="new hire",
+                search_indexer=MagicMock(),
             )
 
-        ops._discard_partial_user.assert_awaited_once()
-        # The audit row must not claim a membership that never landed.
+        session.rollback.assert_awaited_once()
         assert Action.USER_CREATED not in _audited_actions(session)
 
     async def test_reason_is_required(self) -> None:
@@ -298,15 +352,18 @@ class TestCreateUserCleansUpAfterItself:
                 email_verified=True,
                 is_system_admin=False,
                 reason="",
+                search_indexer=MagicMock(),
             )
 
 
 class TestMemberCapIsEnforced:
     async def test_add_member_refuses_at_the_cap(self) -> None:
+        org_id = generate_id()
+        org = MagicMock(id=org_id, max_members=5, slug="capped")
         session = MagicMock()
         session.execute = AsyncMock(
             side_effect=[
-                MagicMock(scalar_one_or_none=lambda: 5),
+                MagicMock(scalar_one_or_none=lambda: org),
                 MagicMock(scalar_one=lambda: 5),
             ]
         )
@@ -315,23 +372,19 @@ class TestMemberCapIsEnforced:
         ops.get_membership = AsyncMock(return_value=None)
 
         with pytest.raises(ValidationError):
-            await ops.add_member(user_id=generate_id(), org_id=generate_id())
+            await ops.add_member(
+                user_id=generate_id(),
+                org_id=org_id,
+                search_indexer=MagicMock(),
+            )
 
     async def test_uncapped_org_passes(self) -> None:
-        session = MagicMock()
-        session.execute = AsyncMock(return_value=MagicMock(scalar_one_or_none=lambda: None))
-
-        ops = OrganizationOperations(session)
-        await ops._require_member_capacity(generate_id())
+        ops = OrganizationOperations(MagicMock())
+        await ops._require_member_capacity(MagicMock(max_members=None))
 
     async def test_below_the_cap_passes(self) -> None:
         session = MagicMock()
-        session.execute = AsyncMock(
-            side_effect=[
-                MagicMock(scalar_one_or_none=lambda: 10),
-                MagicMock(scalar_one=lambda: 4),
-            ]
-        )
+        session.execute = AsyncMock(return_value=MagicMock(scalar_one=lambda: 4))
 
         ops = OrganizationOperations(session)
-        await ops._require_member_capacity(generate_id())
+        await ops._require_member_capacity(MagicMock(id=generate_id(), max_members=10))

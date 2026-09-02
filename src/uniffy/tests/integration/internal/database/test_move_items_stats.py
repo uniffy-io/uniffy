@@ -1,6 +1,6 @@
 """MoveItems refreshes each affected folder's stats once, not once per item."""
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from sqlalchemy import delete
@@ -8,18 +8,15 @@ from uniffy_proto.files.v1.files_pb2 import MoveItemsRequest
 
 from uniffy.core.models.files.file import File
 from uniffy.core.models.files.folder import Folder
-from uniffy.core.search.indexer import SearchIndexer
 from uniffy.domains.files.handlers import FilesHandlers
 from uniffy.domains.files.operations import FolderOperations
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
 
-async def test_move_items_refreshes_each_affected_folder_once(session, env, monkeypatch) -> None:
-    # No Meilisearch in this suite; the assertion is the refresh fan-out.
-    monkeypatch.setattr(SearchIndexer, "index", AsyncMock())
-    monkeypatch.setattr(SearchIndexer, "remove", AsyncMock())
-
+async def test_move_items_refreshes_each_affected_folder_once(
+    session, env, search_indexer, monkeypatch
+) -> None:
     source = Folder(organization_id=env.org_id, owner_id=env.admin_id, name="itdb-src")
     target = Folder(organization_id=env.org_id, owner_id=env.admin_id, name="itdb-dst")
     session.add_all([source, target])
@@ -55,12 +52,21 @@ async def test_move_items_refreshes_each_affected_folder_once(session, env, monk
         file_ids=[str(f.id) for f in files],
         target_folder_id=str(target.id),
     )
+    handlers = FilesHandlers()
+    handlers.storage = MagicMock()
+    handlers.search_indexer = search_indexer
     try:
-        with patch(
-            "uniffy.domains.files.handlers.get_user_id_from_context",
-            MagicMock(return_value=env.admin_id),
+        with (
+            patch(
+                "uniffy.domains.files.rpc.bulk.current_user_id",
+                MagicMock(return_value=env.admin_id),
+            ),
+            patch(
+                "uniffy.domains.files.rpc.bulk.resolve_organization_id",
+                MagicMock(return_value=env.org_id),
+            ),
         ):
-            response = await FilesHandlers().move_items(request, MagicMock())
+            response = await handlers.move_items(request, MagicMock())
 
         assert response.files_moved == 5
         assert sorted(refreshed, key=str) == sorted([source.id, target.id], key=str)

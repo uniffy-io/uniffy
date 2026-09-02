@@ -16,7 +16,7 @@ from uniffy.core.mail import (
     MailSuppressedError,
 )
 from uniffy.core.mail.backends.base import MailResult
-from uniffy.domains.mail.jobs import send_email
+from uniffy.domains.mail.jobs.jobs import send_email
 from uniffy.vendor.arq import Retry
 
 
@@ -26,7 +26,7 @@ class TestSendEmailJob:
         sender_mock.send = AsyncMock(
             return_value=MailResult(success=True, provider_message_id="msg-1")
         )
-        with patch("uniffy.domains.mail.jobs._get_sender", return_value=sender_mock):
+        with patch("uniffy.domains.mail.jobs.jobs._get_sender", return_value=sender_mock):
             result = await send_email(
                 {"job_try": 1},
                 "user@example.com",
@@ -53,14 +53,14 @@ class TestSendEmailJob:
     async def test_suppressed_is_terminal(self) -> None:
         sender_mock = AsyncMock()
         sender_mock.send = AsyncMock(side_effect=MailSuppressedError("blocked"))
-        with patch("uniffy.domains.mail.jobs._get_sender", return_value=sender_mock):
+        with patch("uniffy.domains.mail.jobs.jobs._get_sender", return_value=sender_mock):
             result = await send_email({"job_try": 1}, "a@b.com", "admin/test", "{}")
         assert result["status"] == "suppressed"
 
     async def test_not_configured_is_terminal(self) -> None:
         sender_mock = AsyncMock()
         sender_mock.send = AsyncMock(side_effect=MailNotConfiguredError("no env"))
-        with patch("uniffy.domains.mail.jobs._get_sender", return_value=sender_mock):
+        with patch("uniffy.domains.mail.jobs.jobs._get_sender", return_value=sender_mock):
             result = await send_email({"job_try": 1}, "a@b.com", "admin/test", "{}")
         assert result["status"] == "skipped"
         assert result["reason"] == "not_configured"
@@ -69,7 +69,7 @@ class TestSendEmailJob:
         sender_mock = AsyncMock()
         sender_mock.send = AsyncMock(side_effect=MailRateLimitedError("over"))
         with (
-            patch("uniffy.domains.mail.jobs._get_sender", return_value=sender_mock),
+            patch("uniffy.domains.mail.jobs.jobs._get_sender", return_value=sender_mock),
             pytest.raises(Retry) as exc_info,
         ):
             await send_email({"job_try": 3}, "a@b.com", "admin/test", "{}")
@@ -79,7 +79,7 @@ class TestSendEmailJob:
         sender_mock = AsyncMock()
         sender_mock.send = AsyncMock(side_effect=MailProviderError("smtp down"))
         with (
-            patch("uniffy.domains.mail.jobs._get_sender", return_value=sender_mock),
+            patch("uniffy.domains.mail.jobs.jobs._get_sender", return_value=sender_mock),
             pytest.raises(Retry) as exc_info,
         ):
             await send_email({"job_try": 2}, "a@b.com", "admin/test", "{}")

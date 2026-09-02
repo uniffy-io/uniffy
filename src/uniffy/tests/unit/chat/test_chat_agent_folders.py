@@ -8,7 +8,7 @@ from uniffy.core.errors import NotFoundError, ValidationError
 from uniffy.core.models.chat.agent_folder import ChatAgentFolder
 from uniffy.core.models.chat.channel import ChannelType, ChatChannel
 from uniffy.core.types import generate_id
-from uniffy.domains.chat.agent_folders.operations import AgentFolderOperations
+from uniffy.domains.chat.folders.operations import AgentFolderOperations
 
 
 def _scalars_result(items):
@@ -36,7 +36,7 @@ def _build_ops(execute_results):
     session.delete = AsyncMock()
     session.commit = AsyncMock()
     session.refresh = AsyncMock()
-    return AgentFolderOperations(session), session
+    return AgentFolderOperations(session, MagicMock()), session
 
 
 def _folder(user_id, org_id, name="Work", position=0):
@@ -133,7 +133,7 @@ class TestSetChatFolder:
         folder = _folder(user_id, org_id)
         invalidate = AsyncMock()
         monkeypatch.setattr(
-            "uniffy.domains.chat.agent_folders.operations.invalidate_cached_member_ids",
+            "uniffy.domains.chat.folders.operations.invalidate_cached_member_ids",
             invalidate,
         )
         ops, session = _build_ops([
@@ -149,7 +149,7 @@ class TestSetChatFolder:
         user_id, org_id = generate_id(), generate_id()
         channel = _agent_dm(org_id)
         monkeypatch.setattr(
-            "uniffy.domains.chat.agent_folders.operations.invalidate_cached_member_ids",
+            "uniffy.domains.chat.folders.operations.invalidate_cached_member_ids",
             AsyncMock(),
         )
         ops, _ = _build_ops([_scalar_result(channel), _rowcount_result(0)])
@@ -164,7 +164,7 @@ class TestDelete:
         cid_a, cid_b = generate_id(), generate_id()
         invalidate = AsyncMock()
         monkeypatch.setattr(
-            "uniffy.domains.chat.agent_folders.operations.invalidate_cached_member_ids",
+            "uniffy.domains.chat.folders.operations.invalidate_cached_member_ids",
             invalidate,
         )
         ops, session = _build_ops([

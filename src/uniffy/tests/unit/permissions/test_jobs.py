@@ -8,8 +8,8 @@ import pytest
 
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import AccessMode, ContentRole, ContentType
-from uniffy.domains.permissions.job_contracts import REINDEX_ORG_CONTENT_FOR_DEFAULTS
-from uniffy.domains.permissions.jobs import (
+from uniffy.domains.permissions.jobs.contracts import REINDEX_ORG_CONTENT_FOR_DEFAULTS
+from uniffy.domains.permissions.jobs.jobs import (
     _BATCH_SIZE,
     _domain_for,
     reindex_org_content_for_defaults,
@@ -48,14 +48,14 @@ def _session_for(rows: list[SimpleNamespace]):
 def _worker_patches(open_session) -> Iterator[None]:
     with (
         patch(
-            "uniffy.domains.permissions.jobs._domain_for",
+            "uniffy.domains.permissions.jobs.jobs._domain_for",
             return_value=(_Operations, object()),
         ),
         patch(
-            "uniffy.domains.permissions.jobs._keyset_query",
+            "uniffy.domains.permissions.jobs.jobs._keyset_query",
             return_value=object(),
         ),
-        patch("uniffy.domains.permissions.jobs.open_session", open_session),
+        patch("uniffy.domains.permissions.jobs.jobs.open_session", open_session),
     ):
         yield
 
@@ -111,11 +111,11 @@ async def test_project_reindex_records_and_enqueues_child_refresh() -> None:
     with (
         _worker_patches(open_session),
         patch(
-            "uniffy.domains.permissions.jobs.record_project_search_acl_refresh",
+            "uniffy.domains.permissions.jobs.jobs.record_project_search_acl_refresh",
             AsyncMock(),
         ) as record,
         patch(
-            "uniffy.domains.permissions.jobs.enqueue_project_search_acl_refresh",
+            "uniffy.domains.permissions.jobs.jobs.enqueue_project_search_acl_refresh",
             AsyncMock(),
         ) as enqueue,
     ):
@@ -161,7 +161,7 @@ async def test_full_page_enqueues_cursor_scoped_continuation() -> None:
 
     with (
         _worker_patches(open_session),
-        patch("uniffy.domains.permissions.jobs.enqueue_job", enqueue),
+        patch("uniffy.domains.permissions.jobs.jobs.enqueue_job", enqueue),
     ):
         result = await reindex_org_content_for_defaults(
             {"job_try": 1, "job_id": "initial"},

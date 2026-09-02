@@ -13,23 +13,20 @@ from pathlib import Path
 from loguru import logger
 from sqlalchemy import select
 
-from uniffy.core.search import init_meilisearch
-from uniffy.core.valkey import (
-    QueueName,
-    close_ops_client,
-    close_pubsub,
-    close_queue,
-    init_ops_client,
-    init_pubsub,
-    init_queue,
-)
-from uniffy.db.session import init_db, open_session
-from uniffy.domains.chat.rate_limits import (
+from uniffy.core.jobs import QueueName
+from uniffy.core.search import SearchIndexer, WorkspaceSearch
+from uniffy.domains.chat.limits import (
     CHANNEL_CREATE,
     MEMBER_ADD,
     REACTION_ADD,
     SEND,
 )
+from uniffy.infrastructure.database.session import init_db, open_session
+from uniffy.infrastructure.search import MeiliSearchEngine
+from uniffy.infrastructure.storage import S3Storage
+from uniffy.infrastructure.valkey.ops import close_ops_client, init_ops_client
+from uniffy.infrastructure.valkey.pubsub import close_pubsub, init_pubsub
+from uniffy.infrastructure.valkey.queue import close_queue, init_queue
 from uniffy.scripts.demo_company.context import ResolutionError
 from uniffy.scripts.demo_company.loader import DEFAULT_PERSON_PASSWORD, ContentError
 from uniffy.scripts.demo_company.seeder import DOMAINS, DemoDomain, seed_demo_company
@@ -48,7 +45,7 @@ def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         prog="python -m uniffy.scripts.demo_company",
         description="Seed an organization with a demo knowledge base: users, "
-        "agents, notes, files, rooms, calendar events, projects and chat.",
+        "agents, notes, files, rooms, calendar events, projects, chat and bookmarks.",
     )
     parser.add_argument(
         "--content-dir",
@@ -120,11 +117,18 @@ async def main() -> None:
             logger.info("Demo seed sentinel present, nothing to do")
             return
 
-    await init_meilisearch()
+    search = WorkspaceSearch(MeiliSearchEngine())
+    await search.startup()
+    search_indexer = SearchIndexer(search)
     await _init_valkey()
+    storage = S3Storage()
+    await storage.startup()
 
     try:
         await seed_demo_company(
+            storage=storage,
+            search=search,
+            search_indexer=search_indexer,
             content_dir=args.content_dir,
             org_slug=args.org_slug,
             actor_email=args.actor_email,
@@ -136,6 +140,8 @@ async def main() -> None:
         if args.fresh_only and not args.dry_run:
             await _write_sentinel()
     finally:
+        await storage.shutdown()
+        await search.shutdown()
         await _close_valkey()
 
 
@@ -204,7 +210,7 @@ async def _wait_for_bootstrap() -> None:
 
 
 async def _sentinel_present() -> bool:
-    from uniffy.domains.deployment_settings.operations import DeploymentSettingsOperations
+    from uniffy.core.config.settings import DeploymentSettingsOperations
 
     async with open_session() as session:
         namespace = await DeploymentSettingsOperations(session).get_namespace(SENTINEL_NAMESPACE)
@@ -212,7 +218,7 @@ async def _sentinel_present() -> bool:
 
 
 async def _write_sentinel() -> None:
-    from uniffy.domains.deployment_settings.operations import DeploymentSettingsOperations
+    from uniffy.core.config.settings import DeploymentSettingsOperations
 
     async with open_session() as session:
         await DeploymentSettingsOperations(session).set(

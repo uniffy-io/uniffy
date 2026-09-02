@@ -6,8 +6,7 @@ from dataclasses import dataclass
 from datetime import timedelta
 from typing import Any
 
-from uniffy.core.jobs import JobRef, JobWorkload
-from uniffy.core.valkey.queue import QueueName
+from uniffy.core.jobs import JobRef, JobWorkload, QueueName
 from uniffy.vendor.arq.cron import CronJob, cron
 from uniffy.vendor.arq.worker import Function, func
 

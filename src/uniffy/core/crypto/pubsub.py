@@ -1,9 +1,4 @@
-"""Cross-pod invalidation for the in-process DEK caches.
-
-Two long-lived listeners: per-org (``org_deks:invalidate:{org_id}``) and
-deployment-singleton (``deployment_deks:invalidate``). Subscribers own a
-long-lived ``PSUBSCRIBE`` connection with reconnect / shutdown.
-"""
+"""Cross-process invalidation for organization and deployment DEK caches."""
 
 from __future__ import annotations
 
@@ -11,22 +6,21 @@ import asyncio
 import contextlib
 from uuid import UUID
 
-import valkey.asyncio as aioredis
 from loguru import logger
-from valkey.exceptions import ConnectionError as ValkeyConnectionError
-from valkey.exceptions import TimeoutError as ValkeyTimeoutError
 
 from uniffy.core.crypto.cache import get_deployment_dek_cache, get_org_dek_lru
 from uniffy.core.json_codec import JSONDecodeError, loads
-from uniffy.core.valkey.config import ValkeyConfig
-from uniffy.core.valkey.pubsub import publish_to_channel
+from uniffy.infrastructure.valkey.pubsub import (
+    publish_to_channel,
+    subscribe_channels,
+    subscribe_patterns,
+)
 
 logger = logger.bind(component="crypto.pubsub")
 
 _INVALIDATE_PATTERN = "org_deks:invalidate:*"
 _DEPLOYMENT_INVALIDATE_CHANNEL = "deployment_deks:invalidate"
 _RECONNECT_BACKOFF_SECONDS = 5.0
-_POLL_TIMEOUT_SECONDS = 1.0
 
 
 def org_dek_invalidate_channel(organization_id: UUID) -> str:
@@ -76,40 +70,16 @@ async def close_dek_invalidation_subscriber() -> None:
 
 
 async def _run_subscriber() -> None:
-    url = ValkeyConfig.from_env().to_url()
-
     while _subscriber_shutdown is None or not _subscriber_shutdown.is_set():
-        client: aioredis.Redis | None = None
-        pubsub = None
         try:
-            client = aioredis.from_url(
-                url,
-                decode_responses=True,
-                socket_connect_timeout=5,
-                socket_timeout=5,
-                socket_keepalive=True,
-                health_check_interval=30,
-            )
-            pubsub = client.pubsub()
-            await pubsub.psubscribe(_INVALIDATE_PATTERN)
             logger.info(f"Org DEK invalidation subscriber listening on {_INVALIDATE_PATTERN}")
-
-            while _subscriber_shutdown is None or not _subscriber_shutdown.is_set():
-                msg = await pubsub.get_message(
-                    ignore_subscribe_messages=True,
-                    timeout=_POLL_TIMEOUT_SECONDS,
-                )
-                if msg is None:
-                    continue
-                if msg.get("type") != "pmessage":  # noqa: PLR2004
-                    continue
-                await _handle_invalidate_message(msg.get("data"))
-
-        except (ValkeyConnectionError, ValkeyTimeoutError, OSError) as exc:
-            logger.warning(
-                f"Org DEK invalidation subscriber connection error: {exc}; "
-                f"reconnecting in {_RECONNECT_BACKOFF_SECONDS}s"
-            )
+            async with contextlib.aclosing(subscribe_patterns(_INVALIDATE_PATTERN)) as messages:
+                async for item in messages:
+                    if _subscriber_shutdown is not None and _subscriber_shutdown.is_set():
+                        break
+                    if item is not None:
+                        _channel, payload = item
+                        await _handle_invalidate_message(payload)
         except asyncio.CancelledError:
             raise
         except Exception as exc:
@@ -117,16 +87,6 @@ async def _run_subscriber() -> None:
                 f"Org DEK invalidation subscriber unexpected error: {exc}; "
                 f"reconnecting in {_RECONNECT_BACKOFF_SECONDS}s"
             )
-        finally:
-            if pubsub is not None:
-                with contextlib.suppress(Exception):
-                    await pubsub.punsubscribe(_INVALIDATE_PATTERN)
-                with contextlib.suppress(Exception):
-                    await pubsub.aclose()
-            if client is not None:
-                with contextlib.suppress(Exception):
-                    await client.aclose()
-
         if _subscriber_shutdown is not None and _subscriber_shutdown.is_set():
             break
         try:
@@ -145,11 +105,14 @@ async def _run_subscriber() -> None:
 async def _handle_invalidate_message(raw: object) -> None:
     if raw is None:
         return
-    try:
-        payload = loads(raw)
-    except JSONDecodeError, TypeError:
-        logger.warning(f"Org DEK invalidate message decode failed: {raw!r}")
-        return
+    if isinstance(raw, dict):
+        payload = raw
+    else:
+        try:
+            payload = loads(raw)
+        except JSONDecodeError, TypeError:
+            logger.warning(f"Org DEK invalidate message decode failed: {raw!r}")
+            return
     raw_id = payload.get("organization_id") if isinstance(payload, dict) else None
     if not isinstance(raw_id, str):
         return
@@ -206,48 +169,25 @@ async def close_deployment_dek_invalidation_subscriber() -> None:
 
 
 async def _run_deployment_subscriber() -> None:
-    url = ValkeyConfig.from_env().to_url()
-
     while _deployment_subscriber_shutdown is None or not _deployment_subscriber_shutdown.is_set():
-        client: aioredis.Redis | None = None
-        pubsub = None
         try:
-            client = aioredis.from_url(
-                url,
-                decode_responses=True,
-                socket_connect_timeout=5,
-                socket_timeout=5,
-                socket_keepalive=True,
-                health_check_interval=30,
-            )
-            pubsub = client.pubsub()
-            await pubsub.subscribe(_DEPLOYMENT_INVALIDATE_CHANNEL)
             logger.info(
                 f"Deployment DEK invalidation subscriber listening on "
                 f"{_DEPLOYMENT_INVALIDATE_CHANNEL}"
             )
-
-            while (
-                _deployment_subscriber_shutdown is None
-                or not _deployment_subscriber_shutdown.is_set()
-            ):
-                msg = await pubsub.get_message(
-                    ignore_subscribe_messages=True,
-                    timeout=_POLL_TIMEOUT_SECONDS,
-                )
-                if msg is None:
-                    continue
-                if msg.get("type") != "message":  # noqa: PLR2004
-                    continue
-                dropped = await get_deployment_dek_cache().invalidate_all()
-                if dropped:
-                    logger.debug(f"Deployment DEK cache dropped {dropped} entries")
-
-        except (ValkeyConnectionError, ValkeyTimeoutError, OSError) as exc:
-            logger.warning(
-                f"Deployment DEK invalidation subscriber connection error: {exc}; "
-                f"reconnecting in {_RECONNECT_BACKOFF_SECONDS}s"
-            )
+            async with contextlib.aclosing(
+                subscribe_channels(_DEPLOYMENT_INVALIDATE_CHANNEL)
+            ) as messages:
+                async for payload in messages:
+                    if (
+                        _deployment_subscriber_shutdown is not None
+                        and _deployment_subscriber_shutdown.is_set()
+                    ):
+                        break
+                    if payload is not None:
+                        dropped = await get_deployment_dek_cache().invalidate_all()
+                        if dropped:
+                            logger.debug(f"Deployment DEK cache dropped {dropped} entries")
         except asyncio.CancelledError:
             raise
         except Exception as exc:
@@ -255,16 +195,6 @@ async def _run_deployment_subscriber() -> None:
                 f"Deployment DEK invalidation subscriber unexpected error: {exc}; "
                 f"reconnecting in {_RECONNECT_BACKOFF_SECONDS}s"
             )
-        finally:
-            if pubsub is not None:
-                with contextlib.suppress(Exception):
-                    await pubsub.unsubscribe(_DEPLOYMENT_INVALIDATE_CHANNEL)
-                with contextlib.suppress(Exception):
-                    await pubsub.aclose()
-            if client is not None:
-                with contextlib.suppress(Exception):
-                    await client.aclose()
-
         if _deployment_subscriber_shutdown is not None and _deployment_subscriber_shutdown.is_set():
             break
         try:

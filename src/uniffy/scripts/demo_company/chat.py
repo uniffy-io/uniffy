@@ -19,14 +19,21 @@ from uniffy.core.models.login.user import User
 from uniffy.domains.chat.categories.operations import ChatCategoryOperations
 from uniffy.domains.chat.channels.operations import ChatChannelOperations
 from uniffy.domains.chat.messages.operations import ChatMessageOperations
+from uniffy.scripts.demo_company.chat_history import (
+    seed_message_history,
+    should_import_history,
+)
 from uniffy.scripts.demo_company.chat_series import expand_series
 from uniffy.scripts.demo_company.context import DemoContext, DomainResult
-from uniffy.scripts.demo_company.loader import ChannelSpec, ChatContent, MessageSpec
+from uniffy.scripts.demo_company.loader import (
+    DEMO_MESSAGE_KEY,
+    ChannelSpec,
+    ChatContent,
+    MessageSpec,
+)
 from uniffy.scripts.demo_company.mentions import MentionRegistry
 
 logger = logger.bind(component="scripts.demo_company.chat")
-
-SEED_KEY = "demo_seed_key"
 
 
 @dataclass
@@ -150,7 +157,7 @@ async def _ensure_categories(
     names: tuple[str, ...],
     result: DomainResult,
 ) -> dict[str, UUID | None]:
-    ops = ChatCategoryOperations(ctx.session)
+    ops = ChatCategoryOperations(ctx.session, ctx.search_indexer)
     category_ids: dict[str, UUID | None] = {}
 
     for name in names:
@@ -220,7 +227,10 @@ async def _ensure_members(
     if not missing:
         return
 
-    await ChatChannelOperations(ctx.session).add_members(
+    await ChatChannelOperations(
+        ctx.session,
+        search_indexer=ctx.search_indexer,
+    ).add_members(
         user_id=ctx.actor_id,
         organization_id=ctx.organization_id,
         channel_id=channel_id,
@@ -261,7 +271,10 @@ async def _ensure_channel(
 
     owner_id = member_ids[0] if member_ids else ctx.actor_id
 
-    channel = await ChatChannelOperations(ctx.session).create_channel(
+    channel = await ChatChannelOperations(
+        ctx.session,
+        search_indexer=ctx.search_indexer,
+    ).create_channel(
         user_id=owner_id,
         organization_id=ctx.organization_id,
         name=spec.name,
@@ -291,7 +304,10 @@ async def _ensure_direct(
         result.created += 1
         return None
 
-    channel = await ChatChannelOperations(ctx.session).create_dm(
+    channel = await ChatChannelOperations(
+        ctx.session,
+        search_indexer=ctx.search_indexer,
+    ).create_dm(
         user_id=participants[0],
         organization_id=ctx.organization_id,
         target_user_ids=participants[1:],
@@ -355,7 +371,19 @@ async def _seed_messages(
         result.created += pending
         return
 
-    ops = ChatMessageOperations(ctx.session)
+    if should_import_history(messages):
+        await seed_message_history(
+            ctx,
+            channel_id,
+            label,
+            messages,
+            users,
+            registry,
+            result,
+        )
+        return
+
+    ops = ChatMessageOperations(ctx.session, search_indexer=ctx.search_indexer)
     seeded = await _seeded_messages(ctx, channel_id)
     stamps: dict[UUID, datetime] = {}
     root_ids: set[UUID] = set()
@@ -406,7 +434,7 @@ async def _seeded_messages(ctx: DemoContext, channel_id: UUID) -> _SeededMessage
 
     seeded = _SeededMessages()
     for row in rows:
-        key = (row.message_metadata or {}).get(SEED_KEY)
+        key = (row.message_metadata or {}).get(DEMO_MESSAGE_KEY)
         if key:
             seeded.by_key[key] = row.id
         else:
@@ -447,7 +475,7 @@ async def _send(
         channel_id=channel_id,
         content=content,
         root_id=root_id,
-        message_metadata={SEED_KEY: spec.key},
+        message_metadata={DEMO_MESSAGE_KEY: spec.key},
     )
     stamps[message.id] = sent_at
     result.created += 1

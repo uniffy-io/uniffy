@@ -10,6 +10,7 @@ from uniffy.core.audit.actions import tool_call_action
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models.audit.event import AuditActorKind
 from uniffy.domains.agents.cache import fetch_agent_row
+from uniffy.domains.agents.metrics import AGENT_TOOL_CALLS_TOTAL, AGENT_TOOL_DURATION
 from uniffy.domains.agents.providers.base import ToolCall
 from uniffy.domains.agents.tools.definitions import (
     ToolContext,
@@ -18,7 +19,6 @@ from uniffy.domains.agents.tools.definitions import (
 )
 from uniffy.domains.agents.tools.registry import ToolRegistry
 from uniffy.domains.agents.tools.sanitization import sanitize_tool_error
-from uniffy.observability.metrics import AGENT_TOOL_CALLS_TOTAL, AGENT_TOOL_DURATION
 
 logger = logger.bind(component="agents.tools.executor")
 

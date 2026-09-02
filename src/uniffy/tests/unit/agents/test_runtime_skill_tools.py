@@ -5,12 +5,12 @@ from unittest.mock import AsyncMock, MagicMock
 
 from uniffy.core.models.agents.skill import AgentSkill
 from uniffy.core.types import generate_id
-from uniffy.domains.agents.runtime.operations import _resolve_tool_schemas
 from uniffy.domains.agents.runtime.prompt import (
     SKILL_VIEW_TOOL,
     build_system_prompt,
     to_skill_prompt_entry,
 )
+from uniffy.domains.agents.runtime.tooling import resolve_tool_schemas
 from uniffy.domains.agents.tools.registry import get_tool_registry, to_api_name
 
 _VIEW_API_NAME = to_api_name(SKILL_VIEW_TOOL)
@@ -39,7 +39,7 @@ class TestResolveToolSchemas:
         registry = get_tool_registry()
         entries = [to_skill_prompt_entry(_skill(name="report", always_active=False))]
 
-        schemas = _resolve_tool_schemas(registry, ["search.query"], entries, None)
+        schemas = resolve_tool_schemas(registry, ["search.query"], entries, None)
 
         names = _schema_names(schemas)
         assert _VIEW_API_NAME in names  # the advertised index can now be loaded
@@ -49,14 +49,14 @@ class TestResolveToolSchemas:
         registry = get_tool_registry()
         entries = [to_skill_prompt_entry(_skill(name="report"))]
 
-        schemas = _resolve_tool_schemas(registry, [], entries, None)
+        schemas = resolve_tool_schemas(registry, [], entries, None)
 
         assert _schema_names(schemas) == {_VIEW_API_NAME}
 
     def test_no_view_skill_without_any_skills(self) -> None:
         registry = get_tool_registry()
 
-        schemas = _resolve_tool_schemas(registry, ["search.query"], [], None)
+        schemas = resolve_tool_schemas(registry, ["search.query"], [], None)
 
         assert _VIEW_API_NAME not in _schema_names(schemas)
 
@@ -64,7 +64,7 @@ class TestResolveToolSchemas:
         registry = get_tool_registry()
         entries = [to_skill_prompt_entry(_skill(name="daily", always_active=True))]
 
-        schemas = _resolve_tool_schemas(registry, ["search.query"], entries, None)
+        schemas = resolve_tool_schemas(registry, ["search.query"], entries, None)
 
         assert _VIEW_API_NAME not in _schema_names(schemas)
 
@@ -72,7 +72,7 @@ class TestResolveToolSchemas:
         registry = get_tool_registry()
         invoked = to_skill_prompt_entry(_skill(name="report", always_active=False))
 
-        schemas = _resolve_tool_schemas(registry, [], [invoked], invoked)
+        schemas = resolve_tool_schemas(registry, [], [invoked], invoked)
 
         assert _VIEW_API_NAME not in _schema_names(schemas)
 
@@ -81,7 +81,7 @@ class TestResolveToolSchemas:
         invoked = to_skill_prompt_entry(_skill(name="report"))
         other = to_skill_prompt_entry(_skill(name="other"))
 
-        schemas = _resolve_tool_schemas(registry, [], [invoked, other], invoked)
+        schemas = resolve_tool_schemas(registry, [], [invoked, other], invoked)
 
         assert _VIEW_API_NAME in _schema_names(schemas)
 
@@ -89,7 +89,7 @@ class TestResolveToolSchemas:
         registry = get_tool_registry()
         entries = [to_skill_prompt_entry(_skill(name="report"))]
 
-        schemas = _resolve_tool_schemas(registry, [SKILL_VIEW_TOOL], entries, None)
+        schemas = resolve_tool_schemas(registry, [SKILL_VIEW_TOOL], entries, None)
 
         names = [s["name"] for s in schemas]
         assert names.count(_VIEW_API_NAME) == 1

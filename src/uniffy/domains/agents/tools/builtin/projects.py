@@ -3,7 +3,7 @@
 import contextlib
 from uuid import UUID
 
-from uniffy.domains.agents.tools.builtin.content_space import (
+from uniffy.domains.agents.tools.builtin.content import (
     creation_space_schema,
     parse_creation_space,
     space_for_access_mode,
@@ -33,7 +33,7 @@ async def _execute_create_project(ctx: ToolContext, args: dict) -> ToolResult:
     if "slug" in args:  # noqa: PLR2004
         kwargs["slug"] = args["slug"]
 
-    ops = ProjectOperations(ctx.session)
+    ops = ProjectOperations(ctx.session, ctx.storage, ctx.search_indexer)
     project = await ops.create(
         user_id=ctx.user_id,
         organization_id=ctx.organization_id,
@@ -76,7 +76,7 @@ async def _execute_update_project(ctx: ToolContext, args: dict) -> ToolResult:
     if not kwargs:
         return ToolResult(success=False, data="", error="At least one field to update is required")
 
-    ops = ProjectOperations(ctx.session)
+    ops = ProjectOperations(ctx.session, ctx.storage, ctx.search_indexer)
     project = await ops.update(
         user_id=ctx.user_id,
         organization_id=ctx.organization_id,
@@ -104,7 +104,7 @@ async def _execute_delete_project(ctx: ToolContext, args: dict) -> ToolResult:
     except ValueError:
         return ToolResult(success=False, data="", error=f"Invalid project_id: {project_id_str}")
 
-    ops = ProjectOperations(ctx.session)
+    ops = ProjectOperations(ctx.session, ctx.storage, ctx.search_indexer)
     await ops.delete(
         user_id=ctx.user_id,
         organization_id=ctx.organization_id,
@@ -118,7 +118,7 @@ async def _execute_list_projects(ctx: ToolContext, args: dict) -> ToolResult:
     """List projects in the organization."""
     from uniffy.domains.projects.operations import ProjectOperations
 
-    ops = ProjectOperations(ctx.session)
+    ops = ProjectOperations(ctx.session, ctx.storage, ctx.search_indexer)
     projects, total = await ops.list_projects(
         user_id=ctx.user_id,
         organization_id=ctx.organization_id,
@@ -305,7 +305,7 @@ async def _execute_create_task(ctx: ToolContext, args: dict) -> ToolResult:
             return ToolResult(success=False, data="", error=err)
         kwargs["sprint_id"] = sprint_id
 
-    ops = TaskOperations(ctx.session)
+    ops = TaskOperations(ctx.session, ctx.required_storage, ctx.required_search)
     task = await ops.create(
         user_id=ctx.user_id,
         organization_id=ctx.organization_id,
@@ -400,7 +400,7 @@ async def _execute_update_task(ctx: ToolContext, args: dict) -> ToolResult:
             error="At least one field to update is required",
         )
 
-    ops = TaskOperations(ctx.session)
+    ops = TaskOperations(ctx.session, ctx.required_storage, ctx.required_search)
     task, _ = await ops.update(
         user_id=ctx.user_id,
         organization_id=ctx.organization_id,
@@ -427,7 +427,7 @@ async def _execute_delete_task(ctx: ToolContext, args: dict) -> ToolResult:
     except ValueError:
         return ToolResult(success=False, data="", error=f"Invalid task_id: {task_id_str}")
 
-    ops = TaskOperations(ctx.session)
+    ops = TaskOperations(ctx.session, ctx.required_storage, ctx.required_search)
     await ops.delete(
         user_id=ctx.user_id,
         organization_id=ctx.organization_id,
@@ -439,7 +439,7 @@ async def _execute_delete_task(ctx: ToolContext, args: dict) -> ToolResult:
 
 async def _execute_list_tasks(ctx: ToolContext, args: dict) -> ToolResult:
     """List tasks in a project with optional filters."""
-    from uniffy.domains.projects.operations import TaskOperations
+    from uniffy.domains.projects.operations import TaskReader
 
     project_id_str = args.get("project_id", "")
     if not project_id_str:
@@ -485,7 +485,7 @@ async def _execute_list_tasks(ctx: ToolContext, args: dict) -> ToolResult:
     if "max_depth" in args and args["max_depth"] is not None:  # noqa: PLR2004
         list_kwargs["max_depth"] = int(args["max_depth"])
 
-    ops = TaskOperations(ctx.session)
+    ops = TaskReader(ctx.session)
     tasks, total = await ops.list_tasks(
         user_id=ctx.user_id,
         organization_id=ctx.organization_id,
@@ -539,7 +539,7 @@ async def _execute_move_task(ctx: ToolContext, args: dict) -> ToolResult:
     # sort_order defaults to appending at the end of the target column
     sort_order = args.get("sort_order", 0)
 
-    ops = TaskOperations(ctx.session)
+    ops = TaskOperations(ctx.session, ctx.required_storage, ctx.required_search)
     task, _ = await ops.move(
         user_id=ctx.user_id,
         organization_id=ctx.organization_id,

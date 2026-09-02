@@ -22,7 +22,9 @@ def _build_session() -> MagicMock:
     session = MagicMock()
     session.add = MagicMock()
     session.commit = AsyncMock()
+    session.flush = AsyncMock()
     session.refresh = AsyncMock()
+    session.rollback = AsyncMock()
     session.delete = AsyncMock()
     return session
 
@@ -45,10 +47,10 @@ def _make_room(**overrides) -> Room:
 
 
 async def test_create_room_emits_room_created() -> None:
-    from uniffy.domains.rooms.operations import RoomOperations
+    from uniffy.domains.scheduling.rooms.lifecycle import RoomOperations
 
     session = _build_session()
-    ops = RoomOperations(session)
+    ops = RoomOperations(session, MagicMock())
     ops._index_for_search = AsyncMock()
 
     with patch.object(
@@ -69,7 +71,7 @@ async def test_create_room_emits_room_created() -> None:
 
 
 async def test_update_room_status_to_retired_emits_archived() -> None:
-    from uniffy.domains.rooms.operations import RoomOperations
+    from uniffy.domains.scheduling.rooms.lifecycle import RoomOperations
 
     room = _make_room(status=RoomStatus.ACTIVE)
     session = _build_session()
@@ -99,7 +101,7 @@ async def test_update_room_status_to_retired_emits_archived() -> None:
 
 
 async def test_delete_room_emits_room_deleted() -> None:
-    from uniffy.domains.rooms.operations import RoomOperations
+    from uniffy.domains.scheduling.rooms.lifecycle import RoomOperations
 
     room = _make_room()
     session = _build_session()

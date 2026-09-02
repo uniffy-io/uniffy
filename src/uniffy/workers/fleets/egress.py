@@ -3,7 +3,8 @@
 import os
 from datetime import UTC
 
-from uniffy.core.valkey import QueueName, ValkeyConfig
+from uniffy.core.jobs import QueueName
+from uniffy.infrastructure.valkey.config import ValkeyConfig
 from uniffy.workers.lifecycle import (
     EGRESS_RESOURCE_PROFILE,
     egress_on_shutdown,

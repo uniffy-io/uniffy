@@ -62,7 +62,7 @@ Docstrings work best as a single sentence stating the WHY when that WHY is not o
 
 **Reference examples in this repo:**
 
-- GOOD: `src/uniffy/_metrics_bootstrap.py` - short module docstring stating purpose; one function docstring that explains the WHY ("MUST be called before any `prometheus_client` import"). No `Args:` / `Returns:` blocks.
+- GOOD: `src/uniffy/infrastructure/observability/bootstrap.py` - short module docstring stating purpose; one function docstring that explains the WHY ("MUST be called before any `prometheus_client` import"). No `Args:` / `Returns:` blocks.
 - BAD: any class docstring with an `Attributes\n----------\nkey : str\n    Setting name...` block - the type-annotated field already documents that. Delete the block; keep one sentence stating what the row represents.
 - BAD: multi-paragraph module docstrings with bullet lists narrating filter rules, lifecycle, or per-RPC inventories. Collapse to one or two lines stating the module's job; the bullets belong in the code itself.
 
@@ -90,4 +90,4 @@ Names work best when they describe what the thing IS or DOES, not which plan / p
 
 Delegated agents do not reliably load the repo's `.agents/rules/`. The delegating agent is responsible for carrying this discipline into the task prompt, either by quoting the relevant rules or requiring this file to be read before editing. A prompt that just says "write the handler" tends to produce numpydoc blocks, trivial restate-the-name docstrings, and paragraph-long module headers because that is the default training-data style. Every parallel task needs the rule independently; one agent's adherence does not propagate to siblings.
 
-Reference `src/uniffy/_metrics_bootstrap.py` as the in-repo "good" example and call out the docstring patterns to avoid (`Args:` / `Returns:` / `Attributes:` blocks, trivial restate-the-name docstrings, multi-paragraph module headers narrating flow). Concrete file-path anchors are more reliable than abstract style guidance.
+Reference `src/uniffy/infrastructure/observability/bootstrap.py` as the in-repo "good" example and call out the docstring patterns to avoid (`Args:` / `Returns:` / `Attributes:` blocks, trivial restate-the-name docstrings, multi-paragraph module headers narrating flow). Concrete file-path anchors are more reliable than abstract style guidance.

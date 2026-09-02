@@ -1,18 +1,20 @@
-"""Single facade owning all reads and writes against ``tags`` /
-``tag_assignments``; manual cap is 20, inline syncing is exempt.
-"""
+"""Mutation operations for tags and assignments."""
 
 from collections.abc import Iterable
+from dataclasses import dataclass
 from datetime import UTC, datetime
-from enum import StrEnum
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import and_, delete, exists, func, literal, or_, select, text, update
+from sqlalchemy import delete, func, literal, select, text, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from uniffy.core.content.references import CONTENT_URN_PREFIX, parse_urn
+from uniffy.core.cache.operations import (
+    cache_delete,
+    cache_invalidate_many,
+)
+from uniffy.core.content.references import CONTENT_URN_PREFIX
 from uniffy.core.errors import (
     ConflictError,
     NotFoundError,
@@ -22,55 +24,24 @@ from uniffy.core.errors import (
 from uniffy.core.models.tags.tag import Tag, TagAssignment
 from uniffy.core.search.indexer import SearchIndexer
 from uniffy.core.types import AccessMode, ContentRole, ContentType
-from uniffy.core.valkey.cache import (
-    cache_delete,
-    cache_get_many,
-    cache_get_or_set_locked,
-    cache_invalidate_many,
-    cache_set,
-)
-from uniffy.core.valkey.tags import (
+from uniffy.domains.tags.events import (
     EVENT_TAG_ASSIGNMENT_CHANGED,
     EVENT_TAG_CREATED,
     EVENT_TAG_DELETED,
     EVENT_TAG_UPDATED,
     publish_tag_event,
 )
-from uniffy.domains.permissions.resource_access import (
-    ResourceAccessPurpose,
-    ResourceAccessResolver,
-    ResourceKey,
-)
 from uniffy.domains.tags.normalize import slugify_tag
-from uniffy.domains.tags.visibility import (
-    build_assignment_visibility_predicate,
-    build_tag_visibility_predicate,
+from uniffy.domains.tags.reader import (
+    MAX_MANUAL_TAGS_PER_CONTENT,
+    RECENT_ASSIGNMENT_LIMIT,
+    SOURCE_MANUAL,
+    VALID_SOURCES,
+    TagReader,
+    count_cache_key,
 )
 
 LOGGER_COMPONENT = "tags.ops"
-
-SOURCE_MANUAL = "manual"
-SOURCE_INLINE = "inline"
-_VALID_SOURCES = frozenset({SOURCE_MANUAL, SOURCE_INLINE})
-
-MAX_MANUAL_TAGS_PER_CONTENT = 20
-
-_COUNT_CACHE_TTL = 60
-_COUNT_CACHE_PREFIX = "tag_count"
-_COUNT_CACHE_FIELD = "count"
-
-_DEFAULT_PAGE_SIZE = 100
-_MAX_PAGE_SIZE = 500
-_DEFAULT_SUGGEST_LIMIT = 10
-_MAX_SUGGEST_LIMIT = 50
-
-_RECENT_ASSIGNMENT_LIMIT = 5
-
-
-class TagSort(StrEnum):
-    ALPHA_ASC = "alpha_asc"
-    ALPHA_DESC = "alpha_desc"
-    RECENT_DESC = "recent_desc"
 
 
 class TagSlugCollisionError(ConflictError):
@@ -85,6 +56,26 @@ class TagLimitExceededError(UNIFFYError):
         self.content_urn = content_urn
         self.limit = limit
         super().__init__(f"Tag limit exceeded for {content_urn!r}: max {limit} manual tags")
+
+
+@dataclass(frozen=True)
+class StagedManualTagReplacement:
+    organization_id: UUID
+    content_urn: str
+    content_type: ContentType
+    current_rows: tuple[TagAssignment, ...]
+    affected_tag_ids: tuple[UUID, ...]
+    added_tag_ids: tuple[UUID, ...]
+    removed_tag_ids: tuple[UUID, ...]
+
+
+@dataclass(frozen=True)
+class StagedTagRemoval:
+    actor_id: UUID
+    organization_id: UUID
+    content_urn: str
+    content_type: ContentType
+    removed_tag_ids: tuple[UUID, ...]
 
 
 def _content_type_from_urn(urn: str) -> ContentType:
@@ -103,10 +94,6 @@ def _content_type_from_urn(urn: str) -> ContentType:
         return ContentType(raw_type)
     except ValueError as exc:
         raise ValidationError("content_urn", f"unknown content type in {urn!r}") from exc
-
-
-def _count_cache_key(organization_id: UUID, tag_id: UUID) -> str:
-    return f"{_COUNT_CACHE_PREFIX}:{organization_id}:{tag_id}"
 
 
 def _tag_urn(tag_id: UUID) -> str:
@@ -130,35 +117,14 @@ def _serialize_tag(tag: Tag, *, usage_count: int = 0) -> dict[str, object]:
     }
 
 
-class TagOperations:
-    def __init__(self, session: AsyncSession) -> None:
-        self.session = session
-        self.indexer = SearchIndexer()
-
-    async def filter_viewable_urns(
+class TagOperations(TagReader):
+    def __init__(
         self,
-        *,
-        actor_id: UUID,
-        organization_id: UUID,
-        content_urns: Iterable[str],
-    ) -> list[str]:
-        parsed = {
-            urn: ResourceKey(*key)
-            for urn in dict.fromkeys(content_urns)
-            if (key := parse_urn(urn)) is not None
-        }
-        if not parsed:
-            return []
-        try:
-            decisions = await ResourceAccessResolver(self.session).resolve(
-                actor_id=actor_id,
-                organization_id=organization_id,
-                keys=parsed.values(),
-                purpose=ResourceAccessPurpose.REFERENCE,
-            )
-        except ValueError as exc:
-            raise ValidationError("content_urns", str(exc)) from exc
-        return [urn for urn, key in parsed.items() if decisions[key].can_view]
+        session: AsyncSession,
+        search_indexer: SearchIndexer,
+    ) -> None:
+        super().__init__(session)
+        self.indexer = search_indexer
 
     async def create(
         self,
@@ -277,7 +243,7 @@ class TagOperations:
         await self.session.delete(tag)
         await self.session.commit()
 
-        await cache_delete(_count_cache_key(organization_id, tag_id))
+        await cache_delete(count_cache_key(organization_id, tag_id))
         await self._remove_tag_entity(tag_urn, organization_id)
 
         await publish_tag_event(
@@ -286,179 +252,6 @@ class TagOperations:
             {"tag_id": str(tag_id)},
         )
         return urns
-
-    async def get(
-        self,
-        *,
-        organization_id: UUID,
-        tag_or_slug: str,
-        actor_id: UUID | None = None,
-    ) -> Tag:
-        """Hidden tags raise ``NotFoundError`` (404 instead of 403) to
-        prevent id/slug enumeration.
-        """
-        try:
-            tag_uuid = UUID(tag_or_slug)
-        except ValueError:
-            tag_uuid = None
-
-        tag: Tag | None = None
-        if tag_uuid is not None:
-            tag = await self._get_by_id(organization_id, tag_uuid)
-
-        if tag is None:
-            tag = await self._get_by_slug(organization_id, slugify_tag(tag_or_slug))
-
-        if tag is None:
-            raise NotFoundError("Tag", tag_or_slug)
-
-        if actor_id is not None:
-            if not await self._tag_visible_via_predicate(actor_id, organization_id, tag.id):
-                raise NotFoundError("Tag", tag_or_slug)
-        return tag
-
-    async def _tag_visible_via_predicate(
-        self,
-        actor_id: UUID,
-        organization_id: UUID,
-        tag_id: UUID,
-    ) -> bool:
-        """Single-tag visibility check using the SQL predicate.
-
-        One round-trip: ``SELECT 1 FROM tags WHERE id = ? AND <predicate>``.
-        Org admin short-circuits server-side via the predicate builder.
-        """
-        predicate = await build_tag_visibility_predicate(
-            self.session,
-            user_id=actor_id,
-            organization_id=organization_id,
-        )
-        if predicate is None:
-            return True
-        stmt = select(Tag.id).where(
-            Tag.id == tag_id,
-            Tag.organization_id == organization_id,
-            predicate,
-        )
-        return (await self.session.execute(stmt)).scalar_one_or_none() is not None
-
-    async def list_tags(
-        self,
-        *,
-        organization_id: UUID,
-        content_types: Iterable[ContentType] | None = None,
-        query: str | None = None,
-        sort: TagSort = TagSort.RECENT_DESC,
-        page_size: int = _DEFAULT_PAGE_SIZE,
-        page_token: str | None = None,
-        actor_id: UUID | None = None,
-    ) -> tuple[list[Tag], dict[UUID, int], str | None]:
-        """Page through tags in the org with optional substring search.
-
-        Returns ``(tags, counts_by_id, next_page_token)``. The counts
-        dict is hydrated for the returned page only.
-
-        When ``actor_id`` is supplied the page is filtered server-side
-        via :func:`build_tag_visibility_predicate` so the SQL planner
-        short-circuits per row. Org / domain admins skip the predicate
-        entirely. Pagination is deterministic -- no over-fetch shrink.
-        """
-        page_size = max(1, min(page_size, _MAX_PAGE_SIZE))
-        offset = _decode_offset(page_token)
-
-        visibility_predicate = None
-        if actor_id is not None:
-            visibility_predicate = await build_tag_visibility_predicate(
-                self.session,
-                user_id=actor_id,
-                organization_id=organization_id,
-            )
-
-        stmt = select(Tag).where(Tag.organization_id == organization_id)
-
-        if query:
-            needle = f"{query.strip().lower()}%"
-            stmt = stmt.where(or_(func.lower(Tag.name).like(needle), Tag.slug.like(needle)))
-
-        if content_types:
-            content_type_values = [ct.value for ct in content_types]
-            stmt = stmt.where(
-                exists(
-                    select(1)
-                    .select_from(TagAssignment)
-                    .where(
-                        TagAssignment.tag_id == Tag.id,
-                        TagAssignment.content_type.in_(content_type_values),
-                    )
-                )
-            )
-
-        if visibility_predicate is not None:
-            stmt = stmt.where(visibility_predicate)
-
-        if sort == TagSort.ALPHA_ASC:
-            stmt = stmt.order_by(Tag.name.asc(), Tag.id.asc())
-        elif sort == TagSort.ALPHA_DESC:
-            stmt = stmt.order_by(Tag.name.desc(), Tag.id.desc())
-        elif sort == TagSort.RECENT_DESC:
-            stmt = stmt.order_by(
-                Tag.last_used_at.desc().nullslast(),
-                Tag.id.desc(),
-            )
-        else:
-            stmt = stmt.order_by(Tag.id.desc())
-
-        stmt = stmt.offset(offset).limit(page_size + 1)
-        rows = (await self.session.execute(stmt)).scalars().all()
-        has_more = len(rows) > page_size
-        tags = list(rows[:page_size])
-
-        counts = await self._get_usage_counts(organization_id, [t.id for t in tags])
-
-        next_token = _encode_offset(offset + page_size) if has_more else None
-        return tags, counts, next_token
-
-    async def suggest(
-        self,
-        *,
-        organization_id: UUID,
-        prefix: str,
-        limit: int = _DEFAULT_SUGGEST_LIMIT,
-        actor_id: UUID | None = None,
-    ) -> list[Tag]:
-        """Return tags whose slug starts with ``prefix`` ordered by recency.
-
-        When ``actor_id`` is supplied the result is filtered to tags the
-        user can currently see -- the worst leak surface, since two
-        characters of input are enough to enumerate confidential prefixes.
-        """
-        slug_prefix = slugify_tag(prefix)
-        if not slug_prefix:
-            return []
-        limit = max(1, min(limit, _MAX_SUGGEST_LIMIT))
-
-        visibility_predicate = None
-        if actor_id is not None:
-            visibility_predicate = await build_tag_visibility_predicate(
-                self.session,
-                user_id=actor_id,
-                organization_id=organization_id,
-            )
-
-        stmt = (
-            select(Tag)
-            .where(
-                Tag.organization_id == organization_id,
-                Tag.slug.like(f"{slug_prefix}%"),
-            )
-            .order_by(Tag.last_used_at.desc().nullslast(), Tag.name.asc())
-            .limit(limit)
-        )
-        if visibility_predicate is not None:
-            stmt = stmt.where(visibility_predicate)
-        rows = list((await self.session.execute(stmt)).scalars().all())
-
-        return rows
 
     async def assign(
         self,
@@ -475,7 +268,7 @@ class TagOperations:
         without spawning a duplicate row. Manual assignment honours the
         20-tag cap; ``inline`` is exempt to keep note saves robust.
         """
-        if source not in _VALID_SOURCES:
+        if source not in VALID_SOURCES:
             raise ValidationError("source", f"unknown tag source {source!r}")
 
         content_type = _content_type_from_urn(content_urn)
@@ -570,7 +363,7 @@ class TagOperations:
         on every assignment for the URN.
         """
         _content_type_from_urn(content_urn)
-        if source is not None and source not in _VALID_SOURCES:
+        if source is not None and source not in VALID_SOURCES:
             raise ValidationError("source", f"unknown tag source {source!r}")
 
         target_ids = list(dict.fromkeys(tag_ids)) if tag_ids is not None else None
@@ -643,14 +436,62 @@ class TagOperations:
         organization_id: UUID,
         content_urn: str,
     ) -> list[UUID]:
-        """Drop every assignment pointing at a URN. Called on content delete."""
-        return await self.unassign(
+        staged = await self.stage_unassign_all_for_urn(
             actor_id=actor_id,
             organization_id=organization_id,
             content_urn=content_urn,
-            tag_ids=None,
-            source=None,
         )
+        if not staged.removed_tag_ids:
+            return []
+        try:
+            await self.session.commit()
+        except Exception:
+            await self.session.rollback()
+            raise
+        return await self.finish_unassign_all_after_commit(staged)
+
+    async def stage_unassign_all_for_urn(
+        self,
+        *,
+        actor_id: UUID,
+        organization_id: UUID,
+        content_urn: str,
+    ) -> StagedTagRemoval:
+        rows = await self._fetch_assignments(content_urn, None)
+        removed_tag_ids = tuple(row.tag_id for row in rows)
+        if removed_tag_ids:
+            await self.session.execute(
+                delete(TagAssignment).where(TagAssignment.content_urn == content_urn)
+            )
+        return StagedTagRemoval(
+            actor_id=actor_id,
+            organization_id=organization_id,
+            content_urn=content_urn,
+            content_type=_content_type_from_urn(content_urn),
+            removed_tag_ids=removed_tag_ids,
+        )
+
+    async def finish_unassign_all_after_commit(self, staged: StagedTagRemoval) -> list[UUID]:
+        removed_tag_ids = list(staged.removed_tag_ids)
+        if not removed_tag_ids:
+            return []
+        await self._invalidate_counts(staged.organization_id, removed_tag_ids)
+        tag_counts = await self._reindex_tag_docs(staged.organization_id, removed_tag_ids)
+        await publish_tag_event(
+            staged.organization_id,
+            EVENT_TAG_ASSIGNMENT_CHANGED,
+            {
+                "content_urn": staged.content_urn,
+                "content_type": staged.content_type.value,
+                "added": [],
+                "removed": [str(tag_id) for tag_id in removed_tag_ids],
+                "source": "",
+                "actor_id": str(staged.actor_id),
+                "tag_counts": {str(tag_id): tag_counts.get(tag_id, 0) for tag_id in removed_tag_ids},
+                "tag_urns": {str(tag_id): _tag_urn(tag_id) for tag_id in removed_tag_ids},
+            },
+        )
+        return removed_tag_ids
 
     async def replace_manual_tags(
         self,
@@ -669,6 +510,31 @@ class TagOperations:
         rows, batch INSERT / merge for additions, one ``last_used_at``
         bump, one commit.
         """
+        staged = await self.stage_manual_tags(
+            actor_id=actor_id,
+            organization_id=organization_id,
+            content_urn=content_urn,
+            tag_ids=tag_ids,
+        )
+        if not staged.affected_tag_ids:
+            return list(staged.current_rows)
+
+        try:
+            await self.session.commit()
+        except Exception:
+            await self.session.rollback()
+            raise
+        return await self.finish_manual_tags_after_commit(staged)
+
+    async def stage_manual_tags(
+        self,
+        *,
+        actor_id: UUID,
+        organization_id: UUID,
+        content_urn: str,
+        tag_ids: Iterable[UUID],
+    ) -> StagedManualTagReplacement:
+        """Reconcile manual assignments without committing the caller's transaction."""
         desired = list(dict.fromkeys(tag_ids))
         content_type = _content_type_from_urn(content_urn)
 
@@ -691,7 +557,15 @@ class TagOperations:
             raise TagLimitExceededError(content_urn)
 
         if not to_remove and not to_add:
-            return current_rows
+            return StagedManualTagReplacement(
+                organization_id=organization_id,
+                content_urn=content_urn,
+                content_type=content_type,
+                current_rows=tuple(current_rows),
+                affected_tag_ids=(),
+                added_tag_ids=(),
+                removed_tag_ids=(),
+            )
 
         now = datetime.now(UTC)
         affected_tag_ids: set[UUID] = set()
@@ -742,134 +616,42 @@ class TagOperations:
                 update(Tag).where(Tag.id.in_(list(affected_tag_ids))).values(last_used_at=now)
             )
 
-        await self.session.commit()
+        return StagedManualTagReplacement(
+            organization_id=organization_id,
+            content_urn=content_urn,
+            content_type=content_type,
+            current_rows=tuple(current_rows),
+            affected_tag_ids=tuple(affected_tag_ids),
+            added_tag_ids=tuple(added_tag_ids),
+            removed_tag_ids=tuple(removed_tag_ids),
+        )
 
-        if affected_tag_ids:
-            await self._invalidate_counts(organization_id, affected_tag_ids)
-        affected_id_list = list(affected_tag_ids)
-        tag_counts = await self._reindex_tag_docs(organization_id, affected_id_list)
+    async def finish_manual_tags_after_commit(
+        self,
+        staged: StagedManualTagReplacement,
+    ) -> list[TagAssignment]:
+        if not staged.affected_tag_ids:
+            return list(staged.current_rows)
+
+        await self._invalidate_counts(staged.organization_id, staged.affected_tag_ids)
+        affected_id_list = list(staged.affected_tag_ids)
+        tag_counts = await self._reindex_tag_docs(staged.organization_id, affected_id_list)
 
         await publish_tag_event(
-            organization_id,
+            staged.organization_id,
             EVENT_TAG_ASSIGNMENT_CHANGED,
             {
-                "content_urn": content_urn,
-                "content_type": content_type.value,
-                "added": [str(tid) for tid in added_tag_ids],
-                "removed": [str(tid) for tid in removed_tag_ids],
+                "content_urn": staged.content_urn,
+                "content_type": staged.content_type.value,
+                "added": [str(tid) for tid in staged.added_tag_ids],
+                "removed": [str(tid) for tid in staged.removed_tag_ids],
                 "source": SOURCE_MANUAL,
                 "tag_counts": {str(tid): tag_counts.get(tid, 0) for tid in affected_id_list},
                 "tag_urns": {str(tid): _tag_urn(tid) for tid in affected_id_list},
             },
         )
 
-        return await self._fetch_assignments(content_urn, None)
-
-    async def get_for_urns(
-        self,
-        *,
-        organization_id: UUID,
-        content_urns: Iterable[str],
-    ) -> dict[str, list[Tag]]:
-        """Bulk-fetch the tags applied to each URN.
-
-        Used by domain list endpoints to hydrate ``tags[]`` without
-        N+1 queries. Returns a mapping with an entry for every input
-        URN (empty list when no tags are attached).
-        """
-        urn_list = list(dict.fromkeys(content_urns))
-        result: dict[str, list[Tag]] = {urn: [] for urn in urn_list}
-        if not urn_list:
-            return result
-
-        stmt = (
-            select(TagAssignment.content_urn, Tag)
-            .join(Tag, Tag.id == TagAssignment.tag_id)
-            .where(
-                Tag.organization_id == organization_id,
-                TagAssignment.content_urn.in_(urn_list),
-            )
-            .order_by(TagAssignment.assigned_at.asc())
-        )
-        rows = (await self.session.execute(stmt)).all()
-        for urn, tag in rows:
-            result[urn].append(tag)
-        return result
-
-    async def list_content(
-        self,
-        *,
-        organization_id: UUID,
-        tag_or_slug: str,
-        content_types: Iterable[ContentType] | None = None,
-        additional_tag_ids: Iterable[UUID] | None = None,
-        sources: Iterable[str] | None = None,
-        page_size: int = _DEFAULT_PAGE_SIZE,
-        page_token: str | None = None,
-        actor_id: UUID | None = None,
-    ) -> tuple[list[TagAssignment], str | None]:
-        """Page assignments for a tag, narrowed by the explorer criteria.
-
-        Returns the raw assignments; the caller hydrates each URN to
-        its domain row via the existing search index or a direct
-        lookup.
-
-        When ``actor_id`` is supplied the tag itself is gated through
-        :func:`build_tag_visibility_predicate` (404 on invisible) and
-        individual assignment rows are filtered server-side via
-        :func:`build_assignment_visibility_predicate` so a row whose
-        content the actor cannot view never reaches Python.
-        ``additional_tag_ids`` adds an AND constraint -- the URN must
-        also carry every listed tag. ``sources`` filters the primary
-        assignment row's ``sources`` array (subset semantics: any
-        listed source matches).
-        """
-        tag = await self.get(
-            organization_id=organization_id,
-            tag_or_slug=tag_or_slug,
-            actor_id=actor_id,
-        )
-        page_size = max(1, min(page_size, _MAX_PAGE_SIZE))
-        offset = _decode_offset(page_token)
-
-        stmt = select(TagAssignment).where(TagAssignment.tag_id == tag.id)
-        if content_types:
-            stmt = stmt.where(TagAssignment.content_type.in_([ct.value for ct in content_types]))
-        if sources:
-            valid = [s for s in sources if s in _VALID_SOURCES]
-            if valid:
-                stmt = stmt.where(TagAssignment.sources.overlap(valid))
-        extra = [tid for tid in (additional_tag_ids or []) if tid != tag.id]
-        if extra:
-            stmt = stmt.where(
-                TagAssignment.content_urn.in_(
-                    select(TagAssignment.content_urn)
-                    .where(TagAssignment.tag_id.in_(extra))
-                    .group_by(TagAssignment.content_urn)
-                    .having(func.count(TagAssignment.tag_id.distinct()) == len(extra))
-                )
-            )
-        if actor_id is not None:
-            assignment_predicate = await build_assignment_visibility_predicate(
-                self.session,
-                user_id=actor_id,
-                organization_id=organization_id,
-            )
-            if assignment_predicate is not None:
-                stmt = stmt.where(assignment_predicate)
-
-        stmt = stmt.order_by(
-            TagAssignment.assigned_at.desc(),
-            TagAssignment.content_urn.asc(),
-        )
-        stmt = stmt.offset(offset).limit(page_size + 1)
-
-        rows = list((await self.session.execute(stmt)).scalars().all())
-        has_more = len(rows) > page_size
-        assignments = rows[:page_size]
-
-        next_token = _encode_offset(offset + page_size) if has_more else None
-        return assignments, next_token
+        return await self._fetch_assignments(staged.content_urn, None)
 
     async def merge_tags(
         self,
@@ -939,8 +721,8 @@ class TagOperations:
         await self.session.commit()
         await self.session.refresh(target)
 
-        await cache_delete(_count_cache_key(organization_id, source_tag_id))
-        await cache_delete(_count_cache_key(organization_id, target_tag_id))
+        await cache_delete(count_cache_key(organization_id, source_tag_id))
+        await cache_delete(count_cache_key(organization_id, target_tag_id))
 
         await self._remove_tag_entity(source_urn, organization_id)
         target_counts = await self._reindex_tag_docs(organization_id, [target_tag_id])
@@ -975,19 +757,7 @@ class TagOperations:
         usage_count: int,
         breakdown_data: tuple[dict[str, int], list[str], list[str]] | None = None,
     ) -> None:
-        """Write the tag's Meilisearch document.
-
-        Tags are org-wide entities; visibility maps to ``OPEN_TO_ORG``
-        with a ``VIEWER`` baseline so every org member can resolve them
-        in spotlight / mention pickers. The per-tag visibility narrowing
-        for the unified-tags privacy rule is applied at read time by
-        :func:`build_tag_visibility_predicate`; the index just acts as
-        the denormalized read source for the chip preview.
-
-        ``breakdown_data`` lets a caller that already computed the
-        per-domain breakdown thread it through, avoiding a duplicate
-        scan of ``tag_assignments`` (background reindex worker).
-        """
+        """Index org-visible tag previews while preserving read-time assignment privacy."""
         owner_id = tag.created_by or tag.organization_id
         url_path = f"/tags/{tag.slug}"
         keywords = " ".join(filter(None, [tag.name, tag.slug, tag.description or ""]))
@@ -1023,17 +793,7 @@ class TagOperations:
         organization_id: UUID,
         tag_ids: Iterable[UUID],
     ) -> dict[UUID, int]:
-        """Refresh each affected tag's Meilisearch document inline.
-
-        One COUNT, one breakdown / recent scan, and one Meilisearch
-        partial write per tag. The cost is bounded -- assign / unassign
-        touches at most the manual cap (20) tags in one call -- and
-        running inline guarantees the chip preview reflects the new
-        state on the next ``resolveUrns`` round-trip.
-
-        Returns a ``{tag_id: usage_count}`` map so callers don't need
-        a follow-up ``_get_usage_counts`` for the realtime payload.
-        """
+        """Refresh bounded tag previews inline and return their usage counts."""
         ids = list(dict.fromkeys(tag_ids))
         if not ids:
             return {}
@@ -1051,12 +811,7 @@ class TagOperations:
     async def _compute_tag_breakdown(
         self, tag_id: UUID
     ) -> tuple[dict[str, int], list[str], list[str]]:
-        """Return ``(per_domain_count, recent_urns, recent_iso_timestamps)``.
-
-        Used by :meth:`_index_tag_entity` to denormalize the chip
-        preview's stats row into the tag's Meilisearch document so the
-        chip resolves without a per-render database hop.
-        """
+        """Build the denormalized stats needed to resolve a tag chip without another query."""
         breakdown_stmt = (
             select(TagAssignment.content_type, func.count())
             .where(TagAssignment.tag_id == tag_id)
@@ -1069,7 +824,7 @@ class TagOperations:
             select(TagAssignment.content_urn, TagAssignment.assigned_at)
             .where(TagAssignment.tag_id == tag_id)
             .order_by(TagAssignment.assigned_at.desc())
-            .limit(_RECENT_ASSIGNMENT_LIMIT)
+            .limit(RECENT_ASSIGNMENT_LIMIT)
         )
         recent_rows = (await self.session.execute(recent_stmt)).all()
         recent_urns = [row[0] for row in recent_rows]
@@ -1079,151 +834,18 @@ class TagOperations:
     async def _remove_tag_entity(self, tag_urn: str, organization_id: UUID) -> None:
         await self.indexer.remove(tag_urn, organization_id)
 
-    async def list_assigned_urns_for_tag(self, tag_id: UUID) -> list[str]:
-        """Return every URN currently assigned the tag (used by reindexers)."""
-        result = await self.session.execute(
-            select(TagAssignment.content_urn).where(TagAssignment.tag_id == tag_id)
-        )
-        return [row[0] for row in result.all()]
-
-    async def _get_by_id(self, organization_id: UUID, tag_id: UUID) -> Tag | None:
-        result = await self.session.execute(
-            select(Tag).where(Tag.id == tag_id, Tag.organization_id == organization_id)
-        )
-        return result.scalars().first()
-
-    async def _get_by_slug(self, organization_id: UUID, slug: str) -> Tag | None:
-        if not slug:
-            return None
-        result = await self.session.execute(
-            select(Tag).where(Tag.organization_id == organization_id, Tag.slug == slug)
-        )
-        return result.scalars().first()
-
-    async def _fetch_tags(self, organization_id: UUID, tag_ids: list[UUID]) -> list[Tag]:
-        if not tag_ids:
-            return []
-        result = await self.session.execute(
-            select(Tag).where(
-                Tag.organization_id == organization_id,
-                Tag.id.in_(tag_ids),
-            )
-        )
-        return list(result.scalars().all())
-
-    async def _fetch_assignments(
-        self,
-        content_urn: str,
-        tag_ids: Iterable[UUID] | None,
-    ) -> list[TagAssignment]:
-        stmt = select(TagAssignment).where(TagAssignment.content_urn == content_urn)
-        if tag_ids is not None:
-            stmt = stmt.where(TagAssignment.tag_id.in_(list(tag_ids)))
-        result = await self.session.execute(stmt)
-        return list(result.scalars().all())
-
-    async def _count_manual_for_urn(self, content_urn: str) -> int:
-        result = await self.session.execute(
-            select(func.count())
-            .select_from(TagAssignment)
-            .where(
-                and_(
-                    TagAssignment.content_urn == content_urn,
-                    TagAssignment.sources.any(SOURCE_MANUAL),
-                )
-            )
-        )
-        return int(result.scalar() or 0)
-
-    async def _get_usage_count(
-        self,
-        organization_id: UUID,
-        tag_id: UUID,
-    ) -> int:
-        """Read the cached assignment count for a tag.
-
-        Stampede-protected: a cold miss on a hot tag (``todo`` /
-        ``urgent`` with tens of thousands of assignments) collapses
-        every concurrent caller onto one ``COUNT(*)`` via the locked
-        loader, the rest poll the cache key for the lock TTL.
-        """
-
-        async def _load() -> dict[str, int]:
-            result = await self.session.execute(
-                select(func.count()).select_from(TagAssignment).where(TagAssignment.tag_id == tag_id)
-            )
-            return {_COUNT_CACHE_FIELD: int(result.scalar() or 0)}
-
-        payload = await cache_get_or_set_locked(
-            _count_cache_key(organization_id, tag_id),
-            _load,
-            ttl=_COUNT_CACHE_TTL,
-        )
-        if payload is None or _COUNT_CACHE_FIELD not in payload:
-            return 0
-        return int(payload[_COUNT_CACHE_FIELD])
-
-    async def _get_usage_counts(
-        self,
-        organization_id: UUID,
-        tag_ids: list[UUID],
-    ) -> dict[UUID, int]:
-        if not tag_ids:
-            return {}
-
-        keys = [_count_cache_key(organization_id, tid) for tid in tag_ids]
-        hits, misses = await cache_get_many(keys)
-
-        counts: dict[UUID, int] = {}
-        miss_ids: list[UUID] = []
-        miss_id_by_key = dict(zip(keys, tag_ids, strict=True))
-
-        for key, payload in hits.items():
-            if isinstance(payload, dict) and _COUNT_CACHE_FIELD in payload:
-                counts[miss_id_by_key[key]] = int(payload[_COUNT_CACHE_FIELD])
-            else:
-                miss_ids.append(miss_id_by_key[key])
-
-        for key in misses:
-            miss_ids.append(miss_id_by_key[key])
-
-        if miss_ids:
-            result = await self.session.execute(
-                select(TagAssignment.tag_id, func.count())
-                .where(TagAssignment.tag_id.in_(miss_ids))
-                .group_by(TagAssignment.tag_id)
-            )
-            rows = {row[0]: int(row[1]) for row in result.all()}
-            for tag_id in miss_ids:
-                count = rows.get(tag_id, 0)
-                counts[tag_id] = count
-                await cache_set(
-                    _count_cache_key(organization_id, tag_id),
-                    {_COUNT_CACHE_FIELD: count},
-                    ttl=_COUNT_CACHE_TTL,
-                )
-
-        for tag_id in tag_ids:
-            counts.setdefault(tag_id, 0)
-        return counts
-
     async def _invalidate_counts(
         self,
         organization_id: UUID,
         tag_ids: Iterable[UUID],
     ) -> None:
-        keys = [_count_cache_key(organization_id, tag_id) for tag_id in dict.fromkeys(tag_ids)]
+        keys = [count_cache_key(organization_id, tag_id) for tag_id in dict.fromkeys(tag_ids)]
         if keys:
             await cache_invalidate_many(*keys)
 
 
 def _format_breakdown(breakdown: dict[str, int]) -> str:
-    """Pipe-encode a per-domain usage breakdown for Meili metadata.
-
-    Format: ``NOTE:12|FILE:3|TASK:5``. Empty when the tag has no
-    assignments. Pipes / colons match the existing convention used by
-    other metadata fields.
-    """
+    """Pipe-encode a per-domain usage breakdown for search metadata."""
     if not breakdown:
         return ""
     return "|".join(
@@ -1234,19 +856,3 @@ def _format_breakdown(breakdown: dict[str, int]) -> str:
 def _format_pipes(values: list[str]) -> str:
     """Pipe-encode a parallel-array field. Empty when no entries."""
     return "|".join(values) if values else ""
-
-
-def _encode_offset(offset: int) -> str:
-    return str(offset)
-
-
-def _decode_offset(token: str | None) -> int:
-    if not token:
-        return 0
-    try:
-        value = int(token)
-    except ValueError as exc:
-        raise ValidationError("page_token", f"invalid page token {token!r}") from exc
-    if value < 0:
-        raise ValidationError("page_token", "negative offset")
-    return value

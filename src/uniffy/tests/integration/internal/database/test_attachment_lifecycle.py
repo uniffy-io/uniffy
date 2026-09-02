@@ -1,12 +1,11 @@
 """Staged uploads link in place, derive read access from their parent, and die with it."""
 
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from sqlalchemy import delete, select, update
 
 from uniffy.core.auth.permissions import PermissionChecker
-from uniffy.core.content.members import ContentMembersOperations
 from uniffy.core.models.files.attachment import Attachment
 from uniffy.core.models.files.file import File
 from uniffy.core.models.files.file_version import FileVersion
@@ -15,6 +14,7 @@ from uniffy.core.models.files.media_info import FileMediaInfo
 from uniffy.core.models.files.storage_usage import StorageUsage
 from uniffy.core.models.notes.note import Note
 from uniffy.core.models.permissions.content_member import ContentMember
+from uniffy.core.models.realtime.yjs_snapshot import RealtimeYjsSnapshot
 from uniffy.core.search.indexer import SearchIndexer
 from uniffy.core.types import (
     AccessMode,
@@ -23,31 +23,27 @@ from uniffy.core.types import (
     SubjectType,
     generate_id,
 )
-from uniffy.domains.files.attachments import operations as attachments_module
 from uniffy.domains.files.attachments.operations import AttachmentOperations
 from uniffy.domains.files.operations import FileOperations
 from uniffy.domains.notes.operations import NoteOperations
-from uniffy.domains.permissions.resource_access import (
+from uniffy.domains.permissions.access import (
     ResourceAccessPurpose,
     ResourceAccessResolver,
     ResourceKey,
 )
+from uniffy.domains.permissions.members import ContentMembersOperations
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
 
 @pytest.fixture
-def s3_mock(monkeypatch: pytest.MonkeyPatch) -> AsyncMock:
-    mock = AsyncMock()
-    monkeypatch.setattr(attachments_module, "get_s3_client", lambda: mock)
-    return mock
+def s3_mock() -> AsyncMock:
+    return AsyncMock()
 
 
 @pytest.fixture
-def quiet_search(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(SearchIndexer, "index", AsyncMock())
-    monkeypatch.setattr(SearchIndexer, "remove", AsyncMock())
-    monkeypatch.setattr(SearchIndexer, "update_sharing", AsyncMock())
+def quiet_search() -> SearchIndexer:
+    return MagicMock(spec=SearchIndexer)
 
 
 def _file(env, *, owner_id, folder_id=None, access_mode=AccessMode.OWNER_ONLY) -> File:
@@ -90,6 +86,13 @@ async def _cleanup(session, org_id) -> None:
     await session.execute(delete(Attachment).where(Attachment.organization_id == org_id))
     await session.execute(delete(File).where(File.organization_id == org_id))
     await session.execute(delete(Folder).where(Folder.organization_id == org_id))
+    org_note_ids = select(Note.id).where(Note.organization_id == org_id)
+    await session.execute(
+        delete(RealtimeYjsSnapshot).where(
+            RealtimeYjsSnapshot.content_type == ContentType.NOTE,
+            RealtimeYjsSnapshot.content_id.in_(org_note_ids),
+        )
+    )
     await session.execute(delete(Note).where(Note.organization_id == org_id))
     await session.execute(delete(ContentMember).where(ContentMember.organization_id == org_id))
     await session.execute(delete(StorageUsage).where(StorageUsage.organization_id == org_id))
@@ -104,8 +107,10 @@ async def _staged_setup(session, env, ops: AttachmentOperations) -> tuple[Folder
     return staging, staged
 
 
-async def test_staged_file_links_in_place_and_stays_private(session, env, s3_mock, quiet_search) -> None:
-    ops = AttachmentOperations(session)
+async def test_staged_file_links_in_place_and_stays_private(
+    session, env, s3_mock, quiet_search
+) -> None:
+    ops = AttachmentOperations(session, s3_mock, quiet_search)
     try:
         staging, staged = await _staged_setup(session, env, ops)
         note = _note(env, access_mode=AccessMode.OWNER_ONLY)
@@ -129,15 +134,13 @@ async def test_staged_file_links_in_place_and_stays_private(session, env, s3_moc
 
 
 async def test_attach_indexes_the_attachment_file(
-    session, env, s3_mock, monkeypatch: pytest.MonkeyPatch
+    session, env, s3_mock, quiet_search: SearchIndexer
 ) -> None:
     # Mention chips resolve previews from the raw search document; an attach
     # without a doc leaves every authorized reader on a permanent retry card.
     index_mock = AsyncMock()
-    monkeypatch.setattr(SearchIndexer, "index", index_mock)
-    monkeypatch.setattr(SearchIndexer, "remove", AsyncMock())
-    monkeypatch.setattr(SearchIndexer, "update_sharing", AsyncMock())
-    ops = AttachmentOperations(session)
+    quiet_search.index = index_mock
+    ops = AttachmentOperations(session, s3_mock, quiet_search)
     try:
         _, staged = await _staged_setup(session, env, ops)
         note = _note(env, access_mode=AccessMode.OWNER_ONLY)
@@ -159,7 +162,7 @@ async def test_attach_indexes_the_attachment_file(
 async def test_note_share_grants_viewer_on_linked_attachment_file(
     session, env, s3_mock, quiet_search
 ) -> None:
-    ops = AttachmentOperations(session)
+    ops = AttachmentOperations(session, s3_mock, quiet_search)
     try:
         _, staged = await _staged_setup(session, env, ops)
         note = _note(env, access_mode=AccessMode.EXPLICIT_MEMBERS)
@@ -183,10 +186,12 @@ async def test_note_share_grants_viewer_on_linked_attachment_file(
         )
         assert direct_role is None
 
-        before = await FileOperations(session)._resolve_role(env.member_id, env.org_id, staged)
+        before = await FileOperations(session, search_indexer=quiet_search)._resolve_role(
+            env.member_id, env.org_id, staged
+        )
         assert before is None
 
-        await ContentMembersOperations(session).add_member(
+        await ContentMembersOperations(session, quiet_search).add_member(
             actor_user_id=env.admin_id,
             organization_id=env.org_id,
             content_type=ContentType.NOTE,
@@ -196,7 +201,9 @@ async def test_note_share_grants_viewer_on_linked_attachment_file(
             role=ContentRole.VIEWER,
         )
 
-        after = await FileOperations(session)._resolve_role(env.member_id, env.org_id, staged)
+        after = await FileOperations(session, search_indexer=quiet_search)._resolve_role(
+            env.member_id, env.org_id, staged
+        )
         assert after == ContentRole.VIEWER
     finally:
         await _cleanup(session, env.org_id)
@@ -205,7 +212,7 @@ async def test_note_share_grants_viewer_on_linked_attachment_file(
 async def test_claimed_staged_file_is_copied_on_second_attach(
     session, env, s3_mock, quiet_search
 ) -> None:
-    ops = AttachmentOperations(session)
+    ops = AttachmentOperations(session, s3_mock, quiet_search)
     try:
         staging, staged = await _staged_setup(session, env, ops)
         first_note = _note(env, access_mode=AccessMode.OWNER_ONLY)
@@ -238,7 +245,7 @@ async def test_claimed_staged_file_is_copied_on_second_attach(
 async def test_non_staged_source_is_copied_and_left_untouched(
     session, env, s3_mock, quiet_search
 ) -> None:
-    ops = AttachmentOperations(session)
+    ops = AttachmentOperations(session, s3_mock, quiet_search)
     try:
         regular_folder = Folder(
             organization_id=env.org_id,
@@ -276,7 +283,7 @@ async def test_non_staged_source_is_copied_and_left_untouched(
 async def test_resolver_derives_attachment_file_view_from_note_grant(
     session, env, s3_mock, quiet_search
 ) -> None:
-    ops = AttachmentOperations(session)
+    ops = AttachmentOperations(session, s3_mock, quiet_search)
     try:
         _, staged = await _staged_setup(session, env, ops)
         note = _note(env, access_mode=AccessMode.EXPLICIT_MEMBERS)
@@ -297,7 +304,7 @@ async def test_resolver_derives_attachment_file_view_from_note_grant(
         )[key]
         assert not denied.can_view
 
-        await ContentMembersOperations(session).add_member(
+        await ContentMembersOperations(session, quiet_search).add_member(
             actor_user_id=env.admin_id,
             organization_id=env.org_id,
             content_type=ContentType.NOTE,
@@ -322,7 +329,7 @@ async def test_resolver_derives_attachment_file_view_from_note_grant(
 
 
 async def test_purge_removes_attachment_and_file_rows(session, env, s3_mock, quiet_search) -> None:
-    ops = AttachmentOperations(session)
+    ops = AttachmentOperations(session, s3_mock, quiet_search)
     try:
         _, staged = await _staged_setup(session, env, ops)
         note = _note(env, access_mode=AccessMode.OWNER_ONLY)
@@ -334,9 +341,7 @@ async def test_purge_removes_attachment_and_file_rows(session, env, s3_mock, qui
         )
         await session.commit()
 
-        removed = await ops.purge_attachments_for_content(
-            env.org_id, ContentType.NOTE, [note.id]
-        )
+        removed = await ops.purge_attachments_for_content(env.org_id, ContentType.NOTE, [note.id])
         await session.commit()
 
         assert removed == 1
@@ -350,7 +355,7 @@ async def test_purge_removes_attachment_and_file_rows(session, env, s3_mock, qui
 async def test_note_permanent_delete_purges_linked_attachment(
     session, env, s3_mock, quiet_search
 ) -> None:
-    ops = AttachmentOperations(session)
+    ops = AttachmentOperations(session, s3_mock, quiet_search)
     try:
         _, staged = await _staged_setup(session, env, ops)
         note = _note(env, access_mode=AccessMode.OWNER_ONLY)
@@ -360,13 +365,53 @@ async def test_note_permanent_delete_purges_linked_attachment(
         attachment = await ops.attach_file(
             env.admin_id, env.org_id, ContentType.NOTE, note.id, staged.id
         )
+        session.add(
+            RealtimeYjsSnapshot(
+                content_type=ContentType.NOTE,
+                content_id=note.id,
+                state_vector=b"state",
+                updates=b"updates",
+            )
+        )
         await session.commit()
 
-        await NoteOperations(session).delete(env.admin_id, env.org_id, note.id, permanent=True)
+        await NoteOperations(session, s3_mock, quiet_search).delete(
+            env.admin_id, env.org_id, note.id, permanent=True
+        )
 
         assert await session.get(Attachment, attachment.id) is None
         assert await session.get(File, staged.id) is None
         assert await session.get(Note, note.id) is None
+        assert await session.get(RealtimeYjsSnapshot, (ContentType.NOTE, note.id)) is None
+    finally:
+        await _cleanup(session, env.org_id)
+
+
+async def test_note_empty_trash_purges_realtime_snapshot(
+    session, env, s3_mock, quiet_search
+) -> None:
+    note = _note(env, access_mode=AccessMode.OWNER_ONLY)
+    note.is_deleted = True
+    session.add_all([
+        note,
+        RealtimeYjsSnapshot(
+            content_type=ContentType.NOTE,
+            content_id=note.id,
+            state_vector=b"state",
+            updates=b"updates",
+        ),
+    ])
+    await session.commit()
+
+    try:
+        count = await NoteOperations(session, s3_mock, quiet_search).empty_trash(
+            env.admin_id,
+            env.org_id,
+        )
+
+        assert count == 1
+        assert await session.get(Note, note.id) is None
+        assert await session.get(RealtimeYjsSnapshot, (ContentType.NOTE, note.id)) is None
     finally:
         await _cleanup(session, env.org_id)
 
@@ -374,7 +419,7 @@ async def test_note_permanent_delete_purges_linked_attachment(
 async def test_reconcile_detaches_only_unreferenced_linked_attachments(
     session, env, s3_mock, quiet_search
 ) -> None:
-    ops = AttachmentOperations(session)
+    ops = AttachmentOperations(session, s3_mock, quiet_search)
     try:
         staging = await ops.get_or_create_attachments_folder(env.admin_id, env.org_id)
         dropped_upload = _file(env, owner_id=env.admin_id, folder_id=staging.id)

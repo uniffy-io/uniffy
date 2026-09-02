@@ -1,7 +1,4 @@
-"""Audit emissions for the groups domain.
-
-Covers create / update / delete plus the three member mutations.
-"""
+"""Audit emissions for group and membership mutations."""
 
 from contextlib import ExitStack
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -10,7 +7,8 @@ from uniffy.core.audit.actions import Action
 from uniffy.core.models.login.group import Group
 from uniffy.core.models.login.group_member import GroupRole
 from uniffy.core.types import generate_id
-from uniffy.domains.groups.operations import GroupOperations
+from uniffy.domains.directory.groups.lifecycle import GroupOperations
+from uniffy.domains.directory.groups.members import GroupMemberOperations
 from uniffy.domains.organizations.operations import OrganizationOperations
 
 
@@ -35,9 +33,6 @@ def _make_group() -> Group:
 
 
 def _permitted(group: Group | None = None) -> ExitStack:
-    """Stub the org gates and the org-scoped row load so the test observes
-    only the audit behavior.
-    """
     stack = ExitStack()
     stack.enter_context(
         patch.object(OrganizationOperations, "require_org_admin", AsyncMock(return_value=None))
@@ -47,17 +42,22 @@ def _permitted(group: Group | None = None) -> ExitStack:
     )
     if group is not None:
         stack.enter_context(patch.object(GroupOperations, "_fetch", AsyncMock(return_value=group)))
+        stack.enter_context(
+            patch.object(GroupMemberOperations, "_fetch", AsyncMock(return_value=group))
+        )
     return stack
 
 
 async def test_create_emits_group_created() -> None:
     session = MagicMock()
     session.add = MagicMock()
+    session.flush = AsyncMock()
     session.commit = AsyncMock()
+    session.rollback = AsyncMock()
     session.refresh = AsyncMock()
     session.execute = AsyncMock(return_value=MagicMock(scalar_one_or_none=lambda: None))
 
-    ops = GroupOperations(session)
+    ops = GroupOperations(session, MagicMock())
     actor = generate_id()
     org = generate_id()
 
@@ -87,7 +87,7 @@ async def test_update_emits_changed_keys() -> None:
     session.refresh = AsyncMock()
     session.execute = AsyncMock(return_value=MagicMock(scalar_one_or_none=lambda: None))
 
-    ops = GroupOperations(session)
+    ops = GroupOperations(session, MagicMock())
     with _permitted(group):
         await ops.update(
             group_id=group.id,
@@ -110,7 +110,7 @@ async def test_update_with_no_changes_skips_audit() -> None:
     session.commit = AsyncMock()
     session.refresh = AsyncMock()
 
-    ops = GroupOperations(session)
+    ops = GroupOperations(session, MagicMock())
     with _permitted(group):
         await ops.update(
             group_id=group.id,
@@ -131,7 +131,7 @@ async def test_delete_emits_group_deleted_with_member_count() -> None:
     session.delete = AsyncMock()
     session.commit = AsyncMock()
 
-    ops = GroupOperations(session)
+    ops = GroupOperations(session, MagicMock())
     with _permitted(group):
         await ops.delete(group.id, group.organization_id, actor_user_id=generate_id())
 
@@ -150,7 +150,7 @@ async def test_add_member_emits_group_member_added() -> None:
     session.refresh = AsyncMock()
     session.execute = AsyncMock(return_value=MagicMock(scalar_one_or_none=lambda: None))
 
-    ops = GroupOperations(session)
+    ops = GroupMemberOperations(session)
     target = generate_id()
     actor = generate_id()
 
@@ -180,7 +180,7 @@ async def test_update_member_role_emits_role_changed() -> None:
     session.commit = AsyncMock()
     session.refresh = AsyncMock()
 
-    ops = GroupOperations(session)
+    ops = GroupMemberOperations(session)
     target = generate_id()
     actor = generate_id()
 
@@ -211,7 +211,7 @@ async def test_remove_member_emits_group_member_removed() -> None:
     session.delete = AsyncMock()
     session.commit = AsyncMock()
 
-    ops = GroupOperations(session)
+    ops = GroupMemberOperations(session)
     target = generate_id()
     actor = generate_id()
 

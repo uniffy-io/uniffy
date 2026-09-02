@@ -11,7 +11,7 @@ from uuid import UUID
 from loguru import logger
 from PIL import Image
 
-from uniffy.core.storage import get_s3_client
+from uniffy.core.storage import ObjectStorage
 
 logger = logger.bind(component="avatars")
 
@@ -64,6 +64,7 @@ def resize_avatar(data: bytes, size: int) -> bytes:
 
 
 async def upload_avatar(
+    storage: ObjectStorage,
     entity_id: UUID,
     image_data: bytes,
     filename: str,
@@ -75,12 +76,10 @@ async def upload_avatar(
     content_hash = hashlib.sha256(image_data).hexdigest()[:8]
     key_prefix = f"{prefix}/{entity_id}/{content_hash}"
 
-    s3 = get_s3_client()
-
     for size_name, size_px in AVATAR_SIZES.items():
         resized = resize_avatar(image_data, size_px)
         s3_key = f"{key_prefix}/{size_name}.webp"
-        await s3.upload_bytes(
+        await storage.upload_bytes(
             key=s3_key,
             data=resized,
             content_type="image/webp",
@@ -90,11 +89,10 @@ async def upload_avatar(
     return key_prefix
 
 
-async def delete_avatar(avatar_key: str) -> None:
+async def delete_avatar(storage: ObjectStorage, avatar_key: str) -> None:
     """Delete every size under the avatar key prefix."""
-    s3 = get_s3_client()
     keys = [f"{avatar_key}/{size_name}.webp" for size_name in AVATAR_SIZES]
-    await s3.delete_objects(keys)
+    await storage.delete_objects(keys)
     logger.info(f"Deleted avatar with key prefix {avatar_key}")
 
 

@@ -23,9 +23,8 @@ from uniffy_proto.settings.v1.settings_pb2 import (
     UpdateProfileResponse,
 )
 
+from uniffy.core.auth.principal import current_user_id
 from uniffy.core.errors import NotFoundError, ValidationError
-from uniffy.db import open_session
-from uniffy.domains.auth.context import get_user_id_from_context
 from uniffy.domains.settings.converters import (
     appearance_dict_to_proto,
     appearance_from_proto,
@@ -39,6 +38,7 @@ from uniffy.domains.settings.converters import (
     scheduling_from_proto,
 )
 from uniffy.domains.settings.operations import SettingsOperations
+from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="settings.handlers")
 
@@ -49,7 +49,7 @@ class SettingsHandlers:
         request: CreateProfileRequest,
         ctx: RequestContext,
     ) -> CreateProfileResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
 
         try:
             async with open_session() as session:
@@ -80,7 +80,7 @@ class SettingsHandlers:
         request: GetProfileRequest,
         ctx: RequestContext,
     ) -> GetProfileResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
 
         try:
             profile_id = UUID(request.profile_id)
@@ -106,7 +106,7 @@ class SettingsHandlers:
         request: UpdateProfileRequest,
         ctx: RequestContext,
     ) -> UpdateProfileResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
 
         try:
             profile_id = UUID(request.profile_id)
@@ -148,7 +148,7 @@ class SettingsHandlers:
         request: DeleteProfileRequest,
         ctx: RequestContext,
     ) -> DeleteProfileResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
 
         try:
             profile_id = UUID(request.profile_id)
@@ -176,7 +176,7 @@ class SettingsHandlers:
         request: ListProfilesRequest,
         ctx: RequestContext,
     ) -> ListProfilesResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
 
         try:
             async with open_session() as session:
@@ -199,7 +199,7 @@ class SettingsHandlers:
         request: GetEffectiveSettingsRequest,
         ctx: RequestContext,
     ) -> GetEffectiveSettingsResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
 
         try:
             async with open_session() as session:
@@ -239,7 +239,7 @@ class SettingsHandlers:
         request: GetSettingsSchemaRequest,
         ctx: RequestContext,
     ) -> GetSettingsSchemaResponse:
-        get_user_id_from_context(ctx)
+        current_user_id()
 
         try:
             async with open_session() as session:
@@ -268,7 +268,7 @@ class SettingsHandlers:
         request: SetDefaultProfileRequest,
         ctx: RequestContext,
     ) -> SetDefaultProfileResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
 
         try:
             profile_id = UUID(request.profile_id)

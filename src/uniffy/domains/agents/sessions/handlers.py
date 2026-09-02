@@ -22,9 +22,9 @@ from uniffy_proto.agents.v1.sessions_pb2 import (
 )
 from uniffy_proto.common.v1.common_pb2 import PaginationResponse
 
+from uniffy.core.auth.principal import current_user_id, resolve_organization_id
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models.agents.message import AgentMessageRole
-from uniffy.db import open_session
 from uniffy.domains.agents.sessions.converters import (
     message_feedback_to_proto,
     message_to_proto,
@@ -32,7 +32,7 @@ from uniffy.domains.agents.sessions.converters import (
     session_to_proto,
 )
 from uniffy.domains.agents.sessions.operations import SessionOperations
-from uniffy.domains.auth.context import get_user_id_from_context, resolve_organization_id
+from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="agents.sessions.handlers")
 
@@ -60,10 +60,10 @@ class SessionsHandlers:
             The created or existing session.
 
         """
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
 
         try:
-            org_id = resolve_organization_id(ctx, request.organization_id)
+            org_id = resolve_organization_id(request.organization_id)
             agent_id = UUID(request.agent_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
@@ -117,10 +117,10 @@ class SessionsHandlers:
             The session.
 
         """
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
 
         try:
-            org_id = resolve_organization_id(ctx, request.organization_id)
+            org_id = resolve_organization_id(request.organization_id)
             session_id = UUID(request.session_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
@@ -165,10 +165,10 @@ class SessionsHandlers:
             Paginated list of messages.
 
         """
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
 
         try:
-            org_id = resolve_organization_id(ctx, request.organization_id)
+            org_id = resolve_organization_id(request.organization_id)
             session_id = UUID(request.session_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
@@ -231,9 +231,9 @@ class SessionsHandlers:
         ctx: RequestContext,
     ) -> EditMessageResponse:
         """Handle edit_message RPC call."""
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         try:
-            org_id = resolve_organization_id(ctx, request.organization_id)
+            org_id = resolve_organization_id(request.organization_id)
             message_id = UUID(request.message_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
@@ -267,9 +267,9 @@ class SessionsHandlers:
         ctx: RequestContext,
     ) -> RetryMessageResponse:
         """Handle retry_message RPC call."""
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         try:
-            org_id = resolve_organization_id(ctx, request.organization_id)
+            org_id = resolve_organization_id(request.organization_id)
             message_id = UUID(request.message_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
@@ -302,14 +302,14 @@ class SessionsHandlers:
         ctx: RequestContext,
     ) -> SubmitMessageFeedbackResponse:
         """Handle submit_message_feedback RPC call (thumbs up/down)."""
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         if bool(request.message_id) == bool(request.chat_message_id):
             raise ConnectError(
                 Code.INVALID_ARGUMENT,
                 "Exactly one of message_id and chat_message_id is required",
             )
         try:
-            org_id = resolve_organization_id(ctx, request.organization_id)
+            org_id = resolve_organization_id(request.organization_id)
             message_id = UUID(request.message_id) if request.message_id else None
             chat_message_id = UUID(request.chat_message_id) if request.chat_message_id else None
         except ValueError:

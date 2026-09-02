@@ -1,11 +1,16 @@
-"""Guards the index-time relevancy settings against silent drift."""
+"""Guards the engine-neutral workspace search schema against silent drift."""
 
-from uniffy.core.search.meilisearch import INDEX_SETTINGS
+from uniffy.core.search.policy import WORKSPACE_SEARCH_SCHEMA
 from uniffy.core.search.stop_words import STOP_WORDS, STOP_WORDS_BG, STOP_WORDS_EN
 
 
 def test_stop_words_are_wired_into_index_settings() -> None:
-    assert INDEX_SETTINGS.stop_words == list(STOP_WORDS)
+    assert WORKSPACE_SEARCH_SCHEMA.stop_words == STOP_WORDS
+
+
+def test_search_schema_uses_engine_neutral_ranking_rules() -> None:
+    assert WORKSPACE_SEARCH_SCHEMA.primary_key == "id"
+    assert all(rule.value == str(rule) for rule in WORKSPACE_SEARCH_SCHEMA.ranking_rules)
 
 
 def test_stop_words_are_lowercase_and_unique() -> None:

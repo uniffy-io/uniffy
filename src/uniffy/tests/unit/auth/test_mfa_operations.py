@@ -35,7 +35,7 @@ from uniffy.domains.auth.errors import (
 )
 from uniffy.domains.auth.mfa import operations as mfa_ops
 from uniffy.domains.auth.mfa.operations import MfaOperations
-from uniffy.domains.auth.mfa.rate_limit import VerifyLockStatus
+from uniffy.domains.auth.mfa.limits import VerifyLockStatus
 
 
 @dataclass

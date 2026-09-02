@@ -38,8 +38,8 @@ from uniffy.core.models.files.file_version import FileVersion
 from uniffy.core.models.files.folder import Folder
 from uniffy.core.models.files.media_info import FileMediaInfo
 from uniffy.core.models.files.multipart_upload import MultipartUpload, UploadStatus
+from uniffy.core.models.tags.tag import Tag
 from uniffy.core.types import AccessMode, ContentRole
-from uniffy.domains.tags import Tag
 from uniffy.domains.tags.converters import tag_to_proto
 
 EXTRACTION_STATUS_TO_PROTO = {

@@ -66,7 +66,7 @@ def _person_summary(person: dict) -> str:
 
 
 async def _execute_list_members(ctx: ToolContext, args: dict) -> ToolResult:
-    from uniffy.domains.people.reader import PeopleReader
+    from uniffy.domains.directory.people.reader import PeopleReader
 
     query, error = _text_arg(args, "query", max_length=MAX_QUERY_LENGTH)
     if error:
@@ -118,7 +118,7 @@ async def _execute_list_members(ctx: ToolContext, args: dict) -> ToolResult:
 
 
 async def _execute_get_person(ctx: ToolContext, args: dict) -> ToolResult:
-    from uniffy.domains.people.reader import PeopleReader
+    from uniffy.domains.directory.people.reader import PeopleReader
 
     user_id, error = _uuid_arg(args, "user_id")
     if error:
@@ -172,8 +172,8 @@ async def _execute_get_person(ctx: ToolContext, args: dict) -> ToolResult:
 
 
 async def _execute_list_teams(ctx: ToolContext, args: dict) -> ToolResult:
+    from uniffy.domains.directory.groups.teams import search_team_nodes
     from uniffy.domains.organizations.operations import OrganizationOperations
-    from uniffy.domains.people.teams import search_team_nodes
 
     query, error = _text_arg(args, "query", max_length=MAX_QUERY_LENGTH)
     if error:

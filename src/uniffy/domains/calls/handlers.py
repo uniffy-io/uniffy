@@ -37,15 +37,15 @@ from uniffy_proto.calls.v1.calls_pb2 import (
     UpdateOrgCallPolicyResponse,
 )
 
+from uniffy.core.auth.principal import current_user_id
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models.calls import ScreenShareQuality
-from uniffy.db import open_session
-from uniffy.domains.auth.context import get_user_id_from_context
 from uniffy.domains.calls.config import LiveKitConfigError, get_livekit_config, get_turn_config
 from uniffy.domains.calls.converters import call_to_proto, org_policy_to_proto
-from uniffy.domains.calls.livekit_client import LiveKitUnavailableError
+from uniffy.domains.calls.livekit import LiveKitUnavailableError
 from uniffy.domains.calls.operations import CallOperations
 from uniffy.domains.calls.turn import mint_turn_credentials
+from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="calls.handlers")
 
@@ -104,7 +104,7 @@ class CallHandlers:
     async def initiate_call(
         self, request: InitiateCallRequest, ctx: RequestContext
     ) -> InitiateCallResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         channel_id = _parse_uuid(request.channel_id, "channel_id")
         device_id = _require_device_id(request.device_id)
@@ -132,7 +132,7 @@ class CallHandlers:
         )
 
     async def join_call(self, request: JoinCallRequest, ctx: RequestContext) -> JoinCallResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         call_id = _parse_uuid(request.call_id, "call_id")
         device_id = _require_device_id(request.device_id)
@@ -159,7 +159,7 @@ class CallHandlers:
         )
 
     async def leave_call(self, request: LeaveCallRequest, ctx: RequestContext) -> LeaveCallResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         call_id = _parse_uuid(request.call_id, "call_id")
         device_id = _require_device_id(request.device_id)
@@ -174,7 +174,7 @@ class CallHandlers:
         return LeaveCallResponse(success=True)
 
     async def end_call(self, request: EndCallRequest, ctx: RequestContext) -> EndCallResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         call_id = _parse_uuid(request.call_id, "call_id")
 
@@ -188,7 +188,7 @@ class CallHandlers:
     async def refresh_call_token(
         self, request: RefreshCallTokenRequest, ctx: RequestContext
     ) -> RefreshCallTokenResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         call_id = _parse_uuid(request.call_id, "call_id")
         device_id = _require_device_id(request.device_id)
@@ -205,7 +205,7 @@ class CallHandlers:
     async def get_active_call(
         self, request: GetActiveCallRequest, ctx: RequestContext
     ) -> GetActiveCallResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         channel_id = _parse_uuid(request.channel_id, "channel_id")
 
@@ -225,7 +225,7 @@ class CallHandlers:
     async def list_active_calls(
         self, request: ListActiveCallsRequest, ctx: RequestContext
     ) -> ListActiveCallsResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
 
         async with open_session() as session:
@@ -246,7 +246,7 @@ class CallHandlers:
     ) -> DeclineCallResponse:
         # Acknowledge-only until missed-call records land with the push flow;
         # the caller's ring toast dismisses locally on timeout.
-        get_user_id_from_context(ctx)
+        current_user_id()
         _parse_uuid(request.organization_id, "organization_id")
         _parse_uuid(request.call_id, "call_id")
         return DeclineCallResponse(success=True)
@@ -254,7 +254,7 @@ class CallHandlers:
     async def kick_participant(
         self, request: KickParticipantRequest, ctx: RequestContext
     ) -> KickParticipantResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         call_id = _parse_uuid(request.call_id, "call_id")
 
@@ -270,7 +270,7 @@ class CallHandlers:
     async def mute_participant(
         self, request: MuteParticipantRequest, ctx: RequestContext
     ) -> MuteParticipantResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         call_id = _parse_uuid(request.call_id, "call_id")
 
@@ -286,7 +286,7 @@ class CallHandlers:
     async def get_org_call_policy(
         self, request: GetOrgCallPolicyRequest, ctx: RequestContext
     ) -> GetOrgCallPolicyResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
 
         async with open_session() as session:
@@ -299,7 +299,7 @@ class CallHandlers:
     async def update_org_call_policy(
         self, request: UpdateOrgCallPolicyRequest, ctx: RequestContext
     ) -> UpdateOrgCallPolicyResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
 
         async with open_session() as session:
@@ -327,7 +327,7 @@ class CallHandlers:
     async def report_media_state(
         self, request: ReportMediaStateRequest, ctx: RequestContext
     ) -> ReportMediaStateResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         call_id = _parse_uuid(request.call_id, "call_id")
         device_id = _require_device_id(request.device_id)

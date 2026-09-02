@@ -15,12 +15,14 @@ from uniffy.core.errors import ValidationError
 from uniffy.core.models.tags.tag import Tag, TagAssignment
 from uniffy.core.types import ContentType, generate_id
 from uniffy.domains.tags.operations import (
-    MAX_MANUAL_TAGS_PER_CONTENT,
-    SOURCE_INLINE,
-    SOURCE_MANUAL,
     TagLimitExceededError,
     TagOperations,
     _content_type_from_urn,
+)
+from uniffy.domains.tags.reader import (
+    MAX_MANUAL_TAGS_PER_CONTENT,
+    SOURCE_INLINE,
+    SOURCE_MANUAL,
 )
 
 
@@ -50,9 +52,9 @@ def _make_assignment(tag_id, urn=None, sources=None) -> TagAssignment:
 def _make_ops(session_mock) -> TagOperations:
     ops = TagOperations.__new__(TagOperations)
     ops.session = session_mock
-    ops.indexer = MagicMock()
-    ops.indexer.index = AsyncMock()
-    ops.indexer.remove = AsyncMock()
+    ops._search_indexer = MagicMock()
+    ops._search_indexer.index = AsyncMock()
+    ops._search_indexer.remove = AsyncMock()
     return ops
 
 

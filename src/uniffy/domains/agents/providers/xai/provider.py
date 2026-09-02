@@ -7,7 +7,7 @@ from uniffy.domains.agents.providers.base import ModelInfo
 from uniffy.domains.agents.providers.catalog import ReasoningControl, model_infos_for_provider
 from uniffy.domains.agents.providers.openai.provider import OpenAIProvider
 
-logger = logger.bind(component="agents.providers.xai")
+logger = logger.bind(component="agents.providers.xai.provider")
 
 
 class XAIProvider(OpenAIProvider):

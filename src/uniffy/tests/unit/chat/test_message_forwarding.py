@@ -16,13 +16,18 @@ from uniffy.core.models.chat.message import (
 from uniffy.core.types import generate_id
 from uniffy.domains.chat.messages import forwarding as forwarding_module
 from uniffy.domains.chat.messages.converters import forward_context_to_proto, message_to_proto
-from uniffy.domains.chat.messages.forward_projection import ForwardProjectionResolver
 from uniffy.domains.chat.messages.forwarding import ChatMessageForwardingOperations
 from uniffy.domains.chat.messages.operations import ChatMessageOperations
-from uniffy.domains.chat.streaming import publisher as streaming_publisher
+from uniffy.domains.chat.messages.projection import ForwardProjectionResolver
 
 ORG_ID = generate_id()
 CREATED_AT = datetime(2026, 8, 22, 14, 30, tzinfo=UTC)
+SOURCE_CHANNEL_NAME = "strategy"
+SOURCE_SENDER_NAME = "Alice Example"
+ATTACHMENT_FILENAME = "roadmap.pdf"
+FORWARD_COMMENT = "Context for the forward"
+FORWARD_METADATA_KEY = ChatMessageMetadataKey.FORWARD.value
+FORWARD_CONTEXT_FIELD = "forward_context"
 
 
 def _channel(*, organization_id=ORG_ID, name="source") -> ChatChannel:
@@ -45,7 +50,9 @@ def _source(
         channel_id=channel.id,
         sender_id=generate_id(),
         sender_type=sender_type,
-        content="Original [[[Roadmap|urn:uniffy:content:NOTE:019c0000-0000-7000-8000-000000000001]]]",
+        content=(
+            "Original [[[Roadmap|urn:uniffy:content:NOTE:019c0000-0000-7000-8000-000000000001]]]"
+        ),
         message_metadata=metadata,
         created_at=CREATED_AT,
         updated_at=CREATED_AT,
@@ -72,7 +79,7 @@ def _patch_dependencies(
     send_side_effect: Exception | None = None,
 ) -> AsyncMock:
     resolver = MagicMock()
-    resolver.resolve_one = AsyncMock(return_value=SimpleNamespace(display_name="Alice Example"))
+    resolver.resolve_one = AsyncMock(return_value=SimpleNamespace(display_name=SOURCE_SENDER_NAME))
     monkeypatch.setattr(
         forwarding_module,
         "SenderResolver",
@@ -91,7 +98,7 @@ def _patch_dependencies(
         channel_id=generate_id(),
         sender_id=generate_id(),
         sender_type=SenderType.USER,
-        content="Context for the forward",
+        content=FORWARD_COMMENT,
     )
     send_message = AsyncMock(return_value=(sent, "Forwarder", "avatar"))
     if send_side_effect is not None:
@@ -109,12 +116,12 @@ def _patch_dependencies(
 async def test_forward_captures_immutable_snapshot_and_attachment_links(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    source_channel = _channel(name="strategy")
+    source_channel = _channel(name=SOURCE_CHANNEL_NAME)
     source = _source(source_channel)
     file_id = generate_id()
     file = SimpleNamespace(
         id=file_id,
-        filename="roadmap.pdf",
+        filename=ATTACHMENT_FILENAME,
         mime_type="application/pdf",
         size_bytes=4096,
     )
@@ -131,7 +138,7 @@ async def test_forward_captures_immutable_snapshot_and_attachment_links(
         organization_id=ORG_ID,
         source_message_id=source.id,
         target_channel_id=target_channel_id,
-        comment="Context for the forward",
+        comment=FORWARD_COMMENT,
         sender_name="Forwarder",
         sender_avatar="avatar",
     )
@@ -139,23 +146,23 @@ async def test_forward_captures_immutable_snapshot_and_attachment_links(
     access.check_access.assert_awaited_once_with(user_id, ORG_ID, source_channel)
     kwargs = send_message.await_args.kwargs
     assert kwargs["channel_id"] == target_channel_id
-    assert kwargs["content"] == "Context for the forward"
+    assert kwargs["content"] == FORWARD_COMMENT
     message_metadata = kwargs["message_metadata"]
     assert loads(dumps_str(message_metadata)) == message_metadata
     forward = message_metadata[ChatMessageMetadataKey.FORWARD.value]
     assert forward["message_id"] == str(source.id)
     assert forward["channel_id"] == str(source_channel.id)
-    assert forward["channel_name"] == "strategy"
+    assert forward["channel_name"] == SOURCE_CHANNEL_NAME
     assert forward["snapshot"] == {
         "sender_id": str(source.sender_id),
         "sender_type": "USER",
-        "sender_name": "Alice Example",
+        "sender_name": SOURCE_SENDER_NAME,
         "created_at": CREATED_AT.isoformat(),
         "content": source.content,
         "attachments": [
             {
                 "file_id": str(file_id),
-                "filename": "roadmap.pdf",
+                "filename": ATTACHMENT_FILENAME,
                 "mime_type": "application/pdf",
                 "size_bytes": 4096,
             }
@@ -308,16 +315,16 @@ def test_forward_metadata_projects_to_typed_proto_context() -> None:
     assert proto.is_forwarded
     assert proto.HasField("forward_context")
     assert proto.forward_context.source_message_id == str(source.id)
-    assert proto.forward_context.source_channel_name == "strategy"
-    assert proto.forward_context.sender_name == "Alice Example"
+    assert proto.forward_context.source_channel_name == SOURCE_CHANNEL_NAME
+    assert proto.forward_context.sender_name == SOURCE_SENDER_NAME
     assert proto.forward_context.created_at.ToDatetime(tzinfo=UTC) == CREATED_AT
-    assert proto.forward_context.attachments[0].filename == "roadmap.pdf"
-    assert "forward" not in proto.metadata
+    assert proto.forward_context.attachments[0].filename == ATTACHMENT_FILENAME
+    assert FORWARD_METADATA_KEY not in proto.metadata
 
     restricted = message_to_proto(forwarded)
     assert restricted.is_forwarded
-    assert not restricted.HasField("forward_context")
-    assert "forward" not in restricted.metadata
+    assert not restricted.HasField(FORWARD_CONTEXT_FIELD)
+    assert FORWARD_METADATA_KEY not in restricted.metadata
 
 
 def test_malformed_forward_metadata_does_not_break_message_conversion() -> None:
@@ -332,8 +339,8 @@ def test_malformed_forward_metadata_does_not_break_message_conversion() -> None:
     proto = message_to_proto(message)
 
     assert not proto.is_forwarded
-    assert not proto.HasField("forward_context")
-    assert "forward" not in proto.metadata
+    assert not proto.HasField(FORWARD_CONTEXT_FIELD)
+    assert FORWARD_METADATA_KEY not in proto.metadata
 
 
 @pytest.mark.parametrize("allowed", [True, False])
@@ -362,9 +369,7 @@ async def test_forward_projection_requires_live_source_access(allowed: bool) -> 
         },
     )
     source_result = MagicMock()
-    source_result.all.return_value = [
-        SimpleNamespace(id=source.id, channel_id=source_channel.id)
-    ]
+    source_result.all.return_value = [SimpleNamespace(id=source.id, channel_id=source_channel.id)]
     session = MagicMock()
     session.execute = AsyncMock(return_value=source_result)
     access = MagicMock()
@@ -456,13 +461,11 @@ async def test_live_forward_event_is_personalized_without_raw_metadata(
     publish_personalized = AsyncMock()
     publish_shared = AsyncMock()
     monkeypatch.setattr(
-        streaming_publisher,
-        "publish_user_chat_events",
+        "uniffy.domains.chat.messages.delivery.publish_user_chat_events",
         publish_personalized,
     )
     monkeypatch.setattr(
-        streaming_publisher,
-        "publish_channel_event_to_members",
+        "uniffy.domains.chat.messages.delivery.publish_channel_event_to_members",
         publish_shared,
     )
     operations = ChatMessageOperations(MagicMock(), MagicMock())
@@ -482,8 +485,8 @@ async def test_live_forward_event_is_personalized_without_raw_metadata(
     events = publish_personalized.await_args.args[0]
     payloads = {user_id: payload for user_id, _event_type, payload in events}
     assert payloads[authorized_user_id]["forward_context"] == forward_metadata
-    assert "forward_context" not in payloads[restricted_user_id]
+    assert FORWARD_CONTEXT_FIELD not in payloads[restricted_user_id]
     assert payloads[restricted_user_id]["is_forwarded"] is True
-    assert "forward" not in payloads[authorized_user_id].get("metadata", {})
-    assert "forward" not in payloads[restricted_user_id].get("metadata", {})
+    assert FORWARD_METADATA_KEY not in payloads[authorized_user_id].get("metadata", {})
+    assert FORWARD_METADATA_KEY not in payloads[restricted_user_id].get("metadata", {})
     publish_shared.assert_not_awaited()

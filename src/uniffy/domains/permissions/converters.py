@@ -49,7 +49,7 @@ from uniffy.core.types import (
     ContentType,
     SubjectType,
 )
-from uniffy.domains.permissions.access_requests import (
+from uniffy.domains.permissions.requests.operations import (
     AccessRequestStatusView,
     AccessRequestView,
     RequestAccessOutcome,

@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+from datetime import timedelta
 from uuid import UUID
 
 from loguru import logger
 from sqlalchemy import select
 
+from uniffy.core.auth.passwords.crypto import hash_password
 from uniffy.core.models.login.group import Group, GroupKind
 from uniffy.core.models.login.group_member import GroupMember, GroupRole
 from uniffy.core.models.login.organization_member import (
@@ -14,12 +16,12 @@ from uniffy.core.models.login.organization_member import (
     OrganizationRole,
 )
 from uniffy.core.models.login.user import User
-from uniffy.domains.auth.passwords import hash_password
-from uniffy.domains.groups.naming import slugify
-from uniffy.domains.groups.operations import GroupOperations
+from uniffy.domains.directory.groups.lifecycle import GroupOperations
+from uniffy.domains.directory.groups.members import GroupMemberOperations
+from uniffy.domains.directory.groups.naming import slugify
+from uniffy.domains.directory.people.operations import PeopleOperations
+from uniffy.domains.directory.projection import sync_people_search
 from uniffy.domains.organizations.operations import OrganizationOperations
-from uniffy.domains.people.operations import PeopleOperations
-from uniffy.domains.people.search_sync import sync_people_search
 from uniffy.scripts.demo_company.context import DemoContext, DomainResult, SeedReport
 from uniffy.scripts.demo_company.loader import (
     DemoUser,
@@ -65,7 +67,12 @@ async def seed_people(ctx: DemoContext, content: PeopleContent, report: SeedRepo
     if not ctx.dry_run:
         # Job title, department and team name are denormalized into every
         # member's search document and mention chip.
-        await sync_people_search(ctx.session, ctx.organization_id, list(user_ids.values()))
+        await sync_people_search(
+            ctx.session,
+            ctx.search_indexer,
+            ctx.organization_id,
+            list(user_ids.values()),
+        )
 
 
 async def _ensure_person(ctx: DemoContext, spec: PersonSpec, result: DomainResult) -> UUID | None:
@@ -111,6 +118,7 @@ async def _ensure_person(ctx: DemoContext, spec: PersonSpec, result: DomainResul
         org_id=ctx.organization_id,
         role=OrganizationRole.MEMBER,
         actor_user_id=ctx.actor_id,
+        search_indexer=ctx.search_indexer,
     )
     return user.id
 
@@ -133,14 +141,13 @@ async def _apply_profile(
     changes: dict[str, object] = {"job_title": spec.job_title, "department": spec.department}
     if spec.office_location:
         changes["office_location"] = spec.office_location
-    if spec.start_date:
-        changes["start_date"] = spec.start_date
+    changes["start_date"] = (ctx.now - timedelta(days=spec.start_days_ago)).date()
 
     manager_id = user_ids.get(spec.manager) if spec.manager else None
     if spec.manager and manager_id is None:
         logger.warning(f"{spec.email} reports to {spec.manager}, who was not seeded")
 
-    ops = PeopleOperations(ctx.session)
+    ops = PeopleOperations(ctx.session, ctx.search_indexer)
     current = await ops.get_profile(ctx.organization_id, user_id)
     if (
         current is not None
@@ -245,7 +252,7 @@ async def _ensure_group(
         result.skipped += 1
         return existing
 
-    group = await GroupOperations(ctx.session).create(
+    group = await GroupOperations(ctx.session, ctx.search_indexer).create(
         organization_id=ctx.organization_id,
         name=name,
         created_by_user_id=ctx.actor_id,
@@ -274,7 +281,7 @@ async def _ensure_group_members(
             )
         ).all()
     }
-    ops = GroupOperations(ctx.session)
+    ops = GroupMemberOperations(ctx.session, ctx.search_indexer)
     for user_id, role in members:
         if user_id in current:
             continue
@@ -332,6 +339,7 @@ async def ensure_demo_user(
         org_id=ctx.organization_id,
         role=OrganizationRole.MEMBER,
         actor_user_id=ctx.actor_id,
+        search_indexer=ctx.search_indexer,
     )
 
     # The password stays out of the log: --password exists so a deployment can

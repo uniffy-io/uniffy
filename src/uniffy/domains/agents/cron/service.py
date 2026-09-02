@@ -4,9 +4,8 @@ from uniffy.domains.agents.cron.handlers import CronHandlers
 
 
 class CronServiceImpl(CronHandlers):
-    """Combined cron service implementation.
+    def __init__(self, search_indexer: SearchIndexer) -> None:
+        self.search_indexer = search_indexer
 
-    Inherits from handlers to provide service that can be mounted on ConnectRPC.
-    """
 
-    pass
+from uniffy.core.search import SearchIndexer

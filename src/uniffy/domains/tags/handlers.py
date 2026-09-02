@@ -30,6 +30,10 @@ from uniffy_proto.tags.v1.tags_pb2 import (
     UrnTags,
 )
 
+from uniffy.core.auth.principal import (
+    current_user_id,
+    resolve_organization_id,
+)
 from uniffy.core.content.references import parse_urn
 from uniffy.core.converters.common_proto import (
     content_type_from_proto,
@@ -43,11 +47,6 @@ from uniffy.core.errors import (
 )
 from uniffy.core.jobs import enqueue_job_reconnecting
 from uniffy.core.types import ContentType
-from uniffy.db import open_session
-from uniffy.domains.auth.context import (
-    get_user_id_from_context,
-    resolve_organization_id,
-)
 from uniffy.domains.tags.converters import (
     assignment_to_proto,
     sort_from_proto,
@@ -57,14 +56,15 @@ from uniffy.domains.tags.converters import (
     tags_to_proto_list,
 )
 from uniffy.domains.tags.filters.converters import criteria_from_proto
-from uniffy.domains.tags.job_contracts import REINDEX_TAG_URNS
+from uniffy.domains.tags.jobs.contracts import REINDEX_TAG_URNS
 from uniffy.domains.tags.operations import (
-    SOURCE_MANUAL,
     TagLimitExceededError,
     TagOperations,
     TagSlugCollisionError,
 )
-from uniffy.domains.tags.target_access import TagTargetAccess
+from uniffy.domains.tags.reader import SOURCE_MANUAL
+from uniffy.domains.tags.targets import TagTargetAccess
+from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="tags.handlers")
 
@@ -107,15 +107,15 @@ class TagsHandlers:
         request: CreateTagRequest,
         ctx: RequestContext,
     ) -> CreateTagResponse:
-        actor_id = get_user_id_from_context(ctx)
-        organization_id = resolve_organization_id(ctx, request.organization_id)
+        actor_id = current_user_id()
+        organization_id = resolve_organization_id(request.organization_id)
 
         if not request.name or not request.name.strip():
             raise ConnectError(Code.INVALID_ARGUMENT, "name is required")
 
         try:
             async with open_session() as session:
-                ops = TagOperations(session)
+                ops = TagOperations(session, self.search_indexer)
                 tag = await ops.create(
                     actor_id=actor_id,
                     organization_id=organization_id,
@@ -136,13 +136,13 @@ class TagsHandlers:
         request: UpdateTagRequest,
         ctx: RequestContext,
     ) -> UpdateTagResponse:
-        actor_id = get_user_id_from_context(ctx)
-        organization_id = resolve_organization_id(ctx, request.organization_id)
+        actor_id = current_user_id()
+        organization_id = resolve_organization_id(request.organization_id)
         tag_id = _parse_uuid(request.tag_id, "tag_id")
 
         try:
             async with open_session() as session:
-                ops = TagOperations(session)
+                ops = TagOperations(session, self.search_indexer)
                 tag, slug_changed = await ops.update(
                     actor_id=actor_id,
                     organization_id=organization_id,
@@ -177,13 +177,13 @@ class TagsHandlers:
         request: DeleteTagRequest,
         ctx: RequestContext,
     ) -> DeleteTagResponse:
-        actor_id = get_user_id_from_context(ctx)
-        organization_id = resolve_organization_id(ctx, request.organization_id)
+        actor_id = current_user_id()
+        organization_id = resolve_organization_id(request.organization_id)
         tag_id = _parse_uuid(request.tag_id, "tag_id")
 
         try:
             async with open_session() as session:
-                ops = TagOperations(session)
+                ops = TagOperations(session, self.search_indexer)
                 affected_urns = await ops.delete(
                     actor_id=actor_id,
                     organization_id=organization_id,
@@ -210,15 +210,15 @@ class TagsHandlers:
         request: GetTagRequest,
         ctx: RequestContext,
     ) -> GetTagResponse:
-        actor_id = get_user_id_from_context(ctx)
-        organization_id = resolve_organization_id(ctx, request.organization_id)
+        actor_id = current_user_id()
+        organization_id = resolve_organization_id(request.organization_id)
 
         if not request.tag:
             raise ConnectError(Code.INVALID_ARGUMENT, "tag is required")
 
         try:
             async with open_session() as session:
-                ops = TagOperations(session)
+                ops = TagOperations(session, self.search_indexer)
                 tag = await ops.get(
                     organization_id=organization_id,
                     tag_or_slug=request.tag,
@@ -237,12 +237,12 @@ class TagsHandlers:
         request: ListTagsRequest,
         ctx: RequestContext,
     ) -> ListTagsResponse:
-        actor_id = get_user_id_from_context(ctx)
-        organization_id = resolve_organization_id(ctx, request.organization_id)
+        actor_id = current_user_id()
+        organization_id = resolve_organization_id(request.organization_id)
 
         try:
             async with open_session() as session:
-                ops = TagOperations(session)
+                ops = TagOperations(session, self.search_indexer)
                 tags, counts, next_token = await ops.list_tags(
                     organization_id=organization_id,
                     content_types=_content_types_from_proto(list(request.content_types)),
@@ -267,12 +267,12 @@ class TagsHandlers:
         request: SuggestTagsRequest,
         ctx: RequestContext,
     ) -> SuggestTagsResponse:
-        actor_id = get_user_id_from_context(ctx)
-        organization_id = resolve_organization_id(ctx, request.organization_id)
+        actor_id = current_user_id()
+        organization_id = resolve_organization_id(request.organization_id)
 
         try:
             async with open_session() as session:
-                ops = TagOperations(session)
+                ops = TagOperations(session, self.search_indexer)
                 tags = await ops.suggest(
                     organization_id=organization_id,
                     prefix=request.prefix,
@@ -292,8 +292,8 @@ class TagsHandlers:
         request: AssignTagsRequest,
         ctx: RequestContext,
     ) -> AssignTagsResponse:
-        actor_id = get_user_id_from_context(ctx)
-        organization_id = resolve_organization_id(ctx, request.organization_id)
+        actor_id = current_user_id()
+        organization_id = resolve_organization_id(request.organization_id)
 
         if not request.content_urn:
             raise ConnectError(Code.INVALID_ARGUMENT, "content_urn is required")
@@ -303,7 +303,7 @@ class TagsHandlers:
 
         try:
             async with open_session() as session:
-                ops = TagOperations(session)
+                ops = TagOperations(session, self.search_indexer)
                 target = parse_urn(request.content_urn)
                 if target is None:
                     raise ValidationError("content_urn", "Invalid content URN")
@@ -331,8 +331,8 @@ class TagsHandlers:
         request: UnassignTagsRequest,
         ctx: RequestContext,
     ) -> UnassignTagsResponse:
-        user_id = get_user_id_from_context(ctx)
-        organization_id = resolve_organization_id(ctx, request.organization_id)
+        user_id = current_user_id()
+        organization_id = resolve_organization_id(request.organization_id)
 
         if not request.content_urn:
             raise ConnectError(Code.INVALID_ARGUMENT, "content_urn is required")
@@ -344,7 +344,7 @@ class TagsHandlers:
 
         try:
             async with open_session() as session:
-                ops = TagOperations(session)
+                ops = TagOperations(session, self.search_indexer)
                 target = parse_urn(request.content_urn)
                 if target is None:
                     raise ValidationError("content_urn", "Invalid content URN")
@@ -372,12 +372,12 @@ class TagsHandlers:
         request: GetTagsForUrnsRequest,
         ctx: RequestContext,
     ) -> GetTagsForUrnsResponse:
-        actor_id = get_user_id_from_context(ctx)
-        organization_id = resolve_organization_id(ctx, request.organization_id)
+        actor_id = current_user_id()
+        organization_id = resolve_organization_id(request.organization_id)
 
         try:
             async with open_session() as session:
-                ops = TagOperations(session)
+                ops = TagOperations(session, self.search_indexer)
                 content_urns = await ops.filter_viewable_urns(
                     actor_id=actor_id,
                     organization_id=organization_id,
@@ -408,8 +408,8 @@ class TagsHandlers:
         request: ListContentByTagRequest,
         ctx: RequestContext,
     ) -> ListContentByTagResponse:
-        actor_id = get_user_id_from_context(ctx)
-        organization_id = resolve_organization_id(ctx, request.organization_id)
+        actor_id = current_user_id()
+        organization_id = resolve_organization_id(request.organization_id)
 
         if not request.tag:
             raise ConnectError(Code.INVALID_ARGUMENT, "tag is required")
@@ -441,7 +441,7 @@ class TagsHandlers:
 
         try:
             async with open_session() as session:
-                ops = TagOperations(session)
+                ops = TagOperations(session, self.search_indexer)
                 assignments, next_token = await ops.list_content(
                     organization_id=organization_id,
                     tag_or_slug=request.tag,
@@ -468,14 +468,14 @@ class TagsHandlers:
         request: MergeTagsRequest,
         ctx: RequestContext,
     ) -> MergeTagsResponse:
-        actor_id = get_user_id_from_context(ctx)
-        organization_id = resolve_organization_id(ctx, request.organization_id)
+        actor_id = current_user_id()
+        organization_id = resolve_organization_id(request.organization_id)
         source_id = _parse_uuid(request.source_tag_id, "source_tag_id")
         target_id = _parse_uuid(request.target_tag_id, "target_tag_id")
 
         try:
             async with open_session() as session:
-                ops = TagOperations(session)
+                ops = TagOperations(session, self.search_indexer)
                 target = await ops.merge_tags(
                     actor_id=actor_id,
                     organization_id=organization_id,

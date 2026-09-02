@@ -1,5 +1,7 @@
 """Core data classes for the agent tool system."""
 
+from __future__ import annotations
+
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
@@ -7,8 +9,12 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from uniffy.core.search import SearchIndexer, WorkspaceSearch
+from uniffy.core.storage import ObjectStorage
+
 if TYPE_CHECKING:
     from uniffy.domains.agents.memories.scope import MemoryScopeRef
+    from uniffy.domains.chat.lifecycle import ChannelCallLifecycle
 
 CATEGORY_PLATFORM = "platform"
 CATEGORY_EXTERNAL = "external"
@@ -21,6 +27,9 @@ class ToolContext:
     session: AsyncSession
     user_id: UUID
     organization_id: UUID
+    storage: ObjectStorage | None = None
+    search_indexer: SearchIndexer | None = None
+    call_lifecycle: ChannelCallLifecycle | None = None
     agent_id: UUID | None = None
     session_id: UUID | None = None
     user_timezone: str | None = None
@@ -63,6 +72,30 @@ class ToolContext:
     # after the image and integration filters. Deny by default: advertisement
     # is not authorization, and a model can name a tool it was never offered.
     allowed_tools: frozenset[str] = frozenset()
+
+    @property
+    def search(self) -> WorkspaceSearch:
+        if self.search_indexer is None:
+            raise RuntimeError("Search is required for workspace tools")
+        return self.search_indexer.search
+
+    @property
+    def required_search(self) -> SearchIndexer:
+        if self.search_indexer is None:
+            raise RuntimeError("Search indexing is required for workspace mutations")
+        return self.search_indexer
+
+    @property
+    def required_storage(self) -> ObjectStorage:
+        if self.storage is None:
+            raise RuntimeError("Object storage is required for workspace mutations")
+        return self.storage
+
+    @property
+    def required_call_lifecycle(self) -> ChannelCallLifecycle:
+        if self.call_lifecycle is None:
+            raise RuntimeError("Call lifecycle is required for calendar attendee mutations")
+        return self.call_lifecycle
 
 
 @dataclass

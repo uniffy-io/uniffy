@@ -10,13 +10,13 @@ list does not contain it.
 import pytest
 
 from uniffy.core.types import AccessMode, generate_id
-from uniffy.domains.notes.operations import NoteOperations
+from uniffy.domains.notes.reader import NoteReader
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
 
 async def _ids(session, user_id, org_id, **kwargs) -> set:
-    notes, _ = await NoteOperations(session).list_notes(
+    notes, _ = await NoteReader(session).list_notes(
         user_id=user_id, organization_id=org_id, page_size=100, **kwargs
     )
     return {note.id for note in notes}
@@ -45,7 +45,7 @@ class TestNoAdminBypass:
 
     async def test_admin_count_matches_the_filtered_page(self, session, access) -> None:
         """A bypass in the count query alone would inflate the total."""
-        notes, total = await NoteOperations(session).list_notes(
+        notes, total = await NoteReader(session).list_notes(
             user_id=access.admin_id, organization_id=access.org_id, page_size=100
         )
         assert total == len(notes)

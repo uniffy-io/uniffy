@@ -20,8 +20,9 @@ from uniffy.core.models.chat.message import (
     ChatMessageVisibility,
     SenderType,
 )
-from uniffy.domains.chat.messages.operations import (
+from uniffy.domains.chat.agents import (
     AGENT_THREAD_REPLY_KINDS,
+    SenderResolver,
     bump_channel_message_stats,
     record_thread_reply,
 )
@@ -653,8 +654,6 @@ class ChatChannelMessageWriter:
         only the current agent's own rows stay as `role="assistant"`.
         Envelopes are in-memory; `session_id` is a sentinel.
         """
-        from uniffy.domains.chat.sender_resolver import SenderResolver
-
         binding_row = (
             await self._session.execute(
                 select(

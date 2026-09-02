@@ -24,7 +24,8 @@ from uniffy.domains.chat.drafts.operations import (
     MAX_CLIENT_SESSION_ID_LENGTH,
     ChatDraftOperations,
 )
-from uniffy.domains.chat.messages.operations import MAX_MESSAGE_LENGTH
+from uniffy.domains.chat.messages import delivery as message_delivery_module
+from uniffy.domains.chat.messages.limits import MAX_MESSAGE_LENGTH
 from uniffy.domains.chat.streaming import events as evt
 from uniffy.domains.chat.streaming.events import build_draft_changed_payload
 from uniffy.domains.chat.streaming.handlers import (
@@ -225,7 +226,7 @@ async def test_background_post_send_clears_drafts_for_users_only(
     ops = _make_message_ops_for_post_send()
     clear = AsyncMock()
     fake_cls = MagicMock(return_value=MagicMock(clear_for_send=clear))
-    monkeypatch.setattr(draft_ops_module, "ChatDraftOperations", fake_cls)
+    monkeypatch.setattr(message_delivery_module, "ChatDraftOperations", fake_cls)
 
     message = ChatMessage(
         id=generate_id(),
@@ -237,7 +238,7 @@ async def test_background_post_send_clears_drafts_for_users_only(
     )
     channel = MagicMock(id=message.channel_id, organization_id=generate_id())
 
-    await ops._background_post_send(message, channel, message.sender_id, None, "name", [])
+    await ops.background_post_send(message, channel, message.sender_id, None, "name", [])
 
     assert clear.await_count == (1 if expect_clear else 0)
 
@@ -265,18 +266,22 @@ def test_draft_changed_is_user_level_event():
     assert evt.DRAFT_CHANGED not in _CHANNEL_EVENT_TYPES
 
     now = datetime.now(UTC)
+    channel_id = "chan"
+    root_message_id = "root"
+    content = "hello"
+    client_session_id = "sess"
     decoded = _payload_to_user_event({
         "_type": evt.DRAFT_CHANGED,
-        "channel_id": "chan",
-        "root_message_id": "root",
-        "content": "hello",
+        "channel_id": channel_id,
+        "root_message_id": root_message_id,
+        "content": content,
         "deleted": False,
         "updated_at": now.isoformat(),
-        "client_session_id": "sess",
+        "client_session_id": client_session_id,
     })
     assert decoded is not None
-    assert decoded.draft_changed.channel_id == "chan"
-    assert decoded.draft_changed.root_message_id == "root"
-    assert decoded.draft_changed.content == "hello"
-    assert decoded.draft_changed.client_session_id == "sess"
+    assert decoded.draft_changed.channel_id == channel_id
+    assert decoded.draft_changed.root_message_id == root_message_id
+    assert decoded.draft_changed.content == content
+    assert decoded.draft_changed.client_session_id == client_session_id
     assert decoded.draft_changed.deleted is False

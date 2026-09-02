@@ -8,6 +8,7 @@ from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from uniffy.core.audit.actions import Action
+from uniffy.core.models.audit.event import AuditEvent
 from uniffy.core.models.calls import Call, CallEndReason, CallParticipant, CallType
 from uniffy.core.types import generate_id
 
@@ -16,7 +17,7 @@ def _audit_rows(session: MagicMock) -> list:
     return [
         call.args[0]
         for call in session.add.call_args_list
-        if call.args and call.args[0].__class__.__name__ == "AuditEvent"
+        if call.args and isinstance(call.args[0], AuditEvent)
     ]
 
 
@@ -81,7 +82,7 @@ async def test_end_call_internal_emits_call_ended_with_reason_and_actor() -> Non
     with (
         patch.object(type(ops), "list_active_participants", AsyncMock(return_value=[])),
         patch.object(type(ops), "member_user_ids", AsyncMock(return_value=[])),
-        patch("uniffy.domains.calls.operations.publish_channel_event_to_members", AsyncMock()),
+        patch.object(ops.chat, "publish", AsyncMock()),
         patch("uniffy.domains.calls.operations.get_livekit_admin_client") as client_factory,
     ):
         client_factory.return_value.delete_room = AsyncMock()
@@ -92,7 +93,7 @@ async def test_end_call_internal_emits_call_ended_with_reason_and_actor() -> Non
     assert len(ended) == 1
     assert ended[0].actor_user_id == host_id
     assert ended[0].resource_id == call.id
-    assert ended[0].details["reason"] == "HOST_ENDED"
+    assert ended[0].details["reason"] == CallEndReason.HOST_ENDED.value
     assert ended[0].details["channel_id"] == str(channel_id)
     assert ended[0].details["duration_seconds"] >= 9 * 60
 
@@ -105,7 +106,7 @@ async def test_system_end_emits_call_ended_without_actor() -> None:
     with (
         patch.object(type(ops), "list_active_participants", AsyncMock(return_value=[])),
         patch.object(type(ops), "member_user_ids", AsyncMock(return_value=[])),
-        patch("uniffy.domains.calls.operations.publish_channel_event_to_members", AsyncMock()),
+        patch.object(ops.chat, "publish", AsyncMock()),
         patch("uniffy.domains.calls.operations.get_livekit_admin_client") as client_factory,
     ):
         client_factory.return_value.delete_room = AsyncMock()
@@ -114,7 +115,7 @@ async def test_system_end_emits_call_ended_without_actor() -> None:
     ended = [r for r in _audit_rows(session) if r.action == Action.CALL_ENDED]
     assert len(ended) == 1
     assert ended[0].actor_user_id is None
-    assert ended[0].details["reason"] == "MAX_DURATION"
+    assert ended[0].details["reason"] == CallEndReason.MAX_DURATION.value
 
 
 async def test_kick_emits_participant_kicked_with_target() -> None:
@@ -186,7 +187,7 @@ async def test_join_and_leave_do_not_audit() -> None:
         patch.object(type(ops), "member_user_ids", AsyncMock(return_value=[])),
         patch.object(type(ops), "resolve_profiles", AsyncMock(return_value={})),
         patch.object(type(ops), "reassign_host_if_absent", AsyncMock()),
-        patch("uniffy.domains.calls.operations.publish_channel_event_to_members", AsyncMock()),
+        patch.object(ops.chat, "publish", AsyncMock()),
     ):
         await ops.mark_participant_left(call, participant)
 

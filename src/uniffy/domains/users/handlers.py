@@ -13,11 +13,11 @@ from uniffy_proto.users.v1.users_pb2 import (
     UploadAvatarResponse,
 )
 
+from uniffy.core.auth.principal import current_user_id
 from uniffy.core.errors import NotFoundError, ValidationError
-from uniffy.db import open_session
-from uniffy.domains.auth.context import get_user_id_from_context
 from uniffy.domains.users.converters import user_to_profile
 from uniffy.domains.users.operations import UserOperations
+from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="users.handlers")
 
@@ -28,11 +28,11 @@ class UsersHandlers:
         request: GetMyProfileRequest,
         ctx: RequestContext,
     ) -> GetMyProfileResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
 
         try:
             async with open_session() as session:
-                ops = UserOperations(session)
+                ops = UserOperations(session, self.search_indexer)
                 user = await ops.get_by_id(user_id)
                 return GetMyProfileResponse(user=user_to_profile(user))
         except NotFoundError as e:
@@ -46,11 +46,11 @@ class UsersHandlers:
         request: UpdateMyProfileRequest,
         ctx: RequestContext,
     ) -> UpdateMyProfileResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
 
         try:
             async with open_session() as session:
-                ops = UserOperations(session)
+                ops = UserOperations(session, self.search_indexer)
                 user = await ops.update_profile(
                     user_id=user_id,
                     accent_color=request.accent_color if request.HasField("accent_color") else None,
@@ -71,7 +71,7 @@ class UsersHandlers:
         request: UploadAvatarRequest,
         ctx: RequestContext,
     ) -> UploadAvatarResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
 
         if not request.image_data:
             raise ConnectError(Code.INVALID_ARGUMENT, "Image data is required")
@@ -80,8 +80,9 @@ class UsersHandlers:
 
         try:
             async with open_session() as session:
-                ops = UserOperations(session)
+                ops = UserOperations(session, self.search_indexer)
                 user = await ops.upload_avatar(
+                    storage=self.storage,
                     user_id=user_id,
                     image_data=request.image_data,
                     filename=request.filename,
@@ -100,12 +101,12 @@ class UsersHandlers:
         request: DeleteAvatarRequest,
         ctx: RequestContext,
     ) -> DeleteAvatarResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
 
         try:
             async with open_session() as session:
-                ops = UserOperations(session)
-                user = await ops.delete_avatar(user_id)
+                ops = UserOperations(session, self.search_indexer)
+                user = await ops.delete_avatar(self.storage, user_id)
                 return DeleteAvatarResponse(user=user_to_profile(user))
         except NotFoundError as e:
             raise ConnectError(Code.NOT_FOUND, str(e))

@@ -5,12 +5,12 @@ from uuid import UUID
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from croniter import croniter
+from loguru import logger
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.content.base_operations import BaseContentOperations
-from uniffy.core.content.members import (
-    ContentMembersOperations,
+from uniffy.core.content.registry import (
     register_content_loader,
     register_ownership_transfer_hook,
 )
@@ -23,11 +23,17 @@ from uniffy.core.jobs import enqueue_job
 from uniffy.core.models.agents.agent import Agent
 from uniffy.core.models.agents.cron_task import AgentCronRunStatus, AgentCronTask
 from uniffy.core.models.agents.run_log import AgentRunLog
-from uniffy.core.search.indexer import build_content_urn
+from uniffy.core.search.indexer import SearchIndexer, build_content_urn
 from uniffy.core.types import AccessMode, ContentRole, ContentType, SubjectType
 from uniffy.domains.agents.access import require_agents_builder
 from uniffy.domains.agents.agents.operations import AgentOperations
-from uniffy.domains.agents.cron.job_contracts import EXECUTE_SINGLE_AGENT_CRON_TASK
+from uniffy.domains.agents.cron.jobs.contracts import EXECUTE_SINGLE_AGENT_CRON_TASK
+from uniffy.domains.permissions.members import (
+    ContentMembersOperations,
+    StagedContentMemberAdd,
+)
+
+logger = logger.bind(component="agents.cron.operations")
 
 MAX_CRON_TASKS_PER_USER = 20
 MIN_INTERVAL_SECONDS = 300  # 5 minutes
@@ -39,8 +45,12 @@ class CronTaskOperations(BaseContentOperations[AgentCronTask]):
     content_type = ContentType.AGENT_CRON_TASK
     model_class = AgentCronTask
 
-    def __init__(self, session: AsyncSession) -> None:
-        super().__init__(session)
+    def __init__(
+        self,
+        session: AsyncSession,
+        search_indexer: SearchIndexer | None = None,
+    ) -> None:
+        super().__init__(session, search_indexer)
 
     def _build_search_keywords(self, model: AgentCronTask) -> str:
         parts = [model.name]
@@ -82,7 +92,7 @@ class CronTaskOperations(BaseContentOperations[AgentCronTask]):
         if not prompt or not prompt.strip():
             raise ValidationError("prompt", "Task prompt cannot be empty")
 
-        agent_ops = AgentOperations(self.session)
+        agent_ops = AgentOperations(self.session, self.search_indexer)
         await agent_ops.get_by_id(user_id, organization_id, agent_id)
 
         await require_agents_builder(self.session, user_id, organization_id)
@@ -114,24 +124,53 @@ class CronTaskOperations(BaseContentOperations[AgentCronTask]):
             baseline_role=baseline_role,
         )
         self.session.add(task)
-        await self.session.commit()
+        staged_members: list[StagedContentMemberAdd] = []
+        try:
+            await self.session.flush()
+            members_ops = ContentMembersOperations(self.session, self.search_indexer)
+            for gid in group_ids or []:
+                staged_members.append(
+                    await members_ops.stage_member(
+                        actor_user_id=user_id,
+                        organization_id=organization_id,
+                        content_type=self.content_type,
+                        content_id=task.id,
+                        subject_type=SubjectType.GROUP,
+                        subject_id=gid,
+                        role=ContentRole.VIEWER,
+                    )
+                )
+            await self.session.commit()
+        except Exception:
+            await self.session.rollback()
+            raise
         await self.session.refresh(task)
 
-        if group_ids:
-            members_ops = ContentMembersOperations(self.session)
-            for gid in group_ids:
-                await members_ops.add_member(
-                    actor_user_id=user_id,
-                    organization_id=organization_id,
-                    content_type=self.content_type,
-                    content_id=task.id,
-                    subject_type=SubjectType.GROUP,
-                    subject_id=gid,
-                    role=ContentRole.VIEWER,
+        for staged in staged_members:
+            try:
+                await members_ops.finish_member_add_after_commit(staged)
+            except Exception:
+                logger.opt(exception=True).warning(
+                    "Cron task created with degraded initial member fanout",
+                    task_id=str(task.id),
                 )
 
-        await self._index_for_search(task, skip_member_lookup=not group_ids)
-        await self.session.commit()
+        try:
+            await self._index_for_search(task, skip_member_lookup=not staged_members)
+        except Exception:
+            logger.opt(exception=True).warning(
+                "Cron task created with stale search projection",
+                task_id=str(task.id),
+            )
+
+        try:
+            effective_mode, _ = await self._effective_policy(organization_id, task)
+            await self._broadcast_open_to_org_create(organization_id, task.id, effective_mode)
+        except Exception:
+            logger.opt(exception=True).warning(
+                "Cron task created with degraded access fanout",
+                task_id=str(task.id),
+            )
 
         return task
 
@@ -268,7 +307,7 @@ class CronTaskOperations(BaseContentOperations[AgentCronTask]):
         )
 
         if agent_id:
-            agent_ops = AgentOperations(self.session)
+            agent_ops = AgentOperations(self.session, self.search_indexer)
             await agent_ops.get_by_id(user_id, organization_id, agent_id)
             query = query.where(AgentCronTask.agent_id == agent_id)
         else:
@@ -407,7 +446,7 @@ class CronTaskOperations(BaseContentOperations[AgentCronTask]):
         if not task:
             raise NotFoundError("AGENT_CRON_TASK", task_id)
 
-        agent_ops = AgentOperations(self.session)
+        agent_ops = AgentOperations(self.session, self.search_indexer)
         try:
             await agent_ops.get_by_id(new_owner_id, organization_id, task.agent_id)
         except Exception as exc:
@@ -418,7 +457,7 @@ class CronTaskOperations(BaseContentOperations[AgentCronTask]):
 
         # The registered ownership-transfer hook repoints execution_user_id
         # inside the same transaction as the owner_id move.
-        members_ops = ContentMembersOperations(self.session)
+        members_ops = ContentMembersOperations(self.session, self.search_indexer)
         await members_ops.transfer_ownership(
             actor_user_id=actor_user_id,
             organization_id=organization_id,

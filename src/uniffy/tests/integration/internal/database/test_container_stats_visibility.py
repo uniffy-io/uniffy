@@ -1,5 +1,7 @@
 """Denormalized container stats must not count children narrower than the container."""
 
+from unittest.mock import MagicMock
+
 import pytest
 from sqlalchemy import delete
 
@@ -8,7 +10,7 @@ from uniffy.core.models.files.folder import Folder
 from uniffy.core.models.notes.note import Note
 from uniffy.core.types import AccessMode, NodeType, generate_id
 from uniffy.domains.files.operations import FolderOperations
-from uniffy.domains.notes.operations import NoteOperations
+from uniffy.domains.notes.projection import NoteProjectionOperations
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
@@ -98,7 +100,9 @@ async def test_note_folder_child_count_is_visible_notes_only(session, env) -> No
     await session.commit()
 
     try:
-        meta = await NoteOperations(session)._get_search_metadata_async(folder_note)
+        meta = await NoteProjectionOperations(
+            session, MagicMock()
+        )._get_search_metadata_async(folder_note)
         assert meta is not None
         assert meta["child_count"] == "1"
     finally:

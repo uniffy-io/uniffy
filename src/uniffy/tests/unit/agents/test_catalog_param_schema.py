@@ -10,7 +10,7 @@ from uniffy.domains.agents.providers.catalog import (
     resolve_request_params,
 )
 from uniffy.domains.agents.providers.catalog.loader import merge_parameter_schema
-from uniffy.observability.metrics import AGENT_MODEL_PARAM_DROPPED_TOTAL
+from uniffy.domains.agents.metrics import AGENT_MODEL_PARAM_DROPPED_TOTAL
 
 CORE_KNOBS = ("temperature", "top_p", "max_tokens")
 

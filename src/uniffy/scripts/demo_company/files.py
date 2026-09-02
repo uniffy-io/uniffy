@@ -9,7 +9,6 @@ from sqlalchemy import select
 
 from uniffy.core.models.files.file import File
 from uniffy.core.models.files.folder import Folder
-from uniffy.core.storage import get_s3_client
 from uniffy.core.types import AccessMode, ContentRole
 from uniffy.domains.files.operations import FileOperations, FolderOperations
 from uniffy.scripts.demo_company.context import DemoContext, DomainResult, tag_ids_for
@@ -30,10 +29,9 @@ async def seed_files(
     if not files:
         return result
 
-    folder_ops = FolderOperations(ctx.session)
-    file_ops = FileOperations(ctx.session)
-    s3 = get_s3_client()
-    await s3.ensure_bucket_exists()
+    folder_ops = FolderOperations(ctx.session, ctx.storage, ctx.search_indexer)
+    file_ops = FileOperations(ctx.session, ctx.storage, ctx.search_indexer)
+    await ctx.storage.ensure_bucket_exists()
 
     root_id = await _ensure_folder(ctx, folder_ops, root_folder, None, result)
     folder_ids: dict[str, UUID | None] = {}
@@ -70,7 +68,7 @@ async def seed_files(
 
         # Demo payloads are far below the 5MB multipart minimum, so one part
         # per file is the whole upload.
-        etag = await s3.upload_part(
+        etag = await ctx.storage.upload_part(
             key=upload.storage_key,
             upload_id=upload.s3_upload_id,
             part_number=1,

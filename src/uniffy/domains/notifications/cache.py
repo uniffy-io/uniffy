@@ -4,7 +4,7 @@ import asyncio
 from typing import Any
 from uuid import UUID
 
-from uniffy.core.valkey.cache import (
+from uniffy.core.cache.operations import (
     _CacheMiss,
     cache_delete,
     cache_get,

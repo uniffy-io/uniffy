@@ -5,14 +5,12 @@ from sqlalchemy import select
 
 from uniffy.core.models.permissions.content_member import ContentMember
 from uniffy.core.models.notes.note import Note
-from uniffy.core.search.meilisearch import (
-    build_document_id,
-    close_meilisearch,
-    init_meilisearch,
-)
+from uniffy.core.search.policy import build_document_id
+from uniffy.core.search.workspace import WorkspaceSearch
 from uniffy.core.types import AccessMode, ContentRole, ContentType, SubjectType, generate_id
 from uniffy.domains.search.operations import SearchOperations
 from uniffy.domains.search.queries import UrnAvailability
+from uniffy.infrastructure.search import MeiliSearchEngine
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
@@ -43,7 +41,8 @@ def _document(*, urn: str, organization_id, owner_id, title: str, shared_user_id
 
 
 async def test_stale_meili_allows_never_cross_the_postgres_gate(session, access) -> None:
-    client = await init_meilisearch()
+    search = WorkspaceSearch(MeiliSearchEngine())
+    await search.startup()
     suffix = generate_id().hex[:12]
     stale_title = f"StaleAllow{suffix}"
     allowed_title = f"AllowedHit{suffix}"
@@ -65,21 +64,21 @@ async def test_stale_meili_allows_never_cross_the_postgres_gate(session, access)
             shared_user_ids=[access.peer_id],
         ),
     ]
-    task = await client.client.index(client.config.index_name).add_documents(documents)
-    await client._await_task(task)
+    await search.engine.patch_documents(documents, wait=True)
 
     try:
-        stale_results, _, _ = await SearchOperations(session).search(
+        operations = SearchOperations(session, search)
+        stale_results, _, _ = await operations.search(
             access.peer_id,
             access.org_id,
             stale_title,
         )
-        allowed_results, _, _ = await SearchOperations(session).search(
+        allowed_results, _, _ = await operations.search(
             access.peer_id,
             access.org_id,
             allowed_title,
         )
-        resolved = await SearchOperations(session).resolve_urns(
+        resolved = await operations.resolve_urns(
             access.peer_id,
             access.org_id,
             [stale_urn, allowed_urn],
@@ -109,12 +108,12 @@ async def test_stale_meili_allows_never_cross_the_postgres_gate(session, access)
         session.add(grant)
         await session.commit()
 
-        blocked_results, _, _ = await SearchOperations(session).search(
+        blocked_results, _, _ = await operations.search(
             access.peer_id,
             access.org_id,
             allowed_title,
         )
-        blocked_resolve = await SearchOperations(session).resolve_urns(
+        blocked_resolve = await operations.resolve_urns(
             access.peer_id,
             access.org_id,
             [allowed_urn],
@@ -128,7 +127,7 @@ async def test_stale_meili_allows_never_cross_the_postgres_gate(session, access)
         note.is_deleted = True
         session.add(note)
         await session.commit()
-        deleted_resolve = await SearchOperations(session).resolve_urns(
+        deleted_resolve = await operations.resolve_urns(
             access.peer_id,
             access.org_id,
             [allowed_urn],
@@ -138,5 +137,5 @@ async def test_stale_meili_allows_never_cross_the_postgres_gate(session, access)
         assert deleted_resolve[allowed_urn].title == ""
     finally:
         for urn in (stale_urn, allowed_urn):
-            await client.delete_document(urn, access.org_id)
-        await close_meilisearch()
+            await search.delete_document(urn, access.org_id)
+        await search.shutdown()

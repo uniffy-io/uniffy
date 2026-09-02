@@ -9,11 +9,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.auth.membership import get_active_membership
 from uniffy.core.auth.permissions.defaults import (
+    ORG_PERMISSION_DEFAULTS,
     resolve_effective_content_role,
 )
 from uniffy.core.auth.permissions.scalar import (
     ScalarAuthorizationFacts,
     load_scalar_authorization_facts,
+)
+from uniffy.core.auth.support_session import (
+    ActiveSupportSession,
+    active_support_session_var,
 )
 from uniffy.core.models.platform.support_session import SupportSessionScope
 from uniffy.core.types import (
@@ -21,10 +26,6 @@ from uniffy.core.types import (
     ContentRole,
     ContentType,
     DomainType,
-)
-from uniffy.domains.platform.support_session.context import (
-    ActiveSupportSession,
-    active_support_session_var,
 )
 
 if TYPE_CHECKING:
@@ -106,8 +107,6 @@ class PermissionChecker:
 
         if facts.organization_role is None:
             return None
-
-        from uniffy.domains.organizations.defaults import ORG_PERMISSION_DEFAULTS
 
         fallback = ORG_PERMISSION_DEFAULTS.get(content_type, {})
         default_mode = facts.default_access_mode or fallback.get("default_access_mode")

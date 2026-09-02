@@ -44,7 +44,7 @@ def get_integration_registry() -> IntegrationRegistry:
 
     _registry = IntegrationRegistry()
 
-    from uniffy.domains.integrations.providers.github import GitHubIntegration
+    from uniffy.domains.integrations.providers.github.provider import GitHubIntegration
 
     _registry.register(GitHubIntegration())
 

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from uniffy.domains.agents.providers.catalog.image_params import (
+from uniffy.domains.agents.providers.catalog.images import (
     resolve_image_params,
     validate_image_params,
 )

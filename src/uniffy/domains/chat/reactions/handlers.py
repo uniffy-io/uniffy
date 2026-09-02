@@ -14,14 +14,14 @@ from uniffy_proto.chat.v1.chat_pb2 import (
     RemoveReactionResponse,
 )
 
-from uniffy.core.errors import NotFoundError, PermissionDeniedError
-from uniffy.db import open_session
-from uniffy.domains.auth.context import (
-    get_sender_info_from_context,
-    get_user_id_from_context,
+from uniffy.core.auth.principal import (
+    current_sender_info,
+    current_user_id,
     resolve_organization_id,
 )
+from uniffy.core.errors import NotFoundError, PermissionDeniedError
 from uniffy.domains.chat.reactions.operations import ChatReactionOperations
+from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="chat.reactions.handlers")
 
@@ -41,10 +41,10 @@ class ReactionHandlers:
         request: AddReactionRequest,
         ctx: RequestContext,
     ) -> AddReactionResponse:
-        user_id = get_user_id_from_context(ctx)
-        jwt_name, _ = get_sender_info_from_context(ctx)
+        user_id = current_user_id()
+        jwt_name, _ = current_sender_info()
         try:
-            org_id = resolve_organization_id(ctx, request.organization_id)
+            org_id = resolve_organization_id(request.organization_id)
             channel_id = UUID(request.channel_id)
             message_id = UUID(request.message_id)
         except ValueError:
@@ -89,10 +89,10 @@ class ReactionHandlers:
         request: RemoveReactionRequest,
         ctx: RequestContext,
     ) -> RemoveReactionResponse:
-        user_id = get_user_id_from_context(ctx)
-        jwt_name, _ = get_sender_info_from_context(ctx)
+        user_id = current_user_id()
+        jwt_name, _ = current_sender_info()
         try:
-            org_id = resolve_organization_id(ctx, request.organization_id)
+            org_id = resolve_organization_id(request.organization_id)
             channel_id = UUID(request.channel_id)
             message_id = UUID(request.message_id)
         except ValueError:

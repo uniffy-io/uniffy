@@ -1,28 +1,32 @@
 """Folder delete publishes a mention tombstone; restore re-broadcasts the subtree."""
 
-from unittest.mock import AsyncMock
-
 import pytest
 from sqlalchemy import delete
 
 from uniffy.core.models.files.folder import Folder
-from uniffy.core.search.indexer import SearchIndexer
 from uniffy.domains.files.operations import FolderOperations
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
 
-async def test_folder_delete_tombstones_and_restore_republishes(session, env, monkeypatch) -> None:
-    monkeypatch.setattr(SearchIndexer, "index", AsyncMock())
-    monkeypatch.setattr(SearchIndexer, "remove", AsyncMock())
+async def test_folder_delete_tombstones_and_restore_republishes(
+    session, env, search_indexer, monkeypatch
+) -> None:
     published: list[tuple[str, dict]] = []
 
     async def capture(organization_id, urn, changes):
         published.append((urn, dict(changes)))
 
-    monkeypatch.setattr("uniffy.domains.files.operations.publish_mention_state", capture)
+    monkeypatch.setattr(
+        "uniffy.domains.files.folders.trash.publish_mention_state",
+        capture,
+    )
+    monkeypatch.setattr(
+        "uniffy.domains.files.folders.projection.publish_mention_state",
+        capture,
+    )
 
-    folder_ops = FolderOperations(session)
+    folder_ops = FolderOperations(session, search_indexer=search_indexer)
     try:
         parent = await folder_ops.create(env.admin_id, env.org_id, "itdb-parent")
         child = await folder_ops.create(env.admin_id, env.org_id, "itdb-child", parent_id=parent.id)

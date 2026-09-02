@@ -7,7 +7,7 @@ from uniffy.core.models.chat.message import ChatMessage, SenderType
 from uniffy.core.models.chat.thread import ChatThread, ChatThreadStats
 from uniffy.core.models.chat.thread_follow import ChatThreadFollow
 from uniffy.core.types import generate_id
-from uniffy.domains.chat.messages.operations import counts_as_thread_reply, record_thread_reply
+from uniffy.domains.chat.threads.replies import counts_as_thread_reply, record_thread_reply
 
 CHANNEL = generate_id()
 ROOT = generate_id()

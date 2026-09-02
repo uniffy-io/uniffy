@@ -39,7 +39,6 @@ import {
 } from "@/features/permissions";
 import { MentionStateProvider } from "@/components/mention";
 import { lazyImport } from "@/shared/utils/lazyImport";
-import { loadLastOpenedNote } from "@/features/notes/utils/lastOpenedNote";
 import { loadLastOpenedChannel } from "@/features/chat/utils/lastOpenedChannel";
 
 // Expose toast on window in dev mode for testing
@@ -299,20 +298,6 @@ function AdminIndexRedirect() {
   }
 
   return <Navigate to="/" replace />;
-}
-
-/**
- * NotesIndexRedirect - Sends /notes to the user's last opened note, else the Library knowledge graph.
- */
-function NotesIndexRedirect() {
-  const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
-  const userId = useAppSelector((state) => state.auth.user?.id);
-
-  const lastNoteId = organizationId && userId ? loadLastOpenedNote(organizationId, userId) : null;
-  if (lastNoteId) {
-    return <Navigate to={`/notes/${lastNoteId}`} replace state={{ fromLastOpened: true }} />;
-  }
-  return <Navigate to="/library/graph" replace />;
 }
 
 /**
@@ -785,7 +770,9 @@ export function App() {
                     path="/notes"
                     element={
                       <ProtectedRoute>
-                        <NotesIndexRedirect />
+                        <LazyRoute>
+                          <NotesPage />
+                        </LazyRoute>
                       </ProtectedRoute>
                     }
                   />

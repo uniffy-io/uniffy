@@ -3,7 +3,7 @@ from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from uniffy_proto.auth.v1.auth_pb2 import LoginRequest
 
-from uniffy.observability.crpc import strict_request_codecs
+from uniffy.transport.rpc import strict_request_codecs
 
 
 def _codec(name: str):

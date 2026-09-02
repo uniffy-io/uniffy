@@ -24,12 +24,6 @@ def _result(org_id) -> MagicMock:
     return inner
 
 
-def _indexer_mock() -> MagicMock:
-    indexer = MagicMock()
-    indexer.return_value.index_for_organization = AsyncMock(return_value=None)
-    return indexer
-
-
 def _make_user(**overrides) -> User:
     defaults = dict(
         id=generate_id(),
@@ -53,7 +47,7 @@ async def test_upload_avatar_emits_avatar_changed() -> None:
     session.commit = AsyncMock()
     session.refresh = AsyncMock()
 
-    ops = UserOperations(session)
+    ops = UserOperations(session, MagicMock())
 
     with (
         patch.object(UserOperations, "get_by_id", AsyncMock(return_value=user)),
@@ -69,20 +63,9 @@ async def test_upload_avatar_emits_avatar_changed() -> None:
             "uniffy.domains.users.operations.invalidate_user_profile",
             AsyncMock(return_value=None),
         ),
-        patch(
-            "uniffy.domains.users.operations.cache_invalidate_by_tag",
-            AsyncMock(return_value=None),
-        ),
-        patch(
-            "uniffy.domains.users.operations.invalidate_chart",
-            AsyncMock(return_value=None),
-        ),
-        patch(
-            "uniffy.domains.users.operations.UserSearchIndexer",
-            _indexer_mock(),
-        ),
+        patch("uniffy.domains.users.operations.refresh_global_user", AsyncMock()),
     ):
-        await ops.upload_avatar(user.id, b"img", "a.png")
+        await ops.upload_avatar(AsyncMock(), user.id, b"img", "a.png")
 
     rows = _audit_rows(session)
     assert len(rows) == 1

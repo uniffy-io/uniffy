@@ -28,8 +28,9 @@ from uniffy.domains.agents.memories.scope import (
     scope_ref_for_memory,
     scope_subject_columns,
 )
+from uniffy.domains.agents.runtime.context import memory as memory_context_mod
+from uniffy.domains.agents.runtime.context.memory import MemoryContextBuilder
 from uniffy.domains.agents.runtime.destinations import ChatDestination, SessionDestination
-from uniffy.domains.agents.runtime.operations import RuntimeOperations
 from uniffy.domains.agents.runtime.prompt import (
     MemoryScopeBlock,
     build_memory_block,
@@ -81,21 +82,19 @@ def _memory(scope=MemoryScope.USER, **overrides):
 
 class TestScopeRouting:
     async def _resolve(self, destination, *, session_kind=None, channel=None):
-        fake_self = SimpleNamespace(_session=MagicMock())
+        builder = MemoryContextBuilder(MagicMock())
         if channel is not None or isinstance(destination, ChatDestination):
             with patch(
                 "uniffy.domains.chat.access.ChatAccessChecker.get_channel",
                 new=AsyncMock(return_value=channel),
             ):
-                return await RuntimeOperations._resolve_memory_scope(
-                    fake_self,
+                return await builder.resolve_scope(
                     destination=destination,
                     user_id=USER_ID,
                     organization_id=ORG_ID,
                     session_kind=session_kind,
                 )
-        return await RuntimeOperations._resolve_memory_scope(
-            fake_self,
+        return await builder.resolve_scope(
             destination=destination,
             user_id=USER_ID,
             organization_id=ORG_ID,
@@ -578,25 +577,23 @@ class TestPinCaps:
 
 class TestMemoryBridge:
     async def _resolve(self, scope_ref, *, org_allows=True, opted_in=True, monkeypatch=None):
-        from uniffy.domains.agents.runtime import operations as runtime_ops_mod
-
-        fake_self = SimpleNamespace(_session=MagicMock())
-        original_settings = runtime_ops_mod.get_runtime_settings
-        original_bridge = runtime_ops_mod.is_personal_bridge_enabled
-        runtime_ops_mod.get_runtime_settings = AsyncMock(
-            return_value=SimpleNamespace(personal_memory_bridge_enabled=org_allows)
-        )
-        runtime_ops_mod.is_personal_bridge_enabled = AsyncMock(return_value=opted_in)
-        try:
-            return await RuntimeOperations._resolve_memory_bridge(
-                fake_self,
+        with (
+            patch.object(
+                memory_context_mod,
+                "get_runtime_settings",
+                AsyncMock(return_value=SimpleNamespace(personal_memory_bridge_enabled=org_allows)),
+            ),
+            patch.object(
+                memory_context_mod,
+                "is_personal_bridge_enabled",
+                AsyncMock(return_value=opted_in),
+            ),
+        ):
+            return await MemoryContextBuilder(MagicMock()).resolve_bridge(
                 scope_ref=scope_ref,
                 user_id=USER_ID,
                 organization_id=ORG_ID,
             )
-        finally:
-            runtime_ops_mod.get_runtime_settings = original_settings
-            runtime_ops_mod.is_personal_bridge_enabled = original_bridge
 
     async def test_bridge_only_applies_to_shared_surfaces(self):
         assert await self._resolve(MemoryScopeRef.user(USER_ID)) is None

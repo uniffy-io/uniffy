@@ -6,8 +6,8 @@ from loguru import logger
 from sqlalchemy import select
 
 from uniffy.core.models.login.organization import Organization
-from uniffy.db import open_session
-from uniffy.domains.files.quota_operations import QuotaOperations
+from uniffy.domains.files.quota.operations import QuotaOperations
+from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="files.jobs.quota")
 

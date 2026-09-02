@@ -54,6 +54,16 @@ from uniffy_proto.auth.v1.auth_pb2 import (
 )
 
 from uniffy.core.audit import audit_ip_var
+from uniffy.core.auth.cookies import (
+    attach_asset_cookie,
+    build_clear_cookie,
+    resolve_asset_cookie_config,
+)
+from uniffy.core.auth.devices import request_user_agent
+from uniffy.core.auth.identity import get_user_by_id, require_system_admin
+from uniffy.core.auth.principal import current_session_id, current_user_id
+from uniffy.core.auth.tokens import decode_refresh_token
+from uniffy.core.config.registration import public_registration_enabled
 from uniffy.core.converters import (
     datetime_to_timestamp,
     domain_type_to_proto,
@@ -61,48 +71,35 @@ from uniffy.core.converters import (
 )
 from uniffy.core.errors import RateLimitExceededError, ValidationError
 from uniffy.core.models.shared import DomainType
-from uniffy.db import open_session
-from uniffy.domains.auth.context import (
-    get_session_id_from_context,
-    get_user_agent_from_context,
-    get_user_id_from_context,
-)
+from uniffy.core.search import SearchIndexer
 from uniffy.domains.auth.converters import session_to_proto, user_to_proto
-from uniffy.domains.auth.cookies import (
-    attach_asset_cookie,
-    build_clear_cookie,
-    resolve_asset_cookie_config,
-)
 from uniffy.domains.auth.errors import (
     AuthenticationError,
     RegistrationError,
     TokenError,
 )
-from uniffy.domains.auth.operations import (
-    AuthOperations,
-    is_public_registration_enabled,
-)
-from uniffy.domains.auth.password_reset import (
+from uniffy.domains.auth.operations import AuthOperations
+from uniffy.domains.auth.passwords.reset import (
     PasswordResetError,
     PasswordResetOperations,
     PasswordResetTokenExpiredError,
     PasswordResetTokenNotFoundError,
     PasswordResetTokenUsedError,
 )
-from uniffy.domains.auth.tokens import decode_refresh_token
 from uniffy.domains.auth.types import (
     AuthResult,
     MfaChallengeRequired,
     MfaEnrollmentRequired,
 )
-from uniffy.domains.invitations.errors import (
+from uniffy.domains.organizations.invitations import (
     InvitationAlreadyUsedError,
     InvitationEmailConflictError,
     InvitationExpiredError,
     InvitationNotFoundError,
+    InvitationOperations,
     InvitationRevokedError,
 )
-from uniffy.domains.invitations.operations import InvitationOperations
+from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="auth.handlers")
 
@@ -187,6 +184,9 @@ def _login_outcome_to_proto(
 class AuthHandlers:
     """Auth RPC handlers - authentication only."""
 
+    def __init__(self, search_indexer: SearchIndexer) -> None:
+        self.search_indexer = search_indexer
+
     async def register(
         self,
         request: RegisterRequest,
@@ -194,7 +194,7 @@ class AuthHandlers:
     ) -> RegisterResponse:
         """Register a new user."""
         try:
-            user_agent = get_user_agent_from_context(ctx)
+            user_agent = request_user_agent(ctx)
 
             async with open_session() as session:
                 auth_ops = AuthOperations(session)
@@ -233,7 +233,7 @@ class AuthHandlers:
     ) -> LoginResponse:
         """Authenticate user."""
         try:
-            user_agent = get_user_agent_from_context(ctx)
+            user_agent = request_user_agent(ctx)
 
             async with open_session() as session:
                 auth_ops = AuthOperations(session)
@@ -288,7 +288,7 @@ class AuthHandlers:
                     domain_admin_domains=_domain_admins_to_proto(result),
                     asset_cookie=asset_cookie,
                 )
-        except TokenError as e:
+        except (AuthenticationError, TokenError) as e:
             logger.warning(f"Token refresh failed: {e}")
             raise ConnectError(Code.UNAUTHENTICATED, str(e))
         except Exception as e:
@@ -306,7 +306,7 @@ class AuthHandlers:
         if not request.organization_slug:
             raise ConnectError(Code.INVALID_ARGUMENT, "organization_slug is required")
         try:
-            user_agent = get_user_agent_from_context(ctx)
+            user_agent = request_user_agent(ctx)
             async with open_session() as session:
                 auth_ops = AuthOperations(session)
                 result = await auth_ops.switch_organization(
@@ -331,14 +331,11 @@ class AuthHandlers:
         ctx: RequestContext,
     ) -> GetCurrentUserResponse:
         """Get current authenticated user info."""
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
 
         try:
             async with open_session() as session:
-                from uniffy.domains.users.operations import UserOperations
-
-                user_ops = UserOperations(session)
-                user = await user_ops.get_by_id(user_id)
+                user = await get_user_by_id(session, user_id)
                 return user_to_proto(user)
         except Exception as e:
             logger.exception(f"Error fetching user: {e}")
@@ -365,10 +362,10 @@ class AuthHandlers:
                     pass
 
             if not session_id:
-                session_id = get_session_id_from_context(ctx)
+                session_id = current_session_id()
             if not user_id:
                 with contextlib.suppress(ConnectError):
-                    user_id = get_user_id_from_context(ctx)
+                    user_id = current_user_id()
 
             if session_id and user_id:
                 async with open_session() as session:
@@ -390,8 +387,8 @@ class AuthHandlers:
         ctx: RequestContext,
     ) -> ListSessionsResponse:
         """List active sessions for the current user."""
-        user_id = get_user_id_from_context(ctx)
-        current_session_id = get_session_id_from_context(ctx)
+        user_id = current_user_id()
+        session_id = current_session_id()
 
         try:
             async with open_session() as session:
@@ -399,7 +396,7 @@ class AuthHandlers:
                 sessions = await auth_ops.list_sessions(user_id)
 
                 return ListSessionsResponse(
-                    sessions=[session_to_proto(s, current_session_id) for s in sessions]
+                    sessions=[session_to_proto(s, session_id) for s in sessions]
                 )
         except Exception as e:
             logger.exception(f"Error listing sessions: {e}")
@@ -411,7 +408,7 @@ class AuthHandlers:
         ctx: RequestContext,
     ) -> RevokeSessionResponse:
         """Revoke a specific session."""
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
 
         try:
             target_session_id = UUID(request.session_id)
@@ -435,10 +432,10 @@ class AuthHandlers:
         ctx: RequestContext,
     ) -> RevokeOtherSessionsResponse:
         """Revoke all sessions except the current one."""
-        user_id = get_user_id_from_context(ctx)
-        current_session_id = get_session_id_from_context(ctx)
+        user_id = current_user_id()
+        session_id = current_session_id()
 
-        if not current_session_id:
+        if not session_id:
             raise ConnectError(
                 Code.FAILED_PRECONDITION,
                 "Current session not identified (old token without session tracking)",
@@ -447,7 +444,7 @@ class AuthHandlers:
         try:
             async with open_session() as session:
                 auth_ops = AuthOperations(session)
-                revoked_count = await auth_ops.revoke_other_sessions(user_id, current_session_id)
+                revoked_count = await auth_ops.revoke_other_sessions(user_id, session_id)
                 return RevokeOtherSessionsResponse(revoked_count=revoked_count)
         except Exception as e:
             logger.exception(f"Error revoking other sessions: {e}")
@@ -459,7 +456,7 @@ class AuthHandlers:
         ctx: RequestContext,
     ) -> GetCacheKeySeedResponse:
         """Get cache key seed for client-side storage encryption."""
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
 
         try:
             async with open_session() as session:
@@ -478,7 +475,7 @@ class AuthHandlers:
         ctx: RequestContext,
     ) -> RotateCacheKeySeedResponse:
         """Rotate cache key seed, invalidating all device caches."""
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
 
         target_user_id = None
         if request.HasField("target_user_id") and request.target_user_id:
@@ -491,10 +488,7 @@ class AuthHandlers:
             if target_user_id != user_id:
                 try:
                     async with open_session() as session:
-                        from uniffy.domains.users.operations import UserOperations
-
-                        user_ops = UserOperations(session)
-                        await user_ops.require_system_admin(user_id)
+                        await require_system_admin(session, user_id)
                 except Exception:
                     raise ConnectError(
                         Code.PERMISSION_DENIED,
@@ -518,7 +512,7 @@ class AuthHandlers:
         """Public auth configuration the login / register pages need."""
         del request, ctx
         async with open_session() as session:
-            enabled = await is_public_registration_enabled(session)
+            enabled = await public_registration_enabled(session)
         return GetAuthConfigResponse(public_registration_enabled=enabled)
 
     async def get_invitation(
@@ -571,7 +565,7 @@ class AuthHandlers:
         """
         if not request.token:
             raise ConnectError(Code.INVALID_ARGUMENT, "token is required")
-        user_agent = get_user_agent_from_context(ctx)
+        user_agent = request_user_agent(ctx)
         try:
             async with open_session() as session:
                 ops = InvitationOperations(session)
@@ -581,6 +575,7 @@ class AuthHandlers:
                     password=request.password,
                     full_name=(request.full_name if request.HasField("full_name") else None),
                     user_agent=user_agent,
+                    search_indexer=self.search_indexer,
                 )
                 if isinstance(outcome, MfaEnrollmentRequired):
                     enrollment = EnrollmentRequiredProto(

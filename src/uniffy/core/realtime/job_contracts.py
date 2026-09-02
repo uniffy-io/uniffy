@@ -1,7 +1,6 @@
 """Producer-facing realtime background-job contracts."""
 
-from uniffy.core.jobs import JobRef, JobReliability, JobWorkload
-from uniffy.core.valkey.queue import QueueName
+from uniffy.core.jobs import JobRef, JobReliability, JobWorkload, QueueName
 
 SAVE_REALTIME_SNAPSHOT = JobRef(
     name="save_realtime_snapshot",

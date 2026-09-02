@@ -3,7 +3,7 @@ from datetime import datetime
 from loguru import logger
 
 from uniffy.core.json_codec import loads
-from uniffy.observability.logger import serialize
+from uniffy.infrastructure.observability.logger import serialize
 
 
 def test_json_log_serializer_handles_loguru_record_types() -> None:

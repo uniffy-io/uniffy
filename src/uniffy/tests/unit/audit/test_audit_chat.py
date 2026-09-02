@@ -56,7 +56,7 @@ async def test_admin_deleting_other_users_message_emits_deleted_by_admin() -> No
     # delete_message executes one stats UPDATE for root messages.
     session.execute = AsyncMock(return_value=MagicMock())
 
-    ops = ChatMessageOperations(session)
+    ops = ChatMessageOperations(session, search_indexer=MagicMock())
     ops.access = MagicMock()
     ops.access.get_channel = AsyncMock(return_value=MagicMock(id=channel_id))
 
@@ -122,7 +122,7 @@ async def test_self_delete_does_not_audit() -> None:
     session = _build_session()
     session.execute = AsyncMock(return_value=MagicMock())
 
-    ops = ChatMessageOperations(session)
+    ops = ChatMessageOperations(session, search_indexer=MagicMock())
     ops.access = MagicMock()
     ops.access.get_channel = AsyncMock(return_value=MagicMock(id=channel_id))
 
@@ -182,7 +182,7 @@ async def test_message_attachments_are_removed_before_soft_delete_commit() -> No
     )
     session = _build_session()
     session.execute = AsyncMock(return_value=MagicMock())
-    ops = ChatMessageOperations(session)
+    ops = ChatMessageOperations(session, search_indexer=MagicMock())
     ops.access = MagicMock()
     ops.access.get_channel = AsyncMock(return_value=MagicMock(id=channel_id))
 

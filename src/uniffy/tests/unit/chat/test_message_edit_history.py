@@ -5,21 +5,19 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-# Pre-import the auth package (full chain) so its handlers module
-# finishes before any other test-file import triggers a partial-init
-# cycle through core.converters.
-import uniffy.domains.auth  # noqa: F401
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models.chat.message import ChatMessage, SenderType
 from uniffy.core.models.chat.message_revision import ChatMessageRevision
 from uniffy.core.types import generate_id
-from uniffy.domains.chat.messages.operations import ChatMessageAction, ChatMessageOperations
-from uniffy.domains.chat.policy import EditHistoryVisibility, ResolvedChatPolicy
+from uniffy.domains.chat.messages.operations import ChatMessageOperations
+from uniffy.domains.chat.messages.types import ChatMessageAction
+from uniffy.domains.chat.policies.operations import EditHistoryVisibility, ResolvedChatPolicy
 
 ORG = generate_id()
 CHANNEL_ID = generate_id()
 SENDER = generate_id()
 OTHER = generate_id()
+ORIGINAL_CONTENT = "original"
 
 
 def _policy(**overrides) -> ResolvedChatPolicy:
@@ -27,9 +25,8 @@ def _policy(**overrides) -> ResolvedChatPolicy:
 
 
 def _patch_policy(policy: ResolvedChatPolicy):
-    # Bound at import in operations, so the patch targets the consumer module.
     return patch(
-        "uniffy.domains.chat.messages.operations.resolve_chat_policy",
+        "uniffy.domains.chat.messages.mutations.resolve_chat_policy",
         AsyncMock(return_value=policy),
     )
 
@@ -46,7 +43,7 @@ def _message(
         channel_id=channel_id,
         sender_id=sender_id,
         sender_type=SenderType.USER,
-        content="original",
+        content=ORIGINAL_CONTENT,
         created_at=datetime.now(UTC) - timedelta(minutes=age_minutes),
         is_deleted=is_deleted,
     )
@@ -95,19 +92,20 @@ class TestEditWindowGate:
 
     async def test_edit_past_window_rejected(self):
         ops, _ = _make_ops()
-        with _patch_policy(_policy(edit_window_minutes=15)):
-            with pytest.raises(ValidationError):
-                await ops._require_message_action(
-                    SENDER, ORG, CHANNEL_ID, _message(age_minutes=16), ChatMessageAction.EDIT
-                )
+        with _patch_policy(_policy(edit_window_minutes=15)), pytest.raises(ValidationError):
+            await ops._require_message_action(
+                SENDER, ORG, CHANNEL_ID, _message(age_minutes=16), ChatMessageAction.EDIT
+            )
 
     async def test_zero_window_disables_editing(self):
         ops, _ = _make_ops()
-        with _patch_policy(_policy(edit_window_minutes=0)):
-            with pytest.raises(PermissionDeniedError):
-                await ops._require_message_action(
-                    SENDER, ORG, CHANNEL_ID, _message(age_minutes=0), ChatMessageAction.EDIT
-                )
+        with (
+            _patch_policy(_policy(edit_window_minutes=0)),
+            pytest.raises(PermissionDeniedError),
+        ):
+            await ops._require_message_action(
+                SENDER, ORG, CHANNEL_ID, _message(age_minutes=0), ChatMessageAction.EDIT
+            )
 
     async def test_unlimited_window_allows_old_messages(self):
         ops, _ = _make_ops()
@@ -118,11 +116,13 @@ class TestEditWindowGate:
 
     async def test_only_the_sender_may_edit(self):
         ops, _ = _make_ops(elevated=True)
-        with _patch_policy(_policy(edit_window_minutes=None)):
-            with pytest.raises(PermissionDeniedError):
-                await ops._require_message_action(
-                    OTHER, ORG, CHANNEL_ID, _message(), ChatMessageAction.EDIT
-                )
+        with (
+            _patch_policy(_policy(edit_window_minutes=None)),
+            pytest.raises(PermissionDeniedError),
+        ):
+            await ops._require_message_action(
+                OTHER, ORG, CHANNEL_ID, _message(), ChatMessageAction.EDIT
+            )
 
 
 class TestRecordRevision:
@@ -136,7 +136,7 @@ class TestRecordRevision:
         assert isinstance(revision, ChatMessageRevision)
         assert revision.message_id == msg.id
         assert revision.revision_no == 1
-        assert revision.content == "original"
+        assert revision.content == ORIGINAL_CONTENT
         assert revision.edited_by == SENDER
 
     async def test_revision_number_increments(self):
@@ -152,7 +152,13 @@ class TestUpdateMessageRevisions:
         ops._get_message_by_id = AsyncMock(return_value=msg)
 
         with _patch_policy(_policy()):
-            result = await ops.update_message(SENDER, ORG, CHANNEL_ID, msg.id, "original")
+            result = await ops.update_message(
+                SENDER,
+                ORG,
+                CHANNEL_ID,
+                msg.id,
+                ORIGINAL_CONTENT,
+            )
 
         assert result is msg
         session.add.assert_not_called()
@@ -177,9 +183,11 @@ class TestGetMessageRevisions:
         ops, _ = _make_ops(elevated=False)
         ops._get_message_by_id = AsyncMock(return_value=_message())
 
-        with _patch_policy(_policy(edit_history_visible_to=EditHistoryVisibility.ADMINS)):
-            with pytest.raises(PermissionDeniedError):
-                await ops.get_message_revisions(OTHER, ORG, CHANNEL_ID, generate_id())
+        with (
+            _patch_policy(_policy(edit_history_visible_to=EditHistoryVisibility.ADMINS)),
+            pytest.raises(PermissionDeniedError),
+        ):
+            await ops.get_message_revisions(OTHER, ORG, CHANNEL_ID, generate_id())
 
     async def test_elevated_viewer_allowed_under_admins_policy(self):
         ops, _ = _make_ops(elevated=True, execute_results=[_scalars([self._revision(1)])])

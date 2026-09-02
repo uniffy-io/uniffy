@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
-from datetime import date
 from pathlib import Path
 
 from loguru import logger
@@ -15,6 +14,8 @@ from uniffy.core.types import RecurrencePattern
 logger = logger.bind(component="scripts.demo_company.loader")
 
 CONTENT_DIR = Path(__file__).parent / "content"
+MAX_FILES_PER_SERIES = 500
+DEMO_MESSAGE_KEY = "demo_seed_key"
 
 # Every roster entry shares this login unless the content overrides it, which is
 # only safe on a stack nobody else can reach. Pass a password to
@@ -64,7 +65,7 @@ class PersonSpec:
     job_title: str
     department: str
     office_location: str
-    start_date: date | None
+    start_days_ago: int
     manager: str
 
 
@@ -105,6 +106,7 @@ class Manifest:
     company: str
     root_folder: str
     timezone: str
+    history_days: int
     tags: tuple[TagSpec, ...]
     demo_user: DemoUser | None
 
@@ -200,6 +202,7 @@ class SeriesSpec:
     weekdays_only: bool
     at: str
     gap_minutes: int
+    messages_per_occurrence: int | None
     variants: tuple[SeriesVariant, ...]
     variables: dict[str, tuple[str, ...]]
 
@@ -275,11 +278,14 @@ def load_demo_content(directory: Path | None = None, *, password: str | None = N
         raise ContentError(f"Content directory not found: {root}")
 
     manifest = _load_manifest(root / "manifest.json")
-    people = _load_people(root / "people.json", manifest.demo_user)
+    people = _load_people(root / "people.json", manifest.demo_user, manifest.history_days)
     if password is not None:
         manifest, people = _override_passwords(manifest, people, password)
 
-    files = _load_files(root / "files", root / "files.json")
+    files = _merge_file_specs(
+        _load_files(root / "files", root / "files.json"),
+        _load_file_series(root / "file_series.json"),
+    )
     if root == CONTENT_DIR:
         files = _merge_generated(files)
 
@@ -381,12 +387,17 @@ def _load_manifest(path: Path) -> Manifest:
         company=raw["company"],
         root_folder=raw["root_folder"],
         timezone=raw["timezone"],
+        history_days=max(1, int(raw.get("history_days", 730))),
         tags=tags,
         demo_user=demo_user,
     )
 
 
-def _load_people(path: Path, demo_user: DemoUser | None) -> PeopleContent:
+def _load_people(
+    path: Path,
+    demo_user: DemoUser | None,
+    history_days: int,
+) -> PeopleContent:
     if not path.is_file():
         return PeopleContent(people=(), teams=(), access_groups=())
 
@@ -394,7 +405,7 @@ def _load_people(path: Path, demo_user: DemoUser | None) -> PeopleContent:
     if not isinstance(raw, dict):
         raise ContentError(f"{path.name} must hold a JSON object")
 
-    people = _load_roster(path, raw.get("people", []))
+    people = _load_roster(path, raw.get("people", []), history_days)
     known = {person.email for person in people}
     if demo_user:
         known.add(demo_user.email)
@@ -438,7 +449,11 @@ def _load_people(path: Path, demo_user: DemoUser | None) -> PeopleContent:
     )
 
 
-def _load_roster(path: Path, entries: list[dict]) -> tuple[PersonSpec, ...]:
+def _load_roster(
+    path: Path,
+    entries: list[dict],
+    history_days: int,
+) -> tuple[PersonSpec, ...]:
     people: list[PersonSpec] = []
     seen: set[str] = set()
     for entry in entries:
@@ -456,7 +471,11 @@ def _load_roster(path: Path, entries: list[dict]) -> tuple[PersonSpec, ...]:
             if not entry.get(key):
                 raise ContentError(f"{path.name}: {email} needs '{key}'")
 
-        start = entry.get("start_date")
+        start_days_ago = int(entry.get("start_days_ago", 1))
+        if not 1 <= start_days_ago <= history_days:
+            raise ContentError(
+                f"{path.name}: {email} start_days_ago must be within 1..{history_days}"
+            )
         people.append(
             PersonSpec(
                 email=email,
@@ -466,7 +485,7 @@ def _load_roster(path: Path, entries: list[dict]) -> tuple[PersonSpec, ...]:
                 job_title=entry["job_title"],
                 department=entry["department"],
                 office_location=entry.get("office_location", ""),
-                start_date=date.fromisoformat(start) if start else None,
+                start_days_ago=start_days_ago,
                 manager=entry.get("manager", ""),
             )
         )
@@ -679,6 +698,11 @@ def _load_series(path: Path) -> tuple[SeriesSpec, ...]:
                 weekdays_only=bool(entry.get("weekdays_only", True)),
                 at=entry.get("at", "09:00"),
                 gap_minutes=int(entry.get("gap_minutes", 4)),
+                messages_per_occurrence=(
+                    max(1, int(entry["messages_per_occurrence"]))
+                    if entry.get("messages_per_occurrence") is not None
+                    else None
+                ),
                 variants=variants,
                 variables={
                     name: tuple(values)
@@ -838,3 +862,83 @@ def _load_files(directory: Path, metadata_path: Path) -> tuple[FileSpec, ...]:
             )
         )
     return tuple(files)
+
+
+def _load_file_series(path: Path) -> tuple[FileSpec, ...]:
+    if not path.is_file():
+        return ()
+
+    raw = _read_json(path)
+    if not isinstance(raw, list):
+        raise ContentError(f"{path.name} must hold a JSON array")
+
+    files: list[FileSpec] = []
+    for entry in raw:
+        for key in ("folder", "filename", "content"):
+            if not entry.get(key):
+                raise ContentError(f"{path.name}: every file series needs '{key}'")
+
+        count = int(entry.get("count", 0))
+        if count < 1 or count > MAX_FILES_PER_SERIES:
+            raise ContentError(
+                f"{path.name}: file series count must be between 1 and {MAX_FILES_PER_SERIES}"
+            )
+
+        variables = entry.get("variables", {})
+        if not isinstance(variables, dict) or any(
+            not isinstance(values, list) or not values for values in variables.values()
+        ):
+            raise ContentError(f"{path.name}: file series variables need non-empty arrays")
+
+        for offset in range(count):
+            index = offset + 1
+            values = {
+                "index": str(index),
+                "sequence": f"{index:03d}",
+            }
+            for stride, name in enumerate(sorted(variables), start=1):
+                pool = variables[name]
+                values[name] = str(pool[(offset * stride) % len(pool)])
+
+            filename = _render_file_template(entry["filename"], values)
+            suffix = Path(filename).suffix.lower()
+            mime_type = MIME_BY_SUFFIX.get(suffix)
+            if mime_type is None:
+                raise ContentError(
+                    f"{path.name}: unknown extension in {filename!r}, add it to MIME_BY_SUFFIX"
+                )
+
+            files.append(
+                FileSpec(
+                    folder=entry["folder"],
+                    filename=filename,
+                    mime_type=mime_type,
+                    description=_render_file_template(entry.get("description", ""), values),
+                    tags=tuple(entry.get("tags", [])),
+                    data=_render_file_template(entry["content"], values).encode(),
+                )
+            )
+    return tuple(files)
+
+
+def _render_file_template(template: str, values: dict[str, str]) -> str:
+    for name, value in values.items():
+        template = template.replace("{" + name + "}", value)
+    return template
+
+
+def _merge_file_specs(
+    existing: tuple[FileSpec, ...],
+    generated: tuple[FileSpec, ...],
+) -> tuple[FileSpec, ...]:
+    merged = list(existing)
+    identities = {(spec.folder, spec.filename) for spec in existing}
+    for spec in generated:
+        identity = (spec.folder, spec.filename)
+        if identity in identities:
+            raise ContentError(
+                f"Duplicate demo file {spec.folder}/{spec.filename} across file sources"
+            )
+        identities.add(identity)
+        merged.append(spec)
+    return tuple(merged)

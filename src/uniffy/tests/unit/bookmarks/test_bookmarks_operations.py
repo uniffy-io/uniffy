@@ -7,6 +7,7 @@ import pytest
 
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models.bookmarks.bookmark import Bookmark
+from uniffy.core.search.workspace import WorkspaceSearch
 from uniffy.core.types import AccessMode, ContentType, generate_id
 from uniffy.domains.bookmarks.operations import (
     BOOKMARK_MIN_SCAN_BATCH,
@@ -16,7 +17,7 @@ from uniffy.domains.bookmarks.operations import (
 )
 from uniffy.domains.bookmarks.pagination import decode_bookmark_cursor
 from uniffy.domains.bookmarks.types import BookmarkItem
-from uniffy.domains.permissions.resource_access import (
+from uniffy.domains.permissions.access import (
     ResourceAccessDecision,
     ResourceAccessResolver,
     ResourceKey,
@@ -81,6 +82,7 @@ def _ops(
         access.subject = AsyncMock(return_value=SimpleNamespace(is_active_member=True))
     return BookmarksOperations(
         session or _session(),
+        MagicMock(spec=WorkspaceSearch),
         resource_access=access,
     )
 
@@ -428,7 +430,7 @@ async def test_candidate_resolution_authorizes_before_preview_lookup() -> None:
     assert [item.bookmark for item in items] == [available, deleted]
     assert items[1].content is not None
     assert items[1].content.availability is UrnAvailability.DELETED
-    preview_lookup.assert_awaited_once_with([available.urn], ORG_ID)
+    preview_lookup.assert_awaited_once_with(ops.search, [available.urn], ORG_ID)
     # Previews must carry the same PostgreSQL live state the mention path applies.
     enrich.assert_awaited_once()
     assert list(enrich.await_args.args[0]) == [available.urn]

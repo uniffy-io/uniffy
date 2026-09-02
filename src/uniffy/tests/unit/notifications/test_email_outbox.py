@@ -11,11 +11,11 @@ from uniffy.core.models.notifications.email_delivery import (
     NotificationEmailStatus,
 )
 from uniffy.core.types import ContentType, NotificationType, generate_id
-from uniffy.domains.notifications.email_outbox import (
+from uniffy.domains.notifications.delivery.outbox import (
     NotificationEmailTerminalReason,
     prepare_email_recipient,
 )
-from uniffy.domains.permissions.resource_access import (
+from uniffy.domains.permissions.access import (
     ResourceAccessDecision,
     ResourceKey,
     ResourceRowState,
@@ -92,15 +92,15 @@ async def test_current_email_preference_is_rechecked_before_send() -> None:
 
     with (
         patch(
-            "uniffy.domains.notifications.email_outbox.load_notification_overrides",
+            "uniffy.domains.notifications.delivery.outbox.load_notification_overrides",
             new=AsyncMock(return_value={"email_enabled": False}),
         ),
         patch(
-            "uniffy.domains.notifications.email_outbox.get_user_timezone",
+            "uniffy.domains.notifications.delivery.outbox.get_user_timezone",
             new=AsyncMock(return_value="UTC"),
         ),
         patch(
-            "uniffy.domains.notifications.email_outbox.ResourceAccessResolver",
+            "uniffy.domains.notifications.delivery.outbox.ResourceAccessResolver",
             return_value=resolver,
         ),
     ):
@@ -131,15 +131,15 @@ async def test_revoked_content_access_is_rechecked_before_send() -> None:
 
     with (
         patch(
-            "uniffy.domains.notifications.email_outbox.load_notification_overrides",
+            "uniffy.domains.notifications.delivery.outbox.load_notification_overrides",
             new=AsyncMock(return_value=None),
         ),
         patch(
-            "uniffy.domains.notifications.email_outbox.get_user_timezone",
+            "uniffy.domains.notifications.delivery.outbox.get_user_timezone",
             new=AsyncMock(return_value="UTC"),
         ),
         patch(
-            "uniffy.domains.notifications.email_outbox.ResourceAccessResolver",
+            "uniffy.domains.notifications.delivery.outbox.ResourceAccessResolver",
             return_value=resolver,
         ),
     ):
@@ -162,17 +162,17 @@ async def test_frequency_change_reschedules_pending_delivery() -> None:
 
     with (
         patch(
-            "uniffy.domains.notifications.email_outbox.load_notification_overrides",
+            "uniffy.domains.notifications.delivery.outbox.load_notification_overrides",
             new=AsyncMock(
                 return_value={"email_frequency": "daily", "email_digest_time": "14:00"}
             ),
         ),
         patch(
-            "uniffy.domains.notifications.email_outbox.get_user_timezone",
+            "uniffy.domains.notifications.delivery.outbox.get_user_timezone",
             new=AsyncMock(return_value="UTC"),
         ),
         patch(
-            "uniffy.domains.notifications.email_outbox.ResourceAccessResolver",
+            "uniffy.domains.notifications.delivery.outbox.ResourceAccessResolver",
             return_value=resolver,
         ),
     ):

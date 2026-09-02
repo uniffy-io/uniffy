@@ -9,7 +9,7 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.models.settings.settings_profile import SettingsProfile
-from uniffy.core.valkey.presence import (
+from uniffy.domains.presence.state import (
     presence_get_bulk,
     presence_publish_change,
     presence_set,

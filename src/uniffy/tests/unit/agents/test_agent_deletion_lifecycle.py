@@ -198,7 +198,7 @@ class TestRestore:
 
 class TestChatInvocationRefusesDeletedAgent:
     async def test_no_run_is_started(self) -> None:
-        from uniffy.domains.agents.chat_integration.operations import AgentChatBridge
+        from uniffy.domains.agents.bridge.operations import AgentChatBridge
 
         org_id = generate_id()
         channel_id = generate_id()
@@ -229,7 +229,14 @@ class TestChatInvocationRefusesDeletedAgent:
             side_effect=AssertionError("run started for a deleted agent")
         )
 
-        await bridge.respond_to_chat_message(channel_id, trigger_id, agent.id)
+        await bridge.respond_to_chat_message(
+            channel_id,
+            trigger_id,
+            agent.id,
+            storage=MagicMock(),
+            search_indexer=MagicMock(),
+            call_lifecycle=MagicMock(),
+        )
 
 
 class TestFrozenAgentDm:
@@ -272,7 +279,7 @@ class TestQueriesExcludeDeletedAgents:
 
     async def test_mention_detection_joins_the_agent_row(self) -> None:
         from uniffy.core.models.chat.channel import ChannelType
-        from uniffy.domains.agents.chat_integration.mention_detector import (
+        from uniffy.domains.agents.bridge.mentions import (
             detect_agent_mentions,
         )
 

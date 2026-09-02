@@ -18,12 +18,15 @@ from uniffy.core.models.chat.message import ChatMessage, SenderType
 from uniffy.core.models.shared import NotificationType
 from uniffy.core.types import SubjectType, generate_id
 from uniffy.domains.chat.messages.operations import ChatMessageOperations
-from uniffy.domains.chat.policy import BroadcastMinRole, ResolvedChatPolicy
+from uniffy.domains.chat.policies.operations import BroadcastMinRole, ResolvedChatPolicy
 
 ORG = generate_id()
 
 CHANNEL_URN = broadcast_urn(BroadcastMention.CHANNEL)
 HERE_URN = broadcast_urn(BroadcastMention.HERE)
+CHANNEL_BROADCAST = BroadcastMention.CHANNEL.value
+CHANNEL_TITLE = "Mentioned everyone in #general"
+HERE_TITLE = "Mentioned everyone active in #general"
 
 
 def _channel(channel_type: ChannelType = ChannelType.PUBLIC) -> ChatChannel:
@@ -89,8 +92,7 @@ class TestExtraction:
 
     def test_unknown_broadcast_kind_is_ignored(self) -> None:
         content = (
-            "[[[@admins|urn:uniffy:broadcast:admins]]] "
-            "[[[@everyone|urn:uniffy:broadcast:everyone]]]"
+            "[[[@admins|urn:uniffy:broadcast:admins]]] [[[@everyone|urn:uniffy:broadcast:everyone]]]"
         )
         assert extract_broadcast_mentions_from_content(content) == set()
 
@@ -121,9 +123,8 @@ def _policy(min_role: BroadcastMinRole) -> ResolvedChatPolicy:
 
 
 def _policy_patch(min_role: BroadcastMinRole):
-    # Bound at import in operations, so the patch targets the consumer module.
     return patch(
-        "uniffy.domains.chat.messages.operations.resolve_chat_policy",
+        "uniffy.domains.chat.messages.sending.resolve_chat_policy",
         AsyncMock(return_value=_policy(min_role)),
     )
 
@@ -177,7 +178,7 @@ class TestBroadcastFanout:
             "uniffy.domains.chat.drafts.operations.ChatDraftOperations.clear_for_send",
             AsyncMock(),
         ):
-            await ops._background_post_send(
+            await ops.background_post_send(
                 message, channel, message.sender_id, None, "Ada", member_ids
             )
         return ops
@@ -268,15 +269,15 @@ class TestBroadcastNotificationEmit:
         message = _message(channel.id, sender, "ship it")
         with (
             patch(
-                "uniffy.core.events.bus.emit_notification",
+                "uniffy.domains.chat.messages.notifications.emit_notification",
                 AsyncMock(side_effect=_capture),
             ),
             patch(
-                "uniffy.domains.chat.streaming.publisher.publish_user_chat_event",
+                "uniffy.domains.chat.messages.notifications.publish_user_chat_event",
                 stream_mock,
             ),
             patch(
-                "uniffy.domains.chat.streaming.publisher.publish_user_chat_events",
+                "uniffy.domains.chat.messages.notifications.publish_user_chat_events",
                 AsyncMock(side_effect=_fan_out),
             ),
         ):
@@ -309,9 +310,9 @@ class TestBroadcastNotificationEmit:
         assert len(emitted) == 1
         event = emitted[0]
         assert event.notification_type is NotificationType.CHAT_MENTION
-        assert event.title == "Mentioned everyone in #general"
+        assert event.title == CHANNEL_TITLE
         assert event.target_user_ids == [member]
-        assert event.metadata["broadcast"] == "channel"
+        assert event.metadata["broadcast"] == CHANNEL_BROADCAST
         assert stream.await_count == 1
 
     async def test_here_copy_differs_and_sender_is_excluded(self) -> None:
@@ -327,7 +328,7 @@ class TestBroadcastNotificationEmit:
         )
 
         assert len(emitted) == 1
-        assert emitted[0].title == "Mentioned everyone active in #general"
+        assert emitted[0].title == HERE_TITLE
         assert emitted[0].target_user_ids == [member]
 
     async def test_dm_recipients_exclude_broadcast_notified_users(self) -> None:
@@ -343,4 +344,4 @@ class TestBroadcastNotificationEmit:
         )
 
         assert [e.notification_type for e in emitted] == [NotificationType.CHAT_MENTION]
-        assert emitted[0].metadata["broadcast"] == "channel"
+        assert emitted[0].metadata["broadcast"] == CHANNEL_BROADCAST

@@ -3,7 +3,7 @@
 from decimal import Decimal
 
 from uniffy.domains.agents.providers.base import CompletionResult
-from uniffy.domains.agents.runtime.run_usage import RunUsageAccumulator
+from uniffy.domains.agents.runtime.runs.usage import RunUsageAccumulator
 
 
 def test_accumulates_every_model_call_and_prices_each_model() -> None:

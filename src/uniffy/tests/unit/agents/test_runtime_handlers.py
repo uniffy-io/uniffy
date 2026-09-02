@@ -28,9 +28,9 @@ from uniffy.core.models.agents.message import AgentMessage
 from uniffy.core.types import generate_id
 from uniffy.domains.agents.providers.base import EventType, StreamEvent
 from uniffy.domains.agents.runtime import handlers as handlers_mod
-from uniffy.domains.agents.runtime.file_loader import FileContext
+from uniffy.domains.agents.runtime.files import FileContext
 from uniffy.domains.agents.runtime.handlers import RuntimeHandlers
-from uniffy.domains.agents.runtime.job_contracts import RUN_AGENT_SESSION
+from uniffy.domains.agents.runtime.jobs.contracts import RUN_AGENT_SESSION
 
 
 @pytest.fixture(autouse=True)
@@ -107,8 +107,13 @@ def _install_open_session(monkeypatch) -> None:
 def _install_user_id(monkeypatch, user_id: UUID) -> None:
     monkeypatch.setattr(
         handlers_mod,
-        "get_user_id_from_context",
-        lambda _ctx: user_id,
+        "current_user_id",
+        lambda: user_id,
+    )
+    monkeypatch.setattr(
+        handlers_mod,
+        "resolve_organization_id",
+        UUID,
     )
 
 

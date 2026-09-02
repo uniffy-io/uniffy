@@ -56,11 +56,11 @@ def _ctx_as(user_id, org_id, session):
 
     with (
         patch(
-            "uniffy.domains.integrations.handlers.get_user_id_from_context",
+            "uniffy.domains.integrations.handlers.current_user_id",
             MagicMock(return_value=user_id),
         ),
         patch(
-            "uniffy.domains.auth.context.get_organization_id_from_context",
+            "uniffy.core.auth.principal.current_organization_id",
             MagicMock(return_value=org_id),
         ),
         patch("uniffy.domains.integrations.handlers.open_session", fake_open_session),

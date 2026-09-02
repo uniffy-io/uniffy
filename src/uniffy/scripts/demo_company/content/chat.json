@@ -405,6 +405,24 @@
           ]
         },
         {
+          "name": "company-history",
+          "type": "PUBLIC",
+          "description": "Two years of daily decisions, delivery updates, customer context and operating notes.",
+          "members": [
+            "admin@uniffy.io",
+            "alice@uniffy.io",
+            "bob@uniffy.io",
+            "charlie@uniffy.io",
+            "diana@uniffy.io",
+            "eve@uniffy.io",
+            "elena@uniffy.io",
+            "viktor@uniffy.io",
+            "martin@uniffy.io",
+            "maria@uniffy.io"
+          ],
+          "messages": []
+        },
+        {
           "name": "random",
           "type": "PUBLIC",
           "description": "Non-work chatter. Coffee, mountains, dogs.",

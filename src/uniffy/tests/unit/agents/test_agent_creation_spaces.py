@@ -4,8 +4,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from uniffy.core.types import AccessMode, generate_id
-from uniffy.domains.agents.runtime.workspace_prompt import WORKSPACE_PROMPT
-from uniffy.domains.agents.tools.builtin.content_space import (
+from uniffy.domains.agents.runtime.workspace import WORKSPACE_PROMPT
+from uniffy.domains.agents.tools.builtin.content import (
     parse_creation_space,
     space_for_access_mode,
 )
@@ -33,6 +33,16 @@ from uniffy.domains.agents.tools.builtin.projects import (
     create_project,
 )
 from uniffy.domains.agents.tools.definitions import ToolContext
+
+
+def _tool_context() -> ToolContext:
+    return ToolContext(
+        session=MagicMock(),
+        user_id=generate_id(),
+        organization_id=generate_id(),
+        storage=MagicMock(),
+        search_indexer=MagicMock(),
+    )
 
 
 @pytest.mark.parametrize(
@@ -113,15 +123,11 @@ def test_workspace_prompt_defaults_ambiguous_creation_to_personal() -> None:
 
 
 async def test_missing_space_creates_an_owner_only_note() -> None:
-    ctx = SimpleNamespace(
-        session=MagicMock(),
-        user_id=generate_id(),
-        organization_id=generate_id(),
-    )
+    ctx = _tool_context()
     ops = MagicMock()
     ops.create = AsyncMock(return_value=SimpleNamespace(id=generate_id(), title="Ambiguous"))
 
-    with patch("uniffy.domains.notes.operations.NoteOperations", return_value=ops):
+    with patch("uniffy.domains.agents.tools.builtin.notes.NoteOperations", return_value=ops):
         result = await _execute_create_note(ctx, {"title": "Ambiguous"})
 
     assert result.success
@@ -140,16 +146,12 @@ async def test_note_creation_passes_explicit_access_mode(
     space: str,
     expected: AccessMode,
 ) -> None:
-    ctx = SimpleNamespace(
-        session=MagicMock(),
-        user_id=generate_id(),
-        organization_id=generate_id(),
-    )
+    ctx = _tool_context()
     note = SimpleNamespace(id=generate_id(), title="Trip summary")
     ops = MagicMock()
     ops.create = AsyncMock(return_value=note)
 
-    with patch("uniffy.domains.notes.operations.NoteOperations", return_value=ops):
+    with patch("uniffy.domains.agents.tools.builtin.notes.NoteOperations", return_value=ops):
         result = await _execute_create_note(
             ctx,
             {"title": note.title, "content": "Body", "space": space},
@@ -160,11 +162,7 @@ async def test_note_creation_passes_explicit_access_mode(
 
 
 async def test_note_without_space_inherits_organization_parent() -> None:
-    ctx = SimpleNamespace(
-        session=MagicMock(),
-        user_id=generate_id(),
-        organization_id=generate_id(),
-    )
+    ctx = _tool_context()
     folder_id = generate_id()
     ops = MagicMock()
     ops.get_by_id = AsyncMock(
@@ -176,7 +174,7 @@ async def test_note_without_space_inherits_organization_parent() -> None:
     ops.create = AsyncMock(return_value=SimpleNamespace(id=generate_id(), title="Team note"))
 
     with (
-        patch("uniffy.domains.notes.operations.NoteOperations", return_value=ops),
+        patch("uniffy.domains.agents.tools.builtin.notes.NoteOperations", return_value=ops),
         patch(
             "uniffy.domains.agents.tools.builtin.notes._resolve_folder_arg",
             new=AsyncMock(return_value=(folder_id, None)),
@@ -193,11 +191,7 @@ async def test_note_without_space_inherits_organization_parent() -> None:
 
 
 async def test_explicit_space_conflict_with_parent_refuses_creation() -> None:
-    ctx = SimpleNamespace(
-        session=MagicMock(),
-        user_id=generate_id(),
-        organization_id=generate_id(),
-    )
+    ctx = _tool_context()
     folder_id = generate_id()
     ops = MagicMock()
     ops.get_by_id = AsyncMock(
@@ -209,7 +203,7 @@ async def test_explicit_space_conflict_with_parent_refuses_creation() -> None:
     ops.create = AsyncMock()
 
     with (
-        patch("uniffy.domains.notes.operations.NoteOperations", return_value=ops),
+        patch("uniffy.domains.agents.tools.builtin.notes.NoteOperations", return_value=ops),
         patch(
             "uniffy.domains.agents.tools.builtin.notes._resolve_folder_arg",
             new=AsyncMock(return_value=(folder_id, None)),
@@ -234,7 +228,7 @@ async def test_explicit_space_conflict_with_parent_refuses_creation() -> None:
     [
         (
             execute_create_note_folder,
-            "uniffy.domains.notes.operations.NoteOperations",
+            "uniffy.domains.agents.tools.builtin.notes.NoteOperations",
             "title",
         ),
         (
@@ -249,11 +243,7 @@ async def test_folder_creation_passes_personal_access_mode(
     operations_path: str,
     result_name: str,
 ) -> None:
-    ctx = SimpleNamespace(
-        session=MagicMock(),
-        user_id=generate_id(),
-        organization_id=generate_id(),
-    )
+    ctx = _tool_context()
     folder = SimpleNamespace(id=generate_id(), **{result_name: "Research"})
     ops = MagicMock()
     ops.create = AsyncMock(return_value=folder)
@@ -266,11 +256,7 @@ async def test_folder_creation_passes_personal_access_mode(
 
 
 async def test_project_creation_passes_organization_access_mode() -> None:
-    ctx = SimpleNamespace(
-        session=MagicMock(),
-        user_id=generate_id(),
-        organization_id=generate_id(),
-    )
+    ctx = _tool_context()
     project = SimpleNamespace(id=generate_id(), name="Launch")
     ops = MagicMock()
     ops.create = AsyncMock(return_value=project)
@@ -335,8 +321,11 @@ async def test_generated_image_file_uses_requested_space(
     )
     s3 = MagicMock()
     s3.upload_bytes = AsyncMock()
+    s3.bucket_name = "test-bucket"
+    ctx.storage = s3
     indexer = MagicMock()
     indexer.index = AsyncMock()
+    ctx.search_indexer = indexer
 
     with (
         patch(
@@ -347,14 +336,13 @@ async def test_generated_image_file_uses_requested_space(
             "uniffy.domains.files.attachments.operations.AttachmentOperations",
             return_value=attachments,
         ),
-        patch("uniffy.core.storage.get_s3_client", return_value=s3),
         patch("uniffy.core.search.indexer.SearchIndexer", return_value=indexer),
         patch(
-            "uniffy.core.valkey.rate_limit.check_image_generation_limits",
+            "uniffy.domains.agents.limits.policy.check_image_generation_limits",
             new=AsyncMock(),
         ),
         patch(
-            "uniffy.domains.agents.budgets.image_quota.check_image_quota",
+            "uniffy.domains.agents.budgets.images.check_image_quota",
             new=AsyncMock(),
         ),
         patch(
@@ -371,11 +359,11 @@ async def test_generated_image_file_uses_requested_space(
             return_value=[],
         ),
         patch(
-            "uniffy.domains.agents.budget_alerts.check_and_fire_alerts",
+            "uniffy.domains.agents.budgets.alerts.check_and_fire_alerts",
             new=AsyncMock(),
         ),
         patch(
-            "uniffy.core.valkey.publish_content_access_changed",
+            "uniffy.core.events.realtime.publish_content_access_changed",
             new=AsyncMock(),
         ) as publish_access,
     ):

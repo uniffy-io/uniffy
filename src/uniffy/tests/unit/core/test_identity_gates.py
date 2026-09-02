@@ -17,7 +17,7 @@ from connectrpc.errors import ConnectError
 
 from uniffy.core.errors import PermissionDeniedError
 from uniffy.core.types import generate_id
-from uniffy.domains.chat.categories.operations import ChatCategoryOperations
+from uniffy.domains.chat.categories.reader import ChatCategoryReader
 
 ORG = generate_id()
 ACTOR = generate_id()
@@ -45,12 +45,12 @@ def test_rpc_handlers_do_not_parse_request_organization_scope_directly() -> None
 
 
 def test_request_organization_must_match_authenticated_scope() -> None:
-    from uniffy.domains.auth import context
+    from uniffy.core.auth import principal
 
     other_org = generate_id()
-    with patch.object(context, "get_organization_id_from_context", return_value=ORG):
+    with patch.object(principal, "current_organization_id", return_value=ORG):
         with pytest.raises(ConnectError) as exc_info:
-            context.resolve_organization_id(MagicMock(), str(other_org))
+            principal.resolve_organization_id(str(other_org))
 
     assert exc_info.value.code == Code.PERMISSION_DENIED
 
@@ -68,7 +68,7 @@ async def test_list_categories_requires_active_membership(_membership_state) -> 
     access.require_org_member = AsyncMock(
         side_effect=PermissionDeniedError("access", "organization")
     )
-    ops = ChatCategoryOperations(session, access=access)
+    ops = ChatCategoryReader(session, access=access)
 
     with pytest.raises(PermissionDeniedError):
         await ops.list_categories(ACTOR, ORG)
@@ -81,7 +81,7 @@ async def test_list_categories_allows_a_plain_member() -> None:
     session.execute = AsyncMock(return_value=MagicMock(scalars=lambda: MagicMock(all=lambda: [])))
     access = MagicMock()
     access.require_org_member = AsyncMock()
-    ops = ChatCategoryOperations(session, access=access)
+    ops = ChatCategoryReader(session, access=access)
 
     assert await ops.list_categories(ACTOR, ORG) == []
 
@@ -93,10 +93,10 @@ def _upload_status_ctx(session):
 
     return (
         patch(
-            "uniffy.domains.files.handlers.get_user_id_from_context",
+            "uniffy.domains.files.rpc.uploads.current_user_id",
             MagicMock(return_value=ACTOR),
         ),
-        patch("uniffy.domains.files.handlers.open_session", fake_open_session),
+        patch("uniffy.domains.files.rpc.uploads.open_session", fake_open_session),
     )
 
 
@@ -124,10 +124,13 @@ async def test_get_upload_status_hides_another_users_upload() -> None:
     with (
         patch_user,
         patch_session,
-        patch("uniffy.domains.files.handlers.FileOperations", MagicMock(return_value=ops)),
+        patch("uniffy.domains.files.rpc.uploads.FileOperations", MagicMock(return_value=ops)),
         pytest.raises(ConnectError) as exc_info,
     ):
-        await FilesHandlers().get_upload_status(
+        handlers = FilesHandlers()
+        handlers.storage = MagicMock()
+        handlers.search_indexer = MagicMock()
+        await handlers.get_upload_status(
             GetUploadStatusRequest(upload_id=str(upload_id)), MagicMock()
         )
 

@@ -2,7 +2,7 @@ import pytest
 from sqlalchemy import update
 
 from uniffy.core.errors import PermissionDeniedError
-from uniffy.core.models.comments.comment import Comment
+from uniffy.core.models.comments.comment import Comment, CommentAnchorType
 from uniffy.core.models.permissions.content_member import ContentMember
 from uniffy.core.types import ContentRole, ContentType
 from uniffy.domains.comments.operations import CommentOperations
@@ -82,6 +82,7 @@ async def test_comment_author_loses_mutation_access_with_parent_access(session, 
         content_id=access.private_note_id,
         author_id=access.peer_id,
         body="No longer visible",
+        anchor_type=CommentAnchorType.PAGE,
     )
     session.add(comment)
     await session.commit()
@@ -107,6 +108,7 @@ async def test_comment_counts_only_include_authorized_parents(session, access) -
         content_id=access.private_note_id,
         author_id=access.member_id,
         body="Private",
+        anchor_type=CommentAnchorType.PAGE,
     )
     visible_comment = Comment(
         organization_id=access.org_id,
@@ -114,6 +116,7 @@ async def test_comment_counts_only_include_authorized_parents(session, access) -
         content_id=access.org_note_id,
         author_id=access.member_id,
         body="Visible",
+        anchor_type=CommentAnchorType.PAGE,
     )
     session.add_all([private_comment, visible_comment])
     await session.commit()

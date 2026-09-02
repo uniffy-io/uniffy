@@ -4,7 +4,7 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
 from uniffy.core.types import generate_id
-from uniffy.domains.agents.runtime.settings import (
+from uniffy.domains.agents.runtime.settings.operations import (
     DEFAULT_CIRCUIT_BREAKER_FAILURE_THRESHOLD,
     DEFAULT_CIRCUIT_BREAKER_RECOVERY_SECONDS,
     DEFAULT_DISPLAY_CURRENCY,
@@ -106,7 +106,7 @@ def _admin_ops(*, admin_raises=False, store: dict | None = None):
     from unittest.mock import patch
 
     from uniffy.core.errors import PermissionDeniedError
-    from uniffy.domains.agents.runtime.settings import RuntimeSettingsOperations
+    from uniffy.domains.agents.runtime.settings.operations import RuntimeSettingsOperations
 
     ops = RuntimeSettingsOperations.__new__(RuntimeSettingsOperations)
     ops._session = MagicMock()
@@ -174,7 +174,7 @@ async def test_admin_update_round_trips_every_field() -> None:
 
     async def run() -> None:
         with patch(
-            "uniffy.domains.agents.runtime.settings.write_audit_event",
+            "uniffy.domains.agents.runtime.settings.operations.write_audit_event",
             AsyncMock(),
         ):
             resolved, configured = await ops.update(
@@ -209,7 +209,7 @@ async def test_admin_update_preserves_unmanaged_keys() -> None:
 
     async def run() -> None:
         with patch(
-            "uniffy.domains.agents.runtime.settings.write_audit_event",
+            "uniffy.domains.agents.runtime.settings.operations.write_audit_event",
             AsyncMock(),
         ):
             resolved, _ = await ops.update(**_update_kwargs())
@@ -267,7 +267,7 @@ async def test_default_model_must_match_key_provider() -> None:
     key = _key_row(provider="anthropic")
     ops, _ = _ops_with_key(key)
     with patch(
-        "uniffy.domains.agents.runtime.settings.provider_for_model",
+        "uniffy.domains.agents.runtime.settings.operations.provider_for_model",
         MagicMock(return_value="openai"),
     ):
         await _expect_update_rejected(
@@ -286,11 +286,11 @@ async def test_coherent_default_key_and_model_accepted() -> None:
     async def run() -> None:
         with (
             patch(
-                "uniffy.domains.agents.runtime.settings.write_audit_event",
+                "uniffy.domains.agents.runtime.settings.operations.write_audit_event",
                 AsyncMock(),
             ),
             patch(
-                "uniffy.domains.agents.runtime.settings.provider_for_model",
+                "uniffy.domains.agents.runtime.settings.operations.provider_for_model",
                 MagicMock(return_value="anthropic"),
             ),
         ):
@@ -307,7 +307,7 @@ async def test_coherent_default_key_and_model_accepted() -> None:
 
 
 def test_from_blob_survives_malformed_values() -> None:
-    from uniffy.domains.agents.runtime.settings import _from_blob
+    from uniffy.domains.agents.runtime.settings.operations import _from_blob
 
     parsed = _from_blob({
         "send_deadline_seconds": "not-a-number",
@@ -320,7 +320,7 @@ def test_from_blob_survives_malformed_values() -> None:
 
 
 def test_from_blob_parses_key_id_and_model() -> None:
-    from uniffy.domains.agents.runtime.settings import _from_blob
+    from uniffy.domains.agents.runtime.settings.operations import _from_blob
 
     key_id = generate_id()
     parsed = _from_blob({
@@ -332,7 +332,7 @@ def test_from_blob_parses_key_id_and_model() -> None:
 
 
 def test_from_blob_bad_key_id_is_none() -> None:
-    from uniffy.domains.agents.runtime.settings import _from_blob
+    from uniffy.domains.agents.runtime.settings.operations import _from_blob
 
     parsed = _from_blob({"default_provider_key_id": "not-a-uuid"})
     assert parsed.default_provider_key_id is None
@@ -344,17 +344,16 @@ async def test_bridge_disabled_when_flag_false() -> None:
 
     from uniffy.core.models.agents.memory import MemoryScope
     from uniffy.domains.agents.memories.scope import MemoryScopeRef
-    from uniffy.domains.agents.runtime.operations import RuntimeOperations
+    from uniffy.domains.agents.runtime.context.memory import MemoryContextBuilder
 
-    ops = object.__new__(RuntimeOperations)
-    ops._session = MagicMock()
+    session = MagicMock()
 
     async def run() -> None:
         with patch(
-            "uniffy.domains.agents.runtime.operations.get_runtime_settings",
+            "uniffy.domains.agents.runtime.context.memory.get_runtime_settings",
             AsyncMock(return_value=NS(personal_memory_bridge_enabled=False)),
         ):
-            result = await ops._resolve_memory_bridge(
+            result = await MemoryContextBuilder(session).resolve_bridge(
                 scope_ref=MemoryScopeRef(MemoryScope.CHANNEL, generate_id()),
                 user_id=generate_id(),
                 organization_id=generate_id(),

@@ -1,4 +1,4 @@
-"""``RealtimeContentAdapter`` protocol + registry; domains self-register at import time."""
+"""Extension point between generic realtime state and domain persistence."""
 
 from typing import Protocol
 from uuid import UUID
@@ -40,8 +40,8 @@ class RealtimeContentAdapter(Protocol):
         ydoc: pycrdt.Doc,
         content_id: UUID,
         organization_id: UUID,
-    ) -> None:
-        """Persist the rendered domain shape on each debounced flush. Must be idempotent."""
+    ) -> bool:
+        """Persist the rendered shape, or return false when the target no longer exists."""
         ...
 
     def apply_external_content(self, ydoc: pycrdt.Doc, content: str) -> bool:

@@ -40,9 +40,7 @@ async def test_system_sender_bypasses_membership_gate() -> None:
     ops, access = _build_ops(channel)
 
     with (
-        patch(
-            "uniffy.domains.chat.messages.operations.bump_channel_message_stats", AsyncMock()
-        ),
+        patch("uniffy.domains.chat.messages.sending.bump_channel_message_stats", AsyncMock()),
         patch.object(ops, "_post_commit_send", AsyncMock()) as post_commit,
     ):
         message, _, _ = await ops.send_message(

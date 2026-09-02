@@ -10,8 +10,8 @@ from uniffy.core.jobs import (
     enqueue_job,
     enqueue_job_reconnecting,
 )
-from uniffy.core.valkey.queue import QueueName
-from uniffy.observability.metrics import WORKER_JOB_ENQUEUE_TOTAL
+from uniffy.core.jobs import QueueName
+from uniffy.core.jobs.metrics import WORKER_JOB_ENQUEUE_TOTAL
 
 
 def _outcome_value(ref: JobRef, outcome: JobEnqueueOutcome) -> float:

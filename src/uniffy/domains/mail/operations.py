@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import Action
+from uniffy.core.config.settings.organization import OrgSettingsOperations
 from uniffy.core.mail import MailSender
 from uniffy.core.mail.backends.base import MailResult
 from uniffy.core.mail.config import MAIL_NAMESPACE
@@ -17,7 +18,6 @@ from uniffy.core.mail.errors import MailProviderError, MailSuppressedError
 from uniffy.core.mail.resolver import MailConfigResolver
 from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.settings.org_setting import OrgSetting
-from uniffy.domains.org_settings.operations import OrgSettingsOperations
 from uniffy.domains.organizations.operations import OrganizationOperations
 
 PLAIN_KEYS: tuple[str, ...] = (

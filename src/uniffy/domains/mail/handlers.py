@@ -19,11 +19,11 @@ from uniffy_proto.mail.v1.mail_pb2 import (
     UpdateMailConfigResponse,
 )
 
+from uniffy.core.auth.principal import current_user_id
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
-from uniffy.db import open_session
-from uniffy.domains.auth.context import get_user_id_from_context
 from uniffy.domains.mail.converters import summary_to_proto
 from uniffy.domains.mail.operations import OrgMailOperations
+from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="mail.handlers")
 
@@ -58,7 +58,7 @@ class OrgMailHandlers:
         request: GetMailConfigRequest,
         ctx: RequestContext,
     ) -> GetMailConfigResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         try:
             async with open_session() as session:
@@ -78,7 +78,7 @@ class OrgMailHandlers:
         request: UpdateMailConfigRequest,
         ctx: RequestContext,
     ) -> UpdateMailConfigResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         try:
             async with open_session() as session:
@@ -107,7 +107,7 @@ class OrgMailHandlers:
         request: ClearMailConfigRequest,
         ctx: RequestContext,
     ) -> ClearMailConfigResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         try:
             async with open_session() as session:
@@ -127,7 +127,7 @@ class OrgMailHandlers:
         request: SendTestMailRequest,
         ctx: RequestContext,
     ) -> SendTestMailResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         try:
             async with open_session() as session:

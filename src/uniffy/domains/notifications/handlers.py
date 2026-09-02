@@ -53,26 +53,27 @@ from uniffy_proto.notifications.v1.notifications_pb2 import (
 )
 
 from uniffy.core.auth.membership import is_active_member
+from uniffy.core.auth.principal import current_user_id, resolve_organization_id
 from uniffy.core.config.push import get_vapid_config
 from uniffy.core.converters.proto import timestamp_to_datetime
+from uniffy.core.events.realtime import NotificationPayloadType
 from uniffy.core.models.login.user import User
 from uniffy.core.realtime.reauth import REAUTH_INTERVAL_SECONDS
-from uniffy.core.valkey import NotificationPayloadType, subscribe_channels
-from uniffy.db import open_session
-from uniffy.domains.auth.context import get_user_id_from_context, resolve_organization_id
+from uniffy.core.streaming.disconnect import get_disconnect_event
 from uniffy.domains.notifications.converters import (
     notification_to_proto,
     notification_type_from_proto,
     notification_type_to_proto,
 )
-from uniffy.domains.notifications.middleware import get_disconnect_event
 from uniffy.domains.notifications.operations import (
     NotificationOperations,
     PushSubscriptionOperations,
 )
-from uniffy.domains.notifications.tag_relay import TagEventRelay
+from uniffy.domains.notifications.tags import TagEventRelay
+from uniffy.infrastructure.database import open_session
+from uniffy.infrastructure.valkey.pubsub import subscribe_channels
 
-logger = logger.bind(component="domains.notifications.handlers")
+logger = logger.bind(component="notifications.handlers")
 
 
 class NotificationsHandlers:
@@ -83,10 +84,10 @@ class NotificationsHandlers:
         request: ListNotificationsRequest,
         ctx: RequestContext,
     ) -> ListNotificationsResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
 
         try:
-            organization_id = resolve_organization_id(ctx, request.organization_id)
+            organization_id = resolve_organization_id(request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id format")
 
@@ -150,10 +151,10 @@ class NotificationsHandlers:
         request: GetUnreadCountRequest,
         ctx: RequestContext,
     ) -> GetUnreadCountResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
 
         try:
-            organization_id = resolve_organization_id(ctx, request.organization_id)
+            organization_id = resolve_organization_id(request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id format")
 
@@ -174,7 +175,7 @@ class NotificationsHandlers:
         request: MarkAsReadRequest,
         ctx: RequestContext,
     ) -> MarkAsReadResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
 
         try:
             notification_id = UUID(request.notification_id)
@@ -204,10 +205,10 @@ class NotificationsHandlers:
         request: MarkAllAsReadRequest,
         ctx: RequestContext,
     ) -> MarkAllAsReadResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
 
         try:
-            organization_id = resolve_organization_id(ctx, request.organization_id)
+            organization_id = resolve_organization_id(request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id format")
 
@@ -228,7 +229,7 @@ class NotificationsHandlers:
         request: DeleteNotificationRequest,
         ctx: RequestContext,
     ) -> DeleteNotificationResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
 
         try:
             notification_id = UUID(request.notification_id)
@@ -256,7 +257,7 @@ class NotificationsHandlers:
         request: RegisterPushSubscriptionRequest,
         ctx: RequestContext,
     ) -> RegisterPushSubscriptionResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
 
         if not request.endpoint:
             raise ConnectError(Code.INVALID_ARGUMENT, "Endpoint is required")
@@ -288,7 +289,7 @@ class NotificationsHandlers:
         request: UnregisterPushSubscriptionRequest,
         ctx: RequestContext,
     ) -> UnregisterPushSubscriptionResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
 
         if not request.endpoint:
             raise ConnectError(Code.INVALID_ARGUMENT, "Endpoint is required")
@@ -324,10 +325,10 @@ class NotificationsHandlers:
         request: SearchNotificationsRequest,
         ctx: RequestContext,
     ) -> SearchNotificationsResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
 
         try:
-            organization_id = resolve_organization_id(ctx, request.organization_id)
+            organization_id = resolve_organization_id(request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id format")
 
@@ -410,10 +411,10 @@ class NotificationsHandlers:
         request: GetNotificationStatsRequest,
         ctx: RequestContext,
     ) -> GetNotificationStatsResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
 
         try:
-            organization_id = resolve_organization_id(ctx, request.organization_id)
+            organization_id = resolve_organization_id(request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id format")
 
@@ -468,7 +469,7 @@ class NotificationsHandlers:
         request: BulkMarkAsReadRequest,
         ctx: RequestContext,
     ) -> BulkMarkAsReadResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
 
         notification_ids = []
         for nid in request.notification_ids:
@@ -497,7 +498,7 @@ class NotificationsHandlers:
         request: BulkDeleteNotificationsRequest,
         ctx: RequestContext,
     ) -> BulkDeleteNotificationsResponse:
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
 
         notification_ids = []
         for nid in request.notification_ids:
@@ -527,8 +528,8 @@ class NotificationsHandlers:
         ctx: RequestContext,
     ) -> AsyncIterator[StreamNotificationsResponse]:
         """Stream notification events plus periodic heartbeats for the user."""
-        user_id = get_user_id_from_context(ctx)
-        organization_id = resolve_organization_id(ctx, request.organization_id)
+        user_id = current_user_id()
+        organization_id = resolve_organization_id(request.organization_id)
 
         # The org channels below broadcast org-wide presence, mention, tag,
         # and content events - not personal-content reads - so active
@@ -543,7 +544,7 @@ class NotificationsHandlers:
         heartbeat_interval = 30  # seconds
         disconnect = get_disconnect_event()
 
-        relay = TagEventRelay(user_id, organization_id)
+        relay = TagEventRelay(user_id, organization_id, open_session)
 
         try:
             async with aclosing(

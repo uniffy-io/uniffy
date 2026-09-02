@@ -5,15 +5,15 @@ import pytest
 
 from uniffy.core.errors import NotFoundError
 from uniffy.core.types import ContentType, generate_id
-from uniffy.domains.tags import target_access as access_module
-from uniffy.domains.tags.target_access import TagTargetAccess
+from uniffy.domains.tags import targets as access_module
+from uniffy.domains.tags.targets import TagTargetAccess
 
 
 @pytest.mark.asyncio
 async def test_standard_target_uses_domain_edit_gate(monkeypatch: pytest.MonkeyPatch) -> None:
     operations = MagicMock()
     operations.get_for_edit = AsyncMock()
-    monkeypatch.setattr(access_module, "NoteOperations", lambda _: operations)
+    monkeypatch.setattr(access_module, "NoteReader", lambda _: operations)
 
     await TagTargetAccess(AsyncMock()).require_edit(
         generate_id(),

@@ -1,5 +1,1 @@
-"""Organizations domain package."""
-
-from uniffy.domains.organizations.service import OrganizationsServiceImpl
-
-__all__ = ["OrganizationsServiceImpl"]
+"""Tenant organizations, memberships, invitations, and security policy."""

@@ -25,7 +25,7 @@ from uniffy.domains.auth.mfa.challenge import (
     decode_enrollment_only_token,
     decode_mfa_challenge_token,
 )
-from uniffy.domains.auth.tokens import create_access_token
+from uniffy.core.auth.tokens import create_access_token
 
 # Tests must not depend on the CI environment carrying ``JWT_SECRET_KEY``.
 # ``get_secret_key`` reads the env at call time, so an autouse fixture

@@ -7,15 +7,16 @@ import time
 from loguru import logger
 from valkey.exceptions import ConnectionError as ValkeyConnectionError
 
-from uniffy.core.valkey.queue import QueueName
-from uniffy.observability import ObservabilityConfig, setup_observability
-from uniffy.observability.metrics import (
+from uniffy.core.jobs import QueueName
+from uniffy.infrastructure.observability.config import LoggingConfig
+from uniffy.infrastructure.observability.logger import configure_logging
+from uniffy.infrastructure.observability.prometheus import start_worker_metrics_server
+from uniffy.vendor.arq import run_worker
+from uniffy.workers.metrics import (
     WORKER_READY,
     WORKER_RESTARTS_TOTAL,
     WorkerRestartReason,
-    start_worker_metrics_server,
 )
-from uniffy.vendor.arq import run_worker
 
 logger = logger.bind(component="runner")
 
@@ -41,11 +42,10 @@ def run_worker_with_restart(
     queue: QueueName,
 ) -> None:
     """Run an ARQ worker class with a connection-loss restart loop."""
-    setup_observability(
-        config=ObservabilityConfig(
+    configure_logging(
+        config=LoggingConfig(
             app_name=app_name,
             app_version="0.1.0",
-            environment=os.getenv("ENVIRONMENT", "development"),
             console_log_level=os.getenv("LOG_LEVEL", "info").upper(),
             console_log_type=os.getenv("LOG_FORMAT", "console").lower(),
         )

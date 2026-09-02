@@ -8,29 +8,29 @@ from uuid import UUID
 
 import pytest
 
+from uniffy.core.auth.support_session import (
+    ActiveSupportSession,
+    active_support_session_var,
+)
 from uniffy.core.errors import ValidationError
 from uniffy.core.models.platform.support_session import (
     SupportSessionScope,
     SupportSessionState,
 )
 from uniffy.core.types import generate_id
-from uniffy.domains.platform.support_session.context import (
-    ActiveSupportSession,
-    active_support_session_var,
-)
-from uniffy.domains.platform.support_session.converters import (
+from uniffy.domains.platform.support.converters import (
     scope_from_proto,
     state_from_proto,
 )
-from uniffy.domains.platform.support_session.errors import (
+from uniffy.domains.platform.support.errors import (
     SupportSessionScopeError,
     SupportSessionTransitionError,
 )
-from uniffy.domains.platform.support_session.operations import (
+from uniffy.domains.platform.support.operations import (
     SupportSessionOperations,
     _clamp_duration,
 )
-from uniffy.domains.platform.support_session.policy import (
+from uniffy.domains.platform.support.policy import (
     DEFAULT_DURATION_FLOOR_MINUTES,
     deployment_default_duration_minutes,
     deployment_max_duration_minutes,

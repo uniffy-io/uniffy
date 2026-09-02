@@ -5,7 +5,7 @@ provider keys and agents, notes, files, rooms, calendar events, projects and
 chat. Everything goes through the domain operations, so URNs, search indexing,
 tags, permissions and audit rows are real.
 
-This is THE dev seeding path. `db/seed.py` bootstraps only what production
+This is THE dev seeding path. `domains/platform/bootstrap.py` provisions only what production
 needs (admin user, default org, docs notes, VAPID keys); everything a dev
 stack wants on top comes from here. The script refuses to run outside
 `ENVIRONMENT=development`.

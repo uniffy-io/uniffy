@@ -178,7 +178,11 @@ export function UserMenu() {
   return (
     <div className="relative" ref={menuRef}>
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        type="button"
+        aria-label="User menu"
+        aria-haspopup="true"
+        aria-expanded={isOpen}
+        onClick={() => setIsOpen((open) => !open)}
         className={cn(
           "flex items-center justify-center w-8 h-8 rounded-full overflow-hidden",
           "border border-border transition-all duration-150",

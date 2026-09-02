@@ -3,27 +3,12 @@
 from typing import Any
 from uuid import UUID
 
-from loguru import logger
-
 from uniffy.core.json_codec import dumps_bytes
-from uniffy.core.valkey import pubsub
-
-LOGGER_COMPONENT = "chat.publisher"
+from uniffy.infrastructure.valkey.pubsub import publish_bytes, publish_many
 
 
 async def _publish_to_channel(channel_name: str, payload: bytes) -> None:
-    # Read through the module so a post-import init_pubsub rebind is picked up.
-    publisher = pubsub._pubsub_client
-    if publisher is None:
-        return
-
-    try:
-        await publisher.publish(channel_name, payload)
-    except Exception:
-        logger.warning(
-            f"Failed to publish to {channel_name}",
-            component=LOGGER_COMPONENT,
-        )
+    await publish_bytes(channel_name, payload)
 
 
 async def publish_channel_event_to_members(
@@ -34,10 +19,6 @@ async def publish_channel_event_to_members(
     exclude_user_id: UUID | None = None,
 ) -> None:
     """Pipelined fan-out to each member's chat:user:{user_id} so it costs one RTT, not N."""
-    publisher = pubsub._pubsub_client
-    if publisher is None:
-        return
-
     data: dict[str, Any] = {"_type": event_type, **payload}
     if channel_id and "channel_id" not in data:  # noqa: PLR2004
         data["channel_id"] = str(channel_id)
@@ -47,16 +28,7 @@ async def publish_channel_event_to_members(
     if not targets:
         return
 
-    try:
-        async with publisher.pipeline(transaction=False) as pipe:
-            for uid in targets:
-                pipe.publish(f"chat:user:{uid}", message)
-            await pipe.execute()
-    except Exception:
-        logger.warning(
-            f"Pipelined fan-out failed for {event_type} to {len(targets)} members",
-            component=LOGGER_COMPONENT,
-        )
+    await publish_many([(f"chat:user:{uid}", message) for uid in targets])
 
 
 async def publish_user_chat_event(
@@ -65,9 +37,6 @@ async def publish_user_chat_event(
     payload: dict[str, Any],
 ) -> None:
     """User-level chat event to a single user (unread counts, mentions)."""
-    if pubsub._pubsub_client is None:
-        return
-
     data = {
         "_type": event_type,
         **payload,
@@ -82,18 +51,13 @@ async def publish_user_chat_events(
     """Pipelined per-user fan-out for payloads that differ per recipient
     (e.g. unread counts with per-user mention counts); one RTT, not N.
     """
-    publisher = pubsub._pubsub_client
-    if publisher is None or not events:
+    if not events:
         return
 
-    try:
-        async with publisher.pipeline(transaction=False) as pipe:
-            for user_id, event_type, payload in events:
-                message = dumps_bytes({"_type": event_type, **payload}, default=str)
-                pipe.publish(f"chat:user:{user_id}", message)
-            await pipe.execute()
-    except Exception:
-        logger.warning(
-            f"Pipelined per-user fan-out failed for {len(events)} events",
-            component=LOGGER_COMPONENT,
+    await publish_many([
+        (
+            f"chat:user:{user_id}",
+            dumps_bytes({"_type": event_type, **payload}, default=str),
         )
+        for user_id, event_type, payload in events
+    ])

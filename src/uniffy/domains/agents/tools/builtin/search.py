@@ -14,7 +14,7 @@ async def _execute_search_query(ctx: ToolContext, args: dict) -> ToolResult:
     limit = min(args.get("limit", 10), 20)
     type_filters = args.get("type_filters")
 
-    ops = SearchOperations(ctx.session)
+    ops = SearchOperations(ctx.session, ctx.search)
     results, has_more, _next_offset = await ops.search(
         user_id=ctx.user_id,
         organization_id=ctx.organization_id,

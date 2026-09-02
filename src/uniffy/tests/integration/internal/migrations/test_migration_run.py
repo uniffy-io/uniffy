@@ -16,7 +16,7 @@ from alembic.config import Config
 from alembic.script import ScriptDirectory
 from sqlalchemy.ext.asyncio import create_async_engine
 
-from uniffy.db.session import (
+from uniffy.infrastructure.database.session import (
     ALEMBIC_INI_PATH,
     _build_sync_db_url,
     create_extensions,
@@ -28,7 +28,7 @@ from uniffy.db.session import (
 def _declared_tables() -> set[str]:
     """Every table the models declare, which the migrations are supposed to build."""
     import uniffy.core.models  # noqa: F401  (import populates the metadata)
-    from uniffy.db.base import SQLModel
+    from uniffy.infrastructure.database.base import SQLModel
 
     return set(SQLModel.metadata.tables)
 

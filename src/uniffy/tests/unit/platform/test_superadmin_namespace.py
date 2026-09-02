@@ -1,9 +1,8 @@
 """Guard: ``/api/superadmin.v1.`` is exactly the operator surface.
 
 Self-hosted deployments block the whole namespace with one reverse-proxy
-rule, so every RPC under it must be sysadmin-gated and no operator RPC
-may live outside it. Source-scan over the protos, the handler modules,
-and the operations they call; no dispatch required.
+rule, so every RPC under it must be sysadmin-gated. Handler and operation
+modules are discovered from their live proto imports.
 """
 
 from __future__ import annotations
@@ -25,48 +24,6 @@ DOMAINS = SRC_DIR / "uniffy" / "domains"
 # which several operator RPCs carry in their request message.
 GATE_PATTERN = re.compile(r"require_system_admin\s*\(|if not \w+\.is_system_admin\b")
 
-# Every proto file under superadmin/v1 must have an entry here; a new
-# operator service ships with its gate mapping or this test fails.
-PROTO_TO_MODULES: dict[str, tuple[Path, Path]] = {
-    "support_session.proto": (
-        DOMAINS / "platform" / "support_session" / "handlers.py",
-        DOMAINS / "platform" / "support_session" / "operations.py",
-    ),
-    "system_config.proto": (
-        DOMAINS / "system_config" / "handlers.py",
-        DOMAINS / "system_config" / "operations.py",
-    ),
-    "system_directory.proto": (
-        DOMAINS / "platform" / "directory" / "handlers.py",
-        DOMAINS / "platform" / "directory" / "operations.py",
-    ),
-    "system_encryption.proto": (
-        DOMAINS / "system_encryption" / "handlers.py",
-        DOMAINS / "system_encryption" / "operations.py",
-    ),
-    "system_mail.proto": (
-        DOMAINS / "mail" / "system_handlers.py",
-        DOMAINS / "mail" / "system_operations.py",
-    ),
-    "system_mfa.proto": (
-        DOMAINS / "platform" / "mfa" / "handlers.py",
-        DOMAINS / "auth" / "mfa" / "operations.py",
-    ),
-    "platform_audit.proto": (
-        DOMAINS / "platform" / "audit" / "handlers.py",
-        DOMAINS / "platform" / "audit" / "operations.py",
-    ),
-}
-
-CONSENT_RPCS = (
-    "ApproveSession",
-    "RejectSession",
-    "RevokeSession",
-    "ListOrgSessions",
-    "GetOrgConsentMode",
-    "SetOrgConsentMode",
-)
-
 
 def _rpc_names(proto_text: str) -> list[str]:
     return re.findall(r"^\s*rpc (\w+)\(", proto_text, flags=re.M)
@@ -76,16 +33,15 @@ def _snake(rpc: str) -> str:
     return re.sub(r"(?<!^)(?=[A-Z])", "_", rpc).lower()
 
 
-def _async_defs(module_path: Path) -> dict[str, str]:
-    """Async function name -> source segment (last definition wins)."""
+def _async_defs(module_path: Path) -> dict[str, list[str]]:
     source = module_path.read_text()
     tree = ast.parse(source)
-    out: dict[str, str] = {}
+    out: dict[str, list[str]] = {}
     for node in ast.walk(tree):
         if isinstance(node, ast.AsyncFunctionDef):
             segment = ast.get_source_segment(source, node)
             if segment is not None:
-                out[node.name] = segment
+                out.setdefault(node.name, []).append(segment)
     return out
 
 
@@ -98,21 +54,58 @@ def _awaited_callee_names(method_source: str) -> set[str]:
     return names
 
 
-def _ungated_rpcs(proto_text: str, handlers: Path, operations: Path) -> list[str]:
-    handler_defs = _async_defs(handlers)
-    ops_defs = _async_defs(operations)
+def _handler_modules(proto_path: Path) -> tuple[Path, ...]:
+    proto_import = f"uniffy_proto.superadmin.v1.{proto_path.stem}_pb2"
+    return tuple(path for path in DOMAINS.rglob("*handlers.py") if proto_import in path.read_text())
+
+
+def _imported_domain_modules(module_path: Path) -> tuple[Path, ...]:
+    tree = ast.parse(module_path.read_text())
+    modules: list[Path] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.ImportFrom):
+            continue
+        if node.module is None or not node.module.startswith("uniffy.domains."):
+            continue
+        candidate = SRC_DIR.joinpath(*node.module.split("."))
+        module_file = candidate.with_suffix(".py")
+        package_file = candidate / "__init__.py"
+        if module_file.is_file():
+            modules.append(module_file)
+        elif package_file.is_file():
+            modules.append(package_file)
+    return tuple(dict.fromkeys(modules))
+
+
+def _merge_async_defs(module_paths: tuple[Path, ...]) -> dict[str, list[str]]:
+    merged: dict[str, list[str]] = {}
+    for path in module_paths:
+        for name, segments in _async_defs(path).items():
+            merged.setdefault(name, []).extend(segments)
+    return merged
+
+
+def _ungated_rpcs(proto_text: str, handlers: tuple[Path, ...]) -> list[str]:
+    handler_defs = _merge_async_defs(handlers)
+    dependencies = tuple(
+        dict.fromkeys(
+            dependency for handler in handlers for dependency in _imported_domain_modules(handler)
+        )
+    )
+    callable_defs = _merge_async_defs((*handlers, *dependencies))
     ungated: list[str] = []
     for rpc in _rpc_names(proto_text):
-        method = handler_defs.get(_snake(rpc))
-        if method is None:
+        methods = handler_defs.get(_snake(rpc), [])
+        if not methods:
             ungated.append(f"{rpc} (no handler method {_snake(rpc)})")
             continue
-        if GATE_PATTERN.search(method):
+        if any(GATE_PATTERN.search(method) for method in methods):
             continue
+        callees = {callee for method in methods for callee in _awaited_callee_names(method)}
         gated = any(
-            GATE_PATTERN.search(ops_defs[name])
-            for name in _awaited_callee_names(method)
-            if name in ops_defs
+            GATE_PATTERN.search(candidate)
+            for name in callees
+            for candidate in callable_defs.get(name, [])
         )
         if not gated:
             ungated.append(rpc)
@@ -120,29 +113,29 @@ def _ungated_rpcs(proto_text: str, handlers: Path, operations: Path) -> list[str
 
 
 class TestNamespaceIsTheSurface:
-    def test_every_superadmin_proto_is_mapped(self) -> None:
-        on_disk = {p.name for p in SUPERADMIN_PROTO_DIR.glob("*.proto")}
-        assert on_disk == set(PROTO_TO_MODULES)
+    def test_every_superadmin_proto_has_handlers(self) -> None:
+        missing = [
+            path.name for path in SUPERADMIN_PROTO_DIR.glob("*.proto") if not _handler_modules(path)
+        ]
+        assert missing == []
 
     def test_every_superadmin_rpc_is_sysadmin_gated(self) -> None:
         offenders: dict[str, list[str]] = {}
-        for proto_name, (handlers, operations) in PROTO_TO_MODULES.items():
-            proto_text = (SUPERADMIN_PROTO_DIR / proto_name).read_text()
-            ungated = _ungated_rpcs(proto_text, handlers, operations)
+        for proto_path in SUPERADMIN_PROTO_DIR.glob("*.proto"):
+            proto_text = proto_path.read_text()
+            ungated = _ungated_rpcs(proto_text, _handler_modules(proto_path))
             if ungated:
-                offenders[proto_name] = ungated
+                offenders[proto_path.name] = ungated
         assert offenders == {}
 
     def test_the_scan_would_catch_an_ungated_rpc(self, tmp_path: Path) -> None:
         """A guard that cannot fail is not a guard."""
         proto = "service Fake {\n  rpc DoThing(Req) returns (Resp);\n}\n"
         tmp_handlers = tmp_path / "guard_fake_handlers.py"
-        tmp_ops = tmp_path / "guard_fake_ops.py"
         tmp_handlers.write_text(
             "async def do_thing(self, request, ctx):\n    return await ops.do_thing()\n"
         )
-        tmp_ops.write_text("async def do_thing():\n    return 1\n")
-        assert _ungated_rpcs(proto, tmp_handlers, tmp_ops) == ["DoThing"]
+        assert _ungated_rpcs(proto, (tmp_handlers,)) == ["DoThing"]
 
     def test_an_is_system_admin_field_does_not_count_as_a_gate(self, tmp_path: Path) -> None:
         """``SetSystemAdmin`` and ``CreateUser`` pass ``is_system_admin`` through
@@ -150,16 +143,12 @@ class TestNamespaceIsTheSurface:
         """
         proto = "service Fake {\n  rpc SetSystemAdmin(Req) returns (Resp);\n}\n"
         tmp_handlers = tmp_path / "guard_field_handlers.py"
-        tmp_ops = tmp_path / "guard_field_ops.py"
         tmp_handlers.write_text(
             "async def set_system_admin(self, request, ctx):\n"
             "    return await ops.set_system_admin("
             "is_system_admin=request.is_system_admin)\n"
         )
-        tmp_ops.write_text(
-            "async def set_system_admin(*, is_system_admin):\n    return is_system_admin\n"
-        )
-        assert _ungated_rpcs(proto, tmp_handlers, tmp_ops) == ["SetSystemAdmin"]
+        assert _ungated_rpcs(proto, (tmp_handlers,)) == ["SetSystemAdmin"]
 
 
 class TestTenantServicesCarryNoSysadminGate:
@@ -179,11 +168,11 @@ class TestConsentLivesOutsideTheNamespace:
         assert '"/support.v1.SupportConsentService"' in FACTORY.read_text()
 
     def test_superadmin_support_proto_has_no_consent_rpcs(self) -> None:
-        proto_text = (SUPERADMIN_PROTO_DIR / "support_session.proto").read_text()
-        leaked = [rpc for rpc in CONSENT_RPCS if f"rpc {rpc}(" in proto_text]
-        assert leaked == []
-
-    def test_consent_proto_carries_all_consent_rpcs(self) -> None:
-        proto_text = SUPPORT_CONSENT_PROTO.read_text()
-        missing = [rpc for rpc in CONSENT_RPCS if f"rpc {rpc}(" not in proto_text]
-        assert missing == []
+        consent_rpcs = set(_rpc_names(SUPPORT_CONSENT_PROTO.read_text()))
+        operator_rpcs = {
+            rpc
+            for proto_path in SUPERADMIN_PROTO_DIR.glob("*.proto")
+            for rpc in _rpc_names(proto_path.read_text())
+        }
+        assert consent_rpcs
+        assert consent_rpcs.isdisjoint(operator_rpcs)

@@ -9,7 +9,7 @@ from uniffy.domains.agents.sessions.operations import (
     SKILL_ANALYSIS_DEBOUNCE_SECONDS,
     _skill_analysis_job_id,
 )
-from uniffy.domains.agents.skills import jobs as task_mod
+from uniffy.domains.agents.skills.jobs import jobs as task_mod
 
 
 class TestJobIdSalt:
@@ -115,7 +115,7 @@ class _FakeOpsClient:
 
 def _install_ops_client(monkeypatch) -> _FakeOpsClient:
     client = _FakeOpsClient()
-    monkeypatch.setattr(task_mod, "_get_ops_client", lambda: client)
+    monkeypatch.setattr(task_mod, "get_ops_client", lambda: client)
     return client
 
 

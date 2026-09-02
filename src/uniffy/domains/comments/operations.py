@@ -23,7 +23,7 @@ from uniffy.domains.comments.queries import (
     build_comments_query,
     count_comments_query,
 )
-from uniffy.domains.permissions.resource_access import (
+from uniffy.domains.permissions.access import (
     ResourceAccessPurpose,
     ResourceAccessResolver,
     ResourceKey,

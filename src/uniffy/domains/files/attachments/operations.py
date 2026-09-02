@@ -8,7 +8,6 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from uniffy.core.auth.permissions import PermissionChecker, resolve_effective_policy
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
 from uniffy.core.jobs import enqueue_job
 from uniffy.core.models.files.attachment import Attachment
@@ -16,24 +15,35 @@ from uniffy.core.models.files.file import ExtractionStatus, File, ThumbnailStatu
 from uniffy.core.models.files.file_version import FileVersion
 from uniffy.core.models.files.folder import Folder
 from uniffy.core.models.files.media_info import FileMediaInfo
-from uniffy.core.models.login.organization import Organization
-from uniffy.core.models.login.organization_member import OrganizationMember, OrganizationRole
 from uniffy.core.models.login.user import User
-from uniffy.core.storage import get_s3_client
+from uniffy.core.search.indexer import SearchIndexer
+from uniffy.core.storage import ObjectStorage
 from uniffy.core.types import (
     AccessMode,
     ContentRole,
     ContentType,
     generate_id,
 )
-from uniffy.domains.files.attachments.access import AttachmentTargetAccess
+from uniffy.domains.files.attachments.access import (
+    AttachmentTargetAccess,
+    can_view_attached_file,
+)
+from uniffy.domains.files.attachments.folders import (
+    ATTACHMENTS_FOLDER_NAME,
+    ORG_ATTACHMENTS_FOLDER_NAME,
+    get_or_create_org_attachments_folder,
+    get_or_create_personal_attachments_folder,
+    is_attachment_staging_folder,
+)
 from uniffy.domains.files.jobs.processing import (
     file_processing_job_id,
     initial_extraction_status,
     initial_thumbnail_status,
     pending_jobs_for_file,
 )
-from uniffy.domains.permissions.resource_access import (
+from uniffy.domains.files.quota.operations import QuotaOperations
+from uniffy.domains.files.search import FileSearchOperations
+from uniffy.domains.permissions.access import (
     ResourceAccessPurpose,
     ResourceAccessResolver,
     ResourceKey,
@@ -42,142 +52,57 @@ from uniffy.domains.permissions.resource_access import (
 
 logger = logger.bind(component="files.attachments.operations")
 
-ATTACHMENTS_FOLDER_NAME = "Attachments"
-ORG_ATTACHMENTS_FOLDER_NAME = "Organization Attachments"
-
-
-def is_attachment_staging_folder(folder: Folder | None) -> bool:
-    """True for a personal Attachments folder - uploads staged there stay
-    OWNER_ONLY and out of the search index until an attach links them to a parent."""
-    return (
-        folder is not None
-        and folder.is_system
-        and not folder.is_org_attachments
-        and folder.name == ATTACHMENTS_FOLDER_NAME
-        and folder.parent_id is None
-    )
+__all__ = [
+    "ATTACHMENTS_FOLDER_NAME",
+    "ORG_ATTACHMENTS_FOLDER_NAME",
+    "AttachmentOperations",
+    "is_attachment_staging_folder",
+]
 
 
 class AttachmentOperations:
     """Link files to content; manages file copies in the Attachments folder."""
 
-    def __init__(self, session: AsyncSession) -> None:
+    def __init__(
+        self,
+        session: AsyncSession,
+        storage: ObjectStorage | None = None,
+        search_indexer: SearchIndexer | None = None,
+    ) -> None:
         self._session = session
-        self._s3 = get_s3_client()
+        self._storage = storage
+        self._search_indexer = search_indexer
+
+    @property
+    def storage(self) -> ObjectStorage:
+        if self._storage is None:
+            raise RuntimeError("Object storage is required for this attachment operation")
+        return self._storage
+
+    @property
+    def search_indexer(self) -> SearchIndexer:
+        if self._search_indexer is None:
+            raise RuntimeError("Search indexing is required for attachment mutations")
+        return self._search_indexer
 
     async def get_or_create_attachments_folder(
         self,
         user_id: UUID,
         organization_id: UUID,
     ) -> Folder:
-        """Get or create the user's protected per-org Attachments folder."""
-        result = await self._session.execute(
-            select(Folder).where(
-                Folder.organization_id == organization_id,
-                Folder.owner_id == user_id,
-                Folder.name == ATTACHMENTS_FOLDER_NAME,
-                Folder.is_system == True,  # noqa: E712
-                Folder.parent_id.is_(None),
-            )
+        return await get_or_create_personal_attachments_folder(
+            self._session,
+            user_id,
+            organization_id,
         )
-        folder = result.scalar_one_or_none()
-
-        if folder:
-            return folder
-
-        folder = Folder(
-            organization_id=organization_id,
-            owner_id=user_id,
-            name=ATTACHMENTS_FOLDER_NAME,
-            access_mode=AccessMode.OWNER_ONLY,
-            baseline_role=None,
-            is_system=True,
-            parent_id=None,
-        )
-        self._session.add(folder)
-        await self._session.flush()
-        await self._session.refresh(folder)
-
-        return folder
 
     async def get_or_create_org_attachments_folder(
         self,
         organization_id: UUID,
     ) -> Folder:
-        """Return the per-org system Attachments folder.
-
-        Carries an explicit `OPEN_TO_ORG/EDITOR` policy so it serves every
-        active member regardless of org Files-default flips.
-        """
-        result = await self._session.execute(
-            select(Folder).where(
-                Folder.organization_id == organization_id,
-                Folder.is_org_attachments == True,  # noqa: E712
-                Folder.is_deleted == False,  # noqa: E712
-            )
-        )
-        folder = result.scalar_one_or_none()
-        if folder:
-            return folder
-
-        members = (
-            await self._session.execute(
-                select(OrganizationMember.user_id, OrganizationMember.role)
-                .join(User, User.id == OrganizationMember.user_id)
-                .join(Organization, Organization.id == OrganizationMember.organization_id)
-                .where(
-                    OrganizationMember.organization_id == organization_id,
-                    OrganizationMember.is_active.is_(True),
-                    User.is_active.is_(True),
-                    Organization.deleted_at.is_(None),
-                    Organization.is_suspended.is_(False),
-                )
-                .order_by(OrganizationMember.joined_at)
-            )
-        ).all()
-        if not members:
-            raise NotFoundError("Organization", str(organization_id))
-
-        role_rank = {OrganizationRole.OWNER: 0, OrganizationRole.ADMIN: 1}
-        owner_member = min(
-            members,
-            key=lambda row: role_rank.get(row[1], 2),
-        )
-        owner_user_id = owner_member[0]
-
-        folder = Folder(
-            organization_id=organization_id,
-            owner_id=owner_user_id,
-            name=ORG_ATTACHMENTS_FOLDER_NAME,
-            access_mode=AccessMode.OPEN_TO_ORG,
-            baseline_role=ContentRole.EDITOR,
-            is_system=True,
-            is_org_attachments=True,
-            parent_id=None,
-        )
-        self._session.add(folder)
-        await self._session.flush()
-        await self._session.refresh(folder)
-        return folder
-
-    async def _resolve_parent_effective(
-        self,
-        organization_id: UUID,
-        content_type: ContentType,
-        raw_access_mode: AccessMode | None,
-        raw_baseline_role: ContentRole | None,
-    ) -> tuple[AccessMode, ContentRole | None]:
-        """Resolve effective `(mode, baseline)` using org defaults when NULL."""
-        checker = PermissionChecker(self._session)
-        default_mode, default_baseline = await checker.get_org_defaults(
+        return await get_or_create_org_attachments_folder(
+            self._session,
             organization_id,
-            content_type,
-        )
-        return resolve_effective_policy(
-            raw_access_mode,
-            raw_baseline_role,
-            default_mode,
-            default_baseline,
         )
 
     async def get_attachments_folder_id(
@@ -217,12 +142,8 @@ class AttachmentOperations:
             content_type,
             content_id,
         )
-        parent_mode, parent_baseline = await self._resolve_parent_effective(
-            organization_id,
-            target_policy.content_type,
-            target_policy.access_mode,
-            target_policy.baseline_role,
-        )
+        parent_mode = target_policy.access_mode
+        parent_baseline = target_policy.baseline_role
 
         # Org-wide parent -> org Attachments folder + OPEN_TO_ORG/EDITOR file.
         # Otherwise -> attacher's personal folder, OWNER_ONLY.
@@ -310,9 +231,7 @@ class AttachmentOperations:
         await self._index_attachment_file(file)
 
     async def _index_attachment_file(self, file: File) -> None:
-        from uniffy.domains.files.operations import FileOperations
-
-        await FileOperations(self._session)._index_for_search(
+        await FileSearchOperations(self._session, self.search_indexer)._index_for_search(
             model=file,
             skip_member_lookup=True,
         )
@@ -357,14 +276,14 @@ class AttachmentOperations:
         file = file_result.scalar_one_or_none()
 
         if file:
-            await self._s3.delete_object(file.storage_key)
+            await self.storage.delete_object(file.storage_key)
 
             versions_result = await self._session.execute(
                 select(FileVersion).where(FileVersion.file_id == file.id)
             )
             for version in versions_result.scalars().all():
                 if version.storage_key != file.storage_key:
-                    await self._s3.delete_object(version.storage_key)
+                    await self.storage.delete_object(version.storage_key)
                 await self._session.delete(version)
 
             file.current_version_id = None
@@ -375,16 +294,12 @@ class AttachmentOperations:
             file_size = file.size_bytes
             await self._session.delete(file)
 
-            from uniffy.core.search.indexer import SearchIndexer
-
             urn = f"urn:uniffy:content:{ContentType.FILE.value}:{attachment.file_id}"
-            await SearchIndexer(self._session).remove(urn)
+            await self.search_indexer.remove(urn)
 
             # A linked staged upload was quota-counted at complete_upload;
             # copies never were, so only the linked shape decrements.
             if attachment.source_file_id == attachment.file_id:
-                from uniffy.domains.files.quota_operations import QuotaOperations
-
                 try:
                     await QuotaOperations(self._session).decrement_usage(
                         organization_id=file_org,
@@ -618,21 +533,12 @@ class AttachmentOperations:
         read access to the files attached to it - the file copy stays in the owner's
         private folder, but access is derived from the parent (and revoked with it).
         """
-        result = await self._session.execute(
-            select(Attachment.content_type, Attachment.content_id).where(
-                Attachment.file_id == file_id,
-                Attachment.organization_id == organization_id,
-            )
+        return await can_view_attached_file(
+            self._session,
+            user_id=user_id,
+            organization_id=organization_id,
+            file_id=file_id,
         )
-        row = result.one_or_none()
-        if not row:
-            return False
-
-        try:
-            await self._verify_content_access(user_id, organization_id, row[0], row[1])
-            return True
-        except PermissionDeniedError, NotFoundError:
-            return False
 
     async def _get_accessible_file(
         self,
@@ -678,7 +584,7 @@ class AttachmentOperations:
         new_file_id = generate_id()
         new_storage_key = f"{organization_id}/{user_id}/{new_file_id}/{source_file.filename}"
 
-        await self._s3.copy_object(
+        await self.storage.copy_object(
             source_key=source_file.storage_key,
             destination_key=new_storage_key,
             content_type=source_file.mime_type,
@@ -711,7 +617,7 @@ class AttachmentOperations:
             new_thumb_key = f"{organization_id}/thumbnails/{new_file_id}.jpg"
 
             try:
-                await self._s3.copy_object(
+                await self.storage.copy_object(
                     source_key=source_info.thumbnail_key,
                     destination_key=new_thumb_key,
                     content_type="image/jpeg",

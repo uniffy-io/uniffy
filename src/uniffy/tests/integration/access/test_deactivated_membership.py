@@ -8,6 +8,7 @@ call the gates with a real deactivated row and check what happens.
 """
 
 from datetime import UTC, datetime
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from sqlalchemy import select
@@ -37,7 +38,7 @@ from uniffy.core.types import (
     generate_id,
 )
 from uniffy.domains.agents.access import is_agents_builder, require_agents_builder
-from uniffy.domains.calendar.operations import CalendarEventOperations
+from uniffy.domains.scheduling.calendar.operations import CalendarEventReader
 from uniffy.domains.chat.access import ChatAccessChecker
 from uniffy.domains.chat.cleanup import cleanup_chat_membership_for_organization
 from uniffy.domains.organizations.operations import OrganizationOperations
@@ -276,22 +277,53 @@ class TestAccessFilterMembershipGate:
 
 
 class TestAddMemberReactivation:
-    async def test_readd_reactivates_and_applies_the_incoming_role(self, session, access) -> None:
+    async def test_readd_reactivates_and_applies_the_incoming_role(
+        self, session, access, monkeypatch
+    ) -> None:
+        monkeypatch.setattr(
+            "uniffy.domains.directory.projection.UserDirectoryProjection.index_for_organization",
+            AsyncMock(),
+        )
         ops = OrganizationOperations(session)
-        await ops.add_member(access.ghost_id, access.org_id, OrganizationRole.ADMIN)
+        await ops.add_member(
+            access.ghost_id,
+            access.org_id,
+            OrganizationRole.ADMIN,
+            search_indexer=MagicMock(),
+        )
 
         membership = await ops.get_membership(access.ghost_id, access.org_id)
         assert membership.is_active is True
         assert membership.role is OrganizationRole.ADMIN
 
-    async def test_reactivation_restores_the_org_gate(self, session, access) -> None:
+    async def test_reactivation_restores_the_org_gate(
+        self, session, access, monkeypatch
+    ) -> None:
+        monkeypatch.setattr(
+            "uniffy.domains.directory.projection.UserDirectoryProjection.index_for_organization",
+            AsyncMock(),
+        )
         ops = OrganizationOperations(session)
-        await ops.add_member(access.ghost_id, access.org_id, OrganizationRole.MEMBER)
+        await ops.add_member(
+            access.ghost_id,
+            access.org_id,
+            OrganizationRole.MEMBER,
+            search_indexer=MagicMock(),
+        )
         assert await ops.require_org_member(access.ghost_id, access.org_id) is not None
 
-    async def test_readd_leaves_exactly_one_membership_row(self, session, access) -> None:
+    async def test_readd_leaves_exactly_one_membership_row(
+        self, session, access, monkeypatch
+    ) -> None:
+        monkeypatch.setattr(
+            "uniffy.domains.directory.projection.UserDirectoryProjection.index_for_organization",
+            AsyncMock(),
+        )
         await OrganizationOperations(session).add_member(
-            access.ghost_id, access.org_id, OrganizationRole.MEMBER
+            access.ghost_id,
+            access.org_id,
+            OrganizationRole.MEMBER,
+            search_indexer=MagicMock(),
         )
         rows = await session.execute(
             select(OrganizationMember).where(
@@ -483,7 +515,7 @@ class TestCalendarAttendeeFloor:
 
     async def test_an_active_attendee_reaches_an_owner_only_event(self, session, access) -> None:
         event = await _event_with_attendee(session, access, access.peer_id)
-        ops = CalendarEventOperations(session)
+        ops = CalendarEventReader(session)
 
         role = await ops._resolve_role(access.peer_id, access.org_id, event)
 
@@ -492,7 +524,7 @@ class TestCalendarAttendeeFloor:
     async def test_a_deactivated_attendee_loses_the_floor(self, session, access) -> None:
         event = await _event_with_attendee(session, access, access.peer_id)
         await _deactivate(session, access, access.peer_id)
-        ops = CalendarEventOperations(session)
+        ops = CalendarEventReader(session)
 
         role = await ops._resolve_role(access.peer_id, access.org_id, event)
 
@@ -502,7 +534,7 @@ class TestCalendarAttendeeFloor:
         self, session, access
     ) -> None:
         event = await _event_with_attendee(session, access, access.peer_id)
-        ops = CalendarEventOperations(session)
+        ops = CalendarEventReader(session)
         attendee_access = await ops.attendee_access_filter(access.peer_id, access.org_id)
 
         visible = await session.execute(
@@ -514,7 +546,7 @@ class TestCalendarAttendeeFloor:
         assert event.id in set(visible.scalars().all())
 
         await _deactivate(session, access, access.peer_id)
-        ops = CalendarEventOperations(session)
+        ops = CalendarEventReader(session)
         attendee_access = await ops.attendee_access_filter(access.peer_id, access.org_id)
 
         visible = await session.execute(
@@ -528,7 +560,7 @@ class TestCalendarAttendeeFloor:
     async def test_an_attendee_row_in_another_org_confers_nothing(self, session, access) -> None:
         """The floor is org-scoped: a membership elsewhere is not a membership here."""
         event = await _event_with_attendee(session, access, access.outsider_id)
-        ops = CalendarEventOperations(session)
+        ops = CalendarEventReader(session)
 
         role = await ops._resolve_role(access.outsider_id, access.org_id, event)
 

@@ -1,11 +1,4 @@
-"""Unit tests for the runtime stream-segment enrichment.
-
-Pins the contract between provider block events and what the runtime
-forwards: placeholder reservation on the first non-empty thinking OR
-text delta, message_id + monotonic sequence stamping, elapsed_ms on
-THINKING_BLOCK_END, CompletionResult stripping on MODEL_CALL_END, and
-ERROR capture (not forwarded).
-"""
+"""Tests for provider stream-event enrichment and failover boundaries."""
 
 from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
@@ -17,16 +10,17 @@ from uniffy.domains.agents.providers.base import (
     EventType,
     StreamEvent,
 )
-from uniffy.domains.agents.runtime.model_calls import (
+from uniffy.domains.agents.runtime.models.calls import (
     ModelCallController,
     ModelCallTarget,
 )
-from uniffy.domains.agents.runtime.operations import (
-    RuntimeOperations,
-    _StreamSegmentResult,
+from uniffy.domains.agents.runtime.runs.segments import (
+    StreamSegmentResult,
+    controlled_stream_segment,
+    stream_segment,
 )
-from uniffy.domains.agents.runtime.run_usage import RunUsageAccumulator
-from uniffy.domains.agents.runtime.settings import ResolvedRuntimeSettings
+from uniffy.domains.agents.runtime.runs.usage import RunUsageAccumulator
+from uniffy.domains.agents.runtime.settings.operations import ResolvedRuntimeSettings
 
 
 def _placeholder() -> AgentMessage:
@@ -60,8 +54,7 @@ async def _segment(events: list[StreamEvent], writer) -> list:
             yield event
 
     async def _run() -> list:
-        ops = object.__new__(RuntimeOperations)
-        return [e async for e in ops._stream_segment(_gen(), writer)]
+        return [event async for event in stream_segment(_gen(), writer)]
 
     return await _run()
 
@@ -123,7 +116,7 @@ class TestStreamSegment:
         assert forwarded.result is None
         assert forwarded.input_tokens == 3
         sentinel = out[-1]
-        assert isinstance(sentinel, _StreamSegmentResult)
+        assert isinstance(sentinel, StreamSegmentResult)
         assert sentinel.completion is not None
         assert sentinel.completion.content == "Hello"
 
@@ -237,11 +230,9 @@ async def test_controlled_segment_fails_over_before_output() -> None:
         usage=usage,
         params_for_target=lambda _provider, _model: None,
     )
-    ops = object.__new__(RuntimeOperations)
-
     events = [
         event
-        async for event in ops._controlled_stream_segment(
+        async for event in controlled_stream_segment(
             controller=controller,
             writer=_SessionWriter(),
             messages=[],
@@ -260,3 +251,46 @@ async def test_controlled_segment_fails_over_before_output() -> None:
     ]
     assert events[1].to_provider_key_id == str(fallback_key_id)
     assert [call.status for call in usage.calls] == ["error", "success"]
+
+
+async def test_controlled_segment_does_not_fail_over_after_output() -> None:
+    failure = _Unavailable("unavailable")
+    primary = _StreamProvider([
+        StreamEvent(type=EventType.MODEL_CALL_START, model="m"),
+        StreamEvent(type=EventType.TEXT_BLOCK_START, block_id="text-1"),
+        StreamEvent(type=EventType.ERROR, error="unavailable", error_exception=failure),
+    ])
+    provider_ops = MagicMock()
+    usage = RunUsageAccumulator()
+    controller = ModelCallController(
+        provider_ops=provider_ops,
+        organization_id=generate_id(),
+        target=ModelCallTarget(primary, generate_id(), "m"),
+        fallback_models=[],
+        settings=_runtime_settings(),
+        usage=usage,
+        params_for_target=lambda _provider, _model: None,
+    )
+
+    events = [
+        event
+        async for event in controlled_stream_segment(
+            controller=controller,
+            writer=_SessionWriter(),
+            messages=[],
+            system=None,
+            tools=None,
+            cache_key="agent",
+            safety_identifier="digest",
+        )
+    ]
+
+    assert [event.type for event in events[:-1]] == [
+        EventType.MODEL_CALL_START,
+        EventType.TEXT_BLOCK_START,
+    ]
+    assert isinstance(events[-1], StreamSegmentResult)
+    assert events[-1].error == "unavailable"
+    assert not any(event.type is EventType.FAILOVER for event in events[:-1])
+    provider_ops.get_provider_for_key.assert_not_called()
+    assert [call.status for call in usage.calls] == ["error"]

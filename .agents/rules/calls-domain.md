@@ -2,7 +2,7 @@
 paths:
   - "src/uniffy/domains/calls/**/*.py"
   - "src/uniffy/core/models/calls/**/*.py"
-  - "src/uniffy/domains/calls/jobs.py"
+  - "src/uniffy/domains/calls/jobs/**/*.py"
   - "src/proto/calls/**/*.proto"
   - "src/ui/src/features/calls/**/*.ts"
   - "src/ui/src/features/calls/**/*.tsx"
@@ -40,7 +40,7 @@ as a cross-org isolation defense inside the shared SFU.
 ## Durability model (load-bearing)
 
 Postgres is the source of truth. LiveKit webhooks are hints - at-least-once and out of order. The
-reconciler cron (`domains/calls/jobs.py`) is the guarantee that DB state converges to SFU truth. So:
+reconciler cron (`domains/calls/jobs/jobs.py`) is the guarantee that DB state converges to SFU truth. So:
 every webhook handler re-reads DB state and is idempotent; terminal lifecycle writes are compare-and-set
 guarded (the domain session runs `expire_on_commit=False`, so an in-memory `ended_at`/`left_at` check is
 stale across concurrent handlers); tab-close sends a keepalive leave beacon with the `participant_left`
@@ -113,7 +113,7 @@ path. LiveKit's coordination registry shares the app's Valkey instance.
 | `src/uniffy/domains/calls/handlers.py` | Thin ConnectRPC handlers |
 | `src/uniffy/domains/calls/webhook.py` | LiveKit webhook processor (join eviction, leave/abort, room-ended) |
 | `src/uniffy/domains/calls/tokens.py` | LiveKit token minting + webhook verification |
-| `src/uniffy/domains/calls/jobs.py` | Reconciler + orphan-room cron (the durability backstop) |
+| `src/uniffy/domains/calls/jobs/jobs.py` | Reconciler + orphan-room cron (the durability backstop) |
 | `src/uniffy/core/models/calls/call.py` | `Call` + `CallParticipant` models |
 | `src/ui/src/features/calls/components/CallProvider.tsx` | Global Room owner, rejoin, teardown |
 | `src/mobile/src/features/calls/livekit.native.ts` | Native LiveKit glue: audio session + mic foreground service |

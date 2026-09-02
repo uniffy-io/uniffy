@@ -61,13 +61,13 @@ from uniffy_proto.chat.v1.chat_stream_pb2 import (
     UserChatEventType,
 )
 
+from uniffy.core.auth.principal import current_user_id
 from uniffy.core.json_codec import dumps_str
 from uniffy.core.models.chat.message import ChatMessageMetadataKey
-from uniffy.core.valkey import subscribe_channels
-from uniffy.domains.auth.context import get_user_id_from_context
+from uniffy.core.streaming.disconnect import get_disconnect_event
 from uniffy.domains.chat.messages.converters import forward_context_to_proto
 from uniffy.domains.chat.streaming import events as evt
-from uniffy.domains.notifications.middleware import get_disconnect_event
+from uniffy.infrastructure.valkey.pubsub import subscribe_channels
 
 LOGGER_COMPONENT = "chat.stream"
 HEARTBEAT_INTERVAL = 30
@@ -664,7 +664,7 @@ class ChatStreamHandlers:
         ctx: RequestContext,
     ) -> AsyncIterator[StreamUserChatEventsResponse]:
         """Subscribe to chat:user:{user_id}; channel events arrive via publisher fan-out."""
-        user_id = get_user_id_from_context(ctx)
+        user_id = current_user_id()
 
         logger.info(
             f"starting unified chat stream for {user_id}",

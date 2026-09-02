@@ -12,7 +12,7 @@ from decimal import Decimal
 from loguru import logger
 
 from uniffy.domains.agents.providers.catalog import get_model
-from uniffy.domains.agents.providers.catalog.image_params import ImageQuality
+from uniffy.domains.agents.providers.catalog.images import ImageQuality
 from uniffy.domains.agents.providers.catalog.loader import (
     cache_read_rate,
     cache_write_rate,

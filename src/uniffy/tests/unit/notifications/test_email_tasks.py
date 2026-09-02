@@ -15,7 +15,7 @@ from uniffy.core.models.notifications.email_delivery import (
     NotificationEmailStatus,
 )
 from uniffy.core.types import NotificationType, generate_id
-from uniffy.domains.notifications.email_outbox import RecipientContext
+from uniffy.domains.notifications.delivery.outbox import RecipientContext
 from uniffy.vendor.arq import Retry
 from uniffy.domains.notifications.jobs.email import (
     send_notification_digest,

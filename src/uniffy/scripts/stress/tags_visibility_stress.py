@@ -65,10 +65,9 @@ async def _resolve_org_and_users(session) -> tuple[object, list[object]]:
     return org, users
 
 
-async def _wipe_seed(session, organization_id: UUID) -> None:
+async def _wipe_seed(session, search_indexer, organization_id: UUID) -> None:
     from uniffy.core.models.notes.note import Note
     from uniffy.core.models.tags.tag import Tag, TagAssignment
-    from uniffy.core.search.indexer import SearchIndexer
 
     seed_tag_ids = list(
         (
@@ -103,11 +102,10 @@ async def _wipe_seed(session, organization_id: UUID) -> None:
 
     await session.commit()
 
-    indexer = SearchIndexer()
     for tag_id in seed_tag_ids:
-        await indexer.remove(f"urn:uniffy:content:TAG:{tag_id}", organization_id)
+        await search_indexer.remove(f"urn:uniffy:content:TAG:{tag_id}", organization_id)
     for note_id in note_ids:
-        await indexer.remove(f"urn:uniffy:content:NOTE:{note_id}", organization_id)
+        await search_indexer.remove(f"urn:uniffy:content:NOTE:{note_id}", organization_id)
 
 
 async def _seed_existing(session, organization_id: UUID) -> bool:
@@ -128,6 +126,7 @@ async def _seed_existing(session, organization_id: UUID) -> bool:
 
 async def _seed_notes(
     session,
+    search_indexer,
     organization_id: UUID,
     users: list,
     count: int,
@@ -136,7 +135,6 @@ async def _seed_notes(
     40% OPEN_TO_ORG, 20% EXPLICIT_MEMBERS.
     """
     from uniffy.core.models.notes.note import Note
-    from uniffy.core.search.indexer import SearchIndexer
     from uniffy.core.types import AccessMode, ContentRole, generate_id
 
     notes: list[Note] = []
@@ -168,7 +166,6 @@ async def _seed_notes(
     session.add_all(notes)
     await session.commit()
 
-    indexer = SearchIndexer()
     docs = [
         {
             "urn": f"urn:uniffy:content:NOTE:{n.id}",
@@ -188,7 +185,7 @@ async def _seed_notes(
     ]
     batch = 500
     for start in range(0, len(docs), batch):
-        await indexer.batch_index(docs[start : start + batch])
+        await search_indexer.batch_index(docs[start : start + batch])
     return notes
 
 
@@ -250,13 +247,13 @@ async def _bench_list_tags(
     *,
     label: str,
 ) -> dict[str, float]:
-    from uniffy.db.session import open_session
-    from uniffy.domains.tags.operations import TagOperations
+    from uniffy.domains.tags.reader import TagReader
+    from uniffy.infrastructure.database.session import open_session
 
     samples: list[float] = []
     for _ in range(iterations):
         async with open_session() as session:
-            ops = TagOperations(session)
+            ops = TagReader(session)
             start = time.perf_counter()
             tags, counts, token = await ops.list_tags(
                 organization_id=org_id,
@@ -275,13 +272,13 @@ async def _bench_list_content(
     *,
     label: str,
 ) -> dict[str, float]:
-    from uniffy.db.session import open_session
-    from uniffy.domains.tags.operations import TagOperations
+    from uniffy.domains.tags.reader import TagReader
+    from uniffy.infrastructure.database.session import open_session
 
     samples: list[float] = []
     for _ in range(iterations):
         async with open_session() as session:
-            ops = TagOperations(session)
+            ops = TagReader(session)
             start = time.perf_counter()
             assignments, token = await ops.list_content(
                 organization_id=org_id,
@@ -325,7 +322,7 @@ def _print_summary(rows: list[dict[str, float]]) -> None:
 
 
 async def _explain_inner_query(org_id: UUID, actor_id: UUID, visible_ids: list[UUID]) -> str:
-    from uniffy.db.session import open_session
+    from uniffy.infrastructure.database.session import open_session
 
     if not visible_ids:
         return "no visible tag ids -- skipping EXPLAIN"
@@ -347,13 +344,16 @@ async def _explain_inner_query(org_id: UUID, actor_id: UUID, visible_ids: list[U
 async def run_visibility_stress(config: StressConfig) -> None:
     from dotenv import load_dotenv
 
-    from uniffy.core.search.meilisearch import close_meilisearch, init_meilisearch
-    from uniffy.core.valkey.ops import close_ops_client, init_ops_client
-    from uniffy.db.session import close_db, init_db, open_session
+    from uniffy.core.search import SearchIndexer, WorkspaceSearch
+    from uniffy.infrastructure.database.session import close_db, init_db, open_session
+    from uniffy.infrastructure.search import MeiliSearchEngine
+    from uniffy.infrastructure.valkey.ops import close_ops_client, init_ops_client
 
     load_dotenv()
     await init_db()
-    await init_meilisearch()
+    search = WorkspaceSearch(MeiliSearchEngine())
+    await search.startup()
+    search_indexer = SearchIndexer(search)
     await init_ops_client()
 
     try:
@@ -367,12 +367,18 @@ async def run_visibility_stress(config: StressConfig) -> None:
             existing = await _seed_existing(session, org_id)
             if existing and config.reseed:
                 logger.info("Wiping previous stress seed...")
-                await _wipe_seed(session, org_id)
+                await _wipe_seed(session, search_indexer, org_id)
                 existing = False
 
             if not existing and not config.skip_seed:
                 logger.info(f"Seeding {config.note_count} notes (PG + Meili)...")
-                notes = await _seed_notes(session, org_id, users, config.note_count)
+                notes = await _seed_notes(
+                    session,
+                    search_indexer,
+                    org_id,
+                    users,
+                    config.note_count,
+                )
                 logger.info(
                     f"Seeding {config.tag_count} tags x {config.assignments_per_tag} assignments..."
                 )
@@ -457,7 +463,7 @@ async def run_visibility_stress(config: StressConfig) -> None:
         print(plan)
     finally:
         await close_ops_client()
-        await close_meilisearch()
+        await search.shutdown()
         await close_db()
 
 

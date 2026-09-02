@@ -17,18 +17,18 @@ from uniffy_proto.tags.v1.tags_pb2 import (
     UpdateSavedFilterResponse,
 )
 
-from uniffy.core.errors import NotFoundError, PermissionDeniedError
-from uniffy.db import open_session
-from uniffy.domains.auth.context import (
-    get_user_id_from_context,
+from uniffy.core.auth.principal import (
+    current_user_id,
     resolve_organization_id,
 )
+from uniffy.core.errors import NotFoundError, PermissionDeniedError
 from uniffy.domains.tags.filters.converters import (
     criteria_from_proto,
     icon_from_proto,
     saved_filter_to_proto,
 )
 from uniffy.domains.tags.filters.operations import SavedTagFilterOperations
+from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="tags.filters.handlers")
 
@@ -46,8 +46,8 @@ class SavedTagFilterHandlersMixin:
         request: CreateSavedFilterRequest,
         ctx: RequestContext,
     ) -> CreateSavedFilterResponse:
-        user_id = get_user_id_from_context(ctx)
-        organization_id = resolve_organization_id(ctx, request.organization_id)
+        user_id = current_user_id()
+        organization_id = resolve_organization_id(request.organization_id)
 
         if not request.name or not request.name.strip():
             raise ConnectError(Code.INVALID_ARGUMENT, "Filter name is required")
@@ -83,8 +83,8 @@ class SavedTagFilterHandlersMixin:
         request: UpdateSavedFilterRequest,
         ctx: RequestContext,
     ) -> UpdateSavedFilterResponse:
-        user_id = get_user_id_from_context(ctx)
-        organization_id = resolve_organization_id(ctx, request.organization_id)
+        user_id = current_user_id()
+        organization_id = resolve_organization_id(request.organization_id)
         filter_id = _parse_uuid(request.filter_id, "filter_id")
 
         try:
@@ -123,8 +123,8 @@ class SavedTagFilterHandlersMixin:
         request: DeleteSavedFilterRequest,
         ctx: RequestContext,
     ) -> DeleteSavedFilterResponse:
-        user_id = get_user_id_from_context(ctx)
-        organization_id = resolve_organization_id(ctx, request.organization_id)
+        user_id = current_user_id()
+        organization_id = resolve_organization_id(request.organization_id)
         filter_id = _parse_uuid(request.filter_id, "filter_id")
 
         try:
@@ -151,8 +151,8 @@ class SavedTagFilterHandlersMixin:
         request: ListSavedFiltersRequest,
         ctx: RequestContext,
     ) -> ListSavedFiltersResponse:
-        user_id = get_user_id_from_context(ctx)
-        organization_id = resolve_organization_id(ctx, request.organization_id)
+        user_id = current_user_id()
+        organization_id = resolve_organization_id(request.organization_id)
 
         try:
             async with open_session() as session:

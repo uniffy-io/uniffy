@@ -13,6 +13,7 @@ from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from uniffy.core.database import SessionFactory
 from uniffy.core.events.types import NotificationEvent
 from uniffy.core.jobs import enqueue_job
 from uniffy.core.mail import MailConfig
@@ -22,7 +23,6 @@ from uniffy.core.models.notifications.email_delivery import (
     NotificationEmailStatus,
 )
 from uniffy.core.models.settings.org_setting import OrgSetting
-from uniffy.db import open_session
 from uniffy.domains.notifications.delivery.base import DeliveryAdapter, NotificationChannel
 from uniffy.domains.notifications.delivery.timing import next_email_delivery_at
 from uniffy.domains.notifications.jobs.contracts import SEND_NOTIFICATION_EMAIL
@@ -46,6 +46,9 @@ class StagedEmailDelivery:
 class EmailAdapter(DeliveryAdapter):
     """Stage notification email in PostgreSQL before queue dispatch."""
 
+    def __init__(self, session_factory: SessionFactory) -> None:
+        self._session_factory = session_factory
+
     @property
     def channel_name(self) -> NotificationChannel:
         return NotificationChannel.EMAIL
@@ -56,7 +59,7 @@ class EmailAdapter(DeliveryAdapter):
         if MailConfig.from_env() is not None:
             return
 
-        async with open_session() as session:
+        async with self._session_factory() as session:
             row = (
                 await session.execute(
                     select(OrgSetting).where(OrgSetting.namespace == MAIL_NAMESPACE).limit(1)
@@ -138,7 +141,7 @@ class EmailAdapter(DeliveryAdapter):
         return True
 
     async def deliver(self, user_id: UUID, event: NotificationEvent) -> bool:
-        async with open_session() as session:
+        async with self._session_factory() as session:
             channels, overrides = await get_delivery_preferences(
                 session,
                 user_id,

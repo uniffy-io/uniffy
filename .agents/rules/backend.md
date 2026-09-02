@@ -11,17 +11,24 @@ Rules and load-bearing conventions for the Python backend. Domain-specific invar
 
 ## Vertical slices
 
-Each feature is self-contained in `src/uniffy/domains/{feature}/`:
+Each bounded context is self-contained at `src/uniffy/domains/{feature}/` or, when several cohesive
+subdomains share a parent context, `src/uniffy/domains/{context}/{subdomain}/`:
 
 ```
-domains/{feature}/
-├── converters.py     # Proto <-> domain mapping
-├── queries.py        # Complex SQL (optional)
-├── operations.py     # Business logic (extend BaseContentOperations for content)
-├── handlers.py       # Thin RPC handlers
-├── service.py        # Service class
-└── __init__.py
+domains/{owner}/
+├── {usecase}/        # Cohesive operations, queries, projections, or RPC handlers
+├── jobs/
+│   ├── contracts.py  # Typed producer-facing job contract
+│   └── jobs.py       # Canonical owner-defined handlers
+├── operations.py     # Optional meaningful public content/use-case façade
+├── service.py        # Optional service composition boundary
+└── __init__.py       # Lightweight; no registration side effects
 ```
+
+The shape is illustrative, not a required layer checklist. Small owners stay small; larger owners
+split by aggregate or use case. Keep an `operations.py`, `handlers.py`, or `service.py` façade only
+when it preserves a real public contract or composes behavior. Do not add a forwarding wrapper merely
+to retain an internal import path.
 
 Adding a new domain:
 
@@ -31,19 +38,97 @@ Adding a new domain:
 4. Mount in `factory.py`: `app.mount("/feature.v1.FeatureService", FeatureServiceASGIApplication(service))`
 5. New searchable content type: complete the Search Integration Checklist in `architecture.md`
 
+## Dependency boundaries
+
+- `core` is the shared application kernel and never imports `domains`. `infrastructure` owns generic
+  technical adapters and never imports `domains`; domain-specific adapters stay with their owner.
+  Core and domains also never import concrete search or storage adapters, or observability lifecycle
+  modules; web, worker, and explicit script roots select those implementations. PostgreSQL/SQLAlchemy,
+  Valkey, and owner-local Prometheus instrumentation are selected platform dependencies, so application
+  owners may consume their public capabilities without speculative wrapper layers. Import Linter
+  enforces the live package-graph rules from `pyproject.toml` with no exceptions. Additional
+  dependency rules land only when they describe a universal ownership boundary.
+- Transport is a generic delivery layer: core, domains, and infrastructure never import it, and it
+  never imports product domains. `main.py`, `factory.py`, and `workers/` are process roots; reusable
+  core, domain, infrastructure, and transport modules never import them.
+- Domain-to-domain imports target a narrow owner-defined capability boundary named for what it
+  provides, not a filename allowlist. Current examples include `directory.projection`,
+  `scheduling.rooms.events`, and `chat.access`. Another domain's handlers, services, converters,
+  caches, queries, and general operations are implementation details.
+- Web and worker entry points perform explicit composition. Importing a package solely to trigger
+  registration is not a supported integration mechanism.
+- Parent namespaces group cohesive bounded contexts without flattening their subdomains. Package
+  count is not an architecture quality metric.
+
 ## Core patterns
 
 - **Async everywhere.** Database I/O goes through `AsyncSession`; the rest of the stack composes around it.
-- **`BaseContentOperations`** (`core/content/base_operations.py`): extending it for content gets permission checking and search indexing for free.
+- **`BaseContentOperations`** (`core/content/base_operations.py`): extending it centralizes content
+  permission gates and search-projection hooks. Mutation composition supplies a `SearchIndexer`
+  explicitly when it writes a projection; read-only construction must not resolve a writer.
 - **Permission checks live inside domain operations.** The full model is in `.agents/rules/permissions.md` - the single source of truth; do not re-explain it.
 - **Multi-tenancy:** all content scoped to `organization_id`; users are global, memberships org-scoped. Verifying org access is part of every domain operation's contract.
-- **Raise domain errors (`core/errors.py`), never leak exception text to clients.** `observability/crpc.py::DOMAIN_ERROR_CODES` maps every `UNIFFYError` subclass to its Connect code for ALL unary RPCs, so a handler without local mapping still returns the right code. Handlers may map locally for precision, but an `except Exception` block must respond with the literal `"Internal server error"` - `str(e)` in a client-facing message is a leak (the `logger.exception` line keeps the details server-side).
+- **Raise domain errors (`core/errors.py`), never leak exception text to clients.** `transport/rpc.py::DOMAIN_ERROR_CODES` maps every `UNIFFYError` subclass to its Connect code for ALL unary RPCs, so a handler without local mapping still returns the right code. Handlers may map locally for precision, but an `except Exception` block must respond with the literal `"Internal server error"` - `str(e)` in a client-facing message is a leak (the `logger.exception` line keeps the details server-side).
 - **Imports at the top.** The one exception is the circular-import case in agent tool executors.
+- **Dangerous APIs are lint failures.** Backend code rejects executable code, unsafe
+  pickle/marshal/YAML/XML deserialization, weak cryptography, insecure TLS/SSH/network behavior,
+  direct `subprocess`, shell execution, logging socket configuration, and unsafe template APIs.
+  Backend lint repeats every selected Bandit rule and banned-API check with Ruff's source-level
+  suppressions disabled, so inline and file-level `noqa` directives cannot waive these boundaries.
+  When an external process is unavoidable, use `asyncio.create_subprocess_exec` with a fixed
+  executable and separate arguments; never construct a shell command.
 - **Content we ship is a file, not a literal.** Prompts, templates, catalogs and the like go in `src/uniffy/data/` (see "Shipped content"), never in a triple-quoted string or a hand-written python catalog.
 - **File size:** target 300-400 lines, soft cap 500; split into sub-modules past that.
 - **Type hints** on all functions; docstring discipline per `comment-discipline.md`.
 - **Internal and domain vocabularies use enums or typed constants colocated with their owner.** States, actions, event kinds, selectors, and job or queue names must not be passed or compared as raw strings.
 - **Raw string comparisons are boundary-only:** external protocol values, parser tokens, MIME/schema metadata, and CLI or environment inputs. Mark an intentional comparison with a narrow `# noqa: PLR2004` and a short reason; never suppress the whole file.
+
+## Read and mutation collaborators
+
+A `Reader` is an explicit read-side façade, not a required layer for every aggregate. Introduce
+`{Aggregate}Reader` when one public operations class would otherwise mix database/permission reads
+with mutations that need search writing, object-storage cleanup, call lifecycle, queues, or other
+external effects. Small domains and focused query modules stay as they are when the split adds no
+meaningful contract.
+
+- A reader exposes only observation: get/list/search-candidate hydration, permission resolution, and
+  pure presentation or projection metadata derivation. It never changes authoritative rows, commits
+  or rolls back, writes search/storage projections, publishes realtime events, enqueues work, or calls
+  a mutation lifecycle. Read-through population of a non-authoritative cache is allowed; its matching
+  invalidation remains owned by mutations.
+- Construct the reader with only capabilities its reads intrinsically use. Ordinary PostgreSQL content
+  readers take `AsyncSession`; they do not require `SearchIndexer` or mutation-only storage/lifecycle
+  dependencies. A genuine asset read may receive a read capability such as `ObjectStorage`, but that
+  does not justify adding mutation methods to the reader.
+- Mutation façades may inherit or compose the reader to reuse access gates and query helpers. Their
+  constructor or use-case method declares every required mutation capability as a non-optional typed
+  argument. Do not use `None` defaults plus a guarded property that raises after the transaction has
+  started.
+- Split a projection collaborator separately when post-commit search/realtime repair needs a writer
+  but not the full storage-backed mutation façade. Callers use the narrowest valid collaborator:
+  reader for reads, projection operations for projection work, mutation operations for writes.
+- Use `reader.py` only for a meaningful aggregate read façade. Focused owner-internal query modules may
+  remain beside their use case. Naming a class `Reader` does not make it a public cross-domain API;
+  the narrow owner-defined boundary rule still applies.
+- Tests construct readers with their minimal read dependencies and exercise mutations through their
+  real required signatures. Backend `ty` lint enforces missing arguments dynamically; never add a
+  call-site allowlist or suppression to make invalid mutation composition pass.
+
+## Transaction boundaries
+
+- An externally callable mutation owns its authoritative transaction. Domain rows and every required
+  audit row commit together; a failure before that commit leaves neither fact behind.
+- Reusable helpers that join a caller's transaction use a focused `stage_*` operation. A staging
+  operation validates its own invariants, adds or changes its owned rows, and may flush for generated
+  identifiers, but it never commits. Do not add generic `commit=False` flags.
+- Search, cache invalidation, realtime publication, email, and other external effects run only after
+  the authoritative commit. A required durable effect uses an owner-defined typed job contract backed
+  by a PostgreSQL recovery fact; an in-memory retry or a queue call alone is not durable.
+- PostgreSQL authorization facts remain authoritative when a post-commit projection or notification
+  fails. Degraded external effects are logged and retried through their owner where a recovery path
+  exists; they never cause a second write to weaken or roll back an already committed access fact.
+- Transaction correctness is proven with behavior tests for rollback, concurrent mutation, and
+  post-commit degradation. Commit-call counts may guide diagnosis but are not an architectural test.
 
 ## JSON serialization
 
@@ -81,7 +166,7 @@ When a migration introduces a brand new enum type, create it explicitly inside `
 
 ## Logging (loguru)
 
-Configured in `observability/`; console by default, structured JSON when `LOG_FORMAT=json`.
+Configured in `infrastructure/observability/`; console by default, structured JSON when `LOG_FORMAT=json`.
 
 - **Every module binds a `component` once, right after the import:**
   ```python
@@ -106,13 +191,16 @@ Exactly **two generic settings stores**. Do NOT add per-domain settings/policy/c
 | Deployment | `deployment_settings` | `DeploymentSettingsOperations` | whole install | `DeploymentCipher` |
 | Per-org | `org_settings` | `OrgSettingsOperations` | one tenant | `OrgCipher` |
 
+The generic store implementations live in `core/config/settings/deployment.py` and
+`core/config/settings/organization.py`.
+
 Both are `(namespace, key) -> value` KV rows: plaintext JSONB `value`, or `value_encrypted` when `is_secret=true` (CHECK constraint enforces exclusivity).
 
 - **Pick by scope.** Operator config (registration policy, VAPID keys, system mail relay) -> `deployment_settings`. Tenant config (per-org mail, security, MFA, call policy, agent runtime knobs) -> `org_settings`. Per-**user** preferences stay in `settings_profiles`, not the KV stores.
 - **One namespace per domain** (`namespace='calls'`, `namespace='mail'`, ...), one JSON blob or key-per-setting within it.
-- **Wrap the blob in a frozen dataclass with code-level defaults.** Reference: `domains/calls/policy.py::ResolvedCallPolicy`, `domains/agents/runtime/settings.py::ResolvedRuntimeSettings`. The loader never returns a raw dict; a missing row resolves to defaults.
+- **Wrap the blob in a frozen dataclass with code-level defaults.** Reference: `domains/calls/policy.py::ResolvedCallPolicy`, `domains/agents/runtime/settings/operations.py::ResolvedRuntimeSettings`. The loader never returns a raw dict; a missing row resolves to defaults.
 - **Secrets:** `is_secret=True` encrypts through the tenant/deployment cipher; reads are opt-in via `get_secret(...)`. The `ReEncryptingConsumer` registered per table rotates every `is_secret` row automatically. Never plaintext, never a hand-rolled shared-key Fernet path.
-- **Resolution chain:** per-org row -> env default -> coded default -> typed error. Canonical: `core/mail/resolver.py`, `domains/system_config/operations.py`.
+- **Resolution chain:** per-org row -> env default -> coded default -> typed error. Canonical: `core/mail/resolver.py`, `core/config/registration.py`.
 - **Audit operator-facing writes** in the same transaction (`write_audit_event`).
 - **A real table is still right** for high-cardinality, relational, or hot-path-indexed config (`permissions_org_defaults` is the reference counter-example: materialized policy, not operator config).
 
@@ -123,10 +211,10 @@ Content we author and ship with the build - prompts, agent templates, bundled sk
 | Kind | Path | Consumed by |
 |---|---|---|
 | Agent templates | `data/catalog/*.md` | `domains/agents/templates.py` |
-| Bundled agent skills | `data/skills/*.md` | `db/bundled_skills.py` |
-| Platform prompts | `data/prompts/*.md` | `domains/agents/runtime/workspace_prompt.py` |
+| Bundled agent skills | `data/skills/*.md` | `domains/agents/skills/bundled.py` |
+| Platform prompts | `data/prompts/*.md` | `domains/agents/runtime/workspace.py` |
 | Model catalog | `data/models/catalog.json` | `domains/agents/providers/catalog/loader.py` |
-| Seed assets | `data/assets/` | `db/seed.py` |
+| Seed assets | `data/assets/` | `domains/organizations/starter/canvas.py` |
 
 `core/data_files.py` is the only reader: `DATA_DIR`, `load_documents(dir) -> list[DataDocument]`, and a deliberately tiny frontmatter parser (scalar `key: value` plus `- item` block lists - enough for this content, so no PyYAML dependency). Markdown-with-frontmatter is the default shape: metadata in the frontmatter, prose in the body, so prompt text stays readable and diffable instead of hiding inside a triple-quoted string.
 
@@ -134,7 +222,7 @@ Two consumption shapes. Pick by whether other rows must reference the content:
 
 - **Read at import into a module constant** - the default. `WORKSPACE_PROMPT`, `AGENT_TEMPLATES`, the model catalog. No table, no migration, no seeding, no lifecycle. Editing the file and restarting is the whole update path.
 - **Project into rows** only when other tables key on it (bundled skills: agents store skill ids in `enabled_skills`, usages record `skill_id`). Then the file stays the source of truth and the rows are its projection, which carries four obligations:
-  - Sync on **every** boot from its own entry point with its own advisory lock, **before** `seed_initial_data`. Never inside the "no organizations exist" guard - that block runs once on a virgin DB, so anything seeded there never reaches an existing deployment again.
+  - Sync on **every** boot from its own entry point with its own advisory lock, **before** `bootstrap_deployment`. Never inside the "no organizations exist" guard - that block runs once on a virgin DB, so anything seeded there never reaches an existing deployment again.
   - The file declares a **fixed id** (v7 literal, generated once and committed - `generate_id = uuid7`, there is no uuid5 anywhere). Generating ids at install time makes the same content a different entity per deployment and breaks every cross-deployment reference.
   - Upsert by that id so content edits propagate; insert-if-absent silently freezes old text forever.
   - Content removed from the repo is **retired** (a status flag the list/picker paths filter), never deleted - deleting cascades child rows and silently strips the id out of whatever referenced it.
@@ -143,7 +231,7 @@ Do not duplicate shipped content in the frontend. Expose it over an RPC (`ListAg
 
 ## Performance-critical domains
 
-`domains/chat/` and `domains/agents/` carry the bulk of user traffic; changes there (and in what they call: `core/auth/`, `core/content/`, `core/valkey/`, `core/users/`) are held to a higher bar:
+`domains/chat/` and `domains/agents/` carry the bulk of user traffic; changes there (and in what they call: `core/auth/`, `core/cache/`, `core/content/`, `core/users/`, `infrastructure/valkey/`) are held to a higher bar:
 
 | Rule | Why |
 |---|---|
@@ -163,17 +251,22 @@ Cache adoption + invalidation hooks are part of any change that adds a hot read/
 
 ## Valkey cache layer
 
-Three physical clients per process; importing the right tier matters (mismatches cause subtle hangs):
+Four physical clients per process; importing the right tier matters (mismatches cause subtle hangs):
 
 | Tier | Module | Purpose | Resilience |
 |---|---|---|---|
-| Pubsub | `core/valkey/pubsub.py` | PUBLISH / SUBSCRIBE / PSUBSCRIBE only | 5s socket timeout, retries, long-lived connections |
-| Ops | `core/valkey/ops.py` | Cache, presence, rate-limit, mention-state | 200ms connect, 100ms read, zero retries, 150ms `ops_call` deadline |
-| Queue | `core/valkey/queue.py` | ARQ pool | 10s timeout, 5 retries |
+| Pubsub | `infrastructure/valkey/pubsub.py` | PUBLISH / SUBSCRIBE / PSUBSCRIBE transport | 5s socket timeout, retries, long-lived connections |
+| Ops | `infrastructure/valkey/ops.py` | Fail-fast non-blocking commands | 200ms connect, 100ms read, zero retries, 150ms `ops_call` deadline |
+| Streams | `infrastructure/valkey/streams.py` | Blocking XREAD for agent-run replay | 30s socket timeout, zero retries |
+| Queue | `infrastructure/valkey/queue.py` | ARQ pools | 10s timeout, 5 retries |
 
 Conventions:
 
 - Key naming `{namespace}:{scope}:{id}[:subkind]`; first segment is the metrics namespace.
+- Application cache, presence, mention, tag, realtime-event, rate-limit, and agent-run semantics stay
+  with their core or domain owner; infrastructure exposes transport operations only.
+- Application owners use the public `get_ops_client` accessor when they need concrete Valkey commands;
+  underscore-prefixed adapter state remains private to infrastructure.
 - Tag-based bulk invalidation via `tag:{name}` sets (`cache_invalidate_by_tag`) when the blast radius isn't cheaply enumerable.
 - Stampede control via `cache_get_or_set_locked` on the hottest helpers.
 - Per-namespace kill-switch: `CACHE_DISABLED_NAMESPACES` env var (misses still counted).
@@ -187,12 +280,15 @@ JWT access/refresh pattern; users authenticate globally, then select an org cont
 - `auth.v1.AuthService` is **authentication only** (Register, Login, RefreshToken, GetCurrentUser, Logout). User / org / group management live on their own services.
 - Access token carries `user_id`, `org_id`, `token_version`; refresh token has no org context.
 - `User.token_version` revokes: incrementing it invalidates all existing tokens; validated on every refresh.
-- Key files: `domains/auth/operations.py`, `domains/auth/tokens.py`, `core/models/login/user.py`.
+- The ConnectRPC interceptor decodes a protected request once and publishes an immutable
+  `AuthenticatedPrincipal` through `core/auth/principal.py`; handlers consume that request-scoped identity.
+- Key files: `domains/auth/operations.py`, `domains/auth/interceptors.py`, `core/auth/principal.py`,
+  `core/auth/tokens.py`, `core/models/login/user.py`.
 - The asset-read cookie (GET asset reads for `<img>`/`<video>`/`<audio>`) is owned by `.agents/rules/files-domain.md` - do not add cookie handling elsewhere.
 
 ## HTTP routes vs ConnectRPC
 
-Default is ConnectRPC. Plain FastAPI HTTP routes (`domains/{feature}/http_routes.py`, mounted in `factory.py` under `/api`) exist for GET asset reads that need browser caching or Range requests: files, thumbnails, media, avatars. Identity comes from `get_current_user_id` (`domains/auth/http_deps.py`), which accepts Bearer OR the asset cookie; permission gating stays in the route handler via the domain operations. Media seeking is a native HTTP Range route - do NOT reintroduce a ConnectRPC media stream. Full contract: `.agents/rules/files-domain.md`.
+Default is ConnectRPC. Plain FastAPI HTTP routes (`domains/{feature}/routes.py`, mounted in `factory.py` under `/api`) exist for GET asset reads that need browser caching or Range requests: files, thumbnails, media, avatars. Identity comes from `get_current_user_id` (`core/auth/http.py`), which accepts Bearer OR the asset cookie; permission gating stays in the route handler via the domain operations. Media seeking is a native HTTP Range route - do NOT reintroduce a ConnectRPC media stream. Full contract: `.agents/rules/files-domain.md`.
 
 ## Attachments (sub-feature of files)
 
@@ -201,11 +297,12 @@ Attachments link a file to content via a generic `(content_type, content_id)` ro
 ## Background jobs (ARQ + Valkey)
 
 Job behavior and producer-facing contracts belong to the domain or core subsystem whose state and
-invariants they operate on: a small domain surface uses `domains/{feature}/job_contracts.py` +
-`jobs.py`, while a larger one uses `domains/{feature}/jobs/contracts.py` + focused handler modules.
-`core/jobs/` owns only the generic contract types and dispatch helpers; `workers/` is the composition
-root that validates registrations, builds the core and egress fleets, manages their resources, and
-renders the executable inventory.
+invariants they operate on. Every domain owner uses its `jobs/contracts.py` and `jobs/jobs.py`; a
+parent-context child such as `scheduling/calendar` keeps the same shape below that child. A large
+surface may keep additional focused, one-word collaborators beside those files rather than breaching
+the 500-line soft cap. `core/jobs/` owns only the generic contract types and dispatch helpers;
+`workers/` is the composition root that validates registrations, builds the core and egress fleets,
+manages their resources, and renders the executable inventory.
 
 ### Creating a job
 

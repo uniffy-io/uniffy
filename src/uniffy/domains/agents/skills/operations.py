@@ -29,12 +29,17 @@ from uniffy.core.models.agents.skill_draft import (
 from uniffy.core.models.agents.skill_usage import AgentSkillUsage
 from uniffy.core.models.agents.skill_version import AgentSkillVersion, AgentSkillVersionAuthor
 from uniffy.core.models.audit.event import AuditResourceType
+from uniffy.core.models.chat.channel_member import ChatChannelMember
+from uniffy.core.models.chat.message import ChatMessage
+from uniffy.core.types import SubjectType
 from uniffy.domains.agents.access import require_agents_builder
+from uniffy.domains.agents.agents.operations import AgentOperations
 from uniffy.domains.agents.cache import (
+    fetch_agent_skills,
     invalidate_agents_using_skill,
     invalidate_org_always_active_skills,
 )
-from uniffy.domains.agents.content_policy import check_admin_content
+from uniffy.domains.agents.policy import check_admin_content
 from uniffy.domains.agents.skills.validation import (
     SKILL_CONTENT_MAX,
     SKILL_DESCRIPTION_MAX,
@@ -48,6 +53,8 @@ from uniffy.domains.agents.skills.validation import (
     has_hard_injection,
     sanitize_skill_text,
 )
+from uniffy.domains.chat import agents as chat_evt
+from uniffy.domains.chat.agents import publish_channel_event_to_members
 from uniffy.domains.organizations.operations import OrganizationOperations
 
 # The proposal path is reachable by any org member through an agent tool loop,
@@ -128,8 +135,6 @@ class SkillOperations:
         self._session.add(skill)
         await self._session.flush()
         await self._snapshot_version(skill, author_id=user_id, author_kind="user")
-        await self._session.commit()
-        await self._session.refresh(skill)
 
         await write_audit_event(
             self._session,
@@ -144,7 +149,12 @@ class SkillOperations:
                 "always_active": always_active,
             },
         )
-        await self._session.commit()
+        try:
+            await self._session.commit()
+        except Exception:
+            await self._session.rollback()
+            raise
+        await self._session.refresh(skill)
 
         return skill
 
@@ -1170,11 +1180,6 @@ class SkillOperations:
         user cannot enumerate skills for an agent they cannot see. Reads the
         ``agent:{id}:skills`` cache like the runtime pre-flight does.
         """
-        # Lazy import: skills.operations sits on the hot runtime import path;
-        # AgentOperations pulls in the heavier content stack.
-        from uniffy.domains.agents.agents.operations import AgentOperations
-        from uniffy.domains.agents.cache import fetch_agent_skills
-
         agent = await AgentOperations(self._session).get_for_runtime(
             user_id, organization_id, agent_id
         )
@@ -1310,13 +1315,6 @@ class SkillOperations:
         """
         if draft.channel_id is None or draft.origin_chat_message_id is None:
             return
-        # Lazy imports keep the chat surface off the hot skills import path.
-        from uniffy.core.models.chat.channel_member import ChatChannelMember
-        from uniffy.core.models.chat.message import ChatMessage
-        from uniffy.core.types import SubjectType
-        from uniffy.domains.chat.streaming import events as chat_evt
-        from uniffy.domains.chat.streaming.publisher import publish_channel_event_to_members
-
         msg = await self._session.get(ChatMessage, draft.origin_chat_message_id)
         if msg is None:
             return

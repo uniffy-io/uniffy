@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { createClient } from "@connectrpc/connect";
+import { Code, ConnectError, createClient } from "@connectrpc/connect";
 import { Link, useNavigate } from "react-router-dom";
 import { AuthService } from "@uniffy/proto/auth/v1/auth_pb";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
@@ -8,6 +8,7 @@ import { setAccentColor, setFontFamily } from "@/config/theme/themeSlice";
 import {
   friendlyErrorMessage,
   initStorageEncryptionFromApi,
+  publicUnaryTransport,
   setEnrollmentToken,
   setMemoryAccessToken,
   unaryTransport,
@@ -18,7 +19,7 @@ import { AuthInput } from "@/features/auth/components/AuthInput";
 import { AuthShell } from "@/features/auth/components/AuthShell";
 import { LoginMfaStep } from "@/features/mfa";
 
-const authClient = createClient(AuthService, unaryTransport);
+const authClient = createClient(AuthService, publicUnaryTransport);
 
 export function AuthForms() {
   useDocumentTitle("Login");
@@ -177,7 +178,11 @@ export function AuthForms() {
       }
     } catch (err: unknown) {
       const raw = err instanceof Error ? err.message : "Login failed";
-      setError(friendlyErrorMessage(raw) || "Login failed");
+      setError(
+        err instanceof ConnectError && err.code === Code.Unauthenticated
+          ? "Invalid email or password."
+          : friendlyErrorMessage(raw) || "Login failed",
+      );
     } finally {
       setLoading(false);
     }
@@ -267,6 +272,7 @@ export function AuthForms() {
           className="mb-5 flex items-start gap-3 rounded-lg border border-destructive/20 bg-destructive/5 p-3.5 text-sm text-destructive"
           style={{ animation: "auth-fade-in 0.2s ease-out" }}
           data-testid="auth-error-banner"
+          role="alert"
         >
           <svg className="h-4 w-4 mt-0.5 flex-shrink-0" viewBox="0 0 16 16" fill="currentColor">
             <path

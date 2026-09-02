@@ -29,9 +29,12 @@ from sqlalchemy import select
 from uniffy.core.models.login.organization_member import OrganizationMember
 from uniffy.core.models.login.user import User
 from uniffy.core.models.projects.project import Project
-from uniffy.core.search import init_meilisearch
-from uniffy.db.session import init_db, open_session
+from uniffy.core.search import SearchIndexer, WorkspaceSearch
+from uniffy.core.storage import ObjectStorage
 from uniffy.domains.projects.operations import ProjectOperations, TaskOperations
+from uniffy.infrastructure.database.session import init_db, open_session
+from uniffy.infrastructure.search import MeiliSearchEngine
+from uniffy.infrastructure.storage import S3Storage
 
 ADMIN_EMAIL_DEFAULT = "admin@uniffy.io"
 PROJECT_NAME = "Hierarchy QA"
@@ -56,7 +59,12 @@ async def _resolve_admin(session, email: str) -> tuple[UUID, UUID]:
     return user_row.id, membership.organization_id
 
 
-async def _delete_existing_project(session, user_id: UUID, organization_id: UUID) -> None:
+async def _delete_existing_project(
+    session,
+    search_indexer: SearchIndexer,
+    user_id: UUID,
+    organization_id: UUID,
+) -> None:
     existing = (
         (
             await session.execute(
@@ -72,7 +80,7 @@ async def _delete_existing_project(session, user_id: UUID, organization_id: UUID
     )
     if not existing:
         return
-    ops = ProjectOperations(session)
+    ops = ProjectOperations(session, search_indexer=search_indexer)
     for proj in existing:
         logger.info(f"Removing existing {PROJECT_NAME!r} project id={proj.id}")
         await ops.delete(user_id=user_id, organization_id=organization_id, project_id=proj.id)
@@ -99,8 +107,15 @@ async def _create_task(
     return task.id
 
 
-async def _seed_tree(session, user_id: UUID, organization_id: UUID, project_id: UUID) -> None:
-    ops = TaskOperations(session)
+async def _seed_tree(
+    session,
+    storage: ObjectStorage,
+    search_indexer: SearchIndexer,
+    user_id: UUID,
+    organization_id: UUID,
+    project_id: UUID,
+) -> None:
+    ops = TaskOperations(session, storage, search_indexer)
 
     epic_a = await _create_task(
         ops,
@@ -202,18 +217,21 @@ async def _seed_tree(session, user_id: UUID, organization_id: UUID, project_id: 
     )
 
 
-async def main() -> None:
-    email = os.getenv("ADMIN_EMAIL", ADMIN_EMAIL_DEFAULT)
-    logger.info(f"Seeding {PROJECT_NAME!r} for {email}")
-
-    await init_db(skip_migrations=True)
-    await init_meilisearch()
-
+async def _seed(
+    storage: ObjectStorage,
+    search_indexer: SearchIndexer,
+    email: str,
+) -> None:
     async with open_session() as session:
         user_id, organization_id = await _resolve_admin(session, email)
-        await _delete_existing_project(session, user_id, organization_id)
+        await _delete_existing_project(
+            session,
+            search_indexer,
+            user_id,
+            organization_id,
+        )
 
-        project_ops = ProjectOperations(session)
+        project_ops = ProjectOperations(session, search_indexer=search_indexer)
         project = await project_ops.create(
             user_id=user_id,
             organization_id=organization_id,
@@ -224,7 +242,7 @@ async def main() -> None:
         )
         logger.info(f"Created project id={project.id} slug={project.slug}")
 
-        await _seed_tree(session, user_id, organization_id, project.id)
+        await _seed_tree(session, storage, search_indexer, user_id, organization_id, project.id)
         await session.commit()
 
         logger.info("Seeded hierarchy:")
@@ -242,6 +260,19 @@ async def main() -> None:
         logger.info("  Bug Z")
         logger.info("")
         logger.info(f"Open the project at /projects/{project.id}")
+
+
+async def main() -> None:
+    email = os.getenv("ADMIN_EMAIL", ADMIN_EMAIL_DEFAULT)
+    logger.info(f"Seeding {PROJECT_NAME!r} for {email}")
+
+    await init_db(skip_migrations=True)
+    search = WorkspaceSearch(MeiliSearchEngine())
+    await search.startup()
+    try:
+        await _seed(S3Storage(), SearchIndexer(search), email)
+    finally:
+        await search.shutdown()
 
 
 if __name__ == "__main__":

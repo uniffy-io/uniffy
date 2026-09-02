@@ -7,12 +7,12 @@ import pytest
 from uniffy.core.types import generate_id
 from uniffy.domains.agents.providers.base import CompletionResult
 from uniffy.domains.agents.runtime.failover import CircuitBreaker
-from uniffy.domains.agents.runtime.model_calls import (
+from uniffy.domains.agents.runtime.models.calls import (
     ModelCallController,
     ModelCallTarget,
 )
-from uniffy.domains.agents.runtime.run_usage import RunUsageAccumulator
-from uniffy.domains.agents.runtime.settings import ResolvedRuntimeSettings
+from uniffy.domains.agents.runtime.runs.usage import RunUsageAccumulator
+from uniffy.domains.agents.runtime.settings.operations import ResolvedRuntimeSettings
 
 
 class _Provider:

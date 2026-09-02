@@ -11,6 +11,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from uniffy.core.audit.actions import Action
+from uniffy.core.models.audit.event import AuditEvent, AuditResourceType
 from uniffy.core.models.login.organization_member import OrganizationRole
 from uniffy.core.models.login.user import User
 from uniffy.core.types import generate_id
@@ -18,12 +19,16 @@ from uniffy.domains.auth.errors import AuthenticationError, TokenError
 from uniffy.domains.auth.mfa.enforcement import MfaRequirement, MfaRequirementResult
 from uniffy.domains.auth.operations import AuthOperations
 
+_UNKNOWN_EMAIL = "ghost@example.com"
+_INVALID_CREDENTIALS = "Invalid email or password"
+_SELF_INITIATOR = "self"
 
-def _audit_rows(session: MagicMock) -> list:
+
+def _audit_rows(session: MagicMock) -> list[AuditEvent]:
     return [
         call.args[0]
         for call in session.add.call_args_list
-        if call.args and call.args[0].__class__.__name__ == "AuditEvent"
+        if call.args and isinstance(call.args[0], AuditEvent)
     ]
 
 
@@ -73,7 +78,7 @@ async def test_login_success_emits_login_success() -> None:
         ),
         patch.object(
             AuthOperations,
-            "_create_session",
+            "_stage_session",
             AsyncMock(return_value=MagicMock(id=generate_id())),
         ),
         patch("uniffy.domains.auth.operations.create_access_token", return_value="atk"),
@@ -86,7 +91,7 @@ async def test_login_success_emits_login_success() -> None:
     assert Action.AUTH_LOGIN_SUCCESS in actions
     success = next(r for r in rows if r.action == Action.AUTH_LOGIN_SUCCESS)
     assert success.actor_user_id == user.id
-    assert success.resource_type == "USER"
+    assert success.resource_type == AuditResourceType.USER
     assert success.details["email"] == user.email
 
 
@@ -95,15 +100,15 @@ async def test_login_failure_unknown_email_emits_failure_without_user() -> None:
     ops = AuthOperations(session)
 
     with pytest.raises(AuthenticationError):
-        await ops.authenticate("ghost@example.com", "pw")
+        await ops.authenticate(_UNKNOWN_EMAIL, "pw")
 
     rows = _audit_rows(session)
     assert len(rows) == 1
     failure = rows[0]
     assert failure.action == Action.AUTH_LOGIN_FAILURE
     assert failure.actor_user_id is None
-    assert failure.details["email_attempted"] == "ghost@example.com"
-    assert "Invalid email or password" in failure.details["failure_reason"]
+    assert failure.details["email_attempted"] == _UNKNOWN_EMAIL
+    assert _INVALID_CREDENTIALS in failure.details["failure_reason"]
 
 
 async def test_login_failure_bad_password_carries_user_attribution() -> None:
@@ -150,7 +155,7 @@ async def test_refresh_token_emits_token_refreshed_with_dedupe() -> None:
         ),
         patch("uniffy.domains.auth.operations.create_access_token", return_value="atk"),
         patch("uniffy.domains.auth.operations.create_refresh_token", return_value="rtk"),
-        patch("uniffy.core.audit.writer._get_ops_client", return_value=valkey),
+        patch("uniffy.core.audit.writer.get_ops_client", return_value=valkey),
     ):
         await ops.refresh_token("doesnt-matter")
 
@@ -186,7 +191,7 @@ async def test_refresh_token_dedupe_suppresses_rapid_writes() -> None:
         ),
         patch("uniffy.domains.auth.operations.create_access_token", return_value="atk"),
         patch("uniffy.domains.auth.operations.create_refresh_token", return_value="rtk"),
-        patch("uniffy.core.audit.writer._get_ops_client", return_value=valkey),
+        patch("uniffy.core.audit.writer.get_ops_client", return_value=valkey),
     ):
         await ops.refresh_token("doesnt-matter")
 
@@ -209,7 +214,7 @@ async def test_revoke_session_emits_session_terminated() -> None:
     assert len(rows) == 1
     assert rows[0].action == Action.AUTH_SESSION_TERMINATED
     assert rows[0].resource_id == session_id
-    assert rows[0].details["initiator"] == "self"
+    assert rows[0].details["initiator"] == _SELF_INITIATOR
 
 
 async def test_revoke_other_sessions_emits_token_revoked() -> None:

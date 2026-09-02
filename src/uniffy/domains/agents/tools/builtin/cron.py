@@ -30,7 +30,7 @@ async def _execute_cron_create(ctx: ToolContext, args: dict) -> ToolResult:
     if not agent_id:
         return ToolResult(success=False, data="", error="Agent context not available")
 
-    ops = CronTaskOperations(ctx.session)
+    ops = CronTaskOperations(ctx.session, ctx.search_indexer)
     task = await ops.create_cron_task(
         user_id=ctx.user_id,
         organization_id=ctx.organization_id,
@@ -64,7 +64,7 @@ async def _execute_cron_list(ctx: ToolContext, args: dict) -> ToolResult:
 
     agent_id = getattr(ctx, "agent_id", None)
 
-    ops = CronTaskOperations(ctx.session)
+    ops = CronTaskOperations(ctx.session, ctx.search_indexer)
     tasks, total = await ops.list_cron_tasks(
         user_id=ctx.user_id,
         organization_id=ctx.organization_id,
@@ -124,7 +124,7 @@ async def _execute_cron_update(ctx: ToolContext, args: dict) -> ToolResult:
     if not updates:
         return ToolResult(success=False, data="", error="No updates provided")
 
-    ops = CronTaskOperations(ctx.session)
+    ops = CronTaskOperations(ctx.session, ctx.search_indexer)
     task = await ops.update_cron_task(
         user_id=ctx.user_id,
         organization_id=ctx.organization_id,
@@ -153,7 +153,7 @@ async def _execute_cron_delete(ctx: ToolContext, args: dict) -> ToolResult:
 
     task_id = UUID(task_id_str)
 
-    ops = CronTaskOperations(ctx.session)
+    ops = CronTaskOperations(ctx.session, ctx.search_indexer)
     await ops.delete_cron_task(
         user_id=ctx.user_id,
         organization_id=ctx.organization_id,
@@ -176,7 +176,7 @@ async def _execute_cron_get_runs(ctx: ToolContext, args: dict) -> ToolResult:
     task_id = UUID(task_id_str)
     limit = min(args.get("limit", 10), 20)
 
-    ops = CronTaskOperations(ctx.session)
+    ops = CronTaskOperations(ctx.session, ctx.search_indexer)
     logs, total = await ops.get_run_logs(
         user_id=ctx.user_id,
         organization_id=ctx.organization_id,

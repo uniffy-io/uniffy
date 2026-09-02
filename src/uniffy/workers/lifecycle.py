@@ -11,28 +11,44 @@ from uniffy.core.crypto import (
     close_dek_invalidation_subscriber,
     subscribe_dek_invalidations,
 )
-from uniffy.core.search import close_meilisearch, init_meilisearch
-from uniffy.core.storage.s3_client import close_s3, init_s3
-from uniffy.core.valkey import (
-    close_ops_client,
-    close_pubsub,
-    close_queue,
-    init_ops_client,
-    init_pubsub,
-    init_queue,
+from uniffy.core.database import SESSION_FACTORY_CTX_KEY
+from uniffy.core.jobs import QueueName
+from uniffy.core.search import (
+    SEARCH_INDEXER_CTX_KEY,
+    WORKSPACE_SEARCH_CTX_KEY,
+    SearchIndexer,
+    WorkspaceSearch,
 )
-from uniffy.core.valkey.queue import QueueName
-from uniffy.db import close_db, init_db
-from uniffy.domains.agents.providers.client_cache import (
+from uniffy.core.storage import OBJECT_STORAGE_CTX_KEY, ObjectStorage
+from uniffy.domains.agents.providers.clients import (
     close_provider_invalidation_subscriber,
     init_provider_invalidation_subscriber,
 )
-from uniffy.domains.audit.jobs import provision_audit_partitions
-from uniffy.domains.integrations.client_cache import (
+from uniffy.domains.audit.jobs.jobs import provision_audit_partitions
+from uniffy.domains.calls.channels import CallsChannelLifecycle
+from uniffy.domains.chat.lifecycle import CALL_LIFECYCLE_CTX_KEY
+from uniffy.domains.files.registration import register_file_content
+from uniffy.domains.integrations.clients import (
     close_integration_invalidation_subscriber,
     init_integration_invalidation_subscriber,
 )
-from uniffy.observability.metrics import (
+from uniffy.domains.notes.adapter import register_note_realtime_adapter
+from uniffy.domains.notes.registration import register_note_content
+from uniffy.domains.notifications.delivery import (
+    DELIVERY_ADAPTERS_CTX_KEY,
+    build_delivery_adapters,
+)
+from uniffy.domains.projects.registration import register_project_content
+from uniffy.domains.scheduling.calendar.events.registration import register_calendar_content
+from uniffy.infrastructure.database import close_db, init_db, open_session
+from uniffy.infrastructure.search import MeiliSearchEngine
+from uniffy.infrastructure.storage import S3Storage
+from uniffy.infrastructure.valkey.ops import close_ops_client, init_ops_client
+from uniffy.infrastructure.valkey.pubsub import close_pubsub, init_pubsub
+from uniffy.infrastructure.valkey.queue import close_queue, init_queue
+from uniffy.vendor.arq.constants import job_start_delay_ctx_key
+from uniffy.vendor.arq.typing import JobRejectionReason
+from uniffy.workers.metrics import (
     WORKER_JOB_DURATION,
     WORKER_JOB_REJECTED_TOTAL,
     WORKER_JOB_START_DELAY,
@@ -43,8 +59,6 @@ from uniffy.observability.metrics import (
     WORKER_QUEUE_DEPTH,
     WORKER_READY,
 )
-from uniffy.vendor.arq.constants import job_start_delay_ctx_key
-from uniffy.vendor.arq.typing import JobRejectionReason
 
 logger = logger.bind(component="workers.lifecycle")
 
@@ -103,18 +117,31 @@ async def _on_startup_shared(
     profile: FleetResourceProfile,
 ) -> None:
     """Boot the resources every worker fleet needs."""
+    register_calendar_content()
+    register_file_content()
+    register_note_content()
+    register_project_content()
     queue_name = profile.queue
     ctx["queue"] = queue_name
     logger.info(f"Worker starting up (queue={queue_name})...")
 
-    await init_db(skip_migrations=True)
+    await init_db(skip_migrations=True, application_name=f"uniffy-worker-{queue_name}")
+    ctx[SESSION_FACTORY_CTX_KEY] = open_session
     logger.info("Worker: Database initialized")
 
-    await init_s3()
+    storage = S3Storage()
+    await storage.startup()
+    ctx[OBJECT_STORAGE_CTX_KEY] = storage
     logger.info("Worker: S3 storage initialized")
 
-    await init_meilisearch()
-    logger.info("Worker: Meilisearch initialized")
+    search = WorkspaceSearch(MeiliSearchEngine())
+    await search.startup()
+    ctx[WORKSPACE_SEARCH_CTX_KEY] = search
+    search_indexer = SearchIndexer(search)
+    ctx[SEARCH_INDEXER_CTX_KEY] = search_indexer
+    ctx[CALL_LIFECYCLE_CTX_KEY] = CallsChannelLifecycle()
+    register_note_realtime_adapter(search_indexer)
+    logger.info("Worker: Search engine initialized")
 
     try:
         await init_queue(queue_name)
@@ -151,12 +178,27 @@ async def _on_shutdown_shared(ctx: dict[str, Any]) -> None:
     except Exception as exc:
         logger.warning(f"Failed to close DEK invalidation subscriber: {exc}")
 
+    storage: ObjectStorage | None = ctx.pop(OBJECT_STORAGE_CTX_KEY, None)
+    if storage is not None:
+        try:
+            await storage.shutdown()
+        except Exception as exc:
+            logger.warning(f"Failed to close object storage during shutdown: {exc}")
+
+    ctx.pop(SEARCH_INDEXER_CTX_KEY, None)
+    ctx.pop(CALL_LIFECYCLE_CTX_KEY, None)
+    ctx.pop(SESSION_FACTORY_CTX_KEY, None)
+    search: WorkspaceSearch | None = ctx.pop(WORKSPACE_SEARCH_CTX_KEY, None)
+    if search is not None:
+        try:
+            await search.shutdown()
+        except Exception as exc:
+            logger.warning(f"Failed to close search engine during shutdown: {exc}")
+
     for name, coro in [
         ("ops_client", close_ops_client()),
         ("queue", close_queue(queue_name)),
         ("pubsub", close_pubsub()),
-        ("meilisearch", close_meilisearch()),
-        ("s3", close_s3()),
         ("db", close_db()),
     ]:
         try:
@@ -182,9 +224,9 @@ async def core_on_startup(ctx: dict[str, Any]) -> None:
     # Cron alone would leave the window between a boot and 01:07 unprovisioned.
     await provision_audit_partitions(ctx)
 
-    from uniffy.domains.notifications.delivery import DELIVERY_ADAPTERS
-
-    for name, adapter in DELIVERY_ADAPTERS.items():
+    delivery_adapters = build_delivery_adapters(open_session)
+    ctx[DELIVERY_ADAPTERS_CTX_KEY] = delivery_adapters
+    for name, adapter in delivery_adapters.items():
         try:
             await adapter.startup()
         except Exception as exc:
@@ -200,9 +242,8 @@ async def core_on_startup(ctx: dict[str, Any]) -> None:
 async def core_on_shutdown(ctx: dict[str, Any]) -> None:
     WORKER_READY.labels(queue=QueueName.CORE).set(0)
 
-    from uniffy.domains.notifications.delivery import DELIVERY_ADAPTERS
-
-    for name, adapter in DELIVERY_ADAPTERS.items():
+    delivery_adapters = ctx.pop(DELIVERY_ADAPTERS_CTX_KEY, {})
+    for name, adapter in delivery_adapters.items():
         try:
             await adapter.shutdown()
         except Exception as exc:

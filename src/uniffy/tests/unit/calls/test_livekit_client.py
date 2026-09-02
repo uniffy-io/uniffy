@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from uniffy.domains.calls.config import LiveKitConfig
-from uniffy.domains.calls.livekit_client import (
+from uniffy.domains.calls.livekit import (
     BREAKER_FAILURE_THRESHOLD,
     LiveKitAdminClient,
     LiveKitApiError,
