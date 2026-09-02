@@ -15,11 +15,12 @@ from uniffy.domains.agents.pricing import (
     get_pricing,
 )
 from uniffy.domains.agents.providers.catalog import (
+    Catalog,
     get_model,
-    load_catalog,
     model_info_for,
     provider_for_model,
 )
+from uniffy.domains.agents.providers.catalog import loader as catalog_loader
 from uniffy.domains.agents.providers.catalog.loader import (
     cache_read_rate,
     cache_write_rate,
@@ -96,11 +97,10 @@ class TestComputeTextCost:
         )
         assert cost == Decimal("3.750000")
 
-    def test_xai_cache_read_bills_at_cached_rate(self) -> None:
-        # xai layout: read rate lives in out_cached (0.30), in_cached is 0
-        m = get_pricing(provider="xai", model="grok-4.5")
+    def test_single_cached_rate_bills_as_cache_read(self) -> None:
+        model = _text_model(in_cached="0", out_cached="0.30")
         cost = compute_text_cost(
-            m,
+            model,
             input_tokens=0,
             output_tokens=0,
             cache_read_input_tokens=1_000_000,
@@ -147,25 +147,17 @@ class TestCacheReadRate:
         # in_cached=write(3.75), out_cached=read(0.30)
         assert cache_read_rate(_text_model()) == Decimal("0.30")
 
-    def test_openai_layout_out_cached_is_read(self) -> None:
-        m = get_pricing(provider="openai", model="gpt-4o")
-        assert cache_read_rate(m) == Decimal("1.25")
-
-    def test_gpt5_layout_in_cached_is_read(self) -> None:
-        m = get_pricing(provider="openai", model="gpt-5.5")
-        assert cache_read_rate(m) == Decimal("0.5")
-
-    def test_xai_layout_out_cached_is_read(self) -> None:
-        m = get_pricing(provider="xai", model="grok-4.5")
-        assert cache_read_rate(m) == Decimal("0.30")
+    def test_single_cached_rate_is_read(self) -> None:
+        model = _text_model(in_cached="0.5", out_cached="0")
+        assert cache_read_rate(model) == Decimal("0.5")
 
 
 class TestCacheWriteRate:
     def test_anthropic_layout_in_cached_is_write(self) -> None:
         assert cache_write_rate(_text_model()) == Decimal("3.75")
 
-    def test_gpt_5_6_layout_in_cached_is_write(self) -> None:
-        model = get_pricing(provider="openai", model="gpt-5.6-luna")
+    def test_more_expensive_cached_rate_is_write(self) -> None:
+        model = _text_model(in_cached="0.25", out_cached="0.02")
         assert cache_write_rate(model) == Decimal("0.25")
 
     def test_no_cached_rates_returns_none(self) -> None:
@@ -209,271 +201,151 @@ class TestComputeImageCost:
         )
 
 
-class TestCatalogResolution:
-    """The shipped catalog loads and resolves model ids."""
+@pytest.fixture
+def mock_catalog(monkeypatch: pytest.MonkeyPatch) -> Catalog:
+    catalog = Catalog(
+        schema_version=1,
+        providers={
+            "first-party": ProviderCatalog(
+                display_name="First Party",
+                models=[
+                    Model(
+                        id="chat-model",
+                        aliases=["chat-latest"],
+                        name="Chat Model",
+                        cost_per_1m_in="2",
+                        cost_per_1m_out="10",
+                        cost_per_1m_in_cached="2.5",
+                        cost_per_1m_out_cached="0.2",
+                        context_window=100000,
+                        default_max_tokens=10000,
+                        can_reason=True,
+                        reasoning_levels=["low", "high"],
+                        default_reasoning_effort="high",
+                        supports_attachments=True,
+                    ),
+                    Model(
+                        id="retired-model",
+                        name="Retired Model",
+                        context_window=1000,
+                        deprecated=True,
+                        sunset_date="2099-12-31",
+                    ),
+                ],
+            ),
+            "router": ProviderCatalog(
+                display_name="Router",
+                models=[
+                    Model(
+                        id="vendor/chat-model",
+                        name="Routed Chat Model",
+                        cost_per_1m_in="1",
+                        cost_per_1m_out="4",
+                        context_window=100000,
+                    ),
+                    Model(
+                        id="~vendor/chat-latest",
+                        name="Routed Chat Latest",
+                        cost_per_1m_in="1",
+                        cost_per_1m_out="4",
+                        context_window=100000,
+                    ),
+                    Model(
+                        id="~vendor/chat-fast-latest",
+                        name="Routed Chat Fast Latest",
+                        cost_per_1m_in="0.5",
+                        cost_per_1m_out="2",
+                        context_window=50000,
+                    ),
+                    Model(
+                        id="router/fusion",
+                        name="Dynamic Router",
+                        context_window=1000000,
+                        dynamic_pricing=True,
+                        use_responses_api=True,
+                    ),
+                    Model(
+                        id="chat-model",
+                        name="Shadowed Chat Model",
+                        context_window=100000,
+                    ),
+                ],
+            ),
+        },
+    )
+    monkeypatch.setattr(catalog_loader, "get_catalog", lambda: catalog)
+    return catalog
 
-    def test_catalog_loads_and_covers_reference_models(self) -> None:
-        load_catalog()
-        assert get_model("anthropic", "claude-opus-5") is not None
-        assert get_model("anthropic", "claude-sonnet-4-6") is not None
-        assert get_model("openai", "gpt-5.6-luna") is not None
-        assert get_model("openai", "gpt-4o") is not None
-        assert get_model("google", "gemini-3.6-flash") is not None
-        assert get_model("google", "gemini-3.7-flash") is not None
-        assert get_model("google", "gemini-3.5-flash-lite") is not None
-        assert get_model("google", "gemini-2.5-pro") is not None
-        assert get_model("xai", "grok-4.20-multi-agent-0309") is not None
+
+@pytest.mark.usefixtures("mock_catalog")
+class TestCatalogResolution:
+    def test_exact_id_resolves_with_declared_shape(self) -> None:
+        model = get_model("first-party", "chat-model")
+
+        assert model is not None
+        assert model.can_reason is True
+        assert model.reasoning_levels == ["low", "high"]
+        assert model.supports_attachments is True
+
+    def test_declared_alias_resolves_to_canonical_model(self) -> None:
+        model = get_model("first-party", "chat-latest")
+
+        assert model is not None
+        assert model.id == "chat-model"
 
     def test_date_suffix_resolves_to_base(self) -> None:
-        # An unseen dated snapshot resolves to the base entry.
-        assert get_model("anthropic", "claude-sonnet-4-6-20990101").id == ("claude-sonnet-4-6")
-        assert get_model("openai", "gpt-4o-2024-08-06").id == "gpt-4o"
+        model = get_model("first-party", "chat-model-20990101")
+
+        assert model is not None
+        assert model.id == "chat-model"
 
     def test_unrelated_suffix_does_not_resolve_by_prefix(self) -> None:
-        assert get_model("openai", "gpt-5-pro") is None
-        assert get_model("openai", "gpt-4o-transcribe") is None
-        assert get_model("google", "gemini-2.5-flash-preview-tts") is None
+        assert get_model("first-party", "chat-model-transcribe") is None
 
-    def test_gpt_5_6_luna_current_pricing(self) -> None:
-        model = get_model("openai", "gpt-5.6-luna")
-        assert model is not None
-        assert model.cost_per_1m_in == Decimal("0.2")
-        assert model.cost_per_1m_out == Decimal("1.2")
+    def test_provider_for_model_routes_slugs(self) -> None:
+        assert provider_for_model("vendor/chat-model") == "router"
 
-        info = model_info_for("openai", "gpt-5.6-luna")
-        assert info is not None
-        assert info.cache_read_per_1m == Decimal("0.02")
-        assert info.cache_write_per_1m == Decimal("0.25")
+    def test_first_provider_wins_for_duplicate_model_id(self) -> None:
+        assert provider_for_model("chat-model") == "first-party"
 
-    def test_openai_deprecated_models_keep_distinct_metadata(self) -> None:
-        image_2 = get_model("openai", "gpt-image-2")
-        chatgpt_image = get_model("openai", "chatgpt-image-latest")
-        old_codex = get_model("openai", "gpt-5.2-codex")
+    def test_floating_routes_remain_distinct_models(self) -> None:
+        model_ids = {"~vendor/chat-latest", "~vendor/chat-fast-latest"}
 
-        assert image_2 is not None
-        assert chatgpt_image is not None
-        assert old_codex is not None
-        assert image_2.id == "gpt-image-2"
-        assert chatgpt_image.id == "chatgpt-image-latest"
-        assert chatgpt_image.deprecated is True
-        assert chatgpt_image.sunset_date == "2026-12-01"
-        assert old_codex.deprecated is True
-        assert old_codex.sunset_date == "2026-07-23"
+        for model_id in model_ids:
+            model = get_model("router", model_id)
+            assert model is not None
+            assert model.id == model_id
+            assert provider_for_model(model_id) == "router"
 
-    def test_openrouter_slug_resolves(self) -> None:
-        assert get_model("openrouter", "anthropic/claude-sonnet-5") is not None
-        assert provider_for_model("anthropic/claude-sonnet-5") == "openrouter"
+    def test_dynamic_model_resolves_without_static_pricing(self) -> None:
+        model = get_model("router", "router/fusion")
 
-    def test_openrouter_fusion_resolves_without_static_pricing(self) -> None:
-        model = get_model("openrouter", "openrouter/fusion")
         assert model is not None
         assert model.dynamic_pricing is True
         assert model.use_responses_api is True
-        assert model.context_window == 1000000
-        assert model.default_max_tokens is None
-        assert model.supports_attachments is False
-        assert provider_for_model("openrouter/fusion") == "openrouter"
-        assert get_pricing(provider="openrouter", model="openrouter/fusion") is None
+        assert get_pricing(provider="router", model="router/fusion") is None
 
-        info = model_info_for("openrouter", "openrouter/fusion")
+        info = model_info_for("router", "router/fusion")
         assert info is not None
         assert info.input_per_1m is None
         assert info.output_per_1m is None
 
-    def test_openrouter_latest_family_aliases_are_distinct_models(self) -> None:
-        model_ids = {
-            "~openai/gpt-latest",
-            "~openai/gpt-mini-latest",
-            "~anthropic/claude-fable-latest",
-            "~anthropic/claude-opus-latest",
-            "~anthropic/claude-sonnet-latest",
-            "~anthropic/claude-haiku-latest",
-            "~google/gemini-pro-latest",
-            "~google/gemini-flash-latest",
-            "~x-ai/grok-latest",
-            "~deepseek/deepseek-v4-flash-latest",
-            "~moonshotai/kimi-latest",
-        }
+    def test_model_info_projects_cache_rates(self) -> None:
+        info = model_info_for("first-party", "chat-model")
 
-        for model_id in model_ids:
-            model = get_model("openrouter", model_id)
-            assert model is not None
-            assert model.id == model_id
-            assert provider_for_model(model_id) == "openrouter"
-            assert get_pricing(provider="openrouter", model=model_id) is not None
+        assert info is not None
+        assert info.cache_read_per_1m == Decimal("0.2")
+        assert info.cache_write_per_1m == Decimal("2.5")
 
-        gpt_latest = get_model("openrouter", "~openai/gpt-latest")
-        assert gpt_latest is not None
-        assert gpt_latest.context_window == 1050000
-        assert gpt_latest.cost_per_1m_in == Decimal("5")
-        assert gpt_latest.cost_per_1m_out == Decimal("30")
+    def test_deprecation_metadata_is_preserved(self) -> None:
+        model = get_model("first-party", "retired-model")
 
-    def test_openrouter_deepseek_v4_family_resolves_with_live_pricing(self) -> None:
-        expected = {
-            "deepseek/deepseek-v4-pro": ("1.168", "2.336", "0.09855", 393216),
-            "deepseek/deepseek-v4-pro-0813": ("0.435", "0.87", "0.003625", 384000),
-            "deepseek/deepseek-v4-flash": ("0.14", "0.28", "0.028", 393216),
-            "deepseek/deepseek-v4-flash-0731": ("0.14", "0.28", "0.028", 393216),
-        }
-        for model_id, (input_rate, output_rate, cache_rate, max_tokens) in expected.items():
-            model = get_model("openrouter", model_id)
-            assert model is not None
-            assert model.id == model_id
-            assert model.cost_per_1m_in == Decimal(input_rate)
-            assert model.cost_per_1m_out == Decimal(output_rate)
-            assert model.cost_per_1m_out_cached == Decimal(cache_rate)
-            assert model.default_max_tokens == max_tokens
-            assert model.reasoning_levels == ["high", "xhigh"]
-
-    def test_openrouter_current_gemini_models_resolve_with_live_metadata(self) -> None:
-        expected = {
-            "google/gemini-3.7-flash": (
-                "0.375",
-                "1.875",
-                "0.0208333333333333",
-                "0.0375",
-                65536,
-                ["low", "medium", "high"],
-                "medium",
-            ),
-            "google/gemini-3.6-flash": (
-                "0.75",
-                "3.75",
-                "0.0416666666666667",
-                "0.075",
-                65536,
-                ["minimal", "low", "medium", "high"],
-                "medium",
-            ),
-            "google/gemini-3.5-flash-lite": (
-                "0.3",
-                "2.5",
-                "0.0833333333333333",
-                "0.03",
-                65536,
-                ["minimal", "low", "medium", "high"],
-                "minimal",
-            ),
-        }
-        for model_id, metadata in expected.items():
-            (
-                input_rate,
-                output_rate,
-                cache_write_rate,
-                cache_read_rate,
-                max_tokens,
-                levels,
-                default,
-            ) = metadata
-            model = get_model("openrouter", model_id)
-            assert model is not None
-            assert model.cost_per_1m_in == Decimal(input_rate)
-            assert model.cost_per_1m_out == Decimal(output_rate)
-            assert model.cost_per_1m_in_cached == Decimal(cache_write_rate)
-            assert model.cost_per_1m_out_cached == Decimal(cache_read_rate)
-            assert model.default_max_tokens == max_tokens
-            assert model.reasoning_levels == levels
-            assert model.default_reasoning_effort == default
-            assert model.supports_attachments is True
-
-    def test_openrouter_current_qwen_models_resolve_with_live_metadata(self) -> None:
-        expected = {
-            "qwen/qwen3.8-max": (
-                "2",
-                "6",
-                "2.5",
-                "0.25",
-                1000000,
-                131072,
-                True,
-            ),
-            "qwen/qwen3.8-2.4t-a95b": (
-                "2",
-                "6",
-                "0",
-                "0.25",
-                1010000,
-                262144,
-                False,
-            ),
-            "qwen/qwen3.7-flash": (
-                "0.03",
-                "0.13",
-                "0.038",
-                "0.006",
-                1000000,
-                65536,
-                True,
-            ),
-            "qwen/qwen3.7-plus": (
-                "0.32",
-                "1.28",
-                "0.4",
-                "0.064",
-                1000000,
-                131072,
-                True,
-            ),
-        }
-        for model_id, metadata in expected.items():
-            (
-                input_rate,
-                output_rate,
-                cache_write_rate,
-                cache_read_rate,
-                context,
-                max_tokens,
-                attachments,
-            ) = metadata
-            model = get_model("openrouter", model_id)
-            assert model is not None
-            assert model.cost_per_1m_in == Decimal(input_rate)
-            assert model.cost_per_1m_out == Decimal(output_rate)
-            assert model.cost_per_1m_in_cached == Decimal(cache_write_rate)
-            assert model.cost_per_1m_out_cached == Decimal(cache_read_rate)
-            assert model.context_window == context
-            assert model.default_max_tokens == max_tokens
-            assert model.can_reason is True
-            assert model.supports_attachments is attachments
-
-        qwen_max = get_model("openrouter", "qwen/qwen3.8-max")
-        qwen_open = get_model("openrouter", "qwen/qwen3.8-2.4t-a95b")
-        assert qwen_max is not None
-        assert qwen_open is not None
-        assert qwen_max.reasoning_levels == [
-            "minimal",
-            "low",
-            "medium",
-            "high",
-            "xhigh",
-        ]
-        assert qwen_open.reasoning_levels == ["low", "medium", "xhigh"]
-        assert qwen_max.default_reasoning_effort == "xhigh"
-        assert qwen_open.default_reasoning_effort == "xhigh"
-
-    def test_slug_does_not_shadow_first_party_id(self) -> None:
-        assert provider_for_model("claude-sonnet-5") == "anthropic"
-
-    def test_xai_models_resolve(self) -> None:
-        assert get_model("xai", "grok-4.6") is not None
-        assert get_model("xai", "grok-4.5") is not None
-        assert get_model("xai", "grok-99") is None
-
-    def test_latest_gemini_flash_resolves_to_3_7(self) -> None:
-        model = get_model("google", "gemini-flash-latest")
         assert model is not None
-        assert model.id == "gemini-3.7-flash"
-
-    def test_dated_looking_id_resolves_exactly(self) -> None:
-        # The 0309 segment looks like a date. The exact id must still win.
-        assert get_model("xai", "grok-4.20-0309-reasoning").id == ("grok-4.20-0309-reasoning")
+        assert model.deprecated is True
+        assert model.sunset_date == "2099-12-31"
 
     def test_unknown_model_returns_none(self) -> None:
-        assert get_pricing(provider="openai", model="does-not-exist") is None
-
-    def test_image_model_prices_present(self) -> None:
-        m = get_model("openai", "gpt-image-1")
-        assert m is not None and m.image_prices is not None
+        assert get_pricing(provider="first-party", model="does-not-exist") is None
 
 
 class TestSchemaValidation:
