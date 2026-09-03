@@ -117,6 +117,8 @@ export default defineConfig({
         'src/features/calls/components/ZoomableStage.tsx',
         'src/features/chat/components/SwipeToReply.tsx',
         'src/features/files/components/FullscreenViewer.tsx',
+        'src/features/library/components/LibraryCard.tsx',
+        'src/features/library/components/RibbonRail.tsx',
         'src/features/notes/components/NoteDrag.tsx',
         'src/features/notes/screens/NotesGraphScreen.tsx',
         'src/features/projects/components/ProjectGraphView.tsx',

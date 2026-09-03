@@ -1,6 +1,14 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  keepPreviousData,
+  useInfiniteQuery,
+  useQuery,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
+import type { ContentType } from "@uniffy/proto/common/v1/common_pb";
 import { useAuth } from "@core/providers/AuthContext";
 import { tagsApi } from "@features/tags/tagsApi";
+import { searchApi } from "@features/search/searchApi";
 import {
   tagToPlain,
   taggedItemToPlain,
@@ -9,16 +17,23 @@ import {
 } from "@features/tags/tagSerializer";
 import { TagSort } from "@uniffy/proto/tags/v1/tags_pb";
 
-export function useTags(query: string) {
+const NO_TYPES: ContentType[] = [];
+
+/** Tags matching a search, narrowed to those carrying any of `contentTypes` (empty = all). */
+export function useTags(query: string, contentTypes: ContentType[] = NO_TYPES) {
   const { organizationId, isAuthenticated } = useAuth();
 
   return useQuery({
-    queryKey: ["tags", organizationId, query],
+    queryKey: ["tags", organizationId, query, contentTypes],
     enabled: !!organizationId && isAuthenticated,
+    // A filter change keeps the current list on screen until the narrowed one
+    // arrives, instead of dropping to a spinner and remounting every card.
+    placeholderData: keepPreviousData,
     queryFn: async (): Promise<SerializedTag[]> => {
       const res = await tagsApi.listTags({
         organizationId: organizationId!,
         query: query.trim(),
+        contentTypes,
         sort: TagSort.COUNT_DESC,
         pageSize: 200,
       });
@@ -27,20 +42,40 @@ export function useTags(query: string) {
   });
 }
 
-export function useTagContent(tagId: string | undefined) {
+interface TagContentPage {
+  items: SerializedTaggedItem[];
+  nextPageToken: string | null;
+}
+
+export function useTagContent(tagId: string | undefined, contentTypes: ContentType[] = NO_TYPES) {
   const { organizationId, isAuthenticated } = useAuth();
 
-  return useQuery({
-    queryKey: ["tag-content", organizationId, tagId],
+  return useInfiniteQuery({
+    queryKey: ["tag-content", organizationId, tagId, contentTypes],
     enabled: !!organizationId && !!tagId && isAuthenticated,
-    queryFn: async (): Promise<SerializedTaggedItem[]> => {
+    // A filter change keeps the current list on screen until the narrowed one
+    // arrives, instead of dropping to a spinner and remounting every card.
+    placeholderData: keepPreviousData,
+    initialPageParam: undefined as string | undefined,
+    queryFn: async ({ pageParam }): Promise<TagContentPage> => {
       const res = await tagsApi.listContentByTag({
         organizationId: organizationId!,
         tag: tagId!,
-        pageSize: 100,
+        contentTypes,
+        pageSize: 50,
+        pageToken: pageParam,
       });
-      return res.results.map(taggedItemToPlain);
+      const urns = res.results.map((item) => item.urn);
+      const resolved =
+        urns.length > 0
+          ? (await searchApi.resolveUrns({ organizationId: organizationId!, urns })).resolved
+          : {};
+      return {
+        items: res.results.map((item) => taggedItemToPlain(item, resolved[item.urn])),
+        nextPageToken: res.nextPageToken || null,
+      };
     },
+    getNextPageParam: (lastPage) => lastPage.nextPageToken ?? undefined,
   });
 }
 

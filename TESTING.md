@@ -406,6 +406,20 @@ organizer (A) and an attendee who is not the organizer (B).
 - [ ] Remove B's access entirely, then have B open a stale tab and try to edit: the write is
       rejected and the global error toast explains it.
 
+## Calendar: mobile period rail label
+
+Day view on the phone. The swing reproduced on iPhone-width screens with Wed 2 Sep 2026
+selected, where the centred rail sits on the Aug/Sep pill boundary.
+
+- [ ] Select a day within three days of a month boundary on either side: the month beside
+      the rail settles once and stays; it never alternates between two months.
+- [ ] Scrub the rail slowly across a month marker in both directions: the label changes only
+      once a few points of the new month's first pill are showing.
+- [ ] The label sits at the same distance from the screen edge as the view title above it,
+      with the divider hugging it, on every screen width.
+- [ ] Step onto a day whose leftmost pill is in another year: the label gains the year and the
+      pills stay where they are; the next tap on a pill re-centres it as usual.
+
 ## Calendar activity log
 
 Every event carries an activity log at the bottom of the detail modal: field edits, attendee
@@ -1036,9 +1050,7 @@ browsers; User B needs a private channel User A is initially a member of.
       app land on `/library/tags/{slug}`.
 - [ ] Notes and Files sidebars no longer show a Bookmarks section, Calendar quick access no longer
       shows a Bookmarked filter, yet all Save/Unsave actions on the content itself still work.
-- [ ] Mobile: the Bookmarks screen lists the same items with type filter chips and cursor load
-      more; a chat-message row opens its channel, a folder row opens that folder in Files, and
-      deleted/unavailable rows render the generic card with a working Remove.
+- [ ] Mobile: see "Library: mobile" below.
 
 ## Agents in threads
 
@@ -1156,6 +1168,97 @@ Agent DM channel, agents-in-chat enabled (`(both products)`).
       after reload (no live sync expected mid-session).
 - [ ] Mobile: the sheet lists models, saves a pick, tunes a parameter,
       and clears to default; the next run reflects each change.
+
+## Chat: mobile transcript with the keyboard up
+
+Fresh agent chat on the phone (empty transcript), keyboard open before the first send.
+
+- [ ] Open a new agent chat, tap the composer so the keyboard is up, send the first message:
+      the message row, the "Today" separator and the agent's thinking pill sit directly above
+      the composer, and the reply lands under them without dismissing the keyboard.
+- [ ] Close the keyboard, then reopen it: the rows stay pinned above the composer in both
+      states (nothing slides off the top of the screen).
+- [ ] Open a channel that already has messages with the keyboard closed, then focus the
+      composer: the newest rows stay above the composer, exactly as before.
+
+## Chat: mobile channel list density
+
+Chat tab on the phone, All view, with at least one unread channel, one DM and one agent
+chat.
+
+- [ ] Every channel, agent chat and DM is a single line: glyph or 24dp avatar, name, and
+      nothing else at rest; a screen at the default font size shows a dozen rows.
+- [ ] Unread rows read bold with a bright glyph and carry the count badge (red when the
+      count includes a mention); read rows are regular weight with a dim glyph.
+- [ ] A DM row shows the peer's avatar with the presence dot; a draft shows the pencil; a
+      live call shows the green pill and tapping it opens the pre-join, not the channel.
+- [ ] Sections are separated by a hairline rule, not the rows; folders under Agent Chats
+      still indent their chats. The Threads tab and Browse rows keep their two-line layout.
+- [ ] From another account, send three messages into a channel the phone has not opened, the
+      last one mentioning the phone's user: the badge climbs 1, 2, 3 live without waiting for a
+      poll, and turns red on the mention.
+- [ ] Open a channel and its details sheet: the line under the name reads
+      "Public channel · N members · Created <date>", the date gaining a year once it is not the
+      current one. DMs and agent chats show their own type label with the same suffix.
+
+## Home: mobile overview density
+
+Home tab on the phone with a few events this week (one already over today), five notes
+and four projects.
+
+- [ ] Each section is one rounded surface with hairline-separated rows, not a card per item;
+      at the default font size the first screen shows the greeting, five upcoming events
+      and four notes.
+- [ ] Upcoming lists only what is still ahead: this morning's finished event is gone, an
+      event in progress stays. Rows sort by start time.
+- [ ] The first event of each day carries the day stamp (weekday over the day number); later
+      events that day leave the column empty. Today's number sits in an accent circle. The
+      rule within a day starts at the text; the rule before a new day runs edge to edge.
+- [ ] An event row reads title over "start · duration · location", "All day" replacing the
+      time; cancelled titles are struck and tentative ones faded, as on the calendar. The day
+      stamp beside a faded event keeps full strength.
+- [ ] A note row shows its emoji or the note glyph, title over a one-line snippet, and the
+      age on the right. A project row is a single line: glyph in the project colour, name,
+      "done/total tasks". Unread chats, when any, match the project row with the count badge.
+- [ ] Raise the system text size: rows grow with the text and nothing clips.
+
+## Library: mobile
+
+Home tab on the phone. The header button beside notifications is the Library (the same
+books glyph as the web user menu); the old bookmark and tag addresses redirect into it.
+
+- [ ] The Library opens on Bookmarks: a rail of notched ribbons hangs from the header and drops
+      in with a stagger on first open, evenly spaced, each in its own hue from violet (Notes)
+      towards pink (Rooms); "All" is the accent. Under the rail, the Bookmarks and Tags tabs
+      carry the web sidebar's bookmark and tag glyphs, filled on the active tab.
+- [ ] Tapping a ribbon grows it to full height and fills it solid; tapping another adds it (the
+      set is multi-select); tapping "All" clears. The list narrows to the chosen types.
+- [ ] Bookmarks group under "TODAY", "YESTERDAY", "PAST WEEK", "PAST MONTH", "EARLIER" rules with
+      counts, newest first; each card shows the tinted type box, title, "type · age" under it,
+      and a one-line snippet with mention markup stripped. The filled bookmark at the corner
+      unsaves; a deleted item shows the generic card with Remove in the corner.
+- [ ] A saved message card reads "sender in #channel" under its title and opens the channel; a
+      folder card opens that folder in Files. Scrolling to the end loads the next page.
+- [ ] Tags tab: search, then the chip cloud in each tag's colour with its count under an
+      "ALL TAGS" rule; the ribbons narrow the cloud to tags carrying those types. "+" in the
+      header creates a tag; long press on a chip offers Edit and Delete.
+- [ ] Tapping a chip pushes the tag screen: "#name" with the item count, the ribbons, a summary
+      line (chip, name, count, description), then cards grouped by type largest first with the
+      title, snippet and age resolved live, about eight to a screen; Back returns to the cloud.
+- [ ] With reduce motion on, ribbons and cards appear in place with no drop or rise.
+- [ ] Light theme: ribbons, chips and cards stay legible.
+
+## Shell: iOS stack transitions on the dark theme
+
+iPhone with the app on the dark theme; the phone's own appearance set to light for the
+second step.
+
+- [ ] Open a channel, tap the composer so the keyboard is up, then tap back: no light band
+      appears where the keyboard was while the screens slide. Same result going back with a
+      swipe from the left edge, and with the keyboard closed.
+- [ ] Set the phone to light appearance with the app still on Dark in Appearance: still no
+      light band. Switch the app to Light: transitions stay uniformly light.
+- [ ] Android: the same flows look exactly as before.
 
 ## Agents: memory scopes
 

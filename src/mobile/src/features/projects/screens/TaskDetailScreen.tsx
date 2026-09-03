@@ -7,6 +7,7 @@ import {
   StyleSheet,
   Platform,
   ActivityIndicator,
+  useWindowDimensions,
 } from "react-native";
 import {
   DotsThree,
@@ -19,7 +20,7 @@ import {
 } from "phosphor-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
-import { DomainHeader } from "@shared/components/DomainHeader";
+import { DomainHeader, domainHeaderHeight } from "@shared/components/DomainHeader";
 import { ScreenError } from "@shared/components/ScreenError";
 import { MarkdownRenderer } from "@shared/components/MarkdownRenderer";
 import { CommentButton } from "@shared/comments/CommentsSheet";
@@ -132,6 +133,8 @@ export function TaskDetailScreen() {
   const [assigneesOpen, setAssigneesOpen] = useState(false);
   const [sheet, setSheet] = useState<DetailSheet>(null);
 
+  const { fontScale } = useWindowDimensions();
+  const headerHeight = domainHeaderHeight(insets.top, fontScale);
   const bottomPad =
     Platform.OS === "web" ? BOTTOM_NAV_HEIGHT + 34 : BOTTOM_NAV_HEIGHT + insets.bottom;
 
@@ -243,36 +246,46 @@ export function TaskDetailScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: T.pageBg }]}>
-      <DomainHeader
-        title={project?.name ?? "Projects"}
-        color={projectColor}
-        icon="projects"
-        rightActions={
-          <>
-            <CommentButton contentType={ContentType.TASK} contentId={task.id} color={T.accent} />
-            <ShareButton contentType={ContentType.TASK} contentId={task.id} color={T.accent} />
-            <TouchableOpacity
-              onPress={() => toggleWatcher.mutate(task.id)}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              {isWatching ? (
-                <Eye size={20} color={T.accent} weight="fill" />
-              ) : (
-                <EyeSlash size={20} color={T.text} weight="regular" />
-              )}
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => setSheetOpen(true)}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <DotsThree size={22} color={T.text} weight="bold" />
-            </TouchableOpacity>
-          </>
-        }
-      />
+      {/* The header floats over the page so the task scrolls under its glass;
+          the content starts beneath it by the header's computed height. */}
+      <View style={styles.headerOverlay}>
+        <DomainHeader
+          title={project?.name ?? "Projects"}
+          color={projectColor}
+          icon="projects"
+          translucent
+          rightActions={
+            <>
+              <CommentButton contentType={ContentType.TASK} contentId={task.id} color={T.accent} />
+              <ShareButton contentType={ContentType.TASK} contentId={task.id} color={T.accent} />
+              <TouchableOpacity
+                onPress={() => toggleWatcher.mutate(task.id)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                {isWatching ? (
+                  <Eye size={20} color={T.accent} weight="fill" />
+                ) : (
+                  <EyeSlash size={20} color={T.text} weight="regular" />
+                )}
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => setSheetOpen(true)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <DotsThree size={22} color={T.text} weight="bold" />
+              </TouchableOpacity>
+            </>
+          }
+        />
+      </View>
 
       <ScrollView
-        contentContainerStyle={{ padding: 20, paddingBottom: bottomPad, gap: 20 }}
+        contentContainerStyle={{
+          padding: 20,
+          paddingTop: headerHeight + 20,
+          paddingBottom: bottomPad,
+          gap: 20,
+        }}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.badges}>
@@ -790,6 +803,7 @@ export function TaskDetailScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  headerOverlay: { position: "absolute", top: 0, left: 0, right: 0, zIndex: 10 },
   loadingContainer: { alignItems: "center", justifyContent: "center" },
   badges: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
   badge: {

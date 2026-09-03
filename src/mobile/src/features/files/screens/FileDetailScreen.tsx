@@ -9,6 +9,7 @@ import {
   Alert,
   TextInput,
   Platform,
+  useWindowDimensions,
 } from "react-native";
 import * as Clipboard from "expo-clipboard";
 import {
@@ -23,7 +24,7 @@ import {
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BottomSheet } from "@shared/components/BottomSheet";
-import { DomainHeader } from "@shared/components/DomainHeader";
+import { DomainHeader, domainHeaderHeight } from "@shared/components/DomainHeader";
 import { ActionSheet } from "@shared/components/ActionSheet";
 import { SheetHeader } from "@shared/components/SheetHeader";
 import { CommentButton } from "@shared/comments/CommentsSheet";
@@ -66,6 +67,8 @@ export function FileDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const T = useTheme();
   const insets = useSafeAreaInsets();
+  const { fontScale } = useWindowDimensions();
+  const headerHeight = domainHeaderHeight(insets.top, fontScale);
   const bottomPad =
     Platform.OS === "web" ? BOTTOM_NAV_HEIGHT + 34 : BOTTOM_NAV_HEIGHT + insets.bottom;
   const auth = useAuth();
@@ -155,36 +158,44 @@ export function FileDetailScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: T.pageBg }]}>
-      <DomainHeader
-        title="Files"
-        color={T.accent}
-        icon="files"
-        rightActions={
-          <>
-            <TouchableOpacity
-              onPress={() => toggleBookmark.mutate(file.urn)}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <BookmarkSimple
-                size={20}
-                color={isBookmarked ? T.accent : T.text}
-                weight={isBookmarked ? "fill" : "regular"}
-              />
-            </TouchableOpacity>
-            <CommentButton contentType={ContentType.FILE} contentId={file.id} color={T.accent} />
-            <ShareButton contentType={ContentType.FILE} contentId={file.id} color={T.accent} />
-            <TouchableOpacity
-              onPress={() => setSheetOpen(true)}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <DotsThree size={22} color={T.text} weight="bold" />
-            </TouchableOpacity>
-          </>
-        }
-      />
+      {/* The header floats over the page so the file scrolls under its glass;
+          the content starts beneath it by the header's computed height. */}
+      <View style={styles.headerOverlay}>
+        <DomainHeader
+          title="Files"
+          color={T.accent}
+          icon="files"
+          translucent
+          rightActions={
+            <>
+              <TouchableOpacity
+                onPress={() => toggleBookmark.mutate(file.urn)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <BookmarkSimple
+                  size={20}
+                  color={isBookmarked ? T.accent : T.text}
+                  weight={isBookmarked ? "fill" : "regular"}
+                />
+              </TouchableOpacity>
+              <CommentButton contentType={ContentType.FILE} contentId={file.id} color={T.accent} />
+              <ShareButton contentType={ContentType.FILE} contentId={file.id} color={T.accent} />
+              <TouchableOpacity
+                onPress={() => setSheetOpen(true)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <DotsThree size={22} color={T.text} weight="bold" />
+              </TouchableOpacity>
+            </>
+          }
+        />
+      </View>
 
       <ScrollView
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomPad }]}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingTop: headerHeight + 20, paddingBottom: bottomPad },
+        ]}
         showsVerticalScrollIndicator={false}
       >
         <View style={[styles.previewCard, { backgroundColor: T.surface, borderColor: T.border }]}>
@@ -515,6 +526,7 @@ function VersionsModal({
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  headerOverlay: { position: "absolute", top: 0, left: 0, right: 0, zIndex: 10 },
   scrollContent: { padding: 20, gap: 20 },
   loadingWrap: { flex: 1, alignItems: "center", justifyContent: "center", paddingTop: 60 },
   previewCard: {

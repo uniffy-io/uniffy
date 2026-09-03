@@ -41,6 +41,49 @@ export function idFromUrn(urn: string): string {
   return parts[parts.length - 1] ?? urn;
 }
 
+/** The type token of a content URN, `urn:uniffy:content:{TYPE}:{id}`; the web's UrnType vocabulary. */
+export type UrnType =
+  | "NOTE"
+  | "TAG"
+  | "FOLDER"
+  | "FILE"
+  | "PROJECT"
+  | "TASK"
+  | "CALENDAR_EVENT"
+  | "ROOM"
+  | "CHAT"
+  | "CHAT_MESSAGE"
+  | "AGENT_FOLDER"
+  | "AGENT_CHAT"
+  | "AGENT_CRON_TASK"
+  | "AGENT"
+  | "TEAM"
+  | "USER";
+
+const URN_TYPES: ReadonlySet<string> = new Set<UrnType>([
+  "NOTE",
+  "TAG",
+  "FOLDER",
+  "FILE",
+  "PROJECT",
+  "TASK",
+  "CALENDAR_EVENT",
+  "ROOM",
+  "CHAT",
+  "CHAT_MESSAGE",
+  "AGENT_FOLDER",
+  "AGENT_CHAT",
+  "AGENT_CRON_TASK",
+  "AGENT",
+  "TEAM",
+  "USER",
+]);
+
+export function urnTypeOf(urn: string): UrnType | null {
+  const token = urn.split(":")[3];
+  return token && URN_TYPES.has(token) ? (token as UrnType) : null;
+}
+
 export function contentTypeLabel(type: SearchResultType | undefined): string {
   return TYPE_LABELS[type ?? SearchResultType.UNSPECIFIED] ?? "Item";
 }
@@ -80,7 +123,7 @@ export function nativeRouteFor(
     case SearchResultType.TASK:
       return `/projects/task/${id}`;
     case SearchResultType.TAG:
-      return `/tags/${id}`;
+      return `/library/tags/${id}`;
     default:
       return null;
   }

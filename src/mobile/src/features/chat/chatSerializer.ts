@@ -67,6 +67,7 @@ export interface SerializedChannel {
   messageCount: number;
   memberCount: number;
   lastMessageAtSeconds: number;
+  createdAtIso: string;
   dmMemberIds: string[];
   currentUserRole: ChannelRole | null;
   isMember: boolean;
@@ -208,6 +209,7 @@ export function channelToPlain(proto: ProtoChatChannel): SerializedChannel {
     messageCount: proto.messageCount,
     memberCount: proto.memberCount,
     lastMessageAtSeconds: tsToSeconds(proto.lastMessageAt) || tsToSeconds(proto.lastRootMessageAt),
+    createdAtIso: tsToIso(proto.createdAt),
     dmMemberIds: [...proto.dmMemberIds],
     currentUserRole:
       proto.currentUserRole !== undefined

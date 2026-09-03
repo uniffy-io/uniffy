@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   Linking,
   Alert,
+  useWindowDimensions,
 } from "react-native";
 import * as Clipboard from "expo-clipboard";
 import {
@@ -25,7 +26,7 @@ import {
 } from "phosphor-react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { DomainHeader } from "@shared/components/DomainHeader";
+import { DomainHeader, domainHeaderHeight } from "@shared/components/DomainHeader";
 import { MarkdownRenderer } from "@shared/components/MarkdownRenderer";
 import { CommentButton } from "@shared/comments/CommentsSheet";
 import { ShareButton } from "@shared/permissions/ShareSheet";
@@ -65,6 +66,8 @@ export function EventDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const T = useTheme();
   const insets = useSafeAreaInsets();
+  const { fontScale } = useWindowDimensions();
+  const headerHeight = domainHeaderHeight(insets.top, fontScale);
   const bottomPad =
     Platform.OS === "web" ? BOTTOM_NAV_HEIGHT + 34 : BOTTOM_NAV_HEIGHT + insets.bottom;
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -244,34 +247,42 @@ export function EventDetailScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: T.pageBg }]}>
-      <DomainHeader
-        title="Calendar"
-        color={T.accent}
-        icon="calendar"
-        rightActions={
-          <>
-            <CommentButton
-              contentType={ContentType.CALENDAR_EVENT}
-              contentId={event.id}
-              color={T.accent}
-            />
-            <ShareButton
-              contentType={ContentType.CALENDAR_EVENT}
-              contentId={event.id}
-              color={T.accent}
-            />
-            <TouchableOpacity
-              onPress={() => setSheetOpen(true)}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <DotsThree size={22} color={T.text} weight="bold" />
-            </TouchableOpacity>
-          </>
-        }
-      />
+      {/* The header floats over the page so the event scrolls under its glass;
+          the content starts beneath it by the header's computed height. */}
+      <View style={styles.headerOverlay}>
+        <DomainHeader
+          title="Calendar"
+          color={T.accent}
+          icon="calendar"
+          translucent
+          rightActions={
+            <>
+              <CommentButton
+                contentType={ContentType.CALENDAR_EVENT}
+                contentId={event.id}
+                color={T.accent}
+              />
+              <ShareButton
+                contentType={ContentType.CALENDAR_EVENT}
+                contentId={event.id}
+                color={T.accent}
+              />
+              <TouchableOpacity
+                onPress={() => setSheetOpen(true)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <DotsThree size={22} color={T.text} weight="bold" />
+              </TouchableOpacity>
+            </>
+          }
+        />
+      </View>
 
       <ScrollView
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomPad }]}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingTop: headerHeight + 20, paddingBottom: bottomPad },
+        ]}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.titleSection}>
@@ -737,6 +748,7 @@ export function EventDetailScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  headerOverlay: { position: "absolute", top: 0, left: 0, right: 0, zIndex: 10 },
   scrollContent: { padding: 20, gap: 20 },
   loadingWrap: { flex: 1, alignItems: "center", justifyContent: "center", paddingTop: 60 },
   titleSection: { flexDirection: "row", gap: 12, alignItems: "flex-start" },

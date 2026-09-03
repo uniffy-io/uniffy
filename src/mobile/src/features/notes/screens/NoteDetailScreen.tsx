@@ -8,12 +8,13 @@ import {
   Platform,
   ActivityIndicator,
   Alert,
+  useWindowDimensions,
 } from "react-native";
 import * as Clipboard from "expo-clipboard";
 import { Star, DotsThree, CaretRight, Graph, NotePencil } from "phosphor-react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { DomainHeader } from "@shared/components/DomainHeader";
+import { DomainHeader, domainHeaderHeight } from "@shared/components/DomainHeader";
 import { CommentButton } from "@shared/comments/CommentsSheet";
 import { ShareSheet } from "@shared/permissions/ShareSheet";
 import { ContentType } from "@uniffy/proto/common/v1/common_pb";
@@ -49,6 +50,8 @@ export function NoteDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const T = useTheme();
   const insets = useSafeAreaInsets();
+  const { fontScale } = useWindowDimensions();
+  const headerHeight = domainHeaderHeight(insets.top, fontScale);
   const bottomPad =
     Platform.OS === "web" ? BOTTOM_NAV_HEIGHT + 34 : BOTTOM_NAV_HEIGHT + insets.bottom;
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -150,12 +153,14 @@ export function NoteDetailScreen() {
   const backlinks = backlinksQuery.data ?? [];
 
   // Heading offsets arrive from MarkdownRenderer relative to the body wrapper,
-  // so a jump adds the wrapper's own offset within the scroll content.
+  // so a jump adds the wrapper's own offset within the scroll content, then
+  // backs off by the floating header so the heading lands beneath it, not
+  // under it.
   const jumpToHeading = (headingIndex: number) => {
     const localY = headingOffsetsRef.current.get(headingIndex);
     if (localY === undefined) return;
     scrollRef.current?.scrollTo({
-      y: Math.max(0, bodyOffsetRef.current + localY - HEADING_JUMP_MARGIN),
+      y: Math.max(0, bodyOffsetRef.current + localY - headerHeight - HEADING_JUMP_MARGIN),
       animated: true,
     });
   };
@@ -171,39 +176,49 @@ export function NoteDetailScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: T.pageBg }]}>
-      <DomainHeader
-        title="Notes"
-        color={T.accent}
-        icon="notes"
-        rightActions={
-          <>
-            <RealtimePresence session={rt.session} status={rt.status} />
-            <CommentButton contentType={ContentType.NOTE} contentId={note.id} color={T.accent} />
-            <TouchableOpacity
-              onPress={() => toggleBookmark.mutate(noteUrn)}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <Star
-                key={isBookmarked ? "fill" : "duotone"}
-                size={19}
-                color={isBookmarked ? T.accent : T.textDim}
-                weight={isBookmarked ? "fill" : "duotone"}
-              />
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => setSheetOpen(true)}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <DotsThree size={22} color={T.text} weight="bold" />
-            </TouchableOpacity>
-          </>
-        }
-      />
+      {/* The header floats over the page so the note scrolls under its glass;
+          the content starts beneath it by the header's computed height. */}
+      <View style={styles.headerOverlay}>
+        <DomainHeader
+          title="Notes"
+          color={T.accent}
+          icon="notes"
+          translucent
+          rightActions={
+            <>
+              <RealtimePresence session={rt.session} status={rt.status} />
+              <CommentButton contentType={ContentType.NOTE} contentId={note.id} color={T.accent} />
+              <TouchableOpacity
+                onPress={() => toggleBookmark.mutate(noteUrn)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Star
+                  key={isBookmarked ? "fill" : "duotone"}
+                  size={19}
+                  color={isBookmarked ? T.accent : T.textDim}
+                  weight={isBookmarked ? "fill" : "duotone"}
+                />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => setSheetOpen(true)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <DotsThree size={22} color={T.text} weight="bold" />
+              </TouchableOpacity>
+            </>
+          }
+        />
+      </View>
 
       <ScrollView
         ref={scrollRef}
         style={{ flex: 1 }}
-        contentContainerStyle={{ padding: 20, paddingBottom: bottomPad, gap: 16 }}
+        contentContainerStyle={{
+          padding: 20,
+          paddingTop: headerHeight + 20,
+          paddingBottom: bottomPad,
+          gap: 16,
+        }}
         showsVerticalScrollIndicator={false}
       >
         {breadcrumb.length > 0 && (
@@ -477,6 +492,7 @@ function CanvasPlaceholder({ T }: { T: ReturnType<typeof useTheme> }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  headerOverlay: { position: "absolute", top: 0, left: 0, right: 0, zIndex: 10 },
   notFound: { flex: 1, alignItems: "center", justifyContent: "center" },
   canvasCard: {
     alignItems: "center",

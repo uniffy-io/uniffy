@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { confirmDestructive } from "@shared/lib/confirmDestructive";
+import { formatDateShort } from "@shared/lib/dateFormatting";
 import {
   View,
   Text,
@@ -205,6 +206,7 @@ export function ChannelDetailsSheet({
                     : "Direct message"}
               {" · "}
               {channel.memberCount} {channel.memberCount === 1 ? "member" : "members"}
+              {channel.createdAtIso ? ` · Created ${formatDateShort(channel.createdAtIso)}` : null}
             </Text>
           </View>
         </View>

@@ -258,6 +258,14 @@ export function ChatConversationScreen() {
   // across every mounted row - which is the stutter. Holding the resting height
   // and sliding instead costs a composite and no layout pass at all.
   const { height: keyboardOffset, progress: keyboardProgress } = useReanimatedKeyboardAnimation();
+  // The resting height is read off the screen root, not the transcript slot.
+  // The slot only exists once a message does, and in an empty channel the
+  // first one lands with the keyboard up: measured then, the slot is already
+  // keyboard-short, and the lift below subtracts the keyboard a second time,
+  // which parks every row above the top of the screen until the keyboard
+  // closes. The root is mounted from entry with the keyboard down, and at
+  // rest the slot fills it exactly - the header overlays it and the slot's
+  // negative margin cancels the composer - so the two heights agree.
   const [transcriptHeight, setTranscriptHeight] = useState(0);
   const noteTranscriptHeight = useCallback((height: number) => {
     const rounded = Math.round(height);
@@ -999,7 +1007,10 @@ export function ChatConversationScreen() {
     !attachments.uploading && (!!draft.trim() || (!editing && attachments.readyFileIds.length > 0));
 
   return (
-    <View style={[styles.container, { backgroundColor: T.pageBg }]}>
+    <View
+      style={[styles.container, { backgroundColor: T.pageBg }]}
+      onLayout={(e) => noteTranscriptHeight(e.nativeEvent.layout.height)}
+    >
       <View style={styles.headerOverlay}>
         <DomainHeader
           title={title}
@@ -1110,10 +1121,7 @@ export function ChatConversationScreen() {
           </View>
         )
       ) : (
-        <View
-          style={[styles.transcriptSlot, { marginBottom: -(restingFooterHeight + barSpace) }]}
-          onLayout={(e) => noteTranscriptHeight(e.nativeEvent.layout.height)}
-        >
+        <View style={[styles.transcriptSlot, { marginBottom: -(restingFooterHeight + barSpace) }]}>
           <Animated.View
             style={[
               transcriptHeight > 0 ? { height: transcriptHeight } : styles.fill,

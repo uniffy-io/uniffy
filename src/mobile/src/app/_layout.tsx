@@ -7,15 +7,24 @@ import {
   useFonts,
 } from "@expo-google-fonts/poppins";
 import { QueryClientProvider } from "@tanstack/react-query";
-import { Stack, usePathname, useRouter, useSegments } from "expo-router";
+import {
+  DarkTheme,
+  DefaultTheme,
+  Stack,
+  ThemeProvider as NavigationThemeProvider,
+  usePathname,
+  useRouter,
+  useSegments,
+} from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
 import { View, StyleSheet, BackHandler, ActivityIndicator, Platform } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import * as NavigationBar from "expo-navigation-bar";
+import * as SystemUI from "expo-system-ui";
 import { ErrorBoundary } from "@shared/components/ErrorBoundary";
 import { queryClient } from "@core/api/queryClient";
 import { installConnectivityHooks } from "@core/api/connectivity";
@@ -135,6 +144,36 @@ function RootLayoutNav() {
     }
   }, [T.isDark]);
 
+  // Expo Router paints the native stack container with its navigation theme
+  // and falls back to the light one when the app provides none. On iOS that
+  // container shows wherever a screen stops covering it, most visibly on a pop
+  // with the keyboard up: the outgoing screen leaves as a snapshot at its
+  // keyboard-shortened height while the keyboard slides away, and the band it
+  // vacates is painted in the container color until the transition ends.
+  // Handing the navigator the app theme makes that band the page color. The
+  // object is a context value: a fresh one per render would re-render every
+  // screen in the stack on each route or call-state change up here.
+  const navigationTheme = useMemo(
+    () => ({
+      ...(T.isDark ? DarkTheme : DefaultTheme),
+      colors: {
+        primary: T.accent,
+        background: T.pageBg,
+        card: T.surface,
+        text: T.text,
+        border: T.border,
+        notification: T.red,
+      },
+    }),
+    [T],
+  );
+
+  // The root native view under the React tree defaults to white on iOS, so a
+  // transition gap that reaches it flashes white on the dark theme.
+  useEffect(() => {
+    SystemUI.setBackgroundColorAsync(T.pageBg).catch(() => {});
+  }, [T.pageBg]);
+
   const callExpanded =
     !callMinimized &&
     (callSession.status === "connecting" ||
@@ -174,9 +213,10 @@ function RootLayoutNav() {
   }, [pathname, returnToAt, openAt]);
 
   return (
-    <View style={[styles.root, { backgroundColor: T.pageBg }]}>
-      <StatusBar style={T.isDark ? "light" : "dark"} />
-      {/* The negative margin slides the router content under the flow-laid
+    <NavigationThemeProvider value={navigationTheme}>
+      <View style={[styles.root, { backgroundColor: T.pageBg }]}>
+        <StatusBar style={T.isDark ? "light" : "dark"} />
+        {/* The negative margin slides the router content under the flow-laid
           bar so its glass has real content to refract; screens inset their
           scrollables (BOTTOM_NAV_HEIGHT + insets.bottom, or
           bottomBarBlockHeight for exact flushness) to clear the bar. While a
@@ -184,73 +224,80 @@ function RootLayoutNav() {
           flow child replaces this wrapper (display none keeps navigation state
           mounted); RTCView cannot render in a modal and absolute overlays
           flow-collapse on iOS 26 Fabric. */}
-      <View
-        style={[
-          styles.content,
-          showAppChrome && !immersive && { marginBottom: -bottomBarBlockHeight(insets.bottom) },
-          (callExpanded || prejoinOpen) && styles.contentHidden,
-        ]}
-      >
-        <Stack
-          screenOptions={{
-            headerShown: false,
-            contentStyle: { backgroundColor: showAppChrome ? T.pageBg : "transparent" },
-          }}
+        <View
+          style={[
+            styles.content,
+            showAppChrome && !immersive && { marginBottom: -bottomBarBlockHeight(insets.bottom) },
+            (callExpanded || prejoinOpen) && styles.contentHidden,
+          ]}
         >
-          <Stack.Screen name="auth" options={{ headerShown: false, animation: "fade" }} />
-          <Stack.Screen name="accept-invite" options={{ headerShown: false, animation: "fade" }} />
-          <Stack.Screen name="enroll-mfa" options={{ headerShown: false, animation: "fade" }} />
-          <Stack.Screen name="select-org" options={{ headerShown: false, animation: "fade" }} />
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="notes/index" />
-          <Stack.Screen name="notes/[id]" />
-          <Stack.Screen name="notes/edit" />
-          <Stack.Screen name="notes/trash" />
-          <Stack.Screen name="files/index" />
-          <Stack.Screen name="files/[id]" />
-          <Stack.Screen name="files/trash" />
-          <Stack.Screen name="chat/index" />
-          <Stack.Screen name="chat/[id]" />
-          <Stack.Screen name="chat/create" />
-          <Stack.Screen name="calendar/index" />
-          <Stack.Screen name="calendar/[id]" />
-          <Stack.Screen name="projects/index" />
-          <Stack.Screen name="projects/[id]" />
-          <Stack.Screen name="projects/task/[id]" />
-          <Stack.Screen name="search/index" />
-          <Stack.Screen name="bookmarks/index" />
-          <Stack.Screen name="tags/index" />
-          <Stack.Screen name="tags/[id]" />
-          <Stack.Screen name="notifications/index" />
-          <Stack.Screen name="you/index" />
-          <Stack.Screen name="you/sessions" />
-          <Stack.Screen name="you/appearance" />
-          <Stack.Screen name="you/notifications" />
-          <Stack.Screen name="you/security" />
-        </Stack>
-      </View>
-      {/* The bar is a flow child on purpose: iOS 26 Fabric keeps absolutely
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              contentStyle: { backgroundColor: showAppChrome ? T.pageBg : "transparent" },
+            }}
+          >
+            <Stack.Screen name="auth" options={{ headerShown: false, animation: "fade" }} />
+            <Stack.Screen
+              name="accept-invite"
+              options={{ headerShown: false, animation: "fade" }}
+            />
+            <Stack.Screen name="enroll-mfa" options={{ headerShown: false, animation: "fade" }} />
+            <Stack.Screen name="select-org" options={{ headerShown: false, animation: "fade" }} />
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="notes/index" />
+            <Stack.Screen name="notes/[id]" />
+            <Stack.Screen name="notes/edit" />
+            <Stack.Screen name="notes/trash" />
+            <Stack.Screen name="files/index" />
+            <Stack.Screen name="files/[id]" />
+            <Stack.Screen name="files/trash" />
+            <Stack.Screen name="chat/index" />
+            <Stack.Screen name="chat/[id]" />
+            <Stack.Screen name="chat/create" />
+            <Stack.Screen name="calendar/index" />
+            <Stack.Screen name="calendar/[id]" />
+            <Stack.Screen name="projects/index" />
+            <Stack.Screen name="projects/[id]" />
+            <Stack.Screen name="projects/task/[id]" />
+            <Stack.Screen name="search/index" />
+            <Stack.Screen name="library/index" />
+            <Stack.Screen name="library/tags/index" />
+            <Stack.Screen name="library/tags/[id]" />
+            <Stack.Screen name="bookmarks/index" />
+            <Stack.Screen name="tags/index" />
+            <Stack.Screen name="tags/[id]" />
+            <Stack.Screen name="notifications/index" />
+            <Stack.Screen name="you/index" />
+            <Stack.Screen name="you/sessions" />
+            <Stack.Screen name="you/appearance" />
+            <Stack.Screen name="you/notifications" />
+            <Stack.Screen name="you/security" />
+          </Stack>
+        </View>
+        {/* The bar is a flow child on purpose: iOS 26 Fabric keeps absolutely
           positioned shell overlays in flow layout (they steal Stack height),
           so the bar IS the reserved space. The spacer after it lifts the bar
           above the keyboard. Overlay stacking comes from sibling order, not
           zIndex - zIndex on a fully inset-positioned sibling triggers the
           same flow-layout bug. */}
-      {showAppChrome && prejoinOpen && <PreJoinScreen />}
-      {showAppChrome && callExpanded && <CallScreen />}
-      {showAppChrome && !callExpanded && <CallIndicator />}
-      {showBar && <AppBottomNav />}
-      {showBar && <KeyboardSpacer />}
-      {showAppChrome && <AtOverlay />}
-      {showAppChrome && <IncomingCallBanner />}
-      {showAppChrome && <CallEndedNotice />}
-      {showAppChrome && <CallRestorePrompt />}
-      {loginSplashVisible && (
-        <LoginSplash
-          onReveal={() => setHoldNavigation(false)}
-          onFinished={() => setLoginSplashVisible(false)}
-        />
-      )}
-    </View>
+        {showAppChrome && prejoinOpen && <PreJoinScreen />}
+        {showAppChrome && callExpanded && <CallScreen />}
+        {showAppChrome && !callExpanded && <CallIndicator />}
+        {showBar && <AppBottomNav />}
+        {showBar && <KeyboardSpacer />}
+        {showAppChrome && <AtOverlay />}
+        {showAppChrome && <IncomingCallBanner />}
+        {showAppChrome && <CallEndedNotice />}
+        {showAppChrome && <CallRestorePrompt />}
+        {loginSplashVisible && (
+          <LoginSplash
+            onReveal={() => setHoldNavigation(false)}
+            onFinished={() => setLoginSplashVisible(false)}
+          />
+        )}
+      </View>
+    </NavigationThemeProvider>
   );
 }
 

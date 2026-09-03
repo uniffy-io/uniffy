@@ -16,7 +16,6 @@ import {
   DotsThree,
   NotePencil,
   FolderSimple,
-  Atom,
   Graph,
   Trash,
   Rows,
@@ -241,12 +240,6 @@ function NotesListBody() {
         icon="notes"
         rightActions={
           <>
-            <TouchableOpacity
-              onPress={() => router.push("/notes/graph" as any)}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <Atom size={19} color={T.text} weight="duotone" />
-            </TouchableOpacity>
             <TouchableOpacity
               onPress={() => router.push("/notes/trash" as any)}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}

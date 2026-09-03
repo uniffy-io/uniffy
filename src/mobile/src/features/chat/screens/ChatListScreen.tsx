@@ -1,5 +1,4 @@
 import React, { useState, useCallback, useEffect, useMemo } from "react";
-import { formatCompactAge } from "@shared/lib/dateFormatting";
 import {
   View,
   Text,
@@ -72,7 +71,6 @@ import { useCall } from "@features/calls/CallContext";
 import { useDirectory } from "@shared/directory/useDirectory";
 import { usePresences } from "@shared/presence/usePresence";
 import { useAuth } from "@core/providers/AuthContext";
-import { PresenceDot } from "@shared/presence/PresenceDot";
 import {
   type SerializedChannel,
   type SerializedThreadInboxItem,
@@ -88,8 +86,15 @@ const TABS: { key: Tab; label: string }[] = [
   { key: "unreads", label: "Unreads" },
 ];
 
-function ChannelIcon({ channel, color }: { channel: SerializedChannel; color: string }) {
-  const size = 16;
+function ChannelIcon({
+  channel,
+  color,
+  size = 16,
+}: {
+  channel: SerializedChannel;
+  color: string;
+  size?: number;
+}) {
   if (channel.isAgentDm) return <Robot size={size} color={color} weight="fill" />;
   if (channel.channelType === "DIRECT" || channel.channelType === "GROUP_DM")
     return <ChatCircle size={size} color={color} weight="fill" />;
@@ -476,6 +481,7 @@ export function ChatListScreen() {
             count={uncategorized.length}
             collapsed={!!collapsed.channels}
             onToggle={() => toggle("channels")}
+            divided={false}
             T={T}
             onAdd={() => router.push("/chat/create" as any)}
           >
@@ -1001,6 +1007,7 @@ function CategorySection({
   onAdd,
   onAddFolder,
   hasContent,
+  divided = true,
   T,
   children,
 }: {
@@ -1013,11 +1020,18 @@ function CategorySection({
   onAddFolder?: () => void;
   /** Overrides the count-based check when the body holds more than the counted rows. */
   hasContent?: boolean;
+  /** Off for the first section, which already sits under the filter bar's rule. */
+  divided?: boolean;
   T: ThemeColors;
   children: React.ReactNode;
 }) {
   return (
-    <View style={styles.section}>
+    <View
+      style={[
+        styles.section,
+        divided ? [styles.sectionDivided, { borderTopColor: T.border }] : null,
+      ]}
+    >
       <View style={styles.sectionHeaderRow}>
         <TouchableOpacity
           style={styles.sectionHeader}
@@ -1031,7 +1045,7 @@ function CategorySection({
           ) : (
             <CaretDown size={13} color={T.textDim} weight="bold" />
           )}
-          <Text style={[styles.sectionLabel, { color: T.textDim }]} numberOfLines={1}>
+          <Text style={[styles.sectionLabel, { color: T.text }]} numberOfLines={1}>
             {label}
           </Text>
           <Text style={[styles.sectionCount, { color: T.textDim }]}>{count}</Text>
@@ -1200,77 +1214,67 @@ function ChannelRow({
 }) {
   const hasUnread = channel.unreadCount > 0;
   const liveCall = useActiveCall(channel.id);
+  // Weight carries the unread state on the name: the dark theme's text and
+  // bright-text tokens are one step apart, so a colour change alone is lost.
+  // The glyph dims for read rows instead, which is where the eye lands first.
+  const glyphTone = hasUnread ? T.textBright : T.textDim;
   return (
     <TouchableOpacity
-      style={[styles.row, { borderBottomColor: T.border }]}
+      style={styles.channelRow}
       onPress={onPress}
       onLongPress={onLongPress}
       delayLongPress={300}
       activeOpacity={0.7}
     >
-      <View style={[styles.rowIcon, { backgroundColor: peer ? "transparent" : T.accentSoft }]}>
+      <View style={styles.channelGlyph}>
         {peer ? (
-          <Avatar name={peer.name} avatarUrl={peer.avatarUrl} size={40} />
+          <Avatar
+            name={peer.name}
+            avatarUrl={peer.avatarUrl}
+            size={24}
+            presence={presence}
+            presenceRingColor={T.pageBg}
+          />
         ) : (
-          <ChannelIcon channel={channel} color={T.accent} />
+          <ChannelIcon channel={channel} color={glyphTone} size={18} />
         )}
-        {presence ? <PresenceDot status={presence} size={12} ringColor={T.pageBg} /> : null}
       </View>
-      <View style={styles.rowBody}>
-        <Text
-          style={[
-            styles.rowTitle,
-            { color: T.textBright, fontFamily: hasUnread ? FONT.bold : FONT.semibold },
-          ]}
-          numberOfLines={1}
+      <Text
+        style={[
+          styles.channelTitle,
+          hasUnread
+            ? { color: T.textBright, fontFamily: FONT.bold }
+            : { color: T.text, fontFamily: FONT.regular },
+        ]}
+        numberOfLines={1}
+      >
+        {peer ? peer.name : channel.displayName}
+      </Text>
+      {liveCall ? (
+        <Pressable
+          style={[styles.liveCallPill, { backgroundColor: T.green }]}
+          onPress={() => onJoinCall?.(channel)}
+          disabled={!onJoinCall}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          accessibilityRole="button"
+          accessibilityLabel={`Join the live call in ${channel.displayName}, ${liveCall.participants.length} ${
+            liveCall.participants.length === 1 ? "person" : "people"
+          }`}
         >
-          {peer ? peer.name : channel.displayName}
-        </Text>
-        <Text style={[styles.rowSub, { color: T.textDim }]} numberOfLines={1}>
-          {channel.description
-            ? channel.description
-            : `${channel.memberCount} ${channel.memberCount === 1 ? "member" : "members"}`}
-        </Text>
-      </View>
-      <View style={styles.rowRight}>
-        {liveCall ? (
-          <Pressable
-            style={[styles.liveCallPill, { backgroundColor: T.green }]}
-            onPress={() => onJoinCall?.(channel)}
-            disabled={!onJoinCall}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            accessibilityRole="button"
-            accessibilityLabel={`Join the live call in ${channel.displayName}, ${liveCall.participants.length} ${
-              liveCall.participants.length === 1 ? "person" : "people"
-            }`}
-          >
-            <Phone size={10} color="#ffffff" weight="fill" />
-            <Text style={styles.liveCallPillText}>{liveCall.participants.length}</Text>
-          </Pressable>
-        ) : null}
-        {channel.lastMessageAtSeconds ? (
-          <Text style={[styles.rowTime, { color: hasUnread ? T.accent : T.textDim }]}>
-            {formatCompactAge(channel.lastMessageAtSeconds)}
+          <Phone size={10} color="#ffffff" weight="fill" />
+          <Text style={styles.liveCallPillText}>{liveCall.participants.length}</Text>
+        </Pressable>
+      ) : null}
+      {channel.hasDraft ? <PencilSimple size={13} color={T.textDim} weight="bold" /> : null}
+      {hasUnread ? (
+        <View
+          style={[styles.badge, { backgroundColor: channel.mentionCount > 0 ? T.red : T.accent }]}
+        >
+          <Text style={styles.badgeText}>
+            {channel.unreadCount > 99 ? "99+" : channel.unreadCount}
           </Text>
-        ) : null}
-        {channel.hasDraft || hasUnread ? (
-          <View style={styles.rowIndicators}>
-            {channel.hasDraft ? <PencilSimple size={13} color={T.textDim} weight="bold" /> : null}
-            {hasUnread ? (
-              <View
-                style={[
-                  styles.badge,
-                  { backgroundColor: channel.mentionCount > 0 ? T.red : T.accent },
-                ]}
-              >
-                <Text style={styles.badgeText}>
-                  {channel.unreadCount > 99 ? "99+" : channel.unreadCount}
-                </Text>
-              </View>
-            ) : null}
-          </View>
-        ) : null}
-      </View>
+        </View>
+      ) : null}
     </TouchableOpacity>
   );
 }
@@ -1368,13 +1372,14 @@ const styles = StyleSheet.create({
   browseClose: { fontSize: 14, fontFamily: FONT.semibold },
   listContent: { paddingBottom: 24 },
   emptyContent: { flexGrow: 1 },
-  section: { paddingTop: 6 },
+  section: { paddingTop: 4, paddingBottom: 4 },
+  sectionDivided: { marginTop: 4, borderTopWidth: StyleSheet.hairlineWidth },
   sectionHeaderRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingVertical: 6,
   },
   sectionHeader: { flexDirection: "row", alignItems: "center", gap: 6, flex: 1 },
   sectionActions: { flexDirection: "row", alignItems: "center", gap: 14 },
@@ -1384,7 +1389,7 @@ const styles = StyleSheet.create({
     gap: 7,
     paddingLeft: 24,
     paddingRight: 16,
-    paddingVertical: 9,
+    paddingVertical: 6,
   },
   folderLabel: { fontSize: 13, fontFamily: FONT.semibold, flex: 1 },
   folderChildren: { marginLeft: 30, borderLeftWidth: StyleSheet.hairlineWidth },
@@ -1398,9 +1403,28 @@ const styles = StyleSheet.create({
   sectionEmptyInline: {
     fontSize: 13,
     fontFamily: FONT.regular,
-    paddingHorizontal: 38,
+    paddingHorizontal: 52,
     paddingBottom: 8,
   },
+  // One line per channel, no tile and no rule between rows: the name and the
+  // unread state are what a list of a dozen channels has to show at a glance.
+  // The description and member count live in the channel details sheet.
+  channelRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 3,
+    minHeight: 38,
+  },
+  channelGlyph: {
+    width: 24,
+    height: 24,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  channelTitle: { flex: 1, fontSize: 15 },
   row: {
     flexDirection: "row",
     alignItems: "center",
@@ -1421,7 +1445,6 @@ const styles = StyleSheet.create({
   rowTitle: { fontSize: 15 },
   rowSub: { fontSize: 12, fontFamily: FONT.regular },
   rowRight: { alignItems: "flex-end", gap: 5, flexShrink: 0 },
-  rowIndicators: { flexDirection: "row", alignItems: "center", gap: 5 },
   rowTime: { fontSize: 11, fontFamily: FONT.medium },
   rowReplies: { fontSize: 11, fontFamily: FONT.regular },
   badge: {

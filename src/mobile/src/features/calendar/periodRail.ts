@@ -74,6 +74,15 @@ export function railWidths(unit: RailUnit, fontScale: number) {
   };
 }
 
+// A pill names the pinned label only once this much of it shows, so the
+// sub-point sliver a fractional offset can leave does not count as leftmost.
+const LEADING_MIN_VISIBLE = 4;
+
+/** The pill the pinned label names at a scroll offset: the leftmost one actually showing. */
+export function railLeadingItem(items: RailItem[], x: number): RailItem | undefined {
+  return items.find((i) => i.offset + i.width - ITEM_GAP - x > LEADING_MIN_VISIBLE) ?? items[0];
+}
+
 export function railUnitFor(viewMode: "day" | "week" | "month" | "agenda"): RailUnit {
   if (viewMode === "day") return "day";
   if (viewMode === "week") return "week";

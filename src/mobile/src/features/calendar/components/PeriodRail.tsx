@@ -16,6 +16,7 @@ import {
   buildRailItems,
   railAccessibilityLabel,
   railKeyFor,
+  railLeadingItem,
   railPinnedLabel,
   railUnitFor,
   railWidths,
@@ -45,7 +46,8 @@ export function PeriodRail({
   const { fontScale } = useWindowDimensions();
   const listRef = useRef<FlatList<RailItem>>(null);
   const centredOnce = useRef(false);
-  const [listWidth, setListWidth] = useState(0);
+  const listWidth = useRef(0);
+  const [laidOut, setLaidOut] = useState(false);
   const [leadingLabel, setLeadingLabel] = useState<string | null>(null);
 
   const unit = railUnitFor(viewMode);
@@ -62,21 +64,28 @@ export function PeriodRail({
     [items, activeKey],
   );
 
+  // The list width is read here, never depended on: a width change alone must
+  // not re-centre. The pinned box hugs its text, so naming another month
+  // shifts the list edge by a point or two, and re-centring on that nudged the
+  // offset across a pill boundary wherever it already sat on one, which named
+  // the other month, which nudged it back - the rail swung between the two.
+  // A selection is centred for the width at the time; a later label change
+  // drifts it by half the width difference, and the next selection resets it.
   useEffect(() => {
-    if (listWidth === 0 || selectedIndex === -1) return;
+    if (!laidOut || selectedIndex === -1) return;
     const item = items[selectedIndex];
     listRef.current?.scrollToOffset({
-      offset: Math.max(0, item.offset + item.width / 2 - listWidth / 2),
+      offset: Math.max(0, item.offset + item.width / 2 - listWidth.current / 2),
       animated: centredOnce.current,
     });
     centredOnce.current = true;
-  }, [items, selectedIndex, listWidth]);
+  }, [items, selectedIndex, laidOut]);
 
   // The pinned label names the leftmost pill, so scrubbing into another month
   // or year says so before anything is selected.
   const onScroll = useCallback(
     (x: number) => {
-      const leading = items.find((i) => i.offset + i.width > x) ?? items[0];
+      const leading = railLeadingItem(items, x);
       if (leading) {
         const next = railPinnedLabel(unit, leading.date, today.getFullYear());
         setLeadingLabel((prev) => (prev === next ? prev : next));
@@ -114,7 +123,13 @@ export function PeriodRail({
         </Text>
       </View>
       <View style={[styles.pinnedDivider, { backgroundColor: T.textDim }]} />
-      <View style={styles.listBox} onLayout={(e) => setListWidth(e.nativeEvent.layout.width)}>
+      <View
+        style={styles.listBox}
+        onLayout={(e) => {
+          listWidth.current = e.nativeEvent.layout.width;
+          if (listWidth.current > 0) setLaidOut(true);
+        }}
+      >
         <FlatList
           ref={listRef}
           data={items}

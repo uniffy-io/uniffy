@@ -9,21 +9,16 @@ import {
   ActivityIndicator,
   useWindowDimensions,
 } from "react-native";
-import {
-  NotePencil,
-  CalendarBlank,
-  Kanban,
-  CaretRight,
-  BookmarkSimple,
-  BellSimple,
-  Hash,
-} from "phosphor-react-native";
+import { NotePencil, CalendarBlank, Kanban, Books, BellSimple, Hash } from "phosphor-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { useAuth } from "@core/providers/AuthContext";
 import { useTheme } from "@shared/hooks/useTheme";
+import { parseCalendarDate } from "@shared/lib/dateFormatting";
+import { zonedDayKey } from "@shared/lib/zonedTime";
 import { useEventsInRange } from "@features/calendar/useCalendar";
 import { eventDisplayState } from "@features/calendar/eventDisplay";
+import type { SerializedEvent } from "@features/calendar/calendarSerializer";
 import { useNotesList } from "@features/notes/useNotes";
 import { useProjectsList } from "@features/projects/useProjects";
 import { useChannels } from "@features/chat/useChat";
@@ -32,10 +27,27 @@ import { Avatar } from "@shared/components/Avatar";
 import { BOTTOM_NAV_HEIGHT } from "@theme/theme";
 import { FONT } from "@theme/typography";
 
-// Chosen just above each line's font size: enough to clear the descenders of
-// "Good morning," without opening a paragraph break under it.
-const GREETING_LINE = 26;
-const GREETING_NAME_LINE = 31;
+// Text is set on a heading's tight leading rather than the roomy default the
+// font picks for body copy, so a two-line row stays under fifty points and the
+// greeting reads as one sentence. Scaled by hand, because a lineHeight in a
+// stylesheet is the one thing the reader's text-size setting never touches.
+const LINES = { greeting: 18, name: 28, title: 18, meta: 15, weekday: 11 } as const;
+
+const ROW_PAD_X = 12;
+const ROW_GAP = 10;
+// A row's leading column: a day stamp on events, a glyph everywhere else. The
+// hairline between two rows starts where the text does.
+const DAY_COL = 36;
+const GLYPH_COL = 22;
+const DAY_INSET = ROW_PAD_X + DAY_COL + ROW_GAP;
+const GLYPH_INSET = ROW_PAD_X + GLYPH_COL + ROW_GAP;
+const TODAY_BADGE = 20;
+
+interface UpcomingRow {
+  event: SerializedEvent;
+  /** Set on the first event of a calendar day; the rows after it share the stamp. */
+  stamp?: { weekday: string; day: number; today: boolean };
+}
 
 export function HomeScreen() {
   const { user } = useAuth();
@@ -59,7 +71,37 @@ export function HomeScreen() {
   const { channels } = useChannels();
   const unreadNotifications = useUnreadNotificationCount().data ?? 0;
 
-  const events = eventsQuery.data?.slice(0, 5) ?? [];
+  const upcoming = useMemo<UpcomingRow[]>(() => {
+    const now = new Date();
+    const todayKey = zonedDayKey(now);
+    // "Upcoming" reads literally: what is still ahead, so this morning's
+    // finished stand-up does not head the list all afternoon.
+    const ahead = (eventsQuery.data ?? [])
+      .filter((event) => new Date(event.endTime || event.startTime) >= now)
+      .sort((a, b) => a.startTime.localeCompare(b.startTime))
+      .slice(0, 5);
+    const rows: UpcomingRow[] = [];
+    let lastDayKey = "";
+    for (const event of ahead) {
+      const dayKey = zonedDayKey(event.startTime);
+      if (dayKey === lastDayKey) {
+        rows.push({ event });
+        continue;
+      }
+      lastDayKey = dayKey;
+      const day = parseCalendarDate(dayKey);
+      rows.push({
+        event,
+        stamp: {
+          weekday: day.toLocaleDateString(undefined, { weekday: "short" }),
+          day: day.getDate(),
+          today: dayKey === todayKey,
+        },
+      });
+    }
+    return rows;
+  }, [eventsQuery.data]);
+
   const notes = notesQuery.data?.slice(0, 5) ?? [];
   const projects = projectsQuery.data?.slice(0, 4) ?? [];
   const unreadChannels = channels.filter((c) => c.unreadCount > 0).slice(0, 4);
@@ -67,13 +109,15 @@ export function HomeScreen() {
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
   const userName = user?.fullName || user?.username || "there";
-  // The greeting and the name are one sentence broken over two lines, so they
-  // are set with a heading's tight leading instead of the roomy default a font
-  // picks for body text - and scaled, because a lineHeight in a stylesheet is
-  // the one thing the reader's text-size setting never touches.
   const { fontScale } = useWindowDimensions();
-  const greetingLine = Math.round(GREETING_LINE * fontScale);
-  const greetingNameLine = Math.round(GREETING_NAME_LINE * fontScale);
+  const greetingLine = Math.round(LINES.greeting * fontScale);
+  const nameLine = Math.round(LINES.name * fontScale);
+  const titleLine = Math.round(LINES.title * fontScale);
+  const metaLine = Math.round(LINES.meta * fontScale);
+  const weekdayLine = Math.round(LINES.weekday * fontScale);
+
+  const titleStyle = [styles.rowTitle, { color: T.textBright, lineHeight: titleLine }];
+  const metaStyle = [styles.rowMeta, { color: T.textDim, lineHeight: metaLine }];
 
   return (
     <View style={[styles.container, { backgroundColor: T.pageBg }]}>
@@ -88,11 +132,11 @@ export function HomeScreen() {
           <View style={styles.actionsRow}>
             <TouchableOpacity
               style={[styles.actionBtn, { backgroundColor: T.surfaceHover, borderColor: T.border }]}
-              onPress={() => router.push("/bookmarks" as any)}
+              onPress={() => router.push("/library" as any)}
               activeOpacity={0.7}
-              accessibilityLabel="Bookmarks"
+              accessibilityLabel="Library"
             >
-              <BookmarkSimple size={16} color={T.text} weight="bold" />
+              <Books size={16} color={T.text} weight="bold" />
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.actionBtn, { backgroundColor: T.surfaceHover, borderColor: T.border }]}
@@ -137,7 +181,7 @@ export function HomeScreen() {
             {greeting},
           </Text>
           <Text
-            style={[styles.greetingName, { color: T.accent, lineHeight: greetingNameLine }]}
+            style={[styles.greetingName, { color: T.accent, lineHeight: nameLine }]}
             numberOfLines={1}
           >
             {userName}
@@ -146,217 +190,254 @@ export function HomeScreen() {
 
         {unreadChannels.length > 0 && (
           <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionLabel, { color: T.textDim }]}>UNREAD CHATS</Text>
-              <TouchableOpacity
-                onPress={() => router.push("/chat" as any)}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              >
-                <Text style={[styles.seeAllText, { color: T.accent }]}>See all</Text>
-              </TouchableOpacity>
-            </View>
-            {unreadChannels.map((channel) => (
-              <TouchableOpacity
-                key={channel.id}
-                style={[styles.chatRow, { backgroundColor: T.surface, borderColor: T.border }]}
-                onPress={() => router.push(`/chat/${channel.id}` as any)}
-                activeOpacity={0.8}
-              >
-                <View style={[styles.chatIcon, { backgroundColor: T.accentSoft }]}>
-                  <Hash size={16} color={T.accent} weight="bold" />
-                </View>
-                <Text style={[styles.chatName, { color: T.textBright }]} numberOfLines={1}>
-                  {channel.name}
-                </Text>
-                <View
-                  style={[
-                    styles.chatBadge,
-                    {
-                      backgroundColor: channel.mentionCount > 0 ? T.red : T.accent,
-                    },
-                  ]}
-                >
-                  <Text style={styles.chatBadgeText}>
-                    {channel.unreadCount > 99 ? "99+" : channel.unreadCount}
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            ))}
+            <SectionHeader label="UNREAD CHATS" onSeeAll={() => router.push("/chat" as any)} />
+            <Group>
+              {unreadChannels.map((channel, i) => (
+                <React.Fragment key={channel.id}>
+                  {i > 0 && <Separator inset={GLYPH_INSET} />}
+                  <TouchableOpacity
+                    style={styles.row}
+                    onPress={() => router.push(`/chat/${channel.id}` as any)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.glyphColumn}>
+                      <Hash size={16} color={T.accent} weight="bold" />
+                    </View>
+                    <Text style={[titleStyle, styles.rowBody]} numberOfLines={1}>
+                      {channel.name}
+                    </Text>
+                    <View
+                      style={[
+                        styles.chatBadge,
+                        { backgroundColor: channel.mentionCount > 0 ? T.red : T.accent },
+                      ]}
+                    >
+                      <Text style={styles.chatBadgeText}>
+                        {channel.unreadCount > 99 ? "99+" : channel.unreadCount}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                </React.Fragment>
+              ))}
+            </Group>
           </View>
         )}
 
-        {/* Upcoming Events */}
         <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionLabel, { color: T.textDim }]}>UPCOMING</Text>
-            <TouchableOpacity
-              onPress={() => router.push("/calendar" as any)}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <Text style={[styles.seeAllText, { color: T.accent }]}>See all</Text>
-            </TouchableOpacity>
-          </View>
-
-          {eventsQuery.isLoading ? (
-            <View style={styles.loadingRow}>
-              <ActivityIndicator size="small" color={T.accent} />
-            </View>
-          ) : events.length === 0 ? (
-            <View style={styles.emptyState}>
-              <CalendarBlank size={24} color={T.textDim} weight="duotone" />
-              <Text style={[styles.emptyText, { color: T.textDim }]}>
-                No upcoming events this week
-              </Text>
-            </View>
-          ) : (
-            events.map((event) => {
-              // A private event arrives with its fields stripped, so the title
-              // comes from the shared projection the calendar surfaces use.
-              const display = eventDisplayState(event);
-              const metaParts = [event.startTimeFormatted, event.duration, event.location].filter(
-                Boolean,
-              );
-              return (
-                <TouchableOpacity
-                  key={event.id}
-                  style={[
-                    styles.eventCard,
-                    { backgroundColor: T.surface, borderColor: T.border },
-                    (display.cancelled || display.tentative) && styles.fadedCard,
-                  ]}
-                  onPress={() => router.push(`/calendar/${event.id}` as any)}
-                  activeOpacity={0.8}
-                >
-                  <View style={[styles.domainIcon, { backgroundColor: T.accentSoft }]}>
-                    <CalendarBlank size={18} color={T.accent} weight="duotone" />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text
-                      style={[
-                        styles.eventTitle,
-                        { color: T.textBright },
-                        display.cancelled && styles.struckTitle,
-                      ]}
+          <SectionHeader label="UPCOMING EVENTS" onSeeAll={() => router.push("/calendar" as any)} />
+          <Group>
+            {eventsQuery.isLoading ? (
+              <LoadingRow />
+            ) : upcoming.length === 0 ? (
+              <EmptyRow
+                icon={<CalendarBlank size={18} color={T.textDim} weight="duotone" />}
+                text="No upcoming events this week"
+              />
+            ) : (
+              upcoming.map(({ event, stamp }, i) => {
+                // A private event arrives with its fields stripped, so the title
+                // comes from the shared projection the calendar surfaces use.
+                const display = eventDisplayState(event);
+                const meta = [
+                  event.isAllDay ? "All day" : event.startTimeFormatted,
+                  !event.isAllDay && event.duration,
+                  event.location,
+                ]
+                  .filter(Boolean)
+                  .join(" · ");
+                return (
+                  <React.Fragment key={`${event.id}:${event.startTime}`}>
+                    {i > 0 && <Separator inset={stamp ? 0 : DAY_INSET} />}
+                    <TouchableOpacity
+                      style={styles.row}
+                      onPress={() => router.push(`/calendar/${event.id}` as any)}
+                      activeOpacity={0.7}
                     >
-                      {display.title}
-                    </Text>
-                    {metaParts.length > 0 && (
-                      <Text style={[styles.eventMeta, { color: T.textDim }]}>
-                        {metaParts.join(" · ")}
+                      <View style={styles.dayColumn}>
+                        {stamp && (
+                          <>
+                            <Text
+                              style={[
+                                styles.dayWeekday,
+                                {
+                                  color: stamp.today ? T.accent : T.textBright,
+                                  lineHeight: weekdayLine,
+                                },
+                              ]}
+                            >
+                              {stamp.weekday.toUpperCase()}
+                            </Text>
+                            <View
+                              style={[
+                                styles.dayBadge,
+                                stamp.today && { backgroundColor: T.accent },
+                              ]}
+                            >
+                              <Text
+                                style={[
+                                  styles.dayNumber,
+                                  { color: stamp.today ? "#ffffff" : T.textBright },
+                                ]}
+                              >
+                                {stamp.day}
+                              </Text>
+                            </View>
+                          </>
+                        )}
+                      </View>
+                      {/* Only the event fades when it is tentative or cancelled; the day it sits on is neither. */}
+                      <View
+                        style={[
+                          styles.rowBody,
+                          (display.cancelled || display.tentative) && styles.faded,
+                        ]}
+                      >
+                        <Text
+                          style={[titleStyle, display.cancelled && styles.struck]}
+                          numberOfLines={1}
+                        >
+                          {display.title}
+                        </Text>
+                        {meta ? (
+                          <Text style={metaStyle} numberOfLines={1}>
+                            {meta}
+                          </Text>
+                        ) : null}
+                      </View>
+                    </TouchableOpacity>
+                  </React.Fragment>
+                );
+              })
+            )}
+          </Group>
+        </View>
+
+        <View style={styles.section}>
+          <SectionHeader label="RECENT NOTES" onSeeAll={() => router.push("/notes" as any)} />
+          <Group>
+            {notesQuery.isLoading ? (
+              <LoadingRow />
+            ) : notes.length === 0 ? (
+              <EmptyRow
+                icon={<NotePencil size={18} color={T.textDim} weight="duotone" />}
+                text="No notes yet"
+              />
+            ) : (
+              notes.map((note, i) => (
+                <React.Fragment key={note.id}>
+                  {i > 0 && <Separator inset={GLYPH_INSET} />}
+                  <TouchableOpacity
+                    style={styles.row}
+                    onPress={() => router.push(`/notes/${note.id}` as any)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.glyphColumn}>
+                      {note.icon?.type === "emoji" ? (
+                        <Text style={styles.noteEmoji}>{note.icon.value}</Text>
+                      ) : (
+                        <NotePencil size={16} color={T.accent} weight="duotone" />
+                      )}
+                    </View>
+                    <View style={styles.rowBody}>
+                      <Text style={titleStyle} numberOfLines={1}>
+                        {note.title || "Untitled"}
                       </Text>
-                    )}
-                  </View>
-                  <Text style={[styles.eventTime, { color: T.accent }]}>
-                    {event.dateFormatted?.split(", ")[0] ?? ""}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })
-          )}
+                      {note.snippet ? (
+                        <Text style={metaStyle} numberOfLines={1}>
+                          {note.snippet}
+                        </Text>
+                      ) : null}
+                    </View>
+                    <Text style={[styles.rowTrailing, { color: T.textDim }]}>{note.editedAt}</Text>
+                  </TouchableOpacity>
+                </React.Fragment>
+              ))
+            )}
+          </Group>
         </View>
 
-        {/* Recent Notes */}
         <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionLabel, { color: T.textDim }]}>RECENT NOTES</Text>
-            <TouchableOpacity
-              onPress={() => router.push("/notes" as any)}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <Text style={[styles.seeAllText, { color: T.accent }]}>See all</Text>
-            </TouchableOpacity>
-          </View>
-
-          {notesQuery.isLoading ? (
-            <View style={styles.loadingRow}>
-              <ActivityIndicator size="small" color={T.accent} />
-            </View>
-          ) : notes.length === 0 ? (
-            <View style={styles.emptyState}>
-              <NotePencil size={24} color={T.textDim} weight="duotone" />
-              <Text style={[styles.emptyText, { color: T.textDim }]}>No notes yet</Text>
-            </View>
-          ) : (
-            notes.map((note) => (
-              <TouchableOpacity
-                key={note.id}
-                style={[styles.noteRow, { borderBottomColor: T.border }]}
-                onPress={() => router.push(`/notes/${note.id}` as any)}
-                activeOpacity={0.8}
-              >
-                <View style={[styles.noteIcon, { backgroundColor: T.accentSoft }]}>
-                  {note.icon?.type === "emoji" ? (
-                    <Text style={styles.noteEmoji}>{note.icon.value}</Text>
-                  ) : (
-                    <NotePencil size={16} color={T.accent} weight="duotone" />
-                  )}
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.noteTitle, { color: T.textBright }]} numberOfLines={1}>
-                    {note.title || "Untitled"}
-                  </Text>
-                  {note.snippet ? (
-                    <Text style={[styles.noteSnippet, { color: T.textDim }]} numberOfLines={1}>
-                      {note.snippet}
+          <SectionHeader label="PROJECTS" onSeeAll={() => router.push("/projects" as any)} />
+          <Group>
+            {projectsQuery.isLoading ? (
+              <LoadingRow />
+            ) : projects.length === 0 ? (
+              <EmptyRow
+                icon={<Kanban size={18} color={T.textDim} weight="duotone" />}
+                text="No projects yet"
+              />
+            ) : (
+              projects.map((project, i) => (
+                <React.Fragment key={project.id}>
+                  {i > 0 && <Separator inset={GLYPH_INSET} />}
+                  <TouchableOpacity
+                    style={styles.row}
+                    onPress={() => router.push(`/projects/${project.id}` as any)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.glyphColumn}>
+                      <Kanban size={16} color={project.color || T.accent} weight="duotone" />
+                    </View>
+                    <Text style={[titleStyle, styles.rowBody]} numberOfLines={1}>
+                      {project.name}
                     </Text>
-                  ) : null}
-                </View>
-                <Text style={[styles.noteTime, { color: T.textDim }]}>{note.editedAt}</Text>
-              </TouchableOpacity>
-            ))
-          )}
-        </View>
-
-        {/* Active Projects */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionLabel, { color: T.textDim }]}>PROJECTS</Text>
-            <TouchableOpacity
-              onPress={() => router.push("/projects" as any)}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <Text style={[styles.seeAllText, { color: T.accent }]}>See all</Text>
-            </TouchableOpacity>
-          </View>
-
-          {projectsQuery.isLoading ? (
-            <View style={styles.loadingRow}>
-              <ActivityIndicator size="small" color={T.accent} />
-            </View>
-          ) : projects.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Kanban size={24} color={T.textDim} weight="duotone" />
-              <Text style={[styles.emptyText, { color: T.textDim }]}>No projects yet</Text>
-            </View>
-          ) : (
-            projects.map((project) => (
-              <TouchableOpacity
-                key={project.id}
-                style={[styles.projectCard, { backgroundColor: T.surface, borderColor: T.border }]}
-                onPress={() => router.push(`/projects/${project.id}` as any)}
-                activeOpacity={0.8}
-              >
-                <View
-                  style={[
-                    styles.domainIcon,
-                    { backgroundColor: project.color ? project.color + "22" : T.accentSoft },
-                  ]}
-                >
-                  <Kanban size={18} color={project.color || T.accent} weight="duotone" />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.projectName, { color: T.textBright }]}>{project.name}</Text>
-                  <Text style={[styles.projectMeta, { color: T.textDim }]}>
-                    {project.completedTaskCount}/{project.taskCount}{" "}
-                    {project.taskCount === 1 ? "task" : "tasks"}
-                  </Text>
-                </View>
-                <CaretRight size={14} color={T.textDim} weight="regular" />
-              </TouchableOpacity>
-            ))
-          )}
+                    <Text style={[styles.rowTrailing, { color: T.textDim }]}>
+                      {project.completedTaskCount}/{project.taskCount}{" "}
+                      {project.taskCount === 1 ? "task" : "tasks"}
+                    </Text>
+                  </TouchableOpacity>
+                </React.Fragment>
+              ))
+            )}
+          </Group>
         </View>
       </ScrollView>
+    </View>
+  );
+}
+
+function SectionHeader({ label, onSeeAll }: { label: string; onSeeAll: () => void }) {
+  const T = useTheme();
+  return (
+    <View style={styles.sectionHeader}>
+      <Text style={[styles.sectionLabel, { color: T.textBright }]}>{label}</Text>
+      <TouchableOpacity onPress={onSeeAll} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+        <Text style={[styles.seeAllText, { color: T.accent }]}>See all</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+function Group({ children }: { children: React.ReactNode }) {
+  const T = useTheme();
+  return (
+    <View style={[styles.group, { backgroundColor: T.surface, borderColor: T.border }]}>
+      {children}
+    </View>
+  );
+}
+
+/** The hairline between two rows; a zero inset runs it edge to edge to close a day. */
+function Separator({ inset }: { inset: number }) {
+  const T = useTheme();
+  return <View style={[styles.separator, { backgroundColor: T.border, marginLeft: inset }]} />;
+}
+
+function LoadingRow() {
+  const T = useTheme();
+  return (
+    <View style={styles.loadingRow}>
+      <ActivityIndicator size="small" color={T.accent} />
+    </View>
+  );
+}
+
+function EmptyRow({ icon, text }: { icon: React.ReactNode; text: string }) {
+  const T = useTheme();
+  return (
+    <View style={styles.emptyRow}>
+      {icon}
+      <Text style={[styles.emptyText, { color: T.textDim }]}>{text}</Text>
     </View>
   );
 }
@@ -374,11 +455,11 @@ const styles = StyleSheet.create({
     paddingTop: 10,
   },
   greeting: {
-    fontSize: 22,
-    fontFamily: FONT.semibold,
+    fontSize: 14,
+    fontFamily: FONT.medium,
   },
   greetingName: {
-    fontSize: 26,
+    fontSize: 22,
     fontFamily: FONT.bold,
   },
   headerRow: {
@@ -425,14 +506,13 @@ const styles = StyleSheet.create({
   },
   section: {
     paddingHorizontal: 16,
-    paddingTop: 20,
-    gap: 10,
+    paddingTop: 16,
+    gap: 8,
   },
   sectionHeader: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 2,
   },
   sectionLabel: {
     fontSize: 11,
@@ -443,40 +523,60 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: FONT.medium,
   },
-  loadingRow: {
-    paddingVertical: 20,
-    alignItems: "center",
-  },
-  emptyState: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    paddingVertical: 16,
-  },
-  emptyText: {
-    fontSize: 13,
-    fontFamily: FONT.regular,
-  },
-  chatRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    padding: 12,
-    borderRadius: 10,
+  group: {
+    borderRadius: 12,
     borderWidth: StyleSheet.hairlineWidth,
+    overflow: "hidden",
   },
-  chatIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: 9,
+  separator: { height: StyleSheet.hairlineWidth },
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: ROW_GAP,
+    paddingHorizontal: ROW_PAD_X,
+    paddingVertical: 8,
+  },
+  faded: { opacity: 0.65 },
+  dayColumn: {
+    width: DAY_COL,
+    alignItems: "center",
+    gap: 1,
+  },
+  dayWeekday: {
+    fontSize: 9,
+    fontFamily: FONT.semibold,
+    letterSpacing: 0.6,
+  },
+  dayBadge: {
+    width: TODAY_BADGE,
+    height: TODAY_BADGE,
+    borderRadius: TODAY_BADGE / 2,
     alignItems: "center",
     justifyContent: "center",
   },
-  chatName: {
-    flex: 1,
+  dayNumber: {
+    fontSize: 12,
+    fontFamily: FONT.bold,
+  },
+  glyphColumn: {
+    width: GLYPH_COL,
+    alignItems: "center",
+  },
+  noteEmoji: { fontSize: 15 },
+  rowBody: { flex: 1 },
+  rowTitle: {
     fontSize: 14,
     fontFamily: FONT.semibold,
   },
+  rowMeta: {
+    fontSize: 12,
+    fontFamily: FONT.regular,
+  },
+  rowTrailing: {
+    fontSize: 11,
+    fontFamily: FONT.regular,
+  },
+  struck: { textDecorationLine: "line-through" },
   chatBadge: {
     minWidth: 20,
     height: 20,
@@ -490,81 +590,19 @@ const styles = StyleSheet.create({
     fontFamily: FONT.bold,
     color: "#ffffff",
   },
-  eventCard: {
-    borderRadius: 10,
-    padding: 12,
+  loadingRow: {
+    paddingVertical: 14,
+    alignItems: "center",
+  },
+  emptyRow: {
     flexDirection: "row",
     alignItems: "center",
-    borderWidth: StyleSheet.hairlineWidth,
-    gap: 12,
+    gap: 10,
+    paddingHorizontal: ROW_PAD_X,
+    paddingVertical: 12,
   },
-  domainIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  eventTitle: {
-    fontSize: 14,
-    fontFamily: FONT.semibold,
-  },
-  struckTitle: { textDecorationLine: "line-through" },
-  fadedCard: { opacity: 0.65 },
-  eventMeta: {
-    fontSize: 12,
+  emptyText: {
+    fontSize: 13,
     fontFamily: FONT.regular,
-    marginTop: 2,
-  },
-  eventTime: {
-    fontSize: 12,
-    fontFamily: FONT.semibold,
-  },
-  noteRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    paddingVertical: 10,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  noteIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  noteEmoji: {
-    fontSize: 18,
-  },
-  noteTitle: {
-    fontSize: 14,
-    fontFamily: FONT.medium,
-  },
-  noteSnippet: {
-    fontSize: 12,
-    fontFamily: FONT.regular,
-    marginTop: 2,
-  },
-  noteTime: {
-    fontSize: 11,
-    fontFamily: FONT.regular,
-  },
-  projectCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    padding: 12,
-    borderRadius: 10,
-    borderWidth: StyleSheet.hairlineWidth,
-  },
-  projectName: {
-    fontSize: 14,
-    fontFamily: FONT.semibold,
-  },
-  projectMeta: {
-    fontSize: 12,
-    fontFamily: FONT.regular,
-    marginTop: 1,
   },
 });

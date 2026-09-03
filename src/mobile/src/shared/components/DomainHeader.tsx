@@ -31,6 +31,44 @@ const SUBTITLE_LINE = 14;
 // Chosen so a title and a subtitle at the unscaled size fill exactly SEGMENT,
 // which keeps the pill the height it has always been until the text outgrows it.
 const PILL_PAD_Y = 3;
+const TOP_GAP = 6;
+const BOTTOM_PAD = 6;
+
+function headerTopPad(topInset: number): number {
+  return (Platform.OS === "web" ? 20 : topInset) + TOP_GAP;
+}
+
+// React Native scales fontSize with the reader's text-size setting but never a
+// lineHeight written in a style, so at a large setting the glyphs outgrow the
+// line box they were sized for and a fixed-height pill crops the subtitle.
+// Scaling the lines and the pill together keeps the header legible instead of
+// capping how large the text is allowed to get.
+function headerLines(fontScale: number) {
+  return {
+    title: Math.round(TITLE_LINE * fontScale),
+    subtitle: Math.round(SUBTITLE_LINE * fontScale),
+  };
+}
+
+function pillHeightFor(fontScale: number, hasSubtitle: boolean): number {
+  const lines = headerLines(fontScale);
+  return Math.max(
+    SEGMENT,
+    (hasSubtitle ? lines.title + lines.subtitle : lines.title) + PILL_PAD_Y * 2,
+  );
+}
+
+/**
+ * The height the header occupies, for a screen that floats it over its
+ * content and insets that content to start beneath it.
+ */
+export function domainHeaderHeight(
+  topInset: number,
+  fontScale: number,
+  hasSubtitle = false,
+): number {
+  return headerTopPad(topInset) + pillHeightFor(fontScale, hasSubtitle) + BOTTOM_PAD;
+}
 
 // Segmented, translucent header shared by every screen: a glass back button, a
 // glass title pill, and a glass action group over a transparent bar - so top
@@ -50,19 +88,10 @@ export function DomainHeader({
 }: DomainHeaderProps) {
   const T = useTheme();
   const insets = useSafeAreaInsets();
-  const topPad = (Platform.OS === "web" ? 20 : insets.top) + 6;
-  // React Native scales fontSize with the reader's text-size setting but never a
-  // lineHeight written in a style, so at a large setting the glyphs outgrow the
-  // line box they were sized for and a fixed-height pill crops the subtitle.
-  // Scaling the lines and the pill together keeps the header legible instead of
-  // capping how large the text is allowed to get.
+  const topPad = headerTopPad(insets.top);
   const { fontScale } = useWindowDimensions();
-  const titleLine = Math.round(TITLE_LINE * fontScale);
-  const subtitleLine = Math.round(SUBTITLE_LINE * fontScale);
-  const pillHeight = Math.max(
-    SEGMENT,
-    (subtitle ? titleLine + subtitleLine : titleLine) + PILL_PAD_Y * 2,
-  );
+  const { title: titleLine, subtitle: subtitleLine } = headerLines(fontScale);
+  const pillHeight = pillHeightFor(fontScale, Boolean(subtitle));
   const IconComponent = icon in DOMAIN_ICON ? DOMAIN_ICON[icon as Domain] : null;
   const glassBorder = T.isDark ? "rgba(255,255,255,0.14)" : "rgba(0,0,0,0.08)";
   const glassTint = T.isDark ? "rgba(20,22,34,0.22)" : "rgba(255,255,255,0.35)";
@@ -159,7 +188,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
     paddingHorizontal: 12,
-    paddingBottom: 6,
+    paddingBottom: BOTTOM_PAD,
   },
   pill: {
     flex: 1,

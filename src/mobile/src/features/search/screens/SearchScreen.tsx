@@ -159,7 +159,7 @@ export function SearchScreen() {
         icon="search"
         rightActions={
           <TouchableOpacity
-            onPress={() => router.push("/tags" as any)}
+            onPress={() => router.push("/library/tags" as any)}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
             <TagIcon size={20} color={T.text} weight="duotone" />

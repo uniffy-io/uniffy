@@ -1,4 +1,10 @@
-import { useInfiniteQuery, useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  keepPreviousData,
+  useInfiniteQuery,
+  useQuery,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
 import type { InfiniteData } from "@tanstack/react-query";
 import type { ContentType } from "@uniffy/proto/common/v1/common_pb";
 import { useAuth } from "@core/providers/AuthContext";
@@ -22,6 +28,9 @@ export function useBookmarkItems(contentTypes: ContentType[]) {
   return useInfiniteQuery({
     queryKey: ["bookmark-items", organizationId, contentTypes],
     enabled: !!organizationId && isAuthenticated,
+    // A filter change keeps the current list on screen until the narrowed one
+    // arrives, instead of dropping to a spinner and remounting every card.
+    placeholderData: keepPreviousData,
     initialPageParam: undefined as string | undefined,
     queryFn: async ({ pageParam }) => {
       const items: SerializedBookmarkItem[] = [];

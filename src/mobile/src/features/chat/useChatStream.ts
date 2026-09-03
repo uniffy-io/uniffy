@@ -282,12 +282,22 @@ function applyUserEvent(
   switch (event.payload.case) {
     case "unreadCount": {
       const p = event.payload.value;
+      // The payload is the delta for one message, not the channel total: the
+      // server sends 1 per send (with the mention flag) and the web store adds
+      // it the same way. GetUnreadCounts restores the absolute numbers on its
+      // poll and after every mark-read, so a missed event heals itself.
       queryClient.setQueryData<Record<string, { unread: number; mentions: number }>>(
         ["chat", "unread", orgId],
-        (old) => ({
-          ...old,
-          [p.channelId]: { unread: p.unreadCount, mentions: p.mentionCount },
-        }),
+        (old) => {
+          const prev = old?.[p.channelId] ?? { unread: 0, mentions: 0 };
+          return {
+            ...old,
+            [p.channelId]: {
+              unread: prev.unread + p.unreadCount,
+              mentions: prev.mentions + p.mentionCount,
+            },
+          };
+        },
       );
       break;
     }

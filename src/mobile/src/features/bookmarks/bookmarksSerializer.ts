@@ -1,11 +1,14 @@
 import type { BookmarkItem } from "@uniffy/proto/bookmarks/v1/bookmarks_pb";
 import { SearchResultType, UrnAvailability } from "@uniffy/proto/search/v1/search_pb";
+import { timestampDate } from "@bufbuild/protobuf/wkt";
 import type { Domain } from "@core/types";
 import {
   contentTypeLabel,
   domainForType,
   idFromUrn,
   nativeRouteFor,
+  urnTypeOf,
+  type UrnType,
 } from "@shared/lib/contentTypes";
 
 export type BookmarkAvailability = "available" | "deleted" | "unavailable";
@@ -16,9 +19,12 @@ export interface SerializedBookmarkItem {
   title: string;
   description: string;
   typeLabel: string;
+  type: UrnType | null;
   domain: Domain | null;
   route: string | null;
   availability: BookmarkAvailability;
+  /** When the user saved it, ISO; the library groups by this. */
+  createdAt: string;
 }
 
 function chatMessageDescription(metadata: Record<string, string>): string {
@@ -40,6 +46,10 @@ export function bookmarkItemToPlain(item: BookmarkItem): SerializedBookmarkItem 
         ? "deleted"
         : "unavailable";
 
+  const createdAt = item.bookmark.createdAt
+    ? timestampDate(item.bookmark.createdAt).toISOString()
+    : "";
+
   if (availability !== "available" || !content) {
     return {
       id: item.bookmark.id,
@@ -47,9 +57,11 @@ export function bookmarkItemToPlain(item: BookmarkItem): SerializedBookmarkItem 
       title: "",
       description: "",
       typeLabel: contentTypeLabel(content?.type),
+      type: urnTypeOf(item.bookmark.urn),
       domain: null,
       route: null,
       availability,
+      createdAt,
     };
   }
 
@@ -69,8 +81,10 @@ export function bookmarkItemToPlain(item: BookmarkItem): SerializedBookmarkItem 
       type === SearchResultType.NOTE && metadata["node_type"] === "FOLDER"
         ? "Folder"
         : contentTypeLabel(type),
+    type: urnTypeOf(item.bookmark.urn),
     domain: domainForType(type),
     route: nativeRouteFor(type, contentId, metadata),
     availability,
+    createdAt,
   };
 }
