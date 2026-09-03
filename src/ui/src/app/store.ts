@@ -26,21 +26,20 @@ import { notesReducer } from "@/features/notes/store/notesSlice";
 import { notesTreeReducer } from "@/features/notes/store/notesTreeSlice";
 import { editorReducer } from "@/features/notes/store/editorSlice";
 import { settingsReducer } from "@/features/settings/store/settingsSlice";
-import { accessRequestsReducer, permissionsReducer } from "@/features/permissions";
+import { permissionsReducer } from "@/features/permissions/store/permissionsSlice";
+import { accessRequestsReducer } from "@/features/permissions/store/accessRequestsSlice";
 import { adminReducer } from "@/features/admin/store/adminSlice";
 import { agentsGovernanceReducer } from "@/features/admin/store/agentsGovernanceSlice";
 import { agentRuntimeSettingsReducer } from "@/features/admin/store/agentRuntimeSettingsSlice";
 import { setStoreRef } from "@/app/storeRef";
 import { calendarReducer, calendarUiReducer } from "@/features/calendar/store";
 import { zenModeReducer } from "@/app/zenModeSlice";
-import {
-  filesReducer,
-  filesTreeReducer,
-  uploadReducer,
-  savedFiltersReducer,
-  viewerReducer,
-  trashReducer,
-} from "@/features/files";
+import { filesReducer } from "@/features/files/store/filesSlice";
+import { filesTreeReducer } from "@/features/files/store/filesTreeSlice";
+import { uploadReducer } from "@/features/files/store/uploadSlice";
+import { savedFiltersReducer } from "@/features/files/store/savedFiltersSlice";
+import { viewerReducer } from "@/features/files/store/viewerSlice";
+import { trashReducer } from "@/features/files/store/trashSlice";
 import { imageEditorReducer } from "@/features/files/store/imageEditorSlice";
 import { notificationsReducer } from "@/features/notifications/store/notificationsSlice";
 import { notificationsPageReducer } from "@/features/notifications/store/notificationsPageSlice";
@@ -76,7 +75,7 @@ import { chatUiReducer } from "@/features/chat/store/chatUiSlice";
 import { chatDraftsReducer } from "@/features/chat/store/chatDraftsSlice";
 import { tagsReducer } from "@/features/tags/store/tagsSlice";
 import { peopleReducer } from "@/features/people/store/peopleSlice";
-import { recordingReducer } from "@/features/recording";
+import { recordingReducer } from "@/features/recording/store/recordingSlice";
 import { callsReducer } from "@/features/calls/store/callsSlice";
 import { callPreferencesReducer } from "@/features/calls/store/callPreferencesSlice";
 

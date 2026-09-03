@@ -31,6 +31,7 @@ interface ChatChannelsState {
   agentFolders: ChatAgentFolder[];
   orgPolicy: OrgChatPolicy | null;
   isLoading: boolean;
+  channelsLoaded: boolean;
 }
 
 const initialState: ChatChannelsState = {
@@ -44,6 +45,7 @@ const initialState: ChatChannelsState = {
   agentFolders: [],
   orgPolicy: null,
   isLoading: false,
+  channelsLoaded: false,
 };
 
 export const chatChannelsSlice = createSlice({
@@ -57,6 +59,7 @@ export const chatChannelsSlice = createSlice({
         state.byId[channel.id] = channel;
         state.ids.push(channel.id);
       }
+      state.channelsLoaded = true;
     },
     addChannel: (state, action: PayloadAction<ChatChannel>) => {
       // Idempotent: backend dedups DMs and may return an id we already hold.
@@ -326,6 +329,9 @@ export const selectAgentFolders = (state: RootState): ChatAgentFolder[] =>
   state.chatChannels.agentFolders;
 
 export const selectIsLoading = (state: RootState): boolean => state.chatChannels.isLoading;
+
+export const selectChannelsLoaded = (state: RootState): boolean =>
+  state.chatChannels.channelsLoaded;
 
 export const selectOrgChatPolicy = (state: RootState): OrgChatPolicy | null =>
   state.chatChannels.orgPolicy;

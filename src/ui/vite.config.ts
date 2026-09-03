@@ -130,6 +130,9 @@ export default defineConfig(({ command, mode }) => {
     rollupOptions: {
       output: {
         manualChunks(id) {
+          // The shared lazy-route helper must not make a feature-only vendor chunk startup-critical.
+          if (id.includes('vite/preload-helper')) return 'vendor-runtime';
+
           if (!id.includes('node_modules')) return undefined;
 
           // pnpm nests packages under node_modules/.pnpm/<pkg>@<ver>/node_modules/<pkg>/...
@@ -145,17 +148,12 @@ export default defineConfig(({ command, mode }) => {
           if (pkg === '@reduxjs/toolkit' || pkg === 'react-redux' || pkg === 'redux-persist' || pkg === 'redux' || pkg === 'immer' || pkg === 'reselect') {
             return 'vendor-redux';
           }
-          // lodash-es is shared by @milkdown/* (vendor-editor) and force-graph
-          // (vendor-ui via react-force-graph-2d). Without an explicit chunk,
-          // Rollup parks it inside vendor-editor and vendor-ui ends up calling
-          // into a not-yet-initialized binding ("vS is not a function").
-          // Hoist to its own chunk so both consumers init after it.
+          // lodash-es is shared by the editor and graph chunks. Keeping it standalone
+          // prevents either consumer from calling an uninitialized binding.
           if (pkg === 'lodash-es' || pkg === 'lodash') {
             return 'vendor-lodash';
           }
-          // Milkdown + CodeMirror share transitive edges with vendor-ui
-          // (phosphor icons, prosemirror-view pulls react-like utils),
-          // so splitting them creates a circular chunk graph. Keep merged.
+          // Milkdown, CodeMirror, ProseMirror, and Lezer form one tightly coupled graph.
           if (
             pkg.startsWith('@milkdown/') ||
             pkg.startsWith('prosemirror-') ||
@@ -168,7 +166,16 @@ export default defineConfig(({ command, mode }) => {
           if (pkg === '@connectrpc/connect' || pkg === '@connectrpc/connect-web' || pkg === '@bufbuild/protobuf') {
             return 'vendor-connect';
           }
-          if (pkg === '@headlessui/react' || pkg === '@phosphor-icons/react' || pkg.startsWith('@radix-ui/') || pkg.startsWith('@dnd-kit/') || pkg === 'react-resizable-panels' || pkg === 'react-force-graph-2d') {
+          if (pkg.startsWith('@dnd-kit/')) {
+            return 'vendor-dnd';
+          }
+          if (pkg === 'react-resizable-panels') {
+            return 'vendor-panels';
+          }
+          if (pkg === 'react-force-graph-2d') {
+            return 'vendor-graph';
+          }
+          if (pkg === '@headlessui/react' || pkg === '@phosphor-icons/react' || pkg.startsWith('@radix-ui/')) {
             return 'vendor-ui';
           }
           if (pkg === 'date-fns' || pkg === 'date-fns-tz') {

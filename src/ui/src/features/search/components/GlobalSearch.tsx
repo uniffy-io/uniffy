@@ -7,7 +7,7 @@ import { cn } from "@/shared/utils/cn";
 import { useFormattedKeybinding } from "@/features/settings";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { recordRecentItem } from "@/features/search/utils/recentItems";
-import { openViewerWithFetch } from "@/features/files";
+import { openViewerWithFetch } from "@/features/files/store/viewerThunks";
 import { openRoomViewer } from "@/features/rooms/store/roomsThunks";
 import { createChannel } from "@/features/chat/store/chatThunks";
 import { ChannelType } from "@uniffy/proto/chat/v1/chat_pb";

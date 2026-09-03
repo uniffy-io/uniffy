@@ -18,11 +18,11 @@ import { AdminRoute } from "@/features/admin/components/AdminRoute";
 import { AgentsBuilderRoute } from "@/features/agents/components/AgentsBuilderRoute";
 import { PlatformRoute } from "@/features/platform/components/PlatformRoute";
 import { MainLayout } from "@/shared/layouts/MainLayout";
-import { SpotlightSearch } from "@/features/search";
+import { SpotlightSearch } from "@/features/search/components/SpotlightSearch";
 import { ZenModeHandler } from "@/components/layout/ZenModeHandler";
 import { StreamingProvider } from "@/components/streaming/StreamingProvider";
 import { notificationHref } from "@/features/notifications/utils/notificationTarget";
-import { FileViewerModal } from "@/features/files";
+import { FileViewerModal } from "@/features/files/components/viewer/FileViewerModal";
 import { RoomViewerModal } from "@/features/rooms/components/detail/RoomViewerModal";
 import { UploadTray } from "@/features/files/components/upload/UploadTray";
 import { CallProvider } from "@/features/calls/components/CallProvider";
@@ -35,11 +35,19 @@ import { NotFoundPage } from "@/components/feedback/NotFoundPage";
 import {
   AccessPolicyDialogProvider,
   AccessPolicyDialog,
-  AccessRequestDialogs,
-} from "@/features/permissions";
-import { MentionStateProvider } from "@/components/mention";
+} from "@/features/permissions/components/AccessPolicyDialog";
+import { AccessRequestDialogs } from "@/features/permissions/components/AccessRequestDialogs";
+import { MentionStateProvider } from "@/components/mention/MentionStateProvider";
+import { loadChatPage } from "@/features/chat/pages/chatPageLoader";
 import { lazyImport } from "@/shared/utils/lazyImport";
-import { loadLastOpenedChannel } from "@/features/chat/utils/lastOpenedChannel";
+import {
+  loadAgentsPage,
+  loadCalendarPage,
+  loadDashboard,
+  loadFilesPage,
+  loadNotesPage,
+  loadProjectsPage,
+} from "@/app/mainRouteLoaders";
 
 // Expose toast on window in dev mode for testing
 if (import.meta.env.DEV) {
@@ -71,10 +79,7 @@ const EnrollmentPage = lazyImport(
 );
 
 // Dashboard
-const Dashboard = lazyImport(
-  () => import("@/features/dashboard/components/Dashboard"),
-  "Dashboard",
-);
+const Dashboard = lazyImport(loadDashboard, "Dashboard");
 
 // Admin
 const AdminLayout = lazyImport(() => import("@/features/admin/layouts/AdminLayout"), "AdminLayout");
@@ -155,12 +160,9 @@ const PlatformSessionsPage = lazyImport(
 );
 
 // Content pages
-const NotesPage = lazyImport(() => import("@/features/notes/pages/NotesPage"), "NotesPage");
-const CalendarPage = lazyImport(
-  () => import("@/features/calendar/pages/CalendarPage"),
-  "CalendarPage",
-);
-const FilesPage = lazyImport(() => import("@/features/files/pages/FilesPage"), "FilesPage");
+const NotesPage = lazyImport(loadNotesPage, "NotesPage");
+const CalendarPage = lazyImport(loadCalendarPage, "CalendarPage");
+const FilesPage = lazyImport(loadFilesPage, "FilesPage");
 const FiltersPage = lazyImport(() => import("@/features/files/pages/FiltersPage"), "FiltersPage");
 const FilesTrashPage = lazyImport(
   () => import("@/features/files/pages/FilesTrashPage"),
@@ -168,10 +170,7 @@ const FilesTrashPage = lazyImport(
 );
 const RoomsAdminPage = lazyImport(() => import("@/features/rooms/pages/RoomsPage"), "RoomsPage");
 const RoomPage = lazyImport(() => import("@/features/rooms/pages/RoomPage"), "RoomPage");
-const ProjectsPage = lazyImport(
-  () => import("@/features/projects/pages/ProjectsPage"),
-  "ProjectsPage",
-);
+const ProjectsPage = lazyImport(loadProjectsPage, "ProjectsPage");
 const PortfolioPage = lazyImport(
   () => import("@/features/projects/pages/PortfolioPage"),
   "PortfolioPage",
@@ -184,8 +183,8 @@ const ProjectSettingsPage = lazyImport(
   () => import("@/features/projects/pages/ProjectSettingsPage"),
   "ProjectSettingsPage",
 );
-const AgentsPage = lazyImport(() => import("@/features/agents/pages/AgentsPage"), "AgentsPage");
-const ChatPage = lazyImport(() => import("@/features/chat/pages/ChatPage"), "ChatPage");
+const AgentsPage = lazyImport(loadAgentsPage, "AgentsPage");
+const ChatPage = lazyImport(loadChatPage, "ChatPage");
 const UserSettingsPage = lazyImport(
   () => import("@/features/settings/pages/SettingsPage"),
   "SettingsPage",
@@ -298,27 +297,6 @@ function AdminIndexRedirect() {
   }
 
   return <Navigate to="/" replace />;
-}
-
-/**
- * ChatIndexRedirect - Sends bare /chat to the user's last opened channel.
- * Deep links (/chat/:channelId) and the unreads/threads views bypass this,
- * so notification links always land on their target.
- */
-function ChatIndexRedirect() {
-  const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
-  const userId = useAppSelector((state) => state.auth.user?.id);
-
-  const lastChannelId =
-    organizationId && userId ? loadLastOpenedChannel(organizationId, userId) : null;
-  if (lastChannelId) {
-    return <Navigate to={`/chat/${lastChannelId}`} replace state={{ fromLastOpened: true }} />;
-  }
-  return (
-    <LazyRoute>
-      <ChatPage />
-    </LazyRoute>
-  );
 }
 
 /**
@@ -933,10 +911,12 @@ export function App() {
 
                   {/* Chat routes */}
                   <Route
-                    path="/chat"
+                    path="/chat/:channelId?"
                     element={
                       <ProtectedRoute>
-                        <ChatIndexRedirect />
+                        <LazyRoute>
+                          <ChatPage />
+                        </LazyRoute>
                       </ProtectedRoute>
                     }
                   />
@@ -954,17 +934,6 @@ export function App() {
 
                   <Route
                     path="/chat/threads"
-                    element={
-                      <ProtectedRoute>
-                        <LazyRoute>
-                          <ChatPage />
-                        </LazyRoute>
-                      </ProtectedRoute>
-                    }
-                  />
-
-                  <Route
-                    path="/chat/:channelId"
                     element={
                       <ProtectedRoute>
                         <LazyRoute>

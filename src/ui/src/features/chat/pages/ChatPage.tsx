@@ -1,19 +1,22 @@
-import { useEffect, useCallback, useRef } from "react";
+import { Suspense, useEffect, useCallback, useRef, type ReactNode } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
+import { SpinnerGap } from "@phosphor-icons/react";
 import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
+import { lazyImport } from "@/shared/utils/lazyImport";
 import { useShortcutHandler } from "@/features/settings";
 import { AppHeader } from "@/components/layout/AppHeader";
+import { PageLoader } from "@/components/feedback/PageLoader";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
 import { ChatLayout } from "@/features/chat/components/ChatLayout";
 import { ChatSidebar } from "@/features/chat/components/sidebar/ChatSidebar";
 import { ChannelView } from "@/features/chat/components/channel/ChannelView";
-import { ThreadPanel } from "@/features/chat/components/thread/ThreadPanel";
-import { ResourcePanel } from "@/features/chat/components/channel/ResourcePanel";
-import { ThreadsInbox } from "@/features/chat/components/thread/ThreadsInbox";
-import { UnreadsView } from "@/features/chat/components/unreads/UnreadsView";
-import { setActiveChannel } from "@/features/chat/store/chatChannelsSlice";
+import {
+  selectChannels,
+  selectChannelsLoaded,
+  setActiveChannel,
+} from "@/features/chat/store/chatChannelsSlice";
 import { recordRecentItem } from "@/features/search/utils/recentItems";
 import { SearchResultType } from "@uniffy/proto/search/v1/search_pb";
 import {
@@ -31,20 +34,90 @@ import {
   resolveThreadForMessage,
   jumpToChannelMessage,
 } from "@/features/chat/store/chatThunks";
-import { CreateChannelModal } from "@/features/chat/components/modals/CreateChannelModal";
-import { CreateCategoryModal } from "@/features/chat/components/modals/CreateCategoryModal";
-import { BrowseChannelsModal } from "@/features/chat/components/modals/BrowseChannelsModal";
-import { NewDmModal } from "@/features/chat/components/modals/NewDmModal";
-import { ChannelSettingsModal } from "@/features/chat/components/modals/ChannelSettingsModal";
-import { DmMembersModal } from "@/features/chat/components/modals/DmMembersModal";
-import { AgentChatPickerModal } from "@/features/chat/components/modals/AgentChatPickerModal";
-import { RenameAgentChatDialog } from "@/features/chat/components/modals/RenameAgentChatDialog";
 import { getChannelDisplayName } from "@/features/chat/utils/channelDisplay";
 import {
   saveLastOpenedChannel,
+  loadLastOpenedChannel,
   clearLastOpenedChannel,
 } from "@/features/chat/utils/lastOpenedChannel";
+import { chooseChatLanding } from "@/features/chat/utils/landing";
 import "@/features/chat/styles/chat.css";
+
+const ThreadPanel = lazyImport(
+  () => import("@/features/chat/components/thread/ThreadPanel"),
+  "ThreadPanel",
+);
+const ResourcePanel = lazyImport(
+  () => import("@/features/chat/components/channel/ResourcePanel"),
+  "ResourcePanel",
+);
+const ThreadsInbox = lazyImport(
+  () => import("@/features/chat/components/thread/ThreadsInbox"),
+  "ThreadsInbox",
+);
+const UnreadsView = lazyImport(
+  () => import("@/features/chat/components/unreads/UnreadsView"),
+  "UnreadsView",
+);
+const CreateChannelModal = lazyImport(
+  () => import("@/features/chat/components/modals/CreateChannelModal"),
+  "CreateChannelModal",
+);
+const CreateCategoryModal = lazyImport(
+  () => import("@/features/chat/components/modals/CreateCategoryModal"),
+  "CreateCategoryModal",
+);
+const BrowseChannelsModal = lazyImport(
+  () => import("@/features/chat/components/modals/BrowseChannelsModal"),
+  "BrowseChannelsModal",
+);
+const NewDmModal = lazyImport(
+  () => import("@/features/chat/components/modals/NewDmModal"),
+  "NewDmModal",
+);
+const ChannelSettingsModal = lazyImport(
+  () => import("@/features/chat/components/modals/ChannelSettingsModal"),
+  "ChannelSettingsModal",
+);
+const DmMembersModal = lazyImport(
+  () => import("@/features/chat/components/modals/DmMembersModal"),
+  "DmMembersModal",
+);
+const AgentChatPickerModal = lazyImport(
+  () => import("@/features/chat/components/modals/AgentChatPickerModal"),
+  "AgentChatPickerModal",
+);
+const RenameAgentChatDialog = lazyImport(
+  () => import("@/features/chat/components/modals/RenameAgentChatDialog"),
+  "RenameAgentChatDialog",
+);
+
+function DeferredChatSurface({ children }: { children: ReactNode }) {
+  return <Suspense fallback={<PageLoader className="h-full min-h-0" />}>{children}</Suspense>;
+}
+
+function DeferredChatDialog({ children }: { children: ReactNode }) {
+  return (
+    <Suspense
+      fallback={
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-background/70 backdrop-blur-sm"
+          role="status"
+          aria-label="Loading dialog"
+        >
+          <SpinnerGap size={32} className="animate-spin text-primary" />
+        </div>
+      }
+    >
+      {children}
+    </Suspense>
+  );
+}
+
+function routeSnapshotIsCurrent(pathname: string): boolean {
+  // BrowserRouter writes history before a concurrent route render commits.
+  return pathname === window.location.pathname;
+}
 
 export function ChatPage() {
   const dispatch = useAppDispatch();
@@ -52,39 +125,73 @@ export function ChatPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const initializedRef = useRef(false);
+  const landingNavigationStartedRef = useRef(false);
   const { isMobile } = useBreakpoint();
 
-  const fromLastOpened = Boolean(
-    (location.state as { fromLastOpened?: boolean } | null)?.fromLastOpened,
-  );
   const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
   const userId = useAppSelector((state) => state.auth.user?.id);
+  const channels = useAppSelector(selectChannels);
+  const channelsLoaded = useAppSelector(selectChannelsLoaded);
   const channelInStore = useAppSelector((state) =>
     channelId ? !!state.chatChannels.byId[channelId] : false,
   );
-  const channelsLoaded = useAppSelector((state) => state.chatChannels.ids.length > 0);
+  const routeChannel = useAppSelector((state) =>
+    channelId ? state.chatChannels.byId[channelId] : undefined,
+  );
+  const currentPath = location.pathname;
+  const isChatIndexRoute = !channelId && currentPath === "/chat";
+  const isThreadsInboxRoute = !channelId && currentPath === "/chat/threads";
+  const isUnreadsRoute = !channelId && currentPath === "/chat/unreads";
 
-  useEffect(() => {
-    if (channelId && channelInStore && organizationId && userId) {
-      saveLastOpenedChannel(organizationId, userId, channelId);
-    }
-  }, [channelId, channelInStore, organizationId, userId]);
-
-  // A stale last-opened pointer (deleted chat, lost membership) must not trap
-  // /chat in a dead redirect; deep links stay untouched and just 404 naturally.
   useEffect(() => {
     if (
-      fromLastOpened &&
+      landingNavigationStartedRef.current ||
+      !isChatIndexRoute ||
+      !routeSnapshotIsCurrent(currentPath) ||
+      !channelsLoaded ||
+      !organizationId ||
+      !userId
+    ) {
+      return;
+    }
+
+    const lastOpenedId = loadLastOpenedChannel(organizationId, userId);
+    const landingId = chooseChatLanding(channels, lastOpenedId);
+    if (lastOpenedId && landingId !== lastOpenedId) {
+      clearLastOpenedChannel(organizationId, userId);
+    }
+    if (landingId) {
+      landingNavigationStartedRef.current = true;
+      navigate(`/chat/${landingId}`, { replace: true });
+    }
+  }, [isChatIndexRoute, currentPath, channelsLoaded, channels, organizationId, userId, navigate]);
+
+  useEffect(() => {
+    if (
+      channelId &&
+      routeSnapshotIsCurrent(currentPath) &&
+      channelInStore &&
+      organizationId &&
+      userId
+    ) {
+      saveLastOpenedChannel(organizationId, userId, channelId);
+    }
+  }, [channelId, channelInStore, organizationId, userId, currentPath]);
+
+  useEffect(() => {
+    if (
       channelId &&
       channelsLoaded &&
       !channelInStore &&
       organizationId &&
-      userId
+      userId &&
+      routeSnapshotIsCurrent(currentPath) &&
+      loadLastOpenedChannel(organizationId, userId) === channelId
     ) {
       clearLastOpenedChannel(organizationId, userId);
       navigate("/chat", { replace: true });
     }
-  }, [fromLastOpened, channelId, channelsLoaded, channelInStore, organizationId, userId, navigate]);
+  }, [channelId, channelsLoaded, channelInStore, organizationId, userId, navigate, currentPath]);
 
   const activeChannel = useAppSelector((state) =>
     state.chatChannels.activeChannelId
@@ -92,15 +199,17 @@ export function ChatPage() {
       : undefined,
   );
   useEffect(() => {
-    if (!organizationId || !userId || !activeChannel) return;
+    if (!routeSnapshotIsCurrent(currentPath) || !organizationId || !userId || !routeChannel) {
+      return;
+    }
     recordRecentItem(organizationId, userId, {
-      urn: `urn:uniffy:content:${activeChannel.isAgentDm ? "AGENT_CHAT" : "CHAT"}:${activeChannel.id}`,
-      title: getChannelDisplayName(activeChannel),
-      type: activeChannel.isAgentDm ? SearchResultType.AGENT_CHAT : SearchResultType.CHAT,
-      url: `/chat/${activeChannel.id}`,
+      urn: `urn:uniffy:content:${routeChannel.isAgentDm ? "AGENT_CHAT" : "CHAT"}:${routeChannel.id}`,
+      title: getChannelDisplayName(routeChannel),
+      type: routeChannel.isAgentDm ? SearchResultType.AGENT_CHAT : SearchResultType.CHAT,
+      url: `/chat/${routeChannel.id}`,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- record once per channel visit, not on every unread/activity mutation of the row
-  }, [organizationId, userId, activeChannel?.id]);
+  }, [organizationId, userId, routeChannel?.id, currentPath]);
 
   const threadPanelOpen = useAppSelector((state) => state.chatUi.threadPanelOpen);
   const resourcePanelOpen = useAppSelector((state) => state.chatUi.resourcePanelOpen);
@@ -115,16 +224,12 @@ export function ChatPage() {
   const channelSettingsOpen = useAppSelector((state) => state.chatUi.channelSettingsModalOpen);
   const agentChatPickerOpen = useAppSelector((state) => state.chatUi.agentChatPickerOpen);
   const renameAgentChatChannelId = useAppSelector((state) => state.chatUi.renameAgentChatChannelId);
-  const currentPath = typeof window !== "undefined" ? window.location.pathname : "";
-  const isThreadsInboxRoute = !channelId && currentPath === "/chat/threads";
-  const isUnreadsRoute = !channelId && currentPath === "/chat/unreads";
-
-  const pageTitle = activeChannel
-    ? `#${getChannelDisplayName(activeChannel)}`
-    : isThreadsInboxRoute
-      ? "Threads"
-      : isUnreadsRoute
-        ? "Unreads"
+  const pageTitle = isThreadsInboxRoute
+    ? "Threads"
+    : isUnreadsRoute
+      ? "Unreads"
+      : routeChannel
+        ? `#${getChannelDisplayName(routeChannel)}`
         : "Chat";
   useDocumentTitle(pageTitle);
 
@@ -138,29 +243,30 @@ export function ChatPage() {
   useEffect(() => {
     if (initializedRef.current) return;
     initializedRef.current = true;
-    dispatch(initializeChat({ channelId, messageId: hashMessageId }));
-    // Mobile landing inside a channel keeps the channel view visible instead of the sidebar drawer.
+    dispatch(initializeChat());
+  }, [dispatch]);
+
+  useEffect(() => {
     if (isMobile && channelId) {
       dispatch(collapseSidebar());
     }
-  }, [dispatch, channelId, hashMessageId, isMobile]);
+  }, [dispatch, channelId, isMobile]);
 
-  const prevChannelIdRef = useRef<string | undefined>(channelId);
   useEffect(() => {
-    if (!initializedRef.current) return;
-    if (channelId && channelId !== prevChannelIdRef.current) {
-      prevChannelIdRef.current = channelId;
-      dispatch(setActiveChannel(channelId));
-      // With a hash the deep-link effect below loads the window around the target instead.
-      if (!hashMessageId) {
-        dispatch(fetchMessages({ channelId }));
-      }
+    if (!channelId || !routeSnapshotIsCurrent(currentPath) || !channelInStore) return;
+
+    dispatch(setActiveChannel(channelId));
+    // With a hash the deep-link effect below loads the window around the target instead.
+    if (!hashMessageId) {
+      dispatch(fetchMessages({ channelId }));
     }
-  }, [channelId, hashMessageId, dispatch]);
+  }, [channelId, channelInStore, hashMessageId, dispatch, currentPath]);
 
   const hashHandledRef = useRef<string | null>(null);
   useEffect(() => {
-    if (!hashMessageId || !channelId) return;
+    if (!hashMessageId || !channelId || !routeSnapshotIsCurrent(currentPath) || !channelInStore) {
+      return;
+    }
     // Keyed on the history entry so clicking the same search result twice jumps again.
     const target = `${location.key}:${channelId}#${hashMessageId}`;
     if (hashHandledRef.current === target) return;
@@ -179,7 +285,7 @@ export function ChatPage() {
       const listTarget = result ? result.rootMessageId : hashMessageId;
       await dispatch(jumpToChannelMessage({ channelId, messageId: listTarget }));
     })();
-  }, [hashMessageId, channelId, location.key, dispatch]);
+  }, [hashMessageId, channelId, channelInStore, location.key, currentPath, dispatch]);
 
   useEffect(() => {
     if (splitChannelId) {
@@ -194,9 +300,13 @@ export function ChatPage() {
 
   const rightPanel =
     threadPanelOpen && activeThreadId ? (
-      <ThreadPanel />
+      <DeferredChatSurface>
+        <ThreadPanel />
+      </DeferredChatSurface>
     ) : resourcePanelOpen ? (
-      <ResourcePanel />
+      <DeferredChatSurface>
+        <ResourcePanel />
+      </DeferredChatSurface>
     ) : null;
 
   const splitView =
@@ -210,9 +320,13 @@ export function ChatPage() {
     ) : null;
 
   const mainContent = isThreadsInboxRoute ? (
-    <ThreadsInbox />
+    <DeferredChatSurface>
+      <ThreadsInbox />
+    </DeferredChatSurface>
   ) : isUnreadsRoute ? (
-    <UnreadsView />
+    <DeferredChatSurface>
+      <UnreadsView />
+    </DeferredChatSurface>
   ) : (
     <div
       className={cn(
@@ -221,7 +335,10 @@ export function ChatPage() {
       )}
       onMouseDown={() => splitActive && dispatch(setFocusedPane("left"))}
     >
-      <ChannelView onFocus={() => splitActive && dispatch(setFocusedPane("left"))} />
+      <ChannelView
+        channelId={channelId}
+        onFocus={() => splitActive && dispatch(setFocusedPane("left"))}
+      />
     </div>
   );
 
@@ -234,18 +351,46 @@ export function ChatPage() {
         splitView={splitView}
         rightPanel={rightPanel}
       />
-      {createChannelOpen && <CreateChannelModal />}
-      {createCategoryOpen && <CreateCategoryModal />}
-      {browseChannelsOpen && <BrowseChannelsModal />}
-      {newDmOpen && <NewDmModal />}
+      {createChannelOpen && (
+        <DeferredChatDialog>
+          <CreateChannelModal />
+        </DeferredChatDialog>
+      )}
+      {createCategoryOpen && (
+        <DeferredChatDialog>
+          <CreateCategoryModal />
+        </DeferredChatDialog>
+      )}
+      {browseChannelsOpen && (
+        <DeferredChatDialog>
+          <BrowseChannelsModal />
+        </DeferredChatDialog>
+      )}
+      {newDmOpen && (
+        <DeferredChatDialog>
+          <NewDmModal />
+        </DeferredChatDialog>
+      )}
       {channelSettingsOpen &&
         (activeChannel?.channelType === "DIRECT" || activeChannel?.channelType === "GROUP_DM" ? (
-          <DmMembersModal />
+          <DeferredChatDialog>
+            <DmMembersModal />
+          </DeferredChatDialog>
         ) : (
-          <ChannelSettingsModal />
+          <DeferredChatDialog>
+            <ChannelSettingsModal />
+          </DeferredChatDialog>
         ))}
-      {agentChatPickerOpen && <AgentChatPickerModal />}
-      {renameAgentChatChannelId && <RenameAgentChatDialog />}
+      {agentChatPickerOpen && (
+        <DeferredChatDialog>
+          <AgentChatPickerModal />
+        </DeferredChatDialog>
+      )}
+      {renameAgentChatChannelId && (
+        <DeferredChatDialog>
+          <RenameAgentChatDialog />
+        </DeferredChatDialog>
+      )}
     </>
   );
 }

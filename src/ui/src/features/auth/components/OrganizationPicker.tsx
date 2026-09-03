@@ -8,25 +8,23 @@ import { OrganizationRole } from "@uniffy/proto/common/v1/common_pb";
 import { Button } from "@/components/ui/button";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { setCredentials, logout } from "@/features/auth/store/authSlice";
-import { cancelRecording } from "@/features/recording";
+import { cancelRecording } from "@/features/recording/store/recordingThunks";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { resetSettings } from "@/features/settings/store/settingsSlice";
 import { clearNotes } from "@/features/notes/store/notesSlice";
 import { clearTree as clearNotesTree } from "@/features/notes/store/notesTreeSlice";
 import { clearLibraryScope } from "@/features/library/store/clearLibraryScope";
-import { clearPresence } from "@/features/presence";
-import { clearPermissions } from "@/features/permissions";
-import { clearAdmin } from "@/features/admin";
+import { clearPresence } from "@/features/presence/store/presenceSlice";
+import { clearPermissions } from "@/features/permissions/store/permissionsSlice";
+import { clearAdmin } from "@/features/admin/store/adminSlice";
 import { clearAgentProviders } from "@/features/agents/store/agentProvidersSlice";
 import { clearIntegrations } from "@/features/integrations/store/integrationsSlice";
-import {
-  clearBlobCache,
-  clearFiles,
-  clearTree as clearFilesTree,
-  clearUploads,
-  closeViewer,
-  clearSavedFilters,
-} from "@/features/files";
+import { clearBlobCache } from "@/features/files/components/viewer/hooks/blobCache";
+import { clearFiles } from "@/features/files/store/filesSlice";
+import { clearTree as clearFilesTree } from "@/features/files/store/filesTreeSlice";
+import { clearUploads } from "@/features/files/store/uploadSlice";
+import { closeViewer } from "@/features/files/store/viewerSlice";
+import { clearSavedFilters } from "@/features/files/store/savedFiltersSlice";
 import { uploadService } from "@/features/files/upload";
 import {
   clearChatChannels,
