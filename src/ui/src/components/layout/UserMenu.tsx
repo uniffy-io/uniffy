@@ -16,16 +16,18 @@ import { logout } from "@/features/auth/store/authSlice";
 import { resetSettings } from "@/features/settings/store/settingsSlice";
 import { clearNotes } from "@/features/notes/store/notesSlice";
 import { clearTree } from "@/features/notes/store/notesTreeSlice";
-import { clearNotesCache } from "@/features/notes";
+import { clearAllCache as clearNotesCache } from "@/features/notes/utils/notesCache";
 import { clearLibraryScope } from "@/features/library/store/clearLibraryScope";
-import { clearNotifications } from "@/features/notifications";
-import { cancelRecording } from "@/features/recording";
-import { clearPresence, useCustomStatus } from "@/features/presence";
+import { clearNotifications } from "@/features/notifications/store/notificationsSlice";
+import { cancelRecording } from "@/features/recording/store/recordingThunks";
+import { clearPresence } from "@/features/presence/store/presenceSlice";
+import { useCustomStatus } from "@/features/presence/hooks/useCustomStatus";
 import { CustomStatusPicker } from "@/features/presence/components/CustomStatusPicker";
-import { clearPermissions } from "@/features/permissions";
-import { clearAdmin, useAdminAccess } from "@/features/admin";
-import { clearBlobCache } from "@/features/files";
-import { clearComments } from "@/features/comments";
+import { clearPermissions } from "@/features/permissions/store/permissionsSlice";
+import { clearAdmin } from "@/features/admin/store/adminSlice";
+import { useAdminAccess } from "@/features/admin/hooks/useAdminHooks";
+import { clearBlobCache } from "@/features/files/components/viewer/hooks/blobCache";
+import { clearComments } from "@/features/comments/store/commentsSlice";
 import {
   clearChatChannels,
   clearChatMessages,

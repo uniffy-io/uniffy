@@ -23,7 +23,7 @@ import { oneDark } from "@codemirror/theme-one-dark";
 import { languages } from "@codemirror/language-data";
 import { basicSetup } from "codemirror";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
-import { openViewerWithFetch } from "@/features/files";
+import { openViewerWithFetch } from "@/features/files/store/viewerThunks";
 import { parseFileUrl, buildFileUrl, buildMediaUrl } from "@/shared/utils/fileUrls";
 import { parseUrn, UrnType } from "@/shared/utils/urn";
 import { searchApi } from "@/features/search";

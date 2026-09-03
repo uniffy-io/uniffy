@@ -22,6 +22,7 @@ import {
   chatChannelsSlice,
   removeChannel,
   setActiveChannel,
+  setChannels,
   setChannelMembers,
   setChannelPreferences,
   setSplitChannel,
@@ -37,6 +38,14 @@ import type { RootState } from "@/app/store";
 import type { ChatChannel, ChatMessage } from "@/features/chat/types";
 
 const reducer = chatChannelsSlice.reducer;
+
+describe("setChannels", () => {
+  it("records that an empty channel index finished loading", () => {
+    const state = reducer(undefined, setChannels([]));
+
+    expect(state.channelsLoaded).toBe(true);
+  });
+});
 
 const channel: ChatChannel = {
   id: "channel-1",

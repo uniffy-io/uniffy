@@ -1,12 +1,12 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Kanban, Cpu, List, MagnifyingGlass } from "@phosphor-icons/react";
 import type { Icon } from "@phosphor-icons/react";
 import { UserMenu } from "@/components/layout/UserMenu";
-import { GlobalSearch } from "@/features/search";
-import { NotificationBell } from "@/features/notifications";
-import { CalendarQuickView } from "@/features/calendar";
-import { RecordingNavTrigger } from "@/features/recording";
+import { GlobalSearch } from "@/features/search/components/GlobalSearch";
+import { NotificationBell } from "@/features/notifications/components/NotificationBell";
+import { CalendarQuickView } from "@/features/calendar/components/quick-view/CalendarQuickView";
+import { RecordingNavTrigger } from "@/features/recording/components/RecordingNavTrigger";
 import { CallHeaderPill } from "@/features/calls/components/CallHeaderPill";
 import { cn } from "@/shared/utils/cn";
 import { UrnType } from "@/shared/utils/urn";
@@ -16,6 +16,16 @@ import { useAgentsBuilderAccess } from "@/features/agents/hooks/useAgentsBuilder
 import { UniffyLogo } from "@/components/ui/uniffy-logo";
 import { Drawer } from "@/components/ui/drawer";
 import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
+import { preloadChatPage } from "@/features/chat/pages/chatPageLoader";
+import { loadLastOpenedChannel } from "@/features/chat/utils/lastOpenedChannel";
+import {
+  preloadAgentsPage,
+  preloadCalendarPage,
+  preloadDashboard,
+  preloadFilesPage,
+  preloadNotesPage,
+  preloadProjectsPage,
+} from "@/app/mainRouteLoaders";
 
 const noteConfig = getContentTypeConfig(UrnType.NOTE);
 const fileConfig = getContentTypeConfig(UrnType.FILE);
@@ -26,16 +36,32 @@ interface NavItem {
   name: string;
   path: string;
   icon: Icon;
+  preload?: () => void;
 }
 
 // Nav paths (`/chat`) differ from URN paths (`/chats/{id}`) so we keep the override here.
 const navItems: NavItem[] = [
-  { name: noteConfig.labelPlural, path: "/notes", icon: noteConfig.icon },
-  { name: fileConfig.labelPlural, path: "/files", icon: fileConfig.icon },
-  { name: "Chat", path: "/chat", icon: chatConfig.icon },
-  { name: "Calendar", path: "/calendar", icon: calendarConfig.icon },
-  { name: "Projects", path: "/projects", icon: Kanban },
-  { name: "Agents", path: "/agents", icon: Cpu },
+  {
+    name: noteConfig.labelPlural,
+    path: "/notes",
+    icon: noteConfig.icon,
+    preload: preloadNotesPage,
+  },
+  {
+    name: fileConfig.labelPlural,
+    path: "/files",
+    icon: fileConfig.icon,
+    preload: preloadFilesPage,
+  },
+  { name: "Chat", path: "/chat", icon: chatConfig.icon, preload: preloadChatPage },
+  {
+    name: "Calendar",
+    path: "/calendar",
+    icon: calendarConfig.icon,
+    preload: preloadCalendarPage,
+  },
+  { name: "Projects", path: "/projects", icon: Kanban, preload: preloadProjectsPage },
+  { name: "Agents", path: "/agents", icon: Cpu, preload: preloadAgentsPage },
 ];
 
 // The builder surface is gated; non-builders never see the Agents entry.
@@ -51,6 +77,9 @@ function LogoNavItem({ isActive }: { isActive: boolean }) {
   return (
     <Link
       to="/"
+      onPointerEnter={preloadDashboard}
+      onFocus={preloadDashboard}
+      onPointerDown={preloadDashboard}
       className={cn(
         "group relative flex items-center py-1.5 px-1.5 text-sm font-medium rounded-lg transition-all duration-700 ease-out overflow-hidden",
         "hover:px-2.5",
@@ -83,12 +112,23 @@ function LogoNavItem({ isActive }: { isActive: boolean }) {
   );
 }
 
-function CompactNavItem({ item, isActive }: { item: (typeof navItems)[0]; isActive: boolean }) {
+function CompactNavItem({
+  item,
+  targetPath,
+  isActive,
+}: {
+  item: NavItem;
+  targetPath: string;
+  isActive: boolean;
+}) {
   const Icon = item.icon;
 
   return (
     <Link
-      to={item.path}
+      to={targetPath}
+      onPointerEnter={item.preload}
+      onFocus={item.preload}
+      onPointerDown={item.preload}
       className={cn(
         "group relative flex items-center py-1.5 px-1.5 text-sm font-medium rounded-lg transition-all duration-700 ease-out overflow-hidden",
         "hover:px-2.5",
@@ -132,10 +172,12 @@ function MobileNavDrawer({
   open,
   onClose,
   currentPath,
+  chatPath,
 }: {
   open: boolean;
   onClose: () => void;
   currentPath: string;
+  chatPath: string;
 }) {
   const visibleNavItems = useVisibleNavItems();
   return (
@@ -144,6 +186,9 @@ function MobileNavDrawer({
         <nav className="flex flex-col gap-0.5">
           <Link
             to="/"
+            onPointerEnter={preloadDashboard}
+            onFocus={preloadDashboard}
+            onPointerDown={preloadDashboard}
             onClick={onClose}
             className={cn(
               "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
@@ -157,11 +202,15 @@ function MobileNavDrawer({
           </Link>
           {visibleNavItems.map((item) => {
             const isActive = currentPath.startsWith(item.path);
+            const targetPath = item.path === "/chat" ? chatPath : item.path;
             const NavIcon = item.icon;
             return (
               <Link
                 key={item.path}
-                to={item.path}
+                to={targetPath}
+                onPointerEnter={item.preload}
+                onFocus={item.preload}
+                onPointerDown={item.preload}
                 onClick={onClose}
                 className={cn(
                   "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
@@ -184,11 +233,37 @@ function MobileNavDrawer({
 export function AppHeader() {
   const location = useLocation();
   const isZenMode = useAppSelector((state) => state.zenMode.isActive);
+  const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
+  const userId = useAppSelector((state) => state.auth.user?.id);
   const { isMobile } = useBreakpoint();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const visibleNavItems = useVisibleNavItems();
+  const lastOpenedChannelId =
+    organizationId && userId ? loadLastOpenedChannel(organizationId, userId) : null;
+  const chatPath = lastOpenedChannelId ? `/chat/${lastOpenedChannelId}` : "/chat";
 
   const closeMobileMenu = useCallback(() => setMobileMenuOpen(false), []);
+
+  useEffect(() => {
+    if (location.pathname.startsWith("/chat")) return;
+
+    const connection = (navigator as Navigator & { connection?: { saveData?: boolean } })
+      .connection;
+    if (connection?.saveData) return;
+
+    const hasIdleCallback = "requestIdleCallback" in window;
+    const handle = hasIdleCallback
+      ? window.requestIdleCallback(preloadChatPage, { timeout: 2_000 })
+      : window.setTimeout(preloadChatPage, 500);
+
+    return () => {
+      if (hasIdleCallback) {
+        window.cancelIdleCallback(handle);
+      } else {
+        window.clearTimeout(handle);
+      }
+    };
+  }, [location.pathname]);
 
   return (
     <>
@@ -217,7 +292,15 @@ export function AppHeader() {
               <LogoNavItem isActive={location.pathname === "/"} />
               {visibleNavItems.map((item) => {
                 const isActive = location.pathname.startsWith(item.path);
-                return <CompactNavItem key={item.path} item={item} isActive={isActive} />;
+                const targetPath = item.path === "/chat" ? chatPath : item.path;
+                return (
+                  <CompactNavItem
+                    key={item.path}
+                    item={item}
+                    targetPath={targetPath}
+                    isActive={isActive}
+                  />
+                );
               })}
             </nav>
           </div>
@@ -246,6 +329,7 @@ export function AppHeader() {
         open={mobileMenuOpen}
         onClose={closeMobileMenu}
         currentPath={location.pathname}
+        chatPath={chatPath}
       />
     </>
   );

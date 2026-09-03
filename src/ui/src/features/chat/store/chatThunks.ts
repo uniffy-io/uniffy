@@ -1631,75 +1631,55 @@ export const updateMemberRoleThunk = createAsyncThunk<
 
 export const initializeChat = createAsyncThunk<
   void,
-  { channelId?: string; messageId?: string },
+  void,
   { state: RootState; rejectValue: string }
->(
-  "chat/initialize",
-  async ({ channelId: initialChannelId, messageId }, { getState, dispatch, rejectWithValue }) => {
-    try {
-      // Channels are the only load-bearing fetch here: the active channel and its
-      // messages are picked from them. A transient failure would leave the sidebar
-      // and the message pane empty until the user reloads by hand, so retry once.
-      const loadChannels = async () => {
-        try {
-          await dispatch(fetchChannels()).unwrap();
-        } catch {
-          await new Promise((resolve) => setTimeout(resolve, 1000));
-          await dispatch(fetchChannels()).unwrap();
-        }
-      };
-
-      // Everything else is decoration around the channel list - categories, badges,
-      // agent metadata, the model picker's catalog. Each one is best-effort: a single
-      // slow or failing side fetch must not take the whole conversation down with it.
-      await Promise.all([
-        loadChannels(),
-        dispatch(fetchCategories())
-          .unwrap()
-          .catch(() => {}),
-        dispatch(fetchAgentFolders())
-          .unwrap()
-          .catch(() => {}),
-        dispatch(fetchUnreadCounts())
-          .unwrap()
-          .catch(() => {}),
-        dispatch(fetchThreadsInbox())
-          .unwrap()
-          .catch(() => {}),
-        dispatch(fetchDrafts())
-          .unwrap()
-          .catch(() => {}),
-        dispatch(fetchAgents())
-          .unwrap()
-          .catch(() => {}),
-        dispatch(fetchProviderKeys())
-          .unwrap()
-          .catch(() => {}),
-        dispatch(fetchAvailableModels())
-          .unwrap()
-          .catch(() => {}),
-        // Labels the tool-activity pane shows while an agent run streams.
-        dispatch(fetchAgentTools())
-          .unwrap()
-          .catch(() => {}),
-      ]);
-
-      const state = getState();
-      const targetChannelId = initialChannelId ?? state.chatChannels.ids[0];
-
-      if (targetChannelId) {
-        dispatch(setActiveChannel(targetChannelId));
-        // A deep link loads its own window through jumpToChannelMessage; fetching the latest
-        // page here too would race it and could overwrite the window holding the target.
-        if (!messageId) {
-          dispatch(fetchMessages({ channelId: targetChannelId }));
-        }
+>("chat/initialize", async (_, { dispatch, rejectWithValue }) => {
+  try {
+    // The channel index is load-bearing; auxiliary state may fail without hiding chat.
+    const loadChannels = async () => {
+      try {
+        await dispatch(fetchChannels()).unwrap();
+      } catch {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        await dispatch(fetchChannels()).unwrap();
       }
-    } catch (error) {
-      return rejectWithValue(error instanceof Error ? error.message : "Failed to initialize chat");
-    }
-  },
-);
+    };
+
+    await Promise.all([
+      loadChannels(),
+      dispatch(fetchCategories())
+        .unwrap()
+        .catch(() => {}),
+      dispatch(fetchAgentFolders())
+        .unwrap()
+        .catch(() => {}),
+      dispatch(fetchUnreadCounts())
+        .unwrap()
+        .catch(() => {}),
+      dispatch(fetchThreadsInbox())
+        .unwrap()
+        .catch(() => {}),
+      dispatch(fetchDrafts())
+        .unwrap()
+        .catch(() => {}),
+      dispatch(fetchAgents())
+        .unwrap()
+        .catch(() => {}),
+      dispatch(fetchProviderKeys())
+        .unwrap()
+        .catch(() => {}),
+      dispatch(fetchAvailableModels())
+        .unwrap()
+        .catch(() => {}),
+      // Labels the tool-activity pane shows while an agent run streams.
+      dispatch(fetchAgentTools())
+        .unwrap()
+        .catch(() => {}),
+    ]);
+  } catch (error) {
+    return rejectWithValue(error instanceof Error ? error.message : "Failed to initialize chat");
+  }
+});
 
 export const respondToAgentConfirmation = createAsyncThunk<
   { requestId: string; approved: boolean },
