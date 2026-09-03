@@ -48,6 +48,10 @@ class ConflictError(UNIFFYError):
         super().__init__(f"{resource} conflict: {conflict}")
 
 
+class StaleContentVersionError(ConflictError):
+    """Content changed after the caller observed its version."""
+
+
 class AuthenticationError(UNIFFYError):
     """Authentication failed (invalid credentials, expired token, etc.)."""
 

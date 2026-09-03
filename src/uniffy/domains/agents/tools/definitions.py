@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.search import SearchIndexer, WorkspaceSearch
 from uniffy.core.storage import ObjectStorage
+from uniffy.core.types import ContentType
 
 if TYPE_CHECKING:
     from uniffy.domains.agents.memories.scope import MemoryScopeRef
@@ -72,6 +73,10 @@ class ToolContext:
     # after the image and integration filters. Deny by default: advertisement
     # is not authorization, and a model can name a tool it was never offered.
     allowed_tools: frozenset[str] = frozenset()
+    # Content revisions observed during this run. Isolated read-tool contexts
+    # share the dict with sequential write tools, so a mutation can require a
+    # fresh read instead of trusting a revision copied from conversation history.
+    observed_content_versions: dict[tuple[ContentType, UUID], int] = field(default_factory=dict)
 
     @property
     def search(self) -> WorkspaceSearch:
@@ -100,13 +105,7 @@ class ToolContext:
 
 @dataclass
 class ToolResult:
-    """Structured result from a tool execution.
-
-    ``data`` is what the LLM reads. ``metadata`` is machine-readable detail the
-    LLM never sees: it rides to the client on the tool-call row so a renderer
-    can act on the result (the image card's regenerate menu needs the resolved
-    params, which the model never chose).
-    """
+    """Tool output with model-visible data and client-only metadata."""
 
     success: bool
     data: str
@@ -116,46 +115,7 @@ class ToolResult:
 
 @dataclass(frozen=True)
 class ToolDefinition:
-    """A registered tool that agents can use.
-
-    Attributes
-    ----------
-    name : str
-        Unique tool identifier (e.g. "notes.search_notes").
-    description : str
-        Human-readable description shown to the LLM.
-    parameter_schema : dict
-        JSON Schema describing the tool's input parameters.
-    executor : Callable
-        Async function that performs the tool's action.
-    destructive : bool
-        Whether this tool performs destructive operations that
-        require user confirmation before execution.
-    read_only : bool
-        Whether the tool only reads data. Read-only tools may run
-        concurrently within the same assistant turn against private
-        per-tool sessions; write tools always run sequentially against
-        the runtime's own session so transaction boundaries hold.
-    timeout_seconds : int
-        Per-tool wall-clock cap. ``ToolExecutor.execute`` wraps the
-        executor in ``asyncio.wait_for(..., timeout=timeout_seconds)``
-        and returns a structured timeout failure when the ceiling is
-        exceeded.
-    display_name : str
-        Label the builder UI and the tool-activity pane show. Falls back
-        to a title-cased form of the name when empty.
-    group : str
-        Builder-UI grouping ("Notes", "GitHub", ...). Falls back to the
-        name's prefix when empty.
-    category : str
-        ``platform`` for tools that run against this deployment, or
-        ``external`` for tools that call a third-party API.
-    internal : bool
-        Framework plumbing (``skills.view_skill``): the runtime advertises
-        it to the model on its own terms, so it is never offered as a
-        builder-selectable capability.
-
-    """
+    """Registration metadata and executor for one agent tool."""
 
     name: str
     description: str

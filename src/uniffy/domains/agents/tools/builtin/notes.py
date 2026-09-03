@@ -9,7 +9,7 @@ from sqlalchemy import select
 
 from uniffy.core.auth.permissions.checker import PermissionChecker
 from uniffy.core.auth.permissions.queries import ContentAccessQuery
-from uniffy.core.errors import NotFoundError, PermissionDeniedError
+from uniffy.core.errors import NotFoundError, PermissionDeniedError, StaleContentVersionError
 from uniffy.core.json_codec import OPTION_INDENT_2, dumps_str
 from uniffy.core.models.notes.note import Note
 from uniffy.core.models.shared import NodeType
@@ -309,8 +309,6 @@ async def _execute_list_folders(ctx: ToolContext, args: dict) -> ToolResult:
 
 
 async def _execute_read_note(ctx: ToolContext, args: dict) -> ToolResult:
-    """Read a note's full content."""
-
     note_id_str = args.get("note_id", "")
     if not note_id_str:
         return ToolResult(success=False, data="", error="note_id is required")
@@ -357,6 +355,7 @@ async def _execute_read_note(ctx: ToolContext, args: dict) -> ToolResult:
         "folder_title": folder_titles.get(note.parent_id) if note.parent_id else None,
         "access_mode": (note.access_mode.value if note.access_mode is not None else None),
         "baseline_role": (note.baseline_role.value if note.baseline_role is not None else None),
+        "version": note.version,
         "created_at": note.created_at.isoformat() if note.created_at else None,
         "updated_at": note.updated_at.isoformat() if note.updated_at else None,
     }
@@ -365,8 +364,11 @@ async def _execute_read_note(ctx: ToolContext, args: dict) -> ToolResult:
         result_dict["_truncated"] = True
         result_dict["_original_length"] = original_len
         result_dict["_truncation_notice"] = (
-            f"Content truncated: showing {_MAX_NOTE_CONTENT_CHARS:,} of {original_len:,} characters"
+            f"Content truncated: showing {_MAX_NOTE_CONTENT_CHARS:,} of {original_len:,} "
+            "characters. Do not replace this note's content because the complete body was not read."
         )
+    else:
+        ctx.observed_content_versions[(ContentType.NOTE, note.id)] = note.version
 
     return ToolResult(success=True, data=dumps_str(result_dict, option=OPTION_INDENT_2))
 
@@ -414,12 +416,13 @@ async def _execute_create_note(ctx: ToolContext, args: dict) -> ToolResult:
         parent_id=parent_id,
         access_mode=access_mode,
     )
+    ctx.observed_content_versions[(ContentType.NOTE, note.id)] = note.version
 
     return ToolResult(
         success=True,
         data=(
             f"Note created successfully in {space_for_access_mode(access_mode, None).title()}: "
-            f"[[[{note.title}|{_note_urn(note.id)}]]]"
+            f"[[[{note.title}|{_note_urn(note.id)}]]] (content version: {note.version})"
         ),
     )
 
@@ -478,8 +481,6 @@ async def _execute_create_folder(ctx: ToolContext, args: dict) -> ToolResult:
 
 
 async def _execute_update_note(ctx: ToolContext, args: dict) -> ToolResult:
-    """Update an existing note."""
-
     note_id_str = args.get("note_id", "")
     if not note_id_str:
         return ToolResult(success=False, data="", error="note_id is required")
@@ -487,6 +488,7 @@ async def _execute_update_note(ctx: ToolContext, args: dict) -> ToolResult:
     note_id, err = parse_uuid(note_id_str, "note_id")
     if err:
         return ToolResult(success=False, data="", error=err)
+    assert note_id is not None
 
     title = args.get("title")
     content = args.get("content")
@@ -498,18 +500,62 @@ async def _execute_update_note(ctx: ToolContext, args: dict) -> ToolResult:
             error="At least one of title or content must be provided",
         )
 
-    ops = NoteOperations(ctx.session, ctx.required_storage, ctx.required_search)
-    note = await ops.update(
-        user_id=ctx.user_id,
-        organization_id=ctx.organization_id,
-        note_id=note_id,  # type: ignore[arg-type]
-        title=title,
-        content=content,
-    )
+    expected_version = args.get("expected_version")
+    if content is not None and (
+        isinstance(expected_version, bool)
+        or not isinstance(expected_version, int)
+        or expected_version < 1
+    ):
+        return ToolResult(
+            success=False,
+            data="",
+            error=(
+                "expected_version is required for content changes. Read the note with "
+                "notes.read_note immediately before updating it, merge the requested change "
+                "into that latest content, and pass the returned version."
+            ),
+        )
 
+    content_key = (ContentType.NOTE, note_id)
+    if content is not None and ctx.observed_content_versions.get(content_key) != expected_version:
+        return ToolResult(
+            success=False,
+            data="",
+            error=(
+                "This agent run has not read that content version. Read the note with "
+                "notes.read_note now, merge the requested change into the returned content, "
+                "and pass its version."
+            ),
+        )
+
+    ops = NoteOperations(ctx.session, ctx.required_storage, ctx.required_search)
+    try:
+        note = await ops.update(
+            user_id=ctx.user_id,
+            organization_id=ctx.organization_id,
+            note_id=note_id,
+            title=title,
+            content=content,
+            expected_content_version=expected_version,
+        )
+    except StaleContentVersionError:
+        ctx.observed_content_versions.pop(content_key, None)
+        return ToolResult(
+            success=False,
+            data="",
+            error=(
+                "The note changed after the content version you used. No content was changed. "
+                "Read it again with notes.read_note, merge the user's latest edits with the "
+                "requested change, then retry with the newly returned version."
+            ),
+        )
+
+    if content is not None:
+        ctx.observed_content_versions[content_key] = note.version
+    version_label = f" (content version: {note.version})" if content is not None else ""
     return ToolResult(
         success=True,
-        data=f"Note updated successfully: [[[{note.title}|{_note_urn(note.id)}]]]",
+        data=f"Note updated successfully: [[[{note.title}|{_note_urn(note.id)}]]]{version_label}",
     )
 
 
@@ -680,8 +726,9 @@ read_note = ToolDefinition(
     display_name="Read Note",
     group="Notes",
     description=(
-        "Read the full content of a specific note by its ID, including which folder "
-        "it sits in. Folders hold no content and are rejected here."
+        "Read a specific note by its ID, including its content version and folder. Content "
+        "over 50,000 characters is truncated and cannot be safely replaced by an agent. "
+        "Folders hold no content and are rejected here."
     ),
     parameter_schema={
         "type": "object",
@@ -763,7 +810,12 @@ update_note = ToolDefinition(
     name="notes.update_note",
     display_name="Edit Note",
     group="Notes",
-    description="Update an existing note's title and/or content.",
+    description=(
+        "Update an existing note's title and/or content. Before replacing content, read the "
+        "note immediately with notes.read_note, merge the requested edit into that returned "
+        "content, and pass its version as expected_version. Never rebuild note content from "
+        "conversation memory. A stale version is rejected without changing the note."
+    ),
     parameter_schema={
         "type": "object",
         "properties": {
@@ -777,7 +829,19 @@ update_note = ToolDefinition(
             },
             "content": {
                 "type": "string",
-                "description": "New markdown content for the note.",
+                "description": (
+                    "Complete replacement markdown, merged from the latest notes.read_note "
+                    "result. Requires expected_version."
+                ),
+            },
+            "expected_version": {
+                "type": "integer",
+                "minimum": 1,
+                "description": (
+                    "Content version returned by an immediately preceding notes.read_note, "
+                    "notes.create_note, or successful notes.update_note call in this run. "
+                    "Required whenever content is provided."
+                ),
             },
         },
         "required": ["note_id"],

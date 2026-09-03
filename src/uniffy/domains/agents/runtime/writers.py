@@ -25,6 +25,7 @@ from uniffy.domains.chat.agents import (
     SenderResolver,
     bump_channel_message_stats,
     record_thread_reply,
+    track_agent_message_resources,
 )
 
 if TYPE_CHECKING:
@@ -464,6 +465,14 @@ class ChatChannelMessageWriter:
         await self._session.commit()
         await self._session.refresh(chat_msg)
 
+        if kind is ChatMessageMetadataKind.FINAL and content:
+            await track_agent_message_resources(
+                self._session,
+                self._channel_id,
+                content,
+                self._user_id,
+            )
+
         return AgentMessage(
             id=chat_msg.id,
             session_id=self._channel_id,
@@ -588,6 +597,14 @@ class ChatChannelMessageWriter:
         )
         await self._session.commit()
         await self._session.refresh(chat_msg)
+
+        if content:
+            await track_agent_message_resources(
+                self._session,
+                self._channel_id,
+                content,
+                self._user_id,
+            )
 
         return AgentMessage(
             id=chat_msg.id,

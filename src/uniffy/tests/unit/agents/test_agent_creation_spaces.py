@@ -125,7 +125,9 @@ def test_workspace_prompt_defaults_ambiguous_creation_to_personal() -> None:
 async def test_missing_space_creates_an_owner_only_note() -> None:
     ctx = _tool_context()
     ops = MagicMock()
-    ops.create = AsyncMock(return_value=SimpleNamespace(id=generate_id(), title="Ambiguous"))
+    ops.create = AsyncMock(
+        return_value=SimpleNamespace(id=generate_id(), title="Ambiguous", version=1)
+    )
 
     with patch("uniffy.domains.agents.tools.builtin.notes.NoteOperations", return_value=ops):
         result = await _execute_create_note(ctx, {"title": "Ambiguous"})
@@ -147,7 +149,7 @@ async def test_note_creation_passes_explicit_access_mode(
     expected: AccessMode,
 ) -> None:
     ctx = _tool_context()
-    note = SimpleNamespace(id=generate_id(), title="Trip summary")
+    note = SimpleNamespace(id=generate_id(), title="Trip summary", version=1)
     ops = MagicMock()
     ops.create = AsyncMock(return_value=note)
 
@@ -171,7 +173,9 @@ async def test_note_without_space_inherits_organization_parent() -> None:
             owner_id=ctx.user_id,
         )
     )
-    ops.create = AsyncMock(return_value=SimpleNamespace(id=generate_id(), title="Team note"))
+    ops.create = AsyncMock(
+        return_value=SimpleNamespace(id=generate_id(), title="Team note", version=1)
+    )
 
     with (
         patch("uniffy.domains.agents.tools.builtin.notes.NoteOperations", return_value=ops),

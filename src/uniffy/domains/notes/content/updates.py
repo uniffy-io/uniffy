@@ -13,7 +13,7 @@ from sqlalchemy import update as sql_update
 
 from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import Action
-from uniffy.core.errors import ConflictError, NotFoundError
+from uniffy.core.errors import ConflictError, NotFoundError, StaleContentVersionError
 from uniffy.core.events import NotificationEvent, emit_notification
 from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.notes.note import Note
@@ -46,12 +46,35 @@ class NoteUpdates:
         parent_id: UUID | None | str = None,
         tag_ids: list[UUID] | None = None,
         metadata: dict[str, Any] | None = None,
+        expected_content_version: int | None = None,
     ) -> Note:
         note = await self.operations._fetch_by_id(note_id, organization_id)
         if not note:
             raise NotFoundError("Note", note_id)
-        await self.operations._require_edit(user_id, organization_id, note)
 
+        content_write_requested = content is not None or canvas_content is not None
+        guarded_version = expected_content_version if content_write_requested else None
+        if guarded_version is not None:
+            refreshed = (
+                await self.operations.session.execute(
+                    select(Note)
+                    .where(
+                        Note.id == note_id,
+                        Note.organization_id == organization_id,
+                    )
+                    .execution_options(populate_existing=True)
+                )
+            ).scalar_one_or_none()
+            if refreshed is None:
+                raise NotFoundError("Note", note_id)
+            note = refreshed
+
+        await self.operations._require_edit(user_id, organization_id, note)
+        if guarded_version is not None and note.version != guarded_version:
+            raise StaleContentVersionError(
+                "Note",
+                f"content version {guarded_version} is stale; current version is {note.version}",
+            )
         if isinstance(parent_id, UUID):
             await self.operations._require_moveable_under(note_id, parent_id, organization_id)
 
@@ -73,7 +96,8 @@ class NoteUpdates:
         previous_parent_id = note.parent_id
         parent_changed = False
 
-        for attempt in range(3):
+        attempts = 1 if guarded_version is not None else 3
+        for attempt in range(attempts):
             if attempt:
                 refreshed = (
                     await self.operations.session.execute(
@@ -153,6 +177,11 @@ class NoteUpdates:
                 break
             await self.operations.session.rollback()
         else:
+            if guarded_version is not None:
+                raise StaleContentVersionError(
+                    "Note",
+                    f"content changed after version {guarded_version} was read",
+                )
             raise ConflictError("Note", f"concurrent edits on {note_id}")
 
         await self.operations.session.refresh(note)

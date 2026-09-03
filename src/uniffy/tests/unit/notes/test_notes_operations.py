@@ -1,10 +1,4 @@
-"""Unit tests for ``NoteOperations`` write-path concurrency and persistence guards.
-
-Covers the ``update`` version CAS (bump only on content change, snapshot-row
-delete, retry on a lost race) and ``realtime_save`` (blank-overwrite telemetry,
-CAS re-read retries). Live-DB integration coverage runs under the notes-domain
-harness.
-"""
+"""Concurrency and persistence guards for note writes."""
 
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -12,7 +6,7 @@ import pytest
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.sql.dml import Delete, Update
 
-from uniffy.core.errors import ConflictError
+from uniffy.core.errors import ConflictError, StaleContentVersionError
 from uniffy.core.models.notes.note import Note
 from uniffy.core.types import AccessMode, NodeType, generate_id
 from uniffy.domains.notes.operations import NoteOperations
@@ -142,6 +136,66 @@ class TestUpdateCas:
         assert params["version_1"] == 3
         assert params["title"] == "renamed"
         publish_mock.assert_not_awaited()
+
+    async def test_guarded_content_update_uses_expected_version(self) -> None:
+        note = _make_note(version=3)
+        ops = _make_ops(note)
+        ops.session.execute.side_effect = [
+            _select_result(note),
+            MagicMock(rowcount=1),
+            MagicMock(),
+        ]
+
+        await ops.update(
+            user_id=note.owner_id,
+            organization_id=note.organization_id,
+            note_id=note.id,
+            content="new content",
+            expected_content_version=3,
+        )
+
+        update_stmt = ops.session.execute.await_args_list[1].args[0]
+        params = _params(update_stmt)
+        assert params["version_1"] == 3
+        assert params["version"] == 4
+
+    async def test_guarded_content_update_rejects_stale_version(self) -> None:
+        note = _make_note(version=4, content="user edit")
+        ops = _make_ops(note)
+        ops.session.execute.side_effect = [_select_result(note)]
+
+        with pytest.raises(StaleContentVersionError):
+            await ops.update(
+                user_id=note.owner_id,
+                organization_id=note.organization_id,
+                note_id=note.id,
+                content="stale agent replacement",
+                expected_content_version=3,
+            )
+
+        assert ops.session.execute.await_count == 1
+        ops.session.commit.assert_not_awaited()
+        ops.session.rollback.assert_not_awaited()
+
+    async def test_guarded_content_update_does_not_retry_lost_cas(self) -> None:
+        note = _make_note(version=3)
+        ops = _make_ops(note)
+        ops.session.execute.side_effect = [
+            _select_result(note),
+            MagicMock(rowcount=0),
+        ]
+
+        with pytest.raises(StaleContentVersionError):
+            await ops.update(
+                user_id=note.owner_id,
+                organization_id=note.organization_id,
+                note_id=note.id,
+                content="replacement",
+                expected_content_version=3,
+            )
+
+        assert ops.session.execute.await_count == 2
+        ops.session.rollback.assert_awaited_once()
 
     async def test_update_retries_after_concurrent_version_bump(self) -> None:
         note = _make_note(version=3)
