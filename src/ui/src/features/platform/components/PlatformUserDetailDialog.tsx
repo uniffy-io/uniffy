@@ -10,16 +10,14 @@ import {
   ShieldCheck,
   SignOut,
   UserCircle,
-  X,
   XCircle,
 } from "@phosphor-icons/react";
-import { Modal } from "@/components/ui/modal";
+import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { ReasonDialog } from "@/components/ui/reason-dialog";
 import { cn } from "@/shared/utils/cn";
 import { formatProtoDateTime, formatRelativeTime } from "@/shared/utils/dateFormatting";
 import { friendlyErrorMessage } from "@/config";
-import { SubjectAvatarById } from "@/components/subject";
 import { getAvatarGradientStyle, getInitials } from "@/components/subject/utils";
 import { platformUsersApi } from "@/features/platform/api/systemDirectoryApi";
 import type {
@@ -180,7 +178,7 @@ export function PlatformUserDetailDialog({ userId, onClose, onChanged, selfId }:
     if (detail.memberships.length === 0) {
       return (
         <div className="text-center py-8">
-          <Buildings size={32} weight="duotone" className="mx-auto text-muted-foreground/50 mb-3" />
+          <Buildings size={32} weight="duotone" className="mx-auto text-subtle-foreground mb-3" />
           <p className="text-sm text-muted-foreground">Not a member of any organization</p>
         </div>
       );
@@ -226,32 +224,24 @@ export function PlatformUserDetailDialog({ userId, onClose, onChanged, selfId }:
   };
 
   return (
-    <Modal onClose={onClose} closeDisabled={submitting} maxWidth="max-w-2xl">
-      <div className="flex items-center gap-3 p-4 border-b border-border">
-        {summary ? (
-          <SubjectAvatarById userId={summary.id} displayName={displayName} size="lg" />
-        ) : (
-          <div className="w-10 h-10 rounded-full bg-muted shrink-0" />
-        )}
-        <div className="flex-1 min-w-0">
-          <div className="text-base font-semibold text-foreground truncate">{displayName}</div>
-          {summary && <p className="text-xs text-muted-foreground truncate">{summary.email}</p>}
-        </div>
-        <button
-          type="button"
-          onClick={onClose}
-          disabled={submitting}
-          className="text-muted-foreground hover:text-foreground p-1"
-          aria-label="Close"
-        >
-          <X size={16} weight="bold" />
-        </button>
-      </div>
+    <Modal
+      onClose={onClose}
+      closeDisabled={submitting}
+      maxWidth="max-w-2xl"
+      className="flex flex-col max-h-[85dvh]"
+    >
+      <ModalHeader
+        title={displayName}
+        description={summary?.email}
+        onClose={onClose}
+        closeDisabled={submitting}
+      />
 
       <div className="flex border-b border-border">
         {tabs.map(({ id, label, icon: Icon }) => (
           <button
             key={id}
+            type="button"
             onClick={() => setTab(id)}
             className={cn(
               "flex items-center justify-center gap-1.5 px-4 py-2.5 text-sm font-medium transition-colors relative",
@@ -265,7 +255,7 @@ export function PlatformUserDetailDialog({ userId, onClose, onChanged, selfId }:
         ))}
       </div>
 
-      <div className="p-4 max-h-[55vh] overflow-y-auto">
+      <ModalBody scrollable={false} className="flex-1 min-h-0 overflow-y-auto">
         {loading || !detail ? (
           <div className="py-12 text-center text-sm text-muted-foreground">Loading...</div>
         ) : tab === "memberships" ? (
@@ -273,36 +263,35 @@ export function PlatformUserDetailDialog({ userId, onClose, onChanged, selfId }:
         ) : (
           renderInfoTab()
         )}
-      </div>
+      </ModalBody>
 
       {summary && (
-        <div className="flex flex-wrap items-center gap-2 p-4 border-t border-border">
+        <ModalFooter>
           <Button
+            type="button"
             variant="outline"
-            size="sm"
+            className="mr-auto"
             disabled={submitting || isSelf}
             onClick={() => setPending("force-logout")}
             title={isSelf ? "Cannot force-logout yourself" : undefined}
           >
             <SignOut size={14} weight="duotone" /> Force logout
           </Button>
-          <div className="ml-auto">
-            <Button
-              variant={summary.isSystemAdmin ? "outline" : "default"}
-              size="sm"
-              disabled={submitting || (isSelf && summary.isSystemAdmin)}
-              onClick={() => setPending("toggle-admin")}
-              title={
-                isSelf && summary.isSystemAdmin
-                  ? "Cannot revoke your own system admin role"
-                  : undefined
-              }
-            >
-              <ShieldCheck size={14} weight="duotone" />
-              {summary.isSystemAdmin ? "Revoke system admin" : "Grant system admin"}
-            </Button>
-          </div>
-        </div>
+          <Button
+            type="button"
+            variant={summary.isSystemAdmin ? "outline" : "default"}
+            disabled={submitting || (isSelf && summary.isSystemAdmin)}
+            onClick={() => setPending("toggle-admin")}
+            title={
+              isSelf && summary.isSystemAdmin
+                ? "Cannot revoke your own system admin role"
+                : undefined
+            }
+          >
+            <ShieldCheck size={14} weight="duotone" />
+            {summary.isSystemAdmin ? "Revoke system admin" : "Grant system admin"}
+          </Button>
+        </ModalFooter>
       )}
 
       <ReasonDialog

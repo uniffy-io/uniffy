@@ -25,6 +25,9 @@ import {
   deactivateSplit,
   setFocusedPane,
   openThreadPanel,
+  closeThreadPanel,
+  closeResourcePanel,
+  selectThreadPane,
 } from "@/features/chat/store/chatUiSlice";
 import { setActiveThread } from "@/features/chat/store/chatThreadsSlice";
 import { clearSplitChannel } from "@/features/chat/store/chatChannelsSlice";
@@ -126,7 +129,7 @@ export function ChatPage() {
   const navigate = useNavigate();
   const initializedRef = useRef(false);
   const landingNavigationStartedRef = useRef(false);
-  const { isMobile } = useBreakpoint();
+  const { isMobile, isMobileOrTablet } = useBreakpoint();
 
   const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
   const userId = useAppSelector((state) => state.auth.user?.id);
@@ -215,6 +218,7 @@ export function ChatPage() {
   const resourcePanelOpen = useAppSelector((state) => state.chatUi.resourcePanelOpen);
   const activeThreadId = useAppSelector((state) => state.chatThreads.activeThreadId);
   const splitActive = useAppSelector((state) => state.chatUi.splitActive);
+  const threadPane = useAppSelector(selectThreadPane);
   const splitChannelId = useAppSelector((state) => state.chatChannels.splitChannelId);
   const focusedPane = useAppSelector((state) => state.chatUi.focusedPane);
   const createChannelOpen = useAppSelector((state) => state.chatUi.createChannelModalOpen);
@@ -298,16 +302,43 @@ export function ChatPage() {
     dispatch(clearSplitChannel());
   }, [dispatch]);
 
+  // In split screen the owning ChannelView hosts the thread as a slide-over.
+  const threadInPane = !!threadPane && !isMobileOrTablet;
+
+  const rightPanelKind =
+    threadPanelOpen && activeThreadId && !threadInPane
+      ? "thread"
+      : resourcePanelOpen
+        ? "resources"
+        : null;
+
+  const handleCloseRightPanel = useCallback(() => {
+    if (rightPanelKind === "thread") dispatch(closeThreadPanel());
+    else if (rightPanelKind === "resources") dispatch(closeResourcePanel());
+  }, [dispatch, rightPanelKind]);
+
   const rightPanel =
-    threadPanelOpen && activeThreadId ? (
-      <DeferredChatSurface>
-        <ThreadPanel />
-      </DeferredChatSurface>
-    ) : resourcePanelOpen ? (
-      <DeferredChatSurface>
-        <ResourcePanel />
-      </DeferredChatSurface>
-    ) : null;
+    rightPanelKind === "thread"
+      ? {
+          node: (
+            <DeferredChatSurface>
+              <ThreadPanel />
+            </DeferredChatSurface>
+          ),
+          label: "Thread panel",
+          onClose: handleCloseRightPanel,
+        }
+      : rightPanelKind === "resources"
+        ? {
+            node: (
+              <DeferredChatSurface>
+                <ResourcePanel />
+              </DeferredChatSurface>
+            ),
+            label: "Channel resources",
+            onClose: handleCloseRightPanel,
+          }
+        : null;
 
   const splitView =
     splitActive && splitChannelId ? (
@@ -315,7 +346,12 @@ export function ChatPage() {
         className={cn("h-full", focusedPane === "right" && "ring-1 ring-inset ring-primary/30")}
         onMouseDown={() => dispatch(setFocusedPane("right"))}
       >
-        <ChannelView channelId={splitChannelId} showCloseButton onClose={handleCloseSplit} />
+        <ChannelView
+          channelId={splitChannelId}
+          pane="right"
+          showCloseButton
+          onClose={handleCloseSplit}
+        />
       </div>
     ) : null;
 
@@ -337,6 +373,7 @@ export function ChatPage() {
     >
       <ChannelView
         channelId={channelId}
+        pane="left"
         onFocus={() => splitActive && dispatch(setFocusedPane("left"))}
       />
     </div>

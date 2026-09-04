@@ -139,13 +139,13 @@ export function NoteMentionPreview({
       )}
 
       {/* Footer */}
-      <span className="flex px-4 py-1.5 pl-5 bg-muted/30 border-t border-border/50 items-center justify-between">
+      <span className="flex px-4 py-1.5 pl-5 bg-background/60 items-center justify-between">
         <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <Clock size={12} weight="duotone" />
           <span>{formatRelativeTime(liveState.updatedAt) || "No date"}</span>
           {liveState.updatedByName && (
             <>
-              <span className="text-muted-foreground/40">.</span>
+              <span className="text-subtle-foreground">.</span>
               <span className="truncate max-w-[80px]">{liveState.updatedByName}</span>
             </>
           )}

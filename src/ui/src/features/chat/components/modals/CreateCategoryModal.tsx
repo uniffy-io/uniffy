@@ -1,9 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { X, FolderSimplePlus, Rows } from "@phosphor-icons/react";
 import { useAppDispatch } from "@/app/hooks";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Modal } from "@/components/ui/modal";
+import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/ui/modal";
 import { cn } from "@/shared/utils/cn";
 import { closeCreateCategoryModal } from "@/features/chat/store/chatUiSlice";
 import { createCategoryThunk } from "@/features/chat/store/chatThunks";
@@ -47,39 +46,14 @@ export function CreateCategoryModal() {
   };
 
   return (
-    <Modal onClose={handleClose} closeDisabled={isSubmitting} maxWidth="max-w-sm">
+    <Modal onClose={handleClose} closeDisabled={isSubmitting} maxWidth="max-w-md">
       <div data-testid="chat-create-category-modal">
-        <div className="flex items-center justify-between px-6 pt-6 pb-2">
-          <h2 className="text-xl font-semibold text-foreground">New category</h2>
-          <button
-            type="button"
-            onClick={handleClose}
-            disabled={isSubmitting}
-            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
-            data-testid="chat-create-category-close"
-          >
-            <X size={20} />
-          </button>
-        </div>
+        <ModalHeader title="New category" />
 
         <form onSubmit={handleSubmit}>
-          <div className="px-6 py-4 space-y-5">
-            <div className="flex items-center gap-3 rounded-lg border border-primary/30 bg-primary/5 p-3.5">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
-                <Rows size={22} weight="bold" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-sm font-medium text-foreground">Organize your channels</p>
-                <p className="text-xs text-muted-foreground">
-                  Categories group channels into collapsible sections in the sidebar.
-                </p>
-              </div>
-            </div>
-
+          <ModalBody>
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">
-                Category name
-              </label>
+              <label className="block text-sm text-muted-foreground mb-1">Category name</label>
               <Input
                 ref={inputRef}
                 type="text"
@@ -90,7 +64,7 @@ export function CreateCategoryModal() {
                   if (!touched) setTouched(true);
                 }}
                 disabled={isSubmitting}
-                className={cn(showError && "border-red-500 focus-visible:ring-red-500")}
+                className={cn(showError && "border-red-500")}
                 data-testid="chat-create-category-name-input"
               />
               <div className="flex items-center justify-between mt-1">
@@ -109,9 +83,9 @@ export function CreateCategoryModal() {
                 </p>
               </div>
             </div>
-          </div>
+          </ModalBody>
 
-          <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-border">
+          <ModalFooter>
             <Button
               type="button"
               variant="ghost"
@@ -127,10 +101,9 @@ export function CreateCategoryModal() {
               loading={isSubmitting}
               data-testid="chat-create-category-submit"
             >
-              <FolderSimplePlus size={16} className="mr-1.5" />
               Create category
             </Button>
-          </div>
+          </ModalFooter>
         </form>
       </div>
     </Modal>

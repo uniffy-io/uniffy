@@ -3,6 +3,7 @@ import { Play, CheckCircle, DotsThree, CaretDown, CaretRight } from "@phosphor-i
 import { useAppDispatch } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
 import { Button } from "@/components/ui/button";
+import { popoverShellClass } from "@/components/ui/popover";
 import { startSprint, deleteSprint } from "@/features/projects/store/sprintsThunks";
 import { SprintCompletionDialog } from "@/features/projects/components/modals/SprintCompletionDialog";
 import { formatMinutes } from "@/features/projects/utils/timeFormatting";
@@ -140,7 +141,7 @@ export function SprintCard({ sprint, tasks, projectId, projectSlug }: SprintCard
             <DotsThree size={16} weight="bold" />
           </button>
           {isMenuOpen && (
-            <div className="absolute right-0 top-7 z-50 w-32 rounded-md border border-border bg-card shadow-lg py-1">
+            <div className={cn(popoverShellClass, "absolute right-0 top-7 z-50 w-32 py-1")}>
               <button
                 type="button"
                 className="w-full text-left px-3 py-1.5 text-sm text-destructive hover:bg-muted transition-colors"

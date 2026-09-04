@@ -1,8 +1,9 @@
 import { useState, useCallback } from "react";
-import { Dialog, DialogBackdrop, DialogPanel, DialogTitle } from "@headlessui/react";
-import { X, FloppyDisk, File, Files, Warning } from "@phosphor-icons/react";
+import { FloppyDisk, File, Files, Warning } from "@phosphor-icons/react";
 import { cn } from "@/shared/utils/cn";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/ui/modal";
 
 export type SaveMode = "new" | "version";
 export type ImageFormat = "image/png" | "image/jpeg";
@@ -57,168 +58,131 @@ export function SaveDialog({
 
   const extension = format === "image/png" ? "png" : "jpg";
 
+  if (!isOpen) return null;
+
   return (
-    <Dialog open={isOpen} onClose={onClose} className="relative z-50">
-      <DialogBackdrop
-        transition
-        className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity data-[closed]:opacity-0"
-      />
+    <Modal onClose={onClose} closeDisabled={isSaving} maxWidth="max-w-md">
+      <ModalHeader title="Save image" />
 
-      <div className="fixed inset-0 flex items-center justify-center p-4">
-        <DialogPanel
-          transition
-          className="w-full max-w-md bg-card text-card-foreground rounded-xl shadow-2xl border border-border transition-all data-[closed]:scale-95 data-[closed]:opacity-0"
-        >
-          {/* Header */}
-          <div className="flex items-center justify-between px-5 py-4 border-b border-border">
-            <DialogTitle className="text-lg font-semibold flex items-center gap-2">
-              <FloppyDisk size={20} />
-              Save Image
-            </DialogTitle>
-            <button
-              onClick={onClose}
+      <ModalBody>
+        <div>
+          <label className="block text-sm text-muted-foreground mb-1">Save as</label>
+          <div className="grid grid-cols-2 gap-2">
+            <SaveModeOption
+              mode="new"
+              selected={saveMode === "new"}
+              onSelect={setSaveMode}
+              icon={<File size={20} />}
+              label="New file"
+              description="Create a new file"
               disabled={isSaving}
-              className="p-1 rounded-md hover:bg-muted transition-colors disabled:opacity-50"
-            >
-              <X size={20} />
-            </button>
+            />
+            <SaveModeOption
+              mode="version"
+              selected={saveMode === "version"}
+              onSelect={setSaveMode}
+              icon={<Files size={20} />}
+              label="New version"
+              description="Replace current file"
+              disabled={isSaving}
+            />
           </div>
+        </div>
 
-          {/* Content */}
-          <div className="px-5 py-4 space-y-5">
-            {/* Save mode selection */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-muted-foreground">Save As</label>
-              <div className="grid grid-cols-2 gap-2">
-                <SaveModeOption
-                  mode="new"
-                  selected={saveMode === "new"}
-                  onSelect={setSaveMode}
-                  icon={<File size={20} />}
-                  label="New File"
-                  description="Create a new file"
-                  disabled={isSaving}
-                />
-                <SaveModeOption
-                  mode="version"
-                  selected={saveMode === "version"}
-                  onSelect={setSaveMode}
-                  icon={<Files size={20} />}
-                  label="New Version"
-                  description="Replace current file"
-                  disabled={isSaving}
-                />
-              </div>
+        {saveMode === "new" && (
+          <div>
+            <label htmlFor="filename" className="block text-sm text-muted-foreground mb-1">
+              Filename
+            </label>
+            <div className="flex items-center gap-2">
+              <Input
+                id="filename"
+                type="text"
+                value={filename}
+                onChange={(e) => setFilename(e.target.value)}
+                disabled={isSaving}
+                placeholder="Enter filename"
+              />
+              <span className="text-sm text-muted-foreground">.{extension}</span>
             </div>
+          </div>
+        )}
 
-            {/* Filename (only for new file) */}
-            {saveMode === "new" && (
-              <div className="space-y-2">
-                <label htmlFor="filename" className="text-sm font-medium text-muted-foreground">
-                  Filename
-                </label>
-                <div className="flex items-center gap-2">
-                  <input
-                    id="filename"
-                    type="text"
-                    value={filename}
-                    onChange={(e) => setFilename(e.target.value)}
-                    disabled={isSaving}
-                    className={cn(
-                      "flex-1 px-3 py-2 rounded-md border border-border bg-input",
-                      "text-foreground placeholder:text-muted-foreground",
-                      "focus:outline-none focus:ring-2 focus:ring-ring",
-                      "disabled:opacity-50 disabled:cursor-not-allowed",
-                    )}
-                    placeholder="Enter filename"
-                  />
-                  <span className="text-sm text-muted-foreground">.{extension}</span>
-                </div>
-              </div>
-            )}
+        <div>
+          <label className="block text-sm text-muted-foreground mb-1">Format</label>
+          <div className="flex items-center gap-2">
+            <FormatOption
+              format="image/png"
+              selected={format === "image/png"}
+              onSelect={setFormat}
+              label="PNG"
+              description="Lossless, preserves transparency"
+              disabled={isSaving}
+            />
+            <FormatOption
+              format="image/jpeg"
+              selected={format === "image/jpeg"}
+              onSelect={setFormat}
+              label="JPEG"
+              description="Smaller size, no transparency"
+              disabled={isSaving}
+            />
+          </div>
+        </div>
 
-            {/* Format selection */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-muted-foreground">Format</label>
-              <div className="flex items-center gap-2">
-                <FormatOption
-                  format="image/png"
-                  selected={format === "image/png"}
-                  onSelect={setFormat}
-                  label="PNG"
-                  description="Lossless, preserves transparency"
-                  disabled={isSaving}
-                />
-                <FormatOption
-                  format="image/jpeg"
-                  selected={format === "image/jpeg"}
-                  onSelect={setFormat}
-                  label="JPEG"
-                  description="Smaller size, no transparency"
-                  disabled={isSaving}
-                />
-              </div>
+        {format === "image/jpeg" && (
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-sm text-muted-foreground">Quality</label>
+              <span className="text-sm text-muted-foreground">{quality}%</span>
             </div>
-
-            {/* Quality slider (only for JPEG) */}
-            {format === "image/jpeg" && (
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-sm font-medium text-muted-foreground">Quality</label>
-                  <span className="text-sm text-muted-foreground">{quality}%</span>
-                </div>
-                <input
-                  type="range"
-                  min={10}
-                  max={100}
-                  value={quality}
-                  onChange={(e) => setQuality(Number(e.target.value))}
-                  disabled={isSaving}
-                  className={cn(
-                    "w-full h-2 rounded-full appearance-none cursor-pointer",
-                    "bg-muted accent-primary",
-                    "disabled:opacity-50 disabled:cursor-not-allowed",
-                  )}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Higher quality means larger file size
-                </p>
-              </div>
-            )}
-
-            {/* Error message */}
-            {error && (
-              <div className="flex items-start gap-2 p-3 rounded-md border status-error">
-                <Warning
-                  size={18}
-                  className="shrink-0 mt-0.5"
-                  style={{ color: "var(--status-error)" }}
-                />
-                <p className="text-sm" style={{ color: "var(--status-error)" }}>
-                  {error}
-                </p>
-              </div>
-            )}
+            <input
+              type="range"
+              min={10}
+              max={100}
+              value={quality}
+              onChange={(e) => setQuality(Number(e.target.value))}
+              disabled={isSaving}
+              className={cn(
+                "w-full h-2 rounded-full appearance-none cursor-pointer",
+                "bg-muted accent-primary",
+                "disabled:opacity-50 disabled:cursor-not-allowed",
+              )}
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              Higher quality means a larger file.
+            </p>
           </div>
+        )}
 
-          {/* Footer */}
-          <div className="flex items-center justify-end gap-2 px-5 py-4 border-t border-border">
-            <Button variant="secondary" size="md" onClick={onClose} disabled={isSaving}>
-              Cancel
-            </Button>
-            <Button
-              size="md"
-              onClick={handleSave}
-              loading={isSaving}
-              disabled={isSaving || (saveMode === "new" && !filename.trim())}
-            >
-              <FloppyDisk size={16} />
-              {isSaving ? "Saving..." : "Save"}
-            </Button>
+        {error && (
+          <div className="flex items-start gap-2 p-3 rounded-md border status-error">
+            <Warning
+              size={18}
+              className="shrink-0 mt-0.5"
+              style={{ color: "var(--status-error)" }}
+            />
+            <p className="text-sm" style={{ color: "var(--status-error)" }}>
+              {error}
+            </p>
           </div>
-        </DialogPanel>
-      </div>
-    </Dialog>
+        )}
+      </ModalBody>
+
+      <ModalFooter>
+        <Button variant="ghost" onClick={onClose} disabled={isSaving}>
+          Cancel
+        </Button>
+        <Button
+          onClick={handleSave}
+          loading={isSaving}
+          disabled={isSaving || (saveMode === "new" && !filename.trim())}
+        >
+          <FloppyDisk size={16} />
+          {isSaving ? "Saving..." : "Save"}
+        </Button>
+      </ModalFooter>
+    </Modal>
   );
 }
 
@@ -249,7 +213,7 @@ function SaveModeOption({
         "flex flex-col items-center gap-1 p-3 rounded-lg border transition-colors",
         selected
           ? "border-primary bg-primary/10 text-primary"
-          : "border-border bg-background hover:border-muted-foreground/30",
+          : "border-border bg-card hover:border-border-strong",
         "disabled:opacity-50 disabled:cursor-not-allowed",
       )}
     >
@@ -285,7 +249,7 @@ function FormatOption({
         "flex-1 flex flex-col items-start p-3 rounded-lg border transition-colors text-left",
         selected
           ? "border-primary bg-primary/10"
-          : "border-border bg-background hover:border-muted-foreground/30",
+          : "border-border bg-card hover:border-border-strong",
         "disabled:opacity-50 disabled:cursor-not-allowed",
       )}
     >

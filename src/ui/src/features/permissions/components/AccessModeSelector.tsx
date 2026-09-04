@@ -18,6 +18,8 @@ interface AccessModeSelectorProps {
   showInheritOption?: boolean;
   /** Modes the content type never allows (the backend rejects them too). */
   hiddenModes?: readonly (AccessMode | number)[];
+  /** One rung above the host: `surface` on an app-frame page, `card` inside a dialog. */
+  tone?: "card" | "surface";
 }
 
 const OPTIONS = [
@@ -33,7 +35,9 @@ export function AccessModeSelector({
   defaultBaselineRole = ContentRole.VIEWER,
   showInheritOption = false,
   hiddenModes,
+  tone = "card",
 }: AccessModeSelectorProps) {
+  const pane = tone === "surface" ? "bg-surface" : "bg-card";
   const visibleOptions = hiddenModes?.length
     ? OPTIONS.filter(({ mode }) => !hiddenModes.includes(mode))
     : OPTIONS;
@@ -61,8 +65,9 @@ export function AccessModeSelector({
           onClick={handleInherit}
           disabled={disabled}
           className={cn(
-            "w-full flex items-start gap-3 p-3 rounded-lg border border-dashed text-left transition-colors",
-            "border-border hover:bg-muted",
+            "w-full flex items-start gap-3 p-3 rounded-xl text-left shadow-edge transition-shadow duration-150",
+            pane,
+            "hover:shadow-edge-strong",
             disabled && "opacity-50 cursor-not-allowed",
           )}
         >
@@ -86,8 +91,10 @@ export function AccessModeSelector({
             onClick={() => handleModeChange(mode)}
             disabled={disabled}
             className={cn(
-              "w-full flex items-start gap-3 p-3 rounded-lg border text-left transition-colors",
-              selected ? "border-primary bg-primary/5" : "border-border hover:bg-muted",
+              "w-full flex items-start gap-3 p-3 rounded-xl text-left transition-shadow duration-150",
+              selected
+                ? "bg-primary/5 shadow-edge-primary"
+                : cn(pane, "shadow-edge hover:shadow-edge-strong"),
               disabled && "opacity-50 cursor-not-allowed",
             )}
           >

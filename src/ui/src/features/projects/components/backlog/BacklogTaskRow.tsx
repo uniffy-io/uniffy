@@ -2,12 +2,15 @@ import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { ArrowRight, CalendarBlank, CheckCircle, ArrowsClockwise } from "@phosphor-icons/react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
+import { popoverShellClass } from "@/components/ui/popover";
+import { useOverlayEscape } from "@/shared/hooks/useOverlayEscape";
 import { cn } from "@/shared/utils/cn";
 import { formatDateShort, isOverdue } from "@/shared/utils/dateFormatting";
 import { updateTask } from "@/features/projects/store/projectsThunks";
 import { selectSprintsForProject } from "@/features/projects/store/sprintsSlice";
 import { selectCurrentProject } from "@/features/projects/store/projectsSlice";
-import { getTaskTypeConfig } from "@/features/projects/utils/taskTypes";
+import { TaskTypeIcon } from "@/features/projects/components/TaskTypeIcon";
+import { statusPaint } from "@/features/projects/utils/statusPaint";
 import { SYSTEM_FIELD_IDS } from "@/features/projects/types";
 import type { Task, SelectOption } from "@/features/projects/types";
 import { SubjectAvatarStack } from "@/components/subject";
@@ -60,9 +63,6 @@ export function BacklogTaskRow({
     [priorityOptions, task.priority],
   );
 
-  const typeConfig = getTaskTypeConfig(task.taskType || "task");
-  const TypeIcon = typeConfig.icon;
-
   const updatePosition = useCallback(() => {
     if (!buttonRef.current) return;
     const rect = buttonRef.current.getBoundingClientRect();
@@ -102,17 +102,7 @@ export function BacklogTaskRow({
     return () => document.removeEventListener("mousedown", handleClick);
   }, [isMenuOpen]);
 
-  // Close on escape
-  useEffect(() => {
-    if (!isMenuOpen) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        setIsMenuOpen(false);
-      }
-    };
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [isMenuOpen]);
+  useOverlayEscape(() => setIsMenuOpen(false), isMenuOpen);
 
   const handleMove = async (sprintId: string | null) => {
     setIsMenuOpen(false);
@@ -131,7 +121,10 @@ export function BacklogTaskRow({
           left: menuPos.left,
           width: 176,
         }}
-        className="z-200 rounded-md border border-border bg-card shadow-xl py-1 animate-in fade-in-0 slide-in-from-top-2 duration-100"
+        className={cn(
+          popoverShellClass,
+          "z-200 py-1 animate-in fade-in-0 slide-in-from-top-2 duration-100",
+        )}
       >
         <div className="px-3 py-1 text-xs font-medium text-muted-foreground">Move to</div>
         {currentSprintId !== null && (
@@ -162,15 +155,13 @@ export function BacklogTaskRow({
 
   return (
     <div className="group flex items-center gap-3 px-4 py-2.5 hover:bg-muted/50 transition-colors">
-      {/* Type icon */}
-      <TypeIcon size={14} weight="fill" className="text-muted-foreground shrink-0" />
-
       {/* Task ID */}
       <span className="text-xs font-mono text-muted-foreground w-20 shrink-0">
         {projectSlug}-{task.number}
       </span>
 
-      {/* Title */}
+      {/* Type + title */}
+      <TaskTypeIcon type={task.taskType} className="text-muted-foreground" />
       <span className="text-sm text-foreground truncate flex-1 min-w-0">{task.title}</span>
 
       {/* Due date */}
@@ -211,8 +202,8 @@ export function BacklogTaskRow({
           <span
             className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium"
             style={{
-              backgroundColor: `${statusOption.color}15`,
-              color: statusOption.color,
+              backgroundColor: statusPaint(statusOptions, statusOption.id).translucent,
+              color: statusPaint(statusOptions, statusOption.id).solid,
             }}
           >
             {statusOption.label}

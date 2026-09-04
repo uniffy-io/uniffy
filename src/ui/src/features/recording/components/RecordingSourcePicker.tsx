@@ -52,7 +52,7 @@ export function RecordingSourcePicker() {
               "transition-colors duration-150",
               isActive
                 ? "border-primary/50 bg-primary/10 text-primary"
-                : "border-border bg-card text-muted-foreground hover:border-border/80 hover:text-foreground",
+                : "border-border bg-card text-muted-foreground hover:border-border-strong hover:text-foreground",
             )}
           >
             <Icon size={20} weight={isActive ? "fill" : "duotone"} />

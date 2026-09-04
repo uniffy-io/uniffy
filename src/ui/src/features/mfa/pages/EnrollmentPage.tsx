@@ -2,6 +2,7 @@ import { createClient } from "@connectrpc/connect";
 import { useNavigate } from "react-router-dom";
 
 import { useAppDispatch } from "@/app/hooks";
+import { Card } from "@/components/ui/card";
 import { clearEnrollmentToken, setMemoryAccessToken, unaryTransport } from "@/config/api";
 import { setCredentials } from "@/features/auth/store/authSlice";
 import { EnrollmentWizard } from "@/features/mfa/components/EnrollmentWizard";
@@ -69,9 +70,9 @@ export function EnrollmentPage() {
         </p>
       </div>
 
-      <div className="rounded-lg border border-border bg-card p-6">
+      <Card tone="surface" className="p-6">
         <EnrollmentWizard onComplete={completeAndSignIn} />
-      </div>
+      </Card>
     </div>
   );
 }

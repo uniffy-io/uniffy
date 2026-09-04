@@ -36,15 +36,101 @@
   --color-card: hsl(var(--card));
   --color-card-foreground: hsl(var(--card-foreground));
 
+  /* Borders are translucent so one token reads correctly on every rung of the
+     surface ladder: border for resting edges, border-strong for hover, focus,
+     and open states. Internal dividers use border-border/60. */
   --color-border: hsl(var(--border));
+  --color-border-strong: hsl(var(--border-strong));
+  /* Icon boxes on the nav tone: the darkest rung needs one more notch to read. */
+  --color-border-nav: hsl(var(--border-nav));
+  /* The one fill for every form control (text inputs, textareas, dropdown
+     triggers, checkboxes). Sits at the app-frame tone in dark so controls read
+     as wells cut into the surface; white in light. */
   --color-input: hsl(var(--input));
   --color-ring: hsl(var(--ring));
 
   --color-accent: hsl(var(--accent));
   --color-accent-foreground: hsl(var(--accent-foreground));
 
-  --color-chat-user: hsl(var(--chat-user));
-  --color-chat-user-foreground: hsl(var(--chat-user-foreground));
+  /* Surface ladder, darkest to lightest in dark mode: nav (top header, primary
+     sidebar) -> background (app frame: side panels) -> surface (content sheet)
+     -> card (raised blocks on the sheet). Floating chrome (popover: menus,
+     dialogs, drawers) sits at the sheet tone and separates by border and shadow. */
+  --color-nav: hsl(var(--nav));
+  --color-surface: hsl(var(--surface));
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+
+  /* Third text tier for timestamps, placeholders, and helper copy. */
+  --color-subtle-foreground: hsl(var(--subtle-foreground));
+}
+
+/* Card edges: a 1px ring drawn in the shadow layer (no layout cost, no double
+   line at rounded corners), a top highlight so raised blocks read as lit from
+   above, and a soft drop. edge = resting, edge-strong = hover/open, edge-primary
+   = selected. Inline so the vars resolve on the element, not on :root. */
+@theme inline {
+  --shadow-edge:
+    0 0 0 1px hsl(var(--border)), inset 0 1px 0 hsl(var(--edge-highlight)),
+    0 1px 2px hsl(0 0% 0% / var(--edge-drop));
+  --shadow-edge-strong:
+    0 0 0 1px hsl(var(--border-strong)), inset 0 1px 0 hsl(var(--edge-highlight)),
+    0 2px 6px hsl(0 0% 0% / var(--edge-drop-strong));
+  --shadow-edge-primary:
+    0 0 0 1px hsl(var(--primary) / 0.6), inset 0 1px 0 hsl(var(--edge-highlight)),
+    0 2px 8px hsl(var(--primary) / 0.18);
+  /* Floating chrome (menus, popovers, pickers, hover cards) and the heavier
+     tier for dialogs and drawers: the strong ring so the edge reads on the
+     sheet it floats over, plus a wide soft drop that says "lifted". */
+  --shadow-float: var(--elevation-float);
+  --shadow-float-lg: var(--elevation-float-lg);
+}
+
+/* The float elevations as plain custom properties, so stylesheets that cannot
+   use the utilities (the Milkdown editor chrome) share the one recipe. */
+:root {
+  --elevation-float:
+    0 0 0 1px hsl(var(--border-strong)), inset 0 1px 0 hsl(var(--edge-highlight)),
+    0 12px 32px -8px hsl(0 0% 0% / var(--float-drop)), 0 2px 6px hsl(0 0% 0% / var(--edge-drop));
+  --elevation-float-lg:
+    0 0 0 1px hsl(var(--border-strong)), inset 0 1px 0 hsl(var(--edge-highlight)),
+    0 32px 80px -20px hsl(0 0% 0% / var(--float-drop-strong)),
+    0 8px 24px -8px hsl(0 0% 0% / var(--edge-drop-strong));
+}
+
+/* The one focus recipe: a soft accent halo drawn as an outline (so it stacks on
+   any box-shadow) plus the border lifting to the accent. focus-ring reacts to
+   the element itself or to a preceding `peer` (visually hidden checkbox inputs);
+   focus-ring-within reacts to a focused descendant (icon + bare input boxes). */
+/* The halo is parked at rest (zero width, accent color already set) so a
+   `transition-colors` element never animates outline-color from currentColor
+   into the accent on focus; only the width flips, and width does not animate. */
+@utility focus-ring {
+  outline: 0 solid hsl(var(--ring) / 0.22);
+  outline-offset: 0;
+  &:focus-visible,
+  :where(.peer):focus-visible ~ & {
+    outline-width: 3px;
+    border-color: hsl(var(--primary) / 0.45);
+  }
+}
+
+@utility focus-ring-within {
+  outline: 0 solid hsl(var(--ring) / 0.22);
+  outline-offset: 0;
+  &:has(:focus-visible) {
+    outline-width: 3px;
+    border-color: hsl(var(--primary) / 0.45);
+  }
+}
+
+/* Table header band: the frame tone washed over the table's own tone. Painted
+   opaque (wash stacked on the tone) so a sticky header never shows the rows
+   scrolling beneath it. The table sets --table-tone to card or surface. */
+@utility table-band {
+  background:
+    linear-gradient(hsl(var(--background) / 0.4), hsl(var(--background) / 0.4)),
+    hsl(var(--table-tone, var(--surface)));
 }
 
 /* Shared keyframes */
@@ -225,6 +311,31 @@
   animation: hero-lift-out 0.5s ease-in forwards;
 }
 
+@keyframes thread-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(32px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+@keyframes thread-scrim-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.thread-slideover-panel {
+  animation: thread-slide-in 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.thread-slideover-scrim {
+  animation: thread-scrim-in 0.22s ease-out;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .agent-hero-aurora {
     animation: none;
@@ -235,6 +346,10 @@
   .hero-exit {
     animation: none;
     opacity: 0;
+  }
+  .thread-slideover-panel,
+  .thread-slideover-scrim {
+    animation: none;
   }
 }
 
@@ -456,41 +571,61 @@
   object-fit: cover;
 }
 
-/* Default values (fallback) - Light theme */
+/* Light palette. ThemeProvider only overrides --primary/--ring for a user accent. */
 :root {
   --primary: 250 100% 64.5%;
   --primary-foreground: 210 40% 98%;
+  --nav: 0 0% 92.5%;
   --background: 0 0% 94.9%;
+  --surface: 0 0% 97.5%;
   --foreground: 0 0% 11%;
   --muted: 0 0% 92%;
   --muted-foreground: 0 0% 42%;
+  --subtle-foreground: 0 0% 55%;
   --accent: 0 0% 93%;
   --accent-foreground: 0 0% 11%;
-  --card: 0 0% 98%;
+  --card: 0 0% 100%;
   --card-foreground: 0 0% 11%;
-  --border: 0 0% 85%;
-  --input: 0 0% 91%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 0 0% 11%;
+  --border: 0 0% 0% / 0.08;
+  --border-strong: 0 0% 0% / 0.16;
+  --border-nav: 0 0% 0% / 0.18;
+  --edge-highlight: 0 0% 100% / 0;
+  --edge-drop: 0.05;
+  --edge-drop-strong: 0.1;
+  --float-drop: 0.14;
+  --float-drop-strong: 0.22;
+  --input: 0 0% 100%;
   --ring: 250 100% 64.5%;
-  --chat-user: 0 0% 92%;
-  --chat-user-foreground: 0 0% 11%;
 }
 
 .dark {
   --primary: 250 100% 64.5%;
   --primary-foreground: 210 40% 98%;
-  --background: 223.3 40.9% 8.6%;
-  --foreground: 210 29% 93%;
-  --muted: 215 18% 16%;
-  --muted-foreground: 215 10% 65%;
-  --accent: 215 20% 14%;
-  --accent-foreground: 210 29% 93%;
-  --card: 214 25% 11%;
-  --card-foreground: 210 29% 93%;
-  --border: 212 12% 21%;
-  --input: 215 25% 9%;
+  --nav: 257 14% 4%;
+  --background: 257 11% 8.5%;
+  --surface: 257 10% 12%;
+  --foreground: 257 10% 93%;
+  --muted: 257 9% 17%;
+  --muted-foreground: 257 6% 68%;
+  --subtle-foreground: 257 5% 52%;
+  --accent: 257 9% 15%;
+  --accent-foreground: 257 10% 93%;
+  --card: 257 9% 15.5%;
+  --card-foreground: 257 10% 93%;
+  --popover: 257 10% 12%;
+  --popover-foreground: 257 10% 93%;
+  --border: 0 0% 100% / 0.07;
+  --border-strong: 0 0% 100% / 0.14;
+  --border-nav: 0 0% 100% / 0.22;
+  --edge-highlight: 0 0% 100% / 0.04;
+  --edge-drop: 0.3;
+  --edge-drop-strong: 0.45;
+  --float-drop: 0.55;
+  --float-drop-strong: 0.7;
+  --input: 257 11% 8.5%;
   --ring: 250 100% 64.5%;
-  --chat-user: 215 20% 13%;
-  --chat-user-foreground: 210 29% 93%;
 }
 
 /* Base styles */
@@ -500,10 +635,18 @@
     font-family: var(--font-sans);
   }
 
-  /* Custom scrollbar styles - themed with accent color */
+  /* Thin neutral scrollbars: a translucent foreground thumb on a transparent
+     track reads correctly on every rung of the surface ladder, and the accent
+     stays reserved for selection and focus. The standard properties cover
+     Firefox and Chromium; the -webkit rules cover Safari. */
+  * {
+    scrollbar-color: hsl(var(--foreground) / 0.18) transparent;
+    scrollbar-width: thin;
+  }
+
   ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+    width: 6px;
+    height: 6px;
   }
 
   ::-webkit-scrollbar-track {
@@ -511,24 +654,22 @@
   }
 
   ::-webkit-scrollbar-thumb {
-    background: hsl(var(--primary) / 0.25);
+    background: hsl(var(--foreground) / 0.18);
     border-radius: 9999px;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background: hsl(var(--primary) / 0.45);
+    background: hsl(var(--foreground) / 0.32);
   }
 
-  /* Firefox scrollbar */
-  * {
-    scrollbar-color: hsl(var(--primary) / 0.25) transparent;
-    scrollbar-width: thin;
+  ::selection {
+    background-color: hsl(var(--primary) / 0.3);
   }
 
   /* Invisible scrollbar - reserves space but is not visible */
   .invisible-scrollbar::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+    width: 6px;
+    height: 6px;
   }
 
   .invisible-scrollbar::-webkit-scrollbar-track {

@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useOverlayEscape } from "@/shared/hooks/useOverlayEscape";
 import { createPortal } from "react-dom";
 import { CaretDown, Check, MagnifyingGlass } from "@phosphor-icons/react";
 import { formatInTimeZone } from "date-fns-tz";
 import { cn } from "@/shared/utils/cn";
+import { popoverShellClass } from "@/components/ui/popover";
+import { controlShellClass } from "@/components/ui/input";
 import { getBrowserTimeZone } from "@/shared/utils/timezone";
 
 interface TimezoneSelectProps {
@@ -211,18 +214,15 @@ export function TimezoneSelect({
         setIsOpen(false);
       }
     }
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") setIsOpen(false);
-    }
     document.addEventListener("mousedown", handleClickOutside);
-    document.addEventListener("keydown", handleKeyDown);
     return () => {
       window.removeEventListener("scroll", updatePosition, true);
       window.removeEventListener("resize", updatePosition);
       document.removeEventListener("mousedown", handleClickOutside);
-      document.removeEventListener("keydown", handleKeyDown);
     };
   }, [isOpen]);
+
+  useOverlayEscape(() => setIsOpen(false), isOpen);
 
   const triggerLabel = value ? value.replace(/_/g, " ") : automaticLabel;
 
@@ -248,8 +248,8 @@ export function TimezoneSelect({
           width: position.width,
         }}
         className={cn(
-          "z-[200] overflow-hidden rounded-md",
-          "border border-border bg-card shadow-xl",
+          popoverShellClass,
+          "z-[200] overflow-hidden",
           "animate-in fade-in-0 duration-100",
         )}
       >
@@ -322,11 +322,10 @@ export function TimezoneSelect({
         aria-expanded={isOpen}
         aria-haspopup="listbox"
         className={cn(
-          "flex w-full items-center justify-between gap-2 rounded-md border border-border bg-background",
-          "px-3 py-2 text-sm font-medium transition-colors",
-          "focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 focus:ring-offset-background",
+          controlShellClass,
+          "focus-ring flex w-full items-center justify-between gap-2 px-3 py-2 text-sm font-medium",
           "disabled:opacity-50 disabled:cursor-not-allowed",
-          "hover:bg-muted/50",
+          isOpen && "border-border-strong",
         )}
       >
         <span className="truncate">{triggerLabel}</span>

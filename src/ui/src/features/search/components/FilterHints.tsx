@@ -17,7 +17,7 @@ export function FilterHints({ onHintClick, className }: FilterHintsProps) {
           className={cn(
             "px-2 py-1 rounded-md text-xs",
             "bg-muted hover:bg-muted/80 text-muted-foreground",
-            "border border-border/50 hover:border-border",
+            "border border-border/50 hover:border-border-strong",
             "transition-colors cursor-pointer",
           )}
           title={`${hint.description} (e.g., ${hint.example})`}
@@ -31,7 +31,7 @@ export function FilterHints({ onHintClick, className }: FilterHintsProps) {
 
 export function FilterHintsCompact({ className }: { className?: string }) {
   return (
-    <div className={cn("text-xs text-muted-foreground/60", className)}>
+    <div className={cn("text-xs text-subtle-foreground", className)}>
       <span>Filters: </span>
       {FILTER_HINTS.slice(0, 4).map((hint, i) => (
         <span key={hint.prefix}>

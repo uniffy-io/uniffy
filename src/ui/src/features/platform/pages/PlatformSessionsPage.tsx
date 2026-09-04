@@ -12,6 +12,7 @@ import {
 import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 import { cn } from "@/shared/utils/cn";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -205,15 +206,15 @@ export function PlatformSessionsPage() {
       </div>
 
       <div className="grid grid-cols-3 gap-2 md:gap-4">
-        <div className="p-3 md:p-4 rounded-lg border border-border bg-card">
+        <div className="p-3 md:p-4 rounded-xl bg-surface shadow-edge">
           <p className="text-xl md:text-2xl font-bold">{stats?.active ?? "-"}</p>
           <p className="text-xs md:text-sm text-muted-foreground">Active</p>
         </div>
-        <div className="p-3 md:p-4 rounded-lg border border-border bg-card">
+        <div className="p-3 md:p-4 rounded-xl bg-surface shadow-edge">
           <p className="text-xl md:text-2xl font-bold">{stats?.pending ?? "-"}</p>
           <p className="text-xs md:text-sm text-muted-foreground">Pending approval</p>
         </div>
-        <div className="p-3 md:p-4 rounded-lg border border-border bg-card">
+        <div className="p-3 md:p-4 rounded-xl bg-surface shadow-edge">
           <p className="text-xl md:text-2xl font-bold">{stats?.total ?? "-"}</p>
           <p className="text-xs md:text-sm text-muted-foreground">Total sessions</p>
         </div>
@@ -225,7 +226,7 @@ export function PlatformSessionsPage() {
             size={16}
             className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
           />
-          <input
+          <Input
             type="text"
             value={search}
             onChange={(e) => {
@@ -233,8 +234,7 @@ export function PlatformSessionsPage() {
               setPage(0);
             }}
             placeholder="Search by org or operator email"
-            className="w-full pl-9 pr-4 py-2 rounded-md border border-border bg-background
-                            text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+            className="pl-9 pr-4"
           />
         </div>
         <div className="flex flex-wrap gap-1">
@@ -250,7 +250,7 @@ export function PlatformSessionsPage() {
                 "px-3 py-1 rounded-full text-xs font-medium transition-colors",
                 stateFilter === f.id
                   ? "bg-primary text-primary-foreground"
-                  : "bg-muted text-muted-foreground hover:bg-accent",
+                  : "bg-muted text-muted-foreground hover:bg-muted/60",
               )}
             >
               {f.label}

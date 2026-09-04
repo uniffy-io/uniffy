@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
-import { Calendar, Clock, Info, Prohibit, Tag, X } from "@phosphor-icons/react";
-import { Modal } from "@/components/ui/modal";
+import { Calendar, Clock, Info, Prohibit, Tag } from "@phosphor-icons/react";
+import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { ReasonDialog } from "@/components/ui/reason-dialog";
 import { formatProtoDateTime, formatRelativeTime } from "@/shared/utils/dateFormatting";
@@ -80,36 +80,18 @@ export function PlatformSessionDetailDialog({ session, onClose, onChanged }: Pro
 
   return (
     <Modal onClose={onClose} closeDisabled={submitting} maxWidth="max-w-2xl">
-      <div className="flex items-center gap-3 p-4 border-b border-border">
-        <div
-          className="w-11 h-11 rounded-lg flex items-center justify-center text-sm font-semibold text-white shrink-0"
-          style={getAvatarGradientStyle(session.organizationName)}
-        >
-          {getInitials(session.organizationName)}
-        </div>
-        <div className="flex-1 min-w-0">
-          <Link
-            to="/platform/organizations"
-            className="text-base font-semibold text-foreground truncate block hover:underline"
-          >
+      <ModalHeader
+        title={
+          <Link to="/platform/organizations" className="hover:underline">
             {session.organizationName || "Organization"}
           </Link>
-          <code className="text-xs text-muted-foreground font-mono truncate block">
-            {session.organizationSlug}
-          </code>
-        </div>
-        <button
-          type="button"
-          onClick={onClose}
-          disabled={submitting}
-          className="text-muted-foreground hover:text-foreground p-1"
-          aria-label="Close"
-        >
-          <X size={16} weight="bold" />
-        </button>
-      </div>
+        }
+        description={<code className="font-mono">{session.organizationSlug}</code>}
+        onClose={onClose}
+        closeDisabled={submitting}
+      />
 
-      <div className="p-4 max-h-[55vh] overflow-y-auto space-y-4">
+      <ModalBody>
         <div>
           <p className="text-xs font-medium text-muted-foreground mb-1">Operator</p>
           <div className="flex items-center gap-3 p-2 rounded-md bg-muted/50">
@@ -182,19 +164,19 @@ export function PlatformSessionDetailDialog({ session, onClose, onChanged }: Pro
             <span className="font-mono text-xs">{session.id}</span>
           </Field>
         </div>
-      </div>
+      </ModalBody>
 
       {canRevoke && (
-        <div className="flex items-center justify-end p-4 border-t border-border">
+        <ModalFooter>
           <Button
+            type="button"
             variant="destructive"
-            size="sm"
             disabled={submitting}
             onClick={() => setRevokeOpen(true)}
           >
             <Prohibit size={14} weight="duotone" /> Revoke session
           </Button>
-        </div>
+        </ModalFooter>
       )}
 
       <ReasonDialog

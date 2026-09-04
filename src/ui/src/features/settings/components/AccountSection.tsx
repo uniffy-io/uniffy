@@ -4,6 +4,7 @@ import { updateUser } from "@/features/auth/store/authSlice";
 import { usersApi } from "@/features/settings/api/usersApi";
 import { getInitials } from "@/components/subject/utils";
 import { AvatarUpload } from "@/components/ui/avatar-upload";
+import { Card } from "@/components/ui/card";
 import { avatarUrlAtVariant } from "@/shared/utils/fileUrls";
 import { ProfileFieldsSection } from "@/features/settings/components/ProfileFieldsSection";
 
@@ -51,19 +52,19 @@ export function AccountSection() {
 
       <section className="space-y-4">
         <h2 className="text-lg font-semibold text-foreground">Avatar</h2>
-        <div className="bg-card rounded-lg border border-border p-4 md:p-6">
+        <Card tone="surface" className="p-4 md:p-6">
           <AvatarUpload
             imageUrl={user.avatarUrl ? avatarUrlAtVariant(user.avatarUrl, "lg") : undefined}
             fallback={displayInitials}
             onUpload={handleUpload}
             onDelete={handleDelete}
           />
-        </div>
+        </Card>
       </section>
 
       <section className="space-y-4">
         <h2 className="text-lg font-semibold text-foreground">Account Information</h2>
-        <div className="bg-card rounded-lg border border-border overflow-hidden">
+        <Card tone="surface" className="overflow-hidden">
           <div className="divide-y divide-border">
             <div className="flex items-center justify-between px-4 py-3">
               <span className="text-sm font-medium text-muted-foreground">Full Name</span>
@@ -80,14 +81,14 @@ export function AccountSection() {
               <span className="text-sm text-foreground font-medium">{user.email}</span>
             </div>
           </div>
-        </div>
+        </Card>
       </section>
 
       <ProfileFieldsSection />
 
       <section className="space-y-4">
         <h2 className="text-lg font-semibold text-foreground">Status</h2>
-        <div className="bg-card rounded-lg border border-border overflow-hidden">
+        <Card tone="surface" className="overflow-hidden">
           <div className="divide-y divide-border">
             <div className="flex items-center justify-between px-4 py-3">
               <span className="text-sm font-medium text-muted-foreground">Email Status</span>
@@ -126,7 +127,7 @@ export function AccountSection() {
               </div>
             )}
           </div>
-        </div>
+        </Card>
       </section>
     </div>
   );

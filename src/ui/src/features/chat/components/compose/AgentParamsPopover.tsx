@@ -1,8 +1,8 @@
-/* eslint-disable react-refresh/only-export-components -- pure popover logic is co-located for unit tests */
-
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useOverlayEscape } from "@/shared/hooks/useOverlayEscape";
 import { createPortal } from "react-dom";
 import { ArrowCounterClockwise, Faders } from "@phosphor-icons/react";
+import { popoverShellClass } from "@/components/ui/popover";
 import { cn } from "@/shared/utils/cn";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import {
@@ -10,12 +10,10 @@ import {
   selectModelsForKey,
 } from "@/features/agents/store/agentProvidersSlice";
 import { fetchModelsForKey } from "@/features/agents/store/agentProvidersThunks";
-import type { SerializedModelInfo } from "@/features/agents/store/agentProvidersThunks";
 import type { SerializedAgent } from "@/features/agents/store/agentsThunks";
 import { ModelParamsSection } from "@/features/agents/components/ModelParamsSection";
 import { ImageCostHint } from "@/features/agents/components/ImageCostHint";
 import { parseImagePriceEstimates } from "@/features/agents/utils/imageParams";
-import { IMAGE_GENERATION_TOOL } from "@/features/agents/config/toolCatalog";
 import {
   parseModelParamValues,
   type ModelParamValues,
@@ -23,40 +21,16 @@ import {
 import {
   modelDisplayName,
   resolveEffectiveModelId,
-} from "@/features/chat/components/compose/AgentModelPicker";
+} from "@/features/chat/components/compose/agentModelSelection";
+import {
+  effectiveParamsSchemaJson,
+  hasParamsOverride,
+  imageSchemaFor,
+} from "@/features/chat/components/compose/agentParamsSchema";
 import type {
   ChannelAgentConfigChanges,
   ChannelAgentConfigState,
 } from "@/features/chat/hooks/useChannelAgentConfig";
-
-export const hasParamsOverride = (config: ChannelAgentConfigState | null): boolean =>
-  Object.keys(config?.modelParams ?? {}).length > 0 ||
-  Object.keys(config?.imageParams ?? {}).length > 0;
-
-/** The agent's image model generates nothing here unless the tool is enabled. */
-export const imageSchemaFor = (
-  models: SerializedModelInfo[],
-  agent: Pick<SerializedAgent, "enabledTools" | "imageModel">,
-): { schemaJson: string; estimatesJson: string } => {
-  if (!agent.imageModel || !agent.enabledTools.includes(IMAGE_GENERATION_TOOL)) {
-    return { schemaJson: "", estimatesJson: "" };
-  }
-  const model = models.find((m) => m.id === agent.imageModel);
-  return {
-    schemaJson: model?.imageParameterSchemaJson ?? "",
-    estimatesJson: model?.imagePriceEstimatesJson ?? "",
-  };
-};
-
-/** Schema of the model the conversation actually runs on (override else agent primary). */
-export const effectiveParamsSchemaJson = (
-  models: SerializedModelInfo[],
-  config: Pick<ChannelAgentConfigState, "modelOverride"> | null,
-  primaryModel: string,
-): string => {
-  const effectiveId = resolveEffectiveModelId(config, primaryModel);
-  return models.find((m) => m.id === effectiveId)?.parameterSchemaJson ?? "";
-};
 
 const POPOVER_WIDTH = 320;
 const POPOVER_MAX_HEIGHT = 480;
@@ -141,16 +115,11 @@ export function AgentParamsPopover({
       if (target.closest?.("[data-select-portal]")) return;
       setOpen(false);
     };
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
-    };
     document.addEventListener("mousedown", handleMouseDown);
-    document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.removeEventListener("mousedown", handleMouseDown);
-      document.removeEventListener("keydown", handleKeyDown);
-    };
+    return () => document.removeEventListener("mousedown", handleMouseDown);
   }, [open]);
+
+  useOverlayEscape(() => setOpen(false), open);
 
   const toggleOpen = () => {
     if (open) {
@@ -224,7 +193,7 @@ export function AgentParamsPopover({
             data-testid="chat-compose-params-popover"
           >
             <div
-              className="w-80 overflow-y-auto rounded-xl border border-border bg-card shadow-xl p-3"
+              className={cn(popoverShellClass, "w-80 overflow-y-auto rounded-xl p-3")}
               style={{ maxHeight: position.maxHeight }}
             >
               <p className="px-2 pb-2 text-xs leading-snug text-muted-foreground">

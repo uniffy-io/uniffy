@@ -5,7 +5,8 @@ import { X, MagnifyingGlass, Check, PaperPlaneTilt } from "@phosphor-icons/react
 import { useNavigate } from "react-router-dom";
 import { useAppDispatch } from "@/app/hooks";
 import { Button } from "@/components/ui/button";
-import { Modal } from "@/components/ui/modal";
+import { controlShellClass } from "@/components/ui/input";
+import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/ui/modal";
 import { SubjectAvatar } from "@/components/subject";
 import { cn } from "@/shared/utils/cn";
 import { closeNewDmModal } from "@/features/chat/store/chatUiSlice";
@@ -92,23 +93,22 @@ export function NewDmModal() {
   };
 
   return (
-    <Modal onClose={handleClose} closeDisabled={isSubmitting} maxWidth="max-w-md">
-      <div className="flex flex-col" style={{ maxHeight: "70vh" }} data-testid="chat-new-dm-modal">
-        <div className="flex items-center justify-between px-5 pt-5 pb-3 shrink-0">
-          <h2 className="text-lg font-semibold text-foreground">New message</h2>
-          <button
-            type="button"
-            onClick={handleClose}
-            disabled={isSubmitting}
-            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
-            data-testid="chat-new-dm-close"
-          >
-            <X size={18} />
-          </button>
-        </div>
+    <Modal
+      onClose={handleClose}
+      closeDisabled={isSubmitting}
+      maxWidth="max-w-md"
+      className="flex flex-col max-h-[85dvh]"
+    >
+      <div className="flex flex-col min-h-0" data-testid="chat-new-dm-modal">
+        <ModalHeader title="New message" />
 
-        <div className="px-5 pb-3 shrink-0">
-          <div className="flex flex-wrap items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-2 focus-within:ring-2 focus-within:ring-ring">
+        <div className="px-6 py-4 border-b border-border shrink-0">
+          <div
+            className={cn(
+              controlShellClass,
+              "focus-ring-within flex flex-wrap items-center gap-1.5 px-3 py-2",
+            )}
+          >
             {selectedUsers.map((subject) => (
               <span
                 key={`u-${subject.id}`}
@@ -134,7 +134,7 @@ export function NewDmModal() {
                 onKeyDown={handleKeyDown}
                 placeholder={selectedUsers.length === 0 ? "Search people..." : "Add more..."}
                 disabled={isSubmitting || selectedUsers.length >= MAX_RECIPIENTS}
-                className="flex-1 text-sm bg-transparent outline-none text-foreground placeholder:text-muted-foreground"
+                className="flex-1 text-sm bg-transparent outline-none text-foreground placeholder:text-subtle-foreground"
                 data-testid="chat-new-dm-search-input"
               />
             </div>
@@ -148,14 +148,14 @@ export function NewDmModal() {
           )}
         </div>
 
-        <div className="flex-1 overflow-y-auto border-t border-border min-h-0">
+        <ModalBody scrollable={false} className="flex-1 min-h-0 overflow-y-auto p-0 space-y-0">
           {loading && results.length === 0 ? (
-            <div className="px-5 py-8 text-center text-sm text-muted-foreground">Searching...</div>
+            <div className="px-6 py-8 text-center text-sm text-muted-foreground">Searching...</div>
           ) : (
             <>
               {results.length > 0 && (
                 <div className="py-1">
-                  <div className="px-5 pt-2 pb-1 text-[10px] uppercase tracking-wide text-muted-foreground/60">
+                  <div className="px-6 pt-2 pb-1 text-[10px] uppercase tracking-wide text-subtle-foreground">
                     People
                   </div>
                   {results.map((subject) => (
@@ -164,7 +164,7 @@ export function NewDmModal() {
                       type="button"
                       onClick={() => handleToggleUser(subject)}
                       className={cn(
-                        "flex w-full items-center gap-3 px-5 py-2.5 text-left transition-colors hover:bg-muted",
+                        "flex w-full items-center gap-3 px-6 py-2.5 text-left transition-colors hover:bg-muted",
                       )}
                       data-testid={`chat-new-dm-user-${subject.id}`}
                       data-selected={selectedUserIds.includes(subject.id) ? "true" : "false"}
@@ -189,21 +189,21 @@ export function NewDmModal() {
               )}
 
               {query.length >= 2 && results.length === 0 && (
-                <div className="px-5 py-8 text-center text-sm text-muted-foreground">
+                <div className="px-6 py-8 text-center text-sm text-muted-foreground">
                   No matches
                 </div>
               )}
 
               {query.length < 2 && results.length === 0 && (
-                <div className="px-5 py-8 text-center text-sm text-muted-foreground">
+                <div className="px-6 py-8 text-center text-sm text-muted-foreground">
                   Type a name to find someone to message
                 </div>
               )}
             </>
           )}
-        </div>
+        </ModalBody>
 
-        <div className="flex items-center justify-end gap-3 px-5 py-3 border-t border-border shrink-0">
+        <ModalFooter className="shrink-0">
           <Button
             type="button"
             variant="ghost"
@@ -219,10 +219,10 @@ export function NewDmModal() {
             loading={isSubmitting}
             data-testid="chat-new-dm-submit"
           >
-            <PaperPlaneTilt className="mr-1.5 h-4 w-4" />
+            <PaperPlaneTilt size={16} />
             {selectedUsers.length <= 1 ? "Start conversation" : "Create group"}
           </Button>
-        </div>
+        </ModalFooter>
       </div>
     </Modal>
   );

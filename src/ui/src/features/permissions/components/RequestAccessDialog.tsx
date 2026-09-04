@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
-import { CheckCircle, Clock, LockKey, PaperPlaneTilt, Prohibit, X } from "@phosphor-icons/react";
+import { CheckCircle, Clock, PaperPlaneTilt, Prohibit } from "@phosphor-icons/react";
 import {
   AccessRequestState,
   RequestAccessOutcome,
 } from "@uniffy/proto/permissions/v1/permissions_pb";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { Button } from "@/components/ui/button";
-import { Modal } from "@/components/ui/modal";
+import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/ui/modal";
+import { Textarea } from "@/components/ui/textarea";
 import { getContentTypeConfig } from "@/config/theme/contentTypes";
 import {
   cancelAccessRequest,
@@ -81,26 +82,12 @@ export function RequestAccessDialog({ target, onClose }: RequestAccessDialogProp
 
   return (
     <Modal onClose={onClose} closeDisabled={isBusy} maxWidth="max-w-md">
-      <div className="flex items-start gap-3 p-4 border-b border-border">
-        <div className="p-2 rounded-lg bg-primary/10 shrink-0">
-          <LockKey size={20} weight="duotone" className="text-primary" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="text-base font-semibold text-foreground">Request access</div>
-          <div className="text-xs text-muted-foreground mt-0.5 truncate">{target.label}</div>
-        </div>
-        <button
-          type="button"
-          onClick={onClose}
-          disabled={isBusy}
-          className="text-muted-foreground hover:text-foreground"
-          aria-label="Close"
-        >
-          <X size={16} weight="bold" />
-        </button>
-      </div>
+      <ModalHeader
+        title="Request access"
+        description="Whoever manages this item reviews the request. You will be notified."
+      />
 
-      <div className="p-4 space-y-4">
+      <ModalBody>
         <div
           className={cn(
             "flex items-center gap-3 rounded-lg border p-3",
@@ -165,11 +152,11 @@ export function RequestAccessDialog({ target, onClose }: RequestAccessDialogProp
             <div>
               <label
                 htmlFor="access-request-message"
-                className="block text-xs font-medium text-muted-foreground"
+                className="block text-sm text-muted-foreground mb-1"
               >
-                Add a message <span className="font-normal">(optional)</span>
+                Message (optional)
               </label>
-              <textarea
+              <Textarea
                 id="access-request-message"
                 value={message}
                 onChange={(event) => setMessage(event.target.value.slice(0, 500))}
@@ -177,7 +164,6 @@ export function RequestAccessDialog({ target, onClose }: RequestAccessDialogProp
                 rows={4}
                 placeholder="Share why you need access"
                 disabled={isBusy || !target.canRequestAccess}
-                className="mt-2 w-full resize-none rounded-lg border border-input bg-background px-3 py-2.5 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
               />
               <div className="mt-1 flex items-center justify-between gap-3 text-xs text-muted-foreground">
                 <span>Resource details stay private until access is granted.</span>
@@ -207,39 +193,34 @@ export function RequestAccessDialog({ target, onClose }: RequestAccessDialogProp
             )}
           </>
         )}
-      </div>
+      </ModalBody>
 
-      <div className="flex items-center justify-end gap-2 p-4 border-t border-border">
+      <ModalFooter>
         {isPending ? (
           <>
-            <Button variant="ghost" size="md" onClick={onClose} disabled={isBusy}>
+            <Button variant="ghost" onClick={onClose} disabled={isBusy}>
               Close
             </Button>
-            <Button
-              variant="destructive"
-              size="md"
-              onClick={() => void handleCancel()}
-              loading={isCanceling}
-            >
+            <Button variant="destructive" onClick={() => void handleCancel()} loading={isCanceling}>
               Cancel request
             </Button>
           </>
         ) : isApproved || cooldownActive || !target.canRequestAccess ? (
-          <Button variant="ghost" size="md" onClick={onClose}>
+          <Button variant="ghost" onClick={onClose}>
             Close
           </Button>
         ) : (
           <>
-            <Button variant="ghost" size="md" onClick={onClose} disabled={isBusy}>
+            <Button variant="ghost" onClick={onClose} disabled={isBusy}>
               Cancel
             </Button>
-            <Button size="md" onClick={() => void handleRequest()} loading={isRequesting}>
+            <Button onClick={() => void handleRequest()} loading={isRequesting}>
               <PaperPlaneTilt size={14} weight="duotone" />
               Send request
             </Button>
           </>
         )}
-      </div>
+      </ModalFooter>
     </Modal>
   );
 }

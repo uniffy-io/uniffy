@@ -1,5 +1,6 @@
 import { useRef, useEffect, useState, useCallback } from "react";
 import { X, At } from "@phosphor-icons/react";
+import { dialogShellClass } from "@/components/ui/popover";
 import { SearchResultsList, useSearch } from "@/features/search";
 import { FilterChip } from "@/features/search/components/FilterChip";
 import { FilterHints } from "@/features/search/components/FilterHints";
@@ -114,7 +115,9 @@ export function MarkdownMentionSearch({
           ref={popupRef}
           className="w-full max-w-2xl mx-4 animate-in fade-in-0 zoom-in-95 slide-in-from-top-4 duration-200"
         >
-          <div className="rounded-2xl border-2 border-primary/50 bg-card shadow-2xl ring-4 ring-primary/10 overflow-hidden">
+          <div
+            className={cn(dialogShellClass, "rounded-2xl ring-1 ring-primary/40 overflow-hidden")}
+          >
             <div className="relative flex items-center border-b border-border/50">
               <div className="absolute left-4 flex items-center gap-1">
                 <At size={20} weight="bold" className="text-primary" />
@@ -128,7 +131,7 @@ export function MarkdownMentionSearch({
                 placeholder="Search to mention..."
                 className={cn(
                   "w-full h-14 bg-transparent pl-12 pr-20 text-lg",
-                  "placeholder:text-muted-foreground/60",
+                  "placeholder:text-subtle-foreground",
                   "focus:outline-none",
                 )}
                 autoComplete="off"
@@ -197,7 +200,7 @@ export function MarkdownMentionSearch({
                 <p className="text-sm text-muted-foreground">
                   Type to search for content to mention
                 </p>
-                <p className="text-xs text-muted-foreground/60 mt-2 mb-4">
+                <p className="text-xs text-subtle-foreground mt-2 mb-4">
                   Use{" "}
                   <kbd className="px-1.5 py-0.5 rounded bg-muted border border-border/50 font-mono text-[10px]">
                     @

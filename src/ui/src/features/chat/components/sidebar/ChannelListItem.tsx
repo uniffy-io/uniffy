@@ -49,12 +49,12 @@ export const ChannelListItem = memo(function ChannelListItem({
           "flex items-center gap-2 w-full px-3 py-1.5 rounded-md mx-1.5 cursor-pointer transition-colors text-left",
           "max-w-[calc(100%-12px)]",
           isActive
-            ? "bg-primary/10 text-primary font-medium"
+            ? "bg-muted text-foreground font-medium"
             : isMuted
-              ? "text-muted-foreground/60 hover:bg-accent hover:text-muted-foreground"
+              ? "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
               : hasUnread
-                ? "font-semibold text-foreground hover:bg-accent"
-                : "text-foreground/90 hover:bg-accent hover:text-foreground",
+                ? "font-semibold text-foreground hover:bg-muted/60"
+                : "text-foreground/90 hover:bg-muted/60 hover:text-foreground",
         )}
         data-testid={`chat-sidebar-channel-${channel.id}`}
         data-channel-type={isPrivate ? "private" : "public"}
@@ -68,7 +68,7 @@ export const ChannelListItem = memo(function ChannelListItem({
         />
 
         <span
-          className="truncate text-[0.9rem] flex-1"
+          className="truncate text-[0.9rem] font-[450] flex-1"
           data-testid={`chat-sidebar-channel-name-${channel.id}`}
         >
           {channel.name}
@@ -76,7 +76,7 @@ export const ChannelListItem = memo(function ChannelListItem({
 
         <ChannelCallIndicator channelId={channel.id} />
 
-        {isMuted && <SpeakerSlash size={12} className="shrink-0 text-muted-foreground/50" />}
+        {isMuted && <SpeakerSlash size={12} className="shrink-0 text-subtle-foreground" />}
 
         {hasDraft && mentionCount === 0 && (
           <PencilSimple

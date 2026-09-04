@@ -45,12 +45,10 @@ export function ProjectMentionPreview({
           <span className="block flex-1 min-w-0 pt-0.5">
             <span className="block font-semibold text-sm truncate">{title}</span>
             <span className="flex items-center gap-1.5 mt-0.5">
-              <span className="text-xs font-medium text-orange-600 dark:text-orange-400">
-                Project
-              </span>
+              <span className="text-xs font-medium text-primary">Project</span>
               {liveState.projectStatus && (
                 <>
-                  <span className="text-muted-foreground/40">.</span>
+                  <span className="text-subtle-foreground">.</span>
                   <span className="text-xs text-muted-foreground capitalize">
                     {liveState.projectStatus.replace(/_/g, " ")}
                   </span>
@@ -76,7 +74,7 @@ export function ProjectMentionPreview({
           <span className="flex items-center gap-3">
             <span className="block flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
               <span
-                className="block h-full rounded-full bg-orange-500 transition-all duration-500 ease-out"
+                className="block h-full rounded-full bg-primary transition-all duration-500 ease-out"
                 style={{ width: `${pct}%` }}
               />
             </span>
@@ -97,7 +95,7 @@ export function ProjectMentionPreview({
       )}
 
       {/* Footer */}
-      <span className="flex px-4 py-2 pl-5 bg-muted/30 border-t border-border/50 items-center justify-between">
+      <span className="flex px-4 py-2 pl-5 bg-background/60 items-center justify-between">
         <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <Clock size={12} weight="duotone" />
           <span>{formatRelativeTime(liveState.updatedAt) || "No date"}</span>

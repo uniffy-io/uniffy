@@ -72,7 +72,7 @@ function ContentTypeCard({ contentType, defaults, onUpdate }: ContentTypeCardPro
     : undefined;
 
   return (
-    <div className="p-4 rounded-lg border border-border bg-card">
+    <div className="p-4 rounded-xl bg-surface shadow-edge">
       <div className="flex items-center gap-3 mb-4">
         <div className="p-2 rounded-lg bg-primary/10">
           <Icon size={20} weight="duotone" className="text-primary" />
@@ -117,8 +117,8 @@ function ScopeCard({ icon: Icon, name, description, applies }: ScopeCardProps) {
   return (
     <div
       className={cn(
-        "relative flex flex-col gap-2 p-3 rounded-lg border-2 transition-colors",
-        applies ? "border-primary bg-primary/5" : "border-dashed border-border bg-muted/30",
+        "relative flex flex-col gap-2 p-3 rounded-lg",
+        applies ? "bg-primary/5 shadow-edge-primary" : "bg-muted/30 shadow-edge",
       )}
     >
       <div className="flex items-center gap-2">
@@ -161,7 +161,7 @@ function ScopeCard({ icon: Icon, name, description, applies }: ScopeCardProps) {
 
 function ScopeOverview() {
   return (
-    <div className="rounded-xl border border-border bg-card p-4">
+    <div className="rounded-xl bg-surface shadow-edge p-4">
       <p className="text-sm text-muted-foreground mb-3">
         Defaults below apply only to content created in the{" "}
         <span className="font-medium text-foreground">Organization</span> space. Content in Personal

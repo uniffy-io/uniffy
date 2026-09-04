@@ -21,7 +21,9 @@ import type { Icon } from "@phosphor-icons/react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
 import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
+import { useOverlayEscape } from "@/shared/hooks/useOverlayEscape";
 import { CompactNavItem } from "@/components/layout/CompactNavItem";
+import { popoverEnterClass, popoverShellClass } from "@/components/ui/popover";
 import {
   toggleNodeExpanded,
   fetchFilesTree,
@@ -161,16 +163,11 @@ export function FilesSidebar({ onToggleSidebar, onUpload, onUploadFolder }: File
         setUploadMenuOpen(false);
       }
     };
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setUploadMenuOpen(false);
-    };
     document.addEventListener("mousedown", handleClickOutside);
-    document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-      document.removeEventListener("keydown", handleKeyDown);
-    };
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [uploadMenuOpen]);
+
+  useOverlayEscape(() => setUploadMenuOpen(false), uploadMenuOpen);
 
   const handleUploadClick = useCallback(() => {
     if (hasTransferActivity) {
@@ -247,7 +244,11 @@ export function FilesSidebar({ onToggleSidebar, onUpload, onUploadFolder }: File
         {uploadMenuOpen && (
           <div
             ref={uploadMenuRef}
-            className="fixed z-50 min-w-44 overflow-hidden rounded-md border border-border bg-card shadow-lg animate-in fade-in-0 zoom-in-95 duration-100"
+            className={cn(
+              popoverShellClass,
+              popoverEnterClass,
+              "fixed z-50 min-w-44 overflow-hidden",
+            )}
             style={{ top: uploadMenuPos.y, left: uploadMenuPos.x }}
           >
             <div className="py-1">
@@ -343,7 +344,9 @@ export function FilesSidebar({ onToggleSidebar, onUpload, onUploadFolder }: File
                   onClick={() => handleScopeChange(filter.id)}
                   className={cn(
                     "w-full flex items-center gap-2 px-2 py-2 text-sm rounded-md transition-colors text-left",
-                    isActive ? "bg-accent text-accent-foreground" : "hover:bg-accent",
+                    isActive
+                      ? "bg-muted text-foreground font-medium"
+                      : "text-foreground/90 hover:bg-muted/60",
                   )}
                 >
                   <IconComponent
@@ -364,8 +367,8 @@ export function FilesSidebar({ onToggleSidebar, onUpload, onUploadFolder }: File
               className={cn(
                 "w-full flex items-center gap-2 px-2 py-2 text-sm rounded-md transition-colors text-left",
                 location.pathname === "/files/trash"
-                  ? "bg-accent text-accent-foreground"
-                  : "hover:bg-accent",
+                  ? "bg-muted text-foreground font-medium"
+                  : "text-foreground/90 hover:bg-muted/60",
               )}
             >
               <Trash

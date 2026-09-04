@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { MagnifyingGlass, X } from "@phosphor-icons/react";
 import { useSearch } from "@/features/search/hooks/useSearch";
 import { SearchResultsList } from "@/features/search/components/SearchResultsList";
+import { popoverShellClass } from "@/components/ui/popover";
 import { cn } from "@/shared/utils/cn";
 import { useFormattedKeybinding } from "@/features/settings";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
@@ -146,11 +147,11 @@ export function GlobalSearch() {
 
         <div
           className={cn(
-            "relative w-full flex items-center rounded-lg overflow-hidden",
+            "relative w-full flex items-center rounded-lg overflow-hidden border border-transparent",
             "transition-all duration-300",
             isFocused
-              ? "bg-card border border-primary/30 shadow-lg"
-              : "bg-muted/60 border border-transparent hover:bg-muted/80",
+              ? cn(popoverShellClass, "ring-1 ring-primary/30")
+              : "bg-muted/60 hover:bg-muted/80",
           )}
         >
           <div
@@ -179,7 +180,7 @@ export function GlobalSearch() {
             placeholder="Search anything..."
             className={cn(
               "flex-1 h-8 bg-transparent text-sm",
-              "placeholder:text-muted-foreground/50",
+              "placeholder:text-subtle-foreground",
               "outline-none border-none",
               "transition-all duration-300",
             )}

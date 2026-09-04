@@ -2,7 +2,9 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { Plus, X, CaretDown, Check } from "@phosphor-icons/react";
 import { cn } from "@/shared/utils/cn";
 import { Button } from "@/components/ui/button";
+import { Input, controlShellClass } from "@/components/ui/input";
 import { NumberInput } from "@/components/ui/number-input";
+import { popoverShellClass } from "@/components/ui/popover";
 import { TagPicker } from "@/features/tags";
 import type { FieldDefinition } from "@/features/projects/types";
 import type {
@@ -249,7 +251,7 @@ export function FilterBuilder({
   return (
     <div
       ref={containerRef}
-      className="absolute top-full right-0 z-50 mt-2 w-[520px] rounded-lg border border-border bg-card shadow-lg"
+      className={cn(popoverShellClass, "absolute top-full right-0 z-50 mt-2 w-[520px]")}
     >
       <div className="p-3 border-b border-border">
         <span className="text-sm font-medium text-foreground">Filter tasks</span>
@@ -416,10 +418,10 @@ function FilterSelect({ value, options, onChange, placeholder, minWidth = 80 }: 
         type="button"
         onClick={handleToggle}
         className={cn(
-          "flex items-center justify-between gap-1 w-full h-7 px-2 text-xs rounded-md border border-border bg-background transition-colors",
-          "hover:bg-muted/50",
-          isOpen && "border-primary/50 ring-1 ring-primary/20",
-          selectedOption ? "text-foreground" : "text-muted-foreground",
+          controlShellClass,
+          "focus-ring flex items-center justify-between gap-1 w-full h-7 px-2 text-xs",
+          isOpen && "border-border-strong",
+          selectedOption ? "text-foreground" : "text-subtle-foreground",
         )}
       >
         <span className="truncate flex-1 text-left">
@@ -443,7 +445,10 @@ function FilterSelect({ value, options, onChange, placeholder, minWidth = 80 }: 
       {isOpen && (
         <div
           ref={dropdownRef}
-          className="fixed z-[100] rounded-md border border-border bg-card shadow-lg py-1 max-h-48 overflow-y-auto animate-in fade-in-0 zoom-in-95"
+          className={cn(
+            popoverShellClass,
+            "fixed z-[100] py-1 max-h-48 overflow-y-auto animate-in fade-in-0 zoom-in-95",
+          )}
           style={{
             top: dropdownPos.top,
             left: dropdownPos.left,
@@ -482,8 +487,7 @@ function FilterSelect({ value, options, onChange, placeholder, minWidth = 80 }: 
   );
 }
 
-const NUMBER_INPUT_CLASS =
-  "h-7 px-2 text-xs text-foreground flex-1 min-w-[80px] outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-colors";
+const VALUE_INPUT_CLASS = "h-7 px-2 text-xs flex-1 min-w-[80px]";
 
 function ConditionValueInput({
   field,
@@ -533,12 +537,12 @@ function ConditionValueInput({
 
   if (!field) {
     return (
-      <input
+      <Input
         type="text"
         value={String(value ?? "")}
         onChange={(e) => onChange(e.target.value)}
         placeholder="Value..."
-        className="h-7 px-2 text-xs rounded-md border border-border bg-background text-foreground flex-1 min-w-[80px] outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-colors"
+        className={VALUE_INPUT_CLASS}
       />
     );
   }
@@ -565,11 +569,11 @@ function ConditionValueInput({
 
   if (field.type === "date") {
     return (
-      <input
+      <Input
         type="date"
         value={String(value ?? "")}
         onChange={(e) => onChange(e.target.value)}
-        className="h-7 px-2 text-xs rounded-md border border-border bg-background text-foreground flex-1 min-w-[80px] outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-colors"
+        className={VALUE_INPUT_CLASS}
       />
     );
   }
@@ -591,7 +595,7 @@ function ConditionValueInput({
               );
             }}
             placeholder="Min"
-            className={NUMBER_INPUT_CLASS}
+            className={VALUE_INPUT_CLASS}
           />
           <span className="text-xs text-muted-foreground">to</span>
           <NumberInput
@@ -604,7 +608,7 @@ function ConditionValueInput({
               );
             }}
             placeholder="Max"
-            className={NUMBER_INPUT_CLASS}
+            className={VALUE_INPUT_CLASS}
           />
         </div>
       );
@@ -615,18 +619,18 @@ function ConditionValueInput({
         value={String(value ?? "")}
         onChange={(e) => onChange(e.target.value ? Number(e.target.value) : null)}
         placeholder="Value..."
-        className={NUMBER_INPUT_CLASS}
+        className={VALUE_INPUT_CLASS}
       />
     );
   }
 
   return (
-    <input
+    <Input
       type="text"
       value={String(value ?? "")}
       onChange={(e) => onChange(e.target.value)}
       placeholder="Value..."
-      className="h-7 px-2 text-xs rounded-md border border-border bg-background text-foreground flex-1 min-w-[80px] outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-colors"
+      className={VALUE_INPUT_CLASS}
     />
   );
 }

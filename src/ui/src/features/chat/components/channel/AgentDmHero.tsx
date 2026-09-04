@@ -17,17 +17,15 @@ const enter = (delayMs: number): CSSProperties => ({
  * Landing-hero aurora as a persistent pane background. Stays mounted across
  * the empty-to-conversation flip so the intensity change reads as one slow
  * dim instead of a scene cut. 'hero' = full spectrum (empty agent DM),
- * 'ambient' = dimmed violet only (agent DM conversation), 'flat' = grid and
- * hairline only (human DMs and channels).
+ * 'flat' = hairline only (every conversation with messages, human DMs, channels).
  */
-export function AgentAuroraBackdrop({ intensity }: { intensity: "hero" | "ambient" | "flat" }) {
+export function AgentAuroraBackdrop({ intensity }: { intensity: "hero" | "flat" }) {
   return (
     <div
       className={cn(
         "absolute inset-0 -z-10 overflow-hidden transition-colors duration-1000",
-        // Hero follows the theme: landing navy in dark, the app surface
-        // in light with the auroras boosted so all three colors read.
-        intensity === "hero" ? "bg-background dark:bg-[#0a0d1a]" : "bg-background",
+        // Paints the whole message pane, so it takes the content sheet color.
+        "bg-surface",
       )}
       aria-hidden="true"
       data-testid="chat-agent-aurora"
@@ -55,9 +53,7 @@ export function AgentAuroraBackdrop({ intensity }: { intensity: "hero" | "ambien
         <div
           className={cn(
             "agent-hero-aurora agent-hero-aurora--violet transition-opacity duration-1000",
-            intensity === "hero" && "opacity-70 dark:opacity-100",
-            intensity === "ambient" && "opacity-0 dark:opacity-100",
-            intensity === "flat" && "opacity-0",
+            intensity === "hero" ? "opacity-70 dark:opacity-100" : "opacity-0",
           )}
         />
         <div

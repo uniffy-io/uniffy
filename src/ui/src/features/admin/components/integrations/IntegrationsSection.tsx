@@ -1,5 +1,6 @@
 import { createElement, useCallback, useEffect, useMemo, useState } from "react";
-import { Group, Panel, Separator } from "react-resizable-panels";
+import { Group, Panel } from "react-resizable-panels";
+import { PaneSeparator } from "@/components/ui/pane-separator";
 import {
   ArrowClockwise,
   CheckCircle,
@@ -125,7 +126,7 @@ export function IntegrationsSection() {
         </div>
       </div>
 
-      <div className="h-[70vh] min-h-[480px] rounded-xl border border-border overflow-hidden bg-background">
+      <div className="h-[70vh] min-h-[480px] rounded-xl bg-surface shadow-edge overflow-hidden">
         {status === "loading" && connections.length === 0 ? (
           <div className="flex h-full items-center justify-center">
             <CircleNotch size={32} className="animate-spin text-muted-foreground" />
@@ -142,7 +143,7 @@ export function IntegrationsSection() {
               defaultSize={260}
               minSize={200}
               maxSize={400}
-              className="border-r border-border bg-card overflow-hidden"
+              className="bg-card overflow-hidden"
             >
               <div className="h-full flex flex-col">
                 <div className="px-4 py-3 border-b border-border flex items-center justify-between">
@@ -217,7 +218,7 @@ export function IntegrationsSection() {
               </div>
             </Panel>
 
-            <Separator className="w-1 bg-border hover:bg-primary/50 transition-colors cursor-col-resize data-[resize-handle-state=drag]:bg-primary" />
+            <PaneSeparator />
 
             <Panel id="integrations-detail" minSize={400}>
               <div className="h-full flex flex-col overflow-hidden">

@@ -16,9 +16,8 @@ import {
   Trash,
   UserCircle,
   Users as UsersIcon,
-  X,
 } from "@phosphor-icons/react";
-import { Modal } from "@/components/ui/modal";
+import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { ReasonDialog } from "@/components/ui/reason-dialog";
 import { cn } from "@/shared/utils/cn";
@@ -221,7 +220,7 @@ export function PlatformOrgDetailDialog({ organizationId, onClose, onChanged }: 
     if (detail.owners.length === 0) {
       return (
         <div className="text-center py-8">
-          <Crown size={32} weight="duotone" className="mx-auto text-muted-foreground/50 mb-3" />
+          <Crown size={32} weight="duotone" className="mx-auto text-subtle-foreground mb-3" />
           <p className="text-sm text-muted-foreground">No active owners</p>
         </div>
       );
@@ -260,39 +259,24 @@ export function PlatformOrgDetailDialog({ organizationId, onClose, onChanged }: 
   };
 
   return (
-    <Modal onClose={onClose} closeDisabled={submitting} maxWidth="max-w-2xl">
-      <div className="flex items-center gap-3 p-4 border-b border-border">
-        <div
-          className="w-11 h-11 rounded-lg flex items-center justify-center text-sm font-semibold text-white shrink-0"
-          style={summary ? getAvatarGradientStyle(summary.name) : undefined}
-        >
-          {summary ? getInitials(summary.name) : ""}
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="text-base font-semibold text-foreground truncate">
-            {summary?.name ?? "Organization"}
-          </div>
-          {summary && (
-            <code className="text-xs text-muted-foreground font-mono truncate block">
-              {summary.slug}
-            </code>
-          )}
-        </div>
-        <button
-          type="button"
-          onClick={onClose}
-          disabled={submitting}
-          className="text-muted-foreground hover:text-foreground p-1"
-          aria-label="Close"
-        >
-          <X size={16} weight="bold" />
-        </button>
-      </div>
+    <Modal
+      onClose={onClose}
+      closeDisabled={submitting}
+      maxWidth="max-w-2xl"
+      className="flex flex-col max-h-[85dvh]"
+    >
+      <ModalHeader
+        title={summary?.name ?? "Organization"}
+        description={summary ? <code className="font-mono">{summary.slug}</code> : undefined}
+        onClose={onClose}
+        closeDisabled={submitting}
+      />
 
       <div className="flex border-b border-border">
         {tabs.map(({ id, label, icon: Icon }) => (
           <button
             key={id}
+            type="button"
             onClick={() => setTab(id)}
             className={cn(
               "flex items-center justify-center gap-1.5 px-4 py-2.5 text-sm font-medium transition-colors relative",
@@ -306,7 +290,7 @@ export function PlatformOrgDetailDialog({ organizationId, onClose, onChanged }: 
         ))}
       </div>
 
-      <div className="p-4 max-h-[55vh] overflow-y-auto">
+      <ModalBody scrollable={false} className="flex-1 min-h-0 overflow-y-auto">
         {loading || !detail ? (
           <div className="py-12 text-center text-sm text-muted-foreground">Loading...</div>
         ) : tab === "owners" ? (
@@ -314,71 +298,59 @@ export function PlatformOrgDetailDialog({ organizationId, onClose, onChanged }: 
         ) : (
           renderInfoTab()
         )}
-      </div>
+      </ModalBody>
 
       {summary && (
-        <div className="flex flex-wrap items-center gap-2 p-4 border-t border-border">
+        <ModalFooter className="flex-wrap">
           {!summary.deletedAt && (
-            <>
+            <div className="flex items-center gap-2 mr-auto">
               <Button
+                type="button"
                 variant="outline"
-                size="sm"
                 disabled={submitting}
                 onClick={() => setEditOpen(true)}
               >
                 <PencilSimple size={14} weight="duotone" /> Edit settings
               </Button>
               <Button
+                type="button"
                 variant="outline"
-                size="sm"
                 disabled={submitting}
                 onClick={() => setSupportOpen(true)}
               >
                 <Lifebuoy size={14} weight="duotone" /> Support session
               </Button>
+            </div>
+          )}
+          {summary.deletedAt ? (
+            <Button type="button" disabled={submitting} onClick={() => setPending("restore")}>
+              <ArrowCounterClockwise size={14} weight="duotone" /> Restore
+            </Button>
+          ) : summary.isSuspended ? (
+            <Button type="button" disabled={submitting} onClick={() => setPending("unsuspend")}>
+              <ArrowCounterClockwise size={14} weight="duotone" /> Unsuspend
+            </Button>
+          ) : (
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={submitting}
+                onClick={() => setPending("suspend")}
+              >
+                <Prohibit size={14} weight="duotone" /> Suspend
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                disabled={submitting}
+                onClick={() => setPending("delete")}
+              >
+                <Trash size={14} weight="duotone" /> Delete
+              </Button>
             </>
           )}
-          <div className="flex items-center gap-2 ml-auto">
-            {summary.deletedAt ? (
-              <Button
-                variant="default"
-                size="sm"
-                disabled={submitting}
-                onClick={() => setPending("restore")}
-              >
-                <ArrowCounterClockwise size={14} weight="duotone" /> Restore
-              </Button>
-            ) : summary.isSuspended ? (
-              <Button
-                variant="default"
-                size="sm"
-                disabled={submitting}
-                onClick={() => setPending("unsuspend")}
-              >
-                <ArrowCounterClockwise size={14} weight="duotone" /> Unsuspend
-              </Button>
-            ) : (
-              <>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={submitting}
-                  onClick={() => setPending("suspend")}
-                >
-                  <Prohibit size={14} weight="duotone" /> Suspend
-                </Button>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  disabled={submitting}
-                  onClick={() => setPending("delete")}
-                >
-                  <Trash size={14} weight="duotone" /> Delete
-                </Button>
-              </>
-            )}
-          </div>
-        </div>
+        </ModalFooter>
       )}
 
       {supportOpen && summary && (

@@ -14,7 +14,7 @@ import type { SerializedNote } from "@/features/notes/store/notesThunks";
 import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
 import { MarkdownMentionSearch } from "@/components/editor/plugins/mention/MarkdownMentionSearch";
 import type { SearchResultItem } from "@uniffy/proto/search/v1/search_pb";
-import { useTheme } from "@/config/theme/ThemeProvider";
+import { useTheme } from "@/config/theme/themeContext";
 import { createMarkdownEditorTheme } from "@/features/notes/components/editor/markdownEditorTheme";
 import { useRealtimeMarkdownContent } from "@/features/notes/realtime/useMarkdownContent";
 import { replaceMarkdownYText } from "@/features/notes/realtime/markdown";

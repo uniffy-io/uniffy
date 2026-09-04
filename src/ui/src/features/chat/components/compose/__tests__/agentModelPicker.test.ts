@@ -16,7 +16,7 @@ import {
   paramsForModelSwitch,
   pickerButtonLabel,
   resolveEffectiveModelId,
-} from "@/features/chat/components/compose/AgentModelPicker";
+} from "@/features/chat/components/compose/agentModelSelection";
 import type { SerializedModelInfo } from "@/features/agents/store/agentProvidersThunks";
 
 function model(overrides: Partial<SerializedModelInfo> = {}): SerializedModelInfo {

@@ -106,10 +106,10 @@ export function NotificationsListView() {
     return (
       <div className="flex flex-col items-center justify-center py-16 px-6">
         <div className="flex items-center justify-center w-16 h-16 rounded-full bg-muted/50 mb-4">
-          <BellSimple size={32} weight="duotone" className="text-muted-foreground/50" />
+          <BellSimple size={32} weight="duotone" className="text-subtle-foreground" />
         </div>
         <p className="text-base font-medium text-foreground/60 mb-1">No notifications found</p>
-        <p className="text-sm text-muted-foreground/60 text-center max-w-[300px]">
+        <p className="text-sm text-subtle-foreground text-center max-w-[300px]">
           Try adjusting your filters or search query to find what you are looking for.
         </p>
       </div>
@@ -121,7 +121,7 @@ export function NotificationsListView() {
       {timeGroups.map((group) => (
         <div key={group.label}>
           <div className="sticky top-0 z-[5] px-4 md:px-6 py-1.5 bg-card/95 backdrop-blur-sm border-b border-border/50">
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-subtle-foreground">
               {group.label}
             </span>
           </div>

@@ -136,7 +136,7 @@ function ActivityItem({ activity, actor, subjectMap }: ActivityItemProps) {
           <span className="font-medium text-foreground text-xs">
             {actor?.name || "Unknown user"}
           </span>
-          <span className="text-muted-foreground/60 shrink-0">
+          <span className="text-subtle-foreground shrink-0">
             <ActivityIcon activity={activity} />
           </span>
           <span className="text-foreground text-xs">{describeActivity(activity, subjectMap)}</span>

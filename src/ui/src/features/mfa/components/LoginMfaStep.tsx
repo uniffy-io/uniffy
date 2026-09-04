@@ -143,10 +143,10 @@ export function LoginMfaStep({ challengeToken, onVerified, onCancel }: LoginMfaS
                             px-4 py-3.5
                             ${
                               method === "totp"
-                                ? "text-center font-mono text-2xl tracking-[0.5em] placeholder:tracking-[0.5em] placeholder:text-muted-foreground/40"
-                                : "font-mono text-sm tracking-widest placeholder:text-muted-foreground/40"
+                                ? "text-center font-mono text-2xl tracking-[0.5em] placeholder:tracking-[0.5em] placeholder:text-subtle-foreground"
+                                : "font-mono text-sm tracking-widest placeholder:text-subtle-foreground"
                             }
-                            ${!focused ? "border-border hover:border-muted-foreground/40" : ""}
+                            ${!focused ? "border-border hover:border-border-strong" : ""}
                         `}
             style={
               focused

@@ -96,7 +96,7 @@ export function CalendarMentionPreview({
               {title}
             </span>
             <span className="flex items-center gap-1.5 mt-0.5">
-              <span className="text-xs font-medium text-rose-600 dark:text-rose-400">Event</span>
+              <span className="text-xs font-medium text-primary">Event</span>
               {isCancelled && (
                 <span className="text-[10px] font-medium px-1.5 py-px rounded-full bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">
                   Cancelled
@@ -109,7 +109,7 @@ export function CalendarMentionPreview({
               )}
               {liveState.eventStartTime && !isCancelled && (
                 <>
-                  <span className="text-muted-foreground/40">.</span>
+                  <span className="text-subtle-foreground">.</span>
                   <CalendarTemporalIndicator
                     startTime={liveState.eventStartTime}
                     endTime={liveState.eventEndTime}
@@ -125,7 +125,7 @@ export function CalendarMentionPreview({
       {liveState.eventStartTime && (
         <span className="block px-4 pb-2 pl-5">
           <span className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Clock size={13} weight="duotone" className="text-rose-500 shrink-0" />
+            <Clock size={13} weight="duotone" className="text-primary shrink-0" />
             <span>
               {formatEventTimeRange(
                 liveState.eventStartTime,
@@ -140,7 +140,7 @@ export function CalendarMentionPreview({
       {liveState.eventLocation && (
         <span className="block px-4 pb-2 pl-5">
           <span className="flex items-center gap-2 text-xs text-muted-foreground">
-            <MapPin size={13} weight="duotone" className="text-rose-500 shrink-0" />
+            <MapPin size={13} weight="duotone" className="text-primary shrink-0" />
             <span className="truncate">{liveState.eventLocation}</span>
           </span>
         </span>
@@ -172,14 +172,14 @@ export function CalendarMentionPreview({
             className={cn(
               "inline-flex items-center gap-1.5 text-xs font-medium transition-colors",
               activeCall
-                ? "text-rose-600 dark:text-rose-400 hover:text-rose-500"
+                ? "text-primary hover:text-primary/80"
                 : "text-primary hover:text-primary/80",
             )}
           >
             {activeCall && (
               <span className="relative flex h-1.5 w-1.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75" />
-                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-rose-500" />
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
+                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-primary" />
               </span>
             )}
             <VideoCamera size={13} weight="duotone" />
@@ -200,7 +200,7 @@ export function CalendarMentionPreview({
         </span>
       )}
 
-      <span className="flex px-4 py-2 pl-5 bg-muted/30 border-t border-border/50 items-center justify-between">
+      <span className="flex px-4 py-2 pl-5 bg-background/60 items-center justify-between">
         <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <Clock size={12} weight="duotone" />
           <span>{formatRelativeTime(liveState.updatedAt) || "No date"}</span>

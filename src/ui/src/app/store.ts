@@ -125,7 +125,6 @@ const projectsUiTransform = createTransform(
     hiddenColumns: loadHiddenColumns(),
     selectedTaskId: null,
     selectedTaskIds: [],
-    isMultiSelectMode: false,
     isCreateProjectModalOpen: false,
     editProjectId: null,
     isCreateTaskModalOpen: false,

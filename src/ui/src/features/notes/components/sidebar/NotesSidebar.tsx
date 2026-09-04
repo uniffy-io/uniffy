@@ -547,7 +547,7 @@ export function NotesSidebar() {
             }
           }}
           className={cn(
-            "w-full flex items-center gap-2 px-2 py-2 text-sm rounded-md hover:bg-accent transition-colors text-left group cursor-pointer",
+            "w-full flex items-center gap-2 px-2 py-2 text-sm rounded-md hover:bg-muted/60 transition-colors text-left group cursor-pointer",
             isDropTarget && "bg-primary/10 ring-2 ring-primary",
           )}
         >

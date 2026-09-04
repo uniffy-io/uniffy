@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { Lifebuoy, Clock, UserCircle, Check, X, Prohibit } from "@phosphor-icons/react";
-import { Modal } from "@/components/ui/modal";
+import { Clock, UserCircle, Check, Prohibit } from "@phosphor-icons/react";
+import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { formatProtoDateTime } from "@/shared/utils/dateFormatting";
 import { friendlyErrorMessage } from "@/config";
@@ -70,30 +70,14 @@ export function SupportSessionApprovalDialog({ session, onClose, onChanged }: Pr
   return (
     <>
       <Modal onClose={onClose} closeDisabled={submitting} maxWidth="max-w-md">
-        <div className="flex items-start gap-3 p-4 border-b border-border">
-          <div className="p-2 rounded-lg bg-amber-500/15 shrink-0">
-            <Lifebuoy size={20} weight="duotone" className="text-amber-700 dark:text-amber-300" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-base font-semibold text-foreground">Support access request</div>
-            <div className="text-xs text-muted-foreground mt-0.5 truncate">
-              Platform operator is requesting temporary access
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={submitting}
-            className="text-muted-foreground hover:text-foreground"
-            aria-label="Close"
-          >
-            <X size={16} weight="bold" />
-          </button>
-        </div>
+        <ModalHeader
+          title="Support access request"
+          description="A platform operator is asking for temporary read-only access to this organization."
+        />
 
-        <div className="p-4 space-y-4">
+        <ModalBody>
           <div>
-            <label className="text-xs font-medium text-muted-foreground block mb-1">Operator</label>
+            <label className="block text-sm text-muted-foreground mb-1">Operator</label>
             <div className="flex items-center gap-2 p-2 rounded-md bg-muted/50">
               <UserCircle size={16} weight="duotone" className="text-muted-foreground" />
               <span className="text-sm break-all">
@@ -108,7 +92,7 @@ export function SupportSessionApprovalDialog({ session, onClose, onChanged }: Pr
           </div>
 
           <div>
-            <label className="text-xs font-medium text-muted-foreground block mb-1">Reason</label>
+            <label className="block text-sm text-muted-foreground mb-1">Reason</label>
             <p className="text-sm p-2 rounded-md bg-muted/50 whitespace-pre-wrap break-words">
               {session.reason || "(no reason given)"}
             </p>
@@ -116,13 +100,11 @@ export function SupportSessionApprovalDialog({ session, onClose, onChanged }: Pr
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-xs font-medium text-muted-foreground block mb-1">Scope</label>
+              <label className="block text-sm text-muted-foreground mb-1">Scope</label>
               <p className="text-sm p-2 rounded-md bg-muted/50">Read-only</p>
             </div>
             <div>
-              <label className="text-xs font-medium text-muted-foreground block mb-1">
-                Duration
-              </label>
+              <label className="block text-sm text-muted-foreground mb-1">Duration</label>
               <div className="flex items-center gap-2 p-2 rounded-md bg-muted/50 text-sm">
                 <Clock size={14} weight="duotone" className="text-muted-foreground" />
                 {durationMinutes ? `${durationMinutes} min` : "-"}
@@ -132,9 +114,7 @@ export function SupportSessionApprovalDialog({ session, onClose, onChanged }: Pr
 
           {expiresAt && (
             <div>
-              <label className="text-xs font-medium text-muted-foreground block mb-1">
-                Hard deadline
-              </label>
+              <label className="block text-sm text-muted-foreground mb-1">Hard deadline</label>
               <p className="text-sm p-2 rounded-md bg-muted/50">
                 {formatProtoDateTime(session.expiresAt)}
               </p>
@@ -147,18 +127,21 @@ export function SupportSessionApprovalDialog({ session, onClose, onChanged }: Pr
             <code className="mx-1 px-1 rounded bg-background/60">actor_kind=support</code>. You can
             revoke at any time from the in-app banner.
           </div>
-        </div>
+        </ModalBody>
 
-        <div className="flex items-center justify-end gap-2 p-4 border-t border-border">
-          <Button variant="outline" size="md" onClick={handleReject} disabled={submitting}>
+        <ModalFooter>
+          <Button variant="ghost" onClick={onClose} disabled={submitting}>
+            Cancel
+          </Button>
+          <Button variant="outline" onClick={handleReject} disabled={submitting}>
             <Prohibit size={14} weight="duotone" />
             Reject
           </Button>
-          <Button variant="default" size="md" onClick={handleApprove} disabled={submitting}>
+          <Button onClick={handleApprove} disabled={submitting}>
             <Check size={14} weight="bold" />
             Approve
           </Button>
-        </div>
+        </ModalFooter>
       </Modal>
       <ReasonDialog
         isOpen={rejectOpen}

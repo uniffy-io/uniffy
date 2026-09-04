@@ -1,8 +1,18 @@
 import { useMemo } from "react";
 import { Link } from "react-router-dom";
-import { CaretRight, UsersThree } from "@phosphor-icons/react";
+import {
+  CaretRight,
+  TreeStructure,
+  UserCircle,
+  UsersFour,
+  UsersThree,
+} from "@phosphor-icons/react";
 import { useAppSelector } from "@/app/hooks";
 import { SubjectAvatarById, useSubjectResolver } from "@/components/subject";
+import {
+  ProfileEmptyState,
+  ProfileSection,
+} from "@/features/people/components/profile/ProfileSection";
 import type {
   SerializedOrgChartNode,
   SerializedPersonProfile,
@@ -90,20 +100,18 @@ export function ReportingLine({ person }: ReportingLineProps) {
 
   if (!hasAnything) {
     return (
-      <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-border bg-card py-12 text-center">
-        <UsersThree size={40} weight="duotone" className="text-muted-foreground/50" />
-        <p className="text-sm text-muted-foreground">No org structure yet.</p>
-      </div>
+      <ProfileEmptyState
+        icon={UsersThree}
+        title="No org structure yet"
+        description="A manager, direct reports, and teams show up here once they are set."
+      />
     );
   }
 
   return (
     <div className="space-y-4">
       {managerChain.length > 1 && (
-        <div className="rounded-lg border border-border bg-card p-4 md:p-6">
-          <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Reporting line
-          </h2>
+        <ProfileSection title="Reporting line" icon={TreeStructure}>
           <div className="flex flex-wrap items-center gap-1 text-sm">
             {managerChain.map((node) => (
               <span key={node.userId} className="flex items-center gap-1">
@@ -113,19 +121,16 @@ export function ReportingLine({ person }: ReportingLineProps) {
                 >
                   {node.displayName}
                 </Link>
-                <CaretRight size={12} className="text-muted-foreground/50" />
+                <CaretRight size={12} className="text-subtle-foreground" />
               </span>
             ))}
             <span className="px-1 py-0.5 font-medium text-foreground">{person.displayName}</span>
           </div>
-        </div>
+        </ProfileSection>
       )}
 
       {person.managerUserId && (
-        <div className="rounded-lg border border-border bg-card p-4 md:p-6">
-          <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Manager
-          </h2>
+        <ProfileSection title="Manager" icon={UserCircle}>
           {chartReady && nodesById[person.managerUserId] ? (
             <PersonRow
               userId={person.managerUserId}
@@ -140,17 +145,18 @@ export function ReportingLine({ person }: ReportingLineProps) {
               avatarUrl={fallbackManager?.avatarUrl}
             />
           )}
-        </div>
+        </ProfileSection>
       )}
 
       {(directReports.length > 0 || (!chartReady && person.directReportCount > 0)) && (
-        <div className="rounded-lg border border-border bg-card p-4 md:p-6">
-          <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Direct reports
-            {directReports.length > 0 && ` (${directReports.length})`}
-          </h2>
+        <ProfileSection
+          title={
+            directReports.length > 0 ? `Direct reports (${directReports.length})` : "Direct reports"
+          }
+          icon={UsersThree}
+        >
           {directReports.length > 0 ? (
-            <div className="grid grid-cols-1 gap-1 md:grid-cols-2">
+            <div className="grid grid-cols-1 gap-1">
               {directReports.map((node) => (
                 <PersonRow
                   key={node.userId}
@@ -167,14 +173,11 @@ export function ReportingLine({ person }: ReportingLineProps) {
               {person.directReportCount === 1 ? "" : "s"}
             </p>
           )}
-        </div>
+        </ProfileSection>
       )}
 
       {person.teams.length > 0 && (
-        <div className="rounded-lg border border-border bg-card p-4 md:p-6">
-          <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Teams
-          </h2>
+        <ProfileSection title="Teams" icon={UsersFour}>
           <div className="flex flex-wrap gap-2">
             {person.teams.map((team) => (
               <Link
@@ -191,7 +194,7 @@ export function ReportingLine({ person }: ReportingLineProps) {
               </Link>
             ))}
           </div>
-        </div>
+        </ProfileSection>
       )}
     </div>
   );

@@ -2,6 +2,8 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { CaretRight, DotsThreeOutline } from "@phosphor-icons/react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
+import { popoverShellClass } from "@/components/ui/popover";
+import { cn } from "@/shared/utils/cn";
 import { expandNode, setSelectedNode } from "@/features/notes/store/notesTreeSlice";
 import { setSidebarOpen } from "@/features/notes/store/editorSlice";
 import type { BreadcrumbItem } from "@/features/notes/utils/notesTreeUtils";
@@ -123,7 +125,12 @@ export function NoteBreadcrumbs({ items, noteAccessMode, noteOwnerId }: NoteBrea
         </button>
 
         {isDropdownOpen && (
-          <div className="absolute top-full left-0 mt-1 py-1 min-w-[160px] max-w-[240px] bg-card border border-border rounded-lg shadow-lg z-50">
+          <div
+            className={cn(
+              popoverShellClass,
+              "absolute top-full left-0 mt-1 py-1 min-w-[160px] max-w-[240px] z-50",
+            )}
+          >
             {collapsedItems.map((item, index) => (
               <button
                 key={item.id}

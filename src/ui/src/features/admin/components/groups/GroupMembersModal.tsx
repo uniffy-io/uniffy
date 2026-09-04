@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { TreeStructure, Trash, Users, X } from "@phosphor-icons/react";
+import { TreeStructure, Trash, Users } from "@phosphor-icons/react";
 import { GroupKind } from "@uniffy/proto/common/v1/common_pb";
 import { Button } from "@/components/ui/button";
+import { Modal, ModalBody, ModalHeader } from "@/components/ui/modal";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { useGroupMembers } from "@/features/admin/hooks/useAdminHooks";
 import type { SerializedGroupInfo } from "@/features/admin/store/adminSlice";
@@ -120,168 +121,150 @@ export function GroupMembersModal({ group, onClose }: GroupMembersModalProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50">
-      <div className="w-full sm:w-[calc(100vw-2rem)] sm:max-w-lg bg-card rounded-t-xl sm:rounded-xl border border-border shadow-xl">
-        <div className="flex items-center justify-between px-4 md:px-6 py-3 md:py-4 border-b border-border">
-          <div>
-            <h2 className="text-lg font-semibold">{group.name}</h2>
-            <p className="text-sm text-muted-foreground">
-              {members.length} member{members.length !== 1 ? "s" : ""}
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-          >
-            <X size={20} weight="bold" />
-          </button>
-        </div>
+    <Modal onClose={onClose} maxWidth="max-w-lg">
+      <ModalHeader
+        title={group.name}
+        description={`${members.length} member${members.length !== 1 ? "s" : ""}`}
+        onClose={onClose}
+      />
 
-        <div className="px-4 md:px-6 pt-4">
-          <SubjectSearchInput
-            value={query}
-            onChange={setQuery}
-            placeholder="Add people by name or email..."
+      <div className="px-6 pt-5">
+        <SubjectSearchInput
+          value={query}
+          onChange={setQuery}
+          placeholder="Add people by name or email..."
+        />
+      </div>
+
+      <ModalBody scrollable={false} className="h-[50vh] md:h-96 overflow-y-auto">
+        {showResults ? (
+          <SubjectSearchResults
+            results={results}
+            loading={searching}
+            query={query}
+            busyId={addingId}
+            onSelect={handleAdd}
           />
-        </div>
-
-        <div className="p-4 md:p-6 h-[50vh] md:h-96 overflow-y-auto">
-          {showResults ? (
-            <SubjectSearchResults
-              results={results}
-              loading={searching}
-              query={query}
-              busyId={addingId}
-              onSelect={handleAdd}
-            />
-          ) : loading ? (
-            <div className="py-8 text-center">
-              <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-2" />
-              <p className="text-sm text-muted-foreground">Loading members...</p>
-            </div>
-          ) : members.length === 0 ? (
-            <div className="py-8 text-center">
-              <Users size={32} weight="duotone" className="mx-auto text-muted-foreground/50 mb-2" />
-              <p className="text-sm text-muted-foreground">No members yet</p>
-              <p className="text-xs text-muted-foreground mt-1">Search above to add people.</p>
-            </div>
-          ) : (
-            <div className="space-y-1">
-              {members.map((member) => {
-                const managerId = chartById.get(member.userId)?.managerUserId ?? null;
-                const managerName = managerId
-                  ? (chartById.get(managerId)?.displayName ?? "someone")
+        ) : loading ? (
+          <div className="py-8 text-center">
+            <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+            <p className="text-sm text-muted-foreground">Loading members...</p>
+          </div>
+        ) : members.length === 0 ? (
+          <div className="py-8 text-center">
+            <Users size={32} weight="duotone" className="mx-auto text-subtle-foreground mb-2" />
+            <p className="text-sm text-muted-foreground">No members yet</p>
+            <p className="text-xs text-muted-foreground mt-1">Search above to add people.</p>
+          </div>
+        ) : (
+          <div className="space-y-1">
+            {members.map((member) => {
+              const managerId = chartById.get(member.userId)?.managerUserId ?? null;
+              const managerName = managerId
+                ? (chartById.get(managerId)?.displayName ?? "someone")
+                : null;
+              const leadName =
+                group.leadUserId &&
+                group.leadUserId !== member.userId &&
+                group.leadUserId !== managerId
+                  ? (chartById.get(group.leadUserId)?.displayName ?? null)
                   : null;
-                const leadName =
-                  group.leadUserId &&
-                  group.leadUserId !== member.userId &&
-                  group.leadUserId !== managerId
-                    ? (chartById.get(group.leadUserId)?.displayName ?? null)
-                    : null;
-                const editing = editingManagerFor === member.userId;
-                const saving = savingManagerFor === member.userId;
+              const editing = editingManagerFor === member.userId;
+              const saving = savingManagerFor === member.userId;
 
-                return (
-                  <div key={member.userId} className="rounded-lg hover:bg-muted/50 group">
-                    <div className="flex items-center gap-3 py-2 px-3">
-                      <SubjectAvatarById
-                        userId={member.userId}
-                        displayName={member.displayName}
-                        size="md"
-                      />
+              return (
+                <div key={member.userId} className="rounded-lg hover:bg-muted/50 group">
+                  <div className="flex items-center gap-3 py-2 px-3">
+                    <SubjectAvatarById
+                      userId={member.userId}
+                      displayName={member.displayName}
+                      size="md"
+                    />
 
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{member.displayName}</p>
-                        <p className="text-xs text-muted-foreground truncate">{member.email}</p>
-                      </div>
-
-                      {showManagers && (
-                        <button
-                          type="button"
-                          onClick={() => toggleManagerEditor(member.userId)}
-                          disabled={saving}
-                          className="flex max-w-[9rem] shrink-0 items-center gap-1.5 rounded-md
-                                                        border border-border px-2 py-1 text-xs text-muted-foreground
-                                                        transition-colors hover:border-primary/40 hover:text-primary
-                                                        disabled:opacity-50"
-                          title="Set who this person reports to"
-                        >
-                          <TreeStructure size={14} className="shrink-0" />
-                          <span className="truncate">
-                            {managerName ? `Reports to ${managerName}` : "Set manager"}
-                          </span>
-                        </button>
-                      )}
-
-                      <button
-                        type="button"
-                        onClick={() => handleRemove(member.userId)}
-                        disabled={removing === member.userId}
-                        className="p-1.5 rounded-md text-muted-foreground hover:text-red-500
-                                                    hover:bg-red-500/10 md:opacity-0 md:group-hover:opacity-100 transition-all
-                                                    disabled:opacity-50"
-                        title="Remove from group"
-                      >
-                        <Trash size={16} />
-                      </button>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{member.displayName}</p>
+                      <p className="text-xs text-muted-foreground truncate">{member.email}</p>
                     </div>
 
-                    {showManagers && editing && (
-                      <div className="space-y-2 border-t border-border/60 px-3 py-2.5">
-                        {leadName && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            disabled={saving}
-                            onClick={() => applyManager(member.userId, group.leadUserId)}
-                          >
-                            Report to {leadName} (team lead)
-                          </Button>
-                        )}
-                        <SubjectSearchInput
-                          value={managerQuery}
-                          onChange={setManagerQuery}
-                          placeholder="Search for a manager..."
-                          disabled={saving}
-                        />
-                        {managerQuery.trim().length >= 2 && (
-                          <SubjectSearchResults
-                            results={managerResults}
-                            loading={searchingManagers}
-                            query={managerQuery}
-                            actionLabel="Select"
-                            busyId={saving ? member.userId : null}
-                            onSelect={(subject) => applyManager(member.userId, subject.id)}
-                            className="max-h-44 overflow-y-auto rounded-md border border-border p-1"
-                          />
-                        )}
-                        {managerId && (
-                          <button
-                            type="button"
-                            disabled={saving}
-                            onClick={() => applyManager(member.userId, null)}
-                            className="text-xs text-muted-foreground hover:text-red-500
-                                                            disabled:opacity-50"
-                          >
-                            Clear manager
-                          </button>
-                        )}
-                      </div>
+                    {showManagers && (
+                      <button
+                        type="button"
+                        onClick={() => toggleManagerEditor(member.userId)}
+                        disabled={saving}
+                        className="flex max-w-[9rem] shrink-0 items-center gap-1.5 rounded-md
+                                                      border border-border px-2 py-1 text-xs text-muted-foreground
+                                                      transition-colors hover:border-primary/40 hover:text-primary
+                                                      disabled:opacity-50"
+                        title="Set who this person reports to"
+                      >
+                        <TreeStructure size={14} className="shrink-0" />
+                        <span className="truncate">
+                          {managerName ? `Reports to ${managerName}` : "Set manager"}
+                        </span>
+                      </button>
                     )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
 
-        <div className="flex justify-end px-4 md:px-6 py-3 md:py-4 border-t border-border">
-          <Button size="md" onClick={onClose}>
-            Done
-          </Button>
-        </div>
-      </div>
-    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleRemove(member.userId)}
+                      disabled={removing === member.userId}
+                      className="p-1.5 rounded-md text-muted-foreground hover:text-red-500
+                                                  hover:bg-red-500/10 md:opacity-0 md:group-hover:opacity-100 transition-all
+                                                  disabled:opacity-50"
+                      title="Remove from group"
+                    >
+                      <Trash size={16} />
+                    </button>
+                  </div>
+
+                  {showManagers && editing && (
+                    <div className="space-y-2 border-t border-border/60 px-3 py-2.5">
+                      {leadName && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={saving}
+                          onClick={() => applyManager(member.userId, group.leadUserId)}
+                        >
+                          Report to {leadName} (team lead)
+                        </Button>
+                      )}
+                      <SubjectSearchInput
+                        value={managerQuery}
+                        onChange={setManagerQuery}
+                        placeholder="Search for a manager..."
+                        disabled={saving}
+                      />
+                      {managerQuery.trim().length >= 2 && (
+                        <SubjectSearchResults
+                          results={managerResults}
+                          loading={searchingManagers}
+                          query={managerQuery}
+                          actionLabel="Select"
+                          busyId={saving ? member.userId : null}
+                          onSelect={(subject) => applyManager(member.userId, subject.id)}
+                          className="max-h-44 overflow-y-auto rounded-md border border-border p-1"
+                        />
+                      )}
+                      {managerId && (
+                        <button
+                          type="button"
+                          disabled={saving}
+                          onClick={() => applyManager(member.userId, null)}
+                          className="text-xs text-muted-foreground hover:text-red-500
+                                                          disabled:opacity-50"
+                        >
+                          Clear manager
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </ModalBody>
+    </Modal>
   );
 }

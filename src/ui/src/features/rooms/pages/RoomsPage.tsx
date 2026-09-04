@@ -34,7 +34,18 @@ import { RoomDetailPanel } from "@/features/rooms/components/detail/RoomDetailPa
 import { Drawer } from "@/components/ui/drawer";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableEmpty,
+  TableHead,
+  TableHeader,
+  TableLoading,
+  TableRow,
+} from "@/components/ui/table";
 
 type AvailabilityFilter = "all" | "available" | "booked";
 
@@ -218,16 +229,12 @@ export function RoomsPage() {
               size={16}
               className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground"
             />
-            <input
+            <Input
               type="text"
               placeholder="Search rooms..."
               value={searchQuery}
               onChange={(e) => handleSearch(e.target.value)}
-              className={cn(
-                "w-full rounded-md border border-border bg-input py-1.5 pl-8 pr-3 text-sm",
-                "text-foreground placeholder:text-muted-foreground",
-                "focus:outline-none focus:ring-1 focus:ring-ring",
-              )}
+              className="h-auto py-1.5 pl-8 pr-3"
             />
           </div>
           {hasActiveFilters && (
@@ -310,64 +317,55 @@ export function RoomsPage() {
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 rounded-lg border border-border overflow-hidden">
-        {loading.rooms ? (
-          <div className="flex items-center justify-center py-16">
-            <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-          </div>
-        ) : filteredRooms.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16">
-            <Door size={48} weight="duotone" className="mb-3 text-muted-foreground" />
-            <p className="text-sm font-medium text-foreground">No rooms found</p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              {hasActiveFilters
-                ? "Try adjusting your filters"
-                : "Create your first room to get started"}
-            </p>
-            {!hasActiveFilters && (
-              <Button variant="outline" size="sm" className="mt-4" onClick={handleCreateRoom}>
-                <Plus size={14} className="mr-1" />
-                New Room
-              </Button>
-            )}
-          </div>
-        ) : (
-          <div className="h-full overflow-y-auto">
-            <table className="w-full text-sm">
-              <thead className="sticky top-0 z-10 bg-muted [&_th]:bg-muted">
-                <tr className="border-b border-border">
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Name</th>
-                  <th className="hidden md:table-cell px-4 py-3 text-left font-medium text-muted-foreground">
-                    Type
-                  </th>
-                  <th className="hidden sm:table-cell px-4 py-3 text-left font-medium text-muted-foreground">
-                    Location
-                  </th>
-                  <th className="hidden lg:table-cell px-4 py-3 text-center font-medium text-muted-foreground">
-                    Capacity
-                  </th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Status</th>
-                  <th className="px-4 py-3 text-center font-medium text-muted-foreground">
-                    Availability
-                  </th>
-                  <th className="px-4 py-3 text-right font-medium text-muted-foreground">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredRooms.map((room) => {
+      <div className="flex-1 min-h-0 rounded-xl bg-surface shadow-edge overflow-hidden">
+        {/* This box is the vertical scroller, so the sticky header pins to it. */}
+        <div className="h-full overflow-auto">
+          <Table rounded={false}>
+            <TableHeader>
+              <TableRow hoverable={false}>
+                <TableHead>Name</TableHead>
+                <TableHead className="hidden md:table-cell">Type</TableHead>
+                <TableHead className="hidden sm:table-cell">Location</TableHead>
+                <TableHead align="center" className="hidden lg:table-cell">
+                  Capacity
+                </TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead align="center">Availability</TableHead>
+                <TableHead align="right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loading.rooms ? (
+                <TableLoading colSpan={7} message="Loading rooms..." />
+              ) : filteredRooms.length === 0 ? (
+                <TableEmpty
+                  colSpan={7}
+                  icon={<Door size={48} weight="duotone" />}
+                  title="No rooms found"
+                  description={
+                    hasActiveFilters
+                      ? "Try adjusting your filters"
+                      : "Create your first room to get started"
+                  }
+                  action={
+                    !hasActiveFilters && (
+                      <Button variant="outline" size="sm" onClick={handleCreateRoom}>
+                        <Plus size={14} className="mr-1" />
+                        New Room
+                      </Button>
+                    )
+                  }
+                />
+              ) : (
+                filteredRooms.map((room) => {
                   const isBooked = bookedRoomIds.has(room.id);
                   return (
-                    <tr
+                    <TableRow
                       key={room.id}
-                      className={cn(
-                        "border-b border-border last:border-0 hover:bg-muted/30 transition-colors cursor-pointer",
-                        selectedRoomId === room.id && "bg-primary/5",
-                      )}
+                      className={cn("cursor-pointer", selectedRoomId === room.id && "bg-primary/5")}
                       onClick={() => handleRowClick(room)}
                     >
-                      <td className="px-4 py-3">
+                      <TableCell>
                         <div className="flex items-center gap-2">
                           <Door
                             size={16}
@@ -381,13 +379,13 @@ export function RoomsPage() {
                             </p>
                           </div>
                         </div>
-                      </td>
-                      <td className="hidden md:table-cell px-4 py-3">
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell">
                         <Badge variant="secondary" className="text-xs">
                           {ROOM_TYPE_LABELS[room.roomType]}
                         </Badge>
-                      </td>
-                      <td className="hidden sm:table-cell px-4 py-3 text-muted-foreground">
+                      </TableCell>
+                      <TableCell className="hidden sm:table-cell text-muted-foreground">
                         <div className="flex items-center gap-1.5">
                           <MapPin size={14} className="shrink-0" />
                           <span className="truncate max-w-[200px]">
@@ -396,8 +394,8 @@ export function RoomsPage() {
                               .join(", ") || "-"}
                           </span>
                         </div>
-                      </td>
-                      <td className="hidden lg:table-cell px-4 py-3 text-center">
+                      </TableCell>
+                      <TableCell align="center" className="hidden lg:table-cell">
                         {room.capacity > 0 ? (
                           <span className="flex items-center justify-center gap-1 text-muted-foreground">
                             <Users size={14} />
@@ -406,8 +404,8 @@ export function RoomsPage() {
                         ) : (
                           <span className="text-muted-foreground">-</span>
                         )}
-                      </td>
-                      <td className="px-4 py-3">
+                      </TableCell>
+                      <TableCell>
                         <span
                           className={cn(
                             "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium",
@@ -416,8 +414,8 @@ export function RoomsPage() {
                         >
                           {ROOM_STATUS_LABELS[room.status]}
                         </span>
-                      </td>
-                      <td className="px-4 py-3 text-center">
+                      </TableCell>
+                      <TableCell align="center">
                         {room.status === "active" ? (
                           <span
                             className={cn(
@@ -433,8 +431,8 @@ export function RoomsPage() {
                         ) : (
                           <span className="text-xs text-muted-foreground">-</span>
                         )}
-                      </td>
-                      <td className="px-4 py-3 text-right">
+                      </TableCell>
+                      <TableCell align="right">
                         <div className="flex items-center justify-end gap-1">
                           {(roleCanManage(room.userRole) || room.ownerId === currentUserId) && (
                             <button
@@ -478,14 +476,14 @@ export function RoomsPage() {
                             </button>
                           )}
                         </div>
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
+                })
+              )}
+            </TableBody>
+          </Table>
+        </div>
       </div>
 
       <RoomFormModal isOpen={formOpen} onClose={handleFormClose} room={editingRoom} />

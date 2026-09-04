@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useOverlayEscape } from "@/shared/hooks/useOverlayEscape";
 import { createPortal } from "react-dom";
 import { CaretDown, Gauge, X } from "@phosphor-icons/react";
 import { useAppSelector } from "@/app/hooks";
@@ -7,6 +8,7 @@ import { AgentContextBar } from "@/features/chat/components/channel/AgentContext
 import { selectChannelMembers } from "@/features/chat/store/chatChannelsSlice";
 import { useChannelAgentContextBatch } from "@/features/chat/hooks/useChannelAgentContext";
 import { useChatPermissions } from "@/features/chat/hooks/useChatPermissions";
+import { popoverShellClass } from "@/components/ui/popover";
 import { cn } from "@/shared/utils/cn";
 import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
 import { Drawer } from "@/components/ui/drawer";
@@ -77,13 +79,7 @@ export function ChannelAgentsPopover({ channelId, anchorRef, onClose }: ChannelA
     };
   }, [onClose, isMobile]);
 
-  useEffect(() => {
-    const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", handleEsc);
-    return () => document.removeEventListener("keydown", handleEsc);
-  }, [onClose]);
+  useOverlayEscape(onClose);
 
   const body = (
     <>
@@ -110,7 +106,7 @@ export function ChannelAgentsPopover({ channelId, anchorRef, onClose }: ChannelA
           <div className="py-8 px-4 text-center">
             <Gauge size={32} className="mx-auto mb-2 text-muted-foreground/30" />
             <p className="text-sm text-muted-foreground">No active agent conversations</p>
-            <p className="text-xs text-muted-foreground/60 mt-1">
+            <p className="text-xs text-subtle-foreground mt-1">
               Add an agent member to start tracking context here.
             </p>
           </div>
@@ -188,7 +184,10 @@ export function ChannelAgentsPopover({ channelId, anchorRef, onClose }: ChannelA
   return createPortal(
     <div
       ref={panelRef}
-      className="fixed z-[100] w-[380px] max-h-[60vh] bg-card border border-border rounded-xl shadow-xl overflow-hidden flex flex-col"
+      className={cn(
+        popoverShellClass,
+        "fixed z-[100] w-[380px] max-h-[60vh] rounded-xl overflow-hidden flex flex-col",
+      )}
       style={{ top: position.top, left: position.left }}
       data-testid="chat-channel-agents-popover"
     >

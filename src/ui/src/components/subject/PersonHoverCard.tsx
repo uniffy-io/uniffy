@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { ArrowSquareOut, ChatCircle, Check, Clock, CopySimple } from "@phosphor-icons/react";
 import { getTimezoneOffset } from "date-fns-tz";
+import { popoverShellClass } from "@/components/ui/popover";
 import { cn } from "@/shared/utils/cn";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { usePresence } from "@/features/presence/hooks/usePresence";
@@ -138,9 +139,8 @@ export function PersonCardContent({
   return (
     <div
       className={cn(
-        "w-[28rem] max-w-[calc(100vw-1rem)]",
-        "bg-card text-card-foreground",
-        "rounded-lg shadow-lg border border-border overflow-hidden",
+        popoverShellClass,
+        "w-[28rem] max-w-[calc(100vw-1rem)] overflow-hidden",
         "animate-in fade-in-0 zoom-in-95 duration-200",
         className,
       )}
@@ -204,7 +204,7 @@ export function PersonCardContent({
                         <span className="truncate">
                           {customStatus.text}
                           {customStatus.expiresAt && (
-                            <span className="text-muted-foreground/60">
+                            <span className="text-subtle-foreground">
                               {" "}
                               {formatTimeRemaining(customStatus.expiresAt)}
                             </span>

@@ -1,7 +1,9 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
+import { popoverShellClass } from "@/components/ui/popover";
 import { cn } from "@/shared/utils/cn";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { CommentAnchorType } from "@uniffy/proto/comments/v1/comments_pb";
 import { useCommentActions } from "@/features/comments/hooks/useComments";
 
@@ -87,27 +89,20 @@ export function InlineCommentPopover({
   return createPortal(
     <div
       ref={popoverRef}
-      className={cn(
-        "fixed z-50 transform -translate-x-1/2 -translate-y-full",
-        "bg-card text-card-foreground border border-border rounded-lg shadow-lg",
-      )}
+      className={cn(popoverShellClass, "fixed z-50 transform -translate-x-1/2 -translate-y-full")}
       style={{ top, left }}
     >
       <div className="p-3 w-72">
         <div className="text-xs text-muted-foreground mb-2 line-clamp-1 italic">
           &quot;{selection.text}&quot;
         </div>
-        <textarea
+        <Textarea
           ref={textareaRef}
           value={body}
           onChange={(e) => setBody(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Add a comment..."
           rows={3}
-          className={cn(
-            "w-full resize-none rounded-md border border-border bg-background",
-            "px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring",
-          )}
         />
         <div className="flex items-center justify-between mt-2">
           <span className="text-xs text-muted-foreground">Ctrl+Enter to submit</span>

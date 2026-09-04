@@ -1,5 +1,5 @@
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
-import { Modal } from "@/components/ui/modal";
+import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { useCall } from "@/features/calls/components/callContext";
 import {
@@ -25,29 +25,22 @@ export function CallEndedModal() {
   const endedInfo = useAppSelector(selectEndedInfo);
 
   if (endedInfo) {
+    const dismiss = () => {
+      dispatch(endedInfoCleared());
+      dispatch(sessionReset());
+    };
     return (
-      <Modal
-        onClose={() => {
-          dispatch(endedInfoCleared());
-          dispatch(sessionReset());
-        }}
-        maxWidth="max-w-sm"
-      >
-        <div className="p-5 space-y-4" data-testid="call-ended-modal">
-          <h2 className="text-base font-semibold text-foreground">Call ended</h2>
-          <p className="text-sm text-muted-foreground">
-            {endedInfo.reason ? END_REASON_COPY[endedInfo.reason] : "The call has ended."}
-          </p>
-          <div className="flex justify-end">
-            <Button
-              onClick={() => {
-                dispatch(endedInfoCleared());
-                dispatch(sessionReset());
-              }}
-            >
-              Close
-            </Button>
-          </div>
+      <Modal onClose={dismiss} maxWidth="max-w-sm">
+        <div data-testid="call-ended-modal">
+          <ModalHeader title="Call ended" />
+          <ModalBody>
+            <p className="text-sm text-muted-foreground">
+              {endedInfo.reason ? END_REASON_COPY[endedInfo.reason] : "The call has ended."}
+            </p>
+          </ModalBody>
+          <ModalFooter>
+            <Button onClick={dismiss}>Close</Button>
+          </ModalFooter>
         </div>
       </Modal>
     );
@@ -56,17 +49,19 @@ export function CallEndedModal() {
   if (session.status === "disconnected") {
     return (
       <Modal onClose={() => void leaveCurrentCall()} maxWidth="max-w-sm">
-        <div className="p-5 space-y-4" data-testid="call-disconnected-modal">
-          <h2 className="text-base font-semibold text-foreground">Lost connection</h2>
-          <p className="text-sm text-muted-foreground">
-            The connection to the call could not be restored.
-          </p>
-          <div className="flex justify-end gap-2">
+        <div data-testid="call-disconnected-modal">
+          <ModalHeader title="Lost connection" />
+          <ModalBody>
+            <p className="text-sm text-muted-foreground">
+              The connection to the call could not be restored.
+            </p>
+          </ModalBody>
+          <ModalFooter>
             <Button variant="ghost" onClick={() => void leaveCurrentCall()}>
               Leave call
             </Button>
             <Button onClick={() => void rejoin()}>Rejoin</Button>
-          </div>
+          </ModalFooter>
         </div>
       </Modal>
     );

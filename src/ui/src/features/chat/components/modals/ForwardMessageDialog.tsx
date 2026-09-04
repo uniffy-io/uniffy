@@ -1,8 +1,9 @@
 import { useState, useCallback } from "react";
-import { Paperclip, X } from "@phosphor-icons/react";
+import { Paperclip } from "@phosphor-icons/react";
 import { useAppDispatch } from "@/app/hooks";
 import { Button } from "@/components/ui/button";
-import { Modal } from "@/components/ui/modal";
+import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/ui/modal";
+import { Textarea } from "@/components/ui/textarea";
 import { ChannelSelectList } from "@/features/chat/components/channel/ChannelSelectList";
 import { MessageContent } from "@/features/chat/components/channel/MessageContent";
 import { forwardMessage } from "@/features/chat/store/chatThunks";
@@ -57,27 +58,16 @@ export function ForwardMessageDialog({ message, senderName, onClose }: ForwardMe
   return (
     <Modal onClose={onClose} closeDisabled={isSending} maxWidth="max-w-md">
       <div data-testid={`chat-forward-dialog-${message.id}`}>
-        <div className="flex items-center justify-between px-6 pt-5 pb-2">
-          <h2 className="text-lg font-semibold text-foreground">Forward message</h2>
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={isSending}
-            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
-            data-testid="chat-forward-close"
-          >
-            <X size={20} />
-          </button>
-        </div>
+        <ModalHeader title="Forward message" />
 
         <form onSubmit={handleSubmit}>
-          <div className="px-6 py-3 space-y-4">
+          <ModalBody>
             <div className="rounded-lg border border-border bg-muted/20 px-3 py-2">
               <div className="flex items-baseline gap-2">
                 <span className="text-[13px] font-semibold text-foreground truncate">
                   {senderName}
                 </span>
-                <span className="text-[11px] text-muted-foreground/60 shrink-0">
+                <span className="text-[11px] text-subtle-foreground shrink-0">
                   {formatMessageTimestamp(message.createdAt)}
                 </span>
               </div>
@@ -99,10 +89,10 @@ export function ForwardMessageDialog({ message, senderName, onClose }: ForwardMe
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">Forward to</label>
+              <label className="block text-sm text-muted-foreground mb-1">Forward to</label>
               <div
                 className={cn(
-                  "flex flex-col h-56 rounded-lg border border-input overflow-hidden",
+                  "flex flex-col h-56 rounded-lg border border-border overflow-hidden",
                   isSending && "pointer-events-none opacity-60",
                 )}
               >
@@ -116,19 +106,19 @@ export function ForwardMessageDialog({ message, senderName, onClose }: ForwardMe
             </div>
 
             <div>
-              <textarea
-                placeholder="Add a comment (optional)"
+              <label className="block text-sm text-muted-foreground mb-1">Comment (optional)</label>
+              <Textarea
+                placeholder="Add a comment"
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
                 disabled={isSending}
                 rows={2}
-                className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
                 data-testid="chat-forward-comment-input"
               />
             </div>
-          </div>
+          </ModalBody>
 
-          <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-border">
+          <ModalFooter>
             <Button
               type="button"
               variant="ghost"
@@ -146,7 +136,7 @@ export function ForwardMessageDialog({ message, senderName, onClose }: ForwardMe
             >
               Forward
             </Button>
-          </div>
+          </ModalFooter>
         </form>
       </div>
     </Modal>

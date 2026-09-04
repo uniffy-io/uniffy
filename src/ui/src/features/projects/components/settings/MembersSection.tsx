@@ -23,6 +23,7 @@ export function MembersSection({ project }: MembersSectionProps) {
         contentTitle={project.name}
         explicitUserRole={project.userRole}
         showAuditLink
+        tone="surface"
       />
     </div>
   );

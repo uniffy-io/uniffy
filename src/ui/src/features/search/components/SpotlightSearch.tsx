@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { useOverlayEscape } from "@/shared/hooks/useOverlayEscape";
 import { useNavigate, useLocation } from "react-router-dom";
 import { MagnifyingGlass, X } from "@phosphor-icons/react";
+import { dialogShellClass } from "@/components/ui/popover";
 import { useSearch } from "@/features/search/hooks/useSearch";
 import { useSpotlightOpenListener } from "@/features/search/hooks/useSpotlightTrigger";
 import { SearchResultsList } from "@/features/search/components/SearchResultsList";
@@ -221,15 +223,10 @@ export function SpotlightSearch() {
     }
   }, [isOpen]);
 
+  useOverlayEscape(handleClose, isOpen);
+
   useEffect(() => {
     if (!isOpen) return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        handleClose();
-      }
-    };
 
     const handleClickOutside = (e: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
@@ -237,13 +234,8 @@ export function SpotlightSearch() {
       }
     };
 
-    document.addEventListener("keydown", handleKeyDown);
     document.addEventListener("mousedown", handleClickOutside);
-
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isOpen, handleClose]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -277,7 +269,9 @@ export function SpotlightSearch() {
           ref={containerRef}
           className="w-full max-w-2xl mx-4 animate-in fade-in-0 zoom-in-95 slide-in-from-top-4 duration-200"
         >
-          <div className="rounded-2xl border-2 border-primary/50 bg-card shadow-2xl ring-4 ring-primary/10 overflow-hidden">
+          <div
+            className={cn(dialogShellClass, "rounded-2xl ring-1 ring-primary/40 overflow-hidden")}
+          >
             <div className="relative flex items-center border-b border-border/50">
               <MagnifyingGlass
                 size={20}
@@ -293,7 +287,7 @@ export function SpotlightSearch() {
                 placeholder="Search notes, files, and more..."
                 className={cn(
                   "w-full h-14 bg-transparent pl-12 pr-20 text-lg",
-                  "placeholder:text-muted-foreground/60",
+                  "placeholder:text-subtle-foreground",
                   "focus:outline-none",
                 )}
                 autoComplete="off"
@@ -372,7 +366,7 @@ export function SpotlightSearch() {
               <div className="pb-2">
                 {peopleDms.length > 0 && (
                   <div className="px-4 pt-3">
-                    <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground/60 mb-2">
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-subtle-foreground mb-2">
                       People
                     </p>
                     <div className="flex items-center gap-2 flex-wrap">
@@ -408,7 +402,7 @@ export function SpotlightSearch() {
                 )}
                 {recentResults.length > 0 && (
                   <>
-                    <p className="px-4 pt-3 text-[11px] font-medium uppercase tracking-wide text-muted-foreground/60">
+                    <p className="px-4 pt-3 text-[11px] font-medium uppercase tracking-wide text-subtle-foreground">
                       Recent
                     </p>
                     <SearchResultsList
@@ -428,7 +422,7 @@ export function SpotlightSearch() {
                 <p className="text-sm text-muted-foreground">
                   Type to search across all your content
                 </p>
-                <p className="text-xs text-muted-foreground/60 mt-2 mb-4">
+                <p className="text-xs text-subtle-foreground mt-2 mb-4">
                   Press{" "}
                   <kbd className="px-1.5 py-0.5 rounded bg-muted border border-border/50 font-mono text-[10px]">
                     {shortcutDisplay}

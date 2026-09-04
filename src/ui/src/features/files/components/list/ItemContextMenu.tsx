@@ -9,6 +9,9 @@ import {
   ArrowRight,
   ArrowUUpLeft,
 } from "@phosphor-icons/react";
+import { popoverEnterClass, popoverShellClass } from "@/components/ui/popover";
+import { useOverlayEscape } from "@/shared/hooks/useOverlayEscape";
+import { cn } from "@/shared/utils/cn";
 
 interface ItemContextMenuProps {
   x: number;
@@ -72,16 +75,7 @@ export function ItemContextMenu({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [onClose]);
 
-  // Close on escape
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        onClose();
-      }
-    };
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [onClose]);
+  useOverlayEscape(onClose);
 
   const handleAction = (action: () => void, e: React.MouseEvent) => {
     e.preventDefault();
@@ -94,7 +88,11 @@ export function ItemContextMenu({
     return (
       <div
         ref={menuRef}
-        className="fixed z-50 min-w-[200px] overflow-hidden rounded-md border border-border bg-card shadow-lg animate-in fade-in-0 zoom-in-95 duration-100"
+        className={cn(
+          popoverShellClass,
+          popoverEnterClass,
+          "fixed z-50 min-w-[200px] overflow-hidden",
+        )}
         style={{ top: y, left: x }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -136,7 +134,11 @@ export function ItemContextMenu({
   return (
     <div
       ref={menuRef}
-      className="fixed z-50 min-w-[180px] overflow-hidden rounded-md border border-border bg-card shadow-lg animate-in fade-in-0 zoom-in-95 duration-100"
+      className={cn(
+        popoverShellClass,
+        popoverEnterClass,
+        "fixed z-50 min-w-[180px] overflow-hidden",
+      )}
       style={{ top: y, left: x }}
       onClick={(e) => e.stopPropagation()}
     >

@@ -314,13 +314,13 @@ function MessageItemInner({
   if (message.isDeleted) {
     return (
       <div
-        className={cn("group relative px-4 py-1", "hover:bg-muted/15 transition-colors")}
+        className={cn("group relative px-4 py-1", "hover:bg-muted/20 transition-colors")}
         data-testid={`chat-message-${message.id}`}
         data-message-kind="deleted"
       >
         <div className="flex items-start gap-3">
           <div className="w-8 flex-shrink-0" />
-          <span className="text-xs text-muted-foreground/50 italic">This message was deleted</span>
+          <span className="text-xs text-subtle-foreground italic">This message was deleted</span>
         </div>
       </div>
     );
@@ -354,12 +354,14 @@ function MessageItemInner({
           <div className="min-w-0 flex-1">
             {isFirstInGroup && (
               <div className="flex items-baseline gap-2 mb-0.5">
-                <span className="text-[13px] font-semibold text-foreground">{senderName}</span>
-                <span className="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground/70 bg-muted px-1.5 py-0.5 rounded-full">
+                <span className="text-[14.5px] font-semibold tracking-[-0.01em] text-foreground">
+                  {senderName}
+                </span>
+                <span className="inline-flex items-center gap-0.5 text-[11px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">
                   <Robot size={10} />
                   via Agent
                 </span>
-                <span className="text-[11px] text-muted-foreground/60">
+                <span className="text-xs tabular-nums text-subtle-foreground">
                   {formatMessageTimestamp(message.createdAt)}
                 </span>
               </div>
@@ -378,7 +380,7 @@ function MessageItemInner({
         // scroll into view and a CSS entry animation replays each time.
         "group relative px-4",
         isGrouped ? "py-0.5" : "py-1.5",
-        "hover:bg-muted/15 transition-colors",
+        "hover:bg-muted/20 transition-colors",
         isHighlighted && "bg-primary/10 border-l-2 border-primary",
         message.isPinned && !isHighlighted && "border-l-2 border-primary/50 bg-primary/5",
       )}
@@ -430,7 +432,7 @@ function MessageItemInner({
           <div className="w-8 flex-shrink-0 flex items-center justify-center">
             <span
               className={cn(
-                "text-[10px] text-muted-foreground/50 whitespace-nowrap",
+                "text-[11px] tabular-nums text-subtle-foreground whitespace-nowrap",
                 "opacity-0 group-hover:opacity-100 transition-opacity",
               )}
             >
@@ -443,7 +445,7 @@ function MessageItemInner({
           {isFirstInGroup && (
             <div className="flex items-baseline gap-2 mb-0.5">
               <span
-                className="text-[13px] font-semibold text-foreground cursor-pointer hover:underline"
+                className="text-[14.5px] font-semibold tracking-[-0.01em] text-foreground cursor-pointer hover:underline"
                 onMouseEnter={handleSenderMouseEnter}
                 onMouseLeave={handleSenderMouseLeave}
                 onClick={() => void handleSenderClick()}
@@ -453,7 +455,7 @@ function MessageItemInner({
               </span>
               {isAgent && (
                 <span
-                  className="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground/70 bg-muted px-1.5 py-0.5 rounded-full"
+                  className="inline-flex items-center gap-0.5 text-[11px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full"
                   data-testid={`chat-message-agent-badge-${message.id}`}
                 >
                   <Robot size={10} />
@@ -467,7 +469,7 @@ function MessageItemInner({
                 />
               )}
               <span
-                className="text-[11px] text-muted-foreground/60"
+                className="text-xs tabular-nums text-subtle-foreground"
                 data-testid={`chat-message-timestamp-${message.id}`}
               >
                 {formatMessageTimestamp(message.createdAt)}

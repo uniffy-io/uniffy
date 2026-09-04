@@ -10,6 +10,7 @@ import { buildLiveStateFromMetadata } from "@/components/mention/buildLiveState"
 import {
   hasExpandedCard,
   isPeopleTokenType,
+  MENTION_ACCENT,
   peopleTokenClasses,
 } from "@/components/mention/mentionConstants";
 import { useUrnPreview } from "@/components/editor/plugins/mention/useUrnPreview";
@@ -78,27 +79,56 @@ function writeToggle(urn: string, value: boolean): void {
   }
 }
 
-/** Reserves the expanded-card footprint so chips don't shift size when liveState arrives. */
-function MentionExpandedCardSkeleton({ label }: { label: string }) {
+/** Reserves the expanded-card footprint so chips don't shift size when liveState arrives.
+ *  The type and the Markdown label are known before any resolve, so the header renders them
+ *  for real and only the live meta shimmers; the row layout mirrors the per-type previews. */
+function MentionExpandedCardSkeleton({ urn, label }: { urn: string; label: string }) {
+  const { type: urnType } = parseUrn(urn);
+  const style = getTypeStyle(urnType);
+  const TypeIcon = style.icon;
+  const typeLabel = getUrnTypeLabel(urn);
+
   return (
     <span
       aria-busy="true"
-      aria-label={`Loading ${label}`}
+      aria-label={`Loading ${typeLabel}: ${label}`}
       className={cn(
         "mention-expanded-card not-prose relative block",
-        "w-full max-w-md my-2 px-4 py-3",
-        "bg-card",
-        "rounded-lg border border-border shadow-xs",
+        "w-full max-w-md my-2",
+        "bg-card text-card-foreground",
+        "rounded-lg shadow-edge",
         "overflow-hidden",
       )}
     >
-      <span className="flex items-start gap-3 animate-pulse">
-        <span className="grid place-items-center shrink-0 w-10 h-10 rounded-lg bg-muted" />
-        <span className="block flex-1 min-w-0 pt-1 space-y-2">
-          <span className="block h-3.5 w-3/4 rounded bg-muted" />
-          <span className="block h-2.5 w-1/3 rounded bg-muted" />
-          <span className="block h-2.5 w-full rounded bg-muted/60" />
-          <span className="block h-2.5 w-5/6 rounded bg-muted/60" />
+      <span className="block relative px-4 pr-10 pt-3 pb-1 pl-5">
+        <span className="flex items-center gap-2.5">
+          <span
+            className={cn(
+              "grid place-items-center shrink-0 w-7 h-7 rounded-md",
+              style.iconBoxAccent,
+            )}
+          >
+            <TypeIcon size={16} weight="duotone" />
+          </span>
+          <span className="block flex-1 min-w-0">
+            <span className="block font-semibold text-sm truncate">{label}</span>
+            <span className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-[10px] font-medium text-primary">{typeLabel}</span>
+              <MetaSeparator />
+              <span className="inline-block h-2.5 w-16 rounded bg-muted animate-pulse" />
+            </span>
+          </span>
+        </span>
+      </span>
+
+      <span className="block px-4 pb-2 pl-[3.375rem] space-y-1.5 animate-pulse">
+        <span className="block h-2.5 w-full rounded bg-muted/60" />
+        <span className="block h-2.5 w-5/6 rounded bg-muted/60" />
+      </span>
+
+      <span className="flex px-4 py-1.5 pl-5 bg-background/60 items-center">
+        <span className="flex h-4 items-center animate-pulse">
+          <span className="inline-block h-2.5 w-20 rounded bg-muted/60" />
         </span>
       </span>
     </span>
@@ -227,7 +257,7 @@ function MentionRestricted({
 
   if (expanded) {
     return (
-      <span className="mention-expanded-card mention-chip-restricted not-prose relative block w-full max-w-md my-2 bg-card text-card-foreground rounded-lg shadow-xs border border-border overflow-hidden">
+      <span className="mention-expanded-card mention-chip-restricted not-prose relative block w-full max-w-md my-2 bg-card text-card-foreground rounded-lg shadow-edge overflow-hidden">
         <span className="block relative px-4 pt-3 pb-1 pl-5">
           <span className="flex items-center gap-2.5">
             <span
@@ -256,7 +286,7 @@ function MentionRestricted({
           </span>
         </span>
 
-        <span className="flex px-4 py-1.5 pl-5 bg-muted/30 border-t border-border/50 items-center justify-between">
+        <span className="flex px-4 py-1.5 pl-5 bg-background/60 items-center justify-between">
           <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <LockKey size={12} weight="duotone" />
             <span>Private</span>
@@ -315,7 +345,7 @@ function MentionRestricted({
     style.badgeBg,
     style.border,
     canRequestAccess && "cursor-pointer transition-colors hover:bg-muted",
-    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
+    "focus-ring",
   );
 
   return canRequestAccess ? (
@@ -372,7 +402,7 @@ function MentionUnavailable({
 
   if (expanded) {
     return (
-      <span className="mention-expanded-card mention-chip-unavailable not-prose relative block w-full max-w-md my-2 bg-card text-card-foreground rounded-lg shadow-xs border border-border overflow-hidden">
+      <span className="mention-expanded-card mention-chip-unavailable not-prose relative block w-full max-w-md my-2 bg-card text-card-foreground rounded-lg shadow-edge overflow-hidden">
         <span className="block relative px-4 pt-3 pb-1 pl-5">
           <span className="flex items-center gap-2.5">
             <span className="grid place-items-center shrink-0 w-7 h-7 rounded-md bg-muted text-muted-foreground">
@@ -400,7 +430,7 @@ function MentionUnavailable({
           </span>
         </span>
 
-        <span className="flex px-4 py-1.5 pl-5 bg-muted/30 border-t border-border/50 items-center justify-end">
+        <span className="flex px-4 py-1.5 pl-5 bg-background/60 items-center justify-end">
           <button
             type="button"
             onClick={() => void retry()}
@@ -460,15 +490,14 @@ interface TypeStyle {
   badgeBg: string;
 }
 
+// Only the glyph comes from the type; every chip wears the accent (see MENTION_ACCENT).
 function getTypeStyle(type: UrnType): TypeStyle {
-  const config = getContentTypeConfig(type);
-  const theme = config.theme;
   return {
-    icon: config.icon,
-    iconBoxAccent: theme.iconBoxAccent,
-    border: theme.border,
-    borderHover: theme.borderHover,
-    badgeBg: theme.badgeBg,
+    icon: getContentTypeConfig(type).icon,
+    iconBoxAccent: MENTION_ACCENT.iconBoxAccent,
+    border: MENTION_ACCENT.border,
+    borderHover: MENTION_ACCENT.borderHover,
+    badgeBg: MENTION_ACCENT.badgeBg,
   };
 }
 
@@ -730,7 +759,7 @@ function MentionChipInner({
   }
 
   if (wantsExpanded && !resolvedLiveState) {
-    return <MentionExpandedCardSkeleton label={label} />;
+    return <MentionExpandedCardSkeleton urn={urn} label={label} />;
   }
 
   return (
@@ -751,7 +780,7 @@ function MentionChipInner({
           isLive && "mention-chip-live",
           "cursor-pointer select-none",
           "transition-colors duration-200",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background",
+          "focus-ring",
           selected && "ring-2 ring-primary ring-offset-1 ring-offset-background",
         )}
         onClick={(e) => onClick?.(e)}
@@ -1008,7 +1037,7 @@ function MentionChipCompactInner({
           style.borderHover,
           "cursor-pointer select-none",
           "transition-colors duration-150",
-          "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+          "focus-ring",
           selected && "ring-1 ring-primary",
         )}
         onClick={(e) => onClick?.(e)}

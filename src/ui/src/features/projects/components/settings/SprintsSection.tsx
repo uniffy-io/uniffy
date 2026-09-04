@@ -78,7 +78,7 @@ export function SprintsSection({ project }: SprintsSectionProps) {
             <CheckCircle size={18} weight="fill" className="text-green-500" />
             Active Sprint
           </h2>
-          <div className="bg-card rounded-lg border border-border p-4 md:p-6">
+          <div className="rounded-xl bg-surface p-4 shadow-edge md:p-6">
             <SprintRow
               sprint={activeSprint}
               isEditing={editingId === activeSprint.id}
@@ -106,7 +106,7 @@ export function SprintsSection({ project }: SprintsSectionProps) {
             )}
           </h2>
         </div>
-        <div className="bg-card rounded-lg border border-border p-4 md:p-6 space-y-2">
+        <div className="space-y-2 rounded-xl bg-surface p-4 shadow-edge md:p-6">
           {plannedSprints.length === 0 && !isCreating && (
             <p className="text-sm text-muted-foreground">No planned sprints. Create one below.</p>
           )}
@@ -161,7 +161,7 @@ export function SprintsSection({ project }: SprintsSectionProps) {
             </div>
           </div>
           {showClosed && (
-            <div className="bg-card rounded-lg border border-border p-4 md:p-6 space-y-2">
+            <div className="space-y-2 rounded-xl bg-surface p-4 shadow-edge md:p-6">
               {closedSprints.map((sprint) => (
                 <SprintRow
                   key={sprint.id}
@@ -463,7 +463,7 @@ function CreateSprintInline({ projectId, onCancel, onCreated }: CreateSprintInli
   };
 
   return (
-    <div className="p-3 rounded-lg border border-border bg-background space-y-3">
+    <div className="space-y-3 rounded-xl bg-card p-3 shadow-edge">
       <Input
         value={name}
         onChange={(e) => setName(e.target.value)}

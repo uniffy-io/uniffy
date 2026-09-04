@@ -15,6 +15,7 @@ import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { popoverShellClass } from "@/components/ui/popover";
 import { Select } from "@/components/ui/select";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
@@ -564,7 +565,7 @@ function TrashView() {
             const isLast = idx === breadcrumbs.length - 1;
             return (
               <span key={crumb.id} className="flex items-center gap-1 min-w-0">
-                <CaretRight size={12} weight="bold" className="shrink-0 text-muted-foreground/50" />
+                <CaretRight size={12} weight="bold" className="shrink-0 text-subtle-foreground" />
                 <button
                   onClick={() => !isLast && navigateToFolder(crumb.id)}
                   className={cn(
@@ -745,7 +746,12 @@ function TrashView() {
 
       {/* Inline "restoring…" indicator for long operations */}
       {restoring.size > 0 && (
-        <div className="fixed bottom-4 right-4 bg-card border border-border rounded-md shadow-lg px-3 py-2 text-sm flex items-center gap-2">
+        <div
+          className={cn(
+            popoverShellClass,
+            "fixed bottom-4 right-4 px-3 py-2 text-sm flex items-center gap-2",
+          )}
+        >
           <ArrowsClockwise size={14} weight="bold" className="animate-spin text-primary" />
           Restoring {restoring.size} item{restoring.size === 1 ? "" : "s"}...
         </div>

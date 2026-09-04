@@ -1,5 +1,7 @@
 import { useRef, useEffect, useState, useMemo, useCallback } from "react";
+import { useOverlayEscape } from "@/shared/hooks/useOverlayEscape";
 import { Lightning } from "@phosphor-icons/react";
+import { popoverShellClass } from "@/components/ui/popover";
 import { cn } from "@/shared/utils/cn";
 import type { SerializedRunnableSkill } from "@/features/agents/store/agentRunnableSkillsThunks";
 
@@ -36,12 +38,11 @@ export function SkillSlashPopup({ skills, query, onSelect, onClose }: SkillSlash
     [onSelect],
   );
 
+  useOverlayEscape(onClose);
+
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        onClose();
-      } else if (e.key === "ArrowDown") {
+      if (e.key === "ArrowDown") {
         e.preventDefault();
         setHighlighted((h) => (filtered.length ? (h + 1) % filtered.length : 0));
       } else if (e.key === "ArrowUp") {
@@ -56,7 +57,7 @@ export function SkillSlashPopup({ skills, query, onSelect, onClose }: SkillSlash
     };
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [filtered, activeIndex, select, onClose]);
+  }, [filtered, activeIndex, select]);
 
   useEffect(() => {
     const onClickOutside = (e: MouseEvent) => {
@@ -72,7 +73,10 @@ export function SkillSlashPopup({ skills, query, onSelect, onClose }: SkillSlash
     return (
       <div
         ref={popupRef}
-        className="absolute bottom-full left-0 right-0 mb-2 rounded-xl border border-border bg-card shadow-xl overflow-hidden z-50"
+        className={cn(
+          popoverShellClass,
+          "absolute bottom-full left-0 right-0 mb-2 rounded-xl overflow-hidden z-50",
+        )}
         data-testid="skill-slash-popup"
       >
         <div className="px-4 py-3 text-sm text-muted-foreground">
@@ -85,7 +89,10 @@ export function SkillSlashPopup({ skills, query, onSelect, onClose }: SkillSlash
   return (
     <div
       ref={popupRef}
-      className="absolute bottom-full left-0 right-0 mb-2 rounded-xl border border-border bg-card shadow-xl overflow-hidden z-50"
+      className={cn(
+        popoverShellClass,
+        "absolute bottom-full left-0 right-0 mb-2 rounded-xl overflow-hidden z-50",
+      )}
       data-testid="skill-slash-popup"
     >
       <div className="px-3 py-1.5 border-b border-border/60 text-xs font-medium text-muted-foreground">

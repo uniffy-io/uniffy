@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { X, GlobeSimple, Lock, Check } from "@phosphor-icons/react";
+import { GlobeSimple, Lock, Check } from "@phosphor-icons/react";
 import { useNavigate } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Modal } from "@/components/ui/modal";
+import { Textarea } from "@/components/ui/textarea";
+import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/ui/modal";
 import { Select } from "@/components/ui/select";
 import { cn } from "@/shared/utils/cn";
 import { closeCreateChannelModal } from "@/features/chat/store/chatUiSlice";
@@ -75,25 +76,12 @@ export function CreateChannelModal() {
   return (
     <Modal onClose={handleClose} closeDisabled={isSubmitting}>
       <div data-testid="chat-create-channel-modal">
-        <div className="flex items-center justify-between px-6 pt-6 pb-2">
-          <h2 className="text-xl font-semibold text-foreground">Create a new channel</h2>
-          <button
-            type="button"
-            onClick={handleClose}
-            disabled={isSubmitting}
-            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
-            data-testid="chat-create-channel-close"
-          >
-            <X size={20} />
-          </button>
-        </div>
+        <ModalHeader title="New channel" />
 
         <form onSubmit={handleSubmit}>
-          <div className="px-6 py-4 space-y-5 max-h-[60vh] overflow-y-auto">
+          <ModalBody>
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">
-                Channel name
-              </label>
+              <label className="block text-sm text-muted-foreground mb-1">Channel name</label>
               <Input
                 ref={inputRef}
                 type="text"
@@ -104,7 +92,7 @@ export function CreateChannelModal() {
                   if (!touched) setTouched(true);
                 }}
                 disabled={isSubmitting}
-                className={cn(showError && "border-red-500 focus-visible:ring-red-500")}
+                className={cn(showError && "border-red-500")}
                 data-testid="chat-create-channel-name-input"
               />
               <div className="flex items-center justify-between mt-1">
@@ -134,7 +122,7 @@ export function CreateChannelModal() {
                   "relative flex items-center gap-3 rounded-lg border p-3.5 text-left transition-colors",
                   channelType === "public"
                     ? "border-primary bg-primary/5"
-                    : "border-border bg-muted/30 hover:border-muted-foreground/30",
+                    : "border-border bg-muted/30 hover:border-border-strong",
                 )}
                 data-testid="chat-create-channel-type-public"
                 data-selected={channelType === "public" ? "true" : "false"}
@@ -167,7 +155,7 @@ export function CreateChannelModal() {
                   "relative flex items-center gap-3 rounded-lg border p-3.5 text-left transition-colors",
                   channelType === "private"
                     ? "border-primary bg-primary/5"
-                    : "border-border bg-muted/30 hover:border-muted-foreground/30",
+                    : "border-border bg-muted/30 hover:border-border-strong",
                 )}
                 data-testid="chat-create-channel-type-private"
                 data-selected={channelType === "private" ? "true" : "false"}
@@ -196,9 +184,8 @@ export function CreateChannelModal() {
 
             {categories.length > 0 && (
               <div>
-                <label className="block text-sm font-medium text-foreground mb-1.5">
-                  Category
-                  <span className="text-muted-foreground font-normal ml-1">(optional)</span>
+                <label className="block text-sm text-muted-foreground mb-1">
+                  Category (optional)
                 </label>
                 <Select
                   value={categoryId ?? ""}
@@ -210,26 +197,24 @@ export function CreateChannelModal() {
             )}
 
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">
-                Channel Purpose
-                <span className="text-muted-foreground font-normal ml-1">(optional)</span>
+              <label className="block text-sm text-muted-foreground mb-1">
+                Channel purpose (optional)
               </label>
-              <textarea
+              <Textarea
                 placeholder="What is this channel about?"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 disabled={isSubmitting}
                 rows={3}
-                className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
                 data-testid="chat-create-channel-description-input"
               />
               <p className="text-xs text-muted-foreground mt-1">
                 This will be displayed when browsing for channels.
               </p>
             </div>
-          </div>
+          </ModalBody>
 
-          <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-border">
+          <ModalFooter>
             <Button
               type="button"
               variant="ghost"
@@ -247,7 +232,7 @@ export function CreateChannelModal() {
             >
               Create channel
             </Button>
-          </div>
+          </ModalFooter>
         </form>
       </div>
     </Modal>

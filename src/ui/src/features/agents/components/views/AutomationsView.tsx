@@ -22,6 +22,7 @@ import { cn } from "@/shared/utils/cn";
 import { formatRelativeTime } from "@/shared/utils/dateFormatting";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { PaneBackLink, PaneHeader, PaneHeaderBar } from "@/components/ui/pane-header";
 import { ToggleSwitch } from "@/components/ui/toggle-switch";
 import {
   BrowseBody,
@@ -187,28 +188,22 @@ function TaskDetailPanel({
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
-      <div className="border-b border-border/60 bg-card">
-        <div className="flex items-center gap-3 px-4 pt-3">
-          <button
-            type="button"
-            onClick={onBack}
-            className="flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
-            data-testid="automations-detail-back"
-          >
-            <ArrowLeft size={14} />
-            All automations
-          </button>
-        </div>
-        <div className="flex items-center gap-3 px-4 py-2">
-          <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center shrink-0">
-            <Timer size={18} className="text-muted-foreground" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <h2 className="text-xl font-semibold text-foreground truncate">{task.name}</h2>
-            <p className="text-xs text-muted-foreground truncate">
+      <PaneHeader>
+        <PaneHeaderBar
+          eyebrow={
+            <PaneBackLink onClick={onBack} data-testid="automations-detail-back">
+              <ArrowLeft size={14} />
+              All automations
+            </PaneBackLink>
+          }
+          icon={Timer}
+          title={task.name}
+          subtitle={
+            <>
               {scheduleLabel} ({task.timezone}){task.agentName && ` - ${task.agentName}`}
-            </p>
-          </div>
+            </>
+          }
+        >
           <div className="flex items-center gap-2 shrink-0">
             <Button
               variant="secondary"
@@ -259,8 +254,8 @@ function TaskDetailPanel({
               <Trash size={18} />
             </Button>
           </div>
-        </div>
-      </div>
+        </PaneHeaderBar>
+      </PaneHeader>
 
       <div className="flex-1 overflow-y-auto">
         <section className="border-b border-border px-6 py-5">
@@ -418,8 +413,8 @@ function AutomationsBrowse({
   return (
     <div className="flex h-full flex-col overflow-hidden" data-testid="automations-browse">
       <BrowseHeader
+        icon={Timer}
         title="Automations"
-        subtitle="An agent runs a prompt you define on a recurring schedule."
         search={search}
         onSearchChange={setSearch}
         searchPlaceholder="Search automations..."

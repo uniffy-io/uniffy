@@ -5,6 +5,9 @@ import { editorViewCtx } from "@milkdown/core";
 import { linkSchema } from "@milkdown/kit/preset/commonmark";
 import type { EditorView } from "@milkdown/prose/view";
 import type { EditorHandle } from "@/components/editor/EditorHandle";
+import { popoverShellClass } from "@/components/ui/popover";
+import { useOverlayEscape } from "@/shared/hooks/useOverlayEscape";
+import { cn } from "@/shared/utils/cn";
 
 interface LinkPromptProps {
   handle: EditorHandle;
@@ -60,19 +63,11 @@ export function LinkPrompt({ handle, anchorRect, onClose }: LinkPromptProps) {
       if (containerRef.current?.contains(e.target as Node)) return;
       onClose();
     };
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        onClose();
-      }
-    };
     document.addEventListener("mousedown", onMouseDown);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onMouseDown);
-      document.removeEventListener("keydown", onKey);
-    };
+    return () => document.removeEventListener("mousedown", onMouseDown);
   }, [onClose]);
+
+  useOverlayEscape(onClose);
 
   const apply = (nextHref: string | null) => {
     handle.run((ctx) => {
@@ -106,7 +101,7 @@ export function LinkPrompt({ handle, anchorRect, onClose }: LinkPromptProps) {
       ref={containerRef}
       role="dialog"
       style={{ position: "fixed", top, left, zIndex: 1000, width: 320 }}
-      className="rounded-md border border-border bg-card text-card-foreground shadow-lg p-2"
+      className={cn(popoverShellClass, "p-2")}
       onMouseDown={(e) => e.stopPropagation()}
     >
       <div className="flex items-center gap-2">
@@ -122,7 +117,7 @@ export function LinkPrompt({ handle, anchorRect, onClose }: LinkPromptProps) {
             }
           }}
           placeholder="Paste a link"
-          className="flex-1 min-w-0 bg-transparent border border-border rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+          className="focus-ring flex-1 min-w-0 bg-transparent border border-border rounded px-2 py-1.5 text-sm"
         />
         <button
           type="button"

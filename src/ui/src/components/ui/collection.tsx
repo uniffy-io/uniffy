@@ -12,7 +12,7 @@ export function SectionRule({ label, count }: SectionRuleProps) {
       <h2 className="shrink-0 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
         {label}
       </h2>
-      <span className="text-[11px] tabular-nums text-muted-foreground/60">{count}</span>
+      <span className="text-[11px] tabular-nums text-subtle-foreground">{count}</span>
       <span className="h-px flex-1 bg-border" aria-hidden="true" />
     </div>
   );
@@ -30,7 +30,7 @@ export function CardGridSkeleton({ count = 6, className }: CardGridSkeletonProps
       aria-busy="true"
     >
       {Array.from({ length: count }, (_, i) => (
-        <div key={i} className="h-24 animate-pulse rounded-lg border border-border bg-card" />
+        <div key={i} className="h-24 animate-pulse rounded-lg bg-card shadow-edge" />
       ))}
     </div>
   );

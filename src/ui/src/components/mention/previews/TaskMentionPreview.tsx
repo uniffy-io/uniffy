@@ -188,7 +188,7 @@ export function TaskMentionPreview({
             <span className="flex items-center gap-1.5 flex-1 min-w-0">
               <span className="block flex-1 h-1 rounded-full bg-muted overflow-hidden">
                 <span
-                  className="block h-full rounded-full bg-teal-500 transition-all duration-500 ease-out"
+                  className="block h-full rounded-full bg-primary transition-all duration-500 ease-out"
                   style={{ width: `${subtaskPct}%` }}
                 />
               </span>
@@ -209,13 +209,13 @@ export function TaskMentionPreview({
       )}
 
       {/* Footer */}
-      <span className="flex px-4 py-2 pl-5 bg-muted/30 border-t border-border/50 items-center justify-between">
+      <span className="flex px-4 py-2 pl-5 bg-background/60 items-center justify-between">
         <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <Clock size={12} weight="duotone" />
           <span>{formatRelativeTime(liveState.updatedAt) || "No date"}</span>
           {liveState.updatedByName && (
             <>
-              <span className="text-muted-foreground/40">.</span>
+              <span className="text-subtle-foreground">.</span>
               <span className="truncate max-w-[80px]">{liveState.updatedByName}</span>
             </>
           )}

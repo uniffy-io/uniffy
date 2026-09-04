@@ -1,5 +1,7 @@
 import { useCallback } from "react";
 import { cn } from "@/shared/utils/cn";
+import { Checkbox } from "@/components/ui/checkbox";
+import { TaskTypeIcon } from "@/features/projects/components/TaskTypeIcon";
 import { TASK_TYPES, getTaskTypeConfig } from "@/features/projects/utils/taskTypes";
 import type { FieldDefinition } from "@/features/projects/types/fields";
 import { SYSTEM_FIELD_IDS } from "@/features/projects/types";
@@ -98,7 +100,6 @@ export function TypeFieldSchemasSection({
       <div className="space-y-3">
         {TASK_TYPES.map((taskType) => {
           const config = getTaskTypeConfig(taskType.value);
-          const TypeIcon = config.icon;
           const schema = typeFieldSchemas[taskType.value] || {
             shownFieldIds: [],
             requiredFieldIds: [],
@@ -109,7 +110,7 @@ export function TypeFieldSchemasSection({
           return (
             <div key={taskType.value} className="rounded-lg border border-border p-3">
               <div className="flex items-center gap-2 mb-2">
-                <TypeIcon size={14} weight="fill" className="text-muted-foreground" />
+                <TaskTypeIcon type={taskType.value} className="text-muted-foreground" />
                 <span className="text-sm font-medium text-foreground">{config.label}</span>
               </div>
 
@@ -117,31 +118,39 @@ export function TypeFieldSchemasSection({
                 <div key={field.id} className="flex items-center justify-between py-1.5 px-1">
                   <span className="text-sm text-foreground truncate flex-1 mr-2">{field.name}</span>
                   <div className="flex items-center gap-3 shrink-0">
-                    <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer">
-                      <input
-                        type="checkbox"
+                    <div className="flex items-center gap-1.5">
+                      <Checkbox
+                        size="sm"
+                        id={`${taskType.value}-${field.id}-shown`}
                         checked={shownSet.has(field.id)}
                         onChange={() => toggleShown(taskType.value, field.id)}
-                        className="h-3.5 w-3.5 rounded border-border"
                       />
-                      Show
-                    </label>
-                    <label
-                      className={cn(
-                        "flex items-center gap-1.5 text-xs cursor-pointer",
-                        shownSet.has(field.id)
-                          ? "text-muted-foreground"
-                          : "text-muted-foreground/40",
-                      )}
-                    >
-                      <input
-                        type="checkbox"
+                      <label
+                        htmlFor={`${taskType.value}-${field.id}-shown`}
+                        className="text-xs text-muted-foreground cursor-pointer select-none"
+                      >
+                        Show
+                      </label>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Checkbox
+                        size="sm"
+                        id={`${taskType.value}-${field.id}-required`}
                         checked={requiredSet.has(field.id)}
                         onChange={() => toggleRequired(taskType.value, field.id)}
-                        className="h-3.5 w-3.5 rounded border-border"
                       />
-                      Required
-                    </label>
+                      <label
+                        htmlFor={`${taskType.value}-${field.id}-required`}
+                        className={cn(
+                          "text-xs cursor-pointer select-none",
+                          shownSet.has(field.id)
+                            ? "text-muted-foreground"
+                            : "text-subtle-foreground",
+                        )}
+                      >
+                        Required
+                      </label>
+                    </div>
                   </div>
                 </div>
               ))}

@@ -111,8 +111,8 @@ function NavItemLink({ item, currentPath }: { item: NavItem; currentPath: string
       className={cn(
         "flex items-center gap-2 md:gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors whitespace-nowrap",
         active
-          ? "bg-primary text-primary-foreground"
-          : "text-foreground hover:bg-accent hover:text-accent-foreground",
+          ? "bg-muted text-foreground"
+          : "text-foreground/90 hover:bg-muted/60 hover:text-foreground",
       )}
     >
       <Icon size={18} weight="duotone" className="shrink-0" />
@@ -188,7 +188,7 @@ export function AdminLayout() {
   const flatItems = visibleGroups.flatMap((g) => g.items);
 
   return (
-    <div className="min-h-dvh bg-background text-foreground font-sans antialiased">
+    <div className="min-h-dvh bg-background text-foreground font-sans antialiased [--sticky-top:3rem]">
       <AppHeader />
       <SupportSessionBanner />
       <div className="py-4 md:py-6 px-3 md:px-6 flex flex-col md:flex-row gap-4 md:gap-6">

@@ -1,5 +1,6 @@
 import { useEffect, useCallback, useState } from "react";
-import { Panel, Group, Separator } from "react-resizable-panels";
+import { Panel, Group } from "react-resizable-panels";
+import { PaneSeparator } from "@/components/ui/pane-separator";
 import { Funnel } from "@phosphor-icons/react";
 import { cn } from "@/shared/utils/cn";
 import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
@@ -140,16 +141,16 @@ export function NotificationsPage() {
                 defaultSize={isMobileOrTablet ? 200 : 260}
                 minSize={160}
                 maxSize={isMobileOrTablet ? 300 : 400}
-                className="bg-background overflow-hidden"
+                className="bg-nav overflow-hidden"
               >
                 <NotificationsFilterSidebar />
               </Panel>
-              <Separator className="w-1 bg-border hover:bg-primary/50 transition-colors cursor-col-resize data-[resize-handle-state=drag]:bg-primary" />
+              <PaneSeparator />
             </>
           )}
 
           <Panel id="notifications-content" minSize={isMobileOrTablet ? 200 : 400}>
-            <div className={cn("h-full overflow-hidden bg-card", showCollapsedRail && "ml-12")}>
+            <div className={cn("h-full overflow-hidden bg-surface", showCollapsedRail && "ml-12")}>
               {contentArea}
             </div>
           </Panel>

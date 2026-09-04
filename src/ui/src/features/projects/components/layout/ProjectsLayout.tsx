@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
-import { Group, Panel, Separator } from "react-resizable-panels";
+import { Group, Panel } from "react-resizable-panels";
+import { PaneSeparator } from "@/components/ui/pane-separator";
 import { Kanban, SidebarSimple, SquaresFour, LockSimple, Buildings } from "@phosphor-icons/react";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
@@ -140,12 +141,12 @@ export function ProjectsLayout() {
                 defaultSize={isMobileOrTablet ? 200 : LAYOUT.SIDEBAR_WIDTH}
                 minSize={LAYOUT.SIDEBAR_MIN_WIDTH}
                 maxSize={LAYOUT.SIDEBAR_MAX_WIDTH}
-                className="bg-background border-r border-border"
+                className="bg-nav"
               >
                 <ProjectsSidebar />
               </Panel>
 
-              <Separator className="w-1 bg-border hover:bg-primary/50 transition-colors cursor-col-resize data-[resize-handle-state=drag]:bg-primary" />
+              <PaneSeparator />
             </>
           )}
 
@@ -158,11 +159,11 @@ export function ProjectsLayout() {
             {currentProject ? (
               <div
                 className={cn(
-                  "h-full overflow-hidden bg-card flex flex-col",
+                  "h-full overflow-hidden bg-surface flex flex-col",
                   showCollapsedRail && "ml-12",
                 )}
               >
-                <ProjectHeader project={currentProject} taskCount={currentProject.taskCount} />
+                <ProjectHeader project={currentProject} />
                 <div className="flex-1 overflow-hidden">
                   {viewMode === "table" && <TableView />}
                   {viewMode === "board" && <BoardView />}
@@ -182,14 +183,14 @@ export function ProjectsLayout() {
           {/* Right Detail Panel - inline sidebar on desktop only when sidebar mode */}
           {showDetailPanel && !useModalForDetail && (
             <>
-              <Separator className="w-1 bg-border hover:bg-primary/50 transition-colors cursor-col-resize data-[resize-handle-state=drag]:bg-primary" />
+              <PaneSeparator />
 
               <Panel
                 id="projects-detail"
                 defaultSize={LAYOUT.DETAIL_PANEL_WIDTH}
                 minSize={LAYOUT.DETAIL_PANEL_MIN_WIDTH}
                 maxSize={LAYOUT.DETAIL_PANEL_MAX_WIDTH}
-                className="bg-card border-l border-border"
+                className="bg-background"
               >
                 <TaskDetailPanel taskId={selectedTaskId} />
               </Panel>

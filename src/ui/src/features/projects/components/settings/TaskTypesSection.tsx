@@ -4,6 +4,7 @@ import { useAppDispatch } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
 import { ToggleSwitch } from "@/components/ui/toggle-switch";
 import { updateProject } from "@/features/projects/store/projectsThunks";
+import { TaskTypeIcon } from "@/features/projects/components/TaskTypeIcon";
 import { TASK_TYPES, getTaskTypeConfig } from "@/features/projects/utils/taskTypes";
 import { SYSTEM_FIELD_IDS } from "@/features/projects/types";
 import type { Project, TypeFieldSchema } from "@/features/projects/types";
@@ -112,7 +113,7 @@ export function TaskTypesSection({ project }: TaskTypesSectionProps) {
       </div>
 
       {customFields.length === 0 ? (
-        <div className="bg-card rounded-lg border border-border p-6 text-center">
+        <div className="rounded-xl bg-surface p-6 text-center shadow-edge">
           <p className="text-sm text-muted-foreground">
             No custom fields defined yet. Create custom fields first to configure type-specific
             field visibility.
@@ -122,7 +123,6 @@ export function TaskTypesSection({ project }: TaskTypesSectionProps) {
         <div className="space-y-6">
           {TASK_TYPES.map((taskType) => {
             const config = getTaskTypeConfig(taskType.value);
-            const TypeIcon = config.icon;
             const schema = schemas[taskType.value] || {
               shownFieldIds: [],
               requiredFieldIds: [],
@@ -133,13 +133,13 @@ export function TaskTypesSection({ project }: TaskTypesSectionProps) {
             return (
               <section key={taskType.value} className="space-y-4">
                 <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
-                  <TypeIcon size={18} weight="fill" className="text-muted-foreground" />
+                  <TaskTypeIcon type={taskType.value} size={18} className="text-muted-foreground" />
                   {config.label}
                   <span className="text-xs font-normal text-muted-foreground ml-auto">
                     {shownSet.size} of {customFields.length} shown
                   </span>
                 </h2>
-                <div className="bg-card rounded-lg border border-border">
+                <div className="rounded-xl bg-surface shadow-edge">
                   <div className="divide-y divide-border">
                     {customFields.map((field) => (
                       <div
@@ -165,7 +165,7 @@ export function TaskTypesSection({ project }: TaskTypesSectionProps) {
                                 "text-xs",
                                 shownSet.has(field.id)
                                   ? "text-muted-foreground"
-                                  : "text-muted-foreground/40",
+                                  : "text-subtle-foreground",
                               )}
                             >
                               Required

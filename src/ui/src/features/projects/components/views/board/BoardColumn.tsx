@@ -5,16 +5,16 @@ import { cn } from "@/shared/utils/cn";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
 import { LAYOUT } from "../../../constants";
+import type { StatusPaint } from "../../../utils/statusPaint";
 import type { Task, SelectOption } from "../../../types";
 import { TaskCard } from "./TaskCard";
 
 interface BoardColumnProps {
   statusOption: SelectOption;
+  paint: StatusPaint;
   tasks: Task[];
   priorityOptions: SelectOption[];
-  selectedTaskIds: string[];
-  onTaskClick: (taskId: string, e: React.MouseEvent) => void;
-  onCheckboxChange: (taskId: string) => void;
+  onTaskClick: (taskId: string) => void;
   onAddTask?: () => void;
   projectSlug: string;
   reparentHintActive?: boolean;
@@ -26,11 +26,10 @@ interface BoardColumnProps {
 
 export function BoardColumn({
   statusOption,
+  paint,
   tasks,
   priorityOptions,
-  selectedTaskIds,
   onTaskClick,
-  onCheckboxChange,
   onAddTask,
   projectSlug,
   reparentHintActive = false,
@@ -52,14 +51,14 @@ export function BoardColumn({
 
   return (
     <div
-      className="flex-shrink-0 flex flex-col bg-muted/30 rounded-lg"
+      className="flex-shrink-0 flex flex-col bg-muted/30 dark:bg-muted/60 rounded-lg"
       style={{ width: isMobile ? 280 : LAYOUT.BOARD_COLUMN_WIDTH }}
     >
       {showHeader && (
         <div className="flex items-center gap-2 px-3 py-2.5 border-b border-border">
           <div
             className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-            style={{ backgroundColor: statusOption.color }}
+            style={{ background: paint.gradient }}
           />
           <span className="font-medium text-sm text-foreground truncate">{statusOption.label}</span>
           <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
@@ -82,11 +81,8 @@ export function BoardColumn({
               <TaskCard
                 key={task.id}
                 task={task}
-                statusOption={statusOption}
                 priorityOption={getPriorityOption(task.priority)}
-                onClick={(e) => onTaskClick(task.id, e)}
-                onCheckboxChange={onCheckboxChange}
-                isSelected={selectedTaskIds.includes(task.id)}
+                onClick={() => onTaskClick(task.id)}
                 projectSlug={projectSlug}
                 reparentHintActive={
                   reparentHintActive && activeDragTaskId !== null && activeDragTaskId !== task.id

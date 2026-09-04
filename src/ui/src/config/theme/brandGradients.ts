@@ -33,6 +33,9 @@ const mix = (from: string, to: string, t: number): string => {
   return toHex([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t]);
 };
 
+/** Linear blend of two hex colours, `t` = 0 keeps `from`, 1 gives `to`. */
+export const mixHex = mix;
+
 /** Point on the axis, 0 = Unity Violet, 1 = Belonging Pink. */
 export const brandAxisColor = (t: number): string =>
   mix(BRAND_AXIS_START, BRAND_AXIS_END, Math.min(1, Math.max(0, t)));

@@ -139,7 +139,7 @@ export function ResourcePanel() {
         ) : resources.length === 0 ? (
           <div className="py-8 px-4 text-center">
             <p className="text-sm text-muted-foreground">No resources mentioned in this channel</p>
-            <p className="text-xs text-muted-foreground/60 mt-1">
+            <p className="text-xs text-subtle-foreground mt-1">
               Resources appear here when @mentioned in messages.
             </p>
           </div>

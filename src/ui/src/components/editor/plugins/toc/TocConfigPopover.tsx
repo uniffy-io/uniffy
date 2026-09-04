@@ -1,6 +1,8 @@
 import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
+import { popoverShellClass } from "@/components/ui/popover";
 import { Select } from "@/components/ui/select";
+import { useOverlayEscape } from "@/shared/hooks/useOverlayEscape";
 import { cn } from "@/shared/utils/cn";
 import type { TocAttrs } from "@/components/editor/plugins/toc/tocTypes";
 
@@ -38,13 +40,7 @@ export function TocConfigPopover({ anchorRect, attrs, onChange, onClose }: TocCo
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [onClose]);
 
-  useEffect(() => {
-    function handleKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
-    }
-    document.addEventListener("keydown", handleKey);
-    return () => document.removeEventListener("keydown", handleKey);
-  }, [onClose]);
+  useOverlayEscape(onClose);
 
   const top = anchorRect.bottom + 6;
   const left = Math.max(8, anchorRect.right - 240);
@@ -54,7 +50,8 @@ export function TocConfigPopover({ anchorRect, attrs, onChange, onClose }: TocCo
       ref={popoverRef}
       style={{ position: "fixed", top, left, width: 240 }}
       className={cn(
-        "z-[200] rounded-lg border border-border bg-card shadow-xl p-3",
+        popoverShellClass,
+        "z-[200] p-3",
         "animate-in fade-in-0 slide-in-from-top-1 duration-100",
       )}
       contentEditable={false}

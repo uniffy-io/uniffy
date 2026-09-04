@@ -4,6 +4,7 @@ import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   deleteChannel: vi.fn(),
   deleteCategory: vi.fn(),
+  getChannelPendingApprovals: vi.fn(),
   getMessages: vi.fn(),
   listCategories: vi.fn(),
 }));
@@ -12,6 +13,7 @@ vi.mock("@/features/chat/api/chatApi", () => ({
   chatApi: {
     deleteChannel: mocks.deleteChannel,
     deleteCategory: mocks.deleteCategory,
+    getChannelPendingApprovals: mocks.getChannelPendingApprovals,
     getMessages: mocks.getMessages,
     listCategories: mocks.listCategories,
   },
@@ -27,7 +29,11 @@ import {
   setChannelPreferences,
   setSplitChannel,
 } from "@/features/chat/store/chatChannelsSlice";
-import { chatMessagesSlice, setMessages } from "@/features/chat/store/chatMessagesSlice";
+import {
+  chatMessagesSlice,
+  selectInitialChannelLoadFailed,
+  setMessages,
+} from "@/features/chat/store/chatMessagesSlice";
 import { chatThreadsSlice } from "@/features/chat/store/chatThreadsSlice";
 import {
   deleteCategoryThunk,
@@ -97,6 +103,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   mocks.deleteChannel.mockResolvedValue({});
   mocks.deleteCategory.mockResolvedValue({});
+  mocks.getChannelPendingApprovals.mockResolvedValue({ approvals: [] });
   mocks.listCategories.mockResolvedValue({ categories: [] });
   Object.defineProperty(globalThis, "localStorage", {
     configurable: true,
@@ -221,5 +228,59 @@ describe("removeChannel", () => {
       categoryId: "category-1",
     });
     expect(store.getState().chatChannels.byId[channel.id]?.categoryId).toBeNull();
+  });
+});
+
+describe("fetchMessages", () => {
+  const makeStore = () =>
+    configureStore({
+      reducer: {
+        auth: () => ({
+          currentOrganizationId: "organization-1",
+          user: { id: "user-1" },
+        }),
+        chatChannels: chatChannelsSlice.reducer,
+        chatMessages: chatMessagesSlice.reducer,
+        chatThreads: chatThreadsSlice.reducer,
+      },
+    });
+
+  it("recovers an initial message load after a transient failure", async () => {
+    const store = makeStore();
+    store.dispatch(addChannel(channel));
+    mocks.getMessages.mockRejectedValueOnce(new Error("Request timed out"));
+    mocks.getMessages.mockResolvedValueOnce({ messages: [], hasMore: false });
+
+    await fetchMessages({ channelId: channel.id })(
+      store.dispatch,
+      () => store.getState() as unknown as RootState,
+      undefined,
+    );
+
+    expect(store.getState().chatMessages.isLoadingByChannel[channel.id]).toBe(false);
+    expect(store.getState().chatMessages.idsByChannel[channel.id]).toEqual([]);
+    expect(mocks.getMessages).toHaveBeenCalledTimes(2);
+    expect(
+      selectInitialChannelLoadFailed(store.getState() as unknown as RootState, channel.id),
+    ).toBe(false);
+  });
+
+  it("records a terminal initial-load failure after the retry", async () => {
+    const store = makeStore();
+    store.dispatch(addChannel(channel));
+    mocks.getMessages.mockRejectedValue(new Error("Request timed out"));
+
+    await fetchMessages({ channelId: channel.id })(
+      store.dispatch,
+      () => store.getState() as unknown as RootState,
+      undefined,
+    );
+
+    expect(store.getState().chatMessages.isLoadingByChannel[channel.id]).toBe(false);
+    expect(store.getState().chatMessages.idsByChannel[channel.id]).toBeUndefined();
+    expect(mocks.getMessages).toHaveBeenCalledTimes(2);
+    expect(
+      selectInitialChannelLoadFailed(store.getState() as unknown as RootState, channel.id),
+    ).toBe(true);
   });
 });

@@ -94,12 +94,11 @@ export function MentionExpandedCard({
         "w-full max-w-md my-2",
         "bg-card",
         "text-card-foreground",
-        "rounded-lg shadow-xs",
-        "border border-border",
+        "rounded-lg shadow-edge",
         "overflow-hidden",
         "cursor-pointer",
         "transition-shadow duration-200",
-        "hover:shadow-sm",
+        "hover:shadow-edge-strong",
       )}
       onClick={(e) => {
         if ((e.target as HTMLElement).closest("button, a")) return;

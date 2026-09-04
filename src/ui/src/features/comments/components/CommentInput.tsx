@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from "react";
-import { cn } from "@/shared/utils/cn";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 
 interface CommentInputProps {
   placeholder?: string;
@@ -70,7 +70,7 @@ export function CommentInput({
 
   return (
     <div className="space-y-2">
-      <textarea
+      <Textarea
         ref={textareaRef}
         value={body}
         onChange={(e) => {
@@ -80,12 +80,7 @@ export function CommentInput({
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
         rows={2}
-        className={cn(
-          "w-full resize-none rounded-md border bg-background",
-          "px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring",
-          "min-h-[60px] max-h-[200px]",
-          "border-border",
-        )}
+        className="min-h-[60px] max-h-[200px]"
         style={error ? { borderColor: "var(--status-error)" } : undefined}
       />
       {error && (

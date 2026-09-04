@@ -132,7 +132,7 @@ export function ChannelNotificationMenu({ channelId, onClose }: ChannelNotificat
   ];
 
   const btnClass =
-    "flex items-center gap-2 px-3 py-1.5 text-sm hover:bg-accent cursor-pointer w-full text-left transition-colors text-foreground";
+    "flex items-center gap-2 px-3 py-1.5 text-sm hover:bg-muted/60 cursor-pointer w-full text-left transition-colors text-foreground";
 
   return (
     <div className="py-1 min-w-[220px]">

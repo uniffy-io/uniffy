@@ -21,7 +21,7 @@ export function CalendarHeader() {
   const viewModes: ViewMode[] = ["day", "week", "month", "agenda"];
 
   return (
-    <div className="flex items-center justify-between px-3 md:px-5 py-2 md:py-3 bg-card border-b border-border">
+    <div className="flex items-center justify-between px-3 md:px-5 py-2 md:py-3 bg-surface border-b border-border-strong">
       <div className="flex items-center gap-1 md:gap-2 min-w-0">
         {isMobile && isSidebarCollapsed && (
           <button

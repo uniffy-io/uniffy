@@ -114,10 +114,13 @@ export const SYSTEM_FIELD_IDS = {
   DUE_DATE: "field_due_date",
 } as const;
 
+// Mirrors the backend defaults; the hex is the brand-axis start for each slot and is only a
+// courtesy for readers that cannot derive paint from order (see utils/statusPaint.ts).
 export const DEFAULT_STATUS_OPTIONS: SelectOption[] = [
-  { id: "status_todo", label: "To Do", color: "#6b7280", sortOrder: 0 },
-  { id: "status_in_progress", label: "In Progress", color: "#3b82f6", sortOrder: 1 },
-  { id: "status_done", label: "Done", color: "#22c55e", sortOrder: 2 },
+  { id: "status_todo", label: "To Do", color: "#694aff", sortOrder: 0 },
+  { id: "status_in_progress", label: "In Progress", color: "#8c56fa", sortOrder: 1 },
+  { id: "status_review", label: "Review", color: "#ae62f5", sortOrder: 2 },
+  { id: "status_done", label: "Done", color: "#d16ef0", sortOrder: 3 },
 ];
 
 export const DEFAULT_PRIORITY_OPTIONS: SelectOption[] = [

@@ -195,11 +195,7 @@ export function NotesMetadataPanel() {
     <div className="space-y-2">
       {headings.length === 0 ? (
         <div className="text-center py-8">
-          <ListBullets
-            size={32}
-            weight="duotone"
-            className="mx-auto text-muted-foreground/50 mb-3"
-          />
+          <ListBullets size={32} weight="duotone" className="mx-auto text-subtle-foreground mb-3" />
           <p className="text-sm text-muted-foreground">No headings found</p>
           <p className="text-xs text-muted-foreground mt-1">
             Add headings (# H1, ## H2, etc.) to see the outline
@@ -214,7 +210,7 @@ export function NotesMetadataPanel() {
             {headings.map((heading, index) => (
               <div
                 key={`${heading.id}-${index}`}
-                className="group flex items-center gap-1 rounded-md hover:bg-accent transition-colors"
+                className="group flex items-center gap-1 rounded-md hover:bg-muted/60 transition-colors"
                 style={{ paddingLeft: `${(heading.level - 1) * 12}px` }}
               >
                 <a
@@ -278,7 +274,7 @@ export function NotesMetadataPanel() {
         </h4>
         {outgoingLinks.length === 0 ? (
           <div className="text-center py-6">
-            <Link size={32} weight="duotone" className="mx-auto text-muted-foreground/50 mb-3" />
+            <Link size={32} weight="duotone" className="mx-auto text-subtle-foreground mb-3" />
             <p className="text-sm text-muted-foreground">No outgoing links</p>
             <p className="text-xs text-muted-foreground mt-1">
               Use @ mentions to link to other content
@@ -307,7 +303,7 @@ export function NotesMetadataPanel() {
           </span>
         </h4>
         <div className="text-center py-6 border border-dashed border-border rounded-lg">
-          <FileText size={32} weight="duotone" className="mx-auto text-muted-foreground/50 mb-3" />
+          <FileText size={32} weight="duotone" className="mx-auto text-subtle-foreground mb-3" />
           <p className="text-sm text-muted-foreground">Backlinks coming soon</p>
           <p className="text-xs text-muted-foreground mt-1">See which notes link to this one</p>
         </div>
@@ -414,7 +410,7 @@ export function NotesMetadataPanel() {
 
       {/* Coming soon placeholder */}
       <div className="text-center py-6 border border-dashed border-border rounded-lg">
-        <Clock size={32} weight="duotone" className="mx-auto text-muted-foreground/50 mb-3" />
+        <Clock size={32} weight="duotone" className="mx-auto text-subtle-foreground mb-3" />
         <p className="text-sm text-muted-foreground">Full version history coming soon</p>
         <p className="text-xs text-muted-foreground mt-1">
           Track changes and restore previous versions

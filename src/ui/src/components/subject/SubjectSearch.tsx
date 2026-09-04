@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { MagnifyingGlass, UserPlus, X } from "@phosphor-icons/react";
 import { cn } from "@/shared/utils/cn";
+import { controlShellClass } from "@/components/ui/input";
 import { SubjectAvatar } from "@/components/subject/SubjectAvatar";
 import { SUBJECT_TYPE, type Subject } from "@/components/subject/types";
 
@@ -26,8 +27,8 @@ export function SubjectSearchInput({
   return (
     <div
       className={cn(
-        "flex items-center gap-2 rounded-md border border-border bg-background px-3 py-2",
-        "focus-within:ring-2 focus-within:ring-primary",
+        controlShellClass,
+        "focus-ring-within flex items-center gap-2 px-3 py-2",
         disabled && "opacity-50",
         className,
       )}
@@ -39,7 +40,7 @@ export function SubjectSearchInput({
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         disabled={disabled}
-        className="flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
+        className="flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-subtle-foreground"
       />
       {value && (
         <button

@@ -238,7 +238,7 @@ async function flush(): Promise<void> {
   }
 }
 
-/** Mirrors `metadataToLiveState` in MentionStateProvider so chips behave the same via React provider or module emitter. */
+/** Mirrors `metadataToLiveState` in mentionLiveState so chips behave the same via React provider or module emitter. */
 function previewDataToLiveState(urn: string, data: UrnPreviewData): MentionLiveState {
   const m = data.metadata ?? {};
   const parsed = parseUrn(urn);

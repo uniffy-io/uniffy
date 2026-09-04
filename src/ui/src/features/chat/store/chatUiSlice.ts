@@ -314,6 +314,27 @@ export const selectRenameAgentChatChannelId = (state: RootState): string | null 
 
 export const selectSplitActive = (state: RootState): boolean => state.chatUi.splitActive;
 
+/**
+ * With split screen on, a thread opens as a slide-over inside the pane that
+ * owns its channel instead of a third column. Null when the thread belongs to
+ * neither pane (opened from the inbox) or split is off; those keep the side panel.
+ */
+export const selectThreadPane = (state: RootState): "left" | "right" | null => {
+  if (!state.chatUi.threadPanelOpen || !state.chatUi.splitActive) return null;
+  const splitChannelId = state.chatChannels.splitChannelId;
+  if (!splitChannelId) return null;
+  const rootId = state.chatThreads.activeThreadId;
+  const threadChannelId = rootId ? state.chatMessages.byId[rootId]?.channelId : undefined;
+  if (!threadChannelId) return null;
+  const inRight = threadChannelId === splitChannelId;
+  const inLeft = threadChannelId === state.chatChannels.activeChannelId;
+  // Both panes can show the same channel; only the focused one hosts the thread.
+  if (inRight && inLeft) return state.chatUi.focusedPane;
+  if (inRight) return "right";
+  if (inLeft) return "left";
+  return null;
+};
+
 export const selectFocusedPane = (state: RootState): "left" | "right" => state.chatUi.focusedPane;
 
 export const selectJumpToMessageId = (state: RootState): string | null =>

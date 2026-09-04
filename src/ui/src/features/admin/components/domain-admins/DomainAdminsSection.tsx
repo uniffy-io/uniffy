@@ -166,7 +166,7 @@ export function DomainAdminsSection() {
       </div>
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
-        <div className="rounded-lg border border-border bg-card p-4">
+        <div className="rounded-xl bg-surface shadow-edge p-4">
           <p className="text-2xl font-bold text-foreground">{totalCount}</p>
           <p className="text-xs text-muted-foreground">Total assignments</p>
         </div>
@@ -182,7 +182,7 @@ export function DomainAdminsSection() {
           if (count === 0 && activeTab !== undefined) return null;
           const Icon = DOMAIN_ICONS[d];
           return (
-            <div key={d} className="rounded-lg border border-border bg-card p-4">
+            <div key={d} className="rounded-xl bg-surface shadow-edge p-4">
               <div className="flex items-center gap-2">
                 {Icon && <Icon className="h-4 w-4 text-muted-foreground" weight="duotone" />}
                 <p className="text-2xl font-bold text-foreground">{count}</p>

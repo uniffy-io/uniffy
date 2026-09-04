@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { ContentRole } from "@uniffy/proto/common/v1/common_pb";
 import { Plus, Clock } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { SubjectPicker } from "@/components/subject/SubjectPicker";
 import { type Subject } from "@/components/subject/types";
 import { ContentRoleSelect } from "@/features/permissions/components/ContentRoleSelect";
@@ -60,12 +61,12 @@ export function AddMemberPopover({ existingSubjectIds, onAdd, disabled }: AddMem
       {showExpiry && (
         <div className="flex items-center gap-2 pl-1">
           <span className="text-xs text-muted-foreground">Expires:</span>
-          <input
+          <Input
             type="datetime-local"
             value={expiryValue}
             onChange={(e) => setExpiryValue(e.target.value)}
             min={minDate}
-            className="text-xs rounded-md border border-input bg-background px-2 py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="h-7 w-auto px-2 py-1 text-xs"
           />
         </div>
       )}

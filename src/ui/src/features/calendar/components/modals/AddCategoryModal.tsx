@@ -3,6 +3,8 @@ import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { createCategory, updateCategory } from "@/features/calendar/store/calendarThunks";
 import { cn } from "@/shared/utils/cn";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/ui/modal";
 
 interface AddCategoryModalProps {
   isOpen: boolean;
@@ -44,16 +46,8 @@ export function AddCategoryModal({ isOpen, onClose }: AddCategoryModalProps) {
         setSelectedColor(CATEGORY_COLORS[0]);
       }
       setError(null);
-
-      const handleKeyDown = (e: KeyboardEvent) => {
-        if (e.key === "Escape") {
-          onClose();
-        }
-      };
-      document.addEventListener("keydown", handleKeyDown);
-      return () => document.removeEventListener("keydown", handleKeyDown);
     }
-  }, [isOpen, editingCategoryId, categories, onClose]);
+  }, [isOpen, editingCategoryId, categories]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -99,46 +93,26 @@ export function AddCategoryModal({ isOpen, onClose }: AddCategoryModalProps) {
   const isEditing = !!editingCategoryId;
 
   return (
-    <>
-      <div className="fixed inset-0 bg-black/50 z-40" onClick={onClose} />
+    <Modal onClose={onClose} closeDisabled={isSubmitting} maxWidth="max-w-md">
+      <form onSubmit={handleSubmit}>
+        <ModalHeader title={isEditing ? "Edit category" : "New category"} />
 
-      <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-background rounded-lg shadow-lg z-50 w-[calc(100vw-2rem)] max-w-96 border border-border">
-        <div className="flex items-center justify-between p-4 border-b border-border">
-          <h2 className="text-lg font-semibold text-foreground">
-            {isEditing ? "Edit Category" : "New Category"}
-          </h2>
-          <button
-            onClick={onClose}
-            className="text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="p-4 space-y-4">
-          {error && <div className="text-sm p-3 rounded-md border status-error">{error}</div>}
+        <ModalBody>
+          {error && <div className="p-3 rounded-md text-sm status-error">{error}</div>}
 
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1">Name</label>
-            <input
+            <label className="block text-sm text-muted-foreground mb-1">Name</label>
+            <Input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full px-3 py-2 bg-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-foreground"
               placeholder="e.g. Work, Personal"
               autoFocus
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-foreground mb-2">Color</label>
+            <label className="block text-sm text-muted-foreground mb-1">Color</label>
             <div className="grid grid-cols-5 gap-2">
               {CATEGORY_COLORS.map((color) => (
                 <button
@@ -146,7 +120,7 @@ export function AddCategoryModal({ isOpen, onClose }: AddCategoryModalProps) {
                   type="button"
                   onClick={() => setSelectedColor(color)}
                   className={cn(
-                    "w-8 h-8 rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-background transition-transform hover:scale-110",
+                    "focus-ring w-8 h-8 rounded-full transition-transform hover:scale-110",
                     selectedColor === color
                       ? "ring-2 ring-offset-2 ring-primary ring-offset-background scale-110"
                       : "",
@@ -157,23 +131,17 @@ export function AddCategoryModal({ isOpen, onClose }: AddCategoryModalProps) {
               ))}
             </div>
           </div>
+        </ModalBody>
 
-          <div className="flex justify-end gap-2 pt-4">
-            <Button
-              type="button"
-              variant="ghost"
-              size="md"
-              onClick={onClose}
-              disabled={isSubmitting}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" size="md" loading={isSubmitting} disabled={isSubmitting}>
-              {isSubmitting ? "Saving..." : isEditing ? "Save Changes" : "Create Category"}
-            </Button>
-          </div>
-        </form>
-      </div>
-    </>
+        <ModalFooter>
+          <Button type="button" variant="ghost" onClick={onClose} disabled={isSubmitting}>
+            Cancel
+          </Button>
+          <Button type="submit" loading={isSubmitting} disabled={isSubmitting}>
+            {isSubmitting ? "Saving..." : isEditing ? "Save changes" : "Create category"}
+          </Button>
+        </ModalFooter>
+      </form>
+    </Modal>
   );
 }

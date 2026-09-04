@@ -1,17 +1,28 @@
-import React from "react";
+import React, { useContext } from "react";
 import { cn } from "@/shared/utils/cn";
+import { ButtonSizeContext, type ButtonSize } from "@/components/ui/buttonSize";
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: "default" | "outline" | "ghost" | "destructive" | "secondary" | "warning";
-  size?: "xs" | "sm" | "md" | "lg" | "icon";
+  size?: ButtonSize;
   loading?: boolean;
 }
 
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   (
-    { className, variant = "default", size = "sm", loading = false, children, disabled, ...props },
+    {
+      className,
+      variant = "default",
+      size: sizeProp,
+      loading = false,
+      children,
+      disabled,
+      ...props
+    },
     ref,
   ) => {
+    const contextSize = useContext(ButtonSizeContext);
+    const size = sizeProp ?? contextSize ?? "sm";
     return (
       <button
         ref={ref}
@@ -20,7 +31,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
           "relative inline-flex items-center justify-center gap-1.5 rounded-lg font-medium",
           "tracking-[-0.01em] select-none",
           "transition-all duration-150 ease-out",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-1 focus-visible:ring-offset-background",
+          "focus-ring",
           "disabled:pointer-events-none disabled:opacity-40",
           "hover:-translate-y-px",
           "active:translate-y-0 active:scale-[0.97]",
@@ -38,18 +49,18 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 
           variant === "secondary" && [
             "bg-muted/70 text-foreground",
-            "border border-border/60",
+            "border border-border",
             "shadow-[0_1px_2px_rgba(0,0,0,0.04),0_0_0_0.5px_rgba(0,0,0,0.04)]",
-            "hover:bg-muted hover:border-border/80",
+            "hover:bg-muted hover:border-border-strong",
             "hover:shadow-[0_1px_3px_rgba(0,0,0,0.06),0_0_0_0.5px_rgba(0,0,0,0.06)]",
             "active:bg-muted/90 active:shadow-[inset_0_1px_2px_rgba(0,0,0,0.06)]",
           ],
 
           variant === "outline" && [
             "bg-transparent text-foreground",
-            "border border-border/70",
+            "border border-border",
             "shadow-[0_1px_2px_rgba(0,0,0,0.03),0_0_0_0.5px_rgba(0,0,0,0.04)]",
-            "hover:bg-muted/40 hover:border-border",
+            "hover:bg-muted/40 hover:border-border-strong",
             "hover:shadow-[0_1px_3px_rgba(0,0,0,0.06),0_0_0_0.5px_rgba(0,0,0,0.06)]",
             "active:bg-muted/60 active:shadow-[inset_0_1px_2px_rgba(0,0,0,0.06)]",
           ],

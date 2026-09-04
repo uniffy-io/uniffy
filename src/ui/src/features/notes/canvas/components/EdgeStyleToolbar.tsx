@@ -8,6 +8,8 @@
 import { memo, useEffect, useRef, useState } from "react";
 import { BezierCurve, LineSegment, Path, ArrowBendRightDown } from "@phosphor-icons/react";
 import type { Icon } from "@phosphor-icons/react";
+import { popoverShellClass } from "@/components/ui/popover";
+import { useOverlayEscape } from "@/shared/hooks/useOverlayEscape";
 import { cn } from "@/shared/utils/cn";
 import { NODE_COLORS, BORDER_WIDTHS } from "@/features/notes/canvas/components/nodeStyleConstants";
 import type { EdgeShape, CanvasEdgeData } from "@/features/notes/canvas/types";
@@ -47,22 +49,16 @@ export const EdgeStyleToolbar = memo(function EdgeStyleToolbar({
         onClose();
       }
     };
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-
     document.addEventListener("mousedown", handleClickOutside);
-    document.addEventListener("keydown", handleEscape);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-      document.removeEventListener("keydown", handleEscape);
-    };
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [onClose]);
+
+  useOverlayEscape(onClose);
 
   return (
     <div
       ref={toolbarRef}
-      className="fixed z-50 bg-card border border-border rounded-lg shadow-lg p-2 min-w-[200px]"
+      className={cn(popoverShellClass, "fixed z-50 p-2 min-w-[200px]")}
       style={{ left: x, top: y }}
     >
       {/* Shape picker */}

@@ -123,7 +123,7 @@ export function TodayEventItem({ event, isCurrent, now, onClick }: TodayEventIte
           <span className="text-[11px] font-medium text-muted-foreground">{timeRange}</span>
           {countdown && (
             <>
-              <span className="text-[11px] text-muted-foreground/40">·</span>
+              <span className="text-[11px] text-subtle-foreground">·</span>
               <span
                 className={cn(
                   "text-[11px] font-medium",
@@ -136,7 +136,7 @@ export function TodayEventItem({ event, isCurrent, now, onClick }: TodayEventIte
           )}
           {isChannelLive && (
             <>
-              <span className="text-[11px] text-muted-foreground/40">·</span>
+              <span className="text-[11px] text-subtle-foreground">·</span>
               <span className="inline-flex items-center gap-1 text-[11px] font-medium text-rose-500 dark:text-rose-400">
                 <span className="relative flex h-1.5 w-1.5">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75" />

@@ -4,6 +4,7 @@ import { ArrowClockwise, BookmarkSimple } from "@phosphor-icons/react";
 import { fromJsonString } from "@bufbuild/protobuf";
 import { UrnAvailability, UrnMetadataSchema } from "@uniffy/proto/search/v1/search_pb";
 import { cn } from "@/shared/utils/cn";
+import { Card } from "@/components/ui/card";
 import { CardGridSkeleton, LoadMoreButton, SectionRule } from "@/components/ui/collection";
 import { entranceDelay } from "@/shared/utils/entranceStagger";
 import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
@@ -172,7 +173,7 @@ export function BookmarksCollection({ header }: BookmarksCollectionProps) {
         {isInitialLoading ? (
           <CardGridSkeleton />
         ) : status === "failed" && items.length === 0 ? (
-          <div className="flex flex-col items-center gap-3 rounded-xl border border-border bg-card px-6 py-12 text-center">
+          <Card className="flex flex-col items-center gap-3 px-6 py-12 text-center">
             <p className="text-sm text-muted-foreground">
               {error ?? "Bookmarks could not be loaded."}
             </p>
@@ -185,7 +186,7 @@ export function BookmarksCollection({ header }: BookmarksCollectionProps) {
               <ArrowClockwise size={14} />
               Try again
             </button>
-          </div>
+          </Card>
         ) : isEmpty ? (
           <EmptyCollection filtered={selectedTypes.length > 0} />
         ) : (

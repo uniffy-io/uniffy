@@ -19,10 +19,14 @@ import {
   selectEditingMessage,
   clearEditingMessage,
   setEditingMessage,
+  selectThreadPane,
 } from "@/features/chat/store/chatUiSlice";
+import { ThreadSlideOver } from "@/features/chat/components/thread/ThreadSlideOver";
+import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
 import { useBookmarkStatuses } from "@/features/bookmarks";
 import { selectMessagesForChannel } from "@/features/chat/store/chatMessagesSlice";
 import { useDraftSync } from "@/features/chat/hooks/useDraftSync";
+import { ComposeDock } from "@/features/chat/components/compose/ComposeDock";
 import { useJoinCallParam } from "@/features/chat/hooks/useJoinCallParam";
 import { attachmentsApi } from "@/features/files/api/attachmentsApi";
 import { ContentType } from "@uniffy/proto/common/v1/common_pb";
@@ -32,6 +36,8 @@ const TYPING_THROTTLE_MS = 3000;
 
 interface ChannelViewProps {
   channelId?: string;
+  /** Which split pane this view fills; decides which pane hosts the thread slide-over. */
+  pane?: "left" | "right";
   onFocus?: () => void;
   showCloseButton?: boolean;
   onClose?: () => void;
@@ -39,6 +45,7 @@ interface ChannelViewProps {
 
 export function ChannelView({
   channelId: channelIdProp,
+  pane = "left",
   onFocus,
   showCloseButton,
   onClose,
@@ -76,6 +83,10 @@ export function ChannelView({
     [messageIds],
   );
   useBookmarkStatuses(messageBookmarkUrns);
+
+  const threadPane = useAppSelector(selectThreadPane);
+  const { isMobileOrTablet } = useBreakpoint();
+  const hostsThread = threadPane === pane && !isMobileOrTablet;
 
   const isAgentDm = !!activeChannel?.isAgentDm && !!activeChannel?.agentId;
   let heroPhase: "off" | "pending" | "hero" = "off";
@@ -263,19 +274,18 @@ export function ChannelView({
       data-testid="chat-channel-view"
       data-channel-id={effectiveChannelId ?? ""}
     >
-      <AgentAuroraBackdrop
-        intensity={isAgentDm ? (heroPhase !== "off" ? "hero" : "ambient") : "flat"}
-      />
+      <AgentAuroraBackdrop intensity={isAgentDm && heroPhase !== "off" ? "hero" : "flat"} />
       <ChannelHeader
         channelId={effectiveChannelId ?? undefined}
         showCloseButton={showCloseButton}
         onClose={onClose}
+        bare={heroPhase !== "off"}
       />
       {effectiveChannelId && <CallSection channelId={effectiveChannelId} />}
       {heroPhase === "off" && (
         <div className={cn("relative flex min-h-0 flex-1 flex-col", heroExit && "hero-enter")}>
           <MessageList channelId={effectiveChannelId ?? undefined} />
-          {compose}
+          <ComposeDock testId="chat-compose-dock">{compose}</ComposeDock>
           {heroExit && (
             <div className="pointer-events-none absolute inset-0 z-20 flex flex-col items-center justify-center gap-7 px-4 py-10">
               <AgentDmGreeting
@@ -299,6 +309,7 @@ export function ChannelView({
         </AgentDmHero>
       )}
       {heroPhase === "pending" && <div className="flex-1" />}
+      {hostsThread && <ThreadSlideOver />}
     </div>
   );
 }

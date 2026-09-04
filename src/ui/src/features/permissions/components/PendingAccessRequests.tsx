@@ -16,13 +16,17 @@ interface PendingAccessRequestsProps {
   canonicalContentType: ContentType | number;
   canonicalContentId: string;
   className?: string;
+  /** One rung above the host: `surface` on an app-frame page, `card` inside a dialog. */
+  tone?: "card" | "surface";
 }
 
 export function PendingAccessRequests({
   canonicalContentType,
   canonicalContentId,
   className,
+  tone = "card",
 }: PendingAccessRequestsProps) {
+  const pane = tone === "surface" ? "bg-surface" : "bg-card";
   const dispatch = useAppDispatch();
   const targetKey = `${canonicalContentType}:${canonicalContentId}`;
   const list = useAppSelector((state) => state.accessRequests.listsByTarget[targetKey]);
@@ -57,7 +61,8 @@ export function PendingAccessRequests({
     return (
       <div
         className={cn(
-          "flex items-start gap-2 rounded-lg border border-border bg-muted/30 p-3 text-sm text-muted-foreground",
+          "flex items-start gap-2 rounded-xl p-3 text-sm text-muted-foreground shadow-edge",
+          pane,
           className,
         )}
       >
@@ -71,7 +76,8 @@ export function PendingAccessRequests({
     return (
       <div
         className={cn(
-          "rounded-lg border border-dashed border-border px-3 py-4 text-center text-sm text-muted-foreground",
+          "rounded-xl px-3 py-4 text-center text-sm text-muted-foreground shadow-edge",
+          pane,
           className,
         )}
       >
@@ -89,7 +95,10 @@ export function PendingAccessRequests({
         return (
           <div
             key={request.id}
-            className="flex flex-col gap-3 rounded-lg border border-border bg-muted/20 p-3 sm:flex-row sm:items-center"
+            className={cn(
+              "flex flex-col gap-3 rounded-xl p-3 shadow-edge sm:flex-row sm:items-center",
+              pane,
+            )}
           >
             <div className="flex min-w-0 flex-1 items-center gap-3">
               <SubjectAvatarById

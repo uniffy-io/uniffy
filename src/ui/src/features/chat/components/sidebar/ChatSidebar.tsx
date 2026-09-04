@@ -427,7 +427,7 @@ export function ChatSidebar() {
             placeholder="Search channels..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="h-7 pl-8 text-xs bg-muted/50"
+            className="h-7 pl-8 text-[13px] bg-muted/50"
             data-testid="chat-sidebar-search"
           />
         </div>
@@ -436,12 +436,12 @@ export function ChatSidebar() {
       <div className="flex-1 overflow-y-auto">
         <button
           onClick={handleThreadsClick}
-          className="flex items-center justify-between w-full px-3 py-1.5 mx-0 text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+          className="flex items-center justify-between w-full px-3 py-1.5 mx-0 text-[0.9rem] text-foreground/90 hover:bg-muted/60 hover:text-foreground transition-colors"
           data-testid="chat-sidebar-threads-link"
         >
           <span className="flex items-center gap-2">
             <ChatsCircle size={16} />
-            <span className="font-medium">Threads</span>
+            <span className="font-[450]">Threads</span>
           </span>
           {unreadThreadCount > 0 && (
             <span
@@ -455,12 +455,12 @@ export function ChatSidebar() {
 
         <button
           onClick={() => navigate("/chat/unreads")}
-          className="flex items-center justify-between w-full px-3 py-1.5 mx-0 text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+          className="flex items-center justify-between w-full px-3 py-1.5 mx-0 text-[0.9rem] text-foreground/90 hover:bg-muted/60 hover:text-foreground transition-colors"
           data-testid="chat-sidebar-unreads-link"
         >
           <span className="flex items-center gap-2">
             <Tray size={16} />
-            <span className="font-medium">Unreads</span>
+            <span className="font-[450]">Unreads</span>
           </span>
           {totalUnread > 0 && (
             <span
@@ -474,20 +474,20 @@ export function ChatSidebar() {
 
         <button
           onClick={() => navigate("/library?types=chat_message")}
-          className="flex items-center gap-2 w-full px-3 py-1.5 mx-0 text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+          className="flex items-center gap-2 w-full px-3 py-1.5 mx-0 text-[0.9rem] text-foreground/90 hover:bg-muted/60 hover:text-foreground transition-colors"
           data-testid="chat-sidebar-saved-link"
         >
           <BookmarkSimple size={16} />
-          <span className="font-medium">Saved</span>
+          <span className="font-[450]">Saved</span>
         </button>
 
         <button
           onClick={() => dispatch(openBrowseChannelsModal())}
-          className="flex items-center gap-2 w-full px-3 py-1.5 mx-0 text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+          className="flex items-center gap-2 w-full px-3 py-1.5 mx-0 text-[0.9rem] text-foreground/90 hover:bg-muted/60 hover:text-foreground transition-colors"
           data-testid="chat-sidebar-browse-channels-button"
         >
           <Compass size={16} />
-          <span className="font-medium">Browse Channels</span>
+          <span className="font-[450]">Browse Channels</span>
         </button>
 
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
@@ -567,7 +567,7 @@ export function ChatSidebar() {
 
           {creatingFolder && (
             <div className="px-3 pb-1 mx-1.5 max-w-[calc(100%-12px)]">
-              <input
+              <Input
                 autoFocus
                 value={newFolderName}
                 onChange={(e) => setNewFolderName(e.target.value)}
@@ -580,7 +580,7 @@ export function ChatSidebar() {
                   }
                 }}
                 placeholder="Folder name..."
-                className="w-full bg-input border border-border rounded px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                className="h-7 rounded px-2 py-1 text-xs"
                 data-testid="chat-sidebar-new-agent-folder-input"
               />
             </div>
@@ -622,7 +622,7 @@ export function ChatSidebar() {
                   <button
                     type="button"
                     onClick={() => dispatch(openAgentChatPicker())}
-                    className="flex items-center gap-2 w-full px-3 py-1.5 mx-1.5 rounded-md text-xs text-muted-foreground hover:bg-accent hover:text-foreground transition-colors max-w-[calc(100%-12px)]"
+                    className="flex items-center gap-2 w-full px-3 py-1.5 mx-1.5 rounded-md text-xs text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-colors max-w-[calc(100%-12px)]"
                     data-testid="chat-sidebar-agent-chats-empty"
                   >
                     <Robot size={14} />

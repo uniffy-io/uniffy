@@ -48,7 +48,7 @@ export function TagCloud() {
               onClick={() => handleTagClick(tag.id)}
               aria-pressed={isSelected}
               className={cn(
-                "rounded-full transition-shadow focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
+                "focus-ring rounded-full transition-shadow",
                 isSelected && "ring-2 ring-primary/40 ring-offset-1 ring-offset-background",
               )}
             >

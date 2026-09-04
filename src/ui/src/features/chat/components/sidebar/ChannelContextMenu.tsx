@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useOverlayEscape } from "@/shared/hooks/useOverlayEscape";
 import { useNavigate } from "react-router-dom";
 import {
   SquareSplitHorizontal,
@@ -24,6 +25,8 @@ import { selectChannelPreferences } from "@/features/chat/store/chatChannelsSlic
 import { deleteChannel, leaveChannel, setAgentChatFolder } from "@/features/chat/store/chatThunks";
 import { ChannelNotificationMenu } from "@/features/chat/components/sidebar/ChannelNotificationMenu";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { popoverShellClass } from "@/components/ui/popover";
+import { cn } from "@/shared/utils/cn";
 import { getChannelDisplayName } from "@/features/chat/utils/channelDisplay";
 
 interface ChannelContextMenuProps {
@@ -124,14 +127,7 @@ export function ChannelContextMenu({ channelId, position, onClose }: ChannelCont
     };
   }, [onClose, confirmDeleteOpen, confirmLeaveOpen]);
 
-  useEffect(() => {
-    if (confirmDeleteOpen || confirmLeaveOpen) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [onClose, confirmDeleteOpen, confirmLeaveOpen]);
+  useOverlayEscape(onClose);
 
   const handleOpenInSplit = useCallback(() => {
     dispatch(setSplitChannel(channelId));
@@ -146,7 +142,7 @@ export function ChannelContextMenu({ channelId, position, onClose }: ChannelCont
 
   const MuteIcon = isMuted ? SpeakerHigh : SpeakerSlash;
   const btnClass =
-    "flex items-center gap-2 px-3 py-1.5 text-sm hover:bg-accent cursor-pointer w-full text-left transition-colors text-foreground";
+    "flex items-center gap-2 px-3 py-1.5 text-sm hover:bg-muted/60 cursor-pointer w-full text-left transition-colors text-foreground";
 
   const channelName = channel ? getChannelDisplayName(channel) : "this chat";
 
@@ -154,7 +150,7 @@ export function ChannelContextMenu({ channelId, position, onClose }: ChannelCont
     <>
       <div
         ref={menuRef}
-        className="fixed z-50 bg-card border border-border rounded-lg shadow-xl py-1 min-w-[180px]"
+        className={cn(popoverShellClass, "fixed z-50 py-1 min-w-[180px]")}
         style={menuStyle}
       >
         <button type="button" onClick={handleOpenInSplit} className={btnClass}>
@@ -182,7 +178,12 @@ export function ChannelContextMenu({ channelId, position, onClose }: ChannelCont
                   <CaretRight size={12} className="text-muted-foreground" />
                 </button>
                 {showFolderMenu && (
-                  <div className="absolute left-full top-0 ml-0.5 z-50 bg-card border border-border rounded-lg shadow-xl py-1 min-w-[170px] max-h-64 overflow-y-auto">
+                  <div
+                    className={cn(
+                      popoverShellClass,
+                      "absolute left-full top-0 ml-0.5 z-50 py-1 min-w-[170px] max-h-64 overflow-y-auto",
+                    )}
+                  >
                     {agentFolders.map((folder) => (
                       <button
                         key={folder.id}
@@ -228,7 +229,7 @@ export function ChannelContextMenu({ channelId, position, onClose }: ChannelCont
             <button
               type="button"
               onClick={handleDeleteClick}
-              className="flex items-center gap-2 px-3 py-1.5 text-sm hover:bg-accent cursor-pointer w-full text-left transition-colors text-red-500 hover:text-red-500"
+              className="flex items-center gap-2 px-3 py-1.5 text-sm hover:bg-muted/60 cursor-pointer w-full text-left transition-colors text-red-500 hover:text-red-500"
               data-testid="chat-channel-context-menu-delete"
             >
               <Trash size={16} />
@@ -262,7 +263,7 @@ export function ChannelContextMenu({ channelId, position, onClose }: ChannelCont
             <button
               type="button"
               onClick={() => setConfirmLeaveOpen(true)}
-              className="flex items-center gap-2 px-3 py-1.5 text-sm hover:bg-accent cursor-pointer w-full text-left transition-colors text-red-500 hover:text-red-500"
+              className="flex items-center gap-2 px-3 py-1.5 text-sm hover:bg-muted/60 cursor-pointer w-full text-left transition-colors text-red-500 hover:text-red-500"
               data-testid="chat-channel-context-menu-leave"
             >
               <SignOut size={16} />

@@ -3,13 +3,16 @@ import type { RootState } from "@/app/store";
 import type { DragState, HistoryEntry, ProjectScope } from "../types/ui";
 import type { ViewType, FilterConfig, SortConfig } from "../types/views";
 import { initialProjectsUiState } from "../types/ui";
+import { deleteTasks } from "./projectsThunks";
 import { saveColumnWidths, saveHiddenColumns } from "@/features/projects/utils/tableColumnStorage";
 
 export const projectsUiSlice = createSlice({
   name: "projectsUi",
   initialState: initialProjectsUiState,
   reducers: {
+    // Checkbox selection is a per-view gesture: not every view can show it, so it never carries across.
     setViewMode: (state, action: PayloadAction<ViewType>) => {
+      if (state.viewMode !== action.payload) state.selectedTaskIds = [];
       state.viewMode = action.payload;
     },
 
@@ -17,11 +20,10 @@ export const projectsUiSlice = createSlice({
       state.currentViewId = action.payload;
     },
 
+    // The task open in the detail panel and the checkbox selection are independent:
+    // opening a task never checks it, and checking a task never changes what is open.
     selectTask: (state, action: PayloadAction<string | null>) => {
       state.selectedTaskId = action.payload;
-      if (!state.isMultiSelectMode) {
-        state.selectedTaskIds = action.payload ? [action.payload] : [];
-      }
     },
 
     toggleTaskSelection: (state, action: PayloadAction<string>) => {
@@ -32,30 +34,14 @@ export const projectsUiSlice = createSlice({
       } else {
         state.selectedTaskIds.splice(index, 1);
       }
-      state.selectedTaskId =
-        state.selectedTaskIds.length > 0
-          ? state.selectedTaskIds[state.selectedTaskIds.length - 1]
-          : null;
-    },
-
-    setMultiSelectMode: (state, action: PayloadAction<boolean>) => {
-      state.isMultiSelectMode = action.payload;
-      if (!action.payload) {
-        state.selectedTaskIds = state.selectedTaskId ? [state.selectedTaskId] : [];
-      }
     },
 
     selectAllTasks: (state, action: PayloadAction<string[]>) => {
       state.selectedTaskIds = action.payload;
-      state.isMultiSelectMode = action.payload.length > 1;
-      state.selectedTaskId =
-        action.payload.length > 0 ? action.payload[action.payload.length - 1] : null;
     },
 
     clearSelection: (state) => {
-      state.selectedTaskId = null;
       state.selectedTaskIds = [];
-      state.isMultiSelectMode = false;
     },
 
     openDetailPanel: (state) => {
@@ -279,6 +265,16 @@ export const projectsUiSlice = createSlice({
 
     resetUiState: () => initialProjectsUiState,
   },
+  extraReducers: (builder) => {
+    builder.addCase(deleteTasks.fulfilled, (state, action) => {
+      const deleted = new Set(action.payload);
+      state.selectedTaskIds = state.selectedTaskIds.filter((id) => !deleted.has(id));
+      if (state.selectedTaskId && deleted.has(state.selectedTaskId)) {
+        state.selectedTaskId = null;
+        state.isDetailPanelOpen = false;
+      }
+    });
+  },
 });
 
 export const {
@@ -287,7 +283,6 @@ export const {
   selectTask,
   toggleTaskSelection,
   selectAllTasks,
-  setMultiSelectMode,
   clearSelection,
   openDetailPanel,
   closeDetailPanel,
@@ -341,7 +336,6 @@ export const selectViewMode = (state: RootState) => state.projectsUi.viewMode;
 export const selectCurrentViewId = (state: RootState) => state.projectsUi.currentViewId;
 export const selectSelectedTaskId = (state: RootState) => state.projectsUi.selectedTaskId;
 export const selectSelectedTaskIds = (state: RootState) => state.projectsUi.selectedTaskIds;
-export const selectIsMultiSelectMode = (state: RootState) => state.projectsUi.isMultiSelectMode;
 export const selectIsDetailPanelOpen = (state: RootState) => state.projectsUi.isDetailPanelOpen;
 export const selectDetailViewMode = (state: RootState) => state.projectsUi.detailViewMode;
 export const selectIsSidebarOpen = (state: RootState) => state.projectsUi.isSidebarOpen;

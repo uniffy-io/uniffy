@@ -2,6 +2,8 @@ import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { CaretDown, Check, ClockAfternoon } from "@phosphor-icons/react";
 import { cn } from "@/shared/utils/cn";
+import { Input, controlShellClass } from "@/components/ui/input";
+import { popoverShellClass } from "@/components/ui/popover";
 
 interface TimeSelectProps {
   value: number;
@@ -213,8 +215,8 @@ export function TimeSelect({
           minWidth: 160,
         }}
         className={cn(
-          "z-[200] overflow-hidden rounded-md",
-          "border border-border bg-card shadow-xl",
+          popoverShellClass,
+          "z-[200] overflow-hidden",
           "animate-in fade-in-0 duration-100",
           position.openUpward ? "slide-in-from-bottom-2" : "slide-in-from-top-2",
         )}
@@ -269,7 +271,7 @@ export function TimeSelect({
   return (
     <div ref={containerRef} className={cn("relative", className)}>
       {isOpen ? (
-        <input
+        <Input
           ref={inputRef}
           type="text"
           value={inputValue}
@@ -277,14 +279,7 @@ export function TimeSelect({
           onKeyDown={handleKeyDown}
           placeholder={displayValue}
           aria-label={ariaLabel}
-          className={cn(
-            "flex w-full items-center rounded-md border border-primary bg-background",
-            triggerSize,
-            "font-medium",
-            "outline-none ring-2 ring-primary/50 ring-offset-1 ring-offset-background",
-            "placeholder:text-muted-foreground",
-            compact ? "min-w-0" : "min-w-[100px]",
-          )}
+          className={cn("h-auto font-medium", triggerSize, compact ? "min-w-0" : "min-w-[100px]")}
         />
       ) : (
         <button
@@ -293,11 +288,9 @@ export function TimeSelect({
           disabled={disabled}
           aria-label={ariaLabel}
           className={cn(
-            "flex w-full items-center justify-between gap-2 rounded-md border border-border bg-background",
+            controlShellClass,
+            "focus-ring flex w-full items-center justify-between gap-2 font-medium",
             triggerSize,
-            "font-medium transition-colors",
-            "focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 focus:ring-offset-background",
-            "hover:bg-muted/50",
             "disabled:opacity-50 disabled:cursor-not-allowed",
             compact ? "min-w-0" : "min-w-[100px]",
           )}

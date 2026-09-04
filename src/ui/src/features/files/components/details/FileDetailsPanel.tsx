@@ -164,7 +164,7 @@ export function FileDetailsPanel({ file }: FileDetailsPanelProps) {
             file={file}
             fallback={
               <div className="w-full h-full flex items-center justify-center">
-                <FileIcon size={48} weight="duotone" className="text-muted-foreground/50" />
+                <FileIcon size={48} weight="duotone" className="text-subtle-foreground" />
               </div>
             }
           />
@@ -400,7 +400,7 @@ export function FileDetailsPanel({ file }: FileDetailsPanelProps) {
           </div>
         ) : (
           <div className="text-center py-8">
-            <Camera size={32} weight="duotone" className="mx-auto text-muted-foreground/50 mb-3" />
+            <Camera size={32} weight="duotone" className="mx-auto text-subtle-foreground mb-3" />
             <p className="text-sm text-muted-foreground">No EXIF data available</p>
             <p className="text-xs text-muted-foreground mt-1">
               {isImage
@@ -484,7 +484,7 @@ export function FileDetailsPanel({ file }: FileDetailsPanelProps) {
   return (
     <div className="h-full flex flex-col">
       {/* Tabs */}
-      <div className="flex border-b border-border shrink-0">
+      <div className="flex border-b border-border-strong shrink-0">
         {isMobileOrTablet && (
           <button
             onClick={() => dispatch(setDetailsPanelOpen(false))}

@@ -23,12 +23,20 @@ Uniffy uses a dark/light theme with user-customizable accent colors via CSS vari
 | Purpose | Tailwind Class |
 |---------|---------------|
 | Primary accent | `bg-primary` / `text-primary-foreground` |
-| Base surface | `bg-background` / `text-foreground` |
-| Cards/Popovers | `bg-card` / `text-card-foreground` |
-| Subtle/muted | `bg-muted` / `text-muted-foreground` |
-| Borders | `border-border` |
-| Inputs | `bg-input` |
-| Focus rings | `ring-ring` |
+| Top header, primary sidebar | `bg-nav` |
+| App frame (side panels) | `bg-background` / `text-foreground` |
+| Content sheet, dialogs, drawers | `bg-surface` |
+| Raised block on the sheet | `bg-card` / `text-card-foreground` |
+| Subtle/muted | `bg-muted` / `text-muted-foreground`; third text tier `text-subtle-foreground` for timestamps, placeholders, helper copy |
+| Form controls | `bg-input border-border`, hover `border-border-strong`, focus `focus-ring` |
+| Floating chrome (menus, popovers, pickers) | `popoverShellClass` from `@/components/ui/popover` (`bg-popover shadow-float`) |
+| Cards | `Card` from `@/components/ui/card`, or the `shadow-edge` utility on elements that cannot be a div |
+
+Those four background tokens are a ladder, darkest to lightest in dark mode: nav, background, surface, card. A raised block sits exactly one rung above what it sits on.
+
+Floating chrome and cards carry their edge in the shadow layer (`shadow-float`, `shadow-edge`), never a CSS border. Focus has one recipe: the `focus-ring` utility on the element, `focus-ring-within` on a wrapper whose descendant is focused. Never hand-roll `ring-ring`, `focus:ring-*`, or `ring-offset-*`.
+
+Full detail, including the border tiers and the shared control shell, lives in `.agents/rules/frontend.md` ("Theme system").
 
 **Status colors (use specific colors, NOT theme):**
 - Success: `bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400`
@@ -73,7 +81,7 @@ Then implement working code (React + TypeScript + Tailwind CSS 4) that is:
 
 Focus on:
 - **Typography**: Use the theme system's font stack. For special cases where distinctive typography is needed, choose fonts that are beautiful, unique, and interesting. Pair a distinctive display font with a refined body font.
-- **Color & Theme**: Work WITHIN Uniffy's CSS variable theme system. Use `bg-primary`, `bg-muted`, `bg-card`, etc. for surfaces. Use the accent color system for interactive elements. Commit to a cohesive aesthetic within these constraints.
+- **Color & Theme**: Work WITHIN Uniffy's CSS variable theme system. Use the surface ladder (`bg-nav`, `bg-background`, `bg-surface`, `bg-card`) for tone and the accent color system for interactive elements. Commit to a cohesive aesthetic within these constraints.
 - **Motion**: Use animations for effects and micro-interactions. Prioritize CSS-only solutions. Focus on high-impact moments: one well-orchestrated page load with staggered reveals creates more delight than scattered micro-interactions. Use scroll-triggering and hover states that surprise.
 - **Spatial Composition**: Unexpected layouts. Asymmetry. Overlap. Diagonal flow. Grid-breaking elements. Generous negative space OR controlled density.
 - **Backgrounds & Visual Details**: Create atmosphere and depth using Tailwind utilities. Apply creative forms like gradient meshes, noise textures, geometric patterns, layered transparencies, dramatic shadows, decorative borders, and grain overlays.

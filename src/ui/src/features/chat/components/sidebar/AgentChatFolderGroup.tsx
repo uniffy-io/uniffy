@@ -6,6 +6,7 @@ import { cn } from "@/shared/utils/cn";
 import { renameAgentFolder, deleteAgentFolder } from "@/features/chat/store/chatThunks";
 import { toggleAgentFolderCollapsed } from "@/features/chat/store/chatUiSlice";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { Input } from "@/components/ui/input";
 import type { ChatAgentFolder } from "@/features/chat/types";
 
 interface AgentChatFolderGroupProps {
@@ -69,9 +70,9 @@ export function AgentChatFolderGroup({
         isOver && "bg-primary/10 ring-2 ring-primary",
       )}
     >
-      <div className="group/folder flex items-center gap-2 px-2 py-1.5 text-sm rounded-md hover:bg-accent transition-colors">
+      <div className="group/folder flex items-center gap-2 px-2 py-1.5 text-sm rounded-md hover:bg-muted/60 transition-colors">
         {renaming ? (
-          <input
+          <Input
             ref={inputRef}
             value={draftName}
             onChange={(e) => setDraftName(e.target.value)}
@@ -80,7 +81,7 @@ export function AgentChatFolderGroup({
               if (e.key === "Enter") handleCommitRename();
               if (e.key === "Escape") setRenaming(false);
             }}
-            className="flex-1 min-w-0 bg-input border border-border rounded px-1.5 py-1 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+            className="flex-1 min-w-0 h-7 rounded px-1.5 py-1"
             data-testid={`chat-sidebar-agent-folder-rename-input-${folder.id}`}
           />
         ) : (

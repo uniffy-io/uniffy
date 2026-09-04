@@ -1,4 +1,4 @@
-import { memo, useState, useCallback, useMemo, type ReactNode } from "react";
+import { memo, useState, useCallback, useMemo, type ComponentProps, type ReactNode } from "react";
 import Markdown, { defaultUrlTransform } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
@@ -286,11 +286,34 @@ function scaleEmoji(node: ReactNode): ReactNode {
   return node;
 }
 
+// react-markdown also hands over the hast `node`, which is not a DOM attribute, so only
+// `children` is forwarded to the table.
+function MarkdownTable({ children }: ComponentProps<"table">) {
+  // Tables shrink to their content inside a bordered scroll box instead of
+  // spreading a few columns across the whole pane.
+  return (
+    <div className="not-prose my-2 w-fit max-w-full overflow-x-auto rounded-lg border border-border/70">
+      <table
+        className={cn(
+          "w-auto min-w-[20rem] border-collapse text-[13.5px] leading-snug",
+          "[&_th]:bg-muted/50 [&_th]:px-3 [&_th]:py-1.5 [&_th]:text-left [&_th]:font-semibold [&_th]:text-foreground",
+          "[&_td]:px-3 [&_td]:py-1.5 [&_td]:align-top [&_td]:text-foreground/90",
+          "[&_tr]:border-b [&_tr]:border-border/50 [&_tbody_tr:last-child]:border-b-0",
+          "[&_tbody_tr:nth-child(even)]:bg-muted/20",
+        )}
+      >
+        {children}
+      </table>
+    </div>
+  );
+}
+
 const markdownComponents = {
   a: MarkdownLink,
   pre: CodeBlockPre,
   code: InlineCode,
   p: EmojiParagraph,
+  table: MarkdownTable,
 };
 
 const markdownComponentsCompact = {
@@ -298,6 +321,7 @@ const markdownComponentsCompact = {
   pre: CodeBlockPre,
   code: InlineCode,
   p: EmojiParagraph,
+  table: MarkdownTable,
 };
 
 // Allow urn: protocol; react-markdown v10 strips non-http URLs by default.
@@ -344,9 +368,9 @@ function MessageContentInner({ content, className, compactMentions = false }: Me
           '"Inter Variable", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif',
       }}
       className={cn(
-        "prose prose-sm dark:prose-invert max-w-none",
-        // Mobile 15/1.45 for thumb reading; desktop 14/1.4 for density.
-        "text-foreground/90 font-[450] text-[15px] leading-[1.45] md:text-sm md:leading-[1.4]",
+        "prose prose-sm dark:prose-invert max-w-[820px]",
+        // Mobile 15/1.45 for thumb reading; desktop 14.5/1.45 for density.
+        "text-foreground font-[450] tracking-[-0.006em] text-[15px] leading-[1.45] md:text-[14.5px] md:leading-[1.45]",
         // `my-2` keeps blank-line paragraph breaks visible; tighter values collapsed stanzas.
         "prose-p:my-2 prose-pre:my-0 prose-ul:my-1 prose-ol:my-1",
         // Strip outer paragraph margins so the container controls between-message spacing.

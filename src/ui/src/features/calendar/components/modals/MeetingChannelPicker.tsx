@@ -3,7 +3,10 @@ import { createPortal } from "react-dom";
 import { Hash, LockSimple, X, MagnifyingGlass, Check, Warning, Plus } from "@phosphor-icons/react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
+import { controlShellClass } from "@/components/ui/input";
 import { Input } from "@/components/ui/input";
+import { popoverShellClass } from "@/components/ui/popover";
+import { useOverlayEscape } from "@/shared/hooks/useOverlayEscape";
 import { selectChannels } from "@/features/chat/store/chatChannelsSlice";
 import { fetchChannels, fetchMembers, createChannel } from "@/features/chat/store/chatThunks";
 import { countMissingAttendees } from "@/features/calendar/utils/meeting";
@@ -125,16 +128,11 @@ export function MeetingChannelPicker({
         setIsOpen(false);
       }
     }
-    function handleKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setIsOpen(false);
-    }
     document.addEventListener("mousedown", handleClick);
-    document.addEventListener("keydown", handleKey);
-    return () => {
-      document.removeEventListener("mousedown", handleClick);
-      document.removeEventListener("keydown", handleKey);
-    };
+    return () => document.removeEventListener("mousedown", handleClick);
   }, [isOpen]);
+
+  useOverlayEscape(() => setIsOpen(false), isOpen);
 
   const handleSelect = (channel: ChatChannel) => {
     onSelect(channel.id);
@@ -176,7 +174,8 @@ export function MeetingChannelPicker({
               width: position.width,
             }}
             className={cn(
-              "z-200 rounded-lg border border-border bg-card shadow-xl",
+              popoverShellClass,
+              "z-200",
               "animate-in fade-in-0 slide-in-from-top-2 duration-100",
             )}
           >
@@ -236,7 +235,12 @@ export function MeetingChannelPicker({
     <div className={cn("space-y-2", className)}>
       <div className="relative">
         {selectedChannel ? (
-          <div className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-1.5">
+          <div
+            className={cn(
+              controlShellClass,
+              "flex items-center gap-2 rounded-lg px-3 py-1.5 hover:border-border",
+            )}
+          >
             {selectedChannel.channelType === "PUBLIC" ? (
               <Hash size={14} weight="duotone" className="text-muted-foreground shrink-0" />
             ) : (
@@ -259,9 +263,10 @@ export function MeetingChannelPicker({
             type="button"
             onClick={() => setIsOpen(!isOpen)}
             className={cn(
-              "flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 w-full",
-              "text-sm text-muted-foreground hover:bg-muted/50 transition-colors",
-              "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 focus:ring-offset-background",
+              controlShellClass,
+              "flex items-center gap-2 rounded-lg px-3 py-2 w-full text-sm text-muted-foreground",
+              isOpen && "border-border-strong",
+              "focus-ring",
             )}
           >
             <Hash size={16} weight="duotone" />

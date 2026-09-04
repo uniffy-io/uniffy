@@ -11,6 +11,7 @@ import {
   type CompactResult,
   type ResetResult,
 } from "@/features/chat/hooks/useChannelAgentContext";
+import { popoverShellClass } from "@/components/ui/popover";
 import { cn } from "@/shared/utils/cn";
 import { toast } from "sonner";
 
@@ -159,7 +160,7 @@ function AgentContextBarBody({
           <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
             <div className="h-full w-1/3 rounded-full bg-muted-foreground/20 animate-pulse" />
           </div>
-          <span className="text-xs tabular-nums font-medium text-muted-foreground/60">...</span>
+          <span className="text-xs tabular-nums font-medium text-subtle-foreground">...</span>
         </div>
         <div className="flex items-center gap-2 text-xs text-muted-foreground/70">
           <ArrowsClockwise size={12} className="animate-spin" />
@@ -369,7 +370,10 @@ function AgentContextBarBody({
                 </button>
                 {menuOpen && (
                   <div
-                    className="absolute right-0 top-full mt-1 z-20 min-w-[200px] bg-card border border-border rounded-md shadow-lg py-1"
+                    className={cn(
+                      popoverShellClass,
+                      "absolute right-0 top-full mt-1 z-20 min-w-[200px] py-1",
+                    )}
                     data-testid="chat-agent-context-menu"
                   >
                     <button

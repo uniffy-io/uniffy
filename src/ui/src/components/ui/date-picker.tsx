@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { useOverlayEscape } from "@/shared/hooks/useOverlayEscape";
 import { createPortal } from "react-dom";
 import { CalendarBlank, CaretLeft, CaretRight, X } from "@phosphor-icons/react";
 import {
@@ -17,6 +18,8 @@ import {
   isValid,
 } from "date-fns";
 import { cn } from "@/shared/utils/cn";
+import { popoverShellClass } from "@/components/ui/popover";
+import { controlShellClass } from "@/components/ui/input";
 import { getWeekStartsOn } from "@/shared/utils/weekStart";
 
 interface DatePickerProps {
@@ -26,6 +29,8 @@ interface DatePickerProps {
   placeholder?: string;
   disabled?: boolean;
   className?: string;
+  /** `sm` fits a pane header controls row. */
+  size?: "sm" | "md";
 }
 
 interface DropdownPosition {
@@ -47,6 +52,7 @@ export function DatePicker({
   placeholder = "Pick a date",
   disabled = false,
   className,
+  size = "md",
 }: DatePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [position, setPosition] = useState<DropdownPosition | null>(null);
@@ -119,17 +125,7 @@ export function DatePicker({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isOpen]);
 
-  useEffect(() => {
-    if (!isOpen) return;
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        event.stopPropagation();
-        setIsOpen(false);
-      }
-    }
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen]);
+  useOverlayEscape(() => setIsOpen(false), isOpen);
 
   const handleDayClick = (day: Date) => {
     onChange(format(day, "yyyy-MM-dd"));
@@ -160,8 +156,8 @@ export function DatePicker({
           width: 280,
         }}
         className={cn(
-          "z-[200] rounded-lg",
-          "border border-border bg-card shadow-xl",
+          popoverShellClass,
+          "z-[200]",
           "animate-in fade-in-0 duration-100",
           position.openUpward ? "slide-in-from-bottom-2" : "slide-in-from-top-2",
         )}
@@ -207,8 +203,8 @@ export function DatePicker({
                 onClick={() => handleDayClick(day)}
                 className={cn(
                   "h-8 w-full rounded-md text-sm transition-colors",
-                  "focus:outline-none focus:ring-1 focus:ring-primary",
-                  !isCurrentMonth && "text-muted-foreground/40",
+                  "focus-ring",
+                  !isCurrentMonth && "text-subtle-foreground",
                   isCurrentMonth && !isSelected && "text-foreground hover:bg-muted",
                   isCurrentDay && !isSelected && "font-semibold text-primary",
                   isSelected && "bg-primary text-primary-foreground font-medium",
@@ -260,15 +256,15 @@ export function DatePicker({
         onClick={handleToggle}
         disabled={disabled}
         className={cn(
-          "flex items-center gap-2 w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm",
-          "transition-colors",
-          "focus:outline-none focus:ring-2 focus:ring-ring",
+          controlShellClass,
+          "focus-ring flex items-center gap-2 w-full",
+          size === "sm" ? "h-8 px-2 text-xs" : "h-10 px-3 py-2 text-sm",
           "disabled:opacity-50 disabled:cursor-not-allowed",
-          "hover:bg-muted/50",
-          value ? "text-foreground" : "text-muted-foreground",
+          isOpen && "border-border-strong",
+          value ? "text-foreground" : "text-subtle-foreground",
         )}
       >
-        <CalendarBlank size={16} className="text-muted-foreground shrink-0" />
+        <CalendarBlank size={size === "sm" ? 14 : 16} className="text-muted-foreground shrink-0" />
         <span className="flex-1 text-left truncate">
           {selectedDate ? format(selectedDate, "MMM d, yyyy") : placeholder}
         </span>

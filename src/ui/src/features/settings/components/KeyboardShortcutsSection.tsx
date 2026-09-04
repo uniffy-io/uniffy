@@ -5,6 +5,8 @@ import {
 } from "@/features/settings/hooks/useKeyboardShortcuts";
 import { useSettings } from "@/features/settings/hooks/useSettings";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 
 const SHORTCUT_CATEGORIES = [
   {
@@ -198,14 +200,14 @@ function ShortcutEditor({
   if (isEditing) {
     return (
       <div
-        className={`py-3 px-4 rounded-lg border ${conflict ? "status-warning" : "bg-primary/5 border-primary"}`}
+        className={`py-3 px-4 rounded-lg ${conflict ? "border status-warning" : "bg-primary/5 shadow-edge-primary"}`}
       >
         <div className="flex items-center justify-between">
           <span className="text-sm font-medium text-foreground">{label}</span>
           <div className="flex items-center gap-2">
-            <input
+            <Input
               type="text"
-              className="w-32 px-2 py-1 text-sm bg-background border rounded text-center font-mono border-border"
+              className="h-auto w-32 rounded px-2 py-1 text-center font-mono"
               style={conflict ? { borderColor: "var(--status-warning)" } : undefined}
               value={tempBinding || "Press keys..."}
               readOnly
@@ -295,7 +297,7 @@ export function KeyboardShortcutsSection() {
       {SHORTCUT_CATEGORIES.map(({ id, label, shortcuts }) => (
         <section key={id} className="space-y-2">
           <h2 className="text-lg font-semibold text-foreground mb-4">{label}</h2>
-          <div className="space-y-1 bg-card rounded-lg border border-border">
+          <Card tone="surface" className="space-y-1">
             {shortcuts.map(({ action, label: shortcutLabel }) => (
               <ShortcutEditor
                 key={action}
@@ -307,7 +309,7 @@ export function KeyboardShortcutsSection() {
                 onReset={handleReset}
               />
             ))}
-          </div>
+          </Card>
         </section>
       ))}
 

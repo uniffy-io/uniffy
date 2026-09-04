@@ -43,8 +43,8 @@ export function SettingsLayout({ activeSection, onSectionChange, children }: Set
                 className={cn(
                   "flex items-center gap-2 md:gap-3 w-auto md:w-full px-3 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap",
                   activeSection === id
-                    ? "bg-primary text-primary-foreground"
-                    : "text-foreground hover:bg-accent hover:text-accent-foreground",
+                    ? "bg-muted text-foreground"
+                    : "text-foreground/90 hover:bg-muted/60 hover:text-foreground",
                 )}
                 onClick={() => onSectionChange(id)}
               >

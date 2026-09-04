@@ -93,7 +93,7 @@ function LogoNavItem({ isActive }: { isActive: boolean }) {
           "relative z-10 flex items-center justify-center w-7 h-7 rounded-md transition-all duration-500 ease-out",
           isActive
             ? "border-2 border-primary/30"
-            : "border border-border text-muted-foreground group-hover:border-transparent group-hover:text-primary",
+            : "border border-border-nav text-muted-foreground group-hover:border-transparent group-hover:text-primary",
         )}
       >
         <UniffyLogo className="w-5 h-5 transition-all duration-500" />
@@ -149,7 +149,7 @@ function CompactNavItem({
           "relative z-10 flex items-center justify-center w-7 h-7 rounded-md transition-all duration-500 ease-out",
           isActive
             ? "border border-primary/30 bg-primary/10 text-primary"
-            : "border border-border text-muted-foreground group-hover:border-transparent group-hover:text-primary",
+            : "border border-border-nav text-muted-foreground group-hover:border-transparent group-hover:text-primary",
         )}
       >
         <Icon size={20} weight={isActive ? "fill" : "duotone"} />
@@ -273,7 +273,7 @@ export function AppHeader() {
           isZenMode ? "h-0 opacity-0 delay-150 overflow-hidden" : "h-12 opacity-100 delay-0",
         )}
       >
-        <div className="absolute inset-0 bg-background/95 backdrop-blur-sm border-b border-border" />
+        <div className="absolute inset-0 bg-nav/95 backdrop-blur-sm border-b border-border-strong shadow-[0_8px_24px_-16px_hsl(0_0%_0%_/_var(--edge-drop-strong))]" />
 
         <div className="relative flex h-12 items-center px-3 lg:px-4 justify-between">
           <div className="flex items-center gap-0.5 z-20">
@@ -344,7 +344,7 @@ function MobileSearchButton() {
   return (
     <button
       onClick={handleClick}
-      className="flex items-center justify-center w-7 h-7 rounded-md border border-border text-muted-foreground hover:text-primary hover:border-border transition-colors sm:hidden"
+      className="flex items-center justify-center w-7 h-7 rounded-md border border-border-nav text-muted-foreground hover:text-primary hover:border-primary/30 transition-colors sm:hidden"
       aria-label="Search"
     >
       <MagnifyingGlass size={20} weight="duotone" />

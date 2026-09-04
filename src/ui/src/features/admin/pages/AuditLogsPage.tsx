@@ -13,6 +13,7 @@ import { useAppSelector } from "@/app/hooks";
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Drawer } from "@/components/ui/drawer";
+import { popoverShellClass } from "@/components/ui/popover";
 import { useAdminAccess } from "@/features/admin/hooks/useAdminHooks";
 import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
 import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
@@ -294,7 +295,7 @@ export function AuditLogsPage() {
       )}
 
       <div className="flex gap-6">
-        <div className="flex-1 min-w-0 rounded-xl border border-border bg-card shadow-sm overflow-hidden">
+        <div className="flex-1 min-w-0 space-y-2">
           <AuditEventTable
             events={auditEvents}
             loading={loading}
@@ -302,7 +303,7 @@ export function AuditLogsPage() {
             filteredEmptyDescription="Adjust filters to surface more activity."
             hasActiveFilters={activeFilterCount > 0}
           />
-          <div className="flex items-center justify-between px-3 py-2 border-t border-border text-xs text-muted-foreground">
+          <div className="flex items-center justify-between px-1 text-xs text-muted-foreground">
             <span>
               {events.length > 0 ? `Showing ${events.length} on page ${pageIndex + 1}` : "0"}
             </span>
@@ -320,7 +321,7 @@ export function AuditLogsPage() {
 
         {sidebarInline && sidebarExpanded && (
           <aside className="w-80 shrink-0">
-            <div className="sticky top-4 rounded-xl border border-border bg-card shadow-sm overflow-hidden">
+            <div className="sticky top-4 rounded-xl bg-surface shadow-edge overflow-hidden">
               <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-border bg-muted/40">
                 <div className="flex items-center gap-2">
                   <Funnel size={14} weight="duotone" className="text-primary" />
@@ -362,7 +363,7 @@ export function AuditLogsPage() {
 
         {sidebarInline && !sidebarExpanded && (
           <aside className="w-12 shrink-0">
-            <div className="sticky top-4 rounded-xl border border-border bg-card shadow-sm overflow-hidden">
+            <div className="sticky top-4 rounded-xl bg-surface shadow-edge overflow-hidden">
               <button
                 type="button"
                 onClick={toggleSidebar}
@@ -496,7 +497,7 @@ function PageHeader({
             <span className="hidden sm:inline">Export</span>
           </Button>
           {exportOpen && (
-            <div className="absolute right-0 top-full mt-1 z-20 rounded-lg border border-border bg-card shadow-lg w-48 py-1">
+            <div className={cn(popoverShellClass, "absolute right-0 top-full mt-1 z-20 w-48 py-1")}>
               <button
                 type="button"
                 onClick={() => {
@@ -611,7 +612,7 @@ function ActiveFilterBar({
           className={cn(
             "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs",
             "border border-border bg-muted/60 text-foreground",
-            "hover:bg-muted hover:border-border/80 transition-colors",
+            "hover:bg-muted hover:border-border-strong transition-colors",
           )}
         >
           <span className="font-medium text-muted-foreground">{chip.label}</span>

@@ -18,7 +18,7 @@ export function MemorySharingToggle() {
   }, [dispatch, sharing.loaded]);
 
   return (
-    <div className="bg-card rounded-lg border border-border p-4 md:p-6">
+    <div className="rounded-xl bg-surface p-4 shadow-edge md:p-6">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <p className="text-sm font-medium text-foreground">

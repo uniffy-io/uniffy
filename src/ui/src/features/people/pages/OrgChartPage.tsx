@@ -1,13 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { Panel, Group, Separator } from "react-resizable-panels";
-import {
-  CaretDoubleLeft,
-  Prohibit,
-  TreeStructure,
-  UsersThree,
-  Warning,
-} from "@phosphor-icons/react";
+import { Panel, Group } from "react-resizable-panels";
+import { PaneSeparator } from "@/components/ui/pane-separator";
+import { CaretDoubleLeft, Prohibit, TreeStructure, UsersThree } from "@phosphor-icons/react";
 import { cn } from "@/shared/utils/cn";
 import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
@@ -102,20 +97,7 @@ export function OrgChartPage() {
   );
 
   const chartContent = (
-    <div className="flex h-full flex-col overflow-hidden bg-background">
-      <div className="flex items-center gap-2 border-b border-border bg-card px-4 py-2">
-        <h1 className="text-sm font-semibold text-foreground">People</h1>
-        {chart.truncated && (
-          <span
-            className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-800 dark:bg-amber-900/30 dark:text-amber-400"
-            title="The reporting tree was truncated: a cycle was broken or the depth cap was hit."
-          >
-            <Warning size={10} weight="fill" />
-            Truncated
-          </span>
-        )}
-      </div>
-
+    <div className="flex h-full flex-col overflow-hidden bg-surface">
       {chart.status === "loading" && (
         <div className="flex flex-1 items-center justify-center">
           <div className="w-full max-w-md space-y-3 p-4">
@@ -130,7 +112,7 @@ export function OrgChartPage() {
 
       {chart.status === "succeeded" && !chart.enabled && (
         <div className="flex flex-1 flex-col items-center justify-center gap-2 text-center">
-          <Prohibit size={48} weight="duotone" className="text-muted-foreground/50" />
+          <Prohibit size={48} weight="duotone" className="text-subtle-foreground" />
           <p className="text-sm font-medium text-foreground">The org chart is disabled</p>
           <p className="text-xs text-muted-foreground">
             An organization admin can enable it in the{" "}
@@ -148,14 +130,19 @@ export function OrgChartPage() {
 
       {chart.status === "succeeded" && chart.enabled && chart.nodes.length === 0 && (
         <div className="flex flex-1 flex-col items-center justify-center gap-2 text-center">
-          <TreeStructure size={48} weight="duotone" className="text-muted-foreground/50" />
+          <TreeStructure size={48} weight="duotone" className="text-subtle-foreground" />
           <p className="text-sm font-medium text-foreground">No people yet</p>
         </div>
       )}
 
       {chart.status === "succeeded" && chart.enabled && chart.nodes.length > 0 && (
         <div className="min-h-0 flex-1">
-          <OrgChartCanvas nodes={chart.nodes} teams={chart.teams} selectedTeamId={selectedTeamId} />
+          <OrgChartCanvas
+            nodes={chart.nodes}
+            teams={chart.teams}
+            selectedTeamId={selectedTeamId}
+            truncated={chart.truncated}
+          />
         </div>
       )}
     </div>
@@ -191,11 +178,11 @@ export function OrgChartPage() {
                 defaultSize={isMobileOrTablet ? 220 : 260}
                 minSize={180}
                 maxSize={isMobileOrTablet ? 320 : 400}
-                className="overflow-hidden bg-background"
+                className="overflow-hidden bg-nav"
               >
                 {railPanel}
               </Panel>
-              <Separator className="w-1 cursor-col-resize bg-border transition-colors hover:bg-primary/50 data-[resize-handle-state=drag]:bg-primary" />
+              <PaneSeparator />
             </>
           )}
 

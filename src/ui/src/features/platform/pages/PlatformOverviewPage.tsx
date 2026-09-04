@@ -89,7 +89,7 @@ export function PlatformOverviewPage() {
             <Link
               key={c.path}
               to={c.path}
-              className="group rounded-lg border border-border bg-card p-4 hover:border-amber-500/50 hover:bg-amber-500/5 transition-colors"
+              className="group rounded-xl bg-surface p-4 shadow-edge transition-shadow duration-150 hover:shadow-edge-strong"
             >
               <div className="flex items-center gap-2 mb-2">
                 <Icon size={20} weight="duotone" className="text-amber-600 dark:text-amber-400" />

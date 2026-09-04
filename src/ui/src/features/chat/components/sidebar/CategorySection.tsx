@@ -6,6 +6,7 @@ import { cn } from "@/shared/utils/cn";
 import { useAppDispatch } from "@/app/hooks";
 import { updateCategoryThunk, deleteCategoryThunk } from "@/features/chat/store/chatThunks";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { Input } from "@/components/ui/input";
 
 interface CategorySectionProps {
   id?: string | null;
@@ -114,7 +115,7 @@ export function CategorySection({
       >
         {isEditing ? (
           <div className="flex items-center gap-1 flex-1 min-w-0">
-            <input
+            <Input
               ref={editInputRef}
               type="text"
               value={editName}
@@ -123,7 +124,7 @@ export function CategorySection({
                 if (e.key === "Enter") handleSaveEdit();
                 if (e.key === "Escape") handleCancelEdit();
               }}
-              className="flex-1 min-w-0 text-xs uppercase font-medium tracking-wider bg-input border border-border rounded px-1.5 py-0.5 text-foreground outline-none focus:ring-1 focus:ring-ring"
+              className="flex-1 min-w-0 h-6 rounded px-1.5 py-0.5 text-xs uppercase font-medium tracking-wider"
               data-testid={`chat-sidebar-category-edit-input-${testidId}`}
             />
             <Check
@@ -143,7 +144,7 @@ export function CategorySection({
           <button
             type="button"
             onClick={handleToggle}
-            className="flex items-center gap-1 text-xs uppercase font-medium tracking-wider text-muted-foreground flex-1 min-w-0"
+            className="flex items-center gap-1 text-[11px] uppercase font-semibold tracking-[0.08em] text-muted-foreground flex-1 min-w-0"
             data-testid={`chat-sidebar-category-toggle-${testidId}`}
           >
             <CaretDown

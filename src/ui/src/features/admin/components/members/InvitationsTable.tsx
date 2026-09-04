@@ -136,7 +136,7 @@ function InvitationRow({ invitation, onRevoke, onResend, busyId }: InvitationRow
                 onClick={() => onResend(invitation.id)}
                 disabled={isBusy}
                 title="Resend invitation"
-                className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent
+                className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/60
                                     disabled:opacity-40"
               >
                 <ArrowsClockwise size={16} />

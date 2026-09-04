@@ -1,9 +1,8 @@
 import { useCallback, useState } from "react";
-import { X, Door, CalendarPlus, WarningCircle } from "@phosphor-icons/react";
+import { CalendarPlus, WarningCircle } from "@phosphor-icons/react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
-import { Modal } from "@/components/ui/modal";
+import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/shared/utils/cn";
 import {
   closeRoomViewer,
   selectRoomById,
@@ -64,24 +63,9 @@ export function RoomViewerModal() {
   return (
     <>
       <Modal onClose={handleClose} maxWidth="max-w-md" closeDisabled={bookingOpen}>
-        <div className="flex items-center justify-between px-5 py-3 border-b border-border">
-          <div className="flex items-center gap-2 min-w-0">
-            <Door size={18} weight="duotone" className="text-muted-foreground shrink-0" />
-            <span className="text-sm font-semibold text-foreground truncate">
-              {room?.name ?? "Room"}
-            </span>
-          </div>
-          <button
-            type="button"
-            onClick={handleClose}
-            className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-            aria-label="Close room details"
-          >
-            <X size={18} weight="bold" />
-          </button>
-        </div>
+        <ModalHeader title={room?.name ?? "Room"} />
 
-        <div className={cn("px-5 py-4 max-h-[70vh] overflow-y-auto")}>
+        <ModalBody>
           {viewer.error ? (
             <div className="flex flex-col items-center text-center py-8 gap-2">
               <WarningCircle size={32} weight="duotone" className="text-muted-foreground" />
@@ -103,19 +87,19 @@ export function RoomViewerModal() {
               canCancelBooking={canCancelBooking}
             />
           )}
-        </div>
+        </ModalBody>
 
-        {room && room.status === "active" && (
-          <div className="flex items-center justify-end gap-3 px-5 py-3 bg-muted/30 border-t border-border">
-            <Button variant="outline" size="md" onClick={handleClose}>
-              Close
-            </Button>
-            <Button size="md" className="gap-1.5" onClick={() => setBookingOpen(true)}>
+        <ModalFooter>
+          <Button type="button" variant="ghost" onClick={handleClose}>
+            Close
+          </Button>
+          {room && room.status === "active" && (
+            <Button type="button" onClick={() => setBookingOpen(true)}>
               <CalendarPlus size={16} />
-              Book this Room
+              Book this room
             </Button>
-          </div>
-        )}
+          )}
+        </ModalFooter>
       </Modal>
 
       {room && (

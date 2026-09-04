@@ -24,8 +24,8 @@ export const OrgChartNode = memo(function OrgChartNode({ data }: NodeProps<Perso
   return (
     <div
       className={cn(
-        "flex w-[220px] items-center gap-2.5 rounded-lg border border-border bg-card px-3 py-2.5",
-        "shadow-sm transition-colors hover:border-primary/50",
+        "flex w-[220px] items-center gap-2.5 rounded-xl bg-card px-3 py-2.5",
+        "shadow-edge transition-shadow duration-150 hover:shadow-edge-strong",
       )}
     >
       <Handle

@@ -21,6 +21,8 @@ import {
   Palette,
   ArrowsClockwise,
 } from "@phosphor-icons/react";
+import { popoverShellClass } from "@/components/ui/popover";
+import { useOverlayEscape } from "@/shared/hooks/useOverlayEscape";
 import { cn } from "@/shared/utils/cn";
 import {
   MINDMAP_BRANCH_COLORS,
@@ -85,17 +87,11 @@ export const CanvasContextMenu = memo(function CanvasContextMenu({
         onClose();
       }
     };
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-
     document.addEventListener("mousedown", handleClickOutside);
-    document.addEventListener("keydown", handleEscape);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-      document.removeEventListener("keydown", handleEscape);
-    };
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [onClose]);
+
+  useOverlayEscape(onClose);
 
   const renderItem = (item: MenuItem) => {
     const Icon = item.icon;
@@ -175,7 +171,7 @@ export const CanvasContextMenu = memo(function CanvasContextMenu({
     return (
       <div
         ref={menuRef}
-        className="fixed z-50 min-w-45 bg-card border border-border rounded-lg shadow-lg py-1"
+        className={cn(popoverShellClass, "fixed z-50 min-w-45 py-1")}
         style={{ left: x, top: y }}
       >
         {treeItems.map(renderItem)}
@@ -311,7 +307,7 @@ export const CanvasContextMenu = memo(function CanvasContextMenu({
   return (
     <div
       ref={menuRef}
-      className="fixed z-50 min-w-40 bg-card border border-border rounded-lg shadow-lg py-1"
+      className={cn(popoverShellClass, "fixed z-50 min-w-40 py-1")}
       style={{ left: x, top: y }}
     >
       {editItems.map(renderItem)}

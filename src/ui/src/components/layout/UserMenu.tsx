@@ -51,8 +51,9 @@ import { teardownStorageEncryption } from "@/shared/crypto/storageEncryption";
 import { createClient } from "@connectrpc/connect";
 import { unaryTransport } from "@/config/api";
 import { AuthService } from "@uniffy/proto/auth/v1/auth_pb";
-import { useTheme } from "@/config/theme/ThemeProvider";
+import { useTheme } from "@/config/theme/themeContext";
 import { cn } from "@/shared/utils/cn";
+import { popoverShellClass } from "@/components/ui/popover";
 import { avatarUrlAtVariant } from "@/shared/utils/fileUrls";
 import { getInitials } from "@/components/subject/utils";
 import { useNavigate } from "react-router-dom";
@@ -187,9 +188,9 @@ export function UserMenu() {
         onClick={() => setIsOpen((open) => !open)}
         className={cn(
           "flex items-center justify-center w-8 h-8 rounded-full overflow-hidden",
-          "border border-border transition-all duration-150",
-          "focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-          isOpen ? "border-primary/30" : "hover:border-border",
+          "border border-border-nav transition-all duration-150",
+          "focus-ring",
+          isOpen ? "border-primary/30" : "hover:border-primary/30",
         )}
       >
         {avatarUrl ? (
@@ -209,7 +210,13 @@ export function UserMenu() {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 z-100 mt-1.5 w-[min(240px,calc(100vw-2rem))] origin-top-right rounded-lg bg-card py-1.5 shadow-lg border border-border animate-in fade-in slide-in-from-top-2 duration-200">
+        <div
+          className={cn(
+            popoverShellClass,
+            "absolute right-0 z-100 mt-1.5 w-[min(240px,calc(100vw-2rem))] origin-top-right py-1.5",
+            "animate-in fade-in slide-in-from-top-2 duration-200",
+          )}
+        >
           <div className="px-3 py-2.5 border-b border-border">
             <div className="flex items-center gap-2.5">
               <div

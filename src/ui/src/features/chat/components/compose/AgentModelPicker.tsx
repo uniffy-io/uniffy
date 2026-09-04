@@ -1,12 +1,12 @@
-/* eslint-disable react-refresh/only-export-components -- pure picker logic is co-located for unit tests */
-
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useOverlayEscape } from "@/shared/hooks/useOverlayEscape";
 import { createPortal } from "react-dom";
-import { Brain, Check, X } from "@phosphor-icons/react";
+import { Brain, Check } from "@phosphor-icons/react";
 import { MemoryScope } from "@uniffy/proto/agents/v1/memories_pb";
+import { popoverShellClass } from "@/components/ui/popover";
 import { cn } from "@/shared/utils/cn";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
-import { Modal } from "@/components/ui/modal";
+import { Modal, ModalBody, ModalHeader } from "@/components/ui/modal";
 import {
   selectAvailableModels,
   selectModelsForKey,
@@ -15,102 +15,28 @@ import {
 import {
   fetchAvailableModels,
   fetchModelsForKey,
-  type SerializedModelInfo,
 } from "@/features/agents/store/agentProvidersThunks";
 import { selectMemoryScope } from "@/features/agents/store/agentMemoriesSlice";
-import {
-  fetchMemories,
-  memoryScopeKey,
-  type MemoryScopeSubject,
-} from "@/features/agents/store/agentMemoriesThunks";
+import { fetchMemories, memoryScopeKey } from "@/features/agents/store/agentMemoriesThunks";
 import {
   MemoryList,
   type MemoryScopeDescriptor,
 } from "@/features/agents/components/memory/MemoryList";
 import type { SerializedAgent } from "@/features/agents/store/agentsThunks";
 import {
-  parseModelParamsSchema,
-  stripInvalidParams,
-  type ModelParamValues,
-} from "@/features/agents/utils/modelParamsSchema";
+  buildModelOptions,
+  filterChatModels,
+  memoryScopeForChannel,
+  modelDisplayName,
+  paramsChangesForModelSwitch,
+  pickerButtonLabel,
+} from "@/features/chat/components/compose/agentModelSelection";
 import { selectChannelById, selectChannelMembers } from "@/features/chat/store/chatChannelsSlice";
 import { useChatPermissions } from "@/features/chat/hooks/useChatPermissions";
 import type {
   ChannelAgentConfigChanges,
   ChannelAgentConfigState,
 } from "@/features/chat/hooks/useChannelAgentConfig";
-
-// Curated catalog chat models only - keeps live-API noise (whisper, realtime,
-// embeddings, image-only) out of the picker.
-export const filterChatModels = (models: SerializedModelInfo[]): SerializedModelInfo[] =>
-  models.filter((m) => m.catalogKnown && !m.supportsImageGeneration);
-
-export const modelDisplayName = (models: SerializedModelInfo[], modelId: string): string =>
-  models.find((m) => m.id === modelId)?.displayName || modelId;
-
-export const resolveEffectiveModelId = (
-  config: Pick<ChannelAgentConfigState, "modelOverride"> | null,
-  primaryModel: string,
-): string => config?.modelOverride || primaryModel;
-
-export const pickerButtonLabel = (
-  config: Pick<ChannelAgentConfigState, "modelOverride"> | null,
-  primaryModel: string,
-  models: SerializedModelInfo[],
-): string =>
-  config?.modelOverride
-    ? modelDisplayName(models, config.modelOverride)
-    : `Default (${modelDisplayName(models, primaryModel)})`;
-
-/** Keeps a stale override visible even if the key/catalog no longer lists it. */
-export const buildModelOptions = (
-  chatModels: SerializedModelInfo[],
-  modelOverride: string | null,
-): Array<{ id: string; label: string }> => {
-  const options = chatModels.map((m) => ({ id: m.id, label: m.displayName || m.id }));
-  if (modelOverride && !chatModels.some((m) => m.id === modelOverride)) {
-    options.unshift({ id: modelOverride, label: modelOverride });
-  }
-  return options;
-};
-
-export const paramsForModelSwitch = (
-  nextSchemaJson: string,
-  current: ModelParamValues,
-): ModelParamValues => stripInvalidParams(parseModelParamsSchema(nextSchemaJson), current);
-
-/**
- * Params to send alongside a model switch, mirroring the backend: stored
- * params are stripped per the next effective model, but when that model has no
- * client-visible schema (name-only agent on the org default, stale list) they
- * are left untouched and the backend strips per the real effective model.
- * `undefined` = omit the field from the update.
- */
-export const paramsChangesForModelSwitch = (
-  models: SerializedModelInfo[],
-  nextModelId: string | null,
-  primaryModel: string,
-  current: ModelParamValues,
-): ModelParamValues | undefined => {
-  if (Object.keys(current).length === 0) return undefined;
-  const nextId = nextModelId ?? primaryModel;
-  const nextSchemaJson = models.find((m) => m.id === nextId)?.parameterSchemaJson ?? "";
-  if (!nextSchemaJson) return undefined;
-  return paramsForModelSwitch(nextSchemaJson, current);
-};
-
-/**
- * Mirrors the backend's memory scope routing: a 1:1 agent DM is a personal
- * surface (the caller's own memories with this agent); everything else is
- * channel-shared.
- */
-export const memoryScopeForChannel = (
-  channel: { isAgentDm?: boolean; channelType?: string } | undefined,
-  channelId: string,
-): MemoryScopeSubject =>
-  channel?.isAgentDm && channel.channelType === "DIRECT"
-    ? { scope: MemoryScope.USER }
-    : { scope: MemoryScope.CHANNEL, subjectId: channelId };
 
 const POPOVER_WIDTH = 320;
 const POPOVER_MAX_HEIGHT = 480;
@@ -222,16 +148,11 @@ export function AgentModelPicker({
       if (buttonRef.current?.contains(target)) return;
       setOpen(false);
     };
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
-    };
     document.addEventListener("mousedown", handleMouseDown);
-    document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.removeEventListener("mousedown", handleMouseDown);
-      document.removeEventListener("keydown", handleKeyDown);
-    };
+    return () => document.removeEventListener("mousedown", handleMouseDown);
   }, [open]);
+
+  useOverlayEscape(() => setOpen(false), open);
 
   const toggleOpen = () => {
     if (open) {
@@ -305,7 +226,7 @@ export function AgentModelPicker({
             data-testid="chat-compose-model-popover"
           >
             <div
-              className="w-80 overflow-y-auto rounded-xl border border-border bg-card shadow-xl p-3"
+              className={cn(popoverShellClass, "w-80 overflow-y-auto rounded-xl p-3")}
               style={{ maxHeight: position.maxHeight }}
             >
               <div className="flex items-center gap-1.5 px-2 pb-2 text-xs font-semibold text-foreground uppercase tracking-wider">
@@ -371,37 +292,25 @@ export function AgentModelPicker({
           </div>,
           document.body,
         )}
-      {/* Portaled: the composer's glass card is a `backdrop-filter` containing
-          block, so an in-place fixed modal would anchor to it and clip. */}
-      {memoryOpen &&
-        createPortal(
-          <Modal onClose={() => setMemoryOpen(false)} maxWidth="max-w-2xl">
-            <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-              <div className="flex items-center gap-2 min-w-0">
-                <Brain size={18} weight="duotone" className="text-muted-foreground shrink-0" />
-                <span className="font-medium text-foreground truncate">
-                  {isPersonalMemory ? "My memory" : "Channel memory"}
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={() => setMemoryOpen(false)}
-                className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                aria-label="Close"
-              >
-                <X size={16} />
-              </button>
-            </div>
-            <div className="p-4 overflow-y-auto max-h-[70dvh]">
-              <MemoryList
-                agentName={agent.name}
-                descriptor={memoryDescriptor}
-                subjectLabel={isPersonalMemory ? undefined : channelLabel}
-              />
-            </div>
-          </Modal>,
-          document.body,
-        )}
+      {memoryOpen && (
+        <Modal
+          onClose={() => setMemoryOpen(false)}
+          maxWidth="max-w-2xl"
+          className="flex flex-col max-h-[85dvh]"
+        >
+          <ModalHeader
+            title={isPersonalMemory ? "My memory" : "Channel memory"}
+            onClose={() => setMemoryOpen(false)}
+          />
+          <ModalBody scrollable={false} className="flex-1 min-h-0 overflow-y-auto">
+            <MemoryList
+              agentName={agent.name}
+              descriptor={memoryDescriptor}
+              subjectLabel={isPersonalMemory ? undefined : channelLabel}
+            />
+          </ModalBody>
+        </Modal>
+      )}
     </>
   );
 }

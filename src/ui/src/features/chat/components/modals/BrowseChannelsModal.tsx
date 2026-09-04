@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { X, Hash, MagnifyingGlass, Users, SignIn } from "@phosphor-icons/react";
+import { Hash, MagnifyingGlass, Users, SignIn } from "@phosphor-icons/react";
 import { useNavigate } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { selectChannels } from "@/features/chat/store/chatChannelsSlice";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Modal } from "@/components/ui/modal";
+import { Modal, ModalBody, ModalHeader } from "@/components/ui/modal";
 import { closeBrowseChannelsModal } from "@/features/chat/store/chatUiSlice";
 import { fetchPublicChannels, joinChannel } from "@/features/chat/store/chatThunks";
 import type { ChatChannel } from "@/features/chat/types";
@@ -77,22 +77,13 @@ export function BrowseChannelsModal() {
   );
 
   return (
-    <Modal onClose={handleClose} className="flex flex-col max-h-[80vh]">
-      <div data-testid="chat-browse-channels-modal" className="flex flex-col max-h-[80vh]">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
-          <div className="flex items-center gap-2">
-            <Hash size={20} weight="bold" className="text-primary" />
-            <h3 className="text-lg font-semibold text-foreground">Browse Channels</h3>
-          </div>
-          <button
-            type="button"
-            onClick={handleClose}
-            className="p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-            data-testid="chat-browse-channels-close"
-          >
-            <X size={20} />
-          </button>
-        </div>
+    <Modal onClose={handleClose} className="flex flex-col max-h-[85dvh]">
+      <div data-testid="chat-browse-channels-modal" className="flex flex-col min-h-0">
+        <ModalHeader
+          title="Browse channels"
+          onClose={handleClose}
+          closeTestId="chat-browse-channels-close"
+        />
 
         <div className="px-6 py-3 border-b border-border shrink-0">
           <div className="relative">
@@ -111,7 +102,7 @@ export function BrowseChannelsModal() {
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto">
+        <ModalBody scrollable={false} className="flex-1 min-h-0 overflow-y-auto p-0 space-y-0">
           {loading ? (
             <div className="flex items-center justify-center py-12 text-sm text-muted-foreground">
               Loading channels...
@@ -171,7 +162,7 @@ export function BrowseChannelsModal() {
                         disabled={joiningId !== null}
                         data-testid={`chat-browse-channels-join-${channel.id}`}
                       >
-                        <SignIn size={14} className="mr-1" />
+                        <SignIn size={14} />
                         Join
                       </Button>
                     )}
@@ -180,7 +171,7 @@ export function BrowseChannelsModal() {
               );
             })
           )}
-        </div>
+        </ModalBody>
       </div>
     </Modal>
   );

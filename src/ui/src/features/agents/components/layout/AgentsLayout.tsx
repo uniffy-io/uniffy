@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { Group, Panel, Separator } from "react-resizable-panels";
+import { Group, Panel } from "react-resizable-panels";
+import { PaneSeparator } from "@/components/ui/pane-separator";
 import { useNavigate, useParams } from "react-router-dom";
 import { Books, ClockCounterClockwise, Robot, Lightning } from "@phosphor-icons/react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
@@ -179,19 +180,19 @@ export function AgentsLayout() {
               defaultSize={280}
               minSize={180}
               maxSize={400}
-              className="bg-background overflow-hidden"
+              className="bg-nav overflow-hidden"
             >
               {sidebar}
             </Panel>
 
-            <Separator className="w-1 bg-border hover:bg-primary/50 transition-colors cursor-col-resize data-[resize-handle-state=drag]:bg-primary" />
+            <PaneSeparator />
           </>
         )}
 
         <Panel id="agents-main" minSize={isMobile ? 200 : 400}>
           <div
             className={cn(
-              "h-full flex flex-col overflow-hidden bg-card",
+              "h-full flex flex-col overflow-hidden bg-surface",
               showCollapsedRail && "ml-12",
             )}
           >

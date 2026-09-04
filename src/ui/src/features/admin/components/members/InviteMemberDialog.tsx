@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { PaperPlaneTilt, UserPlus, X } from "@phosphor-icons/react";
+import { PaperPlaneTilt } from "@phosphor-icons/react";
 import { toast } from "sonner";
-import { Modal } from "@/components/ui/modal";
+import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { invitationsApi } from "@/features/admin/api/invitationsApi";
 import { OrganizationRole } from "@uniffy/proto/common/v1/common_pb";
@@ -62,44 +63,26 @@ export function InviteMemberDialog({
 
   return (
     <Modal onClose={onClose} closeDisabled={submitting} maxWidth="max-w-md">
-      <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-        <div className="flex items-center gap-2">
-          <UserPlus size={20} weight="duotone" className="text-primary" />
-          <h2 className="text-lg font-semibold">Invite member</h2>
-        </div>
-        <button
-          type="button"
-          onClick={onClose}
-          disabled={submitting}
-          className="p-1 rounded-md hover:bg-accent text-muted-foreground disabled:opacity-40"
-          aria-label="Close"
-        >
-          <X size={18} />
-        </button>
-      </div>
+      <ModalHeader
+        title="Invite member"
+        description="Existing accounts are added right away. Anyone else gets an invitation link by email."
+      />
 
-      <div className="px-6 py-5 space-y-4">
+      <ModalBody>
         <div>
-          <label className="block text-xs font-medium text-muted-foreground mb-1.5">Email</label>
-          <input
+          <label className="block text-sm text-muted-foreground mb-1">Email</label>
+          <Input
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="person@example.com"
             autoFocus
             disabled={submitting}
-            className="w-full px-3 py-2 rounded-md border border-border bg-background
-                            text-sm focus:outline-none focus:ring-2 focus:ring-primary
-                            disabled:opacity-50"
           />
-          <p className="mt-1.5 text-xs text-muted-foreground">
-            If the email already has an account, they will be added directly. Otherwise we will
-            email them an invitation link.
-          </p>
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-muted-foreground mb-1.5">Role</label>
+          <label className="block text-sm text-muted-foreground mb-1">Role</label>
           <Select
             value={roleStr}
             onChange={setRoleStr}
@@ -107,9 +90,9 @@ export function InviteMemberDialog({
             disabled={submitting}
           />
         </div>
-      </div>
+      </ModalBody>
 
-      <div className="flex items-center justify-end gap-2 px-6 py-3 border-t border-border bg-muted/30">
+      <ModalFooter>
         <Button variant="ghost" onClick={onClose} disabled={submitting}>
           Cancel
         </Button>
@@ -117,7 +100,7 @@ export function InviteMemberDialog({
           <PaperPlaneTilt size={16} weight="fill" />
           Send invitation
         </Button>
-      </div>
+      </ModalFooter>
     </Modal>
   );
 }

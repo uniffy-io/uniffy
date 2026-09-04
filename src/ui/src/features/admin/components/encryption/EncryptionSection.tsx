@@ -45,7 +45,7 @@ export function EncryptionSection() {
         </div>
       </div>
 
-      <div className="p-5 rounded-lg border border-border bg-card flex flex-col gap-4">
+      <div className="p-5 rounded-xl bg-surface shadow-edge flex flex-col gap-4">
         <div className="flex items-start gap-3">
           <Key size={20} weight="duotone" className="text-primary mt-0.5" />
           <div className="flex-1">

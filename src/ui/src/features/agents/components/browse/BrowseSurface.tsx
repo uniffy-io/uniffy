@@ -1,7 +1,7 @@
 import type { Icon } from "@phosphor-icons/react";
-import { MagnifyingGlass } from "@phosphor-icons/react";
 import { cn } from "@/shared/utils/cn";
-import { Input } from "@/components/ui/input";
+import { PaneHeader, PaneHeaderBar } from "@/components/ui/pane-header";
+import { SearchField } from "@/components/ui/search-field";
 
 /**
  * The shell every `/agents` section browses through: a titled header carrying
@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
  * section owns its filtering and its primary action.
  */
 export function BrowseHeader({
+  icon,
   title,
   subtitle,
   search,
@@ -17,6 +18,7 @@ export function BrowseHeader({
   action,
   testId,
 }: {
+  icon?: Icon | React.ReactNode;
   title: string;
   subtitle?: string;
   search?: string;
@@ -26,31 +28,21 @@ export function BrowseHeader({
   testId?: string;
 }) {
   return (
-    <div className="border-b border-border/60 bg-card px-6 py-4" data-testid={testId}>
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="min-w-0 flex-1">
-          <h1 className="text-lg font-semibold text-foreground">{title}</h1>
-          {subtitle && <p className="mt-0.5 text-sm text-muted-foreground">{subtitle}</p>}
-        </div>
+    <PaneHeader data-testid={testId}>
+      <PaneHeaderBar icon={icon} title={title} subtitle={subtitle}>
         {onSearchChange && (
-          <div className="relative w-full sm:w-64">
-            <MagnifyingGlass
-              size={14}
-              className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground"
-            />
-            <Input
-              type="text"
-              placeholder={searchPlaceholder}
-              value={search ?? ""}
-              onChange={(e) => onSearchChange(e.target.value)}
-              className="h-8 pl-8 text-xs"
-              data-testid={testId ? `${testId}-search` : undefined}
-            />
-          </div>
+          <SearchField
+            size="sm"
+            value={search ?? ""}
+            onChange={onSearchChange}
+            placeholder={searchPlaceholder}
+            containerClassName="w-64"
+            data-testid={testId ? `${testId}-search` : undefined}
+          />
         )}
         {action}
-      </div>
-    </div>
+      </PaneHeaderBar>
+    </PaneHeader>
   );
 }
 
@@ -115,7 +107,7 @@ export function BrowseCard({
       className={cn(
         "group flex flex-col gap-3 rounded-xl border border-border bg-card p-4 text-left",
         "cursor-pointer transition-colors hover:border-primary/50 hover:bg-muted/30",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        "focus-ring",
       )}
     >
       <div className={cn("flex items-start gap-3", dimmed && "opacity-60")}>

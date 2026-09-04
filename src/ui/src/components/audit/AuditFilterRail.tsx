@@ -2,7 +2,7 @@ import { useMemo, useRef, useState } from "react";
 import { CaretDown, MagnifyingGlass } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
+import { Input, controlShellClass } from "@/components/ui/input";
 import { DatePicker } from "@/components/ui/date-picker";
 import { SubjectPicker } from "@/components/subject/SubjectPicker";
 import { useSubjectResolver } from "@/components/subject/hooks/useSubjectResolver";
@@ -195,7 +195,7 @@ function OrganizationSection({
             />
           </div>
           {query.trim() && filtered.length > 0 && (
-            <div className="max-h-48 overflow-y-auto rounded-md border border-border bg-background/60 divide-y divide-border">
+            <div className="max-h-48 overflow-y-auto rounded-md border border-border bg-background/40 divide-y divide-border">
               {filtered.map((o) => (
                 <button
                   key={o.id}
@@ -234,9 +234,9 @@ function ActorSection({ filter, onChange }: SubProps) {
         type="button"
         onClick={() => setActorOpen((open) => !open)}
         className={cn(
-          "flex items-center gap-2 w-full h-10 rounded-md border border-input bg-background",
-          "px-3 text-sm text-left transition-colors",
-          "hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+          controlShellClass,
+          "focus-ring flex items-center gap-2 w-full h-10 px-3 text-sm text-left",
+          actorOpen && "border-border-strong",
         )}
       >
         {actorSubject ? (

@@ -75,11 +75,7 @@ export function GroupsPage() {
         </div>
       ) : accessGroups.length === 0 ? (
         <div className="py-12 text-center border border-dashed border-border rounded-lg">
-          <UsersThree
-            size={48}
-            weight="duotone"
-            className="mx-auto text-muted-foreground/50 mb-4"
-          />
+          <UsersThree size={48} weight="duotone" className="mx-auto text-subtle-foreground mb-4" />
           <h3 className="text-lg font-medium mb-2">No groups yet</h3>
           <p className="text-muted-foreground mb-4">
             Create a group to share content with many members at once.

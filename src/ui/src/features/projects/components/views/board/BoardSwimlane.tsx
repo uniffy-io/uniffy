@@ -1,8 +1,9 @@
-import { CaretDown, CaretRight, Lightning } from "@phosphor-icons/react";
+import { CaretDown, CaretRight } from "@phosphor-icons/react";
 import { cn } from "@/shared/utils/cn";
 import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
 import { LAYOUT } from "@/features/projects/constants";
-import { getTaskTypeConfig } from "@/features/projects/utils/taskTypes";
+import { TaskTypeIcon } from "@/features/projects/components/TaskTypeIcon";
+import { statusPaint } from "@/features/projects/utils/statusPaint";
 import { formatDateShort, isOverdue } from "@/shared/utils/dateFormatting";
 import type { Task, SelectOption } from "@/features/projects/types";
 import { BoardColumn } from "./BoardColumn";
@@ -14,9 +15,7 @@ interface BoardSwimlaneProps {
   tasksByStatus: Record<string, Task[]>;
   statusOptions: SelectOption[];
   priorityOptions: SelectOption[];
-  selectedTaskIds: string[];
-  onTaskClick: (taskId: string, e: React.MouseEvent) => void;
-  onCheckboxChange: (taskId: string) => void;
+  onTaskClick: (taskId: string) => void;
   onAddTask?: () => void;
   projectSlug: string;
   reparentHintActive: boolean;
@@ -32,9 +31,7 @@ export function BoardSwimlane({
   tasksByStatus,
   statusOptions,
   priorityOptions,
-  selectedTaskIds,
   onTaskClick,
-  onCheckboxChange,
   onAddTask,
   projectSlug,
   reparentHintActive,
@@ -51,9 +48,8 @@ export function BoardSwimlane({
     0,
   );
 
-  const typeConfig = epic ? getTaskTypeConfig(epic.taskType || "epic") : null;
-  const TypeIcon = typeConfig?.icon ?? Lightning;
   const epicStatusOption = epic ? statusOptions.find((o) => o.id === epic.status) : undefined;
+  const epicPaint = epicStatusOption ? statusPaint(statusOptions, epicStatusOption.id) : null;
   const epicOverdue = epic?.dueDate && isOverdue(epic.dueDate);
 
   return (
@@ -70,14 +66,14 @@ export function BoardSwimlane({
         )}
         {epic ? (
           <>
-            <TypeIcon size={14} weight="fill" className="text-muted-foreground shrink-0" />
+            <TaskTypeIcon type={epic.taskType || "epic"} className="text-muted-foreground" />
             <span className="font-medium text-sm text-foreground truncate">{epic.title}</span>
-            {epicStatusOption && (
+            {epicStatusOption && epicPaint && (
               <span
                 className="px-1.5 py-0.5 rounded text-[10px] font-medium shrink-0"
                 style={{
-                  backgroundColor: `${epicStatusOption.color}20`,
-                  color: epicStatusOption.color,
+                  backgroundColor: epicPaint.translucent,
+                  color: epicPaint.solid,
                 }}
               >
                 {epicStatusOption.label}
@@ -115,11 +111,10 @@ export function BoardSwimlane({
             <BoardColumn
               key={status.id}
               statusOption={status}
+              paint={statusPaint(statusOptions, status.id)}
               tasks={tasksByStatus[status.id] || []}
               priorityOptions={priorityOptions}
-              selectedTaskIds={selectedTaskIds}
               onTaskClick={onTaskClick}
-              onCheckboxChange={onCheckboxChange}
               onAddTask={onAddTask}
               projectSlug={projectSlug}
               reparentHintActive={reparentHintActive}
@@ -153,7 +148,7 @@ export function SwimlaneStatusHeaderRow({ statusOptions }: SwimlaneStatusHeaderR
         >
           <span
             className="w-2.5 h-2.5 rounded-full shrink-0"
-            style={{ backgroundColor: status.color }}
+            style={{ background: statusPaint(statusOptions, status.id).gradient }}
           />
           <span className="font-medium text-sm text-foreground truncate">{status.label}</span>
         </div>

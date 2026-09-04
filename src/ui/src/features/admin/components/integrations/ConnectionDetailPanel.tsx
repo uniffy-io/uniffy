@@ -14,7 +14,7 @@ function protoTimestampToDateStr(ts?: { seconds: number; nanos: number }): strin
 
 export function ConnectionDetailPanel({ connection }: { connection: ConnectionPlain }) {
   return (
-    <div className="bg-card border border-border rounded-lg p-4">
+    <div className="rounded-lg bg-card shadow-edge p-4">
       <h3 className="font-medium text-foreground mb-4">Connection Details</h3>
       <div className="space-y-3">
         <div className="flex items-center justify-between">

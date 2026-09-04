@@ -12,6 +12,7 @@ from uniffy.core.models.projects.field_definition import (
     TaskStatusSemantic,
 )
 from uniffy.core.models.projects.view_config import ViewConfig
+from uniffy.domains.projects.status_colors import brand_ramp_color
 
 
 async def stage_default_project_fields(session: AsyncSession, project_id: UUID) -> None:
@@ -40,28 +41,28 @@ async def stage_default_project_fields(session: AsyncSession, project_id: UUID) 
                         "id": DefaultTaskStatusId.TODO,
                         "semantic": TaskStatusSemantic.TODO,
                         "label": "To Do",
-                        "color": "#6b7280",
+                        "color": brand_ramp_color(0, 4),
                         "sortOrder": 0,
                     },
                     {
                         "id": DefaultTaskStatusId.IN_PROGRESS,
                         "semantic": TaskStatusSemantic.IN_PROGRESS,
                         "label": "In Progress",
-                        "color": "#3b82f6",
+                        "color": brand_ramp_color(1, 4),
                         "sortOrder": 1,
                     },
                     {
                         "id": DefaultTaskStatusId.REVIEW,
                         "semantic": TaskStatusSemantic.REVIEW,
                         "label": "Review",
-                        "color": "#f59e0b",
+                        "color": brand_ramp_color(2, 4),
                         "sortOrder": 2,
                     },
                     {
                         "id": DefaultTaskStatusId.COMPLETED,
                         "semantic": TaskStatusSemantic.COMPLETED,
                         "label": "Done",
-                        "color": "#22c55e",
+                        "color": brand_ramp_color(3, 4),
                         "sortOrder": 3,
                     },
                 ]

@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Modal } from "@/components/ui/modal";
+import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/ui/modal";
 import {
   closeRenameAgentChatDialog,
   selectRenameAgentChatChannelId,
@@ -71,65 +71,66 @@ export function RenameAgentChatDialog() {
   const tooLong = value.length > MAX_NAME_LENGTH;
 
   return (
-    <Modal onClose={handleClose} maxWidth="max-w-md" closeDisabled={isSubmitting}>
-      <form
-        onSubmit={handleSubmit}
-        className="p-5 space-y-4"
-        data-testid="rename-agent-chat-dialog"
-      >
-        <div>
-          <h2 className="text-lg font-semibold text-foreground">Rename chat</h2>
-          <p className="text-sm text-muted-foreground mt-1">
-            Default name: <span className="font-medium text-foreground">{channel.name}</span>
-          </p>
-        </div>
+    <Modal onClose={handleClose} closeDisabled={isSubmitting} maxWidth="max-w-md">
+      <form onSubmit={handleSubmit} data-testid="rename-agent-chat-dialog">
+        <ModalHeader
+          title="Rename chat"
+          description={
+            <>
+              Default name: <span className="font-medium text-foreground">{channel.name}</span>
+            </>
+          }
+        />
 
-        <div>
-          <label htmlFor="rename-agent-chat-input" className="text-sm font-medium text-foreground">
-            Custom name
-          </label>
-          <Input
-            id="rename-agent-chat-input"
-            ref={inputRef}
-            type="text"
-            value={value}
-            onChange={(e) => setValue(e.target.value)}
-            placeholder="Leave empty to use the default name"
-            className="mt-1.5"
-            maxLength={MAX_NAME_LENGTH + 1}
-            disabled={isSubmitting}
-            data-testid="rename-agent-chat-input"
-          />
-          {tooLong && (
-            <p className="text-xs text-destructive mt-1">
-              Name must be {MAX_NAME_LENGTH} characters or fewer.
-            </p>
-          )}
-        </div>
+        <ModalBody>
+          <div>
+            <label
+              htmlFor="rename-agent-chat-input"
+              className="block text-sm text-muted-foreground mb-1"
+            >
+              Custom name
+            </label>
+            <Input
+              id="rename-agent-chat-input"
+              ref={inputRef}
+              type="text"
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              placeholder="Leave empty to use the default name"
+              maxLength={MAX_NAME_LENGTH + 1}
+              disabled={isSubmitting}
+              data-testid="rename-agent-chat-input"
+            />
+            {tooLong && (
+              <p className="text-xs text-destructive mt-1">
+                Name must be {MAX_NAME_LENGTH} characters or fewer.
+              </p>
+            )}
+          </div>
+        </ModalBody>
 
-        <div className="flex items-center justify-between gap-2">
+        <ModalFooter>
           <Button
             type="button"
             variant="ghost"
             onClick={handleReset}
             disabled={isSubmitting || !channel.customName}
+            className="mr-auto"
             data-testid="rename-agent-chat-reset"
           >
             Reset to default
           </Button>
-          <div className="flex items-center gap-2">
-            <Button type="button" variant="ghost" onClick={handleClose} disabled={isSubmitting}>
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              disabled={isSubmitting || tooLong}
-              data-testid="rename-agent-chat-submit"
-            >
-              Save
-            </Button>
-          </div>
-        </div>
+          <Button type="button" variant="ghost" onClick={handleClose} disabled={isSubmitting}>
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            disabled={isSubmitting || tooLong}
+            data-testid="rename-agent-chat-submit"
+          >
+            Save
+          </Button>
+        </ModalFooter>
       </form>
     </Modal>
   );

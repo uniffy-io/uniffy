@@ -1,7 +1,7 @@
 /** Virtualised message list; anchors via firstItemIndex shifts when older rows are prepended or oldest are evicted. */
 
 import { useRef, useEffect, useCallback, useMemo, useState, type ReactNode } from "react";
-import { Hash, Lock } from "@phosphor-icons/react";
+import { Hash, Lock, WarningCircle } from "@phosphor-icons/react";
 import { Virtuoso, type Components, type VirtuosoHandle } from "react-virtuoso";
 import { useAvatarUrl } from "@/shared/hooks/useAvatarUrl";
 import { getInitials } from "@/components/subject/utils";
@@ -16,6 +16,7 @@ import {
   selectTypingUsers,
   selectHasMoreForChannel,
   selectIsChannelLoading,
+  selectInitialChannelLoadFailed,
   selectIsWindowedForChannel,
   evictOldestMessages,
   evictExpiredTyping,
@@ -135,7 +136,7 @@ function DateSeparator({ label }: { label: string }) {
       data-date-label={label}
     >
       <div className="flex-1 h-px bg-border/30" />
-      <span className="text-xs font-medium text-muted-foreground/60 select-none whitespace-nowrap">
+      <span className="text-xs font-medium text-subtle-foreground select-none whitespace-nowrap">
         {label}
       </span>
       <div className="flex-1 h-px bg-border/30" />
@@ -269,7 +270,8 @@ function MessageListHeader({ context }: { context: MessageListContext }) {
 }
 
 function MessageListFooter() {
-  return <div className="pb-2" />;
+  // Room for the floating composer (set by ChannelView) plus the typing slot above it.
+  return <div style={{ height: "calc(var(--chat-compose-reserve, 0.5rem) + 2.5rem)" }} />;
 }
 
 const MESSAGE_LIST_COMPONENTS: Components<GroupedMessage, MessageListContext> = {
@@ -309,6 +311,9 @@ export function MessageList({ channelId: channelIdProp }: MessageListProps) {
   );
   const isLoadingMore = useAppSelector((state) =>
     effectiveChannelId ? selectIsChannelLoading(state, effectiveChannelId) : false,
+  );
+  const initialLoadFailed = useAppSelector((state) =>
+    effectiveChannelId ? selectInitialChannelLoadFailed(state, effectiveChannelId) : false,
   );
   // A jump loads a window around its target, so the bottom of the list is not the live tail.
   const isWindowed = useAppSelector((state) =>
@@ -611,7 +616,7 @@ export function MessageList({ channelId: channelIdProp }: MessageListProps) {
     );
 
   if (rootMessages.length === 0) {
-    if (!hasLoaded || isLoadingMore) {
+    if ((!hasLoaded && !initialLoadFailed) || isLoadingMore) {
       return (
         <div
           className="flex-1 flex items-center justify-center"
@@ -622,8 +627,30 @@ export function MessageList({ channelId: channelIdProp }: MessageListProps) {
         </div>
       );
     }
+    if (initialLoadFailed) {
+      return (
+        <div
+          className="flex-1 flex items-center justify-center px-4"
+          data-testid="chat-message-list"
+          data-error="true"
+        >
+          <div className="flex max-w-sm flex-col items-center text-center">
+            <WarningCircle size={40} weight="duotone" className="mb-3 text-muted-foreground" />
+            <p className="font-medium text-foreground">Messages could not be loaded</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              This channel is temporarily unavailable.
+            </p>
+          </div>
+        </div>
+      );
+    }
     return (
-      <div className="flex-1 flex flex-col" data-testid="chat-message-list" data-empty="true">
+      <div
+        className="flex-1 flex flex-col"
+        style={{ paddingBottom: "var(--chat-compose-reserve, 0px)" }}
+        data-testid="chat-message-list"
+        data-empty="true"
+      >
         <div className="flex-1">
           <ChannelEmptyState
             eyebrow={eyebrow}
@@ -661,12 +688,20 @@ export function MessageList({ channelId: channelIdProp }: MessageListProps) {
         computeItemKey={(_idx, g) => g.message.id}
       />
 
-      <NewMessagesPill
-        count={newMessageCount}
-        showJump={!atBottom || isWindowed}
-        onClick={scrollToBottom}
-      />
-      <TypingIndicator typingUsers={typingUsers} onStopAgent={handleStopAgent} />
+      {/* Tail sits just above the floating composer; the stream scrolls on beneath it. */}
+      <div
+        className="pointer-events-none absolute inset-x-0 z-10"
+        style={{ bottom: "var(--chat-compose-reserve, 0px)" }}
+      >
+        <NewMessagesPill
+          count={newMessageCount}
+          showJump={!atBottom || isWindowed}
+          onClick={scrollToBottom}
+        />
+        <div className="pointer-events-auto">
+          <TypingIndicator typingUsers={typingUsers} onStopAgent={handleStopAgent} />
+        </div>
+      </div>
     </div>
   );
 }

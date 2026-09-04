@@ -71,7 +71,7 @@ export function TeamMentionPreview({
         </span>
       )}
 
-      <span className="flex px-4 py-2.5 pl-5 bg-muted/30 border-t border-border/50 items-center gap-2">
+      <span className="flex px-4 py-2.5 pl-5 bg-background/60 items-center gap-2">
         <button
           onClick={(e) => {
             e.stopPropagation();

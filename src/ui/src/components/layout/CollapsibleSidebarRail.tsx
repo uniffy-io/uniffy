@@ -27,7 +27,7 @@ export function CollapsibleSidebarRail({
 }: CollapsibleSidebarRailProps) {
   return (
     <div className="group/sidebar h-full relative">
-      <div className="h-full flex flex-col items-center pt-3 gap-0.5 bg-background border-r border-border">
+      <div className="h-full flex flex-col items-center pt-3 gap-0.5 bg-nav border-r border-border-strong">
         <button
           type="button"
           onClick={onExpand}
@@ -66,9 +66,8 @@ export function CollapsibleSidebarRail({
           "w-0 group-hover/sidebar:w-72",
           "overflow-hidden",
           "transition-[width,box-shadow] duration-200 ease-out",
-          "bg-background",
-          "group-hover/sidebar:shadow-xl",
-          "group-hover/sidebar:border-r group-hover/sidebar:border-border",
+          "bg-nav",
+          "group-hover/sidebar:shadow-float-lg",
         )}
       >
         <div className="w-72 h-full overflow-hidden">

@@ -25,6 +25,7 @@ import {
 import type { Icon } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { cn } from "@/shared/utils/cn";
+import { popoverShellClass } from "@/components/ui/popover";
 import { parseUrn } from "@/shared/utils/urn";
 import { useNotificationAction } from "@/features/notifications/hooks/useNotificationAction";
 import { SubjectAvatar } from "@/components/subject/SubjectAvatar";
@@ -99,8 +100,8 @@ export function NotificationToast({ notification, toastId, onMarkAsRead }: Notif
     <div
       onClick={handleClick}
       className={cn(
-        "flex items-start gap-3 w-[360px] p-3 rounded-lg cursor-pointer",
-        "bg-card border border-border shadow-lg",
+        popoverShellClass,
+        "flex items-start gap-3 w-[360px] p-3 cursor-pointer",
         "hover:bg-muted/30 transition-colors",
       )}
     >
@@ -152,7 +153,7 @@ export function NotificationToast({ notification, toastId, onMarkAsRead }: Notif
 
       <button
         onClick={handleDismiss}
-        className="p-1 rounded text-muted-foreground/60 hover:text-foreground shrink-0 transition-colors"
+        className="p-1 rounded text-subtle-foreground hover:text-foreground shrink-0 transition-colors"
       >
         <X size={12} weight="bold" />
       </button>

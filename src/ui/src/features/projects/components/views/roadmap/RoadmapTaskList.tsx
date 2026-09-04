@@ -1,10 +1,12 @@
 import { useRef, useEffect } from "react";
 import { Circle, CheckCircle, Spinner, CaretRight, CaretDown } from "@phosphor-icons/react";
 import { cn } from "@/shared/utils/cn";
+import { Checkbox } from "@/components/ui/checkbox";
 import { SubjectAvatarStack } from "@/components/subject";
 import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
 import { LAYOUT } from "@/features/projects/constants";
-import { getTaskTypeConfig } from "@/features/projects/utils/taskTypes";
+import { statusPaint, type StatusPaint } from "@/features/projects/utils/statusPaint";
+import { TaskTypeIcon } from "@/features/projects/components/TaskTypeIcon";
 import type { Task, SelectOption } from "@/features/projects/types";
 import type { RoadmapRow } from "./roadmapRows";
 
@@ -81,6 +83,7 @@ export function RoadmapTaskList({
                 key={task.id}
                 task={task}
                 statusOption={statusOption}
+                paint={statusPaint(statusOptions, task.status)}
                 hasDates={!!hasDates}
                 isSelected={selectedTaskIds.includes(task.id)}
                 projectSlug={projectSlug}
@@ -102,6 +105,7 @@ export function RoadmapTaskList({
 interface RoadmapTaskRowProps {
   task: Task;
   statusOption?: SelectOption;
+  paint: StatusPaint;
   hasDates: boolean;
   isSelected: boolean;
   projectSlug: string;
@@ -116,6 +120,7 @@ interface RoadmapTaskRowProps {
 function RoadmapTaskRow({
   task,
   statusOption,
+  paint,
   hasDates,
   isSelected,
   projectSlug,
@@ -126,9 +131,6 @@ function RoadmapTaskRow({
   onCheckboxChange,
   onToggleCollapse,
 }: RoadmapTaskRowProps) {
-  const typeConfig = getTaskTypeConfig(task.taskType || "task");
-  const TypeIcon = typeConfig.icon;
-
   return (
     <div
       className={cn(
@@ -167,19 +169,14 @@ function RoadmapTaskRow({
       </div>
 
       {/* Checkbox */}
-      <input
-        type="checkbox"
-        className="h-3.5 w-3.5 rounded border-border shrink-0"
-        checked={isSelected}
-        onChange={(e) => {
-          e.stopPropagation();
-          onCheckboxChange();
-        }}
-        onClick={(e) => e.stopPropagation()}
-      />
-
-      {/* Task type icon */}
-      <TypeIcon size={14} weight="fill" className="text-muted-foreground shrink-0" />
+      <span className="shrink-0" onClick={(e) => e.stopPropagation()}>
+        <Checkbox
+          size="sm"
+          aria-label={`Select ${task.title}`}
+          checked={isSelected}
+          onChange={() => onCheckboxChange()}
+        />
+      </span>
 
       {/* Task ID */}
       <span className="text-xs font-mono text-muted-foreground shrink-0">
@@ -187,9 +184,10 @@ function RoadmapTaskRow({
       </span>
 
       {/* Status icon */}
-      <StatusIcon statusId={statusOption?.id} color={statusOption?.color || "#6b7280"} />
+      <StatusIcon statusId={statusOption?.id} color={paint.solid} />
 
-      {/* Task title */}
+      {/* Type + title */}
+      <TaskTypeIcon type={task.taskType} className="text-muted-foreground" />
       <span
         className={cn(
           "flex-1 text-sm truncate",

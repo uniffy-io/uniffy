@@ -6,6 +6,7 @@ import { mailApi } from "@/features/admin/api/mailApi";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { Input } from "@/components/ui/input";
 import { NumberInput } from "@/components/ui/number-input";
 import { cn } from "@/shared/utils/cn";
 import { friendlyErrorMessage } from "@/config";
@@ -181,7 +182,7 @@ export function EmailSection() {
   if (!isAdmin) {
     return (
       <div className="max-w-3xl w-full mx-auto">
-        <div className="p-5 rounded-lg border border-border bg-card">
+        <div className="p-5 rounded-xl bg-surface shadow-edge">
           <p className="text-sm text-muted-foreground">
             Only organization owners and admins can manage mail configuration.
           </p>
@@ -326,42 +327,38 @@ function ConfigurationTab({
     <div className="flex flex-col gap-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Field label="From address" required>
-          <input
+          <Input
             type="email"
             value={draft.fromAddress}
             onChange={(e) => update("fromAddress", e.target.value)}
             placeholder="no-reply@acme.com"
-            className={inputClass}
             disabled={loading}
           />
         </Field>
         <Field label="From name">
-          <input
+          <Input
             type="text"
             value={draft.fromName}
             onChange={(e) => update("fromName", e.target.value)}
             placeholder="Uniffy"
-            className={inputClass}
             disabled={loading}
           />
         </Field>
         <Field label="Reply-To" className="md:col-span-2">
-          <input
+          <Input
             type="email"
             value={draft.replyTo}
             onChange={(e) => update("replyTo", e.target.value)}
             placeholder="support@acme.com"
-            className={inputClass}
             disabled={loading}
           />
         </Field>
         <Field label="SMTP host" required>
-          <input
+          <Input
             type="text"
             value={draft.smtpHost}
             onChange={(e) => update("smtpHost", e.target.value)}
             placeholder="smtp.resend.com"
-            className={inputClass}
             disabled={loading}
           />
         </Field>
@@ -372,27 +369,24 @@ function ConfigurationTab({
             placeholder="587"
             min={1}
             max={65535}
-            className={inputClass}
             disabled={loading}
           />
         </Field>
         <Field label="SMTP username">
-          <input
+          <Input
             type="text"
             value={draft.smtpUsername}
             onChange={(e) => update("smtpUsername", e.target.value)}
             placeholder="resend"
-            className={inputClass}
             disabled={loading}
           />
         </Field>
         <Field label="SMTP password">
-          <input
+          <Input
             type="password"
             value={draft.smtpPassword}
             onChange={(e) => update("smtpPassword", e.target.value)}
             placeholder={passwordSet ? "Leave blank to keep current" : "Paste API key or password"}
-            className={inputClass}
             autoComplete="new-password"
             disabled={loading}
           />
@@ -408,7 +402,6 @@ function ConfigurationTab({
             value={draft.rateLimitPerMin}
             onChange={(e) => update("rateLimitPerMin", e.target.value)}
             min={1}
-            className={inputClass}
             disabled={loading}
           />
         </Field>
@@ -467,12 +460,11 @@ function SendTestTab({
       </p>
 
       <Field label="Recipient">
-        <input
+        <Input
           type="email"
           value={recipient}
           onChange={(e) => setRecipient(e.target.value)}
           placeholder="you@example.com"
-          className={inputClass}
         />
       </Field>
 
@@ -519,7 +511,7 @@ function SendTestTab({
       )}
 
       {lastTestSummary && (
-        <div className="p-4 rounded-lg border border-border bg-card text-sm">
+        <div className="p-4 rounded-xl bg-surface shadow-edge text-sm">
           <p className="text-muted-foreground">
             Last attempt {lastTestSummary.relative} -{" "}
             <span
@@ -563,11 +555,3 @@ function Field({
     </label>
   );
 }
-
-const inputClass = cn(
-  "w-full px-3 py-2 rounded-md text-sm",
-  "bg-background text-foreground",
-  "border border-border",
-  "focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring",
-  "disabled:opacity-50 disabled:cursor-not-allowed",
-);

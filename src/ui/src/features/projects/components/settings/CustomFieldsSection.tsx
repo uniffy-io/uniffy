@@ -226,7 +226,7 @@ export function CustomFieldsSection({ project }: CustomFieldsSectionProps) {
       {/* System Fields */}
       <section className="space-y-4">
         <h2 className="text-lg font-semibold text-foreground">System Fields</h2>
-        <div className="bg-card rounded-lg border border-border p-4 md:p-6">
+        <div className="rounded-xl bg-surface p-4 shadow-edge md:p-6">
           <div className="space-y-1">
             {systemFields.map((field) => {
               const typeConfig = getFieldTypeConfig(field.type);
@@ -249,7 +249,7 @@ export function CustomFieldsSection({ project }: CustomFieldsSectionProps) {
       {/* Custom Fields */}
       <section className="space-y-4">
         <h2 className="text-lg font-semibold text-foreground">Custom Fields</h2>
-        <div className="bg-card rounded-lg border border-border p-4 md:p-6 space-y-4">
+        <div className="space-y-4 rounded-xl bg-surface p-4 shadow-edge md:p-6">
           {customFields.length === 0 && !isCreating && (
             <p className="text-sm text-muted-foreground">No custom fields yet. Add one below.</p>
           )}
@@ -328,7 +328,7 @@ export function CustomFieldsSection({ project }: CustomFieldsSectionProps) {
                 >
                   <DotsSixVertical
                     size={14}
-                    className="text-muted-foreground/40 cursor-grab shrink-0"
+                    className="text-subtle-foreground cursor-grab shrink-0"
                   />
                   <TypeIcon size={14} className="text-muted-foreground shrink-0" />
                   <span className="text-sm font-medium flex-1 truncate">{field.name}</span>
@@ -365,7 +365,7 @@ export function CustomFieldsSection({ project }: CustomFieldsSectionProps) {
 
           {/* Create Field Form */}
           {isCreating ? (
-            <div className="p-4 rounded-lg border border-border bg-background space-y-4">
+            <div className="space-y-4 rounded-xl bg-card p-4 shadow-edge">
               <h4 className="text-sm font-medium">New Field</h4>
 
               {/* Name */}
@@ -394,10 +394,10 @@ export function CustomFieldsSection({ project }: CustomFieldsSectionProps) {
                         }
                       }}
                       className={cn(
-                        "flex flex-col items-center gap-1 p-2 rounded-md border text-xs transition-colors",
+                        "flex flex-col items-center gap-1 p-2 rounded-md text-xs transition-shadow duration-150",
                         newType === type
-                          ? "border-primary bg-primary/10 text-primary"
-                          : "border-border text-muted-foreground hover:text-foreground hover:bg-muted",
+                          ? "bg-primary/5 text-primary shadow-edge-primary"
+                          : "text-muted-foreground shadow-edge hover:text-foreground hover:shadow-edge-strong",
                       )}
                     >
                       <Icon size={16} />
@@ -490,12 +490,12 @@ function OptionsEditor({ options, onChange, onAdd }: OptionsEditorProps) {
                 className="w-6 h-6 rounded-full border border-border cursor-pointer p-0 appearance-none bg-transparent [&::-webkit-color-swatch-wrapper]:p-0 [&::-webkit-color-swatch]:rounded-full [&::-webkit-color-swatch]:border-0"
               />
             </div>
-            <input
+            <Input
               type="text"
               value={opt.label}
               onChange={(e) => updateOption(index, { label: e.target.value })}
               placeholder={`Option ${index + 1}`}
-              className="flex-1 h-8 px-2 text-sm bg-background border border-border rounded-md outline-none focus:border-primary"
+              className="flex-1 h-8 px-2"
             />
             <button
               type="button"

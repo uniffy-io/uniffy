@@ -1,20 +1,12 @@
 import { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import {
-  ArrowLeft,
-  Books,
-  Cpu,
-  Image,
-  Lightning,
-  MagnifyingGlass,
-  Plus,
-  Warning,
-} from "@phosphor-icons/react";
+import { ArrowLeft, Books, Cpu, Image, Lightning, Plus, Warning } from "@phosphor-icons/react";
 import { useAppSelector } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { PaneBackLink, PaneHeader, PaneHeaderBar } from "@/components/ui/pane-header";
+import { SearchField } from "@/components/ui/search-field";
 import { AgentAvatar } from "@/features/agents/components/AgentAvatar";
 import { toolGroupVisual, toolVerbLabels } from "@/features/agents/config/toolGroupVisuals";
 import { brandAlpha, brandGradient } from "@/config/theme/brandGradients";
@@ -140,9 +132,9 @@ function TemplateCard({
       }}
       data-testid={`agents-catalog-card-${template.key}`}
       className={cn(
-        "group flex flex-col gap-3 rounded-xl border border-border bg-card p-4 text-left",
-        "cursor-pointer transition-colors hover:border-primary/50 hover:bg-muted/30",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        "group flex flex-col gap-3 rounded-xl bg-card p-4 text-left shadow-edge",
+        "cursor-pointer transition-shadow duration-150 hover:shadow-edge-strong",
+        "focus-ring",
       )}
     >
       <div className="flex items-start gap-3">
@@ -233,58 +225,55 @@ function TemplateDetail({
 
   return (
     <div
-      className="flex-1 overflow-y-auto"
+      className="flex min-h-0 flex-1 flex-col overflow-hidden"
       data-testid="agents-catalog-detail"
       data-template-key={template.key}
     >
-      <div className="mx-auto w-full max-w-3xl px-6 py-6">
-        <button
-          type="button"
-          onClick={onBack}
-          className="mb-4 flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
-          data-testid="agents-catalog-back"
+      <PaneHeader>
+        <PaneHeaderBar
+          eyebrow={
+            <PaneBackLink onClick={onBack} data-testid="agents-catalog-back">
+              <ArrowLeft size={14} />
+              All templates
+            </PaneBackLink>
+          }
+          icon={<AgentAvatar avatarEmoji={template.emoji} agentName={template.name} size="lg" />}
+          title={template.name}
+          subtitle={template.description}
         >
-          <ArrowLeft size={14} />
-          All templates
-        </button>
-
-        <div className="flex items-start gap-4">
-          <AgentAvatar avatarEmoji={template.emoji} agentName={template.name} size="xl" />
-          <div className="min-w-0 flex-1">
-            <h1 className="text-xl font-semibold text-foreground">{template.name}</h1>
-            <p className="mt-1 text-sm text-muted-foreground">{template.description}</p>
-            {(template.recommendedModel || template.recommendedImageModel) && (
-              <div className="mt-1.5 flex flex-wrap gap-1">
-                {template.recommendedModel && (
-                  <Badge
-                    variant="secondary"
-                    className="gap-1 text-[10px]"
-                    data-testid="agents-catalog-recommended-model"
-                  >
-                    <Cpu size={10} />
-                    {recommendedModel?.displayName ?? template.recommendedModel}
-                  </Badge>
-                )}
-                {template.recommendedImageModel && (
-                  <Badge
-                    variant="secondary"
-                    className="gap-1 text-[10px]"
-                    data-testid="agents-catalog-recommended-image-model"
-                  >
-                    <Image size={10} />
-                    {recommendedImageModel?.displayName ?? template.recommendedImageModel}
-                  </Badge>
-                )}
-              </div>
-            )}
-          </div>
+          {(template.recommendedModel || template.recommendedImageModel) && (
+            <div className="flex shrink-0 flex-wrap items-center gap-1">
+              {template.recommendedModel && (
+                <Badge
+                  variant="secondary"
+                  className="gap-1 text-[10px]"
+                  data-testid="agents-catalog-recommended-model"
+                >
+                  <Cpu size={10} />
+                  {recommendedModel?.displayName ?? template.recommendedModel}
+                </Badge>
+              )}
+              {template.recommendedImageModel && (
+                <Badge
+                  variant="secondary"
+                  className="gap-1 text-[10px]"
+                  data-testid="agents-catalog-recommended-image-model"
+                >
+                  <Image size={10} />
+                  {recommendedImageModel?.displayName ?? template.recommendedImageModel}
+                </Badge>
+              )}
+            </div>
+          )}
           <Button onClick={onUse} data-testid="agents-catalog-detail-use">
             <Plus size={16} />
             Use this template
           </Button>
-        </div>
+        </PaneHeaderBar>
+      </PaneHeader>
 
-        <section className="mt-8">
+      <div className="mx-auto w-full max-w-3xl flex-1 overflow-y-auto px-6 py-6">
+        <section>
           <h2 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
             Instructions
           </h2>
@@ -380,30 +369,18 @@ export function CatalogView({ onUseTemplate }: CatalogViewProps) {
   // rather than stranding the URL on a blank pane.
   return (
     <div className="flex h-full flex-col overflow-hidden" data-testid="agents-catalog-view">
-      <div className="border-b border-border/60 bg-card px-6 py-4">
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="min-w-0 flex-1">
-            <h1 className="text-lg font-semibold text-foreground">Agent catalog</h1>
-            <p className="mt-0.5 text-sm text-muted-foreground">
-              Ready-made agents to start from. Everything is editable once created.
-            </p>
-          </div>
-          <div className="relative w-full sm:w-64">
-            <MagnifyingGlass
-              size={14}
-              className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground"
-            />
-            <Input
-              type="text"
-              placeholder="Search templates..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="h-8 pl-8 text-xs"
-              data-testid="agents-catalog-search"
-            />
-          </div>
-        </div>
-      </div>
+      <PaneHeader>
+        <PaneHeaderBar icon={Books} title="Agent catalog">
+          <SearchField
+            size="sm"
+            value={search}
+            onChange={setSearch}
+            placeholder="Search templates..."
+            containerClassName="w-64"
+            data-testid="agents-catalog-search"
+          />
+        </PaneHeaderBar>
+      </PaneHeader>
 
       <div className="flex-1 overflow-y-auto p-6">
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3" data-testid="agents-catalog-grid">
@@ -412,8 +389,8 @@ export function CatalogView({ onUseTemplate }: CatalogViewProps) {
             onClick={() => onUseTemplate()}
             data-testid="agents-catalog-card-blank"
             className={cn(
-              "flex flex-col items-start gap-3 rounded-xl border border-dashed border-border bg-card p-4 text-left",
-              "transition-colors hover:border-primary/50 hover:bg-muted/30",
+              "flex flex-col items-start gap-3 rounded-xl bg-card p-4 text-left shadow-edge",
+              "transition-shadow duration-150 hover:shadow-edge-strong",
             )}
           >
             <span className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">

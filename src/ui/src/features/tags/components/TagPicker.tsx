@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Plus } from "@phosphor-icons/react";
 
 import { useAppDispatch } from "@/app/hooks";
+import { popoverShellClass } from "@/components/ui/popover";
 import { cn } from "@/shared/utils/cn";
 import { TagChip } from "@/features/tags/components/TagChip";
 import { bulkUpsertTags, type SerializedTag } from "@/features/tags/store/tagsSlice";
@@ -164,7 +165,7 @@ export function TagPicker({
             onBlur={onBlur}
             placeholder={placeholder}
             maxLength={32}
-            className="w-28 rounded-full bg-transparent px-2.5 py-0.5 text-xs text-foreground outline-none ring-1 ring-primary/40 focus:ring-primary placeholder:text-muted-foreground"
+            className="focus-ring w-28 rounded-full bg-transparent px-2.5 py-0.5 text-xs text-foreground ring-1 ring-primary/40 placeholder:text-muted-foreground"
           />
         )}
 
@@ -186,7 +187,12 @@ export function TagPicker({
       </div>
 
       {dropdownOpen && (
-        <div className="absolute left-0 z-20 mt-1 max-h-60 w-64 overflow-y-auto rounded-md border border-border bg-card shadow-lg">
+        <div
+          className={cn(
+            popoverShellClass,
+            "absolute left-0 z-20 mt-1 max-h-60 w-64 overflow-y-auto",
+          )}
+        >
           {suggestions.length === 0 ? (
             <button
               type="button"

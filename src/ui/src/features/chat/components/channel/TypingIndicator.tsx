@@ -53,7 +53,7 @@ function AgentWorkingRow({
 }) {
   return (
     <div
-      className="uniffy-typing-enter pointer-events-auto inline-flex items-center gap-2.5"
+      className="uniffy-typing-enter pointer-events-auto inline-flex items-center gap-2.5 rounded-full border border-border bg-card/60 py-1 pl-2.5 pr-1 shadow-sm backdrop-blur-lg"
       data-testid="chat-agent-working"
     >
       <ThinkingWave tone="agent" />
@@ -76,7 +76,7 @@ function AgentWorkingRow({
 function HumanTypingRow({ users }: { users: TypingEntry[] }) {
   const visible = users.slice(0, 3);
   return (
-    <div className="uniffy-typing-enter inline-flex items-center gap-2 text-xs text-muted-foreground">
+    <div className="uniffy-typing-enter inline-flex items-center gap-2 rounded-full border border-border bg-card/60 px-2.5 py-1 text-xs text-muted-foreground shadow-sm backdrop-blur-lg">
       <div className="flex items-center -space-x-1">
         {visible.map((u) => (
           <div key={u.userId} className="rounded-full ring-2 ring-background">

@@ -11,6 +11,7 @@ import {
   removeProjectFilterFromQuery,
 } from "@/features/search/utils/queryParser";
 import { SearchResultType, type SearchResultItem } from "@uniffy/proto/search/v1/search_pb";
+import { popoverShellClass } from "@/components/ui/popover";
 import { cn } from "@/shared/utils/cn";
 
 // An @-mention is a people gesture first: users, agents, and teams (mentioning
@@ -205,7 +206,9 @@ export function ChatMentionPopup({
           ref={popupRef}
           className="w-full max-w-2xl mx-4 animate-in fade-in-0 zoom-in-95 slide-in-from-top-4 duration-200"
         >
-          <div className="rounded-2xl border-2 border-primary/50 bg-card shadow-2xl ring-4 ring-primary/10 overflow-hidden">
+          <div
+            className={cn(popoverShellClass, "rounded-2xl ring-1 ring-primary/40 overflow-hidden")}
+          >
             <div className="relative flex items-center border-b border-border/50">
               <div className="absolute left-4 flex items-center gap-1">
                 <At size={20} weight="bold" className="text-primary" />
@@ -219,7 +222,7 @@ export function ChatMentionPopup({
                 placeholder="Search to mention..."
                 className={cn(
                   "w-full h-14 bg-transparent pl-12 pr-20 text-lg",
-                  "placeholder:text-muted-foreground/60",
+                  "placeholder:text-subtle-foreground",
                   "focus:outline-none",
                 )}
                 autoComplete="off"
@@ -288,7 +291,7 @@ export function ChatMentionPopup({
               <div className="pb-2">
                 {staticEntries && staticEntries.length > 0 && (
                   <div className="px-4 pt-3">
-                    <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground/60 mb-2">
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-subtle-foreground mb-2">
                       Notify channel
                     </p>
                     <div className="flex items-center gap-2 flex-wrap">
@@ -310,7 +313,7 @@ export function ChatMentionPopup({
                   <p className="text-sm text-muted-foreground">
                     Type to search for content to mention
                   </p>
-                  <p className="text-xs text-muted-foreground/60 mt-2 mb-4">
+                  <p className="text-xs text-subtle-foreground mt-2 mb-4">
                     Search for notes, files, users, and more
                   </p>
                   <FilterHints onHintClick={handleFilterHintClick} />

@@ -4,6 +4,7 @@ import { createClient } from "@connectrpc/connect";
 import { unaryTransport } from "@/config/api";
 import { AuthService } from "@uniffy/proto/auth/v1/auth_pb";
 import { useAppSelector } from "@/app/hooks";
+import { Card } from "@/components/ui/card";
 import {
   clearLocalEncryptedStorage,
   rotateAndClearAll,
@@ -63,7 +64,7 @@ export function SecuritySection() {
 
       <section className="space-y-4">
         <h2 className="text-lg font-semibold text-foreground">Client-Side Data</h2>
-        <div className="bg-card rounded-lg border border-border p-4 md:p-6 space-y-4">
+        <Card tone="surface" className="p-4 md:p-6 space-y-4">
           <div className="flex items-start gap-3">
             <HardDrives
               size={20}
@@ -96,7 +97,7 @@ export function SecuritySection() {
                 onClick={handleClearDevice}
                 disabled={clearingDevice || !encryptionReady}
                 className="shrink-0 px-4 py-2 text-sm font-medium rounded-md border border-border
-                  bg-card text-foreground hover:bg-accent transition-colors
+                  bg-card text-foreground hover:bg-muted/60 transition-colors
                   disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {clearingDevice ? "Clearing..." : "Clear This Device"}
@@ -130,7 +131,7 @@ export function SecuritySection() {
                     onClick={() => setShowConfirmAll(false)}
                     disabled={clearingAll}
                     className="px-3 py-2 text-sm rounded-md border border-border
-                      bg-card text-foreground hover:bg-accent transition-colors"
+                      bg-card text-foreground hover:bg-muted/60 transition-colors"
                   >
                     Cancel
                   </button>
@@ -149,7 +150,7 @@ export function SecuritySection() {
               )}
             </div>
           </div>
-        </div>
+        </Card>
       </section>
 
       <SessionsSection />

@@ -3,7 +3,6 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, CaretDown, CaretRight, Key, Sparkle, X } from "@phosphor-icons/react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
-import { cn } from "@/shared/utils/cn";
 import {
   selectProviderKeys,
   selectModelsByProvider,
@@ -20,7 +19,9 @@ import {
 import type { SerializedAgent } from "@/features/agents/store/agentsThunks";
 import { TagPicker } from "@/features/tags";
 import { AvatarUpload } from "@/components/ui/avatar-upload";
+import { Input } from "@/components/ui/input";
 import { MultiSelect } from "@/components/ui/multi-select";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, type SelectOption } from "@/components/ui/select";
 import { ToggleSwitch } from "@/components/ui/toggle-switch";
 import { ModelParamsSection } from "@/features/agents/components/ModelParamsSection";
@@ -339,14 +340,9 @@ export function OverviewTab({ agent }: { agent: SerializedAgent }) {
             <div>
               <FieldLabel>Name</FieldLabel>
               <div className="flex gap-2">
-                <input
+                <Input
                   type="text"
-                  className={cn(
-                    "flex-1 bg-muted/50 border border-border rounded-lg px-3 py-2 text-sm text-foreground",
-                    "focus:outline-none focus:ring-1 focus:ring-ring focus:border-ring",
-                    "transition-all placeholder:text-muted-foreground",
-                    !canEdit && "opacity-50 cursor-not-allowed",
-                  )}
+                  className="h-auto flex-1 rounded-lg"
                   value={nameValue}
                   onChange={(e) => setNameState({ id: agent.id, value: e.target.value })}
                   onKeyDown={(e) => {
@@ -376,13 +372,9 @@ export function OverviewTab({ agent }: { agent: SerializedAgent }) {
             <div className="flex items-end gap-4">
               <div>
                 <FieldLabel>Fallback Emoji</FieldLabel>
-                <input
+                <Input
                   type="text"
-                  className={cn(
-                    "w-16 bg-muted/50 border border-border rounded-lg px-3 py-2 text-center text-base text-foreground",
-                    "focus:outline-none focus:ring-1 focus:ring-ring focus:border-ring transition-all",
-                    !canEdit && "opacity-50 cursor-not-allowed",
-                  )}
+                  className="h-auto w-16 rounded-lg text-center text-base"
                   value={agent.avatarEmoji}
                   maxLength={2}
                   onChange={(e) => handleUpdate({ avatarEmoji: e.target.value })}
@@ -579,7 +571,7 @@ export function OverviewTab({ agent }: { agent: SerializedAgent }) {
                           />
                           <div>
                             <FieldLabel>Style Preset</FieldLabel>
-                            <textarea
+                            <Textarea
                               value={styleState.value}
                               onChange={(e) =>
                                 setStyleState({
@@ -591,12 +583,7 @@ export function OverviewTab({ agent }: { agent: SerializedAgent }) {
                               rows={3}
                               disabled={!canEdit}
                               placeholder="e.g. flat vector illustration, muted palette, no text"
-                              className={cn(
-                                "w-full bg-background border border-border rounded-md px-3 py-2 text-sm text-foreground",
-                                "focus:outline-none focus:ring-1 focus:ring-ring focus:border-ring transition-all",
-                                "placeholder:text-muted-foreground resize-y",
-                                !canEdit && "opacity-50 cursor-not-allowed",
-                              )}
+                              className="resize-y"
                             />
                             <div className="mt-1.5 flex items-start justify-between gap-3">
                               <p className="text-xs text-muted-foreground">

@@ -1,6 +1,8 @@
 import { useEffect, useRef, useCallback, useState } from "react";
 import { createPortal } from "react-dom";
 import { X, CircleNotch } from "@phosphor-icons/react";
+import { popoverShellClass } from "@/components/ui/popover";
+import { useOverlayEscape } from "@/shared/hooks/useOverlayEscape";
 import { cn } from "@/shared/utils/cn";
 import { CommentThread } from "@/features/comments/components/CommentThread";
 import { serializeComment } from "@/features/comments/store/commentsSlice";
@@ -71,16 +73,7 @@ export function CommentThreadPopover({
     };
   }, [onClose]);
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        onClose();
-      }
-    };
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [onClose]);
+  useOverlayEscape(onClose);
 
   const handleRefresh = useCallback(() => {
     onRefresh();
@@ -91,8 +84,8 @@ export function CommentThreadPopover({
     <div
       ref={popoverRef}
       className={cn(
+        popoverShellClass,
         "fixed z-50 transform -translate-x-1/2",
-        "bg-card text-card-foreground border border-border rounded-lg shadow-xl",
         "w-80 max-h-96 overflow-y-auto",
         "animate-in fade-in-0 zoom-in-95 duration-150",
       )}

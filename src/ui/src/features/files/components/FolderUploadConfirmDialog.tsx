@@ -11,6 +11,7 @@ import {
 } from "@phosphor-icons/react";
 import { useAppSelector } from "@/app/hooks";
 import { Button } from "@/components/ui/button";
+import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/ui/modal";
 import { formatFileSize } from "@/shared/utils/dateFormatting";
 import { cn } from "@/shared/utils/cn";
 import type { ScanResult, FolderTreeStructure } from "@/features/files/utils/folderScanner";
@@ -115,178 +116,151 @@ export function FolderUploadConfirmDialog({
   const excludedCount = totalFiles - includedFiles.length;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
-      <div className="fixed inset-0 bg-black/50" onClick={handleCancel} />
-      <div
-        className={cn(
-          "relative bg-card border border-border rounded-t-xl sm:rounded-xl shadow-lg",
-          "w-[calc(100vw-2rem)] max-w-lg p-6",
-          "max-h-[85vh] flex flex-col",
-        )}
-      >
-        <div className="flex items-center gap-3 mb-4">
-          <div className="p-2 rounded-lg bg-primary/10">
-            <FolderOpen size={24} weight="duotone" className="text-primary" />
-          </div>
-          <div>
-            <h2 className="text-lg font-semibold text-foreground">Upload Folder</h2>
-            <p className="text-xs text-muted-foreground">
-              Uncheck files or folders to exclude them
+    <Modal onClose={handleCancel} maxWidth="max-w-lg" className="flex flex-col max-h-[85dvh]">
+      <ModalHeader title="Upload folder" />
+
+      <ModalBody scrollable={false} className="flex-1 min-h-0 overflow-y-auto">
+        <div className="grid grid-cols-3 gap-3">
+          <div className="rounded-md bg-muted/50 p-3 text-center">
+            <p className="text-lg font-semibold text-foreground">
+              {includedFiles.length}
+              {excludedCount > 0 && (
+                <span className="text-xs text-muted-foreground font-normal"> / {totalFiles}</span>
+              )}
             </p>
+            <p className="text-xs text-muted-foreground">Files</p>
+          </div>
+          <div className="rounded-md bg-muted/50 p-3 text-center">
+            <p className="text-lg font-semibold text-foreground">{scanResult.folderCount}</p>
+            <p className="text-xs text-muted-foreground">Folders</p>
+          </div>
+          <div className="rounded-md bg-muted/50 p-3 text-center">
+            <p className="text-lg font-semibold text-foreground">{formatFileSize(includedSize)}</p>
+            <p className="text-xs text-muted-foreground">Total size</p>
           </div>
         </div>
 
-        <div className="space-y-4 overflow-y-auto flex-1 min-h-0">
-          {/* Summary stats */}
-          <div className="grid grid-cols-3 gap-3">
-            <div className="rounded-md bg-muted/50 p-3 text-center">
-              <p className="text-lg font-semibold text-foreground">
-                {includedFiles.length}
-                {excludedCount > 0 && (
-                  <span className="text-xs text-muted-foreground font-normal"> / {totalFiles}</span>
-                )}
-              </p>
-              <p className="text-xs text-muted-foreground">Files</p>
-            </div>
-            <div className="rounded-md bg-muted/50 p-3 text-center">
-              <p className="text-lg font-semibold text-foreground">{scanResult.folderCount}</p>
-              <p className="text-xs text-muted-foreground">Folders</p>
-            </div>
-            <div className="rounded-md bg-muted/50 p-3 text-center">
-              <p className="text-lg font-semibold text-foreground">
-                {formatFileSize(includedSize)}
-              </p>
-              <p className="text-xs text-muted-foreground">Total Size</p>
-            </div>
+        {scanResult.truncated && (
+          <div className="flex items-center gap-2 p-3 rounded-md bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-400 text-sm">
+            <Warning size={16} weight="fill" className="shrink-0" />
+            <span>File limit reached (10,000). Some files will not be uploaded.</span>
           </div>
+        )}
 
-          {/* Truncation warning */}
-          {scanResult.truncated && (
-            <div className="flex items-center gap-2 p-3 rounded-md bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-400 text-sm">
-              <Warning size={16} weight="fill" className="shrink-0" />
-              <span>File limit reached (10,000). Some files will not be uploaded.</span>
-            </div>
-          )}
-
-          {/* Quota impact */}
-          {quotaImpact.remaining !== null && (
-            <div
-              className={cn(
-                "p-3 rounded-md text-sm",
-                quotaImpact.wouldExceed
-                  ? "bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-400"
-                  : "bg-muted/50 text-muted-foreground",
-              )}
-            >
-              {quotaImpact.wouldExceed ? (
-                <div className="flex items-center gap-2">
-                  <Warning size={16} weight="fill" className="shrink-0" />
-                  <span>
-                    Upload ({formatFileSize(includedSize)}) exceeds remaining quota (
-                    {formatFileSize(quotaImpact.remaining)}).
-                  </span>
-                </div>
-              ) : (
+        {quotaImpact.remaining !== null && (
+          <div
+            className={cn(
+              "p-3 rounded-md text-sm",
+              quotaImpact.wouldExceed
+                ? "bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-400"
+                : "bg-muted/50 text-muted-foreground",
+            )}
+          >
+            {quotaImpact.wouldExceed ? (
+              <div className="flex items-center gap-2">
+                <Warning size={16} weight="fill" className="shrink-0" />
                 <span>
-                  This will use {formatFileSize(includedSize)} of your remaining{" "}
-                  {formatFileSize(quotaImpact.remaining)}.
+                  Upload ({formatFileSize(includedSize)}) exceeds remaining quota (
+                  {formatFileSize(quotaImpact.remaining)}).
                 </span>
-              )}
-            </div>
-          )}
+              </div>
+            ) : (
+              <span>
+                This will use {formatFileSize(includedSize)} of your remaining{" "}
+                {formatFileSize(quotaImpact.remaining)}.
+              </span>
+            )}
+          </div>
+        )}
 
-          {/* Folder tree with checkboxes */}
-          {scanResult.tree.length > 0 && (
-            <div>
-              <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wider">
-                Contents
-              </p>
-              <div className="border border-border rounded-md max-h-72 overflow-y-auto bg-muted/20">
-                <div className="p-2">
-                  {scanResult.tree.map((node, idx) => (
-                    <TreePreviewNode
+        {scanResult.tree.length > 0 && (
+          <div>
+            <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wider">
+              Contents
+            </p>
+            <div className="border border-border rounded-md max-h-72 overflow-y-auto bg-muted/20">
+              <div className="p-2">
+                {scanResult.tree.map((node, idx) => (
+                  <TreePreviewNode
+                    key={idx}
+                    node={node}
+                    depth={0}
+                    parentPath=""
+                    excludedPaths={excludedPaths}
+                    onToggleFile={togglePath}
+                    onToggleFolder={toggleFolder}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {scanResult.tree.length === 0 && scanResult.files.length > 0 && (
+          <div>
+            <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wider">
+              Files
+            </p>
+            <div className="border border-border rounded-md max-h-72 overflow-y-auto bg-muted/20">
+              <div className="p-2 space-y-0.5">
+                {scanResult.files.map((f, idx) => {
+                  const isExcluded = excludedPaths.has(f.path);
+                  return (
+                    <button
                       key={idx}
-                      node={node}
-                      depth={0}
-                      parentPath=""
-                      excludedPaths={excludedPaths}
-                      onToggleFile={togglePath}
-                      onToggleFolder={toggleFolder}
-                    />
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Flat file list fallback */}
-          {scanResult.tree.length === 0 && scanResult.files.length > 0 && (
-            <div>
-              <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wider">
-                Files
-              </p>
-              <div className="border border-border rounded-md max-h-72 overflow-y-auto bg-muted/20">
-                <div className="p-2 space-y-0.5">
-                  {scanResult.files.map((f, idx) => {
-                    const isExcluded = excludedPaths.has(f.path);
-                    return (
-                      <button
-                        key={idx}
-                        onClick={() => togglePath(f.path)}
-                        className="flex items-center gap-2 py-1 px-2 text-sm rounded hover:bg-muted/50 w-full text-left"
-                      >
-                        {isExcluded ? (
-                          <Square size={14} className="text-muted-foreground shrink-0" />
-                        ) : (
-                          <CheckSquare size={14} weight="fill" className="text-primary shrink-0" />
+                      onClick={() => togglePath(f.path)}
+                      className="flex items-center gap-2 py-1 px-2 text-sm rounded hover:bg-muted/50 w-full text-left"
+                    >
+                      {isExcluded ? (
+                        <Square size={14} className="text-muted-foreground shrink-0" />
+                      ) : (
+                        <CheckSquare size={14} weight="fill" className="text-primary shrink-0" />
+                      )}
+                      <FileIcon
+                        size={14}
+                        weight="duotone"
+                        className={cn(
+                          "shrink-0",
+                          isExcluded ? "text-subtle-foreground" : "text-muted-foreground",
                         )}
-                        <FileIcon
-                          size={14}
-                          weight="duotone"
-                          className={cn(
-                            "shrink-0",
-                            isExcluded ? "text-muted-foreground/40" : "text-muted-foreground",
-                          )}
-                        />
-                        <span
-                          className={cn(
-                            "truncate flex-1",
-                            isExcluded && "text-muted-foreground line-through",
-                          )}
-                        >
-                          {f.file.name}
-                        </span>
-                        <span className="text-xs text-muted-foreground shrink-0 tabular-nums">
-                          {formatFileSize(f.file.size)}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
+                      />
+                      <span
+                        className={cn(
+                          "truncate flex-1",
+                          isExcluded && "text-muted-foreground line-through",
+                        )}
+                      >
+                        {f.file.name}
+                      </span>
+                      <span className="text-xs text-muted-foreground shrink-0 tabular-nums">
+                        {formatFileSize(f.file.size)}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
-          )}
-        </div>
+          </div>
+        )}
+      </ModalBody>
 
-        <div className="flex items-center justify-between mt-6 pt-4 border-t border-border shrink-0">
-          <div className="text-xs text-muted-foreground">
-            {excludedCount > 0 && `${excludedCount} item${excludedCount !== 1 ? "s" : ""} excluded`}
-          </div>
-          <div className="flex gap-3">
-            <Button variant="outline" onClick={handleCancel}>
-              Cancel
-            </Button>
-            <Button
-              onClick={handleConfirm}
-              disabled={quotaImpact.wouldExceed || includedFiles.length === 0}
-            >
-              Upload {includedFiles.length} File
-              {includedFiles.length !== 1 ? "s" : ""}
-            </Button>
-          </div>
-        </div>
-      </div>
-    </div>
+      <ModalFooter>
+        {excludedCount > 0 && (
+          <span className="mr-auto text-xs text-muted-foreground">
+            {excludedCount} item{excludedCount !== 1 ? "s" : ""} excluded
+          </span>
+        )}
+        <Button variant="ghost" onClick={handleCancel}>
+          Cancel
+        </Button>
+        <Button
+          onClick={handleConfirm}
+          disabled={quotaImpact.wouldExceed || includedFiles.length === 0}
+        >
+          Upload {includedFiles.length} file{includedFiles.length !== 1 ? "s" : ""}
+        </Button>
+      </ModalFooter>
+    </Modal>
   );
 }
 
@@ -411,7 +385,7 @@ function TreePreviewNode({
                   weight="duotone"
                   className={cn(
                     "shrink-0",
-                    isExcluded ? "text-muted-foreground/40" : "text-muted-foreground",
+                    isExcluded ? "text-subtle-foreground" : "text-muted-foreground",
                   )}
                 />
                 <span

@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from "react";
+import { useOverlayEscape } from "@/shared/hooks/useOverlayEscape";
 import { ClockCounterClockwise } from "@phosphor-icons/react";
 import { timestampDate } from "@bufbuild/protobuf/wkt";
 import { chatApi } from "@/features/chat/api/chatApi";
 import { MessageContent } from "@/features/chat/components/channel/MessageContent";
 import { formatMessageTimestamp } from "@/features/chat/utils/messageTime";
 import { friendlyErrorMessage } from "@/config";
+import { popoverShellClass } from "@/components/ui/popover";
 import { cn } from "@/shared/utils/cn";
 
 interface RevisionRow {
@@ -68,26 +70,23 @@ export function MessageEditHistoryPopover({
         onClose();
       }
     };
-    const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
     const timer = setTimeout(() => {
       document.addEventListener("mousedown", handleClickOutside);
-      document.addEventListener("keydown", handleEsc);
     }, 0);
     return () => {
       clearTimeout(timer);
       document.removeEventListener("mousedown", handleClickOutside);
-      document.removeEventListener("keydown", handleEsc);
     };
   }, [onClose]);
+
+  useOverlayEscape(onClose);
 
   return (
     <div
       ref={containerRef}
       className={cn(
+        popoverShellClass,
         "absolute left-0 top-full mt-1 z-[60] w-96 max-w-[calc(100vw-4rem)]",
-        "bg-card border border-border rounded-lg shadow-lg",
       )}
       data-testid={`chat-message-edit-history-${messageId}`}
     >

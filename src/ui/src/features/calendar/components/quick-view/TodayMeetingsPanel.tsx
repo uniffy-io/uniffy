@@ -1,6 +1,7 @@
 import { useEffect, useRef, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowsClockwise, CheckCircle, ArrowRight, Sun, X } from "@phosphor-icons/react";
+import { dialogShellClass, popoverShellClass } from "@/components/ui/popover";
 import { cn } from "@/shared/utils/cn";
 import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
 import { useTodayEvents } from "@/features/calendar/hooks/useTodayEvents";
@@ -15,8 +16,8 @@ interface TodayMeetingsPanelProps {
 
 function SectionHeader({ label }: { label: string }) {
   return (
-    <div className="sticky top-0 z-10 px-3.5 py-1.5 bg-card/95 backdrop-blur-sm border-b border-border/50">
-      <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+    <div className="sticky top-0 z-10 px-3.5 py-1.5 bg-popover/95 backdrop-blur-sm border-b border-border/50">
+      <span className="text-[10px] font-semibold uppercase tracking-wider text-subtle-foreground">
         {label}
       </span>
     </div>
@@ -31,7 +32,7 @@ function EmptyState({ allDone }: { allDone: boolean }) {
           <CheckCircle size={24} weight="duotone" className="text-green-600 dark:text-green-400" />
         </div>
         <p className="text-sm font-medium text-foreground/60 mb-1">All done for today</p>
-        <p className="text-xs text-muted-foreground/60 text-center max-w-[200px]">
+        <p className="text-xs text-subtle-foreground text-center max-w-[200px]">
           No more meetings remaining
         </p>
       </div>
@@ -41,10 +42,10 @@ function EmptyState({ allDone }: { allDone: boolean }) {
   return (
     <div className="flex flex-col items-center justify-center py-10 px-6">
       <div className="flex items-center justify-center w-12 h-12 rounded-full bg-muted/50 mb-3">
-        <Sun size={24} weight="duotone" className="text-muted-foreground/50" />
+        <Sun size={24} weight="duotone" className="text-subtle-foreground" />
       </div>
       <p className="text-sm font-medium text-foreground/60 mb-1">No meetings today</p>
-      <p className="text-xs text-muted-foreground/60 text-center max-w-[200px]">
+      <p className="text-xs text-subtle-foreground text-center max-w-[200px]">
         Your schedule is clear
       </p>
     </div>
@@ -194,9 +195,7 @@ function PanelContent({
 
       {lastEndTime && hasUpcoming && (
         <div className="px-3.5 py-2 border-t border-border shrink-0">
-          <p className="text-[11px] text-muted-foreground/60 text-center">
-            Free after {lastEndTime}
-          </p>
+          <p className="text-[11px] text-subtle-foreground text-center">Free after {lastEndTime}</p>
         </div>
       )}
     </>
@@ -267,8 +266,8 @@ export function TodayMeetingsPanel({ onClose, anchorRef }: TodayMeetingsPanelPro
         <div
           ref={panelRef}
           className={cn(
-            "fixed inset-x-0 bottom-0 z-[100] max-h-[85dvh]",
-            "bg-card border-t border-border rounded-t-2xl shadow-xl",
+            dialogShellClass,
+            "fixed inset-x-0 bottom-0 z-[100] max-h-[85dvh] rounded-t-2xl",
             "animate-in slide-in-from-bottom duration-300",
             "flex flex-col overflow-hidden",
           )}
@@ -286,8 +285,8 @@ export function TodayMeetingsPanel({ onClose, anchorRef }: TodayMeetingsPanelPro
     <div
       ref={panelRef}
       className={cn(
+        popoverShellClass,
         "absolute right-0 z-[100] mt-1.5 w-[min(360px,calc(100vw-2rem))] max-h-[70vh] origin-top-right rounded-xl",
-        "bg-card shadow-xl border border-border",
         "animate-in fade-in slide-in-from-top-2 duration-200",
         "flex flex-col overflow-hidden",
       )}

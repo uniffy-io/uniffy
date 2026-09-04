@@ -7,7 +7,7 @@ import {
   Warning,
 } from "@phosphor-icons/react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
-import { Modal } from "@/components/ui/modal";
+import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { Select, type SelectOption } from "@/components/ui/select";
 import { cn } from "@/shared/utils/cn";
@@ -97,7 +97,7 @@ function DeviceSelect({
         onChange={onChange}
         options={options}
         menuMinWidth={260}
-        triggerClassName="h-8 w-full min-w-0 bg-input font-normal text-foreground"
+        triggerClassName="h-8 w-full min-w-0 font-normal text-foreground"
       />
     </div>
   );
@@ -272,123 +272,125 @@ export function PreJoinScreen() {
   const channelName = channel ? getChannelDisplayName(channel) : "this channel";
 
   return (
-    <Modal onClose={close} maxWidth="max-w-md">
-      <div className="p-5 space-y-4" data-testid="call-prejoin">
-        <div>
-          <h2 className="text-base font-semibold text-foreground">
-            {activeCall || callId ? `Join call in ${channelName}` : `Start call in ${channelName}`}
-          </h2>
-          <p className="text-xs text-muted-foreground mt-0.5">Joining as {userName}</p>
-        </div>
+    <Modal onClose={close} closeDisabled={joining} maxWidth="max-w-md">
+      <div data-testid="call-prejoin">
+        <ModalHeader
+          title={
+            activeCall || callId ? `Join call in ${channelName}` : `Start call in ${channelName}`
+          }
+          description={`Joining as ${userName}`}
+        />
 
-        <div className="relative aspect-video overflow-hidden rounded-lg bg-muted/60 border border-border/60 flex items-center justify-center">
-          <video
-            ref={videoRef}
-            autoPlay
-            playsInline
-            muted
-            className={cn("h-full w-full object-cover scale-x-[-1]", !camOn && "hidden")}
-          />
-          {!camOn && (
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/15 text-primary text-xl font-semibold">
-              {getInitials(userName)}
+        <ModalBody className="space-y-4">
+          <div className="relative aspect-video overflow-hidden rounded-lg bg-muted/60 border border-border/60 flex items-center justify-center">
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              muted
+              className={cn("h-full w-full object-cover scale-x-[-1]", !camOn && "hidden")}
+            />
+            {!camOn && (
+              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/15 text-primary text-xl font-semibold">
+                {getInitials(userName)}
+              </div>
+            )}
+            <div className="absolute bottom-2 left-1/2 flex -translate-x-1/2 items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setMicOn((v) => !v)}
+                className={cn(
+                  "flex h-9 w-9 items-center justify-center rounded-full border",
+                  micOn
+                    ? "bg-card/90 border-border text-foreground"
+                    : "bg-red-500/90 border-red-500 text-white",
+                )}
+                aria-label={micOn ? "Turn microphone off" : "Turn microphone on"}
+                data-testid="call-prejoin-mic-toggle"
+              >
+                {micOn ? <Microphone size={16} /> : <MicrophoneSlash size={16} />}
+              </button>
+              <button
+                type="button"
+                onClick={() => setCamOn((v) => !v)}
+                className={cn(
+                  "flex h-9 w-9 items-center justify-center rounded-full border",
+                  camOn
+                    ? "bg-card/90 border-border text-foreground"
+                    : "bg-red-500/90 border-red-500 text-white",
+                )}
+                aria-label={camOn ? "Turn camera off" : "Turn camera on"}
+                data-testid="call-prejoin-camera-toggle"
+              >
+                {camOn ? <VideoCamera size={16} /> : <VideoCameraSlash size={16} />}
+              </button>
+            </div>
+          </div>
+
+          {micOn && <MicLevelMeter stream={micStream} />}
+
+          {(micDenied || camDenied) && (
+            <div className="flex items-start gap-2 rounded-md bg-yellow-100 dark:bg-yellow-900/30 px-3 py-2 text-xs text-yellow-800 dark:text-yellow-400">
+              <Warning size={14} className="mt-0.5 shrink-0" />
+              <span>
+                {micDenied
+                  ? "Microphone access was blocked by the browser. You can join listen-only, or allow access in site settings."
+                  : "Camera access was blocked by the browser. You can join without video."}
+              </span>
             </div>
           )}
-          <div className="absolute bottom-2 left-1/2 flex -translate-x-1/2 items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setMicOn((v) => !v)}
-              className={cn(
-                "flex h-9 w-9 items-center justify-center rounded-full border",
-                micOn
-                  ? "bg-card/90 border-border text-foreground"
-                  : "bg-red-500/90 border-red-500 text-white",
-              )}
-              aria-label={micOn ? "Turn microphone off" : "Turn microphone on"}
-              data-testid="call-prejoin-mic-toggle"
-            >
-              {micOn ? <Microphone size={16} /> : <MicrophoneSlash size={16} />}
-            </button>
-            <button
-              type="button"
-              onClick={() => setCamOn((v) => !v)}
-              className={cn(
-                "flex h-9 w-9 items-center justify-center rounded-full border",
-                camOn
-                  ? "bg-card/90 border-border text-foreground"
-                  : "bg-red-500/90 border-red-500 text-white",
-              )}
-              aria-label={camOn ? "Turn camera off" : "Turn camera on"}
-              data-testid="call-prejoin-camera-toggle"
-            >
-              {camOn ? <VideoCamera size={16} /> : <VideoCameraSlash size={16} />}
-            </button>
+
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+            <DeviceSelect
+              label="Microphone"
+              devices={audioInputs}
+              value={preferences.audioInputId}
+              onChange={(id) => dispatch(audioInputSelected(id))}
+            />
+            <DeviceSelect
+              label="Camera"
+              devices={videoInputs}
+              value={preferences.videoInputId}
+              onChange={(id) => dispatch(videoInputSelected(id))}
+            />
+            <DeviceSelect
+              label="Speaker"
+              devices={audioOutputs}
+              value={preferences.audioOutputId}
+              onChange={(id) => dispatch(audioOutputSelected(id))}
+            />
           </div>
-        </div>
 
-        {micOn && <MicLevelMeter stream={micStream} />}
-
-        {(micDenied || camDenied) && (
-          <div className="flex items-start gap-2 rounded-md bg-yellow-100 dark:bg-yellow-900/30 px-3 py-2 text-xs text-yellow-800 dark:text-yellow-400">
-            <Warning size={14} className="mt-0.5 shrink-0" />
-            <span>
-              {micDenied
-                ? "Microphone access was blocked by the browser. You can join listen-only, or allow access in site settings."
-                : "Camera access was blocked by the browser. You can join without video."}
-            </span>
-          </div>
-        )}
-
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-          <DeviceSelect
-            label="Microphone"
-            devices={audioInputs}
-            value={preferences.audioInputId}
-            onChange={(id) => dispatch(audioInputSelected(id))}
-          />
-          <DeviceSelect
-            label="Camera"
-            devices={videoInputs}
-            value={preferences.videoInputId}
-            onChange={(id) => dispatch(videoInputSelected(id))}
-          />
-          <DeviceSelect
-            label="Speaker"
-            devices={audioOutputs}
-            value={preferences.audioOutputId}
-            onChange={(id) => dispatch(audioOutputSelected(id))}
-          />
-        </div>
-
-        {alreadyIn.length > 0 && (
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <div className="flex -space-x-1.5">
-              {alreadyIn.slice(0, 5).map((p) => (
-                <span
-                  key={p.identity}
-                  className="flex h-6 w-6 items-center justify-center rounded-full border border-card bg-primary/15 text-[10px] font-semibold text-primary"
-                  title={p.displayName}
-                >
-                  {getInitials(p.displayName)}
-                </span>
-              ))}
+          {alreadyIn.length > 0 && (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <div className="flex -space-x-1.5">
+                {alreadyIn.slice(0, 5).map((p) => (
+                  <span
+                    key={p.identity}
+                    className="flex h-6 w-6 items-center justify-center rounded-full border border-card bg-primary/15 text-[10px] font-semibold text-primary"
+                    title={p.displayName}
+                  >
+                    {getInitials(p.displayName)}
+                  </span>
+                ))}
+              </div>
+              <span>
+                {alreadyIn.length} {alreadyIn.length === 1 ? "person is" : "people are"} in the call
+              </span>
             </div>
-            <span>
-              {alreadyIn.length} {alreadyIn.length === 1 ? "person is" : "people are"} in the call
-            </span>
-          </div>
-        )}
+          )}
 
-        {joinError === "failed" && (
-          <p className="text-xs text-red-500">Unable to connect. Check your network and retry.</p>
-        )}
-        {joinError === "ended" && (
-          <p className="text-xs text-muted-foreground" data-testid="call-prejoin-ended">
-            This call has already ended.
-          </p>
-        )}
+          {joinError === "failed" && (
+            <p className="text-xs text-red-500">Unable to connect. Check your network and retry.</p>
+          )}
+          {joinError === "ended" && (
+            <p className="text-xs text-muted-foreground" data-testid="call-prejoin-ended">
+              This call has already ended.
+            </p>
+          )}
+        </ModalBody>
 
-        <div className="flex justify-end gap-2">
+        <ModalFooter>
           {joinError === "ended" ? (
             <Button onClick={close}>Close</Button>
           ) : (
@@ -405,7 +407,7 @@ export function PreJoinScreen() {
               </Button>
             </>
           )}
-        </div>
+        </ModalFooter>
       </div>
     </Modal>
   );

@@ -1,10 +1,12 @@
 import { useState, useCallback } from "react";
 import { X, Smiley } from "@phosphor-icons/react";
 import { cn } from "@/shared/utils/cn";
+import { popoverShellClass } from "@/components/ui/popover";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { setCustomStatus, clearCustomStatusThunk } from "@/features/presence/store/presenceThunks";
 import { useCustomStatus } from "@/features/presence/hooks/useCustomStatus";
 import { Button } from "@/components/ui/button";
+import { Input, controlShellClass } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import type { SelectOption } from "@/components/ui/select";
 import { COMMON_EMOJIS } from "@/components/icon-picker";
@@ -93,7 +95,7 @@ export function CustomStatusPicker({ onClose, className }: CustomStatusPickerPro
   }, []);
 
   return (
-    <div className={cn("w-80 bg-card border border-border rounded-xl shadow-lg p-4", className)}>
+    <div className={cn(popoverShellClass, "w-80 rounded-xl p-4", className)}>
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-sm font-medium text-foreground">Set a status</h3>
         <Button variant="ghost" size="icon" onClick={onClose}>
@@ -104,25 +106,21 @@ export function CustomStatusPicker({ onClose, className }: CustomStatusPickerPro
       <div className="flex items-center gap-2 mb-3">
         <button
           className={cn(
-            "w-9 h-9 rounded-lg border border-border flex items-center justify-center",
-            "hover:bg-muted text-lg shrink-0 transition-colors",
-            showEmojiGrid && "ring-2 ring-primary bg-muted",
+            controlShellClass,
+            "focus-ring w-9 h-9 rounded-lg flex items-center justify-center text-lg shrink-0",
+            showEmojiGrid && "border-border-strong",
           )}
           onClick={() => setShowEmojiGrid(!showEmojiGrid)}
           title="Pick emoji"
         >
           {emoji || <Smiley size={18} className="text-muted-foreground" />}
         </button>
-        <input
+        <Input
           type="text"
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder="What's your status?"
-          className={cn(
-            "flex-1 h-9 px-3 rounded-lg border border-border bg-input",
-            "text-sm text-foreground placeholder:text-muted-foreground",
-            "focus:outline-none focus:ring-2 focus:ring-ring",
-          )}
+          className="h-9 flex-1 rounded-lg"
           maxLength={100}
           onKeyDown={(e) => {
             if (e.key === "Enter") handleSave();

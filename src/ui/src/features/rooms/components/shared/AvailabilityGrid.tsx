@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { popoverShellClass } from "@/components/ui/popover";
 import { cn } from "@/shared/utils/cn";
 import type { TimeSlot } from "@/features/rooms/types";
 
@@ -89,10 +90,10 @@ export function AvailabilityGrid({ slots, onSlotClick, className }: Availability
             {!h.isAvailable && h.bookerName && (
               <span
                 className={cn(
+                  popoverShellClass,
                   "absolute bottom-full left-1/2 -translate-x-1/2 mb-1",
                   "hidden group-hover:block",
-                  "px-2 py-1 text-xs rounded-md",
-                  "bg-card text-foreground border border-border shadow-lg",
+                  "px-2 py-1 text-xs",
                   "whitespace-nowrap z-10 pointer-events-none",
                 )}
               >

@@ -4,6 +4,7 @@ import { Key, ArrowsClockwise, ShieldCheck, Warning } from "@phosphor-icons/reac
 import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { Input } from "@/components/ui/input";
 import { friendlyErrorMessage } from "@/config";
 import { formatProtoDateTime } from "@/shared/utils/dateFormatting";
 import { systemEncryptionApi } from "@/features/platform/api/systemEncryptionApi";
@@ -81,7 +82,7 @@ export function PlatformEncryptionPage() {
       </div>
 
       {loading ? (
-        <div className="rounded-lg border border-border bg-card p-6 text-sm text-muted-foreground">
+        <div className="rounded-xl bg-surface shadow-edge p-6 text-sm text-muted-foreground">
           Loading...
         </div>
       ) : (
@@ -107,7 +108,7 @@ export function PlatformEncryptionPage() {
             />
           </div>
 
-          <div className="rounded-lg border border-border bg-card p-4 md:p-6 space-y-3">
+          <div className="rounded-xl bg-surface shadow-edge p-4 md:p-6 space-y-3">
             <div className="flex items-start gap-3">
               <ArrowsClockwise
                 size={20}
@@ -158,12 +159,12 @@ export function PlatformEncryptionPage() {
             </p>
             <div>
               <label className="block text-xs font-medium text-foreground mb-1">Reason</label>
-              <input
+              <Input
                 type="text"
                 value={rotateReason}
                 onChange={(e) => setRotateReason(e.target.value)}
                 placeholder="e.g. scheduled quarterly rotation"
-                className="w-full rounded border border-border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                className="h-8 rounded px-2"
               />
             </div>
           </div>
@@ -188,7 +189,7 @@ function Stat({
   tone: "ok" | "muted";
 }) {
   return (
-    <div className="rounded-lg border border-border bg-card p-3">
+    <div className="rounded-xl bg-surface shadow-edge p-3">
       <div
         className={
           "flex items-center gap-1.5 text-xs " +

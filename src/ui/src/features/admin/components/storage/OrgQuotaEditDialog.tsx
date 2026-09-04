@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
-import { X } from "@phosphor-icons/react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { setOrgStorageQuota, fetchOrgStorageUsage } from "@/features/admin/store/adminThunks";
 import { ByteInput } from "@/features/admin/components/storage/ByteInput";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { Modal } from "@/components/ui/modal";
+import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/ui/modal";
 
 interface OrgQuotaEditDialogProps {
   open: boolean;
@@ -65,65 +65,51 @@ export function OrgQuotaEditDialog({ open, onClose }: OrgQuotaEditDialogProps) {
 
   return (
     <Modal onClose={onClose} closeDisabled={saving} maxWidth="max-w-lg">
-      <div className="flex items-center justify-between p-6 pb-4">
-        <h2 className="text-lg font-semibold text-foreground">Edit Storage Quota</h2>
-        <button
-          onClick={onClose}
-          className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-        >
-          <X size={20} />
-        </button>
-      </div>
+      <ModalHeader title="Edit storage quota" />
 
-      <div className="px-6 pb-6 space-y-5">
+      <ModalBody>
         <ByteInput
           value={orgQuotaBytes}
           onChange={setOrgQuotaBytes}
-          label="Organization Storage Limit"
+          label="Organization storage limit"
           allowUnlimited
         />
 
         <ByteInput
           value={defaultUserQuotaBytes}
           onChange={setDefaultUserQuotaBytes}
-          label="Default Per-User Limit"
+          label="Default per-user limit"
           allowUnlimited
         />
 
-        <div className="space-y-1">
-          <label className="text-sm font-medium text-foreground">Warning Threshold (%)</label>
+        <div>
+          <label className="block text-sm text-muted-foreground mb-1">Warning threshold (%)</label>
           <Input
             type="text"
             inputMode="numeric"
             value={String(warnAtPercent)}
             onChange={handlePercentChange}
           />
-          <p className="text-xs text-muted-foreground">
+          <p className="mt-1.5 text-xs text-muted-foreground">
             Users see a warning when they reach this percentage of their quota.
           </p>
         </div>
 
-        <label className="flex items-center gap-2 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={enforce}
-            onChange={(e) => setEnforce(e.target.checked)}
-            className="rounded border-border"
-          />
-          <span className="text-sm text-foreground">
-            Enforce quotas (block uploads when exceeded)
-          </span>
-        </label>
-      </div>
+        <Checkbox
+          label="Enforce quotas (block uploads when exceeded)"
+          checked={enforce}
+          onChange={(e) => setEnforce(e.target.checked)}
+        />
+      </ModalBody>
 
-      <div className="flex justify-end gap-3 px-6 py-4 border-t border-border bg-muted/30">
-        <Button variant="outline" onClick={onClose} disabled={saving}>
+      <ModalFooter>
+        <Button variant="ghost" onClick={onClose} disabled={saving}>
           Cancel
         </Button>
         <Button onClick={handleSave} disabled={saving}>
           {saving ? "Saving..." : "Save"}
         </Button>
-      </div>
+      </ModalFooter>
     </Modal>
   );
 }

@@ -4,8 +4,10 @@ import { toast } from "sonner";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { friendlyErrorMessage } from "@/config";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, type SelectOption } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { TimezoneSelect } from "@/components/ui/timezone-select";
 import { getEffectiveTimeZone } from "@/shared/utils/timezone";
 import { updateUser } from "@/features/auth/store/authSlice";
@@ -293,7 +295,7 @@ function ProfileForm({ person, initialPronouns }: ProfileFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="space-y-5 rounded-lg border border-border bg-card p-4 md:p-6">
+      <Card tone="surface" className="space-y-5 p-4 md:p-6">
         <ReadOnlyFacts person={person} />
 
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
@@ -373,7 +375,7 @@ function ProfileForm({ person, initialPronouns }: ProfileFormProps) {
         </div>
 
         <Field label="Bio" htmlFor="profile-bio" managed={isManaged("bio")}>
-          <textarea
+          <Textarea
             id="profile-bio"
             value={bio}
             onChange={(e) => setBio(e.target.value)}
@@ -381,7 +383,6 @@ function ProfileForm({ person, initialPronouns }: ProfileFormProps) {
             rows={3}
             maxLength={BIO_MAX}
             placeholder="A few words about what you work on..."
-            className="w-full resize-none rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
           />
           <p className="mt-1.5 text-right text-xs font-medium text-muted-foreground">
             {bio.length} / {BIO_MAX}
@@ -395,7 +396,7 @@ function ProfileForm({ person, initialPronouns }: ProfileFormProps) {
         >
           <LinksField links={links} onChange={setLinks} disabled={isManaged("links")} />
         </Field>
-      </div>
+      </Card>
 
       <div className="flex items-center gap-3">
         <Button type="submit" size="md" disabled={!isDirty} loading={saving}>

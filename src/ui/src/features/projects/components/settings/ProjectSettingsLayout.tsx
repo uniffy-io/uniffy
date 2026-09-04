@@ -133,7 +133,7 @@ export function ProjectSettingsLayout({ project }: ProjectSettingsLayoutProps) {
                     ? "bg-primary text-primary-foreground"
                     : danger
                       ? "text-red-500 hover:bg-red-500/10"
-                      : "text-foreground hover:bg-accent hover:text-accent-foreground",
+                      : "text-foreground hover:bg-muted/60 hover:text-accent-foreground",
                 )}
                 onClick={() => handleSectionChange(id)}
               >

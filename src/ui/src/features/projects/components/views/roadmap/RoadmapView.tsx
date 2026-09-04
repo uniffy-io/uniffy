@@ -20,6 +20,7 @@ import { useFilteredTasks } from "@/features/projects/hooks/useTasks";
 import { useProjectPermission } from "@/features/projects/hooks/useProjectPermissions";
 import { selectSprintsForProject } from "@/features/projects/store/sprintsSlice";
 import { SYSTEM_FIELD_IDS } from "@/features/projects/types";
+import { statusPaint } from "@/features/projects/utils/statusPaint";
 import type { Task } from "@/features/projects/types";
 import type { ZoomLevel } from "@/features/projects/utils/ganttPositioning";
 import {
@@ -358,15 +359,13 @@ export function RoadmapView() {
                     )
                   : null;
 
-                const statusOption = statusOptions.find((s) => s.id === task.status);
-
                 if (position) {
                   return (
                     <GanttBar
                       key={task.id}
                       task={task}
                       position={position}
-                      statusOption={statusOption}
+                      paint={statusPaint(statusOptions, task.status)}
                       isSelected={selectedTaskIds.includes(task.id)}
                       isOverdue={isTaskOverdue(task.dueDate)}
                       onClick={(e: React.MouseEvent) => handleTaskClick(task.id, e)}
@@ -408,7 +407,10 @@ export function RoadmapView() {
         <span className="font-medium">Legend:</span>
         {statusOptions.map((status) => (
           <div key={status.id} className="flex items-center gap-1">
-            <div className="w-3 h-3 rounded" style={{ backgroundColor: status.color }} />
+            <div
+              className="w-3 h-3 rounded"
+              style={{ background: statusPaint(statusOptions, status.id).gradient }}
+            />
             <span>{status.label}</span>
           </div>
         ))}

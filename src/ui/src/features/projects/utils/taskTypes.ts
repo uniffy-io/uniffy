@@ -1,4 +1,4 @@
-import { CheckSquare, Bug, Star, BookOpen, Lightning, type Icon } from "@phosphor-icons/react";
+import { Bug, BookOpen, CheckCircle, Diamond, Sparkle, type Icon } from "@phosphor-icons/react";
 
 export interface TaskTypeConfig {
   value: string;
@@ -7,11 +7,13 @@ export interface TaskTypeConfig {
   description: string;
 }
 
+// Glyphs stay out of the project icon set so one shape means one thing app-wide, and
+// none of them is a square: the table draws a real checkbox two columns to the left.
 export const TASK_TYPES: TaskTypeConfig[] = [
   {
     value: "task",
     label: "Task",
-    icon: CheckSquare,
+    icon: CheckCircle,
     description: "A standard work item",
   },
   {
@@ -23,7 +25,7 @@ export const TASK_TYPES: TaskTypeConfig[] = [
   {
     value: "feature",
     label: "Feature",
-    icon: Star,
+    icon: Sparkle,
     description: "A new capability or enhancement",
   },
   {
@@ -35,7 +37,7 @@ export const TASK_TYPES: TaskTypeConfig[] = [
   {
     value: "epic",
     label: "Epic",
-    icon: Lightning,
+    icon: Diamond,
     description: "A large body of work",
   },
 ];

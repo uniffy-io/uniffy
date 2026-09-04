@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { PencilSimple, X } from "@phosphor-icons/react";
-import { Modal } from "@/components/ui/modal";
+import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { NumberInput } from "@/components/ui/number-input";
 import { Select } from "@/components/ui/select";
 import { friendlyErrorMessage } from "@/config";
@@ -94,31 +94,14 @@ export function EditOrganizationDialog({ detail, onClose, onSaved }: Props) {
 
   return (
     <Modal onClose={onClose} closeDisabled={submitting} maxWidth="max-w-md">
-      <div className="flex items-start gap-3 p-4 border-b border-border">
-        <div className="p-2 rounded-lg bg-primary/10 shrink-0">
-          <PencilSimple size={20} weight="duotone" className="text-primary" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="text-base font-semibold text-foreground">Edit organization settings</div>
-          <div className="text-xs text-muted-foreground mt-0.5 truncate">{summary.name}</div>
-        </div>
-        <button
-          type="button"
-          onClick={onClose}
-          disabled={submitting}
-          className="text-muted-foreground hover:text-foreground"
-          aria-label="Close"
-        >
-          <X size={16} weight="bold" />
-        </button>
-      </div>
+      <ModalHeader
+        title="Edit organization"
+        description={`Changes to ${summary.name} are recorded in the audit log with your reason.`}
+      />
 
-      <div className="p-4 space-y-4">
+      <ModalBody>
         <div>
-          <label
-            htmlFor="org-edit-name"
-            className="text-xs font-medium text-muted-foreground block mb-1"
-          >
+          <label htmlFor="org-edit-name" className="block text-sm text-muted-foreground mb-1">
             Name
           </label>
           <Input
@@ -131,10 +114,7 @@ export function EditOrganizationDialog({ detail, onClose, onSaved }: Props) {
         </div>
 
         <div>
-          <label
-            htmlFor="org-edit-slug"
-            className="text-xs font-medium text-muted-foreground block mb-1"
-          >
+          <label htmlFor="org-edit-slug" className="block text-sm text-muted-foreground mb-1">
             Slug
           </label>
           <Input
@@ -145,14 +125,14 @@ export function EditOrganizationDialog({ detail, onClose, onSaved }: Props) {
             className="font-mono"
             disabled={submitting}
           />
-          <p className="text-[10px] text-muted-foreground mt-0.5">
+          <p className="text-xs text-muted-foreground mt-1">
             Changing the slug breaks existing links that embed it.
           </p>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="text-xs font-medium text-muted-foreground block mb-1">Plan</label>
+            <label className="block text-sm text-muted-foreground mb-1">Plan</label>
             <Select
               value={plan}
               onChange={setPlan}
@@ -164,7 +144,7 @@ export function EditOrganizationDialog({ detail, onClose, onSaved }: Props) {
           <div>
             <label
               htmlFor="org-edit-max-members"
-              className="text-xs font-medium text-muted-foreground block mb-1"
+              className="block text-sm text-muted-foreground mb-1"
             >
               Member cap
             </label>
@@ -180,10 +160,7 @@ export function EditOrganizationDialog({ detail, onClose, onSaved }: Props) {
         </div>
 
         <div>
-          <label
-            htmlFor="org-edit-domain"
-            className="text-xs font-medium text-muted-foreground block mb-1"
-          >
+          <label htmlFor="org-edit-domain" className="block text-sm text-muted-foreground mb-1">
             Domain
           </label>
           <Input
@@ -194,46 +171,41 @@ export function EditOrganizationDialog({ detail, onClose, onSaved }: Props) {
             className="font-mono"
             disabled={submitting}
           />
-          <p className="text-[10px] text-muted-foreground mt-0.5">
+          <p className="text-xs text-muted-foreground mt-1">
             Recorded as the org's primary mail domain. Nothing matches on it today. Leave empty to
             clear.
           </p>
         </div>
 
         <div>
-          <label
-            htmlFor="org-edit-reason"
-            className="text-xs font-medium text-muted-foreground block mb-1"
-          >
+          <label htmlFor="org-edit-reason" className="block text-sm text-muted-foreground mb-1">
             Reason
           </label>
-          <textarea
+          <Textarea
             id="org-edit-reason"
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             rows={2}
             maxLength={1000}
-            placeholder="e.g. Ticket #1234 - plan upgrade after purchase"
-            className="w-full bg-input border border-border rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+            placeholder="e.g. Ticket #1234, plan upgrade after purchase"
             disabled={submitting}
           />
         </div>
-      </div>
+      </ModalBody>
 
-      <div className="flex items-center justify-end gap-2 p-4 border-t border-border">
-        <Button variant="ghost" size="md" onClick={onClose} disabled={submitting}>
+      <ModalFooter>
+        <Button type="button" variant="ghost" onClick={onClose} disabled={submitting}>
           Cancel
         </Button>
         <Button
-          variant="default"
-          size="md"
+          type="button"
           onClick={handleSubmit}
+          loading={submitting}
           disabled={submitting || !canSubmit}
         >
-          <PencilSimple size={14} weight="duotone" />
           Save changes
         </Button>
-      </div>
+      </ModalFooter>
     </Modal>
   );
 }

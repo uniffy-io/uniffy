@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { CircleNotch, Lightning, Plus, Tray } from "@phosphor-icons/react";
 import { SkillSource } from "@uniffy/proto/agents/v1/skills_pb";
@@ -105,8 +105,8 @@ function SkillsBrowse({
   return (
     <div className="flex h-full flex-col overflow-hidden" data-testid="skills-browse">
       <BrowseHeader
+        icon={Lightning}
         title="Skills"
-        subtitle="Reusable markdown instructions agents load on demand."
         search={search}
         onSearchChange={setSearch}
         searchPlaceholder="Search skills..."
@@ -147,7 +147,7 @@ function SkillsBrowse({
             const group = skills.filter((skill) => skill.source === source);
             if (group.length === 0) return null;
             return (
-              <div key={source}>
+              <Fragment key={source}>
                 <BrowseGroupLabel>{label}</BrowseGroupLabel>
                 <BrowseGrid>
                   {group.map((skill) => (
@@ -158,7 +158,7 @@ function SkillsBrowse({
                     />
                   ))}
                 </BrowseGrid>
-              </div>
+              </Fragment>
             );
           })
         )}

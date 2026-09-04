@@ -1,8 +1,10 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { X } from "@phosphor-icons/react";
 import { SafeEmojiPicker } from "@/components/emoji/SafeEmojiPicker";
+import { popoverShellClass } from "@/components/ui/popover";
+import { useOverlayEscape } from "@/shared/hooks/useOverlayEscape";
 import { cn } from "@/shared/utils/cn";
-import { useTheme } from "@/config/theme/ThemeProvider";
+import { useTheme } from "@/config/theme/themeContext";
 import {
   getIconCategories,
   getIconsByCategory,
@@ -50,17 +52,7 @@ export function IconPicker({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [onClose]);
 
-  // Close on escape key
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        onClose();
-      }
-    };
-
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [onClose]);
+  useOverlayEscape(onClose);
 
   const handleIconSelect = useCallback(
     (iconName: string) => {
@@ -92,7 +84,8 @@ export function IconPicker({
     <div
       ref={pickerRef}
       className={cn(
-        "absolute z-50 mt-2 bg-card border border-border rounded-lg shadow-xl overflow-hidden",
+        popoverShellClass,
+        "absolute z-50 mt-2 overflow-hidden",
         isEmojiTab ? "w-[22rem]" : "w-80",
         className,
       )}

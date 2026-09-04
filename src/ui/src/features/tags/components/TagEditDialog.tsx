@@ -1,9 +1,11 @@
 /** Slug collisions on rename raise ALREADY_EXISTS; the dialog catches that and offers to merge into the colliding tag. */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CaretRight, Trash, X } from "@phosphor-icons/react";
-import { Modal } from "@/components/ui/modal";
+import { CaretRight, Trash } from "@phosphor-icons/react";
+import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
 import {
@@ -106,59 +108,44 @@ export function TagEditDialog({ tag, onClose }: TagEditDialogProps) {
   }, [dispatch, mergeCandidate, onClose, tag.id]);
 
   return (
-    <Modal onClose={onClose} maxWidth="max-w-md">
-      <div className="border-b border-border px-5 py-3">
-        <div className="flex items-center justify-between">
-          <h2 className="text-base font-semibold text-foreground">Edit tag</h2>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
-          >
-            <X size={16} weight="bold" />
-          </button>
-        </div>
-      </div>
+    <Modal onClose={onClose} closeDisabled={isSubmitting} maxWidth="max-w-md">
+      <ModalHeader title="Edit tag" description="Changes apply everywhere the tag is used." />
 
-      <div className="space-y-4 px-5 py-4">
+      <ModalBody>
         <div>
-          <label className="text-xs font-medium text-muted-foreground">Preview</label>
-          <div className="mt-1.5">
-            <TagChip tag={previewTag} nonInteractive />
-          </div>
+          <label className="block text-sm text-muted-foreground mb-1">Preview</label>
+          <TagChip tag={previewTag} nonInteractive />
         </div>
 
         <div>
-          <label className="text-xs font-medium text-muted-foreground" htmlFor="tag-name">
+          <label className="block text-sm text-muted-foreground mb-1" htmlFor="tag-name">
             Name
           </label>
-          <input
+          <Input
             id="tag-name"
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="mt-1.5 block w-full rounded-md border border-border bg-background px-3 py-1.5 text-sm focus:border-primary focus:outline-none"
             maxLength={120}
           />
         </div>
 
         <div>
-          <label className="text-xs font-medium text-muted-foreground" htmlFor="tag-desc">
-            Description
+          <label className="block text-sm text-muted-foreground mb-1" htmlFor="tag-desc">
+            Description (optional)
           </label>
-          <textarea
+          <Textarea
             id="tag-desc"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={2}
-            className="mt-1.5 block w-full rounded-md border border-border bg-background px-3 py-1.5 text-sm focus:border-primary focus:outline-none"
             maxLength={500}
           />
         </div>
 
         <div>
-          <label className="text-xs font-medium text-muted-foreground">Color</label>
-          <div className="mt-2 grid grid-cols-6 gap-2">
+          <label className="block text-sm text-muted-foreground mb-1">Color</label>
+          <div className="grid grid-cols-6 gap-2">
             <button
               type="button"
               onClick={() => setColor(null)}
@@ -196,17 +183,17 @@ export function TagEditDialog({ tag, onClose }: TagEditDialogProps) {
             <div className="text-xs font-medium text-foreground">
               Slug already exists. Merge into existing tag?
             </div>
-            <input
+            <Input
               type="text"
               value={mergeQuery}
               onChange={(e) => setMergeQuery(e.target.value)}
               placeholder="Search target tag..."
-              className="mt-2 block w-full rounded-md border border-border bg-background px-2 py-1 text-sm focus:border-primary focus:outline-none"
+              className="mt-2"
             />
             {mergeCandidate && (
               <div className="mt-2 flex items-center justify-between">
                 <TagChip tag={mergeCandidate} nonInteractive />
-                <Button size="sm" onClick={handleMerge} disabled={isSubmitting}>
+                <Button onClick={handleMerge} disabled={isSubmitting}>
                   Merge into <CaretRight size={12} weight="bold" /> {mergeCandidate.name}
                 </Button>
               </div>
@@ -219,45 +206,52 @@ export function TagEditDialog({ tag, onClose }: TagEditDialogProps) {
             {error}
           </p>
         )}
-      </div>
+      </ModalBody>
 
-      <div className="flex items-center gap-2 border-t border-border px-5 py-3">
+      <ModalFooter>
         <Button
           variant="outline"
-          size="sm"
           onClick={() => setConfirmDelete(true)}
           disabled={isSubmitting}
-          className="text-destructive hover:bg-destructive/10"
+          className="mr-auto text-destructive hover:bg-destructive/10"
         >
-          <Trash size={14} weight="bold" className="mr-1" />
+          <Trash size={14} weight="bold" />
           Delete
         </Button>
-        <div className="flex-1" />
-        <Button variant="outline" size="sm" onClick={onClose} disabled={isSubmitting}>
+        <Button variant="ghost" onClick={onClose} disabled={isSubmitting}>
           Cancel
         </Button>
-        <Button size="sm" onClick={handleSave} disabled={isSubmitting}>
+        <Button onClick={handleSave} disabled={isSubmitting}>
           {isSubmitting ? "Saving..." : "Save"}
         </Button>
-      </div>
+      </ModalFooter>
 
       {confirmDelete && (
-        <Modal onClose={() => setConfirmDelete(false)} maxWidth="max-w-sm">
-          <div className="px-5 py-4">
-            <h3 className="text-base font-semibold">Delete &ldquo;{tag.name}&rdquo;?</h3>
-            <p className="mt-1 text-sm text-muted-foreground">
+        <Modal
+          onClose={() => setConfirmDelete(false)}
+          closeDisabled={isSubmitting}
+          maxWidth="max-w-sm"
+        >
+          <ModalHeader title={<>Delete &ldquo;{tag.name}&rdquo;?</>} />
+          <ModalBody>
+            <p className="text-sm text-muted-foreground">
               This removes the tag from every piece of content that carries it ({tag.usageCount}{" "}
               item{tag.usageCount === 1 ? "" : "s"}). This action cannot be undone.
             </p>
-          </div>
-          <div className="flex items-center justify-end gap-2 border-t border-border px-5 py-3">
-            <Button variant="outline" size="sm" onClick={() => setConfirmDelete(false)}>
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="ghost" onClick={() => setConfirmDelete(false)} disabled={isSubmitting}>
               Cancel
             </Button>
-            <Button variant="destructive" size="sm" onClick={handleDelete} disabled={isSubmitting}>
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+              loading={isSubmitting}
+              disabled={isSubmitting}
+            >
               {isSubmitting ? "Deleting..." : "Delete tag"}
             </Button>
-          </div>
+          </ModalFooter>
         </Modal>
       )}
 

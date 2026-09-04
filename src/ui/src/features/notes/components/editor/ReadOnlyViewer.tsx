@@ -18,7 +18,7 @@ export function ReadOnlyViewer({ note, content, titleSlot, realtime }: ReadOnlyV
     debounceMs: 300,
   });
   return (
-    <div className="h-full bg-card">
+    <div className="h-full bg-surface">
       <CrepeEditor
         contentType={ContentType.NOTE}
         contentId={note.id}

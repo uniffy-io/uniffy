@@ -116,7 +116,7 @@ export function NotesEditor() {
 
   if (shouldShowLoading) {
     return (
-      <div className="flex flex-col h-full bg-card">
+      <div className="flex flex-col h-full bg-surface">
         <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
           <p className="text-sm">Loading note...</p>
@@ -127,7 +127,7 @@ export function NotesEditor() {
 
   if (!currentNote) {
     return (
-      <div className="flex flex-col h-full bg-card">
+      <div className="flex flex-col h-full bg-surface">
         <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground">
           <h3 className="text-xl font-semibold mb-2">No note selected</h3>
           <p className="text-sm">Select a note from the sidebar or create a new one</p>
@@ -144,7 +144,7 @@ export function NotesEditor() {
   if (isCanvas && canvasState) {
     return (
       <div
-        className="flex flex-col h-full bg-card"
+        className="flex flex-col h-full bg-surface"
         data-toolbar-pinned={toolbarPinned ? "true" : "false"}
       >
         {!isZenMode && (
@@ -224,7 +224,7 @@ export function NotesEditor() {
   return (
     <EditorHandleContext.Provider value={editorHandle}>
       <div
-        className="flex flex-col h-full bg-card"
+        className="flex flex-col h-full bg-surface"
         data-toolbar-pinned={toolbarPinned ? "true" : "false"}
       >
         {!isZenMode && (

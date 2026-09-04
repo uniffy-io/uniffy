@@ -4,6 +4,7 @@ import { Door, CalendarPlus, WarningCircle } from "@phosphor-icons/react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import {
   closeRoomViewer,
   selectRoomById,
@@ -65,7 +66,7 @@ export function RoomPage() {
   if (viewer.error || !roomId) {
     return (
       <div className="flex flex-col items-center justify-center h-full p-8 gap-2 text-center">
-        <WarningCircle size={48} weight="duotone" className="text-muted-foreground/40" />
+        <WarningCircle size={48} weight="duotone" className="text-subtle-foreground" />
         <p className="text-sm font-medium text-foreground">This room is not available</p>
         <p className="text-xs text-muted-foreground">
           It was removed, or it has not been shared with you.
@@ -98,7 +99,7 @@ export function RoomPage() {
         <span className="text-xs font-semibold uppercase tracking-wider">Room</span>
       </div>
 
-      <div className="rounded-lg border border-border bg-card p-4 md:p-5">
+      <Card tone="surface" className="p-4 md:p-5">
         <RoomOverview
           room={room}
           bookings={viewer.bookings}
@@ -117,7 +118,7 @@ export function RoomPage() {
             </Button>
           </div>
         )}
-      </div>
+      </Card>
 
       <BookingModal
         isOpen={bookingOpen}

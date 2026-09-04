@@ -1,6 +1,8 @@
 import { useState } from "react";
 
-import { Modal } from "@/components/ui/modal";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/ui/modal";
 import { friendlyErrorMessage } from "@/config";
 import { mfaClient } from "@/features/mfa/api/mfaApi";
 import { RecoveryCodesView } from "@/features/mfa/components/RecoveryCodesView";
@@ -38,32 +40,27 @@ export function RegenerateCodesDialog({ onClose, onRegenerated }: RegenerateCode
   };
 
   return (
-    <Modal onClose={onClose} closeDisabled={submitting}>
-      <div className="space-y-4 p-6">
-        <div>
-          <h2 className="text-lg font-semibold text-foreground">Regenerate recovery codes</h2>
-          <p className="mt-1 text-sm font-medium text-muted-foreground">
-            Your old recovery codes will stop working. Confirm with a current authenticator code and
-            save the new ones somewhere only you can reach.
-          </p>
-        </div>
+    <Modal onClose={onClose} closeDisabled={submitting} maxWidth="max-w-md">
+      <ModalHeader
+        title="Regenerate recovery codes"
+        description="Your old recovery codes will stop working. Confirm with a current authenticator code and save the new ones somewhere only you can reach."
+      />
 
-        {codes ? (
-          <>
+      {codes ? (
+        <>
+          <ModalBody>
             <RecoveryCodesView codes={codes} />
-            <div className="flex items-center justify-end">
-              <button
-                type="button"
-                onClick={handleDone}
-                className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
-              >
-                I have saved my codes
-              </button>
-            </div>
-          </>
-        ) : (
-          <form onSubmit={submit} className="space-y-4">
-            <input
+          </ModalBody>
+          <ModalFooter>
+            <Button type="button" onClick={handleDone}>
+              I have saved my codes
+            </Button>
+          </ModalFooter>
+        </>
+      ) : (
+        <form onSubmit={submit}>
+          <ModalBody>
+            <Input
               type="text"
               value={code}
               onChange={(e) => setCode(e.target.value)}
@@ -73,7 +70,7 @@ export function RegenerateCodesDialog({ onClose, onRegenerated }: RegenerateCode
               spellCheck={false}
               autoFocus
               required
-              className="w-full rounded-lg border border-border bg-background px-4 py-3 text-center font-mono text-2xl tracking-widest text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/30"
+              className="h-auto px-4 py-3 text-center font-mono text-2xl tracking-widest"
             />
             {error && (
               <div
@@ -83,26 +80,17 @@ export function RegenerateCodesDialog({ onClose, onRegenerated }: RegenerateCode
                 {error}
               </div>
             )}
-            <div className="flex items-center justify-end gap-2">
-              <button
-                type="button"
-                onClick={onClose}
-                disabled={submitting}
-                className="rounded-md border border-border bg-card px-4 py-2 text-sm text-foreground hover:bg-accent"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={submitting || !code.trim()}
-                className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
-              >
-                {submitting ? "Generating..." : "Generate"}
-              </button>
-            </div>
-          </form>
-        )}
-      </div>
+          </ModalBody>
+          <ModalFooter>
+            <Button type="button" variant="ghost" onClick={onClose} disabled={submitting}>
+              Cancel
+            </Button>
+            <Button type="submit" loading={submitting} disabled={submitting || !code.trim()}>
+              {submitting ? "Generating..." : "Generate"}
+            </Button>
+          </ModalFooter>
+        </form>
+      )}
     </Modal>
   );
 }

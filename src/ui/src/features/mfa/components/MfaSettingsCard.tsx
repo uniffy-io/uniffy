@@ -1,4 +1,5 @@
-import { Modal } from "@/components/ui/modal";
+import { Card } from "@/components/ui/card";
+import { Modal, ModalBody, ModalHeader } from "@/components/ui/modal";
 import { Lock, ShieldCheck, Warning } from "@phosphor-icons/react";
 import { useCallback, useEffect, useState } from "react";
 
@@ -63,7 +64,7 @@ export function MfaSettingsCard() {
         )}
       </div>
 
-      <div className="rounded-lg border border-border bg-card p-4 md:p-6 space-y-4">
+      <Card tone="surface" className="p-4 md:p-6 space-y-4">
         <div className="flex items-start gap-3">
           <Lock size={20} weight="duotone" className="mt-0.5 shrink-0 text-muted-foreground" />
           <div className="space-y-1">
@@ -136,7 +137,7 @@ export function MfaSettingsCard() {
               <button
                 type="button"
                 onClick={() => setShowRegenerate(true)}
-                className="rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground hover:bg-accent"
+                className="rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground hover:bg-muted/60"
               >
                 Regenerate recovery codes
               </button>
@@ -150,11 +151,15 @@ export function MfaSettingsCard() {
             </div>
           </div>
         )}
-      </div>
+      </Card>
 
       {showWizard && (
         <Modal onClose={() => setShowWizard(false)} maxWidth="max-w-2xl">
-          <div className="p-6">
+          <ModalHeader
+            title="Enable two factor authentication"
+            onClose={() => setShowWizard(false)}
+          />
+          <ModalBody>
             <EnrollmentWizard
               onCancel={() => setShowWizard(false)}
               onComplete={async () => {
@@ -162,7 +167,7 @@ export function MfaSettingsCard() {
                 await refresh();
               }}
             />
-          </div>
+          </ModalBody>
         </Modal>
       )}
 

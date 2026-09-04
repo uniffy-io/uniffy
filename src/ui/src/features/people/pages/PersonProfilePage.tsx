@@ -7,6 +7,7 @@ import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { createChannel } from "@/features/chat/store/chatThunks";
 import { ChannelType } from "@uniffy/proto/chat/v1/chat_pb";
 import { ProfileHeader } from "@/features/people/components/profile/ProfileHeader";
@@ -70,62 +71,71 @@ export function PersonProfilePage() {
           isZenMode ? "h-dvh delay-150" : "h-[calc(100dvh-3rem)] delay-0",
         )}
       >
-        <div className="flex h-full flex-col overflow-hidden">
-          <div className="flex items-center gap-1 border-b border-border bg-card px-4 py-2">
-            <Link
-              to="/people"
-              className="text-sm font-semibold text-muted-foreground transition-colors hover:text-foreground"
-            >
-              People
-            </Link>
-            <CaretRight size={12} className="text-muted-foreground/50" />
-            <h1 className="truncate text-sm font-semibold text-foreground">
-              {person?.displayName ?? "Profile"}
-            </h1>
-          </div>
+        <div className="h-full overflow-y-auto">
+          <div className="container mx-auto max-w-5xl space-y-4 px-3 py-4 md:px-4 md:py-6">
+            <nav className="flex items-center gap-1 text-sm" aria-label="Breadcrumb">
+              <Link
+                to="/people"
+                className="font-medium text-muted-foreground transition-colors hover:text-foreground"
+              >
+                People
+              </Link>
+              <CaretRight size={12} className="text-subtle-foreground" />
+              <span className="truncate font-medium text-foreground">
+                {person?.displayName ?? "Profile"}
+              </span>
+            </nav>
 
-          <div className="flex-1 overflow-y-auto">
-            <div className="mx-auto w-full max-w-3xl space-y-4 p-4 md:py-6">
-              {isLoading && (
-                <div className="rounded-lg border border-border bg-card p-6">
-                  <div className="flex items-start gap-4">
-                    <Skeleton variant="rectangular" className="h-16 w-16" />
-                    <div className="flex-1 space-y-2 pt-1">
-                      <Skeleton variant="text" className="h-5 w-1/3" />
-                      <Skeleton variant="text" className="h-3 w-1/4" />
-                      <Skeleton variant="text" className="h-3 w-1/5" />
-                    </div>
+            {isLoading && (
+              <Card tone="surface" className="p-4 md:p-6">
+                <div className="flex items-start gap-4">
+                  <Skeleton variant="rectangular" className="h-16 w-16" />
+                  <div className="flex-1 space-y-2 pt-1">
+                    <Skeleton variant="text" className="h-5 w-1/3" />
+                    <Skeleton variant="text" className="h-3 w-1/4" />
+                    <Skeleton variant="text" className="h-3 w-1/5" />
                   </div>
                 </div>
-              )}
+              </Card>
+            )}
 
-              {notFound && (
-                <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
-                  <UserCircle size={48} weight="duotone" className="text-muted-foreground/50" />
-                  <p className="text-sm font-medium text-foreground">
-                    This person could not be found
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    They may have left the organization.
-                  </p>
-                  <Button variant="outline" size="sm" onClick={() => navigate("/people")}>
-                    Back to people
-                  </Button>
+            {notFound && (
+              <Card
+                tone="surface"
+                className="flex flex-col items-center justify-center gap-3 py-16 text-center"
+              >
+                <div className="rounded-full bg-muted p-3">
+                  <UserCircle size={24} weight="duotone" className="text-muted-foreground" />
                 </div>
-              )}
+                <p className="text-sm font-medium text-foreground">
+                  This person could not be found
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  They may have left the organization.
+                </p>
+                <Button variant="outline" size="sm" onClick={() => navigate("/people")}>
+                  Back to people
+                </Button>
+              </Card>
+            )}
 
-              {person && (
-                <>
-                  <ProfileHeader
-                    person={person}
-                    onMessage={() => void handleMessage()}
-                    messagePending={messagePending}
-                  />
-                  <ProfileFields person={person} />
-                  <ReportingLine person={person} />
-                </>
-              )}
-            </div>
+            {person && (
+              <>
+                <ProfileHeader
+                  person={person}
+                  onMessage={() => void handleMessage()}
+                  messagePending={messagePending}
+                />
+                <div className="grid grid-cols-1 gap-4 lg:grid-cols-5">
+                  <div className="lg:col-span-3">
+                    <ProfileFields person={person} />
+                  </div>
+                  <div className="lg:col-span-2">
+                    <ReportingLine person={person} />
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { friendlyErrorMessage } from "@/config";
+import { Input } from "@/components/ui/input";
 import { mfaClient } from "@/features/mfa/api/mfaApi";
 import { RecoveryCodesView } from "@/features/mfa/components/RecoveryCodesView";
 
@@ -109,7 +110,7 @@ export function EnrollmentWizard({ onComplete, onCancel }: EnrollmentWizardProps
 
   if (loading && !material) {
     return (
-      <div className="rounded-lg border border-border bg-card p-6 text-sm font-medium text-muted-foreground">
+      <div className="rounded-xl bg-card p-6 text-sm font-medium text-muted-foreground shadow-edge">
         Preparing your enrollment...
       </div>
     );
@@ -144,7 +145,7 @@ export function EnrollmentWizard({ onComplete, onCancel }: EnrollmentWizardProps
           </div>
 
           <div className="flex flex-col md:flex-row gap-6 items-start">
-            <div className="rounded-lg border border-border bg-white p-3">
+            <div className="rounded-lg bg-white p-3 shadow-edge">
               <img
                 src={`data:image/svg+xml;base64,${material.qrSvgBase64}`}
                 alt="TOTP enrollment QR code"
@@ -163,7 +164,7 @@ export function EnrollmentWizard({ onComplete, onCancel }: EnrollmentWizardProps
                 <button
                   type="button"
                   onClick={handleCopySecret}
-                  className="rounded-md border border-border bg-card px-3 py-2 text-sm hover:bg-accent"
+                  className="rounded-md border border-border bg-card px-3 py-2 text-sm hover:bg-muted/60"
                 >
                   Copy
                 </button>
@@ -203,7 +204,7 @@ export function EnrollmentWizard({ onComplete, onCancel }: EnrollmentWizardProps
             </p>
           </div>
 
-          <input
+          <Input
             type="text"
             value={code}
             onChange={(e) => setCode(e.target.value)}
@@ -213,7 +214,7 @@ export function EnrollmentWizard({ onComplete, onCancel }: EnrollmentWizardProps
             spellCheck={false}
             autoFocus
             required
-            className="w-full rounded-lg border border-border bg-background px-4 py-3 text-center font-mono text-2xl tracking-widest text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/30"
+            className="h-auto rounded-lg px-4 py-3 text-center font-mono text-2xl tracking-widest"
             data-testid="mfa-enroll-code"
           />
 
@@ -315,7 +316,7 @@ function Stepper({ current }: { current: Step }) {
             <span className={active ? "font-medium text-foreground" : "text-muted-foreground"}>
               {s.label}
             </span>
-            {i < steps.length - 1 && <span className="text-muted-foreground/40">/</span>}
+            {i < steps.length - 1 && <span className="text-subtle-foreground">/</span>}
           </li>
         );
       })}

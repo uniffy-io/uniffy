@@ -66,7 +66,7 @@ Three tiers, every page and component:
 - `useBreakpoint()` (`@/shared/hooks/useBreakpoint`) for JS-level structure changes; Tailwind `sm:`/`md:`/`lg:` for styling.
 - Fixed-height layouts use `h-dvh`/`100dvh`, not `h-screen`/`100vh` (mobile browser chrome).
 - Touch targets >= 44x44px; hover-only actions get an always-visible mobile variant (`md:opacity-0 md:group-hover:opacity-100`).
-- Modals: `w-[calc(100vw-2rem)] max-w-{size}`, slide-up from bottom on mobile; dropdowns become bottom sheets on mobile.
+- Modals: always `Modal` + `ModalHeader` / `ModalBody` / `ModalFooter` from `@/components/ui/modal` (see "Dialogs" below); the shell already handles `w-[calc(100vw-2rem)] max-w-{size}` and the slide-up from bottom on mobile. Dropdowns become bottom sheets on mobile.
 - Tables hide secondary columns with `hidden md:table-cell`.
 - Test at 375px, 768px, 1024px.
 
@@ -77,16 +77,42 @@ Use theme variables, never hardcoded colors - this keeps dark/light parity autom
 | Purpose | Classes |
 |---|---|
 | Primary accent | `bg-primary text-primary-foreground` |
-| Base surfaces | `bg-background text-foreground` |
-| Cards/popovers | `bg-card text-card-foreground border-border` |
-| Subtle/muted | `bg-muted text-muted-foreground` |
-| Inputs / rings | `bg-input`, `ring-ring` |
+| Top header, primary sidebar | `bg-nav` |
+| App frame (side panels) | `bg-background text-foreground` |
+| Content sheet, dialogs, drawers | `bg-surface` (dialogs, drawers, and menus separate by the float shadow, not by a CSS border; `bg-popover` equals `bg-surface` in dark and is one step lighter in light) |
+| Raised blocks on the sheet | `bg-card text-card-foreground` |
+| Subtle/muted | `bg-muted text-muted-foreground`; third text tier `text-subtle-foreground` for timestamps, placeholders, helper copy |
+| Form controls (`Input`, `Textarea`, `Select`, `MultiSelect`, `TimezoneSelect`, `DatePicker`, `Checkbox`, native `<select>`, pickers) | `bg-input border-border`, hover `border-border-strong`, focus `focus-ring`; the open menu is `bg-popover` |
+
+The surface ladder runs darkest to lightest in dark mode: nav, background, surface, card. The palettes live in `index.css` (`:root` / `.dark`); `ThemeProvider` writes only four inline vars on the root element - the user accent (`--primary`, `--ring`, and the contrast-picked `--primary-foreground`) and the user font (`--font-sans`).
 
 Exception - status colors use explicit pairs: success `bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400`, same shape for red/yellow.
 
+**Borders are translucent** (white alpha in dark, black alpha in light) so one token reads correctly on every rung of the ladder. Three tiers: `border-border` for resting edges of blocks inside a surface (cards, inputs, chips, rows), `border-border-strong` for hover, focus, and open states AND for the seams between chrome regions (app header bottom, sidebar rail edge, pane headers such as the channel, calendar, project, and editor headers), `border-border/60` for dividers inside a block. Icon boxes that sit on `bg-nav` (the top header nav, bell, calendar, record, avatar) rest on `border-border-nav`, one notch above strong, since the nav tone is the darkest rung and swallows the other tiers; they hover to `border-primary/30`, the same edge as their open state. Never `border-foreground/N` or `border-muted-foreground/N` for a neutral edge; those are brighter than the token and break the hierarchy.
+
+**Form controls share one shell.** `bg-input` is the single fill for every control (the app-frame tone in dark so fields read as wells, white in light), `border-border` the resting edge, `border-border-strong` on hover and while a menu is open. `controlShellClass` (`@/components/ui/input`) carries exactly that; `Input` and `Textarea` (`@/components/ui/textarea`) are the primitives and take size overrides through `className` (`h-7 px-1.5 text-xs` for inline rename fields, `pl-9` for a search icon). A raw `<input>` or `<textarea>` appears only bare (`bg-transparent`, no border) inside a composer or inside a wrapper box that carries `controlShellClass` + `focus-ring-within`. Placeholders are `text-subtle-foreground`. Never hand-roll `border-input`, `focus:ring-*`, or `focus:border-primary` on a control, and never use `bg-background` / `bg-card` / `bg-muted` as a field fill.
+
+**Focus** has one recipe: the `focus-ring` utility (the element itself, or a visually hidden `peer` input beside it) and `focus-ring-within` (a wrapper whose descendant is focused). Both draw a soft accent outline halo and lift the border to the accent, and they stack on any box-shadow. Buttons, toggles, checkboxes, and every field use them; do not compose `ring-2 ring-ring ring-offset-*` variants by hand.
+
+**Pane headers** (the band at the top of a content pane: projects, notifications, agents, people) are built from `@/components/ui/pane-header`: `PaneHeader` shell, `PaneHeaderBar` (accent icon or avatar, `text-sm md:text-base font-medium` title, `text-xs` subtitle, `eyebrow` for a `PaneBackLink`, actions as children, `divided` when a controls row follows), `PaneHeaderControls` for filters and switchers, `PaneIconButton` for icon-only actions. Search in a header is `SearchField size="sm"` (`@/components/ui/search-field`), exclusive toggles are `SegmentedControl` (`@/components/ui/segmented-control`). No hand-rolled `text-xl font-bold` page titles inside a pane.
+
+**Floating chrome** (menus, popovers, pickers, hover cards, search popups, context menus, floating toolbars) uses `popoverShellClass` from `@/components/ui/popover` (or the `Popover` div): `rounded-lg bg-popover shadow-float`. Dialogs, drawers, and slide-over panels use `dialogShellClass`: `bg-surface shadow-float-lg`. `shadow-float` / `shadow-float-lg` are the elevation tokens, a 1px ring at the strong border tier plus a wide soft drop, so a floating element carries no CSS border and no `shadow-lg` / `shadow-xl` / `shadow-2xl`. Internal dividers inside a popover stay `border-border/60`. An accent-framed floating surface (Spotlight, a focused search box) adds `ring-1 ring-primary/40` on top of the shell rather than a primary border.
+
+**Tables** use `Table` + `TableHeader` / `TableBody` / `TableRow` / `TableHead` / `TableCell` (`@/components/ui/table`), never a hand-rolled `<table>`. The shell is the card shell (`rounded-xl shadow-edge`, `tone="surface"` on an app-frame page, `tone="card"` inside a surface block); the header band is the `table-band` utility (frame tone washed over the table tone, painted opaque), rows divide with `border-border/60` hairlines on the cells, and rows hover with the same `bg-foreground/5` wash as sidebar items. The header is sticky: it pins to the nearest scroller, so a table never sits inside an `overflow-hidden` wrapper, and layouts where the document scrolls under the app header set `[--sticky-top:3rem]` on their root (admin and platform layouts do). `rounded={false}` when a parent draws the frame.
+
+**Scrollbars and selection** are stylesheet-owned: thin neutral thumbs (`foreground` alpha) on every scroller and `::selection` on the accent. Do not restyle either per component.
+
+**Resizable panes** separate with `PaneSeparator` (`@/components/ui/pane-separator`): a 1px seam with a 4px grab area that lifts to the accent on hover and drag. Never hand-roll a `Separator` from `react-resizable-panels` with a `bg-border` bar, and do not add `border-r` / `border-l` on the panels beside one; the separator is the seam. `static` gives the same line between panes that do not resize.
+
+**Raised blocks sit one rung above what they sit on.** Section panes on an app-frame page (`bg-background`: dashboard, settings, admin, platform, project settings) are `bg-surface`; item cards on a content sheet (`bg-surface`: chat, notes, agents builder, people) are `bg-card`. `Card` takes `tone="surface" | "card"` for exactly this. Selectable option tiles use the same edge: resting `shadow-edge`, hover `shadow-edge-strong`, selected `bg-primary/5 shadow-edge-primary`, never a primary border or ring.
+
+**Cards** use `Card` (`@/components/ui/card`) or, on elements that cannot be a div, the `shadow-edge` / `shadow-edge-strong` / `shadow-edge-primary` utilities with the tone above and no CSS border. The edge is a 1px ring in the shadow layer plus a top highlight, so cards read as raised rather than outlined. Hover and selected states ride through `className`: `transition-shadow duration-150 hover:shadow-edge-strong` for a card that opens something, `bg-primary/5 shadow-edge-primary` for the picked card in a set. Card footers step the tone down (`bg-background/60`) instead of drawing a divider.
+
+**Dialogs:** one shell, `Modal` (`@/components/ui/modal`), composed from `ModalHeader` (title + one-line description, no icon badge, X only when the footer has no Cancel/Close), `ModalBody` (scrolls at 65dvh; `scrollable={false}` for flex-column layouts), `ModalFooter` (ghost Cancel first, primary action last). Field labels are `text-sm text-muted-foreground mb-1`, optional fields say `(optional)` inline. `ConfirmDialog` / `ReasonDialog` are the shared confirm shapes. No hand-rolled `fixed inset-0` overlays and no headlessui `Dialog`.
+
 **URN type colors:** `@/config/theme/urnColors.ts` is the single source (`getUrnTypeHexColor` for canvas/SVG, `getUrnTypeTheme` for components, `URN_TYPE_LEGEND` for legends). New content types get their color there, nowhere else.
 
-**Person colors:** `@/config/theme/brandGradients.ts` is the single source (`identityStops` for raw stops, `identityPaint` for solid/gradient/wash, `brandRampStops` for ordered sets). Everything that paints a person - avatar backdrop, realtime caret, canvas pointer - hashes the display name through it, so the same person reads the same everywhere. Stops stay on the Unity Violet -> Belonging Pink axis; do not add a second palette.
+**Person colors:** `@/config/theme/brandGradients.ts` is the single source (`identityStops` for raw stops, `identityPaint` for solid/gradient/wash, `brandRampStops` for ordered sets). Everything that paints a person - avatar backdrop, realtime caret, canvas pointer - hashes the display name through it, so the same person reads the same everywhere. Stops stay on the Unity Violet -> Belonging Pink axis; do not add a second palette. Project task statuses default to the same axis by sort order through `statusPaint` (`@/features/projects/utils/statusPaint`): the first status sits at violet, the last at pink. A colour picked in project settings (from `STATUS_SWATCHES`, brand colours only) overrides that slot; every status surface reads `statusPaint`, never `option.color` directly.
 
 **Icons:** `@phosphor-icons/react` for all icons.
 

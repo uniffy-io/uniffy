@@ -11,6 +11,8 @@ import {
 import type { Icon } from "@phosphor-icons/react";
 import { SearchResultType } from "@uniffy/proto/search/v1/search_pb";
 import type { SearchResultItem } from "@uniffy/proto/search/v1/search_pb";
+import { popoverShellClass } from "@/components/ui/popover";
+import { useOverlayEscape } from "@/shared/hooks/useOverlayEscape";
 import { cn } from "@/shared/utils/cn";
 import { BROADCAST_URN_PREFIX, parseUrn, UrnType } from "@/shared/utils/urn";
 import { SEARCH_RESULT_TYPE_TO_URN_TYPE } from "@/shared/utils/searchResultTypes";
@@ -167,22 +169,20 @@ export function SearchResultsList({
             onSelect(results[selectedIndex]);
           }
           break;
-        case "Escape":
-          e.preventDefault();
-          onClose?.();
-          break;
       }
     };
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [results, selectedIndex, onSelect, onClose, setSelectedIndex]);
+  }, [results, selectedIndex, onSelect, setSelectedIndex]);
+
+  useOverlayEscape(() => onClose?.(), !!onClose);
 
   return (
     <div
       className={cn(
-        "rounded-xl bg-card border border-border/80 shadow-xl",
-        "overflow-hidden",
+        popoverShellClass,
+        "rounded-xl overflow-hidden",
         "animate-in fade-in-0 slide-in-from-top-1 duration-200",
         className,
       )}
@@ -337,7 +337,7 @@ export function SearchResultsList({
                             "text-[10px] font-medium shrink-0 px-1.5 py-0.5 rounded",
                             isSelected
                               ? theme.badgeBg + " " + theme.accentText
-                              : "text-muted-foreground/60",
+                              : "text-subtle-foreground",
                           )}
                         >
                           {theme.label}
@@ -366,22 +366,22 @@ export function SearchResultsList({
                           <Tag
                             size={10}
                             weight="duotone"
-                            className="text-muted-foreground/50 shrink-0"
+                            className="text-subtle-foreground shrink-0"
                           />
                           {result.tags.slice(0, 3).map((tag) => (
-                            <span key={tag} className="text-[10px] text-muted-foreground/60">
+                            <span key={tag} className="text-[10px] text-subtle-foreground">
                               {tag}
                             </span>
                           ))}
                           {result.tags.length > 3 && (
-                            <span className="text-[10px] text-muted-foreground/40">
+                            <span className="text-[10px] text-subtle-foreground">
                               +{result.tags.length - 3}
                             </span>
                           )}
                         </div>
                       )}
                       {showDescription && (
-                        <p className="text-xs text-muted-foreground/60 truncate mt-0.5">
+                        <p className="text-xs text-subtle-foreground truncate mt-0.5">
                           {hasHighlight(result.descriptionHighlighted)
                             ? renderHighlightedText(stripMarkdown(result.descriptionHighlighted))
                             : description}
@@ -397,7 +397,7 @@ export function SearchResultsList({
           {showFooter && (
             <div className="border-t border-border/50 px-3 py-2 flex items-center justify-center gap-3 text-[10px] text-muted-foreground/70">
               {!showHeader && (
-                <span className="mr-auto text-muted-foreground/60">
+                <span className="mr-auto text-subtle-foreground">
                   {resultCountLabel(results.length, hasMore)}
                 </span>
               )}

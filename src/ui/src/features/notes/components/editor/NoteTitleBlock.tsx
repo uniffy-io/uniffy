@@ -10,6 +10,8 @@ import { renderNoteIcon } from "@/features/notes/utils/noteIcons";
 import { IconPicker } from "@/features/notes/components/editor/IconPicker";
 import { TagPicker } from "@/features/tags";
 import { formatProtoDate } from "@/shared/utils/dateFormatting";
+import { popoverShellClass } from "@/components/ui/popover";
+import { useOverlayEscape } from "@/shared/hooks/useOverlayEscape";
 import { cn } from "@/shared/utils/cn";
 import { SubjectAvatarById, useSubjectResolver } from "@/components/subject";
 import { AccessMode } from "@uniffy/proto/common/v1/common_pb";
@@ -34,16 +36,11 @@ function AlignmentChip({
       if (buttonRef.current?.contains(t)) return;
       setOpen(false);
     };
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
-    };
     document.addEventListener("mousedown", onClick);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onClick);
-      document.removeEventListener("keydown", onKey);
-    };
+    return () => document.removeEventListener("mousedown", onClick);
   }, [open]);
+
+  useOverlayEscape(() => setOpen(false), open);
 
   const toggle = () => {
     if (!open && buttonRef.current) setRect(buttonRef.current.getBoundingClientRect());
@@ -76,7 +73,7 @@ function AlignmentChip({
               left: rect.left,
               zIndex: 1000,
             }}
-            className="min-w-[160px] rounded-md border border-border bg-card text-card-foreground shadow-lg p-1"
+            className={cn(popoverShellClass, "min-w-[160px] p-1")}
           >
             {(["left", "center"] as const).map((value) => (
               <button
@@ -223,7 +220,7 @@ export function NoteTitleBlock({ note, canEdit, compact = false }: NoteTitleBloc
             placeholder="Untitled"
             readOnly={!canEdit}
             className={cn(
-              "bg-transparent border-none outline-none focus:ring-0 text-foreground placeholder:text-muted-foreground/40",
+              "bg-transparent border-none outline-none focus:ring-0 text-foreground placeholder:text-subtle-foreground",
               compact ? "flex-1 min-w-0 text-base font-semibold" : "w-full text-4xl font-bold",
               !compact && isCenter && "text-center",
               !canEdit && "cursor-not-allowed",

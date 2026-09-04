@@ -1,7 +1,10 @@
 import { useRef, useEffect, useCallback, useState } from "react";
+import { useOverlayEscape } from "@/shared/hooks/useOverlayEscape";
 import { createPortal } from "react-dom";
 import { SafeEmojiPicker } from "@/components/emoji/SafeEmojiPicker";
-import { useTheme } from "@/config/theme/ThemeProvider";
+import { popoverShellClass } from "@/components/ui/popover";
+import { cn } from "@/shared/utils/cn";
+import { useTheme } from "@/config/theme/themeContext";
 
 interface EmojiPickerProps {
   onSelect: (emoji: string) => void;
@@ -59,13 +62,7 @@ export function EmojiPicker({ onSelect, onClose, anchorRef }: EmojiPickerProps) 
     };
   }, [onClose]);
 
-  useEffect(() => {
-    const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", handleEsc);
-    return () => document.removeEventListener("keydown", handleEsc);
-  }, [onClose]);
+  useOverlayEscape(onClose);
 
   const handleEmojiSelect = useCallback(
     (emoji: { native: string }) => {
@@ -84,7 +81,7 @@ export function EmojiPicker({ onSelect, onClose, anchorRef }: EmojiPickerProps) 
       style={{ top: position.top, left: position.left }}
       data-testid="chat-emoji-picker"
     >
-      <div className="rounded-xl border border-border bg-card shadow-xl overflow-hidden">
+      <div className={cn(popoverShellClass, "rounded-xl overflow-hidden")}>
         <SafeEmojiPicker
           onEmojiSelect={handleEmojiSelect}
           theme={resolvedTheme === "dark" ? "dark" : "light"}

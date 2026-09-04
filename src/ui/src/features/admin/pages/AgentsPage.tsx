@@ -21,6 +21,16 @@ import { NumberInput } from "@/components/ui/number-input";
 import { Select } from "@/components/ui/select";
 import { ToggleSwitch } from "@/components/ui/toggle-switch";
 import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableEmpty,
+  TableHead,
+  TableHeader,
+  TableLoading,
+  TableRow,
+} from "@/components/ui/table";
 import { cn } from "@/shared/utils/cn";
 import {
   fetchRuntimeSettings,
@@ -178,7 +188,7 @@ export function AgentsPage() {
       {activeTab === "general" && <GeneralTab />}
       {activeTab === "runtime" && <RuntimeTab />}
       {activeTab === "keys" && (
-        <div className="h-[70vh] min-h-[560px] overflow-hidden rounded-xl border border-border md:h-auto md:min-h-0 md:flex-1">
+        <div className="h-[70vh] min-h-[560px] overflow-hidden rounded-xl bg-surface shadow-edge md:h-auto md:min-h-0 md:flex-1">
           <ConfigView embedded />
         </div>
       )}
@@ -203,7 +213,7 @@ function SkillsMetricsTab() {
   }, [dispatch, orgId]);
 
   return (
-    <section className="border border-border rounded-xl bg-card">
+    <section className="rounded-xl bg-surface shadow-edge">
       <header className="flex items-center gap-3 px-5 py-4 border-b border-border">
         <Lightbulb size={20} weight="duotone" className="text-amber-500" />
         <div>
@@ -234,46 +244,42 @@ function SkillsMetricsTab() {
           />
         </div>
 
-        <div className="border border-border rounded-lg overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
-              <tr>
-                <th className="text-left px-3 py-2">Skill</th>
-                <th className="text-left px-3 py-2 hidden md:table-cell">Origin</th>
-                <th className="text-right px-3 py-2">Injected</th>
-                <th className="text-right px-3 py-2">Viewed</th>
-                <th className="text-right px-3 py-2">Invoked</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {loading && !loaded ? (
-                <tr>
-                  <td colSpan={5} className="px-3 py-4 text-center text-muted-foreground">
-                    Loading...
-                  </td>
-                </tr>
-              ) : metrics.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="px-3 py-4 text-center text-muted-foreground">
-                    No skill usage recorded yet.
-                  </td>
-                </tr>
-              ) : (
-                metrics.map((m) => (
-                  <tr key={m.skillId}>
-                    <td className="px-3 py-2 font-medium text-foreground">{m.displayName}</td>
-                    <td className="px-3 py-2 text-xs text-muted-foreground hidden md:table-cell">
-                      {SKILL_ORIGIN_LABELS[m.origin] ?? m.origin}
-                    </td>
-                    <td className="px-3 py-2 text-right tabular-nums">{m.injectedCount}</td>
-                    <td className="px-3 py-2 text-right tabular-nums">{m.viewedCount}</td>
-                    <td className="px-3 py-2 text-right tabular-nums">{m.invokedCount}</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+        <Table tone="card">
+          <TableHeader>
+            <TableRow hoverable={false}>
+              <TableHead>Skill</TableHead>
+              <TableHead className="hidden md:table-cell">Origin</TableHead>
+              <TableHead align="right">Injected</TableHead>
+              <TableHead align="right">Viewed</TableHead>
+              <TableHead align="right">Invoked</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {loading && !loaded ? (
+              <TableLoading colSpan={5} />
+            ) : metrics.length === 0 ? (
+              <TableEmpty colSpan={5} title="No skill usage recorded yet." />
+            ) : (
+              metrics.map((m) => (
+                <TableRow key={m.skillId}>
+                  <TableCell className="font-medium text-foreground">{m.displayName}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground hidden md:table-cell">
+                    {SKILL_ORIGIN_LABELS[m.origin] ?? m.origin}
+                  </TableCell>
+                  <TableCell align="right" className="tabular-nums">
+                    {m.injectedCount}
+                  </TableCell>
+                  <TableCell align="right" className="tabular-nums">
+                    {m.viewedCount}
+                  </TableCell>
+                  <TableCell align="right" className="tabular-nums">
+                    {m.invokedCount}
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
       </div>
     </section>
   );
@@ -281,7 +287,7 @@ function SkillsMetricsTab() {
 
 function StatCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: number }) {
   return (
-    <div className="rounded-lg border border-border bg-muted/30 px-4 py-3">
+    <div className="rounded-lg bg-card shadow-edge px-4 py-3">
       <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
         {icon}
         {label}
@@ -317,7 +323,7 @@ function GeneralTab() {
   };
 
   return (
-    <section className="border border-border rounded-xl bg-card">
+    <section className="rounded-xl bg-surface shadow-edge">
       <header className="flex items-center gap-3 px-5 py-4 border-b border-border">
         <ChatCircleText size={20} weight="duotone" className="text-violet-500" />
         <div>
@@ -417,7 +423,7 @@ function RuntimeTab() {
 
   if (!form) {
     return (
-      <section className="border border-border rounded-xl bg-card px-5 py-6 text-sm text-muted-foreground">
+      <section className="rounded-xl bg-surface shadow-edge px-5 py-6 text-sm text-muted-foreground">
         Loading...
       </section>
     );
@@ -429,7 +435,7 @@ function RuntimeTab() {
   const busy = loading || saving;
 
   return (
-    <section className="border border-border rounded-xl bg-card">
+    <section className="rounded-xl bg-surface shadow-edge">
       <header className="flex items-center gap-3 px-5 py-4 border-b border-border">
         <Sliders size={20} weight="duotone" className="text-violet-500" />
         <div>
@@ -668,7 +674,7 @@ function BudgetTab() {
   }, [spend, monthlyLimit]);
 
   return (
-    <section className="border border-border rounded-xl bg-card">
+    <section className="rounded-xl bg-surface shadow-edge">
       <header className="flex items-center gap-3 px-5 py-4 border-b border-border">
         <CurrencyDollar size={20} weight="duotone" className="text-emerald-500" />
         <div>
@@ -798,7 +804,7 @@ function RateLimitsTab() {
   }, [dispatch, orgId]);
 
   return (
-    <section className="border border-border rounded-xl bg-card">
+    <section className="rounded-xl bg-surface shadow-edge">
       <header className="flex items-center gap-3 px-5 py-4 border-b border-border">
         <Gauge size={20} weight="duotone" className="text-violet-500" />
         <div>
@@ -953,7 +959,7 @@ function CurrenciesTab() {
   };
 
   return (
-    <section className="border border-border rounded-xl bg-card">
+    <section className="rounded-xl bg-surface shadow-edge">
       <header className="flex items-center gap-3 px-5 py-4 border-b border-border">
         <Coins size={20} weight="duotone" className="text-amber-500" />
         <div>
@@ -997,63 +1003,55 @@ function CurrenciesTab() {
             Required when a model's pricing currency differs from the display currency. Enter each
             direction explicitly (USD-&gt;EUR and EUR-&gt;USD are separate rows).
           </p>
-          <div className="border border-border rounded-lg overflow-hidden">
-            <table className="w-full text-sm">
-              <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
-                <tr>
-                  <th className="text-left px-3 py-2">From</th>
-                  <th className="text-left px-3 py-2">To</th>
-                  <th className="text-right px-3 py-2">Rate</th>
-                  <th className="text-left px-3 py-2 hidden md:table-cell">Updated</th>
-                  <th className="w-10" />
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {loading && rates.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="px-3 py-4 text-center text-muted-foreground">
-                      Loading...
-                    </td>
-                  </tr>
-                ) : rates.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="px-3 py-4 text-center text-muted-foreground">
-                      No exchange rates configured.
-                    </td>
-                  </tr>
-                ) : (
-                  rates.map((r) => (
-                    <tr key={`${r.fromCurrency}-${r.toCurrency}`}>
-                      <td className="px-3 py-2 font-mono">{r.fromCurrency}</td>
-                      <td className="px-3 py-2 font-mono">{r.toCurrency}</td>
-                      <td className="px-3 py-2 text-right tabular-nums">{r.rate}</td>
-                      <td className="px-3 py-2 text-xs text-muted-foreground hidden md:table-cell">
-                        {new Date(r.updatedAt).toLocaleDateString()}
-                      </td>
-                      <td className="px-3 py-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() =>
-                            dispatch(
-                              deleteCurrencyRate({
-                                fromCurrency: r.fromCurrency,
-                                toCurrency: r.toCurrency,
-                              }),
-                            )
-                          }
-                          aria-label="Delete rate"
-                          className="text-muted-foreground hover:text-red-600 dark:hover:text-red-400 hover:bg-red-500/10"
-                        >
-                          <Trash size={14} />
-                        </Button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+          <Table tone="card">
+            <TableHeader>
+              <TableRow hoverable={false}>
+                <TableHead>From</TableHead>
+                <TableHead>To</TableHead>
+                <TableHead align="right">Rate</TableHead>
+                <TableHead className="hidden md:table-cell">Updated</TableHead>
+                <TableHead className="w-10" />
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loading && rates.length === 0 ? (
+                <TableLoading colSpan={5} />
+              ) : rates.length === 0 ? (
+                <TableEmpty colSpan={5} title="No exchange rates configured." />
+              ) : (
+                rates.map((r) => (
+                  <TableRow key={`${r.fromCurrency}-${r.toCurrency}`}>
+                    <TableCell className="font-mono">{r.fromCurrency}</TableCell>
+                    <TableCell className="font-mono">{r.toCurrency}</TableCell>
+                    <TableCell align="right" className="tabular-nums">
+                      {r.rate}
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground hidden md:table-cell">
+                      {new Date(r.updatedAt).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() =>
+                          dispatch(
+                            deleteCurrencyRate({
+                              fromCurrency: r.fromCurrency,
+                              toCurrency: r.toCurrency,
+                            }),
+                          )
+                        }
+                        aria-label="Delete rate"
+                        className="text-muted-foreground hover:text-red-600 dark:hover:text-red-400 hover:bg-red-500/10"
+                      >
+                        <Trash size={14} />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
 
           <div className="flex items-end gap-2 mt-3 flex-wrap">
             <div>

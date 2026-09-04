@@ -8,6 +8,7 @@ import {
   ArrowSquareOut,
 } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
+import { controlShellClass } from "@/components/ui/input";
 import { ToggleSwitch } from "@/components/ui/toggle-switch";
 import { TimezoneSelect } from "@/components/ui/timezone-select";
 import { cn } from "@/shared/utils/cn";
@@ -220,10 +221,10 @@ export function AppearanceSection() {
               key={id}
               type="button"
               disabled={saving}
-              className={`flex flex-col items-center gap-2 p-3 md:p-4 rounded-lg border-2 transition-colors ${
+              className={`flex flex-col items-center gap-2 p-3 md:p-4 rounded-xl transition-shadow duration-150 ${
                 appearance.theme === id
-                  ? "border-primary bg-primary/5"
-                  : "border-border hover:border-primary/50 bg-card"
+                  ? "bg-primary/5 shadow-edge-primary"
+                  : "bg-surface shadow-edge hover:shadow-edge-strong"
               }`}
               onClick={() => handleThemeChange(id)}
             >
@@ -296,7 +297,7 @@ export function AppearanceSection() {
                 value={scheduling.workdayStart}
                 disabled={saving}
                 onChange={(e) => handleWorkdayHoursChange(e.target.value, scheduling.workdayEnd)}
-                className="h-10 rounded-md border border-border bg-card px-3 text-sm text-foreground"
+                className={cn(controlShellClass, "focus-ring h-10 px-3 text-sm text-foreground")}
                 aria-label="Workday start"
               >
                 {CLOCK_OPTIONS.map((value) => (
@@ -312,7 +313,7 @@ export function AppearanceSection() {
                 value={scheduling.workdayEnd}
                 disabled={saving}
                 onChange={(e) => handleWorkdayHoursChange(scheduling.workdayStart, e.target.value)}
-                className="h-10 rounded-md border border-border bg-card px-3 text-sm text-foreground"
+                className={cn(controlShellClass, "focus-ring h-10 px-3 text-sm text-foreground")}
                 aria-label="Workday end"
               >
                 {CLOCK_OPTIONS.map((value) => (
@@ -373,10 +374,10 @@ export function AppearanceSection() {
               type="button"
               disabled={saving}
               className={cn(
-                "flex flex-col items-stretch gap-3 p-4 rounded-lg border-2 transition-colors text-left",
+                "flex flex-col items-stretch gap-3 p-4 rounded-xl transition-shadow duration-150 text-left",
                 appearance.mentionDisplay === id
-                  ? "border-primary bg-primary/5"
-                  : "border-border hover:border-primary/50 bg-card",
+                  ? "bg-primary/5 shadow-edge-primary"
+                  : "bg-surface shadow-edge hover:shadow-edge-strong",
               )}
               onClick={() => handleMentionDisplayChange(id)}
             >
@@ -471,10 +472,10 @@ export function AppearanceSection() {
               key={id}
               type="button"
               disabled={saving}
-              className={`flex items-center justify-between w-full gap-4 p-4 rounded-lg border transition-colors ${
+              className={`flex items-center justify-between w-full gap-4 p-4 rounded-xl transition-shadow duration-150 ${
                 appearance.fontFamily === id
-                  ? "border-primary bg-primary/5"
-                  : "border-border hover:border-primary/50 bg-card"
+                  ? "bg-primary/5 shadow-edge-primary"
+                  : "bg-surface shadow-edge hover:shadow-edge-strong"
               }`}
               onClick={() => handleFontFamilyChange(id)}
               style={{ fontFamily: stack }}
@@ -518,10 +519,10 @@ export function AppearanceSection() {
                 <button
                   type="button"
                   disabled={saving}
-                  className={`flex items-center justify-between w-full p-4 rounded-lg border transition-colors ${
+                  className={`flex items-center justify-between w-full p-4 rounded-xl transition-shadow duration-150 ${
                     isSelected
-                      ? "border-primary bg-primary/5"
-                      : "border-border hover:border-primary/50 bg-card"
+                      ? "bg-primary/5 shadow-edge-primary"
+                      : "bg-surface shadow-edge hover:shadow-edge-strong"
                   }`}
                   onClick={() => handleDefaultEditorChange(id)}
                 >
@@ -589,7 +590,7 @@ function MentionPreviewExpanded() {
       <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
         <CheckSquare size={12} weight="duotone" className="text-emerald-500" />
         <span>3 of 5 tasks ready</span>
-        <span className="text-muted-foreground/40">.</span>
+        <span className="text-subtle-foreground">.</span>
         <ArrowSquareOut size={11} className="text-muted-foreground/70" />
         <span className="text-muted-foreground/70">Open</span>
       </div>

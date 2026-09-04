@@ -17,6 +17,7 @@ import { cn } from "@/shared/utils/cn";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -256,7 +257,7 @@ function SystemConfigTab() {
 
   if (loading) {
     return (
-      <div className="rounded-lg border border-border bg-card p-6 text-sm text-muted-foreground">
+      <div className="rounded-xl bg-surface shadow-edge p-6 text-sm text-muted-foreground">
         Loading...
       </div>
     );
@@ -268,7 +269,7 @@ function SystemConfigTab() {
 
   return (
     <div className="space-y-4 max-w-2xl">
-      <div className="rounded-lg border border-border bg-card p-4 flex items-start gap-3">
+      <div className="rounded-xl bg-surface shadow-edge p-4 flex items-start gap-3">
         <Envelope size={18} weight="duotone" className="text-muted-foreground shrink-0 mt-0.5" />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
@@ -286,7 +287,7 @@ function SystemConfigTab() {
         </div>
       </div>
 
-      <div className="rounded-lg border border-border bg-card p-4 md:p-6 space-y-3">
+      <div className="rounded-xl bg-surface shadow-edge p-4 md:p-6 space-y-3">
         <FieldRow
           label="From address"
           value={draft.fromAddress}
@@ -379,12 +380,12 @@ function SystemConfigTab() {
             </p>
             <div>
               <label className="block text-xs font-medium text-foreground mb-1">Reason</label>
-              <input
+              <Input
                 type="text"
                 value={clearReason}
                 onChange={(e) => setClearReason(e.target.value)}
                 placeholder="e.g. switching providers, rotating credentials"
-                className="w-full rounded border border-border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                className="h-8 rounded px-2"
               />
             </div>
           </div>
@@ -440,12 +441,12 @@ function FieldRow({
         {label}
         {required && <span className="text-red-500 ml-1">*</span>}
       </label>
-      <input
+      <Input
         type={type ?? "text"}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full rounded border border-border bg-background px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+        className="h-8 rounded px-2.5"
       />
     </div>
   );
@@ -606,12 +607,12 @@ function OrgConfigsTab() {
             </p>
             <div>
               <label className="block text-xs font-medium text-foreground mb-1">Reason</label>
-              <input
+              <Input
                 type="text"
                 value={clearReason}
                 onChange={(e) => setClearReason(e.target.value)}
                 placeholder="e.g. customer ticket #1234, broken SMTP creds"
-                className="w-full rounded border border-border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                className="h-8 rounded px-2"
               />
             </div>
           </div>
@@ -765,12 +766,12 @@ function SuppressionsTab() {
             </p>
             <div>
               <label className="block text-xs font-medium text-foreground mb-1">Reason</label>
-              <input
+              <Input
                 type="text"
                 value={removeReason}
                 onChange={(e) => setRemoveReason(e.target.value)}
                 placeholder="e.g. customer confirmed mailbox is back"
-                className="w-full rounded border border-border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                className="h-8 rounded px-2"
               />
             </div>
           </div>
@@ -917,12 +918,12 @@ function FiltersBar({
             weight="duotone"
             className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground"
           />
-          <input
+          <Input
             type="text"
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder={placeholder ?? "Filter by name or slug"}
-            className="w-full pl-8 pr-2 py-1.5 text-sm rounded-md bg-background border border-border focus:outline-none focus:ring-2 focus:ring-ring"
+            className="h-8 pl-8 pr-2"
           />
         </div>
         {children}

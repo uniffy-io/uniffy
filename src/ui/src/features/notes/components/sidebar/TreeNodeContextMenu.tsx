@@ -8,7 +8,10 @@
 import { useEffect, useRef } from "react";
 import { PencilSimple, Trash, CopySimple, ArrowRight, BookmarkSimple } from "@phosphor-icons/react";
 import type { ActiveMenuState } from "@/features/notes/components/sidebar/types";
+import { popoverEnterClass, popoverShellClass } from "@/components/ui/popover";
 import { useBookmarkToggle } from "@/features/bookmarks";
+import { useOverlayEscape } from "@/shared/hooks/useOverlayEscape";
+import { cn } from "@/shared/utils/cn";
 
 interface TreeNodeContextMenuProps {
   menu: ActiveMenuState;
@@ -47,16 +50,7 @@ export function TreeNodeContextMenu({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [onClose]);
 
-  // Close on escape
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        onClose();
-      }
-    };
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [onClose]);
+  useOverlayEscape(onClose);
 
   const handleAction = (action: () => void, e: React.MouseEvent) => {
     e.preventDefault();
@@ -68,7 +62,7 @@ export function TreeNodeContextMenu({
   return (
     <div
       ref={menuRef}
-      className="fixed z-50 min-w-45 overflow-hidden rounded-md border border-border bg-card shadow-lg animate-in fade-in-0 zoom-in-95 duration-100"
+      className={cn(popoverShellClass, popoverEnterClass, "fixed z-50 min-w-45 overflow-hidden")}
       style={{ top: menu.position.y, left: menu.position.x }}
       onClick={(e) => e.stopPropagation()}
     >

@@ -32,7 +32,17 @@ import {
   Bar,
 } from "recharts";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableEmpty,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { cn } from "@/shared/utils/cn";
+import { popoverShellClass } from "@/components/ui/popover";
 import { formatCurrency } from "@/shared/utils/currencyFormatting";
 import { useAdminAccess } from "@/features/admin";
 import {
@@ -119,7 +129,7 @@ function SecondaryStat({
   tone: keyof typeof SECONDARY_TONES;
 }) {
   return (
-    <div className="bg-card border border-border rounded-xl p-4 flex items-center gap-3">
+    <div className="flex items-center gap-3 rounded-xl bg-surface p-4 shadow-edge">
       <div
         className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${SECONDARY_TONES[tone]}`}
       >
@@ -156,7 +166,7 @@ function ChartTooltip({
   if (!active || !payload?.length) return null;
 
   return (
-    <div className="bg-card border border-border rounded-lg shadow-xl px-3 py-2.5 text-xs">
+    <div className={cn(popoverShellClass, "px-3 py-2.5 text-xs")}>
       <p className="font-medium text-foreground mb-1.5">{String(label)}</p>
       <div className="space-y-1">
         {payload.map((entry, i) => (
@@ -188,7 +198,7 @@ function StatCard({
   accentColor: string;
 }) {
   return (
-    <div className="bg-card border border-border rounded-xl p-4 relative overflow-hidden group hover:border-primary/30 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
+    <div className="group relative overflow-hidden rounded-xl bg-surface p-4 shadow-edge">
       <div
         aria-hidden
         className="pointer-events-none absolute -top-12 -right-12 w-32 h-32 rounded-full blur-2xl opacity-25 group-hover:opacity-40 transition-opacity duration-300"
@@ -639,22 +649,22 @@ function ProviderKeyBars({ data }: { data: UsageStats["providerKeyUsage"] }) {
 
 type SortDirection = "asc" | "desc";
 
-interface TableColumn {
+interface UsageColumn {
   key: string;
   label: string;
   align?: "left" | "right";
   // Gets the whole row so a cell can decorate itself from a sibling field
   // (the provider logo next to a key or model name). Sorting still runs on
   // the raw value, so a decorated cell orders the same as a plain one.
-  format?: (value: number | string, row: TableRow) => React.ReactNode;
+  format?: (value: number | string, row: UsageRow) => React.ReactNode;
   mono?: boolean;
 }
 
-interface TableRow {
+interface UsageRow {
   [key: string]: string | number;
 }
 
-function formatProviderCell(value: number | string, row: TableRow) {
+function formatProviderCell(value: number | string, row: UsageRow) {
   return (
     <span className="inline-flex items-center gap-1.5">
       <ProviderLogo provider={String(row.provider)} size="sm" />
@@ -671,8 +681,8 @@ function SortableTable({
   icon: Icon,
   title,
 }: {
-  columns: TableColumn[];
-  rows: TableRow[];
+  columns: UsageColumn[];
+  rows: UsageRow[];
   defaultSortKey: string;
   defaultSortDir?: SortDirection;
   icon: React.ComponentType<{ size: number; className?: string }>;
@@ -704,84 +714,74 @@ function SortableTable({
   };
 
   return (
-    <div className="bg-card border border-border rounded-xl overflow-hidden">
-      <div className="flex items-center gap-2 px-4 py-3 border-b border-border">
+    <div className="space-y-2">
+      <div className="flex items-center gap-2 px-1">
         <Icon size={16} className="text-muted-foreground" />
         <h3 className="font-medium text-foreground text-sm">{title}</h3>
         <span className="ml-auto text-xs text-muted-foreground">
           {rows.length} {rows.length === 1 ? "entry" : "entries"}
         </span>
       </div>
-      {rows.length === 0 ? (
-        <div className="px-4 py-8 text-center text-sm text-muted-foreground">No data available</div>
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border bg-muted/30">
+      <Table>
+        <TableHeader>
+          <TableRow hoverable={false}>
+            {columns.map((col) => {
+              const isActive = sortKey === col.key;
+              return (
+                <TableHead
+                  key={col.key}
+                  align={col.align ?? "left"}
+                  className="cursor-pointer select-none hover:text-foreground transition-colors group/th"
+                  onClick={() => handleSort(col.key)}
+                >
+                  <span className="inline-flex items-center gap-1">
+                    {col.label}
+                    {isActive ? (
+                      sortDir === "asc" ? (
+                        <SortAscending size={12} weight="bold" className="text-primary" />
+                      ) : (
+                        <SortDescending size={12} weight="bold" className="text-primary" />
+                      )
+                    ) : (
+                      <CaretUpDown
+                        size={12}
+                        className="opacity-0 group-hover/th:opacity-40 transition-opacity"
+                      />
+                    )}
+                  </span>
+                </TableHead>
+              );
+            })}
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {sorted.length === 0 ? (
+            <TableEmpty colSpan={columns.length} title="No data available" />
+          ) : (
+            sorted.map((row, i) => (
+              <TableRow key={i}>
                 {columns.map((col) => {
-                  const isActive = sortKey === col.key;
+                  const raw = row[col.key];
+                  const display = col.format
+                    ? col.format(raw, row)
+                    : typeof raw === "number"
+                      ? raw.toLocaleString()
+                      : String(raw);
                   return (
-                    <th
+                    <TableCell
                       key={col.key}
-                      className={cn(
-                        "px-4 py-2.5 text-xs font-medium text-muted-foreground uppercase tracking-wider cursor-pointer select-none hover:text-foreground transition-colors group/th",
-                        col.align === "right" ? "text-right" : "text-left",
-                      )}
-                      onClick={() => handleSort(col.key)}
+                      align={col.align ?? "left"}
+                      className={cn("text-foreground", col.mono && "font-mono text-xs")}
                     >
-                      <span className="inline-flex items-center gap-1">
-                        {col.label}
-                        {isActive ? (
-                          sortDir === "asc" ? (
-                            <SortAscending size={12} weight="bold" className="text-primary" />
-                          ) : (
-                            <SortDescending size={12} weight="bold" className="text-primary" />
-                          )
-                        ) : (
-                          <CaretUpDown
-                            size={12}
-                            className="opacity-0 group-hover/th:opacity-40 transition-opacity"
-                          />
-                        )}
-                      </span>
-                    </th>
+                      {display}
+                    </TableCell>
                   );
                 })}
-              </tr>
-            </thead>
-            <tbody>
-              {sorted.map((row, i) => (
-                <tr
-                  key={i}
-                  className="border-b border-border last:border-b-0 hover:bg-muted/20 transition-colors"
-                >
-                  {columns.map((col) => {
-                    const raw = row[col.key];
-                    const display = col.format
-                      ? col.format(raw, row)
-                      : typeof raw === "number"
-                        ? raw.toLocaleString()
-                        : String(raw);
-                    return (
-                      <td
-                        key={col.key}
-                        className={cn(
-                          "px-4 py-2.5 text-foreground",
-                          col.align === "right" && "text-right",
-                          col.mono && "font-mono text-xs",
-                        )}
-                      >
-                        {display}
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+              </TableRow>
+            ))
+          )}
+        </TableBody>
+      </Table>
     </div>
   );
 }
@@ -865,7 +865,7 @@ export function UsageView() {
   const totalTokens = stats.totalInputTokens + stats.totalOutputTokens;
   const avgTokensPerRun = stats.totalRuns > 0 ? Math.round(totalTokens / stats.totalRuns) : 0;
 
-  const modelRows: TableRow[] = stats.modelUsage.map((m) => ({
+  const modelRows: UsageRow[] = stats.modelUsage.map((m) => ({
     model: m.model,
     provider: providerByModel[m.model] ?? "",
     runs: m.runs,
@@ -875,7 +875,7 @@ export function UsageView() {
     cost: parseFloat(m.cost) || 0,
   }));
 
-  const agentRows: TableRow[] = stats.agentUsage.map((a) => ({
+  const agentRows: UsageRow[] = stats.agentUsage.map((a) => ({
     agent: a.agentName,
     runs: a.runs,
     inputTokens: a.inputTokens,
@@ -883,12 +883,12 @@ export function UsageView() {
     totalTokens: a.inputTokens + a.outputTokens,
   }));
 
-  const toolRows: TableRow[] = stats.toolUsage.map((t) => ({
+  const toolRows: UsageRow[] = stats.toolUsage.map((t) => ({
     tool: t.toolName,
     calls: t.callCount,
   }));
 
-  const providerKeyRows: TableRow[] = stats.providerKeyUsage.map((p) => ({
+  const providerKeyRows: UsageRow[] = stats.providerKeyUsage.map((p) => ({
     key: `${p.keyLabel} (${p.provider})`,
     provider: p.provider,
     runs: p.runs,
@@ -903,13 +903,16 @@ export function UsageView() {
     <div className="flex-1 overflow-y-auto">
       <div className="max-w-[1400px] mx-auto p-6 space-y-6">
         <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-xl font-bold text-foreground tracking-tight">Usage Analytics</h2>
-            <p className="text-sm text-muted-foreground mt-0.5">
-              {isAdmin
-                ? "Organization-wide token consumption, model distribution, and agent activity"
-                : "Your personal token consumption, model distribution, and agent activity"}
-            </p>
+          <div className="flex min-w-0 items-center gap-2 md:gap-3">
+            <ChartBar size={20} weight="duotone" className="shrink-0 text-primary" />
+            <div className="min-w-0">
+              <h2 className="text-sm md:text-base font-medium text-foreground">Usage Analytics</h2>
+              <p className="text-xs text-muted-foreground">
+                {isAdmin
+                  ? "Organization-wide token consumption, model distribution, and agent activity"
+                  : "Your personal token consumption, model distribution, and agent activity"}
+              </p>
+            </div>
           </div>
           <div className="flex items-center gap-2">
             {loading && <CircleNotch size={14} className="animate-spin text-muted-foreground" />}
@@ -1026,7 +1029,7 @@ export function UsageView() {
           </div>
         )}
 
-        <div className="bg-card border border-border rounded-xl p-5">
+        <div className="rounded-xl bg-surface p-5 shadow-edge">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold text-foreground text-sm">Token Usage</h3>
             <div className="flex items-center gap-3">
@@ -1054,7 +1057,7 @@ export function UsageView() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="bg-card border border-border rounded-xl p-5">
+          <div className="rounded-xl bg-surface p-5 shadow-edge">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <Cube size={16} className="text-muted-foreground" />
@@ -1064,7 +1067,7 @@ export function UsageView() {
             </div>
             <ModelBars data={stats.modelUsage} />
           </div>
-          <div className="bg-card border border-border rounded-xl p-5">
+          <div className="rounded-xl bg-surface p-5 shadow-edge">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <Robot size={16} className="text-muted-foreground" />
@@ -1077,7 +1080,7 @@ export function UsageView() {
         </div>
 
         {stats.providerKeyUsage.length > 0 && (
-          <div className="bg-card border border-border rounded-xl p-5">
+          <div className="rounded-xl bg-surface p-5 shadow-edge">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <Key size={16} className="text-muted-foreground" />
@@ -1169,7 +1172,7 @@ export function UsageView() {
           </>
         )}
 
-        <div className="bg-card border border-border rounded-xl p-5">
+        <div className="rounded-xl bg-surface p-5 shadow-edge">
           <div className="flex items-center gap-2 mb-4">
             <Wrench size={16} className="text-muted-foreground" />
             <h3 className="font-semibold text-foreground text-sm">Tool Calls</h3>

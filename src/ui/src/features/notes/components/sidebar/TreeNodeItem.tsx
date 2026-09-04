@@ -7,6 +7,7 @@ import {
   SelectionAll,
   DotsThree,
 } from "@phosphor-icons/react";
+import { Input } from "@/components/ui/input";
 import { useIsBookmarked } from "@/features/bookmarks";
 import { renderNoteIcon } from "@/features/notes/utils/noteIcons";
 import { CreateDropdown } from "@/features/notes/components/sidebar/CreateDropdown";
@@ -121,7 +122,7 @@ export function TreeNodeItem({
   );
 
   const renderEditInput = () => (
-    <input
+    <Input
       ref={inputRef}
       type="text"
       value={editValue}
@@ -129,7 +130,7 @@ export function TreeNodeItem({
       onBlur={handleSubmitRename}
       onKeyDown={handleKeyDown}
       onClick={(e) => e.stopPropagation()}
-      className="flex-1 bg-background border border-input rounded px-1 py-0.5 text-sm outline-none focus:ring-1 focus:ring-ring"
+      className="h-auto flex-1 rounded px-1 py-0.5"
     />
   );
 
@@ -168,9 +169,9 @@ export function TreeNodeItem({
             drag.onDragStart(node.id);
           }}
           onDragEnd={drag.onDragEnd}
-          className={`w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded-md hover:bg-accent transition-colors text-left group cursor-pointer ${
+          className={`w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded-md hover:bg-muted/60 transition-colors text-left group cursor-pointer ${
             isDragOver ? "bg-primary/10 ring-2 ring-primary" : ""
-          } ${isDragging ? "opacity-50" : ""} ${isSelected ? "bg-accent ring-2 ring-primary/50" : ""}`}
+          } ${isDragging ? "opacity-50" : ""} ${isSelected ? "bg-muted text-foreground font-medium" : ""}`}
           onClick={() => {
             if (isEditing) return;
             actions.onSelect(node.id);
@@ -255,8 +256,8 @@ export function TreeNodeItem({
         drag.onDragStart(node.id);
       }}
       onDragEnd={drag.onDragEnd}
-      className={`w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded-md hover:bg-accent transition-colors text-left group cursor-pointer ${
-        isSelected ? "bg-accent text-accent-foreground" : ""
+      className={`w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded-md hover:bg-muted/60 transition-colors text-left group cursor-pointer ${
+        isSelected ? "bg-muted text-foreground font-medium" : ""
       } ${isDragging ? "opacity-50" : ""}`}
       onClick={() => actions.onSelect(node.id)}
     >

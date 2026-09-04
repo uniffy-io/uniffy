@@ -892,8 +892,11 @@ export function MessageCompose({
         return;
       }
 
+      // An Escape consumed here must not also reach the document listeners of
+      // the overlays under the composer (thread slide-over, dialogs).
       if (e.key === "Escape") {
         if (mentionActive) {
+          e.stopPropagation();
           handleMentionClose();
           return;
         }
@@ -901,10 +904,12 @@ export function MessageCompose({
           return;
         }
         if (editingMessage) {
+          e.stopPropagation();
           onCancelEdit?.();
           return;
         }
         if (replyTo) {
+          e.stopPropagation();
           onCancelReply?.();
           return;
         }
@@ -1099,11 +1104,9 @@ export function MessageCompose({
       />
       <div
         className={cn(
-          "relative border border-border/70 bg-card/75 backdrop-blur-xl dark:bg-card/60",
-          "focus-within:ring-1 focus-within:ring-ring focus-within:border-transparent transition-all",
-          variant === "hero"
-            ? "rounded-2xl shadow-[0_24px_80px_-20px_rgba(105,74,255,0.35)]"
-            : "mx-4 mb-4 rounded-xl",
+          "relative bg-card/60 backdrop-blur-lg backdrop-saturate-150 shadow-float",
+          "focus-ring-within transition-all",
+          variant === "hero" ? "rounded-2xl" : "mx-4 mb-4 rounded-xl",
         )}
         onDrop={handleDrop}
         onDragOver={handleDragOver}
@@ -1127,7 +1130,7 @@ export function MessageCompose({
             <div className="flex items-center gap-2 min-w-0 text-xs">
               <Pencil size={14} className="shrink-0 text-primary" />
               <span className="text-muted-foreground shrink-0">Editing message</span>
-              <span className="text-muted-foreground/60 hidden sm:inline">
+              <span className="text-subtle-foreground hidden sm:inline">
                 Escape to cancel, Enter to save
               </span>
             </div>
@@ -1151,7 +1154,7 @@ export function MessageCompose({
               <ArrowBendUpLeft size={14} className="shrink-0 text-primary" />
               <span className="text-muted-foreground shrink-0">Replying to</span>
               <span className="font-semibold text-foreground truncate">{replyTo.senderName}</span>
-              <span className="text-muted-foreground/60 truncate hidden sm:inline">
+              <span className="text-subtle-foreground truncate hidden sm:inline">
                 {replyTo.contentPreview}
               </span>
             </div>
@@ -1194,7 +1197,7 @@ export function MessageCompose({
 
         <div className="relative">
           {isEmpty && (
-            <div className="absolute px-4 pt-3 pb-2 text-sm text-muted-foreground pointer-events-none select-none">
+            <div className="absolute px-4 pt-3 pb-2 text-[14.5px] leading-[1.45] text-muted-foreground pointer-events-none select-none">
               {displayPlaceholder}
             </div>
           )}
@@ -1208,7 +1211,7 @@ export function MessageCompose({
             onInput={handleInput}
             onKeyDown={handleKeyDown}
             onPaste={handlePaste}
-            className="w-full px-4 pt-3 pb-2 text-sm min-h-[40px] outline-none text-foreground break-words whitespace-pre-wrap"
+            className="w-full px-4 pt-3 pb-2 text-[14.5px] leading-[1.45] min-h-[40px] outline-none text-foreground break-words whitespace-pre-wrap"
             suppressContentEditableWarning
             data-testid="chat-compose-input"
             data-empty={isEmpty ? "true" : "false"}
@@ -1306,7 +1309,7 @@ export function MessageCompose({
                 "p-1.5 rounded-md transition-colors",
                 !isEmpty
                   ? "text-primary hover:bg-primary/10 cursor-pointer"
-                  : "text-muted-foreground/50 cursor-not-allowed",
+                  : "text-subtle-foreground cursor-not-allowed",
               )}
               data-testid="chat-compose-send-button"
               data-disabled={isEmpty ? "true" : "false"}

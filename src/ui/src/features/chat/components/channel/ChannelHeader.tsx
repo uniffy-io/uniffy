@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from "react";
+import { useOverlayEscape } from "@/shared/hooks/useOverlayEscape";
 import {
   Hash,
   Lock,
@@ -53,9 +54,9 @@ import {
 
 const headerButtonClass = cn(
   "group/btn relative flex items-center justify-center h-7 w-7 rounded-md",
-  "border border-foreground/15 bg-transparent text-muted-foreground",
+  "border border-border-strong bg-transparent text-muted-foreground",
   "transition-all duration-300 ease-out",
-  "hover:border-foreground/30 hover:bg-muted hover:text-primary",
+  "hover:border-border-strong hover:bg-muted hover:text-primary",
 );
 
 const headerButtonActiveClass =
@@ -63,18 +64,20 @@ const headerButtonActiveClass =
 
 const headerChipClass = cn(
   "group/btn flex items-center gap-1 h-7 px-1.5 rounded-md",
-  "border border-foreground/15 bg-transparent text-xs text-muted-foreground",
+  "border border-border-strong bg-transparent text-xs text-muted-foreground",
   "transition-all duration-300 ease-out",
-  "hover:border-foreground/30 hover:bg-muted hover:text-primary",
+  "hover:border-border-strong hover:bg-muted hover:text-primary",
 );
 
 interface ChannelHeaderProps {
   channelId?: string;
   showCloseButton?: boolean;
   onClose?: () => void;
+  /** Hero state of an empty agent DM: no bar, only the navigation controls float over it. */
+  bare?: boolean;
 }
 
-export function ChannelHeader({ channelId, showCloseButton, onClose }: ChannelHeaderProps) {
+export function ChannelHeader({ channelId, showCloseButton, onClose, bare }: ChannelHeaderProps) {
   const dispatch = useAppDispatch();
   const defaultActiveChannel = useAppSelector(selectActiveChannel);
   const channelFromId = useAppSelector((state) =>
@@ -98,14 +101,7 @@ export function ChannelHeader({ channelId, showCloseButton, onClose }: ChannelHe
   const searchBtnRef = useRef<HTMLButtonElement>(null);
   const contextBtnRef = useRef<HTMLButtonElement>(null);
 
-  useEffect(() => {
-    if (!showPicker) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setShowPicker(false);
-    };
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [showPicker]);
+  useOverlayEscape(() => setShowPicker(false), showPicker);
 
   const handleSplitClick = useCallback(() => {
     if (splitActive) {
@@ -230,6 +226,46 @@ export function ChannelHeader({ channelId, showCloseButton, onClose }: ChannelHe
 
   if (!activeChannel) return null;
 
+  if (bare) {
+    const showMobileToggle = isMobile && !sidebarOpen && !showCloseButton;
+    const showSplitClose = showCloseButton && onClose;
+    if (!showMobileToggle && !showSplitClose) return null;
+    return (
+      <div
+        className="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-center justify-between px-4 py-2"
+        data-testid="chat-channel-header"
+        data-channel-id={activeChannel.id}
+        data-channel-type={activeChannel.channelType}
+        data-bare="true"
+      >
+        {showMobileToggle ? (
+          <button
+            type="button"
+            onClick={() => dispatch(expandSidebar())}
+            className={cn(headerButtonClass, "pointer-events-auto shrink-0")}
+            aria-label="Open chat navigation"
+            data-testid="chat-channel-mobile-sidebar-toggle"
+          >
+            <SidebarSimple size={16} />
+          </button>
+        ) : (
+          <span />
+        )}
+        {showSplitClose ? (
+          <button
+            type="button"
+            onClick={onClose}
+            className={cn(headerButtonClass, "pointer-events-auto")}
+            aria-label="Close split pane"
+            data-testid="chat-channel-close-split-button"
+          >
+            <X size={16} />
+          </button>
+        ) : null}
+      </div>
+    );
+  }
+
   const isPrivate = activeChannel.channelType === "PRIVATE";
   const ChannelIcon = isPrivate ? Lock : Hash;
   const createdDate = formatDateFull(activeChannel.createdAt);
@@ -237,7 +273,7 @@ export function ChannelHeader({ channelId, showCloseButton, onClose }: ChannelHe
 
   return (
     <div
-      className="border-b border-border/60 bg-card"
+      className="border-b border-border-strong bg-surface"
       data-testid="chat-channel-header"
       data-channel-id={activeChannel.id}
       data-channel-type={activeChannel.channelType}
@@ -274,14 +310,14 @@ export function ChannelHeader({ channelId, showCloseButton, onClose }: ChannelHe
             disabled={isSavingName}
             placeholder={activeChannel.name}
             maxLength={201}
-            className="h-7 text-sm font-semibold w-56"
+            className="h-7 text-[15px] font-semibold w-56"
             data-testid="chat-channel-name-input"
           />
         ) : (
           <button
             type="button"
             onClick={handleNameClick}
-            className="flex items-center gap-1 text-sm font-semibold text-foreground cursor-pointer hover:text-foreground/80 transition-colors"
+            className="flex items-center gap-1 text-[15px] font-semibold tracking-[-0.01em] text-foreground cursor-pointer hover:text-foreground/80 transition-colors"
             data-testid="chat-channel-name"
             title={isAgentDm ? "Click to rename" : undefined}
           >

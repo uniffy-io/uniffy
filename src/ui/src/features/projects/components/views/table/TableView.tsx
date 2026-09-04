@@ -24,8 +24,6 @@ import {
   CaretRight,
   CaretDown,
   DotsSixVertical,
-  X,
-  Trash,
   CheckCircle,
   ArrowBendDownRight,
   EyeSlash,
@@ -34,19 +32,17 @@ import {
 } from "@phosphor-icons/react";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
+import { useOverlayEscape } from "@/shared/hooks/useOverlayEscape";
 import { formatDateShort, isOverdue } from "@/shared/utils/dateFormatting";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { popoverShellClass } from "@/components/ui/popover";
 import {
   selectCurrentProject,
   optimisticUpdateTask,
-  bulkUpdateTasks,
 } from "@/features/projects/store/projectsSlice";
-import {
-  deleteTasks,
-  updateTask,
-  bulkUpdateTasksThunk,
-} from "@/features/projects/store/projectsThunks";
+import { updateTask } from "@/features/projects/store/projectsThunks";
 import {
   selectSelectedTaskIds,
   selectSearchQuery,
@@ -79,6 +75,7 @@ import { useFilteredTasks } from "@/features/projects/hooks/useTasks";
 import { useProjectCollapsedSet } from "@/features/projects/hooks/useProjectCollapsedSet";
 import { moveTask } from "@/features/projects/store/projectsThunks";
 import { LAYOUT, TABLE_COLUMNS } from "@/features/projects/constants";
+import { statusPaint, type StatusPaint } from "@/features/projects/utils/statusPaint";
 import { SYSTEM_FIELD_IDS } from "@/features/projects/types";
 import type { Task, FieldDefinition, SelectOption } from "@/features/projects/types";
 import { SubjectAvatar, SubjectAvatarStack, SubjectPicker } from "@/components/subject";
@@ -88,7 +85,8 @@ import { TagChip } from "@/features/tags";
 import { useTagsByIds } from "@/features/tags/store/selectors";
 import { EmptyState } from "./EmptyState";
 import { useProjectPermission } from "@/features/projects/hooks/useProjectPermissions";
-import { getTaskTypeConfig, TASK_TYPES } from "@/features/projects/utils/taskTypes";
+import { TaskTypeIcon } from "@/features/projects/components/TaskTypeIcon";
+import { TASK_TYPES } from "@/features/projects/utils/taskTypes";
 import { parseMultiSelectValue } from "@/features/projects/utils/multiSelectParsers";
 import { selectSprintsForProject } from "@/features/projects/store/sprintsSlice";
 import { checkReparent } from "@/features/projects/utils/reparent";
@@ -331,7 +329,8 @@ export function TableView() {
       const grouped: TaskGroup[] = options.map((opt) => ({
         key: opt.id,
         label: opt.label,
-        color: opt.color,
+        color:
+          field.id === SYSTEM_FIELD_IDS.STATUS ? statusPaint(options, opt.id).solid : opt.color,
         tasks: filteredTasks.filter((t) => {
           const val = getFieldValue(t, groupByFieldId);
           return val === opt.id;
@@ -1012,56 +1011,8 @@ export function TableView() {
     );
   };
 
-  // Get status and priority options for bulk editing
-  const statusField = project.fieldDefinitions.find((f) => f.id === SYSTEM_FIELD_IDS.STATUS);
-  const statusOptions = statusField?.config.options ?? [];
-  const priorityField = project.fieldDefinitions.find((f) => f.id === SYSTEM_FIELD_IDS.PRIORITY);
-  const priorityOptions = priorityField?.config.options ?? [];
-
   return (
     <div className="flex flex-col h-full relative">
-      {/* Bulk Edit Toolbar */}
-      {selectedTaskIds.length > 1 && (
-        <BulkEditToolbar
-          count={selectedTaskIds.length}
-          statusOptions={statusOptions}
-          priorityOptions={priorityOptions}
-          onChangeStatus={(statusId) => {
-            dispatch(
-              bulkUpdateTasks({
-                ids: selectedTaskIds,
-                changes: { status: statusId },
-              }),
-            );
-            dispatch(
-              bulkUpdateTasksThunk({
-                taskIds: selectedTaskIds,
-                updates: { status: statusId },
-              }),
-            );
-          }}
-          onChangePriority={(priorityId) => {
-            dispatch(
-              bulkUpdateTasks({
-                ids: selectedTaskIds,
-                changes: { priority: priorityId },
-              }),
-            );
-            dispatch(
-              bulkUpdateTasksThunk({
-                taskIds: selectedTaskIds,
-                updates: { priority: priorityId },
-              }),
-            );
-          }}
-          onDelete={() => {
-            dispatch(deleteTasks(selectedTaskIds));
-            dispatch(clearSelection());
-          }}
-          onClearSelection={() => dispatch(clearSelection())}
-        />
-      )}
-
       {/* Scrollable Table (header + body scroll together horizontally) */}
       <ScrollArea className="flex-1">
         <div style={{ minWidth: totalTableWidth }}>
@@ -1078,20 +1029,16 @@ export function TableView() {
               className="shrink-0 flex items-center justify-center border-r border-border bg-muted/30"
               style={{ width: TABLE_COLUMNS.CHECKBOX_WIDTH }}
             >
-              <input
-                type="checkbox"
-                className="h-4 w-4 rounded border-border"
+              <Checkbox
+                size="sm"
+                aria-label="Select all tasks"
                 checked={
                   allVisibleTaskIds.length > 0 &&
                   selectedTaskIds.length === allVisibleTaskIds.length
                 }
-                ref={(el) => {
-                  if (el) {
-                    el.indeterminate =
-                      selectedTaskIds.length > 0 &&
-                      selectedTaskIds.length < allVisibleTaskIds.length;
-                  }
-                }}
+                indeterminate={
+                  selectedTaskIds.length > 0 && selectedTaskIds.length < allVisibleTaskIds.length
+                }
                 onChange={handleSelectAll}
               />
             </div>
@@ -1294,7 +1241,7 @@ export function TableView() {
             <DragOverlay>
               {activeTask && (
                 <div
-                  className="flex items-center bg-card border border-border shadow-lg rounded opacity-90"
+                  className={cn(popoverShellClass, "flex items-center rounded opacity-90")}
                   style={{ height: LAYOUT.TABLE_ROW_HEIGHT }}
                 >
                   <div className="shrink-0 flex items-center justify-center" style={{ width: 28 }}>
@@ -1310,7 +1257,12 @@ export function TableView() {
 
       {/* Floating Undo/Redo pill */}
       {(undoStack.length > 0 || redoStack.length > 0) && (
-        <div className="absolute bottom-4 right-4 flex items-center gap-1 px-2 py-1.5 rounded-lg border border-border bg-card shadow-lg z-10">
+        <div
+          className={cn(
+            popoverShellClass,
+            "absolute bottom-4 right-4 flex items-center gap-1 px-2 py-1.5 z-10",
+          )}
+        >
           <button
             type="button"
             disabled={undoStack.length === 0}
@@ -1354,133 +1306,6 @@ export function TableView() {
           </button>
         </div>
       )}
-    </div>
-  );
-}
-
-interface BulkEditToolbarProps {
-  count: number;
-  statusOptions: SelectOption[];
-  priorityOptions: SelectOption[];
-  onChangeStatus: (statusId: string) => void;
-  onChangePriority: (priorityId: string) => void;
-  onDelete: () => void;
-  onClearSelection: () => void;
-}
-
-function BulkEditToolbar({
-  count,
-  statusOptions,
-  priorityOptions,
-  onChangeStatus,
-  onChangePriority,
-  onDelete,
-  onClearSelection,
-}: BulkEditToolbarProps) {
-  const [openDropdown, setOpenDropdown] = useState<"status" | "priority" | null>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setOpenDropdown(null);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  return (
-    <div
-      ref={dropdownRef}
-      className="shrink-0 flex items-center gap-2 px-4 border-b border-primary/30 bg-primary/5"
-      style={{ height: LAYOUT.TABLE_HEADER_HEIGHT }}
-    >
-      <span className="text-sm font-medium text-primary">{count} selected</span>
-
-      {/* Status Dropdown */}
-      <div className="relative">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-7 text-xs"
-          onClick={() => setOpenDropdown(openDropdown === "status" ? null : "status")}
-        >
-          Status
-        </Button>
-        {openDropdown === "status" && (
-          <div className="absolute top-full left-0 z-50 mt-1 min-w-36 rounded-md border border-border bg-card shadow-lg py-1 max-h-48 overflow-y-auto">
-            {statusOptions.map((opt) => (
-              <button
-                key={opt.id}
-                type="button"
-                onClick={() => {
-                  onChangeStatus(opt.id);
-                  setOpenDropdown(null);
-                }}
-                className="flex w-full items-center gap-2 px-3 py-1.5 text-sm text-foreground hover:bg-muted transition-colors"
-              >
-                <span
-                  className="w-2 h-2 rounded-full shrink-0"
-                  style={{ backgroundColor: opt.color }}
-                />
-                {opt.label}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Priority Dropdown */}
-      <div className="relative">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-7 text-xs"
-          onClick={() => setOpenDropdown(openDropdown === "priority" ? null : "priority")}
-        >
-          Priority
-        </Button>
-        {openDropdown === "priority" && (
-          <div className="absolute top-full left-0 z-50 mt-1 min-w-36 rounded-md border border-border bg-card shadow-lg py-1 max-h-48 overflow-y-auto">
-            {priorityOptions.map((opt) => (
-              <button
-                key={opt.id}
-                type="button"
-                onClick={() => {
-                  onChangePriority(opt.id);
-                  setOpenDropdown(null);
-                }}
-                className="flex w-full items-center gap-2 px-3 py-1.5 text-sm text-foreground hover:bg-muted transition-colors"
-              >
-                <span
-                  className="w-2 h-2 rounded-full shrink-0"
-                  style={{ backgroundColor: opt.color }}
-                />
-                {opt.label}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Delete */}
-      <Button
-        variant="ghost"
-        size="sm"
-        className="h-7 text-xs text-destructive hover:text-destructive"
-        onClick={onDelete}
-      >
-        <Trash size={14} className="mr-1" />
-        Delete
-      </Button>
-
-      <div className="flex-1" />
-
-      {/* Clear Selection */}
-      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onClearSelection}>
-        <X size={14} />
-      </Button>
     </div>
   );
 }
@@ -1596,14 +1421,14 @@ function TableRow({
           "shrink-0 flex items-center justify-center",
           isSubtask
             ? "text-muted-foreground/30"
-            : "cursor-grab active:cursor-grabbing text-muted-foreground/50 hover:text-muted-foreground",
+            : "cursor-grab active:cursor-grabbing text-subtle-foreground hover:text-muted-foreground",
         )}
         style={{ width: 28 }}
         {...(isSubtask ? {} : dragHandleProps)}
         onClick={(e) => e.stopPropagation()}
       >
         {isSubtask ? (
-          <ArrowBendDownRight size={12} className="text-muted-foreground/40" />
+          <ArrowBendDownRight size={12} className="text-subtle-foreground" />
         ) : (
           <DotsSixVertical size={14} />
         )}
@@ -1614,9 +1439,9 @@ function TableRow({
         className="shrink-0 flex items-center justify-center border-r border-border"
         style={{ width: TABLE_COLUMNS.CHECKBOX_WIDTH }}
       >
-        <input
-          type="checkbox"
-          className="h-4 w-4 rounded border-border"
+        <Checkbox
+          size="sm"
+          aria-label={`Select ${task.title}`}
           checked={isSelected}
           onChange={() => {}}
           onClick={onCheckboxClick}
@@ -1770,6 +1595,11 @@ function EditableFieldCell({
         {isEditing && (
           <InlineSelectEditor
             options={field.config.options ?? []}
+            swatch={
+              field.id === SYSTEM_FIELD_IDS.STATUS
+                ? (o) => statusPaint(field.config.options ?? [], o.id).gradient
+                : undefined
+            }
             currentValue={String(getFieldValue(task, field.id) ?? "")}
             onSave={onSave}
             onClose={onEndEdit}
@@ -1936,11 +1766,14 @@ function InlineSelectEditor({
   currentValue,
   onSave,
   onClose,
+  swatch,
 }: {
   options: SelectOption[];
   currentValue: string;
   onSave: (value: unknown) => void;
   onClose: () => void;
+  /** Overrides the stored option colour for the swatch (statuses derive theirs from order). */
+  swatch?: (option: SelectOption) => string;
 }) {
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -1957,7 +1790,10 @@ function InlineSelectEditor({
   return (
     <div
       ref={dropdownRef}
-      className="absolute top-full left-0 z-50 mt-1 min-w-35 rounded-md border border-border bg-card shadow-lg py-1 max-h-48 overflow-y-auto"
+      className={cn(
+        popoverShellClass,
+        "absolute top-full left-0 z-50 mt-1 min-w-35 py-1 max-h-48 overflow-y-auto",
+      )}
       onClick={(e) => e.stopPropagation()}
     >
       {options.map((option) => (
@@ -1977,7 +1813,7 @@ function InlineSelectEditor({
         >
           <span
             className="w-2 h-2 rounded-full shrink-0"
-            style={{ backgroundColor: option.color }}
+            style={{ background: swatch ? swatch(option) : option.color }}
           />
           {option.label}
         </button>
@@ -2024,7 +1860,10 @@ function InlineMultiSelectEditor({
   return (
     <div
       ref={dropdownRef}
-      className="absolute top-full left-0 z-50 mt-1 min-w-35 rounded-md border border-border bg-card shadow-lg py-1 max-h-48 overflow-y-auto"
+      className={cn(
+        popoverShellClass,
+        "absolute top-full left-0 z-50 mt-1 min-w-35 py-1 max-h-48 overflow-y-auto",
+      )}
       onClick={(e) => e.stopPropagation()}
     >
       {options.map((option) => {
@@ -2116,17 +1955,7 @@ function InlineDateEditor({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [onClose]);
 
-  // Close on escape
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.stopPropagation();
-        onClose();
-      }
-    };
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [onClose]);
+  useOverlayEscape(onClose);
 
   const weekdays = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 
@@ -2169,7 +1998,7 @@ function InlineDateEditor({
         <div
           ref={dropdownRef}
           style={{ position: "fixed", top: position.top, left: position.left, width: 280 }}
-          className="z-200 rounded-lg border border-border bg-card shadow-xl"
+          className={cn(popoverShellClass, "z-200")}
           onClick={(e) => e.stopPropagation()}
         >
           {/* Month navigation */}
@@ -2226,7 +2055,7 @@ function InlineDateEditor({
                   onClick={() => handleDayClick(day)}
                   className={cn(
                     "h-8 w-full rounded-md text-sm transition-colors",
-                    !isCurrentMonth && "text-muted-foreground/40",
+                    !isCurrentMonth && "text-subtle-foreground",
                     isCurrentMonth && !isSelected && "text-foreground hover:bg-muted",
                     isCurrentDay && !isSelected && "font-semibold text-primary",
                     isSelected && "bg-primary text-primary-foreground font-medium",
@@ -2310,13 +2139,10 @@ function InlineAssigneeEditor({
 
 function TaskIdCell({ task }: { task: Task }) {
   const project = useAppSelector(selectCurrentProject);
-  const typeConfig = getTaskTypeConfig(task.taskType || "task");
-  const TypeIcon = typeConfig.icon;
   const ticketId = `${project?.slug || ""}-${task.number}`;
 
   return (
-    <div className="flex items-center gap-1.5 min-w-0">
-      <TypeIcon size={14} className="text-muted-foreground shrink-0" weight="fill" />
+    <div className="flex items-center min-w-0">
       <span className="text-xs font-mono text-muted-foreground truncate">{ticketId}</span>
     </div>
   );
@@ -2324,7 +2150,8 @@ function TaskIdCell({ task }: { task: Task }) {
 
 function TaskTitleCell({ task }: { task: Task }) {
   return (
-    <div className="flex items-center min-w-0">
+    <div className="flex items-center gap-2 min-w-0">
+      <TaskTypeIcon type={task.taskType} className="text-muted-foreground" />
       <span className="truncate text-foreground text-sm">{task.title}</span>
     </div>
   );
@@ -2342,7 +2169,16 @@ function FieldCell({ task, field }: FieldCellProps) {
     case "single_select": {
       const option = field.config.options?.find((o) => o.id === value);
       if (!option) return <span className="text-muted-foreground text-sm">-</span>;
-      return <SelectBadge option={option} />;
+      return (
+        <SelectBadge
+          option={option}
+          paint={
+            field.id === SYSTEM_FIELD_IDS.STATUS
+              ? statusPaint(field.config.options ?? [], option.id)
+              : undefined
+          }
+        />
+      );
     }
 
     case "multi_select": {
@@ -2383,13 +2219,13 @@ function FieldCell({ task, field }: FieldCellProps) {
   }
 }
 
-function SelectBadge({ option }: { option: SelectOption }) {
+function SelectBadge({ option, paint }: { option: SelectOption; paint?: StatusPaint }) {
   return (
     <span
       className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
       style={{
-        backgroundColor: `${option.color}15`,
-        color: option.color,
+        backgroundColor: paint?.translucent ?? `${option.color}15`,
+        color: paint?.solid ?? option.color,
       }}
     >
       {option.label}
@@ -2445,7 +2281,7 @@ function getFieldValue(task: Task, fieldId: string): unknown {
 function TagsRowCell({ task }: { task: Task }) {
   const tags = useTagsByIds(task.tagIds ?? []);
   if (tags.length === 0) {
-    return <span className="text-xs text-muted-foreground/60">-</span>;
+    return <span className="text-xs text-subtle-foreground">-</span>;
   }
   const shown = tags.slice(0, 3);
   const overflow = tags.length - shown.length;
@@ -2546,7 +2382,10 @@ function ColumnsVisibilityMenu({
   return (
     <div
       ref={containerRef}
-      className="absolute top-full right-0 z-50 mt-1 w-60 rounded-lg border border-border bg-card shadow-lg py-1 animate-in fade-in-0 zoom-in-95"
+      className={cn(
+        popoverShellClass,
+        "absolute top-full right-0 z-50 mt-1 w-60 py-1 animate-in fade-in-0 zoom-in-95",
+      )}
       onClick={(e) => e.stopPropagation()}
     >
       <div className="px-3 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider border-b border-border">
@@ -2569,7 +2408,7 @@ function ColumnsVisibilityMenu({
               {isVisible ? (
                 <Eye size={14} className="text-muted-foreground shrink-0" />
               ) : (
-                <EyeSlash size={14} className="text-muted-foreground/50 shrink-0" />
+                <EyeSlash size={14} className="text-subtle-foreground shrink-0" />
               )}
             </button>
           );

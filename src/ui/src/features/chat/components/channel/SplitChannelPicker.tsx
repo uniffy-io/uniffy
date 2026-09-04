@@ -1,4 +1,7 @@
 import { useRef, useEffect, useCallback } from "react";
+import { useOverlayEscape } from "@/shared/hooks/useOverlayEscape";
+import { popoverShellClass } from "@/components/ui/popover";
+import { cn } from "@/shared/utils/cn";
 import { ChannelSelectList } from "@/features/chat/components/channel/ChannelSelectList";
 import type { ChatChannel } from "@/features/chat/types";
 
@@ -31,13 +34,7 @@ export function SplitChannelPicker({
     };
   }, [onClose]);
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [onClose]);
+  useOverlayEscape(onClose);
 
   const filterChannel = useCallback(
     (channel: ChatChannel) => channel.id !== currentChannelId,
@@ -47,7 +44,10 @@ export function SplitChannelPicker({
   return (
     <div
       ref={containerRef}
-      className="absolute top-full right-0 mt-1 w-64 bg-card border border-border rounded-lg shadow-xl z-50 py-1 max-h-80 overflow-hidden flex flex-col"
+      className={cn(
+        popoverShellClass,
+        "absolute top-full right-0 mt-1 w-64 z-50 py-1 max-h-80 overflow-hidden flex flex-col",
+      )}
     >
       <ChannelSelectList onSelect={onSelect} filterChannel={filterChannel} autoFocus />
     </div>

@@ -127,7 +127,7 @@ function ActivityItem({ activity, actorName, actorSubject }: ActivityItemProps) 
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5 flex-wrap">
           <span className="font-medium text-foreground text-xs">{actorName || "Unknown user"}</span>
-          <span className="text-muted-foreground/60 shrink-0">
+          <span className="text-subtle-foreground shrink-0">
             {renderActivityIcon(activity.action)}
           </span>
           <span className="text-foreground text-xs">{renderActivityContent(activity)}</span>

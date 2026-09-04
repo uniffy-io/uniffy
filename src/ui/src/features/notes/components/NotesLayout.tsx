@@ -1,5 +1,6 @@
 import { type ReactNode, useState, useCallback } from "react";
-import { Panel, Group, Separator } from "react-resizable-panels";
+import { Panel, Group } from "react-resizable-panels";
+import { PaneSeparator } from "@/components/ui/pane-separator";
 import { LockSimple, UsersThree, Buildings } from "@phosphor-icons/react";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
@@ -82,24 +83,24 @@ export function NotesLayout({
               defaultSize={isMobileOrTablet ? 200 : 280}
               minSize={160}
               maxSize={isMobileOrTablet ? 300 : 500}
-              className="bg-background overflow-hidden"
+              className="bg-nav overflow-hidden"
             >
               {sidebar}
             </Panel>
 
-            <Separator className="w-1 bg-border hover:bg-primary/50 transition-colors cursor-col-resize data-[resize-handle-state=drag]:bg-primary" />
+            <PaneSeparator />
           </>
         )}
 
         <Panel id="notes-editor" minSize={isMobileOrTablet ? 200 : 400}>
-          <div className={cn("h-full overflow-hidden bg-card", showCollapsedRail && "ml-12")}>
+          <div className={cn("h-full overflow-hidden bg-surface", showCollapsedRail && "ml-12")}>
             {editor}
           </div>
         </Panel>
 
         {showMetadataPanel && metadataPanel && !metadataAsDrawer && (
           <>
-            <Separator className="w-1 bg-border hover:bg-primary/50 transition-colors cursor-col-resize data-[resize-handle-state=drag]:bg-primary" />
+            <PaneSeparator />
             <Panel
               id="notes-metadata"
               defaultSize={300}
@@ -118,7 +119,7 @@ export function NotesLayout({
           open={showSidebar}
           onClose={onCloseSidebar ?? (() => {})}
           side="left"
-          className="w-72 bg-background"
+          className="w-72 bg-nav"
           ariaLabel="Notes sidebar"
         >
           {sidebar}

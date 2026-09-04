@@ -207,6 +207,12 @@ export const {
 export const selectActiveThreadId = (state: RootState): string | null =>
   state.chatThreads.activeThreadId;
 
+export const selectActiveThreadChannelId = (state: RootState): string | null => {
+  const activeId = state.chatThreads.activeThreadId;
+  if (!activeId) return null;
+  return state.chatMessages.byId[activeId]?.channelId ?? null;
+};
+
 export const selectActiveThreadMessages = (state: RootState): ChatMessage[] => {
   const activeId = state.chatThreads.activeThreadId;
   if (!activeId) return [];

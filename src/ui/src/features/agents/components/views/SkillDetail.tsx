@@ -7,6 +7,7 @@ import {
   CaretRight,
   CircleNotch,
   ClockCounterClockwise,
+  Lightning,
   PushPin,
   Sparkle,
   Trash,
@@ -16,6 +17,9 @@ import { SkillSource } from "@uniffy/proto/agents/v1/skills_pb";
 import { CrepeEditor } from "@/components/editor/CrepeEditor";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { PaneBackLink, PaneHeader, PaneHeaderBar } from "@/components/ui/pane-header";
 import { Select } from "@/components/ui/select";
 import { ToggleSwitch } from "@/components/ui/toggle-switch";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -49,25 +53,22 @@ import { SkillVersionDiff } from "@/features/agents/components/skills/SkillVersi
 
 const headerButtonClass = cn(
   "group/btn relative flex items-center justify-center h-7 w-7 rounded-md",
-  "border border-foreground/15 bg-transparent text-muted-foreground",
+  "border border-border-strong bg-transparent text-muted-foreground",
   "transition-all duration-300 ease-out",
-  "hover:border-foreground/30 hover:bg-muted hover:text-primary",
+  "hover:border-border-strong hover:bg-muted hover:text-primary",
 );
 
 const headerChipClass = cn(
   "group/btn flex items-center gap-1 h-7 px-1.5 rounded-md",
-  "border border-foreground/15 bg-transparent text-xs text-muted-foreground",
+  "border border-border-strong bg-transparent text-xs text-muted-foreground",
   "transition-all duration-300 ease-out",
-  "hover:border-foreground/30 hover:bg-muted hover:text-primary",
+  "hover:border-border-strong hover:bg-muted hover:text-primary",
 );
 
 const headerChipActiveClass =
   "text-primary bg-primary/10 border-primary/50 hover:border-primary/50 hover:bg-primary/10";
 
 const sectionLabelClass = "text-xs font-medium uppercase tracking-wider text-muted-foreground";
-
-const fieldInputClass =
-  "w-full bg-muted border border-border rounded px-2 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring";
 
 function sourceLabel(source: number): string {
   switch (source) {
@@ -136,12 +137,12 @@ function InlineTextEdit({
 
   if (!canEdit) {
     return (
-      <p
-        className={cn(className, !value && "text-muted-foreground/60 italic")}
+      <span
+        className={cn("block", className, !value && "text-subtle-foreground italic")}
         data-testid={testId}
       >
         {value || placeholder}
-      </p>
+      </span>
     );
   }
 
@@ -157,7 +158,7 @@ function InlineTextEdit({
       className={cn(
         "block w-full text-left rounded px-1 -mx-1 cursor-text hover:bg-muted/60 transition-colors",
         className,
-        !value && "text-muted-foreground/60 italic",
+        !value && "text-subtle-foreground italic",
       )}
     >
       {value || placeholder}
@@ -250,16 +251,12 @@ function VersionHistorySection({
       </p>
 
       {canEdit && pinned && (
-        <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer">
-          <input
-            type="checkbox"
-            checked={false}
-            disabled={busy !== null}
-            onChange={handleFollowLatest}
-            className="accent-primary"
-          />
-          Use the latest version automatically
-        </label>
+        <Checkbox
+          label="Use the latest version automatically"
+          checked={false}
+          disabled={busy !== null}
+          onChange={handleFollowLatest}
+        />
       )}
 
       {compare && baseVersion && targetVersion && (
@@ -318,8 +315,8 @@ function VersionHistorySection({
             <div
               key={version.id}
               className={cn(
-                "rounded-lg border px-3 py-2.5",
-                isMain ? "border-primary/40 bg-primary/5" : "border-border bg-card",
+                "rounded-xl px-3 py-2.5",
+                isMain ? "bg-primary/5 shadow-edge-primary" : "bg-card shadow-edge",
               )}
             >
               <div className="flex items-center gap-2">
@@ -444,36 +441,40 @@ function SavedSkillDetail({ skill }: { skill: SerializedSkill }) {
 
   return (
     <div className="flex h-full flex-col overflow-hidden" data-testid="skill-detail">
-      <div className="px-6 py-4 border-b border-border">
-        <button
-          type="button"
-          onClick={() => navigate("/agents/skills")}
-          className="mb-3 flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
-          data-testid="skill-detail-back"
-        >
-          <ArrowLeft size={14} />
-          All skills
-        </button>
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0 flex-1">
+      <PaneHeader>
+        <PaneHeaderBar
+          eyebrow={
+            <PaneBackLink
+              onClick={() => navigate("/agents/skills")}
+              data-testid="skill-detail-back"
+            >
+              <ArrowLeft size={14} />
+              All skills
+            </PaneBackLink>
+          }
+          icon={Lightning}
+          title={
             <InlineTextEdit
               value={skill.displayName}
               canEdit={canEdit}
               onSave={(next) => dispatch(updateSkill({ skillId: skill.id, displayName: next }))}
               placeholder="Untitled skill"
-              className="text-xl font-semibold text-foreground"
+              className="text-sm md:text-base font-medium text-foreground"
               testId="skill-detail-name"
             />
+          }
+          subtitle={
             <InlineTextEdit
               value={skill.description}
               canEdit={canEdit}
               allowEmpty
               onSave={(next) => dispatch(updateSkill({ skillId: skill.id, description: next }))}
               placeholder="No description provided"
-              className="mt-0.5 text-sm text-muted-foreground"
+              className="text-xs text-muted-foreground"
               testId="skill-detail-description"
             />
-          </div>
+          }
+        >
           <div className="flex items-center gap-1.5 shrink-0">
             <Badge variant="secondary" data-testid="skill-detail-source-chip">
               {sourceLabel(skill.source)}
@@ -499,8 +500,8 @@ function SavedSkillDetail({ skill }: { skill: SerializedSkill }) {
               </button>
             )}
           </div>
-        </div>
-      </div>
+        </PaneHeaderBar>
+      </PaneHeader>
 
       {detailsOpen && (
         <div
@@ -520,19 +521,19 @@ function SavedSkillDetail({ skill }: { skill: SerializedSkill }) {
             <div className="border-b border-border pb-3 space-y-1">
               <p className={sectionLabelClass}>When to use</p>
               {canEdit ? (
-                <input
+                <Input
                   type="text"
                   value={whenToUse}
                   onChange={(e) => handleWhenToUseChange(e.target.value)}
                   placeholder="When to use this skill (trigger guidance)"
                   data-testid="skill-detail-when-to-use"
-                  className={fieldInputClass}
+                  className="h-9 px-2"
                 />
               ) : (
                 <p
                   className={cn(
                     "text-sm",
-                    skill.whenToUse ? "text-foreground" : "text-muted-foreground/60 italic",
+                    skill.whenToUse ? "text-foreground" : "text-subtle-foreground italic",
                   )}
                   data-testid="skill-detail-when-to-use"
                 >
@@ -705,28 +706,32 @@ function DraftDetail({ draft }: { draft: SerializedSkillDraft }) {
 
   return (
     <div className="flex h-full flex-col overflow-hidden" data-testid="skill-detail">
-      <div className="px-6 py-4 border-b border-border">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0 flex-1">
+      <PaneHeader>
+        <PaneHeaderBar
+          icon={Lightning}
+          title={
             <InlineTextEdit
               value={displayName}
               canEdit
               onSave={setDisplayName}
               startEditing={!isEdit && !displayName}
               placeholder="Untitled skill"
-              className="text-xl font-semibold text-foreground"
+              className="text-sm md:text-base font-medium text-foreground"
               testId="skill-detail-name"
             />
+          }
+          subtitle={
             <InlineTextEdit
               value={description}
               canEdit
               allowEmpty
               onSave={setDescription}
               placeholder="Add a description"
-              className="mt-0.5 text-sm text-muted-foreground"
+              className="text-xs text-muted-foreground"
               testId="skill-detail-description"
             />
-          </div>
+          }
+        >
           <div className="flex items-center gap-1.5 shrink-0">
             <span className={headerChipClass}>Draft - {kindLabel}</span>
             {fromAgent && (
@@ -754,13 +759,13 @@ function DraftDetail({ draft }: { draft: SerializedSkillDraft }) {
               {busy === "save" ? "Saving..." : isEdit ? "Save new version" : "Save skill"}
             </Button>
           </div>
-        </div>
+        </PaneHeaderBar>
         {fromAgent && (
-          <p className="mt-1 text-xs text-muted-foreground">
+          <p className="px-3 pb-2 text-xs text-muted-foreground md:px-4">
             Drafted by the agent - it is not active until you save it.
           </p>
         )}
-      </div>
+      </PaneHeader>
 
       <button
         type="button"
@@ -799,12 +804,12 @@ function DraftDetail({ draft }: { draft: SerializedSkillDraft }) {
             </div>
             <div className="border-b border-border pb-3 space-y-1">
               <p className={sectionLabelClass}>When to use</p>
-              <input
+              <Input
                 type="text"
                 value={whenToUse}
                 onChange={(e) => setWhenToUse(e.target.value)}
                 placeholder="When to use this skill (trigger guidance)"
-                className={fieldInputClass}
+                className="h-9 px-2"
               />
             </div>
             <div className="space-y-1.5">

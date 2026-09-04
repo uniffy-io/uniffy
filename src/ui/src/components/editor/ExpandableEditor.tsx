@@ -2,6 +2,8 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { ArrowsOut, Check, PencilSimple } from "@phosphor-icons/react";
 import { CrepeEditor } from "@/components/editor/CrepeEditor";
+import { dialogShellClass } from "@/components/ui/popover";
+import { useOverlayEscape } from "@/shared/hooks/useOverlayEscape";
 import { ContentType } from "@uniffy/proto/common/v1/common_pb";
 import { cn } from "@/shared/utils/cn";
 
@@ -87,19 +89,7 @@ export function ExpandableEditor({
     return () => clearTimeout(timer);
   }, [isExpanded, editorReady]);
 
-  useEffect(() => {
-    if (!isExpanded) return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.stopPropagation();
-        handleClose();
-      }
-    };
-
-    document.addEventListener("keydown", handleKeyDown, { capture: true });
-    return () => document.removeEventListener("keydown", handleKeyDown, { capture: true });
-  }, [isExpanded, handleClose]);
+  useOverlayEscape(handleClose, isExpanded);
 
   const hasContent = value && value.trim().length > 0;
 
@@ -221,7 +211,12 @@ export function ExpandableEditor({
             <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={handleClose} />
 
             {/* Editor panel */}
-            <div className="relative w-full max-w-5xl mx-4 bg-card border border-border rounded-xl shadow-2xl flex flex-col h-[85vh]">
+            <div
+              className={cn(
+                dialogShellClass,
+                "relative w-full max-w-5xl mx-4 rounded-xl flex flex-col h-[85vh]",
+              )}
+            >
               {/* Header */}
               <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
                 <h3 className="text-sm font-semibold text-foreground">{label}</h3>

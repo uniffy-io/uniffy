@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  MagnifyingGlass,
+  ArrowCounterClockwise,
+  Bell,
+  Check,
   CheckCircle,
   GearSix,
   ListBullets,
   SquaresFour,
-  Check,
   Trash,
-  ArrowCounterClockwise,
   User,
   X,
 } from "@phosphor-icons/react";
@@ -16,6 +16,14 @@ import { cn } from "@/shared/utils/cn";
 import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { DatePicker } from "@/components/ui/date-picker";
+import {
+  PaneHeader,
+  PaneHeaderBar,
+  PaneHeaderControls,
+  PaneIconButton,
+} from "@/components/ui/pane-header";
+import { SearchField } from "@/components/ui/search-field";
+import { SegmentedControl } from "@/components/ui/segmented-control";
 import { SubjectAvatar } from "@/components/subject/SubjectAvatar";
 import { SubjectPicker } from "@/components/subject/SubjectPicker";
 import { useSubjectResolver } from "@/components/subject/hooks/useSubjectResolver";
@@ -154,15 +162,11 @@ export function NotificationsPageHeader() {
   const hasCustomDateRange = dateFrom !== null || dateTo !== null;
 
   const handleSearchChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      dispatch(setPageSearchQuery(e.target.value));
+    (value: string) => {
+      dispatch(setPageSearchQuery(value));
     },
     [dispatch],
   );
-
-  const handleClearSearch = useCallback(() => {
-    dispatch(setPageSearchQuery(""));
-  }, [dispatch]);
 
   const handleMarkAllRead = useCallback(() => {
     dispatch(markAllNotificationsAsRead());
@@ -218,286 +222,250 @@ export function NotificationsPageHeader() {
   }, [dispatch, selectedIds]);
 
   return (
-    <div className="shrink-0 border-b border-border bg-card">
-      <div className="px-3 md:px-4 lg:px-6 py-3 md:py-4">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-3">
-            <h1 className="text-xl md:text-2xl font-bold text-foreground">Notifications</h1>
+    <PaneHeader>
+      <PaneHeaderBar
+        icon={Bell}
+        divided
+        title={
+          <>
+            Notifications
             {unreadCount > 0 && (
               <span
-                className={cn(
-                  "inline-flex items-center justify-center",
-                  "min-w-[24px] h-6 px-2 rounded-full",
-                  "text-white text-xs font-bold",
-                )}
+                className="inline-flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-[11px] font-semibold text-white"
                 style={{ backgroundColor: "var(--status-error)" }}
               >
                 {unreadCount > 99 ? "99+" : unreadCount}
               </span>
             )}
-          </div>
+          </>
+        }
+      >
+        {!isMobile && (
+          <SearchField
+            size="sm"
+            value={searchQuery}
+            onChange={handleSearchChange}
+            placeholder="Search notifications..."
+            containerClassName="w-64"
+          />
+        )}
+        {!isMobile && (
+          <SegmentedControl
+            value={viewMode}
+            onChange={handleViewModeChange}
+            ariaLabel="View"
+            options={[
+              { value: "list", content: <ListBullets size={14} />, title: "List view" },
+              { value: "grouped", content: <SquaresFour size={14} />, title: "Grouped view" },
+            ]}
+          />
+        )}
+        {lastActionMessage && (
+          <span className="hidden text-xs text-muted-foreground md:inline">
+            {lastActionMessage}
+          </span>
+        )}
+        <PaneIconButton
+          onClick={handleUndo}
+          disabled={!lastActionMessage}
+          active={Boolean(lastActionMessage)}
+          title={lastActionMessage ? `Undo: ${lastActionMessage}` : "Undo"}
+        >
+          <ArrowCounterClockwise size={16} />
+        </PaneIconButton>
+        {unreadCount > 0 && (
+          <PaneIconButton onClick={handleMarkAllRead} title="Mark all as read">
+            <CheckCircle size={16} />
+          </PaneIconButton>
+        )}
+        <PaneIconButton
+          onClick={() => navigate("/settings?section=notifications")}
+          title="Notification settings"
+        >
+          <GearSix size={16} />
+        </PaneIconButton>
+      </PaneHeaderBar>
 
-          <div className="flex items-center gap-1.5">
-            {lastActionMessage && (
-              <span className="text-xs text-muted-foreground mr-1">{lastActionMessage}</span>
-            )}
+      <PaneHeaderControls>
+        {isMobile && (
+          <SearchField
+            size="sm"
+            value={searchQuery}
+            onChange={handleSearchChange}
+            placeholder="Search notifications..."
+            containerClassName="w-full"
+          />
+        )}
 
-            <button
-              onClick={handleUndo}
-              disabled={!lastActionMessage}
-              className={cn(
-                "p-2 rounded-md transition-colors",
-                lastActionMessage
-                  ? "text-primary hover:bg-primary/10"
-                  : "text-muted-foreground/30 cursor-not-allowed",
+        <button
+          type="button"
+          onClick={() => {
+            if (allSelected) {
+              dispatch(clearSelection());
+            } else {
+              dispatch(selectAllOnPage());
+            }
+          }}
+          className={cn(
+            "focus-ring flex h-4 w-4 shrink-0 items-center justify-center rounded border-2 transition-colors",
+            allSelected
+              ? "border-primary bg-primary"
+              : someSelected
+                ? "border-primary bg-primary/50"
+                : "border-border bg-input hover:border-border-strong",
+          )}
+          title={allSelected ? "Deselect all" : "Select all"}
+        >
+          {(allSelected || someSelected) && (
+            <svg className="h-2.5 w-2.5 text-primary-foreground" viewBox="0 0 12 12" fill="none">
+              {allSelected ? (
+                <path
+                  d="M2 6l3 3 5-5"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              ) : (
+                <path d="M3 6h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
               )}
-              title={lastActionMessage ? `Undo: ${lastActionMessage}` : "Undo"}
-            >
-              <ArrowCounterClockwise size={16} />
-            </button>
+            </svg>
+          )}
+        </button>
 
-            {unreadCount > 0 && (
-              <button
-                onClick={handleMarkAllRead}
-                className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                title="Mark all as read"
-              >
-                <CheckCircle size={16} />
-              </button>
-            )}
-
+        {hasSelection ? (
+          <>
+            <span className="text-xs font-medium text-primary">{selectedIds.length} selected</span>
             <button
-              onClick={() => navigate("/settings?section=notifications")}
-              className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-              title="Notification settings"
+              type="button"
+              onClick={handleBulkMarkRead}
+              disabled={updating}
+              className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-primary transition-colors hover:bg-primary/10"
             >
-              <GearSix size={16} />
+              <Check size={12} weight="bold" />
+              Mark read
             </button>
-          </div>
-        </div>
+            <button
+              type="button"
+              onClick={handleBulkDelete}
+              disabled={updating}
+              className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-red-600 transition-colors hover:bg-red-500/10 dark:text-red-400"
+            >
+              <Trash size={12} />
+              Delete
+            </button>
+            <div className="flex-1" />
+            <button
+              type="button"
+              onClick={() => dispatch(clearSelection())}
+              className="text-xs text-muted-foreground transition-colors hover:text-foreground"
+            >
+              Clear
+            </button>
+          </>
+        ) : (
+          <>
+            <div className="mx-0.5 h-4 w-px bg-border" />
 
-        <div className="flex items-center gap-2">
-          <div className="relative flex-1">
-            <MagnifyingGlass
-              size={16}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/60"
-            />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={handleSearchChange}
-              placeholder="Search notifications..."
-              className={cn(
-                "w-full h-9 pl-9 pr-9 rounded-lg text-sm",
-                "bg-muted/50 border border-border/50",
-                "text-foreground placeholder:text-muted-foreground/50",
-                "focus:outline-none focus:ring-1 focus:ring-ring focus:border-border",
-                "transition-colors",
-              )}
-            />
-            {searchQuery && (
-              <button
-                onClick={handleClearSearch}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/60 hover:text-foreground"
-              >
-                <X size={14} weight="bold" />
-              </button>
-            )}
-          </div>
-
-          {!isMobile && (
-            <div className="flex items-center gap-0.5 bg-muted/50 rounded-md p-0.5 shrink-0">
-              <button
-                onClick={() => handleViewModeChange("list")}
-                className={cn(
-                  "p-1.5 rounded transition-colors",
-                  viewMode === "list"
-                    ? "bg-card text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground",
-                )}
-                title="List view"
-              >
-                <ListBullets size={16} />
-              </button>
-              <button
-                onClick={() => handleViewModeChange("grouped")}
-                className={cn(
-                  "p-1.5 rounded transition-colors",
-                  viewMode === "grouped"
-                    ? "bg-card text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground",
-                )}
-                title="Grouped view"
-              >
-                <SquaresFour size={16} />
-              </button>
+            <div className="flex items-center gap-0.5">
+              {DATE_PRESETS.map((preset) => (
+                <button
+                  key={preset.key}
+                  type="button"
+                  onClick={() => handleDatePreset(preset.key)}
+                  className={cn(
+                    "h-7 whitespace-nowrap rounded-md px-2 text-xs font-medium transition-colors",
+                    activeDatePreset === preset.key
+                      ? "bg-primary/10 text-primary"
+                      : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+                  )}
+                >
+                  {preset.label}
+                </button>
+              ))}
             </div>
-          )}
-        </div>
 
-        <div className="flex items-center gap-2 mt-3 pt-2 border-t border-border/50 flex-wrap">
-          <button
-            onClick={() => {
-              if (allSelected) {
-                dispatch(clearSelection());
-              } else {
-                dispatch(selectAllOnPage());
-              }
-            }}
-            className={cn(
-              "w-4 h-4 rounded border-2 transition-colors flex items-center justify-center shrink-0",
-              allSelected
-                ? "bg-primary border-primary"
-                : someSelected
-                  ? "bg-primary/50 border-primary"
-                  : "border-border hover:border-primary/60",
-            )}
-            title={allSelected ? "Deselect all" : "Select all"}
-          >
-            {(allSelected || someSelected) && (
-              <svg className="w-2.5 h-2.5 text-primary-foreground" viewBox="0 0 12 12" fill="none">
-                {allSelected ? (
-                  <path
-                    d="M2 6l3 3 5-5"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                ) : (
-                  <path d="M3 6h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                )}
-              </svg>
-            )}
-          </button>
+            <div className="mx-0.5 h-4 w-px bg-border" />
 
-          {hasSelection ? (
-            <>
-              <span className="text-xs font-medium text-primary">
-                {selectedIds.length} selected
-              </span>
-              <button
-                onClick={handleBulkMarkRead}
-                disabled={updating}
-                className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium text-primary hover:bg-primary/10 transition-colors"
-              >
-                <Check size={12} weight="bold" />
-                Mark read
-              </button>
-              <button
-                onClick={handleBulkDelete}
-                disabled={updating}
-                className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium text-red-600 hover:bg-red-500/10 dark:text-red-400 transition-colors"
-              >
-                <Trash size={12} />
-                Delete
-              </button>
-              <div className="flex-1" />
-              <button
-                onClick={() => dispatch(clearSelection())}
-                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Clear
-              </button>
-            </>
-          ) : (
-            <>
-              <div className="w-px h-4 bg-border mx-0.5" />
+            <div className="flex items-center gap-1.5">
+              <DatePicker
+                size="sm"
+                value={isoToDatePickerValue(dateFrom)}
+                onChange={handleDateFromChange}
+                placeholder="From"
+                className="w-[128px]"
+              />
+              <span className="text-xs text-muted-foreground">to</span>
+              <DatePicker
+                size="sm"
+                value={isoToDatePickerValue(dateTo)}
+                onChange={handleDateToChange}
+                placeholder="To"
+                className="w-[128px]"
+              />
+              {hasCustomDateRange && activeDatePreset === null && (
+                <button
+                  type="button"
+                  onClick={() => handleDatePreset("all")}
+                  className="rounded p-1 text-muted-foreground transition-colors hover:text-foreground"
+                  title="Clear date range"
+                >
+                  <X size={12} weight="bold" />
+                </button>
+              )}
+            </div>
 
-              <div className="flex items-center gap-0.5">
-                {DATE_PRESETS.map((preset) => (
+            <div className="mx-0.5 h-4 w-px bg-border" />
+
+            <div className="relative flex items-center">
+              {actorSubject && actorId ? (
+                <div className="flex h-7 items-center gap-1.5 rounded-md bg-primary/10 px-2">
+                  <SubjectAvatar subject={actorSubject} size="xs" />
+                  <span className="max-w-[100px] truncate text-xs font-medium text-primary">
+                    {actorSubject.name}
+                  </span>
                   <button
-                    key={preset.key}
-                    onClick={() => handleDatePreset(preset.key)}
-                    className={cn(
-                      "px-2 py-1 rounded-md text-xs font-medium whitespace-nowrap transition-colors",
-                      activeDatePreset === preset.key
-                        ? "bg-primary/10 text-primary"
-                        : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
-                    )}
+                    type="button"
+                    onClick={() => dispatch(setActorFilter(null))}
+                    className="rounded p-0.5 text-primary transition-colors hover:text-primary/70"
+                    title="Clear user filter"
                   >
-                    {preset.label}
+                    <X size={10} weight="bold" />
                   </button>
-                ))}
-              </div>
-
-              <div className="w-px h-4 bg-border mx-0.5" />
-
-              <div className="flex items-center gap-1.5">
-                <DatePicker
-                  value={isoToDatePickerValue(dateFrom)}
-                  onChange={handleDateFromChange}
-                  placeholder="From"
-                  className="w-[140px]"
+                </div>
+              ) : (
+                <button
+                  ref={userButtonRef}
+                  type="button"
+                  onClick={() => setShowUserPicker(!showUserPicker)}
+                  className={cn(
+                    "flex h-7 items-center gap-1.5 whitespace-nowrap rounded-md px-2 text-xs font-medium transition-colors",
+                    showUserPicker
+                      ? "bg-primary/10 text-primary"
+                      : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+                  )}
+                >
+                  <User size={14} />
+                  From user
+                </button>
+              )}
+              {showUserPicker && !actorId && (
+                <SubjectPicker
+                  mode="single"
+                  subjectTypes="users"
+                  value={[]}
+                  onChange={handleActorSelect}
+                  placeholder="Search users..."
+                  portal
+                  anchorRef={userButtonRef}
+                  onClose={() => setShowUserPicker(false)}
+                  autoFocus
                 />
-                <span className="text-xs text-muted-foreground">to</span>
-                <DatePicker
-                  value={isoToDatePickerValue(dateTo)}
-                  onChange={handleDateToChange}
-                  placeholder="To"
-                  className="w-[140px]"
-                />
-                {hasCustomDateRange && activeDatePreset === null && (
-                  <button
-                    onClick={() => handleDatePreset("all")}
-                    className="p-1 rounded text-muted-foreground hover:text-foreground transition-colors"
-                    title="Clear date range"
-                  >
-                    <X size={12} weight="bold" />
-                  </button>
-                )}
-              </div>
-
-              <div className="w-px h-4 bg-border mx-0.5" />
-
-              <div className="relative flex items-center">
-                {actorSubject && actorId ? (
-                  <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-primary/10">
-                    <SubjectAvatar subject={actorSubject} size="xs" />
-                    <span className="text-xs font-medium text-primary max-w-[100px] truncate">
-                      {actorSubject.name}
-                    </span>
-                    <button
-                      onClick={() => dispatch(setActorFilter(null))}
-                      className="p-0.5 rounded text-primary hover:text-primary/70 transition-colors"
-                      title="Clear user filter"
-                    >
-                      <X size={10} weight="bold" />
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    ref={userButtonRef}
-                    onClick={() => setShowUserPicker(!showUserPicker)}
-                    className={cn(
-                      "flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium whitespace-nowrap transition-colors",
-                      showUserPicker
-                        ? "bg-primary/10 text-primary"
-                        : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
-                    )}
-                  >
-                    <User size={14} />
-                    From user
-                  </button>
-                )}
-                {showUserPicker && !actorId && (
-                  <SubjectPicker
-                    mode="single"
-                    subjectTypes="users"
-                    value={[]}
-                    onChange={handleActorSelect}
-                    placeholder="Search users..."
-                    portal
-                    anchorRef={userButtonRef}
-                    onClose={() => setShowUserPicker(false)}
-                    autoFocus
-                  />
-                )}
-              </div>
-            </>
-          )}
-        </div>
-      </div>
-    </div>
+              )}
+            </div>
+          </>
+        )}
+      </PaneHeaderControls>
+    </PaneHeader>
   );
 }

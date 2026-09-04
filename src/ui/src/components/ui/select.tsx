@@ -1,7 +1,10 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import { useOverlayEscape } from "@/shared/hooks/useOverlayEscape";
 import { createPortal } from "react-dom";
 import { CaretDown, Check } from "@phosphor-icons/react";
 import { cn } from "@/shared/utils/cn";
+import { popoverShellClass } from "@/components/ui/popover";
+import { controlShellClass } from "@/components/ui/input";
 
 export interface SelectOption<T extends string | number = string> {
   value: T;
@@ -105,17 +108,7 @@ export function Select<T extends string | number = string>({
     }
   }, [isOpen]);
 
-  useEffect(() => {
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        setIsOpen(false);
-      }
-    }
-    if (isOpen) {
-      document.addEventListener("keydown", handleKeyDown);
-      return () => document.removeEventListener("keydown", handleKeyDown);
-    }
-  }, [isOpen]);
+  useOverlayEscape(() => setIsOpen(false), isOpen);
 
   const selectedOption = options.find((opt) => opt.value === value);
 
@@ -150,8 +143,8 @@ export function Select<T extends string | number = string>({
           width: position.width,
         }}
         className={cn(
-          "z-[200] overflow-hidden rounded-md",
-          "border border-border bg-card shadow-xl",
+          popoverShellClass,
+          "z-[200] overflow-hidden",
           "animate-in fade-in-0 duration-100",
           position.openUpward ? "slide-in-from-bottom-2" : "slide-in-from-top-2",
         )}
@@ -199,11 +192,10 @@ export function Select<T extends string | number = string>({
         aria-expanded={isOpen}
         aria-haspopup="listbox"
         className={cn(
-          "flex items-center justify-between gap-2 rounded-md border border-border bg-background",
-          "font-medium transition-colors",
-          "focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 focus:ring-offset-background",
+          controlShellClass,
+          "focus-ring flex items-center justify-between gap-2 font-medium",
           "disabled:opacity-50 disabled:cursor-not-allowed",
-          "hover:bg-muted/50",
+          isOpen && "border-border-strong",
           sizeClasses[size],
           "min-w-[100px]",
           triggerClassName,

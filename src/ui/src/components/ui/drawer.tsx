@@ -1,6 +1,8 @@
 import { useEffect, useRef } from "react";
 import { X } from "@phosphor-icons/react";
 import { cn } from "@/shared/utils/cn";
+import { dialogShellClass } from "@/components/ui/popover";
+import { useOverlayEscape } from "@/shared/hooks/useOverlayEscape";
 
 interface DrawerProps {
   open: boolean;
@@ -27,18 +29,7 @@ export function Drawer({
 }: DrawerProps) {
   const drawerRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!open) return;
-
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") {
-        onClose();
-      }
-    }
-
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [open, onClose]);
+  useOverlayEscape(onClose, open);
 
   useEffect(() => {
     if (!open) return;
@@ -68,9 +59,10 @@ export function Drawer({
       <div
         ref={drawerRef}
         className={cn(
-          "relative z-50 flex flex-col h-full bg-card border-border overflow-y-auto",
+          dialogShellClass,
+          "relative z-50 flex flex-col h-full overflow-y-auto",
           "transition-transform duration-300 ease-out",
-          isLeft ? "border-r" : "ml-auto border-l",
+          !isLeft && "ml-auto",
           open ? "translate-x-0" : isLeft ? "-translate-x-full" : "translate-x-full",
           width ?? (!className?.includes("w-") && "w-80"),
           className,

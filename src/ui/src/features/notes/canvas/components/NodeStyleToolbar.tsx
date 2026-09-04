@@ -6,6 +6,7 @@
  */
 
 import { useState } from "react";
+import { popoverShellClass } from "@/components/ui/popover";
 import { cn } from "@/shared/utils/cn";
 import { NODE_COLORS, BORDER_WIDTHS } from "@/features/notes/canvas/components/nodeStyleConstants";
 
@@ -36,7 +37,7 @@ export function NodeStyleToolbar({
 
   return (
     <div className="absolute -top-12 left-1/2 -translate-x-1/2 z-50 nopan nodrag">
-      <div className="flex items-center gap-1.5 px-2 py-1 bg-card border border-border rounded-lg shadow-lg">
+      <div className={cn(popoverShellClass, "flex items-center gap-1.5 px-2 py-1")}>
         {/* Fill/background color */}
         <button
           onClick={() => setActivePanel(activePanel === "fill" ? false : "fill")}
@@ -76,7 +77,12 @@ export function NodeStyleToolbar({
 
       {/* Fill/background color picker */}
       {activePanel === "fill" && (
-        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 flex gap-1 p-1.5 bg-card border border-border rounded-lg shadow-lg">
+        <div
+          className={cn(
+            popoverShellClass,
+            "absolute top-full left-1/2 -translate-x-1/2 mt-1 flex gap-1 p-1.5",
+          )}
+        >
           {NODE_COLORS.map((c) => (
             <button
               key={`fill-${c}`}
@@ -103,7 +109,12 @@ export function NodeStyleToolbar({
 
       {/* Border color picker */}
       {activePanel === "border" && (
-        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 flex gap-1 p-1.5 bg-card border border-border rounded-lg shadow-lg">
+        <div
+          className={cn(
+            popoverShellClass,
+            "absolute top-full left-1/2 -translate-x-1/2 mt-1 flex gap-1 p-1.5",
+          )}
+        >
           {NODE_COLORS.map((c) => (
             <button
               key={`border-${c}`}
@@ -132,7 +143,12 @@ export function NodeStyleToolbar({
 
       {/* Border width picker */}
       {activePanel === "width" && (
-        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 flex gap-1 p-1.5 bg-card border border-border rounded-lg shadow-lg">
+        <div
+          className={cn(
+            popoverShellClass,
+            "absolute top-full left-1/2 -translate-x-1/2 mt-1 flex gap-1 p-1.5",
+          )}
+        >
           {BORDER_WIDTHS.map((w) => (
             <button
               key={`width-${w}`}

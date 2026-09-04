@@ -6,6 +6,7 @@
  */
 
 import { useState } from "react";
+import { popoverShellClass } from "@/components/ui/popover";
 import { cn } from "@/shared/utils/cn";
 import { NODE_COLORS, BORDER_WIDTHS } from "@/features/notes/canvas/components/nodeStyleConstants";
 
@@ -46,7 +47,7 @@ export function TextFormatToolbar({
 
   return (
     <div className="absolute -top-12 left-1/2 -translate-x-1/2 z-50 nopan nodrag">
-      <div className="flex items-center gap-0.5 px-1.5 py-1 bg-card border border-border rounded-lg shadow-lg">
+      <div className={cn(popoverShellClass, "flex items-center gap-0.5 px-1.5 py-1")}>
         {/* Bold */}
         <button
           onMouseDown={(e) => {
@@ -241,7 +242,12 @@ export function TextFormatToolbar({
 
       {/* Font size picker */}
       {activePanel === "sizes" && (
-        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 flex gap-0.5 p-1.5 bg-card border border-border rounded-lg shadow-lg">
+        <div
+          className={cn(
+            popoverShellClass,
+            "absolute top-full left-1/2 -translate-x-1/2 mt-1 flex gap-0.5 p-1.5",
+          )}
+        >
           {FONT_SIZES.map((s) => (
             <button
               key={s}
@@ -263,7 +269,12 @@ export function TextFormatToolbar({
 
       {/* Fill color picker */}
       {activePanel === "fill" && (
-        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 flex gap-1 p-1.5 bg-card border border-border rounded-lg shadow-lg">
+        <div
+          className={cn(
+            popoverShellClass,
+            "absolute top-full left-1/2 -translate-x-1/2 mt-1 flex gap-1 p-1.5",
+          )}
+        >
           {NODE_COLORS.map((c) => (
             <button
               key={`fill-${c}`}
@@ -291,7 +302,12 @@ export function TextFormatToolbar({
 
       {/* Border color picker */}
       {activePanel === "border" && (
-        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 flex gap-1 p-1.5 bg-card border border-border rounded-lg shadow-lg">
+        <div
+          className={cn(
+            popoverShellClass,
+            "absolute top-full left-1/2 -translate-x-1/2 mt-1 flex gap-1 p-1.5",
+          )}
+        >
           {NODE_COLORS.map((c) => (
             <button
               key={`border-${c}`}
@@ -319,7 +335,12 @@ export function TextFormatToolbar({
 
       {/* Border width picker */}
       {activePanel === "width" && (
-        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 flex gap-1 p-1.5 bg-card border border-border rounded-lg shadow-lg">
+        <div
+          className={cn(
+            popoverShellClass,
+            "absolute top-full left-1/2 -translate-x-1/2 mt-1 flex gap-1 p-1.5",
+          )}
+        >
           {BORDER_WIDTHS.map((w) => (
             <button
               key={`width-${w}`}

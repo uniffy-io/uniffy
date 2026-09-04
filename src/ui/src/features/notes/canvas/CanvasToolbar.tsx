@@ -25,6 +25,7 @@ import {
   Eye,
   EyeSlash,
 } from "@phosphor-icons/react";
+import { popoverShellClass } from "@/components/ui/popover";
 import { cn } from "@/shared/utils/cn";
 import { NODE_COLORS, BORDER_WIDTHS } from "@/features/notes/canvas/components/nodeStyleConstants";
 import type { CanvasDefaults, EdgeShape } from "@/features/notes/canvas/types";
@@ -146,9 +147,9 @@ export const CanvasToolbar = memo(function CanvasToolbar({
     <div
       ref={toolbarRef}
       className={cn(
+        popoverShellClass,
         "absolute bottom-4 left-1/2 -translate-x-1/2 z-10",
         "flex items-center gap-1 px-2 py-1.5",
-        "bg-card border border-border rounded-lg shadow-lg",
         className,
       )}
     >
@@ -209,7 +210,9 @@ export const CanvasToolbar = memo(function CanvasToolbar({
             <span className="hidden sm:inline">Shape</span>
           </button>
           {showShapeMenu && (
-            <div className="absolute bottom-full left-0 mb-2 flex gap-1 p-1.5 bg-card border border-border rounded-lg shadow-lg">
+            <div
+              className={cn(popoverShellClass, "absolute bottom-full left-0 mb-2 flex gap-1 p-1.5")}
+            >
               <button
                 onClick={() => {
                   onAddShape("rect");
@@ -283,7 +286,12 @@ export const CanvasToolbar = memo(function CanvasToolbar({
             </button>
 
             {showDefaultsMenu && (
-              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-card border border-border rounded-lg shadow-lg p-2 min-w-[180px]">
+              <div
+                className={cn(
+                  popoverShellClass,
+                  "absolute bottom-full left-1/2 -translate-x-1/2 mb-2 p-2 min-w-[180px]",
+                )}
+              >
                 <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5 px-1">
                   New Node Defaults
                 </div>
@@ -625,7 +633,12 @@ export const CanvasToolbar = memo(function CanvasToolbar({
             })()}
 
             {showCursorsMenu && (
-              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-card border border-border rounded-lg shadow-lg p-2 min-w-[220px]">
+              <div
+                className={cn(
+                  popoverShellClass,
+                  "absolute bottom-full left-1/2 -translate-x-1/2 mb-2 p-2 min-w-[220px]",
+                )}
+              >
                 <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5 px-1">
                   Collaborator cursors
                 </div>

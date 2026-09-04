@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { MagnifyingGlass, PencilSimple } from "@phosphor-icons/react";
 import { cn } from "@/shared/utils/cn";
 import { CardGridSkeleton, LoadMoreButton, SectionRule } from "@/components/ui/collection";
+import { Input } from "@/components/ui/input";
 import { entranceDelay } from "@/shared/utils/entranceStagger";
 import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
 import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
@@ -243,12 +244,12 @@ export function TagsCollection({ header }: TagsCollectionProps) {
           weight="duotone"
           className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
         />
-        <input
+        <Input
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Search tags..."
-          className="w-full rounded-full border border-border bg-card py-1.5 pl-8 pr-3 text-sm focus:border-primary focus:outline-none"
+          className="h-auto rounded-full py-1.5 pl-8 pr-3"
           data-testid="library-tag-search"
         />
       </div>

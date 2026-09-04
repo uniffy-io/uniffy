@@ -16,6 +16,7 @@ import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 import { cn } from "@/shared/utils/cn";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
 import { PortalMenu } from "@/components/ui/portal-menu";
 import { ReasonDialog } from "@/components/ui/reason-dialog";
 import {
@@ -192,7 +193,7 @@ function RowActions({
           disabled={isSelf}
           className={cn(
             "w-full text-left px-3 py-1.5 flex items-center gap-2",
-            isSelf ? "opacity-50 cursor-not-allowed" : "hover:bg-accent",
+            isSelf ? "opacity-50 cursor-not-allowed" : "hover:bg-muted/60",
           )}
           onClick={(e) => {
             e.stopPropagation();
@@ -207,7 +208,7 @@ function RowActions({
           disabled={isSelf && user.isSystemAdmin}
           className={cn(
             "w-full text-left px-3 py-1.5 flex items-center gap-2",
-            isSelf && user.isSystemAdmin ? "opacity-50 cursor-not-allowed" : "hover:bg-accent",
+            isSelf && user.isSystemAdmin ? "opacity-50 cursor-not-allowed" : "hover:bg-muted/60",
             user.isSystemAdmin
               ? "text-amber-700 dark:text-amber-400"
               : "text-purple-700 dark:text-purple-400",
@@ -226,7 +227,7 @@ function RowActions({
           disabled={isSelf}
           className={cn(
             "w-full text-left px-3 py-1.5 flex items-center gap-2",
-            isSelf ? "opacity-50 cursor-not-allowed" : "hover:bg-accent",
+            isSelf ? "opacity-50 cursor-not-allowed" : "hover:bg-muted/60",
             user.isActive
               ? "text-rose-700 dark:text-rose-400"
               : "text-emerald-700 dark:text-emerald-400",
@@ -243,7 +244,7 @@ function RowActions({
         {!isSelf && user.mfaEnabled && user.isSystemAdmin && (
           <button
             type="button"
-            className="w-full text-left px-3 py-1.5 flex items-center gap-2 hover:bg-accent text-rose-700 dark:text-rose-400"
+            className="w-full text-left px-3 py-1.5 flex items-center gap-2 hover:bg-muted/60 text-rose-700 dark:text-rose-400"
             onClick={(e) => {
               e.stopPropagation();
               setOpen(false);
@@ -256,7 +257,7 @@ function RowActions({
         {!isSelf && user.mfaEnabled && !user.isSystemAdmin && user.orgMembershipsCount === 0 && (
           <button
             type="button"
-            className="w-full text-left px-3 py-1.5 flex items-center gap-2 hover:bg-accent text-rose-700 dark:text-rose-400"
+            className="w-full text-left px-3 py-1.5 flex items-center gap-2 hover:bg-muted/60 text-rose-700 dark:text-rose-400"
             onClick={(e) => {
               e.stopPropagation();
               setOpen(false);
@@ -424,15 +425,15 @@ export function PlatformUsersPage() {
       <PeerResetInbox selfId={selfId} onApproved={refreshAll} />
 
       <div className="grid grid-cols-3 gap-2 md:gap-4">
-        <div className="p-3 md:p-4 rounded-lg border border-border bg-card">
+        <div className="p-3 md:p-4 rounded-xl bg-surface shadow-edge">
           <p className="text-xl md:text-2xl font-bold">{stats?.users ?? "-"}</p>
           <p className="text-xs md:text-sm text-muted-foreground">Users</p>
         </div>
-        <div className="p-3 md:p-4 rounded-lg border border-border bg-card">
+        <div className="p-3 md:p-4 rounded-xl bg-surface shadow-edge">
           <p className="text-xl md:text-2xl font-bold">{stats?.admins ?? "-"}</p>
           <p className="text-xs md:text-sm text-muted-foreground">System admins</p>
         </div>
-        <div className="p-3 md:p-4 rounded-lg border border-border bg-card">
+        <div className="p-3 md:p-4 rounded-xl bg-surface shadow-edge">
           <p className="text-xl md:text-2xl font-bold">{stats?.inactive ?? "-"}</p>
           <p className="text-xs md:text-sm text-muted-foreground">Inactive</p>
         </div>
@@ -444,7 +445,7 @@ export function PlatformUsersPage() {
             size={16}
             className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
           />
-          <input
+          <Input
             type="text"
             value={search}
             onChange={(e) => {
@@ -452,8 +453,7 @@ export function PlatformUsersPage() {
               setPage(0);
             }}
             placeholder="Search by email, username, or name..."
-            className="w-full pl-9 pr-4 py-2 rounded-md border border-border bg-background
-                            text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+            className="pl-9 pr-4"
           />
         </div>
         <Checkbox

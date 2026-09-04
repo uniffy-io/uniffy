@@ -1,8 +1,11 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import { useOverlayEscape } from "@/shared/hooks/useOverlayEscape";
 import { createPortal } from "react-dom";
 import { CaretDown, Check, X } from "@phosphor-icons/react";
 import { cn } from "@/shared/utils/cn";
+import { popoverShellClass } from "@/components/ui/popover";
 import type { SelectOption } from "@/components/ui/select";
+import { controlShellClass } from "@/components/ui/input";
 
 interface MultiSelectProps<T extends string | number = string> {
   value: T[];
@@ -91,17 +94,7 @@ export function MultiSelect<T extends string | number = string>({
     }
   }, [isOpen]);
 
-  useEffect(() => {
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        setIsOpen(false);
-      }
-    }
-    if (isOpen) {
-      document.addEventListener("keydown", handleKeyDown);
-      return () => document.removeEventListener("keydown", handleKeyDown);
-    }
-  }, [isOpen]);
+  useOverlayEscape(() => setIsOpen(false), isOpen);
 
   const handleToggle = (optionValue: T) => {
     if (selectedSet.has(optionValue)) {
@@ -137,8 +130,8 @@ export function MultiSelect<T extends string | number = string>({
           minWidth: 120,
         }}
         className={cn(
-          "z-[200] overflow-hidden rounded-md",
-          "border border-border bg-card shadow-xl",
+          popoverShellClass,
+          "z-[200] overflow-hidden",
           "animate-in fade-in-0 duration-100",
           position.openUpward ? "slide-in-from-bottom-2" : "slide-in-from-top-2",
         )}
@@ -191,10 +184,10 @@ export function MultiSelect<T extends string | number = string>({
           }
         }}
         className={cn(
-          "flex items-center flex-wrap gap-1 rounded-md border border-border bg-background",
-          "font-medium transition-colors min-h-[2.5rem]",
-          "focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 focus:ring-offset-background",
-          disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:bg-muted/50",
+          controlShellClass,
+          "focus-ring flex items-center flex-wrap gap-1 font-medium min-h-[2.5rem]",
+          disabled ? "opacity-50 cursor-not-allowed hover:border-border" : "cursor-pointer",
+          isOpen && "border-border-strong",
           sizeClasses[size],
         )}
       >

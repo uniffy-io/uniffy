@@ -72,10 +72,7 @@ export function MemoryRow({
   };
 
   return (
-    <div
-      className="bg-card border border-border rounded-lg overflow-hidden"
-      data-testid="memory-row"
-    >
+    <div className="overflow-hidden rounded-xl bg-card shadow-edge" data-testid="memory-row">
       <div className="px-4 py-3 flex items-start gap-3">
         <button
           type="button"

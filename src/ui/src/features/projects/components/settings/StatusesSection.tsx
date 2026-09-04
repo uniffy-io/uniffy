@@ -11,28 +11,19 @@ import { useAppDispatch } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { Input, controlShellClass } from "@/components/ui/input";
 import { updateFieldThunk } from "@/features/projects/store/projectsThunks";
 import { updateFieldDefinition } from "@/features/projects/store/projectsSlice";
 import { SYSTEM_FIELD_IDS } from "@/features/projects/types";
 import type { Project, SelectOption } from "@/features/projects/types";
-
-const STATUS_COLORS = [
-  "#6b7280",
-  "#3b82f6",
-  "#22c55e",
-  "#f59e0b",
-  "#ef4444",
-  "#8b5cf6",
-  "#ec4899",
-  "#06b6d4",
-  "#f97316",
-  "#14b8a6",
-];
+import { STATUS_SWATCHES, statusPaint } from "@/features/projects/utils/statusPaint";
 
 interface StatusesSectionProps {
   project: Project;
 }
 
+// Colours default to the status's slot on the brand axis; the swatch row while editing overrides
+// one status, and the reset action puts every status back on its slot.
 export function StatusesSection({ project }: StatusesSectionProps) {
   const dispatch = useAppDispatch();
   const statusField = project.fieldDefinitions.find((f) => f.id === SYSTEM_FIELD_IDS.STATUS);
@@ -40,9 +31,7 @@ export function StatusesSection({ project }: StatusesSectionProps) {
 
   const [items, setItems] = useState<SelectOption[]>([...initialOptions]);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [isColorPickerOpen, setIsColorPickerOpen] = useState(false);
   const [newLabel, setNewLabel] = useState("");
-  const [newColor, setNewColor] = useState(STATUS_COLORS[0]);
   const [isAdding, setIsAdding] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<SelectOption | null>(null);
   const [migrationTargetId, setMigrationTargetId] = useState<string>("");
@@ -101,6 +90,14 @@ export function StatusesSection({ project }: StatusesSectionProps) {
     persistOptions(newItems);
   };
 
+  // An empty colour asks the backend for the status's slot on the brand axis; the saved field
+  // definition comes back filled and replaces this list.
+  const handleResetColors = () => {
+    const newItems = items.map((item) => ({ ...item, color: "" }));
+    setItems(newItems);
+    persistOptions(newItems);
+  };
+
   const handleDeleteConfirm = () => {
     if (!deleteTarget) return;
     const newItems = items.filter((item) => item.id !== deleteTarget.id);
@@ -113,17 +110,17 @@ export function StatusesSection({ project }: StatusesSectionProps) {
   const handleAddNew = () => {
     if (!newLabel.trim()) return;
     const maxSortOrder = items.reduce((max, item) => Math.max(max, item.sortOrder), -1);
+    // Empty colour: the backend assigns the new slot on the brand axis when it saves.
     const newOption: SelectOption = {
       id: `status_${crypto.randomUUID().slice(0, 8)}`,
       label: newLabel.trim(),
-      color: newColor,
+      color: "",
       sortOrder: maxSortOrder + 1,
     };
     const newItems = [...items, newOption];
     setItems(newItems);
     persistOptions(newItems);
     setNewLabel("");
-    setNewColor(STATUS_COLORS[0]);
     setIsAdding(false);
   };
 
@@ -162,14 +159,25 @@ export function StatusesSection({ project }: StatusesSectionProps) {
           Statuses
         </h1>
         <p className="text-muted-foreground">
-          Configure task statuses and their order. The order here controls the board column order
-          and dropdown order.
+          Configure task statuses and their order. The order controls the board columns and the
+          dropdowns. Colours default to the brand axis, violet for the first status through pink for
+          the last, and can be overridden per status while editing.
         </p>
       </div>
 
       <section className="space-y-4">
-        <h2 className="text-lg font-semibold text-foreground">Status Options</h2>
-        <div className="bg-card rounded-lg border border-border p-4 md:p-6 space-y-1">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold text-foreground">Status Options</h2>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-muted-foreground"
+            onClick={handleResetColors}
+          >
+            Reset colours to brand
+          </Button>
+        </div>
+        <div className="space-y-1 rounded-xl bg-surface p-4 shadow-edge md:p-6">
           {/* Status List */}
           {items.map((item, index) => (
             <div
@@ -193,57 +201,39 @@ export function StatusesSection({ project }: StatusesSectionProps) {
               )}
             >
               {editingId === item.id ? (
-                <div className="flex items-center gap-2 w-full relative">
-                  {/* Color Picker */}
-                  <div className="relative">
-                    <div
-                      className="w-5 h-5 rounded-full cursor-pointer ring-1 ring-border hover:ring-primary transition-all shrink-0"
-                      style={{ backgroundColor: item.color }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setIsColorPickerOpen(!isColorPickerOpen);
-                      }}
-                    />
-                    {isColorPickerOpen && (
-                      <div className="absolute top-7 left-0 z-20 p-2 bg-popover border border-border rounded-lg shadow-lg flex flex-wrap gap-1.5 w-36">
-                        {STATUS_COLORS.map((c) => (
-                          <button
-                            key={c}
-                            type="button"
-                            className={cn(
-                              "w-5 h-5 rounded-full hover:scale-110 transition-transform ring-1 ring-border/50",
-                              item.color === c && "ring-2 ring-primary",
-                            )}
-                            style={{ backgroundColor: c }}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleUpdateItem(item.id, { color: c });
-                              setIsColorPickerOpen(false);
-                            }}
-                          />
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  <input
+                <div className="flex items-center gap-2 w-full">
+                  <div
+                    className="w-4 h-4 rounded-full shrink-0"
+                    style={{ background: statusPaint(items, item.id).gradient }}
+                  />
+                  <Input
                     ref={editInputRef}
-                    className="flex-1 h-8 px-2 bg-background border border-border rounded-md text-sm focus:border-primary outline-none"
+                    className="flex-1 h-8 px-2"
                     value={item.label}
                     onChange={(e) => handleUpdateItem(item.id, { label: e.target.value })}
                     onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === "Escape") {
-                        setEditingId(null);
-                        setIsColorPickerOpen(false);
-                      }
+                      if (e.key === "Enter" || e.key === "Escape") setEditingId(null);
                     }}
                   />
+                  <div className="flex items-center gap-1 shrink-0">
+                    {STATUS_SWATCHES.map((c) => (
+                      <button
+                        key={c}
+                        type="button"
+                        title={c}
+                        onClick={() => handleUpdateItem(item.id, { color: c })}
+                        className={cn(
+                          "w-4 h-4 rounded-full transition-transform hover:scale-110",
+                          item.color.toLowerCase() === c &&
+                            "ring-2 ring-offset-1 ring-offset-surface ring-primary",
+                        )}
+                        style={{ backgroundColor: c }}
+                      />
+                    ))}
+                  </div>
                   <button
                     type="button"
-                    onClick={() => {
-                      setEditingId(null);
-                      setIsColorPickerOpen(false);
-                    }}
+                    onClick={() => setEditingId(null)}
                     className="p-1 text-primary hover:bg-primary/10 rounded"
                   >
                     <Check size={16} />
@@ -253,11 +243,11 @@ export function StatusesSection({ project }: StatusesSectionProps) {
                 <>
                   <DotsSixVertical
                     size={16}
-                    className="text-muted-foreground/40 cursor-grab shrink-0"
+                    className="text-subtle-foreground cursor-grab shrink-0"
                   />
                   <div
                     className="w-4 h-4 rounded-full shrink-0"
-                    style={{ backgroundColor: item.color }}
+                    style={{ background: statusPaint(items, item.id).gradient }}
                   />
                   <span className="flex-1 text-sm font-medium truncate">{item.label}</span>
 
@@ -299,8 +289,8 @@ export function StatusesSection({ project }: StatusesSectionProps) {
           {/* Add New Section */}
           <div className="pt-4">
             {isAdding ? (
-              <div className="space-y-3 p-3 rounded-lg border border-border bg-muted/30">
-                <input
+              <div className="space-y-3 rounded-xl bg-card p-3 shadow-edge">
+                <Input
                   ref={newInputRef}
                   type="text"
                   placeholder="Status name"
@@ -310,33 +300,15 @@ export function StatusesSection({ project }: StatusesSectionProps) {
                     if (e.key === "Enter") handleAddNew();
                     if (e.key === "Escape") setIsAdding(false);
                   }}
-                  className="w-full h-9 px-3 text-sm bg-background border border-border rounded-md outline-none text-foreground focus:border-primary"
+                  className="h-9"
                 />
-                <div className="flex items-center justify-between">
-                  <div className="flex gap-1.5">
-                    {STATUS_COLORS.map((c) => (
-                      <button
-                        key={c}
-                        type="button"
-                        onClick={() => setNewColor(c)}
-                        className={cn(
-                          "w-5 h-5 rounded-full transition-all",
-                          newColor === c
-                            ? "ring-2 ring-offset-1 ring-offset-card ring-primary scale-110"
-                            : "hover:scale-110",
-                        )}
-                        style={{ backgroundColor: c }}
-                      />
-                    ))}
-                  </div>
-                  <div className="flex gap-2">
-                    <Button size="sm" variant="ghost" onClick={() => setIsAdding(false)}>
-                      Cancel
-                    </Button>
-                    <Button size="sm" onClick={handleAddNew} disabled={!newLabel.trim()}>
-                      Add
-                    </Button>
-                  </div>
+                <div className="flex justify-end gap-2">
+                  <Button size="sm" variant="ghost" onClick={() => setIsAdding(false)}>
+                    Cancel
+                  </Button>
+                  <Button size="sm" onClick={handleAddNew} disabled={!newLabel.trim()}>
+                    Add
+                  </Button>
                 </div>
               </div>
             ) : (
@@ -375,7 +347,10 @@ export function StatusesSection({ project }: StatusesSectionProps) {
                 <select
                   value={migrationTargetId}
                   onChange={(e) => setMigrationTargetId(e.target.value)}
-                  className="w-full h-9 px-2 rounded-md border border-border bg-background text-sm"
+                  className={cn(
+                    controlShellClass,
+                    "focus-ring w-full h-9 px-2 text-sm text-foreground",
+                  )}
                 >
                   {items
                     .filter((i) => i.id !== deleteTarget?.id)

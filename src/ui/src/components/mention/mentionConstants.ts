@@ -21,6 +21,16 @@ export function hasExpandedCard(type: string): boolean {
 /** Subject kinds that render as Slack-style `@Name` text tokens instead of boxed chips. */
 export const PEOPLE_TOKEN_TYPES = new Set<string>([UrnType.USER, UrnType.AGENT, UrnType.TEAM]);
 
+/** Every content chip wears the accent; only the glyph tells the type apart. People tokens have their own treatment. */
+export const MENTION_ACCENT = {
+  iconBg: "bg-gradient-to-br from-primary to-primary/80",
+  iconBoxAccent: "border border-primary/55 bg-primary/10 text-primary",
+  accentText: "text-primary",
+  badgeBg: "bg-primary/10",
+  border: "border-primary/40 dark:border-primary/20",
+  borderHover: "hover:border-primary/60 dark:hover:border-primary/40",
+} as const;
+
 export function isPeopleTokenType(type: string): boolean {
   return PEOPLE_TOKEN_TYPES.has(type);
 }
@@ -35,7 +45,7 @@ export function peopleTokenClasses(selfMention: boolean, selected: boolean): str
     selfMention
       ? "bg-primary/25 text-primary hover:bg-primary/30"
       : "bg-primary/10 text-primary hover:bg-primary/20",
-    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+    "focus-ring",
     selected && "ring-2 ring-primary ring-offset-1 ring-offset-background",
   );
 }

@@ -323,7 +323,7 @@ export function RecordingNavTrigger() {
       >
         <span className="absolute bottom-0 left-1/2 -translate-x-1/2 h-0.5 rounded-full bg-primary transition-all duration-700 ease-out w-0 opacity-0 group-hover:w-1/2 group-hover:opacity-70" />
 
-        <span className="relative z-10 flex items-center justify-center w-7 h-7 rounded-md border border-border text-muted-foreground transition-all duration-500 ease-out group-hover:border-transparent group-hover:text-primary">
+        <span className="relative z-10 flex items-center justify-center w-7 h-7 rounded-md border border-border-nav text-muted-foreground transition-all duration-500 ease-out group-hover:border-transparent group-hover:text-primary">
           <VideoCamera size={20} weight="duotone" />
         </span>
 

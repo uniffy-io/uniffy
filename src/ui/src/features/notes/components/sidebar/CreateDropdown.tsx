@@ -1,5 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Plus, FileText, SelectionAll, Folder, ArrowsClockwise } from "@phosphor-icons/react";
+import { popoverEnterClass, popoverShellClass } from "@/components/ui/popover";
+import { useOverlayEscape } from "@/shared/hooks/useOverlayEscape";
+import { cn } from "@/shared/utils/cn";
 
 interface CreateDropdownProps {
   onCreateNote: () => void;
@@ -40,17 +43,7 @@ export function CreateDropdown({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isOpen]);
 
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        setIsOpen(false);
-      }
-    };
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen]);
+  useOverlayEscape(() => setIsOpen(false), isOpen);
 
   const handleAction = useCallback((action: () => void) => {
     setIsOpen(false);
@@ -85,7 +78,7 @@ export function CreateDropdown({
     return (
       <div
         ref={menuRef}
-        className="fixed z-50 min-w-40 overflow-hidden rounded-md border border-border bg-card shadow-lg animate-in fade-in-0 zoom-in-95 duration-100"
+        className={cn(popoverShellClass, popoverEnterClass, "fixed z-50 min-w-40 overflow-hidden")}
         style={{ top: menuPos.y, left: menuPos.x }}
         onClick={(e) => e.stopPropagation()}
       >

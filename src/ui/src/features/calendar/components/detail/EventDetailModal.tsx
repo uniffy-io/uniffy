@@ -1,9 +1,8 @@
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useCallback } from "react";
 import {
   BookmarkSimple,
   ShareNetwork,
   Trash,
-  X,
   Link,
   Warning,
   Clock,
@@ -15,6 +14,9 @@ import { deleteEvent as deleteEventThunk } from "@/features/calendar/store/calen
 import { RecurrenceEditScopeDialog } from "@/features/calendar/components/modals/RecurrenceEditScopeDialog";
 import type { RecurrenceEditScope } from "@/features/calendar/types";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/shared/utils/cn";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/ui/modal";
 import { useCalendarEvents } from "@/features/calendar/hooks";
 import { useEventCommit } from "@/features/calendar/hooks/useEventCommit";
 import { useEventPermission } from "@/features/calendar/hooks/useEventPermission";
@@ -74,31 +76,6 @@ export function EventDetailModal() {
     return findConflicts(selectedEvent, visibleEvents);
   }, [selectedEvent, visibleEvents]);
 
-  // Escape unwinds the innermost surface first so a nested dialog is not skipped.
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key !== "Escape") return;
-      if (pendingPatch) {
-        cancelScope();
-      } else if (showDeleteScopeDialog) {
-        setShowDeleteScopeDialog(false);
-      } else if (showDeleteConfirm) {
-        setShowDeleteConfirm(false);
-      } else {
-        handleClose();
-      }
-    };
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [showDeleteConfirm, showDeleteScopeDialog, pendingPatch, cancelScope, handleClose]);
-
-  useEffect(() => {
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, []);
-
   const category = selectedEvent?.categoryId ? categories[selectedEvent.categoryId] : null;
   const categoryColor = category?.color ?? ACCENT_EVENT_COLOR;
 
@@ -138,160 +115,158 @@ export function EventDetailModal() {
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
-      role="dialog"
-      aria-modal="true"
-      aria-label="Event details"
-    >
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={handleClose} />
-
-      <div className="relative bg-background w-[calc(100vw-2rem)] max-w-3xl rounded-t-xl sm:rounded-xl shadow-2xl border border-border overflow-hidden max-h-[85vh] flex flex-col min-h-0">
+    <>
+      <Modal onClose={handleClose} maxWidth="max-w-3xl" className="flex flex-col max-h-[85dvh]">
         {!selectedEvent ? (
           // The modal opens on selection, so a missing row means the deep-link
           // fetch is still in flight or the event is not reachable.
-          <div className="flex flex-col items-center justify-center gap-4 py-16 text-muted-foreground">
-            <p>{isLoadingDetail ? "Loading event..." : "This event is unavailable."}</p>
+          <>
+            <ModalBody scrollable={false} className="py-16 text-center text-muted-foreground">
+              <p>{isLoadingDetail ? "Loading event..." : "This event is unavailable."}</p>
+            </ModalBody>
             {!isLoadingDetail && (
-              <Button variant="outline" size="md" onClick={handleClose}>
-                Close
-              </Button>
+              <ModalFooter>
+                <Button type="button" variant="ghost" onClick={handleClose}>
+                  Close
+                </Button>
+              </ModalFooter>
             )}
-          </div>
+          </>
         ) : selectedEvent.detailsHidden ? (
           // Server-redacted private event: an honest busy block, nothing more.
           // The activity log and description are not fetched or rendered.
-          <div className="flex flex-col gap-2 px-6 py-8">
-            <div className="flex items-start gap-3">
-              <div className="w-1 h-8 rounded-full shrink-0 bg-muted-foreground/40" />
-              <div className="flex-1 min-w-0">
-                <h2 className="text-lg font-semibold text-foreground">
-                  {selectedEvent.isOutOfOffice ? "Out of office" : "Busy"}
-                </h2>
-                <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
-                  <Clock size={14} weight="duotone" />
-                  <span>{formatTimeRange(selectedEvent.startTime, selectedEvent.endTime)}</span>
-                </div>
-                <p className="mt-3 text-sm text-muted-foreground">
-                  This event is private. Its details are hidden.
-                </p>
+          <>
+            <ModalHeader
+              title={selectedEvent.isOutOfOffice ? "Out of office" : "Busy"}
+              description="This event is private. Its details are hidden."
+            />
+            <ModalBody scrollable={false}>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Clock size={14} weight="duotone" />
+                <span>{formatTimeRange(selectedEvent.startTime, selectedEvent.endTime)}</span>
               </div>
-            </div>
-            <div className="flex justify-end">
-              <Button variant="outline" size="md" onClick={handleClose}>
+            </ModalBody>
+            <ModalFooter>
+              <Button type="button" variant="ghost" onClick={handleClose}>
                 Close
               </Button>
-            </div>
-          </div>
+            </ModalFooter>
+          </>
         ) : (
           <>
-            <div className="flex items-center justify-end gap-1 px-4 py-2 border-b border-border">
-              <button
-                onClick={toggleBookmark}
-                disabled={bookmarkToggling}
-                className="p-2 rounded-md bg-transparent hover:bg-muted transition-colors disabled:opacity-50"
-                title={isBookmarked ? "Remove bookmark" : "Add bookmark"}
-              >
-                <BookmarkSimple
-                  size={20}
-                  weight={isBookmarked ? "fill" : "duotone"}
-                  className="text-primary"
-                />
-              </button>
-              {canManage && (
-                <button
-                  onClick={() =>
-                    openAccessPolicyDialog(
-                      ContentType.CALENDAR_EVENT,
-                      selectedEvent.id,
-                      selectedEvent.title,
-                      selectedEvent.userRole,
-                    )
-                  }
-                  className="p-2 rounded-md bg-transparent hover:bg-muted transition-colors"
-                  title="Share"
-                >
-                  <ShareNetwork size={20} weight="duotone" className="text-primary" />
-                </button>
-              )}
-              {canDelete && (
-                <button
-                  onClick={handleDeleteClick}
-                  className="p-2 rounded-md bg-transparent hover:bg-muted transition-colors"
-                  title="Delete event"
-                >
-                  <Trash size={20} weight="duotone" className="text-red-500" />
-                </button>
-              )}
-              <button
-                onClick={handleClose}
-                className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                title="Close"
-                aria-label="Close event details"
-              >
-                <X size={20} weight="bold" />
-              </button>
-            </div>
-
-            <div className="flex-1 min-h-0 overflow-y-auto">
-              <div className="px-5 py-4 flex items-start gap-3 border-b border-border">
-                <div
-                  className="w-1 h-8 rounded-full shrink-0"
-                  style={{ backgroundColor: categoryColor }}
-                />
-                <div className="flex-1 min-w-0">
-                  <InlineTextField
-                    value={selectedEvent.title}
-                    onCommit={(title) => commit({ title })}
-                    placeholder="Untitled event"
-                    readOnly={!canEdit}
-                    required
-                    className={
-                      selectedEvent.status === "cancelled"
-                        ? "text-lg line-through opacity-60"
-                        : "text-lg"
-                    }
-                    inputClassName="text-lg font-semibold"
+            <ModalHeader
+              title={
+                <span className="flex items-start gap-3 whitespace-normal">
+                  <span
+                    className="w-1 h-8 rounded-full shrink-0"
+                    style={{ backgroundColor: categoryColor }}
                   />
-                  {selectedEvent.status === "cancelled" && (
-                    <span className="inline-block mt-1 px-2 py-0.5 text-xs rounded-full bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">
-                      Cancelled
-                    </span>
+                  <span className="flex-1 min-w-0">
+                    <InlineTextField
+                      value={selectedEvent.title}
+                      onCommit={(title) => commit({ title })}
+                      placeholder="Untitled event"
+                      readOnly={!canEdit}
+                      required
+                      textClassName={cn(
+                        "text-xl font-semibold",
+                        selectedEvent.status === "cancelled" && "line-through opacity-60",
+                      )}
+                      inputClassName="text-xl font-semibold"
+                    />
+                    {selectedEvent.status === "cancelled" && (
+                      <span className="inline-block mt-1 px-2 py-0.5 text-xs font-normal rounded-full bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">
+                        Cancelled
+                      </span>
+                    )}
+                  </span>
+                </span>
+              }
+              actions={
+                <div className="flex items-center gap-1 shrink-0">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={toggleBookmark}
+                    disabled={bookmarkToggling}
+                    title={isBookmarked ? "Remove bookmark" : "Add bookmark"}
+                    aria-label={isBookmarked ? "Remove bookmark" : "Add bookmark"}
+                  >
+                    <BookmarkSimple
+                      size={18}
+                      weight={isBookmarked ? "fill" : "duotone"}
+                      className="text-primary"
+                    />
+                  </Button>
+                  {canManage && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() =>
+                        openAccessPolicyDialog(
+                          ContentType.CALENDAR_EVENT,
+                          selectedEvent.id,
+                          selectedEvent.title,
+                          selectedEvent.userRole,
+                        )
+                      }
+                      title="Share"
+                      aria-label="Share"
+                    >
+                      <ShareNetwork size={18} weight="duotone" className="text-primary" />
+                    </Button>
+                  )}
+                  {canDelete && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={handleDeleteClick}
+                      title="Delete event"
+                      aria-label="Delete event"
+                    >
+                      <Trash size={18} weight="duotone" className="text-red-500" />
+                    </Button>
                   )}
                 </div>
-              </div>
+              }
+              onClose={handleClose}
+            />
 
-              <div className="px-5 py-3 border-b border-border">
+            <ModalBody scrollable={false} className="flex-1 min-h-0 overflow-y-auto p-0 space-y-0">
+              <div className="px-6 py-3 border-b border-border">
                 <EventScheduleSection event={selectedEvent} canEdit={canEdit} commit={commit} />
               </div>
 
               {selectedEvent.attendees.length > 0 && (
-                <div className="px-5 py-3 border-b border-border">
+                <div className="px-6 py-3 border-b border-border">
                   <EventSchedulingSection event={selectedEvent} canEdit={canEdit} commit={commit} />
                 </div>
               )}
 
-              <div className="px-5 py-3 border-b border-border">
+              <div className="px-6 py-3 border-b border-border">
                 <EventPlaceSection event={selectedEvent} canEdit={canEdit} commit={commit} />
               </div>
 
-              <div className="px-5 py-3 border-b border-border">
+              <div className="px-6 py-3 border-b border-border">
                 <EventStateSection event={selectedEvent} canEdit={canEdit} commit={commit} />
               </div>
 
-              <div className="px-5 py-3 border-b border-border">
+              <div className="px-6 py-3 border-b border-border">
                 <EventMetaSection event={selectedEvent} canEdit={canEdit} commit={commit} />
               </div>
 
               {selectedEvent.attendees.length > 0 && (
-                <div className="px-5 py-3 border-b border-border">
+                <div className="px-6 py-3 border-b border-border">
                   <EventPeopleSection event={selectedEvent} canEdit={canEdit} commit={commit} />
                 </div>
               )}
 
               {conflictingEvents.length > 0 && (
                 <div
-                  className="px-5 py-3 border-b border-border"
+                  className="px-6 py-3 border-b border-border"
                   style={{
                     backgroundColor: "color-mix(in srgb, var(--status-warning) 5%, transparent)",
                   }}
@@ -331,7 +306,7 @@ export function EventDetailModal() {
                 </div>
               )}
 
-              <div className="px-5 py-3 border-b border-border">
+              <div className="px-6 py-3 border-b border-border">
                 <ExpandableEditor
                   contentType={ContentType.CALENDAR_EVENT}
                   contentId={selectedEvent.id}
@@ -348,7 +323,7 @@ export function EventDetailModal() {
               </div>
 
               {mentionsFromDescription.length > 0 && (
-                <div className="px-5 py-3 border-b border-border">
+                <div className="px-6 py-3 border-b border-border">
                   <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3 flex items-center gap-2">
                     <Link size={14} weight="duotone" />
                     Referenced Content
@@ -365,38 +340,29 @@ export function EventDetailModal() {
                 </div>
               )}
 
-              <div className="px-5 py-4">
+              <div className="px-6 py-4">
                 <EventActivityLog eventId={selectedEvent.id} />
               </div>
-            </div>
+            </ModalBody>
           </>
         )}
-      </div>
+      </Modal>
 
-      {showDeleteConfirm && selectedEvent && (
-        <>
-          <div className="fixed inset-0 bg-black/50 z-40" />
-          <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-background rounded-lg shadow-lg z-50 w-[calc(100vw-2rem)] max-w-96 border border-border p-4 md:p-6">
-            <h3 className="text-lg font-semibold text-foreground mb-2">Delete Event?</h3>
-            <p className="text-sm text-muted-foreground mb-6">
+      {selectedEvent && (
+        <ConfirmDialog
+          isOpen={showDeleteConfirm}
+          onClose={() => setShowDeleteConfirm(false)}
+          onConfirm={handleDelete}
+          title="Delete event?"
+          message={
+            <>
               Are you sure you want to delete &quot;{selectedEvent.title}&quot;? This action cannot
               be undone.
-            </p>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="md"
-                className="flex-1"
-                onClick={() => setShowDeleteConfirm(false)}
-              >
-                Cancel
-              </Button>
-              <Button variant="destructive" size="md" className="flex-1" onClick={handleDelete}>
-                Delete
-              </Button>
-            </div>
-          </div>
-        </>
+            </>
+          }
+          confirmLabel="Delete"
+          variant="danger"
+        />
       )}
 
       <RecurrenceEditScopeDialog
@@ -412,6 +378,6 @@ export function EventDetailModal() {
         onSelect={resolveScope}
         action="edit"
       />
-    </div>
+    </>
   );
 }

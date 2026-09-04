@@ -2,7 +2,10 @@ import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { Door, X, MagnifyingGlass, Users, Check, Circle, Funnel } from "@phosphor-icons/react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
+import { popoverShellClass } from "@/components/ui/popover";
+import { useOverlayEscape } from "@/shared/hooks/useOverlayEscape";
 import { cn } from "@/shared/utils/cn";
+import { controlShellClass } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { fetchRooms } from "@/features/rooms/store/roomsThunks";
@@ -128,14 +131,7 @@ export function RoomPicker({
     return () => document.removeEventListener("mousedown", handleClick);
   }, [isOpen]);
 
-  useEffect(() => {
-    if (!isOpen) return;
-    function handleKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setIsOpen(false);
-    }
-    document.addEventListener("keydown", handleKey);
-    return () => document.removeEventListener("keydown", handleKey);
-  }, [isOpen]);
+  useOverlayEscape(() => setIsOpen(false), isOpen);
 
   const handleSelectRoom = (room: Room) => {
     onSelect(room.id);
@@ -175,7 +171,8 @@ export function RoomPicker({
               width: position.width,
             }}
             className={cn(
-              "z-200 rounded-lg border border-border bg-card shadow-xl",
+              popoverShellClass,
+              "z-200",
               "animate-in fade-in-0 slide-in-from-top-2 duration-100",
             )}
           >
@@ -322,7 +319,12 @@ export function RoomPicker({
   return (
     <div className={cn("relative", className)}>
       {selectedRoom ? (
-        <div className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-1.5">
+        <div
+          className={cn(
+            controlShellClass,
+            "flex items-center gap-2 rounded-lg px-3 py-1.5 hover:border-border",
+          )}
+        >
           <Door size={14} weight="duotone" className="text-muted-foreground shrink-0" />
           <span className="text-sm font-medium text-foreground truncate flex-1">
             {selectedRoom.name}
@@ -341,9 +343,10 @@ export function RoomPicker({
           type="button"
           onClick={() => setIsOpen(!isOpen)}
           className={cn(
-            "flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 w-full",
-            "text-sm text-muted-foreground hover:bg-muted/50 transition-colors",
-            "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 focus:ring-offset-background",
+            controlShellClass,
+            "flex items-center gap-2 rounded-lg px-3 py-2 w-full text-sm text-muted-foreground",
+            isOpen && "border-border-strong",
+            "focus-ring",
           )}
         >
           <Door size={16} weight="duotone" />

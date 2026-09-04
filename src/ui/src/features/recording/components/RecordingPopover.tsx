@@ -1,6 +1,8 @@
 import { useEffect, useRef } from "react";
 import { VideoCamera } from "@phosphor-icons/react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
+import { popoverShellClass } from "@/components/ui/popover";
+import { useOverlayEscape } from "@/shared/hooks/useOverlayEscape";
 import { cn } from "@/shared/utils/cn";
 import { RecordingSourcePicker } from "@/features/recording/components/RecordingSourcePicker";
 import { RecordingMicPicker } from "@/features/recording/components/RecordingMicPicker";
@@ -41,22 +43,16 @@ export function RecordingPopover({ onClose, anchorRef }: RecordingPopoverProps) 
       }
       onClose();
     }
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        event.stopPropagation();
-        onClose();
-      }
-    }
     const timeoutId = window.setTimeout(() => {
       document.addEventListener("mousedown", handlePointerDown, true);
-      document.addEventListener("keydown", handleKeyDown, true);
     }, 0);
     return () => {
       window.clearTimeout(timeoutId);
       document.removeEventListener("mousedown", handlePointerDown, true);
-      document.removeEventListener("keydown", handleKeyDown, true);
     };
   }, [onClose, anchorRef]);
+
+  useOverlayEscape(onClose);
 
   const handleRecord = () => {
     void dispatch(startRecording());
@@ -76,8 +72,8 @@ export function RecordingPopover({ onClose, anchorRef }: RecordingPopoverProps) 
       role="dialog"
       aria-label="Start screen recording"
       className={cn(
+        popoverShellClass,
         "absolute right-0 z-[100] mt-1.5 w-[min(320px,calc(100vw-2rem))] origin-top-right rounded-xl",
-        "bg-card text-card-foreground shadow-xl border border-border",
         "animate-in fade-in slide-in-from-top-2 duration-150",
         "flex flex-col overflow-hidden",
       )}
@@ -111,7 +107,7 @@ export function RecordingPopover({ onClose, anchorRef }: RecordingPopoverProps) 
             "shrink-0 inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium",
             "bg-red-500 text-white shadow-sm",
             "hover:bg-red-600 transition-colors",
-            "focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500/50",
+            "focus-ring",
             "disabled:opacity-50 disabled:cursor-not-allowed",
           )}
         >

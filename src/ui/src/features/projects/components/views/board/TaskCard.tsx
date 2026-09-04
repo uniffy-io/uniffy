@@ -18,7 +18,7 @@ import { SubjectAvatarStack } from "@/components/subject";
 import { MentionChipCompact } from "@/components/mention";
 import { useMentionState } from "@/components/mention/useMentionState";
 import type { Task, SelectOption } from "@/features/projects/types";
-import { getTaskTypeConfig } from "@/features/projects/utils/taskTypes";
+import { TaskTypeIcon } from "@/features/projects/components/TaskTypeIcon";
 import { extractFallbackLabel } from "@/shared/utils/mentionUtils";
 import { TagChip } from "@/features/tags";
 
@@ -30,22 +30,16 @@ function ReferenceChip({ urn }: { urn: string }) {
 
 interface TaskCardProps {
   task: Task;
-  statusOption?: SelectOption;
   priorityOption?: SelectOption;
   onClick: (e: React.MouseEvent) => void;
-  onCheckboxChange: (taskId: string) => void;
-  isSelected?: boolean;
   projectSlug: string;
   reparentHintActive?: boolean;
 }
 
 export function TaskCard({
   task,
-  statusOption,
   priorityOption,
   onClick,
-  onCheckboxChange,
-  isSelected,
   projectSlug,
   reparentHintActive = false,
 }: TaskCardProps) {
@@ -63,8 +57,6 @@ export function TaskCard({
     task.blockedByTaskIds && task.blockedByTaskIds.length > 0 && task.status !== "status_done";
 
   const ticketId = `${projectSlug}-${task.number}`;
-  const typeConfig = getTaskTypeConfig(task.taskType || "task");
-  const TypeIcon = typeConfig.icon;
 
   const dispatch = useAppDispatch();
   // Narrow subscription: re-renders only when this card's own parent changes.
@@ -83,22 +75,20 @@ export function TaskCard({
       {...attributes}
       {...listeners}
       className={cn(
-        "bg-card rounded-lg border border-border shadow-sm cursor-grab overflow-hidden",
-        "hover:border-primary/50 transition-colors",
+        // Dark mode: card and muted sit two points apart and read as one slab, so the card
+        // drops to the surface gray and the column (BoardColumn) lifts to make the tray.
+        "bg-card dark:bg-surface rounded-lg shadow-edge cursor-grab overflow-hidden transition-shadow duration-150",
+        "hover:shadow-edge-primary",
         isDragging && "opacity-50 shadow-lg",
-        isSelected && "ring-2 ring-primary",
         reparentHintActive && "outline-2 outline-dashed outline-primary/70 -outline-offset-2",
         hasUnresolvedBlockers && "border-l-2 border-l-yellow-500 dark:border-l-yellow-400",
       )}
       onClick={onClick}
     >
-      {/* Status color bar at top */}
-      {statusOption && <div className="h-1" style={{ backgroundColor: statusOption.color }} />}
-
       <div className="p-3">
         {/* Ticket ID and type, with parent breadcrumb for subtasks */}
         <div className="flex items-center gap-1 mb-1.5 min-w-0">
-          <TypeIcon size={12} className="text-muted-foreground shrink-0" weight="fill" />
+          <TaskTypeIcon type={task.taskType} size={12} className="text-muted-foreground" />
           {task.parentId && (
             <>
               <button
@@ -115,7 +105,7 @@ export function TaskCard({
                 <ArrowElbowDownRight size={10} weight="bold" className="shrink-0" />
                 {parentTask ? `${projectSlug}-${parentTask.number}` : "Subtask"}
               </button>
-              <CaretRight size={9} className="text-muted-foreground/40 shrink-0" />
+              <CaretRight size={9} className="text-subtle-foreground shrink-0" />
             </>
           )}
           <span
@@ -133,16 +123,6 @@ export function TaskCard({
         {/* Top Row: Title & Dates */}
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-start gap-2 min-w-0">
-            <input
-              type="checkbox"
-              className="h-4 w-4 rounded border-border mt-0.5 shrink-0"
-              checked={!!isSelected}
-              onChange={(e) => {
-                e.stopPropagation();
-                onCheckboxChange(task.id);
-              }}
-              onClick={(e) => e.stopPropagation()}
-            />
             <div className="min-w-0">
               <h3 className="text-sm font-medium text-foreground line-clamp-2 leading-tight pt-0.5">
                 {task.title}

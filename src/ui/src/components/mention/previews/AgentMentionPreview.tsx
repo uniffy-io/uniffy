@@ -51,7 +51,7 @@ export function AgentMentionPreview({
         </span>
       )}
 
-      <span className="flex px-4 py-2 pl-5 bg-muted/30 border-t border-border/50 items-center justify-between">
+      <span className="flex px-4 py-2 pl-5 bg-background/60 items-center justify-between">
         <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <Clock size={12} weight="duotone" />
           <span>{formatRelativeTime(liveState.updatedAt) || "No date"}</span>

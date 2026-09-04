@@ -20,7 +20,7 @@ export function ToggleSwitch({ enabled, onChange, disabled, size = "md" }: Toggl
       aria-checked={enabled}
       disabled={disabled}
       className={cn(
-        "relative inline-flex shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2",
+        "focus-ring relative inline-flex shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out",
         sizeClasses.container,
         enabled ? "bg-primary" : "bg-muted",
         disabled && "opacity-50 cursor-not-allowed",

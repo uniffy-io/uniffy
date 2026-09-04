@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
-import { X } from "@phosphor-icons/react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { Button } from "@/components/ui/button";
-import { Modal } from "@/components/ui/modal";
+import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/ui/modal";
 import { NumberInput } from "@/components/ui/number-input";
 import { ToggleSwitch } from "@/components/ui/toggle-switch";
 import {
@@ -125,24 +124,12 @@ export function MemberAgentQuotaDialog({ open, userId, displayName, onClose }: P
 
   return (
     <Modal onClose={onClose} closeDisabled={saving} maxWidth="max-w-md">
-      <div className="flex items-center justify-between p-6 pb-4">
-        <h2 className="text-lg font-semibold text-foreground">Agent quota for {displayName}</h2>
-        <button
-          type="button"
-          onClick={onClose}
-          disabled={saving}
-          className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
-        >
-          <X size={20} />
-        </button>
-      </div>
+      <ModalHeader
+        title={`Agent quota for ${displayName}`}
+        description="Caps the cost and image volume this member can consume across all agents. Leave a field blank to inherit the org-wide budget."
+      />
 
-      <div className="px-6 pb-6 space-y-4">
-        <p className="text-xs text-muted-foreground">
-          Caps the cost and image volume this user can consume across all agents in this
-          organization. Leave a field blank to inherit the org-wide budget.
-        </p>
-
+      <ModalBody>
         {loading ? (
           <div className="py-4 text-sm text-muted-foreground">Loading...</div>
         ) : (
@@ -185,10 +172,10 @@ export function MemberAgentQuotaDialog({ open, userId, displayName, onClose }: P
                 disabled={saving}
               />
             </FormRow>
-            <div className="flex items-center justify-between gap-4 pt-2">
-              <div className="min-w-0">
-                <div className="text-sm font-medium">Hard limit</div>
-                <p className="text-xs text-muted-foreground">
+            <div className="flex items-start gap-4">
+              <div className="flex-1 min-w-0">
+                <span className="block text-sm font-medium text-foreground">Hard limit</span>
+                <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
                   Reject requests when over cap. When off, allow but warn.
                 </p>
               </div>
@@ -200,39 +187,34 @@ export function MemberAgentQuotaDialog({ open, userId, displayName, onClose }: P
             </div>
           </>
         )}
-      </div>
+      </ModalBody>
 
-      <div className="flex items-center justify-between px-6 py-4 border-t border-border bg-muted/30">
-        <div>
-          {hasOverride && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleRemove}
-              disabled={saving || loading}
-              className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
-            >
-              Remove override
-            </Button>
-          )}
-        </div>
-        <div className="flex gap-3">
-          <Button variant="outline" onClick={onClose} disabled={saving}>
-            Cancel
+      <ModalFooter>
+        {hasOverride && (
+          <Button
+            variant="ghost"
+            onClick={handleRemove}
+            disabled={saving || loading}
+            className="mr-auto text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
+          >
+            Remove override
           </Button>
-          <Button onClick={handleSave} disabled={saving || loading}>
-            {saving ? "Saving..." : hasOverride ? "Update" : "Set quota"}
-          </Button>
-        </div>
-      </div>
+        )}
+        <Button variant="ghost" onClick={onClose} disabled={saving}>
+          Cancel
+        </Button>
+        <Button onClick={handleSave} disabled={saving || loading}>
+          {saving ? "Saving..." : hasOverride ? "Update" : "Set quota"}
+        </Button>
+      </ModalFooter>
     </Modal>
   );
 }
 
 function FormRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="space-y-2">
-      <label className="block text-sm font-medium text-foreground">{label}</label>
+    <div>
+      <label className="block text-sm text-muted-foreground mb-1">{label}</label>
       {children}
     </div>
   );

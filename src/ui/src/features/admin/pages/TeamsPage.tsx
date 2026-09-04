@@ -83,7 +83,7 @@ export function TeamsPage() {
           <TreeStructure
             size={48}
             weight="duotone"
-            className="mx-auto text-muted-foreground/50 mb-4"
+            className="mx-auto text-subtle-foreground mb-4"
           />
           <h3 className="text-lg font-medium mb-2">No teams yet</h3>
           <p className="text-muted-foreground mb-4">Create one to start building the org chart.</p>

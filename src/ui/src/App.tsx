@@ -12,7 +12,7 @@ import { Toaster, toast } from "sonner";
 import { WarningCircle, CheckCircle, Warning, Info } from "@phosphor-icons/react";
 import { useAppSelector } from "@/app/hooks";
 import { rehydrateAuth } from "@/config";
-import { useTheme } from "@/config/theme/ThemeProvider";
+import { useTheme } from "@/config/theme/themeContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { AdminRoute } from "@/features/admin/components/AdminRoute";
 import { AgentsBuilderRoute } from "@/features/agents/components/AgentsBuilderRoute";

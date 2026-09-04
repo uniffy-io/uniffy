@@ -1,6 +1,10 @@
 import { useState } from "react";
 import { X } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
+import { Input, controlShellClass } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/ui/modal";
+import { cn } from "@/shared/utils/cn";
 import { friendlyErrorMessage } from "@/config/errorMessages";
 import { Select, type SelectOption } from "@/components/ui/select";
 import type { SerializedGroupInfo } from "@/features/admin/store/adminSlice";
@@ -71,50 +75,51 @@ export function TeamFormModal({ team, allTeams, onSave, onClose }: TeamFormModal
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50">
-      <div className="w-full sm:w-[calc(100vw-2rem)] sm:max-w-md bg-card rounded-t-xl sm:rounded-xl border border-border shadow-xl">
-        <div className="flex items-center justify-between px-4 md:px-6 py-3 md:py-4 border-b border-border">
-          <h2 className="text-lg font-semibold">{team ? "Edit Team" : "Create Team"}</h2>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-          >
-            <X size={20} weight="bold" />
-          </button>
-        </div>
+    <Modal onClose={onClose} closeDisabled={saving} maxWidth="max-w-md">
+      <form onSubmit={handleSubmit}>
+        <ModalHeader
+          title={team ? "Edit team" : "New team"}
+          description={
+            team
+              ? undefined
+              : "Teams show up in the people directory and can be mentioned anywhere with @."
+          }
+        />
 
-        <form onSubmit={handleSubmit} className="p-4 md:p-6 space-y-4 max-h-[60vh] overflow-y-auto">
+        <ModalBody>
           {error && <div className="p-3 rounded-md text-sm status-error">{error}</div>}
 
           <div>
-            <label className="block text-sm font-medium mb-1">Name</label>
-            <input
+            <label className="block text-sm text-muted-foreground mb-1">Name</label>
+            <Input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Engineering"
-              className="w-full px-3 py-2 rounded-md border border-border bg-background
-                                text-sm focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">Description</label>
-            <textarea
+            <label className="block text-sm text-muted-foreground mb-1">
+              Description (optional)
+            </label>
+            <Textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Optional description..."
+              placeholder="What this team does"
               rows={3}
-              className="w-full px-3 py-2 rounded-md border border-border bg-background
-                                text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">Team lead</label>
+            <label className="block text-sm text-muted-foreground mb-1">Team lead (optional)</label>
             {leadUserId ? (
-              <div className="flex items-center gap-2.5 rounded-md border border-border bg-background px-3 py-2">
+              <div
+                className={cn(
+                  controlShellClass,
+                  "hover:border-border flex items-center gap-2.5 px-3 py-2",
+                )}
+              >
                 <SubjectAvatarById userId={leadUserId} displayName={leadSubject?.name} size="sm" />
                 <span className="min-w-0 flex-1 truncate text-sm">
                   {leadSubject?.name ?? leadUserId.slice(-6)}
@@ -143,7 +148,9 @@ export function TeamFormModal({ team, allTeams, onSave, onClose }: TeamFormModal
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">Parent team</label>
+            <label className="block text-sm text-muted-foreground mb-1">
+              Parent team (optional)
+            </label>
             <Select
               value={parentGroupId}
               onChange={setParentGroupId}
@@ -152,17 +159,17 @@ export function TeamFormModal({ team, allTeams, onSave, onClose }: TeamFormModal
               menuMinWidth={200}
             />
           </div>
+        </ModalBody>
 
-          <div className="flex justify-end gap-3 pt-2">
-            <Button variant="ghost" size="md" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button type="submit" size="md" loading={saving} disabled={saving}>
-              {saving ? "Saving..." : team ? "Save Changes" : "Create Team"}
-            </Button>
-          </div>
-        </form>
-      </div>
-    </div>
+        <ModalFooter>
+          <Button type="button" variant="ghost" onClick={onClose} disabled={saving}>
+            Cancel
+          </Button>
+          <Button type="submit" loading={saving} disabled={saving}>
+            {saving ? "Saving..." : team ? "Save changes" : "Create team"}
+          </Button>
+        </ModalFooter>
+      </form>
+    </Modal>
   );
 }

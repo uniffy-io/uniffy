@@ -33,7 +33,7 @@ export function RecoveryCodesView({ codes }: RecoveryCodesViewProps) {
         {codes.map((code) => (
           <div
             key={code}
-            className="rounded-md border border-border bg-muted px-3 py-2 font-mono text-sm tracking-wider text-foreground"
+            className="rounded-md bg-card px-3 py-2 font-mono text-sm tracking-wider text-foreground shadow-edge"
           >
             {code}
           </div>
@@ -44,14 +44,14 @@ export function RecoveryCodesView({ codes }: RecoveryCodesViewProps) {
         <button
           type="button"
           onClick={handleCopy}
-          className="inline-flex items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-sm hover:bg-accent"
+          className="inline-flex items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-sm hover:bg-muted/60"
         >
           <Copy size={16} /> Copy
         </button>
         <button
           type="button"
           onClick={handleDownload}
-          className="inline-flex items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-sm hover:bg-accent"
+          className="inline-flex items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-sm hover:bg-muted/60"
         >
           <DownloadSimple size={16} /> Download
         </button>

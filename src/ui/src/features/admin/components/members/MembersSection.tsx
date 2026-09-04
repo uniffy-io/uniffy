@@ -22,6 +22,7 @@ import type { SerializedMemberInfo } from "@/features/admin/store/adminSlice";
 import { useAppSelector } from "@/app/hooks";
 import { Select, type SelectOption } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ReasonDialog } from "@/components/ui/reason-dialog";
 import { friendlyErrorMessage } from "@/config";
@@ -207,7 +208,7 @@ function MemberRow({
             <button
               type="button"
               onClick={() => setShowProfileDialog(true)}
-              className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent
+              className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/60
                                 opacity-0 group-hover:opacity-100 transition-all"
               title="Edit profile"
             >
@@ -218,7 +219,7 @@ function MemberRow({
                 <button
                   type="button"
                   onClick={() => setShowQuotaDialog(true)}
-                  className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent
+                  className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/60
                                     opacity-0 group-hover:opacity-100 transition-all"
                   title="Set agent spend quota"
                 >
@@ -228,7 +229,7 @@ function MemberRow({
                   type="button"
                   onClick={() => setShowInvalidateCachesConfirm(true)}
                   disabled={invalidatingCaches}
-                  className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent
+                  className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/60
                                     opacity-0 group-hover:opacity-100 transition-all
                                     disabled:opacity-50"
                   title="Invalidate local caches"
@@ -239,7 +240,7 @@ function MemberRow({
                   type="button"
                   onClick={() => setShowMfaResetDialog(true)}
                   disabled={mfaResetting}
-                  className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent
+                  className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/60
                                     opacity-0 group-hover:opacity-100 transition-all
                                     disabled:opacity-50"
                   title="Reset two factor authentication"
@@ -382,15 +383,15 @@ export function MembersSection() {
       </div>
 
       <div className="grid grid-cols-3 gap-2 md:gap-4">
-        <div className="p-3 md:p-4 rounded-lg border border-border bg-card">
+        <div className="p-3 md:p-4 rounded-xl bg-surface shadow-edge">
           <p className="text-xl md:text-2xl font-bold">{totalCount}</p>
           <p className="text-xs md:text-sm text-muted-foreground">Total Members</p>
         </div>
-        <div className="p-3 md:p-4 rounded-lg border border-border bg-card">
+        <div className="p-3 md:p-4 rounded-xl bg-surface shadow-edge">
           <p className="text-xl md:text-2xl font-bold">{ownerCount + adminCount}</p>
           <p className="text-xs md:text-sm text-muted-foreground">Administrators</p>
         </div>
-        <div className="p-3 md:p-4 rounded-lg border border-border bg-card">
+        <div className="p-3 md:p-4 rounded-xl bg-surface shadow-edge">
           <p className="text-xl md:text-2xl font-bold">{memberCount}</p>
           <p className="text-xs md:text-sm text-muted-foreground">Regular Members</p>
         </div>
@@ -402,13 +403,12 @@ export function MembersSection() {
             size={16}
             className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
           />
-          <input
+          <Input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search by name or email..."
-            className="w-full pl-9 pr-4 py-2 rounded-md border border-border bg-background
-                            text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+            className="pl-9 pr-4"
           />
         </div>
 

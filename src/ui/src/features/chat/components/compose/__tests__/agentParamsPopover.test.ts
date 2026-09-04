@@ -8,7 +8,7 @@ vi.mock("sonner", () => ({ toast: { error: vi.fn() } }));
 import {
   effectiveParamsSchemaJson,
   hasParamsOverride,
-} from "@/features/chat/components/compose/AgentParamsPopover";
+} from "@/features/chat/components/compose/agentParamsSchema";
 import { parseModelParamsSchema } from "@/features/agents/utils/modelParamsSchema";
 import type { SerializedModelInfo } from "@/features/agents/store/agentProvidersThunks";
 

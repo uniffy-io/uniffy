@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { ClockCounterClockwise } from "@phosphor-icons/react";
+import { popoverShellClass } from "@/components/ui/popover";
 import { FileVersionsTab } from "@/features/files/components/details/FileVersionsTab";
 import type { SerializedFile } from "@/features/files/store/filesThunks";
+import { cn } from "@/shared/utils/cn";
 
 /** Manual popover instead of headlessui: the restore ConfirmDialog renders
  * inside the panel, and an unconditional outside-click close would unmount it
@@ -50,7 +52,12 @@ export function ViewerVersionsPopover({ file }: { file: SerializedFile }) {
         <ClockCounterClockwise size={20} />
       </button>
       {open && (
-        <div className="absolute right-0 top-full mt-2 z-50 w-80 max-w-[calc(100vw-2rem)] max-h-[60vh] overflow-y-auto rounded-lg border border-border bg-card text-card-foreground shadow-xl p-3">
+        <div
+          className={cn(
+            popoverShellClass,
+            "absolute right-0 top-full mt-2 z-50 w-80 max-w-[calc(100vw-2rem)] max-h-[60vh] overflow-y-auto p-3",
+          )}
+        >
           <FileVersionsTab file={file} />
         </div>
       )}

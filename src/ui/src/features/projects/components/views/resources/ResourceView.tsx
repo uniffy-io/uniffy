@@ -11,6 +11,7 @@ import { useFilteredTasks } from "@/features/projects/hooks/useTasks";
 import { formatMinutes } from "@/features/projects/utils/timeFormatting";
 import { formatDateShort, isOverdue } from "@/shared/utils/dateFormatting";
 import { SYSTEM_FIELD_IDS } from "@/features/projects/types";
+import { statusPaint } from "@/features/projects/utils/statusPaint";
 import type { Task, SelectOption } from "@/features/projects/types";
 import type { Subject } from "@/components/subject/types";
 
@@ -205,7 +206,10 @@ export function ResourceView() {
                         {status && (
                           <span
                             className="w-2 h-2 rounded-full shrink-0"
-                            style={{ backgroundColor: status.color }}
+                            style={{
+                              background: statusPaint(Object.values(statusOptions), task.status)
+                                .gradient,
+                            }}
                             title={status.label}
                           />
                         )}

@@ -4,7 +4,8 @@ import { cn } from "@/shared/utils/cn";
 import { useAppSelector } from "@/app/hooks";
 import type { SerializedMemberInfo } from "@/features/admin";
 import { LAYOUT } from "../../../constants";
-import type { Task, SelectOption } from "../../../types";
+import type { Task } from "../../../types";
+import type { StatusPaint } from "../../../utils/statusPaint";
 import type { GanttBarPosition } from "../../../utils/ganttPositioning";
 import { pixelToDate } from "../../../utils/ganttPositioning";
 import type { ZoomLevel } from "../../../utils/ganttPositioning";
@@ -15,7 +16,7 @@ const MIN_BAR_WIDTH = 20;
 interface GanttBarProps {
   task: Task;
   position: GanttBarPosition;
-  statusOption?: SelectOption;
+  paint: StatusPaint;
   isSelected: boolean;
   isOverdue: boolean;
   onClick: (e: React.MouseEvent) => void;
@@ -28,7 +29,7 @@ interface GanttBarProps {
 export function GanttBar({
   task,
   position,
-  statusOption,
+  paint,
   isSelected,
   isOverdue,
   onClick,
@@ -37,7 +38,6 @@ export function GanttBar({
   zoom,
   onResizeEnd,
 }: GanttBarProps) {
-  const barColor = statusOption?.color || "#6b7280";
   const top =
     rowIndex * LAYOUT.ROADMAP_ROW_HEIGHT +
     (LAYOUT.ROADMAP_ROW_HEIGHT - LAYOUT.GANTT_BAR_HEIGHT) / 2;
@@ -235,7 +235,7 @@ export function GanttBar({
         width: displayWidth,
         top,
         height: LAYOUT.GANTT_BAR_HEIGHT,
-        backgroundColor: barColor,
+        background: paint.gradient,
         borderTopLeftRadius: position.isPartialStart ? 0 : 4,
         borderBottomLeftRadius: position.isPartialStart ? 0 : 4,
         borderTopRightRadius: position.isPartialEnd ? 0 : 4,

@@ -64,9 +64,11 @@ import type {
   MindMapCanvasNode,
   MindMapNodeData,
 } from "@/features/notes/canvas/types";
+import { dialogShellClass } from "@/components/ui/popover";
+import { useOverlayEscape } from "@/shared/hooks/useOverlayEscape";
 import { cn } from "@/shared/utils/cn";
 import { sanitizeMentionLabel } from "@/shared/utils/mentionUtils";
-import { useTheme } from "@/config/theme/ThemeProvider";
+import { useTheme } from "@/config/theme/themeContext";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { setCanvasCursorsMode } from "@/features/notes/store/editorSlice";
 import { uploadImage } from "@/components/editor/utils/imageUploader";
@@ -1382,14 +1384,6 @@ function CanvasEditorInner({
     if (!showContentPicker) return;
     const timer = setTimeout(() => contentPickerInputRef.current?.focus(), 10);
 
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        setShowContentPicker(false);
-        clearPickerResults();
-      }
-    };
-
     const handleClickOutside = (e: MouseEvent) => {
       if (contentPickerRef.current && !contentPickerRef.current.contains(e.target as Node)) {
         setShowContentPicker(false);
@@ -1397,14 +1391,17 @@ function CanvasEditorInner({
       }
     };
 
-    document.addEventListener("keydown", handleKeyDown);
     document.addEventListener("mousedown", handleClickOutside);
     return () => {
       clearTimeout(timer);
-      document.removeEventListener("keydown", handleKeyDown);
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [showContentPicker, clearPickerResults]);
+
+  useOverlayEscape(() => {
+    setShowContentPicker(false);
+    clearPickerResults();
+  }, showContentPicker);
 
   const callbacksValue = useMemo(
     () => ({
@@ -1544,7 +1541,12 @@ function CanvasEditorInner({
                 ref={contentPickerRef}
                 className="w-full max-w-2xl mx-4 animate-in fade-in-0 zoom-in-95 slide-in-from-top-4 duration-200"
               >
-                <div className="rounded-2xl border-2 border-primary/50 bg-card shadow-2xl ring-4 ring-primary/10 overflow-hidden">
+                <div
+                  className={cn(
+                    dialogShellClass,
+                    "rounded-2xl ring-1 ring-primary/40 overflow-hidden",
+                  )}
+                >
                   <div className="relative flex items-center border-b border-border/50">
                     <MagnifyingGlass
                       size={20}
@@ -1557,7 +1559,7 @@ function CanvasEditorInner({
                       value={pickerQuery}
                       onChange={(e) => setPickerQuery(e.target.value)}
                       placeholder="Search content to insert..."
-                      className="w-full h-14 bg-transparent pl-12 pr-16 text-lg placeholder:text-muted-foreground/60 focus:outline-none"
+                      className="w-full h-14 bg-transparent pl-12 pr-16 text-lg placeholder:text-subtle-foreground focus:outline-none"
                       autoComplete="off"
                     />
                     <div className="absolute right-4 flex items-center gap-2">

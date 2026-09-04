@@ -97,8 +97,8 @@ export function DashboardCustomizerPanel({
           <div
             key={widget.id}
             className={cn(
-              "flex items-center justify-between rounded-lg border p-2.5 transition-colors",
-              widget.visible ? "border-border bg-card" : "border-border/50 bg-muted/30 opacity-60",
+              "flex items-center justify-between rounded-lg p-2.5 shadow-edge transition-colors",
+              widget.visible ? "bg-card" : "bg-muted/30 opacity-60",
             )}
           >
             <span className="text-xs font-medium truncate mr-2">{WIDGET_LABELS[widget.id]}</span>

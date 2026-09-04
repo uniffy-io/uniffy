@@ -538,24 +538,6 @@ export const selectTasksByStatus = (projectId: string) =>
     );
   });
 
-export const selectProjectTimeStats = (projectId: string) =>
-  createSelector([selectTasksForProject(projectId)], (tasks) => {
-    let totalEstimated = 0;
-    let totalSpent = 0;
-
-    for (const task of tasks) {
-      if (task.estimatedMinutes) totalEstimated += task.estimatedMinutes;
-      if (task.timeSpentMinutes) totalSpent += task.timeSpentMinutes;
-    }
-
-    return {
-      totalEstimated,
-      totalSpent,
-      remaining: Math.max(0, totalEstimated - totalSpent),
-      hasTimeData: totalEstimated > 0 || totalSpent > 0,
-    };
-  });
-
 export const selectProjectCompletion = createSelector([selectAllTasks], (tasks) => {
   const projectStats: Record<string, { total: number; completed: number }> = {};
 

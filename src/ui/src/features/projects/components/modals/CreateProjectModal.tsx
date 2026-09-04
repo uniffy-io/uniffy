@@ -1,12 +1,13 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
-import { X, Kanban, LockSimple, Buildings } from "@phosphor-icons/react";
+import { LockSimple, Buildings } from "@phosphor-icons/react";
 import { AccessMode, ContentRole } from "@uniffy/proto/common/v1/common_pb";
 import { useNavigate } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Modal } from "@/components/ui/modal";
+import { Textarea } from "@/components/ui/textarea";
+import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/ui/modal";
 import {
   closeCreateProjectModal,
   selectProjectScope,
@@ -20,12 +21,12 @@ const ICON_OPTIONS: ProjectIconName[] = [
   "rocket",
   "megaphone",
   "wrench",
-  "lightning",
   "globe",
   "target",
-  "bug",
   "palette",
-  "star",
+  "cube",
+  "trophy",
+  "heart",
 ];
 
 export function CreateProjectModal() {
@@ -59,7 +60,6 @@ export function CreateProjectModal() {
       .toUpperCase();
   }, [manualSlug, name]);
 
-  // Focus input on mount
   useEffect(() => {
     const timer = setTimeout(() => inputRef.current?.focus(), 50);
     return () => clearTimeout(timer);
@@ -92,7 +92,6 @@ export function CreateProjectModal() {
           tagIds: tagIds.length ? tagIds : undefined,
         }),
       ).unwrap();
-      // Load tasks for the new project and navigate to it
       dispatch(fetchProjectTasks(result.id));
       navigate(`/projects/${result.id}`);
       handleClose();
@@ -103,28 +102,12 @@ export function CreateProjectModal() {
 
   return (
     <Modal onClose={handleClose} closeDisabled={isSubmitting}>
-      {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-        <div className="flex items-center gap-2">
-          <Kanban size={20} weight="bold" className="text-primary" />
-          <h3 className="text-lg font-semibold text-foreground">New Project</h3>
-        </div>
-        <button
-          type="button"
-          onClick={handleClose}
-          disabled={isSubmitting}
-          className="p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
-        >
-          <X size={20} />
-        </button>
-      </div>
-
-      {/* Form */}
       <form onSubmit={handleSubmit}>
-        <div className="p-4 md:p-6 space-y-4 max-h-[60vh] overflow-y-auto">
-          {/* Name */}
+        <ModalHeader title="New project" />
+
+        <ModalBody>
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1.5">Project Name</label>
+            <label className="block text-sm text-muted-foreground mb-1">Name</label>
             <Input
               ref={inputRef}
               type="text"
@@ -135,9 +118,8 @@ export function CreateProjectModal() {
             />
           </div>
 
-          {/* Slug (key/identifier) */}
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1.5">Project Key</label>
+            <label className="block text-sm text-muted-foreground mb-1">Project key</label>
             <div className="flex items-center gap-3">
               <Input
                 type="text"
@@ -161,28 +143,21 @@ export function CreateProjectModal() {
             </div>
           </div>
 
-          {/* Description */}
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1.5">
-              Description
-              <span className="text-muted-foreground font-normal ml-1">(optional)</span>
+            <label className="block text-sm text-muted-foreground mb-1">
+              Description (optional)
             </label>
-            <textarea
+            <Textarea
               placeholder="What is this project about?"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               disabled={isSubmitting}
               rows={2}
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
             />
           </div>
 
-          {/* Tags */}
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1.5">
-              Tags
-              <span className="text-muted-foreground font-normal ml-1">(optional)</span>
-            </label>
+            <label className="block text-sm text-muted-foreground mb-1">Tags (optional)</label>
             <TagPicker
               selectedTagIds={tagIds}
               onChange={setTagIds}
@@ -191,9 +166,8 @@ export function CreateProjectModal() {
             />
           </div>
 
-          {/* Access */}
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1.5">Access</label>
+            <label className="block text-sm text-muted-foreground mb-1">Access</label>
             <div className="flex gap-2">
               <button
                 type="button"
@@ -224,37 +198,36 @@ export function CreateProjectModal() {
             </div>
           </div>
 
-          {/* Icon Picker */}
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1.5">Icon</label>
+            <label className="block text-sm text-muted-foreground mb-1">Icon</label>
             <div className="flex flex-wrap gap-2">
               {ICON_OPTIONS.map((iconName) => (
                 <button
                   key={iconName}
                   type="button"
                   onClick={() => setIcon(iconName)}
-                  className={`p-2 rounded-md border transition-colors ${
+                  className={cn(
+                    "p-2 rounded-md border transition-colors",
                     icon === iconName
                       ? "border-primary bg-primary/10 text-primary"
-                      : "border-border text-muted-foreground hover:text-foreground hover:bg-muted"
-                  }`}
+                      : "border-border text-muted-foreground hover:text-foreground hover:bg-muted",
+                  )}
                 >
                   <ProjectIcon icon={iconName} size={20} weight="duotone" />
                 </button>
               ))}
             </div>
           </div>
-        </div>
+        </ModalBody>
 
-        {/* Footer */}
-        <div className="flex items-center justify-end gap-3 px-6 py-4 bg-muted/30 border-t border-border">
-          <Button type="button" variant="outline" onClick={handleClose} disabled={isSubmitting}>
+        <ModalFooter>
+          <Button type="button" variant="ghost" onClick={handleClose} disabled={isSubmitting}>
             Cancel
           </Button>
           <Button type="submit" disabled={!name.trim() || isSubmitting}>
-            {isSubmitting ? "Creating..." : "Create Project"}
+            {isSubmitting ? "Creating..." : "Create project"}
           </Button>
-        </div>
+        </ModalFooter>
       </form>
     </Modal>
   );

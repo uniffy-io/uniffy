@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { ContentRole, AccessMode, ContentType } from "@uniffy/proto/common/v1/common_pb";
 import { ShieldCheck, ArrowRight } from "@phosphor-icons/react";
 import { useAppSelector } from "@/app/hooks";
+import { cn } from "@/shared/utils/cn";
 import { SubjectAvatar } from "@/components/subject/SubjectAvatar";
 import { SubjectPicker } from "@/components/subject/SubjectPicker";
 import { useSubjectResolver } from "@/components/subject/hooks/useSubjectResolver";
@@ -25,6 +26,8 @@ interface AccessPolicyPanelProps {
   contentTitle?: string;
   showAuditLink?: boolean;
   explicitUserRole?: ContentRole | number | null;
+  /** One rung above the host: `surface` on an app-frame page, `card` inside a dialog. */
+  tone?: "card" | "surface";
 }
 
 export function AccessPolicyPanel({
@@ -32,7 +35,9 @@ export function AccessPolicyPanel({
   contentId,
   showAuditLink = false,
   explicitUserRole,
+  tone = "card",
 }: AccessPolicyPanelProps) {
+  const pane = tone === "surface" ? "bg-surface" : "bg-card";
   const currentUserId = useAppSelector((s) => s.auth.user?.id ?? "");
   const { policy, members, loading, error, add, update, remove, setMode, transfer, refresh } =
     useContentMembers(contentType, contentId);
@@ -148,7 +153,7 @@ export function AccessPolicyPanel({
         <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
           Owner
         </h3>
-        <div className="flex items-center gap-3 py-2 px-3 rounded-lg bg-muted/30">
+        <div className={cn("flex items-center gap-3 rounded-xl px-4 py-3 shadow-edge", pane)}>
           <SubjectAvatar subject={owner} size="md" />
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
@@ -190,6 +195,7 @@ export function AccessPolicyPanel({
           hiddenModes={
             contentType === ContentType.CALENDAR_EVENT ? [AccessMode.OPEN_TO_ORG] : undefined
           }
+          tone={tone}
         />
       </div>
 
@@ -210,11 +216,16 @@ export function AccessPolicyPanel({
           </p>
         )}
         {active.length === 0 ? (
-          <div className="py-4 text-center text-sm text-muted-foreground border border-dashed border-border rounded-lg">
+          <div
+            className={cn(
+              "rounded-xl py-4 text-center text-sm text-muted-foreground shadow-edge",
+              pane,
+            )}
+          >
             No members yet
           </div>
         ) : (
-          <div className="space-y-1">
+          <div className={cn("space-y-1 rounded-xl p-1 shadow-edge", pane)}>
             {active.map((m) => (
               <MemberRow
                 key={`${m.subjectType}:${m.subjectId}`}
@@ -239,6 +250,7 @@ export function AccessPolicyPanel({
           <PendingAccessRequests
             canonicalContentType={contentType}
             canonicalContentId={contentId}
+            tone={tone}
           />
         </div>
       )}

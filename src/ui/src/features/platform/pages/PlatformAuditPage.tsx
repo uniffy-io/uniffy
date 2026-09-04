@@ -241,7 +241,7 @@ export function PlatformAuditPage() {
       )}
 
       <div className="flex gap-6">
-        <div className="flex-1 min-w-0 rounded-xl border border-border bg-card shadow-sm overflow-hidden">
+        <div className="flex-1 min-w-0 space-y-2">
           <AuditEventTable
             events={events}
             loading={loading}
@@ -249,7 +249,7 @@ export function PlatformAuditPage() {
             emptyDescription="No platform-scope audit events yet."
             hasActiveFilters={activeFilterCount > 0}
           />
-          <div className="flex items-center justify-between px-3 py-2 border-t border-border text-xs text-muted-foreground">
+          <div className="flex items-center justify-between px-1 text-xs text-muted-foreground">
             <span>{pageInfo}</span>
             <div className="flex items-center gap-2">
               <Button
@@ -277,7 +277,7 @@ export function PlatformAuditPage() {
 
         {sidebarInline && sidebarExpanded && (
           <aside className="w-80 shrink-0">
-            <div className="sticky top-4 rounded-xl border border-border bg-card shadow-sm overflow-hidden">
+            <div className="sticky top-4 rounded-xl bg-surface shadow-edge overflow-hidden">
               <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-border bg-muted/40">
                 <div className="flex items-center gap-2">
                   <Funnel size={14} weight="duotone" className="text-primary" />
@@ -319,7 +319,7 @@ export function PlatformAuditPage() {
 
         {sidebarInline && !sidebarExpanded && (
           <aside className="w-12 shrink-0">
-            <div className="sticky top-4 rounded-xl border border-border bg-card shadow-sm overflow-hidden">
+            <div className="sticky top-4 rounded-xl bg-surface shadow-edge overflow-hidden">
               <button
                 type="button"
                 onClick={toggleSidebar}
@@ -449,7 +449,7 @@ function ActiveFilterBar({
           className={cn(
             "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs",
             "border border-border bg-muted/60 text-foreground",
-            "hover:bg-muted hover:border-border/80 transition-colors",
+            "hover:bg-muted hover:border-border-strong transition-colors",
           )}
         >
           <span className="font-medium text-muted-foreground">{chip.label}</span>

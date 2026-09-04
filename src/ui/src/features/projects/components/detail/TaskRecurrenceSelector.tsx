@@ -114,10 +114,7 @@ function ordinalSuffix(n: number): string {
   return s[(v - 20) % 10] || s[v] || s[0];
 }
 
-const INPUT_CLASS = cn(
-  "h-auto w-14 px-1.5 py-0.5 text-xs rounded text-foreground text-center",
-  "focus:ring-1 focus:ring-primary/50 focus:border-primary transition-all",
-);
+const INPUT_CLASS = "h-auto w-14 px-1.5 py-0.5 text-xs rounded text-foreground text-center";
 
 interface TaskRecurrenceSelectorProps {
   value: string | null;

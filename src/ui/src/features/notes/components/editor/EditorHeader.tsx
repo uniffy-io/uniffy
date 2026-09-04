@@ -96,7 +96,7 @@ export function EditorHeader({
     : [{ mode: "readonly", icon: Eye, label: "Read Only" }];
 
   return (
-    <div className="border-b border-border bg-card">
+    <div className="border-b border-border-strong bg-surface">
       <div className="flex items-center justify-between px-4 py-2 border-b border-border/50">
         <div className="flex items-center gap-2 min-w-0 overflow-hidden">
           <NoteBreadcrumbs

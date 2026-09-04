@@ -11,6 +11,7 @@ import {
 } from "@phosphor-icons/react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
+import { popoverShellClass } from "@/components/ui/popover";
 import { useCall } from "@/features/calls/components/callContext";
 import { ControlsBar } from "@/features/calls/components/ControlsBar";
 import { ParticipantTile } from "@/features/calls/components/ParticipantTile";
@@ -291,7 +292,7 @@ function CallViewInner({ channelId }: { channelId: string }) {
           <CallGrid participants={participants} nameFor={(p) => rosterByIdentity.get(p.identity)} />
           {showSoloPrompt && (
             <div className="absolute inset-x-0 bottom-6 flex justify-center">
-              <div className="rounded-lg border border-border bg-card px-3 py-2 text-xs text-muted-foreground shadow-lg">
+              <div className={cn(popoverShellClass, "px-3 py-2 text-xs text-muted-foreground")}>
                 You are the only one here. The call ends automatically after 5 minutes alone.
                 <button
                   type="button"

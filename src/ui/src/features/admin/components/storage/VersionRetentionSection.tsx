@@ -66,7 +66,7 @@ export function VersionRetentionSection() {
 
   if (loading && keepVersions === null && !error) {
     return (
-      <div className="rounded-lg border border-border bg-card p-4 md:p-6 animate-pulse">
+      <div className="rounded-xl bg-surface shadow-edge p-4 md:p-6 animate-pulse">
         <div className="h-4 w-48 bg-muted rounded mb-4" />
         <div className="h-3 w-64 bg-muted rounded" />
       </div>
@@ -74,7 +74,7 @@ export function VersionRetentionSection() {
   }
 
   return (
-    <div className="rounded-lg border border-border bg-card p-4 md:p-6">
+    <div className="rounded-xl bg-surface shadow-edge p-4 md:p-6">
       <h3 className="text-lg font-semibold text-foreground mb-1">Version Retention</h3>
       <p className="text-sm text-muted-foreground mb-4">
         How many versions of each file to keep. When a new version is saved, older ones beyond this

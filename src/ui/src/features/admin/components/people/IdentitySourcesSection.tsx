@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
-import { ArrowsClockwise, Pencil, Plus, Plugs, Trash, Warning, X } from "@phosphor-icons/react";
+import { ArrowsClockwise, Pencil, Plus, Plugs, Trash, Warning } from "@phosphor-icons/react";
 import { useAppSelector } from "@/app/hooks";
 import { friendlyErrorMessage } from "@/config";
 import { peopleApi } from "@/features/people/api/peopleApi";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { Input } from "@/components/ui/input";
+import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/ui/modal";
 import { Select, type SelectOption } from "@/components/ui/select";
 import { ToggleSwitch } from "@/components/ui/toggle-switch";
 import { IdentitySourceKind } from "@uniffy/proto/people/v1/people_pb";
@@ -64,27 +66,23 @@ function SourceFormModal({ source, onSave, onClose }: SourceFormModalProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50">
-      <div className="w-full sm:w-[calc(100vw-2rem)] sm:max-w-md bg-card rounded-t-xl sm:rounded-xl border border-border shadow-xl">
-        <div className="flex items-center justify-between px-4 md:px-6 py-3 md:py-4 border-b border-border">
-          <h2 className="text-lg font-semibold">
-            {source ? "Edit Identity Source" : "Connect Identity Source"}
-          </h2>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-          >
-            <X size={20} weight="bold" />
-          </button>
-        </div>
+    <Modal onClose={onClose} closeDisabled={saving} maxWidth="max-w-md">
+      <form onSubmit={handleSubmit}>
+        <ModalHeader
+          title={source ? "Edit identity source" : "Connect identity source"}
+          description={
+            source
+              ? undefined
+              : "Member accounts and org structure sync in from your identity provider."
+          }
+        />
 
-        <form onSubmit={handleSubmit} className="p-4 md:p-6 space-y-4">
+        <ModalBody>
           {error && <div className="p-3 rounded-md text-sm status-error">{error}</div>}
 
           {!source && (
             <div>
-              <label className="block text-sm font-medium mb-1">Provider</label>
+              <label className="block text-sm text-muted-foreground mb-1">Provider</label>
               <Select<IdentitySourceKind>
                 value={kind}
                 onChange={setKind}
@@ -99,20 +97,18 @@ function SourceFormModal({ source, onSave, onClose }: SourceFormModalProps) {
           )}
 
           <div>
-            <label className="block text-sm font-medium mb-1">Name</label>
-            <input
+            <label className="block text-sm text-muted-foreground mb-1">Name</label>
+            <Input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Okta production"
-              className="w-full px-3 py-2 rounded-md border border-border bg-background
-                                text-sm focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">Secret</label>
-            <input
+            <label className="block text-sm text-muted-foreground mb-1">Secret</label>
+            <Input
               type="password"
               value={secret}
               onChange={(e) => setSecret(e.target.value)}
@@ -120,25 +116,23 @@ function SourceFormModal({ source, onSave, onClose }: SourceFormModalProps) {
                 source ? "Leave empty to keep the current secret" : "Bearer token / bind password"
               }
               autoComplete="new-password"
-              className="w-full px-3 py-2 rounded-md border border-border bg-background
-                                text-sm focus:outline-none focus:ring-2 focus:ring-primary"
             />
             <p className="mt-1.5 text-xs text-muted-foreground">
               Stored encrypted with the organization key; never shown again.
             </p>
           </div>
+        </ModalBody>
 
-          <div className="flex justify-end gap-3 pt-2">
-            <Button variant="ghost" size="md" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button type="submit" size="md" loading={saving} disabled={saving}>
-              {saving ? "Saving..." : source ? "Save Changes" : "Connect"}
-            </Button>
-          </div>
-        </form>
-      </div>
-    </div>
+        <ModalFooter>
+          <Button type="button" variant="ghost" onClick={onClose} disabled={saving}>
+            Cancel
+          </Button>
+          <Button type="submit" loading={saving} disabled={saving}>
+            {saving ? "Saving..." : source ? "Save changes" : "Connect"}
+          </Button>
+        </ModalFooter>
+      </form>
+    </Modal>
   );
 }
 
@@ -349,7 +343,7 @@ export function IdentitySourcesSection() {
       </div>
 
       {error && (
-        <div className="p-4 rounded-lg border border-border">
+        <div className="p-4 rounded-xl bg-surface shadow-edge">
           <div className="flex items-center gap-2 text-sm" style={{ color: "var(--status-error)" }}>
             <Warning size={20} weight="fill" />
             {error}
@@ -358,11 +352,11 @@ export function IdentitySourcesSection() {
       )}
 
       {loading ? (
-        <div className="rounded-lg border border-border bg-card p-5 text-sm text-muted-foreground">
+        <div className="rounded-xl bg-surface shadow-edge p-5 text-sm text-muted-foreground">
           Loading...
         </div>
       ) : (
-        <div className="rounded-xl border border-border bg-card divide-y divide-border">
+        <div className="rounded-xl bg-surface shadow-edge divide-y divide-border">
           {sources.map((source) => (
             <SourceRow
               key={source.id}

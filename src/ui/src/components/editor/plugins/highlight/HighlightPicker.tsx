@@ -1,5 +1,8 @@
 import { useEffect, useRef } from "react";
 import { HIGHLIGHT_COLORS, colorToBg } from "@/components/editor/plugins/highlight/index";
+import { popoverShellClass } from "@/components/ui/popover";
+import { useOverlayEscape } from "@/shared/hooks/useOverlayEscape";
+import { cn } from "@/shared/utils/cn";
 
 interface HighlightPickerProps {
   anchorRect: DOMRect;
@@ -32,19 +35,11 @@ export function HighlightPicker({ anchorRect, onSelect, onClose }: HighlightPick
       }
     };
 
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        onClose();
-      }
-    };
-
     document.addEventListener("mousedown", handleClickOutside);
-    document.addEventListener("keydown", handleEscape);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-      document.removeEventListener("keydown", handleEscape);
-    };
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [onClose]);
+
+  useOverlayEscape(onClose);
 
   // Position below the selection
   const top = anchorRect.bottom + 8;
@@ -53,7 +48,7 @@ export function HighlightPicker({ anchorRect, onSelect, onClose }: HighlightPick
   return (
     <div
       ref={pickerRef}
-      className="fixed z-[1001] flex items-center gap-1.5 rounded-lg border border-border bg-card p-2 shadow-lg"
+      className={cn(popoverShellClass, "fixed z-[1001] flex items-center gap-1.5 p-2")}
       style={{
         top: `${top}px`,
         left: `${left}px`,
@@ -65,7 +60,7 @@ export function HighlightPicker({ anchorRect, onSelect, onClose }: HighlightPick
           key={color.value}
           type="button"
           title={color.name}
-          className="flex h-6 w-6 items-center justify-center rounded-full transition-transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-ring"
+          className="focus-ring flex h-6 w-6 items-center justify-center rounded-full transition-transform hover:scale-110"
           style={{ backgroundColor: colorToBg(color.value) }}
           onClick={() => onSelect(color.value)}
         >
@@ -80,7 +75,7 @@ export function HighlightPicker({ anchorRect, onSelect, onClose }: HighlightPick
       <button
         type="button"
         title="Remove highlight"
-        className="flex h-6 w-6 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+        className="focus-ring flex h-6 w-6 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
         onClick={() => onSelect(null)}
       >
         {ERASER_ICON}

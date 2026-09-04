@@ -27,6 +27,14 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
+  PaneHeader,
+  PaneHeaderBar,
+  PaneHeaderControls,
+  PaneIconButton,
+} from "@/components/ui/pane-header";
+import { popoverShellClass } from "@/components/ui/popover";
+import { SegmentedControl } from "@/components/ui/segmented-control";
+import {
   setViewMode,
   setSearchQuery,
   setFilterConfig,
@@ -56,15 +64,14 @@ import {
 import { deleteTasks, bulkUpdateTasksThunk } from "@/features/projects/store/projectsThunks";
 import { ProjectIcon } from "@/features/projects/utils/projectIcons";
 import { SYSTEM_FIELD_IDS } from "@/features/projects/types";
+import { statusPaint } from "@/features/projects/utils/statusPaint";
 import type { Project, ViewType } from "@/features/projects/types";
 import { FilterBuilder } from "@/features/projects/components/views/table/FilterBuilder";
 import { ManageStatusesDialog } from "@/features/projects/components/views/board/ManageStatusesDialog";
 import {
   updateFieldDefinition,
-  selectProjectTimeStats,
   selectTasksForProject,
 } from "@/features/projects/store/projectsSlice";
-import { formatMinutes } from "@/features/projects/utils/timeFormatting";
 import { updateFieldThunk } from "@/features/projects/store/projectsThunks";
 import {
   selectActiveSprint,
@@ -80,7 +87,6 @@ import type { AppDispatch } from "@/app/store";
 
 interface ProjectHeaderProps {
   project: Project;
-  taskCount: number;
 }
 
 interface Option {
@@ -97,7 +103,7 @@ const VIEWS: { value: ViewType; label: string; icon: React.ReactNode }[] = [
   { value: "resources", label: "Resources", icon: <Users size={16} /> },
 ];
 
-export function ProjectHeader({ project, taskCount }: ProjectHeaderProps) {
+export function ProjectHeader({ project }: ProjectHeaderProps) {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const { isMobile, isMobileOrTablet, isDesktop } = useBreakpoint();
@@ -108,7 +114,6 @@ export function ProjectHeader({ project, taskCount }: ProjectHeaderProps) {
   const activeGroupByFieldId = useAppSelector(selectActiveGroupByFieldId);
   const isSidebarOpen = useAppSelector(selectIsSidebarOpen);
   const detailViewMode = useAppSelector(selectDetailViewMode);
-  const timeStats = useAppSelector(useMemo(() => selectProjectTimeStats(project.id), [project.id]));
   const { canEdit, canManage } = useProjectPermission();
   const activeSprint = useAppSelector(selectActiveSprint(project.id));
   const allSprints = useAppSelector(selectSprintsForProject(project.id));
@@ -329,46 +334,31 @@ export function ProjectHeader({ project, taskCount }: ProjectHeaderProps) {
 
   return (
     <>
-      <div className="shrink-0 border-b border-border bg-card">
-        {/* Project Info Bar */}
-        <div className="flex items-center gap-2 md:gap-3 px-3 md:px-4 py-2 md:py-3 border-b border-border">
-          {isMobileOrTablet && !isSidebarOpen && (
-            <button
-              onClick={() => dispatch(toggleSidebar())}
-              className="p-1.5 rounded-md bg-transparent hover:bg-muted transition-colors shrink-0"
-              title="Show sidebar"
-            >
-              <SidebarSimple size={16} className="text-primary" />
-            </button>
-          )}
-
-          <ProjectIcon
-            icon={project.icon}
-            size={isMobile ? 16 : 20}
-            weight="duotone"
-            className="text-primary shrink-0"
-          />
-          <div className="min-w-0 flex-1">
-            <h1 className="font-medium text-sm md:text-base text-foreground truncate">
-              {project.name}
-            </h1>
-            <p className="text-xs text-muted-foreground">
-              {taskCount} task{taskCount !== 1 ? "s" : ""}
-              {timeStats.hasTimeData && !isMobile && (
-                <>
-                  {" "}
-                  · {formatMinutes(timeStats.totalSpent)} spent
-                  {timeStats.totalEstimated > 0 && (
-                    <>
-                      {" "}
-                      / {formatMinutes(timeStats.totalEstimated)} est
-                      {timeStats.remaining > 0 && <> · {formatMinutes(timeStats.remaining)} left</>}
-                    </>
-                  )}
-                </>
-              )}
-            </p>
-          </div>
+      <PaneHeader>
+        <PaneHeaderBar
+          divided
+          leading={
+            isMobileOrTablet &&
+            !isSidebarOpen && (
+              <PaneIconButton
+                onClick={() => dispatch(toggleSidebar())}
+                className="text-primary"
+                title="Show sidebar"
+              >
+                <SidebarSimple size={16} />
+              </PaneIconButton>
+            )
+          }
+          icon={
+            <ProjectIcon
+              icon={project.icon}
+              size={isMobile ? 16 : 20}
+              weight="duotone"
+              className="text-primary shrink-0"
+            />
+          }
+          title={project.name}
+        >
           {canEdit && (
             <Button
               size="sm"
@@ -380,50 +370,29 @@ export function ProjectHeader({ project, taskCount }: ProjectHeaderProps) {
             </Button>
           )}
 
-          {/* Detail view mode toggle */}
-          <div className="hidden md:flex items-center gap-0.5 border border-border rounded-md p-0.5 shrink-0">
-            <button
-              type="button"
-              onClick={() => dispatch(setDetailViewMode("sidebar"))}
-              className={cn(
-                "p-1 rounded transition-colors",
-                detailViewMode === "sidebar"
-                  ? "bg-primary/10 text-primary"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
-              title="Sidebar panel"
-            >
-              <SidebarSimple size={14} />
-            </button>
-            <button
-              type="button"
-              onClick={() => dispatch(setDetailViewMode("modal"))}
-              className={cn(
-                "p-1 rounded transition-colors",
-                detailViewMode === "modal"
-                  ? "bg-primary/10 text-primary"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
-              title="Modal view"
-            >
-              <FrameCorners size={14} />
-            </button>
-          </div>
+          <SegmentedControl
+            className="hidden md:flex"
+            ariaLabel="Task detail view"
+            value={detailViewMode}
+            onChange={(mode) => dispatch(setDetailViewMode(mode))}
+            options={[
+              { value: "sidebar", content: <SidebarSimple size={14} />, title: "Sidebar panel" },
+              { value: "modal", content: <FrameCorners size={14} />, title: "Modal view" },
+            ]}
+          />
 
           {canManage && (
-            <button
-              type="button"
+            <PaneIconButton
               onClick={() => navigate(`/projects/${project.id}/settings`)}
-              className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0"
               title="Project Settings"
             >
               <Gear size={16} />
-            </button>
+            </PaneIconButton>
           )}
-        </div>
+        </PaneHeaderBar>
 
         {/* Control bar: view switcher (left) vs slice controls (right) */}
-        <div ref={controlBarRef} className="flex items-center gap-2 md:gap-3 px-3 md:px-4 py-2">
+        <PaneHeaderControls ref={controlBarRef} className="flex-nowrap">
           <ViewSwitcher
             viewMode={viewMode}
             onChange={handleViewChange}
@@ -568,7 +537,7 @@ export function ProjectHeader({ project, taskCount }: ProjectHeaderProps) {
               </div>
             )}
           </div>
-        </div>
+        </PaneHeaderControls>
 
         {/* Active filters: only present once something narrows the view */}
         {hasActiveFilters && !hasSelection && (
@@ -635,7 +604,7 @@ export function ProjectHeader({ project, taskCount }: ProjectHeaderProps) {
             />
           </div>
         )}
-      </div>
+      </PaneHeader>
 
       <ConfirmDialog
         isOpen={showDeleteTasksConfirm}
@@ -782,7 +751,10 @@ function DisplayPanel(props: DisplayPanelProps) {
   return (
     <div
       ref={containerRef}
-      className="absolute top-full right-0 z-50 mt-1.5 w-72 max-h-[70vh] overflow-y-auto rounded-xl border border-border bg-card shadow-xl p-3 space-y-4 animate-in fade-in-0 zoom-in-95"
+      className={cn(
+        popoverShellClass,
+        "absolute top-full right-0 z-50 mt-1.5 w-72 max-h-[70vh] overflow-y-auto rounded-xl p-3 space-y-4 animate-in fade-in-0 zoom-in-95",
+      )}
     >
       <PanelSection label="Filter">
         <PanelRow label="Type">
@@ -1022,7 +994,7 @@ function BulkActionToolbar({
           <CaretDown size={10} />
         </button>
         {openDropdown === "status" && (
-          <div className="absolute top-full left-0 z-50 mt-1 w-40 rounded-lg border border-border bg-card shadow-lg py-1">
+          <div className={cn(popoverShellClass, "absolute top-full left-0 z-50 mt-1 w-40 py-1")}>
             {statusOptions.map((opt) => (
               <button
                 key={opt.id}
@@ -1032,7 +1004,7 @@ function BulkActionToolbar({
               >
                 <span
                   className="w-2 h-2 rounded-full shrink-0"
-                  style={{ backgroundColor: opt.color }}
+                  style={{ background: statusPaint(statusOptions, opt.id).gradient }}
                 />
                 {opt.label}
               </button>
@@ -1051,7 +1023,7 @@ function BulkActionToolbar({
           <CaretDown size={10} />
         </button>
         {openDropdown === "priority" && (
-          <div className="absolute top-full left-0 z-50 mt-1 w-40 rounded-lg border border-border bg-card shadow-lg py-1">
+          <div className={cn(popoverShellClass, "absolute top-full left-0 z-50 mt-1 w-40 py-1")}>
             {priorityOptions.map((opt) => (
               <button
                 key={opt.value}
@@ -1081,7 +1053,7 @@ function BulkActionToolbar({
             <CaretDown size={10} />
           </button>
           {openDropdown === "sprint" && (
-            <div className="absolute top-full left-0 z-50 mt-1 w-48 rounded-lg border border-border bg-card shadow-lg py-1">
+            <div className={cn(popoverShellClass, "absolute top-full left-0 z-50 mt-1 w-48 py-1")}>
               <button
                 type="button"
                 onClick={() => handleBulkUpdate({ sprintId: null })}

@@ -2,6 +2,8 @@ import { useState, useRef, useEffect } from "react";
 import { X, Plus, Trash, TextT, Hash, CaretDown, Calendar } from "@phosphor-icons/react";
 import { cn } from "@/shared/utils/cn";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { popoverShellClass } from "@/components/ui/popover";
 import type { FieldType, FieldDefinition, SelectOption } from "@/features/projects/types";
 
 const CREATABLE_FIELDS: { type: FieldType; label: string; icon: React.ReactNode }[] = [
@@ -117,7 +119,7 @@ export function CreateFieldDialog({ projectId, onSubmit, onClose }: CreateFieldD
   return (
     <div
       ref={containerRef}
-      className="absolute top-full right-0 z-50 mt-1 w-72 rounded-lg border border-border bg-card shadow-xl p-4"
+      className={cn(popoverShellClass, "absolute top-full right-0 z-50 mt-1 w-72 p-4")}
       onClick={(e) => e.stopPropagation()}
     >
       <div className="flex items-center justify-between mb-3">
@@ -132,14 +134,14 @@ export function CreateFieldDialog({ projectId, onSubmit, onClose }: CreateFieldD
       </div>
 
       {/* Field Name */}
-      <input
+      <Input
         ref={nameRef}
         type="text"
         placeholder="Field name"
         value={name}
         onChange={(e) => setName(e.target.value)}
         onKeyDown={handleKeyDown}
-        className="w-full h-8 px-2 mb-3 text-sm bg-background border border-border rounded outline-none text-foreground focus:border-primary"
+        className="h-8 px-2 mb-3 rounded"
       />
 
       {/* Field Type Selector */}
@@ -185,12 +187,12 @@ export function CreateFieldDialog({ projectId, onSubmit, onClose }: CreateFieldD
                     onClick={() => setColorPickerIdx(colorPickerIdx === idx ? null : idx)}
                     title="Pick color"
                   />
-                  <input
+                  <Input
                     type="text"
                     placeholder={`Option ${idx + 1}`}
                     value={opt.label}
                     onChange={(e) => handleOptionLabelChange(idx, e.target.value)}
-                    className="flex-1 h-7 px-2 text-xs bg-background border border-border rounded outline-none text-foreground focus:border-primary"
+                    className="flex-1 h-7 px-2 rounded text-xs"
                   />
                   <button
                     type="button"

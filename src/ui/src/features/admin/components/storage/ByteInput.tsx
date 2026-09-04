@@ -1,5 +1,6 @@
 import { useState, useCallback, useMemo } from "react";
 import { cn } from "@/shared/utils/cn";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 
@@ -116,16 +117,12 @@ export function ByteInput({
         />
       </div>
       {allowUnlimited && (
-        <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
-          <input
-            type="checkbox"
-            checked={isUnlimited}
-            onChange={handleUnlimitedToggle}
-            disabled={disabled}
-            className="rounded border-border"
-          />
-          Unlimited
-        </label>
+        <Checkbox
+          label="Unlimited"
+          checked={isUnlimited}
+          onChange={handleUnlimitedToggle}
+          disabled={disabled}
+        />
       )}
     </div>
   );

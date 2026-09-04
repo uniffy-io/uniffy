@@ -225,7 +225,7 @@ export function NotificationsFilterSidebar() {
         <nav className="space-y-0.5">
           <button
             onClick={() => toggleSection("status")}
-            className="w-full flex items-center gap-2 px-2 py-2 text-sm rounded-md hover:bg-accent transition-colors text-left group cursor-pointer"
+            className="w-full flex items-center gap-2 px-2 py-2 text-sm rounded-md hover:bg-muted/60 transition-colors text-left group cursor-pointer"
           >
             {expandedSections.status ? (
               <CaretDown size={14} weight="bold" className="text-muted-foreground" />
@@ -284,7 +284,7 @@ export function NotificationsFilterSidebar() {
                     <span
                       className={cn(
                         "text-[10px] tabular-nums shrink-0",
-                        isActive ? "text-primary" : "text-muted-foreground/60",
+                        isActive ? "text-primary" : "text-subtle-foreground",
                       )}
                     >
                       {option.count}
@@ -308,7 +308,7 @@ export function NotificationsFilterSidebar() {
               <div key={category.id}>
                 <button
                   onClick={() => toggleSection(category.id)}
-                  className="w-full flex items-center gap-2 px-2 py-2 text-sm rounded-md hover:bg-accent transition-colors text-left group cursor-pointer"
+                  className="w-full flex items-center gap-2 px-2 py-2 text-sm rounded-md hover:bg-muted/60 transition-colors text-left group cursor-pointer"
                 >
                   {isExpanded ? (
                     <CaretDown size={14} weight="bold" className="text-muted-foreground" />
@@ -323,7 +323,7 @@ export function NotificationsFilterSidebar() {
                     </span>
                   )}
                   {categoryTotal > 0 && (
-                    <span className="text-[10px] tabular-nums text-muted-foreground/60">
+                    <span className="text-[10px] tabular-nums text-subtle-foreground">
                       {categoryTotal}
                     </span>
                   )}
@@ -359,7 +359,7 @@ export function NotificationsFilterSidebar() {
                             <span
                               className={cn(
                                 "text-[10px] tabular-nums shrink-0",
-                                isSelected ? "text-primary" : "text-muted-foreground/60",
+                                isSelected ? "text-primary" : "text-subtle-foreground",
                               )}
                             >
                               {typeCount}

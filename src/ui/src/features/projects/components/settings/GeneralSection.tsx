@@ -3,6 +3,7 @@ import { Gear, Check } from "@phosphor-icons/react";
 import { useAppDispatch } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { updateProject } from "@/features/projects/store/projectsThunks";
 import { ProjectIcon, type ProjectIconName } from "@/features/projects/utils/projectIcons";
@@ -13,12 +14,9 @@ const ICON_OPTIONS: ProjectIconName[] = [
   "rocket",
   "megaphone",
   "wrench",
-  "lightning",
   "globe",
   "target",
-  "bug",
   "palette",
-  "star",
   "cart",
   "graduation",
   "trophy",
@@ -93,7 +91,7 @@ export function GeneralSection({ project }: GeneralSectionProps) {
         {/* Basic Info Card */}
         <section className="space-y-4">
           <h2 className="text-lg font-semibold text-foreground">Basic Information</h2>
-          <div className="space-y-4 bg-card rounded-lg border border-border p-4 md:p-6">
+          <div className="space-y-4 rounded-xl bg-surface p-4 shadow-edge md:p-6">
             {/* Project Name */}
             <div>
               <label className="block text-sm font-medium text-foreground mb-1.5">
@@ -115,13 +113,12 @@ export function GeneralSection({ project }: GeneralSectionProps) {
                 Description
                 <span className="text-muted-foreground font-normal ml-1">(optional)</span>
               </label>
-              <textarea
+              <Textarea
                 placeholder="What is this project about?"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 disabled={isSubmitting}
                 rows={3}
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
               />
             </div>
 
@@ -147,7 +144,7 @@ export function GeneralSection({ project }: GeneralSectionProps) {
         {/* Icon Card */}
         <section className="space-y-4">
           <h2 className="text-lg font-semibold text-foreground">Icon</h2>
-          <div className="bg-card rounded-lg border border-border p-4 md:p-6">
+          <div className="rounded-xl bg-surface p-4 shadow-edge md:p-6">
             <div className="flex flex-wrap gap-2">
               {ICON_OPTIONS.map((iconName) => (
                 <button
@@ -155,10 +152,10 @@ export function GeneralSection({ project }: GeneralSectionProps) {
                   type="button"
                   onClick={() => setIcon(iconName)}
                   className={cn(
-                    "p-2 rounded-md border transition-colors",
+                    "p-2 rounded-md transition-shadow duration-150",
                     icon === iconName
-                      ? "border-primary bg-primary/10 text-primary"
-                      : "border-border text-muted-foreground hover:text-foreground hover:bg-muted",
+                      ? "bg-primary/5 text-primary shadow-edge-primary"
+                      : "text-muted-foreground shadow-edge hover:text-foreground hover:shadow-edge-strong",
                   )}
                 >
                   <ProjectIcon icon={iconName} size={20} weight="duotone" />

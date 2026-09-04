@@ -96,7 +96,7 @@ export function PeerResetInbox({ selfId, onApproved }: PeerResetInboxProps) {
           return (
             <li
               key={req.requestId}
-              className="flex flex-col gap-2 rounded-lg border border-border bg-card p-3 sm:flex-row sm:items-center sm:justify-between"
+              className="flex flex-col gap-2 rounded-lg bg-card p-3 shadow-edge sm:flex-row sm:items-center sm:justify-between"
             >
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium text-foreground">

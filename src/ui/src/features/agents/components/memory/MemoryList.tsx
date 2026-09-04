@@ -271,7 +271,7 @@ export function MemoryList({
 
       {filteredMemories.length === 0 && !scopeState.loading && (
         <div className="flex flex-col items-center justify-center py-16 text-center">
-          <Brain size={48} weight="duotone" className="text-muted-foreground/50 mb-4" />
+          <Brain size={48} weight="duotone" className="text-subtle-foreground mb-4" />
           <p className="text-muted-foreground font-medium">No memories found</p>
           <p className="text-sm font-medium text-muted-foreground/70 mt-1 max-w-sm">
             {emptyStateCopy(descriptor)}

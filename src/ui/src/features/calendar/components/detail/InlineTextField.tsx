@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { PencilSimple } from "@phosphor-icons/react";
+import { Input } from "@/components/ui/input";
 import { cn } from "@/shared/utils/cn";
 
 interface InlineTextFieldProps {
@@ -11,6 +12,8 @@ interface InlineTextFieldProps {
   required?: boolean;
   type?: "text" | "url";
   className?: string;
+  /** Classes for the rendered text itself (size, weight, strike-through). */
+  textClassName?: string;
   inputClassName?: string;
 }
 
@@ -23,6 +26,7 @@ export function InlineTextField({
   required = false,
   type = "text",
   className,
+  textClassName,
   inputClassName,
 }: InlineTextFieldProps) {
   const [isEditing, setIsEditing] = useState(false);
@@ -66,7 +70,7 @@ export function InlineTextField({
 
   if (isEditing && !readOnly) {
     return (
-      <input
+      <Input
         ref={inputRef}
         type={type}
         value={draft}
@@ -74,12 +78,7 @@ export function InlineTextField({
         onBlur={handleCommit}
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
-        className={cn(
-          "w-full px-3 py-2 text-sm border border-border rounded-lg bg-background text-foreground",
-          "placeholder-muted-foreground transition-all",
-          "focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary",
-          inputClassName,
-        )}
+        className={cn("rounded-lg", inputClassName)}
       />
     );
   }
@@ -90,6 +89,7 @@ export function InlineTextField({
         className={cn(
           "text-sm",
           value ? "text-foreground" : "text-muted-foreground italic",
+          textClassName,
           className,
         )}
       >
@@ -111,6 +111,7 @@ export function InlineTextField({
         className={cn(
           "text-sm flex-1 truncate",
           value ? "text-foreground" : "text-muted-foreground italic",
+          textClassName,
         )}
       >
         {value || placeholder}

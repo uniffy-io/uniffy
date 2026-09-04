@@ -13,7 +13,9 @@ import {
 } from "@phosphor-icons/react";
 import { editorViewCtx } from "@milkdown/core";
 import type { EditorView } from "@milkdown/prose/view";
+import { popoverShellClass } from "@/components/ui/popover";
 import { useEditorHandle, type EditorHandle } from "@/components/editor/EditorHandle";
+import { cn } from "@/shared/utils/cn";
 import { subscribeSelection } from "@/components/editor/utils/selectionVersionPlugin";
 import { useActiveMarks } from "@/features/notes/components/editor/toolbar/useActiveMarks";
 import { toolbarCommands } from "@/features/notes/components/editor/toolbar/toolbarCommands";
@@ -199,7 +201,7 @@ export function FloatingFormattingToolbar() {
         visibility: position ? "visible" : "hidden",
         zIndex: 60,
       }}
-      className="flex items-center gap-0.5 rounded-md border border-border bg-card text-card-foreground shadow-lg px-1 py-1"
+      className={cn(popoverShellClass, "flex items-center gap-0.5 px-1 py-1")}
     >
       <HeadingDropdown />
       <ToolbarSeparator />

@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+import { popoverShellClass } from "@/components/ui/popover";
+import { useOverlayEscape } from "@/shared/hooks/useOverlayEscape";
 import { cn } from "@/shared/utils/cn";
 
 interface ToolbarPopoverProps {
@@ -32,16 +34,11 @@ export function ToolbarPopover({
       if (triggerRef.current?.contains(target)) return;
       setOpen(false);
     };
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
-    };
     document.addEventListener("mousedown", handle);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", handle);
-      document.removeEventListener("keydown", onKey);
-    };
+    return () => document.removeEventListener("mousedown", handle);
   }, [open]);
+
+  useOverlayEscape(() => setOpen(false), open);
 
   const toggle = () => {
     if (!open && triggerRef.current) {
@@ -68,10 +65,7 @@ export function ToolbarPopover({
               right: align === "end" ? window.innerWidth - rect.right : undefined,
               zIndex: 1000,
             }}
-            className={cn(
-              "min-w-[180px] rounded-md border border-border bg-card text-card-foreground shadow-lg p-1",
-              className,
-            )}
+            className={cn(popoverShellClass, "min-w-[180px] p-1", className)}
           >
             {children(close)}
           </div>,

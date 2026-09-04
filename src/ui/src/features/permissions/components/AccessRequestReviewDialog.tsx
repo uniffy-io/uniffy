@@ -1,13 +1,5 @@
 import { useEffect, useState } from "react";
-import {
-  CheckCircle,
-  ChatCircle,
-  Clock,
-  LockKeyOpen,
-  Prohibit,
-  ShieldCheck,
-  X,
-} from "@phosphor-icons/react";
+import { CheckCircle, ChatCircle, Clock, LockKeyOpen, Prohibit } from "@phosphor-icons/react";
 import { AccessMode, ContentRole, ContentType } from "@uniffy/proto/common/v1/common_pb";
 import {
   AccessRequestDecision,
@@ -16,7 +8,7 @@ import {
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { SubjectAvatarById } from "@/components/subject/SubjectAvatar";
 import { Button } from "@/components/ui/button";
-import { Modal } from "@/components/ui/modal";
+import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/ui/modal";
 import { ReasonDialog } from "@/components/ui/reason-dialog";
 import { getContentTypeConfig } from "@/config/theme/contentTypes";
 import { ContentRoleSelect } from "@/features/permissions/components/ContentRoleSelect";
@@ -75,9 +67,7 @@ function StandardGrantControls({
   return (
     <div className="space-y-3">
       <div>
-        <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
-          Access level
-        </label>
+        <label className="block text-sm text-muted-foreground mb-1">Access level</label>
         <ContentRoleSelect
           value={role}
           onChange={onRoleChange}
@@ -183,28 +173,9 @@ export function AccessRequestReviewDialog({ requestId, onClose }: AccessRequestR
   return (
     <>
       <Modal onClose={onClose} closeDisabled={responding} maxWidth="max-w-md">
-        <div className="flex items-start gap-3 p-4 border-b border-border">
-          <div className="p-2 rounded-lg bg-primary/10 shrink-0">
-            <ShieldCheck size={20} weight="duotone" className="text-primary" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-base font-semibold text-foreground">Review access request</div>
-            <div className="text-xs text-muted-foreground mt-0.5">
-              Confirm the person and scope before granting access.
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={responding}
-            className="text-muted-foreground hover:text-foreground"
-            aria-label="Close"
-          >
-            <X size={16} weight="bold" />
-          </button>
-        </div>
+        <ModalHeader title="Review access request" />
 
-        <div className="p-4 space-y-4 max-h-[60vh] overflow-y-auto">
+        <ModalBody>
           {loading && !request ? (
             <div className="space-y-3" aria-label="Loading access request">
               <div className="h-16 animate-pulse rounded-lg bg-muted" />
@@ -310,30 +281,25 @@ export function AccessRequestReviewDialog({ requestId, onClose }: AccessRequestR
               )}
             </>
           ) : null}
-        </div>
+        </ModalBody>
 
-        <div className="flex items-center justify-end gap-2 p-4 border-t border-border">
-          <Button variant="ghost" size="md" onClick={onClose} disabled={responding}>
+        <ModalFooter>
+          <Button variant="ghost" onClick={onClose} disabled={responding}>
             Close
           </Button>
           {isPending && (
             <>
-              <Button
-                variant="outline"
-                size="md"
-                onClick={() => setDenyOpen(true)}
-                disabled={responding}
-              >
+              <Button variant="outline" onClick={() => setDenyOpen(true)} disabled={responding}>
                 <Prohibit size={14} weight="duotone" />
                 Deny
               </Button>
-              <Button size="md" onClick={() => void approve()} loading={responding}>
+              <Button onClick={() => void approve()} loading={responding}>
                 <CheckCircle size={14} weight="duotone" />
                 Approve
               </Button>
             </>
           )}
-        </div>
+        </ModalFooter>
       </Modal>
 
       <ReasonDialog

@@ -1,8 +1,11 @@
 import { useRef, useEffect, useState } from "react";
+import { useOverlayEscape } from "@/shared/hooks/useOverlayEscape";
 import { createPortal } from "react-dom";
 import { PushPin, X } from "@phosphor-icons/react";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
 import { SubjectAvatarById } from "@/components/subject";
+import { dialogShellClass } from "@/components/ui/popover";
+import { cn } from "@/shared/utils/cn";
 import { AgentAvatar } from "@/features/agents/components/AgentAvatar";
 import { fetchPinnedMessages } from "@/features/chat/store/chatThunks";
 import { formatRelativeTime } from "@/shared/utils/dateFormatting";
@@ -83,18 +86,15 @@ export function PinnedMessagesPanel({
     };
   }, [onClose]);
 
-  useEffect(() => {
-    const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", handleEsc);
-    return () => document.removeEventListener("keydown", handleEsc);
-  }, [onClose]);
+  useOverlayEscape(onClose);
 
   return createPortal(
     <div
       ref={panelRef}
-      className="fixed z-[100] w-[380px] max-h-[60vh] bg-card border border-border rounded-xl shadow-xl overflow-hidden flex flex-col"
+      className={cn(
+        dialogShellClass,
+        "fixed z-[100] w-[380px] max-h-[60vh] rounded-xl overflow-hidden flex flex-col",
+      )}
       style={{ top: position.top, left: position.left }}
     >
       <div className="flex items-center justify-between px-4 py-3 border-b border-border">
@@ -120,7 +120,7 @@ export function PinnedMessagesPanel({
           <div className="py-8 px-4 text-center">
             <PushPin size={32} className="mx-auto mb-2 text-muted-foreground/30" />
             <p className="text-sm text-muted-foreground">No pinned messages</p>
-            <p className="text-xs text-muted-foreground/60 mt-1">
+            <p className="text-xs text-subtle-foreground mt-1">
               Pin important messages so they are easy to find.
             </p>
           </div>

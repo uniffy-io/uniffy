@@ -391,7 +391,7 @@ export function OrganizationPicker() {
                       ${
                         isSelecting
                           ? "border-primary ring-2 ring-primary/20 shadow-sm"
-                          : "border-border hover:border-muted-foreground/30 hover:shadow-sm"
+                          : "border-border hover:border-border-strong hover:shadow-sm"
                       }
                       ${selectingSlug !== null && !isSelecting ? "opacity-60" : ""}
                     `}
@@ -440,7 +440,7 @@ export function OrganizationPicker() {
           )}
 
           <p
-            className="mt-8 text-center text-xs text-muted-foreground/60 opacity-0"
+            className="mt-8 text-center text-xs text-subtle-foreground opacity-0"
             style={{ animation: "org-slide-up 0.5s ease-out 0.6s forwards" }}
           >
             Signed in as {user?.fullName || user?.username || user?.email}

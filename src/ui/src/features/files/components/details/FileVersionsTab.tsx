@@ -93,7 +93,7 @@ export function FileVersionsTab({ file }: FileVersionsTabProps) {
         <ClockCounterClockwise
           size={32}
           weight="duotone"
-          className="mx-auto text-muted-foreground/50 mb-3"
+          className="mx-auto text-subtle-foreground mb-3"
         />
         <p className="text-sm text-muted-foreground">No version history</p>
       </div>

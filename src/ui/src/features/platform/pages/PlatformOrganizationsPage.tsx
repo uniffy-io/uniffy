@@ -17,6 +17,7 @@ import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 import { cn } from "@/shared/utils/cn";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
 import { PortalMenu } from "@/components/ui/portal-menu";
 import { ReasonDialog } from "@/components/ui/reason-dialog";
 import {
@@ -148,7 +149,7 @@ function RowActions({
       <PortalMenu open={open} onClose={() => setOpen(false)} triggerRef={triggerRef}>
         <button
           type="button"
-          className="w-full text-left px-3 py-1.5 hover:bg-accent flex items-center gap-2"
+          className="w-full text-left px-3 py-1.5 hover:bg-muted/60 flex items-center gap-2"
           onClick={(e) => {
             e.stopPropagation();
             setOpen(false);
@@ -160,7 +161,7 @@ function RowActions({
         {org.deletedAt ? (
           <button
             type="button"
-            className="w-full text-left px-3 py-1.5 hover:bg-accent flex items-center gap-2 text-emerald-700 dark:text-emerald-400"
+            className="w-full text-left px-3 py-1.5 hover:bg-muted/60 flex items-center gap-2 text-emerald-700 dark:text-emerald-400"
             onClick={(e) => {
               e.stopPropagation();
               setOpen(false);
@@ -172,7 +173,7 @@ function RowActions({
         ) : org.isSuspended ? (
           <button
             type="button"
-            className="w-full text-left px-3 py-1.5 hover:bg-accent flex items-center gap-2"
+            className="w-full text-left px-3 py-1.5 hover:bg-muted/60 flex items-center gap-2"
             onClick={(e) => {
               e.stopPropagation();
               setOpen(false);
@@ -184,7 +185,7 @@ function RowActions({
         ) : (
           <button
             type="button"
-            className="w-full text-left px-3 py-1.5 hover:bg-accent flex items-center gap-2 text-amber-700 dark:text-amber-400"
+            className="w-full text-left px-3 py-1.5 hover:bg-muted/60 flex items-center gap-2 text-amber-700 dark:text-amber-400"
             onClick={(e) => {
               e.stopPropagation();
               setOpen(false);
@@ -197,7 +198,7 @@ function RowActions({
         {!org.deletedAt && (
           <button
             type="button"
-            className="w-full text-left px-3 py-1.5 hover:bg-accent flex items-center gap-2 text-red-700 dark:text-red-400"
+            className="w-full text-left px-3 py-1.5 hover:bg-muted/60 flex items-center gap-2 text-red-700 dark:text-red-400"
             onClick={(e) => {
               e.stopPropagation();
               setOpen(false);
@@ -339,15 +340,15 @@ export function PlatformOrganizationsPage() {
       </div>
 
       <div className="grid grid-cols-3 gap-2 md:gap-4">
-        <div className="p-3 md:p-4 rounded-lg border border-border bg-card">
+        <div className="p-3 md:p-4 rounded-xl bg-surface shadow-edge">
           <p className="text-xl md:text-2xl font-bold">{stats?.active ?? "-"}</p>
           <p className="text-xs md:text-sm text-muted-foreground">Organizations</p>
         </div>
-        <div className="p-3 md:p-4 rounded-lg border border-border bg-card">
+        <div className="p-3 md:p-4 rounded-xl bg-surface shadow-edge">
           <p className="text-xl md:text-2xl font-bold">{stats?.suspended ?? "-"}</p>
           <p className="text-xs md:text-sm text-muted-foreground">Suspended</p>
         </div>
-        <div className="p-3 md:p-4 rounded-lg border border-border bg-card">
+        <div className="p-3 md:p-4 rounded-xl bg-surface shadow-edge">
           <p className="text-xl md:text-2xl font-bold">{stats?.deleted ?? "-"}</p>
           <p className="text-xs md:text-sm text-muted-foreground">Pending purge</p>
         </div>
@@ -359,7 +360,7 @@ export function PlatformOrganizationsPage() {
             size={16}
             className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
           />
-          <input
+          <Input
             type="text"
             value={search}
             onChange={(e) => {
@@ -367,8 +368,7 @@ export function PlatformOrganizationsPage() {
               setPage(0);
             }}
             placeholder="Search by name or slug..."
-            className="w-full pl-9 pr-4 py-2 rounded-md border border-border bg-background
-                            text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+            className="pl-9 pr-4"
           />
         </div>
         <Checkbox

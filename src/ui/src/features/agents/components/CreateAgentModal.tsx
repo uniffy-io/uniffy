@@ -14,7 +14,7 @@ import {
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
 import { AccessMode } from "@uniffy/proto/common/v1/common_pb";
-import { Modal } from "@/components/ui/modal";
+import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -107,14 +107,9 @@ function CreateAgentModalContent({
 
   return (
     <form onSubmit={handleSubmit} data-testid="agents-create-form">
-      <div className="px-6 py-4 border-b border-border">
-        <h2 className="text-xl font-semibold text-foreground">New agent</h2>
-        <p className="text-sm text-muted-foreground">
-          Name it and pick who can use it. Everything else is editable after.
-        </p>
-      </div>
+      <ModalHeader title="New agent" />
 
-      <div className="max-h-[65dvh] overflow-y-auto px-6 py-5 space-y-5">
+      <ModalBody>
         <div>
           <label className="block text-sm text-muted-foreground mb-1">Starting from</label>
           {selectedTemplate ? (
@@ -244,9 +239,9 @@ function CreateAgentModalContent({
             </button>
           </div>
         </div>
-      </div>
+      </ModalBody>
 
-      <div className="px-6 py-4 border-t border-border flex justify-end gap-2">
+      <ModalFooter>
         <Button type="button" variant="ghost" onClick={onClose}>
           Cancel
         </Button>
@@ -258,7 +253,7 @@ function CreateAgentModalContent({
           {submitting ? <CircleNotch size={16} className="animate-spin" /> : <Plus size={16} />}
           Create Agent
         </Button>
-      </div>
+      </ModalFooter>
     </form>
   );
 }

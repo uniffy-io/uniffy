@@ -46,7 +46,7 @@ export function GroupDirectoryCard({
   return (
     <div
       className={cn(
-        "p-4 rounded-lg border border-border bg-card hover:border-primary/50 transition-colors",
+        "p-4 rounded-xl bg-surface shadow-edge transition-shadow duration-150 hover:shadow-edge-strong",
         className,
       )}
     >

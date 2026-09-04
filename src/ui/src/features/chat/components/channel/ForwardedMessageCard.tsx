@@ -89,7 +89,7 @@ function ForwardedMessageCardInner({
 
       <div className="mt-1 flex items-baseline gap-2">
         <span className="text-[13px] font-semibold text-foreground">{context.senderName}</span>
-        <span className="text-[11px] text-muted-foreground/60">
+        <span className="text-[11px] text-subtle-foreground">
           {formatMessageTimestamp(context.createdAt)}
         </span>
       </div>

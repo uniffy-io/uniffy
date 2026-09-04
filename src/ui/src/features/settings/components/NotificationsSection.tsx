@@ -1,6 +1,7 @@
 import { Fragment, useState } from "react";
 import { BellSimple, EnvelopeSimple, Globe, LockSimple } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Table,
@@ -143,7 +144,7 @@ export function NotificationsSection() {
         <section className="space-y-4">
           <h2 className="text-lg font-semibold text-foreground">Real-time Alerts</h2>
 
-          <div className="space-y-4 bg-card rounded-lg border border-border p-4">
+          <Card tone="surface" className="space-y-4 p-4">
             <div className="flex items-center justify-between gap-6">
               <div>
                 <div className="font-medium text-foreground">Show Toast Notifications</div>
@@ -173,13 +174,13 @@ export function NotificationsSection() {
                 disabled={saving}
               />
             </div>
-          </div>
+          </Card>
         </section>
 
         <section className="space-y-4">
           <h2 className="text-lg font-semibold text-foreground">Browser Notifications</h2>
 
-          <div className="space-y-4 bg-card rounded-lg border border-border p-4">
+          <Card tone="surface" className="space-y-4 p-4">
             <div className="flex items-center justify-between gap-6">
               <div>
                 <div className="font-medium text-foreground">Enable Browser Notifications</div>
@@ -214,7 +215,7 @@ export function NotificationsSection() {
                 disabled={saving || !isSupported || permissionState === "denied"}
               />
             </div>
-          </div>
+          </Card>
         </section>
 
         <section className="space-y-4">
@@ -224,7 +225,7 @@ export function NotificationsSection() {
             In-app notifications still arrive. Times follow your profile timezone (UTC when unset).
           </p>
 
-          <div className="space-y-4 bg-card rounded-lg border border-border p-4">
+          <Card tone="surface" className="space-y-4 p-4">
             <div className="flex items-center justify-between gap-6">
               <div>
                 <div className="font-medium text-foreground">Enable Quiet Hours</div>
@@ -274,13 +275,13 @@ export function NotificationsSection() {
                 )}
               </div>
             )}
-          </div>
+          </Card>
         </section>
 
         <section className="space-y-4">
           <h2 className="text-lg font-semibold text-foreground">Email Notifications</h2>
 
-          <div className="space-y-4 bg-card rounded-lg border border-border p-4">
+          <Card tone="surface" className="space-y-4 p-4">
             <div className="flex items-center justify-between gap-6">
               <div>
                 <div className="font-medium text-foreground">Enable Email Notifications</div>
@@ -321,10 +322,10 @@ export function NotificationsSection() {
                       key={id}
                       type="button"
                       disabled={saving}
-                      className={`flex items-center w-full p-3 rounded-lg border transition-colors ${
+                      className={`flex items-center w-full p-3 rounded-lg transition-shadow duration-150 ${
                         notifications.emailFrequency === id
-                          ? "border-primary bg-primary/5"
-                          : "border-border hover:border-primary/50"
+                          ? "bg-primary/5 shadow-edge-primary"
+                          : "bg-card shadow-edge hover:shadow-edge-strong"
                       }`}
                       onClick={() => handleFrequencyChange(id)}
                     >
@@ -358,7 +359,7 @@ export function NotificationsSection() {
                 )}
               </div>
             )}
-          </div>
+          </Card>
         </section>
 
         <section className="space-y-4">
@@ -388,7 +389,7 @@ export function NotificationsSection() {
                   <TableRow hoverable={false}>
                     <TableCell
                       colSpan={4}
-                      className="bg-muted/30 py-2 md:py-2 lg:py-2 text-sm font-semibold text-foreground"
+                      className="table-band py-2 md:py-2 text-sm font-semibold text-foreground"
                     >
                       {group.label}
                     </TableCell>
@@ -414,7 +415,7 @@ export function NotificationsSection() {
                                   <span
                                     tabIndex={0}
                                     aria-label={`${label} security email is always sent`}
-                                    className="group/lock relative flex h-5 w-5 items-center justify-center text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded"
+                                    className="focus-ring group/lock relative flex h-5 w-5 items-center justify-center text-muted-foreground rounded"
                                   >
                                     <LockSimple size={16} weight="fill" />
                                     <span className="pointer-events-none absolute right-full top-1/2 z-10 mr-2 -translate-y-1/2 whitespace-nowrap rounded-md border border-border bg-card px-2 py-1 text-xs text-foreground shadow-md opacity-0 transition-opacity group-hover/lock:opacity-100 group-focus-visible/lock:opacity-100">
@@ -453,7 +454,7 @@ export function NotificationsSection() {
           <p className="text-sm font-medium text-muted-foreground">
             Set the default reminder intervals for new calendar events.
           </p>
-          <div className="bg-card rounded-lg border border-border p-4">
+          <Card tone="surface" className="p-4">
             <ReminderSelector
               value={notifications.defaultReminderIntervals ?? [15]}
               onChange={(reminders) => {
@@ -462,7 +463,7 @@ export function NotificationsSection() {
                 });
               }}
             />
-          </div>
+          </Card>
         </section>
       </div>
     </div>

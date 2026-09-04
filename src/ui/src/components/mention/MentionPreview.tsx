@@ -5,6 +5,8 @@ import type { UrnPreviewData } from "@/components/editor/plugins/mention/useUrnP
 import { stripMarkdown } from "@/features/search/utils/stripMarkdown";
 import { buildLiveStateFromMetadata } from "@/components/mention/buildLiveState";
 import { getContentTypeConfig } from "@/config/theme/contentTypes";
+import { MENTION_ACCENT } from "@/components/mention/mentionConstants";
+import { popoverShellClass } from "@/components/ui/popover";
 import { formatRelativeTime } from "@/shared/utils/dateFormatting";
 import { cn } from "@/shared/utils/cn";
 import type { MentionLiveState } from "@/components/mention/types";
@@ -47,15 +49,14 @@ interface TypeTheme {
   border: string;
 }
 
+// Only the glyph comes from the type; the card wears the accent (see MENTION_ACCENT).
 function getTypeTheme(type: UrnType): TypeTheme {
-  const config = getContentTypeConfig(type);
-  const theme = config.theme;
   return {
-    icon: config.icon,
-    iconBg: theme.iconBg,
-    iconBoxAccent: theme.iconBoxAccent,
-    accentText: theme.accentText,
-    border: theme.border,
+    icon: getContentTypeConfig(type).icon,
+    iconBg: MENTION_ACCENT.iconBg,
+    iconBoxAccent: MENTION_ACCENT.iconBoxAccent,
+    accentText: MENTION_ACCENT.accentText,
+    border: MENTION_ACCENT.border,
   };
 }
 
@@ -170,11 +171,8 @@ export function MentionPreview({
     >
       <div
         className={cn(
+          popoverShellClass,
           "w-[28rem] max-w-[calc(100vw-1rem)]",
-          "bg-card",
-          "text-card-foreground",
-          "rounded-lg shadow-lg",
-          "border border-border",
           "overflow-hidden",
           "animate-in fade-in-0 zoom-in-95 duration-200",
           opensDownward ? "slide-in-from-top-2" : "slide-in-from-bottom-2",
@@ -375,7 +373,7 @@ export function MentionPreview({
                 </div>
               )}
 
-              <div className="px-4 py-2 pl-5 bg-muted/30 border-t border-border/50 flex items-center justify-between">
+              <div className="px-4 py-2 pl-5 bg-background/60 flex items-center justify-between">
                 <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                   <Clock size={12} weight="duotone" />
                   <span>{formatRelativeTime(preview.updatedAt) || "No date"}</span>

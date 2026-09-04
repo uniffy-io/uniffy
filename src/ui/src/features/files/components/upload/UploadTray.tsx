@@ -16,6 +16,7 @@ import {
   clearCompletedDownloads,
   type DownloadItem,
 } from "@/features/files/store/uploadSlice";
+import { dialogShellClass, popoverShellClass } from "@/components/ui/popover";
 import { uploadService } from "@/features/files/upload";
 import type { UploadRecord } from "@/features/files/upload/uploadTypes";
 import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
@@ -225,7 +226,8 @@ export function UploadTray() {
       <button
         onClick={handleExpand}
         className={cn(
-          "fixed bottom-4 right-4 z-50 flex items-center gap-2 rounded-full bg-card border border-border shadow-lg px-4 py-2 hover:bg-muted/50 transition-colors animate-in slide-in-from-bottom-4 duration-200",
+          popoverShellClass,
+          "fixed bottom-4 right-4 z-50 flex items-center gap-2 rounded-full px-4 py-2 hover:bg-muted/50 transition-colors animate-in slide-in-from-bottom-4 duration-200",
           isMobile &&
             "right-[max(1rem,env(safe-area-inset-right))] bottom-[max(1rem,env(safe-area-inset-bottom))]",
         )}
@@ -257,7 +259,8 @@ export function UploadTray() {
   return (
     <div
       className={cn(
-        "fixed bg-card border border-border shadow-2xl overflow-hidden z-50 animate-in slide-in-from-bottom-4 duration-200",
+        dialogShellClass,
+        "fixed overflow-hidden z-50 animate-in slide-in-from-bottom-4 duration-200",
         isMobile ? "inset-x-0 bottom-0 w-full rounded-t-xl" : "bottom-4 right-4 w-96 rounded-xl",
       )}
     >

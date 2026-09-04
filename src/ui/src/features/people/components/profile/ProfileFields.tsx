@@ -1,7 +1,11 @@
 import type { ReactNode } from "react";
-import { ArrowSquareOut } from "@phosphor-icons/react";
+import { AddressBook, ArrowSquareOut, IdentificationCard } from "@phosphor-icons/react";
 import { formatDateFull } from "@/shared/utils/dateFormatting";
 import type { SerializedPersonProfile } from "@/features/people/store/peopleThunks";
+import {
+  ProfileEmptyState,
+  ProfileSection,
+} from "@/features/people/components/profile/ProfileSection";
 
 interface ProfileFieldsProps {
   person: SerializedPersonProfile;
@@ -12,17 +16,6 @@ function FieldRow({ label, children }: { label: string; children: ReactNode }) {
     <div className="flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:gap-4">
       <dt className="w-32 shrink-0 text-xs font-medium text-muted-foreground">{label}</dt>
       <dd className="min-w-0 flex-1 text-sm text-foreground">{children}</dd>
-    </div>
-  );
-}
-
-function Section({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <div className="rounded-lg border border-border bg-card p-4 md:p-6">
-      <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-        {title}
-      </h2>
-      <dl className="space-y-2.5">{children}</dl>
     </div>
   );
 }
@@ -64,83 +57,91 @@ export function ProfileFields({ person }: ProfileFieldsProps) {
 
   if (!hasContact && !hasAbout) {
     return (
-      <div className="rounded-lg border border-border bg-card p-6 text-center">
-        <p className="text-sm text-muted-foreground">Nothing here yet.</p>
-      </div>
+      <ProfileEmptyState
+        icon={IdentificationCard}
+        title="Nothing here yet"
+        description="Contact details and a bio show up once they are filled in."
+      />
     );
   }
 
   return (
     <div className="space-y-4">
       {hasContact && (
-        <Section title="Contact">
-          {person.email && (
-            <FieldRow label="Email">
-              <a href={`mailto:${person.email}`} className="text-primary hover:underline">
-                {person.email}
-              </a>
-            </FieldRow>
-          )}
-          {person.workPhone && (
-            <FieldRow label="Work phone">
-              <a href={`tel:${person.workPhone}`} className="hover:underline">
-                {person.workPhone}
-              </a>
-            </FieldRow>
-          )}
-          {person.mobilePhone && (
-            <FieldRow label="Mobile phone">
-              <a href={`tel:${person.mobilePhone}`} className="hover:underline">
-                {person.mobilePhone}
-              </a>
-            </FieldRow>
-          )}
-          {person.officeLocation && <FieldRow label="Office">{person.officeLocation}</FieldRow>}
-          {person.timezone && (
-            <FieldRow label="Time zone">
-              {person.timezone}
-              {localTime && (
-                <span className="ml-2 text-xs text-muted-foreground">{localTime} local time</span>
-              )}
-            </FieldRow>
-          )}
-          {person.links.length > 0 && (
-            <FieldRow label="Links">
-              <div className="flex flex-col gap-1">
-                {person.links.map((link) => (
-                  <a
-                    key={`${link.label}-${link.url}`}
-                    href={link.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-primary hover:underline"
-                  >
-                    {link.label || link.url}
-                    <ArrowSquareOut size={12} />
-                  </a>
-                ))}
-              </div>
-            </FieldRow>
-          )}
-        </Section>
+        <ProfileSection title="Contact" icon={AddressBook}>
+          <dl className="space-y-2.5">
+            {person.email && (
+              <FieldRow label="Email">
+                <a href={`mailto:${person.email}`} className="text-primary hover:underline">
+                  {person.email}
+                </a>
+              </FieldRow>
+            )}
+            {person.workPhone && (
+              <FieldRow label="Work phone">
+                <a href={`tel:${person.workPhone}`} className="hover:underline">
+                  {person.workPhone}
+                </a>
+              </FieldRow>
+            )}
+            {person.mobilePhone && (
+              <FieldRow label="Mobile phone">
+                <a href={`tel:${person.mobilePhone}`} className="hover:underline">
+                  {person.mobilePhone}
+                </a>
+              </FieldRow>
+            )}
+            {person.officeLocation && <FieldRow label="Office">{person.officeLocation}</FieldRow>}
+            {person.timezone && (
+              <FieldRow label="Time zone">
+                {person.timezone}
+                {localTime && (
+                  <span className="ml-2 text-xs text-subtle-foreground">
+                    {localTime} local time
+                  </span>
+                )}
+              </FieldRow>
+            )}
+            {person.links.length > 0 && (
+              <FieldRow label="Links">
+                <div className="flex flex-col gap-1">
+                  {person.links.map((link) => (
+                    <a
+                      key={`${link.label}-${link.url}`}
+                      href={link.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-primary hover:underline"
+                    >
+                      {link.label || link.url}
+                      <ArrowSquareOut size={12} />
+                    </a>
+                  ))}
+                </div>
+              </FieldRow>
+            )}
+          </dl>
+        </ProfileSection>
       )}
 
       {hasAbout && (
-        <Section title="About">
-          {person.bio && (
-            <FieldRow label="Bio">
-              <p className="whitespace-pre-wrap">{person.bio}</p>
-            </FieldRow>
-          )}
-          {person.startDateMs !== null && (
-            <FieldRow label="Started">
-              {formatDateFull(new Date(person.startDateMs).toISOString().slice(0, 10))}
-            </FieldRow>
-          )}
-          {person.birthday && (
-            <FieldRow label="Birthday">{formatBirthday(person.birthday)}</FieldRow>
-          )}
-        </Section>
+        <ProfileSection title="About" icon={IdentificationCard}>
+          <dl className="space-y-2.5">
+            {person.bio && (
+              <FieldRow label="Bio">
+                <p className="whitespace-pre-wrap">{person.bio}</p>
+              </FieldRow>
+            )}
+            {person.startDateMs !== null && (
+              <FieldRow label="Started">
+                {formatDateFull(new Date(person.startDateMs).toISOString().slice(0, 10))}
+              </FieldRow>
+            )}
+            {person.birthday && (
+              <FieldRow label="Birthday">{formatBirthday(person.birthday)}</FieldRow>
+            )}
+          </dl>
+        </ProfileSection>
       )}
     </div>
   );

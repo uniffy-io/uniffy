@@ -4,7 +4,7 @@ import { MagnifyingGlass } from "@phosphor-icons/react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Modal } from "@/components/ui/modal";
+import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/ui/modal";
 import { closeAgentChatPicker } from "@/features/chat/store/chatUiSlice";
 import { createAgentChat } from "@/features/chat/store/chatThunks";
 import { selectAllAgents } from "@/features/agents/store/agentsSlice";
@@ -51,72 +51,72 @@ export function AgentChatPickerModal() {
   };
 
   return (
-    <Modal onClose={handleClose} maxWidth="max-w-md" closeDisabled={submittingId !== null}>
-      <div className="p-5 space-y-4" data-testid="agent-chat-picker-modal">
-        <div>
-          <h2 className="text-lg font-semibold text-foreground">Start a new agent chat</h2>
-          <p className="text-sm text-muted-foreground mt-1">
-            Pick an agent. You can have multiple chats with the same agent.
-          </p>
-        </div>
+    <Modal onClose={handleClose} closeDisabled={submittingId !== null} maxWidth="max-w-md">
+      <div data-testid="agent-chat-picker-modal">
+        <ModalHeader
+          title="New agent chat"
+          description="You can have multiple chats with the same agent."
+        />
 
-        <div className="relative">
-          <MagnifyingGlass
-            size={14}
-            className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground"
-          />
-          <Input
-            type="text"
-            placeholder="Search agents..."
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            className="pl-8"
-            autoFocus
-          />
-        </div>
+        <ModalBody scrollable={false}>
+          <div className="relative">
+            <MagnifyingGlass
+              size={14}
+              className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground"
+            />
+            <Input
+              type="text"
+              placeholder="Search agents..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              className="pl-8"
+              autoFocus
+            />
+          </div>
 
-        <div className="max-h-[50vh] overflow-y-auto -mx-2">
-          {filtered.length === 0 ? (
-            <div className="px-3 py-6 text-center text-sm text-muted-foreground">
-              {query ? "No agents match your search." : "No agents available."}
-            </div>
-          ) : (
-            <ul className="space-y-px">
-              {filtered.map((agent) => {
-                const isSubmitting = submittingId === agent.id;
-                return (
-                  <li key={agent.id}>
-                    <button
-                      type="button"
-                      onClick={() => handlePick(agent.id)}
-                      disabled={submittingId !== null}
-                      className={cn(
-                        "flex items-center gap-3 w-full px-3 py-2 rounded-md text-left transition-colors",
-                        "hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed",
-                      )}
-                      data-testid={`agent-chat-picker-option-${agent.id}`}
-                    >
-                      <AgentAvatar
-                        avatarKey={agent.avatarKey}
-                        avatarEmoji={agent.avatarEmoji}
-                        agentName={agent.name}
-                        size="sm"
-                      />
-                      <span className="flex-1 truncate text-sm font-medium text-foreground">
-                        {agent.name}
-                      </span>
-                      {isSubmitting && (
-                        <span className="text-xs text-muted-foreground">Creating...</span>
-                      )}
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </div>
+          <div className="max-h-[50dvh] overflow-y-auto -mx-2">
+            {filtered.length === 0 ? (
+              <div className="px-3 py-6 text-center text-sm text-muted-foreground">
+                {query ? "No agents match your search." : "No agents available."}
+              </div>
+            ) : (
+              <ul className="space-y-px">
+                {filtered.map((agent) => {
+                  const isSubmitting = submittingId === agent.id;
+                  return (
+                    <li key={agent.id}>
+                      <button
+                        type="button"
+                        onClick={() => handlePick(agent.id)}
+                        disabled={submittingId !== null}
+                        className={cn(
+                          "flex items-center gap-3 w-full px-3 py-2 rounded-md text-left transition-colors",
+                          "hover:bg-muted/60 disabled:opacity-50 disabled:cursor-not-allowed",
+                        )}
+                        data-testid={`agent-chat-picker-option-${agent.id}`}
+                      >
+                        <AgentAvatar
+                          avatarKey={agent.avatarKey}
+                          avatarEmoji={agent.avatarEmoji}
+                          agentName={agent.name}
+                          size="sm"
+                        />
+                        <span className="flex-1 truncate text-sm font-medium text-foreground">
+                          {agent.name}
+                        </span>
+                        {isSubmitting && (
+                          <span className="text-xs text-muted-foreground">Creating...</span>
+                        )}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+        </ModalBody>
 
-        <div className="flex justify-end">
+        <ModalFooter>
           <Button
             type="button"
             variant="ghost"
@@ -125,7 +125,7 @@ export function AgentChatPickerModal() {
           >
             Cancel
           </Button>
-        </div>
+        </ModalFooter>
       </div>
     </Modal>
   );

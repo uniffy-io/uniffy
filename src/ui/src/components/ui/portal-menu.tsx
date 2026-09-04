@@ -7,8 +7,10 @@ import {
   useRef,
   useState,
 } from "react";
+import { useOverlayEscape } from "@/shared/hooks/useOverlayEscape";
 import { createPortal } from "react-dom";
 import { cn } from "@/shared/utils/cn";
+import { popoverShellClass } from "@/components/ui/popover";
 
 interface MenuPosition {
   top: number;
@@ -97,16 +99,11 @@ export function PortalMenu({
       if (triggerRef.current?.contains(target)) return;
       onClose();
     }
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") onClose();
-    }
     document.addEventListener("mousedown", handleClickOutside);
-    document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-      document.removeEventListener("keydown", handleKeyDown);
-    };
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [open, onClose, triggerRef]);
+
+  useOverlayEscape(onClose, open);
 
   if (!open || !position) return null;
 
@@ -120,10 +117,7 @@ export function PortalMenu({
         minWidth: position.minWidth,
         visibility: position.ready ? "visible" : "hidden",
       }}
-      className={cn(
-        "z-[200] rounded-lg border border-border bg-card shadow-lg py-1 text-sm",
-        className,
-      )}
+      className={cn(popoverShellClass, "z-[200] py-1 text-sm", className)}
     >
       {children}
     </div>,

@@ -24,6 +24,7 @@ import { cn } from "@/shared/utils/cn";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Select, type SelectOption } from "@/components/ui/select";
+import { popoverEnterClass, popoverShellClass } from "@/components/ui/popover";
 import { renderIcon } from "@/components/icon-picker";
 import { useNavigate } from "react-router-dom";
 import { useSavedFilters } from "@/features/files/hooks/useSavedFilters";
@@ -62,6 +63,7 @@ import type { SerializedTreeNode, SerializedFolder } from "@/features/files/stor
 import { useAccessPolicyDialog } from "@/features/permissions";
 import { addBookmarksSafely, useBookmarkStatuses } from "@/features/bookmarks";
 import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
+import { useOverlayEscape } from "@/shared/hooks/useOverlayEscape";
 import { ContentType, AccessMode } from "@uniffy/proto/common/v1/common_pb";
 import { bucketForContent, roleCanDelete, roleCanEdit } from "@/shared/utils/contentRoles";
 import type { FileDownloadItem } from "@/features/files/utils/archiveDownload";
@@ -237,18 +239,7 @@ export function FilesList({
     }
   }, [contextMenu]);
 
-  // Close context menu on escape
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        setContextMenu(null);
-      }
-    };
-    if (contextMenu) {
-      document.addEventListener("keydown", handleKeyDown);
-      return () => document.removeEventListener("keydown", handleKeyDown);
-    }
-  }, [contextMenu]);
+  useOverlayEscape(() => setContextMenu(null), !!contextMenu);
 
   const handleContextMenu = useCallback(
     (e: React.MouseEvent) => {
@@ -1036,7 +1027,7 @@ export function FilesList({
             const isLast = index === breadcrumbItems.length - 1;
             return (
               <span key={item.id} className="flex items-center gap-1 min-w-0">
-                <CaretRight size={12} weight="bold" className="shrink-0 text-muted-foreground/50" />
+                <CaretRight size={12} weight="bold" className="shrink-0 text-subtle-foreground" />
                 <span
                   onClick={() => !isLast && handleBreadcrumbNavigate(item.id)}
                   className={cn(
@@ -1059,7 +1050,11 @@ export function FilesList({
       {contextMenu && (
         <div
           ref={contextMenuRef}
-          className="fixed z-50 min-w-[160px] overflow-hidden rounded-md border border-border bg-card shadow-lg animate-in fade-in-0 zoom-in-95 duration-100"
+          className={cn(
+            popoverShellClass,
+            popoverEnterClass,
+            "fixed z-50 min-w-[160px] overflow-hidden",
+          )}
           style={{ top: contextMenu.y, left: contextMenu.x }}
         >
           <div className="py-1">

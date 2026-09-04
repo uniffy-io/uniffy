@@ -129,13 +129,13 @@ export function LibraryPage() {
         )}
       >
         {isTabletOrDesktop && !isZenMode && (
-          <aside className="w-60 shrink-0 border-r border-border bg-background">
+          <aside className="w-60 shrink-0 border-r border-border bg-nav">
             <LibrarySidebar tab={tab} />
           </aside>
         )}
 
         {tab === "graph" ? (
-          <div className="flex min-w-0 flex-1 flex-col overflow-hidden bg-card">
+          <div className="flex min-w-0 flex-1 flex-col overflow-hidden bg-surface">
             {!isTabletOrDesktop && (
               <div className="px-4 pb-2">
                 <LibraryHeader tab="graph" />
@@ -157,7 +157,7 @@ export function LibraryPage() {
             </div>
           </div>
         ) : (
-          <div className="relative min-w-0 flex-1 overflow-y-auto bg-card">
+          <div className="relative min-w-0 flex-1 overflow-y-auto bg-surface">
             {/* Faded dot grid gives the library a pinboard texture without competing with content. */}
             <div
               aria-hidden="true"

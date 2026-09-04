@@ -188,7 +188,7 @@ function ToolStepRow({
             <CaretDown
               size={11}
               className={cn(
-                "text-muted-foreground/50 transition-transform group-hover/step:text-muted-foreground",
+                "text-subtle-foreground transition-transform group-hover/step:text-muted-foreground",
                 showDetails && "rotate-180",
               )}
             />

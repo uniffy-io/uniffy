@@ -1,11 +1,14 @@
-import { useEffect, useState, useCallback, useRef } from "react";
+import { createContext, useCallback, useContext, useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { X } from "@phosphor-icons/react";
 import { cn } from "@/shared/utils/cn";
+import { dialogShellClass } from "@/components/ui/popover";
+import { ButtonSizeContext } from "@/components/ui/buttonSize";
+import { useOverlayEscape } from "@/shared/hooks/useOverlayEscape";
 
 const ANIMATION_MS = 150;
 
-// Escape must close only the topmost modal when dialogs stack.
-const modalStack: symbol[] = [];
+const ModalLabelContext = createContext<string | undefined>(undefined);
 
 interface ModalProps {
   children: React.ReactNode;
@@ -13,29 +16,25 @@ interface ModalProps {
   closeDisabled?: boolean;
   maxWidth?: string;
   className?: string;
+  /** Accessible name for a dialog that renders no ModalHeader. */
+  ariaLabel?: string;
 }
 
+/**
+ * Dialog shell: backdrop, portal, escape handling, and the surface tone. Compose the
+ * chrome from ModalHeader / ModalBody / ModalFooter so every dialog reads the same.
+ */
 export function Modal({
   children,
   onClose,
   closeDisabled = false,
   maxWidth = "max-w-lg",
   className,
+  ariaLabel,
 }: ModalProps) {
   const [phase, setPhase] = useState<"entering" | "open" | "exiting">("entering");
   const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
-  // The compiler reads the `Symbol` built-in as a component because it is capitalized.
-  // eslint-disable-next-line react/react-compiler
-  const stackIdRef = useRef(Symbol("modal"));
-
-  useEffect(() => {
-    const id = stackIdRef.current;
-    modalStack.push(id);
-    return () => {
-      const index = modalStack.indexOf(id);
-      if (index >= 0) modalStack.splice(index, 1);
-    };
-  }, []);
+  const titleId = useId();
 
   useEffect(() => {
     const raf = requestAnimationFrame(() => {
@@ -56,15 +55,7 @@ export function Modal({
     };
   }, []);
 
-  useEffect(() => {
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.key !== "Escape") return;
-      if (modalStack[modalStack.length - 1] !== stackIdRef.current) return;
-      requestClose();
-    }
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [requestClose]);
+  useOverlayEscape(requestClose);
 
   useEffect(() => {
     const original = document.body.style.overflow;
@@ -90,17 +81,108 @@ export function Modal({
       />
 
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={ariaLabel}
+        aria-labelledby={ariaLabel ? undefined : titleId}
         className={cn(
-          "relative bg-card w-[calc(100vw-2rem)] rounded-t-xl sm:rounded-xl shadow-2xl border border-border overflow-hidden",
+          dialogShellClass,
+          "relative w-[calc(100vw-2rem)] rounded-t-xl sm:rounded-xl overflow-hidden",
           "transition-all duration-150 ease-out",
           isVisible ? "opacity-100 scale-100 translate-y-0" : "opacity-0 scale-95 translate-y-2",
           maxWidth,
           className,
         )}
       >
-        {children}
+        <ModalLabelContext.Provider value={titleId}>{children}</ModalLabelContext.Provider>
       </div>
     </div>,
     document.body,
+  );
+}
+
+interface ModalHeaderProps {
+  title: React.ReactNode;
+  description?: React.ReactNode;
+  /** Renders a close control. Only for dialogs whose footer carries no Cancel or Close action. */
+  onClose?: () => void;
+  closeDisabled?: boolean;
+  closeTestId?: string;
+  /** Controls placed right of the title, before the close control. */
+  actions?: React.ReactNode;
+  className?: string;
+}
+
+export function ModalHeader({
+  title,
+  description,
+  onClose,
+  closeDisabled = false,
+  closeTestId,
+  actions,
+  className,
+}: ModalHeaderProps) {
+  const titleId = useContext(ModalLabelContext);
+  return (
+    <div className={cn("flex items-start gap-3 px-6 py-4 border-b border-border", className)}>
+      <div className="min-w-0 flex-1">
+        <h2 id={titleId} className="text-xl font-semibold text-foreground break-words">
+          {title}
+        </h2>
+        {description ? <p className="text-sm text-muted-foreground">{description}</p> : null}
+      </div>
+      {actions}
+      {onClose ? (
+        <button
+          type="button"
+          onClick={onClose}
+          disabled={closeDisabled}
+          aria-label="Close"
+          data-testid={closeTestId}
+          className="shrink-0 -mr-1.5 p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
+        >
+          <X size={16} weight="bold" />
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
+interface ModalBodyProps {
+  children: React.ReactNode;
+  className?: string;
+  /** Off when the dialog owns its own scroll region (flex column layouts). */
+  scrollable?: boolean;
+}
+
+export function ModalBody({ children, className, scrollable = true }: ModalBodyProps) {
+  return (
+    <div
+      className={cn(
+        "px-6 py-5 space-y-5",
+        scrollable && "max-h-[65dvh] overflow-y-auto",
+        className,
+      )}
+    >
+      {children}
+    </div>
+  );
+}
+
+interface ModalFooterProps {
+  children: React.ReactNode;
+  className?: string;
+}
+
+export function ModalFooter({ children, className }: ModalFooterProps) {
+  return (
+    <div
+      className={cn(
+        "flex items-center justify-end gap-2 px-6 py-4 border-t border-border",
+        className,
+      )}
+    >
+      <ButtonSizeContext.Provider value="md">{children}</ButtonSizeContext.Provider>
+    </div>
   );
 }

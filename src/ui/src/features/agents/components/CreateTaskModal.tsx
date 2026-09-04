@@ -4,7 +4,7 @@ import { CircleNotch, Plus, Robot } from "@phosphor-icons/react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
 import { ContentType } from "@uniffy/proto/common/v1/common_pb";
-import { Modal } from "@/components/ui/modal";
+import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -51,7 +51,7 @@ function ScheduleBuilder({
   return (
     <div className="space-y-4">
       <div>
-        <label className="block text-sm text-muted-foreground mb-1.5">Repeat</label>
+        <label className="block text-sm text-muted-foreground mb-1">Repeat</label>
         <Select<string>
           value={value.frequency}
           onChange={(f) => onChange({ ...value, frequency: f as Frequency })}
@@ -61,7 +61,7 @@ function ScheduleBuilder({
 
       {value.frequency === "minutes" && (
         <div>
-          <label className="block text-sm text-muted-foreground mb-1.5">Interval</label>
+          <label className="block text-sm text-muted-foreground mb-1">Interval</label>
           <Select<number>
             value={value.minuteInterval}
             onChange={(v) => onChange({ ...value, minuteInterval: v })}
@@ -72,7 +72,7 @@ function ScheduleBuilder({
 
       {value.frequency !== "minutes" && (
         <div>
-          <label className="block text-sm text-muted-foreground mb-1.5">
+          <label className="block text-sm text-muted-foreground mb-1">
             {value.frequency === "hourly" ? "At minute" : "Time"}
           </label>
           {value.frequency === "hourly" ? (
@@ -104,7 +104,7 @@ function ScheduleBuilder({
 
       {value.frequency === "weekly" && (
         <div>
-          <label className="block text-sm text-muted-foreground mb-1.5">Days</label>
+          <label className="block text-sm text-muted-foreground mb-1">Days</label>
           <div className="flex gap-1 mb-2">
             {WEEKDAY_LABELS.map((label, i) => {
               const active = value.weekdays.includes(i);
@@ -153,7 +153,7 @@ function ScheduleBuilder({
 
       {value.frequency === "monthly" && (
         <div>
-          <label className="block text-sm text-muted-foreground mb-1.5">Day of month</label>
+          <label className="block text-sm text-muted-foreground mb-1">Day of month</label>
           <Select<number>
             value={value.monthDay}
             onChange={(d) => onChange({ ...value, monthDay: d })}
@@ -224,38 +224,33 @@ function CreateTaskModalContent({ onClose }: { onClose: () => void }) {
   if (agentOptions.length === 0) {
     return (
       <>
-        <div className="px-6 py-4 border-b border-border">
-          <h2 className="text-xl font-semibold text-foreground">New automation</h2>
-        </div>
-        <div className="flex flex-col items-center justify-center px-6 py-12">
-          <Robot size={32} className="text-muted-foreground mb-2" />
-          <p className="text-sm text-muted-foreground">Create an agent first to schedule tasks</p>
-        </div>
-        <div className="px-6 py-4 border-t border-border flex justify-end">
+        <ModalHeader title="New automation" />
+        <ModalBody>
+          <div className="flex flex-col items-center justify-center py-6">
+            <Robot size={32} className="text-muted-foreground mb-2" />
+            <p className="text-sm text-muted-foreground">Create an agent first to schedule tasks</p>
+          </div>
+        </ModalBody>
+        <ModalFooter>
           <Button variant="ghost" onClick={onClose}>
             Close
           </Button>
-        </div>
+        </ModalFooter>
       </>
     );
   }
 
   return (
     <form onSubmit={handleSubmit}>
-      <div className="px-6 py-4 border-b border-border">
-        <h2 className="text-xl font-semibold text-foreground">New automation</h2>
-        <p className="text-sm text-muted-foreground">
-          Runs an agent with your prompt on a recurring schedule.
-        </p>
-      </div>
+      <ModalHeader title="New automation" />
 
-      <div className="max-h-[65dvh] overflow-y-auto px-6 py-5 space-y-5">
+      <ModalBody>
         <div>
           <label className="block text-sm text-muted-foreground mb-1">Agent</label>
           <Select value={effectiveAgentId} onChange={setAgentId} options={agentOptions} />
         </div>
         <div>
-          <label className="block text-sm text-muted-foreground mb-1">Task Name</label>
+          <label className="block text-sm text-muted-foreground mb-1">Task name</label>
           <Input
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -287,9 +282,9 @@ function CreateTaskModalContent({ onClose }: { onClose: () => void }) {
           <label className="block text-sm text-muted-foreground mb-1">Timezone</label>
           <TimezoneSelect value={timezone} onChange={setTimezoneOverride} allowAutomatic={false} />
         </div>
-      </div>
+      </ModalBody>
 
-      <div className="px-6 py-4 border-t border-border flex justify-end gap-2">
+      <ModalFooter>
         <Button type="button" variant="ghost" onClick={onClose}>
           Cancel
         </Button>
@@ -297,7 +292,7 @@ function CreateTaskModalContent({ onClose }: { onClose: () => void }) {
           {submitting ? <CircleNotch size={16} className="animate-spin" /> : <Plus size={16} />}
           Create Task
         </Button>
-      </div>
+      </ModalFooter>
     </form>
   );
 }

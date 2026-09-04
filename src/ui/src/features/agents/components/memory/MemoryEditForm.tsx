@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { FloppyDisk, Plus, X } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { MemoryCategory } from "@uniffy/proto/agents/v1/memories_pb";
 import type { SerializedMemory } from "@/features/agents/store/agentMemoriesThunks";
 import { CATEGORY_EDIT_OPTIONS } from "@/features/agents/components/memory/memoryCategories";
@@ -12,9 +14,6 @@ export interface MemoryFormValues {
   category: number;
   importance: number;
 }
-
-const inputClass =
-  "w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring";
 
 function FormFields({
   form,
@@ -27,23 +26,22 @@ function FormFields({
     <>
       <div>
         <label className="text-xs font-medium text-muted-foreground mb-1 block">Description</label>
-        <input
+        <Input
           type="text"
           value={form.description}
           onChange={(e) => onChange({ ...form, description: e.target.value })}
           placeholder="One-line summary shown in the agent's memory index"
           maxLength={255}
           required
-          className={inputClass}
         />
       </div>
       <div>
         <label className="text-xs font-medium text-muted-foreground mb-1 block">Content</label>
-        <textarea
+        <Textarea
           value={form.content}
           onChange={(e) => onChange({ ...form, content: e.target.value })}
           placeholder="What should the agent remember?"
-          className={`${inputClass} resize-y min-h-[60px]`}
+          className="resize-y min-h-[60px]"
           rows={3}
         />
       </div>
@@ -130,7 +128,7 @@ export function MemoryCreateForm({
   const canSubmit = key.trim() && form.description.trim() && form.content.trim();
 
   return (
-    <div className="bg-card border border-border rounded-lg overflow-hidden">
+    <div className="overflow-hidden rounded-xl bg-card shadow-edge">
       <div className="px-4 py-3 bg-muted/30 flex items-center gap-2">
         <Plus size={16} className="text-primary" />
         <span className="text-sm font-medium text-foreground">Add Memory</span>
@@ -138,12 +136,11 @@ export function MemoryCreateForm({
       <div className="p-4 space-y-3">
         <div>
           <label className="text-xs font-medium text-muted-foreground mb-1 block">Key</label>
-          <input
+          <Input
             type="text"
             value={key}
             onChange={(e) => setKey(e.target.value)}
             placeholder="Short descriptive key (e.g. preferred_format, project_deadline)"
-            className={inputClass}
             onKeyDown={(e) => {
               if (e.key === "Escape") onCancel();
             }}

@@ -47,7 +47,7 @@ export function ThreadFooter({
     >
       <SubjectAvatarStack subjectIds={participantIds} size="xs" maxDisplay={4} />
 
-      {hasUnread && <div className="w-1.5 h-1.5 rounded-full bg-blue-500 flex-shrink-0" />}
+      {hasUnread && <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />}
 
       <span className="text-xs font-medium text-primary">
         {replyCount} {replyCount === 1 ? "reply" : "replies"}

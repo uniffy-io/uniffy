@@ -32,7 +32,7 @@ function SidebarNavLink({ to, icon: IconComponent, label, active, testId }: Side
       data-testid={testId}
       className={cn(
         "group/nav flex items-center gap-2.5 rounded-md px-3 py-2 transition-colors",
-        active ? "bg-primary/10" : "hover:bg-accent",
+        active ? "bg-muted" : "hover:bg-muted/60",
       )}
     >
       <IconComponent

@@ -71,7 +71,10 @@ export function StorageUsageIndicator({ className }: StorageUsageIndicatorProps)
 
   if (canAccessAdmin) {
     return (
-      <Link to="/admin/storage" className="block hover:bg-accent/50 rounded-md transition-colors">
+      <Link
+        to="/admin/storage"
+        className="block hover:bg-foreground/5 rounded-md transition-colors"
+      >
         {content}
       </Link>
     );

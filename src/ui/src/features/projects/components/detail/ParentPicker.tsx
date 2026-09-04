@@ -1,8 +1,12 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { MagnifyingGlass, X, PencilSimple, Plus } from "@phosphor-icons/react";
+import { popoverShellClass } from "@/components/ui/popover";
+import { useOverlayEscape } from "@/shared/hooks/useOverlayEscape";
 import { cn } from "@/shared/utils/cn";
+import { TaskTypeIcon } from "@/features/projects/components/TaskTypeIcon";
 import { getTaskTypeConfig } from "@/features/projects/utils/taskTypes";
+import { statusPaint } from "@/features/projects/utils/statusPaint";
 import { SYSTEM_FIELD_IDS } from "@/features/projects/types";
 import type { Project, Task } from "@/features/projects/types";
 import {
@@ -113,19 +117,11 @@ export function ParentPicker({
       }
       setIsOpen(false);
     };
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.stopPropagation();
-        setIsOpen(false);
-      }
-    };
     document.addEventListener("mousedown", onPointerDown);
-    document.addEventListener("keydown", onKey, { capture: true });
-    return () => {
-      document.removeEventListener("mousedown", onPointerDown);
-      document.removeEventListener("keydown", onKey, { capture: true });
-    };
+    return () => document.removeEventListener("mousedown", onPointerDown);
   }, [isOpen]);
+
+  useOverlayEscape(() => setIsOpen(false), isOpen);
 
   const closeAndReset = useCallback(() => {
     setIsOpen(false);
@@ -160,7 +156,6 @@ export function ParentPicker({
       );
     }
 
-    const TypeIcon = getTaskTypeConfig(currentParent.taskType || "task").icon;
     const ticket = `${project?.slug ?? ""}-${currentParent.number}`;
     const statusOption = statusField?.config.options?.find((o) => o.id === currentParent.status);
     const breadcrumbTitle = [...ancestorBreadcrumb, currentParent].map((a) => a.title).join(" / ");
@@ -173,15 +168,16 @@ export function ParentPicker({
           className="flex-1 min-w-0 flex items-center gap-2 rounded-md border border-border bg-muted/30 hover:bg-muted/60 px-2 py-1 text-left transition-colors"
           title={breadcrumbTitle}
         >
-          <TypeIcon size={12} weight="fill" className="text-muted-foreground shrink-0" />
+          <TaskTypeIcon type={currentParent.taskType} size={12} className="text-muted-foreground" />
           <span className="font-mono text-xs text-muted-foreground shrink-0">{ticket}</span>
           <span className="text-sm text-foreground truncate">{currentParent.title}</span>
           {statusOption && (
             <span
               className="ml-auto text-[10px] px-1.5 py-0.5 rounded shrink-0"
               style={{
-                backgroundColor: `${statusOption.color}20`,
-                color: statusOption.color,
+                backgroundColor: statusPaint(statusField?.config.options ?? [], statusOption.id)
+                  .translucent,
+                color: statusPaint(statusField?.config.options ?? [], statusOption.id).solid,
               }}
             >
               {statusOption.label}
@@ -219,7 +215,7 @@ export function ParentPicker({
       ? createPortal(
           <div
             ref={dropdownRef}
-            className="fixed z-[300] rounded-lg border border-border bg-card shadow-xl flex flex-col max-h-[60vh]"
+            className={cn(popoverShellClass, "fixed z-[300] flex flex-col max-h-[60vh]")}
             style={{
               top: position.top,
               left: position.left,
@@ -254,7 +250,6 @@ export function ParentPicker({
               <div className="mt-2 flex gap-1">
                 {(["epic", "story"] as const).map((type) => {
                   const cfg = getTaskTypeConfig(type);
-                  const Icon = cfg.icon;
                   const active = typeFilter === type;
                   return (
                     <button
@@ -268,7 +263,7 @@ export function ParentPicker({
                           : "border-border text-muted-foreground hover:text-foreground hover:bg-muted",
                       )}
                     >
-                      <Icon size={10} weight={active ? "fill" : "regular"} />
+                      <TaskTypeIcon type={type} size={10} />
                       Only {cfg.label}s
                     </button>
                   );
@@ -284,7 +279,6 @@ export function ParentPicker({
               ) : (
                 <ul className="py-1">
                   {results.map((t) => {
-                    const Icon = getTaskTypeConfig(t.taskType || "task").icon;
                     const ticket = `${project?.slug ?? ""}-${t.number}`;
                     const statusOption = statusField?.config.options?.find(
                       (o) => o.id === t.status,
@@ -296,10 +290,10 @@ export function ParentPicker({
                           onClick={() => handleSelect(t.id)}
                           className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-muted transition-colors"
                         >
-                          <Icon
+                          <TaskTypeIcon
+                            type={t.taskType}
                             size={12}
-                            weight="fill"
-                            className="text-muted-foreground shrink-0"
+                            className="text-muted-foreground"
                           />
                           <span className="font-mono text-xs text-muted-foreground shrink-0">
                             {ticket}
@@ -309,8 +303,14 @@ export function ParentPicker({
                             <span
                               className="text-[10px] px-1.5 py-0.5 rounded shrink-0"
                               style={{
-                                backgroundColor: `${statusOption.color}20`,
-                                color: statusOption.color,
+                                backgroundColor: statusPaint(
+                                  statusField?.config.options ?? [],
+                                  statusOption.id,
+                                ).translucent,
+                                color: statusPaint(
+                                  statusField?.config.options ?? [],
+                                  statusOption.id,
+                                ).solid,
                               }}
                             >
                               {statusOption.label}

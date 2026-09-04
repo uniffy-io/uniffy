@@ -1,5 +1,6 @@
 import { useRef, useCallback } from "react";
 import { MagnifyingGlass, X } from "@phosphor-icons/react";
+import { Input } from "@/components/ui/input";
 import { cn } from "@/shared/utils/cn";
 
 interface NotificationSearchProps {
@@ -26,28 +27,22 @@ export function NotificationSearch({
     <div className={cn("relative", className)}>
       <MagnifyingGlass
         size={14}
-        className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground/60"
+        className="absolute left-2.5 top-1/2 -translate-y-1/2 text-subtle-foreground"
       />
-      <input
+      <Input
         ref={inputRef}
         type="text"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className={cn(
-          "w-full h-8 pl-8 pr-8 rounded-md text-xs",
-          "bg-muted/50 border border-border/50",
-          "text-foreground placeholder:text-muted-foreground/50",
-          "focus:outline-none focus:ring-1 focus:ring-ring focus:border-border",
-          "transition-colors",
-        )}
+        className="h-8 pl-8 pr-8 text-xs"
       />
       {value && (
         <button
           onClick={handleClear}
           className={cn(
             "absolute right-2 top-1/2 -translate-y-1/2",
-            "p-0.5 rounded text-muted-foreground/60",
+            "p-0.5 rounded text-subtle-foreground",
             "hover:text-foreground transition-colors",
           )}
         >

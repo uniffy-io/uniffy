@@ -10,6 +10,8 @@ import {
   Funnel,
 } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
+import { Input, controlShellClass } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { IconPicker, renderIcon, type IconValue } from "@/components/icon-picker";
 import { cn } from "@/shared/utils/cn";
 import { TagPicker } from "@/features/tags";
@@ -240,7 +242,11 @@ export function FilterBuilder({
             <button
               type="button"
               onClick={() => setIsIconPickerOpen(!isIconPickerOpen)}
-              className="w-12 h-10 flex items-center justify-center bg-background border border-input rounded-md hover:border-primary/50 transition-colors"
+              className={cn(
+                controlShellClass,
+                "focus-ring w-12 h-10 flex items-center justify-center",
+                isIconPickerOpen && "border-border-strong",
+              )}
             >
               {icon ? (
                 icon.type === "emoji" ? (
@@ -269,12 +275,11 @@ export function FilterBuilder({
             <label className="block text-sm font-medium mb-1.5">
               Filter Name <span className="text-destructive">*</span>
             </label>
-            <input
+            <Input
               type="text"
               value={name}
               onChange={handleNameChange}
               placeholder="e.g., My Images, Work Documents"
-              className="w-full px-3 py-2 bg-background border border-input rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-ring"
               maxLength={100}
             />
           </div>
@@ -283,12 +288,11 @@ export function FilterBuilder({
         {/* Description */}
         <div>
           <label className="block text-sm font-medium mb-1.5">Description</label>
-          <textarea
+          <Textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Optional description of what this filter finds..."
             rows={2}
-            className="w-full px-3 py-2 bg-background border border-input rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none"
             maxLength={500}
           />
         </div>
@@ -306,10 +310,10 @@ export function FilterBuilder({
                   type="button"
                   onClick={() => handleCategoryToggleWithClear(cat.id)}
                   className={cn(
-                    "inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md border transition-colors",
-                    isSelected
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "bg-background border-input hover:border-primary/50",
+                    controlShellClass,
+                    "focus-ring inline-flex items-center gap-1.5 px-3 py-1.5 text-sm",
+                    isSelected &&
+                      "bg-primary text-primary-foreground border-primary hover:border-primary",
                   )}
                 >
                   <Icon size={16} weight={isSelected ? "fill" : "duotone"} />
@@ -324,13 +328,13 @@ export function FilterBuilder({
         <div>
           <label className="block text-sm font-medium mb-2">File Extensions</label>
           <div className="flex gap-2 mb-2">
-            <input
+            <Input
               type="text"
               value={extensionInput}
               onChange={(e) => setExtensionInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleAddExtension())}
               placeholder="e.g., pdf, docx"
-              className="flex-1 px-3 py-1.5 bg-background border border-input rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              className="flex-1 h-9 py-1.5"
             />
             <Button variant="outline" size="sm" onClick={handleAddExtension}>
               <Plus size={14} weight="bold" />
@@ -392,10 +396,10 @@ export function FilterBuilder({
                   type="button"
                   onClick={() => handleSizePreset(preset.min, preset.max)}
                   className={cn(
-                    "px-3 py-1.5 text-sm rounded-md border transition-colors",
-                    isSelected
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "bg-background border-input hover:border-primary/50",
+                    controlShellClass,
+                    "focus-ring px-3 py-1.5 text-sm",
+                    isSelected &&
+                      "bg-primary text-primary-foreground border-primary hover:border-primary",
                   )}
                 >
                   {preset.label}
@@ -421,7 +425,10 @@ export function FilterBuilder({
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="w-full px-3 py-2 bg-background border border-input rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              className={cn(
+                controlShellClass,
+                "focus-ring w-full h-10 px-3 text-sm text-foreground",
+              )}
             >
               {SORT_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>
@@ -435,7 +442,10 @@ export function FilterBuilder({
             <select
               value={sortOrder}
               onChange={(e) => setSortOrder(e.target.value)}
-              className="w-full px-3 py-2 bg-background border border-input rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              className={cn(
+                controlShellClass,
+                "focus-ring w-full h-10 px-3 text-sm text-foreground",
+              )}
             >
               <option value="desc">Descending</option>
               <option value="asc">Ascending</option>

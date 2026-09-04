@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, useMemo, useCallback } from "react";
+import React, { useEffect, useState, useMemo, useCallback } from "react";
 import type { Theme } from "@/config/theme/types";
 import { defaultTheme, darkTheme } from "@/config/theme/types";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
@@ -12,17 +12,7 @@ import {
   updateEffectiveSettingsLocal,
   updateSettings,
 } from "@/features/settings/store/settingsSlice";
-
-interface ThemeContextType {
-  theme: Theme;
-  themeMode: ThemeMode;
-  /** Resolves 'system' to the OS preference. */
-  resolvedTheme: "light" | "dark";
-  setTheme: (mode: ThemeMode) => void;
-  availableModes: ThemeMode[];
-}
-
-const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
+import { ThemeContext } from "@/config/theme/themeContext";
 
 /** sRGB relative luminance from an HSL triplet ("221.2 83.2% 53.3%"). Used to pick contrasting foreground. */
 function getLuminance(hsl: string): number {
@@ -177,17 +167,10 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   useEffect(() => {
     const root = window.document.documentElement;
 
-    root.classList.remove("dark");
+    root.classList.toggle("dark", resolvedTheme === "dark");
 
-    if (resolvedTheme === "dark") {
-      root.classList.add("dark");
-    }
-
-    Object.entries(theme.colors).forEach(([key, value]) => {
-      const cssVar = `--${key.replace(/([A-Z])/g, "-$1").toLowerCase()}`;
-      root.style.setProperty(cssVar, value);
-    });
-
+    // The palette itself is stylesheet-owned (:root / .dark in index.css);
+    // inline vars exist only for the user accent and are cleared when unset.
     if (theme.accentColor) {
       root.style.setProperty("--primary", theme.accentColor);
       root.style.setProperty("--ring", theme.accentColor);
@@ -198,9 +181,9 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
       root.style.setProperty("--primary-foreground", foregroundColor);
     } else {
-      root.style.setProperty("--primary", theme.colors.primary);
-      root.style.setProperty("--primary-foreground", theme.colors.primaryForeground);
-      root.style.setProperty("--ring", theme.colors.ring);
+      root.style.removeProperty("--primary");
+      root.style.removeProperty("--ring");
+      root.style.removeProperty("--primary-foreground");
     }
 
     if (theme.fontFamily) {
@@ -234,13 +217,4 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
-};
-
-// eslint-disable-next-line react-refresh/only-export-components
-export const useTheme = () => {
-  const context = useContext(ThemeContext);
-  if (context === undefined) {
-    throw new Error("useTheme must be used within a ThemeProvider");
-  }
-  return context;
 };

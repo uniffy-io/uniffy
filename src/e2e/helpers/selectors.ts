@@ -172,7 +172,6 @@ export const reactions = {
 
 export const modals = {
   createChannelModal: 'chat-create-channel-modal',
-  createChannelClose: 'chat-create-channel-close',
   createChannelName: 'chat-create-channel-name-input',
   createChannelDescription: 'chat-create-channel-description-input',
   createChannelTypePublic: 'chat-create-channel-type-public',
@@ -181,7 +180,6 @@ export const modals = {
   createChannelSubmit: 'chat-create-channel-submit',
 
   createCategoryModal: 'chat-create-category-modal',
-  createCategoryClose: 'chat-create-category-close',
   createCategoryName: 'chat-create-category-name-input',
   createCategoryCancel: 'chat-create-category-cancel',
   createCategorySubmit: 'chat-create-category-submit',
@@ -194,7 +192,6 @@ export const modals = {
   browseChannelsOpen: (id: string) => `chat-browse-channels-open-${id}`,
 
   newDmModal: 'chat-new-dm-modal',
-  newDmClose: 'chat-new-dm-close',
   newDmSearchInput: 'chat-new-dm-search-input',
   newDmCancel: 'chat-new-dm-cancel',
   newDmSubmit: 'chat-new-dm-submit',
@@ -212,7 +209,6 @@ export const modals = {
   confirmDialogMessage: 'confirm-dialog-message',
   confirmDialogConfirm: 'confirm-dialog-confirm',
   confirmDialogCancel: 'confirm-dialog-cancel',
-  confirmDialogClose: 'confirm-dialog-close',
 } as const;
 
 export const mentionPopup = {

@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
-import { useTheme } from "@/config/theme/ThemeProvider";
+import { useTheme } from "@/config/theme/themeContext";
 import { Button } from "@/components/ui/button";
+import { ToggleSwitch } from "@/components/ui/toggle-switch";
 import { friendlyErrorMessage } from "@/config";
 import { systemConfigApi } from "@/features/platform/api/systemConfigApi";
 import {
@@ -18,37 +19,6 @@ import {
   Moon,
 } from "@phosphor-icons/react";
 import { cn } from "@/shared/utils/cn";
-
-interface ToggleSwitchProps {
-  enabled: boolean;
-  onChange: (enabled: boolean) => void;
-  disabled?: boolean;
-}
-
-function ToggleSwitch({ enabled, onChange, disabled }: ToggleSwitchProps) {
-  return (
-    <button
-      type="button"
-      onClick={() => !disabled && onChange(!enabled)}
-      disabled={disabled}
-      className={cn(
-        "relative inline-flex h-6 w-11 items-center rounded-full transition-all duration-300 ease-in-out",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-        "disabled:opacity-50 disabled:cursor-not-allowed",
-        enabled
-          ? "bg-gradient-to-r from-blue-500 to-blue-600 shadow-sm shadow-blue-500/25"
-          : "bg-muted/80",
-      )}
-    >
-      <span
-        className={cn(
-          "inline-block h-4 w-4 transform rounded-full bg-white shadow-lg transition-transform duration-300 ease-in-out",
-          enabled ? "translate-x-6" : "translate-x-1",
-        )}
-      />
-    </button>
-  );
-}
 
 interface SettingItemProps {
   icon: React.ComponentType<{ className?: string }>;
@@ -70,7 +40,7 @@ function SettingItem({
   disabled,
 }: SettingItemProps) {
   return (
-    <div className="group relative overflow-hidden rounded-xl border border-border bg-card hover:border-primary/50 transition-all duration-300 hover:shadow-md hover:shadow-primary/5">
+    <div className="group relative overflow-hidden rounded-xl bg-card shadow-edge transition-shadow duration-150 hover:shadow-edge-strong">
       <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
       <div className="relative flex items-center justify-between p-3 md:p-5">
         <div className="flex items-start gap-4 flex-1">
@@ -210,7 +180,7 @@ export function ServerSettingsPage() {
         </div>
       </div>
 
-      <div className="rounded-xl border border-border bg-card overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300">
+      <div className="rounded-xl bg-surface shadow-edge overflow-hidden">
         <div className="border-b border-border bg-muted/30 px-4 md:px-6 py-3 md:py-4">
           <div className="flex items-center gap-3">
             <PaintBrush size={20} weight="duotone" className="text-primary" />
@@ -229,10 +199,10 @@ export function ServerSettingsPage() {
                   key={mode}
                   onClick={() => setTheme(mode)}
                   className={cn(
-                    "flex-1 rounded-lg border-2 p-4 transition-all duration-300 hover:scale-[1.02]",
+                    "flex-1 rounded-lg p-4 transition-shadow duration-150",
                     themeMode === mode
-                      ? "border-primary bg-primary/10 shadow-md shadow-primary/20"
-                      : "border-border bg-card hover:border-primary/30 hover:bg-accent/50",
+                      ? "bg-primary/5 shadow-edge-primary"
+                      : "bg-card shadow-edge hover:shadow-edge-strong",
                   )}
                 >
                   <div className="flex flex-col items-center gap-2">
@@ -249,7 +219,7 @@ export function ServerSettingsPage() {
         </div>
       </div>
 
-      <div className="rounded-xl border border-border bg-card overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300">
+      <div className="rounded-xl bg-surface shadow-edge overflow-hidden">
         <div className="border-b border-border bg-muted/30 px-4 md:px-6 py-3 md:py-4">
           <div className="flex items-center gap-3">
             <ShieldCheck size={20} weight="duotone" className="text-primary" />
@@ -291,7 +261,7 @@ export function ServerSettingsPage() {
         </div>
       </div>
 
-      <div className="rounded-xl border border-border bg-card overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300">
+      <div className="rounded-xl bg-surface shadow-edge overflow-hidden">
         <div className="border-b border-border bg-muted/30 px-4 md:px-6 py-3 md:py-4">
           <div className="flex items-center gap-3">
             <HardDrives size={20} weight="duotone" className="text-primary" />
@@ -322,7 +292,7 @@ export function ServerSettingsPage() {
         </div>
       </div>
 
-      <div className="rounded-xl border border-border bg-card overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300">
+      <div className="rounded-xl bg-surface shadow-edge overflow-hidden">
         <div className="border-b border-border bg-muted/30 px-4 md:px-6 py-3 md:py-4">
           <div className="flex items-center gap-3">
             <Bell size={20} weight="duotone" className="text-primary" />

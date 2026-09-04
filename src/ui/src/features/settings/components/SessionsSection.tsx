@@ -10,6 +10,7 @@ import {
 } from "@phosphor-icons/react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import {
   fetchSessions,
   revokeSession,
@@ -79,15 +80,15 @@ export function SessionsSection() {
       )}
 
       {loading ? (
-        <div className="bg-card rounded-lg border border-border p-8 flex items-center justify-center">
+        <Card tone="surface" className="p-8 flex items-center justify-center">
           <SpinnerGap className="w-5 h-5 animate-spin text-muted-foreground" />
-        </div>
+        </Card>
       ) : sessions.length === 0 ? (
-        <div className="bg-card rounded-lg border border-border p-4">
+        <Card tone="surface" className="p-4">
           <p className="text-sm font-medium text-muted-foreground">No active sessions found.</p>
-        </div>
+        </Card>
       ) : (
-        <div className="bg-card rounded-lg border border-border overflow-hidden">
+        <Card tone="surface" className="overflow-hidden">
           <div className="divide-y divide-border">
             {sessions.map((session) => {
               const DeviceIcon = getDeviceIcon(session.deviceLabel);
@@ -131,7 +132,7 @@ export function SessionsSection() {
               );
             })}
           </div>
-        </div>
+        </Card>
       )}
     </section>
   );

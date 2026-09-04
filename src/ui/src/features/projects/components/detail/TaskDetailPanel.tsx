@@ -11,12 +11,10 @@ import {
   CaretRight,
 } from "@phosphor-icons/react";
 import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
+import { useOverlayEscape } from "@/shared/hooks/useOverlayEscape";
 import { toast } from "sonner";
-import {
-  TASK_TYPES,
-  getTaskTypeConfig,
-  getHierarchyRuleViolation,
-} from "@/features/projects/utils/taskTypes";
+import { TaskTypeIcon } from "@/features/projects/components/TaskTypeIcon";
+import { TASK_TYPES, getHierarchyRuleViolation } from "@/features/projects/utils/taskTypes";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
 import { isOverdue } from "@/shared/utils/dateFormatting";
@@ -24,6 +22,8 @@ import { SubjectAvatarStack, SubjectPicker } from "@/components/subject";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { DatePicker } from "@/components/ui/date-picker";
+import { Input } from "@/components/ui/input";
+import { popoverShellClass } from "@/components/ui/popover";
 import { ExpandableEditor } from "@/components/editor/ExpandableEditor";
 import { MentionChipCompact } from "@/components/mention";
 import {
@@ -38,6 +38,7 @@ import { selectSprintsForProject } from "@/features/projects/store/sprintsSlice"
 import { projectsApi } from "@/features/projects/api/projectsApi";
 import { formatMinutes, parseTimeInput } from "@/features/projects/utils/timeFormatting";
 import type { SelectOption, Sprint, Task } from "@/features/projects/types";
+import { statusPaint } from "@/features/projects/utils/statusPaint";
 import { SYSTEM_FIELD_IDS } from "@/features/projects/types";
 
 import { CommentsPanel } from "@/features/comments/components/CommentsPanel";
@@ -77,17 +78,12 @@ export function TaskDetailPanel({ taskId, variant = "sidebar" }: TaskDetailPanel
     dispatch(selectTask(null));
   };
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        const tag = (e.target as HTMLElement).tagName;
-        if (tag === "INPUT" || tag === "TEXTAREA") return;
-        handleClose();
-      }
-    };
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useOverlayEscape(() => {
+    // Escape inside a field cancels the field edit, not the whole panel.
+    const tag = document.activeElement?.tagName;
+    if (tag === "INPUT" || tag === "TEXTAREA") return;
+    handleClose();
+  });
 
   // Build ancestor chain for breadcrumb navigation (must be before early return)
   const ancestorChain = useMemo(() => {
@@ -123,8 +119,6 @@ export function TaskDetailPanel({ taskId, variant = "sidebar" }: TaskDetailPanel
   const priorityOption = priorityField?.config.options?.find((o) => o.id === task.priority);
 
   const ticketId = project ? `${project.slug}-${task.number}` : `#${task.number}`;
-  const typeConfig = getTaskTypeConfig(task.taskType || "task");
-  const TypeIcon = typeConfig.icon;
 
   return (
     <div className="flex flex-col h-full">
@@ -140,7 +134,7 @@ export function TaskDetailPanel({ taskId, variant = "sidebar" }: TaskDetailPanel
               <X size={16} weight="bold" />
             </button>
           )}
-          <TypeIcon size={14} className="text-muted-foreground" weight="fill" />
+          <TaskTypeIcon type={task.taskType} className="text-muted-foreground" />
           <span
             className="text-sm font-mono text-muted-foreground hover:text-foreground cursor-pointer"
             onClick={() => navigator.clipboard.writeText(ticketId)}
@@ -168,7 +162,7 @@ export function TaskDetailPanel({ taskId, variant = "sidebar" }: TaskDetailPanel
         <div className="flex items-center gap-1 text-xs text-muted-foreground px-4 pt-2 flex-wrap">
           {ancestorChain.map((ancestor, i) => (
             <span key={ancestor.id} className="flex items-center gap-1">
-              {i > 0 && <CaretRight size={10} className="text-muted-foreground/50" />}
+              {i > 0 && <CaretRight size={10} className="text-subtle-foreground" />}
               <button
                 type="button"
                 className="font-mono hover:text-foreground hover:underline transition-colors truncate max-w-[150px]"
@@ -179,7 +173,7 @@ export function TaskDetailPanel({ taskId, variant = "sidebar" }: TaskDetailPanel
               </button>
             </span>
           ))}
-          <CaretRight size={10} className="text-muted-foreground/50" />
+          <CaretRight size={10} className="text-subtle-foreground" />
           <span className="font-mono text-foreground font-medium">{ticketId}</span>
         </div>
       )}
@@ -390,7 +384,6 @@ export function TaskDetailPanel({ taskId, variant = "sidebar" }: TaskDetailPanel
                   <span className="text-sm text-muted-foreground w-20 shrink-0 pt-1">Type</span>
                   <div className="flex flex-wrap gap-1.5">
                     {TASK_TYPES.map((type) => {
-                      const TIcon = type.icon;
                       const isActive = (task.taskType || "task") === type.value;
                       return (
                         <button
@@ -417,7 +410,7 @@ export function TaskDetailPanel({ taskId, variant = "sidebar" }: TaskDetailPanel
                               : "border-border text-muted-foreground hover:text-foreground hover:bg-muted",
                           )}
                         >
-                          <TIcon size={12} weight={isActive ? "fill" : "regular"} />
+                          <TaskTypeIcon type={type.value} size={12} />
                           {type.label}
                         </button>
                       );
@@ -852,9 +845,11 @@ interface OptionDropdownProps {
   currentId: string;
   onSelect: (optionId: string) => void;
   onClose: () => void;
+  /** Overrides the stored option colour for the swatch (statuses derive theirs from order). */
+  swatch?: (option: SelectOption) => string;
 }
 
-function OptionDropdown({ options, currentId, onSelect, onClose }: OptionDropdownProps) {
+function OptionDropdown({ options, currentId, onSelect, onClose, swatch }: OptionDropdownProps) {
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -870,7 +865,10 @@ function OptionDropdown({ options, currentId, onSelect, onClose }: OptionDropdow
   return (
     <div
       ref={dropdownRef}
-      className="absolute top-full left-0 z-50 mt-1 min-w-40 rounded-md border border-border bg-card shadow-lg py-1 max-h-60 overflow-y-auto"
+      className={cn(
+        popoverShellClass,
+        "absolute top-full left-0 z-50 mt-1 min-w-40 py-1 max-h-60 overflow-y-auto",
+      )}
     >
       {options.map((option) => (
         <button
@@ -889,7 +887,7 @@ function OptionDropdown({ options, currentId, onSelect, onClose }: OptionDropdow
         >
           <span
             className="w-2 h-2 rounded-full shrink-0"
-            style={{ backgroundColor: option.color }}
+            style={{ background: swatch ? swatch(option) : option.color }}
           />
           {option.label}
         </button>
@@ -907,6 +905,7 @@ interface StatusPickerProps {
 
 function StatusPicker({ currentOption, options, onSelect, disabled }: StatusPickerProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const paint = statusPaint(options, currentOption.id);
   const containerRef = useRef<HTMLDivElement>(null);
 
   return (
@@ -917,16 +916,17 @@ function StatusPicker({ currentOption, options, onSelect, disabled }: StatusPick
         disabled={disabled}
         className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-opacity hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-60"
         style={{
-          backgroundColor: `${currentOption.color}15`,
-          border: `1px solid ${currentOption.color}30`,
+          backgroundColor: paint.translucent,
+          border: `1px solid ${paint.translucent}`,
         }}
       >
-        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: currentOption.color }} />
-        <span style={{ color: currentOption.color }}>{currentOption.label}</span>
+        <div className="w-2 h-2 rounded-full" style={{ background: paint.gradient }} />
+        <span style={{ color: paint.solid }}>{currentOption.label}</span>
       </button>
       {isOpen && (
         <OptionDropdown
           options={options}
+          swatch={(o) => statusPaint(options, o.id).gradient}
           currentId={currentOption.id}
           onSelect={onSelect}
           onClose={() => setIsOpen(false)}
@@ -1001,7 +1001,7 @@ function SprintSelector({ sprints, currentSprintId, onSelect }: SprintSelectorPr
   const statusColors: Record<string, string> = {
     active: "text-green-600",
     planned: "text-muted-foreground",
-    closed: "text-muted-foreground/50",
+    closed: "text-subtle-foreground",
   };
 
   return (
@@ -1020,7 +1020,12 @@ function SprintSelector({ sprints, currentSprintId, onSelect }: SprintSelectorPr
       </button>
 
       {isOpen && (
-        <div className="absolute top-full left-0 z-50 mt-1 w-56 rounded-lg border border-border bg-card shadow-lg py-1 animate-in fade-in-0 zoom-in-95">
+        <div
+          className={cn(
+            popoverShellClass,
+            "absolute top-full left-0 z-50 mt-1 w-56 py-1 animate-in fade-in-0 zoom-in-95",
+          )}
+        >
           <div className="px-3 py-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wider">
             Move to
           </div>
@@ -1103,7 +1108,7 @@ function TimeField({ label, minutes, onSave }: TimeFieldProps) {
         {label}
       </span>
       {isEditing ? (
-        <input
+        <Input
           ref={inputRef}
           type="text"
           value={inputValue}
@@ -1114,7 +1119,7 @@ function TimeField({ label, minutes, onSave }: TimeFieldProps) {
             if (e.key === "Escape") setIsEditing(false);
           }}
           placeholder="e.g. 2h 30m"
-          className="h-6 w-24 px-2 text-xs bg-background border border-border rounded outline-none text-foreground focus:border-primary"
+          className="h-6 w-24 px-2 text-xs"
         />
       ) : (
         <button

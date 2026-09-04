@@ -1,4 +1,5 @@
 import { memo, useState, useCallback, useRef, useEffect } from "react";
+import { useOverlayEscape } from "@/shared/hooks/useOverlayEscape";
 import {
   ArrowBendDoubleUpRight,
   ArrowBendUpLeft,
@@ -14,6 +15,7 @@ import {
 } from "@phosphor-icons/react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { useBookmarkToggle } from "@/features/bookmarks";
+import { popoverShellClass } from "@/components/ui/popover";
 import { cn } from "@/shared/utils/cn";
 import { openThreadPanel } from "@/features/chat/store/chatUiSlice";
 import { setActiveThread } from "@/features/chat/store/chatThreadsSlice";
@@ -77,21 +79,17 @@ function HoverActionsToolbarInner({
         setShowMoreMenu(false);
       }
     };
-    const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setShowMoreMenu(false);
-    };
-
     const timer = setTimeout(() => {
       document.addEventListener("mousedown", handleClickOutside);
-      document.addEventListener("keydown", handleEsc);
     }, 0);
 
     return () => {
       clearTimeout(timer);
       document.removeEventListener("mousedown", handleClickOutside);
-      document.removeEventListener("keydown", handleEsc);
     };
   }, [showMoreMenu]);
+
+  useOverlayEscape(() => setShowMoreMenu(false), showMoreMenu);
 
   const buttonClass = cn(
     "p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted",
@@ -170,8 +168,8 @@ function HoverActionsToolbarInner({
   return (
     <div
       className={cn(
+        popoverShellClass,
         "absolute -top-4 right-4 flex items-center",
-        "bg-card border border-border rounded-lg shadow-md",
         showMoreMenu || showEmojiPicker
           ? "opacity-100 z-50"
           : "opacity-0 group-hover:opacity-100 z-10 transition-opacity duration-150",
@@ -251,8 +249,8 @@ function HoverActionsToolbarInner({
         {showMoreMenu && (
           <div
             className={cn(
-              "absolute top-full right-0 mt-1 z-[60]",
-              "bg-card border border-border rounded-lg shadow-lg py-1",
+              popoverShellClass,
+              "absolute top-full right-0 mt-1 z-[60] py-1",
               "min-w-[160px]",
             )}
             onMouseDown={(e) => e.stopPropagation()}

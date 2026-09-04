@@ -18,6 +18,8 @@ import { ItemContextMenu } from "@/features/files/components/list/ItemContextMen
 import { RenameInput } from "@/features/files/components/list/RenameInput";
 import { ThumbnailImage } from "@/features/files/components/list/ThumbnailImage";
 import { getInitials } from "@/components/subject/utils";
+import { popoverShellClass } from "@/components/ui/popover";
+import { useOverlayEscape } from "@/shared/hooks/useOverlayEscape";
 import { getDownloadGateState } from "@/features/files/utils/transcodeGate";
 
 export interface FileCardProps {
@@ -121,17 +123,7 @@ export function FileCard({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isEditingTags]);
 
-  // Close tags popover on escape
-  useEffect(() => {
-    if (!isEditingTags) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        setIsEditingTags(false);
-      }
-    };
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [isEditingTags]);
+  useOverlayEscape(() => setIsEditingTags(false), isEditingTags);
 
   const handleTagsChange = (newTagIds: string[]) => {
     onUpdateTags(file.id, newTagIds);
@@ -195,7 +187,7 @@ export function FileCard({
       ? createPortal(
           <div
             ref={tagsPopoverRef}
-            className="fixed z-50 p-3 bg-card border border-border rounded-lg shadow-lg w-[280px]"
+            className={cn(popoverShellClass, "fixed z-50 w-[280px] p-3")}
             style={{ top: tagsAnchor.top, left: tagsAnchor.left }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -210,7 +202,7 @@ export function FileCard({
       <div
         ref={cardRef}
         className={cn(
-          "flex items-center gap-3 md:gap-4 px-3 md:px-4 py-2.5 hover:bg-accent/50 transition-colors cursor-pointer border-b border-border group",
+          "flex items-center gap-3 md:gap-4 px-3 md:px-4 py-2.5 hover:bg-foreground/5 transition-colors cursor-pointer border-b border-border group",
           isSelected && !isSelectMode && "bg-accent",
           isChecked && "bg-primary/10",
           isSelectMode && "select-none",

@@ -2,6 +2,9 @@ import { useState, useRef, useEffect, useCallback, type RefObject } from "react"
 import { createPortal } from "react-dom";
 import { MagnifyingGlass, Check, LockSimple } from "@phosphor-icons/react";
 import { cn } from "@/shared/utils/cn";
+import { controlShellClass } from "@/components/ui/input";
+import { popoverShellClass } from "@/components/ui/popover";
+import { useOverlayEscape } from "@/shared/hooks/useOverlayEscape";
 import {
   SUBJECT_TYPE,
   type Subject,
@@ -104,7 +107,7 @@ export function SubjectPicker({
   useEffect(() => {
     if (!onClose) return;
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape" || e.key === "Enter") {
+      if (e.key === "Enter") {
         e.stopPropagation();
         e.preventDefault();
         onClose();
@@ -113,6 +116,8 @@ export function SubjectPicker({
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [onClose]);
+
+  useOverlayEscape(() => onClose?.(), !!onClose);
 
   const handleSelect = useCallback(
     (subject: Subject) => {
@@ -210,14 +215,13 @@ export function SubjectPicker({
             }
           : undefined
       }
-      className={cn(
-        "rounded-lg border border-border bg-card shadow-xl",
-        portal ? "z-200" : "absolute z-50 mt-1 w-full",
-      )}
+      className={cn(popoverShellClass, portal ? "z-200" : "absolute z-50 mt-1 w-full")}
       onClick={(e) => e.stopPropagation()}
     >
       <div className="p-2 border-b border-border">
-        <div className="flex items-center gap-2 px-2 py-1.5 rounded-md border border-border bg-background">
+        <div
+          className={cn(controlShellClass, "focus-ring-within flex items-center gap-2 px-2 py-1.5")}
+        >
           <MagnifyingGlass size={14} className="text-muted-foreground shrink-0" />
           <input
             ref={inputRef}
@@ -227,7 +231,7 @@ export function SubjectPicker({
             onKeyDown={(e) => e.stopPropagation()}
             placeholder={placeholder || defaultPlaceholder}
             disabled={disabled}
-            className="flex-1 text-sm bg-transparent outline-none text-foreground placeholder:text-muted-foreground"
+            className="flex-1 text-sm bg-transparent outline-none text-foreground placeholder:text-subtle-foreground"
           />
         </div>
       </div>

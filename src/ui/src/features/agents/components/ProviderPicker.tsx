@@ -40,10 +40,10 @@ export function ProviderPicker({ value, onChange, className }: ProviderPickerPro
               onClick={() => onChange(entry.id)}
               className={cn(
                 "flex items-center gap-2.5 rounded-lg border px-3 py-3 text-left transition-colors",
-                "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 focus:ring-offset-background",
+                "focus-ring",
                 isSelected
                   ? "border-primary bg-primary/10 text-foreground"
-                  : "border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground",
+                  : "border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground",
               )}
             >
               <ProviderLogo provider={entry.id} size="lg" />

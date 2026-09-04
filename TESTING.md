@@ -842,8 +842,8 @@ surface (chat / notes / calendar / ...) per URN. Sweep in dark AND light, at 102
 - [ ] Thread/reply previews stay compact pills regardless of setting.
 - [ ] Live update: rename the mentioned note in a second tab; the pill label and an open card
       both update without refresh.
-- [ ] No tinted halo anywhere: cards and pills are flat (`bg-card` / solid tint + 1px border);
-      the only glow is the temporary live-update pulse.
+- [ ] No tinted halo anywhere: cards carry the `shadow-edge` ring with no CSS border, pills a
+      solid tint; the only glow is the temporary live-update pulse.
 
 ## Mention people tokens + container previews
 

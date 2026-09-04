@@ -106,7 +106,7 @@ export function MiniCalendar() {
                     // shrinks the circles instead of overlapping them.
                     "mx-auto aspect-square w-full max-w-7 text-[11px] rounded-full",
                     "flex items-center justify-center transition-colors",
-                    !day.isCurrentMonth && "text-muted-foreground/50",
+                    !day.isCurrentMonth && "text-subtle-foreground",
                     day.isCurrentMonth &&
                       !isToday &&
                       !isSelected &&
@@ -115,7 +115,7 @@ export function MiniCalendar() {
                       day.isCurrentMonth &&
                       !isToday &&
                       !isSelected &&
-                      "text-muted-foreground/60",
+                      "text-subtle-foreground",
                     isToday && !isSelected && "bg-primary text-primary-foreground font-semibold",
                     isSelected && "ring-2 ring-primary ring-offset-1 ring-offset-background",
                     isSelected && isToday && "bg-primary text-primary-foreground font-semibold",

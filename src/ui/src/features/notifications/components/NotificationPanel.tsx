@@ -1,5 +1,6 @@
 import { useEffect, useRef, useMemo, useCallback } from "react";
 import { CheckCircle, ArrowsClockwise, BellSimple, X, ArrowRight } from "@phosphor-icons/react";
+import { dialogShellClass } from "@/components/ui/popover";
 import { cn } from "@/shared/utils/cn";
 import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
@@ -163,7 +164,7 @@ function PanelContent({
         ) : filteredNotifications.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 px-6">
             <div className="flex items-center justify-center w-12 h-12 rounded-full bg-muted/50 mb-3">
-              <BellSimple size={24} weight="duotone" className="text-muted-foreground/50" />
+              <BellSimple size={24} weight="duotone" className="text-subtle-foreground" />
             </div>
             <p className="text-sm font-medium text-foreground/60 mb-1">
               {activeFilter === "unread"
@@ -172,7 +173,7 @@ function PanelContent({
                   ? "No matches"
                   : "No notifications yet"}
             </p>
-            <p className="text-xs text-muted-foreground/60 text-center max-w-[200px]">
+            <p className="text-xs text-subtle-foreground text-center max-w-[200px]">
               {activeFilter === "unread"
                 ? "You have no unread notifications"
                 : searchQuery
@@ -184,8 +185,8 @@ function PanelContent({
           <div>
             {timeGroups.map((group) => (
               <div key={group.label}>
-                <div className="sticky top-0 z-10 px-4 py-1.5 bg-card/95 backdrop-blur-sm border-b border-border/50">
-                  <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+                <div className="sticky top-0 z-10 px-4 py-1.5 bg-surface/95 backdrop-blur-sm border-b border-border/50">
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-subtle-foreground">
                     {group.label}
                   </span>
                 </div>
@@ -324,8 +325,8 @@ export function NotificationPanel({ onClose, anchorRef }: NotificationPanelProps
         <div
           ref={panelRef}
           className={cn(
-            "fixed inset-x-0 bottom-0 z-[100] max-h-[85dvh]",
-            "bg-card border-t border-border rounded-t-2xl shadow-xl",
+            dialogShellClass,
+            "fixed inset-x-0 bottom-0 z-[100] max-h-[85dvh] rounded-t-2xl",
             "animate-in slide-in-from-bottom duration-300",
             "flex flex-col overflow-hidden",
           )}
@@ -343,8 +344,8 @@ export function NotificationPanel({ onClose, anchorRef }: NotificationPanelProps
     <div
       ref={panelRef}
       className={cn(
+        dialogShellClass,
         "absolute right-0 z-[100] mt-1.5 w-[min(440px,calc(100vw-2rem))] max-h-[70vh] origin-top-right rounded-xl",
-        "bg-card shadow-xl border border-border",
         "animate-in fade-in slide-in-from-top-2 duration-200",
         "flex flex-col overflow-hidden",
       )}

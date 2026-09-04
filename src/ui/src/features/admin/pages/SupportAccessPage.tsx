@@ -103,7 +103,7 @@ export function SupportAccessPage() {
         </div>
       </div>
 
-      <div className="rounded-lg border border-border bg-card p-4 space-y-3">
+      <div className="rounded-xl bg-surface shadow-edge p-4 space-y-3">
         <div className="flex items-center gap-2 text-sm font-medium">
           <ShieldCheck size={16} weight="duotone" />
           Current policy
@@ -195,8 +195,10 @@ function PolicyChoice({ title, description, active, disabled, onClick }: PolicyC
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        "w-full text-left rounded-lg border p-4 transition-colors",
-        active ? "border-primary bg-primary/5" : "border-border bg-card hover:bg-accent",
+        "w-full text-left rounded-xl p-4 transition-shadow duration-150",
+        active
+          ? "bg-primary/5 shadow-edge-primary"
+          : "bg-surface shadow-edge hover:shadow-edge-strong",
         disabled && "opacity-60 cursor-not-allowed",
       )}
     >

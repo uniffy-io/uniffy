@@ -1,6 +1,9 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
+import { useOverlayEscape } from "@/shared/hooks/useOverlayEscape";
 import { MagnifyingGlass, X } from "@phosphor-icons/react";
+import { Input } from "@/components/ui/input";
+import { dialogShellClass } from "@/components/ui/popover";
 import { cn } from "@/shared/utils/cn";
 import { useAppDispatch } from "@/app/hooks";
 import { useChatSearch } from "@/features/chat/hooks/useChatSearch";
@@ -90,13 +93,10 @@ export function ChatSearchPanel({
     [dispatch, onClose],
   );
 
+  useOverlayEscape(onClose);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        onClose();
-        return;
-      }
-
       if (results.length === 0) return;
 
       if (e.key === "ArrowDown") {
@@ -117,7 +117,7 @@ export function ChatSearchPanel({
     };
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [onClose, results, focusedIndex, handleNavigate]);
+  }, [results, focusedIndex, handleNavigate]);
 
   useEffect(() => {
     if (focusedIndex < 0 || !resultsRef.current) return;
@@ -135,7 +135,10 @@ export function ChatSearchPanel({
   return createPortal(
     <div
       ref={panelRef}
-      className="fixed z-[100] w-[420px] max-w-[calc(100vw-2rem)] max-h-[70vh] bg-card border border-border rounded-xl shadow-xl overflow-hidden flex flex-col"
+      className={cn(
+        dialogShellClass,
+        "fixed z-[100] w-[420px] max-w-[calc(100vw-2rem)] max-h-[70vh] rounded-xl overflow-hidden flex flex-col",
+      )}
       style={{ top: position.top, left: position.left }}
       data-testid="chat-search-popover"
       data-loading={isLoading ? "true" : "false"}
@@ -146,17 +149,13 @@ export function ChatSearchPanel({
             size={16}
             className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground"
           />
-          <input
+          <Input
             ref={inputRef}
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search messages..."
-            className={cn(
-              "w-full pl-8 pr-8 py-2 rounded-lg text-sm",
-              "bg-muted border border-border text-foreground placeholder:text-muted-foreground",
-              "focus:outline-none focus:ring-1 focus:ring-ring focus:border-transparent",
-            )}
+            className="h-9 rounded-lg pl-8 pr-8"
             data-testid="chat-search-input"
           />
           {query && (

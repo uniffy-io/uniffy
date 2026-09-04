@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState, useRef } from "react";
 import {
-  X,
   Users,
   UserPlus,
   UserMinus,
@@ -13,7 +12,7 @@ import {
   Check,
 } from "@phosphor-icons/react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
-import { Modal } from "@/components/ui/modal";
+import { Modal, ModalBody, ModalHeader } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -24,6 +23,7 @@ import { SUBJECT_TYPE } from "@/components/subject/types";
 import { AgentAvatar } from "@/features/agents/components/AgentAvatar";
 import { selectAllAgents } from "@/features/agents/store/agentsSlice";
 import { cn } from "@/shared/utils/cn";
+import { popoverShellClass } from "@/components/ui/popover";
 import { selectActiveChannel, selectChannelMembers } from "@/features/chat/store/chatChannelsSlice";
 import { closeChannelSettingsModal } from "@/features/chat/store/chatUiSlice";
 import {
@@ -183,28 +183,21 @@ export function DmMembersModal() {
 
   return (
     <>
-      <Modal onClose={handleClose} closeDisabled={isConverting} maxWidth="max-w-lg">
-        <div
-          className="flex flex-col"
-          style={{ maxHeight: "75vh" }}
-          data-testid="chat-dm-members-modal"
-        >
-          <div className="flex items-center justify-between px-6 pt-6 pb-2 shrink-0">
-            <h2 className="text-xl font-semibold text-foreground">
-              {isGroupDm ? "Group chat" : "Direct message"}
-            </h2>
-            <button
-              type="button"
-              onClick={handleClose}
-              disabled={isConverting}
-              className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
-              data-testid="chat-dm-members-close"
-            >
-              <X size={20} />
-            </button>
-          </div>
+      <Modal
+        onClose={handleClose}
+        closeDisabled={isConverting}
+        maxWidth="max-w-lg"
+        className="flex flex-col max-h-[85dvh]"
+      >
+        <div className="flex flex-col min-h-0" data-testid="chat-dm-members-modal">
+          <ModalHeader
+            title={isGroupDm ? "Group chat" : "Direct message"}
+            onClose={handleClose}
+            closeDisabled={isConverting}
+            closeTestId="chat-dm-members-close"
+          />
 
-          <div className="mx-6 mt-2 mb-4 shrink-0">
+          <div className="px-6 py-4 border-b border-border shrink-0">
             <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/30 p-3.5">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
                 {isGroupDm ? (
@@ -224,14 +217,15 @@ export function DmMembersModal() {
             </div>
           </div>
 
-          <div className="border-b border-border shrink-0" />
-
-          <div className="flex-1 overflow-y-auto min-h-0">
+          <ModalBody scrollable={false} className="flex-1 min-h-0 overflow-y-auto p-0 space-y-0">
             {canAdd && (
               <div className="px-6 pt-4">
-                <div className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 focus-within:ring-2 focus-within:ring-ring">
-                  <MagnifyingGlass size={14} className="text-muted-foreground shrink-0" />
-                  <input
+                <div className="relative">
+                  <MagnifyingGlass
+                    size={14}
+                    className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground"
+                  />
+                  <Input
                     ref={addInputRef}
                     type="text"
                     value={addMemberQuery}
@@ -242,13 +236,13 @@ export function DmMembersModal() {
                     onFocus={() => setShowAddMember(true)}
                     placeholder="Search people to add..."
                     disabled={isAddingMembers}
-                    className="flex-1 text-sm bg-transparent outline-none text-foreground placeholder:text-muted-foreground"
+                    className="pl-8"
                     data-testid="chat-dm-members-add-search"
                   />
                 </div>
 
                 {showAddMember && addMemberQuery.length >= 2 && (
-                  <div className="mt-1 rounded-lg border border-border bg-card shadow-lg max-h-[220px] overflow-y-auto">
+                  <div className={cn(popoverShellClass, "mt-1 max-h-[220px] overflow-y-auto")}>
                     {searchLoading && searchResults.length === 0 ? (
                       <div className="px-4 py-6 text-center text-sm text-muted-foreground">
                         Searching...
@@ -466,7 +460,7 @@ export function DmMembersModal() {
                             "relative flex items-center gap-3 rounded-lg border p-3.5 text-left transition-colors",
                             convertType === id
                               ? "border-primary bg-primary/5"
-                              : "border-border bg-muted/30 hover:border-muted-foreground/30",
+                              : "border-border bg-muted/30 hover:border-border-strong",
                           )}
                           data-testid={`chat-dm-convert-type-${id}`}
                           data-selected={convertType === id ? "true" : "false"}
@@ -528,7 +522,7 @@ export function DmMembersModal() {
                 )}
               </div>
             )}
-          </div>
+          </ModalBody>
         </div>
       </Modal>
 

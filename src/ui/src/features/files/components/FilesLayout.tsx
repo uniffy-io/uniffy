@@ -1,5 +1,6 @@
 import { type ReactNode, useState, useCallback } from "react";
-import { Panel, Group, Separator } from "react-resizable-panels";
+import { Panel, Group } from "react-resizable-panels";
+import { PaneSeparator } from "@/components/ui/pane-separator";
 import { SquaresFour, LockSimple, Buildings } from "@phosphor-icons/react";
 import { useAppSelector } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
@@ -83,18 +84,18 @@ export function FilesLayout({
               defaultSize={isMobileOrTablet ? 200 : 260}
               minSize={160}
               maxSize={isMobileOrTablet ? 300 : 400}
-              className="bg-background overflow-hidden"
+              className="bg-nav overflow-hidden"
             >
               {sidebar}
             </Panel>
 
-            <Separator className="w-1 bg-border hover:bg-primary/50 transition-colors cursor-col-resize data-[resize-handle-state=drag]:bg-primary" />
+            <PaneSeparator />
           </>
         )}
 
         {/* Main Content Area */}
         <Panel id="files-content" minSize={isMobileOrTablet ? 200 : 400}>
-          <div className={cn("h-full overflow-hidden bg-card", showCollapsedRail && "ml-12")}>
+          <div className={cn("h-full overflow-hidden bg-surface", showCollapsedRail && "ml-12")}>
             {content}
           </div>
         </Panel>
@@ -102,13 +103,13 @@ export function FilesLayout({
         {/* Right Detail Panel - inline on desktop, drawer on tablet/mobile */}
         {showDetailPanel && detailPanel && !detailAsDrawer && (
           <>
-            <Separator className="w-1 bg-border hover:bg-primary/50 transition-colors cursor-col-resize data-[resize-handle-state=drag]:bg-primary" />
+            <PaneSeparator />
             <Panel
               id="files-detail"
               defaultSize={320}
               minSize={240}
               maxSize={480}
-              className="bg-card overflow-hidden"
+              className="bg-surface overflow-hidden"
             >
               {detailPanel}
             </Panel>

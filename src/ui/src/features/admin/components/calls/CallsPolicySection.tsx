@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { ToggleSwitch } from "@/components/ui/toggle-switch";
 import { Phone, Warning } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { useAppSelector } from "@/app/hooks";
@@ -129,7 +130,7 @@ export function CallsPolicySection() {
       </div>
 
       {error && (
-        <div className="p-4 rounded-lg border border-border">
+        <div className="p-4 rounded-xl bg-surface shadow-edge">
           <div className="flex items-center gap-2 text-sm" style={{ color: "var(--status-error)" }}>
             <Warning size={20} weight="fill" />
             {error}
@@ -138,16 +139,16 @@ export function CallsPolicySection() {
       )}
 
       {loading || !form ? (
-        <div className="rounded-lg border border-border bg-card p-6 text-sm text-muted-foreground">
+        <div className="rounded-xl bg-surface shadow-edge p-6 text-sm text-muted-foreground">
           Loading...
         </div>
       ) : (
-        <div className="rounded-xl border border-border bg-card divide-y divide-border">
+        <div className="rounded-xl bg-surface shadow-edge divide-y divide-border">
           <Row
             title="Calls enabled"
             description="Turn calling on or off for the whole organization."
           >
-            <Toggle
+            <ToggleSwitch
               enabled={form.callsEnabled}
               onChange={(v) => update("callsEnabled", v)}
               disabled={disabled}
@@ -274,33 +275,5 @@ function ClampedNumberInput({
       }}
       className="w-28"
     />
-  );
-}
-
-function Toggle({
-  enabled,
-  onChange,
-  disabled,
-}: {
-  enabled: boolean;
-  onChange: (next: boolean) => void;
-  disabled: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={() => onChange(!enabled)}
-      disabled={disabled}
-      aria-pressed={enabled}
-      className={`relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed ${
-        enabled ? "bg-primary" : "bg-muted"
-      }`}
-    >
-      <span
-        className={`inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition-transform ${
-          enabled ? "translate-x-5" : "translate-x-0"
-        }`}
-      />
-    </button>
   );
 }

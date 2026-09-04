@@ -122,7 +122,7 @@ export function FolderCard({
     return (
       <div
         className={cn(
-          "flex items-center gap-3 md:gap-4 px-3 md:px-4 py-2.5 hover:bg-accent/50 transition-colors cursor-pointer border-b border-border group",
+          "flex items-center gap-3 md:gap-4 px-3 md:px-4 py-2.5 hover:bg-foreground/5 transition-colors cursor-pointer border-b border-border group",
           isChecked && "bg-primary/10",
           isSelectMode && "select-none",
         )}

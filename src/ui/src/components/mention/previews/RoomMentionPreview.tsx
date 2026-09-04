@@ -3,14 +3,13 @@ import { useState, useCallback } from "react";
 import { Clock, ArrowSquareOut, CopySimple, Check, Door } from "@phosphor-icons/react";
 import { formatRelativeTime } from "@/shared/utils/dateFormatting";
 import { cn } from "@/shared/utils/cn";
-import { UrnType } from "@/shared/utils/urn";
-import { getUrnTypeTheme } from "@/config/theme/urnColors";
+import { MENTION_ACCENT } from "@/components/mention/mentionConstants";
 import { MetaSeparator } from "@/components/mention/previews/ParentBadge";
 import { ROOM_TYPE_LABELS } from "@/features/rooms/types/room";
 import type { RoomType } from "@/features/rooms/types/room";
 import type { MentionLiveState } from "@/components/mention/types";
 
-const theme = getUrnTypeTheme(UrnType.ROOM);
+const theme = MENTION_ACCENT;
 
 interface RoomMentionPreviewProps {
   urn: string;
@@ -113,7 +112,7 @@ export function RoomMentionPreview({
         </span>
       )}
 
-      <span className="flex px-4 py-1.5 pl-5 bg-muted/30 border-t border-border/50 items-center justify-between">
+      <span className="flex px-4 py-1.5 pl-5 bg-background/60 items-center justify-between">
         <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <Clock size={12} weight="duotone" />
           <span>{formatRelativeTime(liveState.updatedAt) || "No date"}</span>

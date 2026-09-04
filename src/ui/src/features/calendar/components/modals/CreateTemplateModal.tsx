@@ -1,7 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/ui/modal";
 import { NumberInput } from "@/components/ui/number-input";
+import { Select } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { createEventTemplate, updateEventTemplate } from "@/features/calendar/store/calendarThunks";
 import { AccessMode } from "@uniffy/proto/common/v1/common_pb";
 
@@ -46,18 +50,6 @@ export function CreateTemplateModal({ isOpen, onClose }: CreateTemplateModalProp
     }
   }
 
-  useEffect(() => {
-    if (isOpen) {
-      const handleKeyDown = (e: KeyboardEvent) => {
-        if (e.key === "Escape") {
-          onClose();
-        }
-      };
-      document.addEventListener("keydown", handleKeyDown);
-      return () => document.removeEventListener("keydown", handleKeyDown);
-    }
-  }, [isOpen, onClose]);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -98,90 +90,67 @@ export function CreateTemplateModal({ isOpen, onClose }: CreateTemplateModalProp
 
   if (!isOpen) return null;
 
-  const categoryArray = Object.values(categories);
+  const categoryOptions = [
+    { value: "", label: "No category" },
+    ...Object.values(categories).map((category) => ({
+      value: category.id,
+      label: category.name,
+    })),
+  ];
   const isEditing = !!editingTemplateId;
 
   return (
-    <>
-      <div className="fixed inset-0 bg-black/50 z-40" onClick={onClose} />
+    <Modal onClose={onClose} closeDisabled={isLoading} maxWidth="max-w-md">
+      <form onSubmit={handleSubmit}>
+        <ModalHeader title={isEditing ? "Edit template" : "New template"} />
 
-      <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-background rounded-lg shadow-lg z-50 w-[calc(100vw-2rem)] max-w-96 border border-border">
-        <div className="flex items-center justify-between p-4 border-b border-border">
-          <h2 className="text-lg font-semibold text-foreground">
-            {isEditing ? "Edit Template" : "New Template"}
-          </h2>
-          <button
-            onClick={onClose}
-            className="text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="p-4 space-y-4">
+        <ModalBody>
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1">Template Name</label>
-            <input
+            <label className="block text-sm text-muted-foreground mb-1">Name</label>
+            <Input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="e.g., Daily Standup, Code Review"
-              className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+              placeholder="e.g. Daily Standup, Code Review"
               autoFocus
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1">
+            <label className="block text-sm text-muted-foreground mb-1">
               Description (optional)
             </label>
-            <textarea
+            <Textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Add notes about this template..."
               rows={3}
-              className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary resize-none"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1">
-              Location (optional)
-            </label>
-            <input
+            <label className="block text-sm text-muted-foreground mb-1">Location (optional)</label>
+            <Input
               type="text"
               value={location}
               onChange={(e) => setLocation(e.target.value)}
               placeholder="e.g. Conference Room A or Zoom Link"
-              className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1">Category</label>
-            <select
+            <label className="block text-sm text-muted-foreground mb-1">Category</label>
+            <Select
               value={selectedCategoryId}
-              onChange={(e) => setSelectedCategoryId(e.target.value)}
-              className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-            >
-              {categoryArray.map((category) => (
-                <option key={category.id} value={category.id}>
-                  {category.name}
-                </option>
-              ))}
-            </select>
+              onChange={setSelectedCategoryId}
+              options={categoryOptions}
+              size="md"
+            />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1">
-              Default Duration (minutes)
+            <label className="block text-sm text-muted-foreground mb-1">
+              Default duration (minutes)
             </label>
             <NumberInput
               value={duration}
@@ -191,29 +160,17 @@ export function CreateTemplateModal({ isOpen, onClose }: CreateTemplateModalProp
               className="text-foreground"
             />
           </div>
+        </ModalBody>
 
-          <div className="flex gap-2 pt-4 border-t border-border">
-            <Button
-              variant="outline"
-              size="md"
-              className="flex-1"
-              onClick={onClose}
-              disabled={isLoading}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              size="md"
-              className="flex-1"
-              loading={isLoading}
-              disabled={!name.trim() || isLoading}
-            >
-              {isLoading ? "Saving..." : isEditing ? "Save Changes" : "Create"}
-            </Button>
-          </div>
-        </form>
-      </div>
-    </>
+        <ModalFooter>
+          <Button type="button" variant="ghost" onClick={onClose} disabled={isLoading}>
+            Cancel
+          </Button>
+          <Button type="submit" loading={isLoading} disabled={!name.trim() || isLoading}>
+            {isLoading ? "Saving..." : isEditing ? "Save changes" : "Create template"}
+          </Button>
+        </ModalFooter>
+      </form>
+    </Modal>
   );
 }

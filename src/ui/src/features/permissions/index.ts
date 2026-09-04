@@ -50,8 +50,8 @@ export { useMyContentRole } from "@/features/permissions/hooks/useMyContentRole"
 export {
   AccessPolicyDialog,
   AccessPolicyDialogProvider,
-  useAccessPolicyDialog,
 } from "@/features/permissions/components/AccessPolicyDialog";
+export { useAccessPolicyDialog } from "@/features/permissions/components/accessPolicyDialogContext";
 export { AccessPolicyPanel } from "@/features/permissions/components/AccessPolicyPanel";
 export { AccessModeIcon } from "@/features/permissions/components/AccessModeIcon";
 export { AccessModeSelector } from "@/features/permissions/components/AccessModeSelector";

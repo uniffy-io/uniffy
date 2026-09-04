@@ -19,11 +19,11 @@ export function NotificationBell() {
         onClick={toggle}
         className={cn(
           "relative flex items-center justify-center w-7 h-7 rounded-md",
-          "border border-border transition-colors duration-150",
-          "focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+          "border border-border-nav transition-colors duration-150",
+          "focus-ring",
           panelOpen
             ? "bg-primary/10 text-primary border-primary/30"
-            : "text-muted-foreground hover:text-primary hover:border-border",
+            : "text-muted-foreground hover:text-primary hover:border-primary/30",
         )}
       >
         <Bell size={20} weight={panelOpen ? "fill" : "duotone"} />

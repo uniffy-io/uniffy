@@ -1,4 +1,4 @@
-/** One persistent stream per session; channel filtering happens client-side against the active channelId. */
+/** One persistent stream per session; channel filtering happens client-side against the live channels (both panes and the open thread's channel). */
 
 import { useEffect, useRef } from "react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
@@ -37,6 +37,7 @@ import {
   appendDeltaToThreadMessage,
   restrictThreadForwardsFromChannel,
   restrictThreadForwardsFromMessage,
+  selectActiveThreadChannelId,
 } from "@/features/chat/store/chatThreadsSlice";
 import {
   updateChannel,
@@ -86,9 +87,21 @@ function hydrateChannel(
     .catch(() => {});
 }
 
+/**
+ * Channels whose events must land in the store live: the left pane, the split
+ * pane, and the channel of the open thread (which can belong to neither pane
+ * when opened from the inbox). Only panes take root messages; the thread's
+ * channel takes thread replies, thread counters, and per-message patches.
+ */
+interface LiveChannels {
+  activeChannelId: string | null;
+  splitChannelId: string | null;
+  threadChannelId: string | null;
+}
+
 function handleChannelEvent(
   event: StreamUserChatEventsResponse,
-  activeChannelId: string | null,
+  live: LiveChannels,
   currentUserId: string,
   organizationId: string,
   dispatch: AppDispatch,
@@ -97,6 +110,8 @@ function handleChannelEvent(
   if (event.payload.case !== "channelEvent" || !event.payload.value) return;
   const ce = event.payload.value;
   const channelId = ce.channelId;
+  const isPane = channelId === live.activeChannelId || channelId === live.splitChannelId;
+  const isLive = isPane || channelId === live.threadChannelId;
 
   if (handleCallStreamEvent(ce, dispatch)) return;
 
@@ -135,8 +150,8 @@ function handleChannelEvent(
           .catch(() => {});
       }
     }
-    if (activeChannelId && channelId === activeChannelId) {
-      dispatch(fetchMembers(activeChannelId));
+    if (isPane) {
+      dispatch(fetchMembers(channelId));
     }
     return;
   }
@@ -151,8 +166,8 @@ function handleChannelEvent(
         return;
       }
     }
-    if (activeChannelId && channelId === activeChannelId) {
-      dispatch(fetchMembers(activeChannelId));
+    if (isPane) {
+      dispatch(fetchMembers(channelId));
     }
     return;
   }
@@ -191,8 +206,8 @@ function handleChannelEvent(
     }
     // Somebody else joined a channel this session already knows about: the
     // roster and member count moved, so refresh them wherever the user is.
-    if (activeChannelId && channelId === activeChannelId) {
-      dispatch(fetchMembers(activeChannelId));
+    if (isPane) {
+      dispatch(fetchMembers(channelId));
     }
     hydrateChannel(organizationId, channelId, dispatch, "update");
     return;
@@ -208,8 +223,8 @@ function handleChannelEvent(
         return;
       }
     }
-    if (activeChannelId && channelId === activeChannelId) {
-      dispatch(fetchMembers(activeChannelId));
+    if (isPane) {
+      dispatch(fetchMembers(channelId));
     }
     hydrateChannel(organizationId, channelId, dispatch, "update");
     return;
@@ -243,7 +258,7 @@ function handleChannelEvent(
     dispatch(restrictThreadForwardsFromMessage(ce.payload.value.messageId));
   }
 
-  if (!activeChannelId || channelId !== activeChannelId) return;
+  if (!isLive) return;
 
   switch (ce.eventType) {
     case ChatEventType.MESSAGE_CREATED: {
@@ -253,23 +268,26 @@ function handleChannelEvent(
         // placeholder); its working indicator is owned by AGENT_TYPING
         // start/stop, so only a human's own message clears their typing entry.
         if (msg.senderType !== "AGENT") {
-          dispatch(clearTypingUser({ channelId: activeChannelId, userId: msg.senderId }));
+          dispatch(clearTypingUser({ channelId, userId: msg.senderId }));
         }
         if (msg.rootId) {
           dispatch(appendThreadMessage({ rootMessageId: msg.rootId, message: msg }));
-        } else {
-          dispatch(appendMessage({ channelId: activeChannelId, message: msg }));
+        } else if (isPane) {
+          dispatch(appendMessage({ channelId, message: msg }));
           // Viewing this channel live: mark the new message read so it never
           // surfaces as unread. Unread is time-based (last_read_at = now), so
           // the real id clears the just-arrived message too. Skip own sends;
-          // thread replies do not count toward the channel badge.
-          if (msg.senderId !== currentUserId && isDocumentVisible()) {
-            dispatch(
-              updateUnreadCounts([{ channelId: activeChannelId, unreadCount: 0, mentionCount: 0 }]),
-            );
+          // thread replies do not count toward the channel badge. The read
+          // cursor follows the left pane only; the split pane keeps its badge.
+          if (
+            channelId === live.activeChannelId &&
+            msg.senderId !== currentUserId &&
+            isDocumentVisible()
+          ) {
+            dispatch(updateUnreadCounts([{ channelId, unreadCount: 0, mentionCount: 0 }]));
             dispatch(
               markChannelRead({
-                channelId: activeChannelId,
+                channelId,
                 lastReadMessageId: msg.id,
               }),
             );
@@ -282,7 +300,7 @@ function handleChannelEvent(
       if (ce.payload.case === "message" && ce.payload.value) {
         dispatch(
           updateMessage({
-            channelId: activeChannelId,
+            channelId,
             message: messageToPlain(ce.payload.value),
           }),
         );
@@ -293,7 +311,7 @@ function handleChannelEvent(
       if (ce.payload.case === "messageDeleted" && ce.payload.value) {
         dispatch(
           deleteMessage({
-            channelId: activeChannelId,
+            channelId,
             messageId: ce.payload.value.messageId,
           }),
         );
@@ -310,10 +328,10 @@ function handleChannelEvent(
           : [...existingParticipants, p.latestParticipantId];
         dispatch(
           updateMessage({
-            channelId: activeChannelId,
+            channelId,
             message: {
               id: p.rootMessageId,
-              channelId: activeChannelId,
+              channelId,
               thread: {
                 replyCount: p.replyCount,
                 lastReplyAt: timestampToIso(p.lastReplyAt) ?? new Date().toISOString(),
@@ -330,7 +348,7 @@ function handleChannelEvent(
       if (ce.payload.case === "typing" && ce.payload.value) {
         dispatch(
           setTypingUser({
-            channelId: activeChannelId,
+            channelId,
             userId: ce.payload.value.userId,
             displayName: ce.payload.value.displayName,
           }),
@@ -343,7 +361,7 @@ function handleChannelEvent(
         const { messageId, emoji, userId } = ce.payload.value;
         dispatch(
           addReactionToMessage({
-            channelId: activeChannelId,
+            channelId,
             messageId,
             emoji,
             userId,
@@ -366,7 +384,7 @@ function handleChannelEvent(
         const { messageId, emoji, userId } = ce.payload.value;
         dispatch(
           removeReactionFromMessage({
-            channelId: activeChannelId,
+            channelId,
             messageId,
             emoji,
             userId,
@@ -390,7 +408,7 @@ function handleChannelEvent(
         if (started) {
           dispatch(
             setAgentTyping({
-              channelId: activeChannelId,
+              channelId,
               agentId,
               displayName,
               rootId: rootId || undefined,
@@ -399,7 +417,7 @@ function handleChannelEvent(
         } else {
           dispatch(
             clearAgentTyping({
-              channelId: activeChannelId,
+              channelId,
               agentId,
               rootId: rootId || undefined,
             }),
@@ -413,7 +431,7 @@ function handleChannelEvent(
         const { messageId, delta, sequence, final } = ce.payload.value;
         // Placeholder lives in channel store OR thread bucket; dispatch to both, the non-owner no-ops.
         const payload = {
-          channelId: activeChannelId,
+          channelId,
           messageId,
           delta,
           sequence: Number(sequence),
@@ -457,7 +475,7 @@ function handleChannelEvent(
         const expiresIso = p.expiresAt ? timestampToIso(p.expiresAt) : null;
         const synthetic: import("@/features/chat/types").ChatMessage = {
           id: p.requestId,
-          channelId: activeChannelId,
+          channelId,
           senderId: p.agentId,
           senderType: "AGENT",
           content: "",
@@ -481,14 +499,14 @@ function handleChannelEvent(
           updatedAt: new Date().toISOString(),
           reactions: [],
         };
-        dispatch(appendMessage({ channelId: activeChannelId, message: synthetic }));
+        if (isPane) dispatch(appendMessage({ channelId, message: synthetic }));
       }
       break;
     }
     case ChatEventType.AGENT_CONFIRMATION_RESOLVED: {
       if (ce.payload.case === "agentConfirmationResolved" && ce.payload.value) {
         const { requestId } = ce.payload.value;
-        dispatch(removeMessage({ channelId: activeChannelId, messageId: requestId }));
+        dispatch(removeMessage({ channelId, messageId: requestId }));
       }
       break;
     }
@@ -499,6 +517,8 @@ function usePersistentChatStream() {
   const dispatch = useAppDispatch();
   const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
   const activeChannelId = useAppSelector((state) => state.chatChannels.activeChannelId);
+  const splitChannelId = useAppSelector((state) => state.chatChannels.splitChannelId);
+  const threadChannelId = useAppSelector(selectActiveThreadChannelId);
   const currentUserId = useAppSelector((state) => state.auth.user?.id ?? "");
   const channelIds = useAppSelector((state) => state.chatChannels.ids);
 
@@ -508,6 +528,10 @@ function usePersistentChatStream() {
   /* eslint-disable react/react-compiler -- latest-value refs keeping the stream connection alive across renders */
   const channelIdRef = useRef(activeChannelId);
   channelIdRef.current = activeChannelId;
+  const splitChannelIdRef = useRef(splitChannelId);
+  splitChannelIdRef.current = splitChannelId;
+  const threadChannelIdRef = useRef(threadChannelId);
+  threadChannelIdRef.current = threadChannelId;
   const userIdRef = useRef(currentUserId);
   userIdRef.current = currentUserId;
   const byId = useAppSelector((state) => state.chatMessages.byId);
@@ -643,7 +667,11 @@ function usePersistentChatStream() {
               case UserChatEventType.CHANNEL_EVENT: {
                 handleChannelEvent(
                   event,
-                  channelIdRef.current,
+                  {
+                    activeChannelId: channelIdRef.current,
+                    splitChannelId: splitChannelIdRef.current,
+                    threadChannelId: threadChannelIdRef.current,
+                  },
                   userIdRef.current,
                   organizationId!,
                   dispatch,

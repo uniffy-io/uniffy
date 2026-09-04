@@ -1,7 +1,6 @@
 import { useLayoutEffect } from "react";
 import { useAuthNetworkCanvas } from "@/features/auth/hooks/useAuthNetworkCanvas";
 import { UniffyLogo } from "@/components/ui/uniffy-logo";
-import { defaultTheme } from "@/config/theme/types";
 
 interface AuthShellProps {
   children: React.ReactNode;
@@ -31,23 +30,14 @@ function BrandContent() {
 export function AuthShell({ children }: AuthShellProps) {
   const canvasRef = useAuthNetworkCanvas();
 
+  // The auth screens are always light; the palette is stylesheet-owned, so
+  // dropping the dark class is the whole switch.
   useLayoutEffect(() => {
     const root = document.documentElement;
     const wasDark = root.classList.contains("dark");
     root.classList.remove("dark");
-
-    const savedValues: Record<string, string> = {};
-    Object.entries(defaultTheme.colors).forEach(([key, value]) => {
-      const cssVar = `--${key.replace(/([A-Z])/g, "-$1").toLowerCase()}`;
-      savedValues[cssVar] = root.style.getPropertyValue(cssVar);
-      root.style.setProperty(cssVar, value);
-    });
-
     return () => {
       if (wasDark) root.classList.add("dark");
-      Object.entries(savedValues).forEach(([cssVar, value]) => {
-        root.style.setProperty(cssVar, value);
-      });
     };
   }, []);
 

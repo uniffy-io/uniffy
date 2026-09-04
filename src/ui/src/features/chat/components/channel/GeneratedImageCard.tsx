@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { ArrowsClockwise, CaretDown, Image as ImageIcon } from "@phosphor-icons/react";
+import { popoverShellClass } from "@/components/ui/popover";
 import { cn } from "@/shared/utils/cn";
 import { useAppSelector } from "@/app/hooks";
 import { runtimeApi } from "@/features/agents/api/runtimeApi";
@@ -101,7 +102,9 @@ export function GeneratedImageCard({
             <CaretDown size={9} />
           </button>
           {open && (
-            <div className="absolute left-0 top-full z-50 mt-1 min-w-52 rounded-lg border border-border bg-card p-1 shadow-xl">
+            <div
+              className={cn(popoverShellClass, "absolute left-0 top-full z-50 mt-1 min-w-52 p-1")}
+            >
               {presets.map(({ label, patch }) => (
                 <button
                   key={label}

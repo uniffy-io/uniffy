@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { ToggleSwitch } from "@/components/ui/toggle-switch";
 import { LockKey, Warning, CheckCircle } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { useAppSelector } from "@/app/hooks";
@@ -116,11 +117,11 @@ export function SecuritySection() {
       )}
 
       {loading || !settings ? (
-        <div className="rounded-lg border border-border bg-card p-6 text-sm text-muted-foreground">
+        <div className="rounded-xl bg-surface shadow-edge p-6 text-sm text-muted-foreground">
           Loading...
         </div>
       ) : (
-        <div className="rounded-xl border border-border bg-card divide-y divide-border">
+        <div className="rounded-xl bg-surface shadow-edge divide-y divide-border">
           <ToggleRow
             title="Password reset"
             description="Allow members to request a password reset link by email. Disable when this organization is SSO-only or requires admin-managed credential rotation."
@@ -190,24 +191,7 @@ function ToggleRow({ title, description, enabled, onChange, disabled, saving }: 
         </div>
         <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{description}</p>
       </div>
-      <button
-        type="button"
-        onClick={() => onChange(!enabled)}
-        disabled={disabled}
-        className={`relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent transition-colors
-                    focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2
-                    disabled:opacity-50 disabled:cursor-not-allowed
-                    ${enabled ? "bg-primary" : "bg-muted"}
-                `}
-        aria-pressed={enabled}
-        aria-busy={saving}
-      >
-        <span
-          className={`inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition-transform
-                        ${enabled ? "translate-x-5" : "translate-x-0"}
-                    `}
-        />
-      </button>
+      <ToggleSwitch enabled={enabled} onChange={onChange} disabled={disabled || saving} />
     </div>
   );
 }

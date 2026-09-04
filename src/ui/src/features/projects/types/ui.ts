@@ -47,7 +47,6 @@ export interface ProjectsUiState {
 
   selectedTaskId: string | null;
   selectedTaskIds: string[];
-  isMultiSelectMode: boolean;
 
   isDetailPanelOpen: boolean;
   isSidebarOpen: boolean;
@@ -116,7 +115,6 @@ export const initialProjectsUiState: ProjectsUiState = {
 
   selectedTaskId: null,
   selectedTaskIds: [],
-  isMultiSelectMode: false,
 
   isDetailPanelOpen: false,
   isSidebarOpen: true,

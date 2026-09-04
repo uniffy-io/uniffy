@@ -21,7 +21,7 @@ export function AuditActionFilter({ filter, onChange, groups }: AuditActionFilte
 
   return (
     <details className="rounded-lg border border-border bg-card">
-      <summary className="px-4 py-2 cursor-pointer flex items-center gap-2 text-sm font-medium hover:bg-accent rounded-lg select-none">
+      <summary className="px-4 py-2 cursor-pointer flex items-center gap-2 text-sm font-medium hover:bg-muted/60 rounded-lg select-none">
         <Funnel size={14} weight="duotone" />
         Filter by action ({filter.actions.length} selected)
       </summary>
@@ -43,7 +43,7 @@ export function AuditActionFilter({ filter, onChange, groups }: AuditActionFilte
                       "px-2.5 py-1 rounded-full text-xs font-medium transition-colors",
                       active
                         ? actionDomainColor(entry.value)
-                        : "bg-muted text-muted-foreground hover:bg-accent",
+                        : "bg-muted text-muted-foreground hover:bg-muted/60",
                     )}
                   >
                     {actionLabel(entry.value)}

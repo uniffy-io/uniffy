@@ -92,7 +92,7 @@ function NavItemLink({ item, currentPath }: { item: NavItem; currentPath: string
         "flex items-center gap-2 md:gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors whitespace-nowrap",
         active
           ? "bg-amber-500/15 text-amber-700 dark:text-amber-300"
-          : "text-foreground hover:bg-accent hover:text-accent-foreground",
+          : "text-foreground/90 hover:bg-muted/60 hover:text-foreground",
       )}
     >
       <Icon size={18} weight="duotone" className="shrink-0" />
@@ -168,7 +168,7 @@ export function PlatformLayout() {
   const flatItems = platformGroups.flatMap((g) => g.items);
 
   return (
-    <div className="min-h-dvh bg-background text-foreground font-sans antialiased">
+    <div className="min-h-dvh bg-background text-foreground font-sans antialiased [--sticky-top:3rem]">
       <AppHeader />
 
       <div

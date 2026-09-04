@@ -30,8 +30,8 @@ function QuickActionCard({ action }: { action: QuickAction }) {
       onClick={action.onClick}
       className={cn(
         "group flex flex-col items-center gap-2 rounded-xl p-3.5 transition-all duration-200",
-        "bg-muted/30 hover:bg-muted border border-transparent hover:border-border",
-        "focus:outline-none focus:ring-2 focus:ring-primary/20",
+        "bg-muted/30 hover:bg-muted border border-transparent hover:border-border-strong",
+        "focus-ring",
       )}
     >
       <div className={cn("rounded-lg p-2", action.color)}>

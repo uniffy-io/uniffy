@@ -2,6 +2,8 @@ import { useEffect } from "react";
 import { Phone, PhoneDisconnect } from "@phosphor-icons/react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { getInitials } from "@/components/subject/utils";
+import { popoverShellClass } from "@/components/ui/popover";
+import { cn } from "@/shared/utils/cn";
 import {
   prejoinOpened,
   ringDismissed,
@@ -82,7 +84,10 @@ function InviteCard({ invite }: { invite: RingInvite }) {
 
   return (
     <div
-      className="pointer-events-auto flex w-80 items-center gap-3 rounded-xl border border-border bg-card p-3 shadow-2xl"
+      className={cn(
+        popoverShellClass,
+        "pointer-events-auto flex w-80 items-center gap-3 rounded-xl p-3",
+      )}
       data-testid="call-invite-toast"
     >
       {invite.callerAvatarUrl ? (

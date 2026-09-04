@@ -27,7 +27,7 @@
   right: 3%;
   bottom: 3%;
   border-radius: 20px;
-  background: rgba(12, 12, 18, 0.92);
+  background: rgba(21, 19, 24, 0.94);
   backdrop-filter: blur(40px) saturate(150%);
   -webkit-backdrop-filter: blur(40px) saturate(150%);
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -65,7 +65,7 @@
   bottom: 0;
   border-radius: 0;
   border: none;
-  background: rgba(8, 8, 12, 0.98);
+  background: rgba(15, 13, 17, 0.98);
 }
 
 .viewer-panel-fullscreen::before {
@@ -78,7 +78,7 @@
 
 /* Refined toolbar - integrated with floating panel */
 .viewer-toolbar {
-  background: rgba(18, 18, 26, 0.6);
+  background: rgba(29, 28, 34, 0.6);
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: 20px 20px 0 0;
 }
@@ -197,7 +197,7 @@
 .viewer-pdf-sidebar {
   @apply h-full flex flex-col flex-none;
   width: 170px;
-  background: rgba(18, 18, 26, 0.6);
+  background: rgba(29, 28, 34, 0.6);
   border-right: 1px solid rgba(255, 255, 255, 0.06);
 }
 
@@ -280,7 +280,7 @@
 /* Floating in-document search bar (top-right of the PDF layout, below the toolbar) */
 .viewer-pdf-searchbar {
   @apply absolute top-3 right-5 z-20 flex items-center gap-1 px-2 py-1.5 rounded-xl;
-  background: rgba(18, 18, 26, 0.92);
+  background: rgba(29, 28, 34, 0.92);
   border: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
 }

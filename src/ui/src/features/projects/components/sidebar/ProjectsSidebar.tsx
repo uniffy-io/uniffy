@@ -143,7 +143,7 @@ export function ProjectsSidebar() {
           <button
             type="button"
             onClick={() => navigate("/portfolio")}
-            className="flex items-center gap-2 w-full px-2 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors"
+            className="flex items-center gap-2 w-full px-2 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/60 rounded-md transition-colors"
           >
             <ChartPieSlice size={14} />
             Portfolio Overview
@@ -170,8 +170,8 @@ function ProjectListItem({ project, isActive, onClick, onEdit, progress }: Proje
     <div
       className={cn(
         "group w-full flex flex-col gap-1 px-2 py-1.5 rounded-md text-left text-sm cursor-pointer",
-        "hover:bg-accent transition-colors",
-        isActive && "bg-primary/10 text-primary",
+        "hover:bg-muted/60 transition-colors",
+        isActive && "bg-muted text-foreground font-medium",
       )}
       onClick={onClick}
     >

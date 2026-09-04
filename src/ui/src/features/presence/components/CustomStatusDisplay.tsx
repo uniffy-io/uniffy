@@ -40,7 +40,7 @@ export function CustomStatusDisplay({
       {customStatus.emoji && <span className="shrink-0">{customStatus.emoji}</span>}
       <span className="truncate">
         {customStatus.text}
-        {remaining && <span className="text-muted-foreground/60"> {remaining}</span>}
+        {remaining && <span className="text-subtle-foreground"> {remaining}</span>}
       </span>
     </span>
   );

@@ -1,10 +1,3 @@
-/**
- * Note Move Dialog Component
- *
- * Dialog for moving notes/folders to a different access mode and/or parent folder.
- * Adapted from the files MoveDialog pattern.
- */
-
 import { useState, useCallback, useMemo } from "react";
 import {
   Folder,
@@ -13,12 +6,11 @@ import {
   Buildings,
   CaretRight,
   CaretDown,
-  X,
-  ArrowRight,
 } from "@phosphor-icons/react";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/ui/modal";
 import { cn } from "@/shared/utils/cn";
 import { AccessMode } from "@uniffy/proto/common/v1/common_pb";
 import { moveNote, updateNote, initializeNotesData } from "@/features/notes/store/notesSlice";
@@ -205,146 +197,120 @@ export function NoteMoveDialog({ target, onClose }: NoteMoveDialogProps) {
   }, [expandedFolders, selectedFolderId, target.noteId, handleSelectFolder, toggleFolder]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-      <div className="bg-background w-full max-w-md rounded-xl shadow-2xl border border-border overflow-hidden animate-in zoom-in-95 duration-200">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-muted/30">
-          <div className="flex items-center gap-3">
-            <div className="rounded-lg bg-primary/10 p-2">
-              <ArrowRight size={20} weight="duotone" className="text-primary" />
-            </div>
-            <div>
-              <h2 className="text-lg font-semibold">Move {target.noteTitle}</h2>
-              <p className="text-xs text-muted-foreground">Select destination</p>
-            </div>
-          </div>
-          <button onClick={onClose} className="p-2 rounded-lg hover:bg-muted transition-colors">
-            <X size={18} className="text-muted-foreground" />
-          </button>
-        </div>
+    <Modal onClose={onClose} closeDisabled={isMoving} maxWidth="max-w-md">
+      <ModalHeader title={`Move ${target.noteTitle}`} />
 
-        {/* Body */}
-        <div className="p-6 space-y-4">
-          {/* Visibility Selection */}
-          <div>
-            <label className="text-sm font-medium text-muted-foreground mb-2 block">Move to</label>
-            <div className="flex gap-2">
-              <button
-                onClick={() => handleVisibilityChange("personal")}
+      <ModalBody>
+        <div>
+          <label className="block text-sm text-muted-foreground mb-1">Move to</label>
+          <div className="flex gap-2">
+            <button
+              onClick={() => handleVisibilityChange("personal")}
+              className={cn(
+                "flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 transition-all",
+                selectedVisibility === "personal"
+                  ? "border-primary bg-primary/5"
+                  : "border-border hover:border-border-strong",
+              )}
+            >
+              <LockSimple
+                size={20}
+                weight={selectedVisibility === "personal" ? "fill" : "duotone"}
+                className={
+                  selectedVisibility === "personal" ? "text-primary" : "text-muted-foreground"
+                }
+              />
+              <span
                 className={cn(
-                  "flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 transition-all",
-                  selectedVisibility === "personal"
-                    ? "border-primary bg-primary/5"
-                    : "border-border hover:border-muted-foreground/30",
+                  "font-medium",
+                  selectedVisibility === "personal" ? "text-primary" : "text-muted-foreground",
                 )}
               >
-                <LockSimple
-                  size={20}
-                  weight={selectedVisibility === "personal" ? "fill" : "duotone"}
-                  className={
-                    selectedVisibility === "personal" ? "text-primary" : "text-muted-foreground"
-                  }
-                />
-                <span
-                  className={cn(
-                    "font-medium",
-                    selectedVisibility === "personal" ? "text-primary" : "text-muted-foreground",
-                  )}
-                >
-                  Personal
-                </span>
-              </button>
-              <button
-                onClick={() => handleVisibilityChange("organization")}
+                Personal
+              </span>
+            </button>
+            <button
+              onClick={() => handleVisibilityChange("organization")}
+              className={cn(
+                "flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 transition-all",
+                selectedVisibility === "organization"
+                  ? "border-primary bg-primary/5"
+                  : "border-border hover:border-border-strong",
+              )}
+            >
+              <Buildings
+                size={20}
+                weight={selectedVisibility === "organization" ? "fill" : "duotone"}
+                className={
+                  selectedVisibility === "organization" ? "text-primary" : "text-muted-foreground"
+                }
+              />
+              <span
                 className={cn(
-                  "flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 transition-all",
-                  selectedVisibility === "organization"
-                    ? "border-primary bg-primary/5"
-                    : "border-border hover:border-muted-foreground/30",
+                  "font-medium",
+                  selectedVisibility === "organization" ? "text-primary" : "text-muted-foreground",
                 )}
               >
-                <Buildings
-                  size={20}
-                  weight={selectedVisibility === "organization" ? "fill" : "duotone"}
-                  className={
-                    selectedVisibility === "organization" ? "text-primary" : "text-muted-foreground"
-                  }
-                />
-                <span
-                  className={cn(
-                    "font-medium",
-                    selectedVisibility === "organization"
-                      ? "text-primary"
-                      : "text-muted-foreground",
-                  )}
-                >
-                  Organization
-                </span>
-              </button>
-            </div>
+                Organization
+              </span>
+            </button>
           </div>
-
-          {/* Folder Selection */}
-          <div>
-            <label className="text-sm font-medium text-muted-foreground mb-2 block">Folder</label>
-            <div className="border border-border rounded-lg max-h-64 overflow-y-auto">
-              {/* Root option */}
-              <div
-                className={cn(
-                  "flex items-center gap-2 px-3 py-2 cursor-pointer transition-colors border-b border-border",
-                  selectedFolderId === null && "bg-primary/10",
-                )}
-                onClick={() => handleSelectFolder(null)}
-              >
-                <Folder size={16} weight="duotone" className="text-muted-foreground" />
-                <span className="text-sm font-medium">Root (No folder)</span>
-              </div>
-
-              {/* Folder tree */}
-              <div className="py-1">
-                {availableFolders.length > 0 ? (
-                  availableFolders.map((node) => renderFolderNode(node))
-                ) : (
-                  <div className="px-3 py-4 text-center text-sm text-muted-foreground">
-                    No folders in{" "}
-                    {selectedVisibility === "personal" ? "Personal Space" : "Organization"}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Error */}
-          {error && (
-            <div className="p-3 rounded-md bg-destructive/10 border border-destructive/30">
-              <p className="text-sm text-destructive">{error}</p>
-            </div>
-          )}
         </div>
 
-        {/* Footer */}
-        <div className="flex justify-end gap-3 px-6 py-4 border-t border-border bg-muted/20">
-          <Button variant="outline" size="md" onClick={onClose} disabled={isMoving}>
-            Cancel
-          </Button>
-          <Button variant="default" size="md" onClick={handleMove} disabled={isMoving || !canMove}>
-            {isMoving ? "Moving..." : "Move"}
-          </Button>
+        <div>
+          <label className="block text-sm text-muted-foreground mb-1">Folder</label>
+          <div className="border border-border rounded-lg max-h-64 overflow-y-auto">
+            <div
+              className={cn(
+                "flex items-center gap-2 px-3 py-2 cursor-pointer transition-colors border-b border-border",
+                selectedFolderId === null && "bg-primary/10",
+              )}
+              onClick={() => handleSelectFolder(null)}
+            >
+              <Folder size={16} weight="duotone" className="text-muted-foreground" />
+              <span className="text-sm font-medium">Root (No folder)</span>
+            </div>
+
+            <div className="py-1">
+              {availableFolders.length > 0 ? (
+                availableFolders.map((node) => renderFolderNode(node))
+              ) : (
+                <div className="px-3 py-4 text-center text-sm text-muted-foreground">
+                  No folders in{" "}
+                  {selectedVisibility === "personal" ? "Personal Space" : "Organization"}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
-        {/* Organization Move Confirmation */}
-        <ConfirmDialog
-          isOpen={showOrgConfirm}
-          onClose={() => setShowOrgConfirm(false)}
-          onConfirm={performMove}
-          title="Move to Organization"
-          message="Moving this note to Organization will make it visible to all organization members. Any content referenced within (attached files, mentioned notes, inline media) will also become visible to the organization."
-          confirmLabel="Move to Organization"
-          cancelLabel="Cancel"
-          variant="warning"
-          loading={isMoving}
-        />
-      </div>
-    </div>
+        {error && (
+          <div className="p-3 rounded-md bg-destructive/10 border border-destructive/30">
+            <p className="text-sm text-destructive">{error}</p>
+          </div>
+        )}
+      </ModalBody>
+
+      <ModalFooter>
+        <Button variant="ghost" onClick={onClose} disabled={isMoving}>
+          Cancel
+        </Button>
+        <Button onClick={handleMove} loading={isMoving} disabled={isMoving || !canMove}>
+          {isMoving ? "Moving..." : "Move"}
+        </Button>
+      </ModalFooter>
+
+      <ConfirmDialog
+        isOpen={showOrgConfirm}
+        onClose={() => setShowOrgConfirm(false)}
+        onConfirm={performMove}
+        title="Move to Organization"
+        message="Moving this note to Organization will make it visible to all organization members. Any content referenced within (attached files, mentioned notes, inline media) will also become visible to the organization."
+        confirmLabel="Move to Organization"
+        cancelLabel="Cancel"
+        variant="warning"
+        loading={isMoving}
+      />
+    </Modal>
   );
 }

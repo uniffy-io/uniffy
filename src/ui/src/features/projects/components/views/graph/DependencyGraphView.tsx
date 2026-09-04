@@ -21,8 +21,9 @@ import {
 } from "@/features/projects/store/projectsUiSlice";
 import { selectSprintsForProject } from "@/features/projects/store/sprintsSlice";
 import { SYSTEM_FIELD_IDS } from "@/features/projects/types";
+import { statusPaint } from "@/features/projects/utils/statusPaint";
 import type { Task, Sprint } from "@/features/projects/types";
-import { getTaskTypeConfig } from "@/features/projects/utils/taskTypes";
+import { TaskTypeIcon } from "@/features/projects/components/TaskTypeIcon";
 import { computeCriticalPath } from "@/features/projects/utils/criticalPath";
 import type { CriticalPathResult } from "@/features/projects/utils/criticalPath";
 
@@ -368,9 +369,10 @@ export function DependencyGraphView() {
     const statusField = currentProject?.fieldDefinitions.find(
       (f) => f.id === SYSTEM_FIELD_IDS.STATUS,
     );
+    const options = statusField?.config.options ?? [];
     const map: Record<string, { color: string; label: string }> = {};
-    for (const opt of statusField?.config.options ?? []) {
-      map[opt.id] = { color: opt.color, label: opt.label };
+    for (const opt of options) {
+      map[opt.id] = { color: statusPaint(options, opt.id).solid, label: opt.label };
     }
     return map;
   }, [currentProject]);
@@ -816,8 +818,6 @@ function GraphNode({
   onClick,
 }: GraphNodeProps) {
   const badge = STATE_BADGE[node.state];
-  const typeConfig = getTaskTypeConfig(node.taskType);
-  const TypeIcon = typeConfig.icon;
 
   const formatShortDate = (dateStr: string) => {
     const d = new Date(dateStr);
@@ -856,11 +856,11 @@ function GraphNode({
             {node.parentId && (
               <ArrowElbowDownRight
                 size={11}
-                className="text-muted-foreground/60 shrink-0"
+                className="text-subtle-foreground shrink-0"
                 aria-label="Subtask"
               />
             )}
-            <TypeIcon size={12} weight="fill" className="text-muted-foreground shrink-0" />
+            <TaskTypeIcon type={node.taskType} size={12} className="text-muted-foreground" />
             <span className="text-[10px] font-mono text-muted-foreground leading-none whitespace-nowrap">
               {projectSlug}-{node.number}
             </span>
@@ -901,7 +901,7 @@ function GraphNode({
             )}
             {node.dueDate && (
               <>
-                {statusColor && <span className="text-[10px] text-muted-foreground/40">|</span>}
+                {statusColor && <span className="text-[10px] text-subtle-foreground">|</span>}
                 <CalendarBlank size={10} className="text-muted-foreground shrink-0" />
                 <span className="text-[10px] text-muted-foreground whitespace-nowrap">
                   {formatShortDate(node.dueDate)}

@@ -425,7 +425,7 @@ export function AuthForms() {
       )}
 
       <p
-        className="mt-8 text-center text-xs text-muted-foreground/60 opacity-0"
+        className="mt-8 text-center text-xs text-subtle-foreground opacity-0"
         style={{ animation: "auth-slide-up 0.5s ease-out 0.5s forwards" }}
       >
         By continuing, you agree to the Uniffy{" "}

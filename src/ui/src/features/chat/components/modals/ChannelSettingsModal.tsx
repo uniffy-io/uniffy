@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  X,
   GlobeSimple,
   Lock,
   UserPlus,
@@ -18,7 +17,8 @@ import {
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Modal } from "@/components/ui/modal";
+import { Textarea } from "@/components/ui/textarea";
+import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/ui/modal";
 import { Select } from "@/components/ui/select";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { SubjectAvatarById } from "@/components/subject/SubjectAvatar";
@@ -31,6 +31,7 @@ import { AgentContextBar } from "@/features/chat/components/channel/AgentContext
 import { selectAllAgents } from "@/features/agents/store/agentsSlice";
 import { adminApi } from "@/features/admin/api/adminApi";
 import { cn } from "@/shared/utils/cn";
+import { popoverShellClass } from "@/components/ui/popover";
 import {
   selectActiveChannel,
   selectChannelMembers,
@@ -325,27 +326,25 @@ export function ChannelSettingsModal() {
 
   return (
     <>
-      <Modal onClose={handleClose} closeDisabled={isSaving || isDeleting} maxWidth="max-w-lg">
+      <Modal
+        onClose={handleClose}
+        closeDisabled={isSaving || isDeleting}
+        maxWidth="max-w-lg"
+        className="flex flex-col max-h-[85dvh]"
+      >
         <div
-          className="flex flex-col"
-          style={{ maxHeight: "75vh" }}
+          className="flex flex-col min-h-0"
           data-testid="chat-channel-settings-modal"
           data-tab={activeTab}
         >
-          <div className="flex items-center justify-between px-6 pt-6 pb-2 shrink-0">
-            <h2 className="text-xl font-semibold text-foreground">Channel settings</h2>
-            <button
-              type="button"
-              onClick={handleClose}
-              disabled={isSaving || isDeleting}
-              className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
-              data-testid="chat-channel-settings-close"
-            >
-              <X size={20} />
-            </button>
-          </div>
+          <ModalHeader
+            title="Channel settings"
+            onClose={handleClose}
+            closeDisabled={isSaving || isDeleting}
+            closeTestId="chat-channel-settings-close"
+          />
 
-          <div className="mx-6 mt-2 mb-4 shrink-0">
+          <div className="px-6 pt-4 shrink-0">
             <div
               className={cn(
                 "flex items-center gap-3 rounded-lg border p-3.5",
@@ -374,7 +373,7 @@ export function ChannelSettingsModal() {
             </div>
           </div>
 
-          <div className="flex gap-1 px-6 shrink-0">
+          <div className="flex gap-1 px-6 pt-4 shrink-0">
             {(["overview", "members"] as const).map((tab) => (
               <button
                 key={tab}
@@ -396,13 +395,17 @@ export function ChannelSettingsModal() {
 
           <div className="border-b border-border mt-2 shrink-0" />
 
-          <div className="flex-1 overflow-y-auto min-h-0">
+          <ModalBody
+            scrollable={false}
+            className={cn(
+              "flex-1 min-h-0 overflow-y-auto",
+              activeTab === "members" && "p-0 space-y-0",
+            )}
+          >
             {activeTab === "overview" ? (
-              <div className="px-6 py-5 space-y-5">
+              <>
                 <div>
-                  <label className="block text-sm font-medium text-foreground mb-1.5">
-                    Channel name
-                  </label>
+                  <label className="block text-sm text-muted-foreground mb-1">Channel name</label>
                   <Input
                     type="text"
                     value={name}
@@ -426,17 +429,15 @@ export function ChannelSettingsModal() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-foreground mb-1.5">
-                    Channel Purpose
-                    <span className="text-muted-foreground font-normal ml-1">(optional)</span>
+                  <label className="block text-sm text-muted-foreground mb-1">
+                    Channel purpose (optional)
                   </label>
-                  <textarea
+                  <Textarea
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     disabled={!canEdit || isSaving}
                     rows={3}
                     placeholder="What is this channel about?"
-                    className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none disabled:opacity-50"
                   />
                   <p className="text-xs text-muted-foreground mt-1">
                     This will be displayed when browsing for channels.
@@ -444,9 +445,8 @@ export function ChannelSettingsModal() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-foreground mb-1.5">
-                    Tags
-                    <span className="text-muted-foreground font-normal ml-1">(optional)</span>
+                  <label className="block text-sm text-muted-foreground mb-1">
+                    Tags (optional)
                   </label>
                   <TagPicker
                     selectedTagIds={tagIds}
@@ -462,9 +462,8 @@ export function ChannelSettingsModal() {
 
                 {categories.length > 0 && (
                   <div>
-                    <label className="block text-sm font-medium text-foreground mb-1.5">
-                      Category
-                      <span className="text-muted-foreground font-normal ml-1">(optional)</span>
+                    <label className="block text-sm text-muted-foreground mb-1">
+                      Category (optional)
                     </label>
                     <Select
                       value={categoryId ?? ""}
@@ -512,7 +511,7 @@ export function ChannelSettingsModal() {
                     </div>
                   </div>
                 )}
-              </div>
+              </>
             ) : (
               <div className="flex flex-col">
                 {canEdit && activeChannel.channelType === "PRIVATE" && (
@@ -528,9 +527,12 @@ export function ChannelSettingsModal() {
                 )}
                 {canEdit && (
                   <div className="px-6 pt-4 pb-3">
-                    <div className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 focus-within:ring-2 focus-within:ring-ring">
-                      <MagnifyingGlass size={14} className="text-muted-foreground shrink-0" />
-                      <input
+                    <div className="relative">
+                      <MagnifyingGlass
+                        size={14}
+                        className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground"
+                      />
+                      <Input
                         ref={addInputRef}
                         type="text"
                         value={addMemberQuery}
@@ -541,12 +543,12 @@ export function ChannelSettingsModal() {
                         onFocus={() => setShowAddMember(true)}
                         placeholder="Search people, groups, or agents to add..."
                         disabled={isAddingMembers}
-                        className="flex-1 text-sm bg-transparent outline-none text-foreground placeholder:text-muted-foreground"
+                        className="pl-8"
                       />
                     </div>
 
                     {showAddMember && addMemberQuery.length >= 2 && (
-                      <div className="mt-1 rounded-lg border border-border bg-card shadow-lg max-h-[260px] overflow-y-auto">
+                      <div className={cn(popoverShellClass, "mt-1 max-h-[260px] overflow-y-auto")}>
                         {searchLoading &&
                         searchResults.length === 0 &&
                         agentMatches.length === 0 ? (
@@ -597,7 +599,7 @@ export function ChannelSettingsModal() {
 
                             {agentMatches.length > 0 && (
                               <div className="py-1 border-t border-border">
-                                <div className="px-4 pt-2 pb-1 text-[10px] uppercase tracking-wide text-muted-foreground/60">
+                                <div className="px-4 pt-2 pb-1 text-[10px] uppercase tracking-wide text-subtle-foreground">
                                   Agents
                                 </div>
                                 {agentMatches.map((agent) => (
@@ -791,10 +793,10 @@ export function ChannelSettingsModal() {
                 </div>
               </div>
             )}
-          </div>
+          </ModalBody>
 
           {activeTab === "overview" && canEdit && isDirty && (
-            <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-border shrink-0">
+            <ModalFooter className="shrink-0">
               <Button
                 type="button"
                 variant="ghost"
@@ -817,7 +819,7 @@ export function ChannelSettingsModal() {
               >
                 Save changes
               </Button>
-            </div>
+            </ModalFooter>
           )}
         </div>
       </Modal>

@@ -20,7 +20,7 @@ import {
   restoreNote,
 } from "@/features/notes/store/notesSlice";
 import { notesApi } from "@/features/notes/api/notesApi";
-import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import type { TreeNode } from "@/features/notes/components/sidebar/types";
 
 interface TrashSectionProps {
@@ -88,7 +88,7 @@ export function TrashSection({
       <div className="flex items-center gap-1">
         <button
           onClick={() => setShowTrash(!showTrash)}
-          className="flex-1 flex items-center gap-2 px-2 py-2 text-sm rounded-md hover:bg-accent transition-colors text-left"
+          className="flex-1 flex items-center gap-2 px-2 py-2 text-sm rounded-md hover:bg-muted/60 transition-colors text-left"
         >
           {showTrash ? (
             <CaretDown size={16} weight="bold" className="text-muted-foreground" />
@@ -114,7 +114,7 @@ export function TrashSection({
             <div
               key={node.id}
               onClick={() => onSelectNote(node.id)}
-              className={`group w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded-md hover:bg-accent transition-colors text-left opacity-60 cursor-pointer ${
+              className={`group w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded-md hover:bg-muted/60 transition-colors text-left opacity-60 cursor-pointer ${
                 currentNoteId === node.id ? "bg-accent text-accent-foreground" : ""
               }`}
             >
@@ -141,54 +141,23 @@ export function TrashSection({
         </div>
       )}
 
-      {/* Empty Trash Confirmation Modal */}
-      {showEmptyTrashConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="bg-background w-full max-w-md rounded-xl shadow-2xl border border-border overflow-hidden animate-in zoom-in-95 duration-200">
-            {/* Header */}
-            <div className="flex items-center gap-3 px-6 py-4 border-b border-border bg-muted/30">
-              <div className="rounded-lg bg-destructive/10 p-2">
-                <Trash size={20} weight="duotone" className="text-destructive" />
-              </div>
-              <div>
-                <h2 className="text-lg font-semibold">Empty Trash</h2>
-                <p className="text-xs text-muted-foreground">This action cannot be undone</p>
-              </div>
-            </div>
-
-            {/* Body */}
-            <div className="p-6">
-              <p className="text-sm text-muted-foreground">
-                Are you sure you want to permanently delete{" "}
-                <span className="font-medium text-foreground">
-                  {trashNodes.length} item{trashNodes.length !== 1 ? "s" : ""}
-                </span>{" "}
-                from the trash? This will free up space but the items cannot be recovered.
-              </p>
-            </div>
-
-            {/* Footer */}
-            <div className="flex justify-end gap-3 px-6 py-4 border-t border-border bg-muted/20">
-              <Button
-                variant="outline"
-                size="md"
-                onClick={() => setShowEmptyTrashConfirm(false)}
-                disabled={emptyingTrash}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="destructive"
-                size="md"
-                onClick={handleEmptyTrashConfirm}
-                disabled={emptyingTrash}
-              >
-                {emptyingTrash ? "Deleting..." : "Delete Permanently"}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        isOpen={showEmptyTrashConfirm}
+        onClose={() => setShowEmptyTrashConfirm(false)}
+        onConfirm={handleEmptyTrashConfirm}
+        title="Empty trash"
+        message={
+          <>
+            Permanently delete{" "}
+            <span className="font-medium text-foreground">
+              {trashNodes.length} item{trashNodes.length !== 1 ? "s" : ""}
+            </span>{" "}
+            from the trash? This frees up space, but the items cannot be recovered.
+          </>
+        }
+        confirmLabel="Delete permanently"
+        loading={emptyingTrash}
+      />
     </div>
   );
 }

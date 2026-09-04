@@ -5,6 +5,16 @@ import { recalculateStorageUsage } from "@/features/admin/store/adminThunks";
 import { StorageProgressBar } from "@/features/admin/components/storage/StorageProgressBar";
 import { SetUserQuotaDialog } from "@/features/admin/components/storage/SetUserQuotaDialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableEmpty,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { formatFileSize } from "@/shared/utils/dateFormatting";
 import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
 import { cn } from "@/shared/utils/cn";
@@ -77,7 +87,7 @@ export function UserQuotaTable() {
 
   if (loading && userUsageList.length === 0) {
     return (
-      <div className="rounded-lg border border-border bg-card p-6 animate-pulse">
+      <div className="rounded-xl bg-surface shadow-edge p-6 animate-pulse">
         <div className="h-4 w-48 bg-muted rounded mb-4" />
         <div className="space-y-3">
           {[1, 2, 3].map((i) => (
@@ -88,48 +98,53 @@ export function UserQuotaTable() {
     );
   }
 
+  const emptyMessage = search
+    ? "No users match the search."
+    : "No active members in this organization.";
+
   return (
     <>
-      <div className="rounded-lg border border-border bg-card">
-        <div className="p-4 md:p-6 border-b border-border">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-            <h3 className="text-lg font-semibold text-foreground">User Storage Usage</h3>
-            <div className="flex items-center gap-2 w-full sm:w-auto">
-              <div className="relative flex-1 sm:flex-none sm:w-64">
-                <MagnifyingGlass
-                  size={16}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-                />
-                <input
-                  type="text"
-                  placeholder="Search users..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className={cn(
-                    "w-full pl-9 pr-3 py-2 rounded-md border border-border bg-input text-sm",
-                    "focus:outline-none focus:ring-2 focus:ring-ring",
-                  )}
-                />
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleRecalculate}
-                disabled={recalculating}
-                title="Recalculate all usage from files"
-              >
-                <ArrowsClockwise
-                  size={16}
-                  weight="duotone"
-                  className={cn(recalculating && "animate-spin")}
-                />
-              </Button>
+      <div className="space-y-3">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <h3 className="text-lg font-semibold text-foreground">User Storage Usage</h3>
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <div className="relative flex-1 sm:flex-none sm:w-64">
+              <MagnifyingGlass
+                size={16}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+              />
+              <Input
+                type="text"
+                placeholder="Search users..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-9 pr-3"
+              />
             </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRecalculate}
+              disabled={recalculating}
+              title="Recalculate all usage from files"
+            >
+              <ArrowsClockwise
+                size={16}
+                weight="duotone"
+                className={cn(recalculating && "animate-spin")}
+              />
+            </Button>
           </div>
         </div>
 
         {isMobile ? (
-          <MobileCards items={filteredAndSorted} memberMap={memberMap} onEdit={setEditUser} />
+          <div className="rounded-xl bg-surface shadow-edge">
+            {filteredAndSorted.length === 0 ? (
+              <p className="p-8 text-center text-muted-foreground text-sm">{emptyMessage}</p>
+            ) : (
+              <MobileCards items={filteredAndSorted} memberMap={memberMap} onEdit={setEditUser} />
+            )}
+          </div>
         ) : (
           <DesktopTable
             items={filteredAndSorted}
@@ -138,13 +153,8 @@ export function UserQuotaTable() {
             sortDir={sortDir}
             onSort={handleSort}
             onEdit={setEditUser}
+            emptyMessage={emptyMessage}
           />
-        )}
-
-        {filteredAndSorted.length === 0 && (
-          <div className="p-8 text-center text-muted-foreground text-sm">
-            {search ? "No users match the search." : "No active members in this organization."}
-          </div>
         )}
       </div>
 
@@ -164,6 +174,7 @@ function DesktopTable({
   sortDir,
   onSort,
   onEdit,
+  emptyMessage,
 }: {
   items: SerializedStorageUsageInfo[];
   memberMap: Record<string, { name: string; email: string }>;
@@ -171,6 +182,7 @@ function DesktopTable({
   sortDir: string;
   onSort: (field: SortField) => void;
   onEdit: (userId: string) => void;
+  emptyMessage: string;
 }) {
   const sortIndicator = (field: SortField) => {
     if (sortField !== field) return "";
@@ -178,53 +190,53 @@ function DesktopTable({
   };
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="border-b border-border">
-            <th className="text-left px-4 py-3 text-muted-foreground font-medium">User</th>
-            <th
-              className="text-right px-4 py-3 text-muted-foreground font-medium cursor-pointer hover:text-foreground"
-              onClick={() => onSort("usedBytes")}
-            >
-              Used{sortIndicator("usedBytes")}
-            </th>
-            <th
-              className="text-right px-4 py-3 text-muted-foreground font-medium cursor-pointer hover:text-foreground hidden lg:table-cell"
-              onClick={() => onSort("effectiveQuotaBytes")}
-            >
-              Quota{sortIndicator("effectiveQuotaBytes")}
-            </th>
-            <th className="px-4 py-3 text-muted-foreground font-medium hidden md:table-cell">
-              Usage
-            </th>
-            <th
-              className="text-right px-4 py-3 text-muted-foreground font-medium cursor-pointer hover:text-foreground"
-              onClick={() => onSort("usagePercent")}
-            >
-              %{sortIndicator("usagePercent")}
-            </th>
-            <th className="px-4 py-3 text-right text-muted-foreground font-medium">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {items.map((usage) => {
+    <Table>
+      <TableHeader>
+        <TableRow hoverable={false}>
+          <TableHead>User</TableHead>
+          <TableHead
+            align="right"
+            className="cursor-pointer hover:text-foreground"
+            onClick={() => onSort("usedBytes")}
+          >
+            Used{sortIndicator("usedBytes")}
+          </TableHead>
+          <TableHead
+            align="right"
+            className="cursor-pointer hover:text-foreground hidden lg:table-cell"
+            onClick={() => onSort("effectiveQuotaBytes")}
+          >
+            Quota{sortIndicator("effectiveQuotaBytes")}
+          </TableHead>
+          <TableHead className="hidden md:table-cell">Usage</TableHead>
+          <TableHead
+            align="right"
+            className="cursor-pointer hover:text-foreground"
+            onClick={() => onSort("usagePercent")}
+          >
+            %{sortIndicator("usagePercent")}
+          </TableHead>
+          <TableHead align="right">Actions</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {items.length === 0 ? (
+          <TableEmpty colSpan={6} title={emptyMessage} />
+        ) : (
+          items.map((usage) => {
             const info = memberMap[usage.userId];
             return (
-              <tr
-                key={usage.userId}
-                className="border-b border-border last:border-0 hover:bg-muted/50"
-              >
-                <td className="px-4 py-3">
+              <TableRow key={usage.userId}>
+                <TableCell>
                   <div>
                     <p className="font-medium text-foreground">{info?.name || "Unknown"}</p>
                     <p className="text-xs text-muted-foreground">{info?.email || ""}</p>
                   </div>
-                </td>
-                <td className="px-4 py-3 text-right text-foreground">
+                </TableCell>
+                <TableCell align="right" className="text-foreground">
                   {formatFileSize(usage.usedBytes)}
-                </td>
-                <td className="px-4 py-3 text-right text-foreground hidden lg:table-cell">
+                </TableCell>
+                <TableCell align="right" className="text-foreground hidden lg:table-cell">
                   <span className="flex items-center justify-end gap-1.5">
                     {usage.hasOverride ? (
                       usage.effectiveQuotaBytes !== null ? (
@@ -247,19 +259,19 @@ function DesktopTable({
                       </span>
                     )}
                   </span>
-                </td>
-                <td className="px-4 py-3 hidden md:table-cell">
+                </TableCell>
+                <TableCell className="hidden md:table-cell">
                   <StorageProgressBar
                     usedBytes={usage.usedBytes}
                     quotaBytes={usage.effectiveQuotaBytes}
                     showLabels={false}
                     size="sm"
                   />
-                </td>
-                <td className="px-4 py-3 text-right text-foreground">
+                </TableCell>
+                <TableCell align="right" className="text-foreground">
                   {usage.effectiveQuotaBytes !== null ? `${usage.usagePercent.toFixed(1)}%` : "-"}
-                </td>
-                <td className="px-4 py-3 text-right">
+                </TableCell>
+                <TableCell align="right">
                   <Button
                     variant="ghost"
                     size="sm"
@@ -268,13 +280,13 @@ function DesktopTable({
                   >
                     <PencilSimple size={16} weight="duotone" />
                   </Button>
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             );
-          })}
-        </tbody>
-      </table>
-    </div>
+          })
+        )}
+      </TableBody>
+    </Table>
   );
 }
 

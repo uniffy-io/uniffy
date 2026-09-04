@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { Buildings, X } from "@phosphor-icons/react";
-import { Modal } from "@/components/ui/modal";
+import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -67,34 +66,14 @@ export function CreateOrganizationDialog({ onClose, onCreated }: Props) {
 
   return (
     <Modal onClose={onClose} closeDisabled={submitting} maxWidth="max-w-md">
-      <div className="flex items-start gap-3 p-4 border-b border-border">
-        <div className="p-2 rounded-lg bg-primary/10 shrink-0">
-          <Buildings size={20} weight="duotone" className="text-primary" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="text-base font-semibold text-foreground">Create organization</div>
-          <div className="text-xs text-muted-foreground mt-0.5">
-            Provisions a full workspace: owner membership, encryption key, default channel and
-            agent.
-          </div>
-        </div>
-        <button
-          type="button"
-          onClick={onClose}
-          disabled={submitting}
-          className="text-muted-foreground hover:text-foreground"
-          aria-label="Close"
-        >
-          <X size={16} weight="bold" />
-        </button>
-      </div>
+      <ModalHeader
+        title="New organization"
+        description="Provisions a full workspace: owner membership, encryption key, default channel and agent."
+      />
 
-      <div className="p-4 space-y-4">
+      <ModalBody>
         <div>
-          <label
-            htmlFor="org-create-name"
-            className="text-xs font-medium text-muted-foreground block mb-1"
-          >
+          <label htmlFor="org-create-name" className="block text-sm text-muted-foreground mb-1">
             Name
           </label>
           <Input
@@ -108,10 +87,7 @@ export function CreateOrganizationDialog({ onClose, onCreated }: Props) {
         </div>
 
         <div>
-          <label
-            htmlFor="org-create-slug"
-            className="text-xs font-medium text-muted-foreground block mb-1"
-          >
+          <label htmlFor="org-create-slug" className="block text-sm text-muted-foreground mb-1">
             Slug
           </label>
           <Input
@@ -126,16 +102,13 @@ export function CreateOrganizationDialog({ onClose, onCreated }: Props) {
             className="font-mono"
             disabled={submitting}
           />
-          <p className="text-[10px] text-muted-foreground mt-0.5">
+          <p className="text-xs text-muted-foreground mt-1">
             Unique across the deployment. Lowercase letters, digits and hyphens.
           </p>
         </div>
 
         <div>
-          <label
-            htmlFor="org-create-owner"
-            className="text-xs font-medium text-muted-foreground block mb-1"
-          >
+          <label htmlFor="org-create-owner" className="block text-sm text-muted-foreground mb-1">
             Owner email
           </label>
           <Input
@@ -146,14 +119,14 @@ export function CreateOrganizationDialog({ onClose, onCreated }: Props) {
             placeholder="owner@acme.com"
             disabled={submitting}
           />
-          <p className="text-[10px] text-muted-foreground mt-0.5">
+          <p className="text-xs text-muted-foreground mt-1">
             Must be an existing active user. They become the org owner.
           </p>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="text-xs font-medium text-muted-foreground block mb-1">Plan</label>
+            <label className="block text-sm text-muted-foreground mb-1">Plan</label>
             <Select
               value={plan}
               onChange={setPlan}
@@ -163,10 +136,7 @@ export function CreateOrganizationDialog({ onClose, onCreated }: Props) {
             />
           </div>
           <div>
-            <label
-              htmlFor="org-create-domain"
-              className="text-xs font-medium text-muted-foreground block mb-1"
-            >
+            <label htmlFor="org-create-domain" className="block text-sm text-muted-foreground mb-1">
               Domain (optional)
             </label>
             <Input
@@ -179,22 +149,21 @@ export function CreateOrganizationDialog({ onClose, onCreated }: Props) {
             />
           </div>
         </div>
-      </div>
+      </ModalBody>
 
-      <div className="flex items-center justify-end gap-2 p-4 border-t border-border">
-        <Button variant="ghost" size="md" onClick={onClose} disabled={submitting}>
+      <ModalFooter>
+        <Button type="button" variant="ghost" onClick={onClose} disabled={submitting}>
           Cancel
         </Button>
         <Button
-          variant="default"
-          size="md"
+          type="button"
           onClick={handleSubmit}
+          loading={submitting}
           disabled={submitting || !canSubmit}
         >
-          <Buildings size={14} weight="duotone" />
           Create organization
         </Button>
-      </div>
+      </ModalFooter>
     </Modal>
   );
 }

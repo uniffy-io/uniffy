@@ -27,7 +27,7 @@ Every mention chip satisfies these properties:
 2. **Availability-safe**: an existing inaccessible target renders Restricted, a confirmed deleted target renders a tombstone, and an uncertain lookup renders Unavailable. Authorization failure and deletion are never conflated.
 3. **PostgreSQL-authorized reads**: PostgreSQL decides lifecycle, access, and requestability for every resolved URN. The search engine supplies only same-organization preview data, and that data is attached only after PostgreSQL authorizes the resource.
 4. **Same component everywhere, setting-driven default**: one chip component renders in chat messages, search results, comments, and the note editor, and the user's `mentionDisplay` setting decides pill vs card uniformly. A mid-sentence expanded card breaks out as a block that splits the line boxes (editor CSS owns that); it never renders as an inline island.
-5. **Stable size**: a chip in expanded mode reserves the expanded-card footprint immediately (skeleton). Growing from inline-pill to block-card after the fetch lands tends to feel janky.
+5. **Stable size, known parts first**: a chip in expanded mode reserves the expanded-card footprint immediately. The placeholder renders what the Markdown already carries (type icon, type label, label) for real and shimmers only the live meta, so a slow resolve reads as details filling in rather than an empty box. Growing from inline-pill to block-card after the fetch lands tends to feel janky.
 
 If a change you are about to make breaks one of these, it is a good moment to reconsider the design.
 
@@ -188,9 +188,9 @@ Live state arrives in three encodings; we have a translator for each:
 
 | Source | Encoding | Translator | File |
 |--------|----------|-----------|------|
-| `searchApi.resolveUrns` (typed RPC) | `UrnMetadata` proto | `metadataToLiveState(urn, meta)` | `MentionStateProvider.tsx` |
+| `searchApi.resolveUrns` (typed RPC) | `UrnMetadata` proto | `metadataToLiveState(urn, meta)` | `mentionLiveState.ts` |
 | `useBatchedSubjectResolver` (preview cache) | `UrnPreviewData` (subset) | `previewDataToLiveState(urn, data)` | `useBatchedSubjectResolver.ts` |
-| `MENTION_STATE_CHANGED` stream event | `Record<string, string>` (snake_case) | `streamChangesToLiveState(changes)` | `MentionStateProvider.tsx` |
+| `MENTION_STATE_CHANGED` stream event | `Record<string, string>` (snake_case) | `streamChangesToLiveState(changes)` | `mentionLiveState.ts` |
 
 When you add a new field, update **all three** translators. They drift in proportion to how easy it is to forget one.
 
@@ -237,7 +237,7 @@ MentionChip          (full chip; hover preview, expand button, live state)
 │  ├─ CalendarMentionPreview
 │  ├─ ProjectMentionPreview
 │  └─ AgentMentionPreview
-├─ MentionExpandedCardSkeleton  (loading footprint, prevents size jump)
+├─ MentionExpandedCardSkeleton  (loading footprint with real type icon + label; only live meta shimmers)
 ├─ MentionRestricted            (privacy-safe lock state and request action)
 ├─ MentionUnavailable           (non-final retry state)
 ├─ MentionTombstoneChip / MentionTombstoneCard  (deleted state)
@@ -246,6 +246,8 @@ MentionChip          (full chip; hover preview, expand button, live state)
 
 MentionChipCompact   (dense inline pill; same data, smaller)
 ```
+
+**One accent for content chips.** Every boxed chip, expanded card, and hover preview wears the theme accent from `MENTION_ACCENT` (`mentionConstants.ts`): accent-tinted body, accent border, accent icon box, accent type label. Only the glyph tells the type apart. The per-type hues in `urnColors.ts` are for canvas, graph legends, and search, never for a chip; a preview that reaches for `getUrnTypeTheme` or a raw `text-sky-*` style class is the regression we keep removing.
 
 **People tokens:** `USER`, `AGENT`, and `TEAM` do not render as boxed chips. All three variants render them as a Slack-style `@Name` text token, composed from `peopleTokenClasses` + `PEOPLE_TOKEN_TYPES` in `mentionConstants.ts` (every surface reuses that helper - hand-copied class strings drift): one accent for every subject kind (`text-primary` on `bg-primary/10`, `bg-primary/25` when the mentioned user IS the viewer; the compose static chip renders without viewer context, so it never applies the self-mention wash), baseline-aligned, no border, no avatar, no presence. Avatars, presence, the agent badge, and member counts live in the hover card only. Teams get the people treatment because a team mention notifies its members - it behaves like a people mention, so it reads like one.
 
@@ -328,7 +330,9 @@ Concrete checklist when, e.g., adding `assignee_count` to project mentions:
 | `src/uniffy/domains/search/converters.py` | `SearchResult` -> `UrnMetadata` proto, including `urn_status` passthrough. |
 | `src/uniffy/domains/search/queries.py` | `SearchResult` dataclass. |
 | `src/ui/src/components/mention/types.ts` | `MentionLiveState`. |
-| `src/ui/src/components/mention/MentionStateProvider.tsx` | React provider, `metadataToLiveState`, `streamChangesToLiveState`. |
+| `src/ui/src/components/mention/MentionStateProvider.tsx` | React provider and `MentionDisplayBridge`. |
+| `src/ui/src/components/mention/mentionStateContext.ts` | `MentionStateContext`, `MENTION_NOOP`, display-mode type. |
+| `src/ui/src/components/mention/mentionLiveState.ts` | `metadataToLiveState`, `streamChangesToLiveState`. |
 | `src/ui/src/components/mention/useBatchedSubjectResolver.ts` | Module-level batch resolver, `previewDataToLiveState`, broadcast. |
 | `src/ui/src/components/mention/useMentionState.ts` | The hook every chip uses to subscribe. |
 | `src/ui/src/components/mention/mentionStateEmitter.ts` | Module-level emitter (`publishMentionState` etc.). |

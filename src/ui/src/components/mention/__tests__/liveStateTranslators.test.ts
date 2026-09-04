@@ -19,7 +19,7 @@ import { buildLiveStateFromMetadata } from "@/components/mention/buildLiveState"
 import {
   metadataToLiveState,
   streamChangesToLiveState,
-} from "@/components/mention/MentionStateProvider";
+} from "@/components/mention/mentionLiveState";
 import { MentionAvailability } from "@/components/mention/types";
 import { MentionAccessRequestStatus } from "@/components/mention/types";
 import { accessRequestStatusToLiveState } from "@/components/mention/accessRequestState";

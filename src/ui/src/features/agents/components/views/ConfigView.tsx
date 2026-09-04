@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Group, Panel, Separator } from "react-resizable-panels";
+import { Group, Panel } from "react-resizable-panels";
+import { PaneSeparator } from "@/components/ui/pane-separator";
 import {
   Key,
   Plus,
@@ -191,7 +192,7 @@ function ModelCard({ model }: { model: SerializedModelInfo }) {
 
   return (
     <div
-      className="group flex flex-col gap-3 rounded-xl border border-border bg-card p-4 transition-colors hover:border-primary/50 hover:bg-muted/30"
+      className="flex flex-col gap-3 rounded-xl bg-surface p-4 shadow-edge"
       data-testid={`provider-model-${model.id}`}
     >
       <div className="flex items-start gap-3">
@@ -457,7 +458,7 @@ export function ConfigView({ embedded = false }: ConfigViewProps = {}) {
           defaultSize={260}
           minSize={200}
           maxSize={400}
-          className="border-r border-border bg-card overflow-hidden"
+          className="bg-card overflow-hidden"
         >
           <div className="h-full flex flex-col">
             <div className="px-4 py-3 border-b border-border flex items-center justify-between gap-2">
@@ -534,7 +535,7 @@ export function ConfigView({ embedded = false }: ConfigViewProps = {}) {
           </div>
         </Panel>
 
-        <Separator className="w-1 bg-border hover:bg-primary/50 transition-colors cursor-col-resize data-[resize-handle-state=drag]:bg-primary" />
+        <PaneSeparator />
 
         <Panel id="config-detail" minSize={400}>
           <div className="h-full flex flex-col overflow-hidden">

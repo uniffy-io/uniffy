@@ -18,6 +18,7 @@ import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { PaneBackLink, PaneHeader, PaneHeaderBar } from "@/components/ui/pane-header";
 import { Tabs } from "@/components/ui/tabs";
 import { AccessModeIcon, useAccessPolicyDialog, useMyContentRole } from "@/features/permissions";
 import {
@@ -51,16 +52,16 @@ import { selectProviderKeys } from "@/features/agents/store/agentProvidersSlice"
 
 const headerButtonClass = cn(
   "group/btn relative flex items-center justify-center h-7 w-7 rounded-md",
-  "border border-foreground/15 bg-transparent text-muted-foreground",
+  "border border-border-strong bg-transparent text-muted-foreground",
   "transition-all duration-300 ease-out",
-  "hover:border-foreground/30 hover:bg-muted hover:text-primary",
+  "hover:border-border-strong hover:bg-muted hover:text-primary",
 );
 
 const headerChipClass = cn(
   "group/btn flex items-center gap-1 h-7 px-1.5 rounded-md",
-  "border border-foreground/15 bg-transparent text-xs text-muted-foreground",
+  "border border-border-strong bg-transparent text-xs text-muted-foreground",
   "transition-all duration-300 ease-out",
-  "hover:border-foreground/30 hover:bg-muted hover:text-primary",
+  "hover:border-border-strong hover:bg-muted hover:text-primary",
 );
 
 function AgentCard({
@@ -155,8 +156,8 @@ function AgentsBrowse({
   return (
     <>
       <BrowseHeader
+        icon={Robot}
         title="Agents"
-        subtitle="Every agent in this organization. Members reach them from chat."
         search={search}
         onSearchChange={setSearch}
         searchPlaceholder="Search agents..."
@@ -360,50 +361,52 @@ export function AgentsView({ onNewAgent }: { onNewAgent: (templateKey?: string) 
         data-agent-id={selectedAgent.id}
         data-panel={activePanel}
       >
-        <div className="border-b border-border/60 bg-card">
-          <div className="flex items-center gap-3 px-4 pt-3">
-            <button
-              type="button"
-              onClick={() => navigate("/agents/agents")}
-              className="flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
-              data-testid="agents-detail-back"
-            >
-              <ArrowLeft size={14} />
-              All agents
-            </button>
-          </div>
-          <div className="flex items-center gap-3 px-4 py-2">
-            <AgentAvatar
-              avatarKey={selectedAgent.avatarKey}
-              avatarEmoji={selectedAgent.avatarEmoji}
-              agentName={selectedAgent.name}
-              size="lg"
-            />
-            <h2
-              className="text-xl font-semibold text-foreground truncate"
-              data-testid="agents-detail-name"
-            >
-              {selectedAgent.name}
-            </h2>
-            <span
-              className={cn(headerChipClass, "font-mono text-xs shrink-0")}
-              data-testid="agents-detail-model-chip"
-            >
-              <ProviderLogo
-                provider={providerKeys[selectedAgent.primaryProviderKeyId]?.provider}
-                size="sm"
-              />
-              {selectedAgent.primaryModel || "No model configured"}
-            </span>
-            {isRetired && (
-              <span
-                className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium uppercase tracking-wider text-muted-foreground"
-                data-testid="agents-detail-deleted-badge"
+        <PaneHeader>
+          <PaneHeaderBar
+            eyebrow={
+              <PaneBackLink
+                onClick={() => navigate("/agents/agents")}
+                data-testid="agents-detail-back"
               >
-                Deleted
-              </span>
-            )}
-            <div className="ml-auto flex items-center gap-1.5 shrink-0">
+                <ArrowLeft size={14} />
+                All agents
+              </PaneBackLink>
+            }
+            icon={
+              <AgentAvatar
+                avatarKey={selectedAgent.avatarKey}
+                avatarEmoji={selectedAgent.avatarEmoji}
+                agentName={selectedAgent.name}
+                size="lg"
+              />
+            }
+            title={
+              <>
+                <span className="truncate" data-testid="agents-detail-name">
+                  {selectedAgent.name}
+                </span>
+                <span
+                  className={cn(headerChipClass, "font-mono text-xs shrink-0")}
+                  data-testid="agents-detail-model-chip"
+                >
+                  <ProviderLogo
+                    provider={providerKeys[selectedAgent.primaryProviderKeyId]?.provider}
+                    size="sm"
+                  />
+                  {selectedAgent.primaryModel || "No model configured"}
+                </span>
+                {isRetired && (
+                  <span
+                    className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium uppercase tracking-wider text-muted-foreground"
+                    data-testid="agents-detail-deleted-badge"
+                  >
+                    Deleted
+                  </span>
+                )}
+              </>
+            }
+          >
+            <div className="flex items-center gap-1.5 shrink-0">
               {isRetired ? (
                 isBuilder && (
                   <Button
@@ -467,8 +470,8 @@ export function AgentsView({ onNewAgent }: { onNewAgent: (templateKey?: string) 
                 </>
               )}
             </div>
-          </div>
-        </div>
+          </PaneHeaderBar>
+        </PaneHeader>
 
         {isRetired && (
           <div

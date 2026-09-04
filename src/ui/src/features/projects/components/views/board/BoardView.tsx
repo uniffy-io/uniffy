@@ -27,12 +27,11 @@ import {
 import { moveTask, updateFieldThunk, updateTask } from "@/features/projects/store/projectsThunks";
 import { checkReparent } from "@/features/projects/utils/reparent";
 import { getHierarchyRuleViolation } from "@/features/projects/utils/taskTypes";
+import { statusPaint } from "@/features/projects/utils/statusPaint";
 import {
-  selectSelectedTaskIds,
   selectSearchQuery,
   selectActiveGroupByFieldId,
   selectTask,
-  toggleTaskSelection,
   openDetailPanel,
   openCreateTaskModal,
 } from "@/features/projects/store/projectsUiSlice";
@@ -53,7 +52,6 @@ export function BoardView() {
   const dispatch = useAppDispatch();
   const project = useAppSelector(selectCurrentProject);
   const tasks = useFilteredTasks(project?.id ?? "", { includeSubtasks: true });
-  const selectedTaskIds = useAppSelector(selectSelectedTaskIds);
   const searchQuery = useAppSelector(selectSearchQuery);
   const groupBy = useAppSelector(selectActiveGroupByFieldId);
   const activeSprint = useAppSelector(selectActiveSprint(project?.id ?? ""));
@@ -176,33 +174,26 @@ export function BoardView() {
       .map((s) => s.id),
   );
 
-  const handleTaskClick = (taskId: string, e: React.MouseEvent) => {
-    if (e.ctrlKey || e.metaKey) {
-      dispatch(toggleTaskSelection(taskId));
-    } else {
-      dispatch(selectTask(taskId));
-      dispatch(openDetailPanel());
-    }
-  };
-
-  const handleCheckboxChange = (taskId: string) => {
-    dispatch(toggleTaskSelection(taskId));
+  const handleTaskClick = (taskId: string) => {
+    dispatch(selectTask(taskId));
+    dispatch(openDetailPanel());
   };
 
   const handleAddTask = () => {
     dispatch(openCreateTaskModal());
   };
 
-  const handleAddStatus = (label: string, color: string) => {
+  const handleAddStatus = (label: string) => {
     if (!statusField) return;
 
     const existingOptions = statusField.config.options || [];
     const maxSortOrder = existingOptions.reduce((max, item) => Math.max(max, item.sortOrder), -1);
 
+    // Empty colour: the backend assigns the new slot on the brand axis when it saves.
     const newOption: SelectOption = {
       id: `status_${crypto.randomUUID().slice(0, 8)}`,
       label,
-      color,
+      color: "",
       sortOrder: maxSortOrder + 1,
     };
 
@@ -418,9 +409,6 @@ export function BoardView() {
   const activePriorityOption = activeTask
     ? priorityOptions.find((o) => o.id === activeTask.priority)
     : undefined;
-  const activeStatusOption = activeTask
-    ? statusOptions.find((o) => o.id === activeTask.status)
-    : undefined;
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
@@ -461,9 +449,7 @@ export function BoardView() {
                   tasksByStatus={byStatus}
                   statusOptions={statusOptions}
                   priorityOptions={priorityOptions}
-                  selectedTaskIds={selectedTaskIds}
                   onTaskClick={handleTaskClick}
-                  onCheckboxChange={handleCheckboxChange}
                   onAddTask={canEdit ? handleAddTask : undefined}
                   projectSlug={project?.slug || ""}
                   reparentHintActive={reparentHintActive}
@@ -479,9 +465,7 @@ export function BoardView() {
                 tasksByStatus={noEpicByStatus}
                 statusOptions={statusOptions}
                 priorityOptions={priorityOptions}
-                selectedTaskIds={selectedTaskIds}
                 onTaskClick={handleTaskClick}
-                onCheckboxChange={handleCheckboxChange}
                 onAddTask={canEdit ? handleAddTask : undefined}
                 projectSlug={project?.slug || ""}
                 reparentHintActive={reparentHintActive}
@@ -497,11 +481,10 @@ export function BoardView() {
                 <BoardColumn
                   key={status.id}
                   statusOption={status}
+                  paint={statusPaint(statusOptions, status.id)}
                   tasks={tasksByStatus[status.id] || []}
                   priorityOptions={priorityOptions}
-                  selectedTaskIds={selectedTaskIds}
                   onTaskClick={handleTaskClick}
-                  onCheckboxChange={handleCheckboxChange}
                   onAddTask={canEdit ? handleAddTask : undefined}
                   projectSlug={project?.slug || ""}
                   reparentHintActive={reparentHintActive}
@@ -540,11 +523,8 @@ export function BoardView() {
             <div className="w-[320px]">
               <TaskCard
                 task={activeTask}
-                statusOption={activeStatusOption}
                 priorityOption={activePriorityOption}
                 onClick={(e) => e.stopPropagation()}
-                onCheckboxChange={() => {}}
-                isSelected={false}
                 projectSlug={project?.slug || ""}
               />
             </div>

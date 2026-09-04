@@ -298,7 +298,7 @@ function SprintBoundaryLines({ sprints, timelineStart, zoom }: SprintBoundaryLin
           <div
             className={cn(
               "absolute top-3 text-[10px] font-medium whitespace-nowrap leading-none",
-              line.isActive ? "text-primary/80" : "text-muted-foreground/50",
+              line.isActive ? "text-primary/80" : "text-subtle-foreground",
             )}
             style={{
               writingMode: "vertical-lr",

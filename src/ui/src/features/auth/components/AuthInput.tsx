@@ -62,7 +62,7 @@ export function AuthInput({
                     ${Icon ? "pl-10 pr-4" : "px-4"}
                     pt-5 pb-2
                     ${disabled || readOnly ? "bg-muted cursor-not-allowed" : ""}
-                    ${!focused ? "border-border hover:border-muted-foreground/40" : ""}
+                    ${!focused ? "border-border hover:border-border-strong" : ""}
                 `}
         style={
           focused

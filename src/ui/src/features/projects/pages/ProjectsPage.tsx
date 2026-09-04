@@ -14,7 +14,6 @@ import {
   openCreateProjectModal,
   toggleSidebar,
   selectSelectedTaskId,
-  selectSelectedTaskIds,
   selectIsDetailPanelOpen,
 } from "../store/projectsUiSlice";
 import { fetchProjects, fetchProjectTasks } from "../store/projectsThunks";
@@ -29,7 +28,6 @@ export function ProjectsPage() {
 
   const currentProject = useAppSelector(selectCurrentProject);
   const selectedTaskId = useAppSelector(selectSelectedTaskId);
-  const selectedTaskIds = useAppSelector(selectSelectedTaskIds);
   const isDetailPanelOpen = useAppSelector(selectIsDetailPanelOpen);
   const { canEdit } = useProjectPermission();
 
@@ -106,9 +104,6 @@ export function ProjectsPage() {
     const openProjectId = currentProject?.id;
     if (!openProjectId) return;
 
-    // URL represents single-task viewing; skip while multi-selecting.
-    if (selectedTaskIds.length > 1) return;
-
     if (selectedTaskId && isDetailPanelOpen) {
       if (taskId !== selectedTaskId) {
         isProgrammaticNav.current = true;
@@ -118,14 +113,7 @@ export function ProjectsPage() {
       isProgrammaticNav.current = true;
       navigate(`/projects/${openProjectId}`, { replace: true });
     }
-  }, [
-    selectedTaskId,
-    selectedTaskIds.length,
-    isDetailPanelOpen,
-    currentProject?.id,
-    taskId,
-    navigate,
-  ]);
+  }, [selectedTaskId, isDetailPanelOpen, currentProject?.id, taskId, navigate]);
 
   return (
     <>

@@ -1,11 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { MouseEvent as ReactMouseEvent } from "react";
+import type { CSSProperties, MouseEvent as ReactMouseEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Background,
-  BackgroundVariant,
   Controls,
   MarkerType,
+  MiniMap,
   Panel,
   ReactFlow,
   type Edge,
@@ -14,8 +13,8 @@ import {
   type NodeTypes,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { UsersThree } from "@phosphor-icons/react";
-import { useTheme } from "@/config/theme/ThemeProvider";
+import { UsersThree, Warning } from "@phosphor-icons/react";
+import { useTheme } from "@/config/theme/themeContext";
 import { layoutTree } from "@/features/people/utils/treeLayout";
 import {
   ORG_CHART_MAX_ZOOM,
@@ -32,6 +31,27 @@ const NODE_WIDTH = 220;
 const NODE_HEIGHT = 64;
 const GROUP_PADDING = 20;
 const GROUP_LABEL_HEIGHT = 34;
+
+/* React Flow paints its own chrome from --xy-* variables; pin them to the
+   theme so the canvas sits on the content-sheet tone like chat and notes and
+   the minimap and controls follow the surface ladder. */
+const ORG_CHART_CANVAS_STYLE = {
+  "--xy-background-color": "hsl(var(--surface))",
+  "--xy-minimap-background-color": "hsl(var(--background))",
+  "--xy-minimap-mask-background-color": "hsl(var(--background) / 0.7)",
+  "--xy-minimap-mask-stroke-color": "hsl(var(--border-strong))",
+  "--xy-minimap-node-stroke-color": "transparent",
+  "--xy-controls-button-background-color": "hsl(var(--card))",
+  "--xy-controls-button-background-color-hover": "hsl(var(--muted))",
+  "--xy-controls-button-color": "hsl(var(--foreground))",
+  "--xy-controls-button-color-hover": "hsl(var(--foreground))",
+  "--xy-controls-button-border-color": "hsl(var(--border))",
+  "--xy-controls-box-shadow": "0 0 0 1px hsl(var(--border))",
+} as CSSProperties;
+
+function miniMapNodeColor(node: Node): string {
+  return node.type === "teamGroup" ? "hsl(var(--muted-foreground) / 0.18)" : "hsl(var(--primary))";
+}
 
 /**
  * Hard ceiling on nodes drawn at once - past it the canvas stops being
@@ -65,6 +85,8 @@ interface OrgChartCanvasProps {
   nodes: SerializedOrgChartNode[];
   teams: SerializedTeamNode[];
   selectedTeamId: string | null;
+  /** The server broke a cycle or hit the depth cap, so the tree is incomplete. */
+  truncated?: boolean;
 }
 
 /** The selected team plus every team nested under it. */
@@ -117,7 +139,12 @@ interface HoverState {
 const HOVER_SHOW_DELAY_MS = 350;
 const HOVER_HIDE_DELAY_MS = 200;
 
-export function OrgChartCanvas({ nodes, teams, selectedTeamId }: OrgChartCanvasProps) {
+export function OrgChartCanvas({
+  nodes,
+  teams,
+  selectedTeamId,
+  truncated = false,
+}: OrgChartCanvasProps) {
   const navigate = useNavigate();
   const { resolvedTheme } = useTheme();
 
@@ -408,18 +435,35 @@ export function OrgChartCanvas({ nodes, teams, selectedTeamId }: OrgChartCanvasP
         maxZoom={ORG_CHART_MAX_ZOOM}
         colorMode={resolvedTheme}
         proOptions={{ hideAttribution: true }}
+        style={ORG_CHART_CANVAS_STYLE}
       >
-        <Background variant={BackgroundVariant.Dots} gap={20} size={1} />
         <Controls showInteractive={false} />
+        <MiniMap
+          pannable
+          zoomable
+          nodeColor={miniMapNodeColor}
+          nodeBorderRadius={4}
+          className="!rounded-lg !shadow-edge"
+        />
         {drawnCount < totalCount && (
           <Panel
             position="top-left"
-            className="rounded-md border border-border bg-card/90 px-2.5 py-1.5 text-[11px] text-muted-foreground shadow-sm backdrop-blur"
+            className="rounded-md bg-card/90 px-2.5 py-1.5 text-[11px] text-muted-foreground shadow-edge backdrop-blur"
           >
             Showing {drawnCount} of {totalCount} people
             {budgetReached
               ? " - collapse a branch or pick a team to draw more"
               : " - expand a branch to see more"}
+          </Panel>
+        )}
+        {truncated && (
+          <Panel
+            position="top-right"
+            className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-800 dark:bg-amber-900/30 dark:text-amber-400"
+            title="The reporting tree was truncated: a cycle was broken or the depth cap was hit."
+          >
+            <Warning size={10} weight="fill" />
+            Truncated
           </Panel>
         )}
       </ReactFlow>

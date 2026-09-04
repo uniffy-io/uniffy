@@ -28,6 +28,7 @@ interface ChatMessagesState {
   windowedByChannel: Record<string, boolean>;
   unreadSeparatorByChannel: Record<string, string | null>;
   isLoadingByChannel: Record<string, boolean>;
+  initialLoadFailedByChannel: Record<string, boolean>;
   typingByChannel: Record<string, TypingEntry[]>;
   typingByThread: Record<string, TypingEntry[]>;
   // Live reasoning keyed by the in-flight agent message id. Ephemeral by
@@ -44,6 +45,7 @@ const initialState: ChatMessagesState = {
   windowedByChannel: {},
   unreadSeparatorByChannel: {},
   isLoadingByChannel: {},
+  initialLoadFailedByChannel: {},
   typingByChannel: {},
   typingByThread: {},
   agentThinkingByMessage: {},
@@ -80,6 +82,7 @@ export const chatMessagesSlice = createSlice({
       state.idSetByChannel[channelId] = set;
       state.pinnedCountByChannel[channelId] = pinned;
       state.windowedByChannel[channelId] = windowed;
+      state.initialLoadFailedByChannel[channelId] = false;
     },
     appendMessage: (state, action: PayloadAction<{ channelId: string; message: ChatMessage }>) => {
       const { channelId, message } = action.payload;
@@ -215,6 +218,12 @@ export const chatMessagesSlice = createSlice({
     ) => {
       state.isLoadingByChannel[action.payload.channelId] = action.payload.isLoading;
     },
+    setInitialChannelLoadFailed: (
+      state,
+      action: PayloadAction<{ channelId: string; failed: boolean }>,
+    ) => {
+      state.initialLoadFailedByChannel[action.payload.channelId] = action.payload.failed;
+    },
     clearChannelMessages: (state, action: PayloadAction<string>) => {
       const channelId = action.payload;
       const ids = state.idsByChannel[channelId];
@@ -230,6 +239,7 @@ export const chatMessagesSlice = createSlice({
       delete state.windowedByChannel[channelId];
       delete state.unreadSeparatorByChannel[channelId];
       delete state.isLoadingByChannel[channelId];
+      delete state.initialLoadFailedByChannel[channelId];
       delete state.typingByChannel[channelId];
     },
     restrictForwardsFromChannel: (state, action: PayloadAction<string>) => {
@@ -483,6 +493,7 @@ export const {
   setUnreadSeparator,
   clearUnreadSeparator,
   setChannelLoading,
+  setInitialChannelLoadFailed,
   clearChannelMessages,
   restrictForwardsFromChannel,
   restrictForwardsFromMessage,
@@ -611,6 +622,9 @@ export const selectUnreadSeparatorForChannel = (
 
 export const selectIsChannelLoading = (state: RootState, channelId: string): boolean =>
   state.chatMessages.isLoadingByChannel[channelId] ?? false;
+
+export const selectInitialChannelLoadFailed = (state: RootState, channelId: string): boolean =>
+  state.chatMessages.initialLoadFailedByChannel[channelId] ?? false;
 
 export const selectPinnedCountForChannel = (state: RootState, channelId: string): number =>
   state.chatMessages.pinnedCountByChannel[channelId] ?? 0;

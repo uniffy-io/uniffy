@@ -147,7 +147,7 @@ export function ChatPolicySection() {
       </div>
 
       {error && (
-        <div className="p-4 rounded-lg border border-border">
+        <div className="p-4 rounded-xl bg-surface shadow-edge">
           <div className="flex items-center gap-2 text-sm" style={{ color: "var(--status-error)" }}>
             <Warning size={20} weight="fill" />
             {error}
@@ -156,11 +156,11 @@ export function ChatPolicySection() {
       )}
 
       {loading || !form ? (
-        <div className="rounded-lg border border-border bg-card p-6 text-sm text-muted-foreground">
+        <div className="rounded-xl bg-surface shadow-edge p-6 text-sm text-muted-foreground">
           Loading...
         </div>
       ) : (
-        <div className="rounded-xl border border-border bg-card divide-y divide-border">
+        <div className="rounded-xl bg-surface shadow-edge divide-y divide-border">
           <div className="flex items-start gap-4 p-5">
             <div className="flex-1 min-w-0">
               <h3 className="text-sm font-semibold text-foreground">

@@ -165,7 +165,7 @@ export function NoteFolderView() {
                       <span className="flex-1 min-w-0 text-sm font-medium text-foreground/80 group-hover:text-foreground truncate">
                         {child.title}
                       </span>
-                      <span className="text-xs text-muted-foreground/60 shrink-0 hidden sm:inline">
+                      <span className="text-xs text-subtle-foreground shrink-0 hidden sm:inline">
                         {formatProtoDate(child.updatedAt)}
                       </span>
                     </button>

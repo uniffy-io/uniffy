@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { ArrowsClockwise, UserPlus, X } from "@phosphor-icons/react";
-import { Modal } from "@/components/ui/modal";
+import { ArrowsClockwise } from "@phosphor-icons/react";
+import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -99,33 +99,14 @@ export function CreateUserDialog({ onClose, onCreated }: Props) {
 
   return (
     <Modal onClose={onClose} closeDisabled={submitting} maxWidth="max-w-md">
-      <div className="flex items-start gap-3 p-4 border-b border-border">
-        <div className="p-2 rounded-lg bg-primary/10 shrink-0">
-          <UserPlus size={20} weight="duotone" className="text-primary" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="text-base font-semibold text-foreground">Create user</div>
-          <div className="text-xs text-muted-foreground mt-0.5">
-            Direct provisioning, no invitation email. Hand the password over out of band.
-          </div>
-        </div>
-        <button
-          type="button"
-          onClick={onClose}
-          disabled={submitting}
-          className="text-muted-foreground hover:text-foreground"
-          aria-label="Close"
-        >
-          <X size={16} weight="bold" />
-        </button>
-      </div>
+      <ModalHeader
+        title="New user"
+        description="Direct provisioning, no invitation email. Hand the password over out of band."
+      />
 
-      <div className="p-4 space-y-4 max-h-[60vh] overflow-y-auto">
+      <ModalBody>
         <div>
-          <label
-            htmlFor="user-create-email"
-            className="text-xs font-medium text-muted-foreground block mb-1"
-          >
+          <label htmlFor="user-create-email" className="block text-sm text-muted-foreground mb-1">
             Email
           </label>
           <Input
@@ -142,7 +123,7 @@ export function CreateUserDialog({ onClose, onCreated }: Props) {
           <div>
             <label
               htmlFor="user-create-username"
-              className="text-xs font-medium text-muted-foreground block mb-1"
+              className="block text-sm text-muted-foreground mb-1"
             >
               Username
             </label>
@@ -159,10 +140,7 @@ export function CreateUserDialog({ onClose, onCreated }: Props) {
             />
           </div>
           <div>
-            <label
-              htmlFor="user-create-name"
-              className="text-xs font-medium text-muted-foreground block mb-1"
-            >
+            <label htmlFor="user-create-name" className="block text-sm text-muted-foreground mb-1">
               Full name
             </label>
             <Input
@@ -178,7 +156,7 @@ export function CreateUserDialog({ onClose, onCreated }: Props) {
         <div>
           <label
             htmlFor="user-create-password"
-            className="text-xs font-medium text-muted-foreground block mb-1"
+            className="block text-sm text-muted-foreground mb-1"
           >
             Password
           </label>
@@ -193,6 +171,7 @@ export function CreateUserDialog({ onClose, onCreated }: Props) {
               disabled={submitting}
             />
             <Button
+              type="button"
               variant="outline"
               size="lg"
               onClick={() => setPassword(generatePassword())}
@@ -203,16 +182,14 @@ export function CreateUserDialog({ onClose, onCreated }: Props) {
               Generate
             </Button>
           </div>
-          <p className="text-[10px] text-muted-foreground mt-0.5">
+          <p className="text-xs text-muted-foreground mt-1">
             12+ characters, or 8-11 mixing case, digits and symbols.
           </p>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="text-xs font-medium text-muted-foreground block mb-1">
-              Organization
-            </label>
+            <label className="block text-sm text-muted-foreground mb-1">Organization</label>
             <Select
               value={organizationId}
               onChange={setOrganizationId}
@@ -223,9 +200,7 @@ export function CreateUserDialog({ onClose, onCreated }: Props) {
           </div>
           {organizationId !== NO_ORG && (
             <div>
-              <label className="text-xs font-medium text-muted-foreground block mb-1">
-                Org role
-              </label>
+              <label className="block text-sm text-muted-foreground mb-1">Org role</label>
               <Select
                 value={role}
                 onChange={setRole}
@@ -253,10 +228,7 @@ export function CreateUserDialog({ onClose, onCreated }: Props) {
         </div>
 
         <div>
-          <label
-            htmlFor="user-create-reason"
-            className="block text-xs font-medium text-foreground mb-1"
-          >
+          <label htmlFor="user-create-reason" className="block text-sm text-muted-foreground mb-1">
             Reason
           </label>
           <Input
@@ -266,31 +238,30 @@ export function CreateUserDialog({ onClose, onCreated }: Props) {
             placeholder="Why this account is being provisioned"
             disabled={submitting}
           />
-          <p className="text-[10px] text-muted-foreground mt-0.5">
+          <p className="text-xs text-muted-foreground mt-1">
             Recorded in the audit log alongside the new account.
           </p>
         </div>
 
-        <p className="text-[10px] text-muted-foreground">
+        <p className="text-xs text-muted-foreground">
           Two-factor enrollment happens at first sign-in when the organization's security policy
           requires it.
         </p>
-      </div>
+      </ModalBody>
 
-      <div className="flex items-center justify-end gap-2 p-4 border-t border-border">
-        <Button variant="ghost" size="md" onClick={onClose} disabled={submitting}>
+      <ModalFooter>
+        <Button type="button" variant="ghost" onClick={onClose} disabled={submitting}>
           Cancel
         </Button>
         <Button
-          variant="default"
-          size="md"
+          type="button"
           onClick={handleSubmit}
+          loading={submitting}
           disabled={submitting || !canSubmit}
         >
-          <UserPlus size={14} weight="duotone" />
           Create user
         </Button>
-      </div>
+      </ModalFooter>
     </Modal>
   );
 }

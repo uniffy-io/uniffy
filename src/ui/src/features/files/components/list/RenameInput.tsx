@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Check, X } from "@phosphor-icons/react";
+import { Input } from "@/components/ui/input";
 import { cn } from "@/shared/utils/cn";
 
 const MAX_NAME_LENGTH = 255;
@@ -57,7 +58,7 @@ export function RenameInput({
   if (variant === "list") {
     return (
       <div className={cn("flex items-center gap-2 flex-1 min-w-0", className)}>
-        <input
+        <Input
           ref={inputRef}
           type="text"
           value={value}
@@ -65,7 +66,7 @@ export function RenameInput({
           onKeyDown={handleKeyDown}
           onBlur={handleConfirm}
           maxLength={MAX_NAME_LENGTH}
-          className="flex-1 min-w-0 px-2 py-1 text-sm bg-background border border-primary rounded focus:outline-none focus:ring-2 focus:ring-primary"
+          className="h-8 flex-1 min-w-0 px-2 py-1"
         />
         <button
           onClick={(e) => {
@@ -98,7 +99,7 @@ export function RenameInput({
   // Grid variant - constrained to card width
   return (
     <div className={cn("flex items-center gap-1 min-w-0", className)}>
-      <input
+      <Input
         ref={inputRef}
         type="text"
         value={value}
@@ -107,7 +108,7 @@ export function RenameInput({
         onBlur={handleConfirm}
         onClick={(e) => e.stopPropagation()}
         maxLength={MAX_NAME_LENGTH}
-        className="w-full min-w-0 px-1 py-0.5 text-sm bg-background border border-primary rounded focus:outline-none focus:ring-1 focus:ring-primary"
+        className="h-7 min-w-0 px-1.5 py-0.5"
       />
     </div>
   );

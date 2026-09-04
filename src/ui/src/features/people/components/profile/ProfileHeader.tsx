@@ -9,6 +9,7 @@ import { avatarUrlAtVariant } from "@/shared/utils/fileUrls";
 import { PresenceIndicator } from "@/components/subject";
 import { getAvatarGradientStyle, getInitials } from "@/components/subject/utils";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import type { SerializedPersonProfile } from "@/features/people/store/peopleThunks";
 
 interface ProfileHeaderProps {
@@ -63,7 +64,7 @@ export function ProfileHeader({ person, onMessage, messagePending }: ProfileHead
         : null;
 
   return (
-    <div className="rounded-lg border border-border bg-card p-4 md:p-6">
+    <Card tone="surface" className="p-4 md:p-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
         <div className="relative shrink-0">
           {avatarSrc ? (
@@ -114,7 +115,7 @@ export function ProfileHeader({ person, onMessage, messagePending }: ProfileHead
             </p>
           )}
           {person.username && (
-            <p className="mt-0.5 text-xs text-muted-foreground/70">@{person.username}</p>
+            <p className="mt-0.5 text-xs text-subtle-foreground">@{person.username}</p>
           )}
           <p
             className={cn(
@@ -139,6 +140,6 @@ export function ProfileHeader({ person, onMessage, messagePending }: ProfileHead
           </Button>
         </div>
       </div>
-    </div>
+    </Card>
   );
 }

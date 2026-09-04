@@ -1,12 +1,14 @@
 import { useState, useEffect, useCallback } from "react";
-import { X, Door, Plus } from "@phosphor-icons/react";
+import { X, Plus } from "@phosphor-icons/react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/ui/modal";
 import { Select } from "@/components/ui/select";
 import type { SelectOption } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { selectRoomsLoading } from "@/features/rooms/store/roomsSlice";
 import { createRoom, updateRoom } from "@/features/rooms/store/roomsThunks";
 import { ROOM_TYPE_LABELS, ROOM_STATUS_LABELS, AMENITY_OPTIONS } from "@/features/rooms/types";
@@ -220,252 +222,202 @@ export function RoomFormModal({ isOpen, onClose, room }: RoomFormModalProps) {
     setCustomAmenity("");
   }, [customAmenity, form.amenities]);
 
-  useEffect(() => {
-    if (!isOpen) return;
-    function handleKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
-    }
-    document.addEventListener("keydown", handleKey);
-    return () => document.removeEventListener("keydown", handleKey);
-  }, [isOpen, onClose]);
-
   if (!isOpen) return null;
 
   const isSubmitting = loading.creating || loading.updating;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center">
-      <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
-        onClick={onClose}
-      />
+    <Modal onClose={onClose} closeDisabled={isSubmitting} maxWidth="max-w-lg">
+      <form onSubmit={handleSubmit}>
+        <ModalHeader title={isEdit ? "Edit room" : "New room"} />
 
-      <div
-        className={cn(
-          "relative bg-card w-[calc(100vw-2rem)] max-w-lg mx-4",
-          "rounded-t-xl sm:rounded-xl",
-          "shadow-2xl border border-border overflow-hidden",
-          "animate-in zoom-in-95 fade-in duration-200",
-        )}
-      >
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-          <div className="flex items-center gap-2">
-            <Door size={20} weight="duotone" className="text-muted-foreground" />
-            <h2 className="text-base font-semibold text-foreground">
-              {isEdit ? "Edit Room" : "New Room"}
-            </h2>
+        <ModalBody>
+          <div>
+            <label className="block text-sm text-muted-foreground mb-1">Name</label>
+            <Input
+              value={form.name}
+              onChange={(e) => handleFieldChange("name", e.target.value)}
+              placeholder="Conference Room A"
+              className={cn(errors.name && "border-red-500")}
+            />
+            {errors.name && <p className="mt-1 text-xs text-red-500">{errors.name}</p>}
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-          >
-            <X size={18} weight="bold" />
-          </button>
-        </div>
 
-        <form onSubmit={handleSubmit}>
-          <div className="px-6 py-4 max-h-[60vh] overflow-y-auto flex flex-col gap-4">
-            <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium text-foreground">
-                Name <span className="text-red-500">*</span>
+          <div>
+            <label className="block text-sm text-muted-foreground mb-1">
+              Description (optional)
+            </label>
+            <Textarea
+              value={form.description}
+              onChange={(e) => handleFieldChange("description", e.target.value)}
+              placeholder="A brief description of this room..."
+              rows={3}
+              className={cn(errors.description && "border-red-500")}
+            />
+            {errors.description && (
+              <p className="mt-1 text-xs text-red-500">{errors.description}</p>
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm text-muted-foreground mb-1">Room type</label>
+              <Select
+                value={form.roomType}
+                onChange={(val) => setForm((prev) => ({ ...prev, roomType: val as RoomType }))}
+                options={ROOM_TYPE_OPTIONS}
+              />
+            </div>
+            <div>
+              <label className="block text-sm text-muted-foreground mb-1">Capacity</label>
+              <Input
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                value={form.capacity}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/[^0-9]/g, "");
+                  handleFieldChange("capacity", val);
+                }}
+                className={cn(errors.capacity && "border-red-500")}
+              />
+              {errors.capacity && <p className="mt-1 text-xs text-red-500">{errors.capacity}</p>}
+            </div>
+          </div>
+
+          {isEdit && (
+            <div>
+              <label className="block text-sm text-muted-foreground mb-1">Status</label>
+              <Select
+                value={form.status}
+                onChange={(val) => setForm((prev) => ({ ...prev, status: val as RoomStatus }))}
+                options={ROOM_STATUS_OPTIONS}
+              />
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm text-muted-foreground mb-1">
+                Building (optional)
               </label>
               <Input
-                value={form.name}
-                onChange={(e) => handleFieldChange("name", e.target.value)}
-                placeholder="Conference Room A"
-                className={cn(errors.name && "border-red-500")}
+                value={form.building}
+                onChange={(e) => handleFieldChange("building", e.target.value)}
+                placeholder="Main Office"
+                className={cn(errors.building && "border-red-500")}
               />
-              {errors.name && <span className="text-xs text-red-500">{errors.name}</span>}
+              {errors.building && <p className="mt-1 text-xs text-red-500">{errors.building}</p>}
             </div>
-
-            <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium text-foreground">Description</label>
-              <textarea
-                value={form.description}
-                onChange={(e) => handleFieldChange("description", e.target.value)}
-                placeholder="A brief description of this room..."
-                rows={3}
-                className={cn(
-                  "flex w-full rounded-md border bg-background px-3 py-2 text-sm",
-                  "placeholder:text-muted-foreground",
-                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-                  "resize-none",
-                  errors.description ? "border-red-500" : "border-input",
-                )}
+            <div>
+              <label className="block text-sm text-muted-foreground mb-1">Floor (optional)</label>
+              <Input
+                value={form.floor}
+                onChange={(e) => handleFieldChange("floor", e.target.value)}
+                placeholder="3"
+                className={cn(errors.floor && "border-red-500")}
               />
-              {errors.description && (
-                <span className="text-xs text-red-500">{errors.description}</span>
-              )}
+              {errors.floor && <p className="mt-1 text-xs text-red-500">{errors.floor}</p>}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm text-muted-foreground mb-1">Location (optional)</label>
+            <Input
+              value={form.location}
+              onChange={(e) => handleFieldChange("location", e.target.value)}
+              placeholder="Wing B, near elevator"
+              className={cn(errors.location && "border-red-500")}
+            />
+            {errors.location && <p className="mt-1 text-xs text-red-500">{errors.location}</p>}
+          </div>
+
+          <div>
+            <label className="block text-sm text-muted-foreground mb-1">Amenities</label>
+            <div className="grid grid-cols-2 gap-2">
+              {AMENITY_OPTIONS.map((amenity) => (
+                <Checkbox
+                  key={amenity}
+                  label={amenity}
+                  checked={form.amenities.includes(amenity)}
+                  onChange={() => handleAmenityToggle(amenity)}
+                />
+              ))}
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div className="flex flex-col gap-1.5">
-                <label className="text-sm font-medium text-foreground">Room Type</label>
-                <Select
-                  value={form.roomType}
-                  onChange={(val) => setForm((prev) => ({ ...prev, roomType: val as RoomType }))}
-                  options={ROOM_TYPE_OPTIONS}
-                  size="sm"
-                />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <label className="text-sm font-medium text-foreground">Capacity</label>
-                <Input
-                  type="text"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  value={form.capacity}
-                  onChange={(e) => {
-                    const val = e.target.value.replace(/[^0-9]/g, "");
-                    handleFieldChange("capacity", val);
-                  }}
-                  className={cn("h-8", errors.capacity && "border-red-500")}
-                />
-                {errors.capacity && <span className="text-xs text-red-500">{errors.capacity}</span>}
-              </div>
-            </div>
-
-            {isEdit && (
-              <div className="flex flex-col gap-1.5">
-                <label className="text-sm font-medium text-foreground">Status</label>
-                <Select
-                  value={form.status}
-                  onChange={(val) => setForm((prev) => ({ ...prev, status: val as RoomStatus }))}
-                  options={ROOM_STATUS_OPTIONS}
-                  size="sm"
-                />
+            {form.amenities.filter((a) => !AMENITY_OPTIONS.includes(a)).length > 0 && (
+              <div className="flex flex-wrap gap-1.5 pt-2">
+                {form.amenities
+                  .filter((a) => !AMENITY_OPTIONS.includes(a))
+                  .map((amenity) => (
+                    <span
+                      key={amenity}
+                      className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary"
+                    >
+                      {amenity}
+                      <button
+                        type="button"
+                        onClick={() => handleAmenityToggle(amenity)}
+                        className="rounded-full p-0.5 hover:bg-primary/20 transition-colors"
+                      >
+                        <X size={10} weight="bold" />
+                      </button>
+                    </span>
+                  ))}
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-3">
-              <div className="flex flex-col gap-1.5">
-                <label className="text-sm font-medium text-foreground">Building</label>
-                <Input
-                  value={form.building}
-                  onChange={(e) => handleFieldChange("building", e.target.value)}
-                  placeholder="Main Office"
-                  className={cn("h-8", errors.building && "border-red-500")}
-                />
-                {errors.building && <span className="text-xs text-red-500">{errors.building}</span>}
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <label className="text-sm font-medium text-foreground">Floor</label>
-                <Input
-                  value={form.floor}
-                  onChange={(e) => handleFieldChange("floor", e.target.value)}
-                  placeholder="3"
-                  className={cn("h-8", errors.floor && "border-red-500")}
-                />
-                {errors.floor && <span className="text-xs text-red-500">{errors.floor}</span>}
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium text-foreground">Location</label>
+            <div className="flex items-center gap-2 pt-2">
               <Input
-                value={form.location}
-                onChange={(e) => handleFieldChange("location", e.target.value)}
-                placeholder="Wing B, near elevator"
-                className={cn(errors.location && "border-red-500")}
+                value={customAmenity}
+                onChange={(e) => setCustomAmenity(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleAddCustomAmenity();
+                  }
+                }}
+                placeholder="Other amenity..."
+                className="h-8 flex-1"
               />
-              {errors.location && <span className="text-xs text-red-500">{errors.location}</span>}
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <label className="text-sm font-medium text-foreground">Amenities</label>
-              <div className="grid grid-cols-2 gap-2">
-                {AMENITY_OPTIONS.map((amenity) => (
-                  <Checkbox
-                    key={amenity}
-                    label={amenity}
-                    checked={form.amenities.includes(amenity)}
-                    onChange={() => handleAmenityToggle(amenity)}
-                  />
-                ))}
-              </div>
-
-              {form.amenities.filter((a) => !AMENITY_OPTIONS.includes(a)).length > 0 && (
-                <div className="flex flex-wrap gap-1.5 pt-1">
-                  {form.amenities
-                    .filter((a) => !AMENITY_OPTIONS.includes(a))
-                    .map((amenity) => (
-                      <span
-                        key={amenity}
-                        className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary"
-                      >
-                        {amenity}
-                        <button
-                          type="button"
-                          onClick={() => handleAmenityToggle(amenity)}
-                          className="rounded-full p-0.5 hover:bg-primary/20 transition-colors"
-                        >
-                          <X size={10} weight="bold" />
-                        </button>
-                      </span>
-                    ))}
-                </div>
-              )}
-
-              <div className="flex items-center gap-2 pt-1">
-                <Input
-                  value={customAmenity}
-                  onChange={(e) => setCustomAmenity(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      handleAddCustomAmenity();
-                    }
-                  }}
-                  placeholder="Other amenity..."
-                  className="h-8 flex-1"
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={handleAddCustomAmenity}
-                  disabled={!customAmenity.trim()}
-                  className="h-8 shrink-0"
-                >
-                  <Plus size={14} className="mr-1" />
-                  Add
-                </Button>
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium text-foreground">Visibility</label>
-              <Select
-                value={form.visibility}
-                onChange={(val) =>
-                  setForm((prev) => ({
-                    ...prev,
-                    visibility: val as "private" | "organization",
-                  }))
-                }
-                options={VISIBILITY_OPTIONS}
+              <Button
+                type="button"
+                variant="outline"
                 size="sm"
-              />
+                onClick={handleAddCustomAmenity}
+                disabled={!customAmenity.trim()}
+                className="h-8 shrink-0"
+              >
+                <Plus size={14} className="mr-1" />
+                Add
+              </Button>
             </div>
           </div>
 
-          <div className="flex items-center justify-end gap-3 px-6 py-4 bg-muted/30 border-t border-border">
-            <Button
-              type="button"
-              variant="outline"
-              size="md"
-              onClick={onClose}
-              disabled={isSubmitting}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" size="md" loading={isSubmitting} disabled={isSubmitting}>
-              {isEdit ? "Save Changes" : "New Room"}
-            </Button>
+          <div>
+            <label className="block text-sm text-muted-foreground mb-1">Visibility</label>
+            <Select
+              value={form.visibility}
+              onChange={(val) =>
+                setForm((prev) => ({
+                  ...prev,
+                  visibility: val as "private" | "organization",
+                }))
+              }
+              options={VISIBILITY_OPTIONS}
+            />
           </div>
-        </form>
-      </div>
-    </div>
+        </ModalBody>
+
+        <ModalFooter>
+          <Button type="button" variant="ghost" onClick={onClose} disabled={isSubmitting}>
+            Cancel
+          </Button>
+          <Button type="submit" loading={isSubmitting} disabled={isSubmitting}>
+            {isEdit ? "Save changes" : "Create room"}
+          </Button>
+        </ModalFooter>
+      </form>
+    </Modal>
   );
 }

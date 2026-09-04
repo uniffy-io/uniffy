@@ -3,10 +3,12 @@ import { useAppSelector } from "@/app/hooks";
 import {
   MentionStateContext,
   MENTION_NOOP,
+  type MentionDisplayMode,
+} from "@/components/mention/mentionStateContext";
+import {
   metadataToLiveState,
   streamChangesToLiveState,
-  type MentionDisplayMode,
-} from "@/components/mention/MentionStateProvider";
+} from "@/components/mention/mentionLiveState";
 import { getMentionState, onMentionStateChange } from "@/components/mention/mentionStateEmitter";
 import { resolveUrnBatched } from "@/components/mention/useBatchedSubjectResolver";
 import type { MentionLiveState } from "@/components/mention/types";

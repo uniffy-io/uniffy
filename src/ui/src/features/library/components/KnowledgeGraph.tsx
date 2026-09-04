@@ -29,9 +29,10 @@ import { useSavedTypesFilter } from "@/features/bookmarks/hooks/useSavedTypesFil
 import { brandAlpha, brandAxisColor, brandGradient } from "@/config/theme/brandGradients";
 import { getUrnTypeBrandStops } from "@/config/theme/urnColors";
 import { getInitials } from "@/components/subject/utils";
+import { popoverShellClass } from "@/components/ui/popover";
 import { cn } from "@/shared/utils/cn";
 import { useUrnResolution } from "@/features/search";
-import { useTheme } from "@/config/theme/ThemeProvider";
+import { useTheme } from "@/config/theme/themeContext";
 import { GraphHitIndex } from "@/features/library/utils/graphHitIndex";
 
 const EMPTY_GRAPH_EDGES: SerializedGraphEdge[] = [];
@@ -1110,21 +1111,21 @@ export function KnowledgeGraph() {
         <div className="absolute bottom-4 right-4 flex flex-col gap-1.5 pointer-events-auto">
           <button
             onClick={handleZoomIn}
-            className="p-2 rounded-lg bg-card/90 backdrop-blur-sm border border-border/50 hover:bg-muted hover:border-border transition-all shadow-lg"
+            className={cn(popoverShellClass, "p-2 hover:bg-muted transition-all")}
             title="Zoom in"
           >
             <MagnifyingGlassPlus size={16} weight="bold" />
           </button>
           <button
             onClick={handleZoomOut}
-            className="p-2 rounded-lg bg-card/90 backdrop-blur-sm border border-border/50 hover:bg-muted hover:border-border transition-all shadow-lg"
+            className={cn(popoverShellClass, "p-2 hover:bg-muted transition-all")}
             title="Zoom out"
           >
             <MagnifyingGlassMinus size={16} weight="bold" />
           </button>
           <button
             onClick={handleZoomFit}
-            className="p-2 rounded-lg bg-card/90 backdrop-blur-sm border border-border/50 hover:bg-muted hover:border-border transition-all shadow-lg"
+            className={cn(popoverShellClass, "p-2 hover:bg-muted transition-all")}
             title="Fit to view"
           >
             <ArrowsOutSimple size={16} weight="bold" />
@@ -1133,7 +1134,12 @@ export function KnowledgeGraph() {
 
         {/* Hover card */}
         {hoveredNode && (
-          <div className="absolute top-4 right-4 bg-card/95 backdrop-blur-md border border-border/50 rounded-xl shadow-2xl p-4 max-w-xs animate-in fade-in slide-in-from-right-2 duration-200 pointer-events-none">
+          <div
+            className={cn(
+              popoverShellClass,
+              "absolute top-4 right-4 rounded-xl p-4 max-w-xs animate-in fade-in slide-in-from-right-2 duration-200 pointer-events-none",
+            )}
+          >
             <div className="flex items-start gap-3">
               {PERSON_TYPES.has(hoveredNode.type) ? (
                 <div
@@ -1244,7 +1250,7 @@ export function KnowledgeGraph() {
               className={cn(
                 "w-56 rounded-full border border-border bg-card py-2 pl-9 pr-8 text-xs text-foreground",
                 "shadow-md placeholder:text-muted-foreground",
-                "transition-[width,border-color] duration-200 focus:w-72 focus:border-primary/60 focus:outline-none",
+                "focus-ring transition-[width,border-color] duration-200 focus:w-72",
               )}
               data-testid="graph-search"
             />
@@ -1300,7 +1306,10 @@ export function KnowledgeGraph() {
           {focusMissing && (
             <div
               role="status"
-              className="flex max-w-72 items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-xs text-muted-foreground shadow-lg backdrop-blur-sm"
+              className={cn(
+                popoverShellClass,
+                "flex max-w-72 items-center gap-2 px-3 py-2 text-xs text-muted-foreground",
+              )}
               data-testid="graph-focus-missing-notice"
             >
               <WarningCircle size={16} className="shrink-0" />

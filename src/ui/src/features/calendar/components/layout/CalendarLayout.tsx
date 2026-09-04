@@ -1,5 +1,6 @@
 import { type ReactNode, useState, useCallback } from "react";
-import { Panel, Group, Separator } from "react-resizable-panels";
+import { Panel, Group } from "react-resizable-panels";
+import { PaneSeparator } from "@/components/ui/pane-separator";
 import { CalendarCheck, CalendarDots, Swatches, Tag } from "@phosphor-icons/react";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
 import { LAYOUT } from "@/features/calendar/constants";
@@ -74,17 +75,17 @@ export function CalendarLayout({ sidebar, mainContent }: CalendarLayoutProps) {
               defaultSize={isMobileOrTablet ? 200 : LAYOUT.SIDEBAR_WIDTH}
               minSize={160}
               maxSize={isMobileOrTablet ? 300 : LAYOUT.SIDEBAR_MAX_WIDTH}
-              className="bg-background overflow-hidden"
+              className="bg-nav overflow-hidden"
             >
               {sidebar}
             </Panel>
 
-            <Separator className="w-1 bg-border hover:bg-primary/50 transition-colors cursor-col-resize data-[resize-handle-state=drag]:bg-primary" />
+            <PaneSeparator />
           </>
         )}
 
         <Panel id="calendar-main" minSize={isMobileOrTablet ? 200 : 400}>
-          <div className={cn("h-full overflow-hidden bg-card", showCollapsedRail && "ml-12")}>
+          <div className={cn("h-full overflow-hidden bg-surface", showCollapsedRail && "ml-12")}>
             {mainContent}
           </div>
         </Panel>

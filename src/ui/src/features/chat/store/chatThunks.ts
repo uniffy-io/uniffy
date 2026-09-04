@@ -51,6 +51,7 @@ import {
   setHasMore,
   setUnreadSeparator,
   setChannelLoading,
+  setInitialChannelLoadFailed,
   addReactionToMessage,
   removeReactionFromMessage,
   setMessageFeedback,
@@ -101,6 +102,8 @@ const getOrganizationId = (state: RootState): string => {
   }
   return orgId;
 };
+
+const INITIAL_MESSAGE_RETRY_DELAY_MS = 250;
 
 const removeChannelLocally = (
   state: RootState,
@@ -352,15 +355,26 @@ export const fetchMessages = createAsyncThunk<
       return { messages: [], hasMore: false };
     }
     const organizationId = getOrganizationId(currentState);
+    if (!params.beforeId) {
+      dispatch(setInitialChannelLoadFailed({ channelId: params.channelId, failed: false }));
+    }
     dispatch(setChannelLoading({ channelId: params.channelId, isLoading: true }));
-    const response = await chatApi.getMessages({
+    const request = {
       organizationId,
       channelId: params.channelId,
       beforeId: params.beforeId,
       aroundId: params.aroundId,
       limit: params.limit ?? 50,
       rootOnly: true,
-    });
+    };
+    let response;
+    try {
+      response = await chatApi.getMessages(request);
+    } catch (error) {
+      if (params.beforeId) throw error;
+      await new Promise((resolve) => setTimeout(resolve, INITIAL_MESSAGE_RETRY_DELAY_MS));
+      response = await chatApi.getMessages(request);
+    }
     const messages = response.messages.map(messageToPlain);
 
     // One batched RPC; a 50-message channel previously fanned out 50 round-trips.
@@ -449,6 +463,9 @@ export const fetchMessages = createAsyncThunk<
     dispatch(setHasMore({ channelId: params.channelId, hasMore: response.hasMore }));
     return { messages, hasMore: response.hasMore };
   } catch (error) {
+    if (getState().chatMessages.idsByChannel[params.channelId] === undefined) {
+      dispatch(setInitialChannelLoadFailed({ channelId: params.channelId, failed: true }));
+    }
     return rejectWithValue(error instanceof Error ? error.message : "Failed to fetch messages");
   } finally {
     dispatch(setChannelLoading({ channelId: params.channelId, isLoading: false }));

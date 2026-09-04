@@ -17,5 +17,5 @@ export function ParentBadge({ label }: ParentBadgeProps) {
 }
 
 export function MetaSeparator() {
-  return <span className="text-muted-foreground/40">·</span>;
+  return <span className="text-subtle-foreground">·</span>;
 }

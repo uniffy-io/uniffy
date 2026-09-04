@@ -2,20 +2,10 @@ import { useState, useRef, useEffect } from "react";
 import { X, PencilSimple, Trash, Check, Plus } from "@phosphor-icons/react";
 import { cn } from "@/shared/utils/cn";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { popoverShellClass } from "@/components/ui/popover";
+import { statusPaint } from "@/features/projects/utils/statusPaint";
 import type { SelectOption } from "../../../types";
-
-const STATUS_COLORS = [
-  "#6b7280",
-  "#3b82f6",
-  "#22c55e",
-  "#f59e0b",
-  "#ef4444",
-  "#8b5cf6",
-  "#ec4899",
-  "#06b6d4",
-  "#f97316",
-  "#14b8a6",
-];
 
 interface ManageStatusesDialogProps {
   options: SelectOption[];
@@ -23,27 +13,21 @@ interface ManageStatusesDialogProps {
   onClose: () => void;
 }
 
+// Colour comes from the status's slot on the brand axis; overrides live in project settings.
 export function ManageStatusesDialog({ options, onSave, onClose }: ManageStatusesDialogProps) {
   const [items, setItems] = useState<SelectOption[]>([...options]);
   const [editingId, setEditingId] = useState<string | null>(null);
 
-  // New Status State
   const [newLabel, setNewLabel] = useState("");
-  const [newColor, setNewColor] = useState(STATUS_COLORS[0]);
   const [isAdding, setIsAdding] = useState(false);
-  const [isColorPickerOpen, setIsColorPickerOpen] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const editInputRef = useRef<HTMLInputElement>(null);
   const newInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    // Focus appropriate input
     if (editingId) {
       editInputRef.current?.focus();
-      // Entering edit mode closes a picker left open for another row.
-      // eslint-disable-next-line react/react-compiler
-      setIsColorPickerOpen(false);
     } else if (isAdding) {
       newInputRef.current?.focus();
     }
@@ -74,13 +58,13 @@ export function ManageStatusesDialog({ options, onSave, onClose }: ManageStatuse
   const handleAddNew = () => {
     if (!newLabel.trim()) return;
 
-    // Sort order should be max + 1
     const maxSortOrder = items.reduce((max, item) => Math.max(max, item.sortOrder), -1);
 
+    // Empty colour: the backend assigns the new slot on the brand axis when it saves.
     const newOption: SelectOption = {
       id: `status_${crypto.randomUUID().slice(0, 8)}`,
       label: newLabel.trim(),
-      color: newColor,
+      color: "",
       sortOrder: maxSortOrder + 1,
     };
 
@@ -89,14 +73,13 @@ export function ManageStatusesDialog({ options, onSave, onClose }: ManageStatuse
     onSave(newItems);
 
     setNewLabel("");
-    setNewColor(STATUS_COLORS[0]);
     setIsAdding(false);
   };
 
   return (
     <div
       ref={containerRef}
-      className="w-80 rounded-lg border border-border bg-card shadow-xl p-4 max-h-[500px] flex flex-col"
+      className={cn(popoverShellClass, "w-80 p-4 max-h-[500px] flex flex-col")}
       onClick={(e) => e.stopPropagation()}
     >
       <div className="flex items-center justify-between mb-3 border-b border-border pb-2 shrink-0">
@@ -116,52 +99,20 @@ export function ManageStatusesDialog({ options, onSave, onClose }: ManageStatuse
             key={item.id}
             className="flex items-center gap-2 group p-1.5 rounded hover:bg-muted/50 text-sm"
           >
+            <div
+              className="w-3 h-3 rounded-full shrink-0"
+              style={{ background: statusPaint(items, item.id).gradient }}
+            />
             {editingId === item.id ? (
-              <div className="flex items-center gap-2 w-full relative">
-                {/* Color Picker (Mini) */}
-                <div className="relative">
-                  <div
-                    className="w-4 h-4 rounded-full cursor-pointer ring-1 ring-border hover:ring-primary transition-all"
-                    style={{ backgroundColor: item.color }}
-                    onClick={(e) => {
-                      e.stopPropagation(); // prevent closing dialog
-                      setIsColorPickerOpen(!isColorPickerOpen);
-                    }}
-                  />
-                  {isColorPickerOpen && (
-                    <div className="absolute top-6 left-0 z-20 p-1.5 bg-popover border border-border rounded shadow-lg flex flex-wrap gap-1 w-32 animate-in fade-in zoom-in-95 duration-100">
-                      {STATUS_COLORS.map((c) => (
-                        <button
-                          key={c}
-                          className="w-4 h-4 rounded-full hover:scale-110 transition-transform ring-1 ring-border/50"
-                          style={{ backgroundColor: c }}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleUpdateItem(item.id, { color: c });
-                            setIsColorPickerOpen(false);
-                          }}
-                        />
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <input
+              <div className="flex items-center gap-2 flex-1 min-w-0">
+                <Input
                   ref={editInputRef}
-                  className="flex-1 h-7 px-1.5 bg-background border border-border rounded text-xs"
+                  className="flex-1 h-7 px-1.5 rounded text-xs"
                   value={item.label}
                   onChange={(e) => handleUpdateItem(item.id, { label: e.target.value })}
                   onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      setEditingId(null);
-                      setIsColorPickerOpen(false);
-                    }
-                    if (e.key === "Escape") {
-                      setEditingId(null);
-                      setIsColorPickerOpen(false);
-                    }
+                    if (e.key === "Enter" || e.key === "Escape") setEditingId(null);
                   }}
-                  // Removed onBlur to allow clicking color picker without closing edit mode
                 />
                 <button
                   onClick={() => setEditingId(null)}
@@ -172,10 +123,6 @@ export function ManageStatusesDialog({ options, onSave, onClose }: ManageStatuse
               </div>
             ) : (
               <>
-                <div
-                  className="w-3 h-3 rounded-full shrink-0"
-                  style={{ backgroundColor: item.color }}
-                />
                 <span className="flex-1 truncate font-medium">{item.label}</span>
 
                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -206,11 +153,10 @@ export function ManageStatusesDialog({ options, onSave, onClose }: ManageStatuse
         )}
       </div>
 
-      {/* Add New Section */}
       <div className="shrink-0 pt-2 border-t border-border">
         {isAdding ? (
           <div className="space-y-2">
-            <input
+            <Input
               ref={newInputRef}
               type="text"
               placeholder="Status name"
@@ -220,38 +166,20 @@ export function ManageStatusesDialog({ options, onSave, onClose }: ManageStatuse
                 if (e.key === "Enter") handleAddNew();
                 if (e.key === "Escape") setIsAdding(false);
               }}
-              className="w-full h-8 px-2 text-sm bg-background border border-border rounded outline-none text-foreground focus:border-primary"
+              className="h-8 px-2 rounded"
             />
-            <div className="flex items-center justify-between">
-              <div className="flex gap-1.5">
-                {STATUS_COLORS.slice(0, 5).map((c) => (
-                  <button
-                    key={c}
-                    type="button"
-                    onClick={() => setNewColor(c)}
-                    className={cn(
-                      "w-5 h-5 rounded-full transition-all",
-                      newColor === c
-                        ? "ring-2 ring-offset-1 ring-offset-card ring-primary scale-110"
-                        : "hover:scale-110",
-                    )}
-                    style={{ backgroundColor: c }}
-                  />
-                ))}
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-7 px-2"
-                  onClick={() => setIsAdding(false)}
-                >
-                  Cancel
-                </Button>
-                <Button size="sm" className="h-7 px-2" onClick={handleAddNew}>
-                  Add
-                </Button>
-              </div>
+            <div className="flex justify-end gap-2">
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 px-2"
+                onClick={() => setIsAdding(false)}
+              >
+                Cancel
+              </Button>
+              <Button size="sm" className="h-7 px-2" onClick={handleAddNew}>
+                Add
+              </Button>
             </div>
           </div>
         ) : (

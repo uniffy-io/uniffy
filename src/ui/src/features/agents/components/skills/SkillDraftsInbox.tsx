@@ -62,7 +62,7 @@ export function SkillDraftsInbox() {
                 <div
                   key={draft.id}
                   onClick={() => navigate(`/agents/skills/drafts/${draft.id}`)}
-                  className="bg-card border border-border rounded-lg p-4 flex flex-col gap-2 cursor-pointer hover:border-foreground/30 transition-colors"
+                  className="flex cursor-pointer flex-col gap-2 rounded-xl bg-card p-4 shadow-edge transition-shadow duration-150 hover:shadow-edge-strong"
                   data-testid="skills-draft-row"
                 >
                   <div className="flex items-center gap-2 flex-wrap">

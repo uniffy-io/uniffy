@@ -2,21 +2,39 @@ import { forwardRef } from "react";
 import { cn } from "@/shared/utils/cn";
 
 export interface TableProps extends React.HTMLAttributes<HTMLTableElement> {
+  /** One rung above what the table sits on: `surface` on an app-frame page, `card` inside a surface block. */
+  tone?: "surface" | "card";
+  /** Draws the raised shell. Turn off when a parent already frames the table. */
   rounded?: boolean;
 }
 
 export const Table = forwardRef<HTMLTableElement, TableProps>(
-  ({ className, rounded = true, children, ...props }, ref) => {
+  ({ className, tone = "surface", rounded = true, children, ...props }, ref) => {
     const table = (
-      <table ref={ref} className={cn("w-full text-sm", className)} {...props}>
+      <table
+        ref={ref}
+        className={cn(
+          "w-full border-separate border-spacing-0 text-sm",
+          tone === "surface" ? "[--table-tone:var(--surface)]" : "[--table-tone:var(--card)]",
+          className,
+        )}
+        {...props}
+      >
         {children}
       </table>
     );
 
     if (rounded) {
       return (
-        <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">{table}</div>
+        // Horizontal scroll only below md: an ancestor with a non-visible overflow
+        // becomes the containing block for the sticky header and pins it there.
+        <div
+          className={cn(
+            "rounded-xl shadow-edge overflow-x-auto md:overflow-visible",
+            tone === "surface" ? "bg-surface" : "bg-card",
+          )}
+        >
+          {table}
         </div>
       );
     }
@@ -30,7 +48,13 @@ export const TableHeader = forwardRef<
   HTMLTableSectionElement,
   React.HTMLAttributes<HTMLTableSectionElement>
 >(({ className, ...props }, ref) => (
-  <thead ref={ref} className={cn("border-b border-border bg-muted/50", className)} {...props} />
+  // Layouts where the document itself scrolls under the sticky app header set
+  // --sticky-top to the header height; inner scrollers leave it at zero.
+  <thead
+    ref={ref}
+    className={cn("sticky top-[var(--sticky-top,0px)] z-10", className)}
+    {...props}
+  />
 ));
 TableHeader.displayName = "TableHeader";
 
@@ -38,7 +62,7 @@ export const TableBody = forwardRef<
   HTMLTableSectionElement,
   React.HTMLAttributes<HTMLTableSectionElement>
 >(({ className, ...props }, ref) => (
-  <tbody ref={ref} className={cn("divide-y divide-border", className)} {...props} />
+  <tbody ref={ref} className={cn("[&>tr:last-child>td]:border-b-0", className)} {...props} />
 ));
 TableBody.displayName = "TableBody";
 
@@ -50,7 +74,7 @@ export const TableRow = forwardRef<HTMLTableRowElement, TableRowProps>(
   ({ className, hoverable = true, ...props }, ref) => (
     <tr
       ref={ref}
-      className={cn("group transition-colors", hoverable && "hover:bg-accent/50", className)}
+      className={cn("group", hoverable && "hover:bg-foreground/5 transition-colors", className)}
       {...props}
     />
   ),
@@ -66,7 +90,7 @@ export const TableHead = forwardRef<HTMLTableCellElement, TableHeadProps>(
     <th
       ref={ref}
       className={cn(
-        "px-3 md:px-4 lg:px-6 py-2.5 md:py-3 lg:py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider",
+        "table-band border-b border-border/60 px-3 md:px-4 lg:px-6 py-2.5 md:py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider first:rounded-tl-xl last:rounded-tr-xl",
         align === "left" && "text-left",
         align === "center" && "text-center",
         align === "right" && "text-right",
@@ -87,7 +111,7 @@ export const TableCell = forwardRef<HTMLTableCellElement, TableCellProps>(
     <td
       ref={ref}
       className={cn(
-        "px-3 md:px-4 lg:px-6 py-2.5 md:py-3 lg:py-4",
+        "border-b border-border/60 px-3 md:px-4 lg:px-6 py-2.5 md:py-3",
         align === "left" && "text-left",
         align === "center" && "text-center",
         align === "right" && "text-right",
@@ -136,7 +160,7 @@ export function TableEmpty({
     <TableRow hoverable={false}>
       <TableCell colSpan={colSpan} className="py-12">
         <div className="flex flex-col items-center justify-center gap-2">
-          {icon && <div className="text-muted-foreground/50">{icon}</div>}
+          {icon && <div className="text-subtle-foreground">{icon}</div>}
           <p className="text-sm font-medium text-foreground">{title}</p>
           {description && <p className="text-xs text-muted-foreground">{description}</p>}
           {action && <div className="mt-2">{action}</div>}

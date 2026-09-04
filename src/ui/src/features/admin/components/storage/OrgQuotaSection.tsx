@@ -15,7 +15,7 @@ export function OrgQuotaSection() {
 
   if (loading && !orgQuota) {
     return (
-      <div className="rounded-lg border border-border bg-card p-4 md:p-6 animate-pulse">
+      <div className="rounded-xl bg-surface shadow-edge p-4 md:p-6 animate-pulse">
         <div className="h-4 w-48 bg-muted rounded mb-4" />
         <div className="h-2.5 w-full bg-muted rounded mb-2" />
         <div className="h-3 w-32 bg-muted rounded" />
@@ -27,7 +27,7 @@ export function OrgQuotaSection() {
 
   return (
     <>
-      <div className="rounded-lg border border-border bg-card p-4 md:p-6">
+      <div className="rounded-xl bg-surface shadow-edge p-4 md:p-6">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-foreground">Organization Storage</h3>
           <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
