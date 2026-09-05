@@ -5,6 +5,7 @@ from enum import StrEnum
 from uuid import UUID
 
 from sqlalchemy import (
+    CheckConstraint,
     Column,
     DateTime,
     ForeignKey,
@@ -31,6 +32,11 @@ class AgentSkillVersion(SQLModel, table=True):
 
     __tablename__ = "agents_skill_versions"
     __table_args__ = (
+        CheckConstraint(
+            "jsonb_typeof(supported_surfaces) = 'array' "
+            """AND supported_surfaces <@ '["session", "chat"]'::jsonb""",
+            name="ck_agents_skill_versions_supported_surfaces",
+        ),
         UniqueConstraint(
             "skill_id",
             "version_number",
@@ -58,15 +64,11 @@ class AgentSkillVersion(SQLModel, table=True):
         default="",
         sa_column=Column(Text(), nullable=False, server_default=text("''")),
     )
-    when_to_use: str = Field(
-        default="",
-        sa_column=Column(Text(), nullable=False, server_default=text("''")),
-    )
     requires_tools: list = Field(
         default_factory=list,
         sa_column=Column(JSONB, nullable=False, server_default=text("'[]'::jsonb")),
     )
-    requires_context: list = Field(
+    supported_surfaces: list = Field(
         default_factory=list,
         sa_column=Column(JSONB, nullable=False, server_default=text("'[]'::jsonb")),
     )

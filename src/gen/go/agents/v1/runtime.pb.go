@@ -1376,9 +1376,8 @@ type SendMessageRequest struct {
 	// outputs back as chat messages via the AgentChatBridge. Mutually
 	// exclusive with session_id at the handler boundary.
 	ChatContext *ChatChannelContext `protobuf:"bytes,6,opt,name=chat_context,json=chatContext,proto3,oneof" json:"chat_context,omitempty"`
-	// A skill the user invoked on-demand for this turn (slash command). Its
-	// full content is force-injected and promoted past conditional gating;
-	// ignored when the skill is not in the agent's resolved set.
+	// Explicitly invoke one assigned skill's exact active version for this turn.
+	// Unavailable skills or unmet tool/surface requirements reject the invocation.
 	InvokedSkillId *string `protobuf:"bytes,7,opt,name=invoked_skill_id,json=invokedSkillId,proto3,oneof" json:"invoked_skill_id,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
@@ -1543,9 +1542,8 @@ type StreamSendMessageRequest struct {
 	// outputs back as chat messages via the AgentChatBridge. Mutually
 	// exclusive with session_id at the handler boundary.
 	ChatContext *ChatChannelContext `protobuf:"bytes,6,opt,name=chat_context,json=chatContext,proto3,oneof" json:"chat_context,omitempty"`
-	// A skill the user invoked on-demand for this turn (slash command). Its
-	// full content is force-injected and promoted past conditional gating;
-	// ignored when the skill is not in the agent's resolved set.
+	// Explicitly invoke one assigned skill's exact active version for this turn.
+	// Unavailable skills or unmet tool/surface requirements reject the invocation.
 	InvokedSkillId *string `protobuf:"bytes,7,opt,name=invoked_skill_id,json=invokedSkillId,proto3,oneof" json:"invoked_skill_id,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache

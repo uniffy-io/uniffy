@@ -45,6 +45,7 @@ from uniffy_proto.common.v1.common_pb2 import PaginationResponse
 
 from uniffy.core.auth.principal import current_user_id, resolve_organization_id
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
+from uniffy.core.models.agents.skill import SkillSurface
 from uniffy.domains.agents.skills.converters import (
     runnable_skill_to_proto,
     skill_draft_to_proto,
@@ -65,29 +66,12 @@ class SkillsHandlers:
         request: CreateSkillRequest,
         ctx: RequestContext,
     ) -> CreateSkillResponse:
-        """Handle create_skill RPC call.
-
-        Parameters
-        ----------
-        request : CreateSkillRequest
-            The request with skill details.
-        ctx : RequestContext
-            RPC request context.
-
-        Returns
-        -------
-        SkillResponse
-            The created skill.
-
-        """
         user_id = current_user_id()
 
         try:
             org_id = resolve_organization_id(request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization ID format")
-
-        always_active = request.always_active if request.HasField("always_active") else False
 
         try:
             async with open_session() as session:
@@ -99,7 +83,6 @@ class SkillsHandlers:
                     display_name=request.display_name,
                     description=request.description,
                     content=request.content,
-                    always_active=always_active,
                 )
                 return CreateSkillResponse(skill=skill_to_proto(skill))
 
@@ -118,21 +101,6 @@ class SkillsHandlers:
         request: GetSkillRequest,
         ctx: RequestContext,
     ) -> GetSkillResponse:
-        """Handle get_skill RPC call.
-
-        Parameters
-        ----------
-        request : GetSkillRequest
-            The request with skill ID.
-        ctx : RequestContext
-            RPC request context.
-
-        Returns
-        -------
-        SkillResponse
-            The skill.
-
-        """
         user_id = current_user_id()
 
         try:
@@ -169,21 +137,6 @@ class SkillsHandlers:
         request: ListSkillsRequest,
         ctx: RequestContext,
     ) -> ListSkillsResponse:
-        """Handle list_skills RPC call.
-
-        Parameters
-        ----------
-        request : ListSkillsRequest
-            The request with organization ID and pagination.
-        ctx : RequestContext
-            RPC request context.
-
-        Returns
-        -------
-        ListSkillsResponse
-            Paginated list of skills.
-
-        """
         user_id = current_user_id()
 
         try:
@@ -236,21 +189,6 @@ class SkillsHandlers:
         request: UpdateSkillRequest,
         ctx: RequestContext,
     ) -> UpdateSkillResponse:
-        """Handle update_skill RPC call.
-
-        Parameters
-        ----------
-        request : UpdateSkillRequest
-            The request with updated fields.
-        ctx : RequestContext
-            RPC request context.
-
-        Returns
-        -------
-        SkillResponse
-            The updated skill.
-
-        """
         user_id = current_user_id()
 
         try:
@@ -263,8 +201,6 @@ class SkillsHandlers:
         display_name = request.display_name if request.HasField("display_name") else None
         description = request.description if request.HasField("description") else None
         content = request.content if request.HasField("content") else None
-        when_to_use = request.when_to_use if request.HasField("when_to_use") else None
-        always_active = request.always_active if request.HasField("always_active") else None
 
         try:
             async with open_session() as session:
@@ -277,8 +213,6 @@ class SkillsHandlers:
                     display_name=display_name,
                     description=description,
                     content=content,
-                    when_to_use=when_to_use,
-                    always_active=always_active,
                 )
                 active_number = await ops.resolve_active_version_number(skill)
                 return UpdateSkillResponse(
@@ -302,12 +236,12 @@ class SkillsHandlers:
         request: ListRunnableSkillsRequest,
         ctx: RequestContext,
     ) -> ListRunnableSkillsResponse:
-        """Handle list_runnable_skills RPC call (slash-command menu)."""
         user_id = current_user_id()
 
         try:
             org_id = resolve_organization_id(request.organization_id)
             agent_id = UUID(request.agent_id)
+            surface = SkillSurface(request.surface)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
 
@@ -318,6 +252,7 @@ class SkillsHandlers:
                     user_id=user_id,
                     organization_id=org_id,
                     agent_id=agent_id,
+                    surface=surface,
                 )
                 return ListRunnableSkillsResponse(
                     skills=[runnable_skill_to_proto(s) for s in skills],
@@ -338,7 +273,6 @@ class SkillsHandlers:
         request: CreateSkillDraftRequest,
         ctx: RequestContext,
     ) -> CreateSkillDraftResponse:
-        """Handle create_skill_draft RPC call."""
         user_id = current_user_id()
 
         try:
@@ -365,10 +299,8 @@ class SkillsHandlers:
                     display_name=request.display_name,
                     description=request.description,
                     content=request.content,
-                    when_to_use=request.when_to_use,
                     requires_tools=list(request.requires_tools),
-                    requires_context=list(request.requires_context),
-                    suggested_always_active=request.suggested_always_active,
+                    supported_surfaces=list(request.supported_surfaces),
                     rationale=request.rationale,
                 )
                 return CreateSkillDraftResponse(draft=skill_draft_to_proto(draft))
@@ -390,7 +322,6 @@ class SkillsHandlers:
         request: GetSkillDraftRequest,
         ctx: RequestContext,
     ) -> GetSkillDraftResponse:
-        """Handle get_skill_draft RPC call."""
         user_id = current_user_id()
 
         try:
@@ -424,7 +355,6 @@ class SkillsHandlers:
         request: ListSkillDraftsRequest,
         ctx: RequestContext,
     ) -> ListSkillDraftsResponse:
-        """Handle list_skill_drafts RPC call (drafts inbox)."""
         user_id = current_user_id()
 
         try:
@@ -476,7 +406,6 @@ class SkillsHandlers:
         request: SaveSkillDraftRequest,
         ctx: RequestContext,
     ) -> SaveSkillDraftResponse:
-        """Handle save_skill_draft RPC call: draft -> skill version."""
         user_id = current_user_id()
 
         try:
@@ -496,10 +425,8 @@ class SkillsHandlers:
                     display_name=request.display_name,
                     description=request.description,
                     content=request.content,
-                    when_to_use=request.when_to_use,
                     requires_tools=list(request.requires_tools),
-                    requires_context=list(request.requires_context),
-                    suggested_always_active=request.suggested_always_active,
+                    supported_surfaces=list(request.supported_surfaces),
                     change_summary=request.change_summary,
                     allow_replace=request.allow_replace,
                 )
@@ -526,7 +453,6 @@ class SkillsHandlers:
         request: DiscardSkillDraftRequest,
         ctx: RequestContext,
     ) -> DiscardSkillDraftResponse:
-        """Handle discard_skill_draft RPC call."""
         user_id = current_user_id()
 
         try:
@@ -562,7 +488,6 @@ class SkillsHandlers:
         request: ListSkillVersionsRequest,
         ctx: RequestContext,
     ) -> ListSkillVersionsResponse:
-        """Handle list_skill_versions RPC call (version history timeline)."""
         user_id = current_user_id()
 
         try:
@@ -620,7 +545,6 @@ class SkillsHandlers:
         request: GetSkillVersionRequest,
         ctx: RequestContext,
     ) -> GetSkillVersionResponse:
-        """Handle get_skill_version RPC call."""
         user_id = current_user_id()
 
         try:
@@ -655,7 +579,6 @@ class SkillsHandlers:
         request: SetMainSkillVersionRequest,
         ctx: RequestContext,
     ) -> SetMainSkillVersionResponse:
-        """Handle set_main_skill_version RPC call (pin / follow latest)."""
         user_id = current_user_id()
 
         try:
@@ -698,7 +621,6 @@ class SkillsHandlers:
         request: RevertSkillRequest,
         ctx: RequestContext,
     ) -> RevertSkillResponse:
-        """Handle revert_skill RPC call (copy an earlier version to the head)."""
         user_id = current_user_id()
 
         try:
@@ -739,7 +661,6 @@ class SkillsHandlers:
         request: GetSkillMetricsRequest,
         ctx: RequestContext,
     ) -> GetSkillMetricsResponse:
-        """Handle get_skill_metrics RPC call (org-admin metrics view)."""
         user_id = current_user_id()
 
         try:
@@ -784,21 +705,6 @@ class SkillsHandlers:
         request: DeleteSkillRequest,
         ctx: RequestContext,
     ) -> DeleteSkillResponse:
-        """Handle delete_skill RPC call.
-
-        Parameters
-        ----------
-        request : DeleteSkillRequest
-            The request with skill ID.
-        ctx : RequestContext
-            RPC request context.
-
-        Returns
-        -------
-        DeleteSkillResponse
-            Success response.
-
-        """
         user_id = current_user_id()
 
         try:

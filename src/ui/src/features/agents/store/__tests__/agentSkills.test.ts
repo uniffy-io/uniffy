@@ -16,11 +16,9 @@ const skillProto = (over: Partial<SkillInfo> = {}): SkillInfo =>
     displayName: "Reporter",
     description: "desc",
     content: "BODY",
-    whenToUse: "weekly",
     requiresTools: ["notes.read_note"],
-    requiresContext: ["session"],
+    supportedSurfaces: ["session"],
     source: 1,
-    alwaysActive: false,
     latestVersionNumber: 2,
     activeVersionNumber: 2,
     activeVersionPinned: false,
@@ -40,10 +38,8 @@ describe("skillToPlain", () => {
   it("carries the fields needed to seed a manual edit draft", () => {
     const plain = skillToPlain(skillProto());
     expect(plain.content).toBe("BODY");
-    expect(plain.whenToUse).toBe("weekly");
     expect(plain.requiresTools).toEqual(["notes.read_note"]);
-    expect(plain.requiresContext).toEqual(["session"]);
-    expect(plain.alwaysActive).toBe(false);
+    expect(plain.supportedSurfaces).toEqual(["session"]);
   });
 
   it("copies repeated fields into new arrays (no proto aliasing)", () => {
@@ -64,12 +60,12 @@ describe("updateSkill", () => {
     return vi.mocked(skillsApi.updateSkill).mock.calls.at(-1)?.[0];
   };
 
-  it("sends when_to_use so trigger guidance persists from the detail view", async () => {
-    const request = await runThunk({ skillId: "s1", whenToUse: "when the report is due" });
+  it("persists the human-readable description", async () => {
+    const request = await runThunk({ skillId: "s1", description: "Weekly report workflow" });
     expect(request).toEqual({
       organizationId: "org-1",
       skillId: "s1",
-      whenToUse: "when the report is due",
+      description: "Weekly report workflow",
     });
   });
 

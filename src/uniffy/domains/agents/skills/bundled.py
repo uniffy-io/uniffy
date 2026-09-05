@@ -12,13 +12,20 @@ from uniffy.core.models.agents.skill import AgentSkill, AgentSkillSource, AgentS
 from uniffy.core.models.agents.skill_version import AgentSkillVersion
 from uniffy.domains.agents.cache import BUNDLED_SKILLS_TAG
 from uniffy.domains.agents.skills.operations import SkillOperations
-from uniffy.domains.agents.skills.validation import clean_skill_write
+from uniffy.domains.agents.skills.validation import clean_skill_write, validate_supported_surfaces
 from uniffy.infrastructure.database.session import open_session, startup_advisory_lock
 
 logger = logger.bind(component="agents.skills.bundled")
 
 BUNDLED_LOCK_ID = 0x756E_6966_6679_5332
-_METADATA_KEYS = frozenset({"id", "name", "display_name", "description", "requires_tools"})
+_METADATA_KEYS = frozenset({
+    "id",
+    "name",
+    "display_name",
+    "description",
+    "requires_tools",
+    "supported_surfaces",
+})
 
 
 async def sync_bundled_skills() -> None:
@@ -52,6 +59,7 @@ async def sync_skill_documents(session: AsyncSession) -> bool:
             "description": clean.description,
             "content": clean.content,
             "requires_tools": doc.items("requires_tools"),
+            "supported_surfaces": validate_supported_surfaces(doc.items("supported_surfaces")),
         }
 
     rows = (
@@ -100,9 +108,8 @@ async def sync_skill_documents(session: AsyncSession) -> bool:
         if needs_snapshot:
             await version_ops.stage_skill_version(row, author_id=None)
             changed = True
-        if row.status != AgentSkillStatus.ACTIVE or row.always_active:
+        if row.status != AgentSkillStatus.ACTIVE:
             row.status = AgentSkillStatus.ACTIVE
-            row.always_active = False
             changed = True
 
     for skill_id, (row, _) in existing.items():

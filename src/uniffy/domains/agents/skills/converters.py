@@ -15,6 +15,7 @@ from uniffy.core.converters import datetime_to_timestamp
 from uniffy.core.models.agents.skill import AgentSkill
 from uniffy.core.models.agents.skill_draft import AgentSkillDraft
 from uniffy.core.models.agents.skill_version import AgentSkillVersion
+from uniffy.domains.agents.skills.resolution import SkillSummary
 
 SKILL_SOURCE_TO_PROTO: dict[str, SkillSource] = {
     "bundled": SKILL_SOURCE_BUNDLED,
@@ -49,12 +50,10 @@ def skill_to_proto(skill: AgentSkill, *, active_version_number: int | None = Non
         description=skill.description or "",
         content=skill.content or "",
         source=skill_source_to_proto(skill.source),
-        always_active=skill.always_active,
         created_at=datetime_to_timestamp(skill.created_at),
         updated_at=datetime_to_timestamp(skill.updated_at),
-        when_to_use=skill.when_to_use or "",
         requires_tools=list(skill.requires_tools or []),
-        requires_context=list(skill.requires_context or []),
+        supported_surfaces=list(skill.supported_surfaces or []),
         status=skill.status or "active",
         origin=skill.origin or "user",
         latest_version_number=skill.latest_version_number or 1,
@@ -70,14 +69,13 @@ def skill_to_proto(skill: AgentSkill, *, active_version_number: int | None = Non
     return info
 
 
-def runnable_skill_to_proto(skill: AgentSkill) -> RunnableSkill:
+def runnable_skill_to_proto(skill: SkillSummary) -> RunnableSkill:
     """Convert a skill to the lean slash-menu entry (no content)."""
     return RunnableSkill(
         id=str(skill.id),
         name=skill.name,
         display_name=skill.display_name,
         description=skill.description or "",
-        when_to_use=skill.when_to_use or "",
     )
 
 
@@ -91,9 +89,8 @@ def skill_version_to_proto(version: AgentSkillVersion) -> SkillVersion:
         display_name=version.display_name,
         description=version.description or "",
         content=version.content or "",
-        when_to_use=version.when_to_use or "",
         requires_tools=list(version.requires_tools or []),
-        requires_context=list(version.requires_context or []),
+        supported_surfaces=list(version.supported_surfaces or []),
         author_kind=version.author_kind or "user",
         change_summary=version.change_summary or "",
         created_at=datetime_to_timestamp(version.created_at),
@@ -118,10 +115,8 @@ def skill_draft_to_proto(draft: AgentSkillDraft) -> SkillDraft:
         display_name=draft.display_name or "",
         description=draft.description or "",
         content=draft.content or "",
-        when_to_use=draft.when_to_use or "",
         requires_tools=list(draft.requires_tools or []),
-        requires_context=list(draft.requires_context or []),
-        suggested_always_active=bool(draft.suggested_always_active),
+        supported_surfaces=list(draft.supported_surfaces or []),
         status=draft.status or "pending",
         created_at=datetime_to_timestamp(draft.created_at),
         updated_at=datetime_to_timestamp(draft.updated_at),

@@ -12,7 +12,6 @@ const skill = (id: string, name: string) => ({
   name,
   displayName: name,
   description: "",
-  whenToUse: "",
 });
 
 describe("agentRunnableSkills slice", () => {
@@ -20,25 +19,29 @@ describe("agentRunnableSkills slice", () => {
     const skills = [skill("s1", "daily-report"), skill("s2", "summarize")];
     const state = agentRunnableSkillsReducer(
       undefined,
-      fetchRunnableSkills.fulfilled({ agentId: AGENT, skills }, "req", { agentId: AGENT }),
+      fetchRunnableSkills.fulfilled({ agentId: AGENT, surface: "chat", skills }, "req", {
+        agentId: AGENT,
+        surface: "chat",
+      }),
     );
     const rootState = { agentRunnableSkills: state } as never;
-    expect(selectRunnableSkillsForAgent(AGENT)(rootState)).toHaveLength(2);
-    expect(selectRunnableSkillsForAgent("other")(rootState)).toEqual([]);
-    expect(selectRunnableSkillsForAgent(undefined)(rootState)).toEqual([]);
+    expect(selectRunnableSkillsForAgent(AGENT, "chat")(rootState)).toHaveLength(2);
+    expect(selectRunnableSkillsForAgent("other", "chat")(rootState)).toEqual([]);
+    expect(selectRunnableSkillsForAgent(undefined, "chat")(rootState)).toEqual([]);
   });
 
   it("tracks the loading agent across pending and clears it on fulfilled", () => {
     const pending = agentRunnableSkillsReducer(
       undefined,
-      fetchRunnableSkills.pending("req", { agentId: AGENT }),
+      fetchRunnableSkills.pending("req", { agentId: AGENT, surface: "chat" }),
     );
     expect(pending.loadingAgentId).toBe(AGENT);
 
     const done = agentRunnableSkillsReducer(
       pending,
-      fetchRunnableSkills.fulfilled({ agentId: AGENT, skills: [] }, "req", {
+      fetchRunnableSkills.fulfilled({ agentId: AGENT, surface: "chat", skills: [] }, "req", {
         agentId: AGENT,
+        surface: "chat",
       }),
     );
     expect(done.loadingAgentId).toBeNull();

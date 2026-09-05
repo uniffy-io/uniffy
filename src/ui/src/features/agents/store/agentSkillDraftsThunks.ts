@@ -33,10 +33,8 @@ export const skillDraftToPlain = (draft: SkillDraft) => ({
   displayName: draft.displayName,
   description: draft.description,
   content: draft.content,
-  whenToUse: draft.whenToUse,
   requiresTools: [...draft.requiresTools],
-  requiresContext: [...draft.requiresContext],
-  suggestedAlwaysActive: draft.suggestedAlwaysActive,
+  supportedSurfaces: [...draft.supportedSurfaces],
   status: draft.status,
   createdAt: timestampToPlain(draft.createdAt),
   updatedAt: timestampToPlain(draft.updatedAt),
@@ -49,10 +47,8 @@ export interface SaveDraftFields {
   displayName: string;
   description: string;
   content: string;
-  whenToUse: string;
   requiresTools: string[];
-  requiresContext: string[];
-  suggestedAlwaysActive: boolean;
+  supportedSurfaces: string[];
   changeSummary?: string;
 }
 
@@ -95,10 +91,8 @@ export const createSkillDraft = createAsyncThunk<
     displayName: string;
     description?: string;
     content: string;
-    whenToUse?: string;
     requiresTools?: string[];
-    requiresContext?: string[];
-    suggestedAlwaysActive?: boolean;
+    supportedSurfaces?: string[];
     rationale?: string;
   },
   { state: RootState; rejectValue: string }
@@ -113,10 +107,8 @@ export const createSkillDraft = createAsyncThunk<
       displayName: params.displayName,
       description: params.description ?? "",
       content: params.content,
-      whenToUse: params.whenToUse ?? "",
       requiresTools: params.requiresTools ?? [],
-      requiresContext: params.requiresContext ?? [],
-      suggestedAlwaysActive: params.suggestedAlwaysActive ?? false,
+      supportedSurfaces: params.supportedSurfaces ?? [],
       rationale: params.rationale ?? "",
     });
     if (!response.draft) throw new Error("No draft in response");
@@ -142,10 +134,8 @@ export const saveSkillDraft = createAsyncThunk<
         displayName: fields.displayName,
         description: fields.description,
         content: fields.content,
-        whenToUse: fields.whenToUse,
         requiresTools: fields.requiresTools,
-        requiresContext: fields.requiresContext,
-        suggestedAlwaysActive: fields.suggestedAlwaysActive,
+        supportedSurfaces: fields.supportedSurfaces,
         changeSummary: fields.changeSummary ?? "",
         allowReplace: allowReplace ?? false,
       });

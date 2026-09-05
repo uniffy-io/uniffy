@@ -29,7 +29,6 @@ from uniffy.domains.agents.skills.validation import (
     SKILL_DESCRIPTION_MAX,
     SKILL_DISPLAY_NAME_MAX,
     SKILL_NAME_MAX,
-    SKILL_WHEN_TO_USE_MAX,
     cap_preserving_mentions,
     has_hard_injection,
     sanitize_skill_text,
@@ -66,7 +65,6 @@ class SkillProposal:
     display_name: str
     content: str
     description: str = ""
-    when_to_use: str = ""
     target_skill_name: str = ""
     rationale: str = ""
 
@@ -76,7 +74,6 @@ class ActiveSkill:
     skill_id: UUID
     name: str
     display_name: str
-    when_to_use: str
     viewed: bool
 
 
@@ -301,11 +298,10 @@ class SkillEvolutionAnalyzer:
             content = cap_preserving_mentions(
                 sanitize_skill_text(proposal.content), _CONTENT_CHAR_CAP
             )
-            when_to_use = sanitize_skill_text(proposal.when_to_use)[:SKILL_WHEN_TO_USE_MAX]
             description = sanitize_skill_text(proposal.description)[:SKILL_DESCRIPTION_MAX]
             # An LLM echoing a prompt-injection delimiter from the analyzed
             # transcript must not seed a draft for the user to review.
-            if has_hard_injection(content, when_to_use, description):
+            if has_hard_injection(content, description):
                 logger.warning("skill analysis: dropped a proposal with injection markers")
                 continue
             dedup_key = (kind, str(target_skill_id) if target_skill_id else "", name.lower())
@@ -323,7 +319,6 @@ class SkillEvolutionAnalyzer:
                 display_name=display_name,
                 description=description,
                 content=content,
-                when_to_use=when_to_use,
                 rationale=sanitize_skill_text(proposal.rationale),
             )
             if channel_id is not None:
@@ -423,7 +418,6 @@ class SkillEvolutionAnalyzer:
                 skill_id=s.id,
                 name=s.name,
                 display_name=s.display_name,
-                when_to_use=s.when_to_use or "",
                 viewed=viewed_by_skill.get(s.id, False),
             )
             for s in skills
@@ -457,7 +451,6 @@ _ANALYSIS_SYSTEM_PROMPT = (
 - "name": machine name in snake_case
 - "display_name": human-readable name
 - "description": one line
-- "when_to_use": short trigger guidance
 - "content": the markdown instructions
 - "rationale": why this is worth saving
 
@@ -470,10 +463,7 @@ def build_analysis_messages(signals: SessionSignals) -> tuple[str, str]:
     """Assemble the (system, user) prompt pair from gathered signals."""
     parts = ["Conversation transcript:", signals.transcript, ""]
     if signals.active_skills:
-        listed = "\n".join(
-            f"- {s.display_name} ({s.name}): {s.when_to_use or 'no trigger guidance'}"
-            for s in signals.active_skills
-        )
+        listed = "\n".join(f"- {s.display_name} ({s.name})" for s in signals.active_skills)
         parts += ["Skills active during this conversation:", listed, ""]
     if signals.negative_feedback:
         parts.append(
@@ -529,7 +519,6 @@ def parse_proposals(text: str) -> list[SkillProposal]:
                 display_name=str(item.get("display_name", "")).strip(),
                 content=str(item.get("content", "")).strip(),
                 description=str(item.get("description", "")).strip(),
-                when_to_use=str(item.get("when_to_use", "")).strip(),
                 target_skill_name=str(item.get("target_skill_name", "")).strip(),
                 rationale=str(item.get("rationale", "")).strip(),
             )

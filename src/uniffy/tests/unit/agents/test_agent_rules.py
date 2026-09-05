@@ -14,7 +14,8 @@ from uniffy.domains.agents.rules.resolution import ResolvedRule, resolve_enabled
 from uniffy.domains.agents.rules.selection import RuleSelectionOperations
 from uniffy.domains.agents.rules.validation import clean_rule_fields, validate_rule_selection
 from uniffy.domains.agents.rules.versions import stage_rule_version
-from uniffy.domains.agents.runtime.prompt import SkillPromptEntry, build_system_prompt
+from uniffy.domains.agents.runtime.prompt import build_system_prompt
+from uniffy.domains.agents.skills.resolution import ResolvedSkill
 
 
 def _session(rows=()) -> MagicMock:
@@ -223,14 +224,16 @@ def test_rules_append_in_stable_order_before_invoked_skill() -> None:
         )
         for name in ("First", "Second")
     )
-    skill = SkillPromptEntry(
+    skill = ResolvedSkill(
         id=generate_id(),
         name="task",
         display_name="Task",
         description="",
-        when_to_use="",
+        version_id=generate_id(),
+        version_number=1,
+        requires_tools=(),
+        supported_surfaces=(),
         content="Invoked body",
-        always_active=False,
     )
     prompt = build_system_prompt(
         agent_name="Agent", soul_prompt="Soul", org_name="Org", rules=rules, invoked_skill=skill
@@ -323,7 +326,9 @@ async def test_prompt_preview_resolves_the_agents_enabled_rules() -> None:
             "get_by_id",
             AsyncMock(return_value=SimpleNamespace(full_name="Member", username="member")),
         ),
-        patch.object(handlers.SkillOperations, "get_skills_for_agent", AsyncMock(return_value=[])),
+        patch.object(
+            handlers.SkillOperations, "get_skills_for_agent", AsyncMock(return_value=[])
+        ) as skill_lookup,
         patch.object(handler, "_fetch_memory_context_for_preview", AsyncMock(return_value=None)),
         patch.object(handlers, "filter_integration_tool_schemas", AsyncMock(return_value=[])),
         patch.object(
@@ -334,6 +339,7 @@ async def test_prompt_preview_resolves_the_agents_enabled_rules() -> None:
             PreviewSystemPromptRequest(organization_id=str(organization_id), agent_id=str(agent.id)),
             MagicMock(),
         )
+    skill_lookup.assert_not_awaited()
     resolve.assert_awaited_once_with(
         session,
         organization_id=organization_id,

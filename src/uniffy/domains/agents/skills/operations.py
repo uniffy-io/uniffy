@@ -35,26 +35,33 @@ from uniffy.core.types import SubjectType
 from uniffy.domains.agents.access import require_agents_builder
 from uniffy.domains.agents.agents.operations import AgentOperations
 from uniffy.domains.agents.cache import (
-    fetch_agent_skills,
     invalidate_agents_using_skill,
-    invalidate_org_always_active_skills,
 )
 from uniffy.domains.agents.policy import check_admin_content
+from uniffy.domains.agents.runtime.images.config import apply_image_tool_schema, resolve_image_config
+from uniffy.domains.agents.runtime.tooling import allowed_tool_names, resolve_tool_schemas
+from uniffy.domains.agents.skills.resolution import (
+    SkillSummary,
+    SkillSurface,
+    resolve_runnable_skills,
+)
 from uniffy.domains.agents.skills.validation import (
     SKILL_CONTENT_MAX,
     SKILL_DESCRIPTION_MAX,
     SKILL_DISPLAY_NAME_MAX,
     SKILL_NAME_MAX,
     SKILL_RATIONALE_MAX,
-    SKILL_WHEN_TO_USE_MAX,
     cap_preserving_mentions,
     clean_skill_update,
     clean_skill_write,
     has_hard_injection,
     sanitize_skill_text,
+    validate_supported_surfaces,
 )
+from uniffy.domains.agents.tools.registry import get_tool_registry
 from uniffy.domains.chat import agents as chat_evt
 from uniffy.domains.chat.agents import publish_channel_event_to_members
+from uniffy.domains.integrations.tools import filter_integration_tool_schemas
 from uniffy.domains.organizations.operations import OrganizationOperations
 
 # The proposal path is reachable by any org member through an agent tool loop,
@@ -74,9 +81,8 @@ def _overlay_skill_copy(skill: AgentSkill, version: AgentSkillVersion) -> AgentS
     """
     data = {attr.key: getattr(skill, attr.key) for attr in sa_inspect(skill).mapper.column_attrs}
     data["content"] = version.content
-    data["when_to_use"] = version.when_to_use
     data["requires_tools"] = list(version.requires_tools or [])
-    data["requires_context"] = list(version.requires_context or [])
+    data["supported_surfaces"] = list(version.supported_surfaces or [])
     return AgentSkill(**data)
 
 
@@ -96,7 +102,6 @@ class SkillOperations:
         display_name: str,
         description: str = "",
         content: str = "",
-        always_active: bool = False,
     ) -> AgentSkill:
         await require_agents_builder(self._session, user_id, organization_id)
 
@@ -130,7 +135,6 @@ class SkillOperations:
             description=clean.description,
             content=clean.content,
             source="organization",
-            always_active=always_active,
         )
         self._session.add(skill)
         await self._session.flush()
@@ -146,7 +150,6 @@ class SkillOperations:
             details={
                 "name": clean.name,
                 "display_name": clean.display_name,
-                "always_active": always_active,
             },
         )
         try:
@@ -230,8 +233,6 @@ class SkillOperations:
         display_name: str | None = None,
         description: str | None = None,
         content: str | None = None,
-        when_to_use: str | None = None,
-        always_active: bool | None = None,
     ) -> AgentSkill:
         """Update an organization skill; bundled skills are read-only."""
         result = await self._session.execute(
@@ -263,10 +264,8 @@ class SkillOperations:
             display_name=display_name,
             description=description,
             content=content,
-            when_to_use=when_to_use,
         )
 
-        was_always_active = skill.always_active
         versioned_changes: list[str] = []
 
         # The slug is the stable identifier agents and enrollments resolve
@@ -291,16 +290,6 @@ class SkillOperations:
                 versioned_changes.append("content")
             skill.content = clean.content
 
-        if clean.when_to_use is not None:
-            if clean.when_to_use != (skill.when_to_use or ""):
-                versioned_changes.append("when to use")
-            skill.when_to_use = clean.when_to_use
-
-        if always_active is not None:
-            skill.always_active = always_active
-
-        # A content/metadata edit lands as a new immutable version; an
-        # always_active-only toggle touches the row but adds no version.
         if versioned_changes:
             await self.stage_skill_version(
                 skill,
@@ -312,12 +301,8 @@ class SkillOperations:
         audit_changes: dict = {}
         if clean.display_name is not None:
             audit_changes["display_name"] = clean.display_name
-        if clean.when_to_use is not None:
-            audit_changes["when_to_use"] = clean.when_to_use
         if clean.content is not None:
             audit_changes["content_updated"] = True
-        if always_active is not None:
-            audit_changes["always_active"] = always_active
 
         skill.updated_at = datetime.now(UTC)
         await self._session.commit()
@@ -336,9 +321,6 @@ class SkillOperations:
             await self._session.commit()
 
         await invalidate_agents_using_skill(skill_id)
-
-        if was_always_active or skill.always_active:
-            await invalidate_org_always_active_skills(organization_id)
 
         return skill
 
@@ -384,7 +366,6 @@ class SkillOperations:
             agent.enabled_skills = [sid for sid in agent.enabled_skills if sid != skill_id_str]
 
         skill_name = skill.name
-        was_always_active = skill.always_active
         await self._session.delete(skill)
         await write_audit_event(
             self._session,
@@ -399,9 +380,6 @@ class SkillOperations:
 
         await invalidate_agents_using_skill(skill_id, drop_tag_set=True)
 
-        if was_always_active:
-            await invalidate_org_always_active_skills(organization_id)
-
     async def create_skill_draft(
         self,
         *,
@@ -413,10 +391,8 @@ class SkillOperations:
         display_name: str = "",
         description: str = "",
         content: str = "",
-        when_to_use: str = "",
         requires_tools: list[str] | None = None,
-        requires_context: list[str] | None = None,
-        suggested_always_active: bool = False,
+        supported_surfaces: list[str] | None = None,
         rationale: str = "",
     ) -> AgentSkillDraft:
         """Persist a user-authored draft awaiting review; activates nothing."""
@@ -441,10 +417,8 @@ class SkillOperations:
             display_name=(display_name or "").strip()[:SKILL_DISPLAY_NAME_MAX] or None,
             description=sanitize_skill_text(description),
             content=sanitize_skill_text(content),
-            when_to_use=sanitize_skill_text(when_to_use),
             requires_tools=list(requires_tools or []),
-            requires_context=list(requires_context or []),
-            suggested_always_active=suggested_always_active,
+            supported_surfaces=validate_supported_surfaces(supported_surfaces),
             status="pending",
         )
         self._session.add(draft)
@@ -465,10 +439,8 @@ class SkillOperations:
         display_name: str,
         description: str = "",
         content: str = "",
-        when_to_use: str = "",
         requires_tools: list[str] | None = None,
-        requires_context: list[str] | None = None,
-        suggested_always_active: bool | None = None,
+        supported_surfaces: list[str] | None = None,
         rationale: str = "",
     ) -> AgentSkillDraft:
         """Persist an agent-proposed draft (status=pending); never auto-activates.
@@ -481,39 +453,32 @@ class SkillOperations:
         a looped agent cannot flood the org-wide inbox.
         """
         clean_content = cap_preserving_mentions(sanitize_skill_text(content), SKILL_CONTENT_MAX)
-        clean_when = cap_preserving_mentions(sanitize_skill_text(when_to_use), SKILL_WHEN_TO_USE_MAX)
         clean_description = cap_preserving_mentions(
             sanitize_skill_text(description), SKILL_DESCRIPTION_MAX
         )
         clean_rationale = cap_preserving_mentions(
             sanitize_skill_text(rationale), SKILL_RATIONALE_MAX
         )
-        if has_hard_injection(clean_content, clean_when, clean_description, clean_rationale):
+        if has_hard_injection(clean_content, clean_description, clean_rationale):
             raise ValidationError(
                 "content", "Skill content contains a disallowed system-prompt delimiter"
             )
         await self._require_pending_draft_quota(user_id, organization_id)
 
         seed_tools = requires_tools
-        seed_context = requires_context
-        seed_always = suggested_always_active
-        # An edit/evolve proposal only changes content and metadata; the target's
-        # tool/context requirements and always-active flag belong to the skill,
-        # so inherit them unless the caller set them explicitly. Otherwise saving
-        # the draft would blank the target's config, dropping it from prompts.
+        seed_context = supported_surfaces
+        # Preserve requirements when the proposal only supplies new content.
         if (
             kind in ("edit", "evolve")
             and target_skill_id is not None
-            and (seed_tools is None or seed_context is None or seed_always is None)
+            and (seed_tools is None or seed_context is None)
         ):
             target = await self._load_skill_for_seed(organization_id, target_skill_id)
             if target is not None:
                 if seed_tools is None:
                     seed_tools = list(target.requires_tools or [])
                 if seed_context is None:
-                    seed_context = list(target.requires_context or [])
-                if seed_always is None:
-                    seed_always = bool(target.always_active)
+                    seed_context = list(target.supported_surfaces or [])
 
         draft = AgentSkillDraft(
             organization_id=organization_id,
@@ -527,10 +492,8 @@ class SkillOperations:
             display_name=(display_name or "").strip()[:SKILL_DISPLAY_NAME_MAX] or None,
             description=clean_description,
             content=clean_content,
-            when_to_use=clean_when,
             requires_tools=list(seed_tools or []),
-            requires_context=list(seed_context or []),
-            suggested_always_active=bool(seed_always),
+            supported_surfaces=validate_supported_surfaces(seed_context),
             status="pending",
         )
         self._session.add(draft)
@@ -592,10 +555,8 @@ class SkillOperations:
         display_name: str,
         description: str = "",
         content: str = "",
-        when_to_use: str = "",
         requires_tools: list[str] | None = None,
-        requires_context: list[str] | None = None,
-        suggested_always_active: bool = False,
+        supported_surfaces: list[str] | None = None,
         change_summary: str = "",
         allow_replace: bool = False,
     ) -> tuple[AgentSkill, AgentSkillVersion]:
@@ -616,7 +577,6 @@ class SkillOperations:
             display_name=display_name,
             description=description,
             content=content,
-            when_to_use=when_to_use,
         )
         if clean.content:
             check_admin_content(clean.content, "skill_content")
@@ -627,7 +587,6 @@ class SkillOperations:
             else AgentSkillVersionAuthor.USER
         )
         author_id = None if author_kind is AgentSkillVersionAuthor.AGENT else user_id
-        was_always_active = False
 
         # Two skills can never share a machine name in an org, so a create draft
         # whose name already belongs to one can only be saved by versioning that
@@ -662,10 +621,8 @@ class SkillOperations:
                 description=clean.description,
                 content=clean.content,
                 source=AgentSkillSource.ORGANIZATION,
-                always_active=bool(suggested_always_active),
-                when_to_use=clean.when_to_use,
                 requires_tools=list(requires_tools or []),
-                requires_context=list(requires_context or []),
+                supported_surfaces=validate_supported_surfaces(supported_surfaces),
                 status=AgentSkillStatus.ACTIVE,
                 origin=origin,
                 created_by_agent_id=draft.proposed_by_agent_id,
@@ -687,29 +644,22 @@ class SkillOperations:
             )
             if clean.name != skill.name:
                 await self._require_unique_name(organization_id, clean.name, exclude_id=skill.id)
-            was_always_active = skill.always_active
             new_tools = list(requires_tools or [])
-            new_context = list(requires_context or [])
-            # always_active is a row flag, not a versioned field, so an
-            # always-active-only edit updates the row without cutting a new
-            # version. A version is snapshotted only when versioned content moves.
+            new_context = validate_supported_surfaces(supported_surfaces)
             versioned_changed = (
                 clean.name != skill.name
                 or clean.display_name != skill.display_name
                 or clean.description != (skill.description or "")
                 or clean.content != (skill.content or "")
-                or clean.when_to_use != (skill.when_to_use or "")
                 or new_tools != list(skill.requires_tools or [])
-                or new_context != list(skill.requires_context or [])
+                or new_context != list(skill.supported_surfaces or [])
             )
             skill.name = clean.name
             skill.display_name = clean.display_name
             skill.description = clean.description
             skill.content = clean.content
-            skill.when_to_use = clean.when_to_use
             skill.requires_tools = new_tools
-            skill.requires_context = new_context
-            skill.always_active = bool(suggested_always_active)
+            skill.supported_surfaces = new_context
             skill.updated_at = datetime.now(UTC)
             if versioned_changed:
                 version = await self.stage_skill_version(
@@ -743,8 +693,6 @@ class SkillOperations:
         await self._session.commit()
 
         await invalidate_agents_using_skill(skill.id)
-        if skill.always_active or was_always_active:
-            await invalidate_org_always_active_skills(organization_id)
 
         await self._notify_chat_draft_resolved(draft, status="saved", saved_skill_id=skill.id)
         return skill, version
@@ -850,8 +798,6 @@ class SkillOperations:
         await self._session.refresh(skill)
 
         await invalidate_agents_using_skill(skill_id)
-        if skill.always_active:
-            await invalidate_org_always_active_skills(organization_id)
         return skill
 
     async def revert_skill(
@@ -876,14 +822,12 @@ class SkillOperations:
         if target.name != skill.name:
             await self._require_unique_name(organization_id, target.name, exclude_id=skill.id)
 
-        was_always_active = skill.always_active
         skill.name = target.name
         skill.display_name = target.display_name
         skill.description = target.description or ""
         skill.content = target.content or ""
-        skill.when_to_use = target.when_to_use or ""
         skill.requires_tools = list(target.requires_tools or [])
-        skill.requires_context = list(target.requires_context or [])
+        skill.supported_surfaces = list(target.supported_surfaces or [])
         skill.updated_at = datetime.now(UTC)
         version = await self.stage_skill_version(
             skill,
@@ -907,8 +851,6 @@ class SkillOperations:
         await self._session.commit()
 
         await invalidate_agents_using_skill(skill_id)
-        if skill.always_active or was_always_active:
-            await invalidate_org_always_active_skills(organization_id)
         return skill, version
 
     async def get_skill_metrics(self, *, user_id: UUID, organization_id: UUID) -> dict:
@@ -1172,22 +1114,25 @@ class SkillOperations:
         user_id: UUID,
         organization_id: UUID,
         agent_id: UUID,
-    ) -> list[AgentSkill]:
-        """Resolve the skills a user may invoke on-demand against an agent.
-
-        The set is the agent's own resolved skills (explicitly enabled +
-        always-active). Access is gated by view permission on the agent, so a
-        user cannot enumerate skills for an agent they cannot see. Reads the
-        ``agent:{id}:skills`` cache like the runtime pre-flight does.
-        """
+        surface: SkillSurface,
+    ) -> list[SkillSummary]:
         agent = await AgentOperations(self._session).get_for_runtime(
             user_id, organization_id, agent_id
         )
-        return await fetch_agent_skills(
-            self,
-            agent_id=agent.id,
+        if not agent.enabled_skills:
+            return []
+        schemas = resolve_tool_schemas(get_tool_registry(), agent.enabled_tools or [])
+        image_config = await resolve_image_config(
+            self._session, agent, organization_id=organization_id
+        )
+        schemas = apply_image_tool_schema(schemas, image_config)
+        schemas = await filter_integration_tool_schemas(self._session, organization_id, schemas)
+        return await resolve_runnable_skills(
+            self._session,
             organization_id=organization_id,
-            enabled_skill_ids=agent.enabled_skills or [],
+            enabled_skill_ids=agent.enabled_skills,
+            surface=surface,
+            executable_tools=allowed_tool_names(schemas),
         )
 
     async def get_skills_for_agent(
@@ -1196,7 +1141,7 @@ class SkillOperations:
         organization_id: UUID,
         enabled_skill_ids: list[str],
     ) -> list[AgentSkill]:
-        """Union of explicitly enabled skills and bundled/org always_active skills."""
+        """Resolve only skills explicitly assigned to this agent."""
         seen_ids: set[UUID] = set()
         skills: list[AgentSkill] = []
 
@@ -1222,20 +1167,6 @@ class SkillOperations:
                 for skill in result.scalars().all():
                     seen_ids.add(skill.id)
                     skills.append(skill)
-
-        always_result = await self._session.execute(
-            select(AgentSkill).where(
-                AgentSkill.always_active == True,  # noqa: E712
-                or_(
-                    AgentSkill.organization_id == organization_id,
-                    AgentSkill.organization_id.is_(None),
-                ),
-            )
-        )
-        for skill in always_result.scalars().all():
-            if skill.id not in seen_ids:
-                seen_ids.add(skill.id)
-                skills.append(skill)
 
         return await self._overlay_active_versions(skills)
 
@@ -1279,9 +1210,8 @@ class SkillOperations:
             display_name=skill.display_name,
             description=skill.description or "",
             content=skill.content or "",
-            when_to_use=skill.when_to_use or "",
             requires_tools=list(skill.requires_tools or []),
-            requires_context=list(skill.requires_context or []),
+            supported_surfaces=list(skill.supported_surfaces or []),
             author_id=author_id,
             author_kind=author_kind,
             change_summary=change_summary,

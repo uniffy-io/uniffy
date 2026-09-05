@@ -54,10 +54,7 @@ type SkillsServiceClient interface {
 	UpdateSkill(ctx context.Context, in *UpdateSkillRequest, opts ...grpc.CallOption) (*UpdateSkillResponse, error)
 	// Delete an organization skill
 	DeleteSkill(ctx context.Context, in *DeleteSkillRequest, opts ...grpc.CallOption) (*DeleteSkillResponse, error)
-	// List the skills a user can invoke on-demand against a given agent
-	// (the agent's resolved set: explicitly enabled + always-active). Powers
-	// the "/" slash-command menu in the agent composers. Lean payload - no
-	// skill content is shipped; the content loads only when the turn runs.
+	// List assigned skills compatible with the requested surface and executable tools.
 	ListRunnableSkills(ctx context.Context, in *ListRunnableSkillsRequest, opts ...grpc.CallOption) (*ListRunnableSkillsResponse, error)
 	// Create a pending draft (library "New skill" / "Edit as draft"). The draft
 	// is never auto-activated; it becomes a skill only on SaveSkillDraft.
@@ -271,10 +268,7 @@ type SkillsServiceServer interface {
 	UpdateSkill(context.Context, *UpdateSkillRequest) (*UpdateSkillResponse, error)
 	// Delete an organization skill
 	DeleteSkill(context.Context, *DeleteSkillRequest) (*DeleteSkillResponse, error)
-	// List the skills a user can invoke on-demand against a given agent
-	// (the agent's resolved set: explicitly enabled + always-active). Powers
-	// the "/" slash-command menu in the agent composers. Lean payload - no
-	// skill content is shipped; the content loads only when the turn runs.
+	// List assigned skills compatible with the requested surface and executable tools.
 	ListRunnableSkills(context.Context, *ListRunnableSkillsRequest) (*ListRunnableSkillsResponse, error)
 	// Create a pending draft (library "New skill" / "Edit as draft"). The draft
 	// is never auto-activated; it becomes a skill only on SaveSkillDraft.

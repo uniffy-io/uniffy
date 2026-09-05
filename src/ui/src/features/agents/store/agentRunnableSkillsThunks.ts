@@ -14,20 +14,19 @@ export const runnableSkillToPlain = (skill: RunnableSkill) => ({
   name: skill.name,
   displayName: skill.displayName,
   description: skill.description,
-  whenToUse: skill.whenToUse,
 });
 
 export type SerializedRunnableSkill = ReturnType<typeof runnableSkillToPlain>;
 
 export const fetchRunnableSkills = createAsyncThunk<
-  { agentId: string; skills: SerializedRunnableSkill[] },
-  { agentId: string },
+  { agentId: string; surface: "session" | "chat"; skills: SerializedRunnableSkill[] },
+  { agentId: string; surface: "session" | "chat" },
   { state: RootState; rejectValue: string }
->("agentRunnableSkills/fetch", async ({ agentId }, { getState, rejectWithValue }) => {
+>("agentRunnableSkills/fetch", async ({ agentId, surface }, { getState, rejectWithValue }) => {
   try {
     const organizationId = getOrganizationId(getState());
-    const response = await skillsApi.listRunnableSkills({ organizationId, agentId });
-    return { agentId, skills: response.skills.map(runnableSkillToPlain) };
+    const response = await skillsApi.listRunnableSkills({ organizationId, agentId, surface });
+    return { agentId, surface, skills: response.skills.map(runnableSkillToPlain) };
   } catch (error) {
     return rejectWithValue(
       error instanceof Error ? error.message : "Failed to fetch runnable skills",

@@ -83,12 +83,6 @@ export function SkillDraftsInbox() {
                   {draft.rationale && (
                     <p className="text-xs text-muted-foreground line-clamp-2">{draft.rationale}</p>
                   )}
-                  {draft.whenToUse && (
-                    <p className="text-xs text-muted-foreground">
-                      <span className="font-medium text-foreground">When: </span>
-                      {draft.whenToUse}
-                    </p>
-                  )}
 
                   <div className="flex items-center gap-3 mt-1">
                     <button

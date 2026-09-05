@@ -1,22 +1,14 @@
-"""Length caps, sanitization, and injection guards for skill writes.
-
-Skill fields land verbatim in the agent system prompt, so every write is
-length-capped (a runaway proposal must not blow the prompt budget), control
-characters are stripped, and hard delimiter-injection markers are rejected.
-``[[[label|urn]]]`` mentions survive both sanitization and capping. Softer
-natural-language injection phrases stay warn-only in ``content_policy`` because
-they show up in legitimate instructions.
-"""
+"""Sanitize and bound skill instructions before they enter system prompts."""
 
 import re
 from dataclasses import dataclass
 
 from uniffy.core.errors import ValidationError
+from uniffy.core.models.agents.skill import SkillSurface
 
 SKILL_NAME_MAX = 100
 SKILL_DISPLAY_NAME_MAX = 255
 SKILL_DESCRIPTION_MAX = 1000
-SKILL_WHEN_TO_USE_MAX = 1000
 SKILL_CONTENT_MAX = 20000
 SKILL_RATIONALE_MAX = 2000
 
@@ -37,7 +29,6 @@ class CleanSkillFields:
     display_name: str
     description: str
     content: str
-    when_to_use: str
 
 
 def sanitize_skill_text(text: str) -> str:
@@ -78,13 +69,7 @@ def clean_skill_write(
     display_name: str,
     description: str = "",
     content: str = "",
-    when_to_use: str = "",
 ) -> CleanSkillFields:
-    """Validate and sanitize the fields that become a skill row.
-
-    Raises ``ValidationError`` on empty identity, an over-length field, or a
-    hard delimiter-injection marker in any injected field.
-    """
     clean_name = (name or "").strip()
     clean_display = (display_name or "").strip()
     if not clean_name:
@@ -95,13 +80,11 @@ def clean_skill_write(
     _require_max("display_name", clean_display, SKILL_DISPLAY_NAME_MAX)
 
     clean_desc = sanitize_skill_text(description)
-    clean_when = sanitize_skill_text(when_to_use)
     clean_content = sanitize_skill_text(content)
     _require_max("description", clean_desc, SKILL_DESCRIPTION_MAX)
-    _require_max("when_to_use", clean_when, SKILL_WHEN_TO_USE_MAX)
     _require_max("content", clean_content, SKILL_CONTENT_MAX)
 
-    if has_hard_injection(clean_content, clean_when, clean_desc):
+    if has_hard_injection(clean_content, clean_desc):
         raise ValidationError(
             "content", "Skill content contains a disallowed system-prompt delimiter"
         )
@@ -110,7 +93,6 @@ def clean_skill_write(
         display_name=clean_display,
         description=clean_desc,
         content=clean_content,
-        when_to_use=clean_when,
     )
 
 
@@ -122,7 +104,6 @@ class CleanSkillUpdate:
     display_name: str | None = None
     description: str | None = None
     content: str | None = None
-    when_to_use: str | None = None
 
 
 def clean_skill_update(
@@ -131,14 +112,7 @@ def clean_skill_update(
     display_name: str | None = None,
     description: str | None = None,
     content: str | None = None,
-    when_to_use: str | None = None,
 ) -> CleanSkillUpdate:
-    """Clean only the fields a partial update supplies (``None`` = untouched).
-
-    Applies the same caps, control-char stripping, and hard delimiter-injection
-    rejection as ``clean_skill_write`` so a partial update cannot slip content
-    past the guards a full write enforces.
-    """
     out = CleanSkillUpdate()
     injected: list[str] = []
     if name is not None:
@@ -163,13 +137,17 @@ def clean_skill_update(
         _require_max("content", clean_content, SKILL_CONTENT_MAX)
         out.content = clean_content
         injected.append(clean_content)
-    if when_to_use is not None:
-        clean_when = sanitize_skill_text(when_to_use)
-        _require_max("when_to_use", clean_when, SKILL_WHEN_TO_USE_MAX)
-        out.when_to_use = clean_when
-        injected.append(clean_when)
     if has_hard_injection(*injected):
         raise ValidationError(
             "content", "Skill content contains a disallowed system-prompt delimiter"
         )
     return out
+
+
+def validate_supported_surfaces(values: list[str] | None) -> list[str]:
+    try:
+        return list(dict.fromkeys(SkillSurface(value).value for value in (values or [])))
+    except ValueError as exc:
+        raise ValidationError(
+            "supported_surfaces", "Supported surfaces must be session or chat"
+        ) from exc

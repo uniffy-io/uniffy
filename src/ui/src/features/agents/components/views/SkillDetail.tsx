@@ -14,9 +14,7 @@ import { SkillSource } from "@uniffy/proto/agents/v1/skills_pb";
 import { CrepeEditor } from "@/components/editor/CrepeEditor";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { PaneBackLink, PaneHeader, PaneHeaderBar } from "@/components/ui/pane-header";
-import { ToggleSwitch } from "@/components/ui/toggle-switch";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { cn } from "@/shared/utils/cn";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
@@ -121,9 +119,7 @@ function SavedSkillDetail({ skill }: { skill: SerializedSkill }) {
   // Version restores replace the content outside the editor; remounting is the
   // only way the seeded editor picks the new body up.
   const [editorEpoch, setEditorEpoch] = useState(0);
-  const [whenToUse, setWhenToUse] = useState(skill.whenToUse);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const whenToUseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleContentChange = useCallback(
     (markdown: string) => {
@@ -135,21 +131,9 @@ function SavedSkillDetail({ skill }: { skill: SerializedSkill }) {
     [dispatch, skill.id],
   );
 
-  const handleWhenToUseChange = useCallback(
-    (next: string) => {
-      setWhenToUse(next);
-      if (whenToUseTimeoutRef.current) clearTimeout(whenToUseTimeoutRef.current);
-      whenToUseTimeoutRef.current = setTimeout(() => {
-        dispatch(updateSkill({ skillId: skill.id, whenToUse: next }));
-      }, 800);
-    },
-    [dispatch, skill.id],
-  );
-
   useEffect(() => {
     return () => {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-      if (whenToUseTimeoutRef.current) clearTimeout(whenToUseTimeoutRef.current);
     };
   }, []);
 
@@ -247,66 +231,10 @@ function SavedSkillDetail({ skill }: { skill: SerializedSkill }) {
                 Fixed at creation. Rename the skill from its title.
               </p>
             </div>
-            <div className="border-b border-border pb-3 space-y-1">
-              <p className={sectionLabelClass}>When to use</p>
-              {canEdit ? (
-                <Input
-                  type="text"
-                  value={whenToUse}
-                  onChange={(e) => handleWhenToUseChange(e.target.value)}
-                  placeholder="When to use this skill (trigger guidance)"
-                  data-testid="skill-detail-when-to-use"
-                  className="h-9 px-2"
-                />
-              ) : (
-                <p
-                  className={cn(
-                    "text-sm",
-                    skill.whenToUse ? "text-foreground" : "text-subtle-foreground italic",
-                  )}
-                  data-testid="skill-detail-when-to-use"
-                >
-                  {skill.whenToUse || "No trigger guidance set"}
-                </p>
-              )}
-            </div>
-            <div className="border-b border-border pb-3 space-y-1.5">
-              <p className={sectionLabelClass}>Activation</p>
-              <div className="flex flex-wrap items-center gap-2">
-                {skill.source === SkillSource.ORGANIZATION && canEdit ? (
-                  <div
-                    className="flex items-center gap-2 text-sm text-foreground"
-                    data-testid="skill-detail-always-active"
-                  >
-                    <ToggleSwitch
-                      size="sm"
-                      enabled={skill.alwaysActive}
-                      onChange={(next) =>
-                        dispatch(
-                          updateSkill({
-                            skillId: skill.id,
-                            alwaysActive: next,
-                          }),
-                        )
-                      }
-                    />
-                    Always active
-                  </div>
-                ) : skill.alwaysActive ? (
-                  <Badge variant="outline">Always loaded</Badge>
-                ) : (
-                  <Badge variant="secondary">Loaded on demand</Badge>
-                )}
-                {skill.requiresTools.length > 0 && (
-                  <span className="text-xs text-muted-foreground">Requires tools:</span>
-                )}
-                {skill.requiresTools.map((tool) => (
-                  <Badge key={tool} variant="outline" className="font-mono">
-                    {tool}
-                  </Badge>
-                ))}
-              </div>
-            </div>
+            <SkillRequirements
+              requiresTools={skill.requiresTools}
+              supportedSurfaces={skill.supportedSurfaces}
+            />
             <VersionHistorySection
               skill={skill}
               canEdit={canEdit}
@@ -368,9 +296,7 @@ function DraftDetail({ draft }: { draft: SerializedSkillDraft }) {
 
   const [displayName, setDisplayName] = useState(draft.displayName ?? "");
   const [description, setDescription] = useState(draft.description ?? "");
-  const [whenToUse, setWhenToUse] = useState(draft.whenToUse ?? "");
   const [content, setContent] = useState(draft.content ?? "");
-  const [alwaysActive, setAlwaysActive] = useState(draft.suggestedAlwaysActive);
   const [busy, setBusy] = useState<"save" | "discard" | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(true);
   const [replaceTarget, setReplaceTarget] = useState<string | null>(null);
@@ -400,10 +326,8 @@ function DraftDetail({ draft }: { draft: SerializedSkillDraft }) {
             displayName: displayName.trim(),
             description: description.trim(),
             content: content.trim(),
-            whenToUse: whenToUse.trim(),
             requiresTools: draft.requiresTools,
-            requiresContext: draft.requiresContext,
-            suggestedAlwaysActive: alwaysActive,
+            supportedSurfaces: draft.supportedSurfaces,
           },
         }),
       ).unwrap();
@@ -531,26 +455,10 @@ function DraftDetail({ draft }: { draft: SerializedSkillDraft }) {
                 Derived from the title and fixed once saved.
               </p>
             </div>
-            <div className="border-b border-border pb-3 space-y-1">
-              <p className={sectionLabelClass}>When to use</p>
-              <Input
-                type="text"
-                value={whenToUse}
-                onChange={(e) => setWhenToUse(e.target.value)}
-                placeholder="When to use this skill (trigger guidance)"
-                className="h-9 px-2"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <p className={sectionLabelClass}>Activation</p>
-              <div
-                className="flex items-center gap-2 text-sm text-foreground"
-                data-testid="skill-draft-always-active"
-              >
-                <ToggleSwitch size="sm" enabled={alwaysActive} onChange={setAlwaysActive} />
-                Always active
-              </div>
-            </div>
+            <SkillRequirements
+              requiresTools={draft.requiresTools}
+              supportedSurfaces={draft.supportedSurfaces}
+            />
           </div>
         </div>
       )}
@@ -584,6 +492,37 @@ function DraftDetail({ draft }: { draft: SerializedSkillDraft }) {
         variant="warning"
         loading={busy === "save"}
       />
+    </div>
+  );
+}
+
+function SkillRequirements({
+  requiresTools,
+  supportedSurfaces,
+}: {
+  requiresTools: string[];
+  supportedSurfaces: string[];
+}) {
+  return (
+    <div className="space-y-2" data-testid="skill-requirements">
+      <p className={sectionLabelClass}>Invocation</p>
+      <p className="text-sm text-muted-foreground">
+        Runs only when you invoke it on an agent it is assigned to.
+      </p>
+      <p className="text-xs text-muted-foreground">
+        Supported surfaces:{" "}
+        {supportedSurfaces.length ? supportedSurfaces.join(", ") : "Chat and test sessions"}
+      </p>
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-xs text-muted-foreground">
+          Required tools: {requiresTools.length === 0 && "None"}
+        </span>
+        {requiresTools.map((tool) => (
+          <Badge key={tool} variant="outline" className="font-mono">
+            {tool}
+          </Badge>
+        ))}
+      </div>
     </div>
   );
 }

@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 from enum import StrEnum
 from uuid import UUID
 
-from sqlalchemy import Boolean, Column, DateTime, Index, String, Text, Uuid, text
+from sqlalchemy import CheckConstraint, Column, DateTime, Index, String, Text, Uuid, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, SQLModel
 
@@ -29,6 +29,11 @@ class AgentSkillDraft(SQLModel, table=True):
 
     __tablename__ = "agents_skill_drafts"
     __table_args__ = (
+        CheckConstraint(
+            "jsonb_typeof(supported_surfaces) = 'array' "
+            """AND supported_surfaces <@ '["session", "chat"]'::jsonb""",
+            name="ck_agents_skill_drafts_supported_surfaces",
+        ),
         Index("ix_agents_skill_drafts_org_status", "organization_id", "status"),
         Index("ix_agents_skill_drafts_owner_status", "owner_id", "status"),
         Index("ix_agents_skill_drafts_target_skill", "target_skill_id"),
@@ -76,21 +81,13 @@ class AgentSkillDraft(SQLModel, table=True):
         default="",
         sa_column=Column(Text(), nullable=False, server_default=text("''")),
     )
-    when_to_use: str = Field(
-        default="",
-        sa_column=Column(Text(), nullable=False, server_default=text("''")),
-    )
     requires_tools: list = Field(
         default_factory=list,
         sa_column=Column(JSONB, nullable=False, server_default=text("'[]'::jsonb")),
     )
-    requires_context: list = Field(
+    supported_surfaces: list = Field(
         default_factory=list,
         sa_column=Column(JSONB, nullable=False, server_default=text("'[]'::jsonb")),
-    )
-    suggested_always_active: bool = Field(
-        default=False,
-        sa_column=Column(Boolean, nullable=False, server_default=text("false")),
     )
     status: AgentSkillDraftStatus = Field(
         default=AgentSkillDraftStatus.PENDING,

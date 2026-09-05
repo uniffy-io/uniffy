@@ -1073,12 +1073,6 @@ def _stream_runtime_ops(monkeypatch, *, binding_row, agent):
     )
     ops._chat = SimpleNamespace(build_channel=AsyncMock(return_value=None))
 
-    async def fake_fetch_skills(_skill_ops, **_kwargs):
-        return []
-
-    async def fake_record_injections(_session, **_kwargs):
-        return None
-
     async def fake_resolve_model(**kwargs):
         captured["resolve_model"] = kwargs
         return "resolved-model"
@@ -1092,9 +1086,7 @@ def _stream_runtime_ops(monkeypatch, *, binding_row, agent):
         }
         raise _StopFlow()
 
-    monkeypatch.setattr(runtime_stream_mod, "fetch_agent_skills", fake_fetch_skills)
     monkeypatch.setattr(runtime_stream_mod, "resolve_enabled_rules", AsyncMock(return_value=()))
-    monkeypatch.setattr(runtime_stream_mod, "record_skill_injections", fake_record_injections)
     monkeypatch.setattr(runtime_stream_mod, "resolve_invoked_skill", AsyncMock(return_value=None))
     monkeypatch.setattr(runtime_stream_mod, "build_system_prompt", lambda **_kwargs: "sys")
     monkeypatch.setattr(runtime_stream_mod, "get_tool_registry", lambda: MagicMock())

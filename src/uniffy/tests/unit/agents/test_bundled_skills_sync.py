@@ -48,6 +48,7 @@ def _version(row: AgentSkill) -> SimpleNamespace:
         description=row.description,
         content=row.content,
         requires_tools=list(row.requires_tools),
+        supported_surfaces=list(row.supported_surfaces),
     )
 
 
@@ -105,7 +106,7 @@ class TestSync:
         assert all(row.source == "bundled" and row.organization_id is None for row in added)
         assert {row.active_version_id for row in added} == {version.id for version in snapshots}
         assert all(version.version_number == 1 for version in snapshots)
-        assert all(not row.always_active for row in added)
+        assert all("always_active" not in type(row).model_fields for row in added)
 
     async def test_ids_come_from_the_files_not_the_database(self) -> None:
         _, added, _ = await _sync([])

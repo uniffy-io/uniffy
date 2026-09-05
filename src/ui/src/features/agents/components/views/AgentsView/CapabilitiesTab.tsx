@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CaretDown, CaretRight, CircleNotch, Lock, WarningCircle } from "@phosphor-icons/react";
+import { CaretDown, CaretRight, CircleNotch, WarningCircle } from "@phosphor-icons/react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { useMyContentRole } from "@/features/permissions";
 import { ContentType } from "@uniffy/proto/common/v1/common_pb";
@@ -211,30 +211,6 @@ function ToolCategory({
   );
 }
 
-function LockedToggle({
-  enabled,
-  locked,
-  lockedLabel,
-  disabled,
-  onChange,
-}: {
-  enabled: boolean;
-  locked: boolean;
-  lockedLabel: string;
-  disabled?: boolean;
-  onChange: () => void;
-}) {
-  if (locked) {
-    return (
-      <div className="flex items-center gap-1.5">
-        <Lock size={14} className="text-muted-foreground" />
-        <span className="text-xs text-muted-foreground">{lockedLabel}</span>
-      </div>
-    );
-  }
-  return <ToggleSwitch size="sm" enabled={enabled} disabled={disabled} onChange={onChange} />;
-}
-
 function RuleRow({
   rule,
   enabled,
@@ -286,11 +262,10 @@ function SkillRow({
         </span>
         <p className="text-xs text-muted-foreground truncate">{skill.description}</p>
       </div>
-      <LockedToggle
-        enabled={enabled || skill.alwaysActive}
-        locked={skill.alwaysActive}
-        lockedLabel="Always on"
-        disabled={disabled}
+      <ToggleSwitch
+        size="sm"
+        enabled={enabled}
+        disabled={disabled || (skill.status === "retired" && !enabled)}
         onChange={onToggle}
       />
     </div>
@@ -534,9 +509,11 @@ export function CapabilitiesTab({ agent }: { agent: SerializedAgent }) {
 
       <section>
         <div className="mb-2">
-          <h3 className="text-xs uppercase tracking-wider text-muted-foreground">Skills</h3>
+          <h3 className="text-xs uppercase tracking-wider text-muted-foreground">
+            Available skills
+          </h3>
           <p className="text-sm text-muted-foreground mt-1">
-            Configure which skills this agent can use
+            Choose which skills people can explicitly invoke on this agent
           </p>
         </div>
 

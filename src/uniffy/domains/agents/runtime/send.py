@@ -10,7 +10,6 @@ from uniffy.core.models.agents.message import AgentMessage
 from uniffy.core.search import SearchIndexer
 from uniffy.core.storage import ObjectStorage
 from uniffy.domains.agents.agents.operations import AgentOperations
-from uniffy.domains.agents.cache import fetch_agent_skills
 from uniffy.domains.agents.memories.recall import attach_to_trigger_turn
 from uniffy.domains.agents.policy import check_user_message
 from uniffy.domains.agents.providers.catalog import resolve_request_params
@@ -31,11 +30,7 @@ from uniffy.domains.agents.runtime.images.config import (
 )
 from uniffy.domains.agents.runtime.models.resolver import resolve_provider_and_model
 from uniffy.domains.agents.runtime.models.window import resolve_context_window
-from uniffy.domains.agents.runtime.prompt import (
-    build_system_prompt,
-    skill_passes_activation,
-    to_skill_prompt_entry,
-)
+from uniffy.domains.agents.runtime.prompt import build_system_prompt
 from uniffy.domains.agents.runtime.runs.complete import CompletionRunner
 from uniffy.domains.agents.runtime.runs.records import RunRecorder
 from uniffy.domains.agents.runtime.skills import resolve_invoked_skill
@@ -48,8 +43,7 @@ from uniffy.domains.agents.sessions.operations import (
     apply_emergency_truncation,
 )
 from uniffy.domains.agents.skills.jobs.contracts import SkillAnalysisDestination
-from uniffy.domains.agents.skills.operations import SkillOperations
-from uniffy.domains.agents.skills.usage import record_skill_injections
+from uniffy.domains.agents.skills.resolution import SkillSurface
 from uniffy.domains.agents.tools.deferral import plan_tool_advertisement
 from uniffy.domains.agents.tools.definitions import ToolContext
 from uniffy.domains.agents.tools.registry import get_tool_registry
@@ -82,7 +76,6 @@ class MessageSender:
         self._session_operations = SessionOperations(session)
         self._agent_operations = AgentOperations(session, search_indexer)
         self._provider_operations = ProviderOperations(session)
-        self._skill_operations = SkillOperations(session)
         self._memory = MemoryContextBuilder(session)
         recorder = RunRecorder(session)
         self._runner = CompletionRunner(
@@ -133,46 +126,7 @@ class MessageSender:
 
         enabled_tools: list[str] = agent.enabled_tools or []
         registry = get_tool_registry()
-        skills = await fetch_agent_skills(
-            self._skill_operations,
-            agent_id=agent.id,
-            organization_id=organization_id,
-            enabled_skill_ids=agent.enabled_skills or [],
-        )
-        active_skills = [
-            skill
-            for skill in skills
-            if skill_passes_activation(
-                skill,
-                enabled_tools=enabled_tools,
-                surface="session",
-            )
-        ]
-        skill_entries = [to_skill_prompt_entry(skill) for skill in active_skills]
-        await record_skill_injections(
-            self._session,
-            skills=active_skills,
-            agent_id=agent.id,
-            user_id=user_id,
-            organization_id=organization_id,
-            session_id=session_id,
-        )
-        invoked_entry = await resolve_invoked_skill(
-            self._session,
-            skills=skills,
-            invoked_skill_id=invoked_skill_id,
-            agent_id=agent.id,
-            user_id=user_id,
-            organization_id=organization_id,
-            session_id=session_id,
-        )
-
-        tool_schemas = resolve_tool_schemas(
-            registry,
-            enabled_tools,
-            skill_entries,
-            invoked_entry,
-        )
+        tool_schemas = resolve_tool_schemas(registry, enabled_tools)
         image_config = await resolve_image_config(
             self._session,
             agent,
@@ -186,6 +140,17 @@ class MessageSender:
         )
         external_note = has_advertised_integration_tools(tool_schemas)
         allowed_tools = allowed_tool_names(tool_schemas)
+        invoked_entry = await resolve_invoked_skill(
+            self._session,
+            enabled_skill_ids=agent.enabled_skills or [],
+            invoked_skill_id=invoked_skill_id,
+            executable_tools=allowed_tools,
+            surface=SkillSurface.SESSION,
+            agent_id=agent.id,
+            user_id=user_id,
+            organization_id=organization_id,
+            session_id=session_id,
+        )
         loaded_tool_groups = list(agent_session.loaded_tool_groups or [])
         advertisement = plan_tool_advertisement(
             registry,
@@ -226,7 +191,6 @@ class MessageSender:
             user_name=user.full_name or user.username,
             user_role=user_role,
             deferred_tools=advertisement.deferred_names() or None,
-            skills=skill_entries or None,
             invoked_skill=invoked_entry,
             memory_context=memory_context,
             user_timezone=user_timezone,

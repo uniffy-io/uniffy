@@ -70,13 +70,6 @@ function SkillCard({ skill, onOpen }: { skill: SerializedSkill; onOpen: () => vo
       }
       title={skill.displayName || skill.name}
       subtitle={skill.description || "No description"}
-      badges={
-        skill.alwaysActive ? (
-          <Badge variant="secondary" className="shrink-0 px-1.5 py-0 text-[10px]">
-            always on
-          </Badge>
-        ) : undefined
-      }
       chips={
         <Badge variant="secondary" className="font-mono text-[10px] font-medium">
           {skill.name}

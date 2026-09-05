@@ -23,7 +23,8 @@ export const agentRunnableSkillsSlice = createSlice({
         state.loadingAgentId = action.meta.arg.agentId;
       })
       .addCase(fetchRunnableSkills.fulfilled, (state, action) => {
-        state.byAgent[action.payload.agentId] = action.payload.skills;
+        state.byAgent[`${action.payload.agentId}:${action.payload.surface}`] =
+          action.payload.skills;
         if (state.loadingAgentId === action.payload.agentId) {
           state.loadingAgentId = null;
         }
@@ -39,8 +40,8 @@ export const agentRunnableSkillsSlice = createSlice({
 const EMPTY: SerializedRunnableSkill[] = [];
 
 export const selectRunnableSkillsForAgent =
-  (agentId: string | null | undefined) =>
+  (agentId: string | null | undefined, surface: "session" | "chat") =>
   (state: RootState): SerializedRunnableSkill[] =>
-    agentId ? (state.agentRunnableSkills.byAgent[agentId] ?? EMPTY) : EMPTY;
+    agentId ? (state.agentRunnableSkills.byAgent[`${agentId}:${surface}`] ?? EMPTY) : EMPTY;
 
 export const agentRunnableSkillsReducer = agentRunnableSkillsSlice.reducer;

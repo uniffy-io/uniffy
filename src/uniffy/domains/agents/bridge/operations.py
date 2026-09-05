@@ -1,18 +1,4 @@
-"""AgentChatBridge: runtime-to-chat orchestrator.
-
-The bridge is the seam between chat message events and the agent
-runtime. It owns:
-
-1. Orchestration: load the trigger message + channel + agent, invoke
-   ``RuntimeOperations.stream_send_message`` with a ``ChatDestination``,
-   and forward each runtime event to a ``ChatStreamPublisher`` that
-   handles the chat-side translation + DB side-effects.
-2. The confirmation-decision resume.
-
-The writer inside the runtime persists chat messages; the bridge is
-only responsible for the fan-out side (driving the publisher + the
-``MESSAGE_CREATED`` companion for new chat rows).
-"""
+"""Drive agent runs and publish their events into chat."""
 
 from __future__ import annotations
 
@@ -47,6 +33,7 @@ from uniffy.domains.agents.runtime.streams import (
     set_run_state,
     touch_run_state,
 )
+from uniffy.domains.agents.skills.resolution import SkillInvocationError, SkillInvocationFailure
 from uniffy.domains.chat import agents as chat_evt
 from uniffy.domains.chat.agents import (
     bump_channel_message_stats,
@@ -75,14 +62,12 @@ CANCEL_POLL_SECONDS = 1.5
 
 
 def _parse_invoked_skill_id(metadata: dict | None) -> UUID | None:
-    """Pull an on-demand invoked skill id off a trigger message's metadata."""
-    raw = (metadata or {}).get("invoked_skill_id")
-    if not raw:
+    if metadata is None or "invoked_skill_id" not in metadata:  # noqa: PLR2004 - chat wire key
         return None
     try:
-        return UUID(str(raw))
-    except ValueError:
-        return None
+        return UUID(str(metadata["invoked_skill_id"]))
+    except ValueError as exc:
+        raise SkillInvocationError(SkillInvocationFailure.UNAVAILABLE) from exc
 
 
 class AgentChatBridge:
@@ -140,7 +125,7 @@ class AgentChatBridge:
         member_ids = await self._load_user_member_ids(channel_id)
         user_id = trigger.sender_id
         thread_root_id = trigger.root_id
-        invoked_skill_id = _parse_invoked_skill_id(trigger.message_metadata)
+        trigger_metadata = dict(trigger.message_metadata or {})
         # Snapshot ORM-backed values now. A mid-run cancel rolls the session back,
         # which expires every attribute; the cleanup path can't drive an async
         # lazy-load (it raises MissingGreenlet), so the cleanup must read locals only.
@@ -198,6 +183,7 @@ class AgentChatBridge:
                 await set_chat_active_run(channel_id, agent_id, run_id)
 
         async def _drive_stream() -> None:
+            invoked_skill_id = _parse_invoked_skill_id(trigger_metadata)
             runtime_ops = RuntimeOperations(
                 self._session,
                 storage,
@@ -245,7 +231,9 @@ class AgentChatBridge:
         except Exception as exc:
             logger.exception("Agent chat invocation failed")
             try:
-                await publisher.write_agent_error_message(str(exc))
+                await publisher.write_agent_error_message(
+                    str(exc) if isinstance(exc, ValidationError) else "Internal server error"
+                )
             except Exception:
                 logger.exception("Failed to write agent error message to chat")
         finally:

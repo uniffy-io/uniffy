@@ -779,9 +779,8 @@ export type SendMessageRequest = Message<"agents.v1.SendMessageRequest"> & {
   chatContext?: ChatChannelContext | undefined;
 
   /**
-   * A skill the user invoked on-demand for this turn (slash command). Its
-   * full content is force-injected and promoted past conditional gating;
-   * ignored when the skill is not in the agent's resolved set.
+   * Explicitly invoke one assigned skill's exact active version for this turn.
+   * Unavailable skills or unmet tool/surface requirements reject the invocation.
    *
    * @generated from field: optional string invoked_skill_id = 7;
    */
@@ -875,9 +874,8 @@ export type StreamSendMessageRequest = Message<"agents.v1.StreamSendMessageReque
   chatContext?: ChatChannelContext | undefined;
 
   /**
-   * A skill the user invoked on-demand for this turn (slash command). Its
-   * full content is force-injected and promoted past conditional gating;
-   * ignored when the skill is not in the agent's resolved set.
+   * Explicitly invoke one assigned skill's exact active version for this turn.
+   * Unavailable skills or unmet tool/surface requirements reject the invocation.
    *
    * @generated from field: optional string invoked_skill_id = 7;
    */

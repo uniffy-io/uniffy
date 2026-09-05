@@ -35,10 +35,8 @@ const draft = (id: string, over: Partial<SerializedSkillDraft> = {}): Serialized
   displayName: `Skill ${id}`,
   description: "",
   content: "body",
-  whenToUse: "",
   requiresTools: [],
-  requiresContext: [],
-  suggestedAlwaysActive: false,
+  supportedSurfaces: [],
   status: "pending",
   createdAt: undefined,
   updatedAt: undefined,
@@ -62,10 +60,8 @@ describe("skillDraftToPlain", () => {
       displayName: "Report",
       description: "desc",
       content: "body",
-      whenToUse: "asked",
       requiresTools: ["search.query"],
-      requiresContext: [],
-      suggestedAlwaysActive: true,
+      supportedSurfaces: [],
       status: "pending",
       createdAt: undefined,
       updatedAt: undefined,
@@ -76,7 +72,6 @@ describe("skillDraftToPlain", () => {
     expect(plain.proposedByAgentId).toBe("agent-1");
     expect(plain.targetSkillId).toBeUndefined();
     expect(plain.requiresTools).toEqual(["search.query"]);
-    expect(plain.suggestedAlwaysActive).toBe(true);
   });
 });
 

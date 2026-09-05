@@ -94,10 +94,7 @@ type SkillsServiceClient interface {
 	UpdateSkill(context.Context, *connect.Request[v1.UpdateSkillRequest]) (*connect.Response[v1.UpdateSkillResponse], error)
 	// Delete an organization skill
 	DeleteSkill(context.Context, *connect.Request[v1.DeleteSkillRequest]) (*connect.Response[v1.DeleteSkillResponse], error)
-	// List the skills a user can invoke on-demand against a given agent
-	// (the agent's resolved set: explicitly enabled + always-active). Powers
-	// the "/" slash-command menu in the agent composers. Lean payload - no
-	// skill content is shipped; the content loads only when the turn runs.
+	// List assigned skills compatible with the requested surface and executable tools.
 	ListRunnableSkills(context.Context, *connect.Request[v1.ListRunnableSkillsRequest]) (*connect.Response[v1.ListRunnableSkillsResponse], error)
 	// Create a pending draft (library "New skill" / "Edit as draft"). The draft
 	// is never auto-activated; it becomes a skill only on SaveSkillDraft.
@@ -348,10 +345,7 @@ type SkillsServiceHandler interface {
 	UpdateSkill(context.Context, *connect.Request[v1.UpdateSkillRequest]) (*connect.Response[v1.UpdateSkillResponse], error)
 	// Delete an organization skill
 	DeleteSkill(context.Context, *connect.Request[v1.DeleteSkillRequest]) (*connect.Response[v1.DeleteSkillResponse], error)
-	// List the skills a user can invoke on-demand against a given agent
-	// (the agent's resolved set: explicitly enabled + always-active). Powers
-	// the "/" slash-command menu in the agent composers. Lean payload - no
-	// skill content is shipped; the content loads only when the turn runs.
+	// List assigned skills compatible with the requested surface and executable tools.
 	ListRunnableSkills(context.Context, *connect.Request[v1.ListRunnableSkillsRequest]) (*connect.Response[v1.ListRunnableSkillsResponse], error)
 	// Create a pending draft (library "New skill" / "Edit as draft"). The draft
 	// is never auto-activated; it becomes a skill only on SaveSkillDraft.

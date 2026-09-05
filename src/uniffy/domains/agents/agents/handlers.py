@@ -61,8 +61,6 @@ from uniffy.domains.agents.runtime.prompt import (
     MemoryScopeBlock,
     build_memory_block,
     build_system_prompt,
-    skill_passes_activation,
-    to_skill_prompt_entry,
 )
 from uniffy.domains.agents.skills.operations import SkillOperations
 from uniffy.domains.agents.templates import AGENT_TEMPLATES
@@ -737,7 +735,6 @@ class AgentsHandlers:
                 agent_ops = AgentOperations(session, search_indexer=self.search_indexer)
                 org_ops = OrganizationOperations(session)
                 user_ops = UserOperations(session)
-                skill_ops = SkillOperations(session)
 
                 agent = await agent_ops.get_by_id(user_id, org_id, agent_id)
 
@@ -746,18 +743,6 @@ class AgentsHandlers:
                 user = await user_ops.get_by_id(user_id)
                 role = membership.role
                 user_role = role.value if hasattr(role, "value") else str(role)
-
-                skills = await skill_ops.get_skills_for_agent(
-                    organization_id=org_id,
-                    enabled_skill_ids=agent.enabled_skills or [],
-                )
-                skill_entries = [
-                    to_skill_prompt_entry(s)
-                    for s in skills
-                    if skill_passes_activation(
-                        s, enabled_tools=agent.enabled_tools or [], surface="session"
-                    )
-                ]
 
                 memory_context = await self._fetch_memory_context_for_preview(
                     session=session,
@@ -779,7 +764,6 @@ class AgentsHandlers:
                     user_name=user.full_name or user.username,
                     user_role=user_role,
                     deferred_tools=plan.deferred_names() or None,
-                    skills=skill_entries or None,
                     rules=await resolve_enabled_rules(
                         session,
                         organization_id=org_id,

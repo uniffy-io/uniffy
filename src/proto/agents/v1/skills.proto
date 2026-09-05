@@ -25,10 +25,7 @@ service SkillsService {
   // Delete an organization skill
   rpc DeleteSkill(DeleteSkillRequest) returns (DeleteSkillResponse) {}
 
-  // List the skills a user can invoke on-demand against a given agent
-  // (the agent's resolved set: explicitly enabled + always-active). Powers
-  // the "/" slash-command menu in the agent composers. Lean payload - no
-  // skill content is shipped; the content loads only when the turn runs.
+  // List assigned skills compatible with the requested surface and executable tools.
   rpc ListRunnableSkills(ListRunnableSkillsRequest) returns (ListRunnableSkillsResponse) {}
 
   // Create a pending draft (library "New skill" / "Edit as draft"). The draft
@@ -76,6 +73,8 @@ enum SkillSource {
 
 // Skill definition returned to clients
 message SkillInfo {
+  reserved 8, 11, 13;
+  reserved "always_active", "when_to_use", "requires_context";
   string id = 1;
   optional string organization_id = 2; // null for bundled skills
   string name = 3;
@@ -83,15 +82,10 @@ message SkillInfo {
   string description = 5;
   string content = 6; // markdown instructions
   SkillSource source = 7;
-  bool always_active = 8; // injected regardless of agent config
   google.protobuf.Timestamp created_at = 9;
   google.protobuf.Timestamp updated_at = 10;
-  // Short trigger guidance shown in the progressive-disclosure metadata index.
-  string when_to_use = 11;
-  // Tool names that must be enabled for the skill to appear (conditional activation).
+  // Tool names required in the agent's final executable tool set.
   repeated string requires_tools = 12;
-  // Optional surface/content-type gates for conditional activation.
-  repeated string requires_context = 13;
   string status = 14; // active | archived
   string origin = 15; // user | agent_proposed | agent_evolved | bundled
   int32 latest_version_number = 16;
@@ -99,10 +93,13 @@ message SkillInfo {
   // latest until the user pins one.
   int32 active_version_number = 17;
   bool active_version_pinned = 18;
+  repeated string supported_surfaces = 19; // session | chat; empty permits both
 }
 
 // One immutable version snapshot of a skill.
 message SkillVersion {
+  reserved 8, 10;
+  reserved "when_to_use", "requires_context";
   string id = 1;
   string skill_id = 2;
   int32 version_number = 3;
@@ -110,19 +107,20 @@ message SkillVersion {
   string display_name = 5;
   string description = 6;
   string content = 7;
-  string when_to_use = 8;
   repeated string requires_tools = 9;
-  repeated string requires_context = 10;
   optional string author_id = 11;
   string author_kind = 12; // user | agent
   string change_summary = 13;
   optional string parent_version_id = 14;
   google.protobuf.Timestamp created_at = 15;
+  repeated string supported_surfaces = 16; // session | chat; empty permits both
 }
 
 // A pending skill draft awaiting user review. One shape for user-authored and
 // agent-proposed drafts; saved only on an explicit user action.
 message SkillDraft {
+  reserved 16, 18, 19;
+  reserved "when_to_use", "requires_context", "suggested_always_active";
   string id = 1;
   string organization_id = 2;
   string owner_id = 3;
@@ -138,24 +136,22 @@ message SkillDraft {
   string display_name = 13;
   string description = 14;
   string content = 15;
-  string when_to_use = 16;
   repeated string requires_tools = 17;
-  repeated string requires_context = 18;
-  bool suggested_always_active = 19;
   string status = 20; // pending | saved | discarded
   google.protobuf.Timestamp created_at = 21;
   google.protobuf.Timestamp updated_at = 22;
+  repeated string supported_surfaces = 23; // session | chat; empty permits both
 }
 
-// --- Requests and Responses ---
-
 message CreateSkillRequest {
+  reserved 6;
+  reserved "always_active";
   string organization_id = 1;
   string name = 2;
   string display_name = 3;
   string description = 4;
   string content = 5;
-  optional bool always_active = 6;
+
 }
 
 message CreateSkillResponse {
@@ -186,6 +182,8 @@ message ListSkillsResponse {
 }
 
 message UpdateSkillRequest {
+  reserved 7, 8;
+  reserved "always_active", "when_to_use";
   string organization_id = 1;
   string skill_id = 2;
   // The slug is the stable identifier: it is set at creation and rejected on
@@ -194,8 +192,7 @@ message UpdateSkillRequest {
   optional string display_name = 4;
   optional string description = 5;
   optional string content = 6;
-  optional bool always_active = 7;
-  optional string when_to_use = 8;
+
 }
 
 message DeleteSkillRequest {
@@ -210,16 +207,19 @@ message DeleteSkillResponse {
 // A skill entry for the slash-command menu. Carries only what the menu
 // renders and what a follow-up invocation needs (the id); no content.
 message RunnableSkill {
+  reserved 5;
+  reserved "when_to_use";
   string id = 1;
   string name = 2;
   string display_name = 3;
   string description = 4;
-  string when_to_use = 5;
+
 }
 
 message ListRunnableSkillsRequest {
   string organization_id = 1;
   string agent_id = 2;
+  string surface = 3; // session | chat
 }
 
 message ListRunnableSkillsResponse {
@@ -227,6 +227,8 @@ message ListRunnableSkillsResponse {
 }
 
 message CreateSkillDraftRequest {
+  reserved 8, 10, 11;
+  reserved "when_to_use", "requires_context", "suggested_always_active";
   string organization_id = 1;
   string kind = 2; // create | edit | evolve
   optional string target_skill_id = 3; // required for edit/evolve
@@ -234,11 +236,9 @@ message CreateSkillDraftRequest {
   string display_name = 5;
   string description = 6;
   string content = 7;
-  string when_to_use = 8;
   repeated string requires_tools = 9;
-  repeated string requires_context = 10;
-  bool suggested_always_active = 11;
   string rationale = 12;
+  repeated string supported_surfaces = 13; // session | chat; empty permits both
 }
 
 message CreateSkillDraftResponse {
@@ -268,19 +268,19 @@ message ListSkillDraftsResponse {
 // The review card sends the full, possibly user-edited field set so the saved
 // version reflects the reviewer's edits without a separate update round-trip.
 message SaveSkillDraftRequest {
+  reserved 7, 9, 10;
+  reserved "when_to_use", "requires_context", "suggested_always_active";
   string organization_id = 1;
   string draft_id = 2;
   string name = 3;
   string display_name = 4;
   string description = 5;
   string content = 6;
-  string when_to_use = 7;
   repeated string requires_tools = 8;
-  repeated string requires_context = 9;
-  bool suggested_always_active = 10;
   string change_summary = 11;
   // Acknowledges that saving replaces an existing skill of the same name.
   bool allow_replace = 12;
+  repeated string supported_surfaces = 13; // session | chat; empty permits both
 }
 
 message SaveSkillDraftResponse {

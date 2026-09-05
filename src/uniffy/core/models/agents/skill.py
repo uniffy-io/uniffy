@@ -4,7 +4,18 @@ from datetime import UTC, datetime
 from enum import StrEnum
 from uuid import UUID
 
-from sqlalchemy import Boolean, Column, DateTime, Index, Integer, String, Text, Uuid, text
+from sqlalchemy import (
+    Boolean,
+    CheckConstraint,
+    Column,
+    DateTime,
+    Index,
+    Integer,
+    String,
+    Text,
+    Uuid,
+    text,
+)
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, SQLModel
 
@@ -26,11 +37,21 @@ class AgentSkillOrigin(StrEnum):
     AGENT_PROPOSED = "agent_proposed"
 
 
+class SkillSurface(StrEnum):
+    SESSION = "session"
+    CHAT = "chat"
+
+
 class AgentSkill(SQLModel, table=True):
     """A curated markdown instruction set injected into an agent's system prompt."""
 
     __tablename__ = "agents_skills"
     __table_args__ = (
+        CheckConstraint(
+            "jsonb_typeof(supported_surfaces) = 'array' "
+            """AND supported_surfaces <@ '["session", "chat"]'::jsonb""",
+            name="ck_agents_skills_supported_surfaces",
+        ),
         Index(
             "uq_agents_skills_org_name",
             "organization_id",
@@ -70,16 +91,11 @@ class AgentSkill(SQLModel, table=True):
     source: AgentSkillSource = Field(
         sa_column=Column(String(20), nullable=False),
     )
-    always_active: bool = Field(default=False, nullable=False)
-    when_to_use: str = Field(
-        default="",
-        sa_column=Column(Text(), nullable=False, server_default=text("''")),
-    )
     requires_tools: list = Field(
         default_factory=list,
         sa_column=Column(JSONB, nullable=False, server_default=text("'[]'::jsonb")),
     )
-    requires_context: list = Field(
+    supported_surfaces: list = Field(
         default_factory=list,
         sa_column=Column(JSONB, nullable=False, server_default=text("'[]'::jsonb")),
     )

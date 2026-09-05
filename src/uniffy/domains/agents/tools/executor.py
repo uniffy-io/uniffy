@@ -106,7 +106,7 @@ class ToolExecutor:
                 error=f"Unknown tool: {tool_call.name}",
             )
 
-        # Internal tools (view_skill, load_group) are advertised by the runtime
+        # Internal tools (load_group) are advertised by the runtime
         # on its own terms and never appear in a builder's enabled set.
         if not tool_def.internal and tool_def.name not in self._context.allowed_tools:
             AGENT_TOOL_CALLS_TOTAL.labels(tool=tool_def.name, status="not_enabled").inc()

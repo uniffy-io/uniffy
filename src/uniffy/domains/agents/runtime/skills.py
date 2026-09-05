@@ -1,38 +1,43 @@
-"""Runtime skill invocation resolution."""
+"""Record explicit invocation usage after exact-version validation."""
 
 from uuid import UUID
 
-from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from uniffy.core.models.agents.skill import AgentSkill
-from uniffy.domains.agents.runtime.prompt import SkillPromptEntry, to_skill_prompt_entry
+from uniffy.domains.agents.skills.resolution import (
+    ResolvedSkill,
+    SkillSurface,
+    resolve_skill_invocation,
+)
 from uniffy.domains.agents.skills.usage import record_skill_event
-
-logger = logger.bind(component="agents.runtime.skills")
 
 
 async def resolve_invoked_skill(
     session: AsyncSession,
     *,
-    skills: list[AgentSkill],
+    enabled_skill_ids: list[str],
     invoked_skill_id: UUID | None,
+    executable_tools: frozenset[str],
+    surface: SkillSurface,
     agent_id: UUID,
     user_id: UUID,
     organization_id: UUID,
     session_id: UUID | None,
-) -> SkillPromptEntry | None:
-    """Resolve only skills already present in the agent's authorized set."""
-    if invoked_skill_id is None:
-        return None
-    match = next((skill for skill in skills if skill.id == invoked_skill_id), None)
-    if match is None:
-        logger.warning(f"Invoked skill {invoked_skill_id} not in agent's resolved set; ignoring")
+) -> ResolvedSkill | None:
+    skill = await resolve_skill_invocation(
+        session,
+        organization_id=organization_id,
+        enabled_skill_ids=enabled_skill_ids,
+        invoked_skill_id=invoked_skill_id,
+        surface=surface,
+        executable_tools=executable_tools,
+    )
+    if skill is None:
         return None
     await record_skill_event(
         session,
-        skill_id=match.id,
-        skill_version=int(getattr(match, "latest_version_number", 0) or 0),
+        skill_id=skill.id,
+        skill_version=skill.version_number,
         agent_id=agent_id,
         user_id=user_id,
         organization_id=organization_id,
@@ -40,4 +45,4 @@ async def resolve_invoked_skill(
         invoked=True,
         commit=False,
     )
-    return to_skill_prompt_entry(match)
+    return skill

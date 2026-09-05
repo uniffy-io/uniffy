@@ -329,11 +329,11 @@ export function MessageCompose({
     id: string;
     name: string;
   } | null>(null);
-  const runnableSkills = useAppSelector(selectRunnableSkillsForAgent(agentDmAgentId));
+  const runnableSkills = useAppSelector(selectRunnableSkillsForAgent(agentDmAgentId, "chat"));
 
   useEffect(() => {
     if (agentDmAgentId) {
-      dispatch(fetchRunnableSkills({ agentId: agentDmAgentId }));
+      dispatch(fetchRunnableSkills({ agentId: agentDmAgentId, surface: "chat" }));
     }
   }, [agentDmAgentId, dispatch]);
 
