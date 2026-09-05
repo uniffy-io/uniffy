@@ -86,7 +86,11 @@ interface MessageComposeProps {
   channelId?: string;
   placeholder?: string;
   organizationId?: string;
-  onSend?: (content: string, fileIds: string[], metadata?: Record<string, string>) => void;
+  onSend?: (
+    content: string,
+    fileIds: string[],
+    metadata?: Record<string, string>,
+  ) => Promise<boolean>;
   onTyping?: () => void;
   replyTo?: {
     id: string;
@@ -317,9 +321,7 @@ export function MessageCompose({
     [canBroadcast, channel],
   );
   const editLastBinding = useKeybinding("chat.editLast");
-  // "/skill" typeahead, agent DMs only. The composer is a contentEditable, so
-  // the token is tracked against the caret's text node like @-mentions rather
-  // than through the textarea-bound hook the session chat uses.
+  // Track slash tokens against the caret's text node, like mentions.
   const [slashActive, setSlashActive] = useState(false);
   const [slashQuery, setSlashQuery] = useState("");
   const slashStartNodeRef = useRef<Node | null>(null);
@@ -330,12 +332,14 @@ export function MessageCompose({
     name: string;
   } | null>(null);
   const runnableSkills = useAppSelector(selectRunnableSkillsForAgent(agentDmAgentId, "chat"));
+  const [isSending, setIsSending] = useState(false);
+  const sendingRef = useRef(false);
 
   useEffect(() => {
-    if (agentDmAgentId) {
-      dispatch(fetchRunnableSkills({ agentId: agentDmAgentId, surface: "chat" }));
+    if (agentDmAgentId && organizationId) {
+      dispatch(fetchRunnableSkills({ organizationId, agentId: agentDmAgentId, surface: "chat" }));
     }
-  }, [agentDmAgentId, dispatch]);
+  }, [agentDmAgentId, organizationId, dispatch]);
 
   const uploadFile = useCallback(
     async (file: File, pendingId: string) => {
@@ -699,19 +703,35 @@ export function MessageCompose({
   }, [closeSlash]);
 
   const performSend = useCallback(
-    (content: string, fileIds: string[], metadata?: Record<string, string>) => {
-      onSend?.(content, fileIds, metadata);
+    async (content: string, fileIds: string[], metadata?: Record<string, string>) => {
+      if (!onSend || sendingRef.current) return;
       const el = editorRef.current;
-      if (el) el.innerHTML = "";
-      setPendingFiles([]);
-      setPendingInvokedSkill(null);
-      closeSlash();
-      updateState();
+      const html = el?.innerHTML;
+      sendingRef.current = true;
+      setIsSending(true);
+      try {
+        if (!(await onSend(content, fileIds, metadata))) return;
+        if (el && editorRef.current === el && el.innerHTML === html) el.innerHTML = "";
+        setPendingFiles((files) =>
+          files.filter((file) => !file.fileId || !fileIds.includes(file.fileId)),
+        );
+        setPendingInvokedSkill((skill) =>
+          skill?.id === metadata?.invoked_skill_id ? null : skill,
+        );
+        closeSlash();
+        updateState();
+      } catch {
+        // The rejected send thunk owns the error toast; keep the draft for retry.
+      } finally {
+        sendingRef.current = false;
+        setIsSending(false);
+      }
     },
     [onSend, closeSlash, updateState],
   );
 
   const handleSend = useCallback(async () => {
+    if (sendingRef.current) return;
     const el = editorRef.current;
     if (!el) return;
 
@@ -761,8 +781,7 @@ export function MessageCompose({
         }
       : undefined;
 
-    // Nothing is cleared before the user confirms: the host's draft flush only
-    // runs on `onSend`, so cancelling leaves the composer exactly as it was.
+    // Confirmation cancellation and rejected sends must leave the draft intact.
     const broadcastKinds = broadcastMentionsIn(content);
     if (broadcastKinds.length > 0) {
       const kind = effectiveBroadcastKind(broadcastKinds);
@@ -1111,6 +1130,7 @@ export function MessageCompose({
         onDrop={handleDrop}
         onDragOver={handleDragOver}
         data-testid="chat-compose-root"
+        inert={isSending}
         data-mode={editingMessage ? "edit" : replyTo ? "reply" : "normal"}
         data-variant={variant}
       >
@@ -1204,7 +1224,8 @@ export function MessageCompose({
 
           <div
             ref={editorRef}
-            contentEditable
+            contentEditable={!isSending}
+            aria-busy={isSending}
             role="textbox"
             aria-label={displayPlaceholder}
             aria-multiline="true"
@@ -1303,7 +1324,7 @@ export function MessageCompose({
             <button
               type="button"
               onClick={handleSend}
-              disabled={isEmpty}
+              disabled={isSending || (isEmpty && !pendingInvokedSkill)}
               aria-label="Send message"
               className={cn(
                 "p-1.5 rounded-md transition-colors",

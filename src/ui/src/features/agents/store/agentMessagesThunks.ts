@@ -59,7 +59,7 @@ export const fetchMessages = createAsyncThunk<
 });
 
 export const streamSendMessage = createAsyncThunk<
-  void,
+  "done" | "cancelled",
   {
     sessionId: string;
     content: string;
@@ -97,8 +97,9 @@ export const streamSendMessage = createAsyncThunk<
         if (outcome?.status === "error") {
           return rejectWithValue(outcome.errorMessage ?? "Streaming failed");
         }
-        if (outcome) return;
+        if (outcome) return outcome.status;
       }
+      throw new Error("Stream ended before completion");
     } finally {
       consumer.dispose();
     }

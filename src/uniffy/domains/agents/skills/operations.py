@@ -3,8 +3,7 @@
 from datetime import UTC, datetime
 from uuid import UUID
 
-from sqlalchemy import and_, func, or_, select
-from sqlalchemy import inspect as sa_inspect
+from sqlalchemy import and_, func, or_, select, tuple_
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -61,7 +60,7 @@ from uniffy.domains.agents.skills.validation import (
 from uniffy.domains.agents.tools.registry import get_tool_registry
 from uniffy.domains.chat import agents as chat_evt
 from uniffy.domains.chat.agents import publish_channel_event_to_members
-from uniffy.domains.integrations.tools import filter_integration_tool_schemas
+from uniffy.domains.integrations.advertisement import filter_integration_tool_schemas
 from uniffy.domains.organizations.operations import OrganizationOperations
 
 # The proposal path is reachable by any org member through an agent tool loop,
@@ -71,19 +70,6 @@ MAX_PENDING_DRAFTS_PER_USER = 25
 
 # Validation field the draft review surface keys its replace-confirmation on.
 SKILL_NAME_CONFLICT_FIELD = "skill_name_conflict"
-
-
-def _overlay_skill_copy(skill: AgentSkill, version: AgentSkillVersion) -> AgentSkill:
-    """Copy a skill row into a session-free instance carrying the version's fields.
-
-    The copy is never added to a session, so resolving a pinned skill for the
-    prompt cannot flush the pinned version back over the skill's head row.
-    """
-    data = {attr.key: getattr(skill, attr.key) for attr in sa_inspect(skill).mapper.column_attrs}
-    data["content"] = version.content
-    data["requires_tools"] = list(version.requires_tools or [])
-    data["supported_surfaces"] = list(version.supported_surfaces or [])
-    return AgentSkill(**data)
 
 
 class SkillOperations:
@@ -772,20 +758,14 @@ class SkillOperations:
         version_number: int | None,
         follow_latest: bool,
     ) -> AgentSkill:
-        """Pin a version as the main one, or unpin to follow the latest edit.
-
-        The runtime resolves skill content through ``active_version_id``, so a
-        change here invalidates the dependent agent skill caches.
-        """
         skill = await self._load_skill_for_edit(
             user_id=user_id, organization_id=organization_id, skill_id=skill_id
         )
 
         if follow_latest:
+            latest = await self._get_version(skill_id, skill.latest_version_number)
             skill.active_version_pinned = False
-            latest = await self._get_version_or_none(skill_id, skill.latest_version_number)
-            if latest is not None:
-                skill.active_version_id = latest.id
+            skill.active_version_id = latest.id
         else:
             if version_number is None:
                 raise ValidationError("version_number", "A version number is required to pin")
@@ -945,32 +925,23 @@ class SkillOperations:
         }
 
     async def resolve_active_version_number(self, skill: AgentSkill) -> int:
-        """Resolve the main version's number for a skill's SkillInfo conversion."""
-        if not skill.active_version_pinned or skill.active_version_id is None:
-            return skill.latest_version_number or 1
-        result = await self._session.execute(
-            select(AgentSkillVersion.version_number).where(
-                AgentSkillVersion.id == skill.active_version_id
-            )
-        )
-        return result.scalar() or (skill.latest_version_number or 1)
+        return (await self.resolve_active_version_numbers([skill]))[skill.id]
 
     async def resolve_active_version_numbers(self, skills: list[AgentSkill]) -> dict[UUID, int]:
-        """Batch-resolve main version numbers; one query covers all pinned skills."""
-        numbers = {s.id: (s.latest_version_number or 1) for s in skills}
-        pinned = {
-            s.active_version_id: s.id
-            for s in skills
-            if s.active_version_pinned and s.active_version_id is not None
-        }
-        if pinned:
-            result = await self._session.execute(
-                select(AgentSkillVersion.id, AgentSkillVersion.version_number).where(
-                    AgentSkillVersion.id.in_(pinned.keys())
-                )
+        if not skills:
+            return {}
+        if any(skill.active_version_id is None for skill in skills):
+            raise ValidationError("active_version_id", "A skill's active version is unavailable")
+        result = await self._session.execute(
+            select(AgentSkillVersion.skill_id, AgentSkillVersion.version_number).where(
+                tuple_(AgentSkillVersion.skill_id, AgentSkillVersion.id).in_([
+                    (skill.id, skill.active_version_id) for skill in skills
+                ])
             )
-            for version_id, number in result.all():
-                numbers[pinned[version_id]] = number
+        )
+        numbers = dict(result.all())
+        if set(numbers) != {skill.id for skill in skills}:
+            raise ValidationError("active_version_id", "A skill's active version is unavailable")
         return numbers
 
     async def _get_version(self, skill_id: UUID, version_number: int) -> AgentSkillVersion:
@@ -980,15 +951,11 @@ class SkillOperations:
         return version
 
     async def _load_active_version(self, skill: AgentSkill) -> AgentSkillVersion:
-        """Return the skill's current main (active) version, falling back to the latest."""
         if skill.active_version_id is not None:
             version = await self._session.get(AgentSkillVersion, skill.active_version_id)
-            if version is not None:
+            if version is not None and version.skill_id == skill.id:
                 return version
-        version = await self._get_version_or_none(skill.id, skill.latest_version_number or 1)
-        if version is None:
-            raise NotFoundError("AgentSkillVersion", str(skill.id))
-        return version
+        raise ValidationError("active_version_id", "The skill's active version is unavailable")
 
     async def _get_version_or_none(
         self, skill_id: UUID, version_number: int
@@ -1135,41 +1102,6 @@ class SkillOperations:
             executable_tools=allowed_tool_names(schemas),
         )
 
-    async def get_skills_for_agent(
-        self,
-        *,
-        organization_id: UUID,
-        enabled_skill_ids: list[str],
-    ) -> list[AgentSkill]:
-        """Resolve only skills explicitly assigned to this agent."""
-        seen_ids: set[UUID] = set()
-        skills: list[AgentSkill] = []
-
-        # Fetch explicitly enabled skills
-        if enabled_skill_ids:
-            enabled_uuids = []
-            for sid in enabled_skill_ids:
-                try:
-                    enabled_uuids.append(UUID(sid))
-                except ValueError:
-                    continue
-
-            if enabled_uuids:
-                result = await self._session.execute(
-                    select(AgentSkill).where(
-                        AgentSkill.id.in_(enabled_uuids),
-                        or_(
-                            AgentSkill.organization_id == organization_id,
-                            AgentSkill.organization_id.is_(None),
-                        ),
-                    )
-                )
-                for skill in result.scalars().all():
-                    seen_ids.add(skill.id)
-                    skills.append(skill)
-
-        return await self._overlay_active_versions(skills)
-
     async def resolve_bundled_skill_id_map(self, names: list[str]) -> dict[str, str]:
         """Map bundled skill names to row ids; unseeded names are absent."""
         if not names:
@@ -1273,35 +1205,3 @@ class SkillOperations:
             payload,
             channel_id=draft.channel_id,
         )
-
-    async def _overlay_active_versions(self, skills: list[AgentSkill]) -> list[AgentSkill]:
-        """Resolve pinned skills against their main version on detached copies.
-
-        The runtime uses the main (active) version, never blindly the latest. An
-        unpinned skill's head row already carries its active-version content, so
-        it passes through untouched and cheaply. A skill pinned to a non-head
-        version is returned as a session-free copy with the pinned fields applied:
-        mutating the persistent row here would let a later commit on the same
-        session flush the pinned content over the skill's head row.
-        """
-        pinned = [s for s in skills if s.active_version_pinned and s.active_version_id]
-        if not pinned:
-            return skills
-        result = await self._session.execute(
-            select(AgentSkillVersion).where(
-                AgentSkillVersion.id.in_([s.active_version_id for s in pinned])
-            )
-        )
-        versions = {v.id: v for v in result.scalars().all()}
-        overlaid: list[AgentSkill] = []
-        for skill in skills:
-            version = (
-                versions.get(skill.active_version_id)
-                if skill.active_version_pinned and skill.active_version_id
-                else None
-            )
-            if version is None:
-                overlaid.append(skill)
-                continue
-            overlaid.append(_overlay_skill_copy(skill, version))
-        return overlaid

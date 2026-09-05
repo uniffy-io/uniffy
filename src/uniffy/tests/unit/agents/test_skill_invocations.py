@@ -18,7 +18,10 @@ from uniffy.domains.agents.skills.resolution import (
     SkillSurface,
     resolve_skill_invocation,
 )
-from uniffy.domains.agents.bridge.operations import _parse_invoked_skill_id
+from uniffy.domains.agents.invocation import parse_invoked_skill_id
+from uniffy.domains.agents import invocation
+from uniffy.core.models.chat.message import SenderType
+from uniffy.core.errors import PermissionDeniedError
 from uniffy.domains.agents.skills.validation import validate_supported_surfaces
 
 
@@ -59,14 +62,116 @@ def invocation_args(version, **overrides):
 @pytest.mark.parametrize("raw", ["", "invalid", None, [], 42])
 def test_malformed_chat_invocation_is_not_an_ordinary_turn(raw):
     with pytest.raises(SkillInvocationError):
-        _parse_invoked_skill_id({"invoked_skill_id": raw})
+        parse_invoked_skill_id({"invoked_skill_id": raw})
 
 
 def test_absent_chat_invocation_is_an_ordinary_turn():
-    assert _parse_invoked_skill_id(None) is None
-    assert _parse_invoked_skill_id({}) is None
+    assert parse_invoked_skill_id(None) is None
+    assert parse_invoked_skill_id({}) is None
     skill_id = generate_id()
-    assert _parse_invoked_skill_id({"invoked_skill_id": str(skill_id)}) == skill_id
+    assert parse_invoked_skill_id({"invoked_skill_id": str(skill_id)}) == skill_id
+
+
+@pytest.fixture
+def chat_preflight(monkeypatch):
+    session = MagicMock()
+    session.execute = AsyncMock(return_value=MagicMock())
+    session.execute.return_value.one_or_none.return_value = SimpleNamespace(
+        owner_id=generate_id(), access_mode=None, baseline_role=None
+    )
+    message = SimpleNamespace(
+        sender_type=SenderType.USER,
+        sender_id=generate_id(),
+        message_metadata={"invoked_skill_id": str(generate_id())},
+    )
+    channel = SimpleNamespace(organization_id=generate_id())
+    agent = SimpleNamespace(
+        enabled_skills=[message.message_metadata["invoked_skill_id"]], enabled_tools=[]
+    )
+    patches = {
+        "detect_agent_mentions": AsyncMock(return_value=[SimpleNamespace(agent_id=generate_id())]),
+        "require_view": AsyncMock(),
+        "fetch_agent_row": AsyncMock(return_value=agent),
+        "resolve_tool_schemas": MagicMock(return_value=[{"name": "search-query"}]),
+        "resolve_image_config": AsyncMock(return_value=None),
+        "apply_image_tool_schema": MagicMock(
+            return_value=[{"name": "search-query"}, {"name": "github-read"}]
+        ),
+        "filter_integration_tool_schemas": AsyncMock(return_value=[{"name": "search-query"}]),
+        "resolve_skill_invocation": AsyncMock(),
+    }
+    for name, mock in patches.items():
+        monkeypatch.setattr(invocation, name, mock)
+    return session, message, channel, patches
+
+
+async def test_chat_preflight_ordinary_turn_has_no_reads(chat_preflight):
+    session, message, channel, mocks = chat_preflight
+    message.message_metadata = None
+    await invocation.validate_chat_skill_invocation(session, message, channel)
+    session.execute.assert_not_awaited()
+    for mock in mocks.values():
+        mock.assert_not_called()
+
+
+@pytest.mark.parametrize("target_count", [0, 2])
+async def test_chat_preflight_rejects_missing_or_ambiguous_agent(chat_preflight, target_count):
+    session, message, channel, mocks = chat_preflight
+    mocks["detect_agent_mentions"].return_value *= target_count
+    with pytest.raises(SkillInvocationError):
+        await invocation.validate_chat_skill_invocation(session, message, channel)
+    session.execute.assert_not_awaited()
+    mocks["resolve_skill_invocation"].assert_not_awaited()
+
+
+async def test_chat_preflight_rechecks_access_before_reading_skill(chat_preflight):
+    session, message, channel, mocks = chat_preflight
+    mocks["require_view"].side_effect = PermissionDeniedError("access")
+    with pytest.raises(PermissionDeniedError):
+        await invocation.validate_chat_skill_invocation(session, message, channel)
+    mocks["fetch_agent_row"].assert_not_awaited()
+    mocks["resolve_skill_invocation"].assert_not_awaited()
+
+
+async def test_chat_preflight_uses_final_executable_tools(chat_preflight):
+    session, message, channel, mocks = chat_preflight
+    await invocation.validate_chat_skill_invocation(session, message, channel)
+    kwargs = mocks["resolve_skill_invocation"].call_args.kwargs
+    assert kwargs["executable_tools"] == frozenset({"search.query"})
+    assert kwargs["surface"] == SkillSurface.CHAT
+    assert kwargs["organization_id"] == channel.organization_id
+    assert str(kwargs["invoked_skill_id"]) == message.message_metadata["invoked_skill_id"]
+    session.add.assert_not_called()
+
+
+async def test_chat_rejected_invocation_is_not_persisted(monkeypatch):
+    from uniffy.domains.chat.messages import sending
+
+    sender = sending.MessageSender()
+    sender.session = MagicMock()
+    sender.session.flush = AsyncMock()
+    sender.session.commit = AsyncMock()
+    channel = SimpleNamespace(is_agent_dm=False)
+    sender.access = SimpleNamespace(
+        get_channel=AsyncMock(return_value=channel), require_send=AsyncMock()
+    )
+    monkeypatch.setattr(sending, "check_chat_mutation_limit", AsyncMock())
+    monkeypatch.setattr(
+        sending,
+        "validate_chat_skill_invocation",
+        AsyncMock(side_effect=SkillInvocationError(SkillInvocationFailure.UNAVAILABLE)),
+    )
+    with pytest.raises(SkillInvocationError):
+        await sender.send_message(
+            generate_id(),
+            generate_id(),
+            generate_id(),
+            "Keep my draft",
+            message_metadata={"invoked_skill_id": str(generate_id())},
+        )
+    sender.session.add.assert_not_called()
+    sender.session.flush.assert_not_awaited()
+    sender.session.commit.assert_not_awaited()
 
 
 def test_supported_surfaces_are_closed_and_deduplicated():
@@ -108,16 +213,22 @@ async def test_menu_rechecks_current_requirements_on_cached_summaries(snapshot):
     cache.side_effect = None
     cache.return_value = payload
     session.execute.reset_mock()
-    assert await resolution.resolve_runnable_skills(
-        session, **{**args, "executable_tools": frozenset()}
-    ) == []
-    assert await resolution.resolve_runnable_skills(
-        session, **{**args, "surface": SkillSurface.SESSION}
-    ) == []
+    assert (
+        await resolution.resolve_runnable_skills(
+            session, **{**args, "executable_tools": frozenset()}
+        )
+        == []
+    )
+    assert (
+        await resolution.resolve_runnable_skills(
+            session, **{**args, "surface": SkillSurface.SESSION}
+        )
+        == []
+    )
     cache.reset_mock()
-    assert await resolution.resolve_runnable_skills(
-        session, **{**args, "enabled_skill_ids": []}
-    ) == []
+    assert (
+        await resolution.resolve_runnable_skills(session, **{**args, "enabled_skill_ids": []}) == []
+    )
     cache.assert_not_awaited()
     session.execute.assert_not_awaited()
 

@@ -6,10 +6,166 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
-from uniffy.core.models.agents.skill import AgentSkill, AgentSkillSource
+from uniffy.core.models.agents.skill import AgentSkill, AgentSkillSource, AgentSkillStatus
 from uniffy.core.models.agents.skill_version import AgentSkillVersion
 from uniffy.core.types import generate_id
 from uniffy.domains.agents.runtime.prompt import build_system_prompt
+from uniffy.domains.agents.skills.operations import SkillOperations
+from uniffy.domains.agents.skills.validation import MAX_ENABLED_SKILLS, validate_skill_selection
+
+
+class TestSkillSelection:
+    def _session(self, rows=()):
+        session = MagicMock()
+        result = MagicMock()
+        result.all.return_value = rows
+        session.execute = AsyncMock(return_value=result)
+        return session
+
+    @pytest.mark.parametrize(
+        "ids", [["invalid"], [""], [str(generate_id())] * (MAX_ENABLED_SKILLS + 1)]
+    )
+    async def test_invalid_selection_rejects_before_query(self, ids):
+        session = self._session()
+        with pytest.raises(ValidationError):
+            await validate_skill_selection(session, generate_id(), ids, existing=[])
+        session.execute.assert_not_awaited()
+
+    async def test_empty_selection_skips_query(self):
+        session = self._session()
+        assert await validate_skill_selection(session, generate_id(), [], existing=[]) == []
+        session.execute.assert_not_awaited()
+
+    async def test_normalizes_and_deduplicates_without_reordering(self):
+        first, second = generate_id(), generate_id()
+        session = self._session([
+            NS(id=second, status=AgentSkillStatus.ACTIVE),
+            NS(id=first, status=AgentSkillStatus.ACTIVE),
+        ])
+        selected = await validate_skill_selection(
+            session, generate_id(), [first.hex.upper(), str(second), str(first)], existing=[]
+        )
+        assert selected == [str(first), str(second)]
+        session.execute.assert_awaited_once()
+
+    async def test_unavailable_selection_rejects(self):
+        with pytest.raises(ValidationError, match="unavailable"):
+            await validate_skill_selection(
+                self._session(), generate_id(), [str(generate_id())], existing=[]
+            )
+
+    async def test_retired_assignment_can_stay_but_cannot_be_added(self):
+        skill_id = generate_id()
+        session = self._session([NS(id=skill_id, status=AgentSkillStatus.RETIRED)])
+        with pytest.raises(ValidationError, match="Retired"):
+            await validate_skill_selection(session, generate_id(), [str(skill_id)], existing=[])
+        assert await validate_skill_selection(
+            session, generate_id(), [str(skill_id)], existing=[skill_id.hex.upper()]
+        ) == [str(skill_id)]
+
+    async def test_invalid_update_leaves_agent_unchanged(self, monkeypatch):
+        from uniffy.core.models.agents.agent import Agent
+        from uniffy.domains.agents.agents import operations
+
+        session = self._session()
+        agent = Agent(organization_id=generate_id(), owner_id=generate_id(), name="Original")
+        ops = operations.AgentOperations(session)
+        monkeypatch.setattr(ops, "_fetch_by_id", AsyncMock(return_value=agent))
+        monkeypatch.setattr(operations, "require_agents_builder", AsyncMock())
+        with pytest.raises(ValidationError, match="Invalid skill"):
+            await ops.update_agent(
+                user_id=agent.owner_id,
+                organization_id=agent.organization_id,
+                agent_id=agent.id,
+                name="Changed",
+                enabled_skills=["invalid"],
+            )
+        assert agent.name == "Original"
+        assert agent.enabled_skills == []
+        session.commit.assert_not_called()
+
+    async def test_create_validates_skill_and_rule_selections(self, monkeypatch):
+        from uniffy.core.models.agents.rule import AgentRule, RuleSource
+        from uniffy.core.types import AccessMode
+        from uniffy.domains.agents.agents import operations
+
+        org_id = generate_id()
+        skill = AgentSkill(
+            organization_id=org_id,
+            source=AgentSkillSource.ORGANIZATION,
+            name="report",
+            display_name="Report",
+        )
+        rule = AgentRule(
+            organization_id=org_id,
+            source=RuleSource.ORGANIZATION,
+            name="clear",
+            display_name="Clear",
+            content="Be clear",
+        )
+        session = self._session([skill])
+        session.execute.return_value.scalars.return_value.all.return_value = [rule]
+        session.flush = AsyncMock()
+        session.commit = AsyncMock()
+        session.refresh = AsyncMock()
+        session.rollback = AsyncMock()
+        ops = operations.AgentOperations(session, search_indexer=MagicMock())
+        monkeypatch.setattr(operations, "require_agents_builder", AsyncMock())
+        monkeypatch.setattr(
+            ops, "_resolve_access_policy", AsyncMock(return_value=(AccessMode.OPEN_TO_ORG, None))
+        )
+        monkeypatch.setattr(ops, "_finish_agent_create_after_commit", AsyncMock())
+        created = await ops.create_agent(
+            user_id=generate_id(),
+            organization_id=org_id,
+            name="Helper",
+            primary_model="",
+            enabled_skills=[skill.id.hex.upper(), str(skill.id)],
+            enabled_rules=[str(rule.id)],
+        )
+        assert created.enabled_skills == [str(skill.id)]
+        assert created.enabled_rules == [str(rule.id)]
+        session.commit.assert_awaited_once()
+
+
+class TestActiveSkillSnapshot:
+    @pytest.mark.parametrize("missing", ["pointer", "row", "owner"])
+    async def test_unavailable_active_version_never_uses_head(self, missing):
+        skill = AgentSkill(
+            source=AgentSkillSource.ORGANIZATION,
+            name="report",
+            display_name="Report",
+            latest_version_number=5,
+        )
+        version = AgentSkillVersion(
+            skill_id=generate_id(), version_number=1, name="other", display_name="Other"
+        )
+        skill.active_version_id = None if missing == "pointer" else version.id
+        session = MagicMock()
+        session.get = AsyncMock(return_value=None if missing == "row" else version)
+        ops = SkillOperations(session)
+        with pytest.raises(ValidationError, match="unavailable"):
+            await ops._load_active_version(skill)
+        session.execute.assert_not_called()
+
+    async def test_batch_active_numbers_rejects_missing_snapshot(self):
+        skill = AgentSkill(
+            source=AgentSkillSource.ORGANIZATION,
+            name="report",
+            display_name="Report",
+            active_version_id=generate_id(),
+        )
+        session = MagicMock()
+        result = MagicMock()
+        result.all.return_value = []
+        session.execute = AsyncMock(return_value=result)
+        with pytest.raises(ValidationError, match="unavailable"):
+            await SkillOperations(session).resolve_active_version_numbers([skill])
+
+    async def test_empty_active_numbers_skips_query(self):
+        session = MagicMock()
+        assert await SkillOperations(session).resolve_active_version_numbers([]) == {}
+        session.execute.assert_not_called()
 
 
 class TestPromptSplit:
@@ -64,189 +220,15 @@ class TestRunnableSkills:
         # the menu payload must not carry skill content (progressive disclosure on the wire)
         assert "content" not in proto.DESCRIPTOR.fields_by_name
 
-    def test_parse_invoked_skill_id_from_metadata(self) -> None:
-        from uniffy.domains.agents.bridge.operations import _parse_invoked_skill_id
+    def testparse_invoked_skill_id_from_metadata(self) -> None:
+        from uniffy.domains.agents.invocation import parse_invoked_skill_id
 
         sid = generate_id()
-        assert _parse_invoked_skill_id({"invoked_skill_id": str(sid)}) == sid
-        assert _parse_invoked_skill_id(None) is None
-        assert _parse_invoked_skill_id({}) is None
+        assert parse_invoked_skill_id({"invoked_skill_id": str(sid)}) == sid
+        assert parse_invoked_skill_id(None) is None
+        assert parse_invoked_skill_id({}) is None
         with pytest.raises(ValidationError, match="unavailable"):
-            _parse_invoked_skill_id({"invoked_skill_id": "not-a-uuid"})
-
-
-class TestActiveVersionOverlay:
-    async def test_overlay_replaces_content_on_a_detached_copy(self) -> None:
-        from uniffy.domains.agents.skills.operations import SkillOperations
-
-        version_id = generate_id()
-        skill = AgentSkill(
-            id=generate_id(),
-            organization_id=generate_id(),
-            name="report",
-            display_name="Report",
-            source="organization",
-            content="OLD",
-            active_version_id=version_id,
-            active_version_pinned=True,
-        )
-        version = AgentSkillVersion(
-            id=version_id,
-            skill_id=skill.id,
-            version_number=3,
-            name="report",
-            display_name="Report",
-            content="NEWBODY",
-            requires_tools=["search.query"],
-        )
-
-        ops = SkillOperations.__new__(SkillOperations)
-        result = MagicMock()
-        result.scalars.return_value.all.return_value = [version]
-        ops._session = MagicMock()
-        ops._session.execute = AsyncMock(return_value=result)
-
-        out = await ops._overlay_active_versions([skill])
-
-        # The overlay lands on a fresh, session-free copy...
-        assert out[0] is not skill
-        assert out[0].content == "NEWBODY"
-        assert out[0].requires_tools == ["search.query"]
-        # ...and the persistent head row is left exactly as loaded.
-        assert skill.content == "OLD"
-
-    async def test_overlay_noop_without_active_version(self) -> None:
-        from uniffy.domains.agents.skills.operations import SkillOperations
-
-        skill = AgentSkill(
-            id=generate_id(),
-            organization_id=generate_id(),
-            name="report",
-            display_name="Report",
-            source="organization",
-            content="OWN",
-        )
-        ops = SkillOperations.__new__(SkillOperations)
-        ops._session = MagicMock()
-        ops._session.execute = AsyncMock()
-
-        out = await ops._overlay_active_versions([skill])
-
-        ops._session.execute.assert_not_called()  # no query when nothing is pinned
-        assert out == [skill]  # passthrough
-        assert skill.content == "OWN"
-
-    async def test_unpinned_skill_passes_through_without_query(self) -> None:
-        from uniffy.domains.agents.skills.operations import SkillOperations
-
-        # An unpinned skill's head row already carries its active-version
-        # content, so the cheap path skips the versions query entirely.
-        skill = AgentSkill(
-            id=generate_id(),
-            organization_id=generate_id(),
-            name="report",
-            display_name="Report",
-            source="organization",
-            content="HEAD",
-            active_version_id=generate_id(),
-            active_version_pinned=False,
-        )
-        ops = SkillOperations.__new__(SkillOperations)
-        ops._session = MagicMock()
-        ops._session.execute = AsyncMock()
-
-        out = await ops._overlay_active_versions([skill])
-
-        ops._session.execute.assert_not_called()
-        assert out == [skill]
-        assert out[0].content == "HEAD"
-
-
-class TestGetSkillsForAgentOverlay:
-    async def test_only_explicitly_assigned_skills_are_resolved(self) -> None:
-        from uniffy.domains.agents.skills.operations import SkillOperations
-
-        organization_id = generate_id()
-        assigned = AgentSkill(
-            source=AgentSkillSource.ORGANIZATION,
-            organization_id=organization_id,
-            name="assigned",
-            display_name="Assigned",
-        )
-        ambient = AgentSkill(
-            source=AgentSkillSource.ORGANIZATION,
-            organization_id=organization_id,
-            name="ambient",
-            display_name="Ambient",
-        )
-        enabled_result, always_result = MagicMock(), MagicMock()
-        enabled_result.scalars.return_value.all.return_value = [assigned]
-        always_result.scalars.return_value.all.return_value = [assigned, ambient]
-        ops = SkillOperations.__new__(SkillOperations)
-        ops._session = MagicMock()
-        ops._session.execute = AsyncMock(side_effect=[enabled_result, always_result])
-
-        resolved = await ops.get_skills_for_agent(
-            organization_id=organization_id,
-            enabled_skill_ids=[str(assigned.id)],
-        )
-
-        assert [skill.id for skill in resolved] == [assigned.id]
-        ops._session.execute.assert_awaited_once()
-
-    async def test_pinned_overlay_does_not_dirty_head_row(self) -> None:
-        from uniffy.domains.agents.skills.operations import SkillOperations
-
-        version_id = generate_id()
-        skill_id = generate_id()
-        org_id = generate_id()
-        # The head row carries the latest (v2) content while a non-latest version
-        # is pinned as the main one - the exact set_main_skill_version shape.
-        head = AgentSkill(
-            id=skill_id,
-            organization_id=org_id,
-            name="report",
-            display_name="Report",
-            source="organization",
-            content="V2 CONTENT",
-            active_version_id=version_id,
-            active_version_pinned=True,
-            latest_version_number=2,
-        )
-        pinned_version = AgentSkillVersion(
-            id=version_id,
-            skill_id=skill_id,
-            version_number=1,
-            name="report",
-            display_name="Report",
-            content="V1 CONTENT",
-        )
-
-        enabled_result = MagicMock()
-        enabled_result.scalars.return_value.all.return_value = [head]
-        always_result = MagicMock()
-        always_result.scalars.return_value.all.return_value = []
-        versions_result = MagicMock()
-        versions_result.scalars.return_value.all.return_value = [pinned_version]
-
-        ops = SkillOperations.__new__(SkillOperations)
-        ops._session = MagicMock()
-        ops._session.execute = AsyncMock(
-            side_effect=[enabled_result, versions_result]
-        )
-
-        out = await ops.get_skills_for_agent(
-            organization_id=org_id,
-            enabled_skill_ids=[str(skill_id)],
-        )
-
-        assert len(out) == 1
-        # The returned entry carries the pinned version's content...
-        assert out[0].content == "V1 CONTENT"
-        assert out[0] is not head
-        # ...but the persistent head row is untouched, so a later commit on the
-        # same session cannot flush the pinned content over the v2 head content.
-        assert head.content == "V2 CONTENT"
+            parse_invoked_skill_id({"invoked_skill_id": "not-a-uuid"})
 
 
 def _ops_with_max_version(max_version: int):
@@ -383,7 +365,6 @@ class TestProposeSkillTool:
         )
         fake_ops = MagicMock()
         fake_ops.propose_skill_draft = AsyncMock(return_value=draft)
-        fake_ops.get_skills_for_agent = AsyncMock(return_value=[])
         monkeypatch.setattr(ops_mod, "SkillOperations", lambda _session: fake_ops)
 
         import uniffy.domains.agents.cache as cache_mod
@@ -1033,7 +1014,7 @@ class TestUpdateSkillValidation:
 
 
 class TestResolveActiveVersionNumber:
-    async def test_unpinned_returns_latest(self) -> None:
+    async def test_missing_active_pointer_rejects_instead_of_returning_latest(self) -> None:
         from uniffy.domains.agents.skills.operations import SkillOperations
 
         skill = AgentSkill(
@@ -1048,10 +1029,12 @@ class TestResolveActiveVersionNumber:
         )
         ops = SkillOperations.__new__(SkillOperations)
         ops._session = MagicMock()
-        assert await ops.resolve_active_version_number(skill) == 4
-        ops._session.execute.assert_not_called()  # no query when following latest
+        with pytest.raises(ValidationError, match="unavailable"):
+            await ops.resolve_active_version_number(skill)
+        ops._session.execute.assert_not_called()
 
-    async def test_pinned_resolves_version_number(self) -> None:
+    @pytest.mark.parametrize("pinned", [True, False])
+    async def test_resolves_exact_active_version_number(self, pinned) -> None:
         from uniffy.domains.agents.skills.operations import SkillOperations
 
         skill = AgentSkill(
@@ -1061,12 +1044,12 @@ class TestResolveActiveVersionNumber:
             display_name="Report",
             source="organization",
             latest_version_number=5,
-            active_version_pinned=True,
+            active_version_pinned=pinned,
             active_version_id=generate_id(),
         )
         ops = SkillOperations.__new__(SkillOperations)
         result = MagicMock()
-        result.scalar = MagicMock(return_value=2)
+        result.all.return_value = [(skill.id, 2)]
         ops._session = MagicMock()
         ops._session.execute = AsyncMock(return_value=result)
         # Pinned main is an older version, not the latest.

@@ -36,13 +36,7 @@ def skill_source_from_proto(proto_source: SkillSource) -> str:
     return SKILL_SOURCE_FROM_PROTO.get(proto_source, "bundled")
 
 
-def skill_to_proto(skill: AgentSkill, *, active_version_number: int | None = None) -> SkillInfo:
-    """Convert a AgentSkill model to proto SkillInfo.
-
-    ``active_version_number`` is the main version's number, resolved by the
-    caller against ``active_version_id``. When omitted it falls back to the
-    latest, which is correct for the unpinned (follow-latest) default.
-    """
+def skill_to_proto(skill: AgentSkill, *, active_version_number: int) -> SkillInfo:
     info = SkillInfo(
         id=str(skill.id),
         name=skill.name,
@@ -57,9 +51,7 @@ def skill_to_proto(skill: AgentSkill, *, active_version_number: int | None = Non
         status=skill.status or "active",
         origin=skill.origin or "user",
         latest_version_number=skill.latest_version_number or 1,
-        active_version_number=active_version_number
-        if active_version_number is not None
-        else (skill.latest_version_number or 1),
+        active_version_number=active_version_number,
         active_version_pinned=bool(skill.active_version_pinned),
     )
 

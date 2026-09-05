@@ -84,7 +84,10 @@ class SkillsHandlers:
                     description=request.description,
                     content=request.content,
                 )
-                return CreateSkillResponse(skill=skill_to_proto(skill))
+                active_number = await ops.resolve_active_version_number(skill)
+                return CreateSkillResponse(
+                    skill=skill_to_proto(skill, active_version_number=active_number)
+                )
 
         except ValidationError as e:
             raise ConnectError(Code.INVALID_ARGUMENT, str(e))

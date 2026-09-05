@@ -21,6 +21,7 @@ from uniffy.core.models.chat.message import ChatMessage, SenderType
 from uniffy.core.search import SearchIndexer
 from uniffy.core.storage import ObjectStorage
 from uniffy.core.types import ContentType, SubjectType, generate_id
+from uniffy.domains.agents.invocation import parse_invoked_skill_id
 from uniffy.domains.agents.runtime.approvals import get_approval_store
 from uniffy.domains.agents.runtime.destinations import ChatDestination
 from uniffy.domains.agents.runtime.files import FileContext, _safe_load_files
@@ -33,7 +34,6 @@ from uniffy.domains.agents.runtime.streams import (
     set_run_state,
     touch_run_state,
 )
-from uniffy.domains.agents.skills.resolution import SkillInvocationError, SkillInvocationFailure
 from uniffy.domains.chat import agents as chat_evt
 from uniffy.domains.chat.agents import (
     bump_channel_message_stats,
@@ -59,15 +59,6 @@ TYPING_HEARTBEAT_SECONDS = 8
 # How often the egress task polls the run-state cancel flag so a user "stop"
 # interrupts an in-flight tool (e.g. image generation) within ~this window.
 CANCEL_POLL_SECONDS = 1.5
-
-
-def _parse_invoked_skill_id(metadata: dict | None) -> UUID | None:
-    if metadata is None or "invoked_skill_id" not in metadata:  # noqa: PLR2004 - chat wire key
-        return None
-    try:
-        return UUID(str(metadata["invoked_skill_id"]))
-    except ValueError as exc:
-        raise SkillInvocationError(SkillInvocationFailure.UNAVAILABLE) from exc
 
 
 class AgentChatBridge:
@@ -183,7 +174,7 @@ class AgentChatBridge:
                 await set_chat_active_run(channel_id, agent_id, run_id)
 
         async def _drive_stream() -> None:
-            invoked_skill_id = _parse_invoked_skill_id(trigger_metadata)
+            invoked_skill_id = parse_invoked_skill_id(trigger_metadata)
             runtime_ops = RuntimeOperations(
                 self._session,
                 storage,

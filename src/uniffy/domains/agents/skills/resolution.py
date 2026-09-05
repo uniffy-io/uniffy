@@ -99,6 +99,25 @@ async def resolve_runnable_skills(
     surface: SkillSurface,
     executable_tools: frozenset[str],
 ) -> list[SkillSummary]:
+    summaries = await resolve_assigned_skill_summaries(
+        session, organization_id=organization_id, enabled_skill_ids=enabled_skill_ids
+    )
+    result = []
+    for skill in summaries:
+        try:
+            _validate_requirements(skill, surface, executable_tools)
+        except SkillInvocationError:
+            continue
+        result.append(skill)
+    return result
+
+
+async def resolve_assigned_skill_summaries(
+    session: AsyncSession,
+    *,
+    organization_id: UUID,
+    enabled_skill_ids: list[str],
+) -> list[SkillSummary]:
     if not enabled_skill_ids:
         return []
     skill_ids = sorted({UUID(value) for value in enabled_skill_ids})
@@ -142,8 +161,7 @@ async def resolve_runnable_skills(
                     SkillSurface(value) for value in entry["supported_surfaces"]
                 ),
             })
-            _validate_requirements(skill, surface, executable_tools)
-        except ValueError, SkillInvocationError:
+        except ValueError:
             continue
         result.append(skill)
     return result

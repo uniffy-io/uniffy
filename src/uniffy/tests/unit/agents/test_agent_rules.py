@@ -326,9 +326,7 @@ async def test_prompt_preview_resolves_the_agents_enabled_rules() -> None:
             "get_by_id",
             AsyncMock(return_value=SimpleNamespace(full_name="Member", username="member")),
         ),
-        patch.object(
-            handlers.SkillOperations, "get_skills_for_agent", AsyncMock(return_value=[])
-        ) as skill_lookup,
+        patch.object(handlers, "SkillOperations") as skill_lookup,
         patch.object(handler, "_fetch_memory_context_for_preview", AsyncMock(return_value=None)),
         patch.object(handlers, "filter_integration_tool_schemas", AsyncMock(return_value=[])),
         patch.object(
@@ -339,7 +337,7 @@ async def test_prompt_preview_resolves_the_agents_enabled_rules() -> None:
             PreviewSystemPromptRequest(organization_id=str(organization_id), agent_id=str(agent.id)),
             MagicMock(),
         )
-    skill_lookup.assert_not_awaited()
+    skill_lookup.assert_not_called()
     resolve.assert_awaited_once_with(
         session,
         organization_id=organization_id,

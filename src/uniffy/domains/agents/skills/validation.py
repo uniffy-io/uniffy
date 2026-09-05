@@ -2,15 +2,58 @@
 
 import re
 from dataclasses import dataclass
+from uuid import UUID
+
+from sqlalchemy import or_, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.errors import ValidationError
-from uniffy.core.models.agents.skill import SkillSurface
+from uniffy.core.models.agents.skill import AgentSkill, AgentSkillStatus, SkillSurface
 
 SKILL_NAME_MAX = 100
 SKILL_DISPLAY_NAME_MAX = 255
 SKILL_DESCRIPTION_MAX = 1000
 SKILL_CONTENT_MAX = 20000
 SKILL_RATIONALE_MAX = 2000
+MAX_ENABLED_SKILLS = 50
+
+
+async def validate_skill_selection(
+    session: AsyncSession,
+    organization_id: UUID,
+    skill_ids: list[str],
+    *,
+    existing: list[str],
+) -> list[str]:
+    if len(skill_ids) > MAX_ENABLED_SKILLS:
+        raise ValidationError("enabled_skills", f"Select at most {MAX_ENABLED_SKILLS} skills")
+    try:
+        ids = list(dict.fromkeys(UUID(value) for value in skill_ids))
+    except ValueError as exc:
+        raise ValidationError("enabled_skills", "Invalid skill ID") from exc
+    if not ids:
+        return []
+    rows = (
+        await session.execute(
+            select(AgentSkill.id, AgentSkill.status)
+            .where(
+                AgentSkill.id.in_(ids),
+                or_(
+                    AgentSkill.organization_id == organization_id,
+                    AgentSkill.organization_id.is_(None),
+                ),
+            )
+            .order_by(AgentSkill.id)
+            .with_for_update()
+        )
+    ).all()
+    if {row.id for row in rows} != set(ids):
+        raise ValidationError("enabled_skills", "A selected skill is unavailable")
+    existing_ids = {UUID(value) for value in existing}
+    if any(row.status == AgentSkillStatus.RETIRED and row.id not in existing_ids for row in rows):
+        raise ValidationError("enabled_skills", "Retired skills cannot be newly assigned")
+    return [str(value) for value in ids]
+
 
 # Stripped on the way in; newline and tab survive so markdown formatting holds.
 _CONTROL_CHARS = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")

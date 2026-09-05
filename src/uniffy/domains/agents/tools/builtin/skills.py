@@ -8,6 +8,7 @@ async def _execute_propose_skill(ctx: ToolContext, args: dict) -> ToolResult:
     """Draft a new or edited skill for the user to review; never auto-activates."""
     from uniffy.domains.agents.providers.base import EventType, StreamEvent
     from uniffy.domains.agents.skills.operations import SkillOperations
+    from uniffy.domains.agents.skills.resolution import resolve_assigned_skill_summaries
 
     name = (args.get("name") or "").strip()
     display_name = (args.get("display_name") or "").strip() or name
@@ -31,7 +32,8 @@ async def _execute_propose_skill(ctx: ToolContext, args: dict) -> ToolResult:
 
         agent = await fetch_agent_row(ctx.session, ctx.agent_id, ctx.organization_id)
         if agent is not None:
-            visible = await ops.get_skills_for_agent(
+            visible = await resolve_assigned_skill_summaries(
+                ctx.session,
                 organization_id=ctx.organization_id,
                 enabled_skill_ids=agent.enabled_skills or [],
             )

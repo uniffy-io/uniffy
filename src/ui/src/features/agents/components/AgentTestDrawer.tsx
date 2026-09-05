@@ -6,7 +6,6 @@ import {
   ChatCircleDots,
   CircleNotch,
   Flask,
-  PaperPlaneRight,
   PencilSimple,
   Stop,
   X,
@@ -16,7 +15,7 @@ import { cn } from "@/shared/utils/cn";
 import { Button } from "@/components/ui/button";
 import { Drawer } from "@/components/ui/drawer";
 import { CrepeEditor } from "@/components/editor/CrepeEditor";
-import { ExpandableEditor } from "@/components/editor/ExpandableEditor";
+import { AgentTestComposer } from "@/features/agents/components/chat/AgentTestComposer";
 import { ContentType } from "@uniffy/proto/common/v1/common_pb";
 import { SessionKind } from "@uniffy/proto/agents/v1/sessions_pb";
 import { createSession } from "@/features/agents/store/agentSessionsThunks";
@@ -250,9 +249,11 @@ export function AgentTestDrawer({
   canEdit: boolean;
 }) {
   const dispatch = useAppDispatch();
-  const [inputValue, setInputValue] = useState("");
-  const [sessionId, setSessionId] = useState<string | null>(null);
+  const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
+  const [session, setSession] = useState<{ key: string; id: string } | null>(null);
   const [chatKey, setChatKey] = useState(0);
+  const sessionKey = `${organizationId}:${agent.id}:${mode}:${chatKey}`;
+  const sessionId = open && session?.key === sessionKey ? session.id : null;
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const messages = useAppSelector(selectMessagesForSession(sessionId));
@@ -263,9 +264,13 @@ export function AgentTestDrawer({
   const isStreaming = useAppSelector(selectIsStreaming);
 
   const isBuilder = mode === "builder";
+  const handleClose = () => {
+    setSession(null);
+    onClose();
+  };
 
   useEffect(() => {
-    if (!open) return;
+    if (!open || !organizationId) return;
     let cancelled = false;
     const prefix = isBuilder ? PROMPT_BUILDER_PREFIX : TEST_SESSION_PREFIX;
     dispatch(
@@ -277,13 +282,14 @@ export function AgentTestDrawer({
       }),
     )
       .unwrap()
-      .then((session) => {
-        if (!cancelled) setSessionId(session.id);
-      });
+      .then((created) => {
+        if (!cancelled) setSession({ key: sessionKey, id: created.id });
+      })
+      .catch(() => {});
     return () => {
       cancelled = true;
     };
-  }, [agent.id, agent.name, dispatch, open, chatKey, isBuilder]);
+  }, [agent.id, agent.name, organizationId, dispatch, open, sessionKey, isBuilder]);
 
   useEffect(() => {
     if (sessionId) dispatch(fetchMessages({ sessionId }));
@@ -292,13 +298,6 @@ export function AgentTestDrawer({
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages.length, streamingContent, streamingThinking, streamingToolCalls.length]);
-
-  const handleSend = useCallback(() => {
-    const content = inputValue.trim();
-    if (!content || !sessionId || isStreaming) return;
-    setInputValue("");
-    dispatch(streamSendMessage({ sessionId, content }));
-  }, [inputValue, sessionId, isStreaming, dispatch]);
 
   const handleApply = useCallback(
     (content: string) => {
@@ -340,15 +339,6 @@ export function AgentTestDrawer({
     dispatch(cancelActiveRun());
   }, [dispatch]);
 
-  // Capture phase so Mod+Enter sends instead of expanding the composer.
-  const handleComposerKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-      e.preventDefault();
-      e.stopPropagation();
-      handleSend();
-    }
-  };
-
   const turns = useMemo(
     () => foldMessageTurns(messages, thinkingByMessage),
     [messages, thinkingByMessage],
@@ -364,7 +354,7 @@ export function AgentTestDrawer({
   return (
     <Drawer
       open={open}
-      onClose={onClose}
+      onClose={handleClose}
       side="right"
       width="w-[440px]"
       className="max-w-[90vw]"
@@ -404,7 +394,7 @@ export function AgentTestDrawer({
               variant="ghost"
               size="icon"
               onClick={() => {
-                setSessionId(null);
+                setSession(null);
                 setChatKey((k) => k + 1);
               }}
               disabled={isStreaming || !sessionId}
@@ -413,7 +403,13 @@ export function AgentTestDrawer({
             >
               <ArrowCounterClockwise size={14} />
             </Button>
-            <Button variant="ghost" size="icon" onClick={onClose} className="h-7 w-7">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleClose}
+              className="h-7 w-7"
+              aria-label="Close test drawer"
+            >
               <X size={14} />
             </Button>
           </div>
@@ -519,38 +515,13 @@ export function AgentTestDrawer({
           )}
         </div>
 
-        <div className="border-t border-border bg-card px-3 py-2.5 shrink-0">
-          <div onKeyDownCapture={handleComposerKeyDown}>
-            <ExpandableEditor
-              contentType={ContentType.AGENT}
-              contentId={agent.id}
-              value={inputValue}
-              onChange={setInputValue}
-              placeholder={
-                isBuilder ? "Describe what your agent should do..." : "Send a test message..."
-              }
-              enableUpload={false}
-              readonly={isStreaming || !sessionId}
-              label={isBuilder ? "Prompt Builder message" : "Test message"}
-            />
-          </div>
-          <div className="mt-1.5 flex items-center justify-between gap-2">
-            {!isBuilder ? (
-              <p className="text-[11px] text-muted-foreground px-1">
-                Test session: hidden from conversations, memory writes disabled.
-              </p>
-            ) : (
-              <span />
-            )}
-            <Button
-              onClick={handleSend}
-              disabled={isStreaming || !inputValue.trim() || !sessionId}
-              size="sm"
-            >
-              <PaperPlaneRight size={14} />
-            </Button>
-          </div>
-        </div>
+        <AgentTestComposer
+          key={`${organizationId}:${agent.id}:${mode}:${sessionId}`}
+          agentId={agent.id}
+          sessionId={sessionId}
+          isBuilder={isBuilder}
+          isStreaming={isStreaming}
+        />
       </div>
     </Drawer>
   );

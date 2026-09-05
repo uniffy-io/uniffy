@@ -8,12 +8,17 @@ from uniffy.core.models.login.organization import Organization
 from uniffy.core.models.login.user import User
 from uniffy.core.models.agents.agent import Agent
 from uniffy.core.types import generate_id
+from uniffy.core.errors import ValidationError
 from uniffy.domains.agents.skills import resolution
 from uniffy.domains.agents.skills.operations import SkillOperations
 from uniffy.domains.agents.skills.resolution import SkillInvocationError, SkillSurface
+from uniffy.domains.agents.skills.validation import validate_skill_selection
 from uniffy.infrastructure.database.session import get_database_url
 from uniffy.tests.integration.internal.migrations.test_migration_run import (
-    _provision_to, _migrate_to, _query, _execute,
+    _provision_to,
+    _migrate_to,
+    _query,
+    _execute,
 )
 
 
@@ -27,36 +32,51 @@ async def test_skill_cutover_preserves_content_history_and_assignments(scratch_d
             session.add_all([org, user])
             await session.flush()
             skill_id, version_id = generate_id(), generate_id()
-            await session.execute(text(
-                "INSERT INTO agents_skills "
-                "(id, organization_id, name, display_name, source, content, "
-                "always_active, when_to_use, requires_context, active_version_id, created_at) "
-                "VALUES (:id, :org, 'release', 'Release', 'organization', 'Head body', "
-                "true, 'Automatic guidance', '[\"chat\"]', :version, now())"
-            ), {"id": skill_id, "org": org.id, "version": version_id})
-            await session.execute(text(
-                "INSERT INTO agents_skill_versions "
-                "(id, skill_id, version_number, name, display_name, content, when_to_use, "
-                "requires_context) VALUES (:id, :skill, 1, 'release', 'Release', "
-                "'Pinned body', 'Version guidance', '[\"chat\"]')"
-            ), {"id": version_id, "skill": skill_id})
-            await session.execute(text(
-                "INSERT INTO agents_skill_drafts "
-                "(id, organization_id, owner_id, target_skill_id, kind, content, "
-                "suggested_always_active, when_to_use, requires_context) VALUES "
-                "(:id, :org, :owner, :skill, 'edit', 'Draft body', true, "
-                "'Draft guidance', '[\"session\"]')"
-            ), {"id": generate_id(), "org": org.id, "owner": user.id, "skill": skill_id})
-            session.add(Agent(
-                organization_id=org.id, owner_id=user.id, name="Assigned",
-                enabled_skills=[str(skill_id)],
-            ))
+            await session.execute(
+                text(
+                    "INSERT INTO agents_skills "
+                    "(id, organization_id, name, display_name, source, content, "
+                    "always_active, when_to_use, requires_context, active_version_id, created_at) "
+                    "VALUES (:id, :org, 'release', 'Release', 'organization', 'Head body', "
+                    "true, 'Automatic guidance', '[\"chat\"]', :version, now())"
+                ),
+                {"id": skill_id, "org": org.id, "version": version_id},
+            )
+            await session.execute(
+                text(
+                    "INSERT INTO agents_skill_versions "
+                    "(id, skill_id, version_number, name, display_name, content, when_to_use, "
+                    "requires_context) VALUES (:id, :skill, 1, 'release', 'Release', "
+                    "'Pinned body', 'Version guidance', '[\"chat\"]')"
+                ),
+                {"id": version_id, "skill": skill_id},
+            )
+            await session.execute(
+                text(
+                    "INSERT INTO agents_skill_drafts "
+                    "(id, organization_id, owner_id, target_skill_id, kind, content, "
+                    "suggested_always_active, when_to_use, requires_context) VALUES "
+                    "(:id, :org, :owner, :skill, 'edit', 'Draft body', true, "
+                    "'Draft guidance', '[\"session\"]')"
+                ),
+                {"id": generate_id(), "org": org.id, "owner": user.id, "skill": skill_id},
+            )
+            session.add(
+                Agent(
+                    organization_id=org.id,
+                    owner_id=user.id,
+                    name="Assigned",
+                    enabled_skills=[str(skill_id)],
+                )
+            )
             await session.commit()
     finally:
         await engine.dispose()
 
     tables = ("agents_skills", "agents_skill_versions", "agents_skill_drafts")
-    before = {table: _query(f"SELECT id, content, requires_context FROM {table}") for table in tables}
+    before = {
+        table: _query(f"SELECT id, content, requires_context FROM {table}") for table in tables
+    }
     assignments = _query("SELECT id, enabled_skills, enabled_rules FROM agents_agents")
     _migrate_to("100")
     for table in tables:
@@ -66,11 +86,14 @@ async def test_skill_cutover_preserves_content_history_and_assignments(scratch_d
     assert _query("SELECT id, enabled_skills, enabled_rules FROM agents_agents") == assignments
     assert _query("SELECT count(*) FROM agents_rules") == [(0,)]
     assert _query("SELECT count(*) FROM agents_rule_versions") == [(0,)]
-    assert _query(
-        "SELECT column_name FROM information_schema.columns WHERE table_name IN "
-        "('agents_skills', 'agents_skill_versions', 'agents_skill_drafts') AND column_name IN "
-        "('always_active', 'when_to_use', 'suggested_always_active', 'requires_context')"
-    ) == []
+    assert (
+        _query(
+            "SELECT column_name FROM information_schema.columns WHERE table_name IN "
+            "('agents_skills', 'agents_skill_versions', 'agents_skill_drafts') AND column_name IN "
+            "('always_active', 'when_to_use', 'suggested_always_active', 'requires_context')"
+        )
+        == []
+    )
 
 
 async def test_exact_skill_snapshot_respects_assignment_tenant_and_pin(
@@ -123,6 +146,15 @@ async def test_exact_skill_snapshot_respects_assignment_tenant_and_pin(
             assert resolved.content == "Pinned body"
             assert skill.content == "Latest body"
             assert not session.dirty
+            assert await ops.resolve_active_version_numbers([skill]) == {skill.id: 1}
+            assert (await ops._load_active_version(skill)).id == pinned.id
+            summaries = await resolution.resolve_assigned_skill_summaries(
+                session, organization_id=first.id, enabled_skill_ids=[str(skill.id)]
+            )
+            assert [summary.version_id for summary in summaries] == [pinned.id]
+            assert not hasattr(summaries[0], "content")
+            assert skill.content == "Latest body"
+            assert not session.dirty
             with pytest.raises(SkillInvocationError, match="unavailable"):
                 await resolution.resolve_skill_invocation(
                     session, **{**args, "organization_id": second.id}
@@ -145,11 +177,72 @@ async def test_exact_skill_snapshot_respects_assignment_tenant_and_pin(
             other_version = await ops.stage_skill_version(other, author_id=None)
             skill.active_version_id = other_version.id
             await session.commit()
+            with pytest.raises(ValidationError, match="unavailable"):
+                await ops.resolve_active_version_numbers([skill])
+            with pytest.raises(ValidationError, match="unavailable"):
+                await ops._load_active_version(skill)
+            assert (
+                await resolution.resolve_assigned_skill_summaries(
+                    session, organization_id=first.id, enabled_skill_ids=[str(skill.id)]
+                )
+                == []
+            )
             with pytest.raises(SkillInvocationError, match="unavailable"):
                 await resolution.resolve_skill_invocation(session, **args)
             skill.active_version_id = None
             await session.commit()
             with pytest.raises(SkillInvocationError, match="unavailable"):
                 await resolution.resolve_skill_invocation(session, **args)
+    finally:
+        await engine.dispose()
+
+
+async def test_skill_selection_enforces_tenant_scope_and_retirement(scratch_database):
+    await _provision_to(scratch_database, "100")
+    engine = create_async_engine(get_database_url())
+    try:
+        async with AsyncSession(engine, expire_on_commit=False) as session:
+            first = Organization(name="First", slug="first")
+            second = Organization(name="Second", slug="second")
+            session.add_all([first, second])
+            await session.flush()
+            own = AgentSkill(
+                organization_id=first.id,
+                source=AgentSkillSource.ORGANIZATION,
+                name="own",
+                display_name="Own",
+            )
+            foreign = AgentSkill(
+                organization_id=second.id,
+                source=AgentSkillSource.ORGANIZATION,
+                name="foreign",
+                display_name="Foreign",
+            )
+            bundled = AgentSkill(
+                source=AgentSkillSource.BUNDLED, name="bundled", display_name="Bundled"
+            )
+            retired = AgentSkill(
+                organization_id=first.id,
+                source=AgentSkillSource.ORGANIZATION,
+                name="retired",
+                display_name="Retired",
+                status=AgentSkillStatus.RETIRED,
+            )
+            session.add_all([own, foreign, bundled, retired])
+            await session.commit()
+            selected = await validate_skill_selection(
+                session, first.id, [own.id.hex.upper(), str(bundled.id), str(own.id)], existing=[]
+            )
+            assert selected == [str(own.id), str(bundled.id)]
+            for unavailable in (foreign.id, generate_id()):
+                with pytest.raises(ValidationError, match="unavailable"):
+                    await validate_skill_selection(
+                        session, first.id, [str(unavailable)], existing=[]
+                    )
+            with pytest.raises(ValidationError, match="Retired"):
+                await validate_skill_selection(session, first.id, [str(retired.id)], existing=[])
+            assert await validate_skill_selection(
+                session, first.id, [str(retired.id)], existing=[str(retired.id)]
+            ) == [str(retired.id)]
     finally:
         await engine.dispose()

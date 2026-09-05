@@ -66,7 +66,7 @@ from uniffy.domains.agents.tools.deferral import plan_tool_advertisement
 from uniffy.domains.agents.tools.definitions import ToolContext
 from uniffy.domains.agents.tools.registry import get_tool_registry
 from uniffy.domains.chat.lifecycle import ChannelCallLifecycle
-from uniffy.domains.integrations.tools import (
+from uniffy.domains.integrations.advertisement import (
     filter_integration_tool_schemas,
     has_advertised_integration_tools,
 )

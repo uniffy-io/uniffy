@@ -67,7 +67,7 @@ from uniffy.domains.agents.templates import AGENT_TEMPLATES
 from uniffy.domains.agents.tools.catalog import list_tool_catalog
 from uniffy.domains.agents.tools.deferral import plan_tool_advertisement
 from uniffy.domains.agents.tools.registry import get_tool_registry
-from uniffy.domains.integrations.tools import filter_integration_tool_schemas
+from uniffy.domains.integrations.advertisement import filter_integration_tool_schemas
 from uniffy.domains.organizations.operations import OrganizationOperations
 from uniffy.domains.permissions.access import ResourceAccessResolver, ResourceKey
 from uniffy.domains.tags.reader import TagReader
