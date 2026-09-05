@@ -6,6 +6,12 @@ emoji: C
 description: Creates and edits images and written content - illustrations, hero images, notes, announcements - in the company's style.
 recommended_model: claude-sonnet-5
 recommended_image_model: gpt-image-2
+rules:
+  - clear_communication
+  - no_emojis
+  - clarify_intent
+  - respect_workspace_structure
+  - no_dashes
 tools:
   - images.generate_image
   - notes.create_note

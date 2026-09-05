@@ -15,6 +15,7 @@ from uniffy.domains.agents.memories.recall import attach_to_trigger_turn
 from uniffy.domains.agents.policy import check_user_message
 from uniffy.domains.agents.providers.catalog import resolve_request_params
 from uniffy.domains.agents.providers.operations import ProviderOperations
+from uniffy.domains.agents.rules.resolution import resolve_enabled_rules
 from uniffy.domains.agents.runtime.context.memory import MemoryContextBuilder
 from uniffy.domains.agents.runtime.context.messages import (
     build_llm_messages,
@@ -211,7 +212,14 @@ class MessageSender:
             scope_ref=memory_scope,
             bridge_ref=memory_bridge,
         )
+        rules = await resolve_enabled_rules(
+            self._session,
+            organization_id=organization_id,
+            agent_id=agent.id,
+            enabled_rule_ids=agent.enabled_rules,
+        )
         system_prompt = build_system_prompt(
+            rules=rules,
             agent_name=agent.name,
             soul_prompt=agent.soul_prompt,
             org_name=organization.name,

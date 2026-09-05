@@ -1,0 +1,148 @@
+syntax = "proto3";
+
+package agents.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/uniffy-io/uniffy-proto-go/agents/v1;agentsv1";
+
+service RulesService {
+  rpc CreateRule(CreateRuleRequest) returns (CreateRuleResponse) {}
+  rpc GetRule(GetRuleRequest) returns (GetRuleResponse) {}
+  rpc ListRules(ListRulesRequest) returns (ListRulesResponse) {}
+  rpc UpdateRule(UpdateRuleRequest) returns (UpdateRuleResponse) {}
+  rpc RetireRule(RetireRuleRequest) returns (RetireRuleResponse) {}
+  rpc RestoreRule(RestoreRuleRequest) returns (RestoreRuleResponse) {}
+  rpc ListRuleVersions(ListRuleVersionsRequest) returns (ListRuleVersionsResponse) {}
+  rpc GetRuleVersion(GetRuleVersionRequest) returns (GetRuleVersionResponse) {}
+  rpc SetMainRuleVersion(SetMainRuleVersionRequest) returns (SetMainRuleVersionResponse) {}
+  rpc RevertRule(RevertRuleRequest) returns (RevertRuleResponse) {}
+  rpc GetEnabledRules(GetEnabledRulesRequest) returns (GetEnabledRulesResponse) {}
+  rpc SetEnabledRules(SetEnabledRulesRequest) returns (SetEnabledRulesResponse) {}
+}
+
+enum RuleSource {
+  RULE_SOURCE_UNSPECIFIED = 0;
+  RULE_SOURCE_BUNDLED = 1;
+  RULE_SOURCE_ORGANIZATION = 2;
+}
+
+enum RuleStatus {
+  RULE_STATUS_UNSPECIFIED = 0;
+  RULE_STATUS_ACTIVE = 1;
+  RULE_STATUS_RETIRED = 2;
+}
+
+message RuleInfo {
+  string id = 1;
+  optional string organization_id = 2;
+  RuleSource source = 3;
+  string name = 4;
+  string display_name = 5;
+  string description = 6;
+  string content = 7;
+  RuleStatus status = 8;
+  int32 latest_version_number = 9;
+  string active_version_id = 10;
+  bool active_version_pinned = 11;
+  google.protobuf.Timestamp created_at = 12;
+  google.protobuf.Timestamp updated_at = 13;
+}
+
+message RuleVersion {
+  string id = 1;
+  string rule_id = 2;
+  int32 version_number = 3;
+  string name = 4;
+  string display_name = 5;
+  string description = 6;
+  string content = 7;
+  optional string author_id = 8;
+  string change_summary = 9;
+  optional string parent_version_id = 10;
+  google.protobuf.Timestamp created_at = 11;
+}
+
+message CreateRuleRequest {
+  string organization_id = 1;
+  string name = 2;
+  string display_name = 3;
+  string description = 4;
+  string content = 5;
+}
+message CreateRuleResponse { RuleInfo rule = 1; }
+message GetRuleRequest {
+  string organization_id = 1;
+  string rule_id = 2;
+}
+message GetRuleResponse { RuleInfo rule = 1; }
+message ListRulesRequest {
+  string organization_id = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+  bool include_retired = 4;
+}
+message ListRulesResponse {
+  repeated RuleInfo rules = 1;
+  string next_page_token = 2;
+}
+message UpdateRuleRequest {
+  string organization_id = 1;
+  string rule_id = 2;
+  string display_name = 3;
+  string description = 4;
+  string content = 5;
+  string change_summary = 6;
+}
+message UpdateRuleResponse { RuleInfo rule = 1; }
+message RetireRuleRequest {
+  string organization_id = 1;
+  string rule_id = 2;
+}
+message RetireRuleResponse { RuleInfo rule = 1; }
+message RestoreRuleRequest {
+  string organization_id = 1;
+  string rule_id = 2;
+}
+message RestoreRuleResponse { RuleInfo rule = 1; }
+message ListRuleVersionsRequest {
+  string organization_id = 1;
+  string rule_id = 2;
+  int32 page_size = 3;
+  string page_token = 4;
+}
+message ListRuleVersionsResponse {
+  repeated RuleVersion versions = 1;
+  string next_page_token = 2;
+}
+message GetRuleVersionRequest {
+  string organization_id = 1;
+  string rule_id = 2;
+  int32 version_number = 3;
+}
+message GetRuleVersionResponse { RuleVersion version = 1; }
+message SetMainRuleVersionRequest {
+  string organization_id = 1;
+  string rule_id = 2;
+  int32 version_number = 3;
+  bool follow_latest = 4;
+}
+message SetMainRuleVersionResponse { RuleInfo rule = 1; }
+message RevertRuleRequest {
+  string organization_id = 1;
+  string rule_id = 2;
+  int32 version_number = 3;
+}
+message RevertRuleResponse { RuleInfo rule = 1; }
+message GetEnabledRulesRequest {
+  string organization_id = 1;
+  // Required: selections belong to one agent.
+  string agent_id = 2;
+}
+message GetEnabledRulesResponse { repeated string rule_ids = 1; }
+message SetEnabledRulesRequest {
+  string organization_id = 1;
+  string agent_id = 2;
+  repeated string rule_ids = 3;
+}
+message SetEnabledRulesResponse { repeated string rule_ids = 1; }

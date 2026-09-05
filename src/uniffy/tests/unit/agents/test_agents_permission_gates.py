@@ -379,7 +379,7 @@ class TestSkillBuilderGate:
             rows={AgentSkill: None},
         )
         ops = self._ops(session)
-        ops._snapshot_version = AsyncMock()
+        ops.stage_skill_version = AsyncMock()
         with (
             _authorization_context(),
             patch(
@@ -405,7 +405,7 @@ class TestSkillBuilderGate:
             rows={AgentSkill: None},
         )
         ops = self._ops(session)
-        ops._snapshot_version = AsyncMock()
+        ops.stage_skill_version = AsyncMock()
         with (
             _authorization_context(),
             patch(

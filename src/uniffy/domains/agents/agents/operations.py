@@ -46,6 +46,7 @@ from uniffy.domains.agents.providers.catalog import (
     validate_image_params,
     validate_model_params,
 )
+from uniffy.domains.agents.rules.validation import validate_rule_selection
 from uniffy.domains.integrations.registry import get_integration_registry
 from uniffy.domains.organizations.operations import OrganizationOperations
 from uniffy.domains.permissions.members import (
@@ -299,6 +300,7 @@ class AgentOperations(BaseContentOperations[Agent]):
         theme_color: str = "",
         is_default: bool = False,
         enabled_skills: list[str] | None = None,
+        enabled_rules: list[str] | None = None,
         access_mode: AccessMode | None = None,
         baseline_role: ContentRole | None = None,
         group_ids: list[UUID] | None = None,
@@ -352,6 +354,9 @@ class AgentOperations(BaseContentOperations[Agent]):
                 "memory.forget",
             ],
             enabled_skills=enabled_skills or [],
+            enabled_rules=await validate_rule_selection(
+                self._session, organization_id, enabled_rules or [], existing=[]
+            ),
             avatar_emoji=avatar_emoji,
             theme_color=theme_color,
             is_default=is_default,

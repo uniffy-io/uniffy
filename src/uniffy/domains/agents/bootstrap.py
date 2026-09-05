@@ -10,6 +10,7 @@ from uniffy.core.models.agents.agent import Agent
 from uniffy.core.models.agents.skill import AgentSkill, AgentSkillSource
 from uniffy.core.search.indexer import SearchIndexer, build_content_urn
 from uniffy.core.types import AccessMode, ContentType
+from uniffy.domains.agents.rules.bundled import resolve_bundled_rule_ids
 from uniffy.domains.agents.templates import get_default_template
 
 
@@ -34,12 +35,16 @@ async def stage_default_agent(
         )
     ).all()
     skill_id_by_name = {name: str(skill_id) for skill_id, name in skill_rows}
+    rule_id_by_name = await resolve_bundled_rule_ids(session, template.bundled_rule_names)
     agent = Agent(
         organization_id=organization_id,
         owner_id=owner_user_id,
         name=template.name,
         soul_prompt=template.soul_prompt,
         enabled_tools=list(template.enabled_tools),
+        enabled_rules=[
+            rule_id_by_name[name] for name in template.bundled_rule_names if name in rule_id_by_name
+        ],
         enabled_skills=[
             skill_id_by_name[name]
             for name in template.bundled_skill_names

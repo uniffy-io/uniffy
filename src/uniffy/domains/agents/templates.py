@@ -1,12 +1,8 @@
-"""Read-only catalog of agent templates used to seed default agents.
-
-Entries are markdown files in `uniffy/data/catalog/`: frontmatter carries the
-identity, tool, and skill wiring, the body is the soul prompt.
-"""
+"""Read-only catalog of agent templates and their capability selections."""
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from uniffy.core.data_files import DATA_DIR, load_documents
 
@@ -20,6 +16,7 @@ class AgentTemplate:
     soul_prompt: str
     enabled_tools: list[str]
     bundled_skill_names: list[str]
+    bundled_rule_names: list[str] = field(default_factory=list)
     # Model ids the template works best on; prefill only, applied at create
     # time when an org key's provider actually serves them.
     recommended_model: str = ""
@@ -41,6 +38,7 @@ def _load_catalog() -> tuple[AgentTemplate, ...]:
                 soul_prompt=doc.body,
                 enabled_tools=doc.items("tools"),
                 bundled_skill_names=doc.items("skills"),
+                bundled_rule_names=doc.items("rules"),
                 recommended_model=str(doc.meta.get("recommended_model", "")),
                 recommended_image_model=str(doc.meta.get("recommended_image_model", "")),
                 is_default=str(doc.meta.get("default", "")).lower() == "true",  # noqa: PLR2004

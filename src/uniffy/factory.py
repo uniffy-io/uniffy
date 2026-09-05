@@ -19,6 +19,7 @@ from uniffy_proto.agents.v1.cron_connect import CronServiceASGIApplication
 from uniffy_proto.agents.v1.memories_connect import MemoriesServiceASGIApplication
 from uniffy_proto.agents.v1.providers_connect import ProvidersServiceASGIApplication
 from uniffy_proto.agents.v1.rate_limits_connect import RateLimitsServiceASGIApplication
+from uniffy_proto.agents.v1.rules_connect import RulesServiceASGIApplication
 from uniffy_proto.agents.v1.runtime_connect import (
     RuntimeServiceASGIApplication,
     RuntimeSettingsServiceASGIApplication,
@@ -103,6 +104,8 @@ from uniffy.domains.agents.providers.clients import (
     init_provider_invalidation_subscriber,
 )
 from uniffy.domains.agents.providers.handlers import ProvidersHandlers
+from uniffy.domains.agents.rules.bundled import sync_bundled_rules
+from uniffy.domains.agents.rules.handlers import RulesHandlers
 from uniffy.domains.agents.runtime.service import RuntimeServiceImpl
 from uniffy.domains.agents.runtime.settings.handlers import (
     RuntimeSettingsServiceImpl,
@@ -413,6 +416,7 @@ async def lifespan(app: FastAPI):
     # rows must exist before the first organization is created.
     try:
         await sync_bundled_skills()
+        await sync_bundled_rules()
     except Exception as e:
         logger.exception(f"Failed to sync bundled skills: {e}")
         raise
@@ -705,6 +709,7 @@ def _create_api_dispatcher(
         AgentsServiceImpl(storage, search_indexer),
     )
     add_rpc("/agents.v1.SkillsService", SkillsServiceASGIApplication, SkillsHandlers())
+    add_rpc("/agents.v1.RulesService", RulesServiceASGIApplication, RulesHandlers())
     add_rpc("/agents.v1.MemoriesService", MemoriesServiceASGIApplication, MemoriesHandlers())
     add_rpc(
         "/agents.v1.CronService",

@@ -120,6 +120,9 @@ class Action:
     AGENT_SKILL_CREATED = "agent.skill_created"
     AGENT_SKILL_UPDATED = "agent.skill_updated"
     AGENT_SKILL_DELETED = "agent.skill_deleted"
+    AGENT_RULE_CREATED = "agent.rule_created"
+    AGENT_RULE_UPDATED = "agent.rule_updated"
+    AGENT_RULES_SELECTED = "agent.rules_selected"
 
     # Agents - cost / billing surfaces (budgets, currency, quotas, rate limits)
     AGENT_BUDGET_CREATED = "agent.budget_created"

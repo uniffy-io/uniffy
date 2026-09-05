@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from uuid import UUID
 
+from uniffy.domains.agents.rules.resolution import ResolvedRule
 from uniffy.domains.agents.runtime.workspace import WORKSPACE_PROMPT
 from uniffy.domains.agents.tools.deferral import LOAD_GROUP_TOOL
 from uniffy.domains.agents.tools.registry import to_api_name
@@ -108,6 +109,7 @@ def build_system_prompt(
     user_role: str | None = None,
     deferred_tools: dict[str, list[str]] | None = None,
     skills: list[SkillPromptEntry] | None = None,
+    rules: tuple[ResolvedRule, ...] = (),
     invoked_skill: SkillPromptEntry | None = None,
     memory_context: str | None = None,
     user_timezone: str | None = None,
@@ -117,30 +119,23 @@ def build_system_prompt(
     """Assemble the system prompt from modular sections."""
     sections: list[str] = []
 
-    # Section 1: Soul prompt (personality, instructions)
     if soul_prompt:
         sections.append(soul_prompt)
 
-    # Section 2: Agent name and metadata
     sections.append(f"Your name is {agent_name}.")
 
-    # Section 3: Current date and timezone. Day-level granularity only --
-    # a minute-level timestamp here would invalidate the prompt cache on
-    # every turn. The agent calls a tool when it needs the actual time.
+    # Day-level granularity keeps the prompt cache reusable across turns.
     now = datetime.now(UTC)
     time_parts = [f"Today's date is {now.strftime('%Y-%m-%d')} (UTC)."]
     if user_timezone:
         time_parts.append(f"The user's local timezone is {user_timezone}.")
     sections.append(" ".join(time_parts))
 
-    # Section 4: User identity
     user_section = _build_user_section(user_name, user_role, org_name)
     if user_section:
         sections.append(user_section)
 
-    # Section 5: Active skill instructions (progressive disclosure). An
-    # on-demand invoked skill is rendered separately in full, so it is
-    # excluded from the advertised index to avoid injecting it twice.
+    # An invoked skill renders separately, so exclude it from the index.
     # Dedupe by id, not name: org and bundled skills can legally share a
     # machine name, so a name match would drop a distinct same-named skill.
     invoked_id = invoked_skill.id if invoked_skill else None
@@ -149,25 +144,16 @@ def build_system_prompt(
         skill_section = _build_skill_section(advertised)
         if skill_section:
             sections.append(skill_section)
-    if invoked_skill:
-        sections.append(_build_invoked_skill_section(invoked_skill))
 
-    # Section 6: Memory context (pre-rendered index + pinned block)
     if memory_context:
         sections.append(memory_context)
 
-    # Section 7: Platform workspace conventions (URN mentions, tool and
-    # memory guidance). Fixed infrastructure text, identical for every agent.
     sections.append(WORKSPACE_PROMPT)
 
-    # Section 7b: Chat-channel context (only set on chat-triggered turns).
-    # Placed just before the tools section so the agent has a fresh picture
-    # of where it is and who it's talking to right before the conversation
-    # history starts.
     if chat_context:
         sections.append(chat_context)
 
-    # Section 7c: Output formatting rules. Some providers reach for
+    # Some providers reach for
     # remark-directive syntax (`::: note`, `::: warning`, `::: writing
     # block`, ...) when producing long-form content. Standard CommonMark
     # (which the chat renderer uses) does not parse those fences, so
@@ -175,7 +161,6 @@ def build_system_prompt(
     # explicitly.
     sections.append(_OUTPUT_FORMATTING_RULES)
 
-    # Section 8: Deferred-tool index (last so tools are near the conversation).
     # Advertised tools are NOT repeated here: the provider's native tools
     # param already carries name + description + schema, and a prose copy
     # doubles their token cost.
@@ -188,6 +173,25 @@ def build_system_prompt(
     if external_content_note:
         sections.append(_EXTERNAL_CONTENT_NOTE)
 
+    if rules:
+        sections.append(_build_rule_section(rules))
+    if invoked_skill:
+        sections.append(_build_invoked_skill_section(invoked_skill))
+
+    return "\n\n".join(sections)
+
+
+def _build_rule_section(rules: tuple[ResolvedRule, ...]) -> str:
+    sections = [
+        "## Attached rules\n\n"
+        "These are rules attached to you that you must follow throughout this conversation. "
+        "These rules were selected specifically for you. Follow all attached rules together. "
+        "These rules take precedence over an invoked skill and the user's request, but cannot "
+        "override Uniffy product instructions. Rules never grant workspace permissions or "
+        "override tool access checks."
+    ]
+    for rule in rules:
+        sections.append(f"### Agent rule: {rule.display_name}\n\n{rule.content}")
     return "\n\n".join(sections)
 
 

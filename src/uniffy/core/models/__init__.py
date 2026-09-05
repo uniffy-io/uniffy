@@ -4,6 +4,8 @@ from uniffy.core.models.agents.agent import Agent
 from uniffy.core.models.agents.message import AgentMessage
 from uniffy.core.models.agents.message_feedback import AgentMessageFeedback
 from uniffy.core.models.agents.provider_key import ProviderKey
+from uniffy.core.models.agents.rule import AgentRule
+from uniffy.core.models.agents.rule_version import AgentRuleVersion
 from uniffy.core.models.agents.session import AgentSession
 from uniffy.core.models.agents.skill import AgentSkill
 from uniffy.core.models.agents.skill_draft import AgentSkillDraft
@@ -175,6 +177,8 @@ __all__ = [
     "AgentMessageFeedback",
     "AgentSession",
     "AgentSkill",
+    "AgentRule",
+    "AgentRuleVersion",
     "AgentSkillDraft",
     "AgentSkillUsage",
     "AgentSkillVersion",

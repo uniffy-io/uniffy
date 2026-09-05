@@ -1030,6 +1030,7 @@ def _stream_agent(
         model_params={"temperature": 0.7},
         enabled_tools=[],
         enabled_skills=[],
+        enabled_rules=[],
     )
 
 
@@ -1092,6 +1093,7 @@ def _stream_runtime_ops(monkeypatch, *, binding_row, agent):
         raise _StopFlow()
 
     monkeypatch.setattr(runtime_stream_mod, "fetch_agent_skills", fake_fetch_skills)
+    monkeypatch.setattr(runtime_stream_mod, "resolve_enabled_rules", AsyncMock(return_value=()))
     monkeypatch.setattr(runtime_stream_mod, "record_skill_injections", fake_record_injections)
     monkeypatch.setattr(runtime_stream_mod, "resolve_invoked_skill", AsyncMock(return_value=None))
     monkeypatch.setattr(runtime_stream_mod, "build_system_prompt", lambda **_kwargs: "sys")
