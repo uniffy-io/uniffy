@@ -27,8 +27,9 @@ class SkillInvocationFailure(StrEnum):
 
 
 class SkillInvocationError(ValidationError):
-    def __init__(self, reason: SkillInvocationFailure) -> None:
+    def __init__(self, reason: SkillInvocationFailure, skill: SkillSummary | None = None) -> None:
         self.reason = reason
+        self.skill = skill
         messages = {
             SkillInvocationFailure.UNAVAILABLE: "The selected skill is unavailable for this agent",
             SkillInvocationFailure.MISSING_TOOLS: "Required skill tools are unavailable",
@@ -86,9 +87,9 @@ def _validate_requirements(
     skill: SkillSummary, surface: SkillSurface, executable_tools: frozenset[str]
 ) -> None:
     if skill.supported_surfaces and surface not in skill.supported_surfaces:
-        raise SkillInvocationError(SkillInvocationFailure.UNSUPPORTED_SURFACE)
+        raise SkillInvocationError(SkillInvocationFailure.UNSUPPORTED_SURFACE, skill)
     if not set(skill.requires_tools).issubset(executable_tools):
-        raise SkillInvocationError(SkillInvocationFailure.MISSING_TOOLS)
+        raise SkillInvocationError(SkillInvocationFailure.MISSING_TOOLS, skill)
 
 
 async def resolve_runnable_skills(

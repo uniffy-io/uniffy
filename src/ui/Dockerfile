@@ -1,6 +1,3 @@
-# UI Dockerfile for UNIFFY Frontend
-# NOTE: Docker context must be the repo root (not src/ui) for workspace access
-# Build stage
 FROM node:24.0-slim AS builder
 
 # Build arguments for Vite environment variables
@@ -43,6 +40,10 @@ COPY --from=builder /app/src/ui/dist /usr/share/nginx/html
 RUN echo 'map $http_user_agent $loggable { \
     ~^kube-probe 0; \
     default 1; \
+} \
+\
+types { \
+    application/javascript mjs; \
 } \
 \
 server { \

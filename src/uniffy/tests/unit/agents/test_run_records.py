@@ -3,8 +3,6 @@
 from decimal import Decimal
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
-
 from uniffy.core.errors import ValidationError
 from uniffy.core.models.agents.run_log import AgentRunStatus
 from uniffy.core.types import generate_id
@@ -84,7 +82,7 @@ async def test_record_persists_complete_usage_and_fires_alerts() -> None:
             alert,
         ),
     ):
-        await RunRecorder(session).record(
+        run_log_id = await RunRecorder(session).record(
             session_id=None,
             channel_id=generate_id(),
             agent_id=generate_id(),
@@ -101,6 +99,7 @@ async def test_record_persists_complete_usage_and_fires_alerts() -> None:
         )
 
     row = session.add.call_args.args[0]
+    assert run_log_id == row.id
     assert row.model == "gpt-5.6-luna"
     assert row.provider_key_id == fallback_key_id
     assert row.input_tokens == 100
@@ -253,7 +252,7 @@ async def test_persistence_failure_is_fail_open_and_skips_alerts() -> None:
             alert,
         ),
     ):
-        await RunRecorder(session).record(
+        run_log_id = await RunRecorder(session).record(
             session_id=generate_id(),
             agent_id=generate_id(),
             user_id=generate_id(),
@@ -268,9 +267,10 @@ async def test_persistence_failure_is_fail_open_and_skips_alerts() -> None:
         )
 
     alert.assert_not_awaited()
+    assert run_log_id is None
 
 
-async def test_alert_failure_propagates_after_the_record_commits() -> None:
+async def test_alert_failure_keeps_committed_run_correlation() -> None:
     session = _session()
 
     with (
@@ -279,9 +279,8 @@ async def test_alert_failure_propagates_after_the_record_commits() -> None:
             "uniffy.domains.agents.runtime.runs.records.check_and_fire_alerts",
             AsyncMock(side_effect=RuntimeError("alert failed")),
         ),
-        pytest.raises(RuntimeError, match="alert failed"),
     ):
-        await RunRecorder(session).record(
+        run_log_id = await RunRecorder(session).record(
             session_id=generate_id(),
             agent_id=generate_id(),
             user_id=generate_id(),
@@ -296,3 +295,4 @@ async def test_alert_failure_propagates_after_the_record_commits() -> None:
         )
 
     session.commit.assert_awaited_once()
+    assert run_log_id == session.add.call_args.args[0].id

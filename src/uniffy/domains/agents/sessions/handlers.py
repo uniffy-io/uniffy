@@ -17,16 +17,12 @@ from uniffy_proto.agents.v1.sessions_pb2 import (
     ListMessagesResponse,
     RetryMessageRequest,
     RetryMessageResponse,
-    SubmitMessageFeedbackRequest,
-    SubmitMessageFeedbackResponse,
 )
 from uniffy_proto.common.v1.common_pb2 import PaginationResponse
 
 from uniffy.core.auth.principal import current_user_id, resolve_organization_id
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
-from uniffy.core.models.agents.message import AgentMessageRole
 from uniffy.domains.agents.sessions.converters import (
-    message_feedback_to_proto,
     message_to_proto,
     session_kind_from_proto,
     session_to_proto,
@@ -198,15 +194,9 @@ class SessionsHandlers:
                     page_size=page_size,
                     include_compacted=include_compacted,
                 )
-                ratings = await ops.get_user_feedback_for_messages(
-                    user_id=user_id,
-                    message_ids=[m.id for m in messages if m.role == AgentMessageRole.ASSISTANT],
-                )
                 total_pages = (total + page_size - 1) // page_size if total > 0 else 0
                 return ListMessagesResponse(
-                    messages=[
-                        message_to_proto(m, feedback_rating=ratings.get(m.id, "")) for m in messages
-                    ],
+                    messages=[message_to_proto(m) for m in messages],
                     pagination=PaginationResponse(
                         page=page,
                         page_size=page_size,
@@ -294,61 +284,4 @@ class SessionsHandlers:
             raise
         except Exception as e:
             logger.exception(f"Error retrying message: {e}")
-            raise ConnectError(Code.INTERNAL, "Internal server error")
-
-    async def submit_message_feedback(
-        self,
-        request: SubmitMessageFeedbackRequest,
-        ctx: RequestContext,
-    ) -> SubmitMessageFeedbackResponse:
-        """Handle submit_message_feedback RPC call (thumbs up/down)."""
-        user_id = current_user_id()
-        if bool(request.message_id) == bool(request.chat_message_id):
-            raise ConnectError(
-                Code.INVALID_ARGUMENT,
-                "Exactly one of message_id and chat_message_id is required",
-            )
-        try:
-            org_id = resolve_organization_id(request.organization_id)
-            message_id = UUID(request.message_id) if request.message_id else None
-            chat_message_id = UUID(request.chat_message_id) if request.chat_message_id else None
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
-
-        comment = request.comment if request.HasField("comment") else ""
-
-        try:
-            async with open_session() as session:
-                ops = SessionOperations(session)
-                if message_id is not None:
-                    feedback = await ops.submit_message_feedback(
-                        user_id=user_id,
-                        organization_id=org_id,
-                        message_id=message_id,
-                        rating=request.rating,
-                        comment=comment,
-                    )
-                else:
-                    feedback = await ops.submit_chat_message_feedback(
-                        user_id=user_id,
-                        organization_id=org_id,
-                        chat_message_id=chat_message_id,
-                        rating=request.rating,
-                        comment=comment,
-                    )
-                response = SubmitMessageFeedbackResponse()
-                if feedback is not None:
-                    response.feedback.CopyFrom(message_feedback_to_proto(feedback))
-                return response
-
-        except NotFoundError:
-            raise ConnectError(Code.NOT_FOUND, "Message not found")
-        except ValidationError as e:
-            raise ConnectError(Code.INVALID_ARGUMENT, str(e))
-        except PermissionDeniedError as e:
-            raise ConnectError(Code.PERMISSION_DENIED, str(e))
-        except ConnectError:
-            raise
-        except Exception as e:
-            logger.exception(f"Error submitting message feedback: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")

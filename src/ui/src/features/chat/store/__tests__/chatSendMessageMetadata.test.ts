@@ -23,7 +23,6 @@ function protoMessage() {
     reactions: [],
     isDeleted: false,
     isPinned: false,
-    feedbackRating: "",
   };
 }
 

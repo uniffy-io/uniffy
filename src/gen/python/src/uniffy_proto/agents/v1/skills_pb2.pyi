@@ -431,35 +431,77 @@ class RevertSkillResponse(_message.Message):
     def __init__(self, skill: _Optional[_Union[SkillInfo, _Mapping]] = ..., version: _Optional[_Union[SkillVersion, _Mapping]] = ...) -> None: ...
 
 class SkillMetric(_message.Message):
-    __slots__ = ("skill_id", "display_name", "origin", "injected_count", "viewed_count", "invoked_count")
+    __slots__ = ("skill_id", "display_name", "skill_version_id", "skill_version_number", "invocation_count", "started_count", "completed_count", "failed_count", "rejected_count", "cancelled_count", "tool_error_run_count", "tool_error_rate", "unique_users", "run_log_count", "duration_ms", "input_tokens", "output_tokens", "costs")
     SKILL_ID_FIELD_NUMBER: _ClassVar[int]
     DISPLAY_NAME_FIELD_NUMBER: _ClassVar[int]
-    ORIGIN_FIELD_NUMBER: _ClassVar[int]
-    INJECTED_COUNT_FIELD_NUMBER: _ClassVar[int]
-    VIEWED_COUNT_FIELD_NUMBER: _ClassVar[int]
-    INVOKED_COUNT_FIELD_NUMBER: _ClassVar[int]
+    SKILL_VERSION_ID_FIELD_NUMBER: _ClassVar[int]
+    SKILL_VERSION_NUMBER_FIELD_NUMBER: _ClassVar[int]
+    INVOCATION_COUNT_FIELD_NUMBER: _ClassVar[int]
+    STARTED_COUNT_FIELD_NUMBER: _ClassVar[int]
+    COMPLETED_COUNT_FIELD_NUMBER: _ClassVar[int]
+    FAILED_COUNT_FIELD_NUMBER: _ClassVar[int]
+    REJECTED_COUNT_FIELD_NUMBER: _ClassVar[int]
+    CANCELLED_COUNT_FIELD_NUMBER: _ClassVar[int]
+    TOOL_ERROR_RUN_COUNT_FIELD_NUMBER: _ClassVar[int]
+    TOOL_ERROR_RATE_FIELD_NUMBER: _ClassVar[int]
+    UNIQUE_USERS_FIELD_NUMBER: _ClassVar[int]
+    RUN_LOG_COUNT_FIELD_NUMBER: _ClassVar[int]
+    DURATION_MS_FIELD_NUMBER: _ClassVar[int]
+    INPUT_TOKENS_FIELD_NUMBER: _ClassVar[int]
+    OUTPUT_TOKENS_FIELD_NUMBER: _ClassVar[int]
+    COSTS_FIELD_NUMBER: _ClassVar[int]
     skill_id: str
     display_name: str
-    origin: str
-    injected_count: int
-    viewed_count: int
-    invoked_count: int
-    def __init__(self, skill_id: _Optional[str] = ..., display_name: _Optional[str] = ..., origin: _Optional[str] = ..., injected_count: _Optional[int] = ..., viewed_count: _Optional[int] = ..., invoked_count: _Optional[int] = ...) -> None: ...
+    skill_version_id: str
+    skill_version_number: int
+    invocation_count: int
+    started_count: int
+    completed_count: int
+    failed_count: int
+    rejected_count: int
+    cancelled_count: int
+    tool_error_run_count: int
+    tool_error_rate: float
+    unique_users: int
+    run_log_count: int
+    duration_ms: int
+    input_tokens: int
+    output_tokens: int
+    costs: _containers.RepeatedCompositeFieldContainer[SkillMetricCost]
+    def __init__(self, skill_id: _Optional[str] = ..., display_name: _Optional[str] = ..., skill_version_id: _Optional[str] = ..., skill_version_number: _Optional[int] = ..., invocation_count: _Optional[int] = ..., started_count: _Optional[int] = ..., completed_count: _Optional[int] = ..., failed_count: _Optional[int] = ..., rejected_count: _Optional[int] = ..., cancelled_count: _Optional[int] = ..., tool_error_run_count: _Optional[int] = ..., tool_error_rate: _Optional[float] = ..., unique_users: _Optional[int] = ..., run_log_count: _Optional[int] = ..., duration_ms: _Optional[int] = ..., input_tokens: _Optional[int] = ..., output_tokens: _Optional[int] = ..., costs: _Optional[_Iterable[_Union[SkillMetricCost, _Mapping]]] = ...) -> None: ...
+
+class SkillMetricCost(_message.Message):
+    __slots__ = ("currency", "amount", "run_count")
+    CURRENCY_FIELD_NUMBER: _ClassVar[int]
+    AMOUNT_FIELD_NUMBER: _ClassVar[int]
+    RUN_COUNT_FIELD_NUMBER: _ClassVar[int]
+    currency: str
+    amount: str
+    run_count: int
+    def __init__(self, currency: _Optional[str] = ..., amount: _Optional[str] = ..., run_count: _Optional[int] = ...) -> None: ...
 
 class GetSkillMetricsRequest(_message.Message):
-    __slots__ = ("organization_id",)
+    __slots__ = ("organization_id", "skill_id", "window_days", "page_size", "cursor")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    SKILL_ID_FIELD_NUMBER: _ClassVar[int]
+    WINDOW_DAYS_FIELD_NUMBER: _ClassVar[int]
+    PAGE_SIZE_FIELD_NUMBER: _ClassVar[int]
+    CURSOR_FIELD_NUMBER: _ClassVar[int]
     organization_id: str
-    def __init__(self, organization_id: _Optional[str] = ...) -> None: ...
+    skill_id: str
+    window_days: int
+    page_size: int
+    cursor: str
+    def __init__(self, organization_id: _Optional[str] = ..., skill_id: _Optional[str] = ..., window_days: _Optional[int] = ..., page_size: _Optional[int] = ..., cursor: _Optional[str] = ...) -> None: ...
 
 class GetSkillMetricsResponse(_message.Message):
-    __slots__ = ("metrics", "positive_feedback_count", "negative_feedback_count", "pending_agent_drafts")
+    __slots__ = ("metrics", "next_cursor", "window_start", "window_end")
     METRICS_FIELD_NUMBER: _ClassVar[int]
-    POSITIVE_FEEDBACK_COUNT_FIELD_NUMBER: _ClassVar[int]
-    NEGATIVE_FEEDBACK_COUNT_FIELD_NUMBER: _ClassVar[int]
-    PENDING_AGENT_DRAFTS_FIELD_NUMBER: _ClassVar[int]
+    NEXT_CURSOR_FIELD_NUMBER: _ClassVar[int]
+    WINDOW_START_FIELD_NUMBER: _ClassVar[int]
+    WINDOW_END_FIELD_NUMBER: _ClassVar[int]
     metrics: _containers.RepeatedCompositeFieldContainer[SkillMetric]
-    positive_feedback_count: int
-    negative_feedback_count: int
-    pending_agent_drafts: int
-    def __init__(self, metrics: _Optional[_Iterable[_Union[SkillMetric, _Mapping]]] = ..., positive_feedback_count: _Optional[int] = ..., negative_feedback_count: _Optional[int] = ..., pending_agent_drafts: _Optional[int] = ...) -> None: ...
+    next_cursor: str
+    window_start: _timestamp_pb2.Timestamp
+    window_end: _timestamp_pb2.Timestamp
+    def __init__(self, metrics: _Optional[_Iterable[_Union[SkillMetric, _Mapping]]] = ..., next_cursor: _Optional[str] = ..., window_start: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., window_end: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...

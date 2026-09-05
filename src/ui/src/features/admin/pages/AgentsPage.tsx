@@ -8,9 +8,6 @@ import {
   Lightbulb,
   Robot,
   Sliders,
-  Sparkle,
-  ThumbsDown,
-  ThumbsUp,
   Trash,
 } from "@phosphor-icons/react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
@@ -73,8 +70,7 @@ import {
   setDisplayCurrency,
 } from "@/features/admin/store/agentsGovernanceThunks";
 import type { RateLimitState } from "@/features/admin/store/agentsGovernanceSlice";
-import { fetchSkillMetrics } from "@/features/agents/store/agentSkillMetricsThunks";
-import { selectSkillMetricsState } from "@/features/agents/store/agentSkillMetricsSlice";
+import { SkillMetricsPanel } from "@/features/agents/components/skills/SkillMetricsPanel";
 
 type TabId =
   | "general"
@@ -96,13 +92,6 @@ const TABS: { id: TabId; label: string }[] = [
   { id: "currencies", label: "Currencies" },
   { id: "skills", label: "Skills" },
 ];
-
-const SKILL_ORIGIN_LABELS: Record<string, string> = {
-  user: "User",
-  agent_proposed: "Agent proposed",
-  agent_evolved: "Agent evolved",
-  bundled: "Bundled",
-};
 
 const RATE_LIMIT_LABELS: Record<number, { name: string; description: string }> = {
   1: {
@@ -167,14 +156,14 @@ export function AgentsPage() {
         </p>
       </div>
 
-      <div className="flex border-b border-border">
+      <div className="flex flex-wrap border-b border-border">
         {TABS.map((t) => (
           <button
             key={t.id}
             type="button"
             onClick={() => setActiveTab(t.id)}
             className={cn(
-              "px-4 py-2 text-sm font-medium transition-colors",
+              "min-h-11 px-4 py-2 text-sm font-medium transition-colors focus-ring",
               activeTab === t.id
                 ? "text-primary border-b-2 border-primary bg-primary/5"
                 : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
@@ -202,98 +191,23 @@ export function AgentsPage() {
 }
 
 function SkillsMetricsTab() {
-  const dispatch = useAppDispatch();
-  const orgId = useAppSelector((s) => s.auth.currentOrganizationId);
-  const { metrics, positiveFeedback, negativeFeedback, pendingAgentDrafts, loading, loaded } =
-    useAppSelector(selectSkillMetricsState);
-
-  useEffect(() => {
-    if (!orgId) return;
-    dispatch(fetchSkillMetrics());
-  }, [dispatch, orgId]);
-
   return (
-    <section className="rounded-xl bg-surface shadow-edge">
+    <section className="rounded-xl bg-surface shadow-edge" data-testid="admin-skill-metrics">
       <header className="flex items-center gap-3 px-5 py-4 border-b border-border">
         <Lightbulb size={20} weight="duotone" className="text-amber-500" />
         <div>
-          <h2 className="text-base font-semibold">Skill usage and quality</h2>
+          <h2 className="text-base font-semibold">Skill observations</h2>
           <p className="text-xs text-muted-foreground">
-            How often each skill is injected into prompts, opened by an agent, or invoked on demand,
-            plus the org-wide feedback the evolution analyzer learns from.
+            What happened each time an agent ran an exact skill version: how invocations ended, tool
+            errors, who used it, and the run logs it correlated with.
           </p>
         </div>
       </header>
 
-      <div className="px-5 py-4 space-y-5">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <StatCard
-            icon={<ThumbsUp size={16} className="text-green-600 dark:text-green-400" />}
-            label="Positive feedback"
-            value={positiveFeedback}
-          />
-          <StatCard
-            icon={<ThumbsDown size={16} className="text-red-500" />}
-            label="Negative feedback"
-            value={negativeFeedback}
-          />
-          <StatCard
-            icon={<Sparkle size={16} className="text-primary" />}
-            label="Agent drafts pending"
-            value={pendingAgentDrafts}
-          />
-        </div>
-
-        <Table tone="card">
-          <TableHeader>
-            <TableRow hoverable={false}>
-              <TableHead>Skill</TableHead>
-              <TableHead className="hidden md:table-cell">Origin</TableHead>
-              <TableHead align="right">Injected</TableHead>
-              <TableHead align="right">Viewed</TableHead>
-              <TableHead align="right">Invoked</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {loading && !loaded ? (
-              <TableLoading colSpan={5} />
-            ) : metrics.length === 0 ? (
-              <TableEmpty colSpan={5} title="No skill usage recorded yet." />
-            ) : (
-              metrics.map((m) => (
-                <TableRow key={m.skillId}>
-                  <TableCell className="font-medium text-foreground">{m.displayName}</TableCell>
-                  <TableCell className="text-xs text-muted-foreground hidden md:table-cell">
-                    {SKILL_ORIGIN_LABELS[m.origin] ?? m.origin}
-                  </TableCell>
-                  <TableCell align="right" className="tabular-nums">
-                    {m.injectedCount}
-                  </TableCell>
-                  <TableCell align="right" className="tabular-nums">
-                    {m.viewedCount}
-                  </TableCell>
-                  <TableCell align="right" className="tabular-nums">
-                    {m.invokedCount}
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+      <div className="px-5 py-4">
+        <SkillMetricsPanel tone="card" testId="admin-skill-metrics-panel" />
       </div>
     </section>
-  );
-}
-
-function StatCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: number }) {
-  return (
-    <div className="rounded-lg bg-card shadow-edge px-4 py-3">
-      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-        {icon}
-        {label}
-      </div>
-      <div className="text-2xl font-semibold tabular-nums mt-1">{value}</div>
-    </div>
   );
 }
 

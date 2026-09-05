@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import time
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from typing import Any
 from uuid import UUID
 
@@ -31,6 +31,7 @@ from uniffy.domains.agents.runtime.runs.segments import (
 from uniffy.domains.agents.runtime.runs.tools import StreamingToolLoop
 from uniffy.domains.agents.runtime.runs.usage import RunUsageAccumulator
 from uniffy.domains.agents.runtime.settings.operations import get_runtime_settings
+from uniffy.domains.agents.runtime.skills import InvocationRun
 from uniffy.domains.agents.runtime.writers import MessageWriter
 from uniffy.domains.agents.tools.definitions import ToolContext
 from uniffy.domains.agents.tools.executor import ToolExecutor
@@ -75,9 +76,12 @@ class StreamingRunner:
         registry: ToolRegistry,
         tool_context: ToolContext,
         deferred_pool: dict[str, list[dict]],
-    ) -> AsyncIterator[StreamEvent]:
+        invocation: InvocationRun | None = None,
+    ) -> AsyncGenerator[StreamEvent]:
         start_time = time.monotonic()
         run_tool_calls: list[dict] = []
+        if invocation is not None:
+            invocation.tool_calls = run_tool_calls
         usage = RunUsageAccumulator()
         runtime_settings = await get_runtime_settings(self._session, organization_id)
         controller = ModelCallController(
@@ -113,10 +117,13 @@ class StreamingRunner:
             if isinstance(event, StreamSegmentResult):
                 stream_result = event
             else:
+                if invocation is not None:
+                    invocation.observe_stream(event)
                 yield event
 
         if stream_result is None or (stream_result.completion is None and not stream_result.error):
             await self._record_error(
+                invocation=invocation,
                 session_id=session_id,
                 channel_id=channel_id,
                 agent_id=agent_id,
@@ -141,6 +148,7 @@ class StreamingRunner:
                 error=stream_result.error,
             )
             await self._record_error(
+                invocation=invocation,
                 session_id=session_id,
                 channel_id=channel_id,
                 agent_id=agent_id,
@@ -167,6 +175,8 @@ class StreamingRunner:
             and completion.tool_calls
         )
         if has_tool_use:
+            if invocation is not None:
+                invocation.response_message_id = None
             if stream_result.placeholder_id is not None:
                 await writer.finalize_assistant_placeholder(
                     message_id=stream_result.placeholder_id,
@@ -196,8 +206,10 @@ class StreamingRunner:
                 ),
                 deferred_pool=deferred_pool,
             ):
+                if invocation is not None:
+                    invocation.observe_stream(event)
                 if event.type is EventType.DONE:
-                    await self._recorder.record(
+                    run_log_id = await self._recorder.record(
                         session_id=session_id,
                         channel_id=channel_id,
                         agent_id=agent_id,
@@ -212,13 +224,17 @@ class StreamingRunner:
                         error=None,
                         provider_key_id=provider_key_id,
                     )
+                    if invocation is not None and event.assistant_message is not None:
+                        await invocation.complete(event.assistant_message.id, run_log_id)
                     yield event
                     return
                 if event.type is EventType.ERROR:
                     terminal_error = event.error
-                yield event
+                else:
+                    yield event
 
             await self._record_error(
+                invocation=invocation,
                 session_id=session_id,
                 channel_id=channel_id,
                 agent_id=agent_id,
@@ -232,6 +248,7 @@ class StreamingRunner:
                 error=terminal_error or "tool_loop_incomplete",
                 provider_key_id=provider_key_id,
             )
+            yield StreamEvent(type=EventType.ERROR, error=terminal_error or "Agent run incomplete")
             return
 
         if stream_result.placeholder_id is not None:
@@ -257,7 +274,7 @@ class StreamingRunner:
                 thinking=stream_result.thinking or None,
             )
 
-        await self._recorder.record(
+        run_log_id = await self._recorder.record(
             session_id=session_id,
             channel_id=channel_id,
             agent_id=agent_id,
@@ -272,6 +289,8 @@ class StreamingRunner:
             error=None,
             provider_key_id=provider_key_id,
         )
+        if invocation is not None:
+            await invocation.complete(assistant_message.id, run_log_id)
         yield StreamEvent(
             type=EventType.DONE,
             assistant_message=assistant_message,
@@ -293,8 +312,9 @@ class StreamingRunner:
         start_time: float,
         error: str,
         provider_key_id: UUID | None,
+        invocation: InvocationRun | None,
     ) -> None:
-        await self._recorder.record(
+        run_log_id = await self._recorder.record(
             session_id=session_id,
             channel_id=channel_id,
             agent_id=agent_id,
@@ -309,3 +329,5 @@ class StreamingRunner:
             error=error,
             provider_key_id=provider_key_id,
         )
+        if invocation is not None:
+            await invocation.fail(run_log_id, deadline_exceeded=usage.deadline_exceeded)

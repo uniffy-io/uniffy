@@ -11,9 +11,6 @@ from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import Action
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models.agents.agent import Agent
-from uniffy.core.models.agents.message import AgentMessage
-from uniffy.core.models.agents.message_feedback import AgentFeedbackRating, AgentMessageFeedback
-from uniffy.core.models.agents.session import AgentSession
 from uniffy.core.models.agents.skill import (
     AgentSkill,
     AgentSkillOrigin,
@@ -25,7 +22,6 @@ from uniffy.core.models.agents.skill_draft import (
     AgentSkillDraftKind,
     AgentSkillDraftStatus,
 )
-from uniffy.core.models.agents.skill_usage import AgentSkillUsage
 from uniffy.core.models.agents.skill_version import AgentSkillVersion, AgentSkillVersionAuthor
 from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.chat.channel_member import ChatChannelMember
@@ -832,97 +828,6 @@ class SkillOperations:
 
         await invalidate_agents_using_skill(skill_id)
         return skill, version
-
-    async def get_skill_metrics(self, *, user_id: UUID, organization_id: UUID) -> dict:
-        """Aggregate per-skill usage + org feedback for the admin metrics view.
-
-        Org-admin gated: this is an organization-wide reporting surface, not
-        personal content. Counts injected/viewed/invoked from
-        ``agents_skill_usages`` and pairs them with each org/bundled skill.
-        """
-        await self._org_ops.require_org_admin(user_id, organization_id)
-
-        usage_rows = (
-            await self._session.execute(
-                select(
-                    AgentSkillUsage.skill_id,
-                    func.count().filter(AgentSkillUsage.injected == True).label("injected"),  # noqa: E712
-                    func.count().filter(AgentSkillUsage.viewed == True).label("viewed"),  # noqa: E712
-                    func.count().filter(AgentSkillUsage.invoked == True).label("invoked"),  # noqa: E712
-                )
-                .where(AgentSkillUsage.organization_id == organization_id)
-                .group_by(AgentSkillUsage.skill_id)
-            )
-        ).all()
-        usage_by_skill = {
-            skill_id: (injected, viewed, invoked)
-            for skill_id, injected, viewed, invoked in usage_rows
-        }
-
-        skills = (
-            (
-                await self._session.execute(
-                    select(AgentSkill).where(
-                        or_(
-                            AgentSkill.organization_id == organization_id,
-                            AgentSkill.organization_id.is_(None),
-                        )
-                    )
-                )
-            )
-            .scalars()
-            .all()
-        )
-
-        metrics = []
-        for skill in skills:
-            injected, viewed, invoked = usage_by_skill.get(skill.id, (0, 0, 0))
-            if injected == 0 and viewed == 0 and invoked == 0:
-                continue
-            metrics.append({
-                "skill_id": skill.id,
-                "display_name": skill.display_name,
-                "origin": skill.origin or "user",
-                "injected": injected,
-                "viewed": viewed,
-                "invoked": invoked,
-            })
-        metrics.sort(key=lambda m: m["injected"], reverse=True)
-
-        feedback_rows = (
-            await self._session.execute(
-                select(
-                    AgentMessageFeedback.rating,
-                    func.count().label("count"),
-                )
-                .select_from(AgentMessageFeedback)
-                .join(AgentMessage, AgentMessage.id == AgentMessageFeedback.agents_message_id)
-                .join(AgentSession, AgentSession.id == AgentMessage.session_id)
-                .where(AgentSession.organization_id == organization_id)
-                .group_by(AgentMessageFeedback.rating)
-            )
-        ).all()
-        feedback = {rating: count for rating, count in feedback_rows}
-
-        pending_agent_drafts = (
-            await self._session.execute(
-                select(func.count())
-                .select_from(AgentSkillDraft)
-                .where(
-                    AgentSkillDraft.organization_id == organization_id,
-                    AgentSkillDraft.status == AgentSkillDraftStatus.PENDING,
-                    AgentSkillDraft.is_deleted == False,  # noqa: E712
-                    AgentSkillDraft.proposed_by_agent_id.is_not(None),
-                )
-            )
-        ).scalar() or 0
-
-        return {
-            "metrics": metrics,
-            "positive": feedback.get(AgentFeedbackRating.UP, 0),
-            "negative": feedback.get(AgentFeedbackRating.DOWN, 0),
-            "pending_agent_drafts": pending_agent_drafts,
-        }
 
     async def resolve_active_version_number(self, skill: AgentSkill) -> int:
         return (await self.resolve_active_version_numbers([skill]))[skill.id]

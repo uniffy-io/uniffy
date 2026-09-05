@@ -4,8 +4,6 @@ import {
   Archive,
   ArrowLeft,
   ArrowUUpLeft,
-  CaretDown,
-  CaretRight,
   ClockCounterClockwise,
   ListChecks,
   PushPin,
@@ -30,14 +28,28 @@ import {
 } from "@/features/agents/store/agentRulesThunks";
 import { deriveSkillSlug } from "@/features/agents/utils/skillSlug";
 import { RULE_EDITOR_PLACEHOLDER } from "@/features/agents/config/skillEditor";
-import { InlineTextEdit } from "@/features/agents/components/instruction/InlineTextEdit";
 import { InstructionVersionHistory } from "@/features/agents/components/instruction/InstructionVersionHistory";
+import {
+  DETAIL_EDITOR_MIN_HEIGHT,
+  DetailBody,
+  DetailCard,
+  DetailEditorCard,
+  DetailField,
+  DetailFieldRow,
+  DetailReadOnlyValue,
+  DetailSection,
+  DetailTextField,
+  DetailToggleSection,
+  detailEditorClass,
+} from "@/features/agents/components/instruction/InstructionDetailLayout";
 import {
   headerButtonClass,
   headerChipActiveClass,
   headerChipClass,
-  sectionLabelClass,
 } from "@/features/agents/components/instruction/detailChrome";
+
+const RULE_HINT =
+  "Markdown appended to the system prompt on every run of an agent that selected this rule. Type / for headings, lists, and code.";
 
 function sourceLabel(source: number): string {
   switch (source) {
@@ -101,6 +113,14 @@ function RuleVersionHistory({
   );
 }
 
+function WhereItApplies({ children }: { children: React.ReactNode }) {
+  return (
+    <DetailField label="Where it applies">
+      <p className="text-sm text-foreground">{children}</p>
+    </DetailField>
+  );
+}
+
 function SavedRuleDetail({ rule }: { rule: SerializedRule }) {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
@@ -110,7 +130,8 @@ function SavedRuleDetail({ rule }: { rule: SerializedRule }) {
   const retired = rule.status === RuleStatus.RETIRED;
   const canEdit = !isBundled && isBuilder;
 
-  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const historyRef = useRef<HTMLElement | null>(null);
   const [confirmingStatus, setConfirmingStatus] = useState(false);
   const [statusBusy, setStatusBusy] = useState(false);
   // Version restores replace the content outside the editor; remounting is the
@@ -174,6 +195,17 @@ function SavedRuleDetail({ rule }: { rule: SerializedRule }) {
     setEditorEpoch((n) => n + 1);
   }, []);
 
+  const toggleHistory = () => {
+    if (historyOpen) {
+      setHistoryOpen(false);
+      return;
+    }
+    setHistoryOpen(true);
+    requestAnimationFrame(() => {
+      historyRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  };
+
   const handleConfirmStatus = async () => {
     setStatusBusy(true);
     try {
@@ -183,6 +215,16 @@ function SavedRuleDetail({ rule }: { rule: SerializedRule }) {
       setStatusBusy(false);
     }
   };
+
+  const versionSummary = rule.activeVersionPinned
+    ? "pinned to an earlier version"
+    : `v${rule.latestVersionNumber || 1}, following the latest edit`;
+
+  const footer = isBundled
+    ? "Bundled rules ship with Uniffy and cannot be edited or retired."
+    : retired
+      ? "Retired rules cannot be newly selected. Agents that already use this rule keep it until it is removed."
+      : undefined;
 
   return (
     <div className="flex h-full flex-col overflow-hidden" data-testid="rule-detail">
@@ -195,38 +237,20 @@ function SavedRuleDetail({ rule }: { rule: SerializedRule }) {
             </PaneBackLink>
           }
           icon={ListChecks}
-          title={
-            <InlineTextEdit
-              value={rule.displayName}
-              canEdit={canEdit}
-              onSave={handleTitleSave}
-              placeholder="Untitled rule"
-              className="text-sm md:text-base font-medium text-foreground"
-              testId="rule-detail-name"
-            />
-          }
-          subtitle={
-            <InlineTextEdit
-              value={rule.description}
-              canEdit={canEdit}
-              allowEmpty
-              onSave={handleDescriptionSave}
-              placeholder="No description provided"
-              className="text-xs text-muted-foreground"
-              testId="rule-detail-description"
-            />
-          }
+          title={rule.displayName || "Untitled rule"}
+          subtitle={rule.description || undefined}
         >
-          <div className="flex items-center gap-1.5 shrink-0">
+          <div className="flex shrink-0 items-center gap-1.5">
             <Badge variant="secondary" data-testid="rule-detail-source-chip">
               {sourceLabel(rule.source)}
             </Badge>
             {retired && <Badge variant="outline">Retired</Badge>}
             <button
               type="button"
-              onClick={() => setDetailsOpen((open) => !open)}
-              className={cn(headerChipClass, detailsOpen && headerChipActiveClass)}
-              data-testid="rule-detail-metadata-toggle"
+              onClick={toggleHistory}
+              className={cn(headerChipClass, historyOpen && headerChipActiveClass)}
+              title="Version history"
+              data-testid="rule-detail-history-chip"
             >
               {rule.activeVersionPinned ? (
                 <PushPin size={14} weight="fill" />
@@ -234,7 +258,6 @@ function SavedRuleDetail({ rule }: { rule: SerializedRule }) {
                 <ClockCounterClockwise size={14} />
               )}
               v{rule.latestVersionNumber || 1}
-              {detailsOpen ? <CaretDown size={12} /> : <CaretRight size={12} />}
             </button>
             {canEdit && (
               <button
@@ -252,61 +275,80 @@ function SavedRuleDetail({ rule }: { rule: SerializedRule }) {
         </PaneHeaderBar>
       </PaneHeader>
 
-      {detailsOpen && (
-        <div
-          className="border-b border-border px-6 py-4 max-h-[50%] overflow-y-auto"
-          data-testid="rule-detail-metadata"
+      <DetailBody>
+        <DetailSection label="Details" testId="rule-detail-metadata">
+          <DetailCard className="space-y-5">
+            <DetailFieldRow>
+              <DetailTextField
+                key={`name:${editorEpoch}`}
+                label="Title"
+                value={rule.displayName}
+                required
+                disabled={!canEdit}
+                placeholder="Untitled rule"
+                onCommit={handleTitleSave}
+                testId="rule-detail-name"
+              />
+              <DetailField label="Identifier" hint="Fixed at creation.">
+                <DetailReadOnlyValue mono testId="rule-detail-slug">
+                  {rule.name}
+                </DetailReadOnlyValue>
+              </DetailField>
+            </DetailFieldRow>
+            <DetailTextField
+              key={`description:${editorEpoch}`}
+              label="Description"
+              value={rule.description}
+              disabled={!canEdit}
+              placeholder="What this rule is for"
+              hint="Shown in the rules list and in each agent's Capabilities panel."
+              onCommit={handleDescriptionSave}
+              testId="rule-detail-description"
+            />
+            <WhereItApplies>
+              Appended to the system prompt of every agent that selected it under Capabilities.
+              Selecting is per agent; there is no organization-wide switch.
+            </WhereItApplies>
+          </DetailCard>
+        </DetailSection>
+
+        <DetailSection label="Rule" hint={RULE_HINT}>
+          <DetailEditorCard testId="rule-detail-editor" footer={footer}>
+            <CrepeEditor
+              key={`${rule.id}:${editorEpoch}`}
+              contentType={ContentType.AGENT}
+              contentId={rule.id}
+              value={rule.content}
+              onChange={canEdit ? handleContentChange : undefined}
+              readonly={!canEdit}
+              enableUpload={false}
+              enableComments={false}
+              allowImages={false}
+              compact
+              minHeight={DETAIL_EDITOR_MIN_HEIGHT}
+              className={detailEditorClass}
+              placeholder={RULE_EDITOR_PLACEHOLDER}
+            />
+          </DetailEditorCard>
+        </DetailSection>
+
+        <DetailToggleSection
+          label="Version history"
+          summary={versionSummary}
+          open={historyOpen}
+          onToggle={toggleHistory}
+          sectionRef={historyRef}
+          testId="rule-detail-history-toggle"
         >
-          <div className="space-y-4">
-            <div className="border-b border-border pb-3 space-y-1">
-              <p className={sectionLabelClass}>Identifier</p>
-              <p className="text-sm font-mono text-foreground" data-testid="rule-detail-slug">
-                {rule.name}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                Fixed at creation. Rename the rule from its title.
-              </p>
-            </div>
-            <div className="border-b border-border pb-3 space-y-1">
-              <p className={sectionLabelClass}>Where it applies</p>
-              <p className="text-sm text-foreground">
-                Appended to the system prompt of every agent that enables it, and to every agent
-                when enabled for the organization.
-              </p>
-            </div>
+          <DetailCard>
             <RuleVersionHistory
               rule={rule}
               canEdit={canEdit}
               onContentReplaced={handleContentReplaced}
             />
-          </div>
-        </div>
-      )}
-
-      <div className="flex-1 min-h-0 bg-card" data-testid="rule-detail-editor">
-        <CrepeEditor
-          key={`${rule.id}:${editorEpoch}`}
-          contentType={ContentType.AGENT}
-          contentId={rule.id}
-          value={rule.content}
-          onChange={canEdit ? handleContentChange : undefined}
-          readonly={!canEdit}
-          enableUpload={false}
-          enableComments={false}
-          allowImages={false}
-          placeholder={RULE_EDITOR_PLACEHOLDER}
-        />
-      </div>
-
-      {(isBundled || retired) && (
-        <div className="px-6 py-2 border-t border-border">
-          <p className="text-xs text-muted-foreground">
-            {isBundled
-              ? "Bundled rules ship with Uniffy and cannot be edited or retired."
-              : "Retired rules cannot be newly enabled. Agents that already use this rule keep it until it is removed."}
-          </p>
-        </div>
-      )}
+          </DetailCard>
+        </DetailToggleSection>
+      </DetailBody>
 
       <ConfirmDialog
         isOpen={confirmingStatus}
@@ -317,12 +359,12 @@ function SavedRuleDetail({ rule }: { rule: SerializedRule }) {
           retired ? (
             <>
               Restore <span className="font-medium text-foreground">{rule.displayName}</span>?
-              Builders can enable it again for agents and for the organization.
+              Builders can select it for agents again.
             </>
           ) : (
             <>
               Retire <span className="font-medium text-foreground">{rule.displayName}</span>? It can
-              no longer be newly enabled. Agents that already use it keep it until it is removed.
+              no longer be newly selected. Agents that already use it keep it until it is removed.
             </>
           )
         }
@@ -345,7 +387,6 @@ function NewRuleDetail() {
   const [description, setDescription] = useState("");
   const [content, setContent] = useState("");
   const [saving, setSaving] = useState(false);
-  const [detailsOpen, setDetailsOpen] = useState(true);
 
   const takenSlugs = useMemo(() => Object.values(rules).map((r) => r.name), [rules]);
   const slug = deriveSkillSlug(displayName.trim(), takenSlugs, "rule");
@@ -373,37 +414,23 @@ function NewRuleDetail() {
     <div className="flex h-full flex-col overflow-hidden" data-testid="rule-detail">
       <PaneHeader>
         <PaneHeaderBar
+          eyebrow={
+            <PaneBackLink onClick={() => navigate("/agents/rules")} data-testid="rule-detail-back">
+              <ArrowLeft size={14} />
+              All rules
+            </PaneBackLink>
+          }
           icon={ListChecks}
-          title={
-            <InlineTextEdit
-              value={displayName}
-              canEdit
-              onSave={setDisplayName}
-              startEditing
-              placeholder="Untitled rule"
-              className="text-sm md:text-base font-medium text-foreground"
-              testId="rule-detail-name"
-            />
-          }
-          subtitle={
-            <InlineTextEdit
-              value={description}
-              canEdit
-              allowEmpty
-              onSave={setDescription}
-              placeholder="Add a description"
-              className="text-xs text-muted-foreground"
-              testId="rule-detail-description"
-            />
-          }
+          title={displayName.trim() || "Untitled rule"}
+          subtitle={description.trim() || "Not saved yet"}
         >
-          <div className="flex items-center gap-1.5 shrink-0">
+          <div className="flex shrink-0 items-center gap-1.5">
             <span className={headerChipClass}>New rule</span>
             <button
               type="button"
               onClick={() => navigate("/agents/rules")}
               disabled={saving}
-              className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-red-500 transition-colors disabled:opacity-50 px-2"
+              className="inline-flex items-center gap-1.5 px-2 text-sm text-muted-foreground transition-colors hover:text-red-500 disabled:opacity-50"
               data-testid="rule-detail-discard"
             >
               <Trash size={14} />
@@ -421,58 +448,59 @@ function NewRuleDetail() {
         </PaneHeaderBar>
       </PaneHeader>
 
-      <button
-        type="button"
-        onClick={() => setDetailsOpen((open) => !open)}
-        className="flex items-center gap-1.5 px-6 py-2 border-b border-border text-left"
-        data-testid="rule-detail-metadata-toggle"
-      >
-        {detailsOpen ? (
-          <CaretDown size={12} className="text-muted-foreground" />
-        ) : (
-          <CaretRight size={12} className="text-muted-foreground" />
-        )}
-        <span className={sectionLabelClass}>Details</span>
-      </button>
+      <DetailBody>
+        <DetailSection label="Details" testId="rule-detail-metadata">
+          <DetailCard className="space-y-5">
+            <DetailFieldRow>
+              <DetailTextField
+                label="Title"
+                value={displayName}
+                live
+                autoFocus
+                placeholder="Give the rule a name"
+                onCommit={setDisplayName}
+                testId="rule-detail-name"
+              />
+              <DetailField label="Identifier" hint="Derived from the title and fixed once saved.">
+                <DetailReadOnlyValue mono testId="rule-detail-slug">
+                  {slug}
+                </DetailReadOnlyValue>
+              </DetailField>
+            </DetailFieldRow>
+            <DetailTextField
+              label="Description"
+              value={description}
+              live
+              placeholder="What this rule is for"
+              hint="Shown in the rules list and in each agent's Capabilities panel."
+              onCommit={setDescription}
+              testId="rule-detail-description"
+            />
+            <WhereItApplies>
+              Saving creates the rule without selecting it anywhere. Turn it on per agent under
+              Capabilities.
+            </WhereItApplies>
+          </DetailCard>
+        </DetailSection>
 
-      {detailsOpen && (
-        <div
-          className="border-b border-border px-6 py-4 max-h-[45%] overflow-y-auto"
-          data-testid="rule-detail-metadata"
-        >
-          <div className="space-y-4">
-            <div className="border-b border-border pb-3 space-y-1">
-              <p className={sectionLabelClass}>Identifier</p>
-              <p className="text-sm font-mono text-foreground" data-testid="rule-detail-slug">
-                {slug}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                Derived from the title and fixed once saved.
-              </p>
-            </div>
-            <div className="space-y-1">
-              <p className={sectionLabelClass}>Where it applies</p>
-              <p className="text-sm text-muted-foreground">
-                Saving creates the rule without enabling it. Turn it on per agent under
-                Capabilities, or for every agent from the rules list.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <div className="flex-1 min-h-0 bg-card" data-testid="rule-detail-editor">
-        <CrepeEditor
-          contentType={ContentType.AGENT}
-          contentId=""
-          value={content}
-          onChange={setContent}
-          enableUpload={false}
-          enableComments={false}
-          allowImages={false}
-          placeholder={RULE_EDITOR_PLACEHOLDER}
-        />
-      </div>
+        <DetailSection label="Rule" hint={RULE_HINT}>
+          <DetailEditorCard testId="rule-detail-editor">
+            <CrepeEditor
+              contentType={ContentType.AGENT}
+              contentId=""
+              value={content}
+              onChange={setContent}
+              enableUpload={false}
+              enableComments={false}
+              allowImages={false}
+              compact
+              minHeight={DETAIL_EDITOR_MIN_HEIGHT}
+              className={detailEditorClass}
+              placeholder={RULE_EDITOR_PLACEHOLDER}
+            />
+          </DetailEditorCard>
+        </DetailSection>
+      </DetailBody>
     </div>
   );
 }

@@ -174,6 +174,12 @@ survive navigation. The floating transfers tray mounts at app root.
 - [ ] Recording: record a screen capture, then reload before it finishes
       uploading. Recovery still completes the recording (now via the shared
       `uniffy-uploads` IndexedDB store).
+- [ ] Recording: capture a mostly static screen (low bitrate, well under 5 MiB
+      per minute) for at least two minutes, then stop. The upload completes and
+      the backend log shows no `EntityTooSmall` on CompleteUpload.
+- [ ] Recording: capture a static screen for about a minute, then kill the tab
+      (not a reload) and reopen the app. Recovery completes the recording with
+      only the last few seconds missing.
 
 ## Authenticated assets (cookie read-path)
 
@@ -1523,14 +1529,19 @@ agent that owns at least one automation.
       works: opt in, verify a channel run reads a personal memory, opt
       out, verify it stops.
 
-### Skill drafts (builder inbox)
+### Skill drafts (Skills page)
 
-- [ ] Member thumbs-down in an agent chat produces a draft; the member
+- [ ] An agent proposing a skill in a chat produces a draft; the member
       sees the draft card WITHOUT a Review button; a builder sees Review
       and can open, edit, and save it - the saved skill is an organization
       skill (no scope picker anywhere).
-- [ ] A builder can discard a draft raised by someone else; the card in
-      the original channel settles to its resolved state.
+- [ ] Pending drafts render as the first group on `/agents/skills` (no
+      separate drafts page; `/agents/skills/drafts` redirects to the grid)
+      and the sidebar Skills row badges their count; search filters drafts
+      and skills alike.
+- [ ] A builder can discard a draft raised by someone else, from the card
+      on the Skills grid or from the draft editor; the card in the original
+      channel settles to its resolved state and the badge drops.
 
 ### Chat ports (agent DMs)
 
@@ -1538,11 +1549,31 @@ agent that owns at least one automation.
       runnable skills; picking one shows a dismissible skill chip; send ->
       the reply follows the skill and the sent message shows the skill
       badge.
-- [ ] Thumbs on an agent chat reply: rate up, reload -> the thumb is
-      still filled; click again -> cleared; thumbs-down feeds the skill
-      analyzer (draft may appear later).
+- [ ] Agent replies carry no thumbs up/down on web or mobile; reactions,
+      copy, reply, thread, thinking and tool panes still work on them.
 - [ ] Proposed-skill draft card renders after an agent reply that
       produced one; opening it lands in the draft editor.
+
+### Skill observations
+
+- [ ] `/admin/agents?tab=skills` (org admin) lists one row per exact skill
+      version invoked in the window, with the 7d/30d/90d switch redrawing
+      the window caption; the table shows invocation outcomes, completed
+      and tool-error counts next to their percentages, unique users, run
+      log coverage (`n of m`, "No run logs" when none), duration, tokens,
+      and one cost line per currency (no merged totals).
+- [ ] A version with invocations but no correlated run log shows a dash
+      for duration, tokens and cost, not zero.
+- [ ] Invoke a skill more than 200 versions' worth (or lower the page size
+      locally): "Load more versions" appends the next page without
+      duplicating a row; a failed page keeps the loaded rows and offers
+      "Try again".
+- [ ] Skill detail -> "Observations" section opens on demand and lists
+      only that skill's versions, newest first; an AGENTS domain admin who
+      is not an org admin can open it, while the admin Skills tab stays
+      org-admin only.
+- [ ] Switch organization while the tab is open: the previous org's rows
+      never render for the new org, and the new org loads its own.
 - [ ] Old links: `/agents/chat` (and `/agents/chat/<id>`) redirect to
       `/chat`.
 

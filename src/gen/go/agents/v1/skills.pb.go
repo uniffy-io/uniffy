@@ -2411,15 +2411,28 @@ func (x *RevertSkillResponse) GetVersion() *SkillVersion {
 	return nil
 }
 
-// Usage + quality aggregate for one skill, drawn from agents_skill_usages.
+// Observations of one exact version within the requested time window.
 type SkillMetric struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	SkillId       string                 `protobuf:"bytes,1,opt,name=skill_id,json=skillId,proto3" json:"skill_id,omitempty"`
-	DisplayName   string                 `protobuf:"bytes,2,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
-	Origin        string                 `protobuf:"bytes,3,opt,name=origin,proto3" json:"origin,omitempty"` // user | agent_proposed | agent_evolved | bundled
-	InjectedCount int32                  `protobuf:"varint,4,opt,name=injected_count,json=injectedCount,proto3" json:"injected_count,omitempty"`
-	ViewedCount   int32                  `protobuf:"varint,5,opt,name=viewed_count,json=viewedCount,proto3" json:"viewed_count,omitempty"`
-	InvokedCount  int32                  `protobuf:"varint,6,opt,name=invoked_count,json=invokedCount,proto3" json:"invoked_count,omitempty"`
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	SkillId            string                 `protobuf:"bytes,1,opt,name=skill_id,json=skillId,proto3" json:"skill_id,omitempty"`
+	DisplayName        string                 `protobuf:"bytes,2,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	SkillVersionId     string                 `protobuf:"bytes,7,opt,name=skill_version_id,json=skillVersionId,proto3" json:"skill_version_id,omitempty"`
+	SkillVersionNumber int32                  `protobuf:"varint,8,opt,name=skill_version_number,json=skillVersionNumber,proto3" json:"skill_version_number,omitempty"`
+	InvocationCount    int64                  `protobuf:"varint,9,opt,name=invocation_count,json=invocationCount,proto3" json:"invocation_count,omitempty"`
+	StartedCount       int64                  `protobuf:"varint,10,opt,name=started_count,json=startedCount,proto3" json:"started_count,omitempty"`
+	CompletedCount     int64                  `protobuf:"varint,11,opt,name=completed_count,json=completedCount,proto3" json:"completed_count,omitempty"`
+	FailedCount        int64                  `protobuf:"varint,12,opt,name=failed_count,json=failedCount,proto3" json:"failed_count,omitempty"`
+	RejectedCount      int64                  `protobuf:"varint,13,opt,name=rejected_count,json=rejectedCount,proto3" json:"rejected_count,omitempty"`
+	CancelledCount     int64                  `protobuf:"varint,14,opt,name=cancelled_count,json=cancelledCount,proto3" json:"cancelled_count,omitempty"`
+	ToolErrorRunCount  int64                  `protobuf:"varint,21,opt,name=tool_error_run_count,json=toolErrorRunCount,proto3" json:"tool_error_run_count,omitempty"`
+	// Fraction of invocations with at least one failed tool call.
+	ToolErrorRate float64            `protobuf:"fixed64,22,opt,name=tool_error_rate,json=toolErrorRate,proto3" json:"tool_error_rate,omitempty"`
+	UniqueUsers   int64              `protobuf:"varint,23,opt,name=unique_users,json=uniqueUsers,proto3" json:"unique_users,omitempty"`
+	RunLogCount   int64              `protobuf:"varint,24,opt,name=run_log_count,json=runLogCount,proto3" json:"run_log_count,omitempty"`
+	DurationMs    int64              `protobuf:"varint,25,opt,name=duration_ms,json=durationMs,proto3" json:"duration_ms,omitempty"`
+	InputTokens   int64              `protobuf:"varint,26,opt,name=input_tokens,json=inputTokens,proto3" json:"input_tokens,omitempty"`
+	OutputTokens  int64              `protobuf:"varint,27,opt,name=output_tokens,json=outputTokens,proto3" json:"output_tokens,omitempty"`
+	Costs         []*SkillMetricCost `protobuf:"bytes,28,rep,name=costs,proto3" json:"costs,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2468,30 +2481,174 @@ func (x *SkillMetric) GetDisplayName() string {
 	return ""
 }
 
-func (x *SkillMetric) GetOrigin() string {
+func (x *SkillMetric) GetSkillVersionId() string {
 	if x != nil {
-		return x.Origin
+		return x.SkillVersionId
 	}
 	return ""
 }
 
-func (x *SkillMetric) GetInjectedCount() int32 {
+func (x *SkillMetric) GetSkillVersionNumber() int32 {
 	if x != nil {
-		return x.InjectedCount
+		return x.SkillVersionNumber
 	}
 	return 0
 }
 
-func (x *SkillMetric) GetViewedCount() int32 {
+func (x *SkillMetric) GetInvocationCount() int64 {
 	if x != nil {
-		return x.ViewedCount
+		return x.InvocationCount
 	}
 	return 0
 }
 
-func (x *SkillMetric) GetInvokedCount() int32 {
+func (x *SkillMetric) GetStartedCount() int64 {
 	if x != nil {
-		return x.InvokedCount
+		return x.StartedCount
+	}
+	return 0
+}
+
+func (x *SkillMetric) GetCompletedCount() int64 {
+	if x != nil {
+		return x.CompletedCount
+	}
+	return 0
+}
+
+func (x *SkillMetric) GetFailedCount() int64 {
+	if x != nil {
+		return x.FailedCount
+	}
+	return 0
+}
+
+func (x *SkillMetric) GetRejectedCount() int64 {
+	if x != nil {
+		return x.RejectedCount
+	}
+	return 0
+}
+
+func (x *SkillMetric) GetCancelledCount() int64 {
+	if x != nil {
+		return x.CancelledCount
+	}
+	return 0
+}
+
+func (x *SkillMetric) GetToolErrorRunCount() int64 {
+	if x != nil {
+		return x.ToolErrorRunCount
+	}
+	return 0
+}
+
+func (x *SkillMetric) GetToolErrorRate() float64 {
+	if x != nil {
+		return x.ToolErrorRate
+	}
+	return 0
+}
+
+func (x *SkillMetric) GetUniqueUsers() int64 {
+	if x != nil {
+		return x.UniqueUsers
+	}
+	return 0
+}
+
+func (x *SkillMetric) GetRunLogCount() int64 {
+	if x != nil {
+		return x.RunLogCount
+	}
+	return 0
+}
+
+func (x *SkillMetric) GetDurationMs() int64 {
+	if x != nil {
+		return x.DurationMs
+	}
+	return 0
+}
+
+func (x *SkillMetric) GetInputTokens() int64 {
+	if x != nil {
+		return x.InputTokens
+	}
+	return 0
+}
+
+func (x *SkillMetric) GetOutputTokens() int64 {
+	if x != nil {
+		return x.OutputTokens
+	}
+	return 0
+}
+
+func (x *SkillMetric) GetCosts() []*SkillMetricCost {
+	if x != nil {
+		return x.Costs
+	}
+	return nil
+}
+
+type SkillMetricCost struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Currency      string                 `protobuf:"bytes,1,opt,name=currency,proto3" json:"currency,omitempty"`
+	Amount        string                 `protobuf:"bytes,2,opt,name=amount,proto3" json:"amount,omitempty"`
+	RunCount      int64                  `protobuf:"varint,3,opt,name=run_count,json=runCount,proto3" json:"run_count,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SkillMetricCost) Reset() {
+	*x = SkillMetricCost{}
+	mi := &file_agents_v1_skills_proto_msgTypes[35]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SkillMetricCost) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SkillMetricCost) ProtoMessage() {}
+
+func (x *SkillMetricCost) ProtoReflect() protoreflect.Message {
+	mi := &file_agents_v1_skills_proto_msgTypes[35]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SkillMetricCost.ProtoReflect.Descriptor instead.
+func (*SkillMetricCost) Descriptor() ([]byte, []int) {
+	return file_agents_v1_skills_proto_rawDescGZIP(), []int{35}
+}
+
+func (x *SkillMetricCost) GetCurrency() string {
+	if x != nil {
+		return x.Currency
+	}
+	return ""
+}
+
+func (x *SkillMetricCost) GetAmount() string {
+	if x != nil {
+		return x.Amount
+	}
+	return ""
+}
+
+func (x *SkillMetricCost) GetRunCount() int64 {
+	if x != nil {
+		return x.RunCount
 	}
 	return 0
 }
@@ -2499,13 +2656,20 @@ func (x *SkillMetric) GetInvokedCount() int32 {
 type GetSkillMetricsRequest struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	// Empty is org-admin reporting; a skill filter is available to builders.
+	SkillId string `protobuf:"bytes,2,opt,name=skill_id,json=skillId,proto3" json:"skill_id,omitempty"`
+	// Defaults to 30, maximum 90.
+	WindowDays int32 `protobuf:"varint,3,opt,name=window_days,json=windowDays,proto3" json:"window_days,omitempty"`
+	// Defaults to 200, maximum 500.
+	PageSize      int32  `protobuf:"varint,4,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	Cursor        string `protobuf:"bytes,5,opt,name=cursor,proto3" json:"cursor,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *GetSkillMetricsRequest) Reset() {
 	*x = GetSkillMetricsRequest{}
-	mi := &file_agents_v1_skills_proto_msgTypes[35]
+	mi := &file_agents_v1_skills_proto_msgTypes[36]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2517,7 +2681,7 @@ func (x *GetSkillMetricsRequest) String() string {
 func (*GetSkillMetricsRequest) ProtoMessage() {}
 
 func (x *GetSkillMetricsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_skills_proto_msgTypes[35]
+	mi := &file_agents_v1_skills_proto_msgTypes[36]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2530,7 +2694,7 @@ func (x *GetSkillMetricsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetSkillMetricsRequest.ProtoReflect.Descriptor instead.
 func (*GetSkillMetricsRequest) Descriptor() ([]byte, []int) {
-	return file_agents_v1_skills_proto_rawDescGZIP(), []int{35}
+	return file_agents_v1_skills_proto_rawDescGZIP(), []int{36}
 }
 
 func (x *GetSkillMetricsRequest) GetOrganizationId() string {
@@ -2540,21 +2704,47 @@ func (x *GetSkillMetricsRequest) GetOrganizationId() string {
 	return ""
 }
 
+func (x *GetSkillMetricsRequest) GetSkillId() string {
+	if x != nil {
+		return x.SkillId
+	}
+	return ""
+}
+
+func (x *GetSkillMetricsRequest) GetWindowDays() int32 {
+	if x != nil {
+		return x.WindowDays
+	}
+	return 0
+}
+
+func (x *GetSkillMetricsRequest) GetPageSize() int32 {
+	if x != nil {
+		return x.PageSize
+	}
+	return 0
+}
+
+func (x *GetSkillMetricsRequest) GetCursor() string {
+	if x != nil {
+		return x.Cursor
+	}
+	return ""
+}
+
 type GetSkillMetricsResponse struct {
-	state   protoimpl.MessageState `protogen:"open.v1"`
-	Metrics []*SkillMetric         `protobuf:"bytes,1,rep,name=metrics,proto3" json:"metrics,omitempty"`
-	// Org-wide agent-message feedback tallies over the same window.
-	PositiveFeedbackCount int32 `protobuf:"varint,2,opt,name=positive_feedback_count,json=positiveFeedbackCount,proto3" json:"positive_feedback_count,omitempty"`
-	NegativeFeedbackCount int32 `protobuf:"varint,3,opt,name=negative_feedback_count,json=negativeFeedbackCount,proto3" json:"negative_feedback_count,omitempty"`
-	// Count of pending agent-proposed/evolved drafts awaiting review.
-	PendingAgentDrafts int32 `protobuf:"varint,4,opt,name=pending_agent_drafts,json=pendingAgentDrafts,proto3" json:"pending_agent_drafts,omitempty"`
-	unknownFields      protoimpl.UnknownFields
-	sizeCache          protoimpl.SizeCache
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Metrics       []*SkillMetric         `protobuf:"bytes,1,rep,name=metrics,proto3" json:"metrics,omitempty"`
+	NextCursor    string                 `protobuf:"bytes,5,opt,name=next_cursor,json=nextCursor,proto3" json:"next_cursor,omitempty"`
+	WindowStart   *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=window_start,json=windowStart,proto3" json:"window_start,omitempty"`
+	WindowEnd     *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=window_end,json=windowEnd,proto3" json:"window_end,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *GetSkillMetricsResponse) Reset() {
 	*x = GetSkillMetricsResponse{}
-	mi := &file_agents_v1_skills_proto_msgTypes[36]
+	mi := &file_agents_v1_skills_proto_msgTypes[37]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2566,7 +2756,7 @@ func (x *GetSkillMetricsResponse) String() string {
 func (*GetSkillMetricsResponse) ProtoMessage() {}
 
 func (x *GetSkillMetricsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_skills_proto_msgTypes[36]
+	mi := &file_agents_v1_skills_proto_msgTypes[37]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2579,7 +2769,7 @@ func (x *GetSkillMetricsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetSkillMetricsResponse.ProtoReflect.Descriptor instead.
 func (*GetSkillMetricsResponse) Descriptor() ([]byte, []int) {
-	return file_agents_v1_skills_proto_rawDescGZIP(), []int{36}
+	return file_agents_v1_skills_proto_rawDescGZIP(), []int{37}
 }
 
 func (x *GetSkillMetricsResponse) GetMetrics() []*SkillMetric {
@@ -2589,25 +2779,25 @@ func (x *GetSkillMetricsResponse) GetMetrics() []*SkillMetric {
 	return nil
 }
 
-func (x *GetSkillMetricsResponse) GetPositiveFeedbackCount() int32 {
+func (x *GetSkillMetricsResponse) GetNextCursor() string {
 	if x != nil {
-		return x.PositiveFeedbackCount
+		return x.NextCursor
 	}
-	return 0
+	return ""
 }
 
-func (x *GetSkillMetricsResponse) GetNegativeFeedbackCount() int32 {
+func (x *GetSkillMetricsResponse) GetWindowStart() *timestamppb.Timestamp {
 	if x != nil {
-		return x.NegativeFeedbackCount
+		return x.WindowStart
 	}
-	return 0
+	return nil
 }
 
-func (x *GetSkillMetricsResponse) GetPendingAgentDrafts() int32 {
+func (x *GetSkillMetricsResponse) GetWindowEnd() *timestamppb.Timestamp {
 	if x != nil {
-		return x.PendingAgentDrafts
+		return x.WindowEnd
 	}
-	return 0
+	return nil
 }
 
 var File_agents_v1_skills_proto protoreflect.FileDescriptor
@@ -2832,21 +3022,46 @@ const file_agents_v1_skills_proto_rawDesc = "" +
 	"\x0eversion_number\x18\x03 \x01(\x05R\rversionNumber\"t\n" +
 	"\x13RevertSkillResponse\x12*\n" +
 	"\x05skill\x18\x01 \x01(\v2\x14.agents.v1.SkillInfoR\x05skill\x121\n" +
-	"\aversion\x18\x02 \x01(\v2\x17.agents.v1.SkillVersionR\aversion\"\xd2\x01\n" +
+	"\aversion\x18\x02 \x01(\v2\x17.agents.v1.SkillVersionR\aversion\"\xa7\a\n" +
 	"\vSkillMetric\x12\x19\n" +
 	"\bskill_id\x18\x01 \x01(\tR\askillId\x12!\n" +
-	"\fdisplay_name\x18\x02 \x01(\tR\vdisplayName\x12\x16\n" +
-	"\x06origin\x18\x03 \x01(\tR\x06origin\x12%\n" +
-	"\x0einjected_count\x18\x04 \x01(\x05R\rinjectedCount\x12!\n" +
-	"\fviewed_count\x18\x05 \x01(\x05R\vviewedCount\x12#\n" +
-	"\rinvoked_count\x18\x06 \x01(\x05R\finvokedCount\"A\n" +
+	"\fdisplay_name\x18\x02 \x01(\tR\vdisplayName\x12(\n" +
+	"\x10skill_version_id\x18\a \x01(\tR\x0eskillVersionId\x120\n" +
+	"\x14skill_version_number\x18\b \x01(\x05R\x12skillVersionNumber\x12)\n" +
+	"\x10invocation_count\x18\t \x01(\x03R\x0finvocationCount\x12#\n" +
+	"\rstarted_count\x18\n" +
+	" \x01(\x03R\fstartedCount\x12'\n" +
+	"\x0fcompleted_count\x18\v \x01(\x03R\x0ecompletedCount\x12!\n" +
+	"\ffailed_count\x18\f \x01(\x03R\vfailedCount\x12%\n" +
+	"\x0erejected_count\x18\r \x01(\x03R\rrejectedCount\x12'\n" +
+	"\x0fcancelled_count\x18\x0e \x01(\x03R\x0ecancelledCount\x12/\n" +
+	"\x14tool_error_run_count\x18\x15 \x01(\x03R\x11toolErrorRunCount\x12&\n" +
+	"\x0ftool_error_rate\x18\x16 \x01(\x01R\rtoolErrorRate\x12!\n" +
+	"\funique_users\x18\x17 \x01(\x03R\vuniqueUsers\x12\"\n" +
+	"\rrun_log_count\x18\x18 \x01(\x03R\vrunLogCount\x12\x1f\n" +
+	"\vduration_ms\x18\x19 \x01(\x03R\n" +
+	"durationMs\x12!\n" +
+	"\finput_tokens\x18\x1a \x01(\x03R\vinputTokens\x12#\n" +
+	"\routput_tokens\x18\x1b \x01(\x03R\foutputTokens\x120\n" +
+	"\x05costs\x18\x1c \x03(\v2\x1a.agents.v1.SkillMetricCostR\x05costsJ\x04\b\x03\x10\x04J\x04\b\x04\x10\x05J\x04\b\x05\x10\x06J\x04\b\x06\x10\aJ\x04\b\x0f\x10\x15R\x06originR\x0einjected_countR\fviewed_countR\rinvoked_countR\x14rated_response_countR\x17positive_feedback_countR\x17negative_feedback_countR\frating_countR\x16positive_feedback_rateR\x16negative_feedback_rate\"b\n" +
+	"\x0fSkillMetricCost\x12\x1a\n" +
+	"\bcurrency\x18\x01 \x01(\tR\bcurrency\x12\x16\n" +
+	"\x06amount\x18\x02 \x01(\tR\x06amount\x12\x1b\n" +
+	"\trun_count\x18\x03 \x01(\x03R\brunCount\"\xb2\x01\n" +
 	"\x16GetSkillMetricsRequest\x12'\n" +
-	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\"\xed\x01\n" +
+	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x19\n" +
+	"\bskill_id\x18\x02 \x01(\tR\askillId\x12\x1f\n" +
+	"\vwindow_days\x18\x03 \x01(\x05R\n" +
+	"windowDays\x12\x1b\n" +
+	"\tpage_size\x18\x04 \x01(\x05R\bpageSize\x12\x16\n" +
+	"\x06cursor\x18\x05 \x01(\tR\x06cursor\"\xc0\x02\n" +
 	"\x17GetSkillMetricsResponse\x120\n" +
-	"\ametrics\x18\x01 \x03(\v2\x16.agents.v1.SkillMetricR\ametrics\x126\n" +
-	"\x17positive_feedback_count\x18\x02 \x01(\x05R\x15positiveFeedbackCount\x126\n" +
-	"\x17negative_feedback_count\x18\x03 \x01(\x05R\x15negativeFeedbackCount\x120\n" +
-	"\x14pending_agent_drafts\x18\x04 \x01(\x05R\x12pendingAgentDrafts*d\n" +
+	"\ametrics\x18\x01 \x03(\v2\x16.agents.v1.SkillMetricR\ametrics\x12\x1f\n" +
+	"\vnext_cursor\x18\x05 \x01(\tR\n" +
+	"nextCursor\x12=\n" +
+	"\fwindow_start\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\vwindowStart\x129\n" +
+	"\n" +
+	"window_end\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\twindowEndJ\x04\b\x02\x10\x03J\x04\b\x03\x10\x04J\x04\b\x04\x10\x05R\x17positive_feedback_countR\x17negative_feedback_countR\x14pending_agent_drafts*d\n" +
 	"\vSkillSource\x12\x1c\n" +
 	"\x18SKILL_SOURCE_UNSPECIFIED\x10\x00\x12\x18\n" +
 	"\x14SKILL_SOURCE_BUNDLED\x10\x01\x12\x1d\n" +
@@ -2883,7 +3098,7 @@ func file_agents_v1_skills_proto_rawDescGZIP() []byte {
 }
 
 var file_agents_v1_skills_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_agents_v1_skills_proto_msgTypes = make([]protoimpl.MessageInfo, 37)
+var file_agents_v1_skills_proto_msgTypes = make([]protoimpl.MessageInfo, 38)
 var file_agents_v1_skills_proto_goTypes = []any{
 	(SkillSource)(0),                    // 0: agents.v1.SkillSource
 	(*SkillInfo)(nil),                   // 1: agents.v1.SkillInfo
@@ -2921,78 +3136,82 @@ var file_agents_v1_skills_proto_goTypes = []any{
 	(*RevertSkillRequest)(nil),          // 33: agents.v1.RevertSkillRequest
 	(*RevertSkillResponse)(nil),         // 34: agents.v1.RevertSkillResponse
 	(*SkillMetric)(nil),                 // 35: agents.v1.SkillMetric
-	(*GetSkillMetricsRequest)(nil),      // 36: agents.v1.GetSkillMetricsRequest
-	(*GetSkillMetricsResponse)(nil),     // 37: agents.v1.GetSkillMetricsResponse
-	(*timestamppb.Timestamp)(nil),       // 38: google.protobuf.Timestamp
-	(*v1.PaginationRequest)(nil),        // 39: common.v1.PaginationRequest
-	(*v1.PaginationResponse)(nil),       // 40: common.v1.PaginationResponse
+	(*SkillMetricCost)(nil),             // 36: agents.v1.SkillMetricCost
+	(*GetSkillMetricsRequest)(nil),      // 37: agents.v1.GetSkillMetricsRequest
+	(*GetSkillMetricsResponse)(nil),     // 38: agents.v1.GetSkillMetricsResponse
+	(*timestamppb.Timestamp)(nil),       // 39: google.protobuf.Timestamp
+	(*v1.PaginationRequest)(nil),        // 40: common.v1.PaginationRequest
+	(*v1.PaginationResponse)(nil),       // 41: common.v1.PaginationResponse
 }
 var file_agents_v1_skills_proto_depIdxs = []int32{
 	0,  // 0: agents.v1.SkillInfo.source:type_name -> agents.v1.SkillSource
-	38, // 1: agents.v1.SkillInfo.created_at:type_name -> google.protobuf.Timestamp
-	38, // 2: agents.v1.SkillInfo.updated_at:type_name -> google.protobuf.Timestamp
-	38, // 3: agents.v1.SkillVersion.created_at:type_name -> google.protobuf.Timestamp
-	38, // 4: agents.v1.SkillDraft.created_at:type_name -> google.protobuf.Timestamp
-	38, // 5: agents.v1.SkillDraft.updated_at:type_name -> google.protobuf.Timestamp
+	39, // 1: agents.v1.SkillInfo.created_at:type_name -> google.protobuf.Timestamp
+	39, // 2: agents.v1.SkillInfo.updated_at:type_name -> google.protobuf.Timestamp
+	39, // 3: agents.v1.SkillVersion.created_at:type_name -> google.protobuf.Timestamp
+	39, // 4: agents.v1.SkillDraft.created_at:type_name -> google.protobuf.Timestamp
+	39, // 5: agents.v1.SkillDraft.updated_at:type_name -> google.protobuf.Timestamp
 	1,  // 6: agents.v1.CreateSkillResponse.skill:type_name -> agents.v1.SkillInfo
 	1,  // 7: agents.v1.GetSkillResponse.skill:type_name -> agents.v1.SkillInfo
 	1,  // 8: agents.v1.UpdateSkillResponse.skill:type_name -> agents.v1.SkillInfo
-	39, // 9: agents.v1.ListSkillsRequest.pagination:type_name -> common.v1.PaginationRequest
+	40, // 9: agents.v1.ListSkillsRequest.pagination:type_name -> common.v1.PaginationRequest
 	1,  // 10: agents.v1.ListSkillsResponse.skills:type_name -> agents.v1.SkillInfo
-	40, // 11: agents.v1.ListSkillsResponse.pagination:type_name -> common.v1.PaginationResponse
+	41, // 11: agents.v1.ListSkillsResponse.pagination:type_name -> common.v1.PaginationResponse
 	14, // 12: agents.v1.ListRunnableSkillsResponse.skills:type_name -> agents.v1.RunnableSkill
 	3,  // 13: agents.v1.CreateSkillDraftResponse.draft:type_name -> agents.v1.SkillDraft
 	3,  // 14: agents.v1.GetSkillDraftResponse.draft:type_name -> agents.v1.SkillDraft
-	39, // 15: agents.v1.ListSkillDraftsRequest.pagination:type_name -> common.v1.PaginationRequest
+	40, // 15: agents.v1.ListSkillDraftsRequest.pagination:type_name -> common.v1.PaginationRequest
 	3,  // 16: agents.v1.ListSkillDraftsResponse.drafts:type_name -> agents.v1.SkillDraft
-	40, // 17: agents.v1.ListSkillDraftsResponse.pagination:type_name -> common.v1.PaginationResponse
+	41, // 17: agents.v1.ListSkillDraftsResponse.pagination:type_name -> common.v1.PaginationResponse
 	1,  // 18: agents.v1.SaveSkillDraftResponse.skill:type_name -> agents.v1.SkillInfo
 	2,  // 19: agents.v1.SaveSkillDraftResponse.version:type_name -> agents.v1.SkillVersion
-	39, // 20: agents.v1.ListSkillVersionsRequest.pagination:type_name -> common.v1.PaginationRequest
+	40, // 20: agents.v1.ListSkillVersionsRequest.pagination:type_name -> common.v1.PaginationRequest
 	2,  // 21: agents.v1.ListSkillVersionsResponse.versions:type_name -> agents.v1.SkillVersion
-	40, // 22: agents.v1.ListSkillVersionsResponse.pagination:type_name -> common.v1.PaginationResponse
+	41, // 22: agents.v1.ListSkillVersionsResponse.pagination:type_name -> common.v1.PaginationResponse
 	2,  // 23: agents.v1.GetSkillVersionResponse.version:type_name -> agents.v1.SkillVersion
 	1,  // 24: agents.v1.SetMainSkillVersionResponse.skill:type_name -> agents.v1.SkillInfo
 	1,  // 25: agents.v1.RevertSkillResponse.skill:type_name -> agents.v1.SkillInfo
 	2,  // 26: agents.v1.RevertSkillResponse.version:type_name -> agents.v1.SkillVersion
-	35, // 27: agents.v1.GetSkillMetricsResponse.metrics:type_name -> agents.v1.SkillMetric
-	4,  // 28: agents.v1.SkillsService.CreateSkill:input_type -> agents.v1.CreateSkillRequest
-	8,  // 29: agents.v1.SkillsService.GetSkill:input_type -> agents.v1.GetSkillRequest
-	9,  // 30: agents.v1.SkillsService.ListSkills:input_type -> agents.v1.ListSkillsRequest
-	11, // 31: agents.v1.SkillsService.UpdateSkill:input_type -> agents.v1.UpdateSkillRequest
-	12, // 32: agents.v1.SkillsService.DeleteSkill:input_type -> agents.v1.DeleteSkillRequest
-	15, // 33: agents.v1.SkillsService.ListRunnableSkills:input_type -> agents.v1.ListRunnableSkillsRequest
-	17, // 34: agents.v1.SkillsService.CreateSkillDraft:input_type -> agents.v1.CreateSkillDraftRequest
-	19, // 35: agents.v1.SkillsService.GetSkillDraft:input_type -> agents.v1.GetSkillDraftRequest
-	21, // 36: agents.v1.SkillsService.ListSkillDrafts:input_type -> agents.v1.ListSkillDraftsRequest
-	23, // 37: agents.v1.SkillsService.SaveSkillDraft:input_type -> agents.v1.SaveSkillDraftRequest
-	25, // 38: agents.v1.SkillsService.DiscardSkillDraft:input_type -> agents.v1.DiscardSkillDraftRequest
-	27, // 39: agents.v1.SkillsService.ListSkillVersions:input_type -> agents.v1.ListSkillVersionsRequest
-	29, // 40: agents.v1.SkillsService.GetSkillVersion:input_type -> agents.v1.GetSkillVersionRequest
-	31, // 41: agents.v1.SkillsService.SetMainSkillVersion:input_type -> agents.v1.SetMainSkillVersionRequest
-	33, // 42: agents.v1.SkillsService.RevertSkill:input_type -> agents.v1.RevertSkillRequest
-	36, // 43: agents.v1.SkillsService.GetSkillMetrics:input_type -> agents.v1.GetSkillMetricsRequest
-	5,  // 44: agents.v1.SkillsService.CreateSkill:output_type -> agents.v1.CreateSkillResponse
-	6,  // 45: agents.v1.SkillsService.GetSkill:output_type -> agents.v1.GetSkillResponse
-	10, // 46: agents.v1.SkillsService.ListSkills:output_type -> agents.v1.ListSkillsResponse
-	7,  // 47: agents.v1.SkillsService.UpdateSkill:output_type -> agents.v1.UpdateSkillResponse
-	13, // 48: agents.v1.SkillsService.DeleteSkill:output_type -> agents.v1.DeleteSkillResponse
-	16, // 49: agents.v1.SkillsService.ListRunnableSkills:output_type -> agents.v1.ListRunnableSkillsResponse
-	18, // 50: agents.v1.SkillsService.CreateSkillDraft:output_type -> agents.v1.CreateSkillDraftResponse
-	20, // 51: agents.v1.SkillsService.GetSkillDraft:output_type -> agents.v1.GetSkillDraftResponse
-	22, // 52: agents.v1.SkillsService.ListSkillDrafts:output_type -> agents.v1.ListSkillDraftsResponse
-	24, // 53: agents.v1.SkillsService.SaveSkillDraft:output_type -> agents.v1.SaveSkillDraftResponse
-	26, // 54: agents.v1.SkillsService.DiscardSkillDraft:output_type -> agents.v1.DiscardSkillDraftResponse
-	28, // 55: agents.v1.SkillsService.ListSkillVersions:output_type -> agents.v1.ListSkillVersionsResponse
-	30, // 56: agents.v1.SkillsService.GetSkillVersion:output_type -> agents.v1.GetSkillVersionResponse
-	32, // 57: agents.v1.SkillsService.SetMainSkillVersion:output_type -> agents.v1.SetMainSkillVersionResponse
-	34, // 58: agents.v1.SkillsService.RevertSkill:output_type -> agents.v1.RevertSkillResponse
-	37, // 59: agents.v1.SkillsService.GetSkillMetrics:output_type -> agents.v1.GetSkillMetricsResponse
-	44, // [44:60] is the sub-list for method output_type
-	28, // [28:44] is the sub-list for method input_type
-	28, // [28:28] is the sub-list for extension type_name
-	28, // [28:28] is the sub-list for extension extendee
-	0,  // [0:28] is the sub-list for field type_name
+	36, // 27: agents.v1.SkillMetric.costs:type_name -> agents.v1.SkillMetricCost
+	35, // 28: agents.v1.GetSkillMetricsResponse.metrics:type_name -> agents.v1.SkillMetric
+	39, // 29: agents.v1.GetSkillMetricsResponse.window_start:type_name -> google.protobuf.Timestamp
+	39, // 30: agents.v1.GetSkillMetricsResponse.window_end:type_name -> google.protobuf.Timestamp
+	4,  // 31: agents.v1.SkillsService.CreateSkill:input_type -> agents.v1.CreateSkillRequest
+	8,  // 32: agents.v1.SkillsService.GetSkill:input_type -> agents.v1.GetSkillRequest
+	9,  // 33: agents.v1.SkillsService.ListSkills:input_type -> agents.v1.ListSkillsRequest
+	11, // 34: agents.v1.SkillsService.UpdateSkill:input_type -> agents.v1.UpdateSkillRequest
+	12, // 35: agents.v1.SkillsService.DeleteSkill:input_type -> agents.v1.DeleteSkillRequest
+	15, // 36: agents.v1.SkillsService.ListRunnableSkills:input_type -> agents.v1.ListRunnableSkillsRequest
+	17, // 37: agents.v1.SkillsService.CreateSkillDraft:input_type -> agents.v1.CreateSkillDraftRequest
+	19, // 38: agents.v1.SkillsService.GetSkillDraft:input_type -> agents.v1.GetSkillDraftRequest
+	21, // 39: agents.v1.SkillsService.ListSkillDrafts:input_type -> agents.v1.ListSkillDraftsRequest
+	23, // 40: agents.v1.SkillsService.SaveSkillDraft:input_type -> agents.v1.SaveSkillDraftRequest
+	25, // 41: agents.v1.SkillsService.DiscardSkillDraft:input_type -> agents.v1.DiscardSkillDraftRequest
+	27, // 42: agents.v1.SkillsService.ListSkillVersions:input_type -> agents.v1.ListSkillVersionsRequest
+	29, // 43: agents.v1.SkillsService.GetSkillVersion:input_type -> agents.v1.GetSkillVersionRequest
+	31, // 44: agents.v1.SkillsService.SetMainSkillVersion:input_type -> agents.v1.SetMainSkillVersionRequest
+	33, // 45: agents.v1.SkillsService.RevertSkill:input_type -> agents.v1.RevertSkillRequest
+	37, // 46: agents.v1.SkillsService.GetSkillMetrics:input_type -> agents.v1.GetSkillMetricsRequest
+	5,  // 47: agents.v1.SkillsService.CreateSkill:output_type -> agents.v1.CreateSkillResponse
+	6,  // 48: agents.v1.SkillsService.GetSkill:output_type -> agents.v1.GetSkillResponse
+	10, // 49: agents.v1.SkillsService.ListSkills:output_type -> agents.v1.ListSkillsResponse
+	7,  // 50: agents.v1.SkillsService.UpdateSkill:output_type -> agents.v1.UpdateSkillResponse
+	13, // 51: agents.v1.SkillsService.DeleteSkill:output_type -> agents.v1.DeleteSkillResponse
+	16, // 52: agents.v1.SkillsService.ListRunnableSkills:output_type -> agents.v1.ListRunnableSkillsResponse
+	18, // 53: agents.v1.SkillsService.CreateSkillDraft:output_type -> agents.v1.CreateSkillDraftResponse
+	20, // 54: agents.v1.SkillsService.GetSkillDraft:output_type -> agents.v1.GetSkillDraftResponse
+	22, // 55: agents.v1.SkillsService.ListSkillDrafts:output_type -> agents.v1.ListSkillDraftsResponse
+	24, // 56: agents.v1.SkillsService.SaveSkillDraft:output_type -> agents.v1.SaveSkillDraftResponse
+	26, // 57: agents.v1.SkillsService.DiscardSkillDraft:output_type -> agents.v1.DiscardSkillDraftResponse
+	28, // 58: agents.v1.SkillsService.ListSkillVersions:output_type -> agents.v1.ListSkillVersionsResponse
+	30, // 59: agents.v1.SkillsService.GetSkillVersion:output_type -> agents.v1.GetSkillVersionResponse
+	32, // 60: agents.v1.SkillsService.SetMainSkillVersion:output_type -> agents.v1.SetMainSkillVersionResponse
+	34, // 61: agents.v1.SkillsService.RevertSkill:output_type -> agents.v1.RevertSkillResponse
+	38, // 62: agents.v1.SkillsService.GetSkillMetrics:output_type -> agents.v1.GetSkillMetricsResponse
+	47, // [47:63] is the sub-list for method output_type
+	31, // [31:47] is the sub-list for method input_type
+	31, // [31:31] is the sub-list for extension type_name
+	31, // [31:31] is the sub-list for extension extendee
+	0,  // [0:31] is the sub-list for field type_name
 }
 
 func init() { file_agents_v1_skills_proto_init() }
@@ -3015,7 +3234,7 @@ func file_agents_v1_skills_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agents_v1_skills_proto_rawDesc), len(file_agents_v1_skills_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   37,
+			NumMessages:   38,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

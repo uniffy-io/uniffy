@@ -2,14 +2,13 @@
 
 from uniffy.core.models.agents.agent import Agent
 from uniffy.core.models.agents.message import AgentMessage
-from uniffy.core.models.agents.message_feedback import AgentMessageFeedback
 from uniffy.core.models.agents.provider_key import ProviderKey
 from uniffy.core.models.agents.rule import AgentRule
 from uniffy.core.models.agents.rule_version import AgentRuleVersion
 from uniffy.core.models.agents.session import AgentSession
 from uniffy.core.models.agents.skill import AgentSkill
 from uniffy.core.models.agents.skill_draft import AgentSkillDraft
-from uniffy.core.models.agents.skill_usage import AgentSkillUsage
+from uniffy.core.models.agents.skill_invocation import AgentSkillInvocation
 from uniffy.core.models.agents.skill_version import AgentSkillVersion
 from uniffy.core.models.audit.event import AuditEvent
 from uniffy.core.models.bookmarks.bookmark import Bookmark
@@ -174,13 +173,12 @@ __all__ = [
     # Agents
     "Agent",
     "AgentMessage",
-    "AgentMessageFeedback",
     "AgentSession",
     "AgentSkill",
     "AgentRule",
     "AgentRuleVersion",
     "AgentSkillDraft",
-    "AgentSkillUsage",
+    "AgentSkillInvocation",
     "AgentSkillVersion",
     "ProviderKey",
     # Crypto

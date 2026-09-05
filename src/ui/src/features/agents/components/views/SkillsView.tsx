@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import { Lightning, Plus, Tray } from "@phosphor-icons/react";
+import { Navigate, useNavigate, useParams } from "react-router-dom";
+import { ArrowRight, Lightning, Plus, Sparkle, Trash } from "@phosphor-icons/react";
 import { SkillSource } from "@uniffy/proto/agents/v1/skills_pb";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { Badge } from "@/components/ui/badge";
@@ -21,10 +21,17 @@ import {
   selectSkillsLoading,
 } from "@/features/agents/store/agentSkillsSlice";
 import { fetchSkills, type SerializedSkill } from "@/features/agents/store/agentSkillsThunks";
-import { selectInboxCount } from "@/features/agents/store/agentSkillDraftsSlice";
-import { selectDraftById } from "@/features/agents/store/agentSkillDraftsSlice";
-import { fetchSkillDraft, fetchSkillDrafts } from "@/features/agents/store/agentSkillDraftsThunks";
-import { SkillDraftsInbox } from "@/features/agents/components/skills/SkillDraftsInbox";
+import {
+  selectDraftById,
+  selectDraftsLoading,
+  selectInboxDrafts,
+} from "@/features/agents/store/agentSkillDraftsSlice";
+import {
+  discardSkillDraft,
+  fetchSkillDraft,
+  fetchSkillDrafts,
+  type SerializedSkillDraft,
+} from "@/features/agents/store/agentSkillDraftsThunks";
 import { SkillDetail } from "@/features/agents/components/views/SkillDetail";
 
 interface SkillsViewProps {
@@ -45,8 +52,10 @@ export function SkillsView({ onNewSkill, creatingSkill }: SkillsViewProps) {
     return <SkillsBrowse onNewSkill={onNewSkill} creatingSkill={creatingSkill} />;
   }
 
+  // Pending drafts browse alongside saved skills; only a draft's editor has its
+  // own route, so a bare /drafts link lands on the grid.
   if (subId === "drafts") {
-    if (!panel) return <SkillDraftsInbox />;
+    if (!panel) return <Navigate to="/agents/skills" replace />;
     return <DraftPane draftId={panel} />;
   }
 
@@ -57,6 +66,12 @@ const SKILL_GROUPS = [
   { source: SkillSource.ORGANIZATION, label: "Organization" },
   { source: SkillSource.BUNDLED, label: "Bundled" },
 ] as const;
+
+function draftKindLabel(kind: string): string {
+  if (kind === "edit") return "Edit";
+  if (kind === "evolve") return "Improvement";
+  return "New skill";
+}
 
 function SkillCard({ skill, onOpen }: { skill: SerializedSkill; onOpen: () => void }) {
   return (
@@ -79,6 +94,77 @@ function SkillCard({ skill, onOpen }: { skill: SerializedSkill; onOpen: () => vo
   );
 }
 
+function DraftCard({
+  draft,
+  onOpen,
+  onDiscard,
+  discarding,
+}: {
+  draft: SerializedSkillDraft;
+  onOpen: () => void;
+  onDiscard: () => void;
+  discarding: boolean;
+}) {
+  const fromAgent = Boolean(draft.proposedByAgentId);
+  const isEdit = draft.kind !== "create";
+  return (
+    <BrowseCard
+      onOpen={onOpen}
+      testId={`skills-draft-card-${draft.id}`}
+      leading={
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-dashed border-primary/40 bg-primary/5 text-primary">
+          <Lightning size={18} weight="duotone" />
+        </span>
+      }
+      title={draft.displayName || draft.name || "Untitled skill"}
+      subtitle={draft.rationale || draft.description || "No description"}
+      badges={
+        <Badge variant="outline" className="shrink-0 px-1.5 py-0 text-[10px]">
+          {draftKindLabel(draft.kind)}
+        </Badge>
+      }
+      chips={
+        <>
+          {isEdit && draft.name && (
+            <Badge variant="secondary" className="font-mono text-[10px] font-medium">
+              {draft.name}
+            </Badge>
+          )}
+          {fromAgent ? (
+            <span className="inline-flex items-center gap-1 text-xs text-primary">
+              <Sparkle size={12} weight="fill" />
+              Proposed by agent
+            </span>
+          ) : (
+            <span className="text-xs text-muted-foreground">Your draft</span>
+          )}
+        </>
+      }
+      footer={
+        <>
+          <span className="inline-flex items-center gap-1 text-xs font-medium text-primary">
+            Review and save
+            <ArrowRight size={13} />
+          </span>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDiscard();
+            }}
+            disabled={discarding}
+            className="inline-flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-red-500 disabled:opacity-50"
+            data-testid={`skills-draft-discard-${draft.id}`}
+          >
+            <Trash size={13} />
+            {discarding ? "Discarding..." : "Discard"}
+          </button>
+        </>
+      }
+    />
+  );
+}
+
 function SkillsBrowse({
   onNewSkill,
   creatingSkill,
@@ -86,16 +172,36 @@ function SkillsBrowse({
   onNewSkill: () => void;
   creatingSkill: boolean;
 }) {
+  const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const skillsMap = useAppSelector(selectAllSkills);
-  const draftCount = useAppSelector(selectInboxCount);
+  const skillsLoading = useAppSelector(selectSkillsLoading);
+  const pendingDrafts = useAppSelector(selectInboxDrafts);
+  const draftsLoading = useAppSelector(selectDraftsLoading);
   const [search, setSearch] = useState("");
+  const [discardingId, setDiscardingId] = useState<string | null>(null);
 
   const query = search.trim().toLowerCase();
   const skills = Object.values(skillsMap).filter((skill) => {
     const label = skill.displayName || skill.name;
     return !query || label.toLowerCase().includes(query);
   });
+  const drafts = pendingDrafts.filter((draft) => {
+    const label = draft.displayName || draft.name || "";
+    return !query || label.toLowerCase().includes(query);
+  });
+
+  const handleDiscard = async (draftId: string) => {
+    setDiscardingId(draftId);
+    try {
+      await dispatch(discardSkillDraft(draftId)).unwrap();
+    } finally {
+      setDiscardingId(null);
+    }
+  };
+
+  const loading = (skillsLoading || draftsLoading) && skills.length === 0 && drafts.length === 0;
+  const empty = skills.length === 0 && drafts.length === 0;
 
   return (
     <div className="flex h-full flex-col overflow-hidden" data-testid="skills-browse">
@@ -107,29 +213,17 @@ function SkillsBrowse({
         searchPlaceholder="Search skills..."
         testId="skills-browse-header"
         action={
-          <div className="flex items-center gap-2">
-            {draftCount > 0 && (
-              <Button
-                variant="outline"
-                onClick={() => navigate("/agents/skills/drafts")}
-                data-testid="skills-browse-drafts-button"
-              >
-                <Tray size={16} />
-                {draftCount} draft{draftCount === 1 ? "" : "s"}
-              </Button>
-            )}
-            <Button onClick={onNewSkill} disabled={creatingSkill} data-testid="skills-new-skill">
-              <Plus size={16} />
-              {creatingSkill ? "Creating..." : "New skill"}
-            </Button>
-          </div>
+          <Button onClick={onNewSkill} disabled={creatingSkill} data-testid="skills-new-skill">
+            <Plus size={16} />
+            {creatingSkill ? "Creating..." : "New skill"}
+          </Button>
         }
       />
       <BrowseBody testId="skills-browse-body">
-        {skills.length === 0 ? (
+        {empty ? (
           <BrowseEmpty
             icon={Lightning}
-            title={query ? "No match" : "No skills yet"}
+            title={query ? "No match" : loading ? "Loading skills..." : "No skills yet"}
             description={
               query
                 ? `No skill matches "${search.trim()}".`
@@ -138,24 +232,42 @@ function SkillsBrowse({
             testId="skills-browse-empty"
           />
         ) : (
-          SKILL_GROUPS.map(({ source, label }) => {
-            const group = skills.filter((skill) => skill.source === source);
-            if (group.length === 0) return null;
-            return (
-              <Fragment key={source}>
-                <BrowseGroupLabel>{label}</BrowseGroupLabel>
+          <>
+            {drafts.length > 0 && (
+              <>
+                <BrowseGroupLabel>Drafts to review</BrowseGroupLabel>
                 <BrowseGrid>
-                  {group.map((skill) => (
-                    <SkillCard
-                      key={skill.id}
-                      skill={skill}
-                      onOpen={() => navigate(`/agents/skills/${skill.id}`)}
+                  {drafts.map((draft) => (
+                    <DraftCard
+                      key={draft.id}
+                      draft={draft}
+                      discarding={discardingId === draft.id}
+                      onOpen={() => navigate(`/agents/skills/drafts/${draft.id}`)}
+                      onDiscard={() => void handleDiscard(draft.id)}
                     />
                   ))}
                 </BrowseGrid>
-              </Fragment>
-            );
-          })
+              </>
+            )}
+            {SKILL_GROUPS.map(({ source, label }) => {
+              const group = skills.filter((skill) => skill.source === source);
+              if (group.length === 0) return null;
+              return (
+                <Fragment key={source}>
+                  <BrowseGroupLabel>{label}</BrowseGroupLabel>
+                  <BrowseGrid>
+                    {group.map((skill) => (
+                      <SkillCard
+                        key={skill.id}
+                        skill={skill}
+                        onOpen={() => navigate(`/agents/skills/${skill.id}`)}
+                      />
+                    ))}
+                  </BrowseGrid>
+                </Fragment>
+              );
+            })}
+          </>
         )}
       </BrowseBody>
     </div>

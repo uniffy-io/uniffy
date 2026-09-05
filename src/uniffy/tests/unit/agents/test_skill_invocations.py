@@ -339,33 +339,35 @@ async def test_skill_mutation_invalidates_exact_snapshot_without_agent_refs(monk
     invalidate.assert_awaited_once_with(f"skill_snapshot:{skill_id}")
 
 
-async def test_usage_records_the_resolved_version_not_latest(snapshot, monkeypatch):
+async def test_invocation_records_the_resolved_version_not_latest(snapshot, monkeypatch):
     version, session, _ = snapshot
     record = AsyncMock()
-    monkeypatch.setattr(runtime_skills, "record_skill_event", record)
+    invocation = SimpleNamespace(start=record)
     skill = await runtime_skills.resolve_invoked_skill(
         session,
         **invocation_args(version),
         agent_id=generate_id(),
         user_id=generate_id(),
-        session_id=None,
+        session_id=generate_id(),
+        invocation=invocation,
     )
     assert skill.version_id == version.id
-    assert record.await_args.kwargs["skill_version"] == version.version_number
-    assert record.await_args.kwargs["invoked"] is True
+    assert record.await_args.args[0].skill_version_number == version.version_number
+    assert record.await_args.args[0].skill_version_id == version.id
 
 
 @pytest.mark.parametrize("invoked", [False, True])
 async def test_absent_or_invalid_invocation_records_no_usage(snapshot, monkeypatch, invoked):
     version, session, _ = snapshot
     record = AsyncMock()
-    monkeypatch.setattr(runtime_skills, "record_skill_event", record)
+    invocation = SimpleNamespace(start=record)
     args = {
         **invocation_args(version, invoked_skill_id=version.skill_id if invoked else None),
         "enabled_skill_ids": [],
         "agent_id": generate_id(),
         "user_id": generate_id(),
-        "session_id": None,
+        "session_id": generate_id(),
+        "invocation": invocation,
     }
     if invoked:
         with pytest.raises(SkillInvocationError):
@@ -400,6 +402,7 @@ async def test_runtime_uses_final_tools_and_skips_ordinary_skill_reads(
         kind="direct",
     )
     runtime._session = session
+    runtime._session_factory = MagicMock()
     runtime._org_operations = SimpleNamespace(
         require_org_member=AsyncMock(return_value=SimpleNamespace(role="member")),
         get_by_id=AsyncMock(return_value=SimpleNamespace(name="Org")),
@@ -423,8 +426,11 @@ async def test_runtime_uses_final_tools_and_skips_ordinary_skill_reads(
         "plan_tool_advertisement",
         lambda *args: SimpleNamespace(tool_schemas=[], deferred={}),
     )
-    usage = AsyncMock()
-    monkeypatch.setattr(runtime_skills, "record_skill_event", usage)
+    recorder = SimpleNamespace(
+        start=AsyncMock(return_value=SimpleNamespace(status="started")),
+        finalize=AsyncMock(),
+    )
+    monkeypatch.setattr(runtime_skills, "SkillInvocationRecorder", lambda _: recorder)
     args = dict(
         user_id=generate_id(),
         organization_id=generate_id(),
@@ -460,4 +466,10 @@ async def test_runtime_uses_final_tools_and_skips_ordinary_skill_reads(
             await run()
         cache.assert_not_awaited()
     filtered.assert_awaited_once()
-    usage.assert_not_awaited()
+    if invoked:
+        recorder.start.assert_awaited_once()
+        assert recorder.finalize.await_args.kwargs["status"] == "rejected"
+        assert recorder.finalize.await_args.kwargs["error_code"] == "missing_tools"
+    else:
+        recorder.start.assert_not_awaited()
+        recorder.finalize.assert_not_awaited()

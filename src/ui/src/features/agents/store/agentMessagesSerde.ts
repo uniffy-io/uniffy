@@ -30,7 +30,6 @@ export const messageToPlain = (msg: MessageInfo) => ({
   editedAt: timestampToPlain(msg.editedAt),
   previousContent: msg.previousContent,
   wasCancelled: msg.wasCancelled,
-  feedbackRating: msg.feedbackRating || "",
   invokedSkillName: msg.invokedSkillName || "",
   thinkingJson: msg.thinkingJson || "",
 });

@@ -7,7 +7,6 @@ import { cn } from "@/shared/utils/cn";
 import { formatProtoDateTime } from "@/shared/utils/dateFormatting";
 import { diffStat } from "@/features/agents/utils/instructionDiff";
 import { InstructionVersionDiff } from "@/features/agents/components/instruction/InstructionVersionDiff";
-import { sectionLabelClass } from "@/features/agents/components/instruction/detailChrome";
 
 export interface InstructionVersion {
   id: string;
@@ -90,7 +89,6 @@ export function InstructionVersionHistory({
 
   return (
     <div className="space-y-3" data-testid={testId}>
-      <p className={sectionLabelClass}>Version history</p>
       <p className="text-xs text-muted-foreground">
         {pinned
           ? `Pinned to version ${activeVersionNumber}`

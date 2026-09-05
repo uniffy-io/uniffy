@@ -52,6 +52,7 @@ from uniffy.domains.agents.skills.converters import (
     skill_to_proto,
     skill_version_to_proto,
 )
+from uniffy.domains.agents.skills.metrics import SkillMetricsReader
 from uniffy.domains.agents.skills.operations import SkillOperations
 from uniffy.infrastructure.database import open_session
 
@@ -673,27 +674,28 @@ class SkillsHandlers:
 
         try:
             async with open_session() as session:
-                ops = SkillOperations(session)
-                data = await ops.get_skill_metrics(
+                try:
+                    skill_id = UUID(request.skill_id) if request.skill_id else None
+                except ValueError:
+                    raise ValidationError("skill_id", "Invalid skill ID") from None
+                page = await SkillMetricsReader(session).read(
                     user_id=user_id,
                     organization_id=org_id,
+                    skill_id=skill_id,
+                    window_days=request.window_days or 30,
+                    page_size=request.page_size or 200,
+                    cursor=request.cursor,
                 )
-                return GetSkillMetricsResponse(
-                    metrics=[
-                        SkillMetric(
-                            skill_id=str(m["skill_id"]),
-                            display_name=m["display_name"],
-                            origin=m["origin"],
-                            injected_count=m["injected"],
-                            viewed_count=m["viewed"],
-                            invoked_count=m["invoked"],
-                        )
-                        for m in data["metrics"]
-                    ],
-                    positive_feedback_count=data["positive"],
-                    negative_feedback_count=data["negative"],
-                    pending_agent_drafts=data["pending_agent_drafts"],
+                response = GetSkillMetricsResponse(
+                    metrics=[SkillMetric(**metric) for metric in page.metrics],
+                    next_cursor=page.next_cursor,
                 )
+                response.window_start.FromDatetime(page.window_start)
+                response.window_end.FromDatetime(page.window_end)
+                return response
+
+        except ValidationError as e:
+            raise ConnectError(Code.INVALID_ARGUMENT, str(e))
 
         except PermissionDeniedError as e:
             raise ConnectError(Code.PERMISSION_DENIED, str(e))

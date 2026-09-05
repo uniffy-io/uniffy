@@ -60,7 +60,10 @@ class _Recorder:
         self.calls.append(kwargs)
 
 
-async def test_completion_loop_preserves_order_and_session_isolation(monkeypatch) -> None:
+@pytest.mark.parametrize("tool_success", [True, False])
+async def test_completion_loop_preserves_order_and_session_isolation(
+    monkeypatch, tool_success
+) -> None:
     import uniffy.domains.agents.tools.executor as executor_mod
 
     main_session = MagicMock(name="main_session")
@@ -77,13 +80,21 @@ async def test_completion_loop_preserves_order_and_session_isolation(monkeypatch
         await asyncio.sleep(0)
         read_active -= 1
         execution_order.append(args["label"])
-        return ToolResult(success=True, data=args["label"])
+        return ToolResult(
+            success=tool_success,
+            data=args["label"],
+            error="read failed" if not tool_success else None,
+        )
 
     async def write_tool(context: ToolContext, args: dict) -> ToolResult:
         assert context.session is main_session
         execution_order.append(args["label"])
         await asyncio.sleep(0)
-        return ToolResult(success=True, data=args["label"])
+        return ToolResult(
+            success=tool_success,
+            data=args["label"],
+            error="write failed" if not tool_success else None,
+        )
 
     registry = ToolRegistry()
     registry.register(
@@ -147,6 +158,7 @@ async def test_completion_loop_preserves_order_and_session_isolation(monkeypatch
         organization_id=generate_id(),
         allowed_tools=frozenset(registry.get(call.name).name for call in calls),
     )
+    traces = []
     result = await CompletionToolLoop(session_operations, session_factory).run(
         user_id=context.user_id,
         organization_id=context.organization_id,
@@ -159,9 +171,13 @@ async def test_completion_loop_preserves_order_and_session_isolation(monkeypatch
         llm_messages=[],
         result=initial,
         executor=ToolExecutor(registry, context),
+        run_tool_calls=traces,
     )
 
     assert result.content == "done"
+    assert traces == [
+        {"name": call.name, "call_id": call.id, "success": tool_success} for call in calls
+    ]
     assert read_peak == 2
     assert len(read_sessions) == 2
     assert set(read_sessions) == set(created_sessions)
@@ -245,6 +261,7 @@ async def test_streaming_loop_rejection_and_placeholder_finalization(monkeypatch
         stop_reason=CompletionStopReason.TOOL_USE,
         tool_calls=[ToolCall(id="delete-1", name="files-delete", input={})],
     )
+    traces = []
     events = [
         event
         async for event in StreamingToolLoop(MagicMock()).run(
@@ -255,7 +272,7 @@ async def test_streaming_loop_rejection_and_placeholder_finalization(monkeypatch
             llm_messages=[],
             result=initial,
             executor=ToolExecutor(registry, context),
-            run_tool_calls=[],
+            run_tool_calls=traces,
             call_controller=MagicMock(),
             safety_identifier="digest",
             pending_thinking=None,
@@ -270,12 +287,86 @@ async def test_streaming_loop_rejection_and_placeholder_finalization(monkeypatch
         EventType.DONE,
     ]
     assert executed is False
+    assert traces == [{"name": "files-delete", "call_id": "delete-1", "success": False}]
     assert events[2].success is False
     assert "rejected" in events[2].tool_result
     approval_store.register.assert_awaited_once()
     approval_store.wait_for_response.assert_awaited_once()
     assert writer.finalized[0]["message_id"] == placeholder_id
     assert events[-1].assistant_message.id == placeholder_id
+
+
+@pytest.mark.parametrize("success", [True, False])
+async def test_streaming_tool_trace_records_read_and_write_outcomes(monkeypatch, success):
+    import uniffy.domains.agents.runtime.runs.tools as tools_mod
+
+    async def execute(context, args):
+        return ToolResult(success=success, data="result", error=None if success else "failed")
+
+    registry = ToolRegistry()
+    registry.register(
+        ToolDefinition(name="notes.read", description="", executor=execute, read_only=True)
+    )
+    registry.register(ToolDefinition(name="notes.write", description="", executor=execute))
+    context = ToolContext(
+        session=MagicMock(),
+        user_id=generate_id(),
+        organization_id=generate_id(),
+        allowed_tools=frozenset({"notes.read", "notes.write"}),
+    )
+    executor = ToolExecutor(registry, context)
+    monkeypatch.setattr(executor, "execute", AsyncMock(return_value=await execute(None, {})))
+    monkeypatch.setattr(tools_mod, "get_tool_registry", lambda: registry)
+    monkeypatch.setattr(
+        tools_mod,
+        "gather_read_tool_results",
+        AsyncMock(
+            return_value={
+                "read": await execute(None, {}),
+            }
+        ),
+    )
+
+    async def segment(**kwargs):
+        yield StreamSegmentResult(
+            completion=CompletionResult(content="done", model="test"),
+            error=None,
+            error_exception=None,
+            placeholder_id=None,
+        )
+
+    monkeypatch.setattr(tools_mod, "controlled_stream_segment", segment)
+    traces = []
+    events = [
+        event
+        async for event in StreamingToolLoop(MagicMock()).run(
+            writer=_Writer(),
+            agent_id=generate_id(),
+            system_prompt="system",
+            tool_schemas=[{"name": "notes-read"}, {"name": "notes-write"}],
+            llm_messages=[],
+            result=CompletionResult(
+                content="",
+                model="test",
+                stop_reason=CompletionStopReason.TOOL_USE,
+                tool_calls=[
+                    ToolCall(id="read", name="notes-read", input={}),
+                    ToolCall(id="write", name="notes-write", input={}),
+                ],
+            ),
+            executor=executor,
+            run_tool_calls=traces,
+            call_controller=MagicMock(),
+            safety_identifier=None,
+            pending_thinking=None,
+            deferred_pool=None,
+        )
+    ]
+    assert events[-1].type == EventType.DONE
+    assert traces == [
+        {"name": "notes-read", "call_id": "read", "success": success},
+        {"name": "notes-write", "call_id": "write", "success": success},
+    ]
 
 
 def _streaming_runner(recorder: _Recorder, tool_loop) -> StreamingRunner:
@@ -287,11 +378,18 @@ def _streaming_runner(recorder: _Recorder, tool_loop) -> StreamingRunner:
     )
 
 
-async def _run_streaming_runner(monkeypatch, segment, *, tool_loop=None, tools=None):
+async def _run_streaming_runner(
+    monkeypatch, segment, *, tool_loop=None, tools=None, invocation=None
+):
     import uniffy.domains.agents.runtime.runs.stream as stream_mod
 
     async def controlled_segment(**_kwargs):
-        if segment is not None:
+        if isinstance(segment, list):
+            for item in segment:
+                if isinstance(item, BaseException):
+                    raise item
+                yield item
+        elif segment is not None:
             yield segment
 
     monkeypatch.setattr(stream_mod, "controlled_stream_segment", controlled_segment)
@@ -307,6 +405,7 @@ async def _run_streaming_runner(monkeypatch, segment, *, tool_loop=None, tools=N
         event
         async for event in runner.run(
             writer=writer,
+            invocation=invocation,
             user_id=generate_id(),
             organization_id=generate_id(),
             session_id=generate_id(),
@@ -445,7 +544,7 @@ async def test_streaming_runner_records_tool_loop_success(monkeypatch) -> None:
     assert recorder.calls[0]["model"] == "resolved"
 
 
-async def _run_completion_runner(monkeypatch, provider, recorder=None):
+async def _run_completion_runner(monkeypatch, provider, recorder=None, invocation=None):
     import uniffy.domains.agents.runtime.runs.complete as complete_mod
 
     monkeypatch.setattr(
@@ -473,6 +572,7 @@ async def _run_completion_runner(monkeypatch, provider, recorder=None):
         recorder=recorder,
     )
     result = await runner.run(
+        invocation=invocation,
         user_id=generate_id(),
         organization_id=generate_id(),
         session_id=generate_id(),

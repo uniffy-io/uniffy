@@ -6,6 +6,7 @@ enqueues become a no-op and only the current owner can release the lock.
 
 import asyncio
 import time
+from contextlib import aclosing
 from datetime import datetime
 from typing import Any, cast
 from uuid import UUID
@@ -174,6 +175,7 @@ async def run_agent_session(
             destination = SessionDestination(session_id=sid)
             done_seen = False
             cancelled = False
+            deadline_at = time.monotonic() + runtime_settings.send_deadline_seconds
             if rerun_message_id:
                 event_stream = runtime_ops.stream_rerun_from_message(
                     user_id=uid,
@@ -190,9 +192,14 @@ async def run_agent_session(
                     files=file_contexts,
                     user_timezone=user_timezone,
                     invoked_skill_id=UUID(invoked_skill_id) if invoked_skill_id else None,
+                    run_id=rid,
+                    deadline_at=deadline_at,
                 )
             try:
-                async with asyncio.timeout(runtime_settings.send_deadline_seconds):
+                async with (
+                    asyncio.timeout(runtime_settings.send_deadline_seconds),
+                    aclosing(event_stream),
+                ):
                     async for event in event_stream:
                         await publisher.publish(event)
                         if event.type is EventType.DONE:

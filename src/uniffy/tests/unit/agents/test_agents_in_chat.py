@@ -1038,6 +1038,7 @@ def _stream_runtime_ops(monkeypatch, *, binding_row, agent):
     captured: dict = {}
 
     ops = object.__new__(MessageStreamer)
+    ops._session_factory = MagicMock()
     session = MagicMock()
 
     async def fake_execute(_stmt):

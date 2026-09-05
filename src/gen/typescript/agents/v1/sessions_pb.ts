@@ -14,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agents/v1/sessions.proto.
  */
 export const file_agents_v1_sessions: GenFile = /*@__PURE__*/
-  fileDesc("ChhhZ2VudHMvdjEvc2Vzc2lvbnMucHJvdG8SCWFnZW50cy52MSLfAwoLU2Vzc2lvbkluZm8SCgoCaWQYASABKAkSFwoPb3JnYW5pemF0aW9uX2lkGAIgASgJEhAKCGFnZW50X2lkGAMgASgJEg8KB3VzZXJfaWQYBCABKAkSJAoEa2luZBgFIAEoDjIWLmFnZW50cy52MS5TZXNzaW9uS2luZBIZCgxkaXNwbGF5X25hbWUYBiABKAlIAIgBARIbCg5tb2RlbF9vdmVycmlkZRgHIAEoCUgBiAEBEhoKEnRvdGFsX2lucHV0X3Rva2VucxgIIAEoAxIbChN0b3RhbF9vdXRwdXRfdG9rZW5zGAkgASgDEhUKDW1lc3NhZ2VfY291bnQYCiABKAUSHAoPbGFzdF9tb2RlbF91c2VkGAsgASgJSAKIAQESEwoLaXNfYXJjaGl2ZWQYDCABKAgSLgoKY3JlYXRlZF9hdBgNIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLgoKdXBkYXRlZF9hdBgOIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASDwoHaXNfdGVzdBgPIAEoCEIPCg1fZGlzcGxheV9uYW1lQhEKD19tb2RlbF9vdmVycmlkZUISChBfbGFzdF9tb2RlbF91c2VkIpAGCgtNZXNzYWdlSW5mbxIKCgJpZBgBIAEoCRISCgpzZXNzaW9uX2lkGAIgASgJEiQKBHJvbGUYAyABKA4yFi5hZ2VudHMudjEuTWVzc2FnZVJvbGUSFAoHY29udGVudBgEIAEoCUgAiAEBEhQKDGlucHV0X3Rva2VucxgFIAEoBRIVCg1vdXRwdXRfdG9rZW5zGAYgASgFEhIKBW1vZGVsGAcgASgJSAGIAQESFgoJdG9vbF9uYW1lGAggASgJSAKIAQESGQoMdG9vbF9jYWxsX2lkGAkgASgJSAOIAQESGwoOdG9vbF9hcmdzX2pzb24YCiABKAlIBIgBARIYCgt0b29sX3Jlc3VsdBgLIAEoCUgFiAEBEhMKC2lzX3RoaW5raW5nGAwgASgIEhQKDGlzX2NvbXBhY3RlZBgNIAEoCBIuCgpjcmVhdGVkX2F0GA4gASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIQCghmaWxlX2lkcxgPIAMoCRIWCg5pc19pbnZhbGlkYXRlZBgQIAEoCBIyCgllZGl0ZWRfYXQYESABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wSAaIAQESHQoQcHJldmlvdXNfY29udGVudBgSIAEoCUgHiAEBEhUKDXdhc19jYW5jZWxsZWQYEyABKAgSFwoPZmVlZGJhY2tfcmF0aW5nGBQgASgJEhoKEmludm9rZWRfc2tpbGxfbmFtZRgVIAEoCRIVCg10aGlua2luZ19qc29uGBYgASgJEh8KF2NhY2hlX3JlYWRfaW5wdXRfdG9rZW5zGBcgASgFEiMKG2NhY2hlX2NyZWF0aW9uX2lucHV0X3Rva2VucxgYIAEoBUIKCghfY29udGVudEIICgZfbW9kZWxCDAoKX3Rvb2xfbmFtZUIPCg1fdG9vbF9jYWxsX2lkQhEKD190b29sX2FyZ3NfanNvbkIOCgxfdG9vbF9yZXN1bHRCDAoKX2VkaXRlZF9hdEITChFfcHJldmlvdXNfY29udGVudCLUAQoUQ3JlYXRlU2Vzc2lvblJlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEhAKCGFnZW50X2lkGAIgASgJEiQKBGtpbmQYAyABKA4yFi5hZ2VudHMudjEuU2Vzc2lvbktpbmQSGQoMZGlzcGxheV9uYW1lGAQgASgJSACIAQESGwoObW9kZWxfb3ZlcnJpZGUYBSABKAlIAYgBARIPCgdpc190ZXN0GAYgASgIQg8KDV9kaXNwbGF5X25hbWVCEQoPX21vZGVsX292ZXJyaWRlIkAKFUNyZWF0ZVNlc3Npb25SZXNwb25zZRInCgdzZXNzaW9uGAEgASgLMhYuYWdlbnRzLnYxLlNlc3Npb25JbmZvIj0KEkdldFNlc3Npb25SZXNwb25zZRInCgdzZXNzaW9uGAEgASgLMhYuYWdlbnRzLnYxLlNlc3Npb25JbmZvIkAKEUdldFNlc3Npb25SZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRISCgpzZXNzaW9uX2lkGAIgASgJIr4BChNMaXN0TWVzc2FnZXNSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRISCgpzZXNzaW9uX2lkGAIgASgJEjUKCnBhZ2luYXRpb24YAyABKAsyHC5jb21tb24udjEuUGFnaW5hdGlvblJlcXVlc3RIAIgBARIeChFpbmNsdWRlX2NvbXBhY3RlZBgEIAEoCEgBiAEBQg0KC19wYWdpbmF0aW9uQhQKEl9pbmNsdWRlX2NvbXBhY3RlZCJzChRMaXN0TWVzc2FnZXNSZXNwb25zZRIoCghtZXNzYWdlcxgBIAMoCzIWLmFnZW50cy52MS5NZXNzYWdlSW5mbxIxCgpwYWdpbmF0aW9uGAIgASgLMh0uY29tbW9uLnYxLlBhZ2luYXRpb25SZXNwb25zZSJWChJFZGl0TWVzc2FnZVJlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEhIKCm1lc3NhZ2VfaWQYAiABKAkSEwoLbmV3X2NvbnRlbnQYAyABKAkiXgoTRWRpdE1lc3NhZ2VSZXNwb25zZRInCgdtZXNzYWdlGAEgASgLMhYuYWdlbnRzLnYxLk1lc3NhZ2VJbmZvEh4KFmRvd25zdHJlYW1faW52YWxpZGF0ZWQYAiABKAUiQgoTUmV0cnlNZXNzYWdlUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSEgoKbWVzc2FnZV9pZBgCIAEoCSI5ChRSZXRyeU1lc3NhZ2VSZXNwb25zZRIPCgdjb250ZW50GAEgASgJEhAKCGZpbGVfaWRzGAIgAygJInYKD01lc3NhZ2VGZWVkYmFjaxISCgptZXNzYWdlX2lkGAEgASgJEg4KBnJhdGluZxgCIAEoCRIPCgdjb21tZW50GAMgASgJEi4KCmNyZWF0ZWRfYXQYBCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wIpYBChxTdWJtaXRNZXNzYWdlRmVlZGJhY2tSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRISCgptZXNzYWdlX2lkGAIgASgJEg4KBnJhdGluZxgDIAEoCRIUCgdjb21tZW50GAQgASgJSACIAQESFwoPY2hhdF9tZXNzYWdlX2lkGAUgASgJQgoKCF9jb21tZW50Il8KHVN1Ym1pdE1lc3NhZ2VGZWVkYmFja1Jlc3BvbnNlEjEKCGZlZWRiYWNrGAEgASgLMhouYWdlbnRzLnYxLk1lc3NhZ2VGZWVkYmFja0gAiAEBQgsKCV9mZWVkYmFjayp1CgtTZXNzaW9uS2luZBIcChhTRVNTSU9OX0tJTkRfVU5TUEVDSUZJRUQQABIXChNTRVNTSU9OX0tJTkRfRElSRUNUEAESFgoSU0VTU0lPTl9LSU5EX0dST1VQEAISFwoTU0VTU0lPTl9LSU5EX0dMT0JBTBADKqgBCgtNZXNzYWdlUm9sZRIcChhNRVNTQUdFX1JPTEVfVU5TUEVDSUZJRUQQABIVChFNRVNTQUdFX1JPTEVfVVNFUhABEhoKFk1FU1NBR0VfUk9MRV9BU1NJU1RBTlQQAhIVChFNRVNTQUdFX1JPTEVfVE9PTBADEhcKE01FU1NBR0VfUk9MRV9TWVNURU0QBBIYChRNRVNTQUdFX1JPTEVfU1VNTUFSWRAFMpgECg9TZXNzaW9uc1NlcnZpY2USVAoNQ3JlYXRlU2Vzc2lvbhIfLmFnZW50cy52MS5DcmVhdGVTZXNzaW9uUmVxdWVzdBogLmFnZW50cy52MS5DcmVhdGVTZXNzaW9uUmVzcG9uc2UiABJLCgpHZXRTZXNzaW9uEhwuYWdlbnRzLnYxLkdldFNlc3Npb25SZXF1ZXN0Gh0uYWdlbnRzLnYxLkdldFNlc3Npb25SZXNwb25zZSIAElEKDExpc3RNZXNzYWdlcxIeLmFnZW50cy52MS5MaXN0TWVzc2FnZXNSZXF1ZXN0Gh8uYWdlbnRzLnYxLkxpc3RNZXNzYWdlc1Jlc3BvbnNlIgASTgoLRWRpdE1lc3NhZ2USHS5hZ2VudHMudjEuRWRpdE1lc3NhZ2VSZXF1ZXN0Gh4uYWdlbnRzLnYxLkVkaXRNZXNzYWdlUmVzcG9uc2UiABJRCgxSZXRyeU1lc3NhZ2USHi5hZ2VudHMudjEuUmV0cnlNZXNzYWdlUmVxdWVzdBofLmFnZW50cy52MS5SZXRyeU1lc3NhZ2VSZXNwb25zZSIAEmwKFVN1Ym1pdE1lc3NhZ2VGZWVkYmFjaxInLmFnZW50cy52MS5TdWJtaXRNZXNzYWdlRmVlZGJhY2tSZXF1ZXN0GiguYWdlbnRzLnYxLlN1Ym1pdE1lc3NhZ2VGZWVkYmFja1Jlc3BvbnNlIgBCOVo3Z2l0aHViLmNvbS91bmlmZnktaW8vdW5pZmZ5LXByb3RvLWdvL2FnZW50cy92MTthZ2VudHN2MWIGcHJvdG8z", [file_common_v1_common, file_google_protobuf_timestamp]);
+  fileDesc("ChhhZ2VudHMvdjEvc2Vzc2lvbnMucHJvdG8SCWFnZW50cy52MSLfAwoLU2Vzc2lvbkluZm8SCgoCaWQYASABKAkSFwoPb3JnYW5pemF0aW9uX2lkGAIgASgJEhAKCGFnZW50X2lkGAMgASgJEg8KB3VzZXJfaWQYBCABKAkSJAoEa2luZBgFIAEoDjIWLmFnZW50cy52MS5TZXNzaW9uS2luZBIZCgxkaXNwbGF5X25hbWUYBiABKAlIAIgBARIbCg5tb2RlbF9vdmVycmlkZRgHIAEoCUgBiAEBEhoKEnRvdGFsX2lucHV0X3Rva2VucxgIIAEoAxIbChN0b3RhbF9vdXRwdXRfdG9rZW5zGAkgASgDEhUKDW1lc3NhZ2VfY291bnQYCiABKAUSHAoPbGFzdF9tb2RlbF91c2VkGAsgASgJSAKIAQESEwoLaXNfYXJjaGl2ZWQYDCABKAgSLgoKY3JlYXRlZF9hdBgNIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLgoKdXBkYXRlZF9hdBgOIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASDwoHaXNfdGVzdBgPIAEoCEIPCg1fZGlzcGxheV9uYW1lQhEKD19tb2RlbF9vdmVycmlkZUISChBfbGFzdF9tb2RlbF91c2VkIo4GCgtNZXNzYWdlSW5mbxIKCgJpZBgBIAEoCRISCgpzZXNzaW9uX2lkGAIgASgJEiQKBHJvbGUYAyABKA4yFi5hZ2VudHMudjEuTWVzc2FnZVJvbGUSFAoHY29udGVudBgEIAEoCUgAiAEBEhQKDGlucHV0X3Rva2VucxgFIAEoBRIVCg1vdXRwdXRfdG9rZW5zGAYgASgFEhIKBW1vZGVsGAcgASgJSAGIAQESFgoJdG9vbF9uYW1lGAggASgJSAKIAQESGQoMdG9vbF9jYWxsX2lkGAkgASgJSAOIAQESGwoOdG9vbF9hcmdzX2pzb24YCiABKAlIBIgBARIYCgt0b29sX3Jlc3VsdBgLIAEoCUgFiAEBEhMKC2lzX3RoaW5raW5nGAwgASgIEhQKDGlzX2NvbXBhY3RlZBgNIAEoCBIuCgpjcmVhdGVkX2F0GA4gASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIQCghmaWxlX2lkcxgPIAMoCRIWCg5pc19pbnZhbGlkYXRlZBgQIAEoCBIyCgllZGl0ZWRfYXQYESABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wSAaIAQESHQoQcHJldmlvdXNfY29udGVudBgSIAEoCUgHiAEBEhUKDXdhc19jYW5jZWxsZWQYEyABKAgSGgoSaW52b2tlZF9za2lsbF9uYW1lGBUgASgJEhUKDXRoaW5raW5nX2pzb24YFiABKAkSHwoXY2FjaGVfcmVhZF9pbnB1dF90b2tlbnMYFyABKAUSIwobY2FjaGVfY3JlYXRpb25faW5wdXRfdG9rZW5zGBggASgFQgoKCF9jb250ZW50QggKBl9tb2RlbEIMCgpfdG9vbF9uYW1lQg8KDV90b29sX2NhbGxfaWRCEQoPX3Rvb2xfYXJnc19qc29uQg4KDF90b29sX3Jlc3VsdEIMCgpfZWRpdGVkX2F0QhMKEV9wcmV2aW91c19jb250ZW50SgQIFBAVUg9mZWVkYmFja19yYXRpbmci1AEKFENyZWF0ZVNlc3Npb25SZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRIQCghhZ2VudF9pZBgCIAEoCRIkCgRraW5kGAMgASgOMhYuYWdlbnRzLnYxLlNlc3Npb25LaW5kEhkKDGRpc3BsYXlfbmFtZRgEIAEoCUgAiAEBEhsKDm1vZGVsX292ZXJyaWRlGAUgASgJSAGIAQESDwoHaXNfdGVzdBgGIAEoCEIPCg1fZGlzcGxheV9uYW1lQhEKD19tb2RlbF9vdmVycmlkZSJAChVDcmVhdGVTZXNzaW9uUmVzcG9uc2USJwoHc2Vzc2lvbhgBIAEoCzIWLmFnZW50cy52MS5TZXNzaW9uSW5mbyI9ChJHZXRTZXNzaW9uUmVzcG9uc2USJwoHc2Vzc2lvbhgBIAEoCzIWLmFnZW50cy52MS5TZXNzaW9uSW5mbyJAChFHZXRTZXNzaW9uUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSEgoKc2Vzc2lvbl9pZBgCIAEoCSK+AQoTTGlzdE1lc3NhZ2VzUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSEgoKc2Vzc2lvbl9pZBgCIAEoCRI1CgpwYWdpbmF0aW9uGAMgASgLMhwuY29tbW9uLnYxLlBhZ2luYXRpb25SZXF1ZXN0SACIAQESHgoRaW5jbHVkZV9jb21wYWN0ZWQYBCABKAhIAYgBAUINCgtfcGFnaW5hdGlvbkIUChJfaW5jbHVkZV9jb21wYWN0ZWQicwoUTGlzdE1lc3NhZ2VzUmVzcG9uc2USKAoIbWVzc2FnZXMYASADKAsyFi5hZ2VudHMudjEuTWVzc2FnZUluZm8SMQoKcGFnaW5hdGlvbhgCIAEoCzIdLmNvbW1vbi52MS5QYWdpbmF0aW9uUmVzcG9uc2UiVgoSRWRpdE1lc3NhZ2VSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRISCgptZXNzYWdlX2lkGAIgASgJEhMKC25ld19jb250ZW50GAMgASgJIl4KE0VkaXRNZXNzYWdlUmVzcG9uc2USJwoHbWVzc2FnZRgBIAEoCzIWLmFnZW50cy52MS5NZXNzYWdlSW5mbxIeChZkb3duc3RyZWFtX2ludmFsaWRhdGVkGAIgASgFIkIKE1JldHJ5TWVzc2FnZVJlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEhIKCm1lc3NhZ2VfaWQYAiABKAkiOQoUUmV0cnlNZXNzYWdlUmVzcG9uc2USDwoHY29udGVudBgBIAEoCRIQCghmaWxlX2lkcxgCIAMoCSp1CgtTZXNzaW9uS2luZBIcChhTRVNTSU9OX0tJTkRfVU5TUEVDSUZJRUQQABIXChNTRVNTSU9OX0tJTkRfRElSRUNUEAESFgoSU0VTU0lPTl9LSU5EX0dST1VQEAISFwoTU0VTU0lPTl9LSU5EX0dMT0JBTBADKqgBCgtNZXNzYWdlUm9sZRIcChhNRVNTQUdFX1JPTEVfVU5TUEVDSUZJRUQQABIVChFNRVNTQUdFX1JPTEVfVVNFUhABEhoKFk1FU1NBR0VfUk9MRV9BU1NJU1RBTlQQAhIVChFNRVNTQUdFX1JPTEVfVE9PTBADEhcKE01FU1NBR0VfUk9MRV9TWVNURU0QBBIYChRNRVNTQUdFX1JPTEVfU1VNTUFSWRAFMqoDCg9TZXNzaW9uc1NlcnZpY2USVAoNQ3JlYXRlU2Vzc2lvbhIfLmFnZW50cy52MS5DcmVhdGVTZXNzaW9uUmVxdWVzdBogLmFnZW50cy52MS5DcmVhdGVTZXNzaW9uUmVzcG9uc2UiABJLCgpHZXRTZXNzaW9uEhwuYWdlbnRzLnYxLkdldFNlc3Npb25SZXF1ZXN0Gh0uYWdlbnRzLnYxLkdldFNlc3Npb25SZXNwb25zZSIAElEKDExpc3RNZXNzYWdlcxIeLmFnZW50cy52MS5MaXN0TWVzc2FnZXNSZXF1ZXN0Gh8uYWdlbnRzLnYxLkxpc3RNZXNzYWdlc1Jlc3BvbnNlIgASTgoLRWRpdE1lc3NhZ2USHS5hZ2VudHMudjEuRWRpdE1lc3NhZ2VSZXF1ZXN0Gh4uYWdlbnRzLnYxLkVkaXRNZXNzYWdlUmVzcG9uc2UiABJRCgxSZXRyeU1lc3NhZ2USHi5hZ2VudHMudjEuUmV0cnlNZXNzYWdlUmVxdWVzdBofLmFnZW50cy52MS5SZXRyeU1lc3NhZ2VSZXNwb25zZSIAQjlaN2dpdGh1Yi5jb20vdW5pZmZ5LWlvL3VuaWZmeS1wcm90by1nby9hZ2VudHMvdjE7YWdlbnRzdjFiBnByb3RvMw", [file_common_v1_common, file_google_protobuf_timestamp]);
 
 /**
  * Session info returned to clients
@@ -221,14 +221,6 @@ export type MessageInfo = Message<"agents.v1.MessageInfo"> & {
    * @generated from field: bool was_cancelled = 19;
    */
   wasCancelled: boolean;
-
-  /**
-   * The caller's own thumbs rating on this message ("up" | "down" | "").
-   * Only assistant messages carry feedback; empty when the caller hasn't rated.
-   *
-   * @generated from field: string feedback_rating = 20;
-   */
-  feedbackRating: string;
 
   /**
    * Display name of the skill the user ran via the slash menu for this turn.
@@ -518,105 +510,6 @@ export const RetryMessageResponseSchema: GenMessage<RetryMessageResponse> = /*@_
   messageDesc(file_agents_v1_sessions, 11);
 
 /**
- * One user's thumbs rating on an agent message.
- *
- * @generated from message agents.v1.MessageFeedback
- */
-export type MessageFeedback = Message<"agents.v1.MessageFeedback"> & {
-  /**
-   * @generated from field: string message_id = 1;
-   */
-  messageId: string;
-
-  /**
-   * up | down
-   *
-   * @generated from field: string rating = 2;
-   */
-  rating: string;
-
-  /**
-   * @generated from field: string comment = 3;
-   */
-  comment: string;
-
-  /**
-   * @generated from field: google.protobuf.Timestamp created_at = 4;
-   */
-  createdAt?: Timestamp | undefined;
-};
-
-/**
- * Describes the message agents.v1.MessageFeedback.
- * Use `create(MessageFeedbackSchema)` to create a new message.
- */
-export const MessageFeedbackSchema: GenMessage<MessageFeedback> = /*@__PURE__*/
-  messageDesc(file_agents_v1_sessions, 12);
-
-/**
- * @generated from message agents.v1.SubmitMessageFeedbackRequest
- */
-export type SubmitMessageFeedbackRequest = Message<"agents.v1.SubmitMessageFeedbackRequest"> & {
-  /**
-   * @generated from field: string organization_id = 1;
-   */
-  organizationId: string;
-
-  /**
-   * Session-message target (agents_messages id). Exactly one of message_id
-   * and chat_message_id must be set.
-   *
-   * @generated from field: string message_id = 2;
-   */
-  messageId: string;
-
-  /**
-   * up | down, or "" to clear
-   *
-   * @generated from field: string rating = 3;
-   */
-  rating: string;
-
-  /**
-   * @generated from field: optional string comment = 4;
-   */
-  comment?: string | undefined;
-
-  /**
-   * Chat target: an agent reply's chat_messages id.
-   *
-   * @generated from field: string chat_message_id = 5;
-   */
-  chatMessageId: string;
-};
-
-/**
- * Describes the message agents.v1.SubmitMessageFeedbackRequest.
- * Use `create(SubmitMessageFeedbackRequestSchema)` to create a new message.
- */
-export const SubmitMessageFeedbackRequestSchema: GenMessage<SubmitMessageFeedbackRequest> = /*@__PURE__*/
-  messageDesc(file_agents_v1_sessions, 13);
-
-/**
- * @generated from message agents.v1.SubmitMessageFeedbackResponse
- */
-export type SubmitMessageFeedbackResponse = Message<"agents.v1.SubmitMessageFeedbackResponse"> & {
-  /**
-   * Unset when the rating was cleared.
-   *
-   * @generated from field: optional agents.v1.MessageFeedback feedback = 1;
-   */
-  feedback?: MessageFeedback | undefined;
-};
-
-/**
- * Describes the message agents.v1.SubmitMessageFeedbackResponse.
- * Use `create(SubmitMessageFeedbackResponseSchema)` to create a new message.
- */
-export const SubmitMessageFeedbackResponseSchema: GenMessage<SubmitMessageFeedbackResponse> = /*@__PURE__*/
-  messageDesc(file_agents_v1_sessions, 14);
-
-/**
  * Kind of session
  *
  * @generated from enum agents.v1.SessionKind
@@ -763,18 +656,6 @@ export const SessionsService: GenService<{
     methodKind: "unary";
     input: typeof RetryMessageRequestSchema;
     output: typeof RetryMessageResponseSchema;
-  },
-  /**
-   * Record (or clear) the caller's thumbs up/down on an agent reply, by
-   * session message id or by chat message id. The signal feeds the
-   * skill-evolution analyzer; an empty rating clears it.
-   *
-   * @generated from rpc agents.v1.SessionsService.SubmitMessageFeedback
-   */
-  submitMessageFeedback: {
-    methodKind: "unary";
-    input: typeof SubmitMessageFeedbackRequestSchema;
-    output: typeof SubmitMessageFeedbackResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_agents_v1_sessions, 0);

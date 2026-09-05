@@ -37,7 +37,7 @@ class RunRecorder:
         error: str | None,
         provider_key_id: UUID | None = None,
         channel_id: UUID | None = None,
-    ) -> None:
+    ) -> UUID | None:
         cost, cost_currency = await self._compute_cost(
             organization_id=organization_id,
             usage=usage,
@@ -70,19 +70,24 @@ class RunRecorder:
                 cost=cost,
                 cost_currency=cost_currency,
             )
+            run_log_id = run_log.id
             self._session.add(run_log)
             await self._session.commit()
         except Exception:
             logger.opt(exception=True).warning("Failed to create agent run log")
-            return
+            return None
 
         if cost is not None:
-            await check_and_fire_alerts(
-                self._session,
-                organization_id=organization_id,
-                run_cost=cost,
-                run_image_count=0,
-            )
+            try:
+                await check_and_fire_alerts(
+                    self._session,
+                    organization_id=organization_id,
+                    run_cost=cost,
+                    run_image_count=0,
+                )
+            except Exception:
+                logger.opt(exception=True).warning("Agent run budget alerts failed")
+        return run_log_id
 
     async def _compute_cost(
         self,

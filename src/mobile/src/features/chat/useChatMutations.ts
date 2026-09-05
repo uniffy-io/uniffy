@@ -100,7 +100,6 @@ export function useSendMessage(channelId: string) {
         reactions: [],
         senderName: user?.fullName || user?.username || "You",
         senderAvatarUrl: user?.avatarUrl || null,
-        feedbackRating: "",
         attachments: [],
       };
       queryClient.setQueryData<SerializedMessage[]>(key, (old) => [failed, ...(old ?? [])]);

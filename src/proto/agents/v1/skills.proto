@@ -347,25 +347,56 @@ message RevertSkillResponse {
   SkillVersion version = 2;
 }
 
-// Usage + quality aggregate for one skill, drawn from agents_skill_usages.
+// Observations of one exact version within the requested time window.
 message SkillMetric {
+  reserved 3, 4, 5, 6;
+  reserved "origin", "injected_count", "viewed_count", "invoked_count";
   string skill_id = 1;
   string display_name = 2;
-  string origin = 3; // user | agent_proposed | agent_evolved | bundled
-  int32 injected_count = 4;
-  int32 viewed_count = 5;
-  int32 invoked_count = 6;
+  string skill_version_id = 7;
+  int32 skill_version_number = 8;
+  int64 invocation_count = 9;
+  int64 started_count = 10;
+  int64 completed_count = 11;
+  int64 failed_count = 12;
+  int64 rejected_count = 13;
+  int64 cancelled_count = 14;
+  reserved 15 to 20;
+  reserved "rated_response_count", "positive_feedback_count", "negative_feedback_count",
+    "rating_count", "positive_feedback_rate", "negative_feedback_rate";
+  int64 tool_error_run_count = 21;
+  // Fraction of invocations with at least one failed tool call.
+  double tool_error_rate = 22;
+  int64 unique_users = 23;
+  int64 run_log_count = 24;
+  int64 duration_ms = 25;
+  int64 input_tokens = 26;
+  int64 output_tokens = 27;
+  repeated SkillMetricCost costs = 28;
+}
+
+message SkillMetricCost {
+  string currency = 1;
+  string amount = 2;
+  int64 run_count = 3;
 }
 
 message GetSkillMetricsRequest {
   string organization_id = 1;
+  // Empty is org-admin reporting; a skill filter is available to builders.
+  string skill_id = 2;
+  // Defaults to 30, maximum 90.
+  int32 window_days = 3;
+  // Defaults to 200, maximum 500.
+  int32 page_size = 4;
+  string cursor = 5;
 }
 
 message GetSkillMetricsResponse {
+  reserved 2, 3, 4;
+  reserved "positive_feedback_count", "negative_feedback_count", "pending_agent_drafts";
   repeated SkillMetric metrics = 1;
-  // Org-wide agent-message feedback tallies over the same window.
-  int32 positive_feedback_count = 2;
-  int32 negative_feedback_count = 3;
-  // Count of pending agent-proposed/evolved drafts awaiting review.
-  int32 pending_agent_drafts = 4;
+  string next_cursor = 5;
+  google.protobuf.Timestamp window_start = 6;
+  google.protobuf.Timestamp window_end = 7;
 }

@@ -57,7 +57,7 @@ function messageRev(m: ChatMessage): string {
     ? `${m.thread.replyCount}:${m.thread.lastReplyAt ?? ""}:${m.thread.hasUnread ? 1 : 0}`
     : "";
   const forwardRev = m.forwardContext ? 2 : m.isForwarded ? 1 : 0;
-  return `${m.id}|${m.updatedAt ?? ""}|${m.editedAt ?? ""}|${m.isDeleted ? 1 : 0}|${m.isPinned ? 1 : 0}|${contentLen}|${seq}|${stopped}|${reactionsHash}|${attachmentCount}|${threadRev}|${m.feedbackRating ?? ""}|${forwardRev}`;
+  return `${m.id}|${m.updatedAt ?? ""}|${m.editedAt ?? ""}|${m.isDeleted ? 1 : 0}|${m.isPinned ? 1 : 0}|${contentLen}|${seq}|${stopped}|${reactionsHash}|${attachmentCount}|${threadRev}|${forwardRev}`;
 }
 
 function messageItemPropsAreEqual(prev: MessageItemProps, next: MessageItemProps): boolean {

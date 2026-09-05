@@ -14,18 +14,12 @@ import {
   CaretDown,
   CaretUp,
   Lightning,
-  ThumbsUp,
-  ThumbsDown,
 } from "@phosphor-icons/react";
 import { StreamingMessage } from "@/features/chat/components/channel/StreamingMessage";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/shared/utils/cn";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
-import {
-  respondToAgentConfirmation,
-  stopAgentRun,
-  submitAgentReplyFeedback,
-} from "@/features/chat/store/chatThunks";
+import { respondToAgentConfirmation, stopAgentRun } from "@/features/chat/store/chatThunks";
 import {
   selectAgentThinkingForMessage,
   selectMessagesForChannel,
@@ -122,61 +116,6 @@ function FinalMessageWithThinking({
         />
       )}
       {showStreamingBody && <StreamingMessage content={message.content} streaming={streaming} />}
-      {!streaming && !!message.content && <ReplyFeedbackRow message={message} />}
-    </div>
-  );
-}
-
-/** Thumbs on a settled agent reply; clicking the active thumb clears the rating. */
-function ReplyFeedbackRow({ message }: { message: ChatMessage }) {
-  const dispatch = useAppDispatch();
-  const rating = message.feedbackRating ?? "";
-
-  const rate = (value: "up" | "down") => {
-    dispatch(
-      submitAgentReplyFeedback({
-        channelId: message.channelId,
-        messageId: message.id,
-        rating: rating === value ? "" : value,
-      }),
-    );
-  };
-
-  return (
-    <div
-      className={cn(
-        "mt-1 flex items-center gap-0.5 transition-opacity",
-        rating ? "opacity-100" : "md:opacity-0 md:group-hover:opacity-100",
-      )}
-      data-testid={`chat-agent-feedback-${message.id}`}
-      data-rating={rating || "none"}
-    >
-      <button
-        type="button"
-        onClick={() => rate("up")}
-        className={cn(
-          "p-1 rounded-md hover:bg-muted transition-colors",
-          rating === "up"
-            ? "text-green-600 dark:text-green-400"
-            : "text-muted-foreground hover:text-foreground",
-        )}
-        title="Good response"
-        data-testid={`chat-agent-feedback-up-${message.id}`}
-      >
-        <ThumbsUp size={14} weight={rating === "up" ? "fill" : "regular"} />
-      </button>
-      <button
-        type="button"
-        onClick={() => rate("down")}
-        className={cn(
-          "p-1 rounded-md hover:bg-muted transition-colors",
-          rating === "down" ? "text-red-500" : "text-muted-foreground hover:text-foreground",
-        )}
-        title="Bad response"
-        data-testid={`chat-agent-feedback-down-${message.id}`}
-      >
-        <ThumbsDown size={14} weight={rating === "down" ? "fill" : "regular"} />
-      </button>
     </div>
   );
 }

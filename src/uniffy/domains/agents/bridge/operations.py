@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+from contextlib import aclosing
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
 from uuid import UUID
@@ -189,16 +190,20 @@ class AgentChatBridge:
                 thread_root_id=thread_root_id,
                 trigger_rule=trigger_rule,
             )
-            async for event in runtime_ops.stream_send_message(
-                destination=destination,
-                user_id=user_id,
-                organization_id=organization_id,
-                content=trigger.content,
-                files=files,
-                invoked_skill_id=invoked_skill_id,
-                user_timezone=user_timezone,
-            ):
-                await publisher.publish(event)
+            async with aclosing(
+                runtime_ops.stream_send_message(
+                    destination=destination,
+                    user_id=user_id,
+                    organization_id=organization_id,
+                    content=trigger.content,
+                    files=files,
+                    invoked_skill_id=invoked_skill_id,
+                    run_id=run_id,
+                    user_timezone=user_timezone,
+                )
+            ) as events:
+                async for event in events:
+                    await publisher.publish(event)
 
         async def _cancel_watcher(task: asyncio.Task[None]) -> None:
             while not task.done():

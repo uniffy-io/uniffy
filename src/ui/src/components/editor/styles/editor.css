@@ -148,6 +148,16 @@
   padding: 0 !important;
 }
 
+/*
+ * Skill and rule editors sit in a card that grows with the document, so the
+ * wrapper never scrolls on its own. Letting it overflow keeps Crepe's slash
+ * menu and toolbar, which mount inside the editor root, from being clipped at
+ * the card edge; the page scroller is the only boundary they flip against.
+ */
+.crepe-editor-wrapper.instruction-editor {
+  overflow: visible !important;
+}
+
 /* Ensure milkdown container takes full width */
 .crepe-editor .milkdown {
   width: 100% !important;

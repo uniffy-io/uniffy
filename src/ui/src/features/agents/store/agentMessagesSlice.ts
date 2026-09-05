@@ -191,7 +191,6 @@ export const agentMessagesSlice = createSlice({
         editedAt: undefined,
         previousContent: undefined,
         wasCancelled: false,
-        feedbackRating: "",
         invokedSkillName: invokedSkillName || "",
         thinkingJson: "",
       });

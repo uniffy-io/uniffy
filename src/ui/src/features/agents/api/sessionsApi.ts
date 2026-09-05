@@ -7,7 +7,6 @@ import {
   ListMessagesRequestSchema,
   RetryMessageRequestSchema,
   SessionsService,
-  SubmitMessageFeedbackRequestSchema,
 } from "@uniffy/proto/agents/v1/sessions_pb";
 import type { MessageInitShape } from "@bufbuild/protobuf";
 
@@ -28,10 +27,5 @@ export const sessionsApi = {
   },
   retryMessage: async (request: MessageInitShape<typeof RetryMessageRequestSchema>) => {
     return client.retryMessage(request);
-  },
-  submitMessageFeedback: async (
-    request: MessageInitShape<typeof SubmitMessageFeedbackRequestSchema>,
-  ) => {
-    return client.submitMessageFeedback(request);
   },
 };

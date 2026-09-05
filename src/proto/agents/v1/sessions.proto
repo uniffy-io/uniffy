@@ -32,10 +32,6 @@ service SessionsService {
   // currently in flight on this session.
   rpc RetryMessage(RetryMessageRequest) returns (RetryMessageResponse) {}
 
-  // Record (or clear) the caller's thumbs up/down on an agent reply, by
-  // session message id or by chat message id. The signal feeds the
-  // skill-evolution analyzer; an empty rating clears it.
-  rpc SubmitMessageFeedback(SubmitMessageFeedbackRequest) returns (SubmitMessageFeedbackResponse) {}
 }
 
 // Kind of session
@@ -106,9 +102,8 @@ message MessageInfo {
   // True if this assistant turn was cancelled by the user before
   // completion. The UI renders it as a "cancelled" placeholder.
   bool was_cancelled = 19;
-  // The caller's own thumbs rating on this message ("up" | "down" | "").
-  // Only assistant messages carry feedback; empty when the caller hasn't rated.
-  string feedback_rating = 20;
+  reserved 20;
+  reserved "feedback_rating";
   // Display name of the skill the user ran via the slash menu for this turn.
   // Only user messages carry it; empty when no skill was invoked.
   string invoked_skill_name = 21;
@@ -176,28 +171,4 @@ message RetryMessageResponse {
   string content = 1;
   // File ids that were attached to the original user message.
   repeated string file_ids = 2;
-}
-
-// One user's thumbs rating on an agent message.
-message MessageFeedback {
-  string message_id = 1;
-  string rating = 2; // up | down
-  string comment = 3;
-  google.protobuf.Timestamp created_at = 4;
-}
-
-message SubmitMessageFeedbackRequest {
-  string organization_id = 1;
-  // Session-message target (agents_messages id). Exactly one of message_id
-  // and chat_message_id must be set.
-  string message_id = 2;
-  string rating = 3; // up | down, or "" to clear
-  optional string comment = 4;
-  // Chat target: an agent reply's chat_messages id.
-  string chat_message_id = 5;
-}
-
-message SubmitMessageFeedbackResponse {
-  // Unset when the rating was cleared.
-  optional MessageFeedback feedback = 1;
 }

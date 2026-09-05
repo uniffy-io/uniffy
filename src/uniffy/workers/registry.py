@@ -50,15 +50,6 @@ from uniffy.domains.agents.sessions.jobs.jobs import (
     COMPACT_SESSION_JOB_TIMEOUT_SECONDS,
     compact_session,
 )
-from uniffy.domains.agents.skills.jobs.contracts import (
-    ANALYZE_SESSION_FOR_SKILLS,
-    SKILL_JOB_REFS,
-    SKILL_SCHEDULED_JOB_REFS,
-)
-from uniffy.domains.agents.skills.jobs.jobs import (
-    SKILL_ANALYSIS_JOB_TIMEOUT_SECONDS,
-    analyze_session_for_skills,
-)
 from uniffy.domains.audit.jobs.contracts import (
     AUDIT_JOB_REFS,
     AUDIT_SCHEDULED_JOB_REFS,
@@ -286,11 +277,6 @@ EGRESS_JOB_REGISTRATIONS = (
         compact_session,
         timeout=COMPACT_SESSION_JOB_TIMEOUT_SECONDS,
     ),
-    _bind(
-        ANALYZE_SESSION_FOR_SKILLS,
-        analyze_session_for_skills,
-        timeout=SKILL_ANALYSIS_JOB_TIMEOUT_SECONDS,
-    ),
     _bind(EXECUTE_SINGLE_AGENT_CRON_TASK, execute_single_agent_cron_task),
     _bind(
         RUN_AGENT_SESSION,
@@ -408,7 +394,6 @@ _JOB_REFS = (
     *CRON_JOB_REFS,
     *RUNTIME_JOB_REFS,
     *SESSION_JOB_REFS,
-    *SKILL_JOB_REFS,
     *AUDIT_JOB_REFS,
     *CALENDAR_JOB_REFS,
     *CALLS_JOB_REFS,
@@ -431,7 +416,6 @@ _SCHEDULED_JOB_REFS = (
     *CRON_SCHEDULED_JOB_REFS,
     *RUNTIME_SCHEDULED_JOB_REFS,
     *SESSION_SCHEDULED_JOB_REFS,
-    *SKILL_SCHEDULED_JOB_REFS,
     *AUDIT_SCHEDULED_JOB_REFS,
     *CALENDAR_SCHEDULED_JOB_REFS,
     *CALLS_SCHEDULED_JOB_REFS,
