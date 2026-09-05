@@ -6,6 +6,7 @@ import {
   CaretDoubleRight,
   ClockCounterClockwise,
   Lightning,
+  ListChecks,
   Robot,
   Tray,
   type Icon,
@@ -121,6 +122,13 @@ export function AgentsModuleSidebar() {
           active={draftsActive}
           onClick={() => navigate("/agents/skills/drafts")}
           testId="agents-sidebar-nav-drafts"
+        />
+        <NavRow
+          icon={ListChecks}
+          label="Rules"
+          active={section === "rules"}
+          onClick={() => navigate("/agents/rules")}
+          testId="agents-sidebar-nav-rules"
         />
         <NavRow
           icon={ClockCounterClockwise}

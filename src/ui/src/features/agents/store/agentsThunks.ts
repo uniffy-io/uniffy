@@ -34,6 +34,7 @@ export const agentToPlain = (agent: AgentInfo) => ({
   themeColor: agent.themeColor,
   isDefault: agent.isDefault,
   enabledSkills: [...agent.enabledSkills],
+  enabledRules: [...agent.enabledRules],
   accessMode: agent.accessMode,
   baselineRole: agent.baselineRole,
   userRole: agent.userRole,
@@ -105,6 +106,7 @@ export const createAgent = createAsyncThunk<
     soulPrompt?: string;
     avatarEmoji?: string;
     enabledSkills?: string[];
+    enabledRules?: string[];
     accessMode?: number;
     baselineRole?: number;
     groupIds?: string[];
@@ -128,6 +130,7 @@ export const createAgent = createAsyncThunk<
       soulPrompt: params.soulPrompt,
       avatarEmoji: params.avatarEmoji,
       enabledSkills: params.enabledSkills ?? [],
+      enabledRules: params.enabledRules ?? [],
       accessMode: params.accessMode,
       baselineRole: params.baselineRole,
       groupIds: params.groupIds ?? [],
@@ -223,6 +226,7 @@ export const cloneAgent = createAsyncThunk<
       avatarEmoji: source.avatarEmoji,
       themeColor: source.themeColor,
       enabledSkills: source.enabledSkills,
+      enabledRules: source.enabledRules,
       accessMode: source.accessMode,
       baselineRole: source.baselineRole,
       imageModel: source.imageModel,

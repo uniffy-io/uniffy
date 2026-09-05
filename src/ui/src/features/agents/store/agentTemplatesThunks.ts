@@ -17,6 +17,7 @@ export const templateToPlain = (template: AgentTemplate) => ({
   soulPrompt: template.soulPrompt,
   enabledTools: [...template.enabledTools],
   enabledSkillIds: [...template.enabledSkillIds],
+  enabledRuleIds: [...template.enabledRuleIds],
   recommendedModel: template.recommendedModel,
   recommendedImageModel: template.recommendedImageModel,
 });

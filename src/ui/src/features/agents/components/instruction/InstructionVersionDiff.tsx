@@ -1,17 +1,24 @@
 import { useMemo, useState } from "react";
 import { cn } from "@/shared/utils/cn";
-import { diffLineParts, diffWordParts, type DiffMode } from "@/features/agents/utils/skillDiff";
+import {
+  diffLineParts,
+  diffWordParts,
+  type DiffMode,
+} from "@/features/agents/utils/instructionDiff";
 
-interface SkillVersionDiffProps {
+interface InstructionVersionDiffProps {
   oldText: string;
   newText: string;
   oldLabel: string;
   newLabel: string;
 }
 
-// Themed diff between two skill version bodies. Line mode shows added/removed
-// blocks; word mode highlights inline edits within the text.
-export function SkillVersionDiff({ oldText, newText, oldLabel, newLabel }: SkillVersionDiffProps) {
+export function InstructionVersionDiff({
+  oldText,
+  newText,
+  oldLabel,
+  newLabel,
+}: InstructionVersionDiffProps) {
   const [mode, setMode] = useState<DiffMode>("line");
 
   const parts = useMemo(

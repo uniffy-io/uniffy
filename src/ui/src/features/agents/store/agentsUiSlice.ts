@@ -1,9 +1,15 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import type { RootState } from "@/app/store";
 
-export type AgentsSection = "agents" | "catalog" | "skills" | "automations";
+export type AgentsSection = "agents" | "catalog" | "skills" | "rules" | "automations";
 
-export const AGENTS_SECTIONS: AgentsSection[] = ["agents", "catalog", "skills", "automations"];
+export const AGENTS_SECTIONS: AgentsSection[] = [
+  "agents",
+  "catalog",
+  "skills",
+  "rules",
+  "automations",
+];
 
 export const AGENT_PANELS = ["overview", "instructions", "capabilities", "memory"] as const;
 export type AgentPanel = (typeof AGENT_PANELS)[number];

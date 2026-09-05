@@ -1,4 +1,4 @@
-import type { Icon } from "@phosphor-icons/react";
+import { CircleNotch, type Icon } from "@phosphor-icons/react";
 import { cn } from "@/shared/utils/cn";
 import { PaneHeader, PaneHeaderBar } from "@/components/ui/pane-header";
 import { SearchField } from "@/components/ui/search-field";
@@ -151,6 +151,35 @@ export function BrowseEmpty({
       <p className="text-sm font-semibold text-foreground">{title}</p>
       <p className="mt-1 max-w-md text-sm text-muted-foreground">{description}</p>
       {action && <div className="mt-5">{action}</div>}
+    </div>
+  );
+}
+
+export function BrowsePaneSpinner() {
+  return (
+    <div className="flex h-full items-center justify-center">
+      <CircleNotch size={32} className="animate-spin text-muted-foreground" />
+    </div>
+  );
+}
+
+/** Full-pane notice for a detail route whose item is missing or already handled. */
+export function BrowsePaneMessage({
+  icon: MessageIcon,
+  title,
+  description,
+}: {
+  icon: Icon;
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="flex h-full flex-1 items-center justify-center px-4">
+      <div className="flex flex-col items-center text-center max-w-md">
+        <MessageIcon size={48} weight="light" className="text-muted-foreground/30 mb-4" />
+        <h2 className="text-lg font-semibold text-foreground">{title}</h2>
+        <p className="text-sm text-muted-foreground mt-1">{description}</p>
+      </div>
     </div>
   );
 }

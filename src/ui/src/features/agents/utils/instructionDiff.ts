@@ -28,7 +28,6 @@ function withTrailingNewline(text: string): string {
   return text.endsWith("\n") ? text : `${text}\n`;
 }
 
-// Added/removed line counts for a compact "+N -M" summary in the timeline.
 export function diffStat(oldText: string, newText: string): DiffStat {
   let added = 0;
   let removed = 0;

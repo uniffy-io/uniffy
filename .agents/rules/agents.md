@@ -20,7 +20,7 @@ Agents are plain content rows under the generic permission model; the tiers diff
 | Tier | Surface | Contents |
 |---|---|---|
 | Chat | `/chat` | ALL conversation: 1:1 agent DMs, channel agents. Skill slash-invoke, feedback thumbs, proposed-skill draft cards, thinking/tool panes, context bar, per-DM model + params overrides. Average users never leave this tier. |
-| Builder | `/agents` | **Builder-gated**: org OWNER/ADMIN or AGENTS domain admin (`require_agents_builder`, `domains/agents/access.py`; UI `useAgentsBuilderAccess` + `AgentsBuilderRoute`, nav icon hidden for non-builders). The sidebar is a flat list of destinations (Agents, Catalog, Skills, Skill drafts, Automations) - it never lists a section's contents nor how many a section holds, so nothing is duplicated between it and the main panel. The one number it carries is the skill-drafts badge, which is an actionable review count, not an inventory. Every section browses like the catalog: a `BrowseHeader` with its own search plus a `BrowseGrid` of `BrowseCard`s (`components/browse/BrowseSurface.tsx` is the shared shell), and a detail opens in place with a back link. URL-first routes (`/agents/agents/:id/:panel`, `/agents/catalog`, `/agents/catalog/:templateKey`, `/agents/skills/:id`, `/agents/skills/drafts`, `/agents/automations/:id`). Agent detail has 4 route-driven panels: Overview (identity + collapsed Model settings), Instructions (soul prompt + AI Builder), Capabilities (tool groups + skills), Memory - which shows ORG scope only, in its two tiers (all agents / this agent), since personal entries belong to the member and are managed in Settings > AI. Skills edit in a full-height markdown surface. Testing happens in the AgentTestDrawer on the detail page, not in a chat surface. `ProviderKeyNotice` sits above every section while the org has no enabled+valid key, since nothing here can answer a message without one; it links org admins to `/admin/agents?tab=keys` and tells other builders to ask one. |
+| Builder | `/agents` | **Builder-gated**: org OWNER/ADMIN or AGENTS domain admin (`require_agents_builder`, `domains/agents/access.py`; UI `useAgentsBuilderAccess` + `AgentsBuilderRoute`, nav icon hidden for non-builders). The sidebar is a flat list of destinations (Agents, Catalog, Skills, Skill drafts, Rules, Automations) - it never lists a section's contents nor how many a section holds, so nothing is duplicated between it and the main panel. The one number it carries is the skill-drafts badge, which is an actionable review count, not an inventory. Every section browses like the catalog: a `BrowseHeader` with its own search plus a `BrowseGrid` of `BrowseCard`s (`components/browse/BrowseSurface.tsx` is the shared shell), and a detail opens in place with a back link. URL-first routes (`/agents/agents/:id/:panel`, `/agents/catalog`, `/agents/catalog/:templateKey`, `/agents/skills/:id`, `/agents/skills/drafts`, `/agents/rules/:id`, `/agents/automations/:id`). Agent detail has 4 route-driven panels: Overview (identity + collapsed Model settings), Instructions (soul prompt + AI Builder), Capabilities (rules, tool groups, skills), Memory - which shows ORG scope only, in its two tiers (all agents / this agent), since personal entries belong to the member and are managed in Settings > AI. Skills and rules edit in a full-height markdown surface with the same header chrome, inline title edit, and version history (`components/instruction/`); rules are selected strictly per agent from its Capabilities panel. The rules library has no global enablement toggle or inherited selections. Testing happens in the AgentTestDrawer on the detail page, not in a chat surface. `ProviderKeyNotice` sits above every section while the org has no enabled+valid key, since nothing here can answer a message without one; it links org admins to `/admin/agents?tab=keys` and tells other builders to ask one. |
 | Admin | `/admin/agents` | Tab lives in the URL (`?tab=keys`), so other surfaces deep-link into it. Org keys (the ONLY key-management surface), org usage, budgets, rate limits, currencies, skills metrics, Runtime tab (org default model, memory-bridge gate, image resolution/quality ceilings, failover/resume/deadline/circuit knobs). Members' Settings > AI holds their own usage view, the personal memory-bridge consent toggle, and their one PERSONAL memory store, shared by every agent they talk to. |
 
 There is no personal tier: agents, skills, automations, and provider keys are org-level resources managed by builders (keys: org admins only). Builder management is a domain-level power, not content access - agent/cron mutations gate on `require_agents_builder`, and a `ContentMembersOperations` manage override lets builders run the sharing dialog on agents they don't own (see `permissions.md`). Provider keys are not shareable content at all: they have no access policy, and any org member can use any enabled key. Chat USAGE is unchanged: any member can use an agent whose access policy allows it (`OPEN_TO_ORG` default), and model pickers keep member-readable `ListKeys`/`GetAvailableModels`.
@@ -219,6 +219,40 @@ One flat `StreamEvent` dataclass + `EventType` StrEnum (`providers/base.py`) tra
 - Channel-scoped (chat) agent compaction is a separate path (`bridge/context.py`); the runtime writer is a no-op for chat destinations.
 
 ## Skills and memories
+
+### Rules and invocation-only skill contract
+
+The product distinguishes five concepts: product system instructions are shipped runtime behavior;
+Rules are guidance applied on every run of an agent that selected them; Skills are explicitly invoked workflows;
+Tools are permission-gated capabilities; Memory is contextual data with no instruction authority.
+
+Rules have bundled and organization-authored definitions, with builder-selected enablement stored
+separately. Bundled rules follow the same shipped markdown, fixed-ID sync, and retirement conventions
+as bundled skills. Catalog YAML frontmatter may link them with a `rules:` list, prefilling an agent's
+enabled rules on creation. Syncing definitions never enables them, and catalog updates never rewrite
+existing agent selections. Append enabled rule bodies to the system prompt on every run, deduplicated
+within that agent's selection, without model routing or tool/surface activation filters.
+`Agent.enabled_rules` is the only activation source. Selection RPCs require an agent ID; no
+organization-wide selection or inheritance exists. Bundled/organization describes definition
+ownership, never activation scope. An empty selection injects no rules and skips rule reads.
+Existing skills are never automatically converted into rules. Schema/runtime changes use a direct
+pre-production cutover without compatibility columns, dual writes, or fallback readers.
+
+Selected rules are cumulative and render in stable order. The complete instruction order is
+product system instructions > selected agent rules > invoked skill > user request. This order never grants workspace access: tools still execute as the human actor.
+
+`enabled_skills` means available for explicit invocation. One human-initiated turn selects at most
+one assigned skill and resolves its exact immutable active version. Requirements are checked against
+the final executable tools and supported surface; invalid invocations must fail visibly. Command
+remainder text stays in the user message and never substitutes into system-role skill content.
+
+Ambient `always_active` skills, the model-facing skill index and `skills.view_skill`, passive
+conversation analysis, and feedback-triggered draft generation are transitional behavior pending
+removal. The runtime descriptions below document that existing behavior until cutover. New behavior
+must use Rules for ambient guidance and explicit actions for skill invocation and draft generation.
+Feedback alone must not trigger generation in the invocation-only contract. Generated improvements
+remain drafts until a builder saves them; behavioral evaluations use fixture-only tools and never
+activate a version.
 
 - Skills are markdown snippets in `agents_skills`, injected into the system prompt. Sources: `bundled` (read-only, shipped) and `organization` (builders manage).
 - **Bundled skills are a projection of `uniffy/data/skills/*.md`, not seed data** - `domains/agents/skills/bundled.py::sync_bundled_skills()` follows the project-into-rows contract in `backend.md` (every boot, own lock, before `bootstrap_deployment`, fixed ids in the files, retire never delete). Agent-specific consequences: bundled rows are global (`organization_id IS NULL`), so a new org needs NO per-org seeding and `list_skills` / `get_skills_for_agent` reach them through `organization_id == org OR organization_id IS NULL`. A retired skill leaves `get_skills_for_agent` alone, so an agent that already enabled it keeps working. `SkillOperations.resolve_bundled_skill_id_map` is the name-to-id hop the template catalog and org bootstrap share. Enabled per agent via `enabled_skills` + `always_active`. Skill drafts are an org-wide builder review inbox: anyone's thumbs-down or an agent's `skills.propose_skill` raises a draft (`propose_skill_draft` is deliberately ungated), but list/save/discard are builder-only and drafts always publish as organization skills; the draft row's `owner_id` is provenance only. Because that write is ungated it carries its own bounds - field caps, `has_hard_injection`, and `MAX_PENDING_DRAFTS_PER_USER` - so a member cannot flood the inbox or park injection markers in front of a reviewer. Any new ungated write here needs the same treatment.

@@ -13,7 +13,7 @@ import {
   type SerializedSkillVersion,
 } from "@/features/agents/store/agentSkillVersionsThunks";
 import type { SerializedSkill } from "@/features/agents/store/agentSkillsThunks";
-import { diffStat, diffLineParts } from "@/features/agents/utils/skillDiff";
+import { diffStat, diffLineParts } from "@/features/agents/utils/instructionDiff";
 
 const SKILL = "skill-1";
 

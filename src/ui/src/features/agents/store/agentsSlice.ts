@@ -1,6 +1,7 @@
 import { createSlice } from "@reduxjs/toolkit";
 import type { RootState } from "@/app/store";
 import type { SerializedAgent } from "@/features/agents/store/agentsThunks";
+import { setEnabledRules } from "@/features/agents/store/agentRulesThunks";
 import {
   fetchAgents,
   fetchDeletedAgents,
@@ -34,6 +35,10 @@ export const agentsSlice = createSlice({
   reducers: {},
   extraReducers: (builder) => {
     builder
+      .addCase(setEnabledRules.fulfilled, (state, { payload }) => {
+        const agent = state.agents[payload.target];
+        if (agent) agent.enabledRules = payload.ruleIds;
+      })
       .addCase(fetchAgents.pending, (state) => {
         state.loading = true;
         state.error = null;

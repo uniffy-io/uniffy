@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Group, Panel } from "react-resizable-panels";
 import { PaneSeparator } from "@/components/ui/pane-separator";
 import { useNavigate, useParams } from "react-router-dom";
-import { Books, ClockCounterClockwise, Robot, Lightning } from "@phosphor-icons/react";
+import { Books, ClockCounterClockwise, Robot, Lightning, ListChecks } from "@phosphor-icons/react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
 import { clearPanelLayout, loadPanelLayout, savePanelLayout } from "@/shared/utils/panelStorage";
@@ -37,6 +37,7 @@ import { AgentsModuleSidebar } from "@/features/agents/components/layout/AgentsM
 import { AgentsView } from "@/features/agents/components/views/AgentsView";
 import { CatalogView } from "@/features/agents/components/views/CatalogView";
 import { SkillsView } from "@/features/agents/components/views/SkillsView";
+import { RulesView } from "@/features/agents/components/views/RulesView";
 import { AutomationsView } from "@/features/agents/components/views/AutomationsView";
 import { CreateAgentModal } from "@/features/agents/components/CreateAgentModal";
 import { CreateTaskModal } from "@/features/agents/components/CreateTaskModal";
@@ -137,6 +138,13 @@ export function AgentsLayout() {
       onClick: () => navigate("/agents/skills"),
     },
     {
+      id: "rules",
+      icon: ListChecks,
+      label: "Rules",
+      isActive: section === "rules",
+      onClick: () => navigate("/agents/rules"),
+    },
+    {
       id: "automations",
       icon: ClockCounterClockwise,
       label: "Automations",
@@ -204,6 +212,8 @@ export function AgentsLayout() {
                 <CatalogView onUseTemplate={handleNewAgent} />
               ) : section === "skills" ? (
                 <SkillsView onNewSkill={handleNewSkill} creatingSkill={creatingSkill} />
+              ) : section === "rules" ? (
+                <RulesView />
               ) : section === "automations" ? (
                 <AutomationsView onNewAutomation={handleNewAutomation} />
               ) : (

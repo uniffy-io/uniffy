@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { CircleNotch, Lightning, Plus, Tray } from "@phosphor-icons/react";
+import { Lightning, Plus, Tray } from "@phosphor-icons/react";
 import { SkillSource } from "@uniffy/proto/agents/v1/skills_pb";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +12,8 @@ import {
   BrowseGrid,
   BrowseGroupLabel,
   BrowseHeader,
+  BrowsePaneMessage,
+  BrowsePaneSpinner,
 } from "@/features/agents/components/browse/BrowseSurface";
 import {
   selectAllSkills,
@@ -167,34 +169,15 @@ function SkillsBrowse({
   );
 }
 
-function PaneSpinner() {
-  return (
-    <div className="flex h-full items-center justify-center">
-      <CircleNotch size={32} className="animate-spin text-muted-foreground" />
-    </div>
-  );
-}
-
-function PaneMessage({ title, description }: { title: string; description: string }) {
-  return (
-    <div className="flex h-full flex-1 items-center justify-center px-4">
-      <div className="flex flex-col items-center text-center max-w-md">
-        <Lightning size={48} weight="light" className="text-muted-foreground/30 mb-4" />
-        <h2 className="text-lg font-semibold text-foreground">{title}</h2>
-        <p className="text-sm text-muted-foreground mt-1">{description}</p>
-      </div>
-    </div>
-  );
-}
-
 function SkillPane({ skillId }: { skillId: string }) {
   const skill = useAppSelector(selectSkillById(skillId));
   const loading = useAppSelector(selectSkillsLoading);
 
   if (skill) return <SkillDetail skill={skill} />;
-  if (loading) return <PaneSpinner />;
+  if (loading) return <BrowsePaneSpinner />;
   return (
-    <PaneMessage
+    <BrowsePaneMessage
+      icon={Lightning}
       title="Skill not found"
       description="This skill no longer exists or you do not have access to it."
     />
@@ -222,7 +205,8 @@ function DraftPane({ draftId }: { draftId: string }) {
   if (draft?.status === "pending") return <SkillDetail draft={draft} />;
   if (draft) {
     return (
-      <PaneMessage
+      <BrowsePaneMessage
+        icon={Lightning}
         title="Draft already handled"
         description={
           draft.status === "saved"
@@ -234,11 +218,12 @@ function DraftPane({ draftId }: { draftId: string }) {
   }
   if (fetchFailed) {
     return (
-      <PaneMessage
+      <BrowsePaneMessage
+        icon={Lightning}
         title="Draft not found"
         description="This draft no longer exists. It may have been saved or discarded."
       />
     );
   }
-  return <PaneSpinner />;
+  return <BrowsePaneSpinner />;
 }

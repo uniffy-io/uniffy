@@ -1,14 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  ArrowCounterClockwise,
   ArrowLeft,
   CaretDown,
   CaretRight,
-  CircleNotch,
   ClockCounterClockwise,
   Lightning,
-  PushPin,
   Sparkle,
   Trash,
 } from "@phosphor-icons/react";
@@ -17,14 +14,11 @@ import { SkillSource } from "@uniffy/proto/agents/v1/skills_pb";
 import { CrepeEditor } from "@/components/editor/CrepeEditor";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { PaneBackLink, PaneHeader, PaneHeaderBar } from "@/components/ui/pane-header";
-import { Select } from "@/components/ui/select";
 import { ToggleSwitch } from "@/components/ui/toggle-switch";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { cn } from "@/shared/utils/cn";
-import { formatProtoDateTime } from "@/shared/utils/dateFormatting";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { useAgentsBuilderAccess } from "@/features/agents/hooks/useAgentsBuilderAccess";
 import {
@@ -45,30 +39,17 @@ import {
   revertSkill,
   setMainSkillVersion,
 } from "@/features/agents/store/agentSkillVersionsThunks";
-import { diffStat } from "@/features/agents/utils/skillDiff";
 import { parseSkillNameConflict } from "@/features/agents/utils/skillDraftErrors";
 import { deriveSkillSlug } from "@/features/agents/utils/skillSlug";
 import { SKILL_EDITOR_PLACEHOLDER } from "@/features/agents/config/skillEditor";
-import { SkillVersionDiff } from "@/features/agents/components/skills/SkillVersionDiff";
-
-const headerButtonClass = cn(
-  "group/btn relative flex items-center justify-center h-7 w-7 rounded-md",
-  "border border-border-strong bg-transparent text-muted-foreground",
-  "transition-all duration-300 ease-out",
-  "hover:border-border-strong hover:bg-muted hover:text-primary",
-);
-
-const headerChipClass = cn(
-  "group/btn flex items-center gap-1 h-7 px-1.5 rounded-md",
-  "border border-border-strong bg-transparent text-xs text-muted-foreground",
-  "transition-all duration-300 ease-out",
-  "hover:border-border-strong hover:bg-muted hover:text-primary",
-);
-
-const headerChipActiveClass =
-  "text-primary bg-primary/10 border-primary/50 hover:border-primary/50 hover:bg-primary/10";
-
-const sectionLabelClass = "text-xs font-medium uppercase tracking-wider text-muted-foreground";
+import { InlineTextEdit } from "@/features/agents/components/instruction/InlineTextEdit";
+import { InstructionVersionHistory } from "@/features/agents/components/instruction/InstructionVersionHistory";
+import {
+  headerButtonClass,
+  headerChipActiveClass,
+  headerChipClass,
+  sectionLabelClass,
+} from "@/features/agents/components/instruction/detailChrome";
 
 function sourceLabel(source: number): string {
   switch (source) {
@@ -79,91 +60,6 @@ function sourceLabel(source: number): string {
     default:
       return "Unknown";
   }
-}
-
-interface InlineTextEditProps {
-  value: string;
-  onSave: (next: string) => void;
-  canEdit: boolean;
-  allowEmpty?: boolean;
-  placeholder?: string;
-  className?: string;
-  testId?: string;
-  startEditing?: boolean;
-}
-
-function InlineTextEdit({
-  value,
-  onSave,
-  canEdit,
-  allowEmpty = false,
-  placeholder,
-  className,
-  testId,
-  startEditing = false,
-}: InlineTextEditProps) {
-  const [editing, setEditing] = useState(startEditing);
-  const [text, setText] = useState(value);
-
-  if (editing) {
-    const commit = () => {
-      setEditing(false);
-      const next = text.trim();
-      if (!next && !allowEmpty) return;
-      if (next !== value) onSave(next);
-    };
-    return (
-      <input
-        autoFocus
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        onBlur={commit}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") e.currentTarget.blur();
-          if (e.key === "Escape") {
-            setText(value);
-            setEditing(false);
-          }
-        }}
-        placeholder={placeholder}
-        data-testid={testId}
-        className={cn(
-          "w-full bg-transparent border-b border-primary/50 focus:outline-none",
-          className,
-        )}
-      />
-    );
-  }
-
-  if (!canEdit) {
-    return (
-      <span
-        className={cn("block", className, !value && "text-subtle-foreground italic")}
-        data-testid={testId}
-      >
-        {value || placeholder}
-      </span>
-    );
-  }
-
-  return (
-    <button
-      type="button"
-      onClick={() => {
-        setText(value);
-        setEditing(true);
-      }}
-      title="Click to edit"
-      data-testid={testId}
-      className={cn(
-        "block w-full text-left rounded px-1 -mx-1 cursor-text hover:bg-muted/60 transition-colors",
-        className,
-        !value && "text-subtle-foreground italic",
-      )}
-    >
-      {value || placeholder}
-    </button>
-  );
 }
 
 function VersionHistorySection({
@@ -177,204 +73,37 @@ function VersionHistorySection({
 }) {
   const dispatch = useAppDispatch();
   const entry = useAppSelector(selectSkillVersionsEntry(skill.id));
-  const [busy, setBusy] = useState<number | "follow" | null>(null);
-  // Null until the user picks a pair of their own; "main vs latest" applies until then.
-  const [compareOverride, setCompareOverride] = useState<{ base: number; target: number } | null>(
-    null,
-  );
 
   useEffect(() => {
     dispatch(fetchSkillVersions(skill.id));
   }, [dispatch, skill.id]);
 
   const versions = useMemo(() => entry?.versions ?? [], [entry?.versions]);
-  const activeNumber = entry?.activeVersionNumber ?? 0;
-  const pinned = entry?.activeVersionPinned ?? false;
-
-  const compare = useMemo(() => {
-    if (compareOverride) return compareOverride;
-    if (versions.length < 2 || !entry) return null;
-    const latest = entry.latestVersionNumber;
-    const base =
-      entry.activeVersionNumber && entry.activeVersionNumber !== latest
-        ? entry.activeVersionNumber
-        : versions[1].versionNumber;
-    return { base, target: latest };
-  }, [compareOverride, entry, versions]);
-
-  const byNumber = useMemo(() => {
-    const map = new Map<number, (typeof versions)[number]>();
-    for (const v of versions) map.set(v.versionNumber, v);
-    return map;
-  }, [versions]);
-
-  const handleFollowLatest = async () => {
-    setBusy("follow");
-    try {
-      await dispatch(setMainSkillVersion({ skillId: skill.id, followLatest: true })).unwrap();
-      onContentReplaced();
-    } finally {
-      setBusy(null);
-    }
-  };
-
-  const handleSetMain = async (versionNumber: number) => {
-    setBusy(versionNumber);
-    try {
-      await dispatch(
-        setMainSkillVersion({ skillId: skill.id, versionNumber, followLatest: false }),
-      ).unwrap();
-      onContentReplaced();
-    } finally {
-      setBusy(null);
-    }
-  };
-
-  const handleRevert = async (versionNumber: number) => {
-    setBusy(versionNumber);
-    try {
-      await dispatch(revertSkill({ skillId: skill.id, versionNumber })).unwrap();
-      onContentReplaced();
-    } finally {
-      setBusy(null);
-    }
-  };
-
-  const baseVersion = compare ? byNumber.get(compare.base) : undefined;
-  const targetVersion = compare ? byNumber.get(compare.target) : undefined;
 
   return (
-    <div className="space-y-3" data-testid="skill-detail-version-history">
-      <p className={sectionLabelClass}>Version history</p>
-      <p className="text-xs text-muted-foreground">
-        {pinned ? `Pinned to version ${activeNumber}` : "Following the latest edit automatically"}
-      </p>
-
-      {canEdit && pinned && (
-        <Checkbox
-          label="Use the latest version automatically"
-          checked={false}
-          disabled={busy !== null}
-          onChange={handleFollowLatest}
-        />
-      )}
-
-      {compare && baseVersion && targetVersion && (
-        <div className="space-y-2">
-          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-            <span>Compare</span>
-            <Select
-              value={compare.base}
-              onChange={(value) => setCompareOverride({ ...compare, base: value })}
-              size="sm"
-              triggerClassName="min-w-0 w-20"
-              options={versions.map((v) => ({
-                value: v.versionNumber,
-                label: `v${v.versionNumber}`,
-              }))}
-            />
-            <span>with</span>
-            <Select
-              value={compare.target}
-              onChange={(value) => setCompareOverride({ ...compare, target: value })}
-              size="sm"
-              triggerClassName="min-w-0 w-20"
-              options={versions.map((v) => ({
-                value: v.versionNumber,
-                label: `v${v.versionNumber}`,
-              }))}
-            />
-          </div>
-          <div className="max-h-64 overflow-hidden flex flex-col">
-            <SkillVersionDiff
-              oldText={baseVersion.content}
-              newText={targetVersion.content}
-              oldLabel={`v${baseVersion.versionNumber}`}
-              newLabel={`v${targetVersion.versionNumber}`}
-            />
-          </div>
-        </div>
-      )}
-
-      {entry?.loading && versions.length === 0 && (
-        <div className="flex items-center justify-center py-6">
-          <CircleNotch size={20} className="animate-spin text-muted-foreground" />
-        </div>
-      )}
-      {!entry?.loading && versions.length === 0 && (
-        <p className="text-sm text-muted-foreground py-2">No version history yet.</p>
-      )}
-
-      <div className="space-y-2">
-        {versions.map((version, i) => {
-          const prev = versions[i + 1];
-          const stat = prev ? diffStat(prev.content, version.content) : null;
-          const isMain = version.versionNumber === activeNumber;
-          const rowBusy = busy === version.versionNumber;
-          return (
-            <div
-              key={version.id}
-              className={cn(
-                "rounded-xl px-3 py-2.5",
-                isMain ? "bg-primary/5 shadow-edge-primary" : "bg-card shadow-edge",
-              )}
-            >
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-foreground">
-                  v{version.versionNumber}
-                </span>
-                {isMain && (
-                  <span className="inline-flex items-center gap-1 text-xs bg-primary/10 text-primary rounded px-1.5 py-0.5">
-                    {pinned && <PushPin size={11} weight="fill" />}
-                    Main
-                  </span>
-                )}
-                <span className="text-xs text-muted-foreground">
-                  {version.authorKind === "agent" ? "Agent" : "User"}
-                </span>
-                {stat && (stat.added > 0 || stat.removed > 0) && (
-                  <span className="text-xs font-mono">
-                    <span className="text-green-600 dark:text-green-400">+{stat.added}</span>{" "}
-                    <span className="text-red-500">-{stat.removed}</span>
-                  </span>
-                )}
-                <span className="ml-auto text-xs text-muted-foreground">
-                  {formatProtoDateTime(version.createdAt)}
-                </span>
-              </div>
-              {version.changeSummary && (
-                <p className="text-xs text-muted-foreground mt-1">{version.changeSummary}</p>
-              )}
-              {canEdit && (
-                <div className="flex items-center gap-3 mt-2">
-                  {!isMain && (
-                    <button
-                      type="button"
-                      onClick={() => handleSetMain(version.versionNumber)}
-                      disabled={busy !== null}
-                      className="text-xs text-primary hover:underline disabled:opacity-50"
-                    >
-                      {rowBusy ? "Working..." : "Set as main"}
-                    </button>
-                  )}
-                  {version.versionNumber !== entry?.latestVersionNumber && (
-                    <button
-                      type="button"
-                      onClick={() => handleRevert(version.versionNumber)}
-                      disabled={busy !== null}
-                      className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground disabled:opacity-50"
-                    >
-                      <ArrowCounterClockwise size={12} />
-                      Revert to this
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
-    </div>
+    <InstructionVersionHistory
+      versions={versions}
+      activeVersionNumber={entry?.activeVersionNumber ?? 0}
+      latestVersionNumber={entry?.latestVersionNumber ?? 0}
+      pinned={entry?.activeVersionPinned ?? false}
+      loading={entry?.loading ?? false}
+      canEdit={canEdit}
+      onFollowLatest={async () => {
+        await dispatch(setMainSkillVersion({ skillId: skill.id, followLatest: true })).unwrap();
+        onContentReplaced();
+      }}
+      onSetMain={async (versionNumber) => {
+        await dispatch(
+          setMainSkillVersion({ skillId: skill.id, versionNumber, followLatest: false }),
+        ).unwrap();
+        onContentReplaced();
+      }}
+      onRevert={async (versionNumber) => {
+        await dispatch(revertSkill({ skillId: skill.id, versionNumber })).unwrap();
+        onContentReplaced();
+      }}
+      testId="skill-detail-version-history"
+    />
   );
 }
 

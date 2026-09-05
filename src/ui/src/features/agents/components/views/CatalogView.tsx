@@ -1,7 +1,8 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Books, Cpu, Image, Lightning, Plus, Warning } from "@phosphor-icons/react";
-import { useAppSelector } from "@/app/hooks";
+import { useAppDispatch, useAppSelector } from "@/app/hooks";
+import { fetchRules } from "@/features/agents/store/agentRulesThunks";
 import { cn } from "@/shared/utils/cn";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -198,11 +199,13 @@ function TemplateCard({
 function TemplateDetail({
   template,
   skillLabels,
+  ruleLabels,
   onBack,
   onUse,
 }: {
   template: SerializedAgentTemplate;
   skillLabels: string[];
+  ruleLabels: string[];
   onBack: () => void;
   onUse: () => void;
 }) {
@@ -282,6 +285,20 @@ function TemplateDetail({
           </p>
         </section>
 
+        {ruleLabels.length > 0 && (
+          <section className="mt-8">
+            <h2 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              Rules enabled on creation
+            </h2>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {ruleLabels.map((label) => (
+                <Badge key={label} variant="secondary">
+                  {label}
+                </Badge>
+              ))}
+            </div>
+          </section>
+        )}
         {skillLabels.length > 0 && (
           <section className="mt-8">
             <h2 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
@@ -326,6 +343,11 @@ function TemplateDetail({
 }
 
 export function CatalogView({ onUseTemplate }: CatalogViewProps) {
+  const dispatch = useAppDispatch();
+  const rules = useAppSelector((state) => state.agentRules.rules);
+  useEffect(() => {
+    dispatch(fetchRules());
+  }, [dispatch]);
   const navigate = useNavigate();
   const { subId: templateKey } = useParams<{ subId?: string }>();
   const templates = useAppSelector(selectAgentTemplates);
@@ -358,6 +380,7 @@ export function CatalogView({ onUseTemplate }: CatalogViewProps) {
         <TemplateDetail
           template={selected}
           skillLabels={skillLabelsFor(selected)}
+          ruleLabels={selected.enabledRuleIds.map((id) => rules[id]?.displayName ?? "Rule")}
           onBack={() => navigate("/agents/catalog")}
           onUse={() => onUseTemplate(selected.key)}
         />
