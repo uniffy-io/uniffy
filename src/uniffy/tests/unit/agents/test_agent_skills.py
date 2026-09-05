@@ -1,7 +1,4 @@
-"""Unit tests for the agent skills domain: progressive disclosure, on-demand
-invocation, drafts and versioning, the evolution analyzer, message feedback, and
-write-time validation.
-"""
+"""Skill resolution, versioning, draft review, and feedback behavior."""
 
 from types import SimpleNamespace as NS
 from unittest.mock import AsyncMock, MagicMock
@@ -9,7 +6,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
-from uniffy.core.models.agents.skill import AgentSkill
+from uniffy.core.models.agents.skill import AgentSkill, AgentSkillSource
 from uniffy.core.models.agents.skill_version import AgentSkillVersion
 from uniffy.core.types import generate_id
 from uniffy.domains.agents.runtime.prompt import (
@@ -342,6 +339,85 @@ class TestActiveVersionOverlay:
 
 
 class TestGetSkillsForAgentOverlay:
+    async def test_enabled_and_always_active_union_deduplicates_skills(self) -> None:
+        from uniffy.domains.agents.skills.operations import SkillOperations
+
+        organization_id = generate_id()
+        assigned = AgentSkill(
+            source=AgentSkillSource.ORGANIZATION,
+            organization_id=organization_id,
+            name="assigned",
+            display_name="Assigned",
+            always_active=True,
+        )
+        ambient = AgentSkill(
+            source=AgentSkillSource.ORGANIZATION,
+            organization_id=organization_id,
+            name="ambient",
+            display_name="Ambient",
+            always_active=True,
+        )
+        enabled_result, always_result = MagicMock(), MagicMock()
+        enabled_result.scalars.return_value.all.return_value = [assigned]
+        always_result.scalars.return_value.all.return_value = [assigned, ambient]
+        ops = SkillOperations.__new__(SkillOperations)
+        ops._session = MagicMock()
+        ops._session.execute = AsyncMock(side_effect=[enabled_result, always_result])
+
+        resolved = await ops.get_skills_for_agent(
+            organization_id=organization_id,
+            enabled_skill_ids=[str(assigned.id)],
+        )
+
+        assert [skill.id for skill in resolved] == [assigned.id, ambient.id]
+
+    async def test_pinned_content_invocation_records_head_version(self, monkeypatch) -> None:
+        import uniffy.domains.agents.runtime.skills as skills_mod
+        from uniffy.domains.agents.skills.operations import SkillOperations
+
+        organization_id = generate_id()
+        head = AgentSkill(
+            source=AgentSkillSource.ORGANIZATION,
+            organization_id=organization_id,
+            name="report",
+            display_name="Report",
+            content="Latest body",
+            latest_version_number=3,
+            active_version_id=generate_id(),
+            active_version_pinned=True,
+        )
+        pinned = AgentSkillVersion(
+            id=head.active_version_id,
+            skill_id=head.id,
+            version_number=1,
+            name="report",
+            display_name="Report",
+            content="Pinned body",
+        )
+        result = MagicMock()
+        result.scalars.return_value.all.return_value = [pinned]
+        ops = SkillOperations.__new__(SkillOperations)
+        ops._session = MagicMock()
+        ops._session.execute = AsyncMock(return_value=result)
+        record = AsyncMock()
+        monkeypatch.setattr(skills_mod, "record_skill_event", record)
+
+        resolved = await ops._overlay_active_versions([head])
+        entry = await skills_mod.resolve_invoked_skill(
+            ops._session,
+            skills=resolved,
+            invoked_skill_id=head.id,
+            agent_id=generate_id(),
+            user_id=generate_id(),
+            organization_id=organization_id,
+            session_id=None,
+        )
+
+        assert entry is not None
+        assert entry.content == pinned.content
+        assert record.await_args.kwargs["skill_version"] == head.latest_version_number
+        assert record.await_args.kwargs["skill_version"] != pinned.version_number
+
     async def test_pinned_overlay_does_not_dirty_head_row(self) -> None:
         from uniffy.domains.agents.skills.operations import SkillOperations
 
@@ -521,7 +597,7 @@ class TestSnapshotVersion:
             active_version_pinned=False,
         )
         ops = _ops_with_max_version(2)
-        version = await ops._snapshot_version(skill, author_id=generate_id(), author_kind="user")
+        version = await ops.stage_skill_version(skill, author_id=generate_id(), author_kind="user")
 
         assert version.version_number == 3
         assert version.content == "V2 BODY"
@@ -544,7 +620,7 @@ class TestSnapshotVersion:
             active_version_pinned=True,
         )
         ops = _ops_with_max_version(5)
-        version = await ops._snapshot_version(skill, author_id=None, author_kind="agent")
+        version = await ops.stage_skill_version(skill, author_id=None, author_kind="agent")
 
         assert version.version_number == 6
         assert skill.latest_version_number == 6
@@ -736,14 +812,14 @@ class TestSaveSkillDraftEdit:
 
     async def test_always_active_only_edit_skips_version(self, monkeypatch) -> None:
         ops, skill, draft = self._setup(monkeypatch)
-        ops._snapshot_version = AsyncMock()
+        ops.stage_skill_version = AsyncMock()
         existing = NS(version_number=2)
         ops._load_active_version = AsyncMock(return_value=existing)
 
         _, version = await self._save(ops, skill, draft, content="BODY", always_active=True)
 
         # Toggling always_active touches the row but cuts no new version.
-        ops._snapshot_version.assert_not_awaited()
+        ops.stage_skill_version.assert_not_awaited()
         ops._load_active_version.assert_awaited_once()
         assert version is existing
         assert skill.always_active is True
@@ -752,12 +828,12 @@ class TestSaveSkillDraftEdit:
     async def test_content_change_creates_version(self, monkeypatch) -> None:
         ops, skill, draft = self._setup(monkeypatch)
         new_version = NS(version_number=3)
-        ops._snapshot_version = AsyncMock(return_value=new_version)
+        ops.stage_skill_version = AsyncMock(return_value=new_version)
         ops._load_active_version = AsyncMock()
 
         _, version = await self._save(ops, skill, draft, content="NEW BODY", always_active=False)
 
-        ops._snapshot_version.assert_awaited_once()
+        ops.stage_skill_version.assert_awaited_once()
         ops._load_active_version.assert_not_awaited()
         assert version is new_version
 
@@ -787,7 +863,7 @@ class TestSaveCreateDraftNameCollision:
         ops._find_skill_by_name = AsyncMock(return_value=collision)
         ops._require_unique_name = AsyncMock()
         ops._load_skill_for_edit = AsyncMock(return_value=collision)
-        ops._snapshot_version = AsyncMock(return_value=NS(version_number=3))
+        ops.stage_skill_version = AsyncMock(return_value=NS(version_number=3))
         ops._load_active_version = AsyncMock(return_value=NS(version_number=2))
         ops._notify_chat_draft_resolved = AsyncMock()
         return ops, draft
@@ -842,7 +918,7 @@ class TestSaveCreateDraftNameCollision:
         assert draft.status == "pending"
         ops._session.add.assert_not_called()
         ops._session.commit.assert_not_awaited()
-        ops._snapshot_version.assert_not_awaited()
+        ops.stage_skill_version.assert_not_awaited()
 
     async def test_acknowledged_replacement_versions_the_existing_skill(self, monkeypatch) -> None:
         existing = self._existing()
@@ -1180,7 +1256,7 @@ class TestProposeSkillDraftSeeding:
         ops._get_draft = AsyncMock(return_value=draft)
         ops._load_skill_for_edit = AsyncMock(return_value=skill)
         ops._notify_chat_draft_resolved = AsyncMock()
-        ops._snapshot_version = AsyncMock(return_value=NS(version_number=3))
+        ops.stage_skill_version = AsyncMock(return_value=NS(version_number=3))
         ops._load_active_version = AsyncMock(return_value=NS(version_number=2))
 
         await ops.save_skill_draft(
@@ -1219,7 +1295,7 @@ class TestUpdateSkillValidation:
         monkeypatch.setattr(ops_mod, "check_admin_content", MagicMock())
         ops._org_ops = MagicMock()
         ops._org_ops.require_org_admin = AsyncMock()
-        ops._snapshot_version = AsyncMock()
+        ops.stage_skill_version = AsyncMock()
         load_result = MagicMock()
         load_result.scalar_one_or_none = MagicMock(return_value=skill)
         ops._session.execute = AsyncMock(return_value=load_result)
@@ -1259,7 +1335,7 @@ class TestUpdateSkillValidation:
             content="NEW BODY",
         )
         assert out.content == "NEW BODY"
-        ops._snapshot_version.assert_awaited_once()
+        ops.stage_skill_version.assert_awaited_once()
 
     async def test_updates_when_to_use(self, monkeypatch) -> None:
         skill = self._skill()
@@ -1271,7 +1347,7 @@ class TestUpdateSkillValidation:
             when_to_use="when the weekly report is due",
         )
         assert out.when_to_use == "when the weekly report is due"
-        ops._snapshot_version.assert_awaited_once()
+        ops.stage_skill_version.assert_awaited_once()
 
     async def test_rejects_slug_change(self, monkeypatch) -> None:
         skill = self._skill()
@@ -1431,7 +1507,7 @@ class TestRevertSkill:
         )
         ops._get_version = AsyncMock(return_value=target)
         new_version = NS(version_number=5)
-        ops._snapshot_version = AsyncMock(return_value=new_version)
+        ops.stage_skill_version = AsyncMock(return_value=new_version)
 
         out_skill, out_version = await ops.revert_skill(
             user_id=generate_id(),
@@ -1444,7 +1520,7 @@ class TestRevertSkill:
         assert out_skill.when_to_use == "oldtrig"
         assert out_skill.requires_tools == ["search.query"]
         assert out_version is new_version
-        ops._snapshot_version.assert_awaited_once()
+        ops.stage_skill_version.assert_awaited_once()
 
 
 class TestParseProposals:

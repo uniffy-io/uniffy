@@ -36,6 +36,7 @@ logger = logger.bind(component="agents.cache")
 
 _AGENT_TTL_SECONDS = 900
 _SKILLS_TTL_SECONDS = 900
+BUNDLED_SKILLS_TAG = "bundled_skills"
 
 
 def _agent_key(agent_id: UUID) -> str:
@@ -252,7 +253,7 @@ async def fetch_agent_skills(
         _agent_skills_key(agent_id),
         _load,
         ttl=_SKILLS_TTL_SECONDS,
-        tags=[_org_skills_tag(organization_id)],
+        tags=[_org_skills_tag(organization_id), BUNDLED_SKILLS_TAG],
     )
     if not payload:
         return []

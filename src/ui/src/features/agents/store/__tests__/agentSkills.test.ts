@@ -28,6 +28,15 @@ const skillProto = (over: Partial<SkillInfo> = {}): SkillInfo =>
   }) as unknown as SkillInfo;
 
 describe("skillToPlain", () => {
+  it("keeps the active version separate from the latest version when pinned", () => {
+    const plain = skillToPlain(
+      skillProto({ latestVersionNumber: 4, activeVersionNumber: 1, activeVersionPinned: true }),
+    );
+    expect(plain.latestVersionNumber).toBe(4);
+    expect(plain.activeVersionNumber).toBe(1);
+    expect(plain.activeVersionPinned).toBe(true);
+  });
+
   it("carries the fields needed to seed a manual edit draft", () => {
     const plain = skillToPlain(skillProto());
     expect(plain.content).toBe("BODY");

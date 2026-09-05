@@ -134,7 +134,7 @@ class SkillOperations:
         )
         self._session.add(skill)
         await self._session.flush()
-        await self._snapshot_version(skill, author_id=user_id, author_kind="user")
+        await self.stage_skill_version(skill, author_id=user_id, author_kind="user")
 
         await write_audit_event(
             self._session,
@@ -302,7 +302,7 @@ class SkillOperations:
         # A content/metadata edit lands as a new immutable version; an
         # always_active-only toggle touches the row but adds no version.
         if versioned_changes:
-            await self._snapshot_version(
+            await self.stage_skill_version(
                 skill,
                 author_id=user_id,
                 author_kind="user",
@@ -672,7 +672,7 @@ class SkillOperations:
             )
             self._session.add(skill)
             await self._session.flush()
-            version = await self._snapshot_version(
+            version = await self.stage_skill_version(
                 skill,
                 author_id=author_id,
                 author_kind=author_kind,
@@ -712,7 +712,7 @@ class SkillOperations:
             skill.always_active = bool(suggested_always_active)
             skill.updated_at = datetime.now(UTC)
             if versioned_changed:
-                version = await self._snapshot_version(
+                version = await self.stage_skill_version(
                     skill,
                     author_id=author_id,
                     author_kind=author_kind,
@@ -885,7 +885,7 @@ class SkillOperations:
         skill.requires_tools = list(target.requires_tools or [])
         skill.requires_context = list(target.requires_context or [])
         skill.updated_at = datetime.now(UTC)
-        version = await self._snapshot_version(
+        version = await self.stage_skill_version(
             skill,
             author_id=user_id,
             author_kind="user",
@@ -1257,7 +1257,7 @@ class SkillOperations:
         id_by_name = await self.resolve_bundled_skill_id_map(names)
         return [id_by_name[name] for name in names if name in id_by_name]
 
-    async def _snapshot_version(
+    async def stage_skill_version(
         self,
         skill: AgentSkill,
         *,
@@ -1265,13 +1265,7 @@ class SkillOperations:
         author_kind: AgentSkillVersionAuthor = AgentSkillVersionAuthor.USER,
         change_summary: str = "",
     ) -> AgentSkillVersion:
-        """Capture the skill's current fields as the next immutable version.
-
-        Bumps ``latest_version_number`` and, unless a version is pinned as the
-        main one, repoints ``active_version_id`` at the new snapshot - the main
-        version follows the latest edit until the user pins one. The skill must
-        already be flushed (``skill.id`` assigned).
-        """
+        """Stage an immutable snapshot while preserving a pinned active version."""
         result = await self._session.execute(
             select(func.max(AgentSkillVersion.version_number)).where(
                 AgentSkillVersion.skill_id == skill.id
