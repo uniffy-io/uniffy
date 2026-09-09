@@ -18,7 +18,12 @@ import { cn } from "@/shared/utils/cn";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { ChatMentionPopup } from "@/features/agents/components/chat/ChatMentionPopup";
 import { SkillSlashPopup } from "@/features/agents/components/chat/SkillSlashPopup";
-import { computeSlashToken, matchLeadingSkillCommand } from "@/features/agents/utils/slashCommands";
+import { computeSlashToken } from "@/features/agents/utils/slashCommands";
+import {
+  matchChatSkillCommand,
+  mentionedSkillAgents,
+  resolveChatSkillAgent,
+} from "@/features/chat/utils/skillCommands";
 import {
   fetchRunnableSkills,
   type SerializedRunnableSkill,
@@ -84,6 +89,7 @@ interface MessageComposeProps {
   channelName: string;
   /** Enables channel-aware toolbar extras (agent DM model picker). */
   channelId?: string;
+  threadRootId?: string;
   placeholder?: string;
   organizationId?: string;
   onSend?: (
@@ -243,6 +249,7 @@ function hydrateFromMarkdown(container: HTMLDivElement, markdown: string): void 
 export function MessageCompose({
   channelName,
   channelId,
+  threadRootId,
   placeholder,
   organizationId,
   onSend,
@@ -263,6 +270,31 @@ export function MessageCompose({
     channelId ? state.chatChannels.byId[channelId] : undefined,
   );
   const agentDmAgentId = channel?.isAgentDm ? channel.agentId : undefined;
+  const replyMessage = useAppSelector((state) => {
+    if (!replyTo) return undefined;
+    return (
+      state.chatMessages.byId[replyTo.id] ??
+      (threadRootId
+        ? state.chatThreads.threadMessages[threadRootId]?.find(
+            (message) => message.id === replyTo.id,
+          )
+        : undefined)
+    );
+  });
+  const threadRoot = useAppSelector((state) =>
+    threadRootId ? state.chatMessages.byId[threadRootId] : undefined,
+  );
+  const [mentionedAgentIds, setMentionedAgentIds] = useState<string[]>([]);
+  const skillAgentId = useMemo(
+    () =>
+      resolveChatSkillAgent(
+        mentionedAgentIds,
+        agentDmAgentId,
+        replyMessage?.senderType === "AGENT" ? replyMessage.senderId : undefined,
+        threadRoot?.senderType === "AGENT" ? threadRoot.senderId : undefined,
+      ),
+    [mentionedAgentIds, agentDmAgentId, replyMessage, threadRoot],
+  );
   const agentDmAgent = useAppSelector((state) =>
     agentDmAgentId ? (state.agents.agents[agentDmAgentId] ?? null) : null,
   );
@@ -331,15 +363,15 @@ export function MessageCompose({
     id: string;
     name: string;
   } | null>(null);
-  const runnableSkills = useAppSelector(selectRunnableSkillsForAgent(agentDmAgentId, "chat"));
+  const runnableSkills = useAppSelector(selectRunnableSkillsForAgent(skillAgentId, "chat"));
   const [isSending, setIsSending] = useState(false);
   const sendingRef = useRef(false);
 
   useEffect(() => {
-    if (agentDmAgentId && organizationId) {
-      dispatch(fetchRunnableSkills({ organizationId, agentId: agentDmAgentId, surface: "chat" }));
+    if (skillAgentId && organizationId) {
+      dispatch(fetchRunnableSkills({ organizationId, agentId: skillAgentId, surface: "chat" }));
     }
-  }, [agentDmAgentId, organizationId, dispatch]);
+  }, [skillAgentId, organizationId, dispatch]);
 
   const uploadFile = useCallback(
     async (file: File, pendingId: string) => {
@@ -476,6 +508,8 @@ export function MessageCompose({
     const hasText = text.trim().length > 0 || el.querySelectorAll(`[${MENTION_ATTR}]`).length > 0;
     setIsEmpty(!hasText && pendingFiles.length === 0);
     setCharCount(text.length);
+    const agentIds = mentionedSkillAgents(serializeToMarkdown(el));
+    setMentionedAgentIds((previous) => (previous.join() === agentIds.join() ? previous : agentIds));
   }, [pendingFiles.length]);
 
   // Edit mode is not a draft: autosave stays silent while editingMessage is set.
@@ -578,7 +612,7 @@ export function MessageCompose({
       }
     }
 
-    if (!agentDmAgentId) return;
+    if (!skillAgentId) return;
 
     const token = computeSlashToken(textBefore);
     if (!token) {
@@ -595,7 +629,7 @@ export function MessageCompose({
     emitDraftChange,
     mentionActive,
     onTyping,
-    agentDmAgentId,
+    skillAgentId,
     slashActive,
     closeSlash,
   ]);
@@ -756,7 +790,7 @@ export function MessageCompose({
     // system prompt, user text must not.
     const leadingCommand = pendingInvokedSkill
       ? null
-      : matchLeadingSkillCommand(trimmed, runnableSkills);
+      : matchChatSkillCommand(trimmed, runnableSkills);
     const invokedSkill = pendingInvokedSkill ?? leadingCommand?.skill ?? null;
     const body = leadingCommand ? leadingCommand.rest : trimmed;
 
@@ -1134,7 +1168,7 @@ export function MessageCompose({
         data-mode={editingMessage ? "edit" : replyTo ? "reply" : "normal"}
         data-variant={variant}
       >
-        {slashActive && !!agentDmAgentId && (
+        {slashActive && !!skillAgentId && (
           <SkillSlashPopup
             skills={runnableSkills}
             query={slashQuery}

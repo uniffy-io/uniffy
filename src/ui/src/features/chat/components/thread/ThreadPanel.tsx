@@ -284,6 +284,7 @@ export function ThreadPanel({ overlay = false }: ThreadPanelProps) {
             // Channel + org context feed the broadcast/team-mention guards and
             // attachment uploads.
             channelId={rootMessage?.channelId}
+            threadRootId={activeThreadId ?? undefined}
             organizationId={organizationId ?? undefined}
             placeholder="Reply..."
             onSend={handleSend}

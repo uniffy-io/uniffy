@@ -1,6 +1,7 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import type { ChatMessage, ThreadInboxItem } from "@/features/chat/types";
 import type { RootState } from "@/app/store";
+import { deleteMessage, updateMessage } from "@/features/chat/store/chatMessagesSlice";
 
 interface ChatThreadsState {
   activeThreadId: string | null;
@@ -171,6 +172,31 @@ export const chatThreadsSlice = createSlice({
       }
     },
     clearChatThreads: () => initialState,
+  },
+  extraReducers: (builder) => {
+    builder.addCase(updateMessage, (state, action) => {
+      const { channelId, message } = action.payload;
+      for (const messages of Object.values(state.threadMessages)) {
+        const existing = messages.find(
+          (row) => row.id === message.id && row.channelId === channelId,
+        );
+        if (!existing) continue;
+        for (const [key, value] of Object.entries(message)) {
+          if (value !== undefined) {
+            (existing as Record<string, unknown>)[key] = value;
+          }
+        }
+      }
+    });
+    builder.addCase(deleteMessage, (state, action) => {
+      const { channelId, messageId } = action.payload;
+      for (const messages of Object.values(state.threadMessages)) {
+        const existing = messages.find(
+          (row) => row.id === messageId && row.channelId === channelId,
+        );
+        if (existing) existing.isDeleted = true;
+      }
+    });
   },
 });
 

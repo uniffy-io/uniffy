@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Select } from "@/components/ui/select";
+import { randomUUID } from "@/shared/utils/uuid";
 import { EvaluationCaseDialog } from "@/features/agents/components/skills/EvaluationCaseDialog";
 import {
   SkillEvaluationComparison,
@@ -164,7 +165,7 @@ function EvaluationWorkspace({
       targets,
       cases: cases.map((item) => [item.id, item.updatedAt]),
     });
-    const ids = retryRequests.current.get(signature) ?? targets.map(() => crypto.randomUUID());
+    const ids = retryRequests.current.get(signature) ?? targets.map(() => randomUUID());
     retryRequests.current.set(signature, ids);
     setSubmitting(true);
     if (compare) setComparison({ agentId, ids: [ids[0], ids[1]] });

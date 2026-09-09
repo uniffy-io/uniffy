@@ -3,6 +3,7 @@ import { useAppDispatch } from "@/app/hooks";
 import { Button } from "@/components/ui/button";
 import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/ui/modal";
 import { Textarea } from "@/components/ui/textarea";
+import { randomUUID } from "@/shared/utils/uuid";
 import {
   generateSkillDraft,
   type GenerateDraftFields,
@@ -41,7 +42,7 @@ export function GenerateSkillDraftDialog({
     const fields = request ?? {
       ...evidence,
       rationale: rationale.trim(),
-      requestId: crypto.randomUUID(),
+      requestId: randomUUID(),
     };
     setRequest(fields);
     setSubmitting(true);
