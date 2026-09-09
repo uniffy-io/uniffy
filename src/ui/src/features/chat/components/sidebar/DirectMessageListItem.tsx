@@ -1,6 +1,7 @@
 import { memo, useState, useCallback, useMemo } from "react";
 import { SpeakerSlash, PencilSimple, Trash } from "@phosphor-icons/react";
 import { ChannelCallIndicator } from "@/features/calls/components/ChannelCallIndicator";
+import { useChannelPrefetch } from "@/features/chat/hooks/useChannelPrefetch";
 import { cn } from "@/shared/utils/cn";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { type ChatChannel } from "@/features/chat/types";
@@ -83,6 +84,7 @@ export const DirectMessageListItem = memo(function DirectMessageListItem({
   }, [channel.id, channel.name, isGroupDm, currentUserName, channel.memberCount]);
 
   const dispatch = useAppDispatch();
+  const prefetch = useChannelPrefetch(channel.id, isActive);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
 
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
@@ -121,6 +123,7 @@ export const DirectMessageListItem = memo(function DirectMessageListItem({
         data-unread={hasUnread ? "true" : "false"}
       >
         <button
+          {...prefetch}
           type="button"
           onClick={handleClick}
           onContextMenu={handleContextMenu}
