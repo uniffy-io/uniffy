@@ -33,6 +33,7 @@ function makeMessage(overrides: Partial<SerializedMessage>): SerializedMessage {
     previousContent: undefined,
     wasCancelled: false,
     invokedSkillName: "",
+    skillInvocation: {},
     thinkingJson: "",
     ...overrides,
   };

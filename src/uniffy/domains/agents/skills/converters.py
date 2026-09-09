@@ -110,11 +110,18 @@ def skill_draft_to_proto(draft: AgentSkillDraft) -> SkillDraft:
         requires_tools=list(draft.requires_tools or []),
         supported_surfaces=list(draft.supported_surfaces or []),
         status=draft.status or "pending",
+        generation_attempt=draft.generation_attempt,
+        generation_error=draft.generation_error or "",
+        target_version_number=draft.target_version_number or 0,
         created_at=datetime_to_timestamp(draft.created_at),
         updated_at=datetime_to_timestamp(draft.updated_at),
     )
     if draft.target_skill_id is not None:
         proto.target_skill_id = str(draft.target_skill_id)
+    if draft.invocation_id is not None:
+        proto.invocation_id = str(draft.invocation_id)
+    if draft.target_version_id is not None:
+        proto.target_version_id = str(draft.target_version_id)
     if draft.proposed_by_agent_id is not None:
         proto.proposed_by_agent_id = str(draft.proposed_by_agent_id)
     if draft.session_id is not None:

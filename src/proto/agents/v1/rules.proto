@@ -70,12 +70,16 @@ message CreateRuleRequest {
   string description = 4;
   string content = 5;
 }
-message CreateRuleResponse { RuleInfo rule = 1; }
+message CreateRuleResponse {
+  RuleInfo rule = 1;
+}
 message GetRuleRequest {
   string organization_id = 1;
   string rule_id = 2;
 }
-message GetRuleResponse { RuleInfo rule = 1; }
+message GetRuleResponse {
+  RuleInfo rule = 1;
+}
 message ListRulesRequest {
   string organization_id = 1;
   int32 page_size = 2;
@@ -94,17 +98,23 @@ message UpdateRuleRequest {
   string content = 5;
   string change_summary = 6;
 }
-message UpdateRuleResponse { RuleInfo rule = 1; }
+message UpdateRuleResponse {
+  RuleInfo rule = 1;
+}
 message RetireRuleRequest {
   string organization_id = 1;
   string rule_id = 2;
 }
-message RetireRuleResponse { RuleInfo rule = 1; }
+message RetireRuleResponse {
+  RuleInfo rule = 1;
+}
 message RestoreRuleRequest {
   string organization_id = 1;
   string rule_id = 2;
 }
-message RestoreRuleResponse { RuleInfo rule = 1; }
+message RestoreRuleResponse {
+  RuleInfo rule = 1;
+}
 message ListRuleVersionsRequest {
   string organization_id = 1;
   string rule_id = 2;
@@ -120,29 +130,39 @@ message GetRuleVersionRequest {
   string rule_id = 2;
   int32 version_number = 3;
 }
-message GetRuleVersionResponse { RuleVersion version = 1; }
+message GetRuleVersionResponse {
+  RuleVersion version = 1;
+}
 message SetMainRuleVersionRequest {
   string organization_id = 1;
   string rule_id = 2;
   int32 version_number = 3;
   bool follow_latest = 4;
 }
-message SetMainRuleVersionResponse { RuleInfo rule = 1; }
+message SetMainRuleVersionResponse {
+  RuleInfo rule = 1;
+}
 message RevertRuleRequest {
   string organization_id = 1;
   string rule_id = 2;
   int32 version_number = 3;
 }
-message RevertRuleResponse { RuleInfo rule = 1; }
+message RevertRuleResponse {
+  RuleInfo rule = 1;
+}
 message GetEnabledRulesRequest {
   string organization_id = 1;
   // Required: selections belong to one agent.
   string agent_id = 2;
 }
-message GetEnabledRulesResponse { repeated string rule_ids = 1; }
+message GetEnabledRulesResponse {
+  repeated string rule_ids = 1;
+}
 message SetEnabledRulesRequest {
   string organization_id = 1;
   string agent_id = 2;
   repeated string rule_ids = 3;
 }
-message SetEnabledRulesResponse { repeated string rule_ids = 1; }
+message SetEnabledRulesResponse {
+  repeated string rule_ids = 1;
+}

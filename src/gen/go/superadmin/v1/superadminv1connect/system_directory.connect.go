@@ -98,19 +98,19 @@ type SystemOrganizationsServiceClient interface {
 	// stay on the org admin surface.
 	UpdateOrganization(context.Context, *connect.Request[v1.UpdateOrganizationRequest]) (*connect.Response[v1.UpdateOrganizationResponse], error)
 	// Block sign-in for every member of the org and bump
-	// “token_version“ so existing JWTs reject immediately. Reversible
-	// via “UnsuspendOrganization“.
+	// ``token_version`` so existing JWTs reject immediately. Reversible
+	// via ``UnsuspendOrganization``.
 	SuspendOrganization(context.Context, *connect.Request[v1.SuspendOrganizationRequest]) (*connect.Response[v1.SuspendOrganizationResponse], error)
 	// Clear the suspension flag. Members can sign in again on next
 	// login (existing tokens are still dead from the original bump).
 	UnsuspendOrganization(context.Context, *connect.Request[v1.UnsuspendOrganizationRequest]) (*connect.Response[v1.UnsuspendOrganizationResponse], error)
-	// Soft-delete: stamps “deleted_at“ on the org and revokes every
+	// Soft-delete: stamps ``deleted_at`` on the org and revokes every
 	// member's tokens. The rows are retained, not destroyed: nothing
 	// erases tenant data today, so a deleted org stays restorable until
 	// an operator purges it out of band. The owner is emailed at delete
 	// time and again 24h after the 30-day mark passes.
 	DeleteOrganization(context.Context, *connect.Request[v1.DeleteOrganizationRequest]) (*connect.Response[v1.DeleteOrganizationResponse], error)
-	// Clear “deleted_at“ and bring the org back.
+	// Clear ``deleted_at`` and bring the org back.
 	RestoreOrganization(context.Context, *connect.Request[v1.RestoreOrganizationRequest]) (*connect.Response[v1.RestoreOrganizationResponse], error)
 }
 
@@ -246,19 +246,19 @@ type SystemOrganizationsServiceHandler interface {
 	// stay on the org admin surface.
 	UpdateOrganization(context.Context, *connect.Request[v1.UpdateOrganizationRequest]) (*connect.Response[v1.UpdateOrganizationResponse], error)
 	// Block sign-in for every member of the org and bump
-	// “token_version“ so existing JWTs reject immediately. Reversible
-	// via “UnsuspendOrganization“.
+	// ``token_version`` so existing JWTs reject immediately. Reversible
+	// via ``UnsuspendOrganization``.
 	SuspendOrganization(context.Context, *connect.Request[v1.SuspendOrganizationRequest]) (*connect.Response[v1.SuspendOrganizationResponse], error)
 	// Clear the suspension flag. Members can sign in again on next
 	// login (existing tokens are still dead from the original bump).
 	UnsuspendOrganization(context.Context, *connect.Request[v1.UnsuspendOrganizationRequest]) (*connect.Response[v1.UnsuspendOrganizationResponse], error)
-	// Soft-delete: stamps “deleted_at“ on the org and revokes every
+	// Soft-delete: stamps ``deleted_at`` on the org and revokes every
 	// member's tokens. The rows are retained, not destroyed: nothing
 	// erases tenant data today, so a deleted org stays restorable until
 	// an operator purges it out of band. The owner is emailed at delete
 	// time and again 24h after the 30-day mark passes.
 	DeleteOrganization(context.Context, *connect.Request[v1.DeleteOrganizationRequest]) (*connect.Response[v1.DeleteOrganizationResponse], error)
-	// Clear “deleted_at“ and bring the org back.
+	// Clear ``deleted_at`` and bring the org back.
 	RestoreOrganization(context.Context, *connect.Request[v1.RestoreOrganizationRequest]) (*connect.Response[v1.RestoreOrganizationResponse], error)
 }
 
@@ -390,10 +390,10 @@ type SystemUsersServiceClient interface {
 	// sign-in and kills existing tokens; identity fields (email,
 	// username, full name) are operator-owned rather than self-editable.
 	UpdateUser(context.Context, *connect.Request[v1.UpdateUserRequest]) (*connect.Response[v1.UpdateUserResponse], error)
-	// Bump “token_version“ to invalidate every JWT for one user.
+	// Bump ``token_version`` to invalidate every JWT for one user.
 	// Forces them to log in again on next request.
 	ForceLogoutUser(context.Context, *connect.Request[v1.ForceLogoutUserRequest]) (*connect.Response[v1.ForceLogoutUserResponse], error)
-	// Toggle “is_system_admin“ on one user. Granting promotes them to
+	// Toggle ``is_system_admin`` on one user. Granting promotes them to
 	// a platform operator; revoking demotes back to a regular user.
 	// Cannot revoke from yourself.
 	SetSystemAdmin(context.Context, *connect.Request[v1.SetSystemAdminRequest]) (*connect.Response[v1.SetSystemAdminResponse], error)
@@ -503,10 +503,10 @@ type SystemUsersServiceHandler interface {
 	// sign-in and kills existing tokens; identity fields (email,
 	// username, full name) are operator-owned rather than self-editable.
 	UpdateUser(context.Context, *connect.Request[v1.UpdateUserRequest]) (*connect.Response[v1.UpdateUserResponse], error)
-	// Bump “token_version“ to invalidate every JWT for one user.
+	// Bump ``token_version`` to invalidate every JWT for one user.
 	// Forces them to log in again on next request.
 	ForceLogoutUser(context.Context, *connect.Request[v1.ForceLogoutUserRequest]) (*connect.Response[v1.ForceLogoutUserResponse], error)
-	// Toggle “is_system_admin“ on one user. Granting promotes them to
+	// Toggle ``is_system_admin`` on one user. Granting promotes them to
 	// a platform operator; revoking demotes back to a regular user.
 	// Cannot revoke from yourself.
 	SetSystemAdmin(context.Context, *connect.Request[v1.SetSystemAdminRequest]) (*connect.Response[v1.SetSystemAdminResponse], error)

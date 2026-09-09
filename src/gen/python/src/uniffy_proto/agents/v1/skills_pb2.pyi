@@ -89,7 +89,7 @@ class SkillVersion(_message.Message):
     def __init__(self, id: _Optional[str] = ..., skill_id: _Optional[str] = ..., version_number: _Optional[int] = ..., name: _Optional[str] = ..., display_name: _Optional[str] = ..., description: _Optional[str] = ..., content: _Optional[str] = ..., requires_tools: _Optional[_Iterable[str]] = ..., author_id: _Optional[str] = ..., author_kind: _Optional[str] = ..., change_summary: _Optional[str] = ..., parent_version_id: _Optional[str] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., supported_surfaces: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class SkillDraft(_message.Message):
-    __slots__ = ("id", "organization_id", "owner_id", "target_skill_id", "kind", "proposed_by_agent_id", "session_id", "channel_id", "origin_chat_message_id", "evidence_message_ids", "rationale", "name", "display_name", "description", "content", "requires_tools", "status", "created_at", "updated_at", "supported_surfaces")
+    __slots__ = ("id", "organization_id", "owner_id", "target_skill_id", "kind", "proposed_by_agent_id", "session_id", "channel_id", "origin_chat_message_id", "evidence_message_ids", "rationale", "name", "display_name", "description", "content", "requires_tools", "status", "created_at", "updated_at", "supported_surfaces", "invocation_id", "target_version_id", "target_version_number", "generation_attempt", "generation_error")
     ID_FIELD_NUMBER: _ClassVar[int]
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     OWNER_ID_FIELD_NUMBER: _ClassVar[int]
@@ -110,6 +110,11 @@ class SkillDraft(_message.Message):
     CREATED_AT_FIELD_NUMBER: _ClassVar[int]
     UPDATED_AT_FIELD_NUMBER: _ClassVar[int]
     SUPPORTED_SURFACES_FIELD_NUMBER: _ClassVar[int]
+    INVOCATION_ID_FIELD_NUMBER: _ClassVar[int]
+    TARGET_VERSION_ID_FIELD_NUMBER: _ClassVar[int]
+    TARGET_VERSION_NUMBER_FIELD_NUMBER: _ClassVar[int]
+    GENERATION_ATTEMPT_FIELD_NUMBER: _ClassVar[int]
+    GENERATION_ERROR_FIELD_NUMBER: _ClassVar[int]
     id: str
     organization_id: str
     owner_id: str
@@ -130,7 +135,50 @@ class SkillDraft(_message.Message):
     created_at: _timestamp_pb2.Timestamp
     updated_at: _timestamp_pb2.Timestamp
     supported_surfaces: _containers.RepeatedScalarFieldContainer[str]
-    def __init__(self, id: _Optional[str] = ..., organization_id: _Optional[str] = ..., owner_id: _Optional[str] = ..., target_skill_id: _Optional[str] = ..., kind: _Optional[str] = ..., proposed_by_agent_id: _Optional[str] = ..., session_id: _Optional[str] = ..., channel_id: _Optional[str] = ..., origin_chat_message_id: _Optional[str] = ..., evidence_message_ids: _Optional[_Iterable[str]] = ..., rationale: _Optional[str] = ..., name: _Optional[str] = ..., display_name: _Optional[str] = ..., description: _Optional[str] = ..., content: _Optional[str] = ..., requires_tools: _Optional[_Iterable[str]] = ..., status: _Optional[str] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., supported_surfaces: _Optional[_Iterable[str]] = ...) -> None: ...
+    invocation_id: str
+    target_version_id: str
+    target_version_number: int
+    generation_attempt: int
+    generation_error: str
+    def __init__(self, id: _Optional[str] = ..., organization_id: _Optional[str] = ..., owner_id: _Optional[str] = ..., target_skill_id: _Optional[str] = ..., kind: _Optional[str] = ..., proposed_by_agent_id: _Optional[str] = ..., session_id: _Optional[str] = ..., channel_id: _Optional[str] = ..., origin_chat_message_id: _Optional[str] = ..., evidence_message_ids: _Optional[_Iterable[str]] = ..., rationale: _Optional[str] = ..., name: _Optional[str] = ..., display_name: _Optional[str] = ..., description: _Optional[str] = ..., content: _Optional[str] = ..., requires_tools: _Optional[_Iterable[str]] = ..., status: _Optional[str] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., supported_surfaces: _Optional[_Iterable[str]] = ..., invocation_id: _Optional[str] = ..., target_version_id: _Optional[str] = ..., target_version_number: _Optional[int] = ..., generation_attempt: _Optional[int] = ..., generation_error: _Optional[str] = ...) -> None: ...
+
+class GenerateSkillDraftRequest(_message.Message):
+    __slots__ = ("organization_id", "request_id", "agent_id", "session_id", "channel_id", "thread_root_id", "evidence_message_ids", "rationale", "invocation_id")
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    REQUEST_ID_FIELD_NUMBER: _ClassVar[int]
+    AGENT_ID_FIELD_NUMBER: _ClassVar[int]
+    SESSION_ID_FIELD_NUMBER: _ClassVar[int]
+    CHANNEL_ID_FIELD_NUMBER: _ClassVar[int]
+    THREAD_ROOT_ID_FIELD_NUMBER: _ClassVar[int]
+    EVIDENCE_MESSAGE_IDS_FIELD_NUMBER: _ClassVar[int]
+    RATIONALE_FIELD_NUMBER: _ClassVar[int]
+    INVOCATION_ID_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    request_id: str
+    agent_id: str
+    session_id: str
+    channel_id: str
+    thread_root_id: str
+    evidence_message_ids: _containers.RepeatedScalarFieldContainer[str]
+    rationale: str
+    invocation_id: str
+    def __init__(self, organization_id: _Optional[str] = ..., request_id: _Optional[str] = ..., agent_id: _Optional[str] = ..., session_id: _Optional[str] = ..., channel_id: _Optional[str] = ..., thread_root_id: _Optional[str] = ..., evidence_message_ids: _Optional[_Iterable[str]] = ..., rationale: _Optional[str] = ..., invocation_id: _Optional[str] = ...) -> None: ...
+
+class GenerateSkillDraftResponse(_message.Message):
+    __slots__ = ("draft",)
+    DRAFT_FIELD_NUMBER: _ClassVar[int]
+    draft: SkillDraft
+    def __init__(self, draft: _Optional[_Union[SkillDraft, _Mapping]] = ...) -> None: ...
+
+class RetrySkillDraftGenerationRequest(_message.Message):
+    __slots__ = ("organization_id", "draft_id", "expected_attempt")
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    DRAFT_ID_FIELD_NUMBER: _ClassVar[int]
+    EXPECTED_ATTEMPT_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    draft_id: str
+    expected_attempt: int
+    def __init__(self, organization_id: _Optional[str] = ..., draft_id: _Optional[str] = ..., expected_attempt: _Optional[int] = ...) -> None: ...
 
 class CreateSkillRequest(_message.Message):
     __slots__ = ("organization_id", "name", "display_name", "description", "content")

@@ -1,182 +1,196 @@
-import { describe, expect, it } from "vitest";
-import type { SkillDraft } from "@uniffy/proto/agents/v1/skills_pb";
+import { create } from "@bufbuild/protobuf";
+import { describe, expect, it, vi } from "vitest";
+import { SkillDraftSchema } from "@uniffy/proto/agents/v1/skills_pb";
 import {
   agentSkillDraftsReducer,
-  upsertProposedDraft,
-  selectInboxDrafts,
   selectInboxCount,
   selectSessionDrafts,
-  selectDraftById,
 } from "@/features/agents/store/agentSkillDraftsSlice";
 import {
   skillDraftToPlain,
-  fetchSkillDrafts,
   fetchSkillDraft,
-  saveSkillDraft,
+  generateSkillDraft,
+  retrySkillDraftGeneration,
   discardSkillDraft,
-  createSkillDraft,
   type SerializedSkillDraft,
 } from "@/features/agents/store/agentSkillDraftsThunks";
+import { logout, setCredentials } from "@/features/auth/store/authSlice";
+import { skillsApi } from "@/features/agents/api/skillsApi";
 
-const SESSION = "sess-1";
+vi.mock("@/features/agents/api/skillsApi", () => ({
+  skillsApi: {
+    generateSkillDraft: vi.fn(),
+    retrySkillDraftGeneration: vi.fn(),
+  },
+}));
 
-const draft = (id: string, over: Partial<SerializedSkillDraft> = {}): SerializedSkillDraft => ({
-  id,
-  organizationId: "org-1",
-  ownerId: "user-1",
-  targetSkillId: undefined,
-  kind: "create",
-  proposedByAgentId: undefined,
-  sessionId: SESSION,
-  channelId: undefined,
-  originChatMessageId: undefined,
-  rationale: "",
-  name: `skill-${id}`,
-  displayName: `Skill ${id}`,
-  description: "",
-  content: "body",
-  requiresTools: [],
-  supportedSurfaces: [],
-  status: "pending",
-  createdAt: undefined,
-  updatedAt: undefined,
-  ...over,
+const fields = {
+  requestId: "draft",
+  agentId: "agent",
+  sessionId: "session",
+  evidenceMessageIds: ["request", "reply"],
+  rationale: "Make the report reusable",
+};
+const draft = (overrides: Partial<SerializedSkillDraft> = {}) => ({
+  ...skillDraftToPlain(
+    create(SkillDraftSchema, {
+      id: "draft",
+      organizationId: "org",
+      ownerId: "user",
+      sessionId: "session",
+      status: "generating",
+      generationAttempt: 1,
+    }),
+  ),
+  ...overrides,
 });
 
-describe("skillDraftToPlain", () => {
-  it("maps proto fields and normalizes optional + repeated fields", () => {
-    const proto = {
-      id: "d1",
-      organizationId: "org-1",
-      ownerId: "user-1",
-      targetSkillId: undefined,
-      kind: "edit",
-      proposedByAgentId: "agent-1",
-      sessionId: undefined,
-      channelId: undefined,
-      originChatMessageId: undefined,
-      rationale: "because",
-      name: "report",
-      displayName: "Report",
-      description: "desc",
-      content: "body",
-      requiresTools: ["search.query"],
-      supportedSurfaces: [],
-      status: "pending",
-      createdAt: undefined,
-      updatedAt: undefined,
-    } as unknown as SkillDraft;
+function requested() {
+  return agentSkillDraftsReducer(undefined, generateSkillDraft.pending("request", fields));
+}
 
-    const plain = skillDraftToPlain(proto);
-    expect(plain.kind).toBe("edit");
-    expect(plain.proposedByAgentId).toBe("agent-1");
-    expect(plain.targetSkillId).toBeUndefined();
-    expect(plain.requiresTools).toEqual(["search.query"]);
-  });
-});
+function generated() {
+  return agentSkillDraftsReducer(
+    requested(),
+    generateSkillDraft.fulfilled(draft(), "request", fields),
+  );
+}
 
-describe("agentSkillDrafts slice", () => {
-  it("upserts a proposed draft into inbox + session bucket", () => {
-    const state = agentSkillDraftsReducer(
-      undefined,
-      upsertProposedDraft({ draft: draft("d1"), sessionId: SESSION }),
+describe("skill draft lifecycle", () => {
+  it("keeps one draft through repeated generation responses and session lookup", () => {
+    let state = generated();
+    state = agentSkillDraftsReducer(state, generateSkillDraft.pending("duplicate", fields));
+    state = agentSkillDraftsReducer(
+      state,
+      generateSkillDraft.fulfilled(draft(), "duplicate", fields),
     );
     const root = { agentSkillDrafts: state } as never;
     expect(selectInboxCount(root)).toBe(1);
-    expect(selectInboxDrafts(root)).toHaveLength(1);
-    expect(selectSessionDrafts(SESSION)(root)).toHaveLength(1);
-    expect(selectSessionDrafts("other")(root)).toEqual([]);
-    expect(selectDraftById("d1")(root)?.name).toBe("skill-d1");
+    expect(selectSessionDrafts("session")(root)).toHaveLength(1);
+    expect(selectSessionDrafts("another-session")(root)).toEqual([]);
   });
 
-  it("does not double-add the same draft to the inbox", () => {
-    let state = agentSkillDraftsReducer(
-      undefined,
-      upsertProposedDraft({ draft: draft("d1"), sessionId: SESSION }),
+  it("hydrates a generated proposal into the review editor", () => {
+    let state = generated();
+    state = agentSkillDraftsReducer(state, fetchSkillDraft.pending("poll", "draft"));
+    state = agentSkillDraftsReducer(
+      state,
+      fetchSkillDraft.fulfilled(
+        draft({ status: "pending", content: "Instructions" }),
+        "poll",
+        "draft",
+      ),
+    );
+    expect(state.byId.draft.status).toBe("pending");
+    expect(state.byId.draft.content).toBe("Instructions");
+  });
+
+  it("does not let an older attempt overwrite an explicit retry", () => {
+    let state = generated();
+    const retry = { draftId: "draft", expectedAttempt: 1 };
+    state = agentSkillDraftsReducer(state, fetchSkillDraft.pending("poll", "draft"));
+    state = agentSkillDraftsReducer(state, retrySkillDraftGeneration.pending("retry", retry));
+    state = agentSkillDraftsReducer(
+      state,
+      retrySkillDraftGeneration.fulfilled(draft({ generationAttempt: 2 }), "retry", retry),
     );
     state = agentSkillDraftsReducer(
       state,
-      upsertProposedDraft({ draft: draft("d1"), sessionId: SESSION }),
+      fetchSkillDraft.fulfilled(draft({ status: "generation_failed" }), "poll", "draft"),
     );
-    expect(state.inboxIds).toEqual(["d1"]);
-    expect(state.idsBySession[SESSION]).toEqual(["d1"]);
+    expect(state.byId.draft.generationAttempt).toBe(2);
+    expect(state.byId.draft.status).toBe("generating");
   });
 
-  it("fetch replaces the inbox", () => {
-    const state = agentSkillDraftsReducer(
-      undefined,
-      fetchSkillDrafts.fulfilled([draft("a"), draft("b")], "req", undefined),
-    );
-    const root = { agentSkillDrafts: state } as never;
-    expect(selectInboxDrafts(root).map((d) => d.id)).toEqual(["a", "b"]);
-  });
-
-  it("saving a draft marks it saved and drops it from the inbox", () => {
-    let state = agentSkillDraftsReducer(
-      undefined,
-      upsertProposedDraft({ draft: draft("d1"), sessionId: SESSION }),
+  it("does not restore a discarded draft from an in-flight poll", () => {
+    let state = generated();
+    state = agentSkillDraftsReducer(state, fetchSkillDraft.pending("poll", "draft"));
+    state = agentSkillDraftsReducer(state, discardSkillDraft.pending("discard", "draft"));
+    state = agentSkillDraftsReducer(
+      state,
+      discardSkillDraft.fulfilled("draft", "discard", "draft"),
     );
     state = agentSkillDraftsReducer(
       state,
-      saveSkillDraft.fulfilled({ draftId: "d1", skill: { id: "skill-x" } as never }, "req", {
-        draftId: "d1",
-        fields: {} as never,
+      fetchSkillDraft.fulfilled(draft({ status: "pending" }), "poll", "draft"),
+    );
+    expect(state.byId.draft.status).toBe("discarded");
+    expect(state.inboxIds).toEqual([]);
+  });
+
+  it("clears drafts and ignores delayed results after logout", () => {
+    let state = requested();
+    state = agentSkillDraftsReducer(state, logout());
+    state = agentSkillDraftsReducer(
+      state,
+      generateSkillDraft.fulfilled(draft(), "request", fields),
+    );
+    expect(state.byId).toEqual({});
+    expect(state.requests).toEqual({});
+  });
+
+  it("ignores a previous organization's delayed generation response", () => {
+    let state = requested();
+    state = agentSkillDraftsReducer(state, setCredentials({ organizationId: "other" } as never));
+    state = agentSkillDraftsReducer(
+      state,
+      generateSkillDraft.fulfilled(draft(), "request", fields),
+    );
+    expect(state.organizationId).toBe("other");
+    expect(state.byId).toEqual({});
+  });
+
+  it("preserves exact invocation and version facts in serialization", () => {
+    const plain = skillDraftToPlain(
+      create(SkillDraftSchema, {
+        invocationId: "invocation",
+        targetVersionId: "immutable-version",
+        targetVersionNumber: 3,
+        generationError: "access_revoked",
       }),
     );
-    expect(state.inboxIds).toEqual([]);
-    expect(state.byId["d1"].status).toBe("saved");
-    // The inline session card persists so the user sees the resolved state.
-    expect(state.idsBySession[SESSION]).toEqual(["d1"]);
+    expect(plain.invocationId).toBe("invocation");
+    expect(plain.targetVersionId).toBe("immutable-version");
+    expect(plain.targetVersionNumber).toBe(3);
+    expect(plain.generationError).toBe("access_revoked");
   });
 
-  it("discarding a draft marks it discarded and drops it from the inbox", () => {
+  it("clears pending requests when the account changes within the same organization", () => {
     let state = agentSkillDraftsReducer(
       undefined,
-      upsertProposedDraft({ draft: draft("d1"), sessionId: SESSION }),
+      setCredentials({ organizationId: "org", user: { id: "first" } } as never),
     );
-    state = agentSkillDraftsReducer(state, discardSkillDraft.fulfilled("d1", "req", "d1"));
-    expect(state.inboxIds).toEqual([]);
-    expect(state.byId["d1"].status).toBe("discarded");
-  });
-
-  it("createSkillDraft.fulfilled seeds a pending draft into the inbox", () => {
-    const state = agentSkillDraftsReducer(
-      undefined,
-      createSkillDraft.fulfilled(draft("new"), "req", {
-        kind: "create",
-        name: "x",
-        displayName: "X",
-        content: "y",
-      }),
-    );
-    expect(state.inboxIds).toEqual(["new"]);
-  });
-
-  it("fetching a single draft for the editor carries the plain draft but does not touch the store", () => {
-    let state = agentSkillDraftsReducer(
-      undefined,
-      upsertProposedDraft({ draft: draft("d1"), sessionId: SESSION }),
-    );
-    const action = fetchSkillDraft.fulfilled(draft("d2"), "req", "d2");
-    expect(action.payload.id).toBe("d2");
-    state = agentSkillDraftsReducer(state, action);
-    expect(state.inboxIds).toEqual(["d1"]);
-    expect(state.byId["d2"]).toBeUndefined();
-    expect(state.idsBySession[SESSION]).toEqual(["d1"]);
-  });
-
-  it("a rejected single-draft fetch leaves the store intact", () => {
-    let state = agentSkillDraftsReducer(
-      undefined,
-      upsertProposedDraft({ draft: draft("d1"), sessionId: SESSION }),
+    state = agentSkillDraftsReducer(state, generateSkillDraft.pending("request", fields));
+    state = agentSkillDraftsReducer(
+      state,
+      setCredentials({ organizationId: "org", user: { id: "second" } } as never),
     );
     state = agentSkillDraftsReducer(
       state,
-      fetchSkillDraft.rejected(new Error("nope"), "req", "d2"),
+      generateSkillDraft.fulfilled(draft(), "request", fields),
     );
-    const root = { agentSkillDrafts: state } as never;
-    expect(selectInboxCount(root)).toBe(1);
-    expect(selectInboxDrafts(root).map((d) => d.id)).toEqual(["d1"]);
-    expect(state.byId["d1"].status).toBe("pending");
+    expect(state.userId).toBe("second");
+    expect(state.byId).toEqual({});
+  });
+});
+
+describe("explicit generation requests", () => {
+  it("sends only selected IDs and rationale under the active organization", async () => {
+    vi.mocked(skillsApi.generateSkillDraft).mockResolvedValue({
+      draft: create(SkillDraftSchema, { id: "draft", status: "generating" }),
+    } as never);
+    const getState = () => ({ auth: { currentOrganizationId: "org" } });
+    const result = await generateSkillDraft(fields)(vi.fn(), getState as never, undefined);
+    expect(generateSkillDraft.fulfilled.match(result)).toBe(true);
+    expect(skillsApi.generateSkillDraft).toHaveBeenCalledWith({ ...fields, organizationId: "org" });
+  });
+
+  it("does not silently retry a failed request", async () => {
+    vi.mocked(skillsApi.generateSkillDraft).mockClear().mockRejectedValue(new Error("Unavailable"));
+    const getState = () => ({ auth: { currentOrganizationId: "org" } });
+    const result = await generateSkillDraft(fields)(vi.fn(), getState as never, undefined);
+    expect(generateSkillDraft.rejected.match(result)).toBe(true);
+    expect(skillsApi.generateSkillDraft).toHaveBeenCalledTimes(1);
+    expect(skillsApi.retrySkillDraftGeneration).not.toHaveBeenCalled();
   });
 });

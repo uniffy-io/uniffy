@@ -58,7 +58,7 @@ type SystemConfigServiceClient interface {
 	// window before the requirement becomes hard.
 	GetMfaPolicy(context.Context, *connect.Request[v1.GetMfaPolicyRequest]) (*connect.Response[v1.GetMfaPolicyResponse], error)
 	// Partial update to the MFA policy. Only fields explicitly set in
-	// the request are written. Audits as “auth.mfa_policy_changed“.
+	// the request are written. Audits as ``auth.mfa_policy_changed``.
 	SetMfaPolicy(context.Context, *connect.Request[v1.SetMfaPolicyRequest]) (*connect.Response[v1.SetMfaPolicyResponse], error)
 }
 
@@ -139,7 +139,7 @@ type SystemConfigServiceHandler interface {
 	// window before the requirement becomes hard.
 	GetMfaPolicy(context.Context, *connect.Request[v1.GetMfaPolicyRequest]) (*connect.Response[v1.GetMfaPolicyResponse], error)
 	// Partial update to the MFA policy. Only fields explicitly set in
-	// the request are written. Audits as “auth.mfa_policy_changed“.
+	// the request are written. Audits as ``auth.mfa_policy_changed``.
 	SetMfaPolicy(context.Context, *connect.Request[v1.SetMfaPolicyRequest]) (*connect.Response[v1.SetMfaPolicyResponse], error)
 }
 

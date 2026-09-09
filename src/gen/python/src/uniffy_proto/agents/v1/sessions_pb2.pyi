@@ -72,7 +72,14 @@ class SessionInfo(_message.Message):
     def __init__(self, id: _Optional[str] = ..., organization_id: _Optional[str] = ..., agent_id: _Optional[str] = ..., user_id: _Optional[str] = ..., kind: _Optional[_Union[SessionKind, str]] = ..., display_name: _Optional[str] = ..., model_override: _Optional[str] = ..., total_input_tokens: _Optional[int] = ..., total_output_tokens: _Optional[int] = ..., message_count: _Optional[int] = ..., last_model_used: _Optional[str] = ..., is_archived: _Optional[bool] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., is_test: _Optional[bool] = ...) -> None: ...
 
 class MessageInfo(_message.Message):
-    __slots__ = ("id", "session_id", "role", "content", "input_tokens", "output_tokens", "model", "tool_name", "tool_call_id", "tool_args_json", "tool_result", "is_thinking", "is_compacted", "created_at", "file_ids", "is_invalidated", "edited_at", "previous_content", "was_cancelled", "invoked_skill_name", "thinking_json", "cache_read_input_tokens", "cache_creation_input_tokens")
+    __slots__ = ("id", "session_id", "role", "content", "input_tokens", "output_tokens", "model", "tool_name", "tool_call_id", "tool_args_json", "tool_result", "is_thinking", "is_compacted", "created_at", "file_ids", "is_invalidated", "edited_at", "previous_content", "was_cancelled", "invoked_skill_name", "thinking_json", "cache_read_input_tokens", "cache_creation_input_tokens", "skill_invocation")
+    class SkillInvocationEntry(_message.Message):
+        __slots__ = ("key", "value")
+        KEY_FIELD_NUMBER: _ClassVar[int]
+        VALUE_FIELD_NUMBER: _ClassVar[int]
+        key: str
+        value: str
+        def __init__(self, key: _Optional[str] = ..., value: _Optional[str] = ...) -> None: ...
     ID_FIELD_NUMBER: _ClassVar[int]
     SESSION_ID_FIELD_NUMBER: _ClassVar[int]
     ROLE_FIELD_NUMBER: _ClassVar[int]
@@ -96,6 +103,7 @@ class MessageInfo(_message.Message):
     THINKING_JSON_FIELD_NUMBER: _ClassVar[int]
     CACHE_READ_INPUT_TOKENS_FIELD_NUMBER: _ClassVar[int]
     CACHE_CREATION_INPUT_TOKENS_FIELD_NUMBER: _ClassVar[int]
+    SKILL_INVOCATION_FIELD_NUMBER: _ClassVar[int]
     id: str
     session_id: str
     role: MessageRole
@@ -119,7 +127,8 @@ class MessageInfo(_message.Message):
     thinking_json: str
     cache_read_input_tokens: int
     cache_creation_input_tokens: int
-    def __init__(self, id: _Optional[str] = ..., session_id: _Optional[str] = ..., role: _Optional[_Union[MessageRole, str]] = ..., content: _Optional[str] = ..., input_tokens: _Optional[int] = ..., output_tokens: _Optional[int] = ..., model: _Optional[str] = ..., tool_name: _Optional[str] = ..., tool_call_id: _Optional[str] = ..., tool_args_json: _Optional[str] = ..., tool_result: _Optional[str] = ..., is_thinking: _Optional[bool] = ..., is_compacted: _Optional[bool] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., file_ids: _Optional[_Iterable[str]] = ..., is_invalidated: _Optional[bool] = ..., edited_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., previous_content: _Optional[str] = ..., was_cancelled: _Optional[bool] = ..., invoked_skill_name: _Optional[str] = ..., thinking_json: _Optional[str] = ..., cache_read_input_tokens: _Optional[int] = ..., cache_creation_input_tokens: _Optional[int] = ...) -> None: ...
+    skill_invocation: _containers.ScalarMap[str, str]
+    def __init__(self, id: _Optional[str] = ..., session_id: _Optional[str] = ..., role: _Optional[_Union[MessageRole, str]] = ..., content: _Optional[str] = ..., input_tokens: _Optional[int] = ..., output_tokens: _Optional[int] = ..., model: _Optional[str] = ..., tool_name: _Optional[str] = ..., tool_call_id: _Optional[str] = ..., tool_args_json: _Optional[str] = ..., tool_result: _Optional[str] = ..., is_thinking: _Optional[bool] = ..., is_compacted: _Optional[bool] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., file_ids: _Optional[_Iterable[str]] = ..., is_invalidated: _Optional[bool] = ..., edited_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., previous_content: _Optional[str] = ..., was_cancelled: _Optional[bool] = ..., invoked_skill_name: _Optional[str] = ..., thinking_json: _Optional[str] = ..., cache_read_input_tokens: _Optional[int] = ..., cache_creation_input_tokens: _Optional[int] = ..., skill_invocation: _Optional[_Mapping[str, str]] = ...) -> None: ...
 
 class CreateSessionRequest(_message.Message):
     __slots__ = ("organization_id", "agent_id", "kind", "display_name", "model_override", "is_test")

@@ -185,23 +185,14 @@ class TestRuntimeStreamEventRoundTrip:
         assert decoded.type is EventType.ERROR
         assert decoded.error == "boom"
 
-    def test_skill_draft_round_trip(self) -> None:
-        from uniffy.core.models.agents.skill_draft import AgentSkillDraft
-
-        draft = AgentSkillDraft(
-            id=generate_id(),
-            organization_id=generate_id(),
-            owner_id=generate_id(),
-            kind="create",
-            name="weekly-report",
-            display_name="Weekly Report",
-            content="Steps to write the report",
-            status="pending",
-        )
-        decoded = _round_trip(StreamEvent(type=EventType.SKILL_DRAFT, draft=draft))
-        assert decoded.draft.id == draft.id
-        assert decoded.draft.name == "weekly-report"
-        assert decoded.draft.kind == "create"
+    def test_done_preserves_exact_skill_attribution(self) -> None:
+        attribution = {
+            "skill_invocation_id": str(generate_id()),
+            "skill_version_id": str(generate_id()),
+            "skill_version_number": "3",
+        }
+        decoded = _round_trip(StreamEvent(type=EventType.DONE, skill_invocation=attribution))
+        assert decoded.skill_invocation == attribution
 
     def test_completion_result_never_serialized(self) -> None:
         from uniffy.domains.agents.providers.base import CompletionResult

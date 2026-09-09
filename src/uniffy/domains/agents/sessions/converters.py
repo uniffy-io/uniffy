@@ -161,7 +161,9 @@ def session_to_proto(session: AgentSession) -> SessionInfo:
     return info
 
 
-def message_to_proto(message: AgentMessage) -> MessageInfo:
+def message_to_proto(
+    message: AgentMessage, *, skill_invocation: dict[str, str] | None = None
+) -> MessageInfo:
     info = MessageInfo(
         id=str(message.id),
         session_id=str(message.session_id),
@@ -174,6 +176,7 @@ def message_to_proto(message: AgentMessage) -> MessageInfo:
         is_thinking=message.is_thinking,
         is_compacted=message.is_compacted,
         created_at=datetime_to_timestamp(message.created_at),
+        skill_invocation=skill_invocation or {},
     )
 
     if message.content is not None:

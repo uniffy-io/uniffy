@@ -12,7 +12,6 @@ from uuid import UUID
 
 if TYPE_CHECKING:
     from uniffy.core.models.agents.message import AgentMessage
-    from uniffy.core.models.agents.skill_draft import AgentSkillDraft
 
 
 VISIBLE_REFUSAL_MESSAGE = "I can't help with that request."
@@ -152,7 +151,6 @@ class EventType(StrEnum):
     CONFIRMATION_REQUIRED = "confirmation_required"
     CONFIRMATION_RESPONSE = "confirmation_response"
     FAILOVER = "failover"
-    SKILL_DRAFT = "skill_draft"
     EXCEED_MAX_ITERS = "exceed_max_iters"
     MESSAGE_STORED = "message_stored"
     DONE = "done"
@@ -201,7 +199,7 @@ class StreamEvent:
     request_id: UUID | None = None
     message: AgentMessage | None = None
     assistant_message: AgentMessage | None = None
-    draft: AgentSkillDraft | None = None
+    skill_invocation: dict[str, str] | None = None
 
 
 class ProviderDescriptor(ABC):

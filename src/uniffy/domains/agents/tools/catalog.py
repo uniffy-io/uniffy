@@ -24,7 +24,6 @@ GROUP_ORDER: list[str] = [
     "Search",
     "People",
     "Memory",
-    "Skills",
     "Scheduling",
     "System",
     "Images",

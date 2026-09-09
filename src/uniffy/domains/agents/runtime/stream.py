@@ -17,6 +17,7 @@ from uniffy.core.models.agents.message import AgentMessage, AgentMessageRole
 from uniffy.core.search import SearchIndexer
 from uniffy.core.storage import ObjectStorage
 from uniffy.domains.agents.agents.operations import AgentOperations
+from uniffy.domains.agents.invocation import read_response_skill_attributions
 from uniffy.domains.agents.memories.recall import attach_to_trigger_turn
 from uniffy.domains.agents.policy import check_user_message
 from uniffy.domains.agents.providers.base import EventType, StreamEvent
@@ -421,4 +422,13 @@ class MessageStreamer:
                 )
             ) as events:
                 async for event in events:
+                    if event.type == EventType.DONE and invocation.target is not None:
+                        attributions = await read_response_skill_attributions(
+                            self._session,
+                            organization_id=organization_id,
+                            response_ids=[event.assistant_message.id],
+                            channel_id=channel_id,
+                            session_id=session_id,
+                        )
+                        event.skill_invocation = attributions.get(event.assistant_message.id)
                     yield event

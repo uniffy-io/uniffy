@@ -22,6 +22,7 @@ from uniffy_proto.common.v1.common_pb2 import PaginationResponse
 
 from uniffy.core.auth.principal import current_user_id, resolve_organization_id
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
+from uniffy.domains.agents.invocation import read_response_skill_attributions
 from uniffy.domains.agents.sessions.converters import (
     message_to_proto,
     session_kind_from_proto,
@@ -194,9 +195,18 @@ class SessionsHandlers:
                     page_size=page_size,
                     include_compacted=include_compacted,
                 )
+                attributions = await read_response_skill_attributions(
+                    session,
+                    organization_id=org_id,
+                    session_id=session_id,
+                    response_ids=[message.id for message in messages],
+                )
                 total_pages = (total + page_size - 1) // page_size if total > 0 else 0
                 return ListMessagesResponse(
-                    messages=[message_to_proto(m) for m in messages],
+                    messages=[
+                        message_to_proto(m, skill_invocation=attributions.get(m.id))
+                        for m in messages
+                    ],
                     pagination=PaginationResponse(
                         page=page,
                         page_size=page_size,

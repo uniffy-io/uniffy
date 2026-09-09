@@ -2057,7 +2057,6 @@ type AgentStreamEvent struct {
 	//	*AgentStreamEvent_ToolResultEnd
 	//	*AgentStreamEvent_ConfirmationRequired
 	//	*AgentStreamEvent_Failover
-	//	*AgentStreamEvent_SkillDraft
 	//	*AgentStreamEvent_ExceedMaxIters
 	//	*AgentStreamEvent_MessageStored
 	//	*AgentStreamEvent_Done
@@ -2258,15 +2257,6 @@ func (x *AgentStreamEvent) GetFailover() *StreamFailoverEvent {
 	return nil
 }
 
-func (x *AgentStreamEvent) GetSkillDraft() *StreamSkillDraftEvent {
-	if x != nil {
-		if x, ok := x.Event.(*AgentStreamEvent_SkillDraft); ok {
-			return x.SkillDraft
-		}
-	}
-	return nil
-}
-
 func (x *AgentStreamEvent) GetExceedMaxIters() *StreamExceedMaxItersEvent {
 	if x != nil {
 		if x, ok := x.Event.(*AgentStreamEvent_ExceedMaxIters); ok {
@@ -2382,10 +2372,6 @@ type AgentStreamEvent_Failover struct {
 	Failover *StreamFailoverEvent `protobuf:"bytes,17,opt,name=failover,proto3,oneof"`
 }
 
-type AgentStreamEvent_SkillDraft struct {
-	SkillDraft *StreamSkillDraftEvent `protobuf:"bytes,18,opt,name=skill_draft,json=skillDraft,proto3,oneof"`
-}
-
 type AgentStreamEvent_ExceedMaxIters struct {
 	ExceedMaxIters *StreamExceedMaxItersEvent `protobuf:"bytes,19,opt,name=exceed_max_iters,json=exceedMaxIters,proto3,oneof"`
 }
@@ -2435,8 +2421,6 @@ func (*AgentStreamEvent_ToolResultEnd) isAgentStreamEvent_Event() {}
 func (*AgentStreamEvent_ConfirmationRequired) isAgentStreamEvent_Event() {}
 
 func (*AgentStreamEvent_Failover) isAgentStreamEvent_Event() {}
-
-func (*AgentStreamEvent_SkillDraft) isAgentStreamEvent_Event() {}
 
 func (*AgentStreamEvent_ExceedMaxIters) isAgentStreamEvent_Event() {}
 
@@ -3924,58 +3908,11 @@ func (x *StreamFailoverEvent) GetAttempt() int32 {
 	return 0
 }
 
-// Emitted when the agent proposes a skill draft for the user to review. The
-// draft is persisted (status=pending) but never auto-activated; the client
-// renders an editable review card and saves via SaveSkillDraft.
-type StreamSkillDraftEvent struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Draft         *SkillDraft            `protobuf:"bytes,1,opt,name=draft,proto3" json:"draft,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *StreamSkillDraftEvent) Reset() {
-	*x = StreamSkillDraftEvent{}
-	mi := &file_agents_v1_runtime_proto_msgTypes[50]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *StreamSkillDraftEvent) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*StreamSkillDraftEvent) ProtoMessage() {}
-
-func (x *StreamSkillDraftEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_runtime_proto_msgTypes[50]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use StreamSkillDraftEvent.ProtoReflect.Descriptor instead.
-func (*StreamSkillDraftEvent) Descriptor() ([]byte, []int) {
-	return file_agents_v1_runtime_proto_rawDescGZIP(), []int{50}
-}
-
-func (x *StreamSkillDraftEvent) GetDraft() *SkillDraft {
-	if x != nil {
-		return x.Draft
-	}
-	return nil
-}
-
 var File_agents_v1_runtime_proto protoreflect.FileDescriptor
 
 const file_agents_v1_runtime_proto_rawDesc = "" +
 	"\n" +
-	"\x17agents/v1/runtime.proto\x12\tagents.v1\x1a\x18agents/v1/sessions.proto\x1a\x16agents/v1/skills.proto\"\xb3\x04\n" +
+	"\x17agents/v1/runtime.proto\x12\tagents.v1\x1a\x18agents/v1/sessions.proto\"\xb3\x04\n" +
 	"\x0fRuntimeSettings\x122\n" +
 	"\x15send_deadline_seconds\x18\x01 \x01(\x05R\x13sendDeadlineSeconds\x12)\n" +
 	"\x10failover_enabled\x18\x02 \x01(\bR\x0ffailoverEnabled\x12%\n" +
@@ -4169,7 +4106,7 @@ const file_agents_v1_runtime_proto_rawDesc = "" +
 	"\x14CancelStreamResponse\x12\x1c\n" +
 	"\tcancelled\x18\x01 \x01(\bR\tcancelled\";\n" +
 	"\x1dRespondToConfirmationResponse\x12\x1a\n" +
-	"\baccepted\x18\x01 \x01(\bR\baccepted\"\xe6\r\n" +
+	"\baccepted\x18\x01 \x01(\bR\baccepted\"\xb4\r\n" +
 	"\x10AgentStreamEvent\x12C\n" +
 	"\vreply_start\x18\x01 \x01(\v2 .agents.v1.StreamReplyStartEventH\x00R\n" +
 	"replyStart\x12P\n" +
@@ -4189,15 +4126,13 @@ const file_agents_v1_runtime_proto_rawDesc = "" +
 	"\x11tool_result_delta\x18\x0e \x01(\v2%.agents.v1.StreamToolResultDeltaEventH\x00R\x0ftoolResultDelta\x12M\n" +
 	"\x0ftool_result_end\x18\x0f \x01(\v2#.agents.v1.StreamToolResultEndEventH\x00R\rtoolResultEnd\x12a\n" +
 	"\x15confirmation_required\x18\x10 \x01(\v2*.agents.v1.StreamConfirmationRequiredEventH\x00R\x14confirmationRequired\x12<\n" +
-	"\bfailover\x18\x11 \x01(\v2\x1e.agents.v1.StreamFailoverEventH\x00R\bfailover\x12C\n" +
-	"\vskill_draft\x18\x12 \x01(\v2 .agents.v1.StreamSkillDraftEventH\x00R\n" +
-	"skillDraft\x12P\n" +
+	"\bfailover\x18\x11 \x01(\v2\x1e.agents.v1.StreamFailoverEventH\x00R\bfailover\x12P\n" +
 	"\x10exceed_max_iters\x18\x13 \x01(\v2$.agents.v1.StreamExceedMaxItersEventH\x00R\x0eexceedMaxIters\x12L\n" +
 	"\x0emessage_stored\x18\x14 \x01(\v2#.agents.v1.StreamMessageStoredEventH\x00R\rmessageStored\x120\n" +
 	"\x04done\x18\x15 \x01(\v2\x1a.agents.v1.StreamDoneEventH\x00R\x04done\x123\n" +
 	"\x05error\x18\x16 \x01(\v2\x1b.agents.v1.StreamErrorEventH\x00R\x05error\x12\x15\n" +
 	"\x06run_id\x18\x1e \x01(\tR\x05runIdB\a\n" +
-	"\x05event\"N\n" +
+	"\x05eventJ\x04\b\x12\x10\x13R\vskill_draft\"N\n" +
 	"\x19StreamSendMessageResponse\x121\n" +
 	"\x05event\x18\x01 \x01(\v2\x1b.agents.v1.AgentStreamEventR\x05event\"M\n" +
 	"\x18RerunFromMessageResponse\x121\n" +
@@ -4316,9 +4251,7 @@ const file_agents_v1_runtime_proto_rawDesc = "" +
 	"\x12to_provider_key_id\x18\x02 \x01(\tR\x0ftoProviderKeyId\x12\x19\n" +
 	"\bto_model\x18\x03 \x01(\tR\atoModel\x12\x16\n" +
 	"\x06reason\x18\x04 \x01(\tR\x06reason\x12\x18\n" +
-	"\aattempt\x18\x05 \x01(\x05R\aattempt\"D\n" +
-	"\x15StreamSkillDraftEvent\x12+\n" +
-	"\x05draft\x18\x01 \x01(\v2\x15.agents.v1.SkillDraftR\x05draft2\xf3\x05\n" +
+	"\aattempt\x18\x05 \x01(\x05R\aattempt2\xf3\x05\n" +
 	"\x0eRuntimeService\x12N\n" +
 	"\vSendMessage\x12\x1d.agents.v1.SendMessageRequest\x1a\x1e.agents.v1.SendMessageResponse\"\x00\x12b\n" +
 	"\x11StreamSendMessage\x12#.agents.v1.StreamSendMessageRequest\x1a$.agents.v1.StreamSendMessageResponse\"\x000\x01\x12_\n" +
@@ -4344,7 +4277,7 @@ func file_agents_v1_runtime_proto_rawDescGZIP() []byte {
 	return file_agents_v1_runtime_proto_rawDescData
 }
 
-var file_agents_v1_runtime_proto_msgTypes = make([]protoimpl.MessageInfo, 51)
+var file_agents_v1_runtime_proto_msgTypes = make([]protoimpl.MessageInfo, 50)
 var file_agents_v1_runtime_proto_goTypes = []any{
 	(*RuntimeSettings)(nil),                 // 0: agents.v1.RuntimeSettings
 	(*GetRuntimeSettingsRequest)(nil),       // 1: agents.v1.GetRuntimeSettingsRequest
@@ -4396,9 +4329,7 @@ var file_agents_v1_runtime_proto_goTypes = []any{
 	(*StreamErrorEvent)(nil),                // 47: agents.v1.StreamErrorEvent
 	(*StreamConfirmationRequiredEvent)(nil), // 48: agents.v1.StreamConfirmationRequiredEvent
 	(*StreamFailoverEvent)(nil),             // 49: agents.v1.StreamFailoverEvent
-	(*StreamSkillDraftEvent)(nil),           // 50: agents.v1.StreamSkillDraftEvent
-	(*MessageInfo)(nil),                     // 51: agents.v1.MessageInfo
-	(*SkillDraft)(nil),                      // 52: agents.v1.SkillDraft
+	(*MessageInfo)(nil),                     // 50: agents.v1.MessageInfo
 }
 var file_agents_v1_runtime_proto_depIdxs = []int32{
 	0,  // 0: agents.v1.UpdateRuntimeSettingsRequest.settings:type_name -> agents.v1.RuntimeSettings
@@ -4412,8 +4343,8 @@ var file_agents_v1_runtime_proto_depIdxs = []int32{
 	14, // 8: agents.v1.GetUsageStatsResponse.cron_usage:type_name -> agents.v1.CronTaskUsage
 	18, // 9: agents.v1.SendMessageRequest.chat_context:type_name -> agents.v1.ChatChannelContext
 	18, // 10: agents.v1.StreamSendMessageRequest.chat_context:type_name -> agents.v1.ChatChannelContext
-	51, // 11: agents.v1.SendMessageResponse.user_message:type_name -> agents.v1.MessageInfo
-	51, // 12: agents.v1.SendMessageResponse.assistant_message:type_name -> agents.v1.MessageInfo
+	50, // 11: agents.v1.SendMessageResponse.user_message:type_name -> agents.v1.MessageInfo
+	50, // 12: agents.v1.SendMessageResponse.assistant_message:type_name -> agents.v1.MessageInfo
 	29, // 13: agents.v1.AgentStreamEvent.reply_start:type_name -> agents.v1.StreamReplyStartEvent
 	30, // 14: agents.v1.AgentStreamEvent.model_call_start:type_name -> agents.v1.StreamModelCallStartEvent
 	31, // 15: agents.v1.AgentStreamEvent.model_call_end:type_name -> agents.v1.StreamModelCallEndEvent
@@ -4431,42 +4362,40 @@ var file_agents_v1_runtime_proto_depIdxs = []int32{
 	43, // 27: agents.v1.AgentStreamEvent.tool_result_end:type_name -> agents.v1.StreamToolResultEndEvent
 	48, // 28: agents.v1.AgentStreamEvent.confirmation_required:type_name -> agents.v1.StreamConfirmationRequiredEvent
 	49, // 29: agents.v1.AgentStreamEvent.failover:type_name -> agents.v1.StreamFailoverEvent
-	50, // 30: agents.v1.AgentStreamEvent.skill_draft:type_name -> agents.v1.StreamSkillDraftEvent
-	44, // 31: agents.v1.AgentStreamEvent.exceed_max_iters:type_name -> agents.v1.StreamExceedMaxItersEvent
-	45, // 32: agents.v1.AgentStreamEvent.message_stored:type_name -> agents.v1.StreamMessageStoredEvent
-	46, // 33: agents.v1.AgentStreamEvent.done:type_name -> agents.v1.StreamDoneEvent
-	47, // 34: agents.v1.AgentStreamEvent.error:type_name -> agents.v1.StreamErrorEvent
-	25, // 35: agents.v1.StreamSendMessageResponse.event:type_name -> agents.v1.AgentStreamEvent
-	25, // 36: agents.v1.RerunFromMessageResponse.event:type_name -> agents.v1.AgentStreamEvent
-	25, // 37: agents.v1.SubscribeToRunResponse.event:type_name -> agents.v1.AgentStreamEvent
-	51, // 38: agents.v1.StreamMessageStoredEvent.message:type_name -> agents.v1.MessageInfo
-	51, // 39: agents.v1.StreamDoneEvent.assistant_message:type_name -> agents.v1.MessageInfo
-	52, // 40: agents.v1.StreamSkillDraftEvent.draft:type_name -> agents.v1.SkillDraft
-	15, // 41: agents.v1.RuntimeService.SendMessage:input_type -> agents.v1.SendMessageRequest
-	17, // 42: agents.v1.RuntimeService.StreamSendMessage:input_type -> agents.v1.StreamSendMessageRequest
-	16, // 43: agents.v1.RuntimeService.RerunFromMessage:input_type -> agents.v1.RerunFromMessageRequest
-	21, // 44: agents.v1.RuntimeService.SubscribeToRun:input_type -> agents.v1.SubscribeToRunRequest
-	22, // 45: agents.v1.RuntimeService.CancelStream:input_type -> agents.v1.CancelStreamRequest
-	20, // 46: agents.v1.RuntimeService.RespondToConfirmation:input_type -> agents.v1.RespondToConfirmationRequest
-	7,  // 47: agents.v1.RuntimeService.GetUsageStats:input_type -> agents.v1.GetUsageStatsRequest
-	5,  // 48: agents.v1.RuntimeService.RegenerateImage:input_type -> agents.v1.RegenerateImageRequest
-	1,  // 49: agents.v1.RuntimeSettingsService.GetRuntimeSettings:input_type -> agents.v1.GetRuntimeSettingsRequest
-	2,  // 50: agents.v1.RuntimeSettingsService.UpdateRuntimeSettings:input_type -> agents.v1.UpdateRuntimeSettingsRequest
-	19, // 51: agents.v1.RuntimeService.SendMessage:output_type -> agents.v1.SendMessageResponse
-	26, // 52: agents.v1.RuntimeService.StreamSendMessage:output_type -> agents.v1.StreamSendMessageResponse
-	27, // 53: agents.v1.RuntimeService.RerunFromMessage:output_type -> agents.v1.RerunFromMessageResponse
-	28, // 54: agents.v1.RuntimeService.SubscribeToRun:output_type -> agents.v1.SubscribeToRunResponse
-	23, // 55: agents.v1.RuntimeService.CancelStream:output_type -> agents.v1.CancelStreamResponse
-	24, // 56: agents.v1.RuntimeService.RespondToConfirmation:output_type -> agents.v1.RespondToConfirmationResponse
-	8,  // 57: agents.v1.RuntimeService.GetUsageStats:output_type -> agents.v1.GetUsageStatsResponse
-	6,  // 58: agents.v1.RuntimeService.RegenerateImage:output_type -> agents.v1.RegenerateImageResponse
-	3,  // 59: agents.v1.RuntimeSettingsService.GetRuntimeSettings:output_type -> agents.v1.GetRuntimeSettingsResponse
-	4,  // 60: agents.v1.RuntimeSettingsService.UpdateRuntimeSettings:output_type -> agents.v1.UpdateRuntimeSettingsResponse
-	51, // [51:61] is the sub-list for method output_type
-	41, // [41:51] is the sub-list for method input_type
-	41, // [41:41] is the sub-list for extension type_name
-	41, // [41:41] is the sub-list for extension extendee
-	0,  // [0:41] is the sub-list for field type_name
+	44, // 30: agents.v1.AgentStreamEvent.exceed_max_iters:type_name -> agents.v1.StreamExceedMaxItersEvent
+	45, // 31: agents.v1.AgentStreamEvent.message_stored:type_name -> agents.v1.StreamMessageStoredEvent
+	46, // 32: agents.v1.AgentStreamEvent.done:type_name -> agents.v1.StreamDoneEvent
+	47, // 33: agents.v1.AgentStreamEvent.error:type_name -> agents.v1.StreamErrorEvent
+	25, // 34: agents.v1.StreamSendMessageResponse.event:type_name -> agents.v1.AgentStreamEvent
+	25, // 35: agents.v1.RerunFromMessageResponse.event:type_name -> agents.v1.AgentStreamEvent
+	25, // 36: agents.v1.SubscribeToRunResponse.event:type_name -> agents.v1.AgentStreamEvent
+	50, // 37: agents.v1.StreamMessageStoredEvent.message:type_name -> agents.v1.MessageInfo
+	50, // 38: agents.v1.StreamDoneEvent.assistant_message:type_name -> agents.v1.MessageInfo
+	15, // 39: agents.v1.RuntimeService.SendMessage:input_type -> agents.v1.SendMessageRequest
+	17, // 40: agents.v1.RuntimeService.StreamSendMessage:input_type -> agents.v1.StreamSendMessageRequest
+	16, // 41: agents.v1.RuntimeService.RerunFromMessage:input_type -> agents.v1.RerunFromMessageRequest
+	21, // 42: agents.v1.RuntimeService.SubscribeToRun:input_type -> agents.v1.SubscribeToRunRequest
+	22, // 43: agents.v1.RuntimeService.CancelStream:input_type -> agents.v1.CancelStreamRequest
+	20, // 44: agents.v1.RuntimeService.RespondToConfirmation:input_type -> agents.v1.RespondToConfirmationRequest
+	7,  // 45: agents.v1.RuntimeService.GetUsageStats:input_type -> agents.v1.GetUsageStatsRequest
+	5,  // 46: agents.v1.RuntimeService.RegenerateImage:input_type -> agents.v1.RegenerateImageRequest
+	1,  // 47: agents.v1.RuntimeSettingsService.GetRuntimeSettings:input_type -> agents.v1.GetRuntimeSettingsRequest
+	2,  // 48: agents.v1.RuntimeSettingsService.UpdateRuntimeSettings:input_type -> agents.v1.UpdateRuntimeSettingsRequest
+	19, // 49: agents.v1.RuntimeService.SendMessage:output_type -> agents.v1.SendMessageResponse
+	26, // 50: agents.v1.RuntimeService.StreamSendMessage:output_type -> agents.v1.StreamSendMessageResponse
+	27, // 51: agents.v1.RuntimeService.RerunFromMessage:output_type -> agents.v1.RerunFromMessageResponse
+	28, // 52: agents.v1.RuntimeService.SubscribeToRun:output_type -> agents.v1.SubscribeToRunResponse
+	23, // 53: agents.v1.RuntimeService.CancelStream:output_type -> agents.v1.CancelStreamResponse
+	24, // 54: agents.v1.RuntimeService.RespondToConfirmation:output_type -> agents.v1.RespondToConfirmationResponse
+	8,  // 55: agents.v1.RuntimeService.GetUsageStats:output_type -> agents.v1.GetUsageStatsResponse
+	6,  // 56: agents.v1.RuntimeService.RegenerateImage:output_type -> agents.v1.RegenerateImageResponse
+	3,  // 57: agents.v1.RuntimeSettingsService.GetRuntimeSettings:output_type -> agents.v1.GetRuntimeSettingsResponse
+	4,  // 58: agents.v1.RuntimeSettingsService.UpdateRuntimeSettings:output_type -> agents.v1.UpdateRuntimeSettingsResponse
+	49, // [49:59] is the sub-list for method output_type
+	39, // [39:49] is the sub-list for method input_type
+	39, // [39:39] is the sub-list for extension type_name
+	39, // [39:39] is the sub-list for extension extendee
+	0,  // [0:39] is the sub-list for field type_name
 }
 
 func init() { file_agents_v1_runtime_proto_init() }
@@ -4475,7 +4404,6 @@ func file_agents_v1_runtime_proto_init() {
 		return
 	}
 	file_agents_v1_sessions_proto_init()
-	file_agents_v1_skills_proto_init()
 	file_agents_v1_runtime_proto_msgTypes[15].OneofWrappers = []any{}
 	file_agents_v1_runtime_proto_msgTypes[17].OneofWrappers = []any{}
 	file_agents_v1_runtime_proto_msgTypes[18].OneofWrappers = []any{}
@@ -4497,7 +4425,6 @@ func file_agents_v1_runtime_proto_init() {
 		(*AgentStreamEvent_ToolResultEnd)(nil),
 		(*AgentStreamEvent_ConfirmationRequired)(nil),
 		(*AgentStreamEvent_Failover)(nil),
-		(*AgentStreamEvent_SkillDraft)(nil),
 		(*AgentStreamEvent_ExceedMaxIters)(nil),
 		(*AgentStreamEvent_MessageStored)(nil),
 		(*AgentStreamEvent_Done)(nil),
@@ -4509,7 +4436,7 @@ func file_agents_v1_runtime_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agents_v1_runtime_proto_rawDesc), len(file_agents_v1_runtime_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   51,
+			NumMessages:   50,
 			NumExtensions: 0,
 			NumServices:   2,
 		},

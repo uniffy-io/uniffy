@@ -267,6 +267,7 @@ class RuntimeHandlers:
             user_message = None
             assistant_message = None
             model_used = ""
+            skill_invocation = None
 
             async for event in _subscribe_runtime_events(
                 run_id,
@@ -280,6 +281,7 @@ class RuntimeHandlers:
                 if event.type is EventType.DONE:
                     assistant_message = event.assistant_message
                     model_used = event.model
+                    skill_invocation = event.skill_invocation
                     break
 
                 if event.type is EventType.ERROR:
@@ -300,6 +302,7 @@ class RuntimeHandlers:
                 user_message=user_message,
                 assistant_message=assistant_message,
                 model_used=model_used,
+                skill_invocation=skill_invocation,
             )
         except ConnectError:
             raise

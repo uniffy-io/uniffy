@@ -11,7 +11,6 @@ from uniffy.domains.agents.tools.builtin.people import PEOPLE_TOOLS
 from uniffy.domains.agents.tools.builtin.projects import PROJECT_TOOLS, TASK_TOOLS
 from uniffy.domains.agents.tools.builtin.rooms import ROOMS_TOOLS
 from uniffy.domains.agents.tools.builtin.search import SEARCH_TOOLS
-from uniffy.domains.agents.tools.builtin.skills import SKILL_TOOLS
 from uniffy.domains.agents.tools.builtin.system import SYSTEM_TOOLS
 from uniffy.domains.agents.tools.registry import ToolRegistry
 
@@ -38,8 +37,6 @@ def register_all(registry: ToolRegistry) -> None:
     for tool in IMAGES_TOOLS:
         registry.register(tool)
     for tool in CRON_TOOLS:
-        registry.register(tool)
-    for tool in SKILL_TOOLS:
         registry.register(tool)
     for tool in SYSTEM_TOOLS:
         registry.register(tool)

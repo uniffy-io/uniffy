@@ -33,6 +33,7 @@ import {
   type SerializedSkillDraft,
 } from "@/features/agents/store/agentSkillDraftsThunks";
 import { SkillDetail } from "@/features/agents/components/views/SkillDetail";
+import { SkillDraftStatus } from "@/features/agents/components/skills/SkillDraftStatus";
 
 interface SkillsViewProps {
   onNewSkill: () => void;
@@ -45,7 +46,7 @@ export function SkillsView({ onNewSkill, creatingSkill }: SkillsViewProps) {
 
   useEffect(() => {
     dispatch(fetchSkills());
-    dispatch(fetchSkillDrafts({ status: "pending" }));
+    dispatch(fetchSkillDrafts({ status: "open" }));
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!subId) {
@@ -133,7 +134,7 @@ function DraftCard({
           {fromAgent ? (
             <span className="inline-flex items-center gap-1 text-xs text-primary">
               <Sparkle size={12} weight="fill" />
-              Proposed by agent
+              Requested generation
             </span>
           ) : (
             <span className="text-xs text-muted-foreground">Your draft</span>
@@ -143,7 +144,11 @@ function DraftCard({
       footer={
         <>
           <span className="inline-flex items-center gap-1 text-xs font-medium text-primary">
-            Review and save
+            {draft.status === "generating"
+              ? "Generating..."
+              : draft.status === "generation_failed"
+                ? "Generation failed"
+                : "Review and save"}
             <ArrowRight size={13} />
           </span>
           <button
@@ -180,6 +185,24 @@ function SkillsBrowse({
   const draftsLoading = useAppSelector(selectDraftsLoading);
   const [search, setSearch] = useState("");
   const [discardingId, setDiscardingId] = useState<string | null>(null);
+  const generating = pendingDrafts.some((draft) => draft.status === "generating");
+
+  useEffect(() => {
+    if (!generating) return;
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout>;
+    const poll = async () => {
+      const result = await dispatch(fetchSkillDrafts({ status: "open" }));
+      if (!cancelled && fetchSkillDrafts.fulfilled.match(result)) {
+        timer = setTimeout(poll, 2500);
+      }
+    };
+    timer = setTimeout(poll, 2500);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [dispatch, generating]);
 
   const query = search.trim().toLowerCase();
   const skills = Object.values(skillsMap).filter((skill) => {
@@ -308,6 +331,15 @@ function DraftPane({ draftId }: { draftId: string }) {
   }, [dispatch, draftId, draft]);
 
   if (draft?.status === "pending") return <SkillDetail draft={draft} />;
+  if (draft?.status === "generating" || draft?.status === "generation_failed") {
+    return (
+      <div className="mx-auto w-full max-w-2xl space-y-4 p-6">
+        <p className="text-sm font-medium">{draft.displayName || "Skill draft"}</p>
+        <p className="text-sm text-muted-foreground">{draft.rationale}</p>
+        <SkillDraftStatus {...draft} draftId={draft.id} />
+      </div>
+    );
+  }
   if (draft) {
     return (
       <BrowsePaneMessage

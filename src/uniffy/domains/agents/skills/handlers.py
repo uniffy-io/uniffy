@@ -52,6 +52,7 @@ from uniffy.domains.agents.skills.converters import (
     skill_to_proto,
     skill_version_to_proto,
 )
+from uniffy.domains.agents.skills.generation_handlers import SkillGenerationHandlers
 from uniffy.domains.agents.skills.metrics import SkillMetricsReader
 from uniffy.domains.agents.skills.operations import SkillOperations
 from uniffy.infrastructure.database import open_session
@@ -59,7 +60,7 @@ from uniffy.infrastructure.database import open_session
 logger = logger.bind(component="agents.skills.handlers")
 
 
-class SkillsHandlers:
+class SkillsHandlers(SkillGenerationHandlers):
     """RPC handlers for skills service."""
 
     async def create_skill(

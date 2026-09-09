@@ -27,6 +27,7 @@ from uniffy.core.auth.principal import current_user_id, resolve_organization_id
 from uniffy.core.converters import datetime_to_timestamp
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
 from uniffy.core.models.chat.message import ChatMessage, SenderType
+from uniffy.domains.agents.invocation import read_response_skill_attributions
 from uniffy.domains.chat.access import ChatAccessChecker
 from uniffy.domains.chat.messages.converters import SENDER_TYPE_TO_PROTO, message_to_proto
 from uniffy.domains.chat.messages.projection import ForwardProjectionResolver
@@ -97,6 +98,13 @@ class ThreadHandlers:
                 )
                 if stats and stats.last_reply_at:
                     resp.last_reply_at.CopyFrom(datetime_to_timestamp(stats.last_reply_at))
+                attributions = await read_response_skill_attributions(
+                    session,
+                    organization_id=org_id,
+                    channel_id=channel_id,
+                    response_ids=[root_msg.id],
+                )
+                resp.root_message.metadata.update(attributions.get(root_msg.id, {}))
                 return resp
         except (NotFoundError, PermissionDeniedError) as e:
             _handle_error(e)
@@ -144,6 +152,12 @@ class ThreadHandlers:
                 )
 
                 proto_messages = []
+                attributions = await read_response_skill_attributions(
+                    session,
+                    organization_id=org_id,
+                    channel_id=channel_id,
+                    response_ids=[message.id for message in messages],
+                )
                 for m in messages:
                     proto_msg = message_to_proto(
                         m,
@@ -159,6 +173,7 @@ class ThreadHandlers:
                         ),
                         forward_context=forward_contexts.get(m.id),
                     )
+                    proto_msg.metadata.update(attributions.get(m.id, {}))
                     proto_messages.append(proto_msg)
 
                 return GetThreadMessagesResponse(

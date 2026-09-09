@@ -31,6 +31,7 @@ export const messageToPlain = (msg: MessageInfo) => ({
   previousContent: msg.previousContent,
   wasCancelled: msg.wasCancelled,
   invokedSkillName: msg.invokedSkillName || "",
+  skillInvocation: { ...msg.skillInvocation },
   thinkingJson: msg.thinkingJson || "",
 });
 

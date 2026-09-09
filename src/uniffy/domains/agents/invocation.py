@@ -8,6 +8,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from uniffy.core.auth.permissions.checker import PermissionChecker
 from uniffy.core.auth.permissions.helpers import require_view
 from uniffy.core.models.agents.agent import Agent
+from uniffy.core.models.agents.skill_invocation import AgentSkillInvocation, SkillInvocationStatus
+from uniffy.core.models.agents.skill_version import AgentSkillVersion
 from uniffy.core.models.chat.channel import ChatChannel
 from uniffy.core.models.chat.message import ChatMessage, SenderType
 from uniffy.core.types import ContentType
@@ -23,6 +25,50 @@ from uniffy.domains.agents.skills.resolution import (
 )
 from uniffy.domains.agents.tools.registry import get_tool_registry
 from uniffy.domains.integrations.advertisement import filter_integration_tool_schemas
+
+
+async def read_response_skill_attributions(
+    session: AsyncSession,
+    *,
+    organization_id: UUID,
+    response_ids: list[UUID],
+    channel_id: UUID | None = None,
+    session_id: UUID | None = None,
+) -> dict[UUID, dict[str, str]]:
+    """Project exact snapshots for a bounded page whose conversation access is already gated."""
+    if not response_ids:
+        return {}
+    if len(response_ids) > 500 or (channel_id is None) == (session_id is None):
+        raise ValueError("Attribution requires a bounded page in one conversation")
+    rows = (
+        await session.execute(
+            select(AgentSkillInvocation, AgentSkillVersion.display_name)
+            .join(
+                AgentSkillVersion,
+                (AgentSkillVersion.id == AgentSkillInvocation.skill_version_id)
+                & (AgentSkillVersion.skill_id == AgentSkillInvocation.skill_id),
+            )
+            .where(
+                AgentSkillInvocation.organization_id == organization_id,
+                AgentSkillInvocation.response_message_id.in_(response_ids),
+                AgentSkillInvocation.channel_id == channel_id,
+                AgentSkillInvocation.session_id == session_id,
+                AgentSkillInvocation.status == SkillInvocationStatus.COMPLETED,
+            )
+        )
+    ).all()
+    return {
+        invocation.response_message_id: {
+            "skill_invocation_id": str(invocation.id),
+            "skill_id": str(invocation.skill_id),
+            "skill_version_id": str(invocation.skill_version_id),
+            "skill_version_number": str(invocation.skill_version_number),
+            "skill_display_name": display_name,
+            "skill_actor_user_id": str(invocation.user_id),
+            "skill_trigger_message_id": str(invocation.trigger_message_id or ""),
+        }
+        for invocation, display_name in rows
+    }
 
 
 def parse_invoked_skill_id(metadata: dict | None) -> UUID | None:

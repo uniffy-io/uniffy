@@ -192,6 +192,7 @@ export const agentMessagesSlice = createSlice({
         previousContent: undefined,
         wasCancelled: false,
         invokedSkillName: invokedSkillName || "",
+        skillInvocation: {},
         thinkingJson: "",
       });
     },

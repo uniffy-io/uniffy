@@ -70,7 +70,7 @@ export function AgentsLayout() {
     dispatch(fetchAgents());
     dispatch(fetchDeletedAgents());
     dispatch(fetchSkills());
-    dispatch(fetchSkillDrafts({ status: "pending" }));
+    dispatch(fetchSkillDrafts({ status: "open" }));
     dispatch(fetchCronTasks());
     dispatch(fetchProviderKeys());
     dispatch(fetchAvailableModels());

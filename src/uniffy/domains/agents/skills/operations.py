@@ -18,15 +18,13 @@ from uniffy.core.models.agents.skill import (
     AgentSkillStatus,
 )
 from uniffy.core.models.agents.skill_draft import (
+    OPEN_DRAFT_STATUSES,
     AgentSkillDraft,
     AgentSkillDraftKind,
     AgentSkillDraftStatus,
 )
 from uniffy.core.models.agents.skill_version import AgentSkillVersion, AgentSkillVersionAuthor
 from uniffy.core.models.audit.event import AuditResourceType
-from uniffy.core.models.chat.channel_member import ChatChannelMember
-from uniffy.core.models.chat.message import ChatMessage
-from uniffy.core.types import SubjectType
 from uniffy.domains.agents.access import require_agents_builder
 from uniffy.domains.agents.agents.operations import AgentOperations
 from uniffy.domains.agents.cache import (
@@ -35,34 +33,25 @@ from uniffy.domains.agents.cache import (
 from uniffy.domains.agents.policy import check_admin_content
 from uniffy.domains.agents.runtime.images.config import apply_image_tool_schema, resolve_image_config
 from uniffy.domains.agents.runtime.tooling import allowed_tool_names, resolve_tool_schemas
+from uniffy.domains.agents.skills.cards import publish_draft_card, stage_draft_card
+from uniffy.domains.agents.skills.generation import SkillDraftGeneration
+from uniffy.domains.agents.skills.quotas import require_draft_capacity
 from uniffy.domains.agents.skills.resolution import (
     SkillSummary,
     SkillSurface,
     resolve_runnable_skills,
 )
 from uniffy.domains.agents.skills.validation import (
-    SKILL_CONTENT_MAX,
-    SKILL_DESCRIPTION_MAX,
     SKILL_DISPLAY_NAME_MAX,
     SKILL_NAME_MAX,
-    SKILL_RATIONALE_MAX,
-    cap_preserving_mentions,
     clean_skill_update,
     clean_skill_write,
-    has_hard_injection,
     sanitize_skill_text,
     validate_supported_surfaces,
 )
 from uniffy.domains.agents.tools.registry import get_tool_registry
-from uniffy.domains.chat import agents as chat_evt
-from uniffy.domains.chat.agents import publish_channel_event_to_members
 from uniffy.domains.integrations.advertisement import filter_integration_tool_schemas
 from uniffy.domains.organizations.operations import OrganizationOperations
-
-# The proposal path is reachable by any org member through an agent tool loop,
-# so a single user cannot hold more than this many open drafts in the org-wide
-# builder review inbox.
-MAX_PENDING_DRAFTS_PER_USER = 25
 
 # Validation field the draft review surface keys its replace-confirmation on.
 SKILL_NAME_CONFLICT_FIELD = "skill_name_conflict"
@@ -379,6 +368,7 @@ class SkillOperations:
     ) -> AgentSkillDraft:
         """Persist a user-authored draft awaiting review; activates nothing."""
         await require_agents_builder(self._session, user_id, organization_id)
+        await require_draft_capacity(self._session, user_id, organization_id)
         if kind not in ("create", "edit", "evolve"):
             raise ValidationError("kind", f"Unknown draft kind '{kind}'")
         if kind in ("edit", "evolve"):
@@ -408,81 +398,6 @@ class SkillOperations:
         await self._session.refresh(draft)
         return draft
 
-    async def propose_skill_draft(
-        self,
-        *,
-        user_id: UUID,
-        organization_id: UUID,
-        agent_id: UUID | None,
-        session_id: UUID | None,
-        kind: str,
-        target_skill_id: UUID | None,
-        name: str,
-        display_name: str,
-        description: str = "",
-        content: str = "",
-        requires_tools: list[str] | None = None,
-        supported_surfaces: list[str] | None = None,
-        rationale: str = "",
-    ) -> AgentSkillDraft:
-        """Persist an agent-proposed draft (status=pending); never auto-activates.
-
-        Called from the ``skills.propose_skill`` tool inside a run that has
-        already gated the acting user, so it does no permission check of its own.
-        Being the one ungated write, it carries its own bounds: every free-text
-        field is capped, hard delimiter-injection markers are rejected before the
-        text can render for a reviewer, and one user's open drafts are quota'd so
-        a looped agent cannot flood the org-wide inbox.
-        """
-        clean_content = cap_preserving_mentions(sanitize_skill_text(content), SKILL_CONTENT_MAX)
-        clean_description = cap_preserving_mentions(
-            sanitize_skill_text(description), SKILL_DESCRIPTION_MAX
-        )
-        clean_rationale = cap_preserving_mentions(
-            sanitize_skill_text(rationale), SKILL_RATIONALE_MAX
-        )
-        if has_hard_injection(clean_content, clean_description, clean_rationale):
-            raise ValidationError(
-                "content", "Skill content contains a disallowed system-prompt delimiter"
-            )
-        await self._require_pending_draft_quota(user_id, organization_id)
-
-        seed_tools = requires_tools
-        seed_context = supported_surfaces
-        # Preserve requirements when the proposal only supplies new content.
-        if (
-            kind in ("edit", "evolve")
-            and target_skill_id is not None
-            and (seed_tools is None or seed_context is None)
-        ):
-            target = await self._load_skill_for_seed(organization_id, target_skill_id)
-            if target is not None:
-                if seed_tools is None:
-                    seed_tools = list(target.requires_tools or [])
-                if seed_context is None:
-                    seed_context = list(target.supported_surfaces or [])
-
-        draft = AgentSkillDraft(
-            organization_id=organization_id,
-            owner_id=user_id,
-            target_skill_id=target_skill_id,
-            kind=kind,
-            proposed_by_agent_id=agent_id,
-            session_id=session_id,
-            rationale=clean_rationale,
-            name=(name or "").strip()[:SKILL_NAME_MAX] or None,
-            display_name=(display_name or "").strip()[:SKILL_DISPLAY_NAME_MAX] or None,
-            description=clean_description,
-            content=clean_content,
-            requires_tools=list(seed_tools or []),
-            supported_surfaces=validate_supported_surfaces(seed_context),
-            status="pending",
-        )
-        self._session.add(draft)
-        await self._session.commit()
-        await self._session.refresh(draft)
-        return draft
-
     async def get_skill_draft(
         self,
         *,
@@ -491,8 +406,9 @@ class SkillOperations:
         draft_id: UUID,
     ) -> AgentSkillDraft:
         """Fetch a draft from the builder review inbox."""
-        await require_agents_builder(self._session, user_id, organization_id)
-        return await self._get_draft(organization_id=organization_id, draft_id=draft_id)
+        return await SkillDraftGeneration(self._session).get(
+            user_id=user_id, organization_id=organization_id, draft_id=draft_id
+        )
 
     async def list_skill_drafts(
         self,
@@ -509,7 +425,9 @@ class SkillOperations:
             AgentSkillDraft.organization_id == organization_id,
             AgentSkillDraft.is_deleted == False,  # noqa: E712
         ]
-        if status:
+        if status == "open":  # noqa: PLR2004 - API filter
+            filters.append(AgentSkillDraft.status.in_(OPEN_DRAFT_STATUSES))
+        elif status:
             filters.append(AgentSkillDraft.status == status)
 
         count_result = await self._session.execute(
@@ -655,10 +573,7 @@ class SkillOperations:
             audit_action = Action.AGENT_SKILL_UPDATED
 
         draft.status = AgentSkillDraftStatus.SAVED
-        await self._session.commit()
-        await self._session.refresh(skill)
-        await self._session.refresh(version)
-
+        await stage_draft_card(self._session, draft)
         await write_audit_event(
             self._session,
             organization_id=organization_id,
@@ -673,10 +588,12 @@ class SkillOperations:
             },
         )
         await self._session.commit()
+        await self._session.refresh(skill)
+        await self._session.refresh(version)
 
         await invalidate_agents_using_skill(skill.id)
 
-        await self._notify_chat_draft_resolved(draft, status="saved", saved_skill_id=skill.id)
+        await publish_draft_card(self._session, draft)
         return skill, version
 
     async def discard_skill_draft(
@@ -686,18 +603,21 @@ class SkillOperations:
         organization_id: UUID,
         draft_id: UUID,
     ) -> None:
-        """Soft-discard a pending draft. Activates nothing."""
+        """Discard an open draft without allowing an in-flight worker to restore it."""
         await require_agents_builder(self._session, user_id, organization_id)
         draft = await self._get_draft(
             organization_id=organization_id,
             draft_id=draft_id,
-            require_pending=True,
+            require_pending=False,
         )
+        if draft.status not in OPEN_DRAFT_STATUSES:
+            raise ValidationError("draft_id", "This draft has already been resolved")
         draft.status = AgentSkillDraftStatus.DISCARDED
         draft.is_deleted = True
         draft.deleted_at = datetime.now(UTC)
+        await stage_draft_card(self._session, draft)
         await self._session.commit()
-        await self._notify_chat_draft_resolved(draft, status="discarded")
+        await publish_draft_card(self._session, draft)
 
     async def list_skill_versions(
         self,
@@ -887,11 +807,14 @@ class SkillOperations:
         require_pending: bool = False,
     ) -> AgentSkillDraft:
         result = await self._session.execute(
-            select(AgentSkillDraft).where(
+            select(AgentSkillDraft)
+            .where(
                 AgentSkillDraft.id == draft_id,
                 AgentSkillDraft.organization_id == organization_id,
-                AgentSkillDraft.is_deleted == False,  # noqa: E712
+                AgentSkillDraft.is_deleted.is_(False),
             )
+            .with_for_update()
+            .execution_options(populate_existing=True)
         )
         draft = result.scalar_one_or_none()
         if draft is None:
@@ -899,26 +822,6 @@ class SkillOperations:
         if require_pending and draft.status != AgentSkillDraftStatus.PENDING:
             raise ValidationError("status", "This draft has already been resolved")
         return draft
-
-    async def _require_pending_draft_quota(self, user_id: UUID, organization_id: UUID) -> None:
-        count = (
-            await self._session.execute(
-                select(func.count())
-                .select_from(AgentSkillDraft)
-                .where(
-                    AgentSkillDraft.organization_id == organization_id,
-                    AgentSkillDraft.owner_id == user_id,
-                    AgentSkillDraft.status == AgentSkillDraftStatus.PENDING,
-                    AgentSkillDraft.is_deleted == False,  # noqa: E712
-                )
-            )
-        ).scalar() or 0
-        if count >= MAX_PENDING_DRAFTS_PER_USER:
-            raise ValidationError(
-                "drafts",
-                f"You already have {MAX_PENDING_DRAFTS_PER_USER} skill drafts awaiting "
-                "review. Ask a builder to review them before proposing more.",
-            )
 
     async def _require_unique_name(
         self, organization_id: UUID, name: str, *, exclude_id: UUID | None = None
@@ -932,19 +835,6 @@ class SkillOperations:
         existing = await self._session.execute(select(AgentSkill).where(*filters))
         if existing.scalar_one_or_none():
             raise ValidationError("name", f"Skill name '{name}' already exists in this organization")
-
-    async def _load_skill_for_seed(self, organization_id: UUID, skill_id: UUID) -> AgentSkill | None:
-        """Read an org or bundled skill by id to seed a draft; no permission gate."""
-        result = await self._session.execute(
-            select(AgentSkill).where(
-                AgentSkill.id == skill_id,
-                or_(
-                    AgentSkill.organization_id == organization_id,
-                    AgentSkill.organization_id.is_(None),
-                ),
-            )
-        )
-        return result.scalar_one_or_none()
 
     async def _find_skill_by_name(self, organization_id: UUID, name: str) -> AgentSkill | None:
         """Return the org's skill with this exact machine name, if any."""
@@ -1060,53 +950,3 @@ class SkillOperations:
         if not skill.active_version_pinned:
             skill.active_version_id = version.id
         return version
-
-    async def _notify_chat_draft_resolved(
-        self,
-        draft: AgentSkillDraft,
-        *,
-        status: str,
-        saved_skill_id: UUID | None = None,
-    ) -> None:
-        """Flip a chat-origin draft card to its resolved state and fan it out.
-
-        A no-op for drafts that did not originate from a chat message. Stamps
-        the original card row's metadata (wire type ``map<string,string>``) so
-        every channel member sees the card settle to saved/discarded.
-        """
-        if draft.channel_id is None or draft.origin_chat_message_id is None:
-            return
-        msg = await self._session.get(ChatMessage, draft.origin_chat_message_id)
-        if msg is None:
-            return
-        new_meta = {**(msg.message_metadata or {}), "draft_status": status}
-        if saved_skill_id is not None:
-            new_meta["saved_skill_id"] = str(saved_skill_id)
-        payload = chat_evt.build_message_payload(
-            message_id=msg.id,
-            channel_id=msg.channel_id,
-            sender_id=msg.sender_id,
-            sender_type=msg.sender_type.value
-            if hasattr(msg.sender_type, "value")
-            else str(msg.sender_type),
-            content=msg.content or "",
-            root_id=msg.root_id,
-            created_at=msg.created_at,
-            metadata=new_meta,
-            reply_to_id=msg.reply_to_id,
-        )
-        msg.message_metadata = new_meta
-        await self._session.commit()
-        members = await self._session.execute(
-            select(ChatChannelMember.subject_id).where(
-                ChatChannelMember.channel_id == draft.channel_id,
-                ChatChannelMember.subject_type == SubjectType.USER,
-            )
-        )
-        member_ids = [r[0] for r in members.all()]
-        await publish_channel_event_to_members(
-            member_ids,
-            chat_evt.MESSAGE_UPDATED,
-            payload,
-            channel_id=draft.channel_id,
-        )

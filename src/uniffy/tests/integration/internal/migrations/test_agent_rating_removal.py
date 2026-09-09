@@ -10,12 +10,12 @@ from uniffy_proto.agents.v1.sessions_pb2 import ListMessagesRequest
 from uniffy_proto.chat.v1.chat_pb2 import GetThreadMessagesRequest
 
 import uniffy.core.models  # noqa: F401
+from uniffy.core.json_codec import dumps_str
 from uniffy.core.models.agents.agent import Agent
 from uniffy.core.models.agents.message import AgentMessage, AgentMessageRole
 from uniffy.core.models.agents.run_log import AgentRunLog
 from uniffy.core.models.agents.session import AgentSession, AgentSessionKind
 from uniffy.core.models.agents.skill import AgentSkill, AgentSkillSource, SkillSurface
-from uniffy.core.models.agents.skill_draft import AgentSkillDraft, AgentSkillDraftKind
 from uniffy.core.models.agents.skill_invocation import AgentSkillInvocation
 from uniffy.core.models.agents.skill_version import AgentSkillVersion
 from uniffy.core.models.chat.channel import ChannelType, ChatChannel
@@ -126,16 +126,23 @@ async def test_rating_removal_preserves_content_and_history(scratch_database, mo
                     run_log_id=run.id,
                     response_message_id=reply.id,
                 ),
-                AgentSkillDraft(
-                    organization_id=org.id,
-                    owner_id=user.id,
-                    kind=AgentSkillDraftKind.EDIT,
-                    target_skill_id=skill.id,
-                    content="Draft body",
-                    evidence_message_ids=[str(reply.id)],
-                ),
                 ChatReaction(message_id=chat_reply.id, user_id=user.id, emoji="ack"),
             ])
+            await session.execute(
+                text(
+                    "INSERT INTO agents_skill_drafts "
+                    "(id, organization_id, owner_id, kind, target_skill_id, "
+                    "content, evidence_message_ids) VALUES "
+                    "(:id, :org, :user, 'edit', :skill, 'Draft body', CAST(:evidence AS jsonb))"
+                ),
+                {
+                    "id": generate_id(),
+                    "org": org.id,
+                    "user": user.id,
+                    "skill": skill.id,
+                    "evidence": dumps_str([str(reply.id)]),
+                },
+            )
             for target, message_id in (
                 ("agents_message_id", reply.id),
                 ("chat_message_id", chat_reply.id),

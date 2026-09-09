@@ -31,7 +31,6 @@ service SessionsService {
   // preceding user message and returns that. Refused if a run is
   // currently in flight on this session.
   rpc RetryMessage(RetryMessageRequest) returns (RetryMessageResponse) {}
-
 }
 
 // Kind of session
@@ -112,6 +111,8 @@ message MessageInfo {
   string thinking_json = 22;
   int32 cache_read_input_tokens = 23;
   int32 cache_creation_input_tokens = 24;
+  // Exact invocation facts for a settled response.
+  map<string, string> skill_invocation = 25;
 }
 
 message CreateSessionRequest {

@@ -227,9 +227,6 @@ class StreamingToolLoop:
                 )
                 results_content[tool_call.id] = content
 
-                while base_context.pending_events:
-                    yield base_context.pending_events.pop(0)
-
             llm_messages.append({
                 "role": "user",
                 "content": [

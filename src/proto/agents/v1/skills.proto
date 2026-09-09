@@ -10,6 +10,8 @@ option go_package = "github.com/uniffy-io/uniffy-proto-go/agents/v1;agentsv1";
 // SkillsService manages skill definitions for agents.
 // Skills are curated instruction sets (markdown) that shape agent behavior.
 service SkillsService {
+  rpc GenerateSkillDraft(GenerateSkillDraftRequest) returns (GenerateSkillDraftResponse) {}
+  rpc RetrySkillDraftGeneration(RetrySkillDraftGenerationRequest) returns (GenerateSkillDraftResponse) {}
   // Create a new organization skill
   rpc CreateSkill(CreateSkillRequest) returns (CreateSkillResponse) {}
 
@@ -60,7 +62,7 @@ service SkillsService {
   // a new version at the head of the history.
   rpc RevertSkill(RevertSkillRequest) returns (RevertSkillResponse) {}
 
-  // Per-skill usage + feedback aggregates for the org admin metrics view.
+  // Exact-version invocation observations for the org admin metrics view.
   rpc GetSkillMetrics(GetSkillMetricsRequest) returns (GetSkillMetricsResponse) {}
 }
 
@@ -137,10 +139,39 @@ message SkillDraft {
   string description = 14;
   string content = 15;
   repeated string requires_tools = 17;
-  string status = 20; // pending | saved | discarded
+  string status = 20; // generating | generation_failed | pending | saved | discarded
   google.protobuf.Timestamp created_at = 21;
   google.protobuf.Timestamp updated_at = 22;
   repeated string supported_surfaces = 23; // session | chat; empty permits both
+  optional string invocation_id = 24;
+  optional string target_version_id = 25;
+  int32 target_version_number = 26;
+  int32 generation_attempt = 27;
+  string generation_error = 28;
+}
+
+message GenerateSkillDraftRequest {
+  string organization_id = 1;
+  // A client-generated UUID deduplicates retries of the same confirmed action.
+  string request_id = 2;
+  string agent_id = 3;
+  optional string session_id = 4;
+  optional string channel_id = 5;
+  optional string thread_root_id = 6;
+  repeated string evidence_message_ids = 7;
+  string rationale = 8;
+  // Improve targets the exact invocation, never a client-selected skill.
+  optional string invocation_id = 9;
+}
+
+message GenerateSkillDraftResponse {
+  SkillDraft draft = 1;
+}
+
+message RetrySkillDraftGenerationRequest {
+  string organization_id = 1;
+  string draft_id = 2;
+  int32 expected_attempt = 3;
 }
 
 message CreateSkillRequest {
@@ -151,7 +182,6 @@ message CreateSkillRequest {
   string display_name = 3;
   string description = 4;
   string content = 5;
-
 }
 
 message CreateSkillResponse {
@@ -192,7 +222,6 @@ message UpdateSkillRequest {
   optional string display_name = 4;
   optional string description = 5;
   optional string content = 6;
-
 }
 
 message DeleteSkillRequest {
@@ -213,7 +242,6 @@ message RunnableSkill {
   string name = 2;
   string display_name = 3;
   string description = 4;
-
 }
 
 message ListRunnableSkillsRequest {
@@ -362,8 +390,7 @@ message SkillMetric {
   int64 rejected_count = 13;
   int64 cancelled_count = 14;
   reserved 15 to 20;
-  reserved "rated_response_count", "positive_feedback_count", "negative_feedback_count",
-    "rating_count", "positive_feedback_rate", "negative_feedback_rate";
+  reserved "rated_response_count", "positive_feedback_count", "negative_feedback_count", "rating_count", "positive_feedback_rate", "negative_feedback_rate";
   int64 tool_error_run_count = 21;
   // Fraction of invocations with at least one failed tool call.
   double tool_error_rate = 22;

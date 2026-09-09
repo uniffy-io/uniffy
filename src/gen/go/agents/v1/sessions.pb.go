@@ -332,8 +332,10 @@ type MessageInfo struct {
 	ThinkingJson             string `protobuf:"bytes,22,opt,name=thinking_json,json=thinkingJson,proto3" json:"thinking_json,omitempty"`
 	CacheReadInputTokens     int32  `protobuf:"varint,23,opt,name=cache_read_input_tokens,json=cacheReadInputTokens,proto3" json:"cache_read_input_tokens,omitempty"`
 	CacheCreationInputTokens int32  `protobuf:"varint,24,opt,name=cache_creation_input_tokens,json=cacheCreationInputTokens,proto3" json:"cache_creation_input_tokens,omitempty"`
-	unknownFields            protoimpl.UnknownFields
-	sizeCache                protoimpl.SizeCache
+	// Exact invocation facts for a settled response.
+	SkillInvocation map[string]string `protobuf:"bytes,25,rep,name=skill_invocation,json=skillInvocation,proto3" json:"skill_invocation,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *MessageInfo) Reset() {
@@ -525,6 +527,13 @@ func (x *MessageInfo) GetCacheCreationInputTokens() int32 {
 		return x.CacheCreationInputTokens
 	}
 	return 0
+}
+
+func (x *MessageInfo) GetSkillInvocation() map[string]string {
+	if x != nil {
+		return x.SkillInvocation
+	}
+	return nil
 }
 
 type CreateSessionRequest struct {
@@ -1118,7 +1127,7 @@ const file_agents_v1_sessions_proto_rawDesc = "" +
 	"\ais_test\x18\x0f \x01(\bR\x06isTestB\x0f\n" +
 	"\r_display_nameB\x11\n" +
 	"\x0f_model_overrideB\x12\n" +
-	"\x10_last_model_used\"\xb3\b\n" +
+	"\x10_last_model_used\"\xcf\t\n" +
 	"\vMessageInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
 	"\n" +
@@ -1148,7 +1157,11 @@ const file_agents_v1_sessions_proto_rawDesc = "" +
 	"\x12invoked_skill_name\x18\x15 \x01(\tR\x10invokedSkillName\x12#\n" +
 	"\rthinking_json\x18\x16 \x01(\tR\fthinkingJson\x125\n" +
 	"\x17cache_read_input_tokens\x18\x17 \x01(\x05R\x14cacheReadInputTokens\x12=\n" +
-	"\x1bcache_creation_input_tokens\x18\x18 \x01(\x05R\x18cacheCreationInputTokensB\n" +
+	"\x1bcache_creation_input_tokens\x18\x18 \x01(\x05R\x18cacheCreationInputTokens\x12V\n" +
+	"\x10skill_invocation\x18\x19 \x03(\v2+.agents.v1.MessageInfo.SkillInvocationEntryR\x0fskillInvocation\x1aB\n" +
+	"\x14SkillInvocationEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01B\n" +
 	"\n" +
 	"\b_contentB\b\n" +
 	"\x06_modelB\f\n" +
@@ -1241,7 +1254,7 @@ func file_agents_v1_sessions_proto_rawDescGZIP() []byte {
 }
 
 var file_agents_v1_sessions_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_agents_v1_sessions_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
+var file_agents_v1_sessions_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
 var file_agents_v1_sessions_proto_goTypes = []any{
 	(SessionKind)(0),              // 0: agents.v1.SessionKind
 	(MessageRole)(0),              // 1: agents.v1.MessageRole
@@ -1257,39 +1270,41 @@ var file_agents_v1_sessions_proto_goTypes = []any{
 	(*EditMessageResponse)(nil),   // 11: agents.v1.EditMessageResponse
 	(*RetryMessageRequest)(nil),   // 12: agents.v1.RetryMessageRequest
 	(*RetryMessageResponse)(nil),  // 13: agents.v1.RetryMessageResponse
-	(*timestamppb.Timestamp)(nil), // 14: google.protobuf.Timestamp
-	(*v1.PaginationRequest)(nil),  // 15: common.v1.PaginationRequest
-	(*v1.PaginationResponse)(nil), // 16: common.v1.PaginationResponse
+	nil,                           // 14: agents.v1.MessageInfo.SkillInvocationEntry
+	(*timestamppb.Timestamp)(nil), // 15: google.protobuf.Timestamp
+	(*v1.PaginationRequest)(nil),  // 16: common.v1.PaginationRequest
+	(*v1.PaginationResponse)(nil), // 17: common.v1.PaginationResponse
 }
 var file_agents_v1_sessions_proto_depIdxs = []int32{
 	0,  // 0: agents.v1.SessionInfo.kind:type_name -> agents.v1.SessionKind
-	14, // 1: agents.v1.SessionInfo.created_at:type_name -> google.protobuf.Timestamp
-	14, // 2: agents.v1.SessionInfo.updated_at:type_name -> google.protobuf.Timestamp
+	15, // 1: agents.v1.SessionInfo.created_at:type_name -> google.protobuf.Timestamp
+	15, // 2: agents.v1.SessionInfo.updated_at:type_name -> google.protobuf.Timestamp
 	1,  // 3: agents.v1.MessageInfo.role:type_name -> agents.v1.MessageRole
-	14, // 4: agents.v1.MessageInfo.created_at:type_name -> google.protobuf.Timestamp
-	14, // 5: agents.v1.MessageInfo.edited_at:type_name -> google.protobuf.Timestamp
-	0,  // 6: agents.v1.CreateSessionRequest.kind:type_name -> agents.v1.SessionKind
-	2,  // 7: agents.v1.CreateSessionResponse.session:type_name -> agents.v1.SessionInfo
-	2,  // 8: agents.v1.GetSessionResponse.session:type_name -> agents.v1.SessionInfo
-	15, // 9: agents.v1.ListMessagesRequest.pagination:type_name -> common.v1.PaginationRequest
-	3,  // 10: agents.v1.ListMessagesResponse.messages:type_name -> agents.v1.MessageInfo
-	16, // 11: agents.v1.ListMessagesResponse.pagination:type_name -> common.v1.PaginationResponse
-	3,  // 12: agents.v1.EditMessageResponse.message:type_name -> agents.v1.MessageInfo
-	4,  // 13: agents.v1.SessionsService.CreateSession:input_type -> agents.v1.CreateSessionRequest
-	7,  // 14: agents.v1.SessionsService.GetSession:input_type -> agents.v1.GetSessionRequest
-	8,  // 15: agents.v1.SessionsService.ListMessages:input_type -> agents.v1.ListMessagesRequest
-	10, // 16: agents.v1.SessionsService.EditMessage:input_type -> agents.v1.EditMessageRequest
-	12, // 17: agents.v1.SessionsService.RetryMessage:input_type -> agents.v1.RetryMessageRequest
-	5,  // 18: agents.v1.SessionsService.CreateSession:output_type -> agents.v1.CreateSessionResponse
-	6,  // 19: agents.v1.SessionsService.GetSession:output_type -> agents.v1.GetSessionResponse
-	9,  // 20: agents.v1.SessionsService.ListMessages:output_type -> agents.v1.ListMessagesResponse
-	11, // 21: agents.v1.SessionsService.EditMessage:output_type -> agents.v1.EditMessageResponse
-	13, // 22: agents.v1.SessionsService.RetryMessage:output_type -> agents.v1.RetryMessageResponse
-	18, // [18:23] is the sub-list for method output_type
-	13, // [13:18] is the sub-list for method input_type
-	13, // [13:13] is the sub-list for extension type_name
-	13, // [13:13] is the sub-list for extension extendee
-	0,  // [0:13] is the sub-list for field type_name
+	15, // 4: agents.v1.MessageInfo.created_at:type_name -> google.protobuf.Timestamp
+	15, // 5: agents.v1.MessageInfo.edited_at:type_name -> google.protobuf.Timestamp
+	14, // 6: agents.v1.MessageInfo.skill_invocation:type_name -> agents.v1.MessageInfo.SkillInvocationEntry
+	0,  // 7: agents.v1.CreateSessionRequest.kind:type_name -> agents.v1.SessionKind
+	2,  // 8: agents.v1.CreateSessionResponse.session:type_name -> agents.v1.SessionInfo
+	2,  // 9: agents.v1.GetSessionResponse.session:type_name -> agents.v1.SessionInfo
+	16, // 10: agents.v1.ListMessagesRequest.pagination:type_name -> common.v1.PaginationRequest
+	3,  // 11: agents.v1.ListMessagesResponse.messages:type_name -> agents.v1.MessageInfo
+	17, // 12: agents.v1.ListMessagesResponse.pagination:type_name -> common.v1.PaginationResponse
+	3,  // 13: agents.v1.EditMessageResponse.message:type_name -> agents.v1.MessageInfo
+	4,  // 14: agents.v1.SessionsService.CreateSession:input_type -> agents.v1.CreateSessionRequest
+	7,  // 15: agents.v1.SessionsService.GetSession:input_type -> agents.v1.GetSessionRequest
+	8,  // 16: agents.v1.SessionsService.ListMessages:input_type -> agents.v1.ListMessagesRequest
+	10, // 17: agents.v1.SessionsService.EditMessage:input_type -> agents.v1.EditMessageRequest
+	12, // 18: agents.v1.SessionsService.RetryMessage:input_type -> agents.v1.RetryMessageRequest
+	5,  // 19: agents.v1.SessionsService.CreateSession:output_type -> agents.v1.CreateSessionResponse
+	6,  // 20: agents.v1.SessionsService.GetSession:output_type -> agents.v1.GetSessionResponse
+	9,  // 21: agents.v1.SessionsService.ListMessages:output_type -> agents.v1.ListMessagesResponse
+	11, // 22: agents.v1.SessionsService.EditMessage:output_type -> agents.v1.EditMessageResponse
+	13, // 23: agents.v1.SessionsService.RetryMessage:output_type -> agents.v1.RetryMessageResponse
+	19, // [19:24] is the sub-list for method output_type
+	14, // [14:19] is the sub-list for method input_type
+	14, // [14:14] is the sub-list for extension type_name
+	14, // [14:14] is the sub-list for extension extendee
+	0,  // [0:14] is the sub-list for field type_name
 }
 
 func init() { file_agents_v1_sessions_proto_init() }
@@ -1307,7 +1322,7 @@ func file_agents_v1_sessions_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agents_v1_sessions_proto_rawDesc), len(file_agents_v1_sessions_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   12,
+			NumMessages:   13,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

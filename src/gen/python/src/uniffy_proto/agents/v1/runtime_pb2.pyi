@@ -1,5 +1,4 @@
 from agents.v1 import sessions_pb2 as _sessions_pb2
-from agents.v1 import skills_pb2 as _skills_pb2
 from google.protobuf.internal import containers as _containers
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message
@@ -369,7 +368,7 @@ class RespondToConfirmationResponse(_message.Message):
     def __init__(self, accepted: _Optional[bool] = ...) -> None: ...
 
 class AgentStreamEvent(_message.Message):
-    __slots__ = ("reply_start", "model_call_start", "model_call_end", "text_block_start", "text_block_delta", "text_block_end", "thinking_block_start", "thinking_block_delta", "thinking_block_end", "tool_call_start", "tool_call_delta", "tool_call_end", "tool_result_start", "tool_result_delta", "tool_result_end", "confirmation_required", "failover", "skill_draft", "exceed_max_iters", "message_stored", "done", "error", "run_id")
+    __slots__ = ("reply_start", "model_call_start", "model_call_end", "text_block_start", "text_block_delta", "text_block_end", "thinking_block_start", "thinking_block_delta", "thinking_block_end", "tool_call_start", "tool_call_delta", "tool_call_end", "tool_result_start", "tool_result_delta", "tool_result_end", "confirmation_required", "failover", "exceed_max_iters", "message_stored", "done", "error", "run_id")
     REPLY_START_FIELD_NUMBER: _ClassVar[int]
     MODEL_CALL_START_FIELD_NUMBER: _ClassVar[int]
     MODEL_CALL_END_FIELD_NUMBER: _ClassVar[int]
@@ -387,7 +386,6 @@ class AgentStreamEvent(_message.Message):
     TOOL_RESULT_END_FIELD_NUMBER: _ClassVar[int]
     CONFIRMATION_REQUIRED_FIELD_NUMBER: _ClassVar[int]
     FAILOVER_FIELD_NUMBER: _ClassVar[int]
-    SKILL_DRAFT_FIELD_NUMBER: _ClassVar[int]
     EXCEED_MAX_ITERS_FIELD_NUMBER: _ClassVar[int]
     MESSAGE_STORED_FIELD_NUMBER: _ClassVar[int]
     DONE_FIELD_NUMBER: _ClassVar[int]
@@ -410,13 +408,12 @@ class AgentStreamEvent(_message.Message):
     tool_result_end: StreamToolResultEndEvent
     confirmation_required: StreamConfirmationRequiredEvent
     failover: StreamFailoverEvent
-    skill_draft: StreamSkillDraftEvent
     exceed_max_iters: StreamExceedMaxItersEvent
     message_stored: StreamMessageStoredEvent
     done: StreamDoneEvent
     error: StreamErrorEvent
     run_id: str
-    def __init__(self, reply_start: _Optional[_Union[StreamReplyStartEvent, _Mapping]] = ..., model_call_start: _Optional[_Union[StreamModelCallStartEvent, _Mapping]] = ..., model_call_end: _Optional[_Union[StreamModelCallEndEvent, _Mapping]] = ..., text_block_start: _Optional[_Union[StreamTextBlockStartEvent, _Mapping]] = ..., text_block_delta: _Optional[_Union[StreamTextBlockDeltaEvent, _Mapping]] = ..., text_block_end: _Optional[_Union[StreamTextBlockEndEvent, _Mapping]] = ..., thinking_block_start: _Optional[_Union[StreamThinkingBlockStartEvent, _Mapping]] = ..., thinking_block_delta: _Optional[_Union[StreamThinkingBlockDeltaEvent, _Mapping]] = ..., thinking_block_end: _Optional[_Union[StreamThinkingBlockEndEvent, _Mapping]] = ..., tool_call_start: _Optional[_Union[StreamToolCallStartEvent, _Mapping]] = ..., tool_call_delta: _Optional[_Union[StreamToolCallDeltaEvent, _Mapping]] = ..., tool_call_end: _Optional[_Union[StreamToolCallEndEvent, _Mapping]] = ..., tool_result_start: _Optional[_Union[StreamToolResultStartEvent, _Mapping]] = ..., tool_result_delta: _Optional[_Union[StreamToolResultDeltaEvent, _Mapping]] = ..., tool_result_end: _Optional[_Union[StreamToolResultEndEvent, _Mapping]] = ..., confirmation_required: _Optional[_Union[StreamConfirmationRequiredEvent, _Mapping]] = ..., failover: _Optional[_Union[StreamFailoverEvent, _Mapping]] = ..., skill_draft: _Optional[_Union[StreamSkillDraftEvent, _Mapping]] = ..., exceed_max_iters: _Optional[_Union[StreamExceedMaxItersEvent, _Mapping]] = ..., message_stored: _Optional[_Union[StreamMessageStoredEvent, _Mapping]] = ..., done: _Optional[_Union[StreamDoneEvent, _Mapping]] = ..., error: _Optional[_Union[StreamErrorEvent, _Mapping]] = ..., run_id: _Optional[str] = ...) -> None: ...
+    def __init__(self, reply_start: _Optional[_Union[StreamReplyStartEvent, _Mapping]] = ..., model_call_start: _Optional[_Union[StreamModelCallStartEvent, _Mapping]] = ..., model_call_end: _Optional[_Union[StreamModelCallEndEvent, _Mapping]] = ..., text_block_start: _Optional[_Union[StreamTextBlockStartEvent, _Mapping]] = ..., text_block_delta: _Optional[_Union[StreamTextBlockDeltaEvent, _Mapping]] = ..., text_block_end: _Optional[_Union[StreamTextBlockEndEvent, _Mapping]] = ..., thinking_block_start: _Optional[_Union[StreamThinkingBlockStartEvent, _Mapping]] = ..., thinking_block_delta: _Optional[_Union[StreamThinkingBlockDeltaEvent, _Mapping]] = ..., thinking_block_end: _Optional[_Union[StreamThinkingBlockEndEvent, _Mapping]] = ..., tool_call_start: _Optional[_Union[StreamToolCallStartEvent, _Mapping]] = ..., tool_call_delta: _Optional[_Union[StreamToolCallDeltaEvent, _Mapping]] = ..., tool_call_end: _Optional[_Union[StreamToolCallEndEvent, _Mapping]] = ..., tool_result_start: _Optional[_Union[StreamToolResultStartEvent, _Mapping]] = ..., tool_result_delta: _Optional[_Union[StreamToolResultDeltaEvent, _Mapping]] = ..., tool_result_end: _Optional[_Union[StreamToolResultEndEvent, _Mapping]] = ..., confirmation_required: _Optional[_Union[StreamConfirmationRequiredEvent, _Mapping]] = ..., failover: _Optional[_Union[StreamFailoverEvent, _Mapping]] = ..., exceed_max_iters: _Optional[_Union[StreamExceedMaxItersEvent, _Mapping]] = ..., message_stored: _Optional[_Union[StreamMessageStoredEvent, _Mapping]] = ..., done: _Optional[_Union[StreamDoneEvent, _Mapping]] = ..., error: _Optional[_Union[StreamErrorEvent, _Mapping]] = ..., run_id: _Optional[str] = ...) -> None: ...
 
 class StreamSendMessageResponse(_message.Message):
     __slots__ = ("event",)
@@ -661,9 +658,3 @@ class StreamFailoverEvent(_message.Message):
     reason: str
     attempt: int
     def __init__(self, from_provider_key_id: _Optional[str] = ..., to_provider_key_id: _Optional[str] = ..., to_model: _Optional[str] = ..., reason: _Optional[str] = ..., attempt: _Optional[int] = ...) -> None: ...
-
-class StreamSkillDraftEvent(_message.Message):
-    __slots__ = ("draft",)
-    DRAFT_FIELD_NUMBER: _ClassVar[int]
-    draft: _skills_pb2.SkillDraft
-    def __init__(self, draft: _Optional[_Union[_skills_pb2.SkillDraft, _Mapping]] = ...) -> None: ...

@@ -55,13 +55,13 @@ const (
 
 // SupportConsentServiceClient is a client for the support.v1.SupportConsentService service.
 type SupportConsentServiceClient interface {
-	// Owner-side: approve a “PENDING“ session in OWNER_APPROVED mode.
+	// Owner-side: approve a ``PENDING`` session in OWNER_APPROVED mode.
 	// Caller must be org OWNER or ADMIN of the target org; a platform
 	// admin explicitly does NOT bypass this gate.
 	ApproveSession(context.Context, *connect.Request[v1.ApproveSessionRequest]) (*connect.Response[v1.ApproveSessionResponse], error)
-	// Owner-side: reject a “PENDING“ session. Same gate as approve.
+	// Owner-side: reject a ``PENDING`` session. Same gate as approve.
 	RejectSession(context.Context, *connect.Request[v1.RejectSessionRequest]) (*connect.Response[v1.RejectSessionResponse], error)
-	// Either side: revoke an “ACTIVE“ or “PENDING“ session early.
+	// Either side: revoke an ``ACTIVE`` or ``PENDING`` session early.
 	// Org OWNER/ADMIN can always revoke; the support user can always
 	// end their own session.
 	RevokeSession(context.Context, *connect.Request[v1.RevokeSessionRequest]) (*connect.Response[v1.RevokeSessionResponse], error)
@@ -174,13 +174,13 @@ func (c *supportConsentServiceClient) SetOrgConsentMode(ctx context.Context, req
 // SupportConsentServiceHandler is an implementation of the support.v1.SupportConsentService
 // service.
 type SupportConsentServiceHandler interface {
-	// Owner-side: approve a “PENDING“ session in OWNER_APPROVED mode.
+	// Owner-side: approve a ``PENDING`` session in OWNER_APPROVED mode.
 	// Caller must be org OWNER or ADMIN of the target org; a platform
 	// admin explicitly does NOT bypass this gate.
 	ApproveSession(context.Context, *connect.Request[v1.ApproveSessionRequest]) (*connect.Response[v1.ApproveSessionResponse], error)
-	// Owner-side: reject a “PENDING“ session. Same gate as approve.
+	// Owner-side: reject a ``PENDING`` session. Same gate as approve.
 	RejectSession(context.Context, *connect.Request[v1.RejectSessionRequest]) (*connect.Response[v1.RejectSessionResponse], error)
-	// Either side: revoke an “ACTIVE“ or “PENDING“ session early.
+	// Either side: revoke an ``ACTIVE`` or ``PENDING`` session early.
 	// Org OWNER/ADMIN can always revoke; the support user can always
 	// end their own session.
 	RevokeSession(context.Context, *connect.Request[v1.RevokeSessionRequest]) (*connect.Response[v1.RevokeSessionResponse], error)

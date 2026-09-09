@@ -42,6 +42,7 @@ import type { SerializedAgent } from "@/features/agents/store/agentsThunks";
 import { ThinkingPane } from "@/features/agents/components/ThinkingPane";
 import { ToolActivityPane } from "@/features/agents/components/ToolActivityPane";
 import { foldMessageTurns, streamingToolCallsToSteps } from "@/features/agents/utils/messageTurns";
+import { SkillResponseActions } from "@/features/agents/components/skills/SkillResponseActions";
 
 const TEST_SESSION_PREFIX = "[test] ";
 
@@ -162,11 +163,13 @@ function UserBubble({
 
 function AssistantBubble({
   message,
+  agentId,
   onApply,
   onRetry,
   disabled,
 }: {
   message: SerializedMessage;
+  agentId?: string;
   onApply?: (content: string) => void;
   onRetry?: (messageId: string) => void;
   disabled: boolean;
@@ -205,6 +208,14 @@ function AssistantBubble({
         <p className="text-[10px] text-muted-foreground mt-0.5 px-1">
           {formatTime(message.createdAt)}
         </p>
+        {agentId && !isOptimistic(message) && message.content && (
+          <SkillResponseActions
+            agentId={agentId}
+            sessionId={message.sessionId}
+            responseMessageId={message.id}
+            attribution={message.skillInvocation}
+          />
+        )}
       </div>
       {onRetry && (
         <button
@@ -468,6 +479,7 @@ export function AgentTestDrawer({
                     )}
                     <AssistantBubble
                       message={turn.message}
+                      agentId={isBuilder ? undefined : agent.id}
                       onApply={isBuilder && canEdit ? handleApply : undefined}
                       onRetry={isBuilder ? undefined : handleRetry}
                       disabled={isStreaming}
