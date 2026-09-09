@@ -4,9 +4,12 @@ import {
   agentRunnableSkillsReducer as reduce,
   selectRunnableSkillsForAgent,
   selectRunnableSkillsStatus,
+  selectSkillCompatibility,
+  selectSkillCompatibilityStatus,
 } from "@/features/agents/store/agentRunnableSkillsSlice";
 import {
   fetchRunnableSkills,
+  fetchSkillCompatibility,
   type RunnableSkillsRequest,
 } from "@/features/agents/store/agentRunnableSkillsThunks";
 import {
@@ -26,9 +29,62 @@ const skills = [
 ];
 const credentials = (organizationId?: string) => ({
   organizationId,
-  user: {} as Parameters<typeof setCredentials>[0]["user"],
+  user: { id: "user-1" } as Parameters<typeof setCredentials>[0]["user"],
   accessToken: "token",
   refreshToken: "refresh",
+});
+
+describe("skill compatibility diagnostics", () => {
+  const params = { organizationId: "org-1", agentId: "agent-1" };
+  const diagnostics = [
+    {
+      skillId: "s1",
+      versionId: "v2",
+      versionNumber: 2,
+      missingTools: ["notes.read_note"],
+      unsupportedSurfaces: ["chat"],
+      unavailable: false,
+      displayName: "Report",
+      retired: false,
+    },
+  ];
+  const start = (id: string) => fetchSkillCompatibility.pending(id, params);
+  const finish = (id: string) =>
+    fetchSkillCompatibility.fulfilled({ ...params, skills: diagnostics }, id, params);
+
+  it("stores exact-version diagnostics without advertising unavailable skills", () => {
+    const state = reduce(reduce(initial(), start("one")), finish("one"));
+    expect(selectSkillCompatibility("agent-1")(root(state))).toEqual(diagnostics);
+    expect(selectRunnableSkillsForAgent("agent-1", "chat")(root(state))).toEqual([]);
+    expect(selectSkillCompatibility("agent-2")(root(state))).toEqual([]);
+    expect(selectSkillCompatibility("agent-1")(root(state, "org-2"))).toEqual([]);
+  });
+
+  it("clears stale diagnostics during refresh and ignores an older response", () => {
+    let state = reduce(reduce(initial(), start("one")), finish("one"));
+    state = reduce(state, start("two"));
+    expect(selectSkillCompatibility("agent-1")(root(state))).toEqual([]);
+    expect(reduce(state, finish("one"))).toEqual(state);
+    state = reduce(state, fetchSkillCompatibility.rejected(null, "two", params, "Failed"));
+    expect(selectSkillCompatibilityStatus("agent-1")(root(state))).toBe("failed");
+  });
+
+  it("drops pending diagnostics across account switches within one organization", () => {
+    let state = reduce(initial(), start("one"));
+    const next = credentials("org-1");
+    next.user.id = "user-2";
+    state = reduce(state, setCredentials(next));
+    expect(reduce(state, finish("one"))).toEqual(state);
+    expect(state.compatibility).toEqual({});
+  });
+
+  it.each([logout(), rehydrateFailed(), setCredentials(credentials("org-2"))])(
+    "drops pending diagnostics after $type",
+    (action) => {
+      const state = reduce(reduce(initial(), start("one")), action);
+      expect(reduce(state, finish("one"))).toEqual(state);
+    },
+  );
 });
 const initial = () => reduce(undefined, setCredentials(credentials("org-1")));
 const root = (state: ReturnType<typeof reduce>, organizationId = "org-1") =>

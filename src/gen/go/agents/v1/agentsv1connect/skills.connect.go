@@ -33,6 +33,9 @@ const (
 // reflection-formatted method names, remove the leading slash and convert the remaining slash to a
 // period.
 const (
+	// SkillsServiceGetSkillCompatibilityProcedure is the fully-qualified name of the SkillsService's
+	// GetSkillCompatibility RPC.
+	SkillsServiceGetSkillCompatibilityProcedure = "/agents.v1.SkillsService/GetSkillCompatibility"
 	// SkillsServiceGenerateSkillDraftProcedure is the fully-qualified name of the SkillsService's
 	// GenerateSkillDraft RPC.
 	SkillsServiceGenerateSkillDraftProcedure = "/agents.v1.SkillsService/GenerateSkillDraft"
@@ -90,6 +93,7 @@ const (
 
 // SkillsServiceClient is a client for the agents.v1.SkillsService service.
 type SkillsServiceClient interface {
+	GetSkillCompatibility(context.Context, *connect.Request[v1.GetSkillCompatibilityRequest]) (*connect.Response[v1.GetSkillCompatibilityResponse], error)
 	GenerateSkillDraft(context.Context, *connect.Request[v1.GenerateSkillDraftRequest]) (*connect.Response[v1.GenerateSkillDraftResponse], error)
 	RetrySkillDraftGeneration(context.Context, *connect.Request[v1.RetrySkillDraftGenerationRequest]) (*connect.Response[v1.GenerateSkillDraftResponse], error)
 	// Create a new organization skill
@@ -142,6 +146,12 @@ func NewSkillsServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 	baseURL = strings.TrimRight(baseURL, "/")
 	skillsServiceMethods := v1.File_agents_v1_skills_proto.Services().ByName("SkillsService").Methods()
 	return &skillsServiceClient{
+		getSkillCompatibility: connect.NewClient[v1.GetSkillCompatibilityRequest, v1.GetSkillCompatibilityResponse](
+			httpClient,
+			baseURL+SkillsServiceGetSkillCompatibilityProcedure,
+			connect.WithSchema(skillsServiceMethods.ByName("GetSkillCompatibility")),
+			connect.WithClientOptions(opts...),
+		),
 		generateSkillDraft: connect.NewClient[v1.GenerateSkillDraftRequest, v1.GenerateSkillDraftResponse](
 			httpClient,
 			baseURL+SkillsServiceGenerateSkillDraftProcedure,
@@ -255,6 +265,7 @@ func NewSkillsServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 
 // skillsServiceClient implements SkillsServiceClient.
 type skillsServiceClient struct {
+	getSkillCompatibility     *connect.Client[v1.GetSkillCompatibilityRequest, v1.GetSkillCompatibilityResponse]
 	generateSkillDraft        *connect.Client[v1.GenerateSkillDraftRequest, v1.GenerateSkillDraftResponse]
 	retrySkillDraftGeneration *connect.Client[v1.RetrySkillDraftGenerationRequest, v1.GenerateSkillDraftResponse]
 	createSkill               *connect.Client[v1.CreateSkillRequest, v1.CreateSkillResponse]
@@ -273,6 +284,11 @@ type skillsServiceClient struct {
 	setMainSkillVersion       *connect.Client[v1.SetMainSkillVersionRequest, v1.SetMainSkillVersionResponse]
 	revertSkill               *connect.Client[v1.RevertSkillRequest, v1.RevertSkillResponse]
 	getSkillMetrics           *connect.Client[v1.GetSkillMetricsRequest, v1.GetSkillMetricsResponse]
+}
+
+// GetSkillCompatibility calls agents.v1.SkillsService.GetSkillCompatibility.
+func (c *skillsServiceClient) GetSkillCompatibility(ctx context.Context, req *connect.Request[v1.GetSkillCompatibilityRequest]) (*connect.Response[v1.GetSkillCompatibilityResponse], error) {
+	return c.getSkillCompatibility.CallUnary(ctx, req)
 }
 
 // GenerateSkillDraft calls agents.v1.SkillsService.GenerateSkillDraft.
@@ -367,6 +383,7 @@ func (c *skillsServiceClient) GetSkillMetrics(ctx context.Context, req *connect.
 
 // SkillsServiceHandler is an implementation of the agents.v1.SkillsService service.
 type SkillsServiceHandler interface {
+	GetSkillCompatibility(context.Context, *connect.Request[v1.GetSkillCompatibilityRequest]) (*connect.Response[v1.GetSkillCompatibilityResponse], error)
 	GenerateSkillDraft(context.Context, *connect.Request[v1.GenerateSkillDraftRequest]) (*connect.Response[v1.GenerateSkillDraftResponse], error)
 	RetrySkillDraftGeneration(context.Context, *connect.Request[v1.RetrySkillDraftGenerationRequest]) (*connect.Response[v1.GenerateSkillDraftResponse], error)
 	// Create a new organization skill
@@ -415,6 +432,12 @@ type SkillsServiceHandler interface {
 // and JSON codecs. They also support gzip compression.
 func NewSkillsServiceHandler(svc SkillsServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
 	skillsServiceMethods := v1.File_agents_v1_skills_proto.Services().ByName("SkillsService").Methods()
+	skillsServiceGetSkillCompatibilityHandler := connect.NewUnaryHandler(
+		SkillsServiceGetSkillCompatibilityProcedure,
+		svc.GetSkillCompatibility,
+		connect.WithSchema(skillsServiceMethods.ByName("GetSkillCompatibility")),
+		connect.WithHandlerOptions(opts...),
+	)
 	skillsServiceGenerateSkillDraftHandler := connect.NewUnaryHandler(
 		SkillsServiceGenerateSkillDraftProcedure,
 		svc.GenerateSkillDraft,
@@ -525,6 +548,8 @@ func NewSkillsServiceHandler(svc SkillsServiceHandler, opts ...connect.HandlerOp
 	)
 	return "/agents.v1.SkillsService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
+		case SkillsServiceGetSkillCompatibilityProcedure:
+			skillsServiceGetSkillCompatibilityHandler.ServeHTTP(w, r)
 		case SkillsServiceGenerateSkillDraftProcedure:
 			skillsServiceGenerateSkillDraftHandler.ServeHTTP(w, r)
 		case SkillsServiceRetrySkillDraftGenerationProcedure:
@@ -569,6 +594,10 @@ func NewSkillsServiceHandler(svc SkillsServiceHandler, opts ...connect.HandlerOp
 
 // UnimplementedSkillsServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedSkillsServiceHandler struct{}
+
+func (UnimplementedSkillsServiceHandler) GetSkillCompatibility(context.Context, *connect.Request[v1.GetSkillCompatibilityRequest]) (*connect.Response[v1.GetSkillCompatibilityResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.SkillsService.GetSkillCompatibility is not implemented"))
+}
 
 func (UnimplementedSkillsServiceHandler) GenerateSkillDraft(context.Context, *connect.Request[v1.GenerateSkillDraftRequest]) (*connect.Response[v1.GenerateSkillDraftResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.SkillsService.GenerateSkillDraft is not implemented"))

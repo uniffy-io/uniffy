@@ -10,6 +10,15 @@ import type { ToolGroup, ToolCategorySection } from "@/features/agents/config/to
 import { toolSummary } from "@/features/agents/config/toolLabels";
 import { selectAllSkills, selectSkillsLoading } from "@/features/agents/store/agentSkillsSlice";
 import { fetchSkills } from "@/features/agents/store/agentSkillsThunks";
+import { SkillCompatibilityNotice } from "@/features/agents/components/skills/SkillCompatibilityNotice";
+import {
+  fetchSkillCompatibility,
+  type SerializedSkillCompatibility,
+} from "@/features/agents/store/agentRunnableSkillsThunks";
+import {
+  selectSkillCompatibility,
+  selectSkillCompatibilityStatus,
+} from "@/features/agents/store/agentRunnableSkillsSlice";
 import {
   selectToolSections,
   selectAgentToolsLoading,
@@ -247,11 +256,15 @@ function SkillRow({
   skill,
   enabled,
   disabled,
+  diagnostic,
+  toolLabels,
   onToggle,
 }: {
   skill: SerializedSkill;
   enabled: boolean;
   disabled?: boolean;
+  diagnostic?: SerializedSkillCompatibility;
+  toolLabels: Record<string, string>;
   onToggle: () => void;
 }) {
   return (
@@ -261,6 +274,14 @@ function SkillRow({
           {skill.displayName}
         </span>
         <p className="text-xs text-muted-foreground truncate">{skill.description}</p>
+        {skill.status === "retired" && (
+          <p className="mt-1 text-xs text-muted-foreground">
+            {enabled
+              ? "Retired. Remains available until unassigned."
+              : "Retired skills cannot be assigned."}
+          </p>
+        )}
+        {enabled && <SkillCompatibilityNotice diagnostic={diagnostic} toolLabels={toolLabels} />}
       </div>
       <ToggleSwitch
         size="sm"
@@ -305,6 +326,9 @@ function CapabilityGroup({
 
 export function CapabilitiesTab({ agent }: { agent: SerializedAgent }) {
   const dispatch = useAppDispatch();
+  const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
+  const diagnostics = useAppSelector(selectSkillCompatibility(agent.id));
+  const diagnosticStatus = useAppSelector(selectSkillCompatibilityStatus(agent.id));
   const skillsMap = useAppSelector(selectAllSkills);
   const skillsLoading = useAppSelector(selectSkillsLoading);
   const myRole = useMyContentRole(ContentType.AGENT, agent.id, agent.userRole);
@@ -315,6 +339,38 @@ export function CapabilitiesTab({ agent }: { agent: SerializedAgent }) {
   const connections = useAppSelector(selectIntegrationConnections);
   const toolSections = useAppSelector(selectToolSections);
   const toolsLoading = useAppSelector(selectAgentToolsLoading);
+  const diagnosticsById = useMemo(
+    () => Object.fromEntries(diagnostics.map((item) => [item.skillId, item])),
+    [diagnostics],
+  );
+  const toolLabels = useMemo(
+    () =>
+      Object.fromEntries(
+        toolSections.flatMap((section) =>
+          section.groups.flatMap((group) =>
+            group.tools.map((tool) => [tool.name, tool.displayName]),
+          ),
+        ),
+      ),
+    [toolSections],
+  );
+
+  useEffect(() => {
+    if (organizationId && !agent.isDeleted) {
+      dispatch(fetchSkillCompatibility({ organizationId, agentId: agent.id }));
+    }
+  }, [
+    dispatch,
+    organizationId,
+    agent.id,
+    agent.isDeleted,
+    agent.enabledSkills,
+    agent.enabledTools,
+    agent.imageModel,
+    agent.integrationConnections,
+    skillsMap,
+    connections,
+  ]);
 
   const rulesMap = useAppSelector((s) => s.agentRules.rules);
   const rulesLoading = useAppSelector((s) => s.agentRules.loading);
@@ -391,6 +447,7 @@ export function CapabilitiesTab({ agent }: { agent: SerializedAgent }) {
   );
 
   const enabledSkillIds = useMemo(() => new Set(agent.enabledSkills), [agent.enabledSkills]);
+  const unlistedAssignments = diagnostics.filter((item) => !skillsMap[item.skillId]);
 
   const bundledSkills = useMemo(
     () => skills.filter((s) => s.source === SkillSource.BUNDLED),
@@ -515,6 +572,14 @@ export function CapabilitiesTab({ agent }: { agent: SerializedAgent }) {
           <p className="text-sm text-muted-foreground mt-1">
             Choose which skills people can explicitly invoke on this agent
           </p>
+          {diagnosticStatus === "loading" && (
+            <p className="mt-1 text-xs text-muted-foreground">Checking skill requirements…</p>
+          )}
+          {diagnosticStatus === "failed" && (
+            <p className="mt-1 text-xs text-muted-foreground">
+              Skill requirements could not be checked. They will be checked again when invoked.
+            </p>
+          )}
         </div>
 
         {skillsLoading && skills.length === 0 ? (
@@ -523,12 +588,39 @@ export function CapabilitiesTab({ agent }: { agent: SerializedAgent }) {
           </div>
         ) : (
           <div className="space-y-4">
+            {unlistedAssignments.length > 0 && (
+              <CapabilityGroup title="Assigned" count={unlistedAssignments.length}>
+                {unlistedAssignments.map((item) => (
+                  <div key={item.skillId} className={listRowClass}>
+                    <div className="flex-1 min-w-0">
+                      <span className="block text-sm font-medium text-foreground">
+                        {item.displayName || "Unavailable skill"}
+                      </span>
+                      {item.retired && (
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          Retired. Remains available until unassigned.
+                        </p>
+                      )}
+                      <SkillCompatibilityNotice diagnostic={item} toolLabels={toolLabels} />
+                    </div>
+                    <ToggleSwitch
+                      size="sm"
+                      enabled
+                      disabled={!canEdit}
+                      onChange={() => handleSkillToggle(item.skillId)}
+                    />
+                  </div>
+                ))}
+              </CapabilityGroup>
+            )}
             <CapabilityGroup title="Bundled" count={bundledSkills.length}>
               <div>
                 {bundledSkills.map((skill) => (
                   <SkillRow
                     key={skill.id}
                     skill={skill}
+                    diagnostic={diagnosticsById[skill.id]}
+                    toolLabels={toolLabels}
                     enabled={enabledSkillIds.has(skill.id)}
                     disabled={!canEdit}
                     onToggle={() => handleSkillToggle(skill.id)}
@@ -546,6 +638,8 @@ export function CapabilitiesTab({ agent }: { agent: SerializedAgent }) {
                   <SkillRow
                     key={skill.id}
                     skill={skill}
+                    diagnostic={diagnosticsById[skill.id]}
+                    toolLabels={toolLabels}
                     enabled={enabledSkillIds.has(skill.id)}
                     disabled={!canEdit}
                     onToggle={() => handleSkillToggle(skill.id)}

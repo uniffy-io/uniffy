@@ -344,8 +344,8 @@ def _edit_ops(monkeypatch):
     monkeypatch.setattr(ops_mod, "write_audit_event", AsyncMock())
     monkeypatch.setattr(ops_mod, "stage_draft_card", AsyncMock())
     monkeypatch.setattr(ops_mod, "publish_draft_card", AsyncMock())
-    # The builder gate reads Valkey-cached org-admin state; stub it so these
-    # unit tests exercise the operation body with an authorized caller.
+    monkeypatch.setattr(ops_mod, "lock_evaluation_admission", AsyncMock())
+    monkeypatch.setattr(ops_mod, "stage_publish_evaluations", AsyncMock())
     monkeypatch.setattr(ops_mod, "require_agents_builder", AsyncMock())
 
     ops = SkillOperations.__new__(SkillOperations)

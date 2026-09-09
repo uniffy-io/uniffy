@@ -34,6 +34,34 @@ const HTTP_STATUS_MESSAGES: Record<number, string> = {
 
 const MESSAGE_PATTERNS: [RegExp, string][] = [
   [
+    /^skill_evaluation_queue_unavailable$/,
+    "Evaluations are unavailable. Run the case again when the service is back.",
+  ],
+  [
+    /^skill_evaluation_provider_required$/,
+    "An organization admin needs to configure an AI provider before evaluations can run.",
+  ],
+  [
+    /^skill_evaluation_access_revoked$/,
+    "The agent is no longer accessible to the builder who requested this evaluation.",
+  ],
+  [
+    /^skill_evaluation_budget_exceeded$/,
+    "The AI usage budget has been reached. Run the case after the budget is available.",
+  ],
+  [
+    /^skill_evaluation_invalid_response$/,
+    "The model returned a response the evaluator could not read.",
+  ],
+  [
+    /^skill_evaluation_(interrupted|provider_error)$/,
+    "The evaluation did not finish. You can request a new run.",
+  ],
+  [
+    /^skill_evaluation_judge_/,
+    "Rubric judging did not finish. The tool assertions remain available.",
+  ],
+  [
     /^skill_generation_queue_unavailable$/,
     "Generation is unavailable. Try again when the service is back.",
   ],

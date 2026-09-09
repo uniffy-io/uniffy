@@ -41,6 +41,7 @@ import { deriveSkillSlug } from "@/features/agents/utils/skillSlug";
 import { SKILL_EDITOR_PLACEHOLDER } from "@/features/agents/config/skillEditor";
 import { InstructionVersionHistory } from "@/features/agents/components/instruction/InstructionVersionHistory";
 import { SkillMetricsPanel } from "@/features/agents/components/skills/SkillMetricsPanel";
+import { SkillEvaluationPanel } from "@/features/agents/components/skills/SkillEvaluationPanel";
 import {
   DETAIL_EDITOR_MIN_HEIGHT,
   DetailBody,
@@ -340,6 +341,8 @@ function SavedSkillDetail({ skill }: { skill: SerializedSkill }) {
           </DetailEditorCard>
         </DetailSection>
 
+        {isBuilder && <SkillEvaluationPanel skillId={skill.id} />}
+
         <DetailToggleSection
           label="Version history"
           summary={versionSummary}
@@ -592,6 +595,12 @@ function DraftDetail({ draft }: { draft: SerializedSkillDraft }) {
             />
           </DetailEditorCard>
         </DetailSection>
+        <SkillEvaluationPanel
+          draftId={draft.id}
+          skillId={draft.targetSkillId}
+          draftContent={content}
+          initialAgentId={draft.proposedByAgentId}
+        />
       </DetailBody>
 
       <ConfirmDialog

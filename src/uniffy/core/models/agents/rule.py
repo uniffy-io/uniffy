@@ -1,4 +1,4 @@
-"""Reusable rule definitions; enablement belongs to organizations and agents."""
+"""Reusable rule definitions selected independently by each agent."""
 
 from datetime import UTC, datetime
 from enum import StrEnum

@@ -53,7 +53,7 @@ PROPOSAL = dumps_str({
 
 @pytest.fixture
 async def generation_db(scratch_database, monkeypatch):
-    await _provision_to(scratch_database, "104")
+    await _provision_to(scratch_database, "head")
     engine = create_async_engine(get_database_url())
     sessions = async_sessionmaker(engine, expire_on_commit=False)
     enqueue = AsyncMock(return_value=JobEnqueueResult(None, JobEnqueueOutcome.ENQUEUED))

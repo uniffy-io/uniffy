@@ -123,6 +123,10 @@ class Action:
     AGENT_RULE_CREATED = "agent.rule_created"
     AGENT_RULE_UPDATED = "agent.rule_updated"
     AGENT_RULES_SELECTED = "agent.rules_selected"
+    AGENT_EVALUATION_CASE_CREATED = "agent.evaluation_case_created"
+    AGENT_EVALUATION_CASE_UPDATED = "agent.evaluation_case_updated"
+    AGENT_EVALUATION_CASE_DELETED = "agent.evaluation_case_deleted"
+    AGENT_EVALUATION_REQUESTED = "agent.evaluation_requested"
 
     # Agents - cost / billing surfaces (budgets, currency, quotas, rate limits)
     AGENT_BUDGET_CREATED = "agent.budget_created"

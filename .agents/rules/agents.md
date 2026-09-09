@@ -237,8 +237,7 @@ within that agent's selection, without model routing or tool/surface activation 
 `Agent.enabled_rules` is the only activation source. Selection RPCs require an agent ID; no
 organization-wide selection or inheritance exists. Bundled/organization describes definition
 ownership, never activation scope. An empty selection injects no rules and skips rule reads.
-Existing skills are never automatically converted into rules. Schema/runtime changes use a direct
-pre-production cutover without compatibility columns, dual writes, or fallback readers.
+Skills and rules are independent definitions; neither is inferred from the other.
 
 Selected rules are cumulative and render in stable order. The complete instruction order is
 product system instructions > selected agent rules > invoked skill > user request. This order never grants workspace access: tools still execute as the human actor.
@@ -251,18 +250,33 @@ remainder text stays in the user message and never substitutes into system-role 
 Ordinary unary, streaming, and preview prompts have no skill section or skill lookup. Explicit
 runtime invocation uses `skills/resolution.py` and requires an assigned ID, an exact active snapshot,
 and compatible final executable tools and surface. It never falls back to the head or an ordinary
-answer. The model-facing skill index and skill-view tool are removed.
+answer. Models have no skill-discovery or skill-invocation tool.
 
 Skill models, API, and builder controls have no automatic activation or routing fields.
 `supported_surfaces` accepts only `session` and `chat`, with an empty list allowing both.
 The slash menu uses the exact snapshot query and rechecks tool/surface requirements on cache hits.
-Passive conversation analysis and feedback-triggered draft generation are removed.
-Use Rules for
-ambient guidance and explicit actions for skill invocation and draft generation.
+Rules provide ambient guidance. Skill invocation and draft generation require explicit human actions;
+ordinary replies and reactions never create drafts.
 Operational skill metrics report exact-version outcomes, tool errors, users, duration, tokens, and
 costs per currency; completion is not a measure of answer quality. Generated improvements
 remain drafts until a builder saves them; behavioral evaluations use fixture-only tools and never
 activate a version.
+
+Behavioral evaluations are builder-only case libraries scoped to a skill or pending create draft.
+Edit drafts use their target skill's cases; saving a create draft transfers its cases and links its
+historical runs to the saved skill. A requested run captures immutable case fields, draft editor
+content or exact saved version, selected rule versions, the assembled system prompt, final executable
+tool schemas, and agent model settings. Later edits affect later requests only. The fixture executor
+has no database session or real tool executor; even reads and memory lookup are excluded. Missing
+responses, unavailable or forbidden calls, and incomplete outputs produce visible deterministic
+outcomes. Optional rubric judging requires explicit consent and preserves tool assertions on failure.
+Org admission locks bound case libraries and open runs; request IDs deduplicate case/suite requests.
+Egress jobs use owned leases and a PostgreSQL claim, recheck builder and agent-view access before
+execution and publication, and record provider usage as evaluation runs through normal budget and
+accounting paths. Expiry settles interrupted work without another model call. An explicit new run
+is the only retry. Both cloud and self-hosted deployments use organization provider configuration;
+no provider is required to edit rules, skills, or cases. Logs and metrics exclude prompt and fixture
+content, and metric labels never carry tenant/resource identifiers.
 
 - Skills are markdown snippets in `agents_skills`, injected into the system prompt. Sources: `bundled` (read-only, shipped) and `organization` (builders manage).
 - **Bundled skills are a projection of `uniffy/data/skills/*.md`, not seed data** - `domains/agents/skills/bundled.py::sync_bundled_skills()` follows the project-into-rows contract in `backend.md` (every boot, own lock, before `bootstrap_deployment`, fixed ids in the files, retire never delete). Agent-specific consequences: bundled rows are global (`organization_id IS NULL`), so a new org needs NO per-org seeding and `list_skills` / exact snapshot queries reach them through `organization_id == org OR organization_id IS NULL`. Retired skills remain invocable by agents that already selected them, but write-time selection validation rejects newly assigned retired IDs. Agent creation and updates normalize and deduplicate UUIDs and reject missing or cross-organization selections. `SkillOperations.resolve_bundled_skill_id_map` is the name-to-id hop the template catalog and org bootstrap share. Available per agent only through `enabled_skills`; invocation is explicit. Skill drafts are an org-wide builder review inbox. Only explicit human Create from conversation, Improve, or Retry actions enqueue generation; no model tool creates drafts. Evidence IDs are loaded server-side under the requester's active membership, agent view permission, and session ownership or chat branch access, with message/character bounds and a serialized per-user open-draft quota. Improve requires the requester's completed invocation and exact immutable skill version. Generation uses the configured provider and normal budgets, executes no tools, and returns at most one sanitized proposal. Generating and failed requests remain inert; only builders save or discard, and only the requester retries. Chat cards carry lifecycle state. An interrupted attempt settles as failed for explicit retry, never automatic paid work.

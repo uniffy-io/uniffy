@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from hashlib import sha256
 from uuid import UUID
 
+from loguru import logger
 from prometheus_client import Histogram
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -15,6 +16,8 @@ from uniffy.core.cache.operations import (
 from uniffy.core.errors import ValidationError
 from uniffy.core.models.agents.rule import AgentRule
 from uniffy.core.models.agents.rule_version import AgentRuleVersion
+
+logger = logger.bind(component="agents.rules.resolution")
 
 RULE_RESOLUTION_SECONDS = Histogram(
     "uniffy_agent_rule_resolution_seconds", "Enabled rule resolution latency"
@@ -103,4 +106,11 @@ async def resolve_enabled_rules(
         )
         for row in (payload or {}).get("rules", [])
     ]
+    logger.debug(
+        "Selected agent rules resolved",
+        organization_id=str(organization_id),
+        agent_id=str(agent_id),
+        rule_version_ids=[str(rule.version_id) for rule in resolved],
+        rule_count=len(resolved),
+    )
     return tuple(resolved)

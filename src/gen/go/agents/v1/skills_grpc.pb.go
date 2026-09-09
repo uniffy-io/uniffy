@@ -19,6 +19,7 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
+	SkillsService_GetSkillCompatibility_FullMethodName     = "/agents.v1.SkillsService/GetSkillCompatibility"
 	SkillsService_GenerateSkillDraft_FullMethodName        = "/agents.v1.SkillsService/GenerateSkillDraft"
 	SkillsService_RetrySkillDraftGeneration_FullMethodName = "/agents.v1.SkillsService/RetrySkillDraftGeneration"
 	SkillsService_CreateSkill_FullMethodName               = "/agents.v1.SkillsService/CreateSkill"
@@ -46,6 +47,7 @@ const (
 // SkillsService manages skill definitions for agents.
 // Skills are curated instruction sets (markdown) that shape agent behavior.
 type SkillsServiceClient interface {
+	GetSkillCompatibility(ctx context.Context, in *GetSkillCompatibilityRequest, opts ...grpc.CallOption) (*GetSkillCompatibilityResponse, error)
 	GenerateSkillDraft(ctx context.Context, in *GenerateSkillDraftRequest, opts ...grpc.CallOption) (*GenerateSkillDraftResponse, error)
 	RetrySkillDraftGeneration(ctx context.Context, in *RetrySkillDraftGenerationRequest, opts ...grpc.CallOption) (*GenerateSkillDraftResponse, error)
 	// Create a new organization skill
@@ -93,6 +95,16 @@ type skillsServiceClient struct {
 
 func NewSkillsServiceClient(cc grpc.ClientConnInterface) SkillsServiceClient {
 	return &skillsServiceClient{cc}
+}
+
+func (c *skillsServiceClient) GetSkillCompatibility(ctx context.Context, in *GetSkillCompatibilityRequest, opts ...grpc.CallOption) (*GetSkillCompatibilityResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetSkillCompatibilityResponse)
+	err := c.cc.Invoke(ctx, SkillsService_GetSkillCompatibility_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *skillsServiceClient) GenerateSkillDraft(ctx context.Context, in *GenerateSkillDraftRequest, opts ...grpc.CallOption) (*GenerateSkillDraftResponse, error) {
@@ -282,6 +294,7 @@ func (c *skillsServiceClient) GetSkillMetrics(ctx context.Context, in *GetSkillM
 // SkillsService manages skill definitions for agents.
 // Skills are curated instruction sets (markdown) that shape agent behavior.
 type SkillsServiceServer interface {
+	GetSkillCompatibility(context.Context, *GetSkillCompatibilityRequest) (*GetSkillCompatibilityResponse, error)
 	GenerateSkillDraft(context.Context, *GenerateSkillDraftRequest) (*GenerateSkillDraftResponse, error)
 	RetrySkillDraftGeneration(context.Context, *RetrySkillDraftGenerationRequest) (*GenerateSkillDraftResponse, error)
 	// Create a new organization skill
@@ -331,6 +344,9 @@ type SkillsServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedSkillsServiceServer struct{}
 
+func (UnimplementedSkillsServiceServer) GetSkillCompatibility(context.Context, *GetSkillCompatibilityRequest) (*GetSkillCompatibilityResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetSkillCompatibility not implemented")
+}
 func (UnimplementedSkillsServiceServer) GenerateSkillDraft(context.Context, *GenerateSkillDraftRequest) (*GenerateSkillDraftResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GenerateSkillDraft not implemented")
 }
@@ -404,6 +420,24 @@ func RegisterSkillsServiceServer(s grpc.ServiceRegistrar, srv SkillsServiceServe
 		t.testEmbeddedByValue()
 	}
 	s.RegisterService(&SkillsService_ServiceDesc, srv)
+}
+
+func _SkillsService_GetSkillCompatibility_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetSkillCompatibilityRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SkillsServiceServer).GetSkillCompatibility(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SkillsService_GetSkillCompatibility_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SkillsServiceServer).GetSkillCompatibility(ctx, req.(*GetSkillCompatibilityRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _SkillsService_GenerateSkillDraft_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -737,6 +771,10 @@ var SkillsService_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "agents.v1.SkillsService",
 	HandlerType: (*SkillsServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "GetSkillCompatibility",
+			Handler:    _SkillsService_GetSkillCompatibility_Handler,
+		},
 		{
 			MethodName: "GenerateSkillDraft",
 			Handler:    _SkillsService_GenerateSkillDraft_Handler,

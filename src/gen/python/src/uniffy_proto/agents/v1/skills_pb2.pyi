@@ -294,6 +294,40 @@ class ListRunnableSkillsResponse(_message.Message):
     skills: _containers.RepeatedCompositeFieldContainer[RunnableSkill]
     def __init__(self, skills: _Optional[_Iterable[_Union[RunnableSkill, _Mapping]]] = ...) -> None: ...
 
+class GetSkillCompatibilityRequest(_message.Message):
+    __slots__ = ("organization_id", "agent_id")
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    AGENT_ID_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    agent_id: str
+    def __init__(self, organization_id: _Optional[str] = ..., agent_id: _Optional[str] = ...) -> None: ...
+
+class SkillCompatibility(_message.Message):
+    __slots__ = ("skill_id", "version_id", "version_number", "missing_tools", "unsupported_surfaces", "unavailable", "display_name", "retired")
+    SKILL_ID_FIELD_NUMBER: _ClassVar[int]
+    VERSION_ID_FIELD_NUMBER: _ClassVar[int]
+    VERSION_NUMBER_FIELD_NUMBER: _ClassVar[int]
+    MISSING_TOOLS_FIELD_NUMBER: _ClassVar[int]
+    UNSUPPORTED_SURFACES_FIELD_NUMBER: _ClassVar[int]
+    UNAVAILABLE_FIELD_NUMBER: _ClassVar[int]
+    DISPLAY_NAME_FIELD_NUMBER: _ClassVar[int]
+    RETIRED_FIELD_NUMBER: _ClassVar[int]
+    skill_id: str
+    version_id: str
+    version_number: int
+    missing_tools: _containers.RepeatedScalarFieldContainer[str]
+    unsupported_surfaces: _containers.RepeatedScalarFieldContainer[str]
+    unavailable: bool
+    display_name: str
+    retired: bool
+    def __init__(self, skill_id: _Optional[str] = ..., version_id: _Optional[str] = ..., version_number: _Optional[int] = ..., missing_tools: _Optional[_Iterable[str]] = ..., unsupported_surfaces: _Optional[_Iterable[str]] = ..., unavailable: _Optional[bool] = ..., display_name: _Optional[str] = ..., retired: _Optional[bool] = ...) -> None: ...
+
+class GetSkillCompatibilityResponse(_message.Message):
+    __slots__ = ("skills",)
+    SKILLS_FIELD_NUMBER: _ClassVar[int]
+    skills: _containers.RepeatedCompositeFieldContainer[SkillCompatibility]
+    def __init__(self, skills: _Optional[_Iterable[_Union[SkillCompatibility, _Mapping]]] = ...) -> None: ...
+
 class CreateSkillDraftRequest(_message.Message):
     __slots__ = ("organization_id", "kind", "target_skill_id", "name", "display_name", "description", "content", "requires_tools", "rationale", "supported_surfaces")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]

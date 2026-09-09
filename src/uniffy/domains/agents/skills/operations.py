@@ -31,14 +31,21 @@ from uniffy.domains.agents.cache import (
     invalidate_agents_using_skill,
 )
 from uniffy.domains.agents.policy import check_admin_content
-from uniffy.domains.agents.runtime.images.config import apply_image_tool_schema, resolve_image_config
-from uniffy.domains.agents.runtime.tooling import allowed_tool_names, resolve_tool_schemas
+from uniffy.domains.agents.runtime.capabilities import resolve_executable_tool_schemas
+from uniffy.domains.agents.runtime.tooling import allowed_tool_names
 from uniffy.domains.agents.skills.cards import publish_draft_card, stage_draft_card
+from uniffy.domains.agents.skills.evaluations.cases import (
+    lock_evaluation_admission,
+    stage_publish_evaluations,
+)
 from uniffy.domains.agents.skills.generation import SkillDraftGeneration
 from uniffy.domains.agents.skills.quotas import require_draft_capacity
 from uniffy.domains.agents.skills.resolution import (
+    SkillCompatibility,
     SkillSummary,
     SkillSurface,
+    describe_compatibility,
+    resolve_assigned_skill_summaries,
     resolve_runnable_skills,
 )
 from uniffy.domains.agents.skills.validation import (
@@ -49,8 +56,6 @@ from uniffy.domains.agents.skills.validation import (
     sanitize_skill_text,
     validate_supported_surfaces,
 )
-from uniffy.domains.agents.tools.registry import get_tool_registry
-from uniffy.domains.integrations.advertisement import filter_integration_tool_schemas
 from uniffy.domains.organizations.operations import OrganizationOperations
 
 # Validation field the draft review surface keys its replace-confirmation on.
@@ -466,6 +471,7 @@ class SkillOperations:
         appends a new version to its target.
         """
         await require_agents_builder(self._session, user_id, organization_id)
+        await lock_evaluation_admission(self._session, organization_id)
         draft = await self._get_draft(
             organization_id=organization_id,
             draft_id=draft_id,
@@ -573,6 +579,12 @@ class SkillOperations:
             audit_action = Action.AGENT_SKILL_UPDATED
 
         draft.status = AgentSkillDraftStatus.SAVED
+        await stage_publish_evaluations(
+            self._session,
+            organization_id=organization_id,
+            draft_id=draft.id,
+            skill_id=skill.id,
+        )
         await stage_draft_card(self._session, draft)
         await write_audit_event(
             self._session,
@@ -883,18 +895,62 @@ class SkillOperations:
         )
         if not agent.enabled_skills:
             return []
-        schemas = resolve_tool_schemas(get_tool_registry(), agent.enabled_tools or [])
-        image_config = await resolve_image_config(
-            self._session, agent, organization_id=organization_id
-        )
-        schemas = apply_image_tool_schema(schemas, image_config)
-        schemas = await filter_integration_tool_schemas(self._session, organization_id, schemas)
+        executable_tools = await self._executable_tools(agent, organization_id)
         return await resolve_runnable_skills(
             self._session,
             organization_id=organization_id,
             enabled_skill_ids=agent.enabled_skills,
             surface=surface,
-            executable_tools=allowed_tool_names(schemas),
+            executable_tools=executable_tools,
+        )
+
+    async def get_skill_compatibility(
+        self, *, user_id: UUID, organization_id: UUID, agent_id: UUID
+    ) -> list[SkillCompatibility]:
+        await require_agents_builder(self._session, user_id, organization_id)
+        agent = await AgentOperations(self._session).get_for_runtime(
+            user_id, organization_id, agent_id
+        )
+        if not agent.enabled_skills:
+            return []
+        executable_tools = await self._executable_tools(agent, organization_id)
+        summaries = await resolve_assigned_skill_summaries(
+            self._session,
+            organization_id=organization_id,
+            enabled_skill_ids=agent.enabled_skills,
+        )
+        by_id = {skill.id: skill for skill in summaries}
+        retired_ids = set(
+            (
+                await self._session.execute(
+                    select(AgentSkill.id).where(
+                        AgentSkill.id.in_(by_id),
+                        AgentSkill.status == AgentSkillStatus.RETIRED,
+                        or_(
+                            AgentSkill.organization_id == organization_id,
+                            AgentSkill.organization_id.is_(None),
+                        ),
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
+        return [
+            describe_compatibility(
+                skill_id,
+                by_id.get(skill_id),
+                executable_tools,
+                retired=skill_id in retired_ids,
+            )
+            for skill_id in dict.fromkeys(UUID(value) for value in agent.enabled_skills)
+        ]
+
+    async def _executable_tools(self, agent: Agent, organization_id: UUID) -> frozenset[str]:
+        return allowed_tool_names(
+            await resolve_executable_tool_schemas(
+                self._session, organization_id=organization_id, agent=agent
+            )
         )
 
     async def resolve_bundled_skill_id_map(self, names: list[str]) -> dict[str, str]:

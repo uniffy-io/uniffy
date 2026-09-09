@@ -10,6 +10,7 @@ option go_package = "github.com/uniffy-io/uniffy-proto-go/agents/v1;agentsv1";
 // SkillsService manages skill definitions for agents.
 // Skills are curated instruction sets (markdown) that shape agent behavior.
 service SkillsService {
+  rpc GetSkillCompatibility(GetSkillCompatibilityRequest) returns (GetSkillCompatibilityResponse) {}
   rpc GenerateSkillDraft(GenerateSkillDraftRequest) returns (GenerateSkillDraftResponse) {}
   rpc RetrySkillDraftGeneration(RetrySkillDraftGenerationRequest) returns (GenerateSkillDraftResponse) {}
   // Create a new organization skill
@@ -252,6 +253,26 @@ message ListRunnableSkillsRequest {
 
 message ListRunnableSkillsResponse {
   repeated RunnableSkill skills = 1;
+}
+
+message GetSkillCompatibilityRequest {
+  string organization_id = 1;
+  string agent_id = 2;
+}
+
+message SkillCompatibility {
+  string skill_id = 1;
+  string version_id = 2;
+  int32 version_number = 3;
+  repeated string missing_tools = 4;
+  repeated string unsupported_surfaces = 5;
+  bool unavailable = 6;
+  string display_name = 7;
+  bool retired = 8;
+}
+
+message GetSkillCompatibilityResponse {
+  repeated SkillCompatibility skills = 1;
 }
 
 message CreateSkillDraftRequest {

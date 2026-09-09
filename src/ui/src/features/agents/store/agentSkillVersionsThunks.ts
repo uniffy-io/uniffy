@@ -53,9 +53,23 @@ export const fetchSkillVersions = createAsyncThunk<
   try {
     const organizationId = getOrganizationId(getState());
     const response = await skillsApi.listSkillVersions({ organizationId, skillId });
+    const versions = [...response.versions];
+    if (
+      response.activeVersionNumber > 0 &&
+      !versions.some((version) => version.versionNumber === response.activeVersionNumber)
+    ) {
+      const active = await skillsApi.getSkillVersion({
+        organizationId,
+        skillId,
+        versionNumber: response.activeVersionNumber,
+      });
+      if (active.version) versions.push(active.version);
+    }
     return {
       skillId,
-      versions: response.versions.map(skillVersionToPlain),
+      versions: versions
+        .map(skillVersionToPlain)
+        .sort((left, right) => right.versionNumber - left.versionNumber),
       activeVersionNumber: response.activeVersionNumber,
       activeVersionPinned: response.activeVersionPinned,
       latestVersionNumber: response.latestVersionNumber,

@@ -16,6 +16,7 @@ from uniffy.core.models.agents.skill_invocation import (
     SkillInvocationErrorCode,
     SkillInvocationStatus,
 )
+from uniffy.domains.agents.skills.observability import record_invocation_outcome
 
 logger = logger.bind(component="agents.skills.invocations")
 
@@ -133,6 +134,15 @@ class SkillInvocationRecorder:
                 )
                 changed = updated.scalar_one_or_none() is not None
                 await session.commit()
+                if changed:
+                    record_invocation_outcome(
+                        invocation_id=invocation_id,
+                        organization_id=organization_id,
+                        status=status,
+                        error_code=error_code,
+                        run_log_id=run_log_id,
+                        response_message_id=response_message_id,
+                    )
                 return changed
         except Exception:
             logger.opt(exception=True).warning(

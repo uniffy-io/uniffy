@@ -526,7 +526,3 @@ message StreamFailoverEvent {
   // 1-based attempt counter for the swap (first failover = 1).
   int32 attempt = 5;
 }
-
-// Emitted when the agent proposes a skill draft for the user to review. The
-// draft is persisted (status=pending) but never auto-activated; the client
-// renders an editable review card and saves via SaveSkillDraft.

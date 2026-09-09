@@ -15,6 +15,8 @@ from uniffy_proto.agents.v1.skills_pb2 import (
     DeleteSkillResponse,
     DiscardSkillDraftRequest,
     DiscardSkillDraftResponse,
+    GetSkillCompatibilityRequest,
+    GetSkillCompatibilityResponse,
     GetSkillDraftRequest,
     GetSkillDraftResponse,
     GetSkillMetricsRequest,
@@ -37,6 +39,7 @@ from uniffy_proto.agents.v1.skills_pb2 import (
     SaveSkillDraftResponse,
     SetMainSkillVersionRequest,
     SetMainSkillVersionResponse,
+    SkillCompatibility,
     SkillMetric,
     UpdateSkillRequest,
     UpdateSkillResponse,
@@ -62,6 +65,36 @@ logger = logger.bind(component="agents.skills.handlers")
 
 class SkillsHandlers(SkillGenerationHandlers):
     """RPC handlers for skills service."""
+
+    async def get_skill_compatibility(
+        self, request: GetSkillCompatibilityRequest, ctx: RequestContext
+    ) -> GetSkillCompatibilityResponse:
+        organization_id = resolve_organization_id(request.organization_id)
+        try:
+            agent_id = UUID(request.agent_id)
+        except ValueError as exc:
+            raise ValidationError("agent_id", "Invalid agent ID") from exc
+        async with open_session() as session:
+            diagnostics = await SkillOperations(session).get_skill_compatibility(
+                user_id=current_user_id(),
+                organization_id=organization_id,
+                agent_id=agent_id,
+            )
+            return GetSkillCompatibilityResponse(
+                skills=[
+                    SkillCompatibility(
+                        skill_id=str(item.skill_id),
+                        version_id=str(item.version_id) if item.version_id else "",
+                        version_number=item.version_number,
+                        missing_tools=list(item.missing_tools),
+                        unsupported_surfaces=list(item.unsupported_surfaces),
+                        unavailable=item.unavailable,
+                        display_name=item.display_name,
+                        retired=item.retired,
+                    )
+                    for item in diagnostics
+                ]
+            )
 
     async def create_skill(
         self,

@@ -21,6 +21,7 @@ from uniffy.domains.agents.access import is_agents_builder
 from uniffy.domains.agents.skills.cards import publish_draft_card, stage_draft_card
 from uniffy.domains.agents.skills.evidence import load_draft_evidence
 from uniffy.domains.agents.skills.jobs.contracts import GENERATE_SKILL_DRAFT
+from uniffy.domains.agents.skills.observability import record_generation_state
 from uniffy.domains.agents.skills.quotas import require_draft_capacity
 from uniffy.domains.agents.skills.validation import (
     SKILL_RATIONALE_MAX,
@@ -113,6 +114,7 @@ class SkillDraftGeneration:
         await stage_draft_card(self._session, candidate)
         await self._session.commit()
         await self._session.refresh(candidate)
+        record_generation_state(candidate)
         await publish_draft_card(self._session, candidate, created=True)
         await self.enqueue(candidate)
         return candidate
@@ -148,6 +150,7 @@ class SkillDraftGeneration:
         await stage_draft_card(self._session, draft)
         await self._session.commit()
         await self._session.refresh(draft)
+        record_generation_state(draft)
         await publish_draft_card(self._session, draft)
         await self.enqueue(draft)
         return draft
@@ -211,4 +214,5 @@ class SkillDraftGeneration:
         await stage_draft_card(self._session, draft)
         await self._session.commit()
         await self._session.refresh(draft)
+        record_generation_state(draft)
         await publish_draft_card(self._session, draft)

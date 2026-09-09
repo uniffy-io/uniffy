@@ -7,7 +7,7 @@ from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.errors import ValidationError
-from uniffy.core.models.agents.run_log import AgentRunLog, AgentRunStatus
+from uniffy.core.models.agents.run_log import AgentRunKind, AgentRunLog, AgentRunStatus
 from uniffy.domains.agents.budgets.alerts import check_and_fire_alerts
 from uniffy.domains.agents.currency import convert as convert_currency
 from uniffy.domains.agents.currency import get_display_currency
@@ -37,6 +37,7 @@ class RunRecorder:
         error: str | None,
         provider_key_id: UUID | None = None,
         channel_id: UUID | None = None,
+        kind: AgentRunKind = AgentRunKind.CHAT,
     ) -> UUID | None:
         cost, cost_currency = await self._compute_cost(
             organization_id=organization_id,
@@ -48,6 +49,7 @@ class RunRecorder:
             run_log = AgentRunLog(
                 session_id=session_id,
                 channel_id=channel_id,
+                kind=kind,
                 agent_id=agent_id,
                 user_id=user_id,
                 organization_id=organization_id,

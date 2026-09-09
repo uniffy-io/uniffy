@@ -34,6 +34,7 @@ from uniffy.domains.agents.runtime.runs.usage import RunUsageAccumulator
 from uniffy.domains.agents.skills.cards import publish_draft_card, stage_draft_card
 from uniffy.domains.agents.skills.evidence import load_draft_evidence
 from uniffy.domains.agents.skills.generation import GENERATION_TIMEOUT_SECONDS
+from uniffy.domains.agents.skills.observability import record_generation_state
 from uniffy.domains.agents.skills.proposal import GENERATION_PROMPT, parse_proposal
 from uniffy.domains.agents.skills.validation import CleanSkillFields
 from uniffy.infrastructure.database import open_session
@@ -88,6 +89,7 @@ async def _finish(
         await stage_draft_card(session, draft)
         await session.commit()
         await session.refresh(draft)
+        record_generation_state(draft)
         await publish_draft_card(session, draft)
 
 

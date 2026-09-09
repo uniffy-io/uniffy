@@ -55,6 +55,42 @@ class ResolvedSkill(SkillSummary):
     content: str
 
 
+@dataclass(frozen=True)
+class SkillCompatibility:
+    skill_id: UUID
+    version_id: UUID | None = None
+    version_number: int = 0
+    missing_tools: tuple[str, ...] = ()
+    unsupported_surfaces: tuple[SkillSurface, ...] = ()
+    unavailable: bool = False
+    display_name: str = ""
+    retired: bool = False
+
+
+def describe_compatibility(
+    skill_id: UUID,
+    skill: SkillSummary | None,
+    executable_tools: frozenset[str],
+    *,
+    retired: bool = False,
+) -> SkillCompatibility:
+    if skill is None:
+        return SkillCompatibility(skill_id=skill_id, unavailable=True)
+    return SkillCompatibility(
+        skill_id=skill.id,
+        version_id=skill.version_id,
+        version_number=skill.version_number,
+        display_name=skill.display_name,
+        retired=retired,
+        missing_tools=tuple(sorted(set(skill.requires_tools) - executable_tools)),
+        unsupported_surfaces=tuple(
+            surface
+            for surface in SkillSurface
+            if skill.supported_surfaces and surface not in skill.supported_surfaces
+        ),
+    )
+
+
 def _snapshot_query(organization_id: UUID, skill_ids: list[UUID], *, content: bool):
     columns = [
         AgentSkillVersion.skill_id,
