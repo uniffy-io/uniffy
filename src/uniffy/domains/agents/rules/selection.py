@@ -36,6 +36,9 @@ class RuleSelectionOperations:
         rule_ids: list[str],
     ) -> list[str]:
         await self.get(user_id, organization_id, agent_id)
+        # The gate read above already put the agent in the identity map; the row lock
+        # serializes concurrent selection writes and populate_existing refreshes that
+        # copy so the validation diff runs against the locked row, not a stale one.
         agent = (
             await self._session.execute(
                 select(Agent)
