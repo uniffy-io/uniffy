@@ -11,7 +11,7 @@ import { CallHeaderPill } from "@/features/calls/components/CallHeaderPill";
 import { cn } from "@/shared/utils/cn";
 import { UrnType } from "@/shared/utils/urn";
 import { getContentTypeConfig } from "@/config/theme/contentTypes";
-import { useAppSelector } from "@/app/hooks";
+import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { useAgentsBuilderAccess } from "@/features/agents/hooks/useAgentsBuilderAccess";
 import { UniffyLogo } from "@/components/ui/uniffy-logo";
 import { Drawer } from "@/components/ui/drawer";
@@ -231,6 +231,7 @@ function MobileNavDrawer({
 }
 
 export function AppHeader() {
+  const dispatch = useAppDispatch();
   const location = useLocation();
   const isZenMode = useAppSelector((state) => state.zenMode.isActive);
   const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
@@ -245,25 +246,36 @@ export function AppHeader() {
   const closeMobileMenu = useCallback(() => setMobileMenuOpen(false), []);
 
   useEffect(() => {
-    if (location.pathname.startsWith("/chat")) return;
+    if (!organizationId || !userId || location.pathname.startsWith("/chat")) return;
 
     const connection = (navigator as Navigator & { connection?: { saveData?: boolean } })
       .connection;
     if (connection?.saveData) return;
 
+    let cancelled = false;
+    const preload = () => {
+      if (document.visibilityState !== "visible") return;
+      preloadChatPage();
+      void import("@/features/chat/store/chatThunks")
+        .then(({ prefetchChat }) => {
+          if (!cancelled) void dispatch(prefetchChat());
+        })
+        .catch(() => {});
+    };
     const hasIdleCallback = "requestIdleCallback" in window;
     const handle = hasIdleCallback
-      ? window.requestIdleCallback(preloadChatPage, { timeout: 2_000 })
-      : window.setTimeout(preloadChatPage, 500);
+      ? window.requestIdleCallback(preload, { timeout: 2_000 })
+      : window.setTimeout(preload, 500);
 
     return () => {
+      cancelled = true;
       if (hasIdleCallback) {
         window.cancelIdleCallback(handle);
       } else {
         window.clearTimeout(handle);
       }
     };
-  }, [location.pathname]);
+  }, [dispatch, location.pathname, organizationId, userId]);
 
   return (
     <>

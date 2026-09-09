@@ -84,7 +84,17 @@ import { fetchAgentTools } from "@/features/agents/store/agentToolsThunks";
 import { markNotificationsReadBySource } from "@/features/notifications/store/notificationsSlice";
 import type { RootState } from "@/app/store";
 import type { ChatMessage, ChatChannel, ChatChannelMember } from "@/features/chat/types";
-import { clearLastOpenedChannel } from "@/features/chat/utils/lastOpenedChannel";
+import {
+  clearLastOpenedChannel,
+  loadLastOpenedChannel,
+} from "@/features/chat/utils/lastOpenedChannel";
+import { chooseChatLanding } from "@/features/chat/utils/landing";
+import {
+  isChatSessionCurrent,
+  loadChatInitialization,
+  loadLatestChannelMessages,
+  type MessagePage,
+} from "@/features/chat/store/chatPreload";
 import {
   ChannelType as ProtoChannelType,
   ChatNotificationLevel,
@@ -127,27 +137,38 @@ const hydrateChannelTags = (
   }
 };
 
+async function loadChannels(
+  getState: () => RootState,
+  dispatch: Dispatch<UnknownAction>,
+): Promise<void> {
+  const auth = getState().auth;
+  dispatch(setLoading(true));
+  try {
+    const organizationId = getOrganizationId(getState());
+    const collected: ChatChannel[] = [];
+    let cursor: string | undefined;
+    do {
+      const response = await chatApi.listChannels({ organizationId, cursor });
+      if (!isChatSessionCurrent(auth, getState().auth)) return;
+      hydrateChannelTags(dispatch, response.channels);
+      collected.push(...response.channels.map(channelToPlain));
+      cursor = response.nextCursor || undefined;
+    } while (cursor);
+    if (isChatSessionCurrent(auth, getState().auth)) dispatch(setChannels(collected));
+  } finally {
+    if (isChatSessionCurrent(auth, getState().auth)) dispatch(setLoading(false));
+  }
+}
+
 export const fetchChannels = createAsyncThunk<
   void,
   void,
   { state: RootState; rejectValue: string }
 >("chat/fetchChannels", async (_, { getState, dispatch, rejectWithValue }) => {
   try {
-    dispatch(setLoading(true));
-    const organizationId = getOrganizationId(getState());
-    const collected: ChatChannel[] = [];
-    let cursor: string | undefined;
-    do {
-      const response = await chatApi.listChannels({ organizationId, cursor });
-      hydrateChannelTags(dispatch, response.channels);
-      collected.push(...response.channels.map(channelToPlain));
-      cursor = response.nextCursor || undefined;
-    } while (cursor);
-    dispatch(setChannels(collected));
+    await loadChannels(getState, dispatch);
   } catch (error) {
     return rejectWithValue(error instanceof Error ? error.message : "Failed to fetch channels");
-  } finally {
-    dispatch(setLoading(false));
   }
 });
 
@@ -341,13 +362,55 @@ export const deleteChannel = createAsyncThunk<
   }
 });
 
+async function loadMessagePage(
+  request: Parameters<typeof chatApi.getMessages>[0],
+): Promise<MessagePage> {
+  const response = await chatApi.getMessages(request);
+  const messages = response.messages.map(messageToPlain);
+
+  // Attachments share one batched read for the whole message page.
+  if (messages.length > 0) {
+    try {
+      const batch = await attachmentsApi.batchListAttachments({
+        organizationId: request.organizationId,
+        contentType: ContentType.CHAT_MESSAGE,
+        contentIds: messages.map((m) => m.id),
+      });
+      const byId = new Map<string, (typeof messages)[number]["attachments"]>();
+      for (const group of batch.groups) {
+        byId.set(
+          group.contentId,
+          group.attachments.map((a) => ({
+            id: a.id,
+            fileId: a.fileId,
+            sourceFileId: a.sourceFileId || undefined,
+            filename: a.filename,
+            mimeType: a.mimeType,
+            sizeBytes: Number(a.sizeBytes),
+          })),
+        );
+      }
+      for (let i = 0; i < messages.length; i++) {
+        const attachments = byId.get(messages[i].id);
+        if (attachments && attachments.length > 0) {
+          messages[i] = { ...messages[i], attachments };
+        }
+      }
+    } catch {
+      // Non-fatal: messages render without their attachment metadata.
+    }
+  }
+
+  return { messages, hasMore: response.hasMore };
+}
+
 export const fetchMessages = createAsyncThunk<
   { messages: ChatMessage[]; hasMore: boolean },
   { channelId: string; beforeId?: string; aroundId?: string; limit?: number },
   { state: RootState; rejectValue: string }
 >("chat/fetchMessages", async (params, { getState, dispatch, rejectWithValue }) => {
+  const currentState = getState();
   try {
-    const currentState = getState();
     if (!currentState.chatChannels.byId[params.channelId]) {
       return { messages: [], hasMore: false };
     }
@@ -364,48 +427,28 @@ export const fetchMessages = createAsyncThunk<
       limit: params.limit ?? 50,
       rootOnly: true,
     };
-    let response;
+    const load = () => loadMessagePage(request);
+    const loadPage = () =>
+      !params.beforeId && !params.aroundId && !params.limit
+        ? loadLatestChannelMessages(getState, params.channelId, load)
+        : load();
+    let response: MessagePage;
     try {
-      response = await chatApi.getMessages(request);
+      response = await loadPage();
     } catch (error) {
       if (params.beforeId) throw error;
       await new Promise((resolve) => setTimeout(resolve, INITIAL_MESSAGE_RETRY_DELAY_MS));
-      response = await chatApi.getMessages(request);
+      if (!isChatSessionCurrent(currentState.auth, getState().auth))
+        return { messages: [], hasMore: false };
+      response = await loadPage();
     }
-    const messages = response.messages.map(messageToPlain);
-
-    // One batched RPC; a 50-message channel previously fanned out 50 round-trips.
-    if (messages.length > 0) {
-      try {
-        const batch = await attachmentsApi.batchListAttachments({
-          organizationId,
-          contentType: ContentType.CHAT_MESSAGE,
-          contentIds: messages.map((m) => m.id),
-        });
-        const byId = new Map<string, (typeof messages)[number]["attachments"]>();
-        for (const group of batch.groups) {
-          byId.set(
-            group.contentId,
-            group.attachments.map((a) => ({
-              id: a.id,
-              fileId: a.fileId,
-              sourceFileId: a.sourceFileId || undefined,
-              filename: a.filename,
-              mimeType: a.mimeType,
-              sizeBytes: Number(a.sizeBytes),
-            })),
-          );
-        }
-        for (let i = 0; i < messages.length; i++) {
-          const attachments = byId.get(messages[i].id);
-          if (attachments && attachments.length > 0) {
-            messages[i] = { ...messages[i], attachments };
-          }
-        }
-      } catch {
-        // Non-fatal: messages render without their attachment metadata.
-      }
+    if (
+      !isChatSessionCurrent(currentState.auth, getState().auth) ||
+      !getState().chatChannels.byId[params.channelId]
+    ) {
+      return { messages: [], hasMore: false };
     }
+    const { messages } = response;
 
     if (params.beforeId) {
       dispatch(prependMessages({ channelId: params.channelId, messages }));
@@ -460,12 +503,16 @@ export const fetchMessages = createAsyncThunk<
     dispatch(setHasMore({ channelId: params.channelId, hasMore: response.hasMore }));
     return { messages, hasMore: response.hasMore };
   } catch (error) {
+    if (!isChatSessionCurrent(currentState.auth, getState().auth))
+      return { messages: [], hasMore: false };
     if (getState().chatMessages.idsByChannel[params.channelId] === undefined) {
       dispatch(setInitialChannelLoadFailed({ channelId: params.channelId, failed: true }));
     }
     return rejectWithValue(error instanceof Error ? error.message : "Failed to fetch messages");
   } finally {
-    dispatch(setChannelLoading({ channelId: params.channelId, isLoading: false }));
+    if (isChatSessionCurrent(currentState.auth, getState().auth)) {
+      dispatch(setChannelLoading({ channelId: params.channelId, isLoading: false }));
+    }
   }
 });
 
@@ -1114,15 +1161,24 @@ export const sendTyping = createAsyncThunk<void, string, { state: RootState; rej
   },
 );
 
+async function loadCategories(
+  getState: () => RootState,
+  dispatch: Dispatch<UnknownAction>,
+): Promise<void> {
+  const scope = getState().auth;
+  const organizationId = getOrganizationId(getState());
+  const response = await chatApi.listCategories({ organizationId });
+  if (!isChatSessionCurrent(scope, getState().auth)) return;
+  dispatch(setCategories(response.categories.map(categoryToPlain)));
+}
+
 export const fetchCategories = createAsyncThunk<
   void,
   void,
   { state: RootState; rejectValue: string }
 >("chat/fetchCategories", async (_, { getState, dispatch, rejectWithValue }) => {
   try {
-    const organizationId = getOrganizationId(getState());
-    const response = await chatApi.listCategories({ organizationId });
-    dispatch(setCategories(response.categories.map(categoryToPlain)));
+    await loadCategories(getState, dispatch);
   } catch (error) {
     return rejectWithValue(error instanceof Error ? error.message : "Failed to fetch categories");
   }
@@ -1155,19 +1211,28 @@ export const convertGroupDmToChannel = createAsyncThunk<
   }
 });
 
+async function loadAgentFolders(
+  getState: () => RootState,
+  dispatch: Dispatch<UnknownAction>,
+): Promise<void> {
+  const scope = getState().auth;
+  const organizationId = getOrganizationId(getState());
+  const response = await chatApi.listAgentFolders({ organizationId });
+  if (!isChatSessionCurrent(scope, getState().auth)) return;
+  dispatch(
+    setAgentFolders(
+      response.folders.map((f) => ({ id: f.id, name: f.name, position: f.position })),
+    ),
+  );
+}
+
 export const fetchAgentFolders = createAsyncThunk<
   void,
   void,
   { state: RootState; rejectValue: string }
 >("chat/fetchAgentFolders", async (_, { getState, dispatch, rejectWithValue }) => {
   try {
-    const organizationId = getOrganizationId(getState());
-    const response = await chatApi.listAgentFolders({ organizationId });
-    dispatch(
-      setAgentFolders(
-        response.folders.map((f) => ({ id: f.id, name: f.name, position: f.position })),
-      ),
-    );
+    await loadAgentFolders(getState, dispatch);
   } catch (error) {
     return rejectWithValue(error instanceof Error ? error.message : "Failed to fetch folders");
   }
@@ -1621,30 +1686,89 @@ export const updateMemberRoleThunk = createAsyncThunk<
   }
 });
 
+function loadChatSidebar(
+  getState: () => RootState,
+  dispatch: Dispatch<UnknownAction>,
+): Promise<void> {
+  const scope = getState().auth;
+  return loadChatInitialization(scope, async () => {
+    const index = async () => {
+      try {
+        await loadChannels(getState, dispatch);
+      } catch (error) {
+        if (!isChatSessionCurrent(scope, getState().auth)) throw error;
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        if (!isChatSessionCurrent(scope, getState().auth)) throw error;
+        await loadChannels(getState, dispatch);
+      }
+    };
+    await Promise.all([
+      index(),
+      loadCategories(getState, dispatch).catch(() => {}),
+      loadAgentFolders(getState, dispatch).catch(() => {}),
+    ]);
+  });
+}
+
 export const initializeChat = createAsyncThunk<
   void,
   void,
   { state: RootState; rejectValue: string }
->("chat/initialize", async (_, { dispatch, rejectWithValue }) => {
+>("chat/initialize", async (_, { getState, dispatch, rejectWithValue }) => {
   try {
-    // The channel index is load-bearing; auxiliary state may fail without hiding chat.
-    const loadChannels = async () => {
-      try {
-        await dispatch(fetchChannels()).unwrap();
-      } catch {
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-        await dispatch(fetchChannels()).unwrap();
-      }
-    };
+    await loadChatSidebar(getState, dispatch);
+  } catch (error) {
+    return rejectWithValue(error instanceof Error ? error.message : "Failed to initialize chat");
+  }
+});
 
+export const prefetchChannelMessages = createAsyncThunk<void, string, { state: RootState }>(
+  "chat/prefetchChannelMessages",
+  async (channelId, { getState }) => {
+    const state = getState();
+    const organizationId = state.auth.currentOrganizationId;
+    if (!state.auth.isAuthenticated || !organizationId || !state.chatChannels.byId[channelId])
+      return;
+    try {
+      await loadLatestChannelMessages(
+        getState,
+        channelId,
+        () => loadMessagePage({ organizationId, channelId, limit: 50, rootOnly: true }),
+        true,
+      );
+    } catch {
+      // Opening the channel owns visible errors and retries.
+    }
+  },
+);
+
+export const prefetchChat = createAsyncThunk<void, void, { state: RootState }>(
+  "chat/prefetch",
+  async (_, { getState, dispatch }) => {
+    const scope = getState().auth;
+    if (!scope.isAuthenticated || !scope.currentOrganizationId || !scope.user) return;
+    try {
+      await loadChatSidebar(getState, dispatch);
+      if (!isChatSessionCurrent(scope, getState().auth)) return;
+      const state = getState();
+      const channelId = chooseChatLanding(
+        state.chatChannels.ids.map((id) => state.chatChannels.byId[id]),
+        loadLastOpenedChannel(scope.currentOrganizationId, scope.user.id),
+      );
+      if (!channelId) return;
+      await dispatch(prefetchChannelMessages(channelId));
+    } catch {
+      // Speculation is optional; opening Chat owns visible errors and retries.
+    }
+  },
+);
+
+// Start auxiliary reads after the visible conversation has loaded: on HTTP/1.1 they
+// otherwise occupy the browser's connections ahead of GetMessages.
+export const hydrateChat = createAsyncThunk<void, void, { state: RootState }>(
+  "chat/hydrate",
+  async (_, { dispatch }) => {
     await Promise.all([
-      loadChannels(),
-      dispatch(fetchCategories())
-        .unwrap()
-        .catch(() => {}),
-      dispatch(fetchAgentFolders())
-        .unwrap()
-        .catch(() => {}),
       dispatch(fetchUnreadCounts())
         .unwrap()
         .catch(() => {}),
@@ -1668,10 +1792,8 @@ export const initializeChat = createAsyncThunk<
         .unwrap()
         .catch(() => {}),
     ]);
-  } catch (error) {
-    return rejectWithValue(error instanceof Error ? error.message : "Failed to initialize chat");
-  }
-});
+  },
+);
 
 export const respondToAgentConfirmation = createAsyncThunk<
   { requestId: string; approved: boolean },

@@ -37,7 +37,7 @@ dependencies = [
   "python-multipart>=0.0.32",
   "sqlmodel>=0.0.39",
   "sqlalchemy>=2.0.51",
-  "granian>=2.7.9",
+  "granian>=2.8.2",
   "aioboto3>=13.0.0",
   "types-aiobotocore[s3]>=2.15.0",
   # Background jobs: arq is vendored under uniffy.vendor.arq (valkey-backed); it needs click.

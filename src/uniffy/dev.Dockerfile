@@ -1,4 +1,4 @@
-FROM registry.uniffy.io/uniffy/python-base:3.14.4-slim-trixie
+FROM ghcr.io/uniffy-io/python-base:3.14.4-slim-trixie
 
 WORKDIR /app
 

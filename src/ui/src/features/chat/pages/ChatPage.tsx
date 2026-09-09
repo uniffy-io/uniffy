@@ -33,6 +33,7 @@ import { setActiveThread } from "@/features/chat/store/chatThreadsSlice";
 import { clearSplitChannel } from "@/features/chat/store/chatChannelsSlice";
 import {
   initializeChat,
+  hydrateChat,
   fetchMessages,
   resolveThreadForMessage,
   jumpToChannelMessage,
@@ -128,6 +129,7 @@ export function ChatPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const initializedRef = useRef(false);
+  const hydrationStartedRef = useRef(false);
   const landingNavigationStartedRef = useRef(false);
   const { isMobile, isMobileOrTablet } = useBreakpoint();
 
@@ -140,6 +142,12 @@ export function ChatPage() {
   );
   const routeChannel = useAppSelector((state) =>
     channelId ? state.chatChannels.byId[channelId] : undefined,
+  );
+  const channelMessagesSettled = useAppSelector((state) =>
+    channelId
+      ? state.chatMessages.idsByChannel[channelId] !== undefined ||
+        !!state.chatMessages.initialLoadFailedByChannel[channelId]
+      : false,
   );
   const currentPath = location.pathname;
   const isChatIndexRoute = !channelId && currentPath === "/chat";
@@ -249,6 +257,25 @@ export function ChatPage() {
     initializedRef.current = true;
     dispatch(initializeChat());
   }, [dispatch]);
+
+  useEffect(() => {
+    if (hydrationStartedRef.current || !routeSnapshotIsCurrent(currentPath) || !channelsLoaded) {
+      return;
+    }
+    if (channelId && channelInStore && !channelMessagesSettled) return;
+    if (isChatIndexRoute && channels.length > 0) return;
+    hydrationStartedRef.current = true;
+    dispatch(hydrateChat());
+  }, [
+    dispatch,
+    currentPath,
+    channelsLoaded,
+    channelId,
+    channelInStore,
+    channelMessagesSettled,
+    isChatIndexRoute,
+    channels.length,
+  ]);
 
   useEffect(() => {
     if (isMobile && channelId) {

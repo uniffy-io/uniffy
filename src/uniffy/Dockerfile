@@ -1,4 +1,4 @@
-FROM registry.uniffy.io/uniffy/python-base:3.14.4-slim-trixie AS deps
+FROM ghcr.io/uniffy-io/python-base:3.14.4-slim-trixie AS deps
 
 WORKDIR /app
 
@@ -14,7 +14,7 @@ COPY src/gen/python/src/ src/gen/python/src/
 RUN uv sync --compile-bytecode --frozen --no-dev --no-install-project \
     && rm -rf /root/.cache/uv
 
-FROM registry.uniffy.io/uniffy/python-base:3.14.4-slim-trixie AS production
+FROM ghcr.io/uniffy-io/python-base:3.14.4-slim-trixie AS production
 
 WORKDIR /app
 

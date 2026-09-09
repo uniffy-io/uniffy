@@ -4,6 +4,7 @@ import { cn } from "@/shared/utils/cn";
 import { type ChatChannel } from "@/features/chat/types";
 import { ChannelContextMenu } from "@/features/chat/components/sidebar/ChannelContextMenu";
 import { ChannelCallIndicator } from "@/features/calls/components/ChannelCallIndicator";
+import { useChannelPrefetch } from "@/features/chat/hooks/useChannelPrefetch";
 
 interface ChannelListItemProps {
   channel: ChatChannel;
@@ -27,6 +28,7 @@ export const ChannelListItem = memo(function ChannelListItem({
   hasDraft = false,
   onSelect,
 }: ChannelListItemProps) {
+  const prefetch = useChannelPrefetch(channel.id, isActive);
   const isPrivate = channel.channelType === "PRIVATE";
   const hasUnread = unreadCount > 0;
   const Icon = isPrivate ? Lock : Hash;
@@ -43,6 +45,7 @@ export const ChannelListItem = memo(function ChannelListItem({
   return (
     <>
       <button
+        {...prefetch}
         onClick={handleClick}
         onContextMenu={handleContextMenu}
         className={cn(
