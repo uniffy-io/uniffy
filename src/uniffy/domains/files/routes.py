@@ -13,6 +13,7 @@ from uniffy.core.auth.http import get_current_user_id
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
 from uniffy.core.models.files.file import TranscodeStatus
 from uniffy.core.storage import ObjectStorage
+from uniffy.domains.files.naming import content_disposition
 from uniffy.domains.files.operations import FileOperations
 from uniffy.infrastructure.database import open_session
 
@@ -191,7 +192,7 @@ async def stream_file(
                 # revalidation so a post-transcode swap propagates without a hard refresh.
                 "Cache-Control": "private, max-age=300, must-revalidate",
                 "ETag": f'"{file_id}.v{file_version}"',
-                "Content-Disposition": f'inline; filename="{file_filename}"',
+                "Content-Disposition": content_disposition("inline", file_filename),
             }
 
             if content_length:
@@ -262,7 +263,7 @@ async def stream_media(
                 # private: permission-gated media stays out of shared caches.
                 "Cache-Control": "private, max-age=300, must-revalidate",
                 "ETag": f'"{file_id}.v{file.version}"',
-                "Content-Disposition": f'inline; filename="{file.filename}"',
+                "Content-Disposition": content_disposition("inline", file.filename),
             }
 
             if range_header and total_size:

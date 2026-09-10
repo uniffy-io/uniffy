@@ -19,6 +19,7 @@ export function NamePromptSheet({
   onClose,
   onSubmit,
   initialName,
+  lockedSuffix = "",
   placeholder = "Name",
   pending = false,
   icon: Icon,
@@ -30,6 +31,8 @@ export function NamePromptSheet({
   onClose: () => void;
   onSubmit: (name: string) => void;
   initialName?: string;
+  /** Read-only tail kept out of the editable text, e.g. a file's extension. */
+  lockedSuffix?: string;
   placeholder?: string;
   pending?: boolean;
   icon?: IconComponent;
@@ -37,20 +40,23 @@ export function NamePromptSheet({
 }) {
   const T = useTheme();
   const accent = accentColor || T.accent;
-  const [name, setName] = useState(initialName ?? "");
+  const fullInitial = initialName ?? "";
+  const suffix = lockedSuffix && fullInitial.endsWith(lockedSuffix) ? lockedSuffix : "";
+  const editableInitial = fullInitial.slice(0, fullInitial.length - suffix.length);
+  const [name, setName] = useState(editableInitial);
 
   // Render-phase reset, so reopening for a different subject never shows the
   // previous one's name. An effect would paint the stale value for a frame.
   const [wasVisible, setWasVisible] = useState(visible);
   if (visible !== wasVisible) {
     setWasVisible(visible);
-    if (visible) setName(initialName ?? "");
+    if (visible) setName(editableInitial);
   }
 
   const trimmed = name.trim();
   const submit = () => {
     if (!trimmed || pending) return;
-    onSubmit(trimmed);
+    onSubmit(trimmed + suffix);
   };
 
   return (
@@ -60,19 +66,19 @@ export function NamePromptSheet({
         <Text style={[styles.title, { color: T.textBright }]}>{title}</Text>
       </View>
 
-      <TextInput
-        value={name}
-        onChangeText={setName}
-        placeholder={placeholder}
-        placeholderTextColor={T.textDim}
-        autoFocus
-        returnKeyType="done"
-        onSubmitEditing={submit}
-        style={[
-          styles.input,
-          { color: T.textBright, backgroundColor: T.bg, borderColor: T.border },
-        ]}
-      />
+      <View style={[styles.field, { backgroundColor: T.bg, borderColor: T.border }]}>
+        <TextInput
+          value={name}
+          onChangeText={setName}
+          placeholder={placeholder}
+          placeholderTextColor={T.textDim}
+          autoFocus
+          returnKeyType="done"
+          onSubmitEditing={submit}
+          style={[styles.input, { color: T.textBright }]}
+        />
+        {suffix ? <Text style={[styles.suffix, { color: T.textDim }]}>{suffix}</Text> : null}
+      </View>
 
       <TouchableOpacity
         style={[styles.cta, { backgroundColor: trimmed ? accent : T.surfaceHover }]}
@@ -97,11 +103,21 @@ const styles = StyleSheet.create({
     paddingBottom: 14,
   },
   title: { fontSize: 16, fontFamily: FONT.semibold, flex: 1 },
-  input: {
+  field: {
+    flexDirection: "row",
+    alignItems: "center",
     borderRadius: 12,
     borderWidth: StyleSheet.hairlineWidth,
     paddingHorizontal: 14,
+  },
+  input: {
+    flex: 1,
     paddingVertical: 12,
+    fontSize: 15,
+    fontFamily: FONT.regular,
+  },
+  suffix: {
+    marginLeft: 4,
     fontSize: 15,
     fontFamily: FONT.regular,
   },

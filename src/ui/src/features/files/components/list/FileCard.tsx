@@ -21,6 +21,7 @@ import { getInitials } from "@/components/subject/utils";
 import { popoverShellClass } from "@/components/ui/popover";
 import { useOverlayEscape } from "@/shared/hooks/useOverlayEscape";
 import { getDownloadGateState } from "@/features/files/utils/transcodeGate";
+import { fileExtension } from "@/features/files/utils/fileExtension";
 
 export interface FileCardProps {
   file: SerializedFile;
@@ -250,6 +251,7 @@ export function FileCard({
           <div className="flex-1 min-w-0" onClick={(e) => e.stopPropagation()}>
             <RenameInput
               initialValue={file.filename}
+              lockedSuffix={fileExtension(file.filename)}
               onConfirm={handleRenameConfirm}
               onCancel={handleRenameCancel}
               variant="list"
@@ -436,6 +438,7 @@ export function FileCard({
           <div onClick={(e) => e.stopPropagation()} className="min-w-0">
             <RenameInput
               initialValue={file.filename}
+              lockedSuffix={fileExtension(file.filename)}
               onConfirm={handleRenameConfirm}
               onCancel={handleRenameCancel}
               variant="grid"

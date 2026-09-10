@@ -36,6 +36,8 @@ import { DomainHeader } from "@shared/components/DomainHeader";
 import { ActionSheet } from "@shared/components/ActionSheet";
 import { BottomSheet } from "@shared/components/BottomSheet";
 import { NamePromptSheet } from "@shared/components/NamePromptSheet";
+import { fileExtension } from "@shared/lib/fileExtension";
+import { userFacingError } from "@shared/lib/userFacingError";
 import { FileThumb } from "@features/files/components/FileThumb";
 import { useTheme } from "@shared/hooks/useTheme";
 import { useAuth } from "@core/providers/AuthContext";
@@ -210,10 +212,13 @@ export function FilesListScreen() {
         setRenameTarget(null);
         returnToItemSheet();
       };
+      const onError = (error: unknown) => {
+        Alert.alert("Rename failed", userFacingError(error, "Could not rename. Try again."));
+      };
       if (renameTarget.isFolder) {
-        updateFolder.mutate({ folderId: renameTarget.id, name }, { onSettled });
+        updateFolder.mutate({ folderId: renameTarget.id, name }, { onSettled, onError });
       } else {
-        updateFile.mutate({ fileId: renameTarget.id, filename: name }, { onSettled });
+        updateFile.mutate({ fileId: renameTarget.id, filename: name }, { onSettled, onError });
       }
     },
     [renameTarget, updateFile, updateFolder, returnToItemSheet],
@@ -874,6 +879,9 @@ export function FilesListScreen() {
         cta="Rename"
         icon={PencilSimple}
         initialName={renameTarget?.name}
+        lockedSuffix={
+          renameTarget && !renameTarget.isFolder ? fileExtension(renameTarget.name) : ""
+        }
         pending={updateFile.isPending || updateFolder.isPending}
         onClose={() => {
           setRenameTarget(null);

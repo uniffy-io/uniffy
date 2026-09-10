@@ -8,6 +8,8 @@ const MAX_NAME_LENGTH = 255;
 interface RenameInputProps {
   /** Initial name value */
   initialValue: string;
+  /** Read-only tail kept out of the editable text, e.g. a file's extension. */
+  lockedSuffix?: string;
   /** Called when rename is confirmed */
   onConfirm: (newName: string) => void;
   /** Called when rename is cancelled */
@@ -20,12 +22,15 @@ interface RenameInputProps {
 
 export function RenameInput({
   initialValue,
+  lockedSuffix = "",
   onConfirm,
   onCancel,
   className,
   variant = "grid",
 }: RenameInputProps) {
-  const [value, setValue] = useState(initialValue);
+  const suffix = lockedSuffix && initialValue.endsWith(lockedSuffix) ? lockedSuffix : "";
+  const editableInitial = initialValue.slice(0, initialValue.length - suffix.length);
+  const [value, setValue] = useState(editableInitial);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Focus and select text on mount
@@ -38,8 +43,8 @@ export function RenameInput({
 
   const handleConfirm = () => {
     const trimmed = value.trim();
-    if (trimmed && trimmed !== initialValue) {
-      onConfirm(trimmed);
+    if (trimmed && trimmed !== editableInitial) {
+      onConfirm(trimmed + suffix);
     } else {
       onCancel();
     }
@@ -55,6 +60,8 @@ export function RenameInput({
     }
   };
 
+  const maxLength = MAX_NAME_LENGTH - suffix.length;
+
   if (variant === "list") {
     return (
       <div className={cn("flex items-center gap-2 flex-1 min-w-0", className)}>
@@ -65,9 +72,10 @@ export function RenameInput({
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={handleKeyDown}
           onBlur={handleConfirm}
-          maxLength={MAX_NAME_LENGTH}
+          maxLength={maxLength}
           className="h-8 flex-1 min-w-0 px-2 py-1"
         />
+        {suffix && <span className="shrink-0 text-sm text-subtle-foreground">{suffix}</span>}
         <button
           onClick={(e) => {
             e.stopPropagation();
@@ -107,9 +115,10 @@ export function RenameInput({
         onKeyDown={handleKeyDown}
         onBlur={handleConfirm}
         onClick={(e) => e.stopPropagation()}
-        maxLength={MAX_NAME_LENGTH}
+        maxLength={maxLength}
         className="h-7 min-w-0 px-1.5 py-0.5"
       />
+      {suffix && <span className="shrink-0 text-xs text-subtle-foreground">{suffix}</span>}
     </div>
   );
 }
