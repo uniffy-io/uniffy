@@ -11,7 +11,11 @@ from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.search import SearchIndexer
 from uniffy.domains.scheduling.calendar.events.activity import EventActivityOperations
 from uniffy.domains.scheduling.calendar.events.content import EventContentOperations
-from uniffy.domains.scheduling.calendar.events.queries import EventQueryOperations
+from uniffy.domains.scheduling.calendar.events.queries import (
+    DEFAULT_PAGE_SIZE,
+    EventPage,
+    EventQueryOperations,
+)
 from uniffy.domains.scheduling.calendar.events.recurrence.queries import RecurrenceQueryOperations
 from uniffy.domains.scheduling.calendar.events.registration import register_calendar_content
 
@@ -89,6 +93,34 @@ class CalendarEventReader(EventContentOperations):
             page,
             page_size,
             sort_by,
+            sort_order,
+        )
+
+    async def list_events_page(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        calendar_id: UUID | None = None,
+        category_id: UUID | None = None,
+        start_date: datetime | None = None,
+        end_date: datetime | None = None,
+        include_deleted: bool = False,
+        tag_ids: list[UUID] | None = None,
+        page_token: str | None = None,
+        page_size: int = DEFAULT_PAGE_SIZE,
+        sort_order: str = "asc",
+    ) -> EventPage:
+        return await EventQueryOperations(self).list_events_page(
+            user_id,
+            organization_id,
+            calendar_id,
+            category_id,
+            start_date,
+            end_date,
+            include_deleted,
+            tag_ids,
+            page_token,
+            page_size,
             sort_order,
         )
 

@@ -12,14 +12,13 @@ from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.login.organization_member import OrganizationRole
 from uniffy.core.types import generate_id
 from uniffy.domains.audit.handlers import _parse_resource_type
+from uniffy.core.pagination import decode_time_cursor, encode_time_cursor
 from uniffy.domains.audit.operations import (
     DEFAULT_PAGE_SIZE,
     MAX_PAGE_SIZE,
     AuditOperations,
     ListEventsFilter,
     SortOrder,
-    _decode_cursor,
-    _encode_cursor,
 )
 
 
@@ -122,15 +121,15 @@ def _list_result(rows):
 def test_cursor_encode_decode_roundtrip() -> None:
     moment = datetime(2026, 5, 20, 12, 34, 56, tzinfo=UTC)
     event_id = generate_id()
-    token = _encode_cursor(moment, event_id)
-    decoded_at, decoded_id = _decode_cursor(token)
+    token = encode_time_cursor(moment, event_id)
+    decoded_at, decoded_id = decode_time_cursor(token)
     assert decoded_at == moment
     assert decoded_id == event_id
 
 
 def test_malformed_cursor_raises_validation_error() -> None:
     with pytest.raises(ValidationError):
-        _decode_cursor("not-a-real-cursor")
+        decode_time_cursor("not-a-real-cursor")
 
 
 def test_filter_default_order_is_time_desc() -> None:

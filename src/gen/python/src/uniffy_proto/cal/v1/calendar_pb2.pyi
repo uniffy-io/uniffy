@@ -499,7 +499,7 @@ class RemoveAttendeesResponse(_message.Message):
     def __init__(self, event: _Optional[_Union[CalendarEvent, _Mapping]] = ...) -> None: ...
 
 class ListEventsRequest(_message.Message):
-    __slots__ = ("organization_id", "calendar_id", "category_id", "start_date", "end_date", "include_deleted", "page", "page_size", "sort_by", "sort_order", "tag_ids")
+    __slots__ = ("organization_id", "calendar_id", "category_id", "start_date", "end_date", "include_deleted", "page", "page_size", "sort_by", "sort_order", "tag_ids", "page_token")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     CALENDAR_ID_FIELD_NUMBER: _ClassVar[int]
     CATEGORY_ID_FIELD_NUMBER: _ClassVar[int]
@@ -511,6 +511,7 @@ class ListEventsRequest(_message.Message):
     SORT_BY_FIELD_NUMBER: _ClassVar[int]
     SORT_ORDER_FIELD_NUMBER: _ClassVar[int]
     TAG_IDS_FIELD_NUMBER: _ClassVar[int]
+    PAGE_TOKEN_FIELD_NUMBER: _ClassVar[int]
     organization_id: str
     calendar_id: str
     category_id: str
@@ -522,21 +523,24 @@ class ListEventsRequest(_message.Message):
     sort_by: str
     sort_order: str
     tag_ids: _containers.RepeatedScalarFieldContainer[str]
-    def __init__(self, organization_id: _Optional[str] = ..., calendar_id: _Optional[str] = ..., category_id: _Optional[str] = ..., start_date: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., end_date: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., include_deleted: _Optional[bool] = ..., page: _Optional[int] = ..., page_size: _Optional[int] = ..., sort_by: _Optional[str] = ..., sort_order: _Optional[str] = ..., tag_ids: _Optional[_Iterable[str]] = ...) -> None: ...
+    page_token: str
+    def __init__(self, organization_id: _Optional[str] = ..., calendar_id: _Optional[str] = ..., category_id: _Optional[str] = ..., start_date: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., end_date: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., include_deleted: _Optional[bool] = ..., page: _Optional[int] = ..., page_size: _Optional[int] = ..., sort_by: _Optional[str] = ..., sort_order: _Optional[str] = ..., tag_ids: _Optional[_Iterable[str]] = ..., page_token: _Optional[str] = ...) -> None: ...
 
 class ListEventsResponse(_message.Message):
-    __slots__ = ("events", "total_count", "page", "page_size", "total_pages")
+    __slots__ = ("events", "total_count", "page", "page_size", "total_pages", "next_page_token")
     EVENTS_FIELD_NUMBER: _ClassVar[int]
     TOTAL_COUNT_FIELD_NUMBER: _ClassVar[int]
     PAGE_FIELD_NUMBER: _ClassVar[int]
     PAGE_SIZE_FIELD_NUMBER: _ClassVar[int]
     TOTAL_PAGES_FIELD_NUMBER: _ClassVar[int]
+    NEXT_PAGE_TOKEN_FIELD_NUMBER: _ClassVar[int]
     events: _containers.RepeatedCompositeFieldContainer[CalendarEvent]
     total_count: int
     page: int
     page_size: int
     total_pages: int
-    def __init__(self, events: _Optional[_Iterable[_Union[CalendarEvent, _Mapping]]] = ..., total_count: _Optional[int] = ..., page: _Optional[int] = ..., page_size: _Optional[int] = ..., total_pages: _Optional[int] = ...) -> None: ...
+    next_page_token: str
+    def __init__(self, events: _Optional[_Iterable[_Union[CalendarEvent, _Mapping]]] = ..., total_count: _Optional[int] = ..., page: _Optional[int] = ..., page_size: _Optional[int] = ..., total_pages: _Optional[int] = ..., next_page_token: _Optional[str] = ...) -> None: ...
 
 class GetEventsInRangeRequest(_message.Message):
     __slots__ = ("organization_id", "start_date", "end_date", "calendar_ids", "category_ids", "channel_id")

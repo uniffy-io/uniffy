@@ -1,19 +1,30 @@
 """Calendar operations."""
 
+from dataclasses import dataclass
 from datetime import datetime
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import func, or_, select
+from sqlalchemy import Select, and_, func, or_, select
 
 from uniffy.core.models.calendar.attendee import EventAttendee
 from uniffy.core.models.calendar.event import CalendarEvent
+from uniffy.core.pagination import decode_time_cursor, encode_time_cursor
 from uniffy.core.types import (
     SortOrder,
 )
 from uniffy.domains.scheduling.calendar import queries
 
 logger = logger.bind(component="scheduling.calendar.events.queries")
+
+DEFAULT_PAGE_SIZE = 50
+MAX_PAGE_SIZE = 100
+
+
+@dataclass(frozen=True)
+class EventPage:
+    events: list[CalendarEvent]
+    next_page_token: str | None
 
 
 class EventQueryOperations:
@@ -23,22 +34,17 @@ class EventQueryOperations:
         self.content_type = events.content_type
         self.access_query = events.access_query
 
-    async def list_events(
+    async def _accessible_events(
         self,
         user_id: UUID,
         organization_id: UUID,
-        calendar_id: UUID | None = None,
-        category_id: UUID | None = None,
-        start_date: datetime | None = None,
-        end_date: datetime | None = None,
-        include_deleted: bool = False,
-        tag_ids: list[UUID] | None = None,
-        page: int = 1,
-        page_size: int = 50,
-        sort_by: str = "start_time",
-        sort_order: str = "asc",
-    ) -> tuple[list[CalendarEvent], int]:
-        """List events the user can access with filters/pagination."""
+        calendar_id: UUID | None,
+        category_id: UUID | None,
+        start_date: datetime | None,
+        end_date: datetime | None,
+        include_deleted: bool,
+        tag_ids: list[UUID] | None,
+    ) -> Select:
         query = select(CalendarEvent).where(CalendarEvent.organization_id == organization_id)
 
         access_filter = await self.access_query.build_accessible_filter(
@@ -70,6 +76,110 @@ class EventQueryOperations:
             query = query.where(CalendarEvent.is_deleted == False)  # noqa: E712
         if tag_ids:
             query = query.where(CalendarEvent.id.in_(self.events._tag_filter_subquery(tag_ids)))
+
+        return query
+
+    async def list_events_page(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        calendar_id: UUID | None = None,
+        category_id: UUID | None = None,
+        start_date: datetime | None = None,
+        end_date: datetime | None = None,
+        include_deleted: bool = False,
+        tag_ids: list[UUID] | None = None,
+        page_token: str | None = None,
+        page_size: int = DEFAULT_PAGE_SIZE,
+        sort_order: str = "asc",
+    ) -> EventPage:
+        """A page of accessible events ordered by ``(start_time, id)``.
+
+        Keyset paging, so the cost of a page does not grow with how far into
+        the result set it sits, and no count of the whole set is taken.
+        """
+        page_size = max(1, min(page_size, MAX_PAGE_SIZE))
+        descending = sort_order == SortOrder.DESCENDING
+
+        query = await self._accessible_events(
+            user_id,
+            organization_id,
+            calendar_id,
+            category_id,
+            start_date,
+            end_date,
+            include_deleted,
+            tag_ids,
+        )
+
+        if page_token:
+            cursor_start, cursor_id = decode_time_cursor(page_token)
+            if descending:
+                query = query.where(
+                    or_(
+                        CalendarEvent.start_time < cursor_start,
+                        and_(
+                            CalendarEvent.start_time == cursor_start,
+                            CalendarEvent.id < cursor_id,
+                        ),
+                    )
+                )
+            else:
+                query = query.where(
+                    or_(
+                        CalendarEvent.start_time > cursor_start,
+                        and_(
+                            CalendarEvent.start_time == cursor_start,
+                            CalendarEvent.id > cursor_id,
+                        ),
+                    )
+                )
+
+        if descending:
+            query = query.order_by(CalendarEvent.start_time.desc(), CalendarEvent.id.desc())
+        else:
+            query = query.order_by(CalendarEvent.start_time.asc(), CalendarEvent.id.asc())
+
+        rows = list((await self.session.execute(query.limit(page_size + 1))).scalars().all())
+
+        next_token: str | None = None
+        if len(rows) > page_size:
+            rows = rows[:page_size]
+            tail = rows[-1]
+            next_token = encode_time_cursor(tail.start_time, tail.id)
+
+        return EventPage(events=rows, next_page_token=next_token)
+
+    async def list_events(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        calendar_id: UUID | None = None,
+        category_id: UUID | None = None,
+        start_date: datetime | None = None,
+        end_date: datetime | None = None,
+        include_deleted: bool = False,
+        tag_ids: list[UUID] | None = None,
+        page: int = 1,
+        page_size: int = DEFAULT_PAGE_SIZE,
+        sort_by: str = "start_time",
+        sort_order: str = "asc",
+    ) -> tuple[list[CalendarEvent], int]:
+        """List events the user can access, numbering pages from one.
+
+        Prefer :meth:`list_events_page`; this walks an offset and counts the
+        whole result set, so both costs grow with the org's event count.
+        """
+        query = await self._accessible_events(
+            user_id,
+            organization_id,
+            calendar_id,
+            category_id,
+            start_date,
+            end_date,
+            include_deleted,
+            tag_ids,
+        )
 
         count_query = select(func.count()).select_from(query.subquery())
         total = (await self.session.execute(count_query)).scalar() or 0

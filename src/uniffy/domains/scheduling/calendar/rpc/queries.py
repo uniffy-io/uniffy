@@ -13,6 +13,7 @@ from uniffy_proto.cal.v1.calendar_pb2 import (
 
 from uniffy.core.auth.principal import current_user_id, resolve_organization_id
 from uniffy.core.converters.proto import timestamp_to_datetime
+from uniffy.core.errors import ValidationError
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import ContentType
 from uniffy.domains.permissions.access import ResourceAccessResolver, ResourceKey
@@ -35,6 +36,8 @@ from uniffy.infrastructure.database import open_session
 
 DEFAULT_PAGE_SIZE = 50
 MAX_PAGE_SIZE = 100
+# The only order a cursor can express, since the cursor carries a start time.
+CURSOR_SORT_FIELD = "start_time"
 
 
 class EventQueryHandlers:
@@ -103,24 +106,51 @@ class EventQueryHandlers:
 
         page = max(1, request.page or 1)
         page_size = min(MAX_PAGE_SIZE, max(1, request.page_size or DEFAULT_PAGE_SIZE))
+        sort_by = request.sort_by or CURSOR_SORT_FIELD
+        # An absent field means the caller pages by number; an empty one asks
+        # for the first cursor page.
+        by_cursor = request.HasField("page_token")
+        page_token = request.page_token or None
 
         try:
+            if by_cursor and sort_by != CURSOR_SORT_FIELD:
+                raise ValidationError("page_token", "Cursor paging requires the start_time sort")
+
             async with open_session() as session:
                 operations = CalendarEventReader(session)
-                events, total = await operations.list_events(
-                    user_id=user_id,
-                    organization_id=organization_id,
-                    calendar_id=calendar_id,
-                    category_id=category_id,
-                    start_date=start_date,
-                    end_date=end_date,
-                    include_deleted=request.include_deleted,
-                    tag_ids=tag_ids,
-                    page=page,
-                    page_size=page_size,
-                    sort_by=request.sort_by or "start_time",
-                    sort_order=request.sort_order or "asc",
-                )
+                total = 0
+                next_page_token = ""
+                if by_cursor:
+                    result = await operations.list_events_page(
+                        user_id=user_id,
+                        organization_id=organization_id,
+                        calendar_id=calendar_id,
+                        category_id=category_id,
+                        start_date=start_date,
+                        end_date=end_date,
+                        include_deleted=request.include_deleted,
+                        tag_ids=tag_ids,
+                        page_token=page_token,
+                        page_size=page_size,
+                        sort_order=request.sort_order or "asc",
+                    )
+                    events = result.events
+                    next_page_token = result.next_page_token or ""
+                else:
+                    events, total = await operations.list_events(
+                        user_id=user_id,
+                        organization_id=organization_id,
+                        calendar_id=calendar_id,
+                        category_id=category_id,
+                        start_date=start_date,
+                        end_date=end_date,
+                        include_deleted=request.include_deleted,
+                        tag_ids=tag_ids,
+                        page=page,
+                        page_size=page_size,
+                        sort_by=sort_by,
+                        sort_order=request.sort_order or "asc",
+                    )
 
                 total_pages = (total + page_size - 1) // page_size
                 event_ids = [event.id for event in events]
@@ -165,6 +195,7 @@ class EventQueryHandlers:
                     page=page,
                     page_size=page_size,
                     total_pages=total_pages,
+                    next_page_token=next_page_token,
                 )
         except ConnectError:
             raise

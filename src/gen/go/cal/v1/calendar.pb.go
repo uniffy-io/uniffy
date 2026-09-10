@@ -2509,7 +2509,10 @@ type ListEventsRequest struct {
 	// Sort order (asc, desc)
 	SortOrder string `protobuf:"bytes,10,opt,name=sort_order,json=sortOrder,proto3" json:"sort_order,omitempty"`
 	// Filter events that have ALL of the provided tag ids (logical AND).
-	TagIds        []string `protobuf:"bytes,11,rep,name=tag_ids,json=tagIds,proto3" json:"tag_ids,omitempty"`
+	TagIds []string `protobuf:"bytes,11,rep,name=tag_ids,json=tagIds,proto3" json:"tag_ids,omitempty"`
+	// Opaque cursor from a previous response. Supplying it pages by cursor and
+	// ignores `page`; it requires the default start_time sort.
+	PageToken     *string `protobuf:"bytes,12,opt,name=page_token,json=pageToken,proto3,oneof" json:"page_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2621,14 +2624,25 @@ func (x *ListEventsRequest) GetTagIds() []string {
 	return nil
 }
 
+func (x *ListEventsRequest) GetPageToken() string {
+	if x != nil && x.PageToken != nil {
+		return *x.PageToken
+	}
+	return ""
+}
+
 // Response for listing events
 type ListEventsResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Events        []*CalendarEvent       `protobuf:"bytes,1,rep,name=events,proto3" json:"events,omitempty"`
-	TotalCount    int32                  `protobuf:"varint,2,opt,name=total_count,json=totalCount,proto3" json:"total_count,omitempty"`
-	Page          int32                  `protobuf:"varint,3,opt,name=page,proto3" json:"page,omitempty"`
-	PageSize      int32                  `protobuf:"varint,4,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
-	TotalPages    int32                  `protobuf:"varint,5,opt,name=total_pages,json=totalPages,proto3" json:"total_pages,omitempty"`
+	state  protoimpl.MessageState `protogen:"open.v1"`
+	Events []*CalendarEvent       `protobuf:"bytes,1,rep,name=events,proto3" json:"events,omitempty"`
+	// Only meaningful when paging by `page`; cursor paging leaves it at zero
+	// rather than counting the whole result set on every request.
+	TotalCount int32 `protobuf:"varint,2,opt,name=total_count,json=totalCount,proto3" json:"total_count,omitempty"`
+	Page       int32 `protobuf:"varint,3,opt,name=page,proto3" json:"page,omitempty"`
+	PageSize   int32 `protobuf:"varint,4,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	TotalPages int32 `protobuf:"varint,5,opt,name=total_pages,json=totalPages,proto3" json:"total_pages,omitempty"`
+	// Cursor for the next page, empty when this is the last one.
+	NextPageToken string `protobuf:"bytes,6,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2696,6 +2710,13 @@ func (x *ListEventsResponse) GetTotalPages() int32 {
 		return x.TotalPages
 	}
 	return 0
+}
+
+func (x *ListEventsResponse) GetNextPageToken() string {
+	if x != nil {
+		return x.NextPageToken
+	}
+	return ""
 }
 
 // Request to get events in a date range (optimized for calendar views)
@@ -5509,7 +5530,7 @@ const file_cal_v1_calendar_proto_rawDesc = "" +
 	"\x1aUpdateAttendeeRoleResponse\x12+\n" +
 	"\x05event\x18\x01 \x01(\v2\x15.cal.v1.CalendarEventR\x05event\"F\n" +
 	"\x17RemoveAttendeesResponse\x12+\n" +
-	"\x05event\x18\x01 \x01(\v2\x15.cal.v1.CalendarEventR\x05event\"\xeb\x03\n" +
+	"\x05event\x18\x01 \x01(\v2\x15.cal.v1.CalendarEventR\x05event\"\x9e\x04\n" +
 	"\x11ListEventsRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12$\n" +
 	"\vcalendar_id\x18\x02 \x01(\tH\x00R\n" +
@@ -5526,11 +5547,14 @@ const file_cal_v1_calendar_proto_rawDesc = "" +
 	"\n" +
 	"sort_order\x18\n" +
 	" \x01(\tR\tsortOrder\x12\x17\n" +
-	"\atag_ids\x18\v \x03(\tR\x06tagIdsB\x0e\n" +
+	"\atag_ids\x18\v \x03(\tR\x06tagIds\x12\"\n" +
+	"\n" +
+	"page_token\x18\f \x01(\tH\x04R\tpageToken\x88\x01\x01B\x0e\n" +
 	"\f_calendar_idB\x0e\n" +
 	"\f_category_idB\r\n" +
 	"\v_start_dateB\v\n" +
-	"\t_end_date\"\xb6\x01\n" +
+	"\t_end_dateB\r\n" +
+	"\v_page_token\"\xde\x01\n" +
 	"\x12ListEventsResponse\x12-\n" +
 	"\x06events\x18\x01 \x03(\v2\x15.cal.v1.CalendarEventR\x06events\x12\x1f\n" +
 	"\vtotal_count\x18\x02 \x01(\x05R\n" +
@@ -5538,7 +5562,8 @@ const file_cal_v1_calendar_proto_rawDesc = "" +
 	"\x04page\x18\x03 \x01(\x05R\x04page\x12\x1b\n" +
 	"\tpage_size\x18\x04 \x01(\x05R\bpageSize\x12\x1f\n" +
 	"\vtotal_pages\x18\x05 \x01(\x05R\n" +
-	"totalPages\"\xad\x02\n" +
+	"totalPages\x12&\n" +
+	"\x0fnext_page_token\x18\x06 \x01(\tR\rnextPageToken\"\xad\x02\n" +
 	"\x17GetEventsInRangeRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x129\n" +
 	"\n" +
