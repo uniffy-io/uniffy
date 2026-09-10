@@ -18,6 +18,7 @@ def _writer(session: MagicMock) -> tuple[ChatChannelMessageWriter, dict[str, UUI
     return (
         ChatChannelMessageWriter(
             session=session,
+            search_indexer=MagicMock(),
             user_id=ids["user"],
             organization_id=ids["organization"],
             channel_id=ids["channel"],
@@ -45,10 +46,14 @@ async def test_final_agent_message_tracks_channel_resources() -> None:
             "uniffy.domains.agents.runtime.writers.track_agent_message_resources",
             AsyncMock(),
         ) as track,
+        patch("uniffy.domains.agents.runtime.writers.index_agent_message", AsyncMock()) as index,
     ):
-        await writer.add_message(role=AgentMessageRole.ASSISTANT, content=content)
+        message = await writer.add_message(role=AgentMessageRole.ASSISTANT, content=content)
 
     track.assert_awaited_once_with(session, ids["channel"], content, ids["user"])
+    assert index.await_args.args[2].id == message.id
+    assert index.await_args.args[2].content == content
+    assert index.await_args.args[3] == ids["organization"]
 
 
 async def test_tool_message_does_not_track_channel_resources() -> None:
@@ -67,6 +72,7 @@ async def test_tool_message_does_not_track_channel_resources() -> None:
             "uniffy.domains.agents.runtime.writers.track_agent_message_resources",
             AsyncMock(),
         ) as track,
+        patch("uniffy.domains.agents.runtime.writers.index_agent_message", AsyncMock()) as index,
     ):
         await writer.add_message(
             role=AgentMessageRole.TOOL,
@@ -75,6 +81,7 @@ async def test_tool_message_does_not_track_channel_resources() -> None:
         )
 
     track.assert_not_awaited()
+    index.assert_not_awaited()
 
 
 async def test_finalized_placeholder_tracks_channel_resources() -> None:
@@ -94,11 +101,17 @@ async def test_finalized_placeholder_tracks_channel_resources() -> None:
     urn = f"urn:uniffy:content:NOTE:{generate_id()}"
     content = f"Updated [[[Runbook|{urn}]]]"
 
-    with patch(
-        "uniffy.domains.agents.runtime.writers.track_agent_message_resources",
-        AsyncMock(),
-    ) as track:
+    with (
+        patch(
+            "uniffy.domains.agents.runtime.writers.track_agent_message_resources",
+            AsyncMock(),
+        ) as track,
+        patch("uniffy.domains.agents.runtime.writers.index_agent_message", AsyncMock()) as index,
+    ):
         await writer.finalize_assistant_placeholder(message_id=message_id, content=content)
 
     track.assert_awaited_once_with(session, ids["channel"], content, ids["user"])
     assert row.mentioned_urns == [urn]
+    assert index.await_args.args[2].id == message_id
+    assert index.await_args.args[2].content == content
+    assert "streaming" not in index.await_args.args[2].message_metadata

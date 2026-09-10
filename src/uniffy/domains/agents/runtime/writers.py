@@ -24,6 +24,7 @@ from uniffy.domains.chat.agents import (
     AGENT_THREAD_REPLY_KINDS,
     SenderResolver,
     bump_channel_message_stats,
+    index_agent_message,
     record_thread_reply,
     track_agent_message_resources,
 )
@@ -33,6 +34,7 @@ if TYPE_CHECKING:
 
     from sqlalchemy.ext.asyncio import AsyncSession
 
+    from uniffy.core.search import SearchIndexer
     from uniffy.domains.agents.sessions.operations import SessionOperations
 
 
@@ -268,6 +270,7 @@ class ChatChannelMessageWriter:
         self,
         *,
         session: AsyncSession,
+        search_indexer: SearchIndexer,
         user_id: UUID,
         organization_id: UUID,
         channel_id: UUID,
@@ -276,6 +279,7 @@ class ChatChannelMessageWriter:
         thread_root_id: UUID | None = None,
     ) -> None:
         self._session = session
+        self._search_indexer = search_indexer
         self._user_id = user_id
         self._organization_id = organization_id
         self._channel_id = channel_id
@@ -466,6 +470,12 @@ class ChatChannelMessageWriter:
         await self._session.refresh(chat_msg)
 
         if kind is ChatMessageMetadataKind.FINAL and content:
+            await index_agent_message(
+                self._session,
+                self._search_indexer,
+                chat_msg,
+                self._organization_id,
+            )
             await track_agent_message_resources(
                 self._session,
                 self._channel_id,
@@ -599,6 +609,12 @@ class ChatChannelMessageWriter:
         await self._session.refresh(chat_msg)
 
         if content:
+            await index_agent_message(
+                self._session,
+                self._search_indexer,
+                chat_msg,
+                self._organization_id,
+            )
             await track_agent_message_resources(
                 self._session,
                 self._channel_id,

@@ -174,6 +174,7 @@ class MessageStreamer:
                 channel_id = destination.channel_id
                 writer = ChatChannelMessageWriter(
                     session=self._session,
+                    search_indexer=self._search_indexer,
                     user_id=user_id,
                     organization_id=organization_id,
                     channel_id=destination.channel_id,

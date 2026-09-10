@@ -480,6 +480,7 @@ class TestChatWriterApprovalAccessors:
         return (
             ChatChannelMessageWriter(
                 session=MagicMock(),
+                search_indexer=MagicMock(),
                 user_id=ids["user"],
                 organization_id=ids["org"],
                 channel_id=ids["channel"],
@@ -1039,6 +1040,7 @@ def _stream_runtime_ops(monkeypatch, *, binding_row, agent):
 
     ops = object.__new__(MessageStreamer)
     ops._session_factory = MagicMock()
+    ops._search_indexer = MagicMock()
     session = MagicMock()
 
     async def fake_execute(_stmt):

@@ -1,6 +1,7 @@
 """What an agent reads, and what a thread reply does to its counters."""
 
 from datetime import UTC, datetime
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from sqlalchemy import select
@@ -23,6 +24,7 @@ AGENT_REPLY_CONTENT = "answer in A"
 def _writer(session, threads, *, thread_root_id=None) -> ChatChannelMessageWriter:
     return ChatChannelMessageWriter(
         session=session,
+        search_indexer=MagicMock(index=AsyncMock(), remove=AsyncMock()),
         user_id=threads.user_id,
         organization_id=threads.org_id,
         channel_id=threads.channel_id,
