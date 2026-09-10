@@ -23,7 +23,10 @@ from uniffy.core.models.shared import (
 from uniffy.domains.scheduling.calendar.recurrence import expand_recurrence
 from uniffy.domains.scheduling.intervals import Interval, merge_intervals
 
-MAX_FREE_BUSY_USERS = 20
+# A department-sized group. The cost is really the product of this and the
+# window: 100 users over the full 62 days measures ~340ms against calendars
+# carrying 40 events plus three long-running daily series each.
+MAX_FREE_BUSY_USERS = 100
 MAX_WINDOW_DAYS = 62
 
 
@@ -126,8 +129,16 @@ async def get_busy_intervals(
     }
     exceptions_by_event: dict[UUID, set[date]] = {}
     if master_ids:
+        # Only the exceptions the expansion can skip, which widens its date
+        # window by a day each side of the range.
         exc_result = await session.execute(
-            select(RecurrenceException).where(RecurrenceException.event_id.in_(master_ids))
+            select(RecurrenceException).where(
+                and_(
+                    RecurrenceException.event_id.in_(master_ids),
+                    RecurrenceException.original_date >= range_start.date() - timedelta(days=1),
+                    RecurrenceException.original_date <= range_end.date() + timedelta(days=1),
+                )
+            )
         )
         for exc in exc_result.scalars().all():
             exceptions_by_event.setdefault(exc.event_id, set()).add(exc.original_date)

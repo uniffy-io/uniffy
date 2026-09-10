@@ -98,6 +98,21 @@ class TestGetBusyIntervals:
                 session, generate_id(), [generate_id()], _dt(1, 0), _dt(1, 0) + timedelta(days=90)
             )
 
+    async def test_a_group_at_the_ceiling_is_answered(self) -> None:
+        users = [generate_id() for _ in range(MAX_FREE_BUSY_USERS)]
+        session = MagicMock()
+        session.execute = AsyncMock(
+            side_effect=[
+                MagicMock(all=MagicMock(return_value=[(uid,) for uid in users])),
+                MagicMock(all=MagicMock(return_value=[])),
+            ]
+        )
+
+        result = await get_busy_intervals(session, generate_id(), users, _dt(3, 0), _dt(4, 0))
+
+        assert set(result) == set(users)
+        assert all(spans == [] for spans in result.values())
+
     async def test_plain_event_clipped_and_merged(self) -> None:
         user = generate_id()
         early = _make_event(start=_dt(2, 23), end=_dt(3, 1))

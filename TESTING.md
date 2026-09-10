@@ -2214,6 +2214,36 @@ public-source address, per the Caddy or nginx snippet in the docs).
       settings, and members pages all work from the denied address.
 - [ ] From an allowed (private/VPN) address, the `/platform` pages work.
 
+## Calendar scale guardrails
+
+Read paths that used to cost more than the window they were asked for. Needs an
+org where at least one member owns a recurring event created years ago -- a
+daily series starting three years back is the shape that used to hurt.
+
+- [ ] Open the calendar on a month containing a years-old daily series. The
+      occurrences render, and the month is no slower to load than a month of a
+      series created last week. Compare the two `GetEventsInRange` timings in
+      the network tab; they should be within noise of each other.
+- [ ] Skip one occurrence of that series, then reload a month that does NOT
+      contain the skipped date. The skip still holds on its own date, and the
+      months around it are unaffected.
+- [ ] Move a single occurrence of the series to another day. Both the gap and
+      the moved occurrence render once, not twice, and not at all in months
+      outside the move.
+- [ ] Ask for a range wider than a year (call `GetEventsInRange` directly with
+      a two-year span). It is refused with a clear message rather than served
+      slowly. A range whose end precedes its start is refused the same way.
+- [ ] A calendar month holding many events loads with a bounded number of
+      queries: the count does not grow with the number of events on screen.
+      Watch the backend log or `pg_stat_statements` while switching months.
+- [ ] Attendee avatars and room details still appear on every event in a busy
+      month, including on occurrences of a recurring series.
+- [ ] Open the scheduling assistant with a large attendee list (more than 20,
+      up to 100). Availability is computed rather than refused. Past 100 the
+      panel says so instead of querying.
+- [ ] An all-day event, an event in a non-UTC timezone, and an event spanning a
+      daylight-saving change all still render on the right days.
+
 ## Pre-release sweep
 
 - [ ] All linters green: `./manage.py lint`.
