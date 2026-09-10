@@ -21,18 +21,14 @@ export function reminderLabel(minutes: number): string {
 export function ReminderChips({
   value,
   onChange,
-  lockLast = false,
 }: {
   value: number[];
   onChange: (reminders: number[]) => void;
-  /** Editing an existing event: the wire cannot clear every reminder, so the last one stays. */
-  lockLast?: boolean;
 }) {
   const T = useTheme();
 
   const toggle = (minutes: number) => {
     if (value.includes(minutes)) {
-      if (lockLast && value.length === 1) return;
       onChange(value.filter((v) => v !== minutes));
     } else {
       onChange([...value, minutes].sort((a, b) => a - b));

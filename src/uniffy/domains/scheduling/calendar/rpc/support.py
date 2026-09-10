@@ -1,5 +1,6 @@
 """Shared calendar RPC parsing and projection helpers."""
 
+from collections.abc import Iterable
 from uuid import UUID
 
 from connectrpc.code import Code
@@ -32,6 +33,15 @@ def parse_event_id(value: str) -> UUID:
 
 def parse_tag_id_list(values: list[str]) -> list[UUID]:
     return [parse_uuid(value, "tag_id") for value in values]
+
+
+def parse_reminders(values: Iterable[int], *, explicit_empty: bool) -> list[int] | None:
+    """``None`` means unspecified: create applies the member's defaults, update
+    leaves the rows alone. A proto3 repeated cannot say "none", so the request
+    carries that intent as a flag."""
+    if explicit_empty:
+        return []
+    return list(values) or None
 
 
 async def hydrate_event_tags(
