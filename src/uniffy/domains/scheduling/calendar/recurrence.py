@@ -243,6 +243,118 @@ def _generate_occurrence_dates(
     return []
 
 
+def _ceil_div(numerator: int, denominator: int) -> int:
+    return -(-numerator // denominator)
+
+
+def _month_of(start: date, offset: int) -> tuple[int, int]:
+    """Calendar month ``offset`` months after the master's own month."""
+    total = start.month - 1 + offset
+    return start.year + total // 12, total % 12 + 1
+
+
+def _clamped_day(year: int, month: int, target_day: int) -> date:
+    """The target day pulled back to the last of the month where it overflows."""
+    return date(year, month, min(target_day, cal_mod.monthrange(year, month)[1]))
+
+
+def _advance_month(year: int, month: int, interval: int) -> tuple[int, int]:
+    month += interval
+    if month > 12:
+        year += (month - 1) // 12
+        month = (month - 1) % 12 + 1
+    return year, month
+
+
+def _seek_daily(
+    start: date,
+    interval: int,
+    allowed_weekdays: set[int] | None,
+    range_start: date,
+) -> tuple[date, int]:
+    """Cursor at or after ``range_start``, plus the occurrences the series has
+    already spent reaching it.
+
+    Candidate dates form an arithmetic progression, so the cursor is computed.
+    Walking to it instead would make a one-week request cost one step per
+    interval elapsed since the master, which on a years-old series is thousands
+    of steps for five dates.
+    """
+    if range_start <= start:
+        return start, 0
+
+    steps = _ceil_div((range_start - start).days, interval)
+    cursor = start + timedelta(days=steps * interval)
+    if allowed_weekdays is None:
+        return cursor, steps
+    if interval % 7 == 0:
+        # Stepping in whole weeks never leaves the master's own weekday.
+        return cursor, steps if start.weekday() in allowed_weekdays else 0
+
+    # 7 is prime and the interval is not a multiple of it, so any seven
+    # consecutive candidates cover every weekday exactly once.
+    whole_cycles, remainder = divmod(steps, 7)
+    spent = whole_cycles * len(allowed_weekdays)
+    spent += sum(
+        1 for step in range(remainder) if (start.weekday() + step * interval) % 7 in allowed_weekdays
+    )
+    return cursor, spent
+
+
+def _seek_weekly(
+    week_start: date,
+    start: date,
+    interval: int,
+    target_days: list[int],
+    range_start: date,
+) -> tuple[date, int]:
+    """Cursor week and occurrences already spent, computed rather than walked."""
+    stride = 7 * interval
+    # A week is worth visiting once its last day reaches the window.
+    steps = _ceil_div((range_start - timedelta(days=6) - week_start).days, stride)
+    if steps <= 0:
+        return week_start, 0
+
+    cursor = week_start + timedelta(days=steps * stride)
+    # The master's own week counts only from the master onwards.
+    first_week = sum(1 for day in target_days if week_start + timedelta(days=day) >= start)
+    return cursor, first_week + (steps - 1) * len(target_days)
+
+
+def _seek_monthly(
+    start: date,
+    interval: int,
+    target_day: int,
+    range_start: date,
+) -> tuple[tuple[int, int], int]:
+    """Cursor month and occurrences already spent, computed rather than walked."""
+    months_ahead = (range_start.year - start.year) * 12 + (range_start.month - start.month)
+    index = _ceil_div(months_ahead, interval) if months_ahead > 0 else 0
+    if index and _clamped_day(*_month_of(start, index * interval), target_day) < range_start:
+        # The cursor landed in the window's own month but before it opens; the
+        # month after is already past it, so one step is always enough.
+        index += 1
+    if index == 0:
+        return (start.year, start.month), 0
+
+    # The master's month is skipped without counting when the target day falls
+    # before the master itself.
+    skipped = _clamped_day(start.year, start.month, target_day) < start
+    return _month_of(start, index * interval), index - (1 if skipped else 0)
+
+
+def _seek_yearly(start: date, interval: int, range_start: date) -> tuple[int, int]:
+    """Cursor year and occurrences already spent, computed rather than walked."""
+    years_ahead = range_start.year - start.year
+    index = _ceil_div(years_ahead, interval) if years_ahead > 0 else 0
+    if index and _clamped_day(start.year + index * interval, start.month, start.day) < range_start:
+        index += 1
+    if index == 0:
+        return start.year, 0
+
+    return start.year + index * interval, index
+
+
 def _expand_daily(
     start: date,
     interval: int,
@@ -259,9 +371,11 @@ def _expand_daily(
     if days_of_week and len(days_of_week) < 7:
         allowed_weekdays = {_DAY_OF_WEEK_TO_INT[d] for d in days_of_week if d in _DAY_OF_WEEK_TO_INT}
 
+    if end_date and end_date < range_start:
+        return []
+
     results: list[date] = []
-    count = 0
-    current = start
+    current, count = _seek_daily(start, interval, allowed_weekdays, range_start)
 
     while current <= range_end:
         if end_date and current > end_date:
@@ -296,12 +410,14 @@ def _expand_weekly(
     else:
         target_days = [start.weekday()]
 
+    if end_date and end_date < range_start:
+        return []
+
     results: list[date] = []
-    count = 0
 
     # Find the start of the first week (Monday of the event's week)
     week_start = start - timedelta(days=start.weekday())
-    current_week = week_start
+    current_week, count = _seek_weekly(week_start, start, interval, target_days, range_start)
 
     while current_week <= range_end + timedelta(days=6):
         if end_date and current_week > end_date + timedelta(days=6):
@@ -341,23 +457,18 @@ def _expand_monthly(
 ) -> list[date]:
     """Expand monthly recurrence, clamping to valid day of month."""
     target_day = day_of_month or start.day
-    results: list[date] = []
-    count = 0
 
-    current_year = start.year
-    current_month = start.month
+    if end_date and end_date < range_start:
+        return []
+
+    results: list[date] = []
+    (current_year, current_month), count = _seek_monthly(start, interval, target_day, range_start)
 
     while True:
-        # Clamp day to valid range for this month
-        max_day = cal_mod.monthrange(current_year, current_month)[1]
-        clamped_day = min(target_day, max_day)
-        occ = date(current_year, current_month, clamped_day)
+        occ = _clamped_day(current_year, current_month, target_day)
 
         if occ < start:
-            current_month += interval
-            if current_month > 12:
-                current_year += (current_month - 1) // 12
-                current_month = (current_month - 1) % 12 + 1
+            current_year, current_month = _advance_month(current_year, current_month, interval)
             continue
 
         if end_date and occ > end_date:
@@ -371,10 +482,7 @@ def _expand_monthly(
             results.append(occ)
         count += 1
 
-        current_month += interval
-        if current_month > 12:
-            current_year += (current_month - 1) // 12
-            current_month = (current_month - 1) % 12 + 1
+        current_year, current_month = _advance_month(current_year, current_month, interval)
 
     return results
 
@@ -388,21 +496,15 @@ def _expand_yearly(
     range_end: date,
 ) -> list[date]:
     """Expand yearly recurrence, handling Feb 29 gracefully."""
-    target_month = start.month
-    target_day = start.day
+    if end_date and end_date < range_start:
+        return []
+
     results: list[date] = []
-    count = 0
-    current_year = start.year
+    current_year, count = _seek_yearly(start, interval, range_start)
 
     while True:
         # Handle Feb 29 in non-leap years
-        max_day = cal_mod.monthrange(current_year, target_month)[1]
-        clamped_day = min(target_day, max_day)
-        occ = date(current_year, target_month, clamped_day)
-
-        if occ < start:
-            current_year += interval
-            continue
+        occ = _clamped_day(current_year, start.month, start.day)
 
         if end_date and occ > end_date:
             break
