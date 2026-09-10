@@ -7,7 +7,7 @@ from loguru import logger
 from sqlalchemy import select
 
 from uniffy.core.auth.permissions import (
-    resolve_access_policy,
+    resolve_creation_policy,
 )
 from uniffy.core.content.mentions import publish_mention_state
 from uniffy.core.converters.common_proto import content_type_to_proto
@@ -75,8 +75,7 @@ class FolderMutationOperations:
         access_mode: AccessMode | None = None,
         baseline_role: ContentRole | None = None,
     ) -> Folder:
-        """Create a new folder."""
-        access_mode, baseline_role = await resolve_access_policy(
+        access_mode, baseline_role = await resolve_creation_policy(
             self.session,
             organization_id,
             ContentType.FOLDER,
@@ -97,9 +96,7 @@ class FolderMutationOperations:
         await self.session.commit()
         await self.session.refresh(folder)
 
-        # FolderOperations is standalone (not a BaseContentOperations subclass),
-        # so it broadcasts the org-wide refresh directly. resolve_access_policy
-        # above already materialised any inherited mode into access_mode.
+        # FolderOperations does not inherit BaseContentOperations' creation fanout.
         if access_mode == AccessMode.OPEN_TO_ORG:
             await publish_content_access_changed(
                 content_type=content_type_to_proto(ContentType.FOLDER),

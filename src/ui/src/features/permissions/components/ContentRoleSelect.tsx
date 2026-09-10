@@ -18,6 +18,7 @@ interface ContentRoleSelectProps {
   disabled?: boolean;
   className?: string;
   size?: "sm" | "md";
+  includeOrgDefault?: boolean;
 }
 
 export function ContentRoleSelect({
@@ -27,6 +28,7 @@ export function ContentRoleSelect({
   disabled,
   className,
   size = "sm",
+  includeOrgDefault = false,
 }: ContentRoleSelectProps) {
   const options: SelectOption<number>[] = ALL_ROLES.filter((r) => !excludeRoles.includes(r)).map(
     (r) => ({
@@ -34,6 +36,9 @@ export function ContentRoleSelect({
       label: roleLabel(r),
     }),
   );
+  if (includeOrgDefault) {
+    options.unshift({ value: ContentRole.UNSPECIFIED, label: "Organization default" });
+  }
 
   return (
     <Select<number>

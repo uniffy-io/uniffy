@@ -36,8 +36,8 @@ const ALL_CONTENT_TYPES = [
 
 const CONTENT_TYPE_DESCRIPTIONS: Partial<Record<number, string>> = {
   [ContentType.AGENT]:
-    "Controls who can USE agents in chat, not who can build them. Agents without " +
-    "their own sharing setup follow this default live; the baseline role is what " +
+    "Controls who can USE agents in chat, not who can build them. Organization agents " +
+    "using default permissions follow this policy live; the baseline role is what " +
     "every member gets, and Viewer is enough to chat with an agent. Stricter than " +
     '"Open to organization" hides agents from members until a builder shares them. ' +
     "Creating and editing agents always requires an org admin or Agents domain " +
@@ -165,7 +165,7 @@ function ScopeOverview() {
       <p className="text-sm text-muted-foreground mb-3">
         Defaults below apply only to content created in the{" "}
         <span className="font-medium text-foreground">Organization</span> space. Content in Personal
-        Space and Shared With Me stays owner-only regardless.
+        Space starts owner-only. Explicitly shared content keeps its chosen members and roles.
       </p>
       <div className="grid gap-2 sm:grid-cols-3">
         <ScopeCard
@@ -208,8 +208,8 @@ export function PermissionDefaultsSection() {
           <h1 className="text-xl md:text-2xl font-bold">Permission Defaults</h1>
         </div>
         <p className="text-muted-foreground text-sm">
-          Default access mode for new content created in this organization.
-          <span className="hidden sm:inline"> These can be overridden per item.</span>
+          Default permissions for content in the Organization space.
+          <span className="hidden sm:inline"> Personal content starts owner-only.</span>
         </p>
       </div>
 

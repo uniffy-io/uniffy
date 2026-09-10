@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { LockSimple, Buildings } from "@phosphor-icons/react";
-import { AccessMode, ContentRole } from "@uniffy/proto/common/v1/common_pb";
+import { AccessMode } from "@uniffy/proto/common/v1/common_pb";
 import { useNavigate } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
@@ -87,7 +87,6 @@ export function CreateProjectModal() {
           description: description.trim(),
           icon,
           accessMode: isOrgScope ? AccessMode.OPEN_TO_ORG : AccessMode.OWNER_ONLY,
-          baselineRole: isOrgScope ? ContentRole.EDITOR : null,
           slug: slug || undefined,
           tagIds: tagIds.length ? tagIds : undefined,
         }),

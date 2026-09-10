@@ -8,7 +8,7 @@ from sqlalchemy import select, text
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from uniffy.core.auth.permissions import (
-    resolve_access_policy,
+    resolve_creation_policy,
 )
 from uniffy.core.errors import NotFoundError
 from uniffy.core.models.files.folder import Folder
@@ -39,7 +39,7 @@ class FolderTreeOperations:
         baseline_role: ContentRole | None = None,
     ) -> list[dict]:
         """Create a folder tree in one transaction; returns flat [{id, name, path, parent_id}]."""
-        access_mode, baseline_role = await resolve_access_policy(
+        access_mode, baseline_role = await resolve_creation_policy(
             self.session,
             organization_id,
             ContentType.FOLDER,

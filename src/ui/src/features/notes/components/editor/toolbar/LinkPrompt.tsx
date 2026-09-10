@@ -1,13 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import { Trash, Check } from "@phosphor-icons/react";
 import { editorViewCtx } from "@milkdown/core";
 import { linkSchema } from "@milkdown/kit/preset/commonmark";
 import type { EditorView } from "@milkdown/prose/view";
 import type { EditorHandle } from "@/components/editor/EditorHandle";
-import { popoverShellClass } from "@/components/ui/popover";
-import { useOverlayEscape } from "@/shared/hooks/useOverlayEscape";
-import { cn } from "@/shared/utils/cn";
+import { PortalMenu } from "@/components/ui/portal-menu";
+import { Input } from "@/components/ui/input";
 
 interface LinkPromptProps {
   handle: EditorHandle;
@@ -15,11 +13,7 @@ interface LinkPromptProps {
   onClose: () => void;
 }
 
-/**
- * Read the existing link href on the current selection, if any. We only
- * surface a single href - if the selection spans multiple links, the first
- * one wins, which is the same behavior as Crepe's link tooltip.
- */
+/** A selection spanning multiple links edits the first URL, matching Crepe's tooltip. */
 function readCurrentHref(handle: EditorHandle): string {
   let found = "";
   handle.run((ctx) => {
@@ -48,26 +42,18 @@ function normalizeHref(input: string): string {
 }
 
 export function LinkPrompt({ handle, anchorRect, onClose }: LinkPromptProps) {
-  const containerRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [href, setHref] = useState(() => readCurrentHref(handle));
   const hasExisting = href !== "";
 
   useEffect(() => {
-    inputRef.current?.focus();
-    inputRef.current?.select();
+    // Portal menus measure while hidden, so focus after their first layout.
+    const frame = requestAnimationFrame(() => {
+      inputRef.current?.focus();
+      inputRef.current?.select();
+    });
+    return () => cancelAnimationFrame(frame);
   }, []);
-
-  useEffect(() => {
-    const onMouseDown = (e: MouseEvent) => {
-      if (containerRef.current?.contains(e.target as Node)) return;
-      onClose();
-    };
-    document.addEventListener("mousedown", onMouseDown);
-    return () => document.removeEventListener("mousedown", onMouseDown);
-  }, [onClose]);
-
-  useOverlayEscape(onClose);
 
   const apply = (nextHref: string | null) => {
     handle.run((ctx) => {
@@ -93,19 +79,19 @@ export function LinkPrompt({ handle, anchorRect, onClose }: LinkPromptProps) {
     apply(normalized);
   };
 
-  const top = anchorRect.bottom + 6;
-  const left = Math.max(8, Math.min(window.innerWidth - 320, anchorRect.left));
-
-  return createPortal(
-    <div
-      ref={containerRef}
-      role="dialog"
-      style={{ position: "fixed", top, left, zIndex: 1000, width: 320 }}
-      className={cn(popoverShellClass, "p-2")}
-      onMouseDown={(e) => e.stopPropagation()}
+  return (
+    <PortalMenu
+      open
+      onClose={onClose}
+      position={{ x: anchorRect.left, y: anchorRect.bottom + 6 }}
+      className="z-[1000] w-80 p-2"
     >
-      <div className="flex items-center gap-2">
-        <input
+      <div
+        role="dialog"
+        className="flex items-center gap-2"
+        onMouseDown={(e) => e.stopPropagation()}
+      >
+        <Input
           ref={inputRef}
           type="text"
           value={href}
@@ -117,12 +103,12 @@ export function LinkPrompt({ handle, anchorRect, onClose }: LinkPromptProps) {
             }
           }}
           placeholder="Paste a link"
-          className="focus-ring flex-1 min-w-0 bg-transparent border border-border rounded px-2 py-1.5 text-sm"
+          className="h-11 min-w-0 flex-1 px-2 text-sm lg:h-8"
         />
         <button
           type="button"
           onClick={submit}
-          className="p-1.5 rounded text-primary hover:bg-primary/10 transition-colors"
+          className="focus-ring flex h-11 w-11 shrink-0 items-center justify-center rounded text-primary hover:bg-primary/10 transition-colors lg:h-8 lg:w-8"
           aria-label="Apply link"
           title="Apply link"
         >
@@ -132,7 +118,7 @@ export function LinkPrompt({ handle, anchorRect, onClose }: LinkPromptProps) {
           <button
             type="button"
             onClick={() => apply(null)}
-            className="p-1.5 rounded text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+            className="focus-ring flex h-11 w-11 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors lg:h-8 lg:w-8"
             aria-label="Remove link"
             title="Remove link"
           >
@@ -140,7 +126,6 @@ export function LinkPrompt({ handle, anchorRect, onClose }: LinkPromptProps) {
           </button>
         )}
       </div>
-    </div>,
-    document.body,
+    </PortalMenu>
   );
 }

@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from uniffy.core.auth.membership import get_active_membership
 from uniffy.core.auth.permissions import (
     PermissionChecker,
-    resolve_access_policy,
+    resolve_creation_policy,
     role_can_view,
 )
 from uniffy.core.errors import (
@@ -68,7 +68,7 @@ class EventTemplateOperations:
                 "access_mode", "Event templates cannot be shared with named people"
             )
 
-        access_mode, baseline_role = await resolve_access_policy(
+        access_mode, baseline_role = await resolve_creation_policy(
             self.session,
             organization_id,
             ContentType.CALENDAR_EVENT,

@@ -16,6 +16,7 @@ interface AccessModeSelectorProps {
   defaultBaselineRole?: ContentRole;
   /** Clears per-item override (writes UNSPECIFIED -> NULL) so the row inherits the org default. */
   showInheritOption?: boolean;
+  allowBaselineInheritance?: boolean;
   /** Modes the content type never allows (the backend rejects them too). */
   hiddenModes?: readonly (AccessMode | number)[];
   /** One rung above the host: `surface` on an app-frame page, `card` inside a dialog. */
@@ -34,6 +35,7 @@ export function AccessModeSelector({
   disabled,
   defaultBaselineRole = ContentRole.VIEWER,
   showInheritOption = false,
+  allowBaselineInheritance = false,
   hiddenModes,
   tone = "card",
 }: AccessModeSelectorProps) {
@@ -46,7 +48,7 @@ export function AccessModeSelector({
     if (mode === AccessMode.OPEN_TO_ORG) {
       onChange({
         accessMode: mode,
-        baselineRole: value.baselineRole ?? defaultBaselineRole,
+        baselineRole: value.baselineRole ?? (allowBaselineInheritance ? null : defaultBaselineRole),
       });
     } else {
       onChange({ accessMode: mode, baselineRole: null });
@@ -56,6 +58,7 @@ export function AccessModeSelector({
   const handleInherit = () => {
     onChange({ accessMode: AccessMode.UNSPECIFIED, baselineRole: null });
   };
+  const inherits = value.accessMode === AccessMode.UNSPECIFIED;
 
   return (
     <div className="space-y-2">
@@ -64,20 +67,32 @@ export function AccessModeSelector({
           type="button"
           onClick={handleInherit}
           disabled={disabled}
+          aria-pressed={inherits}
           className={cn(
-            "w-full flex items-start gap-3 p-3 rounded-xl text-left shadow-edge transition-shadow duration-150",
-            pane,
-            "hover:shadow-edge-strong",
+            "focus-ring w-full flex items-start gap-3 p-3 rounded-xl text-left transition-shadow duration-150",
+            inherits
+              ? "bg-primary/5 shadow-edge-primary"
+              : cn(pane, "shadow-edge hover:shadow-edge-strong"),
             disabled && "opacity-50 cursor-not-allowed",
           )}
         >
-          <div className="mt-0.5 w-4 h-4 rounded-full border-2 border-muted-foreground shrink-0" />
-          <Sparkle size={20} weight="duotone" className="shrink-0 text-muted-foreground" />
+          <div
+            className={cn(
+              "mt-0.5 w-4 h-4 rounded-full border-2 shrink-0 flex items-center justify-center",
+              inherits ? "border-primary" : "border-muted-foreground",
+            )}
+          >
+            {inherits && <div className="w-2 h-2 rounded-full bg-primary" />}
+          </div>
+          <Sparkle
+            size={20}
+            weight="duotone"
+            className={cn("shrink-0", inherits ? "text-primary" : "text-muted-foreground")}
+          />
           <div className="flex-1 min-w-0">
             <div className="text-sm font-medium text-foreground">Use organization default</div>
             <div className="text-xs text-muted-foreground mt-0.5">
-              Clear the per-item override. This item will follow the org's live default for its
-              content type.
+              Organization content follows the current default permissions for its content type.
             </div>
           </div>
         </button>
@@ -90,8 +105,9 @@ export function AccessModeSelector({
             type="button"
             onClick={() => handleModeChange(mode)}
             disabled={disabled}
+            aria-pressed={selected}
             className={cn(
-              "w-full flex items-start gap-3 p-3 rounded-xl text-left transition-shadow duration-150",
+              "focus-ring w-full flex items-start gap-3 p-3 rounded-xl text-left transition-shadow duration-150",
               selected
                 ? "bg-primary/5 shadow-edge-primary"
                 : cn(pane, "shadow-edge hover:shadow-edge-strong"),
@@ -126,8 +142,17 @@ export function AccessModeSelector({
             Baseline role for everyone in the organization
           </label>
           <ContentRoleSelect
-            value={value.baselineRole ?? ContentRole.VIEWER}
-            onChange={(role) => onChange({ accessMode: value.accessMode, baselineRole: role })}
+            value={
+              value.baselineRole ??
+              (allowBaselineInheritance ? ContentRole.UNSPECIFIED : ContentRole.VIEWER)
+            }
+            onChange={(role) =>
+              onChange({
+                accessMode: value.accessMode,
+                baselineRole: role === ContentRole.UNSPECIFIED ? null : role,
+              })
+            }
+            includeOrgDefault={allowBaselineInheritance}
             excludeRoles={[ContentRole.OWNER, ContentRole.BLOCKED, ContentRole.UNSPECIFIED]}
             disabled={disabled}
           />

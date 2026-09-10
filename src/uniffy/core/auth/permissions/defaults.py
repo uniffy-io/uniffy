@@ -1,9 +1,4 @@
-"""Per-org default access-policy resolution.
-
-A NULL ``access_mode`` on a content row inherits from
-``permissions_org_defaults``; non-NULL is an explicit override. Fallback
-chain: org-default row -> ``ORG_PERMISSION_DEFAULTS`` -> ``(OWNER_ONLY, None)``.
-"""
+"""Resolve personal creation policies and explicit organization-default inheritance."""
 
 from typing import TypedDict
 from uuid import UUID
@@ -112,6 +107,20 @@ async def resolve_access_policy(
         return access_mode, baseline_role
 
     return access_mode, None
+
+
+async def resolve_creation_policy(
+    session: AsyncSession,
+    organization_id: UUID,
+    content_type: ContentType,
+    access_mode: AccessMode | None,
+    baseline_role: ContentRole | None,
+) -> tuple[AccessMode, ContentRole | None]:
+    """Omitting a sharing choice creates private content, independent of org defaults."""
+    mode, baseline = await resolve_access_policy(
+        session, organization_id, content_type, access_mode, baseline_role
+    )
+    return mode if mode is not None else AccessMode.OWNER_ONLY, baseline
 
 
 _MODE_OPENNESS: dict[AccessMode, int] = {

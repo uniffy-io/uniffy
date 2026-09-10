@@ -239,8 +239,9 @@ export function NotesEditor() {
         <div ref={editorContainerRef} className="flex-1 overflow-hidden">
           <ErrorBoundary fallback={renderEditorErrorFallback}>{renderEditor()}</ErrorBoundary>
         </div>
-        {/* Floating toolbar only when persistent bar unpinned and in crepe mode. */}
-        {canEdit && editorMode === "crepe" && !toolbarPinned && <FloatingFormattingToolbar />}
+        {canEdit && editorMode === "crepe" && (
+          <FloatingFormattingToolbar showOnSelection={!toolbarPinned} />
+        )}
       </div>
     </EditorHandleContext.Provider>
   );

@@ -13,6 +13,7 @@ from uniffy.core.auth.permissions.defaults import (
     modes_at_least_as_open,
     resolve_access_policy,
     resolve_content_defaults,
+    resolve_creation_policy,
     resolve_effective_policy,
 )
 from uniffy.core.auth.permissions.helpers import (
@@ -67,6 +68,7 @@ __all__ = [
     "record_ownership_transferred",
     "resolve_access_policy",
     "resolve_content_defaults",
+    "resolve_creation_policy",
     "resolve_effective_policy",
     "require_delete",
     "require_edit",
