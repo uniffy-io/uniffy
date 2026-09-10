@@ -7,14 +7,14 @@ import "google/protobuf/timestamp.proto";
 option go_package = "github.com/uniffy-io/uniffy-proto-go/agents/v1;agentsv1";
 
 service SkillEvaluationsService {
-  rpc CreateCase(CreateEvaluationCaseRequest) returns (EvaluationCaseResponse) {}
-  rpc UpdateCase(UpdateEvaluationCaseRequest) returns (EvaluationCaseResponse) {}
-  rpc DeleteCase(DeleteEvaluationCaseRequest) returns (DeleteEvaluationCaseResponse) {}
-  rpc ListCases(ListEvaluationCasesRequest) returns (ListEvaluationCasesResponse) {}
-  rpc RunCase(RunSkillEvaluationRequest) returns (RunSkillEvaluationResponse) {}
-  rpc RunSuite(RunSkillEvaluationRequest) returns (RunSkillEvaluationResponse) {}
-  rpc ListRuns(ListEvaluationRunsRequest) returns (ListEvaluationRunsResponse) {}
-  rpc GetRun(GetEvaluationRunRequest) returns (EvaluationRunResponse) {}
+  rpc CreateCase(CreateCaseRequest) returns (CreateCaseResponse) {}
+  rpc UpdateCase(UpdateCaseRequest) returns (UpdateCaseResponse) {}
+  rpc DeleteCase(DeleteCaseRequest) returns (DeleteCaseResponse) {}
+  rpc ListCases(ListCasesRequest) returns (ListCasesResponse) {}
+  rpc RunCase(RunCaseRequest) returns (RunCaseResponse) {}
+  rpc RunSuite(RunSuiteRequest) returns (RunSuiteResponse) {}
+  rpc ListRuns(ListRunsRequest) returns (ListRunsResponse) {}
+  rpc GetRun(GetRunRequest) returns (GetRunResponse) {}
 }
 
 message EvaluationScope {
@@ -47,35 +47,39 @@ message EvaluationCase {
   google.protobuf.Timestamp updated_at = 5;
 }
 
-message CreateEvaluationCaseRequest {
+message CreateCaseRequest {
   string organization_id = 1;
   EvaluationScope scope = 2;
   EvaluationCaseFields fields = 3;
 }
 
-message UpdateEvaluationCaseRequest {
+message UpdateCaseRequest {
   string organization_id = 1;
   string case_id = 2;
   EvaluationCaseFields fields = 3;
 }
 
-message EvaluationCaseResponse {
+message CreateCaseResponse {
   EvaluationCase evaluation_case = 1;
 }
 
-message DeleteEvaluationCaseRequest {
+message UpdateCaseResponse {
+  EvaluationCase evaluation_case = 1;
+}
+
+message DeleteCaseRequest {
   string organization_id = 1;
   string case_id = 2;
 }
 
-message DeleteEvaluationCaseResponse {}
+message DeleteCaseResponse {}
 
-message ListEvaluationCasesRequest {
+message ListCasesRequest {
   string organization_id = 1;
   EvaluationScope scope = 2;
 }
 
-message ListEvaluationCasesResponse {
+message ListCasesResponse {
   repeated EvaluationCase cases = 1;
 }
 
@@ -88,12 +92,24 @@ message EvaluationTarget {
   optional string draft_content = 3;
 }
 
-message RunSkillEvaluationRequest {
+message RunCaseRequest {
   string organization_id = 1;
   string request_id = 2;
   string agent_id = 3;
   EvaluationTarget target = 4;
-  // RunCase requires exactly one; RunSuite accepts an empty list for the whole suite.
+  // Exactly one case is required.
+  repeated string case_ids = 5;
+  bool judge = 6;
+  string model_override = 7;
+  string judge_model = 8;
+}
+
+message RunSuiteRequest {
+  string organization_id = 1;
+  string request_id = 2;
+  string agent_id = 3;
+  EvaluationTarget target = 4;
+  // An empty list selects the whole suite.
   repeated string case_ids = 5;
   bool judge = 6;
   string model_override = 7;
@@ -162,11 +178,15 @@ message EvaluationRun {
   optional string run_log_id = 28;
 }
 
-message RunSkillEvaluationResponse {
+message RunCaseResponse {
   repeated EvaluationRun runs = 1;
 }
 
-message ListEvaluationRunsRequest {
+message RunSuiteResponse {
+  repeated EvaluationRun runs = 1;
+}
+
+message ListRunsRequest {
   string organization_id = 1;
   string agent_id = 2;
   EvaluationScope scope = 3;
@@ -174,16 +194,16 @@ message ListEvaluationRunsRequest {
   string cursor = 5;
 }
 
-message ListEvaluationRunsResponse {
+message ListRunsResponse {
   repeated EvaluationRun runs = 1;
   string next_cursor = 2;
 }
 
-message GetEvaluationRunRequest {
+message GetRunRequest {
   string organization_id = 1;
   string run_id = 2;
 }
 
-message EvaluationRunResponse {
+message GetRunResponse {
   EvaluationRun run = 1;
 }

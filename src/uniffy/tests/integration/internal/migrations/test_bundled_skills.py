@@ -16,7 +16,7 @@ async def test_bundled_skills_preserve_exact_versions_without_creating_rules(
     scratch_database,
     monkeypatch,
 ):
-    await _provision_to(scratch_database, "100")
+    await _provision_to(scratch_database, "098")
     engine = create_async_engine(get_database_url())
     documents = load_documents(DATA_DIR / "skills")
     try:

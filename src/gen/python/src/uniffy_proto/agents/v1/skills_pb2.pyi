@@ -180,6 +180,12 @@ class RetrySkillDraftGenerationRequest(_message.Message):
     expected_attempt: int
     def __init__(self, organization_id: _Optional[str] = ..., draft_id: _Optional[str] = ..., expected_attempt: _Optional[int] = ...) -> None: ...
 
+class RetrySkillDraftGenerationResponse(_message.Message):
+    __slots__ = ("draft",)
+    DRAFT_FIELD_NUMBER: _ClassVar[int]
+    draft: SkillDraft
+    def __init__(self, draft: _Optional[_Union[SkillDraft, _Mapping]] = ...) -> None: ...
+
 class CreateSkillRequest(_message.Message):
     __slots__ = ("organization_id", "name", "display_name", "description", "content")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]

@@ -7,6 +7,7 @@ from uniffy_proto.agents.v1.skills_pb2 import (
     GenerateSkillDraftRequest,
     GenerateSkillDraftResponse,
     RetrySkillDraftGenerationRequest,
+    RetrySkillDraftGenerationResponse,
 )
 
 from uniffy.core.auth.principal import current_user_id, resolve_organization_id
@@ -50,7 +51,7 @@ class SkillGenerationHandlers:
 
     async def retry_skill_draft_generation(
         self, request: RetrySkillDraftGenerationRequest, ctx: RequestContext
-    ) -> GenerateSkillDraftResponse:
+    ) -> RetrySkillDraftGenerationResponse:
         try:
             organization_id = resolve_organization_id(request.organization_id)
             draft_id = UUID(request.draft_id)
@@ -63,4 +64,4 @@ class SkillGenerationHandlers:
                 draft_id=draft_id,
                 expected_attempt=request.expected_attempt,
             )
-            return GenerateSkillDraftResponse(draft=skill_draft_to_proto(draft))
+            return RetrySkillDraftGenerationResponse(draft=skill_draft_to_proto(draft))

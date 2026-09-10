@@ -2,11 +2,17 @@ import { create } from "@bufbuild/protobuf";
 import { configureStore } from "@reduxjs/toolkit";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  CreateCaseResponseSchema,
   EvaluationCaseSchema,
   EvaluationRunSchema,
   EvaluationStatus,
+  ListRunsResponseSchema,
+  RunCaseResponseSchema,
 } from "@uniffy/proto/agents/v1/skill_evaluations_pb";
-import { SkillVersionSchema } from "@uniffy/proto/agents/v1/skills_pb";
+import {
+  GetSkillVersionResponseSchema,
+  ListSkillVersionsResponseSchema,
+} from "@uniffy/proto/agents/v1/skills_pb";
 import type { RootState } from "@/app/store";
 import { skillEvaluationsApi } from "@/features/agents/api/skillEvaluationsApi";
 import { skillsApi } from "@/features/agents/api/skillsApi";
@@ -229,9 +235,9 @@ describe("explicit evaluation requests", () => {
     return action(current.dispatch, () => current.getState() as RootState, undefined);
   }
   it("case editing never requests a model run", async () => {
-    vi.mocked(skillEvaluationsApi.createCase).mockResolvedValue({
-      evaluationCase: create(EvaluationCaseSchema, { id: "case" }),
-    } as Awaited<ReturnType<typeof skillEvaluationsApi.createCase>>);
+    vi.mocked(skillEvaluationsApi.createCase).mockResolvedValue(
+      create(CreateCaseResponseSchema, { evaluationCase: { id: "case" } }),
+    );
     await dispatchThunk(saveEvaluationCase({ ...context, fields: sampleCase.fields }));
     expect(skillEvaluationsApi.createCase).toHaveBeenCalledWith({
       organizationId: "org",
@@ -242,9 +248,7 @@ describe("explicit evaluation requests", () => {
     expect(skillEvaluationsApi.runSuite).not.toHaveBeenCalled();
   });
   it("sends explicit draft content and judge consent with the caller's request ID", async () => {
-    vi.mocked(skillEvaluationsApi.runCase).mockResolvedValue({ runs: [] } as Awaited<
-      ReturnType<typeof skillEvaluationsApi.runCase>
-    >);
+    vi.mocked(skillEvaluationsApi.runCase).mockResolvedValue(create(RunCaseResponseSchema));
     await dispatchThunk(
       runSkillEvaluation({
         ...params,
@@ -274,10 +278,7 @@ describe("explicit evaluation requests", () => {
     expect(skillEvaluationsApi.runSuite).not.toHaveBeenCalled();
   });
   it("pages history without starting or retrying an evaluation", async () => {
-    vi.mocked(skillEvaluationsApi.listRuns).mockResolvedValue({
-      runs: [],
-      nextCursor: "",
-    } as Awaited<ReturnType<typeof skillEvaluationsApi.listRuns>>);
+    vi.mocked(skillEvaluationsApi.listRuns).mockResolvedValue(create(ListRunsResponseSchema));
     await dispatchThunk(fetchEvaluationRuns({ ...history, cursor: "older" }));
     expect(skillEvaluationsApi.listRuns).toHaveBeenCalledWith(
       expect.objectContaining({ cursor: "older", pageSize: 50 }),
@@ -285,15 +286,17 @@ describe("explicit evaluation requests", () => {
     expect(skillEvaluationsApi.runSuite).not.toHaveBeenCalled();
   });
   it("loads an active pinned version outside the recent history page", async () => {
-    vi.mocked(skillsApi.listSkillVersions).mockResolvedValue({
-      versions: [create(SkillVersionSchema, { id: "recent", versionNumber: 99 })],
-      activeVersionNumber: 2,
-      activeVersionPinned: true,
-      latestVersionNumber: 99,
-    } as Awaited<ReturnType<typeof skillsApi.listSkillVersions>>);
-    vi.mocked(skillsApi.getSkillVersion).mockResolvedValue({
-      version: create(SkillVersionSchema, { id: "pinned", versionNumber: 2 }),
-    } as Awaited<ReturnType<typeof skillsApi.getSkillVersion>>);
+    vi.mocked(skillsApi.listSkillVersions).mockResolvedValue(
+      create(ListSkillVersionsResponseSchema, {
+        versions: [{ id: "recent", versionNumber: 99 }],
+        activeVersionNumber: 2,
+        activeVersionPinned: true,
+        latestVersionNumber: 99,
+      }),
+    );
+    vi.mocked(skillsApi.getSkillVersion).mockResolvedValue(
+      create(GetSkillVersionResponseSchema, { version: { id: "pinned", versionNumber: 2 } }),
+    );
     const result = await dispatchThunk(fetchSkillVersions("skill"));
     expect(skillsApi.getSkillVersion).toHaveBeenCalledWith({
       organizationId: "org",

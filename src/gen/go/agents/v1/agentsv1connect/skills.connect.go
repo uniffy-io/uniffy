@@ -95,7 +95,7 @@ const (
 type SkillsServiceClient interface {
 	GetSkillCompatibility(context.Context, *connect.Request[v1.GetSkillCompatibilityRequest]) (*connect.Response[v1.GetSkillCompatibilityResponse], error)
 	GenerateSkillDraft(context.Context, *connect.Request[v1.GenerateSkillDraftRequest]) (*connect.Response[v1.GenerateSkillDraftResponse], error)
-	RetrySkillDraftGeneration(context.Context, *connect.Request[v1.RetrySkillDraftGenerationRequest]) (*connect.Response[v1.GenerateSkillDraftResponse], error)
+	RetrySkillDraftGeneration(context.Context, *connect.Request[v1.RetrySkillDraftGenerationRequest]) (*connect.Response[v1.RetrySkillDraftGenerationResponse], error)
 	// Create a new organization skill
 	CreateSkill(context.Context, *connect.Request[v1.CreateSkillRequest]) (*connect.Response[v1.CreateSkillResponse], error)
 	// Get a skill by ID
@@ -158,7 +158,7 @@ func NewSkillsServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 			connect.WithSchema(skillsServiceMethods.ByName("GenerateSkillDraft")),
 			connect.WithClientOptions(opts...),
 		),
-		retrySkillDraftGeneration: connect.NewClient[v1.RetrySkillDraftGenerationRequest, v1.GenerateSkillDraftResponse](
+		retrySkillDraftGeneration: connect.NewClient[v1.RetrySkillDraftGenerationRequest, v1.RetrySkillDraftGenerationResponse](
 			httpClient,
 			baseURL+SkillsServiceRetrySkillDraftGenerationProcedure,
 			connect.WithSchema(skillsServiceMethods.ByName("RetrySkillDraftGeneration")),
@@ -267,7 +267,7 @@ func NewSkillsServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 type skillsServiceClient struct {
 	getSkillCompatibility     *connect.Client[v1.GetSkillCompatibilityRequest, v1.GetSkillCompatibilityResponse]
 	generateSkillDraft        *connect.Client[v1.GenerateSkillDraftRequest, v1.GenerateSkillDraftResponse]
-	retrySkillDraftGeneration *connect.Client[v1.RetrySkillDraftGenerationRequest, v1.GenerateSkillDraftResponse]
+	retrySkillDraftGeneration *connect.Client[v1.RetrySkillDraftGenerationRequest, v1.RetrySkillDraftGenerationResponse]
 	createSkill               *connect.Client[v1.CreateSkillRequest, v1.CreateSkillResponse]
 	getSkill                  *connect.Client[v1.GetSkillRequest, v1.GetSkillResponse]
 	listSkills                *connect.Client[v1.ListSkillsRequest, v1.ListSkillsResponse]
@@ -297,7 +297,7 @@ func (c *skillsServiceClient) GenerateSkillDraft(ctx context.Context, req *conne
 }
 
 // RetrySkillDraftGeneration calls agents.v1.SkillsService.RetrySkillDraftGeneration.
-func (c *skillsServiceClient) RetrySkillDraftGeneration(ctx context.Context, req *connect.Request[v1.RetrySkillDraftGenerationRequest]) (*connect.Response[v1.GenerateSkillDraftResponse], error) {
+func (c *skillsServiceClient) RetrySkillDraftGeneration(ctx context.Context, req *connect.Request[v1.RetrySkillDraftGenerationRequest]) (*connect.Response[v1.RetrySkillDraftGenerationResponse], error) {
 	return c.retrySkillDraftGeneration.CallUnary(ctx, req)
 }
 
@@ -385,7 +385,7 @@ func (c *skillsServiceClient) GetSkillMetrics(ctx context.Context, req *connect.
 type SkillsServiceHandler interface {
 	GetSkillCompatibility(context.Context, *connect.Request[v1.GetSkillCompatibilityRequest]) (*connect.Response[v1.GetSkillCompatibilityResponse], error)
 	GenerateSkillDraft(context.Context, *connect.Request[v1.GenerateSkillDraftRequest]) (*connect.Response[v1.GenerateSkillDraftResponse], error)
-	RetrySkillDraftGeneration(context.Context, *connect.Request[v1.RetrySkillDraftGenerationRequest]) (*connect.Response[v1.GenerateSkillDraftResponse], error)
+	RetrySkillDraftGeneration(context.Context, *connect.Request[v1.RetrySkillDraftGenerationRequest]) (*connect.Response[v1.RetrySkillDraftGenerationResponse], error)
 	// Create a new organization skill
 	CreateSkill(context.Context, *connect.Request[v1.CreateSkillRequest]) (*connect.Response[v1.CreateSkillResponse], error)
 	// Get a skill by ID
@@ -603,7 +603,7 @@ func (UnimplementedSkillsServiceHandler) GenerateSkillDraft(context.Context, *co
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.SkillsService.GenerateSkillDraft is not implemented"))
 }
 
-func (UnimplementedSkillsServiceHandler) RetrySkillDraftGeneration(context.Context, *connect.Request[v1.RetrySkillDraftGenerationRequest]) (*connect.Response[v1.GenerateSkillDraftResponse], error) {
+func (UnimplementedSkillsServiceHandler) RetrySkillDraftGeneration(context.Context, *connect.Request[v1.RetrySkillDraftGenerationRequest]) (*connect.Response[v1.RetrySkillDraftGenerationResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.SkillsService.RetrySkillDraftGeneration is not implemented"))
 }
 

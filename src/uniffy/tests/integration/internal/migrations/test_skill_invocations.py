@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from uniffy.core.models.agents.skill import AgentSkill, AgentSkillSource, AgentSkillStatus
 from uniffy.core.models.login.organization import Organization
 from uniffy.core.models.login.user import User
-from uniffy.core.models.agents.agent import Agent
+from uniffy.core.models.settings.org_setting import OrgSetting
 from uniffy.core.types import generate_id
 from uniffy.core.errors import ValidationError
 from uniffy.domains.agents.skills import resolution
@@ -23,7 +23,7 @@ from uniffy.tests.integration.internal.migrations.test_migration_run import (
 
 
 async def test_skill_cutover_preserves_content_history_and_assignments(scratch_database):
-    await _provision_to(scratch_database, "099")
+    await _provision_to(scratch_database, "097")
     engine = create_async_engine(get_database_url())
     try:
         async with AsyncSession(engine, expire_on_commit=False) as session:
@@ -61,14 +61,23 @@ async def test_skill_cutover_preserves_content_history_and_assignments(scratch_d
                 ),
                 {"id": generate_id(), "org": org.id, "owner": user.id, "skill": skill_id},
             )
-            session.add(
-                Agent(
-                    organization_id=org.id,
-                    owner_id=user.id,
-                    name="Assigned",
-                    enabled_skills=[str(skill_id)],
-                )
+            await session.execute(
+                text(
+                    "INSERT INTO agents_agents (id, organization_id, owner_id, name, enabled_skills) "
+                    "VALUES (:id, :org, :owner, 'Assigned', jsonb_build_array(CAST(:skill AS text)))"
+                ),
+                {"id": generate_id(), "org": org.id, "owner": user.id, "skill": str(skill_id)},
             )
+            session.add_all([
+                OrgSetting(organization_id=org.id, namespace=namespace, key=key, value=value)
+                for namespace, key, value in (
+                    ("agents", "enabled_rules", [str(generate_id())]),
+                    ("agents", "skill_evolution_enabled", True),
+                    ("agents", "runtime", {"keep": True}),
+                    ("other", "enabled_rules", ["keep"]),
+                    ("other", "skill_evolution_enabled", True),
+                )
+            ])
             await session.commit()
     finally:
         await engine.dispose()
@@ -77,13 +86,19 @@ async def test_skill_cutover_preserves_content_history_and_assignments(scratch_d
     before = {
         table: _query(f"SELECT id, content, requires_context FROM {table}") for table in tables
     }
-    assignments = _query("SELECT id, enabled_skills, enabled_rules FROM agents_agents")
-    _migrate_to("100")
+    assignments = _query("SELECT id, enabled_skills FROM agents_agents")
+    _migrate_to("098")
     for table in tables:
         assert _query(f"SELECT id, content, supported_surfaces FROM {table}") == before[table]
         with pytest.raises(CheckViolation):
             _execute(f"UPDATE {table} SET supported_surfaces = '[\"unknown\"]'::jsonb")
-    assert _query("SELECT id, enabled_skills, enabled_rules FROM agents_agents") == assignments
+    assert _query("SELECT id, enabled_skills FROM agents_agents") == assignments
+    assert _query("SELECT enabled_rules FROM agents_agents") == [([],)]
+    assert _query("SELECT namespace, key, value FROM org_settings ORDER BY namespace, key") == [
+        ("agents", "runtime", {"keep": True}),
+        ("other", "enabled_rules", ["keep"]),
+        ("other", "skill_evolution_enabled", True),
+    ]
     assert _query("SELECT count(*) FROM agents_rules") == [(0,)]
     assert _query("SELECT count(*) FROM agents_rule_versions") == [(0,)]
     assert (
@@ -99,7 +114,7 @@ async def test_skill_cutover_preserves_content_history_and_assignments(scratch_d
 async def test_exact_skill_snapshot_respects_assignment_tenant_and_pin(
     scratch_database, monkeypatch
 ):
-    await _provision_to(scratch_database, "100")
+    await _provision_to(scratch_database, "098")
 
     async def uncached(key, loader, **kwargs):
         return await loader()
@@ -198,7 +213,7 @@ async def test_exact_skill_snapshot_respects_assignment_tenant_and_pin(
 
 
 async def test_skill_selection_enforces_tenant_scope_and_retirement(scratch_database):
-    await _provision_to(scratch_database, "100")
+    await _provision_to(scratch_database, "098")
     engine = create_async_engine(get_database_url())
     try:
         async with AsyncSession(engine, expire_on_commit=False) as session:

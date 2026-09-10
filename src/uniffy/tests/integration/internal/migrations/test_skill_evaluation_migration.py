@@ -2,13 +2,12 @@ import pytest
 from alembic import command
 from alembic.config import Config
 from psycopg2.errors import CheckViolation
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
-from uniffy.core.models.agents.skill import AgentSkill, AgentSkillSource
 from uniffy.core.models.login.organization import Organization
 from uniffy.core.models.login.user import User
 from uniffy.core.types import generate_id
-from uniffy.domains.agents.skills.operations import SkillOperations
 from uniffy.infrastructure.database.session import ALEMBIC_INI_PATH, get_database_url
 from uniffy.tests.integration.internal.migrations.test_migration_run import (
     _execute,
@@ -19,7 +18,7 @@ from uniffy.tests.integration.internal.migrations.test_migration_run import (
 
 
 async def test_evaluation_schema_preserves_skills_and_requires_scoped_targets(scratch_database):
-    await _provision_to(scratch_database, "104")
+    await _provision_to(scratch_database, "097")
     engine = create_async_engine(get_database_url())
     organization_id, owner_id = generate_id(), generate_id()
     try:
@@ -29,16 +28,25 @@ async def test_evaluation_schema_preserves_skills_and_requires_scoped_targets(sc
                 User(id=owner_id, username="builder", email="builder@example.test"),
             ])
             await session.flush()
-            skill = AgentSkill(
-                organization_id=organization_id,
-                name="report",
-                display_name="Report",
-                source=AgentSkillSource.ORGANIZATION,
-                content="Existing instructions",
+            skill_id, version_id = generate_id(), generate_id()
+            await session.execute(
+                text(
+                    "INSERT INTO agents_skills "
+                    "(id, organization_id, name, display_name, source, content, "
+                    "active_version_id, created_at) "
+                    "VALUES (:id, :org, 'report', 'Report', 'organization', "
+                    "'Existing instructions', :version, now())"
+                ),
+                {"id": skill_id, "org": organization_id, "version": version_id},
             )
-            session.add(skill)
-            await session.flush()
-            await SkillOperations(session).stage_skill_version(skill, author_id=owner_id)
+            await session.execute(
+                text(
+                    "INSERT INTO agents_skill_versions "
+                    "(id, skill_id, version_number, name, display_name, content) "
+                    "VALUES (:id, :skill, 1, 'report', 'Report', 'Existing instructions')"
+                ),
+                {"id": version_id, "skill": skill_id},
+            )
             await session.commit()
     finally:
         await engine.dispose()
@@ -46,7 +54,7 @@ async def test_evaluation_schema_preserves_skills_and_requires_scoped_targets(sc
     versions_before = _query(
         "SELECT id, skill_id, content, version_number FROM agents_skill_versions"
     )
-    _migrate_to("105")
+    _migrate_to("098")
     assert _query("SELECT id, name, content, active_version_id FROM agents_skills") == skill_before
     assert (
         _query("SELECT id, skill_id, content, version_number FROM agents_skill_versions")
@@ -83,11 +91,11 @@ async def test_evaluation_schema_preserves_skills_and_requires_scoped_targets(sc
     } <= indexes
     config = Config(str(ALEMBIC_INI_PATH))
     config.attributes["configure_logger"] = False
-    command.downgrade(config, "104")
+    command.downgrade(config, "097")
     assert _query("SELECT id, name, content, active_version_id FROM agents_skills") == skill_before
     assert (
         _query("SELECT id, skill_id, content, version_number FROM agents_skill_versions")
         == versions_before
     )
-    _migrate_to("105")
+    _migrate_to("098")
     assert _query("SELECT count(*) FROM agents_skill_evaluation_runs") == [(0,)]

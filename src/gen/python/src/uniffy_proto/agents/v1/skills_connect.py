@@ -24,7 +24,7 @@ class SkillsService(Protocol):
     async def generate_skill_draft(self, request: agents_dot_v1_dot_skills__pb2.GenerateSkillDraftRequest, ctx: RequestContext) -> agents_dot_v1_dot_skills__pb2.GenerateSkillDraftResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def retry_skill_draft_generation(self, request: agents_dot_v1_dot_skills__pb2.RetrySkillDraftGenerationRequest, ctx: RequestContext) -> agents_dot_v1_dot_skills__pb2.GenerateSkillDraftResponse:
+    async def retry_skill_draft_generation(self, request: agents_dot_v1_dot_skills__pb2.RetrySkillDraftGenerationRequest, ctx: RequestContext) -> agents_dot_v1_dot_skills__pb2.RetrySkillDraftGenerationResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
     async def create_skill(self, request: agents_dot_v1_dot_skills__pb2.CreateSkillRequest, ctx: RequestContext) -> agents_dot_v1_dot_skills__pb2.CreateSkillResponse:
@@ -106,7 +106,7 @@ class SkillsServiceASGIApplication(ConnectASGIApplication[SkillsService]):
                         name="RetrySkillDraftGeneration",
                         service_name="agents.v1.SkillsService",
                         input=agents_dot_v1_dot_skills__pb2.RetrySkillDraftGenerationRequest,
-                        output=agents_dot_v1_dot_skills__pb2.GenerateSkillDraftResponse,
+                        output=agents_dot_v1_dot_skills__pb2.RetrySkillDraftGenerationResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.retry_skill_draft_generation,
@@ -331,14 +331,14 @@ class SkillsServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_skills__pb2.GenerateSkillDraftResponse:
+    ) -> agents_dot_v1_dot_skills__pb2.RetrySkillDraftGenerationResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="RetrySkillDraftGeneration",
                 service_name="agents.v1.SkillsService",
                 input=agents_dot_v1_dot_skills__pb2.RetrySkillDraftGenerationRequest,
-                output=agents_dot_v1_dot_skills__pb2.GenerateSkillDraftResponse,
+                output=agents_dot_v1_dot_skills__pb2.RetrySkillDraftGenerationResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -674,7 +674,7 @@ class SkillsServiceSync(Protocol):
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def generate_skill_draft(self, request: agents_dot_v1_dot_skills__pb2.GenerateSkillDraftRequest, ctx: RequestContext) -> agents_dot_v1_dot_skills__pb2.GenerateSkillDraftResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def retry_skill_draft_generation(self, request: agents_dot_v1_dot_skills__pb2.RetrySkillDraftGenerationRequest, ctx: RequestContext) -> agents_dot_v1_dot_skills__pb2.GenerateSkillDraftResponse:
+    def retry_skill_draft_generation(self, request: agents_dot_v1_dot_skills__pb2.RetrySkillDraftGenerationRequest, ctx: RequestContext) -> agents_dot_v1_dot_skills__pb2.RetrySkillDraftGenerationResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def create_skill(self, request: agents_dot_v1_dot_skills__pb2.CreateSkillRequest, ctx: RequestContext) -> agents_dot_v1_dot_skills__pb2.CreateSkillResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
@@ -739,7 +739,7 @@ class SkillsServiceWSGIApplication(ConnectWSGIApplication):
                         name="RetrySkillDraftGeneration",
                         service_name="agents.v1.SkillsService",
                         input=agents_dot_v1_dot_skills__pb2.RetrySkillDraftGenerationRequest,
-                        output=agents_dot_v1_dot_skills__pb2.GenerateSkillDraftResponse,
+                        output=agents_dot_v1_dot_skills__pb2.RetrySkillDraftGenerationResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.retry_skill_draft_generation,
@@ -964,14 +964,14 @@ class SkillsServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_skills__pb2.GenerateSkillDraftResponse:
+    ) -> agents_dot_v1_dot_skills__pb2.RetrySkillDraftGenerationResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="RetrySkillDraftGeneration",
                 service_name="agents.v1.SkillsService",
                 input=agents_dot_v1_dot_skills__pb2.RetrySkillDraftGenerationRequest,
-                output=agents_dot_v1_dot_skills__pb2.GenerateSkillDraftResponse,
+                output=agents_dot_v1_dot_skills__pb2.RetrySkillDraftGenerationResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

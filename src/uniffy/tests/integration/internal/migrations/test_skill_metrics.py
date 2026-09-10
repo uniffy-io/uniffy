@@ -27,7 +27,7 @@ from uniffy.tests.integration.internal.migrations.test_migration_run import _pro
 
 
 async def test_skill_metrics_exact_versions_scope_and_bounded_pages(scratch_database):
-    await _provision_to(scratch_database, "103")
+    await _provision_to(scratch_database, "098")
     engine = create_async_engine(get_database_url())
     try:
         async with AsyncSession(engine, expire_on_commit=False) as session:

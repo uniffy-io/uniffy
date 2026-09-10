@@ -15,6 +15,7 @@ const reply: ChatMessage = {
   content: "",
   rootId: "root",
   replyToId: null,
+  isForwarded: false,
   editedAt: null,
   isDeleted: false,
   isPinned: false,

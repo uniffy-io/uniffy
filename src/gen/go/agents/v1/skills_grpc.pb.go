@@ -49,7 +49,7 @@ const (
 type SkillsServiceClient interface {
 	GetSkillCompatibility(ctx context.Context, in *GetSkillCompatibilityRequest, opts ...grpc.CallOption) (*GetSkillCompatibilityResponse, error)
 	GenerateSkillDraft(ctx context.Context, in *GenerateSkillDraftRequest, opts ...grpc.CallOption) (*GenerateSkillDraftResponse, error)
-	RetrySkillDraftGeneration(ctx context.Context, in *RetrySkillDraftGenerationRequest, opts ...grpc.CallOption) (*GenerateSkillDraftResponse, error)
+	RetrySkillDraftGeneration(ctx context.Context, in *RetrySkillDraftGenerationRequest, opts ...grpc.CallOption) (*RetrySkillDraftGenerationResponse, error)
 	// Create a new organization skill
 	CreateSkill(ctx context.Context, in *CreateSkillRequest, opts ...grpc.CallOption) (*CreateSkillResponse, error)
 	// Get a skill by ID
@@ -117,9 +117,9 @@ func (c *skillsServiceClient) GenerateSkillDraft(ctx context.Context, in *Genera
 	return out, nil
 }
 
-func (c *skillsServiceClient) RetrySkillDraftGeneration(ctx context.Context, in *RetrySkillDraftGenerationRequest, opts ...grpc.CallOption) (*GenerateSkillDraftResponse, error) {
+func (c *skillsServiceClient) RetrySkillDraftGeneration(ctx context.Context, in *RetrySkillDraftGenerationRequest, opts ...grpc.CallOption) (*RetrySkillDraftGenerationResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(GenerateSkillDraftResponse)
+	out := new(RetrySkillDraftGenerationResponse)
 	err := c.cc.Invoke(ctx, SkillsService_RetrySkillDraftGeneration_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -296,7 +296,7 @@ func (c *skillsServiceClient) GetSkillMetrics(ctx context.Context, in *GetSkillM
 type SkillsServiceServer interface {
 	GetSkillCompatibility(context.Context, *GetSkillCompatibilityRequest) (*GetSkillCompatibilityResponse, error)
 	GenerateSkillDraft(context.Context, *GenerateSkillDraftRequest) (*GenerateSkillDraftResponse, error)
-	RetrySkillDraftGeneration(context.Context, *RetrySkillDraftGenerationRequest) (*GenerateSkillDraftResponse, error)
+	RetrySkillDraftGeneration(context.Context, *RetrySkillDraftGenerationRequest) (*RetrySkillDraftGenerationResponse, error)
 	// Create a new organization skill
 	CreateSkill(context.Context, *CreateSkillRequest) (*CreateSkillResponse, error)
 	// Get a skill by ID
@@ -350,7 +350,7 @@ func (UnimplementedSkillsServiceServer) GetSkillCompatibility(context.Context, *
 func (UnimplementedSkillsServiceServer) GenerateSkillDraft(context.Context, *GenerateSkillDraftRequest) (*GenerateSkillDraftResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GenerateSkillDraft not implemented")
 }
-func (UnimplementedSkillsServiceServer) RetrySkillDraftGeneration(context.Context, *RetrySkillDraftGenerationRequest) (*GenerateSkillDraftResponse, error) {
+func (UnimplementedSkillsServiceServer) RetrySkillDraftGeneration(context.Context, *RetrySkillDraftGenerationRequest) (*RetrySkillDraftGenerationResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method RetrySkillDraftGeneration not implemented")
 }
 func (UnimplementedSkillsServiceServer) CreateSkill(context.Context, *CreateSkillRequest) (*CreateSkillResponse, error) {

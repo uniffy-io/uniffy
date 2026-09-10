@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agents/v1/skill_evaluations.proto.
  */
 export const file_agents_v1_skill_evaluations: GenFile = /*@__PURE__*/
-  fileDesc("CiFhZ2VudHMvdjEvc2tpbGxfZXZhbHVhdGlvbnMucHJvdG8SCWFnZW50cy52MSJCCg9FdmFsdWF0aW9uU2NvcGUSEgoIc2tpbGxfaWQYASABKAlIABISCghkcmFmdF9pZBgCIAEoCUgAQgcKBXNjb3BlIkQKC1Rvb2xGaXh0dXJlEhEKCXRvb2xfbmFtZRgBIAEoCRIQCghyZXNwb25zZRgCIAEoCRIQCghpc19lcnJvchgDIAEoCCKeAQoURXZhbHVhdGlvbkNhc2VGaWVsZHMSDAoEbmFtZRgBIAEoCRINCgVpbnB1dBgCIAEoCRIOCgZydWJyaWMYAyABKAkSFgoOZXhwZWN0ZWRfdG9vbHMYBCADKAkSFwoPZm9yYmlkZGVuX3Rvb2xzGAUgAygJEigKCGZpeHR1cmVzGAYgAygLMhYuYWdlbnRzLnYxLlRvb2xGaXh0dXJlItgBCg5FdmFsdWF0aW9uQ2FzZRIKCgJpZBgBIAEoCRIpCgVzY29wZRgCIAEoCzIaLmFnZW50cy52MS5FdmFsdWF0aW9uU2NvcGUSLwoGZmllbGRzGAMgASgLMh8uYWdlbnRzLnYxLkV2YWx1YXRpb25DYXNlRmllbGRzEi4KCmNyZWF0ZWRfYXQYBCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi4KCnVwZGF0ZWRfYXQYBSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wIpIBChtDcmVhdGVFdmFsdWF0aW9uQ2FzZVJlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEikKBXNjb3BlGAIgASgLMhouYWdlbnRzLnYxLkV2YWx1YXRpb25TY29wZRIvCgZmaWVsZHMYAyABKAsyHy5hZ2VudHMudjEuRXZhbHVhdGlvbkNhc2VGaWVsZHMieAobVXBkYXRlRXZhbHVhdGlvbkNhc2VSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRIPCgdjYXNlX2lkGAIgASgJEi8KBmZpZWxkcxgDIAEoCzIfLmFnZW50cy52MS5FdmFsdWF0aW9uQ2FzZUZpZWxkcyJMChZFdmFsdWF0aW9uQ2FzZVJlc3BvbnNlEjIKD2V2YWx1YXRpb25fY2FzZRgBIAEoCzIZLmFnZW50cy52MS5FdmFsdWF0aW9uQ2FzZSJHChtEZWxldGVFdmFsdWF0aW9uQ2FzZVJlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEg8KB2Nhc2VfaWQYAiABKAkiHgocRGVsZXRlRXZhbHVhdGlvbkNhc2VSZXNwb25zZSJgChpMaXN0RXZhbHVhdGlvbkNhc2VzUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSKQoFc2NvcGUYAiABKAsyGi5hZ2VudHMudjEuRXZhbHVhdGlvblNjb3BlIkcKG0xpc3RFdmFsdWF0aW9uQ2FzZXNSZXNwb25zZRIoCgVjYXNlcxgBIAMoCzIZLmFnZW50cy52MS5FdmFsdWF0aW9uQ2FzZSJ6ChBFdmFsdWF0aW9uVGFyZ2V0EhoKEHNraWxsX3ZlcnNpb25faWQYASABKAlIABISCghkcmFmdF9pZBgCIAEoCUgAEhoKDWRyYWZ0X2NvbnRlbnQYAyABKAlIAYgBAUIICgZ0YXJnZXRCEAoOX2RyYWZ0X2NvbnRlbnQi1QEKGVJ1blNraWxsRXZhbHVhdGlvblJlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEhIKCnJlcXVlc3RfaWQYAiABKAkSEAoIYWdlbnRfaWQYAyABKAkSKwoGdGFyZ2V0GAQgASgLMhsuYWdlbnRzLnYxLkV2YWx1YXRpb25UYXJnZXQSEAoIY2FzZV9pZHMYBSADKAkSDQoFanVkZ2UYBiABKAgSFgoObW9kZWxfb3ZlcnJpZGUYByABKAkSEwoLanVkZ2VfbW9kZWwYCCABKAkifQoVRXZhbHVhdGlvblRvb2xBdHRlbXB0EhEKCXRvb2xfbmFtZRgBIAEoCRISCgppbnB1dF9qc29uGAIgASgJEhgKEGZpeHR1cmVfcmVzcG9uc2UYAyABKAkSFAoMZml4dHVyZV91c2VkGAQgASgIEg0KBWlzc3VlGAUgASgJIkYKE0V2YWx1YXRpb25Bc3NlcnRpb24SEQoJdG9vbF9uYW1lGAEgASgJEgwKBGtpbmQYAiABKAkSDgoGcGFzc2VkGAMgASgIImEKD0V2YWx1YXRpb25KdWRnZRIOCgZzdGF0dXMYASABKAkSEgoFc2NvcmUYAiABKAFIAIgBARIRCglyYXRpb25hbGUYAyABKAkSDQoFZXJyb3IYBCABKAlCCAoGX3Njb3JlIogHCg1FdmFsdWF0aW9uUnVuEgoKAmlkGAEgASgJEhIKCnJlcXVlc3RfaWQYAiABKAkSDwoHY2FzZV9pZBgDIAEoCRIQCghhZ2VudF9pZBgEIAEoCRIVCghza2lsbF9pZBgFIAEoCUgAiAEBEh0KEHNraWxsX3ZlcnNpb25faWQYBiABKAlIAYgBARIWCg52ZXJzaW9uX251bWJlchgHIAEoBRIVCghkcmFmdF9pZBgIIAEoCUgCiAEBEhUKDXRhcmdldF9kaWdlc3QYCSABKAkSKwoGc3RhdHVzGAogASgOMhsuYWdlbnRzLnYxLkV2YWx1YXRpb25TdGF0dXMSDQoFZXJyb3IYCyABKAkSNgoNY2FzZV9zbmFwc2hvdBgMIAEoCzIfLmFnZW50cy52MS5FdmFsdWF0aW9uQ2FzZUZpZWxkcxIWCg50YXJnZXRfY29udGVudBgNIAEoCRIOCgZvdXRwdXQYDiABKAkSNwoNdG9vbF9hdHRlbXB0cxgPIAMoCzIgLmFnZW50cy52MS5FdmFsdWF0aW9uVG9vbEF0dGVtcHQSMgoKYXNzZXJ0aW9ucxgQIAMoCzIeLmFnZW50cy52MS5FdmFsdWF0aW9uQXNzZXJ0aW9uEikKBWp1ZGdlGBEgASgLMhouYWdlbnRzLnYxLkV2YWx1YXRpb25KdWRnZRINCgVtb2RlbBgSIAEoCRIRCgRjb3N0GBMgASgJSAOIAQESGgoNY29zdF9jdXJyZW5jeRgUIAEoCUgEiAEBEhQKDGlucHV0X3Rva2VucxgVIAEoBRIVCg1vdXRwdXRfdG9rZW5zGBYgASgFEhMKC2R1cmF0aW9uX21zGBcgASgFEi4KCmNyZWF0ZWRfYXQYGCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEjAKDGNvbXBsZXRlZF9hdBgZIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASGAoQcnVsZV92ZXJzaW9uX2lkcxgaIAMoCRIWCg5vdXRjb21lX3JlYXNvbhgbIAEoCRIXCgpydW5fbG9nX2lkGBwgASgJSAWIAQFCCwoJX3NraWxsX2lkQhMKEV9za2lsbF92ZXJzaW9uX2lkQgsKCV9kcmFmdF9pZEIHCgVfY29zdEIQCg5fY29zdF9jdXJyZW5jeUINCgtfcnVuX2xvZ19pZCJEChpSdW5Ta2lsbEV2YWx1YXRpb25SZXNwb25zZRImCgRydW5zGAEgAygLMhguYWdlbnRzLnYxLkV2YWx1YXRpb25SdW4ilAEKGUxpc3RFdmFsdWF0aW9uUnVuc1JlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEhAKCGFnZW50X2lkGAIgASgJEikKBXNjb3BlGAMgASgLMhouYWdlbnRzLnYxLkV2YWx1YXRpb25TY29wZRIRCglwYWdlX3NpemUYBCABKAUSDgoGY3Vyc29yGAUgASgJIlkKGkxpc3RFdmFsdWF0aW9uUnVuc1Jlc3BvbnNlEiYKBHJ1bnMYASADKAsyGC5hZ2VudHMudjEuRXZhbHVhdGlvblJ1bhITCgtuZXh0X2N1cnNvchgCIAEoCSJCChdHZXRFdmFsdWF0aW9uUnVuUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSDgoGcnVuX2lkGAIgASgJIj4KFUV2YWx1YXRpb25SdW5SZXNwb25zZRIlCgNydW4YASABKAsyGC5hZ2VudHMudjEuRXZhbHVhdGlvblJ1birvAQoQRXZhbHVhdGlvblN0YXR1cxIhCh1FVkFMVUFUSU9OX1NUQVRVU19VTlNQRUNJRklFRBAAEhwKGEVWQUxVQVRJT05fU1RBVFVTX1FVRVVFRBABEh0KGUVWQUxVQVRJT05fU1RBVFVTX1JVTk5JTkcQAhIcChhFVkFMVUFUSU9OX1NUQVRVU19QQVNTRUQQAxIcChhFVkFMVUFUSU9OX1NUQVRVU19GQUlMRUQQBBIiCh5FVkFMVUFUSU9OX1NUQVRVU19JTkNPTkNMVVNJVkUQBRIbChdFVkFMVUFUSU9OX1NUQVRVU19FUlJPUhAGMvAFChdTa2lsbEV2YWx1YXRpb25zU2VydmljZRJZCgpDcmVhdGVDYXNlEiYuYWdlbnRzLnYxLkNyZWF0ZUV2YWx1YXRpb25DYXNlUmVxdWVzdBohLmFnZW50cy52MS5FdmFsdWF0aW9uQ2FzZVJlc3BvbnNlIgASWQoKVXBkYXRlQ2FzZRImLmFnZW50cy52MS5VcGRhdGVFdmFsdWF0aW9uQ2FzZVJlcXVlc3QaIS5hZ2VudHMudjEuRXZhbHVhdGlvbkNhc2VSZXNwb25zZSIAEl8KCkRlbGV0ZUNhc2USJi5hZ2VudHMudjEuRGVsZXRlRXZhbHVhdGlvbkNhc2VSZXF1ZXN0GicuYWdlbnRzLnYxLkRlbGV0ZUV2YWx1YXRpb25DYXNlUmVzcG9uc2UiABJcCglMaXN0Q2FzZXMSJS5hZ2VudHMudjEuTGlzdEV2YWx1YXRpb25DYXNlc1JlcXVlc3QaJi5hZ2VudHMudjEuTGlzdEV2YWx1YXRpb25DYXNlc1Jlc3BvbnNlIgASWAoHUnVuQ2FzZRIkLmFnZW50cy52MS5SdW5Ta2lsbEV2YWx1YXRpb25SZXF1ZXN0GiUuYWdlbnRzLnYxLlJ1blNraWxsRXZhbHVhdGlvblJlc3BvbnNlIgASWQoIUnVuU3VpdGUSJC5hZ2VudHMudjEuUnVuU2tpbGxFdmFsdWF0aW9uUmVxdWVzdBolLmFnZW50cy52MS5SdW5Ta2lsbEV2YWx1YXRpb25SZXNwb25zZSIAElkKCExpc3RSdW5zEiQuYWdlbnRzLnYxLkxpc3RFdmFsdWF0aW9uUnVuc1JlcXVlc3QaJS5hZ2VudHMudjEuTGlzdEV2YWx1YXRpb25SdW5zUmVzcG9uc2UiABJQCgZHZXRSdW4SIi5hZ2VudHMudjEuR2V0RXZhbHVhdGlvblJ1blJlcXVlc3QaIC5hZ2VudHMudjEuRXZhbHVhdGlvblJ1blJlc3BvbnNlIgBCOVo3Z2l0aHViLmNvbS91bmlmZnktaW8vdW5pZmZ5LXByb3RvLWdvL2FnZW50cy92MTthZ2VudHN2MWIGcHJvdG8z", [file_google_protobuf_timestamp]);
+  fileDesc("CiFhZ2VudHMvdjEvc2tpbGxfZXZhbHVhdGlvbnMucHJvdG8SCWFnZW50cy52MSJCCg9FdmFsdWF0aW9uU2NvcGUSEgoIc2tpbGxfaWQYASABKAlIABISCghkcmFmdF9pZBgCIAEoCUgAQgcKBXNjb3BlIkQKC1Rvb2xGaXh0dXJlEhEKCXRvb2xfbmFtZRgBIAEoCRIQCghyZXNwb25zZRgCIAEoCRIQCghpc19lcnJvchgDIAEoCCKeAQoURXZhbHVhdGlvbkNhc2VGaWVsZHMSDAoEbmFtZRgBIAEoCRINCgVpbnB1dBgCIAEoCRIOCgZydWJyaWMYAyABKAkSFgoOZXhwZWN0ZWRfdG9vbHMYBCADKAkSFwoPZm9yYmlkZGVuX3Rvb2xzGAUgAygJEigKCGZpeHR1cmVzGAYgAygLMhYuYWdlbnRzLnYxLlRvb2xGaXh0dXJlItgBCg5FdmFsdWF0aW9uQ2FzZRIKCgJpZBgBIAEoCRIpCgVzY29wZRgCIAEoCzIaLmFnZW50cy52MS5FdmFsdWF0aW9uU2NvcGUSLwoGZmllbGRzGAMgASgLMh8uYWdlbnRzLnYxLkV2YWx1YXRpb25DYXNlRmllbGRzEi4KCmNyZWF0ZWRfYXQYBCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi4KCnVwZGF0ZWRfYXQYBSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wIogBChFDcmVhdGVDYXNlUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSKQoFc2NvcGUYAiABKAsyGi5hZ2VudHMudjEuRXZhbHVhdGlvblNjb3BlEi8KBmZpZWxkcxgDIAEoCzIfLmFnZW50cy52MS5FdmFsdWF0aW9uQ2FzZUZpZWxkcyJuChFVcGRhdGVDYXNlUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSDwoHY2FzZV9pZBgCIAEoCRIvCgZmaWVsZHMYAyABKAsyHy5hZ2VudHMudjEuRXZhbHVhdGlvbkNhc2VGaWVsZHMiSAoSQ3JlYXRlQ2FzZVJlc3BvbnNlEjIKD2V2YWx1YXRpb25fY2FzZRgBIAEoCzIZLmFnZW50cy52MS5FdmFsdWF0aW9uQ2FzZSJIChJVcGRhdGVDYXNlUmVzcG9uc2USMgoPZXZhbHVhdGlvbl9jYXNlGAEgASgLMhkuYWdlbnRzLnYxLkV2YWx1YXRpb25DYXNlIj0KEURlbGV0ZUNhc2VSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRIPCgdjYXNlX2lkGAIgASgJIhQKEkRlbGV0ZUNhc2VSZXNwb25zZSJWChBMaXN0Q2FzZXNSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRIpCgVzY29wZRgCIAEoCzIaLmFnZW50cy52MS5FdmFsdWF0aW9uU2NvcGUiPQoRTGlzdENhc2VzUmVzcG9uc2USKAoFY2FzZXMYASADKAsyGS5hZ2VudHMudjEuRXZhbHVhdGlvbkNhc2UiegoQRXZhbHVhdGlvblRhcmdldBIaChBza2lsbF92ZXJzaW9uX2lkGAEgASgJSAASEgoIZHJhZnRfaWQYAiABKAlIABIaCg1kcmFmdF9jb250ZW50GAMgASgJSAGIAQFCCAoGdGFyZ2V0QhAKDl9kcmFmdF9jb250ZW50IsoBCg5SdW5DYXNlUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSEgoKcmVxdWVzdF9pZBgCIAEoCRIQCghhZ2VudF9pZBgDIAEoCRIrCgZ0YXJnZXQYBCABKAsyGy5hZ2VudHMudjEuRXZhbHVhdGlvblRhcmdldBIQCghjYXNlX2lkcxgFIAMoCRINCgVqdWRnZRgGIAEoCBIWCg5tb2RlbF9vdmVycmlkZRgHIAEoCRITCgtqdWRnZV9tb2RlbBgIIAEoCSLLAQoPUnVuU3VpdGVSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRISCgpyZXF1ZXN0X2lkGAIgASgJEhAKCGFnZW50X2lkGAMgASgJEisKBnRhcmdldBgEIAEoCzIbLmFnZW50cy52MS5FdmFsdWF0aW9uVGFyZ2V0EhAKCGNhc2VfaWRzGAUgAygJEg0KBWp1ZGdlGAYgASgIEhYKDm1vZGVsX292ZXJyaWRlGAcgASgJEhMKC2p1ZGdlX21vZGVsGAggASgJIn0KFUV2YWx1YXRpb25Ub29sQXR0ZW1wdBIRCgl0b29sX25hbWUYASABKAkSEgoKaW5wdXRfanNvbhgCIAEoCRIYChBmaXh0dXJlX3Jlc3BvbnNlGAMgASgJEhQKDGZpeHR1cmVfdXNlZBgEIAEoCBINCgVpc3N1ZRgFIAEoCSJGChNFdmFsdWF0aW9uQXNzZXJ0aW9uEhEKCXRvb2xfbmFtZRgBIAEoCRIMCgRraW5kGAIgASgJEg4KBnBhc3NlZBgDIAEoCCJhCg9FdmFsdWF0aW9uSnVkZ2USDgoGc3RhdHVzGAEgASgJEhIKBXNjb3JlGAIgASgBSACIAQESEQoJcmF0aW9uYWxlGAMgASgJEg0KBWVycm9yGAQgASgJQggKBl9zY29yZSKIBwoNRXZhbHVhdGlvblJ1bhIKCgJpZBgBIAEoCRISCgpyZXF1ZXN0X2lkGAIgASgJEg8KB2Nhc2VfaWQYAyABKAkSEAoIYWdlbnRfaWQYBCABKAkSFQoIc2tpbGxfaWQYBSABKAlIAIgBARIdChBza2lsbF92ZXJzaW9uX2lkGAYgASgJSAGIAQESFgoOdmVyc2lvbl9udW1iZXIYByABKAUSFQoIZHJhZnRfaWQYCCABKAlIAogBARIVCg10YXJnZXRfZGlnZXN0GAkgASgJEisKBnN0YXR1cxgKIAEoDjIbLmFnZW50cy52MS5FdmFsdWF0aW9uU3RhdHVzEg0KBWVycm9yGAsgASgJEjYKDWNhc2Vfc25hcHNob3QYDCABKAsyHy5hZ2VudHMudjEuRXZhbHVhdGlvbkNhc2VGaWVsZHMSFgoOdGFyZ2V0X2NvbnRlbnQYDSABKAkSDgoGb3V0cHV0GA4gASgJEjcKDXRvb2xfYXR0ZW1wdHMYDyADKAsyIC5hZ2VudHMudjEuRXZhbHVhdGlvblRvb2xBdHRlbXB0EjIKCmFzc2VydGlvbnMYECADKAsyHi5hZ2VudHMudjEuRXZhbHVhdGlvbkFzc2VydGlvbhIpCgVqdWRnZRgRIAEoCzIaLmFnZW50cy52MS5FdmFsdWF0aW9uSnVkZ2USDQoFbW9kZWwYEiABKAkSEQoEY29zdBgTIAEoCUgDiAEBEhoKDWNvc3RfY3VycmVuY3kYFCABKAlIBIgBARIUCgxpbnB1dF90b2tlbnMYFSABKAUSFQoNb3V0cHV0X3Rva2VucxgWIAEoBRITCgtkdXJhdGlvbl9tcxgXIAEoBRIuCgpjcmVhdGVkX2F0GBggASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIwCgxjb21wbGV0ZWRfYXQYGSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhgKEHJ1bGVfdmVyc2lvbl9pZHMYGiADKAkSFgoOb3V0Y29tZV9yZWFzb24YGyABKAkSFwoKcnVuX2xvZ19pZBgcIAEoCUgFiAEBQgsKCV9za2lsbF9pZEITChFfc2tpbGxfdmVyc2lvbl9pZEILCglfZHJhZnRfaWRCBwoFX2Nvc3RCEAoOX2Nvc3RfY3VycmVuY3lCDQoLX3J1bl9sb2dfaWQiOQoPUnVuQ2FzZVJlc3BvbnNlEiYKBHJ1bnMYASADKAsyGC5hZ2VudHMudjEuRXZhbHVhdGlvblJ1biI6ChBSdW5TdWl0ZVJlc3BvbnNlEiYKBHJ1bnMYASADKAsyGC5hZ2VudHMudjEuRXZhbHVhdGlvblJ1biKKAQoPTGlzdFJ1bnNSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRIQCghhZ2VudF9pZBgCIAEoCRIpCgVzY29wZRgDIAEoCzIaLmFnZW50cy52MS5FdmFsdWF0aW9uU2NvcGUSEQoJcGFnZV9zaXplGAQgASgFEg4KBmN1cnNvchgFIAEoCSJPChBMaXN0UnVuc1Jlc3BvbnNlEiYKBHJ1bnMYASADKAsyGC5hZ2VudHMudjEuRXZhbHVhdGlvblJ1bhITCgtuZXh0X2N1cnNvchgCIAEoCSI4Cg1HZXRSdW5SZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRIOCgZydW5faWQYAiABKAkiNwoOR2V0UnVuUmVzcG9uc2USJQoDcnVuGAEgASgLMhguYWdlbnRzLnYxLkV2YWx1YXRpb25SdW4q7wEKEEV2YWx1YXRpb25TdGF0dXMSIQodRVZBTFVBVElPTl9TVEFUVVNfVU5TUEVDSUZJRUQQABIcChhFVkFMVUFUSU9OX1NUQVRVU19RVUVVRUQQARIdChlFVkFMVUFUSU9OX1NUQVRVU19SVU5OSU5HEAISHAoYRVZBTFVBVElPTl9TVEFUVVNfUEFTU0VEEAMSHAoYRVZBTFVBVElPTl9TVEFUVVNfRkFJTEVEEAQSIgoeRVZBTFVBVElPTl9TVEFUVVNfSU5DT05DTFVTSVZFEAUSGwoXRVZBTFVBVElPTl9TVEFUVVNfRVJST1IQBjLdBAoXU2tpbGxFdmFsdWF0aW9uc1NlcnZpY2USSwoKQ3JlYXRlQ2FzZRIcLmFnZW50cy52MS5DcmVhdGVDYXNlUmVxdWVzdBodLmFnZW50cy52MS5DcmVhdGVDYXNlUmVzcG9uc2UiABJLCgpVcGRhdGVDYXNlEhwuYWdlbnRzLnYxLlVwZGF0ZUNhc2VSZXF1ZXN0Gh0uYWdlbnRzLnYxLlVwZGF0ZUNhc2VSZXNwb25zZSIAEksKCkRlbGV0ZUNhc2USHC5hZ2VudHMudjEuRGVsZXRlQ2FzZVJlcXVlc3QaHS5hZ2VudHMudjEuRGVsZXRlQ2FzZVJlc3BvbnNlIgASSAoJTGlzdENhc2VzEhsuYWdlbnRzLnYxLkxpc3RDYXNlc1JlcXVlc3QaHC5hZ2VudHMudjEuTGlzdENhc2VzUmVzcG9uc2UiABJCCgdSdW5DYXNlEhkuYWdlbnRzLnYxLlJ1bkNhc2VSZXF1ZXN0GhouYWdlbnRzLnYxLlJ1bkNhc2VSZXNwb25zZSIAEkUKCFJ1blN1aXRlEhouYWdlbnRzLnYxLlJ1blN1aXRlUmVxdWVzdBobLmFnZW50cy52MS5SdW5TdWl0ZVJlc3BvbnNlIgASRQoITGlzdFJ1bnMSGi5hZ2VudHMudjEuTGlzdFJ1bnNSZXF1ZXN0GhsuYWdlbnRzLnYxLkxpc3RSdW5zUmVzcG9uc2UiABI/CgZHZXRSdW4SGC5hZ2VudHMudjEuR2V0UnVuUmVxdWVzdBoZLmFnZW50cy52MS5HZXRSdW5SZXNwb25zZSIAQjlaN2dpdGh1Yi5jb20vdW5pZmZ5LWlvL3VuaWZmeS1wcm90by1nby9hZ2VudHMvdjE7YWdlbnRzdjFiBnByb3RvMw", [file_google_protobuf_timestamp]);
 
 /**
  * @generated from message agents.v1.EvaluationScope
@@ -150,9 +150,9 @@ export const EvaluationCaseSchema: GenMessage<EvaluationCase> = /*@__PURE__*/
   messageDesc(file_agents_v1_skill_evaluations, 3);
 
 /**
- * @generated from message agents.v1.CreateEvaluationCaseRequest
+ * @generated from message agents.v1.CreateCaseRequest
  */
-export type CreateEvaluationCaseRequest = Message<"agents.v1.CreateEvaluationCaseRequest"> & {
+export type CreateCaseRequest = Message<"agents.v1.CreateCaseRequest"> & {
   /**
    * @generated from field: string organization_id = 1;
    */
@@ -170,16 +170,16 @@ export type CreateEvaluationCaseRequest = Message<"agents.v1.CreateEvaluationCas
 };
 
 /**
- * Describes the message agents.v1.CreateEvaluationCaseRequest.
- * Use `create(CreateEvaluationCaseRequestSchema)` to create a new message.
+ * Describes the message agents.v1.CreateCaseRequest.
+ * Use `create(CreateCaseRequestSchema)` to create a new message.
  */
-export const CreateEvaluationCaseRequestSchema: GenMessage<CreateEvaluationCaseRequest> = /*@__PURE__*/
+export const CreateCaseRequestSchema: GenMessage<CreateCaseRequest> = /*@__PURE__*/
   messageDesc(file_agents_v1_skill_evaluations, 4);
 
 /**
- * @generated from message agents.v1.UpdateEvaluationCaseRequest
+ * @generated from message agents.v1.UpdateCaseRequest
  */
-export type UpdateEvaluationCaseRequest = Message<"agents.v1.UpdateEvaluationCaseRequest"> & {
+export type UpdateCaseRequest = Message<"agents.v1.UpdateCaseRequest"> & {
   /**
    * @generated from field: string organization_id = 1;
    */
@@ -197,16 +197,16 @@ export type UpdateEvaluationCaseRequest = Message<"agents.v1.UpdateEvaluationCas
 };
 
 /**
- * Describes the message agents.v1.UpdateEvaluationCaseRequest.
- * Use `create(UpdateEvaluationCaseRequestSchema)` to create a new message.
+ * Describes the message agents.v1.UpdateCaseRequest.
+ * Use `create(UpdateCaseRequestSchema)` to create a new message.
  */
-export const UpdateEvaluationCaseRequestSchema: GenMessage<UpdateEvaluationCaseRequest> = /*@__PURE__*/
+export const UpdateCaseRequestSchema: GenMessage<UpdateCaseRequest> = /*@__PURE__*/
   messageDesc(file_agents_v1_skill_evaluations, 5);
 
 /**
- * @generated from message agents.v1.EvaluationCaseResponse
+ * @generated from message agents.v1.CreateCaseResponse
  */
-export type EvaluationCaseResponse = Message<"agents.v1.EvaluationCaseResponse"> & {
+export type CreateCaseResponse = Message<"agents.v1.CreateCaseResponse"> & {
   /**
    * @generated from field: agents.v1.EvaluationCase evaluation_case = 1;
    */
@@ -214,16 +214,33 @@ export type EvaluationCaseResponse = Message<"agents.v1.EvaluationCaseResponse">
 };
 
 /**
- * Describes the message agents.v1.EvaluationCaseResponse.
- * Use `create(EvaluationCaseResponseSchema)` to create a new message.
+ * Describes the message agents.v1.CreateCaseResponse.
+ * Use `create(CreateCaseResponseSchema)` to create a new message.
  */
-export const EvaluationCaseResponseSchema: GenMessage<EvaluationCaseResponse> = /*@__PURE__*/
+export const CreateCaseResponseSchema: GenMessage<CreateCaseResponse> = /*@__PURE__*/
   messageDesc(file_agents_v1_skill_evaluations, 6);
 
 /**
- * @generated from message agents.v1.DeleteEvaluationCaseRequest
+ * @generated from message agents.v1.UpdateCaseResponse
  */
-export type DeleteEvaluationCaseRequest = Message<"agents.v1.DeleteEvaluationCaseRequest"> & {
+export type UpdateCaseResponse = Message<"agents.v1.UpdateCaseResponse"> & {
+  /**
+   * @generated from field: agents.v1.EvaluationCase evaluation_case = 1;
+   */
+  evaluationCase?: EvaluationCase | undefined;
+};
+
+/**
+ * Describes the message agents.v1.UpdateCaseResponse.
+ * Use `create(UpdateCaseResponseSchema)` to create a new message.
+ */
+export const UpdateCaseResponseSchema: GenMessage<UpdateCaseResponse> = /*@__PURE__*/
+  messageDesc(file_agents_v1_skill_evaluations, 7);
+
+/**
+ * @generated from message agents.v1.DeleteCaseRequest
+ */
+export type DeleteCaseRequest = Message<"agents.v1.DeleteCaseRequest"> & {
   /**
    * @generated from field: string organization_id = 1;
    */
@@ -236,29 +253,29 @@ export type DeleteEvaluationCaseRequest = Message<"agents.v1.DeleteEvaluationCas
 };
 
 /**
- * Describes the message agents.v1.DeleteEvaluationCaseRequest.
- * Use `create(DeleteEvaluationCaseRequestSchema)` to create a new message.
+ * Describes the message agents.v1.DeleteCaseRequest.
+ * Use `create(DeleteCaseRequestSchema)` to create a new message.
  */
-export const DeleteEvaluationCaseRequestSchema: GenMessage<DeleteEvaluationCaseRequest> = /*@__PURE__*/
-  messageDesc(file_agents_v1_skill_evaluations, 7);
-
-/**
- * @generated from message agents.v1.DeleteEvaluationCaseResponse
- */
-export type DeleteEvaluationCaseResponse = Message<"agents.v1.DeleteEvaluationCaseResponse"> & {
-};
-
-/**
- * Describes the message agents.v1.DeleteEvaluationCaseResponse.
- * Use `create(DeleteEvaluationCaseResponseSchema)` to create a new message.
- */
-export const DeleteEvaluationCaseResponseSchema: GenMessage<DeleteEvaluationCaseResponse> = /*@__PURE__*/
+export const DeleteCaseRequestSchema: GenMessage<DeleteCaseRequest> = /*@__PURE__*/
   messageDesc(file_agents_v1_skill_evaluations, 8);
 
 /**
- * @generated from message agents.v1.ListEvaluationCasesRequest
+ * @generated from message agents.v1.DeleteCaseResponse
  */
-export type ListEvaluationCasesRequest = Message<"agents.v1.ListEvaluationCasesRequest"> & {
+export type DeleteCaseResponse = Message<"agents.v1.DeleteCaseResponse"> & {
+};
+
+/**
+ * Describes the message agents.v1.DeleteCaseResponse.
+ * Use `create(DeleteCaseResponseSchema)` to create a new message.
+ */
+export const DeleteCaseResponseSchema: GenMessage<DeleteCaseResponse> = /*@__PURE__*/
+  messageDesc(file_agents_v1_skill_evaluations, 9);
+
+/**
+ * @generated from message agents.v1.ListCasesRequest
+ */
+export type ListCasesRequest = Message<"agents.v1.ListCasesRequest"> & {
   /**
    * @generated from field: string organization_id = 1;
    */
@@ -271,16 +288,16 @@ export type ListEvaluationCasesRequest = Message<"agents.v1.ListEvaluationCasesR
 };
 
 /**
- * Describes the message agents.v1.ListEvaluationCasesRequest.
- * Use `create(ListEvaluationCasesRequestSchema)` to create a new message.
+ * Describes the message agents.v1.ListCasesRequest.
+ * Use `create(ListCasesRequestSchema)` to create a new message.
  */
-export const ListEvaluationCasesRequestSchema: GenMessage<ListEvaluationCasesRequest> = /*@__PURE__*/
-  messageDesc(file_agents_v1_skill_evaluations, 9);
+export const ListCasesRequestSchema: GenMessage<ListCasesRequest> = /*@__PURE__*/
+  messageDesc(file_agents_v1_skill_evaluations, 10);
 
 /**
- * @generated from message agents.v1.ListEvaluationCasesResponse
+ * @generated from message agents.v1.ListCasesResponse
  */
-export type ListEvaluationCasesResponse = Message<"agents.v1.ListEvaluationCasesResponse"> & {
+export type ListCasesResponse = Message<"agents.v1.ListCasesResponse"> & {
   /**
    * @generated from field: repeated agents.v1.EvaluationCase cases = 1;
    */
@@ -288,11 +305,11 @@ export type ListEvaluationCasesResponse = Message<"agents.v1.ListEvaluationCases
 };
 
 /**
- * Describes the message agents.v1.ListEvaluationCasesResponse.
- * Use `create(ListEvaluationCasesResponseSchema)` to create a new message.
+ * Describes the message agents.v1.ListCasesResponse.
+ * Use `create(ListCasesResponseSchema)` to create a new message.
  */
-export const ListEvaluationCasesResponseSchema: GenMessage<ListEvaluationCasesResponse> = /*@__PURE__*/
-  messageDesc(file_agents_v1_skill_evaluations, 10);
+export const ListCasesResponseSchema: GenMessage<ListCasesResponse> = /*@__PURE__*/
+  messageDesc(file_agents_v1_skill_evaluations, 11);
 
 /**
  * @generated from message agents.v1.EvaluationTarget
@@ -328,12 +345,12 @@ export type EvaluationTarget = Message<"agents.v1.EvaluationTarget"> & {
  * Use `create(EvaluationTargetSchema)` to create a new message.
  */
 export const EvaluationTargetSchema: GenMessage<EvaluationTarget> = /*@__PURE__*/
-  messageDesc(file_agents_v1_skill_evaluations, 11);
+  messageDesc(file_agents_v1_skill_evaluations, 12);
 
 /**
- * @generated from message agents.v1.RunSkillEvaluationRequest
+ * @generated from message agents.v1.RunCaseRequest
  */
-export type RunSkillEvaluationRequest = Message<"agents.v1.RunSkillEvaluationRequest"> & {
+export type RunCaseRequest = Message<"agents.v1.RunCaseRequest"> & {
   /**
    * @generated from field: string organization_id = 1;
    */
@@ -355,7 +372,7 @@ export type RunSkillEvaluationRequest = Message<"agents.v1.RunSkillEvaluationReq
   target?: EvaluationTarget | undefined;
 
   /**
-   * RunCase requires exactly one; RunSuite accepts an empty list for the whole suite.
+   * Exactly one case is required.
    *
    * @generated from field: repeated string case_ids = 5;
    */
@@ -378,11 +395,65 @@ export type RunSkillEvaluationRequest = Message<"agents.v1.RunSkillEvaluationReq
 };
 
 /**
- * Describes the message agents.v1.RunSkillEvaluationRequest.
- * Use `create(RunSkillEvaluationRequestSchema)` to create a new message.
+ * Describes the message agents.v1.RunCaseRequest.
+ * Use `create(RunCaseRequestSchema)` to create a new message.
  */
-export const RunSkillEvaluationRequestSchema: GenMessage<RunSkillEvaluationRequest> = /*@__PURE__*/
-  messageDesc(file_agents_v1_skill_evaluations, 12);
+export const RunCaseRequestSchema: GenMessage<RunCaseRequest> = /*@__PURE__*/
+  messageDesc(file_agents_v1_skill_evaluations, 13);
+
+/**
+ * @generated from message agents.v1.RunSuiteRequest
+ */
+export type RunSuiteRequest = Message<"agents.v1.RunSuiteRequest"> & {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId: string;
+
+  /**
+   * @generated from field: string request_id = 2;
+   */
+  requestId: string;
+
+  /**
+   * @generated from field: string agent_id = 3;
+   */
+  agentId: string;
+
+  /**
+   * @generated from field: agents.v1.EvaluationTarget target = 4;
+   */
+  target?: EvaluationTarget | undefined;
+
+  /**
+   * An empty list selects the whole suite.
+   *
+   * @generated from field: repeated string case_ids = 5;
+   */
+  caseIds: string[];
+
+  /**
+   * @generated from field: bool judge = 6;
+   */
+  judge: boolean;
+
+  /**
+   * @generated from field: string model_override = 7;
+   */
+  modelOverride: string;
+
+  /**
+   * @generated from field: string judge_model = 8;
+   */
+  judgeModel: string;
+};
+
+/**
+ * Describes the message agents.v1.RunSuiteRequest.
+ * Use `create(RunSuiteRequestSchema)` to create a new message.
+ */
+export const RunSuiteRequestSchema: GenMessage<RunSuiteRequest> = /*@__PURE__*/
+  messageDesc(file_agents_v1_skill_evaluations, 14);
 
 /**
  * @generated from message agents.v1.EvaluationToolAttempt
@@ -419,7 +490,7 @@ export type EvaluationToolAttempt = Message<"agents.v1.EvaluationToolAttempt"> &
  * Use `create(EvaluationToolAttemptSchema)` to create a new message.
  */
 export const EvaluationToolAttemptSchema: GenMessage<EvaluationToolAttempt> = /*@__PURE__*/
-  messageDesc(file_agents_v1_skill_evaluations, 13);
+  messageDesc(file_agents_v1_skill_evaluations, 15);
 
 /**
  * @generated from message agents.v1.EvaluationAssertion
@@ -446,7 +517,7 @@ export type EvaluationAssertion = Message<"agents.v1.EvaluationAssertion"> & {
  * Use `create(EvaluationAssertionSchema)` to create a new message.
  */
 export const EvaluationAssertionSchema: GenMessage<EvaluationAssertion> = /*@__PURE__*/
-  messageDesc(file_agents_v1_skill_evaluations, 14);
+  messageDesc(file_agents_v1_skill_evaluations, 16);
 
 /**
  * @generated from message agents.v1.EvaluationJudge
@@ -478,7 +549,7 @@ export type EvaluationJudge = Message<"agents.v1.EvaluationJudge"> & {
  * Use `create(EvaluationJudgeSchema)` to create a new message.
  */
 export const EvaluationJudgeSchema: GenMessage<EvaluationJudge> = /*@__PURE__*/
-  messageDesc(file_agents_v1_skill_evaluations, 15);
+  messageDesc(file_agents_v1_skill_evaluations, 17);
 
 /**
  * @generated from message agents.v1.EvaluationRun
@@ -630,12 +701,12 @@ export type EvaluationRun = Message<"agents.v1.EvaluationRun"> & {
  * Use `create(EvaluationRunSchema)` to create a new message.
  */
 export const EvaluationRunSchema: GenMessage<EvaluationRun> = /*@__PURE__*/
-  messageDesc(file_agents_v1_skill_evaluations, 16);
+  messageDesc(file_agents_v1_skill_evaluations, 18);
 
 /**
- * @generated from message agents.v1.RunSkillEvaluationResponse
+ * @generated from message agents.v1.RunCaseResponse
  */
-export type RunSkillEvaluationResponse = Message<"agents.v1.RunSkillEvaluationResponse"> & {
+export type RunCaseResponse = Message<"agents.v1.RunCaseResponse"> & {
   /**
    * @generated from field: repeated agents.v1.EvaluationRun runs = 1;
    */
@@ -643,16 +714,33 @@ export type RunSkillEvaluationResponse = Message<"agents.v1.RunSkillEvaluationRe
 };
 
 /**
- * Describes the message agents.v1.RunSkillEvaluationResponse.
- * Use `create(RunSkillEvaluationResponseSchema)` to create a new message.
+ * Describes the message agents.v1.RunCaseResponse.
+ * Use `create(RunCaseResponseSchema)` to create a new message.
  */
-export const RunSkillEvaluationResponseSchema: GenMessage<RunSkillEvaluationResponse> = /*@__PURE__*/
-  messageDesc(file_agents_v1_skill_evaluations, 17);
+export const RunCaseResponseSchema: GenMessage<RunCaseResponse> = /*@__PURE__*/
+  messageDesc(file_agents_v1_skill_evaluations, 19);
 
 /**
- * @generated from message agents.v1.ListEvaluationRunsRequest
+ * @generated from message agents.v1.RunSuiteResponse
  */
-export type ListEvaluationRunsRequest = Message<"agents.v1.ListEvaluationRunsRequest"> & {
+export type RunSuiteResponse = Message<"agents.v1.RunSuiteResponse"> & {
+  /**
+   * @generated from field: repeated agents.v1.EvaluationRun runs = 1;
+   */
+  runs: EvaluationRun[];
+};
+
+/**
+ * Describes the message agents.v1.RunSuiteResponse.
+ * Use `create(RunSuiteResponseSchema)` to create a new message.
+ */
+export const RunSuiteResponseSchema: GenMessage<RunSuiteResponse> = /*@__PURE__*/
+  messageDesc(file_agents_v1_skill_evaluations, 20);
+
+/**
+ * @generated from message agents.v1.ListRunsRequest
+ */
+export type ListRunsRequest = Message<"agents.v1.ListRunsRequest"> & {
   /**
    * @generated from field: string organization_id = 1;
    */
@@ -680,16 +768,16 @@ export type ListEvaluationRunsRequest = Message<"agents.v1.ListEvaluationRunsReq
 };
 
 /**
- * Describes the message agents.v1.ListEvaluationRunsRequest.
- * Use `create(ListEvaluationRunsRequestSchema)` to create a new message.
+ * Describes the message agents.v1.ListRunsRequest.
+ * Use `create(ListRunsRequestSchema)` to create a new message.
  */
-export const ListEvaluationRunsRequestSchema: GenMessage<ListEvaluationRunsRequest> = /*@__PURE__*/
-  messageDesc(file_agents_v1_skill_evaluations, 18);
+export const ListRunsRequestSchema: GenMessage<ListRunsRequest> = /*@__PURE__*/
+  messageDesc(file_agents_v1_skill_evaluations, 21);
 
 /**
- * @generated from message agents.v1.ListEvaluationRunsResponse
+ * @generated from message agents.v1.ListRunsResponse
  */
-export type ListEvaluationRunsResponse = Message<"agents.v1.ListEvaluationRunsResponse"> & {
+export type ListRunsResponse = Message<"agents.v1.ListRunsResponse"> & {
   /**
    * @generated from field: repeated agents.v1.EvaluationRun runs = 1;
    */
@@ -702,16 +790,16 @@ export type ListEvaluationRunsResponse = Message<"agents.v1.ListEvaluationRunsRe
 };
 
 /**
- * Describes the message agents.v1.ListEvaluationRunsResponse.
- * Use `create(ListEvaluationRunsResponseSchema)` to create a new message.
+ * Describes the message agents.v1.ListRunsResponse.
+ * Use `create(ListRunsResponseSchema)` to create a new message.
  */
-export const ListEvaluationRunsResponseSchema: GenMessage<ListEvaluationRunsResponse> = /*@__PURE__*/
-  messageDesc(file_agents_v1_skill_evaluations, 19);
+export const ListRunsResponseSchema: GenMessage<ListRunsResponse> = /*@__PURE__*/
+  messageDesc(file_agents_v1_skill_evaluations, 22);
 
 /**
- * @generated from message agents.v1.GetEvaluationRunRequest
+ * @generated from message agents.v1.GetRunRequest
  */
-export type GetEvaluationRunRequest = Message<"agents.v1.GetEvaluationRunRequest"> & {
+export type GetRunRequest = Message<"agents.v1.GetRunRequest"> & {
   /**
    * @generated from field: string organization_id = 1;
    */
@@ -724,16 +812,16 @@ export type GetEvaluationRunRequest = Message<"agents.v1.GetEvaluationRunRequest
 };
 
 /**
- * Describes the message agents.v1.GetEvaluationRunRequest.
- * Use `create(GetEvaluationRunRequestSchema)` to create a new message.
+ * Describes the message agents.v1.GetRunRequest.
+ * Use `create(GetRunRequestSchema)` to create a new message.
  */
-export const GetEvaluationRunRequestSchema: GenMessage<GetEvaluationRunRequest> = /*@__PURE__*/
-  messageDesc(file_agents_v1_skill_evaluations, 20);
+export const GetRunRequestSchema: GenMessage<GetRunRequest> = /*@__PURE__*/
+  messageDesc(file_agents_v1_skill_evaluations, 23);
 
 /**
- * @generated from message agents.v1.EvaluationRunResponse
+ * @generated from message agents.v1.GetRunResponse
  */
-export type EvaluationRunResponse = Message<"agents.v1.EvaluationRunResponse"> & {
+export type GetRunResponse = Message<"agents.v1.GetRunResponse"> & {
   /**
    * @generated from field: agents.v1.EvaluationRun run = 1;
    */
@@ -741,11 +829,11 @@ export type EvaluationRunResponse = Message<"agents.v1.EvaluationRunResponse"> &
 };
 
 /**
- * Describes the message agents.v1.EvaluationRunResponse.
- * Use `create(EvaluationRunResponseSchema)` to create a new message.
+ * Describes the message agents.v1.GetRunResponse.
+ * Use `create(GetRunResponseSchema)` to create a new message.
  */
-export const EvaluationRunResponseSchema: GenMessage<EvaluationRunResponse> = /*@__PURE__*/
-  messageDesc(file_agents_v1_skill_evaluations, 21);
+export const GetRunResponseSchema: GenMessage<GetRunResponse> = /*@__PURE__*/
+  messageDesc(file_agents_v1_skill_evaluations, 24);
 
 /**
  * @generated from enum agents.v1.EvaluationStatus
@@ -802,64 +890,64 @@ export const SkillEvaluationsService: GenService<{
    */
   createCase: {
     methodKind: "unary";
-    input: typeof CreateEvaluationCaseRequestSchema;
-    output: typeof EvaluationCaseResponseSchema;
+    input: typeof CreateCaseRequestSchema;
+    output: typeof CreateCaseResponseSchema;
   },
   /**
    * @generated from rpc agents.v1.SkillEvaluationsService.UpdateCase
    */
   updateCase: {
     methodKind: "unary";
-    input: typeof UpdateEvaluationCaseRequestSchema;
-    output: typeof EvaluationCaseResponseSchema;
+    input: typeof UpdateCaseRequestSchema;
+    output: typeof UpdateCaseResponseSchema;
   },
   /**
    * @generated from rpc agents.v1.SkillEvaluationsService.DeleteCase
    */
   deleteCase: {
     methodKind: "unary";
-    input: typeof DeleteEvaluationCaseRequestSchema;
-    output: typeof DeleteEvaluationCaseResponseSchema;
+    input: typeof DeleteCaseRequestSchema;
+    output: typeof DeleteCaseResponseSchema;
   },
   /**
    * @generated from rpc agents.v1.SkillEvaluationsService.ListCases
    */
   listCases: {
     methodKind: "unary";
-    input: typeof ListEvaluationCasesRequestSchema;
-    output: typeof ListEvaluationCasesResponseSchema;
+    input: typeof ListCasesRequestSchema;
+    output: typeof ListCasesResponseSchema;
   },
   /**
    * @generated from rpc agents.v1.SkillEvaluationsService.RunCase
    */
   runCase: {
     methodKind: "unary";
-    input: typeof RunSkillEvaluationRequestSchema;
-    output: typeof RunSkillEvaluationResponseSchema;
+    input: typeof RunCaseRequestSchema;
+    output: typeof RunCaseResponseSchema;
   },
   /**
    * @generated from rpc agents.v1.SkillEvaluationsService.RunSuite
    */
   runSuite: {
     methodKind: "unary";
-    input: typeof RunSkillEvaluationRequestSchema;
-    output: typeof RunSkillEvaluationResponseSchema;
+    input: typeof RunSuiteRequestSchema;
+    output: typeof RunSuiteResponseSchema;
   },
   /**
    * @generated from rpc agents.v1.SkillEvaluationsService.ListRuns
    */
   listRuns: {
     methodKind: "unary";
-    input: typeof ListEvaluationRunsRequestSchema;
-    output: typeof ListEvaluationRunsResponseSchema;
+    input: typeof ListRunsRequestSchema;
+    output: typeof ListRunsResponseSchema;
   },
   /**
    * @generated from rpc agents.v1.SkillEvaluationsService.GetRun
    */
   getRun: {
     methodKind: "unary";
-    input: typeof GetEvaluationRunRequestSchema;
-    output: typeof EvaluationRunResponseSchema;
+    input: typeof GetRunRequestSchema;
+    output: typeof GetRunResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_agents_v1_skill_evaluations, 0);

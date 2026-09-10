@@ -28,7 +28,7 @@ from uniffy.tests.integration.internal.migrations.test_migration_run import (
 
 @pytest.fixture
 async def invocation_store(scratch_database):
-    await _provision_to(scratch_database, "101")
+    await _provision_to(scratch_database, "098")
     engine = create_async_engine(get_database_url())
     factory = async_sessionmaker(engine)
     try:
@@ -183,29 +183,27 @@ async def test_invocation_constraints_and_migration_round_trip(invocation_store)
             await session.rollback()
     config = Config(str(ALEMBIC_INI_PATH))
     config.attributes["configure_logger"] = False
-    command.downgrade(config, "100")
+    command.downgrade(config, "097")
     assert _query("SELECT to_regclass('agents_skill_invocations')") == [(None,)]
-    _migrate_to("101")
+    _migrate_to("098")
     assert _query("SELECT count(*) FROM agents_skill_invocations") == [(0,)]
 
 
-async def test_usage_cutover_does_not_fabricate_invocations(invocation_store):
-    recorder, _ = invocation_store
-    selected = target()
-    await recorder.start(invocation_id=generate_id(), target=selected)
+async def test_usage_cutover_does_not_fabricate_invocations(scratch_database):
+    await _provision_to(scratch_database, "097")
     _execute(
         "INSERT INTO agents_skill_usages "
         "(id, skill_id, agent_id, user_id, organization_id, invoked) "
         "VALUES (gen_random_uuid(), gen_random_uuid(), gen_random_uuid(), "
         "gen_random_uuid(), gen_random_uuid(), true)"
     )
-    before = _query("SELECT * FROM agents_skill_invocations")
-    _migrate_to("102")
+    _migrate_to("098")
     assert _query("SELECT to_regclass('agents_skill_usages')") == [(None,)]
-    assert _query("SELECT * FROM agents_skill_invocations") == before
+    assert _query("SELECT count(*) FROM agents_skill_invocations") == [(0,)]
     config = Config(str(ALEMBIC_INI_PATH))
     config.attributes["configure_logger"] = False
-    command.downgrade(config, "101")
+    command.downgrade(config, "097")
     assert _query("SELECT count(*) FROM agents_skill_usages") == [(0,)]
-    assert _query("SELECT * FROM agents_skill_invocations") == before
-    _migrate_to("102")
+    assert _query("SELECT to_regclass('agents_skill_invocations')") == [(None,)]
+    _migrate_to("098")
+    assert _query("SELECT count(*) FROM agents_skill_invocations") == [(0,)]

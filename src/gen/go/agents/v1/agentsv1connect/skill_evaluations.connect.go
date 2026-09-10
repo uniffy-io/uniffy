@@ -61,14 +61,14 @@ const (
 
 // SkillEvaluationsServiceClient is a client for the agents.v1.SkillEvaluationsService service.
 type SkillEvaluationsServiceClient interface {
-	CreateCase(context.Context, *connect.Request[v1.CreateEvaluationCaseRequest]) (*connect.Response[v1.EvaluationCaseResponse], error)
-	UpdateCase(context.Context, *connect.Request[v1.UpdateEvaluationCaseRequest]) (*connect.Response[v1.EvaluationCaseResponse], error)
-	DeleteCase(context.Context, *connect.Request[v1.DeleteEvaluationCaseRequest]) (*connect.Response[v1.DeleteEvaluationCaseResponse], error)
-	ListCases(context.Context, *connect.Request[v1.ListEvaluationCasesRequest]) (*connect.Response[v1.ListEvaluationCasesResponse], error)
-	RunCase(context.Context, *connect.Request[v1.RunSkillEvaluationRequest]) (*connect.Response[v1.RunSkillEvaluationResponse], error)
-	RunSuite(context.Context, *connect.Request[v1.RunSkillEvaluationRequest]) (*connect.Response[v1.RunSkillEvaluationResponse], error)
-	ListRuns(context.Context, *connect.Request[v1.ListEvaluationRunsRequest]) (*connect.Response[v1.ListEvaluationRunsResponse], error)
-	GetRun(context.Context, *connect.Request[v1.GetEvaluationRunRequest]) (*connect.Response[v1.EvaluationRunResponse], error)
+	CreateCase(context.Context, *connect.Request[v1.CreateCaseRequest]) (*connect.Response[v1.CreateCaseResponse], error)
+	UpdateCase(context.Context, *connect.Request[v1.UpdateCaseRequest]) (*connect.Response[v1.UpdateCaseResponse], error)
+	DeleteCase(context.Context, *connect.Request[v1.DeleteCaseRequest]) (*connect.Response[v1.DeleteCaseResponse], error)
+	ListCases(context.Context, *connect.Request[v1.ListCasesRequest]) (*connect.Response[v1.ListCasesResponse], error)
+	RunCase(context.Context, *connect.Request[v1.RunCaseRequest]) (*connect.Response[v1.RunCaseResponse], error)
+	RunSuite(context.Context, *connect.Request[v1.RunSuiteRequest]) (*connect.Response[v1.RunSuiteResponse], error)
+	ListRuns(context.Context, *connect.Request[v1.ListRunsRequest]) (*connect.Response[v1.ListRunsResponse], error)
+	GetRun(context.Context, *connect.Request[v1.GetRunRequest]) (*connect.Response[v1.GetRunResponse], error)
 }
 
 // NewSkillEvaluationsServiceClient constructs a client for the agents.v1.SkillEvaluationsService
@@ -82,49 +82,49 @@ func NewSkillEvaluationsServiceClient(httpClient connect.HTTPClient, baseURL str
 	baseURL = strings.TrimRight(baseURL, "/")
 	skillEvaluationsServiceMethods := v1.File_agents_v1_skill_evaluations_proto.Services().ByName("SkillEvaluationsService").Methods()
 	return &skillEvaluationsServiceClient{
-		createCase: connect.NewClient[v1.CreateEvaluationCaseRequest, v1.EvaluationCaseResponse](
+		createCase: connect.NewClient[v1.CreateCaseRequest, v1.CreateCaseResponse](
 			httpClient,
 			baseURL+SkillEvaluationsServiceCreateCaseProcedure,
 			connect.WithSchema(skillEvaluationsServiceMethods.ByName("CreateCase")),
 			connect.WithClientOptions(opts...),
 		),
-		updateCase: connect.NewClient[v1.UpdateEvaluationCaseRequest, v1.EvaluationCaseResponse](
+		updateCase: connect.NewClient[v1.UpdateCaseRequest, v1.UpdateCaseResponse](
 			httpClient,
 			baseURL+SkillEvaluationsServiceUpdateCaseProcedure,
 			connect.WithSchema(skillEvaluationsServiceMethods.ByName("UpdateCase")),
 			connect.WithClientOptions(opts...),
 		),
-		deleteCase: connect.NewClient[v1.DeleteEvaluationCaseRequest, v1.DeleteEvaluationCaseResponse](
+		deleteCase: connect.NewClient[v1.DeleteCaseRequest, v1.DeleteCaseResponse](
 			httpClient,
 			baseURL+SkillEvaluationsServiceDeleteCaseProcedure,
 			connect.WithSchema(skillEvaluationsServiceMethods.ByName("DeleteCase")),
 			connect.WithClientOptions(opts...),
 		),
-		listCases: connect.NewClient[v1.ListEvaluationCasesRequest, v1.ListEvaluationCasesResponse](
+		listCases: connect.NewClient[v1.ListCasesRequest, v1.ListCasesResponse](
 			httpClient,
 			baseURL+SkillEvaluationsServiceListCasesProcedure,
 			connect.WithSchema(skillEvaluationsServiceMethods.ByName("ListCases")),
 			connect.WithClientOptions(opts...),
 		),
-		runCase: connect.NewClient[v1.RunSkillEvaluationRequest, v1.RunSkillEvaluationResponse](
+		runCase: connect.NewClient[v1.RunCaseRequest, v1.RunCaseResponse](
 			httpClient,
 			baseURL+SkillEvaluationsServiceRunCaseProcedure,
 			connect.WithSchema(skillEvaluationsServiceMethods.ByName("RunCase")),
 			connect.WithClientOptions(opts...),
 		),
-		runSuite: connect.NewClient[v1.RunSkillEvaluationRequest, v1.RunSkillEvaluationResponse](
+		runSuite: connect.NewClient[v1.RunSuiteRequest, v1.RunSuiteResponse](
 			httpClient,
 			baseURL+SkillEvaluationsServiceRunSuiteProcedure,
 			connect.WithSchema(skillEvaluationsServiceMethods.ByName("RunSuite")),
 			connect.WithClientOptions(opts...),
 		),
-		listRuns: connect.NewClient[v1.ListEvaluationRunsRequest, v1.ListEvaluationRunsResponse](
+		listRuns: connect.NewClient[v1.ListRunsRequest, v1.ListRunsResponse](
 			httpClient,
 			baseURL+SkillEvaluationsServiceListRunsProcedure,
 			connect.WithSchema(skillEvaluationsServiceMethods.ByName("ListRuns")),
 			connect.WithClientOptions(opts...),
 		),
-		getRun: connect.NewClient[v1.GetEvaluationRunRequest, v1.EvaluationRunResponse](
+		getRun: connect.NewClient[v1.GetRunRequest, v1.GetRunResponse](
 			httpClient,
 			baseURL+SkillEvaluationsServiceGetRunProcedure,
 			connect.WithSchema(skillEvaluationsServiceMethods.ByName("GetRun")),
@@ -135,67 +135,67 @@ func NewSkillEvaluationsServiceClient(httpClient connect.HTTPClient, baseURL str
 
 // skillEvaluationsServiceClient implements SkillEvaluationsServiceClient.
 type skillEvaluationsServiceClient struct {
-	createCase *connect.Client[v1.CreateEvaluationCaseRequest, v1.EvaluationCaseResponse]
-	updateCase *connect.Client[v1.UpdateEvaluationCaseRequest, v1.EvaluationCaseResponse]
-	deleteCase *connect.Client[v1.DeleteEvaluationCaseRequest, v1.DeleteEvaluationCaseResponse]
-	listCases  *connect.Client[v1.ListEvaluationCasesRequest, v1.ListEvaluationCasesResponse]
-	runCase    *connect.Client[v1.RunSkillEvaluationRequest, v1.RunSkillEvaluationResponse]
-	runSuite   *connect.Client[v1.RunSkillEvaluationRequest, v1.RunSkillEvaluationResponse]
-	listRuns   *connect.Client[v1.ListEvaluationRunsRequest, v1.ListEvaluationRunsResponse]
-	getRun     *connect.Client[v1.GetEvaluationRunRequest, v1.EvaluationRunResponse]
+	createCase *connect.Client[v1.CreateCaseRequest, v1.CreateCaseResponse]
+	updateCase *connect.Client[v1.UpdateCaseRequest, v1.UpdateCaseResponse]
+	deleteCase *connect.Client[v1.DeleteCaseRequest, v1.DeleteCaseResponse]
+	listCases  *connect.Client[v1.ListCasesRequest, v1.ListCasesResponse]
+	runCase    *connect.Client[v1.RunCaseRequest, v1.RunCaseResponse]
+	runSuite   *connect.Client[v1.RunSuiteRequest, v1.RunSuiteResponse]
+	listRuns   *connect.Client[v1.ListRunsRequest, v1.ListRunsResponse]
+	getRun     *connect.Client[v1.GetRunRequest, v1.GetRunResponse]
 }
 
 // CreateCase calls agents.v1.SkillEvaluationsService.CreateCase.
-func (c *skillEvaluationsServiceClient) CreateCase(ctx context.Context, req *connect.Request[v1.CreateEvaluationCaseRequest]) (*connect.Response[v1.EvaluationCaseResponse], error) {
+func (c *skillEvaluationsServiceClient) CreateCase(ctx context.Context, req *connect.Request[v1.CreateCaseRequest]) (*connect.Response[v1.CreateCaseResponse], error) {
 	return c.createCase.CallUnary(ctx, req)
 }
 
 // UpdateCase calls agents.v1.SkillEvaluationsService.UpdateCase.
-func (c *skillEvaluationsServiceClient) UpdateCase(ctx context.Context, req *connect.Request[v1.UpdateEvaluationCaseRequest]) (*connect.Response[v1.EvaluationCaseResponse], error) {
+func (c *skillEvaluationsServiceClient) UpdateCase(ctx context.Context, req *connect.Request[v1.UpdateCaseRequest]) (*connect.Response[v1.UpdateCaseResponse], error) {
 	return c.updateCase.CallUnary(ctx, req)
 }
 
 // DeleteCase calls agents.v1.SkillEvaluationsService.DeleteCase.
-func (c *skillEvaluationsServiceClient) DeleteCase(ctx context.Context, req *connect.Request[v1.DeleteEvaluationCaseRequest]) (*connect.Response[v1.DeleteEvaluationCaseResponse], error) {
+func (c *skillEvaluationsServiceClient) DeleteCase(ctx context.Context, req *connect.Request[v1.DeleteCaseRequest]) (*connect.Response[v1.DeleteCaseResponse], error) {
 	return c.deleteCase.CallUnary(ctx, req)
 }
 
 // ListCases calls agents.v1.SkillEvaluationsService.ListCases.
-func (c *skillEvaluationsServiceClient) ListCases(ctx context.Context, req *connect.Request[v1.ListEvaluationCasesRequest]) (*connect.Response[v1.ListEvaluationCasesResponse], error) {
+func (c *skillEvaluationsServiceClient) ListCases(ctx context.Context, req *connect.Request[v1.ListCasesRequest]) (*connect.Response[v1.ListCasesResponse], error) {
 	return c.listCases.CallUnary(ctx, req)
 }
 
 // RunCase calls agents.v1.SkillEvaluationsService.RunCase.
-func (c *skillEvaluationsServiceClient) RunCase(ctx context.Context, req *connect.Request[v1.RunSkillEvaluationRequest]) (*connect.Response[v1.RunSkillEvaluationResponse], error) {
+func (c *skillEvaluationsServiceClient) RunCase(ctx context.Context, req *connect.Request[v1.RunCaseRequest]) (*connect.Response[v1.RunCaseResponse], error) {
 	return c.runCase.CallUnary(ctx, req)
 }
 
 // RunSuite calls agents.v1.SkillEvaluationsService.RunSuite.
-func (c *skillEvaluationsServiceClient) RunSuite(ctx context.Context, req *connect.Request[v1.RunSkillEvaluationRequest]) (*connect.Response[v1.RunSkillEvaluationResponse], error) {
+func (c *skillEvaluationsServiceClient) RunSuite(ctx context.Context, req *connect.Request[v1.RunSuiteRequest]) (*connect.Response[v1.RunSuiteResponse], error) {
 	return c.runSuite.CallUnary(ctx, req)
 }
 
 // ListRuns calls agents.v1.SkillEvaluationsService.ListRuns.
-func (c *skillEvaluationsServiceClient) ListRuns(ctx context.Context, req *connect.Request[v1.ListEvaluationRunsRequest]) (*connect.Response[v1.ListEvaluationRunsResponse], error) {
+func (c *skillEvaluationsServiceClient) ListRuns(ctx context.Context, req *connect.Request[v1.ListRunsRequest]) (*connect.Response[v1.ListRunsResponse], error) {
 	return c.listRuns.CallUnary(ctx, req)
 }
 
 // GetRun calls agents.v1.SkillEvaluationsService.GetRun.
-func (c *skillEvaluationsServiceClient) GetRun(ctx context.Context, req *connect.Request[v1.GetEvaluationRunRequest]) (*connect.Response[v1.EvaluationRunResponse], error) {
+func (c *skillEvaluationsServiceClient) GetRun(ctx context.Context, req *connect.Request[v1.GetRunRequest]) (*connect.Response[v1.GetRunResponse], error) {
 	return c.getRun.CallUnary(ctx, req)
 }
 
 // SkillEvaluationsServiceHandler is an implementation of the agents.v1.SkillEvaluationsService
 // service.
 type SkillEvaluationsServiceHandler interface {
-	CreateCase(context.Context, *connect.Request[v1.CreateEvaluationCaseRequest]) (*connect.Response[v1.EvaluationCaseResponse], error)
-	UpdateCase(context.Context, *connect.Request[v1.UpdateEvaluationCaseRequest]) (*connect.Response[v1.EvaluationCaseResponse], error)
-	DeleteCase(context.Context, *connect.Request[v1.DeleteEvaluationCaseRequest]) (*connect.Response[v1.DeleteEvaluationCaseResponse], error)
-	ListCases(context.Context, *connect.Request[v1.ListEvaluationCasesRequest]) (*connect.Response[v1.ListEvaluationCasesResponse], error)
-	RunCase(context.Context, *connect.Request[v1.RunSkillEvaluationRequest]) (*connect.Response[v1.RunSkillEvaluationResponse], error)
-	RunSuite(context.Context, *connect.Request[v1.RunSkillEvaluationRequest]) (*connect.Response[v1.RunSkillEvaluationResponse], error)
-	ListRuns(context.Context, *connect.Request[v1.ListEvaluationRunsRequest]) (*connect.Response[v1.ListEvaluationRunsResponse], error)
-	GetRun(context.Context, *connect.Request[v1.GetEvaluationRunRequest]) (*connect.Response[v1.EvaluationRunResponse], error)
+	CreateCase(context.Context, *connect.Request[v1.CreateCaseRequest]) (*connect.Response[v1.CreateCaseResponse], error)
+	UpdateCase(context.Context, *connect.Request[v1.UpdateCaseRequest]) (*connect.Response[v1.UpdateCaseResponse], error)
+	DeleteCase(context.Context, *connect.Request[v1.DeleteCaseRequest]) (*connect.Response[v1.DeleteCaseResponse], error)
+	ListCases(context.Context, *connect.Request[v1.ListCasesRequest]) (*connect.Response[v1.ListCasesResponse], error)
+	RunCase(context.Context, *connect.Request[v1.RunCaseRequest]) (*connect.Response[v1.RunCaseResponse], error)
+	RunSuite(context.Context, *connect.Request[v1.RunSuiteRequest]) (*connect.Response[v1.RunSuiteResponse], error)
+	ListRuns(context.Context, *connect.Request[v1.ListRunsRequest]) (*connect.Response[v1.ListRunsResponse], error)
+	GetRun(context.Context, *connect.Request[v1.GetRunRequest]) (*connect.Response[v1.GetRunResponse], error)
 }
 
 // NewSkillEvaluationsServiceHandler builds an HTTP handler from the service implementation. It
@@ -280,34 +280,34 @@ func NewSkillEvaluationsServiceHandler(svc SkillEvaluationsServiceHandler, opts 
 // UnimplementedSkillEvaluationsServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedSkillEvaluationsServiceHandler struct{}
 
-func (UnimplementedSkillEvaluationsServiceHandler) CreateCase(context.Context, *connect.Request[v1.CreateEvaluationCaseRequest]) (*connect.Response[v1.EvaluationCaseResponse], error) {
+func (UnimplementedSkillEvaluationsServiceHandler) CreateCase(context.Context, *connect.Request[v1.CreateCaseRequest]) (*connect.Response[v1.CreateCaseResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.SkillEvaluationsService.CreateCase is not implemented"))
 }
 
-func (UnimplementedSkillEvaluationsServiceHandler) UpdateCase(context.Context, *connect.Request[v1.UpdateEvaluationCaseRequest]) (*connect.Response[v1.EvaluationCaseResponse], error) {
+func (UnimplementedSkillEvaluationsServiceHandler) UpdateCase(context.Context, *connect.Request[v1.UpdateCaseRequest]) (*connect.Response[v1.UpdateCaseResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.SkillEvaluationsService.UpdateCase is not implemented"))
 }
 
-func (UnimplementedSkillEvaluationsServiceHandler) DeleteCase(context.Context, *connect.Request[v1.DeleteEvaluationCaseRequest]) (*connect.Response[v1.DeleteEvaluationCaseResponse], error) {
+func (UnimplementedSkillEvaluationsServiceHandler) DeleteCase(context.Context, *connect.Request[v1.DeleteCaseRequest]) (*connect.Response[v1.DeleteCaseResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.SkillEvaluationsService.DeleteCase is not implemented"))
 }
 
-func (UnimplementedSkillEvaluationsServiceHandler) ListCases(context.Context, *connect.Request[v1.ListEvaluationCasesRequest]) (*connect.Response[v1.ListEvaluationCasesResponse], error) {
+func (UnimplementedSkillEvaluationsServiceHandler) ListCases(context.Context, *connect.Request[v1.ListCasesRequest]) (*connect.Response[v1.ListCasesResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.SkillEvaluationsService.ListCases is not implemented"))
 }
 
-func (UnimplementedSkillEvaluationsServiceHandler) RunCase(context.Context, *connect.Request[v1.RunSkillEvaluationRequest]) (*connect.Response[v1.RunSkillEvaluationResponse], error) {
+func (UnimplementedSkillEvaluationsServiceHandler) RunCase(context.Context, *connect.Request[v1.RunCaseRequest]) (*connect.Response[v1.RunCaseResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.SkillEvaluationsService.RunCase is not implemented"))
 }
 
-func (UnimplementedSkillEvaluationsServiceHandler) RunSuite(context.Context, *connect.Request[v1.RunSkillEvaluationRequest]) (*connect.Response[v1.RunSkillEvaluationResponse], error) {
+func (UnimplementedSkillEvaluationsServiceHandler) RunSuite(context.Context, *connect.Request[v1.RunSuiteRequest]) (*connect.Response[v1.RunSuiteResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.SkillEvaluationsService.RunSuite is not implemented"))
 }
 
-func (UnimplementedSkillEvaluationsServiceHandler) ListRuns(context.Context, *connect.Request[v1.ListEvaluationRunsRequest]) (*connect.Response[v1.ListEvaluationRunsResponse], error) {
+func (UnimplementedSkillEvaluationsServiceHandler) ListRuns(context.Context, *connect.Request[v1.ListRunsRequest]) (*connect.Response[v1.ListRunsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.SkillEvaluationsService.ListRuns is not implemented"))
 }
 
-func (UnimplementedSkillEvaluationsServiceHandler) GetRun(context.Context, *connect.Request[v1.GetEvaluationRunRequest]) (*connect.Response[v1.EvaluationRunResponse], error) {
+func (UnimplementedSkillEvaluationsServiceHandler) GetRun(context.Context, *connect.Request[v1.GetRunRequest]) (*connect.Response[v1.GetRunResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.SkillEvaluationsService.GetRun is not implemented"))
 }

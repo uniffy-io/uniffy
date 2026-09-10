@@ -75,7 +75,7 @@ class EvaluationCase(_message.Message):
     updated_at: _timestamp_pb2.Timestamp
     def __init__(self, id: _Optional[str] = ..., scope: _Optional[_Union[EvaluationScope, _Mapping]] = ..., fields: _Optional[_Union[EvaluationCaseFields, _Mapping]] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
 
-class CreateEvaluationCaseRequest(_message.Message):
+class CreateCaseRequest(_message.Message):
     __slots__ = ("organization_id", "scope", "fields")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     SCOPE_FIELD_NUMBER: _ClassVar[int]
@@ -85,7 +85,7 @@ class CreateEvaluationCaseRequest(_message.Message):
     fields: EvaluationCaseFields
     def __init__(self, organization_id: _Optional[str] = ..., scope: _Optional[_Union[EvaluationScope, _Mapping]] = ..., fields: _Optional[_Union[EvaluationCaseFields, _Mapping]] = ...) -> None: ...
 
-class UpdateEvaluationCaseRequest(_message.Message):
+class UpdateCaseRequest(_message.Message):
     __slots__ = ("organization_id", "case_id", "fields")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     CASE_ID_FIELD_NUMBER: _ClassVar[int]
@@ -95,13 +95,19 @@ class UpdateEvaluationCaseRequest(_message.Message):
     fields: EvaluationCaseFields
     def __init__(self, organization_id: _Optional[str] = ..., case_id: _Optional[str] = ..., fields: _Optional[_Union[EvaluationCaseFields, _Mapping]] = ...) -> None: ...
 
-class EvaluationCaseResponse(_message.Message):
+class CreateCaseResponse(_message.Message):
     __slots__ = ("evaluation_case",)
     EVALUATION_CASE_FIELD_NUMBER: _ClassVar[int]
     evaluation_case: EvaluationCase
     def __init__(self, evaluation_case: _Optional[_Union[EvaluationCase, _Mapping]] = ...) -> None: ...
 
-class DeleteEvaluationCaseRequest(_message.Message):
+class UpdateCaseResponse(_message.Message):
+    __slots__ = ("evaluation_case",)
+    EVALUATION_CASE_FIELD_NUMBER: _ClassVar[int]
+    evaluation_case: EvaluationCase
+    def __init__(self, evaluation_case: _Optional[_Union[EvaluationCase, _Mapping]] = ...) -> None: ...
+
+class DeleteCaseRequest(_message.Message):
     __slots__ = ("organization_id", "case_id")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     CASE_ID_FIELD_NUMBER: _ClassVar[int]
@@ -109,11 +115,11 @@ class DeleteEvaluationCaseRequest(_message.Message):
     case_id: str
     def __init__(self, organization_id: _Optional[str] = ..., case_id: _Optional[str] = ...) -> None: ...
 
-class DeleteEvaluationCaseResponse(_message.Message):
+class DeleteCaseResponse(_message.Message):
     __slots__ = ()
     def __init__(self) -> None: ...
 
-class ListEvaluationCasesRequest(_message.Message):
+class ListCasesRequest(_message.Message):
     __slots__ = ("organization_id", "scope")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     SCOPE_FIELD_NUMBER: _ClassVar[int]
@@ -121,7 +127,7 @@ class ListEvaluationCasesRequest(_message.Message):
     scope: EvaluationScope
     def __init__(self, organization_id: _Optional[str] = ..., scope: _Optional[_Union[EvaluationScope, _Mapping]] = ...) -> None: ...
 
-class ListEvaluationCasesResponse(_message.Message):
+class ListCasesResponse(_message.Message):
     __slots__ = ("cases",)
     CASES_FIELD_NUMBER: _ClassVar[int]
     cases: _containers.RepeatedCompositeFieldContainer[EvaluationCase]
@@ -137,7 +143,27 @@ class EvaluationTarget(_message.Message):
     draft_content: str
     def __init__(self, skill_version_id: _Optional[str] = ..., draft_id: _Optional[str] = ..., draft_content: _Optional[str] = ...) -> None: ...
 
-class RunSkillEvaluationRequest(_message.Message):
+class RunCaseRequest(_message.Message):
+    __slots__ = ("organization_id", "request_id", "agent_id", "target", "case_ids", "judge", "model_override", "judge_model")
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    REQUEST_ID_FIELD_NUMBER: _ClassVar[int]
+    AGENT_ID_FIELD_NUMBER: _ClassVar[int]
+    TARGET_FIELD_NUMBER: _ClassVar[int]
+    CASE_IDS_FIELD_NUMBER: _ClassVar[int]
+    JUDGE_FIELD_NUMBER: _ClassVar[int]
+    MODEL_OVERRIDE_FIELD_NUMBER: _ClassVar[int]
+    JUDGE_MODEL_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    request_id: str
+    agent_id: str
+    target: EvaluationTarget
+    case_ids: _containers.RepeatedScalarFieldContainer[str]
+    judge: bool
+    model_override: str
+    judge_model: str
+    def __init__(self, organization_id: _Optional[str] = ..., request_id: _Optional[str] = ..., agent_id: _Optional[str] = ..., target: _Optional[_Union[EvaluationTarget, _Mapping]] = ..., case_ids: _Optional[_Iterable[str]] = ..., judge: _Optional[bool] = ..., model_override: _Optional[str] = ..., judge_model: _Optional[str] = ...) -> None: ...
+
+class RunSuiteRequest(_message.Message):
     __slots__ = ("organization_id", "request_id", "agent_id", "target", "case_ids", "judge", "model_override", "judge_model")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     REQUEST_ID_FIELD_NUMBER: _ClassVar[int]
@@ -253,13 +279,19 @@ class EvaluationRun(_message.Message):
     run_log_id: str
     def __init__(self, id: _Optional[str] = ..., request_id: _Optional[str] = ..., case_id: _Optional[str] = ..., agent_id: _Optional[str] = ..., skill_id: _Optional[str] = ..., skill_version_id: _Optional[str] = ..., version_number: _Optional[int] = ..., draft_id: _Optional[str] = ..., target_digest: _Optional[str] = ..., status: _Optional[_Union[EvaluationStatus, str]] = ..., error: _Optional[str] = ..., case_snapshot: _Optional[_Union[EvaluationCaseFields, _Mapping]] = ..., target_content: _Optional[str] = ..., output: _Optional[str] = ..., tool_attempts: _Optional[_Iterable[_Union[EvaluationToolAttempt, _Mapping]]] = ..., assertions: _Optional[_Iterable[_Union[EvaluationAssertion, _Mapping]]] = ..., judge: _Optional[_Union[EvaluationJudge, _Mapping]] = ..., model: _Optional[str] = ..., cost: _Optional[str] = ..., cost_currency: _Optional[str] = ..., input_tokens: _Optional[int] = ..., output_tokens: _Optional[int] = ..., duration_ms: _Optional[int] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., completed_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., rule_version_ids: _Optional[_Iterable[str]] = ..., outcome_reason: _Optional[str] = ..., run_log_id: _Optional[str] = ...) -> None: ...
 
-class RunSkillEvaluationResponse(_message.Message):
+class RunCaseResponse(_message.Message):
     __slots__ = ("runs",)
     RUNS_FIELD_NUMBER: _ClassVar[int]
     runs: _containers.RepeatedCompositeFieldContainer[EvaluationRun]
     def __init__(self, runs: _Optional[_Iterable[_Union[EvaluationRun, _Mapping]]] = ...) -> None: ...
 
-class ListEvaluationRunsRequest(_message.Message):
+class RunSuiteResponse(_message.Message):
+    __slots__ = ("runs",)
+    RUNS_FIELD_NUMBER: _ClassVar[int]
+    runs: _containers.RepeatedCompositeFieldContainer[EvaluationRun]
+    def __init__(self, runs: _Optional[_Iterable[_Union[EvaluationRun, _Mapping]]] = ...) -> None: ...
+
+class ListRunsRequest(_message.Message):
     __slots__ = ("organization_id", "agent_id", "scope", "page_size", "cursor")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     AGENT_ID_FIELD_NUMBER: _ClassVar[int]
@@ -273,7 +305,7 @@ class ListEvaluationRunsRequest(_message.Message):
     cursor: str
     def __init__(self, organization_id: _Optional[str] = ..., agent_id: _Optional[str] = ..., scope: _Optional[_Union[EvaluationScope, _Mapping]] = ..., page_size: _Optional[int] = ..., cursor: _Optional[str] = ...) -> None: ...
 
-class ListEvaluationRunsResponse(_message.Message):
+class ListRunsResponse(_message.Message):
     __slots__ = ("runs", "next_cursor")
     RUNS_FIELD_NUMBER: _ClassVar[int]
     NEXT_CURSOR_FIELD_NUMBER: _ClassVar[int]
@@ -281,7 +313,7 @@ class ListEvaluationRunsResponse(_message.Message):
     next_cursor: str
     def __init__(self, runs: _Optional[_Iterable[_Union[EvaluationRun, _Mapping]]] = ..., next_cursor: _Optional[str] = ...) -> None: ...
 
-class GetEvaluationRunRequest(_message.Message):
+class GetRunRequest(_message.Message):
     __slots__ = ("organization_id", "run_id")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     RUN_ID_FIELD_NUMBER: _ClassVar[int]
@@ -289,7 +321,7 @@ class GetEvaluationRunRequest(_message.Message):
     run_id: str
     def __init__(self, organization_id: _Optional[str] = ..., run_id: _Optional[str] = ...) -> None: ...
 
-class EvaluationRunResponse(_message.Message):
+class GetRunResponse(_message.Message):
     __slots__ = ("run",)
     RUN_FIELD_NUMBER: _ClassVar[int]
     run: EvaluationRun

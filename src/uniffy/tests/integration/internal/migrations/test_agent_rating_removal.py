@@ -11,13 +11,9 @@ from uniffy_proto.chat.v1.chat_pb2 import GetThreadMessagesRequest
 
 import uniffy.core.models  # noqa: F401
 from uniffy.core.json_codec import dumps_str
-from uniffy.core.models.agents.agent import Agent
 from uniffy.core.models.agents.message import AgentMessage, AgentMessageRole
 from uniffy.core.models.agents.run_log import AgentRunLog
 from uniffy.core.models.agents.session import AgentSession, AgentSessionKind
-from uniffy.core.models.agents.skill import AgentSkill, AgentSkillSource, SkillSurface
-from uniffy.core.models.agents.skill_invocation import AgentSkillInvocation
-from uniffy.core.models.agents.skill_version import AgentSkillVersion
 from uniffy.core.models.chat.channel import ChannelType, ChatChannel
 from uniffy.core.models.chat.message import ChatMessage, SenderType
 from uniffy.core.models.chat.reaction import ChatReaction
@@ -38,7 +34,7 @@ from uniffy.tests.integration.internal.migrations.test_migration_run import (
 
 
 async def test_rating_removal_preserves_content_and_history(scratch_database, monkeypatch):
-    await _provision_to(scratch_database, "102")
+    await _provision_to(scratch_database, "097")
     engine = create_async_engine(get_database_url())
     try:
         async with AsyncSession(engine, expire_on_commit=False) as session:
@@ -46,13 +42,31 @@ async def test_rating_removal_preserves_content_and_history(scratch_database, mo
             user = User(username="reader", email="reader@example.test")
             session.add_all([org, user])
             await session.flush()
-            agent = Agent(organization_id=org.id, owner_id=user.id, name="Assistant")
-            skill = AgentSkill(
-                organization_id=org.id,
-                source=AgentSkillSource.ORGANIZATION,
-                name="summary",
-                display_name="Summary",
-                content="Summarize the conversation.",
+            agent_id, skill_id, version_id = generate_id(), generate_id(), generate_id()
+            await session.execute(
+                text(
+                    "INSERT INTO agents_agents (id, organization_id, owner_id, name) "
+                    "VALUES (:id, :org, :owner, 'Assistant')"
+                ),
+                {"id": agent_id, "org": org.id, "owner": user.id},
+            )
+            await session.execute(
+                text(
+                    "INSERT INTO agents_skills "
+                    "(id, organization_id, source, name, display_name, content, "
+                    "active_version_id, created_at) "
+                    "VALUES (:id, :org, 'organization', 'summary', 'Summary', "
+                    "'Summarize the conversation.', :version, now())"
+                ),
+                {"id": skill_id, "org": org.id, "version": version_id},
+            )
+            await session.execute(
+                text(
+                    "INSERT INTO agents_skill_versions "
+                    "(id, skill_id, version_number, name, display_name, content) "
+                    "VALUES (:id, :skill, 1, 'summary', 'Summary', 'Summarize the conversation.')"
+                ),
+                {"id": version_id, "skill": skill_id},
             )
             channel = ChatChannel(
                 organization_id=org.id,
@@ -62,8 +76,6 @@ async def test_rating_removal_preserves_content_and_history(scratch_database, mo
                 channel_type=ChannelType.PUBLIC,
             )
             session.add_all([
-                agent,
-                skill,
                 channel,
                 OrganizationMember(
                     organization_id=org.id, user_id=user.id, role=OrganizationRole.ADMIN
@@ -72,16 +84,9 @@ async def test_rating_removal_preserves_content_and_history(scratch_database, mo
             await session.flush()
             conversation = AgentSession(
                 organization_id=org.id,
-                agent_id=agent.id,
+                agent_id=agent_id,
                 user_id=user.id,
                 kind=AgentSessionKind.DIRECT,
-            )
-            version = AgentSkillVersion(
-                skill_id=skill.id,
-                version_number=1,
-                name=skill.name,
-                display_name=skill.display_name,
-                content=skill.content,
             )
             root = ChatMessage(
                 channel_id=channel.id,
@@ -89,7 +94,7 @@ async def test_rating_removal_preserves_content_and_history(scratch_database, mo
                 sender_type=SenderType.USER,
                 content="Please summarize.",
             )
-            session.add_all([conversation, version, root])
+            session.add_all([conversation, root])
             await session.flush()
             reply = AgentMessage(
                 session_id=conversation.id,
@@ -99,35 +104,21 @@ async def test_rating_removal_preserves_content_and_history(scratch_database, mo
             )
             chat_reply = ChatMessage(
                 channel_id=channel.id,
-                sender_id=agent.id,
+                sender_id=agent_id,
                 sender_type=SenderType.AGENT,
                 root_id=root.id,
                 content="Thread answer",
             )
             run = AgentRunLog(
                 organization_id=org.id,
-                agent_id=agent.id,
+                agent_id=agent_id,
                 user_id=user.id,
                 session_id=conversation.id,
                 model="fixture",
             )
             session.add_all([reply, chat_reply, run])
             await session.flush()
-            session.add_all([
-                AgentSkillInvocation(
-                    organization_id=org.id,
-                    user_id=user.id,
-                    agent_id=agent.id,
-                    skill_id=skill.id,
-                    skill_version_id=version.id,
-                    skill_version_number=1,
-                    surface=SkillSurface.SESSION,
-                    session_id=conversation.id,
-                    run_log_id=run.id,
-                    response_message_id=reply.id,
-                ),
-                ChatReaction(message_id=chat_reply.id, user_id=user.id, emoji="ack"),
-            ])
+            session.add(ChatReaction(message_id=chat_reply.id, user_id=user.id, emoji="ack"))
             await session.execute(
                 text(
                     "INSERT INTO agents_skill_drafts "
@@ -139,7 +130,7 @@ async def test_rating_removal_preserves_content_and_history(scratch_database, mo
                     "id": generate_id(),
                     "org": org.id,
                     "user": user.id,
-                    "skill": skill.id,
+                    "skill": skill_id,
                     "evidence": dumps_str([str(reply.id)]),
                 },
             )
@@ -161,24 +152,32 @@ async def test_rating_removal_preserves_content_and_history(scratch_database, mo
                 )
             await session.commit()
 
-            tables = (
-                "agents_agents",
-                "agents_sessions",
-                "agents_messages",
-                "agents_skills",
-                "agents_skill_versions",
-                "agents_skill_drafts",
-                "agents_skill_invocations",
-                "agents_run_logs",
-                "chat_channels",
-                "chat_messages",
-                "chat_reactions",
-            )
-            before = {table: _query(f"SELECT * FROM {table}") for table in tables}
+            projections = {
+                "agents_agents": "id, name, enabled_skills",
+                "agents_sessions": "*",
+                "agents_messages": "*",
+                "agents_skills": "id, name, content, active_version_id, latest_version_number",
+                "agents_skill_versions": "id, skill_id, content, version_number",
+                "agents_skill_drafts": (
+                    "id, target_skill_id, content, evidence_message_ids, status, is_deleted"
+                ),
+                "agents_run_logs": "*",
+                "chat_channels": "*",
+                "chat_messages": "*",
+                "chat_reactions": "*",
+            }
+            before = {
+                table: _query(f"SELECT {columns} FROM {table} ORDER BY 1")
+                for table, columns in projections.items()
+            }
             assert _query("SELECT count(*) FROM agents_message_feedback") == [(2,)]
-            _migrate_to("103")
+            _migrate_to("098")
             assert _query("SELECT to_regclass('agents_message_feedback')") == [(None,)]
-            assert {table: _query(f"SELECT * FROM {table}") for table in tables} == before
+            assert {
+                table: _query(f"SELECT {columns} FROM {table} ORDER BY 1")
+                for table, columns in projections.items()
+            } == before
+            assert _query("SELECT count(*) FROM agents_skill_invocations") == [(0,)]
 
             @asynccontextmanager
             async def open_history():
@@ -192,7 +191,7 @@ async def test_rating_removal_preserves_content_and_history(scratch_database, mo
             sender = SimpleNamespace(
                 resolve_many=AsyncMock(
                     return_value={
-                        agent.id: SimpleNamespace(display_name="Assistant", avatar_url=None)
+                        agent_id: SimpleNamespace(display_name="Assistant", avatar_url=None)
                     }
                 )
             )
@@ -230,10 +229,13 @@ async def test_rating_removal_preserves_content_and_history(scratch_database, mo
 
             config = Config(str(ALEMBIC_INI_PATH))
             config.attributes["configure_logger"] = False
-            command.downgrade(config, "102")
+            command.downgrade(config, "097")
             assert _query("SELECT count(*) FROM agents_message_feedback") == [(0,)]
-            assert {table: _query(f"SELECT * FROM {table}") for table in tables} == before
-            _migrate_to("103")
+            assert {
+                table: _query(f"SELECT {columns} FROM {table} ORDER BY 1")
+                for table, columns in projections.items()
+            } == before
+            _migrate_to("098")
             assert _query("SELECT to_regclass('agents_message_feedback')") == [(None,)]
     finally:
         await engine.dispose()

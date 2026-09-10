@@ -385,7 +385,7 @@ func (x *EvaluationCase) GetUpdatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
-type CreateEvaluationCaseRequest struct {
+type CreateCaseRequest struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
 	Scope          *EvaluationScope       `protobuf:"bytes,2,opt,name=scope,proto3" json:"scope,omitempty"`
@@ -394,20 +394,20 @@ type CreateEvaluationCaseRequest struct {
 	sizeCache      protoimpl.SizeCache
 }
 
-func (x *CreateEvaluationCaseRequest) Reset() {
-	*x = CreateEvaluationCaseRequest{}
+func (x *CreateCaseRequest) Reset() {
+	*x = CreateCaseRequest{}
 	mi := &file_agents_v1_skill_evaluations_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *CreateEvaluationCaseRequest) String() string {
+func (x *CreateCaseRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*CreateEvaluationCaseRequest) ProtoMessage() {}
+func (*CreateCaseRequest) ProtoMessage() {}
 
-func (x *CreateEvaluationCaseRequest) ProtoReflect() protoreflect.Message {
+func (x *CreateCaseRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_agents_v1_skill_evaluations_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -419,33 +419,33 @@ func (x *CreateEvaluationCaseRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use CreateEvaluationCaseRequest.ProtoReflect.Descriptor instead.
-func (*CreateEvaluationCaseRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use CreateCaseRequest.ProtoReflect.Descriptor instead.
+func (*CreateCaseRequest) Descriptor() ([]byte, []int) {
 	return file_agents_v1_skill_evaluations_proto_rawDescGZIP(), []int{4}
 }
 
-func (x *CreateEvaluationCaseRequest) GetOrganizationId() string {
+func (x *CreateCaseRequest) GetOrganizationId() string {
 	if x != nil {
 		return x.OrganizationId
 	}
 	return ""
 }
 
-func (x *CreateEvaluationCaseRequest) GetScope() *EvaluationScope {
+func (x *CreateCaseRequest) GetScope() *EvaluationScope {
 	if x != nil {
 		return x.Scope
 	}
 	return nil
 }
 
-func (x *CreateEvaluationCaseRequest) GetFields() *EvaluationCaseFields {
+func (x *CreateCaseRequest) GetFields() *EvaluationCaseFields {
 	if x != nil {
 		return x.Fields
 	}
 	return nil
 }
 
-type UpdateEvaluationCaseRequest struct {
+type UpdateCaseRequest struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
 	CaseId         string                 `protobuf:"bytes,2,opt,name=case_id,json=caseId,proto3" json:"case_id,omitempty"`
@@ -454,20 +454,20 @@ type UpdateEvaluationCaseRequest struct {
 	sizeCache      protoimpl.SizeCache
 }
 
-func (x *UpdateEvaluationCaseRequest) Reset() {
-	*x = UpdateEvaluationCaseRequest{}
+func (x *UpdateCaseRequest) Reset() {
+	*x = UpdateCaseRequest{}
 	mi := &file_agents_v1_skill_evaluations_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *UpdateEvaluationCaseRequest) String() string {
+func (x *UpdateCaseRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*UpdateEvaluationCaseRequest) ProtoMessage() {}
+func (*UpdateCaseRequest) ProtoMessage() {}
 
-func (x *UpdateEvaluationCaseRequest) ProtoReflect() protoreflect.Message {
+func (x *UpdateCaseRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_agents_v1_skill_evaluations_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -479,53 +479,53 @@ func (x *UpdateEvaluationCaseRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use UpdateEvaluationCaseRequest.ProtoReflect.Descriptor instead.
-func (*UpdateEvaluationCaseRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use UpdateCaseRequest.ProtoReflect.Descriptor instead.
+func (*UpdateCaseRequest) Descriptor() ([]byte, []int) {
 	return file_agents_v1_skill_evaluations_proto_rawDescGZIP(), []int{5}
 }
 
-func (x *UpdateEvaluationCaseRequest) GetOrganizationId() string {
+func (x *UpdateCaseRequest) GetOrganizationId() string {
 	if x != nil {
 		return x.OrganizationId
 	}
 	return ""
 }
 
-func (x *UpdateEvaluationCaseRequest) GetCaseId() string {
+func (x *UpdateCaseRequest) GetCaseId() string {
 	if x != nil {
 		return x.CaseId
 	}
 	return ""
 }
 
-func (x *UpdateEvaluationCaseRequest) GetFields() *EvaluationCaseFields {
+func (x *UpdateCaseRequest) GetFields() *EvaluationCaseFields {
 	if x != nil {
 		return x.Fields
 	}
 	return nil
 }
 
-type EvaluationCaseResponse struct {
+type CreateCaseResponse struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	EvaluationCase *EvaluationCase        `protobuf:"bytes,1,opt,name=evaluation_case,json=evaluationCase,proto3" json:"evaluation_case,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
 
-func (x *EvaluationCaseResponse) Reset() {
-	*x = EvaluationCaseResponse{}
+func (x *CreateCaseResponse) Reset() {
+	*x = CreateCaseResponse{}
 	mi := &file_agents_v1_skill_evaluations_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *EvaluationCaseResponse) String() string {
+func (x *CreateCaseResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*EvaluationCaseResponse) ProtoMessage() {}
+func (*CreateCaseResponse) ProtoMessage() {}
 
-func (x *EvaluationCaseResponse) ProtoReflect() protoreflect.Message {
+func (x *CreateCaseResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_agents_v1_skill_evaluations_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -537,19 +537,63 @@ func (x *EvaluationCaseResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use EvaluationCaseResponse.ProtoReflect.Descriptor instead.
-func (*EvaluationCaseResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use CreateCaseResponse.ProtoReflect.Descriptor instead.
+func (*CreateCaseResponse) Descriptor() ([]byte, []int) {
 	return file_agents_v1_skill_evaluations_proto_rawDescGZIP(), []int{6}
 }
 
-func (x *EvaluationCaseResponse) GetEvaluationCase() *EvaluationCase {
+func (x *CreateCaseResponse) GetEvaluationCase() *EvaluationCase {
 	if x != nil {
 		return x.EvaluationCase
 	}
 	return nil
 }
 
-type DeleteEvaluationCaseRequest struct {
+type UpdateCaseResponse struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	EvaluationCase *EvaluationCase        `protobuf:"bytes,1,opt,name=evaluation_case,json=evaluationCase,proto3" json:"evaluation_case,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *UpdateCaseResponse) Reset() {
+	*x = UpdateCaseResponse{}
+	mi := &file_agents_v1_skill_evaluations_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateCaseResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateCaseResponse) ProtoMessage() {}
+
+func (x *UpdateCaseResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_agents_v1_skill_evaluations_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateCaseResponse.ProtoReflect.Descriptor instead.
+func (*UpdateCaseResponse) Descriptor() ([]byte, []int) {
+	return file_agents_v1_skill_evaluations_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *UpdateCaseResponse) GetEvaluationCase() *EvaluationCase {
+	if x != nil {
+		return x.EvaluationCase
+	}
+	return nil
+}
+
+type DeleteCaseRequest struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
 	CaseId         string                 `protobuf:"bytes,2,opt,name=case_id,json=caseId,proto3" json:"case_id,omitempty"`
@@ -557,21 +601,21 @@ type DeleteEvaluationCaseRequest struct {
 	sizeCache      protoimpl.SizeCache
 }
 
-func (x *DeleteEvaluationCaseRequest) Reset() {
-	*x = DeleteEvaluationCaseRequest{}
-	mi := &file_agents_v1_skill_evaluations_proto_msgTypes[7]
+func (x *DeleteCaseRequest) Reset() {
+	*x = DeleteCaseRequest{}
+	mi := &file_agents_v1_skill_evaluations_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *DeleteEvaluationCaseRequest) String() string {
+func (x *DeleteCaseRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*DeleteEvaluationCaseRequest) ProtoMessage() {}
+func (*DeleteCaseRequest) ProtoMessage() {}
 
-func (x *DeleteEvaluationCaseRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_skill_evaluations_proto_msgTypes[7]
+func (x *DeleteCaseRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agents_v1_skill_evaluations_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -582,46 +626,46 @@ func (x *DeleteEvaluationCaseRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use DeleteEvaluationCaseRequest.ProtoReflect.Descriptor instead.
-func (*DeleteEvaluationCaseRequest) Descriptor() ([]byte, []int) {
-	return file_agents_v1_skill_evaluations_proto_rawDescGZIP(), []int{7}
+// Deprecated: Use DeleteCaseRequest.ProtoReflect.Descriptor instead.
+func (*DeleteCaseRequest) Descriptor() ([]byte, []int) {
+	return file_agents_v1_skill_evaluations_proto_rawDescGZIP(), []int{8}
 }
 
-func (x *DeleteEvaluationCaseRequest) GetOrganizationId() string {
+func (x *DeleteCaseRequest) GetOrganizationId() string {
 	if x != nil {
 		return x.OrganizationId
 	}
 	return ""
 }
 
-func (x *DeleteEvaluationCaseRequest) GetCaseId() string {
+func (x *DeleteCaseRequest) GetCaseId() string {
 	if x != nil {
 		return x.CaseId
 	}
 	return ""
 }
 
-type DeleteEvaluationCaseResponse struct {
+type DeleteCaseResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *DeleteEvaluationCaseResponse) Reset() {
-	*x = DeleteEvaluationCaseResponse{}
-	mi := &file_agents_v1_skill_evaluations_proto_msgTypes[8]
+func (x *DeleteCaseResponse) Reset() {
+	*x = DeleteCaseResponse{}
+	mi := &file_agents_v1_skill_evaluations_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *DeleteEvaluationCaseResponse) String() string {
+func (x *DeleteCaseResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*DeleteEvaluationCaseResponse) ProtoMessage() {}
+func (*DeleteCaseResponse) ProtoMessage() {}
 
-func (x *DeleteEvaluationCaseResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_skill_evaluations_proto_msgTypes[8]
+func (x *DeleteCaseResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_agents_v1_skill_evaluations_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -632,12 +676,12 @@ func (x *DeleteEvaluationCaseResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use DeleteEvaluationCaseResponse.ProtoReflect.Descriptor instead.
-func (*DeleteEvaluationCaseResponse) Descriptor() ([]byte, []int) {
-	return file_agents_v1_skill_evaluations_proto_rawDescGZIP(), []int{8}
+// Deprecated: Use DeleteCaseResponse.ProtoReflect.Descriptor instead.
+func (*DeleteCaseResponse) Descriptor() ([]byte, []int) {
+	return file_agents_v1_skill_evaluations_proto_rawDescGZIP(), []int{9}
 }
 
-type ListEvaluationCasesRequest struct {
+type ListCasesRequest struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
 	Scope          *EvaluationScope       `protobuf:"bytes,2,opt,name=scope,proto3" json:"scope,omitempty"`
@@ -645,21 +689,21 @@ type ListEvaluationCasesRequest struct {
 	sizeCache      protoimpl.SizeCache
 }
 
-func (x *ListEvaluationCasesRequest) Reset() {
-	*x = ListEvaluationCasesRequest{}
-	mi := &file_agents_v1_skill_evaluations_proto_msgTypes[9]
+func (x *ListCasesRequest) Reset() {
+	*x = ListCasesRequest{}
+	mi := &file_agents_v1_skill_evaluations_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *ListEvaluationCasesRequest) String() string {
+func (x *ListCasesRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ListEvaluationCasesRequest) ProtoMessage() {}
+func (*ListCasesRequest) ProtoMessage() {}
 
-func (x *ListEvaluationCasesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_skill_evaluations_proto_msgTypes[9]
+func (x *ListCasesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agents_v1_skill_evaluations_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -670,47 +714,47 @@ func (x *ListEvaluationCasesRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ListEvaluationCasesRequest.ProtoReflect.Descriptor instead.
-func (*ListEvaluationCasesRequest) Descriptor() ([]byte, []int) {
-	return file_agents_v1_skill_evaluations_proto_rawDescGZIP(), []int{9}
+// Deprecated: Use ListCasesRequest.ProtoReflect.Descriptor instead.
+func (*ListCasesRequest) Descriptor() ([]byte, []int) {
+	return file_agents_v1_skill_evaluations_proto_rawDescGZIP(), []int{10}
 }
 
-func (x *ListEvaluationCasesRequest) GetOrganizationId() string {
+func (x *ListCasesRequest) GetOrganizationId() string {
 	if x != nil {
 		return x.OrganizationId
 	}
 	return ""
 }
 
-func (x *ListEvaluationCasesRequest) GetScope() *EvaluationScope {
+func (x *ListCasesRequest) GetScope() *EvaluationScope {
 	if x != nil {
 		return x.Scope
 	}
 	return nil
 }
 
-type ListEvaluationCasesResponse struct {
+type ListCasesResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Cases         []*EvaluationCase      `protobuf:"bytes,1,rep,name=cases,proto3" json:"cases,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *ListEvaluationCasesResponse) Reset() {
-	*x = ListEvaluationCasesResponse{}
-	mi := &file_agents_v1_skill_evaluations_proto_msgTypes[10]
+func (x *ListCasesResponse) Reset() {
+	*x = ListCasesResponse{}
+	mi := &file_agents_v1_skill_evaluations_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *ListEvaluationCasesResponse) String() string {
+func (x *ListCasesResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ListEvaluationCasesResponse) ProtoMessage() {}
+func (*ListCasesResponse) ProtoMessage() {}
 
-func (x *ListEvaluationCasesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_skill_evaluations_proto_msgTypes[10]
+func (x *ListCasesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_agents_v1_skill_evaluations_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -721,12 +765,12 @@ func (x *ListEvaluationCasesResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ListEvaluationCasesResponse.ProtoReflect.Descriptor instead.
-func (*ListEvaluationCasesResponse) Descriptor() ([]byte, []int) {
-	return file_agents_v1_skill_evaluations_proto_rawDescGZIP(), []int{10}
+// Deprecated: Use ListCasesResponse.ProtoReflect.Descriptor instead.
+func (*ListCasesResponse) Descriptor() ([]byte, []int) {
+	return file_agents_v1_skill_evaluations_proto_rawDescGZIP(), []int{11}
 }
 
-func (x *ListEvaluationCasesResponse) GetCases() []*EvaluationCase {
+func (x *ListCasesResponse) GetCases() []*EvaluationCase {
 	if x != nil {
 		return x.Cases
 	}
@@ -748,7 +792,7 @@ type EvaluationTarget struct {
 
 func (x *EvaluationTarget) Reset() {
 	*x = EvaluationTarget{}
-	mi := &file_agents_v1_skill_evaluations_proto_msgTypes[11]
+	mi := &file_agents_v1_skill_evaluations_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -760,7 +804,7 @@ func (x *EvaluationTarget) String() string {
 func (*EvaluationTarget) ProtoMessage() {}
 
 func (x *EvaluationTarget) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_skill_evaluations_proto_msgTypes[11]
+	mi := &file_agents_v1_skill_evaluations_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -773,7 +817,7 @@ func (x *EvaluationTarget) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EvaluationTarget.ProtoReflect.Descriptor instead.
 func (*EvaluationTarget) Descriptor() ([]byte, []int) {
-	return file_agents_v1_skill_evaluations_proto_rawDescGZIP(), []int{11}
+	return file_agents_v1_skill_evaluations_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *EvaluationTarget) GetTarget() isEvaluationTarget_Target {
@@ -824,13 +868,13 @@ func (*EvaluationTarget_SkillVersionId) isEvaluationTarget_Target() {}
 
 func (*EvaluationTarget_DraftId) isEvaluationTarget_Target() {}
 
-type RunSkillEvaluationRequest struct {
+type RunCaseRequest struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
 	RequestId      string                 `protobuf:"bytes,2,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
 	AgentId        string                 `protobuf:"bytes,3,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
 	Target         *EvaluationTarget      `protobuf:"bytes,4,opt,name=target,proto3" json:"target,omitempty"`
-	// RunCase requires exactly one; RunSuite accepts an empty list for the whole suite.
+	// Exactly one case is required.
 	CaseIds       []string `protobuf:"bytes,5,rep,name=case_ids,json=caseIds,proto3" json:"case_ids,omitempty"`
 	Judge         bool     `protobuf:"varint,6,opt,name=judge,proto3" json:"judge,omitempty"`
 	ModelOverride string   `protobuf:"bytes,7,opt,name=model_override,json=modelOverride,proto3" json:"model_override,omitempty"`
@@ -839,21 +883,21 @@ type RunSkillEvaluationRequest struct {
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *RunSkillEvaluationRequest) Reset() {
-	*x = RunSkillEvaluationRequest{}
-	mi := &file_agents_v1_skill_evaluations_proto_msgTypes[12]
+func (x *RunCaseRequest) Reset() {
+	*x = RunCaseRequest{}
+	mi := &file_agents_v1_skill_evaluations_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *RunSkillEvaluationRequest) String() string {
+func (x *RunCaseRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*RunSkillEvaluationRequest) ProtoMessage() {}
+func (*RunCaseRequest) ProtoMessage() {}
 
-func (x *RunSkillEvaluationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_skill_evaluations_proto_msgTypes[12]
+func (x *RunCaseRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agents_v1_skill_evaluations_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -864,61 +908,162 @@ func (x *RunSkillEvaluationRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use RunSkillEvaluationRequest.ProtoReflect.Descriptor instead.
-func (*RunSkillEvaluationRequest) Descriptor() ([]byte, []int) {
-	return file_agents_v1_skill_evaluations_proto_rawDescGZIP(), []int{12}
+// Deprecated: Use RunCaseRequest.ProtoReflect.Descriptor instead.
+func (*RunCaseRequest) Descriptor() ([]byte, []int) {
+	return file_agents_v1_skill_evaluations_proto_rawDescGZIP(), []int{13}
 }
 
-func (x *RunSkillEvaluationRequest) GetOrganizationId() string {
+func (x *RunCaseRequest) GetOrganizationId() string {
 	if x != nil {
 		return x.OrganizationId
 	}
 	return ""
 }
 
-func (x *RunSkillEvaluationRequest) GetRequestId() string {
+func (x *RunCaseRequest) GetRequestId() string {
 	if x != nil {
 		return x.RequestId
 	}
 	return ""
 }
 
-func (x *RunSkillEvaluationRequest) GetAgentId() string {
+func (x *RunCaseRequest) GetAgentId() string {
 	if x != nil {
 		return x.AgentId
 	}
 	return ""
 }
 
-func (x *RunSkillEvaluationRequest) GetTarget() *EvaluationTarget {
+func (x *RunCaseRequest) GetTarget() *EvaluationTarget {
 	if x != nil {
 		return x.Target
 	}
 	return nil
 }
 
-func (x *RunSkillEvaluationRequest) GetCaseIds() []string {
+func (x *RunCaseRequest) GetCaseIds() []string {
 	if x != nil {
 		return x.CaseIds
 	}
 	return nil
 }
 
-func (x *RunSkillEvaluationRequest) GetJudge() bool {
+func (x *RunCaseRequest) GetJudge() bool {
 	if x != nil {
 		return x.Judge
 	}
 	return false
 }
 
-func (x *RunSkillEvaluationRequest) GetModelOverride() string {
+func (x *RunCaseRequest) GetModelOverride() string {
 	if x != nil {
 		return x.ModelOverride
 	}
 	return ""
 }
 
-func (x *RunSkillEvaluationRequest) GetJudgeModel() string {
+func (x *RunCaseRequest) GetJudgeModel() string {
+	if x != nil {
+		return x.JudgeModel
+	}
+	return ""
+}
+
+type RunSuiteRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	RequestId      string                 `protobuf:"bytes,2,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	AgentId        string                 `protobuf:"bytes,3,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
+	Target         *EvaluationTarget      `protobuf:"bytes,4,opt,name=target,proto3" json:"target,omitempty"`
+	// An empty list selects the whole suite.
+	CaseIds       []string `protobuf:"bytes,5,rep,name=case_ids,json=caseIds,proto3" json:"case_ids,omitempty"`
+	Judge         bool     `protobuf:"varint,6,opt,name=judge,proto3" json:"judge,omitempty"`
+	ModelOverride string   `protobuf:"bytes,7,opt,name=model_override,json=modelOverride,proto3" json:"model_override,omitempty"`
+	JudgeModel    string   `protobuf:"bytes,8,opt,name=judge_model,json=judgeModel,proto3" json:"judge_model,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RunSuiteRequest) Reset() {
+	*x = RunSuiteRequest{}
+	mi := &file_agents_v1_skill_evaluations_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RunSuiteRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RunSuiteRequest) ProtoMessage() {}
+
+func (x *RunSuiteRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agents_v1_skill_evaluations_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RunSuiteRequest.ProtoReflect.Descriptor instead.
+func (*RunSuiteRequest) Descriptor() ([]byte, []int) {
+	return file_agents_v1_skill_evaluations_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *RunSuiteRequest) GetOrganizationId() string {
+	if x != nil {
+		return x.OrganizationId
+	}
+	return ""
+}
+
+func (x *RunSuiteRequest) GetRequestId() string {
+	if x != nil {
+		return x.RequestId
+	}
+	return ""
+}
+
+func (x *RunSuiteRequest) GetAgentId() string {
+	if x != nil {
+		return x.AgentId
+	}
+	return ""
+}
+
+func (x *RunSuiteRequest) GetTarget() *EvaluationTarget {
+	if x != nil {
+		return x.Target
+	}
+	return nil
+}
+
+func (x *RunSuiteRequest) GetCaseIds() []string {
+	if x != nil {
+		return x.CaseIds
+	}
+	return nil
+}
+
+func (x *RunSuiteRequest) GetJudge() bool {
+	if x != nil {
+		return x.Judge
+	}
+	return false
+}
+
+func (x *RunSuiteRequest) GetModelOverride() string {
+	if x != nil {
+		return x.ModelOverride
+	}
+	return ""
+}
+
+func (x *RunSuiteRequest) GetJudgeModel() string {
 	if x != nil {
 		return x.JudgeModel
 	}
@@ -938,7 +1083,7 @@ type EvaluationToolAttempt struct {
 
 func (x *EvaluationToolAttempt) Reset() {
 	*x = EvaluationToolAttempt{}
-	mi := &file_agents_v1_skill_evaluations_proto_msgTypes[13]
+	mi := &file_agents_v1_skill_evaluations_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -950,7 +1095,7 @@ func (x *EvaluationToolAttempt) String() string {
 func (*EvaluationToolAttempt) ProtoMessage() {}
 
 func (x *EvaluationToolAttempt) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_skill_evaluations_proto_msgTypes[13]
+	mi := &file_agents_v1_skill_evaluations_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -963,7 +1108,7 @@ func (x *EvaluationToolAttempt) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EvaluationToolAttempt.ProtoReflect.Descriptor instead.
 func (*EvaluationToolAttempt) Descriptor() ([]byte, []int) {
-	return file_agents_v1_skill_evaluations_proto_rawDescGZIP(), []int{13}
+	return file_agents_v1_skill_evaluations_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *EvaluationToolAttempt) GetToolName() string {
@@ -1012,7 +1157,7 @@ type EvaluationAssertion struct {
 
 func (x *EvaluationAssertion) Reset() {
 	*x = EvaluationAssertion{}
-	mi := &file_agents_v1_skill_evaluations_proto_msgTypes[14]
+	mi := &file_agents_v1_skill_evaluations_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1024,7 +1169,7 @@ func (x *EvaluationAssertion) String() string {
 func (*EvaluationAssertion) ProtoMessage() {}
 
 func (x *EvaluationAssertion) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_skill_evaluations_proto_msgTypes[14]
+	mi := &file_agents_v1_skill_evaluations_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1037,7 +1182,7 @@ func (x *EvaluationAssertion) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EvaluationAssertion.ProtoReflect.Descriptor instead.
 func (*EvaluationAssertion) Descriptor() ([]byte, []int) {
-	return file_agents_v1_skill_evaluations_proto_rawDescGZIP(), []int{14}
+	return file_agents_v1_skill_evaluations_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *EvaluationAssertion) GetToolName() string {
@@ -1073,7 +1218,7 @@ type EvaluationJudge struct {
 
 func (x *EvaluationJudge) Reset() {
 	*x = EvaluationJudge{}
-	mi := &file_agents_v1_skill_evaluations_proto_msgTypes[15]
+	mi := &file_agents_v1_skill_evaluations_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1085,7 +1230,7 @@ func (x *EvaluationJudge) String() string {
 func (*EvaluationJudge) ProtoMessage() {}
 
 func (x *EvaluationJudge) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_skill_evaluations_proto_msgTypes[15]
+	mi := &file_agents_v1_skill_evaluations_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1098,7 +1243,7 @@ func (x *EvaluationJudge) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EvaluationJudge.ProtoReflect.Descriptor instead.
 func (*EvaluationJudge) Descriptor() ([]byte, []int) {
-	return file_agents_v1_skill_evaluations_proto_rawDescGZIP(), []int{15}
+	return file_agents_v1_skill_evaluations_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *EvaluationJudge) GetStatus() string {
@@ -1165,7 +1310,7 @@ type EvaluationRun struct {
 
 func (x *EvaluationRun) Reset() {
 	*x = EvaluationRun{}
-	mi := &file_agents_v1_skill_evaluations_proto_msgTypes[16]
+	mi := &file_agents_v1_skill_evaluations_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1177,7 +1322,7 @@ func (x *EvaluationRun) String() string {
 func (*EvaluationRun) ProtoMessage() {}
 
 func (x *EvaluationRun) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_skill_evaluations_proto_msgTypes[16]
+	mi := &file_agents_v1_skill_evaluations_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1190,7 +1335,7 @@ func (x *EvaluationRun) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EvaluationRun.ProtoReflect.Descriptor instead.
 func (*EvaluationRun) Descriptor() ([]byte, []int) {
-	return file_agents_v1_skill_evaluations_proto_rawDescGZIP(), []int{16}
+	return file_agents_v1_skill_evaluations_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *EvaluationRun) GetId() string {
@@ -1389,28 +1534,28 @@ func (x *EvaluationRun) GetRunLogId() string {
 	return ""
 }
 
-type RunSkillEvaluationResponse struct {
+type RunCaseResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Runs          []*EvaluationRun       `protobuf:"bytes,1,rep,name=runs,proto3" json:"runs,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *RunSkillEvaluationResponse) Reset() {
-	*x = RunSkillEvaluationResponse{}
-	mi := &file_agents_v1_skill_evaluations_proto_msgTypes[17]
+func (x *RunCaseResponse) Reset() {
+	*x = RunCaseResponse{}
+	mi := &file_agents_v1_skill_evaluations_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *RunSkillEvaluationResponse) String() string {
+func (x *RunCaseResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*RunSkillEvaluationResponse) ProtoMessage() {}
+func (*RunCaseResponse) ProtoMessage() {}
 
-func (x *RunSkillEvaluationResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_skill_evaluations_proto_msgTypes[17]
+func (x *RunCaseResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_agents_v1_skill_evaluations_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1421,19 +1566,63 @@ func (x *RunSkillEvaluationResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use RunSkillEvaluationResponse.ProtoReflect.Descriptor instead.
-func (*RunSkillEvaluationResponse) Descriptor() ([]byte, []int) {
-	return file_agents_v1_skill_evaluations_proto_rawDescGZIP(), []int{17}
+// Deprecated: Use RunCaseResponse.ProtoReflect.Descriptor instead.
+func (*RunCaseResponse) Descriptor() ([]byte, []int) {
+	return file_agents_v1_skill_evaluations_proto_rawDescGZIP(), []int{19}
 }
 
-func (x *RunSkillEvaluationResponse) GetRuns() []*EvaluationRun {
+func (x *RunCaseResponse) GetRuns() []*EvaluationRun {
 	if x != nil {
 		return x.Runs
 	}
 	return nil
 }
 
-type ListEvaluationRunsRequest struct {
+type RunSuiteResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Runs          []*EvaluationRun       `protobuf:"bytes,1,rep,name=runs,proto3" json:"runs,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RunSuiteResponse) Reset() {
+	*x = RunSuiteResponse{}
+	mi := &file_agents_v1_skill_evaluations_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RunSuiteResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RunSuiteResponse) ProtoMessage() {}
+
+func (x *RunSuiteResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_agents_v1_skill_evaluations_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RunSuiteResponse.ProtoReflect.Descriptor instead.
+func (*RunSuiteResponse) Descriptor() ([]byte, []int) {
+	return file_agents_v1_skill_evaluations_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *RunSuiteResponse) GetRuns() []*EvaluationRun {
+	if x != nil {
+		return x.Runs
+	}
+	return nil
+}
+
+type ListRunsRequest struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
 	AgentId        string                 `protobuf:"bytes,2,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
@@ -1444,21 +1633,21 @@ type ListEvaluationRunsRequest struct {
 	sizeCache      protoimpl.SizeCache
 }
 
-func (x *ListEvaluationRunsRequest) Reset() {
-	*x = ListEvaluationRunsRequest{}
-	mi := &file_agents_v1_skill_evaluations_proto_msgTypes[18]
+func (x *ListRunsRequest) Reset() {
+	*x = ListRunsRequest{}
+	mi := &file_agents_v1_skill_evaluations_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *ListEvaluationRunsRequest) String() string {
+func (x *ListRunsRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ListEvaluationRunsRequest) ProtoMessage() {}
+func (*ListRunsRequest) ProtoMessage() {}
 
-func (x *ListEvaluationRunsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_skill_evaluations_proto_msgTypes[18]
+func (x *ListRunsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agents_v1_skill_evaluations_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1469,47 +1658,47 @@ func (x *ListEvaluationRunsRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ListEvaluationRunsRequest.ProtoReflect.Descriptor instead.
-func (*ListEvaluationRunsRequest) Descriptor() ([]byte, []int) {
-	return file_agents_v1_skill_evaluations_proto_rawDescGZIP(), []int{18}
+// Deprecated: Use ListRunsRequest.ProtoReflect.Descriptor instead.
+func (*ListRunsRequest) Descriptor() ([]byte, []int) {
+	return file_agents_v1_skill_evaluations_proto_rawDescGZIP(), []int{21}
 }
 
-func (x *ListEvaluationRunsRequest) GetOrganizationId() string {
+func (x *ListRunsRequest) GetOrganizationId() string {
 	if x != nil {
 		return x.OrganizationId
 	}
 	return ""
 }
 
-func (x *ListEvaluationRunsRequest) GetAgentId() string {
+func (x *ListRunsRequest) GetAgentId() string {
 	if x != nil {
 		return x.AgentId
 	}
 	return ""
 }
 
-func (x *ListEvaluationRunsRequest) GetScope() *EvaluationScope {
+func (x *ListRunsRequest) GetScope() *EvaluationScope {
 	if x != nil {
 		return x.Scope
 	}
 	return nil
 }
 
-func (x *ListEvaluationRunsRequest) GetPageSize() int32 {
+func (x *ListRunsRequest) GetPageSize() int32 {
 	if x != nil {
 		return x.PageSize
 	}
 	return 0
 }
 
-func (x *ListEvaluationRunsRequest) GetCursor() string {
+func (x *ListRunsRequest) GetCursor() string {
 	if x != nil {
 		return x.Cursor
 	}
 	return ""
 }
 
-type ListEvaluationRunsResponse struct {
+type ListRunsResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Runs          []*EvaluationRun       `protobuf:"bytes,1,rep,name=runs,proto3" json:"runs,omitempty"`
 	NextCursor    string                 `protobuf:"bytes,2,opt,name=next_cursor,json=nextCursor,proto3" json:"next_cursor,omitempty"`
@@ -1517,21 +1706,21 @@ type ListEvaluationRunsResponse struct {
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *ListEvaluationRunsResponse) Reset() {
-	*x = ListEvaluationRunsResponse{}
-	mi := &file_agents_v1_skill_evaluations_proto_msgTypes[19]
+func (x *ListRunsResponse) Reset() {
+	*x = ListRunsResponse{}
+	mi := &file_agents_v1_skill_evaluations_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *ListEvaluationRunsResponse) String() string {
+func (x *ListRunsResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ListEvaluationRunsResponse) ProtoMessage() {}
+func (*ListRunsResponse) ProtoMessage() {}
 
-func (x *ListEvaluationRunsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_skill_evaluations_proto_msgTypes[19]
+func (x *ListRunsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_agents_v1_skill_evaluations_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1542,26 +1731,26 @@ func (x *ListEvaluationRunsResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ListEvaluationRunsResponse.ProtoReflect.Descriptor instead.
-func (*ListEvaluationRunsResponse) Descriptor() ([]byte, []int) {
-	return file_agents_v1_skill_evaluations_proto_rawDescGZIP(), []int{19}
+// Deprecated: Use ListRunsResponse.ProtoReflect.Descriptor instead.
+func (*ListRunsResponse) Descriptor() ([]byte, []int) {
+	return file_agents_v1_skill_evaluations_proto_rawDescGZIP(), []int{22}
 }
 
-func (x *ListEvaluationRunsResponse) GetRuns() []*EvaluationRun {
+func (x *ListRunsResponse) GetRuns() []*EvaluationRun {
 	if x != nil {
 		return x.Runs
 	}
 	return nil
 }
 
-func (x *ListEvaluationRunsResponse) GetNextCursor() string {
+func (x *ListRunsResponse) GetNextCursor() string {
 	if x != nil {
 		return x.NextCursor
 	}
 	return ""
 }
 
-type GetEvaluationRunRequest struct {
+type GetRunRequest struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
 	RunId          string                 `protobuf:"bytes,2,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
@@ -1569,21 +1758,21 @@ type GetEvaluationRunRequest struct {
 	sizeCache      protoimpl.SizeCache
 }
 
-func (x *GetEvaluationRunRequest) Reset() {
-	*x = GetEvaluationRunRequest{}
-	mi := &file_agents_v1_skill_evaluations_proto_msgTypes[20]
+func (x *GetRunRequest) Reset() {
+	*x = GetRunRequest{}
+	mi := &file_agents_v1_skill_evaluations_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *GetEvaluationRunRequest) String() string {
+func (x *GetRunRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*GetEvaluationRunRequest) ProtoMessage() {}
+func (*GetRunRequest) ProtoMessage() {}
 
-func (x *GetEvaluationRunRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_skill_evaluations_proto_msgTypes[20]
+func (x *GetRunRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agents_v1_skill_evaluations_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1594,47 +1783,47 @@ func (x *GetEvaluationRunRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use GetEvaluationRunRequest.ProtoReflect.Descriptor instead.
-func (*GetEvaluationRunRequest) Descriptor() ([]byte, []int) {
-	return file_agents_v1_skill_evaluations_proto_rawDescGZIP(), []int{20}
+// Deprecated: Use GetRunRequest.ProtoReflect.Descriptor instead.
+func (*GetRunRequest) Descriptor() ([]byte, []int) {
+	return file_agents_v1_skill_evaluations_proto_rawDescGZIP(), []int{23}
 }
 
-func (x *GetEvaluationRunRequest) GetOrganizationId() string {
+func (x *GetRunRequest) GetOrganizationId() string {
 	if x != nil {
 		return x.OrganizationId
 	}
 	return ""
 }
 
-func (x *GetEvaluationRunRequest) GetRunId() string {
+func (x *GetRunRequest) GetRunId() string {
 	if x != nil {
 		return x.RunId
 	}
 	return ""
 }
 
-type EvaluationRunResponse struct {
+type GetRunResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Run           *EvaluationRun         `protobuf:"bytes,1,opt,name=run,proto3" json:"run,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *EvaluationRunResponse) Reset() {
-	*x = EvaluationRunResponse{}
-	mi := &file_agents_v1_skill_evaluations_proto_msgTypes[21]
+func (x *GetRunResponse) Reset() {
+	*x = GetRunResponse{}
+	mi := &file_agents_v1_skill_evaluations_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *EvaluationRunResponse) String() string {
+func (x *GetRunResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*EvaluationRunResponse) ProtoMessage() {}
+func (*GetRunResponse) ProtoMessage() {}
 
-func (x *EvaluationRunResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_skill_evaluations_proto_msgTypes[21]
+func (x *GetRunResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_agents_v1_skill_evaluations_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1645,12 +1834,12 @@ func (x *EvaluationRunResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use EvaluationRunResponse.ProtoReflect.Descriptor instead.
-func (*EvaluationRunResponse) Descriptor() ([]byte, []int) {
-	return file_agents_v1_skill_evaluations_proto_rawDescGZIP(), []int{21}
+// Deprecated: Use GetRunResponse.ProtoReflect.Descriptor instead.
+func (*GetRunResponse) Descriptor() ([]byte, []int) {
+	return file_agents_v1_skill_evaluations_proto_rawDescGZIP(), []int{24}
 }
 
-func (x *EvaluationRunResponse) GetRun() *EvaluationRun {
+func (x *GetRunResponse) GetRun() *EvaluationRun {
 	if x != nil {
 		return x.Run
 	}
@@ -1684,33 +1873,46 @@ const file_agents_v1_skill_evaluations_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\xb1\x01\n" +
-	"\x1bCreateEvaluationCaseRequest\x12'\n" +
+	"updated_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\xa7\x01\n" +
+	"\x11CreateCaseRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x120\n" +
 	"\x05scope\x18\x02 \x01(\v2\x1a.agents.v1.EvaluationScopeR\x05scope\x127\n" +
-	"\x06fields\x18\x03 \x01(\v2\x1f.agents.v1.EvaluationCaseFieldsR\x06fields\"\x98\x01\n" +
-	"\x1bUpdateEvaluationCaseRequest\x12'\n" +
+	"\x06fields\x18\x03 \x01(\v2\x1f.agents.v1.EvaluationCaseFieldsR\x06fields\"\x8e\x01\n" +
+	"\x11UpdateCaseRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x17\n" +
 	"\acase_id\x18\x02 \x01(\tR\x06caseId\x127\n" +
-	"\x06fields\x18\x03 \x01(\v2\x1f.agents.v1.EvaluationCaseFieldsR\x06fields\"\\\n" +
-	"\x16EvaluationCaseResponse\x12B\n" +
-	"\x0fevaluation_case\x18\x01 \x01(\v2\x19.agents.v1.EvaluationCaseR\x0eevaluationCase\"_\n" +
-	"\x1bDeleteEvaluationCaseRequest\x12'\n" +
+	"\x06fields\x18\x03 \x01(\v2\x1f.agents.v1.EvaluationCaseFieldsR\x06fields\"X\n" +
+	"\x12CreateCaseResponse\x12B\n" +
+	"\x0fevaluation_case\x18\x01 \x01(\v2\x19.agents.v1.EvaluationCaseR\x0eevaluationCase\"X\n" +
+	"\x12UpdateCaseResponse\x12B\n" +
+	"\x0fevaluation_case\x18\x01 \x01(\v2\x19.agents.v1.EvaluationCaseR\x0eevaluationCase\"U\n" +
+	"\x11DeleteCaseRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x17\n" +
-	"\acase_id\x18\x02 \x01(\tR\x06caseId\"\x1e\n" +
-	"\x1cDeleteEvaluationCaseResponse\"w\n" +
-	"\x1aListEvaluationCasesRequest\x12'\n" +
+	"\acase_id\x18\x02 \x01(\tR\x06caseId\"\x14\n" +
+	"\x12DeleteCaseResponse\"m\n" +
+	"\x10ListCasesRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x120\n" +
-	"\x05scope\x18\x02 \x01(\v2\x1a.agents.v1.EvaluationScopeR\x05scope\"N\n" +
-	"\x1bListEvaluationCasesResponse\x12/\n" +
+	"\x05scope\x18\x02 \x01(\v2\x1a.agents.v1.EvaluationScopeR\x05scope\"D\n" +
+	"\x11ListCasesResponse\x12/\n" +
 	"\x05cases\x18\x01 \x03(\v2\x19.agents.v1.EvaluationCaseR\x05cases\"\xa1\x01\n" +
 	"\x10EvaluationTarget\x12*\n" +
 	"\x10skill_version_id\x18\x01 \x01(\tH\x00R\x0eskillVersionId\x12\x1b\n" +
 	"\bdraft_id\x18\x02 \x01(\tH\x00R\adraftId\x12(\n" +
 	"\rdraft_content\x18\x03 \x01(\tH\x01R\fdraftContent\x88\x01\x01B\b\n" +
 	"\x06targetB\x10\n" +
-	"\x0e_draft_content\"\xac\x02\n" +
-	"\x19RunSkillEvaluationRequest\x12'\n" +
+	"\x0e_draft_content\"\xa1\x02\n" +
+	"\x0eRunCaseRequest\x12'\n" +
+	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1d\n" +
+	"\n" +
+	"request_id\x18\x02 \x01(\tR\trequestId\x12\x19\n" +
+	"\bagent_id\x18\x03 \x01(\tR\aagentId\x123\n" +
+	"\x06target\x18\x04 \x01(\v2\x1b.agents.v1.EvaluationTargetR\x06target\x12\x19\n" +
+	"\bcase_ids\x18\x05 \x03(\tR\acaseIds\x12\x14\n" +
+	"\x05judge\x18\x06 \x01(\bR\x05judge\x12%\n" +
+	"\x0emodel_override\x18\a \x01(\tR\rmodelOverride\x12\x1f\n" +
+	"\vjudge_model\x18\b \x01(\tR\n" +
+	"judgeModel\"\xa2\x02\n" +
+	"\x0fRunSuiteRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1d\n" +
 	"\n" +
 	"request_id\x18\x02 \x01(\tR\trequestId\x12\x19\n" +
@@ -1779,23 +1981,25 @@ const file_agents_v1_skill_evaluations_proto_rawDesc = "" +
 	"\t_draft_idB\a\n" +
 	"\x05_costB\x10\n" +
 	"\x0e_cost_currencyB\r\n" +
-	"\v_run_log_id\"J\n" +
-	"\x1aRunSkillEvaluationResponse\x12,\n" +
-	"\x04runs\x18\x01 \x03(\v2\x18.agents.v1.EvaluationRunR\x04runs\"\xc6\x01\n" +
-	"\x19ListEvaluationRunsRequest\x12'\n" +
+	"\v_run_log_id\"?\n" +
+	"\x0fRunCaseResponse\x12,\n" +
+	"\x04runs\x18\x01 \x03(\v2\x18.agents.v1.EvaluationRunR\x04runs\"@\n" +
+	"\x10RunSuiteResponse\x12,\n" +
+	"\x04runs\x18\x01 \x03(\v2\x18.agents.v1.EvaluationRunR\x04runs\"\xbc\x01\n" +
+	"\x0fListRunsRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x19\n" +
 	"\bagent_id\x18\x02 \x01(\tR\aagentId\x120\n" +
 	"\x05scope\x18\x03 \x01(\v2\x1a.agents.v1.EvaluationScopeR\x05scope\x12\x1b\n" +
 	"\tpage_size\x18\x04 \x01(\x05R\bpageSize\x12\x16\n" +
-	"\x06cursor\x18\x05 \x01(\tR\x06cursor\"k\n" +
-	"\x1aListEvaluationRunsResponse\x12,\n" +
+	"\x06cursor\x18\x05 \x01(\tR\x06cursor\"a\n" +
+	"\x10ListRunsResponse\x12,\n" +
 	"\x04runs\x18\x01 \x03(\v2\x18.agents.v1.EvaluationRunR\x04runs\x12\x1f\n" +
 	"\vnext_cursor\x18\x02 \x01(\tR\n" +
-	"nextCursor\"Y\n" +
-	"\x17GetEvaluationRunRequest\x12'\n" +
+	"nextCursor\"O\n" +
+	"\rGetRunRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x15\n" +
-	"\x06run_id\x18\x02 \x01(\tR\x05runId\"C\n" +
-	"\x15EvaluationRunResponse\x12*\n" +
+	"\x06run_id\x18\x02 \x01(\tR\x05runId\"<\n" +
+	"\x0eGetRunResponse\x12*\n" +
 	"\x03run\x18\x01 \x01(\v2\x18.agents.v1.EvaluationRunR\x03run*\xef\x01\n" +
 	"\x10EvaluationStatus\x12!\n" +
 	"\x1dEVALUATION_STATUS_UNSPECIFIED\x10\x00\x12\x1c\n" +
@@ -1804,19 +2008,19 @@ const file_agents_v1_skill_evaluations_proto_rawDesc = "" +
 	"\x18EVALUATION_STATUS_PASSED\x10\x03\x12\x1c\n" +
 	"\x18EVALUATION_STATUS_FAILED\x10\x04\x12\"\n" +
 	"\x1eEVALUATION_STATUS_INCONCLUSIVE\x10\x05\x12\x1b\n" +
-	"\x17EVALUATION_STATUS_ERROR\x10\x062\xf0\x05\n" +
-	"\x17SkillEvaluationsService\x12Y\n" +
+	"\x17EVALUATION_STATUS_ERROR\x10\x062\xdd\x04\n" +
+	"\x17SkillEvaluationsService\x12K\n" +
 	"\n" +
-	"CreateCase\x12&.agents.v1.CreateEvaluationCaseRequest\x1a!.agents.v1.EvaluationCaseResponse\"\x00\x12Y\n" +
+	"CreateCase\x12\x1c.agents.v1.CreateCaseRequest\x1a\x1d.agents.v1.CreateCaseResponse\"\x00\x12K\n" +
 	"\n" +
-	"UpdateCase\x12&.agents.v1.UpdateEvaluationCaseRequest\x1a!.agents.v1.EvaluationCaseResponse\"\x00\x12_\n" +
+	"UpdateCase\x12\x1c.agents.v1.UpdateCaseRequest\x1a\x1d.agents.v1.UpdateCaseResponse\"\x00\x12K\n" +
 	"\n" +
-	"DeleteCase\x12&.agents.v1.DeleteEvaluationCaseRequest\x1a'.agents.v1.DeleteEvaluationCaseResponse\"\x00\x12\\\n" +
-	"\tListCases\x12%.agents.v1.ListEvaluationCasesRequest\x1a&.agents.v1.ListEvaluationCasesResponse\"\x00\x12X\n" +
-	"\aRunCase\x12$.agents.v1.RunSkillEvaluationRequest\x1a%.agents.v1.RunSkillEvaluationResponse\"\x00\x12Y\n" +
-	"\bRunSuite\x12$.agents.v1.RunSkillEvaluationRequest\x1a%.agents.v1.RunSkillEvaluationResponse\"\x00\x12Y\n" +
-	"\bListRuns\x12$.agents.v1.ListEvaluationRunsRequest\x1a%.agents.v1.ListEvaluationRunsResponse\"\x00\x12P\n" +
-	"\x06GetRun\x12\".agents.v1.GetEvaluationRunRequest\x1a .agents.v1.EvaluationRunResponse\"\x00B9Z7github.com/uniffy-io/uniffy-proto-go/agents/v1;agentsv1b\x06proto3"
+	"DeleteCase\x12\x1c.agents.v1.DeleteCaseRequest\x1a\x1d.agents.v1.DeleteCaseResponse\"\x00\x12H\n" +
+	"\tListCases\x12\x1b.agents.v1.ListCasesRequest\x1a\x1c.agents.v1.ListCasesResponse\"\x00\x12B\n" +
+	"\aRunCase\x12\x19.agents.v1.RunCaseRequest\x1a\x1a.agents.v1.RunCaseResponse\"\x00\x12E\n" +
+	"\bRunSuite\x12\x1a.agents.v1.RunSuiteRequest\x1a\x1b.agents.v1.RunSuiteResponse\"\x00\x12E\n" +
+	"\bListRuns\x12\x1a.agents.v1.ListRunsRequest\x1a\x1b.agents.v1.ListRunsResponse\"\x00\x12?\n" +
+	"\x06GetRun\x12\x18.agents.v1.GetRunRequest\x1a\x19.agents.v1.GetRunResponse\"\x00B9Z7github.com/uniffy-io/uniffy-proto-go/agents/v1;agentsv1b\x06proto3"
 
 var (
 	file_agents_v1_skill_evaluations_proto_rawDescOnce sync.Once
@@ -1831,78 +2035,84 @@ func file_agents_v1_skill_evaluations_proto_rawDescGZIP() []byte {
 }
 
 var file_agents_v1_skill_evaluations_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_agents_v1_skill_evaluations_proto_msgTypes = make([]protoimpl.MessageInfo, 22)
+var file_agents_v1_skill_evaluations_proto_msgTypes = make([]protoimpl.MessageInfo, 25)
 var file_agents_v1_skill_evaluations_proto_goTypes = []any{
-	(EvaluationStatus)(0),                // 0: agents.v1.EvaluationStatus
-	(*EvaluationScope)(nil),              // 1: agents.v1.EvaluationScope
-	(*ToolFixture)(nil),                  // 2: agents.v1.ToolFixture
-	(*EvaluationCaseFields)(nil),         // 3: agents.v1.EvaluationCaseFields
-	(*EvaluationCase)(nil),               // 4: agents.v1.EvaluationCase
-	(*CreateEvaluationCaseRequest)(nil),  // 5: agents.v1.CreateEvaluationCaseRequest
-	(*UpdateEvaluationCaseRequest)(nil),  // 6: agents.v1.UpdateEvaluationCaseRequest
-	(*EvaluationCaseResponse)(nil),       // 7: agents.v1.EvaluationCaseResponse
-	(*DeleteEvaluationCaseRequest)(nil),  // 8: agents.v1.DeleteEvaluationCaseRequest
-	(*DeleteEvaluationCaseResponse)(nil), // 9: agents.v1.DeleteEvaluationCaseResponse
-	(*ListEvaluationCasesRequest)(nil),   // 10: agents.v1.ListEvaluationCasesRequest
-	(*ListEvaluationCasesResponse)(nil),  // 11: agents.v1.ListEvaluationCasesResponse
-	(*EvaluationTarget)(nil),             // 12: agents.v1.EvaluationTarget
-	(*RunSkillEvaluationRequest)(nil),    // 13: agents.v1.RunSkillEvaluationRequest
-	(*EvaluationToolAttempt)(nil),        // 14: agents.v1.EvaluationToolAttempt
-	(*EvaluationAssertion)(nil),          // 15: agents.v1.EvaluationAssertion
-	(*EvaluationJudge)(nil),              // 16: agents.v1.EvaluationJudge
-	(*EvaluationRun)(nil),                // 17: agents.v1.EvaluationRun
-	(*RunSkillEvaluationResponse)(nil),   // 18: agents.v1.RunSkillEvaluationResponse
-	(*ListEvaluationRunsRequest)(nil),    // 19: agents.v1.ListEvaluationRunsRequest
-	(*ListEvaluationRunsResponse)(nil),   // 20: agents.v1.ListEvaluationRunsResponse
-	(*GetEvaluationRunRequest)(nil),      // 21: agents.v1.GetEvaluationRunRequest
-	(*EvaluationRunResponse)(nil),        // 22: agents.v1.EvaluationRunResponse
-	(*timestamppb.Timestamp)(nil),        // 23: google.protobuf.Timestamp
+	(EvaluationStatus)(0),         // 0: agents.v1.EvaluationStatus
+	(*EvaluationScope)(nil),       // 1: agents.v1.EvaluationScope
+	(*ToolFixture)(nil),           // 2: agents.v1.ToolFixture
+	(*EvaluationCaseFields)(nil),  // 3: agents.v1.EvaluationCaseFields
+	(*EvaluationCase)(nil),        // 4: agents.v1.EvaluationCase
+	(*CreateCaseRequest)(nil),     // 5: agents.v1.CreateCaseRequest
+	(*UpdateCaseRequest)(nil),     // 6: agents.v1.UpdateCaseRequest
+	(*CreateCaseResponse)(nil),    // 7: agents.v1.CreateCaseResponse
+	(*UpdateCaseResponse)(nil),    // 8: agents.v1.UpdateCaseResponse
+	(*DeleteCaseRequest)(nil),     // 9: agents.v1.DeleteCaseRequest
+	(*DeleteCaseResponse)(nil),    // 10: agents.v1.DeleteCaseResponse
+	(*ListCasesRequest)(nil),      // 11: agents.v1.ListCasesRequest
+	(*ListCasesResponse)(nil),     // 12: agents.v1.ListCasesResponse
+	(*EvaluationTarget)(nil),      // 13: agents.v1.EvaluationTarget
+	(*RunCaseRequest)(nil),        // 14: agents.v1.RunCaseRequest
+	(*RunSuiteRequest)(nil),       // 15: agents.v1.RunSuiteRequest
+	(*EvaluationToolAttempt)(nil), // 16: agents.v1.EvaluationToolAttempt
+	(*EvaluationAssertion)(nil),   // 17: agents.v1.EvaluationAssertion
+	(*EvaluationJudge)(nil),       // 18: agents.v1.EvaluationJudge
+	(*EvaluationRun)(nil),         // 19: agents.v1.EvaluationRun
+	(*RunCaseResponse)(nil),       // 20: agents.v1.RunCaseResponse
+	(*RunSuiteResponse)(nil),      // 21: agents.v1.RunSuiteResponse
+	(*ListRunsRequest)(nil),       // 22: agents.v1.ListRunsRequest
+	(*ListRunsResponse)(nil),      // 23: agents.v1.ListRunsResponse
+	(*GetRunRequest)(nil),         // 24: agents.v1.GetRunRequest
+	(*GetRunResponse)(nil),        // 25: agents.v1.GetRunResponse
+	(*timestamppb.Timestamp)(nil), // 26: google.protobuf.Timestamp
 }
 var file_agents_v1_skill_evaluations_proto_depIdxs = []int32{
 	2,  // 0: agents.v1.EvaluationCaseFields.fixtures:type_name -> agents.v1.ToolFixture
 	1,  // 1: agents.v1.EvaluationCase.scope:type_name -> agents.v1.EvaluationScope
 	3,  // 2: agents.v1.EvaluationCase.fields:type_name -> agents.v1.EvaluationCaseFields
-	23, // 3: agents.v1.EvaluationCase.created_at:type_name -> google.protobuf.Timestamp
-	23, // 4: agents.v1.EvaluationCase.updated_at:type_name -> google.protobuf.Timestamp
-	1,  // 5: agents.v1.CreateEvaluationCaseRequest.scope:type_name -> agents.v1.EvaluationScope
-	3,  // 6: agents.v1.CreateEvaluationCaseRequest.fields:type_name -> agents.v1.EvaluationCaseFields
-	3,  // 7: agents.v1.UpdateEvaluationCaseRequest.fields:type_name -> agents.v1.EvaluationCaseFields
-	4,  // 8: agents.v1.EvaluationCaseResponse.evaluation_case:type_name -> agents.v1.EvaluationCase
-	1,  // 9: agents.v1.ListEvaluationCasesRequest.scope:type_name -> agents.v1.EvaluationScope
-	4,  // 10: agents.v1.ListEvaluationCasesResponse.cases:type_name -> agents.v1.EvaluationCase
-	12, // 11: agents.v1.RunSkillEvaluationRequest.target:type_name -> agents.v1.EvaluationTarget
-	0,  // 12: agents.v1.EvaluationRun.status:type_name -> agents.v1.EvaluationStatus
-	3,  // 13: agents.v1.EvaluationRun.case_snapshot:type_name -> agents.v1.EvaluationCaseFields
-	14, // 14: agents.v1.EvaluationRun.tool_attempts:type_name -> agents.v1.EvaluationToolAttempt
-	15, // 15: agents.v1.EvaluationRun.assertions:type_name -> agents.v1.EvaluationAssertion
-	16, // 16: agents.v1.EvaluationRun.judge:type_name -> agents.v1.EvaluationJudge
-	23, // 17: agents.v1.EvaluationRun.created_at:type_name -> google.protobuf.Timestamp
-	23, // 18: agents.v1.EvaluationRun.completed_at:type_name -> google.protobuf.Timestamp
-	17, // 19: agents.v1.RunSkillEvaluationResponse.runs:type_name -> agents.v1.EvaluationRun
-	1,  // 20: agents.v1.ListEvaluationRunsRequest.scope:type_name -> agents.v1.EvaluationScope
-	17, // 21: agents.v1.ListEvaluationRunsResponse.runs:type_name -> agents.v1.EvaluationRun
-	17, // 22: agents.v1.EvaluationRunResponse.run:type_name -> agents.v1.EvaluationRun
-	5,  // 23: agents.v1.SkillEvaluationsService.CreateCase:input_type -> agents.v1.CreateEvaluationCaseRequest
-	6,  // 24: agents.v1.SkillEvaluationsService.UpdateCase:input_type -> agents.v1.UpdateEvaluationCaseRequest
-	8,  // 25: agents.v1.SkillEvaluationsService.DeleteCase:input_type -> agents.v1.DeleteEvaluationCaseRequest
-	10, // 26: agents.v1.SkillEvaluationsService.ListCases:input_type -> agents.v1.ListEvaluationCasesRequest
-	13, // 27: agents.v1.SkillEvaluationsService.RunCase:input_type -> agents.v1.RunSkillEvaluationRequest
-	13, // 28: agents.v1.SkillEvaluationsService.RunSuite:input_type -> agents.v1.RunSkillEvaluationRequest
-	19, // 29: agents.v1.SkillEvaluationsService.ListRuns:input_type -> agents.v1.ListEvaluationRunsRequest
-	21, // 30: agents.v1.SkillEvaluationsService.GetRun:input_type -> agents.v1.GetEvaluationRunRequest
-	7,  // 31: agents.v1.SkillEvaluationsService.CreateCase:output_type -> agents.v1.EvaluationCaseResponse
-	7,  // 32: agents.v1.SkillEvaluationsService.UpdateCase:output_type -> agents.v1.EvaluationCaseResponse
-	9,  // 33: agents.v1.SkillEvaluationsService.DeleteCase:output_type -> agents.v1.DeleteEvaluationCaseResponse
-	11, // 34: agents.v1.SkillEvaluationsService.ListCases:output_type -> agents.v1.ListEvaluationCasesResponse
-	18, // 35: agents.v1.SkillEvaluationsService.RunCase:output_type -> agents.v1.RunSkillEvaluationResponse
-	18, // 36: agents.v1.SkillEvaluationsService.RunSuite:output_type -> agents.v1.RunSkillEvaluationResponse
-	20, // 37: agents.v1.SkillEvaluationsService.ListRuns:output_type -> agents.v1.ListEvaluationRunsResponse
-	22, // 38: agents.v1.SkillEvaluationsService.GetRun:output_type -> agents.v1.EvaluationRunResponse
-	31, // [31:39] is the sub-list for method output_type
-	23, // [23:31] is the sub-list for method input_type
-	23, // [23:23] is the sub-list for extension type_name
-	23, // [23:23] is the sub-list for extension extendee
-	0,  // [0:23] is the sub-list for field type_name
+	26, // 3: agents.v1.EvaluationCase.created_at:type_name -> google.protobuf.Timestamp
+	26, // 4: agents.v1.EvaluationCase.updated_at:type_name -> google.protobuf.Timestamp
+	1,  // 5: agents.v1.CreateCaseRequest.scope:type_name -> agents.v1.EvaluationScope
+	3,  // 6: agents.v1.CreateCaseRequest.fields:type_name -> agents.v1.EvaluationCaseFields
+	3,  // 7: agents.v1.UpdateCaseRequest.fields:type_name -> agents.v1.EvaluationCaseFields
+	4,  // 8: agents.v1.CreateCaseResponse.evaluation_case:type_name -> agents.v1.EvaluationCase
+	4,  // 9: agents.v1.UpdateCaseResponse.evaluation_case:type_name -> agents.v1.EvaluationCase
+	1,  // 10: agents.v1.ListCasesRequest.scope:type_name -> agents.v1.EvaluationScope
+	4,  // 11: agents.v1.ListCasesResponse.cases:type_name -> agents.v1.EvaluationCase
+	13, // 12: agents.v1.RunCaseRequest.target:type_name -> agents.v1.EvaluationTarget
+	13, // 13: agents.v1.RunSuiteRequest.target:type_name -> agents.v1.EvaluationTarget
+	0,  // 14: agents.v1.EvaluationRun.status:type_name -> agents.v1.EvaluationStatus
+	3,  // 15: agents.v1.EvaluationRun.case_snapshot:type_name -> agents.v1.EvaluationCaseFields
+	16, // 16: agents.v1.EvaluationRun.tool_attempts:type_name -> agents.v1.EvaluationToolAttempt
+	17, // 17: agents.v1.EvaluationRun.assertions:type_name -> agents.v1.EvaluationAssertion
+	18, // 18: agents.v1.EvaluationRun.judge:type_name -> agents.v1.EvaluationJudge
+	26, // 19: agents.v1.EvaluationRun.created_at:type_name -> google.protobuf.Timestamp
+	26, // 20: agents.v1.EvaluationRun.completed_at:type_name -> google.protobuf.Timestamp
+	19, // 21: agents.v1.RunCaseResponse.runs:type_name -> agents.v1.EvaluationRun
+	19, // 22: agents.v1.RunSuiteResponse.runs:type_name -> agents.v1.EvaluationRun
+	1,  // 23: agents.v1.ListRunsRequest.scope:type_name -> agents.v1.EvaluationScope
+	19, // 24: agents.v1.ListRunsResponse.runs:type_name -> agents.v1.EvaluationRun
+	19, // 25: agents.v1.GetRunResponse.run:type_name -> agents.v1.EvaluationRun
+	5,  // 26: agents.v1.SkillEvaluationsService.CreateCase:input_type -> agents.v1.CreateCaseRequest
+	6,  // 27: agents.v1.SkillEvaluationsService.UpdateCase:input_type -> agents.v1.UpdateCaseRequest
+	9,  // 28: agents.v1.SkillEvaluationsService.DeleteCase:input_type -> agents.v1.DeleteCaseRequest
+	11, // 29: agents.v1.SkillEvaluationsService.ListCases:input_type -> agents.v1.ListCasesRequest
+	14, // 30: agents.v1.SkillEvaluationsService.RunCase:input_type -> agents.v1.RunCaseRequest
+	15, // 31: agents.v1.SkillEvaluationsService.RunSuite:input_type -> agents.v1.RunSuiteRequest
+	22, // 32: agents.v1.SkillEvaluationsService.ListRuns:input_type -> agents.v1.ListRunsRequest
+	24, // 33: agents.v1.SkillEvaluationsService.GetRun:input_type -> agents.v1.GetRunRequest
+	7,  // 34: agents.v1.SkillEvaluationsService.CreateCase:output_type -> agents.v1.CreateCaseResponse
+	8,  // 35: agents.v1.SkillEvaluationsService.UpdateCase:output_type -> agents.v1.UpdateCaseResponse
+	10, // 36: agents.v1.SkillEvaluationsService.DeleteCase:output_type -> agents.v1.DeleteCaseResponse
+	12, // 37: agents.v1.SkillEvaluationsService.ListCases:output_type -> agents.v1.ListCasesResponse
+	20, // 38: agents.v1.SkillEvaluationsService.RunCase:output_type -> agents.v1.RunCaseResponse
+	21, // 39: agents.v1.SkillEvaluationsService.RunSuite:output_type -> agents.v1.RunSuiteResponse
+	23, // 40: agents.v1.SkillEvaluationsService.ListRuns:output_type -> agents.v1.ListRunsResponse
+	25, // 41: agents.v1.SkillEvaluationsService.GetRun:output_type -> agents.v1.GetRunResponse
+	34, // [34:42] is the sub-list for method output_type
+	26, // [26:34] is the sub-list for method input_type
+	26, // [26:26] is the sub-list for extension type_name
+	26, // [26:26] is the sub-list for extension extendee
+	0,  // [0:26] is the sub-list for field type_name
 }
 
 func init() { file_agents_v1_skill_evaluations_proto_init() }
@@ -1914,19 +2124,19 @@ func file_agents_v1_skill_evaluations_proto_init() {
 		(*EvaluationScope_SkillId)(nil),
 		(*EvaluationScope_DraftId)(nil),
 	}
-	file_agents_v1_skill_evaluations_proto_msgTypes[11].OneofWrappers = []any{
+	file_agents_v1_skill_evaluations_proto_msgTypes[12].OneofWrappers = []any{
 		(*EvaluationTarget_SkillVersionId)(nil),
 		(*EvaluationTarget_DraftId)(nil),
 	}
-	file_agents_v1_skill_evaluations_proto_msgTypes[15].OneofWrappers = []any{}
-	file_agents_v1_skill_evaluations_proto_msgTypes[16].OneofWrappers = []any{}
+	file_agents_v1_skill_evaluations_proto_msgTypes[17].OneofWrappers = []any{}
+	file_agents_v1_skill_evaluations_proto_msgTypes[18].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agents_v1_skill_evaluations_proto_rawDesc), len(file_agents_v1_skill_evaluations_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   22,
+			NumMessages:   25,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

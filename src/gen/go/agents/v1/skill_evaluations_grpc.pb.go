@@ -33,14 +33,14 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type SkillEvaluationsServiceClient interface {
-	CreateCase(ctx context.Context, in *CreateEvaluationCaseRequest, opts ...grpc.CallOption) (*EvaluationCaseResponse, error)
-	UpdateCase(ctx context.Context, in *UpdateEvaluationCaseRequest, opts ...grpc.CallOption) (*EvaluationCaseResponse, error)
-	DeleteCase(ctx context.Context, in *DeleteEvaluationCaseRequest, opts ...grpc.CallOption) (*DeleteEvaluationCaseResponse, error)
-	ListCases(ctx context.Context, in *ListEvaluationCasesRequest, opts ...grpc.CallOption) (*ListEvaluationCasesResponse, error)
-	RunCase(ctx context.Context, in *RunSkillEvaluationRequest, opts ...grpc.CallOption) (*RunSkillEvaluationResponse, error)
-	RunSuite(ctx context.Context, in *RunSkillEvaluationRequest, opts ...grpc.CallOption) (*RunSkillEvaluationResponse, error)
-	ListRuns(ctx context.Context, in *ListEvaluationRunsRequest, opts ...grpc.CallOption) (*ListEvaluationRunsResponse, error)
-	GetRun(ctx context.Context, in *GetEvaluationRunRequest, opts ...grpc.CallOption) (*EvaluationRunResponse, error)
+	CreateCase(ctx context.Context, in *CreateCaseRequest, opts ...grpc.CallOption) (*CreateCaseResponse, error)
+	UpdateCase(ctx context.Context, in *UpdateCaseRequest, opts ...grpc.CallOption) (*UpdateCaseResponse, error)
+	DeleteCase(ctx context.Context, in *DeleteCaseRequest, opts ...grpc.CallOption) (*DeleteCaseResponse, error)
+	ListCases(ctx context.Context, in *ListCasesRequest, opts ...grpc.CallOption) (*ListCasesResponse, error)
+	RunCase(ctx context.Context, in *RunCaseRequest, opts ...grpc.CallOption) (*RunCaseResponse, error)
+	RunSuite(ctx context.Context, in *RunSuiteRequest, opts ...grpc.CallOption) (*RunSuiteResponse, error)
+	ListRuns(ctx context.Context, in *ListRunsRequest, opts ...grpc.CallOption) (*ListRunsResponse, error)
+	GetRun(ctx context.Context, in *GetRunRequest, opts ...grpc.CallOption) (*GetRunResponse, error)
 }
 
 type skillEvaluationsServiceClient struct {
@@ -51,9 +51,9 @@ func NewSkillEvaluationsServiceClient(cc grpc.ClientConnInterface) SkillEvaluati
 	return &skillEvaluationsServiceClient{cc}
 }
 
-func (c *skillEvaluationsServiceClient) CreateCase(ctx context.Context, in *CreateEvaluationCaseRequest, opts ...grpc.CallOption) (*EvaluationCaseResponse, error) {
+func (c *skillEvaluationsServiceClient) CreateCase(ctx context.Context, in *CreateCaseRequest, opts ...grpc.CallOption) (*CreateCaseResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(EvaluationCaseResponse)
+	out := new(CreateCaseResponse)
 	err := c.cc.Invoke(ctx, SkillEvaluationsService_CreateCase_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -61,9 +61,9 @@ func (c *skillEvaluationsServiceClient) CreateCase(ctx context.Context, in *Crea
 	return out, nil
 }
 
-func (c *skillEvaluationsServiceClient) UpdateCase(ctx context.Context, in *UpdateEvaluationCaseRequest, opts ...grpc.CallOption) (*EvaluationCaseResponse, error) {
+func (c *skillEvaluationsServiceClient) UpdateCase(ctx context.Context, in *UpdateCaseRequest, opts ...grpc.CallOption) (*UpdateCaseResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(EvaluationCaseResponse)
+	out := new(UpdateCaseResponse)
 	err := c.cc.Invoke(ctx, SkillEvaluationsService_UpdateCase_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -71,9 +71,9 @@ func (c *skillEvaluationsServiceClient) UpdateCase(ctx context.Context, in *Upda
 	return out, nil
 }
 
-func (c *skillEvaluationsServiceClient) DeleteCase(ctx context.Context, in *DeleteEvaluationCaseRequest, opts ...grpc.CallOption) (*DeleteEvaluationCaseResponse, error) {
+func (c *skillEvaluationsServiceClient) DeleteCase(ctx context.Context, in *DeleteCaseRequest, opts ...grpc.CallOption) (*DeleteCaseResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(DeleteEvaluationCaseResponse)
+	out := new(DeleteCaseResponse)
 	err := c.cc.Invoke(ctx, SkillEvaluationsService_DeleteCase_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -81,9 +81,9 @@ func (c *skillEvaluationsServiceClient) DeleteCase(ctx context.Context, in *Dele
 	return out, nil
 }
 
-func (c *skillEvaluationsServiceClient) ListCases(ctx context.Context, in *ListEvaluationCasesRequest, opts ...grpc.CallOption) (*ListEvaluationCasesResponse, error) {
+func (c *skillEvaluationsServiceClient) ListCases(ctx context.Context, in *ListCasesRequest, opts ...grpc.CallOption) (*ListCasesResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ListEvaluationCasesResponse)
+	out := new(ListCasesResponse)
 	err := c.cc.Invoke(ctx, SkillEvaluationsService_ListCases_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -91,9 +91,9 @@ func (c *skillEvaluationsServiceClient) ListCases(ctx context.Context, in *ListE
 	return out, nil
 }
 
-func (c *skillEvaluationsServiceClient) RunCase(ctx context.Context, in *RunSkillEvaluationRequest, opts ...grpc.CallOption) (*RunSkillEvaluationResponse, error) {
+func (c *skillEvaluationsServiceClient) RunCase(ctx context.Context, in *RunCaseRequest, opts ...grpc.CallOption) (*RunCaseResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(RunSkillEvaluationResponse)
+	out := new(RunCaseResponse)
 	err := c.cc.Invoke(ctx, SkillEvaluationsService_RunCase_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -101,9 +101,9 @@ func (c *skillEvaluationsServiceClient) RunCase(ctx context.Context, in *RunSkil
 	return out, nil
 }
 
-func (c *skillEvaluationsServiceClient) RunSuite(ctx context.Context, in *RunSkillEvaluationRequest, opts ...grpc.CallOption) (*RunSkillEvaluationResponse, error) {
+func (c *skillEvaluationsServiceClient) RunSuite(ctx context.Context, in *RunSuiteRequest, opts ...grpc.CallOption) (*RunSuiteResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(RunSkillEvaluationResponse)
+	out := new(RunSuiteResponse)
 	err := c.cc.Invoke(ctx, SkillEvaluationsService_RunSuite_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -111,9 +111,9 @@ func (c *skillEvaluationsServiceClient) RunSuite(ctx context.Context, in *RunSki
 	return out, nil
 }
 
-func (c *skillEvaluationsServiceClient) ListRuns(ctx context.Context, in *ListEvaluationRunsRequest, opts ...grpc.CallOption) (*ListEvaluationRunsResponse, error) {
+func (c *skillEvaluationsServiceClient) ListRuns(ctx context.Context, in *ListRunsRequest, opts ...grpc.CallOption) (*ListRunsResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ListEvaluationRunsResponse)
+	out := new(ListRunsResponse)
 	err := c.cc.Invoke(ctx, SkillEvaluationsService_ListRuns_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -121,9 +121,9 @@ func (c *skillEvaluationsServiceClient) ListRuns(ctx context.Context, in *ListEv
 	return out, nil
 }
 
-func (c *skillEvaluationsServiceClient) GetRun(ctx context.Context, in *GetEvaluationRunRequest, opts ...grpc.CallOption) (*EvaluationRunResponse, error) {
+func (c *skillEvaluationsServiceClient) GetRun(ctx context.Context, in *GetRunRequest, opts ...grpc.CallOption) (*GetRunResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(EvaluationRunResponse)
+	out := new(GetRunResponse)
 	err := c.cc.Invoke(ctx, SkillEvaluationsService_GetRun_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -135,14 +135,14 @@ func (c *skillEvaluationsServiceClient) GetRun(ctx context.Context, in *GetEvalu
 // All implementations must embed UnimplementedSkillEvaluationsServiceServer
 // for forward compatibility.
 type SkillEvaluationsServiceServer interface {
-	CreateCase(context.Context, *CreateEvaluationCaseRequest) (*EvaluationCaseResponse, error)
-	UpdateCase(context.Context, *UpdateEvaluationCaseRequest) (*EvaluationCaseResponse, error)
-	DeleteCase(context.Context, *DeleteEvaluationCaseRequest) (*DeleteEvaluationCaseResponse, error)
-	ListCases(context.Context, *ListEvaluationCasesRequest) (*ListEvaluationCasesResponse, error)
-	RunCase(context.Context, *RunSkillEvaluationRequest) (*RunSkillEvaluationResponse, error)
-	RunSuite(context.Context, *RunSkillEvaluationRequest) (*RunSkillEvaluationResponse, error)
-	ListRuns(context.Context, *ListEvaluationRunsRequest) (*ListEvaluationRunsResponse, error)
-	GetRun(context.Context, *GetEvaluationRunRequest) (*EvaluationRunResponse, error)
+	CreateCase(context.Context, *CreateCaseRequest) (*CreateCaseResponse, error)
+	UpdateCase(context.Context, *UpdateCaseRequest) (*UpdateCaseResponse, error)
+	DeleteCase(context.Context, *DeleteCaseRequest) (*DeleteCaseResponse, error)
+	ListCases(context.Context, *ListCasesRequest) (*ListCasesResponse, error)
+	RunCase(context.Context, *RunCaseRequest) (*RunCaseResponse, error)
+	RunSuite(context.Context, *RunSuiteRequest) (*RunSuiteResponse, error)
+	ListRuns(context.Context, *ListRunsRequest) (*ListRunsResponse, error)
+	GetRun(context.Context, *GetRunRequest) (*GetRunResponse, error)
 	mustEmbedUnimplementedSkillEvaluationsServiceServer()
 }
 
@@ -153,28 +153,28 @@ type SkillEvaluationsServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedSkillEvaluationsServiceServer struct{}
 
-func (UnimplementedSkillEvaluationsServiceServer) CreateCase(context.Context, *CreateEvaluationCaseRequest) (*EvaluationCaseResponse, error) {
+func (UnimplementedSkillEvaluationsServiceServer) CreateCase(context.Context, *CreateCaseRequest) (*CreateCaseResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateCase not implemented")
 }
-func (UnimplementedSkillEvaluationsServiceServer) UpdateCase(context.Context, *UpdateEvaluationCaseRequest) (*EvaluationCaseResponse, error) {
+func (UnimplementedSkillEvaluationsServiceServer) UpdateCase(context.Context, *UpdateCaseRequest) (*UpdateCaseResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateCase not implemented")
 }
-func (UnimplementedSkillEvaluationsServiceServer) DeleteCase(context.Context, *DeleteEvaluationCaseRequest) (*DeleteEvaluationCaseResponse, error) {
+func (UnimplementedSkillEvaluationsServiceServer) DeleteCase(context.Context, *DeleteCaseRequest) (*DeleteCaseResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method DeleteCase not implemented")
 }
-func (UnimplementedSkillEvaluationsServiceServer) ListCases(context.Context, *ListEvaluationCasesRequest) (*ListEvaluationCasesResponse, error) {
+func (UnimplementedSkillEvaluationsServiceServer) ListCases(context.Context, *ListCasesRequest) (*ListCasesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListCases not implemented")
 }
-func (UnimplementedSkillEvaluationsServiceServer) RunCase(context.Context, *RunSkillEvaluationRequest) (*RunSkillEvaluationResponse, error) {
+func (UnimplementedSkillEvaluationsServiceServer) RunCase(context.Context, *RunCaseRequest) (*RunCaseResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method RunCase not implemented")
 }
-func (UnimplementedSkillEvaluationsServiceServer) RunSuite(context.Context, *RunSkillEvaluationRequest) (*RunSkillEvaluationResponse, error) {
+func (UnimplementedSkillEvaluationsServiceServer) RunSuite(context.Context, *RunSuiteRequest) (*RunSuiteResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method RunSuite not implemented")
 }
-func (UnimplementedSkillEvaluationsServiceServer) ListRuns(context.Context, *ListEvaluationRunsRequest) (*ListEvaluationRunsResponse, error) {
+func (UnimplementedSkillEvaluationsServiceServer) ListRuns(context.Context, *ListRunsRequest) (*ListRunsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListRuns not implemented")
 }
-func (UnimplementedSkillEvaluationsServiceServer) GetRun(context.Context, *GetEvaluationRunRequest) (*EvaluationRunResponse, error) {
+func (UnimplementedSkillEvaluationsServiceServer) GetRun(context.Context, *GetRunRequest) (*GetRunResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetRun not implemented")
 }
 func (UnimplementedSkillEvaluationsServiceServer) mustEmbedUnimplementedSkillEvaluationsServiceServer() {
@@ -200,7 +200,7 @@ func RegisterSkillEvaluationsServiceServer(s grpc.ServiceRegistrar, srv SkillEva
 }
 
 func _SkillEvaluationsService_CreateCase_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(CreateEvaluationCaseRequest)
+	in := new(CreateCaseRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -212,13 +212,13 @@ func _SkillEvaluationsService_CreateCase_Handler(srv interface{}, ctx context.Co
 		FullMethod: SkillEvaluationsService_CreateCase_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SkillEvaluationsServiceServer).CreateCase(ctx, req.(*CreateEvaluationCaseRequest))
+		return srv.(SkillEvaluationsServiceServer).CreateCase(ctx, req.(*CreateCaseRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _SkillEvaluationsService_UpdateCase_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(UpdateEvaluationCaseRequest)
+	in := new(UpdateCaseRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -230,13 +230,13 @@ func _SkillEvaluationsService_UpdateCase_Handler(srv interface{}, ctx context.Co
 		FullMethod: SkillEvaluationsService_UpdateCase_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SkillEvaluationsServiceServer).UpdateCase(ctx, req.(*UpdateEvaluationCaseRequest))
+		return srv.(SkillEvaluationsServiceServer).UpdateCase(ctx, req.(*UpdateCaseRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _SkillEvaluationsService_DeleteCase_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(DeleteEvaluationCaseRequest)
+	in := new(DeleteCaseRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -248,13 +248,13 @@ func _SkillEvaluationsService_DeleteCase_Handler(srv interface{}, ctx context.Co
 		FullMethod: SkillEvaluationsService_DeleteCase_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SkillEvaluationsServiceServer).DeleteCase(ctx, req.(*DeleteEvaluationCaseRequest))
+		return srv.(SkillEvaluationsServiceServer).DeleteCase(ctx, req.(*DeleteCaseRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _SkillEvaluationsService_ListCases_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ListEvaluationCasesRequest)
+	in := new(ListCasesRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -266,13 +266,13 @@ func _SkillEvaluationsService_ListCases_Handler(srv interface{}, ctx context.Con
 		FullMethod: SkillEvaluationsService_ListCases_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SkillEvaluationsServiceServer).ListCases(ctx, req.(*ListEvaluationCasesRequest))
+		return srv.(SkillEvaluationsServiceServer).ListCases(ctx, req.(*ListCasesRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _SkillEvaluationsService_RunCase_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(RunSkillEvaluationRequest)
+	in := new(RunCaseRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -284,13 +284,13 @@ func _SkillEvaluationsService_RunCase_Handler(srv interface{}, ctx context.Conte
 		FullMethod: SkillEvaluationsService_RunCase_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SkillEvaluationsServiceServer).RunCase(ctx, req.(*RunSkillEvaluationRequest))
+		return srv.(SkillEvaluationsServiceServer).RunCase(ctx, req.(*RunCaseRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _SkillEvaluationsService_RunSuite_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(RunSkillEvaluationRequest)
+	in := new(RunSuiteRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -302,13 +302,13 @@ func _SkillEvaluationsService_RunSuite_Handler(srv interface{}, ctx context.Cont
 		FullMethod: SkillEvaluationsService_RunSuite_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SkillEvaluationsServiceServer).RunSuite(ctx, req.(*RunSkillEvaluationRequest))
+		return srv.(SkillEvaluationsServiceServer).RunSuite(ctx, req.(*RunSuiteRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _SkillEvaluationsService_ListRuns_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ListEvaluationRunsRequest)
+	in := new(ListRunsRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -320,13 +320,13 @@ func _SkillEvaluationsService_ListRuns_Handler(srv interface{}, ctx context.Cont
 		FullMethod: SkillEvaluationsService_ListRuns_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SkillEvaluationsServiceServer).ListRuns(ctx, req.(*ListEvaluationRunsRequest))
+		return srv.(SkillEvaluationsServiceServer).ListRuns(ctx, req.(*ListRunsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _SkillEvaluationsService_GetRun_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetEvaluationRunRequest)
+	in := new(GetRunRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -338,7 +338,7 @@ func _SkillEvaluationsService_GetRun_Handler(srv interface{}, ctx context.Contex
 		FullMethod: SkillEvaluationsService_GetRun_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SkillEvaluationsServiceServer).GetRun(ctx, req.(*GetEvaluationRunRequest))
+		return srv.(SkillEvaluationsServiceServer).GetRun(ctx, req.(*GetRunRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }

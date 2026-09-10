@@ -21,7 +21,7 @@ from uniffy.infrastructure.database.session import ALEMBIC_INI_PATH, get_databas
 from uniffy.tests.integration.internal.migrations.test_migration_run import _provision_to, _query
 
 
-async def test_rules_are_per_agent_and_migration_removes_only_global_selection(
+async def test_rules_are_selected_per_agent_and_ignore_global_settings(
     scratch_database,
     monkeypatch,
 ):
@@ -82,14 +82,6 @@ async def test_rules_are_per_agent_and_migration_removes_only_global_selection(
                 enabled_rule_ids=first.enabled_rules,
             )
             assert [entry.id for entry in selected] == [rule.id]
-            before = _query("SELECT id, enabled_rules FROM agents_agents ORDER BY id")
-        config = Config(str(ALEMBIC_INI_PATH))
-        config.attributes["configure_logger"] = False
-        command.upgrade(config, "099")
-        assert _query("SELECT id, enabled_rules FROM agents_agents ORDER BY id") == before
-        assert _query("SELECT key FROM org_settings WHERE namespace = 'agents'") == [("runtime",)]
-        assert _query("SELECT count(*) FROM agents_rules") == [(1,)]
-        assert _query("SELECT count(*) FROM agents_rule_versions") == [(1,)]
     finally:
         await engine.dispose()
 

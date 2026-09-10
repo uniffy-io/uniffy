@@ -12,7 +12,7 @@ option go_package = "github.com/uniffy-io/uniffy-proto-go/agents/v1;agentsv1";
 service SkillsService {
   rpc GetSkillCompatibility(GetSkillCompatibilityRequest) returns (GetSkillCompatibilityResponse) {}
   rpc GenerateSkillDraft(GenerateSkillDraftRequest) returns (GenerateSkillDraftResponse) {}
-  rpc RetrySkillDraftGeneration(RetrySkillDraftGenerationRequest) returns (GenerateSkillDraftResponse) {}
+  rpc RetrySkillDraftGeneration(RetrySkillDraftGenerationRequest) returns (RetrySkillDraftGenerationResponse) {}
   // Create a new organization skill
   rpc CreateSkill(CreateSkillRequest) returns (CreateSkillResponse) {}
 
@@ -173,6 +173,10 @@ message RetrySkillDraftGenerationRequest {
   string organization_id = 1;
   string draft_id = 2;
   int32 expected_attempt = 3;
+}
+
+message RetrySkillDraftGenerationResponse {
+  SkillDraft draft = 1;
 }
 
 message CreateSkillRequest {

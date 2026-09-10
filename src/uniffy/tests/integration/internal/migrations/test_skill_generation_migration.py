@@ -17,7 +17,7 @@ from uniffy.tests.integration.internal.migrations.test_migration_run import (
 async def test_generation_upgrade_preserves_drafts_and_downgrade_settles_open_attempts(
     scratch_database,
 ):
-    await _provision_to(scratch_database, "103")
+    await _provision_to(scratch_database, "097")
     org_id, user_id, draft_id = generate_id(), generate_id(), generate_id()
     engine = create_async_engine(get_database_url())
     try:
@@ -35,7 +35,7 @@ async def test_generation_upgrade_preserves_drafts_and_downgrade_settles_open_at
         f"VALUES ('{draft_id}', '{org_id}', '{user_id}', 'create', 'report', 'Report', 'BODY')"
     )
     before = _query("SELECT id, name, content, status, is_deleted FROM agents_skill_drafts")
-    _migrate_to("104")
+    _migrate_to("098")
     assert _query("SELECT id, name, content, status, is_deleted FROM agents_skill_drafts") == before
     assert _query("SELECT generation_attempt, invocation_id FROM agents_skill_drafts") == [(0, None)]
     assert _query(
@@ -50,7 +50,7 @@ async def test_generation_upgrade_preserves_drafts_and_downgrade_settles_open_at
         )
     config = Config(str(ALEMBIC_INI_PATH))
     config.attributes["configure_logger"] = False
-    command.downgrade(config, "103")
+    command.downgrade(config, "097")
     assert (
         _query(
             "SELECT id, name, content, status, is_deleted FROM agents_skill_drafts "

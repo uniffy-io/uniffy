@@ -18,28 +18,28 @@ import agents.v1.skill_evaluations_pb2 as agents_dot_v1_dot_skill__evaluations__
 
 
 class SkillEvaluationsService(Protocol):
-    async def create_case(self, request: agents_dot_v1_dot_skill__evaluations__pb2.CreateEvaluationCaseRequest, ctx: RequestContext) -> agents_dot_v1_dot_skill__evaluations__pb2.EvaluationCaseResponse:
+    async def create_case(self, request: agents_dot_v1_dot_skill__evaluations__pb2.CreateCaseRequest, ctx: RequestContext) -> agents_dot_v1_dot_skill__evaluations__pb2.CreateCaseResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def update_case(self, request: agents_dot_v1_dot_skill__evaluations__pb2.UpdateEvaluationCaseRequest, ctx: RequestContext) -> agents_dot_v1_dot_skill__evaluations__pb2.EvaluationCaseResponse:
+    async def update_case(self, request: agents_dot_v1_dot_skill__evaluations__pb2.UpdateCaseRequest, ctx: RequestContext) -> agents_dot_v1_dot_skill__evaluations__pb2.UpdateCaseResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def delete_case(self, request: agents_dot_v1_dot_skill__evaluations__pb2.DeleteEvaluationCaseRequest, ctx: RequestContext) -> agents_dot_v1_dot_skill__evaluations__pb2.DeleteEvaluationCaseResponse:
+    async def delete_case(self, request: agents_dot_v1_dot_skill__evaluations__pb2.DeleteCaseRequest, ctx: RequestContext) -> agents_dot_v1_dot_skill__evaluations__pb2.DeleteCaseResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def list_cases(self, request: agents_dot_v1_dot_skill__evaluations__pb2.ListEvaluationCasesRequest, ctx: RequestContext) -> agents_dot_v1_dot_skill__evaluations__pb2.ListEvaluationCasesResponse:
+    async def list_cases(self, request: agents_dot_v1_dot_skill__evaluations__pb2.ListCasesRequest, ctx: RequestContext) -> agents_dot_v1_dot_skill__evaluations__pb2.ListCasesResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def run_case(self, request: agents_dot_v1_dot_skill__evaluations__pb2.RunSkillEvaluationRequest, ctx: RequestContext) -> agents_dot_v1_dot_skill__evaluations__pb2.RunSkillEvaluationResponse:
+    async def run_case(self, request: agents_dot_v1_dot_skill__evaluations__pb2.RunCaseRequest, ctx: RequestContext) -> agents_dot_v1_dot_skill__evaluations__pb2.RunCaseResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def run_suite(self, request: agents_dot_v1_dot_skill__evaluations__pb2.RunSkillEvaluationRequest, ctx: RequestContext) -> agents_dot_v1_dot_skill__evaluations__pb2.RunSkillEvaluationResponse:
+    async def run_suite(self, request: agents_dot_v1_dot_skill__evaluations__pb2.RunSuiteRequest, ctx: RequestContext) -> agents_dot_v1_dot_skill__evaluations__pb2.RunSuiteResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def list_runs(self, request: agents_dot_v1_dot_skill__evaluations__pb2.ListEvaluationRunsRequest, ctx: RequestContext) -> agents_dot_v1_dot_skill__evaluations__pb2.ListEvaluationRunsResponse:
+    async def list_runs(self, request: agents_dot_v1_dot_skill__evaluations__pb2.ListRunsRequest, ctx: RequestContext) -> agents_dot_v1_dot_skill__evaluations__pb2.ListRunsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def get_run(self, request: agents_dot_v1_dot_skill__evaluations__pb2.GetEvaluationRunRequest, ctx: RequestContext) -> agents_dot_v1_dot_skill__evaluations__pb2.EvaluationRunResponse:
+    async def get_run(self, request: agents_dot_v1_dot_skill__evaluations__pb2.GetRunRequest, ctx: RequestContext) -> agents_dot_v1_dot_skill__evaluations__pb2.GetRunResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
 
@@ -52,8 +52,8 @@ class SkillEvaluationsServiceASGIApplication(ConnectASGIApplication[SkillEvaluat
                     method=MethodInfo(
                         name="CreateCase",
                         service_name="agents.v1.SkillEvaluationsService",
-                        input=agents_dot_v1_dot_skill__evaluations__pb2.CreateEvaluationCaseRequest,
-                        output=agents_dot_v1_dot_skill__evaluations__pb2.EvaluationCaseResponse,
+                        input=agents_dot_v1_dot_skill__evaluations__pb2.CreateCaseRequest,
+                        output=agents_dot_v1_dot_skill__evaluations__pb2.CreateCaseResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.create_case,
@@ -62,8 +62,8 @@ class SkillEvaluationsServiceASGIApplication(ConnectASGIApplication[SkillEvaluat
                     method=MethodInfo(
                         name="UpdateCase",
                         service_name="agents.v1.SkillEvaluationsService",
-                        input=agents_dot_v1_dot_skill__evaluations__pb2.UpdateEvaluationCaseRequest,
-                        output=agents_dot_v1_dot_skill__evaluations__pb2.EvaluationCaseResponse,
+                        input=agents_dot_v1_dot_skill__evaluations__pb2.UpdateCaseRequest,
+                        output=agents_dot_v1_dot_skill__evaluations__pb2.UpdateCaseResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.update_case,
@@ -72,8 +72,8 @@ class SkillEvaluationsServiceASGIApplication(ConnectASGIApplication[SkillEvaluat
                     method=MethodInfo(
                         name="DeleteCase",
                         service_name="agents.v1.SkillEvaluationsService",
-                        input=agents_dot_v1_dot_skill__evaluations__pb2.DeleteEvaluationCaseRequest,
-                        output=agents_dot_v1_dot_skill__evaluations__pb2.DeleteEvaluationCaseResponse,
+                        input=agents_dot_v1_dot_skill__evaluations__pb2.DeleteCaseRequest,
+                        output=agents_dot_v1_dot_skill__evaluations__pb2.DeleteCaseResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.delete_case,
@@ -82,8 +82,8 @@ class SkillEvaluationsServiceASGIApplication(ConnectASGIApplication[SkillEvaluat
                     method=MethodInfo(
                         name="ListCases",
                         service_name="agents.v1.SkillEvaluationsService",
-                        input=agents_dot_v1_dot_skill__evaluations__pb2.ListEvaluationCasesRequest,
-                        output=agents_dot_v1_dot_skill__evaluations__pb2.ListEvaluationCasesResponse,
+                        input=agents_dot_v1_dot_skill__evaluations__pb2.ListCasesRequest,
+                        output=agents_dot_v1_dot_skill__evaluations__pb2.ListCasesResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.list_cases,
@@ -92,8 +92,8 @@ class SkillEvaluationsServiceASGIApplication(ConnectASGIApplication[SkillEvaluat
                     method=MethodInfo(
                         name="RunCase",
                         service_name="agents.v1.SkillEvaluationsService",
-                        input=agents_dot_v1_dot_skill__evaluations__pb2.RunSkillEvaluationRequest,
-                        output=agents_dot_v1_dot_skill__evaluations__pb2.RunSkillEvaluationResponse,
+                        input=agents_dot_v1_dot_skill__evaluations__pb2.RunCaseRequest,
+                        output=agents_dot_v1_dot_skill__evaluations__pb2.RunCaseResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.run_case,
@@ -102,8 +102,8 @@ class SkillEvaluationsServiceASGIApplication(ConnectASGIApplication[SkillEvaluat
                     method=MethodInfo(
                         name="RunSuite",
                         service_name="agents.v1.SkillEvaluationsService",
-                        input=agents_dot_v1_dot_skill__evaluations__pb2.RunSkillEvaluationRequest,
-                        output=agents_dot_v1_dot_skill__evaluations__pb2.RunSkillEvaluationResponse,
+                        input=agents_dot_v1_dot_skill__evaluations__pb2.RunSuiteRequest,
+                        output=agents_dot_v1_dot_skill__evaluations__pb2.RunSuiteResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.run_suite,
@@ -112,8 +112,8 @@ class SkillEvaluationsServiceASGIApplication(ConnectASGIApplication[SkillEvaluat
                     method=MethodInfo(
                         name="ListRuns",
                         service_name="agents.v1.SkillEvaluationsService",
-                        input=agents_dot_v1_dot_skill__evaluations__pb2.ListEvaluationRunsRequest,
-                        output=agents_dot_v1_dot_skill__evaluations__pb2.ListEvaluationRunsResponse,
+                        input=agents_dot_v1_dot_skill__evaluations__pb2.ListRunsRequest,
+                        output=agents_dot_v1_dot_skill__evaluations__pb2.ListRunsResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.list_runs,
@@ -122,8 +122,8 @@ class SkillEvaluationsServiceASGIApplication(ConnectASGIApplication[SkillEvaluat
                     method=MethodInfo(
                         name="GetRun",
                         service_name="agents.v1.SkillEvaluationsService",
-                        input=agents_dot_v1_dot_skill__evaluations__pb2.GetEvaluationRunRequest,
-                        output=agents_dot_v1_dot_skill__evaluations__pb2.EvaluationRunResponse,
+                        input=agents_dot_v1_dot_skill__evaluations__pb2.GetRunRequest,
+                        output=agents_dot_v1_dot_skill__evaluations__pb2.GetRunResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.get_run,
@@ -144,18 +144,18 @@ class SkillEvaluationsServiceASGIApplication(ConnectASGIApplication[SkillEvaluat
 class SkillEvaluationsServiceClient(ConnectClient):
     async def create_case(
         self,
-        request: agents_dot_v1_dot_skill__evaluations__pb2.CreateEvaluationCaseRequest,
+        request: agents_dot_v1_dot_skill__evaluations__pb2.CreateCaseRequest,
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_skill__evaluations__pb2.EvaluationCaseResponse:
+    ) -> agents_dot_v1_dot_skill__evaluations__pb2.CreateCaseResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="CreateCase",
                 service_name="agents.v1.SkillEvaluationsService",
-                input=agents_dot_v1_dot_skill__evaluations__pb2.CreateEvaluationCaseRequest,
-                output=agents_dot_v1_dot_skill__evaluations__pb2.EvaluationCaseResponse,
+                input=agents_dot_v1_dot_skill__evaluations__pb2.CreateCaseRequest,
+                output=agents_dot_v1_dot_skill__evaluations__pb2.CreateCaseResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -164,18 +164,18 @@ class SkillEvaluationsServiceClient(ConnectClient):
 
     async def update_case(
         self,
-        request: agents_dot_v1_dot_skill__evaluations__pb2.UpdateEvaluationCaseRequest,
+        request: agents_dot_v1_dot_skill__evaluations__pb2.UpdateCaseRequest,
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_skill__evaluations__pb2.EvaluationCaseResponse:
+    ) -> agents_dot_v1_dot_skill__evaluations__pb2.UpdateCaseResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="UpdateCase",
                 service_name="agents.v1.SkillEvaluationsService",
-                input=agents_dot_v1_dot_skill__evaluations__pb2.UpdateEvaluationCaseRequest,
-                output=agents_dot_v1_dot_skill__evaluations__pb2.EvaluationCaseResponse,
+                input=agents_dot_v1_dot_skill__evaluations__pb2.UpdateCaseRequest,
+                output=agents_dot_v1_dot_skill__evaluations__pb2.UpdateCaseResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -184,18 +184,18 @@ class SkillEvaluationsServiceClient(ConnectClient):
 
     async def delete_case(
         self,
-        request: agents_dot_v1_dot_skill__evaluations__pb2.DeleteEvaluationCaseRequest,
+        request: agents_dot_v1_dot_skill__evaluations__pb2.DeleteCaseRequest,
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_skill__evaluations__pb2.DeleteEvaluationCaseResponse:
+    ) -> agents_dot_v1_dot_skill__evaluations__pb2.DeleteCaseResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="DeleteCase",
                 service_name="agents.v1.SkillEvaluationsService",
-                input=agents_dot_v1_dot_skill__evaluations__pb2.DeleteEvaluationCaseRequest,
-                output=agents_dot_v1_dot_skill__evaluations__pb2.DeleteEvaluationCaseResponse,
+                input=agents_dot_v1_dot_skill__evaluations__pb2.DeleteCaseRequest,
+                output=agents_dot_v1_dot_skill__evaluations__pb2.DeleteCaseResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -204,18 +204,18 @@ class SkillEvaluationsServiceClient(ConnectClient):
 
     async def list_cases(
         self,
-        request: agents_dot_v1_dot_skill__evaluations__pb2.ListEvaluationCasesRequest,
+        request: agents_dot_v1_dot_skill__evaluations__pb2.ListCasesRequest,
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_skill__evaluations__pb2.ListEvaluationCasesResponse:
+    ) -> agents_dot_v1_dot_skill__evaluations__pb2.ListCasesResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="ListCases",
                 service_name="agents.v1.SkillEvaluationsService",
-                input=agents_dot_v1_dot_skill__evaluations__pb2.ListEvaluationCasesRequest,
-                output=agents_dot_v1_dot_skill__evaluations__pb2.ListEvaluationCasesResponse,
+                input=agents_dot_v1_dot_skill__evaluations__pb2.ListCasesRequest,
+                output=agents_dot_v1_dot_skill__evaluations__pb2.ListCasesResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -224,18 +224,18 @@ class SkillEvaluationsServiceClient(ConnectClient):
 
     async def run_case(
         self,
-        request: agents_dot_v1_dot_skill__evaluations__pb2.RunSkillEvaluationRequest,
+        request: agents_dot_v1_dot_skill__evaluations__pb2.RunCaseRequest,
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_skill__evaluations__pb2.RunSkillEvaluationResponse:
+    ) -> agents_dot_v1_dot_skill__evaluations__pb2.RunCaseResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="RunCase",
                 service_name="agents.v1.SkillEvaluationsService",
-                input=agents_dot_v1_dot_skill__evaluations__pb2.RunSkillEvaluationRequest,
-                output=agents_dot_v1_dot_skill__evaluations__pb2.RunSkillEvaluationResponse,
+                input=agents_dot_v1_dot_skill__evaluations__pb2.RunCaseRequest,
+                output=agents_dot_v1_dot_skill__evaluations__pb2.RunCaseResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -244,18 +244,18 @@ class SkillEvaluationsServiceClient(ConnectClient):
 
     async def run_suite(
         self,
-        request: agents_dot_v1_dot_skill__evaluations__pb2.RunSkillEvaluationRequest,
+        request: agents_dot_v1_dot_skill__evaluations__pb2.RunSuiteRequest,
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_skill__evaluations__pb2.RunSkillEvaluationResponse:
+    ) -> agents_dot_v1_dot_skill__evaluations__pb2.RunSuiteResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="RunSuite",
                 service_name="agents.v1.SkillEvaluationsService",
-                input=agents_dot_v1_dot_skill__evaluations__pb2.RunSkillEvaluationRequest,
-                output=agents_dot_v1_dot_skill__evaluations__pb2.RunSkillEvaluationResponse,
+                input=agents_dot_v1_dot_skill__evaluations__pb2.RunSuiteRequest,
+                output=agents_dot_v1_dot_skill__evaluations__pb2.RunSuiteResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -264,18 +264,18 @@ class SkillEvaluationsServiceClient(ConnectClient):
 
     async def list_runs(
         self,
-        request: agents_dot_v1_dot_skill__evaluations__pb2.ListEvaluationRunsRequest,
+        request: agents_dot_v1_dot_skill__evaluations__pb2.ListRunsRequest,
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_skill__evaluations__pb2.ListEvaluationRunsResponse:
+    ) -> agents_dot_v1_dot_skill__evaluations__pb2.ListRunsResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="ListRuns",
                 service_name="agents.v1.SkillEvaluationsService",
-                input=agents_dot_v1_dot_skill__evaluations__pb2.ListEvaluationRunsRequest,
-                output=agents_dot_v1_dot_skill__evaluations__pb2.ListEvaluationRunsResponse,
+                input=agents_dot_v1_dot_skill__evaluations__pb2.ListRunsRequest,
+                output=agents_dot_v1_dot_skill__evaluations__pb2.ListRunsResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -284,18 +284,18 @@ class SkillEvaluationsServiceClient(ConnectClient):
 
     async def get_run(
         self,
-        request: agents_dot_v1_dot_skill__evaluations__pb2.GetEvaluationRunRequest,
+        request: agents_dot_v1_dot_skill__evaluations__pb2.GetRunRequest,
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_skill__evaluations__pb2.EvaluationRunResponse:
+    ) -> agents_dot_v1_dot_skill__evaluations__pb2.GetRunResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="GetRun",
                 service_name="agents.v1.SkillEvaluationsService",
-                input=agents_dot_v1_dot_skill__evaluations__pb2.GetEvaluationRunRequest,
-                output=agents_dot_v1_dot_skill__evaluations__pb2.EvaluationRunResponse,
+                input=agents_dot_v1_dot_skill__evaluations__pb2.GetRunRequest,
+                output=agents_dot_v1_dot_skill__evaluations__pb2.GetRunResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -307,21 +307,21 @@ class SkillEvaluationsServiceClient(ConnectClient):
 
 
 class SkillEvaluationsServiceSync(Protocol):
-    def create_case(self, request: agents_dot_v1_dot_skill__evaluations__pb2.CreateEvaluationCaseRequest, ctx: RequestContext) -> agents_dot_v1_dot_skill__evaluations__pb2.EvaluationCaseResponse:
+    def create_case(self, request: agents_dot_v1_dot_skill__evaluations__pb2.CreateCaseRequest, ctx: RequestContext) -> agents_dot_v1_dot_skill__evaluations__pb2.CreateCaseResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def update_case(self, request: agents_dot_v1_dot_skill__evaluations__pb2.UpdateEvaluationCaseRequest, ctx: RequestContext) -> agents_dot_v1_dot_skill__evaluations__pb2.EvaluationCaseResponse:
+    def update_case(self, request: agents_dot_v1_dot_skill__evaluations__pb2.UpdateCaseRequest, ctx: RequestContext) -> agents_dot_v1_dot_skill__evaluations__pb2.UpdateCaseResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def delete_case(self, request: agents_dot_v1_dot_skill__evaluations__pb2.DeleteEvaluationCaseRequest, ctx: RequestContext) -> agents_dot_v1_dot_skill__evaluations__pb2.DeleteEvaluationCaseResponse:
+    def delete_case(self, request: agents_dot_v1_dot_skill__evaluations__pb2.DeleteCaseRequest, ctx: RequestContext) -> agents_dot_v1_dot_skill__evaluations__pb2.DeleteCaseResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def list_cases(self, request: agents_dot_v1_dot_skill__evaluations__pb2.ListEvaluationCasesRequest, ctx: RequestContext) -> agents_dot_v1_dot_skill__evaluations__pb2.ListEvaluationCasesResponse:
+    def list_cases(self, request: agents_dot_v1_dot_skill__evaluations__pb2.ListCasesRequest, ctx: RequestContext) -> agents_dot_v1_dot_skill__evaluations__pb2.ListCasesResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def run_case(self, request: agents_dot_v1_dot_skill__evaluations__pb2.RunSkillEvaluationRequest, ctx: RequestContext) -> agents_dot_v1_dot_skill__evaluations__pb2.RunSkillEvaluationResponse:
+    def run_case(self, request: agents_dot_v1_dot_skill__evaluations__pb2.RunCaseRequest, ctx: RequestContext) -> agents_dot_v1_dot_skill__evaluations__pb2.RunCaseResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def run_suite(self, request: agents_dot_v1_dot_skill__evaluations__pb2.RunSkillEvaluationRequest, ctx: RequestContext) -> agents_dot_v1_dot_skill__evaluations__pb2.RunSkillEvaluationResponse:
+    def run_suite(self, request: agents_dot_v1_dot_skill__evaluations__pb2.RunSuiteRequest, ctx: RequestContext) -> agents_dot_v1_dot_skill__evaluations__pb2.RunSuiteResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def list_runs(self, request: agents_dot_v1_dot_skill__evaluations__pb2.ListEvaluationRunsRequest, ctx: RequestContext) -> agents_dot_v1_dot_skill__evaluations__pb2.ListEvaluationRunsResponse:
+    def list_runs(self, request: agents_dot_v1_dot_skill__evaluations__pb2.ListRunsRequest, ctx: RequestContext) -> agents_dot_v1_dot_skill__evaluations__pb2.ListRunsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def get_run(self, request: agents_dot_v1_dot_skill__evaluations__pb2.GetEvaluationRunRequest, ctx: RequestContext) -> agents_dot_v1_dot_skill__evaluations__pb2.EvaluationRunResponse:
+    def get_run(self, request: agents_dot_v1_dot_skill__evaluations__pb2.GetRunRequest, ctx: RequestContext) -> agents_dot_v1_dot_skill__evaluations__pb2.GetRunResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
 
@@ -333,8 +333,8 @@ class SkillEvaluationsServiceWSGIApplication(ConnectWSGIApplication):
                     method=MethodInfo(
                         name="CreateCase",
                         service_name="agents.v1.SkillEvaluationsService",
-                        input=agents_dot_v1_dot_skill__evaluations__pb2.CreateEvaluationCaseRequest,
-                        output=agents_dot_v1_dot_skill__evaluations__pb2.EvaluationCaseResponse,
+                        input=agents_dot_v1_dot_skill__evaluations__pb2.CreateCaseRequest,
+                        output=agents_dot_v1_dot_skill__evaluations__pb2.CreateCaseResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.create_case,
@@ -343,8 +343,8 @@ class SkillEvaluationsServiceWSGIApplication(ConnectWSGIApplication):
                     method=MethodInfo(
                         name="UpdateCase",
                         service_name="agents.v1.SkillEvaluationsService",
-                        input=agents_dot_v1_dot_skill__evaluations__pb2.UpdateEvaluationCaseRequest,
-                        output=agents_dot_v1_dot_skill__evaluations__pb2.EvaluationCaseResponse,
+                        input=agents_dot_v1_dot_skill__evaluations__pb2.UpdateCaseRequest,
+                        output=agents_dot_v1_dot_skill__evaluations__pb2.UpdateCaseResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.update_case,
@@ -353,8 +353,8 @@ class SkillEvaluationsServiceWSGIApplication(ConnectWSGIApplication):
                     method=MethodInfo(
                         name="DeleteCase",
                         service_name="agents.v1.SkillEvaluationsService",
-                        input=agents_dot_v1_dot_skill__evaluations__pb2.DeleteEvaluationCaseRequest,
-                        output=agents_dot_v1_dot_skill__evaluations__pb2.DeleteEvaluationCaseResponse,
+                        input=agents_dot_v1_dot_skill__evaluations__pb2.DeleteCaseRequest,
+                        output=agents_dot_v1_dot_skill__evaluations__pb2.DeleteCaseResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.delete_case,
@@ -363,8 +363,8 @@ class SkillEvaluationsServiceWSGIApplication(ConnectWSGIApplication):
                     method=MethodInfo(
                         name="ListCases",
                         service_name="agents.v1.SkillEvaluationsService",
-                        input=agents_dot_v1_dot_skill__evaluations__pb2.ListEvaluationCasesRequest,
-                        output=agents_dot_v1_dot_skill__evaluations__pb2.ListEvaluationCasesResponse,
+                        input=agents_dot_v1_dot_skill__evaluations__pb2.ListCasesRequest,
+                        output=agents_dot_v1_dot_skill__evaluations__pb2.ListCasesResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.list_cases,
@@ -373,8 +373,8 @@ class SkillEvaluationsServiceWSGIApplication(ConnectWSGIApplication):
                     method=MethodInfo(
                         name="RunCase",
                         service_name="agents.v1.SkillEvaluationsService",
-                        input=agents_dot_v1_dot_skill__evaluations__pb2.RunSkillEvaluationRequest,
-                        output=agents_dot_v1_dot_skill__evaluations__pb2.RunSkillEvaluationResponse,
+                        input=agents_dot_v1_dot_skill__evaluations__pb2.RunCaseRequest,
+                        output=agents_dot_v1_dot_skill__evaluations__pb2.RunCaseResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.run_case,
@@ -383,8 +383,8 @@ class SkillEvaluationsServiceWSGIApplication(ConnectWSGIApplication):
                     method=MethodInfo(
                         name="RunSuite",
                         service_name="agents.v1.SkillEvaluationsService",
-                        input=agents_dot_v1_dot_skill__evaluations__pb2.RunSkillEvaluationRequest,
-                        output=agents_dot_v1_dot_skill__evaluations__pb2.RunSkillEvaluationResponse,
+                        input=agents_dot_v1_dot_skill__evaluations__pb2.RunSuiteRequest,
+                        output=agents_dot_v1_dot_skill__evaluations__pb2.RunSuiteResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.run_suite,
@@ -393,8 +393,8 @@ class SkillEvaluationsServiceWSGIApplication(ConnectWSGIApplication):
                     method=MethodInfo(
                         name="ListRuns",
                         service_name="agents.v1.SkillEvaluationsService",
-                        input=agents_dot_v1_dot_skill__evaluations__pb2.ListEvaluationRunsRequest,
-                        output=agents_dot_v1_dot_skill__evaluations__pb2.ListEvaluationRunsResponse,
+                        input=agents_dot_v1_dot_skill__evaluations__pb2.ListRunsRequest,
+                        output=agents_dot_v1_dot_skill__evaluations__pb2.ListRunsResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.list_runs,
@@ -403,8 +403,8 @@ class SkillEvaluationsServiceWSGIApplication(ConnectWSGIApplication):
                     method=MethodInfo(
                         name="GetRun",
                         service_name="agents.v1.SkillEvaluationsService",
-                        input=agents_dot_v1_dot_skill__evaluations__pb2.GetEvaluationRunRequest,
-                        output=agents_dot_v1_dot_skill__evaluations__pb2.EvaluationRunResponse,
+                        input=agents_dot_v1_dot_skill__evaluations__pb2.GetRunRequest,
+                        output=agents_dot_v1_dot_skill__evaluations__pb2.GetRunResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.get_run,
@@ -425,18 +425,18 @@ class SkillEvaluationsServiceWSGIApplication(ConnectWSGIApplication):
 class SkillEvaluationsServiceClientSync(ConnectClientSync):
     def create_case(
         self,
-        request: agents_dot_v1_dot_skill__evaluations__pb2.CreateEvaluationCaseRequest,
+        request: agents_dot_v1_dot_skill__evaluations__pb2.CreateCaseRequest,
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_skill__evaluations__pb2.EvaluationCaseResponse:
+    ) -> agents_dot_v1_dot_skill__evaluations__pb2.CreateCaseResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="CreateCase",
                 service_name="agents.v1.SkillEvaluationsService",
-                input=agents_dot_v1_dot_skill__evaluations__pb2.CreateEvaluationCaseRequest,
-                output=agents_dot_v1_dot_skill__evaluations__pb2.EvaluationCaseResponse,
+                input=agents_dot_v1_dot_skill__evaluations__pb2.CreateCaseRequest,
+                output=agents_dot_v1_dot_skill__evaluations__pb2.CreateCaseResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -445,18 +445,18 @@ class SkillEvaluationsServiceClientSync(ConnectClientSync):
 
     def update_case(
         self,
-        request: agents_dot_v1_dot_skill__evaluations__pb2.UpdateEvaluationCaseRequest,
+        request: agents_dot_v1_dot_skill__evaluations__pb2.UpdateCaseRequest,
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_skill__evaluations__pb2.EvaluationCaseResponse:
+    ) -> agents_dot_v1_dot_skill__evaluations__pb2.UpdateCaseResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="UpdateCase",
                 service_name="agents.v1.SkillEvaluationsService",
-                input=agents_dot_v1_dot_skill__evaluations__pb2.UpdateEvaluationCaseRequest,
-                output=agents_dot_v1_dot_skill__evaluations__pb2.EvaluationCaseResponse,
+                input=agents_dot_v1_dot_skill__evaluations__pb2.UpdateCaseRequest,
+                output=agents_dot_v1_dot_skill__evaluations__pb2.UpdateCaseResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -465,18 +465,18 @@ class SkillEvaluationsServiceClientSync(ConnectClientSync):
 
     def delete_case(
         self,
-        request: agents_dot_v1_dot_skill__evaluations__pb2.DeleteEvaluationCaseRequest,
+        request: agents_dot_v1_dot_skill__evaluations__pb2.DeleteCaseRequest,
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_skill__evaluations__pb2.DeleteEvaluationCaseResponse:
+    ) -> agents_dot_v1_dot_skill__evaluations__pb2.DeleteCaseResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="DeleteCase",
                 service_name="agents.v1.SkillEvaluationsService",
-                input=agents_dot_v1_dot_skill__evaluations__pb2.DeleteEvaluationCaseRequest,
-                output=agents_dot_v1_dot_skill__evaluations__pb2.DeleteEvaluationCaseResponse,
+                input=agents_dot_v1_dot_skill__evaluations__pb2.DeleteCaseRequest,
+                output=agents_dot_v1_dot_skill__evaluations__pb2.DeleteCaseResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -485,18 +485,18 @@ class SkillEvaluationsServiceClientSync(ConnectClientSync):
 
     def list_cases(
         self,
-        request: agents_dot_v1_dot_skill__evaluations__pb2.ListEvaluationCasesRequest,
+        request: agents_dot_v1_dot_skill__evaluations__pb2.ListCasesRequest,
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_skill__evaluations__pb2.ListEvaluationCasesResponse:
+    ) -> agents_dot_v1_dot_skill__evaluations__pb2.ListCasesResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="ListCases",
                 service_name="agents.v1.SkillEvaluationsService",
-                input=agents_dot_v1_dot_skill__evaluations__pb2.ListEvaluationCasesRequest,
-                output=agents_dot_v1_dot_skill__evaluations__pb2.ListEvaluationCasesResponse,
+                input=agents_dot_v1_dot_skill__evaluations__pb2.ListCasesRequest,
+                output=agents_dot_v1_dot_skill__evaluations__pb2.ListCasesResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -505,18 +505,18 @@ class SkillEvaluationsServiceClientSync(ConnectClientSync):
 
     def run_case(
         self,
-        request: agents_dot_v1_dot_skill__evaluations__pb2.RunSkillEvaluationRequest,
+        request: agents_dot_v1_dot_skill__evaluations__pb2.RunCaseRequest,
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_skill__evaluations__pb2.RunSkillEvaluationResponse:
+    ) -> agents_dot_v1_dot_skill__evaluations__pb2.RunCaseResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="RunCase",
                 service_name="agents.v1.SkillEvaluationsService",
-                input=agents_dot_v1_dot_skill__evaluations__pb2.RunSkillEvaluationRequest,
-                output=agents_dot_v1_dot_skill__evaluations__pb2.RunSkillEvaluationResponse,
+                input=agents_dot_v1_dot_skill__evaluations__pb2.RunCaseRequest,
+                output=agents_dot_v1_dot_skill__evaluations__pb2.RunCaseResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -525,18 +525,18 @@ class SkillEvaluationsServiceClientSync(ConnectClientSync):
 
     def run_suite(
         self,
-        request: agents_dot_v1_dot_skill__evaluations__pb2.RunSkillEvaluationRequest,
+        request: agents_dot_v1_dot_skill__evaluations__pb2.RunSuiteRequest,
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_skill__evaluations__pb2.RunSkillEvaluationResponse:
+    ) -> agents_dot_v1_dot_skill__evaluations__pb2.RunSuiteResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="RunSuite",
                 service_name="agents.v1.SkillEvaluationsService",
-                input=agents_dot_v1_dot_skill__evaluations__pb2.RunSkillEvaluationRequest,
-                output=agents_dot_v1_dot_skill__evaluations__pb2.RunSkillEvaluationResponse,
+                input=agents_dot_v1_dot_skill__evaluations__pb2.RunSuiteRequest,
+                output=agents_dot_v1_dot_skill__evaluations__pb2.RunSuiteResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -545,18 +545,18 @@ class SkillEvaluationsServiceClientSync(ConnectClientSync):
 
     def list_runs(
         self,
-        request: agents_dot_v1_dot_skill__evaluations__pb2.ListEvaluationRunsRequest,
+        request: agents_dot_v1_dot_skill__evaluations__pb2.ListRunsRequest,
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_skill__evaluations__pb2.ListEvaluationRunsResponse:
+    ) -> agents_dot_v1_dot_skill__evaluations__pb2.ListRunsResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="ListRuns",
                 service_name="agents.v1.SkillEvaluationsService",
-                input=agents_dot_v1_dot_skill__evaluations__pb2.ListEvaluationRunsRequest,
-                output=agents_dot_v1_dot_skill__evaluations__pb2.ListEvaluationRunsResponse,
+                input=agents_dot_v1_dot_skill__evaluations__pb2.ListRunsRequest,
+                output=agents_dot_v1_dot_skill__evaluations__pb2.ListRunsResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -565,18 +565,18 @@ class SkillEvaluationsServiceClientSync(ConnectClientSync):
 
     def get_run(
         self,
-        request: agents_dot_v1_dot_skill__evaluations__pb2.GetEvaluationRunRequest,
+        request: agents_dot_v1_dot_skill__evaluations__pb2.GetRunRequest,
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_skill__evaluations__pb2.EvaluationRunResponse:
+    ) -> agents_dot_v1_dot_skill__evaluations__pb2.GetRunResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="GetRun",
                 service_name="agents.v1.SkillEvaluationsService",
-                input=agents_dot_v1_dot_skill__evaluations__pb2.GetEvaluationRunRequest,
-                output=agents_dot_v1_dot_skill__evaluations__pb2.EvaluationRunResponse,
+                input=agents_dot_v1_dot_skill__evaluations__pb2.GetRunRequest,
+                output=agents_dot_v1_dot_skill__evaluations__pb2.GetRunResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

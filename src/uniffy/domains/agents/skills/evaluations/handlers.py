@@ -63,8 +63,8 @@ def parse_fields(fields: proto.EvaluationCaseFields) -> dict:
 
 class SkillEvaluationHandlers:
     async def create_case(
-        self, request: proto.CreateEvaluationCaseRequest, ctx: RequestContext
-    ) -> proto.EvaluationCaseResponse:
+        self, request: proto.CreateCaseRequest, ctx: RequestContext
+    ) -> proto.CreateCaseResponse:
         organization_id = resolve_organization_id(request.organization_id)
         async with open_session() as session:
             case = await EvaluationCases(session).create(
@@ -73,11 +73,11 @@ class SkillEvaluationHandlers:
                 scope=parse_scope(request.scope),
                 fields=parse_fields(request.fields),
             )
-            return proto.EvaluationCaseResponse(evaluation_case=case_to_proto(case))
+            return proto.CreateCaseResponse(evaluation_case=case_to_proto(case))
 
     async def update_case(
-        self, request: proto.UpdateEvaluationCaseRequest, ctx: RequestContext
-    ) -> proto.EvaluationCaseResponse:
+        self, request: proto.UpdateCaseRequest, ctx: RequestContext
+    ) -> proto.UpdateCaseResponse:
         organization_id = resolve_organization_id(request.organization_id)
         async with open_session() as session:
             case = await EvaluationCases(session).update(
@@ -86,11 +86,11 @@ class SkillEvaluationHandlers:
                 case_id=parse_id(request.case_id),
                 fields=parse_fields(request.fields),
             )
-            return proto.EvaluationCaseResponse(evaluation_case=case_to_proto(case))
+            return proto.UpdateCaseResponse(evaluation_case=case_to_proto(case))
 
     async def delete_case(
-        self, request: proto.DeleteEvaluationCaseRequest, ctx: RequestContext
-    ) -> proto.DeleteEvaluationCaseResponse:
+        self, request: proto.DeleteCaseRequest, ctx: RequestContext
+    ) -> proto.DeleteCaseResponse:
         organization_id = resolve_organization_id(request.organization_id)
         async with open_session() as session:
             await EvaluationCases(session).delete(
@@ -98,11 +98,11 @@ class SkillEvaluationHandlers:
                 organization_id=organization_id,
                 case_id=parse_id(request.case_id),
             )
-        return proto.DeleteEvaluationCaseResponse()
+        return proto.DeleteCaseResponse()
 
     async def list_cases(
-        self, request: proto.ListEvaluationCasesRequest, ctx: RequestContext
-    ) -> proto.ListEvaluationCasesResponse:
+        self, request: proto.ListCasesRequest, ctx: RequestContext
+    ) -> proto.ListCasesResponse:
         organization_id = resolve_organization_id(request.organization_id)
         async with open_session() as session:
             cases = await EvaluationCases(session).list(
@@ -110,23 +110,23 @@ class SkillEvaluationHandlers:
                 organization_id=organization_id,
                 scope=parse_scope(request.scope),
             )
-            return proto.ListEvaluationCasesResponse(cases=[case_to_proto(case) for case in cases])
+            return proto.ListCasesResponse(cases=[case_to_proto(case) for case in cases])
 
     async def run_case(
-        self, request: proto.RunSkillEvaluationRequest, ctx: RequestContext
-    ) -> proto.RunSkillEvaluationResponse:
+        self, request: proto.RunCaseRequest, ctx: RequestContext
+    ) -> proto.RunCaseResponse:
         if len(request.case_ids) != 1:
             raise ValidationError("cases", "Select exactly one evaluation case")
-        return await self._run(request)
+        return proto.RunCaseResponse(runs=await self._run(request))
 
     async def run_suite(
-        self, request: proto.RunSkillEvaluationRequest, ctx: RequestContext
-    ) -> proto.RunSkillEvaluationResponse:
-        return await self._run(request)
+        self, request: proto.RunSuiteRequest, ctx: RequestContext
+    ) -> proto.RunSuiteResponse:
+        return proto.RunSuiteResponse(runs=await self._run(request))
 
     async def _run(
-        self, request: proto.RunSkillEvaluationRequest
-    ) -> proto.RunSkillEvaluationResponse:
+        self, request: proto.RunCaseRequest | proto.RunSuiteRequest
+    ) -> list[proto.EvaluationRun]:
         organization_id = resolve_organization_id(request.organization_id)
         target = parse_target(request.target)
         async with open_session() as session:
@@ -141,11 +141,11 @@ class SkillEvaluationHandlers:
                 model_override=request.model_override,
                 judge_model=request.judge_model,
             )
-            return proto.RunSkillEvaluationResponse(runs=[run_to_proto(run) for run in runs])
+            return [run_to_proto(run) for run in runs]
 
     async def list_runs(
-        self, request: proto.ListEvaluationRunsRequest, ctx: RequestContext
-    ) -> proto.ListEvaluationRunsResponse:
+        self, request: proto.ListRunsRequest, ctx: RequestContext
+    ) -> proto.ListRunsResponse:
         organization_id = resolve_organization_id(request.organization_id)
         async with open_session() as session:
             runs, cursor = await EvaluationReader(session).list(
@@ -156,13 +156,13 @@ class SkillEvaluationHandlers:
                 page_size=request.page_size,
                 cursor=request.cursor,
             )
-            return proto.ListEvaluationRunsResponse(
+            return proto.ListRunsResponse(
                 runs=[run_to_proto(run) for run in runs], next_cursor=cursor
             )
 
     async def get_run(
-        self, request: proto.GetEvaluationRunRequest, ctx: RequestContext
-    ) -> proto.EvaluationRunResponse:
+        self, request: proto.GetRunRequest, ctx: RequestContext
+    ) -> proto.GetRunResponse:
         organization_id = resolve_organization_id(request.organization_id)
         async with open_session() as session:
             run = await EvaluationReader(session).get(
@@ -170,4 +170,4 @@ class SkillEvaluationHandlers:
                 organization_id=organization_id,
                 run_id=parse_id(request.run_id),
             )
-            return proto.EvaluationRunResponse(run=run_to_proto(run))
+            return proto.GetRunResponse(run=run_to_proto(run))

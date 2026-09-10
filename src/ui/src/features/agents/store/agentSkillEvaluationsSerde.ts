@@ -1,8 +1,11 @@
+import type { MessageInitShape } from "@bufbuild/protobuf";
 import { timestampDate } from "@bufbuild/protobuf/wkt";
 import type {
   EvaluationCase,
   EvaluationCaseFields,
   EvaluationRun,
+  EvaluationScopeSchema,
+  EvaluationTargetSchema,
 } from "@uniffy/proto/agents/v1/skill_evaluations_pb";
 
 export type EvaluationScopeInput =
@@ -13,16 +16,20 @@ export type EvaluationTargetInput =
   | { draftId: string; draftContent?: string; skillVersionId?: never };
 
 export const evaluationScopeKey = (scope: EvaluationScopeInput) =>
-  scope.skillId ? `skill:${scope.skillId}` : `draft:${scope.draftId}`;
-export const evaluationScopeToProto = (scope: EvaluationScopeInput) =>
-  scope.skillId
-    ? { scope: { case: "skillId" as const, value: scope.skillId } }
-    : { scope: { case: "draftId" as const, value: scope.draftId } };
-export const evaluationTargetToProto = (target: EvaluationTargetInput) =>
-  target.skillVersionId
-    ? { target: { case: "skillVersionId" as const, value: target.skillVersionId } }
+  scope.skillId !== undefined ? `skill:${scope.skillId}` : `draft:${scope.draftId}`;
+export const evaluationScopeToProto = (
+  scope: EvaluationScopeInput,
+): MessageInitShape<typeof EvaluationScopeSchema> =>
+  scope.skillId !== undefined
+    ? { scope: { case: "skillId", value: scope.skillId } }
+    : { scope: { case: "draftId", value: scope.draftId } };
+export const evaluationTargetToProto = (
+  target: EvaluationTargetInput,
+): MessageInitShape<typeof EvaluationTargetSchema> =>
+  target.skillVersionId !== undefined
+    ? { target: { case: "skillVersionId", value: target.skillVersionId } }
     : {
-        target: { case: "draftId" as const, value: target.draftId },
+        target: { case: "draftId", value: target.draftId },
         draftContent: target.draftContent,
       };
 
