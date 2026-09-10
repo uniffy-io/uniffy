@@ -1,6 +1,7 @@
-/** Seeking flows through the media service worker's Range handler. */
+/** Plays through the `/api/media` Range route; a file still being transcoded shows a processing state instead of a player. */
 
 import { useEffect, useRef, useState } from "react";
+import { Spinner } from "@phosphor-icons/react";
 import videojs from "video.js";
 import type Player from "video.js/dist/types/player";
 import "video.js/dist/video-js.css";
@@ -12,7 +13,9 @@ import {
   setDuration,
   setViewerLoading,
 } from "@/features/files/store/viewerSlice";
+import { fetchFile } from "@/features/files/store/filesThunks";
 import { useMedia } from "@/features/files/components/viewer/hooks/useMedia";
+import { isTranscodePending } from "@/features/files/utils/transcodeGate";
 import type { SerializedFile } from "@/features/files/store/filesThunks";
 
 // Formats that browsers typically don't support
@@ -20,11 +23,43 @@ import type { SerializedFile } from "@/features/files/store/filesThunks";
 // The player will show an error if the specific codec isn't supported
 const UNSUPPORTED_FORMATS = ["video/x-msvideo", "video/x-ms-wmv"];
 
+// FILE_UPDATED only reaches the owner's stream; polling covers shared viewers
+// and dropped connections.
+const TRANSCODE_POLL_MS = 5000;
+
+const UNSUPPORTED_MESSAGE =
+  "This video format is not supported by your browser. Try downloading the file instead.";
+
 interface VideoViewerProps {
   file: SerializedFile;
 }
 
 export function VideoViewer({ file }: VideoViewerProps) {
+  const dispatch = useAppDispatch();
+  const transcoding = isTranscodePending(file.transcodeStatus);
+
+  useEffect(() => {
+    if (!transcoding) return;
+    const timer = window.setInterval(() => {
+      void dispatch(fetchFile(file.id));
+    }, TRANSCODE_POLL_MS);
+    return () => window.clearInterval(timer);
+  }, [transcoding, file.id, dispatch]);
+
+  if (transcoding) {
+    return (
+      <div className="viewer-loading flex-col gap-4 p-8 text-center">
+        <Spinner size={48} className="animate-spin" />
+        <p>Preparing this video for playback. It will be ready in about a minute.</p>
+      </div>
+    );
+  }
+
+  // Keyed per file so paging in the playlist never carries a previous file's error state.
+  return <VideoPlayer key={file.id} file={file} />;
+}
+
+function VideoPlayer({ file }: VideoViewerProps) {
   const dispatch = useAppDispatch();
   // Per-field subscriptions -- subscribing to the whole slice re-rendered
   // the player on every timeupdate (currentTime changes every ~250ms),
@@ -32,26 +67,17 @@ export function VideoViewer({ file }: VideoViewerProps) {
   const isPlaying = useAppSelector((state) => state.fileViewer.isPlaying);
   const volume = useAppSelector((state) => state.fileViewer.volume);
   const isMuted = useAppSelector((state) => state.fileViewer.isMuted);
-  const { url: streamUrl, loading: swLoading, error: swError } = useMedia(file.id);
+  const { url: streamUrl, error: mediaError } = useMedia(file.id);
   const [error, setError] = useState<string | null>(null);
 
   const videoContainerRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<Player | null>(null);
 
-  // Check for unsupported formats
   const isUnsupportedFormat = UNSUPPORTED_FORMATS.includes(file.mimeType);
 
   useEffect(() => {
     if (!videoContainerRef.current || !streamUrl) {
       return;
-    }
-
-    // Check if SW is controlling before loading
-    const swController = navigator.serviceWorker?.controller;
-    if (!swController) {
-      console.warn(
-        "[VideoViewer] No Service Worker controller - requests will NOT be intercepted!",
-      );
     }
 
     dispatch(setViewerLoading(true));
@@ -76,7 +102,6 @@ export function VideoViewer({ file }: VideoViewerProps) {
 
     playerRef.current = player;
 
-    // Event handlers
     player.on("loadedmetadata", () => {
       dispatch(setDuration(player.duration() || 0));
       dispatch(setViewerLoading(false));
@@ -101,38 +126,34 @@ export function VideoViewer({ file }: VideoViewerProps) {
     player.on("error", () => {
       dispatch(setViewerLoading(false));
       const err = player.error();
-      const currentSwController = navigator.serviceWorker?.controller;
       console.error("[VideoViewer] Playback error:", {
         code: err?.code,
         message: err?.message,
-        streamUrl,
         mimeType: file.mimeType,
-        swControlling: !!currentSwController,
       });
-      if (err?.code === 4) {
-        // Check if this might be a SW issue
-        if (!currentSwController) {
-          setError("Media streaming unavailable. Please refresh the page.");
-        } else {
-          setError(
-            "This video format is not supported by your browser. Try downloading the file instead.",
-          );
-        }
-      } else {
+      if (err?.code !== 4) {
         setError("Failed to play video");
+        return;
       }
+      // A file whose transcode started after this row was loaded answers 425 and
+      // surfaces here as an unsupported source. Refresh the row first: a pending
+      // status hands over to the processing state instead of an error.
+      void dispatch(fetchFile(file.id))
+        .unwrap()
+        .then((fresh) => {
+          if (!isTranscodePending(fresh.transcodeStatus)) setError(UNSUPPORTED_MESSAGE);
+        })
+        .catch(() => setError(UNSUPPORTED_MESSAGE));
     });
 
-    // Cleanup
     return () => {
       if (playerRef.current) {
         playerRef.current.dispose();
         playerRef.current = null;
       }
     };
-  }, [streamUrl, file.mimeType, dispatch]);
+  }, [streamUrl, file.id, file.mimeType, dispatch]);
 
-  // Sync play state
   useEffect(() => {
     const player = playerRef.current;
     if (!player) return;
@@ -148,7 +169,6 @@ export function VideoViewer({ file }: VideoViewerProps) {
     }
   }, [isPlaying]);
 
-  // Sync volume
   useEffect(() => {
     const player = playerRef.current;
     if (!player || error) return;
@@ -161,29 +181,10 @@ export function VideoViewer({ file }: VideoViewerProps) {
     }
   }, [volume, isMuted, error]);
 
-  if (swLoading) {
-    return (
-      <div className="viewer-loading">
-        <span>Initializing media player...</span>
-      </div>
-    );
-  }
-
-  if (swError) {
+  if (mediaError || !streamUrl) {
     return (
       <div className="viewer-error">
-        <p>{swError}</p>
-        <button onClick={() => window.location.reload()} className="viewer-btn px-4 py-2">
-          Refresh Page
-        </button>
-      </div>
-    );
-  }
-
-  if (!streamUrl) {
-    return (
-      <div className="viewer-error">
-        <p>Unable to load video</p>
+        <p>{mediaError ?? "Unable to load video"}</p>
       </div>
     );
   }

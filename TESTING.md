@@ -180,6 +180,30 @@ survive navigation. The floating transfers tray mounts at app root.
 - [ ] Recording: capture a static screen for about a minute, then kill the tab
       (not a reload) and reopen the app. Recovery completes the recording with
       only the last few seconds missing.
+- [ ] Recording: record as user A, log out, log in as user B in the same
+      browser and record again. The file lands in B's own `Recordings` folder
+      (no `Permission denied: view on folder`), the first-use consent modal
+      shows once for B, and B's recent list starts empty.
+- [ ] Recording: open the recording right after stopping, while the
+      transcode is still running. The viewer shows "Preparing this video for
+      playback" instead of a player error, and the player appears on its own
+      once the transcode completes, without a reload. Download stays disabled
+      until then.
+- [ ] Recording: keep the `Recordings` folder open while a recording is
+      processed. The card swaps its icon for a real frame thumbnail within a
+      few seconds of the thumbnail job finishing, and the download button
+      enables when the transcode finishes, both without a reload.
+- [ ] Files: rename a video to a Cyrillic name such as `1ф.mp4`. It still
+      plays in the viewer and downloads with that name (the media and file
+      routes used to 500 on a non-Latin `Content-Disposition`).
+- [ ] Files: rename a file in list and grid view. The extension sits outside
+      the input as a fixed suffix and cannot be edited; renaming through the
+      API to a different extension is rejected with "The name has to keep its
+      .mp4 extension". Folders rename as before.
+- [ ] Mobile: rename a file from the item sheet. The extension shows as a
+      fixed grey tail inside the field and the keyboard edits only the stem.
+      A failed rename (e.g. offline) shows a "Rename failed" alert instead of
+      silently closing. Folders show no tail.
 
 ## Authenticated assets (cookie read-path)
 

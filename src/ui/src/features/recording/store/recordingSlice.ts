@@ -1,6 +1,7 @@
 /** Screen recording state machine. Live state wipes on rehydrate (MediaStream cannot survive a reload); persisted picker prefs only. */
 
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
+import { logout, rehydrateComplete, setCredentials } from "@/features/auth/store/authSlice";
 
 export type RecordingState =
   | "idle"
@@ -36,7 +37,8 @@ export interface RecordingSliceState {
   network: NetworkStatus;
   auth: "ok" | "lost";
   uploadId: string | null;
-  recordingsFolderId: string | null;
+  /** Who the persisted per-user fields (recents, first-use consent) belong to. */
+  ownerUserId: string | null;
   startedAt: number | null;
   pausedDurationMs: number;
   pausedAt: number | null;
@@ -60,7 +62,7 @@ const initialState: RecordingSliceState = {
   network: "online",
   auth: "ok",
   uploadId: null,
-  recordingsFolderId: null,
+  ownerUserId: null,
   startedAt: null,
   pausedDurationMs: 0,
   pausedAt: null,
@@ -80,6 +82,14 @@ const initialState: RecordingSliceState = {
 };
 
 const RECENTS_CAP = 10;
+
+/** The slice persists across logins on a shared browser; a different account starts clean. */
+function claimForUser(state: RecordingSliceState, userId: string) {
+  if (state.ownerUserId === userId) return;
+  state.ownerUserId = userId;
+  state.recents = [];
+  state.firstUseAcknowledged = false;
+}
 
 const recordingSlice = createSlice({
   name: "recording",
@@ -167,9 +177,6 @@ const recordingSlice = createSlice({
     authStatusChanged(state, action: PayloadAction<"ok" | "lost">) {
       state.auth = action.payload;
     },
-    recordingsFolderResolved(state, action: PayloadAction<string>) {
-      state.recordingsFolderId = action.payload;
-    },
     clearError(state) {
       state.error = null;
     },
@@ -202,6 +209,18 @@ const recordingSlice = createSlice({
       state.firstUseModalOpen = false;
     },
   },
+  extraReducers: (builder) => {
+    builder
+      .addCase(setCredentials, (state, { payload }) => {
+        claimForUser(state, payload.user.id);
+      })
+      .addCase(rehydrateComplete, (state, { payload }) => {
+        claimForUser(state, payload.user.id);
+      })
+      .addCase(logout, (state) => {
+        state.recents = [];
+      });
+  },
 });
 
 export const {
@@ -219,7 +238,6 @@ export const {
   bytesProgress,
   networkStatusChanged,
   authStatusChanged,
-  recordingsFolderResolved,
   clearError,
   sourceChanged,
   micDeviceChanged,

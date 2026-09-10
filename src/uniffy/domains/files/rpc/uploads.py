@@ -96,6 +96,12 @@ class UploadHandlers:
                     total_chunks=upload.total_chunks,
                 )
 
+        except NotFoundError:
+            raise ConnectError(Code.NOT_FOUND, "Folder not found")
+        except ValidationError as e:
+            raise ConnectError(Code.INVALID_ARGUMENT, str(e))
+        except PermissionDeniedError as e:
+            raise ConnectError(Code.PERMISSION_DENIED, str(e) or "Access denied")
         except ConnectError:
             raise
         except Exception as e:

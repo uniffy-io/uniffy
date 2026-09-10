@@ -1,5 +1,4 @@
-import { useEffect, useState } from "react";
-import { ExtractionStatus } from "@uniffy/proto/files/v1/files_pb";
+import { useState } from "react";
 import { useThumbnailUrl } from "@/features/files/hooks/useThumbnail";
 import type { SerializedFile } from "@/features/files/store/filesThunks";
 
@@ -9,50 +8,24 @@ interface ThumbnailImageProps {
 }
 
 export function ThumbnailImage({ file, fallback }: ThumbnailImageProps) {
-  const [error, setError] = useState(false);
-  const { url, loading } = useThumbnailUrl(file.id);
+  // A failed load is remembered per version, so new bytes retry on their own.
+  const [failedVersion, setFailedVersion] = useState<number | null>(null);
+  const { url } = useThumbnailUrl(file.id);
 
-  // Re-extracted files bump extractionStatus; clear the error so we retry.
-  useEffect(() => {
-    // eslint-disable-next-line react/react-compiler
-    setError(false);
-  }, [file.extractionStatus]);
-
-  // Don't attempt loading until worker has finished processing
-  if (file.extractionStatus !== ExtractionStatus.COMPLETED) {
+  // `hasThumbnail` flips through the FILE_UPDATED refetch once the worker has
+  // stored the JPEG, so the request is never made before the object exists.
+  const hasThumbnail = file.metadata?.hasThumbnail ?? false;
+  if (!hasThumbnail || !url || failedVersion === file.version) {
     return <>{fallback}</>;
   }
-
-  // Still waiting for service worker
-  if (loading) {
-    return (
-      <div className="w-full h-full flex items-center justify-center bg-muted/30">
-        <div className="animate-pulse w-8 h-8 rounded-full bg-muted" />
-      </div>
-    );
-  }
-
-  // No URL available (SW not ready or missing org)
-  if (!url) {
-    return <>{fallback}</>;
-  }
-
-  // Error loading image
-  if (error) {
-    return <>{fallback}</>;
-  }
-
-  // Cache-bust with the file version (new bytes -> new thumbnail) and
-  // extractionStatus (so a cached 404 is retried once processing completes).
-  const cacheBustedUrl = `${url}?v=${file.version}-${file.extractionStatus}`;
 
   return (
     <img
-      src={cacheBustedUrl}
+      src={`${url}?v=${file.version}`}
       alt={file.filename}
       className="w-full h-full object-cover"
       loading="lazy"
-      onError={() => setError(true)}
+      onError={() => setFailedVersion(file.version)}
     />
   );
 }

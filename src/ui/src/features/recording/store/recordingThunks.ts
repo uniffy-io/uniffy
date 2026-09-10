@@ -20,7 +20,6 @@ import {
   recordingFailed,
   recordingPaused,
   recordingResumed,
-  recordingsFolderResolved,
   recordingStarted,
   startRequested,
   stopRequested,
@@ -84,12 +83,11 @@ export const startRecording = createAsyncThunk<void, void, ThunkApiConfig>(
 
     dispatch(startRequested());
 
-    let folderId = state.recording.recordingsFolderId;
+    // Resolved on every start: the folder is per user and per org, so a cached id
+    // would follow the browser across account or org switches.
+    let folderId: string;
     try {
-      if (!folderId) {
-        folderId = await fetchRecordingsFolderId(organizationId);
-        dispatch(recordingsFolderResolved(folderId));
-      }
+      folderId = await fetchRecordingsFolderId(organizationId);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to resolve folder";
       releaseLock();
