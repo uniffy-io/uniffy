@@ -209,13 +209,13 @@ class SkillOperations:
         display_name: str | None = None,
         description: str | None = None,
         content: str | None = None,
+        requires_tools: list[str] | None = None,
     ) -> AgentSkill:
         """Update an organization skill; bundled skills are read-only."""
         result = await self._session.execute(
-            select(AgentSkill).where(
-                AgentSkill.id == skill_id,
-                AgentSkill.organization_id == organization_id,
-            )
+            select(AgentSkill)
+            .where(AgentSkill.id == skill_id, AgentSkill.organization_id == organization_id)
+            .with_for_update()
         )
         skill = result.scalar_one_or_none()
         if not skill:
@@ -266,6 +266,12 @@ class SkillOperations:
                 versioned_changes.append("content")
             skill.content = clean.content
 
+        if requires_tools is not None:
+            new_tools = list(dict.fromkeys(requires_tools))
+            if new_tools != list(skill.requires_tools or []):
+                versioned_changes.append("required tools")
+            skill.requires_tools = new_tools
+
         if versioned_changes:
             await self.stage_skill_version(
                 skill,
@@ -279,10 +285,10 @@ class SkillOperations:
             audit_changes["display_name"] = clean.display_name
         if clean.content is not None:
             audit_changes["content_updated"] = True
+        if requires_tools is not None:
+            audit_changes["requires_tools"] = skill.requires_tools
 
         skill.updated_at = datetime.now(UTC)
-        await self._session.commit()
-        await self._session.refresh(skill)
 
         if audit_changes:
             await write_audit_event(
@@ -294,7 +300,8 @@ class SkillOperations:
                 resource_id=skill_id,
                 details={"changes": audit_changes},
             )
-            await self._session.commit()
+        await self._session.commit()
+        await self._session.refresh(skill)
 
         await invalidate_agents_using_skill(skill_id)
 

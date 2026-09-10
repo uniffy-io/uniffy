@@ -58,7 +58,6 @@ import { agentTemplatesReducer } from "@/features/agents/store/agentTemplatesSli
 import { agentToolsReducer } from "@/features/agents/store/agentToolsSlice";
 import { agentRunnableSkillsReducer } from "@/features/agents/store/agentRunnableSkillsSlice";
 import { agentSkillDraftsReducer } from "@/features/agents/store/agentSkillDraftsSlice";
-import { agentSkillEvaluationsReducer } from "@/features/agents/store/agentSkillEvaluationsSlice";
 import { agentSkillVersionsReducer } from "@/features/agents/store/agentSkillVersionsSlice";
 import { agentSkillMetricsReducer } from "@/features/agents/store/agentSkillMetricsSlice";
 import { agentProvidersReducer } from "@/features/agents/store/agentProvidersSlice";
@@ -208,7 +207,6 @@ const rootReducer = combineReducers({
   agentTools: agentToolsReducer,
   agentRunnableSkills: agentRunnableSkillsReducer,
   agentSkillDrafts: agentSkillDraftsReducer,
-  agentSkillEvaluations: agentSkillEvaluationsReducer,
   agentSkillVersions: agentSkillVersionsReducer,
   agentSkillMetrics: agentSkillMetricsReducer,
   agentProviders: agentProvidersReducer,

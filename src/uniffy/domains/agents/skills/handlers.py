@@ -239,6 +239,9 @@ class SkillsHandlers(SkillGenerationHandlers):
         display_name = request.display_name if request.HasField("display_name") else None
         description = request.description if request.HasField("description") else None
         content = request.content if request.HasField("content") else None
+        requires_tools = (
+            list(request.requires_tools.names) if request.HasField("requires_tools") else None
+        )
 
         try:
             async with open_session() as session:
@@ -251,6 +254,7 @@ class SkillsHandlers(SkillGenerationHandlers):
                     display_name=display_name,
                     description=description,
                     content=content,
+                    requires_tools=requires_tools,
                 )
                 active_number = await ops.resolve_active_version_number(skill)
                 return UpdateSkillResponse(

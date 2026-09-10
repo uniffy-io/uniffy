@@ -243,20 +243,28 @@ class ListSkillsResponse(_message.Message):
     def __init__(self, skills: _Optional[_Iterable[_Union[SkillInfo, _Mapping]]] = ..., pagination: _Optional[_Union[_common_pb2.PaginationResponse, _Mapping]] = ...) -> None: ...
 
 class UpdateSkillRequest(_message.Message):
-    __slots__ = ("organization_id", "skill_id", "name", "display_name", "description", "content")
+    __slots__ = ("organization_id", "skill_id", "name", "display_name", "description", "content", "requires_tools")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     SKILL_ID_FIELD_NUMBER: _ClassVar[int]
     NAME_FIELD_NUMBER: _ClassVar[int]
     DISPLAY_NAME_FIELD_NUMBER: _ClassVar[int]
     DESCRIPTION_FIELD_NUMBER: _ClassVar[int]
     CONTENT_FIELD_NUMBER: _ClassVar[int]
+    REQUIRES_TOOLS_FIELD_NUMBER: _ClassVar[int]
     organization_id: str
     skill_id: str
     name: str
     display_name: str
     description: str
     content: str
-    def __init__(self, organization_id: _Optional[str] = ..., skill_id: _Optional[str] = ..., name: _Optional[str] = ..., display_name: _Optional[str] = ..., description: _Optional[str] = ..., content: _Optional[str] = ...) -> None: ...
+    requires_tools: SkillToolNames
+    def __init__(self, organization_id: _Optional[str] = ..., skill_id: _Optional[str] = ..., name: _Optional[str] = ..., display_name: _Optional[str] = ..., description: _Optional[str] = ..., content: _Optional[str] = ..., requires_tools: _Optional[_Union[SkillToolNames, _Mapping]] = ...) -> None: ...
+
+class SkillToolNames(_message.Message):
+    __slots__ = ("names",)
+    NAMES_FIELD_NUMBER: _ClassVar[int]
+    names: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, names: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class DeleteSkillRequest(_message.Message):
     __slots__ = ("organization_id", "skill_id")

@@ -67,54 +67,32 @@ exact skill version used.
 Skills come from the bundled library or your organization. Builders edit organization
 skills under **Agents > Skills**. Version history lets them choose an active version,
 follow the latest saved version, or restore an earlier body as a new version.
+The **Required tools** selector defines what an agent needs to run a skill. Builders
+can add or remove requirements on organization skills and drafts. An empty selection
+means the skill has no tool requirements; selecting tools does not enable them on agents.
 
 ## Create and improve skills from a conversation
 
-Use **Create skill from conversation** on a reply and explain what the skill should
-help with. After explicitly confirming, the configured model generates a draft from
+Open a reply's **More actions** menu and choose **Create skill from conversation**.
+In the agent's test drawer, use **More response actions** beside the reply. Explain
+what the skill should help with. After explicitly confirming, the configured model generates a draft from
 the selected reply and its triggering message. The draft is visible to organization
 builders for review.
 
-The person who invoked a skill can use **Improve this skill** on its completed reply.
+The person who invoked a skill can choose **Improve this skill** from its completed reply's menu.
 The proposal targets that invocation's recorded version. It does not guess a target
 from the agent's other skills or from the current active version.
+
+To refine a skill, invoke it with a real request, review the answer and tool activity,
+then choose **Improve this skill** and describe what should work better. Review the
+proposed instructions before saving, and try the skill again with another request.
+Chat and the agent's test drawer use the agent's enabled tools with your permissions;
+tool calls can read or change workspace content.
 
 Generation shows its progress and any failure. The requester can explicitly retry a
 failed attempt. Builders review, edit, save, or discard the draft in the Skills list.
 A draft does not change any agent until saved. Replies and reactions do not trigger
 generation automatically.
-
-## Evaluate skill behavior
-
-Open **Evaluations** in a skill or pending draft. Builders can keep up to 25 reusable
-cases with:
-
-- A name and input message.
-- Tools that must be called and tools that must never be called.
-- Sample responses for tool calls, including simulated errors.
-- An optional rubric describing response quality.
-
-Choose an accessible agent and a saved version, or evaluate the draft instructions
-currently in the editor. Click **Run** for one case or **Run suite** for all cases.
-The evaluator uses the selected agent's instructions, rules, enabled tool schemas,
-and configured model. Tools return only the case's sample responses: they never read
-or change real workspace data, call integrations, or generate images.
-
-Results distinguish passed, failed, and inconclusive tool assertions. An unavailable
-or forbidden call fails. A call missing a sample response is inconclusive unless
-another assertion already failed. Cases without tool assertions are inconclusive.
-Expand a result to inspect its response, attempted calls, captured instructions and
-case, model, cost, and time.
-
-**Judge cases with a rubric** adds a separate model call for each rubric. Its score
-and rationale appear alongside the deterministic tool assertions. If judging fails,
-the tool assertions remain available.
-
-For an improvement draft, **Compare active version and draft** runs the same cases
-against both targets and shows them side by side. Each request captures the case and
-configuration at that moment. Later edits do not rewrite results. Passing an
-evaluation never saves a draft or changes the active version; that remains a separate
-builder decision.
 
 ## Memory and observations
 
@@ -128,7 +106,7 @@ context, not authority to override rules or permissions.
 
 A skill's **Observations** section reports real invocation outcomes, tool errors,
 duration, tokens, and costs by exact version. Completion means the run finished; it
-does not grade the answer. Behavioral evaluations provide a separate, explicit check.
+does not grade the answer. Review the actual response to decide what needs improvement.
 
 ## Hosted and self-hosted operation
 
@@ -136,11 +114,11 @@ Hosted and self-hosted deployments use the same organization-scoped provider set
 permission checks, and budgets. An organization admin configures keys and the default
 model in **Admin > Agents**. Keys are encrypted at rest.
 
-Editing agents, rules, skills, and evaluation cases makes no model calls. Generation
-and evaluation require an explicit action and a configured provider. Without a
-provider, those requests report that configuration is required. Without the job
-service, requests report an unavailable or interrupted run. Recovery never silently
-repeats paid generation or evaluation; request a retry or new run explicitly.
+Editing agents, rules, and skills makes no model calls. Generating or improving a skill
+requires an explicit action and a configured provider. Without a provider, those
+requests report that configuration is required. Without the job service, requests
+report an unavailable or interrupted run. Recovery never silently repeats paid
+generation; request a retry explicitly.
 
 Self-hosted installations can keep these AI actions unused and run air-gapped. The
 bundled rule and skill libraries remain available locally.
@@ -153,9 +131,8 @@ bundled rule and skill libraries remain available locally.
 | An agent cannot answer | An enabled, valid provider key, a configured model, available budget, and running services |
 | A skill is missing from the slash menu | Its assignment, active version, required tools, and supported surface |
 | A referenced note is inaccessible | Your current permission to view that note |
-| Generation or evaluation could not finish | The displayed reason; retry explicitly once the provider, budget, or job service is available |
-| A case is inconclusive | Missing sample responses, missing tool assertions, or an incomplete model response |
-| An evaluation result differs from current edits | Results retain the case and instructions captured when requested; run again to evaluate current changes |
+| Generation could not finish | The displayed reason; retry explicitly once the provider, budget, or job service is available |
+| An improvement did not change the next reply | Save the draft and check which skill version is active; a pinned version stays active until changed |
 
 See [Sharing](SHARING.md) for content permissions and [Searching](SEARCHING.md) for
 workspace search and mentions.

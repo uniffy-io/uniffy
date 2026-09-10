@@ -78,4 +78,16 @@ describe("updateSkill", () => {
     });
     expect(request).not.toHaveProperty("name");
   });
+
+  it.each([{ tools: ["notes.read_note"] }, { tools: [] }])(
+    "replaces or clears tool requirements: $tools",
+    async ({ tools }) => {
+      const request = await runThunk({ skillId: "s1", requiresTools: tools });
+      expect(request).toEqual({
+        organizationId: "org-1",
+        skillId: "s1",
+        requiresTools: { names: tools },
+      });
+    },
+  );
 });

@@ -41,7 +41,7 @@ import { deriveSkillSlug } from "@/features/agents/utils/skillSlug";
 import { SKILL_EDITOR_PLACEHOLDER } from "@/features/agents/config/skillEditor";
 import { InstructionVersionHistory } from "@/features/agents/components/instruction/InstructionVersionHistory";
 import { SkillMetricsPanel } from "@/features/agents/components/skills/SkillMetricsPanel";
-import { SkillEvaluationPanel } from "@/features/agents/components/skills/SkillEvaluationPanel";
+import { SkillRequirements } from "@/features/agents/components/skills/SkillRequirements";
 import {
   DETAIL_EDITOR_MIN_HEIGHT,
   DetailBody,
@@ -120,45 +120,6 @@ function VersionHistorySection({
   );
 }
 
-function SkillRequirements({
-  requiresTools,
-  supportedSurfaces,
-}: {
-  requiresTools: string[];
-  supportedSurfaces: string[];
-}) {
-  return (
-    <DetailFieldRow>
-      <DetailField
-        label="Invocation"
-        hint={`Supported surfaces: ${
-          supportedSurfaces.length ? supportedSurfaces.join(", ") : "chat and test sessions"
-        }.`}
-      >
-        <p className="text-sm text-foreground">
-          Runs only when you invoke it on an agent it is assigned to.
-        </p>
-      </DetailField>
-      <DetailField
-        label="Required tools"
-        hint="The agent must have these enabled to run the skill."
-      >
-        {requiresTools.length === 0 ? (
-          <p className="text-sm text-muted-foreground">None</p>
-        ) : (
-          <div className="flex flex-wrap items-center gap-1.5" data-testid="skill-requirements">
-            {requiresTools.map((tool) => (
-              <Badge key={tool} variant="outline" className="font-mono">
-                {tool}
-              </Badge>
-            ))}
-          </div>
-        )}
-      </DetailField>
-    </DetailFieldRow>
-  );
-}
-
 function SavedSkillDetail({ skill }: { skill: SerializedSkill }) {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
@@ -173,6 +134,7 @@ function SavedSkillDetail({ skill }: { skill: SerializedSkill }) {
   const [observationsOpen, setObservationsOpen] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleteBusy, setDeleteBusy] = useState(false);
+  const [requirementsBusy, setRequirementsBusy] = useState(false);
   // Version restores replace the content outside the editor; remounting is the
   // only way the seeded editor picks the new body up.
   const [editorEpoch, setEditorEpoch] = useState(0);
@@ -198,6 +160,16 @@ function SavedSkillDetail({ skill }: { skill: SerializedSkill }) {
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     setEditorEpoch((n) => n + 1);
   }, []);
+
+  const handleRequirementsChange = async (requiresTools: string[]) => {
+    if (requirementsBusy) return;
+    setRequirementsBusy(true);
+    try {
+      await dispatch(updateSkill({ skillId: skill.id, requiresTools }));
+    } finally {
+      setRequirementsBusy(false);
+    }
+  };
 
   const toggleHistory = () => {
     if (historyOpen) {
@@ -311,6 +283,8 @@ function SavedSkillDetail({ skill }: { skill: SerializedSkill }) {
             <SkillRequirements
               requiresTools={skill.requiresTools}
               supportedSurfaces={skill.supportedSurfaces}
+              onChange={canEdit ? handleRequirementsChange : undefined}
+              disabled={requirementsBusy}
             />
           </DetailCard>
         </DetailSection>
@@ -321,7 +295,7 @@ function SavedSkillDetail({ skill }: { skill: SerializedSkill }) {
             footer={
               isBundled
                 ? "Bundled skills ship with Uniffy and cannot be edited or deleted."
-                : undefined
+                : `Use /${skill.name} with an agent this skill is assigned to. Open the response's More actions menu and choose Improve this skill, then review and save the draft.`
             }
           >
             <CrepeEditor
@@ -340,8 +314,6 @@ function SavedSkillDetail({ skill }: { skill: SerializedSkill }) {
             />
           </DetailEditorCard>
         </DetailSection>
-
-        {isBuilder && <SkillEvaluationPanel skillId={skill.id} />}
 
         <DetailToggleSection
           label="Version history"
@@ -420,6 +392,7 @@ function DraftDetail({ draft }: { draft: SerializedSkillDraft }) {
   const [displayName, setDisplayName] = useState(draft.displayName ?? "");
   const [description, setDescription] = useState(draft.description ?? "");
   const [content, setContent] = useState(draft.content ?? "");
+  const [requiresTools, setRequiresTools] = useState(draft.requiresTools);
   const [busy, setBusy] = useState<"save" | "discard" | null>(null);
   const [replaceTarget, setReplaceTarget] = useState<string | null>(null);
 
@@ -448,7 +421,7 @@ function DraftDetail({ draft }: { draft: SerializedSkillDraft }) {
             displayName: displayName.trim(),
             description: description.trim(),
             content: content.trim(),
-            requiresTools: draft.requiresTools,
+            requiresTools,
             supportedSurfaces: draft.supportedSurfaces,
           },
         }),
@@ -572,8 +545,10 @@ function DraftDetail({ draft }: { draft: SerializedSkillDraft }) {
               </DetailField>
             )}
             <SkillRequirements
-              requiresTools={draft.requiresTools}
+              requiresTools={requiresTools}
               supportedSurfaces={draft.supportedSurfaces}
+              onChange={setRequiresTools}
+              disabled={busy !== null}
             />
           </DetailCard>
         </DetailSection>
@@ -595,12 +570,6 @@ function DraftDetail({ draft }: { draft: SerializedSkillDraft }) {
             />
           </DetailEditorCard>
         </DetailSection>
-        <SkillEvaluationPanel
-          draftId={draft.id}
-          skillId={draft.targetSkillId}
-          draftContent={content}
-          initialAgentId={draft.proposedByAgentId}
-        />
       </DetailBody>
 
       <ConfirmDialog

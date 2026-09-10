@@ -758,6 +758,51 @@ class TestUpdateSkillValidation:
             )
         assert skill.name == "report"
 
+    @pytest.mark.parametrize("pinned", [False, True])
+    @pytest.mark.parametrize("tools", [None, [], ["notes.read_note"], ["notes.create_note"]])
+    async def test_requirement_edits_preserve_version_semantics(self, monkeypatch, pinned, tools):
+        skill = self._skill()
+        skill.requires_tools = ["notes.read_note"]
+        skill.active_version_id = generate_id()
+        skill.active_version_pinned = pinned
+        active_id = skill.active_version_id
+        ops = self._ops(monkeypatch, skill)
+        ops.stage_skill_version = SkillOperations.stage_skill_version.__get__(ops)
+        ops._session.flush = AsyncMock()
+        ops._session.execute.return_value.scalar.return_value = 1
+
+        await ops.update_skill(
+            user_id=generate_id(),
+            organization_id=skill.organization_id,
+            skill_id=skill.id,
+            requires_tools=tools,
+        )
+
+        expected = tools if tools is not None else ["notes.read_note"]
+        assert skill.requires_tools == expected
+        assert skill.content == "OLD"
+        versions = [
+            call.args[0]
+            for call in ops._session.add.call_args_list
+            if isinstance(call.args[0], AgentSkillVersion)
+        ]
+        if expected == ["notes.read_note"]:
+            assert versions == []
+        else:
+            assert len(versions) == 1
+            assert versions[0].requires_tools == expected
+            assert versions[0].version_number == 2
+            assert versions[0].content == "OLD"
+            assert skill.active_version_id == (active_id if pinned else versions[0].id)
+
+        await ops.update_skill(
+            user_id=generate_id(),
+            organization_id=skill.organization_id,
+            skill_id=skill.id,
+            description="Changed description",
+        )
+        assert skill.requires_tools == expected
+
     async def test_resending_the_current_slug_is_a_no_op(self, monkeypatch) -> None:
         skill = self._skill()
         ops = self._ops(monkeypatch, skill)

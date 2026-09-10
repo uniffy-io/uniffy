@@ -1256,10 +1256,12 @@ type UpdateSkillRequest struct {
 	SkillId        string                 `protobuf:"bytes,2,opt,name=skill_id,json=skillId,proto3" json:"skill_id,omitempty"`
 	// The slug is the stable identifier: it is set at creation and rejected on
 	// update. The field stays so a caller resending the current value is a no-op.
-	Name          *string `protobuf:"bytes,3,opt,name=name,proto3,oneof" json:"name,omitempty"`
-	DisplayName   *string `protobuf:"bytes,4,opt,name=display_name,json=displayName,proto3,oneof" json:"display_name,omitempty"`
-	Description   *string `protobuf:"bytes,5,opt,name=description,proto3,oneof" json:"description,omitempty"`
-	Content       *string `protobuf:"bytes,6,opt,name=content,proto3,oneof" json:"content,omitempty"`
+	Name        *string `protobuf:"bytes,3,opt,name=name,proto3,oneof" json:"name,omitempty"`
+	DisplayName *string `protobuf:"bytes,4,opt,name=display_name,json=displayName,proto3,oneof" json:"display_name,omitempty"`
+	Description *string `protobuf:"bytes,5,opt,name=description,proto3,oneof" json:"description,omitempty"`
+	Content     *string `protobuf:"bytes,6,opt,name=content,proto3,oneof" json:"content,omitempty"`
+	// Omitted leaves requirements unchanged; an empty wrapper clears them.
+	RequiresTools *SkillToolNames `protobuf:"bytes,9,opt,name=requires_tools,json=requiresTools,proto3,oneof" json:"requires_tools,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1336,6 +1338,57 @@ func (x *UpdateSkillRequest) GetContent() string {
 	return ""
 }
 
+func (x *UpdateSkillRequest) GetRequiresTools() *SkillToolNames {
+	if x != nil {
+		return x.RequiresTools
+	}
+	return nil
+}
+
+type SkillToolNames struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Names         []string               `protobuf:"bytes,1,rep,name=names,proto3" json:"names,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SkillToolNames) Reset() {
+	*x = SkillToolNames{}
+	mi := &file_agents_v1_skills_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SkillToolNames) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SkillToolNames) ProtoMessage() {}
+
+func (x *SkillToolNames) ProtoReflect() protoreflect.Message {
+	mi := &file_agents_v1_skills_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SkillToolNames.ProtoReflect.Descriptor instead.
+func (*SkillToolNames) Descriptor() ([]byte, []int) {
+	return file_agents_v1_skills_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *SkillToolNames) GetNames() []string {
+	if x != nil {
+		return x.Names
+	}
+	return nil
+}
+
 type DeleteSkillRequest struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
@@ -1346,7 +1399,7 @@ type DeleteSkillRequest struct {
 
 func (x *DeleteSkillRequest) Reset() {
 	*x = DeleteSkillRequest{}
-	mi := &file_agents_v1_skills_proto_msgTypes[15]
+	mi := &file_agents_v1_skills_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1358,7 +1411,7 @@ func (x *DeleteSkillRequest) String() string {
 func (*DeleteSkillRequest) ProtoMessage() {}
 
 func (x *DeleteSkillRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_skills_proto_msgTypes[15]
+	mi := &file_agents_v1_skills_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1371,7 +1424,7 @@ func (x *DeleteSkillRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteSkillRequest.ProtoReflect.Descriptor instead.
 func (*DeleteSkillRequest) Descriptor() ([]byte, []int) {
-	return file_agents_v1_skills_proto_rawDescGZIP(), []int{15}
+	return file_agents_v1_skills_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *DeleteSkillRequest) GetOrganizationId() string {
@@ -1397,7 +1450,7 @@ type DeleteSkillResponse struct {
 
 func (x *DeleteSkillResponse) Reset() {
 	*x = DeleteSkillResponse{}
-	mi := &file_agents_v1_skills_proto_msgTypes[16]
+	mi := &file_agents_v1_skills_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1409,7 +1462,7 @@ func (x *DeleteSkillResponse) String() string {
 func (*DeleteSkillResponse) ProtoMessage() {}
 
 func (x *DeleteSkillResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_skills_proto_msgTypes[16]
+	mi := &file_agents_v1_skills_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1422,7 +1475,7 @@ func (x *DeleteSkillResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteSkillResponse.ProtoReflect.Descriptor instead.
 func (*DeleteSkillResponse) Descriptor() ([]byte, []int) {
-	return file_agents_v1_skills_proto_rawDescGZIP(), []int{16}
+	return file_agents_v1_skills_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *DeleteSkillResponse) GetSuccess() bool {
@@ -1446,7 +1499,7 @@ type RunnableSkill struct {
 
 func (x *RunnableSkill) Reset() {
 	*x = RunnableSkill{}
-	mi := &file_agents_v1_skills_proto_msgTypes[17]
+	mi := &file_agents_v1_skills_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1458,7 +1511,7 @@ func (x *RunnableSkill) String() string {
 func (*RunnableSkill) ProtoMessage() {}
 
 func (x *RunnableSkill) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_skills_proto_msgTypes[17]
+	mi := &file_agents_v1_skills_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1471,7 +1524,7 @@ func (x *RunnableSkill) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RunnableSkill.ProtoReflect.Descriptor instead.
 func (*RunnableSkill) Descriptor() ([]byte, []int) {
-	return file_agents_v1_skills_proto_rawDescGZIP(), []int{17}
+	return file_agents_v1_skills_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *RunnableSkill) GetId() string {
@@ -1513,7 +1566,7 @@ type ListRunnableSkillsRequest struct {
 
 func (x *ListRunnableSkillsRequest) Reset() {
 	*x = ListRunnableSkillsRequest{}
-	mi := &file_agents_v1_skills_proto_msgTypes[18]
+	mi := &file_agents_v1_skills_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1525,7 +1578,7 @@ func (x *ListRunnableSkillsRequest) String() string {
 func (*ListRunnableSkillsRequest) ProtoMessage() {}
 
 func (x *ListRunnableSkillsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_skills_proto_msgTypes[18]
+	mi := &file_agents_v1_skills_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1538,7 +1591,7 @@ func (x *ListRunnableSkillsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListRunnableSkillsRequest.ProtoReflect.Descriptor instead.
 func (*ListRunnableSkillsRequest) Descriptor() ([]byte, []int) {
-	return file_agents_v1_skills_proto_rawDescGZIP(), []int{18}
+	return file_agents_v1_skills_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *ListRunnableSkillsRequest) GetOrganizationId() string {
@@ -1571,7 +1624,7 @@ type ListRunnableSkillsResponse struct {
 
 func (x *ListRunnableSkillsResponse) Reset() {
 	*x = ListRunnableSkillsResponse{}
-	mi := &file_agents_v1_skills_proto_msgTypes[19]
+	mi := &file_agents_v1_skills_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1583,7 +1636,7 @@ func (x *ListRunnableSkillsResponse) String() string {
 func (*ListRunnableSkillsResponse) ProtoMessage() {}
 
 func (x *ListRunnableSkillsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_skills_proto_msgTypes[19]
+	mi := &file_agents_v1_skills_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1596,7 +1649,7 @@ func (x *ListRunnableSkillsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListRunnableSkillsResponse.ProtoReflect.Descriptor instead.
 func (*ListRunnableSkillsResponse) Descriptor() ([]byte, []int) {
-	return file_agents_v1_skills_proto_rawDescGZIP(), []int{19}
+	return file_agents_v1_skills_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *ListRunnableSkillsResponse) GetSkills() []*RunnableSkill {
@@ -1616,7 +1669,7 @@ type GetSkillCompatibilityRequest struct {
 
 func (x *GetSkillCompatibilityRequest) Reset() {
 	*x = GetSkillCompatibilityRequest{}
-	mi := &file_agents_v1_skills_proto_msgTypes[20]
+	mi := &file_agents_v1_skills_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1628,7 +1681,7 @@ func (x *GetSkillCompatibilityRequest) String() string {
 func (*GetSkillCompatibilityRequest) ProtoMessage() {}
 
 func (x *GetSkillCompatibilityRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_skills_proto_msgTypes[20]
+	mi := &file_agents_v1_skills_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1641,7 +1694,7 @@ func (x *GetSkillCompatibilityRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetSkillCompatibilityRequest.ProtoReflect.Descriptor instead.
 func (*GetSkillCompatibilityRequest) Descriptor() ([]byte, []int) {
-	return file_agents_v1_skills_proto_rawDescGZIP(), []int{20}
+	return file_agents_v1_skills_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *GetSkillCompatibilityRequest) GetOrganizationId() string {
@@ -1674,7 +1727,7 @@ type SkillCompatibility struct {
 
 func (x *SkillCompatibility) Reset() {
 	*x = SkillCompatibility{}
-	mi := &file_agents_v1_skills_proto_msgTypes[21]
+	mi := &file_agents_v1_skills_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1686,7 +1739,7 @@ func (x *SkillCompatibility) String() string {
 func (*SkillCompatibility) ProtoMessage() {}
 
 func (x *SkillCompatibility) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_skills_proto_msgTypes[21]
+	mi := &file_agents_v1_skills_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1699,7 +1752,7 @@ func (x *SkillCompatibility) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SkillCompatibility.ProtoReflect.Descriptor instead.
 func (*SkillCompatibility) Descriptor() ([]byte, []int) {
-	return file_agents_v1_skills_proto_rawDescGZIP(), []int{21}
+	return file_agents_v1_skills_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *SkillCompatibility) GetSkillId() string {
@@ -1767,7 +1820,7 @@ type GetSkillCompatibilityResponse struct {
 
 func (x *GetSkillCompatibilityResponse) Reset() {
 	*x = GetSkillCompatibilityResponse{}
-	mi := &file_agents_v1_skills_proto_msgTypes[22]
+	mi := &file_agents_v1_skills_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1779,7 +1832,7 @@ func (x *GetSkillCompatibilityResponse) String() string {
 func (*GetSkillCompatibilityResponse) ProtoMessage() {}
 
 func (x *GetSkillCompatibilityResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_skills_proto_msgTypes[22]
+	mi := &file_agents_v1_skills_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1792,7 +1845,7 @@ func (x *GetSkillCompatibilityResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetSkillCompatibilityResponse.ProtoReflect.Descriptor instead.
 func (*GetSkillCompatibilityResponse) Descriptor() ([]byte, []int) {
-	return file_agents_v1_skills_proto_rawDescGZIP(), []int{22}
+	return file_agents_v1_skills_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *GetSkillCompatibilityResponse) GetSkills() []*SkillCompatibility {
@@ -1820,7 +1873,7 @@ type CreateSkillDraftRequest struct {
 
 func (x *CreateSkillDraftRequest) Reset() {
 	*x = CreateSkillDraftRequest{}
-	mi := &file_agents_v1_skills_proto_msgTypes[23]
+	mi := &file_agents_v1_skills_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1832,7 +1885,7 @@ func (x *CreateSkillDraftRequest) String() string {
 func (*CreateSkillDraftRequest) ProtoMessage() {}
 
 func (x *CreateSkillDraftRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_skills_proto_msgTypes[23]
+	mi := &file_agents_v1_skills_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1845,7 +1898,7 @@ func (x *CreateSkillDraftRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateSkillDraftRequest.ProtoReflect.Descriptor instead.
 func (*CreateSkillDraftRequest) Descriptor() ([]byte, []int) {
-	return file_agents_v1_skills_proto_rawDescGZIP(), []int{23}
+	return file_agents_v1_skills_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *CreateSkillDraftRequest) GetOrganizationId() string {
@@ -1927,7 +1980,7 @@ type CreateSkillDraftResponse struct {
 
 func (x *CreateSkillDraftResponse) Reset() {
 	*x = CreateSkillDraftResponse{}
-	mi := &file_agents_v1_skills_proto_msgTypes[24]
+	mi := &file_agents_v1_skills_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1939,7 +1992,7 @@ func (x *CreateSkillDraftResponse) String() string {
 func (*CreateSkillDraftResponse) ProtoMessage() {}
 
 func (x *CreateSkillDraftResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_skills_proto_msgTypes[24]
+	mi := &file_agents_v1_skills_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1952,7 +2005,7 @@ func (x *CreateSkillDraftResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateSkillDraftResponse.ProtoReflect.Descriptor instead.
 func (*CreateSkillDraftResponse) Descriptor() ([]byte, []int) {
-	return file_agents_v1_skills_proto_rawDescGZIP(), []int{24}
+	return file_agents_v1_skills_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *CreateSkillDraftResponse) GetDraft() *SkillDraft {
@@ -1972,7 +2025,7 @@ type GetSkillDraftRequest struct {
 
 func (x *GetSkillDraftRequest) Reset() {
 	*x = GetSkillDraftRequest{}
-	mi := &file_agents_v1_skills_proto_msgTypes[25]
+	mi := &file_agents_v1_skills_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1984,7 +2037,7 @@ func (x *GetSkillDraftRequest) String() string {
 func (*GetSkillDraftRequest) ProtoMessage() {}
 
 func (x *GetSkillDraftRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_skills_proto_msgTypes[25]
+	mi := &file_agents_v1_skills_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1997,7 +2050,7 @@ func (x *GetSkillDraftRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetSkillDraftRequest.ProtoReflect.Descriptor instead.
 func (*GetSkillDraftRequest) Descriptor() ([]byte, []int) {
-	return file_agents_v1_skills_proto_rawDescGZIP(), []int{25}
+	return file_agents_v1_skills_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *GetSkillDraftRequest) GetOrganizationId() string {
@@ -2023,7 +2076,7 @@ type GetSkillDraftResponse struct {
 
 func (x *GetSkillDraftResponse) Reset() {
 	*x = GetSkillDraftResponse{}
-	mi := &file_agents_v1_skills_proto_msgTypes[26]
+	mi := &file_agents_v1_skills_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2035,7 +2088,7 @@ func (x *GetSkillDraftResponse) String() string {
 func (*GetSkillDraftResponse) ProtoMessage() {}
 
 func (x *GetSkillDraftResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_skills_proto_msgTypes[26]
+	mi := &file_agents_v1_skills_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2048,7 +2101,7 @@ func (x *GetSkillDraftResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetSkillDraftResponse.ProtoReflect.Descriptor instead.
 func (*GetSkillDraftResponse) Descriptor() ([]byte, []int) {
-	return file_agents_v1_skills_proto_rawDescGZIP(), []int{26}
+	return file_agents_v1_skills_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *GetSkillDraftResponse) GetDraft() *SkillDraft {
@@ -2069,7 +2122,7 @@ type ListSkillDraftsRequest struct {
 
 func (x *ListSkillDraftsRequest) Reset() {
 	*x = ListSkillDraftsRequest{}
-	mi := &file_agents_v1_skills_proto_msgTypes[27]
+	mi := &file_agents_v1_skills_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2081,7 +2134,7 @@ func (x *ListSkillDraftsRequest) String() string {
 func (*ListSkillDraftsRequest) ProtoMessage() {}
 
 func (x *ListSkillDraftsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_skills_proto_msgTypes[27]
+	mi := &file_agents_v1_skills_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2094,7 +2147,7 @@ func (x *ListSkillDraftsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListSkillDraftsRequest.ProtoReflect.Descriptor instead.
 func (*ListSkillDraftsRequest) Descriptor() ([]byte, []int) {
-	return file_agents_v1_skills_proto_rawDescGZIP(), []int{27}
+	return file_agents_v1_skills_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *ListSkillDraftsRequest) GetOrganizationId() string {
@@ -2128,7 +2181,7 @@ type ListSkillDraftsResponse struct {
 
 func (x *ListSkillDraftsResponse) Reset() {
 	*x = ListSkillDraftsResponse{}
-	mi := &file_agents_v1_skills_proto_msgTypes[28]
+	mi := &file_agents_v1_skills_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2140,7 +2193,7 @@ func (x *ListSkillDraftsResponse) String() string {
 func (*ListSkillDraftsResponse) ProtoMessage() {}
 
 func (x *ListSkillDraftsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_skills_proto_msgTypes[28]
+	mi := &file_agents_v1_skills_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2153,7 +2206,7 @@ func (x *ListSkillDraftsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListSkillDraftsResponse.ProtoReflect.Descriptor instead.
 func (*ListSkillDraftsResponse) Descriptor() ([]byte, []int) {
-	return file_agents_v1_skills_proto_rawDescGZIP(), []int{28}
+	return file_agents_v1_skills_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *ListSkillDraftsResponse) GetDrafts() []*SkillDraft {
@@ -2191,7 +2244,7 @@ type SaveSkillDraftRequest struct {
 
 func (x *SaveSkillDraftRequest) Reset() {
 	*x = SaveSkillDraftRequest{}
-	mi := &file_agents_v1_skills_proto_msgTypes[29]
+	mi := &file_agents_v1_skills_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2203,7 +2256,7 @@ func (x *SaveSkillDraftRequest) String() string {
 func (*SaveSkillDraftRequest) ProtoMessage() {}
 
 func (x *SaveSkillDraftRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_skills_proto_msgTypes[29]
+	mi := &file_agents_v1_skills_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2216,7 +2269,7 @@ func (x *SaveSkillDraftRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SaveSkillDraftRequest.ProtoReflect.Descriptor instead.
 func (*SaveSkillDraftRequest) Descriptor() ([]byte, []int) {
-	return file_agents_v1_skills_proto_rawDescGZIP(), []int{29}
+	return file_agents_v1_skills_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *SaveSkillDraftRequest) GetOrganizationId() string {
@@ -2299,7 +2352,7 @@ type SaveSkillDraftResponse struct {
 
 func (x *SaveSkillDraftResponse) Reset() {
 	*x = SaveSkillDraftResponse{}
-	mi := &file_agents_v1_skills_proto_msgTypes[30]
+	mi := &file_agents_v1_skills_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2311,7 +2364,7 @@ func (x *SaveSkillDraftResponse) String() string {
 func (*SaveSkillDraftResponse) ProtoMessage() {}
 
 func (x *SaveSkillDraftResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_skills_proto_msgTypes[30]
+	mi := &file_agents_v1_skills_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2324,7 +2377,7 @@ func (x *SaveSkillDraftResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SaveSkillDraftResponse.ProtoReflect.Descriptor instead.
 func (*SaveSkillDraftResponse) Descriptor() ([]byte, []int) {
-	return file_agents_v1_skills_proto_rawDescGZIP(), []int{30}
+	return file_agents_v1_skills_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *SaveSkillDraftResponse) GetSkill() *SkillInfo {
@@ -2351,7 +2404,7 @@ type DiscardSkillDraftRequest struct {
 
 func (x *DiscardSkillDraftRequest) Reset() {
 	*x = DiscardSkillDraftRequest{}
-	mi := &file_agents_v1_skills_proto_msgTypes[31]
+	mi := &file_agents_v1_skills_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2363,7 +2416,7 @@ func (x *DiscardSkillDraftRequest) String() string {
 func (*DiscardSkillDraftRequest) ProtoMessage() {}
 
 func (x *DiscardSkillDraftRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_skills_proto_msgTypes[31]
+	mi := &file_agents_v1_skills_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2376,7 +2429,7 @@ func (x *DiscardSkillDraftRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DiscardSkillDraftRequest.ProtoReflect.Descriptor instead.
 func (*DiscardSkillDraftRequest) Descriptor() ([]byte, []int) {
-	return file_agents_v1_skills_proto_rawDescGZIP(), []int{31}
+	return file_agents_v1_skills_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *DiscardSkillDraftRequest) GetOrganizationId() string {
@@ -2402,7 +2455,7 @@ type DiscardSkillDraftResponse struct {
 
 func (x *DiscardSkillDraftResponse) Reset() {
 	*x = DiscardSkillDraftResponse{}
-	mi := &file_agents_v1_skills_proto_msgTypes[32]
+	mi := &file_agents_v1_skills_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2414,7 +2467,7 @@ func (x *DiscardSkillDraftResponse) String() string {
 func (*DiscardSkillDraftResponse) ProtoMessage() {}
 
 func (x *DiscardSkillDraftResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_skills_proto_msgTypes[32]
+	mi := &file_agents_v1_skills_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2427,7 +2480,7 @@ func (x *DiscardSkillDraftResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DiscardSkillDraftResponse.ProtoReflect.Descriptor instead.
 func (*DiscardSkillDraftResponse) Descriptor() ([]byte, []int) {
-	return file_agents_v1_skills_proto_rawDescGZIP(), []int{32}
+	return file_agents_v1_skills_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *DiscardSkillDraftResponse) GetSuccess() bool {
@@ -2448,7 +2501,7 @@ type ListSkillVersionsRequest struct {
 
 func (x *ListSkillVersionsRequest) Reset() {
 	*x = ListSkillVersionsRequest{}
-	mi := &file_agents_v1_skills_proto_msgTypes[33]
+	mi := &file_agents_v1_skills_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2460,7 +2513,7 @@ func (x *ListSkillVersionsRequest) String() string {
 func (*ListSkillVersionsRequest) ProtoMessage() {}
 
 func (x *ListSkillVersionsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_skills_proto_msgTypes[33]
+	mi := &file_agents_v1_skills_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2473,7 +2526,7 @@ func (x *ListSkillVersionsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListSkillVersionsRequest.ProtoReflect.Descriptor instead.
 func (*ListSkillVersionsRequest) Descriptor() ([]byte, []int) {
-	return file_agents_v1_skills_proto_rawDescGZIP(), []int{33}
+	return file_agents_v1_skills_proto_rawDescGZIP(), []int{34}
 }
 
 func (x *ListSkillVersionsRequest) GetOrganizationId() string {
@@ -2512,7 +2565,7 @@ type ListSkillVersionsResponse struct {
 
 func (x *ListSkillVersionsResponse) Reset() {
 	*x = ListSkillVersionsResponse{}
-	mi := &file_agents_v1_skills_proto_msgTypes[34]
+	mi := &file_agents_v1_skills_proto_msgTypes[35]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2524,7 +2577,7 @@ func (x *ListSkillVersionsResponse) String() string {
 func (*ListSkillVersionsResponse) ProtoMessage() {}
 
 func (x *ListSkillVersionsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_skills_proto_msgTypes[34]
+	mi := &file_agents_v1_skills_proto_msgTypes[35]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2537,7 +2590,7 @@ func (x *ListSkillVersionsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListSkillVersionsResponse.ProtoReflect.Descriptor instead.
 func (*ListSkillVersionsResponse) Descriptor() ([]byte, []int) {
-	return file_agents_v1_skills_proto_rawDescGZIP(), []int{34}
+	return file_agents_v1_skills_proto_rawDescGZIP(), []int{35}
 }
 
 func (x *ListSkillVersionsResponse) GetVersions() []*SkillVersion {
@@ -2586,7 +2639,7 @@ type GetSkillVersionRequest struct {
 
 func (x *GetSkillVersionRequest) Reset() {
 	*x = GetSkillVersionRequest{}
-	mi := &file_agents_v1_skills_proto_msgTypes[35]
+	mi := &file_agents_v1_skills_proto_msgTypes[36]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2598,7 +2651,7 @@ func (x *GetSkillVersionRequest) String() string {
 func (*GetSkillVersionRequest) ProtoMessage() {}
 
 func (x *GetSkillVersionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_skills_proto_msgTypes[35]
+	mi := &file_agents_v1_skills_proto_msgTypes[36]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2611,7 +2664,7 @@ func (x *GetSkillVersionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetSkillVersionRequest.ProtoReflect.Descriptor instead.
 func (*GetSkillVersionRequest) Descriptor() ([]byte, []int) {
-	return file_agents_v1_skills_proto_rawDescGZIP(), []int{35}
+	return file_agents_v1_skills_proto_rawDescGZIP(), []int{36}
 }
 
 func (x *GetSkillVersionRequest) GetOrganizationId() string {
@@ -2644,7 +2697,7 @@ type GetSkillVersionResponse struct {
 
 func (x *GetSkillVersionResponse) Reset() {
 	*x = GetSkillVersionResponse{}
-	mi := &file_agents_v1_skills_proto_msgTypes[36]
+	mi := &file_agents_v1_skills_proto_msgTypes[37]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2656,7 +2709,7 @@ func (x *GetSkillVersionResponse) String() string {
 func (*GetSkillVersionResponse) ProtoMessage() {}
 
 func (x *GetSkillVersionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_skills_proto_msgTypes[36]
+	mi := &file_agents_v1_skills_proto_msgTypes[37]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2669,7 +2722,7 @@ func (x *GetSkillVersionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetSkillVersionResponse.ProtoReflect.Descriptor instead.
 func (*GetSkillVersionResponse) Descriptor() ([]byte, []int) {
-	return file_agents_v1_skills_proto_rawDescGZIP(), []int{36}
+	return file_agents_v1_skills_proto_rawDescGZIP(), []int{37}
 }
 
 func (x *GetSkillVersionResponse) GetVersion() *SkillVersion {
@@ -2693,7 +2746,7 @@ type SetMainSkillVersionRequest struct {
 
 func (x *SetMainSkillVersionRequest) Reset() {
 	*x = SetMainSkillVersionRequest{}
-	mi := &file_agents_v1_skills_proto_msgTypes[37]
+	mi := &file_agents_v1_skills_proto_msgTypes[38]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2705,7 +2758,7 @@ func (x *SetMainSkillVersionRequest) String() string {
 func (*SetMainSkillVersionRequest) ProtoMessage() {}
 
 func (x *SetMainSkillVersionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_skills_proto_msgTypes[37]
+	mi := &file_agents_v1_skills_proto_msgTypes[38]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2718,7 +2771,7 @@ func (x *SetMainSkillVersionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetMainSkillVersionRequest.ProtoReflect.Descriptor instead.
 func (*SetMainSkillVersionRequest) Descriptor() ([]byte, []int) {
-	return file_agents_v1_skills_proto_rawDescGZIP(), []int{37}
+	return file_agents_v1_skills_proto_rawDescGZIP(), []int{38}
 }
 
 func (x *SetMainSkillVersionRequest) GetOrganizationId() string {
@@ -2758,7 +2811,7 @@ type SetMainSkillVersionResponse struct {
 
 func (x *SetMainSkillVersionResponse) Reset() {
 	*x = SetMainSkillVersionResponse{}
-	mi := &file_agents_v1_skills_proto_msgTypes[38]
+	mi := &file_agents_v1_skills_proto_msgTypes[39]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2770,7 +2823,7 @@ func (x *SetMainSkillVersionResponse) String() string {
 func (*SetMainSkillVersionResponse) ProtoMessage() {}
 
 func (x *SetMainSkillVersionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_skills_proto_msgTypes[38]
+	mi := &file_agents_v1_skills_proto_msgTypes[39]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2783,7 +2836,7 @@ func (x *SetMainSkillVersionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetMainSkillVersionResponse.ProtoReflect.Descriptor instead.
 func (*SetMainSkillVersionResponse) Descriptor() ([]byte, []int) {
-	return file_agents_v1_skills_proto_rawDescGZIP(), []int{38}
+	return file_agents_v1_skills_proto_rawDescGZIP(), []int{39}
 }
 
 func (x *SetMainSkillVersionResponse) GetSkill() *SkillInfo {
@@ -2804,7 +2857,7 @@ type RevertSkillRequest struct {
 
 func (x *RevertSkillRequest) Reset() {
 	*x = RevertSkillRequest{}
-	mi := &file_agents_v1_skills_proto_msgTypes[39]
+	mi := &file_agents_v1_skills_proto_msgTypes[40]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2816,7 +2869,7 @@ func (x *RevertSkillRequest) String() string {
 func (*RevertSkillRequest) ProtoMessage() {}
 
 func (x *RevertSkillRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_skills_proto_msgTypes[39]
+	mi := &file_agents_v1_skills_proto_msgTypes[40]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2829,7 +2882,7 @@ func (x *RevertSkillRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RevertSkillRequest.ProtoReflect.Descriptor instead.
 func (*RevertSkillRequest) Descriptor() ([]byte, []int) {
-	return file_agents_v1_skills_proto_rawDescGZIP(), []int{39}
+	return file_agents_v1_skills_proto_rawDescGZIP(), []int{40}
 }
 
 func (x *RevertSkillRequest) GetOrganizationId() string {
@@ -2863,7 +2916,7 @@ type RevertSkillResponse struct {
 
 func (x *RevertSkillResponse) Reset() {
 	*x = RevertSkillResponse{}
-	mi := &file_agents_v1_skills_proto_msgTypes[40]
+	mi := &file_agents_v1_skills_proto_msgTypes[41]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2875,7 +2928,7 @@ func (x *RevertSkillResponse) String() string {
 func (*RevertSkillResponse) ProtoMessage() {}
 
 func (x *RevertSkillResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_skills_proto_msgTypes[40]
+	mi := &file_agents_v1_skills_proto_msgTypes[41]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2888,7 +2941,7 @@ func (x *RevertSkillResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RevertSkillResponse.ProtoReflect.Descriptor instead.
 func (*RevertSkillResponse) Descriptor() ([]byte, []int) {
-	return file_agents_v1_skills_proto_rawDescGZIP(), []int{40}
+	return file_agents_v1_skills_proto_rawDescGZIP(), []int{41}
 }
 
 func (x *RevertSkillResponse) GetSkill() *SkillInfo {
@@ -2933,7 +2986,7 @@ type SkillMetric struct {
 
 func (x *SkillMetric) Reset() {
 	*x = SkillMetric{}
-	mi := &file_agents_v1_skills_proto_msgTypes[41]
+	mi := &file_agents_v1_skills_proto_msgTypes[42]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2945,7 +2998,7 @@ func (x *SkillMetric) String() string {
 func (*SkillMetric) ProtoMessage() {}
 
 func (x *SkillMetric) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_skills_proto_msgTypes[41]
+	mi := &file_agents_v1_skills_proto_msgTypes[42]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2958,7 +3011,7 @@ func (x *SkillMetric) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SkillMetric.ProtoReflect.Descriptor instead.
 func (*SkillMetric) Descriptor() ([]byte, []int) {
-	return file_agents_v1_skills_proto_rawDescGZIP(), []int{41}
+	return file_agents_v1_skills_proto_rawDescGZIP(), []int{42}
 }
 
 func (x *SkillMetric) GetSkillId() string {
@@ -3098,7 +3151,7 @@ type SkillMetricCost struct {
 
 func (x *SkillMetricCost) Reset() {
 	*x = SkillMetricCost{}
-	mi := &file_agents_v1_skills_proto_msgTypes[42]
+	mi := &file_agents_v1_skills_proto_msgTypes[43]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3110,7 +3163,7 @@ func (x *SkillMetricCost) String() string {
 func (*SkillMetricCost) ProtoMessage() {}
 
 func (x *SkillMetricCost) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_skills_proto_msgTypes[42]
+	mi := &file_agents_v1_skills_proto_msgTypes[43]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3123,7 +3176,7 @@ func (x *SkillMetricCost) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SkillMetricCost.ProtoReflect.Descriptor instead.
 func (*SkillMetricCost) Descriptor() ([]byte, []int) {
-	return file_agents_v1_skills_proto_rawDescGZIP(), []int{42}
+	return file_agents_v1_skills_proto_rawDescGZIP(), []int{43}
 }
 
 func (x *SkillMetricCost) GetCurrency() string {
@@ -3163,7 +3216,7 @@ type GetSkillMetricsRequest struct {
 
 func (x *GetSkillMetricsRequest) Reset() {
 	*x = GetSkillMetricsRequest{}
-	mi := &file_agents_v1_skills_proto_msgTypes[43]
+	mi := &file_agents_v1_skills_proto_msgTypes[44]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3175,7 +3228,7 @@ func (x *GetSkillMetricsRequest) String() string {
 func (*GetSkillMetricsRequest) ProtoMessage() {}
 
 func (x *GetSkillMetricsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_skills_proto_msgTypes[43]
+	mi := &file_agents_v1_skills_proto_msgTypes[44]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3188,7 +3241,7 @@ func (x *GetSkillMetricsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetSkillMetricsRequest.ProtoReflect.Descriptor instead.
 func (*GetSkillMetricsRequest) Descriptor() ([]byte, []int) {
-	return file_agents_v1_skills_proto_rawDescGZIP(), []int{43}
+	return file_agents_v1_skills_proto_rawDescGZIP(), []int{44}
 }
 
 func (x *GetSkillMetricsRequest) GetOrganizationId() string {
@@ -3238,7 +3291,7 @@ type GetSkillMetricsResponse struct {
 
 func (x *GetSkillMetricsResponse) Reset() {
 	*x = GetSkillMetricsResponse{}
-	mi := &file_agents_v1_skills_proto_msgTypes[44]
+	mi := &file_agents_v1_skills_proto_msgTypes[45]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3250,7 +3303,7 @@ func (x *GetSkillMetricsResponse) String() string {
 func (*GetSkillMetricsResponse) ProtoMessage() {}
 
 func (x *GetSkillMetricsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_skills_proto_msgTypes[44]
+	mi := &file_agents_v1_skills_proto_msgTypes[45]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3263,7 +3316,7 @@ func (x *GetSkillMetricsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetSkillMetricsResponse.ProtoReflect.Descriptor instead.
 func (*GetSkillMetricsResponse) Descriptor() ([]byte, []int) {
-	return file_agents_v1_skills_proto_rawDescGZIP(), []int{44}
+	return file_agents_v1_skills_proto_rawDescGZIP(), []int{45}
 }
 
 func (x *GetSkillMetricsResponse) GetMetrics() []*SkillMetric {
@@ -3430,19 +3483,23 @@ const file_agents_v1_skills_proto_rawDesc = "" +
 	"\x06skills\x18\x01 \x03(\v2\x14.agents.v1.SkillInfoR\x06skills\x12=\n" +
 	"\n" +
 	"pagination\x18\x02 \x01(\v2\x1d.common.v1.PaginationResponseR\n" +
-	"pagination\"\xbd\x02\n" +
+	"pagination\"\x97\x03\n" +
 	"\x12UpdateSkillRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x19\n" +
 	"\bskill_id\x18\x02 \x01(\tR\askillId\x12\x17\n" +
 	"\x04name\x18\x03 \x01(\tH\x00R\x04name\x88\x01\x01\x12&\n" +
 	"\fdisplay_name\x18\x04 \x01(\tH\x01R\vdisplayName\x88\x01\x01\x12%\n" +
 	"\vdescription\x18\x05 \x01(\tH\x02R\vdescription\x88\x01\x01\x12\x1d\n" +
-	"\acontent\x18\x06 \x01(\tH\x03R\acontent\x88\x01\x01B\a\n" +
+	"\acontent\x18\x06 \x01(\tH\x03R\acontent\x88\x01\x01\x12E\n" +
+	"\x0erequires_tools\x18\t \x01(\v2\x19.agents.v1.SkillToolNamesH\x04R\rrequiresTools\x88\x01\x01B\a\n" +
 	"\x05_nameB\x0f\n" +
 	"\r_display_nameB\x0e\n" +
 	"\f_descriptionB\n" +
 	"\n" +
-	"\b_contentJ\x04\b\a\x10\bJ\x04\b\b\x10\tR\ralways_activeR\vwhen_to_use\"X\n" +
+	"\b_contentB\x11\n" +
+	"\x0f_requires_toolsJ\x04\b\a\x10\bJ\x04\b\b\x10\tR\ralways_activeR\vwhen_to_use\"&\n" +
+	"\x0eSkillToolNames\x12\x14\n" +
+	"\x05names\x18\x01 \x03(\tR\x05names\"X\n" +
 	"\x12DeleteSkillRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x19\n" +
 	"\bskill_id\x18\x02 \x01(\tR\askillId\"/\n" +
@@ -3642,7 +3699,7 @@ func file_agents_v1_skills_proto_rawDescGZIP() []byte {
 }
 
 var file_agents_v1_skills_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_agents_v1_skills_proto_msgTypes = make([]protoimpl.MessageInfo, 45)
+var file_agents_v1_skills_proto_msgTypes = make([]protoimpl.MessageInfo, 46)
 var file_agents_v1_skills_proto_goTypes = []any{
 	(SkillSource)(0),                          // 0: agents.v1.SkillSource
 	(*SkillInfo)(nil),                         // 1: agents.v1.SkillInfo
@@ -3660,118 +3717,120 @@ var file_agents_v1_skills_proto_goTypes = []any{
 	(*ListSkillsRequest)(nil),                 // 13: agents.v1.ListSkillsRequest
 	(*ListSkillsResponse)(nil),                // 14: agents.v1.ListSkillsResponse
 	(*UpdateSkillRequest)(nil),                // 15: agents.v1.UpdateSkillRequest
-	(*DeleteSkillRequest)(nil),                // 16: agents.v1.DeleteSkillRequest
-	(*DeleteSkillResponse)(nil),               // 17: agents.v1.DeleteSkillResponse
-	(*RunnableSkill)(nil),                     // 18: agents.v1.RunnableSkill
-	(*ListRunnableSkillsRequest)(nil),         // 19: agents.v1.ListRunnableSkillsRequest
-	(*ListRunnableSkillsResponse)(nil),        // 20: agents.v1.ListRunnableSkillsResponse
-	(*GetSkillCompatibilityRequest)(nil),      // 21: agents.v1.GetSkillCompatibilityRequest
-	(*SkillCompatibility)(nil),                // 22: agents.v1.SkillCompatibility
-	(*GetSkillCompatibilityResponse)(nil),     // 23: agents.v1.GetSkillCompatibilityResponse
-	(*CreateSkillDraftRequest)(nil),           // 24: agents.v1.CreateSkillDraftRequest
-	(*CreateSkillDraftResponse)(nil),          // 25: agents.v1.CreateSkillDraftResponse
-	(*GetSkillDraftRequest)(nil),              // 26: agents.v1.GetSkillDraftRequest
-	(*GetSkillDraftResponse)(nil),             // 27: agents.v1.GetSkillDraftResponse
-	(*ListSkillDraftsRequest)(nil),            // 28: agents.v1.ListSkillDraftsRequest
-	(*ListSkillDraftsResponse)(nil),           // 29: agents.v1.ListSkillDraftsResponse
-	(*SaveSkillDraftRequest)(nil),             // 30: agents.v1.SaveSkillDraftRequest
-	(*SaveSkillDraftResponse)(nil),            // 31: agents.v1.SaveSkillDraftResponse
-	(*DiscardSkillDraftRequest)(nil),          // 32: agents.v1.DiscardSkillDraftRequest
-	(*DiscardSkillDraftResponse)(nil),         // 33: agents.v1.DiscardSkillDraftResponse
-	(*ListSkillVersionsRequest)(nil),          // 34: agents.v1.ListSkillVersionsRequest
-	(*ListSkillVersionsResponse)(nil),         // 35: agents.v1.ListSkillVersionsResponse
-	(*GetSkillVersionRequest)(nil),            // 36: agents.v1.GetSkillVersionRequest
-	(*GetSkillVersionResponse)(nil),           // 37: agents.v1.GetSkillVersionResponse
-	(*SetMainSkillVersionRequest)(nil),        // 38: agents.v1.SetMainSkillVersionRequest
-	(*SetMainSkillVersionResponse)(nil),       // 39: agents.v1.SetMainSkillVersionResponse
-	(*RevertSkillRequest)(nil),                // 40: agents.v1.RevertSkillRequest
-	(*RevertSkillResponse)(nil),               // 41: agents.v1.RevertSkillResponse
-	(*SkillMetric)(nil),                       // 42: agents.v1.SkillMetric
-	(*SkillMetricCost)(nil),                   // 43: agents.v1.SkillMetricCost
-	(*GetSkillMetricsRequest)(nil),            // 44: agents.v1.GetSkillMetricsRequest
-	(*GetSkillMetricsResponse)(nil),           // 45: agents.v1.GetSkillMetricsResponse
-	(*timestamppb.Timestamp)(nil),             // 46: google.protobuf.Timestamp
-	(*v1.PaginationRequest)(nil),              // 47: common.v1.PaginationRequest
-	(*v1.PaginationResponse)(nil),             // 48: common.v1.PaginationResponse
+	(*SkillToolNames)(nil),                    // 16: agents.v1.SkillToolNames
+	(*DeleteSkillRequest)(nil),                // 17: agents.v1.DeleteSkillRequest
+	(*DeleteSkillResponse)(nil),               // 18: agents.v1.DeleteSkillResponse
+	(*RunnableSkill)(nil),                     // 19: agents.v1.RunnableSkill
+	(*ListRunnableSkillsRequest)(nil),         // 20: agents.v1.ListRunnableSkillsRequest
+	(*ListRunnableSkillsResponse)(nil),        // 21: agents.v1.ListRunnableSkillsResponse
+	(*GetSkillCompatibilityRequest)(nil),      // 22: agents.v1.GetSkillCompatibilityRequest
+	(*SkillCompatibility)(nil),                // 23: agents.v1.SkillCompatibility
+	(*GetSkillCompatibilityResponse)(nil),     // 24: agents.v1.GetSkillCompatibilityResponse
+	(*CreateSkillDraftRequest)(nil),           // 25: agents.v1.CreateSkillDraftRequest
+	(*CreateSkillDraftResponse)(nil),          // 26: agents.v1.CreateSkillDraftResponse
+	(*GetSkillDraftRequest)(nil),              // 27: agents.v1.GetSkillDraftRequest
+	(*GetSkillDraftResponse)(nil),             // 28: agents.v1.GetSkillDraftResponse
+	(*ListSkillDraftsRequest)(nil),            // 29: agents.v1.ListSkillDraftsRequest
+	(*ListSkillDraftsResponse)(nil),           // 30: agents.v1.ListSkillDraftsResponse
+	(*SaveSkillDraftRequest)(nil),             // 31: agents.v1.SaveSkillDraftRequest
+	(*SaveSkillDraftResponse)(nil),            // 32: agents.v1.SaveSkillDraftResponse
+	(*DiscardSkillDraftRequest)(nil),          // 33: agents.v1.DiscardSkillDraftRequest
+	(*DiscardSkillDraftResponse)(nil),         // 34: agents.v1.DiscardSkillDraftResponse
+	(*ListSkillVersionsRequest)(nil),          // 35: agents.v1.ListSkillVersionsRequest
+	(*ListSkillVersionsResponse)(nil),         // 36: agents.v1.ListSkillVersionsResponse
+	(*GetSkillVersionRequest)(nil),            // 37: agents.v1.GetSkillVersionRequest
+	(*GetSkillVersionResponse)(nil),           // 38: agents.v1.GetSkillVersionResponse
+	(*SetMainSkillVersionRequest)(nil),        // 39: agents.v1.SetMainSkillVersionRequest
+	(*SetMainSkillVersionResponse)(nil),       // 40: agents.v1.SetMainSkillVersionResponse
+	(*RevertSkillRequest)(nil),                // 41: agents.v1.RevertSkillRequest
+	(*RevertSkillResponse)(nil),               // 42: agents.v1.RevertSkillResponse
+	(*SkillMetric)(nil),                       // 43: agents.v1.SkillMetric
+	(*SkillMetricCost)(nil),                   // 44: agents.v1.SkillMetricCost
+	(*GetSkillMetricsRequest)(nil),            // 45: agents.v1.GetSkillMetricsRequest
+	(*GetSkillMetricsResponse)(nil),           // 46: agents.v1.GetSkillMetricsResponse
+	(*timestamppb.Timestamp)(nil),             // 47: google.protobuf.Timestamp
+	(*v1.PaginationRequest)(nil),              // 48: common.v1.PaginationRequest
+	(*v1.PaginationResponse)(nil),             // 49: common.v1.PaginationResponse
 }
 var file_agents_v1_skills_proto_depIdxs = []int32{
 	0,  // 0: agents.v1.SkillInfo.source:type_name -> agents.v1.SkillSource
-	46, // 1: agents.v1.SkillInfo.created_at:type_name -> google.protobuf.Timestamp
-	46, // 2: agents.v1.SkillInfo.updated_at:type_name -> google.protobuf.Timestamp
-	46, // 3: agents.v1.SkillVersion.created_at:type_name -> google.protobuf.Timestamp
-	46, // 4: agents.v1.SkillDraft.created_at:type_name -> google.protobuf.Timestamp
-	46, // 5: agents.v1.SkillDraft.updated_at:type_name -> google.protobuf.Timestamp
+	47, // 1: agents.v1.SkillInfo.created_at:type_name -> google.protobuf.Timestamp
+	47, // 2: agents.v1.SkillInfo.updated_at:type_name -> google.protobuf.Timestamp
+	47, // 3: agents.v1.SkillVersion.created_at:type_name -> google.protobuf.Timestamp
+	47, // 4: agents.v1.SkillDraft.created_at:type_name -> google.protobuf.Timestamp
+	47, // 5: agents.v1.SkillDraft.updated_at:type_name -> google.protobuf.Timestamp
 	3,  // 6: agents.v1.GenerateSkillDraftResponse.draft:type_name -> agents.v1.SkillDraft
 	3,  // 7: agents.v1.RetrySkillDraftGenerationResponse.draft:type_name -> agents.v1.SkillDraft
 	1,  // 8: agents.v1.CreateSkillResponse.skill:type_name -> agents.v1.SkillInfo
 	1,  // 9: agents.v1.GetSkillResponse.skill:type_name -> agents.v1.SkillInfo
 	1,  // 10: agents.v1.UpdateSkillResponse.skill:type_name -> agents.v1.SkillInfo
-	47, // 11: agents.v1.ListSkillsRequest.pagination:type_name -> common.v1.PaginationRequest
+	48, // 11: agents.v1.ListSkillsRequest.pagination:type_name -> common.v1.PaginationRequest
 	1,  // 12: agents.v1.ListSkillsResponse.skills:type_name -> agents.v1.SkillInfo
-	48, // 13: agents.v1.ListSkillsResponse.pagination:type_name -> common.v1.PaginationResponse
-	18, // 14: agents.v1.ListRunnableSkillsResponse.skills:type_name -> agents.v1.RunnableSkill
-	22, // 15: agents.v1.GetSkillCompatibilityResponse.skills:type_name -> agents.v1.SkillCompatibility
-	3,  // 16: agents.v1.CreateSkillDraftResponse.draft:type_name -> agents.v1.SkillDraft
-	3,  // 17: agents.v1.GetSkillDraftResponse.draft:type_name -> agents.v1.SkillDraft
-	47, // 18: agents.v1.ListSkillDraftsRequest.pagination:type_name -> common.v1.PaginationRequest
-	3,  // 19: agents.v1.ListSkillDraftsResponse.drafts:type_name -> agents.v1.SkillDraft
-	48, // 20: agents.v1.ListSkillDraftsResponse.pagination:type_name -> common.v1.PaginationResponse
-	1,  // 21: agents.v1.SaveSkillDraftResponse.skill:type_name -> agents.v1.SkillInfo
-	2,  // 22: agents.v1.SaveSkillDraftResponse.version:type_name -> agents.v1.SkillVersion
-	47, // 23: agents.v1.ListSkillVersionsRequest.pagination:type_name -> common.v1.PaginationRequest
-	2,  // 24: agents.v1.ListSkillVersionsResponse.versions:type_name -> agents.v1.SkillVersion
-	48, // 25: agents.v1.ListSkillVersionsResponse.pagination:type_name -> common.v1.PaginationResponse
-	2,  // 26: agents.v1.GetSkillVersionResponse.version:type_name -> agents.v1.SkillVersion
-	1,  // 27: agents.v1.SetMainSkillVersionResponse.skill:type_name -> agents.v1.SkillInfo
-	1,  // 28: agents.v1.RevertSkillResponse.skill:type_name -> agents.v1.SkillInfo
-	2,  // 29: agents.v1.RevertSkillResponse.version:type_name -> agents.v1.SkillVersion
-	43, // 30: agents.v1.SkillMetric.costs:type_name -> agents.v1.SkillMetricCost
-	42, // 31: agents.v1.GetSkillMetricsResponse.metrics:type_name -> agents.v1.SkillMetric
-	46, // 32: agents.v1.GetSkillMetricsResponse.window_start:type_name -> google.protobuf.Timestamp
-	46, // 33: agents.v1.GetSkillMetricsResponse.window_end:type_name -> google.protobuf.Timestamp
-	21, // 34: agents.v1.SkillsService.GetSkillCompatibility:input_type -> agents.v1.GetSkillCompatibilityRequest
-	4,  // 35: agents.v1.SkillsService.GenerateSkillDraft:input_type -> agents.v1.GenerateSkillDraftRequest
-	6,  // 36: agents.v1.SkillsService.RetrySkillDraftGeneration:input_type -> agents.v1.RetrySkillDraftGenerationRequest
-	8,  // 37: agents.v1.SkillsService.CreateSkill:input_type -> agents.v1.CreateSkillRequest
-	12, // 38: agents.v1.SkillsService.GetSkill:input_type -> agents.v1.GetSkillRequest
-	13, // 39: agents.v1.SkillsService.ListSkills:input_type -> agents.v1.ListSkillsRequest
-	15, // 40: agents.v1.SkillsService.UpdateSkill:input_type -> agents.v1.UpdateSkillRequest
-	16, // 41: agents.v1.SkillsService.DeleteSkill:input_type -> agents.v1.DeleteSkillRequest
-	19, // 42: agents.v1.SkillsService.ListRunnableSkills:input_type -> agents.v1.ListRunnableSkillsRequest
-	24, // 43: agents.v1.SkillsService.CreateSkillDraft:input_type -> agents.v1.CreateSkillDraftRequest
-	26, // 44: agents.v1.SkillsService.GetSkillDraft:input_type -> agents.v1.GetSkillDraftRequest
-	28, // 45: agents.v1.SkillsService.ListSkillDrafts:input_type -> agents.v1.ListSkillDraftsRequest
-	30, // 46: agents.v1.SkillsService.SaveSkillDraft:input_type -> agents.v1.SaveSkillDraftRequest
-	32, // 47: agents.v1.SkillsService.DiscardSkillDraft:input_type -> agents.v1.DiscardSkillDraftRequest
-	34, // 48: agents.v1.SkillsService.ListSkillVersions:input_type -> agents.v1.ListSkillVersionsRequest
-	36, // 49: agents.v1.SkillsService.GetSkillVersion:input_type -> agents.v1.GetSkillVersionRequest
-	38, // 50: agents.v1.SkillsService.SetMainSkillVersion:input_type -> agents.v1.SetMainSkillVersionRequest
-	40, // 51: agents.v1.SkillsService.RevertSkill:input_type -> agents.v1.RevertSkillRequest
-	44, // 52: agents.v1.SkillsService.GetSkillMetrics:input_type -> agents.v1.GetSkillMetricsRequest
-	23, // 53: agents.v1.SkillsService.GetSkillCompatibility:output_type -> agents.v1.GetSkillCompatibilityResponse
-	5,  // 54: agents.v1.SkillsService.GenerateSkillDraft:output_type -> agents.v1.GenerateSkillDraftResponse
-	7,  // 55: agents.v1.SkillsService.RetrySkillDraftGeneration:output_type -> agents.v1.RetrySkillDraftGenerationResponse
-	9,  // 56: agents.v1.SkillsService.CreateSkill:output_type -> agents.v1.CreateSkillResponse
-	10, // 57: agents.v1.SkillsService.GetSkill:output_type -> agents.v1.GetSkillResponse
-	14, // 58: agents.v1.SkillsService.ListSkills:output_type -> agents.v1.ListSkillsResponse
-	11, // 59: agents.v1.SkillsService.UpdateSkill:output_type -> agents.v1.UpdateSkillResponse
-	17, // 60: agents.v1.SkillsService.DeleteSkill:output_type -> agents.v1.DeleteSkillResponse
-	20, // 61: agents.v1.SkillsService.ListRunnableSkills:output_type -> agents.v1.ListRunnableSkillsResponse
-	25, // 62: agents.v1.SkillsService.CreateSkillDraft:output_type -> agents.v1.CreateSkillDraftResponse
-	27, // 63: agents.v1.SkillsService.GetSkillDraft:output_type -> agents.v1.GetSkillDraftResponse
-	29, // 64: agents.v1.SkillsService.ListSkillDrafts:output_type -> agents.v1.ListSkillDraftsResponse
-	31, // 65: agents.v1.SkillsService.SaveSkillDraft:output_type -> agents.v1.SaveSkillDraftResponse
-	33, // 66: agents.v1.SkillsService.DiscardSkillDraft:output_type -> agents.v1.DiscardSkillDraftResponse
-	35, // 67: agents.v1.SkillsService.ListSkillVersions:output_type -> agents.v1.ListSkillVersionsResponse
-	37, // 68: agents.v1.SkillsService.GetSkillVersion:output_type -> agents.v1.GetSkillVersionResponse
-	39, // 69: agents.v1.SkillsService.SetMainSkillVersion:output_type -> agents.v1.SetMainSkillVersionResponse
-	41, // 70: agents.v1.SkillsService.RevertSkill:output_type -> agents.v1.RevertSkillResponse
-	45, // 71: agents.v1.SkillsService.GetSkillMetrics:output_type -> agents.v1.GetSkillMetricsResponse
-	53, // [53:72] is the sub-list for method output_type
-	34, // [34:53] is the sub-list for method input_type
-	34, // [34:34] is the sub-list for extension type_name
-	34, // [34:34] is the sub-list for extension extendee
-	0,  // [0:34] is the sub-list for field type_name
+	49, // 13: agents.v1.ListSkillsResponse.pagination:type_name -> common.v1.PaginationResponse
+	16, // 14: agents.v1.UpdateSkillRequest.requires_tools:type_name -> agents.v1.SkillToolNames
+	19, // 15: agents.v1.ListRunnableSkillsResponse.skills:type_name -> agents.v1.RunnableSkill
+	23, // 16: agents.v1.GetSkillCompatibilityResponse.skills:type_name -> agents.v1.SkillCompatibility
+	3,  // 17: agents.v1.CreateSkillDraftResponse.draft:type_name -> agents.v1.SkillDraft
+	3,  // 18: agents.v1.GetSkillDraftResponse.draft:type_name -> agents.v1.SkillDraft
+	48, // 19: agents.v1.ListSkillDraftsRequest.pagination:type_name -> common.v1.PaginationRequest
+	3,  // 20: agents.v1.ListSkillDraftsResponse.drafts:type_name -> agents.v1.SkillDraft
+	49, // 21: agents.v1.ListSkillDraftsResponse.pagination:type_name -> common.v1.PaginationResponse
+	1,  // 22: agents.v1.SaveSkillDraftResponse.skill:type_name -> agents.v1.SkillInfo
+	2,  // 23: agents.v1.SaveSkillDraftResponse.version:type_name -> agents.v1.SkillVersion
+	48, // 24: agents.v1.ListSkillVersionsRequest.pagination:type_name -> common.v1.PaginationRequest
+	2,  // 25: agents.v1.ListSkillVersionsResponse.versions:type_name -> agents.v1.SkillVersion
+	49, // 26: agents.v1.ListSkillVersionsResponse.pagination:type_name -> common.v1.PaginationResponse
+	2,  // 27: agents.v1.GetSkillVersionResponse.version:type_name -> agents.v1.SkillVersion
+	1,  // 28: agents.v1.SetMainSkillVersionResponse.skill:type_name -> agents.v1.SkillInfo
+	1,  // 29: agents.v1.RevertSkillResponse.skill:type_name -> agents.v1.SkillInfo
+	2,  // 30: agents.v1.RevertSkillResponse.version:type_name -> agents.v1.SkillVersion
+	44, // 31: agents.v1.SkillMetric.costs:type_name -> agents.v1.SkillMetricCost
+	43, // 32: agents.v1.GetSkillMetricsResponse.metrics:type_name -> agents.v1.SkillMetric
+	47, // 33: agents.v1.GetSkillMetricsResponse.window_start:type_name -> google.protobuf.Timestamp
+	47, // 34: agents.v1.GetSkillMetricsResponse.window_end:type_name -> google.protobuf.Timestamp
+	22, // 35: agents.v1.SkillsService.GetSkillCompatibility:input_type -> agents.v1.GetSkillCompatibilityRequest
+	4,  // 36: agents.v1.SkillsService.GenerateSkillDraft:input_type -> agents.v1.GenerateSkillDraftRequest
+	6,  // 37: agents.v1.SkillsService.RetrySkillDraftGeneration:input_type -> agents.v1.RetrySkillDraftGenerationRequest
+	8,  // 38: agents.v1.SkillsService.CreateSkill:input_type -> agents.v1.CreateSkillRequest
+	12, // 39: agents.v1.SkillsService.GetSkill:input_type -> agents.v1.GetSkillRequest
+	13, // 40: agents.v1.SkillsService.ListSkills:input_type -> agents.v1.ListSkillsRequest
+	15, // 41: agents.v1.SkillsService.UpdateSkill:input_type -> agents.v1.UpdateSkillRequest
+	17, // 42: agents.v1.SkillsService.DeleteSkill:input_type -> agents.v1.DeleteSkillRequest
+	20, // 43: agents.v1.SkillsService.ListRunnableSkills:input_type -> agents.v1.ListRunnableSkillsRequest
+	25, // 44: agents.v1.SkillsService.CreateSkillDraft:input_type -> agents.v1.CreateSkillDraftRequest
+	27, // 45: agents.v1.SkillsService.GetSkillDraft:input_type -> agents.v1.GetSkillDraftRequest
+	29, // 46: agents.v1.SkillsService.ListSkillDrafts:input_type -> agents.v1.ListSkillDraftsRequest
+	31, // 47: agents.v1.SkillsService.SaveSkillDraft:input_type -> agents.v1.SaveSkillDraftRequest
+	33, // 48: agents.v1.SkillsService.DiscardSkillDraft:input_type -> agents.v1.DiscardSkillDraftRequest
+	35, // 49: agents.v1.SkillsService.ListSkillVersions:input_type -> agents.v1.ListSkillVersionsRequest
+	37, // 50: agents.v1.SkillsService.GetSkillVersion:input_type -> agents.v1.GetSkillVersionRequest
+	39, // 51: agents.v1.SkillsService.SetMainSkillVersion:input_type -> agents.v1.SetMainSkillVersionRequest
+	41, // 52: agents.v1.SkillsService.RevertSkill:input_type -> agents.v1.RevertSkillRequest
+	45, // 53: agents.v1.SkillsService.GetSkillMetrics:input_type -> agents.v1.GetSkillMetricsRequest
+	24, // 54: agents.v1.SkillsService.GetSkillCompatibility:output_type -> agents.v1.GetSkillCompatibilityResponse
+	5,  // 55: agents.v1.SkillsService.GenerateSkillDraft:output_type -> agents.v1.GenerateSkillDraftResponse
+	7,  // 56: agents.v1.SkillsService.RetrySkillDraftGeneration:output_type -> agents.v1.RetrySkillDraftGenerationResponse
+	9,  // 57: agents.v1.SkillsService.CreateSkill:output_type -> agents.v1.CreateSkillResponse
+	10, // 58: agents.v1.SkillsService.GetSkill:output_type -> agents.v1.GetSkillResponse
+	14, // 59: agents.v1.SkillsService.ListSkills:output_type -> agents.v1.ListSkillsResponse
+	11, // 60: agents.v1.SkillsService.UpdateSkill:output_type -> agents.v1.UpdateSkillResponse
+	18, // 61: agents.v1.SkillsService.DeleteSkill:output_type -> agents.v1.DeleteSkillResponse
+	21, // 62: agents.v1.SkillsService.ListRunnableSkills:output_type -> agents.v1.ListRunnableSkillsResponse
+	26, // 63: agents.v1.SkillsService.CreateSkillDraft:output_type -> agents.v1.CreateSkillDraftResponse
+	28, // 64: agents.v1.SkillsService.GetSkillDraft:output_type -> agents.v1.GetSkillDraftResponse
+	30, // 65: agents.v1.SkillsService.ListSkillDrafts:output_type -> agents.v1.ListSkillDraftsResponse
+	32, // 66: agents.v1.SkillsService.SaveSkillDraft:output_type -> agents.v1.SaveSkillDraftResponse
+	34, // 67: agents.v1.SkillsService.DiscardSkillDraft:output_type -> agents.v1.DiscardSkillDraftResponse
+	36, // 68: agents.v1.SkillsService.ListSkillVersions:output_type -> agents.v1.ListSkillVersionsResponse
+	38, // 69: agents.v1.SkillsService.GetSkillVersion:output_type -> agents.v1.GetSkillVersionResponse
+	40, // 70: agents.v1.SkillsService.SetMainSkillVersion:output_type -> agents.v1.SetMainSkillVersionResponse
+	42, // 71: agents.v1.SkillsService.RevertSkill:output_type -> agents.v1.RevertSkillResponse
+	46, // 72: agents.v1.SkillsService.GetSkillMetrics:output_type -> agents.v1.GetSkillMetricsResponse
+	54, // [54:73] is the sub-list for method output_type
+	35, // [35:54] is the sub-list for method input_type
+	35, // [35:35] is the sub-list for extension type_name
+	35, // [35:35] is the sub-list for extension extendee
+	0,  // [0:35] is the sub-list for field type_name
 }
 
 func init() { file_agents_v1_skills_proto_init() }
@@ -3785,17 +3844,17 @@ func file_agents_v1_skills_proto_init() {
 	file_agents_v1_skills_proto_msgTypes[3].OneofWrappers = []any{}
 	file_agents_v1_skills_proto_msgTypes[12].OneofWrappers = []any{}
 	file_agents_v1_skills_proto_msgTypes[14].OneofWrappers = []any{}
-	file_agents_v1_skills_proto_msgTypes[23].OneofWrappers = []any{}
-	file_agents_v1_skills_proto_msgTypes[27].OneofWrappers = []any{}
-	file_agents_v1_skills_proto_msgTypes[33].OneofWrappers = []any{}
-	file_agents_v1_skills_proto_msgTypes[37].OneofWrappers = []any{}
+	file_agents_v1_skills_proto_msgTypes[24].OneofWrappers = []any{}
+	file_agents_v1_skills_proto_msgTypes[28].OneofWrappers = []any{}
+	file_agents_v1_skills_proto_msgTypes[34].OneofWrappers = []any{}
+	file_agents_v1_skills_proto_msgTypes[38].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agents_v1_skills_proto_rawDesc), len(file_agents_v1_skills_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   45,
+			NumMessages:   46,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

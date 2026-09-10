@@ -227,6 +227,12 @@ message UpdateSkillRequest {
   optional string display_name = 4;
   optional string description = 5;
   optional string content = 6;
+  // Omitted leaves requirements unchanged; an empty wrapper clears them.
+  optional SkillToolNames requires_tools = 9;
+}
+
+message SkillToolNames {
+  repeated string names = 1;
 }
 
 message DeleteSkillRequest {
