@@ -403,6 +403,7 @@ async def test_runtime_uses_final_tools_and_skips_ordinary_skill_reads(
     )
     runtime._session = session
     runtime._session_factory = MagicMock()
+    runtime._search_indexer = MagicMock()
     runtime._org_operations = SimpleNamespace(
         require_org_member=AsyncMock(return_value=SimpleNamespace(role="member")),
         get_by_id=AsyncMock(return_value=SimpleNamespace(name="Org")),
