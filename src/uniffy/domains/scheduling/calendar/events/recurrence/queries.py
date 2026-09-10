@@ -1,12 +1,13 @@
 """Calendar operations."""
 
 import copy
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from uuid import UUID
 
 from loguru import logger
 from sqlalchemy import and_, or_, select
 
+from uniffy.core.errors import ValidationError
 from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.models.calendar.exception import RecurrenceException
 from uniffy.core.types import (
@@ -18,6 +19,10 @@ from uniffy.domains.scheduling.calendar.recurrence import (
 )
 
 logger = logger.bind(component="scheduling.calendar.events.recurrence.queries")
+
+# A year of calendar covers every view a client offers; past that the caller is
+# asking for a bulk export, which is the interop surface rather than this one.
+MAX_RANGE_DAYS = 366
 
 
 class RecurrenceQueryOperations:
@@ -42,6 +47,11 @@ class RecurrenceQueryOperations:
         Combines the canonical accessible-filter with an attendee bypass
         so invitees always see events they are on.
         """
+        if end_date < start_date:
+            raise ValidationError("range", "Range end precedes its start")
+        if end_date - start_date > timedelta(days=MAX_RANGE_DAYS):
+            raise ValidationError("range", f"Range is capped at {MAX_RANGE_DAYS} days")
+
         access_filter = await self.access_query.build_accessible_filter(
             user_id=user_id,
             organization_id=organization_id,
@@ -126,8 +136,16 @@ class RecurrenceQueryOperations:
 
         exceptions_by_event: dict[UUID, dict[date, RecurrenceException]] = {}
         if recurring_ids:
+            # Only exceptions the expansion can actually skip are worth loading,
+            # and it widens its date window by a day each side of the range.
             exc_result = await self.session.execute(
-                select(RecurrenceException).where(RecurrenceException.event_id.in_(recurring_ids))
+                select(RecurrenceException).where(
+                    and_(
+                        RecurrenceException.event_id.in_(recurring_ids),
+                        RecurrenceException.original_date >= range_start.date() - timedelta(days=1),
+                        RecurrenceException.original_date <= range_end.date() + timedelta(days=1),
+                    )
+                )
             )
             for exc in exc_result.scalars().all():
                 exceptions_by_event.setdefault(exc.event_id, {})[exc.original_date] = exc

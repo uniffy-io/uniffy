@@ -26,5 +26,8 @@ export interface MeetingSuggestion {
   unavailableOptionalUserIds: string[];
 }
 
-/** Mirrors the backend cap; past it the panel degrades instead of querying. */
-export const MAX_FREE_BUSY_USERS = 20;
+/**
+ * Mirrors MAX_FREE_BUSY_USERS in the calendar availability domain; past it the
+ * panel degrades instead of querying. Keep the two in step.
+ */
+export const MAX_FREE_BUSY_USERS = 100;

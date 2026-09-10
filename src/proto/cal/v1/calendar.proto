@@ -562,15 +562,22 @@ message ListEventsRequest {
   string sort_order = 10;
   // Filter events that have ALL of the provided tag ids (logical AND).
   repeated string tag_ids = 11;
+  // Opaque cursor from a previous response. Supplying it pages by cursor and
+  // ignores `page`; it requires the default start_time sort.
+  optional string page_token = 12;
 }
 
 // Response for listing events
 message ListEventsResponse {
   repeated CalendarEvent events = 1;
+  // Only meaningful when paging by `page`; cursor paging leaves it at zero
+  // rather than counting the whole result set on every request.
   int32 total_count = 2;
   int32 page = 3;
   int32 page_size = 4;
   int32 total_pages = 5;
+  // Cursor for the next page, empty when this is the last one.
+  string next_page_token = 6;
 }
 
 // Request to get events in a date range (optimized for calendar views)

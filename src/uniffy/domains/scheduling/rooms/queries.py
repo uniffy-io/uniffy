@@ -1,3 +1,4 @@
+from collections.abc import Sequence
 from datetime import datetime
 from uuid import UUID
 
@@ -159,3 +160,21 @@ async def get_booking_for_event(
         )
     )
     return result.scalar_one_or_none()
+
+
+async def get_bookings_for_events(
+    session: AsyncSession,
+    event_ids: Sequence[UUID],
+) -> list[RoomBooking]:
+    if not event_ids:
+        return []
+
+    result = await session.execute(
+        select(RoomBooking).where(
+            and_(
+                RoomBooking.event_id.in_(event_ids),
+                RoomBooking.status == BookingStatus.CONFIRMED,
+            )
+        )
+    )
+    return list(result.scalars().all())
