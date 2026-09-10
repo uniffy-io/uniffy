@@ -17,7 +17,7 @@ from uniffy.core.events.realtime import ContentAccessAction
 from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.search.engine import SearchAll, SearchAny, SearchFilter, SearchNot, SearchTerm
 from uniffy.core.search.policy import build_permission_filter
-from uniffy.core.types import AccessMode, ContentRole, generate_id
+from uniffy.core.types import AccessMode, AttendeeStatus, ContentRole, generate_id
 from uniffy.domains.scheduling.calendar.operations import CalendarEventOperations
 
 
@@ -130,6 +130,46 @@ class TestGetByIdAfterRsvp:
         ops._fetch_by_id = AsyncMock(return_value=event)
         with pytest.raises(PermissionDeniedError):
             await ops.get_by_id(generate_id(), event.organization_id, event.id)
+
+
+class TestRsvpMembershipGate:
+    """A response rides the read resolver, so a stale attendee row left behind
+    by removal authorises nothing on its own."""
+
+    async def test_former_member_cannot_respond(self) -> None:
+        ops = _make_ops(is_attendee=False)
+        event = _make_event()
+        ops._fetch_by_id = AsyncMock(return_value=event)
+
+        with pytest.raises(PermissionDeniedError):
+            await ops.update_attendee_status(
+                generate_id(), event.organization_id, event.id, AttendeeStatus.ACCEPTED
+            )
+
+        ops.session.execute.assert_not_called()
+
+    async def test_active_attendee_still_responds(self) -> None:
+        ops = _make_ops(is_attendee=True)
+        event = _make_event()
+        invitee = generate_id()
+        attendee = MagicMock(status=AttendeeStatus.PENDING)
+        ops._fetch_by_id = AsyncMock(return_value=event)
+        ops.session.execute = AsyncMock(
+            return_value=MagicMock(scalar_one_or_none=MagicMock(return_value=attendee))
+        )
+        ops.session.commit = AsyncMock()
+        ops._log_activity = AsyncMock()
+
+        with patch(
+            "uniffy.domains.scheduling.calendar.events.attendees.emit_notification",
+            AsyncMock(),
+        ) as emit:
+            assert await ops.update_attendee_status(
+                invitee, event.organization_id, event.id, AttendeeStatus.ACCEPTED
+            )
+
+        assert attendee.status == AttendeeStatus.ACCEPTED
+        assert emit.await_args.args[0].target_user_ids == [event.organizer_id]
 
 
 class TestSearchAttendeeIds:

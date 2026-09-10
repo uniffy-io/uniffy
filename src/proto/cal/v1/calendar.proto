@@ -386,6 +386,9 @@ message CreateEventRequest {
   bool is_out_of_office = 26;
   // Attendees with explicit roles; merged with attendee_ids (which imply REQUIRED)
   repeated AttendeeInput attendees = 27;
+  // Create the event with no reminders at all. Otherwise an empty `reminders`
+  // list falls back to the member's default intervals.
+  bool no_reminders = 28;
 }
 
 // An attendee to invite, with the role to invite them under
@@ -461,6 +464,9 @@ message UpdateEventRequest {
   optional EventTransparency transparency = 28;
   // Updated out-of-office flag; unset leaves it untouched
   optional bool is_out_of_office = 29;
+  // Remove every reminder. Otherwise an empty `reminders` list leaves them
+  // untouched, since proto3 cannot tell an empty repeated apart from an unset one.
+  bool clear_reminders = 30;
 }
 
 // Wrapper so the caller can distinguish "leave tags alone" from

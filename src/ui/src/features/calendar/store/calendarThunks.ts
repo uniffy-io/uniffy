@@ -29,7 +29,7 @@ import {
 } from "@uniffy/proto/cal/v1/calendar_pb";
 import { AccessMode } from "@uniffy/proto/common/v1/common_pb";
 import { create } from "@bufbuild/protobuf";
-import { TimestampSchema, timestampDate, type Timestamp } from "@bufbuild/protobuf/wkt";
+import { TimestampSchema, type Timestamp } from "@bufbuild/protobuf/wkt";
 import type {
   CalendarEvent,
   Category,
@@ -294,8 +294,8 @@ const templateFromProto = (proto: ProtoEventTemplate): EventTemplate => ({
   tags: proto.tags,
   visibility: proto.accessMode,
   createdBy: proto.createdBy,
-  createdAt: proto.createdAt ? timestampDate(proto.createdAt) : new Date(),
-  updatedAt: proto.updatedAt ? timestampDate(proto.updatedAt) : new Date(),
+  createdAt: timestampToIso(proto.createdAt),
+  updatedAt: timestampToIso(proto.updatedAt),
 });
 
 export const fetchEventsInRange = createAsyncThunk<
@@ -363,6 +363,8 @@ export const createEvent = createAsyncThunk<
     isFocusTime?: boolean;
     tagIds?: string[];
     reminders?: number[];
+    /** Create without reminders; otherwise an empty list means the member's defaults. */
+    noReminders?: boolean;
     roomId?: string;
     status?: EventStatus;
     visibility?: EventVisibility;
@@ -409,6 +411,7 @@ export const createEvent = createAsyncThunk<
       isFocusTime: params.isFocusTime || false,
       tagIds: params.tagIds || [],
       reminders: params.reminders || [],
+      noReminders: params.noReminders ?? false,
       roomId: params.roomId || undefined,
       channelId: params.channelId,
       channelAutoCreated: params.channelAutoCreated,
@@ -510,6 +513,7 @@ export const updateEvent = createAsyncThunk<
       isFocusTime: params.isFocusTime,
       tagIds: params.tagIds !== undefined ? { ids: params.tagIds } : undefined,
       reminders: params.reminders,
+      clearReminders: params.reminders !== undefined && params.reminders.length === 0,
       recurrenceEditScope: params.recurrenceEditScope
         ? EDIT_SCOPE_TO_PROTO[params.recurrenceEditScope]
         : undefined,

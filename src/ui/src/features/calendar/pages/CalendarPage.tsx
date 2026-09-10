@@ -127,6 +127,7 @@ export function CalendarPage() {
       <QuickEventModal
         isOpen={isEventModalOpen}
         onClose={() => dispatch(closeEventModal())}
+        prefill={eventModalPrefill}
         initialDate={
           eventModalPrefill?.startTime
             ? parseISO(eventModalPrefill.date || instantDayKey(eventModalPrefill.startTime))

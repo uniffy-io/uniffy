@@ -790,6 +790,38 @@ Period rail
 - [ ] Flipping the week-start preference between Monday and Sunday reshapes the week pills
       and the day letters.
 
+## Calendar access gates, templates, room details, and reminders
+
+The RSVP path and the template direct read follow the membership and grant model; a
+template fills the create form; room details reach editors; reminders can be set while
+creating. Needs an organizer (A), an attendee (B), a third member (C), an org admin, and
+`db shell`. (both products)
+
+- [ ] A invites B to an event. The admin deactivates B from the members admin page while
+      B's session is still open: responding from the notification inline buttons or from
+      `/calendar/<event-id>` returns permission denied, B's row in `calendar_event_attendees`
+      stays `PENDING`, and A receives no RSVP notification.
+- [ ] The admin reactivates B: the same response succeeds and A is notified.
+- [ ] A creates a template from the sidebar, then in `db shell` sets its `access_mode` to
+      `EXPLICIT_MEMBERS` (the web form offers no access control yet). C's sidebar does not
+      list it and `GetEventTemplate` with its id as C returns permission denied. Grant C
+      VIEWER through `MembersService.AddMember` (content type CALENDAR_EVENT, the template
+      id): the sidebar lists it and the direct read succeeds. A BLOCKED row denies it again.
+- [ ] A clicks a template carrying a title, description, category, location, meeting link,
+      and a 45 minute duration: the create form opens with every field filled, the meeting
+      mode on "Link", and the end time 45 minutes after the start.
+- [ ] A books a room on an event and reopens it: the room picker shows the room AND the
+      details card below it (name, location, capacity, amenities), and the name opens the
+      room viewer. B (view only) sees the same card.
+- [ ] Settings -> Notifications -> Default reminders set to 30 min and 1 day. Open the create
+      form: those two chips are preselected. Switch to 1 hour only and create: the event
+      carries exactly one reminder row per attendee in `calendar_event_reminders`.
+- [ ] Clear every chip and create: the event stores `reminders = []` and has no reminder
+      rows, even though the member has defaults. In the detail modal of an event with
+      reminders, deselect the last chip: every row disappears and reopening shows none
+      selected. On mobile, editing an event now allows removing the last reminder too.
+- [ ] Creating a template no longer logs a Redux serializability error in the console.
+
 ## Chat synced drafts
 
 Unsent composer text syncs across devices per channel and per thread. Needs one user logged in

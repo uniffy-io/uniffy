@@ -730,16 +730,7 @@ export function EventDetailScreen() {
           actions={[{ label: "Save", onPress: saveReminders, disabled: updateEvent.isPending }]}
         />
         <View style={styles.reminderSheetBody}>
-          <ReminderChips
-            value={draftReminders}
-            onChange={setDraftReminders}
-            lockLast={event.reminders.length > 0}
-          />
-          {event.reminders.length > 0 ? (
-            <Text style={[styles.reminderHint, { color: T.textDim }]}>
-              An event that has reminders keeps at least one.
-            </Text>
-          ) : null}
+          <ReminderChips value={draftReminders} onChange={setDraftReminders} />
         </View>
       </BottomSheet>
     </View>
@@ -852,5 +843,4 @@ const styles = StyleSheet.create({
   amenityText: { fontSize: 11, fontFamily: FONT.medium },
   activityToggle: { flexDirection: "row", alignItems: "center", gap: 6 },
   reminderSheetBody: { paddingHorizontal: 16, paddingBottom: 16, gap: 8 },
-  reminderHint: { fontSize: 12, fontFamily: FONT.regular },
 });

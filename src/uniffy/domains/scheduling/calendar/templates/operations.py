@@ -7,10 +7,15 @@ from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.auth.membership import get_active_membership
-from uniffy.core.auth.permissions import resolve_creation_policy
+from uniffy.core.auth.permissions import (
+    PermissionChecker,
+    resolve_creation_policy,
+    role_can_view,
+)
 from uniffy.core.errors import (
     NotFoundError,
     PermissionDeniedError,
+    ValidationError,
 )
 from uniffy.core.models.calendar.template import EventTemplate
 from uniffy.core.types import (
@@ -30,6 +35,7 @@ class EventTemplateOperations:
 
         self.session = session
         self.access_query = ContentAccessQuery(session)
+        self.permission_checker = PermissionChecker(session)
 
     async def _verify_org_membership(
         self,
@@ -54,6 +60,13 @@ class EventTemplateOperations:
         baseline_role: ContentRole | None = None,
     ) -> EventTemplate:
         await self._verify_org_membership(user_id, organization_id)
+
+        # Templates are not registered content, so nothing can grant a named
+        # person access to one; the mode would be enforced but never satisfiable.
+        if access_mode == AccessMode.EXPLICIT_MEMBERS:
+            raise ValidationError(
+                "access_mode", "Event templates cannot be shared with named people"
+            )
 
         access_mode, baseline_role = await resolve_creation_policy(
             self.session,
@@ -87,8 +100,7 @@ class EventTemplateOperations:
         organization_id: UUID,
         user_id: UUID,
     ) -> EventTemplate:
-        """Get a template by ID, enforcing access policy."""
-
+        """A direct read resolves the same policy the list filter applies."""
         await self._verify_org_membership(user_id, organization_id)
 
         query = select(EventTemplate).where(
@@ -103,21 +115,16 @@ class EventTemplateOperations:
         if not template:
             raise NotFoundError("EventTemplate", template_id)
 
-        from uniffy.core.auth.permissions import resolve_effective_policy
-        from uniffy.core.auth.permissions.defaults import resolve_content_defaults
-
-        default_mode, default_baseline = await resolve_content_defaults(
-            self.session,
-            organization_id,
-            ContentType.CALENDAR_EVENT,
+        role = await self.permission_checker.effective_role(
+            user_id=user_id,
+            organization_id=organization_id,
+            content_type=ContentType.CALENDAR_EVENT,
+            content_id=template.id,
+            owner_id=template.created_by,
+            access_mode=template.access_mode,
+            baseline_role=template.baseline_role,
         )
-        effective_mode, _ = resolve_effective_policy(
-            template.access_mode,
-            template.baseline_role,
-            default_mode,
-            default_baseline,
-        )
-        if effective_mode == AccessMode.OWNER_ONLY and template.created_by != user_id:
+        if not role_can_view(role):
             raise PermissionDeniedError("read", "event template")
 
         return template

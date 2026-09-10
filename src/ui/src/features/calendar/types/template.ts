@@ -12,8 +12,8 @@ export interface EventTemplate {
   tags: string[];
   visibility: AccessMode;
   createdBy: string;
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface CreateTemplatePayload {
