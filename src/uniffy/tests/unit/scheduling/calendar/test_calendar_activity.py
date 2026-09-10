@@ -227,6 +227,7 @@ class TestUpdateAttendeeStatus:
         result.scalar_one_or_none.return_value = attendee
 
         ops._fetch_by_id = AsyncMock(return_value=event)
+        ops._require_view = AsyncMock()
         ops.session.execute = AsyncMock(return_value=result)
         ops.session.commit = AsyncMock()
         ops._delete_reminder_rows = AsyncMock()

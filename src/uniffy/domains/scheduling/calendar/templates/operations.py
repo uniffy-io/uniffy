@@ -7,7 +7,11 @@ from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.auth.membership import get_active_membership
-from uniffy.core.auth.permissions import resolve_access_policy
+from uniffy.core.auth.permissions import (
+    PermissionChecker,
+    resolve_access_policy,
+    role_can_view,
+)
 from uniffy.core.errors import (
     NotFoundError,
     PermissionDeniedError,
@@ -30,6 +34,7 @@ class EventTemplateOperations:
 
         self.session = session
         self.access_query = ContentAccessQuery(session)
+        self.permission_checker = PermissionChecker(session)
 
     async def _verify_org_membership(
         self,
@@ -87,8 +92,7 @@ class EventTemplateOperations:
         organization_id: UUID,
         user_id: UUID,
     ) -> EventTemplate:
-        """Get a template by ID, enforcing access policy."""
-
+        """A direct read resolves the same policy the list filter applies."""
         await self._verify_org_membership(user_id, organization_id)
 
         query = select(EventTemplate).where(
@@ -103,21 +107,16 @@ class EventTemplateOperations:
         if not template:
             raise NotFoundError("EventTemplate", template_id)
 
-        from uniffy.core.auth.permissions import resolve_effective_policy
-        from uniffy.core.auth.permissions.defaults import resolve_content_defaults
-
-        default_mode, default_baseline = await resolve_content_defaults(
-            self.session,
-            organization_id,
-            ContentType.CALENDAR_EVENT,
+        role = await self.permission_checker.effective_role(
+            user_id=user_id,
+            organization_id=organization_id,
+            content_type=ContentType.CALENDAR_EVENT,
+            content_id=template.id,
+            owner_id=template.created_by,
+            access_mode=template.access_mode,
+            baseline_role=template.baseline_role,
         )
-        effective_mode, _ = resolve_effective_policy(
-            template.access_mode,
-            template.baseline_role,
-            default_mode,
-            default_baseline,
-        )
-        if effective_mode == AccessMode.OWNER_ONLY and template.created_by != user_id:
+        if not role_can_view(role):
             raise PermissionDeniedError("read", "event template")
 
         return template

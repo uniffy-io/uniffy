@@ -261,6 +261,11 @@ class AttendeeOperations:
         if not event:
             raise NotFoundError("CalendarEvent", event_id)
 
+        # The attendee row alone authorises nothing: removal leaves it behind,
+        # so a response rides the same resolver as a read, where the invitation
+        # floor rechecks active membership.
+        await self.events._require_view(user_id, organization_id, event)
+
         if event.status == EventStatus.CANCELLED:
             raise ValidationError("event", "Cannot respond to a cancelled event")
 
