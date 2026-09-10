@@ -18,7 +18,7 @@ import { cn } from "@/shared/utils/cn";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { PortalMenu } from "@/components/ui/portal-menu";
+import { ActionMenu, ActionMenuItem } from "@/components/ui/action-menu";
 import { ReasonDialog } from "@/components/ui/reason-dialog";
 import {
   Table,
@@ -143,13 +143,19 @@ function RowActions({
           setOpen((v) => !v);
         }}
         aria-label="Row actions"
+        aria-haspopup="menu"
+        aria-expanded={open}
       >
         <DotsThreeVertical size={16} weight="bold" />
       </Button>
-      <PortalMenu open={open} onClose={() => setOpen(false)} triggerRef={triggerRef}>
-        <button
+      <ActionMenu
+        label="Row actions"
+        open={open}
+        onClose={() => setOpen(false)}
+        triggerRef={triggerRef}
+      >
+        <ActionMenuItem
           type="button"
-          className="w-full text-left px-3 py-1.5 hover:bg-muted/60 flex items-center gap-2"
           onClick={(e) => {
             e.stopPropagation();
             setOpen(false);
@@ -157,11 +163,10 @@ function RowActions({
           }}
         >
           <Lifebuoy size={14} weight="duotone" /> Enter support session
-        </button>
+        </ActionMenuItem>
         {org.deletedAt ? (
-          <button
+          <ActionMenuItem
             type="button"
-            className="w-full text-left px-3 py-1.5 hover:bg-muted/60 flex items-center gap-2 text-emerald-700 dark:text-emerald-400"
             onClick={(e) => {
               e.stopPropagation();
               setOpen(false);
@@ -169,11 +174,10 @@ function RowActions({
             }}
           >
             <ArrowCounterClockwise size={14} weight="duotone" /> Restore
-          </button>
+          </ActionMenuItem>
         ) : org.isSuspended ? (
-          <button
+          <ActionMenuItem
             type="button"
-            className="w-full text-left px-3 py-1.5 hover:bg-muted/60 flex items-center gap-2"
             onClick={(e) => {
               e.stopPropagation();
               setOpen(false);
@@ -181,11 +185,10 @@ function RowActions({
             }}
           >
             <ArrowCounterClockwise size={14} weight="duotone" /> Unsuspend
-          </button>
+          </ActionMenuItem>
         ) : (
-          <button
+          <ActionMenuItem
             type="button"
-            className="w-full text-left px-3 py-1.5 hover:bg-muted/60 flex items-center gap-2 text-amber-700 dark:text-amber-400"
             onClick={(e) => {
               e.stopPropagation();
               setOpen(false);
@@ -193,12 +196,12 @@ function RowActions({
             }}
           >
             <Prohibit size={14} weight="duotone" /> Suspend
-          </button>
+          </ActionMenuItem>
         )}
         {!org.deletedAt && (
-          <button
+          <ActionMenuItem
             type="button"
-            className="w-full text-left px-3 py-1.5 hover:bg-muted/60 flex items-center gap-2 text-red-700 dark:text-red-400"
+            destructive
             onClick={(e) => {
               e.stopPropagation();
               setOpen(false);
@@ -206,9 +209,9 @@ function RowActions({
             }}
           >
             <Trash size={14} weight="duotone" /> Delete
-          </button>
+          </ActionMenuItem>
         )}
-      </PortalMenu>
+      </ActionMenu>
     </>
   );
 }

@@ -6,7 +6,6 @@ from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
-from sqlalchemy import select
 from uniffy_proto.chat.v1.chat_pb2 import (
     ChatMessage as ProtoChatMessage,
 )
@@ -27,8 +26,8 @@ from uniffy_proto.chat.v1.chat_pb2 import (
 from uniffy.core.auth.principal import current_user_id, resolve_organization_id
 from uniffy.core.converters import datetime_to_timestamp
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
-from uniffy.core.models.agents.message_feedback import AgentMessageFeedback
 from uniffy.core.models.chat.message import ChatMessage, SenderType
+from uniffy.domains.agents.invocation import read_response_skill_attributions
 from uniffy.domains.chat.access import ChatAccessChecker
 from uniffy.domains.chat.messages.converters import SENDER_TYPE_TO_PROTO, message_to_proto
 from uniffy.domains.chat.messages.projection import ForwardProjectionResolver
@@ -99,6 +98,13 @@ class ThreadHandlers:
                 )
                 if stats and stats.last_reply_at:
                     resp.last_reply_at.CopyFrom(datetime_to_timestamp(stats.last_reply_at))
+                attributions = await read_response_skill_attributions(
+                    session,
+                    organization_id=org_id,
+                    channel_id=channel_id,
+                    response_ids=[root_msg.id],
+                )
+                resp.root_message.metadata.update(attributions.get(root_msg.id, {}))
                 return resp
         except (NotFoundError, PermissionDeniedError) as e:
             _handle_error(e)
@@ -145,21 +151,13 @@ class ThreadHandlers:
                     messages=messages,
                 )
 
-                feedback_map: dict[UUID, str] = {}
-                agent_ids = [m.id for m in messages if m.sender_type == SenderType.AGENT]
-                if agent_ids:
-                    fb_result = await session.execute(
-                        select(
-                            AgentMessageFeedback.chat_message_id,
-                            AgentMessageFeedback.rating,
-                        ).where(
-                            AgentMessageFeedback.user_id == user_id,
-                            AgentMessageFeedback.chat_message_id.in_(agent_ids),
-                        )
-                    )
-                    feedback_map = {mid: rating for mid, rating in fb_result.all()}
-
                 proto_messages = []
+                attributions = await read_response_skill_attributions(
+                    session,
+                    organization_id=org_id,
+                    channel_id=channel_id,
+                    response_ids=[message.id for message in messages],
+                )
                 for m in messages:
                     proto_msg = message_to_proto(
                         m,
@@ -175,9 +173,7 @@ class ThreadHandlers:
                         ),
                         forward_context=forward_contexts.get(m.id),
                     )
-                    rating = feedback_map.get(m.id)
-                    if rating:
-                        proto_msg.feedback_rating = rating
+                    proto_msg.metadata.update(attributions.get(m.id, {}))
                     proto_messages.append(proto_msg)
 
                 return GetThreadMessagesResponse(

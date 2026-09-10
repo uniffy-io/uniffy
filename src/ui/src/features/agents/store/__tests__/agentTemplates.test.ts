@@ -17,6 +17,7 @@ const assistant = {
   soulPrompt: "You are the workspace assistant.",
   enabledTools: ["search.query"],
   enabledSkillIds: ["skill-1"],
+  enabledRuleIds: ["rule-1"],
   recommendedModel: "",
   recommendedImageModel: "",
 };
@@ -29,6 +30,7 @@ describe("templateToPlain", () => {
     expect(plain).toEqual(assistant);
     expect(plain.enabledTools).not.toBe(message.enabledTools);
     expect(plain.enabledSkillIds).not.toBe(message.enabledSkillIds);
+    expect(plain.enabledRuleIds).not.toBe(message.enabledRuleIds);
   });
 });
 

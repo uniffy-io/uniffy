@@ -50,14 +50,27 @@ from uniffy.domains.agents.sessions.jobs.jobs import (
     COMPACT_SESSION_JOB_TIMEOUT_SECONDS,
     compact_session,
 )
+from uniffy.domains.agents.skills.evaluations.jobs.contracts import (
+    EVALUATION_JOB_REFS,
+    EVALUATION_SCHEDULED_JOB_REFS,
+    EXPIRE_SKILL_EVALUATIONS_SCHEDULE,
+    RUN_SKILL_EVALUATION,
+)
+from uniffy.domains.agents.skills.evaluations.jobs.jobs import (
+    expire_skill_evaluations,
+    run_skill_evaluation,
+)
+from uniffy.domains.agents.skills.evaluations.schemas import EVALUATION_TIMEOUT_SECONDS
+from uniffy.domains.agents.skills.generation import GENERATION_TIMEOUT_SECONDS
 from uniffy.domains.agents.skills.jobs.contracts import (
-    ANALYZE_SESSION_FOR_SKILLS,
+    EXPIRE_SKILL_DRAFT_GENERATIONS_SCHEDULE,
+    GENERATE_SKILL_DRAFT,
     SKILL_JOB_REFS,
     SKILL_SCHEDULED_JOB_REFS,
 )
 from uniffy.domains.agents.skills.jobs.jobs import (
-    SKILL_ANALYSIS_JOB_TIMEOUT_SECONDS,
-    analyze_session_for_skills,
+    expire_skill_draft_generations,
+    generate_skill_draft,
 )
 from uniffy.domains.audit.jobs.contracts import (
     AUDIT_JOB_REFS,
@@ -280,16 +293,23 @@ CORE_JOB_REGISTRATIONS = (
 )
 
 EGRESS_JOB_REGISTRATIONS = (
+    _bind(
+        RUN_SKILL_EVALUATION,
+        run_skill_evaluation,
+        timeout=EVALUATION_TIMEOUT_SECONDS + 30,
+        max_tries=1,
+    ),
+    _bind(
+        GENERATE_SKILL_DRAFT,
+        generate_skill_draft,
+        timeout=GENERATION_TIMEOUT_SECONDS + 30,
+        max_tries=1,
+    ),
     _bind(RESPOND_TO_CHAT_MESSAGE, respond_to_chat_message),
     _bind(
         COMPACT_SESSION,
         compact_session,
         timeout=COMPACT_SESSION_JOB_TIMEOUT_SECONDS,
-    ),
-    _bind(
-        ANALYZE_SESSION_FOR_SKILLS,
-        analyze_session_for_skills,
-        timeout=SKILL_ANALYSIS_JOB_TIMEOUT_SECONDS,
     ),
     _bind(EXECUTE_SINGLE_AGENT_CRON_TASK, execute_single_agent_cron_task),
     _bind(
@@ -306,6 +326,8 @@ EGRESS_JOB_REGISTRATIONS = (
 )
 
 CORE_SCHEDULED_REGISTRATIONS = (
+    _bind_schedule(EXPIRE_SKILL_EVALUATIONS_SCHEDULE, expire_skill_evaluations),
+    _bind_schedule(EXPIRE_SKILL_DRAFT_GENERATIONS_SCHEDULE, expire_skill_draft_generations),
     _bind_schedule(
         CHECK_CALENDAR_REMINDERS_SCHEDULE,
         check_calendar_reminders,
@@ -409,6 +431,7 @@ _JOB_REFS = (
     *RUNTIME_JOB_REFS,
     *SESSION_JOB_REFS,
     *SKILL_JOB_REFS,
+    *EVALUATION_JOB_REFS,
     *AUDIT_JOB_REFS,
     *CALENDAR_JOB_REFS,
     *CALLS_JOB_REFS,
@@ -432,6 +455,7 @@ _SCHEDULED_JOB_REFS = (
     *RUNTIME_SCHEDULED_JOB_REFS,
     *SESSION_SCHEDULED_JOB_REFS,
     *SKILL_SCHEDULED_JOB_REFS,
+    *EVALUATION_SCHEDULED_JOB_REFS,
     *AUDIT_SCHEDULED_JOB_REFS,
     *CALENDAR_SCHEDULED_JOB_REFS,
     *CALLS_SCHEDULED_JOB_REFS,

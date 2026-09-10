@@ -34,6 +34,30 @@ const HTTP_STATUS_MESSAGES: Record<number, string> = {
 
 const MESSAGE_PATTERNS: [RegExp, string][] = [
   [
+    /^skill_generation_queue_unavailable$/,
+    "Generation is unavailable. Try again when the service is back.",
+  ],
+  [
+    /^skill_generation_provider_required$/,
+    "An organization admin needs to configure an AI provider before generation can run.",
+  ],
+  [
+    /^skill_generation_access_revoked$/,
+    "The selected conversation or agent is no longer accessible.",
+  ],
+  [
+    /^skill_generation_budget_exceeded$/,
+    "The AI usage budget has been reached. Retry after the budget is available.",
+  ],
+  [
+    /^skill_generation_invalid_proposal$/,
+    "The AI response could not be used as a skill. You can retry generation.",
+  ],
+  [
+    /^skill_generation_(interrupted|generation_failed)$/,
+    "Generation did not finish. You can retry generation.",
+  ],
+  [
     /fetch failed|failed to fetch|networkerror/i,
     "Could not connect to the server. Please check your internet connection.",
   ],

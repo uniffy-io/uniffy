@@ -480,6 +480,7 @@ class TestChatWriterApprovalAccessors:
         return (
             ChatChannelMessageWriter(
                 session=MagicMock(),
+                search_indexer=MagicMock(),
                 user_id=ids["user"],
                 organization_id=ids["org"],
                 channel_id=ids["channel"],
@@ -1030,6 +1031,7 @@ def _stream_agent(
         model_params={"temperature": 0.7},
         enabled_tools=[],
         enabled_skills=[],
+        enabled_rules=[],
     )
 
 
@@ -1037,6 +1039,8 @@ def _stream_runtime_ops(monkeypatch, *, binding_row, agent):
     captured: dict = {}
 
     ops = object.__new__(MessageStreamer)
+    ops._session_factory = MagicMock()
+    ops._search_indexer = MagicMock()
     session = MagicMock()
 
     async def fake_execute(_stmt):
@@ -1072,12 +1076,6 @@ def _stream_runtime_ops(monkeypatch, *, binding_row, agent):
     )
     ops._chat = SimpleNamespace(build_channel=AsyncMock(return_value=None))
 
-    async def fake_fetch_skills(_skill_ops, **_kwargs):
-        return []
-
-    async def fake_record_injections(_session, **_kwargs):
-        return None
-
     async def fake_resolve_model(**kwargs):
         captured["resolve_model"] = kwargs
         return "resolved-model"
@@ -1091,8 +1089,7 @@ def _stream_runtime_ops(monkeypatch, *, binding_row, agent):
         }
         raise _StopFlow()
 
-    monkeypatch.setattr(runtime_stream_mod, "fetch_agent_skills", fake_fetch_skills)
-    monkeypatch.setattr(runtime_stream_mod, "record_skill_injections", fake_record_injections)
+    monkeypatch.setattr(runtime_stream_mod, "resolve_enabled_rules", AsyncMock(return_value=()))
     monkeypatch.setattr(runtime_stream_mod, "resolve_invoked_skill", AsyncMock(return_value=None))
     monkeypatch.setattr(runtime_stream_mod, "build_system_prompt", lambda **_kwargs: "sys")
     monkeypatch.setattr(runtime_stream_mod, "get_tool_registry", lambda: MagicMock())

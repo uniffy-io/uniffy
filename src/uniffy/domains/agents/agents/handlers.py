@@ -55,19 +55,19 @@ from uniffy.domains.agents.agents.converters import (
 from uniffy.domains.agents.agents.operations import AgentOperations
 from uniffy.domains.agents.cache import fetch_memory_index
 from uniffy.domains.agents.memories.scope import MemoryScopeRef
+from uniffy.domains.agents.rules.bundled import resolve_bundled_rule_ids
+from uniffy.domains.agents.rules.resolution import resolve_enabled_rules
 from uniffy.domains.agents.runtime.prompt import (
     MemoryScopeBlock,
     build_memory_block,
     build_system_prompt,
-    skill_passes_activation,
-    to_skill_prompt_entry,
 )
 from uniffy.domains.agents.skills.operations import SkillOperations
 from uniffy.domains.agents.templates import AGENT_TEMPLATES
 from uniffy.domains.agents.tools.catalog import list_tool_catalog
 from uniffy.domains.agents.tools.deferral import plan_tool_advertisement
 from uniffy.domains.agents.tools.registry import get_tool_registry
-from uniffy.domains.integrations.tools import filter_integration_tool_schemas
+from uniffy.domains.integrations.advertisement import filter_integration_tool_schemas
 from uniffy.domains.organizations.operations import OrganizationOperations
 from uniffy.domains.permissions.access import ResourceAccessResolver, ResourceKey
 from uniffy.domains.tags.reader import TagReader
@@ -241,6 +241,7 @@ class AgentsHandlers:
                     theme_color=theme_color,
                     is_default=is_default,
                     enabled_skills=list(request.enabled_skills),
+                    enabled_rules=list(request.enabled_rules),
                     access_mode=access_mode,
                     baseline_role=baseline_role,
                     group_ids=group_ids,
@@ -405,6 +406,9 @@ class AgentsHandlers:
 
                 names = [name for t in AGENT_TEMPLATES for name in t.bundled_skill_names]
                 id_by_name = await SkillOperations(session).resolve_bundled_skill_id_map(names)
+                rule_ids = await resolve_bundled_rule_ids(
+                    session, [name for t in AGENT_TEMPLATES for name in t.bundled_rule_names]
+                )
                 return ListAgentTemplatesResponse(
                     templates=[
                         agent_template_to_proto(
@@ -414,6 +418,7 @@ class AgentsHandlers:
                                 for name in t.bundled_skill_names
                                 if name in id_by_name
                             ],
+                            [rule_ids[name] for name in t.bundled_rule_names if name in rule_ids],
                         )
                         for t in AGENT_TEMPLATES
                     ]
@@ -730,7 +735,6 @@ class AgentsHandlers:
                 agent_ops = AgentOperations(session, search_indexer=self.search_indexer)
                 org_ops = OrganizationOperations(session)
                 user_ops = UserOperations(session)
-                skill_ops = SkillOperations(session)
 
                 agent = await agent_ops.get_by_id(user_id, org_id, agent_id)
 
@@ -739,18 +743,6 @@ class AgentsHandlers:
                 user = await user_ops.get_by_id(user_id)
                 role = membership.role
                 user_role = role.value if hasattr(role, "value") else str(role)
-
-                skills = await skill_ops.get_skills_for_agent(
-                    organization_id=org_id,
-                    enabled_skill_ids=agent.enabled_skills or [],
-                )
-                skill_entries = [
-                    to_skill_prompt_entry(s)
-                    for s in skills
-                    if skill_passes_activation(
-                        s, enabled_tools=agent.enabled_tools or [], surface="session"
-                    )
-                ]
 
                 memory_context = await self._fetch_memory_context_for_preview(
                     session=session,
@@ -772,7 +764,12 @@ class AgentsHandlers:
                     user_name=user.full_name or user.username,
                     user_role=user_role,
                     deferred_tools=plan.deferred_names() or None,
-                    skills=skill_entries or None,
+                    rules=await resolve_enabled_rules(
+                        session,
+                        organization_id=org_id,
+                        agent_id=agent.id,
+                        enabled_rule_ids=agent.enabled_rules,
+                    ),
                     memory_context=memory_context,
                 )
 

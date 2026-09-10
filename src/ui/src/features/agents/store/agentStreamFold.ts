@@ -16,8 +16,6 @@ import {
   streamCancelled,
 } from "@/features/agents/store/agentMessagesSlice";
 import { messageToPlain } from "@/features/agents/store/agentMessagesSerde";
-import { upsertProposedDraft } from "@/features/agents/store/agentSkillDraftsSlice";
-import { skillDraftToPlain } from "@/features/agents/store/agentSkillDraftsThunks";
 
 export interface AgentStreamOutcome {
   status: "done" | "error" | "cancelled";
@@ -182,18 +180,6 @@ export function createAgentStreamConsumer(
             description: event.event.value.description,
           }),
         );
-        return null;
-      }
-      case "skillDraft": {
-        const draft = event.event.value.draft;
-        if (draft) {
-          dispatch(
-            upsertProposedDraft({
-              draft: skillDraftToPlain(draft),
-              sessionId,
-            }),
-          );
-        }
         return null;
       }
       case "error": {

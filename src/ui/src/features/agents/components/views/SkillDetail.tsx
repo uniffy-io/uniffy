@@ -1,11 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  ArrowCounterClockwise,
   ArrowLeft,
-  CaretDown,
-  CaretRight,
-  CircleNotch,
   ClockCounterClockwise,
   Lightning,
   PushPin,
@@ -17,14 +13,9 @@ import { SkillSource } from "@uniffy/proto/agents/v1/skills_pb";
 import { CrepeEditor } from "@/components/editor/CrepeEditor";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
 import { PaneBackLink, PaneHeader, PaneHeaderBar } from "@/components/ui/pane-header";
-import { Select } from "@/components/ui/select";
-import { ToggleSwitch } from "@/components/ui/toggle-switch";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { cn } from "@/shared/utils/cn";
-import { formatProtoDateTime } from "@/shared/utils/dateFormatting";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { useAgentsBuilderAccess } from "@/features/agents/hooks/useAgentsBuilderAccess";
 import {
@@ -45,30 +36,33 @@ import {
   revertSkill,
   setMainSkillVersion,
 } from "@/features/agents/store/agentSkillVersionsThunks";
-import { diffStat } from "@/features/agents/utils/skillDiff";
 import { parseSkillNameConflict } from "@/features/agents/utils/skillDraftErrors";
 import { deriveSkillSlug } from "@/features/agents/utils/skillSlug";
 import { SKILL_EDITOR_PLACEHOLDER } from "@/features/agents/config/skillEditor";
-import { SkillVersionDiff } from "@/features/agents/components/skills/SkillVersionDiff";
+import { InstructionVersionHistory } from "@/features/agents/components/instruction/InstructionVersionHistory";
+import { SkillMetricsPanel } from "@/features/agents/components/skills/SkillMetricsPanel";
+import { SkillRequirements } from "@/features/agents/components/skills/SkillRequirements";
+import {
+  DETAIL_EDITOR_MIN_HEIGHT,
+  DetailBody,
+  DetailCard,
+  DetailEditorCard,
+  DetailField,
+  DetailFieldRow,
+  DetailReadOnlyValue,
+  DetailSection,
+  DetailTextField,
+  DetailToggleSection,
+  detailEditorClass,
+} from "@/features/agents/components/instruction/InstructionDetailLayout";
+import {
+  headerButtonClass,
+  headerChipActiveClass,
+  headerChipClass,
+} from "@/features/agents/components/instruction/detailChrome";
 
-const headerButtonClass = cn(
-  "group/btn relative flex items-center justify-center h-7 w-7 rounded-md",
-  "border border-border-strong bg-transparent text-muted-foreground",
-  "transition-all duration-300 ease-out",
-  "hover:border-border-strong hover:bg-muted hover:text-primary",
-);
-
-const headerChipClass = cn(
-  "group/btn flex items-center gap-1 h-7 px-1.5 rounded-md",
-  "border border-border-strong bg-transparent text-xs text-muted-foreground",
-  "transition-all duration-300 ease-out",
-  "hover:border-border-strong hover:bg-muted hover:text-primary",
-);
-
-const headerChipActiveClass =
-  "text-primary bg-primary/10 border-primary/50 hover:border-primary/50 hover:bg-primary/10";
-
-const sectionLabelClass = "text-xs font-medium uppercase tracking-wider text-muted-foreground";
+const INSTRUCTIONS_HINT =
+  "Markdown the agent loads when the skill is invoked. Type / for headings, lists, and code.";
 
 function sourceLabel(source: number): string {
   switch (source) {
@@ -79,91 +73,6 @@ function sourceLabel(source: number): string {
     default:
       return "Unknown";
   }
-}
-
-interface InlineTextEditProps {
-  value: string;
-  onSave: (next: string) => void;
-  canEdit: boolean;
-  allowEmpty?: boolean;
-  placeholder?: string;
-  className?: string;
-  testId?: string;
-  startEditing?: boolean;
-}
-
-function InlineTextEdit({
-  value,
-  onSave,
-  canEdit,
-  allowEmpty = false,
-  placeholder,
-  className,
-  testId,
-  startEditing = false,
-}: InlineTextEditProps) {
-  const [editing, setEditing] = useState(startEditing);
-  const [text, setText] = useState(value);
-
-  if (editing) {
-    const commit = () => {
-      setEditing(false);
-      const next = text.trim();
-      if (!next && !allowEmpty) return;
-      if (next !== value) onSave(next);
-    };
-    return (
-      <input
-        autoFocus
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        onBlur={commit}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") e.currentTarget.blur();
-          if (e.key === "Escape") {
-            setText(value);
-            setEditing(false);
-          }
-        }}
-        placeholder={placeholder}
-        data-testid={testId}
-        className={cn(
-          "w-full bg-transparent border-b border-primary/50 focus:outline-none",
-          className,
-        )}
-      />
-    );
-  }
-
-  if (!canEdit) {
-    return (
-      <span
-        className={cn("block", className, !value && "text-subtle-foreground italic")}
-        data-testid={testId}
-      >
-        {value || placeholder}
-      </span>
-    );
-  }
-
-  return (
-    <button
-      type="button"
-      onClick={() => {
-        setText(value);
-        setEditing(true);
-      }}
-      title="Click to edit"
-      data-testid={testId}
-      className={cn(
-        "block w-full text-left rounded px-1 -mx-1 cursor-text hover:bg-muted/60 transition-colors",
-        className,
-        !value && "text-subtle-foreground italic",
-      )}
-    >
-      {value || placeholder}
-    </button>
-  );
 }
 
 function VersionHistorySection({
@@ -177,204 +86,37 @@ function VersionHistorySection({
 }) {
   const dispatch = useAppDispatch();
   const entry = useAppSelector(selectSkillVersionsEntry(skill.id));
-  const [busy, setBusy] = useState<number | "follow" | null>(null);
-  // Null until the user picks a pair of their own; "main vs latest" applies until then.
-  const [compareOverride, setCompareOverride] = useState<{ base: number; target: number } | null>(
-    null,
-  );
 
   useEffect(() => {
     dispatch(fetchSkillVersions(skill.id));
   }, [dispatch, skill.id]);
 
   const versions = useMemo(() => entry?.versions ?? [], [entry?.versions]);
-  const activeNumber = entry?.activeVersionNumber ?? 0;
-  const pinned = entry?.activeVersionPinned ?? false;
-
-  const compare = useMemo(() => {
-    if (compareOverride) return compareOverride;
-    if (versions.length < 2 || !entry) return null;
-    const latest = entry.latestVersionNumber;
-    const base =
-      entry.activeVersionNumber && entry.activeVersionNumber !== latest
-        ? entry.activeVersionNumber
-        : versions[1].versionNumber;
-    return { base, target: latest };
-  }, [compareOverride, entry, versions]);
-
-  const byNumber = useMemo(() => {
-    const map = new Map<number, (typeof versions)[number]>();
-    for (const v of versions) map.set(v.versionNumber, v);
-    return map;
-  }, [versions]);
-
-  const handleFollowLatest = async () => {
-    setBusy("follow");
-    try {
-      await dispatch(setMainSkillVersion({ skillId: skill.id, followLatest: true })).unwrap();
-      onContentReplaced();
-    } finally {
-      setBusy(null);
-    }
-  };
-
-  const handleSetMain = async (versionNumber: number) => {
-    setBusy(versionNumber);
-    try {
-      await dispatch(
-        setMainSkillVersion({ skillId: skill.id, versionNumber, followLatest: false }),
-      ).unwrap();
-      onContentReplaced();
-    } finally {
-      setBusy(null);
-    }
-  };
-
-  const handleRevert = async (versionNumber: number) => {
-    setBusy(versionNumber);
-    try {
-      await dispatch(revertSkill({ skillId: skill.id, versionNumber })).unwrap();
-      onContentReplaced();
-    } finally {
-      setBusy(null);
-    }
-  };
-
-  const baseVersion = compare ? byNumber.get(compare.base) : undefined;
-  const targetVersion = compare ? byNumber.get(compare.target) : undefined;
 
   return (
-    <div className="space-y-3" data-testid="skill-detail-version-history">
-      <p className={sectionLabelClass}>Version history</p>
-      <p className="text-xs text-muted-foreground">
-        {pinned ? `Pinned to version ${activeNumber}` : "Following the latest edit automatically"}
-      </p>
-
-      {canEdit && pinned && (
-        <Checkbox
-          label="Use the latest version automatically"
-          checked={false}
-          disabled={busy !== null}
-          onChange={handleFollowLatest}
-        />
-      )}
-
-      {compare && baseVersion && targetVersion && (
-        <div className="space-y-2">
-          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-            <span>Compare</span>
-            <Select
-              value={compare.base}
-              onChange={(value) => setCompareOverride({ ...compare, base: value })}
-              size="sm"
-              triggerClassName="min-w-0 w-20"
-              options={versions.map((v) => ({
-                value: v.versionNumber,
-                label: `v${v.versionNumber}`,
-              }))}
-            />
-            <span>with</span>
-            <Select
-              value={compare.target}
-              onChange={(value) => setCompareOverride({ ...compare, target: value })}
-              size="sm"
-              triggerClassName="min-w-0 w-20"
-              options={versions.map((v) => ({
-                value: v.versionNumber,
-                label: `v${v.versionNumber}`,
-              }))}
-            />
-          </div>
-          <div className="max-h-64 overflow-hidden flex flex-col">
-            <SkillVersionDiff
-              oldText={baseVersion.content}
-              newText={targetVersion.content}
-              oldLabel={`v${baseVersion.versionNumber}`}
-              newLabel={`v${targetVersion.versionNumber}`}
-            />
-          </div>
-        </div>
-      )}
-
-      {entry?.loading && versions.length === 0 && (
-        <div className="flex items-center justify-center py-6">
-          <CircleNotch size={20} className="animate-spin text-muted-foreground" />
-        </div>
-      )}
-      {!entry?.loading && versions.length === 0 && (
-        <p className="text-sm text-muted-foreground py-2">No version history yet.</p>
-      )}
-
-      <div className="space-y-2">
-        {versions.map((version, i) => {
-          const prev = versions[i + 1];
-          const stat = prev ? diffStat(prev.content, version.content) : null;
-          const isMain = version.versionNumber === activeNumber;
-          const rowBusy = busy === version.versionNumber;
-          return (
-            <div
-              key={version.id}
-              className={cn(
-                "rounded-xl px-3 py-2.5",
-                isMain ? "bg-primary/5 shadow-edge-primary" : "bg-card shadow-edge",
-              )}
-            >
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-foreground">
-                  v{version.versionNumber}
-                </span>
-                {isMain && (
-                  <span className="inline-flex items-center gap-1 text-xs bg-primary/10 text-primary rounded px-1.5 py-0.5">
-                    {pinned && <PushPin size={11} weight="fill" />}
-                    Main
-                  </span>
-                )}
-                <span className="text-xs text-muted-foreground">
-                  {version.authorKind === "agent" ? "Agent" : "User"}
-                </span>
-                {stat && (stat.added > 0 || stat.removed > 0) && (
-                  <span className="text-xs font-mono">
-                    <span className="text-green-600 dark:text-green-400">+{stat.added}</span>{" "}
-                    <span className="text-red-500">-{stat.removed}</span>
-                  </span>
-                )}
-                <span className="ml-auto text-xs text-muted-foreground">
-                  {formatProtoDateTime(version.createdAt)}
-                </span>
-              </div>
-              {version.changeSummary && (
-                <p className="text-xs text-muted-foreground mt-1">{version.changeSummary}</p>
-              )}
-              {canEdit && (
-                <div className="flex items-center gap-3 mt-2">
-                  {!isMain && (
-                    <button
-                      type="button"
-                      onClick={() => handleSetMain(version.versionNumber)}
-                      disabled={busy !== null}
-                      className="text-xs text-primary hover:underline disabled:opacity-50"
-                    >
-                      {rowBusy ? "Working..." : "Set as main"}
-                    </button>
-                  )}
-                  {version.versionNumber !== entry?.latestVersionNumber && (
-                    <button
-                      type="button"
-                      onClick={() => handleRevert(version.versionNumber)}
-                      disabled={busy !== null}
-                      className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground disabled:opacity-50"
-                    >
-                      <ArrowCounterClockwise size={12} />
-                      Revert to this
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
-    </div>
+    <InstructionVersionHistory
+      versions={versions}
+      activeVersionNumber={entry?.activeVersionNumber ?? 0}
+      latestVersionNumber={entry?.latestVersionNumber ?? 0}
+      pinned={entry?.activeVersionPinned ?? false}
+      loading={entry?.loading ?? false}
+      canEdit={canEdit}
+      onFollowLatest={async () => {
+        await dispatch(setMainSkillVersion({ skillId: skill.id, followLatest: true })).unwrap();
+        onContentReplaced();
+      }}
+      onSetMain={async (versionNumber) => {
+        await dispatch(
+          setMainSkillVersion({ skillId: skill.id, versionNumber, followLatest: false }),
+        ).unwrap();
+        onContentReplaced();
+      }}
+      onRevert={async (versionNumber) => {
+        await dispatch(revertSkill({ skillId: skill.id, versionNumber })).unwrap();
+        onContentReplaced();
+      }}
+      testId="skill-detail-version-history"
+    />
   );
 }
 
@@ -386,15 +128,17 @@ function SavedSkillDetail({ skill }: { skill: SerializedSkill }) {
   const isBundled = skill.source === SkillSource.BUNDLED;
   const canEdit = !isBundled && isBuilder;
 
-  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const historyRef = useRef<HTMLElement | null>(null);
+  // Observations fetch on open only: most visits are edits, not reviews.
+  const [observationsOpen, setObservationsOpen] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleteBusy, setDeleteBusy] = useState(false);
+  const [requirementsBusy, setRequirementsBusy] = useState(false);
   // Version restores replace the content outside the editor; remounting is the
   // only way the seeded editor picks the new body up.
   const [editorEpoch, setEditorEpoch] = useState(0);
-  const [whenToUse, setWhenToUse] = useState(skill.whenToUse);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const whenToUseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleContentChange = useCallback(
     (markdown: string) => {
@@ -406,21 +150,9 @@ function SavedSkillDetail({ skill }: { skill: SerializedSkill }) {
     [dispatch, skill.id],
   );
 
-  const handleWhenToUseChange = useCallback(
-    (next: string) => {
-      setWhenToUse(next);
-      if (whenToUseTimeoutRef.current) clearTimeout(whenToUseTimeoutRef.current);
-      whenToUseTimeoutRef.current = setTimeout(() => {
-        dispatch(updateSkill({ skillId: skill.id, whenToUse: next }));
-      }, 800);
-    },
-    [dispatch, skill.id],
-  );
-
   useEffect(() => {
     return () => {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-      if (whenToUseTimeoutRef.current) clearTimeout(whenToUseTimeoutRef.current);
     };
   }, []);
 
@@ -428,6 +160,27 @@ function SavedSkillDetail({ skill }: { skill: SerializedSkill }) {
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     setEditorEpoch((n) => n + 1);
   }, []);
+
+  const handleRequirementsChange = async (requiresTools: string[]) => {
+    if (requirementsBusy) return;
+    setRequirementsBusy(true);
+    try {
+      await dispatch(updateSkill({ skillId: skill.id, requiresTools }));
+    } finally {
+      setRequirementsBusy(false);
+    }
+  };
+
+  const toggleHistory = () => {
+    if (historyOpen) {
+      setHistoryOpen(false);
+      return;
+    }
+    setHistoryOpen(true);
+    requestAnimationFrame(() => {
+      historyRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  };
 
   const handleConfirmDelete = async () => {
     setDeleteBusy(true);
@@ -438,6 +191,10 @@ function SavedSkillDetail({ skill }: { skill: SerializedSkill }) {
       setDeleteBusy(false);
     }
   };
+
+  const versionSummary = skill.activeVersionPinned
+    ? `pinned to v${skill.activeVersionNumber || 1}`
+    : `v${skill.activeVersionNumber || 1}, following the latest edit`;
 
   return (
     <div className="flex h-full flex-col overflow-hidden" data-testid="skill-detail">
@@ -453,40 +210,26 @@ function SavedSkillDetail({ skill }: { skill: SerializedSkill }) {
             </PaneBackLink>
           }
           icon={Lightning}
-          title={
-            <InlineTextEdit
-              value={skill.displayName}
-              canEdit={canEdit}
-              onSave={(next) => dispatch(updateSkill({ skillId: skill.id, displayName: next }))}
-              placeholder="Untitled skill"
-              className="text-sm md:text-base font-medium text-foreground"
-              testId="skill-detail-name"
-            />
-          }
-          subtitle={
-            <InlineTextEdit
-              value={skill.description}
-              canEdit={canEdit}
-              allowEmpty
-              onSave={(next) => dispatch(updateSkill({ skillId: skill.id, description: next }))}
-              placeholder="No description provided"
-              className="text-xs text-muted-foreground"
-              testId="skill-detail-description"
-            />
-          }
+          title={skill.displayName || "Untitled skill"}
+          subtitle={skill.description || undefined}
         >
-          <div className="flex items-center gap-1.5 shrink-0">
+          <div className="flex shrink-0 items-center gap-1.5">
             <Badge variant="secondary" data-testid="skill-detail-source-chip">
               {sourceLabel(skill.source)}
             </Badge>
             <button
               type="button"
-              onClick={() => setDetailsOpen((open) => !open)}
-              className={cn(headerChipClass, detailsOpen && headerChipActiveClass)}
-              data-testid="skill-detail-metadata-toggle"
+              onClick={toggleHistory}
+              className={cn(headerChipClass, historyOpen && headerChipActiveClass)}
+              title="Version history"
+              data-testid="skill-detail-history-chip"
             >
-              <ClockCounterClockwise size={14} />v{skill.activeVersionNumber || 1}
-              {detailsOpen ? <CaretDown size={12} /> : <CaretRight size={12} />}
+              {skill.activeVersionPinned ? (
+                <PushPin size={14} weight="fill" />
+              ) : (
+                <ClockCounterClockwise size={14} />
+              )}
+              v{skill.activeVersionNumber || 1}
             </button>
             {canEdit && (
               <button
@@ -494,6 +237,7 @@ function SavedSkillDetail({ skill }: { skill: SerializedSkill }) {
                 onClick={() => setConfirmingDelete(true)}
                 className={headerButtonClass}
                 aria-label="Delete skill"
+                title="Delete skill"
                 data-testid="skill-detail-delete"
               >
                 <Trash size={14} />
@@ -503,111 +247,101 @@ function SavedSkillDetail({ skill }: { skill: SerializedSkill }) {
         </PaneHeaderBar>
       </PaneHeader>
 
-      {detailsOpen && (
-        <div
-          className="border-b border-border px-6 py-4 max-h-[50%] overflow-y-auto"
-          data-testid="skill-detail-metadata"
+      <DetailBody>
+        <DetailSection label="Details" testId="skill-detail-metadata">
+          <DetailCard className="space-y-5">
+            <DetailFieldRow>
+              <DetailTextField
+                key={`name:${editorEpoch}`}
+                label="Title"
+                value={skill.displayName}
+                required
+                disabled={!canEdit}
+                placeholder="Untitled skill"
+                onCommit={(next) => dispatch(updateSkill({ skillId: skill.id, displayName: next }))}
+                testId="skill-detail-name"
+              />
+              <DetailField
+                label="Identifier"
+                hint="Fixed at creation. Agents invoke the skill by this name."
+              >
+                <DetailReadOnlyValue mono testId="skill-detail-slug">
+                  {skill.name}
+                </DetailReadOnlyValue>
+              </DetailField>
+            </DetailFieldRow>
+            <DetailTextField
+              key={`description:${editorEpoch}`}
+              label="Description"
+              value={skill.description}
+              disabled={!canEdit}
+              placeholder="What this skill is for"
+              hint="Shown in the skills list so users can choose when to invoke it."
+              onCommit={(next) => dispatch(updateSkill({ skillId: skill.id, description: next }))}
+              testId="skill-detail-description"
+            />
+            <SkillRequirements
+              requiresTools={skill.requiresTools}
+              supportedSurfaces={skill.supportedSurfaces}
+              onChange={canEdit ? handleRequirementsChange : undefined}
+              disabled={requirementsBusy}
+            />
+          </DetailCard>
+        </DetailSection>
+
+        <DetailSection label="Instructions" hint={INSTRUCTIONS_HINT}>
+          <DetailEditorCard
+            testId="skill-detail-editor"
+            footer={
+              isBundled
+                ? "Bundled skills ship with Uniffy and cannot be edited or deleted."
+                : `Use /${skill.name} with an agent this skill is assigned to. Open the response's More actions menu and choose Improve this skill, then review and save the draft.`
+            }
+          >
+            <CrepeEditor
+              key={`${skill.id}:${editorEpoch}`}
+              contentType={ContentType.AGENT}
+              contentId={skill.id}
+              value={skill.content}
+              onChange={canEdit ? handleContentChange : undefined}
+              readonly={!canEdit}
+              enableUpload={false}
+              allowImages={false}
+              compact
+              minHeight={DETAIL_EDITOR_MIN_HEIGHT}
+              className={detailEditorClass}
+              placeholder={SKILL_EDITOR_PLACEHOLDER}
+            />
+          </DetailEditorCard>
+        </DetailSection>
+
+        <DetailToggleSection
+          label="Version history"
+          summary={versionSummary}
+          open={historyOpen}
+          onToggle={toggleHistory}
+          sectionRef={historyRef}
+          testId="skill-detail-history-toggle"
         >
-          <div className="space-y-4">
-            <div className="border-b border-border pb-3 space-y-1">
-              <p className={sectionLabelClass}>Identifier</p>
-              <p className="text-sm font-mono text-foreground" data-testid="skill-detail-slug">
-                {skill.name}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                Fixed at creation. Rename the skill from its title.
-              </p>
-            </div>
-            <div className="border-b border-border pb-3 space-y-1">
-              <p className={sectionLabelClass}>When to use</p>
-              {canEdit ? (
-                <Input
-                  type="text"
-                  value={whenToUse}
-                  onChange={(e) => handleWhenToUseChange(e.target.value)}
-                  placeholder="When to use this skill (trigger guidance)"
-                  data-testid="skill-detail-when-to-use"
-                  className="h-9 px-2"
-                />
-              ) : (
-                <p
-                  className={cn(
-                    "text-sm",
-                    skill.whenToUse ? "text-foreground" : "text-subtle-foreground italic",
-                  )}
-                  data-testid="skill-detail-when-to-use"
-                >
-                  {skill.whenToUse || "No trigger guidance set"}
-                </p>
-              )}
-            </div>
-            <div className="border-b border-border pb-3 space-y-1.5">
-              <p className={sectionLabelClass}>Activation</p>
-              <div className="flex flex-wrap items-center gap-2">
-                {skill.source === SkillSource.ORGANIZATION && canEdit ? (
-                  <div
-                    className="flex items-center gap-2 text-sm text-foreground"
-                    data-testid="skill-detail-always-active"
-                  >
-                    <ToggleSwitch
-                      size="sm"
-                      enabled={skill.alwaysActive}
-                      onChange={(next) =>
-                        dispatch(
-                          updateSkill({
-                            skillId: skill.id,
-                            alwaysActive: next,
-                          }),
-                        )
-                      }
-                    />
-                    Always active
-                  </div>
-                ) : skill.alwaysActive ? (
-                  <Badge variant="outline">Always loaded</Badge>
-                ) : (
-                  <Badge variant="secondary">Loaded on demand</Badge>
-                )}
-                {skill.requiresTools.length > 0 && (
-                  <span className="text-xs text-muted-foreground">Requires tools:</span>
-                )}
-                {skill.requiresTools.map((tool) => (
-                  <Badge key={tool} variant="outline" className="font-mono">
-                    {tool}
-                  </Badge>
-                ))}
-              </div>
-            </div>
+          <DetailCard>
             <VersionHistorySection
               skill={skill}
               canEdit={canEdit}
               onContentReplaced={handleContentReplaced}
             />
-          </div>
-        </div>
-      )}
+          </DetailCard>
+        </DetailToggleSection>
 
-      <div className="flex-1 min-h-0 bg-card" data-testid="skill-detail-editor">
-        <CrepeEditor
-          key={`${skill.id}:${editorEpoch}`}
-          contentType={ContentType.AGENT}
-          contentId={skill.id}
-          value={skill.content}
-          onChange={canEdit ? handleContentChange : undefined}
-          readonly={!canEdit}
-          enableUpload={false}
-          allowImages={false}
-          placeholder={SKILL_EDITOR_PLACEHOLDER}
-        />
-      </div>
-
-      {isBundled && (
-        <div className="px-6 py-2 border-t border-border">
-          <p className="text-xs text-muted-foreground">
-            Bundled skills ship with Uniffy and cannot be edited or deleted.
-          </p>
-        </div>
-      )}
+        <DetailToggleSection
+          label="Observations"
+          summary="how each version ran when agents invoked it"
+          open={observationsOpen}
+          onToggle={() => setObservationsOpen((open) => !open)}
+          testId="skill-detail-observations-toggle"
+        >
+          <SkillMetricsPanel skillId={skill.id} tone="card" testId="skill-detail-observations" />
+        </DetailToggleSection>
+      </DetailBody>
 
       <ConfirmDialog
         isOpen={confirmingDelete}
@@ -629,6 +363,24 @@ function SavedSkillDetail({ skill }: { skill: SerializedSkill }) {
   );
 }
 
+function AgentDraftNotice({ rationale }: { rationale: string }) {
+  return (
+    <div
+      className="flex items-start gap-3 rounded-xl border border-primary/30 bg-primary/5 px-4 py-3"
+      data-testid="skill-detail-agent-notice"
+    >
+      <Sparkle size={18} weight="fill" className="mt-0.5 shrink-0 text-primary" />
+      <div className="min-w-0 space-y-1">
+        <p className="text-sm font-medium text-foreground">Proposed by an agent</p>
+        {rationale && <p className="text-sm text-muted-foreground">{rationale}</p>}
+        <p className="text-xs text-muted-foreground">
+          Review and adjust it freely. Nothing changes for any agent until you save.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 // The reviewer's edits are authoritative: the full field set is sent on save, so
 // what they see is exactly what the saved version captures. SaveSkillDraft has no
 // partial-update variant, so edits stay local until an explicit save.
@@ -639,11 +391,9 @@ function DraftDetail({ draft }: { draft: SerializedSkillDraft }) {
 
   const [displayName, setDisplayName] = useState(draft.displayName ?? "");
   const [description, setDescription] = useState(draft.description ?? "");
-  const [whenToUse, setWhenToUse] = useState(draft.whenToUse ?? "");
   const [content, setContent] = useState(draft.content ?? "");
-  const [alwaysActive, setAlwaysActive] = useState(draft.suggestedAlwaysActive);
+  const [requiresTools, setRequiresTools] = useState(draft.requiresTools);
   const [busy, setBusy] = useState<"save" | "discard" | null>(null);
-  const [detailsOpen, setDetailsOpen] = useState(true);
   const [replaceTarget, setReplaceTarget] = useState<string | null>(null);
 
   const isEdit = draft.kind !== "create";
@@ -671,10 +421,8 @@ function DraftDetail({ draft }: { draft: SerializedSkillDraft }) {
             displayName: displayName.trim(),
             description: description.trim(),
             content: content.trim(),
-            whenToUse: whenToUse.trim(),
-            requiresTools: draft.requiresTools,
-            requiresContext: draft.requiresContext,
-            suggestedAlwaysActive: alwaysActive,
+            requiresTools,
+            supportedSurfaces: draft.supportedSurfaces,
           },
         }),
       ).unwrap();
@@ -698,7 +446,7 @@ function DraftDetail({ draft }: { draft: SerializedSkillDraft }) {
     setBusy("discard");
     try {
       await dispatch(discardSkillDraft(draft.id)).unwrap();
-      navigate("/agents/skills/drafts");
+      navigate("/agents/skills");
     } catch {
       setBusy(null);
     }
@@ -708,31 +456,23 @@ function DraftDetail({ draft }: { draft: SerializedSkillDraft }) {
     <div className="flex h-full flex-col overflow-hidden" data-testid="skill-detail">
       <PaneHeader>
         <PaneHeaderBar
-          icon={Lightning}
-          title={
-            <InlineTextEdit
-              value={displayName}
-              canEdit
-              onSave={setDisplayName}
-              startEditing={!isEdit && !displayName}
-              placeholder="Untitled skill"
-              className="text-sm md:text-base font-medium text-foreground"
-              testId="skill-detail-name"
-            />
+          eyebrow={
+            <PaneBackLink
+              onClick={() => navigate("/agents/skills")}
+              data-testid="skill-detail-back"
+            >
+              <ArrowLeft size={14} />
+              All skills
+            </PaneBackLink>
           }
+          icon={Lightning}
+          title={displayName.trim() || "Untitled skill"}
           subtitle={
-            <InlineTextEdit
-              value={description}
-              canEdit
-              allowEmpty
-              onSave={setDescription}
-              placeholder="Add a description"
-              className="text-xs text-muted-foreground"
-              testId="skill-detail-description"
-            />
+            description.trim() ||
+            (isEdit ? `New version of ${draft.name}` : "Draft, not active until saved")
           }
         >
-          <div className="flex items-center gap-1.5 shrink-0">
+          <div className="flex shrink-0 items-center gap-1.5">
             <span className={headerChipClass}>Draft - {kindLabel}</span>
             {fromAgent && (
               <span className={cn(headerChipClass, "text-primary")}>
@@ -744,7 +484,7 @@ function DraftDetail({ draft }: { draft: SerializedSkillDraft }) {
               type="button"
               onClick={handleDiscard}
               disabled={busy !== null}
-              className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-red-500 transition-colors disabled:opacity-50 px-2"
+              className="inline-flex items-center gap-1.5 px-2 text-sm text-muted-foreground transition-colors hover:text-red-500 disabled:opacity-50"
               data-testid="skill-detail-discard-draft"
             >
               <Trash size={14} />
@@ -760,84 +500,77 @@ function DraftDetail({ draft }: { draft: SerializedSkillDraft }) {
             </Button>
           </div>
         </PaneHeaderBar>
-        {fromAgent && (
-          <p className="px-3 pb-2 text-xs text-muted-foreground md:px-4">
-            Drafted by the agent - it is not active until you save it.
-          </p>
-        )}
       </PaneHeader>
 
-      <button
-        type="button"
-        onClick={() => setDetailsOpen((open) => !open)}
-        className="flex items-center gap-1.5 px-6 py-2 border-b border-border text-left"
-        data-testid="skill-detail-metadata-toggle"
-      >
-        {detailsOpen ? (
-          <CaretDown size={12} className="text-muted-foreground" />
-        ) : (
-          <CaretRight size={12} className="text-muted-foreground" />
-        )}
-        <span className={sectionLabelClass}>Details</span>
-      </button>
+      <DetailBody>
+        {fromAgent && <AgentDraftNotice rationale={draft.rationale} />}
 
-      {detailsOpen && (
-        <div
-          className="border-b border-border px-6 py-4 max-h-[45%] overflow-y-auto"
-          data-testid="skill-detail-metadata"
-        >
-          <div className="space-y-4">
-            {draft.rationale && (
-              <div className="border-b border-border pb-3 space-y-1">
-                <p className={sectionLabelClass}>Rationale</p>
-                <p className="text-sm text-muted-foreground">{draft.rationale}</p>
-              </div>
-            )}
-            <div className="border-b border-border pb-3 space-y-1">
-              <p className={sectionLabelClass}>Identifier</p>
-              <p className="text-sm font-mono text-foreground" data-testid="skill-detail-slug">
-                {slug}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                Derived from the title and fixed once saved.
-              </p>
-            </div>
-            <div className="border-b border-border pb-3 space-y-1">
-              <p className={sectionLabelClass}>When to use</p>
-              <Input
-                type="text"
-                value={whenToUse}
-                onChange={(e) => setWhenToUse(e.target.value)}
-                placeholder="When to use this skill (trigger guidance)"
-                className="h-9 px-2"
+        <DetailSection label="Details" testId="skill-detail-metadata">
+          <DetailCard className="space-y-5">
+            <DetailFieldRow>
+              <DetailTextField
+                label="Title"
+                value={displayName}
+                live
+                autoFocus={!isEdit && !displayName}
+                placeholder="Give the skill a name"
+                onCommit={setDisplayName}
+                testId="skill-detail-name"
               />
-            </div>
-            <div className="space-y-1.5">
-              <p className={sectionLabelClass}>Activation</p>
-              <div
-                className="flex items-center gap-2 text-sm text-foreground"
-                data-testid="skill-draft-always-active"
+              <DetailField
+                label="Identifier"
+                hint={
+                  isEdit
+                    ? "Fixed: this draft saves a new version of the existing skill."
+                    : "Derived from the title and fixed once saved."
+                }
               >
-                <ToggleSwitch size="sm" enabled={alwaysActive} onChange={setAlwaysActive} />
-                Always active
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+                <DetailReadOnlyValue mono testId="skill-detail-slug">
+                  {slug}
+                </DetailReadOnlyValue>
+              </DetailField>
+            </DetailFieldRow>
+            <DetailTextField
+              label="Description"
+              value={description}
+              live
+              placeholder="What this skill is for"
+              hint="Shown in the skills list so users can choose when to invoke it."
+              onCommit={setDescription}
+              testId="skill-detail-description"
+            />
+            {!fromAgent && draft.rationale && (
+              <DetailField label="Rationale">
+                <p className="text-sm text-muted-foreground">{draft.rationale}</p>
+              </DetailField>
+            )}
+            <SkillRequirements
+              requiresTools={requiresTools}
+              supportedSurfaces={draft.supportedSurfaces}
+              onChange={setRequiresTools}
+              disabled={busy !== null}
+            />
+          </DetailCard>
+        </DetailSection>
 
-      <div className="flex-1 min-h-0 bg-card" data-testid="skill-detail-editor">
-        <CrepeEditor
-          key={draft.id}
-          contentType={ContentType.AGENT}
-          contentId={draft.targetSkillId ?? ""}
-          value={content}
-          onChange={setContent}
-          enableUpload={false}
-          allowImages={false}
-          placeholder={SKILL_EDITOR_PLACEHOLDER}
-        />
-      </div>
+        <DetailSection label="Instructions" hint={INSTRUCTIONS_HINT}>
+          <DetailEditorCard testId="skill-detail-editor">
+            <CrepeEditor
+              key={draft.id}
+              contentType={ContentType.AGENT}
+              contentId={draft.targetSkillId ?? ""}
+              value={content}
+              onChange={setContent}
+              enableUpload={false}
+              allowImages={false}
+              compact
+              minHeight={DETAIL_EDITOR_MIN_HEIGHT}
+              className={detailEditorClass}
+              placeholder={SKILL_EDITOR_PLACEHOLDER}
+            />
+          </DetailEditorCard>
+        </DetailSection>
+      </DetailBody>
 
       <ConfirmDialog
         isOpen={replaceTarget !== null}

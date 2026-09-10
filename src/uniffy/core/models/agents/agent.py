@@ -79,6 +79,10 @@ class Agent(SQLModel, table=True):
     )
     enabled_tools: list = Field(default_factory=list, sa_column=Column(JSONB, nullable=False))
     enabled_skills: list = Field(default_factory=list, sa_column=Column(JSONB, nullable=False))
+    enabled_rules: list[str] = Field(
+        default_factory=list,
+        sa_column=Column(JSONB, nullable=False, server_default=text("'[]'::jsonb")),
+    )
     # Integration pins (provider id -> connection id), the default connection
     # for that provider's tools when a call names none. {} = resolve
     # automatically (single-connection auto or ambiguity error).

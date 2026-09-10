@@ -33,9 +33,6 @@ class SessionsService(Protocol):
     async def retry_message(self, request: agents_dot_v1_dot_sessions__pb2.RetryMessageRequest, ctx: RequestContext) -> agents_dot_v1_dot_sessions__pb2.RetryMessageResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def submit_message_feedback(self, request: agents_dot_v1_dot_sessions__pb2.SubmitMessageFeedbackRequest, ctx: RequestContext) -> agents_dot_v1_dot_sessions__pb2.SubmitMessageFeedbackResponse:
-        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-
 
 class SessionsServiceASGIApplication(ConnectASGIApplication[SessionsService]):
     def __init__(self, service: SessionsService | AsyncGenerator[SessionsService], *, interceptors: Iterable[Interceptor]=(), read_max_bytes: int | None = None, compressions: Iterable[Compression] | None = None, codecs: Iterable[Codec] | None = None) -> None:
@@ -91,16 +88,6 @@ class SessionsServiceASGIApplication(ConnectASGIApplication[SessionsService]):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.retry_message,
-                ),
-                "/agents.v1.SessionsService/SubmitMessageFeedback": Endpoint.unary(
-                    method=MethodInfo(
-                        name="SubmitMessageFeedback",
-                        service_name="agents.v1.SessionsService",
-                        input=agents_dot_v1_dot_sessions__pb2.SubmitMessageFeedbackRequest,
-                        output=agents_dot_v1_dot_sessions__pb2.SubmitMessageFeedbackResponse,
-                        idempotency_level=IdempotencyLevel.UNKNOWN,
-                    ),
-                    function=svc.submit_message_feedback,
                 ),
             },
             interceptors=interceptors,
@@ -216,26 +203,6 @@ class SessionsServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
-    async def submit_message_feedback(
-        self,
-        request: agents_dot_v1_dot_sessions__pb2.SubmitMessageFeedbackRequest,
-        *,
-        headers: Headers | Mapping[str, str] | None = None,
-        timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_sessions__pb2.SubmitMessageFeedbackResponse:
-        return await self.execute_unary(
-            request=request,
-            method=MethodInfo(
-                name="SubmitMessageFeedback",
-                service_name="agents.v1.SessionsService",
-                input=agents_dot_v1_dot_sessions__pb2.SubmitMessageFeedbackRequest,
-                output=agents_dot_v1_dot_sessions__pb2.SubmitMessageFeedbackResponse,
-                idempotency_level=IdempotencyLevel.UNKNOWN,
-            ),
-            headers=headers,
-            timeout_ms=timeout_ms,
-        )
-
 
 
 
@@ -250,8 +217,6 @@ class SessionsServiceSync(Protocol):
     def edit_message(self, request: agents_dot_v1_dot_sessions__pb2.EditMessageRequest, ctx: RequestContext) -> agents_dot_v1_dot_sessions__pb2.EditMessageResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def retry_message(self, request: agents_dot_v1_dot_sessions__pb2.RetryMessageRequest, ctx: RequestContext) -> agents_dot_v1_dot_sessions__pb2.RetryMessageResponse:
-        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def submit_message_feedback(self, request: agents_dot_v1_dot_sessions__pb2.SubmitMessageFeedbackRequest, ctx: RequestContext) -> agents_dot_v1_dot_sessions__pb2.SubmitMessageFeedbackResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
 
@@ -308,16 +273,6 @@ class SessionsServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.retry_message,
-                ),
-                "/agents.v1.SessionsService/SubmitMessageFeedback": EndpointSync.unary(
-                    method=MethodInfo(
-                        name="SubmitMessageFeedback",
-                        service_name="agents.v1.SessionsService",
-                        input=agents_dot_v1_dot_sessions__pb2.SubmitMessageFeedbackRequest,
-                        output=agents_dot_v1_dot_sessions__pb2.SubmitMessageFeedbackResponse,
-                        idempotency_level=IdempotencyLevel.UNKNOWN,
-                    ),
-                    function=service.submit_message_feedback,
                 ),
             },
             interceptors=interceptors,
@@ -427,26 +382,6 @@ class SessionsServiceClientSync(ConnectClientSync):
                 service_name="agents.v1.SessionsService",
                 input=agents_dot_v1_dot_sessions__pb2.RetryMessageRequest,
                 output=agents_dot_v1_dot_sessions__pb2.RetryMessageResponse,
-                idempotency_level=IdempotencyLevel.UNKNOWN,
-            ),
-            headers=headers,
-            timeout_ms=timeout_ms,
-        )
-
-    def submit_message_feedback(
-        self,
-        request: agents_dot_v1_dot_sessions__pb2.SubmitMessageFeedbackRequest,
-        *,
-        headers: Headers | Mapping[str, str] | None = None,
-        timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_sessions__pb2.SubmitMessageFeedbackResponse:
-        return self.execute_unary(
-            request=request,
-            method=MethodInfo(
-                name="SubmitMessageFeedback",
-                service_name="agents.v1.SessionsService",
-                input=agents_dot_v1_dot_sessions__pb2.SubmitMessageFeedbackRequest,
-                output=agents_dot_v1_dot_sessions__pb2.SubmitMessageFeedbackResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

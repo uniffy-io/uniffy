@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CaretDown, CaretRight, CircleNotch, Lock, WarningCircle } from "@phosphor-icons/react";
+import { CaretDown, CaretRight, CircleNotch, WarningCircle } from "@phosphor-icons/react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { useMyContentRole } from "@/features/permissions";
 import { ContentType } from "@uniffy/proto/common/v1/common_pb";
@@ -10,6 +10,15 @@ import type { ToolGroup, ToolCategorySection } from "@/features/agents/config/to
 import { toolSummary } from "@/features/agents/config/toolLabels";
 import { selectAllSkills, selectSkillsLoading } from "@/features/agents/store/agentSkillsSlice";
 import { fetchSkills } from "@/features/agents/store/agentSkillsThunks";
+import { SkillCompatibilityNotice } from "@/features/agents/components/skills/SkillCompatibilityNotice";
+import {
+  fetchSkillCompatibility,
+  type SerializedSkillCompatibility,
+} from "@/features/agents/store/agentRunnableSkillsThunks";
+import {
+  selectSkillCompatibility,
+  selectSkillCompatibilityStatus,
+} from "@/features/agents/store/agentRunnableSkillsSlice";
 import {
   selectToolSections,
   selectAgentToolsLoading,
@@ -22,6 +31,12 @@ import { updateAgent } from "@/features/agents/store/agentsThunks";
 import type { SerializedAgent } from "@/features/agents/store/agentsThunks";
 import type { SerializedSkill } from "@/features/agents/store/agentSkillsThunks";
 import { SkillSource } from "@uniffy/proto/agents/v1/skills_pb";
+import { RuleSource, RuleStatus } from "@uniffy/proto/agents/v1/rules_pb";
+import {
+  fetchRules,
+  setEnabledRules,
+  type SerializedRule,
+} from "@/features/agents/store/agentRulesThunks";
 
 const listRowClass = "flex items-center gap-3 py-2 border-b border-border/60 last:border-0";
 
@@ -205,37 +220,51 @@ function ToolCategory({
   );
 }
 
-function SkillToggle({
+function RuleRow({
+  rule,
   enabled,
-  locked,
   disabled,
-  onChange,
+  onToggle,
 }: {
+  rule: SerializedRule;
   enabled: boolean;
-  locked: boolean;
   disabled?: boolean;
-  onChange: () => void;
+  onToggle: () => void;
 }) {
-  if (locked) {
-    return (
-      <div className="flex items-center gap-1.5">
-        <Lock size={14} className="text-muted-foreground" />
-        <span className="text-xs text-muted-foreground">Always on</span>
+  const retired = rule.status === RuleStatus.RETIRED;
+  return (
+    <div className={listRowClass} data-testid={`capabilities-rule-${rule.id}`}>
+      <div className="flex-1 min-w-0">
+        <span className="text-sm font-medium truncate text-foreground block">
+          {rule.displayName}
+        </span>
+        <p className="text-xs text-muted-foreground truncate">
+          {retired ? "Retired. Stays on until turned off." : rule.description}
+        </p>
       </div>
-    );
-  }
-  return <ToggleSwitch size="sm" enabled={enabled} disabled={disabled} onChange={onChange} />;
+      <ToggleSwitch
+        size="sm"
+        enabled={enabled}
+        disabled={disabled || (retired && !enabled)}
+        onChange={onToggle}
+      />
+    </div>
+  );
 }
 
 function SkillRow({
   skill,
   enabled,
   disabled,
+  diagnostic,
+  toolLabels,
   onToggle,
 }: {
   skill: SerializedSkill;
   enabled: boolean;
   disabled?: boolean;
+  diagnostic?: SerializedSkillCompatibility;
+  toolLabels: Record<string, string>;
   onToggle: () => void;
 }) {
   return (
@@ -245,18 +274,26 @@ function SkillRow({
           {skill.displayName}
         </span>
         <p className="text-xs text-muted-foreground truncate">{skill.description}</p>
+        {skill.status === "retired" && (
+          <p className="mt-1 text-xs text-muted-foreground">
+            {enabled
+              ? "Retired. Remains available until unassigned."
+              : "Retired skills cannot be assigned."}
+          </p>
+        )}
+        {enabled && <SkillCompatibilityNotice diagnostic={diagnostic} toolLabels={toolLabels} />}
       </div>
-      <SkillToggle
-        enabled={enabled || skill.alwaysActive}
-        locked={skill.alwaysActive}
-        disabled={disabled}
+      <ToggleSwitch
+        size="sm"
+        enabled={enabled}
+        disabled={disabled || (skill.status === "retired" && !enabled)}
         onChange={onToggle}
       />
     </div>
   );
 }
 
-function SkillSection({
+function CapabilityGroup({
   title,
   count,
   children,
@@ -289,6 +326,9 @@ function SkillSection({
 
 export function CapabilitiesTab({ agent }: { agent: SerializedAgent }) {
   const dispatch = useAppDispatch();
+  const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
+  const diagnostics = useAppSelector(selectSkillCompatibility(agent.id));
+  const diagnosticStatus = useAppSelector(selectSkillCompatibilityStatus(agent.id));
   const skillsMap = useAppSelector(selectAllSkills);
   const skillsLoading = useAppSelector(selectSkillsLoading);
   const myRole = useMyContentRole(ContentType.AGENT, agent.id, agent.userRole);
@@ -299,10 +339,47 @@ export function CapabilitiesTab({ agent }: { agent: SerializedAgent }) {
   const connections = useAppSelector(selectIntegrationConnections);
   const toolSections = useAppSelector(selectToolSections);
   const toolsLoading = useAppSelector(selectAgentToolsLoading);
+  const diagnosticsById = useMemo(
+    () => Object.fromEntries(diagnostics.map((item) => [item.skillId, item])),
+    [diagnostics],
+  );
+  const toolLabels = useMemo(
+    () =>
+      Object.fromEntries(
+        toolSections.flatMap((section) =>
+          section.groups.flatMap((group) =>
+            group.tools.map((tool) => [tool.name, tool.displayName]),
+          ),
+        ),
+      ),
+    [toolSections],
+  );
+
+  useEffect(() => {
+    if (organizationId && !agent.isDeleted) {
+      dispatch(fetchSkillCompatibility({ organizationId, agentId: agent.id }));
+    }
+  }, [
+    dispatch,
+    organizationId,
+    agent.id,
+    agent.isDeleted,
+    agent.enabledSkills,
+    agent.enabledTools,
+    agent.imageModel,
+    agent.integrationConnections,
+    skillsMap,
+    connections,
+  ]);
+
+  const rulesMap = useAppSelector((s) => s.agentRules.rules);
+  const rulesLoading = useAppSelector((s) => s.agentRules.loading);
+  const ruleSelecting = useAppSelector((s) => s.agentRules.selecting[agent.id] ?? false);
 
   useEffect(() => {
     dispatch(fetchSkills());
     dispatch(fetchAgentTools());
+    dispatch(fetchRules());
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const usableConnections = useMemo(
@@ -370,6 +447,7 @@ export function CapabilitiesTab({ agent }: { agent: SerializedAgent }) {
   );
 
   const enabledSkillIds = useMemo(() => new Set(agent.enabledSkills), [agent.enabledSkills]);
+  const unlistedAssignments = diagnostics.filter((item) => !skillsMap[item.skillId]);
 
   const bundledSkills = useMemo(
     () => skills.filter((s) => s.source === SkillSource.BUNDLED),
@@ -390,8 +468,77 @@ export function CapabilitiesTab({ agent }: { agent: SerializedAgent }) {
     [agent.id, agent.enabledSkills, enabledSkillIds, dispatch],
   );
 
+  const enabledRuleIds = useMemo(() => new Set(agent.enabledRules), [agent.enabledRules]);
+
+  // Retired rules drop out of the list unless this agent still carries them,
+  // since they can be turned off but never newly enabled.
+  const visibleRules = useMemo(
+    () =>
+      Object.values(rulesMap).filter(
+        (rule) => rule.status === RuleStatus.ACTIVE || enabledRuleIds.has(rule.id),
+      ),
+    [rulesMap, enabledRuleIds],
+  );
+  const bundledRules = useMemo(
+    () => visibleRules.filter((r) => r.source === RuleSource.BUNDLED),
+    [visibleRules],
+  );
+  const orgRules = useMemo(
+    () => visibleRules.filter((r) => r.source === RuleSource.ORGANIZATION),
+    [visibleRules],
+  );
+
+  const handleRuleToggle = useCallback(
+    (ruleId: string) => {
+      const ruleIds = enabledRuleIds.has(ruleId)
+        ? agent.enabledRules.filter((id) => id !== ruleId)
+        : [...agent.enabledRules, ruleId];
+      dispatch(setEnabledRules({ agentId: agent.id, ruleIds }));
+    },
+    [agent.id, agent.enabledRules, enabledRuleIds, dispatch],
+  );
+
+  const renderRuleRows = (rules: SerializedRule[], emptyLabel: string) => (
+    <div>
+      {rules.map((rule) => (
+        <RuleRow
+          key={rule.id}
+          rule={rule}
+          enabled={enabledRuleIds.has(rule.id)}
+          disabled={!canEdit || ruleSelecting}
+          onToggle={() => handleRuleToggle(rule.id)}
+        />
+      ))}
+      {rules.length === 0 && <p className="py-2 text-sm text-muted-foreground">{emptyLabel}</p>}
+    </div>
+  );
+
   return (
     <div className="max-w-4xl mx-auto space-y-6">
+      <section className="border-b border-border pb-6">
+        <div className="mb-2">
+          <h3 className="text-xs uppercase tracking-wider text-muted-foreground">Rules</h3>
+          <p className="text-sm text-muted-foreground mt-1">
+            Select the rules appended to this agent’s runs. Rules are never inherited from other
+            agents.
+          </p>
+        </div>
+
+        {rulesLoading && visibleRules.length === 0 ? (
+          <div className="flex items-center justify-center py-12">
+            <CircleNotch size={24} className="animate-spin text-muted-foreground" />
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <CapabilityGroup title="Bundled" count={bundledRules.length}>
+              {renderRuleRows(bundledRules, "No bundled rules available")}
+            </CapabilityGroup>
+            <CapabilityGroup title="Organization" count={orgRules.length}>
+              {renderRuleRows(orgRules, "No organization rules available")}
+            </CapabilityGroup>
+          </div>
+        )}
+      </section>
       {toolSections.length === 0 && toolsLoading && (
         <div className="flex items-center justify-center py-8">
           <CircleNotch size={20} className="animate-spin text-muted-foreground" />
@@ -419,10 +566,20 @@ export function CapabilitiesTab({ agent }: { agent: SerializedAgent }) {
 
       <section>
         <div className="mb-2">
-          <h3 className="text-xs uppercase tracking-wider text-muted-foreground">Skills</h3>
+          <h3 className="text-xs uppercase tracking-wider text-muted-foreground">
+            Available skills
+          </h3>
           <p className="text-sm text-muted-foreground mt-1">
-            Configure which skills this agent can use
+            Choose which skills people can explicitly invoke on this agent
           </p>
+          {diagnosticStatus === "loading" && (
+            <p className="mt-1 text-xs text-muted-foreground">Checking skill requirements…</p>
+          )}
+          {diagnosticStatus === "failed" && (
+            <p className="mt-1 text-xs text-muted-foreground">
+              Skill requirements could not be checked. They will be checked again when invoked.
+            </p>
+          )}
         </div>
 
         {skillsLoading && skills.length === 0 ? (
@@ -431,12 +588,39 @@ export function CapabilitiesTab({ agent }: { agent: SerializedAgent }) {
           </div>
         ) : (
           <div className="space-y-4">
-            <SkillSection title="Bundled" count={bundledSkills.length}>
+            {unlistedAssignments.length > 0 && (
+              <CapabilityGroup title="Assigned" count={unlistedAssignments.length}>
+                {unlistedAssignments.map((item) => (
+                  <div key={item.skillId} className={listRowClass}>
+                    <div className="flex-1 min-w-0">
+                      <span className="block text-sm font-medium text-foreground">
+                        {item.displayName || "Unavailable skill"}
+                      </span>
+                      {item.retired && (
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          Retired. Remains available until unassigned.
+                        </p>
+                      )}
+                      <SkillCompatibilityNotice diagnostic={item} toolLabels={toolLabels} />
+                    </div>
+                    <ToggleSwitch
+                      size="sm"
+                      enabled
+                      disabled={!canEdit}
+                      onChange={() => handleSkillToggle(item.skillId)}
+                    />
+                  </div>
+                ))}
+              </CapabilityGroup>
+            )}
+            <CapabilityGroup title="Bundled" count={bundledSkills.length}>
               <div>
                 {bundledSkills.map((skill) => (
                   <SkillRow
                     key={skill.id}
                     skill={skill}
+                    diagnostic={diagnosticsById[skill.id]}
+                    toolLabels={toolLabels}
                     enabled={enabledSkillIds.has(skill.id)}
                     disabled={!canEdit}
                     onToggle={() => handleSkillToggle(skill.id)}
@@ -446,14 +630,16 @@ export function CapabilitiesTab({ agent }: { agent: SerializedAgent }) {
                   <p className="py-2 text-sm text-muted-foreground">No bundled skills available</p>
                 )}
               </div>
-            </SkillSection>
+            </CapabilityGroup>
 
-            <SkillSection title="Organization" count={orgSkills.length}>
+            <CapabilityGroup title="Organization" count={orgSkills.length}>
               <div>
                 {orgSkills.map((skill) => (
                   <SkillRow
                     key={skill.id}
                     skill={skill}
+                    diagnostic={diagnosticsById[skill.id]}
+                    toolLabels={toolLabels}
                     enabled={enabledSkillIds.has(skill.id)}
                     disabled={!canEdit}
                     onToggle={() => handleSkillToggle(skill.id)}
@@ -465,7 +651,7 @@ export function CapabilitiesTab({ agent }: { agent: SerializedAgent }) {
                   </p>
                 )}
               </div>
-            </SkillSection>
+            </CapabilityGroup>
           </div>
         )}
       </section>

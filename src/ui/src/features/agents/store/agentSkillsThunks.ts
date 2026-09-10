@@ -24,11 +24,10 @@ export const skillToPlain = (skill: SkillInfo) => ({
   displayName: skill.displayName,
   description: skill.description,
   content: skill.content,
-  whenToUse: skill.whenToUse,
   requiresTools: [...skill.requiresTools],
-  requiresContext: [...skill.requiresContext],
+  supportedSurfaces: [...skill.supportedSurfaces],
   source: skill.source,
-  alwaysActive: skill.alwaysActive,
+  status: skill.status,
   latestVersionNumber: skill.latestVersionNumber,
   activeVersionNumber: skill.activeVersionNumber,
   activeVersionPinned: skill.activeVersionPinned,
@@ -77,18 +76,18 @@ export const updateSkill = createAsyncThunk<
     displayName?: string;
     description?: string;
     content?: string;
-    whenToUse?: string;
-    alwaysActive?: boolean;
+    requiresTools?: string[];
   },
   { state: RootState; rejectValue: string }
 >("agentSkills/updateSkill", async (params, { getState, rejectWithValue }) => {
   try {
     const organizationId = getOrganizationId(getState());
-    const { skillId, ...fields } = params;
+    const { skillId, requiresTools, ...fields } = params;
     const response = await skillsApi.updateSkill({
       organizationId,
       skillId,
       ...fields,
+      ...(requiresTools !== undefined ? { requiresTools: { names: requiresTools } } : {}),
     });
     if (!response.skill) throw new Error("No skill in response");
     return skillToPlain(response.skill);

@@ -1,9 +1,9 @@
-import { useState } from "react";
-import { Play, CheckCircle, DotsThree, CaretDown, CaretRight } from "@phosphor-icons/react";
+import { useRef, useState } from "react";
+import { Play, CheckCircle, DotsThree, Trash, CaretDown, CaretRight } from "@phosphor-icons/react";
 import { useAppDispatch } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
 import { Button } from "@/components/ui/button";
-import { popoverShellClass } from "@/components/ui/popover";
+import { ActionMenu, ActionMenuItem } from "@/components/ui/action-menu";
 import { startSprint, deleteSprint } from "@/features/projects/store/sprintsThunks";
 import { SprintCompletionDialog } from "@/features/projects/components/modals/SprintCompletionDialog";
 import { formatMinutes } from "@/features/projects/utils/timeFormatting";
@@ -21,6 +21,7 @@ export function SprintCard({ sprint, tasks, projectId, projectSlug }: SprintCard
   const dispatch = useAppDispatch();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const menuTriggerRef = useRef<HTMLButtonElement>(null);
   const [isCompletionDialogOpen, setIsCompletionDialogOpen] = useState(false);
   const [isStarting, setIsStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -135,24 +136,34 @@ export function SprintCard({ sprint, tasks, projectId, projectSlug }: SprintCard
         <div className="relative shrink-0">
           <button
             type="button"
-            className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            className="focus-ring grid h-11 w-11 lg:h-6 lg:w-6 place-items-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            ref={menuTriggerRef}
+            aria-label="Sprint actions"
+            aria-haspopup="menu"
+            aria-expanded={isMenuOpen}
             onClick={() => setIsMenuOpen(!isMenuOpen)}
           >
             <DotsThree size={16} weight="bold" />
           </button>
           {isMenuOpen && (
-            <div className={cn(popoverShellClass, "absolute right-0 top-7 z-50 w-32 py-1")}>
-              <button
+            <ActionMenu
+              open
+              triggerRef={menuTriggerRef}
+              onClose={() => setIsMenuOpen(false)}
+              label="Sprint actions"
+            >
+              <ActionMenuItem
                 type="button"
-                className="w-full text-left px-3 py-1.5 text-sm text-destructive hover:bg-muted transition-colors"
+                destructive
                 onClick={() => {
                   setIsMenuOpen(false);
                   handleDeleteSprint();
                 }}
               >
+                <Trash size={16} />
                 Delete Sprint
-              </button>
-            </div>
+              </ActionMenuItem>
+            </ActionMenu>
           )}
         </div>
       </div>

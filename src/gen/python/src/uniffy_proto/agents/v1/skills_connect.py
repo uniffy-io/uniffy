@@ -18,6 +18,15 @@ import agents.v1.skills_pb2 as agents_dot_v1_dot_skills__pb2
 
 
 class SkillsService(Protocol):
+    async def get_skill_compatibility(self, request: agents_dot_v1_dot_skills__pb2.GetSkillCompatibilityRequest, ctx: RequestContext) -> agents_dot_v1_dot_skills__pb2.GetSkillCompatibilityResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def generate_skill_draft(self, request: agents_dot_v1_dot_skills__pb2.GenerateSkillDraftRequest, ctx: RequestContext) -> agents_dot_v1_dot_skills__pb2.GenerateSkillDraftResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def retry_skill_draft_generation(self, request: agents_dot_v1_dot_skills__pb2.RetrySkillDraftGenerationRequest, ctx: RequestContext) -> agents_dot_v1_dot_skills__pb2.RetrySkillDraftGenerationResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
     async def create_skill(self, request: agents_dot_v1_dot_skills__pb2.CreateSkillRequest, ctx: RequestContext) -> agents_dot_v1_dot_skills__pb2.CreateSkillResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
@@ -72,6 +81,36 @@ class SkillsServiceASGIApplication(ConnectASGIApplication[SkillsService]):
         super().__init__(
             service=service,
             endpoints=lambda svc: {
+                "/agents.v1.SkillsService/GetSkillCompatibility": Endpoint.unary(
+                    method=MethodInfo(
+                        name="GetSkillCompatibility",
+                        service_name="agents.v1.SkillsService",
+                        input=agents_dot_v1_dot_skills__pb2.GetSkillCompatibilityRequest,
+                        output=agents_dot_v1_dot_skills__pb2.GetSkillCompatibilityResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.get_skill_compatibility,
+                ),
+                "/agents.v1.SkillsService/GenerateSkillDraft": Endpoint.unary(
+                    method=MethodInfo(
+                        name="GenerateSkillDraft",
+                        service_name="agents.v1.SkillsService",
+                        input=agents_dot_v1_dot_skills__pb2.GenerateSkillDraftRequest,
+                        output=agents_dot_v1_dot_skills__pb2.GenerateSkillDraftResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.generate_skill_draft,
+                ),
+                "/agents.v1.SkillsService/RetrySkillDraftGeneration": Endpoint.unary(
+                    method=MethodInfo(
+                        name="RetrySkillDraftGeneration",
+                        service_name="agents.v1.SkillsService",
+                        input=agents_dot_v1_dot_skills__pb2.RetrySkillDraftGenerationRequest,
+                        output=agents_dot_v1_dot_skills__pb2.RetrySkillDraftGenerationResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.retry_skill_draft_generation,
+                ),
                 "/agents.v1.SkillsService/CreateSkill": Endpoint.unary(
                     method=MethodInfo(
                         name="CreateSkill",
@@ -246,6 +285,66 @@ class SkillsServiceASGIApplication(ConnectASGIApplication[SkillsService]):
 
 
 class SkillsServiceClient(ConnectClient):
+    async def get_skill_compatibility(
+        self,
+        request: agents_dot_v1_dot_skills__pb2.GetSkillCompatibilityRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> agents_dot_v1_dot_skills__pb2.GetSkillCompatibilityResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetSkillCompatibility",
+                service_name="agents.v1.SkillsService",
+                input=agents_dot_v1_dot_skills__pb2.GetSkillCompatibilityRequest,
+                output=agents_dot_v1_dot_skills__pb2.GetSkillCompatibilityResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def generate_skill_draft(
+        self,
+        request: agents_dot_v1_dot_skills__pb2.GenerateSkillDraftRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> agents_dot_v1_dot_skills__pb2.GenerateSkillDraftResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GenerateSkillDraft",
+                service_name="agents.v1.SkillsService",
+                input=agents_dot_v1_dot_skills__pb2.GenerateSkillDraftRequest,
+                output=agents_dot_v1_dot_skills__pb2.GenerateSkillDraftResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def retry_skill_draft_generation(
+        self,
+        request: agents_dot_v1_dot_skills__pb2.RetrySkillDraftGenerationRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> agents_dot_v1_dot_skills__pb2.RetrySkillDraftGenerationResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="RetrySkillDraftGeneration",
+                service_name="agents.v1.SkillsService",
+                input=agents_dot_v1_dot_skills__pb2.RetrySkillDraftGenerationRequest,
+                output=agents_dot_v1_dot_skills__pb2.RetrySkillDraftGenerationResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
     async def create_skill(
         self,
         request: agents_dot_v1_dot_skills__pb2.CreateSkillRequest,
@@ -571,6 +670,12 @@ class SkillsServiceClient(ConnectClient):
 
 
 class SkillsServiceSync(Protocol):
+    def get_skill_compatibility(self, request: agents_dot_v1_dot_skills__pb2.GetSkillCompatibilityRequest, ctx: RequestContext) -> agents_dot_v1_dot_skills__pb2.GetSkillCompatibilityResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def generate_skill_draft(self, request: agents_dot_v1_dot_skills__pb2.GenerateSkillDraftRequest, ctx: RequestContext) -> agents_dot_v1_dot_skills__pb2.GenerateSkillDraftResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def retry_skill_draft_generation(self, request: agents_dot_v1_dot_skills__pb2.RetrySkillDraftGenerationRequest, ctx: RequestContext) -> agents_dot_v1_dot_skills__pb2.RetrySkillDraftGenerationResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def create_skill(self, request: agents_dot_v1_dot_skills__pb2.CreateSkillRequest, ctx: RequestContext) -> agents_dot_v1_dot_skills__pb2.CreateSkillResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def get_skill(self, request: agents_dot_v1_dot_skills__pb2.GetSkillRequest, ctx: RequestContext) -> agents_dot_v1_dot_skills__pb2.GetSkillResponse:
@@ -609,6 +714,36 @@ class SkillsServiceWSGIApplication(ConnectWSGIApplication):
     def __init__(self, service: SkillsServiceSync, interceptors: Iterable[InterceptorSync]=(), read_max_bytes: int | None = None, compressions: Iterable[Compression] | None = None, codecs: Iterable[Codec] | None = None) -> None:
         super().__init__(
             endpoints={
+                "/agents.v1.SkillsService/GetSkillCompatibility": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="GetSkillCompatibility",
+                        service_name="agents.v1.SkillsService",
+                        input=agents_dot_v1_dot_skills__pb2.GetSkillCompatibilityRequest,
+                        output=agents_dot_v1_dot_skills__pb2.GetSkillCompatibilityResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.get_skill_compatibility,
+                ),
+                "/agents.v1.SkillsService/GenerateSkillDraft": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="GenerateSkillDraft",
+                        service_name="agents.v1.SkillsService",
+                        input=agents_dot_v1_dot_skills__pb2.GenerateSkillDraftRequest,
+                        output=agents_dot_v1_dot_skills__pb2.GenerateSkillDraftResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.generate_skill_draft,
+                ),
+                "/agents.v1.SkillsService/RetrySkillDraftGeneration": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="RetrySkillDraftGeneration",
+                        service_name="agents.v1.SkillsService",
+                        input=agents_dot_v1_dot_skills__pb2.RetrySkillDraftGenerationRequest,
+                        output=agents_dot_v1_dot_skills__pb2.RetrySkillDraftGenerationResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.retry_skill_draft_generation,
+                ),
                 "/agents.v1.SkillsService/CreateSkill": EndpointSync.unary(
                     method=MethodInfo(
                         name="CreateSkill",
@@ -783,6 +918,66 @@ class SkillsServiceWSGIApplication(ConnectWSGIApplication):
 
 
 class SkillsServiceClientSync(ConnectClientSync):
+    def get_skill_compatibility(
+        self,
+        request: agents_dot_v1_dot_skills__pb2.GetSkillCompatibilityRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> agents_dot_v1_dot_skills__pb2.GetSkillCompatibilityResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetSkillCompatibility",
+                service_name="agents.v1.SkillsService",
+                input=agents_dot_v1_dot_skills__pb2.GetSkillCompatibilityRequest,
+                output=agents_dot_v1_dot_skills__pb2.GetSkillCompatibilityResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def generate_skill_draft(
+        self,
+        request: agents_dot_v1_dot_skills__pb2.GenerateSkillDraftRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> agents_dot_v1_dot_skills__pb2.GenerateSkillDraftResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GenerateSkillDraft",
+                service_name="agents.v1.SkillsService",
+                input=agents_dot_v1_dot_skills__pb2.GenerateSkillDraftRequest,
+                output=agents_dot_v1_dot_skills__pb2.GenerateSkillDraftResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def retry_skill_draft_generation(
+        self,
+        request: agents_dot_v1_dot_skills__pb2.RetrySkillDraftGenerationRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> agents_dot_v1_dot_skills__pb2.RetrySkillDraftGenerationResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="RetrySkillDraftGeneration",
+                service_name="agents.v1.SkillsService",
+                input=agents_dot_v1_dot_skills__pb2.RetrySkillDraftGenerationRequest,
+                output=agents_dot_v1_dot_skills__pb2.RetrySkillDraftGenerationResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
     def create_skill(
         self,
         request: agents_dot_v1_dot_skills__pb2.CreateSkillRequest,

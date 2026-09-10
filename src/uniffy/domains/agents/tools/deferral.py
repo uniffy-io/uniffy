@@ -21,7 +21,7 @@ LOADED_GROUPS_METADATA_KEY = "loaded_tool_groups"
 # Groups every agent needs from the first token: memory and skills are
 # referenced by other prompt sections, search/people back the mention
 # workflow, and System carries the time tool the date section defers to.
-CORE_GROUPS = frozenset({"Memory", "Search", "People", "Skills", "System"})
+CORE_GROUPS = frozenset({"Memory", "Search", "People", "System"})
 
 # At or below this many advertisable schemas deferral is pure overhead:
 # advertise everything and skip the meta tool.

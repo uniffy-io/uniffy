@@ -1,6 +1,6 @@
 /** Per-(channel, agent) context meter + controls. Standalone fetches its own stats; batched mode reads from props. */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { ArrowsClockwise, DotsThree, Trash } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -11,7 +11,7 @@ import {
   type CompactResult,
   type ResetResult,
 } from "@/features/chat/hooks/useChannelAgentContext";
-import { popoverShellClass } from "@/components/ui/popover";
+import { ActionMenu, ActionMenuItem } from "@/components/ui/action-menu";
 import { cn } from "@/shared/utils/cn";
 import { toast } from "sonner";
 
@@ -130,19 +130,8 @@ function AgentContextBarBody({
 }: AgentContextBarBodyProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [confirmResetOpen, setConfirmResetOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLButtonElement>(null);
   const isCompact = variant === "compact";
-
-  useEffect(() => {
-    if (!menuOpen) return;
-    const handler = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setMenuOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [menuOpen]);
 
   if (!stats) {
     return (
@@ -357,11 +346,14 @@ function AgentContextBarBody({
           {!isCompact && (
             <>
               <div className="flex-1" />
-              <div className="relative" ref={menuRef}>
+              <div className="relative">
                 <button
                   type="button"
                   onClick={() => setMenuOpen((open) => !open)}
-                  className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                  className="focus-ring grid h-11 w-11 lg:h-6 lg:w-6 place-items-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                  ref={menuRef}
+                  aria-haspopup="menu"
+                  aria-expanded={menuOpen}
                   aria-label="Context options"
                   data-testid="chat-agent-context-menu-button"
                   data-state={menuOpen ? "open" : "closed"}
@@ -369,27 +361,26 @@ function AgentContextBarBody({
                   <DotsThree size={16} weight="bold" />
                 </button>
                 {menuOpen && (
-                  <div
-                    className={cn(
-                      popoverShellClass,
-                      "absolute right-0 top-full mt-1 z-20 min-w-[200px] py-1",
-                    )}
-                    data-testid="chat-agent-context-menu"
+                  <ActionMenu
+                    open
+                    triggerRef={menuRef}
+                    onClose={() => setMenuOpen(false)}
+                    label="Context options"
                   >
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setMenuOpen(false);
-                        setConfirmResetOpen(true);
-                      }}
-                      disabled={isResetting}
-                      className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-foreground hover:bg-muted transition-colors disabled:opacity-50"
-                      data-testid="chat-agent-context-menu-reset"
-                    >
-                      <Trash size={14} className="text-muted-foreground" />
-                      <span>Reset conversation</span>
-                    </button>
-                  </div>
+                    <div data-testid="chat-agent-context-menu">
+                      <ActionMenuItem
+                        onClick={() => {
+                          setMenuOpen(false);
+                          setConfirmResetOpen(true);
+                        }}
+                        disabled={isResetting}
+                        data-testid="chat-agent-context-menu-reset"
+                      >
+                        <Trash size={14} className="text-muted-foreground" />
+                        <span>Reset conversation</span>
+                      </ActionMenuItem>
+                    </div>
+                  </ActionMenu>
                 )}
               </div>
             </>

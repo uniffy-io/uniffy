@@ -1,9 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@core/providers/AuthContext";
-import { agentsApi, providersApi, sessionsApi } from "@features/agents/agentsApi";
+import { agentsApi, providersApi } from "@features/agents/agentsApi";
 import { chatApi } from "@features/chat/chatApi";
-import { messagesKey } from "@features/chat/useChatMutations";
-import type { SerializedMessage } from "@features/chat/chatSerializer";
 import { agentToPlain, type SerializedAgent } from "@features/agents/agentSerializer";
 import { rememberToolLabels } from "@features/agents/toolLabels";
 
@@ -163,37 +161,6 @@ export function useCreateAgentChat() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["chat", "channels", organizationId] });
       queryClient.invalidateQueries({ queryKey: ["chat", "agentChats", organizationId] });
-    },
-  });
-}
-
-/**
- * Thumbs rating on an agent's chat reply. The agents feedback RPC takes exactly
- * one target, so chat replies go in as `chatMessageId`; re-sending the rating
- * already showing clears it.
- */
-export function useSubmitAgentReplyFeedback(channelId: string) {
-  const { organizationId } = useAuth();
-  const queryClient = useQueryClient();
-  const key = messagesKey(organizationId, channelId);
-
-  return useMutation({
-    mutationFn: (args: { messageId: string; rating: "up" | "down" | "" }) =>
-      sessionsApi.submitMessageFeedback({
-        organizationId: organizationId!,
-        chatMessageId: args.messageId,
-        rating: args.rating,
-      }),
-    onMutate: async (args) => {
-      await queryClient.cancelQueries({ queryKey: key });
-      const previous = queryClient.getQueryData<SerializedMessage[]>(key);
-      queryClient.setQueryData<SerializedMessage[]>(key, (old) =>
-        old?.map((m) => (m.id === args.messageId ? { ...m, feedbackRating: args.rating } : m)),
-      );
-      return { previous };
-    },
-    onError: (_err, _args, ctx) => {
-      if (ctx?.previous) queryClient.setQueryData(key, ctx.previous);
     },
   });
 }

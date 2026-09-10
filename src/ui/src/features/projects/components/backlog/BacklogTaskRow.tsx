@@ -1,9 +1,7 @@
-import { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import { createPortal } from "react-dom";
+import { useState, useRef, useMemo } from "react";
 import { ArrowRight, CalendarBlank, CheckCircle, ArrowsClockwise } from "@phosphor-icons/react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
-import { popoverShellClass } from "@/components/ui/popover";
-import { useOverlayEscape } from "@/shared/hooks/useOverlayEscape";
+import { ActionMenu, ActionMenuItem } from "@/components/ui/action-menu";
 import { cn } from "@/shared/utils/cn";
 import { formatDateShort, isOverdue } from "@/shared/utils/dateFormatting";
 import { updateTask } from "@/features/projects/store/projectsThunks";
@@ -31,9 +29,7 @@ export function BacklogTaskRow({
 }: BacklogTaskRowProps) {
   const dispatch = useAppDispatch();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [menuPos, setMenuPos] = useState<{ top: number; left: number } | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
 
   const project = useAppSelector(selectCurrentProject);
 
@@ -63,91 +59,33 @@ export function BacklogTaskRow({
     [priorityOptions, task.priority],
   );
 
-  const updatePosition = useCallback(() => {
-    if (!buttonRef.current) return;
-    const rect = buttonRef.current.getBoundingClientRect();
-    setMenuPos({
-      top: rect.bottom + 4,
-      left: rect.right - 176, // 176 = w-44 (11rem)
-    });
-  }, []);
-
-  // Update position on open and scroll/resize
-  useEffect(() => {
-    if (!isMenuOpen) return;
-    updatePosition();
-    const handler = () => updatePosition();
-    window.addEventListener("scroll", handler, true);
-    window.addEventListener("resize", handler);
-    return () => {
-      window.removeEventListener("scroll", handler, true);
-      window.removeEventListener("resize", handler);
-    };
-  }, [isMenuOpen, updatePosition]);
-
-  // Close menu on outside click
-  useEffect(() => {
-    if (!isMenuOpen) return;
-    const handleClick = (e: MouseEvent) => {
-      if (
-        buttonRef.current &&
-        !buttonRef.current.contains(e.target as Node) &&
-        menuRef.current &&
-        !menuRef.current.contains(e.target as Node)
-      ) {
-        setIsMenuOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, [isMenuOpen]);
-
-  useOverlayEscape(() => setIsMenuOpen(false), isMenuOpen);
-
   const handleMove = async (sprintId: string | null) => {
     setIsMenuOpen(false);
     await dispatch(updateTask({ id: task.id, sprintId }));
   };
 
   const renderMenu = () => {
-    if (!isMenuOpen || !menuPos) return null;
+    if (!isMenuOpen) return null;
 
-    return createPortal(
-      <div
-        ref={menuRef}
-        style={{
-          position: "fixed",
-          top: menuPos.top,
-          left: menuPos.left,
-          width: 176,
-        }}
-        className={cn(
-          popoverShellClass,
-          "z-200 py-1 animate-in fade-in-0 slide-in-from-top-2 duration-100",
-        )}
+    return (
+      <ActionMenu
+        open
+        triggerRef={buttonRef}
+        onClose={() => setIsMenuOpen(false)}
+        label="Move task"
       >
         <div className="px-3 py-1 text-xs font-medium text-muted-foreground">Move to</div>
         {currentSprintId !== null && (
-          <button
-            type="button"
-            className="w-full text-left px-3 py-1.5 text-sm text-foreground hover:bg-muted transition-colors"
-            onClick={() => handleMove(null)}
-          >
+          <ActionMenuItem type="button" onClick={() => handleMove(null)}>
             Backlog
-          </button>
+          </ActionMenuItem>
         )}
         {availableSprints.map((s) => (
-          <button
-            key={s.id}
-            type="button"
-            className="w-full text-left px-3 py-1.5 text-sm text-foreground hover:bg-muted transition-colors truncate"
-            onClick={() => handleMove(s.id)}
-          >
-            {s.name}
-          </button>
+          <ActionMenuItem key={s.id} type="button" onClick={() => handleMove(s.id)}>
+            <span className="truncate">{s.name}</span>
+          </ActionMenuItem>
         ))}
-      </div>,
-      document.body,
+      </ActionMenu>
     );
   };
 
@@ -247,10 +185,15 @@ export function BacklogTaskRow({
             type="button"
             onClick={() => setIsMenuOpen(!isMenuOpen)}
             className={cn(
-              "p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0",
-              isMenuOpen ? "opacity-100" : "opacity-0 group-hover:opacity-100",
+              "focus-ring grid h-11 w-11 lg:h-6 lg:w-6 place-items-center p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0",
+              isMenuOpen
+                ? "opacity-100"
+                : "lg:opacity-0 lg:group-hover:opacity-100 focus-visible:opacity-100",
             )}
             title="Move to..."
+            aria-label="Move task"
+            aria-haspopup="menu"
+            aria-expanded={isMenuOpen}
           >
             <ArrowRight size={14} />
           </button>

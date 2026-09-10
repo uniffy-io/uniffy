@@ -90,6 +90,7 @@ class StreamingToolLoop:
             })
 
             tool_call_message_ids: dict[str, UUID] = {}
+            turn_traces: dict[str, dict] = {}
             for tool_call in result.tool_calls:
                 stored = await writer.add_message(
                     role="assistant",
@@ -106,8 +107,10 @@ class StreamingToolLoop:
                 )
                 pending_thinking = None
                 tool_call_message_ids[tool_call.id] = stored.id
+                trace = {"name": tool_call.name, "call_id": tool_call.id, "success": None}
+                turn_traces[tool_call.id] = trace
                 if run_tool_calls is not None:
-                    run_tool_calls.append({"name": tool_call.name, "call_id": tool_call.id})
+                    run_tool_calls.append(trace)
                 yield StreamEvent(
                     type=EventType.TOOL_RESULT_START,
                     tool_call_id=tool_call.id,
@@ -127,6 +130,8 @@ class StreamingToolLoop:
                 read_calls,
                 self._session_factory,
             )
+            for call_id, tool_result in read_results.items():
+                turn_traces[call_id]["success"] = tool_result.success
 
             results_content: dict[str, str] = {}
             turn_tool_results: dict[str, ToolResult] = dict(read_results)
@@ -180,6 +185,7 @@ class StreamingToolLoop:
                         timeout=120.0,
                     )
                     if not approved:
+                        turn_traces[tool_call.id]["success"] = False
                         rejection = "Action was rejected by the user or timed out."
                         stored_result = await writer.add_message(
                             role="tool",
@@ -200,6 +206,7 @@ class StreamingToolLoop:
                         continue
 
                 tool_result = await executor.execute(tool_call)
+                turn_traces[tool_call.id]["success"] = tool_result.success
                 turn_tool_results[tool_call.id] = tool_result
                 content = tool_result.data if tool_result.success else f"Error: {tool_result.error}"
                 stored_result = await writer.add_message(
@@ -219,9 +226,6 @@ class StreamingToolLoop:
                     message_id=stored_result.id,
                 )
                 results_content[tool_call.id] = content
-
-                while base_context.pending_events:
-                    yield base_context.pending_events.pop(0)
 
             llm_messages.append({
                 "role": "user",

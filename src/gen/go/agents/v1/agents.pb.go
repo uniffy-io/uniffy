@@ -73,7 +73,8 @@ type AgentInfo struct {
 	DeletedAt *timestamppb.Timestamp `protobuf:"bytes,27,opt,name=deleted_at,json=deletedAt,proto3,oneof" json:"deleted_at,omitempty"`
 	// JSON object pinning an integration provider to one org connection
 	// (provider id -> connection id). "{}" = automatic resolution.
-	IntegrationConnections string `protobuf:"bytes,28,opt,name=integration_connections,json=integrationConnections,proto3" json:"integration_connections,omitempty"`
+	IntegrationConnections string   `protobuf:"bytes,28,opt,name=integration_connections,json=integrationConnections,proto3" json:"integration_connections,omitempty"`
+	EnabledRules           []string `protobuf:"bytes,29,rep,name=enabled_rules,json=enabledRules,proto3" json:"enabled_rules,omitempty"`
 	unknownFields          protoimpl.UnknownFields
 	sizeCache              protoimpl.SizeCache
 }
@@ -304,6 +305,13 @@ func (x *AgentInfo) GetIntegrationConnections() string {
 	return ""
 }
 
+func (x *AgentInfo) GetEnabledRules() []string {
+	if x != nil {
+		return x.EnabledRules
+	}
+	return nil
+}
+
 type CreateAgentRequest struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
@@ -332,7 +340,8 @@ type CreateAgentRequest struct {
 	ImageParams      *string `protobuf:"bytes,18,opt,name=image_params,json=imageParams,proto3,oneof" json:"image_params,omitempty"`
 	ImageStylePrompt *string `protobuf:"bytes,19,opt,name=image_style_prompt,json=imageStylePrompt,proto3,oneof" json:"image_style_prompt,omitempty"`
 	// JSON object pinning integration providers to org connections
-	IntegrationConnections *string `protobuf:"bytes,20,opt,name=integration_connections,json=integrationConnections,proto3,oneof" json:"integration_connections,omitempty"`
+	IntegrationConnections *string  `protobuf:"bytes,20,opt,name=integration_connections,json=integrationConnections,proto3,oneof" json:"integration_connections,omitempty"`
+	EnabledRules           []string `protobuf:"bytes,21,rep,name=enabled_rules,json=enabledRules,proto3" json:"enabled_rules,omitempty"`
 	unknownFields          protoimpl.UnknownFields
 	sizeCache              protoimpl.SizeCache
 }
@@ -505,6 +514,13 @@ func (x *CreateAgentRequest) GetIntegrationConnections() string {
 		return *x.IntegrationConnections
 	}
 	return ""
+}
+
+func (x *CreateAgentRequest) GetEnabledRules() []string {
+	if x != nil {
+		return x.EnabledRules
+	}
+	return nil
 }
 
 type CreateAgentResponse struct {
@@ -1590,8 +1606,9 @@ type AgentTemplate struct {
 	EnabledSkillIds []string `protobuf:"bytes,7,rep,name=enabled_skill_ids,json=enabledSkillIds,proto3" json:"enabled_skill_ids,omitempty"`
 	// Model ids the template works best on; empty when the template has no
 	// recommendation. Prefill only - clients apply them when the org serves them.
-	RecommendedModel      string `protobuf:"bytes,8,opt,name=recommended_model,json=recommendedModel,proto3" json:"recommended_model,omitempty"`
-	RecommendedImageModel string `protobuf:"bytes,9,opt,name=recommended_image_model,json=recommendedImageModel,proto3" json:"recommended_image_model,omitempty"`
+	RecommendedModel      string   `protobuf:"bytes,8,opt,name=recommended_model,json=recommendedModel,proto3" json:"recommended_model,omitempty"`
+	RecommendedImageModel string   `protobuf:"bytes,9,opt,name=recommended_image_model,json=recommendedImageModel,proto3" json:"recommended_image_model,omitempty"`
+	EnabledRuleIds        []string `protobuf:"bytes,10,rep,name=enabled_rule_ids,json=enabledRuleIds,proto3" json:"enabled_rule_ids,omitempty"`
 	unknownFields         protoimpl.UnknownFields
 	sizeCache             protoimpl.SizeCache
 }
@@ -1687,6 +1704,13 @@ func (x *AgentTemplate) GetRecommendedImageModel() string {
 		return x.RecommendedImageModel
 	}
 	return ""
+}
+
+func (x *AgentTemplate) GetEnabledRuleIds() []string {
+	if x != nil {
+		return x.EnabledRuleIds
+	}
+	return nil
 }
 
 type ListAgentTemplatesRequest struct {
@@ -1970,7 +1994,7 @@ var File_agents_v1_agents_proto protoreflect.FileDescriptor
 
 const file_agents_v1_agents_proto_rawDesc = "" +
 	"\n" +
-	"\x16agents/v1/agents.proto\x12\tagents.v1\x1a\x16common/v1/common.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x12tags/v1/tags.proto\"\xc2\t\n" +
+	"\x16agents/v1/agents.proto\x12\tagents.v1\x1a\x16common/v1/common.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x12tags/v1/tags.proto\"\xe7\t\n" +
 	"\tAgentInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12'\n" +
 	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12\x19\n" +
@@ -2010,11 +2034,12 @@ const file_agents_v1_agents_proto_rawDesc = "" +
 	"is_deleted\x18\x1a \x01(\bR\tisDeleted\x12>\n" +
 	"\n" +
 	"deleted_at\x18\x1b \x01(\v2\x1a.google.protobuf.TimestampH\x02R\tdeletedAt\x88\x01\x01\x127\n" +
-	"\x17integration_connections\x18\x1c \x01(\tR\x16integrationConnectionsB\x10\n" +
+	"\x17integration_connections\x18\x1c \x01(\tR\x16integrationConnections\x12#\n" +
+	"\renabled_rules\x18\x1d \x03(\tR\fenabledRulesB\x10\n" +
 	"\x0e_baseline_roleB\f\n" +
 	"\n" +
 	"_user_roleB\r\n" +
-	"\v_deleted_at\"\x82\t\n" +
+	"\v_deleted_at\"\xa7\t\n" +
 	"\x12CreateAgentRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12$\n" +
@@ -2042,7 +2067,8 @@ const file_agents_v1_agents_proto_rawDesc = "" +
 	"R\vmodelParams\x88\x01\x01\x12&\n" +
 	"\fimage_params\x18\x12 \x01(\tH\vR\vimageParams\x88\x01\x01\x121\n" +
 	"\x12image_style_prompt\x18\x13 \x01(\tH\fR\x10imageStylePrompt\x88\x01\x01\x12<\n" +
-	"\x17integration_connections\x18\x14 \x01(\tH\rR\x16integrationConnections\x88\x01\x01B\x0e\n" +
+	"\x17integration_connections\x18\x14 \x01(\tH\rR\x16integrationConnections\x88\x01\x01\x12#\n" +
+	"\renabled_rules\x18\x15 \x03(\tR\fenabledRulesB\x0e\n" +
 	"\f_soul_promptB\x10\n" +
 	"\x0e_primary_modelB\x0f\n" +
 	"\r_avatar_emojiB\x0e\n" +
@@ -2154,7 +2180,7 @@ const file_agents_v1_agents_proto_rawDesc = "" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x19\n" +
 	"\bagent_id\x18\x02 \x01(\tR\aagentId\"B\n" +
 	"\x1bPreviewSystemPromptResponse\x12#\n" +
-	"\rsystem_prompt\x18\x01 \x01(\tR\fsystemPrompt\"\xc4\x02\n" +
+	"\rsystem_prompt\x18\x01 \x01(\tR\fsystemPrompt\"\xee\x02\n" +
 	"\rAgentTemplate\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x14\n" +
@@ -2165,7 +2191,9 @@ const file_agents_v1_agents_proto_rawDesc = "" +
 	"\renabled_tools\x18\x06 \x03(\tR\fenabledTools\x12*\n" +
 	"\x11enabled_skill_ids\x18\a \x03(\tR\x0fenabledSkillIds\x12+\n" +
 	"\x11recommended_model\x18\b \x01(\tR\x10recommendedModel\x126\n" +
-	"\x17recommended_image_model\x18\t \x01(\tR\x15recommendedImageModel\"D\n" +
+	"\x17recommended_image_model\x18\t \x01(\tR\x15recommendedImageModel\x12(\n" +
+	"\x10enabled_rule_ids\x18\n" +
+	" \x03(\tR\x0eenabledRuleIds\"D\n" +
 	"\x19ListAgentTemplatesRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\"T\n" +
 	"\x1aListAgentTemplatesResponse\x126\n" +

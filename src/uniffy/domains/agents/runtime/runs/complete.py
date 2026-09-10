@@ -27,6 +27,7 @@ from uniffy.domains.agents.runtime.models.calls import (
 from uniffy.domains.agents.runtime.runs.records import RunRecorder
 from uniffy.domains.agents.runtime.runs.usage import RunUsageAccumulator
 from uniffy.domains.agents.runtime.settings.operations import get_runtime_settings
+from uniffy.domains.agents.runtime.skills import InvocationRun
 from uniffy.domains.agents.runtime.tooling import (
     MAX_LOAD_ONLY_ITERATIONS,
     MAX_TOOL_ITERATIONS,
@@ -158,6 +159,7 @@ class CompletionToolLoop:
                 "content": assistant_content,
             })
 
+            turn_traces: dict[str, dict] = {}
             for tool_call in result.tool_calls:
                 await self._session_operations.add_message(
                     user_id=user_id,
@@ -174,8 +176,10 @@ class CompletionToolLoop:
                     cache_read_input_tokens=result.cache_read_input_tokens,
                     model=result.model,
                 )
+                trace = {"name": tool_call.name, "call_id": tool_call.id, "success": None}
+                turn_traces[tool_call.id] = trace
                 if run_tool_calls is not None:
-                    run_tool_calls.append({"name": tool_call.name, "call_id": tool_call.id})
+                    run_tool_calls.append(trace)
 
             registry = executor.registry
             base_context = executor.context
@@ -186,8 +190,11 @@ class CompletionToolLoop:
                 read_calls,
                 self._session_factory,
             )
+            for call_id, tool_result in tool_results.items():
+                turn_traces[call_id]["success"] = tool_result.success
             for tool_call in write_calls:
                 tool_results[tool_call.id] = await executor.execute(tool_call)
+                turn_traces[tool_call.id]["success"] = tool_results[tool_call.id].success
 
             tool_result_blocks: list[dict] = []
             for tool_call in result.tool_calls:
@@ -275,9 +282,12 @@ class CompletionRunner:
         registry: ToolRegistry,
         tool_context: ToolContext,
         deferred_pool: dict[str, list[dict]],
+        invocation: InvocationRun | None = None,
     ) -> tuple[AgentMessage, str]:
         start_time = time.monotonic()
         run_tool_calls: list[dict] = []
+        if invocation is not None:
+            invocation.tool_calls = run_tool_calls
         usage = RunUsageAccumulator()
         runtime_settings = await get_runtime_settings(
             self._session,
@@ -349,7 +359,7 @@ class CompletionRunner:
         except Exception as exc:
             status = AgentRunStatus.ERROR
             error = str(exc)
-            await self._recorder.record(
+            run_log_id = await self._recorder.record(
                 session_id=session_id,
                 agent_id=agent_id,
                 user_id=user_id,
@@ -363,6 +373,8 @@ class CompletionRunner:
                 error=error,
                 provider_key_id=provider_key_id,
             )
+            if invocation is not None:
+                await invocation.fail(run_log_id, deadline_exceeded=usage.deadline_exceeded)
             raise
 
         assistant_message = await self._session_operations.add_message(
@@ -377,7 +389,7 @@ class CompletionRunner:
             cache_read_input_tokens=result.cache_read_input_tokens,
             model=result.model,
         )
-        await self._recorder.record(
+        run_log_id = await self._recorder.record(
             session_id=session_id,
             agent_id=agent_id,
             user_id=user_id,
@@ -391,4 +403,6 @@ class CompletionRunner:
             error=error,
             provider_key_id=provider_key_id,
         )
+        if invocation is not None:
+            await invocation.complete(assistant_message.id, run_log_id)
         return assistant_message, result.model

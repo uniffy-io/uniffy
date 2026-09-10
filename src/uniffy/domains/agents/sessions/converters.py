@@ -11,7 +11,6 @@ from uniffy_proto.agents.v1.sessions_pb2 import (
     SESSION_KIND_GLOBAL,
     SESSION_KIND_GROUP,
     SESSION_KIND_UNSPECIFIED,
-    MessageFeedback,
     MessageInfo,
     MessageRole,
     SessionInfo,
@@ -21,7 +20,6 @@ from uniffy_proto.agents.v1.sessions_pb2 import (
 from uniffy.core.converters import datetime_to_timestamp
 from uniffy.core.json_codec import dumps_str
 from uniffy.core.models.agents.message import AgentMessage
-from uniffy.core.models.agents.message_feedback import AgentMessageFeedback
 from uniffy.core.models.agents.session import AgentSession
 
 SESSION_KIND_TO_PROTO: dict[str, SessionKind] = {
@@ -163,12 +161,9 @@ def session_to_proto(session: AgentSession) -> SessionInfo:
     return info
 
 
-def message_to_proto(message: AgentMessage, *, feedback_rating: str = "") -> MessageInfo:
-    """Convert a AgentMessage model to proto MessageInfo.
-
-    ``feedback_rating`` is the caller's own thumbs rating ("up"/"down"/""),
-    resolved by the handler so the client can render the persisted thumb state.
-    """
+def message_to_proto(
+    message: AgentMessage, *, skill_invocation: dict[str, str] | None = None
+) -> MessageInfo:
     info = MessageInfo(
         id=str(message.id),
         session_id=str(message.session_id),
@@ -181,6 +176,7 @@ def message_to_proto(message: AgentMessage, *, feedback_rating: str = "") -> Mes
         is_thinking=message.is_thinking,
         is_compacted=message.is_compacted,
         created_at=datetime_to_timestamp(message.created_at),
+        skill_invocation=skill_invocation or {},
     )
 
     if message.content is not None:
@@ -210,19 +206,7 @@ def message_to_proto(message: AgentMessage, *, feedback_rating: str = "") -> Mes
         info.edited_at.CopyFrom(datetime_to_timestamp(message.edited_at))
     if message.previous_content is not None:
         info.previous_content = message.previous_content
-    if feedback_rating:
-        info.feedback_rating = feedback_rating
     if message.invoked_skill_name:
         info.invoked_skill_name = message.invoked_skill_name
 
     return info
-
-
-def message_feedback_to_proto(feedback: AgentMessageFeedback) -> MessageFeedback:
-    """Convert a stored thumbs rating to proto."""
-    return MessageFeedback(
-        message_id=str(feedback.agents_message_id or feedback.chat_message_id),
-        rating=feedback.rating,
-        comment=feedback.comment or "",
-        created_at=datetime_to_timestamp(feedback.created_at),
-    )

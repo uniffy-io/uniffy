@@ -98,8 +98,6 @@ export interface SerializedMessage {
   reactions: SerializedReaction[];
   senderName: string;
   senderAvatarUrl: string | null;
-  /** The caller's own thumbs rating on an agent reply; history reads only. */
-  feedbackRating: "up" | "down" | "";
   /** Populated by a separate BatchListAttachments fetch, not the message proto. */
   attachments: SerializedAttachment[];
 }
@@ -262,8 +260,6 @@ export function messageToPlain(proto: ProtoChatMessage): SerializedMessage {
     // name by senderId and this fallback only covers the pre-load gap.
     senderName: proto.senderName || (senderType === "AGENT" ? "Agent" : "Unknown"),
     senderAvatarUrl: proto.senderAvatarUrl || null,
-    feedbackRating:
-      proto.feedbackRating === "up" || proto.feedbackRating === "down" ? proto.feedbackRating : "",
     attachments: [],
   };
 }

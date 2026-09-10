@@ -115,8 +115,7 @@ export function ChannelView({
 
   const handleSend = useCallback(
     async (content: string, fileIds: string[], metadata?: Record<string, string>) => {
-      if (!activeChannel || !effectiveChannelId) return;
-      flushOnSend();
+      if (!activeChannel || !effectiveChannelId) return false;
       const result = await dispatch(
         sendMessage({
           channelId: effectiveChannelId,
@@ -126,6 +125,7 @@ export function ChannelView({
           metadata,
         }),
       ).unwrap();
+      flushOnSend();
       dispatch(clearReplyToMessage());
 
       if (fileIds.length > 0 && organizationId && result.id) {
@@ -155,6 +155,7 @@ export function ChannelView({
           console.error("[ChannelView] Failed to load attachments for sent message:", err);
         }
       }
+      return true;
     },
     [activeChannel, effectiveChannelId, replyToMessage, dispatch, organizationId, flushOnSend],
   );
@@ -248,7 +249,7 @@ export function ChannelView({
     <MessageCompose
       // Remount per channel: the contentEditable DOM would otherwise carry
       // one channel's text into another and corrupt its draft.
-      key={effectiveChannelId ?? "none"}
+      key={`${organizationId}:${effectiveChannelId ?? "none"}`}
       channelName={channelDisplayName}
       channelId={effectiveChannelId ?? undefined}
       organizationId={organizationId ?? undefined}

@@ -27,7 +27,7 @@ from uniffy.core.converters.common_proto import (
     access_mode_from_proto,
     content_role_from_proto,
 )
-from uniffy.core.errors import NotFoundError, PermissionDeniedError
+from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models.files.multipart_upload import UploadStatus
 from uniffy.domains.files.converters import (
     file_to_proto,
@@ -96,6 +96,12 @@ class UploadHandlers:
                     total_chunks=upload.total_chunks,
                 )
 
+        except NotFoundError:
+            raise ConnectError(Code.NOT_FOUND, "Folder not found")
+        except ValidationError as e:
+            raise ConnectError(Code.INVALID_ARGUMENT, str(e))
+        except PermissionDeniedError as e:
+            raise ConnectError(Code.PERMISSION_DENIED, str(e) or "Access denied")
         except ConnectError:
             raise
         except Exception as e:
@@ -208,6 +214,8 @@ class UploadHandlers:
                     )
                 )
 
+        except ValidationError as e:
+            raise ConnectError(Code.INVALID_ARGUMENT, str(e))
         except NotFoundError:
             raise ConnectError(Code.NOT_FOUND, "Upload not found")
         except PermissionDeniedError:

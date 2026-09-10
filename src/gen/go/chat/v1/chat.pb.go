@@ -1165,9 +1165,6 @@ type ChatMessage struct {
 	CreatedAt  *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	// Inline quote reply reference
 	ReplyToId *string `protobuf:"bytes,12,opt,name=reply_to_id,json=replyToId,proto3,oneof" json:"reply_to_id,omitempty"`
-	// The caller's own thumbs rating on an agent reply ("up" | "down" | "").
-	// Populated only on history reads; empty on stream fanout.
-	FeedbackRating string `protobuf:"bytes,13,opt,name=feedback_rating,json=feedbackRating,proto3" json:"feedback_rating,omitempty"`
 	// Populated for root messages that have replies
 	Thread *ThreadInfo `protobuf:"bytes,20,opt,name=thread,proto3,oneof" json:"thread,omitempty"`
 	// Reactions on this message
@@ -1296,13 +1293,6 @@ func (x *ChatMessage) GetCreatedAt() *timestamppb.Timestamp {
 func (x *ChatMessage) GetReplyToId() string {
 	if x != nil && x.ReplyToId != nil {
 		return *x.ReplyToId
-	}
-	return ""
-}
-
-func (x *ChatMessage) GetFeedbackRating() string {
-	if x != nil {
-		return x.FeedbackRating
 	}
 	return ""
 }
@@ -9644,7 +9634,7 @@ const file_chat_v1_chat_proto_rawDesc = "" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1f\n" +
 	"\vsender_name\x18\x02 \x01(\tR\n" +
 	"senderName\x12'\n" +
-	"\x0fcontent_preview\x18\x03 \x01(\tR\x0econtentPreview\"\xb2\b\n" +
+	"\x0fcontent_preview\x18\x03 \x01(\tR\x0econtentPreview\"\xa0\b\n" +
 	"\vChatMessage\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
 	"\n" +
@@ -9662,8 +9652,7 @@ const file_chat_v1_chat_proto_rawDesc = "" +
 	" \x03(\v2\".chat.v1.ChatMessage.MetadataEntryR\bmetadata\x129\n" +
 	"\n" +
 	"created_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x12#\n" +
-	"\vreply_to_id\x18\f \x01(\tH\x02R\treplyToId\x88\x01\x01\x12'\n" +
-	"\x0ffeedback_rating\x18\r \x01(\tR\x0efeedbackRating\x120\n" +
+	"\vreply_to_id\x18\f \x01(\tH\x02R\treplyToId\x88\x01\x01\x120\n" +
 	"\x06thread\x18\x14 \x01(\v2\x13.chat.v1.ThreadInfoH\x03R\x06thread\x88\x01\x01\x124\n" +
 	"\treactions\x18\x15 \x03(\v2\x16.chat.v1.ReactionGroupR\treactions\x12$\n" +
 	"\vsender_name\x18\x16 \x01(\tH\x04R\n" +
@@ -9684,7 +9673,7 @@ const file_chat_v1_chat_proto_rawDesc = "" +
 	"\f_sender_nameB\x14\n" +
 	"\x12_sender_avatar_urlB\x10\n" +
 	"\x0e_reply_contextB\x12\n" +
-	"\x10_forward_context\"\x88\x01\n" +
+	"\x10_forward_contextJ\x04\b\r\x10\x0eR\x0ffeedback_rating\"\x88\x01\n" +
 	"\rReactionGroup\x12\x14\n" +
 	"\x05emoji\x18\x01 \x01(\tR\x05emoji\x12\x14\n" +
 	"\x05count\x18\x02 \x01(\x05R\x05count\x12\x19\n" +

@@ -119,9 +119,9 @@ export function SkillSlashPopup({ skills, query, onSelect, onClose }: SkillSlash
                     {skill.displayName}
                   </span>
                 </span>
-                {(skill.description || skill.whenToUse) && (
+                {skill.description && (
                   <span className="block text-xs text-muted-foreground/80 truncate">
-                    {skill.description || `Use when ${skill.whenToUse}`}
+                    {skill.description}
                   </span>
                 )}
               </span>

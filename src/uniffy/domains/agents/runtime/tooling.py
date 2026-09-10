@@ -7,7 +7,6 @@ from dataclasses import replace
 
 from uniffy.core.database import SessionFactory
 from uniffy.domains.agents.providers.base import ToolCall
-from uniffy.domains.agents.runtime.prompt import SKILL_VIEW_TOOL, SkillPromptEntry
 from uniffy.domains.agents.tools.deferral import (
     LOAD_GROUP_TOOL,
     LOADED_GROUPS_METADATA_KEY,
@@ -24,14 +23,8 @@ READ_TOOL_POOL_SIZE = 5
 def resolve_tool_schemas(
     registry: ToolRegistry,
     enabled_tools: list[str],
-    skill_entries: list[SkillPromptEntry],
-    invoked_skill: SkillPromptEntry | None,
 ) -> list[dict] | None:
     schemas = registry.get_anthropic_schemas(enabled_tools)
-    invoked_id = invoked_skill.id if invoked_skill else None
-    advertises = any(not entry.always_active and entry.id != invoked_id for entry in skill_entries)
-    if advertises and SKILL_VIEW_TOOL not in enabled_tools:
-        schemas.extend(registry.get_anthropic_schemas([SKILL_VIEW_TOOL]))
     return schemas or None
 
 

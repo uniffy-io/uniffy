@@ -15,6 +15,7 @@ interface MultiSelectProps<T extends string | number = string> {
   disabled?: boolean;
   className?: string;
   size?: "sm" | "md";
+  ariaLabel?: string;
 }
 
 interface DropdownPosition {
@@ -32,6 +33,7 @@ export function MultiSelect<T extends string | number = string>({
   disabled = false,
   className,
   size = "md",
+  ariaLabel,
 }: MultiSelectProps<T>) {
   const [isOpen, setIsOpen] = useState(false);
   const [position, setPosition] = useState<DropdownPosition | null>(null);
@@ -97,6 +99,7 @@ export function MultiSelect<T extends string | number = string>({
   useOverlayEscape(() => setIsOpen(false), isOpen);
 
   const handleToggle = (optionValue: T) => {
+    if (disabled) return;
     if (selectedSet.has(optionValue)) {
       onChange(value.filter((v) => v !== optionValue));
     } else {
@@ -143,6 +146,7 @@ export function MultiSelect<T extends string | number = string>({
               <button
                 key={String(option.value)}
                 type="button"
+                disabled={disabled}
                 onClick={() => handleToggle(option.value)}
                 className={cn(
                   "flex w-full items-center justify-between gap-2 px-3 py-2 text-left",
@@ -174,6 +178,8 @@ export function MultiSelect<T extends string | number = string>({
       <div
         ref={buttonRef}
         role="combobox"
+        aria-label={ariaLabel}
+        aria-disabled={disabled}
         tabIndex={disabled ? -1 : 0}
         aria-expanded={isOpen}
         onClick={() => !disabled && setIsOpen(!isOpen)}
@@ -204,6 +210,7 @@ export function MultiSelect<T extends string | number = string>({
               {!disabled && (
                 <button
                   type="button"
+                  aria-label={`Remove ${opt.label}`}
                   onClick={(e) => handleRemove(opt.value, e)}
                   className="hover:bg-primary/20 rounded-sm p-0.5 transition-colors"
                 >

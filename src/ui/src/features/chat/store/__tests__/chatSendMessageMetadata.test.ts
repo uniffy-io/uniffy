@@ -10,6 +10,7 @@ vi.mock("@/features/chat/api/chatApi", () => ({
 
 import { sendMessage } from "@/features/chat/store/chatThunks";
 import type { RootState } from "@/app/store";
+import { matchLeadingSkillCommand } from "@/features/agents/utils/slashCommands";
 
 function protoMessage() {
   return {
@@ -22,7 +23,6 @@ function protoMessage() {
     reactions: [],
     isDeleted: false,
     isPinned: false,
-    feedbackRating: "",
   };
 }
 
@@ -34,6 +34,34 @@ beforeEach(() => {
 });
 
 describe("sendMessage metadata pass-through", () => {
+  it("strips only the leading command and sends the remainder unchanged as user content", async () => {
+    const skills = [
+      { id: "sk-1", name: "summarize" },
+      { id: "sk-2", name: "review" },
+    ];
+    const content =
+      "First line\n/review remains text\n[[[Note|urn:uniffy:content:NOTE:n1]]]\n{{input}}";
+    const command = matchLeadingSkillCommand(`/summarize ${content}`, skills);
+    expect(command).not.toBeNull();
+    if (!command) throw new Error("Expected a leading skill command");
+
+    await sendMessage({
+      channelId: "ch-1",
+      content: command.rest,
+      metadata: {
+        invoked_skill_id: command.skill.id,
+        invoked_skill_name: command.skill.name,
+      },
+    })(vi.fn(), getState, undefined);
+
+    expect(mocks.sendMessage).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({
+        content,
+        metadata: { invoked_skill_id: "sk-1", invoked_skill_name: "summarize" },
+      }),
+    );
+  });
+
   it("forwards invoked-skill metadata onto the request", async () => {
     const thunk = sendMessage({
       channelId: "ch-1",

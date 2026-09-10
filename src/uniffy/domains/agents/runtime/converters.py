@@ -22,7 +22,6 @@ from uniffy_proto.agents.v1.runtime_pb2 import (
     StreamModelCallEndEvent,
     StreamModelCallStartEvent,
     StreamReplyStartEvent,
-    StreamSkillDraftEvent,
     StreamTextBlockDeltaEvent,
     StreamTextBlockEndEvent,
     StreamTextBlockStartEvent,
@@ -40,10 +39,8 @@ from uniffy_proto.agents.v1.runtime_pb2 import (
 
 from uniffy.core.json_codec import dumps_str
 from uniffy.core.models.agents.message import AgentMessage
-from uniffy.core.models.agents.skill_draft import AgentSkillDraft
 from uniffy.domains.agents.providers.base import EventType, StreamEvent
 from uniffy.domains.agents.sessions.converters import message_to_proto
-from uniffy.domains.agents.skills.converters import skill_draft_to_proto
 
 
 def send_message_response_to_proto(
@@ -51,6 +48,7 @@ def send_message_response_to_proto(
     user_message: AgentMessage,
     assistant_message: AgentMessage,
     model_used: str,
+    skill_invocation: dict[str, str] | None = None,
 ) -> SendMessageResponse:
     """Convert runtime result to proto SendMessageResponse.
 
@@ -71,7 +69,7 @@ def send_message_response_to_proto(
     """
     return SendMessageResponse(
         user_message=message_to_proto(user_message),
-        assistant_message=message_to_proto(assistant_message),
+        assistant_message=message_to_proto(assistant_message, skill_invocation=skill_invocation),
         model_used=model_used,
     )
 
@@ -237,10 +235,6 @@ def runtime_stream_event_to_proto(event: StreamEvent) -> AgentStreamEvent:
                     attempt=event.attempt,
                 )
             )
-        case EventType.SKILL_DRAFT:
-            return AgentStreamEvent(
-                skill_draft=StreamSkillDraftEvent(draft=skill_draft_to_proto(event.draft))
-            )
         case EventType.EXCEED_MAX_ITERS:
             return AgentStreamEvent(exceed_max_iters=StreamExceedMaxItersEvent())
         case EventType.MESSAGE_STORED:
@@ -250,7 +244,9 @@ def runtime_stream_event_to_proto(event: StreamEvent) -> AgentStreamEvent:
         case EventType.DONE:
             return AgentStreamEvent(
                 done=StreamDoneEvent(
-                    assistant_message=message_to_proto(event.assistant_message),
+                    assistant_message=message_to_proto(
+                        event.assistant_message, skill_invocation=event.skill_invocation
+                    ),
                     model_used=event.model,
                 )
             )
@@ -283,7 +279,7 @@ def runtime_stream_event_to_json(event: StreamEvent) -> dict[str, Any]:
             continue
         if name in _UUID_FIELDS:
             value = str(value)
-        elif name in _MESSAGE_FIELDS or name == "draft":  # noqa: PLR2004
+        elif name in _MESSAGE_FIELDS:
             value = value.model_dump(mode="json")
         payload[name] = value
     return payload
@@ -313,8 +309,6 @@ def runtime_stream_event_from_json(payload: dict[str, Any]) -> StreamEvent:
             kwargs[name] = UUID(value)
         elif name in _MESSAGE_FIELDS:
             kwargs[name] = AgentMessage.model_validate(value)
-        elif name == "draft":  # noqa: PLR2004
-            kwargs[name] = AgentSkillDraft.model_validate(value)
         else:
             kwargs[name] = value
     return StreamEvent(type=event_type, **kwargs)

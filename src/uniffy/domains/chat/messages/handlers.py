@@ -38,6 +38,7 @@ from uniffy.core.auth.principal import (
 from uniffy.core.avatars import get_avatar_url
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models.chat.message import ChatMessage
+from uniffy.domains.agents.invocation import read_response_skill_attributions
 from uniffy.domains.chat.access import ChatAccessChecker
 from uniffy.domains.chat.messages.converters import message_to_proto, revision_to_proto
 from uniffy.domains.chat.messages.forwarding import ChatMessageForwardingOperations
@@ -250,12 +251,15 @@ class MessageHandlers:
                     organization_id=org_id,
                     messages=[msg],
                 )
-                return GetMessageResponse(
-                    message=message_to_proto(
-                        msg,
-                        forward_context=forward_contexts.get(msg.id),
-                    )
+                proto = message_to_proto(msg, forward_context=forward_contexts.get(msg.id))
+                attributions = await read_response_skill_attributions(
+                    session,
+                    organization_id=org_id,
+                    channel_id=channel_id,
+                    response_ids=[msg.id],
                 )
+                proto.metadata.update(attributions.get(msg.id, {}))
+                return GetMessageResponse(message=proto)
         except (NotFoundError, PermissionDeniedError) as e:
             _handle_error(e)
 
@@ -534,20 +538,6 @@ class MessageHandlers:
         reaction_ops = ChatReactionOperations(session)
         reactions_map = await reaction_ops.get_reactions_for_messages(message_ids, user_id)
 
-        from uniffy.core.models.agents.message_feedback import AgentMessageFeedback
-        from uniffy.core.models.chat.message import SenderType
-
-        feedback_map: dict[UUID, str] = {}
-        agent_message_ids = [m.id for m in messages if m.sender_type == SenderType.AGENT]
-        if agent_message_ids:
-            fb_result = await session.execute(
-                select(AgentMessageFeedback.chat_message_id, AgentMessageFeedback.rating).where(
-                    AgentMessageFeedback.user_id == user_id,
-                    AgentMessageFeedback.chat_message_id.in_(agent_message_ids),
-                )
-            )
-            feedback_map = {mid: rating for mid, rating in fb_result.all()}
-
         thread_unread_map: dict[UUID, bool] = {}
         if thread_stats_map:
             from uniffy.domains.chat.reads.operations import ChatReadStateOperations
@@ -568,6 +558,12 @@ class MessageHandlers:
                     thread_unread_map[tid] = False
 
         proto_messages = []
+        attributions = await read_response_skill_attributions(
+            session,
+            organization_id=organization_id,
+            channel_id=messages[0].channel_id,
+            response_ids=[message.id for message in messages],
+        )
         for msg in messages:
             ts = thread_stats_map.get(msg.id)
             participants = thread_participants_map.get(msg.id)
@@ -600,9 +596,7 @@ class MessageHandlers:
                 reply_context_content_preview=rc[2] if rc else None,
                 forward_context=forward_contexts.get(msg.id),
             )
-            rating = feedback_map.get(msg.id)
-            if rating:
-                proto_msg.feedback_rating = rating
+            proto_msg.metadata.update(attributions.get(msg.id, {}))
             proto_messages.append(proto_msg)
 
         return proto_messages

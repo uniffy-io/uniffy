@@ -13,7 +13,6 @@ from sqlalchemy import select
 
 from uniffy.core.json_codec import dumps_str
 from uniffy.core.models.agents.message import AgentMessageRole
-from uniffy.core.models.agents.skill_draft import AgentSkillDraft
 from uniffy.core.models.chat.message import ChatMessage, SenderType
 from uniffy.core.models.chat.thread import ChatThreadStats
 from uniffy.domains.agents.providers.base import EventType, StreamEvent
@@ -170,11 +169,13 @@ class ChatStreamPublisher:
                             ),
                             channel_id=self._channel_id,
                         )
-                        await self._publish_message_event(msg_id, chat_evt.MESSAGE_UPDATED)
+                        await self._publish_message_event(
+                            msg_id, chat_evt.MESSAGE_UPDATED, skill_invocation=event.skill_invocation
+                        )
                     else:
-                        await self._publish_message_created(msg_id)
-            case EventType.SKILL_DRAFT:
-                await self.write_skill_draft_card(event.draft)
+                        await self._publish_message_event(
+                            msg_id, chat_evt.MESSAGE_CREATED, skill_invocation=event.skill_invocation
+                        )
             case EventType.ERROR:
                 logger.warning(
                     f"Agent runtime error for agent={self._agent_id} "
@@ -236,7 +237,9 @@ class ChatStreamPublisher:
     async def _publish_message_created(self, message_id: UUID) -> None:
         await self._publish_message_event(message_id, chat_evt.MESSAGE_CREATED)
 
-    async def _publish_message_event(self, message_id: UUID, event_type: str) -> None:
+    async def _publish_message_event(
+        self, message_id: UUID, event_type: str, *, skill_invocation: dict[str, str] | None = None
+    ) -> None:
         msg = await self._session.get(ChatMessage, message_id)
         if msg is None:
             return
@@ -253,7 +256,7 @@ class ChatStreamPublisher:
                 content=msg.content or "",
                 root_id=msg.root_id,
                 created_at=msg.created_at,
-                metadata=msg.message_metadata,
+                metadata={**(msg.message_metadata or {}), **(skill_invocation or {})},
                 reply_to_id=msg.reply_to_id,
             ),
             channel_id=msg.channel_id,
@@ -320,59 +323,6 @@ class ChatStreamPublisher:
         await self._record_thread_reply(at=row.created_at)
         await self._session.commit()
         await self._session.refresh(row)
-        await self._publish_message_created(row.id)
-
-    async def write_skill_draft_card(self, draft) -> None:
-        """Persist + fan a ``metadata.kind="skill_draft"`` review card.
-
-        Links the draft row back to this card (``channel_id`` /
-        ``origin_chat_message_id``) so a later save/discard can settle the card.
-        Metadata values are strings (the chat metadata wire type is
-        ``map<string,string>``).
-        """
-        display = draft.display_name or draft.name or "Untitled skill"
-        summary = (draft.description or "").strip()
-        body = f"Proposed skill: {display}"
-        if summary:
-            body = f"{body} - {summary}"
-        meta = {
-            "kind": "skill_draft",
-            "agent_id": str(self._agent_id),
-            "draft_id": str(draft.id),
-            "draft_kind": draft.kind,
-            "draft_name": draft.name or "",
-            "draft_display_name": display,
-            "draft_description": summary[:500],
-            "draft_status": "pending",
-            "actor_user_id": str(self._actor_user_id),
-            "trigger_message_id": str(self._trigger_message_id),
-        }
-        row = ChatMessage(
-            channel_id=self._channel_id,
-            sender_id=self._agent_id,
-            sender_type=SenderType.AGENT,
-            content=body,
-            reply_to_id=self._trigger_message_id,
-            root_id=self._thread_root_id,
-            message_metadata=meta,
-        )
-        self._session.add(row)
-        await bump_channel_message_stats(
-            self._session,
-            self._channel_id,
-            at=row.created_at,
-            is_root=self._thread_root_id is None,
-        )
-        await self._record_thread_reply(at=row.created_at)
-        await self._session.commit()
-        await self._session.refresh(row)
-
-        draft_row = await self._session.get(AgentSkillDraft, draft.id)
-        if draft_row is not None:
-            draft_row.channel_id = self._channel_id
-            draft_row.origin_chat_message_id = row.id
-            await self._session.commit()
-
         await self._publish_message_created(row.id)
 
     async def discard_empty_placeholders(self) -> None:

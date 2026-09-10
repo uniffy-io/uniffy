@@ -16,11 +16,9 @@ const skillProto = (over: Partial<SkillInfo> = {}): SkillInfo =>
     displayName: "Reporter",
     description: "desc",
     content: "BODY",
-    whenToUse: "weekly",
     requiresTools: ["notes.read_note"],
-    requiresContext: ["session"],
+    supportedSurfaces: ["session"],
     source: 1,
-    alwaysActive: false,
     latestVersionNumber: 2,
     activeVersionNumber: 2,
     activeVersionPinned: false,
@@ -28,13 +26,20 @@ const skillProto = (over: Partial<SkillInfo> = {}): SkillInfo =>
   }) as unknown as SkillInfo;
 
 describe("skillToPlain", () => {
+  it("keeps the active version separate from the latest version when pinned", () => {
+    const plain = skillToPlain(
+      skillProto({ latestVersionNumber: 4, activeVersionNumber: 1, activeVersionPinned: true }),
+    );
+    expect(plain.latestVersionNumber).toBe(4);
+    expect(plain.activeVersionNumber).toBe(1);
+    expect(plain.activeVersionPinned).toBe(true);
+  });
+
   it("carries the fields needed to seed a manual edit draft", () => {
     const plain = skillToPlain(skillProto());
     expect(plain.content).toBe("BODY");
-    expect(plain.whenToUse).toBe("weekly");
     expect(plain.requiresTools).toEqual(["notes.read_note"]);
-    expect(plain.requiresContext).toEqual(["session"]);
-    expect(plain.alwaysActive).toBe(false);
+    expect(plain.supportedSurfaces).toEqual(["session"]);
   });
 
   it("copies repeated fields into new arrays (no proto aliasing)", () => {
@@ -55,12 +60,12 @@ describe("updateSkill", () => {
     return vi.mocked(skillsApi.updateSkill).mock.calls.at(-1)?.[0];
   };
 
-  it("sends when_to_use so trigger guidance persists from the detail view", async () => {
-    const request = await runThunk({ skillId: "s1", whenToUse: "when the report is due" });
+  it("persists the human-readable description", async () => {
+    const request = await runThunk({ skillId: "s1", description: "Weekly report workflow" });
     expect(request).toEqual({
       organizationId: "org-1",
       skillId: "s1",
-      whenToUse: "when the report is due",
+      description: "Weekly report workflow",
     });
   });
 
@@ -73,4 +78,16 @@ describe("updateSkill", () => {
     });
     expect(request).not.toHaveProperty("name");
   });
+
+  it.each([{ tools: ["notes.read_note"] }, { tools: [] }])(
+    "replaces or clears tool requirements: $tools",
+    async ({ tools }) => {
+      const request = await runThunk({ skillId: "s1", requiresTools: tools });
+      expect(request).toEqual({
+        organizationId: "org-1",
+        skillId: "s1",
+        requiresTools: { names: tools },
+      });
+    },
+  );
 });

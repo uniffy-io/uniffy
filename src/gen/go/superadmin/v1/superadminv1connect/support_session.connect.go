@@ -47,15 +47,15 @@ const (
 // SupportServiceClient is a client for the superadmin.v1.SupportService service.
 type SupportServiceClient interface {
 	// Operator-side: open a new session against one org. Returns the
-	// row in “PENDING“ (OWNER_APPROVED mode) or “ACTIVE“
-	// (OPERATOR_JUSTIFIED mode). Caller must have “is_system_admin“.
+	// row in ``PENDING`` (OWNER_APPROVED mode) or ``ACTIVE``
+	// (OPERATOR_JUSTIFIED mode). Caller must have ``is_system_admin``.
 	RequestSession(context.Context, *connect.Request[v1.RequestSessionRequest]) (*connect.Response[v1.RequestSessionResponse], error)
 	// Operator-side: list sessions where the caller is
-	// “support_user_id“. Most recent first.
+	// ``support_user_id``. Most recent first.
 	ListMySessions(context.Context, *connect.Request[v1.ListMySessionsRequest]) (*connect.Response[v1.ListMySessionsResponse], error)
 	// Operator-side: cross-tenant list of every session in the
-	// deployment. Backs “/platform/sessions“. Caller must have
-	// “is_system_admin“.
+	// deployment. Backs ``/platform/sessions``. Caller must have
+	// ``is_system_admin``.
 	ListAllSessions(context.Context, *connect.Request[v1.ListAllSessionsRequest]) (*connect.Response[v1.ListAllSessionsResponse], error)
 }
 
@@ -116,15 +116,15 @@ func (c *supportServiceClient) ListAllSessions(ctx context.Context, req *connect
 // SupportServiceHandler is an implementation of the superadmin.v1.SupportService service.
 type SupportServiceHandler interface {
 	// Operator-side: open a new session against one org. Returns the
-	// row in “PENDING“ (OWNER_APPROVED mode) or “ACTIVE“
-	// (OPERATOR_JUSTIFIED mode). Caller must have “is_system_admin“.
+	// row in ``PENDING`` (OWNER_APPROVED mode) or ``ACTIVE``
+	// (OPERATOR_JUSTIFIED mode). Caller must have ``is_system_admin``.
 	RequestSession(context.Context, *connect.Request[v1.RequestSessionRequest]) (*connect.Response[v1.RequestSessionResponse], error)
 	// Operator-side: list sessions where the caller is
-	// “support_user_id“. Most recent first.
+	// ``support_user_id``. Most recent first.
 	ListMySessions(context.Context, *connect.Request[v1.ListMySessionsRequest]) (*connect.Response[v1.ListMySessionsResponse], error)
 	// Operator-side: cross-tenant list of every session in the
-	// deployment. Backs “/platform/sessions“. Caller must have
-	// “is_system_admin“.
+	// deployment. Backs ``/platform/sessions``. Caller must have
+	// ``is_system_admin``.
 	ListAllSessions(context.Context, *connect.Request[v1.ListAllSessionsRequest]) (*connect.Response[v1.ListAllSessionsResponse], error)
 }
 

@@ -111,11 +111,8 @@ def _admin_ops(*, admin_raises=False, store: dict | None = None):
     ops = RuntimeSettingsOperations.__new__(RuntimeSettingsOperations)
     ops._session = MagicMock()
     ops._session.commit = AsyncMock()
-    ops._org_ops = NS(
-        require_org_admin=AsyncMock(
-            side_effect=PermissionDeniedError("admin") if admin_raises else None
-        ),
-        require_org_member=AsyncMock(),
+    ops._require_admin = AsyncMock(
+        side_effect=PermissionDeniedError("admin") if admin_raises else None
     )
     ops._settings = MagicMock()
 

@@ -14,6 +14,7 @@ from uniffy.core.models.files.file import File
 from uniffy.core.search.indexer import SearchIndexer, build_content_urn
 from uniffy.core.storage import ObjectStorage
 from uniffy.domains.files.folders.operations import FolderOperations
+from uniffy.domains.files.naming import file_extension
 from uniffy.domains.files.quota.operations import QuotaOperations
 from uniffy.domains.search.rename import propagate_rename
 from uniffy.domains.tags.operations import TagOperations
@@ -58,6 +59,17 @@ class FileMutationOperations:
         if filename is not None:
             if len(filename) > 255:
                 raise ValidationError("filename", "Filename must be 255 characters or fewer")
+            current_extension = file_extension(file.filename)
+            extension_changed = (
+                current_extension != ""
+                and file_extension(filename).lower() != current_extension.lower()
+            )
+            if extension_changed:
+                # Desktop clients trust the extension for the format; the bytes
+                # behind it never change on rename.
+                raise ValidationError(
+                    "filename", f"The name has to keep its {current_extension} extension"
+                )
             file.filename = filename
         if description is not None:
             file.description = description

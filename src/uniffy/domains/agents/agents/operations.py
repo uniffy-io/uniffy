@@ -46,6 +46,8 @@ from uniffy.domains.agents.providers.catalog import (
     validate_image_params,
     validate_model_params,
 )
+from uniffy.domains.agents.rules.validation import validate_rule_selection
+from uniffy.domains.agents.skills.validation import validate_skill_selection
 from uniffy.domains.integrations.registry import get_integration_registry
 from uniffy.domains.organizations.operations import OrganizationOperations
 from uniffy.domains.permissions.members import (
@@ -299,6 +301,7 @@ class AgentOperations(BaseContentOperations[Agent]):
         theme_color: str = "",
         is_default: bool = False,
         enabled_skills: list[str] | None = None,
+        enabled_rules: list[str] | None = None,
         access_mode: AccessMode | None = None,
         baseline_role: ContentRole | None = None,
         group_ids: list[UUID] | None = None,
@@ -336,6 +339,13 @@ class AgentOperations(BaseContentOperations[Agent]):
             organization_id, access_mode, baseline_role
         )
 
+        selected_skills = await validate_skill_selection(
+            self.session, organization_id, enabled_skills or [], existing=[]
+        )
+        selected_rules = await validate_rule_selection(
+            self.session, organization_id, enabled_rules or [], existing=[]
+        )
+
         if is_default:
             await self._clear_existing_default(organization_id)
 
@@ -351,7 +361,8 @@ class AgentOperations(BaseContentOperations[Agent]):
                 "memory.read",
                 "memory.forget",
             ],
-            enabled_skills=enabled_skills or [],
+            enabled_skills=selected_skills,
+            enabled_rules=selected_rules,
             avatar_emoji=avatar_emoji,
             theme_color=theme_color,
             is_default=is_default,
@@ -621,6 +632,11 @@ class AgentOperations(BaseContentOperations[Agent]):
 
         if is_default is not None and is_default != agent.is_default:
             await OrganizationOperations(self.session).require_org_admin(user_id, organization_id)
+
+        if enabled_skills is not None:
+            enabled_skills = await validate_skill_selection(
+                self.session, organization_id, enabled_skills, existing=agent.enabled_skills
+            )
 
         if is_default is not None and is_default and not agent.is_default:
             await self._clear_existing_default(organization_id)

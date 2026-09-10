@@ -3,7 +3,6 @@ syntax = "proto3";
 package agents.v1;
 
 import "agents/v1/sessions.proto";
-import "agents/v1/skills.proto";
 
 option go_package = "github.com/uniffy-io/uniffy-proto-go/agents/v1;agentsv1";
 
@@ -239,9 +238,8 @@ message SendMessageRequest {
   // outputs back as chat messages via the AgentChatBridge. Mutually
   // exclusive with session_id at the handler boundary.
   optional ChatChannelContext chat_context = 6;
-  // A skill the user invoked on-demand for this turn (slash command). Its
-  // full content is force-injected and promoted past conditional gating;
-  // ignored when the skill is not in the agent's resolved set.
+  // Explicitly invoke one assigned skill's exact active version for this turn.
+  // Unavailable skills or unmet tool/surface requirements reject the invocation.
   optional string invoked_skill_id = 7;
 }
 
@@ -270,9 +268,8 @@ message StreamSendMessageRequest {
   // outputs back as chat messages via the AgentChatBridge. Mutually
   // exclusive with session_id at the handler boundary.
   optional ChatChannelContext chat_context = 6;
-  // A skill the user invoked on-demand for this turn (slash command). Its
-  // full content is force-injected and promoted past conditional gating;
-  // ignored when the skill is not in the agent's resolved set.
+  // Explicitly invoke one assigned skill's exact active version for this turn.
+  // Unavailable skills or unmet tool/surface requirements reject the invocation.
   optional string invoked_skill_id = 7;
 }
 
@@ -335,6 +332,8 @@ message RespondToConfirmationResponse {
 // Thinking is a first-class block and never appears in text deltas or
 // stored message content.
 message AgentStreamEvent {
+  reserved 18;
+  reserved "skill_draft";
   oneof event {
     StreamReplyStartEvent reply_start = 1;
     StreamModelCallStartEvent model_call_start = 2;
@@ -353,7 +352,6 @@ message AgentStreamEvent {
     StreamToolResultEndEvent tool_result_end = 15;
     StreamConfirmationRequiredEvent confirmation_required = 16;
     StreamFailoverEvent failover = 17;
-    StreamSkillDraftEvent skill_draft = 18;
     StreamExceedMaxItersEvent exceed_max_iters = 19;
     StreamMessageStoredEvent message_stored = 20;
     StreamDoneEvent done = 21;
@@ -527,11 +525,4 @@ message StreamFailoverEvent {
   string reason = 4;
   // 1-based attempt counter for the swap (first failover = 1).
   int32 attempt = 5;
-}
-
-// Emitted when the agent proposes a skill draft for the user to review. The
-// draft is persisted (status=pending) but never auto-activated; the client
-// renders an editable review card and saves via SaveSkillDraft.
-message StreamSkillDraftEvent {
-  SkillDraft draft = 1;
 }

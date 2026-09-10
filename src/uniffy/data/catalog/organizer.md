@@ -7,6 +7,12 @@ description: Schedules meetings that work for everyone - finds open slots across
 recommended_model: claude-sonnet-5
 skills:
   - meeting_summarizer
+rules:
+  - clear_communication
+  - no_emojis
+  - clarify_intent
+  - respect_workspace_structure
+  - no_dashes
 tools:
   - calendar.find_time
   - calendar.get_free_busy

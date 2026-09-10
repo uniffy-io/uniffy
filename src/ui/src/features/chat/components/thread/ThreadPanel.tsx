@@ -126,18 +126,21 @@ export function ThreadPanel({ overlay = false }: ThreadPanelProps) {
   );
 
   const handleSend = useCallback(
-    (content: string) => {
-      if (!activeThreadId || !rootMessage) return;
-      flushOnSend();
-      dispatch(
+    async (content: string, fileIds: string[], metadata?: Record<string, string>) => {
+      if (!activeThreadId || !rootMessage) return false;
+      await dispatch(
         sendMessage({
           channelId: rootMessage.channelId,
           content,
           rootId: activeThreadId,
           replyToId: replyToMessage?.id,
+          attachmentFileIds: fileIds,
+          metadata,
         }),
-      );
+      ).unwrap();
+      flushOnSend();
       dispatch(clearReplyToMessage());
+      return true;
     },
     [activeThreadId, rootMessage, replyToMessage, dispatch, flushOnSend],
   );
@@ -276,11 +279,12 @@ export function ThreadPanel({ overlay = false }: ThreadPanelProps) {
         <ComposeDock testId="chat-thread-compose-dock">
           <MessageCompose
             // Remount per thread so one thread's text never leaks into another.
-            key={activeThreadId}
+            key={`${organizationId}:${activeThreadId}`}
             channelName=""
             // Channel + org context feed the broadcast/team-mention guards and
             // attachment uploads.
             channelId={rootMessage?.channelId}
+            threadRootId={activeThreadId ?? undefined}
             organizationId={organizationId ?? undefined}
             placeholder="Reply..."
             onSend={handleSend}

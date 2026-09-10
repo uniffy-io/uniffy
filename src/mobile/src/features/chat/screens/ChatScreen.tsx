@@ -36,8 +36,6 @@ import {
   Gauge,
   Phone,
   PhoneSlash,
-  ThumbsUp,
-  ThumbsDown,
 } from "phosphor-react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -107,7 +105,6 @@ import {
   useAgentModels,
   useAgentTools,
   useStopAgentRun,
-  useSubmitAgentReplyFeedback,
 } from "@features/agents/useAgents";
 import { persistedThinkingBlocks, type ThinkingBlockView } from "@features/agents/thinkingBlocks";
 import {
@@ -314,7 +311,6 @@ export function ChatConversationScreen() {
   const agentsQuery = useAgents();
   // Fills the label store the tool panes subscribe to; nothing here renders it.
   useAgentTools();
-  const submitReplyFeedback = useSubmitAgentReplyFeedback(channelId);
   const { canManageChat } = useChatPermissions();
 
   const [draft, setDraft] = useState("");
@@ -828,20 +824,6 @@ export function ChatConversationScreen() {
   const listRef = useRef<FlatList<MessageRowItem>>(null);
   const scrollOffsetRef = useRef(0);
 
-  // Scroll a quoted message into view. Silently a no-op when the target sits in
-  // a page the transcript has not loaded yet - there is no id-addressable fetch
-  // for a single older message, only the page walk that onEndReached drives.
-  // Re-sending the rating already showing clears it, matching the web thumbs.
-  const rateReply = useCallback(
-    (message: SerializedMessage, rating: "up" | "down") => {
-      submitReplyFeedback.mutate({
-        messageId: message.id,
-        rating: message.feedbackRating === rating ? "" : rating,
-      });
-    },
-    [submitReplyFeedback],
-  );
-
   // Every per-row handler is stable and takes the message, so a screen re-render
   // hands MessageRow the same function identities and its memo holds. Inline
   // closures here would defeat it and re-parse every visible message's markdown.
@@ -866,6 +848,9 @@ export function ChatConversationScreen() {
     [openThread],
   );
 
+  // Scroll a quoted message into view. Silently a no-op when the target sits in
+  // a page the transcript has not loaded yet - there is no id-addressable fetch
+  // for a single older message, only the page walk that onEndReached drives.
   const jumpToMessage = useCallback(
     (messageId: string | undefined) => {
       if (!messageId) return;
@@ -959,7 +944,6 @@ export function ChatConversationScreen() {
               onPressThread={openThreadFor}
               onPressReplyContext={jumpToReplyContext}
               onToggleReaction={handleReact}
-              onRateReply={rateReply}
             />
           </SwipeToReply>
         </View>
@@ -988,7 +972,6 @@ export function ChatConversationScreen() {
       hideReplyContext,
       startReply,
       jumpToReplyContext,
-      rateReply,
     ],
   );
 
@@ -1557,44 +1540,6 @@ function UnreadDivider({ T }: { T: ThemeColors }) {
   );
 }
 
-/** Thumbs on a finished agent reply; tapping the active one clears the rating. */
-function ReplyFeedbackRow({
-  T,
-  rating,
-  onRate,
-}: {
-  T: ThemeColors;
-  rating: "up" | "down" | "";
-  onRate: (next: "up" | "down") => void;
-}) {
-  return (
-    <View style={styles.feedbackRow}>
-      <TouchableOpacity
-        onPress={() => onRate("up")}
-        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        accessibilityLabel="Helpful reply"
-      >
-        <ThumbsUp
-          size={15}
-          color={rating === "up" ? T.green : T.textDim}
-          weight={rating === "up" ? "fill" : "regular"}
-        />
-      </TouchableOpacity>
-      <TouchableOpacity
-        onPress={() => onRate("down")}
-        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        accessibilityLabel="Unhelpful reply"
-      >
-        <ThumbsDown
-          size={15}
-          color={rating === "down" ? T.red : T.textDim}
-          weight={rating === "down" ? "fill" : "regular"}
-        />
-      </TouchableOpacity>
-    </View>
-  );
-}
-
 /**
  * Memoized because the screen re-renders on every poll, stream event and layout
  * change, and an unmemoized row re-parses its markdown each time - with a
@@ -1642,7 +1587,6 @@ const MessageRow = React.memo(function MessageRow({
   onPressThread,
   onPressReplyContext,
   onToggleReaction,
-  onRateReply,
   senderPresence,
 }: {
   message: SerializedMessage;
@@ -1668,7 +1612,6 @@ const MessageRow = React.memo(function MessageRow({
   onPressThread: (message: SerializedMessage) => void;
   onPressReplyContext: (message: SerializedMessage) => void;
   onToggleReaction: (message: SerializedMessage, emoji: string) => void;
-  onRateReply: (message: SerializedMessage, rating: "up" | "down") => void;
   senderPresence?: string | null;
 }) {
   const { display } = useMemo(() => parseMentions(message.content), [message.content]);
@@ -1691,9 +1634,6 @@ const MessageRow = React.memo(function MessageRow({
   const failed = message.metadata?.failed === "1";
   const pending = message.metadata?.optimistic === "1" && !failed;
   const agentSpecial = isAgent && isSpecialAgentKind(message);
-  // The runtime drops the flag when it finalizes the row, so its absence is
-  // what marks a reply as finished and rateable.
-  const streamingReply = !!message.metadata?.streaming;
   const jumbo = useMemo(() => !agentSpecial && isEmojiOnly(display), [agentSpecial, display]);
 
   // Agents take a side too - a reply is a message like any other, and a
@@ -1887,13 +1827,6 @@ const MessageRow = React.memo(function MessageRow({
             <MarkdownRenderer
               content={message.content}
               onMeasureWidth={canHug ? noteTextWidth : undefined}
-            />
-          ) : null}
-          {isAgent && !agentSpecial && !streamingReply && message.content.length > 0 ? (
-            <ReplyFeedbackRow
-              T={T}
-              rating={message.feedbackRating}
-              onRate={(rating) => onRateReply(message, rating)}
             />
           ) : null}
           {message.attachments.length > 0 ? (
@@ -2151,7 +2084,6 @@ const styles = StyleSheet.create({
   agentTagText: { fontSize: 9, fontFamily: FONT.bold, letterSpacing: 0.4 },
   msgTime: { fontSize: 11, fontFamily: FONT.regular },
   editedTag: { fontSize: 11, fontFamily: FONT.regular },
-  feedbackRow: { flexDirection: "row", alignItems: "center", gap: 14, marginTop: 6 },
   jumboEmoji: { fontSize: 40, lineHeight: 48, paddingVertical: 2 },
   failedRow: { flexDirection: "row", alignItems: "center", gap: 5, marginTop: 3 },
   failedText: { fontSize: 12, fontFamily: FONT.medium },

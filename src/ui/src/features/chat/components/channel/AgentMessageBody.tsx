@@ -1,7 +1,6 @@
 /** Renders an agent-authored ChatMessage by dispatching on `metadata.kind`. */
 
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import {
   CheckCircle,
   XCircle,
@@ -14,24 +13,18 @@ import {
   CaretDown,
   CaretUp,
   Lightning,
-  ThumbsUp,
-  ThumbsDown,
 } from "@phosphor-icons/react";
 import { StreamingMessage } from "@/features/chat/components/channel/StreamingMessage";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/shared/utils/cn";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
-import {
-  respondToAgentConfirmation,
-  stopAgentRun,
-  submitAgentReplyFeedback,
-} from "@/features/chat/store/chatThunks";
+import { respondToAgentConfirmation, stopAgentRun } from "@/features/chat/store/chatThunks";
 import {
   selectAgentThinkingForMessage,
   selectMessagesForChannel,
   selectTypingUsers,
 } from "@/features/chat/store/chatMessagesSlice";
-import { useAgentsBuilderAccess } from "@/features/agents/hooks/useAgentsBuilderAccess";
+import { Card } from "@/components/ui/card";
+import { SkillDraftStatus } from "@/features/agents/components/skills/SkillDraftStatus";
 import { ThinkingPane } from "@/features/agents/components/ThinkingPane";
 import { ToolActivityPane, type ToolStep } from "@/features/agents/components/ToolActivityPane";
 import { internalToolName, toolActionLabel } from "@/features/agents/config/toolLabels";
@@ -122,61 +115,6 @@ function FinalMessageWithThinking({
         />
       )}
       {showStreamingBody && <StreamingMessage content={message.content} streaming={streaming} />}
-      {!streaming && !!message.content && <ReplyFeedbackRow message={message} />}
-    </div>
-  );
-}
-
-/** Thumbs on a settled agent reply; clicking the active thumb clears the rating. */
-function ReplyFeedbackRow({ message }: { message: ChatMessage }) {
-  const dispatch = useAppDispatch();
-  const rating = message.feedbackRating ?? "";
-
-  const rate = (value: "up" | "down") => {
-    dispatch(
-      submitAgentReplyFeedback({
-        channelId: message.channelId,
-        messageId: message.id,
-        rating: rating === value ? "" : value,
-      }),
-    );
-  };
-
-  return (
-    <div
-      className={cn(
-        "mt-1 flex items-center gap-0.5 transition-opacity",
-        rating ? "opacity-100" : "md:opacity-0 md:group-hover:opacity-100",
-      )}
-      data-testid={`chat-agent-feedback-${message.id}`}
-      data-rating={rating || "none"}
-    >
-      <button
-        type="button"
-        onClick={() => rate("up")}
-        className={cn(
-          "p-1 rounded-md hover:bg-muted transition-colors",
-          rating === "up"
-            ? "text-green-600 dark:text-green-400"
-            : "text-muted-foreground hover:text-foreground",
-        )}
-        title="Good response"
-        data-testid={`chat-agent-feedback-up-${message.id}`}
-      >
-        <ThumbsUp size={14} weight={rating === "up" ? "fill" : "regular"} />
-      </button>
-      <button
-        type="button"
-        onClick={() => rate("down")}
-        className={cn(
-          "p-1 rounded-md hover:bg-muted transition-colors",
-          rating === "down" ? "text-red-500" : "text-muted-foreground hover:text-foreground",
-        )}
-        title="Bad response"
-        data-testid={`chat-agent-feedback-down-${message.id}`}
-      >
-        <ThumbsDown size={14} weight={rating === "down" ? "fill" : "regular"} />
-      </button>
     </div>
   );
 }
@@ -521,77 +459,37 @@ function ConfirmationRequestCard({ message }: { message: ChatMessage }) {
 }
 
 function SkillDraftCard({ message }: { message: ChatMessage }) {
-  const navigate = useNavigate();
   const currentUserId = useAppSelector((state) => state.auth.user?.id ?? "");
-  const { isBuilder } = useAgentsBuilderAccess();
-
-  const draftId = readString(message.metadata, "draft_id") ?? "";
+  const actorUserId = readString(message.metadata, "actor_user_id") ?? "";
   const title =
     readString(message.metadata, "draft_display_name") ??
     readString(message.metadata, "draft_name") ??
-    "Proposed skill";
+    "Skill draft";
   const description = readString(message.metadata, "draft_description");
-  const draftKind = readString(message.metadata, "draft_kind") ?? "create";
-  const status = readString(message.metadata, "draft_status") ?? "pending";
-  const actorUserId = readString(message.metadata, "actor_user_id") ?? "";
-
-  const isActor = !!currentUserId && currentUserId === actorUserId;
-
-  const openReview = () => {
-    if (!draftId) return;
-    navigate(`/agents/skills/drafts/${draftId}`);
-  };
 
   return (
-    <div
-      className="flex flex-col items-start"
+    <Card
+      className="w-full max-w-md space-y-3 p-3"
       data-testid={`chat-skill-draft-${message.id}`}
-      data-actor={isActor ? "self" : "other"}
+      data-actor={currentUserId === actorUserId ? "self" : "other"}
     >
-      <div className="max-w-[70%] bg-card border-2 border-primary/40 rounded-lg overflow-hidden">
-        <div className="px-3 py-2.5 space-y-2">
-          <div className="flex items-start gap-2.5">
-            <Lightning size={18} weight="fill" className="text-primary shrink-0 mt-0.5" />
-            <div className="min-w-0">
-              <p className="text-[13px] font-medium text-foreground">
-                {draftKind === "create" ? "Proposed skill" : "Proposed skill update"}: {title}
-              </p>
-              {description && (
-                <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-2">
-                  {description}
-                </p>
-              )}
-            </div>
-          </div>
-
-          {status === "pending" ? (
-            isBuilder ? (
-              <Button
-                onClick={openReview}
-                size="sm"
-                data-testid={`chat-skill-draft-review-${message.id}`}
-              >
-                Review &amp; save
-              </Button>
-            ) : (
-              <p className="text-[11px] text-muted-foreground italic">
-                Waiting for a builder to review...
-              </p>
-            )
-          ) : (
-            <div
-              className={cn(
-                "inline-flex items-center gap-1 text-[11px]",
-                status === "saved" ? "text-green-600 dark:text-green-400" : "text-muted-foreground",
-              )}
-            >
-              {status === "saved" ? <Check size={13} /> : <X size={13} />}
-              {status === "saved" ? "Saved to skills" : "Discarded"}
-            </div>
+      <div className="flex items-start gap-2.5">
+        <Lightning size={18} weight="fill" className="mt-0.5 shrink-0 text-primary" />
+        <div className="min-w-0">
+          <p className="text-sm font-medium">{title}</p>
+          {description && (
+            <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{description}</p>
           )}
         </div>
       </div>
-    </div>
+      <SkillDraftStatus
+        draftId={readString(message.metadata, "draft_id") ?? ""}
+        ownerId={actorUserId}
+        status={readString(message.metadata, "draft_status") ?? "pending"}
+        generationAttempt={Number(readString(message.metadata, "draft_attempt") ?? 0)}
+        generationError={readString(message.metadata, "draft_error") ?? ""}
+      />
+    </Card>
   );
 }
 

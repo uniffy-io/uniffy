@@ -57,13 +57,13 @@ Your own skills are yours to edit, and every edit is kept. The version history s
 
 Per agent you choose which skills it can reach, and which of those are always on. Always on costs tokens on every single message, so reserve it for the ones that genuinely apply every time. The Skills tab under agent administration tells you which ones are pulling their weight.
 
-## The skill drafts inbox
+## Skill drafts
 
-Skills also arrive on their own. When a member gives an agent a thumbs down, and when an agent decides a procedure is worth keeping, a draft lands in a shared review inbox with a badge on your sidebar.
+Skills also arrive on their own. When a member gives an agent a thumbs down, and when an agent decides a procedure is worth keeping, a draft appears at the top of the Skills page, and the Skills entry in your sidebar carries a badge with the count waiting for review.
 
-Anyone can raise a draft. Only builders can publish, edit or discard one, and everything published becomes an organization skill regardless of who proposed it. Drafts are capped per person and screened for instruction injection markers before a reviewer ever reads one, so the inbox cannot be used to flood you or to smuggle text past you.
+Anyone can raise a draft. Only builders can publish, edit or discard one, and everything published becomes an organization skill regardless of who proposed it. Drafts are capped per person and screened for instruction injection markers before a reviewer ever reads one, so drafts cannot be used to flood you or to smuggle text past you.
 
-Treat the inbox as feedback with a shape. A thumbs down that turns into a two line procedure is worth more than a bug report.
+Treat drafts as feedback with a shape. A thumbs down that turns into a two line procedure is worth more than a bug report.
 
 ## Automations
 

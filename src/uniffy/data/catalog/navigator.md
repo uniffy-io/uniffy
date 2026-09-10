@@ -8,6 +8,12 @@ description: Answers "where", "when", and "who" questions by searching everythin
 recommended_model: claude-sonnet-5
 skills:
   - meeting_summarizer
+rules:
+  - clear_communication
+  - no_emojis
+  - clarify_intent
+  - respect_workspace_structure
+  - no_dashes
 tools:
   - search.query
   - people.list_members

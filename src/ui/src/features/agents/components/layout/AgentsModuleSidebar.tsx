@@ -6,8 +6,8 @@ import {
   CaretDoubleRight,
   ClockCounterClockwise,
   Lightning,
+  ListChecks,
   Robot,
-  Tray,
   type Icon,
 } from "@phosphor-icons/react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
@@ -64,12 +64,13 @@ export function AgentsModuleSidebar() {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const isOverlay = useContext(SidebarOverlayContext);
-  const { tab, subId } = useParams<{ tab?: string; subId?: string }>();
+  const { tab } = useParams<{ tab?: string }>();
 
+  // The only count in this sidebar: pending drafts are work to review, not
+  // inventory, and they browse at the top of the Skills grid.
   const draftCount = useAppSelector(selectInboxCount);
 
   const section = tab ?? "agents";
-  const draftsActive = section === "skills" && subId === "drafts";
 
   return (
     <div className="flex h-full flex-col" data-testid="agents-module-sidebar">
@@ -110,17 +111,17 @@ export function AgentsModuleSidebar() {
         <NavRow
           icon={Lightning}
           label="Skills"
-          active={section === "skills" && !draftsActive}
+          badgeCount={draftCount}
+          active={section === "skills"}
           onClick={() => navigate("/agents/skills")}
           testId="agents-sidebar-nav-skills"
         />
         <NavRow
-          icon={Tray}
-          label="Skill drafts"
-          badgeCount={draftCount}
-          active={draftsActive}
-          onClick={() => navigate("/agents/skills/drafts")}
-          testId="agents-sidebar-nav-drafts"
+          icon={ListChecks}
+          label="Rules"
+          active={section === "rules"}
+          onClick={() => navigate("/agents/rules")}
+          testId="agents-sidebar-nav-rules"
         />
         <NavRow
           icon={ClockCounterClockwise}

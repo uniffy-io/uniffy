@@ -66,10 +66,10 @@ type SystemMailServiceClient interface {
 	// Secrets are masked.
 	GetSystemMailConfig(context.Context, *connect.Request[v1.GetSystemMailConfigRequest]) (*connect.Response[v1.GetSystemMailConfigResponse], error)
 	// Upsert the deployment-tier system mail config. Secrets are
-	// encrypted server-side via “DeploymentCipher“ and stored in
-	// “deployment_settings“ under “namespace='mail'“. An empty
-	// “smtp_password“ means "leave current value untouched"; explicit
-	// clear is via “ClearSystemMailConfig“. Lets operators bring up the
+	// encrypted server-side via ``DeploymentCipher`` and stored in
+	// ``deployment_settings`` under ``namespace='mail'``. An empty
+	// ``smtp_password`` means "leave current value untouched"; explicit
+	// clear is via ``ClearSystemMailConfig``. Lets operators bring up the
 	// deployment with zero mail env, then configure SMTP from the UI.
 	UpdateSystemMailConfig(context.Context, *connect.Request[v1.UpdateSystemMailConfigRequest]) (*connect.Response[v1.UpdateSystemMailConfigResponse], error)
 	// Drop every deployment-tier mail row, reverting to the env default
@@ -79,7 +79,7 @@ type SystemMailServiceClient interface {
 	// Paginated list of every org's mail config summary. No secrets are
 	// surfaced; only presence booleans and the test-status metadata.
 	ListOrgMailConfigs(context.Context, *connect.Request[v1.ListOrgMailConfigsRequest]) (*connect.Response[v1.ListOrgMailConfigsResponse], error)
-	// Wipe every “mail.*“ setting for one org. Used by operators when
+	// Wipe every ``mail.*`` setting for one org. Used by operators when
 	// a tenant's per-org mail config is broken and the tenant cannot
 	// reach the admin UI to fix it themselves. Subsequent sends fall
 	// back to the env default.
@@ -90,8 +90,8 @@ type SystemMailServiceClient interface {
 	// a hard-bounced address that has been fixed externally.
 	RemoveGlobalSuppression(context.Context, *connect.Request[v1.RemoveGlobalSuppressionRequest]) (*connect.Response[v1.RemoveGlobalSuppressionResponse], error)
 	// Paginated feed of mail-send events across the deployment, read
-	// from the audit log (“mail.sent“ / “mail.send_failed“ /
-	// “mail.suppressed“).
+	// from the audit log (``mail.sent`` / ``mail.send_failed`` /
+	// ``mail.suppressed``).
 	ListGlobalDeliveries(context.Context, *connect.Request[v1.ListGlobalDeliveriesRequest]) (*connect.Response[v1.ListGlobalDeliveriesResponse], error)
 }
 
@@ -216,10 +216,10 @@ type SystemMailServiceHandler interface {
 	// Secrets are masked.
 	GetSystemMailConfig(context.Context, *connect.Request[v1.GetSystemMailConfigRequest]) (*connect.Response[v1.GetSystemMailConfigResponse], error)
 	// Upsert the deployment-tier system mail config. Secrets are
-	// encrypted server-side via “DeploymentCipher“ and stored in
-	// “deployment_settings“ under “namespace='mail'“. An empty
-	// “smtp_password“ means "leave current value untouched"; explicit
-	// clear is via “ClearSystemMailConfig“. Lets operators bring up the
+	// encrypted server-side via ``DeploymentCipher`` and stored in
+	// ``deployment_settings`` under ``namespace='mail'``. An empty
+	// ``smtp_password`` means "leave current value untouched"; explicit
+	// clear is via ``ClearSystemMailConfig``. Lets operators bring up the
 	// deployment with zero mail env, then configure SMTP from the UI.
 	UpdateSystemMailConfig(context.Context, *connect.Request[v1.UpdateSystemMailConfigRequest]) (*connect.Response[v1.UpdateSystemMailConfigResponse], error)
 	// Drop every deployment-tier mail row, reverting to the env default
@@ -229,7 +229,7 @@ type SystemMailServiceHandler interface {
 	// Paginated list of every org's mail config summary. No secrets are
 	// surfaced; only presence booleans and the test-status metadata.
 	ListOrgMailConfigs(context.Context, *connect.Request[v1.ListOrgMailConfigsRequest]) (*connect.Response[v1.ListOrgMailConfigsResponse], error)
-	// Wipe every “mail.*“ setting for one org. Used by operators when
+	// Wipe every ``mail.*`` setting for one org. Used by operators when
 	// a tenant's per-org mail config is broken and the tenant cannot
 	// reach the admin UI to fix it themselves. Subsequent sends fall
 	// back to the env default.
@@ -240,8 +240,8 @@ type SystemMailServiceHandler interface {
 	// a hard-bounced address that has been fixed externally.
 	RemoveGlobalSuppression(context.Context, *connect.Request[v1.RemoveGlobalSuppressionRequest]) (*connect.Response[v1.RemoveGlobalSuppressionResponse], error)
 	// Paginated feed of mail-send events across the deployment, read
-	// from the audit log (“mail.sent“ / “mail.send_failed“ /
-	// “mail.suppressed“).
+	// from the audit log (``mail.sent`` / ``mail.send_failed`` /
+	// ``mail.suppressed``).
 	ListGlobalDeliveries(context.Context, *connect.Request[v1.ListGlobalDeliveriesRequest]) (*connect.Response[v1.ListGlobalDeliveriesResponse], error)
 }
 

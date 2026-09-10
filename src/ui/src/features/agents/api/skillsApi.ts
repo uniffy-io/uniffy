@@ -4,9 +4,12 @@ import {
   SkillsService,
   CreateSkillRequestSchema,
   CreateSkillDraftRequestSchema,
+  GenerateSkillDraftRequestSchema,
+  RetrySkillDraftGenerationRequestSchema,
   DiscardSkillDraftRequestSchema,
   GetSkillRequestSchema,
   GetSkillDraftRequestSchema,
+  GetSkillCompatibilityRequestSchema,
   ListSkillsRequestSchema,
   ListSkillDraftsRequestSchema,
   ListSkillVersionsRequestSchema,
@@ -24,6 +27,14 @@ import type { MessageInitShape } from "@bufbuild/protobuf";
 const client = createClient(SkillsService, unaryTransport);
 
 export const skillsApi = {
+  getSkillCompatibility: async (
+    request: MessageInitShape<typeof GetSkillCompatibilityRequestSchema>,
+  ) => client.getSkillCompatibility(request),
+  generateSkillDraft: async (request: MessageInitShape<typeof GenerateSkillDraftRequestSchema>) =>
+    client.generateSkillDraft(request),
+  retrySkillDraftGeneration: async (
+    request: MessageInitShape<typeof RetrySkillDraftGenerationRequestSchema>,
+  ) => client.retrySkillDraftGeneration(request),
   createSkill: async (request: MessageInitShape<typeof CreateSkillRequestSchema>) => {
     return client.createSkill(request);
   },

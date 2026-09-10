@@ -12,7 +12,7 @@ import pytest
 
 import uniffy.domains.integrations.clients as client_cache_mod
 from uniffy.core.types import generate_id
-from uniffy.domains.integrations import tools as tool_gate
+from uniffy.domains.integrations import advertisement as tool_gate
 from uniffy.domains.integrations.base import (
     IntegrationDescriptor,
     IntegrationProbeResult,

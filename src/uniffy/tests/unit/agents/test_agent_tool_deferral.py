@@ -50,7 +50,6 @@ def _registry() -> ToolRegistry:
     registry = ToolRegistry()
     registry.register(_tool("memory.save", "Memory"))
     registry.register(_tool("search.query", "Search"))
-    registry.register(_tool("skills.view_skill", "Skills", internal=True))
     for i in range(8):
         registry.register(_tool(f"notes.tool_{i}", "Notes"))
     for i in range(8):
@@ -62,7 +61,6 @@ def _registry() -> ToolRegistry:
 _ALL_TOOLS = [
     "memory.save",
     "search.query",
-    "skills.view_skill",
     *[f"notes.tool_{i}" for i in range(8)],
     *[f"calendar.tool_{i}" for i in range(8)],
 ]
@@ -87,7 +85,6 @@ class TestPlanToolAdvertisement:
         assert _names(plan.tool_schemas) == [
             "memory-save",
             "search-query",
-            "skills-view_skill",
             LOAD_API_NAME,
         ]
         assert list(plan.deferred) == ["Notes", "Calendar"]
@@ -99,13 +96,12 @@ class TestPlanToolAdvertisement:
         schemas = registry.get_anthropic_schemas(_ALL_TOOLS)
         plan = plan_tool_advertisement(registry, schemas, ["calendar"])
         names = _names(plan.tool_schemas)
-        assert names[:4] == [
+        assert names[:3] == [
             "memory-save",
             "search-query",
-            "skills-view_skill",
             LOAD_API_NAME,
         ]
-        assert names[4:] == [f"calendar-tool_{i}" for i in range(8)]
+        assert names[3:] == [f"calendar-tool_{i}" for i in range(8)]
         assert list(plan.deferred) == ["Notes"]
 
     def test_unknown_loaded_label_is_ignored(self) -> None:

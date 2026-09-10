@@ -13,11 +13,10 @@ import {
   XCircle,
 } from "@phosphor-icons/react";
 import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
-import { cn } from "@/shared/utils/cn";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { PortalMenu } from "@/components/ui/portal-menu";
+import { ActionMenu, ActionMenuItem } from "@/components/ui/action-menu";
 import { ReasonDialog } from "@/components/ui/reason-dialog";
 import {
   Table,
@@ -184,17 +183,20 @@ function RowActions({
           setOpen((v) => !v);
         }}
         aria-label="Row actions"
+        aria-haspopup="menu"
+        aria-expanded={open}
       >
         <DotsThreeVertical size={16} weight="bold" />
       </Button>
-      <PortalMenu open={open} onClose={() => setOpen(false)} triggerRef={triggerRef}>
-        <button
+      <ActionMenu
+        label="Row actions"
+        open={open}
+        onClose={() => setOpen(false)}
+        triggerRef={triggerRef}
+      >
+        <ActionMenuItem
           type="button"
           disabled={isSelf}
-          className={cn(
-            "w-full text-left px-3 py-1.5 flex items-center gap-2",
-            isSelf ? "opacity-50 cursor-not-allowed" : "hover:bg-muted/60",
-          )}
           onClick={(e) => {
             e.stopPropagation();
             setOpen(false);
@@ -202,17 +204,11 @@ function RowActions({
           }}
         >
           <SignOut size={14} weight="duotone" /> Force logout
-        </button>
-        <button
+        </ActionMenuItem>
+        <ActionMenuItem
           type="button"
           disabled={isSelf && user.isSystemAdmin}
-          className={cn(
-            "w-full text-left px-3 py-1.5 flex items-center gap-2",
-            isSelf && user.isSystemAdmin ? "opacity-50 cursor-not-allowed" : "hover:bg-muted/60",
-            user.isSystemAdmin
-              ? "text-amber-700 dark:text-amber-400"
-              : "text-purple-700 dark:text-purple-400",
-          )}
+          className={user.isSystemAdmin ? "text-amber-700 dark:text-amber-400" : "text-primary"}
           onClick={(e) => {
             e.stopPropagation();
             setOpen(false);
@@ -221,17 +217,11 @@ function RowActions({
         >
           <ShieldCheck size={14} weight="duotone" />
           {user.isSystemAdmin ? "Revoke system admin" : "Grant system admin"}
-        </button>
-        <button
+        </ActionMenuItem>
+        <ActionMenuItem
           type="button"
           disabled={isSelf}
-          className={cn(
-            "w-full text-left px-3 py-1.5 flex items-center gap-2",
-            isSelf ? "opacity-50 cursor-not-allowed" : "hover:bg-muted/60",
-            user.isActive
-              ? "text-rose-700 dark:text-rose-400"
-              : "text-emerald-700 dark:text-emerald-400",
-          )}
+          className={user.isActive ? "text-destructive" : "text-emerald-700 dark:text-emerald-400"}
           onClick={(e) => {
             e.stopPropagation();
             setOpen(false);
@@ -240,11 +230,10 @@ function RowActions({
         >
           <Prohibit size={14} weight="duotone" />
           {user.isActive ? "Deactivate account" : "Reactivate account"}
-        </button>
+        </ActionMenuItem>
         {!isSelf && user.mfaEnabled && user.isSystemAdmin && (
-          <button
+          <ActionMenuItem
             type="button"
-            className="w-full text-left px-3 py-1.5 flex items-center gap-2 hover:bg-muted/60 text-rose-700 dark:text-rose-400"
             onClick={(e) => {
               e.stopPropagation();
               setOpen(false);
@@ -252,12 +241,11 @@ function RowActions({
             }}
           >
             <ShieldSlash size={14} weight="duotone" /> Request peer MFA reset
-          </button>
+          </ActionMenuItem>
         )}
         {!isSelf && user.mfaEnabled && !user.isSystemAdmin && user.orgMembershipsCount === 0 && (
-          <button
+          <ActionMenuItem
             type="button"
-            className="w-full text-left px-3 py-1.5 flex items-center gap-2 hover:bg-muted/60 text-rose-700 dark:text-rose-400"
             onClick={(e) => {
               e.stopPropagation();
               setOpen(false);
@@ -265,9 +253,9 @@ function RowActions({
             }}
           >
             <ShieldSlash size={14} weight="duotone" /> Reset MFA
-          </button>
+          </ActionMenuItem>
         )}
-      </PortalMenu>
+      </ActionMenu>
     </>
   );
 }

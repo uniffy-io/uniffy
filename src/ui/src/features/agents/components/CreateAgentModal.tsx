@@ -82,6 +82,7 @@ function CreateAgentModalContent({
                 soulPrompt: template.soulPrompt,
                 avatarEmoji: template.emoji,
                 enabledSkills: template.enabledSkillIds,
+                enabledRules: template.enabledRuleIds,
                 ...(recommendedModel ? { primaryModel: recommendedModel.id } : {}),
                 ...(recommendedImageModel ? { imageModel: recommendedImageModel.id } : {}),
               }

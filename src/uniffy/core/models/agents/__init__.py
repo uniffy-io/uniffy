@@ -11,9 +11,14 @@ from uniffy.core.models.agents.memory_bridge import AgentMemoryBridgeOptIn
 from uniffy.core.models.agents.message import AgentMessage
 from uniffy.core.models.agents.provider_key import ProviderKey
 from uniffy.core.models.agents.rate_limit_config import AgentRateLimitConfig
+from uniffy.core.models.agents.rule import AgentRule
+from uniffy.core.models.agents.rule_version import AgentRuleVersion
 from uniffy.core.models.agents.run_log import AgentRunLog
 from uniffy.core.models.agents.session import AgentSession
 from uniffy.core.models.agents.skill import AgentSkill
+from uniffy.core.models.agents.skill_evaluation_case import AgentSkillEvaluationCase
+from uniffy.core.models.agents.skill_evaluation_run import AgentSkillEvaluationRun
+from uniffy.core.models.agents.skill_invocation import AgentSkillInvocation
 from uniffy.core.models.agents.user_quota import AgentUserQuota
 
 __all__ = [
@@ -28,8 +33,13 @@ __all__ = [
     "AgentMessage",
     "AgentRateLimitConfig",
     "AgentRunLog",
+    "AgentRule",
+    "AgentRuleVersion",
     "AgentSession",
     "AgentSkill",
+    "AgentSkillEvaluationCase",
+    "AgentSkillEvaluationRun",
+    "AgentSkillInvocation",
     "AgentUserQuota",
     "ProviderKey",
 ]

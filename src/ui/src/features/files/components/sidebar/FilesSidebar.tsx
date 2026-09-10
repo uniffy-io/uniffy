@@ -21,9 +21,8 @@ import type { Icon } from "@phosphor-icons/react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
 import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
-import { useOverlayEscape } from "@/shared/hooks/useOverlayEscape";
 import { CompactNavItem } from "@/components/layout/CompactNavItem";
-import { popoverEnterClass, popoverShellClass } from "@/components/ui/popover";
+import { ActionMenu, ActionMenuItem } from "@/components/ui/action-menu";
 import {
   toggleNodeExpanded,
   fetchFilesTree,
@@ -147,43 +146,12 @@ export function FilesSidebar({ onToggleSidebar, onUpload, onUploadFolder }: File
 
   // Upload menu popover (shown when idle so user can pick files vs folder)
   const uploadButtonRef = useRef<HTMLButtonElement>(null);
-  const uploadMenuRef = useRef<HTMLDivElement>(null);
   const [uploadMenuOpen, setUploadMenuOpen] = useState(false);
-  const [uploadMenuPos, setUploadMenuPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
-
-  useEffect(() => {
-    if (!uploadMenuOpen) return;
-    const handleClickOutside = (e: MouseEvent) => {
-      if (
-        uploadMenuRef.current &&
-        !uploadMenuRef.current.contains(e.target as Node) &&
-        uploadButtonRef.current &&
-        !uploadButtonRef.current.contains(e.target as Node)
-      ) {
-        setUploadMenuOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [uploadMenuOpen]);
-
-  useOverlayEscape(() => setUploadMenuOpen(false), uploadMenuOpen);
-
   const handleUploadClick = useCallback(() => {
     if (hasTransferActivity) {
       // When there's activity, expand the transfers tray (or collapse it if already open).
       dispatch(setTrayView(showPanel ? "minimized" : "expanded"));
       return;
-    }
-    // When idle, open a small menu so the user can pick files or a folder
-    const rect = uploadButtonRef.current?.getBoundingClientRect();
-    if (rect) {
-      const menuWidth = 180;
-      const menuHeight = 90;
-      const x = rect.left + menuWidth > window.innerWidth ? rect.right - menuWidth : rect.left;
-      const y =
-        rect.bottom + menuHeight > window.innerHeight ? rect.top - menuHeight - 4 : rect.bottom + 4;
-      setUploadMenuPos({ x, y });
     }
     setUploadMenuOpen((prev) => !prev);
   }, [dispatch, hasTransferActivity, showPanel]);
@@ -205,6 +173,8 @@ export function FilesSidebar({ onToggleSidebar, onUpload, onUploadFolder }: File
         {/* Upload/Status Button */}
         <button
           ref={uploadButtonRef}
+          aria-haspopup="menu"
+          aria-expanded={uploadMenuOpen}
           onClick={handleUploadClick}
           className={cn(
             "group relative flex items-center py-1.5 px-1.5 text-sm font-medium rounded-lg transition-all duration-700 ease-out overflow-hidden hover:px-2.5",
@@ -242,34 +212,26 @@ export function FilesSidebar({ onToggleSidebar, onUpload, onUploadFolder }: File
           </span>
         </button>
         {uploadMenuOpen && (
-          <div
-            ref={uploadMenuRef}
-            className={cn(
-              popoverShellClass,
-              popoverEnterClass,
-              "fixed z-50 min-w-44 overflow-hidden",
-            )}
-            style={{ top: uploadMenuPos.y, left: uploadMenuPos.x }}
+          <ActionMenu
+            open
+            triggerRef={uploadButtonRef}
+            onClose={() => setUploadMenuOpen(false)}
+            label="Upload"
+            align="left"
           >
-            <div className="py-1">
-              <button
-                onClick={handleSelectUploadFiles}
-                className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
-              >
+            <>
+              <ActionMenuItem onClick={handleSelectUploadFiles}>
                 <File size={16} weight="duotone" className="text-primary" />
                 Upload Files
-              </button>
+              </ActionMenuItem>
               {onUploadFolder && (
-                <button
-                  onClick={handleSelectUploadFolder}
-                  className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
-                >
+                <ActionMenuItem onClick={handleSelectUploadFolder}>
                   <FolderOpen size={16} weight="duotone" className="text-primary" />
                   Upload Folder
-                </button>
+                </ActionMenuItem>
               )}
-            </div>
-          </div>
+            </>
+          </ActionMenu>
         )}
         {filesNavItems.map((item) => {
           const isActive =

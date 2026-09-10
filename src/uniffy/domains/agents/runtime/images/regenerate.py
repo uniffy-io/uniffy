@@ -111,6 +111,7 @@ async def regenerate_image(
 
     writer = ChatChannelMessageWriter(
         session=session,
+        search_indexer=search_indexer,
         user_id=user_id,
         organization_id=organization_id,
         channel_id=channel_id,

@@ -1,23 +1,10 @@
-"""AgentChatBridge: runtime-to-chat orchestrator.
-
-The bridge is the seam between chat message events and the agent
-runtime. It owns:
-
-1. Orchestration: load the trigger message + channel + agent, invoke
-   ``RuntimeOperations.stream_send_message`` with a ``ChatDestination``,
-   and forward each runtime event to a ``ChatStreamPublisher`` that
-   handles the chat-side translation + DB side-effects.
-2. The confirmation-decision resume.
-
-The writer inside the runtime persists chat messages; the bridge is
-only responsible for the fan-out side (driving the publisher + the
-``MESSAGE_CREATED`` companion for new chat rows).
-"""
+"""Drive agent runs and publish their events into chat."""
 
 from __future__ import annotations
 
 import asyncio
 import contextlib
+from contextlib import aclosing
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
 from uuid import UUID
@@ -35,6 +22,7 @@ from uniffy.core.models.chat.message import ChatMessage, SenderType
 from uniffy.core.search import SearchIndexer
 from uniffy.core.storage import ObjectStorage
 from uniffy.core.types import ContentType, SubjectType, generate_id
+from uniffy.domains.agents.invocation import parse_invoked_skill_id
 from uniffy.domains.agents.runtime.approvals import get_approval_store
 from uniffy.domains.agents.runtime.destinations import ChatDestination
 from uniffy.domains.agents.runtime.files import FileContext, _safe_load_files
@@ -72,17 +60,6 @@ TYPING_HEARTBEAT_SECONDS = 8
 # How often the egress task polls the run-state cancel flag so a user "stop"
 # interrupts an in-flight tool (e.g. image generation) within ~this window.
 CANCEL_POLL_SECONDS = 1.5
-
-
-def _parse_invoked_skill_id(metadata: dict | None) -> UUID | None:
-    """Pull an on-demand invoked skill id off a trigger message's metadata."""
-    raw = (metadata or {}).get("invoked_skill_id")
-    if not raw:
-        return None
-    try:
-        return UUID(str(raw))
-    except ValueError:
-        return None
 
 
 class AgentChatBridge:
@@ -140,7 +117,7 @@ class AgentChatBridge:
         member_ids = await self._load_user_member_ids(channel_id)
         user_id = trigger.sender_id
         thread_root_id = trigger.root_id
-        invoked_skill_id = _parse_invoked_skill_id(trigger.message_metadata)
+        trigger_metadata = dict(trigger.message_metadata or {})
         # Snapshot ORM-backed values now. A mid-run cancel rolls the session back,
         # which expires every attribute; the cleanup path can't drive an async
         # lazy-load (it raises MissingGreenlet), so the cleanup must read locals only.
@@ -198,6 +175,7 @@ class AgentChatBridge:
                 await set_chat_active_run(channel_id, agent_id, run_id)
 
         async def _drive_stream() -> None:
+            invoked_skill_id = parse_invoked_skill_id(trigger_metadata)
             runtime_ops = RuntimeOperations(
                 self._session,
                 storage,
@@ -212,16 +190,20 @@ class AgentChatBridge:
                 thread_root_id=thread_root_id,
                 trigger_rule=trigger_rule,
             )
-            async for event in runtime_ops.stream_send_message(
-                destination=destination,
-                user_id=user_id,
-                organization_id=organization_id,
-                content=trigger.content,
-                files=files,
-                invoked_skill_id=invoked_skill_id,
-                user_timezone=user_timezone,
-            ):
-                await publisher.publish(event)
+            async with aclosing(
+                runtime_ops.stream_send_message(
+                    destination=destination,
+                    user_id=user_id,
+                    organization_id=organization_id,
+                    content=trigger.content,
+                    files=files,
+                    invoked_skill_id=invoked_skill_id,
+                    run_id=run_id,
+                    user_timezone=user_timezone,
+                )
+            ) as events:
+                async for event in events:
+                    await publisher.publish(event)
 
         async def _cancel_watcher(task: asyncio.Task[None]) -> None:
             while not task.done():
@@ -245,7 +227,9 @@ class AgentChatBridge:
         except Exception as exc:
             logger.exception("Agent chat invocation failed")
             try:
-                await publisher.write_agent_error_message(str(exc))
+                await publisher.write_agent_error_message(
+                    str(exc) if isinstance(exc, ValidationError) else "Internal server error"
+                )
             except Exception:
                 logger.exception("Failed to write agent error message to chat")
         finally:

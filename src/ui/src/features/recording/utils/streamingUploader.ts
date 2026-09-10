@@ -1,7 +1,9 @@
 /**
  * Streaming multipart uploader. Parts (>=5MB) upload with max 2 concurrent + exponential backoff.
- * Each part is mirrored to IndexedDB before send for tab-crash recovery; queue-depth governor
- * fires `onBackpressure` so the slice can banner and auto-stop on overflow.
+ * Each part is mirrored to IndexedDB before send for tab-crash recovery, and the still-unsealed
+ * buffer is mirrored under the next part number after every chunk so a crash loses at most one
+ * timeslice; recovery uploads that remainder as the final part, which S3 allows at any size.
+ * Queue-depth governor fires `onBackpressure` so the slice can banner and auto-stop on overflow.
  */
 
 import { filesApi } from "@/features/files/api/filesApi";
@@ -69,6 +71,8 @@ export class StreamingUploader {
     const part = this.aggregator.pushChunk(blob);
     if (part) {
       this.enqueuePart(part.data, part.size);
+    } else {
+      this.mirrorPendingBuffer();
     }
     this.emitProgress();
   }
@@ -132,6 +136,14 @@ export class StreamingUploader {
     }
     this.evaluateBackpressure();
     this.pump();
+  }
+
+  private mirrorPendingBuffer(): void {
+    if (!this.uploadId) return;
+    const pending = this.aggregator.snapshot();
+    if (!pending) return;
+    // Same key the sealed part will take, so sealing simply overwrites the mirror.
+    void putChunk(this.uploadId, this.nextPartNumber, pending);
   }
 
   private pump(): void {

@@ -97,7 +97,7 @@ async def test_strict_schema_nulls_are_omitted_for_optional_arguments() -> None:
 
 
 async def test_internal_tool_runs_without_being_in_the_enabled_set() -> None:
-    # view_skill / load_group are advertised by the runtime itself and are
+    # load_group are advertised by the runtime itself and are
     # absent from every builder's enabled set by design.
     async def _exec(_ctx: ToolContext, _args: dict) -> ToolResult:
         return ToolResult(success=True, data="loaded")

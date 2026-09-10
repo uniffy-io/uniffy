@@ -57,6 +57,7 @@ def agent_to_proto(
         created_at=datetime_to_timestamp(agent.created_at),
         updated_at=datetime_to_timestamp(agent.updated_at),
         enabled_skills=agent.enabled_skills or [],
+        enabled_rules=agent.enabled_rules,
         access_mode=access_mode_to_proto(resolved_mode) if resolved_mode is not None else 0,
         avatar_key=avatar_url,
         image_model=agent.image_model or "",
@@ -90,6 +91,7 @@ def agent_to_proto(
 def agent_template_to_proto(
     template: AgentTemplate,
     enabled_skill_ids: list[str],
+    enabled_rule_ids: list[str],
 ) -> AgentTemplateProto:
     return AgentTemplateProto(
         key=template.key,
@@ -99,6 +101,7 @@ def agent_template_to_proto(
         soul_prompt=template.soul_prompt,
         enabled_tools=list(template.enabled_tools),
         enabled_skill_ids=enabled_skill_ids,
+        enabled_rule_ids=enabled_rule_ids,
         recommended_model=template.recommended_model,
         recommended_image_model=template.recommended_image_model,
     )

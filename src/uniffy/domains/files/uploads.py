@@ -1,7 +1,9 @@
 """Multipart upload lifecycle for files."""
 
 import os
+from collections.abc import Sequence
 from datetime import UTC, datetime, timedelta
+from typing import NoReturn
 from uuid import UUID
 
 from loguru import logger
@@ -69,6 +71,14 @@ def calculate_chunk_size(total_size: int) -> int:
     if total_size >= THRESHOLD_MEDIUM:
         return MEDIUM_CHUNK_SIZE
     return SMALL_CHUNK_SIZE
+
+
+def undersized_part_numbers(parts: Sequence[tuple[int, int]]) -> list[int]:
+    """Part numbers below the S3 minimum; the final part is exempt and may be any size.
+
+    ``parts`` is ``(part_number, size)`` sorted by part number.
+    """
+    return [number for number, size in parts[:-1] if size < MIN_CHUNK_SIZE]
 
 
 class FileUploadOperations:
@@ -268,16 +278,21 @@ class FileUploadOperations:
         actual_size = sum(row.size for row in part_rows)
 
         if upload.total_size and upload.total_size > 0 and actual_size > upload.total_size:
-            await self.storage.abort_multipart_upload(
-                key=upload.storage_key,
-                upload_id=upload.s3_upload_id,
-            )
-            upload.status = UploadStatus.ABORTED
-            upload.updated_at = datetime.now(UTC)
-            await self.session.commit()
-            raise ValidationError(
+            await self._abort_invalid_upload(
+                upload,
                 "upload_size",
                 "Uploaded bytes exceed declared total_size; multipart aborted.",
+            )
+
+        # S3 rejects CompleteMultipartUpload outright when any non-final part is undersized,
+        # so fail with a clear reason here instead of surfacing an opaque storage error.
+        undersized = undersized_part_numbers([(row.part_number, row.size) for row in part_rows])
+        if undersized:
+            await self._abort_invalid_upload(
+                upload,
+                "upload_parts",
+                f"Parts {undersized} are below the {MIN_CHUNK_SIZE} byte multipart minimum; "
+                "multipart aborted.",
             )
 
         if upload.total_size == 0:
@@ -288,14 +303,7 @@ class FileUploadOperations:
                 additional_bytes=actual_size,
             )
             if not quota_result.allowed:
-                await self.storage.abort_multipart_upload(
-                    key=upload.storage_key,
-                    upload_id=upload.s3_upload_id,
-                )
-                upload.status = UploadStatus.ABORTED
-                upload.updated_at = datetime.now(UTC)
-                await self.session.commit()
-                raise ValidationError("quota", quota_result.reason)
+                await self._abort_invalid_upload(upload, "quota", quota_result.reason)
 
         if version_of_file_id is not None:
             await self.storage.complete_multipart_upload(
@@ -449,6 +457,22 @@ class FileUploadOperations:
             await self._enqueue_processing_jobs(file)
 
         return file
+
+    async def _abort_invalid_upload(
+        self,
+        upload: MultipartUpload,
+        field: str,
+        message: str,
+    ) -> NoReturn:
+        """Abort the storage multipart, mark the row ABORTED, and raise ValidationError."""
+        await self.storage.abort_multipart_upload(
+            key=upload.storage_key,
+            upload_id=upload.s3_upload_id,
+        )
+        upload.status = UploadStatus.ABORTED
+        upload.updated_at = datetime.now(UTC)
+        await self.session.commit()
+        raise ValidationError(field, message)
 
     @staticmethod
     async def _enqueue_processing_jobs(file: File) -> None:

@@ -33,6 +33,15 @@ const (
 // reflection-formatted method names, remove the leading slash and convert the remaining slash to a
 // period.
 const (
+	// SkillsServiceGetSkillCompatibilityProcedure is the fully-qualified name of the SkillsService's
+	// GetSkillCompatibility RPC.
+	SkillsServiceGetSkillCompatibilityProcedure = "/agents.v1.SkillsService/GetSkillCompatibility"
+	// SkillsServiceGenerateSkillDraftProcedure is the fully-qualified name of the SkillsService's
+	// GenerateSkillDraft RPC.
+	SkillsServiceGenerateSkillDraftProcedure = "/agents.v1.SkillsService/GenerateSkillDraft"
+	// SkillsServiceRetrySkillDraftGenerationProcedure is the fully-qualified name of the
+	// SkillsService's RetrySkillDraftGeneration RPC.
+	SkillsServiceRetrySkillDraftGenerationProcedure = "/agents.v1.SkillsService/RetrySkillDraftGeneration"
 	// SkillsServiceCreateSkillProcedure is the fully-qualified name of the SkillsService's CreateSkill
 	// RPC.
 	SkillsServiceCreateSkillProcedure = "/agents.v1.SkillsService/CreateSkill"
@@ -84,6 +93,9 @@ const (
 
 // SkillsServiceClient is a client for the agents.v1.SkillsService service.
 type SkillsServiceClient interface {
+	GetSkillCompatibility(context.Context, *connect.Request[v1.GetSkillCompatibilityRequest]) (*connect.Response[v1.GetSkillCompatibilityResponse], error)
+	GenerateSkillDraft(context.Context, *connect.Request[v1.GenerateSkillDraftRequest]) (*connect.Response[v1.GenerateSkillDraftResponse], error)
+	RetrySkillDraftGeneration(context.Context, *connect.Request[v1.RetrySkillDraftGenerationRequest]) (*connect.Response[v1.RetrySkillDraftGenerationResponse], error)
 	// Create a new organization skill
 	CreateSkill(context.Context, *connect.Request[v1.CreateSkillRequest]) (*connect.Response[v1.CreateSkillResponse], error)
 	// Get a skill by ID
@@ -94,10 +106,7 @@ type SkillsServiceClient interface {
 	UpdateSkill(context.Context, *connect.Request[v1.UpdateSkillRequest]) (*connect.Response[v1.UpdateSkillResponse], error)
 	// Delete an organization skill
 	DeleteSkill(context.Context, *connect.Request[v1.DeleteSkillRequest]) (*connect.Response[v1.DeleteSkillResponse], error)
-	// List the skills a user can invoke on-demand against a given agent
-	// (the agent's resolved set: explicitly enabled + always-active). Powers
-	// the "/" slash-command menu in the agent composers. Lean payload - no
-	// skill content is shipped; the content loads only when the turn runs.
+	// List assigned skills compatible with the requested surface and executable tools.
 	ListRunnableSkills(context.Context, *connect.Request[v1.ListRunnableSkillsRequest]) (*connect.Response[v1.ListRunnableSkillsResponse], error)
 	// Create a pending draft (library "New skill" / "Edit as draft"). The draft
 	// is never auto-activated; it becomes a skill only on SaveSkillDraft.
@@ -122,7 +131,7 @@ type SkillsServiceClient interface {
 	// Revert a skill to an earlier version by copying that version's content into
 	// a new version at the head of the history.
 	RevertSkill(context.Context, *connect.Request[v1.RevertSkillRequest]) (*connect.Response[v1.RevertSkillResponse], error)
-	// Per-skill usage + feedback aggregates for the org admin metrics view.
+	// Exact-version invocation observations for the org admin metrics view.
 	GetSkillMetrics(context.Context, *connect.Request[v1.GetSkillMetricsRequest]) (*connect.Response[v1.GetSkillMetricsResponse], error)
 }
 
@@ -137,6 +146,24 @@ func NewSkillsServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 	baseURL = strings.TrimRight(baseURL, "/")
 	skillsServiceMethods := v1.File_agents_v1_skills_proto.Services().ByName("SkillsService").Methods()
 	return &skillsServiceClient{
+		getSkillCompatibility: connect.NewClient[v1.GetSkillCompatibilityRequest, v1.GetSkillCompatibilityResponse](
+			httpClient,
+			baseURL+SkillsServiceGetSkillCompatibilityProcedure,
+			connect.WithSchema(skillsServiceMethods.ByName("GetSkillCompatibility")),
+			connect.WithClientOptions(opts...),
+		),
+		generateSkillDraft: connect.NewClient[v1.GenerateSkillDraftRequest, v1.GenerateSkillDraftResponse](
+			httpClient,
+			baseURL+SkillsServiceGenerateSkillDraftProcedure,
+			connect.WithSchema(skillsServiceMethods.ByName("GenerateSkillDraft")),
+			connect.WithClientOptions(opts...),
+		),
+		retrySkillDraftGeneration: connect.NewClient[v1.RetrySkillDraftGenerationRequest, v1.RetrySkillDraftGenerationResponse](
+			httpClient,
+			baseURL+SkillsServiceRetrySkillDraftGenerationProcedure,
+			connect.WithSchema(skillsServiceMethods.ByName("RetrySkillDraftGeneration")),
+			connect.WithClientOptions(opts...),
+		),
 		createSkill: connect.NewClient[v1.CreateSkillRequest, v1.CreateSkillResponse](
 			httpClient,
 			baseURL+SkillsServiceCreateSkillProcedure,
@@ -238,22 +265,40 @@ func NewSkillsServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 
 // skillsServiceClient implements SkillsServiceClient.
 type skillsServiceClient struct {
-	createSkill         *connect.Client[v1.CreateSkillRequest, v1.CreateSkillResponse]
-	getSkill            *connect.Client[v1.GetSkillRequest, v1.GetSkillResponse]
-	listSkills          *connect.Client[v1.ListSkillsRequest, v1.ListSkillsResponse]
-	updateSkill         *connect.Client[v1.UpdateSkillRequest, v1.UpdateSkillResponse]
-	deleteSkill         *connect.Client[v1.DeleteSkillRequest, v1.DeleteSkillResponse]
-	listRunnableSkills  *connect.Client[v1.ListRunnableSkillsRequest, v1.ListRunnableSkillsResponse]
-	createSkillDraft    *connect.Client[v1.CreateSkillDraftRequest, v1.CreateSkillDraftResponse]
-	getSkillDraft       *connect.Client[v1.GetSkillDraftRequest, v1.GetSkillDraftResponse]
-	listSkillDrafts     *connect.Client[v1.ListSkillDraftsRequest, v1.ListSkillDraftsResponse]
-	saveSkillDraft      *connect.Client[v1.SaveSkillDraftRequest, v1.SaveSkillDraftResponse]
-	discardSkillDraft   *connect.Client[v1.DiscardSkillDraftRequest, v1.DiscardSkillDraftResponse]
-	listSkillVersions   *connect.Client[v1.ListSkillVersionsRequest, v1.ListSkillVersionsResponse]
-	getSkillVersion     *connect.Client[v1.GetSkillVersionRequest, v1.GetSkillVersionResponse]
-	setMainSkillVersion *connect.Client[v1.SetMainSkillVersionRequest, v1.SetMainSkillVersionResponse]
-	revertSkill         *connect.Client[v1.RevertSkillRequest, v1.RevertSkillResponse]
-	getSkillMetrics     *connect.Client[v1.GetSkillMetricsRequest, v1.GetSkillMetricsResponse]
+	getSkillCompatibility     *connect.Client[v1.GetSkillCompatibilityRequest, v1.GetSkillCompatibilityResponse]
+	generateSkillDraft        *connect.Client[v1.GenerateSkillDraftRequest, v1.GenerateSkillDraftResponse]
+	retrySkillDraftGeneration *connect.Client[v1.RetrySkillDraftGenerationRequest, v1.RetrySkillDraftGenerationResponse]
+	createSkill               *connect.Client[v1.CreateSkillRequest, v1.CreateSkillResponse]
+	getSkill                  *connect.Client[v1.GetSkillRequest, v1.GetSkillResponse]
+	listSkills                *connect.Client[v1.ListSkillsRequest, v1.ListSkillsResponse]
+	updateSkill               *connect.Client[v1.UpdateSkillRequest, v1.UpdateSkillResponse]
+	deleteSkill               *connect.Client[v1.DeleteSkillRequest, v1.DeleteSkillResponse]
+	listRunnableSkills        *connect.Client[v1.ListRunnableSkillsRequest, v1.ListRunnableSkillsResponse]
+	createSkillDraft          *connect.Client[v1.CreateSkillDraftRequest, v1.CreateSkillDraftResponse]
+	getSkillDraft             *connect.Client[v1.GetSkillDraftRequest, v1.GetSkillDraftResponse]
+	listSkillDrafts           *connect.Client[v1.ListSkillDraftsRequest, v1.ListSkillDraftsResponse]
+	saveSkillDraft            *connect.Client[v1.SaveSkillDraftRequest, v1.SaveSkillDraftResponse]
+	discardSkillDraft         *connect.Client[v1.DiscardSkillDraftRequest, v1.DiscardSkillDraftResponse]
+	listSkillVersions         *connect.Client[v1.ListSkillVersionsRequest, v1.ListSkillVersionsResponse]
+	getSkillVersion           *connect.Client[v1.GetSkillVersionRequest, v1.GetSkillVersionResponse]
+	setMainSkillVersion       *connect.Client[v1.SetMainSkillVersionRequest, v1.SetMainSkillVersionResponse]
+	revertSkill               *connect.Client[v1.RevertSkillRequest, v1.RevertSkillResponse]
+	getSkillMetrics           *connect.Client[v1.GetSkillMetricsRequest, v1.GetSkillMetricsResponse]
+}
+
+// GetSkillCompatibility calls agents.v1.SkillsService.GetSkillCompatibility.
+func (c *skillsServiceClient) GetSkillCompatibility(ctx context.Context, req *connect.Request[v1.GetSkillCompatibilityRequest]) (*connect.Response[v1.GetSkillCompatibilityResponse], error) {
+	return c.getSkillCompatibility.CallUnary(ctx, req)
+}
+
+// GenerateSkillDraft calls agents.v1.SkillsService.GenerateSkillDraft.
+func (c *skillsServiceClient) GenerateSkillDraft(ctx context.Context, req *connect.Request[v1.GenerateSkillDraftRequest]) (*connect.Response[v1.GenerateSkillDraftResponse], error) {
+	return c.generateSkillDraft.CallUnary(ctx, req)
+}
+
+// RetrySkillDraftGeneration calls agents.v1.SkillsService.RetrySkillDraftGeneration.
+func (c *skillsServiceClient) RetrySkillDraftGeneration(ctx context.Context, req *connect.Request[v1.RetrySkillDraftGenerationRequest]) (*connect.Response[v1.RetrySkillDraftGenerationResponse], error) {
+	return c.retrySkillDraftGeneration.CallUnary(ctx, req)
 }
 
 // CreateSkill calls agents.v1.SkillsService.CreateSkill.
@@ -338,6 +383,9 @@ func (c *skillsServiceClient) GetSkillMetrics(ctx context.Context, req *connect.
 
 // SkillsServiceHandler is an implementation of the agents.v1.SkillsService service.
 type SkillsServiceHandler interface {
+	GetSkillCompatibility(context.Context, *connect.Request[v1.GetSkillCompatibilityRequest]) (*connect.Response[v1.GetSkillCompatibilityResponse], error)
+	GenerateSkillDraft(context.Context, *connect.Request[v1.GenerateSkillDraftRequest]) (*connect.Response[v1.GenerateSkillDraftResponse], error)
+	RetrySkillDraftGeneration(context.Context, *connect.Request[v1.RetrySkillDraftGenerationRequest]) (*connect.Response[v1.RetrySkillDraftGenerationResponse], error)
 	// Create a new organization skill
 	CreateSkill(context.Context, *connect.Request[v1.CreateSkillRequest]) (*connect.Response[v1.CreateSkillResponse], error)
 	// Get a skill by ID
@@ -348,10 +396,7 @@ type SkillsServiceHandler interface {
 	UpdateSkill(context.Context, *connect.Request[v1.UpdateSkillRequest]) (*connect.Response[v1.UpdateSkillResponse], error)
 	// Delete an organization skill
 	DeleteSkill(context.Context, *connect.Request[v1.DeleteSkillRequest]) (*connect.Response[v1.DeleteSkillResponse], error)
-	// List the skills a user can invoke on-demand against a given agent
-	// (the agent's resolved set: explicitly enabled + always-active). Powers
-	// the "/" slash-command menu in the agent composers. Lean payload - no
-	// skill content is shipped; the content loads only when the turn runs.
+	// List assigned skills compatible with the requested surface and executable tools.
 	ListRunnableSkills(context.Context, *connect.Request[v1.ListRunnableSkillsRequest]) (*connect.Response[v1.ListRunnableSkillsResponse], error)
 	// Create a pending draft (library "New skill" / "Edit as draft"). The draft
 	// is never auto-activated; it becomes a skill only on SaveSkillDraft.
@@ -376,7 +421,7 @@ type SkillsServiceHandler interface {
 	// Revert a skill to an earlier version by copying that version's content into
 	// a new version at the head of the history.
 	RevertSkill(context.Context, *connect.Request[v1.RevertSkillRequest]) (*connect.Response[v1.RevertSkillResponse], error)
-	// Per-skill usage + feedback aggregates for the org admin metrics view.
+	// Exact-version invocation observations for the org admin metrics view.
 	GetSkillMetrics(context.Context, *connect.Request[v1.GetSkillMetricsRequest]) (*connect.Response[v1.GetSkillMetricsResponse], error)
 }
 
@@ -387,6 +432,24 @@ type SkillsServiceHandler interface {
 // and JSON codecs. They also support gzip compression.
 func NewSkillsServiceHandler(svc SkillsServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
 	skillsServiceMethods := v1.File_agents_v1_skills_proto.Services().ByName("SkillsService").Methods()
+	skillsServiceGetSkillCompatibilityHandler := connect.NewUnaryHandler(
+		SkillsServiceGetSkillCompatibilityProcedure,
+		svc.GetSkillCompatibility,
+		connect.WithSchema(skillsServiceMethods.ByName("GetSkillCompatibility")),
+		connect.WithHandlerOptions(opts...),
+	)
+	skillsServiceGenerateSkillDraftHandler := connect.NewUnaryHandler(
+		SkillsServiceGenerateSkillDraftProcedure,
+		svc.GenerateSkillDraft,
+		connect.WithSchema(skillsServiceMethods.ByName("GenerateSkillDraft")),
+		connect.WithHandlerOptions(opts...),
+	)
+	skillsServiceRetrySkillDraftGenerationHandler := connect.NewUnaryHandler(
+		SkillsServiceRetrySkillDraftGenerationProcedure,
+		svc.RetrySkillDraftGeneration,
+		connect.WithSchema(skillsServiceMethods.ByName("RetrySkillDraftGeneration")),
+		connect.WithHandlerOptions(opts...),
+	)
 	skillsServiceCreateSkillHandler := connect.NewUnaryHandler(
 		SkillsServiceCreateSkillProcedure,
 		svc.CreateSkill,
@@ -485,6 +548,12 @@ func NewSkillsServiceHandler(svc SkillsServiceHandler, opts ...connect.HandlerOp
 	)
 	return "/agents.v1.SkillsService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
+		case SkillsServiceGetSkillCompatibilityProcedure:
+			skillsServiceGetSkillCompatibilityHandler.ServeHTTP(w, r)
+		case SkillsServiceGenerateSkillDraftProcedure:
+			skillsServiceGenerateSkillDraftHandler.ServeHTTP(w, r)
+		case SkillsServiceRetrySkillDraftGenerationProcedure:
+			skillsServiceRetrySkillDraftGenerationHandler.ServeHTTP(w, r)
 		case SkillsServiceCreateSkillProcedure:
 			skillsServiceCreateSkillHandler.ServeHTTP(w, r)
 		case SkillsServiceGetSkillProcedure:
@@ -525,6 +594,18 @@ func NewSkillsServiceHandler(svc SkillsServiceHandler, opts ...connect.HandlerOp
 
 // UnimplementedSkillsServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedSkillsServiceHandler struct{}
+
+func (UnimplementedSkillsServiceHandler) GetSkillCompatibility(context.Context, *connect.Request[v1.GetSkillCompatibilityRequest]) (*connect.Response[v1.GetSkillCompatibilityResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.SkillsService.GetSkillCompatibility is not implemented"))
+}
+
+func (UnimplementedSkillsServiceHandler) GenerateSkillDraft(context.Context, *connect.Request[v1.GenerateSkillDraftRequest]) (*connect.Response[v1.GenerateSkillDraftResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.SkillsService.GenerateSkillDraft is not implemented"))
+}
+
+func (UnimplementedSkillsServiceHandler) RetrySkillDraftGeneration(context.Context, *connect.Request[v1.RetrySkillDraftGenerationRequest]) (*connect.Response[v1.RetrySkillDraftGenerationResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.SkillsService.RetrySkillDraftGeneration is not implemented"))
+}
 
 func (UnimplementedSkillsServiceHandler) CreateSkill(context.Context, *connect.Request[v1.CreateSkillRequest]) (*connect.Response[v1.CreateSkillResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.SkillsService.CreateSkill is not implemented"))

@@ -14,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agents/v1/skills.proto.
  */
 export const file_agents_v1_skills: GenFile = /*@__PURE__*/
-  fileDesc("ChZhZ2VudHMvdjEvc2tpbGxzLnByb3RvEglhZ2VudHMudjEi9gMKCVNraWxsSW5mbxIKCgJpZBgBIAEoCRIcCg9vcmdhbml6YXRpb25faWQYAiABKAlIAIgBARIMCgRuYW1lGAMgASgJEhQKDGRpc3BsYXlfbmFtZRgEIAEoCRITCgtkZXNjcmlwdGlvbhgFIAEoCRIPCgdjb250ZW50GAYgASgJEiYKBnNvdXJjZRgHIAEoDjIWLmFnZW50cy52MS5Ta2lsbFNvdXJjZRIVCg1hbHdheXNfYWN0aXZlGAggASgIEi4KCmNyZWF0ZWRfYXQYCSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi4KCnVwZGF0ZWRfYXQYCiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhMKC3doZW5fdG9fdXNlGAsgASgJEhYKDnJlcXVpcmVzX3Rvb2xzGAwgAygJEhgKEHJlcXVpcmVzX2NvbnRleHQYDSADKAkSDgoGc3RhdHVzGA4gASgJEg4KBm9yaWdpbhgPIAEoCRIdChVsYXRlc3RfdmVyc2lvbl9udW1iZXIYECABKAUSHQoVYWN0aXZlX3ZlcnNpb25fbnVtYmVyGBEgASgFEh0KFWFjdGl2ZV92ZXJzaW9uX3Bpbm5lZBgSIAEoCEISChBfb3JnYW5pemF0aW9uX2lkIo4DCgxTa2lsbFZlcnNpb24SCgoCaWQYASABKAkSEAoIc2tpbGxfaWQYAiABKAkSFgoOdmVyc2lvbl9udW1iZXIYAyABKAUSDAoEbmFtZRgEIAEoCRIUCgxkaXNwbGF5X25hbWUYBSABKAkSEwoLZGVzY3JpcHRpb24YBiABKAkSDwoHY29udGVudBgHIAEoCRITCgt3aGVuX3RvX3VzZRgIIAEoCRIWCg5yZXF1aXJlc190b29scxgJIAMoCRIYChByZXF1aXJlc19jb250ZXh0GAogAygJEhYKCWF1dGhvcl9pZBgLIAEoCUgAiAEBEhMKC2F1dGhvcl9raW5kGAwgASgJEhYKDmNoYW5nZV9zdW1tYXJ5GA0gASgJEh4KEXBhcmVudF92ZXJzaW9uX2lkGA4gASgJSAGIAQESLgoKY3JlYXRlZF9hdBgPIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCDAoKX2F1dGhvcl9pZEIUChJfcGFyZW50X3ZlcnNpb25faWQiogUKClNraWxsRHJhZnQSCgoCaWQYASABKAkSFwoPb3JnYW5pemF0aW9uX2lkGAIgASgJEhAKCG93bmVyX2lkGAMgASgJEhwKD3RhcmdldF9za2lsbF9pZBgEIAEoCUgAiAEBEgwKBGtpbmQYBSABKAkSIQoUcHJvcG9zZWRfYnlfYWdlbnRfaWQYBiABKAlIAYgBARIXCgpzZXNzaW9uX2lkGAcgASgJSAKIAQESFwoKY2hhbm5lbF9pZBgIIAEoCUgDiAEBEiMKFm9yaWdpbl9jaGF0X21lc3NhZ2VfaWQYCSABKAlIBIgBARIcChRldmlkZW5jZV9tZXNzYWdlX2lkcxgKIAMoCRIRCglyYXRpb25hbGUYCyABKAkSDAoEbmFtZRgMIAEoCRIUCgxkaXNwbGF5X25hbWUYDSABKAkSEwoLZGVzY3JpcHRpb24YDiABKAkSDwoHY29udGVudBgPIAEoCRITCgt3aGVuX3RvX3VzZRgQIAEoCRIWCg5yZXF1aXJlc190b29scxgRIAMoCRIYChByZXF1aXJlc19jb250ZXh0GBIgAygJEh8KF3N1Z2dlc3RlZF9hbHdheXNfYWN0aXZlGBMgASgIEg4KBnN0YXR1cxgUIAEoCRIuCgpjcmVhdGVkX2F0GBUgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIuCgp1cGRhdGVkX2F0GBYgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEISChBfdGFyZ2V0X3NraWxsX2lkQhcKFV9wcm9wb3NlZF9ieV9hZ2VudF9pZEINCgtfc2Vzc2lvbl9pZEINCgtfY2hhbm5lbF9pZEIZChdfb3JpZ2luX2NoYXRfbWVzc2FnZV9pZCKlAQoSQ3JlYXRlU2tpbGxSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRIMCgRuYW1lGAIgASgJEhQKDGRpc3BsYXlfbmFtZRgDIAEoCRITCgtkZXNjcmlwdGlvbhgEIAEoCRIPCgdjb250ZW50GAUgASgJEhoKDWFsd2F5c19hY3RpdmUYBiABKAhIAIgBAUIQCg5fYWx3YXlzX2FjdGl2ZSI6ChNDcmVhdGVTa2lsbFJlc3BvbnNlEiMKBXNraWxsGAEgASgLMhQuYWdlbnRzLnYxLlNraWxsSW5mbyI3ChBHZXRTa2lsbFJlc3BvbnNlEiMKBXNraWxsGAEgASgLMhQuYWdlbnRzLnYxLlNraWxsSW5mbyI6ChNVcGRhdGVTa2lsbFJlc3BvbnNlEiMKBXNraWxsGAEgASgLMhQuYWdlbnRzLnYxLlNraWxsSW5mbyI8Cg9HZXRTa2lsbFJlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEhAKCHNraWxsX2lkGAIgASgJInIKEUxpc3RTa2lsbHNSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRI1CgpwYWdpbmF0aW9uGAIgASgLMhwuY29tbW9uLnYxLlBhZ2luYXRpb25SZXF1ZXN0SACIAQFCDQoLX3BhZ2luYXRpb24ibQoSTGlzdFNraWxsc1Jlc3BvbnNlEiQKBnNraWxscxgBIAMoCzIULmFnZW50cy52MS5Ta2lsbEluZm8SMQoKcGFnaW5hdGlvbhgCIAEoCzIdLmNvbW1vbi52MS5QYWdpbmF0aW9uUmVzcG9uc2UiqwIKElVwZGF0ZVNraWxsUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSEAoIc2tpbGxfaWQYAiABKAkSEQoEbmFtZRgDIAEoCUgAiAEBEhkKDGRpc3BsYXlfbmFtZRgEIAEoCUgBiAEBEhgKC2Rlc2NyaXB0aW9uGAUgASgJSAKIAQESFAoHY29udGVudBgGIAEoCUgDiAEBEhoKDWFsd2F5c19hY3RpdmUYByABKAhIBIgBARIYCgt3aGVuX3RvX3VzZRgIIAEoCUgFiAEBQgcKBV9uYW1lQg8KDV9kaXNwbGF5X25hbWVCDgoMX2Rlc2NyaXB0aW9uQgoKCF9jb250ZW50QhAKDl9hbHdheXNfYWN0aXZlQg4KDF93aGVuX3RvX3VzZSI/ChJEZWxldGVTa2lsbFJlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEhAKCHNraWxsX2lkGAIgASgJIiYKE0RlbGV0ZVNraWxsUmVzcG9uc2USDwoHc3VjY2VzcxgBIAEoCCJpCg1SdW5uYWJsZVNraWxsEgoKAmlkGAEgASgJEgwKBG5hbWUYAiABKAkSFAoMZGlzcGxheV9uYW1lGAMgASgJEhMKC2Rlc2NyaXB0aW9uGAQgASgJEhMKC3doZW5fdG9fdXNlGAUgASgJIkYKGUxpc3RSdW5uYWJsZVNraWxsc1JlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEhAKCGFnZW50X2lkGAIgASgJIkYKGkxpc3RSdW5uYWJsZVNraWxsc1Jlc3BvbnNlEigKBnNraWxscxgBIAMoCzIYLmFnZW50cy52MS5SdW5uYWJsZVNraWxsIrcCChdDcmVhdGVTa2lsbERyYWZ0UmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSDAoEa2luZBgCIAEoCRIcCg90YXJnZXRfc2tpbGxfaWQYAyABKAlIAIgBARIMCgRuYW1lGAQgASgJEhQKDGRpc3BsYXlfbmFtZRgFIAEoCRITCgtkZXNjcmlwdGlvbhgGIAEoCRIPCgdjb250ZW50GAcgASgJEhMKC3doZW5fdG9fdXNlGAggASgJEhYKDnJlcXVpcmVzX3Rvb2xzGAkgAygJEhgKEHJlcXVpcmVzX2NvbnRleHQYCiADKAkSHwoXc3VnZ2VzdGVkX2Fsd2F5c19hY3RpdmUYCyABKAgSEQoJcmF0aW9uYWxlGAwgASgJQhIKEF90YXJnZXRfc2tpbGxfaWQiQAoYQ3JlYXRlU2tpbGxEcmFmdFJlc3BvbnNlEiQKBWRyYWZ0GAEgASgLMhUuYWdlbnRzLnYxLlNraWxsRHJhZnQiQQoUR2V0U2tpbGxEcmFmdFJlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEhAKCGRyYWZ0X2lkGAIgASgJIj0KFUdldFNraWxsRHJhZnRSZXNwb25zZRIkCgVkcmFmdBgBIAEoCzIVLmFnZW50cy52MS5Ta2lsbERyYWZ0IpcBChZMaXN0U2tpbGxEcmFmdHNSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRITCgZzdGF0dXMYAiABKAlIAIgBARI1CgpwYWdpbmF0aW9uGAMgASgLMhwuY29tbW9uLnYxLlBhZ2luYXRpb25SZXF1ZXN0SAGIAQFCCQoHX3N0YXR1c0INCgtfcGFnaW5hdGlvbiJzChdMaXN0U2tpbGxEcmFmdHNSZXNwb25zZRIlCgZkcmFmdHMYASADKAsyFS5hZ2VudHMudjEuU2tpbGxEcmFmdBIxCgpwYWdpbmF0aW9uGAIgASgLMh0uY29tbW9uLnYxLlBhZ2luYXRpb25SZXNwb25zZSKjAgoVU2F2ZVNraWxsRHJhZnRSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRIQCghkcmFmdF9pZBgCIAEoCRIMCgRuYW1lGAMgASgJEhQKDGRpc3BsYXlfbmFtZRgEIAEoCRITCgtkZXNjcmlwdGlvbhgFIAEoCRIPCgdjb250ZW50GAYgASgJEhMKC3doZW5fdG9fdXNlGAcgASgJEhYKDnJlcXVpcmVzX3Rvb2xzGAggAygJEhgKEHJlcXVpcmVzX2NvbnRleHQYCSADKAkSHwoXc3VnZ2VzdGVkX2Fsd2F5c19hY3RpdmUYCiABKAgSFgoOY2hhbmdlX3N1bW1hcnkYCyABKAkSFQoNYWxsb3dfcmVwbGFjZRgMIAEoCCJnChZTYXZlU2tpbGxEcmFmdFJlc3BvbnNlEiMKBXNraWxsGAEgASgLMhQuYWdlbnRzLnYxLlNraWxsSW5mbxIoCgd2ZXJzaW9uGAIgASgLMhcuYWdlbnRzLnYxLlNraWxsVmVyc2lvbiJFChhEaXNjYXJkU2tpbGxEcmFmdFJlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEhAKCGRyYWZ0X2lkGAIgASgJIiwKGURpc2NhcmRTa2lsbERyYWZ0UmVzcG9uc2USDwoHc3VjY2VzcxgBIAEoCCKLAQoYTGlzdFNraWxsVmVyc2lvbnNSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRIQCghza2lsbF9pZBgCIAEoCRI1CgpwYWdpbmF0aW9uGAMgASgLMhwuY29tbW9uLnYxLlBhZ2luYXRpb25SZXF1ZXN0SACIAQFCDQoLX3BhZ2luYXRpb24i1gEKGUxpc3RTa2lsbFZlcnNpb25zUmVzcG9uc2USKQoIdmVyc2lvbnMYASADKAsyFy5hZ2VudHMudjEuU2tpbGxWZXJzaW9uEjEKCnBhZ2luYXRpb24YAiABKAsyHS5jb21tb24udjEuUGFnaW5hdGlvblJlc3BvbnNlEh0KFWFjdGl2ZV92ZXJzaW9uX251bWJlchgDIAEoBRIdChVhY3RpdmVfdmVyc2lvbl9waW5uZWQYBCABKAgSHQoVbGF0ZXN0X3ZlcnNpb25fbnVtYmVyGAUgASgFIlsKFkdldFNraWxsVmVyc2lvblJlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEhAKCHNraWxsX2lkGAIgASgJEhYKDnZlcnNpb25fbnVtYmVyGAMgASgFIkMKF0dldFNraWxsVmVyc2lvblJlc3BvbnNlEigKB3ZlcnNpb24YASABKAsyFy5hZ2VudHMudjEuU2tpbGxWZXJzaW9uIo4BChpTZXRNYWluU2tpbGxWZXJzaW9uUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSEAoIc2tpbGxfaWQYAiABKAkSGwoOdmVyc2lvbl9udW1iZXIYAyABKAVIAIgBARIVCg1mb2xsb3dfbGF0ZXN0GAQgASgIQhEKD192ZXJzaW9uX251bWJlciJCChtTZXRNYWluU2tpbGxWZXJzaW9uUmVzcG9uc2USIwoFc2tpbGwYASABKAsyFC5hZ2VudHMudjEuU2tpbGxJbmZvIlcKElJldmVydFNraWxsUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSEAoIc2tpbGxfaWQYAiABKAkSFgoOdmVyc2lvbl9udW1iZXIYAyABKAUiZAoTUmV2ZXJ0U2tpbGxSZXNwb25zZRIjCgVza2lsbBgBIAEoCzIULmFnZW50cy52MS5Ta2lsbEluZm8SKAoHdmVyc2lvbhgCIAEoCzIXLmFnZW50cy52MS5Ta2lsbFZlcnNpb24iigEKC1NraWxsTWV0cmljEhAKCHNraWxsX2lkGAEgASgJEhQKDGRpc3BsYXlfbmFtZRgCIAEoCRIOCgZvcmlnaW4YAyABKAkSFgoOaW5qZWN0ZWRfY291bnQYBCABKAUSFAoMdmlld2VkX2NvdW50GAUgASgFEhUKDWludm9rZWRfY291bnQYBiABKAUiMQoWR2V0U2tpbGxNZXRyaWNzUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkiogEKF0dldFNraWxsTWV0cmljc1Jlc3BvbnNlEicKB21ldHJpY3MYASADKAsyFi5hZ2VudHMudjEuU2tpbGxNZXRyaWMSHwoXcG9zaXRpdmVfZmVlZGJhY2tfY291bnQYAiABKAUSHwoXbmVnYXRpdmVfZmVlZGJhY2tfY291bnQYAyABKAUSHAoUcGVuZGluZ19hZ2VudF9kcmFmdHMYBCABKAUqZAoLU2tpbGxTb3VyY2USHAoYU0tJTExfU09VUkNFX1VOU1BFQ0lGSUVEEAASGAoUU0tJTExfU09VUkNFX0JVTkRMRUQQARIdChlTS0lMTF9TT1VSQ0VfT1JHQU5JWkFUSU9OEAIylgsKDVNraWxsc1NlcnZpY2USTgoLQ3JlYXRlU2tpbGwSHS5hZ2VudHMudjEuQ3JlYXRlU2tpbGxSZXF1ZXN0Gh4uYWdlbnRzLnYxLkNyZWF0ZVNraWxsUmVzcG9uc2UiABJFCghHZXRTa2lsbBIaLmFnZW50cy52MS5HZXRTa2lsbFJlcXVlc3QaGy5hZ2VudHMudjEuR2V0U2tpbGxSZXNwb25zZSIAEksKCkxpc3RTa2lsbHMSHC5hZ2VudHMudjEuTGlzdFNraWxsc1JlcXVlc3QaHS5hZ2VudHMudjEuTGlzdFNraWxsc1Jlc3BvbnNlIgASTgoLVXBkYXRlU2tpbGwSHS5hZ2VudHMudjEuVXBkYXRlU2tpbGxSZXF1ZXN0Gh4uYWdlbnRzLnYxLlVwZGF0ZVNraWxsUmVzcG9uc2UiABJOCgtEZWxldGVTa2lsbBIdLmFnZW50cy52MS5EZWxldGVTa2lsbFJlcXVlc3QaHi5hZ2VudHMudjEuRGVsZXRlU2tpbGxSZXNwb25zZSIAEmMKEkxpc3RSdW5uYWJsZVNraWxscxIkLmFnZW50cy52MS5MaXN0UnVubmFibGVTa2lsbHNSZXF1ZXN0GiUuYWdlbnRzLnYxLkxpc3RSdW5uYWJsZVNraWxsc1Jlc3BvbnNlIgASXQoQQ3JlYXRlU2tpbGxEcmFmdBIiLmFnZW50cy52MS5DcmVhdGVTa2lsbERyYWZ0UmVxdWVzdBojLmFnZW50cy52MS5DcmVhdGVTa2lsbERyYWZ0UmVzcG9uc2UiABJUCg1HZXRTa2lsbERyYWZ0Eh8uYWdlbnRzLnYxLkdldFNraWxsRHJhZnRSZXF1ZXN0GiAuYWdlbnRzLnYxLkdldFNraWxsRHJhZnRSZXNwb25zZSIAEloKD0xpc3RTa2lsbERyYWZ0cxIhLmFnZW50cy52MS5MaXN0U2tpbGxEcmFmdHNSZXF1ZXN0GiIuYWdlbnRzLnYxLkxpc3RTa2lsbERyYWZ0c1Jlc3BvbnNlIgASVwoOU2F2ZVNraWxsRHJhZnQSIC5hZ2VudHMudjEuU2F2ZVNraWxsRHJhZnRSZXF1ZXN0GiEuYWdlbnRzLnYxLlNhdmVTa2lsbERyYWZ0UmVzcG9uc2UiABJgChFEaXNjYXJkU2tpbGxEcmFmdBIjLmFnZW50cy52MS5EaXNjYXJkU2tpbGxEcmFmdFJlcXVlc3QaJC5hZ2VudHMudjEuRGlzY2FyZFNraWxsRHJhZnRSZXNwb25zZSIAEmAKEUxpc3RTa2lsbFZlcnNpb25zEiMuYWdlbnRzLnYxLkxpc3RTa2lsbFZlcnNpb25zUmVxdWVzdBokLmFnZW50cy52MS5MaXN0U2tpbGxWZXJzaW9uc1Jlc3BvbnNlIgASWgoPR2V0U2tpbGxWZXJzaW9uEiEuYWdlbnRzLnYxLkdldFNraWxsVmVyc2lvblJlcXVlc3QaIi5hZ2VudHMudjEuR2V0U2tpbGxWZXJzaW9uUmVzcG9uc2UiABJmChNTZXRNYWluU2tpbGxWZXJzaW9uEiUuYWdlbnRzLnYxLlNldE1haW5Ta2lsbFZlcnNpb25SZXF1ZXN0GiYuYWdlbnRzLnYxLlNldE1haW5Ta2lsbFZlcnNpb25SZXNwb25zZSIAEk4KC1JldmVydFNraWxsEh0uYWdlbnRzLnYxLlJldmVydFNraWxsUmVxdWVzdBoeLmFnZW50cy52MS5SZXZlcnRTa2lsbFJlc3BvbnNlIgASWgoPR2V0U2tpbGxNZXRyaWNzEiEuYWdlbnRzLnYxLkdldFNraWxsTWV0cmljc1JlcXVlc3QaIi5hZ2VudHMudjEuR2V0U2tpbGxNZXRyaWNzUmVzcG9uc2UiAEI5WjdnaXRodWIuY29tL3VuaWZmeS1pby91bmlmZnktcHJvdG8tZ28vYWdlbnRzL3YxO2FnZW50c3YxYgZwcm90bzM", [file_common_v1_common, file_google_protobuf_timestamp]);
+  fileDesc("ChZhZ2VudHMvdjEvc2tpbGxzLnByb3RvEglhZ2VudHMudjEijAQKCVNraWxsSW5mbxIKCgJpZBgBIAEoCRIcCg9vcmdhbml6YXRpb25faWQYAiABKAlIAIgBARIMCgRuYW1lGAMgASgJEhQKDGRpc3BsYXlfbmFtZRgEIAEoCRITCgtkZXNjcmlwdGlvbhgFIAEoCRIPCgdjb250ZW50GAYgASgJEiYKBnNvdXJjZRgHIAEoDjIWLmFnZW50cy52MS5Ta2lsbFNvdXJjZRIuCgpjcmVhdGVkX2F0GAkgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIuCgp1cGRhdGVkX2F0GAogASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIWCg5yZXF1aXJlc190b29scxgMIAMoCRIOCgZzdGF0dXMYDiABKAkSDgoGb3JpZ2luGA8gASgJEh0KFWxhdGVzdF92ZXJzaW9uX251bWJlchgQIAEoBRIdChVhY3RpdmVfdmVyc2lvbl9udW1iZXIYESABKAUSHQoVYWN0aXZlX3ZlcnNpb25fcGlubmVkGBIgASgIEhoKEnN1cHBvcnRlZF9zdXJmYWNlcxgTIAMoCUISChBfb3JnYW5pemF0aW9uX2lkSgQICBAJSgQICxAMSgQIDRAOUg1hbHdheXNfYWN0aXZlUgt3aGVuX3RvX3VzZVIQcmVxdWlyZXNfY29udGV4dCKmAwoMU2tpbGxWZXJzaW9uEgoKAmlkGAEgASgJEhAKCHNraWxsX2lkGAIgASgJEhYKDnZlcnNpb25fbnVtYmVyGAMgASgFEgwKBG5hbWUYBCABKAkSFAoMZGlzcGxheV9uYW1lGAUgASgJEhMKC2Rlc2NyaXB0aW9uGAYgASgJEg8KB2NvbnRlbnQYByABKAkSFgoOcmVxdWlyZXNfdG9vbHMYCSADKAkSFgoJYXV0aG9yX2lkGAsgASgJSACIAQESEwoLYXV0aG9yX2tpbmQYDCABKAkSFgoOY2hhbmdlX3N1bW1hcnkYDSABKAkSHgoRcGFyZW50X3ZlcnNpb25faWQYDiABKAlIAYgBARIuCgpjcmVhdGVkX2F0GA8gASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIaChJzdXBwb3J0ZWRfc3VyZmFjZXMYECADKAlCDAoKX2F1dGhvcl9pZEIUChJfcGFyZW50X3ZlcnNpb25faWRKBAgIEAlKBAgKEAtSC3doZW5fdG9fdXNlUhByZXF1aXJlc19jb250ZXh0IvEGCgpTa2lsbERyYWZ0EgoKAmlkGAEgASgJEhcKD29yZ2FuaXphdGlvbl9pZBgCIAEoCRIQCghvd25lcl9pZBgDIAEoCRIcCg90YXJnZXRfc2tpbGxfaWQYBCABKAlIAIgBARIMCgRraW5kGAUgASgJEiEKFHByb3Bvc2VkX2J5X2FnZW50X2lkGAYgASgJSAGIAQESFwoKc2Vzc2lvbl9pZBgHIAEoCUgCiAEBEhcKCmNoYW5uZWxfaWQYCCABKAlIA4gBARIjChZvcmlnaW5fY2hhdF9tZXNzYWdlX2lkGAkgASgJSASIAQESHAoUZXZpZGVuY2VfbWVzc2FnZV9pZHMYCiADKAkSEQoJcmF0aW9uYWxlGAsgASgJEgwKBG5hbWUYDCABKAkSFAoMZGlzcGxheV9uYW1lGA0gASgJEhMKC2Rlc2NyaXB0aW9uGA4gASgJEg8KB2NvbnRlbnQYDyABKAkSFgoOcmVxdWlyZXNfdG9vbHMYESADKAkSDgoGc3RhdHVzGBQgASgJEi4KCmNyZWF0ZWRfYXQYFSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi4KCnVwZGF0ZWRfYXQYFiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhoKEnN1cHBvcnRlZF9zdXJmYWNlcxgXIAMoCRIaCg1pbnZvY2F0aW9uX2lkGBggASgJSAWIAQESHgoRdGFyZ2V0X3ZlcnNpb25faWQYGSABKAlIBogBARIdChV0YXJnZXRfdmVyc2lvbl9udW1iZXIYGiABKAUSGgoSZ2VuZXJhdGlvbl9hdHRlbXB0GBsgASgFEhgKEGdlbmVyYXRpb25fZXJyb3IYHCABKAlCEgoQX3RhcmdldF9za2lsbF9pZEIXChVfcHJvcG9zZWRfYnlfYWdlbnRfaWRCDQoLX3Nlc3Npb25faWRCDQoLX2NoYW5uZWxfaWRCGQoXX29yaWdpbl9jaGF0X21lc3NhZ2VfaWRCEAoOX2ludm9jYXRpb25faWRCFAoSX3RhcmdldF92ZXJzaW9uX2lkSgQIEBARSgQIEhATSgQIExAUUgt3aGVuX3RvX3VzZVIQcmVxdWlyZXNfY29udGV4dFIXc3VnZ2VzdGVkX2Fsd2F5c19hY3RpdmUiuQIKGUdlbmVyYXRlU2tpbGxEcmFmdFJlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEhIKCnJlcXVlc3RfaWQYAiABKAkSEAoIYWdlbnRfaWQYAyABKAkSFwoKc2Vzc2lvbl9pZBgEIAEoCUgAiAEBEhcKCmNoYW5uZWxfaWQYBSABKAlIAYgBARIbCg50aHJlYWRfcm9vdF9pZBgGIAEoCUgCiAEBEhwKFGV2aWRlbmNlX21lc3NhZ2VfaWRzGAcgAygJEhEKCXJhdGlvbmFsZRgIIAEoCRIaCg1pbnZvY2F0aW9uX2lkGAkgASgJSAOIAQFCDQoLX3Nlc3Npb25faWRCDQoLX2NoYW5uZWxfaWRCEQoPX3RocmVhZF9yb290X2lkQhAKDl9pbnZvY2F0aW9uX2lkIkIKGkdlbmVyYXRlU2tpbGxEcmFmdFJlc3BvbnNlEiQKBWRyYWZ0GAEgASgLMhUuYWdlbnRzLnYxLlNraWxsRHJhZnQiZwogUmV0cnlTa2lsbERyYWZ0R2VuZXJhdGlvblJlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEhAKCGRyYWZ0X2lkGAIgASgJEhgKEGV4cGVjdGVkX2F0dGVtcHQYAyABKAUiSQohUmV0cnlTa2lsbERyYWZ0R2VuZXJhdGlvblJlc3BvbnNlEiQKBWRyYWZ0GAEgASgLMhUuYWdlbnRzLnYxLlNraWxsRHJhZnQijAEKEkNyZWF0ZVNraWxsUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSDAoEbmFtZRgCIAEoCRIUCgxkaXNwbGF5X25hbWUYAyABKAkSEwoLZGVzY3JpcHRpb24YBCABKAkSDwoHY29udGVudBgFIAEoCUoECAYQB1INYWx3YXlzX2FjdGl2ZSI6ChNDcmVhdGVTa2lsbFJlc3BvbnNlEiMKBXNraWxsGAEgASgLMhQuYWdlbnRzLnYxLlNraWxsSW5mbyI3ChBHZXRTa2lsbFJlc3BvbnNlEiMKBXNraWxsGAEgASgLMhQuYWdlbnRzLnYxLlNraWxsSW5mbyI6ChNVcGRhdGVTa2lsbFJlc3BvbnNlEiMKBXNraWxsGAEgASgLMhQuYWdlbnRzLnYxLlNraWxsSW5mbyI8Cg9HZXRTa2lsbFJlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEhAKCHNraWxsX2lkGAIgASgJInIKEUxpc3RTa2lsbHNSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRI1CgpwYWdpbmF0aW9uGAIgASgLMhwuY29tbW9uLnYxLlBhZ2luYXRpb25SZXF1ZXN0SACIAQFCDQoLX3BhZ2luYXRpb24ibQoSTGlzdFNraWxsc1Jlc3BvbnNlEiQKBnNraWxscxgBIAMoCzIULmFnZW50cy52MS5Ta2lsbEluZm8SMQoKcGFnaW5hdGlvbhgCIAEoCzIdLmNvbW1vbi52MS5QYWdpbmF0aW9uUmVzcG9uc2UixgIKElVwZGF0ZVNraWxsUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSEAoIc2tpbGxfaWQYAiABKAkSEQoEbmFtZRgDIAEoCUgAiAEBEhkKDGRpc3BsYXlfbmFtZRgEIAEoCUgBiAEBEhgKC2Rlc2NyaXB0aW9uGAUgASgJSAKIAQESFAoHY29udGVudBgGIAEoCUgDiAEBEjYKDnJlcXVpcmVzX3Rvb2xzGAkgASgLMhkuYWdlbnRzLnYxLlNraWxsVG9vbE5hbWVzSASIAQFCBwoFX25hbWVCDwoNX2Rpc3BsYXlfbmFtZUIOCgxfZGVzY3JpcHRpb25CCgoIX2NvbnRlbnRCEQoPX3JlcXVpcmVzX3Rvb2xzSgQIBxAISgQICBAJUg1hbHdheXNfYWN0aXZlUgt3aGVuX3RvX3VzZSIfCg5Ta2lsbFRvb2xOYW1lcxINCgVuYW1lcxgBIAMoCSI/ChJEZWxldGVTa2lsbFJlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEhAKCHNraWxsX2lkGAIgASgJIiYKE0RlbGV0ZVNraWxsUmVzcG9uc2USDwoHc3VjY2VzcxgBIAEoCCJnCg1SdW5uYWJsZVNraWxsEgoKAmlkGAEgASgJEgwKBG5hbWUYAiABKAkSFAoMZGlzcGxheV9uYW1lGAMgASgJEhMKC2Rlc2NyaXB0aW9uGAQgASgJSgQIBRAGUgt3aGVuX3RvX3VzZSJXChlMaXN0UnVubmFibGVTa2lsbHNSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRIQCghhZ2VudF9pZBgCIAEoCRIPCgdzdXJmYWNlGAMgASgJIkYKGkxpc3RSdW5uYWJsZVNraWxsc1Jlc3BvbnNlEigKBnNraWxscxgBIAMoCzIYLmFnZW50cy52MS5SdW5uYWJsZVNraWxsIkkKHEdldFNraWxsQ29tcGF0aWJpbGl0eVJlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEhAKCGFnZW50X2lkGAIgASgJIsMBChJTa2lsbENvbXBhdGliaWxpdHkSEAoIc2tpbGxfaWQYASABKAkSEgoKdmVyc2lvbl9pZBgCIAEoCRIWCg52ZXJzaW9uX251bWJlchgDIAEoBRIVCg1taXNzaW5nX3Rvb2xzGAQgAygJEhwKFHVuc3VwcG9ydGVkX3N1cmZhY2VzGAUgAygJEhMKC3VuYXZhaWxhYmxlGAYgASgIEhQKDGRpc3BsYXlfbmFtZRgHIAEoCRIPCgdyZXRpcmVkGAggASgIIk4KHUdldFNraWxsQ29tcGF0aWJpbGl0eVJlc3BvbnNlEi0KBnNraWxscxgBIAMoCzIdLmFnZW50cy52MS5Ta2lsbENvbXBhdGliaWxpdHkizQIKF0NyZWF0ZVNraWxsRHJhZnRSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRIMCgRraW5kGAIgASgJEhwKD3RhcmdldF9za2lsbF9pZBgDIAEoCUgAiAEBEgwKBG5hbWUYBCABKAkSFAoMZGlzcGxheV9uYW1lGAUgASgJEhMKC2Rlc2NyaXB0aW9uGAYgASgJEg8KB2NvbnRlbnQYByABKAkSFgoOcmVxdWlyZXNfdG9vbHMYCSADKAkSEQoJcmF0aW9uYWxlGAwgASgJEhoKEnN1cHBvcnRlZF9zdXJmYWNlcxgNIAMoCUISChBfdGFyZ2V0X3NraWxsX2lkSgQICBAJSgQIChALSgQICxAMUgt3aGVuX3RvX3VzZVIQcmVxdWlyZXNfY29udGV4dFIXc3VnZ2VzdGVkX2Fsd2F5c19hY3RpdmUiQAoYQ3JlYXRlU2tpbGxEcmFmdFJlc3BvbnNlEiQKBWRyYWZ0GAEgASgLMhUuYWdlbnRzLnYxLlNraWxsRHJhZnQiQQoUR2V0U2tpbGxEcmFmdFJlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEhAKCGRyYWZ0X2lkGAIgASgJIj0KFUdldFNraWxsRHJhZnRSZXNwb25zZRIkCgVkcmFmdBgBIAEoCzIVLmFnZW50cy52MS5Ta2lsbERyYWZ0IpcBChZMaXN0U2tpbGxEcmFmdHNSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRITCgZzdGF0dXMYAiABKAlIAIgBARI1CgpwYWdpbmF0aW9uGAMgASgLMhwuY29tbW9uLnYxLlBhZ2luYXRpb25SZXF1ZXN0SAGIAQFCCQoHX3N0YXR1c0INCgtfcGFnaW5hdGlvbiJzChdMaXN0U2tpbGxEcmFmdHNSZXNwb25zZRIlCgZkcmFmdHMYASADKAsyFS5hZ2VudHMudjEuU2tpbGxEcmFmdBIxCgpwYWdpbmF0aW9uGAIgASgLMh0uY29tbW9uLnYxLlBhZ2luYXRpb25SZXNwb25zZSK5AgoVU2F2ZVNraWxsRHJhZnRSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRIQCghkcmFmdF9pZBgCIAEoCRIMCgRuYW1lGAMgASgJEhQKDGRpc3BsYXlfbmFtZRgEIAEoCRITCgtkZXNjcmlwdGlvbhgFIAEoCRIPCgdjb250ZW50GAYgASgJEhYKDnJlcXVpcmVzX3Rvb2xzGAggAygJEhYKDmNoYW5nZV9zdW1tYXJ5GAsgASgJEhUKDWFsbG93X3JlcGxhY2UYDCABKAgSGgoSc3VwcG9ydGVkX3N1cmZhY2VzGA0gAygJSgQIBxAISgQICRAKSgQIChALUgt3aGVuX3RvX3VzZVIQcmVxdWlyZXNfY29udGV4dFIXc3VnZ2VzdGVkX2Fsd2F5c19hY3RpdmUiZwoWU2F2ZVNraWxsRHJhZnRSZXNwb25zZRIjCgVza2lsbBgBIAEoCzIULmFnZW50cy52MS5Ta2lsbEluZm8SKAoHdmVyc2lvbhgCIAEoCzIXLmFnZW50cy52MS5Ta2lsbFZlcnNpb24iRQoYRGlzY2FyZFNraWxsRHJhZnRSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRIQCghkcmFmdF9pZBgCIAEoCSIsChlEaXNjYXJkU2tpbGxEcmFmdFJlc3BvbnNlEg8KB3N1Y2Nlc3MYASABKAgiiwEKGExpc3RTa2lsbFZlcnNpb25zUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSEAoIc2tpbGxfaWQYAiABKAkSNQoKcGFnaW5hdGlvbhgDIAEoCzIcLmNvbW1vbi52MS5QYWdpbmF0aW9uUmVxdWVzdEgAiAEBQg0KC19wYWdpbmF0aW9uItYBChlMaXN0U2tpbGxWZXJzaW9uc1Jlc3BvbnNlEikKCHZlcnNpb25zGAEgAygLMhcuYWdlbnRzLnYxLlNraWxsVmVyc2lvbhIxCgpwYWdpbmF0aW9uGAIgASgLMh0uY29tbW9uLnYxLlBhZ2luYXRpb25SZXNwb25zZRIdChVhY3RpdmVfdmVyc2lvbl9udW1iZXIYAyABKAUSHQoVYWN0aXZlX3ZlcnNpb25fcGlubmVkGAQgASgIEh0KFWxhdGVzdF92ZXJzaW9uX251bWJlchgFIAEoBSJbChZHZXRTa2lsbFZlcnNpb25SZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRIQCghza2lsbF9pZBgCIAEoCRIWCg52ZXJzaW9uX251bWJlchgDIAEoBSJDChdHZXRTa2lsbFZlcnNpb25SZXNwb25zZRIoCgd2ZXJzaW9uGAEgASgLMhcuYWdlbnRzLnYxLlNraWxsVmVyc2lvbiKOAQoaU2V0TWFpblNraWxsVmVyc2lvblJlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEhAKCHNraWxsX2lkGAIgASgJEhsKDnZlcnNpb25fbnVtYmVyGAMgASgFSACIAQESFQoNZm9sbG93X2xhdGVzdBgEIAEoCEIRCg9fdmVyc2lvbl9udW1iZXIiQgobU2V0TWFpblNraWxsVmVyc2lvblJlc3BvbnNlEiMKBXNraWxsGAEgASgLMhQuYWdlbnRzLnYxLlNraWxsSW5mbyJXChJSZXZlcnRTa2lsbFJlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEhAKCHNraWxsX2lkGAIgASgJEhYKDnZlcnNpb25fbnVtYmVyGAMgASgFImQKE1JldmVydFNraWxsUmVzcG9uc2USIwoFc2tpbGwYASABKAsyFC5hZ2VudHMudjEuU2tpbGxJbmZvEigKB3ZlcnNpb24YAiABKAsyFy5hZ2VudHMudjEuU2tpbGxWZXJzaW9uIqgFCgtTa2lsbE1ldHJpYxIQCghza2lsbF9pZBgBIAEoCRIUCgxkaXNwbGF5X25hbWUYAiABKAkSGAoQc2tpbGxfdmVyc2lvbl9pZBgHIAEoCRIcChRza2lsbF92ZXJzaW9uX251bWJlchgIIAEoBRIYChBpbnZvY2F0aW9uX2NvdW50GAkgASgDEhUKDXN0YXJ0ZWRfY291bnQYCiABKAMSFwoPY29tcGxldGVkX2NvdW50GAsgASgDEhQKDGZhaWxlZF9jb3VudBgMIAEoAxIWCg5yZWplY3RlZF9jb3VudBgNIAEoAxIXCg9jYW5jZWxsZWRfY291bnQYDiABKAMSHAoUdG9vbF9lcnJvcl9ydW5fY291bnQYFSABKAMSFwoPdG9vbF9lcnJvcl9yYXRlGBYgASgBEhQKDHVuaXF1ZV91c2VycxgXIAEoAxIVCg1ydW5fbG9nX2NvdW50GBggASgDEhMKC2R1cmF0aW9uX21zGBkgASgDEhQKDGlucHV0X3Rva2VucxgaIAEoAxIVCg1vdXRwdXRfdG9rZW5zGBsgASgDEikKBWNvc3RzGBwgAygLMhouYWdlbnRzLnYxLlNraWxsTWV0cmljQ29zdEoECAMQBEoECAQQBUoECAUQBkoECAYQB0oECA8QFVIGb3JpZ2luUg5pbmplY3RlZF9jb3VudFIMdmlld2VkX2NvdW50Ug1pbnZva2VkX2NvdW50UhRyYXRlZF9yZXNwb25zZV9jb3VudFIXcG9zaXRpdmVfZmVlZGJhY2tfY291bnRSF25lZ2F0aXZlX2ZlZWRiYWNrX2NvdW50UgxyYXRpbmdfY291bnRSFnBvc2l0aXZlX2ZlZWRiYWNrX3JhdGVSFm5lZ2F0aXZlX2ZlZWRiYWNrX3JhdGUiRgoPU2tpbGxNZXRyaWNDb3N0EhAKCGN1cnJlbmN5GAEgASgJEg4KBmFtb3VudBgCIAEoCRIRCglydW5fY291bnQYAyABKAMiewoWR2V0U2tpbGxNZXRyaWNzUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSEAoIc2tpbGxfaWQYAiABKAkSEwoLd2luZG93X2RheXMYAyABKAUSEQoJcGFnZV9zaXplGAQgASgFEg4KBmN1cnNvchgFIAEoCSKTAgoXR2V0U2tpbGxNZXRyaWNzUmVzcG9uc2USJwoHbWV0cmljcxgBIAMoCzIWLmFnZW50cy52MS5Ta2lsbE1ldHJpYxITCgtuZXh0X2N1cnNvchgFIAEoCRIwCgx3aW5kb3dfc3RhcnQYBiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi4KCndpbmRvd19lbmQYByABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wSgQIAhADSgQIAxAESgQIBBAFUhdwb3NpdGl2ZV9mZWVkYmFja19jb3VudFIXbmVnYXRpdmVfZmVlZGJhY2tfY291bnRSFHBlbmRpbmdfYWdlbnRfZHJhZnRzKmQKC1NraWxsU291cmNlEhwKGFNLSUxMX1NPVVJDRV9VTlNQRUNJRklFRBAAEhgKFFNLSUxMX1NPVVJDRV9CVU5ETEVEEAESHQoZU0tJTExfU09VUkNFX09SR0FOSVpBVElPThACMuMNCg1Ta2lsbHNTZXJ2aWNlEmwKFUdldFNraWxsQ29tcGF0aWJpbGl0eRInLmFnZW50cy52MS5HZXRTa2lsbENvbXBhdGliaWxpdHlSZXF1ZXN0GiguYWdlbnRzLnYxLkdldFNraWxsQ29tcGF0aWJpbGl0eVJlc3BvbnNlIgASYwoSR2VuZXJhdGVTa2lsbERyYWZ0EiQuYWdlbnRzLnYxLkdlbmVyYXRlU2tpbGxEcmFmdFJlcXVlc3QaJS5hZ2VudHMudjEuR2VuZXJhdGVTa2lsbERyYWZ0UmVzcG9uc2UiABJ4ChlSZXRyeVNraWxsRHJhZnRHZW5lcmF0aW9uEisuYWdlbnRzLnYxLlJldHJ5U2tpbGxEcmFmdEdlbmVyYXRpb25SZXF1ZXN0GiwuYWdlbnRzLnYxLlJldHJ5U2tpbGxEcmFmdEdlbmVyYXRpb25SZXNwb25zZSIAEk4KC0NyZWF0ZVNraWxsEh0uYWdlbnRzLnYxLkNyZWF0ZVNraWxsUmVxdWVzdBoeLmFnZW50cy52MS5DcmVhdGVTa2lsbFJlc3BvbnNlIgASRQoIR2V0U2tpbGwSGi5hZ2VudHMudjEuR2V0U2tpbGxSZXF1ZXN0GhsuYWdlbnRzLnYxLkdldFNraWxsUmVzcG9uc2UiABJLCgpMaXN0U2tpbGxzEhwuYWdlbnRzLnYxLkxpc3RTa2lsbHNSZXF1ZXN0Gh0uYWdlbnRzLnYxLkxpc3RTa2lsbHNSZXNwb25zZSIAEk4KC1VwZGF0ZVNraWxsEh0uYWdlbnRzLnYxLlVwZGF0ZVNraWxsUmVxdWVzdBoeLmFnZW50cy52MS5VcGRhdGVTa2lsbFJlc3BvbnNlIgASTgoLRGVsZXRlU2tpbGwSHS5hZ2VudHMudjEuRGVsZXRlU2tpbGxSZXF1ZXN0Gh4uYWdlbnRzLnYxLkRlbGV0ZVNraWxsUmVzcG9uc2UiABJjChJMaXN0UnVubmFibGVTa2lsbHMSJC5hZ2VudHMudjEuTGlzdFJ1bm5hYmxlU2tpbGxzUmVxdWVzdBolLmFnZW50cy52MS5MaXN0UnVubmFibGVTa2lsbHNSZXNwb25zZSIAEl0KEENyZWF0ZVNraWxsRHJhZnQSIi5hZ2VudHMudjEuQ3JlYXRlU2tpbGxEcmFmdFJlcXVlc3QaIy5hZ2VudHMudjEuQ3JlYXRlU2tpbGxEcmFmdFJlc3BvbnNlIgASVAoNR2V0U2tpbGxEcmFmdBIfLmFnZW50cy52MS5HZXRTa2lsbERyYWZ0UmVxdWVzdBogLmFnZW50cy52MS5HZXRTa2lsbERyYWZ0UmVzcG9uc2UiABJaCg9MaXN0U2tpbGxEcmFmdHMSIS5hZ2VudHMudjEuTGlzdFNraWxsRHJhZnRzUmVxdWVzdBoiLmFnZW50cy52MS5MaXN0U2tpbGxEcmFmdHNSZXNwb25zZSIAElcKDlNhdmVTa2lsbERyYWZ0EiAuYWdlbnRzLnYxLlNhdmVTa2lsbERyYWZ0UmVxdWVzdBohLmFnZW50cy52MS5TYXZlU2tpbGxEcmFmdFJlc3BvbnNlIgASYAoRRGlzY2FyZFNraWxsRHJhZnQSIy5hZ2VudHMudjEuRGlzY2FyZFNraWxsRHJhZnRSZXF1ZXN0GiQuYWdlbnRzLnYxLkRpc2NhcmRTa2lsbERyYWZ0UmVzcG9uc2UiABJgChFMaXN0U2tpbGxWZXJzaW9ucxIjLmFnZW50cy52MS5MaXN0U2tpbGxWZXJzaW9uc1JlcXVlc3QaJC5hZ2VudHMudjEuTGlzdFNraWxsVmVyc2lvbnNSZXNwb25zZSIAEloKD0dldFNraWxsVmVyc2lvbhIhLmFnZW50cy52MS5HZXRTa2lsbFZlcnNpb25SZXF1ZXN0GiIuYWdlbnRzLnYxLkdldFNraWxsVmVyc2lvblJlc3BvbnNlIgASZgoTU2V0TWFpblNraWxsVmVyc2lvbhIlLmFnZW50cy52MS5TZXRNYWluU2tpbGxWZXJzaW9uUmVxdWVzdBomLmFnZW50cy52MS5TZXRNYWluU2tpbGxWZXJzaW9uUmVzcG9uc2UiABJOCgtSZXZlcnRTa2lsbBIdLmFnZW50cy52MS5SZXZlcnRTa2lsbFJlcXVlc3QaHi5hZ2VudHMudjEuUmV2ZXJ0U2tpbGxSZXNwb25zZSIAEloKD0dldFNraWxsTWV0cmljcxIhLmFnZW50cy52MS5HZXRTa2lsbE1ldHJpY3NSZXF1ZXN0GiIuYWdlbnRzLnYxLkdldFNraWxsTWV0cmljc1Jlc3BvbnNlIgBCOVo3Z2l0aHViLmNvbS91bmlmZnktaW8vdW5pZmZ5LXByb3RvLWdvL2FnZW50cy92MTthZ2VudHN2MWIGcHJvdG8z", [file_common_v1_common, file_google_protobuf_timestamp]);
 
 /**
  * Skill definition returned to clients
@@ -62,13 +62,6 @@ export type SkillInfo = Message<"agents.v1.SkillInfo"> & {
   source: SkillSource;
 
   /**
-   * injected regardless of agent config
-   *
-   * @generated from field: bool always_active = 8;
-   */
-  alwaysActive: boolean;
-
-  /**
    * @generated from field: google.protobuf.Timestamp created_at = 9;
    */
   createdAt?: Timestamp | undefined;
@@ -79,25 +72,11 @@ export type SkillInfo = Message<"agents.v1.SkillInfo"> & {
   updatedAt?: Timestamp | undefined;
 
   /**
-   * Short trigger guidance shown in the progressive-disclosure metadata index.
-   *
-   * @generated from field: string when_to_use = 11;
-   */
-  whenToUse: string;
-
-  /**
-   * Tool names that must be enabled for the skill to appear (conditional activation).
+   * Tool names required in the agent's final executable tool set.
    *
    * @generated from field: repeated string requires_tools = 12;
    */
   requiresTools: string[];
-
-  /**
-   * Optional surface/content-type gates for conditional activation.
-   *
-   * @generated from field: repeated string requires_context = 13;
-   */
-  requiresContext: string[];
 
   /**
    * active | archived
@@ -130,6 +109,13 @@ export type SkillInfo = Message<"agents.v1.SkillInfo"> & {
    * @generated from field: bool active_version_pinned = 18;
    */
   activeVersionPinned: boolean;
+
+  /**
+   * session | chat; empty permits both
+   *
+   * @generated from field: repeated string supported_surfaces = 19;
+   */
+  supportedSurfaces: string[];
 };
 
 /**
@@ -181,19 +167,9 @@ export type SkillVersion = Message<"agents.v1.SkillVersion"> & {
   content: string;
 
   /**
-   * @generated from field: string when_to_use = 8;
-   */
-  whenToUse: string;
-
-  /**
    * @generated from field: repeated string requires_tools = 9;
    */
   requiresTools: string[];
-
-  /**
-   * @generated from field: repeated string requires_context = 10;
-   */
-  requiresContext: string[];
 
   /**
    * @generated from field: optional string author_id = 11;
@@ -221,6 +197,13 @@ export type SkillVersion = Message<"agents.v1.SkillVersion"> & {
    * @generated from field: google.protobuf.Timestamp created_at = 15;
    */
   createdAt?: Timestamp | undefined;
+
+  /**
+   * session | chat; empty permits both
+   *
+   * @generated from field: repeated string supported_surfaces = 16;
+   */
+  supportedSurfaces: string[];
 };
 
 /**
@@ -317,27 +300,12 @@ export type SkillDraft = Message<"agents.v1.SkillDraft"> & {
   content: string;
 
   /**
-   * @generated from field: string when_to_use = 16;
-   */
-  whenToUse: string;
-
-  /**
    * @generated from field: repeated string requires_tools = 17;
    */
   requiresTools: string[];
 
   /**
-   * @generated from field: repeated string requires_context = 18;
-   */
-  requiresContext: string[];
-
-  /**
-   * @generated from field: bool suggested_always_active = 19;
-   */
-  suggestedAlwaysActive: boolean;
-
-  /**
-   * pending | saved | discarded
+   * generating | generation_failed | pending | saved | discarded
    *
    * @generated from field: string status = 20;
    */
@@ -352,6 +320,38 @@ export type SkillDraft = Message<"agents.v1.SkillDraft"> & {
    * @generated from field: google.protobuf.Timestamp updated_at = 22;
    */
   updatedAt?: Timestamp | undefined;
+
+  /**
+   * session | chat; empty permits both
+   *
+   * @generated from field: repeated string supported_surfaces = 23;
+   */
+  supportedSurfaces: string[];
+
+  /**
+   * @generated from field: optional string invocation_id = 24;
+   */
+  invocationId?: string | undefined;
+
+  /**
+   * @generated from field: optional string target_version_id = 25;
+   */
+  targetVersionId?: string | undefined;
+
+  /**
+   * @generated from field: int32 target_version_number = 26;
+   */
+  targetVersionNumber: number;
+
+  /**
+   * @generated from field: int32 generation_attempt = 27;
+   */
+  generationAttempt: number;
+
+  /**
+   * @generated from field: string generation_error = 28;
+   */
+  generationError: string;
 };
 
 /**
@@ -360,6 +360,128 @@ export type SkillDraft = Message<"agents.v1.SkillDraft"> & {
  */
 export const SkillDraftSchema: GenMessage<SkillDraft> = /*@__PURE__*/
   messageDesc(file_agents_v1_skills, 2);
+
+/**
+ * @generated from message agents.v1.GenerateSkillDraftRequest
+ */
+export type GenerateSkillDraftRequest = Message<"agents.v1.GenerateSkillDraftRequest"> & {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId: string;
+
+  /**
+   * A client-generated UUID deduplicates retries of the same confirmed action.
+   *
+   * @generated from field: string request_id = 2;
+   */
+  requestId: string;
+
+  /**
+   * @generated from field: string agent_id = 3;
+   */
+  agentId: string;
+
+  /**
+   * @generated from field: optional string session_id = 4;
+   */
+  sessionId?: string | undefined;
+
+  /**
+   * @generated from field: optional string channel_id = 5;
+   */
+  channelId?: string | undefined;
+
+  /**
+   * @generated from field: optional string thread_root_id = 6;
+   */
+  threadRootId?: string | undefined;
+
+  /**
+   * @generated from field: repeated string evidence_message_ids = 7;
+   */
+  evidenceMessageIds: string[];
+
+  /**
+   * @generated from field: string rationale = 8;
+   */
+  rationale: string;
+
+  /**
+   * Improve targets the exact invocation, never a client-selected skill.
+   *
+   * @generated from field: optional string invocation_id = 9;
+   */
+  invocationId?: string | undefined;
+};
+
+/**
+ * Describes the message agents.v1.GenerateSkillDraftRequest.
+ * Use `create(GenerateSkillDraftRequestSchema)` to create a new message.
+ */
+export const GenerateSkillDraftRequestSchema: GenMessage<GenerateSkillDraftRequest> = /*@__PURE__*/
+  messageDesc(file_agents_v1_skills, 3);
+
+/**
+ * @generated from message agents.v1.GenerateSkillDraftResponse
+ */
+export type GenerateSkillDraftResponse = Message<"agents.v1.GenerateSkillDraftResponse"> & {
+  /**
+   * @generated from field: agents.v1.SkillDraft draft = 1;
+   */
+  draft?: SkillDraft | undefined;
+};
+
+/**
+ * Describes the message agents.v1.GenerateSkillDraftResponse.
+ * Use `create(GenerateSkillDraftResponseSchema)` to create a new message.
+ */
+export const GenerateSkillDraftResponseSchema: GenMessage<GenerateSkillDraftResponse> = /*@__PURE__*/
+  messageDesc(file_agents_v1_skills, 4);
+
+/**
+ * @generated from message agents.v1.RetrySkillDraftGenerationRequest
+ */
+export type RetrySkillDraftGenerationRequest = Message<"agents.v1.RetrySkillDraftGenerationRequest"> & {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId: string;
+
+  /**
+   * @generated from field: string draft_id = 2;
+   */
+  draftId: string;
+
+  /**
+   * @generated from field: int32 expected_attempt = 3;
+   */
+  expectedAttempt: number;
+};
+
+/**
+ * Describes the message agents.v1.RetrySkillDraftGenerationRequest.
+ * Use `create(RetrySkillDraftGenerationRequestSchema)` to create a new message.
+ */
+export const RetrySkillDraftGenerationRequestSchema: GenMessage<RetrySkillDraftGenerationRequest> = /*@__PURE__*/
+  messageDesc(file_agents_v1_skills, 5);
+
+/**
+ * @generated from message agents.v1.RetrySkillDraftGenerationResponse
+ */
+export type RetrySkillDraftGenerationResponse = Message<"agents.v1.RetrySkillDraftGenerationResponse"> & {
+  /**
+   * @generated from field: agents.v1.SkillDraft draft = 1;
+   */
+  draft?: SkillDraft | undefined;
+};
+
+/**
+ * Describes the message agents.v1.RetrySkillDraftGenerationResponse.
+ * Use `create(RetrySkillDraftGenerationResponseSchema)` to create a new message.
+ */
+export const RetrySkillDraftGenerationResponseSchema: GenMessage<RetrySkillDraftGenerationResponse> = /*@__PURE__*/
+  messageDesc(file_agents_v1_skills, 6);
 
 /**
  * @generated from message agents.v1.CreateSkillRequest
@@ -389,11 +511,6 @@ export type CreateSkillRequest = Message<"agents.v1.CreateSkillRequest"> & {
    * @generated from field: string content = 5;
    */
   content: string;
-
-  /**
-   * @generated from field: optional bool always_active = 6;
-   */
-  alwaysActive?: boolean | undefined;
 };
 
 /**
@@ -401,7 +518,7 @@ export type CreateSkillRequest = Message<"agents.v1.CreateSkillRequest"> & {
  * Use `create(CreateSkillRequestSchema)` to create a new message.
  */
 export const CreateSkillRequestSchema: GenMessage<CreateSkillRequest> = /*@__PURE__*/
-  messageDesc(file_agents_v1_skills, 3);
+  messageDesc(file_agents_v1_skills, 7);
 
 /**
  * @generated from message agents.v1.CreateSkillResponse
@@ -418,7 +535,7 @@ export type CreateSkillResponse = Message<"agents.v1.CreateSkillResponse"> & {
  * Use `create(CreateSkillResponseSchema)` to create a new message.
  */
 export const CreateSkillResponseSchema: GenMessage<CreateSkillResponse> = /*@__PURE__*/
-  messageDesc(file_agents_v1_skills, 4);
+  messageDesc(file_agents_v1_skills, 8);
 
 /**
  * @generated from message agents.v1.GetSkillResponse
@@ -435,7 +552,7 @@ export type GetSkillResponse = Message<"agents.v1.GetSkillResponse"> & {
  * Use `create(GetSkillResponseSchema)` to create a new message.
  */
 export const GetSkillResponseSchema: GenMessage<GetSkillResponse> = /*@__PURE__*/
-  messageDesc(file_agents_v1_skills, 5);
+  messageDesc(file_agents_v1_skills, 9);
 
 /**
  * @generated from message agents.v1.UpdateSkillResponse
@@ -452,7 +569,7 @@ export type UpdateSkillResponse = Message<"agents.v1.UpdateSkillResponse"> & {
  * Use `create(UpdateSkillResponseSchema)` to create a new message.
  */
 export const UpdateSkillResponseSchema: GenMessage<UpdateSkillResponse> = /*@__PURE__*/
-  messageDesc(file_agents_v1_skills, 6);
+  messageDesc(file_agents_v1_skills, 10);
 
 /**
  * @generated from message agents.v1.GetSkillRequest
@@ -474,7 +591,7 @@ export type GetSkillRequest = Message<"agents.v1.GetSkillRequest"> & {
  * Use `create(GetSkillRequestSchema)` to create a new message.
  */
 export const GetSkillRequestSchema: GenMessage<GetSkillRequest> = /*@__PURE__*/
-  messageDesc(file_agents_v1_skills, 7);
+  messageDesc(file_agents_v1_skills, 11);
 
 /**
  * @generated from message agents.v1.ListSkillsRequest
@@ -496,7 +613,7 @@ export type ListSkillsRequest = Message<"agents.v1.ListSkillsRequest"> & {
  * Use `create(ListSkillsRequestSchema)` to create a new message.
  */
 export const ListSkillsRequestSchema: GenMessage<ListSkillsRequest> = /*@__PURE__*/
-  messageDesc(file_agents_v1_skills, 8);
+  messageDesc(file_agents_v1_skills, 12);
 
 /**
  * @generated from message agents.v1.ListSkillsResponse
@@ -518,7 +635,7 @@ export type ListSkillsResponse = Message<"agents.v1.ListSkillsResponse"> & {
  * Use `create(ListSkillsResponseSchema)` to create a new message.
  */
 export const ListSkillsResponseSchema: GenMessage<ListSkillsResponse> = /*@__PURE__*/
-  messageDesc(file_agents_v1_skills, 9);
+  messageDesc(file_agents_v1_skills, 13);
 
 /**
  * @generated from message agents.v1.UpdateSkillRequest
@@ -558,14 +675,11 @@ export type UpdateSkillRequest = Message<"agents.v1.UpdateSkillRequest"> & {
   content?: string | undefined;
 
   /**
-   * @generated from field: optional bool always_active = 7;
+   * Omitted leaves requirements unchanged; an empty wrapper clears them.
+   *
+   * @generated from field: optional agents.v1.SkillToolNames requires_tools = 9;
    */
-  alwaysActive?: boolean | undefined;
-
-  /**
-   * @generated from field: optional string when_to_use = 8;
-   */
-  whenToUse?: string | undefined;
+  requiresTools?: SkillToolNames | undefined;
 };
 
 /**
@@ -573,7 +687,24 @@ export type UpdateSkillRequest = Message<"agents.v1.UpdateSkillRequest"> & {
  * Use `create(UpdateSkillRequestSchema)` to create a new message.
  */
 export const UpdateSkillRequestSchema: GenMessage<UpdateSkillRequest> = /*@__PURE__*/
-  messageDesc(file_agents_v1_skills, 10);
+  messageDesc(file_agents_v1_skills, 14);
+
+/**
+ * @generated from message agents.v1.SkillToolNames
+ */
+export type SkillToolNames = Message<"agents.v1.SkillToolNames"> & {
+  /**
+   * @generated from field: repeated string names = 1;
+   */
+  names: string[];
+};
+
+/**
+ * Describes the message agents.v1.SkillToolNames.
+ * Use `create(SkillToolNamesSchema)` to create a new message.
+ */
+export const SkillToolNamesSchema: GenMessage<SkillToolNames> = /*@__PURE__*/
+  messageDesc(file_agents_v1_skills, 15);
 
 /**
  * @generated from message agents.v1.DeleteSkillRequest
@@ -595,7 +726,7 @@ export type DeleteSkillRequest = Message<"agents.v1.DeleteSkillRequest"> & {
  * Use `create(DeleteSkillRequestSchema)` to create a new message.
  */
 export const DeleteSkillRequestSchema: GenMessage<DeleteSkillRequest> = /*@__PURE__*/
-  messageDesc(file_agents_v1_skills, 11);
+  messageDesc(file_agents_v1_skills, 16);
 
 /**
  * @generated from message agents.v1.DeleteSkillResponse
@@ -612,7 +743,7 @@ export type DeleteSkillResponse = Message<"agents.v1.DeleteSkillResponse"> & {
  * Use `create(DeleteSkillResponseSchema)` to create a new message.
  */
 export const DeleteSkillResponseSchema: GenMessage<DeleteSkillResponse> = /*@__PURE__*/
-  messageDesc(file_agents_v1_skills, 12);
+  messageDesc(file_agents_v1_skills, 17);
 
 /**
  * A skill entry for the slash-command menu. Carries only what the menu
@@ -640,11 +771,6 @@ export type RunnableSkill = Message<"agents.v1.RunnableSkill"> & {
    * @generated from field: string description = 4;
    */
   description: string;
-
-  /**
-   * @generated from field: string when_to_use = 5;
-   */
-  whenToUse: string;
 };
 
 /**
@@ -652,7 +778,7 @@ export type RunnableSkill = Message<"agents.v1.RunnableSkill"> & {
  * Use `create(RunnableSkillSchema)` to create a new message.
  */
 export const RunnableSkillSchema: GenMessage<RunnableSkill> = /*@__PURE__*/
-  messageDesc(file_agents_v1_skills, 13);
+  messageDesc(file_agents_v1_skills, 18);
 
 /**
  * @generated from message agents.v1.ListRunnableSkillsRequest
@@ -667,6 +793,13 @@ export type ListRunnableSkillsRequest = Message<"agents.v1.ListRunnableSkillsReq
    * @generated from field: string agent_id = 2;
    */
   agentId: string;
+
+  /**
+   * session | chat
+   *
+   * @generated from field: string surface = 3;
+   */
+  surface: string;
 };
 
 /**
@@ -674,7 +807,7 @@ export type ListRunnableSkillsRequest = Message<"agents.v1.ListRunnableSkillsReq
  * Use `create(ListRunnableSkillsRequestSchema)` to create a new message.
  */
 export const ListRunnableSkillsRequestSchema: GenMessage<ListRunnableSkillsRequest> = /*@__PURE__*/
-  messageDesc(file_agents_v1_skills, 14);
+  messageDesc(file_agents_v1_skills, 19);
 
 /**
  * @generated from message agents.v1.ListRunnableSkillsResponse
@@ -691,7 +824,98 @@ export type ListRunnableSkillsResponse = Message<"agents.v1.ListRunnableSkillsRe
  * Use `create(ListRunnableSkillsResponseSchema)` to create a new message.
  */
 export const ListRunnableSkillsResponseSchema: GenMessage<ListRunnableSkillsResponse> = /*@__PURE__*/
-  messageDesc(file_agents_v1_skills, 15);
+  messageDesc(file_agents_v1_skills, 20);
+
+/**
+ * @generated from message agents.v1.GetSkillCompatibilityRequest
+ */
+export type GetSkillCompatibilityRequest = Message<"agents.v1.GetSkillCompatibilityRequest"> & {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId: string;
+
+  /**
+   * @generated from field: string agent_id = 2;
+   */
+  agentId: string;
+};
+
+/**
+ * Describes the message agents.v1.GetSkillCompatibilityRequest.
+ * Use `create(GetSkillCompatibilityRequestSchema)` to create a new message.
+ */
+export const GetSkillCompatibilityRequestSchema: GenMessage<GetSkillCompatibilityRequest> = /*@__PURE__*/
+  messageDesc(file_agents_v1_skills, 21);
+
+/**
+ * @generated from message agents.v1.SkillCompatibility
+ */
+export type SkillCompatibility = Message<"agents.v1.SkillCompatibility"> & {
+  /**
+   * @generated from field: string skill_id = 1;
+   */
+  skillId: string;
+
+  /**
+   * @generated from field: string version_id = 2;
+   */
+  versionId: string;
+
+  /**
+   * @generated from field: int32 version_number = 3;
+   */
+  versionNumber: number;
+
+  /**
+   * @generated from field: repeated string missing_tools = 4;
+   */
+  missingTools: string[];
+
+  /**
+   * @generated from field: repeated string unsupported_surfaces = 5;
+   */
+  unsupportedSurfaces: string[];
+
+  /**
+   * @generated from field: bool unavailable = 6;
+   */
+  unavailable: boolean;
+
+  /**
+   * @generated from field: string display_name = 7;
+   */
+  displayName: string;
+
+  /**
+   * @generated from field: bool retired = 8;
+   */
+  retired: boolean;
+};
+
+/**
+ * Describes the message agents.v1.SkillCompatibility.
+ * Use `create(SkillCompatibilitySchema)` to create a new message.
+ */
+export const SkillCompatibilitySchema: GenMessage<SkillCompatibility> = /*@__PURE__*/
+  messageDesc(file_agents_v1_skills, 22);
+
+/**
+ * @generated from message agents.v1.GetSkillCompatibilityResponse
+ */
+export type GetSkillCompatibilityResponse = Message<"agents.v1.GetSkillCompatibilityResponse"> & {
+  /**
+   * @generated from field: repeated agents.v1.SkillCompatibility skills = 1;
+   */
+  skills: SkillCompatibility[];
+};
+
+/**
+ * Describes the message agents.v1.GetSkillCompatibilityResponse.
+ * Use `create(GetSkillCompatibilityResponseSchema)` to create a new message.
+ */
+export const GetSkillCompatibilityResponseSchema: GenMessage<GetSkillCompatibilityResponse> = /*@__PURE__*/
+  messageDesc(file_agents_v1_skills, 23);
 
 /**
  * @generated from message agents.v1.CreateSkillDraftRequest
@@ -737,29 +961,21 @@ export type CreateSkillDraftRequest = Message<"agents.v1.CreateSkillDraftRequest
   content: string;
 
   /**
-   * @generated from field: string when_to_use = 8;
-   */
-  whenToUse: string;
-
-  /**
    * @generated from field: repeated string requires_tools = 9;
    */
   requiresTools: string[];
 
   /**
-   * @generated from field: repeated string requires_context = 10;
-   */
-  requiresContext: string[];
-
-  /**
-   * @generated from field: bool suggested_always_active = 11;
-   */
-  suggestedAlwaysActive: boolean;
-
-  /**
    * @generated from field: string rationale = 12;
    */
   rationale: string;
+
+  /**
+   * session | chat; empty permits both
+   *
+   * @generated from field: repeated string supported_surfaces = 13;
+   */
+  supportedSurfaces: string[];
 };
 
 /**
@@ -767,7 +983,7 @@ export type CreateSkillDraftRequest = Message<"agents.v1.CreateSkillDraftRequest
  * Use `create(CreateSkillDraftRequestSchema)` to create a new message.
  */
 export const CreateSkillDraftRequestSchema: GenMessage<CreateSkillDraftRequest> = /*@__PURE__*/
-  messageDesc(file_agents_v1_skills, 16);
+  messageDesc(file_agents_v1_skills, 24);
 
 /**
  * @generated from message agents.v1.CreateSkillDraftResponse
@@ -784,7 +1000,7 @@ export type CreateSkillDraftResponse = Message<"agents.v1.CreateSkillDraftRespon
  * Use `create(CreateSkillDraftResponseSchema)` to create a new message.
  */
 export const CreateSkillDraftResponseSchema: GenMessage<CreateSkillDraftResponse> = /*@__PURE__*/
-  messageDesc(file_agents_v1_skills, 17);
+  messageDesc(file_agents_v1_skills, 25);
 
 /**
  * @generated from message agents.v1.GetSkillDraftRequest
@@ -806,7 +1022,7 @@ export type GetSkillDraftRequest = Message<"agents.v1.GetSkillDraftRequest"> & {
  * Use `create(GetSkillDraftRequestSchema)` to create a new message.
  */
 export const GetSkillDraftRequestSchema: GenMessage<GetSkillDraftRequest> = /*@__PURE__*/
-  messageDesc(file_agents_v1_skills, 18);
+  messageDesc(file_agents_v1_skills, 26);
 
 /**
  * @generated from message agents.v1.GetSkillDraftResponse
@@ -823,7 +1039,7 @@ export type GetSkillDraftResponse = Message<"agents.v1.GetSkillDraftResponse"> &
  * Use `create(GetSkillDraftResponseSchema)` to create a new message.
  */
 export const GetSkillDraftResponseSchema: GenMessage<GetSkillDraftResponse> = /*@__PURE__*/
-  messageDesc(file_agents_v1_skills, 19);
+  messageDesc(file_agents_v1_skills, 27);
 
 /**
  * @generated from message agents.v1.ListSkillDraftsRequest
@@ -852,7 +1068,7 @@ export type ListSkillDraftsRequest = Message<"agents.v1.ListSkillDraftsRequest">
  * Use `create(ListSkillDraftsRequestSchema)` to create a new message.
  */
 export const ListSkillDraftsRequestSchema: GenMessage<ListSkillDraftsRequest> = /*@__PURE__*/
-  messageDesc(file_agents_v1_skills, 20);
+  messageDesc(file_agents_v1_skills, 28);
 
 /**
  * @generated from message agents.v1.ListSkillDraftsResponse
@@ -874,7 +1090,7 @@ export type ListSkillDraftsResponse = Message<"agents.v1.ListSkillDraftsResponse
  * Use `create(ListSkillDraftsResponseSchema)` to create a new message.
  */
 export const ListSkillDraftsResponseSchema: GenMessage<ListSkillDraftsResponse> = /*@__PURE__*/
-  messageDesc(file_agents_v1_skills, 21);
+  messageDesc(file_agents_v1_skills, 29);
 
 /**
  * The review card sends the full, possibly user-edited field set so the saved
@@ -914,24 +1130,9 @@ export type SaveSkillDraftRequest = Message<"agents.v1.SaveSkillDraftRequest"> &
   content: string;
 
   /**
-   * @generated from field: string when_to_use = 7;
-   */
-  whenToUse: string;
-
-  /**
    * @generated from field: repeated string requires_tools = 8;
    */
   requiresTools: string[];
-
-  /**
-   * @generated from field: repeated string requires_context = 9;
-   */
-  requiresContext: string[];
-
-  /**
-   * @generated from field: bool suggested_always_active = 10;
-   */
-  suggestedAlwaysActive: boolean;
 
   /**
    * @generated from field: string change_summary = 11;
@@ -944,6 +1145,13 @@ export type SaveSkillDraftRequest = Message<"agents.v1.SaveSkillDraftRequest"> &
    * @generated from field: bool allow_replace = 12;
    */
   allowReplace: boolean;
+
+  /**
+   * session | chat; empty permits both
+   *
+   * @generated from field: repeated string supported_surfaces = 13;
+   */
+  supportedSurfaces: string[];
 };
 
 /**
@@ -951,7 +1159,7 @@ export type SaveSkillDraftRequest = Message<"agents.v1.SaveSkillDraftRequest"> &
  * Use `create(SaveSkillDraftRequestSchema)` to create a new message.
  */
 export const SaveSkillDraftRequestSchema: GenMessage<SaveSkillDraftRequest> = /*@__PURE__*/
-  messageDesc(file_agents_v1_skills, 22);
+  messageDesc(file_agents_v1_skills, 30);
 
 /**
  * @generated from message agents.v1.SaveSkillDraftResponse
@@ -973,7 +1181,7 @@ export type SaveSkillDraftResponse = Message<"agents.v1.SaveSkillDraftResponse">
  * Use `create(SaveSkillDraftResponseSchema)` to create a new message.
  */
 export const SaveSkillDraftResponseSchema: GenMessage<SaveSkillDraftResponse> = /*@__PURE__*/
-  messageDesc(file_agents_v1_skills, 23);
+  messageDesc(file_agents_v1_skills, 31);
 
 /**
  * @generated from message agents.v1.DiscardSkillDraftRequest
@@ -995,7 +1203,7 @@ export type DiscardSkillDraftRequest = Message<"agents.v1.DiscardSkillDraftReque
  * Use `create(DiscardSkillDraftRequestSchema)` to create a new message.
  */
 export const DiscardSkillDraftRequestSchema: GenMessage<DiscardSkillDraftRequest> = /*@__PURE__*/
-  messageDesc(file_agents_v1_skills, 24);
+  messageDesc(file_agents_v1_skills, 32);
 
 /**
  * @generated from message agents.v1.DiscardSkillDraftResponse
@@ -1012,7 +1220,7 @@ export type DiscardSkillDraftResponse = Message<"agents.v1.DiscardSkillDraftResp
  * Use `create(DiscardSkillDraftResponseSchema)` to create a new message.
  */
 export const DiscardSkillDraftResponseSchema: GenMessage<DiscardSkillDraftResponse> = /*@__PURE__*/
-  messageDesc(file_agents_v1_skills, 25);
+  messageDesc(file_agents_v1_skills, 33);
 
 /**
  * @generated from message agents.v1.ListSkillVersionsRequest
@@ -1039,7 +1247,7 @@ export type ListSkillVersionsRequest = Message<"agents.v1.ListSkillVersionsReque
  * Use `create(ListSkillVersionsRequestSchema)` to create a new message.
  */
 export const ListSkillVersionsRequestSchema: GenMessage<ListSkillVersionsRequest> = /*@__PURE__*/
-  messageDesc(file_agents_v1_skills, 26);
+  messageDesc(file_agents_v1_skills, 34);
 
 /**
  * @generated from message agents.v1.ListSkillVersionsResponse
@@ -1079,7 +1287,7 @@ export type ListSkillVersionsResponse = Message<"agents.v1.ListSkillVersionsResp
  * Use `create(ListSkillVersionsResponseSchema)` to create a new message.
  */
 export const ListSkillVersionsResponseSchema: GenMessage<ListSkillVersionsResponse> = /*@__PURE__*/
-  messageDesc(file_agents_v1_skills, 27);
+  messageDesc(file_agents_v1_skills, 35);
 
 /**
  * @generated from message agents.v1.GetSkillVersionRequest
@@ -1106,7 +1314,7 @@ export type GetSkillVersionRequest = Message<"agents.v1.GetSkillVersionRequest">
  * Use `create(GetSkillVersionRequestSchema)` to create a new message.
  */
 export const GetSkillVersionRequestSchema: GenMessage<GetSkillVersionRequest> = /*@__PURE__*/
-  messageDesc(file_agents_v1_skills, 28);
+  messageDesc(file_agents_v1_skills, 36);
 
 /**
  * @generated from message agents.v1.GetSkillVersionResponse
@@ -1123,7 +1331,7 @@ export type GetSkillVersionResponse = Message<"agents.v1.GetSkillVersionResponse
  * Use `create(GetSkillVersionResponseSchema)` to create a new message.
  */
 export const GetSkillVersionResponseSchema: GenMessage<GetSkillVersionResponse> = /*@__PURE__*/
-  messageDesc(file_agents_v1_skills, 29);
+  messageDesc(file_agents_v1_skills, 37);
 
 /**
  * @generated from message agents.v1.SetMainSkillVersionRequest
@@ -1159,7 +1367,7 @@ export type SetMainSkillVersionRequest = Message<"agents.v1.SetMainSkillVersionR
  * Use `create(SetMainSkillVersionRequestSchema)` to create a new message.
  */
 export const SetMainSkillVersionRequestSchema: GenMessage<SetMainSkillVersionRequest> = /*@__PURE__*/
-  messageDesc(file_agents_v1_skills, 30);
+  messageDesc(file_agents_v1_skills, 38);
 
 /**
  * @generated from message agents.v1.SetMainSkillVersionResponse
@@ -1176,7 +1384,7 @@ export type SetMainSkillVersionResponse = Message<"agents.v1.SetMainSkillVersion
  * Use `create(SetMainSkillVersionResponseSchema)` to create a new message.
  */
 export const SetMainSkillVersionResponseSchema: GenMessage<SetMainSkillVersionResponse> = /*@__PURE__*/
-  messageDesc(file_agents_v1_skills, 31);
+  messageDesc(file_agents_v1_skills, 39);
 
 /**
  * @generated from message agents.v1.RevertSkillRequest
@@ -1203,7 +1411,7 @@ export type RevertSkillRequest = Message<"agents.v1.RevertSkillRequest"> & {
  * Use `create(RevertSkillRequestSchema)` to create a new message.
  */
 export const RevertSkillRequestSchema: GenMessage<RevertSkillRequest> = /*@__PURE__*/
-  messageDesc(file_agents_v1_skills, 32);
+  messageDesc(file_agents_v1_skills, 40);
 
 /**
  * @generated from message agents.v1.RevertSkillResponse
@@ -1225,10 +1433,10 @@ export type RevertSkillResponse = Message<"agents.v1.RevertSkillResponse"> & {
  * Use `create(RevertSkillResponseSchema)` to create a new message.
  */
 export const RevertSkillResponseSchema: GenMessage<RevertSkillResponse> = /*@__PURE__*/
-  messageDesc(file_agents_v1_skills, 33);
+  messageDesc(file_agents_v1_skills, 41);
 
 /**
- * Usage + quality aggregate for one skill, drawn from agents_skill_usages.
+ * Observations of one exact version within the requested time window.
  *
  * @generated from message agents.v1.SkillMetric
  */
@@ -1244,26 +1452,86 @@ export type SkillMetric = Message<"agents.v1.SkillMetric"> & {
   displayName: string;
 
   /**
-   * user | agent_proposed | agent_evolved | bundled
+   * @generated from field: string skill_version_id = 7;
+   */
+  skillVersionId: string;
+
+  /**
+   * @generated from field: int32 skill_version_number = 8;
+   */
+  skillVersionNumber: number;
+
+  /**
+   * @generated from field: int64 invocation_count = 9;
+   */
+  invocationCount: bigint;
+
+  /**
+   * @generated from field: int64 started_count = 10;
+   */
+  startedCount: bigint;
+
+  /**
+   * @generated from field: int64 completed_count = 11;
+   */
+  completedCount: bigint;
+
+  /**
+   * @generated from field: int64 failed_count = 12;
+   */
+  failedCount: bigint;
+
+  /**
+   * @generated from field: int64 rejected_count = 13;
+   */
+  rejectedCount: bigint;
+
+  /**
+   * @generated from field: int64 cancelled_count = 14;
+   */
+  cancelledCount: bigint;
+
+  /**
+   * @generated from field: int64 tool_error_run_count = 21;
+   */
+  toolErrorRunCount: bigint;
+
+  /**
+   * Fraction of invocations with at least one failed tool call.
    *
-   * @generated from field: string origin = 3;
+   * @generated from field: double tool_error_rate = 22;
    */
-  origin: string;
+  toolErrorRate: number;
 
   /**
-   * @generated from field: int32 injected_count = 4;
+   * @generated from field: int64 unique_users = 23;
    */
-  injectedCount: number;
+  uniqueUsers: bigint;
 
   /**
-   * @generated from field: int32 viewed_count = 5;
+   * @generated from field: int64 run_log_count = 24;
    */
-  viewedCount: number;
+  runLogCount: bigint;
 
   /**
-   * @generated from field: int32 invoked_count = 6;
+   * @generated from field: int64 duration_ms = 25;
    */
-  invokedCount: number;
+  durationMs: bigint;
+
+  /**
+   * @generated from field: int64 input_tokens = 26;
+   */
+  inputTokens: bigint;
+
+  /**
+   * @generated from field: int64 output_tokens = 27;
+   */
+  outputTokens: bigint;
+
+  /**
+   * @generated from field: repeated agents.v1.SkillMetricCost costs = 28;
+   */
+  costs: SkillMetricCost[];
 };
 
 /**
@@ -1271,7 +1539,34 @@ export type SkillMetric = Message<"agents.v1.SkillMetric"> & {
  * Use `create(SkillMetricSchema)` to create a new message.
  */
 export const SkillMetricSchema: GenMessage<SkillMetric> = /*@__PURE__*/
-  messageDesc(file_agents_v1_skills, 34);
+  messageDesc(file_agents_v1_skills, 42);
+
+/**
+ * @generated from message agents.v1.SkillMetricCost
+ */
+export type SkillMetricCost = Message<"agents.v1.SkillMetricCost"> & {
+  /**
+   * @generated from field: string currency = 1;
+   */
+  currency: string;
+
+  /**
+   * @generated from field: string amount = 2;
+   */
+  amount: string;
+
+  /**
+   * @generated from field: int64 run_count = 3;
+   */
+  runCount: bigint;
+};
+
+/**
+ * Describes the message agents.v1.SkillMetricCost.
+ * Use `create(SkillMetricCostSchema)` to create a new message.
+ */
+export const SkillMetricCostSchema: GenMessage<SkillMetricCost> = /*@__PURE__*/
+  messageDesc(file_agents_v1_skills, 43);
 
 /**
  * @generated from message agents.v1.GetSkillMetricsRequest
@@ -1281,6 +1576,32 @@ export type GetSkillMetricsRequest = Message<"agents.v1.GetSkillMetricsRequest">
    * @generated from field: string organization_id = 1;
    */
   organizationId: string;
+
+  /**
+   * Empty is org-admin reporting; a skill filter is available to builders.
+   *
+   * @generated from field: string skill_id = 2;
+   */
+  skillId: string;
+
+  /**
+   * Defaults to 30, maximum 90.
+   *
+   * @generated from field: int32 window_days = 3;
+   */
+  windowDays: number;
+
+  /**
+   * Defaults to 200, maximum 500.
+   *
+   * @generated from field: int32 page_size = 4;
+   */
+  pageSize: number;
+
+  /**
+   * @generated from field: string cursor = 5;
+   */
+  cursor: string;
 };
 
 /**
@@ -1288,7 +1609,7 @@ export type GetSkillMetricsRequest = Message<"agents.v1.GetSkillMetricsRequest">
  * Use `create(GetSkillMetricsRequestSchema)` to create a new message.
  */
 export const GetSkillMetricsRequestSchema: GenMessage<GetSkillMetricsRequest> = /*@__PURE__*/
-  messageDesc(file_agents_v1_skills, 35);
+  messageDesc(file_agents_v1_skills, 44);
 
 /**
  * @generated from message agents.v1.GetSkillMetricsResponse
@@ -1300,23 +1621,19 @@ export type GetSkillMetricsResponse = Message<"agents.v1.GetSkillMetricsResponse
   metrics: SkillMetric[];
 
   /**
-   * Org-wide agent-message feedback tallies over the same window.
-   *
-   * @generated from field: int32 positive_feedback_count = 2;
+   * @generated from field: string next_cursor = 5;
    */
-  positiveFeedbackCount: number;
+  nextCursor: string;
 
   /**
-   * @generated from field: int32 negative_feedback_count = 3;
+   * @generated from field: google.protobuf.Timestamp window_start = 6;
    */
-  negativeFeedbackCount: number;
+  windowStart?: Timestamp | undefined;
 
   /**
-   * Count of pending agent-proposed/evolved drafts awaiting review.
-   *
-   * @generated from field: int32 pending_agent_drafts = 4;
+   * @generated from field: google.protobuf.Timestamp window_end = 7;
    */
-  pendingAgentDrafts: number;
+  windowEnd?: Timestamp | undefined;
 };
 
 /**
@@ -1324,7 +1641,7 @@ export type GetSkillMetricsResponse = Message<"agents.v1.GetSkillMetricsResponse
  * Use `create(GetSkillMetricsResponseSchema)` to create a new message.
  */
 export const GetSkillMetricsResponseSchema: GenMessage<GetSkillMetricsResponse> = /*@__PURE__*/
-  messageDesc(file_agents_v1_skills, 36);
+  messageDesc(file_agents_v1_skills, 45);
 
 /**
  * Source of a skill definition
@@ -1365,6 +1682,30 @@ export const SkillSourceSchema: GenEnum<SkillSource> = /*@__PURE__*/
  * @generated from service agents.v1.SkillsService
  */
 export const SkillsService: GenService<{
+  /**
+   * @generated from rpc agents.v1.SkillsService.GetSkillCompatibility
+   */
+  getSkillCompatibility: {
+    methodKind: "unary";
+    input: typeof GetSkillCompatibilityRequestSchema;
+    output: typeof GetSkillCompatibilityResponseSchema;
+  },
+  /**
+   * @generated from rpc agents.v1.SkillsService.GenerateSkillDraft
+   */
+  generateSkillDraft: {
+    methodKind: "unary";
+    input: typeof GenerateSkillDraftRequestSchema;
+    output: typeof GenerateSkillDraftResponseSchema;
+  },
+  /**
+   * @generated from rpc agents.v1.SkillsService.RetrySkillDraftGeneration
+   */
+  retrySkillDraftGeneration: {
+    methodKind: "unary";
+    input: typeof RetrySkillDraftGenerationRequestSchema;
+    output: typeof RetrySkillDraftGenerationResponseSchema;
+  },
   /**
    * Create a new organization skill
    *
@@ -1416,10 +1757,7 @@ export const SkillsService: GenService<{
     output: typeof DeleteSkillResponseSchema;
   },
   /**
-   * List the skills a user can invoke on-demand against a given agent
-   * (the agent's resolved set: explicitly enabled + always-active). Powers
-   * the "/" slash-command menu in the agent composers. Lean payload - no
-   * skill content is shipped; the content loads only when the turn runs.
+   * List assigned skills compatible with the requested surface and executable tools.
    *
    * @generated from rpc agents.v1.SkillsService.ListRunnableSkills
    */
@@ -1524,7 +1862,7 @@ export const SkillsService: GenService<{
     output: typeof RevertSkillResponseSchema;
   },
   /**
-   * Per-skill usage + feedback aggregates for the org admin metrics view.
+   * Exact-version invocation observations for the org admin metrics view.
    *
    * @generated from rpc agents.v1.SkillsService.GetSkillMetrics
    */

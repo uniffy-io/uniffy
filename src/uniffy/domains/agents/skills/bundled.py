@@ -1,108 +1,121 @@
-"""Sync the shipped agent skills in `uniffy/data/skills/` into the database.
-
-Bundled skills are shipped content that orgs cannot edit, so the markdown files
-are the source of truth and the rows are a projection of them. Each file carries
-a fixed `id`, which keeps a bundled skill the same entity on every deployment -
-agent configs reference those ids, so generating them per install would make the
-same skill a different row in every tenant.
-"""
-
-from __future__ import annotations
+"""Project shipped skills into immutable, file-backed versions."""
 
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import select
+from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from uniffy.core.cache.operations import cache_invalidate_by_tag
 from uniffy.core.data_files import DATA_DIR, load_documents
+from uniffy.core.models.agents.skill import AgentSkill, AgentSkillSource, AgentSkillStatus
+from uniffy.core.models.agents.skill_version import AgentSkillVersion
+from uniffy.domains.agents.cache import BUNDLED_SKILLS_TAG
+from uniffy.domains.agents.skills.operations import SkillOperations
+from uniffy.domains.agents.skills.validation import clean_skill_write, validate_supported_surfaces
+from uniffy.infrastructure.database.session import open_session, startup_advisory_lock
 
 logger = logger.bind(component="agents.skills.bundled")
 
-BUNDLED_LOCK_ID = 0x756E_6966_6679_5332  # "unifyS2"
+BUNDLED_LOCK_ID = 0x756E_6966_6679_5332
+_METADATA_KEYS = frozenset({
+    "id",
+    "name",
+    "display_name",
+    "description",
+    "requires_tools",
+    "supported_surfaces",
+})
 
 
 async def sync_bundled_skills() -> None:
-    """Reconcile the bundled skill rows with the shipped files.
-
-    Runs on every startup, ahead of deployment bootstrap, so a release that
-    adds or edits a skill reaches deployments that were provisioned long ago.
-    """
-    from uniffy.infrastructure.database.session import open_session, startup_advisory_lock
-
     with startup_advisory_lock(BUNDLED_LOCK_ID, "bundled skills sync"):
         async with open_session() as session:
-            await _sync_locked(session)
+            changed = await sync_skill_documents(session)
             await session.commit()
+        if changed:
+            await cache_invalidate_by_tag(BUNDLED_SKILLS_TAG)
 
 
-async def _sync_locked(session: AsyncSession) -> None:
-    from uniffy.core.models.agents.skill import AgentSkill, AgentSkillSource, AgentSkillStatus
-
-    documents = load_documents(DATA_DIR / "skills")
-    shipped: dict[UUID, dict[str, str]] = {}
-    for doc in documents:
-        shipped[UUID(doc.scalar("id"))] = {
-            "name": doc.scalar("name"),
-            "display_name": doc.scalar("display_name"),
-            "description": doc.scalar("description"),
-            "content": doc.body,
+async def sync_skill_documents(session: AsyncSession) -> bool:
+    shipped: dict[UUID, dict] = {}
+    names: set[str] = set()
+    for doc in load_documents(DATA_DIR / "skills"):
+        if doc.meta.keys() - _METADATA_KEYS:
+            raise ValueError(f"{doc.path.name}: unsupported bundled skill frontmatter")
+        clean = clean_skill_write(
+            name=doc.scalar("name"),
+            display_name=doc.scalar("display_name"),
+            description=doc.scalar("description"),
+            content=doc.body,
+        )
+        skill_id = UUID(doc.scalar("id"))
+        if skill_id in shipped or clean.name in names:
+            raise ValueError("Bundled skills must have unique IDs and names")
+        names.add(clean.name)
+        shipped[skill_id] = {
+            "name": clean.name,
+            "display_name": clean.display_name,
+            "description": clean.description,
+            "content": clean.content,
+            "requires_tools": doc.items("requires_tools"),
+            "supported_surfaces": validate_supported_surfaces(doc.items("supported_surfaces")),
         }
 
-    result = await session.execute(select(AgentSkill).where(AgentSkill.organization_id.is_(None)))
-    rows = list(result.scalars().all())
-    existing = {row.id: row for row in rows}
-    by_name = {row.name: row for row in rows}
-
-    added, updated, retired = 0, 0, 0
-
-    for skill_id, fields in shipped.items():
-        row = existing.get(skill_id)
-        if row is None:
-            claimed = by_name.get(fields["name"])
-            if claimed is not None:
-                # A row predating the fixed ids. Inserting would trip
-                # uq_agents_skills_bundled_name, and repointing it would orphan
-                # the id in every agent's enabled_skills, so leave it alone:
-                # lookups resolve by name, so the deployment still works.
-                logger.error(
-                    f"Bundled skill {fields['name']} exists as {claimed.id}, "
-                    f"shipped id is {skill_id}. Content not synced. Reset the "
-                    f"database to adopt the shipped ids."
-                )
-                continue
-            session.add(
-                AgentSkill(
-                    id=skill_id,
-                    organization_id=None,
-                    source=AgentSkillSource.BUNDLED,
-                    always_active=False,
-                    **fields,
-                )
+    rows = (
+        await session.execute(
+            select(AgentSkill, AgentSkillVersion)
+            .outerjoin(
+                AgentSkillVersion,
+                and_(
+                    AgentSkillVersion.skill_id == AgentSkill.id,
+                    AgentSkillVersion.version_number == AgentSkill.latest_version_number,
+                ),
             )
-            added += 1
-            continue
-
-        changed = any(getattr(row, key) != value for key, value in fields.items())
-        if changed or row.status != AgentSkillStatus.ACTIVE:
-            for key, value in fields.items():
+            .where(
+                AgentSkill.source == AgentSkillSource.BUNDLED,
+                AgentSkill.organization_id.is_(None),
+            )
+            .with_for_update(of=AgentSkill)
+        )
+    ).all()
+    existing = {row.id: (row, version) for row, version in rows}
+    by_name = {row.name: row for row, _ in rows}
+    version_ops = SkillOperations(session)
+    changed = False
+    for skill_id, fields in shipped.items():
+        row, latest = existing.get(skill_id, (None, None))
+        if row is None:
+            if fields["name"] in by_name:
+                raise ValueError("Bundled skill name is bound to a different fixed ID")
+            row = AgentSkill(
+                id=skill_id,
+                source=AgentSkillSource.BUNDLED,
+                latest_version_number=0,
+                **fields,
+            )
+            session.add(row)
+            await session.flush()
+        needs_snapshot = (
+            latest is None
+            or row.active_version_id is None
+            or any(getattr(latest, key) != value for key, value in fields.items())
+        )
+        for key, value in fields.items():
+            if getattr(row, key) != value:
                 setattr(row, key, value)
+                changed = True
+        if needs_snapshot:
+            await version_ops.stage_skill_version(row, author_id=None)
+            changed = True
+        if row.status != AgentSkillStatus.ACTIVE:
             row.status = AgentSkillStatus.ACTIVE
-            updated += 1
+            changed = True
 
-    shipped_names = {fields["name"] for fields in shipped.values()}
-    for skill_id, row in existing.items():
-        if skill_id in shipped or row.name in shipped_names:
-            continue
-        if row.status != AgentSkillStatus.RETIRED:
-            # Dropping the row would cascade its versions and silently strip the
-            # id out of every agent's enabled_skills; retiring only hides it from
-            # the pickers while agents that already use it keep working.
+    for skill_id, (row, _) in existing.items():
+        if skill_id not in shipped and row.status != AgentSkillStatus.RETIRED:
             row.status = AgentSkillStatus.RETIRED
-            retired += 1
-            logger.warning(f"Bundled skill {row.name} no longer shipped, retired")
+            changed = True
 
-    logger.info(
-        f"Bundled skills synced: {added} added, {updated} updated, "
-        f"{retired} retired, {len(shipped)} shipped"
-    )
+    logger.info("Bundled skills reconciled", shipped_count=len(shipped), changed=changed)
+    return changed

@@ -5,6 +5,7 @@ from uuid import UUID
 from uniffy.core.data_files import DATA_DIR, load_documents
 from uniffy.core.models.agents.agent import Agent
 from uniffy.core.types import AccessMode, generate_id
+from uniffy.domains.agents.rules.validation import clean_rule_fields
 from uniffy.domains.agents.templates import (
     AGENT_TEMPLATES,
     get_default_template,
@@ -50,6 +51,45 @@ class TestCatalogIntegrity:
             assert template.description.strip()
             assert template.enabled_tools
 
+    def test_bundled_rule_names_match_shipped_rules(self) -> None:
+        shipped = {doc.scalar("name") for doc in load_documents(DATA_DIR / "rules")}
+        for template in AGENT_TEMPLATES:
+            assert set(template.bundled_rule_names) <= shipped
+        assert get_default_template().bundled_rule_names
+
+    def test_every_catalog_agent_selects_the_shared_rules(self) -> None:
+        shared = {
+            "clear_communication",
+            "no_emojis",
+            "clarify_intent",
+            "respect_workspace_structure",
+            "no_dashes",
+        }
+        for template in AGENT_TEMPLATES:
+            assert shared <= set(template.bundled_rule_names), template.key
+            assert len(template.bundled_rule_names) == len(set(template.bundled_rule_names))
+
+    def test_bundled_rules_have_valid_content_and_unique_fixed_ids(self) -> None:
+        documents = load_documents(DATA_DIR / "rules")
+        ids = [UUID(document.scalar("id")) for document in documents]
+        assert len(ids) == len(set(ids))
+        assert all(rule_id.version == 7 for rule_id in ids)
+        for document in documents:
+            fields = clean_rule_fields(
+                name=document.scalar("name"),
+                display_name=document.scalar("display_name"),
+                description=document.scalar("description"),
+                content=document.body,
+            )
+            assert fields["content"] == document.body
+
+    def test_workspace_prompt_leaves_selectable_guidance_to_rules(self) -> None:
+        prompt = (DATA_DIR / "prompts" / "workspace.md").read_text(encoding="utf-8")
+        assert "### Rules" not in prompt
+        assert "Never use emojis" not in prompt
+        assert "### Working with Tools" in prompt
+        assert "### Content References" in prompt
+
     def test_navigator_has_rich_people_reads(self) -> None:
         tools = set(get_template("navigator").enabled_tools)
         assert {
@@ -79,7 +119,11 @@ async def _org_create(skill_rows: list[tuple[UUID, str]]):
     owner_lookup.scalar_one_or_none.return_value = SimpleNamespace(id=owner_id)
     skill_lookup = MagicMock()
     skill_lookup.all.return_value = skill_rows
-    session.execute = AsyncMock(side_effect=[owner_lookup, skill_lookup])
+    rule_lookup = MagicMock()
+    rule_lookup.all.return_value = [
+        (doc.scalar("name"), UUID(doc.scalar("id"))) for doc in load_documents(DATA_DIR / "rules")
+    ]
+    session.execute = AsyncMock(side_effect=[owner_lookup, skill_lookup, rule_lookup])
 
     ops = OrganizationOperations.__new__(OrganizationOperations)
     ops._session = session
@@ -161,6 +205,10 @@ class TestDefaultAgentBootstrap:
         assert agent.baseline_role is None
         assert agent.enabled_tools == template.enabled_tools
         assert agent.enabled_skills == [str(skill_id)]
+        rule_ids = {
+            doc.scalar("name"): doc.scalar("id") for doc in load_documents(DATA_DIR / "rules")
+        }
+        assert agent.enabled_rules == [rule_ids[name] for name in template.bundled_rule_names]
         assert agent.primary_provider_key_id is None
         assert agent.image_provider_key_id is None
         finish_default_agent.assert_awaited_once()

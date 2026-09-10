@@ -28,7 +28,6 @@ from uniffy.core.cache.operations import (
 )
 from uniffy.core.json_codec import dumps_bytes
 from uniffy.core.models.agents.agent import Agent
-from uniffy.core.models.agents.skill import AgentSkill
 from uniffy.core.types import AccessMode, ContentRole
 from uniffy.infrastructure.valkey.ops import get_ops_client
 
@@ -36,6 +35,7 @@ logger = logger.bind(component="agents.cache")
 
 _AGENT_TTL_SECONDS = 900
 _SKILLS_TTL_SECONDS = 900
+BUNDLED_SKILLS_TAG = "bundled_skills"
 
 
 def _agent_key(agent_id: UUID) -> str:
@@ -80,6 +80,7 @@ def _serialize_agent(agent: Agent) -> dict[str, Any]:
         ),
         "enabled_tools": list(agent.enabled_tools or []),
         "enabled_skills": list(agent.enabled_skills or []),
+        "enabled_rules": list(agent.enabled_rules or []),
         "integration_connections": dict(agent.integration_connections or {}),
         "avatar_emoji": agent.avatar_emoji,
         "avatar_key": agent.avatar_key,
@@ -118,6 +119,7 @@ def _deserialize_agent(payload: dict[str, Any]) -> Agent:
         ),
         enabled_tools=payload.get("enabled_tools") or [],
         enabled_skills=payload.get("enabled_skills") or [],
+        enabled_rules=payload.get("enabled_rules") or [],
         integration_connections=payload.get("integration_connections") or {},
         avatar_emoji=payload.get("avatar_emoji", ""),
         avatar_key=payload.get("avatar_key"),
@@ -194,72 +196,8 @@ async def fetch_agent_row(
     return agent
 
 
-def _serialize_skill(skill: AgentSkill) -> dict[str, Any]:
-    return {
-        "id": str(skill.id),
-        "name": skill.name,
-        "display_name": skill.display_name,
-        "description": skill.description,
-        "content": skill.content,
-        "source": skill.source,
-        "always_active": skill.always_active,
-        "when_to_use": getattr(skill, "when_to_use", "") or "",
-        "requires_tools": list(getattr(skill, "requires_tools", None) or []),
-        "requires_context": list(getattr(skill, "requires_context", None) or []),
-        "latest_version_number": int(getattr(skill, "latest_version_number", 1) or 1),
-    }
-
-
-def _deserialize_skill(payload: dict[str, Any]) -> AgentSkill:
-    return AgentSkill(
-        id=UUID(payload["id"]),
-        organization_id=None,
-        name=payload["name"],
-        display_name=payload["display_name"],
-        description=payload.get("description", ""),
-        content=payload.get("content", ""),
-        source=payload["source"],
-        owner_id=None,
-        always_active=payload.get("always_active", False),
-        when_to_use=payload.get("when_to_use", ""),
-        requires_tools=payload.get("requires_tools") or [],
-        requires_context=payload.get("requires_context") or [],
-        latest_version_number=payload.get("latest_version_number", 1),
-    )
-
-
 async def invalidate_cached_agent_skills(agent_id: UUID) -> None:
     await cache_delete(_agent_skills_key(agent_id))
-
-
-async def fetch_agent_skills(
-    skill_ops,
-    *,
-    agent_id: UUID,
-    organization_id: UUID,
-    enabled_skill_ids: list[str],
-) -> list[AgentSkill]:
-    """Stampede-protected cache-or-load for resolved agent skills."""
-
-    async def _load() -> dict[str, Any] | None:
-        skills = await skill_ops.get_skills_for_agent(
-            organization_id=organization_id,
-            enabled_skill_ids=enabled_skill_ids,
-        )
-        return {"skills": [_serialize_skill(s) for s in skills]}
-
-    payload = await cache_get_or_set_locked(
-        _agent_skills_key(agent_id),
-        _load,
-        ttl=_SKILLS_TTL_SECONDS,
-        tags=[_org_skills_tag(organization_id)],
-    )
-    if not payload:
-        return []
-    raw = payload.get("skills") if isinstance(payload, dict) else None
-    if not isinstance(raw, list):
-        return []
-    return [_deserialize_skill(s) for s in raw]
 
 
 async def _set_add(set_key: str, member: str, ttl: int) -> None:
@@ -331,6 +269,7 @@ async def invalidate_agents_using_skill(
 
     `drop_tag_set=True` also DELs the tag set itself (skill row delete).
     """
+    await cache_invalidate_by_tag(f"skill_snapshot:{skill_id}")
     set_key = _skill_tag_key(skill_id)
     members = await _set_members(set_key)
     if members:
@@ -347,15 +286,6 @@ async def invalidate_agents_using_skill(
                     f"Cache reverse-index DEL failed for {set_key}",
                     component="cache",
                 )
-
-
-async def invalidate_org_always_active_skills(organization_id: UUID) -> None:
-    """Fan-invalidate every agent's skills cache via the org tag.
-
-    Always-active skills are injected for every agent, so per-skill reverse
-    indices miss them; only the org tag covers all agents at once.
-    """
-    await cache_invalidate_by_tag(_org_skills_tag(organization_id))
 
 
 def _is_uuid(value: str) -> bool:

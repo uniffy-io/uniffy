@@ -2,30 +2,20 @@
 
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import delete, func, select, text
-from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.jobs import JobEnqueueOutcome, enqueue_job_reconnecting
 from uniffy.core.models.agents.message import AgentMessage, AgentMessageRole
-from uniffy.core.models.agents.message_feedback import AgentFeedbackRating, AgentMessageFeedback
 from uniffy.core.models.agents.session import AgentSession, AgentSessionKind
-from uniffy.core.models.chat.channel import ChatChannel
-from uniffy.core.models.chat.message import ChatMessage, SenderType
-from uniffy.core.types import generate_id
 from uniffy.domains.agents.agents.operations import AgentOperations
 from uniffy.domains.agents.runtime.compactor import summarise_conversation
 from uniffy.domains.agents.runtime.streams import session_has_active_run
 from uniffy.domains.agents.sessions.jobs.contracts import COMPACT_SESSION
-from uniffy.domains.agents.skills.jobs.contracts import (
-    ANALYZE_SESSION_FOR_SKILLS,
-    SkillAnalysisDestination,
-)
-from uniffy.domains.chat.access import ChatAccessChecker
 from uniffy.domains.organizations.operations import OrganizationOperations
 
 logger = logger.bind(component="agents.sessions.operations")
@@ -37,19 +27,6 @@ logger = logger.bind(component="agents.sessions.operations")
 # to the current conversation, not to history a model has long since
 # moved past.
 EDIT_WINDOW_SECONDS = 600
-
-# Defer window for the skill-evolution analyzer. Each trigger enqueues its own
-# job deferred by this many seconds; the worker exits unless the conversation
-# has stayed quiet for the full window, so a burst of turns collapses to one
-# real run without relying on ARQ to extend a shared job's defer.
-SKILL_ANALYSIS_DEBOUNCE_SECONDS = 90
-
-
-def _skill_analysis_job_id(
-    destination_kind: SkillAnalysisDestination, destination_id: UUID, salt: str
-) -> str:
-    return f"analyze_skills:{destination_kind}:{destination_id}:{salt}"
-
 
 # Hard cap on rows handed to the LLM when the async compaction worker
 # hasn't caught up yet. The runtime trusts the provider-reported prompt
@@ -704,227 +681,6 @@ class SessionOperations:
             )
             return False
         return True
-
-    async def enqueue_skill_analysis(
-        self,
-        *,
-        destination_kind: SkillAnalysisDestination,
-        destination_id: UUID,
-        user_id: UUID,
-        agent_id: UUID,
-        organization_id: UUID,
-    ) -> bool:
-        """Queue a debounced skill-evolution analysis for a conversation turn.
-
-        Best-effort and cheap. The worker gates on the per-org opt-in and the
-        daily budget before any LLM work, so enqueuing is safe even when
-        evolution is disabled.
-        """
-        # A fresh salt per trigger gives each turn its own job id. ARQ never
-        # extends the defer of an existing id and caches a finished job's result
-        # for WORKER_KEEP_RESULT seconds, so a reused id would fire against a
-        # partial transcript and then block re-enqueues for that window. The
-        # worker self-debounces the resulting burst down to one real run.
-        job_id = _skill_analysis_job_id(destination_kind, destination_id, uuid4().hex)
-        try:
-            enqueue_result = await enqueue_job_reconnecting(
-                ANALYZE_SESSION_FOR_SKILLS,
-                destination_kind,
-                str(destination_id),
-                str(user_id),
-                str(agent_id),
-                str(organization_id),
-                _job_id=job_id,
-                _defer_by=SKILL_ANALYSIS_DEBOUNCE_SECONDS,
-            )
-            if enqueue_result.outcome is JobEnqueueOutcome.UNAVAILABLE:
-                return False
-        except Exception:
-            logger.opt(exception=True).warning(
-                "analyze_session_for_skills enqueue failed",
-                destination_id=str(destination_id),
-            )
-            return False
-        return True
-
-    async def submit_message_feedback(
-        self,
-        *,
-        user_id: UUID,
-        organization_id: UUID,
-        message_id: UUID,
-        rating: str,
-        comment: str = "",
-    ) -> AgentMessageFeedback | None:
-        """Upsert (or clear) the caller's thumbs rating on an assistant message.
-
-        Only assistant messages are ratable. An empty rating clears the row; a
-        thumbs-down queues a skill-evolution pass for the session.
-        """
-        await self._org_ops.require_org_member(user_id, organization_id)
-        clean = (rating or "").strip().lower()
-        if clean not in ("", "up", "down"):
-            raise ValidationError("rating", "rating must be 'up', 'down', or empty")
-
-        msg, agent_session = await self._load_message(
-            user_id=user_id,
-            organization_id=organization_id,
-            message_id=message_id,
-        )
-        if msg.role != AgentMessageRole.ASSISTANT:
-            raise ValidationError("role", "feedback is only supported on agent messages")
-
-        feedback = await self._upsert_feedback(
-            target_column="agents_message_id",
-            target_id=message_id,
-            user_id=user_id,
-            rating=clean,
-            comment=comment,
-        )
-
-        if clean == AgentFeedbackRating.DOWN:
-            await self.enqueue_skill_analysis(
-                destination_kind=SkillAnalysisDestination.SESSION,
-                destination_id=agent_session.id,
-                user_id=user_id,
-                agent_id=agent_session.agent_id,
-                organization_id=organization_id,
-            )
-        return feedback
-
-    async def submit_chat_message_feedback(
-        self,
-        *,
-        user_id: UUID,
-        organization_id: UUID,
-        chat_message_id: UUID,
-        rating: str,
-        comment: str = "",
-    ) -> AgentMessageFeedback | None:
-        """Upsert (or clear) the caller's thumbs rating on an agent chat reply.
-
-        The caller must be able to view the channel; only AGENT-sent, undeleted
-        messages are ratable. A thumbs-down queues a skill-evolution pass for
-        the channel.
-        """
-        await self._org_ops.require_org_member(user_id, organization_id)
-        clean = (rating or "").strip().lower()
-        if clean not in ("", "up", "down"):
-            raise ValidationError("rating", "rating must be 'up', 'down', or empty")
-
-        result = await self._session.execute(
-            select(ChatMessage, ChatChannel)
-            .join(ChatChannel, ChatChannel.id == ChatMessage.channel_id)
-            .where(
-                ChatMessage.id == chat_message_id,
-                ChatChannel.organization_id == organization_id,
-            )
-        )
-        row = result.first()
-        if row is None:
-            raise NotFoundError("ChatMessage", str(chat_message_id))
-        msg, channel = row
-        if msg.is_deleted:
-            raise NotFoundError("ChatMessage", str(chat_message_id))
-        if msg.sender_type != SenderType.AGENT:
-            raise ValidationError("sender", "feedback is only supported on agent messages")
-
-        await ChatAccessChecker(self._session).check_access(user_id, organization_id, channel)
-
-        feedback = await self._upsert_feedback(
-            target_column="chat_message_id",
-            target_id=chat_message_id,
-            user_id=user_id,
-            rating=clean,
-            comment=comment,
-        )
-
-        if clean == AgentFeedbackRating.DOWN:
-            await self.enqueue_skill_analysis(
-                destination_kind=SkillAnalysisDestination.CHANNEL,
-                destination_id=msg.channel_id,
-                user_id=user_id,
-                agent_id=msg.sender_id,
-                organization_id=organization_id,
-            )
-        return feedback
-
-    async def _upsert_feedback(
-        self,
-        *,
-        target_column: str,
-        target_id: UUID,
-        user_id: UUID,
-        rating: str,
-        comment: str,
-    ) -> AgentMessageFeedback | None:
-        column = getattr(AgentMessageFeedback, target_column)
-        if not rating:
-            await self._session.execute(
-                delete(AgentMessageFeedback).where(
-                    column == target_id,
-                    AgentMessageFeedback.user_id == user_id,
-                )
-            )
-            await self._session.commit()
-            return None
-
-        comment_clean = (comment or "").strip() or None
-        now = datetime.now(UTC)
-        stmt = (
-            pg_insert(AgentMessageFeedback)
-            .values(
-                id=generate_id(),
-                user_id=user_id,
-                rating=rating,
-                comment=comment_clean,
-                created_at=now,
-                **{target_column: target_id},
-            )
-            .on_conflict_do_update(
-                index_elements=[target_column, "user_id"],
-                index_where=text(f"{target_column} IS NOT NULL"),
-                set_={"rating": rating, "comment": comment_clean, "created_at": now},
-            )
-        )
-        await self._session.execute(stmt)
-        await self._session.commit()
-
-        result = await self._session.execute(
-            select(AgentMessageFeedback).where(
-                column == target_id,
-                AgentMessageFeedback.user_id == user_id,
-            )
-        )
-        return result.scalar_one_or_none()
-
-    async def get_user_feedback_for_messages(
-        self, *, user_id: UUID, message_ids: list[UUID]
-    ) -> dict[UUID, str]:
-        """Map agents_message_id -> the caller's rating for a page of messages."""
-        if not message_ids:
-            return {}
-        result = await self._session.execute(
-            select(AgentMessageFeedback.agents_message_id, AgentMessageFeedback.rating).where(
-                AgentMessageFeedback.user_id == user_id,
-                AgentMessageFeedback.agents_message_id.in_(message_ids),
-            )
-        )
-        return {mid: rating for mid, rating in result.all()}
-
-    async def get_user_feedback_for_chat_messages(
-        self, *, user_id: UUID, chat_message_ids: list[UUID]
-    ) -> dict[UUID, str]:
-        """Map chat_message_id -> the caller's rating for a page of chat messages."""
-        if not chat_message_ids:
-            return {}
-        result = await self._session.execute(
-            select(AgentMessageFeedback.chat_message_id, AgentMessageFeedback.rating).where(
-                AgentMessageFeedback.user_id == user_id,
-                AgentMessageFeedback.chat_message_id.in_(chat_message_ids),
-            )
-        )
-        return {mid: rating for mid, rating in result.all()}
 
     async def compact_session_if_needed(
         self,

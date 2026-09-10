@@ -47,7 +47,19 @@ describe("PartAggregator", () => {
     expect(aggregator.bufferedSize()).toBe(0);
   });
 
-  describe("soft flush deadline", () => {
+  it("snapshot() returns the pending bytes without sealing them", () => {
+    aggregator.pushChunk(blob(ONE_MB));
+    aggregator.pushChunk(blob(ONE_MB));
+    const pending = aggregator.snapshot();
+    expect(pending?.size).toBe(2 * ONE_MB);
+    expect(aggregator.bufferedSize()).toBe(2 * ONE_MB);
+  });
+
+  it("snapshot() returns null when nothing is buffered", () => {
+    expect(aggregator.snapshot()).toBeNull();
+  });
+
+  describe("elapsed time", () => {
     beforeEach(() => {
       vi.useFakeTimers();
       vi.setSystemTime(new Date("2026-05-09T12:00:00Z"));
@@ -57,12 +69,11 @@ describe("PartAggregator", () => {
       vi.useRealTimers();
     });
 
-    it("flushes after 45 s even when the buffer is below the 5 MB floor", () => {
+    it("never seals a part below the 5 MB floor, however long chunks trickle in", () => {
       aggregator.pushChunk(blob(ONE_MB));
-      vi.setSystemTime(new Date("2026-05-09T12:00:45Z"));
-      const result = aggregator.pushChunk(blob(ONE_MB));
-      expect(result).not.toBeNull();
-      expect(result!.size).toBe(2 * ONE_MB);
+      vi.setSystemTime(new Date("2026-05-09T12:05:00Z"));
+      expect(aggregator.pushChunk(blob(ONE_MB))).toBeNull();
+      expect(aggregator.bufferedSize()).toBe(2 * ONE_MB);
     });
   });
 });

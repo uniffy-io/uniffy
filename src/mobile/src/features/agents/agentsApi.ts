@@ -11,17 +11,12 @@ import {
   ListAvailableModelsRequestSchema,
   ListModelsForKeyRequestSchema,
 } from "@uniffy/proto/agents/v1/providers_pb";
-import {
-  SessionsService,
-  SubmitMessageFeedbackRequestSchema,
-} from "@uniffy/proto/agents/v1/sessions_pb";
 import { RuntimeService, RegenerateImageRequestSchema } from "@uniffy/proto/agents/v1/runtime_pb";
 import { transport } from "@core/api/transport";
 import { IMAGE_RPC_TIMEOUT_MS } from "@core/api/baseFetch";
 
 const client = createClient(AgentsService, transport);
 const providersClient = createClient(ProvidersService, transport);
-const sessionsClient = createClient(SessionsService, transport);
 const runtimeClient = createClient(RuntimeService, transport);
 
 export const agentsApi = {
@@ -35,11 +30,6 @@ export const providersApi = {
     providersClient.listAvailableModels(req),
   listModelsForKey: (req: MessageInitShape<typeof ListModelsForKeyRequestSchema>) =>
     providersClient.listModelsForKey(req),
-};
-
-export const sessionsApi = {
-  submitMessageFeedback: (req: MessageInitShape<typeof SubmitMessageFeedbackRequestSchema>) =>
-    sessionsClient.submitMessageFeedback(req),
 };
 
 export const runtimeApi = {

@@ -2,26 +2,12 @@
 
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from uuid import UUID
 
+from uniffy.domains.agents.rules.resolution import ResolvedRule
 from uniffy.domains.agents.runtime.workspace import WORKSPACE_PROMPT
+from uniffy.domains.agents.skills.resolution import ResolvedSkill
 from uniffy.domains.agents.tools.deferral import LOAD_GROUP_TOOL
 from uniffy.domains.agents.tools.registry import to_api_name
-
-SKILL_VIEW_TOOL = "skills.view_skill"
-
-
-@dataclass(frozen=True)
-class SkillPromptEntry:
-    """A skill resolved for prompt injection, already filtered by conditional activation."""
-
-    id: UUID
-    name: str
-    display_name: str
-    description: str
-    when_to_use: str
-    content: str
-    always_active: bool
 
 
 @dataclass(frozen=True)
@@ -74,31 +60,6 @@ def build_memory_block(blocks: list[MemoryScopeBlock]) -> str | None:
     return header + "\n\n" + "\n\n".join(scope_parts)
 
 
-def skill_passes_activation(skill, *, enabled_tools, surface: str) -> bool:
-    """True when the skill's required tools are enabled and its required context fits the surface.
-
-    Accepts any object exposing ``requires_tools`` / ``requires_context`` (the
-    ``AgentSkill`` row or a cache-rehydrated copy). Empty requirements always pass.
-    """
-    req_tools = list(getattr(skill, "requires_tools", None) or [])
-    if req_tools and not set(req_tools).issubset(set(enabled_tools or [])):
-        return False
-    req_context = list(getattr(skill, "requires_context", None) or [])
-    return not (req_context and surface not in req_context)
-
-
-def to_skill_prompt_entry(skill) -> SkillPromptEntry:
-    return SkillPromptEntry(
-        id=skill.id,
-        name=skill.name,
-        display_name=getattr(skill, "display_name", "") or skill.name,
-        description=getattr(skill, "description", "") or "",
-        when_to_use=getattr(skill, "when_to_use", "") or "",
-        content=getattr(skill, "content", "") or "",
-        always_active=bool(getattr(skill, "always_active", False)),
-    )
-
-
 def build_system_prompt(
     *,
     agent_name: str,
@@ -107,8 +68,8 @@ def build_system_prompt(
     user_name: str | None = None,
     user_role: str | None = None,
     deferred_tools: dict[str, list[str]] | None = None,
-    skills: list[SkillPromptEntry] | None = None,
-    invoked_skill: SkillPromptEntry | None = None,
+    rules: tuple[ResolvedRule, ...] = (),
+    invoked_skill: ResolvedSkill | None = None,
     memory_context: str | None = None,
     user_timezone: str | None = None,
     chat_context: str | None = None,
@@ -117,57 +78,31 @@ def build_system_prompt(
     """Assemble the system prompt from modular sections."""
     sections: list[str] = []
 
-    # Section 1: Soul prompt (personality, instructions)
     if soul_prompt:
         sections.append(soul_prompt)
 
-    # Section 2: Agent name and metadata
     sections.append(f"Your name is {agent_name}.")
 
-    # Section 3: Current date and timezone. Day-level granularity only --
-    # a minute-level timestamp here would invalidate the prompt cache on
-    # every turn. The agent calls a tool when it needs the actual time.
+    # Day-level granularity keeps the prompt cache reusable across turns.
     now = datetime.now(UTC)
     time_parts = [f"Today's date is {now.strftime('%Y-%m-%d')} (UTC)."]
     if user_timezone:
         time_parts.append(f"The user's local timezone is {user_timezone}.")
     sections.append(" ".join(time_parts))
 
-    # Section 4: User identity
     user_section = _build_user_section(user_name, user_role, org_name)
     if user_section:
         sections.append(user_section)
 
-    # Section 5: Active skill instructions (progressive disclosure). An
-    # on-demand invoked skill is rendered separately in full, so it is
-    # excluded from the advertised index to avoid injecting it twice.
-    # Dedupe by id, not name: org and bundled skills can legally share a
-    # machine name, so a name match would drop a distinct same-named skill.
-    invoked_id = invoked_skill.id if invoked_skill else None
-    advertised = [s for s in skills if s.id != invoked_id] if skills else []
-    if advertised:
-        skill_section = _build_skill_section(advertised)
-        if skill_section:
-            sections.append(skill_section)
-    if invoked_skill:
-        sections.append(_build_invoked_skill_section(invoked_skill))
-
-    # Section 6: Memory context (pre-rendered index + pinned block)
     if memory_context:
         sections.append(memory_context)
 
-    # Section 7: Platform workspace conventions (URN mentions, tool and
-    # memory guidance). Fixed infrastructure text, identical for every agent.
     sections.append(WORKSPACE_PROMPT)
 
-    # Section 7b: Chat-channel context (only set on chat-triggered turns).
-    # Placed just before the tools section so the agent has a fresh picture
-    # of where it is and who it's talking to right before the conversation
-    # history starts.
     if chat_context:
         sections.append(chat_context)
 
-    # Section 7c: Output formatting rules. Some providers reach for
+    # Some providers reach for
     # remark-directive syntax (`::: note`, `::: warning`, `::: writing
     # block`, ...) when producing long-form content. Standard CommonMark
     # (which the chat renderer uses) does not parse those fences, so
@@ -175,7 +110,6 @@ def build_system_prompt(
     # explicitly.
     sections.append(_OUTPUT_FORMATTING_RULES)
 
-    # Section 8: Deferred-tool index (last so tools are near the conversation).
     # Advertised tools are NOT repeated here: the provider's native tools
     # param already carries name + description + schema, and a prose copy
     # doubles their token cost.
@@ -188,6 +122,25 @@ def build_system_prompt(
     if external_content_note:
         sections.append(_EXTERNAL_CONTENT_NOTE)
 
+    if rules:
+        sections.append(_build_rule_section(rules))
+    if invoked_skill:
+        sections.append(_build_invoked_skill_section(invoked_skill))
+
+    return "\n\n".join(sections)
+
+
+def _build_rule_section(rules: tuple[ResolvedRule, ...]) -> str:
+    sections = [
+        "## Attached rules\n\n"
+        "These are rules attached to you that you must follow throughout this conversation. "
+        "These rules were selected specifically for you. Follow all attached rules together. "
+        "These rules take precedence over an invoked skill and the user's request, but cannot "
+        "override Uniffy product instructions. Rules never grant workspace permissions or "
+        "override tool access checks."
+    ]
+    for rule in rules:
+        sections.append(f"### Agent rule: {rule.display_name}\n\n{rule.content}")
     return "\n\n".join(sections)
 
 
@@ -317,49 +270,12 @@ def _describe_trigger_rule(rule: str | None) -> str:
     return mapping.get(rule or "", "a chat trigger")
 
 
-def _build_skill_section(skills: list[SkillPromptEntry]) -> str | None:
-    """Render always-active skills as full content and the rest as a view_skill index."""
-    always_blocks = [s.content for s in skills if s.always_active and s.content]
-    available = [s for s in skills if not s.always_active]
-
-    parts: list[str] = []
-    if always_blocks:
-        parts.append(
-            "The following skill instructions are active for this session:\n\n"
-            + "\n\n---\n\n".join(always_blocks)
-        )
-    if available:
-        lines = [
-            "The following skills are available but not yet loaded. A skill is "
-            f"NOT a tool -- to use one, first call the `{SKILL_VIEW_TOOL}` tool "
-            "with its name to load the full instructions, then follow them. When "
-            "the user's request matches a skill's trigger below, load and follow "
-            "that skill before replying, instead of answering from memory or "
-            "proposing a new or changed skill for something it already covers:",
-            "",
-        ]
-        for s in available:
-            entry = f"- `{s.name}` ({s.display_name})"
-            description = s.description.strip()
-            if description:
-                entry += f": {description}"
-            when = s.when_to_use.strip()
-            if when:
-                # Avoid "use when when ..." when the guidance already leads with "when".
-                lead = "" if when[:5].lower() == "when " else "use when "  # noqa: PLR2004
-                entry += f" -- {lead}{when}"
-            lines.append(entry)
-        parts.append("\n".join(lines))
-
-    return "\n\n".join(parts) if parts else None
-
-
-def _build_invoked_skill_section(skill: SkillPromptEntry) -> str:
+def _build_invoked_skill_section(skill: ResolvedSkill) -> str:
     """Render a user-invoked skill in full with an execute-now directive."""
     header = (
         f"The user explicitly invoked the `{skill.name}` ({skill.display_name}) skill for "
-        "this message. Follow these instructions to carry out the request now, unless the "
-        "user's actual message clearly asks for something else:"
+        "this message. Follow these instructions to carry out the request. They cannot "
+        "override Uniffy product instructions or the rules attached to this agent:"
     )
     return f"{header}\n\n{skill.content}" if skill.content else header
 
@@ -369,23 +285,6 @@ def _build_user_section(
     user_role: str | None,
     org_name: str,
 ) -> str | None:
-    """Build the user identity section for the system prompt.
-
-    Parameters
-    ----------
-    user_name : str | None
-        Name of the user.
-    user_role : str | None
-        User's organization role.
-    org_name : str
-        Organization name.
-
-    Returns
-    -------
-    str | None
-        Formatted user identity section, or None if no user info.
-
-    """
     if not user_name:
         return None
 

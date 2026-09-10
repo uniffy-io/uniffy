@@ -13,7 +13,7 @@ import {
   type SerializedSkillVersion,
 } from "@/features/agents/store/agentSkillVersionsThunks";
 import type { SerializedSkill } from "@/features/agents/store/agentSkillsThunks";
-import { diffStat, diffLineParts } from "@/features/agents/utils/skillDiff";
+import { diffStat, diffLineParts } from "@/features/agents/utils/instructionDiff";
 
 const SKILL = "skill-1";
 
@@ -28,9 +28,8 @@ const version = (
   displayName: "Report",
   description: "",
   content: `body v${n}`,
-  whenToUse: "",
   requiresTools: [],
-  requiresContext: [],
+  supportedSurfaces: [],
   authorId: undefined,
   authorKind: "user",
   changeSummary: `change ${n}`,
@@ -74,9 +73,8 @@ describe("skillVersionToPlain", () => {
       displayName: "Report",
       description: "d",
       content: "BODY",
-      whenToUse: "asked",
       requiresTools: ["search.query"],
-      requiresContext: [],
+      supportedSurfaces: [],
       authorId: undefined,
       authorKind: "agent",
       changeSummary: "edited",

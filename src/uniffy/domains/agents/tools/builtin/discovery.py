@@ -1,9 +1,4 @@
-"""The tools.load_group meta tool.
-
-Framework plumbing like ``skills.view_skill``: the runtime advertises it on
-its own terms whenever the advertisement plan defers any group, so it is
-``internal`` and never builder-selectable.
-"""
+"""Runtime-owned loading of deferred tool groups."""
 
 from uniffy.domains.agents.tools.deferral import LOAD_GROUP_TOOL
 from uniffy.domains.agents.tools.definitions import (

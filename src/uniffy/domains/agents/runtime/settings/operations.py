@@ -18,15 +18,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import Action
 from uniffy.core.config.settings.organization import OrgSettingsOperations
-from uniffy.core.errors import ValidationError
+from uniffy.core.errors import PermissionDeniedError, ValidationError
 from uniffy.core.models.agents.provider_key import ProviderKey
 from uniffy.core.models.audit.event import AuditResourceType
+from uniffy.domains.agents.access import is_org_admin
 from uniffy.domains.agents.providers.catalog.images import (
     QUALITY_ORDER,
     RESOLUTION_ORDER,
 )
 from uniffy.domains.agents.providers.catalog.loader import provider_for_model
-from uniffy.domains.organizations.operations import OrganizationOperations
 
 logger = logger.bind(component="agents.runtime.settings.operations")
 
@@ -170,7 +170,10 @@ class RuntimeSettingsOperations:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
         self._settings = OrgSettingsOperations(session)
-        self._org_ops = OrganizationOperations(session)
+
+    async def _require_admin(self, user_id: UUID, organization_id: UUID) -> None:
+        if not await is_org_admin(self._session, user_id, organization_id):
+            raise PermissionDeniedError("Requires organization admin privileges")
 
     async def get(
         self,
@@ -178,7 +181,7 @@ class RuntimeSettingsOperations:
         user_id: UUID,
         organization_id: UUID,
     ) -> tuple[ResolvedRuntimeSettings, bool]:
-        await self._org_ops.require_org_admin(user_id, organization_id)
+        await self._require_admin(user_id, organization_id)
         row = await self._read_row(organization_id)
         configured = row is not None and isinstance(row.value, dict)
         resolved = _from_blob(row.value) if configured else _defaults()
@@ -200,7 +203,7 @@ class RuntimeSettingsOperations:
         image_max_resolution: str,
         image_max_quality: str,
     ) -> tuple[ResolvedRuntimeSettings, bool]:
-        await self._org_ops.require_org_admin(user_id, organization_id)
+        await self._require_admin(user_id, organization_id)
 
         key_id = await self._validate_default_key(
             organization_id, default_provider_key_id, default_chat_model

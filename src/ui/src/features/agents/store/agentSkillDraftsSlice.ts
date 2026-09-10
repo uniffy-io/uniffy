@@ -1,116 +1,169 @@
-import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
+import {
+  createSelector,
+  createSlice,
+  isAnyOf,
+  isFulfilled,
+  isPending,
+  isRejected,
+} from "@reduxjs/toolkit";
 import type { RootState } from "@/app/store";
 import {
+  logout,
+  rehydrateComplete,
+  rehydrateFailed,
+  setCredentials,
+} from "@/features/auth/store/authSlice";
+import {
   fetchSkillDrafts,
+  fetchSkillDraft,
   createSkillDraft,
+  generateSkillDraft,
+  retrySkillDraftGeneration,
   saveSkillDraft,
   discardSkillDraft,
   type SerializedSkillDraft,
 } from "@/features/agents/store/agentSkillDraftsThunks";
 
 interface AgentSkillDraftsState {
+  organizationId: string | null;
+  userId: string | null;
+  requests: Record<string, true>;
   byId: Record<string, SerializedSkillDraft>;
-  // Pending drafts for the review inbox (newest first).
   inboxIds: string[];
-  // Drafts an agent proposed during a given session, for inline review cards.
-  idsBySession: Record<string, string[]>;
   loading: boolean;
 }
 
 const initialState: AgentSkillDraftsState = {
+  organizationId: null,
+  userId: null,
+  requests: {},
   byId: {},
   inboxIds: [],
-  idsBySession: {},
   loading: false,
 };
 
-const dropFromInbox = (state: AgentSkillDraftsState, draftId: string) => {
-  state.inboxIds = state.inboxIds.filter((id) => id !== draftId);
-};
+const draftRequests = [
+  fetchSkillDrafts,
+  fetchSkillDraft,
+  createSkillDraft,
+  generateSkillDraft,
+  retrySkillDraftGeneration,
+  saveSkillDraft,
+  discardSkillDraft,
+] as const;
+
+export const isOpenSkillDraft = (status: string) =>
+  ["pending", "generating", "generation_failed"].includes(status);
+
+function storeDraft(state: AgentSkillDraftsState, draft: SerializedSkillDraft) {
+  const existing = state.byId[draft.id];
+  if (existing) {
+    if (existing.generationAttempt > draft.generationAttempt) return;
+    if (!isOpenSkillDraft(existing.status)) return;
+    const previousTime = existing.updatedAt;
+    const nextTime = draft.updatedAt;
+    if (
+      previousTime &&
+      nextTime &&
+      (previousTime.seconds > nextTime.seconds ||
+        (previousTime.seconds === nextTime.seconds && previousTime.nanos > nextTime.nanos))
+    ) {
+      return;
+    }
+  }
+  state.byId[draft.id] = draft;
+  if (isOpenSkillDraft(draft.status)) {
+    if (!state.inboxIds.includes(draft.id)) state.inboxIds.unshift(draft.id);
+  } else {
+    state.inboxIds = state.inboxIds.filter((id) => id !== draft.id);
+  }
+}
 
 export const agentSkillDraftsSlice = createSlice({
   name: "agentSkillDrafts",
   initialState,
-  reducers: {
-    upsertProposedDraft: (
-      state,
-      action: PayloadAction<{ draft: SerializedSkillDraft; sessionId?: string }>,
-    ) => {
-      const { draft, sessionId } = action.payload;
-      state.byId[draft.id] = draft;
-      if (draft.status === "pending" && !state.inboxIds.includes(draft.id)) {
-        state.inboxIds.unshift(draft.id);
-      }
-      const key = sessionId ?? draft.sessionId;
-      if (key) {
-        const list = state.idsBySession[key] ?? [];
-        if (!list.includes(draft.id)) state.idsBySession[key] = [...list, draft.id];
-      }
-    },
-  },
+  reducers: {},
   extraReducers: (builder) => {
     builder
+      .addCase(logout, () => initialState)
+      .addCase(rehydrateFailed, () => initialState)
+      .addCase(setCredentials, (state, { payload }) => {
+        const organizationId = payload.organizationId || null;
+        const userId = payload.user?.id || null;
+        if (state.organizationId !== organizationId || state.userId !== userId) {
+          return { ...initialState, organizationId, userId };
+        }
+      })
+      .addCase(rehydrateComplete, (state, { payload }) => {
+        const organizationId = payload.organizationId || state.organizationId;
+        const userId = payload.user.id;
+        if (state.organizationId !== organizationId || state.userId !== userId) {
+          return { ...initialState, organizationId, userId };
+        }
+      })
       .addCase(fetchSkillDrafts.pending, (state) => {
         state.loading = true;
       })
-      .addCase(fetchSkillDrafts.fulfilled, (state, action) => {
+      .addCase(fetchSkillDrafts.fulfilled, (state, { payload, meta }) => {
+        if (!state.requests[meta.requestId]) return;
         state.loading = false;
-        state.inboxIds = action.payload.map((d) => d.id);
-        for (const draft of action.payload) {
-          state.byId[draft.id] = draft;
-        }
+        for (const draft of payload) storeDraft(state, draft);
+        state.inboxIds = payload
+          .filter((draft) => isOpenSkillDraft(state.byId[draft.id].status))
+          .map((draft) => draft.id);
       })
-      .addCase(fetchSkillDrafts.rejected, (state) => {
-        state.loading = false;
+      .addCase(fetchSkillDrafts.rejected, (state, { meta }) => {
+        if (state.requests[meta.requestId]) state.loading = false;
       })
-      .addCase(createSkillDraft.fulfilled, (state, action) => {
-        const draft = action.payload;
-        state.byId[draft.id] = draft;
-        if (draft.status === "pending" && !state.inboxIds.includes(draft.id)) {
-          state.inboxIds.unshift(draft.id);
-        }
-      })
-      .addCase(saveSkillDraft.fulfilled, (state, action) => {
-        const { draftId } = action.payload;
-        const existing = state.byId[draftId];
+      .addCase(saveSkillDraft.fulfilled, (state, { payload, meta }) => {
+        if (!state.requests[meta.requestId]) return;
+        const existing = state.byId[payload.draftId];
         if (existing) existing.status = "saved";
-        dropFromInbox(state, draftId);
+        state.inboxIds = state.inboxIds.filter((id) => id !== payload.draftId);
       })
-      .addCase(discardSkillDraft.fulfilled, (state, action) => {
-        const draftId = action.payload;
-        const existing = state.byId[draftId];
+      .addCase(discardSkillDraft.fulfilled, (state, { payload, meta }) => {
+        if (!state.requests[meta.requestId]) return;
+        const existing = state.byId[payload];
         if (existing) existing.status = "discarded";
-        dropFromInbox(state, draftId);
-      });
+        state.inboxIds = state.inboxIds.filter((id) => id !== payload);
+      })
+      .addMatcher(
+        isAnyOf(
+          fetchSkillDraft.fulfilled,
+          createSkillDraft.fulfilled,
+          generateSkillDraft.fulfilled,
+          retrySkillDraftGeneration.fulfilled,
+        ),
+        (state, { payload, meta }) => {
+          if (state.requests[meta.requestId]) storeDraft(state, payload);
+        },
+      )
+      .addMatcher(isPending(...draftRequests), (state, { meta }) => {
+        state.requests[meta.requestId] = true;
+      })
+      .addMatcher(
+        isAnyOf(isFulfilled(...draftRequests), isRejected(...draftRequests)),
+        (state, { meta }) => {
+          delete state.requests[meta.requestId];
+        },
+      );
   },
 });
-
-export const { upsertProposedDraft } = agentSkillDraftsSlice.actions;
-
-const EMPTY: SerializedSkillDraft[] = [];
 
 export const selectDraftById = (id: string) => (state: RootState) =>
   state.agentSkillDrafts.byId[id] ?? null;
 
-export const selectInboxDrafts = (state: RootState): SerializedSkillDraft[] =>
-  state.agentSkillDrafts.inboxIds
-    .map((id) => state.agentSkillDrafts.byId[id])
-    .filter((d): d is SerializedSkillDraft => Boolean(d));
+export const selectInboxDrafts = createSelector(
+  [(state: RootState) => state.agentSkillDrafts],
+  (state) => state.inboxIds.map((id) => state.byId[id]).filter(Boolean),
+);
 
-export const selectInboxCount = (state: RootState): number =>
-  state.agentSkillDrafts.inboxIds.length;
+export const selectInboxCount = (state: RootState) => state.agentSkillDrafts.inboxIds.length;
 
-export const selectSessionDrafts =
-  (sessionId: string | null | undefined) =>
-  (state: RootState): SerializedSkillDraft[] => {
-    if (!sessionId) return EMPTY;
-    const ids = state.agentSkillDrafts.idsBySession[sessionId];
-    if (!ids || ids.length === 0) return EMPTY;
-    return ids
-      .map((id) => state.agentSkillDrafts.byId[id])
-      .filter((d): d is SerializedSkillDraft => Boolean(d));
-  };
+export const selectSessionDrafts = (sessionId: string | null | undefined) =>
+  createSelector([(state: RootState) => state.agentSkillDrafts.byId], (drafts) =>
+    Object.values(drafts).filter((draft) => sessionId && draft.sessionId === sessionId),
+  );
 
 export const selectDraftsLoading = (state: RootState) => state.agentSkillDrafts.loading;
-
 export const agentSkillDraftsReducer = agentSkillDraftsSlice.reducer;

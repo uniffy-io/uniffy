@@ -2,7 +2,7 @@
 const SKILL_SLUG_MAX = 100;
 const FALLBACK_SLUG = "skill";
 
-export function slugifySkillName(displayName: string): string {
+export function slugifySkillName(displayName: string, fallback = FALLBACK_SLUG): string {
   // NFKD splits an accent off its base letter so dropping combining marks
   // keeps the letter: "Resume" rather than "re-sume".
   const slug = displayName
@@ -13,14 +13,18 @@ export function slugifySkillName(displayName: string): string {
     .replace(/^-+|-+$/g, "")
     .slice(0, SKILL_SLUG_MAX)
     .replace(/-+$/g, "");
-  return slug || FALLBACK_SLUG;
+  return slug || fallback;
 }
 
 // The slug is the stable identifier and the backend rejects duplicates within an
 // org, so a collision is resolved here rather than surfaced as a save error.
-export function deriveSkillSlug(displayName: string, taken: Iterable<string>): string {
+export function deriveSkillSlug(
+  displayName: string,
+  taken: Iterable<string>,
+  fallback = FALLBACK_SLUG,
+): string {
   const used = new Set(taken);
-  const base = slugifySkillName(displayName);
+  const base = slugifySkillName(displayName, fallback);
   if (!used.has(base)) return base;
 
   for (let suffix = 2; ; suffix += 1) {

@@ -1,3 +1,4 @@
+import { ActionMenuItem, ActionMenuSeparator } from "@/components/ui/action-menu";
 import { useCallback, useMemo } from "react";
 import {
   SpeakerHigh,
@@ -131,9 +132,6 @@ export function ChannelNotificationMenu({ channelId, onClose }: ChannelNotificat
     { label: "Nothing", value: "NONE", icon: BellSlash },
   ];
 
-  const btnClass =
-    "flex items-center gap-2 px-3 py-1.5 text-sm hover:bg-muted/60 cursor-pointer w-full text-left transition-colors text-foreground";
-
   return (
     <div className="py-1 min-w-[220px]">
       <div className="px-3 py-1 text-xs font-medium text-muted-foreground uppercase tracking-wider">
@@ -141,19 +139,19 @@ export function ChannelNotificationMenu({ channelId, onClose }: ChannelNotificat
       </div>
       {!isMuted ? (
         muteOptions.map((opt) => (
-          <button key={opt.label} type="button" onClick={opt.action} className={btnClass}>
+          <ActionMenuItem key={opt.label} type="button" onClick={opt.action}>
             <Clock size={16} className="text-muted-foreground shrink-0" />
             <span>{opt.label}</span>
-          </button>
+          </ActionMenuItem>
         ))
       ) : (
-        <button type="button" onClick={handleUnmute} className={btnClass}>
+        <ActionMenuItem type="button" onClick={handleUnmute}>
           <SpeakerHigh size={16} className="text-muted-foreground shrink-0" />
           <span>Unmute channel</span>
-        </button>
+        </ActionMenuItem>
       )}
 
-      <div className="my-1 h-px bg-border mx-2" />
+      <ActionMenuSeparator />
 
       <div className="px-3 py-1 text-xs font-medium text-muted-foreground uppercase tracking-wider">
         Notify me about
@@ -162,26 +160,32 @@ export function ChannelNotificationMenu({ channelId, onClose }: ChannelNotificat
         const Icon = opt.icon;
         const isSelected = notificationLevel === opt.value;
         return (
-          <button
+          <ActionMenuItem
             key={opt.value}
             type="button"
+            role="menuitemradio"
+            aria-checked={isSelected}
             onClick={() => handleNotificationLevel(opt.value)}
-            className={btnClass}
           >
             <Icon size={16} className="text-muted-foreground shrink-0" />
             <span className="flex-1">{opt.label}</span>
             {isSelected && <Check size={14} className="text-primary shrink-0" />}
-          </button>
+          </ActionMenuItem>
         );
       })}
 
-      <div className="my-1 h-px bg-border mx-2" />
+      <ActionMenuSeparator />
 
-      <button type="button" onClick={handleToggleFollowThreads} className={btnClass}>
+      <ActionMenuItem
+        type="button"
+        role="menuitemcheckbox"
+        aria-checked={followAllThreads}
+        onClick={handleToggleFollowThreads}
+      >
         <ChatCircle size={16} className="text-muted-foreground shrink-0" />
         <span className="flex-1">Follow all threads</span>
         {followAllThreads && <Check size={14} className="text-primary shrink-0" />}
-      </button>
+      </ActionMenuItem>
     </div>
   );
 }

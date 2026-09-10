@@ -11,6 +11,7 @@ from uuid import UUID
 from loguru import logger
 from sqlalchemy import select
 
+from uniffy.core.events.realtime import NotificationPayloadType, publish_notification
 from uniffy.core.jobs.locks import acquire_owned_job_lock, release_owned_job_lock
 from uniffy.core.models.files.file import File, TranscodeStatus
 from uniffy.core.models.files.file_version import FileVersion
@@ -225,6 +226,20 @@ async def transcode_video_to_mp4(
                 log.warning("Search re-index failed after transcode swap")
 
             await ops.prune_file_versions(file)
+
+            # Lets the owner's open tabs lift the download gate and swap in the
+            # MP4 without a reload.
+            try:
+                await publish_notification(
+                    file.owner_id,
+                    {
+                        "_type": NotificationPayloadType.FILE_UPDATED,
+                        "file_id": str(file.id),
+                        "organization_id": str(file.organization_id),
+                    },
+                )
+            except Exception:
+                log.warning("Failed to publish file update event")
 
         valkey = ctx.get("valkey") if ctx else None
         if valkey is not None and old_storage_key:

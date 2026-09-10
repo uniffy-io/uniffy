@@ -35,6 +35,7 @@ export function EmojiPicker({ onSelect, onClose, anchorRef }: EmojiPickerProps) 
     if (top < 8) {
       top = rect.bottom + 8;
     }
+    top = Math.max(8, Math.min(top, window.innerHeight - pickerHeight - 8));
 
     if (left + pickerWidth > window.innerWidth - 8) {
       left = window.innerWidth - pickerWidth - 8;
@@ -77,7 +78,7 @@ export function EmojiPicker({ onSelect, onClose, anchorRef }: EmojiPickerProps) 
   return createPortal(
     <div
       ref={containerRef}
-      className="fixed z-[1000]"
+      className="fixed z-[1000] max-h-[calc(100dvh-1rem)] overflow-y-auto"
       style={{ top: position.top, left: position.left }}
       data-testid="chat-emoji-picker"
     >

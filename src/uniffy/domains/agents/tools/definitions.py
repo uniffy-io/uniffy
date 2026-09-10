@@ -49,7 +49,6 @@ class ToolContext:
     memory_recall_promoted: bool = False
     # Side-channel for a write tool to surface runtime stream events (e.g. a
     # proposed skill draft) that the loop drains and forwards to the client.
-    pending_events: list = field(default_factory=list)
     # Image-generation knobs the runtime resolved for this run (agent defaults
     # under any per-conversation override). The image tool merges the model's
     # own call args over these, then clamps the result to the org ceiling -

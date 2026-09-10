@@ -1,5 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
-import { useOverlayEscape } from "@/shared/hooks/useOverlayEscape";
+import { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   SquareSplitHorizontal,
@@ -25,7 +24,7 @@ import { selectChannelPreferences } from "@/features/chat/store/chatChannelsSlic
 import { deleteChannel, leaveChannel, setAgentChatFolder } from "@/features/chat/store/chatThunks";
 import { ChannelNotificationMenu } from "@/features/chat/components/sidebar/ChannelNotificationMenu";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { popoverShellClass } from "@/components/ui/popover";
+import { ActionMenu, ActionMenuItem, ActionMenuSeparator } from "@/components/ui/action-menu";
 import { cn } from "@/shared/utils/cn";
 import { getChannelDisplayName } from "@/features/chat/utils/channelDisplay";
 
@@ -38,7 +37,6 @@ interface ChannelContextMenuProps {
 export function ChannelContextMenu({ channelId, position, onClose }: ChannelContextMenuProps) {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
-  const menuRef = useRef<HTMLDivElement>(null);
   const currentUserId = useAppSelector((state) => state.auth.user?.id ?? "");
   const prefs = useAppSelector(selectChannelPreferences);
   const members = useAppSelector((state) => state.chatChannels.channelMembers[channelId]);
@@ -111,85 +109,64 @@ export function ChannelContextMenu({ channelId, position, onClose }: ChannelCont
     // eslint-disable-next-line react/react-compiler
   }, [dispatch, channelId, activeChannelId, navigate, onClose]);
 
-  useEffect(() => {
-    if (confirmDeleteOpen || confirmLeaveOpen) return;
-    const handleClick = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        onClose();
-      }
-    };
-    const timer = setTimeout(() => {
-      document.addEventListener("mousedown", handleClick);
-    }, 0);
-    return () => {
-      clearTimeout(timer);
-      document.removeEventListener("mousedown", handleClick);
-    };
-  }, [onClose, confirmDeleteOpen, confirmLeaveOpen]);
-
-  useOverlayEscape(onClose);
-
   const handleOpenInSplit = useCallback(() => {
     dispatch(setSplitChannel(channelId));
     dispatch(activateSplit());
     onClose();
   }, [dispatch, channelId, onClose]);
 
-  const menuStyle = {
-    top: position.y,
-    left: position.x,
-  };
-
   const MuteIcon = isMuted ? SpeakerHigh : SpeakerSlash;
-  const btnClass =
-    "flex items-center gap-2 px-3 py-1.5 text-sm hover:bg-muted/60 cursor-pointer w-full text-left transition-colors text-foreground";
 
   const channelName = channel ? getChannelDisplayName(channel) : "this chat";
 
   return (
     <>
-      <div
-        ref={menuRef}
-        className={cn(popoverShellClass, "fixed z-50 py-1 min-w-[180px]")}
-        style={menuStyle}
+      <ActionMenu
+        open={!confirmDeleteOpen && !confirmLeaveOpen}
+        position={position}
+        onClose={onClose}
+        label="Chat actions"
+        className="w-64"
       >
-        <button type="button" onClick={handleOpenInSplit} className={btnClass}>
+        <ActionMenuItem type="button" onClick={handleOpenInSplit}>
           <SquareSplitHorizontal size={16} className="text-muted-foreground" />
           <span>Open in Split View</span>
-        </button>
+        </ActionMenuItem>
 
         {isAgentDm && (
           <>
-            <div className="my-1 h-px bg-border mx-2" />
+            <ActionMenuSeparator />
             {agentFolders.length > 0 && (
-              <div
-                className="relative"
-                onMouseEnter={() => setShowFolderMenu(true)}
-                onMouseLeave={() => setShowFolderMenu(false)}
-              >
-                <button
+              <div className="relative">
+                <ActionMenuItem
                   type="button"
+                  aria-expanded={showFolderMenu}
                   onClick={() => setShowFolderMenu((v) => !v)}
-                  className={btnClass}
+
                   data-testid="chat-channel-context-menu-move-to-folder"
                 >
                   <FolderSimple size={16} className="text-muted-foreground" />
                   <span className="flex-1">Move to folder</span>
-                  <CaretRight size={12} className="text-muted-foreground" />
-                </button>
+                  <CaretRight
+                    size={12}
+                    className={cn(
+                      "text-muted-foreground transition-transform",
+                      showFolderMenu && "rotate-90",
+                    )}
+                  />
+                </ActionMenuItem>
                 {showFolderMenu && (
                   <div
-                    className={cn(
-                      popoverShellClass,
-                      "absolute left-full top-0 ml-0.5 z-50 py-1 min-w-[170px] max-h-64 overflow-y-auto",
-                    )}
+                    role="group"
+                    aria-label="Move to folder"
+                    className="ml-3 border-l border-border/60 pl-1"
                   >
                     {agentFolders.map((folder) => (
-                      <button
+                      <ActionMenuItem
                         key={folder.id}
                         type="button"
                         onClick={() => handleMoveToFolder(folder.id)}
-                        className={btnClass}
+
                         data-testid={`chat-channel-context-menu-folder-${folder.id}`}
                       >
                         <FolderSimple size={14} className="text-muted-foreground" />
@@ -197,81 +174,80 @@ export function ChannelContextMenu({ channelId, position, onClose }: ChannelCont
                         {channel?.agentFolderId === folder.id && (
                           <Check size={12} className="text-primary" />
                         )}
-                      </button>
+                      </ActionMenuItem>
                     ))}
                     {channel?.agentFolderId && (
                       <>
-                        <div className="my-1 h-px bg-border mx-2" />
-                        <button
+                        <ActionMenuSeparator />
+                        <ActionMenuItem
                           type="button"
                           onClick={() => handleMoveToFolder(null)}
-                          className={btnClass}
+
                           data-testid="chat-channel-context-menu-unfile"
                         >
                           <FolderSimpleMinus size={14} className="text-muted-foreground" />
                           <span>Remove from folder</span>
-                        </button>
+                        </ActionMenuItem>
                       </>
                     )}
                   </div>
                 )}
               </div>
             )}
-            <button
+            <ActionMenuItem
               type="button"
               onClick={handleRename}
-              className={btnClass}
               data-testid="chat-channel-context-menu-rename"
             >
               <PencilSimple size={16} className="text-muted-foreground" />
               <span>Rename chat</span>
-            </button>
-            <button
+            </ActionMenuItem>
+            <ActionMenuItem
               type="button"
               onClick={handleDeleteClick}
-              className="flex items-center gap-2 px-3 py-1.5 text-sm hover:bg-muted/60 cursor-pointer w-full text-left transition-colors text-red-500 hover:text-red-500"
+              destructive
               data-testid="chat-channel-context-menu-delete"
             >
               <Trash size={16} />
               <span>Delete chat</span>
-            </button>
+            </ActionMenuItem>
           </>
         )}
 
-        <div className="my-1 h-px bg-border mx-2" />
+        <ActionMenuSeparator />
 
-        <button
+        <ActionMenuItem
           type="button"
+          aria-expanded={showNotificationMenu}
           onClick={() => setShowNotificationMenu(!showNotificationMenu)}
-          className={btnClass}
         >
           <MuteIcon size={16} className="text-muted-foreground" />
           <span className="flex-1">{isMuted ? "Muted" : "Notification settings"}</span>
           <CaretRight size={12} className="text-muted-foreground" />
-        </button>
+        </ActionMenuItem>
 
         {showNotificationMenu && (
           <>
-            <div className="my-1 h-px bg-border mx-2" />
+            <ActionMenuSeparator />
             <ChannelNotificationMenu channelId={channelId} onClose={onClose} />
           </>
         )}
 
         {canLeave && (
           <>
-            <div className="my-1 h-px bg-border mx-2" />
-            <button
+            <ActionMenuSeparator />
+            <ActionMenuItem
               type="button"
               onClick={() => setConfirmLeaveOpen(true)}
-              className="flex items-center gap-2 px-3 py-1.5 text-sm hover:bg-muted/60 cursor-pointer w-full text-left transition-colors text-red-500 hover:text-red-500"
+              destructive
               data-testid="chat-channel-context-menu-leave"
             >
               <SignOut size={16} />
               <span>{isGroupDm ? "Leave conversation" : "Leave channel"}</span>
-            </button>
+            </ActionMenuItem>
           </>
         )}
-      </div>
+      </ActionMenu>
 
       <ConfirmDialog
         isOpen={confirmDeleteOpen}

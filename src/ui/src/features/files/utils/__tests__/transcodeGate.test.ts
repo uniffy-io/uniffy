@@ -1,6 +1,17 @@
 import { describe, it, expect } from "vitest";
 import { TranscodeStatus } from "@uniffy/proto/files/v1/files_pb";
-import { getDownloadGateState } from "../transcodeGate";
+import { getDownloadGateState, isTranscodePending } from "@/features/files/utils/transcodeGate";
+
+describe("isTranscodePending", () => {
+  it("is true only while the worker still owns the bytes", () => {
+    expect(isTranscodePending(TranscodeStatus.PENDING)).toBe(true);
+    expect(isTranscodePending(TranscodeStatus.PROCESSING)).toBe(true);
+    expect(isTranscodePending(TranscodeStatus.COMPLETED)).toBe(false);
+    expect(isTranscodePending(TranscodeStatus.FAILED)).toBe(false);
+    expect(isTranscodePending(TranscodeStatus.NOT_NEEDED)).toBe(false);
+    expect(isTranscodePending(undefined)).toBe(false);
+  });
+});
 
 describe("getDownloadGateState", () => {
   it("returns enabled when status is undefined", () => {

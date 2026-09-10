@@ -94,6 +94,7 @@ message AgentInfo {
   // JSON object pinning an integration provider to one org connection
   // (provider id -> connection id). "{}" = automatic resolution.
   string integration_connections = 28;
+  repeated string enabled_rules = 29;
 }
 
 // --- Requests and Responses ---
@@ -126,6 +127,7 @@ message CreateAgentRequest {
   optional string image_style_prompt = 19;
   // JSON object pinning integration providers to org connections
   optional string integration_connections = 20;
+  repeated string enabled_rules = 21;
 }
 
 message CreateAgentResponse {
@@ -268,6 +270,7 @@ message AgentTemplate {
   // recommendation. Prefill only - clients apply them when the org serves them.
   string recommended_model = 8;
   string recommended_image_model = 9;
+  repeated string enabled_rule_ids = 10;
 }
 
 message ListAgentTemplatesRequest {

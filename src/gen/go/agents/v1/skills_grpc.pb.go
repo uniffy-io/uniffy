@@ -19,22 +19,25 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	SkillsService_CreateSkill_FullMethodName         = "/agents.v1.SkillsService/CreateSkill"
-	SkillsService_GetSkill_FullMethodName            = "/agents.v1.SkillsService/GetSkill"
-	SkillsService_ListSkills_FullMethodName          = "/agents.v1.SkillsService/ListSkills"
-	SkillsService_UpdateSkill_FullMethodName         = "/agents.v1.SkillsService/UpdateSkill"
-	SkillsService_DeleteSkill_FullMethodName         = "/agents.v1.SkillsService/DeleteSkill"
-	SkillsService_ListRunnableSkills_FullMethodName  = "/agents.v1.SkillsService/ListRunnableSkills"
-	SkillsService_CreateSkillDraft_FullMethodName    = "/agents.v1.SkillsService/CreateSkillDraft"
-	SkillsService_GetSkillDraft_FullMethodName       = "/agents.v1.SkillsService/GetSkillDraft"
-	SkillsService_ListSkillDrafts_FullMethodName     = "/agents.v1.SkillsService/ListSkillDrafts"
-	SkillsService_SaveSkillDraft_FullMethodName      = "/agents.v1.SkillsService/SaveSkillDraft"
-	SkillsService_DiscardSkillDraft_FullMethodName   = "/agents.v1.SkillsService/DiscardSkillDraft"
-	SkillsService_ListSkillVersions_FullMethodName   = "/agents.v1.SkillsService/ListSkillVersions"
-	SkillsService_GetSkillVersion_FullMethodName     = "/agents.v1.SkillsService/GetSkillVersion"
-	SkillsService_SetMainSkillVersion_FullMethodName = "/agents.v1.SkillsService/SetMainSkillVersion"
-	SkillsService_RevertSkill_FullMethodName         = "/agents.v1.SkillsService/RevertSkill"
-	SkillsService_GetSkillMetrics_FullMethodName     = "/agents.v1.SkillsService/GetSkillMetrics"
+	SkillsService_GetSkillCompatibility_FullMethodName     = "/agents.v1.SkillsService/GetSkillCompatibility"
+	SkillsService_GenerateSkillDraft_FullMethodName        = "/agents.v1.SkillsService/GenerateSkillDraft"
+	SkillsService_RetrySkillDraftGeneration_FullMethodName = "/agents.v1.SkillsService/RetrySkillDraftGeneration"
+	SkillsService_CreateSkill_FullMethodName               = "/agents.v1.SkillsService/CreateSkill"
+	SkillsService_GetSkill_FullMethodName                  = "/agents.v1.SkillsService/GetSkill"
+	SkillsService_ListSkills_FullMethodName                = "/agents.v1.SkillsService/ListSkills"
+	SkillsService_UpdateSkill_FullMethodName               = "/agents.v1.SkillsService/UpdateSkill"
+	SkillsService_DeleteSkill_FullMethodName               = "/agents.v1.SkillsService/DeleteSkill"
+	SkillsService_ListRunnableSkills_FullMethodName        = "/agents.v1.SkillsService/ListRunnableSkills"
+	SkillsService_CreateSkillDraft_FullMethodName          = "/agents.v1.SkillsService/CreateSkillDraft"
+	SkillsService_GetSkillDraft_FullMethodName             = "/agents.v1.SkillsService/GetSkillDraft"
+	SkillsService_ListSkillDrafts_FullMethodName           = "/agents.v1.SkillsService/ListSkillDrafts"
+	SkillsService_SaveSkillDraft_FullMethodName            = "/agents.v1.SkillsService/SaveSkillDraft"
+	SkillsService_DiscardSkillDraft_FullMethodName         = "/agents.v1.SkillsService/DiscardSkillDraft"
+	SkillsService_ListSkillVersions_FullMethodName         = "/agents.v1.SkillsService/ListSkillVersions"
+	SkillsService_GetSkillVersion_FullMethodName           = "/agents.v1.SkillsService/GetSkillVersion"
+	SkillsService_SetMainSkillVersion_FullMethodName       = "/agents.v1.SkillsService/SetMainSkillVersion"
+	SkillsService_RevertSkill_FullMethodName               = "/agents.v1.SkillsService/RevertSkill"
+	SkillsService_GetSkillMetrics_FullMethodName           = "/agents.v1.SkillsService/GetSkillMetrics"
 )
 
 // SkillsServiceClient is the client API for SkillsService service.
@@ -44,6 +47,9 @@ const (
 // SkillsService manages skill definitions for agents.
 // Skills are curated instruction sets (markdown) that shape agent behavior.
 type SkillsServiceClient interface {
+	GetSkillCompatibility(ctx context.Context, in *GetSkillCompatibilityRequest, opts ...grpc.CallOption) (*GetSkillCompatibilityResponse, error)
+	GenerateSkillDraft(ctx context.Context, in *GenerateSkillDraftRequest, opts ...grpc.CallOption) (*GenerateSkillDraftResponse, error)
+	RetrySkillDraftGeneration(ctx context.Context, in *RetrySkillDraftGenerationRequest, opts ...grpc.CallOption) (*RetrySkillDraftGenerationResponse, error)
 	// Create a new organization skill
 	CreateSkill(ctx context.Context, in *CreateSkillRequest, opts ...grpc.CallOption) (*CreateSkillResponse, error)
 	// Get a skill by ID
@@ -54,10 +60,7 @@ type SkillsServiceClient interface {
 	UpdateSkill(ctx context.Context, in *UpdateSkillRequest, opts ...grpc.CallOption) (*UpdateSkillResponse, error)
 	// Delete an organization skill
 	DeleteSkill(ctx context.Context, in *DeleteSkillRequest, opts ...grpc.CallOption) (*DeleteSkillResponse, error)
-	// List the skills a user can invoke on-demand against a given agent
-	// (the agent's resolved set: explicitly enabled + always-active). Powers
-	// the "/" slash-command menu in the agent composers. Lean payload - no
-	// skill content is shipped; the content loads only when the turn runs.
+	// List assigned skills compatible with the requested surface and executable tools.
 	ListRunnableSkills(ctx context.Context, in *ListRunnableSkillsRequest, opts ...grpc.CallOption) (*ListRunnableSkillsResponse, error)
 	// Create a pending draft (library "New skill" / "Edit as draft"). The draft
 	// is never auto-activated; it becomes a skill only on SaveSkillDraft.
@@ -82,7 +85,7 @@ type SkillsServiceClient interface {
 	// Revert a skill to an earlier version by copying that version's content into
 	// a new version at the head of the history.
 	RevertSkill(ctx context.Context, in *RevertSkillRequest, opts ...grpc.CallOption) (*RevertSkillResponse, error)
-	// Per-skill usage + feedback aggregates for the org admin metrics view.
+	// Exact-version invocation observations for the org admin metrics view.
 	GetSkillMetrics(ctx context.Context, in *GetSkillMetricsRequest, opts ...grpc.CallOption) (*GetSkillMetricsResponse, error)
 }
 
@@ -92,6 +95,36 @@ type skillsServiceClient struct {
 
 func NewSkillsServiceClient(cc grpc.ClientConnInterface) SkillsServiceClient {
 	return &skillsServiceClient{cc}
+}
+
+func (c *skillsServiceClient) GetSkillCompatibility(ctx context.Context, in *GetSkillCompatibilityRequest, opts ...grpc.CallOption) (*GetSkillCompatibilityResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetSkillCompatibilityResponse)
+	err := c.cc.Invoke(ctx, SkillsService_GetSkillCompatibility_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *skillsServiceClient) GenerateSkillDraft(ctx context.Context, in *GenerateSkillDraftRequest, opts ...grpc.CallOption) (*GenerateSkillDraftResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GenerateSkillDraftResponse)
+	err := c.cc.Invoke(ctx, SkillsService_GenerateSkillDraft_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *skillsServiceClient) RetrySkillDraftGeneration(ctx context.Context, in *RetrySkillDraftGenerationRequest, opts ...grpc.CallOption) (*RetrySkillDraftGenerationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RetrySkillDraftGenerationResponse)
+	err := c.cc.Invoke(ctx, SkillsService_RetrySkillDraftGeneration_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *skillsServiceClient) CreateSkill(ctx context.Context, in *CreateSkillRequest, opts ...grpc.CallOption) (*CreateSkillResponse, error) {
@@ -261,6 +294,9 @@ func (c *skillsServiceClient) GetSkillMetrics(ctx context.Context, in *GetSkillM
 // SkillsService manages skill definitions for agents.
 // Skills are curated instruction sets (markdown) that shape agent behavior.
 type SkillsServiceServer interface {
+	GetSkillCompatibility(context.Context, *GetSkillCompatibilityRequest) (*GetSkillCompatibilityResponse, error)
+	GenerateSkillDraft(context.Context, *GenerateSkillDraftRequest) (*GenerateSkillDraftResponse, error)
+	RetrySkillDraftGeneration(context.Context, *RetrySkillDraftGenerationRequest) (*RetrySkillDraftGenerationResponse, error)
 	// Create a new organization skill
 	CreateSkill(context.Context, *CreateSkillRequest) (*CreateSkillResponse, error)
 	// Get a skill by ID
@@ -271,10 +307,7 @@ type SkillsServiceServer interface {
 	UpdateSkill(context.Context, *UpdateSkillRequest) (*UpdateSkillResponse, error)
 	// Delete an organization skill
 	DeleteSkill(context.Context, *DeleteSkillRequest) (*DeleteSkillResponse, error)
-	// List the skills a user can invoke on-demand against a given agent
-	// (the agent's resolved set: explicitly enabled + always-active). Powers
-	// the "/" slash-command menu in the agent composers. Lean payload - no
-	// skill content is shipped; the content loads only when the turn runs.
+	// List assigned skills compatible with the requested surface and executable tools.
 	ListRunnableSkills(context.Context, *ListRunnableSkillsRequest) (*ListRunnableSkillsResponse, error)
 	// Create a pending draft (library "New skill" / "Edit as draft"). The draft
 	// is never auto-activated; it becomes a skill only on SaveSkillDraft.
@@ -299,7 +332,7 @@ type SkillsServiceServer interface {
 	// Revert a skill to an earlier version by copying that version's content into
 	// a new version at the head of the history.
 	RevertSkill(context.Context, *RevertSkillRequest) (*RevertSkillResponse, error)
-	// Per-skill usage + feedback aggregates for the org admin metrics view.
+	// Exact-version invocation observations for the org admin metrics view.
 	GetSkillMetrics(context.Context, *GetSkillMetricsRequest) (*GetSkillMetricsResponse, error)
 	mustEmbedUnimplementedSkillsServiceServer()
 }
@@ -311,6 +344,15 @@ type SkillsServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedSkillsServiceServer struct{}
 
+func (UnimplementedSkillsServiceServer) GetSkillCompatibility(context.Context, *GetSkillCompatibilityRequest) (*GetSkillCompatibilityResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetSkillCompatibility not implemented")
+}
+func (UnimplementedSkillsServiceServer) GenerateSkillDraft(context.Context, *GenerateSkillDraftRequest) (*GenerateSkillDraftResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GenerateSkillDraft not implemented")
+}
+func (UnimplementedSkillsServiceServer) RetrySkillDraftGeneration(context.Context, *RetrySkillDraftGenerationRequest) (*RetrySkillDraftGenerationResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RetrySkillDraftGeneration not implemented")
+}
 func (UnimplementedSkillsServiceServer) CreateSkill(context.Context, *CreateSkillRequest) (*CreateSkillResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateSkill not implemented")
 }
@@ -378,6 +420,60 @@ func RegisterSkillsServiceServer(s grpc.ServiceRegistrar, srv SkillsServiceServe
 		t.testEmbeddedByValue()
 	}
 	s.RegisterService(&SkillsService_ServiceDesc, srv)
+}
+
+func _SkillsService_GetSkillCompatibility_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetSkillCompatibilityRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SkillsServiceServer).GetSkillCompatibility(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SkillsService_GetSkillCompatibility_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SkillsServiceServer).GetSkillCompatibility(ctx, req.(*GetSkillCompatibilityRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SkillsService_GenerateSkillDraft_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GenerateSkillDraftRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SkillsServiceServer).GenerateSkillDraft(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SkillsService_GenerateSkillDraft_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SkillsServiceServer).GenerateSkillDraft(ctx, req.(*GenerateSkillDraftRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SkillsService_RetrySkillDraftGeneration_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RetrySkillDraftGenerationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SkillsServiceServer).RetrySkillDraftGeneration(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SkillsService_RetrySkillDraftGeneration_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SkillsServiceServer).RetrySkillDraftGeneration(ctx, req.(*RetrySkillDraftGenerationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _SkillsService_CreateSkill_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -675,6 +771,18 @@ var SkillsService_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "agents.v1.SkillsService",
 	HandlerType: (*SkillsServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "GetSkillCompatibility",
+			Handler:    _SkillsService_GetSkillCompatibility_Handler,
+		},
+		{
+			MethodName: "GenerateSkillDraft",
+			Handler:    _SkillsService_GenerateSkillDraft_Handler,
+		},
+		{
+			MethodName: "RetrySkillDraftGeneration",
+			Handler:    _SkillsService_RetrySkillDraftGeneration_Handler,
+		},
 		{
 			MethodName: "CreateSkill",
 			Handler:    _SkillsService_CreateSkill_Handler,

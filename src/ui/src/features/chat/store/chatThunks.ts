@@ -54,7 +54,6 @@ import {
   setInitialChannelLoadFailed,
   addReactionToMessage,
   removeReactionFromMessage,
-  setMessageFeedback,
   restrictForwardsFromChannel,
   restrictForwardsFromMessage,
 } from "@/features/chat/store/chatMessagesSlice";
@@ -72,7 +71,6 @@ import {
   setLoadingThread,
   addReactionToThreadMessage,
   removeReactionFromThreadMessage,
-  setThreadMessageFeedback,
   restrictThreadForwardsFromChannel,
   restrictThreadForwardsFromMessage,
 } from "@/features/chat/store/chatThreadsSlice";
@@ -83,7 +81,6 @@ import {
   fetchProviderKeys,
 } from "@/features/agents/store/agentProvidersThunks";
 import { fetchAgentTools } from "@/features/agents/store/agentToolsThunks";
-import { sessionsApi } from "@/features/agents/api/sessionsApi";
 import { markNotificationsReadBySource } from "@/features/notifications/store/notificationsSlice";
 import type { RootState } from "@/app/store";
 import type { ChatMessage, ChatChannel, ChatChannelMember } from "@/features/chat/types";
@@ -800,28 +797,6 @@ export const removeReaction = createAsyncThunk<
       }),
     );
     return rejectWithValue(error instanceof Error ? error.message : "Failed to remove reaction");
-  }
-});
-
-export const submitAgentReplyFeedback = createAsyncThunk<
-  { channelId: string; messageId: string; rating: string },
-  { channelId: string; messageId: string; rating: string },
-  { state: RootState; rejectValue: string }
->("chat/submitAgentReplyFeedback", async (params, { getState, dispatch, rejectWithValue }) => {
-  try {
-    const organizationId = getOrganizationId(getState());
-    // Chat agent replies are rated through the agents feedback RPC, targeted
-    // by chat message id (messageId stays unset; the RPC takes exactly one).
-    await sessionsApi.submitMessageFeedback({
-      organizationId,
-      chatMessageId: params.messageId,
-      rating: params.rating,
-    });
-    dispatch(setMessageFeedback({ messageId: params.messageId, rating: params.rating }));
-    dispatch(setThreadMessageFeedback({ messageId: params.messageId, rating: params.rating }));
-    return params;
-  } catch (error) {
-    return rejectWithValue(error instanceof Error ? error.message : "Failed to submit feedback");
   }
 });
 

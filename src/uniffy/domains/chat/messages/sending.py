@@ -23,6 +23,7 @@ from uniffy.core.models.chat.channel_member import (
 )
 from uniffy.core.models.chat.message import ChatMessage, SenderType
 from uniffy.core.types import ContentType
+from uniffy.domains.agents.invocation import validate_chat_skill_invocation
 from uniffy.domains.chat.jobs.contracts import POST_SEND_CHAT_MESSAGE
 from uniffy.domains.chat.limits import SEND, check_chat_mutation_limit
 from uniffy.domains.chat.messages.limits import MAX_MESSAGE_LENGTH
@@ -120,6 +121,7 @@ class MessageSender:
             created_at=now,
             updated_at=now,
         )
+        await validate_chat_skill_invocation(self.session, message, channel)
         self.session.add(message)
         await self.session.flush()
 

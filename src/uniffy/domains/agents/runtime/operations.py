@@ -1,6 +1,6 @@
 """Stable public façade for agent runtime message execution."""
 
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -71,7 +71,7 @@ class RuntimeOperations:
         organization_id: UUID,
         message_id: UUID,
         user_timezone: str | None = None,
-    ) -> AsyncIterator[StreamEvent]:
+    ) -> AsyncGenerator[StreamEvent]:
         return self._streamer.rerun(
             user_id=user_id,
             organization_id=organization_id,
@@ -90,7 +90,9 @@ class RuntimeOperations:
         user_timezone: str | None = None,
         invoked_skill_id: UUID | None = None,
         rerun_anchor: AgentMessage | None = None,
-    ) -> AsyncIterator[StreamEvent]:
+        run_id: UUID | None = None,
+        deadline_at: float | None = None,
+    ) -> AsyncGenerator[StreamEvent]:
         return self._streamer.stream(
             user_id=user_id,
             organization_id=organization_id,
@@ -100,4 +102,6 @@ class RuntimeOperations:
             user_timezone=user_timezone,
             invoked_skill_id=invoked_skill_id,
             rerun_anchor=rerun_anchor,
+            run_id=run_id,
+            deadline_at=deadline_at,
         )

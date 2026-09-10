@@ -18,7 +18,12 @@ import { cn } from "@/shared/utils/cn";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { ChatMentionPopup } from "@/features/agents/components/chat/ChatMentionPopup";
 import { SkillSlashPopup } from "@/features/agents/components/chat/SkillSlashPopup";
-import { computeSlashToken, matchLeadingSkillCommand } from "@/features/agents/utils/slashCommands";
+import { computeSlashToken } from "@/features/agents/utils/slashCommands";
+import {
+  matchChatSkillCommand,
+  mentionedSkillAgents,
+  resolveChatSkillAgent,
+} from "@/features/chat/utils/skillCommands";
 import {
   fetchRunnableSkills,
   type SerializedRunnableSkill,
@@ -84,9 +89,14 @@ interface MessageComposeProps {
   channelName: string;
   /** Enables channel-aware toolbar extras (agent DM model picker). */
   channelId?: string;
+  threadRootId?: string;
   placeholder?: string;
   organizationId?: string;
-  onSend?: (content: string, fileIds: string[], metadata?: Record<string, string>) => void;
+  onSend?: (
+    content: string,
+    fileIds: string[],
+    metadata?: Record<string, string>,
+  ) => Promise<boolean>;
   onTyping?: () => void;
   replyTo?: {
     id: string;
@@ -239,6 +249,7 @@ function hydrateFromMarkdown(container: HTMLDivElement, markdown: string): void 
 export function MessageCompose({
   channelName,
   channelId,
+  threadRootId,
   placeholder,
   organizationId,
   onSend,
@@ -259,6 +270,31 @@ export function MessageCompose({
     channelId ? state.chatChannels.byId[channelId] : undefined,
   );
   const agentDmAgentId = channel?.isAgentDm ? channel.agentId : undefined;
+  const replyMessage = useAppSelector((state) => {
+    if (!replyTo) return undefined;
+    return (
+      state.chatMessages.byId[replyTo.id] ??
+      (threadRootId
+        ? state.chatThreads.threadMessages[threadRootId]?.find(
+            (message) => message.id === replyTo.id,
+          )
+        : undefined)
+    );
+  });
+  const threadRoot = useAppSelector((state) =>
+    threadRootId ? state.chatMessages.byId[threadRootId] : undefined,
+  );
+  const [mentionedAgentIds, setMentionedAgentIds] = useState<string[]>([]);
+  const skillAgentId = useMemo(
+    () =>
+      resolveChatSkillAgent(
+        mentionedAgentIds,
+        agentDmAgentId,
+        replyMessage?.senderType === "AGENT" ? replyMessage.senderId : undefined,
+        threadRoot?.senderType === "AGENT" ? threadRoot.senderId : undefined,
+      ),
+    [mentionedAgentIds, agentDmAgentId, replyMessage, threadRoot],
+  );
   const agentDmAgent = useAppSelector((state) =>
     agentDmAgentId ? (state.agents.agents[agentDmAgentId] ?? null) : null,
   );
@@ -317,9 +353,7 @@ export function MessageCompose({
     [canBroadcast, channel],
   );
   const editLastBinding = useKeybinding("chat.editLast");
-  // "/skill" typeahead, agent DMs only. The composer is a contentEditable, so
-  // the token is tracked against the caret's text node like @-mentions rather
-  // than through the textarea-bound hook the session chat uses.
+  // Track slash tokens against the caret's text node, like mentions.
   const [slashActive, setSlashActive] = useState(false);
   const [slashQuery, setSlashQuery] = useState("");
   const slashStartNodeRef = useRef<Node | null>(null);
@@ -329,13 +363,15 @@ export function MessageCompose({
     id: string;
     name: string;
   } | null>(null);
-  const runnableSkills = useAppSelector(selectRunnableSkillsForAgent(agentDmAgentId));
+  const runnableSkills = useAppSelector(selectRunnableSkillsForAgent(skillAgentId, "chat"));
+  const [isSending, setIsSending] = useState(false);
+  const sendingRef = useRef(false);
 
   useEffect(() => {
-    if (agentDmAgentId) {
-      dispatch(fetchRunnableSkills({ agentId: agentDmAgentId }));
+    if (skillAgentId && organizationId) {
+      dispatch(fetchRunnableSkills({ organizationId, agentId: skillAgentId, surface: "chat" }));
     }
-  }, [agentDmAgentId, dispatch]);
+  }, [skillAgentId, organizationId, dispatch]);
 
   const uploadFile = useCallback(
     async (file: File, pendingId: string) => {
@@ -472,6 +508,8 @@ export function MessageCompose({
     const hasText = text.trim().length > 0 || el.querySelectorAll(`[${MENTION_ATTR}]`).length > 0;
     setIsEmpty(!hasText && pendingFiles.length === 0);
     setCharCount(text.length);
+    const agentIds = mentionedSkillAgents(serializeToMarkdown(el));
+    setMentionedAgentIds((previous) => (previous.join() === agentIds.join() ? previous : agentIds));
   }, [pendingFiles.length]);
 
   // Edit mode is not a draft: autosave stays silent while editingMessage is set.
@@ -574,7 +612,7 @@ export function MessageCompose({
       }
     }
 
-    if (!agentDmAgentId) return;
+    if (!skillAgentId) return;
 
     const token = computeSlashToken(textBefore);
     if (!token) {
@@ -591,7 +629,7 @@ export function MessageCompose({
     emitDraftChange,
     mentionActive,
     onTyping,
-    agentDmAgentId,
+    skillAgentId,
     slashActive,
     closeSlash,
   ]);
@@ -699,19 +737,35 @@ export function MessageCompose({
   }, [closeSlash]);
 
   const performSend = useCallback(
-    (content: string, fileIds: string[], metadata?: Record<string, string>) => {
-      onSend?.(content, fileIds, metadata);
+    async (content: string, fileIds: string[], metadata?: Record<string, string>) => {
+      if (!onSend || sendingRef.current) return;
       const el = editorRef.current;
-      if (el) el.innerHTML = "";
-      setPendingFiles([]);
-      setPendingInvokedSkill(null);
-      closeSlash();
-      updateState();
+      const html = el?.innerHTML;
+      sendingRef.current = true;
+      setIsSending(true);
+      try {
+        if (!(await onSend(content, fileIds, metadata))) return;
+        if (el && editorRef.current === el && el.innerHTML === html) el.innerHTML = "";
+        setPendingFiles((files) =>
+          files.filter((file) => !file.fileId || !fileIds.includes(file.fileId)),
+        );
+        setPendingInvokedSkill((skill) =>
+          skill?.id === metadata?.invoked_skill_id ? null : skill,
+        );
+        closeSlash();
+        updateState();
+      } catch {
+        // The rejected send thunk owns the error toast; keep the draft for retry.
+      } finally {
+        sendingRef.current = false;
+        setIsSending(false);
+      }
     },
     [onSend, closeSlash, updateState],
   );
 
   const handleSend = useCallback(async () => {
+    if (sendingRef.current) return;
     const el = editorRef.current;
     if (!el) return;
 
@@ -736,7 +790,7 @@ export function MessageCompose({
     // system prompt, user text must not.
     const leadingCommand = pendingInvokedSkill
       ? null
-      : matchLeadingSkillCommand(trimmed, runnableSkills);
+      : matchChatSkillCommand(trimmed, runnableSkills);
     const invokedSkill = pendingInvokedSkill ?? leadingCommand?.skill ?? null;
     const body = leadingCommand ? leadingCommand.rest : trimmed;
 
@@ -761,8 +815,7 @@ export function MessageCompose({
         }
       : undefined;
 
-    // Nothing is cleared before the user confirms: the host's draft flush only
-    // runs on `onSend`, so cancelling leaves the composer exactly as it was.
+    // Confirmation cancellation and rejected sends must leave the draft intact.
     const broadcastKinds = broadcastMentionsIn(content);
     if (broadcastKinds.length > 0) {
       const kind = effectiveBroadcastKind(broadcastKinds);
@@ -1111,10 +1164,11 @@ export function MessageCompose({
         onDrop={handleDrop}
         onDragOver={handleDragOver}
         data-testid="chat-compose-root"
+        inert={isSending}
         data-mode={editingMessage ? "edit" : replyTo ? "reply" : "normal"}
         data-variant={variant}
       >
-        {slashActive && !!agentDmAgentId && (
+        {slashActive && !!skillAgentId && (
           <SkillSlashPopup
             skills={runnableSkills}
             query={slashQuery}
@@ -1204,7 +1258,8 @@ export function MessageCompose({
 
           <div
             ref={editorRef}
-            contentEditable
+            contentEditable={!isSending}
+            aria-busy={isSending}
             role="textbox"
             aria-label={displayPlaceholder}
             aria-multiline="true"
@@ -1303,7 +1358,7 @@ export function MessageCompose({
             <button
               type="button"
               onClick={handleSend}
-              disabled={isEmpty}
+              disabled={isSending || (isEmpty && !pendingInvokedSkill)}
               aria-label="Send message"
               className={cn(
                 "p-1.5 rounded-md transition-colors",

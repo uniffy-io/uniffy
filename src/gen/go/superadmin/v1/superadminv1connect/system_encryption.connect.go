@@ -46,7 +46,7 @@ type SystemEncryptionServiceClient interface {
 	// Snapshot the active + retired deployment DEK rows.
 	GetDeploymentEncryptionStatus(context.Context, *connect.Request[v1.GetDeploymentEncryptionStatusRequest]) (*connect.Response[v1.GetDeploymentEncryptionStatusResponse], error)
 	// Bump the active DEK to a fresh version and re-encrypt every
-	// registered “DeploymentReEncryptingConsumer“ row under it.
+	// registered ``DeploymentReEncryptingConsumer`` row under it.
 	// Publishes a cross-pod cache invalidation so peers drop the
 	// retired Fernet immediately. Returns the new active version.
 	RotateDeploymentDek(context.Context, *connect.Request[v1.RotateDeploymentDekRequest]) (*connect.Response[v1.RotateDeploymentDekResponse], error)
@@ -101,7 +101,7 @@ type SystemEncryptionServiceHandler interface {
 	// Snapshot the active + retired deployment DEK rows.
 	GetDeploymentEncryptionStatus(context.Context, *connect.Request[v1.GetDeploymentEncryptionStatusRequest]) (*connect.Response[v1.GetDeploymentEncryptionStatusResponse], error)
 	// Bump the active DEK to a fresh version and re-encrypt every
-	// registered “DeploymentReEncryptingConsumer“ row under it.
+	// registered ``DeploymentReEncryptingConsumer`` row under it.
 	// Publishes a cross-pod cache invalidation so peers drop the
 	// retired Fernet immediately. Returns the new active version.
 	RotateDeploymentDek(context.Context, *connect.Request[v1.RotateDeploymentDekRequest]) (*connect.Response[v1.RotateDeploymentDekResponse], error)

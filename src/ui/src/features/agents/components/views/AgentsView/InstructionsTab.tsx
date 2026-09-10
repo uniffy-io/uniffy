@@ -85,9 +85,8 @@ function AssembledPromptPreview({ agent }: { agent: SerializedAgent }) {
         <div className="mt-3 space-y-2">
           <div className="flex items-center justify-between">
             <p className="text-xs text-muted-foreground">
-              Preview of the full prompt sent to the LLM. The platform automatically appends agent
-              metadata, enabled tools, active skills, user memories, and the workspace guidelines to
-              your custom instructions.
+              Preview of an ordinary turn, including workspace guidance, selected rules, and memory
+              context. Skills are included only when explicitly invoked for a turn.
             </p>
             <button
               type="button"
