@@ -1,4 +1,3 @@
-import { useEffect, useRef } from "react";
 import {
   PencilSimple,
   Trash,
@@ -9,9 +8,7 @@ import {
   ArrowRight,
   ArrowUUpLeft,
 } from "@phosphor-icons/react";
-import { popoverEnterClass, popoverShellClass } from "@/components/ui/popover";
-import { useOverlayEscape } from "@/shared/hooks/useOverlayEscape";
-import { cn } from "@/shared/utils/cn";
+import { ActionMenu, ActionMenuItem, ActionMenuSeparator } from "@/components/ui/action-menu";
 
 interface ItemContextMenuProps {
   x: number;
@@ -62,21 +59,6 @@ export function ItemContextMenu({
   downloadDisabled = false,
   downloadTooltip = null,
 }: ItemContextMenuProps) {
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  // Close on outside click
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        onClose();
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [onClose]);
-
-  useOverlayEscape(onClose);
-
   const handleAction = (action: () => void, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -86,142 +68,93 @@ export function ItemContextMenu({
 
   if (trashMode) {
     return (
-      <div
-        ref={menuRef}
-        className={cn(
-          popoverShellClass,
-          popoverEnterClass,
-          "fixed z-50 min-w-[200px] overflow-hidden",
+      <ActionMenu open position={{ x, y }} onClose={onClose} label="Trash actions">
+        {canRestore && onRestore && (
+          <ActionMenuItem onClick={(e) => handleAction(onRestore, e)}>
+            <ArrowUUpLeft size={16} weight="bold" className="text-primary" />
+            Restore
+          </ActionMenuItem>
         )}
-        style={{ top: y, left: x }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="py-1">
-          {canRestore && onRestore && (
-            <button
-              onClick={(e) => handleAction(onRestore, e)}
-              className="flex w-full items-center gap-3 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
-            >
-              <ArrowUUpLeft size={16} weight="bold" className="text-primary" />
-              Restore
-            </button>
-          )}
 
-          <button
-            onClick={(e) => (downloadDisabled ? e.stopPropagation() : handleAction(onDownload, e))}
-            disabled={downloadDisabled}
-            title={downloadDisabled ? (downloadTooltip ?? "") : undefined}
-            className="flex w-full items-center gap-3 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Download size={16} className="text-primary" />
-            Download
-          </button>
+        <ActionMenuItem
+          onClick={(e) => (downloadDisabled ? e.stopPropagation() : handleAction(onDownload, e))}
+          disabled={downloadDisabled}
+          title={downloadDisabled ? (downloadTooltip ?? "") : undefined}
+        >
+          <Download size={16} className="text-primary" />
+          Download
+        </ActionMenuItem>
 
-          <div className="my-1 h-px bg-border" />
+        <ActionMenuSeparator />
 
-          <button
-            onClick={(e) => handleAction(onDelete, e)}
-            className="flex w-full items-center gap-3 px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-600/10 dark:hover:bg-red-400/10 transition-colors"
-          >
-            <Trash size={16} className="text-red-600 dark:text-red-400" />
-            Delete Permanently
-          </button>
-        </div>
-      </div>
+        <ActionMenuItem onClick={(e) => handleAction(onDelete, e)} destructive>
+          <Trash size={16} className="text-red-600 dark:text-red-400" />
+          Delete Permanently
+        </ActionMenuItem>
+      </ActionMenu>
     );
   }
 
   return (
-    <div
-      ref={menuRef}
-      className={cn(
-        popoverShellClass,
-        popoverEnterClass,
-        "fixed z-50 min-w-[180px] overflow-hidden",
+    <ActionMenu open position={{ x, y }} onClose={onClose} label="File actions">
+      {canEdit && (
+        <ActionMenuItem onClick={(e) => handleAction(onRename, e)}>
+          <PencilSimple size={16} className="text-primary" />
+          Rename
+        </ActionMenuItem>
       )}
-      style={{ top: y, left: x }}
-      onClick={(e) => e.stopPropagation()}
-    >
-      <div className="py-1">
-        {canEdit && (
-          <button
-            onClick={(e) => handleAction(onRename, e)}
-            className="flex w-full items-center gap-3 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
-          >
-            <PencilSimple size={16} className="text-primary" />
-            Rename
-          </button>
-        )}
 
-        {onBookmark && (
-          <button
-            onClick={(e) => handleAction(onBookmark, e)}
-            disabled={bookmarkToggling}
-            className="flex w-full items-center gap-3 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors disabled:opacity-50"
-          >
-            <BookmarkSimple
-              size={16}
-              weight={isBookmarked ? "fill" : "duotone"}
-              className="text-primary"
-            />
-            {isBookmarked ? "Remove Bookmark" : "Add Bookmark"}
-          </button>
-        )}
+      {onBookmark && (
+        <ActionMenuItem onClick={(e) => handleAction(onBookmark, e)} disabled={bookmarkToggling}>
+          <BookmarkSimple
+            size={16}
+            weight={isBookmarked ? "fill" : "duotone"}
+            className="text-primary"
+          />
+          {isBookmarked ? "Remove Bookmark" : "Add Bookmark"}
+        </ActionMenuItem>
+      )}
 
-        {onEditTags && canEdit && (
-          <button
-            onClick={(e) => handleAction(onEditTags, e)}
-            className="flex w-full items-center gap-3 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
-          >
-            <Tag size={16} className="text-primary" />
-            Edit Tags
-          </button>
-        )}
+      {onEditTags && canEdit && (
+        <ActionMenuItem onClick={(e) => handleAction(onEditTags, e)}>
+          <Tag size={16} className="text-primary" />
+          Edit Tags
+        </ActionMenuItem>
+      )}
 
-        {onMove && canEdit && (
-          <button
-            onClick={(e) => handleAction(onMove, e)}
-            className="flex w-full items-center gap-3 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
-          >
-            <ArrowRight size={16} className="text-primary" />
-            Move to...
-          </button>
-        )}
+      {onMove && canEdit && (
+        <ActionMenuItem onClick={(e) => handleAction(onMove, e)}>
+          <ArrowRight size={16} className="text-primary" />
+          Move to...
+        </ActionMenuItem>
+      )}
 
-        {canShare && (
-          <button
-            onClick={(e) => handleAction(onShare, e)}
-            className="flex w-full items-center gap-3 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
-          >
-            <ShareNetwork size={16} className="text-primary" />
-            Share
-          </button>
-        )}
+      {canShare && (
+        <ActionMenuItem onClick={(e) => handleAction(onShare, e)}>
+          <ShareNetwork size={16} className="text-primary" />
+          Share
+        </ActionMenuItem>
+      )}
 
-        <button
-          onClick={(e) => (downloadDisabled ? e.stopPropagation() : handleAction(onDownload, e))}
-          disabled={downloadDisabled}
-          title={downloadDisabled ? (downloadTooltip ?? "") : undefined}
-          className="flex w-full items-center gap-3 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <Download size={16} className="text-primary" />
-          Download
-        </button>
+      <ActionMenuItem
+        onClick={(e) => (downloadDisabled ? e.stopPropagation() : handleAction(onDownload, e))}
+        disabled={downloadDisabled}
+        title={downloadDisabled ? (downloadTooltip ?? "") : undefined}
+      >
+        <Download size={16} className="text-primary" />
+        Download
+      </ActionMenuItem>
 
-        {canDelete && (
-          <>
-            <div className="my-1 h-px bg-border" />
+      {canDelete && (
+        <>
+          <ActionMenuSeparator />
 
-            <button
-              onClick={(e) => handleAction(onDelete, e)}
-              className="flex w-full items-center gap-3 px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-600/10 dark:hover:bg-red-400/10 transition-colors"
-            >
-              <Trash size={16} className="text-red-600 dark:text-red-400" />
-              Delete
-            </button>
-          </>
-        )}
-      </div>
-    </div>
+          <ActionMenuItem onClick={(e) => handleAction(onDelete, e)} destructive>
+            <Trash size={16} className="text-red-600 dark:text-red-400" />
+            Delete
+          </ActionMenuItem>
+        </>
+      )}
+    </ActionMenu>
   );
 }

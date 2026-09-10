@@ -3,7 +3,10 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { GenerateSkillDraftDialog } from "@/features/agents/components/skills/GenerateSkillDraftDialog";
-import { SkillResponseActions } from "@/features/agents/components/skills/SkillResponseActions";
+import {
+  SkillResponseActions,
+  SkillResponseMenuItems,
+} from "@/features/agents/components/skills/SkillResponseActions";
 import { SkillDraftStatus } from "@/features/agents/components/skills/SkillDraftStatus";
 
 const mocks = vi.hoisted(() => ({ state: {}, dispatch: vi.fn() }));
@@ -52,8 +55,14 @@ function actions(facts: Record<string, string> = attribution) {
       channelId: "channel",
       responseMessageId: "reply",
       attribution: facts,
+      action: null,
+      onClose: vi.fn(),
     }),
   );
+}
+
+function menu(facts: Record<string, string> = attribution) {
+  return render(createElement(SkillResponseMenuItems, { attribution: facts, onSelect: vi.fn() }));
 }
 
 function status(value: string) {
@@ -76,17 +85,27 @@ describe("explicit skill generation controls", () => {
 
   it("shows the exact version and Improve only to the invocation's actor", () => {
     expect(actions()).toContain("Used Report v3");
-    expect(actions()).toContain("Improve this skill");
+    expect(menu()).toContain("Improve this skill");
+    expect(actions()).not.toContain("Improve this skill");
+    expect(actions()).not.toContain("Create skill from conversation");
     expect(actions()).not.toContain('href="/agents/skills/skill"');
     state("another");
-    expect(actions()).not.toContain("Improve this skill");
-    expect(actions()).toContain("Create skill from conversation");
+    expect(menu()).not.toContain("Improve this skill");
+    expect(menu()).toContain("Create skill from conversation");
     expect(mocks.dispatch).not.toHaveBeenCalled();
   });
 
   it("never guesses an improvement target for an ordinary response", () => {
-    expect(actions({})).not.toContain("Improve this skill");
+    expect(menu({})).not.toContain("Improve this skill");
+    expect(menu({})).toContain("Create skill from conversation");
     expect(actions({})).not.toContain("Used ");
+  });
+
+  it("requires the invocation and its trigger before offering improvement", () => {
+    expect(menu({ ...attribution, skill_trigger_message_id: "" })).not.toContain(
+      "Improve this skill",
+    );
+    expect(menu({ ...attribution, skill_invocation_id: "" })).not.toContain("Improve this skill");
   });
 
   it("links builders to the attributed skill", () => {

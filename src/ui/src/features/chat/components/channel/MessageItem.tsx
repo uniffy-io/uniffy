@@ -15,6 +15,11 @@ import { ReactionBar } from "@/features/chat/components/reactions/ReactionBar";
 import { EmojiPicker } from "@/features/chat/components/compose/EmojiPicker";
 import { SubjectAvatarById, PersonHoverCard } from "@/components/subject";
 import { AgentAvatar } from "@/features/agents/components/AgentAvatar";
+import {
+  SkillResponseActions,
+  SkillResponseMenuItems,
+  type SkillResponseAction,
+} from "@/features/agents/components/skills/SkillResponseActions";
 import { CustomStatusDisplay } from "@/features/presence/components/CustomStatusDisplay";
 import { cn } from "@/shared/utils/cn";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
@@ -87,6 +92,12 @@ function MessageItemInner({
   const currentUserId = useAppSelector((state) => state.auth.user?.id);
   const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
   const isAgent = message.senderType === "AGENT";
+  const hasSkillActions =
+    isAgent &&
+    Boolean(message.content) &&
+    (!message.metadata.kind || message.metadata.kind === "final") &&
+    ![true, "true", "True"].includes(message.metadata.streaming as boolean | string) &&
+    ![true, "true", "True"].includes(message.metadata.was_cancelled as boolean | string);
   // A file referenced inline as a mention chip already represents itself; skip its
   // card so it shows once (the attachment record still rides along for access).
   // Uploads mention the SOURCE file while the attachment links its copy, so both
@@ -124,6 +135,7 @@ function MessageItemInner({
   const [showReactionPicker, setShowReactionPicker] = useState(false);
   const [showForwardDialog, setShowForwardDialog] = useState(false);
   const [showEditHistory, setShowEditHistory] = useState(false);
+  const [skillAction, setSkillAction] = useState<SkillResponseAction | null>(null);
   const addReactionRef = useRef<HTMLDivElement>(null);
 
   const orgPolicy = useAppSelector(selectOrgChatPolicy);
@@ -401,9 +413,23 @@ function MessageItemInner({
         onQuoteReply={handleQuoteReply}
         onEdit={handleStartEdit}
         onForward={handleForward}
+        renderAdditionalActions={
+          hasSkillActions
+            ? (closeMenu) => (
+                <SkillResponseMenuItems
+                  attribution={message.metadata}
+                  triggerMessageId={message.replyToId ?? undefined}
+                  onSelect={(action) => {
+                    closeMenu();
+                    setSkillAction(action);
+                  }}
+                />
+              )
+            : undefined
+        }
       />
 
-      <div className="flex items-start gap-3">
+      <div className="flex items-start gap-3 pr-12 lg:pr-0">
         {isFirstInGroup ? (
           <div
             className="shrink-0 mt-0.5 cursor-pointer"
@@ -526,7 +552,21 @@ function MessageItemInner({
           )}
           <div data-testid={`chat-message-body-${message.id}`}>
             {isAgent ? (
-              <AgentMessageBody message={message} />
+              <>
+                <AgentMessageBody message={message} />
+                {hasSkillActions && (
+                  <SkillResponseActions
+                    agentId={message.senderId}
+                    channelId={message.channelId}
+                    threadRootId={message.rootId ?? undefined}
+                    responseMessageId={message.id}
+                    triggerMessageId={message.replyToId ?? undefined}
+                    attribution={message.metadata}
+                    action={skillAction}
+                    onClose={() => setSkillAction(null)}
+                  />
+                )}
+              </>
             ) : message.isForwarded ? (
               <>
                 {message.content.trim().length > 0 && <MessageContent content={message.content} />}

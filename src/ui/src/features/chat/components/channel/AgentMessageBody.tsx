@@ -24,7 +24,6 @@ import {
   selectTypingUsers,
 } from "@/features/chat/store/chatMessagesSlice";
 import { Card } from "@/components/ui/card";
-import { SkillResponseActions } from "@/features/agents/components/skills/SkillResponseActions";
 import { SkillDraftStatus } from "@/features/agents/components/skills/SkillDraftStatus";
 import { ThinkingPane } from "@/features/agents/components/ThinkingPane";
 import { ToolActivityPane, type ToolStep } from "@/features/agents/components/ToolActivityPane";
@@ -116,16 +115,6 @@ function FinalMessageWithThinking({
         />
       )}
       {showStreamingBody && <StreamingMessage content={message.content} streaming={streaming} />}
-      {!streaming && message.content && !readBoolean(message.metadata, "was_cancelled") && (
-        <SkillResponseActions
-          agentId={message.senderId}
-          channelId={message.channelId}
-          threadRootId={message.rootId ?? undefined}
-          responseMessageId={message.id}
-          triggerMessageId={message.replyToId ?? undefined}
-          attribution={message.metadata}
-        />
-      )}
     </div>
   );
 }

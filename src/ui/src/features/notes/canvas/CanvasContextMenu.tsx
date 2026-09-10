@@ -1,12 +1,4 @@
-/**
- * CanvasContextMenu - Right-click context menu for canvas nodes.
- *
- * Provides: Duplicate, Delete, and node ordering (Bring to Front, etc.).
- * For mind map nodes, provides tree operations (Add child, Add sibling,
- * Collapse/Expand) and a branch color picker.
- */
-
-import { memo, useEffect, useRef } from "react";
+import { memo } from "react";
 import {
   Trash,
   CopySimple,
@@ -21,8 +13,7 @@ import {
   Palette,
   ArrowsClockwise,
 } from "@phosphor-icons/react";
-import { popoverShellClass } from "@/components/ui/popover";
-import { useOverlayEscape } from "@/shared/hooks/useOverlayEscape";
+import { ActionMenu, ActionMenuItem, ActionMenuSeparator } from "@/components/ui/action-menu";
 import { cn } from "@/shared/utils/cn";
 import {
   MINDMAP_BRANCH_COLORS,
@@ -78,40 +69,20 @@ export const CanvasContextMenu = memo(function CanvasContextMenu({
   onSendBackward,
   mindMapInfo,
 }: CanvasContextMenuProps) {
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  // Close on click outside
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        onClose();
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [onClose]);
-
-  useOverlayEscape(onClose);
-
   const renderItem = (item: MenuItem) => {
     const Icon = item.icon;
     return (
-      <button
+      <ActionMenuItem
         key={item.label}
         onClick={item.action}
-        className={cn(
-          "w-full flex items-center gap-2 px-3 py-1.5 text-sm text-left transition-colors",
-          item.variant === "destructive"
-            ? "text-red-500 hover:bg-red-500/10"
-            : "text-foreground hover:bg-muted",
-        )}
+        destructive={item.variant === "destructive"}
       >
         <Icon size={14} weight="duotone" />
         <span className="flex-1">{item.label}</span>
         {item.shortcut && (
           <span className="text-xs text-muted-foreground ml-4">{item.shortcut}</span>
         )}
-      </button>
+      </ActionMenuItem>
     );
   };
 
@@ -169,15 +140,16 @@ export const CanvasContextMenu = memo(function CanvasContextMenu({
     }
 
     return (
-      <div
-        ref={menuRef}
-        className={cn(popoverShellClass, "fixed z-50 min-w-45 py-1")}
-        style={{ left: x, top: y }}
+      <ActionMenu
+        open
+        position={{ x, y }}
+        onClose={onClose}
+        label={mindMapInfo ? "Mind map actions" : "Canvas actions"}
       >
         {treeItems.map(renderItem)}
         {collapseItems.length > 0 && (
           <>
-            <div className="h-px bg-border my-1" />
+            <ActionMenuSeparator />
             {collapseItems.map(renderItem)}
           </>
         )}
@@ -196,7 +168,7 @@ export const CanvasContextMenu = memo(function CanvasContextMenu({
             };
             return (
               <>
-                <div className="h-px bg-border my-1" />
+                <ActionMenuSeparator />
                 {renderItem({
                   label: `Rotate (${dirLabels[nextDir]})`,
                   icon: ArrowsClockwise as MenuItem["icon"],
@@ -211,22 +183,26 @@ export const CanvasContextMenu = memo(function CanvasContextMenu({
         {/* Branch color picker (non-root only) */}
         {!mindMapInfo.isRoot && (
           <>
-            <div className="h-px bg-border my-1" />
+            <ActionMenuSeparator />
             <div className="px-3 py-1.5">
               <div className="flex items-center gap-2 text-sm text-foreground mb-1.5">
                 <Palette size={14} weight="duotone" />
                 <span>Branch color</span>
               </div>
-              <div className="flex gap-1">
+              <div className="flex flex-wrap gap-1">
                 {MINDMAP_BRANCH_COLORS.map((c) => (
                   <button
                     key={c}
+                    type="button"
+                    role="menuitemradio"
+                    aria-label={`Branch color ${c}`}
+                    aria-checked={c === mindMapInfo.branchColor}
                     onClick={() => {
                       mindMapInfo.onBranchColorChange(c);
                       onClose();
                     }}
                     className={cn(
-                      "w-5 h-5 rounded border transition-transform",
+                      "focus-ring h-11 w-11 lg:h-6 lg:w-6 rounded border transition-transform",
                       c === mindMapInfo.branchColor
                         ? "border-foreground scale-110"
                         : "border-border",
@@ -240,11 +216,11 @@ export const CanvasContextMenu = memo(function CanvasContextMenu({
         )}
         {deleteItems.length > 0 && (
           <>
-            <div className="h-px bg-border my-1" />
+            <ActionMenuSeparator />
             {deleteItems.map(renderItem)}
           </>
         )}
-      </div>
+      </ActionMenu>
     );
   }
 
@@ -305,14 +281,15 @@ export const CanvasContextMenu = memo(function CanvasContextMenu({
   ];
 
   return (
-    <div
-      ref={menuRef}
-      className={cn(popoverShellClass, "fixed z-50 min-w-40 py-1")}
-      style={{ left: x, top: y }}
+    <ActionMenu
+      open
+      position={{ x, y }}
+      onClose={onClose}
+      label={mindMapInfo ? "Mind map actions" : "Canvas actions"}
     >
       {editItems.map(renderItem)}
-      <div className="h-px bg-border my-1" />
+      <ActionMenuSeparator />
       {orderItems.map(renderItem)}
-    </div>
+    </ActionMenu>
   );
 });

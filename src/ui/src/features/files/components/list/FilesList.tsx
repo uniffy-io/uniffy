@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState, useRef, useEffect } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   File,
   Folder,
@@ -24,7 +24,7 @@ import { cn } from "@/shared/utils/cn";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Select, type SelectOption } from "@/components/ui/select";
-import { popoverEnterClass, popoverShellClass } from "@/components/ui/popover";
+import { ActionMenu, ActionMenuItem } from "@/components/ui/action-menu";
 import { renderIcon } from "@/components/icon-picker";
 import { useNavigate } from "react-router-dom";
 import { useSavedFilters } from "@/features/files/hooks/useSavedFilters";
@@ -63,7 +63,6 @@ import type { SerializedTreeNode, SerializedFolder } from "@/features/files/stor
 import { useAccessPolicyDialog } from "@/features/permissions";
 import { addBookmarksSafely, useBookmarkStatuses } from "@/features/bookmarks";
 import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
-import { useOverlayEscape } from "@/shared/hooks/useOverlayEscape";
 import { ContentType, AccessMode } from "@uniffy/proto/common/v1/common_pb";
 import { bucketForContent, roleCanDelete, roleCanEdit } from "@/shared/utils/contentRoles";
 import type { FileDownloadItem } from "@/features/files/utils/archiveDownload";
@@ -198,7 +197,6 @@ export function FilesList({
 
   // Context menu state
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
-  const contextMenuRef = useRef<HTMLDivElement>(null);
 
   // Folder id that should open in rename mode immediately after creation.
   const [pendingRenameFolderId, setPendingRenameFolderId] = useState<string | null>(null);
@@ -225,21 +223,6 @@ export function FilesList({
 
   // Access policy dialog
   const { openFor } = useAccessPolicyDialog();
-
-  // Close context menu on outside click
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (contextMenuRef.current && !contextMenuRef.current.contains(e.target as Node)) {
-        setContextMenu(null);
-      }
-    };
-    if (contextMenu) {
-      document.addEventListener("mousedown", handleClickOutside);
-      return () => document.removeEventListener("mousedown", handleClickOutside);
-    }
-  }, [contextMenu]);
-
-  useOverlayEscape(() => setContextMenu(null), !!contextMenu);
 
   const handleContextMenu = useCallback(
     (e: React.MouseEvent) => {
@@ -1048,54 +1031,48 @@ export function FilesList({
 
       {/* Context Menu */}
       {contextMenu && (
-        <div
-          ref={contextMenuRef}
-          className={cn(
-            popoverShellClass,
-            popoverEnterClass,
-            "fixed z-50 min-w-[160px] overflow-hidden",
-          )}
-          style={{ top: contextMenu.y, left: contextMenu.x }}
+        <ActionMenu
+          open
+          position={contextMenu}
+          onClose={() => setContextMenu(null)}
+          label="Folder actions"
         >
-          <div className="py-1">
+          <>
             {onUpload && (
-              <button
+              <ActionMenuItem
                 onClick={() => {
                   onUpload();
                   setContextMenu(null);
                 }}
-                className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
               >
                 <File size={16} weight="duotone" className="text-primary" />
                 Upload Files
-              </button>
+              </ActionMenuItem>
             )}
             {onUploadFolder && (
-              <button
+              <ActionMenuItem
                 onClick={() => {
                   onUploadFolder();
                   setContextMenu(null);
                 }}
-                className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
               >
                 <FolderOpen size={16} weight="duotone" className="text-primary" />
                 Upload Folder
-              </button>
+              </ActionMenuItem>
             )}
             {onCreateFolder && (
-              <button
+              <ActionMenuItem
                 onClick={() => {
                   setContextMenu(null);
                   void handleCreateFolderClick();
                 }}
-                className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
               >
                 <FolderPlus size={16} className="text-blue-500" />
                 New Folder
-              </button>
+              </ActionMenuItem>
             )}
-          </div>
-        </div>
+          </>
+        </ActionMenu>
       )}
 
       {/* Folders and Files */}

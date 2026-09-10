@@ -1,8 +1,6 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useCallback } from "react";
 import { Plus, FileText, SelectionAll, Folder, ArrowsClockwise } from "@phosphor-icons/react";
-import { popoverEnterClass, popoverShellClass } from "@/components/ui/popover";
-import { useOverlayEscape } from "@/shared/hooks/useOverlayEscape";
-import { cn } from "@/shared/utils/cn";
+import { ActionMenu, ActionMenuItem } from "@/components/ui/action-menu";
 
 interface CreateDropdownProps {
   onCreateNote: () => void;
@@ -22,29 +20,7 @@ export function CreateDropdown({
   compact = false,
 }: CreateDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [menuPos, setMenuPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
-  const triggerRef = useRef<HTMLSpanElement | HTMLButtonElement>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const handleClickOutside = (e: MouseEvent) => {
-      if (
-        menuRef.current &&
-        !menuRef.current.contains(e.target as Node) &&
-        triggerRef.current &&
-        !triggerRef.current.contains(e.target as Node)
-      ) {
-        setIsOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isOpen]);
-
-  useOverlayEscape(() => setIsOpen(false), isOpen);
-
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const handleAction = useCallback((action: () => void) => {
     setIsOpen(false);
     action();
@@ -56,72 +32,57 @@ export function CreateDropdown({
       e.preventDefault();
       if (disabled || creating) return;
 
-      if (!isOpen) {
-        const rect = triggerRef.current?.getBoundingClientRect();
-        if (rect) {
-          const menuWidth = 160;
-          const menuHeight = 130;
-          const x = rect.right + menuWidth > window.innerWidth ? rect.left - menuWidth : rect.left;
-          const y =
-            rect.bottom + menuHeight > window.innerHeight ? rect.top - menuHeight : rect.bottom + 4;
-          setMenuPos({ x, y });
-        }
-      }
       setIsOpen((prev) => !prev);
     },
-    [disabled, creating, isOpen],
+    [disabled, creating],
   );
 
   const renderMenu = () => {
     if (!isOpen) return null;
 
     return (
-      <div
-        ref={menuRef}
-        className={cn(popoverShellClass, popoverEnterClass, "fixed z-50 min-w-40 overflow-hidden")}
-        style={{ top: menuPos.y, left: menuPos.x }}
-        onClick={(e) => e.stopPropagation()}
+      <ActionMenu
+        open
+        triggerRef={triggerRef}
+        onClose={() => setIsOpen(false)}
+        label="Create new"
+        align="left"
       >
-        <div className="py-1">
-          <button
-            onClick={() => handleAction(onCreateNote)}
-            className="flex w-full items-center gap-3 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
-          >
+        <>
+          <ActionMenuItem onClick={() => handleAction(onCreateNote)}>
             <FileText size={16} weight="duotone" className="text-muted-foreground" />
             Note
-          </button>
+          </ActionMenuItem>
 
-          <button
-            onClick={() => handleAction(onCreateCanvas)}
-            className="flex w-full items-center gap-3 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
-          >
+          <ActionMenuItem onClick={() => handleAction(onCreateCanvas)}>
             <SelectionAll size={16} weight="duotone" className="text-muted-foreground" />
             Canvas
-          </button>
+          </ActionMenuItem>
 
-          <button
-            onClick={() => handleAction(onCreateFolder)}
-            className="flex w-full items-center gap-3 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
-          >
+          <ActionMenuItem onClick={() => handleAction(onCreateFolder)}>
             <Folder size={16} weight="duotone" className="text-muted-foreground" />
             Folder
-          </button>
-        </div>
-      </div>
+          </ActionMenuItem>
+        </>
+      </ActionMenu>
     );
   };
 
   if (compact) {
     return (
       <>
-        <span
-          ref={triggerRef as React.RefObject<HTMLSpanElement>}
+        <button
+          ref={triggerRef}
+          type="button"
+          disabled={disabled || creating}
+          aria-haspopup="menu"
+          aria-expanded={isOpen}
           onClick={handleToggle}
-          className="p-0.5 rounded hover:bg-muted cursor-pointer"
+          className="focus-ring grid h-11 w-11 lg:h-6 lg:w-6 place-items-center rounded hover:bg-muted disabled:opacity-50"
           title="Create new..."
         >
           <Plus size={14} weight="bold" className="text-muted-foreground" />
-        </span>
+        </button>
         {renderMenu()}
       </>
     );
@@ -130,10 +91,13 @@ export function CreateDropdown({
   return (
     <>
       <button
-        ref={triggerRef as React.RefObject<HTMLButtonElement>}
+        ref={triggerRef}
+        type="button"
+        aria-haspopup="menu"
+        aria-expanded={isOpen}
         onClick={handleToggle}
         disabled={disabled || creating}
-        className="group relative flex items-center py-1.5 px-1.5 text-sm font-medium rounded-lg transition-all duration-300 ease-out overflow-hidden hover:px-2.5 disabled:opacity-50"
+        className="focus-ring group relative flex min-h-11 lg:min-h-0 items-center py-1.5 px-1.5 text-sm font-medium rounded-lg transition-all duration-300 ease-out overflow-hidden hover:px-2.5 disabled:opacity-50"
         title="Create new..."
       >
         <span className="absolute bottom-0 left-1/2 -translate-x-1/2 h-0.5 rounded-full bg-primary transition-all duration-700 ease-out w-0 opacity-0 group-hover:w-1/2 group-hover:opacity-70" />

@@ -5,6 +5,7 @@ import {
   ArrowsClockwise,
   ChatCircleDots,
   CircleNotch,
+  DotsThree,
   Flask,
   PencilSimple,
   Stop,
@@ -14,6 +15,7 @@ import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
 import { Button } from "@/components/ui/button";
 import { Drawer } from "@/components/ui/drawer";
+import { ActionMenu } from "@/components/ui/action-menu";
 import { CrepeEditor } from "@/components/editor/CrepeEditor";
 import { AgentTestComposer } from "@/features/agents/components/chat/AgentTestComposer";
 import { ContentType } from "@uniffy/proto/common/v1/common_pb";
@@ -42,7 +44,11 @@ import type { SerializedAgent } from "@/features/agents/store/agentsThunks";
 import { ThinkingPane } from "@/features/agents/components/ThinkingPane";
 import { ToolActivityPane } from "@/features/agents/components/ToolActivityPane";
 import { foldMessageTurns, streamingToolCallsToSteps } from "@/features/agents/utils/messageTurns";
-import { SkillResponseActions } from "@/features/agents/components/skills/SkillResponseActions";
+import {
+  SkillResponseActions,
+  SkillResponseMenuItems,
+  type SkillResponseAction,
+} from "@/features/agents/components/skills/SkillResponseActions";
 
 const TEST_SESSION_PREFIX = "[test] ";
 
@@ -174,6 +180,10 @@ function AssistantBubble({
   onRetry?: (messageId: string) => void;
   disabled: boolean;
 }) {
+  const [showActionsMenu, setShowActionsMenu] = useState(false);
+  const [skillAction, setSkillAction] = useState<SkillResponseAction | null>(null);
+  const actionsButtonRef = useRef<HTMLButtonElement>(null);
+
   if (message.isInvalidated) {
     return <RemovedBubble align="start" label="This reply was removed" />;
   }
@@ -214,9 +224,41 @@ function AssistantBubble({
             sessionId={message.sessionId}
             responseMessageId={message.id}
             attribution={message.skillInvocation}
+            action={skillAction}
+            onClose={() => setSkillAction(null)}
           />
         )}
       </div>
+      {agentId && !isOptimistic(message) && message.content && (
+        <>
+          <button
+            ref={actionsButtonRef}
+            type="button"
+            className="focus-ring flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground lg:h-7 lg:w-7"
+            aria-label="More response actions"
+            aria-haspopup="menu"
+            aria-expanded={showActionsMenu}
+            onClick={() => setShowActionsMenu((open) => !open)}
+          >
+            <DotsThree size={18} />
+          </button>
+          <ActionMenu
+            label="Response actions"
+            open={showActionsMenu}
+            onClose={() => setShowActionsMenu(false)}
+            triggerRef={actionsButtonRef}
+            className="w-72"
+          >
+            <SkillResponseMenuItems
+              attribution={message.skillInvocation}
+              onSelect={(action) => {
+                setShowActionsMenu(false);
+                setSkillAction(action);
+              }}
+            />
+          </ActionMenu>
+        </>
+      )}
       {onRetry && (
         <button
           type="button"

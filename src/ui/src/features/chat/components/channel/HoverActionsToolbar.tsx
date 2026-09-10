@@ -1,5 +1,5 @@
-import { memo, useState, useCallback, useRef, useEffect } from "react";
-import { useOverlayEscape } from "@/shared/hooks/useOverlayEscape";
+import { memo, useState, useCallback, useRef, type ReactNode } from "react";
+import { ActionMenu, ActionMenuItem } from "@/components/ui/action-menu";
 import {
   ArrowBendDoubleUpRight,
   ArrowBendUpLeft,
@@ -17,6 +17,7 @@ import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { useBookmarkToggle } from "@/features/bookmarks";
 import { popoverShellClass } from "@/components/ui/popover";
 import { cn } from "@/shared/utils/cn";
+import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
 import { openThreadPanel } from "@/features/chat/store/chatUiSlice";
 import { setActiveThread } from "@/features/chat/store/chatThreadsSlice";
 import { EmojiPicker } from "@/features/chat/components/compose/EmojiPicker";
@@ -39,6 +40,7 @@ interface HoverActionsToolbarProps {
   onQuoteReply?: () => void;
   onEdit?: () => void;
   onForward?: () => void;
+  renderAdditionalActions?: (closeMenu: () => void) => ReactNode;
 }
 
 function HoverActionsToolbarInner({
@@ -51,15 +53,17 @@ function HoverActionsToolbarInner({
   onQuoteReply,
   onEdit,
   onForward,
+  renderAdditionalActions,
 }: HoverActionsToolbarProps) {
   const dispatch = useAppDispatch();
   const currentUserId = useAppSelector((state) => state.auth.user?.id);
+  const { isMobileOrTablet } = useBreakpoint();
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [canEdit, setCanEdit] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const moreMenuRef = useRef<HTMLDivElement>(null);
+  const moreButtonRef = useRef<HTMLButtonElement>(null);
   const emojiButtonRef = useRef<HTMLButtonElement>(null);
 
   const isOwnMessage = senderId === currentUserId;
@@ -71,29 +75,9 @@ function HoverActionsToolbarInner({
     toggle: toggleBookmark,
   } = useBookmarkToggle(messageUrn);
 
-  useEffect(() => {
-    if (!showMoreMenu) return;
-
-    const handleClickOutside = (e: MouseEvent) => {
-      if (moreMenuRef.current && !moreMenuRef.current.contains(e.target as Node)) {
-        setShowMoreMenu(false);
-      }
-    };
-    const timer = setTimeout(() => {
-      document.addEventListener("mousedown", handleClickOutside);
-    }, 0);
-
-    return () => {
-      clearTimeout(timer);
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [showMoreMenu]);
-
-  useOverlayEscape(() => setShowMoreMenu(false), showMoreMenu);
-
   const buttonClass = cn(
-    "p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted",
-    "transition-colors h-7 w-7 flex items-center justify-center",
+    "focus-ring p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted",
+    "transition-colors h-11 w-11 lg:h-7 lg:w-7 flex items-center justify-center",
   );
 
   const handleReplyInThread = useCallback(() => {
@@ -160,82 +144,85 @@ function HoverActionsToolbarInner({
     // eslint-disable-next-line react/react-compiler
   }, [dispatch, channelId, messageId]);
 
-  const menuItemClass = cn(
-    "flex items-center gap-2 px-3 py-1.5 text-sm text-foreground",
-    "hover:bg-muted cursor-pointer w-full text-left",
-  );
-
   return (
     <div
       className={cn(
         popoverShellClass,
-        "absolute -top-4 right-4 flex items-center",
+        "absolute top-0 lg:-top-4 right-4 flex items-center",
         showMoreMenu || showEmojiPicker
           ? "opacity-100 z-50"
-          : "opacity-0 group-hover:opacity-100 z-10 transition-opacity duration-150",
+          : "opacity-100 lg:opacity-0 lg:group-hover:opacity-100 focus-within:opacity-100 z-10 transition-opacity duration-150",
       )}
       data-testid={`chat-message-actions-${messageId}`}
     >
-      <button
-        ref={emojiButtonRef}
-        className={buttonClass}
-        title="Add reaction"
-        onClick={() => setShowEmojiPicker((prev) => !prev)}
-        data-testid={`chat-message-react-button-${messageId}`}
-      >
-        <Smiley size={16} />
-      </button>
+      {!isMobileOrTablet && (
+        <>
+          <button
+            ref={emojiButtonRef}
+            className={buttonClass}
+            title="Add reaction"
+            onClick={() => setShowEmojiPicker((prev) => !prev)}
+            data-testid={`chat-message-react-button-${messageId}`}
+          >
+            <Smiley size={16} />
+          </button>
+
+          <button
+            className={buttonClass}
+            title="Reply in thread"
+            onClick={handleReplyInThread}
+            data-testid={`chat-message-thread-button-${messageId}`}
+          >
+            <ChatText size={16} />
+          </button>
+
+          <button
+            className={buttonClass}
+            title={isPinned ? "Unpin message" : "Pin message"}
+            onClick={handleTogglePin}
+            data-testid={`chat-message-pin-button-${messageId}`}
+            data-state={isPinned ? "pinned" : "unpinned"}
+          >
+            <PushPin size={16} weight={isPinned ? "fill" : "regular"} />
+          </button>
+
+          <button
+            className={buttonClass}
+            title="Quote reply"
+            onClick={handleQuoteReply}
+            data-testid={`chat-message-reply-button-${messageId}`}
+          >
+            <ArrowBendUpLeft size={16} />
+          </button>
+
+          {onForward && (
+            <button
+              className={buttonClass}
+              title="Forward"
+              onClick={onForward}
+              data-testid={`chat-message-forward-button-${messageId}`}
+            >
+              <ArrowBendDoubleUpRight size={16} />
+            </button>
+          )}
+        </>
+      )}
+
       {showEmojiPicker && (
         <EmojiPicker
-          anchorRef={emojiButtonRef}
+          anchorRef={isMobileOrTablet ? moreButtonRef : emojiButtonRef}
           onSelect={handleEmojiSelect}
           onClose={() => setShowEmojiPicker(false)}
         />
       )}
 
-      <button
-        className={buttonClass}
-        title="Reply in thread"
-        onClick={handleReplyInThread}
-        data-testid={`chat-message-thread-button-${messageId}`}
-      >
-        <ChatText size={16} />
-      </button>
-
-      <button
-        className={buttonClass}
-        title={isPinned ? "Unpin message" : "Pin message"}
-        onClick={handleTogglePin}
-        data-testid={`chat-message-pin-button-${messageId}`}
-        data-state={isPinned ? "pinned" : "unpinned"}
-      >
-        <PushPin size={16} weight={isPinned ? "fill" : "regular"} />
-      </button>
-
-      <button
-        className={buttonClass}
-        title="Quote reply"
-        onClick={handleQuoteReply}
-        data-testid={`chat-message-reply-button-${messageId}`}
-      >
-        <ArrowBendUpLeft size={16} />
-      </button>
-
-      {onForward && (
+      <div className="relative">
         <button
-          className={buttonClass}
-          title="Forward"
-          onClick={onForward}
-          data-testid={`chat-message-forward-button-${messageId}`}
-        >
-          <ArrowBendDoubleUpRight size={16} />
-        </button>
-      )}
-
-      <div className="relative" ref={moreMenuRef}>
-        <button
+          ref={moreButtonRef}
           className={buttonClass}
           title="More actions"
+          aria-haspopup="menu"
+          aria-expanded={showMoreMenu}
           onClick={() => {
             setCanEdit(isEditAllowed?.() ?? false);
             setShowMoreMenu((prev) => !prev);
@@ -246,34 +233,99 @@ function HoverActionsToolbarInner({
           <DotsThreeVertical size={16} />
         </button>
 
-        {showMoreMenu && (
+        <ActionMenu
+          label="Message actions"
+          open={showMoreMenu}
+          onClose={() => setShowMoreMenu(false)}
+          triggerRef={moreButtonRef}
+          className={renderAdditionalActions ? "w-72" : "w-52"}
+        >
           <div
-            className={cn(
-              popoverShellClass,
-              "absolute top-full right-0 mt-1 z-[60] py-1",
-              "min-w-[160px]",
-            )}
             onMouseDown={(e) => e.stopPropagation()}
             data-testid={`chat-message-more-menu-${messageId}`}
           >
-            <button
-              className={menuItemClass}
+            {isMobileOrTablet && (
+              <div className="mb-1 border-b border-border/60 pb-1">
+                <ActionMenuItem
+                  role="menuitem"
+
+                  onClick={() => {
+                    setShowMoreMenu(false);
+                    setShowEmojiPicker(true);
+                  }}
+                >
+                  <Smiley size={16} />
+                  <span>Add reaction</span>
+                </ActionMenuItem>
+                <ActionMenuItem
+                  role="menuitem"
+
+                  onClick={() => {
+                    setShowMoreMenu(false);
+                    handleReplyInThread();
+                  }}
+                >
+                  <ChatText size={16} />
+                  <span>Reply in thread</span>
+                </ActionMenuItem>
+                <ActionMenuItem
+                  role="menuitem"
+
+                  onClick={() => {
+                    setShowMoreMenu(false);
+                    handleTogglePin();
+                  }}
+                >
+                  <PushPin size={16} weight={isPinned ? "fill" : "regular"} />
+                  <span>{isPinned ? "Unpin message" : "Pin message"}</span>
+                </ActionMenuItem>
+                <ActionMenuItem
+                  role="menuitem"
+
+                  onClick={() => {
+                    setShowMoreMenu(false);
+                    handleQuoteReply();
+                  }}
+                >
+                  <ArrowBendUpLeft size={16} />
+                  <span>Quote reply</span>
+                </ActionMenuItem>
+                {onForward && (
+                  <ActionMenuItem
+                    role="menuitem"
+
+                    onClick={() => {
+                      setShowMoreMenu(false);
+                      onForward();
+                    }}
+                  >
+                    <ArrowBendDoubleUpRight size={16} />
+                    <span>Forward</span>
+                  </ActionMenuItem>
+                )}
+              </div>
+            )}
+            <ActionMenuItem
+              role="menuitem"
+
               onClick={handleCopyText}
               data-testid={`chat-message-copy-text-${messageId}`}
             >
               <Copy size={14} />
               <span>Copy text</span>
-            </button>
-            <button
-              className={menuItemClass}
+            </ActionMenuItem>
+            <ActionMenuItem
+              role="menuitem"
+
               onClick={handleCopyLink}
               data-testid={`chat-message-copy-link-${messageId}`}
             >
               <LinkSimple size={14} />
               <span>Copy link</span>
-            </button>
-            <button
-              className={menuItemClass}
+            </ActionMenuItem>
+            <ActionMenuItem
+              role="menuitem"
+
               onClick={handleToggleSave}
               disabled={bookmarkToggling}
               data-testid={`chat-message-save-button-${messageId}`}
@@ -281,32 +333,39 @@ function HoverActionsToolbarInner({
             >
               <BookmarkSimple size={14} weight={isBookmarked ? "fill" : "regular"} />
               <span>{isBookmarked ? "Remove from saved" : "Save message"}</span>
-            </button>
+            </ActionMenuItem>
+            {renderAdditionalActions && (
+              <div className="mt-1 border-t border-border/60 pt-1">
+                {renderAdditionalActions(() => setShowMoreMenu(false))}
+              </div>
+            )}
             {isOwnMessage && (
               <>
                 <div className="my-1 border-t border-border" />
                 {canEdit && (
-                  <button
-                    className={menuItemClass}
+                  <ActionMenuItem
+                    role="menuitem"
+
                     onClick={handleEdit}
                     data-testid={`chat-message-edit-button-${messageId}`}
                   >
                     <Pencil size={14} />
                     <span>Edit message</span>
-                  </button>
+                  </ActionMenuItem>
                 )}
-                <button
-                  className={cn(menuItemClass, "text-red-500 hover:text-red-500")}
+                <ActionMenuItem
+                  role="menuitem"
+                  destructive
                   onClick={handleDelete}
                   data-testid={`chat-message-delete-button-${messageId}`}
                 >
                   <Trash size={14} />
                   <span>Delete message</span>
-                </button>
+                </ActionMenuItem>
               </>
             )}
           </div>
-        )}
+        </ActionMenu>
       </div>
 
       <ConfirmDialog
