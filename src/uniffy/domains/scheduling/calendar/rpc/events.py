@@ -36,6 +36,7 @@ from uniffy.domains.scheduling.calendar.recurrence import OCCURRENCE_ID_SEPARATO
 from uniffy.domains.scheduling.calendar.rpc.support import (
     hydrate_event_tags,
     map_domain_error,
+    parse_reminders,
     parse_tag_id_list,
     parse_uuid,
 )
@@ -128,7 +129,9 @@ class EventMutationHandlers:
                     is_focus_time=request.is_focus_time,
                     tag_ids=tag_ids,
                     linked_resources=linked_resources,
-                    reminders=list(request.reminders) if request.reminders else None,
+                    reminders=parse_reminders(
+                        request.reminders, explicit_empty=request.no_reminders
+                    ),
                     room_id=room_id,
                     channel_id=channel_id,
                     channel_auto_created=request.channel_auto_created,
@@ -209,8 +212,9 @@ class EventMutationHandlers:
             kwargs["attendee_ids"] = [
                 parse_uuid(value, "attendee_id") for value in request.attendee_ids
             ]
-        if request.reminders:
-            kwargs["reminders"] = list(request.reminders)
+        reminders = parse_reminders(request.reminders, explicit_empty=request.clear_reminders)
+        if reminders is not None:
+            kwargs["reminders"] = reminders
         if request.HasField("recurrence_edit_scope"):
             kwargs["recurrence_edit_scope"] = recurrence_edit_scope_from_proto(
                 request.recurrence_edit_scope

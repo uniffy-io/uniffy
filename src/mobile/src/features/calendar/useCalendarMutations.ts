@@ -167,7 +167,7 @@ export function useUpdateEvent() {
       recurrenceEditScope?: RecurrenceEditScope;
       occurrenceDate?: string;
       isFocusTime?: boolean;
-      /** Empty or omitted leaves reminders untouched - the wire cannot clear them all. */
+      /** Replacement set; undefined leaves reminders untouched, [] clears them. */
       reminders?: number[];
       recurrence?: SerializedRecurrence;
       /** "" clears the room, undefined leaves it untouched. */
@@ -198,6 +198,7 @@ export function useUpdateEvent() {
         categoryId: args.categoryId,
         isFocusTime: args.isFocusTime,
         reminders: args.reminders ?? [],
+        clearReminders: args.reminders !== undefined && args.reminders.length === 0,
         recurrence: args.recurrence ? recurrenceToProto(args.recurrence) : undefined,
         roomId: args.roomId,
         tagIds: args.tagIds !== undefined ? { ids: args.tagIds } : undefined,

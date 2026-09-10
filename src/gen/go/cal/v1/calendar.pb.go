@@ -1339,7 +1339,10 @@ type CreateEventRequest struct {
 	// Marks the event as an out-of-office period
 	IsOutOfOffice bool `protobuf:"varint,26,opt,name=is_out_of_office,json=isOutOfOffice,proto3" json:"is_out_of_office,omitempty"`
 	// Attendees with explicit roles; merged with attendee_ids (which imply REQUIRED)
-	Attendees     []*AttendeeInput `protobuf:"bytes,27,rep,name=attendees,proto3" json:"attendees,omitempty"`
+	Attendees []*AttendeeInput `protobuf:"bytes,27,rep,name=attendees,proto3" json:"attendees,omitempty"`
+	// Create the event with no reminders at all. Otherwise an empty `reminders`
+	// list falls back to the member's default intervals.
+	NoReminders   bool `protobuf:"varint,28,opt,name=no_reminders,json=noReminders,proto3" json:"no_reminders,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1549,6 +1552,13 @@ func (x *CreateEventRequest) GetAttendees() []*AttendeeInput {
 	return nil
 }
 
+func (x *CreateEventRequest) GetNoReminders() bool {
+	if x != nil {
+		return x.NoReminders
+	}
+	return false
+}
+
 // An attendee to invite, with the role to invite them under
 type AttendeeInput struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -1717,8 +1727,11 @@ type UpdateEventRequest struct {
 	Transparency *EventTransparency `protobuf:"varint,28,opt,name=transparency,proto3,enum=cal.v1.EventTransparency,oneof" json:"transparency,omitempty"`
 	// Updated out-of-office flag; unset leaves it untouched
 	IsOutOfOffice *bool `protobuf:"varint,29,opt,name=is_out_of_office,json=isOutOfOffice,proto3,oneof" json:"is_out_of_office,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	// Remove every reminder. Otherwise an empty `reminders` list leaves them
+	// untouched, since proto3 cannot tell an empty repeated apart from an unset one.
+	ClearReminders bool `protobuf:"varint,30,opt,name=clear_reminders,json=clearReminders,proto3" json:"clear_reminders,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *UpdateEventRequest) Reset() {
@@ -1936,6 +1949,13 @@ func (x *UpdateEventRequest) GetTransparency() EventTransparency {
 func (x *UpdateEventRequest) GetIsOutOfOffice() bool {
 	if x != nil && x.IsOutOfOffice != nil {
 		return *x.IsOutOfOffice
+	}
+	return false
+}
+
+func (x *UpdateEventRequest) GetClearReminders() bool {
+	if x != nil {
+		return x.ClearReminders
 	}
 	return false
 }
@@ -5340,7 +5360,7 @@ const file_cal_v1_calendar_proto_rawDesc = "" +
 	"\x04type\x18\x02 \x01(\x0e2\x14.cal.v1.ResourceTypeR\x04type\x12\x12\n" +
 	"\x04name\x18\x03 \x01(\tR\x04name\x12\x15\n" +
 	"\x03url\x18\x04 \x01(\tH\x00R\x03url\x88\x01\x01B\x06\n" +
-	"\x04_url\"\xb1\t\n" +
+	"\x04_url\"\xd4\t\n" +
 	"\x12CreateEventRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12%\n" +
@@ -5377,7 +5397,8 @@ const file_cal_v1_calendar_proto_rawDesc = "" +
 	"visibility\x12=\n" +
 	"\ftransparency\x18\x19 \x01(\x0e2\x19.cal.v1.EventTransparencyR\ftransparency\x12'\n" +
 	"\x10is_out_of_office\x18\x1a \x01(\bR\risOutOfOffice\x123\n" +
-	"\tattendees\x18\x1b \x03(\v2\x15.cal.v1.AttendeeInputR\tattendeesB\x0e\n" +
+	"\tattendees\x18\x1b \x03(\v2\x15.cal.v1.AttendeeInputR\tattendees\x12!\n" +
+	"\fno_reminders\x18\x1c \x01(\bR\vnoRemindersB\x0e\n" +
 	"\f_descriptionB\v\n" +
 	"\t_timezoneB\v\n" +
 	"\t_locationB\x0e\n" +
@@ -5393,7 +5414,7 @@ const file_cal_v1_calendar_proto_rawDesc = "" +
 	"\x04role\x18\x02 \x01(\x0e2\x14.cal.v1.AttendeeRoleR\x04role\"U\n" +
 	"\x0fGetEventRequest\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12'\n" +
-	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\"\xb8\f\n" +
+	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\"\xe1\f\n" +
 	"\x12UpdateEventRequest\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12'\n" +
 	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12\x19\n" +
@@ -5433,7 +5454,8 @@ const file_cal_v1_calendar_proto_rawDesc = "" +
 	"visibility\x18\x1b \x01(\x0e2\x17.cal.v1.EventVisibilityH\x13R\n" +
 	"visibility\x88\x01\x01\x12B\n" +
 	"\ftransparency\x18\x1c \x01(\x0e2\x19.cal.v1.EventTransparencyH\x14R\ftransparency\x88\x01\x01\x12,\n" +
-	"\x10is_out_of_office\x18\x1d \x01(\bH\x15R\risOutOfOffice\x88\x01\x01B\b\n" +
+	"\x10is_out_of_office\x18\x1d \x01(\bH\x15R\risOutOfOffice\x88\x01\x01\x12'\n" +
+	"\x0fclear_reminders\x18\x1e \x01(\bR\x0eclearRemindersB\b\n" +
 	"\x06_titleB\x0e\n" +
 	"\f_descriptionB\r\n" +
 	"\v_start_timeB\v\n" +

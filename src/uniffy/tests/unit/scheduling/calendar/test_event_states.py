@@ -128,6 +128,7 @@ class TestCancelledRsvp:
         ops = CalendarEventOperations.__new__(CalendarEventOperations)
         cancelled = _event(status=EventStatus.CANCELLED)
         ops._fetch_by_id = AsyncMock(return_value=cancelled)
+        ops._require_view = AsyncMock()
         ops.session = MagicMock()
 
         with pytest.raises(ValidationError):

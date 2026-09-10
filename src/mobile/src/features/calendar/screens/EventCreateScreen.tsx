@@ -592,11 +592,7 @@ export function CreateEventScreen() {
             <Text style={[styles.fieldLabel, { color: T.textBright }]}>Reminders</Text>
           </View>
           <View style={styles.chipsBody}>
-            <ReminderChips
-              value={reminders}
-              onChange={setReminders}
-              lockLast={isEditing && (eventQuery.data?.reminders.length ?? 0) > 0}
-            />
+            <ReminderChips value={reminders} onChange={setReminders} />
             {!isEditing && reminders.length === 0 ? (
               <Text style={[styles.hintText, { color: T.textDim }]}>
                 Your default reminders apply unless set
