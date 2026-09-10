@@ -125,7 +125,7 @@ export function EventPlaceSection({ event, canEdit, commit }: EventPlaceSectionP
         </div>
       )}
 
-      {canEdit && organizationId ? (
+      {canEdit && organizationId && (
         <div>
           <SectionLabel>Room</SectionLabel>
           <RoomPicker
@@ -136,52 +136,52 @@ export function EventPlaceSection({ event, canEdit, commit }: EventPlaceSectionP
             endTime={event.endTime}
           />
         </div>
-      ) : (
-        event.roomName && (
-          <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-2">
-            <div className="flex items-center gap-2">
-              <Door size={16} weight="duotone" className="text-muted-foreground" />
-              {event.roomId ? (
-                <button
-                  type="button"
-                  onClick={() => dispatch(openRoomViewer({ roomId: event.roomId! }))}
-                  className="text-sm font-medium text-foreground hover:text-primary transition-colors text-left"
-                  title="View room details"
-                >
-                  {event.roomName}
-                </button>
-              ) : (
-                <span className="text-sm font-medium text-foreground">{event.roomName}</span>
-              )}
-            </div>
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground pl-6">
-              {event.roomLocation && (
-                <span className="flex items-center gap-1">
-                  <MapPin size={12} />
-                  {event.roomLocation}
-                </span>
-              )}
-              {event.roomCapacity && event.roomCapacity > 0 && (
-                <span className="flex items-center gap-1">
-                  <Users size={12} />
-                  {event.roomCapacity} {event.roomCapacity === 1 ? "person" : "people"}
-                </span>
-              )}
-            </div>
-            {event.roomAmenities && event.roomAmenities.length > 0 && (
-              <div className="flex flex-wrap gap-1 pl-6">
-                {event.roomAmenities.map((amenity) => (
-                  <span
-                    key={amenity}
-                    className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground"
-                  >
-                    {amenity}
-                  </span>
-                ))}
-              </div>
+      )}
+
+      {event.roomName && (
+        <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-2">
+          <div className="flex items-center gap-2">
+            <Door size={16} weight="duotone" className="text-muted-foreground" />
+            {event.roomId ? (
+              <button
+                type="button"
+                onClick={() => dispatch(openRoomViewer({ roomId: event.roomId! }))}
+                className="text-sm font-medium text-foreground hover:text-primary transition-colors text-left"
+                title="View room details"
+              >
+                {event.roomName}
+              </button>
+            ) : (
+              <span className="text-sm font-medium text-foreground">{event.roomName}</span>
             )}
           </div>
-        )
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground pl-6">
+            {event.roomLocation && (
+              <span className="flex items-center gap-1">
+                <MapPin size={12} />
+                {event.roomLocation}
+              </span>
+            )}
+            {event.roomCapacity && event.roomCapacity > 0 && (
+              <span className="flex items-center gap-1">
+                <Users size={12} />
+                {event.roomCapacity} {event.roomCapacity === 1 ? "person" : "people"}
+              </span>
+            )}
+          </div>
+          {event.roomAmenities && event.roomAmenities.length > 0 && (
+            <div className="flex flex-wrap gap-1 pl-6">
+              {event.roomAmenities.map((amenity) => (
+                <span
+                  key={amenity}
+                  className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground"
+                >
+                  {amenity}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
       )}
     </div>
   );

@@ -32,13 +32,16 @@ import { getInitials } from "@/components/subject/utils";
 import { AttendeesSelector } from "@/features/calendar/components/modals/AttendeesSelector";
 import { RoomPicker } from "@/features/rooms/components/shared/RoomPicker";
 import { RecurrenceSelector } from "@/features/calendar/components/modals/RecurrenceSelector";
+import { ReminderSelector } from "@/features/calendar/components/modals/ReminderSelector";
 import { TimeSelect } from "@/features/calendar/components/modals/TimeSelect";
 import { DatePicker } from "@/components/ui/date-picker";
 import { useConflictDetection } from "@/features/calendar/hooks/useConflictDetection";
 import { TagPicker } from "@/features/tags";
 import type { Attendee, RecurrenceConfig } from "@/features/calendar/types";
+import type { EventModalPrefill } from "@/features/calendar/types/ui";
 import { MeetingChannelPicker } from "@/features/calendar/components/modals/MeetingChannelPicker";
 import type { MeetingMode } from "@/features/calendar/utils/meeting";
+import { useNotificationSettings } from "@/features/settings/hooks/useSettings";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -80,6 +83,8 @@ function generateDateOptions(): { value: string; label: string }[] {
 interface QuickEventModalProps {
   isOpen: boolean;
   onClose: () => void;
+  /** Field values a template or another surface seeds the form with. */
+  prefill?: EventModalPrefill | null;
   initialDate?: Date;
   initialStartHour?: number;
   initialEndHour?: number;
@@ -88,13 +93,16 @@ interface QuickEventModalProps {
 export function QuickEventModal({
   isOpen,
   onClose,
+  prefill,
   initialDate,
   initialStartHour = 9,
   initialEndHour = 10,
 }: QuickEventModalProps) {
   const dispatch = useAppDispatch();
+  const { defaultReminderIntervals } = useNotificationSettings();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [location, setLocation] = useState("");
   const [isMultiDay, setIsMultiDay] = useState(false);
   // `initialDate` is a calendar token; bare "today" is the display zone's day.
   const [startDate, setStartDate] = useState(() =>
@@ -110,6 +118,8 @@ export function QuickEventModal({
   const [recurrence, setRecurrence] = useState<RecurrenceConfig | undefined>(undefined);
   const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
   const [tagIds, setTagIds] = useState<string[]>([]);
+  // Seeded from the member's defaults so the chips show what the event will get.
+  const [reminders, setReminders] = useState<number[]>(defaultReminderIntervals);
   const [meetingMode, setMeetingMode] = useState<MeetingMode>("none");
   const [meetingUrl, setMeetingUrl] = useState("");
   const [selectedChannelId, setSelectedChannelId] = useState<string | null>(null);
@@ -171,17 +181,26 @@ export function QuickEventModal({
       const day = initialDate ? getDateString(initialDate) : instantDayKey(new Date());
       // The modal stays mounted and only renders null while closed, so each open reseeds the form.
       // eslint-disable-next-line react/react-compiler
-      setTitle("");
-      setDescription("");
+      setTitle(prefill?.title ?? "");
+      setDescription(prefill?.description ?? "");
+      setLocation(prefill?.location ?? "");
       setIsMultiDay(false);
       setStartDate(day);
       setEndDate(day);
       setStartHour(initialStartHour);
-      setEndHour(initialEndHour);
+      // A template carries a duration rather than an end; clamp so a long one
+      // still ends on the same day.
+      setEndHour(
+        prefill?.durationMinutes
+          ? Math.min(initialStartHour + prefill.durationMinutes / 60, 23.75)
+          : initialEndHour,
+      );
       setRecurrence(undefined);
-      setTagIds([]);
-      setMeetingMode("none");
-      setMeetingUrl("");
+      setTagIds(prefill?.tagIds ?? []);
+      setReminders(defaultReminderIntervals);
+      const prefillUrl = prefill?.meetingUrl ?? "";
+      setMeetingMode(prefillUrl ? "link" : "none");
+      setMeetingUrl(prefillUrl);
       setSelectedChannelId(null);
       setChannelAutoCreated(false);
       setIsTentative(false);
@@ -191,14 +210,16 @@ export function QuickEventModal({
       setIsSubmitting(false);
 
       const categoryIds = Object.keys(categories || {});
-      if (categoryIds.length > 0) {
+      if (prefill?.categoryId && categories[prefill.categoryId]) {
+        setSelectedCategoryId(prefill.categoryId);
+      } else if (categoryIds.length > 0) {
         setSelectedCategoryId(categoryIds[0]);
       }
       setAttendees([]);
       pendingFileIdsRef.current = [];
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, initialStartHour, initialEndHour]);
+  }, [isOpen, initialStartHour, initialEndHour, prefill]);
 
   const handleAttendeeAdd = (member: { userId: string; displayName: string; email: string }) => {
     if (attendees.some((a) => a.id === member.userId)) return;
@@ -256,6 +277,7 @@ export function QuickEventModal({
       createEvent({
         title: title.trim(),
         description,
+        location: location.trim() || undefined,
         startTime: eventStartTime.toISOString(),
         endTime: eventEndTime.toISOString(),
         isAllDay: isMultiDay,
@@ -268,6 +290,8 @@ export function QuickEventModal({
         recurrence,
         roomId: selectedRoomId || undefined,
         tagIds,
+        reminders,
+        noReminders: reminders.length === 0,
         meetingUrl: meetingMode === "link" ? meetingUrl.trim() || undefined : undefined,
         channelId: meetingMode === "channel" ? selectedChannelId || undefined : undefined,
         channelAutoCreated:
@@ -324,6 +348,16 @@ export function QuickEventModal({
               onChange={(e) => setTitle(e.target.value)}
               placeholder="What's the event?"
               autoFocus
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm text-muted-foreground mb-1">Location (optional)</label>
+            <Input
+              type="text"
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+              placeholder="Where does it happen?"
             />
           </div>
 
@@ -565,6 +599,11 @@ export function QuickEventModal({
           )}
 
           <RecurrenceSelector value={recurrence} onChange={setRecurrence} />
+
+          <div>
+            <label className="block text-sm text-muted-foreground mb-1">Reminders</label>
+            <ReminderSelector value={reminders} onChange={setReminders} />
+          </div>
 
           <div>
             <label className="block text-sm text-muted-foreground mb-1">Category</label>
