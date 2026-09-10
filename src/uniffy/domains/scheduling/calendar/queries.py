@@ -1,5 +1,6 @@
 """Calendar-specific database queries."""
 
+from collections.abc import Sequence
 from datetime import UTC, datetime
 from uuid import UUID
 
@@ -73,45 +74,44 @@ async def get_events_in_range(
     return list(result.scalars().all())
 
 
+def _attendee_user_info(user: User) -> dict:
+    return {
+        "name": user.full_name or user.email,
+        "email": user.email,
+        "initials": _get_initials(user.full_name or user.email),
+        "avatar_url": None,  # User model doesn't have avatar_url yet
+        "timezone": None,  # User model doesn't have timezone yet
+    }
+
+
+async def get_attendees_for_events(
+    session: AsyncSession,
+    event_ids: Sequence[UUID],
+) -> dict[UUID, list[tuple[EventAttendee, dict]]]:
+    """Attendees with their user information for many events in one query,
+    keyed by event. An event with no attendees is absent.
+    """
+    if not event_ids:
+        return {}
+
+    result = await session.execute(
+        select(EventAttendee, User)
+        .join(User, EventAttendee.user_id == User.id)
+        .where(EventAttendee.event_id.in_(event_ids))
+    )
+
+    by_event: dict[UUID, list[tuple[EventAttendee, dict]]] = {}
+    for attendee, user in result.all():
+        by_event.setdefault(attendee.event_id, []).append((attendee, _attendee_user_info(user)))
+    return by_event
+
+
 async def get_event_attendees(
     session: AsyncSession,
     event_id: UUID,
 ) -> list[tuple[EventAttendee, dict]]:
-    """
-    Get attendees for an event with user information.
-
-    Parameters
-    ----------
-    session : AsyncSession
-        Database session.
-    event_id : UUID
-        Event ID.
-
-    Returns
-    -------
-    list[tuple[EventAttendee, dict]]
-        List of (attendee, user_info) tuples.
-
-    """
-    result = await session.execute(
-        select(EventAttendee, User)
-        .join(User, EventAttendee.user_id == User.id)
-        .where(EventAttendee.event_id == event_id)
-    )
-    rows = result.all()
-
-    attendees = []
-    for attendee, user in rows:
-        user_info = {
-            "name": user.full_name or user.email,
-            "email": user.email,
-            "initials": _get_initials(user.full_name or user.email),
-            "avatar_url": None,  # User model doesn't have avatar_url yet
-            "timezone": None,  # User model doesn't have timezone yet
-        }
-        attendees.append((attendee, user_info))
-
-    return attendees
+    """Attendees for an event with their user information."""
+    return (await get_attendees_for_events(session, [event_id])).get(event_id, [])
 
 
 def _get_initials(name: str) -> str:

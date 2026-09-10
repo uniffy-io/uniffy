@@ -27,8 +27,14 @@ from uniffy.domains.scheduling.calendar.rpc.support import (
     parse_tag_id_list,
     parse_uuid,
 )
-from uniffy.domains.scheduling.rooms.projection import get_event_room_info
+from uniffy.domains.scheduling.rooms.projection import (
+    get_event_room_info,
+    get_room_info_for_events,
+)
 from uniffy.infrastructure.database import open_session
+
+DEFAULT_PAGE_SIZE = 50
+MAX_PAGE_SIZE = 100
 
 
 class EventQueryHandlers:
@@ -95,6 +101,9 @@ class EventQueryHandlers:
             end_date = timestamp_to_datetime(request.end_date)
         tag_ids = parse_tag_id_list(request.tag_ids) if request.tag_ids else None
 
+        page = max(1, request.page or 1)
+        page_size = min(MAX_PAGE_SIZE, max(1, request.page_size or DEFAULT_PAGE_SIZE))
+
         try:
             async with open_session() as session:
                 operations = CalendarEventReader(session)
@@ -107,27 +116,29 @@ class EventQueryHandlers:
                     end_date=end_date,
                     include_deleted=request.include_deleted,
                     tag_ids=tag_ids,
-                    page=max(1, request.page or 1),
-                    page_size=min(100, max(1, request.page_size or 50)),
+                    page=page,
+                    page_size=page_size,
                     sort_by=request.sort_by or "start_time",
                     sort_order=request.sort_order or "asc",
                 )
 
-                page_size = request.page_size or 50
                 total_pages = (total + page_size - 1) // page_size
-                tags_by_urn = await hydrate_event_tags(
-                    session, organization_id, [event.id for event in events]
-                )
+                event_ids = [event.id for event in events]
+                tags_by_urn = await hydrate_event_tags(session, organization_id, event_ids)
                 decisions = await ResourceAccessResolver(session).resolve_page(
                     actor_id=user_id,
                     organization_id=organization_id,
-                    keys=[ResourceKey(ContentType.CALENDAR_EVENT, event.id) for event in events],
+                    keys=[
+                        ResourceKey(ContentType.CALENDAR_EVENT, event_id) for event_id in event_ids
+                    ],
                 )
+                attendees_by_event = await queries.get_attendees_for_events(session, event_ids)
+                room_info_by_event = await get_room_info_for_events(session, event_ids)
 
                 proto_events = []
                 for event in events:
-                    attendees = await queries.get_event_attendees(session, event.id)
-                    room_info = await get_event_room_info(session, event.id)
+                    attendees = attendees_by_event.get(event.id, [])
+                    room_info = room_info_by_event.get(event.id, {})
                     user_role = decisions[ResourceKey(ContentType.CALENDAR_EVENT, event.id)].role
                     proto_events.append(
                         event_to_proto(
@@ -151,7 +162,7 @@ class EventQueryHandlers:
                 return ListEventsResponse(
                     events=proto_events,
                     total_count=total,
-                    page=request.page or 1,
+                    page=page,
                     page_size=page_size,
                     total_pages=total_pages,
                 )
@@ -191,10 +202,8 @@ class EventQueryHandlers:
                     channel_id=channel_id,
                 )
 
-                attendees_cache: dict[str, list] = {}
-                room_info_cache: dict[str, dict[str, object]] = {}
-                master_ids = {parse_event_id(str(event.id)) for event in events}
-                tags_by_urn = await hydrate_event_tags(session, organization_id, list(master_ids))
+                master_ids = list({parse_event_id(str(event.id)) for event in events})
+                tags_by_urn = await hydrate_event_tags(session, organization_id, master_ids)
                 decisions = await ResourceAccessResolver(session).resolve_page(
                     actor_id=user_id,
                     organization_id=organization_id,
@@ -202,19 +211,14 @@ class EventQueryHandlers:
                         ResourceKey(ContentType.CALENDAR_EVENT, event_id) for event_id in master_ids
                     ],
                 )
+                attendees_by_event = await queries.get_attendees_for_events(session, master_ids)
+                room_info_by_event = await get_room_info_for_events(session, master_ids)
 
                 proto_events = []
                 for event in events:
                     real_id = parse_event_id(str(event.id))
-                    real_id_str = str(real_id)
-                    if real_id_str not in attendees_cache:
-                        attendees_cache[real_id_str] = await queries.get_event_attendees(
-                            session, real_id
-                        )
-                    if real_id_str not in room_info_cache:
-                        room_info_cache[real_id_str] = await get_event_room_info(session, real_id)
                     user_role = decisions[ResourceKey(ContentType.CALENDAR_EVENT, real_id)].role
-                    attendees = attendees_cache[real_id_str]
+                    attendees = attendees_by_event.get(real_id, [])
                     proto_events.append(
                         event_to_proto(
                             event,
@@ -230,7 +234,7 @@ class EventQueryHandlers:
                                 user_role,
                                 any(attendee.user_id == user_id for attendee, _ in attendees),
                             ),
-                            **room_info_cache[real_id_str],
+                            **room_info_by_event.get(real_id, {}),
                         )
                     )
 
