@@ -63,6 +63,8 @@ Explicit grants are `ContentMember` rows (`permissions_content_members`) keyed o
 
 Org defaults are materialised live via `resolve_effective_policy` (`defaults.py`): row override -> `permissions_org_defaults` -> `ORG_PERMISSION_DEFAULTS` -> `(OWNER_ONLY, None)`.
 
+Creation is private by default: `resolve_creation_policy` stores `OWNER_ONLY` when a caller omits the access policy. Organization creation explicitly selects `OPEN_TO_ORG`; a NULL baseline inherits the organization's role. Clearing a policy through `ContentMembersOperations` is an explicit choice to inherit organization defaults, not the default for personal creations. Personal and explicitly shared items do not follow later organization-default changes.
+
 ## Capability gates (`core/auth/permissions/roles.py`)
 
 Gate operations with these predicates, never with raw role comparisons:

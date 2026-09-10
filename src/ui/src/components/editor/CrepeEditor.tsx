@@ -47,6 +47,7 @@ import { tocPlugins } from "@/components/editor/plugins/toc";
 import { highlightPlugins, highlightMark } from "@/components/editor/plugins/highlight";
 import { HighlightPicker } from "@/components/editor/plugins/highlight/HighlightPicker";
 import { underlinePlugins } from "@/components/editor/plugins/underline";
+import { imageResizeView } from "@/components/editor/plugins/image";
 import { slashMenuGridNavigation } from "@/components/editor/plugins/slashMenuGridNavigation";
 import {
   insertTocBlock,
@@ -230,8 +231,7 @@ function createCrepeConfig(
       [Crepe.Feature.ListItem]: true,
       [Crepe.Feature.LinkTooltip]: false,
       [Crepe.Feature.ImageBlock]: allowImages,
-      // Disable editing features in readonly mode
-      // In compact mode, BlockEdit is enabled for slash commands but drag handle is hidden via CSS
+      // BlockEdit supplies slash commands; its add and drag handles stay hidden via CSS.
       [Crepe.Feature.BlockEdit]: !readonly,
       [Crepe.Feature.Placeholder]: !readonly,
       // Floating selection toolbar - notes disables this (ships its own
@@ -755,6 +755,7 @@ export function CrepeEditor({
       editor.use(highlightPlugins);
       // Register underline mark plugin (both edit and readonly)
       editor.use(underlinePlugins);
+      if (allowImages) editor.use(imageResizeView);
       // Arrow-key remap for the two column slash menu grid
       editor.use(slashMenuGridNavigation);
       // Selection version notifier - drives external toolbar active-state subscriptions
@@ -810,30 +811,35 @@ export function CrepeEditor({
                 // Serializer not ready yet - next update retries.
               }
             };
+            const flushPending = () => {
+              if (timer) {
+                clearTimeout(timer);
+                timer = null;
+              }
+              if (pendingView && !pendingView.isDestroyed) flush(pendingView);
+              pendingView = null;
+            };
             return new Plugin({
-              view: () => ({
-                update: (updatedView, prevState) => {
-                  if (updatedView.state.doc.eq(prevState.doc)) return;
-                  const syncState = ySyncPluginKey.getState(updatedView.state) as {
-                    isChangeOrigin?: boolean;
-                  } | null;
-                  if (syncState?.isChangeOrigin) return;
-                  pendingView = updatedView;
-                  if (timer) clearTimeout(timer);
-                  timer = setTimeout(() => flush(updatedView), 250);
-                },
-                destroy: () => {
-                  if (timer) {
-                    clearTimeout(timer);
-                    timer = null;
-                  }
-                  // Flush instead of discarding: this tab is the only mirror
-                  // writer for its own edits, so an unmount inside the
-                  // debounce window would otherwise leave Y.Text stale.
-                  if (pendingView && !pendingView.isDestroyed) flush(pendingView);
-                  pendingView = null;
-                },
-              }),
+              view: () => {
+                // Navigation does not destroy React node views before closing the document.
+                window.addEventListener("pagehide", flushPending);
+                return {
+                  update: (updatedView, prevState) => {
+                    if (updatedView.state.doc.eq(prevState.doc)) return;
+                    const syncState = ySyncPluginKey.getState(updatedView.state) as {
+                      isChangeOrigin?: boolean;
+                    } | null;
+                    if (syncState?.isChangeOrigin) return;
+                    pendingView = updatedView;
+                    if (timer) clearTimeout(timer);
+                    timer = setTimeout(() => flush(updatedView), 250);
+                  },
+                  destroy: () => {
+                    window.removeEventListener("pagehide", flushPending);
+                    flushPending();
+                  },
+                };
+              },
             });
           }),
         );
@@ -865,7 +871,8 @@ export function CrepeEditor({
                   onFileUploaded: onFileUploadedCapture,
                 });
 
-                const node = schema.nodes.image?.createAndFill({
+                const imageType = schema.nodes["image-block"] ?? schema.nodes.image;
+                const node = imageType?.createAndFill({
                   src: url,
                   alt: file.name,
                 });
@@ -1182,6 +1189,7 @@ export function CrepeEditor({
       editor.use(mentionPlugins);
       editor.use(highlightPlugins);
       editor.use(underlinePlugins);
+      if (allowImages) editor.use(imageResizeView);
     } catch {
       // Plugin registration failed silently
     }

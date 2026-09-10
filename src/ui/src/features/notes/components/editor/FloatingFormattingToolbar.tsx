@@ -16,6 +16,7 @@ import type { EditorView } from "@milkdown/prose/view";
 import { popoverShellClass } from "@/components/ui/popover";
 import { useEditorHandle, type EditorHandle } from "@/components/editor/EditorHandle";
 import { cn } from "@/shared/utils/cn";
+import { useOverlayEscape } from "@/shared/hooks/useOverlayEscape";
 import { subscribeSelection } from "@/components/editor/utils/selectionVersionPlugin";
 import { useActiveMarks } from "@/features/notes/components/editor/toolbar/useActiveMarks";
 import { toolbarCommands } from "@/features/notes/components/editor/toolbar/toolbarCommands";
@@ -30,6 +31,8 @@ import { highlightMark } from "@/components/editor/plugins/highlight";
 import { LinkPrompt } from "@/features/notes/components/editor/toolbar/LinkPrompt";
 
 interface SelectionAnchor {
+  from: number;
+  to: number;
   top: number;
   bottom: number;
   left: number;
@@ -37,7 +40,6 @@ interface SelectionAnchor {
 }
 
 const VERTICAL_OFFSET = 8;
-const ESTIMATED_TOOLBAR_HEIGHT = 40;
 
 function readSelectionAnchor(handle: EditorHandle | null): SelectionAnchor | null {
   if (!handle) return null;
@@ -45,13 +47,13 @@ function readSelectionAnchor(handle: EditorHandle | null): SelectionAnchor | nul
   if (!view || view.isDestroyed) return null;
   const { state } = view;
   const { from, to, empty } = state.selection;
-  if (empty) return null;
-  // Only show on regular text selections; node selections (image, video, etc.) skip the bar.
-  if ("node" in state.selection) return null;
+  if (empty || "node" in state.selection) return null;
   try {
     const start = view.coordsAtPos(from);
     const end = view.coordsAtPos(to);
     return {
+      from,
+      to,
       top: Math.min(start.top, end.top),
       bottom: Math.max(start.bottom, end.bottom),
       left: Math.min(start.left, end.left),
@@ -65,7 +67,14 @@ function readSelectionAnchor(handle: EditorHandle | null): SelectionAnchor | nul
 function anchorsEqual(a: SelectionAnchor | null, b: SelectionAnchor | null): boolean {
   if (a === b) return true;
   if (!a || !b) return false;
-  return a.top === b.top && a.bottom === b.bottom && a.left === b.left && a.right === b.right;
+  return (
+    a.from === b.from &&
+    a.to === b.to &&
+    a.top === b.top &&
+    a.bottom === b.bottom &&
+    a.left === b.left &&
+    a.right === b.right
+  );
 }
 
 interface AnchorStore {
@@ -100,73 +109,132 @@ function createAnchorStore(handle: EditorHandle | null): AnchorStore {
   };
 }
 
-export function FloatingFormattingToolbar() {
+export function FloatingFormattingToolbar({
+  showOnSelection = true,
+}: {
+  showOnSelection?: boolean;
+}) {
   const handle = useEditorHandle();
+  const store = useMemo(() => createAnchorStore(handle), [handle]);
+  const anchor = useSyncExternalStore(store.subscribe, store.getSnapshot, () => null);
+
+  if (!handle || !anchor) return null;
+
+  return (
+    <SelectionFormattingToolbar
+      key={`${anchor.from}:${anchor.to}:${showOnSelection}`}
+      handle={handle}
+      anchor={anchor}
+      showOnSelection={showOnSelection}
+    />
+  );
+}
+
+function SelectionFormattingToolbar({
+  handle,
+  anchor,
+  showOnSelection,
+}: {
+  handle: EditorHandle;
+  anchor: SelectionAnchor;
+  showOnSelection: boolean;
+}) {
   const active = useActiveMarks();
   const [highlightAnchor, setHighlightAnchor] = useState<DOMRect | null>(null);
   const [linkAnchor, setLinkAnchor] = useState<DOMRect | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const toolbarMouseEvents = useRef(new WeakSet<Event>());
   const [position, setPosition] = useState<{
     top: number;
     left: number;
-    placement: "top" | "bottom";
   } | null>(null);
+  const [contextPosition, setContextPosition] = useState<{
+    x: number;
+    y: number;
+    keyboard: boolean;
+  } | null>(null);
+  const [dismissed, setDismissed] = useState(false);
+  const visible = !dismissed && (showOnSelection || contextPosition !== null);
 
-  // Track the current selection rect. Cached by value so getSnapshot returns
-  // a stable reference between renders unless the selection actually moved
-  // (required by useSyncExternalStore to avoid infinite re-renders).
-  const store = useMemo(() => createAnchorStore(handle), [handle]);
-  const anchor = useSyncExternalStore(store.subscribe, store.getSnapshot, () => null);
-
-  // Hide the bar while a comment popover is open for this selection. We snap
-  // the anchor at the moment Comment is clicked; as long as the selection
-  // stays identical (which it will while the popover is open), the bar stays
-  // hidden. A new selection clears the snapshot through value comparison.
-  const [commentSnapshot, setCommentSnapshot] = useState<SelectionAnchor | null>(null);
-  const hiddenForComment = commentSnapshot !== null && anchorsEqual(commentSnapshot, anchor);
-
-  const visible = anchor !== null && !hiddenForComment;
-
-  // Position the toolbar above the selection by default, flip below when
-  // there is not enough room above. Positioning is recomputed after layout
-  // using the rendered width to keep the bar centered on the selection.
-  useLayoutEffect(() => {
-    if (!visible || !anchor || !containerRef.current) {
-      setPosition(null);
-      return;
-    }
-    const rect = containerRef.current.getBoundingClientRect();
-    const width = rect.width || 320;
-    const selectionCenter = (anchor.left + anchor.right) / 2;
-    const desiredLeft = Math.max(
-      8,
-      Math.min(window.innerWidth - width - 8, selectionCenter - width / 2),
-    );
-    const fitsAbove = anchor.top - VERTICAL_OFFSET - ESTIMATED_TOOLBAR_HEIGHT >= 8;
-    const top = fitsAbove
-      ? anchor.top - VERTICAL_OFFSET - rect.height
-      : anchor.bottom + VERTICAL_OFFSET;
-    setPosition({ top, left: desiredLeft, placement: fitsAbove ? "top" : "bottom" });
-  }, [visible, anchor]);
-
-  // Close the highlight picker if selection collapses.
   useEffect(() => {
-    // Dropping the anchor, rather than hiding it, keeps a stale picker off the next selection.
-    // eslint-disable-next-line react/react-compiler
-    if (!visible) setHighlightAnchor(null);
+    const { view } = handle;
+    const open = (event: MouseEvent | KeyboardEvent) => {
+      const selection = readSelectionAnchor(handle);
+      if (!view.editable || !selection) return;
+      event.preventDefault();
+      event.stopPropagation();
+      const keyboard =
+        event instanceof KeyboardEvent || (event.clientX === 0 && event.clientY === 0);
+      setContextPosition({
+        x: keyboard ? selection.left : event.clientX,
+        y: keyboard ? selection.bottom : event.clientY,
+        keyboard,
+      });
+      setDismissed(false);
+      setHighlightAnchor(null);
+      setLinkAnchor(null);
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "ContextMenu" || (event.shiftKey && event.key === "F10")) open(event);
+    };
+    view.dom.addEventListener("contextmenu", open);
+    view.dom.addEventListener("keydown", onKeyDown);
+    return () => {
+      view.dom.removeEventListener("contextmenu", open);
+      view.dom.removeEventListener("keydown", onKeyDown);
+    };
+  }, [handle]);
+
+  useOverlayEscape(() => {
+    setDismissed(true);
+    handle.focus();
+  }, visible);
+
+  useEffect(() => {
+    if (!visible) return;
+    const dismiss = () => setDismissed(true);
+    const onMouseDown = (event: MouseEvent) => {
+      if (!toolbarMouseEvents.current.has(event)) dismiss();
+    };
+    document.addEventListener("mousedown", onMouseDown);
+    window.addEventListener("scroll", dismiss, true);
+    window.addEventListener("resize", dismiss);
+    return () => {
+      document.removeEventListener("mousedown", onMouseDown);
+      window.removeEventListener("scroll", dismiss, true);
+      window.removeEventListener("resize", dismiss);
+    };
   }, [visible]);
 
+  useEffect(() => {
+    if (contextPosition?.keyboard) containerRef.current?.querySelector("button")?.focus();
+  }, [contextPosition]);
+
+  useLayoutEffect(() => {
+    if (!visible || !containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const desiredLeft = contextPosition?.x ?? (anchor.left + anchor.right - rect.width) / 2;
+    const below = (contextPosition?.y ?? anchor.bottom) + VERTICAL_OFFSET;
+    const above = (contextPosition?.y ?? anchor.top) - VERTICAL_OFFSET - rect.height;
+    const desiredTop = contextPosition
+      ? below + rect.height <= window.innerHeight - 8
+        ? below
+        : above
+      : above >= 8
+        ? above
+        : below;
+    setPosition({
+      top: Math.max(8, Math.min(window.innerHeight - rect.height - 8, desiredTop)),
+      left: Math.max(8, Math.min(window.innerWidth - rect.width - 8, desiredLeft)),
+    });
+  }, [visible, anchor, contextPosition]);
+
   const onHighlightClick = (e: React.MouseEvent<HTMLButtonElement>) => {
-    if (!handle) return;
     setHighlightAnchor(e.currentTarget.getBoundingClientRect());
   };
 
   const applyHighlight = useMemo(
     () => (color: string | null) => {
-      if (!handle) {
-        setHighlightAnchor(null);
-        return;
-      }
       handle.run((ctx) => {
         const view = ctx.get(editorViewCtx) as EditorView;
         if (!view) return;
@@ -183,7 +251,7 @@ export function FloatingFormattingToolbar() {
     [handle],
   );
 
-  if (!handle || !visible) return null;
+  if (!visible) return null;
 
   return createPortal(
     <div
@@ -193,6 +261,8 @@ export function FloatingFormattingToolbar() {
       onMouseDown={(e) => {
         // Prevent ProseMirror from clearing the selection when clicking the toolbar.
         e.preventDefault();
+        // Portaled popovers belong to this toolbar even though they sit outside its DOM tree.
+        toolbarMouseEvents.current.add(e.nativeEvent);
       }}
       style={{
         position: "fixed",
@@ -201,7 +271,11 @@ export function FloatingFormattingToolbar() {
         visibility: position ? "visible" : "hidden",
         zIndex: 60,
       }}
-      className={cn(popoverShellClass, "flex items-center gap-0.5 px-1 py-1")}
+      className={cn(
+        popoverShellClass,
+        "flex w-max max-w-[calc(100vw-16px)] flex-wrap items-center gap-0.5 px-1 py-1",
+        "[&_button]:focus-ring max-lg:[&_button]:h-11 max-lg:[&_button]:min-w-11",
+      )}
     >
       <HeadingDropdown />
       <ToolbarSeparator />
@@ -263,7 +337,7 @@ export function FloatingFormattingToolbar() {
         {handle.triggerComment && (
           <ToolbarButton
             onClick={() => {
-              setCommentSnapshot(anchor);
+              setDismissed(true);
               handle.triggerComment?.();
             }}
             label="Comment on selection"

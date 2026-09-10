@@ -191,7 +191,11 @@ export function AccessPolicyPanel({
           }}
           onChange={handleModeChange}
           disabled={!canManage}
-          showInheritOption
+          allowBaselineInheritance
+          showInheritOption={
+            policy.accessMode === AccessMode.UNSPECIFIED ||
+            resolvedAccessMode === AccessMode.OPEN_TO_ORG
+          }
           hiddenModes={
             contentType === ContentType.CALENDAR_EVENT ? [AccessMode.OPEN_TO_ORG] : undefined
           }

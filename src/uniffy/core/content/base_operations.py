@@ -19,7 +19,7 @@ from sqlalchemy.orm import InstrumentedAttribute
 from uniffy.core.auth.permissions import (
     ContentAccessQuery,
     PermissionChecker,
-    resolve_access_policy,
+    resolve_creation_policy,
     resolve_effective_policy,
     role_can_comment,
     role_can_delete,
@@ -193,8 +193,8 @@ class BaseContentOperations[TModel](ABC):
         access_mode: AccessMode | None,
         baseline_role: ContentRole | None,
     ) -> tuple[AccessMode, ContentRole | None]:
-        """Validate ``(access_mode, baseline)`` for storage, bound to this class's session + type."""
-        return await resolve_access_policy(
+        """Keep new content personal unless its creator explicitly chooses sharing."""
+        return await resolve_creation_policy(
             self.session,
             organization_id,
             self.content_type,

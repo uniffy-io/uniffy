@@ -131,9 +131,6 @@ class ProjectOperations(BaseContentOperations[Project]):
         slug: str | None = None,
         tag_ids: list[UUID] | None = None,
     ) -> Project:
-        """``access_mode`` / ``baseline_role`` default to the org defaults
-        for ``ContentType.PROJECT``.
-        """
         access_mode, baseline_role = await self._resolve_access_policy(
             organization_id, access_mode, baseline_role
         )

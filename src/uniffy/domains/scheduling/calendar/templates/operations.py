@@ -7,7 +7,7 @@ from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.auth.membership import get_active_membership
-from uniffy.core.auth.permissions import resolve_access_policy
+from uniffy.core.auth.permissions import resolve_creation_policy
 from uniffy.core.errors import (
     NotFoundError,
     PermissionDeniedError,
@@ -55,7 +55,7 @@ class EventTemplateOperations:
     ) -> EventTemplate:
         await self._verify_org_membership(user_id, organization_id)
 
-        access_mode, baseline_role = await resolve_access_policy(
+        access_mode, baseline_role = await resolve_creation_policy(
             self.session,
             organization_id,
             ContentType.CALENDAR_EVENT,

@@ -1,8 +1,5 @@
-import { useEffect, useRef } from "react";
 import { HIGHLIGHT_COLORS, colorToBg } from "@/components/editor/plugins/highlight/index";
-import { popoverShellClass } from "@/components/ui/popover";
-import { useOverlayEscape } from "@/shared/hooks/useOverlayEscape";
-import { cn } from "@/shared/utils/cn";
+import { PortalMenu } from "@/components/ui/portal-menu";
 
 interface HighlightPickerProps {
   anchorRect: DOMRect;
@@ -25,42 +22,19 @@ const ERASER_ICON = (
 );
 
 export function HighlightPicker({ anchorRect, onSelect, onClose }: HighlightPickerProps) {
-  const pickerRef = useRef<HTMLDivElement>(null);
-
-  // Close on click outside
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) {
-        onClose();
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [onClose]);
-
-  useOverlayEscape(onClose);
-
-  // Position below the selection
-  const top = anchorRect.bottom + 8;
-  const left = anchorRect.left + anchorRect.width / 2;
-
   return (
-    <div
-      ref={pickerRef}
-      className={cn(popoverShellClass, "fixed z-[1001] flex items-center gap-1.5 p-2")}
-      style={{
-        top: `${top}px`,
-        left: `${left}px`,
-        transform: "translateX(-50%)",
-      }}
+    <PortalMenu
+      open
+      onClose={onClose}
+      position={{ x: anchorRect.left, y: anchorRect.bottom + 8 }}
+      className="z-[1001] grid grid-cols-4 items-center gap-1.5 p-2 lg:flex"
     >
       {HIGHLIGHT_COLORS.map((color) => (
         <button
           key={color.value}
           type="button"
           title={color.name}
-          className="focus-ring flex h-6 w-6 items-center justify-center rounded-full transition-transform hover:scale-110"
+          className="focus-ring flex h-11 w-11 items-center justify-center rounded-full transition-transform hover:scale-110 lg:h-6 lg:w-6"
           style={{ backgroundColor: colorToBg(color.value) }}
           onClick={() => onSelect(color.value)}
         >
@@ -68,18 +42,16 @@ export function HighlightPicker({ anchorRect, onSelect, onClose }: HighlightPick
         </button>
       ))}
 
-      {/* Divider */}
-      <div className="mx-0.5 h-5 w-px bg-border" />
+      <div className="mx-0.5 hidden h-5 w-px bg-border lg:block" />
 
-      {/* Remove highlight */}
       <button
         type="button"
         title="Remove highlight"
-        className="focus-ring flex h-6 w-6 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+        className="focus-ring flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground lg:h-6 lg:w-6"
         onClick={() => onSelect(null)}
       >
         {ERASER_ICON}
       </button>
-    </div>
+    </PortalMenu>
   );
 }

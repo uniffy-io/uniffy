@@ -11,7 +11,7 @@ import {
   RoomStatus as ProtoRoomStatus,
   BookingStatus as ProtoBookingStatus,
 } from "@uniffy/proto/rooms/v1/rooms_pb";
-import { AccessMode, ContentRole } from "@uniffy/proto/common/v1/common_pb";
+import { AccessMode } from "@uniffy/proto/common/v1/common_pb";
 import { create } from "@bufbuild/protobuf";
 import { TimestampSchema, type Timestamp } from "@bufbuild/protobuf/wkt";
 import type {
@@ -82,7 +82,7 @@ function frontendVisibilityToAccessMode(v: "private" | "organization"): {
   baselineRole: number | undefined;
 } {
   return v === "organization"
-    ? { accessMode: AccessMode.OPEN_TO_ORG, baselineRole: ContentRole.VIEWER }
+    ? { accessMode: AccessMode.OPEN_TO_ORG, baselineRole: undefined }
     : { accessMode: AccessMode.OWNER_ONLY, baselineRole: undefined };
 }
 
