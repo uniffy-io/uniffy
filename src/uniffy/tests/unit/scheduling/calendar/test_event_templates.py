@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from uniffy.core.errors import PermissionDeniedError
+from uniffy.core.errors import PermissionDeniedError, ValidationError
 from uniffy.core.models.calendar.template import EventTemplate
 from uniffy.core.types import AccessMode, ContentRole, ContentType, generate_id
 from uniffy.domains.scheduling.calendar.templates.operations import EventTemplateOperations
@@ -31,6 +31,23 @@ def _ops(template: EventTemplate, role: ContentRole | None) -> EventTemplateOper
     ops.permission_checker.effective_role = AsyncMock(return_value=role)
     ops._verify_org_membership = AsyncMock()
     return ops
+
+
+class TestCreateAccessMode:
+    async def test_named_people_mode_is_refused(self) -> None:
+        ops = EventTemplateOperations.__new__(EventTemplateOperations)
+        ops.session = MagicMock()
+        ops._verify_org_membership = AsyncMock()
+
+        with pytest.raises(ValidationError):
+            await ops.create(
+                generate_id(),
+                generate_id(),
+                "Weekly sync",
+                access_mode=AccessMode.EXPLICIT_MEMBERS,
+            )
+
+        ops.session.add.assert_not_called()
 
 
 class TestGetByIdAccess:

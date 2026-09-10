@@ -15,6 +15,7 @@ from uniffy.core.auth.permissions import (
 from uniffy.core.errors import (
     NotFoundError,
     PermissionDeniedError,
+    ValidationError,
 )
 from uniffy.core.models.calendar.template import EventTemplate
 from uniffy.core.types import (
@@ -59,6 +60,13 @@ class EventTemplateOperations:
         baseline_role: ContentRole | None = None,
     ) -> EventTemplate:
         await self._verify_org_membership(user_id, organization_id)
+
+        # Templates are not registered content, so nothing can grant a named
+        # person access to one; the mode would be enforced but never satisfiable.
+        if access_mode == AccessMode.EXPLICIT_MEMBERS:
+            raise ValidationError(
+                "access_mode", "Event templates cannot be shared with named people"
+            )
 
         access_mode, baseline_role = await resolve_access_policy(
             self.session,
