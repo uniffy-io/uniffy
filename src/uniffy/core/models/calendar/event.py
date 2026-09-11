@@ -132,6 +132,12 @@ class CalendarEvent(SQLModel, table=True):
     )
     reminders: list[int] | None = Field(default=None, sa_column=Column(JSONB))
     recurrence_id: UUID | None = Field(default=None, foreign_key="calendar_events.id", index=True)
+    # Identity carried in from an imported file; re-importing it must not
+    # duplicate the event. Rows created in the product leave this NULL.
+    ical_uid: str | None = Field(default=None, max_length=500)
+    # RFC 5545 revision counter. Clients ignore an update whose sequence has
+    # not moved, so every change mail has to advance it.
+    ical_sequence: int = Field(default=0, nullable=False)
     recurrence_config: dict[str, Any] | None = Field(default=None, sa_column=Column(JSONB))
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
