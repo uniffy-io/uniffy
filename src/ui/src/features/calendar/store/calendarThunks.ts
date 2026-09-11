@@ -1,6 +1,7 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import { getEffectiveTimeZone } from "@/shared/utils/timezone";
 import { calendarApi } from "@/features/calendar/api/calendarApi";
+import { downloadIcs } from "@/features/calendar/utils/downloadIcs";
 import type { RootState } from "@/app/store";
 import { bulkUpsertTags, tagToPlain } from "@/features/tags";
 import type {
@@ -12,6 +13,11 @@ import type {
   EventTemplate as ProtoEventTemplate,
   BusyInterval as ProtoBusyInterval,
 } from "@uniffy/proto/cal/v1/calendar_pb";
+import type {
+  CalendarFeed,
+  CalendarImportPreview,
+  CalendarImportResult,
+} from "@/features/calendar/types/interop";
 import type {
   FreeBusyData,
   MeetingSuggestion,
@@ -1000,5 +1006,147 @@ export const updateAttendeeRole = createAsyncThunk<
     return rejectWithValue(
       error instanceof Error ? error.message : "Failed to update attendee role",
     );
+  }
+});
+
+export const exportEvent = createAsyncThunk<
+  void,
+  string,
+  { state: RootState; rejectValue: string }
+>("calendar/exportEvent", async (eventId, { getState, rejectWithValue }) => {
+  try {
+    const organizationId = getOrganizationId(getState());
+    const response = await calendarApi.exportEvent({ eventId, organizationId });
+    downloadIcs(response.content, response.filename);
+  } catch (error) {
+    return rejectWithValue(error instanceof Error ? error.message : "Failed to export event");
+  }
+});
+
+export const exportCalendar = createAsyncThunk<
+  number,
+  { calendarId?: string; startDate?: string; endDate?: string } | undefined,
+  { state: RootState; rejectValue: string }
+>("calendar/exportCalendar", async (params, { getState, rejectWithValue }) => {
+  try {
+    const organizationId = getOrganizationId(getState());
+    const response = await calendarApi.exportCalendar({
+      organizationId,
+      calendarId: params?.calendarId ?? "",
+      ...(params?.startDate ? { startTime: isoToTimestamp(params.startDate) } : {}),
+      ...(params?.endDate ? { endTime: isoToTimestamp(params.endDate) } : {}),
+    });
+    downloadIcs(response.content, response.filename);
+    return response.eventCount;
+  } catch (error) {
+    return rejectWithValue(error instanceof Error ? error.message : "Failed to export calendar");
+  }
+});
+
+export const previewCalendarImport = createAsyncThunk<
+  CalendarImportPreview,
+  { content: Uint8Array; calendarId?: string },
+  { state: RootState; rejectValue: string }
+>("calendar/previewCalendarImport", async (params, { getState, rejectWithValue }) => {
+  try {
+    const organizationId = getOrganizationId(getState());
+    const response = await calendarApi.previewCalendarImport({
+      organizationId,
+      calendarId: params.calendarId ?? "",
+      content: params.content,
+    });
+    return {
+      creatable: response.creatable.map((entry) => ({
+        title: entry.title,
+        startTime: timestampToIso(entry.startTime),
+        endTime: timestampToIso(entry.endTime),
+        isAllDay: entry.isAllDay,
+        repeats: entry.repeats,
+      })),
+      duplicateCount: response.duplicateCount,
+      skipped: response.skipped.map((entry) => ({ label: entry.label, reason: entry.reason })),
+    };
+  } catch (error) {
+    return rejectWithValue(error instanceof Error ? error.message : "Failed to read the file");
+  }
+});
+
+export const applyCalendarImport = createAsyncThunk<
+  CalendarImportResult,
+  { content: Uint8Array; calendarId?: string },
+  { state: RootState; rejectValue: string }
+>("calendar/applyCalendarImport", async (params, { getState, rejectWithValue }) => {
+  try {
+    const organizationId = getOrganizationId(getState());
+    const response = await calendarApi.applyCalendarImport({
+      organizationId,
+      calendarId: params.calendarId ?? "",
+      content: params.content,
+    });
+    return {
+      createdCount: response.createdCount,
+      duplicateCount: response.duplicateCount,
+      skipped: response.skipped.map((entry) => ({ label: entry.label, reason: entry.reason })),
+    };
+  } catch (error) {
+    return rejectWithValue(error instanceof Error ? error.message : "Failed to import the file");
+  }
+});
+
+export const fetchCalendarFeed = createAsyncThunk<
+  CalendarFeed,
+  string | undefined,
+  { state: RootState; rejectValue: string }
+>("calendar/fetchCalendarFeed", async (calendarId, { getState, rejectWithValue }) => {
+  try {
+    const organizationId = getOrganizationId(getState());
+    const response = await calendarApi.getCalendarFeedUrl({
+      organizationId,
+      calendarId: calendarId ?? "",
+    });
+    return {
+      url: response.url,
+      createdAt: response.createdAt ? timestampToIso(response.createdAt) : null,
+      lastUsedAt: response.lastUsedAt ? timestampToIso(response.lastUsedAt) : null,
+    };
+  } catch (error) {
+    return rejectWithValue(error instanceof Error ? error.message : "Failed to load the feed");
+  }
+});
+
+export const regenerateCalendarFeed = createAsyncThunk<
+  CalendarFeed,
+  string | undefined,
+  { state: RootState; rejectValue: string }
+>("calendar/regenerateCalendarFeed", async (calendarId, { getState, rejectWithValue }) => {
+  try {
+    const organizationId = getOrganizationId(getState());
+    const response = await calendarApi.regenerateCalendarFeed({
+      organizationId,
+      calendarId: calendarId ?? "",
+    });
+    return {
+      url: response.url,
+      createdAt: response.createdAt ? timestampToIso(response.createdAt) : null,
+      lastUsedAt: null,
+    };
+  } catch (error) {
+    return rejectWithValue(error instanceof Error ? error.message : "Failed to create the link");
+  }
+});
+
+export const revokeCalendarFeed = createAsyncThunk<
+  void,
+  string | undefined,
+  { state: RootState; rejectValue: string }
+>("calendar/revokeCalendarFeed", async (calendarId, { getState, rejectWithValue }) => {
+  try {
+    const organizationId = getOrganizationId(getState());
+    await calendarApi.revokeCalendarFeed({
+      organizationId,
+      calendarId: calendarId ?? "",
+    });
+  } catch (error) {
+    return rejectWithValue(error instanceof Error ? error.message : "Failed to stop the link");
   }
 });
