@@ -71,6 +71,8 @@ dependencies = [
   "pycrdt>=0.13.0",
   "pycrdt-websocket>=0.16.1",
   "orjson>=3.12.0",
+  # iCalendar (RFC 5545) serialization and parsing
+  "icalendar>=7.3.0",
 ]
 
 [dependency-groups]
