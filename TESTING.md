@@ -2244,6 +2244,91 @@ daily series starting three years back is the shape that used to hurt.
 - [ ] An all-day event, an event in a non-UTC timezone, and an event spanning a
       daylight-saving change all still render on the right days.
 
+## Calendar interop (iCalendar)
+
+Export, import and subscribe against real clients. Needs Outlook (or Outlook on
+the web), Google Calendar, and Apple Calendar -- the three that disagree most.
+Prepare one event of each shape beforehand: a plain timed event, an all-day
+event, a weekly series with one occurrence skipped and one moved, a monthly
+series on the 31st, and a yearly event on 29 February.
+
+- [ ] Export a single timed event from the event dialog. The file opens in all
+      three clients, on the right day, at the right time, with the same title,
+      location and description. A mention in the description reads as its label,
+      not as `[[[label|urn]]]`.
+- [ ] Export the all-day event. It lands on one day in every client, with no
+      spill into the day before or after, and no time shown.
+- [ ] Export the weekly series. The skipped occurrence is absent, the moved one
+      appears on its new date only, and the rest of the series is intact. Check
+      in a client whose timezone differs from yours.
+- [ ] Export the monthly-on-the-31st series. February shows the last day of the
+      month rather than being skipped, matching what Uniffy shows.
+- [ ] Export the 29 February event. It appears only in leap years, in every
+      client and in Uniffy.
+- [ ] Export a whole calendar. The event count in the confirmation matches what
+      the file contains. A calendar above the export cap refuses with a message
+      naming the cap, rather than timing out.
+- [ ] Import a file exported by Google Calendar, then by Outlook, then by Apple.
+      The preview lists what would be created before anything is created, and
+      the counts match what lands.
+- [ ] Import the same file a second time. Nothing is duplicated; the preview
+      reports them as already present.
+- [ ] Import a file containing an entry we cannot represent (a rule using
+      `BYWEEKNO`, or an entry with no start). It appears in the skipped list
+      with a readable reason, and everything else in the file still imports.
+- [ ] Import a file into a calendar you do not own, by calling the RPC with
+      another person's calendar id. It is refused as not found.
+- [ ] Create a subscribe link, paste it into each of the three clients, and
+      confirm events appear. Change an event in Uniffy; within the client's
+      refresh interval the change shows up.
+- [ ] Fetch the subscribe URL twice with `curl -i`. The second fetch with
+      `If-None-Match` returns 304 and no body. No `Set-Cookie` on either.
+- [ ] Replace the subscribe link. The old URL stops working immediately; the
+      new one works. Re-open the panel -- the same URL is shown, not a new one.
+- [ ] Stop sharing. Every subscribed client stops updating, and the URL returns
+      404 rather than an error that reveals it once existed.
+- [ ] Sign in as another member and fetch someone else's feed URL. It serves
+      only what that person can see -- it does not become their access.
+- [ ] Deactivate a member who has a live feed. Their URL stops resolving without
+      anyone revoking it.
+
+## Calendar event mail
+
+Needs SMTP configured (both products) and two accounts, one of them an
+organizer. Watch the outbox, not just the UI.
+
+- [ ] Invite someone to an event. They get one message naming the event, its
+      time in their own timezone, the location, and who else is invited. It
+      carries a `.ics` part, so Outlook and Google show their own accept and
+      decline buttons.
+- [ ] Change the time. One message arrives saying what changed, not a second
+      invitation. The `.ics` part updates the event in the external client
+      rather than creating a duplicate.
+- [ ] Change the time, then the location, then the title within a minute. One
+      message arrives describing the final state, not three.
+- [ ] Cancel the event. One cancellation arrives, and the event disappears from
+      the external client rather than lingering.
+- [ ] Cancel a single occurrence of a series. Only that occurrence disappears,
+      and the message names the date.
+- [ ] Change a recurring event. The message describes the series, not one
+      occurrence, and attendees receive one message rather than one per date.
+- [ ] Answer from the message: click Yes. The page asks for confirmation before
+      anything is recorded, then the organizer sees the answer in Uniffy.
+- [ ] Open every link in the invitation with a tool that follows links without
+      clicking (`curl -sL`). No answer is recorded -- responding is a POST the
+      page performs, not something the link itself does.
+- [ ] Remove someone from the event, then have them use an RSVP link they kept.
+      It is refused, saying they are no longer invited.
+- [ ] Use an RSVP link a second time, and use one from an older message for the
+      same event. Both still work and record the new answer.
+- [ ] Turn off calendar-invitation email in notification preferences. No
+      invitation or change mail arrives, and no generic notification email
+      arrives in its place -- one preference, one email, or none.
+- [ ] Turn the master email switch off. Nothing arrives at all.
+- [ ] Stop SMTP (or point it at a dead host) and invite someone. The invitation
+      still succeeds in the app; the message is retried rather than lost, and
+      gives up after several attempts without blocking anything.
+
 ## Pre-release sweep
 
 - [ ] All linters green: `./manage.py lint`.
