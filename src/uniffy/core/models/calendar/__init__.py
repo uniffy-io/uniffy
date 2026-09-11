@@ -6,6 +6,7 @@ from uniffy.core.models.calendar.calendar import Calendar
 from uniffy.core.models.calendar.category import Category
 from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.models.calendar.exception import RecurrenceException
+from uniffy.core.models.calendar.feed_token import CalendarFeedToken
 from uniffy.core.models.calendar.mail_delivery import (
     CalendarMailDelivery,
     CalendarMailKind,
@@ -18,6 +19,7 @@ __all__ = [
     "Calendar",
     "Category",
     "CalendarEvent",
+    "CalendarFeedToken",
     "CalendarMailDelivery",
     "CalendarMailKind",
     "CalendarMailStatus",
