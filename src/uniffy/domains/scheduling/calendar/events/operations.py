@@ -462,8 +462,8 @@ class CalendarEventOperations(CalendarEventReader):
         event: CalendarEvent,
         actor_id: UUID,
         before: dict[str, object],
-    ) -> None:
-        await EventActivityOperations(self)._log_field_changes(event, actor_id, before)
+    ) -> set[str]:
+        return await EventActivityOperations(self)._log_field_changes(event, actor_id, before)
 
     @staticmethod
     def _activity_snapshot(event: CalendarEvent) -> dict[str, object]:

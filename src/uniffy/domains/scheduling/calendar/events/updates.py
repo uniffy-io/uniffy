@@ -24,6 +24,7 @@ from uniffy.core.events.realtime import ContentAccessAction
 from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.calendar.attendee import EventAttendee
 from uniffy.core.models.calendar.event import CalendarEvent
+from uniffy.core.models.calendar.mail_delivery import CalendarMailKind
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import (
     AttendeeRole,
@@ -37,6 +38,15 @@ from uniffy.core.types import (
     RecurrencePattern,
 )
 from uniffy.domains.chat.lifecycle import ChannelCallLifecycle
+from uniffy.domains.scheduling.calendar.mail.outbox import (
+    drop_pending_for_recipients,
+    stage_event_mail,
+)
+from uniffy.domains.scheduling.calendar.mail.staging import (
+    MAIL_TRIGGERING_ACTIONS,
+    stage_cancellation_mail,
+    stage_change_mail,
+)
 from uniffy.domains.scheduling.rooms.events import EventBookingOperations
 from uniffy.domains.search.rename import propagate_rename
 from uniffy.domains.tags.operations import TagOperations
@@ -307,7 +317,7 @@ class EventUpdateOperations:
 
         event.updated_at = datetime.now(UTC)
 
-        await self.events._log_field_changes(event, user_id, activity_before)
+        changed_actions = await self.events._log_field_changes(event, user_id, activity_before)
         if newly_invited_ids:
             await self.events._log_activity(
                 event.id,
@@ -328,6 +338,32 @@ class EventUpdateOperations:
             added=newly_invited_ids,
             removed=removed_attendee_ids,
             call_lifecycle=call_lifecycle,
+        )
+
+        await stage_event_mail(
+            self.events.session,
+            organization_id=organization_id,
+            event_id=event.id,
+            recipient_ids=newly_invited_ids,
+            kind=CalendarMailKind.INVITATION,
+            actor_user_id=user_id,
+        )
+        if became_cancelled:
+            await stage_cancellation_mail(self.events.session, event, actor_id=user_id)
+        elif changed_actions & MAIL_TRIGGERING_ACTIONS:
+            # Clients ignore an update whose sequence has not moved.
+            event.ical_sequence += 1
+            await stage_change_mail(
+                self.events.session,
+                event,
+                actor_id=user_id,
+                # Somebody invited by this same edit gets the invitation, which
+                # already states the new time; a change notice as well is noise.
+                exclude=set(newly_invited_ids),
+            )
+        # A message not yet sent must not reach somebody just uninvited.
+        await drop_pending_for_recipients(
+            self.events.session, event.id, removed_attendee_ids, datetime.now(UTC)
         )
 
         await self.events.session.commit()

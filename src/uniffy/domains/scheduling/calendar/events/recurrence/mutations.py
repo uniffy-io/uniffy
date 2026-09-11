@@ -18,6 +18,7 @@ from uniffy.core.types import (
     EventStatus,
     RecurrencePattern,
 )
+from uniffy.domains.scheduling.calendar.mail.staging import stage_cancellation_mail
 from uniffy.domains.scheduling.calendar.recurrence import (
     count_occurrences_through,
     occurrence_start_for_date,
@@ -65,6 +66,10 @@ class RecurrenceMutationOperations:
             "recurrence_changed",
             field_id="cancelled_occurrence",
             new_value=occurrence_date.isoformat(),
+        )
+
+        await stage_cancellation_mail(
+            self.session, event, actor_id=user_id, occurrence_date=occurrence_date
         )
 
         await self.session.commit()
@@ -187,6 +192,14 @@ class RecurrenceMutationOperations:
         await self.events._log_field_changes(override, user_id, edited_before)
 
         await self.events._index_for_search(override, skip_member_lookup=True)
+        if master.status != EventStatus.CANCELLED and override.status == EventStatus.CANCELLED:
+            await stage_cancellation_mail(
+                self.session,
+                master,
+                actor_id=user_id,
+                occurrence_date=occurrence_date,
+                event_id=master.id,
+            )
         await self.session.commit()
 
         if master.status != EventStatus.CANCELLED and override.status == EventStatus.CANCELLED:
@@ -336,6 +349,8 @@ class RecurrenceMutationOperations:
         await self.events._log_field_changes(new_event, user_id, edited_before)
 
         await self.events._index_for_search(new_event, skip_member_lookup=True)
+        if master.status != EventStatus.CANCELLED and new_event.status == EventStatus.CANCELLED:
+            await stage_cancellation_mail(self.session, new_event, actor_id=user_id)
         await self.session.commit()
 
         if master.status != EventStatus.CANCELLED and new_event.status == EventStatus.CANCELLED:

@@ -26,7 +26,16 @@ def _ops(execute_results) -> CalendarEventOperations:
     ops.session.add = MagicMock()
     ops.session.commit = AsyncMock()
     ops.session.refresh = AsyncMock()
-    ops.session.execute = AsyncMock(side_effect=execute_results)
+
+    # These tests pin the reads they care about, in order. Writes the operation
+    # makes beyond them are not this file's subject, so an exhausted list yields
+    # a blank result rather than failing the test.
+    remaining = iter(execute_results)
+
+    async def _execute(*_args, **_kwargs):
+        return next(remaining, _result())
+
+    ops.session.execute = AsyncMock(side_effect=_execute)
     return ops
 
 

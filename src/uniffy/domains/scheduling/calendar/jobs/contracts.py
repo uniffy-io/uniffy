@@ -13,5 +13,19 @@ CHECK_CALENDAR_REMINDERS_SCHEDULE = JobRef(
     ),
 )
 
+DISPATCH_EVENT_MAIL_SCHEDULE = JobRef(
+    name="cron:dispatch_calendar_event_mail",
+    queue=QueueName.CORE,
+    workload=JobWorkload.DELIVERY,
+    reliability=JobReliability.DURABLE,
+    recovery=JobRecovery(
+        fact="PENDING calendar_mail_deliveries rows",
+        trigger="every-minute core schedule",
+    ),
+)
+
 CALENDAR_JOB_REFS: tuple[JobRef, ...] = ()
-CALENDAR_SCHEDULED_JOB_REFS = (CHECK_CALENDAR_REMINDERS_SCHEDULE,)
+CALENDAR_SCHEDULED_JOB_REFS = (
+    CHECK_CALENDAR_REMINDERS_SCHEDULE,
+    DISPATCH_EVENT_MAIL_SCHEDULE,
+)

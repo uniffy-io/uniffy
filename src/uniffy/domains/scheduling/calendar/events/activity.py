@@ -116,8 +116,11 @@ class EventActivityOperations:
         event: CalendarEvent,
         actor_id: UUID,
         before: dict[str, object],
-    ) -> None:
-        """Emit one activity entry per tracked field that actually changed."""
+    ) -> set[str]:
+        """Emit one activity entry per tracked field that actually changed, and
+        report the actions emitted so callers need not repeat the comparison.
+        """
+        emitted: set[str] = set()
         for field_name, action, keep_values in _ACTIVITY_TRACKED_FIELDS:
             if field_name not in before:
                 continue
@@ -134,6 +137,8 @@ class EventActivityOperations:
                 previous_value=_activity_value(old_value) if keep_values else None,
                 new_value=_activity_value(new_value) if keep_values else None,
             )
+            emitted.add(action)
+        return emitted
 
     @staticmethod
     def _activity_snapshot(event: CalendarEvent) -> dict[str, object]:
