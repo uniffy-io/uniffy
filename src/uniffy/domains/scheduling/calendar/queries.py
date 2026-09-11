@@ -7,6 +7,7 @@ from uuid import UUID
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from uniffy.core.errors import NotFoundError
 from uniffy.core.models.calendar.attendee import EventAttendee
 from uniffy.core.models.calendar.calendar import Calendar
 from uniffy.core.models.calendar.category import Category
@@ -374,3 +375,29 @@ async def permanent_delete_event(
 
     await session.delete(event)
     await session.commit()
+
+
+async def require_own_calendar(
+    session: AsyncSession,
+    user_id: UUID,
+    organization_id: UUID,
+    calendar_id: UUID,
+) -> None:
+    """Admit a caller who owns this calendar, or refuse as if it did not exist.
+
+    Calendars carry no content role yet, which is why this is an ownership check
+    rather than a permission resolution. Anything naming a calendar directly -
+    importing into it, subscribing to it - goes through here, so the day
+    calendars gain members there is one place to widen.
+
+    Refusing with ``NotFoundError`` rather than a denial keeps a stranger from
+    learning which calendar ids exist.
+    """
+    owner = await session.scalar(
+        select(Calendar.owner_id).where(
+            Calendar.id == calendar_id,
+            Calendar.organization_id == organization_id,
+        )
+    )
+    if owner is None or owner != user_id:
+        raise NotFoundError("Calendar", calendar_id)
