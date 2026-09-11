@@ -33,6 +33,7 @@ from uniffy.core.types import (
 )
 from uniffy.domains.scheduling.calendar.events.state import _StagedCalendarEventCreate
 from uniffy.domains.scheduling.calendar.mail.outbox import stage_event_mail
+from uniffy.domains.scheduling.calendar.queries import require_own_calendar
 from uniffy.domains.scheduling.rooms.events import EventBookingOperations
 from uniffy.domains.settings.operations import get_user_reminder_defaults
 from uniffy.domains.tags.operations import TagOperations
@@ -80,7 +81,13 @@ class EventCreateOperations:
 
         Events are invite-only: the row is always OWNER_ONLY and visibility
         for non-organizers comes from the attendee floor in `_resolve_role`.
+
+        The target calendar is checked before anything else: `calendar_id`
+        arrives from the request, and an unchecked one would file the event on
+        somebody else's calendar, or on another tenant's.
         """
+        await require_own_calendar(self.session, user_id, organization_id, calendar_id)
+
         if transparency is None:
             # All-day entries have never blocked time; an out-of-office period
             # must, even when it spans whole days.

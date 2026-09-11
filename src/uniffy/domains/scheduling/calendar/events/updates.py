@@ -47,6 +47,7 @@ from uniffy.domains.scheduling.calendar.mail.staging import (
     stage_cancellation_mail,
     stage_change_mail,
 )
+from uniffy.domains.scheduling.calendar.queries import require_own_calendar
 from uniffy.domains.scheduling.rooms.events import EventBookingOperations
 from uniffy.domains.search.rename import propagate_rename
 from uniffy.domains.tags.operations import TagOperations
@@ -213,6 +214,10 @@ class EventUpdateOperations:
         )
         previous_calendar_id = event.calendar_id
         calendar_moved = calendar_id is not None and calendar_id != event.calendar_id
+        if calendar_moved:
+            # Editing an event you organize must not let you file it on a
+            # calendar you do not hold.
+            await require_own_calendar(self.events.session, user_id, organization_id, calendar_id)
         if calendar_id is not None:
             event.calendar_id = calendar_id
         if category_id is not None:

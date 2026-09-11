@@ -55,9 +55,12 @@ def _make_event(
     )
 
 
-def _make_ops() -> CalendarEventOperations:
+def _make_ops(calendar_owner: UUID | None = None) -> CalendarEventOperations:
+    """`calendar_owner` answers the ownership check `create()` runs first;
+    tests that never reach it can leave it unset."""
     ops = CalendarEventOperations.__new__(CalendarEventOperations)
     ops.session = MagicMock()
+    ops.session.scalar = AsyncMock(return_value=calendar_owner)
     ops._call_lifecycle = MagicMock()
     ops._search_indexer = MagicMock()
     return ops
@@ -154,11 +157,12 @@ class TestValidateChannelBinding:
 
 class TestCreateMutualExclusion:
     async def test_create_rejects_meeting_url_and_channel_both_set(self) -> None:
-        ops = _make_ops()
+        author = generate_id()
+        ops = _make_ops(author)
         now = datetime.now(UTC)
         with pytest.raises(ValidationError):
             await ops.create(
-                user_id=generate_id(),
+                user_id=author,
                 organization_id=generate_id(),
                 title="Sync",
                 start_time=now,
@@ -169,14 +173,15 @@ class TestCreateMutualExclusion:
             )
 
     async def test_create_validates_channel_when_no_meeting_url(self) -> None:
-        ops = _make_ops()
+        author = generate_id()
+        ops = _make_ops(author)
         ops._validate_channel_binding = AsyncMock(
             side_effect=ValidationError("channel_id", "denied")
         )
         now = datetime.now(UTC)
         with pytest.raises(ValidationError):
             await ops.create(
-                user_id=generate_id(),
+                user_id=author,
                 organization_id=generate_id(),
                 title="Sync",
                 start_time=now,
