@@ -40,6 +40,15 @@ from uniffy.tests.unit.core.mail.test_calendar_templates import FULL_CONTEXT
 
 WEDNESDAY = DayOfWeek.WEDNESDAY.value
 
+# An invitation carries RSVP links, so composing one signs a token. The secret
+# is read from the environment at call time and CI carries none.
+_TEST_SECRET = "test-32-byte-secret-padding-for-event-mail-01"
+
+
+@pytest.fixture(autouse=True)
+def _set_jwt_secret(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("JWT_SECRET_KEY", _TEST_SECRET)
+
 
 def _event(**overrides) -> CalendarEvent:
     defaults = {

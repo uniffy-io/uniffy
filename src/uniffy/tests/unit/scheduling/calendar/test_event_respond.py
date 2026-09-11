@@ -29,6 +29,16 @@ USER = uuid4()
 ORG = uuid4()
 EVENT = uuid4()
 
+# Every token here is signed with the secret read from the environment at call
+# time, and CI carries none. Setting it per test also keeps one case free to
+# override it.
+_TEST_SECRET = "test-32-byte-secret-padding-for-rsvp-tokens-1"
+
+
+@pytest.fixture(autouse=True)
+def _set_jwt_secret(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("JWT_SECRET_KEY", _TEST_SECRET)
+
 
 class TestToken:
     def test_it_names_one_attendee_and_one_event(self) -> None:
