@@ -51,6 +51,27 @@ const (
 	// CalendarServiceGetEventsInRangeProcedure is the fully-qualified name of the CalendarService's
 	// GetEventsInRange RPC.
 	CalendarServiceGetEventsInRangeProcedure = "/cal.v1.CalendarService/GetEventsInRange"
+	// CalendarServiceExportEventProcedure is the fully-qualified name of the CalendarService's
+	// ExportEvent RPC.
+	CalendarServiceExportEventProcedure = "/cal.v1.CalendarService/ExportEvent"
+	// CalendarServiceExportCalendarProcedure is the fully-qualified name of the CalendarService's
+	// ExportCalendar RPC.
+	CalendarServiceExportCalendarProcedure = "/cal.v1.CalendarService/ExportCalendar"
+	// CalendarServicePreviewCalendarImportProcedure is the fully-qualified name of the
+	// CalendarService's PreviewCalendarImport RPC.
+	CalendarServicePreviewCalendarImportProcedure = "/cal.v1.CalendarService/PreviewCalendarImport"
+	// CalendarServiceApplyCalendarImportProcedure is the fully-qualified name of the CalendarService's
+	// ApplyCalendarImport RPC.
+	CalendarServiceApplyCalendarImportProcedure = "/cal.v1.CalendarService/ApplyCalendarImport"
+	// CalendarServiceGetCalendarFeedUrlProcedure is the fully-qualified name of the CalendarService's
+	// GetCalendarFeedUrl RPC.
+	CalendarServiceGetCalendarFeedUrlProcedure = "/cal.v1.CalendarService/GetCalendarFeedUrl"
+	// CalendarServiceRegenerateCalendarFeedProcedure is the fully-qualified name of the
+	// CalendarService's RegenerateCalendarFeed RPC.
+	CalendarServiceRegenerateCalendarFeedProcedure = "/cal.v1.CalendarService/RegenerateCalendarFeed"
+	// CalendarServiceRevokeCalendarFeedProcedure is the fully-qualified name of the CalendarService's
+	// RevokeCalendarFeed RPC.
+	CalendarServiceRevokeCalendarFeedProcedure = "/cal.v1.CalendarService/RevokeCalendarFeed"
 	// CalendarServiceCreateCategoryProcedure is the fully-qualified name of the CalendarService's
 	// CreateCategory RPC.
 	CalendarServiceCreateCategoryProcedure = "/cal.v1.CalendarService/CreateCategory"
@@ -118,6 +139,20 @@ type CalendarServiceClient interface {
 	ListEvents(context.Context, *connect.Request[v1.ListEventsRequest]) (*connect.Response[v1.ListEventsResponse], error)
 	// Get events for a specific date range (optimized for calendar views)
 	GetEventsInRange(context.Context, *connect.Request[v1.GetEventsInRangeRequest]) (*connect.Response[v1.GetEventsInRangeResponse], error)
+	// Export one event, with its whole series, as an iCalendar document
+	ExportEvent(context.Context, *connect.Request[v1.ExportEventRequest]) (*connect.Response[v1.ExportEventResponse], error)
+	// Export every accessible event on a calendar as an iCalendar document
+	ExportCalendar(context.Context, *connect.Request[v1.ExportCalendarRequest]) (*connect.Response[v1.ExportCalendarResponse], error)
+	// Read an iCalendar document and report what importing it would do
+	PreviewCalendarImport(context.Context, *connect.Request[v1.PreviewCalendarImportRequest]) (*connect.Response[v1.PreviewCalendarImportResponse], error)
+	// Import an iCalendar document into a calendar
+	ApplyCalendarImport(context.Context, *connect.Request[v1.ApplyCalendarImportRequest]) (*connect.Response[v1.ApplyCalendarImportResponse], error)
+	// Read the caller's own subscribe URL for a calendar, if one has been minted
+	GetCalendarFeedUrl(context.Context, *connect.Request[v1.GetCalendarFeedUrlRequest]) (*connect.Response[v1.GetCalendarFeedUrlResponse], error)
+	// Mint a subscribe URL, retiring any the caller already holds for this calendar
+	RegenerateCalendarFeed(context.Context, *connect.Request[v1.RegenerateCalendarFeedRequest]) (*connect.Response[v1.RegenerateCalendarFeedResponse], error)
+	// Stop the caller's subscribe URL for a calendar
+	RevokeCalendarFeed(context.Context, *connect.Request[v1.RevokeCalendarFeedRequest]) (*connect.Response[v1.RevokeCalendarFeedResponse], error)
 	// Create a new category
 	CreateCategory(context.Context, *connect.Request[v1.CreateCategoryRequest]) (*connect.Response[v1.CreateCategoryResponse], error)
 	// Get a category by ID
@@ -201,6 +236,48 @@ func NewCalendarServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			httpClient,
 			baseURL+CalendarServiceGetEventsInRangeProcedure,
 			connect.WithSchema(calendarServiceMethods.ByName("GetEventsInRange")),
+			connect.WithClientOptions(opts...),
+		),
+		exportEvent: connect.NewClient[v1.ExportEventRequest, v1.ExportEventResponse](
+			httpClient,
+			baseURL+CalendarServiceExportEventProcedure,
+			connect.WithSchema(calendarServiceMethods.ByName("ExportEvent")),
+			connect.WithClientOptions(opts...),
+		),
+		exportCalendar: connect.NewClient[v1.ExportCalendarRequest, v1.ExportCalendarResponse](
+			httpClient,
+			baseURL+CalendarServiceExportCalendarProcedure,
+			connect.WithSchema(calendarServiceMethods.ByName("ExportCalendar")),
+			connect.WithClientOptions(opts...),
+		),
+		previewCalendarImport: connect.NewClient[v1.PreviewCalendarImportRequest, v1.PreviewCalendarImportResponse](
+			httpClient,
+			baseURL+CalendarServicePreviewCalendarImportProcedure,
+			connect.WithSchema(calendarServiceMethods.ByName("PreviewCalendarImport")),
+			connect.WithClientOptions(opts...),
+		),
+		applyCalendarImport: connect.NewClient[v1.ApplyCalendarImportRequest, v1.ApplyCalendarImportResponse](
+			httpClient,
+			baseURL+CalendarServiceApplyCalendarImportProcedure,
+			connect.WithSchema(calendarServiceMethods.ByName("ApplyCalendarImport")),
+			connect.WithClientOptions(opts...),
+		),
+		getCalendarFeedUrl: connect.NewClient[v1.GetCalendarFeedUrlRequest, v1.GetCalendarFeedUrlResponse](
+			httpClient,
+			baseURL+CalendarServiceGetCalendarFeedUrlProcedure,
+			connect.WithSchema(calendarServiceMethods.ByName("GetCalendarFeedUrl")),
+			connect.WithClientOptions(opts...),
+		),
+		regenerateCalendarFeed: connect.NewClient[v1.RegenerateCalendarFeedRequest, v1.RegenerateCalendarFeedResponse](
+			httpClient,
+			baseURL+CalendarServiceRegenerateCalendarFeedProcedure,
+			connect.WithSchema(calendarServiceMethods.ByName("RegenerateCalendarFeed")),
+			connect.WithClientOptions(opts...),
+		),
+		revokeCalendarFeed: connect.NewClient[v1.RevokeCalendarFeedRequest, v1.RevokeCalendarFeedResponse](
+			httpClient,
+			baseURL+CalendarServiceRevokeCalendarFeedProcedure,
+			connect.WithSchema(calendarServiceMethods.ByName("RevokeCalendarFeed")),
 			connect.WithClientOptions(opts...),
 		),
 		createCategory: connect.NewClient[v1.CreateCategoryRequest, v1.CreateCategoryResponse](
@@ -310,29 +387,36 @@ func NewCalendarServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 
 // calendarServiceClient implements CalendarServiceClient.
 type calendarServiceClient struct {
-	createEvent          *connect.Client[v1.CreateEventRequest, v1.CreateEventResponse]
-	getEvent             *connect.Client[v1.GetEventRequest, v1.GetEventResponse]
-	updateEvent          *connect.Client[v1.UpdateEventRequest, v1.UpdateEventResponse]
-	deleteEvent          *connect.Client[v1.DeleteEventRequest, v1.DeleteEventResponse]
-	listEvents           *connect.Client[v1.ListEventsRequest, v1.ListEventsResponse]
-	getEventsInRange     *connect.Client[v1.GetEventsInRangeRequest, v1.GetEventsInRangeResponse]
-	createCategory       *connect.Client[v1.CreateCategoryRequest, v1.CreateCategoryResponse]
-	getCategory          *connect.Client[v1.GetCategoryRequest, v1.GetCategoryResponse]
-	updateCategory       *connect.Client[v1.UpdateCategoryRequest, v1.UpdateCategoryResponse]
-	deleteCategory       *connect.Client[v1.DeleteCategoryRequest, v1.DeleteCategoryResponse]
-	listCategories       *connect.Client[v1.ListCategoriesRequest, v1.ListCategoriesResponse]
-	updateAttendeeStatus *connect.Client[v1.UpdateAttendeeStatusRequest, v1.UpdateAttendeeStatusResponse]
-	addAttendees         *connect.Client[v1.AddAttendeesRequest, v1.AddAttendeesResponse]
-	updateAttendeeRole   *connect.Client[v1.UpdateAttendeeRoleRequest, v1.UpdateAttendeeRoleResponse]
-	removeAttendees      *connect.Client[v1.RemoveAttendeesRequest, v1.RemoveAttendeesResponse]
-	getFreeBusy          *connect.Client[v1.GetFreeBusyRequest, v1.GetFreeBusyResponse]
-	suggestMeetingTimes  *connect.Client[v1.SuggestMeetingTimesRequest, v1.SuggestMeetingTimesResponse]
-	listEventActivities  *connect.Client[v1.ListEventActivitiesRequest, v1.ListEventActivitiesResponse]
-	createEventTemplate  *connect.Client[v1.CreateEventTemplateRequest, v1.CreateEventTemplateResponse]
-	getEventTemplate     *connect.Client[v1.GetEventTemplateRequest, v1.GetEventTemplateResponse]
-	updateEventTemplate  *connect.Client[v1.UpdateEventTemplateRequest, v1.UpdateEventTemplateResponse]
-	deleteEventTemplate  *connect.Client[v1.DeleteEventTemplateRequest, v1.DeleteEventTemplateResponse]
-	listEventTemplates   *connect.Client[v1.ListEventTemplatesRequest, v1.ListEventTemplatesResponse]
+	createEvent            *connect.Client[v1.CreateEventRequest, v1.CreateEventResponse]
+	getEvent               *connect.Client[v1.GetEventRequest, v1.GetEventResponse]
+	updateEvent            *connect.Client[v1.UpdateEventRequest, v1.UpdateEventResponse]
+	deleteEvent            *connect.Client[v1.DeleteEventRequest, v1.DeleteEventResponse]
+	listEvents             *connect.Client[v1.ListEventsRequest, v1.ListEventsResponse]
+	getEventsInRange       *connect.Client[v1.GetEventsInRangeRequest, v1.GetEventsInRangeResponse]
+	exportEvent            *connect.Client[v1.ExportEventRequest, v1.ExportEventResponse]
+	exportCalendar         *connect.Client[v1.ExportCalendarRequest, v1.ExportCalendarResponse]
+	previewCalendarImport  *connect.Client[v1.PreviewCalendarImportRequest, v1.PreviewCalendarImportResponse]
+	applyCalendarImport    *connect.Client[v1.ApplyCalendarImportRequest, v1.ApplyCalendarImportResponse]
+	getCalendarFeedUrl     *connect.Client[v1.GetCalendarFeedUrlRequest, v1.GetCalendarFeedUrlResponse]
+	regenerateCalendarFeed *connect.Client[v1.RegenerateCalendarFeedRequest, v1.RegenerateCalendarFeedResponse]
+	revokeCalendarFeed     *connect.Client[v1.RevokeCalendarFeedRequest, v1.RevokeCalendarFeedResponse]
+	createCategory         *connect.Client[v1.CreateCategoryRequest, v1.CreateCategoryResponse]
+	getCategory            *connect.Client[v1.GetCategoryRequest, v1.GetCategoryResponse]
+	updateCategory         *connect.Client[v1.UpdateCategoryRequest, v1.UpdateCategoryResponse]
+	deleteCategory         *connect.Client[v1.DeleteCategoryRequest, v1.DeleteCategoryResponse]
+	listCategories         *connect.Client[v1.ListCategoriesRequest, v1.ListCategoriesResponse]
+	updateAttendeeStatus   *connect.Client[v1.UpdateAttendeeStatusRequest, v1.UpdateAttendeeStatusResponse]
+	addAttendees           *connect.Client[v1.AddAttendeesRequest, v1.AddAttendeesResponse]
+	updateAttendeeRole     *connect.Client[v1.UpdateAttendeeRoleRequest, v1.UpdateAttendeeRoleResponse]
+	removeAttendees        *connect.Client[v1.RemoveAttendeesRequest, v1.RemoveAttendeesResponse]
+	getFreeBusy            *connect.Client[v1.GetFreeBusyRequest, v1.GetFreeBusyResponse]
+	suggestMeetingTimes    *connect.Client[v1.SuggestMeetingTimesRequest, v1.SuggestMeetingTimesResponse]
+	listEventActivities    *connect.Client[v1.ListEventActivitiesRequest, v1.ListEventActivitiesResponse]
+	createEventTemplate    *connect.Client[v1.CreateEventTemplateRequest, v1.CreateEventTemplateResponse]
+	getEventTemplate       *connect.Client[v1.GetEventTemplateRequest, v1.GetEventTemplateResponse]
+	updateEventTemplate    *connect.Client[v1.UpdateEventTemplateRequest, v1.UpdateEventTemplateResponse]
+	deleteEventTemplate    *connect.Client[v1.DeleteEventTemplateRequest, v1.DeleteEventTemplateResponse]
+	listEventTemplates     *connect.Client[v1.ListEventTemplatesRequest, v1.ListEventTemplatesResponse]
 }
 
 // CreateEvent calls cal.v1.CalendarService.CreateEvent.
@@ -363,6 +447,41 @@ func (c *calendarServiceClient) ListEvents(ctx context.Context, req *connect.Req
 // GetEventsInRange calls cal.v1.CalendarService.GetEventsInRange.
 func (c *calendarServiceClient) GetEventsInRange(ctx context.Context, req *connect.Request[v1.GetEventsInRangeRequest]) (*connect.Response[v1.GetEventsInRangeResponse], error) {
 	return c.getEventsInRange.CallUnary(ctx, req)
+}
+
+// ExportEvent calls cal.v1.CalendarService.ExportEvent.
+func (c *calendarServiceClient) ExportEvent(ctx context.Context, req *connect.Request[v1.ExportEventRequest]) (*connect.Response[v1.ExportEventResponse], error) {
+	return c.exportEvent.CallUnary(ctx, req)
+}
+
+// ExportCalendar calls cal.v1.CalendarService.ExportCalendar.
+func (c *calendarServiceClient) ExportCalendar(ctx context.Context, req *connect.Request[v1.ExportCalendarRequest]) (*connect.Response[v1.ExportCalendarResponse], error) {
+	return c.exportCalendar.CallUnary(ctx, req)
+}
+
+// PreviewCalendarImport calls cal.v1.CalendarService.PreviewCalendarImport.
+func (c *calendarServiceClient) PreviewCalendarImport(ctx context.Context, req *connect.Request[v1.PreviewCalendarImportRequest]) (*connect.Response[v1.PreviewCalendarImportResponse], error) {
+	return c.previewCalendarImport.CallUnary(ctx, req)
+}
+
+// ApplyCalendarImport calls cal.v1.CalendarService.ApplyCalendarImport.
+func (c *calendarServiceClient) ApplyCalendarImport(ctx context.Context, req *connect.Request[v1.ApplyCalendarImportRequest]) (*connect.Response[v1.ApplyCalendarImportResponse], error) {
+	return c.applyCalendarImport.CallUnary(ctx, req)
+}
+
+// GetCalendarFeedUrl calls cal.v1.CalendarService.GetCalendarFeedUrl.
+func (c *calendarServiceClient) GetCalendarFeedUrl(ctx context.Context, req *connect.Request[v1.GetCalendarFeedUrlRequest]) (*connect.Response[v1.GetCalendarFeedUrlResponse], error) {
+	return c.getCalendarFeedUrl.CallUnary(ctx, req)
+}
+
+// RegenerateCalendarFeed calls cal.v1.CalendarService.RegenerateCalendarFeed.
+func (c *calendarServiceClient) RegenerateCalendarFeed(ctx context.Context, req *connect.Request[v1.RegenerateCalendarFeedRequest]) (*connect.Response[v1.RegenerateCalendarFeedResponse], error) {
+	return c.regenerateCalendarFeed.CallUnary(ctx, req)
+}
+
+// RevokeCalendarFeed calls cal.v1.CalendarService.RevokeCalendarFeed.
+func (c *calendarServiceClient) RevokeCalendarFeed(ctx context.Context, req *connect.Request[v1.RevokeCalendarFeedRequest]) (*connect.Response[v1.RevokeCalendarFeedResponse], error) {
+	return c.revokeCalendarFeed.CallUnary(ctx, req)
 }
 
 // CreateCategory calls cal.v1.CalendarService.CreateCategory.
@@ -464,6 +583,20 @@ type CalendarServiceHandler interface {
 	ListEvents(context.Context, *connect.Request[v1.ListEventsRequest]) (*connect.Response[v1.ListEventsResponse], error)
 	// Get events for a specific date range (optimized for calendar views)
 	GetEventsInRange(context.Context, *connect.Request[v1.GetEventsInRangeRequest]) (*connect.Response[v1.GetEventsInRangeResponse], error)
+	// Export one event, with its whole series, as an iCalendar document
+	ExportEvent(context.Context, *connect.Request[v1.ExportEventRequest]) (*connect.Response[v1.ExportEventResponse], error)
+	// Export every accessible event on a calendar as an iCalendar document
+	ExportCalendar(context.Context, *connect.Request[v1.ExportCalendarRequest]) (*connect.Response[v1.ExportCalendarResponse], error)
+	// Read an iCalendar document and report what importing it would do
+	PreviewCalendarImport(context.Context, *connect.Request[v1.PreviewCalendarImportRequest]) (*connect.Response[v1.PreviewCalendarImportResponse], error)
+	// Import an iCalendar document into a calendar
+	ApplyCalendarImport(context.Context, *connect.Request[v1.ApplyCalendarImportRequest]) (*connect.Response[v1.ApplyCalendarImportResponse], error)
+	// Read the caller's own subscribe URL for a calendar, if one has been minted
+	GetCalendarFeedUrl(context.Context, *connect.Request[v1.GetCalendarFeedUrlRequest]) (*connect.Response[v1.GetCalendarFeedUrlResponse], error)
+	// Mint a subscribe URL, retiring any the caller already holds for this calendar
+	RegenerateCalendarFeed(context.Context, *connect.Request[v1.RegenerateCalendarFeedRequest]) (*connect.Response[v1.RegenerateCalendarFeedResponse], error)
+	// Stop the caller's subscribe URL for a calendar
+	RevokeCalendarFeed(context.Context, *connect.Request[v1.RevokeCalendarFeedRequest]) (*connect.Response[v1.RevokeCalendarFeedResponse], error)
 	// Create a new category
 	CreateCategory(context.Context, *connect.Request[v1.CreateCategoryRequest]) (*connect.Response[v1.CreateCategoryResponse], error)
 	// Get a category by ID
@@ -543,6 +676,48 @@ func NewCalendarServiceHandler(svc CalendarServiceHandler, opts ...connect.Handl
 		CalendarServiceGetEventsInRangeProcedure,
 		svc.GetEventsInRange,
 		connect.WithSchema(calendarServiceMethods.ByName("GetEventsInRange")),
+		connect.WithHandlerOptions(opts...),
+	)
+	calendarServiceExportEventHandler := connect.NewUnaryHandler(
+		CalendarServiceExportEventProcedure,
+		svc.ExportEvent,
+		connect.WithSchema(calendarServiceMethods.ByName("ExportEvent")),
+		connect.WithHandlerOptions(opts...),
+	)
+	calendarServiceExportCalendarHandler := connect.NewUnaryHandler(
+		CalendarServiceExportCalendarProcedure,
+		svc.ExportCalendar,
+		connect.WithSchema(calendarServiceMethods.ByName("ExportCalendar")),
+		connect.WithHandlerOptions(opts...),
+	)
+	calendarServicePreviewCalendarImportHandler := connect.NewUnaryHandler(
+		CalendarServicePreviewCalendarImportProcedure,
+		svc.PreviewCalendarImport,
+		connect.WithSchema(calendarServiceMethods.ByName("PreviewCalendarImport")),
+		connect.WithHandlerOptions(opts...),
+	)
+	calendarServiceApplyCalendarImportHandler := connect.NewUnaryHandler(
+		CalendarServiceApplyCalendarImportProcedure,
+		svc.ApplyCalendarImport,
+		connect.WithSchema(calendarServiceMethods.ByName("ApplyCalendarImport")),
+		connect.WithHandlerOptions(opts...),
+	)
+	calendarServiceGetCalendarFeedUrlHandler := connect.NewUnaryHandler(
+		CalendarServiceGetCalendarFeedUrlProcedure,
+		svc.GetCalendarFeedUrl,
+		connect.WithSchema(calendarServiceMethods.ByName("GetCalendarFeedUrl")),
+		connect.WithHandlerOptions(opts...),
+	)
+	calendarServiceRegenerateCalendarFeedHandler := connect.NewUnaryHandler(
+		CalendarServiceRegenerateCalendarFeedProcedure,
+		svc.RegenerateCalendarFeed,
+		connect.WithSchema(calendarServiceMethods.ByName("RegenerateCalendarFeed")),
+		connect.WithHandlerOptions(opts...),
+	)
+	calendarServiceRevokeCalendarFeedHandler := connect.NewUnaryHandler(
+		CalendarServiceRevokeCalendarFeedProcedure,
+		svc.RevokeCalendarFeed,
+		connect.WithSchema(calendarServiceMethods.ByName("RevokeCalendarFeed")),
 		connect.WithHandlerOptions(opts...),
 	)
 	calendarServiceCreateCategoryHandler := connect.NewUnaryHandler(
@@ -661,6 +836,20 @@ func NewCalendarServiceHandler(svc CalendarServiceHandler, opts ...connect.Handl
 			calendarServiceListEventsHandler.ServeHTTP(w, r)
 		case CalendarServiceGetEventsInRangeProcedure:
 			calendarServiceGetEventsInRangeHandler.ServeHTTP(w, r)
+		case CalendarServiceExportEventProcedure:
+			calendarServiceExportEventHandler.ServeHTTP(w, r)
+		case CalendarServiceExportCalendarProcedure:
+			calendarServiceExportCalendarHandler.ServeHTTP(w, r)
+		case CalendarServicePreviewCalendarImportProcedure:
+			calendarServicePreviewCalendarImportHandler.ServeHTTP(w, r)
+		case CalendarServiceApplyCalendarImportProcedure:
+			calendarServiceApplyCalendarImportHandler.ServeHTTP(w, r)
+		case CalendarServiceGetCalendarFeedUrlProcedure:
+			calendarServiceGetCalendarFeedUrlHandler.ServeHTTP(w, r)
+		case CalendarServiceRegenerateCalendarFeedProcedure:
+			calendarServiceRegenerateCalendarFeedHandler.ServeHTTP(w, r)
+		case CalendarServiceRevokeCalendarFeedProcedure:
+			calendarServiceRevokeCalendarFeedHandler.ServeHTTP(w, r)
 		case CalendarServiceCreateCategoryProcedure:
 			calendarServiceCreateCategoryHandler.ServeHTTP(w, r)
 		case CalendarServiceGetCategoryProcedure:
@@ -726,6 +915,34 @@ func (UnimplementedCalendarServiceHandler) ListEvents(context.Context, *connect.
 
 func (UnimplementedCalendarServiceHandler) GetEventsInRange(context.Context, *connect.Request[v1.GetEventsInRangeRequest]) (*connect.Response[v1.GetEventsInRangeResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("cal.v1.CalendarService.GetEventsInRange is not implemented"))
+}
+
+func (UnimplementedCalendarServiceHandler) ExportEvent(context.Context, *connect.Request[v1.ExportEventRequest]) (*connect.Response[v1.ExportEventResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("cal.v1.CalendarService.ExportEvent is not implemented"))
+}
+
+func (UnimplementedCalendarServiceHandler) ExportCalendar(context.Context, *connect.Request[v1.ExportCalendarRequest]) (*connect.Response[v1.ExportCalendarResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("cal.v1.CalendarService.ExportCalendar is not implemented"))
+}
+
+func (UnimplementedCalendarServiceHandler) PreviewCalendarImport(context.Context, *connect.Request[v1.PreviewCalendarImportRequest]) (*connect.Response[v1.PreviewCalendarImportResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("cal.v1.CalendarService.PreviewCalendarImport is not implemented"))
+}
+
+func (UnimplementedCalendarServiceHandler) ApplyCalendarImport(context.Context, *connect.Request[v1.ApplyCalendarImportRequest]) (*connect.Response[v1.ApplyCalendarImportResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("cal.v1.CalendarService.ApplyCalendarImport is not implemented"))
+}
+
+func (UnimplementedCalendarServiceHandler) GetCalendarFeedUrl(context.Context, *connect.Request[v1.GetCalendarFeedUrlRequest]) (*connect.Response[v1.GetCalendarFeedUrlResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("cal.v1.CalendarService.GetCalendarFeedUrl is not implemented"))
+}
+
+func (UnimplementedCalendarServiceHandler) RegenerateCalendarFeed(context.Context, *connect.Request[v1.RegenerateCalendarFeedRequest]) (*connect.Response[v1.RegenerateCalendarFeedResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("cal.v1.CalendarService.RegenerateCalendarFeed is not implemented"))
+}
+
+func (UnimplementedCalendarServiceHandler) RevokeCalendarFeed(context.Context, *connect.Request[v1.RevokeCalendarFeedRequest]) (*connect.Response[v1.RevokeCalendarFeedResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("cal.v1.CalendarService.RevokeCalendarFeed is not implemented"))
 }
 
 func (UnimplementedCalendarServiceHandler) CreateCategory(context.Context, *connect.Request[v1.CreateCategoryRequest]) (*connect.Response[v1.CreateCategoryResponse], error) {

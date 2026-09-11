@@ -131,6 +131,29 @@ service CalendarService {
   // Get events for a specific date range (optimized for calendar views)
   rpc GetEventsInRange(GetEventsInRangeRequest) returns (GetEventsInRangeResponse) {}
 
+  // === Interop Operations ===
+
+  // Export one event, with its whole series, as an iCalendar document
+  rpc ExportEvent(ExportEventRequest) returns (ExportEventResponse) {}
+
+  // Export every accessible event on a calendar as an iCalendar document
+  rpc ExportCalendar(ExportCalendarRequest) returns (ExportCalendarResponse) {}
+
+  // Read an iCalendar document and report what importing it would do
+  rpc PreviewCalendarImport(PreviewCalendarImportRequest) returns (PreviewCalendarImportResponse) {}
+
+  // Import an iCalendar document into a calendar
+  rpc ApplyCalendarImport(ApplyCalendarImportRequest) returns (ApplyCalendarImportResponse) {}
+
+  // Read the caller's own subscribe URL for a calendar, if one has been minted
+  rpc GetCalendarFeedUrl(GetCalendarFeedUrlRequest) returns (GetCalendarFeedUrlResponse) {}
+
+  // Mint a subscribe URL, retiring any the caller already holds for this calendar
+  rpc RegenerateCalendarFeed(RegenerateCalendarFeedRequest) returns (RegenerateCalendarFeedResponse) {}
+
+  // Stop the caller's subscribe URL for a calendar
+  rpc RevokeCalendarFeed(RevokeCalendarFeedRequest) returns (RevokeCalendarFeedResponse) {}
+
   // === Category Operations ===
 
   // Create a new category
@@ -940,4 +963,148 @@ message MeetingTimeSuggestion {
 
 message SuggestMeetingTimesResponse {
   repeated MeetingTimeSuggestion suggestions = 1;
+}
+
+// Request to export a single event
+message ExportEventRequest {
+  // Event ID; an occurrence id exports the series it belongs to
+  string event_id = 1;
+  // Organization ID
+  string organization_id = 2;
+}
+
+// An iCalendar document ready to be written to a file
+message ExportEventResponse {
+  // The iCalendar document itself
+  bytes content = 1;
+  // Suggested filename, extension included
+  string filename = 2;
+}
+
+// Request to export a whole calendar
+message ExportCalendarRequest {
+  // Organization ID
+  string organization_id = 1;
+  // Calendar ID
+  string calendar_id = 2;
+  // Only events ending at or after this instant; omit for the whole calendar
+  optional google.protobuf.Timestamp start_time = 3;
+  // Only events starting at or before this instant
+  optional google.protobuf.Timestamp end_time = 4;
+}
+
+// An iCalendar document ready to be written to a file
+message ExportCalendarResponse {
+  // The iCalendar document itself
+  bytes content = 1;
+  // Suggested filename, extension included
+  string filename = 2;
+  // How many events the document carries
+  int32 event_count = 3;
+}
+
+// An entry the file describes that is not already on the calendar
+message ImportedEventPreview {
+  string title = 1;
+  google.protobuf.Timestamp start_time = 2;
+  google.protobuf.Timestamp end_time = 3;
+  bool is_all_day = 4;
+  // Whether the entry repeats
+  bool repeats = 5;
+}
+
+// An entry that could not be imported, and why
+message SkippedImportEntry {
+  // The entry's own title, or a placeholder when it states none
+  string label = 1;
+  // Human-readable explanation, safe to show the importer
+  string reason = 2;
+}
+
+// Request to read a file without importing it
+message PreviewCalendarImportRequest {
+  // Organization ID
+  string organization_id = 1;
+  // Calendar the entries would be created on
+  string calendar_id = 2;
+  // The iCalendar document
+  bytes content = 3;
+}
+
+// What importing the supplied document would do
+message PreviewCalendarImportResponse {
+  // Entries that would be created
+  repeated ImportedEventPreview creatable = 1;
+  // Entries already on this calendar, which a second import would not duplicate
+  int32 duplicate_count = 2;
+  // Entries that cannot be imported, each with its reason
+  repeated SkippedImportEntry skipped = 3;
+}
+
+// Request to import a file
+message ApplyCalendarImportRequest {
+  // Organization ID
+  string organization_id = 1;
+  // Calendar to create the entries on
+  string calendar_id = 2;
+  // The iCalendar document
+  bytes content = 3;
+}
+
+// The result of an import
+message ApplyCalendarImportResponse {
+  // How many events were created
+  int32 created_count = 1;
+  // How many entries were already present and therefore left alone
+  int32 duplicate_count = 2;
+  // Entries that could not be imported, each with its reason
+  repeated SkippedImportEntry skipped = 3;
+}
+
+// Request for the caller's own subscribe URL
+message GetCalendarFeedUrlRequest {
+  // Organization ID
+  string organization_id = 1;
+  // Calendar the feed reads from
+  string calendar_id = 2;
+}
+
+// A subscribe URL, or nothing when none has been minted
+message GetCalendarFeedUrlResponse {
+  // The URL a calendar client subscribes to; empty when no feed exists
+  string url = 1;
+  // When the current URL was minted
+  optional google.protobuf.Timestamp created_at = 2;
+  // Last time a client fetched it, absent when it never has
+  optional google.protobuf.Timestamp last_used_at = 3;
+}
+
+// Request to mint a fresh subscribe URL
+message RegenerateCalendarFeedRequest {
+  // Organization ID
+  string organization_id = 1;
+  // Calendar the feed reads from
+  string calendar_id = 2;
+}
+
+// The newly minted URL; every URL previously issued for this calendar stops working
+message RegenerateCalendarFeedResponse {
+  // The URL a calendar client subscribes to
+  string url = 1;
+  // When it was minted
+  google.protobuf.Timestamp created_at = 2;
+}
+
+// Request to stop the caller's subscribe URL
+message RevokeCalendarFeedRequest {
+  // Organization ID
+  string organization_id = 1;
+  // Calendar the feed reads from
+  string calendar_id = 2;
+}
+
+// Whether a feed was there to stop
+message RevokeCalendarFeedResponse {
+  // False when the caller had no feed for this calendar
+  bool revoked = 1;
 }
