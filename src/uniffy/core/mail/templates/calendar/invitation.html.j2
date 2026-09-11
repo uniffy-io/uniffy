@@ -1,0 +1,33 @@
+{% extends "base.html.j2" %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<p style="margin:0 0 8px 0;font-size:13px;color:#6b7280;">{{ organization_name }}</p>
+<p style="margin:0 0 4px 0;font-size:18px;font-weight:600;color:#111111;">{{ title }}</p>
+{% if organizer_name %}<p style="margin:0 0 20px 0;color:#4b5563;">Invited by {{ organizer_name }}</p>{% endif %}
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:0 0 24px 0;font-size:15px;">
+  <tr>
+    <td style="padding:0 16px 8px 0;color:#6b7280;vertical-align:top;">When</td>
+    <td style="padding:0 0 8px 0;">{{ when }}{% if recurrence %}<br><span style="color:#6b7280;font-size:13px;">{{ recurrence }}</span>{% endif %}</td>
+  </tr>
+  {% if location %}<tr>
+    <td style="padding:0 16px 8px 0;color:#6b7280;vertical-align:top;">Where</td>
+    <td style="padding:0 0 8px 0;">{{ location }}</td>
+  </tr>{% endif %}
+  {% if attendee_summary %}<tr>
+    <td style="padding:0 16px 8px 0;color:#6b7280;vertical-align:top;">Who</td>
+    <td style="padding:0 0 8px 0;">{{ attendee_summary }}</td>
+  </tr>{% endif %}
+</table>
+{% if join_url %}<p style="margin:0 0 24px 0;">
+  <a href="{{ join_url }}" style="display:inline-block;background-color:#111111;color:#ffffff;text-decoration:none;font-weight:600;padding:12px 20px;border-radius:6px;">Join the meeting</a>
+</p>{% endif %}
+{% if description %}<p style="margin:0 0 24px 0;white-space:pre-wrap;">{{ description }}</p>{% endif %}
+{% if respond_accept_url %}<p style="margin:0 0 8px 0;color:#6b7280;font-size:13px;">Can you make it?</p>
+<p style="margin:0 0 24px 0;">
+  <a href="{{ respond_accept_url }}" style="display:inline-block;border:1px solid #d1d5db;border-radius:6px;padding:8px 14px;margin-right:8px;color:#111111;text-decoration:none;">Yes</a>
+  <a href="{{ respond_tentative_url }}" style="display:inline-block;border:1px solid #d1d5db;border-radius:6px;padding:8px 14px;margin-right:8px;color:#111111;text-decoration:none;">Maybe</a>
+  <a href="{{ respond_decline_url }}" style="display:inline-block;border:1px solid #d1d5db;border-radius:6px;padding:8px 14px;color:#111111;text-decoration:none;">No</a>
+</p>{% endif %}
+<p style="margin:0 0 16px 0;"><a href="{{ action_url }}" style="color:#4f46e5;">Open in Uniffy</a></p>
+<p style="margin:0;font-size:12px;color:#6b7280;">Times are shown in {{ timezone_label }}. You can turn event email off in <a href="{{ preferences_url }}" style="color:#4f46e5;">notification preferences</a>.</p>
+{% endblock %}

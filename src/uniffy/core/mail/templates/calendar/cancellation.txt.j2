@@ -1,0 +1,16 @@
+{% extends "base.txt.j2" %}
+{% block content %}
+{{ organization_name }}
+
+{{ title }}
+{% if occurrence_only %}This occurrence has been cancelled{% else %}This meeting has been cancelled{% endif %}{% if organizer_name %} by {{ organizer_name }}{% endif %}.
+
+Was:   {{ when }}
+
+Open in Uniffy:
+  {{ action_url }}
+
+Times are shown in {{ timezone_label }}.
+Notification preferences:
+  {{ preferences_url }}
+{% endblock %}
