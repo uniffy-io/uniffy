@@ -553,6 +553,21 @@ class TestContext:
 
         assert set(context) == set(FULL_CONTEXT)
 
+    def test_the_action_link_is_a_route_the_app_serves(self) -> None:
+        """The app routes /calendar/:eventId; a link the router does not match
+        renders the 404 page, and mail is the one surface nobody can fix after
+        it has been sent."""
+        event = _event()
+
+        context = build_context(
+            event,
+            organization_name="Acme",
+            organizer_name="Ada",
+            recipient_timezone="UTC",
+        )
+
+        assert context["action_url"].endswith(f"/calendar/{event.id}")
+
     def test_times_render_in_the_recipients_zone(self) -> None:
         context = build_context(
             _event(),

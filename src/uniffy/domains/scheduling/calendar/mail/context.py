@@ -53,7 +53,8 @@ def base_url() -> str:
 
 
 def event_url(event_id) -> str:
-    return f"{base_url()}/calendar/event/{event_id}"
+    """The calendar deep link the app routes; `/calendar/event/...` is not one."""
+    return f"{base_url()}/calendar/{event_id}"
 
 
 def preferences_url() -> str:
