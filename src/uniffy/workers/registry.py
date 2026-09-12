@@ -212,8 +212,12 @@ from uniffy.domains.scheduling.calendar.jobs.contracts import (
     CALENDAR_SCHEDULED_JOB_REFS,
     CHECK_CALENDAR_REMINDERS_SCHEDULE,
     DISPATCH_EVENT_MAIL_SCHEDULE,
+    SEND_EVENT_MAIL,
 )
-from uniffy.domains.scheduling.calendar.jobs.event_mail import dispatch_calendar_event_mail
+from uniffy.domains.scheduling.calendar.jobs.event_mail import (
+    dispatch_calendar_event_mail,
+    send_calendar_event_mail,
+)
 from uniffy.domains.scheduling.calendar.jobs.jobs import check_calendar_reminders
 from uniffy.domains.search.jobs.contracts import (
     FLUSH_SEARCH_REMOVALS,
@@ -274,6 +278,7 @@ CORE_JOB_REGISTRATIONS = (
     _bind(SEND_NOTIFICATION_EMAIL, send_notification_email),
     _bind(SEND_NOTIFICATION_DIGEST, send_notification_digest),
     _bind(DISPATCH_NOTIFICATION_EMAILS, dispatch_notification_emails),
+    _bind(SEND_EVENT_MAIL, send_calendar_event_mail),
     _bind(REINDEX_TAG_URNS, reindex_tag_urns),
     _bind(REINDEX_TAG_DOC, reindex_tag_doc),
     _bind(

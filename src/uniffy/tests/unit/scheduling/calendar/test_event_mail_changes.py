@@ -7,8 +7,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from uniffy.core.models.calendar.event import CalendarEvent
-from uniffy.core.models.calendar.mail_delivery import CalendarMailKind
 from uniffy.core.types import AccessMode, generate_id
+from uniffy.domains.scheduling.calendar.mail.outbox import CalendarMailKind
 from uniffy.domains.scheduling.calendar.mail.staging import (
     CHANGE_LABELS,
     MAIL_TRIGGERING_ACTIONS,
@@ -101,20 +101,31 @@ class TestDescribingChanges:
 
 
 class TestStaging:
+    @staticmethod
+    def _staged():
+        return patch(
+            "uniffy.domains.scheduling.calendar.mail.staging.stage_event_mail",
+            AsyncMock(return_value=1),
+        )
+
     async def test_change_mail_goes_to_everyone_already_invited(self) -> None:
         event = _event()
         attendees = [generate_id(), generate_id()]
         session = _session([*attendees, ACTOR])
 
-        staged = await stage_change_mail(session, event, actor_id=ACTOR)
+        with self._staged() as staged:
+            await stage_change_mail(session, event, actor_id=ACTOR, actions=set())
 
-        assert staged == 2
+        assert sorted(staged.await_args.kwargs["recipient_ids"]) == sorted(attendees)
 
     async def test_the_editor_is_not_told_about_their_own_edit(self) -> None:
         event = _event()
         session = _session([ACTOR])
 
-        assert await stage_change_mail(session, event, actor_id=ACTOR) == 0
+        with self._staged() as staged:
+            await stage_change_mail(session, event, actor_id=ACTOR, actions=set())
+
+        assert staged.await_args.kwargs["recipient_ids"] == []
 
     async def test_somebody_invited_by_the_same_edit_gets_only_the_invitation(self) -> None:
         """They receive the new time in the invitation; a change notice as well
@@ -124,33 +135,51 @@ class TestStaging:
         existing = generate_id()
         session = _session([existing, invited_now])
 
-        staged = await stage_change_mail(
-            session, event, actor_id=ACTOR, exclude={invited_now}
-        )
+        with self._staged() as staged:
+            await stage_change_mail(
+                session, event, actor_id=ACTOR, actions=set(), exclude={invited_now}
+            )
 
-        assert staged == 1
+        assert staged.await_args.kwargs["recipient_ids"] == [existing]
+
+    async def test_only_the_actions_that_warrant_a_message_travel(self) -> None:
+        """The row carries what changed, so a burst of edits still describes
+        every aspect that moved without re-reading the activity log."""
+        event = _event()
+        session = _session([generate_id()])
+
+        with self._staged() as staged:
+            await stage_change_mail(
+                session,
+                event,
+                actor_id=ACTOR,
+                actions={"schedule_changed", "title_changed"},
+            )
+
+        assert staged.await_args.kwargs["changes"] == ["schedule_changed"]
 
     async def test_cancellation_goes_to_every_attendee(self) -> None:
         event = _event()
-        session = _session([generate_id(), generate_id(), ACTOR])
+        attendees = [generate_id(), generate_id()]
+        session = _session([*attendees, ACTOR])
 
-        assert await stage_cancellation_mail(session, event, actor_id=ACTOR) == 2
+        with self._staged() as staged:
+            await stage_cancellation_mail(session, event, actor_id=ACTOR)
+
+        assert sorted(staged.await_args.kwargs["recipient_ids"]) == sorted(attendees)
 
     async def test_an_event_nobody_else_is_on_stages_nothing(self) -> None:
         event = _event()
         session = _session([])
 
         assert await stage_cancellation_mail(session, event, actor_id=ACTOR) == 0
-        assert await stage_change_mail(session, event, actor_id=ACTOR) == 0
+        assert await stage_change_mail(session, event, actor_id=ACTOR, actions=set()) == 0
 
     async def test_cancelling_one_occurrence_records_which_one(self) -> None:
         event = _event()
         session = _session([generate_id()])
 
-        with patch(
-            "uniffy.domains.scheduling.calendar.mail.staging.stage_event_mail",
-            AsyncMock(return_value=1),
-        ) as staged:
+        with self._staged() as staged:
             await stage_cancellation_mail(
                 session, event, actor_id=ACTOR, occurrence_date=date(2026, 3, 25)
             )
@@ -158,14 +187,23 @@ class TestStaging:
         assert staged.await_args.kwargs["occurrence_date"] == date(2026, 3, 25)
         assert staged.await_args.kwargs["kind"] is CalendarMailKind.CANCELLATION
 
+    async def test_withdrawing_a_meeting_advances_its_revision(self) -> None:
+        """A client that already holds the meeting ignores a cancellation whose
+        sequence has not moved."""
+        event = _event()
+        event.ical_sequence = 2
+        session = _session([generate_id()])
+
+        with self._staged():
+            await stage_cancellation_mail(session, event, actor_id=ACTOR)
+
+        assert event.ical_sequence == 3  # noqa: PLR2004
+
     async def test_cancelling_a_series_records_no_occurrence(self) -> None:
         event = _event()
         session = _session([generate_id()])
 
-        with patch(
-            "uniffy.domains.scheduling.calendar.mail.staging.stage_event_mail",
-            AsyncMock(return_value=1),
-        ) as staged:
+        with self._staged() as staged:
             await stage_cancellation_mail(session, event, actor_id=ACTOR)
 
         assert staged.await_args.kwargs["occurrence_date"] is None
@@ -175,10 +213,7 @@ class TestStaging:
         event = _event()
         session = _session([generate_id()])
 
-        with patch(
-            "uniffy.domains.scheduling.calendar.mail.staging.stage_event_mail",
-            AsyncMock(return_value=1),
-        ) as staged:
-            await stage_change_mail(session, event, actor_id=ACTOR)
+        with self._staged() as staged:
+            await stage_change_mail(session, event, actor_id=ACTOR, actions=set())
 
         assert staged.await_args.kwargs["kind"] is CalendarMailKind.CHANGE

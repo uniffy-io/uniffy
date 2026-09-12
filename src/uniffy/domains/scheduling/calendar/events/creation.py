@@ -18,7 +18,6 @@ from uniffy.core.events import (
 from uniffy.core.events.realtime import ContentAccessAction
 from uniffy.core.models.calendar.attendee import EventAttendee
 from uniffy.core.models.calendar.event import CalendarEvent
-from uniffy.core.models.calendar.mail_delivery import CalendarMailKind
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import (
     AccessMode,
@@ -32,7 +31,7 @@ from uniffy.core.types import (
     RecurrencePattern,
 )
 from uniffy.domains.scheduling.calendar.events.state import _StagedCalendarEventCreate
-from uniffy.domains.scheduling.calendar.mail.outbox import stage_event_mail
+from uniffy.domains.scheduling.calendar.mail.outbox import CalendarMailKind, stage_event_mail
 from uniffy.domains.scheduling.calendar.queries import require_own_calendar
 from uniffy.domains.scheduling.rooms.events import EventBookingOperations
 from uniffy.domains.settings.operations import get_user_reminder_defaults
@@ -199,6 +198,7 @@ class EventCreateOperations:
                 self.session,
                 organization_id=organization_id,
                 event_id=event.id,
+                title=event.title,
                 recipient_ids=[aid for aid in attendee_ids or [] if aid != user_id],
                 kind=CalendarMailKind.INVITATION,
                 actor_user_id=user_id,

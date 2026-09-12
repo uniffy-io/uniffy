@@ -5,7 +5,7 @@ from enum import StrEnum
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import Column, DateTime, Index, String, Text, UniqueConstraint
+from sqlalchemy import Column, DateTime, Index, String, Text, UniqueConstraint, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, SQLModel
 
@@ -19,6 +19,13 @@ class NotificationEmailStatus(StrEnum):
     SUPPRESSED = "suppressed"
     SKIPPED = "skipped"
     FAILED = "failed"
+
+
+class EmailComposer(StrEnum):
+    """Which owner renders and sends the row; the lifecycle around it is shared."""
+
+    NOTIFICATION = "notification"
+    CALENDAR = "calendar"
 
 
 class NotificationEmailDelivery(SQLModel, table=True):
@@ -42,6 +49,14 @@ class NotificationEmailDelivery(SQLModel, table=True):
             "user_id",
             "frequency",
             "scheduled_for",
+        ),
+        # A burst of edits about the same subject collapses onto the message
+        # still waiting to go out, rather than filling an inbox.
+        Index(
+            "uq_notification_email_deliveries_coalesce",
+            "coalesce_key",
+            unique=True,
+            postgresql_where=text("coalesce_key IS NOT NULL AND status = 'pending'"),
         ),
     )
 
@@ -76,6 +91,15 @@ class NotificationEmailDelivery(SQLModel, table=True):
         sa_column=Column(JSONB, nullable=True),
     )
     frequency: str = Field(max_length=16, nullable=False)
+    composer: EmailComposer = Field(
+        default=EmailComposer.NOTIFICATION,
+        sa_column=Column(
+            String(20),
+            nullable=False,
+            server_default=EmailComposer.NOTIFICATION.value,
+        ),
+    )
+    coalesce_key: str | None = Field(default=None, max_length=200)
     status: NotificationEmailStatus = Field(
         default=NotificationEmailStatus.PENDING,
         sa_column=Column(String(20), nullable=False),

@@ -19,7 +19,6 @@ from uniffy.core.events import (
 from uniffy.core.events.realtime import ContentAccessAction
 from uniffy.core.models.calendar.attendee import EventAttendee
 from uniffy.core.models.calendar.event import CalendarEvent
-from uniffy.core.models.calendar.mail_delivery import CalendarMailKind
 from uniffy.core.models.login.group import Group
 from uniffy.core.models.login.group_member import GroupMember
 from uniffy.core.models.login.organization import Organization
@@ -37,7 +36,11 @@ from uniffy.core.types import (
 )
 from uniffy.domains.chat.lifecycle import ChannelCallLifecycle
 from uniffy.domains.chat.rooms import RoomMembership, StagedRoomMembershipSync
-from uniffy.domains.scheduling.calendar.mail.outbox import stage_event_mail
+from uniffy.domains.scheduling.calendar.mail.outbox import (
+    CalendarMailKind,
+    retire_pending_event_mail,
+    stage_event_mail,
+)
 
 logger = logger.bind(component="scheduling.calendar.events.attendees")
 
@@ -116,6 +119,7 @@ class AttendeeOperations:
             self.session,
             organization_id=organization_id,
             event_id=event.id,
+            title=event.title,
             recipient_ids=added_ids,
             kind=CalendarMailKind.INVITATION,
             actor_user_id=user_id,
@@ -244,6 +248,9 @@ class AttendeeOperations:
             removed=removed_ids,
             call_lifecycle=call_lifecycle,
         )
+
+        # A message not yet sent must not reach somebody just uninvited.
+        await retire_pending_event_mail(self.session, event_id, removed_ids, datetime.now(UTC))
 
         await self.session.commit()
         await self.session.refresh(event)

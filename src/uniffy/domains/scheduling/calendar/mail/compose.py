@@ -3,22 +3,16 @@
 from dataclasses import dataclass, field
 from uuid import UUID
 
-from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.auth.tokens import create_event_response_token
-from uniffy.core.mail import MailSender
+from uniffy.core.mail import MailResult, MailSender
 from uniffy.core.mail.parts import CalendarMethod, CalendarPart, MailAttachment
 from uniffy.core.models.calendar.attendee import EventAttendee
 from uniffy.core.models.calendar.event import CalendarEvent
-from uniffy.core.models.calendar.mail_delivery import (
-    CalendarMailDelivery,
-    CalendarMailKind,
-)
-from uniffy.core.models.login.organization import Organization
 from uniffy.core.models.login.user import User
-from uniffy.core.types import NotificationType
+from uniffy.domains.notifications.delivery.outbox import RecipientContext
 from uniffy.domains.notifications.delivery.timing import resolve_timezone
 from uniffy.domains.scheduling.calendar.ical.assemble import build_exports
 from uniffy.domains.scheduling.calendar.ical.emit import EventExport, serialize_events
@@ -27,9 +21,8 @@ from uniffy.domains.scheduling.calendar.mail.context import (
     build_context,
     respond_links,
 )
-from uniffy.domains.settings.defaults import wants_transactional_email
-
-logger = logger.bind(component="scheduling.calendar.mail.compose")
+from uniffy.domains.scheduling.calendar.mail.outbox import CalendarMailKind, EventMailRequest
+from uniffy.domains.scheduling.calendar.mail.staging import describe_changes
 
 ATTACHMENT_FILENAME = "invite.ics"
 
@@ -46,22 +39,14 @@ _METHODS: dict[CalendarMailKind, CalendarMethod] = {
     CalendarMailKind.CANCELLATION: CalendarMethod.CANCEL,
 }
 
-# There is no CALENDAR_CHANGED notification type, and a member who wants
-# invitations wants the updates to them, so changes follow the invite toggle.
-_PREFERENCES: dict[CalendarMailKind, NotificationType] = {
-    CalendarMailKind.INVITATION: NotificationType.CALENDAR_INVITE,
-    CalendarMailKind.CHANGE: NotificationType.CALENDAR_INVITE,
-    CalendarMailKind.CANCELLATION: NotificationType.CALENDAR_CANCELLED,
-}
-
 
 @dataclass
 class EventMailBundle:
     """Everything shared by every recipient of one event's mail."""
 
     event: CalendarEvent
-    organization: Organization
     organizer_name: str
+    attendee_ids: set[UUID] = field(default_factory=set)
     attendee_names: list[str] = field(default_factory=list)
     exports: list[EventExport] = field(default_factory=list)
 
@@ -71,14 +56,11 @@ async def load_bundle(session: AsyncSession, event_id: UUID) -> EventMailBundle 
     event = await session.get(CalendarEvent, event_id)
     if event is None:
         return None
-    organization = await session.get(Organization, event.organization_id)
-    if organization is None:
-        return None
 
     organizer = await session.get(User, event.organizer_id)
-    names = (
+    roster = (
         await session.execute(
-            select(User.full_name, User.username, User.email)
+            select(User.id, User.full_name, User.username, User.email)
             .join(EventAttendee, EventAttendee.user_id == User.id)
             .where(EventAttendee.event_id == event_id)
         )
@@ -86,27 +68,39 @@ async def load_bundle(session: AsyncSession, event_id: UUID) -> EventMailBundle 
 
     return EventMailBundle(
         event=event,
-        organization=organization,
         organizer_name=_display_name(organizer),
-        attendee_names=[full or username or email for full, username, email in names],
-        exports=await build_exports(session, [event]),
+        attendee_ids={user_id for user_id, _, _, _ in roster},
+        attendee_names=[full or username or email for _, full, username, email in roster],
+        # The document describes the meeting as its organizer sees it,
+        # which is what everyone on the roster was invited to.
+        exports=await build_exports(
+            session,
+            [event],
+            viewer_id=event.organizer_id,
+            organization_id=event.organization_id,
+        ),
     )
 
 
-def build_message_document(bundle: EventMailBundle, delivery: CalendarMailDelivery) -> bytes:
+def build_message_document(bundle: EventMailBundle, request: EventMailRequest) -> bytes:
     """The iCalendar body for one message.
 
     Withdrawing a single occurrence sends that occurrence alone, carrying a
     RECURRENCE-ID, rather than the series it belongs to.
     """
-    method = _METHODS[delivery.kind]
-    if delivery.occurrence_date is not None:
+    method = _METHODS[request.kind]
+    series = bundle.exports[0] if bundle.exports else None
+    if request.occurrence_date is not None:
+        # A withdrawal names the organizer and everyone it affects, or the
+        # receiving client has nothing to match against its own copy.
         return serialize_events(
             [
                 EventExport(
                     event=bundle.event,
+                    organizer=series.organizer if series else None,
+                    attendees=series.attendees if series else (),
                     sequence=bundle.event.ical_sequence,
-                    occurrence_date=delivery.occurrence_date,
+                    occurrence_date=request.occurrence_date,
                 )
             ],
             method=method.value,
@@ -125,51 +119,36 @@ def build_message_document(bundle: EventMailBundle, delivery: CalendarMailDelive
     return serialize_events(exports, method=method.value)
 
 
-async def send_delivery(
-    session: AsyncSession,
-    delivery: CalendarMailDelivery,
+async def send_event_mail(
+    request: EventMailRequest,
     bundle: EventMailBundle,
+    recipient: RecipientContext,
     *,
     sender: MailSender,
-    overrides_loader,
-    timezone_loader,
-    changes: list[str] | None = None,
-) -> bool:
-    """Send one message, or report that the recipient did not want it.
-
-    Returning False is a settled outcome, not a failure: the row is done.
-    """
-    recipient = await session.get(User, delivery.recipient_user_id)
-    if recipient is None or not recipient.is_active:
-        return False
-
-    overrides = await overrides_loader(session, recipient.id)
-    if not wants_transactional_email(_PREFERENCES[delivery.kind], overrides):
-        return False
-
-    document = build_message_document(bundle, delivery)
+) -> MailResult:
+    """Send one message; the caller owns what its outcome does to the row."""
+    document = build_message_document(bundle, request)
     context = build_context(
         bundle.event,
-        organization_name=bundle.organization.name,
+        organization_name=recipient.organization.name,
         organizer_name=bundle.organizer_name,
-        recipient_timezone=str(resolve_timezone(await timezone_loader(session, recipient.id))),
+        recipient_timezone=str(resolve_timezone(recipient.timezone)),
         attendee_names=bundle.attendee_names,
-        respond=_respond_links_for(delivery, recipient.id),
-        changes=changes or [],
-        occurrence_date=delivery.occurrence_date,
+        respond=_respond_links_for(request),
+        changes=describe_changes(request.changes),
+        occurrence_date=request.occurrence_date,
     )
 
-    await sender.send(
-        recipient_email=recipient.email,
-        template_name=_TEMPLATES[delivery.kind],
+    return await sender.send(
+        recipient_email=recipient.user.email,
+        template_name=_TEMPLATES[request.kind],
         context=context,
-        organization_id=delivery.organization_id,
-        user_id=recipient.id,
-        idempotency_key=f"calendar-mail:{delivery.id}",
-        calendar_part=CalendarPart(document=document, method=_METHODS[delivery.kind]),
+        organization_id=request.organization_id,
+        user_id=request.recipient_id,
+        idempotency_key=f"calendar-mail:{request.delivery_id}",
+        calendar_part=CalendarPart(document=document, method=_METHODS[request.kind]),
         attachments=[MailAttachment(filename=ATTACHMENT_FILENAME, content=document)],
     )
-    return True
 
 
 def _display_name(user: User | None) -> str:
@@ -178,10 +157,10 @@ def _display_name(user: User | None) -> str:
     return user.full_name or user.username or user.email
 
 
-def _respond_links_for(delivery: CalendarMailDelivery, recipient_id) -> RespondLinks:
+def _respond_links_for(request: EventMailRequest) -> RespondLinks:
     """A withdrawn meeting has nothing left to answer."""
-    if delivery.kind is CalendarMailKind.CANCELLATION:
+    if request.kind is CalendarMailKind.CANCELLATION:
         return RespondLinks()
     return respond_links(
-        create_event_response_token(recipient_id, delivery.organization_id, delivery.event_id)
+        create_event_response_token(request.recipient_id, request.organization_id, request.event_id)
     )

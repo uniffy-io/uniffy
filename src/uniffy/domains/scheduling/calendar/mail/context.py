@@ -14,7 +14,10 @@ from zoneinfo import ZoneInfo
 from uniffy.core.content.references import MENTION_PATTERN
 from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.models.shared import DayOfWeek, RecurrencePattern
-from uniffy.domains.scheduling.calendar.recurrence import resolve_event_zone
+from uniffy.domains.scheduling.calendar.recurrence import (
+    occurrence_start_for_date,
+    resolve_event_zone,
+)
 
 _DEFAULT_BASE_URL = "http://localhost:5173"
 _NAMES_SHOWN = 3
@@ -155,12 +158,23 @@ def summarize_attendees(names: Sequence[str]) -> str:
 def _occurrence_start(
     event: CalendarEvent, occurrence_date: date | None, zone: ZoneInfo
 ) -> datetime:
-    local = event.start_time.astimezone(zone)
-    if occurrence_date is None:
-        return local
-    return local.replace(
-        year=occurrence_date.year, month=occurrence_date.month, day=occurrence_date.day
+    """Resolve the occurrence where the meeting lives, then read it where the
+    recipient does.
+
+    Substituting the date after converting to the reader's zone uses their wall
+    clock, which drifts by an hour whenever the two zones cross daylight saving
+    on different days. An all-day event carries a date rather than an instant,
+    so converting it at all would move it to the day before for anyone west of
+    the organizer.
+    """
+    start = (
+        event.start_time
+        if occurrence_date is None
+        else occurrence_start_for_date(event.start_time, event.timezone, occurrence_date)
     )
+    if event.is_all_day:
+        return start.astimezone(resolve_event_zone(event.timezone))
+    return start.astimezone(zone)
 
 
 def _format_when(event: CalendarEvent, start: datetime, zone: ZoneInfo) -> str:

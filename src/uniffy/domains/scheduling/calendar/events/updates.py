@@ -24,7 +24,6 @@ from uniffy.core.events.realtime import ContentAccessAction
 from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.calendar.attendee import EventAttendee
 from uniffy.core.models.calendar.event import CalendarEvent
-from uniffy.core.models.calendar.mail_delivery import CalendarMailKind
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import (
     AttendeeRole,
@@ -39,7 +38,8 @@ from uniffy.core.types import (
 )
 from uniffy.domains.chat.lifecycle import ChannelCallLifecycle
 from uniffy.domains.scheduling.calendar.mail.outbox import (
-    drop_pending_for_recipients,
+    CalendarMailKind,
+    retire_pending_event_mail,
     stage_event_mail,
 )
 from uniffy.domains.scheduling.calendar.mail.staging import (
@@ -349,6 +349,7 @@ class EventUpdateOperations:
             self.events.session,
             organization_id=organization_id,
             event_id=event.id,
+            title=event.title,
             recipient_ids=newly_invited_ids,
             kind=CalendarMailKind.INVITATION,
             actor_user_id=user_id,
@@ -362,12 +363,13 @@ class EventUpdateOperations:
                 self.events.session,
                 event,
                 actor_id=user_id,
+                actions=changed_actions,
                 # Somebody invited by this same edit gets the invitation, which
                 # already states the new time; a change notice as well is noise.
                 exclude=set(newly_invited_ids),
             )
         # A message not yet sent must not reach somebody just uninvited.
-        await drop_pending_for_recipients(
+        await retire_pending_event_mail(
             self.events.session, event.id, removed_attendee_ids, datetime.now(UTC)
         )
 

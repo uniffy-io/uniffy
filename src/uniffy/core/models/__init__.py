@@ -71,6 +71,7 @@ from uniffy.core.models.login.user_session import UserSession
 from uniffy.core.models.mail.suppression import EmailSuppression, EmailSuppressionReason
 from uniffy.core.models.notes.note import Note
 from uniffy.core.models.notifications.email_delivery import (
+    EmailComposer,
     NotificationEmailDelivery,
     NotificationEmailStatus,
 )
@@ -187,6 +188,7 @@ __all__ = [
     "Comment",
     "CommentAnchorType",
     "CommentReaction",
+    "EmailComposer",
     "Notification",
     "NotificationEmailDelivery",
     "NotificationEmailStatus",

@@ -20,6 +20,7 @@ from uniffy.core.mail import (
     MailSuppressedError,
 )
 from uniffy.core.models.notifications.email_delivery import (
+    EmailComposer,
     NotificationEmailDelivery,
     NotificationEmailStatus,
 )
@@ -39,6 +40,7 @@ from uniffy.domains.notifications.delivery.outbox import (
     prepare_email_recipient,
     purge_terminal_email_deliveries,
     release_email_delivery,
+    retry_email_deliveries,
     terminal_email_delivery,
 )
 from uniffy.domains.notifications.delivery.timing import quiet_hours_end_at, resolve_timezone
@@ -56,7 +58,6 @@ logger = logger.bind(component="notifications.jobs.email")
 _DISPATCH_LIMIT = 500
 _DIGEST_RENDER_LIMIT = 50
 _ACTIVE_DEFER = timedelta(minutes=15)
-_MAX_ATTEMPTS = 5
 
 
 class NotificationEmailTemplate(StrEnum):
@@ -83,6 +84,8 @@ async def dispatch_notification_emails(ctx: dict[str, Any]) -> dict[str, Any]:
                     select(NotificationEmailDelivery)
                     .where(
                         NotificationEmailDelivery.scheduled_for <= now,
+                        # Rows another domain composes are dispatched by it.
+                        NotificationEmailDelivery.composer == EmailComposer.NOTIFICATION.value,
                         claimable_email_predicate(now),
                     )
                     .order_by(NotificationEmailDelivery.scheduled_for)
@@ -340,25 +343,13 @@ async def _retry_or_fail(
     ctx: dict[str, Any],
     now: datetime,
 ) -> dict[str, Any]:
-    retryable: list[NotificationEmailDelivery] = []
-    delay_seconds = max(60, int(ctx.get("job_try", 1)) * 60)
-    for delivery in deliveries:
-        if delivery.attempt_count >= _MAX_ATTEMPTS:
-            terminal_email_delivery(
-                delivery,
-                NotificationEmailStatus.FAILED,
-                NotificationEmailTerminalReason.DELIVERY_FAILED,
-                now,
-            )
-        else:
-            release_email_delivery(
-                delivery,
-                scheduled_for=now + timedelta(seconds=delay_seconds),
-                now=now,
-            )
-            retryable.append(delivery)
+    delay_seconds = retry_email_deliveries(
+        deliveries,
+        attempt=int(ctx.get("job_try", 1)),
+        now=now,
+    )
     await session.commit()
-    if retryable:
+    if delay_seconds is not None:
         raise Retry(defer=delay_seconds)
     return {
         "status": "failed",

@@ -13,6 +13,7 @@ from uniffy.core.content.references import parse_urn
 from uniffy.core.models.login.organization import Organization
 from uniffy.core.models.login.user import User
 from uniffy.core.models.notifications.email_delivery import (
+    EmailComposer,
     NotificationEmailDelivery,
     NotificationEmailStatus,
 )
@@ -23,11 +24,16 @@ from uniffy.domains.notifications.preferences import (
     resolve_email_frequency,
 )
 from uniffy.domains.permissions.access import ResourceAccessResolver, ResourceKey
-from uniffy.domains.settings.defaults import get_effective_notification_channels
+from uniffy.domains.settings.defaults import (
+    get_effective_notification_channels,
+    wants_transactional_email,
+)
 from uniffy.domains.settings.operations import get_user_timezone
 
 _DIGEST_LIMIT = 500
 _LEASE_DURATION = timedelta(minutes=10)
+_RETRY_BASE_DELAY = 60
+MAX_EMAIL_ATTEMPTS = 5
 _TERMINAL_RETENTION = timedelta(days=30)
 _TERMINAL_PURGE_LIMIT = 1000
 
@@ -174,14 +180,17 @@ async def prepare_email_recipient(
                 now,
             )
             continue
-        channels = get_effective_notification_channels(notification_type, overrides)
-        if not channels.get("email", False):
+        if not _email_wanted(delivery, notification_type, overrides):
             terminal_email_delivery(
                 delivery,
                 NotificationEmailStatus.SKIPPED,
                 NotificationEmailTerminalReason.PREFERENCE_DISABLED,
                 now,
             )
+            continue
+        # Mail a domain composes itself is transactional: it answers something
+        # that just happened, so it never waits for a digest window.
+        if delivery.composer != EmailComposer.NOTIFICATION:
             continue
         scheduled_for = next_email_delivery_at(
             current_frequency,
@@ -295,6 +304,48 @@ def mark_email_deliveries_sent(
         delivery.provider_message_id = provider_message_id
         delivery.lease_expires_at = None
         delivery.updated_at = now
+
+
+def _email_wanted(
+    delivery: NotificationEmailDelivery,
+    notification_type: NotificationType,
+    overrides: dict[str, Any] | None,
+) -> bool:
+    """The member's preference, asked the way this row's sender has to ask it."""
+    if delivery.composer != EmailComposer.NOTIFICATION:
+        return wants_transactional_email(notification_type, overrides)
+    return get_effective_notification_channels(notification_type, overrides).get("email", False)
+
+
+def retry_email_deliveries(
+    deliveries: list[NotificationEmailDelivery],
+    *,
+    attempt: int,
+    now: datetime,
+) -> int | None:
+    """Release what may be tried again and fail what may not.
+
+    Returns the delay the caller should defer by, or None once every row has
+    spent its attempts.
+    """
+    delay_seconds = max(_RETRY_BASE_DELAY, attempt * _RETRY_BASE_DELAY)
+    retryable = False
+    for delivery in deliveries:
+        if delivery.attempt_count >= MAX_EMAIL_ATTEMPTS:
+            terminal_email_delivery(
+                delivery,
+                NotificationEmailStatus.FAILED,
+                NotificationEmailTerminalReason.DELIVERY_FAILED,
+                now,
+            )
+            continue
+        release_email_delivery(
+            delivery,
+            scheduled_for=now + timedelta(seconds=delay_seconds),
+            now=now,
+        )
+        retryable = True
+    return delay_seconds if retryable else None
 
 
 async def _drop_revoked_deliveries(

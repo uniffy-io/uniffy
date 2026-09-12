@@ -1,0 +1,177 @@
+"""PostgreSQL guarantees for event mail staged onto the shared outbox."""
+
+from datetime import UTC, date, datetime
+
+import pytest
+from sqlalchemy import delete, select
+
+from uniffy.core.models.notifications.email_delivery import (
+    EmailComposer,
+    NotificationEmailDelivery,
+    NotificationEmailStatus,
+)
+from uniffy.core.types import generate_id
+from uniffy.domains.scheduling.calendar.mail.outbox import (
+    CalendarMailKind,
+    read_event_mail,
+    retire_pending_event_mail,
+    stage_event_mail,
+)
+
+pytestmark = pytest.mark.asyncio(loop_scope="session")
+
+NOW = datetime(2026, 3, 18, 9, 0, tzinfo=UTC)
+
+
+async def _rows(session, event_id) -> list[NotificationEmailDelivery]:
+    return list(
+        (
+            await session.execute(
+                select(NotificationEmailDelivery)
+                .where(NotificationEmailDelivery.content_id == event_id)
+                .order_by(NotificationEmailDelivery.created_at)
+            )
+        )
+        .scalars()
+        .all()
+    )
+
+
+async def _clear(session, event_id) -> None:
+    await session.execute(
+        delete(NotificationEmailDelivery).where(NotificationEmailDelivery.content_id == event_id)
+    )
+    await session.commit()
+
+
+async def _stage(session, env, event_id, kind, **overrides) -> int:
+    return await stage_event_mail(
+        session,
+        organization_id=env.org_id,
+        event_id=event_id,
+        title="Standup",
+        recipient_ids=overrides.pop("recipient_ids", [env.member_id]),
+        kind=kind,
+        actor_user_id=env.admin_id,
+        now=NOW,
+        **overrides,
+    )
+
+
+async def test_a_burst_of_edits_collapses_onto_one_pending_row(session, env) -> None:
+    event_id = generate_id()
+    try:
+        await _stage(session, env, event_id, CalendarMailKind.CHANGE, changes=["schedule_changed"])
+        await _stage(session, env, event_id, CalendarMailKind.CHANGE, changes=["location_changed"])
+        await session.commit()
+
+        rows = await _rows(session, event_id)
+        assert len(rows) == 1
+        request = read_event_mail(rows[0])
+        assert request is not None
+        assert request.changes == ("location_changed", "schedule_changed")
+    finally:
+        await _clear(session, event_id)
+
+
+async def test_create_then_cancel_sends_only_the_cancellation(session, env) -> None:
+    event_id = generate_id()
+    try:
+        await _stage(session, env, event_id, CalendarMailKind.INVITATION)
+        await _stage(session, env, event_id, CalendarMailKind.CANCELLATION)
+        await session.commit()
+
+        rows = await _rows(session, event_id)
+        assert len(rows) == 1
+        request = read_event_mail(rows[0])
+        assert request is not None
+        assert request.kind is CalendarMailKind.CANCELLATION
+    finally:
+        await _clear(session, event_id)
+
+
+async def test_withdrawing_one_occurrence_keeps_the_invitation_to_the_series(
+    session, env
+) -> None:
+    event_id = generate_id()
+    try:
+        await _stage(session, env, event_id, CalendarMailKind.INVITATION)
+        await _stage(
+            session,
+            env,
+            event_id,
+            CalendarMailKind.CANCELLATION,
+            occurrence_date=date(2026, 3, 25),
+        )
+        await session.commit()
+
+        kinds = {read_event_mail(row).kind for row in await _rows(session, event_id)}
+        assert kinds == {CalendarMailKind.INVITATION, CalendarMailKind.CANCELLATION}
+    finally:
+        await _clear(session, event_id)
+
+
+async def test_a_message_already_sent_does_not_swallow_the_next_one(session, env) -> None:
+    """The window closes when the row leaves PENDING; later edits owe a new
+    message rather than folding into one nobody will read again."""
+    event_id = generate_id()
+    try:
+        await _stage(session, env, event_id, CalendarMailKind.INVITATION)
+        await session.commit()
+        sent = (await _rows(session, event_id))[0]
+        sent.status = NotificationEmailStatus.SENT
+        await session.commit()
+
+        await _stage(session, env, event_id, CalendarMailKind.CHANGE)
+        await session.commit()
+
+        rows = await _rows(session, event_id)
+        assert len(rows) == 2
+        assert {row.status for row in rows} == {
+            NotificationEmailStatus.SENT,
+            NotificationEmailStatus.PENDING,
+        }
+    finally:
+        await _clear(session, event_id)
+
+
+async def test_each_recipient_owns_their_own_row(session, env) -> None:
+    event_id = generate_id()
+    try:
+        staged = await _stage(
+            session,
+            env,
+            event_id,
+            CalendarMailKind.INVITATION,
+            recipient_ids=[env.member_id, env.admin_id],
+        )
+        await session.commit()
+
+        assert staged == 2
+        rows = await _rows(session, event_id)
+        assert {row.user_id for row in rows} == {env.member_id, env.admin_id}
+        assert all(row.composer == EmailComposer.CALENDAR for row in rows)
+    finally:
+        await _clear(session, event_id)
+
+
+async def test_somebody_uninvited_loses_the_message_still_waiting(session, env) -> None:
+    event_id = generate_id()
+    try:
+        await _stage(
+            session,
+            env,
+            event_id,
+            CalendarMailKind.INVITATION,
+            recipient_ids=[env.member_id, env.admin_id],
+        )
+        await session.commit()
+
+        await retire_pending_event_mail(session, event_id, [env.member_id], NOW)
+        await session.commit()
+
+        settled = {row.user_id: row.status for row in await _rows(session, event_id)}
+        assert settled[env.member_id] == NotificationEmailStatus.SKIPPED
+        assert settled[env.admin_id] == NotificationEmailStatus.PENDING
+    finally:
+        await _clear(session, event_id)

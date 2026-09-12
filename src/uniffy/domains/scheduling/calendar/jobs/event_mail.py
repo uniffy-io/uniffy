@@ -1,34 +1,44 @@
-"""Per-minute cron: send the event mail owed since the last pass."""
+"""Event mail: a per-minute sweep, then one job per message owed."""
 
-from collections import defaultdict
 from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
 from loguru import logger
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from uniffy.core.mail import MailSender
-from uniffy.core.models.calendar.activity import EventActivity
-from uniffy.core.models.calendar.mail_delivery import (
-    CalendarMailDelivery,
-    CalendarMailKind,
+from uniffy.core.jobs import enqueue_job
+from uniffy.core.mail import (
+    MailNotConfiguredError,
+    MailProviderError,
+    MailRateLimitedError,
+    MailSender,
+    MailSuppressedError,
 )
-from uniffy.domains.notifications.preferences import load_notification_overrides
-from uniffy.domains.scheduling.calendar.mail.compose import load_bundle, send_delivery
-from uniffy.domains.scheduling.calendar.mail.outbox import (
-    claim_due_deliveries,
-    mark_failed,
-    mark_sent,
+from uniffy.core.models.notifications.email_delivery import (
+    EmailComposer,
+    NotificationEmailDelivery,
+    NotificationEmailStatus,
 )
-from uniffy.domains.scheduling.calendar.mail.staging import (
-    MAIL_TRIGGERING_ACTIONS,
-    describe_changes,
+from uniffy.domains.notifications.delivery.outbox import (
+    NotificationEmailTerminalReason,
+    claim_email_delivery,
+    claimable_email_predicate,
+    mark_email_deliveries_sent,
+    prepare_email_recipient,
+    retry_email_deliveries,
+    terminal_email_delivery,
 )
-from uniffy.domains.settings.operations import get_user_timezone
+from uniffy.domains.scheduling.calendar.jobs.contracts import SEND_EVENT_MAIL
+from uniffy.domains.scheduling.calendar.mail.compose import load_bundle, send_event_mail
+from uniffy.domains.scheduling.calendar.mail.outbox import CalendarMailKind, read_event_mail
 from uniffy.infrastructure.database import open_session
+from uniffy.vendor.arq import Retry
 
 logger = logger.bind(component="scheduling.calendar.jobs.event_mail")
+
+_DISPATCH_LIMIT = 500
 
 _sender: MailSender | None = None
 
@@ -41,88 +51,127 @@ def _get_sender() -> MailSender:
 
 
 async def dispatch_calendar_event_mail(ctx: dict[str, Any]) -> dict[str, Any]:
-    """Claim every due row, then send one message per recipient.
-
-    Rows are grouped by event so the document and the roster are built once for
-    everyone hearing about the same meeting. A recipient whose preference says
-    no is settled, not retried - the row is done either way.
-    """
+    """Hand every due message its own job, so one send owns one transaction."""
     now = datetime.now(UTC)
-    sent = 0
-    skipped = 0
-    failed = 0
-
     async with open_session() as session:
-        claimed = await claim_due_deliveries(session, now=now)
-        if not claimed:
-            await session.commit()
-            return {"sent": 0, "skipped": 0, "failed": 0}
-
-        by_event: dict[UUID, list[CalendarMailDelivery]] = defaultdict(list)
-        for delivery in claimed:
-            by_event[delivery.event_id].append(delivery)
-
-        for event_id, deliveries in by_event.items():
-            bundle = await load_bundle(session, event_id)
-            if bundle is None:
-                # The event is gone; there is nothing left to describe.
-                await mark_sent(session, deliveries, now)
-                skipped += len(deliveries)
-                continue
-
-            for delivery in deliveries:
-                try:
-                    delivered = await send_delivery(
-                        session,
-                        delivery,
-                        bundle,
-                        sender=_get_sender(),
-                        overrides_loader=load_notification_overrides,
-                        timezone_loader=get_user_timezone,
-                        changes=await _changes_since(session, delivery),
+        due = (
+            (
+                await session.execute(
+                    select(NotificationEmailDelivery.id)
+                    .where(
+                        NotificationEmailDelivery.composer == EmailComposer.CALENDAR.value,
+                        NotificationEmailDelivery.scheduled_for <= now,
+                        claimable_email_predicate(now),
                     )
-                except Exception as exc:  # noqa: BLE001 - one bad recipient must not stop the pass
-                    logger.opt(exception=True).warning(
-                        "Event mail failed",
-                        event_id=str(event_id),
-                        delivery_id=str(delivery.id),
-                    )
-                    await mark_failed(session, [delivery], now, str(exc))
-                    failed += 1
-                    continue
-
-                await mark_sent(session, [delivery], now)
-                if delivered:
-                    sent += 1
-                else:
-                    skipped += 1
-
-        await session.commit()
-
-    if sent or failed:
-        logger.info("Event mail pass complete", sent=sent, skipped=skipped, failed=failed)
-    return {"sent": sent, "skipped": skipped, "failed": failed}
-
-
-async def _changes_since(session, delivery: CalendarMailDelivery) -> list[str]:
-    """What moved while this message was waiting to go out.
-
-    Read from the activity log rather than carried on the row: several edits
-    coalesce onto one delivery, and the log already holds every one of them.
-    """
-    if delivery.kind is not CalendarMailKind.CHANGE:
-        return []
-    actions = (
-        (
-            await session.execute(
-                select(EventActivity.action).where(
-                    EventActivity.event_id == delivery.event_id,
-                    EventActivity.created_at >= delivery.created_at,
-                    EventActivity.action.in_(MAIL_TRIGGERING_ACTIONS),
+                    .order_by(NotificationEmailDelivery.scheduled_for)
+                    .limit(_DISPATCH_LIMIT)
                 )
             )
+            .scalars()
+            .all()
         )
-        .scalars()
-        .all()
+
+    queued = 0
+    for delivery_id in due:
+        try:
+            await enqueue_job(
+                SEND_EVENT_MAIL,
+                str(delivery_id),
+                _job_id=f"calendar_event_mail:{delivery_id}",
+            )
+            queued += 1
+        except Exception:
+            logger.opt(exception=True).warning(f"Could not enqueue event mail {delivery_id}")
+
+    return {"status": "success", "due": len(due), "queued": queued}
+
+
+async def send_calendar_event_mail(ctx: dict[str, Any], delivery_id: str) -> dict[str, Any]:
+    """Send one message, against the meeting and the roster as they stand now."""
+    now = datetime.now(UTC)
+    async with open_session() as session:
+        delivery = await claim_email_delivery(session, UUID(delivery_id), now)
+        if delivery is None:
+            return {"status": "skipped", "reason": "not_claimable"}
+
+        request = read_event_mail(delivery)
+        if request is None:
+            terminal_email_delivery(
+                delivery,
+                NotificationEmailStatus.SKIPPED,
+                NotificationEmailTerminalReason.ACCESS_REVOKED,
+                now,
+            )
+            await session.commit()
+            return {"status": "skipped", "reason": "not_event_mail"}
+
+        recipient = await prepare_email_recipient(session, [delivery], now)
+        if recipient is None or delivery.status != NotificationEmailStatus.PROCESSING:
+            await session.commit()
+            return {"status": "skipped", "reason": delivery.terminal_reason}
+
+        # A meeting erased outright leaves nothing to describe, and somebody
+        # taken off the roster since the edit must not hear about it either.
+        bundle = await load_bundle(session, request.event_id)
+        still_owed = bundle is not None and (
+            request.kind is CalendarMailKind.CANCELLATION
+            or request.recipient_id in bundle.attendee_ids
+        )
+        if bundle is None or not still_owed:
+            terminal_email_delivery(
+                delivery,
+                NotificationEmailStatus.SKIPPED,
+                NotificationEmailTerminalReason.ACCESS_REVOKED,
+                now,
+            )
+            await session.commit()
+            return {
+                "status": "skipped",
+                "reason": NotificationEmailTerminalReason.ACCESS_REVOKED.value,
+            }
+
+        try:
+            result = await send_event_mail(request, bundle, recipient, sender=_get_sender())
+        except MailSuppressedError:
+            terminal_email_delivery(
+                delivery,
+                NotificationEmailStatus.SUPPRESSED,
+                NotificationEmailTerminalReason.SUPPRESSION_LIST,
+                now,
+            )
+        except MailNotConfiguredError:
+            terminal_email_delivery(
+                delivery,
+                NotificationEmailStatus.SKIPPED,
+                NotificationEmailTerminalReason.MAIL_NOT_CONFIGURED,
+                now,
+            )
+        except MailProviderError, MailRateLimitedError:
+            logger.opt(exception=True).warning(
+                "Event mail failed",
+                event_id=str(request.event_id),
+                delivery_id=delivery_id,
+            )
+            return await _retry_or_fail(session, delivery, ctx, now)
+        else:
+            mark_email_deliveries_sent([delivery], result.provider_message_id, now)
+
+        await session.commit()
+        return {"status": str(delivery.status), "delivery_id": delivery_id}
+
+
+async def _retry_or_fail(
+    session: AsyncSession,
+    delivery: NotificationEmailDelivery,
+    ctx: dict[str, Any],
+    now: datetime,
+) -> dict[str, Any]:
+    delay_seconds = retry_email_deliveries(
+        [delivery],
+        attempt=int(ctx.get("job_try", 1)),
+        now=now,
     )
-    return describe_changes(set(actions))
+    await session.commit()
+    if delay_seconds is not None:
+        raise Retry(defer=delay_seconds)
+    return {"status": "failed", "reason": NotificationEmailTerminalReason.DELIVERY_FAILED.value}

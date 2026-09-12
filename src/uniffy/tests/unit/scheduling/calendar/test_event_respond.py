@@ -15,9 +15,9 @@ from uniffy.core.auth.tokens import (
     decode_event_response_token,
 )
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
-from uniffy.core.models.calendar.mail_delivery import CalendarMailKind
 from uniffy.core.models.shared import AttendeeStatus
 from uniffy.domains.scheduling.calendar.mail.compose import _respond_links_for
+from uniffy.domains.scheduling.calendar.mail.outbox import CalendarMailKind, EventMailRequest
 from uniffy.domains.scheduling.calendar.routes import (
     RESPOND_PATH,
     RespondRequest,
@@ -191,31 +191,35 @@ class TestMethod:
 
 class TestLinksInMail:
     @staticmethod
-    def _delivery(kind: CalendarMailKind):
-        delivery = MagicMock()
-        delivery.kind = kind
-        delivery.organization_id = ORG
-        delivery.event_id = EVENT
-        return delivery
+    def _request(kind: CalendarMailKind) -> EventMailRequest:
+        return EventMailRequest(
+            delivery_id=uuid4(),
+            organization_id=ORG,
+            recipient_id=USER,
+            event_id=EVENT,
+            kind=kind,
+            occurrence_date=None,
+            changes=(),
+        )
 
     @pytest.mark.parametrize("kind", [CalendarMailKind.INVITATION, CalendarMailKind.CHANGE])
     def test_an_invitation_and_an_update_offer_all_three_answers(
         self, kind: CalendarMailKind
     ) -> None:
-        links = _respond_links_for(self._delivery(kind), USER)
+        links = _respond_links_for(self._request(kind))
 
         assert "response=accepted" in links.accept
         assert "response=tentative" in links.tentative
         assert "response=declined" in links.decline
 
     def test_a_cancellation_offers_nothing_to_answer(self) -> None:
-        links = _respond_links_for(self._delivery(CalendarMailKind.CANCELLATION), USER)
+        links = _respond_links_for(self._request(CalendarMailKind.CANCELLATION))
 
         assert links.accept == ""
         assert links.decline == ""
 
     def test_the_link_carries_a_token_the_route_accepts(self) -> None:
-        links = _respond_links_for(self._delivery(CalendarMailKind.INVITATION), USER)
+        links = _respond_links_for(self._request(CalendarMailKind.INVITATION))
 
         token = links.accept.split("token=")[1].split("&")[0]
         assert decode_event_response_token(token)["sub"] == str(USER)
