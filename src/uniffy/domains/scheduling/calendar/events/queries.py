@@ -11,9 +11,11 @@ from uniffy.core.models.calendar.attendee import EventAttendee
 from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.pagination import decode_time_cursor, encode_time_cursor
 from uniffy.core.types import (
+    RecurrencePattern,
     SortOrder,
 )
 from uniffy.domains.scheduling.calendar import queries
+from uniffy.domains.scheduling.calendar.recurrence import recurrence_end_date
 
 logger = logger.bind(component="scheduling.calendar.events.queries")
 
@@ -25,6 +27,14 @@ MAX_PAGE_SIZE = 100
 class EventPage:
     events: list[CalendarEvent]
     next_page_token: str | None
+
+
+def _series_ended_before(event: CalendarEvent, start_date: datetime | None) -> bool:
+    """A repeat that stopped before the window opens belongs to nobody's week."""
+    if start_date is None or event.recurrence_pattern == RecurrencePattern.NONE:
+        return False
+    ends = recurrence_end_date(event.recurrence_config, event.timezone)
+    return ends is not None and ends < start_date.date()
 
 
 class EventQueryOperations:
@@ -196,6 +206,62 @@ class EventQueryOperations:
         events = list(result.scalars().all())
 
         return events, total
+
+    async def list_events_in_window(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        *,
+        calendar_id: UUID | None = None,
+        start_date: datetime | None = None,
+        end_date: datetime | None = None,
+        limit: int,
+    ) -> tuple[list[CalendarEvent], int]:
+        """Everything a document covering this window has to carry.
+
+        A window keeps whole series rather than the rows that begin inside it:
+        a weekly meeting set up two years ago still happens this week, and its
+        master carrying the rule is what an external client expands. A series
+        that has already run out is left behind.
+        """
+        query = await self._accessible_events(
+            user_id,
+            organization_id,
+            calendar_id,
+            None,
+            None,
+            None,
+            False,
+            None,
+        )
+
+        overlap = [
+            clause
+            for clause in (
+                CalendarEvent.start_time < end_date if end_date is not None else None,
+                CalendarEvent.end_time > start_date if start_date is not None else None,
+            )
+            if clause is not None
+        ]
+        if overlap:
+            series = [
+                CalendarEvent.recurrence_pattern != RecurrencePattern.NONE,
+                CalendarEvent.recurrence_id.is_(None),
+            ]
+            if end_date is not None:
+                series.append(CalendarEvent.start_time < end_date)
+            query = query.where(or_(and_(*overlap), and_(*series)))
+
+        count_query = select(func.count()).select_from(query.subquery())
+        total = (await self.session.execute(count_query)).scalar() or 0
+
+        rows = (
+            (await self.session.execute(query.order_by(CalendarEvent.start_time.asc()).limit(limit)))
+            .scalars()
+            .all()
+        )
+        events = [event for event in rows if not _series_ended_before(event, start_date)]
+        return events, total - (len(rows) - len(events))
 
     async def get_event_with_attendees(
         self,

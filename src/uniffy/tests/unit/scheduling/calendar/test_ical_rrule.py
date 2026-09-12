@@ -266,6 +266,12 @@ class TestRejection:
             ("FREQ=YEARLY;BYWEEKNO=20", RecurrenceRejection.UNSUPPORTED_PART),
             ("FREQ=DAILY;BYYEARDAY=100", RecurrenceRejection.UNSUPPORTED_PART),
             ("FREQ=MONTHLY;BYMONTH=3;BYMONTHDAY=1", RecurrenceRejection.UNSUPPORTED_PART),
+            ("FREQ=MONTHLY;BYMONTHDAY=-2", RecurrenceRejection.UNSUPPORTED_MONTH_DAY),
+            ("FREQ=MONTHLY;BYMONTHDAY=0", RecurrenceRejection.UNSUPPORTED_MONTH_DAY),
+            ("FREQ=MONTHLY;BYMONTHDAY=32", RecurrenceRejection.UNSUPPORTED_MONTH_DAY),
+            ("FREQ=MONTHLY;BYMONTHDAY=30", RecurrenceRejection.CLAMPED_MONTH_DAY),
+            ("FREQ=MONTHLY;BYMONTHDAY=31", RecurrenceRejection.CLAMPED_MONTH_DAY),
+            ("FREQ=WEEKLY;INTERVAL=2;BYDAY=MO;WKST=SU", RecurrenceRejection.WEEK_START),
         ],
     )
     def test_unsupported_rules_are_refused_with_a_reason(
@@ -283,6 +289,50 @@ class TestRejection:
 
 
 class TestImport:
+    def test_a_monthly_day_the_two_calendars_disagree_about_is_refused(self) -> None:
+        """RFC 5545 skips February for a rule on the 30th; the expander pulls
+        the occurrence back to the 28th. Importing it would move meetings."""
+        mapped = rrule_to_config("FREQ=MONTHLY;BYMONTHDAY=30", dtstart=date(2026, 1, 30))
+
+        assert isinstance(mapped, UnsupportedRule)
+
+    def test_a_monthly_rule_taking_its_day_from_the_start_is_refused_the_same_way(self) -> None:
+        mapped = rrule_to_config("FREQ=MONTHLY", dtstart=date(2026, 1, 31))
+
+        assert isinstance(mapped, UnsupportedRule)
+
+    def test_the_clamp_stated_explicitly_still_imports(self) -> None:
+        """The pair this module emits says which day wins in a short month, so
+        reading it back moves nothing."""
+        mapped = rrule_to_config(
+            "FREQ=MONTHLY;BYMONTHDAY=30,-1;BYSETPOS=1", dtstart=date(2026, 1, 30)
+        )
+
+        assert isinstance(mapped, RecurrenceMapping)
+        assert mapped.config["day_of_month"] == 30  # noqa: PLR2004
+
+    def test_a_fortnightly_rule_counting_weeks_from_sunday_is_refused(self) -> None:
+        """The expander anchors weeks to Monday, so the two disagree about
+        which fortnight a date falls in."""
+        mapped = rrule_to_config(
+            "FREQ=WEEKLY;INTERVAL=2;BYDAY=MO;WKST=SU", dtstart=date(2026, 3, 16)
+        )
+
+        assert isinstance(mapped, UnsupportedRule)
+
+    def test_a_weekly_rule_is_unaffected_by_the_week_start(self) -> None:
+        """Repeating every week selects the same days whatever the week start."""
+        mapped = rrule_to_config("FREQ=WEEKLY;BYDAY=MO;WKST=SU", dtstart=date(2026, 3, 16))
+
+        assert isinstance(mapped, RecurrenceMapping)
+
+    def test_a_day_counted_back_from_the_end_never_reaches_the_expander(self) -> None:
+        """Accepting it would store a day no date can be built from, and the
+        next range read over that series would raise rather than answer."""
+        mapped = rrule_to_config("FREQ=MONTHLY;BYMONTHDAY=-2", dtstart=date(2026, 3, 18))
+
+        assert isinstance(mapped, UnsupportedRule)
+
     def test_negative_month_day_reads_back_as_the_clamped_last_day(self) -> None:
         mapped = rrule_to_config("FREQ=MONTHLY;BYMONTHDAY=-1", dtstart=date(2026, 1, 31))
 

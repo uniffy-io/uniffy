@@ -22,6 +22,10 @@ PRODUCT_ID = "-//Uniffy//Uniffy Calendar//EN"
 ICAL_VERSION = "2.0"
 DEFAULT_UID_DOMAIN = "uniffy"
 
+# What a private event says to somebody who may see that it happens but not
+# what it is about.
+BUSY_SUMMARY = "Busy"
+
 _UTC = ZoneInfo("UTC")
 _MIDNIGHT = time(0, 0)
 
@@ -74,6 +78,12 @@ class EventExport:
     # move to that date and a RECURRENCE-ID names it. Withdrawing a single
     # occurrence sends exactly this, with no master alongside it.
     occurrence_date: date | None = None
+    # The date this override replaces, which is what RECURRENCE-ID has to name
+    # even once the meeting itself has been moved somewhere else.
+    original_date: date | None = None
+    # The private-event policy: the block is honest about when, and says
+    # nothing about what.
+    details_hidden: bool = False
 
 
 def serialize_events(
@@ -86,10 +96,8 @@ def serialize_events(
 ) -> bytes:
     """Render a VCALENDAR carrying every export and the zones they reference.
 
-    ``calendar_name`` and ``refresh_interval`` are for a subscribed feed: the
-    first gives the subscription a name instead of a URL, the second tells the
-    client how often to come back. Neither is in RFC 5545, but every major
-    client reads them, and a client that does not simply ignores them.
+    ``calendar_name`` and ``refresh_interval`` are subscription hints outside
+    RFC 5545; every major client reads them and the rest ignore them.
     """
     calendar = Calendar()
     calendar.add("prodid", PRODUCT_ID)
@@ -116,7 +124,7 @@ def serialize_events(
                 _build_event(
                     override,
                     uid_domain=uid_domain,
-                    series_uid=_uid(export.event.id, uid_domain),
+                    series_uid=_uid(export.event, uid_domain),
                     master=export.event,
                 )
             )
@@ -135,23 +143,23 @@ def _build_event(
     tz = resolve_event_zone(event.timezone)
     component = Event()
 
-    component.add("uid", series_uid or _uid(event.id, uid_domain))
+    component.add("uid", series_uid or _uid(event, uid_domain))
     component.add("dtstamp", event.updated_at.astimezone(_UTC))
     component.add("created", event.created_at.astimezone(_UTC))
     component.add("last-modified", event.updated_at.astimezone(_UTC))
     component.add("sequence", export.sequence)
-    component.add("summary", event.title)
+    component.add("summary", BUSY_SUMMARY if export.details_hidden else event.title)
 
     if export.occurrence_date is not None:
         _add_occurrence_times(component, event, tz, export.occurrence_date)
     else:
         _add_times(component, event, tz)
 
-    if event.description:
+    if event.description and not export.details_hidden:
         component.add("description", _plain_text(event.description))
-    if event.location:
+    if event.location and not export.details_hidden:
         component.add("location", event.location)
-    if event.meeting_url:
+    if event.meeting_url and not export.details_hidden:
         component.add("url", event.meeting_url)
 
     component.add("status", _EVENT_STATUS_TO_ICAL[event.status])
@@ -164,8 +172,9 @@ def _build_event(
 
     if export.organizer:
         component.add("organizer", _cal_address(export.organizer), encode=0)
-    for attendee in export.attendees:
-        component.add("attendee", _attendee_address(attendee), encode=0)
+    if not export.details_hidden:
+        for attendee in export.attendees:
+            component.add("attendee", _attendee_address(attendee), encode=0)
 
     # A single occurrence carries no rule of its own; the series it names
     # already holds one.
@@ -185,7 +194,7 @@ def _build_event(
         _add_exdates(component, event, tz, export.cancelled_dates)
 
     if master is not None:
-        component.add("recurrence-id", _occurrence_value(master, event, tz))
+        component.add("recurrence-id", _occurrence_value(master, export, tz))
     elif export.occurrence_date is not None:
         component.add(
             "recurrence-id",
@@ -256,13 +265,18 @@ def _add_exdates(
     )
 
 
-def _occurrence_value(
-    master: CalendarEvent, override: CalendarEvent, tz: ZoneInfo
-) -> datetime | date:
-    original = override.start_time.astimezone(tz)
+def _occurrence_value(master: CalendarEvent, export: EventExport, tz: ZoneInfo) -> datetime | date:
+    """RECURRENCE-ID names the occurrence being replaced, not where it moved to.
+
+    A client matches the override to its series by this value, so a meeting
+    dragged to another day has to keep pointing at the day it left.
+    """
+    original = export.original_date
     if master.is_all_day:
-        return original.date()
-    return original
+        return original or export.event.start_time.astimezone(tz).date()
+    if original is None:
+        return export.event.start_time.astimezone(tz)
+    return occurrence_start_for_date(master.start_time, master.timezone, original).astimezone(tz)
 
 
 def _referenced_zones(exports: Sequence[EventExport]) -> list[str]:
@@ -286,8 +300,11 @@ def _is_known_zone(tzid: str) -> bool:
     return True
 
 
-def _uid(event_id, uid_domain: str) -> str:
-    return f"{event_id}@{uid_domain}"
+def _uid(event: CalendarEvent, uid_domain: str) -> str:
+    """An imported event keeps the UID it arrived with, so exporting it and
+    importing it back matches the event already here instead of duplicating it.
+    """
+    return event.ical_uid or f"{event.id}@{uid_domain}"
 
 
 def _plain_text(markdown: str) -> str:

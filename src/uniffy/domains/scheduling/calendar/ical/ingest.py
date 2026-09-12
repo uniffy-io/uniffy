@@ -17,6 +17,7 @@ from uniffy.domains.scheduling.calendar.ical.parse import (
     parse_calendar,
 )
 from uniffy.domains.scheduling.calendar.queries import require_own_calendar
+from uniffy.domains.scheduling.calendar.search import CalendarEventProjection
 
 logger = logger.bind(component="scheduling.calendar.ical.ingest")
 
@@ -61,7 +62,7 @@ async def apply_import(
     organization_id: UUID,
     calendar_id: UUID,
     payload: bytes,
-    events_operations: object | None = None,
+    projection: CalendarEventProjection | None = None,
 ) -> ImportOutcome:
     """Create everything the file describes that is not already here.
 
@@ -125,7 +126,7 @@ async def apply_import(
         await session.rollback()
         raise
 
-    await _index_after_commit(created, events_operations)
+    await _index_after_commit(created, projection)
 
     return ImportOutcome(
         created_ids=tuple(event.id for event in created),
@@ -192,15 +193,17 @@ async def _existing_uids(session: AsyncSession, calendar_id: UUID, uids: list[st
     return {uid for uid in rows.scalars().all() if uid}
 
 
-async def _index_after_commit(events: list[CalendarEvent], operations: object | None) -> None:
+async def _index_after_commit(
+    events: list[CalendarEvent], projection: CalendarEventProjection | None
+) -> None:
     """Search projection is a post-commit effect, exactly as create() treats it:
     a stale index never fails an import that already landed.
     """
-    if operations is None or not events:
+    if projection is None or not events:
         return
     for event in events:
         try:
-            await operations._index_for_search(event, skip_member_lookup=True)
+            await projection.index(event)
         except Exception:  # noqa: BLE001
             logger.opt(exception=True).warning(
                 "Imported event has a stale search projection", event_id=str(event.id)

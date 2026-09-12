@@ -11,6 +11,7 @@ from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.models.calendar.exception import RecurrenceException
 from uniffy.core.types import AccessMode, RecurrencePattern, generate_id
 from uniffy.domains.scheduling.calendar.ical.ingest import apply_import, preview_import
+from uniffy.domains.scheduling.calendar.search import CalendarEventProjection
 
 OWNER = generate_id()
 ORG = generate_id()
@@ -247,10 +248,15 @@ class TestApply:
 
 
 class TestProjection:
+    @staticmethod
+    def _projection(**kwargs) -> MagicMock:
+        projection = MagicMock(spec=CalendarEventProjection)
+        projection.index = AsyncMock(**kwargs)
+        return projection
+
     async def test_a_stale_search_projection_does_not_fail_the_import(self) -> None:
         session = _Session()
-        operations = MagicMock()
-        operations._index_for_search = AsyncMock(side_effect=RuntimeError("search is down"))
+        projection = self._projection(side_effect=RuntimeError("search is down"))
 
         outcome = await apply_import(
             session,
@@ -258,7 +264,7 @@ class TestProjection:
             organization_id=ORG,
             calendar_id=CALENDAR,
             payload=_document(_vevent("a@example.com")),
-            events_operations=operations,
+            projection=projection,
         )
 
         assert len(outcome.created_ids) == 1
@@ -266,8 +272,7 @@ class TestProjection:
 
     async def test_created_events_are_indexed(self) -> None:
         session = _Session()
-        operations = MagicMock()
-        operations._index_for_search = AsyncMock()
+        projection = self._projection()
 
         await apply_import(
             session,
@@ -275,7 +280,7 @@ class TestProjection:
             organization_id=ORG,
             calendar_id=CALENDAR,
             payload=_document(_vevent("a@example.com"), _vevent("b@example.com")),
-            events_operations=operations,
+            projection=projection,
         )
 
-        assert operations._index_for_search.await_count == 2
+        assert projection.index.await_count == 2  # noqa: PLR2004

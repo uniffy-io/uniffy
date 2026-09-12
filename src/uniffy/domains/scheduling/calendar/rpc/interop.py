@@ -45,6 +45,7 @@ from uniffy.domains.scheduling.calendar.rpc.support import (
     parse_event_id,
     parse_uuid,
 )
+from uniffy.domains.scheduling.calendar.search import CalendarEventProjection
 from uniffy.infrastructure.database import open_session
 
 # A whole-calendar export is a single response body, so it is bounded rather
@@ -76,14 +77,22 @@ class InteropHandlers:
                 if event.recurrence_id is not None:
                     event = await reader.get_by_id(user_id, organization_id, event.recurrence_id)
 
-                exports = await build_exports(session, [event])
+                exports = await build_exports(
+                    session,
+                    [event],
+                    viewer_id=user_id,
+                    organization_id=organization_id,
+                )
                 content = serialize_events(exports)
+                # A busy block names nothing, and neither may the file it
+                # arrives in.
+                hidden = any(export.details_hidden for export in exports)
         except Exception as exc:
             raise map_domain_error("export_event", exc) from exc
 
         return ExportEventResponse(
             content=content,
-            filename=_filename(event.title),
+            filename=_filename(_FALLBACK_FILENAME if hidden else event.title),
         )
 
     async def export_calendar(
@@ -107,14 +116,13 @@ class InteropHandlers:
                     session, request.calendar_id, user_id, organization_id
                 )
                 reader = CalendarEventReader(session)
-                events, total = await reader.list_events(
+                events, total = await reader.list_events_in_window(
                     user_id,
                     organization_id,
                     calendar_id=calendar_id,
                     start_date=start_time,
                     end_date=end_time,
-                    page=1,
-                    page_size=MAX_EXPORT_EVENTS,
+                    limit=MAX_EXPORT_EVENTS,
                 )
                 if total > MAX_EXPORT_EVENTS:
                     raise ValidationError(
@@ -129,7 +137,12 @@ class InteropHandlers:
                         Calendar.organization_id == organization_id,
                     )
                 )
-                exports = await build_exports(session, events)
+                exports = await build_exports(
+                    session,
+                    events,
+                    viewer_id=user_id,
+                    organization_id=organization_id,
+                )
                 content = serialize_events(exports)
         except Exception as exc:
             raise map_domain_error("export_calendar", exc) from exc
@@ -188,9 +201,7 @@ class InteropHandlers:
                     organization_id=organization_id,
                     calendar_id=calendar_id,
                     payload=request.content,
-                    events_operations=CalendarEventReader(
-                        session, _search_indexer=self.search_indexer
-                    ),
+                    projection=CalendarEventProjection(session, self.search_indexer),
                 )
         except Exception as exc:
             raise map_domain_error("apply_calendar_import", exc) from exc

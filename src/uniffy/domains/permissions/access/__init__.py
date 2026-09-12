@@ -1,6 +1,6 @@
 from uniffy.domains.permissions.access.audience import ResourceAudienceResolver
 from uniffy.domains.permissions.access.filtering import AUDIENCE_CONTENT_TYPES
-from uniffy.domains.permissions.access.resolver import ResourceAccessResolver
+from uniffy.domains.permissions.access.resolver import MAX_RESOURCE_PAGE, ResourceAccessResolver
 from uniffy.domains.permissions.access.types import (
     AccessGrantKind,
     RequestTarget,
@@ -13,6 +13,7 @@ from uniffy.domains.permissions.access.types import (
 
 __all__ = [
     "AccessGrantKind",
+    "MAX_RESOURCE_PAGE",
     "AUDIENCE_CONTENT_TYPES",
     "RequestTarget",
     "ResolvedResourcePolicy",

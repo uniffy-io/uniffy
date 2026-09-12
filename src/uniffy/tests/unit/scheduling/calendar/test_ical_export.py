@@ -2,7 +2,7 @@
 becomes a moved occurrence, and how many queries it costs."""
 
 from datetime import UTC, date, datetime
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from icalendar import Calendar
@@ -12,10 +12,21 @@ from uniffy.core.models.calendar.exception import RecurrenceException
 from uniffy.core.models.login.user import User
 from uniffy.core.models.shared import AttendeeRole, AttendeeStatus, DayOfWeek
 from uniffy.core.models.calendar.attendee import EventAttendee
-from uniffy.core.types import AccessMode, RecurrencePattern, generate_id
+from uniffy.core.types import (
+    AccessMode,
+    ContentRole,
+    ContentType,
+    EventVisibility,
+    RecurrencePattern,
+    generate_id,
+)
+from uniffy.domains.permissions.access import ResourceKey
 from uniffy.domains.scheduling.calendar.ical.assemble import build_exports
 from uniffy.domains.scheduling.calendar.ical.emit import serialize_events
 from uniffy.domains.scheduling.calendar.rpc.interop import _filename
+
+VIEWER = generate_id()
+ORG = generate_id()
 
 
 class _Scalars(list):
@@ -33,7 +44,7 @@ def _rows(rows: list) -> MagicMock:
 
 def _series(**overrides) -> CalendarEvent:
     event = CalendarEvent(
-        organization_id=generate_id(),
+        organization_id=ORG,
         organizer_id=generate_id(),
         calendar_id=generate_id(),
         title="Standup",
@@ -95,7 +106,12 @@ class TestAssembly:
             exceptions=[_exception(master.id, date(2026, 3, 25), cancelled=True)]
         )
 
-        exports = await build_exports(session, [master])
+        exports = await build_exports(
+            session,
+            [master],
+            viewer_id=VIEWER,
+            organization_id=ORG,
+        )
 
         assert list(exports[0].cancelled_dates) == [date(2026, 3, 25)]
 
@@ -112,7 +128,12 @@ class TestAssembly:
             overrides=[moved],
         )
 
-        exports = await build_exports(session, [master])
+        exports = await build_exports(
+            session,
+            [master],
+            viewer_id=VIEWER,
+            organization_id=ORG,
+        )
 
         assert list(exports[0].cancelled_dates) == []
         assert [export.event.id for export in exports[0].overrides] == [moved.id]
@@ -123,7 +144,12 @@ class TestAssembly:
         moved = _override_of(master, datetime(2026, 3, 25, 14, tzinfo=UTC))
         session = _session(overrides=[moved])
 
-        exports = await build_exports(session, [master, moved])
+        exports = await build_exports(
+            session,
+            [master, moved],
+            viewer_id=VIEWER,
+            organization_id=ORG,
+        )
 
         assert len(exports) == 1
         assert exports[0].event.id == master.id
@@ -151,7 +177,12 @@ class TestAssembly:
         )
         session = _session(attendees=[(attendee, guest)], users=[organizer])
 
-        exports = await build_exports(session, [master])
+        exports = await build_exports(
+            session,
+            [master],
+            viewer_id=VIEWER,
+            organization_id=ORG,
+        )
 
         assert exports[0].organizer.email == "ada@example.com"
         assert exports[0].attendees[0].person.name == "Grace Hopper"
@@ -162,7 +193,12 @@ class TestAssembly:
         events = [_series() for _ in range(25)]
         session = _session()
 
-        await build_exports(session, events)
+        await build_exports(
+            session,
+            events,
+            viewer_id=VIEWER,
+            organization_id=ORG,
+        )
 
         assert session.execute.await_count == 4  # noqa: PLR2004
 
@@ -170,7 +206,12 @@ class TestAssembly:
         session = MagicMock()
         session.execute = AsyncMock()
 
-        assert await build_exports(session, []) == []
+        assert await build_exports(
+            session,
+            [],
+            viewer_id=VIEWER,
+            organization_id=ORG,
+        ) == []
         session.execute.assert_not_awaited()
 
     async def test_assembled_series_serializes_with_its_exclusions(self) -> None:
@@ -179,11 +220,87 @@ class TestAssembly:
             exceptions=[_exception(master.id, date(2026, 3, 25), cancelled=True)]
         )
 
-        exports = await build_exports(session, [master])
+        exports = await build_exports(
+            session,
+            [master],
+            viewer_id=VIEWER,
+            organization_id=ORG,
+        )
         component = next(iter(Calendar.from_ical(serialize_events(exports)).walk("VEVENT")))
 
         assert "rrule" in component
         assert "exdate" in component
+
+
+class TestPrivateEvents:
+    """A private event a viewer is not on publishes as a busy block; the
+    export path owes the same redaction the app applies on every other read."""
+
+    @staticmethod
+    def _resolver(role: ContentRole | None):
+        resolved = MagicMock()
+        resolved.resolve_page = AsyncMock(
+            side_effect=lambda **kwargs: {
+                key: MagicMock(role=role) for key in kwargs["keys"]
+            }
+        )
+        return patch(
+            "uniffy.domains.scheduling.calendar.ical.assemble.ResourceAccessResolver",
+            return_value=resolved,
+        )
+
+    async def _hidden(self, *, role=None, attendees=(), users=()) -> bool:
+        master = _series(visibility=EventVisibility.PRIVATE)
+        session = _session(attendees=list(attendees), users=list(users))
+
+        with self._resolver(role):
+            exports = await build_exports(
+                session,
+                [master],
+                viewer_id=VIEWER,
+                organization_id=ORG,
+            )
+        return exports[0].details_hidden
+
+    async def test_a_bystander_sees_only_that_the_time_is_taken(self) -> None:
+        assert await self._hidden(role=ContentRole.VIEWER) is True
+
+    async def test_an_editor_sees_the_whole_meeting(self) -> None:
+        assert await self._hidden(role=ContentRole.EDITOR) is False
+
+    async def test_somebody_on_the_meeting_sees_it(self) -> None:
+        viewer = User(id=VIEWER, email="grace@example.com", username="grace")
+        attendee = EventAttendee(event_id=generate_id(), user_id=VIEWER)
+
+        master = _series(visibility=EventVisibility.PRIVATE)
+        attendee.event_id = master.id
+        session = _session(attendees=[(attendee, viewer)])
+
+        with self._resolver(ContentRole.VIEWER):
+            exports = await build_exports(
+                session,
+                [master],
+                viewer_id=VIEWER,
+                organization_id=ORG,
+            )
+
+        assert exports[0].details_hidden is False
+
+    async def test_an_ordinary_event_costs_no_authorization_round_trip(self) -> None:
+        """Only a private event can be hidden, so nothing else pays for it."""
+        master = _series()
+        session = _session()
+
+        with self._resolver(None) as resolver:
+            exports = await build_exports(
+                session,
+                [master],
+                viewer_id=VIEWER,
+                organization_id=ORG,
+            )
+
+        assert exports[0].details_hidden is False
+        resolver.assert_not_called()
 
 
 class TestFilename:

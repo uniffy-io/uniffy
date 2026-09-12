@@ -62,6 +62,9 @@ class RecurrenceRejection(StrEnum):
     MONTHLY_BY_WEEKDAY = "MONTHLY_BY_WEEKDAY"
     ORDINAL_WEEKDAY = "ORDINAL_WEEKDAY"
     MULTIPLE_MONTH_DAYS = "MULTIPLE_MONTH_DAYS"
+    UNSUPPORTED_MONTH_DAY = "UNSUPPORTED_MONTH_DAY"
+    CLAMPED_MONTH_DAY = "CLAMPED_MONTH_DAY"
+    WEEK_START = "WEEK_START"
     UNSUPPORTED_PART = "UNSUPPORTED_PART"
     MALFORMED = "MALFORMED"
 
@@ -81,6 +84,15 @@ _REJECTION_MESSAGES: dict[RecurrenceRejection, str] = {
         "Repeats on a numbered weekday, such as the second Monday, are not supported."
     ),
     RecurrenceRejection.MULTIPLE_MONTH_DAYS: "A monthly repeat may target only one day.",
+    RecurrenceRejection.UNSUPPORTED_MONTH_DAY: (
+        "A monthly repeat can count backwards only from the last day of the month."
+    ),
+    RecurrenceRejection.CLAMPED_MONTH_DAY: (
+        "A monthly repeat on a day some months do not have would land on other dates here."
+    ),
+    RecurrenceRejection.WEEK_START: (
+        "A repeat that counts its weeks from a day other than Monday is not supported."
+    ),
     RecurrenceRejection.UNSUPPORTED_PART: ("The repeat rule uses options with no equivalent here."),
     RecurrenceRejection.MALFORMED: "The repeat rule could not be read.",
 }
@@ -179,6 +191,8 @@ def rrule_to_config(rrule: str, *, dtstart: date) -> RecurrenceMapping | Unsuppo
             return days
         if parts.get("BYMONTHDAY") or parts.get("BYSETPOS") or parts.get("BYMONTH"):
             return UnsupportedRule(RecurrenceRejection.UNSUPPORTED_PART)
+        if _counts_weeks_elsewhere(frequency, config["interval"], _single(parts.get("WKST"))):
+            return UnsupportedRule(RecurrenceRejection.WEEK_START)
         if days:
             config["days_of_week"] = days
         pattern = RecurrencePattern(frequency)
@@ -341,7 +355,7 @@ def _monthly_day(by_month_day: Any, by_set_pos: Any, dtstart: date) -> int | Uns
     if not by_month_day:
         if by_set_pos:
             return UnsupportedRule(RecurrenceRejection.UNSUPPORTED_PART)
-        return dtstart.day
+        return _unclamped(dtstart.day)
 
     values = [int(v) for v in (by_month_day if isinstance(by_month_day, list) else [by_month_day])]
     if len(values) == 1:
@@ -350,11 +364,50 @@ def _monthly_day(by_month_day: Any, by_set_pos: Any, dtstart: date) -> int | Uns
         only = values[0]
         # A rule anchored to the last day means the same series as the clamped
         # 31st, which is how the expander already stores it.
-        return _LAST_DAY_OF_MONTH if only == -1 else only
+        if only == -1:
+            return _LAST_DAY_OF_MONTH
+        day = _day_of_month(only)
+        return day if isinstance(day, UnsupportedRule) else _unclamped(day)
 
     positives = sorted(v for v in values if v > 0)
     if len(values) == 2 and -1 in values and len(positives) == 1:  # noqa: PLR2004
         if not by_set_pos or int(_single(by_set_pos)) != 1:
             return UnsupportedRule(RecurrenceRejection.MULTIPLE_MONTH_DAYS)
-        return positives[0]
+        return _day_of_month(positives[0])
     return UnsupportedRule(RecurrenceRejection.MULTIPLE_MONTH_DAYS)
+
+
+def _counts_weeks_elsewhere(frequency: str, interval: int, week_start: Any) -> bool:
+    """Whether the rule counts its weeks from a day the expander does not.
+
+    Only an interval above one can disagree: every week start selects the same
+    days when the rule repeats every week.
+    """
+    if frequency != _FREQ_WEEKLY or interval == 1 or week_start is None:
+        return False
+    return str(week_start).upper() != _WEEK_START
+
+
+def _unclamped(day: int) -> int | UnsupportedRule:
+    """Refuse a day the two calendars disagree about.
+
+    RFC 5545 skips a month that has no such day; the expander pulls the
+    occurrence back to the last one. Importing it either way silently moves
+    meetings, so the row goes to the skipped report instead. The BYSETPOS pair
+    this module emits states the clamp explicitly and is read back above.
+    """
+    if day in _CLAMPED_DAYS or day == _LAST_DAY_OF_MONTH:
+        return UnsupportedRule(RecurrenceRejection.CLAMPED_MONTH_DAY)
+    return day
+
+
+def _day_of_month(day: int) -> int | UnsupportedRule:
+    """Only a day the expander can build a date from survives import.
+
+    Counting backwards has no representation beyond the last day, so accepting
+    a second-to-last day would store a number that raises when the series is
+    next expanded - taking the whole range read down with it.
+    """
+    if 1 <= day <= _LAST_DAY_OF_MONTH:
+        return day
+    return UnsupportedRule(RecurrenceRejection.UNSUPPORTED_MONTH_DAY)

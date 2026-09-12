@@ -482,3 +482,127 @@ class TestIdentity:
         ]
 
         assert len(_events(_parse(serialize_events(exports)))) == 3  # noqa: PLR2004
+
+
+class TestMovedOccurrence:
+    def test_the_recurrence_id_names_the_occurrence_being_replaced(self) -> None:
+        """A client matches an override to its series by RECURRENCE-ID, so a
+        meeting dragged to another day still has to point at the day it left."""
+        master = _event(
+            start=datetime(2026, 3, 18, 9, tzinfo=UTC),
+            end=datetime(2026, 3, 18, 9, 30, tzinfo=UTC),
+            pattern=RecurrencePattern.WEEKLY,
+            config={"interval": 1, "days_of_week": [DayOfWeek.WEDNESDAY.value]},
+        )
+        moved = _event(
+            start=datetime(2026, 3, 27, 14, tzinfo=UTC),
+            end=datetime(2026, 3, 27, 14, 30, tzinfo=UTC),
+            title="Standup (moved)",
+        )
+        export = EventExport(
+            event=master,
+            overrides=[EventExport(event=moved, original_date=date(2026, 3, 25))],
+        )
+
+        _, override = _events(_parse(serialize_events([export])))
+
+        assert override.decoded("recurrence-id").date() == date(2026, 3, 25)
+        assert override.decoded("dtstart").date() == date(2026, 3, 27)
+
+    def test_an_all_day_series_names_the_original_date(self) -> None:
+        master = _event(
+            start=datetime(2026, 3, 18, tzinfo=UTC),
+            end=datetime(2026, 3, 19, tzinfo=UTC),
+            is_all_day=True,
+            pattern=RecurrencePattern.WEEKLY,
+            config={"interval": 1, "days_of_week": [DayOfWeek.WEDNESDAY.value]},
+        )
+        moved = _event(
+            start=datetime(2026, 3, 27, tzinfo=UTC),
+            end=datetime(2026, 3, 28, tzinfo=UTC),
+            is_all_day=True,
+        )
+        export = EventExport(
+            event=master,
+            overrides=[EventExport(event=moved, original_date=date(2026, 3, 25))],
+        )
+
+        _, override = _events(_parse(serialize_events([export])))
+
+        assert override.decoded("recurrence-id") == date(2026, 3, 25)
+
+
+class TestImportedIdentity:
+    def test_an_imported_event_keeps_the_uid_it_arrived_with(self) -> None:
+        """Exporting and importing back has to match the event already here
+        rather than create a second copy of it."""
+        event = _event(
+            start=datetime(2026, 3, 18, 9, tzinfo=UTC),
+            end=datetime(2026, 3, 18, 9, 30, tzinfo=UTC),
+            ical_uid="outside-uid@example.com",
+        )
+
+        component = _only(_parse(serialize_events([EventExport(event=event)])))
+
+        assert str(component["uid"]) == "outside-uid@example.com"
+
+    def test_an_override_carries_the_series_uid_it_belongs_to(self) -> None:
+        master = _event(
+            start=datetime(2026, 3, 18, 9, tzinfo=UTC),
+            end=datetime(2026, 3, 18, 9, 30, tzinfo=UTC),
+            pattern=RecurrencePattern.WEEKLY,
+            config={"interval": 1, "days_of_week": [DayOfWeek.WEDNESDAY.value]},
+            ical_uid="series-uid@example.com",
+        )
+        moved = _event(
+            start=datetime(2026, 3, 25, 14, tzinfo=UTC),
+            end=datetime(2026, 3, 25, 14, 30, tzinfo=UTC),
+            ical_uid="ignored-override-uid@example.com",
+        )
+        export = EventExport(event=master, overrides=[EventExport(event=moved)])
+
+        series, override = _events(_parse(serialize_events([export])))
+
+        assert str(series["uid"]) == "series-uid@example.com"
+        assert str(override["uid"]) == "series-uid@example.com"
+
+
+class TestPrivateDetail:
+    @staticmethod
+    def _hidden_component():
+        event = _event(
+            start=datetime(2026, 3, 18, 9, tzinfo=UTC),
+            end=datetime(2026, 3, 18, 9, 30, tzinfo=UTC),
+            title="Offer negotiation",
+            description="Salary band",
+            location="Room 4",
+            meeting_url="https://meet.example.com/abc",
+            visibility=EventVisibility.PRIVATE,
+        )
+        export = EventExport(
+            event=event,
+            organizer=IcalPerson(email="ada@example.com", name="Ada Lovelace"),
+            attendees=[IcalAttendee(person=IcalPerson(email="grace@example.com"))],
+            details_hidden=True,
+        )
+        return _only(_parse(serialize_events([export])))
+
+    def test_it_says_only_that_the_time_is_taken(self) -> None:
+        component = self._hidden_component()
+
+        assert str(component["summary"]) == "Busy"
+        assert "description" not in component
+        assert "location" not in component
+        assert "url" not in component
+
+    def test_it_names_nobody_on_the_meeting(self) -> None:
+        component = self._hidden_component()
+
+        assert "attendee" not in component
+
+    def test_it_stays_honest_about_when(self) -> None:
+        """The whole point of publishing it at all is that the time is taken."""
+        component = self._hidden_component()
+
+        assert component.decoded("dtstart") == datetime(2026, 3, 18, 9, tzinfo=UTC)
+        assert str(component["class"]) == "PRIVATE"

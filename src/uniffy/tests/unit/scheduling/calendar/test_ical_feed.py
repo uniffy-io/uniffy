@@ -234,7 +234,7 @@ class TestRendering:
         session = AsyncMock()
         session.scalar = AsyncMock(return_value="Team calendar")
         reader = AsyncMock()
-        reader.list_events = AsyncMock(return_value=([], 0))
+        reader.list_events_in_window = AsyncMock(return_value=([], 0))
 
         with (
             patch.object(feed_module, "CalendarEventReader", return_value=reader),
@@ -244,9 +244,9 @@ class TestRendering:
 
         # The permission-filtered query runs as the subscriber, never as an
         # unscoped reader: the token carries identity, not access.
-        assert reader.list_events.await_args.args[0] == OWNER
-        assert reader.list_events.await_args.args[1] == ORG
-        assert reader.list_events.await_args.kwargs["calendar_id"] == CALENDAR
+        assert reader.list_events_in_window.await_args.args[0] == OWNER
+        assert reader.list_events_in_window.await_args.args[1] == ORG
+        assert reader.list_events_in_window.await_args.kwargs["calendar_id"] == CALENDAR
         assert b"X-WR-CALNAME:Team calendar" in document
         # Both spellings, so Apple and Outlook each find the poll rate.
         assert b"REFRESH-INTERVAL;VALUE=DURATION:PT1H" in document
@@ -264,7 +264,7 @@ class TestRendering:
         session = AsyncMock()
         session.scalar = AsyncMock(return_value="Team calendar")
         reader = AsyncMock()
-        reader.list_events = AsyncMock(return_value=([], 0))
+        reader.list_events_in_window = AsyncMock(return_value=([], 0))
 
         with (
             patch.object(feed_module, "CalendarEventReader", return_value=reader),
@@ -272,10 +272,10 @@ class TestRendering:
         ):
             await render_feed(session, row)
 
-        kwargs = reader.list_events.await_args.kwargs
+        kwargs = reader.list_events_in_window.await_args.kwargs
         span = kwargs["end_date"] - kwargs["start_date"]
         assert span.days == feed_module.FEED_PAST_DAYS + feed_module.FEED_FUTURE_DAYS
-        assert kwargs["page_size"] == feed_module.MAX_FEED_EVENTS
+        assert kwargs["limit"] == feed_module.MAX_FEED_EVENTS
 
 
 class TestRecordingAFetch:

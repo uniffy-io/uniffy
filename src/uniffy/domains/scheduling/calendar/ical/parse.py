@@ -1,8 +1,7 @@
 """Reading a VCALENDAR into rows this product can store.
 
 Anything the in-house vocabulary cannot express is reported rather than
-approximated: a silently reshaped meeting is worse than one that was not
-imported.
+approximated: a silently reshaped meeting is worse than a skipped one.
 """
 
 from collections.abc import Iterable
