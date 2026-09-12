@@ -18,7 +18,12 @@ from uniffy.core.types import (
     EventStatus,
     RecurrencePattern,
 )
-from uniffy.domains.scheduling.calendar.mail.staging import stage_cancellation_mail
+from uniffy.domains.scheduling.calendar.mail.outbox import CalendarMailKind, stage_event_mail
+from uniffy.domains.scheduling.calendar.mail.staging import (
+    MAIL_TRIGGERING_ACTIONS,
+    stage_cancellation_mail,
+    stage_change_mail,
+)
 from uniffy.domains.scheduling.calendar.recurrence import (
     count_occurrences_through,
     occurrence_start_for_date,
@@ -189,7 +194,7 @@ class RecurrenceMutationOperations:
             new_value=occurrence_date.isoformat(),
         )
         await self.events._log_activity(override.id, user_id, "created")
-        await self.events._log_field_changes(override, user_id, edited_before)
+        changed_actions = await self.events._log_field_changes(override, user_id, edited_before)
 
         await self.events._index_for_search(override, skip_member_lookup=True)
         if master.status != EventStatus.CANCELLED and override.status == EventStatus.CANCELLED:
@@ -199,6 +204,17 @@ class RecurrenceMutationOperations:
                 actor_id=user_id,
                 occurrence_date=occurrence_date,
                 event_id=master.id,
+            )
+        elif changed_actions & MAIL_TRIGGERING_ACTIONS:
+            # The message describes the series, because that is what the
+            # document carries: the moved occurrence rides in it as the
+            # RECURRENCE-ID sibling a client matches against its own copy.
+            master.ical_sequence += 1
+            await stage_change_mail(
+                self.session,
+                master,
+                actor_id=user_id,
+                actions=changed_actions,
             )
         await self.session.commit()
 
@@ -310,6 +326,7 @@ class RecurrenceMutationOperations:
             select(EventAttendee).where(EventAttendee.event_id == master.id)
         )
         active_attendee_ids: list[UUID] = []
+        carried_attendee_ids: list[UUID] = []
         for att in att_result.scalars().all():
             new_att = EventAttendee(
                 event_id=new_event.id,
@@ -320,6 +337,7 @@ class RecurrenceMutationOperations:
                 invited_via_group_id=att.invited_via_group_id,
             )
             self.session.add(new_att)
+            carried_attendee_ids.append(att.user_id)
             if att.status != AttendeeStatus.DECLINED:
                 active_attendee_ids.append(att.user_id)
 
@@ -351,6 +369,25 @@ class RecurrenceMutationOperations:
         await self.events._index_for_search(new_event, skip_member_lookup=True)
         if master.status != EventStatus.CANCELLED and new_event.status == EventStatus.CANCELLED:
             await stage_cancellation_mail(self.session, new_event, actor_id=user_id)
+        else:
+            # A split is two series from here on: the one everybody holds now
+            # stops earlier, and the one taking over is theirs to accept.
+            master.ical_sequence += 1
+            await stage_change_mail(
+                self.session,
+                master,
+                actor_id=user_id,
+                actions={"recurrence_changed"},
+            )
+            await stage_event_mail(
+                self.session,
+                organization_id=organization_id,
+                event_id=new_event.id,
+                title=new_event.title,
+                recipient_ids=[uid for uid in carried_attendee_ids if uid != user_id],
+                kind=CalendarMailKind.INVITATION,
+                actor_user_id=user_id,
+            )
         await self.session.commit()
 
         if master.status != EventStatus.CANCELLED and new_event.status == EventStatus.CANCELLED:
