@@ -1,6 +1,7 @@
 import { createSlice, createSelector, type PayloadAction } from "@reduxjs/toolkit";
 import type { ChatMessage } from "@/features/chat/types";
 import type { RootState } from "@/app/store";
+import { REACTOR_PREVIEW_LIMIT } from "@/features/chat/utils/limits";
 
 interface TypingEntry {
   userId: string;
@@ -379,11 +380,16 @@ export const chatMessagesSlice = createSlice({
       if (!msg.reactions) msg.reactions = [];
       const group = msg.reactions.find((r) => r.emoji === emoji);
       if (group) {
-        if (!group.userIds.includes(userId)) {
+        // The optimistic dispatch and the server's own echo both land here, so
+        // counting is keyed on whether this reactor is already counted. Beyond
+        // the bounded list `currentUserReacted` is the only per-reactor fact.
+        const isSelf = userId === currentUserId;
+        const counted = isSelf ? group.currentUserReacted : group.userIds.includes(userId);
+        if (!counted) {
           group.count += 1;
-          group.userIds.push(userId);
+          if (group.userIds.length < REACTOR_PREVIEW_LIMIT) group.userIds.push(userId);
         }
-        if (userId === currentUserId) group.currentUserReacted = true;
+        if (isSelf) group.currentUserReacted = true;
       } else {
         msg.reactions.push({
           emoji,
@@ -408,9 +414,12 @@ export const chatMessagesSlice = createSlice({
       if (!msg?.reactions) return;
       const group = msg.reactions.find((r) => r.emoji === emoji);
       if (!group) return;
+      const isSelf = userId === currentUserId;
+      // Own removal arrives twice (optimistic, then the echo); the second is a no-op.
+      if (isSelf && !group.currentUserReacted) return;
       group.count = Math.max(0, group.count - 1);
       group.userIds = group.userIds.filter((id) => id !== userId);
-      if (userId === currentUserId) group.currentUserReacted = false;
+      if (isSelf) group.currentUserReacted = false;
       if (group.count === 0) {
         msg.reactions = msg.reactions.filter((r) => r.emoji !== emoji);
       }

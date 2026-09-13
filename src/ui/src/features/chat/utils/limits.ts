@@ -3,3 +3,6 @@ export const GROUP_DM_MAX_PARTICIPANTS = 9;
 
 /** The creator is a participant too, so a new group DM takes one fewer recipient. */
 export const NEW_DM_MAX_RECIPIENTS = GROUP_DM_MAX_PARTICIPANTS - 1;
+
+/** Mirrors REACTOR_PREVIEW_LIMIT in the backend: the chip names at most this many reactors. */
+export const REACTOR_PREVIEW_LIMIT = 10;

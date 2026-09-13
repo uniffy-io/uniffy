@@ -2368,6 +2368,26 @@ plus a second device or tab for the sync check.
 - [ ] The list holds up at 375, 768, and 1024 px, and the discard action is reachable on touch
       (no hover required under `md`).
 
+## Chat reaction authorship
+
+Reaction chips name who reacted. Needs a message with more than ten reactors to exercise the bound,
+plus a second user for the live checks.
+
+- [ ] Hover a reaction chip: a card opens naming the reactors, with "You" first when you are one of
+      them, and the count in the header matching the chip.
+- [ ] On a message with more than ten reactors, the card names ten and ends with "and N more"; the
+      chip count still shows everyone.
+- [ ] Tab to a chip with the keyboard: the same card opens on focus and closes on blur.
+- [ ] React and un-react yourself: the count moves by exactly one each way, and the number after a
+      reload matches what the chip showed live.
+- [ ] React from a second browser: the first browser's count and name list update without a reload.
+- [ ] Un-react from a second device signed in as the same user: the first device drops the chip's
+      highlight and count once, not twice.
+- [ ] Mobile: long-press a reaction chip: a sheet lists the same names with the same "and N more"
+      tail, and each row is at least 44 px tall.
+- [ ] Open a 200-message channel with reactions throughout: reaction reads stay one query per page
+      (watch the backend log), and scrolling stays smooth.
+
 ## Pre-release sweep
 
 - [ ] All linters green: `./manage.py lint`.

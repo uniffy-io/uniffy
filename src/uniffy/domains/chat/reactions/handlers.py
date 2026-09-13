@@ -71,6 +71,7 @@ class ReactionHandlers:
                                 emoji=g["emoji"],
                                 count=g["count"],
                                 current_user_reacted=g["current_user_reacted"],
+                                user_ids=g["user_ids"],
                             )
                         )
 
@@ -79,6 +80,7 @@ class ReactionHandlers:
                         emoji=request.emoji,
                         count=1,
                         current_user_reacted=True,
+                        user_ids=[str(user_id)],
                     )
                 )
         except (NotFoundError, PermissionDeniedError) as e:

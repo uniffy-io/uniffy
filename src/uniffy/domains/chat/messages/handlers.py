@@ -577,6 +577,7 @@ class MessageHandlers:
                         emoji=r["emoji"],
                         count=r["count"],
                         current_user_reacted=r["current_user_reacted"],
+                        user_ids=r["user_ids"],
                     )
                     for r in msg_reactions
                 ]

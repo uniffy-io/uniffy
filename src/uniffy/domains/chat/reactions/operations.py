@@ -4,6 +4,8 @@ from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy import delete, func, select
+from sqlalchemy.dialects.postgresql import ARRAY, aggregate_order_by
+from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -14,6 +16,10 @@ from uniffy.core.types import SubjectType
 from uniffy.domains.chat.access import ChatAccessChecker
 from uniffy.domains.chat.cache import fetch_channel_members
 from uniffy.domains.chat.limits import REACTION_ADD, check_chat_mutation_limit
+
+# A popular message carries hundreds of reactors; the chips only ever name a few,
+# and `count` stays authoritative for the rest.
+REACTOR_PREVIEW_LIMIT = 10
 
 
 class ChatReactionOperations:
@@ -163,12 +169,22 @@ class ChatReactionOperations:
         if not message_ids:
             return {}
 
+        reactor_ids = func.array_agg(
+            aggregate_order_by(
+                ChatReaction.user_id,
+                ChatReaction.created_at.asc(),
+                ChatReaction.user_id.asc(),
+            ),
+            type_=ARRAY(PG_UUID(as_uuid=True)),
+        )[1:REACTOR_PREVIEW_LIMIT].label("user_ids")
+
         result = await self.session.execute(
             select(
                 ChatReaction.message_id,
                 ChatReaction.emoji,
                 func.count().label("count"),
                 func.bool_or(ChatReaction.user_id == current_user_id).label("current_user_reacted"),
+                reactor_ids,
             )
             .where(ChatReaction.message_id.in_(message_ids))
             .group_by(ChatReaction.message_id, ChatReaction.emoji)
@@ -179,10 +195,11 @@ class ChatReactionOperations:
 
         reactions_map: dict[UUID, list[dict]] = defaultdict(list)
         for row in result.all():
-            reactions_map[row[0]].append({
-                "emoji": row[1],
-                "count": row[2],
-                "current_user_reacted": row[3],
+            reactions_map[row.message_id].append({
+                "emoji": row.emoji,
+                "count": row.count,
+                "current_user_reacted": row.current_user_reacted,
+                "user_ids": [str(uid) for uid in row.user_ids] if row.user_ids else [],
             })
 
         return dict(reactions_map)

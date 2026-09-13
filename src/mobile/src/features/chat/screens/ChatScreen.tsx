@@ -143,8 +143,10 @@ import {
   editWindowAllows,
   resolveChannelTitle,
   type SerializedMessage,
+  type SerializedReaction,
 } from "@features/chat/chatSerializer";
 import { EditHistorySheet } from "@features/chat/components/EditHistorySheet";
+import { ReactorsSheet } from "@features/chat/components/ReactorsSheet";
 
 const GROUP_WINDOW_SECONDS = 300;
 const QUICK_EMOJIS = ["👍", "❤️", "😂", "🎉", "👀", "🙏"];
@@ -457,6 +459,8 @@ export function ChatConversationScreen() {
 
   // Only used to attribute an agent context reset, which stamps a user id but
   // not always a name.
+  const [reactorsTarget, setReactorsTarget] = useState<SerializedReaction | null>(null);
+
   const resolveUserName = useCallback(
     (userId: string) => {
       if (!userId) return undefined;
@@ -944,6 +948,7 @@ export function ChatConversationScreen() {
               onPressThread={openThreadFor}
               onPressReplyContext={jumpToReplyContext}
               onToggleReaction={handleReact}
+              onShowReactors={setReactorsTarget}
             />
           </SwipeToReply>
         </View>
@@ -1315,6 +1320,14 @@ export function ChatConversationScreen() {
 
       <EditHistorySheet message={historyMessage} T={T} onClose={() => setHistoryMessage(null)} />
 
+      <ReactorsSheet
+        reaction={reactorsTarget}
+        currentUserId={user?.id}
+        T={T}
+        resolveUserName={resolveUserName}
+        onClose={() => setReactorsTarget(null)}
+      />
+
       <EmojiPickerSheet
         visible={emojiTarget !== null}
         T={T}
@@ -1587,6 +1600,7 @@ const MessageRow = React.memo(function MessageRow({
   onPressThread,
   onPressReplyContext,
   onToggleReaction,
+  onShowReactors,
   senderPresence,
 }: {
   message: SerializedMessage;
@@ -1612,6 +1626,7 @@ const MessageRow = React.memo(function MessageRow({
   onPressThread: (message: SerializedMessage) => void;
   onPressReplyContext: (message: SerializedMessage) => void;
   onToggleReaction: (message: SerializedMessage, emoji: string) => void;
+  onShowReactors: (reaction: SerializedReaction) => void;
   senderPresence?: string | null;
 }) {
   const { display } = useMemo(() => parseMentions(message.content), [message.content]);
@@ -1892,6 +1907,8 @@ const MessageRow = React.memo(function MessageRow({
                   },
                 ]}
                 onPress={() => onToggleReaction(message, r.emoji)}
+                onLongPress={() => onShowReactors(r)}
+                delayLongPress={250}
                 activeOpacity={0.7}
               >
                 <Text style={styles.reactionEmoji}>{r.emoji}</Text>
