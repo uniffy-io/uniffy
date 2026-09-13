@@ -1,6 +1,7 @@
 """PostgreSQL guarantees for event mail staged onto the shared outbox."""
 
-from datetime import UTC, date, datetime
+import asyncio
+from datetime import UTC, date, datetime, timedelta
 
 import pytest
 from sqlalchemy import delete, select
@@ -13,14 +14,17 @@ from uniffy.core.models.notifications.email_delivery import (
 from uniffy.core.types import generate_id
 from uniffy.domains.scheduling.calendar.mail.outbox import (
     CalendarMailKind,
+    claim_event_mail,
     read_event_mail,
     retire_pending_event_mail,
     stage_event_mail,
+    stage_event_mail_retry,
 )
+from uniffy.infrastructure.database import open_session
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
-NOW = datetime(2026, 3, 18, 9, 0, tzinfo=UTC)
+NOW = datetime(2036, 3, 18, 9, 0, tzinfo=UTC)
 
 
 async def _rows(session, event_id) -> list[NotificationEmailDelivery]:
@@ -90,9 +94,7 @@ async def test_create_then_cancel_sends_only_the_cancellation(session, env) -> N
         await _clear(session, event_id)
 
 
-async def test_withdrawing_one_occurrence_keeps_the_invitation_to_the_series(
-    session, env
-) -> None:
+async def test_withdrawing_one_occurrence_keeps_the_invitation_to_the_series(session, env) -> None:
     event_id = generate_id()
     try:
         await _stage(session, env, event_id, CalendarMailKind.INVITATION)
@@ -173,5 +175,82 @@ async def test_somebody_uninvited_loses_the_message_still_waiting(session, env) 
         settled = {row.user_id: row.status for row in await _rows(session, event_id)}
         assert settled[env.member_id] == NotificationEmailStatus.SKIPPED
         assert settled[env.admin_id] == NotificationEmailStatus.PENDING
+    finally:
+        await _clear(session, event_id)
+
+
+async def test_failed_send_merges_into_cancellation_staged_during_send(session, env) -> None:
+    event_id = generate_id()
+    try:
+        await _stage(session, env, event_id, CalendarMailKind.INVITATION)
+        await session.commit()
+        first = (await _rows(session, event_id))[0]
+        held = await claim_event_mail(session, first.id, NOW + timedelta(minutes=2))
+        assert held is not None
+        await _stage(session, env, event_id, CalendarMailKind.CANCELLATION)
+        await session.commit()
+
+        delay = await stage_event_mail_retry(session, held, attempt=1, now=NOW)
+        await session.commit()
+
+        rows = await _rows(session, event_id)
+        pending = [row for row in rows if row.status == NotificationEmailStatus.PENDING]
+        assert delay is None
+        assert held.status == NotificationEmailStatus.SKIPPED
+        assert held.terminal_reason == "superseded"
+        assert len(pending) == 1
+        assert read_event_mail(pending[0]).kind is CalendarMailKind.CANCELLATION
+    finally:
+        await _clear(session, event_id)
+
+
+async def test_failed_send_without_successor_remains_retryable(session, env) -> None:
+    event_id = generate_id()
+    try:
+        await _stage(session, env, event_id, CalendarMailKind.INVITATION)
+        await session.commit()
+        first = (await _rows(session, event_id))[0]
+        held = await claim_event_mail(session, first.id, NOW + timedelta(minutes=2))
+        assert held is not None
+        delay = await stage_event_mail_retry(session, held, attempt=1, now=NOW)
+        await session.commit()
+
+        assert delay == 60
+        assert held.status == NotificationEmailStatus.PENDING
+        assert held.attempt_count == 1
+        assert held.lease_expires_at is None
+    finally:
+        await _clear(session, event_id)
+
+
+async def test_retry_racing_new_edit_keeps_one_pending_cancellation(session, env) -> None:
+    event_id = generate_id()
+    try:
+        await _stage(session, env, event_id, CalendarMailKind.INVITATION)
+        await session.commit()
+        first = (await _rows(session, event_id))[0]
+        held = await claim_event_mail(session, first.id, NOW + timedelta(minutes=2))
+        assert held is not None
+
+        async def retry() -> None:
+            async with open_session() as retry_session:
+                delivery = await retry_session.get(NotificationEmailDelivery, first.id)
+                await stage_event_mail_retry(retry_session, delivery, attempt=1, now=NOW)
+                await retry_session.commit()
+
+        async def edit() -> None:
+            async with open_session() as edit_session:
+                await _stage(edit_session, env, event_id, CalendarMailKind.CANCELLATION)
+                await edit_session.commit()
+
+        await asyncio.wait_for(asyncio.gather(retry(), edit()), timeout=10)
+        session.expire_all()
+        pending = [
+            row
+            for row in await _rows(session, event_id)
+            if row.status == NotificationEmailStatus.PENDING
+        ]
+        assert len(pending) == 1
+        assert read_event_mail(pending[0]).kind is CalendarMailKind.CANCELLATION
     finally:
         await _clear(session, event_id)

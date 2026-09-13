@@ -7,7 +7,8 @@ from enum import StrEnum
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import select, text, update
+from pydantic import ValidationError
+from sqlalchemy import func, select, text, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -18,7 +19,13 @@ from uniffy.core.models.notifications.email_delivery import (
 )
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import ContentType, NotificationType, generate_id
-from uniffy.domains.notifications.delivery.outbox import NotificationEmailTerminalReason
+from uniffy.domains.notifications.delivery.outbox import (
+    NotificationEmailTerminalReason,
+    claim_email_delivery,
+    retry_email_deliveries,
+    terminal_email_delivery,
+)
+from uniffy.domains.scheduling.calendar.mail.withdrawal import EventWithdrawal
 from uniffy.domains.settings.defaults import EmailFrequency
 
 
@@ -50,6 +57,7 @@ _NOTIFICATION_TYPES: dict[CalendarMailKind, NotificationType] = {
 }
 
 _PENDING_INDEX = text("coalesce_key IS NOT NULL AND status = 'pending'")
+_WITHDRAWAL = "withdrawal"
 
 
 @dataclass(frozen=True)
@@ -63,6 +71,7 @@ class EventMailRequest:
     kind: CalendarMailKind
     occurrence_date: date | None
     changes: tuple[str, ...]
+    withdrawal: EventWithdrawal | None = None
 
 
 async def stage_event_mail(
@@ -76,14 +85,10 @@ async def stage_event_mail(
     actor_user_id: UUID | None = None,
     occurrence_date: date | None = None,
     changes: Iterable[str] = (),
+    withdrawal: EventWithdrawal | None = None,
     now: datetime | None = None,
 ) -> int:
-    """Add pending rows to the caller's transaction without committing.
-
-    A recipient still owed a message about this meeting keeps the row they
-    have: it absorbs the new one, so a burst of edits arrives as one message
-    describing the final state.
-    """
+    """Coalesce pending messages within the caller's transaction."""
     recipients = list(dict.fromkeys(recipient_ids))
     if not recipients:
         return 0
@@ -94,7 +99,8 @@ async def stage_event_mail(
         recipient_id: _coalesce_key(event_id, occurrence_date, recipient_id)
         for recipient_id in recipients
     }
-    metadata = _metadata(kind, occurrence_date, changes)
+    await _lock_event_mail(session, event_id)
+    metadata = _metadata(kind, occurrence_date, changes, withdrawal)
 
     claimed = (
         await session.execute(
@@ -141,10 +147,70 @@ async def stage_event_mail(
             actor_user_id=actor_user_id,
             occurrence_date=occurrence_date,
             changes=changes,
+            withdrawal=withdrawal,
             due=due,
             now=moment,
         )
     return len(recipients)
+
+
+async def claim_event_mail(
+    session: AsyncSession, delivery_id: UUID, now: datetime
+) -> NotificationEmailDelivery | None:
+    delivery = await session.get(NotificationEmailDelivery, delivery_id)
+    if (
+        delivery is None
+        or delivery.composer != EmailComposer.CALENDAR
+        or delivery.content_id is None
+    ):
+        return None
+    await _lock_event_mail(session, delivery.content_id)
+    await session.refresh(delivery)
+    return await claim_email_delivery(session, delivery_id, now)
+
+
+async def stage_event_mail_retry(
+    session: AsyncSession,
+    delivery: NotificationEmailDelivery,
+    *,
+    attempt: int,
+    now: datetime,
+) -> int | None:
+    """Fold failed sends into newer pending mail before releasing their lease."""
+    request = read_event_mail(delivery)
+    if request is None:
+        raise ValueError("Calendar delivery required")
+    await _lock_event_mail(session, request.event_id)
+    successor = await session.scalar(
+        select(NotificationEmailDelivery)
+        .where(
+            NotificationEmailDelivery.coalesce_key == delivery.coalesce_key,
+            NotificationEmailDelivery.id != delivery.id,
+            NotificationEmailDelivery.status == NotificationEmailStatus.PENDING,
+        )
+        .with_for_update()
+    )
+    if successor is not None:
+        metadata = coalesce_metadata(
+            delivery.notification_metadata or {}, successor.notification_metadata or {}
+        )
+        successor.notification_metadata = metadata
+        successor.notification_type = _NOTIFICATION_TYPES[CalendarMailKind[metadata["kind"]]].value
+        successor.updated_at = now
+        terminal_email_delivery(
+            delivery,
+            NotificationEmailStatus.SKIPPED,
+            NotificationEmailTerminalReason.SUPERSEDED,
+            now,
+        )
+        return None
+    return retry_email_deliveries([delivery], attempt=attempt, now=now)
+
+
+async def _lock_event_mail(session: AsyncSession, event_id: UUID) -> None:
+    await session.execute(
+        select(func.pg_advisory_xact_lock(func.hashtextextended(f"calendar-mail:{event_id}", 0)))
+    )
 
 
 async def retire_pending_event_mail(
@@ -183,33 +249,48 @@ def read_event_mail(delivery: NotificationEmailDelivery) -> EventMailRequest | N
         return None
 
     occurrence = metadata.get("occurrence_date")
+    try:
+        occurrence_date = date.fromisoformat(occurrence) if occurrence else None
+        withdrawal = (
+            EventWithdrawal.model_validate(metadata[_WITHDRAWAL])
+            if _WITHDRAWAL in metadata
+            else None
+        )
+    except ValidationError, ValueError, TypeError:
+        return None
+    if withdrawal is not None and kind != CalendarMailKind.CANCELLATION:
+        return None
     return EventMailRequest(
         delivery_id=delivery.id,
         organization_id=delivery.organization_id,
         recipient_id=delivery.user_id,
         event_id=delivery.content_id,
         kind=CalendarMailKind[kind],
-        occurrence_date=date.fromisoformat(occurrence) if occurrence else None,
+        occurrence_date=occurrence_date,
         changes=tuple(metadata.get("changes") or ()),
+        withdrawal=withdrawal,
     )
 
 
 def coalesce_metadata(held: dict[str, Any], incoming: dict[str, Any]) -> dict[str, Any]:
-    """Fold a second message into the one still waiting.
-
-    The higher-ranked kind decides what the message is and which occurrence it
-    names; every change either of them described still has to be read.
-    """
+    """Retain the strongest message kind and every changed aspect."""
     ranked = held.get("kind") in CalendarMailKind.__members__ and (
         _PRECEDENCE[CalendarMailKind[held["kind"]]]
         >= _PRECEDENCE[CalendarMailKind[incoming["kind"]]]
     )
     winner = held if ranked else incoming
-    return {
+    result = {
         "kind": winner["kind"],
         "occurrence_date": winner.get("occurrence_date"),
         "changes": sorted(set(held.get("changes") or ()) | set(incoming.get("changes") or ())),
     }
+    withdrawals = [value[_WITHDRAWAL] for value in (held, incoming) if _WITHDRAWAL in value]
+    if withdrawals:
+        result[_WITHDRAWAL] = {
+            **max(withdrawals, key=lambda value: value["sequence"]),
+            "this_and_following": any(value["this_and_following"] for value in withdrawals),
+        }
+    return result
 
 
 async def _absorb(
@@ -220,6 +301,7 @@ async def _absorb(
     actor_user_id: UUID | None,
     occurrence_date: date | None,
     changes: Iterable[str],
+    withdrawal: EventWithdrawal | None,
     due: datetime,
     now: datetime,
 ) -> None:
@@ -237,10 +319,12 @@ async def _absorb(
         .scalars()
         .all()
     )
-    incoming = _metadata(kind, occurrence_date, changes)
+    incoming = _metadata(kind, occurrence_date, changes, withdrawal)
     for row in rows:
         metadata = coalesce_metadata(row.notification_metadata or {}, incoming)
         row.notification_metadata = metadata
+        if _WITHDRAWAL in metadata:
+            row.title = "Meeting cancelled"
         row.notification_type = _NOTIFICATION_TYPES[CalendarMailKind[metadata["kind"]]].value
         if metadata["kind"] == kind.value:
             row.actor_id = actor_user_id
@@ -253,12 +337,18 @@ def _metadata(
     kind: CalendarMailKind,
     occurrence_date: date | None,
     changes: Iterable[str],
+    withdrawal: EventWithdrawal | None = None,
 ) -> dict[str, Any]:
-    return {
+    metadata = {
         "kind": kind.value,
         "occurrence_date": occurrence_date.isoformat() if occurrence_date else None,
         "changes": sorted(set(changes)),
     }
+    if withdrawal is not None:
+        if kind is not CalendarMailKind.CANCELLATION:
+            raise ValueError("Only cancellations can carry withdrawal identity")
+        metadata[_WITHDRAWAL] = withdrawal.model_dump(mode="json")
+    return metadata
 
 
 def _coalesce_key(event_id: UUID, occurrence_date: date | None, recipient_id: UUID) -> str:

@@ -107,3 +107,107 @@ async def test_a_series_that_already_ran_out_is_left_behind(session, env) -> Non
         await session.execute(delete(CalendarEvent).where(CalendarEvent.calendar_id == calendar.id))
         await session.execute(delete(Calendar).where(Calendar.id == calendar.id))
         await session.commit()
+
+
+@pytest.mark.parametrize(
+    "expired_config",
+    [
+        {"end_date": (NOW - timedelta(days=365)).isoformat()},
+        {"max_occurrences": 3},
+    ],
+)
+async def test_expired_series_do_not_spend_window_limit(session, env, expired_config) -> None:
+    calendar = await _calendar(session, env)
+    for number in range(2000):
+        session.add(
+            _event(
+                env,
+                calendar,
+                title=f"Expired {number}",
+                start=NOW - timedelta(days=730),
+                recurrence_pattern=RecurrencePattern.WEEKLY,
+                recurrence_config={"interval": 1, **expired_config},
+            )
+        )
+    session.add(_event(env, calendar, title="Current", start=NOW))
+    await session.commit()
+    try:
+        rows, total = await CalendarEventReader(session).list_events_in_window(
+            env.admin_id,
+            env.org_id,
+            calendar_id=calendar.id,
+            start_date=WINDOW_START,
+            end_date=WINDOW_END,
+            limit=2000,
+        )
+        assert [row.title for row in rows] == ["Current"]
+        assert total == 1
+    finally:
+        await session.execute(delete(CalendarEvent).where(CalendarEvent.calendar_id == calendar.id))
+        await session.execute(delete(Calendar).where(Calendar.id == calendar.id))
+        await session.commit()
+
+
+async def test_moved_override_keeps_its_expired_master_in_window(session, env) -> None:
+    calendar = await _calendar(session, env)
+    master = _event(
+        env,
+        calendar,
+        title="Expired master",
+        start=NOW - timedelta(days=730),
+        recurrence_pattern=RecurrencePattern.WEEKLY,
+        recurrence_config={"interval": 1, "max_occurrences": 3},
+    )
+    session.add(master)
+    await session.flush()
+    session.add(_event(env, calendar, title="Moved", start=NOW, recurrence_id=master.id))
+    await session.commit()
+    try:
+        assert await _titles_in_window(session, env, calendar) == {"Expired master"}
+    finally:
+        await session.execute(delete(CalendarEvent).where(CalendarEvent.calendar_id == calendar.id))
+        await session.execute(delete(Calendar).where(Calendar.id == calendar.id))
+        await session.commit()
+
+
+async def test_last_multiday_occurrence_overlaps_after_end_date(session, env) -> None:
+    calendar = await _calendar(session, env)
+    master = _event(
+        env,
+        calendar,
+        title="Long final occurrence",
+        start=WINDOW_START - timedelta(days=9),
+        recurrence_pattern=RecurrencePattern.WEEKLY,
+        timezone="Pacific/Auckland",
+        recurrence_config={"interval": 1, "max_occurrences": 2},
+    )
+    master.end_time = master.start_time + timedelta(days=3)
+    session.add(master)
+    await session.commit()
+    try:
+        assert await _titles_in_window(session, env, calendar) == {"Long final occurrence"}
+    finally:
+        await session.execute(delete(CalendarEvent).where(CalendarEvent.calendar_id == calendar.id))
+        await session.execute(delete(Calendar).where(Calendar.id == calendar.id))
+        await session.commit()
+
+
+async def test_large_interval_outside_window_does_not_overflow(session, env) -> None:
+    calendar = await _calendar(session, env)
+    session.add(
+        _event(
+            env,
+            calendar,
+            title="Distant next occurrence",
+            start=NOW - timedelta(days=730),
+            recurrence_pattern=RecurrencePattern.MONTHLY,
+            recurrence_config={"interval": 50000, "max_occurrences": 2},
+        )
+    )
+    await session.commit()
+    try:
+        assert await _titles_in_window(session, env, calendar) == set()
+    finally:
+        await session.execute(delete(CalendarEvent).where(CalendarEvent.calendar_id == calendar.id))
+        await session.execute(delete(Calendar).where(Calendar.id == calendar.id))
+        await session.commit()

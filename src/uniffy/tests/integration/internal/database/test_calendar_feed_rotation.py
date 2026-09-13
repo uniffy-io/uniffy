@@ -7,7 +7,11 @@ from uniffy.core.crypto import OrgCipher
 from uniffy.core.models.calendar.calendar import Calendar
 from uniffy.core.models.calendar.feed_token import CalendarFeedToken
 from uniffy.core.types import generate_id
-from uniffy.domains.scheduling.calendar.ical.feed import issue_feed, read_feed
+from uniffy.domains.scheduling.calendar.ical.feed import (
+    issue_feed,
+    read_feed,
+    register_calendar_crypto,
+)
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
@@ -15,6 +19,7 @@ pytestmark = pytest.mark.asyncio(loop_scope="session")
 async def test_rotating_the_org_key_re_encrypts_the_feed_secret(session, env) -> None:
     """Rotation used to report success while these rows stayed sealed under the
     retired key, so removing it would have broken every subscription."""
+    register_calendar_crypto()
     calendar = Calendar(
         organization_id=env.org_id,
         owner_id=env.admin_id,

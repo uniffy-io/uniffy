@@ -1,7 +1,7 @@
 """Staging event mail from the operations that cause it."""
 
 from collections.abc import Iterable
-from datetime import date
+from datetime import UTC, date, datetime
 from uuid import UUID
 
 from sqlalchemy import select
@@ -9,7 +9,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.models.calendar.attendee import EventAttendee
 from uniffy.core.models.calendar.event import CalendarEvent
+from uniffy.core.models.login.user import User
+from uniffy.core.types import ContentType
+from uniffy.domains.permissions.access import ResourceAudienceResolver, ResourceKey
+from uniffy.domains.scheduling.calendar.ical.emit import event_uid
 from uniffy.domains.scheduling.calendar.mail.outbox import CalendarMailKind, stage_event_mail
+from uniffy.domains.scheduling.calendar.mail.withdrawal import EventWithdrawal
+from uniffy.domains.scheduling.calendar.recurrence import occurrence_start_for_date
 
 # Activity actions that move what an attendee needs to know: when it happens,
 # where, and how to join. A retitled meeting or an edited agenda does not
@@ -37,11 +43,7 @@ async def stage_change_mail(
     actions: Iterable[str],
     exclude: set[UUID] | None = None,
 ) -> int:
-    """Tell everyone already invited that the meeting moved.
-
-    The actions travel with the row: several edits coalesce onto one message,
-    and their union is what the recipient needs to read.
-    """
+    """Coalesced edits retain every changed aspect."""
     recipients = await _attendee_ids(session, event.id, exclude={actor_id, *(exclude or set())})
     return await stage_event_mail(
         session,
@@ -63,11 +65,7 @@ async def stage_cancellation_mail(
     occurrence_date: date | None = None,
     event_id: UUID | None = None,
 ) -> int:
-    """Tell every attendee the meeting, or this occurrence of it, is off.
-
-    The revision moves with the withdrawal: a client that already holds the
-    meeting ignores a cancellation whose sequence has not advanced.
-    """
+    """Advance the revision so clients accept the cancellation."""
     target = event_id or event.id
     withdrawn = event if target == event.id else await session.get(CalendarEvent, target)
     if withdrawn is not None:
@@ -85,13 +83,52 @@ async def stage_cancellation_mail(
     )
 
 
-def describe_changes(actions: Iterable[str]) -> list[str]:
-    """Human lines for the actions seen, in a stable order.
+async def stage_withdrawal_mail(
+    session: AsyncSession,
+    event: CalendarEvent,
+    *,
+    actor_id: UUID,
+    occurrence_date: date | None = None,
+    this_and_following: bool = False,
+) -> int:
+    """Authorize the withdrawal audience before deletion removes its access facts."""
+    recipients = await _attendee_ids(session, event.id, exclude={actor_id})
+    recipients = await ResourceAudienceResolver(session).filter_resource(
+        organization_id=event.organization_id,
+        key=ResourceKey(ContentType.CALENDAR_EVENT, event.id),
+        candidate_user_ids=recipients,
+    )
+    event.ical_sequence += 1
+    organizer = await session.get(User, event.organizer_id)
+    if not recipients or organizer is None:
+        return 0
+    withdrawal = EventWithdrawal(
+        uid=event_uid(event),
+        organizer_email=organizer.email,
+        sequence=event.ical_sequence,
+        timestamp=datetime.now(UTC),
+        occurrence_on=occurrence_date if event.is_all_day else None,
+        occurrence_at=(
+            occurrence_start_for_date(event.start_time, event.timezone, occurrence_date)
+            if occurrence_date is not None and not event.is_all_day
+            else None
+        ),
+        this_and_following=this_and_following,
+    )
+    return await stage_event_mail(
+        session,
+        organization_id=event.organization_id,
+        event_id=event.id,
+        title="Meeting cancelled",
+        recipient_ids=recipients,
+        kind=CalendarMailKind.CANCELLATION,
+        actor_user_id=actor_id,
+        occurrence_date=occurrence_date,
+        withdrawal=withdrawal,
+    )
 
-    Aspects rather than a diff: several edits coalesce into one message, and
-    "the time has changed" stays true however many times it moved, where a
-    narrative of every intermediate value would read as noise.
-    """
+
+def describe_changes(actions: Iterable[str]) -> list[str]:
     seen = set(actions)
     return [CHANGE_LABELS[action] for action in CHANGE_LABELS if action in seen]
 

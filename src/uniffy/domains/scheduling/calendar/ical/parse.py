@@ -1,8 +1,4 @@
-"""Reading a VCALENDAR into rows this product can store.
-
-Anything the in-house vocabulary cannot express is reported rather than
-approximated: a silently reshaped meeting is worse than a skipped one.
-"""
+"""Reject calendar rules the stored recurrence model cannot preserve."""
 
 from collections.abc import Iterable
 from dataclasses import dataclass, field, replace

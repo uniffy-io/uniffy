@@ -18,12 +18,19 @@ from uniffy.core.types import (
     EventStatus,
     RecurrencePattern,
 )
+from uniffy.domains.scheduling.calendar.events.recurrence.withdrawal import (
+    finish_following_overrides,
+    stage_following_overrides,
+)
+from uniffy.domains.scheduling.calendar.events.tags import EventTagOperations
 from uniffy.domains.scheduling.calendar.mail.outbox import CalendarMailKind, stage_event_mail
 from uniffy.domains.scheduling.calendar.mail.staging import (
     MAIL_TRIGGERING_ACTIONS,
     stage_cancellation_mail,
     stage_change_mail,
+    stage_withdrawal_mail,
 )
+from uniffy.domains.scheduling.calendar.queries import get_event_for_update
 from uniffy.domains.scheduling.calendar.recurrence import (
     count_occurrences_through,
     occurrence_start_for_date,
@@ -47,7 +54,7 @@ class RecurrenceMutationOperations:
         occurrence_date: date,
     ) -> None:
         """Cancel a single occurrence of a recurring event."""
-        event = await self.events._fetch_by_id(event_id, organization_id)
+        event = await get_event_for_update(self.session, event_id, organization_id)
         if not event:
             raise NotFoundError("CalendarEvent", event_id)
 
@@ -88,7 +95,7 @@ class RecurrenceMutationOperations:
         **updates: object,
     ) -> CalendarEvent:
         """Materialize an override event for a single recurring occurrence."""
-        master = await self.events._fetch_by_id(event_id, organization_id)
+        master = await get_event_for_update(self.session, event_id, organization_id)
         if not master:
             raise NotFoundError("CalendarEvent", event_id)
 
@@ -179,7 +186,7 @@ class RecurrenceMutationOperations:
             )
         await self.events._reschedule_master_reminder_rows(master)
 
-        await self.events._copy_tag_assignments(
+        staged_tags = await EventTagOperations(self.events).stage_copy_tags(
             organization_id=organization_id,
             actor_id=user_id,
             source_event_id=master.id,
@@ -196,7 +203,6 @@ class RecurrenceMutationOperations:
         await self.events._log_activity(override.id, user_id, "created")
         changed_actions = await self.events._log_field_changes(override, user_id, edited_before)
 
-        await self.events._index_for_search(override, skip_member_lookup=True)
         if master.status != EventStatus.CANCELLED and override.status == EventStatus.CANCELLED:
             await stage_cancellation_mail(
                 self.session,
@@ -218,6 +224,11 @@ class RecurrenceMutationOperations:
             )
         await self.session.commit()
 
+        await EventTagOperations(self.events).finish_copy_tags(staged_tags)
+        try:
+            await self.events._index_for_search(override, skip_member_lookup=True)
+        except Exception:
+            logger.opt(exception=True).warning("Occurrence search projection failed")
         if master.status != EventStatus.CANCELLED and override.status == EventStatus.CANCELLED:
             await self.events._emit_cancellation_notification(
                 override, user_id, organization_id, occurrence_date=occurrence_date
@@ -234,7 +245,7 @@ class RecurrenceMutationOperations:
         **updates: object,
     ) -> CalendarEvent:
         """Split a recurring series at `occurrence_date` and apply updates."""
-        master = await self.events._fetch_by_id(event_id, organization_id)
+        master = await get_event_for_update(self.session, event_id, organization_id)
         if not master:
             raise NotFoundError("CalendarEvent", event_id)
 
@@ -349,7 +360,7 @@ class RecurrenceMutationOperations:
             )
         await self.events._reschedule_master_reminder_rows(master)
 
-        await self.events._copy_tag_assignments(
+        staged_tags = await EventTagOperations(self.events).stage_copy_tags(
             organization_id=organization_id,
             actor_id=user_id,
             source_event_id=master.id,
@@ -366,9 +377,18 @@ class RecurrenceMutationOperations:
         await self.events._log_activity(new_event.id, user_id, "created")
         await self.events._log_field_changes(new_event, user_id, edited_before)
 
-        await self.events._index_for_search(new_event, skip_member_lookup=True)
+        withdrawn_overrides = []
         if master.status != EventStatus.CANCELLED and new_event.status == EventStatus.CANCELLED:
-            await stage_cancellation_mail(self.session, new_event, actor_id=user_id)
+            withdrawn_overrides = await stage_following_overrides(
+                self.session, master, occurrence_date
+            )
+            await stage_withdrawal_mail(
+                self.session,
+                master,
+                actor_id=user_id,
+                occurrence_date=occurrence_date,
+                this_and_following=True,
+            )
         else:
             # A split is two series from here on: the one everybody holds now
             # stops earlier, and the one taking over is theirs to accept.
@@ -390,6 +410,12 @@ class RecurrenceMutationOperations:
             )
         await self.session.commit()
 
+        await EventTagOperations(self.events).finish_copy_tags(staged_tags)
+        await finish_following_overrides(self.events.search_indexer, withdrawn_overrides)
+        try:
+            await self.events._index_for_search(new_event, skip_member_lookup=True)
+        except Exception:
+            logger.opt(exception=True).warning("Split series search projection failed")
         if master.status != EventStatus.CANCELLED and new_event.status == EventStatus.CANCELLED:
             await self.events._emit_cancellation_notification(
                 new_event,

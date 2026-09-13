@@ -1,5 +1,6 @@
 """Two-way mapping between the in-house recurrence vocabulary and RFC 5545 RRULE."""
 
+from calendar import monthrange
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from enum import StrEnum
@@ -235,14 +236,7 @@ def _ical_days(days_of_week: list[str] | None) -> list[str]:
 
 
 def _monthly_parts(target_day: int) -> list[str]:
-    """Express the expander's clamping, which RFC 5545 does not share.
-
-    A plain ``BYMONTHDAY=30`` skips February outright, where the expander pulls
-    the occurrence back to the 28th. Pairing the day with the month's last day
-    and taking the first of the set reproduces the clamp exactly: in a long
-    month the set is {30, 31} and the 30th wins, in February it collapses to
-    the last day.
-    """
+    """Express month-end clamping instead of RFC 5545's invalid-date skipping."""
     if target_day >= _LAST_DAY_OF_MONTH:
         return ["BYMONTHDAY=-1"]
     if target_day in _CLAMPED_DAYS:
@@ -251,20 +245,14 @@ def _monthly_parts(target_day: int) -> list[str]:
 
 
 def _yearly_parts(start_date: date) -> list[str]:
-    """February 29 is the only start date whose day is absent from some years.
-
-    RFC 5545 would recur it in leap years alone, where the expander clamps it to
-    the 28th - the same pairing the monthly case needs, scoped to February.
-    """
+    """Express February 29 clamping in years without that date."""
     if (start_date.month, start_date.day) != _LEAP_DAY:
         return []
     return ["BYMONTH=2", "BYMONTHDAY=29,-1", "BYSETPOS=1"]
 
 
 def _yearly_refusal(parts: dict[str, Any], dtstart: date) -> UnsupportedRule | None:
-    """A yearly series repeats on its own month and day, so the BY parts are
-    accepted only where they restate that rather than move it.
-    """
+    """Accept only yearly rules that preserve the expander's dates."""
     if parts.get("BYDAY"):
         return UnsupportedRule(RecurrenceRejection.UNSUPPORTED_PART)
 
@@ -273,15 +261,25 @@ def _yearly_refusal(parts: dict[str, Any], dtstart: date) -> UnsupportedRule | N
         return UnsupportedRule(RecurrenceRejection.UNSUPPORTED_PART)
 
     by_month_day = parts.get("BYMONTHDAY")
-    if by_month_day:
-        values = {int(v) for v in _as_list(by_month_day)}
-        if values not in ({dtstart.day}, {-1}, {dtstart.day, -1}):
-            return UnsupportedRule(RecurrenceRejection.UNSUPPORTED_PART)
-
     by_set_pos = parts.get("BYSETPOS")
-    if by_set_pos and int(_single(by_set_pos)) != 1:
+    if by_set_pos and {int(v) for v in _as_list(by_set_pos)} != {1}:
         return UnsupportedRule(RecurrenceRejection.UNSUPPORTED_PART)
-    return None
+    leap_day = (dtstart.month, dtstart.day) == _LEAP_DAY
+    if not by_month_day:
+        if leap_day or (by_set_pos and not by_month):
+            return UnsupportedRule(RecurrenceRejection.UNSUPPORTED_PART)
+        return None
+    if not by_month:
+        return UnsupportedRule(RecurrenceRejection.UNSUPPORTED_PART)
+    values = {int(v) for v in _as_list(by_month_day)}
+    always_last = all(dtstart.day == monthrange(year, dtstart.month)[1] for year in (2000, 2001))
+    if values == {dtstart.day} and not leap_day:
+        return None
+    if values == {-1} and (always_last or leap_day):
+        return None
+    if values == {dtstart.day, -1} and (by_set_pos or always_last):
+        return None
+    return UnsupportedRule(RecurrenceRejection.UNSUPPORTED_PART)
 
 
 def _bound_parts(
@@ -378,36 +376,21 @@ def _monthly_day(by_month_day: Any, by_set_pos: Any, dtstart: date) -> int | Uns
 
 
 def _counts_weeks_elsewhere(frequency: str, interval: int, week_start: Any) -> bool:
-    """Whether the rule counts its weeks from a day the expander does not.
-
-    Only an interval above one can disagree: every week start selects the same
-    days when the rule repeats every week.
-    """
+    """Multiweek intervals require the same week start as the expander."""
     if frequency != _FREQ_WEEKLY or interval == 1 or week_start is None:
         return False
     return str(week_start).upper() != _WEEK_START
 
 
 def _unclamped(day: int) -> int | UnsupportedRule:
-    """Refuse a day the two calendars disagree about.
-
-    RFC 5545 skips a month that has no such day; the expander pulls the
-    occurrence back to the last one. Importing it either way silently moves
-    meetings, so the row goes to the skipped report instead. The BYSETPOS pair
-    this module emits states the clamp explicitly and is read back above.
-    """
+    """Reject rules that skip months where the expander clamps the day."""
     if day in _CLAMPED_DAYS or day == _LAST_DAY_OF_MONTH:
         return UnsupportedRule(RecurrenceRejection.CLAMPED_MONTH_DAY)
     return day
 
 
 def _day_of_month(day: int) -> int | UnsupportedRule:
-    """Only a day the expander can build a date from survives import.
-
-    Counting backwards has no representation beyond the last day, so accepting
-    a second-to-last day would store a number that raises when the series is
-    next expanded - taking the whole range read down with it.
-    """
+    """The stored model supports only forward day-of-month values."""
     if 1 <= day <= _LAST_DAY_OF_MONTH:
         return day
     return UnsupportedRule(RecurrenceRejection.UNSUPPORTED_MONTH_DAY)

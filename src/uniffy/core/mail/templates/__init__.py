@@ -57,6 +57,10 @@ TEMPLATES: dict[str, MailTemplate] = {
         name="calendar/cancellation",
         description="Sent to every attendee when an event, or one occurrence of it, is called off.",
     ),
+    "calendar/withdrawal": MailTemplate(
+        name="calendar/withdrawal",
+        description="Withdraws a meeting without reading deleted content.",
+    ),
     "notifications/instant": MailTemplate(
         name="notifications/instant",
         description="Immediate delivery of one user notification.",

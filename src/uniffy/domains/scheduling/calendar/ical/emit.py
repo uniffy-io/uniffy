@@ -62,12 +62,6 @@ class IcalAttendee:
 
 @dataclass(frozen=True)
 class EventExport:
-    """An event with everything the serializer needs already loaded.
-
-    ``cancelled_dates`` become EXDATE; ``overrides`` become sibling VEVENTs
-    carrying RECURRENCE-ID, which is how iCalendar expresses a moved occurrence.
-    """
-
     event: CalendarEvent
     organizer: IcalPerson | None = None
     attendees: Sequence[IcalAttendee] = ()
@@ -94,11 +88,6 @@ def serialize_events(
     calendar_name: str | None = None,
     refresh_interval: timedelta | None = None,
 ) -> bytes:
-    """Render a VCALENDAR carrying every export and the zones they reference.
-
-    ``calendar_name`` and ``refresh_interval`` are subscription hints outside
-    RFC 5545; every major client reads them and the rest ignore them.
-    """
     calendar = Calendar()
     calendar.add("prodid", PRODUCT_ID)
     calendar.add("version", ICAL_VERSION)
@@ -124,7 +113,7 @@ def serialize_events(
                 _build_event(
                     override,
                     uid_domain=uid_domain,
-                    series_uid=_uid(export.event, uid_domain),
+                    series_uid=event_uid(export.event, uid_domain),
                     master=export.event,
                 )
             )
@@ -143,7 +132,7 @@ def _build_event(
     tz = resolve_event_zone(event.timezone)
     component = Event()
 
-    component.add("uid", series_uid or _uid(event, uid_domain))
+    component.add("uid", series_uid or event_uid(event, uid_domain))
     component.add("dtstamp", event.updated_at.astimezone(_UTC))
     component.add("created", event.created_at.astimezone(_UTC))
     component.add("last-modified", event.updated_at.astimezone(_UTC))
@@ -249,9 +238,7 @@ def _add_exdates(
     tz: ZoneInfo,
     cancelled: Sequence[date],
 ) -> None:
-    """EXDATE values have to match the occurrence DTSTART they cancel exactly,
-    so a timed series excludes instants rather than bare dates.
-    """
+    """Exclusions must match the DTSTART value type and timezone."""
     ordered = sorted(set(cancelled))
     if event.is_all_day:
         component.add("exdate", ordered)
@@ -266,11 +253,7 @@ def _add_exdates(
 
 
 def _occurrence_value(master: CalendarEvent, export: EventExport, tz: ZoneInfo) -> datetime | date:
-    """RECURRENCE-ID names the occurrence being replaced, not where it moved to.
-
-    A client matches the override to its series by this value, so a meeting
-    dragged to another day has to keep pointing at the day it left.
-    """
+    """RECURRENCE-ID identifies the original occurrence before it moved."""
     original = export.original_date
     if master.is_all_day:
         return original or export.event.start_time.astimezone(tz).date()
@@ -300,10 +283,8 @@ def _is_known_zone(tzid: str) -> bool:
     return True
 
 
-def _uid(event: CalendarEvent, uid_domain: str) -> str:
-    """An imported event keeps the UID it arrived with, so exporting it and
-    importing it back matches the event already here instead of duplicating it.
-    """
+def event_uid(event: CalendarEvent, uid_domain: str = DEFAULT_UID_DOMAIN) -> str:
+    """Preserve imported identities so clients can match revisions."""
     return event.ical_uid or f"{event.id}@{uid_domain}"
 
 

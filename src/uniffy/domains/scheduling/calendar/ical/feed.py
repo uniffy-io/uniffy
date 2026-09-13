@@ -1,9 +1,4 @@
-"""Subscribe feeds: a read-only iCalendar URL a calendar client can poll.
-
-The token is scoped identity, never a bypass: it resolves to the person it was
-minted for, and the document is the ordinary permission-filtered read run as
-them.
-"""
+"""Token-scoped calendar feeds recheck live access on every fetch."""
 
 import hashlib
 import os
@@ -62,11 +57,6 @@ async def issue_feed(
     organization_id: UUID,
     calendar_id: UUID,
 ) -> tuple[str, CalendarFeedToken]:
-    """Mint this person's feed for this calendar, replacing any earlier one.
-
-    The row is unique per (calendar, subscriber), so regenerating retires the
-    previous URL in the same transaction rather than leaving two live.
-    """
     await require_own_calendar(session, user_id, organization_id, calendar_id)
 
     raw_token = secrets.token_urlsafe(TOKEN_BYTES)
@@ -101,11 +91,6 @@ async def read_feed(
     organization_id: UUID,
     calendar_id: UUID,
 ) -> tuple[str, CalendarFeedToken] | None:
-    """Return the caller's own feed URL, or ``None`` when they have none.
-
-    The raw token is recovered from its envelope rather than re-minted, so
-    reading it on a second device does not break the first one's subscription.
-    """
     await require_own_calendar(session, user_id, organization_id, calendar_id)
     row = await _load_own(session, user_id, organization_id, calendar_id)
     if row is None:
@@ -134,11 +119,7 @@ async def revoke_feed(
 
 
 async def resolve_feed(session: AsyncSession, raw_token: str) -> CalendarFeedToken | None:
-    """Match a polled URL to the subscription it names, or refuse.
-
-    A token outlives the session that created it, so the subscriber's standing
-    is rechecked on every fetch rather than trusted from when it was minted.
-    """
+    """A feed token confers no access beyond its owner's live permissions."""
     row = await session.scalar(
         select(CalendarFeedToken).where(CalendarFeedToken.token_hash == hash_token(raw_token))
     )
@@ -189,11 +170,7 @@ async def render_feed(session: AsyncSession, row: CalendarFeedToken) -> bytes:
 
 
 async def record_fetch(session: AsyncSession, row: CalendarFeedToken) -> None:
-    """Note that a client polled, so a subscription gone quiet is visible.
-
-    A targeted UPDATE: this runs on an unauthenticated request and must commit
-    one column without carrying anything else the request touched with it.
-    """
+    """Update only telemetry so a concurrent key rotation cannot be overwritten."""
     fetched_at = datetime.now(UTC)
     await session.execute(
         update(CalendarFeedToken)
@@ -251,12 +228,13 @@ def _feed_token_set_ciphertext(row: CalendarFeedToken, ciphertext: str) -> None:
 
 # Without this the rotation sweep reports success while these secrets stay
 # sealed under the retired key, and every subscription breaks on its removal.
-register_consumer(
-    ReEncryptingConsumer(
-        name="calendar_feed_tokens",
-        table_name="calendar_feed_tokens",
-        list_rows=_list_feed_tokens_for_org,
-        get_ciphertext=lambda row: row.token_encrypted,
-        set_ciphertext=_feed_token_set_ciphertext,
+def register_calendar_crypto() -> None:
+    register_consumer(
+        ReEncryptingConsumer(
+            name="calendar_feed_tokens",
+            table_name="calendar_feed_tokens",
+            list_rows=_list_feed_tokens_for_org,
+            get_ciphertext=lambda row: row.token_encrypted,
+            set_ciphertext=_feed_token_set_ciphertext,
+        )
     )
-)

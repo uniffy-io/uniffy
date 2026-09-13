@@ -40,6 +40,7 @@ from uniffy.domains.notifications.delivery import (
 )
 from uniffy.domains.projects.registration import register_project_content
 from uniffy.domains.scheduling.calendar.events.registration import register_calendar_content
+from uniffy.domains.scheduling.calendar.ical.feed import register_calendar_crypto
 from uniffy.infrastructure.database import close_db, init_db, open_session
 from uniffy.infrastructure.search import MeiliSearchEngine
 from uniffy.infrastructure.storage import S3Storage
@@ -118,6 +119,7 @@ async def _on_startup_shared(
 ) -> None:
     """Boot the resources every worker fleet needs."""
     register_calendar_content()
+    register_calendar_crypto()
     register_file_content()
     register_note_content()
     register_project_content()

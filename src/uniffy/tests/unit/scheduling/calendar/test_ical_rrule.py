@@ -62,53 +62,98 @@ def _scenarios() -> list[tuple[str, date, RecurrencePattern, dict]]:
     cases: list[tuple[str, date, RecurrencePattern, dict]] = []
 
     for interval in (1, 2, 5):
-        cases.append((f"daily-{interval}", mid_month, RecurrencePattern.DAILY, {
-            "interval": interval,
-        }))
-    cases.append(("daily-weekday-filter", mid_month, RecurrencePattern.DAILY, {
-        "interval": 1,
-        "days_of_week": [MONDAY, WEDNESDAY, FRIDAY],
-    }))
+        cases.append((
+            f"daily-{interval}",
+            mid_month,
+            RecurrencePattern.DAILY,
+            {
+                "interval": interval,
+            },
+        ))
+    cases.append((
+        "daily-weekday-filter",
+        mid_month,
+        RecurrencePattern.DAILY,
+        {
+            "interval": 1,
+            "days_of_week": [MONDAY, WEDNESDAY, FRIDAY],
+        },
+    ))
 
     for interval in (1, 2, 3):
-        cases.append((f"weekly-{interval}", mid_month, RecurrencePattern.WEEKLY, {
-            "interval": interval,
-            "days_of_week": [TUESDAY],
-        }))
-    cases.append(("weekly-multi-day", mid_month, RecurrencePattern.WEEKLY, {
-        "interval": 1,
-        "days_of_week": [MONDAY, WEDNESDAY, FRIDAY],
-    }))
+        cases.append((
+            f"weekly-{interval}",
+            mid_month,
+            RecurrencePattern.WEEKLY,
+            {
+                "interval": interval,
+                "days_of_week": [TUESDAY],
+            },
+        ))
+    cases.append((
+        "weekly-multi-day",
+        mid_month,
+        RecurrencePattern.WEEKLY,
+        {
+            "interval": 1,
+            "days_of_week": [MONDAY, WEDNESDAY, FRIDAY],
+        },
+    ))
     cases.append(("weekly-implicit-day", mid_month, RecurrencePattern.WEEKLY, {"interval": 1}))
-    cases.append(("biweekly", mid_month, RecurrencePattern.BIWEEKLY, {
-        "interval": 1,
-        "days_of_week": [WEDNESDAY],
-    }))
+    cases.append((
+        "biweekly",
+        mid_month,
+        RecurrencePattern.BIWEEKLY,
+        {
+            "interval": 1,
+            "days_of_week": [WEDNESDAY],
+        },
+    ))
 
     # Every day-of-month, so the clamped 29th/30th/31st are covered against a
     # February in the window rather than only in principle.
     for day in (1, 15, 28, 29, 30, 31):
-        cases.append((f"monthly-day-{day}", jan_first, RecurrencePattern.MONTHLY, {
-            "interval": 1,
-            "day_of_month": day,
-        }))
-    cases.append(("monthly-interval", jan_first, RecurrencePattern.MONTHLY, {
-        "interval": 3,
-        "day_of_month": 10,
-    }))
+        cases.append((
+            f"monthly-day-{day}",
+            jan_first,
+            RecurrencePattern.MONTHLY,
+            {
+                "interval": 1,
+                "day_of_month": day,
+            },
+        ))
+    cases.append((
+        "monthly-interval",
+        jan_first,
+        RecurrencePattern.MONTHLY,
+        {
+            "interval": 3,
+            "day_of_month": 10,
+        },
+    ))
 
     cases.append(("yearly", date(2024, 2, 29), RecurrencePattern.YEARLY, {"interval": 1}))
     cases.append(("yearly-interval", jan_first, RecurrencePattern.YEARLY, {"interval": 2}))
 
-    cases.append(("counted", mid_month, RecurrencePattern.DAILY, {
-        "interval": 2,
-        "max_occurrences": 9,
-    }))
-    cases.append(("counted-weekly", mid_month, RecurrencePattern.WEEKLY, {
-        "interval": 1,
-        "days_of_week": [MONDAY, FRIDAY],
-        "max_occurrences": 7,
-    }))
+    cases.append((
+        "counted",
+        mid_month,
+        RecurrencePattern.DAILY,
+        {
+            "interval": 2,
+            "max_occurrences": 9,
+        },
+    ))
+    cases.append((
+        "counted-weekly",
+        mid_month,
+        RecurrencePattern.WEEKLY,
+        {
+            "interval": 1,
+            "days_of_week": [MONDAY, FRIDAY],
+            "max_occurrences": 7,
+        },
+    ))
 
     return cases
 
@@ -289,6 +334,20 @@ class TestRejection:
 
 
 class TestImport:
+    @pytest.mark.parametrize(
+        ("start", "rule"),
+        [
+            (date(2024, 2, 29), "FREQ=YEARLY;COUNT=3"),
+            (date(2024, 2, 29), "FREQ=YEARLY;BYMONTH=2;BYMONTHDAY=29"),
+            (date(2026, 3, 18), "FREQ=YEARLY;BYMONTHDAY=18"),
+            (date(2026, 3, 18), "FREQ=YEARLY;BYMONTH=3;BYMONTHDAY=-1"),
+            (date(2026, 3, 18), "FREQ=YEARLY;BYMONTH=3;BYMONTHDAY=18,-1"),
+            (date(2026, 2, 28), "FREQ=YEARLY;BYMONTH=2;BYMONTHDAY=-1"),
+        ],
+    )
+    def test_yearly_rules_with_different_dates_are_refused(self, start: date, rule: str) -> None:
+        assert isinstance(rrule_to_config(rule, dtstart=start), UnsupportedRule)
+
     def test_a_monthly_day_the_two_calendars_disagree_about_is_refused(self) -> None:
         """RFC 5545 skips February for a rule on the 30th; the expander pulls
         the occurrence back to the 28th. Importing it would move meetings."""

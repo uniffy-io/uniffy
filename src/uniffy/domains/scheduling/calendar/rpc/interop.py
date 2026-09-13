@@ -127,7 +127,7 @@ class InteropHandlers:
                 if total > MAX_EXPORT_EVENTS:
                     raise ValidationError(
                         "calendar_id",
-                        f"This calendar holds {total} events; export is capped at "
+                        "This window exceeds the export limit of "
                         f"{MAX_EXPORT_EVENTS}. Narrow the window and export again.",
                     )
 

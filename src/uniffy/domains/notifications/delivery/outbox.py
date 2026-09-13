@@ -47,6 +47,7 @@ class NotificationEmailTerminalReason(StrEnum):
     SUPPRESSION_LIST = "suppression_list"
     MAIL_NOT_CONFIGURED = "mail_not_configured"
     DELIVERY_FAILED = "delivery_failed"
+    SUPERSEDED = "superseded"
 
 
 @dataclass(frozen=True)
@@ -120,6 +121,28 @@ async def prepare_email_recipient(
     deliveries: list[NotificationEmailDelivery],
     now: datetime,
 ) -> RecipientContext | None:
+    resolver = ResourceAccessResolver(session)
+    recipient = await _prepare_email_recipient(session, deliveries, now, resolver)
+    if recipient is not None:
+        await _drop_revoked_deliveries(session, resolver, deliveries, now)
+    return recipient
+
+
+async def prepare_transactional_email_recipient(
+    session: AsyncSession,
+    delivery: NotificationEmailDelivery,
+    now: datetime,
+) -> RecipientContext | None:
+    """Check recipient eligibility; the composing owner must authorize its payload."""
+    return await _prepare_email_recipient(session, [delivery], now, ResourceAccessResolver(session))
+
+
+async def _prepare_email_recipient(
+    session: AsyncSession,
+    deliveries: list[NotificationEmailDelivery],
+    now: datetime,
+    access_resolver: ResourceAccessResolver,
+) -> RecipientContext | None:
     first = deliveries[0]
     user = await session.get(User, first.user_id)
     organization = await session.get(Organization, first.organization_id)
@@ -153,7 +176,6 @@ async def prepare_email_recipient(
         return None
 
     overrides = await load_notification_overrides(session, user.id)
-    access_resolver = ResourceAccessResolver(session)
     subject = await access_resolver.subject(
         actor_id=user.id,
         organization_id=organization.id,
@@ -203,7 +225,6 @@ async def prepare_email_recipient(
             release_email_delivery(delivery, scheduled_for=scheduled_for, now=now)
             continue
 
-    await _drop_revoked_deliveries(session, access_resolver, deliveries, now)
     actor_ids = {delivery.actor_id for delivery in deliveries if delivery.actor_id}
     actor_names: dict[UUID, str] = {}
     if actor_ids:

@@ -31,13 +31,6 @@ async def build_exports(
     viewer_id: UUID,
     organization_id: UUID,
 ) -> list[EventExport]:
-    """Assemble exports for ``events`` as ``viewer_id`` is allowed to see them.
-
-    Each series pulls its exceptions and moved occurrences so the document is
-    self-contained, and a private event the viewer is not on publishes as a
-    busy block. The reads are batched across the whole set rather than per
-    event, so a calendar export costs a fixed number of queries.
-    """
     if not events:
         return []
 
@@ -71,6 +64,7 @@ async def build_exports(
         exports.append(
             EventExport(
                 event=event,
+                sequence=event.ical_sequence,
                 organizer=people.get(event.organizer_id),
                 attendees=attendees.get(event.id, ()),
                 details_hidden=event.id in hidden,
@@ -82,6 +76,7 @@ async def build_exports(
                 overrides=tuple(
                     EventExport(
                         event=override,
+                        sequence=event.ical_sequence,
                         organizer=people.get(override.organizer_id),
                         attendees=attendees.get(override.id, ()),
                         details_hidden=override.id in hidden,
@@ -102,12 +97,7 @@ async def _hidden_from(
     viewer_id: UUID,
     organization_id: UUID,
 ) -> set[UUID]:
-    """Which of these events publish as busy for this viewer.
-
-    Only private events can be hidden, so the authorization round trip is paid
-    for those alone; everything else is already as public as the calendar it
-    sits on.
-    """
+    """Private events expose details only to attendees and editors."""
     private = [event for event in events if event.visibility == EventVisibility.PRIVATE]
     if not private:
         return set()
@@ -140,9 +130,7 @@ async def _hidden_from(
 async def _exceptions_for(
     session: AsyncSession, series_ids: Sequence[UUID]
 ) -> dict[UUID, list[RecurrenceException]]:
-    """Every exception in the series, not just a window's worth - an export
-    that dropped the rest would resurrect occurrences the organizer cancelled.
-    """
+    """Export all exceptions so clients cannot resurrect cancelled dates."""
     if not series_ids:
         return {}
     rows = (

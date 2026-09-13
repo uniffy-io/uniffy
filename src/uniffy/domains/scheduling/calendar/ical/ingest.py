@@ -64,11 +64,7 @@ async def apply_import(
     payload: bytes,
     projection: CalendarEventProjection | None = None,
 ) -> ImportOutcome:
-    """Create everything the file describes that is not already here.
-
-    One transaction covers the whole file: a partial import would leave a
-    series without its exclusions, which reads as a different meeting.
-    """
+    """Import accepted rows atomically before publishing projections."""
     preview = await preview_import(
         session,
         user_id=user_id,
@@ -145,12 +141,6 @@ def _stage_event(
     recurrence_id: UUID | None = None,
     ical_uid: str | None = "",
 ) -> CalendarEvent:
-    """Add one row to the caller's transaction without committing it.
-
-    Imported events are OWNER_ONLY like every other created event; the file
-    names attendees by email, and mapping those to members is out of scope, so
-    an imported event starts private to whoever imported it.
-    """
     event = CalendarEvent(
         organization_id=organization_id,
         organizer_id=user_id,
@@ -196,9 +186,7 @@ async def _existing_uids(session: AsyncSession, calendar_id: UUID, uids: list[st
 async def _index_after_commit(
     events: list[CalendarEvent], projection: CalendarEventProjection | None
 ) -> None:
-    """Search projection is a post-commit effect, exactly as create() treats it:
-    a stale index never fails an import that already landed.
-    """
+    """Search failure must not undo a committed import."""
     if projection is None or not events:
         return
     for event in events:

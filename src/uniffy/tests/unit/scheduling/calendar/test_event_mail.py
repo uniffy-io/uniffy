@@ -33,12 +33,12 @@ from uniffy.domains.notifications.delivery.outbox import (
     RecipientContext,
     retry_email_deliveries,
 )
-from uniffy.domains.scheduling.calendar.jobs.event_mail import send_calendar_event_mail
 from uniffy.domains.scheduling.calendar.ical.emit import (
     EventExport,
     IcalAttendee,
     IcalPerson,
 )
+from uniffy.domains.scheduling.calendar.jobs.event_mail import send_calendar_event_mail
 from uniffy.domains.scheduling.calendar.mail.compose import (
     EventMailBundle,
     build_message_document,
@@ -260,9 +260,7 @@ class TestDocument:
             recurrence_pattern=RecurrencePattern.WEEKLY,
             recurrence_config={"interval": 1, "days_of_week": [WEDNESDAY]},
         )
-        request = _request(
-            event, CalendarMailKind.CANCELLATION, occurrence_date=date(2026, 3, 25)
-        )
+        request = _request(event, CalendarMailKind.CANCELLATION, occurrence_date=date(2026, 3, 25))
 
         component = next(
             iter(Calendar.from_ical(build_message_document(_bundle(event), request)).walk("VEVENT"))
@@ -275,9 +273,7 @@ class TestDocument:
         """RFC 5546 wants the organizer and the affected attendees on a CANCEL;
         without them the receiving client has nothing to match its copy to."""
         event = _event()
-        request = _request(
-            event, CalendarMailKind.CANCELLATION, occurrence_date=date(2026, 3, 25)
-        )
+        request = _request(event, CalendarMailKind.CANCELLATION, occurrence_date=date(2026, 3, 25))
         bundle = _bundle(
             event,
             exports=[
@@ -362,6 +358,27 @@ class TestCoalescing:
 
 
 class TestReadingTheRow:
+    def test_later_single_cancellation_preserves_pending_range(self) -> None:
+        held = {
+            "kind": "CANCELLATION",
+            "occurrence_date": "2026-03-25",
+            "withdrawal": {
+                "sequence": 1,
+                "this_and_following": True,
+            },
+        }
+        incoming = {
+            "kind": "CANCELLATION",
+            "occurrence_date": "2026-03-25",
+            "withdrawal": {
+                "sequence": 2,
+                "this_and_following": False,
+            },
+        }
+        merged = coalesce_metadata(held, incoming)
+        assert merged["withdrawal"]["sequence"] == 2
+        assert merged["withdrawal"]["this_and_following"] is True
+
     def test_a_row_another_domain_composed_is_not_event_mail(self) -> None:
         event = _event()
         row = _row(event, CalendarMailKind.INVITATION)
@@ -416,6 +433,7 @@ class TestTheJob:
 
     async def _run(self, row, *, bundle, sender=None):
         session = AsyncMock()
+        session.scalar.return_value = None
         if sender is None:
             sender = AsyncMock()
             sender.send.return_value = MailResult(success=True, provider_message_id="smtp-1")
@@ -426,7 +444,7 @@ class TestTheJob:
                 new=lambda: _session_context(session),
             ),
             patch(
-                "uniffy.domains.scheduling.calendar.jobs.event_mail.claim_email_delivery",
+                "uniffy.domains.scheduling.calendar.jobs.event_mail.claim_event_mail",
                 new=AsyncMock(return_value=row),
             ),
             patch(

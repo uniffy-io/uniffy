@@ -1,9 +1,4 @@
-"""Template context for event mail.
-
-The mail environment uses StrictUndefined, so every key a template can
-reference is emitted here unconditionally - an absent value becomes an empty
-string, never a missing key.
-"""
+"""Complete template context for the strict mail renderer."""
 
 import os
 from collections.abc import Sequence
@@ -62,11 +57,7 @@ def preferences_url() -> str:
 
 
 def respond_links(token: str) -> RespondLinks:
-    """Links to the page that submits the response.
-
-    The page posts the token rather than the link itself carrying the effect,
-    so a mail scanner opening every URL cannot accept a meeting for somebody.
-    """
+    """Responses require a POST so link scanners cannot change attendance."""
     page = f"{base_url()}/calendar/respond"
     return RespondLinks(
         accept=f"{page}?token={token}&response=accepted",
@@ -159,15 +150,7 @@ def summarize_attendees(names: Sequence[str]) -> str:
 def _occurrence_start(
     event: CalendarEvent, occurrence_date: date | None, zone: ZoneInfo
 ) -> datetime:
-    """Resolve the occurrence where the meeting lives, then read it where the
-    recipient does.
-
-    Substituting the date after converting to the reader's zone uses their wall
-    clock, which drifts by an hour whenever the two zones cross daylight saving
-    on different days. An all-day event carries a date rather than an instant,
-    so converting it at all would move it to the day before for anyone west of
-    the organizer.
-    """
+    """Resolve occurrence dates in the event timezone before converting for the recipient."""
     start = (
         event.start_time
         if occurrence_date is None

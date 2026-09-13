@@ -1,6 +1,6 @@
 """Building and sending one event message."""
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from uuid import UUID
 
 from sqlalchemy import select
@@ -19,10 +19,12 @@ from uniffy.domains.scheduling.calendar.ical.emit import EventExport, serialize_
 from uniffy.domains.scheduling.calendar.mail.context import (
     RespondLinks,
     build_context,
+    preferences_url,
     respond_links,
 )
 from uniffy.domains.scheduling.calendar.mail.outbox import CalendarMailKind, EventMailRequest
 from uniffy.domains.scheduling.calendar.mail.staging import describe_changes
+from uniffy.domains.scheduling.calendar.mail.withdrawal import withdrawal_document
 
 ATTACHMENT_FILENAME = "invite.ics"
 
@@ -83,11 +85,7 @@ async def load_bundle(session: AsyncSession, event_id: UUID) -> EventMailBundle 
 
 
 def build_message_document(bundle: EventMailBundle, request: EventMailRequest) -> bytes:
-    """The iCalendar body for one message.
-
-    Withdrawing a single occurrence sends that occurrence alone, carrying a
-    RECURRENCE-ID, rather than the series it belongs to.
-    """
+    """Occurrence cancellations retain the original recurrence identity."""
     method = _METHODS[request.kind]
     series = bundle.exports[0] if bundle.exports else None
     if request.occurrence_date is not None:
@@ -106,12 +104,12 @@ def build_message_document(bundle: EventMailBundle, request: EventMailRequest) -
             method=method.value,
         )
     exports = [
-        EventExport(
-            event=export.event,
-            organizer=export.organizer,
-            attendees=export.attendees,
-            cancelled_dates=export.cancelled_dates,
-            overrides=export.overrides,
+        replace(
+            export,
+            overrides=tuple(
+                replace(override, sequence=bundle.event.ical_sequence)
+                for override in export.overrides
+            ),
             sequence=bundle.event.ical_sequence,
         )
         for export in bundle.exports
@@ -147,6 +145,32 @@ async def send_event_mail(
         user_id=request.recipient_id,
         idempotency_key=f"calendar-mail:{request.delivery_id}",
         calendar_part=CalendarPart(document=document, method=_METHODS[request.kind]),
+        attachments=[MailAttachment(filename=ATTACHMENT_FILENAME, content=document)],
+    )
+
+
+async def send_withdrawal_mail(
+    request: EventMailRequest,
+    recipient: RecipientContext,
+    *,
+    sender: MailSender,
+) -> MailResult:
+    withdrawal = request.withdrawal
+    if withdrawal is None:
+        raise ValueError("Withdrawal identity required")
+    document = withdrawal_document(withdrawal, recipient.user.email)
+    return await sender.send(
+        recipient_email=recipient.user.email,
+        template_name="calendar/withdrawal",
+        context={
+            "organization_name": recipient.organization.name,
+            "preferences_url": preferences_url(),
+            "this_and_following": withdrawal.this_and_following,
+        },
+        organization_id=request.organization_id,
+        user_id=request.recipient_id,
+        idempotency_key=f"calendar-mail:{request.delivery_id}",
+        calendar_part=CalendarPart(document=document, method=CalendarMethod.CANCEL),
         attachments=[MailAttachment(filename=ATTACHMENT_FILENAME, content=document)],
     )
 

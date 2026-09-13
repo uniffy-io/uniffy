@@ -1,11 +1,12 @@
 """Calendar operations."""
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from uuid import UUID
 
 from loguru import logger
 from sqlalchemy import Select, and_, func, or_, select
+from sqlalchemy.orm import aliased
 
 from uniffy.core.models.calendar.attendee import EventAttendee
 from uniffy.core.models.calendar.event import CalendarEvent
@@ -15,7 +16,7 @@ from uniffy.core.types import (
     SortOrder,
 )
 from uniffy.domains.scheduling.calendar import queries
-from uniffy.domains.scheduling.calendar.recurrence import recurrence_end_date
+from uniffy.domains.scheduling.calendar.recurrence import expand_recurrence, recurrence_end_date
 
 logger = logger.bind(component="scheduling.calendar.events.queries")
 
@@ -29,12 +30,44 @@ class EventPage:
     next_page_token: str | None
 
 
-def _series_ended_before(event: CalendarEvent, start_date: datetime | None) -> bool:
-    """A repeat that stopped before the window opens belongs to nobody's week."""
-    if start_date is None or event.recurrence_pattern == RecurrencePattern.NONE:
+def _overlaps_window(
+    event: CalendarEvent, start_date: datetime | None, end_date: datetime | None
+) -> bool:
+    if (end_date is None or event.start_time < end_date) and (
+        start_date is None or event.end_time > start_date
+    ):
+        return True
+    if event.recurrence_pattern == RecurrencePattern.NONE or start_date is None:
         return False
+    duration = event.end_time - event.start_time
+    lower = start_date - duration
     ends = recurrence_end_date(event.recurrence_config, event.timezone)
-    return ends is not None and ends < start_date.date()
+    if ends is not None and ends < lower.date() - timedelta(days=1):
+        return False
+    # Two cycles cover timezone boundaries and a filtered daily rule's weekdays.
+    stride_days = {
+        RecurrencePattern.DAILY: 14,
+        RecurrencePattern.WEEKLY: 14,
+        RecurrencePattern.BIWEEKLY: 28,
+        RecurrencePattern.MONTHLY: 62,
+        RecurrencePattern.YEARLY: 732,
+    }[event.recurrence_pattern]
+    interval = max(1, (event.recurrence_config or {}).get("interval", 1))
+    remaining_days = (datetime.max.replace(tzinfo=start_date.tzinfo) - start_date).days
+    horizon = start_date + timedelta(days=min(stride_days * interval, remaining_days))
+    upper = min(end_date, horizon) if end_date is not None else horizon
+    return any(
+        occurrence.end_time > start_date
+        for occurrence in expand_recurrence(
+            event.start_time,
+            event.end_time,
+            event.recurrence_pattern,
+            event.recurrence_config,
+            lower,
+            upper,
+            timezone=event.timezone,
+        )
+    )
 
 
 class EventQueryOperations:
@@ -103,11 +136,6 @@ class EventQueryOperations:
         page_size: int = DEFAULT_PAGE_SIZE,
         sort_order: str = "asc",
     ) -> EventPage:
-        """A page of accessible events ordered by ``(start_time, id)``.
-
-        Keyset paging, so the cost of a page does not grow with how far into
-        the result set it sits, and no count of the whole set is taken.
-        """
         page_size = max(1, min(page_size, MAX_PAGE_SIZE))
         descending = sort_order == SortOrder.DESCENDING
 
@@ -175,11 +203,7 @@ class EventQueryOperations:
         sort_by: str = "start_time",
         sort_order: str = "asc",
     ) -> tuple[list[CalendarEvent], int]:
-        """List events the user can access, numbering pages from one.
-
-        Prefer :meth:`list_events_page`; this walks an offset and counts the
-        whole result set, so both costs grow with the org's event count.
-        """
+        """Numbered pages serve bounded callers; growing lists use keyset pagination."""
         query = await self._accessible_events(
             user_id,
             organization_id,
@@ -217,13 +241,7 @@ class EventQueryOperations:
         end_date: datetime | None = None,
         limit: int,
     ) -> tuple[list[CalendarEvent], int]:
-        """Everything a document covering this window has to carry.
-
-        A window keeps whole series rather than the rows that begin inside it:
-        a weekly meeting set up two years ago still happens this week, and its
-        master carrying the rule is what an external client expands. A series
-        that has already run out is left behind.
-        """
+        """Count only qualifying masters so expired series cannot consume the export limit."""
         query = await self._accessible_events(
             user_id,
             organization_id,
@@ -235,6 +253,18 @@ class EventQueryOperations:
             None,
         )
 
+        query = query.where(CalendarEvent.recurrence_id.is_(None))
+        override = aliased(CalendarEvent)
+        moved = select(override.id).where(
+            override.recurrence_id == CalendarEvent.id,
+            override.organization_id == organization_id,
+            override.is_deleted.is_(False),
+        )
+        if start_date is not None:
+            moved = moved.where(override.end_time > start_date)
+        if end_date is not None:
+            moved = moved.where(override.start_time < end_date)
+        has_override = moved.exists()
         overlap = [
             clause
             for clause in (
@@ -250,18 +280,24 @@ class EventQueryOperations:
             ]
             if end_date is not None:
                 series.append(CalendarEvent.start_time < end_date)
-            query = query.where(or_(and_(*overlap), and_(*series)))
+            query = query.where(or_(and_(*overlap), and_(*series), has_override))
 
-        count_query = select(func.count()).select_from(query.subquery())
-        total = (await self.session.execute(count_query)).scalar() or 0
-
-        rows = (
-            (await self.session.execute(query.order_by(CalendarEvent.start_time.asc()).limit(limit)))
-            .scalars()
-            .all()
+        rows = await self.session.stream(
+            query
+            .add_columns(has_override)
+            .order_by(CalendarEvent.start_time.asc(), CalendarEvent.id.asc())
+            .execution_options(yield_per=MAX_PAGE_SIZE)
         )
-        events = [event for event in rows if not _series_ended_before(event, start_date)]
-        return events, total - (len(rows) - len(events))
+        events: list[CalendarEvent] = []
+        try:
+            async for event, moved_into_window in rows:
+                if moved_into_window or _overlaps_window(event, start_date, end_date):
+                    events.append(event)
+                    if len(events) > limit:
+                        break
+        finally:
+            await rows.close()
+        return events[:limit], len(events)
 
     async def get_event_with_attendees(
         self,

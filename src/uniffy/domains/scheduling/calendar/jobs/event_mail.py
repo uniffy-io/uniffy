@@ -21,18 +21,28 @@ from uniffy.core.models.notifications.email_delivery import (
     NotificationEmailDelivery,
     NotificationEmailStatus,
 )
+from uniffy.core.types import ContentType
 from uniffy.domains.notifications.delivery.outbox import (
     NotificationEmailTerminalReason,
-    claim_email_delivery,
     claimable_email_predicate,
     mark_email_deliveries_sent,
     prepare_email_recipient,
-    retry_email_deliveries,
+    prepare_transactional_email_recipient,
     terminal_email_delivery,
 )
+from uniffy.domains.permissions.access import ResourceAudienceResolver
 from uniffy.domains.scheduling.calendar.jobs.contracts import SEND_EVENT_MAIL
-from uniffy.domains.scheduling.calendar.mail.compose import load_bundle, send_event_mail
-from uniffy.domains.scheduling.calendar.mail.outbox import CalendarMailKind, read_event_mail
+from uniffy.domains.scheduling.calendar.mail.compose import (
+    load_bundle,
+    send_event_mail,
+    send_withdrawal_mail,
+)
+from uniffy.domains.scheduling.calendar.mail.outbox import (
+    CalendarMailKind,
+    claim_event_mail,
+    read_event_mail,
+    stage_event_mail_retry,
+)
 from uniffy.infrastructure.database import open_session
 from uniffy.vendor.arq import Retry
 
@@ -90,7 +100,7 @@ async def send_calendar_event_mail(ctx: dict[str, Any], delivery_id: str) -> dic
     """Send one message, against the meeting and the roster as they stand now."""
     now = datetime.now(UTC)
     async with open_session() as session:
-        delivery = await claim_email_delivery(session, UUID(delivery_id), now)
+        delivery = await claim_event_mail(session, UUID(delivery_id), now)
         if delivery is None:
             return {"status": "skipped", "reason": "not_claimable"}
 
@@ -105,19 +115,31 @@ async def send_calendar_event_mail(ctx: dict[str, Any], delivery_id: str) -> dic
             await session.commit()
             return {"status": "skipped", "reason": "not_event_mail"}
 
-        recipient = await prepare_email_recipient(session, [delivery], now)
+        recipient = (
+            await prepare_transactional_email_recipient(session, delivery, now)
+            if request.withdrawal is not None
+            else await prepare_email_recipient(session, [delivery], now)
+        )
         if recipient is None or delivery.status != NotificationEmailStatus.PROCESSING:
             await session.commit()
             return {"status": "skipped", "reason": delivery.terminal_reason}
 
-        # A meeting erased outright leaves nothing to describe, and somebody
-        # taken off the roster since the edit must not hear about it either.
-        bundle = await load_bundle(session, request.event_id)
-        still_owed = bundle is not None and (
-            request.kind is CalendarMailKind.CANCELLATION
-            or request.recipient_id in bundle.attendee_ids
-        )
-        if bundle is None or not still_owed:
+        bundle = None
+        if request.withdrawal is not None:
+            blocked = await ResourceAudienceResolver(session).blocked_users(
+                request.organization_id,
+                ContentType.CALENDAR_EVENT,
+                request.event_id,
+                [request.recipient_id],
+            )
+            still_owed = request.recipient_id not in blocked
+        else:
+            bundle = await load_bundle(session, request.event_id)
+            still_owed = bundle is not None and (
+                request.kind is CalendarMailKind.CANCELLATION
+                or request.recipient_id in bundle.attendee_ids
+            )
+        if not still_owed:
             terminal_email_delivery(
                 delivery,
                 NotificationEmailStatus.SKIPPED,
@@ -131,7 +153,11 @@ async def send_calendar_event_mail(ctx: dict[str, Any], delivery_id: str) -> dic
             }
 
         try:
-            result = await send_event_mail(request, bundle, recipient, sender=_get_sender())
+            if request.withdrawal is not None:
+                result = await send_withdrawal_mail(request, recipient, sender=_get_sender())
+            else:
+                assert bundle is not None
+                result = await send_event_mail(request, bundle, recipient, sender=_get_sender())
         except MailSuppressedError:
             terminal_email_delivery(
                 delivery,
@@ -166,12 +192,13 @@ async def _retry_or_fail(
     ctx: dict[str, Any],
     now: datetime,
 ) -> dict[str, Any]:
-    delay_seconds = retry_email_deliveries(
-        [delivery],
+    delay_seconds = await stage_event_mail_retry(
+        session,
+        delivery,
         attempt=int(ctx.get("job_try", 1)),
         now=now,
     )
     await session.commit()
     if delay_seconds is not None:
         raise Retry(defer=delay_seconds)
-    return {"status": "failed", "reason": NotificationEmailTerminalReason.DELIVERY_FAILED.value}
+    return {"status": str(delivery.status), "reason": delivery.terminal_reason}
