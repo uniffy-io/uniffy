@@ -10,6 +10,20 @@ class LiveKitConfigError(RuntimeError):
     pass
 
 
+# This secret signs the credentials that admit someone to a call and verifies the
+# events the media service sends back, so anyone holding it can mint admission to
+# any call in the deployment and forge the presence we trust. Values that have
+# shipped in this repository are public knowledge; refusing them is the only thing
+# that stops a self-hosted deployment running on one.
+_PUBLISHED_SECRETS = frozenset({
+    "devsecret-change-me-in-prod-32chars-min",
+    "devsecret",
+    "changeme",
+    "secret",
+})
+_MIN_SECRET_LENGTH = 32
+
+
 def default_screen_share_quality() -> ScreenShareQuality:
     """Deploy-time screen-share ceiling for many-viewer calls (self-host safe).
 
@@ -42,7 +56,24 @@ class LiveKitConfig:
             raise LiveKitConfigError(
                 "LIVEKIT_HOST, LIVEKIT_API_KEY and LIVEKIT_API_SECRET are required"
             )
+        _require_credible_secret(api_secret)
         return cls(host=host, api_key=api_key, api_secret=api_secret, ws_url=ws_url)
+
+
+def _require_credible_secret(api_secret: str) -> None:
+    """Refuse a secret the whole internet can read, or one too short to guess badly."""
+    if api_secret.strip().lower() in _PUBLISHED_SECRETS:
+        raise LiveKitConfigError(
+            "LIVEKIT_API_SECRET is a placeholder that ships in this repository and is "
+            "therefore public. Generate one with `openssl rand -hex 32` and set it on "
+            "the backend and the LiveKit server together."
+        )
+    if len(api_secret) < _MIN_SECRET_LENGTH:
+        raise LiveKitConfigError(
+            f"LIVEKIT_API_SECRET must be at least {_MIN_SECRET_LENGTH} characters. "
+            "Generate one with `openssl rand -hex 32` and set it on the backend and "
+            "the LiveKit server together."
+        )
 
 
 @dataclass(frozen=True)

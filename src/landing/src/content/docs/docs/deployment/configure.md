@@ -147,7 +147,7 @@ LiveKit is the SFU for audio and video calls. Server config lives in LiveKit's o
 | `LIVEKIT_WS_URL` | `ws://localhost:7880` | WebSocket URL the **browser** uses to reach LiveKit signaling. |
 | `LIVEKIT_HOST` | `http://localhost:7880` | HTTP URL the **backend** uses for LiveKit admin REST API (server-to-server). |
 | `LIVEKIT_API_KEY` | `devkey` | Shared API key. Rotate together with the secret. |
-| `LIVEKIT_API_SECRET` | `devsecret-...` | Shared secret. Minimum 32 characters in production. |
+| `LIVEKIT_API_SECRET` | none | Shared secret, yours to generate: `openssl rand -hex 32`. At least 32 characters, and never one published in the repository. Calls stay disabled until it is set on both the backend and the LiveKit server. |
 | `LIVEKIT_VALKEY_DATABASE` | `1` | Valkey logical DB used by LiveKit for its room registry. Kept separate from the app's DB (`VALKEY_DATABASE`) to avoid eviction or pub/sub cross-impact. |
 
 ## TURN relay
