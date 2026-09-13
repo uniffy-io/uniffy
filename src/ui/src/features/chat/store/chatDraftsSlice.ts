@@ -7,6 +7,13 @@ export interface ChatDraftEntry {
   updatedAt: string;
 }
 
+/** One unsent draft with its key parsed back into the channel and thread it belongs to. */
+export interface ChatDraftRow extends ChatDraftEntry {
+  key: string;
+  channelId: string;
+  rootMessageId: string | null;
+}
+
 interface ChatDraftsState {
   byKey: Record<string, ChatDraftEntry>;
 }
@@ -63,5 +70,26 @@ export const selectChannelsWithDrafts = createSelector(
     return channels;
   },
 );
+
+/** Newest first, matching the order ListDrafts returns. */
+export const selectDraftRows = createSelector(
+  [(state: RootState) => state.chatDrafts.byKey],
+  (byKey): ChatDraftRow[] =>
+    Object.entries(byKey)
+      .map(([key, entry]) => {
+        const separator = key.indexOf(":");
+        return {
+          key,
+          channelId: separator === -1 ? key : key.slice(0, separator),
+          rootMessageId: separator === -1 ? null : key.slice(separator + 1),
+          content: entry.content,
+          updatedAt: entry.updatedAt,
+        };
+      })
+      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)),
+);
+
+export const selectDraftCount = (state: RootState): number =>
+  Object.keys(state.chatDrafts.byKey).length;
 
 export const chatDraftsReducer = chatDraftsSlice.reducer;

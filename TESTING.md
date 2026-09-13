@@ -2346,6 +2346,28 @@ org with at least ten members.
 - [ ] A 1:1 DM (one recipient) still opens as a direct message, and adding a third person to it is
       still refused.
 
+## Chat drafts view
+
+`/chat/drafts` lists every unsent draft. Needs one user with drafts in more than one channel,
+plus a second device or tab for the sync check.
+
+- [ ] Type in a channel composer, pause ~2s, then open Drafts in the chat sidebar: the draft is
+      listed with the channel name, a relative time, and a plain-text preview (mention chips read
+      as their labels, not as raw `[[[...]]]` markup).
+- [ ] The sidebar Drafts entry carries a count badge, and the entry highlights while the route is
+      open (as Threads and Unreads now do).
+- [ ] Start a thread reply, pause, and return to Drafts: that row carries a "Thread reply" tag.
+- [ ] Click a channel draft row: the channel opens with the composer prefilled.
+- [ ] Click a thread draft row: the channel opens, the thread panel opens on the right, and the
+      reply composer is prefilled.
+- [ ] Discard a row: it disappears immediately, the sidebar badge drops, and the pencil indicator
+      on that channel clears.
+- [ ] Save a draft on a second device: it appears in the list without a reload.
+- [ ] Send a drafted message: its row leaves the list.
+- [ ] With no drafts, the view shows the empty state, and the page title reads "Drafts | Uniffy".
+- [ ] The list holds up at 375, 768, and 1024 px, and the discard action is reachable on touch
+      (no hover required under `md`).
+
 ## Pre-release sweep
 
 - [ ] All linters green: `./manage.py lint`.

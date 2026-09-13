@@ -63,6 +63,10 @@ const UnreadsView = lazyImport(
   () => import("@/features/chat/components/unreads/UnreadsView"),
   "UnreadsView",
 );
+const DraftsView = lazyImport(
+  () => import("@/features/chat/components/drafts/DraftsView"),
+  "DraftsView",
+);
 const CreateChannelModal = lazyImport(
   () => import("@/features/chat/components/modals/CreateChannelModal"),
   "CreateChannelModal",
@@ -153,6 +157,7 @@ export function ChatPage() {
   const isChatIndexRoute = !channelId && currentPath === "/chat";
   const isThreadsInboxRoute = !channelId && currentPath === "/chat/threads";
   const isUnreadsRoute = !channelId && currentPath === "/chat/unreads";
+  const isDraftsRoute = !channelId && currentPath === "/chat/drafts";
 
   useEffect(() => {
     if (
@@ -240,9 +245,11 @@ export function ChatPage() {
     ? "Threads"
     : isUnreadsRoute
       ? "Unreads"
-      : routeChannel
-        ? `#${getChannelDisplayName(routeChannel)}`
-        : "Chat";
+      : isDraftsRoute
+        ? "Drafts"
+        : routeChannel
+          ? `#${getChannelDisplayName(routeChannel)}`
+          : "Chat";
   useDocumentTitle(pageTitle);
 
   const handleToggleSidebar = useCallback(() => {
@@ -389,6 +396,10 @@ export function ChatPage() {
   ) : isUnreadsRoute ? (
     <DeferredChatSurface>
       <UnreadsView />
+    </DeferredChatSurface>
+  ) : isDraftsRoute ? (
+    <DeferredChatSurface>
+      <DraftsView />
     </DeferredChatSurface>
   ) : (
     <div

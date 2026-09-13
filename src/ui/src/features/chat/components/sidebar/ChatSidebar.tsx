@@ -1,8 +1,9 @@
 import { useState, useCallback, useEffect, useMemo, useContext, type ReactNode } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import {
   Plus,
   PencilSimple,
+  NotePencil,
   MagnifyingGlass,
   BookmarkSimple,
   ChatsCircle,
@@ -43,7 +44,7 @@ import {
 } from "@/features/chat/store/chatChannelsSlice";
 import { createAgentFolder, setAgentChatFolder } from "@/features/chat/store/chatThunks";
 import { AgentChatFolderGroup } from "@/features/chat/components/sidebar/AgentChatFolderGroup";
-import { selectChannelsWithDrafts } from "@/features/chat/store/chatDraftsSlice";
+import { selectChannelsWithDrafts, selectDraftCount } from "@/features/chat/store/chatDraftsSlice";
 import {
   toggleDmSection,
   toggleAgentChatsSection,
@@ -66,6 +67,51 @@ import { CategorySection } from "@/features/chat/components/sidebar/CategorySect
 import { useChatPermissions } from "@/features/chat/hooks/useChatPermissions";
 import { cn } from "@/shared/utils/cn";
 import type { Icon } from "@phosphor-icons/react";
+
+function SidebarNavItem({
+  icon: NavIcon,
+  label,
+  badge,
+  active,
+  onClick,
+  testId,
+  badgeTestId,
+}: {
+  icon: Icon;
+  label: string;
+  badge?: number;
+  active?: boolean;
+  onClick: () => void;
+  testId: string;
+  badgeTestId?: string;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        "flex items-center justify-between w-full px-3 py-1.5 mx-0 text-[0.9rem] transition-colors",
+        active
+          ? "bg-muted text-foreground font-medium"
+          : "text-foreground/90 hover:bg-muted/60 hover:text-foreground",
+      )}
+      data-testid={testId}
+      data-active={active ? "true" : "false"}
+    >
+      <span className="flex items-center gap-2">
+        <NavIcon size={16} className={active ? "text-primary" : undefined} />
+        <span className="font-[450]">{label}</span>
+      </span>
+      {!!badge && badge > 0 && (
+        <span
+          className="min-w-[18px] h-[18px] rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center"
+          data-testid={badgeTestId}
+        >
+          {badge}
+        </span>
+      )}
+    </button>
+  );
+}
 
 function DraggableAgentChat({ channelId, children }: { channelId: string; children: ReactNode }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
@@ -136,6 +182,7 @@ function CompactActionButton({
 export function ChatSidebar() {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
+  const currentPath = useLocation().pathname;
   const [searchQuery, setSearchQuery] = useState("");
   const { isMobile } = useBreakpoint();
   const isOverlay = useContext(SidebarOverlayContext);
@@ -155,6 +202,7 @@ export function ChatSidebar() {
   const { canManageChat } = useChatPermissions();
   const channelPreferences = useAppSelector(selectChannelPreferences);
   const draftChannels = useAppSelector(selectChannelsWithDrafts);
+  const draftCount = useAppSelector(selectDraftCount);
   const currentUserId = useAppSelector((state) => state.auth.user?.id ?? "");
   const allChannelMembers = useAppSelector((state) => state.chatChannels.channelMembers);
 
@@ -434,61 +482,49 @@ export function ChatSidebar() {
       </div>
 
       <div className="flex-1 overflow-y-auto">
-        <button
+        <SidebarNavItem
+          icon={ChatsCircle}
+          label="Threads"
+          badge={unreadThreadCount}
+          active={currentPath === "/chat/threads"}
           onClick={handleThreadsClick}
-          className="flex items-center justify-between w-full px-3 py-1.5 mx-0 text-[0.9rem] text-foreground/90 hover:bg-muted/60 hover:text-foreground transition-colors"
-          data-testid="chat-sidebar-threads-link"
-        >
-          <span className="flex items-center gap-2">
-            <ChatsCircle size={16} />
-            <span className="font-[450]">Threads</span>
-          </span>
-          {unreadThreadCount > 0 && (
-            <span
-              className="min-w-[18px] h-[18px] rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center"
-              data-testid="chat-sidebar-threads-unread-badge"
-            >
-              {unreadThreadCount}
-            </span>
-          )}
-        </button>
+          testId="chat-sidebar-threads-link"
+          badgeTestId="chat-sidebar-threads-unread-badge"
+        />
 
-        <button
+        <SidebarNavItem
+          icon={Tray}
+          label="Unreads"
+          badge={totalUnread}
+          active={currentPath === "/chat/unreads"}
           onClick={() => navigate("/chat/unreads")}
-          className="flex items-center justify-between w-full px-3 py-1.5 mx-0 text-[0.9rem] text-foreground/90 hover:bg-muted/60 hover:text-foreground transition-colors"
-          data-testid="chat-sidebar-unreads-link"
-        >
-          <span className="flex items-center gap-2">
-            <Tray size={16} />
-            <span className="font-[450]">Unreads</span>
-          </span>
-          {totalUnread > 0 && (
-            <span
-              className="min-w-[18px] h-[18px] rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center"
-              data-testid="chat-sidebar-unreads-badge"
-            >
-              {totalUnread}
-            </span>
-          )}
-        </button>
+          testId="chat-sidebar-unreads-link"
+          badgeTestId="chat-sidebar-unreads-badge"
+        />
 
-        <button
+        <SidebarNavItem
+          icon={NotePencil}
+          label="Drafts"
+          badge={draftCount}
+          active={currentPath === "/chat/drafts"}
+          onClick={() => navigate("/chat/drafts")}
+          testId="chat-sidebar-drafts-link"
+          badgeTestId="chat-sidebar-drafts-badge"
+        />
+
+        <SidebarNavItem
+          icon={BookmarkSimple}
+          label="Saved"
           onClick={() => navigate("/library?types=chat_message")}
-          className="flex items-center gap-2 w-full px-3 py-1.5 mx-0 text-[0.9rem] text-foreground/90 hover:bg-muted/60 hover:text-foreground transition-colors"
-          data-testid="chat-sidebar-saved-link"
-        >
-          <BookmarkSimple size={16} />
-          <span className="font-[450]">Saved</span>
-        </button>
+          testId="chat-sidebar-saved-link"
+        />
 
-        <button
+        <SidebarNavItem
+          icon={Compass}
+          label="Browse Channels"
           onClick={() => dispatch(openBrowseChannelsModal())}
-          className="flex items-center gap-2 w-full px-3 py-1.5 mx-0 text-[0.9rem] text-foreground/90 hover:bg-muted/60 hover:text-foreground transition-colors"
-          data-testid="chat-sidebar-browse-channels-button"
-        >
-          <Compass size={16} />
-          <span className="font-[450]">Browse Channels</span>
-        </button>
+          testId="chat-sidebar-browse-channels-button"
+        />
 
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={sortableCategoryIds} strategy={verticalListSortingStrategy}>
