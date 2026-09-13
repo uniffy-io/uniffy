@@ -163,6 +163,8 @@ from uniffy.domains.presence.handlers import PresenceHandlers
 from uniffy.domains.projects.registration import register_project_content
 from uniffy.domains.projects.service import ProjectsServiceImpl
 from uniffy.domains.scheduling.calendar.events.registration import register_calendar_content
+from uniffy.domains.scheduling.calendar.ical.feed import register_calendar_crypto
+from uniffy.domains.scheduling.calendar.routes import create_calendar_router
 from uniffy.domains.scheduling.calendar.service import CalendarServiceImpl
 from uniffy.domains.scheduling.rooms.service import RoomsServiceImpl
 from uniffy.domains.search.service import SearchServiceImpl
@@ -475,6 +477,7 @@ def create_app(
     register_note_realtime_adapter(search_indexer)
     register_note_content()
     register_calendar_content()
+    register_calendar_crypto()
     register_file_content()
     register_project_content()
     _setup_logging()
@@ -743,17 +746,20 @@ def _create_api_dispatcher(
     http_app = FastAPI()
     setup_request_logging(http_app)
     thumbnails_router, files_router, media_router = create_file_routers(storage)
+    calendar_router = create_calendar_router(search_indexer)
     avatars_router = create_avatars_router(storage)
     agent_avatars_router = create_agent_avatars_router(storage)
     http_app.include_router(thumbnails_router)
     http_app.include_router(files_router)
     http_app.include_router(media_router)
+    http_app.include_router(calendar_router)
     http_app.include_router(avatars_router)
     http_app.include_router(agent_avatars_router)
     http_app.include_router(realtime_router)
     dispatcher.add_service("/thumbnails", http_app)
     dispatcher.add_service("/files", http_app)
     dispatcher.add_service("/media", http_app)
+    dispatcher.add_service("/calendar", http_app)
     dispatcher.add_service("/avatars", http_app)
     dispatcher.add_service("/agents/avatars", http_app)
     dispatcher.add_service("/realtime", http_app)

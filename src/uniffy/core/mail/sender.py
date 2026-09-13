@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from contextlib import AbstractAsyncContextManager
 from email.message import EmailMessage
 from typing import Any
@@ -26,6 +26,7 @@ from uniffy.core.mail.metrics import (
     MAIL_SENT_TOTAL,
     MAIL_SUPPRESSED_TOTAL,
 )
+from uniffy.core.mail.parts import ICALENDAR_SUBTYPE, CalendarPart, MailAttachment
 from uniffy.core.mail.rate_limit import check_send_rate_limit
 from uniffy.core.mail.rendering import render_template
 from uniffy.core.mail.resolver import MailConfigResolver
@@ -54,6 +55,8 @@ class MailSender:
         organization_id: UUID | None = None,
         idempotency_key: str | None = None,
         user_id: UUID | None = None,
+        attachments: Sequence[MailAttachment] = (),
+        calendar_part: CalendarPart | None = None,
     ) -> MailResult:
         """Render ``template_name`` and dispatch through the resolved backend.
 
@@ -107,6 +110,8 @@ class MailSender:
             subject=rendered.subject,
             html=rendered.html,
             text=rendered.text,
+            attachments=attachments,
+            calendar_part=calendar_part,
         )
 
         backend = build_backend(config)
@@ -246,6 +251,8 @@ def _compose(
     subject: str,
     html: str,
     text: str,
+    attachments: Sequence[MailAttachment] = (),
+    calendar_part: CalendarPart | None = None,
 ) -> EmailMessage:
     """Multi-part ``EmailMessage`` from rendered template and config envelope metadata."""
     message = EmailMessage()
@@ -257,8 +264,26 @@ def _compose(
         message["From"] = config.from_address
     if config.reply_to:
         message["Reply-To"] = config.reply_to
+
     message.set_content(text)
     message.add_alternative(html, subtype="html")
+
+    if calendar_part is not None:
+        # Ordering is load-bearing: a client picks the LAST alternative it
+        # understands, so the calendar body has to follow the HTML one.
+        message.add_alternative(
+            calendar_part.document.decode("utf-8"),
+            subtype=ICALENDAR_SUBTYPE,
+            params={"method": calendar_part.method.value},
+        )
+
+    for attachment in attachments:
+        message.add_attachment(
+            attachment.content,
+            maintype=attachment.maintype,
+            subtype=attachment.subtype,
+            filename=attachment.filename,
+        )
     return message
 
 

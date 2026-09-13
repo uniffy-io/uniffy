@@ -96,6 +96,25 @@ class CalendarEventReader(EventContentOperations):
             sort_order,
         )
 
+    async def list_events_in_window(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        *,
+        calendar_id: UUID | None = None,
+        start_date: datetime | None = None,
+        end_date: datetime | None = None,
+        limit: int,
+    ) -> tuple[list[CalendarEvent], int]:
+        return await EventQueryOperations(self).list_events_in_window(
+            user_id,
+            organization_id,
+            calendar_id=calendar_id,
+            start_date=start_date,
+            end_date=end_date,
+            limit=limit,
+        )
+
     async def list_events_page(
         self,
         user_id: UUID,

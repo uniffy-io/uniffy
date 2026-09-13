@@ -965,3 +965,151 @@ class SuggestMeetingTimesResponse(_message.Message):
     SUGGESTIONS_FIELD_NUMBER: _ClassVar[int]
     suggestions: _containers.RepeatedCompositeFieldContainer[MeetingTimeSuggestion]
     def __init__(self, suggestions: _Optional[_Iterable[_Union[MeetingTimeSuggestion, _Mapping]]] = ...) -> None: ...
+
+class ExportEventRequest(_message.Message):
+    __slots__ = ("event_id", "organization_id")
+    EVENT_ID_FIELD_NUMBER: _ClassVar[int]
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    event_id: str
+    organization_id: str
+    def __init__(self, event_id: _Optional[str] = ..., organization_id: _Optional[str] = ...) -> None: ...
+
+class ExportEventResponse(_message.Message):
+    __slots__ = ("content", "filename")
+    CONTENT_FIELD_NUMBER: _ClassVar[int]
+    FILENAME_FIELD_NUMBER: _ClassVar[int]
+    content: bytes
+    filename: str
+    def __init__(self, content: _Optional[bytes] = ..., filename: _Optional[str] = ...) -> None: ...
+
+class ExportCalendarRequest(_message.Message):
+    __slots__ = ("organization_id", "calendar_id", "start_time", "end_time")
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    CALENDAR_ID_FIELD_NUMBER: _ClassVar[int]
+    START_TIME_FIELD_NUMBER: _ClassVar[int]
+    END_TIME_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    calendar_id: str
+    start_time: _timestamp_pb2.Timestamp
+    end_time: _timestamp_pb2.Timestamp
+    def __init__(self, organization_id: _Optional[str] = ..., calendar_id: _Optional[str] = ..., start_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., end_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+
+class ExportCalendarResponse(_message.Message):
+    __slots__ = ("content", "filename", "event_count")
+    CONTENT_FIELD_NUMBER: _ClassVar[int]
+    FILENAME_FIELD_NUMBER: _ClassVar[int]
+    EVENT_COUNT_FIELD_NUMBER: _ClassVar[int]
+    content: bytes
+    filename: str
+    event_count: int
+    def __init__(self, content: _Optional[bytes] = ..., filename: _Optional[str] = ..., event_count: _Optional[int] = ...) -> None: ...
+
+class ImportedEventPreview(_message.Message):
+    __slots__ = ("title", "start_time", "end_time", "is_all_day", "repeats")
+    TITLE_FIELD_NUMBER: _ClassVar[int]
+    START_TIME_FIELD_NUMBER: _ClassVar[int]
+    END_TIME_FIELD_NUMBER: _ClassVar[int]
+    IS_ALL_DAY_FIELD_NUMBER: _ClassVar[int]
+    REPEATS_FIELD_NUMBER: _ClassVar[int]
+    title: str
+    start_time: _timestamp_pb2.Timestamp
+    end_time: _timestamp_pb2.Timestamp
+    is_all_day: bool
+    repeats: bool
+    def __init__(self, title: _Optional[str] = ..., start_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., end_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., is_all_day: _Optional[bool] = ..., repeats: _Optional[bool] = ...) -> None: ...
+
+class SkippedImportEntry(_message.Message):
+    __slots__ = ("label", "reason")
+    LABEL_FIELD_NUMBER: _ClassVar[int]
+    REASON_FIELD_NUMBER: _ClassVar[int]
+    label: str
+    reason: str
+    def __init__(self, label: _Optional[str] = ..., reason: _Optional[str] = ...) -> None: ...
+
+class PreviewCalendarImportRequest(_message.Message):
+    __slots__ = ("organization_id", "calendar_id", "content")
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    CALENDAR_ID_FIELD_NUMBER: _ClassVar[int]
+    CONTENT_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    calendar_id: str
+    content: bytes
+    def __init__(self, organization_id: _Optional[str] = ..., calendar_id: _Optional[str] = ..., content: _Optional[bytes] = ...) -> None: ...
+
+class PreviewCalendarImportResponse(_message.Message):
+    __slots__ = ("creatable", "duplicate_count", "skipped")
+    CREATABLE_FIELD_NUMBER: _ClassVar[int]
+    DUPLICATE_COUNT_FIELD_NUMBER: _ClassVar[int]
+    SKIPPED_FIELD_NUMBER: _ClassVar[int]
+    creatable: _containers.RepeatedCompositeFieldContainer[ImportedEventPreview]
+    duplicate_count: int
+    skipped: _containers.RepeatedCompositeFieldContainer[SkippedImportEntry]
+    def __init__(self, creatable: _Optional[_Iterable[_Union[ImportedEventPreview, _Mapping]]] = ..., duplicate_count: _Optional[int] = ..., skipped: _Optional[_Iterable[_Union[SkippedImportEntry, _Mapping]]] = ...) -> None: ...
+
+class ApplyCalendarImportRequest(_message.Message):
+    __slots__ = ("organization_id", "calendar_id", "content")
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    CALENDAR_ID_FIELD_NUMBER: _ClassVar[int]
+    CONTENT_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    calendar_id: str
+    content: bytes
+    def __init__(self, organization_id: _Optional[str] = ..., calendar_id: _Optional[str] = ..., content: _Optional[bytes] = ...) -> None: ...
+
+class ApplyCalendarImportResponse(_message.Message):
+    __slots__ = ("created_count", "duplicate_count", "skipped")
+    CREATED_COUNT_FIELD_NUMBER: _ClassVar[int]
+    DUPLICATE_COUNT_FIELD_NUMBER: _ClassVar[int]
+    SKIPPED_FIELD_NUMBER: _ClassVar[int]
+    created_count: int
+    duplicate_count: int
+    skipped: _containers.RepeatedCompositeFieldContainer[SkippedImportEntry]
+    def __init__(self, created_count: _Optional[int] = ..., duplicate_count: _Optional[int] = ..., skipped: _Optional[_Iterable[_Union[SkippedImportEntry, _Mapping]]] = ...) -> None: ...
+
+class GetCalendarFeedUrlRequest(_message.Message):
+    __slots__ = ("organization_id", "calendar_id")
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    CALENDAR_ID_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    calendar_id: str
+    def __init__(self, organization_id: _Optional[str] = ..., calendar_id: _Optional[str] = ...) -> None: ...
+
+class GetCalendarFeedUrlResponse(_message.Message):
+    __slots__ = ("url", "created_at", "last_used_at")
+    URL_FIELD_NUMBER: _ClassVar[int]
+    CREATED_AT_FIELD_NUMBER: _ClassVar[int]
+    LAST_USED_AT_FIELD_NUMBER: _ClassVar[int]
+    url: str
+    created_at: _timestamp_pb2.Timestamp
+    last_used_at: _timestamp_pb2.Timestamp
+    def __init__(self, url: _Optional[str] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., last_used_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+
+class RegenerateCalendarFeedRequest(_message.Message):
+    __slots__ = ("organization_id", "calendar_id")
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    CALENDAR_ID_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    calendar_id: str
+    def __init__(self, organization_id: _Optional[str] = ..., calendar_id: _Optional[str] = ...) -> None: ...
+
+class RegenerateCalendarFeedResponse(_message.Message):
+    __slots__ = ("url", "created_at")
+    URL_FIELD_NUMBER: _ClassVar[int]
+    CREATED_AT_FIELD_NUMBER: _ClassVar[int]
+    url: str
+    created_at: _timestamp_pb2.Timestamp
+    def __init__(self, url: _Optional[str] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+
+class RevokeCalendarFeedRequest(_message.Message):
+    __slots__ = ("organization_id", "calendar_id")
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    CALENDAR_ID_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    calendar_id: str
+    def __init__(self, organization_id: _Optional[str] = ..., calendar_id: _Optional[str] = ...) -> None: ...
+
+class RevokeCalendarFeedResponse(_message.Message):
+    __slots__ = ("revoked",)
+    REVOKED_FIELD_NUMBER: _ClassVar[int]
+    revoked: bool
+    def __init__(self, revoked: _Optional[bool] = ...) -> None: ...

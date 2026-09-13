@@ -39,6 +39,28 @@ TEMPLATES: dict[str, MailTemplate] = {
             "by an org admin, platform admin, or break-glass CLI."
         ),
     ),
+    "calendar/invitation": MailTemplate(
+        name="calendar/invitation",
+        description=(
+            "Event invitation carrying the time, place, joining details and "
+            "response links, with the event attached for the recipient's own calendar."
+        ),
+    ),
+    "calendar/change": MailTemplate(
+        name="calendar/change",
+        description=(
+            "Sent to everyone already invited when the time, place or joining "
+            "details of an event move."
+        ),
+    ),
+    "calendar/cancellation": MailTemplate(
+        name="calendar/cancellation",
+        description="Sent to every attendee when an event, or one occurrence of it, is called off.",
+    ),
+    "calendar/withdrawal": MailTemplate(
+        name="calendar/withdrawal",
+        description="Withdraws a meeting without reading deleted content.",
+    ),
     "notifications/instant": MailTemplate(
         name="notifications/instant",
         description="Immediate delivery of one user notification.",

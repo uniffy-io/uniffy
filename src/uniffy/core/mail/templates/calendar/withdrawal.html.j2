@@ -1,0 +1,8 @@
+{% extends "base.html.j2" %}
+{% block content %}
+<h1>Meeting cancelled</h1>
+<p>{{ organization_name }}</p>
+<p>{% if this_and_following %}This occurrence and following occurrences have been cancelled.{% else %}This meeting has been cancelled.{% endif %}</p>
+<p>Attached cancellation updates your calendar.</p>
+<p><a href="{{ preferences_url }}">Notification preferences</a></p>
+{% endblock %}

@@ -3,12 +3,16 @@ import { unaryTransport } from "@/config/api";
 import {
   CalendarService,
   AddAttendeesRequestSchema,
+  ApplyCalendarImportRequestSchema,
   CreateCategoryRequestSchema,
   CreateEventRequestSchema,
   CreateEventTemplateRequestSchema,
   DeleteCategoryRequestSchema,
   DeleteEventRequestSchema,
   DeleteEventTemplateRequestSchema,
+  ExportCalendarRequestSchema,
+  ExportEventRequestSchema,
+  GetCalendarFeedUrlRequestSchema,
   EventActivityAction as ProtoEventActivityAction,
   GetEventRequestSchema,
   GetEventTemplateRequestSchema,
@@ -18,6 +22,9 @@ import {
   ListCategoriesRequestSchema,
   ListEventActivitiesRequestSchema,
   ListEventTemplatesRequestSchema,
+  PreviewCalendarImportRequestSchema,
+  RegenerateCalendarFeedRequestSchema,
+  RevokeCalendarFeedRequestSchema,
   RemoveAttendeesRequestSchema,
   UpdateAttendeeRoleRequestSchema,
   UpdateAttendeeStatusRequestSchema,
@@ -160,5 +167,39 @@ export const calendarApi = {
   ) => {
     const response = await calendarClient.listEventActivities(request);
     return response.activities.map(activityFromProto);
+  },
+
+  exportEvent: async (request: MessageInitShape<typeof ExportEventRequestSchema>) => {
+    return calendarClient.exportEvent(request);
+  },
+
+  exportCalendar: async (request: MessageInitShape<typeof ExportCalendarRequestSchema>) => {
+    return calendarClient.exportCalendar(request);
+  },
+
+  previewCalendarImport: async (
+    request: MessageInitShape<typeof PreviewCalendarImportRequestSchema>,
+  ) => {
+    return calendarClient.previewCalendarImport(request);
+  },
+
+  applyCalendarImport: async (
+    request: MessageInitShape<typeof ApplyCalendarImportRequestSchema>,
+  ) => {
+    return calendarClient.applyCalendarImport(request);
+  },
+
+  getCalendarFeedUrl: async (request: MessageInitShape<typeof GetCalendarFeedUrlRequestSchema>) => {
+    return calendarClient.getCalendarFeedUrl(request);
+  },
+
+  regenerateCalendarFeed: async (
+    request: MessageInitShape<typeof RegenerateCalendarFeedRequestSchema>,
+  ) => {
+    return calendarClient.regenerateCalendarFeed(request);
+  },
+
+  revokeCalendarFeed: async (request: MessageInitShape<typeof RevokeCalendarFeedRequestSchema>) => {
+    return calendarClient.revokeCalendarFeed(request);
   },
 };

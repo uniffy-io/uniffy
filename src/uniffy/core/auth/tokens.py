@@ -190,6 +190,40 @@ def decode_asset_read_token(token: str) -> dict[str, Any]:
     return _decode_with_required_type(token, "asset_read")
 
 
+# An invitation can sit in an inbox for a long time before the meeting happens,
+# so the link outlives an ordinary session by a wide margin.
+EVENT_RESPONSE_TOKEN_DAYS = 90
+
+
+def create_event_response_token(
+    user_id: UUID,
+    organization_id: UUID,
+    event_id: UUID,
+    expires_delta: timedelta | None = None,
+) -> str:
+    """Mint the RSVP link token carried in event mail.
+
+    It names one attendee and one event and authorises nothing else: the
+    response path still resolves the caller's access to that event, so a member
+    who was removed or deactivated cannot respond with a link they kept.
+    """
+    now = datetime.now(UTC)
+    payload: dict[str, Any] = {
+        "sub": str(user_id),
+        "org_id": str(organization_id),
+        "eid": str(event_id),
+        "exp": now + (expires_delta or timedelta(days=EVENT_RESPONSE_TOKEN_DAYS)),
+        "iat": now,
+        "type": "event_response",
+    }
+    return jwt.encode(payload, get_secret_key(), algorithm="HS256")
+
+
+def decode_event_response_token(token: str) -> dict[str, Any]:
+    """Decode + verify an RSVP token. Refuses other token kinds."""
+    return _decode_with_required_type(token, "event_response")
+
+
 JWT_DECODE_LEEWAY = timedelta(minutes=2)
 
 

@@ -36,6 +36,11 @@ from uniffy.core.types import (
 )
 from uniffy.domains.chat.lifecycle import ChannelCallLifecycle
 from uniffy.domains.chat.rooms import RoomMembership, StagedRoomMembershipSync
+from uniffy.domains.scheduling.calendar.mail.outbox import (
+    CalendarMailKind,
+    retire_pending_event_mail,
+    stage_event_mail,
+)
 
 logger = logger.bind(component="scheduling.calendar.events.attendees")
 
@@ -108,6 +113,16 @@ class AttendeeOperations:
             added=added_ids,
             removed=[],
             call_lifecycle=call_lifecycle,
+        )
+
+        await stage_event_mail(
+            self.session,
+            organization_id=organization_id,
+            event_id=event.id,
+            title=event.title,
+            recipient_ids=added_ids,
+            kind=CalendarMailKind.INVITATION,
+            actor_user_id=user_id,
         )
 
         await self.session.commit()
@@ -233,6 +248,9 @@ class AttendeeOperations:
             removed=removed_ids,
             call_lifecycle=call_lifecycle,
         )
+
+        # A message not yet sent must not reach somebody just uninvited.
+        await retire_pending_event_mail(self.session, event_id, removed_ids, datetime.now(UTC))
 
         await self.session.commit()
         await self.session.refresh(event)

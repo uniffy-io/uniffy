@@ -1,0 +1,29 @@
+{% extends "base.txt.j2" %}
+{% block content %}
+{{ organization_name }}
+
+{{ title }}
+{% if organizer_name %}Invited by {{ organizer_name }}
+{% endif %}
+When:  {{ when }}
+{% if recurrence %}       {{ recurrence }}
+{% endif %}{% if location %}Where: {{ location }}
+{% endif %}{% if attendee_summary %}Who:   {{ attendee_summary }}
+{% endif %}{% if join_url %}
+Join the meeting:
+  {{ join_url }}
+{% endif %}{% if description %}
+{{ description }}
+{% endif %}{% if respond_accept_url %}
+Can you make it?
+  Yes:   {{ respond_accept_url }}
+  Maybe: {{ respond_tentative_url }}
+  No:    {{ respond_decline_url }}
+{% endif %}
+Open in Uniffy:
+  {{ action_url }}
+
+Times are shown in {{ timezone_label }}.
+Notification preferences:
+  {{ preferences_url }}
+{% endblock %}

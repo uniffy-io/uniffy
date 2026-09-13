@@ -183,10 +183,14 @@ DEFAULT_NOTIFICATION_CHANNELS: dict[NotificationType, dict[str, bool]] = {
     },
 }
 
+# Types whose own domain composes and sends the message, so the generic
+# notification mail must not also go out. In-app and browser are unaffected.
 TRANSACTIONAL_EMAIL_NOTIFICATION_TYPES = {
     NotificationType.SUPPORT_SESSION_REQUESTED,
     NotificationType.SUPPORT_SESSION_STARTED,
     NotificationType.SUPPORT_SESSION_REVOKED,
+    NotificationType.CALENDAR_INVITE,
+    NotificationType.CALENDAR_CANCELLED,
 }
 
 
@@ -283,11 +287,11 @@ def get_effective_notifications(overrides: dict[str, Any] | None) -> dict[str, A
     return merge_with_defaults(overrides, get_notifications_defaults_dict())
 
 
-def get_effective_notification_channels(
+def _resolve_channels(
     notification_type: NotificationType,
     overrides: dict[str, Any] | None,
 ) -> dict[str, bool]:
-    """Resolve channel prefs for a NotificationType, applying master switches last."""
+    """What the member asked for, before any transactional suppression."""
     channels = DEFAULT_NOTIFICATION_CHANNELS[notification_type].copy()
 
     effective = get_effective_notifications(overrides)
@@ -304,7 +308,31 @@ def get_effective_notification_channels(
         channels["browser"] = False
     if not effective.get("email_enabled", True):
         channels["email"] = False
-    if notification_type in TRANSACTIONAL_EMAIL_NOTIFICATION_TYPES:
-        channels["email"] = False
 
     return channels
+
+
+def get_effective_notification_channels(
+    notification_type: NotificationType,
+    overrides: dict[str, Any] | None,
+) -> dict[str, bool]:
+    """Resolve channel prefs for a NotificationType, applying master switches last."""
+    channels = _resolve_channels(notification_type, overrides)
+    if notification_type in TRANSACTIONAL_EMAIL_NOTIFICATION_TYPES:
+        channels["email"] = False
+    return channels
+
+
+def wants_transactional_email(
+    notification_type: NotificationType,
+    overrides: dict[str, Any] | None,
+) -> bool:
+    """Whether a domain sending its own mail for this type should send it.
+
+    Types in TRANSACTIONAL_EMAIL_NOTIFICATION_TYPES are suppressed on the
+    generic notification path precisely because their own domain composes a
+    better message. That domain still owes the member their preference, so it
+    asks here instead - the per-type toggle and the master email switch both
+    still decide.
+    """
+    return _resolve_channels(notification_type, overrides).get("email", False)

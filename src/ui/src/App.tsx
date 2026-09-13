@@ -162,6 +162,10 @@ const PlatformSessionsPage = lazyImport(
 // Content pages
 const NotesPage = lazyImport(loadNotesPage, "NotesPage");
 const CalendarPage = lazyImport(loadCalendarPage, "CalendarPage");
+const RespondToInvitationPage = lazyImport(
+  () => import("@/features/calendar/pages/RespondToInvitationPage"),
+  "RespondToInvitationPage",
+);
 const FilesPage = lazyImport(loadFilesPage, "FilesPage");
 const FiltersPage = lazyImport(() => import("@/features/files/pages/FiltersPage"), "FiltersPage");
 const FilesTrashPage = lazyImport(
@@ -730,6 +734,15 @@ export function App() {
                           <CalendarPage />
                         </LazyRoute>
                       </ProtectedRoute>
+                    }
+                  />
+
+                  <Route
+                    path="/calendar/respond"
+                    element={
+                      <LazyRoute>
+                        <RespondToInvitationPage />
+                      </LazyRoute>
                     }
                   />
 

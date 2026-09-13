@@ -462,8 +462,8 @@ class CalendarEventOperations(CalendarEventReader):
         event: CalendarEvent,
         actor_id: UUID,
         before: dict[str, object],
-    ) -> None:
-        await EventActivityOperations(self)._log_field_changes(event, actor_id, before)
+    ) -> set[str]:
+        return await EventActivityOperations(self)._log_field_changes(event, actor_id, before)
 
     @staticmethod
     def _activity_snapshot(event: CalendarEvent) -> dict[str, object]:
@@ -486,21 +486,6 @@ class CalendarEventOperations(CalendarEventReader):
         user_ids: list[UUID] | None = None,
     ) -> None:
         await ReminderStagingOperations(self)._delete_reminder_rows(event_id, user_ids)
-
-    async def _copy_tag_assignments(
-        self,
-        *,
-        organization_id: UUID,
-        actor_id: UUID,
-        source_event_id: UUID,
-        target_event_id: UUID,
-    ) -> None:
-        await EventTagOperations(self)._copy_tag_assignments(
-            organization_id=organization_id,
-            actor_id=actor_id,
-            source_event_id=source_event_id,
-            target_event_id=target_event_id,
-        )
 
     def _tag_filter_subquery(self, tag_ids: list[UUID]):
         return EventTagOperations(self)._tag_filter_subquery(tag_ids)

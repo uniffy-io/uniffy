@@ -36,6 +36,27 @@ class CalendarService(Protocol):
     async def get_events_in_range(self, request: cal_dot_v1_dot_calendar__pb2.GetEventsInRangeRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.GetEventsInRangeResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
+    async def export_event(self, request: cal_dot_v1_dot_calendar__pb2.ExportEventRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.ExportEventResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def export_calendar(self, request: cal_dot_v1_dot_calendar__pb2.ExportCalendarRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.ExportCalendarResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def preview_calendar_import(self, request: cal_dot_v1_dot_calendar__pb2.PreviewCalendarImportRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.PreviewCalendarImportResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def apply_calendar_import(self, request: cal_dot_v1_dot_calendar__pb2.ApplyCalendarImportRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.ApplyCalendarImportResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def get_calendar_feed_url(self, request: cal_dot_v1_dot_calendar__pb2.GetCalendarFeedUrlRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.GetCalendarFeedUrlResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def regenerate_calendar_feed(self, request: cal_dot_v1_dot_calendar__pb2.RegenerateCalendarFeedRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.RegenerateCalendarFeedResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def revoke_calendar_feed(self, request: cal_dot_v1_dot_calendar__pb2.RevokeCalendarFeedRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.RevokeCalendarFeedResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
     async def create_category(self, request: cal_dot_v1_dot_calendar__pb2.CreateCategoryRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.CreateCategoryResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
@@ -152,6 +173,76 @@ class CalendarServiceASGIApplication(ConnectASGIApplication[CalendarService]):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.get_events_in_range,
+                ),
+                "/cal.v1.CalendarService/ExportEvent": Endpoint.unary(
+                    method=MethodInfo(
+                        name="ExportEvent",
+                        service_name="cal.v1.CalendarService",
+                        input=cal_dot_v1_dot_calendar__pb2.ExportEventRequest,
+                        output=cal_dot_v1_dot_calendar__pb2.ExportEventResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.export_event,
+                ),
+                "/cal.v1.CalendarService/ExportCalendar": Endpoint.unary(
+                    method=MethodInfo(
+                        name="ExportCalendar",
+                        service_name="cal.v1.CalendarService",
+                        input=cal_dot_v1_dot_calendar__pb2.ExportCalendarRequest,
+                        output=cal_dot_v1_dot_calendar__pb2.ExportCalendarResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.export_calendar,
+                ),
+                "/cal.v1.CalendarService/PreviewCalendarImport": Endpoint.unary(
+                    method=MethodInfo(
+                        name="PreviewCalendarImport",
+                        service_name="cal.v1.CalendarService",
+                        input=cal_dot_v1_dot_calendar__pb2.PreviewCalendarImportRequest,
+                        output=cal_dot_v1_dot_calendar__pb2.PreviewCalendarImportResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.preview_calendar_import,
+                ),
+                "/cal.v1.CalendarService/ApplyCalendarImport": Endpoint.unary(
+                    method=MethodInfo(
+                        name="ApplyCalendarImport",
+                        service_name="cal.v1.CalendarService",
+                        input=cal_dot_v1_dot_calendar__pb2.ApplyCalendarImportRequest,
+                        output=cal_dot_v1_dot_calendar__pb2.ApplyCalendarImportResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.apply_calendar_import,
+                ),
+                "/cal.v1.CalendarService/GetCalendarFeedUrl": Endpoint.unary(
+                    method=MethodInfo(
+                        name="GetCalendarFeedUrl",
+                        service_name="cal.v1.CalendarService",
+                        input=cal_dot_v1_dot_calendar__pb2.GetCalendarFeedUrlRequest,
+                        output=cal_dot_v1_dot_calendar__pb2.GetCalendarFeedUrlResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.get_calendar_feed_url,
+                ),
+                "/cal.v1.CalendarService/RegenerateCalendarFeed": Endpoint.unary(
+                    method=MethodInfo(
+                        name="RegenerateCalendarFeed",
+                        service_name="cal.v1.CalendarService",
+                        input=cal_dot_v1_dot_calendar__pb2.RegenerateCalendarFeedRequest,
+                        output=cal_dot_v1_dot_calendar__pb2.RegenerateCalendarFeedResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.regenerate_calendar_feed,
+                ),
+                "/cal.v1.CalendarService/RevokeCalendarFeed": Endpoint.unary(
+                    method=MethodInfo(
+                        name="RevokeCalendarFeed",
+                        service_name="cal.v1.CalendarService",
+                        input=cal_dot_v1_dot_calendar__pb2.RevokeCalendarFeedRequest,
+                        output=cal_dot_v1_dot_calendar__pb2.RevokeCalendarFeedResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.revoke_calendar_feed,
                 ),
                 "/cal.v1.CalendarService/CreateCategory": Endpoint.unary(
                     method=MethodInfo(
@@ -451,6 +542,146 @@ class CalendarServiceClient(ConnectClient):
                 service_name="cal.v1.CalendarService",
                 input=cal_dot_v1_dot_calendar__pb2.GetEventsInRangeRequest,
                 output=cal_dot_v1_dot_calendar__pb2.GetEventsInRangeResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def export_event(
+        self,
+        request: cal_dot_v1_dot_calendar__pb2.ExportEventRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> cal_dot_v1_dot_calendar__pb2.ExportEventResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ExportEvent",
+                service_name="cal.v1.CalendarService",
+                input=cal_dot_v1_dot_calendar__pb2.ExportEventRequest,
+                output=cal_dot_v1_dot_calendar__pb2.ExportEventResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def export_calendar(
+        self,
+        request: cal_dot_v1_dot_calendar__pb2.ExportCalendarRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> cal_dot_v1_dot_calendar__pb2.ExportCalendarResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ExportCalendar",
+                service_name="cal.v1.CalendarService",
+                input=cal_dot_v1_dot_calendar__pb2.ExportCalendarRequest,
+                output=cal_dot_v1_dot_calendar__pb2.ExportCalendarResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def preview_calendar_import(
+        self,
+        request: cal_dot_v1_dot_calendar__pb2.PreviewCalendarImportRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> cal_dot_v1_dot_calendar__pb2.PreviewCalendarImportResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="PreviewCalendarImport",
+                service_name="cal.v1.CalendarService",
+                input=cal_dot_v1_dot_calendar__pb2.PreviewCalendarImportRequest,
+                output=cal_dot_v1_dot_calendar__pb2.PreviewCalendarImportResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def apply_calendar_import(
+        self,
+        request: cal_dot_v1_dot_calendar__pb2.ApplyCalendarImportRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> cal_dot_v1_dot_calendar__pb2.ApplyCalendarImportResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ApplyCalendarImport",
+                service_name="cal.v1.CalendarService",
+                input=cal_dot_v1_dot_calendar__pb2.ApplyCalendarImportRequest,
+                output=cal_dot_v1_dot_calendar__pb2.ApplyCalendarImportResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def get_calendar_feed_url(
+        self,
+        request: cal_dot_v1_dot_calendar__pb2.GetCalendarFeedUrlRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> cal_dot_v1_dot_calendar__pb2.GetCalendarFeedUrlResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetCalendarFeedUrl",
+                service_name="cal.v1.CalendarService",
+                input=cal_dot_v1_dot_calendar__pb2.GetCalendarFeedUrlRequest,
+                output=cal_dot_v1_dot_calendar__pb2.GetCalendarFeedUrlResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def regenerate_calendar_feed(
+        self,
+        request: cal_dot_v1_dot_calendar__pb2.RegenerateCalendarFeedRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> cal_dot_v1_dot_calendar__pb2.RegenerateCalendarFeedResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="RegenerateCalendarFeed",
+                service_name="cal.v1.CalendarService",
+                input=cal_dot_v1_dot_calendar__pb2.RegenerateCalendarFeedRequest,
+                output=cal_dot_v1_dot_calendar__pb2.RegenerateCalendarFeedResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def revoke_calendar_feed(
+        self,
+        request: cal_dot_v1_dot_calendar__pb2.RevokeCalendarFeedRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> cal_dot_v1_dot_calendar__pb2.RevokeCalendarFeedResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="RevokeCalendarFeed",
+                service_name="cal.v1.CalendarService",
+                input=cal_dot_v1_dot_calendar__pb2.RevokeCalendarFeedRequest,
+                output=cal_dot_v1_dot_calendar__pb2.RevokeCalendarFeedResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -814,6 +1045,20 @@ class CalendarServiceSync(Protocol):
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def get_events_in_range(self, request: cal_dot_v1_dot_calendar__pb2.GetEventsInRangeRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.GetEventsInRangeResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def export_event(self, request: cal_dot_v1_dot_calendar__pb2.ExportEventRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.ExportEventResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def export_calendar(self, request: cal_dot_v1_dot_calendar__pb2.ExportCalendarRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.ExportCalendarResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def preview_calendar_import(self, request: cal_dot_v1_dot_calendar__pb2.PreviewCalendarImportRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.PreviewCalendarImportResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def apply_calendar_import(self, request: cal_dot_v1_dot_calendar__pb2.ApplyCalendarImportRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.ApplyCalendarImportResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def get_calendar_feed_url(self, request: cal_dot_v1_dot_calendar__pb2.GetCalendarFeedUrlRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.GetCalendarFeedUrlResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def regenerate_calendar_feed(self, request: cal_dot_v1_dot_calendar__pb2.RegenerateCalendarFeedRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.RegenerateCalendarFeedResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def revoke_calendar_feed(self, request: cal_dot_v1_dot_calendar__pb2.RevokeCalendarFeedRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.RevokeCalendarFeedResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def create_category(self, request: cal_dot_v1_dot_calendar__pb2.CreateCategoryRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.CreateCategoryResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def get_category(self, request: cal_dot_v1_dot_calendar__pb2.GetCategoryRequest, ctx: RequestContext) -> cal_dot_v1_dot_calendar__pb2.GetCategoryResponse:
@@ -913,6 +1158,76 @@ class CalendarServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.get_events_in_range,
+                ),
+                "/cal.v1.CalendarService/ExportEvent": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="ExportEvent",
+                        service_name="cal.v1.CalendarService",
+                        input=cal_dot_v1_dot_calendar__pb2.ExportEventRequest,
+                        output=cal_dot_v1_dot_calendar__pb2.ExportEventResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.export_event,
+                ),
+                "/cal.v1.CalendarService/ExportCalendar": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="ExportCalendar",
+                        service_name="cal.v1.CalendarService",
+                        input=cal_dot_v1_dot_calendar__pb2.ExportCalendarRequest,
+                        output=cal_dot_v1_dot_calendar__pb2.ExportCalendarResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.export_calendar,
+                ),
+                "/cal.v1.CalendarService/PreviewCalendarImport": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="PreviewCalendarImport",
+                        service_name="cal.v1.CalendarService",
+                        input=cal_dot_v1_dot_calendar__pb2.PreviewCalendarImportRequest,
+                        output=cal_dot_v1_dot_calendar__pb2.PreviewCalendarImportResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.preview_calendar_import,
+                ),
+                "/cal.v1.CalendarService/ApplyCalendarImport": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="ApplyCalendarImport",
+                        service_name="cal.v1.CalendarService",
+                        input=cal_dot_v1_dot_calendar__pb2.ApplyCalendarImportRequest,
+                        output=cal_dot_v1_dot_calendar__pb2.ApplyCalendarImportResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.apply_calendar_import,
+                ),
+                "/cal.v1.CalendarService/GetCalendarFeedUrl": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="GetCalendarFeedUrl",
+                        service_name="cal.v1.CalendarService",
+                        input=cal_dot_v1_dot_calendar__pb2.GetCalendarFeedUrlRequest,
+                        output=cal_dot_v1_dot_calendar__pb2.GetCalendarFeedUrlResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.get_calendar_feed_url,
+                ),
+                "/cal.v1.CalendarService/RegenerateCalendarFeed": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="RegenerateCalendarFeed",
+                        service_name="cal.v1.CalendarService",
+                        input=cal_dot_v1_dot_calendar__pb2.RegenerateCalendarFeedRequest,
+                        output=cal_dot_v1_dot_calendar__pb2.RegenerateCalendarFeedResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.regenerate_calendar_feed,
+                ),
+                "/cal.v1.CalendarService/RevokeCalendarFeed": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="RevokeCalendarFeed",
+                        service_name="cal.v1.CalendarService",
+                        input=cal_dot_v1_dot_calendar__pb2.RevokeCalendarFeedRequest,
+                        output=cal_dot_v1_dot_calendar__pb2.RevokeCalendarFeedResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.revoke_calendar_feed,
                 ),
                 "/cal.v1.CalendarService/CreateCategory": EndpointSync.unary(
                     method=MethodInfo(
@@ -1212,6 +1527,146 @@ class CalendarServiceClientSync(ConnectClientSync):
                 service_name="cal.v1.CalendarService",
                 input=cal_dot_v1_dot_calendar__pb2.GetEventsInRangeRequest,
                 output=cal_dot_v1_dot_calendar__pb2.GetEventsInRangeResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def export_event(
+        self,
+        request: cal_dot_v1_dot_calendar__pb2.ExportEventRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> cal_dot_v1_dot_calendar__pb2.ExportEventResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ExportEvent",
+                service_name="cal.v1.CalendarService",
+                input=cal_dot_v1_dot_calendar__pb2.ExportEventRequest,
+                output=cal_dot_v1_dot_calendar__pb2.ExportEventResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def export_calendar(
+        self,
+        request: cal_dot_v1_dot_calendar__pb2.ExportCalendarRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> cal_dot_v1_dot_calendar__pb2.ExportCalendarResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ExportCalendar",
+                service_name="cal.v1.CalendarService",
+                input=cal_dot_v1_dot_calendar__pb2.ExportCalendarRequest,
+                output=cal_dot_v1_dot_calendar__pb2.ExportCalendarResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def preview_calendar_import(
+        self,
+        request: cal_dot_v1_dot_calendar__pb2.PreviewCalendarImportRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> cal_dot_v1_dot_calendar__pb2.PreviewCalendarImportResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="PreviewCalendarImport",
+                service_name="cal.v1.CalendarService",
+                input=cal_dot_v1_dot_calendar__pb2.PreviewCalendarImportRequest,
+                output=cal_dot_v1_dot_calendar__pb2.PreviewCalendarImportResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def apply_calendar_import(
+        self,
+        request: cal_dot_v1_dot_calendar__pb2.ApplyCalendarImportRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> cal_dot_v1_dot_calendar__pb2.ApplyCalendarImportResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ApplyCalendarImport",
+                service_name="cal.v1.CalendarService",
+                input=cal_dot_v1_dot_calendar__pb2.ApplyCalendarImportRequest,
+                output=cal_dot_v1_dot_calendar__pb2.ApplyCalendarImportResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def get_calendar_feed_url(
+        self,
+        request: cal_dot_v1_dot_calendar__pb2.GetCalendarFeedUrlRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> cal_dot_v1_dot_calendar__pb2.GetCalendarFeedUrlResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetCalendarFeedUrl",
+                service_name="cal.v1.CalendarService",
+                input=cal_dot_v1_dot_calendar__pb2.GetCalendarFeedUrlRequest,
+                output=cal_dot_v1_dot_calendar__pb2.GetCalendarFeedUrlResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def regenerate_calendar_feed(
+        self,
+        request: cal_dot_v1_dot_calendar__pb2.RegenerateCalendarFeedRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> cal_dot_v1_dot_calendar__pb2.RegenerateCalendarFeedResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="RegenerateCalendarFeed",
+                service_name="cal.v1.CalendarService",
+                input=cal_dot_v1_dot_calendar__pb2.RegenerateCalendarFeedRequest,
+                output=cal_dot_v1_dot_calendar__pb2.RegenerateCalendarFeedResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def revoke_calendar_feed(
+        self,
+        request: cal_dot_v1_dot_calendar__pb2.RevokeCalendarFeedRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> cal_dot_v1_dot_calendar__pb2.RevokeCalendarFeedResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="RevokeCalendarFeed",
+                service_name="cal.v1.CalendarService",
+                input=cal_dot_v1_dot_calendar__pb2.RevokeCalendarFeedRequest,
+                output=cal_dot_v1_dot_calendar__pb2.RevokeCalendarFeedResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

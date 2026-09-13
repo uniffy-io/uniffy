@@ -6,6 +6,7 @@ import { getTimezoneOffset } from "@/features/calendar/utils";
 import { cn } from "@/shared/utils/cn";
 import { formatTimeZoneLabel } from "@/shared/utils/timezone";
 import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
+import { CalendarInteropMenu } from "@/features/calendar/components/interop";
 import type { ViewMode } from "@/features/calendar/types";
 
 export function CalendarHeader() {
@@ -90,6 +91,8 @@ export function CalendarHeader() {
             </button>
           ))}
         </div>
+
+        <CalendarInteropMenu />
       </div>
     </div>
   );

@@ -334,19 +334,22 @@ class TestCalendarRoomAtomicityPrecheck:
     async def test_conflict_aborts_before_event_is_added(self) -> None:
         from uniffy.domains.scheduling.calendar.operations import CalendarEventOperations
 
+        room = _make_room()
+        org_id = generate_id()
+        user_id = generate_id()
+
         session = MagicMock()
         session.add = MagicMock()
         session.commit = AsyncMock()
         session.flush = AsyncMock()
         session.refresh = AsyncMock()
+        # create() checks the target calendar belongs to the author first.
+        session.scalar = AsyncMock(return_value=user_id)
 
         ops = CalendarEventOperations(session, MagicMock())
         ops._resolve_access_policy = AsyncMock(return_value=(None, None))
         ops._expand_group_attendees = AsyncMock(side_effect=lambda ids: ids)
 
-        room = _make_room()
-        org_id = generate_id()
-        user_id = generate_id()
         start = datetime.now(UTC)
         end = start + timedelta(hours=1)
 
@@ -385,10 +388,13 @@ class TestCalendarRoomAtomicityPrecheck:
     async def test_inactive_room_aborts_before_event_is_added(self) -> None:
         from uniffy.domains.scheduling.calendar.operations import CalendarEventOperations
 
+        user_id = generate_id()
+
         session = MagicMock()
         session.add = MagicMock()
         session.commit = AsyncMock()
         session.flush = AsyncMock()
+        session.scalar = AsyncMock(return_value=user_id)
 
         ops = CalendarEventOperations(session, MagicMock())
         ops._resolve_access_policy = AsyncMock(return_value=(None, None))
@@ -403,7 +409,7 @@ class TestCalendarRoomAtomicityPrecheck:
             raised = None
             try:
                 await ops.create(
-                    user_id=generate_id(),
+                    user_id=user_id,
                     organization_id=generate_id(),
                     title="Sync",
                     start_time=datetime.now(UTC),

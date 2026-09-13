@@ -27,3 +27,18 @@ async def refresh_event_search_projection(
             **metadata,
         },
     )
+
+
+class CalendarEventProjection:
+    """An event's search document, for writers that are not the mutation façade.
+
+    Import creates its rows in a transaction of its own and then owes search
+    the same document ``create`` writes, which is a narrower need than the
+    whole storage-backed operations class.
+    """
+
+    def __init__(self, session: AsyncSession, search_indexer: SearchIndexer) -> None:
+        self._operations = CalendarEventOperations(session, search_indexer=search_indexer)
+
+    async def index(self, event: CalendarEvent) -> None:
+        await self._operations._index_for_search(event, skip_member_lookup=True)

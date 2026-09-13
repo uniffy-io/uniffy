@@ -1,0 +1,10 @@
+{% extends "base.txt.j2" %}
+{% block content %}
+{{ organization_name }}
+
+{% if this_and_following %}This occurrence and following occurrences have been cancelled.{% else %}This meeting has been cancelled.{% endif %}
+Attached cancellation updates your calendar.
+
+Notification preferences:
+  {{ preferences_url }}
+{% endblock %}

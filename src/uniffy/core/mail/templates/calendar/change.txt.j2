@@ -1,0 +1,23 @@
+{% extends "base.txt.j2" %}
+{% block content %}
+{{ organization_name }}
+
+{{ title }}
+This meeting has changed{% if organizer_name %}, updated by {{ organizer_name }}{% endif %}.
+{% if changes %}
+{% for change in changes %}  - {{ change }}
+{% endfor %}{% endif %}
+When:  {{ when }}
+{% if recurrence %}       {{ recurrence }}
+{% endif %}{% if location %}Where: {{ location }}
+{% endif %}{% if join_url %}
+Join the meeting:
+  {{ join_url }}
+{% endif %}
+Open in Uniffy:
+  {{ action_url }}
+
+Times are shown in {{ timezone_label }}.
+Notification preferences:
+  {{ preferences_url }}
+{% endblock %}

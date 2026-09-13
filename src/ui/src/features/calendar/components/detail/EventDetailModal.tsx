@@ -2,6 +2,7 @@ import { useState, useMemo, useCallback } from "react";
 import {
   BookmarkSimple,
   ShareNetwork,
+  DownloadSimple,
   Trash,
   Link,
   Warning,
@@ -10,7 +11,10 @@ import {
 } from "@phosphor-icons/react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { deselectEvent } from "@/features/calendar/store";
-import { deleteEvent as deleteEventThunk } from "@/features/calendar/store/calendarThunks";
+import {
+  deleteEvent as deleteEventThunk,
+  exportEvent,
+} from "@/features/calendar/store/calendarThunks";
 import { RecurrenceEditScopeDialog } from "@/features/calendar/components/modals/RecurrenceEditScopeDialog";
 import type { RecurrenceEditScope } from "@/features/calendar/types";
 import { Button } from "@/components/ui/button";
@@ -218,6 +222,16 @@ export function EventDetailModal() {
                       <ShareNetwork size={18} weight="duotone" className="text-primary" />
                     </Button>
                   )}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => void dispatch(exportEvent(selectedEvent.id))}
+                    title="Download as .ics"
+                    aria-label="Download as .ics"
+                  >
+                    <DownloadSimple size={18} weight="duotone" className="text-primary" />
+                  </Button>
                   {canDelete && (
                     <Button
                       type="button"

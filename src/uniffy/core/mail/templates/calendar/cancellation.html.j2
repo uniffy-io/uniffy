@@ -1,0 +1,17 @@
+{% extends "base.html.j2" %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<p style="margin:0 0 8px 0;font-size:13px;color:#6b7280;">{{ organization_name }}</p>
+<p style="margin:0 0 4px 0;font-size:18px;font-weight:600;color:#111111;text-decoration:line-through;">{{ title }}</p>
+<p style="margin:0 0 20px 0;color:#4b5563;">
+  {% if occurrence_only %}This occurrence has been cancelled{% else %}This meeting has been cancelled{% endif %}{% if organizer_name %} by {{ organizer_name }}{% endif %}.
+</p>
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:0 0 24px 0;font-size:15px;">
+  <tr>
+    <td style="padding:0 16px 8px 0;color:#6b7280;vertical-align:top;">Was</td>
+    <td style="padding:0 0 8px 0;">{{ when }}</td>
+  </tr>
+</table>
+<p style="margin:0 0 16px 0;"><a href="{{ action_url }}" style="color:#4f46e5;">Open in Uniffy</a></p>
+<p style="margin:0;font-size:12px;color:#6b7280;">Times are shown in {{ timezone_label }}. You can turn event email off in <a href="{{ preferences_url }}" style="color:#4f46e5;">notification preferences</a>.</p>
+{% endblock %}

@@ -8,7 +8,11 @@ from sqlalchemy import String, cast, func, select
 from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.models.tags.tag import TagAssignment
 from uniffy.core.search.indexer import build_content_urn
-from uniffy.domains.tags.operations import TagOperations
+from uniffy.domains.tags.context import (
+    ContentTagMutations,
+    ContentTagReader,
+    StagedManualTagReplacement,
+)
 
 logger = logger.bind(component="scheduling.calendar.events.tags")
 
@@ -19,31 +23,39 @@ class EventTagOperations:
         self.session = events.session
         self.content_type = events.content_type
 
-    async def _copy_tag_assignments(
+    async def stage_copy_tags(
         self,
         *,
         organization_id: UUID,
         actor_id: UUID,
         source_event_id: UUID,
         target_event_id: UUID,
-    ) -> None:
-        """Copy manual tag assignments from one event URN to another."""
-        tag_ops = TagOperations(self.session, self.events.search_indexer)
+    ) -> StagedManualTagReplacement | None:
         source_urn = build_content_urn(self.content_type, source_event_id)
         target_urn = build_content_urn(self.content_type, target_event_id)
-        bulk = await tag_ops.get_for_urns(
+        bulk = await ContentTagReader(self.session).get_for_urns(
             organization_id=organization_id,
             content_urns=[source_urn],
         )
         tag_ids = [tag.id for tag in bulk.get(source_urn, [])]
         if not tag_ids:
-            return
-        await tag_ops.assign(
+            return None
+        return await ContentTagMutations(self.session, self.events.search_indexer).stage_manual_tags(
             actor_id=actor_id,
             organization_id=organization_id,
             content_urn=target_urn,
             tag_ids=tag_ids,
         )
+
+    async def finish_copy_tags(self, staged: StagedManualTagReplacement | None) -> None:
+        if staged is None:
+            return
+        try:
+            await ContentTagMutations(
+                self.session, self.events.search_indexer
+            ).finish_manual_tags_after_commit(staged)
+        except Exception:
+            logger.opt(exception=True).warning("Copied event tag projection failed")
 
     def _tag_filter_subquery(self, tag_ids: list[UUID]):
         """Event ids that carry every tag id in `tag_ids` (logical AND)."""
