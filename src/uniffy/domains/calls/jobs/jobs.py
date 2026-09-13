@@ -82,8 +82,17 @@ async def reconcile_calls(ctx: dict[str, Any]) -> dict[str, Any]:
     try:
         client = get_livekit_admin_client()
         async with open_session() as session:
-            result = await session.execute(select(Call).where(Call.ended_at.is_(None)))
+            result = await session.execute(
+                select(Call).where(Call.ended_at.is_(None)).order_by(Call.id)
+            )
             active_calls = list(result.scalars().all())
+
+            # Unreachable media is a property of the pass, not of one call, so the
+            # first failure stops us asking again rather than paying a timeout per
+            # call. The loop continues regardless: ending an overlong call is a
+            # clock comparison that needs no roster, and abandoning the pass is
+            # what used to leave those calls running for the length of an outage.
+            media_reachable = True
 
             for call in active_calls:
                 ops = CallOperations(session)
@@ -98,11 +107,15 @@ async def reconcile_calls(ctx: dict[str, Any]) -> dict[str, Any]:
                         ended += 1
                     continue
 
+                if not media_reachable:
+                    continue
+
                 try:
                     live = await client.list_participants(call.livekit_room_name)
                     live_identities = {p.get("identity", "") for p in live}
                 except LiveKitUnavailableError:
-                    break
+                    media_reachable = False
+                    continue
                 except LiveKitApiError as exc:
                     if exc.status_code == 404:
                         live, live_identities = [], set()
@@ -163,7 +176,12 @@ async def reconcile_calls(ctx: dict[str, Any]) -> dict[str, Any]:
                         if await ops.end_call_internal(call, CallEndReason.SOLO_TIMEOUT):
                             ended += 1
 
-        return {"status": "success", "ended": ended, "ghost_participants": ghosts}
+        return {
+            "status": "success",
+            "ended": ended,
+            "ghost_participants": ghosts,
+            "media_reachable": media_reachable,
+        }
     except Exception as exc:
         logger.exception(f"reconcile_calls failed: {exc}")
         return {"status": "error", "error": str(exc)[:500]}
