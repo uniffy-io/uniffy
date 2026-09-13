@@ -244,3 +244,5 @@ src/unictl/dist/
 .external/
 .claude/settings.local.json
 .agents/local/
+CLAUDE.local.md
+AGENTS.override.md
