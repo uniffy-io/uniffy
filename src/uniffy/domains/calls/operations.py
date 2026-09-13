@@ -262,6 +262,10 @@ class CallOperations:
         """Resync snapshot: active calls the user can see - channels they belong to, plus any call
         they are an active participant of. A joiner in an unjoined PUBLIC channel (or an admin
         moderating) has no member row, so a membership-only query would omit their own live call."""
+        # Channel-member and participant rows outlive the membership that justified
+        # them, so without this the roster keeps answering someone the organization
+        # has already removed or deactivated.
+        await self.access.require_org_member(user_id, organization_id)
         member_channels = select(ChatChannelMember.channel_id).where(
             ChatChannelMember.subject_type == SubjectType.USER,
             ChatChannelMember.subject_id == user_id,

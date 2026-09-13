@@ -20,6 +20,7 @@ from uniffy.core.errors import PermissionDeniedError
 from uniffy.core.models.calendar.attendee import EventAttendee
 from uniffy.core.models.calendar.calendar import Calendar
 from uniffy.core.models.calendar.event import CalendarEvent
+from uniffy.core.models.calls.call import Call, CallParticipant, CallType
 from uniffy.core.models.chat.channel import ChannelType, ChatChannel, ChatChannelStats
 from uniffy.core.models.chat.channel_member import ChatChannelMember
 from uniffy.core.models.chat.message import ChatMessage
@@ -38,10 +39,12 @@ from uniffy.core.types import (
     generate_id,
 )
 from uniffy.domains.agents.access import is_agents_builder, require_agents_builder
-from uniffy.domains.scheduling.calendar.operations import CalendarEventReader
+from uniffy.domains.calls import config as calls_config
+from uniffy.domains.calls.operations import CallOperations
 from uniffy.domains.chat.access import ChatAccessChecker
 from uniffy.domains.chat.cleanup import cleanup_chat_membership_for_organization
 from uniffy.domains.organizations.operations import OrganizationOperations
+from uniffy.domains.scheduling.calendar.operations import CalendarEventReader
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
@@ -122,6 +125,43 @@ async def _channel(session, access, channel_type=ChannelType.PRIVATE) -> ChatCha
     )
     await session.commit()
     return channel
+
+
+async def _active_call(session, access, channel, *, participant_id) -> Call:
+    """A live call on `channel` with one participant still in it."""
+    call = Call(
+        organization_id=access.org_id,
+        channel_id=channel.id,
+        call_type=CallType.CHANNEL,
+        initiator_user_id=access.member_id,
+        host_user_id=access.member_id,
+        livekit_room_name=f"org_{access.org_id}:call_{generate_id().hex[:8]}",
+    )
+    session.add(call)
+    await session.flush()
+    session.add(
+        CallParticipant(
+            call_id=call.id,
+            organization_id=access.org_id,
+            user_id=participant_id,
+            device_id="device-1",
+            identity=f"{participant_id}:device-1",
+        )
+    )
+    await session.commit()
+    return call
+
+
+async def _join_channel(session, channel, user_id) -> None:
+    session.add(
+        ChatChannelMember(
+            channel_id=channel.id,
+            subject_type=SubjectType.USER,
+            subject_id=user_id,
+            user_id=user_id,
+        )
+    )
+    await session.commit()
 
 
 class TestOrgGates:
@@ -565,3 +605,84 @@ class TestCalendarAttendeeFloor:
         role = await ops._resolve_role(access.outsider_id, access.org_id, event)
 
         assert role is None
+
+
+class TestCallRosterMembershipGate:
+    """The active-call roster is a live view of who is meeting with whom, by name,
+    so it carries the same membership precondition as the rest of the domain.
+
+    Channel-member and participant rows outlive the membership that justified
+    them, which is exactly why the gate cannot be inferred from either.
+    """
+
+    @pytest.fixture(autouse=True)
+    def _livekit_env(self, monkeypatch):
+        """`CallOperations` mints tokens, so it needs credible config to exist.
+
+        Supplied here rather than inherited from the environment, so the gate is
+        what these tests measure and not whichever secret the shell happens to
+        carry.
+        """
+        monkeypatch.setattr(calls_config, "_config", None)
+        monkeypatch.setenv("LIVEKIT_HOST", "http://livekit:7880")
+        monkeypatch.setenv("LIVEKIT_API_KEY", "devkey")
+        monkeypatch.setenv("LIVEKIT_API_SECRET", "t" * 48)
+
+    async def test_a_deactivated_member_is_refused_the_roster(self, session, access) -> None:
+        channel = await _channel(session, access)
+        await _join_channel(session, channel, access.ghost_id)
+        await _active_call(session, access, channel, participant_id=access.member_id)
+
+        with pytest.raises(PermissionDeniedError):
+            await CallOperations(session).list_active_calls_for_user(access.ghost_id, access.org_id)
+
+    async def test_being_in_the_call_does_not_survive_deactivation(self, session, access) -> None:
+        """The harsher case: their own participant row is still open, which is
+        what the query reads access from when nothing gates it."""
+        channel = await _channel(session, access)
+        await _active_call(session, access, channel, participant_id=access.ghost_id)
+
+        with pytest.raises(PermissionDeniedError):
+            await CallOperations(session).list_active_calls_for_user(access.ghost_id, access.org_id)
+
+    async def test_a_member_of_another_organization_is_refused(self, session, access) -> None:
+        channel = await _channel(session, access)
+        await _active_call(session, access, channel, participant_id=access.member_id)
+
+        with pytest.raises(PermissionDeniedError):
+            await CallOperations(session).list_active_calls_for_user(
+                access.outsider_id, access.org_id
+            )
+
+    async def test_an_active_member_still_sees_the_call(self, session, access) -> None:
+        """The gate refuses non-members; it must not narrow what a member sees."""
+        channel = await _channel(session, access)
+        call = await _active_call(session, access, channel, participant_id=access.member_id)
+
+        found = await CallOperations(session).list_active_calls_for_user(
+            access.member_id, access.org_id
+        )
+
+        assert [row.id for row, _ in found] == [call.id]
+
+    async def test_a_reactivated_member_sees_it_again(self, session, access) -> None:
+        channel = await _channel(session, access)
+        await _join_channel(session, channel, access.ghost_id)
+        call = await _active_call(session, access, channel, participant_id=access.member_id)
+
+        membership = (
+            await session.execute(
+                select(OrganizationMember).where(
+                    OrganizationMember.organization_id == access.org_id,
+                    OrganizationMember.user_id == access.ghost_id,
+                )
+            )
+        ).scalar_one()
+        membership.is_active = True
+        await session.commit()
+
+        found = await CallOperations(session).list_active_calls_for_user(
+            access.ghost_id, access.org_id
+        )
+
+        assert [row.id for row, _ in found] == [call.id]
