@@ -19,6 +19,7 @@ import {
   Hash,
   Lock,
   ChatCircle,
+  ArrowCounterClockwise,
   Robot,
   ChatTeardropText,
   Compass,
@@ -46,6 +47,7 @@ import { FONT } from "@theme/typography";
 import { GROUP_DM_MAX_PARTICIPANTS, NEW_DM_MAX_RECIPIENTS } from "@features/chat/chatLimits";
 import {
   useChannels,
+  useArchivedChannels,
   useAgentChats,
   useThreadsInbox,
   useBrowseChannels,
@@ -56,6 +58,7 @@ import {
   useJoinChannel,
   useCreateCategory,
   useCreateDm,
+  useUnarchiveChannel,
   useUpdateCategory,
   useDeleteCategory,
   useCreateAgentFolder,
@@ -63,6 +66,7 @@ import {
   useDeleteAgentFolder,
   useSetAgentChatFolder,
 } from "@features/chat/useChatMutations";
+import { useChatPermissions } from "@features/chat/useChatPermissions";
 import { useChatStream } from "@features/chat/useChatStream";
 import { useAgents, useCreateAgentChat } from "@features/agents/useAgents";
 import type { SerializedAgent } from "@features/agents/agentSerializer";
@@ -110,7 +114,7 @@ export function ChatListScreen() {
     Platform.OS === "web" ? BOTTOM_NAV_HEIGHT + 34 : BOTTOM_NAV_HEIGHT + insets.bottom;
   const [tab, setTab] = useState<Tab>("all");
   const [browsing, setBrowsing] = useState(false);
-  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({ archived: true });
 
   const [newCategoryOpen, setNewCategoryOpen] = useState(false);
   const [newDmOpen, setNewDmOpen] = useState(false);
@@ -126,6 +130,10 @@ export function ChatListScreen() {
   const joinChannel = useJoinChannel();
   const createCategory = useCreateCategory();
   const createDm = useCreateDm();
+  const { canManageChat } = useChatPermissions();
+  const unarchiveChannel = useUnarchiveChannel();
+  const archivedQuery = useArchivedChannels(!collapsed.archived);
+  const archivedChannels = archivedQuery.data ?? [];
   const createAgentChat = useCreateAgentChat();
   const agentFolders = useAgentFolders();
   const createAgentFolder = useCreateAgentFolder();
@@ -586,6 +594,37 @@ export function ChatListScreen() {
                 peer={dmPeer(c)}
               />
             ))}
+          </CategorySection>
+
+          <CategorySection
+            label="Archived"
+            count={archivedChannels.length}
+            collapsed={!!collapsed.archived}
+            onToggle={() => toggle("archived")}
+            hasContent
+            T={T}
+          >
+            {archivedQuery.isLoading ? (
+              <Text style={[styles.sectionEmptyText, styles.archivedNote, { color: T.textDim }]}>
+                Loading...
+              </Text>
+            ) : archivedChannels.length === 0 ? (
+              <Text style={[styles.sectionEmptyText, styles.archivedNote, { color: T.textDim }]}>
+                No archived channels
+              </Text>
+            ) : (
+              archivedChannels.map((c) => (
+                <ArchivedChannelRow
+                  key={c.id}
+                  channel={c}
+                  T={T}
+                  canRestore={canManageChat || c.currentUserRole === "OWNER"}
+                  restoring={unarchiveChannel.isPending && unarchiveChannel.variables === c.id}
+                  onPress={() => openChannel(c.id)}
+                  onRestore={() => unarchiveChannel.mutate(c.id)}
+                />
+              ))
+            )}
           </CategorySection>
         </ScrollView>
       )}
@@ -1206,6 +1245,48 @@ function ThreadsList({
   );
 }
 
+function ArchivedChannelRow({
+  channel,
+  T,
+  canRestore,
+  restoring,
+  onPress,
+  onRestore,
+}: {
+  channel: SerializedChannel;
+  T: ThemeColors;
+  canRestore: boolean;
+  restoring: boolean;
+  onPress: () => void;
+  onRestore: () => void;
+}) {
+  const isDm = channel.channelType === "DIRECT" || channel.channelType === "GROUP_DM";
+  const TypeIcon = isDm ? ChatCircle : channel.channelType === "PRIVATE" ? Lock : Hash;
+
+  return (
+    <View style={styles.archivedRow}>
+      <TouchableOpacity style={styles.archivedMain} onPress={onPress} activeOpacity={0.7}>
+        <TypeIcon size={16} color={T.textDim} weight="bold" />
+        <Text style={[styles.archivedName, { color: T.textDim }]} numberOfLines={1}>
+          {channel.displayName}
+        </Text>
+      </TouchableOpacity>
+      {canRestore ? (
+        <TouchableOpacity
+          style={styles.archivedRestore}
+          onPress={onRestore}
+          disabled={restoring}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          activeOpacity={0.7}
+          accessibilityLabel={`Restore ${channel.displayName}`}
+        >
+          <ArrowCounterClockwise size={16} color={restoring ? T.textDim : T.accent} weight="bold" />
+        </TouchableOpacity>
+      ) : null}
+    </View>
+  );
+}
+
 function ChannelRow({
   channel,
   T,
@@ -1546,6 +1627,18 @@ const styles = StyleSheet.create({
   },
   newFolderRow: { flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 14 },
   newFolderText: { fontSize: 14, fontFamily: FONT.medium },
+  archivedNote: { paddingHorizontal: 16, paddingVertical: 10 },
+  archivedRow: { flexDirection: "row", alignItems: "center", minHeight: 44 },
+  archivedMain: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+  archivedName: { flex: 1, fontSize: 15, fontFamily: FONT.regular },
+  archivedRestore: { paddingHorizontal: 16, paddingVertical: 10 },
   dmCapNotice: { fontSize: 12, fontFamily: FONT.regular, marginTop: 10 },
   dmName: { fontSize: 15, fontFamily: FONT.medium },
   dmEmail: { fontSize: 12, fontFamily: FONT.regular, marginTop: 1 },

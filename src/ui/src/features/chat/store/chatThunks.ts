@@ -22,6 +22,8 @@ import { draftClientSessionId } from "@/features/chat/api/draftSession";
 import { bulkUpsertTags, tagToPlain } from "@/features/tags";
 import {
   setChannels,
+  setArchivedChannels,
+  archivedChannelRestored,
   addChannel,
   removeChannel,
   updateChannel,
@@ -341,9 +343,48 @@ export const archiveChannel = createAsyncThunk<
     const organizationId = getOrganizationId(getState());
     await chatApi.archiveChannel({ organizationId, channelId });
     removeChannelLocally(getState(), dispatch, organizationId, channelId);
+    // The archived list is a cached page; refresh it so a reopened section
+    // shows what was just archived.
+    if (getState().chatChannels.archivedLoaded) {
+      void dispatch(fetchArchivedChannels());
+    }
     return channelId;
   } catch (error) {
     return rejectWithValue(error instanceof Error ? error.message : "Failed to archive channel");
+  }
+});
+
+export const fetchArchivedChannels = createAsyncThunk<
+  void,
+  void,
+  { state: RootState; rejectValue: string }
+>("chat/fetchArchivedChannels", async (_, { getState, dispatch, rejectWithValue }) => {
+  try {
+    const organizationId = getOrganizationId(getState());
+    const response = await chatApi.listChannels({ organizationId, archivedOnly: true });
+    dispatch(setArchivedChannels(response.channels.map(channelToPlain)));
+  } catch (error) {
+    return rejectWithValue(
+      error instanceof Error ? error.message : "Failed to load archived channels",
+    );
+  }
+});
+
+export const unarchiveChannel = createAsyncThunk<
+  string,
+  string,
+  { state: RootState; rejectValue: string }
+>("chat/unarchiveChannel", async (channelId, { getState, dispatch, rejectWithValue }) => {
+  try {
+    const organizationId = getOrganizationId(getState());
+    const response = await chatApi.unarchiveChannel({ organizationId, channelId });
+    dispatch(archivedChannelRestored(channelId));
+    if (response.channel) {
+      dispatch(addChannel(channelToPlain(response.channel)));
+    }
+    return channelId;
+  } catch (error) {
+    return rejectWithValue(error instanceof Error ? error.message : "Failed to restore channel");
   }
 });
 

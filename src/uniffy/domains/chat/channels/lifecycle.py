@@ -71,6 +71,41 @@ class ChannelLifecycle:
 
         await self._broadcast_channel_removed(channel)
 
+    async def unarchive_channel(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        channel_id: UUID,
+    ) -> ChatChannel:
+        """Restore an archived channel with its members and history intact."""
+        channel = await self.get_by_id(user_id, organization_id, channel_id)
+        await self._require_delete(user_id, organization_id, channel)
+
+        if not channel.is_archived:
+            raise ValidationError("channel", "Channel is not archived")
+
+        channel.is_archived = False
+        channel.updated_at = datetime.now(UTC)
+
+        await write_audit_event(
+            self.session,
+            organization_id=organization_id,
+            actor_user_id=user_id,
+            action=Action.CHAT_CHANNEL_UNARCHIVED,
+            resource_type=AuditResourceType.CHAT,
+            resource_id=channel.id,
+            details={"name": channel.name},
+        )
+
+        await self.session.commit()
+        await self.session.refresh(channel)
+
+        # Members never changed, so the row clients dropped on archive is the one
+        # they re-add; the metadata-edit broadcast carries the cleared flag.
+        await self._publish_channel_updated(channel)
+
+        return channel
+
     async def delete_channel(
         self,
         user_id: UUID,

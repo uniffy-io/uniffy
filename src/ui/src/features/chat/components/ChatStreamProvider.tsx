@@ -106,6 +106,7 @@ function handleChannelEvent(
   organizationId: string,
   dispatch: AppDispatch,
   getMessageById: (id: string) => import("@/features/chat/types").ChatMessage | undefined,
+  hasChannel: (channelId: string) => boolean,
 ): void {
   if (event.payload.case !== "channelEvent" || !event.payload.value) return;
   const ce = event.payload.value;
@@ -129,7 +130,9 @@ function handleChannelEvent(
       dispatch(removeChannel(channelId));
       return;
     }
-    hydrateChannel(organizationId, channelId, dispatch, "update");
+    // A restore arrives on this path with the row already dropped from this
+    // session, so it is added back rather than patched into nothing.
+    hydrateChannel(organizationId, channelId, dispatch, hasChannel(channelId) ? "update" : "add");
     return;
   }
 
@@ -676,6 +679,7 @@ function usePersistentChatStream() {
                   organizationId!,
                   dispatch,
                   (id) => byIdRef.current[id],
+                  (id) => channelIdsRef.current.has(id),
                 );
                 break;
               }

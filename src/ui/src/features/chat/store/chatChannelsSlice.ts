@@ -32,6 +32,10 @@ interface ChatChannelsState {
   orgPolicy: OrgChatPolicy | null;
   isLoading: boolean;
   channelsLoaded: boolean;
+  // Archived channels live apart from `byId`: they are paged in only when the
+  // sidebar section is opened and must never reach the active channel lists.
+  archived: ChatChannel[];
+  archivedLoaded: boolean;
 }
 
 const initialState: ChatChannelsState = {
@@ -46,6 +50,8 @@ const initialState: ChatChannelsState = {
   orgPolicy: null,
   isLoading: false,
   channelsLoaded: false,
+  archived: [],
+  archivedLoaded: false,
 };
 
 export const chatChannelsSlice = createSlice({
@@ -60,6 +66,13 @@ export const chatChannelsSlice = createSlice({
         state.ids.push(channel.id);
       }
       state.channelsLoaded = true;
+    },
+    setArchivedChannels: (state, action: PayloadAction<ChatChannel[]>) => {
+      state.archived = action.payload;
+      state.archivedLoaded = true;
+    },
+    archivedChannelRestored: (state, action: PayloadAction<string>) => {
+      state.archived = state.archived.filter((channel) => channel.id !== action.payload);
     },
     addChannel: (state, action: PayloadAction<ChatChannel>) => {
       // Idempotent: backend dedups DMs and may return an id we already hold.
@@ -248,6 +261,8 @@ export const chatChannelsSlice = createSlice({
 
 export const {
   setChannels,
+  setArchivedChannels,
+  archivedChannelRestored,
   addChannel,
   removeChannel,
   setActiveChannel,
@@ -346,5 +361,11 @@ export const selectSplitChannel = (state: RootState): ChatChannel | undefined =>
   state.chatChannels.splitChannelId
     ? state.chatChannels.byId[state.chatChannels.splitChannelId]
     : undefined;
+
+export const selectArchivedChannels = (state: RootState): ChatChannel[] =>
+  state.chatChannels.archived;
+
+export const selectArchivedLoaded = (state: RootState): boolean =>
+  state.chatChannels.archivedLoaded;
 
 export const chatChannelsReducer = chatChannelsSlice.reducer;

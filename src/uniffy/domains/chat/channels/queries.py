@@ -36,6 +36,7 @@ class ChannelQueries:
         cursor: str | None = None,
         limit: int = DEFAULT_PAGE_SIZE,
         tag_ids: list[UUID] | None = None,
+        archived_only: bool = False,
     ) -> tuple[list[tuple[ChatChannel, ChatChannelStats, ChannelRole, UUID | None]], str | None]:
         await self.access.require_org_member(user_id, organization_id)
         # Keyset by (coalesce(last_root_message_at, epoch) DESC, channel_id ASC).
@@ -61,7 +62,7 @@ class ChannelQueries:
             .where(
                 ChatChannel.organization_id == organization_id,
                 ChatChannel.is_deleted == False,  # noqa: E712
-                ChatChannel.is_archived == False,  # noqa: E712
+                ChatChannel.is_archived == archived_only,
             )
             .order_by(sort_ts.desc(), ChatChannel.id.asc())
         )

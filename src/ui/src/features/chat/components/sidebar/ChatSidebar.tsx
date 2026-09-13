@@ -15,6 +15,10 @@ import {
   CaretDoubleRight,
   Robot,
   FolderSimplePlus,
+  Archive,
+  ArrowCounterClockwise,
+  Hash,
+  Lock,
 } from "@phosphor-icons/react";
 import {
   DndContext,
@@ -39,15 +43,23 @@ import {
   selectChannelPreferences,
   selectChannels,
   selectAgentFolders,
+  selectArchivedChannels,
+  selectArchivedLoaded,
   sortByLastActivity,
   sortByRootActivity,
 } from "@/features/chat/store/chatChannelsSlice";
-import { createAgentFolder, setAgentChatFolder } from "@/features/chat/store/chatThunks";
+import {
+  createAgentFolder,
+  setAgentChatFolder,
+  fetchArchivedChannels,
+  unarchiveChannel,
+} from "@/features/chat/store/chatThunks";
 import { AgentChatFolderGroup } from "@/features/chat/components/sidebar/AgentChatFolderGroup";
 import { selectChannelsWithDrafts, selectDraftCount } from "@/features/chat/store/chatDraftsSlice";
 import {
   toggleDmSection,
   toggleAgentChatsSection,
+  toggleArchivedSection,
   revealAgentFolder,
   openAgentChatPicker,
   collapseSidebar,
@@ -66,6 +78,8 @@ import { DirectMessageListItem } from "@/features/chat/components/sidebar/Direct
 import { CategorySection } from "@/features/chat/components/sidebar/CategorySection";
 import { useChatPermissions } from "@/features/chat/hooks/useChatPermissions";
 import { cn } from "@/shared/utils/cn";
+import { getChannelDisplayName } from "@/features/chat/utils/channelDisplay";
+import type { ChatChannel } from "@/features/chat/types";
 import type { Icon } from "@phosphor-icons/react";
 
 function SidebarNavItem({
@@ -203,6 +217,9 @@ export function ChatSidebar() {
   const channelPreferences = useAppSelector(selectChannelPreferences);
   const draftChannels = useAppSelector(selectChannelsWithDrafts);
   const draftCount = useAppSelector(selectDraftCount);
+  const archivedChannels = useAppSelector(selectArchivedChannels);
+  const archivedLoaded = useAppSelector(selectArchivedLoaded);
+  const archivedSectionCollapsed = useAppSelector((state) => state.chatUi.archivedSectionCollapsed);
   const currentUserId = useAppSelector((state) => state.auth.user?.id ?? "");
   const allChannelMembers = useAppSelector((state) => state.chatChannels.channelMembers);
 
@@ -423,6 +440,14 @@ export function ChatSidebar() {
     },
     [sortableCategoryIds, categories, dispatch],
   );
+
+  const handleToggleArchived = useCallback(() => {
+    // Paged in on first open only; archived channels are cold data.
+    if (archivedSectionCollapsed && !archivedLoaded) {
+      void dispatch(fetchArchivedChannels());
+    }
+    dispatch(toggleArchivedSection());
+  }, [dispatch, archivedSectionCollapsed, archivedLoaded]);
 
   const handleThreadsClick = useCallback(() => {
     navigate("/chat/threads");
@@ -729,7 +754,87 @@ export function ChatSidebar() {
             </div>
           )}
         </div>
+
+        <div
+          className="mt-1 mb-2"
+          data-testid="chat-sidebar-archived-section"
+          data-state={archivedSectionCollapsed ? "collapsed" : "expanded"}
+        >
+          <button
+            type="button"
+            onClick={handleToggleArchived}
+            className="flex items-center gap-1 w-full px-3 py-1.5 text-xs uppercase font-medium tracking-wider text-muted-foreground hover:text-foreground transition-colors"
+            data-testid="chat-sidebar-archived-toggle"
+          >
+            {archivedSectionCollapsed ? <CaretRight size={10} /> : <CaretDown size={10} />}
+            <Archive size={12} />
+            Archived
+          </button>
+
+          {!archivedSectionCollapsed && (
+            <div className="space-y-px">
+              {!archivedLoaded ? (
+                <p className="px-3 py-1.5 text-xs text-subtle-foreground">Loading...</p>
+              ) : archivedChannels.length === 0 ? (
+                <p className="px-3 py-1.5 text-xs text-subtle-foreground">No archived channels</p>
+              ) : (
+                archivedChannels.map((channel) => (
+                  <ArchivedChannelItem
+                    key={channel.id}
+                    channel={channel}
+                    canRestore={canManageChat || channel.currentUserRole === "OWNER"}
+                    onSelect={handleChannelSelect}
+                    onRestore={() => dispatch(unarchiveChannel(channel.id))}
+                  />
+                ))
+              )}
+            </div>
+          )}
+        </div>
       </div>
+    </div>
+  );
+}
+
+function ArchivedChannelItem({
+  channel,
+  canRestore,
+  onSelect,
+  onRestore,
+}: {
+  channel: ChatChannel;
+  canRestore: boolean;
+  onSelect: (channelId: string) => void;
+  onRestore: () => void;
+}) {
+  const isDm = channel.channelType === "DIRECT" || channel.channelType === "GROUP_DM";
+  const TypeIcon = isDm ? ChatsCircle : channel.channelType === "PRIVATE" ? Lock : Hash;
+
+  return (
+    <div
+      className="group flex items-center gap-1 pr-1.5"
+      data-testid={`chat-sidebar-archived-${channel.id}`}
+    >
+      <button
+        type="button"
+        onClick={() => onSelect(channel.id)}
+        className="flex flex-1 min-w-0 items-center gap-2 px-3 py-1.5 text-left text-[0.9rem] text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-colors"
+      >
+        <TypeIcon size={14} className="shrink-0" />
+        <span className="truncate font-[450]">{getChannelDisplayName(channel)}</span>
+      </button>
+      {canRestore && (
+        <button
+          type="button"
+          onClick={onRestore}
+          aria-label={`Restore ${getChannelDisplayName(channel)}`}
+          title="Restore channel"
+          className="shrink-0 rounded p-1 text-muted-foreground opacity-100 transition-opacity hover:text-foreground md:opacity-0 md:group-hover:opacity-100 focus:opacity-100"
+          data-testid={`chat-sidebar-archived-restore-${channel.id}`}
+        >
+          <ArrowCounterClockwise size={14} />
+        </button>
+      )}
     </div>
   );
 }

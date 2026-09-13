@@ -11,6 +11,7 @@ import {
   FolderSimpleMinus,
   Check,
   SignOut,
+  Archive,
 } from "@phosphor-icons/react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import {
@@ -21,7 +22,13 @@ import {
 } from "@/features/chat/store/chatChannelsSlice";
 import { activateSplit, openRenameAgentChatDialog } from "@/features/chat/store/chatUiSlice";
 import { selectChannelPreferences } from "@/features/chat/store/chatChannelsSlice";
-import { deleteChannel, leaveChannel, setAgentChatFolder } from "@/features/chat/store/chatThunks";
+import {
+  archiveChannel,
+  deleteChannel,
+  leaveChannel,
+  setAgentChatFolder,
+} from "@/features/chat/store/chatThunks";
+import { useChatPermissions } from "@/features/chat/hooks/useChatPermissions";
 import { ChannelNotificationMenu } from "@/features/chat/components/sidebar/ChannelNotificationMenu";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ActionMenu, ActionMenuItem, ActionMenuSeparator } from "@/components/ui/action-menu";
@@ -52,8 +59,19 @@ export function ChannelContextMenu({ channelId, position, onClose }: ChannelCont
   const [isDeleting, setIsDeleting] = useState(false);
   const [confirmLeaveOpen, setConfirmLeaveOpen] = useState(false);
   const [isLeaving, setIsLeaving] = useState(false);
+  const [confirmArchiveOpen, setConfirmArchiveOpen] = useState(false);
+  const [isArchiving, setIsArchiving] = useState(false);
+  const { canManageChat } = useChatPermissions();
 
   const isGroupDm = channel?.channelType === "GROUP_DM";
+  // Mirrors the backend delete gate: channel owner, org admin, or chat domain admin.
+  const canArchive =
+    !!channel &&
+    !isAgentDm &&
+    !channel.isDefault &&
+    channel.channelType !== "DIRECT" &&
+    !isGroupDm &&
+    (canManageChat || channel.currentUserRole === "OWNER");
   const canLeave =
     !!channel && !isAgentDm && channel.channelType !== "DIRECT" && !channel.isDefault;
 
@@ -117,12 +135,27 @@ export function ChannelContextMenu({ channelId, position, onClose }: ChannelCont
 
   const MuteIcon = isMuted ? SpeakerHigh : SpeakerSlash;
 
+  const handleConfirmArchive = useCallback(async () => {
+    setIsArchiving(true);
+    try {
+      await dispatch(archiveChannel(channelId)).unwrap();
+      setConfirmArchiveOpen(false);
+      onClose();
+      if (activeChannelId === channelId) navigate("/chat");
+    } finally {
+      setIsArchiving(false);
+    }
+    // The deps below ARE read in the body; oxlint's memo analysis misses reads
+    // inside try/finally blocks and object-literal call arguments.
+    // eslint-disable-next-line react/react-compiler
+  }, [dispatch, channelId, activeChannelId, navigate, onClose]);
+
   const channelName = channel ? getChannelDisplayName(channel) : "this chat";
 
   return (
     <>
       <ActionMenu
-        open={!confirmDeleteOpen && !confirmLeaveOpen}
+        open={!confirmDeleteOpen && !confirmLeaveOpen && !confirmArchiveOpen}
         position={position}
         onClose={onClose}
         label="Chat actions"
@@ -233,6 +266,20 @@ export function ChannelContextMenu({ channelId, position, onClose }: ChannelCont
           </>
         )}
 
+        {canArchive && (
+          <>
+            <ActionMenuSeparator />
+            <ActionMenuItem
+              type="button"
+              onClick={() => setConfirmArchiveOpen(true)}
+              data-testid="chat-channel-context-menu-archive"
+            >
+              <Archive size={16} className="text-muted-foreground" />
+              <span>Archive channel</span>
+            </ActionMenuItem>
+          </>
+        )}
+
         {canLeave && (
           <>
             <ActionMenuSeparator />
@@ -258,6 +305,16 @@ export function ChannelContextMenu({ channelId, position, onClose }: ChannelCont
         confirmLabel="Delete"
         variant="danger"
         loading={isDeleting}
+      />
+
+      <ConfirmDialog
+        isOpen={confirmArchiveOpen}
+        onClose={() => setConfirmArchiveOpen(false)}
+        onConfirm={handleConfirmArchive}
+        title="Archive channel"
+        message={`Archive "${channelName}"? Members keep the history and an owner or admin can restore it from the Archived section.`}
+        confirmLabel="Archive"
+        loading={isArchiving}
       />
 
       <ConfirmDialog

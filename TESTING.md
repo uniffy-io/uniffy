@@ -2388,6 +2388,29 @@ plus a second user for the live checks.
 - [ ] Open a 200-message channel with reactions throughout: reaction reads stay one query per page
       (watch the backend log), and scrolling stays smooth.
 
+## Chat channel archive and restore
+
+Archiving is reversible: archived channels stay listed under their own section and an owner or
+admin can put one back. Needs a channel you own plus a second browser signed in as another member.
+
+- [ ] Right-click a channel you own in the sidebar: the menu offers "Archive channel", and the
+      confirm explains members keep the history.
+- [ ] Archive it: the row leaves the channel groups, and the open channel navigates away.
+- [ ] Expand the sidebar's Archived section: the channel is listed there (the section only loads
+      when first opened).
+- [ ] The second browser, signed in as an ordinary member, sees the channel disappear from its
+      sidebar without a reload, and its Archived section lists it with no restore action.
+- [ ] Restore it from the Archived section: it returns to its category in your sidebar, and the
+      second browser gets it back live without a reload.
+- [ ] Sending into the restored channel works; sending into an archived one is still refused.
+- [ ] `/admin/audit` filtered to `chat_channel.unarchived` shows the restore, with the channel
+      name in the details.
+- [ ] An ordinary MEMBER and a channel ADMIN see no Archive entry in the context menu, and the
+      restore action is absent on their archived rows.
+- [ ] A default channel offers no archive action.
+- [ ] Mobile: the chat list carries a collapsed Archived section with the same restore action, and
+      restoring there moves the channel back into the list.
+
 ## Pre-release sweep
 
 - [ ] All linters green: `./manage.py lint`.

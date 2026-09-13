@@ -15,6 +15,7 @@ service ChatService {
   rpc GetChannel(GetChannelRequest) returns (GetChannelResponse) {}
   rpc UpdateChannel(UpdateChannelRequest) returns (UpdateChannelResponse) {}
   rpc ArchiveChannel(ArchiveChannelRequest) returns (ArchiveChannelResponse) {}
+  rpc UnarchiveChannel(UnarchiveChannelRequest) returns (UnarchiveChannelResponse) {}
   rpc DeleteChannel(DeleteChannelRequest) returns (DeleteChannelResponse) {}
   rpc ListChannels(ListChannelsRequest) returns (ListChannelsResponse) {}
 
@@ -473,6 +474,15 @@ message ArchiveChannelRequest {
 
 message ArchiveChannelResponse {}
 
+message UnarchiveChannelRequest {
+  string organization_id = 1;
+  string channel_id = 2;
+}
+
+message UnarchiveChannelResponse {
+  ChatChannel channel = 1;
+}
+
 message DeleteChannelRequest {
   string organization_id = 1;
   string channel_id = 2;
@@ -496,6 +506,10 @@ message ListChannelsRequest {
   // Empty = no tag filter. Mirrors ``ListNotesRequest`` / ``ListFilesRequest``
   // / ``ListEventsRequest``.
   repeated string tag_ids = 5;
+  // Return the caller's archived channels INSTEAD of their active ones, which
+  // is what the sidebar's Archived section pages through. Default false, so
+  // existing callers keep the active view untouched.
+  bool archived_only = 6;
 }
 
 message ListChannelsResponse {

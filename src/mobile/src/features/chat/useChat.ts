@@ -44,6 +44,24 @@ function isStreamHealthy(queryClient: QueryClient): boolean {
 type UnreadMap = Record<string, { unread: number; mentions: number }>;
 
 /** The user's joined channels, merged with live unread counts. */
+/** Archived channels, paged in only when the archived section is open. */
+export function useArchivedChannels(enabled: boolean) {
+  const { organizationId } = useAuth();
+
+  return useQuery({
+    queryKey: ["chat", "archived-channels", organizationId],
+    enabled: !!organizationId && enabled,
+    queryFn: async () => {
+      const res = await chatApi.listChannels({
+        organizationId: organizationId!,
+        browsePublic: false,
+        archivedOnly: true,
+      });
+      return res.channels.map(channelToPlain);
+    },
+  });
+}
+
 export function useChannels() {
   const { organizationId } = useAuth();
 

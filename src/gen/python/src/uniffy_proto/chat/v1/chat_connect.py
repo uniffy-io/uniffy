@@ -30,6 +30,9 @@ class ChatService(Protocol):
     async def archive_channel(self, request: chat_dot_v1_dot_chat__pb2.ArchiveChannelRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.ArchiveChannelResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
+    async def unarchive_channel(self, request: chat_dot_v1_dot_chat__pb2.UnarchiveChannelRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.UnarchiveChannelResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
     async def delete_channel(self, request: chat_dot_v1_dot_chat__pb2.DeleteChannelRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.DeleteChannelResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
@@ -255,6 +258,16 @@ class ChatServiceASGIApplication(ConnectASGIApplication[ChatService]):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.archive_channel,
+                ),
+                "/chat.v1.ChatService/UnarchiveChannel": Endpoint.unary(
+                    method=MethodInfo(
+                        name="UnarchiveChannel",
+                        service_name="chat.v1.ChatService",
+                        input=chat_dot_v1_dot_chat__pb2.UnarchiveChannelRequest,
+                        output=chat_dot_v1_dot_chat__pb2.UnarchiveChannelResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.unarchive_channel,
                 ),
                 "/chat.v1.ChatService/DeleteChannel": Endpoint.unary(
                     method=MethodInfo(
@@ -944,6 +957,26 @@ class ChatServiceClient(ConnectClient):
                 service_name="chat.v1.ChatService",
                 input=chat_dot_v1_dot_chat__pb2.ArchiveChannelRequest,
                 output=chat_dot_v1_dot_chat__pb2.ArchiveChannelResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def unarchive_channel(
+        self,
+        request: chat_dot_v1_dot_chat__pb2.UnarchiveChannelRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> chat_dot_v1_dot_chat__pb2.UnarchiveChannelResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="UnarchiveChannel",
+                service_name="chat.v1.ChatService",
+                input=chat_dot_v1_dot_chat__pb2.UnarchiveChannelRequest,
+                output=chat_dot_v1_dot_chat__pb2.UnarchiveChannelResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -2163,6 +2196,8 @@ class ChatServiceSync(Protocol):
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def archive_channel(self, request: chat_dot_v1_dot_chat__pb2.ArchiveChannelRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.ArchiveChannelResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def unarchive_channel(self, request: chat_dot_v1_dot_chat__pb2.UnarchiveChannelRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.UnarchiveChannelResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def delete_channel(self, request: chat_dot_v1_dot_chat__pb2.DeleteChannelRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.DeleteChannelResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def list_channels(self, request: chat_dot_v1_dot_chat__pb2.ListChannelsRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.ListChannelsResponse:
@@ -2328,6 +2363,16 @@ class ChatServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.archive_channel,
+                ),
+                "/chat.v1.ChatService/UnarchiveChannel": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="UnarchiveChannel",
+                        service_name="chat.v1.ChatService",
+                        input=chat_dot_v1_dot_chat__pb2.UnarchiveChannelRequest,
+                        output=chat_dot_v1_dot_chat__pb2.UnarchiveChannelResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.unarchive_channel,
                 ),
                 "/chat.v1.ChatService/DeleteChannel": EndpointSync.unary(
                     method=MethodInfo(
@@ -3017,6 +3062,26 @@ class ChatServiceClientSync(ConnectClientSync):
                 service_name="chat.v1.ChatService",
                 input=chat_dot_v1_dot_chat__pb2.ArchiveChannelRequest,
                 output=chat_dot_v1_dot_chat__pb2.ArchiveChannelResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def unarchive_channel(
+        self,
+        request: chat_dot_v1_dot_chat__pb2.UnarchiveChannelRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> chat_dot_v1_dot_chat__pb2.UnarchiveChannelResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="UnarchiveChannel",
+                service_name="chat.v1.ChatService",
+                input=chat_dot_v1_dot_chat__pb2.UnarchiveChannelRequest,
+                output=chat_dot_v1_dot_chat__pb2.UnarchiveChannelResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
