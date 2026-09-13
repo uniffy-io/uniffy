@@ -43,6 +43,7 @@ import { useTheme } from "@shared/hooks/useTheme";
 import { BOTTOM_NAV_HEIGHT } from "@theme/theme";
 import type { ThemeColors } from "@theme/theme";
 import { FONT } from "@theme/typography";
+import { GROUP_DM_MAX_PARTICIPANTS, NEW_DM_MAX_RECIPIENTS } from "@features/chat/chatLimits";
 import {
   useChannels,
   useAgentChats,
@@ -902,11 +903,13 @@ function NewDmModal({
       );
   }, [directory.subjects, search]);
 
+  const atCap = selected.size >= NEW_DM_MAX_RECIPIENTS;
+
   const toggleUser = (id: string) =>
     setSelected((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
-      else next.add(id);
+      else if (prev.size < NEW_DM_MAX_RECIPIENTS) next.add(id);
       return next;
     });
 
@@ -928,6 +931,12 @@ function NewDmModal({
           style={[styles.searchInput, { color: T.textBright }]}
         />
       </View>
+      {atCap ? (
+        <Text style={[styles.dmCapNotice, { color: T.textDim }]}>
+          Group chats are limited to {GROUP_DM_MAX_PARTICIPANTS} people. Create a channel for a
+          bigger group.
+        </Text>
+      ) : null}
       <FlatList
         data={users}
         keyExtractor={(item) => item.id}
@@ -935,10 +944,12 @@ function NewDmModal({
         style={styles.dmList}
         renderItem={({ item }) => {
           const active = selected.has(item.id);
+          const blocked = atCap && !active;
           return (
             <TouchableOpacity
-              style={[styles.dmRow, { borderBottomColor: T.border }]}
+              style={[styles.dmRow, { borderBottomColor: T.border, opacity: blocked ? 0.4 : 1 }]}
               onPress={() => toggleUser(item.id)}
+              disabled={blocked}
               activeOpacity={0.7}
             >
               <Avatar name={item.name} avatarUrl={item.avatarUrl} size={36} />
@@ -1535,6 +1546,7 @@ const styles = StyleSheet.create({
   },
   newFolderRow: { flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 14 },
   newFolderText: { fontSize: 14, fontFamily: FONT.medium },
+  dmCapNotice: { fontSize: 12, fontFamily: FONT.regular, marginTop: 10 },
   dmName: { fontSize: 15, fontFamily: FONT.medium },
   dmEmail: { fontSize: 12, fontFamily: FONT.regular, marginTop: 1 },
   dmCheckbox: {

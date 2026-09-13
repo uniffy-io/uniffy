@@ -12,10 +12,9 @@ import { cn } from "@/shared/utils/cn";
 import { closeNewDmModal } from "@/features/chat/store/chatUiSlice";
 import { createChannel } from "@/features/chat/store/chatThunks";
 import { useSubjectSearch } from "@/components/subject/hooks/useSubjectSearch";
+import { GROUP_DM_MAX_PARTICIPANTS, NEW_DM_MAX_RECIPIENTS } from "@/features/chat/utils/limits";
 import { ChannelType } from "@uniffy/proto/chat/v1/chat_pb";
 import type { Subject } from "@/components/subject/types";
-
-const MAX_RECIPIENTS = 7;
 
 export function NewDmModal() {
   const dispatch = useAppDispatch();
@@ -53,7 +52,7 @@ export function NewDmModal() {
       if (prev.find((s) => s.id === subject.id)) {
         return prev.filter((s) => s.id !== subject.id);
       }
-      if (prev.length >= MAX_RECIPIENTS) return prev;
+      if (prev.length >= NEW_DM_MAX_RECIPIENTS) return prev;
       return [...prev, subject];
     });
     setQuery("");
@@ -133,17 +132,26 @@ export function NewDmModal() {
                 onChange={(e) => setQuery(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder={selectedUsers.length === 0 ? "Search people..." : "Add more..."}
-                disabled={isSubmitting || selectedUsers.length >= MAX_RECIPIENTS}
+                disabled={isSubmitting || selectedUsers.length >= NEW_DM_MAX_RECIPIENTS}
                 className="flex-1 text-sm bg-transparent outline-none text-foreground placeholder:text-subtle-foreground"
                 data-testid="chat-new-dm-search-input"
               />
             </div>
           </div>
           {selectedUsers.length > 0 && (
-            <p className="text-xs text-muted-foreground mt-1.5">
+            <p className="text-xs text-muted-foreground mt-1.5" data-testid="chat-new-dm-hint">
               {selectedUsers.length === 1
                 ? "Press Enter or click below to start a conversation"
-                : `Group conversation with ${selectedUsers.length + 1} participants`}
+                : `Group conversation with ${selectedUsers.length + 1} of ${GROUP_DM_MAX_PARTICIPANTS} participants`}
+            </p>
+          )}
+          {selectedUsers.length >= NEW_DM_MAX_RECIPIENTS && (
+            <p
+              className="text-xs text-amber-700 dark:text-amber-400 mt-1"
+              data-testid="chat-new-dm-cap-notice"
+            >
+              Group chats are limited to {GROUP_DM_MAX_PARTICIPANTS} people. Create a channel for a
+              bigger group.
             </p>
           )}
         </div>

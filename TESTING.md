@@ -2329,6 +2329,23 @@ organizer. Watch the outbox, not just the UI.
       still succeeds in the app; the message is retried rather than lost, and
       gives up after several attempts without blocking anything.
 
+## Chat group DM participant cap
+
+One ceiling of nine participants, enforced by the server and mirrored by both clients. Needs an
+org with at least ten members.
+
+- [ ] Web: open New message, select people. The picker stops accepting at eight recipients
+      (nine participants with you) and says so; the header hint counts "N of 9 participants".
+- [ ] Create that nine-person group chat. It opens as a group conversation, and its name reads
+      "A, B, and 7 others" in both the sidebar and the channel header.
+- [ ] Open the group's member list: the subtitle reads "9 of 9", the add-people search is gone,
+      and the cap notice offers converting to a channel.
+- [ ] Remove one member, then add a different person: the add succeeds and the cap notice returns.
+- [ ] Mobile: New direct message blocks the ninth recipient with the same copy, and the rows that
+      can no longer be picked are dimmed.
+- [ ] A 1:1 DM (one recipient) still opens as a direct message, and adding a third person to it is
+      still refused.
+
 ## Pre-release sweep
 
 - [ ] All linters green: `./manage.py lint`.
