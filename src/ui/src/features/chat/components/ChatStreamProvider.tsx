@@ -79,6 +79,8 @@ interface LiveChannels {
   activeChannelId: string | null;
   splitChannelId: string | null;
   threadChannelId: string | null;
+  /** Channels the user marked unread; auto-mark-read stays off until reopened. */
+  manualUnread: Record<string, true>;
 }
 
 function handleChannelEvent(
@@ -250,7 +252,8 @@ function handleChannelEvent(
           if (
             channelId === live.activeChannelId &&
             msg.senderId !== currentUserId &&
-            isDocumentVisible()
+            isDocumentVisible() &&
+            live.manualUnread[channelId] !== true
           ) {
             dispatch(updateUnreadCounts([{ channelId, unreadCount: 0, mentionCount: 0 }]));
             dispatch(
@@ -489,6 +492,7 @@ function usePersistentChatStream() {
   const threadChannelId = useAppSelector(selectActiveThreadChannelId);
   const currentUserId = useAppSelector((state) => state.auth.user?.id ?? "");
   const channelIds = useAppSelector((state) => state.chatChannels.ids);
+  const manualUnread = useAppSelector((state) => state.chatChannels.manualUnread);
 
   // Refs keep the effect from re-running on channel switch or user change.
   // A re-run would drop and re-open the user stream, and events during that gap
@@ -502,6 +506,8 @@ function usePersistentChatStream() {
   threadChannelIdRef.current = threadChannelId;
   const userIdRef = useRef(currentUserId);
   userIdRef.current = currentUserId;
+  const manualUnreadRef = useRef(manualUnread);
+  manualUnreadRef.current = manualUnread;
   const byId = useAppSelector((state) => state.chatMessages.byId);
   const channelIdsRef = useRef(new Set<string>());
   channelIdsRef.current = new Set(channelIds);
@@ -590,11 +596,31 @@ function usePersistentChatStream() {
                 if (event.payload.case === "unreadCount" && event.payload.value) {
                   const p = event.payload.value;
 
+                  // A cursor move carries the recomputed totals; it is the only
+                  // publisher that can lower a badge, so it replaces rather than
+                  // adds and outranks the reading-live rule below.
+                  if (p.absolute) {
+                    dispatch(
+                      updateUnreadCounts([
+                        {
+                          channelId: p.channelId,
+                          unreadCount: p.unreadCount,
+                          mentionCount: p.mentionCount,
+                        },
+                      ]),
+                    );
+                    break;
+                  }
+
                   // Channel open and window focused: the user is reading it now.
                   // Keep the badge clear and advance the read cursor instead of
                   // surfacing a phantom unread (which also cascades the chat
                   // notification read, so the bell does not accumulate).
-                  if (p.channelId === channelIdRef.current && isDocumentVisible()) {
+                  if (
+                    p.channelId === channelIdRef.current &&
+                    isDocumentVisible() &&
+                    manualUnreadRef.current[p.channelId] !== true
+                  ) {
                     // Reading it live: keep the badge clear. The MESSAGE_CREATED
                     // handler advances the server read cursor with the real id.
                     dispatch(
@@ -637,6 +663,7 @@ function usePersistentChatStream() {
                     activeChannelId: channelIdRef.current,
                     splitChannelId: splitChannelIdRef.current,
                     threadChannelId: threadChannelIdRef.current,
+                    manualUnread: manualUnreadRef.current,
                   },
                   userIdRef.current,
                   dispatch,

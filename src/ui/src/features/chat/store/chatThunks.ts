@@ -41,6 +41,8 @@ import {
   setLoading,
   updateUnreadCounts,
   setActiveChannel,
+  setManualUnread,
+  selectIsManuallyUnread,
   setOrgChatPolicy,
   clearChannelCategory,
   type OrgChatPolicy,
@@ -94,6 +96,7 @@ import {
   loadLastOpenedChannel,
 } from "@/features/chat/utils/lastOpenedChannel";
 import { chooseChatLanding } from "@/features/chat/utils/landing";
+import { firstUnreadMessageId } from "@/features/chat/utils/readCursor";
 import {
   isChatSessionCurrent,
   loadChatInitialization,
@@ -558,14 +561,12 @@ export const fetchMessages = createAsyncThunk<
       const channel = state.chatChannels.byId[params.channelId];
       const unreadCount = channel?.unreadCount ?? 0;
       if (unreadCount > 0 && messages.length > 0) {
-        const separatorIndex = messages.length - unreadCount;
-        if (separatorIndex >= 0 && separatorIndex < messages.length) {
-          dispatch(
-            setUnreadSeparator({
-              channelId: params.channelId,
-              messageId: messages[separatorIndex].id,
-            }),
-          );
+        const firstUnreadId = firstUnreadMessageId(
+          messages.map((m) => m.id),
+          channel?.lastReadMessageId,
+        );
+        if (firstUnreadId) {
+          dispatch(setUnreadSeparator({ channelId: params.channelId, messageId: firstUnreadId }));
         }
       }
 
@@ -575,7 +576,7 @@ export const fetchMessages = createAsyncThunk<
       dispatch(fetchChannelPendingApprovals({ channelId: params.channelId }));
 
       const lastMessage = messages[messages.length - 1];
-      if (lastMessage) {
+      if (lastMessage && !selectIsManuallyUnread(state, params.channelId)) {
         dispatch(
           markChannelRead({
             channelId: params.channelId,
@@ -588,6 +589,7 @@ export const fetchMessages = createAsyncThunk<
               channelId: params.channelId,
               unreadCount: 0,
               mentionCount: 0,
+              lastReadMessageId: lastMessage.id,
             },
           ]),
         );
@@ -1054,6 +1056,40 @@ export const jumpToChannelMessage = createAsyncThunk<
   }
 });
 
+/** Scroll a channel to where the viewer left off, loading the cursor's page when it is out of window. */
+export const jumpToFirstUnread = createAsyncThunk<
+  void,
+  { channelId: string },
+  { state: RootState; rejectValue: string }
+>("chat/jumpToFirstUnread", async ({ channelId }, { getState, dispatch }) => {
+  const state = getState();
+  const cursor = state.chatChannels.byId[channelId]?.lastReadMessageId;
+  const loadedIds = state.chatMessages.idsByChannel[channelId] ?? [];
+
+  // Cursor is in the window: the message right after it is the target.
+  if (cursor && state.chatMessages.idSetByChannel[channelId]?.[cursor] === true) {
+    const target = firstUnreadMessageId(loadedIds, cursor);
+    if (target) await dispatch(jumpToChannelMessage({ channelId, messageId: target }));
+    return;
+  }
+
+  // Unread runs past the loaded page or the 100 cap, so the first unread is not
+  // in the window. The cursor is, by definition, the row before it - load that
+  // page and step forward one.
+  if (cursor) {
+    const { messages } = await dispatch(fetchMessages({ channelId, aroundId: cursor })).unwrap();
+    const target = firstUnreadMessageId(
+      messages.map((m) => m.id),
+      cursor,
+    );
+    if (target) dispatch(jumpToMessage(target));
+    return;
+  }
+
+  // Never read: the oldest row we hold is the closest thing to the start.
+  if (loadedIds[0]) dispatch(jumpToMessage(loadedIds[0]));
+});
+
 export const fetchThreadsInbox = createAsyncThunk<
   void,
   { unreadOnly?: boolean } | void,
@@ -1115,6 +1151,7 @@ export const clearActiveChannelUnread = createAsyncThunk<
   const state = getState();
   const channelId = state.chatChannels.activeChannelId;
   if (!channelId) return;
+  if (selectIsManuallyUnread(state, channelId)) return;
   const channel = state.chatChannels.byId[channelId];
   if (!channel || ((channel.unreadCount ?? 0) === 0 && (channel.mentionCount ?? 0) === 0)) return;
   const ids = state.chatMessages.idsByChannel[channelId];
@@ -1140,6 +1177,39 @@ export const markChannelRead = createAsyncThunk<
     dispatch(markNotificationsReadBySource(`urn:uniffy:content:CHAT:${params.channelId}`));
   } catch (error) {
     return rejectWithValue(error instanceof Error ? error.message : "Failed to mark channel read");
+  }
+});
+
+export const markChannelUnread = createAsyncThunk<
+  void,
+  { channelId: string; messageId: string },
+  { state: RootState; rejectValue: string }
+>("chat/markChannelUnread", async (params, { getState, dispatch, rejectWithValue }) => {
+  try {
+    const organizationId = getOrganizationId(getState());
+    // Set before the call so the auto-mark-read paths cannot race the response
+    // and clear the badge the user just asked for.
+    dispatch(setManualUnread(params.channelId));
+    const response = await chatApi.markChannelUnread({
+      organizationId,
+      channelId: params.channelId,
+      messageId: params.messageId,
+    });
+    dispatch(
+      updateUnreadCounts([
+        {
+          channelId: params.channelId,
+          unreadCount: response.unreadCount,
+          mentionCount: response.mentionCount,
+          lastReadMessageId: response.lastReadMessageId,
+        },
+      ]),
+    );
+    dispatch(setUnreadSeparator({ channelId: params.channelId, messageId: params.messageId }));
+  } catch (error) {
+    return rejectWithValue(
+      error instanceof Error ? error.message : "Failed to mark channel unread",
+    );
   }
 });
 
@@ -1179,6 +1249,8 @@ export const fetchUnreadCounts = createAsyncThunk<
           channelId: c.channelId,
           unreadCount: c.unreadCount,
           mentionCount: c.mentionCount,
+          lastReadMessageId: c.lastReadMessageId,
+          latestMessageId: c.latestMessageId,
         })),
       ),
     );

@@ -36,6 +36,8 @@ import {
   setChannelMembers,
   setChannelPreferences,
   setSplitChannel,
+  setManualUnread,
+  updateUnreadCounts,
   archivedLoadStarted,
   setArchivedChannels,
   invalidateArchivedChannels,
@@ -511,5 +513,66 @@ describe("fetchMessages", () => {
     expect(
       selectInitialChannelLoadFailed(store.getState() as unknown as RootState, channel.id),
     ).toBe(true);
+  });
+});
+
+describe("manual unread", () => {
+  const seeded = () => reducer(undefined, addChannel(channel));
+
+  it("keeps the flag while the same channel stays selected", () => {
+    let state = reducer(seeded(), setActiveChannel(channel.id));
+    state = reducer(state, setManualUnread(channel.id));
+    // A re-render re-selects the open channel; that is not the user reopening it.
+    state = reducer(state, setActiveChannel(channel.id));
+
+    expect(state.manualUnread[channel.id]).toBe(true);
+  });
+
+  it("clears the flag when the channel is reopened", () => {
+    let state = reducer(seeded(), setActiveChannel(channel.id));
+    state = reducer(state, setManualUnread(channel.id));
+    state = reducer(state, setActiveChannel("channel-2"));
+    state = reducer(state, setActiveChannel(channel.id));
+
+    expect(state.manualUnread[channel.id]).toBeUndefined();
+  });
+});
+
+describe("updateUnreadCounts", () => {
+  const seeded = () => reducer(undefined, addChannel(channel));
+
+  it("stores the server read cursor and latest message id", () => {
+    const state = reducer(
+      seeded(),
+      updateUnreadCounts([
+        {
+          channelId: channel.id,
+          unreadCount: 3,
+          mentionCount: 1,
+          lastReadMessageId: "message-7",
+          latestMessageId: "message-10",
+        },
+      ]),
+    );
+
+    expect(state.byId[channel.id].lastReadMessageId).toBe("message-7");
+    expect(state.byId[channel.id].latestMessageId).toBe("message-10");
+    expect(state.byId[channel.id].unreadCount).toBe(3);
+  });
+
+  it("leaves the stored cursor alone when the payload omits it", () => {
+    let state = reducer(
+      seeded(),
+      updateUnreadCounts([
+        { channelId: channel.id, unreadCount: 3, mentionCount: 0, lastReadMessageId: "message-7" },
+      ]),
+    );
+    state = reducer(
+      state,
+      updateUnreadCounts([{ channelId: channel.id, unreadCount: 0, mentionCount: 0 }]),
+    );
+
+    expect(state.byId[channel.id].lastReadMessageId).toBe("message-7");
+    expect(state.byId[channel.id].unreadCount).toBe(0);
   });
 });

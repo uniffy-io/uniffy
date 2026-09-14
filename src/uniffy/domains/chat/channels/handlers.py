@@ -1264,6 +1264,8 @@ class ChannelHandlers:
                 )
                 if data["last_read_message_id"]:
                     item.last_read_message_id = str(data["last_read_message_id"])
+                if data["latest_message_id"]:
+                    item.latest_message_id = str(data["latest_message_id"])
                 if muted_until:
                     item.muted_until.CopyFrom(datetime_to_timestamp(muted_until))
                 items.append(item)

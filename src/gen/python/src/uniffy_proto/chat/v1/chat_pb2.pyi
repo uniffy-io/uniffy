@@ -1024,7 +1024,7 @@ class GetUnreadCountsResponse(_message.Message):
     def __init__(self, channels: _Optional[_Iterable[_Union[ChannelUnreadCount, _Mapping]]] = ...) -> None: ...
 
 class ChannelUnreadCount(_message.Message):
-    __slots__ = ("channel_id", "unread_count", "mention_count", "last_read_message_id", "is_muted", "notification_level", "muted_until")
+    __slots__ = ("channel_id", "unread_count", "mention_count", "last_read_message_id", "is_muted", "notification_level", "muted_until", "latest_message_id")
     CHANNEL_ID_FIELD_NUMBER: _ClassVar[int]
     UNREAD_COUNT_FIELD_NUMBER: _ClassVar[int]
     MENTION_COUNT_FIELD_NUMBER: _ClassVar[int]
@@ -1032,6 +1032,7 @@ class ChannelUnreadCount(_message.Message):
     IS_MUTED_FIELD_NUMBER: _ClassVar[int]
     NOTIFICATION_LEVEL_FIELD_NUMBER: _ClassVar[int]
     MUTED_UNTIL_FIELD_NUMBER: _ClassVar[int]
+    LATEST_MESSAGE_ID_FIELD_NUMBER: _ClassVar[int]
     channel_id: str
     unread_count: int
     mention_count: int
@@ -1039,7 +1040,8 @@ class ChannelUnreadCount(_message.Message):
     is_muted: bool
     notification_level: ChatNotificationLevel
     muted_until: _timestamp_pb2.Timestamp
-    def __init__(self, channel_id: _Optional[str] = ..., unread_count: _Optional[int] = ..., mention_count: _Optional[int] = ..., last_read_message_id: _Optional[str] = ..., is_muted: _Optional[bool] = ..., notification_level: _Optional[_Union[ChatNotificationLevel, str]] = ..., muted_until: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+    latest_message_id: str
+    def __init__(self, channel_id: _Optional[str] = ..., unread_count: _Optional[int] = ..., mention_count: _Optional[int] = ..., last_read_message_id: _Optional[str] = ..., is_muted: _Optional[bool] = ..., notification_level: _Optional[_Union[ChatNotificationLevel, str]] = ..., muted_until: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., latest_message_id: _Optional[str] = ...) -> None: ...
 
 class ChatDraft(_message.Message):
     __slots__ = ("channel_id", "root_message_id", "content", "updated_at")

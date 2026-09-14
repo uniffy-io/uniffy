@@ -21,7 +21,7 @@ import {
   evictOldestMessages,
   evictExpiredTyping,
 } from "@/features/chat/store/chatMessagesSlice";
-import { fetchMessages, stopAgentRun } from "@/features/chat/store/chatThunks";
+import { fetchMessages, stopAgentRun, jumpToFirstUnread } from "@/features/chat/store/chatThunks";
 import { selectJumpToMessageId, clearJumpToMessage } from "@/features/chat/store/chatUiSlice";
 import { MessageItem } from "@/features/chat/components/channel/MessageItem";
 import { TypingIndicator } from "@/features/chat/components/channel/TypingIndicator";
@@ -144,11 +144,22 @@ function DateSeparator({ label }: { label: string }) {
   );
 }
 
-function UnreadSeparator() {
+function UnreadSeparator({ onJump }: { onJump?: () => void }) {
   return (
     <div className="flex items-center gap-3 py-1 px-4" data-testid="chat-unread-separator">
       <div className="flex-1 h-px bg-primary/50" />
-      <span className="text-xs font-medium text-primary select-none">New messages</span>
+      {onJump ? (
+        <button
+          type="button"
+          onClick={onJump}
+          className="focus-ring rounded px-1.5 py-0.5 text-xs font-medium text-primary hover:bg-primary/10 transition-colors"
+          data-testid="chat-jump-to-first-unread"
+        >
+          Jump to first unread
+        </button>
+      ) : (
+        <span className="text-xs font-medium text-primary select-none">New messages</span>
+      )}
       <div className="flex-1 h-px bg-primary/50" />
     </div>
   );
@@ -298,6 +309,15 @@ export function MessageList({ channelId: channelIdProp }: MessageListProps) {
   const unreadSeparatorId = useAppSelector((state) =>
     effectiveChannelId ? selectUnreadSeparatorForChannel(state, effectiveChannelId) : null,
   );
+  // With the cursor outside the loaded window the divider sits at the top of the
+  // page rather than at the real first unread, so offer the jump that loads it.
+  const cursorLoaded = useAppSelector((state) => {
+    const cursor = effectiveChannelId
+      ? state.chatChannels.byId[effectiveChannelId]?.lastReadMessageId
+      : undefined;
+    if (!effectiveChannelId || !cursor) return true;
+    return state.chatMessages.idSetByChannel[effectiveChannelId]?.[cursor] === true;
+  });
   const currentUserId = useAppSelector((state) => state.auth.user?.id);
   const allTypingUsers = useAppSelector((state) =>
     effectiveChannelId ? selectTypingUsers(state, effectiveChannelId) : [],
@@ -539,6 +559,10 @@ export function MessageList({ channelId: channelIdProp }: MessageListProps) {
     [hasMore, isLoadingMore],
   );
 
+  const handleJumpToFirstUnread = useCallback(() => {
+    if (effectiveChannelId) void dispatch(jumpToFirstUnread({ channelId: effectiveChannelId }));
+  }, [dispatch, effectiveChannelId]);
+
   const itemContent = useCallback(
     (_idx: number, g: GroupedMessage) => (
       <div
@@ -547,7 +571,9 @@ export function MessageList({ channelId: channelIdProp }: MessageListProps) {
         data-message-kind={resolveMessageKind(g.message)}
       >
         {g.showDateSeparator && <DateSeparator label={g.dateLabel} />}
-        {unreadSeparatorId === g.message.id && <UnreadSeparator />}
+        {unreadSeparatorId === g.message.id && (
+          <UnreadSeparator onJump={cursorLoaded ? undefined : handleJumpToFirstUnread} />
+        )}
         <MessageItem
           message={g.message}
           isGrouped={!g.showAvatar}
@@ -557,7 +583,7 @@ export function MessageList({ channelId: channelIdProp }: MessageListProps) {
         />
       </div>
     ),
-    [unreadSeparatorId, highlightedId],
+    [unreadSeparatorId, highlightedId, cursorLoaded, handleJumpToFirstUnread],
   );
 
   const currentUserName = useAppSelector((s) => s.auth.user?.fullName ?? "");

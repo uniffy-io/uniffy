@@ -337,6 +337,8 @@ class ChatReadStateOperations:
                 "user_id": user_id,
             },
         )
+        latest_ids = await self._latest_message_ids(ordered_channel_ids)
+
         counts: dict[UUID, dict] = {}
         for row in result.all():
             cid = row[0] if isinstance(row[0], UUID) else UUID(str(row[0]))
@@ -344,6 +346,7 @@ class ChatReadStateOperations:
                 "unread_count": row[1],
                 "mention_count": row[2],
                 "last_read_message_id": last_read_msg_ids.get(cid),
+                "latest_message_id": latest_ids.get(cid),
             }
 
         # Empty channels don't appear in GROUP BY; fill zeros so every requested id maps.
@@ -353,9 +356,33 @@ class ChatReadStateOperations:
                     "unread_count": 0,
                     "mention_count": 0,
                     "last_read_message_id": last_read_msg_ids.get(cid),
+                    "latest_message_id": latest_ids.get(cid),
                 }
 
         return counts
+
+    async def _latest_message_ids(self, channel_ids: list[UUID]) -> dict[UUID, UUID]:
+        """Newest root message per channel, one batched backward scan of the roots index."""
+        if not channel_ids:
+            return {}
+
+        result = await self.session.execute(
+            text(
+                """
+                SELECT DISTINCT ON (m.channel_id) m.channel_id, m.id
+                FROM chat_messages m
+                WHERE m.channel_id = ANY(CAST(:channel_ids AS UUID[]))
+                  AND m.is_deleted = false AND m.root_id IS NULL
+                ORDER BY m.channel_id, m.created_at DESC, m.id DESC
+                """
+            ),
+            {"channel_ids": channel_ids},
+        )
+        latest: dict[UUID, UUID] = {}
+        for row in result.all():
+            cid = row[0] if isinstance(row[0], UUID) else UUID(str(row[0]))
+            latest[cid] = row[1] if isinstance(row[1], UUID) else UUID(str(row[1]))
+        return latest
 
     async def batch_get_thread_read_cursors(
         self,

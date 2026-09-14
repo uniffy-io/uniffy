@@ -861,6 +861,9 @@ message ChannelUnreadCount {
   bool is_muted = 5;
   ChatNotificationLevel notification_level = 6;
   optional google.protobuf.Timestamp muted_until = 7;
+  // Newest root message in the channel. Lets a surface that never opened the
+  // channel - the unreads list - mark it read without inventing an id.
+  optional string latest_message_id = 8;
 }
 
 // DRAFTS

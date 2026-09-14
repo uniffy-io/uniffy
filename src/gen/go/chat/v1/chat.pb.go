@@ -5949,8 +5949,11 @@ type ChannelUnreadCount struct {
 	IsMuted           bool                   `protobuf:"varint,5,opt,name=is_muted,json=isMuted,proto3" json:"is_muted,omitempty"`
 	NotificationLevel ChatNotificationLevel  `protobuf:"varint,6,opt,name=notification_level,json=notificationLevel,proto3,enum=chat.v1.ChatNotificationLevel" json:"notification_level,omitempty"`
 	MutedUntil        *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=muted_until,json=mutedUntil,proto3,oneof" json:"muted_until,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	// Newest root message in the channel. Lets a surface that never opened the
+	// channel - the unreads list - mark it read without inventing an id.
+	LatestMessageId *string `protobuf:"bytes,8,opt,name=latest_message_id,json=latestMessageId,proto3,oneof" json:"latest_message_id,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *ChannelUnreadCount) Reset() {
@@ -6030,6 +6033,13 @@ func (x *ChannelUnreadCount) GetMutedUntil() *timestamppb.Timestamp {
 		return x.MutedUntil
 	}
 	return nil
+}
+
+func (x *ChannelUnreadCount) GetLatestMessageId() string {
+	if x != nil && x.LatestMessageId != nil {
+		return *x.LatestMessageId
+	}
+	return ""
 }
 
 // ChatDraft carries canonical Markdown content ([[[label|urn]]] mentions).
@@ -10305,7 +10315,7 @@ const file_chat_v1_chat_proto_rawDesc = "" +
 	"\x16GetUnreadCountsRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\"R\n" +
 	"\x17GetUnreadCountsResponse\x127\n" +
-	"\bchannels\x18\x01 \x03(\v2\x1b.chat.v1.ChannelUnreadCountR\bchannels\"\x86\x03\n" +
+	"\bchannels\x18\x01 \x03(\v2\x1b.chat.v1.ChannelUnreadCountR\bchannels\"\xcd\x03\n" +
 	"\x12ChannelUnreadCount\x12\x1d\n" +
 	"\n" +
 	"channel_id\x18\x01 \x01(\tR\tchannelId\x12!\n" +
@@ -10315,9 +10325,11 @@ const file_chat_v1_chat_proto_rawDesc = "" +
 	"\bis_muted\x18\x05 \x01(\bR\aisMuted\x12M\n" +
 	"\x12notification_level\x18\x06 \x01(\x0e2\x1e.chat.v1.ChatNotificationLevelR\x11notificationLevel\x12@\n" +
 	"\vmuted_until\x18\a \x01(\v2\x1a.google.protobuf.TimestampH\x01R\n" +
-	"mutedUntil\x88\x01\x01B\x17\n" +
+	"mutedUntil\x88\x01\x01\x12/\n" +
+	"\x11latest_message_id\x18\b \x01(\tH\x02R\x0flatestMessageId\x88\x01\x01B\x17\n" +
 	"\x15_last_read_message_idB\x0e\n" +
-	"\f_muted_until\"\xc0\x01\n" +
+	"\f_muted_untilB\x14\n" +
+	"\x12_latest_message_id\"\xc0\x01\n" +
 	"\tChatDraft\x12\x1d\n" +
 	"\n" +
 	"channel_id\x18\x01 \x01(\tR\tchannelId\x12+\n" +

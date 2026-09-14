@@ -36,6 +36,7 @@ import {
   RemoveReactionRequestSchema,
   SetTypingRequestSchema,
   MarkChannelReadRequestSchema,
+  MarkChannelUnreadRequestSchema,
   MarkThreadReadRequestSchema,
   GetUnreadCountsRequestSchema,
   SaveDraftRequestSchema,
@@ -155,6 +156,8 @@ export const chatApi = {
   setTyping: (req: MessageInitShape<typeof SetTypingRequestSchema>) => chatClient.setTyping(req),
   markChannelRead: (req: MessageInitShape<typeof MarkChannelReadRequestSchema>) =>
     chatClient.markChannelRead(req),
+  markChannelUnread: (req: MessageInitShape<typeof MarkChannelUnreadRequestSchema>) =>
+    chatClient.markChannelUnread(req),
   markThreadRead: (req: MessageInitShape<typeof MarkThreadReadRequestSchema>) =>
     chatClient.markThreadRead(req),
   getUnreadCounts: (req: MessageInitShape<typeof GetUnreadCountsRequestSchema>) =>

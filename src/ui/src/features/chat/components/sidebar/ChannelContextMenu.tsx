@@ -12,10 +12,12 @@ import {
   Check,
   SignOut,
   Archive,
+  ArrowLineUp,
 } from "@phosphor-icons/react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import {
   setSplitChannel,
+  setActiveChannel,
   selectChannelById,
   selectActiveChannelId,
   selectAgentFolders,
@@ -27,6 +29,7 @@ import {
   deleteChannel,
   leaveChannel,
   setAgentChatFolder,
+  jumpToFirstUnread,
 } from "@/features/chat/store/chatThunks";
 import { useChatPermissions } from "@/features/chat/hooks/useChatPermissions";
 import { ChannelNotificationMenu } from "@/features/chat/components/sidebar/ChannelNotificationMenu";
@@ -133,6 +136,17 @@ export function ChannelContextMenu({ channelId, position, onClose }: ChannelCont
     onClose();
   }, [dispatch, channelId, onClose]);
 
+  const hasUnread = (channel?.unreadCount ?? 0) > 0;
+
+  const handleJumpToFirstUnread = useCallback(() => {
+    if (activeChannelId !== channelId) {
+      dispatch(setActiveChannel(channelId));
+      navigate(`/chat/${channelId}`);
+    }
+    void dispatch(jumpToFirstUnread({ channelId }));
+    onClose();
+  }, [dispatch, channelId, activeChannelId, navigate, onClose]);
+
   const MuteIcon = isMuted ? SpeakerHigh : SpeakerSlash;
 
   const handleConfirmArchive = useCallback(async () => {
@@ -165,6 +179,17 @@ export function ChannelContextMenu({ channelId, position, onClose }: ChannelCont
           <SquareSplitHorizontal size={16} className="text-muted-foreground" />
           <span>Open in Split View</span>
         </ActionMenuItem>
+
+        {hasUnread && (
+          <ActionMenuItem
+            type="button"
+            onClick={handleJumpToFirstUnread}
+            data-testid="chat-channel-context-menu-jump-unread"
+          >
+            <ArrowLineUp size={16} className="text-muted-foreground" />
+            <span>Jump to first unread</span>
+          </ActionMenuItem>
+        )}
 
         {isAgentDm && (
           <>

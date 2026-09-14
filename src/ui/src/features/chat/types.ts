@@ -57,6 +57,13 @@ export interface ChatChannel {
   currentUserRole?: ChannelRole;
   unreadCount?: number;
   mentionCount?: number;
+  /** Server read cursor. The unread divider anchors on the message after this
+   *  one; deriving it from unreadCount breaks past the loaded page and the
+   *  100 cap. Absent until GetUnreadCounts has answered for this channel. */
+  lastReadMessageId?: string;
+  /** Newest root message, so a surface that never loaded the channel can still
+   *  mark it read. Absent until GetUnreadCounts has answered. */
+  latestMessageId?: string;
 }
 
 export interface ChatAgentFolder {
