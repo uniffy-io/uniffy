@@ -143,7 +143,10 @@ async def _process_channel(
         version = row.version
         channel_type = (
             await session.execute(
-                select(ChatChannel.channel_type).where(ChatChannel.id == channel_id)
+                select(ChatChannel.channel_type).where(
+                    ChatChannel.id == channel_id,
+                    ChatChannel.organization_id == row.organization_id,
+                )
             )
         ).scalar_one_or_none()
         if channel_type is None:

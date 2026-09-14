@@ -26,7 +26,7 @@ from uniffy.core.types import (
     ContentType,
     slugify,
 )
-from uniffy.domains.chat.attachments import lock_channel_attachment_policy
+from uniffy.domains.chat.access import lock_channel_visibility
 from uniffy.domains.chat.cache import (
     invalidate_cached_dm_peers,
     invalidate_cached_member_ids,
@@ -177,10 +177,12 @@ class ChannelUpdates:
         await invalidate_cached_member_ids(channel.id)
         await invalidate_cached_dm_peers(channel.id)
 
-        await self._post_membership_conversion_message(
+        kind = "public" if channel.channel_type == ChannelType.PUBLIC else "private"
+        await self._post_actor_system_message(
             user_id,
             organization_id,
             channel,
+            f"converted this conversation to the {kind} channel #{channel.name}",
         )
 
         # PRIVATE channels index as EXPLICIT_MEMBERS; the GROUP_DM never was indexed.
@@ -202,7 +204,7 @@ class ChannelUpdates:
     ) -> ChatChannel:
         """Owner-only PUBLIC <-> PRIVATE flip; history is re-indexed to match."""
         await self.get_by_id(user_id, organization_id, channel_id)
-        channel = await lock_channel_attachment_policy(self.session, channel_id, organization_id)
+        channel = await lock_channel_visibility(self.session, channel_id, organization_id)
         if target_type not in (ChannelType.PUBLIC, ChannelType.PRIVATE):
             raise ValidationError("channel_type", "Channels can only be public or private")
         if channel.channel_type not in (ChannelType.PUBLIC, ChannelType.PRIVATE):
@@ -273,7 +275,14 @@ class ChannelUpdates:
         if await self._claim_visibility_refresh(channel_id):
             await enqueue_chat_search_acl_refresh(channel_id)
 
-        await self._post_visibility_change_message(user_id, organization_id, channel)
+        await self._post_actor_system_message(
+            user_id,
+            organization_id,
+            channel,
+            "opened this channel to everyone in the organization"
+            if target_type == ChannelType.PUBLIC
+            else "made this channel private",
+        )
         await self._refresh_channel_live_state(channel)
         await self._publish_channel_updated(channel)
         await publish_dismissed_requests(dismissed)
@@ -293,25 +302,24 @@ class ChannelUpdates:
             )
             return token is not None
         except Exception:
-            logger.warning(f"Visibility refresh claim failed for channel {channel_id}")
+            logger.opt(exception=True).warning(
+                f"Visibility refresh claim failed for channel {channel_id}"
+            )
             return True
 
-    async def _post_visibility_change_message(
+    async def _post_actor_system_message(
         self,
         actor_user_id: UUID,
         organization_id: UUID,
         channel: ChatChannel,
+        what: str,
     ) -> None:
+        """Post "<actor> <what>" as a SYSTEM message; a failure is logged, never raised."""
         try:
             resolver = SenderResolver(self.session)
             info = await resolver.resolve_one(SenderType.USER, actor_user_id)
             actor_label = sanitize_mention_label(info.display_name)
             actor = f"[[[{actor_label}|urn:uniffy:content:USER:{actor_user_id}]]]"
-            what = (
-                "opened this channel to everyone in the organization"
-                if channel.channel_type == ChannelType.PUBLIC
-                else "made this channel private"
-            )
             msg_ops = ChatMessageOperations(
                 self.session,
                 storage=self.storage,
@@ -325,31 +333,6 @@ class ChannelUpdates:
                 sender_type=SenderType.SYSTEM,
             )
         except Exception:
-            logger.warning(f"Failed to post visibility message for channel {channel.id}")
-
-    async def _post_membership_conversion_message(
-        self,
-        actor_user_id: UUID,
-        organization_id: UUID,
-        channel: ChatChannel,
-    ) -> None:
-        try:
-            resolver = SenderResolver(self.session)
-            info = await resolver.resolve_one(SenderType.USER, actor_user_id)
-            actor_label = sanitize_mention_label(info.display_name)
-            actor = f"[[[{actor_label}|urn:uniffy:content:USER:{actor_user_id}]]]"
-            kind = "public" if channel.channel_type == ChannelType.PUBLIC else "private"
-            msg_ops = ChatMessageOperations(
-                self.session,
-                storage=self.storage,
-                search_indexer=self.search_indexer,
+            logger.opt(exception=True).warning(
+                f"Failed to post system message for channel {channel.id}"
             )
-            await msg_ops.send_message(
-                user_id=actor_user_id,
-                organization_id=organization_id,
-                channel_id=channel.id,
-                content=f"{actor} converted this conversation to the {kind} channel #{channel.name}",
-                sender_type=SenderType.SYSTEM,
-            )
-        except Exception:
-            logger.warning(f"Failed to post conversion message for channel {channel.id}")

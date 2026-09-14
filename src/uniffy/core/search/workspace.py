@@ -151,18 +151,17 @@ class WorkspaceSearch:
         organization_id: UUID,
         channel_id: UUID,
         shared_user_ids: list[UUID],
-        access_mode: str | None = None,
-        baseline_role: str | None = None,
+        access_mode: str,
+        baseline_role: str | None,
     ) -> int:
         """Historical public documents need policy fields refreshed as well as membership."""
+        # Meilisearch keeps an omitted key untouched, so a None baseline has to
+        # be written explicitly or OPEN_TO_ORG's VIEWER would survive.
         patch: dict[str, Any] = {
             "shared_user_ids": [str(value) for value in shared_user_ids],
+            "access_mode": access_mode,
+            "baseline_role": baseline_role,
         }
-        if access_mode is not None:
-            patch["access_mode"] = access_mode
-            # Meilisearch keeps an omitted key untouched, so a None baseline has
-            # to be written explicitly or OPEN_TO_ORG's VIEWER would survive.
-            patch["baseline_role"] = baseline_role
         return await self._patch_matching(
             all_of(
                 SearchTerm("organization_id", str(organization_id)),

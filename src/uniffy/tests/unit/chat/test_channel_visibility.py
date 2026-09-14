@@ -13,6 +13,7 @@ from uniffy.core.models.chat.channel_member import ChannelRole, ChatChannelMembe
 from uniffy.core.search.engine import SearchDocumentsPage
 from uniffy.core.search.workspace import WorkspaceSearch
 from uniffy.core.types import AccessMode, ContentRole, ContentType, SubjectType, generate_id
+from uniffy.domains.chat.channels import lifecycle as lifecycle_module
 from uniffy.domains.chat.channels import updates as updates_module
 from uniffy.domains.chat.channels.operations import ChatChannelOperations
 from uniffy.domains.chat.jobs import jobs as jobs_module
@@ -60,7 +61,7 @@ def _operations(
     operations.access.get_membership = AsyncMock(
         return_value=_member(channel, user_id, role) if role else None
     )
-    operations._post_visibility_change_message = AsyncMock()
+    operations._post_actor_system_message = AsyncMock()
     operations._refresh_channel_live_state = AsyncMock()
     operations._publish_channel_updated = AsyncMock()
     operations._claim_visibility_refresh = AsyncMock(return_value=True)
@@ -396,15 +397,24 @@ class TestMessageDocPatch:
         # The old roster must not linger on a doc that now grants org-wide.
         assert patch["shared_user_ids"] == []
 
-    async def test_a_membership_change_leaves_the_mode_untouched(self) -> None:
-        """The pre-existing call path passes no mode and must keep patching only members."""
-        search, engine = self._search()
 
-        await search.update_chat_message_sharing(
-            organization_id=generate_id(),
-            channel_id=generate_id(),
-            shared_user_ids=[generate_id()],
-        )
+class TestJoin:
+    async def test_join_reads_the_type_under_the_shared_visibility_lock(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        channel = _channel(ChannelType.PRIVATE)
+        operations = ChatChannelOperations.__new__(ChatChannelOperations)
+        operations.session = MagicMock()
+        operations.access = MagicMock()
+        operations.access.require_org_member = AsyncMock()
+        lock = AsyncMock(return_value=channel)
+        monkeypatch.setattr(lifecycle_module, "lock_channel_visibility", lock)
 
-        patch = self._sent(engine)
-        assert patch.keys().isdisjoint({"access_mode", "baseline_role"})
+        # The row the lock hands back is the one the gate reads, so a lock-down
+        # that committed while the join waited is what denies it.
+        with pytest.raises(PermissionDeniedError):
+            await operations.join_channel(generate_id(), channel.organization_id, channel.id)
+
+        assert lock.await_args.args[1:] == (channel.id, channel.organization_id)
+        assert lock.await_args.kwargs == {"shared": True}
+

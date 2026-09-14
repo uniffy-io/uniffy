@@ -31,6 +31,7 @@ from uniffy.core.models.permissions.content_access_request import (
     ContentAccessRequestState,
 )
 from uniffy.core.types import ContentType, SubjectType, generate_id
+from uniffy.domains.chat.channels import updates
 from uniffy.domains.chat.channels.operations import ChatChannelOperations
 from uniffy.domains.permissions.requests.dismissal import stage_dismiss_pending_requests
 from uniffy.infrastructure.database.session import get_database_url
@@ -326,3 +327,56 @@ async def test_visibility_dismissal_preserves_an_in_flight_terminal_decision(ses
         assert request.decision_note == decided.decision_note
     finally:
         await engine.dispose()
+
+
+async def test_a_join_waits_for_an_in_flight_lock_down(session, env: NS, monkeypatch) -> None:
+    locked, release = asyncio.Event(), asyncio.Event()
+    write_audit = updates.write_audit_event
+
+    async def pause_flip(*args, **kwargs):
+        await write_audit(*args, **kwargs)
+        locked.set()
+        await release.wait()
+
+    monkeypatch.setattr(updates, "write_audit_event", pause_flip)
+    flipping = _operations(session)
+    flipping._claim_visibility_refresh = AsyncMock(return_value=False)
+    flipping._post_actor_system_message = AsyncMock()
+    flipping._refresh_channel_live_state = AsyncMock()
+    flipping._publish_channel_updated = AsyncMock()
+    flip = asyncio.create_task(
+        flipping.change_channel_visibility(
+            env.owner_id, env.org_id, env.public_id, ChannelType.PRIVATE
+        )
+    )
+    engine = create_async_engine(get_database_url())
+    try:
+        await asyncio.wait_for(locked.wait(), 5)
+        async with AsyncSession(engine, expire_on_commit=False) as joining:
+            joiner = _operations(joining)
+            joiner._publish_member_event = AsyncMock()
+            joiner._post_join_system_message = AsyncMock()
+            joiner._refresh_channel_live_state = AsyncMock()
+            join = asyncio.create_task(
+                joiner.join_channel(env.outsider_id, env.org_id, env.public_id)
+            )
+            # The gate cannot read the type until the lock-down has committed.
+            with pytest.raises(TimeoutError):
+                await asyncio.wait_for(asyncio.shield(join), 0.2)
+            release.set()
+            await asyncio.wait_for(flip, 5)
+            with pytest.raises(PermissionDeniedError):
+                await asyncio.wait_for(join, 5)
+        member = (
+            await session.execute(
+                select(ChatChannelMember).where(
+                    ChatChannelMember.channel_id == env.public_id,
+                    ChatChannelMember.user_id == env.outsider_id,
+                )
+            )
+        ).scalar_one_or_none()
+        assert member is None
+    finally:
+        release.set()
+        await engine.dispose()
+

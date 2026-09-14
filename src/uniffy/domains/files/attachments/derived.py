@@ -2,20 +2,18 @@
 
 from uuid import UUID
 
-from sqlalchemy import Select, cast, func, literal, select, update
-from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlalchemy import Select, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from uniffy.core.content.mentions import publish_mention_state
 from uniffy.core.models.files.attachment import Attachment
 from uniffy.core.models.files.file import File
-from uniffy.core.models.files.folder import Folder
 from uniffy.core.search import SearchIndexer
 from uniffy.core.types import AccessMode, ContentRole, ContentType
 from uniffy.domains.files.attachments.folders import (
-    ATTACHMENTS_FOLDER_NAME,
     get_or_create_org_attachments_folder,
+    stage_personal_attachments_folder,
 )
 from uniffy.domains.files.search import FileSearchOperations
 
@@ -43,75 +41,40 @@ async def stage_attachment_parent_policy(
     file_ids = _attached_ids(organization_id, content_type, content_ids)
     if (await session.execute(file_ids.limit(1))).first() is None:
         return
+    # The same folder answer AttachFile gives: one org folder for an org-wide
+    # parent, otherwise each attacher's own protected folder.
+    targets: dict[UUID | None, UUID] = {}
     if access_mode == AccessMode.OPEN_TO_ORG:
         folder = await get_or_create_org_attachments_folder(session, organization_id)
-        target_folder = folder.id
+        targets[None] = folder.id
     else:
         owners = (
-            select(File.owner_id)
-            .where(
-                File.organization_id == organization_id,
-                File.id.in_(file_ids),
+            (
+                await session.execute(
+                    select(File.owner_id)
+                    .where(File.organization_id == organization_id, File.id.in_(file_ids))
+                    .distinct()
+                )
             )
-            .distinct()
-            .subquery()
+            .scalars()
+            .all()
         )
-        await session.execute(
-            pg_insert(Folder)
-            .from_select(
-                [
-                    "id",
-                    "organization_id",
-                    "owner_id",
-                    "name",
-                    "access_mode",
-                    "is_system",
-                    "is_org_attachments",
-                    "is_deleted",
-                    "created_at",
-                    "updated_at",
-                ],
-                select(
-                    func.uuidv7(),
-                    literal(organization_id),
-                    owners.c.owner_id,
-                    literal(ATTACHMENTS_FOLDER_NAME),
-                    cast(literal(AccessMode.OWNER_ONLY.value), Folder.__table__.c.access_mode.type),
-                    literal(True),
-                    literal(False),
-                    literal(False),
-                    func.now(),
-                    func.now(),
-                ),
-                include_defaults=False,
+        for owner_id in owners:
+            folder = await stage_personal_attachments_folder(session, owner_id, organization_id)
+            targets[owner_id] = folder.id
+    for owner_id, folder_id in targets.items():
+        statement = (
+            update(File)
+            .where(File.organization_id == organization_id, File.id.in_(file_ids))
+            .values(
+                access_mode=access_mode,
+                baseline_role=baseline_role if access_mode == AccessMode.OPEN_TO_ORG else None,
+                folder_id=folder_id,
             )
-            .on_conflict_do_nothing()
         )
-        target_folder = (
-            select(Folder.id)
-            .where(
-                Folder.organization_id == organization_id,
-                Folder.owner_id == File.owner_id,
-                Folder.name == ATTACHMENTS_FOLDER_NAME,
-                Folder.is_system.is_(True),
-                Folder.is_deleted.is_(False),
-                Folder.parent_id.is_(None),
-            )
-            .scalar_subquery()
-        )
-    await session.execute(
-        update(File)
-        .where(
-            File.organization_id == organization_id,
-            File.id.in_(file_ids),
-        )
-        .values(
-            access_mode=access_mode,
-            baseline_role=baseline_role if access_mode == AccessMode.OPEN_TO_ORG else None,
-            folder_id=target_folder,
-        )
-        .execution_options(synchronize_session=False)
-    )
+        if owner_id is not None:
+            statement = statement.where(File.owner_id == owner_id)
+        await session.execute(statement.execution_options(synchronize_session=False))
 
 
 async def refresh_attachment_parent_search(

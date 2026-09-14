@@ -19,6 +19,32 @@ from uniffy.core.types import DomainType, SubjectType
 PERSONAL_CHANNEL_TYPES = frozenset({ChannelType.DIRECT, ChannelType.GROUP_DM})
 
 
+async def lock_channel_visibility(
+    session: AsyncSession,
+    channel_id: UUID,
+    organization_id: UUID,
+    *,
+    shared: bool = False,
+) -> ChatChannel:
+    """Read the channel under the row lock that orders it against a visibility flip."""
+    # The flip holds NO KEY UPDATE for its whole transaction. A SHARE reader
+    # waits for it and then sees the committed type, while SHARE readers run
+    # side by side with each other and with child FK inserts, so joins and
+    # attachment copies never queue behind one another.
+    query = select(ChatChannel).where(
+        ChatChannel.id == channel_id,
+        ChatChannel.organization_id == organization_id,
+        ChatChannel.is_deleted.is_(False),
+    )
+    query = query.with_for_update(read=True) if shared else query.with_for_update(key_share=True)
+    channel = (
+        await session.execute(query.execution_options(populate_existing=True))
+    ).scalar_one_or_none()
+    if channel is None:
+        raise NotFoundError("channel", channel_id)
+    return channel
+
+
 class ChatAccessChecker:
     """Request-scoped access checker with single-request caching."""
 

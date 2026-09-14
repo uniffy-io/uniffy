@@ -16,6 +16,7 @@ import {
 } from "@phosphor-icons/react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/ui/modal";
@@ -500,13 +501,10 @@ export function ChannelSettingsModal() {
                 )}
 
                 {canChangeVisibility && (
-                  <div className="rounded-lg bg-card p-4 shadow-edge">
+                  <Card tone="card" className="p-4">
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="flex items-center gap-1.5 text-sm font-medium text-foreground">
-                          {isChannelPublic ? <GlobeSimple size={14} /> : <Lock size={14} />}
-                          {isChannelPublic ? "Public channel" : "Private channel"}
-                        </p>
+                        <p className="text-sm font-medium text-foreground">Visibility</p>
                         <p className="mt-1 text-xs text-muted-foreground">
                           {isChannelPublic
                             ? "Anyone in the organization can read and join this channel."
@@ -530,7 +528,7 @@ export function ChannelSettingsModal() {
                         The default channel has to stay public.
                       </p>
                     )}
-                  </div>
+                  </Card>
                 )}
 
                 {activeChannel.createdAt && (

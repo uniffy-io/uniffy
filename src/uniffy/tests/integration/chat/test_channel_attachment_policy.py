@@ -17,6 +17,7 @@ from uniffy.core.models.chat.search_acl_refresh import ChatSearchAclRefresh
 from uniffy.core.models.files.file import File
 from uniffy.core.models.files.folder import Folder
 from uniffy.core.types import AccessMode, ContentRole, ContentType, SubjectType
+from uniffy.domains.chat.access import lock_channel_visibility
 from uniffy.domains.chat.channels import updates
 from uniffy.domains.chat.jobs import jobs
 from uniffy.domains.files import routes
@@ -53,7 +54,7 @@ async def env(session, monkeypatch):
 def _quiet_operations(session):
     ops = _operations(session)
     ops._claim_visibility_refresh = AsyncMock(return_value=False)
-    ops._post_visibility_change_message = AsyncMock()
+    ops._post_actor_system_message = AsyncMock()
     ops._refresh_channel_live_state = AsyncMock()
     ops._publish_channel_updated = AsyncMock()
     return ops
@@ -279,3 +280,34 @@ async def test_attachment_waiting_for_flip_derives_committed_private_policy(
     finally:
         release.set()
         await engine.dispose()
+
+
+async def test_attachment_policy_reads_run_side_by_side_and_a_flip_waits(session, env):
+    engine = create_async_engine(get_database_url())
+    try:
+        async with AsyncSession(engine) as first, AsyncSession(engine) as second:
+            await lock_channel_visibility(first, env.public_id, env.org_id, shared=True)
+            # A second attach in the same channel is not queued behind the first.
+            await asyncio.wait_for(
+                lock_channel_visibility(second, env.public_id, env.org_id, shared=True), 1
+            )
+            flip = asyncio.create_task(lock_channel_visibility(session, env.public_id, env.org_id))
+            with pytest.raises(TimeoutError):
+                await asyncio.wait_for(asyncio.shield(flip), 0.1)
+            await first.rollback()
+            await second.rollback()
+            await asyncio.wait_for(flip, 5)
+            # New attaches wait while the flip holds the row.
+            async with AsyncSession(engine) as third:
+                late = asyncio.create_task(
+                    lock_channel_visibility(third, env.public_id, env.org_id, shared=True)
+                )
+                with pytest.raises(TimeoutError):
+                    await asyncio.wait_for(asyncio.shield(late), 0.1)
+                await session.rollback()
+                await asyncio.wait_for(late, 5)
+                await third.rollback()
+    finally:
+        await session.rollback()
+        await engine.dispose()
+
