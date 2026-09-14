@@ -281,12 +281,7 @@ class ChannelUpdates:
         return channel
 
     async def _claim_visibility_refresh(self, channel_id: UUID) -> bool:
-        """Collapse overlapping flips into one enqueue.
-
-        Only the queue call is skipped; the `chat_search_acl_refreshes` row is
-        already committed, so the flush schedule still carries a suppressed
-        refresh through.
-        """
+        """The committed refresh intent recovers work when a duplicate enqueue is skipped."""
         try:
             client = get_ops_client()
             if client is None:

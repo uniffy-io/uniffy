@@ -14,6 +14,8 @@ from uniffy_proto.chat.v1.chat_pb2 import (
     AddMembersResponse,
     ArchiveChannelRequest,
     ArchiveChannelResponse,
+    ChangeChannelVisibilityRequest,
+    ChangeChannelVisibilityResponse,
     ChannelUnreadCount,
     CreateAgentChatRequest,
     CreateAgentChatResponse,
@@ -602,10 +604,9 @@ class ChannelHandlers:
 
     async def change_channel_visibility(
         self,
-        request,
+        request: ChangeChannelVisibilityRequest,
         ctx: RequestContext,
-    ):
-        from uniffy_proto.chat.v1.chat_pb2 import ChangeChannelVisibilityResponse
+    ) -> ChangeChannelVisibilityResponse:
 
         user_id = current_user_id()
         try:

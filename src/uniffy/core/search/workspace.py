@@ -154,12 +154,7 @@ class WorkspaceSearch:
         access_mode: str | None = None,
         baseline_role: str | None = None,
     ) -> int:
-        """Patch a channel's historical message docs; membership always, mode only on a flip.
-
-        A public-era doc grants on `access_mode`/`baseline_role` regardless of
-        `shared_user_ids`, so a lock-down that patched membership alone would
-        leave every historical message readable org-wide.
-        """
+        """Historical public documents need policy fields refreshed as well as membership."""
         patch: dict[str, Any] = {
             "shared_user_ids": [str(value) for value in shared_user_ids],
         }
