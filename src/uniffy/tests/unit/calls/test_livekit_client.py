@@ -1,5 +1,6 @@
 """Unit tests for the LiveKit Twirp admin client and its circuit breaker."""
 
+import asyncio
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -77,6 +78,68 @@ async def test_transport_error_counts_as_failure():
             await client.list_rooms()
     with pytest.raises(LiveKitUnavailableError):
         await client.list_rooms()
+
+
+@pytest.mark.parametrize("failure", [TimeoutError("unreachable"), ConnectionError("refused"), 503])
+async def test_maintenance_stops_requests_on_first_outage_and_recovers(failure):
+    client = _client()
+    client._http.post = AsyncMock(
+        side_effect=failure if isinstance(failure, Exception) else None,
+        return_value=_response(failure) if isinstance(failure, int) else None,
+    )
+
+    with client.stop_after_unavailable() as media:
+        with pytest.raises(LiveKitUnavailableError):
+            await client.list_participants("room")
+        assert media.reachable is False
+        with pytest.raises(LiveKitUnavailableError):
+            await client.delete_room("room")
+        assert client._http.post.await_count == 1
+
+    client._http.post = AsyncMock(return_value=_response(200))
+    with client.stop_after_unavailable() as recovered:
+        await client.delete_room("room")
+        assert recovered.reachable is True
+    client._http.post.assert_awaited_once()
+
+
+async def test_missing_room_keeps_maintenance_media_available():
+    client = _client()
+    client._http.post = AsyncMock(side_effect=[_response(404), _response(200)])
+
+    with client.stop_after_unavailable() as media:
+        with pytest.raises(LiveKitApiError) as error:
+            await client.list_participants("gone")
+        assert error.value.status_code == 404
+        await client.list_participants("present")
+        assert media.reachable is True
+    assert client._http.post.await_count == 2
+
+
+async def test_maintenance_outage_does_not_suppress_other_tasks():
+    client = _client()
+    failed = asyncio.Event()
+    checked = asyncio.Event()
+    client._http.post = AsyncMock(side_effect=[TimeoutError("unreachable"), _response(200)])
+
+    async def maintenance():
+        with client.stop_after_unavailable():
+            with pytest.raises(LiveKitUnavailableError):
+                await client.list_rooms()
+            failed.set()
+            await checked.wait()
+            with pytest.raises(LiveKitUnavailableError):
+                await client.delete_room("room")
+
+    async def independent_request():
+        await failed.wait()
+        try:
+            await client.list_rooms()
+        finally:
+            checked.set()
+
+    await asyncio.gather(maintenance(), independent_request())
+    assert client._http.post.await_count == 2
 
 
 async def test_mute_participant_microphone_targets_mic_tracks():

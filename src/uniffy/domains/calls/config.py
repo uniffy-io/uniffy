@@ -10,12 +10,13 @@ class LiveKitConfigError(RuntimeError):
     pass
 
 
-def default_screen_share_quality() -> ScreenShareQuality:
-    """Deploy-time screen-share ceiling for many-viewer calls (self-host safe).
+# Public credentials remain unsafe regardless of length.
+_PUBLISHED_SECRET = "devsecret-change-me-in-prod-32chars-min"
+_MIN_SECRET_LENGTH = 32
 
-    A 1:1 DIRECT call overrides this to MAX at resolve time; this only governs
-    channel / group calls where egress scales with the viewer count.
-    """
+
+def default_screen_share_quality() -> ScreenShareQuality:
+    """Channel and group calls need a deploy-time ceiling on screen-share egress."""
     raw = os.getenv("CALLS_DEFAULT_SCREEN_SHARE_QUALITY", "BALANCED").strip().upper()
     try:
         return ScreenShareQuality[raw]
@@ -42,16 +43,28 @@ class LiveKitConfig:
             raise LiveKitConfigError(
                 "LIVEKIT_HOST, LIVEKIT_API_KEY and LIVEKIT_API_SECRET are required"
             )
+        _validate_api_secret(api_secret)
         return cls(host=host, api_key=api_key, api_secret=api_secret, ws_url=ws_url)
+
+
+def _validate_api_secret(api_secret: str) -> None:
+    if api_secret == _PUBLISHED_SECRET:
+        raise LiveKitConfigError(
+            "LIVEKIT_API_SECRET matches a published placeholder. "
+            "Generate one with `openssl rand -hex 32` and set it on "
+            "the backend and the LiveKit server together."
+        )
+    if len(api_secret) < _MIN_SECRET_LENGTH:
+        raise LiveKitConfigError(
+            f"LIVEKIT_API_SECRET must be at least {_MIN_SECRET_LENGTH} characters. "
+            "Generate one with `openssl rand -hex 32` and set it on the backend and "
+            "the LiveKit server together."
+        )
 
 
 @dataclass(frozen=True)
 class TurnConfig:
-    """Ephemeral TURN credential settings (k8s/STUNner relayed-media mode).
-
-    Unset TURN_SERVER_URLS means direct media (embedded TURN via LiveKit
-    signaling) and resolves to None everywhere.
-    """
+    """External TURN settings are optional for direct-media deployments."""
 
     server_urls: tuple[str, ...]
     shared_secret: str

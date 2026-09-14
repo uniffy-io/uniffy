@@ -153,7 +153,7 @@ configs:
         # the container IP in every dev mode, so loopback is never needed.
 
       keys:
-        devkey: devsecret-change-me-in-prod-32chars-min
+        ${LIVEKIT_API_KEY:-devkey}: ${LIVEKIT_API_SECRET:-}
 
       redis:
         address: valkey:6379
@@ -165,7 +165,7 @@ configs:
         udp_port: 3478
 
       webhook:
-        api_key: devkey
+        api_key: ${LIVEKIT_API_KEY:-devkey}
         urls:
           - http://host.docker.internal:8000/internal/webhooks/livekit
 
