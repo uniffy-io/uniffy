@@ -71,10 +71,24 @@ const initialState: ChatChannelsState = {
   unreadCountsLoaded: false,
 };
 
+// Unread state arrives from GetUnreadCounts and the stream, never on the
+// channel row, so a hydrate carries the stored values forward.
+function withUnreadState(channel: ChatChannel, existing: ChatChannel | undefined): ChatChannel {
+  if (!existing) return channel;
+  return {
+    ...channel,
+    unreadCount: channel.unreadCount ?? existing.unreadCount,
+    mentionCount: channel.mentionCount ?? existing.mentionCount,
+    lastReadMessageId: channel.lastReadMessageId ?? existing.lastReadMessageId,
+    firstUnreadMessageId: channel.firstUnreadMessageId ?? existing.firstUnreadMessageId,
+    latestMessageId: channel.latestMessageId ?? existing.latestMessageId,
+  };
+}
+
 function storeChannel(state: ChatChannelsState, channel: ChatChannel): void {
   const existing = state.byId[channel.id];
   state.byId[channel.id] = {
-    ...channel,
+    ...withUnreadState(channel, existing),
     // Single-channel reads omit the folder assigned by ListChannels.
     agentFolderId: channel.agentFolderId ?? existing?.agentFolderId ?? null,
   };
@@ -99,12 +113,13 @@ export const chatChannelsSlice = createSlice({
   initialState,
   reducers: {
     setChannels: (state, action: PayloadAction<ChatChannel[]>) => {
+      const previous = state.byId;
       state.byId = Object.fromEntries(
-        Object.entries(state.byId).filter(([, channel]) => channel.isArchived),
+        Object.entries(previous).filter(([, channel]) => channel.isArchived),
       );
       state.ids = [];
       for (const channel of action.payload) {
-        state.byId[channel.id] = channel;
+        state.byId[channel.id] = withUnreadState(channel, previous[channel.id]);
         state.ids.push(channel.id);
       }
       state.archivedIds = state.archivedIds.filter((id) => state.byId[id]?.isArchived);
@@ -248,15 +263,23 @@ export const chatChannelsSlice = createSlice({
     },
     incrementUnreadCount: (
       state,
-      action: PayloadAction<{ channelId: string; mentionCount?: number }>,
+      action: PayloadAction<{ channelId: string; messageId?: string; mentionCount?: number }>,
     ) => {
       const channel = state.byId[action.payload.channelId];
-      if (channel) {
-        channel.unreadCount = (channel.unreadCount ?? 0) + 1;
-        if (action.payload.mentionCount) {
-          channel.mentionCount = (channel.mentionCount ?? 0) + action.payload.mentionCount;
-        }
+      if (!channel) return;
+      const { messageId, mentionCount } = action.payload;
+      const wasClear = !channel.unreadCount;
+      channel.unreadCount = (channel.unreadCount ?? 0) + 1;
+      if (mentionCount) {
+        channel.mentionCount = (channel.mentionCount ?? 0) + mentionCount;
       }
+      if (!messageId) return;
+      // Ids are time-ordered, so a delta that arrives late never moves the tail back.
+      if (!channel.latestMessageId || messageId > channel.latestMessageId) {
+        channel.latestMessageId = messageId;
+      }
+      // The first message past a clear badge is where the divider belongs.
+      if (wasClear) channel.firstUnreadMessageId = messageId;
     },
     touchChannelActivity: (
       state,

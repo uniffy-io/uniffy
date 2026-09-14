@@ -1367,8 +1367,9 @@ export function MessageCompose({
             {sendOption && (
               <Checkbox
                 size="sm"
-                className="mr-1"
+                className="mr-1 min-w-0"
                 label={sendOption.label}
+                labelClassName="truncate"
                 checked={sendOption.checked}
                 onChange={(e) => sendOption.onChange(e.target.checked)}
                 data-testid="chat-compose-also-send-to-channel"

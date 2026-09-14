@@ -25,6 +25,7 @@ import {
   fetchMembers,
   fetchChannel,
   fetchChannels,
+  fetchUnreadCounts,
   fetchThreadsInbox,
   fetchDrafts,
   fetchChatPolicy,
@@ -576,7 +577,12 @@ function usePersistentChatStream() {
           void dispatch(syncActiveCalls());
           void dispatch(fetchDrafts());
           dispatch(invalidateArchivedChannels({ clear: true }));
-          if (reconnecting) void dispatch(fetchChannels());
+          if (reconnecting) {
+            // Badges, cursors, and divider targets only move on events, so the
+            // gap is closed from the snapshot as well as from the channel list.
+            void dispatch(fetchChannels());
+            void dispatch(fetchUnreadCounts());
+          }
           reconnecting = true;
 
           for await (const event of stream) {
@@ -651,6 +657,7 @@ function usePersistentChatStream() {
                     dispatch(
                       incrementUnreadCount({
                         channelId: p.channelId,
+                        messageId: p.messageId,
                         mentionCount: p.mentionCount > 0 ? p.mentionCount : undefined,
                       }),
                     );

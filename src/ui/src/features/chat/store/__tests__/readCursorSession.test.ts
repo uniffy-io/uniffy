@@ -23,6 +23,7 @@ import {
   removeChannel,
   chatChannelsSlice,
   clearChatChannels,
+  incrementUnreadCount,
   setActiveChannel,
   updateUnreadCounts,
   setManualUnread,
@@ -344,4 +345,70 @@ it("discards manual unread response after channel removal", async () => {
   expect(store.getState().chatChannels.manualUnreadRequests).toEqual({});
   expect(store.getState().chatChannels.manualUnread[channel.id]).toBeUndefined();
   expect(store.getState().chatMessages.unreadSeparatorByChannel[channel.id]).toBeUndefined();
+});
+
+it("reads to the live tail when the unread target no longer exists", async () => {
+  const store = makeStore();
+  const channel = seedChannel(store);
+  const tail = create(ChatMessageSchema, { id: "latest", channelId: channel.id });
+  api.getUnreadCounts.mockResolvedValue({
+    channels: [
+      {
+        channelId: channel.id,
+        unreadCount: 4,
+        mentionCount: 0,
+        lastReadMessageId: "previous-read",
+        firstUnreadMessageId: "purged",
+        latestMessageId: tail.id,
+      },
+    ],
+  });
+  // The server falls back to the latest page when the around target is gone.
+  api.getMessages.mockResolvedValue({ messages: [tail], hasMore: true });
+  await fetchMessages({ channelId: channel.id })(
+    store.dispatch,
+    store.getState as () => RootState,
+    undefined,
+  );
+  expect(store.getState().chatMessages.unreadSeparatorByChannel[channel.id]).toBeNull();
+  expect(store.getState().chatMessages.windowedByChannel[channel.id]).toBe(false);
+  expect(api.markChannelRead).toHaveBeenCalledWith(
+    expect.objectContaining({ channelId: channel.id, lastReadMessageId: tail.id }),
+  );
+  expect(store.getState().chatChannels.byId[channel.id].unreadCount).toBe(0);
+});
+
+it("shares one unread snapshot between concurrent callers", async () => {
+  const store = makeStore();
+  seedChannel(store);
+  const unread = deferred<{ channels: never[] }>();
+  api.getUnreadCounts.mockReturnValue(unread.promise);
+  const first = fetchUnreadCounts()(store.dispatch, store.getState as () => RootState, undefined);
+  const second = fetchUnreadCounts()(store.dispatch, store.getState as () => RootState, undefined);
+  expect(api.getUnreadCounts).toHaveBeenCalledTimes(1);
+  unread.resolve({ channels: [] });
+  await Promise.all([first, second]);
+  expect(store.getState().chatChannels.unreadCountsLoaded).toBe(true);
+  await fetchUnreadCounts()(store.dispatch, store.getState as () => RootState, undefined);
+  expect(api.getUnreadCounts).toHaveBeenCalledTimes(2);
+});
+
+it("opens on a stream-anchored divider without asking for a snapshot", async () => {
+  const store = makeStore();
+  const channel = seedChannel(store);
+  const older = create(ChatMessageSchema, { id: "older", channelId: channel.id });
+  const fresh = create(ChatMessageSchema, { id: "fresh", channelId: channel.id });
+  store.dispatch(markUnreadCountsLoaded());
+  store.dispatch(incrementUnreadCount({ channelId: channel.id, messageId: fresh.id }));
+  api.getMessages.mockResolvedValue({ messages: [older, fresh], hasMore: false });
+  await fetchMessages({ channelId: channel.id })(
+    store.dispatch,
+    store.getState as () => RootState,
+    undefined,
+  );
+  expect(api.getUnreadCounts).not.toHaveBeenCalled();
+  expect(store.getState().chatMessages.unreadSeparatorByChannel[channel.id]).toBe(fresh.id);
+  expect(api.markChannelRead).toHaveBeenCalledWith(
+    expect.objectContaining({ channelId: channel.id, lastReadMessageId: fresh.id }),
+  );
 });

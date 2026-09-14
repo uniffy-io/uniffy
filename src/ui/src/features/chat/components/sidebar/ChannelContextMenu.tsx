@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   SquareSplitHorizontal,
   SpeakerSlash,
@@ -47,6 +47,7 @@ interface ChannelContextMenuProps {
 export function ChannelContextMenu({ channelId, position, onClose }: ChannelContextMenuProps) {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
   const currentUserId = useAppSelector((state) => state.auth.user?.id ?? "");
   const prefs = useAppSelector(selectChannelPreferences);
   const members = useAppSelector((state) => state.chatChannels.channelMembers[channelId]);
@@ -139,13 +140,15 @@ export function ChannelContextMenu({ channelId, position, onClose }: ChannelCont
   const hasUnread = (channel?.unreadCount ?? 0) > 0;
 
   const handleJumpToFirstUnread = useCallback(() => {
-    if (activeChannelId !== channelId) {
+    // activeChannelId survives leaving the channel route, so the route decides
+    // whether a message list is mounted to receive the jump.
+    if (location.pathname !== `/chat/${channelId}`) {
       dispatch(setActiveChannel(channelId));
       navigate(`/chat/${channelId}`);
     }
     void dispatch(jumpToFirstUnread({ channelId }));
     onClose();
-  }, [dispatch, channelId, activeChannelId, navigate, onClose]);
+  }, [dispatch, channelId, location.pathname, navigate, onClose]);
 
   const MuteIcon = isMuted ? SpeakerHigh : SpeakerSlash;
 

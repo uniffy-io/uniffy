@@ -103,6 +103,7 @@ import {
   isChatSessionCurrent,
   loadChatInitialization,
   loadLatestChannelMessages,
+  loadUnreadCounts,
   type MessagePage,
 } from "@/features/chat/store/chatPreload";
 import {
@@ -585,13 +586,17 @@ export const fetchMessages = createAsyncThunk<
         }
       }
       const targetLoaded = !!firstUnreadId && messages.some((m) => m.id === firstUnreadId);
+      // A cursor target that no longer exists leaves the server on the latest page: a live
+      // tail with nothing to divide, which reads like any other open.
+      const windowLoaded = windowed && targetLoaded;
       dispatch(
-        setUnreadSeparator({ channelId: params.channelId, messageId: firstUnreadId ?? null }),
+        setUnreadSeparator({
+          channelId: params.channelId,
+          messageId: (targetLoaded && firstUnreadId) || null,
+        }),
       );
       if (targetLoaded) dispatch(jumpToMessage(firstUnreadId));
-      dispatch(
-        setMessages({ channelId: params.channelId, messages, windowed: windowed && targetLoaded }),
-      );
+      dispatch(setMessages({ channelId: params.channelId, messages, windowed: windowLoaded }));
       const state = getState();
 
       // Re-hydrate any pending agent approval cards still live in Valkey (24h TTL) but dropped from Redux on reload.
@@ -600,7 +605,7 @@ export const fetchMessages = createAsyncThunk<
       const lastMessage = messages[messages.length - 1];
       if (
         lastMessage &&
-        !windowed &&
+        !windowLoaded &&
         selectUnreadCountsLoaded(state) &&
         !selectIsManuallyUnread(state, params.channelId)
       ) {
@@ -1216,7 +1221,7 @@ export const markChannelUnread = createAsyncThunk<
             unreadCount: response.unreadCount,
             mentionCount: response.mentionCount,
             lastReadMessageId: response.lastReadMessageId,
-            firstUnreadMessageId: response.firstUnreadMessageId ?? "",
+            firstUnreadMessageId: response.firstUnreadMessageId,
           },
         ]),
       );
@@ -1263,6 +1268,52 @@ export const markThreadRead = createAsyncThunk<
   }
 });
 
+const NOTIFICATION_LEVEL_NAMES: Record<number, "ALL" | "MENTIONS" | "NONE"> = {
+  [ChatNotificationLevel.ALL]: "ALL",
+  [ChatNotificationLevel.MENTIONS]: "MENTIONS",
+  [ChatNotificationLevel.NONE]: "NONE",
+};
+
+async function syncUnreadCounts(
+  initial: RootState,
+  getState: () => RootState,
+  dispatch: Dispatch<UnknownAction>,
+): Promise<void> {
+  const organizationId = getOrganizationId(initial);
+  const response = await chatApi.getUnreadCounts({ organizationId });
+  if (!isChatSessionCurrent(initial.auth, getState().auth)) return;
+  dispatch(
+    updateUnreadCounts(
+      response.channels.map((c) => ({
+        channelId: c.channelId,
+        unreadCount: c.unreadCount,
+        mentionCount: c.mentionCount,
+        lastReadMessageId: c.lastReadMessageId ?? "",
+        firstUnreadMessageId: c.firstUnreadMessageId ?? "",
+        latestMessageId: c.latestMessageId,
+      })),
+    ),
+  );
+  dispatch(markUnreadCountsLoaded());
+
+  const prefs: Record<
+    string,
+    {
+      isMuted: boolean;
+      notificationLevel: "ALL" | "MENTIONS" | "NONE";
+      mutedUntil: string | null;
+    }
+  > = {};
+  for (const c of response.channels) {
+    prefs[c.channelId] = {
+      isMuted: c.isMuted,
+      notificationLevel: NOTIFICATION_LEVEL_NAMES[c.notificationLevel] ?? "ALL",
+      mutedUntil: c.mutedUntil ? new Date(Number(c.mutedUntil.seconds) * 1000).toISOString() : null,
+    };
+  }
+  dispatch(setChannelPreferences(prefs));
+}
+
 export const fetchUnreadCounts = createAsyncThunk<
   void,
   void,
@@ -1270,47 +1321,7 @@ export const fetchUnreadCounts = createAsyncThunk<
 >("chat/fetchUnreadCounts", async (_, { getState, dispatch, rejectWithValue }) => {
   const initial = getState();
   try {
-    const nlMap: Record<number, "ALL" | "MENTIONS" | "NONE"> = {
-      [ChatNotificationLevel.ALL]: "ALL",
-      [ChatNotificationLevel.MENTIONS]: "MENTIONS",
-      [ChatNotificationLevel.NONE]: "NONE",
-    };
-
-    const organizationId = getOrganizationId(initial);
-    const response = await chatApi.getUnreadCounts({ organizationId });
-    if (!isChatSessionCurrent(initial.auth, getState().auth)) return;
-    dispatch(
-      updateUnreadCounts(
-        response.channels.map((c) => ({
-          channelId: c.channelId,
-          unreadCount: c.unreadCount,
-          mentionCount: c.mentionCount,
-          lastReadMessageId: c.lastReadMessageId ?? "",
-          firstUnreadMessageId: c.firstUnreadMessageId ?? "",
-          latestMessageId: c.latestMessageId,
-        })),
-      ),
-    );
-    dispatch(markUnreadCountsLoaded());
-
-    const prefs: Record<
-      string,
-      {
-        isMuted: boolean;
-        notificationLevel: "ALL" | "MENTIONS" | "NONE";
-        mutedUntil: string | null;
-      }
-    > = {};
-    for (const c of response.channels) {
-      prefs[c.channelId] = {
-        isMuted: c.isMuted,
-        notificationLevel: nlMap[c.notificationLevel] ?? "ALL",
-        mutedUntil: c.mutedUntil
-          ? new Date(Number(c.mutedUntil.seconds) * 1000).toISOString()
-          : null,
-      };
-    }
-    dispatch(setChannelPreferences(prefs));
+    await loadUnreadCounts(initial.auth, () => syncUnreadCounts(initial, getState, dispatch));
   } catch (error) {
     return rejectWithValue(
       error instanceof Error ? error.message : "Failed to fetch unread counts",
@@ -1999,11 +2010,15 @@ export const prefetchChat = createAsyncThunk<void, void, { state: RootState }>(
 // otherwise occupy the browser's connections ahead of GetMessages.
 export const hydrateChat = createAsyncThunk<void, void, { state: RootState }>(
   "chat/hydrate",
-  async (_, { dispatch }) => {
+  async (_, { dispatch, getState }) => {
     await Promise.all([
-      dispatch(fetchUnreadCounts())
-        .unwrap()
-        .catch(() => {}),
+      // A cold channel open already took the snapshot, and the stream keeps it
+      // current from there.
+      selectUnreadCountsLoaded(getState())
+        ? Promise.resolve()
+        : dispatch(fetchUnreadCounts())
+            .unwrap()
+            .catch(() => {}),
       dispatch(fetchThreadsInbox())
         .unwrap()
         .catch(() => {}),

@@ -309,13 +309,6 @@ export function MessageList({ channelId: channelIdProp }: MessageListProps) {
   const unreadSeparatorId = useAppSelector((state) =>
     effectiveChannelId ? selectUnreadSeparatorForChannel(state, effectiveChannelId) : null,
   );
-  const unreadTargetLoaded =
-    !!unreadSeparatorId && messages.some((m) => m.id === unreadSeparatorId);
-  const displayedSeparatorId = unreadTargetLoaded
-    ? unreadSeparatorId
-    : unreadSeparatorId
-      ? messages[0]?.id
-      : null;
   const currentUserId = useAppSelector((state) => state.auth.user?.id);
   const allTypingUsers = useAppSelector((state) =>
     effectiveChannelId ? selectTypingUsers(state, effectiveChannelId) : [],
@@ -377,6 +370,16 @@ export function MessageList({ channelId: channelIdProp }: MessageListProps) {
   );
 
   const grouped = useMemo(() => groupMessages(rootMessages), [rootMessages]);
+
+  // Anchored on rendered rows: an absorbed tool result never gets a row, so the
+  // raw list's first message may be one the divider cannot attach to.
+  const unreadTargetLoaded =
+    !!unreadSeparatorId && grouped.some((g) => g.message.id === unreadSeparatorId);
+  const displayedSeparatorId = unreadTargetLoaded
+    ? unreadSeparatorId
+    : unreadSeparatorId
+      ? (grouped[0]?.message.id ?? null)
+      : null;
 
   const entryIndex = grouped.findIndex((g) => g.message.id === unreadSeparatorId);
 

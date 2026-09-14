@@ -32,6 +32,7 @@ vi.mock("@/features/chat/api/chatApi", () => ({
 import {
   addChannel,
   chatChannelsSlice,
+  incrementUnreadCount,
   removeChannel,
   setActiveChannel,
   setChannels,
@@ -585,5 +586,80 @@ describe("updateUnreadCounts", () => {
 
     expect(state.byId[channel.id].lastReadMessageId).toBe("message-7");
     expect(state.byId[channel.id].unreadCount).toBe(0);
+  });
+});
+
+describe("channel hydrate", () => {
+  const withUnread = () =>
+    reducer(
+      reducer(undefined, addChannel(channel)),
+      updateUnreadCounts([
+        {
+          channelId: channel.id,
+          unreadCount: 3,
+          mentionCount: 1,
+          lastReadMessageId: "message-7",
+          firstUnreadMessageId: "message-8",
+          latestMessageId: "message-10",
+        },
+      ]),
+    );
+  const unreadState = (state: ReturnType<typeof reducer>) => {
+    const row = state.byId[channel.id];
+    return [
+      row.unreadCount,
+      row.mentionCount,
+      row.lastReadMessageId,
+      row.firstUnreadMessageId,
+      row.latestMessageId,
+    ];
+  };
+
+  it("keeps the unread state across a single-channel refetch", () => {
+    const state = reducer(withUnread(), addChannel({ ...channel, name: "Renamed" }));
+
+    expect(state.byId[channel.id].name).toBe("Renamed");
+    expect(unreadState(state)).toEqual([3, 1, "message-7", "message-8", "message-10"]);
+  });
+
+  it("keeps the unread state across a reconnect channel list", () => {
+    const state = reducer(withUnread(), setChannels([{ ...channel, name: "Renamed" }]));
+
+    expect(state.byId[channel.id].name).toBe("Renamed");
+    expect(unreadState(state)).toEqual([3, 1, "message-7", "message-8", "message-10"]);
+  });
+});
+
+describe("incrementUnreadCount", () => {
+  const seeded = () => reducer(undefined, addChannel(channel));
+
+  it("anchors the divider and the newest id on the first delta past a clear badge", () => {
+    let state = reducer(
+      seeded(),
+      incrementUnreadCount({ channelId: channel.id, messageId: "m-1" }),
+    );
+    state = reducer(state, incrementUnreadCount({ channelId: channel.id, messageId: "m-2" }));
+
+    expect(state.byId[channel.id].unreadCount).toBe(2);
+    expect(state.byId[channel.id].firstUnreadMessageId).toBe("m-1");
+    expect(state.byId[channel.id].latestMessageId).toBe("m-2");
+  });
+
+  it("never moves the newest id backwards on a late delta", () => {
+    let state = reducer(
+      seeded(),
+      incrementUnreadCount({ channelId: channel.id, messageId: "m-2" }),
+    );
+    state = reducer(state, incrementUnreadCount({ channelId: channel.id, messageId: "m-1" }));
+
+    expect(state.byId[channel.id].latestMessageId).toBe("m-2");
+  });
+
+  it("leaves the anchors alone on a delta without an id", () => {
+    const state = reducer(seeded(), incrementUnreadCount({ channelId: channel.id }));
+
+    expect(state.byId[channel.id].unreadCount).toBe(1);
+    expect(state.byId[channel.id].firstUnreadMessageId).toBeUndefined();
+    expect(state.byId[channel.id].latestMessageId).toBeUndefined();
   });
 });

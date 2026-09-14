@@ -129,8 +129,22 @@ export function ThreadPanel({ overlay = false }: ThreadPanelProps) {
   );
 
   // Deliberately not persisted with the draft: broadcasting to the channel is a
-  // decision about one reply, not a standing preference.
-  const [alsoSendToChannel, setAlsoSendToChannel] = useState(false);
+  // decision about one reply, not a standing preference. Keyed on the thread so
+  // switching threads inside the same panel never carries the choice over.
+  const [broadcastChoice, setBroadcastChoice] = useState<{
+    threadId: string;
+    checked: boolean;
+  } | null>(null);
+  const alsoSendToChannel =
+    broadcastChoice !== null &&
+    broadcastChoice.threadId === activeThreadId &&
+    broadcastChoice.checked;
+  const setAlsoSendToChannel = useCallback(
+    (checked: boolean) => {
+      setBroadcastChoice(activeThreadId ? { threadId: activeThreadId, checked } : null);
+    },
+    [activeThreadId],
+  );
 
   const handleSend = useCallback(
     async (content: string, fileIds: string[], metadata?: Record<string, string>) => {
@@ -148,7 +162,7 @@ export function ThreadPanel({ overlay = false }: ThreadPanelProps) {
       ).unwrap();
       flushOnSend();
       dispatch(clearReplyToMessage());
-      setAlsoSendToChannel(false);
+      setBroadcastChoice(null);
       return true;
     },
     [activeThreadId, rootMessage, replyToMessage, dispatch, flushOnSend, alsoSendToChannel],
