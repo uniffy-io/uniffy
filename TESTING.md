@@ -2492,6 +2492,10 @@ a second user who is not a member of it.
       the action is selectable in the filter.
 - [ ] Mobile shows the new channel type after the flip without a reload. Mobile has no control to
       change it.
+- [ ] Known edge, confirm it is still only staleness: have a non-member sit on the public channel's
+      page while the owner makes it private. Their already-loaded view stays on screen (the update
+      fans out to members only) but every fresh fetch is denied, and no message they had not already
+      loaded arrives.
 
 ## Pre-release sweep
 
