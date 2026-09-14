@@ -403,6 +403,8 @@ export function useUnreadMessageWindow(
   const [latestEntry, setLatestEntry] = useState<string | null>(null);
   useEffect(() => {
     if (!entry.ready || head.isLoading || choice?.key === entry.key) return;
+    // Latched once per entry, so a later head refetch cannot flip the window
+    // choice under a list that already opened on it.
     // eslint-disable-next-line react/react-compiler
     setChoice({
       key: entry.key,

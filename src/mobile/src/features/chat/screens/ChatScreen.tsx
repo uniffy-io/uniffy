@@ -302,9 +302,13 @@ export function ChatConversationScreen() {
   const [entryUnread, setEntryUnread] = useState<{ key: string; target: string | null } | null>(
     null,
   );
+  // A manual unread holds for the whole visit: coming back from a pushed
+  // thread refocuses this screen, and that is not a reopen.
+  useEffect(() => {
+    manualUnreadRef.current = false;
+  }, [channelId]);
   useEffect(() => {
     if (!organizationId || !unreadQuery.data || entryUnread?.key === entryKey) return;
-    manualUnreadRef.current = false;
     landedOnUnreadRef.current = false;
     const unread = unreadQuery.data[channelId];
     // Capture once when this channel's unread snapshot becomes available.

@@ -313,7 +313,7 @@ export function ChatComposer({
         {sendOption ? (
           <TouchableOpacity
             style={[
-              styles.sendOptionChip,
+              styles.chip,
               {
                 backgroundColor: sendOption.checked ? T.accentSoft : T.bg,
                 borderColor: sendOption.checked ? T.accent : T.border,
@@ -331,10 +331,7 @@ export function ChatComposer({
               <Square size={14} color={T.textDim} weight="bold" />
             )}
             <Text
-              style={[
-                styles.sendOptionChipText,
-                { color: sendOption.checked ? T.accent : T.textDim },
-              ]}
+              style={[styles.chipText, { color: sendOption.checked ? T.accent : T.textDim }]}
               numberOfLines={1}
             >
               {sendOption.label}
@@ -343,14 +340,14 @@ export function ChatComposer({
         ) : null}
         {model ? (
           <TouchableOpacity
-            style={[styles.modelChip, { backgroundColor: T.bg, borderColor: T.border }]}
+            style={[styles.chip, { backgroundColor: T.bg, borderColor: T.border }]}
             onPress={model.onPress}
             activeOpacity={0.7}
             accessibilityRole="button"
             accessibilityLabel={`Model: ${model.label}. Change model`}
           >
             <Faders size={13} color={T.textDim} weight="bold" />
-            <Text style={[styles.modelChipText, { color: T.textDim }]} numberOfLines={1}>
+            <Text style={[styles.chipText, { color: T.textDim }]} numberOfLines={1}>
               {model.label}
             </Text>
           </TouchableOpacity>
@@ -415,9 +412,10 @@ const styles = StyleSheet.create({
   toolRow: { flexDirection: "row", alignItems: "center", gap: 2 },
   toolBtn: { padding: 6, borderRadius: 8 },
   spacer: { flex: 1 },
+  // One shape for the model and send-option chips so they read as a family.
   // Shrinks ahead of the buttons: with the tool row open there is little width
-  // left, and a truncated model name beats a wrapped or clipped send button.
-  modelChip: {
+  // left, and a truncated label beats a wrapped or clipped send button.
+  chip: {
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
@@ -427,20 +425,7 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     borderWidth: StyleSheet.hairlineWidth,
   },
-  modelChipText: { fontSize: 11, fontFamily: FONT.semibold, flexShrink: 1 },
-  // Shares the model chip's metrics so the two read as one family of controls,
-  // and shrinks the same way when the tool row leaves little width.
-  sendOptionChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    flexShrink: 1,
-    paddingHorizontal: 10,
-    height: 30,
-    borderRadius: 15,
-    borderWidth: StyleSheet.hairlineWidth,
-  },
-  sendOptionChipText: { fontSize: 11, fontFamily: FONT.semibold, flexShrink: 1 },
+  chipText: { fontSize: 11, fontFamily: FONT.semibold, flexShrink: 1 },
   roundBtn: {
     width: 38,
     height: 38,
