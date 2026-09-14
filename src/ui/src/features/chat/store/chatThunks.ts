@@ -628,6 +628,7 @@ export const sendMessage = createAsyncThunk<
     replyToId?: string;
     attachmentFileIds?: string[];
     metadata?: Record<string, string>;
+    alsoSendToChannel?: boolean;
   },
   { state: RootState; rejectValue: string }
 >("chat/sendMessage", async (params, { getState, dispatch, rejectWithValue }) => {
@@ -641,6 +642,7 @@ export const sendMessage = createAsyncThunk<
       replyToId: params.replyToId,
       attachmentFileIds: params.attachmentFileIds ?? [],
       metadata: params.metadata ?? {},
+      alsoSendToChannel: params.alsoSendToChannel ?? false,
     });
     if (!response.message) {
       return rejectWithValue("Failed to send message");

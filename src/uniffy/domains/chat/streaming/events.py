@@ -57,6 +57,7 @@ def build_message_payload(
     reply_context: dict[str, str] | None = None,
     is_forwarded: bool = False,
     forward_context: dict | None = None,
+    thread_reply_context: dict | None = None,
 ) -> dict[str, Any]:
     payload: dict[str, Any] = {
         "message_id": str(message_id),
@@ -81,6 +82,8 @@ def build_message_payload(
         payload["reply_context"] = reply_context
     if forward_context:
         payload["forward_context"] = forward_context
+    if thread_reply_context:
+        payload["thread_reply_context"] = thread_reply_context
     return payload
 
 

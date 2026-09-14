@@ -29,6 +29,7 @@ from uniffy.domains.chat.drafts.operations import ChatDraftOperations
 from uniffy.domains.chat.features import is_chat_agents_enabled
 from uniffy.domains.chat.messages.converters import (
     get_forward_metadata,
+    get_thread_reply_metadata,
     public_message_metadata,
 )
 from uniffy.domains.chat.streaming.events import (
@@ -247,6 +248,7 @@ class MessageDelivery:
     ) -> None:
         try:
             forward_metadata = get_forward_metadata(message.message_metadata)
+            thread_reply_metadata = get_thread_reply_metadata(message.message_metadata)
             base_payload = build_message_payload(
                 message_id=message.id,
                 channel_id=channel.id,
@@ -261,6 +263,7 @@ class MessageDelivery:
                 reply_to_id=message.reply_to_id,
                 reply_context=reply_context,
                 is_forwarded=forward_metadata is not None,
+                thread_reply_context=thread_reply_metadata,
             )
             if forward_metadata is None:
                 await publish_channel_event_to_members(

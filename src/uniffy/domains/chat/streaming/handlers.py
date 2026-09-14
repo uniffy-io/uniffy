@@ -65,7 +65,10 @@ from uniffy.core.auth.principal import current_user_id
 from uniffy.core.json_codec import dumps_str
 from uniffy.core.models.chat.message import ChatMessageMetadataKey
 from uniffy.core.streaming.disconnect import get_disconnect_event
-from uniffy.domains.chat.messages.converters import forward_context_to_proto
+from uniffy.domains.chat.messages.converters import (
+    forward_context_to_proto,
+    thread_reply_context_to_proto,
+)
 from uniffy.domains.chat.streaming import events as evt
 from uniffy.infrastructure.valkey.pubsub import subscribe_channels
 
@@ -555,6 +558,14 @@ def _build_message_proto(payload: dict) -> ProtoChatMessage:
         })
         if forward_context is not None:
             msg.forward_context.CopyFrom(forward_context)
+
+    raw_thread_reply = payload.get("thread_reply_context")
+    if isinstance(raw_thread_reply, dict):
+        thread_reply_context = thread_reply_context_to_proto({
+            ChatMessageMetadataKey.THREAD_REPLY.value: raw_thread_reply
+        })
+        if thread_reply_context is not None:
+            msg.thread_reply_context.CopyFrom(thread_reply_context)
 
     return msg
 

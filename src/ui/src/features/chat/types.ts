@@ -104,6 +104,12 @@ export interface ForwardContext {
   attachments: ForwardedAttachment[];
 }
 
+/** Present on the channel copy of a thread reply sent with "Also send to #channel". */
+export interface ThreadReplyContext {
+  rootMessageId: string;
+  replyMessageId: string;
+}
+
 export interface ChatMessage {
   id: string;
   channelId: string;
@@ -115,6 +121,7 @@ export interface ChatMessage {
   replyContext?: ReplyContext;
   isForwarded: boolean;
   forwardContext?: ForwardContext;
+  threadReplyContext?: ThreadReplyContext;
   editedAt: string | null;
   isDeleted: boolean;
   isPinned: boolean;

@@ -4,6 +4,7 @@ import { ArrowBendUpLeft, Lightning, PushPin, Robot, Stop } from "@phosphor-icon
 import { type ChatMessage } from "@/features/chat/types";
 import { HoverActionsToolbar } from "@/features/chat/components/channel/HoverActionsToolbar";
 import { MessageContent } from "@/features/chat/components/channel/MessageContent";
+import { ThreadReplyCaption } from "@/features/chat/components/channel/ThreadReplyCaption";
 import { SystemMessage } from "@/features/chat/components/channel/SystemMessage";
 import { MessageAttachments } from "@/features/chat/components/channel/MessageAttachments";
 import { ThreadFooter } from "@/features/chat/components/channel/ThreadFooter";
@@ -63,7 +64,8 @@ function messageRev(m: ChatMessage): string {
     ? `${m.thread.replyCount}:${m.thread.lastReplyAt ?? ""}:${m.thread.hasUnread ? 1 : 0}`
     : "";
   const forwardRev = m.forwardContext ? 2 : m.isForwarded ? 1 : 0;
-  return `${m.id}|${m.updatedAt ?? ""}|${m.editedAt ?? ""}|${m.isDeleted ? 1 : 0}|${m.isPinned ? 1 : 0}|${contentLen}|${seq}|${stopped}|${reactionsHash}|${attachmentCount}|${threadRev}|${forwardRev}`;
+  const threadReplyRev = m.threadReplyContext ? 1 : 0;
+  return `${m.id}|${m.updatedAt ?? ""}|${m.editedAt ?? ""}|${m.isDeleted ? 1 : 0}|${m.isPinned ? 1 : 0}|${contentLen}|${seq}|${stopped}|${reactionsHash}|${attachmentCount}|${threadRev}|${forwardRev}|${threadReplyRev}`;
 }
 
 function messageItemPropsAreEqual(prev: MessageItemProps, next: MessageItemProps): boolean {
@@ -582,6 +584,9 @@ function MessageItemInner({
               </>
             ) : (
               <MessageContent content={message.content} />
+            )}
+            {message.threadReplyContext && (
+              <ThreadReplyCaption context={message.threadReplyContext} />
             )}
             {message.editedAt && (
               <span className="relative inline-block">
