@@ -1,7 +1,7 @@
 ---
 name: uniffy-issue
 description: |
-  Create or refine GitHub issues in `uniffy-io/uniffy` using the project's title, label, template, dependency, project, and image-attachment conventions. Use when asked to create, open, file, draft, report, rename, or track a bug, feature, security issue, or performance issue in this repository, including requests that begin with `[BUG]`, `[FEATURE]`, `[SECURITY]`, or `[PERFORMANCE]`. Skip for pull requests, commit messages, implementation plans that do not need a tracking issue, other repositories, or general GitHub CLI questions.
+  Create or refine GitHub issues in `uniffy-io/uniffy` using the project's title, template, dependency, project, and image-attachment conventions. Use when asked to create, open, file, draft, report, rename, or track a bug, feature, security issue, or performance issue in this repository, including requests that begin with `[BUG]`, `[FEATURE]`, `[SECURITY]`, or `[PERFORMANCE]`. Skip for pull requests, commit messages, implementation plans that do not need a tracking issue, other repositories, or general GitHub CLI questions.
 ---
 
 # Uniffy Issue Creation
@@ -12,8 +12,8 @@ Codifies the issue conventions for the `uniffy-io/uniffy` repo. Apply every time
 
 `[TYPE] Domain: short description`
 
-- `TYPE` is one of `BUG`, `FEATURE`, `SECURITY`, `PERFORMANCE`. Maps to the matching label.
-- `Domain` is CamelCase matching a `domain:*` label (without the `domain:` prefix). Omit the `Domain:` segment only if the change is genuinely cross-cutting with no dominant domain.
+- `TYPE` is one of `BUG`, `FEATURE`, `SECURITY`, `PERFORMANCE`.
+- `Domain` is CamelCase, named after the vertical slice (backend `src/uniffy/domains/<x>/` and frontend `src/ui/src/features/<x>/` share the name). Omit the `Domain:` segment only if the change is genuinely cross-cutting with no dominant domain.
 - Keep titles under ~80 chars. Detail goes in the body, not the title.
 
 Examples:
@@ -36,12 +36,7 @@ When creating via `gh issue create --body`, write the body in the shape the matc
 
 ## Labels
 
-Always apply:
-1. The type label: `bug` | `feature` | `security` | `performance`
-2. One or more `domain:*` labels matching the affected vertical slice(s) - backend `src/uniffy/domains/<x>/` AND frontend `src/ui/src/features/<x>/` share the same domain label
-3. Zero or more `area:*` labels for cross-cutting concerns: `area:frontend`, `area:mobile`, `area:proto`, `area:infra`, `area:docs`
-
-A single issue can carry multiple `domain:*` labels (e.g. a feature touching chat + agents). Verify labels exist before applying (`gh label list | grep domain:`). Never invent new labels without user confirmation.
+None. Issues in this repo carry no labels: the title prefix carries the type and domain, and the `Area` body section carries the areas. Do not add labels even though `domain:*` and `area:*` labels still exist in the repo.
 
 ## Body sections (FEATURE template - the gold standard)
 
@@ -73,7 +68,7 @@ Out:
 - [ ] always include rule-driven boxes that apply to the change
 
 ## Area
-backend / frontend / mobile / proto / infra - matches the `area:*` labels
+backend / frontend / mobile / proto / infra
 
 ## Alternatives Considered
 - **Option name.** One-line description. Rejected: reason.
@@ -105,7 +100,6 @@ If the user says "first analyse" or "don't create yet", deliver findings as a re
 ```bash
 gh issue create \
   --title "[FEATURE] Domain: title" \
-  --label "feature,domain:<x>,area:<y>" \
   --body "$(cat <<'EOF'
 ## Summary
 ...
@@ -115,12 +109,7 @@ EOF
 
 After creation, capture the issue number from the URL output. Then:
 
-1. **Add to the project** (Uniffy V1, number 1, owner uniffy-io):
-   ```bash
-   gh project item-add 1 --owner uniffy-io --url <issue-url>
-   ```
-
-2. **Link blockers** via GraphQL (gh CLI has no native flag):
+1. **Link blockers** via GraphQL (gh CLI has no native flag):
    ```bash
    # Get node ids
    gh api graphql -f query='query { repository(owner:"uniffy-io", name:"uniffy") { issue(number:<blocked>) { id } } }' --jq '.data.repository.issue.id'
@@ -130,7 +119,7 @@ After creation, capture the issue number from the URL output. Then:
    ```
    Use the native dependency, NOT a plain comment or markdown link. The dependency shows in the sidebar and filters like `is:open is:issue -blocked:*`.
 
-3. **If the user wants an image attached**: `gh` CLI cannot upload binary attachments. Two paths:
+2. **If the user wants an image attached**: `gh` CLI cannot upload binary attachments. Two paths:
    - Default: create the issue without the image, tell the user to drag-drop it into the issue in the browser, and preserve its temporary path for handoff.
    - Persistent: commit the image to a tracked location and reference via raw URL. Only with explicit user OK - polluting the repo for an issue asset is rarely worth it.
 
@@ -168,10 +157,6 @@ If the user shares a screenshot showing a bug or feature request:
 | Field | Default |
 |---|---|
 | Repo | `uniffy-io/uniffy` |
-| Project | `Uniffy V1` (org project number 1, owner `uniffy-io`) |
-| Project assignment | Always add the new issue to the project |
-| Type label | Match the TYPE prefix in the title |
-| Domain labels | Include every domain the change touches |
-| Area labels | Include for cross-cutting concerns only |
+| Project | `V1 Roadmap` (org project number 3, owner `uniffy-io`). New issues join it automatically; never run `item-add`. Effort lives there as `Size` (XS to XL) and `Estimate` (working days), set only when asked |
 | Native dependency | Use `addBlockedBy` GraphQL when one issue blocks another |
 | Image attach | Tell user to drag-drop in browser (gh limitation) |
