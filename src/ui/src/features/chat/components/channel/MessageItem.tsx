@@ -45,6 +45,7 @@ interface MessageItemProps {
   isGrouped: boolean;
   isFirstInGroup: boolean;
   isHighlighted?: boolean;
+  isInThread?: boolean;
   /** A folded run of consecutive agent tool calls rendered as one activity pane. */
   toolRun?: ChatMessage[];
 }
@@ -69,6 +70,7 @@ function messageItemPropsAreEqual(prev: MessageItemProps, next: MessageItemProps
   if (prev.isGrouped !== next.isGrouped) return false;
   if (prev.isFirstInGroup !== next.isFirstInGroup) return false;
   if ((prev.isHighlighted ?? false) !== (next.isHighlighted ?? false)) return false;
+  if ((prev.isInThread ?? false) !== (next.isInThread ?? false)) return false;
   // A growing tool run keeps the same representative message, so compare the run
   // membership and its last member; the pane reads result/typing state itself.
   const prevRun = prev.toolRun;
@@ -86,6 +88,7 @@ function MessageItemInner({
   isGrouped,
   isFirstInGroup,
   isHighlighted = false,
+  isInThread = false,
   toolRun,
 }: MessageItemProps) {
   const dispatch = useAppDispatch();
@@ -408,6 +411,7 @@ function MessageItemInner({
         channelId={message.channelId}
         senderId={message.senderId}
         isPinned={message.isPinned}
+        canReplyInThread={!isInThread && !message.rootId}
         content={message.content}
         isEditAllowed={isEditAllowed}
         onQuoteReply={handleQuoteReply}
@@ -645,7 +649,7 @@ function MessageItemInner({
             )}
           </div>
 
-          {hasThread && message.thread && (
+          {!isInThread && !message.rootId && hasThread && message.thread && (
             <ThreadFooter
               rootMessageId={message.id}
               replyCount={message.thread.replyCount}

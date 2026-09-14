@@ -242,7 +242,12 @@ export function ThreadPanel({ overlay = false }: ThreadPanelProps) {
             data-reply-count={replyCount}
           >
             <div className="mx-4 mt-4 rounded-xl bg-card shadow-edge [&>*]:rounded-xl [&>*]:py-3">
-              <MessageItem message={rootMessage} isGrouped={false} isFirstInGroup={true} />
+              <MessageItem
+                message={rootMessage}
+                isGrouped={false}
+                isFirstInGroup={true}
+                isInThread
+              />
             </div>
 
             {replyCount > 0 && (
@@ -265,6 +270,7 @@ export function ThreadPanel({ overlay = false }: ThreadPanelProps) {
                   message={reply}
                   isGrouped={isGrouped}
                   isFirstInGroup={!isGrouped}
+                  isInThread
                 />
               );
             })}

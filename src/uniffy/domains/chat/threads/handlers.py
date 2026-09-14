@@ -25,7 +25,7 @@ from uniffy_proto.chat.v1.chat_pb2 import (
 
 from uniffy.core.auth.principal import current_user_id, resolve_organization_id
 from uniffy.core.converters import datetime_to_timestamp
-from uniffy.core.errors import NotFoundError, PermissionDeniedError
+from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models.chat.message import ChatMessage, SenderType
 from uniffy.domains.agents.invocation import read_response_skill_attributions
 from uniffy.domains.chat.access import ChatAccessChecker
@@ -43,6 +43,8 @@ def _handle_error(e: Exception) -> None:
         raise ConnectError(Code.NOT_FOUND, str(e))
     if isinstance(e, PermissionDeniedError):
         raise ConnectError(Code.PERMISSION_DENIED, str(e))
+    if isinstance(e, ValidationError):
+        raise ConnectError(Code.INVALID_ARGUMENT, str(e))
     logger.exception(f"Unexpected error: {e}")
     raise ConnectError(Code.INTERNAL, "Internal error")
 
@@ -106,7 +108,7 @@ class ThreadHandlers:
                 )
                 resp.root_message.metadata.update(attributions.get(root_msg.id, {}))
                 return resp
-        except (NotFoundError, PermissionDeniedError) as e:
+        except (NotFoundError, PermissionDeniedError, ValidationError) as e:
             _handle_error(e)
 
     async def get_thread_messages(
@@ -180,7 +182,7 @@ class ThreadHandlers:
                     messages=proto_messages,
                     has_more=has_more,
                 )
-        except (NotFoundError, PermissionDeniedError) as e:
+        except (NotFoundError, PermissionDeniedError, ValidationError) as e:
             _handle_error(e)
 
     async def get_threads_inbox(

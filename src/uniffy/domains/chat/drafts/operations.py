@@ -51,11 +51,17 @@ class ChatDraftOperations:
 
         if root_message_id is not None:
             root_result = await self.session.execute(
-                select(ChatMessage.channel_id).where(ChatMessage.id == root_message_id)
+                select(ChatMessage.channel_id, ChatMessage.root_id).where(
+                    ChatMessage.id == root_message_id
+                )
             )
-            root_channel_id = root_result.scalar_one_or_none()
-            if root_channel_id is None or root_channel_id != channel_id:
+            root = root_result.one_or_none()
+            if root is None or root.channel_id != channel_id:
                 raise NotFoundError("message", root_message_id)
+            if root.root_id is not None:
+                raise ValidationError(
+                    "root_message_id", "Thread replies cannot start another thread"
+                )
 
         if not content.strip():
             await self.delete_draft(
