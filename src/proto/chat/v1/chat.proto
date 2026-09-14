@@ -55,6 +55,7 @@ service ChatService {
   // Typing and read state
   rpc SetTyping(SetTypingRequest) returns (SetTypingResponse) {}
   rpc MarkChannelRead(MarkChannelReadRequest) returns (MarkChannelReadResponse) {}
+  rpc MarkChannelUnread(MarkChannelUnreadRequest) returns (MarkChannelUnreadResponse) {}
   rpc MarkThreadRead(MarkThreadReadRequest) returns (MarkThreadReadResponse) {}
   rpc GetUnreadCounts(GetUnreadCountsRequest) returns (GetUnreadCountsResponse) {}
 
@@ -334,6 +335,17 @@ message ChatMessage {
   optional ForwardContext forward_context = 25;
   // True for a forwarded row even when forward_context is withheld.
   bool is_forwarded = 26;
+  // Set on the channel copy of a thread reply that was broadcast to the
+  // channel in one send.
+  optional ThreadReplyContext thread_reply_context = 27;
+}
+
+// Links a channel message back to the thread reply it was posted alongside.
+// Both rows live in the same channel under the same access, so this carries
+// ids only - no snapshot and no access-gated projection.
+message ThreadReplyContext {
+  string root_message_id = 1;
+  string reply_message_id = 2;
 }
 
 // ReactionGroup represents a unique emoji with its reactors.
@@ -621,6 +633,9 @@ message SendMessageRequest {
   // and before any agent invocation is enqueued, so downstream consumers
   // (notifications, chat-triggered agents) observe a consistent view.
   repeated string attachment_file_ids = 7;
+  // Also post this thread reply to the channel as a root message, linked back
+  // to the thread. Only valid with root_id set.
+  bool also_send_to_channel = 8;
 }
 
 message SendMessageResponse {
@@ -822,6 +837,23 @@ message MarkChannelReadRequest {
 
 message MarkChannelReadResponse {}
 
+// Moves the read cursor to the message immediately before message_id, so the
+// target and everything after it read as unread.
+message MarkChannelUnreadRequest {
+  string organization_id = 1;
+  string channel_id = 2;
+  string message_id = 3;
+}
+
+message MarkChannelUnreadResponse {
+  int32 unread_count = 1;
+  int32 mention_count = 2;
+  // Empty when the target was the channel's first message.
+  string last_read_message_id = 3;
+  // Empty when nothing after the cursor is unread for this user.
+  string first_unread_message_id = 4;
+}
+
 message MarkThreadReadRequest {
   string organization_id = 1;
   string root_message_id = 2;
@@ -845,6 +877,10 @@ message ChannelUnreadCount {
   bool is_muted = 5;
   ChatNotificationLevel notification_level = 6;
   optional google.protobuf.Timestamp muted_until = 7;
+  // Newest root message in the channel. Lets a surface that never opened the
+  // channel - the unreads list - mark it read without inventing an id.
+  optional string latest_message_id = 8;
+  optional string first_unread_message_id = 9;
 }
 
 // DRAFTS

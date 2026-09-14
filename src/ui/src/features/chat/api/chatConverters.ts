@@ -140,6 +140,12 @@ export function messageToPlain(proto: ProtoChatMessage): ChatMessage {
       : undefined,
     isForwarded: proto.isForwarded,
     forwardContext: proto.forwardContext ? forwardContextToPlain(proto.forwardContext) : undefined,
+    threadReplyContext: proto.threadReplyContext
+      ? {
+          rootMessageId: proto.threadReplyContext.rootMessageId,
+          replyMessageId: proto.threadReplyContext.replyMessageId,
+        }
+      : undefined,
     editedAt: timestampToIso(proto.editedAt),
     isDeleted: proto.isDeleted,
     isPinned: proto.isPinned,

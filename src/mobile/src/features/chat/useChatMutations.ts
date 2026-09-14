@@ -1,3 +1,4 @@
+import type { UnreadMap } from "@features/chat/unreadCounts";
 import { useMutation, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { AgentConfirmationDecision } from "@uniffy/proto/chat/v1/chat_pb";
 import { SubjectType } from "@uniffy/proto/common/v1/common_pb";
@@ -82,6 +83,7 @@ export function useSendMessage(channelId: string) {
         rootId: null,
         replyToId: args.replyToId ?? null,
         replyContext: null,
+        threadReplyContext: null,
         editedAtSeconds: null,
         isDeleted: false,
         isPinned: false,
@@ -220,13 +222,18 @@ export function useSendThreadReply(channelId: string, rootMessageId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (args: { content: string; attachmentFileIds?: string[] }) =>
+    mutationFn: (args: {
+      content: string;
+      attachmentFileIds?: string[];
+      alsoSendToChannel?: boolean;
+    }) =>
       chatApi.sendMessage({
         organizationId: organizationId!,
         channelId,
         content: args.content,
         rootId: rootMessageId,
         attachmentFileIds: args.attachmentFileIds,
+        alsoSendToChannel: args.alsoSendToChannel,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({
@@ -288,6 +295,32 @@ export function useMarkChannelRead(channelId: string) {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["chat", "unread", organizationId] });
+    },
+  });
+}
+
+export function useMarkChannelUnread(channelId: string) {
+  const { organizationId } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (messageId: string) =>
+      chatApi.markChannelUnread({
+        organizationId: organizationId!,
+        channelId,
+        messageId,
+      }),
+    onSuccess: (res) => {
+      queryClient.setQueryData<UnreadMap>(["chat", "unread", organizationId], (prev) => ({
+        ...prev,
+        [channelId]: {
+          ...prev?.[channelId],
+          unread: res.unreadCount,
+          mentions: res.mentionCount,
+          lastReadMessageId: res.lastReadMessageId,
+          firstUnreadMessageId: res.firstUnreadMessageId,
+        },
+      }));
     },
   });
 }

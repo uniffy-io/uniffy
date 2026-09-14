@@ -9,6 +9,7 @@ from uniffy.core.content.references import is_mention_only_content, strip_mentio
 from uniffy.core.models.chat.channel import ChannelType, ChatChannel
 from uniffy.core.models.chat.message import ChatMessage, SenderType
 from uniffy.core.types import AccessMode, ContentRole
+from uniffy.domains.chat.messages.broadcasts import find_broadcast_peer
 from uniffy.domains.chat.resources.operations import ChatResourceOperations
 from uniffy.domains.chat.senders import SenderResolver
 
@@ -25,6 +26,24 @@ class MessageIndexing:
     ) -> None:
         # System messages are UI narration rather than searchable content.
         if message.sender_type == SenderType.SYSTEM:
+            return
+
+        try:
+            peer = await find_broadcast_peer(self.session, message)
+        except Exception:
+            logger.opt(exception=True).warning("Broadcast lookup failed for message {}", message.id)
+            return
+        if peer is not None:
+            reply, copy = (message, peer) if message.root_id is not None else (peer, message)
+            canonical = copy if not copy.is_deleted else reply
+            redundant = reply if canonical.id == copy.id else copy
+            try:
+                await self.search_indexer.remove(f"urn:uniffy:content:CHAT_MESSAGE:{redundant.id}")
+            except Exception:
+                logger.warning("Search remove failed for broadcast peer {}", redundant.id)
+            message = canonical
+
+        if message.is_deleted:
             return
 
         if is_mention_only_content(message.content):

@@ -1,4 +1,5 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import type { UnreadMap } from "@features/chat/unreadCounts";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   useInfiniteQuery,
   useQuery,
@@ -11,6 +12,7 @@ import { chatApi } from "@features/chat/chatApi";
 import { filesApi } from "@features/files/filesApi";
 import { STREAM_HEALTH_KEY } from "@features/chat/useChatStream";
 import { draftsKey, agentFoldersKey } from "@features/chat/useChatMutations";
+import { messageWindowOptions, MESSAGE_WINDOW_SIZE } from "@features/chat/messageWindow";
 import {
   channelToPlain,
   messageToPlain,
@@ -45,8 +47,6 @@ const UNREAD_POLL_STREAMING_MS = 30000;
 function isStreamHealthy(queryClient: QueryClient): boolean {
   return queryClient.getQueryData<boolean>(STREAM_HEALTH_KEY) === true;
 }
-
-type UnreadMap = Record<string, { unread: number; mentions: number }>;
 
 export function useArchivedChannels(enabled: boolean) {
   const { organizationId } = useAuth();
@@ -111,7 +111,7 @@ export function useChannels() {
 }
 
 /** Live unread/mention counts keyed by channel id. Shared cache across the chat UI. */
-function useUnreadCounts() {
+export function useUnreadCounts() {
   const { organizationId } = useAuth();
   const queryClient = useQueryClient();
   return useQuery({
@@ -123,7 +123,12 @@ function useUnreadCounts() {
       const res = await chatApi.getUnreadCounts({ organizationId: organizationId! });
       const map: UnreadMap = {};
       for (const c of res.channels) {
-        map[c.channelId] = { unread: c.unreadCount, mentions: c.mentionCount };
+        map[c.channelId] = {
+          unread: c.unreadCount,
+          mentions: c.mentionCount,
+          lastReadMessageId: c.lastReadMessageId,
+          firstUnreadMessageId: c.firstUnreadMessageId,
+        };
       }
       return map;
     },
@@ -304,12 +309,7 @@ export function useMessageRevisions(channelId: string | undefined, messageId: st
 
 const MESSAGE_PAGE_SIZE = 50;
 
-/**
- * Channel root messages, newest-first for an inverted list. The newest page
- * polls on an interval (React Native's fetch cannot consume the ConnectRPC
- * server stream the web client uses); older pages accumulate separately via
- * loadOlder so the poll never re-fetches history.
- */
+/** Keep history separate so polling only refreshes the newest page. */
 export function useMessages(channelId: string | undefined) {
   const { organizationId } = useAuth();
   const queryClient = useQueryClient();
@@ -392,7 +392,82 @@ export function useMessages(channelId: string | undefined) {
   };
 }
 
-/** Populate message.attachments in place with one batched RPC. Non-fatal on error. */
+export function useUnreadMessageWindow(
+  channelId: string,
+  entry: { key: string; target: string | null; ready: boolean },
+  head: ReturnType<typeof useMessages>,
+) {
+  const { organizationId } = useAuth();
+  const queryClient = useQueryClient();
+  const [choice, setChoice] = useState<{ key: string; windowed: boolean } | null>(null);
+  const [latestEntry, setLatestEntry] = useState<string | null>(null);
+  useEffect(() => {
+    if (!entry.ready || head.isLoading || choice?.key === entry.key) return;
+    // Latched once per entry, so a later head refetch cannot flip the window
+    // choice under a list that already opened on it.
+    // eslint-disable-next-line react/react-compiler
+    setChoice({
+      key: entry.key,
+      windowed: !!entry.target && !head.data.some((message) => message.id === entry.target),
+    });
+  }, [entry.ready, entry.key, entry.target, head.isLoading, head.data, choice?.key]);
+  const pending = !entry.ready || choice?.key !== entry.key;
+  const windowed = !pending && choice.windowed && latestEntry !== entry.key;
+  const windowQuery = useInfiniteQuery({
+    ...messageWindowOptions(
+      organizationId ?? "",
+      channelId,
+      entry.key,
+      entry.target ?? "",
+      async (cursor, signal) => {
+        const response = await chatApi.getMessages(
+          {
+            organizationId: organizationId!,
+            channelId,
+            rootOnly: true,
+            limit: MESSAGE_WINDOW_SIZE,
+            ...cursor,
+          },
+          { signal },
+        );
+        const messages = response.messages.map(messageToPlain).reverse();
+        await attachAttachments(organizationId!, messages);
+        return { messages, hasMore: response.hasMore };
+      },
+    ),
+    enabled: !!organizationId && windowed,
+    refetchInterval: windowed
+      ? () => (isStreamHealthy(queryClient) ? MESSAGE_POLL_STREAMING_MS : MESSAGE_POLL_MS)
+      : false,
+  });
+  const windowMessages = useMemo(() => {
+    const messages = windowQuery.data?.pages.flatMap((page) => page.messages) ?? [];
+    return [...new Map(messages.map((message) => [message.id, message])).values()];
+  }, [windowQuery.data]);
+  return {
+    ...head,
+    data: windowed ? windowMessages : head.data,
+    isLoading: windowed ? windowQuery.isLoading : head.isLoading,
+    blocksRead: pending || windowed,
+    windowed,
+    error: windowed && windowQuery.isError,
+    retry: () => void windowQuery.refetch(),
+    jumpToLatest: () => setLatestEntry(entry.key),
+    hasNewer: windowed && windowQuery.hasPreviousPage,
+    isLoadingNewer: windowQuery.isFetchingPreviousPage,
+    loadNewer: () => {
+      if (!windowQuery.isFetching && windowQuery.hasPreviousPage)
+        void windowQuery.fetchPreviousPage();
+    },
+    isLoadingOlder: windowed ? windowQuery.isFetchingNextPage : head.isLoadingOlder,
+    loadOlder: () => {
+      if (pending) return;
+      if (!windowed) return head.loadOlder();
+      if (!windowQuery.isFetching && windowQuery.hasNextPage) void windowQuery.fetchNextPage();
+    },
+  };
+}
+
 async function attachAttachments(organizationId: string, messages: SerializedMessage[]) {
   if (messages.length === 0) return;
   try {

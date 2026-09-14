@@ -39,6 +39,7 @@ async def post_send_chat_message(
     root_id: str | None,
     sender_name: str,
     member_ids_json: str,
+    channel_copy_id: str | None = None,
 ) -> dict[str, Any]:
     try:
         mid = UUID(message_id)
@@ -46,6 +47,7 @@ async def post_send_chat_message(
         uid = UUID(user_id)
         rid = UUID(root_id) if root_id is not None else None
         member_ids = [UUID(value) for value in loads(member_ids_json)]
+        copy_id = UUID(channel_copy_id) if channel_copy_id is not None else None
     except TypeError, ValueError:
         return {"status": "error", "reason": "invalid_payload"}
 
@@ -56,6 +58,20 @@ async def post_send_chat_message(
         channel = await session.get(ChatChannel, cid)
         if message is None or channel is None:
             return {"status": "skipped", "reason": "message_or_channel_missing"}
+        # A reply broadcast to its channel is one message in two rows; the
+        # channel row is the one that carries the search document. Pinned to
+        # this channel so a crafted payload cannot index a message from another
+        # channel under this channel's audience.
+        channel_copy = None
+        if copy_id is not None:
+            channel_copy = (
+                await session.execute(
+                    select(ChatMessage).where(
+                        ChatMessage.id == copy_id,
+                        ChatMessage.channel_id == cid,
+                    )
+                )
+            ).scalar_one_or_none()
         await ChatMessageOperations(session, search_indexer=search_indexer).background_post_send(
             message,
             channel,
@@ -63,6 +79,7 @@ async def post_send_chat_message(
             rid,
             sender_name,
             member_ids,
+            index_message=channel_copy,
         )
     return {"status": "success", "message_id": message_id}
 

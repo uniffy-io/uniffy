@@ -15,6 +15,7 @@ import {
 } from "@phosphor-icons/react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { cn } from "@/shared/utils/cn";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { ChatMentionPopup } from "@/features/agents/components/chat/ChatMentionPopup";
 import { SkillSlashPopup } from "@/features/agents/components/chat/SkillSlashPopup";
@@ -104,6 +105,13 @@ interface MessageComposeProps {
     contentPreview: string;
   } | null;
   onCancelReply?: () => void;
+  /** Opt-in toggle rendered beside the send button; the thread composer uses it
+   *  to also post the reply to its channel. */
+  sendOption?: {
+    label: string;
+    checked: boolean;
+    onChange: (checked: boolean) => void;
+  };
   editingMessage?: {
     id: string;
     channelId: string;
@@ -253,6 +261,7 @@ export function MessageCompose({
   placeholder,
   organizationId,
   onSend,
+  sendOption,
   onTyping,
   replyTo,
   onCancelReply,
@@ -1354,6 +1363,17 @@ export function MessageCompose({
               >
                 <TextB size={18} />
               </button>
+            )}
+            {sendOption && (
+              <Checkbox
+                size="sm"
+                className="mr-1 min-w-0"
+                label={sendOption.label}
+                labelClassName="truncate"
+                checked={sendOption.checked}
+                onChange={(e) => sendOption.onChange(e.target.checked)}
+                data-testid="chat-compose-also-send-to-channel"
+              />
             )}
             <button
               type="button"

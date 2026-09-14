@@ -1,21 +1,20 @@
-"""Destructive-action audit emissions for chat.
+"""Audit moderation deletes without recording ordinary self-deletes."""
 
-Channel CRUD plus moderation: ``chat_message.deleted_by_admin`` only
-emits when the deleter is not the message's sender. Regular self-deletes
-stay unaudited because the volume is too high.
-"""
-
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from uniffy.core.audit.actions import Action
+from uniffy.core.models.audit.event import AuditEvent
+from uniffy.core.models.chat.message import ChatMessage, SenderType
 from uniffy.core.types import generate_id
+from uniffy.domains.chat.messages.operations import ChatMessageOperations
 
 
-def _audit_rows(session: MagicMock) -> list:
+def _audit_rows(session: MagicMock) -> list[AuditEvent]:
     return [
         call.args[0]
         for call in session.add.call_args_list
-        if call.args and call.args[0].__class__.__name__ == "AuditEvent"
+        if call.args and isinstance(call.args[0], AuditEvent)
     ]
 
 
@@ -30,11 +29,6 @@ def _build_session() -> MagicMock:
 
 async def test_admin_deleting_other_users_message_emits_deleted_by_admin() -> None:
     """Audit fires only when the actor is NOT the message sender."""
-    from datetime import UTC, datetime
-
-    from uniffy.core.models.chat.message import ChatMessage, SenderType
-    from uniffy.domains.chat.messages.operations import ChatMessageOperations
-
     sender_id = generate_id()
     admin_id = generate_id()
     org_id = generate_id()
@@ -53,7 +47,6 @@ async def test_admin_deleting_other_users_message_emits_deleted_by_admin() -> No
 
     session = _build_session()
 
-    # delete_message executes one stats UPDATE for root messages.
     session.execute = AsyncMock(return_value=MagicMock())
 
     ops = ChatMessageOperations(session, search_indexer=MagicMock())
@@ -61,6 +54,10 @@ async def test_admin_deleting_other_users_message_emits_deleted_by_admin() -> No
     ops.access.get_channel = AsyncMock(return_value=MagicMock(id=channel_id))
 
     with (
+        patch(
+            "uniffy.domains.chat.messages.mutations.lock_message_pair",
+            AsyncMock(return_value=(message, None)),
+        ),
         patch.object(
             ChatMessageOperations,
             "_get_message_by_id",
@@ -99,11 +96,6 @@ async def test_admin_deleting_other_users_message_emits_deleted_by_admin() -> No
 
 async def test_self_delete_does_not_audit() -> None:
     """User deleting their own message produces no audit row."""
-    from datetime import UTC, datetime
-
-    from uniffy.core.models.chat.message import ChatMessage, SenderType
-    from uniffy.domains.chat.messages.operations import ChatMessageOperations
-
     user_id = generate_id()
     org_id = generate_id()
     channel_id = generate_id()
@@ -127,6 +119,10 @@ async def test_self_delete_does_not_audit() -> None:
     ops.access.get_channel = AsyncMock(return_value=MagicMock(id=channel_id))
 
     with (
+        patch(
+            "uniffy.domains.chat.messages.mutations.lock_message_pair",
+            AsyncMock(return_value=(message, None)),
+        ),
         patch.object(
             ChatMessageOperations,
             "_get_message_by_id",
@@ -161,11 +157,6 @@ async def test_self_delete_does_not_audit() -> None:
 
 
 async def test_message_attachments_are_removed_before_soft_delete_commit() -> None:
-    from datetime import UTC, datetime
-
-    from uniffy.core.models.chat.message import ChatMessage, SenderType
-    from uniffy.domains.chat.messages.operations import ChatMessageOperations
-
     user_id = generate_id()
     org_id = generate_id()
     channel_id = generate_id()
@@ -192,6 +183,10 @@ async def test_message_attachments_are_removed_before_soft_delete_commit() -> No
         return 1
 
     with (
+        patch(
+            "uniffy.domains.chat.messages.mutations.lock_message_pair",
+            AsyncMock(return_value=(message, None)),
+        ),
         patch.object(
             ChatMessageOperations,
             "_get_message_by_id",

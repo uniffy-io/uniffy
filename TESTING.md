@@ -2411,6 +2411,56 @@ admin can put one back. Needs a channel you own plus a second browser signed in 
 - [ ] Mobile: the chat list carries a collapsed Archived section with the same restore action, and
       restoring there moves the channel back into the list.
 
+## Chat unread cursor: jump to first unread and mark as unread
+
+The read cursor is anchored on a message, so the divider, the badge, and the jump all agree.
+Needs a channel with more than one page of history and a second browser signed in as the same user.
+
+- [ ] Have another member send several messages to a channel you are not looking at, then open it:
+      the "New messages" divider sits directly above the first message you had not seen, not
+      counted back from the bottom.
+- [ ] Leave the channel and have that member send more than one page of messages (past 100 is
+      ideal). Reopen: the divider carries a "Jump to first unread" action, and using it loads the
+      older page and lands on the first message you missed.
+- [ ] With unread under one page, the divider reads "New messages" with no jump action, since it
+      already sits at the first unread.
+- [ ] Right-click a channel with unreads in the sidebar: "Jump to first unread" opens it at the
+      same place. A channel with no unreads does not offer the entry.
+- [ ] Open a message's overflow menu and choose "Mark as unread": the sidebar badge appears while
+      you are still standing in the channel, and it survives new messages arriving, switching tabs
+      away and back, and the window losing focus.
+- [ ] The second browser, signed in as the same user, shows the same badge without a reload.
+- [ ] Leave the channel and reopen it: the badge clears and the cursor moves to the newest message.
+- [ ] Mark the very first message in a channel unread: every message reads as unread and the badge
+      shows the full count (capped at 100).
+- [ ] Send a message in a channel you had marked unread: the badge clears, matching how the cursor
+      advances on send.
+- [ ] Open the Unreads view and use "Mark read" on a channel you have never opened: the row clears
+      and stays cleared after a refresh.
+      "Mark all read" clears every listed channel the same way.
+- [ ] Mobile: entering a channel with unreads lands on the divider rather than the newest message,
+      and the action sheet's "Mark as unread" leaves the badge set for the rest of the visit.
+
+## Chat: also send a thread reply to the channel
+
+A reply sent with the toggle on writes two rows: the reply in the thread, and a separate root message
+in the channel that links back. Needs a channel with at least one thread and a second member.
+
+- [ ] The "Also send to #channel" toggle appears in the thread composer only; the channel composer
+      never offers it.
+- [ ] Send a reply with the toggle on: it lands in the thread, and a copy appears in the channel
+      carrying a "Replied to a thread" caption with a preview of the root message.
+- [ ] Tap or click that caption: the thread opens on the right root.
+- [ ] The thread's reply count goes up by one, not two, and the root's "N replies" line agrees.
+- [ ] The toggle resets to off after sending; the next reply stays in the thread unless you set it
+      again.
+- [ ] The second member sees the channel copy arrive live, already captioned, with no reload.
+- [ ] Search for the text of a broadcast reply: exactly one result comes back, and opening it lands
+      on the channel copy rather than the thread reply.
+- [ ] Send a broadcast reply that @-mentions an agent: the agent answers once, not twice.
+- [ ] Mobile: the same toggle sits beside the send button in the thread composer, and the channel
+      copy renders the caption and opens the thread on tap.
+
 ## Pre-release sweep
 
 - [ ] All linters green: `./manage.py lint`.

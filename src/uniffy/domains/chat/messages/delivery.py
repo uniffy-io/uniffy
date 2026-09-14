@@ -29,6 +29,7 @@ from uniffy.domains.chat.drafts.operations import ChatDraftOperations
 from uniffy.domains.chat.features import is_chat_agents_enabled
 from uniffy.domains.chat.messages.converters import (
     get_forward_metadata,
+    get_thread_reply_metadata,
     public_message_metadata,
 )
 from uniffy.domains.chat.streaming.events import (
@@ -87,8 +88,9 @@ class MessageDelivery:
         root_id: UUID | None,
         sender_name: str,
         member_ids: list[UUID],
+        index_message: ChatMessage | None = None,
     ) -> None:
-        """Run the independent, non-authoritative post-send projections."""
+        """Index the channel-visible twin so a broadcast has one search document."""
         # Membership and join messages embed a mention urn for the member the
         # event is about. That urn is the copy, not a ping: nobody gets
         # "Mentioned you" or a mention badge for their own membership event.
@@ -130,7 +132,9 @@ class MessageDelivery:
                 else:
                     broadcast_notify_ids = set(broadcast_badge_ids)
 
-        await self._index_message(message, channel, member_ids, sender_name=sender_name)
+        await self._index_message(
+            index_message or message, channel, member_ids, sender_name=sender_name
+        )
 
         await self._update_resources(channel.id, message.content, user_id)
 
@@ -157,11 +161,14 @@ class MessageDelivery:
         except Exception:
             logger.warning(f"Failed to fetch notification preferences for channel {channel.id}")
 
+        # Only root rows enter the channel badge; a plain thread reply has no anchor.
+        counted = index_message or message
         await self._publish_unread_notifications(
             channel,
             user_id,
             member_ids,
             visible_mentioned | team_recipient_ids | broadcast_badge_ids,
+            message_id=counted.id if counted.root_id is None else None,
         )
 
         # A broadcast is a mention for badge purposes, but muted and
@@ -240,6 +247,7 @@ class MessageDelivery:
     ) -> None:
         try:
             forward_metadata = get_forward_metadata(message.message_metadata)
+            thread_reply_metadata = get_thread_reply_metadata(message.message_metadata)
             base_payload = build_message_payload(
                 message_id=message.id,
                 channel_id=channel.id,
@@ -254,6 +262,7 @@ class MessageDelivery:
                 reply_to_id=message.reply_to_id,
                 reply_context=reply_context,
                 is_forwarded=forward_metadata is not None,
+                thread_reply_context=thread_reply_metadata,
             )
             if forward_metadata is None:
                 await publish_channel_event_to_members(

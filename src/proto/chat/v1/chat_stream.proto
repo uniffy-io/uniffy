@@ -327,6 +327,18 @@ message UnreadCountPayload {
   string channel_id = 1;
   int32 unread_count = 2;
   int32 mention_count = 3;
+  // Sends publish a delta the client adds to its badge, because recomputing a
+  // per-member aggregate on every send would be one query per member. Cursor
+  // moves publish the recomputed totals instead and set this, so the client
+  // replaces the badge rather than adding to it.
+  bool absolute = 4;
+  // Present empty values clear the cursor on an absolute update.
+  optional string last_read_message_id = 5;
+  optional string first_unread_message_id = 6;
+  // Root message a send delta is about, so a badge raised from the stream can
+  // anchor the unread divider and the newest id without a snapshot. Absent on
+  // cursor moves and on thread replies, which never enter the channel badge.
+  optional string message_id = 7;
 }
 
 message ThreadActivityPayload {

@@ -57,6 +57,11 @@ export interface ChatChannel {
   currentUserRole?: ChannelRole;
   unreadCount?: number;
   mentionCount?: number;
+  lastReadMessageId?: string;
+  firstUnreadMessageId?: string;
+  /** Newest root message, so a surface that never loaded the channel can still
+   *  mark it read. Absent until GetUnreadCounts has answered. */
+  latestMessageId?: string;
 }
 
 export interface ChatAgentFolder {
@@ -97,6 +102,12 @@ export interface ForwardContext {
   attachments: ForwardedAttachment[];
 }
 
+/** Present on the channel copy of a thread reply sent with "Also send to #channel". */
+export interface ThreadReplyContext {
+  rootMessageId: string;
+  replyMessageId: string;
+}
+
 export interface ChatMessage {
   id: string;
   channelId: string;
@@ -108,6 +119,7 @@ export interface ChatMessage {
   replyContext?: ReplyContext;
   isForwarded: boolean;
   forwardContext?: ForwardContext;
+  threadReplyContext?: ThreadReplyContext;
   editedAt: string | null;
   isDeleted: boolean;
   isPinned: boolean;

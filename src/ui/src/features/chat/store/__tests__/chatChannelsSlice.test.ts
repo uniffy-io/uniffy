@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   deleteCategory: vi.fn(),
   getChannelPendingApprovals: vi.fn(),
   getMessages: vi.fn(),
+  getUnreadCounts: vi.fn().mockResolvedValue({ channels: [] }),
   getThread: vi.fn(),
   getChannel: vi.fn(),
   listCategories: vi.fn(),
@@ -20,6 +21,7 @@ vi.mock("@/features/chat/api/chatApi", () => ({
     deleteCategory: mocks.deleteCategory,
     getChannelPendingApprovals: mocks.getChannelPendingApprovals,
     getMessages: mocks.getMessages,
+    getUnreadCounts: mocks.getUnreadCounts,
     getThread: mocks.getThread,
     getChannel: mocks.getChannel,
     listCategories: mocks.listCategories,
@@ -30,12 +32,16 @@ vi.mock("@/features/chat/api/chatApi", () => ({
 import {
   addChannel,
   chatChannelsSlice,
+  incrementUnreadCount,
   removeChannel,
   setActiveChannel,
   setChannels,
   setChannelMembers,
   setChannelPreferences,
   setSplitChannel,
+  setManualUnread,
+  clearManualUnread,
+  updateUnreadCounts,
   archivedLoadStarted,
   setArchivedChannels,
   invalidateArchivedChannels,
@@ -54,7 +60,7 @@ import {
   deleteChannel,
   fetchMessages,
   fetchArchivedChannels,
-  fetchDraftRoot,
+  fetchThreadRoot,
   fetchChannel,
 } from "@/features/chat/store/chatThunks";
 import type { RootState } from "@/app/store";
@@ -113,7 +119,7 @@ const message: ChatMessage = {
   updatedAt: "2026-08-26T00:00:00.000Z",
 };
 
-describe("draft roots", () => {
+describe("thread roots", () => {
   const makeStore = () =>
     configureStore({
       reducer: {
@@ -133,7 +139,7 @@ describe("draft roots", () => {
     store.dispatch(setMessages({ channelId: channel.id, messages: [message] }));
     mocks.getThread.mockResolvedValue({ rootMessage: root });
     await store.dispatch(
-      fetchDraftRoot({ channelId: channel.id, rootMessageId: root.id }) as never,
+      fetchThreadRoot({ channelId: channel.id, rootMessageId: root.id }) as never,
     );
     expect(store.getState().chatMessages.byId[root.id]?.content).toBe(root.content);
     expect(store.getState().chatMessages.idsByChannel[channel.id]).toEqual([message.id]);
@@ -152,7 +158,7 @@ describe("draft roots", () => {
       }),
     );
     const request = store.dispatch(
-      fetchDraftRoot({ channelId: channel.id, rootMessageId: root.id }) as never,
+      fetchThreadRoot({ channelId: channel.id, rootMessageId: root.id }) as never,
     );
     store.dispatch(removeChannel(channel.id));
     finish({ rootMessage: root });
@@ -164,9 +170,9 @@ describe("draft roots", () => {
     const store = makeStore();
     mocks.getThread.mockResolvedValue({});
     const result = await store.dispatch(
-      fetchDraftRoot({ channelId: channel.id, rootMessageId: root.id }) as never,
+      fetchThreadRoot({ channelId: channel.id, rootMessageId: root.id }) as never,
     );
-    expect(fetchDraftRoot.rejected.match(result)).toBe(true);
+    expect(fetchThreadRoot.rejected.match(result)).toBe(true);
     expect(store.getState().chatMessages.byId[root.id]).toBeUndefined();
   });
 });
@@ -511,5 +517,149 @@ describe("fetchMessages", () => {
     expect(
       selectInitialChannelLoadFailed(store.getState() as unknown as RootState, channel.id),
     ).toBe(true);
+  });
+});
+
+describe("manual unread", () => {
+  const seeded = () => reducer(undefined, addChannel(channel));
+
+  it("survives re-selecting the channel the user is already standing in", () => {
+    let state = reducer(seeded(), setActiveChannel(channel.id));
+    state = reducer(state, setManualUnread(channel.id));
+    // Leaving the chat route never clears activeChannelId, so selection alone
+    // cannot tell a re-render apart from a genuine reopen - only the open does.
+    state = reducer(state, setActiveChannel(channel.id));
+
+    expect(state.manualUnread[channel.id]).toBe(true);
+  });
+
+  it("clears when the channel is opened", () => {
+    let state = reducer(seeded(), setManualUnread(channel.id));
+    state = reducer(state, clearManualUnread(channel.id));
+
+    expect(state.manualUnread[channel.id]).toBeUndefined();
+  });
+
+  it("leaves other channels' flags alone", () => {
+    let state = reducer(seeded(), setManualUnread(channel.id));
+    state = reducer(state, setManualUnread("channel-2"));
+    state = reducer(state, clearManualUnread(channel.id));
+
+    expect(state.manualUnread[channel.id]).toBeUndefined();
+    expect(state.manualUnread["channel-2"]).toBe(true);
+  });
+});
+
+describe("updateUnreadCounts", () => {
+  const seeded = () => reducer(undefined, addChannel(channel));
+
+  it("stores the server read cursor and latest message id", () => {
+    const state = reducer(
+      seeded(),
+      updateUnreadCounts([
+        {
+          channelId: channel.id,
+          unreadCount: 3,
+          mentionCount: 1,
+          lastReadMessageId: "message-7",
+          latestMessageId: "message-10",
+        },
+      ]),
+    );
+
+    expect(state.byId[channel.id].lastReadMessageId).toBe("message-7");
+    expect(state.byId[channel.id].latestMessageId).toBe("message-10");
+    expect(state.byId[channel.id].unreadCount).toBe(3);
+  });
+
+  it("leaves the stored cursor alone when the payload omits it", () => {
+    let state = reducer(
+      seeded(),
+      updateUnreadCounts([
+        { channelId: channel.id, unreadCount: 3, mentionCount: 0, lastReadMessageId: "message-7" },
+      ]),
+    );
+    state = reducer(
+      state,
+      updateUnreadCounts([{ channelId: channel.id, unreadCount: 0, mentionCount: 0 }]),
+    );
+
+    expect(state.byId[channel.id].lastReadMessageId).toBe("message-7");
+    expect(state.byId[channel.id].unreadCount).toBe(0);
+  });
+});
+
+describe("channel hydrate", () => {
+  const withUnread = () =>
+    reducer(
+      reducer(undefined, addChannel(channel)),
+      updateUnreadCounts([
+        {
+          channelId: channel.id,
+          unreadCount: 3,
+          mentionCount: 1,
+          lastReadMessageId: "message-7",
+          firstUnreadMessageId: "message-8",
+          latestMessageId: "message-10",
+        },
+      ]),
+    );
+  const unreadState = (state: ReturnType<typeof reducer>) => {
+    const row = state.byId[channel.id];
+    return [
+      row.unreadCount,
+      row.mentionCount,
+      row.lastReadMessageId,
+      row.firstUnreadMessageId,
+      row.latestMessageId,
+    ];
+  };
+
+  it("keeps the unread state across a single-channel refetch", () => {
+    const state = reducer(withUnread(), addChannel({ ...channel, name: "Renamed" }));
+
+    expect(state.byId[channel.id].name).toBe("Renamed");
+    expect(unreadState(state)).toEqual([3, 1, "message-7", "message-8", "message-10"]);
+  });
+
+  it("keeps the unread state across a reconnect channel list", () => {
+    const state = reducer(withUnread(), setChannels([{ ...channel, name: "Renamed" }]));
+
+    expect(state.byId[channel.id].name).toBe("Renamed");
+    expect(unreadState(state)).toEqual([3, 1, "message-7", "message-8", "message-10"]);
+  });
+});
+
+describe("incrementUnreadCount", () => {
+  const seeded = () => reducer(undefined, addChannel(channel));
+
+  it("anchors the divider and the newest id on the first delta past a clear badge", () => {
+    let state = reducer(
+      seeded(),
+      incrementUnreadCount({ channelId: channel.id, messageId: "m-1" }),
+    );
+    state = reducer(state, incrementUnreadCount({ channelId: channel.id, messageId: "m-2" }));
+
+    expect(state.byId[channel.id].unreadCount).toBe(2);
+    expect(state.byId[channel.id].firstUnreadMessageId).toBe("m-1");
+    expect(state.byId[channel.id].latestMessageId).toBe("m-2");
+  });
+
+  it("never moves the newest id backwards on a late delta", () => {
+    let state = reducer(
+      seeded(),
+      incrementUnreadCount({ channelId: channel.id, messageId: "m-2" }),
+    );
+    state = reducer(state, incrementUnreadCount({ channelId: channel.id, messageId: "m-1" }));
+
+    expect(state.byId[channel.id].latestMessageId).toBe("m-2");
+  });
+
+  it("leaves the anchors alone on a delta without an id", () => {
+    const state = reducer(seeded(), incrementUnreadCount({ channelId: channel.id }));
+
+    expect(state.byId[channel.id].unreadCount).toBe(1);
+    expect(state.byId[channel.id].firstUnreadMessageId).toBeUndefined();
+    expect(state.byId[channel.id].latestMessageId).toBeUndefined();
   });
 });

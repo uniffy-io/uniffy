@@ -3,7 +3,11 @@ import { useNavigate } from "react-router-dom";
 import { Hash, Lock, Check, ChatTeardrop, Tray } from "@phosphor-icons/react";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
 import { SubjectAvatarById } from "@/components/subject";
-import { setActiveChannel, selectChannels } from "@/features/chat/store/chatChannelsSlice";
+import {
+  setActiveChannel,
+  selectChannels,
+  updateUnreadCounts,
+} from "@/features/chat/store/chatChannelsSlice";
 import { selectMessagesForChannel } from "@/features/chat/store/chatMessagesSlice";
 import { formatRelativeTime } from "@/shared/utils/dateFormatting";
 import { MessageContent } from "@/features/chat/components/channel/MessageContent";
@@ -129,23 +133,33 @@ export function UnreadsView() {
     [dispatch, navigate],
   );
 
+  // The server rejects an empty cursor, so a channel whose newest id has not
+  // arrived yet stays in the list rather than reading as cleared.
   const handleMarkRead = useCallback(
     (channelId: string) => {
-      const state = channels.find((c) => c.id === channelId);
-      if (state) {
-        dispatch(markChannelRead({ channelId, lastReadMessageId: "" }));
-      }
+      const channel = channels.find((c) => c.id === channelId);
+      if (!channel?.latestMessageId) return;
+      dispatch(markChannelRead({ channelId, lastReadMessageId: channel.latestMessageId }));
+      dispatch(updateUnreadCounts([{ channelId, unreadCount: 0, mentionCount: 0 }]));
       setMarkedRead((prev) => new Set([...prev, channelId]));
     },
     [dispatch, channels],
   );
 
   const handleMarkAllRead = useCallback(() => {
-    const ids = unreadChannels.map((c) => c.id);
-    for (const channelId of ids) {
-      dispatch(markChannelRead({ channelId, lastReadMessageId: "" }));
+    const marked: string[] = [];
+    for (const channel of unreadChannels) {
+      if (!channel.latestMessageId) continue;
+      dispatch(
+        markChannelRead({
+          channelId: channel.id,
+          lastReadMessageId: channel.latestMessageId,
+        }),
+      );
+      dispatch(updateUnreadCounts([{ channelId: channel.id, unreadCount: 0, mentionCount: 0 }]));
+      marked.push(channel.id);
     }
-    setMarkedRead((prev) => new Set([...prev, ...ids]));
+    setMarkedRead((prev) => new Set([...prev, ...marked]));
   }, [dispatch, unreadChannels]);
 
   return (

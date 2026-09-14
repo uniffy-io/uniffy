@@ -7,6 +7,7 @@ import {
   ChatText,
   Copy,
   DotsThreeVertical,
+  EnvelopeSimple,
   LinkSimple,
   Pencil,
   PushPin,
@@ -27,6 +28,7 @@ import {
   unpinMessage,
   addReaction,
   removeMessage,
+  markChannelUnread,
 } from "@/features/chat/store/chatThunks";
 
 interface HoverActionsToolbarProps {
@@ -35,6 +37,7 @@ interface HoverActionsToolbarProps {
   senderId: string;
   isPinned: boolean;
   canReplyInThread: boolean;
+  canMarkUnread: boolean;
   content: string;
   /** Edit-window policy decision, evaluated when the menu opens; the server is the boundary. */
   isEditAllowed?: () => boolean;
@@ -50,6 +53,7 @@ function HoverActionsToolbarInner({
   senderId,
   isPinned,
   canReplyInThread,
+  canMarkUnread,
   content,
   isEditAllowed,
   onQuoteReply,
@@ -123,6 +127,11 @@ function HoverActionsToolbarInner({
     toggleBookmark();
     setShowMoreMenu(false);
   }, [toggleBookmark]);
+
+  const handleMarkUnread = useCallback(() => {
+    void dispatch(markChannelUnread({ channelId, messageId }));
+    setShowMoreMenu(false);
+  }, [dispatch, channelId, messageId]);
 
   const handleEdit = useCallback(() => {
     setShowMoreMenu(false);
@@ -329,6 +338,16 @@ function HoverActionsToolbarInner({
               <LinkSimple size={14} />
               <span>Copy link</span>
             </ActionMenuItem>
+            {canMarkUnread && (
+              <ActionMenuItem
+                role="menuitem"
+                onClick={handleMarkUnread}
+                data-testid={`chat-message-mark-unread-${messageId}`}
+              >
+                <EnvelopeSimple size={14} />
+                <span>Mark as unread</span>
+              </ActionMenuItem>
+            )}
             <ActionMenuItem
               role="menuitem"
 

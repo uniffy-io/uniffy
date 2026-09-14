@@ -21,12 +21,14 @@ import { Image } from "expo-image";
 import {
   At,
   Check,
+  CheckSquare,
   Code,
   Faders,
   PaperPlaneRight,
   Paperclip,
   Plus,
   Smiley,
+  Square,
   TextB,
   X,
 } from "phosphor-react-native";
@@ -48,6 +50,13 @@ export type ComposerModel = {
   onPress: () => void;
   /** Keeps the composer open while the picker covers it. */
   pickerOpen?: boolean;
+};
+
+/** A per-send choice offered beside the send button, off again after each send. */
+export type ComposerSendOption = {
+  label: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
 };
 
 // Vertical space the action row claims when the composer is open: the round
@@ -103,6 +112,7 @@ export function ChatComposer({
   onSend,
   tools,
   model,
+  sendOption,
   attachments = [],
   onRemoveAttachment,
 }: {
@@ -117,6 +127,7 @@ export function ChatComposer({
   onSend: () => void;
   tools: ComposerTools;
   model?: ComposerModel;
+  sendOption?: ComposerSendOption;
   attachments?: PendingAttachment[];
   onRemoveAttachment?: (localId: string) => void;
 }) {
@@ -130,7 +141,15 @@ export function ChatComposer({
   // most: reaching the emoji picker, the @ overlay or the attach sheet blurs the
   // input, and the composer must not fold away underneath the sheet the user
   // just asked for.
-  const expanded = focused || toolsOpen || editing || draft.length > 0 || attachments.length > 0;
+  const expanded =
+    focused ||
+    toolsOpen ||
+    editing ||
+    draft.length > 0 ||
+    attachments.length > 0 ||
+    // A choice already made has to stay visible and revocable; folding the row
+    // away would send it silently on the next tap.
+    !!sendOption?.checked;
 
   // Tapping the message list or the Android back key hides the keyboard without
   // always blurring the input, which would leave the composer open with a live
@@ -291,16 +310,44 @@ export function ChatComposer({
           </View>
         ) : null}
         <View style={styles.spacer} />
+        {sendOption ? (
+          <TouchableOpacity
+            style={[
+              styles.chip,
+              {
+                backgroundColor: sendOption.checked ? T.accentSoft : T.bg,
+                borderColor: sendOption.checked ? T.accent : T.border,
+              },
+            ]}
+            onPress={() => sendOption.onChange(!sendOption.checked)}
+            activeOpacity={0.7}
+            accessibilityRole="switch"
+            accessibilityState={{ checked: sendOption.checked }}
+            accessibilityLabel={sendOption.label}
+          >
+            {sendOption.checked ? (
+              <CheckSquare size={14} color={T.accent} weight="fill" />
+            ) : (
+              <Square size={14} color={T.textDim} weight="bold" />
+            )}
+            <Text
+              style={[styles.chipText, { color: sendOption.checked ? T.accent : T.textDim }]}
+              numberOfLines={1}
+            >
+              {sendOption.label}
+            </Text>
+          </TouchableOpacity>
+        ) : null}
         {model ? (
           <TouchableOpacity
-            style={[styles.modelChip, { backgroundColor: T.bg, borderColor: T.border }]}
+            style={[styles.chip, { backgroundColor: T.bg, borderColor: T.border }]}
             onPress={model.onPress}
             activeOpacity={0.7}
             accessibilityRole="button"
             accessibilityLabel={`Model: ${model.label}. Change model`}
           >
             <Faders size={13} color={T.textDim} weight="bold" />
-            <Text style={[styles.modelChipText, { color: T.textDim }]} numberOfLines={1}>
+            <Text style={[styles.chipText, { color: T.textDim }]} numberOfLines={1}>
               {model.label}
             </Text>
           </TouchableOpacity>
@@ -365,9 +412,10 @@ const styles = StyleSheet.create({
   toolRow: { flexDirection: "row", alignItems: "center", gap: 2 },
   toolBtn: { padding: 6, borderRadius: 8 },
   spacer: { flex: 1 },
+  // One shape for the model and send-option chips so they read as a family.
   // Shrinks ahead of the buttons: with the tool row open there is little width
-  // left, and a truncated model name beats a wrapped or clipped send button.
-  modelChip: {
+  // left, and a truncated label beats a wrapped or clipped send button.
+  chip: {
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
@@ -377,7 +425,7 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     borderWidth: StyleSheet.hairlineWidth,
   },
-  modelChipText: { fontSize: 11, fontFamily: FONT.semibold, flexShrink: 1 },
+  chipText: { fontSize: 11, fontFamily: FONT.semibold, flexShrink: 1 },
   roundBtn: {
     width: 38,
     height: 38,

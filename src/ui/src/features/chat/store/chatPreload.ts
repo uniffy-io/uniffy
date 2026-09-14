@@ -10,6 +10,7 @@ export interface MessagePage {
 
 interface PreloadState {
   initialization?: { promise: Promise<void>; expiresAt: number };
+  unreadCounts?: Promise<void>;
   messages?: {
     channel: ChatChannel;
     promise: Promise<MessagePage>;
@@ -57,6 +58,21 @@ export function loadChatInitialization(
     if (state.initialization === entry) state.initialization = undefined;
   });
   return entry.promise;
+}
+
+// One org-wide unread snapshot at a time: the channel open and the auxiliary
+// hydrate both ask for it on a cold load, and both want the same answer.
+export function loadUnreadCounts(
+  auth: RootState["auth"],
+  load: () => Promise<void>,
+): Promise<void> {
+  const state = forSession(auth);
+  if (state.unreadCounts) return state.unreadCounts;
+  const promise = load().finally(() => {
+    if (state.unreadCounts === promise) state.unreadCounts = undefined;
+  });
+  state.unreadCounts = promise;
+  return promise;
 }
 
 export async function loadLatestChannelMessages(

@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useCallback } from "react";
+import { useEffect, useLayoutEffect, useRef, useCallback, useState } from "react";
 import { toast } from "sonner";
 import { X, LinkSimple, CaretLeft } from "@phosphor-icons/react";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
@@ -128,6 +128,24 @@ export function ThreadPanel({ overlay = false }: ThreadPanelProps) {
     activeThreadId ?? undefined,
   );
 
+  // Deliberately not persisted with the draft: broadcasting to the channel is a
+  // decision about one reply, not a standing preference. Keyed on the thread so
+  // switching threads inside the same panel never carries the choice over.
+  const [broadcastChoice, setBroadcastChoice] = useState<{
+    threadId: string;
+    checked: boolean;
+  } | null>(null);
+  const alsoSendToChannel =
+    broadcastChoice !== null &&
+    broadcastChoice.threadId === activeThreadId &&
+    broadcastChoice.checked;
+  const setAlsoSendToChannel = useCallback(
+    (checked: boolean) => {
+      setBroadcastChoice(activeThreadId ? { threadId: activeThreadId, checked } : null);
+    },
+    [activeThreadId],
+  );
+
   const handleSend = useCallback(
     async (content: string, fileIds: string[], metadata?: Record<string, string>) => {
       if (!activeThreadId || !rootMessage) return false;
@@ -139,13 +157,15 @@ export function ThreadPanel({ overlay = false }: ThreadPanelProps) {
           replyToId: replyToMessage?.id,
           attachmentFileIds: fileIds,
           metadata,
+          alsoSendToChannel,
         }),
       ).unwrap();
       flushOnSend();
       dispatch(clearReplyToMessage());
+      setBroadcastChoice(null);
       return true;
     },
-    [activeThreadId, rootMessage, replyToMessage, dispatch, flushOnSend],
+    [activeThreadId, rootMessage, replyToMessage, dispatch, flushOnSend, alsoSendToChannel],
   );
 
   const handleCancelReply = useCallback(() => {
@@ -302,6 +322,11 @@ export function ThreadPanel({ overlay = false }: ThreadPanelProps) {
               organizationId={organizationId ?? undefined}
               placeholder="Reply..."
               onSend={handleSend}
+              sendOption={{
+                label: channelName ? `Also send to ${channelName}` : "Also send to channel",
+                checked: alsoSendToChannel,
+                onChange: setAlsoSendToChannel,
+              }}
               replyTo={replyToMessage}
               onCancelReply={handleCancelReply}
               initialDraft={initialDraft}

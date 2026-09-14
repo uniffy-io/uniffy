@@ -36,6 +36,15 @@ interface ChatChannelsState {
   archivedNextCursor: string | null;
   revision: number;
   revisionsById: Record<string, number>;
+  /** Channels the user marked unread while standing in them. Suppresses the
+   *  auto-mark-read paths until the channel is reopened, or the badge the user
+   *  just asked for would clear itself under them. */
+  manualUnread: Record<string, true>;
+  manualUnreadRequests: Record<string, string>;
+  /** Whether GetUnreadCounts has answered at least once. Opening a channel
+   *  marks it read, so the divider has to be latched before that happens -
+   *  which means waiting for the read cursor to exist rather than racing it. */
+  unreadCountsLoaded: boolean;
 }
 
 const initialState: ChatChannelsState = {
@@ -57,12 +66,29 @@ const initialState: ChatChannelsState = {
   archivedNextCursor: null,
   revision: 0,
   revisionsById: {},
+  manualUnread: {},
+  manualUnreadRequests: {},
+  unreadCountsLoaded: false,
 };
+
+// Unread state arrives from GetUnreadCounts and the stream, never on the
+// channel row, so a hydrate carries the stored values forward.
+function withUnreadState(channel: ChatChannel, existing: ChatChannel | undefined): ChatChannel {
+  if (!existing) return channel;
+  return {
+    ...channel,
+    unreadCount: channel.unreadCount ?? existing.unreadCount,
+    mentionCount: channel.mentionCount ?? existing.mentionCount,
+    lastReadMessageId: channel.lastReadMessageId ?? existing.lastReadMessageId,
+    firstUnreadMessageId: channel.firstUnreadMessageId ?? existing.firstUnreadMessageId,
+    latestMessageId: channel.latestMessageId ?? existing.latestMessageId,
+  };
+}
 
 function storeChannel(state: ChatChannelsState, channel: ChatChannel): void {
   const existing = state.byId[channel.id];
   state.byId[channel.id] = {
-    ...channel,
+    ...withUnreadState(channel, existing),
     // Single-channel reads omit the folder assigned by ListChannels.
     agentFolderId: channel.agentFolderId ?? existing?.agentFolderId ?? null,
   };
@@ -87,12 +113,13 @@ export const chatChannelsSlice = createSlice({
   initialState,
   reducers: {
     setChannels: (state, action: PayloadAction<ChatChannel[]>) => {
+      const previous = state.byId;
       state.byId = Object.fromEntries(
-        Object.entries(state.byId).filter(([, channel]) => channel.isArchived),
+        Object.entries(previous).filter(([, channel]) => channel.isArchived),
       );
       state.ids = [];
       for (const channel of action.payload) {
-        state.byId[channel.id] = channel;
+        state.byId[channel.id] = withUnreadState(channel, previous[channel.id]);
         state.ids.push(channel.id);
       }
       state.archivedIds = state.archivedIds.filter((id) => state.byId[id]?.isArchived);
@@ -160,9 +187,41 @@ export const chatChannelsSlice = createSlice({
       if (state.splitChannelId === channelId) state.splitChannelId = null;
       delete state.channelMembers[channelId];
       delete state.channelPreferences[channelId];
+      delete state.manualUnread[channelId];
+      delete state.manualUnreadRequests[channelId];
     },
     setActiveChannel: (state, action: PayloadAction<string | null>) => {
       state.activeChannelId = action.payload;
+    },
+    setManualUnread: (state, action: PayloadAction<string>) => {
+      state.manualUnread[action.payload] = true;
+    },
+    // Dispatched when a channel is opened, which is what ends a manual unread.
+    // Leaving the chat route never clears activeChannelId, so the open itself
+    // is the only reliable signal - comparing ids would never fire.
+    clearManualUnread: (state, action: PayloadAction<string>) => {
+      delete state.manualUnread[action.payload];
+      delete state.manualUnreadRequests[action.payload];
+    },
+    beginManualUnread: (state, action: PayloadAction<{ channelId: string; requestId: string }>) => {
+      state.manualUnread[action.payload.channelId] = true;
+      state.manualUnreadRequests[action.payload.channelId] = action.payload.requestId;
+    },
+    finishManualUnread: (
+      state,
+      action: PayloadAction<{
+        channelId: string;
+        requestId: string;
+        restoreRead?: boolean;
+      }>,
+    ) => {
+      const { channelId, requestId, restoreRead } = action.payload;
+      if (state.manualUnreadRequests[channelId] !== requestId) return;
+      delete state.manualUnreadRequests[channelId];
+      if (restoreRead) delete state.manualUnread[channelId];
+    },
+    markUnreadCountsLoaded: (state) => {
+      state.unreadCountsLoaded = true;
     },
     updateChannel: (state, action: PayloadAction<ChatChannel>) => {
       if (state.byId[action.payload.id]) storeChannel(state, action.payload);
@@ -170,32 +229,57 @@ export const chatChannelsSlice = createSlice({
     updateUnreadCounts: (
       state,
       action: PayloadAction<
-        Array<{ channelId: string; unreadCount: number; mentionCount: number }>
+        Array<{
+          channelId: string;
+          unreadCount: number;
+          mentionCount: number;
+          lastReadMessageId?: string;
+          latestMessageId?: string;
+          firstUnreadMessageId?: string;
+        }>
       >,
     ) => {
       for (const item of action.payload) {
         const channel = state.byId[item.channelId];
+        if (!channel) continue;
         // Skip no-op writes so an already-clear channel keeps its object identity.
         if (
-          channel &&
-          (channel.unreadCount !== item.unreadCount || channel.mentionCount !== item.mentionCount)
+          channel.unreadCount !== item.unreadCount ||
+          channel.mentionCount !== item.mentionCount
         ) {
           channel.unreadCount = item.unreadCount;
           channel.mentionCount = item.mentionCount;
+        }
+        if (item.firstUnreadMessageId !== undefined || item.unreadCount === 0) {
+          channel.firstUnreadMessageId = item.firstUnreadMessageId ?? "";
+        }
+        if (item.lastReadMessageId !== undefined) {
+          channel.lastReadMessageId = item.lastReadMessageId;
+        }
+        if (item.latestMessageId !== undefined) {
+          channel.latestMessageId = item.latestMessageId;
         }
       }
     },
     incrementUnreadCount: (
       state,
-      action: PayloadAction<{ channelId: string; mentionCount?: number }>,
+      action: PayloadAction<{ channelId: string; messageId?: string; mentionCount?: number }>,
     ) => {
       const channel = state.byId[action.payload.channelId];
-      if (channel) {
-        channel.unreadCount = (channel.unreadCount ?? 0) + 1;
-        if (action.payload.mentionCount) {
-          channel.mentionCount = (channel.mentionCount ?? 0) + action.payload.mentionCount;
-        }
+      if (!channel) return;
+      const { messageId, mentionCount } = action.payload;
+      const wasClear = !channel.unreadCount;
+      channel.unreadCount = (channel.unreadCount ?? 0) + 1;
+      if (mentionCount) {
+        channel.mentionCount = (channel.mentionCount ?? 0) + mentionCount;
       }
+      if (!messageId) return;
+      // Ids are time-ordered, so a delta that arrives late never moves the tail back.
+      if (!channel.latestMessageId || messageId > channel.latestMessageId) {
+        channel.latestMessageId = messageId;
+      }
+      // The first message past a clear badge is where the divider belongs.
+      if (wasClear) channel.firstUnreadMessageId = messageId;
     },
     touchChannelActivity: (
       state,
@@ -326,6 +410,11 @@ export const {
   addChannel,
   removeChannel,
   setActiveChannel,
+  setManualUnread,
+  beginManualUnread,
+  finishManualUnread,
+  clearManualUnread,
+  markUnreadCountsLoaded,
   updateChannel,
   updateUnreadCounts,
   incrementUnreadCount,
@@ -393,6 +482,12 @@ export const selectDirectMessages = createSelector([selectChannels], (channels) 
 export const selectAgentChats = createSelector([selectChannels], (channels) =>
   channels.filter((c) => c.isAgentDm).sort(sortByLastActivity),
 );
+
+export const selectIsManuallyUnread = (state: RootState, channelId: string): boolean =>
+  state.chatChannels.manualUnread[channelId] === true;
+
+export const selectUnreadCountsLoaded = (state: RootState): boolean =>
+  state.chatChannels.unreadCountsLoaded;
 
 export const selectChannelMembers = (state: RootState, channelId: string): ChatChannelMember[] =>
   state.chatChannels.channelMembers[channelId] ?? [];

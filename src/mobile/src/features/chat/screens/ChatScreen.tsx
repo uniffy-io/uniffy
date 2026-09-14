@@ -19,6 +19,7 @@ import * as Clipboard from "expo-clipboard";
 import {
   Trash,
   Copy,
+  EnvelopeSimple,
   Hash,
   Lock,
   Robot,
@@ -37,8 +38,8 @@ import {
   Phone,
   PhoneSlash,
 } from "phosphor-react-native";
-import { router, useLocalSearchParams } from "expo-router";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { router, useLocalSearchParams, useFocusEffect } from "expo-router";
+import { useQuery } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { useAnimatedStyle, useSharedValue } from "react-native-reanimated";
 import { useReanimatedKeyboardAnimation } from "react-native-keyboard-controller";
@@ -53,6 +54,7 @@ import { SwipeToReply } from "@features/chat/components/SwipeToReply";
 import { MarkdownRenderer } from "@shared/components/MarkdownRenderer";
 import { SystemMessage } from "@features/chat/components/SystemMessage";
 import { MessageAttachments } from "@features/chat/components/MessageAttachments";
+import { ThreadReplyCaption } from "@features/chat/components/ThreadReplyCaption";
 import { AgentMessageBody, isSpecialAgentKind } from "@features/agents/components/AgentMessageBody";
 import { ThinkingPane } from "@features/agents/components/ThinkingPane";
 import { AgentApprovalCard } from "@features/agents/components/AgentApprovalCard";
@@ -72,7 +74,9 @@ import { useAuth } from "@core/providers/AuthContext";
 import { useUniffy } from "@core/providers/UniffyContext";
 import {
   useChannel,
+  useUnreadCounts,
   useMessages,
+  useUnreadMessageWindow,
   useChannelMembers,
   useChannelPendingApprovals,
   usePinnedMessages,
@@ -84,6 +88,7 @@ import {
   useDeleteMessage,
   useToggleReaction,
   useMarkChannelRead,
+  useMarkChannelUnread,
   useEditMessage,
   usePinMessage,
   useDiscardFailedMessage,
@@ -153,6 +158,8 @@ const QUICK_EMOJIS = ["👍", "❤️", "😂", "🎉", "👀", "🙏"];
 // The send path snapshots the quoted message as content[:150], so an expanded
 // quote can only ever show that much of a longer original.
 const REPLY_PREVIEW_MAX_CHARS = 150;
+// One line's worth at the caption's size; the row truncates anything longer.
+const THREAD_ROOT_PREVIEW_MAX_CHARS = 90;
 const REPLY_BODY_GAP = 5;
 // Offset 0 is the newest message in the inverted list. Within this much of it
 // the reader counts as "at the bottom" and new rows are followed automatically,
@@ -284,11 +291,42 @@ export function ChatConversationScreen() {
 
   const { user, organizationId } = useAuth();
   const { pendingReference, clearPendingReference, openAt } = useUniffy();
-  const queryClient = useQueryClient();
 
   useChatStream();
   const channelQuery = useChannel(channelId);
-  const messagesQuery = useMessages(channelId);
+  const unreadQuery = useUnreadCounts();
+  const manualUnreadRef = useRef(false);
+  const landedOnUnreadRef = useRef(false);
+  const [entryVisit, setEntryVisit] = useState(0);
+  const entryKey = `${organizationId ?? ""}:${user?.id ?? ""}:${channelId}:${entryVisit}`;
+  const [entryUnread, setEntryUnread] = useState<{ key: string; target: string | null } | null>(
+    null,
+  );
+  // A manual unread holds for the whole visit: coming back from a pushed
+  // thread refocuses this screen, and that is not a reopen.
+  useEffect(() => {
+    manualUnreadRef.current = false;
+  }, [channelId]);
+  useEffect(() => {
+    if (!organizationId || !unreadQuery.data || entryUnread?.key === entryKey) return;
+    landedOnUnreadRef.current = false;
+    const unread = unreadQuery.data[channelId];
+    // Capture once when this channel's unread snapshot becomes available.
+    // eslint-disable-next-line react/react-compiler
+    setEntryUnread({
+      key: entryKey,
+      target: unread?.unread ? (unread.firstUnreadMessageId ?? null) : null,
+    });
+  }, [organizationId, channelId, entryKey, entryUnread?.key, unreadQuery.data]);
+  const entryReady = entryUnread?.key === entryKey;
+  const firstUnreadId = entryReady ? entryUnread.target : null;
+
+  const messageHead = useMessages(channelId);
+  const messagesQuery = useUnreadMessageWindow(
+    channelId,
+    { key: entryKey, target: firstUnreadId, ready: entryReady },
+    messageHead,
+  );
   const membersQuery = useChannelMembers(channelId);
   const approvalsQuery = useChannelPendingApprovals(channelId, true);
   const sendMessage = useSendMessage(channelId);
@@ -297,6 +335,7 @@ export function ChatConversationScreen() {
   const editMessage = useEditMessage(channelId);
   const pinMessage = usePinMessage(channelId);
   const markRead = useMarkChannelRead(channelId);
+  const markUnread = useMarkChannelUnread(channelId);
   const stopAgent = useStopAgentRun();
   const respondToConfirmation = useRespondToAgentConfirmation(channelId);
   const updateChannel = useUpdateChannel(channelId);
@@ -431,6 +470,22 @@ export function ChatConversationScreen() {
     [toolResultsById],
   );
 
+  // Roots quoted by the caption on a thread reply's channel copy. Built only
+  // when such a copy is on screen, so an ordinary channel pays nothing, and
+  // holding only the quoted roots keeps it small in one that has many.
+  const threadRootContentById = useMemo(() => {
+    const wanted = new Set<string>();
+    for (const m of messages) {
+      if (m.threadReplyContext) wanted.add(m.threadReplyContext.rootMessageId);
+    }
+    if (wanted.size === 0) return null;
+    const map = new Map<string, string>();
+    for (const m of messages) {
+      if (wanted.has(m.id)) map.set(m.id, m.content);
+    }
+    return map;
+  }, [messages]);
+
   // A run of consecutive tool calls from one agent is one activity pane rather
   // than one row per call. The transcript is newest-first, so a run is walked
   // backwards and anchored on its OLDEST row - that is the one whose header
@@ -522,39 +577,6 @@ export function ChatConversationScreen() {
     ],
     [directory.subjects, agentsQuery.data],
   );
-
-  // Snapshot the unread count on entry, before mark-as-read zeroes it out. It
-  // has to be a lazily filled ref rather than a useState initializer: the org
-  // may still be resolving on the first render, and the snapshot has to be taken
-  // on whichever render first has it.
-  const entryUnreadRef = useRef<number | null>(null);
-  // eslint-disable-next-line react/react-compiler
-  if (entryUnreadRef.current === null && organizationId) {
-    const unreadMap = queryClient.getQueryData<Record<string, { unread: number }>>([
-      "chat",
-      "unread",
-      organizationId,
-    ]);
-    entryUnreadRef.current = unreadMap?.[channelId]?.unread ?? 0;
-  }
-
-  // Anchor the "New messages" divider to the first unread message of the
-  // initial load; locked once so later polls do not move it.
-  const unreadAnchorRef = useRef<string | null | undefined>(undefined);
-  const firstUnreadId = useMemo(() => {
-    if (unreadAnchorRef.current !== undefined) return unreadAnchorRef.current;
-    const loaded = messagesQuery.data;
-    if (!loaded || loaded.length === 0) return null;
-    // The anchor is latched in a ref, not state: it must be picked from the very
-    // first non-empty page and then survive every later poll unchanged, and a
-    // state write here would re-render the whole thread to reach the same value.
-    // eslint-disable-next-line react/react-compiler
-    const unread = entryUnreadRef.current ?? 0;
-    const anchor = unread > 0 ? (loaded[Math.min(unread, loaded.length) - 1]?.id ?? null) : null;
-    // eslint-disable-next-line react/react-compiler
-    unreadAnchorRef.current = anchor;
-    return anchor;
-  }, [messagesQuery.data]);
 
   // Typing entries are patched into this cache by the chat stream provider;
   // the query only subscribes, it never fetches.
@@ -652,13 +674,23 @@ export function ChatConversationScreen() {
     [draft, mentionTypeahead.token],
   );
 
+  // Holds off the newest-id auto-mark-read after the user marks something
+  // unread, or the badge they just asked for clears on the next poll.
+
   const newestId = messages[0]?.id;
   useEffect(() => {
+    if (
+      !entryReady ||
+      messagesQuery.blocksRead ||
+      !screenFocused.current ||
+      manualUnreadRef.current
+    )
+      return;
     if (newestId && !newestId.startsWith("optimistic-")) {
       markRead.mutate(newestId);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [newestId]);
+  }, [newestId, entryReady, messagesQuery.blocksRead]);
 
   // A reference picked in the @ overlay is inserted at the cursor as @label.
   // Focus-guarded: the thread screen stacks on top with its own composer.
@@ -692,19 +724,20 @@ export function ChatConversationScreen() {
       flushOnSend();
       resetCompose();
       attachments.clear();
+      messagesQuery.jumpToLatest();
       sendMessage.mutate({ content, replyToId: replyId, attachmentFileIds });
       // Only a scrolled-up sender needs snapping back to the newest message
       // (offset 0 in the inverted list). Firing it unconditionally animates the
       // list while it is already pinned there, which fights the insert the
       // anchor is busy absorbing. Deferred a frame so the optimistic row lands
       // first.
-      if (scrollOffsetRef.current > NEAR_BOTTOM_PX) {
+      if (messagesQuery.windowed || scrollOffsetRef.current > NEAR_BOTTOM_PX) {
         requestAnimationFrame(() => {
           listRef.current?.scrollToOffset({ offset: 0, animated: true });
         });
       }
     },
-    [flushOnSend, resetCompose, attachments, sendMessage],
+    [flushOnSend, resetCompose, attachments, sendMessage, messagesQuery],
   );
 
   const handleSend = useCallback(() => {
@@ -872,6 +905,21 @@ export function ChatConversationScreen() {
     [jumpToMessage],
   );
 
+  // Entering a busy channel otherwise lands at the newest message with no way
+  // back to where the user left off. Fires once per channel entry; the anchor
+  // itself is latched, so later polls never re-trigger it.
+  useFocusEffect(
+    useCallback(() => {
+      setEntryVisit((visit) => visit + 1);
+    }, []),
+  );
+  useEffect(() => {
+    if (landedOnUnreadRef.current || !firstUnreadId || rows.length === 0) return;
+    if (!rows.some((row) => row.message.id === firstUnreadId)) return;
+    landedOnUnreadRef.current = true;
+    jumpToMessage(firstUnreadId);
+  }, [firstUnreadId, rows, jumpToMessage]);
+
   const renderItem = useCallback(
     ({ item, index }: { item: MessageRowItem; index: number }) => {
       const message = item.message;
@@ -946,6 +994,12 @@ export function ChatConversationScreen() {
               }
               onPressFailed={promptFailedSend}
               onPressThread={openThreadFor}
+              onPressThreadRoot={openThread}
+              threadRootContent={
+                message.threadReplyContext
+                  ? threadRootContentById?.get(message.threadReplyContext.rootMessageId)
+                  : undefined
+              }
               onPressReplyContext={jumpToReplyContext}
               onToggleReaction={handleReact}
               onShowReactors={setReactorsTarget}
@@ -973,6 +1027,8 @@ export function ChatConversationScreen() {
       elevatedHistoryViewer,
       chatPolicy?.editHistoryVisibleTo,
       openThreadFor,
+      openThread,
+      threadRootContentById,
       presenceByUser,
       hideReplyContext,
       startReply,
@@ -1087,7 +1143,17 @@ export function ChatConversationScreen() {
         <View style={styles.loadingWrap}>
           <ActivityIndicator size="large" color={T.accent} />
         </View>
-      ) : messages.length === 0 ? (
+      ) : messagesQuery.error ? (
+        <View style={styles.emptyWrap}>
+          <Text style={[styles.emptySub, { color: T.textDim }]}>Could not load messages</Text>
+          <TouchableOpacity onPress={messagesQuery.retry} accessibilityRole="button">
+            <Text style={{ color: T.accent }}>Retry</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={messagesQuery.jumpToLatest} accessibilityRole="button">
+            <Text style={{ color: T.accent }}>Jump to latest</Text>
+          </TouchableOpacity>
+        </View>
+      ) : messages.length === 0 && !messagesQuery.windowed ? (
         channel?.isAgentDm ? (
           <View style={styles.emptyWrap}>
             <Robot size={40} color={T.accent} weight="duotone" />
@@ -1161,6 +1227,36 @@ export function ChatConversationScreen() {
               windowSize={11}
               initialNumToRender={14}
               maxToRenderPerBatch={8}
+              ListHeaderComponent={
+                messagesQuery.windowed ? (
+                  <View style={styles.loadOlderWrap}>
+                    {messagesQuery.error ? (
+                      <TouchableOpacity onPress={messagesQuery.retry} accessibilityRole="button">
+                        <Text style={{ color: T.accent }}>Retry loading messages</Text>
+                      </TouchableOpacity>
+                    ) : messagesQuery.hasNewer ? (
+                      <TouchableOpacity
+                        onPress={messagesQuery.loadNewer}
+                        disabled={messagesQuery.isLoadingNewer}
+                        accessibilityRole="button"
+                      >
+                        <Text style={{ color: T.accent }}>
+                          {messagesQuery.isLoadingNewer ? "Loading messages" : "Newer messages"}
+                        </Text>
+                      </TouchableOpacity>
+                    ) : null}
+                    <TouchableOpacity
+                      onPress={() => {
+                        messagesQuery.jumpToLatest();
+                        listRef.current?.scrollToOffset({ offset: 0, animated: false });
+                      }}
+                      accessibilityRole="button"
+                    >
+                      <Text style={{ color: T.accent }}>Jump to latest</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : null
+              }
               ListFooterComponent={
                 messagesQuery.isLoadingOlder ? (
                   <View style={styles.loadOlderWrap}>
@@ -1312,6 +1408,19 @@ export function ChatConversationScreen() {
             await Clipboard.setStringAsync(display);
           }
           setActionMessage(null);
+        }}
+        onMarkUnread={() => {
+          const msg = actionMessage;
+          setActionMessage(null);
+          if (!msg || msg.id.startsWith("optimistic-")) return;
+          if (markUnread.isPending) return;
+          const wasManuallyUnread = manualUnreadRef.current;
+          manualUnreadRef.current = true;
+          markUnread.mutate(msg.id, {
+            onError: () => {
+              manualUnreadRef.current = wasManuallyUnread;
+            },
+          });
         }}
         onDelete={() => {
           const msg = actionMessage;
@@ -1604,6 +1713,8 @@ const MessageRow = React.memo(function MessageRow({
   onPressEdited,
   onPressFailed,
   onPressThread,
+  onPressThreadRoot,
+  threadRootContent,
   onPressReplyContext,
   onToggleReaction,
   onShowReactors,
@@ -1630,6 +1741,9 @@ const MessageRow = React.memo(function MessageRow({
   onPressEdited?: (message: SerializedMessage) => void;
   onPressFailed: (message: SerializedMessage) => void;
   onPressThread: (message: SerializedMessage) => void;
+  onPressThreadRoot: (rootMessageId: string) => void;
+  /** Content of the thread root this message's caption quotes, when it is loaded. */
+  threadRootContent?: string;
   onPressReplyContext: (message: SerializedMessage) => void;
   onToggleReaction: (message: SerializedMessage, emoji: string) => void;
   onShowReactors: (reaction: SerializedReaction) => void;
@@ -1647,6 +1761,13 @@ const MessageRow = React.memo(function MessageRow({
     return preview.length >= REPLY_PREVIEW_MAX_CHARS ? `${display}...` : display;
   }, [message.replyContext?.contentPreview]);
   const [replyExpanded, setReplyExpanded] = useState(false);
+  const threadRootPreview = useMemo(() => {
+    if (!threadRootContent) return undefined;
+    return parseMentions(threadRootContent)
+      .display.replace(/\s+/g, " ")
+      .trim()
+      .slice(0, THREAD_ROOT_PREVIEW_MAX_CHARS);
+  }, [threadRootContent]);
   const isAgent = message.senderType === "AGENT";
 
   const toggleReplyExpanded = useCallback(() => setReplyExpanded((open) => !open), []);
@@ -1681,6 +1802,7 @@ const MessageRow = React.memo(function MessageRow({
     !isAgent &&
     message.attachments.length === 0 &&
     !(!hideReplyContext && message.replyContext) &&
+    !message.threadReplyContext &&
     !message.editedAtSeconds &&
     !failed;
   const noteTextWidth = useCallback((width: number) => {
@@ -1857,6 +1979,14 @@ const MessageRow = React.memo(function MessageRow({
               T={T}
             />
           ) : null}
+          {message.threadReplyContext ? (
+            <ThreadReplyCaption
+              context={message.threadReplyContext}
+              rootPreview={threadRootPreview}
+              T={T}
+              onPress={onPressThreadRoot}
+            />
+          ) : null}
           {message.editedAtSeconds ? (
             <Text
               style={[styles.editedTag, { color: T.textDim }]}
@@ -1948,6 +2078,7 @@ function MessageActionSheet({
   onPin,
   onEdit,
   onCopy,
+  onMarkUnread,
   onDelete,
 }: {
   message: SerializedMessage | null;
@@ -1963,6 +2094,7 @@ function MessageActionSheet({
   onPin: () => void;
   onEdit: () => void;
   onCopy: () => void;
+  onMarkUnread: () => void;
   onDelete: () => void;
 }) {
   const canEdit = isOwn && message?.senderType === "USER" && editAllowed;
@@ -2024,6 +2156,12 @@ function MessageActionSheet({
         onPress={onCopy}
         icon={<Copy size={18} color={T.text} weight="duotone" />}
         label="Copy text"
+      />
+      <SheetAction
+        T={T}
+        onPress={onMarkUnread}
+        icon={<EnvelopeSimple size={18} color={T.text} weight="duotone" />}
+        label="Mark as unread"
       />
       {isOwn ? (
         <SheetAction

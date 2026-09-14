@@ -28,6 +28,9 @@ from uniffy_proto.chat.v1.chat_pb2 import (
 from uniffy_proto.chat.v1.chat_pb2 import (
     ThreadInfo as ProtoThreadInfo,
 )
+from uniffy_proto.chat.v1.chat_pb2 import (
+    ThreadReplyContext as ProtoThreadReplyContext,
+)
 
 from uniffy.core.converters import datetime_to_timestamp
 from uniffy.core.json_codec import dumps_str
@@ -54,12 +57,38 @@ def get_forward_metadata(metadata: dict | None) -> dict | None:
     return raw
 
 
+_PRIVATE_METADATA_KEYS = frozenset({
+    ChatMessageMetadataKey.FORWARD.value,
+    ChatMessageMetadataKey.THREAD_REPLY.value,
+})
+
+
 def public_message_metadata(metadata: dict | None) -> dict:
+    """Metadata minus the keys that reach clients as typed contexts instead."""
     return {
         str(key): value
         for key, value in (metadata or {}).items()
-        if str(key) != ChatMessageMetadataKey.FORWARD.value
+        if str(key) not in _PRIVATE_METADATA_KEYS
     }
+
+
+def get_thread_reply_metadata(metadata: dict | None) -> dict | None:
+    raw = (metadata or {}).get(ChatMessageMetadataKey.THREAD_REPLY.value)
+    if not isinstance(raw, dict):
+        return None
+    if not raw.get("root_message_id") or not raw.get("reply_message_id"):
+        return None
+    return raw
+
+
+def thread_reply_context_to_proto(metadata: dict | None) -> ProtoThreadReplyContext | None:
+    raw = get_thread_reply_metadata(metadata)
+    if raw is None:
+        return None
+    return ProtoThreadReplyContext(
+        root_message_id=str(raw["root_message_id"]),
+        reply_message_id=str(raw["reply_message_id"]),
+    )
 
 
 def forward_context_to_proto(metadata: dict | None) -> ProtoForwardContext | None:
@@ -154,6 +183,9 @@ def message_to_proto(
             proto.metadata[k] = dumps_str(v) if isinstance(v, (dict, list)) else str(v)
     if forward_context is not None:
         proto.forward_context.CopyFrom(forward_context)
+    thread_reply_context = thread_reply_context_to_proto(message.message_metadata)
+    if thread_reply_context is not None:
+        proto.thread_reply_context.CopyFrom(thread_reply_context)
     if message.created_at:
         proto.created_at.CopyFrom(datetime_to_timestamp(message.created_at))
 

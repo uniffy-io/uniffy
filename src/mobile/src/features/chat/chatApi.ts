@@ -32,6 +32,7 @@ import {
   RemoveReactionRequestSchema,
   SetTypingRequestSchema,
   MarkChannelReadRequestSchema,
+  MarkChannelUnreadRequestSchema,
   GetUnreadCountsRequestSchema,
   SaveDraftRequestSchema,
   DeleteDraftRequestSchema,
@@ -102,7 +103,10 @@ export const chatApi = {
     client.updateChannelMember(req),
 
   sendMessage: (req: MessageInitShape<typeof SendMessageRequestSchema>) => client.sendMessage(req),
-  getMessages: (req: MessageInitShape<typeof GetMessagesRequestSchema>) => client.getMessages(req),
+  getMessages: (
+    req: MessageInitShape<typeof GetMessagesRequestSchema>,
+    options?: { signal?: AbortSignal },
+  ) => client.getMessages(req, options),
   updateMessage: (req: MessageInitShape<typeof UpdateMessageRequestSchema>) =>
     client.updateMessage(req),
   getMessageRevisions: (req: MessageInitShape<typeof GetMessageRevisionsRequestSchema>) =>
@@ -129,6 +133,8 @@ export const chatApi = {
   setTyping: (req: MessageInitShape<typeof SetTypingRequestSchema>) => client.setTyping(req),
   markChannelRead: (req: MessageInitShape<typeof MarkChannelReadRequestSchema>) =>
     client.markChannelRead(req),
+  markChannelUnread: (req: MessageInitShape<typeof MarkChannelUnreadRequestSchema>) =>
+    client.markChannelUnread(req),
   getUnreadCounts: (req: MessageInitShape<typeof GetUnreadCountsRequestSchema>) =>
     client.getUnreadCounts(req),
 

@@ -9,11 +9,23 @@ interface CheckboxProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>
   size?: "sm" | "md";
   /** Mixed state for a select-all control: some but not all of its targets are checked. */
   indeterminate?: boolean;
+  /** Classes for the label text, e.g. `truncate` for a one-line control inside a toolbar. */
+  labelClassName?: string;
 }
 
 export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
   (
-    { className, label, description, id, checked, size = "md", indeterminate = false, ...props },
+    {
+      className,
+      label,
+      labelClassName,
+      description,
+      id,
+      checked,
+      size = "md",
+      indeterminate = false,
+      ...props
+    },
     ref,
   ) => {
     const generatedId = useId();
@@ -88,11 +100,14 @@ export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
           </div>
         </div>
         {(label || description) && (
-          <div className="flex flex-col">
+          <div className="flex min-w-0 flex-col">
             {label && (
               <label
                 htmlFor={checkboxId}
-                className="text-sm font-medium text-foreground cursor-pointer select-none"
+                className={cn(
+                  "text-sm font-medium text-foreground cursor-pointer select-none",
+                  labelClassName,
+                )}
               >
                 {label}
               </label>

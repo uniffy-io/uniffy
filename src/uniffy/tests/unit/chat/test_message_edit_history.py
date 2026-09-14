@@ -151,7 +151,13 @@ class TestUpdateMessageRevisions:
         msg = _message()
         ops._get_message_by_id = AsyncMock(return_value=msg)
 
-        with _patch_policy(_policy()):
+        with (
+            _patch_policy(_policy()),
+            patch(
+                "uniffy.domains.chat.messages.mutations.lock_message_pair",
+                AsyncMock(return_value=(msg, None)),
+            ),
+        ):
             result = await ops.update_message(
                 SENDER,
                 ORG,

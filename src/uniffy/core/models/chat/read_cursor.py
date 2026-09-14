@@ -11,7 +11,12 @@ class ChatReadCursor(SQLModel, table=True):
     """Per-user, per-channel read position; Valkey-first, periodically flushed to PG."""
 
     __tablename__ = "chat_read_cursors"
-    __table_args__ = (Index("ix_chat_read_cursors_user", "user_id"),)
+    __table_args__ = (
+        Index("ix_chat_read_cursors_user", "user_id"),
+        Index(
+            "ix_chat_read_cursor_cache_refresh", "revision", postgresql_where="needs_cache_refresh"
+        ),
+    )
 
     channel_id: UUID = Field(
         sa_column=Column(ForeignKey("chat_channels.id", ondelete="CASCADE"), primary_key=True),
@@ -21,6 +26,8 @@ class ChatReadCursor(SQLModel, table=True):
     )
     last_read_message_id: UUID | None = Field(default=None)
     last_read_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True)))
+    revision: UUID = Field(default=UUID(int=0), nullable=False)
+    needs_cache_refresh: bool = Field(default=False, nullable=False)
 
 
 class ChatThreadReadCursor(SQLModel, table=True):

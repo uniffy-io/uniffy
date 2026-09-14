@@ -21,11 +21,16 @@ from uniffy.core.models.chat.channel_member import (
     ChannelRole,
     ChatChannelMember,
 )
-from uniffy.core.models.chat.message import ChatMessage, SenderType
+from uniffy.core.models.chat.message import (
+    ChatMessage,
+    ChatMessageMetadataKey,
+    SenderType,
+)
 from uniffy.core.types import ContentType
 from uniffy.domains.agents.invocation import validate_chat_skill_invocation
 from uniffy.domains.chat.jobs.contracts import POST_SEND_CHAT_MESSAGE
 from uniffy.domains.chat.limits import SEND, check_chat_mutation_limit
+from uniffy.domains.chat.messages.broadcasts import remap_file_references
 from uniffy.domains.chat.messages.limits import MAX_MESSAGE_LENGTH
 from uniffy.domains.chat.messages.stats import bump_channel_message_stats
 from uniffy.domains.chat.policies.operations import (
@@ -55,10 +60,15 @@ class MessageSender:
         sender_name: str = "",
         sender_avatar: str = "",
         attachment_file_ids: list[UUID] | None = None,
+        also_send_to_channel: bool = False,
     ) -> tuple[ChatMessage, str, str]:
         """Persist a message before publishing its non-authoritative effects."""
         if len(content) > MAX_MESSAGE_LENGTH:
             raise ValidationError("content", f"Message exceeds {MAX_MESSAGE_LENGTH} characters")
+        if also_send_to_channel and root_id is None:
+            raise ValidationError(
+                "also_send_to_channel", "Only a thread reply can also be sent to the channel"
+            )
 
         channel = await self.access.get_channel(channel_id, organization_id)
         # SYSTEM breadcrumbs record something that happened, attributed to a user
@@ -125,20 +135,28 @@ class MessageSender:
         self.session.add(message)
         await self.session.flush()
 
+        owned_file_ids: list[UUID] = []
         if attachment_file_ids:
             att_ops = AttachmentOperations(
                 self.session,
                 self.storage,
                 self.search_indexer,
             )
-            for file_id in attachment_file_ids:
-                await att_ops.attach_file(
+            attachment_mapping = {}
+            for file_id in dict.fromkeys(attachment_file_ids):
+                attachment = await att_ops.attach_file(
                     user_id=user_id,
                     organization_id=organization_id,
                     content_type=ContentType.CHAT_MESSAGE,
                     content_id=message.id,
                     source_file_id=file_id,
                 )
+                attachment_mapping[file_id] = attachment.file_id
+                owned_file_ids.append(attachment.file_id)
+            message.content = remap_file_references(content, organization_id, attachment_mapping)
+            message.mentioned_urns = (
+                sorted(extract_all_outgoing_references(message.content, organization_id)) or None
+            )
 
         await bump_channel_message_stats(self.session, channel_id, at=now, is_root=root_id is None)
         if root_id is not None:
@@ -152,8 +170,24 @@ class MessageSender:
                 root_message=root_msg,
             )
 
+        channel_copy: ChatMessage | None = None
+        if also_send_to_channel and root_id is not None:
+            channel_copy = await self._stage_channel_copy(
+                message,
+                user_id=user_id,
+                organization_id=organization_id,
+                channel_id=channel_id,
+                root_id=root_id,
+                content=message.content,
+                urn_mentions=message.mentioned_urns or [],
+                attachment_file_ids=owned_file_ids,
+                at=now,
+            )
+
         await self.session.commit()
         await self.session.refresh(message)
+        if channel_copy is not None:
+            await self.session.refresh(channel_copy)
 
         reply_context: dict[str, str] | None = None
         if reply_to_msg:
@@ -174,9 +208,68 @@ class MessageSender:
             sender_name,
             sender_avatar,
             reply_context,
+            channel_copy=channel_copy,
         )
 
         return message, sender_name, sender_avatar
+
+    async def _stage_channel_copy(
+        self,
+        reply: ChatMessage,
+        *,
+        user_id: UUID,
+        organization_id: UUID,
+        channel_id: UUID,
+        root_id: UUID,
+        content: str,
+        urn_mentions: list[str],
+        attachment_file_ids: list[UUID] | None,
+        at: datetime,
+    ) -> ChatMessage:
+        """Stage both surfaces in one transaction so the pair is visible atomically."""
+        copy = ChatMessage(
+            channel_id=channel_id,
+            sender_id=user_id,
+            sender_type=reply.sender_type,
+            content=content,
+            root_id=None,
+            mentioned_urns=urn_mentions or None,
+            # Agent triggering reads this column, and the pair must invoke an
+            # agent once - the reply is what carries it.
+            mentioned_agent_ids=None,
+            message_metadata={
+                ChatMessageMetadataKey.THREAD_REPLY.value: {
+                    "root_message_id": str(root_id),
+                    "reply_message_id": str(reply.id),
+                }
+            },
+            created_at=at,
+            updated_at=at,
+        )
+        self.session.add(copy)
+        await self.session.flush()
+
+        if attachment_file_ids:
+            att_ops = AttachmentOperations(self.session, self.storage, self.search_indexer)
+            attachment_mapping = {}
+            for file_id in attachment_file_ids:
+                attachment = await att_ops.attach_file(
+                    user_id=user_id,
+                    organization_id=organization_id,
+                    content_type=ContentType.CHAT_MESSAGE,
+                    content_id=copy.id,
+                    source_file_id=file_id,
+                )
+                attachment_mapping[file_id] = attachment.file_id
+            copy.content = remap_file_references(content, organization_id, attachment_mapping)
+            copy.mentioned_urns = (
+                sorted(extract_all_outgoing_references(copy.content, organization_id)) or None
+            )
+
+        # Thread counters, participants and follows belong to the reply alone;
+        # only the channel's own root-message stats move for the copy.
+        await bump_channel_message_stats(self.session, channel_id, at=at, is_root=True)
+        return copy
 
     async def _require_broadcast_allowed(
         self,
@@ -240,6 +333,7 @@ class MessageSender:
         sender_name: str,
         sender_avatar: str,
         reply_context: dict[str, str] | None = None,
+        channel_copy: ChatMessage | None = None,
     ) -> None:
         """Publish the committed message and enqueue its remaining projections."""
         # Sending marks the sender read up to their own message, so the badge
@@ -251,6 +345,10 @@ class MessageSender:
                     await read_ops.mark_channel_read(user_id, channel.id, message.id)
                 else:
                     await read_ops.mark_thread_read(user_id, root_id)
+                    # The copy is a root row the sender just posted; without this
+                    # their own broadcast would badge their other sessions.
+                    if channel_copy is not None:
+                        await read_ops.mark_channel_read(user_id, channel.id, channel_copy.id)
             except Exception:
                 logger.warning(f"Failed to advance sender read cursor for channel {channel.id}")
 
@@ -268,6 +366,19 @@ class MessageSender:
             reply_context,
         )
 
+        if channel_copy is not None:
+            await self._publish_send_event(
+                channel_copy,
+                channel,
+                user_id,
+                None,
+                now,
+                sender_name,
+                sender_avatar,
+                member_ids,
+                None,
+            )
+
         # Agent detection finishes on this session before background work begins.
         await self._maybe_trigger_agents(message, channel)
 
@@ -280,6 +391,7 @@ class MessageSender:
                 str(root_id) if root_id is not None else None,
                 sender_name,
                 dumps_str([str(member_id) for member_id in member_ids]),
+                str(channel_copy.id) if channel_copy is not None else None,
             )
         except Exception:
             logger.opt(exception=True).warning(
