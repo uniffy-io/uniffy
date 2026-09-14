@@ -117,7 +117,7 @@ function ReactionChip({
       <button
         ref={buttonRef}
         className={cn(
-          "focus-ring inline-flex items-center justify-center min-h-11 min-w-11 gap-1 px-1.5 py-0.5 rounded-full border text-xs cursor-pointer transition-colors",
+          "focus-ring inline-flex items-center justify-center pointer-coarse:min-h-11 pointer-coarse:min-w-11 gap-1 px-1.5 py-0.5 rounded-full border text-xs cursor-pointer transition-colors",
           reaction.hasCurrentUser
             ? "border-primary/50 bg-primary/10 text-primary"
             : "border-border bg-muted/50 hover:bg-muted",
@@ -173,7 +173,7 @@ function ReactionBarInner({
       ))}
       <button
         className={cn(
-          "focus-ring inline-flex items-center justify-center min-h-11 min-w-11 px-1.5 py-0.5 rounded-full",
+          "focus-ring inline-flex items-center justify-center pointer-coarse:min-h-11 pointer-coarse:min-w-11 px-1.5 py-0.5 rounded-full",
           "border border-dashed border-border hover:border-primary/50",
           "text-muted-foreground hover:text-foreground transition-colors cursor-pointer",
         )}
