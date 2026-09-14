@@ -2461,6 +2461,38 @@ in the channel that links back. Needs a channel with at least one thread and a s
 - [ ] Mobile: the same toggle sits beside the send button in the thread composer, and the channel
       copy renders the caption and opens the thread on tap.
 
+## Chat: convert a channel between public and private
+
+The conversion rewrites search visibility for the channel's whole history, so the test that matters
+is what a NON-member can find before and after. Needs two browsers, a channel with some history, and
+a second user who is not a member of it.
+
+- [ ] The visibility card appears in channel settings for the owner only. A channel ADMIN and an org
+      admin who is not the owner do not see it; the default channel shows it with "Make private"
+      disabled.
+- [ ] As the non-member, search for a distinctive word from a public channel's history: the messages
+      come back.
+- [ ] The owner uses "Make private" and confirms. The dialog says only members keep access and that
+      search results update shortly.
+- [ ] The channel's icon and label switch to private in both browsers without a reload, and a system
+      message records the change in the transcript.
+- [ ] After a few seconds, the non-member repeats the same search: zero hits, for the messages and
+      for the channel itself. This is the data-exposure check - if the old messages still come back,
+      the ACL refresh did not rewrite `access_mode` and the lock-down leaked.
+- [ ] The non-member can no longer open the channel from a direct link, and a mention chip pointing
+      at one of its messages renders restricted rather than previewing the text.
+- [ ] Flip it back with "Make public". The dialog warns that history becomes visible to everyone.
+      After a few seconds the non-member finds the messages again and can open the channel.
+- [ ] Request access to a private channel as the non-member, then have the owner make the channel
+      public: the pending request disappears from the requester's side without the owner acting on
+      it, and from the settings modal's pending list.
+- [ ] Flip twice in quick succession: the channel ends on the type you picked last and search agrees
+      with it once the refresh settles.
+- [ ] The admin audit log lists "Channel visibility changed" with the before and after values, and
+      the action is selectable in the filter.
+- [ ] Mobile shows the new channel type after the flip without a reload. Mobile has no control to
+      change it.
+
 ## Pre-release sweep
 
 - [ ] All linters green: `./manage.py lint`.
