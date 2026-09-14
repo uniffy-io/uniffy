@@ -161,11 +161,14 @@ class MessageDelivery:
         except Exception:
             logger.warning(f"Failed to fetch notification preferences for channel {channel.id}")
 
+        # Only root rows enter the channel badge; a plain thread reply has no anchor.
+        counted = index_message or message
         await self._publish_unread_notifications(
             channel,
             user_id,
             member_ids,
             visible_mentioned | team_recipient_ids | broadcast_badge_ids,
+            message_id=counted.id if counted.root_id is None else None,
         )
 
         # A broadcast is a mention for badge purposes, but muted and

@@ -24,7 +24,11 @@ from uniffy.domains.chat.cache import (
     invalidate_cached_pinned_messages,
     set_cached_pinned_message_ids,
 )
-from uniffy.domains.chat.messages.broadcasts import lock_message_pair, peer_attachment_content
+from uniffy.domains.chat.messages.broadcasts import (
+    lock_message_pair,
+    peer_attachment_content,
+    released_resource_content,
+)
 from uniffy.domains.chat.messages.converters import get_thread_reply_metadata
 from uniffy.domains.chat.messages.limits import MAX_MESSAGE_LENGTH
 from uniffy.domains.chat.messages.types import ChatMessageAction
@@ -232,11 +236,13 @@ class MessageMutations:
         if peer is not None and not peer.is_deleted:
             await self._index_message(peer, channel, member_ids)
 
-        try:
-            ops = ChatResourceOperations(self.session)
-            await ops.decrement_resources_from_message(channel_id, msg.content)
-        except Exception:
-            logger.warning(f"Resource decrement failed for message {msg.id}")
+        released = released_resource_content(msg, peer)
+        if released is not None:
+            try:
+                ops = ChatResourceOperations(self.session)
+                await ops.decrement_resources_from_message(channel_id, released)
+            except Exception:
+                logger.warning(f"Resource decrement failed for message {msg.id}")
 
     async def pin_message(
         self,

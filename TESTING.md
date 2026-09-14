@@ -2436,7 +2436,7 @@ Needs a channel with more than one page of history and a second browser signed i
 - [ ] Send a message in a channel you had marked unread: the badge clears, matching how the cursor
       advances on send.
 - [ ] Open the Unreads view and use "Mark read" on a channel you have never opened: the row clears
-      and stays cleared after a refresh (it previously sent an empty cursor the server rejected).
+      and stays cleared after a refresh.
       "Mark all read" clears every listed channel the same way.
 - [ ] Mobile: entering a channel with unreads lands on the divider rather than the newest message,
       and the action sheet's "Mark as unread" leaves the badge set for the rest of the visit.

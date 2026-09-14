@@ -154,3 +154,61 @@ async def test_flush_uses_worker_valkey_pool() -> None:
         REFRESH_CHAT_SEARCH_ACL.name,
         str(channel_id),
     )
+
+
+def _copy_lookup_session(message: object, channel: object, found: object | None) -> AsyncMock:
+    session = AsyncMock()
+
+    async def get(model: type, object_id: object) -> object | None:
+        if model is ChatMessage:
+            return message
+        if model is ChatChannel:
+            return channel
+        return None
+
+    session.get.side_effect = get
+    session.execute.return_value = MagicMock(scalar_one_or_none=MagicMock(return_value=found))
+    return session
+
+
+async def _run_post_send(session: AsyncMock, channel_id: object, copy_id: object) -> MagicMock:
+    @asynccontextmanager
+    async def session_factory() -> AsyncIterator[AsyncMock]:
+        yield session
+
+    operations = MagicMock()
+    operations.background_post_send = AsyncMock()
+    with patch("uniffy.domains.chat.jobs.jobs.ChatMessageOperations", return_value=operations):
+        await post_send_chat_message(
+            {SESSION_FACTORY_CTX_KEY: session_factory, SEARCH_INDEXER_CTX_KEY: MagicMock()},
+            str(uuid4()),
+            str(channel_id),
+            str(uuid4()),
+            str(uuid4()),
+            "Ada",
+            dumps_str([]),
+            channel_copy_id=str(copy_id),
+        )
+    return operations
+
+
+async def test_post_send_pins_the_channel_copy_to_the_jobs_channel() -> None:
+    channel_id, copy_id = uuid4(), uuid4()
+    copy = SimpleNamespace(id=copy_id)
+    session = _copy_lookup_session(SimpleNamespace(id=uuid4()), SimpleNamespace(id=channel_id), copy)
+
+    operations = await _run_post_send(session, channel_id, copy_id)
+
+    bound = set(session.execute.await_args.args[0].compile().params.values())
+    assert {copy_id, channel_id} <= bound
+    assert operations.background_post_send.await_args.kwargs == {"index_message": copy}
+
+
+async def test_post_send_ignores_a_copy_that_lives_in_another_channel() -> None:
+    channel_id = uuid4()
+    session = _copy_lookup_session(SimpleNamespace(id=uuid4()), SimpleNamespace(id=channel_id), None)
+
+    operations = await _run_post_send(session, channel_id, uuid4())
+
+    # The reply itself is still indexed; only the foreign row is refused.
+    assert operations.background_post_send.await_args.kwargs == {"index_message": None}

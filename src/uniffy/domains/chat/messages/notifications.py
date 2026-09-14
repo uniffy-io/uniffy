@@ -35,6 +35,8 @@ class MessageNotifications:
         sender_id: UUID,
         member_ids: list[UUID],
         mentioned_user_ids: set[UUID] | None = None,
+        *,
+        message_id: UUID | None = None,
     ) -> None:
         """Publish the unread/mention count change to every member but the sender.
 
@@ -46,6 +48,11 @@ class MessageNotifications:
         try:
             mentioned = mentioned_user_ids or set()
 
+            base: dict = {"channel_id": str(channel.id), "unread_count": 1}
+            # The root row is the channel's newest message and, on a clear badge,
+            # its first unread, so a client can anchor both without a snapshot.
+            if message_id is not None:
+                base["message_id"] = str(message_id)
             events: list[tuple[UUID, str, dict]] = []
             for uid in member_ids:
                 if uid == sender_id:
@@ -53,11 +60,7 @@ class MessageNotifications:
                 events.append((
                     uid,
                     UNREAD_COUNT_CHANGED,
-                    {
-                        "channel_id": str(channel.id),
-                        "unread_count": 1,
-                        "mention_count": 1 if uid in mentioned else 0,
-                    },
+                    {**base, "mention_count": 1 if uid in mentioned else 0},
                 ))
             await publish_user_chat_events(events)
         except Exception:

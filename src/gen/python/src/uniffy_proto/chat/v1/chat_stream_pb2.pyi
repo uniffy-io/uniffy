@@ -381,20 +381,22 @@ class DraftChangedPayload(_message.Message):
     def __init__(self, channel_id: _Optional[str] = ..., root_message_id: _Optional[str] = ..., content: _Optional[str] = ..., deleted: _Optional[bool] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., client_session_id: _Optional[str] = ...) -> None: ...
 
 class UnreadCountPayload(_message.Message):
-    __slots__ = ("channel_id", "unread_count", "mention_count", "absolute", "last_read_message_id", "first_unread_message_id")
+    __slots__ = ("channel_id", "unread_count", "mention_count", "absolute", "last_read_message_id", "first_unread_message_id", "message_id")
     CHANNEL_ID_FIELD_NUMBER: _ClassVar[int]
     UNREAD_COUNT_FIELD_NUMBER: _ClassVar[int]
     MENTION_COUNT_FIELD_NUMBER: _ClassVar[int]
     ABSOLUTE_FIELD_NUMBER: _ClassVar[int]
     LAST_READ_MESSAGE_ID_FIELD_NUMBER: _ClassVar[int]
     FIRST_UNREAD_MESSAGE_ID_FIELD_NUMBER: _ClassVar[int]
+    MESSAGE_ID_FIELD_NUMBER: _ClassVar[int]
     channel_id: str
     unread_count: int
     mention_count: int
     absolute: bool
     last_read_message_id: str
     first_unread_message_id: str
-    def __init__(self, channel_id: _Optional[str] = ..., unread_count: _Optional[int] = ..., mention_count: _Optional[int] = ..., absolute: _Optional[bool] = ..., last_read_message_id: _Optional[str] = ..., first_unread_message_id: _Optional[str] = ...) -> None: ...
+    message_id: str
+    def __init__(self, channel_id: _Optional[str] = ..., unread_count: _Optional[int] = ..., mention_count: _Optional[int] = ..., absolute: _Optional[bool] = ..., last_read_message_id: _Optional[str] = ..., first_unread_message_id: _Optional[str] = ..., message_id: _Optional[str] = ...) -> None: ...
 
 class ThreadActivityPayload(_message.Message):
     __slots__ = ("root_message_id", "channel_id", "channel_name", "reply_count", "last_reply_at")

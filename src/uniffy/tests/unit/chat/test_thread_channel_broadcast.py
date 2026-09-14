@@ -9,11 +9,15 @@ from uniffy.core.errors import ValidationError
 from uniffy.core.models.chat.channel import ChannelType, ChatChannel
 from uniffy.core.models.chat.message import ChatMessage, ChatMessageMetadataKey, SenderType
 from uniffy.core.types import generate_id
-from uniffy.domains.chat.messages.broadcasts import remap_file_references
+from uniffy.domains.chat.messages.broadcasts import (
+    released_resource_content,
+    remap_file_references,
+)
 from uniffy.domains.chat.messages.converters import (
     public_message_metadata,
     thread_reply_context_to_proto,
 )
+from uniffy.domains.chat.messages.operations import ChatMessageOperations
 from uniffy.domains.chat.messages.sending import MessageSender
 
 CHANNEL = generate_id()
@@ -215,3 +219,97 @@ class TestProjection:
     def test_a_plain_message_has_no_context(self) -> None:
         assert thread_reply_context_to_proto(None) is None
         assert thread_reply_context_to_proto({"kind": "tool_call"}) is None
+
+
+class TestReleasedResources:
+    """Which body the resource counter gives back when a row is deleted."""
+
+    @staticmethod
+    def _row(*, root_id, content: str, deleted: bool = False) -> ChatMessage:
+        row = ChatMessage(
+            channel_id=CHANNEL,
+            sender_id=USER,
+            sender_type=SenderType.USER,
+            content=content,
+            root_id=root_id,
+        )
+        row.id = generate_id()
+        row.is_deleted = deleted
+        return row
+
+    def test_a_plain_message_releases_its_own_body(self) -> None:
+        message = self._row(root_id=None, content="root")
+
+        assert released_resource_content(message, None) == "root"
+
+    def test_a_surviving_peer_keeps_the_count(self) -> None:
+        reply = self._row(root_id=ROOT, content="reply")
+        copy = self._row(root_id=None, content="copy")
+
+        assert released_resource_content(copy, reply) is None
+        assert released_resource_content(reply, copy) is None
+
+    def test_the_last_copy_releases_the_reply_body_that_was_counted(self) -> None:
+        reply = self._row(root_id=ROOT, content="reply", deleted=True)
+        copy = self._row(root_id=None, content="copy")
+
+        assert released_resource_content(copy, reply) == "reply"
+
+    def test_the_last_reply_releases_its_own_body(self) -> None:
+        reply = self._row(root_id=ROOT, content="reply")
+        copy = self._row(root_id=None, content="copy", deleted=True)
+
+        assert released_resource_content(reply, copy) == "reply"
+
+
+class TestUnreadDeltaAnchor:
+    """The send delta names the root row the badge is about, and only a root row."""
+
+    @staticmethod
+    async def _post_send(message: ChatMessage, copy: ChatMessage | None) -> AsyncMock:
+        operations = ChatMessageOperations(MagicMock(), search_indexer=MagicMock())
+        operations.session.execute = AsyncMock(return_value=MagicMock(all=MagicMock(return_value=[])))
+        operations.access = MagicMock()
+        operations.access.filter_viewers = AsyncMock(return_value=[])
+        operations._index_message = AsyncMock()
+        operations._update_resources = AsyncMock()
+        operations._publish_unread_notifications = AsyncMock()
+        operations._emit_send_notifications = AsyncMock()
+        channel = ChatChannel(
+            id=CHANNEL,
+            organization_id=ORG,
+            owner_id=USER,
+            name="Test",
+            slug="test",
+            channel_type=ChannelType.PUBLIC,
+        )
+        with patch(
+            "uniffy.domains.chat.drafts.operations.ChatDraftOperations.clear_for_send",
+            AsyncMock(),
+        ):
+            await operations.background_post_send(
+                message, channel, USER, message.root_id, "Ada", [USER], index_message=copy
+            )
+        return operations._publish_unread_notifications
+
+    async def test_a_root_message_anchors_on_itself(self) -> None:
+        message = _reply()
+        message.root_id = None
+
+        publish = await self._post_send(message, None)
+
+        assert publish.await_args.kwargs == {"message_id": message.id}
+
+    async def test_a_broadcast_anchors_on_its_channel_copy(self) -> None:
+        sender = _sender()
+        reply = _reply()
+        copy = await _stage(sender, reply)
+
+        publish = await self._post_send(reply, copy)
+
+        assert publish.await_args.kwargs == {"message_id": copy.id}
+
+    async def test_a_plain_thread_reply_carries_no_anchor(self) -> None:
+        publish = await self._post_send(_reply(), None)
+
+        assert publish.await_args.kwargs == {"message_id": None}

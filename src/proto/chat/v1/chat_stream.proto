@@ -335,6 +335,10 @@ message UnreadCountPayload {
   // Present empty values clear the cursor on an absolute update.
   optional string last_read_message_id = 5;
   optional string first_unread_message_id = 6;
+  // Root message a send delta is about, so a badge raised from the stream can
+  // anchor the unread divider and the newest id without a snapshot. Absent on
+  // cursor moves and on thread replies, which never enter the channel badge.
+  optional string message_id = 7;
 }
 
 message ThreadActivityPayload {

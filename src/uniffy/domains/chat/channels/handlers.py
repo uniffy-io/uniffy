@@ -14,6 +14,7 @@ from uniffy_proto.chat.v1.chat_pb2 import (
     AddMembersResponse,
     ArchiveChannelRequest,
     ArchiveChannelResponse,
+    ChannelUnreadCount,
     CreateAgentChatRequest,
     CreateAgentChatResponse,
     CreateChannelRequest,
@@ -66,7 +67,11 @@ from uniffy.core.auth.principal import (
     current_user_id,
     resolve_organization_id,
 )
-from uniffy.core.converters import SUBJECT_TYPE_FROM_PROTO, timestamp_to_datetime
+from uniffy.core.converters import (
+    SUBJECT_TYPE_FROM_PROTO,
+    datetime_to_timestamp,
+    timestamp_to_datetime,
+)
 from uniffy.core.errors import (
     ConflictError,
     NotFoundError,
@@ -90,11 +95,15 @@ from uniffy.domains.chat.cache import (
 from uniffy.domains.chat.channels.converters import (
     CHANNEL_ROLE_FROM_PROTO,
     CHANNEL_TYPE_FROM_PROTO,
+    NOTIFICATION_LEVEL_TO_PROTO,
     channel_to_proto,
     channel_type_from_proto,
     member_to_proto,
 )
 from uniffy.domains.chat.channels.operations import ChatChannelOperations
+from uniffy.domains.chat.reads.operations import ChatReadStateOperations
+from uniffy.domains.chat.streaming.events import UNREAD_COUNT_CHANGED
+from uniffy.domains.chat.streaming.publisher import publish_user_chat_event
 from uniffy.domains.chat.subjects import ChatSubject
 from uniffy.domains.notifications.operations import NotificationOperations
 from uniffy.domains.search.operations import SearchOperations
@@ -1115,8 +1124,6 @@ class ChannelHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
 
         async with open_session() as session:
-            from uniffy.domains.chat.reads.operations import ChatReadStateOperations
-
             ops = ChatReadStateOperations(session)
             await ops.mark_channel_read(user_id, channel_id, message_id)
 
@@ -1144,11 +1151,6 @@ class ChannelHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
 
         async with open_session() as session:
-            from uniffy.domains.chat.channels.operations import ChatChannelOperations
-            from uniffy.domains.chat.reads.operations import ChatReadStateOperations
-            from uniffy.domains.chat.streaming.events import UNREAD_COUNT_CHANGED
-            from uniffy.domains.chat.streaming.publisher import publish_user_chat_event
-
             ch_ops = ChatChannelOperations(
                 session,
                 storage=self.storage,
@@ -1197,8 +1199,6 @@ class ChannelHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid root_message_id")
 
         async with open_session() as session:
-            from uniffy.domains.chat.reads.operations import ChatReadStateOperations
-
             ops = ChatReadStateOperations(session)
             await ops.mark_thread_read(user_id, root_id)
             return MarkThreadReadResponse()
@@ -1215,15 +1215,6 @@ class ChannelHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
 
         async with open_session() as session:
-            from sqlalchemy import select as sa_select
-
-            from uniffy.core.models.chat.channel_member import (
-                ChatChannelMember as MemberModel,
-            )
-            from uniffy.domains.chat.channels.converters import NOTIFICATION_LEVEL_TO_PROTO
-            from uniffy.domains.chat.channels.operations import ChatChannelOperations
-            from uniffy.domains.chat.reads.operations import ChatReadStateOperations
-
             ch_ops = ChatChannelOperations(
                 session,
                 storage=self.storage,
@@ -1235,21 +1226,17 @@ class ChannelHandlers:
             counts = await read_ops.get_unread_counts(user_id, org_id, channel_ids)
 
             prefs_result = await session.execute(
-                sa_select(
-                    MemberModel.channel_id,
-                    MemberModel.is_muted,
-                    MemberModel.notification_level,
-                    MemberModel.muted_until,
+                select(
+                    ChatChannelMemberModel.channel_id,
+                    ChatChannelMemberModel.is_muted,
+                    ChatChannelMemberModel.notification_level,
+                    ChatChannelMemberModel.muted_until,
                 ).where(
-                    MemberModel.user_id == user_id,
-                    MemberModel.channel_id.in_(channel_ids),
+                    ChatChannelMemberModel.user_id == user_id,
+                    ChatChannelMemberModel.channel_id.in_(channel_ids),
                 )
             )
             prefs_map = {row[0]: (row[1], row[2], row[3]) for row in prefs_result.all()}
-
-            from uniffy_proto.chat.v1.chat_pb2 import ChannelUnreadCount
-
-            from uniffy.core.converters import datetime_to_timestamp
 
             items = []
             for cid, data in counts.items():

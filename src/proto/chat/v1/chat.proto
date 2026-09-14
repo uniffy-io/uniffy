@@ -850,7 +850,8 @@ message MarkChannelUnreadResponse {
   int32 mention_count = 2;
   // Empty when the target was the channel's first message.
   string last_read_message_id = 3;
-  optional string first_unread_message_id = 4;
+  // Empty when nothing after the cursor is unread for this user.
+  string first_unread_message_id = 4;
 }
 
 message MarkThreadReadRequest {

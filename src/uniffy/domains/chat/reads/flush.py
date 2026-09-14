@@ -6,7 +6,7 @@ from typing import Any, cast
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import select, tuple_, update
+from sqlalchemy import Select, select, tuple_, update
 from sqlalchemy.dialects.postgresql import insert
 from valkey.asyncio import Redis
 
@@ -26,23 +26,21 @@ from uniffy.infrastructure.valkey.ops import get_ops_client, ops_call
 logger = logger.bind(component="chat.reads.flush")
 
 
+def pending_cache_refresh() -> Select:
+    # Written as the bare column: the partial index predicate is the bare
+    # boolean, and PostgreSQL does not match it against `IS true`.
+    return (
+        select(ChatReadCursor)
+        .where(ChatReadCursor.needs_cache_refresh)
+        .order_by(ChatReadCursor.revision)
+        .limit(500)
+    )
+
+
 async def reconcile_channel_cursors(client: Redis, session_factory: SessionFactory) -> int:
     repaired: list[tuple[UUID, UUID, UUID]] = []
     async with session_factory() as session:
-        rows = (
-            (
-                await session.execute(
-                    select(ChatReadCursor)
-                    .where(
-                        ChatReadCursor.needs_cache_refresh.is_(True),
-                    )
-                    .order_by(ChatReadCursor.revision)
-                    .limit(500)
-                )
-            )
-            .scalars()
-            .all()
-        )
+        rows = (await session.execute(pending_cache_refresh())).scalars().all()
         for row in rows:
             cursor = ChannelCursor(
                 row.revision,

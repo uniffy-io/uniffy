@@ -71,6 +71,17 @@ async def lock_message_pair(
     return by_id[message.id], by_id.get(peer.id) if peer is not None else None
 
 
+def released_resource_content(message: ChatMessage, peer: ChatMessage | None) -> str | None:
+    """The body whose mentions leave the channel resources with this delete, or None."""
+    # A broadcast pair is counted once, from the reply body, so the count only
+    # moves when the last of the two rows goes.
+    if peer is not None and not peer.is_deleted:
+        return None
+    if message.root_id is None and peer is not None:
+        return peer.content
+    return message.content
+
+
 def remap_file_references(content: str, organization_id: UUID, file_ids: dict[UUID, UUID]) -> str:
     urns = {
         f"urn:uniffy:content:FILE:{source}": f"urn:uniffy:content:FILE:{target}"

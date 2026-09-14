@@ -59,8 +59,19 @@ async def post_send_chat_message(
         if message is None or channel is None:
             return {"status": "skipped", "reason": "message_or_channel_missing"}
         # A reply broadcast to its channel is one message in two rows; the
-        # channel row is the one that carries the search document.
-        channel_copy = await session.get(ChatMessage, copy_id) if copy_id is not None else None
+        # channel row is the one that carries the search document. Pinned to
+        # this channel so a crafted payload cannot index a message from another
+        # channel under this channel's audience.
+        channel_copy = None
+        if copy_id is not None:
+            channel_copy = (
+                await session.execute(
+                    select(ChatMessage).where(
+                        ChatMessage.id == copy_id,
+                        ChatMessage.channel_id == cid,
+                    )
+                )
+            ).scalar_one_or_none()
         await ChatMessageOperations(session, search_indexer=search_indexer).background_post_send(
             message,
             channel,
