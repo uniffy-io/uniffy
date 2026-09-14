@@ -120,6 +120,7 @@ Calls render as a global overlay mounted from `_layout`, not as a route, but eve
 - Static assets stay at the root `assets/`. Reference them with a relative `require()` from the file's location, or add an `@assets` alias if the depth becomes awkward.
 - Platform variants use the `.native.ts` / `.ios.tsx` / `.web.tsx` suffix (for example `features/calls/livekit.ts` + `livekit.native.ts`); import the base specifier and let Metro pick.
 - No barrel `index.ts` files today; imports target the concrete module. If barrels are introduced later, they do not change the layering rules.
+- Unit tests sit beside their feature in `features/<domain>/__tests__/*.test.ts` and run with `./manage.py test -s mobile` (vitest; `vitest.config.ts` mirrors the tsconfig aliases). They cover pure modules only; nothing that imports React Native or Expo runs there. The web suite never imports mobile code.
 - Follow `comment-discipline.md`: no plan/phase/PR references in code or identifiers, no decorative dividers, no restate-the-name docstrings.
 
 ## Adding a feature

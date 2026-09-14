@@ -360,6 +360,51 @@ jobs:
           comment: false
           job_summary: true
 
+  test-mobile:
+    needs: changes
+    if: needs.changes.outputs.mobile == 'true' || needs.changes.outputs.proto == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "pnpm"
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --filter uniffy-mobile...
+
+      - name: Run Vitest
+        run: pnpm --filter uniffy-mobile test:ci
+
+      - name: Upload Vitest JUnit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vitest-mobile-report
+          path: reports/vitest-mobile-report.xml
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Publish test report
+        if: success() || failure()
+        uses: mikepenz/action-junit-report@v5
+        with:
+          report_paths: reports/vitest-mobile-report.xml
+          check_name: Vitest Mobile Results
+          require_tests: true
+          detailed_summary: true
+          comment: false
+          job_summary: true
+
   benchmark-python:
     needs: changes
     if: >
@@ -419,6 +464,7 @@ jobs:
       - typecheck-mobile
       - test-python
       - test-frontend
+      - test-mobile
     runs-on: ubuntu-latest
     steps:
       - name: Verify required jobs succeeded or were skipped

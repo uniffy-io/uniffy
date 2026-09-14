@@ -1,9 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { InfiniteQueryObserver, QueryClient } from "@tanstack/react-query";
-import {
-  messageWindowOptions,
-  type MessageWindowCursor,
-} from "@/../../mobile/src/features/chat/messageWindow";
+import { messageWindowOptions, type MessageWindowCursor } from "@features/chat/messageWindow";
 
 const history = Array.from({ length: 150 }, (_, index) => ({ id: String(index + 1) }));
 
