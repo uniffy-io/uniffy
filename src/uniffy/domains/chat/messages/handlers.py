@@ -116,6 +116,7 @@ class MessageHandlers:
                     sender_name=jwt_name,
                     sender_avatar=jwt_avatar,
                     attachment_file_ids=attachment_file_ids,
+                    also_send_to_channel=request.also_send_to_channel,
                 )
 
                 return SendMessageResponse(

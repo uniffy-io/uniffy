@@ -87,8 +87,13 @@ class MessageDelivery:
         root_id: UUID | None,
         sender_name: str,
         member_ids: list[UUID],
+        index_message: ChatMessage | None = None,
     ) -> None:
-        """Run the independent, non-authoritative post-send projections."""
+        """Run the independent, non-authoritative post-send projections.
+
+        `index_message` redirects the search document to the channel-visible twin
+        of a thread reply, so one logical message keeps one document.
+        """
         # Membership and join messages embed a mention urn for the member the
         # event is about. That urn is the copy, not a ping: nobody gets
         # "Mentioned you" or a mention badge for their own membership event.
@@ -130,7 +135,9 @@ class MessageDelivery:
                 else:
                     broadcast_notify_ids = set(broadcast_badge_ids)
 
-        await self._index_message(message, channel, member_ids, sender_name=sender_name)
+        await self._index_message(
+            index_message or message, channel, member_ids, sender_name=sender_name
+        )
 
         await self._update_resources(channel.id, message.content, user_id)
 

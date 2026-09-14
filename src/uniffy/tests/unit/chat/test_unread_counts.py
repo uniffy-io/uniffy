@@ -26,9 +26,12 @@ def _row(value):
     return result
 
 
-def _ops(aggregate_rows=()):
+def _ops(aggregate_rows=(), latest_rows=()):
     session = MagicMock()
-    session.execute = AsyncMock(side_effect=[_result(), _result(aggregate_rows)])
+    # PG cursor read, then the unread aggregate, then the latest-message lookup.
+    session.execute = AsyncMock(
+        side_effect=[_result(), _result(aggregate_rows), _result(latest_rows)]
+    )
     return ChatReadStateOperations(session)
 
 
@@ -81,6 +84,15 @@ class TestMentionMatch:
         assert counts[channel]["unread_count"] == 4
         assert counts[channel]["mention_count"] == 2
 
+    async def test_latest_message_id_rides_the_same_batch(self) -> None:
+        channel, newest = generate_id(), generate_id()
+        ops = _ops([(channel, 4, 2)], [(channel, newest)])
+
+        counts = await _run(ops, [channel], [generate_id()])
+
+        # A surface that never opened the channel needs this to mark it read.
+        assert counts[channel]["latest_message_id"] == newest
+
     async def test_channel_without_rows_fills_zeros(self) -> None:
         channel = generate_id()
         ops = _ops()
@@ -91,6 +103,7 @@ class TestMentionMatch:
             "unread_count": 0,
             "mention_count": 0,
             "last_read_message_id": None,
+            "latest_message_id": None,
         }
 
     async def test_empty_channel_list_short_circuits(self) -> None:

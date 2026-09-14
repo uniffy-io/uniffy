@@ -44,6 +44,7 @@ class ChatMessageVisibility(StrEnum):
 
 class ChatMessageMetadataKey(StrEnum):
     FORWARD = "forward"
+    THREAD_REPLY = "thread_reply"
 
 
 class ChatMessage(SQLModel, table=True):

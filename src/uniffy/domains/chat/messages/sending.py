@@ -21,7 +21,11 @@ from uniffy.core.models.chat.channel_member import (
     ChannelRole,
     ChatChannelMember,
 )
-from uniffy.core.models.chat.message import ChatMessage, SenderType
+from uniffy.core.models.chat.message import (
+    ChatMessage,
+    ChatMessageMetadataKey,
+    SenderType,
+)
 from uniffy.core.types import ContentType
 from uniffy.domains.agents.invocation import validate_chat_skill_invocation
 from uniffy.domains.chat.jobs.contracts import POST_SEND_CHAT_MESSAGE
@@ -55,10 +59,15 @@ class MessageSender:
         sender_name: str = "",
         sender_avatar: str = "",
         attachment_file_ids: list[UUID] | None = None,
+        also_send_to_channel: bool = False,
     ) -> tuple[ChatMessage, str, str]:
         """Persist a message before publishing its non-authoritative effects."""
         if len(content) > MAX_MESSAGE_LENGTH:
             raise ValidationError("content", f"Message exceeds {MAX_MESSAGE_LENGTH} characters")
+        if also_send_to_channel and root_id is None:
+            raise ValidationError(
+                "also_send_to_channel", "Only a thread reply can also be sent to the channel"
+            )
 
         channel = await self.access.get_channel(channel_id, organization_id)
         # SYSTEM breadcrumbs record something that happened, attributed to a user
@@ -152,8 +161,24 @@ class MessageSender:
                 root_message=root_msg,
             )
 
+        channel_copy: ChatMessage | None = None
+        if also_send_to_channel and root_id is not None:
+            channel_copy = await self._stage_channel_copy(
+                message,
+                user_id=user_id,
+                organization_id=organization_id,
+                channel_id=channel_id,
+                root_id=root_id,
+                content=content,
+                urn_mentions=urn_mentions,
+                attachment_file_ids=attachment_file_ids,
+                at=now,
+            )
+
         await self.session.commit()
         await self.session.refresh(message)
+        if channel_copy is not None:
+            await self.session.refresh(channel_copy)
 
         reply_context: dict[str, str] | None = None
         if reply_to_msg:
@@ -174,9 +199,66 @@ class MessageSender:
             sender_name,
             sender_avatar,
             reply_context,
+            channel_copy=channel_copy,
         )
 
         return message, sender_name, sender_avatar
+
+    async def _stage_channel_copy(
+        self,
+        reply: ChatMessage,
+        *,
+        user_id: UUID,
+        organization_id: UUID,
+        channel_id: UUID,
+        root_id: UUID,
+        content: str,
+        urn_mentions: list[str],
+        attachment_file_ids: list[UUID] | None,
+        at: datetime,
+    ) -> ChatMessage:
+        """Add the channel-visible twin of a thread reply to the caller's transaction.
+
+        Joins the reply's transaction and never commits: the pair exists whole or
+        not at all, so no reader can see a copy pointing at a reply that rolled back.
+        """
+        copy = ChatMessage(
+            channel_id=channel_id,
+            sender_id=user_id,
+            sender_type=reply.sender_type,
+            content=content,
+            root_id=None,
+            mentioned_urns=urn_mentions or None,
+            # Agent triggering reads this column, and the pair must invoke an
+            # agent once - the reply is what carries it.
+            mentioned_agent_ids=None,
+            message_metadata={
+                ChatMessageMetadataKey.THREAD_REPLY.value: {
+                    "root_message_id": str(root_id),
+                    "reply_message_id": str(reply.id),
+                }
+            },
+            created_at=at,
+            updated_at=at,
+        )
+        self.session.add(copy)
+        await self.session.flush()
+
+        if attachment_file_ids:
+            att_ops = AttachmentOperations(self.session, self.storage, self.search_indexer)
+            for file_id in attachment_file_ids:
+                await att_ops.attach_file(
+                    user_id=user_id,
+                    organization_id=organization_id,
+                    content_type=ContentType.CHAT_MESSAGE,
+                    content_id=copy.id,
+                    source_file_id=file_id,
+                )
+
+        # Thread counters, participants and follows belong to the reply alone;
+        # only the channel's own root-message stats move for the copy.
+        await bump_channel_message_stats(self.session, channel_id, at=at, is_root=True)
+        return copy
 
     async def _require_broadcast_allowed(
         self,
@@ -240,6 +322,7 @@ class MessageSender:
         sender_name: str,
         sender_avatar: str,
         reply_context: dict[str, str] | None = None,
+        channel_copy: ChatMessage | None = None,
     ) -> None:
         """Publish the committed message and enqueue its remaining projections."""
         # Sending marks the sender read up to their own message, so the badge
@@ -251,6 +334,10 @@ class MessageSender:
                     await read_ops.mark_channel_read(user_id, channel.id, message.id)
                 else:
                     await read_ops.mark_thread_read(user_id, root_id)
+                    # The copy is a root row the sender just posted; without this
+                    # their own broadcast would badge their other sessions.
+                    if channel_copy is not None:
+                        await read_ops.mark_channel_read(user_id, channel.id, channel_copy.id)
             except Exception:
                 logger.warning(f"Failed to advance sender read cursor for channel {channel.id}")
 
@@ -268,6 +355,19 @@ class MessageSender:
             reply_context,
         )
 
+        if channel_copy is not None:
+            await self._publish_send_event(
+                channel_copy,
+                channel,
+                user_id,
+                None,
+                now,
+                sender_name,
+                sender_avatar,
+                member_ids,
+                None,
+            )
+
         # Agent detection finishes on this session before background work begins.
         await self._maybe_trigger_agents(message, channel)
 
@@ -280,6 +380,7 @@ class MessageSender:
                 str(root_id) if root_id is not None else None,
                 sender_name,
                 dumps_str([str(member_id) for member_id in member_ids]),
+                str(channel_copy.id) if channel_copy is not None else None,
             )
         except Exception:
             logger.opt(exception=True).warning(

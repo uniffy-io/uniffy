@@ -335,6 +335,17 @@ message ChatMessage {
   optional ForwardContext forward_context = 25;
   // True for a forwarded row even when forward_context is withheld.
   bool is_forwarded = 26;
+  // Set on the channel copy of a thread reply that was broadcast to the
+  // channel in one send.
+  optional ThreadReplyContext thread_reply_context = 27;
+}
+
+// Links a channel message back to the thread reply it was posted alongside.
+// Both rows live in the same channel under the same access, so this carries
+// ids only - no snapshot and no access-gated projection.
+message ThreadReplyContext {
+  string root_message_id = 1;
+  string reply_message_id = 2;
 }
 
 // ReactionGroup represents a unique emoji with its reactors.
@@ -622,6 +633,9 @@ message SendMessageRequest {
   // and before any agent invocation is enqueued, so downstream consumers
   // (notifications, chat-triggered agents) observe a consistent view.
   repeated string attachment_file_ids = 7;
+  // Also post this thread reply to the channel as a root message, linked back
+  // to the thread. Only valid with root_id set.
+  bool also_send_to_channel = 8;
 }
 
 message SendMessageResponse {

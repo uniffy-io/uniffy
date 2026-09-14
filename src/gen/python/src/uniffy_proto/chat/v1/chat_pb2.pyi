@@ -226,7 +226,7 @@ class ReplyContext(_message.Message):
     def __init__(self, id: _Optional[str] = ..., sender_name: _Optional[str] = ..., content_preview: _Optional[str] = ...) -> None: ...
 
 class ChatMessage(_message.Message):
-    __slots__ = ("id", "channel_id", "sender_id", "sender_type", "content", "root_id", "edited_at", "is_deleted", "is_pinned", "metadata", "created_at", "reply_to_id", "thread", "reactions", "sender_name", "sender_avatar_url", "reply_context", "forward_context", "is_forwarded")
+    __slots__ = ("id", "channel_id", "sender_id", "sender_type", "content", "root_id", "edited_at", "is_deleted", "is_pinned", "metadata", "created_at", "reply_to_id", "thread", "reactions", "sender_name", "sender_avatar_url", "reply_context", "forward_context", "is_forwarded", "thread_reply_context")
     class MetadataEntry(_message.Message):
         __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]
@@ -253,6 +253,7 @@ class ChatMessage(_message.Message):
     REPLY_CONTEXT_FIELD_NUMBER: _ClassVar[int]
     FORWARD_CONTEXT_FIELD_NUMBER: _ClassVar[int]
     IS_FORWARDED_FIELD_NUMBER: _ClassVar[int]
+    THREAD_REPLY_CONTEXT_FIELD_NUMBER: _ClassVar[int]
     id: str
     channel_id: str
     sender_id: str
@@ -272,7 +273,16 @@ class ChatMessage(_message.Message):
     reply_context: ReplyContext
     forward_context: ForwardContext
     is_forwarded: bool
-    def __init__(self, id: _Optional[str] = ..., channel_id: _Optional[str] = ..., sender_id: _Optional[str] = ..., sender_type: _Optional[_Union[SenderType, str]] = ..., content: _Optional[str] = ..., root_id: _Optional[str] = ..., edited_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., is_deleted: _Optional[bool] = ..., is_pinned: _Optional[bool] = ..., metadata: _Optional[_Mapping[str, str]] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., reply_to_id: _Optional[str] = ..., thread: _Optional[_Union[ThreadInfo, _Mapping]] = ..., reactions: _Optional[_Iterable[_Union[ReactionGroup, _Mapping]]] = ..., sender_name: _Optional[str] = ..., sender_avatar_url: _Optional[str] = ..., reply_context: _Optional[_Union[ReplyContext, _Mapping]] = ..., forward_context: _Optional[_Union[ForwardContext, _Mapping]] = ..., is_forwarded: _Optional[bool] = ...) -> None: ...
+    thread_reply_context: ThreadReplyContext
+    def __init__(self, id: _Optional[str] = ..., channel_id: _Optional[str] = ..., sender_id: _Optional[str] = ..., sender_type: _Optional[_Union[SenderType, str]] = ..., content: _Optional[str] = ..., root_id: _Optional[str] = ..., edited_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., is_deleted: _Optional[bool] = ..., is_pinned: _Optional[bool] = ..., metadata: _Optional[_Mapping[str, str]] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., reply_to_id: _Optional[str] = ..., thread: _Optional[_Union[ThreadInfo, _Mapping]] = ..., reactions: _Optional[_Iterable[_Union[ReactionGroup, _Mapping]]] = ..., sender_name: _Optional[str] = ..., sender_avatar_url: _Optional[str] = ..., reply_context: _Optional[_Union[ReplyContext, _Mapping]] = ..., forward_context: _Optional[_Union[ForwardContext, _Mapping]] = ..., is_forwarded: _Optional[bool] = ..., thread_reply_context: _Optional[_Union[ThreadReplyContext, _Mapping]] = ...) -> None: ...
+
+class ThreadReplyContext(_message.Message):
+    __slots__ = ("root_message_id", "reply_message_id")
+    ROOT_MESSAGE_ID_FIELD_NUMBER: _ClassVar[int]
+    REPLY_MESSAGE_ID_FIELD_NUMBER: _ClassVar[int]
+    root_message_id: str
+    reply_message_id: str
+    def __init__(self, root_message_id: _Optional[str] = ..., reply_message_id: _Optional[str] = ...) -> None: ...
 
 class ReactionGroup(_message.Message):
     __slots__ = ("emoji", "count", "user_ids", "current_user_reacted")
@@ -645,7 +655,7 @@ class UpdateMemberRoleResponse(_message.Message):
     def __init__(self, member: _Optional[_Union[ChatChannelMember, _Mapping]] = ...) -> None: ...
 
 class SendMessageRequest(_message.Message):
-    __slots__ = ("organization_id", "channel_id", "content", "root_id", "metadata", "reply_to_id", "attachment_file_ids")
+    __slots__ = ("organization_id", "channel_id", "content", "root_id", "metadata", "reply_to_id", "attachment_file_ids", "also_send_to_channel")
     class MetadataEntry(_message.Message):
         __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]
@@ -660,6 +670,7 @@ class SendMessageRequest(_message.Message):
     METADATA_FIELD_NUMBER: _ClassVar[int]
     REPLY_TO_ID_FIELD_NUMBER: _ClassVar[int]
     ATTACHMENT_FILE_IDS_FIELD_NUMBER: _ClassVar[int]
+    ALSO_SEND_TO_CHANNEL_FIELD_NUMBER: _ClassVar[int]
     organization_id: str
     channel_id: str
     content: str
@@ -667,7 +678,8 @@ class SendMessageRequest(_message.Message):
     metadata: _containers.ScalarMap[str, str]
     reply_to_id: str
     attachment_file_ids: _containers.RepeatedScalarFieldContainer[str]
-    def __init__(self, organization_id: _Optional[str] = ..., channel_id: _Optional[str] = ..., content: _Optional[str] = ..., root_id: _Optional[str] = ..., metadata: _Optional[_Mapping[str, str]] = ..., reply_to_id: _Optional[str] = ..., attachment_file_ids: _Optional[_Iterable[str]] = ...) -> None: ...
+    also_send_to_channel: bool
+    def __init__(self, organization_id: _Optional[str] = ..., channel_id: _Optional[str] = ..., content: _Optional[str] = ..., root_id: _Optional[str] = ..., metadata: _Optional[_Mapping[str, str]] = ..., reply_to_id: _Optional[str] = ..., attachment_file_ids: _Optional[_Iterable[str]] = ..., also_send_to_channel: _Optional[bool] = ...) -> None: ...
 
 class SendMessageResponse(_message.Message):
     __slots__ = ("message",)

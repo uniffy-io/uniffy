@@ -51,6 +51,8 @@ async def test_committed_message_enqueues_owner_post_send_job() -> None:
         str(root_id),
         "Ada",
         dumps_str([str(member_id) for member_id in member_ids]),
+        # No channel copy: this reply was not broadcast to its channel.
+        None,
     )
 
 
@@ -106,6 +108,7 @@ async def test_post_send_uses_worker_composed_dependencies() -> None:
         root_id,
         "Ada",
         member_ids,
+        index_message=None,
     )
 
 
