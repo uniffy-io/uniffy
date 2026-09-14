@@ -1295,6 +1295,22 @@ class ConvertGroupDmToChannelResponse(_message.Message):
     channel: ChatChannel
     def __init__(self, channel: _Optional[_Union[ChatChannel, _Mapping]] = ...) -> None: ...
 
+class ChangeChannelVisibilityRequest(_message.Message):
+    __slots__ = ("organization_id", "channel_id", "channel_type")
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    CHANNEL_ID_FIELD_NUMBER: _ClassVar[int]
+    CHANNEL_TYPE_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    channel_id: str
+    channel_type: ChannelType
+    def __init__(self, organization_id: _Optional[str] = ..., channel_id: _Optional[str] = ..., channel_type: _Optional[_Union[ChannelType, str]] = ...) -> None: ...
+
+class ChangeChannelVisibilityResponse(_message.Message):
+    __slots__ = ("channel",)
+    CHANNEL_FIELD_NUMBER: _ClassVar[int]
+    channel: ChatChannel
+    def __init__(self, channel: _Optional[_Union[ChatChannel, _Mapping]] = ...) -> None: ...
+
 class AgentChatFolder(_message.Message):
     __slots__ = ("id", "name", "position")
     ID_FIELD_NUMBER: _ClassVar[int]

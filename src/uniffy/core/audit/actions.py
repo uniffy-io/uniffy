@@ -192,6 +192,7 @@ class Action:
     # Chat
     CHAT_CHANNEL_CREATED = "chat_channel.created"
     CHAT_CHANNEL_UPDATED = "chat_channel.updated"
+    CHAT_CHANNEL_VISIBILITY_CHANGED = "chat_channel.visibility_changed"
     CHAT_CHANNEL_ARCHIVED = "chat_channel.archived"
     CHAT_CHANNEL_UNARCHIVED = "chat_channel.unarchived"
     CHAT_CHANNEL_DELETED = "chat_channel.deleted"

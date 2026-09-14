@@ -8,7 +8,7 @@ from uniffy.core.errors import NotFoundError, PermissionDeniedError
 from uniffy.core.models.chat.channel import ChannelType
 from uniffy.core.models.chat.message import ChatMessage
 from uniffy.core.types import AccessMode, ContentRole
-from uniffy.domains.chat.access import ChatAccessChecker
+from uniffy.domains.chat.access import ChatAccessChecker, lock_channel_visibility
 
 
 @dataclass(frozen=True, slots=True)
@@ -36,7 +36,9 @@ async def require_message_attachment_edit(
         raise NotFoundError("ChatMessage", str(message_id))
 
     checker = ChatAccessChecker(session)
-    channel = await checker.get_channel(row.channel_id, organization_id)
+    # Shared: the policy holds until this transaction commits, and only a flip
+    # in flight makes it wait.
+    channel = await lock_channel_visibility(session, row.channel_id, organization_id, shared=True)
     await checker.check_access(user_id, organization_id, channel)
     if row.sender_id != user_id and not await checker.require_elevated(
         user_id,

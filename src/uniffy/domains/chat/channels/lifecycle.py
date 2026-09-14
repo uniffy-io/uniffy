@@ -26,6 +26,7 @@ from uniffy.core.types import (
     ContentType,
     SubjectType,
 )
+from uniffy.domains.chat.access import lock_channel_visibility
 from uniffy.domains.chat.cache import (
     invalidate_cached_dm_peers,
     invalidate_cached_member_ids,
@@ -223,10 +224,11 @@ class ChannelLifecycle:
     ) -> ChatChannel:
         """Self-join a PUBLIC channel."""
         await self.access.require_org_member(user_id, organization_id)
-        channel = await self._fetch_by_id(channel_id, organization_id)
-        if not channel:
-            raise NotFoundError("channel", channel_id)
-
+        # A lock-down in flight commits before the type is read, so a joiner
+        # cannot slip into a channel that is going private.
+        channel = await lock_channel_visibility(
+            self.session, channel_id, organization_id, shared=True
+        )
         if channel.channel_type != ChannelType.PUBLIC:
             raise PermissionDeniedError("join", "channel")
 

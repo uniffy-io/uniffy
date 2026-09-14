@@ -10,16 +10,17 @@ from sqlalchemy import and_, delete, select, update
 from uniffy.core.database import SESSION_FACTORY_CTX_KEY, SessionFactory
 from uniffy.core.jobs.locks import acquire_owned_job_lock, release_owned_job_lock
 from uniffy.core.json_codec import loads
-from uniffy.core.models.chat.channel import ChatChannel
+from uniffy.core.models.chat.channel import ChannelType, ChatChannel
 from uniffy.core.models.chat.channel_member import ChatChannelMember
 from uniffy.core.models.chat.message import ChatMessage
 from uniffy.core.models.chat.search_acl_refresh import ChatSearchAclRefresh
 from uniffy.core.models.login.organization_member import OrganizationMember
 from uniffy.core.search import SEARCH_INDEXER_CTX_KEY, SearchIndexer
 from uniffy.core.search.workspace import WORKSPACE_SEARCH_CTX_KEY, WorkspaceSearch
-from uniffy.core.types import SubjectType
+from uniffy.core.types import AccessMode, ContentRole, ContentType, SubjectType
 from uniffy.domains.chat.jobs.contracts import REFRESH_CHAT_SEARCH_ACL
 from uniffy.domains.chat.messages.operations import ChatMessageOperations
+from uniffy.domains.files.attachments.derived import refresh_attachment_parent_search
 from uniffy.infrastructure.database import open_session
 from uniffy.infrastructure.valkey.ops import get_ops_client
 from uniffy.vendor.arq import Retry
@@ -140,6 +141,21 @@ async def _process_channel(
             return {"status": "empty"}
 
         version = row.version
+        channel_type = (
+            await session.execute(
+                select(ChatChannel.channel_type).where(
+                    ChatChannel.id == channel_id,
+                    ChatChannel.organization_id == row.organization_id,
+                )
+            )
+        ).scalar_one_or_none()
+        if channel_type is None:
+            await session.execute(
+                delete(ChatSearchAclRefresh).where(ChatSearchAclRefresh.channel_id == channel_id)
+            )
+            await session.commit()
+            return {"status": "skipped", "reason": "channel_missing"}
+
         member_result = await session.execute(
             select(ChatChannelMember.user_id)
             .join(
@@ -157,11 +173,30 @@ async def _process_channel(
         )
         member_ids = [user_id for user_id in member_result.scalars().all() if user_id]
 
+        # Derived from the channel's live type rather than carried on the row, so
+        # a replay after a second flip writes the current answer and any doc that
+        # drifted is healed by the next refresh. Must match the shapes
+        # `ChatMessageIndexing` writes at send time.
+        is_public = channel_type == ChannelType.PUBLIC
+        access_mode = (AccessMode.OPEN_TO_ORG if is_public else AccessMode.EXPLICIT_MEMBERS).value
+        baseline_role = ContentRole.VIEWER.value if is_public else None
+
         try:
             updated = await search.update_chat_message_sharing(
                 organization_id=row.organization_id,
                 channel_id=channel_id,
-                shared_user_ids=member_ids,
+                # An open-up must not leave the old roster behind on docs that
+                # now grant org-wide.
+                shared_user_ids=[] if is_public else member_ids,
+                access_mode=access_mode,
+                baseline_role=baseline_role,
+            )
+            await refresh_attachment_parent_search(
+                session,
+                SearchIndexer(search),
+                organization_id=row.organization_id,
+                content_type=ContentType.CHAT_MESSAGE,
+                content_ids=select(ChatMessage.id).where(ChatMessage.channel_id == channel_id),
             )
         except Exception:
             await session.rollback()

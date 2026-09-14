@@ -151,14 +151,24 @@ class WorkspaceSearch:
         organization_id: UUID,
         channel_id: UUID,
         shared_user_ids: list[UUID],
+        access_mode: str,
+        baseline_role: str | None,
     ) -> int:
+        """Historical public documents need policy fields refreshed as well as membership."""
+        # Meilisearch keeps an omitted key untouched, so a None baseline has to
+        # be written explicitly or OPEN_TO_ORG's VIEWER would survive.
+        patch: dict[str, Any] = {
+            "shared_user_ids": [str(value) for value in shared_user_ids],
+            "access_mode": access_mode,
+            "baseline_role": baseline_role,
+        }
         return await self._patch_matching(
             all_of(
                 SearchTerm("organization_id", str(organization_id)),
                 SearchTerm("entity_type", "chat_message"),
                 SearchTerm("metadata.channel_id", str(channel_id)),
             ),
-            {"shared_user_ids": [str(value) for value in shared_user_ids]},
+            patch,
         )
 
     async def update_task_sharing(

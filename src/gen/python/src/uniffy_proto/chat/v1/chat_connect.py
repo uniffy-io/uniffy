@@ -138,6 +138,9 @@ class ChatService(Protocol):
     async def convert_group_dm_to_channel(self, request: chat_dot_v1_dot_chat__pb2.ConvertGroupDmToChannelRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.ConvertGroupDmToChannelResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
+    async def change_channel_visibility(self, request: chat_dot_v1_dot_chat__pb2.ChangeChannelVisibilityRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.ChangeChannelVisibilityResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
     async def create_agent_chat(self, request: chat_dot_v1_dot_chat__pb2.CreateAgentChatRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.CreateAgentChatResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
@@ -621,6 +624,16 @@ class ChatServiceASGIApplication(ConnectASGIApplication[ChatService]):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.convert_group_dm_to_channel,
+                ),
+                "/chat.v1.ChatService/ChangeChannelVisibility": Endpoint.unary(
+                    method=MethodInfo(
+                        name="ChangeChannelVisibility",
+                        service_name="chat.v1.ChatService",
+                        input=chat_dot_v1_dot_chat__pb2.ChangeChannelVisibilityRequest,
+                        output=chat_dot_v1_dot_chat__pb2.ChangeChannelVisibilityResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.change_channel_visibility,
                 ),
                 "/chat.v1.ChatService/CreateAgentChat": Endpoint.unary(
                     method=MethodInfo(
@@ -1696,6 +1709,26 @@ class ChatServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
+    async def change_channel_visibility(
+        self,
+        request: chat_dot_v1_dot_chat__pb2.ChangeChannelVisibilityRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> chat_dot_v1_dot_chat__pb2.ChangeChannelVisibilityResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ChangeChannelVisibility",
+                service_name="chat.v1.ChatService",
+                input=chat_dot_v1_dot_chat__pb2.ChangeChannelVisibilityRequest,
+                output=chat_dot_v1_dot_chat__pb2.ChangeChannelVisibilityResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
     async def create_agent_chat(
         self,
         request: chat_dot_v1_dot_chat__pb2.CreateAgentChatRequest,
@@ -2301,6 +2334,8 @@ class ChatServiceSync(Protocol):
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def convert_group_dm_to_channel(self, request: chat_dot_v1_dot_chat__pb2.ConvertGroupDmToChannelRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.ConvertGroupDmToChannelResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def change_channel_visibility(self, request: chat_dot_v1_dot_chat__pb2.ChangeChannelVisibilityRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.ChangeChannelVisibilityResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def create_agent_chat(self, request: chat_dot_v1_dot_chat__pb2.CreateAgentChatRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.CreateAgentChatResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def rename_agent_chat(self, request: chat_dot_v1_dot_chat__pb2.RenameAgentChatRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.RenameAgentChatResponse:
@@ -2758,6 +2793,16 @@ class ChatServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.convert_group_dm_to_channel,
+                ),
+                "/chat.v1.ChatService/ChangeChannelVisibility": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="ChangeChannelVisibility",
+                        service_name="chat.v1.ChatService",
+                        input=chat_dot_v1_dot_chat__pb2.ChangeChannelVisibilityRequest,
+                        output=chat_dot_v1_dot_chat__pb2.ChangeChannelVisibilityResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.change_channel_visibility,
                 ),
                 "/chat.v1.ChatService/CreateAgentChat": EndpointSync.unary(
                     method=MethodInfo(
@@ -3827,6 +3872,26 @@ class ChatServiceClientSync(ConnectClientSync):
                 service_name="chat.v1.ChatService",
                 input=chat_dot_v1_dot_chat__pb2.ConvertGroupDmToChannelRequest,
                 output=chat_dot_v1_dot_chat__pb2.ConvertGroupDmToChannelResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def change_channel_visibility(
+        self,
+        request: chat_dot_v1_dot_chat__pb2.ChangeChannelVisibilityRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> chat_dot_v1_dot_chat__pb2.ChangeChannelVisibilityResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ChangeChannelVisibility",
+                service_name="chat.v1.ChatService",
+                input=chat_dot_v1_dot_chat__pb2.ChangeChannelVisibilityRequest,
+                output=chat_dot_v1_dot_chat__pb2.ChangeChannelVisibilityResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

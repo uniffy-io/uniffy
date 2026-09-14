@@ -433,9 +433,11 @@ export const unarchiveChannel = createAsyncThunk<
   string,
   { state: RootState; rejectValue: string }
 >("chat/unarchiveChannel", async (channelId, { getState, dispatch, rejectWithValue }) => {
+  const { auth } = getState();
   try {
     const organizationId = getOrganizationId(getState());
     const response = await chatApi.unarchiveChannel({ organizationId, channelId });
+    if (!isChatSessionCurrent(auth, getState().auth)) return channelId;
     dispatch(invalidateArchivedChannels({}));
     if (response.channel) {
       dispatch(addChannel(channelToPlain(response.channel)));
@@ -445,6 +447,37 @@ export const unarchiveChannel = createAsyncThunk<
     return rejectWithValue(error instanceof Error ? error.message : "Failed to restore channel");
   }
 });
+
+export const changeChannelVisibility = createAsyncThunk<
+  string,
+  { channelId: string; channelType: "PUBLIC" | "PRIVATE" },
+  { state: RootState; rejectValue: string }
+>(
+  "chat/changeChannelVisibility",
+  async ({ channelId, channelType }, { getState, dispatch, rejectWithValue }) => {
+    const { auth } = getState();
+    try {
+      const organizationId = getOrganizationId(getState());
+      const response = await chatApi.changeChannelVisibility({
+        organizationId,
+        channelId,
+        channelType: channelType === "PUBLIC" ? ProtoChannelType.PUBLIC : ProtoChannelType.PRIVATE,
+      });
+      // The type drives the sidebar icon and the browse list; the server also
+      // publishes CHANNEL_UPDATED, so this only shortens the gap for the actor.
+      // The channel is already in the store while its settings are open, and
+      // a workspace switch mid-flight must not plant it in the next sidebar.
+      if (response.channel && isChatSessionCurrent(auth, getState().auth)) {
+        dispatch(updateChannel(channelToPlain(response.channel)));
+      }
+      return channelId;
+    } catch (error) {
+      return rejectWithValue(
+        error instanceof Error ? error.message : "Failed to change channel visibility",
+      );
+    }
+  },
+);
 
 export const deleteChannel = createAsyncThunk<
   string,

@@ -16,6 +16,7 @@ import {
 } from "@phosphor-icons/react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/ui/modal";
@@ -49,6 +50,7 @@ import {
   fetchMembers,
   deleteChannel,
   archiveChannel,
+  changeChannelVisibility,
 } from "@/features/chat/store/chatThunks";
 import { useChatPermissions } from "@/features/chat/hooks/useChatPermissions";
 import { formatDateFull } from "@/shared/utils/dateFormatting";
@@ -106,6 +108,8 @@ export function ChannelSettingsModal() {
   const [memberToRemove, setMemberToRemove] = useState<ChatChannelMember | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isArchiving, setIsArchiving] = useState(false);
+  const [showVisibilityConfirm, setShowVisibilityConfirm] = useState(false);
+  const [isChangingVisibility, setIsChangingVisibility] = useState(false);
   const [expandedAgentId, setExpandedAgentId] = useState<string | null>(null);
 
   const addInputRef = useRef<HTMLInputElement>(null);
@@ -189,6 +193,12 @@ export function ChannelSettingsModal() {
   }, [actorIsOwner]);
 
   const isChannelPublic = activeChannel?.channelType === "PUBLIC";
+  // Ownership, not `actorIsOwner`: that folds in org admins, and the backend
+  // treats visibility as a content decision they deliberately cannot make.
+  const canChangeVisibility =
+    currentUserRole === "OWNER" &&
+    (activeChannel?.channelType === "PUBLIC" || activeChannel?.channelType === "PRIVATE");
+  const visibilityLocked = isChannelPublic && !!activeChannel?.isDefault;
 
   const {
     results: searchResults,
@@ -310,6 +320,21 @@ export function ChannelSettingsModal() {
       navigate("/chat");
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  const handleChangeVisibility = async () => {
+    setIsChangingVisibility(true);
+    try {
+      await dispatch(
+        changeChannelVisibility({
+          channelId,
+          channelType: isChannelPublic ? "PRIVATE" : "PUBLIC",
+        }),
+      ).unwrap();
+      setShowVisibilityConfirm(false);
+    } finally {
+      setIsChangingVisibility(false);
     }
   };
 
@@ -473,6 +498,37 @@ export function ChannelSettingsModal() {
                       disabled={!canEdit || isSaving}
                     />
                   </div>
+                )}
+
+                {canChangeVisibility && (
+                  <Card tone="card" className="p-4">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-foreground">Visibility</p>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {isChannelPublic
+                            ? "Anyone in the organization can read and join this channel."
+                            : "Only members can read this channel or find its messages in search."}
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowVisibilityConfirm(true)}
+                        disabled={
+                          visibilityLocked || isChangingVisibility || isArchiving || isDeleting
+                        }
+                      >
+                        {isChannelPublic ? "Make private" : "Make public"}
+                      </Button>
+                    </div>
+                    {visibilityLocked && (
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        The default channel has to stay public.
+                      </p>
+                    )}
+                  </Card>
                 )}
 
                 {activeChannel.createdAt && (
@@ -844,6 +900,21 @@ export function ChannelSettingsModal() {
         confirmLabel="Archive channel"
         variant="warning"
         loading={isArchiving}
+      />
+
+      <ConfirmDialog
+        isOpen={showVisibilityConfirm}
+        onClose={() => setShowVisibilityConfirm(false)}
+        onConfirm={handleChangeVisibility}
+        title={isChannelPublic ? "Make channel private" : "Make channel public"}
+        message={
+          isChannelPublic
+            ? `Only members keep access to #${activeChannel.name}. Search results update shortly.`
+            : `The history of #${activeChannel.name} becomes visible to everyone in the organization.`
+        }
+        confirmLabel={isChannelPublic ? "Make private" : "Make public"}
+        variant="warning"
+        loading={isChangingVisibility}
       />
 
       <ConfirmDialog
