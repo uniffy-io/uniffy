@@ -6,15 +6,24 @@ from typing import Any, cast
 from uuid import UUID
 
 from loguru import logger
+from sqlalchemy.dialects.postgresql import insert
+from valkey.asyncio import Redis
 
 from uniffy.core.database import SESSION_FACTORY_CTX_KEY, SessionFactory
+from uniffy.core.models.chat.read_cursor import ChatThreadReadCursor
+from uniffy.domains.chat.reads.cursors import (
+    CURSOR_KEY,
+    DIRTY_CURSORS,
+    ChannelCursor,
+    clean_cursors,
+    upsert_cursors,
+)
+from uniffy.infrastructure.valkey.ops import get_ops_client, ops_call
 
-LOGGER_COMPONENT = "chat.reads.flush"
+logger = logger.bind(component="chat.reads.flush")
 
 
 async def flush_chat_read_cursors(ctx: dict[str, Any]) -> dict[str, Any]:
-    from uniffy.infrastructure.valkey.ops import get_ops_client
-
     client = get_ops_client()
     if client is None:
         return {"status": "skipped", "reason": "valkey not available"}
@@ -26,7 +35,6 @@ async def flush_chat_read_cursors(ctx: dict[str, Any]) -> dict[str, Any]:
     if channel_count > 0 or thread_count > 0:
         logger.info(
             f"Flushed {channel_count} channel + {thread_count} thread read cursors",
-            component=LOGGER_COMPONENT,
         )
 
     return {
@@ -36,99 +44,60 @@ async def flush_chat_read_cursors(ctx: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-async def _flush_channel_cursors(client: Any, session_factory: SessionFactory) -> int:
-    dirty_set_key = "chat:dirty_read_cursors"
-
+async def _flush_channel_cursors(client: Redis, session_factory: SessionFactory) -> int:
     try:
-        members = await client.smembers(dirty_set_key)
+        async with ops_call("chat", "cursor_dirty"):
+            members = await client.smembers(DIRTY_CURSORS)
     except Exception:
-        logger.warning("Failed to read dirty channel cursors set", component=LOGGER_COMPONENT)
+        logger.opt(exception=True).warning("Failed to read dirty channel cursors")
         return 0
 
-    if not members:
-        return 0
-
-    parsed: list[tuple[UUID, UUID, str]] = []  # (user_id, channel_id, valkey_key)
+    parsed: list[tuple[UUID, UUID, str, str]] = []
     for member in members:
         try:
-            parts = str(member).split(":", 1)
-            if len(parts) != 2:
-                continue
-            user_id = UUID(parts[0])
-            channel_id = UUID(parts[1])
-            key = f"chat:read:{user_id}:{channel_id}"
-            parsed.append((user_id, channel_id, key))
-        except ValueError, IndexError:
+            user, channel = member.split(":", 1)
+            user_id, channel_id = UUID(user), UUID(channel)
+            key = CURSOR_KEY.format(user_id=user_id, channel_id=channel_id)
+            parsed.append((user_id, channel_id, key, member))
+        except ValueError:
             continue
-
     if not parsed:
         return 0
 
-    valkey_keys = [p[2] for p in parsed]
-    try:
-        values = await client.mget(*valkey_keys)
-    except Exception:
-        logger.warning("Failed to MGET channel cursors", component=LOGGER_COMPONENT)
-        return 0
-
-    rows_to_upsert = []
-    for i, raw in enumerate(values):
-        if not raw:
-            continue
-        try:
-            val_parts = str(raw).split(":", 1)
-            if len(val_parts) != 2:
-                continue
-            user_id, channel_id, _ = parsed[i]
-            message_id = UUID(val_parts[0])
-            read_at = datetime.fromisoformat(val_parts[1])
-            rows_to_upsert.append({
-                "channel_id": channel_id,
-                "user_id": user_id,
-                "last_read_message_id": message_id,
-                "last_read_at": read_at,
-            })
-        except ValueError, IndexError:
-            continue
-
-    if not rows_to_upsert:
-        with contextlib.suppress(Exception):
-            await client.srem(dirty_set_key, *members)
-        return 0
-
     flushed = 0
-    async with session_factory() as session:
+    for offset in range(0, len(parsed), 500):
+        batch = parsed[offset : offset + 500]
         try:
-            from sqlalchemy.dialects.postgresql import insert
-
-            from uniffy.core.models.chat.read_cursor import ChatReadCursor
-
-            stmt = insert(ChatReadCursor).values(rows_to_upsert)
-            stmt = stmt.on_conflict_do_update(
-                index_elements=["channel_id", "user_id"],
-                set_={
-                    "last_read_message_id": stmt.excluded.last_read_message_id,
-                    "last_read_at": stmt.excluded.last_read_at,
-                },
-            )
-            await session.execute(stmt)
-            await session.commit()
-            flushed = len(rows_to_upsert)
+            async with ops_call("chat", "cursor_snapshot"):
+                values = await client.mget(*(item[2] for item in batch))
         except Exception:
-            logger.warning(
-                "Failed to batch-upsert channel cursors",
-                component=LOGGER_COMPONENT,
-            )
+            logger.opt(exception=True).warning("Failed to snapshot channel cursors")
+            return flushed
 
-    try:
-        if members:
-            await client.srem(dirty_set_key, *members)
-    except Exception:
-        logger.warning(
-            "Failed to clean dirty channel cursors set",
-            component=LOGGER_COMPONENT,
-        )
+        rows = []
+        snapshots = []
+        for (user_id, channel_id, key, member), raw in zip(batch, values, strict=True):
+            if raw:
+                try:
+                    cursor = ChannelCursor.decode(raw)
+                except ValueError:
+                    continue
+                rows.append(cursor.row(user_id, channel_id))
+            snapshots.append((key, raw or "", member))
 
+        if rows:
+            try:
+                async with session_factory() as session:
+                    await session.execute(upsert_cursors(rows))
+                    await session.commit()
+            except Exception:
+                logger.opt(exception=True).warning("Failed to persist channel cursors")
+                continue
+            flushed += len(rows)
+        try:
+            await clean_cursors(client, snapshots)
+        except Exception:
+            logger.opt(exception=True).warning("Failed to clean dirty channel cursors")
     return flushed
 
 
@@ -138,7 +107,7 @@ async def _flush_thread_cursors(client: Any, session_factory: SessionFactory) ->
     try:
         members = await client.smembers(dirty_set_key)
     except Exception:
-        logger.warning("Failed to read dirty thread cursors set", component=LOGGER_COMPONENT)
+        logger.warning("Failed to read dirty thread cursors set")
         return 0
 
     if not members:
@@ -164,7 +133,7 @@ async def _flush_thread_cursors(client: Any, session_factory: SessionFactory) ->
     try:
         values = await client.mget(*valkey_keys)
     except Exception:
-        logger.warning("Failed to MGET thread cursors", component=LOGGER_COMPONENT)
+        logger.warning("Failed to MGET thread cursors")
         return 0
 
     rows_to_upsert = []
@@ -191,10 +160,6 @@ async def _flush_thread_cursors(client: Any, session_factory: SessionFactory) ->
     flushed = 0
     async with session_factory() as session:
         try:
-            from sqlalchemy.dialects.postgresql import insert
-
-            from uniffy.core.models.chat.read_cursor import ChatThreadReadCursor
-
             stmt = insert(ChatThreadReadCursor).values(rows_to_upsert)
             stmt = stmt.on_conflict_do_update(
                 index_elements=["root_message_id", "user_id"],
@@ -206,7 +171,6 @@ async def _flush_thread_cursors(client: Any, session_factory: SessionFactory) ->
         except Exception:
             logger.warning(
                 "Failed to batch-upsert thread cursors",
-                component=LOGGER_COMPONENT,
             )
 
     try:
@@ -215,7 +179,6 @@ async def _flush_thread_cursors(client: Any, session_factory: SessionFactory) ->
     except Exception:
         logger.warning(
             "Failed to clean dirty thread cursors set",
-            component=LOGGER_COMPONENT,
         )
 
     return flushed

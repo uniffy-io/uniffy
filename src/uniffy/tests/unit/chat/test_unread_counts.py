@@ -8,6 +8,7 @@ import pytest
 from uniffy.core.content.references import BROADCAST_URNS
 from uniffy.core.errors import NotFoundError
 from uniffy.core.types import generate_id
+from uniffy.domains.chat.reads.cursors import ChannelCursor
 from uniffy.domains.chat.reads.operations import _EPOCH, ChatReadStateOperations
 
 ORG = generate_id()
@@ -30,7 +31,7 @@ def _ops(aggregate_rows=(), latest_rows=()):
     session = MagicMock()
     # PG cursor read, then the unread aggregate, then the latest-message lookup.
     session.execute = AsyncMock(
-        side_effect=[_result(), _result(aggregate_rows), _result(latest_rows)]
+        side_effect=[_result(), _result(aggregate_rows), _result(latest_rows), _result()]
     )
     return ChatReadStateOperations(session)
 
@@ -104,6 +105,7 @@ class TestMentionMatch:
             "mention_count": 0,
             "last_read_message_id": None,
             "latest_message_id": None,
+            "first_unread_message_id": None,
         }
 
     async def test_empty_channel_list_short_circuits(self) -> None:
@@ -135,31 +137,27 @@ class TestMarkChannelUnread:
         predecessor_id = generate_id()
         predecessor_at = datetime(2026, 9, 14, 10, 0, tzinfo=UTC)
         ops = _unread_ops(datetime(2026, 9, 14, 10, 5, tzinfo=UTC), (predecessor_id, predecessor_at))
-        client = MagicMock(set=AsyncMock(), sadd=AsyncMock())
+        client = MagicMock(eval=AsyncMock())
 
         with _valkey(client):
             cursor_id, cursor_at = await ops.mark_channel_unread(USER, channel, target)
 
         assert (cursor_id, cursor_at) == (predecessor_id, predecessor_at)
-        # now() would sit after the target and count nothing as unread.
-        key, value = client.set.call_args.args
-        assert key == f"chat:read:{USER}:{channel}"
-        assert value == f"{predecessor_id}:{predecessor_at.isoformat()}"
-        client.sadd.assert_awaited_once_with("chat:dirty_read_cursors", f"{USER}:{channel}")
+        value = client.eval.call_args.args[5]
+        cursor = ChannelCursor.decode(value)
+        assert (cursor.message_id, cursor.read_at) == (predecessor_id, predecessor_at)
 
-    async def test_first_message_target_clears_cache_and_parks_at_epoch(self) -> None:
+    async def test_first_message_target_caches_explicit_null_cursor(self) -> None:
         channel, target = generate_id(), generate_id()
         ops = _unread_ops(datetime(2026, 9, 14, 10, 0, tzinfo=UTC), None)
-        client = MagicMock(delete=AsyncMock(), set=AsyncMock())
+        client = MagicMock(eval=AsyncMock())
 
         with _valkey(client):
             cursor_id, cursor_at = await ops.mark_channel_unread(USER, channel, target)
 
         assert (cursor_id, cursor_at) == (None, _EPOCH)
-        # A surviving Valkey key would win over the PG row and re-hide the unreads.
-        client.delete.assert_awaited_once_with(f"chat:read:{USER}:{channel}")
-        client.set.assert_not_awaited()
-        ops.session.commit.assert_awaited()
+        cursor = ChannelCursor.decode(client.eval.call_args.args[5])
+        assert (cursor.message_id, cursor.read_at) == (None, _EPOCH)
 
     async def test_target_outside_the_channel_is_rejected(self) -> None:
         ops = _unread_ops(None, None)
@@ -172,7 +170,7 @@ class TestMarkChannelUnread:
         predecessor_id = generate_id()
         predecessor_at = datetime(2026, 9, 14, 10, 0, tzinfo=UTC)
         ops = _unread_ops(datetime(2026, 9, 14, 10, 5, tzinfo=UTC), (predecessor_id, predecessor_at))
-        client = MagicMock(set=AsyncMock(side_effect=RuntimeError("valkey down")))
+        client = MagicMock(eval=AsyncMock(side_effect=RuntimeError("valkey down")))
 
         with _valkey(client):
             cursor_id, cursor_at = await ops.mark_channel_unread(USER, channel, target)

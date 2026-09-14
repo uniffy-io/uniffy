@@ -2089,9 +2089,12 @@ type UnreadCountPayload struct {
 	// per-member aggregate on every send would be one query per member. Cursor
 	// moves publish the recomputed totals instead and set this, so the client
 	// replaces the badge rather than adding to it.
-	Absolute      bool `protobuf:"varint,4,opt,name=absolute,proto3" json:"absolute,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Absolute bool `protobuf:"varint,4,opt,name=absolute,proto3" json:"absolute,omitempty"`
+	// Present empty values clear the cursor on an absolute update.
+	LastReadMessageId    *string `protobuf:"bytes,5,opt,name=last_read_message_id,json=lastReadMessageId,proto3,oneof" json:"last_read_message_id,omitempty"`
+	FirstUnreadMessageId *string `protobuf:"bytes,6,opt,name=first_unread_message_id,json=firstUnreadMessageId,proto3,oneof" json:"first_unread_message_id,omitempty"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
 }
 
 func (x *UnreadCountPayload) Reset() {
@@ -2150,6 +2153,20 @@ func (x *UnreadCountPayload) GetAbsolute() bool {
 		return x.Absolute
 	}
 	return false
+}
+
+func (x *UnreadCountPayload) GetLastReadMessageId() string {
+	if x != nil && x.LastReadMessageId != nil {
+		return *x.LastReadMessageId
+	}
+	return ""
+}
+
+func (x *UnreadCountPayload) GetFirstUnreadMessageId() string {
+	if x != nil && x.FirstUnreadMessageId != nil {
+		return *x.FirstUnreadMessageId
+	}
+	return ""
 }
 
 type ThreadActivityPayload struct {
@@ -2477,13 +2494,17 @@ const file_chat_v1_chat_stream_proto_rawDesc = "" +
 	"\n" +
 	"updated_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12*\n" +
 	"\x11client_session_id\x18\x06 \x01(\tR\x0fclientSessionIdB\x12\n" +
-	"\x10_root_message_id\"\x97\x01\n" +
+	"\x10_root_message_id\"\xbe\x02\n" +
 	"\x12UnreadCountPayload\x12\x1d\n" +
 	"\n" +
 	"channel_id\x18\x01 \x01(\tR\tchannelId\x12!\n" +
 	"\funread_count\x18\x02 \x01(\x05R\vunreadCount\x12#\n" +
 	"\rmention_count\x18\x03 \x01(\x05R\fmentionCount\x12\x1a\n" +
-	"\babsolute\x18\x04 \x01(\bR\babsolute\"\xe2\x01\n" +
+	"\babsolute\x18\x04 \x01(\bR\babsolute\x124\n" +
+	"\x14last_read_message_id\x18\x05 \x01(\tH\x00R\x11lastReadMessageId\x88\x01\x01\x12:\n" +
+	"\x17first_unread_message_id\x18\x06 \x01(\tH\x01R\x14firstUnreadMessageId\x88\x01\x01B\x17\n" +
+	"\x15_last_read_message_idB\x1a\n" +
+	"\x18_first_unread_message_id\"\xe2\x01\n" +
 	"\x15ThreadActivityPayload\x12&\n" +
 	"\x0froot_message_id\x18\x01 \x01(\tR\rrootMessageId\x12\x1d\n" +
 	"\n" +
@@ -2682,6 +2703,7 @@ func file_chat_v1_chat_stream_proto_init() {
 		(*StreamUserChatEventsResponse_DraftChanged)(nil),
 	}
 	file_chat_v1_chat_stream_proto_msgTypes[19].OneofWrappers = []any{}
+	file_chat_v1_chat_stream_proto_msgTypes[20].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{

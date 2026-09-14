@@ -1002,14 +1002,16 @@ class MarkChannelUnreadRequest(_message.Message):
     def __init__(self, organization_id: _Optional[str] = ..., channel_id: _Optional[str] = ..., message_id: _Optional[str] = ...) -> None: ...
 
 class MarkChannelUnreadResponse(_message.Message):
-    __slots__ = ("unread_count", "mention_count", "last_read_message_id")
+    __slots__ = ("unread_count", "mention_count", "last_read_message_id", "first_unread_message_id")
     UNREAD_COUNT_FIELD_NUMBER: _ClassVar[int]
     MENTION_COUNT_FIELD_NUMBER: _ClassVar[int]
     LAST_READ_MESSAGE_ID_FIELD_NUMBER: _ClassVar[int]
+    FIRST_UNREAD_MESSAGE_ID_FIELD_NUMBER: _ClassVar[int]
     unread_count: int
     mention_count: int
     last_read_message_id: str
-    def __init__(self, unread_count: _Optional[int] = ..., mention_count: _Optional[int] = ..., last_read_message_id: _Optional[str] = ...) -> None: ...
+    first_unread_message_id: str
+    def __init__(self, unread_count: _Optional[int] = ..., mention_count: _Optional[int] = ..., last_read_message_id: _Optional[str] = ..., first_unread_message_id: _Optional[str] = ...) -> None: ...
 
 class MarkThreadReadRequest(_message.Message):
     __slots__ = ("organization_id", "root_message_id")
@@ -1036,7 +1038,7 @@ class GetUnreadCountsResponse(_message.Message):
     def __init__(self, channels: _Optional[_Iterable[_Union[ChannelUnreadCount, _Mapping]]] = ...) -> None: ...
 
 class ChannelUnreadCount(_message.Message):
-    __slots__ = ("channel_id", "unread_count", "mention_count", "last_read_message_id", "is_muted", "notification_level", "muted_until", "latest_message_id")
+    __slots__ = ("channel_id", "unread_count", "mention_count", "last_read_message_id", "is_muted", "notification_level", "muted_until", "latest_message_id", "first_unread_message_id")
     CHANNEL_ID_FIELD_NUMBER: _ClassVar[int]
     UNREAD_COUNT_FIELD_NUMBER: _ClassVar[int]
     MENTION_COUNT_FIELD_NUMBER: _ClassVar[int]
@@ -1045,6 +1047,7 @@ class ChannelUnreadCount(_message.Message):
     NOTIFICATION_LEVEL_FIELD_NUMBER: _ClassVar[int]
     MUTED_UNTIL_FIELD_NUMBER: _ClassVar[int]
     LATEST_MESSAGE_ID_FIELD_NUMBER: _ClassVar[int]
+    FIRST_UNREAD_MESSAGE_ID_FIELD_NUMBER: _ClassVar[int]
     channel_id: str
     unread_count: int
     mention_count: int
@@ -1053,7 +1056,8 @@ class ChannelUnreadCount(_message.Message):
     notification_level: ChatNotificationLevel
     muted_until: _timestamp_pb2.Timestamp
     latest_message_id: str
-    def __init__(self, channel_id: _Optional[str] = ..., unread_count: _Optional[int] = ..., mention_count: _Optional[int] = ..., last_read_message_id: _Optional[str] = ..., is_muted: _Optional[bool] = ..., notification_level: _Optional[_Union[ChatNotificationLevel, str]] = ..., muted_until: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., latest_message_id: _Optional[str] = ...) -> None: ...
+    first_unread_message_id: str
+    def __init__(self, channel_id: _Optional[str] = ..., unread_count: _Optional[int] = ..., mention_count: _Optional[int] = ..., last_read_message_id: _Optional[str] = ..., is_muted: _Optional[bool] = ..., notification_level: _Optional[_Union[ChatNotificationLevel, str]] = ..., muted_until: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., latest_message_id: _Optional[str] = ..., first_unread_message_id: _Optional[str] = ...) -> None: ...
 
 class ChatDraft(_message.Message):
     __slots__ = ("channel_id", "root_message_id", "content", "updated_at")

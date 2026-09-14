@@ -21,6 +21,7 @@ class ChatReadCursor(SQLModel, table=True):
     )
     last_read_message_id: UUID | None = Field(default=None)
     last_read_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True)))
+    revision: UUID = Field(default=UUID(int=0), nullable=False)
 
 
 class ChatThreadReadCursor(SQLModel, table=True):

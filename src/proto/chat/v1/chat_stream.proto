@@ -332,6 +332,9 @@ message UnreadCountPayload {
   // moves publish the recomputed totals instead and set this, so the client
   // replaces the badge rather than adding to it.
   bool absolute = 4;
+  // Present empty values clear the cursor on an absolute update.
+  optional string last_read_message_id = 5;
+  optional string first_unread_message_id = 6;
 }
 
 message ThreadActivityPayload {

@@ -1161,6 +1161,7 @@ class ChannelHandlers:
 
             counts = await read_ops.get_unread_counts(user_id, org_id, [channel_id])
             channel_counts = counts.get(channel_id, {"unread_count": 0, "mention_count": 0})
+            first_unread_id = channel_counts.get("first_unread_message_id")
 
             # The actor's other tabs and devices hold their own badge state; the send
             # path's delta event cannot express a cursor that moved backwards.
@@ -1172,6 +1173,8 @@ class ChannelHandlers:
                     "unread_count": channel_counts["unread_count"],
                     "mention_count": channel_counts["mention_count"],
                     "absolute": True,
+                    "last_read_message_id": str(cursor_id) if cursor_id else "",
+                    "first_unread_message_id": str(first_unread_id) if first_unread_id else "",
                 },
             )
 
@@ -1179,6 +1182,7 @@ class ChannelHandlers:
                 unread_count=channel_counts["unread_count"],
                 mention_count=channel_counts["mention_count"],
                 last_read_message_id=str(cursor_id) if cursor_id else "",
+                first_unread_message_id=str(first_unread_id) if first_unread_id else "",
             )
 
     async def mark_thread_read(
@@ -1266,6 +1270,8 @@ class ChannelHandlers:
                     item.last_read_message_id = str(data["last_read_message_id"])
                 if data["latest_message_id"]:
                     item.latest_message_id = str(data["latest_message_id"])
+                if data["first_unread_message_id"]:
+                    item.first_unread_message_id = str(data["first_unread_message_id"])
                 if muted_until:
                     item.muted_until.CopyFrom(datetime_to_timestamp(muted_until))
                 items.append(item)

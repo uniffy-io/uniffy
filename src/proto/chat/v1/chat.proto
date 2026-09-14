@@ -850,6 +850,7 @@ message MarkChannelUnreadResponse {
   int32 mention_count = 2;
   // Empty when the target was the channel's first message.
   string last_read_message_id = 3;
+  optional string first_unread_message_id = 4;
 }
 
 message MarkThreadReadRequest {
@@ -878,6 +879,7 @@ message ChannelUnreadCount {
   // Newest root message in the channel. Lets a surface that never opened the
   // channel - the unreads list - mark it read without inventing an id.
   optional string latest_message_id = 8;
+  optional string first_unread_message_id = 9;
 }
 
 // DRAFTS

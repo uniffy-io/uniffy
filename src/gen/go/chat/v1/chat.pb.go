@@ -5783,9 +5783,10 @@ type MarkChannelUnreadResponse struct {
 	UnreadCount  int32                  `protobuf:"varint,1,opt,name=unread_count,json=unreadCount,proto3" json:"unread_count,omitempty"`
 	MentionCount int32                  `protobuf:"varint,2,opt,name=mention_count,json=mentionCount,proto3" json:"mention_count,omitempty"`
 	// Empty when the target was the channel's first message.
-	LastReadMessageId string `protobuf:"bytes,3,opt,name=last_read_message_id,json=lastReadMessageId,proto3" json:"last_read_message_id,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	LastReadMessageId    string  `protobuf:"bytes,3,opt,name=last_read_message_id,json=lastReadMessageId,proto3" json:"last_read_message_id,omitempty"`
+	FirstUnreadMessageId *string `protobuf:"bytes,4,opt,name=first_unread_message_id,json=firstUnreadMessageId,proto3,oneof" json:"first_unread_message_id,omitempty"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
 }
 
 func (x *MarkChannelUnreadResponse) Reset() {
@@ -5835,6 +5836,13 @@ func (x *MarkChannelUnreadResponse) GetMentionCount() int32 {
 func (x *MarkChannelUnreadResponse) GetLastReadMessageId() string {
 	if x != nil {
 		return x.LastReadMessageId
+	}
+	return ""
+}
+
+func (x *MarkChannelUnreadResponse) GetFirstUnreadMessageId() string {
+	if x != nil && x.FirstUnreadMessageId != nil {
+		return *x.FirstUnreadMessageId
 	}
 	return ""
 }
@@ -6026,9 +6034,10 @@ type ChannelUnreadCount struct {
 	MutedUntil        *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=muted_until,json=mutedUntil,proto3,oneof" json:"muted_until,omitempty"`
 	// Newest root message in the channel. Lets a surface that never opened the
 	// channel - the unreads list - mark it read without inventing an id.
-	LatestMessageId *string `protobuf:"bytes,8,opt,name=latest_message_id,json=latestMessageId,proto3,oneof" json:"latest_message_id,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	LatestMessageId      *string `protobuf:"bytes,8,opt,name=latest_message_id,json=latestMessageId,proto3,oneof" json:"latest_message_id,omitempty"`
+	FirstUnreadMessageId *string `protobuf:"bytes,9,opt,name=first_unread_message_id,json=firstUnreadMessageId,proto3,oneof" json:"first_unread_message_id,omitempty"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
 }
 
 func (x *ChannelUnreadCount) Reset() {
@@ -6113,6 +6122,13 @@ func (x *ChannelUnreadCount) GetMutedUntil() *timestamppb.Timestamp {
 func (x *ChannelUnreadCount) GetLatestMessageId() string {
 	if x != nil && x.LatestMessageId != nil {
 		return *x.LatestMessageId
+	}
+	return ""
+}
+
+func (x *ChannelUnreadCount) GetFirstUnreadMessageId() string {
+	if x != nil && x.FirstUnreadMessageId != nil {
+		return *x.FirstUnreadMessageId
 	}
 	return ""
 }
@@ -10384,11 +10400,13 @@ const file_chat_v1_chat_proto_rawDesc = "" +
 	"\n" +
 	"channel_id\x18\x02 \x01(\tR\tchannelId\x12\x1d\n" +
 	"\n" +
-	"message_id\x18\x03 \x01(\tR\tmessageId\"\x94\x01\n" +
+	"message_id\x18\x03 \x01(\tR\tmessageId\"\xec\x01\n" +
 	"\x19MarkChannelUnreadResponse\x12!\n" +
 	"\funread_count\x18\x01 \x01(\x05R\vunreadCount\x12#\n" +
 	"\rmention_count\x18\x02 \x01(\x05R\fmentionCount\x12/\n" +
-	"\x14last_read_message_id\x18\x03 \x01(\tR\x11lastReadMessageId\"h\n" +
+	"\x14last_read_message_id\x18\x03 \x01(\tR\x11lastReadMessageId\x12:\n" +
+	"\x17first_unread_message_id\x18\x04 \x01(\tH\x00R\x14firstUnreadMessageId\x88\x01\x01B\x1a\n" +
+	"\x18_first_unread_message_id\"h\n" +
 	"\x15MarkThreadReadRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12&\n" +
 	"\x0froot_message_id\x18\x02 \x01(\tR\rrootMessageId\"\x18\n" +
@@ -10396,7 +10414,7 @@ const file_chat_v1_chat_proto_rawDesc = "" +
 	"\x16GetUnreadCountsRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\"R\n" +
 	"\x17GetUnreadCountsResponse\x127\n" +
-	"\bchannels\x18\x01 \x03(\v2\x1b.chat.v1.ChannelUnreadCountR\bchannels\"\xcd\x03\n" +
+	"\bchannels\x18\x01 \x03(\v2\x1b.chat.v1.ChannelUnreadCountR\bchannels\"\xa5\x04\n" +
 	"\x12ChannelUnreadCount\x12\x1d\n" +
 	"\n" +
 	"channel_id\x18\x01 \x01(\tR\tchannelId\x12!\n" +
@@ -10407,10 +10425,12 @@ const file_chat_v1_chat_proto_rawDesc = "" +
 	"\x12notification_level\x18\x06 \x01(\x0e2\x1e.chat.v1.ChatNotificationLevelR\x11notificationLevel\x12@\n" +
 	"\vmuted_until\x18\a \x01(\v2\x1a.google.protobuf.TimestampH\x01R\n" +
 	"mutedUntil\x88\x01\x01\x12/\n" +
-	"\x11latest_message_id\x18\b \x01(\tH\x02R\x0flatestMessageId\x88\x01\x01B\x17\n" +
+	"\x11latest_message_id\x18\b \x01(\tH\x02R\x0flatestMessageId\x88\x01\x01\x12:\n" +
+	"\x17first_unread_message_id\x18\t \x01(\tH\x03R\x14firstUnreadMessageId\x88\x01\x01B\x17\n" +
 	"\x15_last_read_message_idB\x0e\n" +
 	"\f_muted_untilB\x14\n" +
-	"\x12_latest_message_id\"\xc0\x01\n" +
+	"\x12_latest_message_idB\x1a\n" +
+	"\x18_first_unread_message_id\"\xc0\x01\n" +
 	"\tChatDraft\x12\x1d\n" +
 	"\n" +
 	"channel_id\x18\x01 \x01(\tR\tchannelId\x12+\n" +
@@ -11275,6 +11295,7 @@ func file_chat_v1_chat_proto_init() {
 	file_chat_v1_chat_proto_msgTypes[67].OneofWrappers = []any{}
 	file_chat_v1_chat_proto_msgTypes[69].OneofWrappers = []any{}
 	file_chat_v1_chat_proto_msgTypes[70].OneofWrappers = []any{}
+	file_chat_v1_chat_proto_msgTypes[84].OneofWrappers = []any{}
 	file_chat_v1_chat_proto_msgTypes[89].OneofWrappers = []any{}
 	file_chat_v1_chat_proto_msgTypes[90].OneofWrappers = []any{}
 	file_chat_v1_chat_proto_msgTypes[91].OneofWrappers = []any{}

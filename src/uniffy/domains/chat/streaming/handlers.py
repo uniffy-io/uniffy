@@ -582,6 +582,8 @@ def _payload_to_user_event(payload: dict) -> StreamUserChatEventsResponse | None
                 unread_count=payload.get("unread_count", 0),
                 mention_count=payload.get("mention_count", 0),
                 absolute=payload.get("absolute", False),
+                last_read_message_id=payload.get("last_read_message_id"),
+                first_unread_message_id=payload.get("first_unread_message_id"),
             ),
         )
 
