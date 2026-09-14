@@ -446,6 +446,34 @@ export const unarchiveChannel = createAsyncThunk<
   }
 });
 
+export const changeChannelVisibility = createAsyncThunk<
+  string,
+  { channelId: string; channelType: "PUBLIC" | "PRIVATE" },
+  { state: RootState; rejectValue: string }
+>(
+  "chat/changeChannelVisibility",
+  async ({ channelId, channelType }, { getState, dispatch, rejectWithValue }) => {
+    try {
+      const organizationId = getOrganizationId(getState());
+      const response = await chatApi.changeChannelVisibility({
+        organizationId,
+        channelId,
+        channelType: channelType === "PUBLIC" ? ProtoChannelType.PUBLIC : ProtoChannelType.PRIVATE,
+      });
+      // The type drives the sidebar icon and the browse list; the server also
+      // publishes CHANNEL_UPDATED, so this only shortens the gap for the actor.
+      if (response.channel) {
+        dispatch(addChannel(channelToPlain(response.channel)));
+      }
+      return channelId;
+    } catch (error) {
+      return rejectWithValue(
+        error instanceof Error ? error.message : "Failed to change channel visibility",
+      );
+    }
+  },
+);
+
 export const deleteChannel = createAsyncThunk<
   string,
   string,

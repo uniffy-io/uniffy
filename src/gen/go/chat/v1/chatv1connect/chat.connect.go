@@ -139,6 +139,9 @@ const (
 	// ChatServiceConvertGroupDmToChannelProcedure is the fully-qualified name of the ChatService's
 	// ConvertGroupDmToChannel RPC.
 	ChatServiceConvertGroupDmToChannelProcedure = "/chat.v1.ChatService/ConvertGroupDmToChannel"
+	// ChatServiceChangeChannelVisibilityProcedure is the fully-qualified name of the ChatService's
+	// ChangeChannelVisibility RPC.
+	ChatServiceChangeChannelVisibilityProcedure = "/chat.v1.ChatService/ChangeChannelVisibility"
 	// ChatServiceCreateAgentChatProcedure is the fully-qualified name of the ChatService's
 	// CreateAgentChat RPC.
 	ChatServiceCreateAgentChatProcedure = "/chat.v1.ChatService/CreateAgentChat"
@@ -273,6 +276,9 @@ type ChatServiceClient interface {
 	// Convert a group DM into a PRIVATE channel (owner only); members and
 	// history carry over. Group DMs are capped, channels are not.
 	ConvertGroupDmToChannel(context.Context, *connect.Request[v1.ConvertGroupDmToChannelRequest]) (*connect.Response[v1.ConvertGroupDmToChannelResponse], error)
+	// Switch an existing channel between PUBLIC and PRIVATE (owner only). The
+	// channel's history is re-indexed so search visibility follows the new type.
+	ChangeChannelVisibility(context.Context, *connect.Request[v1.ChangeChannelVisibilityRequest]) (*connect.Response[v1.ChangeChannelVisibilityResponse], error)
 	// Named agent chats - multiple chats per (user, agent) pair, each renamable.
 	CreateAgentChat(context.Context, *connect.Request[v1.CreateAgentChatRequest]) (*connect.Response[v1.CreateAgentChatResponse], error)
 	RenameAgentChat(context.Context, *connect.Request[v1.RenameAgentChatRequest]) (*connect.Response[v1.RenameAgentChatResponse], error)
@@ -590,6 +596,12 @@ func NewChatServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(chatServiceMethods.ByName("ConvertGroupDmToChannel")),
 			connect.WithClientOptions(opts...),
 		),
+		changeChannelVisibility: connect.NewClient[v1.ChangeChannelVisibilityRequest, v1.ChangeChannelVisibilityResponse](
+			httpClient,
+			baseURL+ChatServiceChangeChannelVisibilityProcedure,
+			connect.WithSchema(chatServiceMethods.ByName("ChangeChannelVisibility")),
+			connect.WithClientOptions(opts...),
+		),
 		createAgentChat: connect.NewClient[v1.CreateAgentChatRequest, v1.CreateAgentChatResponse](
 			httpClient,
 			baseURL+ChatServiceCreateAgentChatProcedure,
@@ -791,6 +803,7 @@ type chatServiceClient struct {
 	listDrafts                       *connect.Client[v1.ListDraftsRequest, v1.ListDraftsResponse]
 	getChannelResources              *connect.Client[v1.GetChannelResourcesRequest, v1.GetChannelResourcesResponse]
 	convertGroupDmToChannel          *connect.Client[v1.ConvertGroupDmToChannelRequest, v1.ConvertGroupDmToChannelResponse]
+	changeChannelVisibility          *connect.Client[v1.ChangeChannelVisibilityRequest, v1.ChangeChannelVisibilityResponse]
 	createAgentChat                  *connect.Client[v1.CreateAgentChatRequest, v1.CreateAgentChatResponse]
 	renameAgentChat                  *connect.Client[v1.RenameAgentChatRequest, v1.RenameAgentChatResponse]
 	listAgentChats                   *connect.Client[v1.ListAgentChatsRequest, v1.ListAgentChatsResponse]
@@ -1019,6 +1032,11 @@ func (c *chatServiceClient) ConvertGroupDmToChannel(ctx context.Context, req *co
 	return c.convertGroupDmToChannel.CallUnary(ctx, req)
 }
 
+// ChangeChannelVisibility calls chat.v1.ChatService.ChangeChannelVisibility.
+func (c *chatServiceClient) ChangeChannelVisibility(ctx context.Context, req *connect.Request[v1.ChangeChannelVisibilityRequest]) (*connect.Response[v1.ChangeChannelVisibilityResponse], error) {
+	return c.changeChannelVisibility.CallUnary(ctx, req)
+}
+
 // CreateAgentChat calls chat.v1.ChatService.CreateAgentChat.
 func (c *chatServiceClient) CreateAgentChat(ctx context.Context, req *connect.Request[v1.CreateAgentChatRequest]) (*connect.Response[v1.CreateAgentChatResponse], error) {
 	return c.createAgentChat.CallUnary(ctx, req)
@@ -1203,6 +1221,9 @@ type ChatServiceHandler interface {
 	// Convert a group DM into a PRIVATE channel (owner only); members and
 	// history carry over. Group DMs are capped, channels are not.
 	ConvertGroupDmToChannel(context.Context, *connect.Request[v1.ConvertGroupDmToChannelRequest]) (*connect.Response[v1.ConvertGroupDmToChannelResponse], error)
+	// Switch an existing channel between PUBLIC and PRIVATE (owner only). The
+	// channel's history is re-indexed so search visibility follows the new type.
+	ChangeChannelVisibility(context.Context, *connect.Request[v1.ChangeChannelVisibilityRequest]) (*connect.Response[v1.ChangeChannelVisibilityResponse], error)
 	// Named agent chats - multiple chats per (user, agent) pair, each renamable.
 	CreateAgentChat(context.Context, *connect.Request[v1.CreateAgentChatRequest]) (*connect.Response[v1.CreateAgentChatResponse], error)
 	RenameAgentChat(context.Context, *connect.Request[v1.RenameAgentChatRequest]) (*connect.Response[v1.RenameAgentChatResponse], error)
@@ -1516,6 +1537,12 @@ func NewChatServiceHandler(svc ChatServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(chatServiceMethods.ByName("ConvertGroupDmToChannel")),
 		connect.WithHandlerOptions(opts...),
 	)
+	chatServiceChangeChannelVisibilityHandler := connect.NewUnaryHandler(
+		ChatServiceChangeChannelVisibilityProcedure,
+		svc.ChangeChannelVisibility,
+		connect.WithSchema(chatServiceMethods.ByName("ChangeChannelVisibility")),
+		connect.WithHandlerOptions(opts...),
+	)
 	chatServiceCreateAgentChatHandler := connect.NewUnaryHandler(
 		ChatServiceCreateAgentChatProcedure,
 		svc.CreateAgentChat,
@@ -1754,6 +1781,8 @@ func NewChatServiceHandler(svc ChatServiceHandler, opts ...connect.HandlerOption
 			chatServiceGetChannelResourcesHandler.ServeHTTP(w, r)
 		case ChatServiceConvertGroupDmToChannelProcedure:
 			chatServiceConvertGroupDmToChannelHandler.ServeHTTP(w, r)
+		case ChatServiceChangeChannelVisibilityProcedure:
+			chatServiceChangeChannelVisibilityHandler.ServeHTTP(w, r)
 		case ChatServiceCreateAgentChatProcedure:
 			chatServiceCreateAgentChatHandler.ServeHTTP(w, r)
 		case ChatServiceRenameAgentChatProcedure:
@@ -1973,6 +2002,10 @@ func (UnimplementedChatServiceHandler) GetChannelResources(context.Context, *con
 
 func (UnimplementedChatServiceHandler) ConvertGroupDmToChannel(context.Context, *connect.Request[v1.ConvertGroupDmToChannelRequest]) (*connect.Response[v1.ConvertGroupDmToChannelResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("chat.v1.ChatService.ConvertGroupDmToChannel is not implemented"))
+}
+
+func (UnimplementedChatServiceHandler) ChangeChannelVisibility(context.Context, *connect.Request[v1.ChangeChannelVisibilityRequest]) (*connect.Response[v1.ChangeChannelVisibilityResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("chat.v1.ChatService.ChangeChannelVisibility is not implemented"))
 }
 
 func (UnimplementedChatServiceHandler) CreateAgentChat(context.Context, *connect.Request[v1.CreateAgentChatRequest]) (*connect.Response[v1.CreateAgentChatResponse], error) {

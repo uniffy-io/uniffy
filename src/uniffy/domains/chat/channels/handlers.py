@@ -600,6 +600,47 @@ class ChannelHandlers:
         except (NotFoundError, PermissionDeniedError, ValidationError) as e:
             _handle_error(e)
 
+    async def change_channel_visibility(
+        self,
+        request,
+        ctx: RequestContext,
+    ):
+        from uniffy_proto.chat.v1.chat_pb2 import ChangeChannelVisibilityResponse
+
+        user_id = current_user_id()
+        try:
+            org_id = resolve_organization_id(request.organization_id)
+            channel_id = UUID(request.channel_id)
+        except ValueError:
+            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
+
+        target_type = CHANNEL_TYPE_FROM_PROTO.get(request.channel_type)
+        if target_type is None:
+            raise ConnectError(Code.INVALID_ARGUMENT, "A channel type is required")
+
+        try:
+            async with open_session() as session:
+                ops = ChatChannelOperations(
+                    session, storage=self.storage, search_indexer=self.search_indexer
+                )
+                channel = await ops.change_channel_visibility(
+                    user_id,
+                    org_id,
+                    channel_id,
+                    target_type,
+                )
+                tags_by_id = await _hydrate_channel_tags(session, org_id, [channel.id])
+                return ChangeChannelVisibilityResponse(
+                    channel=channel_to_proto(
+                        channel,
+                        current_user_role=ChannelRole.OWNER,
+                        is_member=True,
+                        tags=tags_by_id.get(channel.id),
+                    )
+                )
+        except (NotFoundError, PermissionDeniedError, ValidationError) as e:
+            _handle_error(e)
+
     async def archive_channel(
         self,
         request: ArchiveChannelRequest,

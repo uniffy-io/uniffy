@@ -13,13 +13,16 @@ from uniffy.core.errors import (
     PermissionDeniedError,
     ValidationError,
 )
+from uniffy.core.jobs.locks import acquire_owned_job_lock
 from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.chat.channel import ChannelType, ChatChannel
 from uniffy.core.models.chat.channel_member import (
     ChannelRole,
 )
 from uniffy.core.models.chat.message import SenderType
+from uniffy.core.models.permissions.content_access_request import ContentAccessRequest
 from uniffy.core.types import (
+    ContentType,
     slugify,
 )
 from uniffy.domains.chat.cache import (
@@ -28,9 +31,21 @@ from uniffy.domains.chat.cache import (
 )
 from uniffy.domains.chat.channels.slugs import slug_suffix
 from uniffy.domains.chat.messages.operations import ChatMessageOperations
+from uniffy.domains.chat.search import (
+    enqueue_chat_search_acl_refresh,
+    record_chat_search_acl_refresh,
+)
 from uniffy.domains.chat.senders import SenderResolver
+from uniffy.domains.permissions.requests.dismissal import (
+    publish_dismissed_requests,
+    stage_dismiss_pending_requests,
+)
+from uniffy.infrastructure.valkey.ops import get_ops_client
 
 logger = logger.bind(component="chat.channels.updates")
+
+# Short enough that a deliberate flip-back a few seconds later still enqueues.
+_VISIBILITY_ENQUEUE_LOCK_SECONDS = 10
 
 
 class ChannelUpdates:
@@ -173,6 +188,131 @@ class ChannelUpdates:
         await self._publish_members_changed(channel.id, member_ids, added=True)
 
         return channel
+
+    async def change_channel_visibility(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        channel_id: UUID,
+        target_type: ChannelType,
+    ) -> ChatChannel:
+        """Owner-only PUBLIC <-> PRIVATE flip; history is re-indexed to match."""
+        channel = await self.get_by_id(user_id, organization_id, channel_id)
+        if target_type not in (ChannelType.PUBLIC, ChannelType.PRIVATE):
+            raise ValidationError("channel_type", "Channels can only be public or private")
+        if channel.channel_type not in (ChannelType.PUBLIC, ChannelType.PRIVATE):
+            raise ValidationError("channel", "Only channels have a visibility to change")
+        if channel.channel_type == target_type:
+            raise ValidationError("channel_type", "The channel already has this visibility")
+        if channel.is_default and target_type == ChannelType.PRIVATE:
+            raise ValidationError("channel_type", "The default channel must stay public")
+
+        # Deliberately the membership gate rather than require_elevated: visibility
+        # is a content decision, and chat's admin bypass exists for moderation.
+        membership = await self.access.get_membership(channel_id, user_id)
+        if membership is None or membership.role != ChannelRole.OWNER:
+            raise PermissionDeniedError(
+                "change_visibility", "Only the channel owner can change its visibility"
+            )
+
+        previous_type = channel.channel_type
+        channel.channel_type = target_type
+        channel.updated_at = datetime.now(UTC)
+
+        await write_audit_event(
+            self.session,
+            organization_id=organization_id,
+            actor_user_id=user_id,
+            action=Action.CHAT_CHANNEL_VISIBILITY_CHANGED,
+            resource_type=AuditResourceType.CHAT,
+            resource_id=channel.id,
+            details={"from": previous_type.value, "to": target_type.value},
+        )
+
+        # No `channel_type != PUBLIC` guard here, unlike the membership call sites:
+        # an open-up is exactly the case where public-era docs must be rewritten.
+        await record_chat_search_acl_refresh(
+            self.session,
+            organization_id=organization_id,
+            channel_id=channel_id,
+        )
+
+        dismissed: list[ContentAccessRequest] = []
+        if target_type == ChannelType.PUBLIC:
+            # Anyone in the org can read it now, so a pending ask has nothing left
+            # to ask for.
+            dismissed = await stage_dismiss_pending_requests(
+                self.session,
+                organization_id=organization_id,
+                content_type=ContentType.CHAT,
+                content_id=channel_id,
+            )
+
+        await self.session.commit()
+        await self.session.refresh(channel)
+
+        await invalidate_cached_member_ids(channel.id)
+        if await self._claim_visibility_refresh(channel_id):
+            await enqueue_chat_search_acl_refresh(channel_id)
+
+        await self._post_visibility_change_message(user_id, organization_id, channel)
+        await self._refresh_channel_live_state(channel)
+        await self._publish_channel_updated(channel)
+        await publish_dismissed_requests(dismissed)
+
+        return channel
+
+    async def _claim_visibility_refresh(self, channel_id: UUID) -> bool:
+        """Collapse overlapping flips into one enqueue.
+
+        Only the queue call is skipped; the `chat_search_acl_refreshes` row is
+        already committed, so the flush schedule still carries a suppressed
+        refresh through.
+        """
+        try:
+            client = get_ops_client()
+            if client is None:
+                return True
+            token = await acquire_owned_job_lock(
+                client,
+                f"chat:visibility_refresh:{channel_id}",
+                _VISIBILITY_ENQUEUE_LOCK_SECONDS,
+            )
+            return token is not None
+        except Exception:
+            logger.warning(f"Visibility refresh claim failed for channel {channel_id}")
+            return True
+
+    async def _post_visibility_change_message(
+        self,
+        actor_user_id: UUID,
+        organization_id: UUID,
+        channel: ChatChannel,
+    ) -> None:
+        try:
+            resolver = SenderResolver(self.session)
+            info = await resolver.resolve_one(SenderType.USER, actor_user_id)
+            actor_label = sanitize_mention_label(info.display_name)
+            actor = f"[[[{actor_label}|urn:uniffy:content:USER:{actor_user_id}]]]"
+            what = (
+                "opened this channel to everyone in the organization"
+                if channel.channel_type == ChannelType.PUBLIC
+                else "made this channel private"
+            )
+            msg_ops = ChatMessageOperations(
+                self.session,
+                storage=self.storage,
+                search_indexer=self.search_indexer,
+            )
+            await msg_ops.send_message(
+                user_id=actor_user_id,
+                organization_id=organization_id,
+                channel_id=channel.id,
+                content=f"{actor} {what}",
+                sender_type=SenderType.SYSTEM,
+            )
+        except Exception:
+            logger.warning(f"Failed to post visibility message for channel {channel.id}")
 
     async def _post_membership_conversion_message(
         self,

@@ -71,6 +71,10 @@ service ChatService {
   // history carry over. Group DMs are capped, channels are not.
   rpc ConvertGroupDmToChannel(ConvertGroupDmToChannelRequest) returns (ConvertGroupDmToChannelResponse) {}
 
+  // Switch an existing channel between PUBLIC and PRIVATE (owner only). The
+  // channel's history is re-indexed so search visibility follows the new type.
+  rpc ChangeChannelVisibility(ChangeChannelVisibilityRequest) returns (ChangeChannelVisibilityResponse) {}
+
   // Named agent chats - multiple chats per (user, agent) pair, each renamable.
   rpc CreateAgentChat(CreateAgentChatRequest) returns (CreateAgentChatResponse) {}
   rpc RenameAgentChat(RenameAgentChatRequest) returns (RenameAgentChatResponse) {}
@@ -1049,6 +1053,17 @@ message ConvertGroupDmToChannelRequest {
 }
 
 message ConvertGroupDmToChannelResponse {
+  ChatChannel channel = 1;
+}
+
+message ChangeChannelVisibilityRequest {
+  string organization_id = 1;
+  string channel_id = 2;
+  // PUBLIC or PRIVATE only. DIRECT and GROUP_DM are rejected.
+  ChannelType channel_type = 3;
+}
+
+message ChangeChannelVisibilityResponse {
   ChatChannel channel = 1;
 }
 

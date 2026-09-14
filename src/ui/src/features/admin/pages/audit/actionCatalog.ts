@@ -219,6 +219,7 @@ export const ACTION_GROUPS: readonly ActionGroup[] = [
     actions: [
       { value: "chat_channel.created", label: "Channel created" },
       { value: "chat_channel.updated", label: "Channel updated" },
+      { value: "chat_channel.visibility_changed", label: "Channel visibility changed" },
       { value: "chat_channel.archived", label: "Channel archived" },
       { value: "chat_channel.unarchived", label: "Channel unarchived" },
       { value: "chat_channel.deleted", label: "Channel deleted" },
