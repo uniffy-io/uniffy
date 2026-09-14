@@ -30,6 +30,7 @@ from uniffy.core.types import ContentType
 from uniffy.domains.agents.invocation import validate_chat_skill_invocation
 from uniffy.domains.chat.jobs.contracts import POST_SEND_CHAT_MESSAGE
 from uniffy.domains.chat.limits import SEND, check_chat_mutation_limit
+from uniffy.domains.chat.messages.broadcasts import remap_file_references
 from uniffy.domains.chat.messages.limits import MAX_MESSAGE_LENGTH
 from uniffy.domains.chat.messages.stats import bump_channel_message_stats
 from uniffy.domains.chat.policies.operations import (
@@ -134,20 +135,28 @@ class MessageSender:
         self.session.add(message)
         await self.session.flush()
 
+        owned_file_ids: list[UUID] = []
         if attachment_file_ids:
             att_ops = AttachmentOperations(
                 self.session,
                 self.storage,
                 self.search_indexer,
             )
-            for file_id in attachment_file_ids:
-                await att_ops.attach_file(
+            attachment_mapping = {}
+            for file_id in dict.fromkeys(attachment_file_ids):
+                attachment = await att_ops.attach_file(
                     user_id=user_id,
                     organization_id=organization_id,
                     content_type=ContentType.CHAT_MESSAGE,
                     content_id=message.id,
                     source_file_id=file_id,
                 )
+                attachment_mapping[file_id] = attachment.file_id
+                owned_file_ids.append(attachment.file_id)
+            message.content = remap_file_references(content, organization_id, attachment_mapping)
+            message.mentioned_urns = (
+                sorted(extract_all_outgoing_references(message.content, organization_id)) or None
+            )
 
         await bump_channel_message_stats(self.session, channel_id, at=now, is_root=root_id is None)
         if root_id is not None:
@@ -169,9 +178,9 @@ class MessageSender:
                 organization_id=organization_id,
                 channel_id=channel_id,
                 root_id=root_id,
-                content=content,
-                urn_mentions=urn_mentions,
-                attachment_file_ids=attachment_file_ids,
+                content=message.content,
+                urn_mentions=message.mentioned_urns or [],
+                attachment_file_ids=owned_file_ids,
                 at=now,
             )
 
@@ -217,11 +226,7 @@ class MessageSender:
         attachment_file_ids: list[UUID] | None,
         at: datetime,
     ) -> ChatMessage:
-        """Add the channel-visible twin of a thread reply to the caller's transaction.
-
-        Joins the reply's transaction and never commits: the pair exists whole or
-        not at all, so no reader can see a copy pointing at a reply that rolled back.
-        """
+        """Stage both surfaces in one transaction so the pair is visible atomically."""
         copy = ChatMessage(
             channel_id=channel_id,
             sender_id=user_id,
@@ -246,14 +251,20 @@ class MessageSender:
 
         if attachment_file_ids:
             att_ops = AttachmentOperations(self.session, self.storage, self.search_indexer)
+            attachment_mapping = {}
             for file_id in attachment_file_ids:
-                await att_ops.attach_file(
+                attachment = await att_ops.attach_file(
                     user_id=user_id,
                     organization_id=organization_id,
                     content_type=ContentType.CHAT_MESSAGE,
                     content_id=copy.id,
                     source_file_id=file_id,
                 )
+                attachment_mapping[file_id] = attachment.file_id
+            copy.content = remap_file_references(content, organization_id, attachment_mapping)
+            copy.mentioned_urns = (
+                sorted(extract_all_outgoing_references(copy.content, organization_id)) or None
+            )
 
         # Thread counters, participants and follows belong to the reply alone;
         # only the channel's own root-message stats move for the copy.

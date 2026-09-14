@@ -5,7 +5,7 @@ from enum import Enum, StrEnum
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import Column, DateTime, ForeignKey, Index, Text
+from sqlalchemy import Column, DateTime, ForeignKey, Index, Text, text
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy.dialects.postgresql import ARRAY as PG_ARRAY
 from sqlalchemy.dialects.postgresql import JSONB as PG_JSONB
@@ -55,6 +55,12 @@ class ChatMessage(SQLModel, table=True):
     __tablename__ = "chat_messages"
     __table_args__ = (
         Index("ix_chat_messages_channel_timeline", "channel_id", "created_at", "id"),
+        Index(
+            "ix_chat_messages_broadcast_reply",
+            "channel_id",
+            text("(metadata -> 'thread_reply' ->> 'reply_message_id')"),
+            postgresql_where="root_id IS NULL",
+        ),
         Index(
             "ix_chat_messages_channel_roots",
             "channel_id",

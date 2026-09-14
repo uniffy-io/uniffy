@@ -1,13 +1,15 @@
 """A thread reply broadcast to its channel: two rows, one of everything else."""
 
 from datetime import UTC, datetime
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from uniffy.core.errors import ValidationError
+from uniffy.core.models.chat.channel import ChannelType, ChatChannel
 from uniffy.core.models.chat.message import ChatMessage, ChatMessageMetadataKey, SenderType
 from uniffy.core.types import generate_id
+from uniffy.domains.chat.messages.broadcasts import remap_file_references
 from uniffy.domains.chat.messages.converters import (
     public_message_metadata,
     thread_reply_context_to_proto,
@@ -116,6 +118,64 @@ class TestFlagValidation:
                 root_id=None,
                 also_send_to_channel=True,
             )
+
+
+async def test_broadcast_post_commit_invokes_agent_and_queues_delivery_once():
+    sender = _sender()
+    reply = _reply()
+    copy = await _stage(sender, reply)
+    channel = ChatChannel(
+        id=CHANNEL,
+        organization_id=ORG,
+        owner_id=USER,
+        name="Test",
+        slug="test",
+        channel_type=ChannelType.PUBLIC,
+    )
+    sender._get_channel_member_ids = AsyncMock(return_value=[USER])
+    sender._publish_send_event = AsyncMock()
+    sender._maybe_trigger_agents = AsyncMock()
+    with (
+        patch(
+            "uniffy.domains.chat.messages.sending.ChatReadStateOperations", return_value=AsyncMock()
+        ),
+        patch("uniffy.domains.chat.messages.sending.enqueue_job", AsyncMock()) as enqueue,
+    ):
+        await sender._post_commit_send(
+            reply,
+            channel,
+            USER,
+            ROOT,
+            NOW,
+            "Sender",
+            "",
+            channel_copy=copy,
+        )
+    sender._maybe_trigger_agents.assert_awaited_once_with(reply, channel)
+    enqueue.assert_awaited_once()
+    assert [call.args[0].id for call in sender._publish_send_event.await_args_list] == [
+        reply.id,
+        copy.id,
+    ]
+
+
+def test_file_mapping_preserves_labels_other_types_and_foreign_org_urls():
+    source, target, foreign_org = generate_id(), generate_id(), generate_id()
+    source_urn = f"urn:uniffy:content:FILE:{source}"
+    target_urn = f"urn:uniffy:content:FILE:{target}"
+    content = (
+        f"[[[{source_urn}|{source_urn}]]] "
+        f"[[[person|urn:uniffy:content:USER:{source}]]] "
+        f"![media](/api/files/{ORG}/{source}) "
+        f"/api/files/{foreign_org}/{source}"
+    )
+    result = remap_file_references(content, ORG, {source: target})
+    assert result == (
+        f"[[[{source_urn}|{target_urn}]]] "
+        f"[[[person|urn:uniffy:content:USER:{source}]]] "
+        f"![media](/api/files/{ORG}/{target}) "
+        f"/api/files/{foreign_org}/{source}"
+    )
 
 
 class TestProjection:

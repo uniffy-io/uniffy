@@ -24,6 +24,8 @@ from uniffy.domains.chat.cache import (
     invalidate_cached_pinned_messages,
     set_cached_pinned_message_ids,
 )
+from uniffy.domains.chat.messages.broadcasts import lock_message_pair, peer_attachment_content
+from uniffy.domains.chat.messages.converters import get_thread_reply_metadata
 from uniffy.domains.chat.messages.limits import MAX_MESSAGE_LENGTH
 from uniffy.domains.chat.messages.types import ChatMessageAction
 from uniffy.domains.chat.policies.operations import (
@@ -61,6 +63,9 @@ class MessageMutations:
         msg = await self._get_message_by_id(message_id)
         if not msg or msg.channel_id != channel_id:
             raise NotFoundError("message", message_id)
+        msg, peer = await lock_message_pair(self.session, msg)
+        if msg.is_deleted:
+            raise NotFoundError("message", message_id)
 
         await self._require_message_action(
             user_id, organization_id, channel_id, msg, ChatMessageAction.EDIT
@@ -74,18 +79,31 @@ class MessageMutations:
         if content == msg.content:
             return msg
 
-        await self._record_revision(msg, edited_by=user_id)
-
         now = datetime.now(UTC)
-        msg.content = content
-        msg.edited_at = now
-        msg.updated_at = now
-        agent_mentions = sorted(extract_mentioned_agent_ids_from_content(content))
-        urn_mentions = sorted(
-            extract_all_outgoing_references(content, organization_id=organization_id)
-        )
-        msg.mentioned_agent_ids = agent_mentions or None
-        msg.mentioned_urns = urn_mentions or None
+        edits = [(msg, content)]
+        if peer is not None and not peer.is_deleted:
+            peer_content = await peer_attachment_content(
+                self.session,
+                organization_id=organization_id,
+                message=msg,
+                peer=peer,
+                content=content,
+            )
+            edits.append((peer, peer_content))
+        for edited, body in edits:
+            await self._record_revision(edited, edited_by=user_id)
+            edited.content = body
+            edited.edited_at = now
+            edited.updated_at = now
+            edited.mentioned_agent_ids = (
+                sorted(extract_mentioned_agent_ids_from_content(body)) or None
+                if get_thread_reply_metadata(edited.message_metadata) is None
+                else None
+            )
+            edited.mentioned_urns = (
+                sorted(extract_all_outgoing_references(body, organization_id=organization_id))
+                or None
+            )
 
         await self.session.commit()
         await self.session.refresh(msg)
@@ -93,24 +111,25 @@ class MessageMutations:
         # One fetch covers fan-out + re-index.
         member_ids = await self._get_channel_member_ids(channel_id)
 
-        try:
-            await publish_channel_event_to_members(
-                member_ids,
-                MESSAGE_UPDATED,
-                build_message_payload(
-                    message_id=msg.id,
-                    channel_id=channel_id,
-                    sender_id=msg.sender_id,
-                    sender_type=msg.sender_type.value,
-                    content=msg.content,
-                    root_id=msg.root_id,
-                    created_at=msg.created_at,
-                    edited_at=msg.edited_at,
-                    is_pinned=msg.is_pinned,
-                ),
-            )
-        except Exception:
-            logger.warning(f"Valkey publish failed for message update {msg.id}")
+        for edited, _ in edits:
+            try:
+                await publish_channel_event_to_members(
+                    member_ids,
+                    MESSAGE_UPDATED,
+                    build_message_payload(
+                        message_id=edited.id,
+                        channel_id=channel_id,
+                        sender_id=edited.sender_id,
+                        sender_type=edited.sender_type.value,
+                        content=edited.content,
+                        root_id=edited.root_id,
+                        created_at=edited.created_at,
+                        edited_at=edited.edited_at,
+                        is_pinned=edited.is_pinned,
+                    ),
+                )
+            except Exception:
+                logger.warning(f"Valkey publish failed for message update {edited.id}")
 
         await self._index_message(msg, channel, member_ids)
 
@@ -125,9 +144,12 @@ class MessageMutations:
         channel_id: UUID,
         message_id: UUID,
     ) -> None:
-        await self.access.get_channel(channel_id, organization_id)
+        channel = await self.access.get_channel(channel_id, organization_id)
         msg = await self._get_message_by_id(message_id)
         if not msg or msg.channel_id != channel_id:
+            raise NotFoundError("message", message_id)
+        msg, peer = await lock_message_pair(self.session, msg)
+        if msg.is_deleted:
             raise NotFoundError("message", message_id)
 
         await self._require_message_action(
@@ -190,8 +212,8 @@ class MessageMutations:
         if was_pinned:
             await invalidate_cached_pinned_messages(channel_id)
 
+        member_ids = await self._get_channel_member_ids(channel_id)
         try:
-            member_ids = await self._get_channel_member_ids(channel_id)
             await publish_channel_event_to_members(
                 member_ids,
                 MESSAGE_DELETED,
@@ -206,6 +228,9 @@ class MessageMutations:
             await self.search_indexer.remove(urn)
         except Exception:
             logger.warning(f"Search remove failed for message {msg.id}")
+
+        if peer is not None and not peer.is_deleted:
+            await self._index_message(peer, channel, member_ids)
 
         try:
             ops = ChatResourceOperations(self.session)
