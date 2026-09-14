@@ -123,6 +123,10 @@ export default defineConfig(({ command, mode }) => {
       resolveExtensions: ['.ts', '.tsx', '.js', '.jsx'],
     },
   },
+  // Pure mobile modules share this runner without requiring Expo's config package.
+  esbuild: mode === 'test' ? {
+    tsconfigRaw: { compilerOptions: { useDefineForClassFields: true, verbatimModuleSyntax: true } },
+  } : undefined,
   test: {
     include: ['src/**/*.test.ts'],
   },
