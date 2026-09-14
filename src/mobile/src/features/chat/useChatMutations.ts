@@ -292,6 +292,38 @@ export function useMarkChannelRead(channelId: string) {
   });
 }
 
+export function useMarkChannelUnread(channelId: string) {
+  const { organizationId } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (messageId: string) =>
+      chatApi.markChannelUnread({
+        organizationId: organizationId!,
+        channelId,
+        messageId,
+      }),
+    onSuccess: (res) => {
+      // Write the returned counts through rather than refetching: the poll
+      // interval would otherwise leave the badge stale for seconds.
+      queryClient.setQueryData<
+        Record<string, { unread: number; mentions: number; lastReadMessageId?: string }>
+      >(["chat", "unread", organizationId], (prev) =>
+        prev
+          ? {
+              ...prev,
+              [channelId]: {
+                unread: res.unreadCount,
+                mentions: res.mentionCount,
+                lastReadMessageId: res.lastReadMessageId || undefined,
+              },
+            }
+          : prev,
+      );
+    },
+  });
+}
+
 /**
  * Autosave draft mutations patch the cache optimistically and stay silent on
  * error: a failed save keeps the optimistic entry and the next debounce

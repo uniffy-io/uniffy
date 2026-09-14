@@ -46,7 +46,7 @@ function isStreamHealthy(queryClient: QueryClient): boolean {
   return queryClient.getQueryData<boolean>(STREAM_HEALTH_KEY) === true;
 }
 
-type UnreadMap = Record<string, { unread: number; mentions: number }>;
+type UnreadMap = Record<string, { unread: number; mentions: number; lastReadMessageId?: string }>;
 
 export function useArchivedChannels(enabled: boolean) {
   const { organizationId } = useAuth();
@@ -123,7 +123,11 @@ function useUnreadCounts() {
       const res = await chatApi.getUnreadCounts({ organizationId: organizationId! });
       const map: UnreadMap = {};
       for (const c of res.channels) {
-        map[c.channelId] = { unread: c.unreadCount, mentions: c.mentionCount };
+        map[c.channelId] = {
+          unread: c.unreadCount,
+          mentions: c.mentionCount,
+          lastReadMessageId: c.lastReadMessageId,
+        };
       }
       return map;
     },

@@ -19,6 +19,7 @@ import * as Clipboard from "expo-clipboard";
 import {
   Trash,
   Copy,
+  EnvelopeSimple,
   Hash,
   Lock,
   Robot,
@@ -84,6 +85,7 @@ import {
   useDeleteMessage,
   useToggleReaction,
   useMarkChannelRead,
+  useMarkChannelUnread,
   useEditMessage,
   usePinMessage,
   useDiscardFailedMessage,
@@ -297,6 +299,7 @@ export function ChatConversationScreen() {
   const editMessage = useEditMessage(channelId);
   const pinMessage = usePinMessage(channelId);
   const markRead = useMarkChannelRead(channelId);
+  const markUnread = useMarkChannelUnread(channelId);
   const stopAgent = useStopAgentRun();
   const respondToConfirmation = useRespondToAgentConfirmation(channelId);
   const updateChannel = useUpdateChannel(channelId);
@@ -528,20 +531,22 @@ export function ChatConversationScreen() {
   // may still be resolving on the first render, and the snapshot has to be taken
   // on whichever render first has it.
   const entryUnreadRef = useRef<number | null>(null);
+  const entryCursorRef = useRef<string | undefined>(undefined);
   // eslint-disable-next-line react/react-compiler
   if (entryUnreadRef.current === null && organizationId) {
-    const unreadMap = queryClient.getQueryData<Record<string, { unread: number }>>([
-      "chat",
-      "unread",
-      organizationId,
-    ]);
+    const unreadMap = queryClient.getQueryData<
+      Record<string, { unread: number; lastReadMessageId?: string }>
+    >(["chat", "unread", organizationId]);
     entryUnreadRef.current = unreadMap?.[channelId]?.unread ?? 0;
+    // eslint-disable-next-line react/react-compiler
+    entryCursorRef.current = unreadMap?.[channelId]?.lastReadMessageId;
   }
 
   // Anchor the "New messages" divider to the first unread message of the
   // initial load; locked once so later polls do not move it.
   const unreadAnchorRef = useRef<string | null | undefined>(undefined);
   const firstUnreadId = useMemo(() => {
+    // eslint-disable-next-line react/react-compiler
     if (unreadAnchorRef.current !== undefined) return unreadAnchorRef.current;
     const loaded = messagesQuery.data;
     if (!loaded || loaded.length === 0) return null;
@@ -550,7 +555,23 @@ export function ChatConversationScreen() {
     // state write here would re-render the whole thread to reach the same value.
     // eslint-disable-next-line react/react-compiler
     const unread = entryUnreadRef.current ?? 0;
-    const anchor = unread > 0 ? (loaded[Math.min(unread, loaded.length) - 1]?.id ?? null) : null;
+    // eslint-disable-next-line react/react-compiler
+    const cursor = entryCursorRef.current;
+    // The list is newest-first, so the first unread sits one index BEFORE the
+    // cursor. Counting back from the tail instead breaks once unread exceeds
+    // the loaded page or the server's 100 cap.
+    let anchor: string | null = null;
+    if (unread > 0) {
+      // eslint-disable-next-line react/react-compiler
+      const cursorIndex = cursor ? loaded.findIndex((m) => m.id === cursor) : -1;
+      anchor =
+        cursorIndex > 0
+          ? loaded[cursorIndex - 1].id
+          : // Cursor out of window (or never read): everything loaded is unread.
+            cursorIndex === -1
+            ? (loaded[loaded.length - 1]?.id ?? null)
+            : null;
+    }
     // eslint-disable-next-line react/react-compiler
     unreadAnchorRef.current = anchor;
     return anchor;
@@ -652,8 +673,13 @@ export function ChatConversationScreen() {
     [draft, mentionTypeahead.token],
   );
 
+  // Holds off the newest-id auto-mark-read after the user marks something
+  // unread, or the badge they just asked for clears on the next poll.
+  const manualUnreadRef = useRef(false);
+
   const newestId = messages[0]?.id;
   useEffect(() => {
+    if (manualUnreadRef.current) return;
     if (newestId && !newestId.startsWith("optimistic-")) {
       markRead.mutate(newestId);
     }
@@ -871,6 +897,19 @@ export function ChatConversationScreen() {
     (message: SerializedMessage) => jumpToMessage(message.replyContext?.id),
     [jumpToMessage],
   );
+
+  // Entering a busy channel otherwise lands at the newest message with no way
+  // back to where the user left off. Fires once per channel entry; the anchor
+  // itself is latched, so later polls never re-trigger it.
+  const landedOnUnreadRef = useRef(false);
+  useEffect(() => {
+    if (landedOnUnreadRef.current || !firstUnreadId || rows.length === 0) return;
+    landedOnUnreadRef.current = true;
+    jumpToMessage(firstUnreadId);
+    // firstUnreadId is latched in a ref above, which the compiler analysis
+    // treats as a render-time ref read even though this runs in an effect.
+    // eslint-disable-next-line react/react-compiler
+  }, [firstUnreadId, rows.length, jumpToMessage]);
 
   const renderItem = useCallback(
     ({ item, index }: { item: MessageRowItem; index: number }) => {
@@ -1312,6 +1351,13 @@ export function ChatConversationScreen() {
             await Clipboard.setStringAsync(display);
           }
           setActionMessage(null);
+        }}
+        onMarkUnread={() => {
+          const msg = actionMessage;
+          setActionMessage(null);
+          if (!msg || msg.id.startsWith("optimistic-")) return;
+          manualUnreadRef.current = true;
+          markUnread.mutate(msg.id);
         }}
         onDelete={() => {
           const msg = actionMessage;
@@ -1948,6 +1994,7 @@ function MessageActionSheet({
   onPin,
   onEdit,
   onCopy,
+  onMarkUnread,
   onDelete,
 }: {
   message: SerializedMessage | null;
@@ -1963,6 +2010,7 @@ function MessageActionSheet({
   onPin: () => void;
   onEdit: () => void;
   onCopy: () => void;
+  onMarkUnread: () => void;
   onDelete: () => void;
 }) {
   const canEdit = isOwn && message?.senderType === "USER" && editAllowed;
@@ -2024,6 +2072,12 @@ function MessageActionSheet({
         onPress={onCopy}
         icon={<Copy size={18} color={T.text} weight="duotone" />}
         label="Copy text"
+      />
+      <SheetAction
+        T={T}
+        onPress={onMarkUnread}
+        icon={<EnvelopeSimple size={18} color={T.text} weight="duotone" />}
+        label="Mark as unread"
       />
       {isOwn ? (
         <SheetAction
