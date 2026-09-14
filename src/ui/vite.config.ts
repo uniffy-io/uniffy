@@ -123,9 +123,9 @@ export default defineConfig(({ command, mode }) => {
       resolveExtensions: ['.ts', '.tsx', '.js', '.jsx'],
     },
   },
-  // Pure mobile modules share this runner without requiring Expo's config package.
+  // String form prevents Vite from loading Expo's config for pure mobile test modules.
   esbuild: mode === 'test' ? {
-    tsconfigRaw: { compilerOptions: { useDefineForClassFields: true, verbatimModuleSyntax: true } },
+    tsconfigRaw: JSON.stringify({ compilerOptions: { useDefineForClassFields: true, verbatimModuleSyntax: true } }),
   } : undefined,
   test: {
     include: ['src/**/*.test.ts'],
