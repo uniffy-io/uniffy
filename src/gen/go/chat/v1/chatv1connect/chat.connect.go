@@ -44,6 +44,9 @@ const (
 	// ChatServiceArchiveChannelProcedure is the fully-qualified name of the ChatService's
 	// ArchiveChannel RPC.
 	ChatServiceArchiveChannelProcedure = "/chat.v1.ChatService/ArchiveChannel"
+	// ChatServiceUnarchiveChannelProcedure is the fully-qualified name of the ChatService's
+	// UnarchiveChannel RPC.
+	ChatServiceUnarchiveChannelProcedure = "/chat.v1.ChatService/UnarchiveChannel"
 	// ChatServiceDeleteChannelProcedure is the fully-qualified name of the ChatService's DeleteChannel
 	// RPC.
 	ChatServiceDeleteChannelProcedure = "/chat.v1.ChatService/DeleteChannel"
@@ -220,6 +223,7 @@ type ChatServiceClient interface {
 	GetChannel(context.Context, *connect.Request[v1.GetChannelRequest]) (*connect.Response[v1.GetChannelResponse], error)
 	UpdateChannel(context.Context, *connect.Request[v1.UpdateChannelRequest]) (*connect.Response[v1.UpdateChannelResponse], error)
 	ArchiveChannel(context.Context, *connect.Request[v1.ArchiveChannelRequest]) (*connect.Response[v1.ArchiveChannelResponse], error)
+	UnarchiveChannel(context.Context, *connect.Request[v1.UnarchiveChannelRequest]) (*connect.Response[v1.UnarchiveChannelResponse], error)
 	DeleteChannel(context.Context, *connect.Request[v1.DeleteChannelRequest]) (*connect.Response[v1.DeleteChannelResponse], error)
 	ListChannels(context.Context, *connect.Request[v1.ListChannelsRequest]) (*connect.Response[v1.ListChannelsResponse], error)
 	// Membership
@@ -364,6 +368,12 @@ func NewChatServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			httpClient,
 			baseURL+ChatServiceArchiveChannelProcedure,
 			connect.WithSchema(chatServiceMethods.ByName("ArchiveChannel")),
+			connect.WithClientOptions(opts...),
+		),
+		unarchiveChannel: connect.NewClient[v1.UnarchiveChannelRequest, v1.UnarchiveChannelResponse](
+			httpClient,
+			baseURL+ChatServiceUnarchiveChannelProcedure,
+			connect.WithSchema(chatServiceMethods.ByName("UnarchiveChannel")),
 			connect.WithClientOptions(opts...),
 		),
 		deleteChannel: connect.NewClient[v1.DeleteChannelRequest, v1.DeleteChannelResponse](
@@ -735,6 +745,7 @@ type chatServiceClient struct {
 	getChannel                       *connect.Client[v1.GetChannelRequest, v1.GetChannelResponse]
 	updateChannel                    *connect.Client[v1.UpdateChannelRequest, v1.UpdateChannelResponse]
 	archiveChannel                   *connect.Client[v1.ArchiveChannelRequest, v1.ArchiveChannelResponse]
+	unarchiveChannel                 *connect.Client[v1.UnarchiveChannelRequest, v1.UnarchiveChannelResponse]
 	deleteChannel                    *connect.Client[v1.DeleteChannelRequest, v1.DeleteChannelResponse]
 	listChannels                     *connect.Client[v1.ListChannelsRequest, v1.ListChannelsResponse]
 	joinChannel                      *connect.Client[v1.JoinChannelRequest, v1.JoinChannelResponse]
@@ -815,6 +826,11 @@ func (c *chatServiceClient) UpdateChannel(ctx context.Context, req *connect.Requ
 // ArchiveChannel calls chat.v1.ChatService.ArchiveChannel.
 func (c *chatServiceClient) ArchiveChannel(ctx context.Context, req *connect.Request[v1.ArchiveChannelRequest]) (*connect.Response[v1.ArchiveChannelResponse], error) {
 	return c.archiveChannel.CallUnary(ctx, req)
+}
+
+// UnarchiveChannel calls chat.v1.ChatService.UnarchiveChannel.
+func (c *chatServiceClient) UnarchiveChannel(ctx context.Context, req *connect.Request[v1.UnarchiveChannelRequest]) (*connect.Response[v1.UnarchiveChannelResponse], error) {
+	return c.unarchiveChannel.CallUnary(ctx, req)
 }
 
 // DeleteChannel calls chat.v1.ChatService.DeleteChannel.
@@ -1124,6 +1140,7 @@ type ChatServiceHandler interface {
 	GetChannel(context.Context, *connect.Request[v1.GetChannelRequest]) (*connect.Response[v1.GetChannelResponse], error)
 	UpdateChannel(context.Context, *connect.Request[v1.UpdateChannelRequest]) (*connect.Response[v1.UpdateChannelResponse], error)
 	ArchiveChannel(context.Context, *connect.Request[v1.ArchiveChannelRequest]) (*connect.Response[v1.ArchiveChannelResponse], error)
+	UnarchiveChannel(context.Context, *connect.Request[v1.UnarchiveChannelRequest]) (*connect.Response[v1.UnarchiveChannelResponse], error)
 	DeleteChannel(context.Context, *connect.Request[v1.DeleteChannelRequest]) (*connect.Response[v1.DeleteChannelResponse], error)
 	ListChannels(context.Context, *connect.Request[v1.ListChannelsRequest]) (*connect.Response[v1.ListChannelsResponse], error)
 	// Membership
@@ -1264,6 +1281,12 @@ func NewChatServiceHandler(svc ChatServiceHandler, opts ...connect.HandlerOption
 		ChatServiceArchiveChannelProcedure,
 		svc.ArchiveChannel,
 		connect.WithSchema(chatServiceMethods.ByName("ArchiveChannel")),
+		connect.WithHandlerOptions(opts...),
+	)
+	chatServiceUnarchiveChannelHandler := connect.NewUnaryHandler(
+		ChatServiceUnarchiveChannelProcedure,
+		svc.UnarchiveChannel,
+		connect.WithSchema(chatServiceMethods.ByName("UnarchiveChannel")),
 		connect.WithHandlerOptions(opts...),
 	)
 	chatServiceDeleteChannelHandler := connect.NewUnaryHandler(
@@ -1636,6 +1659,8 @@ func NewChatServiceHandler(svc ChatServiceHandler, opts ...connect.HandlerOption
 			chatServiceUpdateChannelHandler.ServeHTTP(w, r)
 		case ChatServiceArchiveChannelProcedure:
 			chatServiceArchiveChannelHandler.ServeHTTP(w, r)
+		case ChatServiceUnarchiveChannelProcedure:
+			chatServiceUnarchiveChannelHandler.ServeHTTP(w, r)
 		case ChatServiceDeleteChannelProcedure:
 			chatServiceDeleteChannelHandler.ServeHTTP(w, r)
 		case ChatServiceListChannelsProcedure:
@@ -1779,6 +1804,10 @@ func (UnimplementedChatServiceHandler) UpdateChannel(context.Context, *connect.R
 
 func (UnimplementedChatServiceHandler) ArchiveChannel(context.Context, *connect.Request[v1.ArchiveChannelRequest]) (*connect.Response[v1.ArchiveChannelResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("chat.v1.ChatService.ArchiveChannel is not implemented"))
+}
+
+func (UnimplementedChatServiceHandler) UnarchiveChannel(context.Context, *connect.Request[v1.UnarchiveChannelRequest]) (*connect.Response[v1.UnarchiveChannelResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("chat.v1.ChatService.UnarchiveChannel is not implemented"))
 }
 
 func (UnimplementedChatServiceHandler) DeleteChannel(context.Context, *connect.Request[v1.DeleteChannelRequest]) (*connect.Response[v1.DeleteChannelResponse], error) {

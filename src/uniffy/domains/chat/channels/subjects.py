@@ -31,6 +31,7 @@ from uniffy.domains.chat.cache import (
     invalidate_cached_member_ids,
 )
 from uniffy.domains.chat.channels.limits import (
+    GROUP_DM_CAP_MESSAGE,
     GROUP_DM_MAX_PARTICIPANTS,
 )
 from uniffy.domains.chat.limits import (
@@ -58,8 +59,9 @@ class ChannelSubjects:
     ) -> list[ChatChannelMember]:
         """Add USER/AGENT members; actor needs channel MANAGE plus VIEWER+ on each AGENT.
 
-        Group DMs: any participant can add people (users only, 8-person cap);
-        1:1 DMs stay immutable - adding a third person means a new conversation.
+        Group DMs: any participant can add people (users only, capped at
+        GROUP_DM_MAX_PARTICIPANTS); 1:1 DMs stay immutable - adding a third
+        person means a new conversation.
         """
         channel = await self.get_by_id(user_id, organization_id, channel_id)
 
@@ -80,11 +82,7 @@ class ChannelSubjects:
             )
             current_count = count_result.scalar_one()
             if current_count + len({s.subject_id for s in subjects}) > GROUP_DM_MAX_PARTICIPANTS:
-                raise ValidationError(
-                    "members",
-                    f"Group chats are limited to {GROUP_DM_MAX_PARTICIPANTS} people. "
-                    "Convert this conversation to a channel to add more.",
-                )
+                raise ValidationError("members", GROUP_DM_CAP_MESSAGE)
         else:
             await self._require_edit(user_id, organization_id, channel)
 

@@ -19,6 +19,7 @@ import {
   Hash,
   Lock,
   ChatCircle,
+  ArrowCounterClockwise,
   Robot,
   ChatTeardropText,
   Compass,
@@ -43,8 +44,10 @@ import { useTheme } from "@shared/hooks/useTheme";
 import { BOTTOM_NAV_HEIGHT } from "@theme/theme";
 import type { ThemeColors } from "@theme/theme";
 import { FONT } from "@theme/typography";
+import { GROUP_DM_MAX_PARTICIPANTS, NEW_DM_MAX_RECIPIENTS } from "@features/chat/chatLimits";
 import {
   useChannels,
+  useArchivedChannels,
   useAgentChats,
   useThreadsInbox,
   useBrowseChannels,
@@ -55,6 +58,7 @@ import {
   useJoinChannel,
   useCreateCategory,
   useCreateDm,
+  useUnarchiveChannel,
   useUpdateCategory,
   useDeleteCategory,
   useCreateAgentFolder,
@@ -62,6 +66,7 @@ import {
   useDeleteAgentFolder,
   useSetAgentChatFolder,
 } from "@features/chat/useChatMutations";
+import { useChatPermissions } from "@features/chat/useChatPermissions";
 import { useChatStream } from "@features/chat/useChatStream";
 import { useAgents, useCreateAgentChat } from "@features/agents/useAgents";
 import type { SerializedAgent } from "@features/agents/agentSerializer";
@@ -109,7 +114,7 @@ export function ChatListScreen() {
     Platform.OS === "web" ? BOTTOM_NAV_HEIGHT + 34 : BOTTOM_NAV_HEIGHT + insets.bottom;
   const [tab, setTab] = useState<Tab>("all");
   const [browsing, setBrowsing] = useState(false);
-  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({ archived: true });
 
   const [newCategoryOpen, setNewCategoryOpen] = useState(false);
   const [newDmOpen, setNewDmOpen] = useState(false);
@@ -125,6 +130,13 @@ export function ChatListScreen() {
   const joinChannel = useJoinChannel();
   const createCategory = useCreateCategory();
   const createDm = useCreateDm();
+  const { canManageChat } = useChatPermissions();
+  const unarchiveChannel = useUnarchiveChannel();
+  const archivedQuery = useArchivedChannels(!collapsed.archived);
+  const archivedChannels = useMemo(
+    () => archivedQuery.data?.pages.flatMap((page) => page.channels) ?? [],
+    [archivedQuery.data],
+  );
   const createAgentChat = useCreateAgentChat();
   const agentFolders = useAgentFolders();
   const createAgentFolder = useCreateAgentFolder();
@@ -586,6 +598,53 @@ export function ChatListScreen() {
               />
             ))}
           </CategorySection>
+
+          <CategorySection
+            label="Archived"
+            count={archivedChannels.length}
+            collapsed={!!collapsed.archived}
+            onToggle={() => toggle("archived")}
+            hasContent
+            T={T}
+          >
+            {archivedQuery.isLoading ? (
+              <Text style={[styles.sectionEmptyText, styles.archivedNote, { color: T.textDim }]}>
+                Loading...
+              </Text>
+            ) : archivedChannels.length === 0 && !archivedQuery.isError ? (
+              <Text style={[styles.sectionEmptyText, styles.archivedNote, { color: T.textDim }]}>
+                No archived channels
+              </Text>
+            ) : (
+              archivedChannels.map((c) => (
+                <ArchivedChannelRow
+                  key={c.id}
+                  channel={c}
+                  T={T}
+                  canRestore={canManageChat || c.currentUserRole === "OWNER"}
+                  restoring={unarchiveChannel.isPending && unarchiveChannel.variables === c.id}
+                  onPress={() => openChannel(c.id)}
+                  onRestore={() => unarchiveChannel.mutate(c.id)}
+                />
+              ))
+            )}
+            {archivedQuery.isError ? (
+              <TouchableOpacity onPress={() => archivedQuery.refetch()} style={styles.archivedMain}>
+                <Text style={{ color: T.textDim }}>Archived channels could not load. Retry</Text>
+              </TouchableOpacity>
+            ) : null}
+            {archivedQuery.hasNextPage ? (
+              <TouchableOpacity
+                onPress={() => archivedQuery.fetchNextPage()}
+                disabled={archivedQuery.isFetchingNextPage}
+                style={styles.archivedMain}
+              >
+                <Text style={{ color: T.textDim }}>
+                  {archivedQuery.isFetchingNextPage ? "Loading..." : "Load more"}
+                </Text>
+              </TouchableOpacity>
+            ) : null}
+          </CategorySection>
         </ScrollView>
       )}
 
@@ -902,11 +961,13 @@ function NewDmModal({
       );
   }, [directory.subjects, search]);
 
+  const atCap = selected.size >= NEW_DM_MAX_RECIPIENTS;
+
   const toggleUser = (id: string) =>
     setSelected((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
-      else next.add(id);
+      else if (prev.size < NEW_DM_MAX_RECIPIENTS) next.add(id);
       return next;
     });
 
@@ -928,6 +989,12 @@ function NewDmModal({
           style={[styles.searchInput, { color: T.textBright }]}
         />
       </View>
+      {atCap ? (
+        <Text style={[styles.dmCapNotice, { color: T.textDim }]}>
+          Group chats are limited to {GROUP_DM_MAX_PARTICIPANTS} people. Create a channel for a
+          bigger group.
+        </Text>
+      ) : null}
       <FlatList
         data={users}
         keyExtractor={(item) => item.id}
@@ -935,10 +1002,12 @@ function NewDmModal({
         style={styles.dmList}
         renderItem={({ item }) => {
           const active = selected.has(item.id);
+          const blocked = atCap && !active;
           return (
             <TouchableOpacity
-              style={[styles.dmRow, { borderBottomColor: T.border }]}
+              style={[styles.dmRow, { borderBottomColor: T.border, opacity: blocked ? 0.4 : 1 }]}
               onPress={() => toggleUser(item.id)}
+              disabled={blocked}
               activeOpacity={0.7}
             >
               <Avatar name={item.name} avatarUrl={item.avatarUrl} size={36} />
@@ -1192,6 +1261,48 @@ function ThreadsList({
         </View>
       }
     />
+  );
+}
+
+function ArchivedChannelRow({
+  channel,
+  T,
+  canRestore,
+  restoring,
+  onPress,
+  onRestore,
+}: {
+  channel: SerializedChannel;
+  T: ThemeColors;
+  canRestore: boolean;
+  restoring: boolean;
+  onPress: () => void;
+  onRestore: () => void;
+}) {
+  const isDm = channel.channelType === "DIRECT" || channel.channelType === "GROUP_DM";
+  const TypeIcon = isDm ? ChatCircle : channel.channelType === "PRIVATE" ? Lock : Hash;
+
+  return (
+    <View style={styles.archivedRow}>
+      <TouchableOpacity style={styles.archivedMain} onPress={onPress} activeOpacity={0.7}>
+        <TypeIcon size={16} color={T.textDim} weight="bold" />
+        <Text style={[styles.archivedName, { color: T.textDim }]} numberOfLines={1}>
+          {channel.displayName}
+        </Text>
+      </TouchableOpacity>
+      {canRestore ? (
+        <TouchableOpacity
+          style={styles.archivedRestore}
+          onPress={onRestore}
+          disabled={restoring}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          activeOpacity={0.7}
+          accessibilityLabel={`Restore ${channel.displayName}`}
+        >
+          <ArrowCounterClockwise size={16} color={restoring ? T.textDim : T.accent} weight="bold" />
+        </TouchableOpacity>
+      ) : null}
+    </View>
   );
 }
 
@@ -1535,6 +1646,26 @@ const styles = StyleSheet.create({
   },
   newFolderRow: { flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 14 },
   newFolderText: { fontSize: 14, fontFamily: FONT.medium },
+  archivedNote: { paddingHorizontal: 16, paddingVertical: 10 },
+  archivedRow: { flexDirection: "row", alignItems: "center", minHeight: 44 },
+  archivedMain: {
+    minHeight: 44,
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+  archivedName: { flex: 1, fontSize: 15, fontFamily: FONT.regular },
+  archivedRestore: {
+    minHeight: 44,
+    minWidth: 44,
+    justifyContent: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+  dmCapNotice: { fontSize: 12, fontFamily: FONT.regular, marginTop: 10 },
   dmName: { fontSize: 15, fontFamily: FONT.medium },
   dmEmail: { fontSize: 12, fontFamily: FONT.regular, marginTop: 1 },
   dmCheckbox: {

@@ -34,6 +34,7 @@ interface HoverActionsToolbarProps {
   channelId: string;
   senderId: string;
   isPinned: boolean;
+  canReplyInThread: boolean;
   content: string;
   /** Edit-window policy decision, evaluated when the menu opens; the server is the boundary. */
   isEditAllowed?: () => boolean;
@@ -48,6 +49,7 @@ function HoverActionsToolbarInner({
   channelId,
   senderId,
   isPinned,
+  canReplyInThread,
   content,
   isEditAllowed,
   onQuoteReply,
@@ -81,9 +83,10 @@ function HoverActionsToolbarInner({
   );
 
   const handleReplyInThread = useCallback(() => {
+    if (!canReplyInThread) return;
     dispatch(setActiveThread(messageId));
     dispatch(openThreadPanel());
-  }, [dispatch, messageId]);
+  }, [canReplyInThread, dispatch, messageId]);
 
   const handleTogglePin = useCallback(() => {
     if (isPinned) {
@@ -167,14 +170,16 @@ function HoverActionsToolbarInner({
             <Smiley size={16} />
           </button>
 
-          <button
-            className={buttonClass}
-            title="Reply in thread"
-            onClick={handleReplyInThread}
-            data-testid={`chat-message-thread-button-${messageId}`}
-          >
-            <ChatText size={16} />
-          </button>
+          {canReplyInThread && (
+            <button
+              className={buttonClass}
+              title="Reply in thread"
+              onClick={handleReplyInThread}
+              data-testid={`chat-message-thread-button-${messageId}`}
+            >
+              <ChatText size={16} />
+            </button>
+          )}
 
           <button
             className={buttonClass}
@@ -257,17 +262,18 @@ function HoverActionsToolbarInner({
                   <Smiley size={16} />
                   <span>Add reaction</span>
                 </ActionMenuItem>
-                <ActionMenuItem
-                  role="menuitem"
-
-                  onClick={() => {
-                    setShowMoreMenu(false);
-                    handleReplyInThread();
-                  }}
-                >
-                  <ChatText size={16} />
-                  <span>Reply in thread</span>
-                </ActionMenuItem>
+                {canReplyInThread && (
+                  <ActionMenuItem
+                    role="menuitem"
+                    onClick={() => {
+                      setShowMoreMenu(false);
+                      handleReplyInThread();
+                    }}
+                  >
+                    <ChatText size={16} />
+                    <span>Reply in thread</span>
+                  </ActionMenuItem>
+                )}
                 <ActionMenuItem
                   role="menuitem"
 

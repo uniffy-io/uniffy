@@ -21,6 +21,7 @@ from uniffy.core.types import (
     slugify,
 )
 from uniffy.domains.chat.channels.limits import (
+    GROUP_DM_CAP_MESSAGE,
     GROUP_DM_MAX_PARTICIPANTS,
 )
 from uniffy.domains.chat.channels.slugs import slug_suffix
@@ -49,11 +50,7 @@ class DirectChannels:
         if len(all_user_ids) < 2:
             raise ValidationError("members", "DM requires at least 2 participants")
         if len(all_user_ids) > GROUP_DM_MAX_PARTICIPANTS:
-            raise ValidationError(
-                "members",
-                f"Group chats are limited to {GROUP_DM_MAX_PARTICIPANTS} people. "
-                "Create a channel for a bigger group.",
-            )
+            raise ValidationError("members", GROUP_DM_CAP_MESSAGE)
 
         is_direct = len(all_user_ids) == 2
         channel_type = ChannelType.DIRECT if is_direct else ChannelType.GROUP_DM
@@ -205,8 +202,8 @@ class DirectChannels:
 
         if len(participants) < 2:
             raise ValidationError("members", "DM requires at least 2 participants")
-        if len(participants) > 8:
-            raise ValidationError("members", "Group DMs support up to 8 participants")
+        if len(participants) > GROUP_DM_MAX_PARTICIPANTS:
+            raise ValidationError("members", GROUP_DM_CAP_MESSAGE)
 
         is_direct = len(participants) == 2
         channel_type = ChannelType.DIRECT if is_direct else ChannelType.GROUP_DM

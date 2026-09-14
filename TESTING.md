@@ -2329,6 +2329,88 @@ organizer. Watch the outbox, not just the UI.
       still succeeds in the app; the message is retried rather than lost, and
       gives up after several attempts without blocking anything.
 
+## Chat group DM participant cap
+
+One ceiling of nine participants, enforced by the server and mirrored by both clients. Needs an
+org with at least ten members.
+
+- [ ] Web: open New message, select people. The picker stops accepting at eight recipients
+      (nine participants with you) and says so; the header hint counts "N of 9 participants".
+- [ ] Create that nine-person group chat. It opens as a group conversation, and its name reads
+      "A, B, and 7 others" in both the sidebar and the channel header.
+- [ ] Open the group's member list: the subtitle reads "9 of 9", the add-people search is gone,
+      and the cap notice offers converting to a channel.
+- [ ] Remove one member, then add a different person: the add succeeds and the cap notice returns.
+- [ ] Mobile: New direct message blocks the ninth recipient with the same copy, and the rows that
+      can no longer be picked are dimmed.
+- [ ] A 1:1 DM (one recipient) still opens as a direct message, and adding a third person to it is
+      still refused.
+
+## Chat drafts view
+
+`/chat/drafts` lists every unsent draft. Needs one user with drafts in more than one channel,
+plus a second device or tab for the sync check.
+
+- [ ] Type in a channel composer, pause ~2s, then open Drafts in the chat sidebar: the draft is
+      listed with the channel name, a relative time, and a plain-text preview (mention chips read
+      as their labels, not as raw `[[[...]]]` markup).
+- [ ] The sidebar Drafts entry carries a count badge, and the entry highlights while the route is
+      open (as Threads and Unreads now do).
+- [ ] Start a thread reply, pause, and return to Drafts: that row carries a "Thread reply" tag.
+- [ ] Click a channel draft row: the channel opens with the composer prefilled.
+- [ ] Click a thread draft row: the channel opens, the thread panel opens on the right, and the
+      reply composer is prefilled.
+- [ ] Discard a row: it disappears immediately, the sidebar badge drops, and the pencil indicator
+      on that channel clears.
+- [ ] Save a draft on a second device: it appears in the list without a reload.
+- [ ] Send a drafted message: its row leaves the list.
+- [ ] With no drafts, the view shows the empty state, and the page title reads "Drafts | Uniffy".
+- [ ] The list holds up at 375, 768, and 1024 px, and the discard action is reachable on touch
+      (no hover required under `md`).
+
+## Chat reaction authorship
+
+Reaction chips name who reacted. Needs a message with more than ten reactors to exercise the bound,
+plus a second user for the live checks.
+
+- [ ] Hover a reaction chip: a card opens naming the reactors, with "You" first when you are one of
+      them, and the count in the header matching the chip.
+- [ ] On a message with more than ten reactors, the card names ten and ends with "and N more"; the
+      chip count still shows everyone.
+- [ ] Tab to a chip with the keyboard: the same card opens on focus and closes on blur.
+- [ ] React and un-react yourself: the count moves by exactly one each way, and the number after a
+      reload matches what the chip showed live.
+- [ ] React from a second browser: the first browser's count and name list update without a reload.
+- [ ] Un-react from a second device signed in as the same user: the first device drops the chip's
+      highlight and count once, not twice.
+- [ ] Mobile: long-press a reaction chip: a sheet lists the same names with the same "and N more"
+      tail, and each row is at least 44 px tall.
+- [ ] Open a 200-message channel with reactions throughout: reaction reads stay one query per page
+      (watch the backend log), and scrolling stays smooth.
+
+## Chat channel archive and restore
+
+Archiving is reversible: archived channels stay listed under their own section and an owner or
+admin can put one back. Needs a channel you own plus a second browser signed in as another member.
+
+- [ ] Right-click a channel you own in the sidebar: the menu offers "Archive channel", and the
+      confirm explains members keep the history.
+- [ ] Archive it: the row leaves the channel groups, and the open channel navigates away.
+- [ ] Expand the sidebar's Archived section: the channel is listed there (the section only loads
+      when first opened).
+- [ ] The second browser, signed in as an ordinary member, sees the channel disappear from its
+      sidebar without a reload, and its Archived section lists it with no restore action.
+- [ ] Restore it from the Archived section: it returns to its category in your sidebar, and the
+      second browser gets it back live without a reload.
+- [ ] Sending into the restored channel works; sending into an archived one is still refused.
+- [ ] `/admin/audit` filtered to `chat_channel.unarchived` shows the restore, with the channel
+      name in the details.
+- [ ] An ordinary MEMBER and a channel ADMIN see no Archive entry in the context menu, and the
+      restore action is absent on their archived rows.
+- [ ] A default channel offers no archive action.
+- [ ] Mobile: the chat list carries a collapsed Archived section with the same restore action, and
+      restoring there moves the channel back into the list.
+
 ## Pre-release sweep
 
 - [ ] All linters green: `./manage.py lint`.

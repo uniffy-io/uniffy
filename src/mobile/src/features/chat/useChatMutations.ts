@@ -523,6 +523,21 @@ export function useArchiveChannel() {
       chatApi.archiveChannel({ organizationId: organizationId!, channelId }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["chat", "channels", organizationId] });
+      queryClient.invalidateQueries({ queryKey: ["chat", "archived-channels", organizationId] });
+    },
+  });
+}
+
+export function useUnarchiveChannel() {
+  const { organizationId } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (channelId: string) =>
+      chatApi.unarchiveChannel({ organizationId: organizationId!, channelId }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["chat", "channels", organizationId] });
+      queryClient.invalidateQueries({ queryKey: ["chat", "archived-channels", organizationId] });
     },
   });
 }

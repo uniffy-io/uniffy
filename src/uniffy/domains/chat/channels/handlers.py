@@ -46,6 +46,8 @@ from uniffy_proto.chat.v1.chat_pb2 import (
     RenameAgentChatResponse,
     SetTypingRequest,
     SetTypingResponse,
+    UnarchiveChannelRequest,
+    UnarchiveChannelResponse,
     UpdateChannelMemberRequest,
     UpdateChannelMemberResponse,
     UpdateChannelRequest,
@@ -612,6 +614,40 @@ class ChannelHandlers:
         except (NotFoundError, PermissionDeniedError, ValidationError) as e:
             _handle_error(e)
 
+    async def unarchive_channel(
+        self,
+        request: UnarchiveChannelRequest,
+        ctx: RequestContext,
+    ) -> UnarchiveChannelResponse:
+        user_id = current_user_id()
+        try:
+            org_id = resolve_organization_id(request.organization_id)
+            channel_id = UUID(request.channel_id)
+        except ValueError:
+            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
+
+        try:
+            async with open_session() as session:
+                ops = ChatChannelOperations(
+                    session,
+                    storage=self.storage,
+                    search_indexer=self.search_indexer,
+                    call_lifecycle=self.call_lifecycle,
+                )
+                channel = await ops.unarchive_channel(user_id, org_id, channel_id)
+                membership = await ops.access.get_membership(channel.id, user_id)
+                tags = await _hydrate_channel_tags(session, org_id, [channel.id])
+                return UnarchiveChannelResponse(
+                    channel=channel_to_proto(
+                        channel,
+                        current_user_role=membership.role if membership else None,
+                        is_member=membership is not None,
+                        tags=tags.get(channel.id),
+                    )
+                )
+        except (NotFoundError, PermissionDeniedError, ValidationError) as e:
+            _handle_error(e)
+
     async def delete_channel(
         self,
         request: DeleteChannelRequest,
@@ -691,6 +727,7 @@ class ChannelHandlers:
                         cursor=cursor,
                         limit=page_size,
                         tag_ids=tag_ids or None,
+                        archived_only=request.archived_only,
                     )
 
                     # DM-peer cache MGET, with a single PG backfill for misses.

@@ -279,13 +279,29 @@ const migrations: MigrationManifest = {
     }
     return state;
   },
+  4: (state: PersistedState) => {
+    // Slices are reconciled wholesale, so a key added to chatUi after a session
+    // was persisted arrives undefined; the archived section starts closed.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const s = state as any;
+    if (s?.chatUi && s.chatUi.archivedSectionCollapsed === undefined) {
+      return {
+        ...s,
+        chatUi: {
+          ...s.chatUi,
+          archivedSectionCollapsed: true,
+        },
+      };
+    }
+    return state;
+  },
 };
 
 type RootReducerState = ReturnType<typeof rootReducer>;
 
 const persistConfig: Parameters<typeof persistReducer<RootReducerState>>[0] = {
   key: "root",
-  version: 3,
+  version: 4,
   storage,
   whitelist: [
     "auth",

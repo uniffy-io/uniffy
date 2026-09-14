@@ -470,6 +470,20 @@ class ArchiveChannelResponse(_message.Message):
     __slots__ = ()
     def __init__(self) -> None: ...
 
+class UnarchiveChannelRequest(_message.Message):
+    __slots__ = ("organization_id", "channel_id")
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    CHANNEL_ID_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    channel_id: str
+    def __init__(self, organization_id: _Optional[str] = ..., channel_id: _Optional[str] = ...) -> None: ...
+
+class UnarchiveChannelResponse(_message.Message):
+    __slots__ = ("channel",)
+    CHANNEL_FIELD_NUMBER: _ClassVar[int]
+    channel: ChatChannel
+    def __init__(self, channel: _Optional[_Union[ChatChannel, _Mapping]] = ...) -> None: ...
+
 class DeleteChannelRequest(_message.Message):
     __slots__ = ("organization_id", "channel_id")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
@@ -483,18 +497,20 @@ class DeleteChannelResponse(_message.Message):
     def __init__(self) -> None: ...
 
 class ListChannelsRequest(_message.Message):
-    __slots__ = ("organization_id", "browse_public", "cursor", "page_size", "tag_ids")
+    __slots__ = ("organization_id", "browse_public", "cursor", "page_size", "tag_ids", "archived_only")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     BROWSE_PUBLIC_FIELD_NUMBER: _ClassVar[int]
     CURSOR_FIELD_NUMBER: _ClassVar[int]
     PAGE_SIZE_FIELD_NUMBER: _ClassVar[int]
     TAG_IDS_FIELD_NUMBER: _ClassVar[int]
+    ARCHIVED_ONLY_FIELD_NUMBER: _ClassVar[int]
     organization_id: str
     browse_public: bool
     cursor: str
     page_size: int
     tag_ids: _containers.RepeatedScalarFieldContainer[str]
-    def __init__(self, organization_id: _Optional[str] = ..., browse_public: _Optional[bool] = ..., cursor: _Optional[str] = ..., page_size: _Optional[int] = ..., tag_ids: _Optional[_Iterable[str]] = ...) -> None: ...
+    archived_only: bool
+    def __init__(self, organization_id: _Optional[str] = ..., browse_public: _Optional[bool] = ..., cursor: _Optional[str] = ..., page_size: _Optional[int] = ..., tag_ids: _Optional[_Iterable[str]] = ..., archived_only: _Optional[bool] = ...) -> None: ...
 
 class ListChannelsResponse(_message.Message):
     __slots__ = ("channels", "next_cursor")

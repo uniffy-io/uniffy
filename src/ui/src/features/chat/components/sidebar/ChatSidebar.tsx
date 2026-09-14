@@ -1,8 +1,9 @@
 import { useState, useCallback, useEffect, useMemo, useContext, type ReactNode } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import {
   Plus,
   PencilSimple,
+  NotePencil,
   MagnifyingGlass,
   BookmarkSimple,
   ChatsCircle,
@@ -14,6 +15,10 @@ import {
   CaretDoubleRight,
   Robot,
   FolderSimplePlus,
+  Archive,
+  ArrowCounterClockwise,
+  Hash,
+  Lock,
 } from "@phosphor-icons/react";
 import {
   DndContext,
@@ -32,21 +37,30 @@ import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable"
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
 import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { SidebarOverlayContext } from "@/components/layout/CollapsibleSidebarRail";
 import {
   setSplitChannel,
   selectChannelPreferences,
   selectChannels,
   selectAgentFolders,
+  selectArchivedChannels,
+  selectArchivedLoaded,
   sortByLastActivity,
   sortByRootActivity,
 } from "@/features/chat/store/chatChannelsSlice";
-import { createAgentFolder, setAgentChatFolder } from "@/features/chat/store/chatThunks";
+import {
+  createAgentFolder,
+  setAgentChatFolder,
+  fetchArchivedChannels,
+  unarchiveChannel,
+} from "@/features/chat/store/chatThunks";
 import { AgentChatFolderGroup } from "@/features/chat/components/sidebar/AgentChatFolderGroup";
-import { selectChannelsWithDrafts } from "@/features/chat/store/chatDraftsSlice";
+import { selectChannelsWithDrafts, selectDraftCount } from "@/features/chat/store/chatDraftsSlice";
 import {
   toggleDmSection,
   toggleAgentChatsSection,
+  toggleArchivedSection,
   revealAgentFolder,
   openAgentChatPicker,
   collapseSidebar,
@@ -65,7 +79,54 @@ import { DirectMessageListItem } from "@/features/chat/components/sidebar/Direct
 import { CategorySection } from "@/features/chat/components/sidebar/CategorySection";
 import { useChatPermissions } from "@/features/chat/hooks/useChatPermissions";
 import { cn } from "@/shared/utils/cn";
+import { getChannelDisplayName } from "@/features/chat/utils/channelDisplay";
+import type { ChatChannel } from "@/features/chat/types";
 import type { Icon } from "@phosphor-icons/react";
+
+function SidebarNavItem({
+  icon: NavIcon,
+  label,
+  badge,
+  active,
+  onClick,
+  testId,
+  badgeTestId,
+}: {
+  icon: Icon;
+  label: string;
+  badge?: number;
+  active?: boolean;
+  onClick: () => void;
+  testId: string;
+  badgeTestId?: string;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        "flex items-center justify-between w-full px-3 py-1.5 mx-0 text-[0.9rem] transition-colors",
+        active
+          ? "bg-muted text-foreground font-medium"
+          : "text-foreground/90 hover:bg-muted/60 hover:text-foreground",
+      )}
+      data-testid={testId}
+      data-active={active ? "true" : "false"}
+    >
+      <span className="flex items-center gap-2">
+        <NavIcon size={16} className={active ? "text-primary" : undefined} />
+        <span className="font-[450]">{label}</span>
+      </span>
+      {!!badge && badge > 0 && (
+        <span
+          className="min-w-[18px] h-[18px] rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center"
+          data-testid={badgeTestId}
+        >
+          {badge}
+        </span>
+      )}
+    </button>
+  );
+}
 
 function DraggableAgentChat({ channelId, children }: { channelId: string; children: ReactNode }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
@@ -136,6 +197,7 @@ function CompactActionButton({
 export function ChatSidebar() {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
+  const currentPath = useLocation().pathname;
   const [searchQuery, setSearchQuery] = useState("");
   const { isMobile } = useBreakpoint();
   const isOverlay = useContext(SidebarOverlayContext);
@@ -155,6 +217,13 @@ export function ChatSidebar() {
   const { canManageChat } = useChatPermissions();
   const channelPreferences = useAppSelector(selectChannelPreferences);
   const draftChannels = useAppSelector(selectChannelsWithDrafts);
+  const draftCount = useAppSelector(selectDraftCount);
+  const archivedChannels = useAppSelector(selectArchivedChannels);
+  const archivedLoaded = useAppSelector(selectArchivedLoaded);
+  const archivedLoading = useAppSelector((state) => !!state.chatChannels.archivedRequestId);
+  const archivedError = useAppSelector((state) => state.chatChannels.archivedError);
+  const archivedNextCursor = useAppSelector((state) => state.chatChannels.archivedNextCursor);
+  const archivedSectionCollapsed = useAppSelector((state) => state.chatUi.archivedSectionCollapsed);
   const currentUserId = useAppSelector((state) => state.auth.user?.id ?? "");
   const allChannelMembers = useAppSelector((state) => state.chatChannels.channelMembers);
 
@@ -376,6 +445,16 @@ export function ChatSidebar() {
     [sortableCategoryIds, categories, dispatch],
   );
 
+  useEffect(() => {
+    if (!archivedSectionCollapsed && !archivedLoaded && !archivedLoading && !archivedError) {
+      void dispatch(fetchArchivedChannels());
+    }
+  }, [dispatch, archivedSectionCollapsed, archivedLoaded, archivedLoading, archivedError]);
+
+  const handleToggleArchived = useCallback(() => {
+    dispatch(toggleArchivedSection());
+  }, [dispatch]);
+
   const handleThreadsClick = useCallback(() => {
     navigate("/chat/threads");
   }, [navigate]);
@@ -434,61 +513,49 @@ export function ChatSidebar() {
       </div>
 
       <div className="flex-1 overflow-y-auto">
-        <button
+        <SidebarNavItem
+          icon={ChatsCircle}
+          label="Threads"
+          badge={unreadThreadCount}
+          active={currentPath === "/chat/threads"}
           onClick={handleThreadsClick}
-          className="flex items-center justify-between w-full px-3 py-1.5 mx-0 text-[0.9rem] text-foreground/90 hover:bg-muted/60 hover:text-foreground transition-colors"
-          data-testid="chat-sidebar-threads-link"
-        >
-          <span className="flex items-center gap-2">
-            <ChatsCircle size={16} />
-            <span className="font-[450]">Threads</span>
-          </span>
-          {unreadThreadCount > 0 && (
-            <span
-              className="min-w-[18px] h-[18px] rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center"
-              data-testid="chat-sidebar-threads-unread-badge"
-            >
-              {unreadThreadCount}
-            </span>
-          )}
-        </button>
+          testId="chat-sidebar-threads-link"
+          badgeTestId="chat-sidebar-threads-unread-badge"
+        />
 
-        <button
+        <SidebarNavItem
+          icon={Tray}
+          label="Unreads"
+          badge={totalUnread}
+          active={currentPath === "/chat/unreads"}
           onClick={() => navigate("/chat/unreads")}
-          className="flex items-center justify-between w-full px-3 py-1.5 mx-0 text-[0.9rem] text-foreground/90 hover:bg-muted/60 hover:text-foreground transition-colors"
-          data-testid="chat-sidebar-unreads-link"
-        >
-          <span className="flex items-center gap-2">
-            <Tray size={16} />
-            <span className="font-[450]">Unreads</span>
-          </span>
-          {totalUnread > 0 && (
-            <span
-              className="min-w-[18px] h-[18px] rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center"
-              data-testid="chat-sidebar-unreads-badge"
-            >
-              {totalUnread}
-            </span>
-          )}
-        </button>
+          testId="chat-sidebar-unreads-link"
+          badgeTestId="chat-sidebar-unreads-badge"
+        />
 
-        <button
+        <SidebarNavItem
+          icon={NotePencil}
+          label="Drafts"
+          badge={draftCount}
+          active={currentPath === "/chat/drafts"}
+          onClick={() => navigate("/chat/drafts")}
+          testId="chat-sidebar-drafts-link"
+          badgeTestId="chat-sidebar-drafts-badge"
+        />
+
+        <SidebarNavItem
+          icon={BookmarkSimple}
+          label="Saved"
           onClick={() => navigate("/library?types=chat_message")}
-          className="flex items-center gap-2 w-full px-3 py-1.5 mx-0 text-[0.9rem] text-foreground/90 hover:bg-muted/60 hover:text-foreground transition-colors"
-          data-testid="chat-sidebar-saved-link"
-        >
-          <BookmarkSimple size={16} />
-          <span className="font-[450]">Saved</span>
-        </button>
+          testId="chat-sidebar-saved-link"
+        />
 
-        <button
+        <SidebarNavItem
+          icon={Compass}
+          label="Browse Channels"
           onClick={() => dispatch(openBrowseChannelsModal())}
-          className="flex items-center gap-2 w-full px-3 py-1.5 mx-0 text-[0.9rem] text-foreground/90 hover:bg-muted/60 hover:text-foreground transition-colors"
-          data-testid="chat-sidebar-browse-channels-button"
-        >
-          <Compass size={16} />
-          <span className="font-[450]">Browse Channels</span>
-        </button>
+          testId="chat-sidebar-browse-channels-button"
+        />
 
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={sortableCategoryIds} strategy={verticalListSortingStrategy}>
@@ -693,7 +760,111 @@ export function ChatSidebar() {
             </div>
           )}
         </div>
+
+        <div
+          className="mt-1 mb-2"
+          data-testid="chat-sidebar-archived-section"
+          data-state={archivedSectionCollapsed ? "collapsed" : "expanded"}
+        >
+          <button
+            type="button"
+            onClick={handleToggleArchived}
+            className="focus-ring flex min-h-11 items-center gap-1 w-full px-3 py-1.5 text-xs uppercase font-medium tracking-wider text-muted-foreground hover:text-foreground transition-colors"
+            data-testid="chat-sidebar-archived-toggle"
+          >
+            {archivedSectionCollapsed ? <CaretRight size={10} /> : <CaretDown size={10} />}
+            <Archive size={12} />
+            Archived
+          </button>
+
+          {!archivedSectionCollapsed && (
+            <div className="space-y-px">
+              {!archivedLoaded && !archivedError ? (
+                <p className="px-3 py-1.5 text-xs text-subtle-foreground">Loading...</p>
+              ) : archivedChannels.length === 0 && !archivedError ? (
+                <p className="px-3 py-1.5 text-xs text-subtle-foreground">No archived channels</p>
+              ) : (
+                archivedChannels.map((channel) => (
+                  <ArchivedChannelItem
+                    key={channel.id}
+                    channel={channel}
+                    canRestore={canManageChat || channel.currentUserRole === "OWNER"}
+                    onSelect={handleChannelSelect}
+                    onRestore={() => dispatch(unarchiveChannel(channel.id))}
+                  />
+                ))
+              )}
+              {archivedError && (
+                <div className="px-3 py-2">
+                  <p className="text-xs text-muted-foreground">Archived channels could not load.</p>
+                  <Button
+                    variant="ghost"
+                    onClick={() =>
+                      dispatch(fetchArchivedChannels({ cursor: archivedNextCursor ?? undefined }))
+                    }
+                  >
+                    Retry
+                  </Button>
+                </div>
+              )}
+              {archivedLoaded && archivedNextCursor && !archivedError && (
+                <Button
+                  variant="ghost"
+                  className="w-full"
+                  disabled={archivedLoading}
+                  onClick={() => dispatch(fetchArchivedChannels({ cursor: archivedNextCursor }))}
+                  data-testid="chat-sidebar-archived-more"
+                >
+                  {archivedLoading ? "Loading..." : "Load more"}
+                </Button>
+              )}
+            </div>
+          )}
+        </div>
       </div>
+    </div>
+  );
+}
+
+function ArchivedChannelItem({
+  channel,
+  canRestore,
+  onSelect,
+  onRestore,
+}: {
+  channel: ChatChannel;
+  canRestore: boolean;
+  onSelect: (channelId: string) => void;
+  onRestore: () => void;
+}) {
+  const isDm = channel.channelType === "DIRECT" || channel.channelType === "GROUP_DM";
+  const TypeIcon = isDm ? ChatsCircle : channel.channelType === "PRIVATE" ? Lock : Hash;
+
+  return (
+    <div
+      className="group flex items-center gap-1 pr-1.5"
+      data-testid={`chat-sidebar-archived-${channel.id}`}
+    >
+      <button
+        type="button"
+        onClick={() => onSelect(channel.id)}
+        className="focus-ring flex min-h-11 flex-1 min-w-0 items-center gap-2 px-3 py-1.5 text-left text-[0.9rem] text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-colors"
+      >
+        <TypeIcon size={14} className="shrink-0" />
+        <span className="truncate font-[450]">{getChannelDisplayName(channel)}</span>
+      </button>
+      {canRestore && (
+        <button
+          type="button"
+          onClick={onRestore}
+          aria-label={`Restore ${getChannelDisplayName(channel)}`}
+          title="Restore channel"
+          className="focus-ring flex min-h-11 min-w-11 items-center justify-center shrink-0 rounded p-1 text-muted-foreground opacity-100 transition-opacity hover:text-foreground md:opacity-0 md:group-hover:opacity-100 focus:opacity-100"
+          data-testid={`chat-sidebar-archived-restore-${channel.id}`}
+        >
+          <ArrowCounterClockwise size={14} />
+        </button>
+      )}
     </div>
   );
 }

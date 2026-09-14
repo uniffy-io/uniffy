@@ -7,6 +7,8 @@ import {
   clearChatDrafts,
   draftKey,
   selectChannelsWithDrafts,
+  selectDraftCount,
+  selectDraftRows,
 } from "@/features/chat/store/chatDraftsSlice";
 import type { PlainDraft } from "@/features/chat/api/chatConverters";
 import type { RootState } from "@/app/store";
@@ -130,5 +132,74 @@ describe("selectChannelsWithDrafts", () => {
 
   it("returns an empty set when there are no drafts", () => {
     expect(selectChannelsWithDrafts(toRootState({}))).toEqual(new Set());
+  });
+});
+
+describe("selectDraftRows", () => {
+  it("splits keys back into channel and thread ids", () => {
+    const rows = selectDraftRows(
+      toRootState({
+        "ch-1": { content: "channel text", updatedAt: "2026-07-16T00:00:00.000Z" },
+        "ch-2:root-9": { content: "thread text", updatedAt: "2026-07-15T00:00:00.000Z" },
+      }),
+    );
+    expect(rows).toEqual([
+      {
+        key: "ch-1",
+        channelId: "ch-1",
+        rootMessageId: null,
+        content: "channel text",
+        updatedAt: "2026-07-16T00:00:00.000Z",
+      },
+      {
+        key: "ch-2:root-9",
+        channelId: "ch-2",
+        rootMessageId: "root-9",
+        content: "thread text",
+        updatedAt: "2026-07-15T00:00:00.000Z",
+      },
+    ]);
+  });
+
+  it("orders by updatedAt descending, newest first", () => {
+    const rows = selectDraftRows(
+      toRootState({
+        older: { content: "a", updatedAt: "2026-07-14T00:00:00.000Z" },
+        newest: { content: "b", updatedAt: "2026-07-16T00:00:00.000Z" },
+        middle: { content: "c", updatedAt: "2026-07-15T00:00:00.000Z" },
+      }),
+    );
+    expect(rows.map((row) => row.key)).toEqual(["newest", "middle", "older"]);
+  });
+
+  it("keeps a channel draft and its thread draft as separate rows", () => {
+    const rows = selectDraftRows(
+      toRootState({
+        "ch-1": { content: "a", updatedAt: "2026-07-16T00:00:00.000Z" },
+        "ch-1:root-9": { content: "b", updatedAt: "2026-07-16T01:00:00.000Z" },
+      }),
+    );
+    expect(rows).toHaveLength(2);
+    expect(rows[0].rootMessageId).toBe("root-9");
+    expect(rows[1].rootMessageId).toBeNull();
+  });
+
+  it("returns nothing when there are no drafts", () => {
+    expect(selectDraftRows(toRootState({}))).toEqual([]);
+  });
+});
+
+describe("selectDraftCount", () => {
+  it("counts channel and thread drafts separately", () => {
+    expect(
+      selectDraftCount(
+        toRootState({
+          "ch-1": { content: "a", updatedAt: "2026-07-16T00:00:00.000Z" },
+          "ch-1:root-9": { content: "b", updatedAt: "2026-07-16T00:00:00.000Z" },
+          "ch-2": { content: "c", updatedAt: "2026-07-16T00:00:00.000Z" },
+        }),
+      ),
+    ).toBe(3);
+    expect(selectDraftCount(toRootState({}))).toBe(0);
   });
 });

@@ -246,3 +246,6 @@ src/unictl/dist/
 .agents/local/
 CLAUDE.local.md
 AGENTS.override.md
+
+# Local Playwright verification screenshots
+screenshots/

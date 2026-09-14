@@ -6,7 +6,7 @@ from sqlalchemy import and_, delete, func, or_, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from uniffy.core.errors import NotFoundError
+from uniffy.core.errors import NotFoundError, ValidationError
 from uniffy.core.models.chat.channel import ChatChannel
 from uniffy.core.models.chat.message import ChatMessage
 from uniffy.core.models.chat.thread import ChatThread, ChatThreadParticipant, ChatThreadStats
@@ -78,6 +78,8 @@ class ChatThreadOperations:
         root_msg = result.scalar_one_or_none()
         if not root_msg:
             raise NotFoundError("message", root_message_id)
+        if root_msg.root_id is not None:
+            raise ValidationError("root_message_id", "Thread replies cannot start another thread")
 
         stats_result = await self.session.execute(
             select(ChatThreadStats).where(ChatThreadStats.root_message_id == root_message_id)
@@ -126,10 +128,23 @@ class ChatThreadOperations:
         channel = await self.access.get_channel(channel_id, organization_id)
         await self.access.check_access(user_id, organization_id, channel)
 
+        root_result = await self.session.execute(
+            select(ChatMessage.root_id).where(
+                ChatMessage.id == root_message_id,
+                ChatMessage.channel_id == channel_id,
+            )
+        )
+        root = root_result.one_or_none()
+        if root is None:
+            raise NotFoundError("message", root_message_id)
+        if root.root_id is not None:
+            raise ValidationError("root_message_id", "Thread replies cannot start another thread")
+
         limit = min(max(limit, 1), 100)
 
         query = select(ChatMessage).where(
             ChatMessage.root_id == root_message_id,
+            ChatMessage.channel_id == channel_id,
             ChatMessage.is_deleted == False,  # noqa: E712
         )
 

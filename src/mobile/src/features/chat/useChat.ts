@@ -1,5 +1,10 @@
 import { useCallback, useMemo, useRef, useState } from "react";
-import { useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useQuery,
+  useQueryClient,
+  type QueryClient,
+} from "@tanstack/react-query";
 import { ContentType } from "@uniffy/proto/common/v1/common_pb";
 import { useAuth } from "@core/providers/AuthContext";
 import { chatApi } from "@features/chat/chatApi";
@@ -43,7 +48,29 @@ function isStreamHealthy(queryClient: QueryClient): boolean {
 
 type UnreadMap = Record<string, { unread: number; mentions: number }>;
 
-/** The user's joined channels, merged with live unread counts. */
+export function useArchivedChannels(enabled: boolean) {
+  const { organizationId } = useAuth();
+
+  return useInfiniteQuery({
+    queryKey: ["chat", "archived-channels", organizationId],
+    enabled: !!organizationId && enabled,
+    initialPageParam: "",
+    queryFn: async ({ pageParam, signal }) => {
+      const res = await chatApi.listChannels(
+        {
+          organizationId: organizationId!,
+          browsePublic: false,
+          archivedOnly: true,
+          cursor: pageParam || undefined,
+        },
+        { signal },
+      );
+      return { channels: res.channels.map(channelToPlain), nextCursor: res.nextCursor };
+    },
+    getNextPageParam: (page) => page.nextCursor || undefined,
+  });
+}
+
 export function useChannels() {
   const { organizationId } = useAuth();
 
@@ -232,11 +259,14 @@ export function useChannel(channelId: string | undefined) {
   return useQuery({
     queryKey: ["chat", "channel", organizationId, channelId],
     enabled: !!organizationId && !!channelId,
-    queryFn: async () => {
-      const res = await chatApi.getChannel({
-        organizationId: organizationId!,
-        channelId: channelId!,
-      });
+    queryFn: async ({ signal }) => {
+      const res = await chatApi.getChannel(
+        {
+          organizationId: organizationId!,
+          channelId: channelId!,
+        },
+        { signal },
+      );
       return res.channel ? channelToPlain(res.channel) : null;
     },
   });

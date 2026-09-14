@@ -956,6 +956,17 @@ export function App() {
                     }
                   />
 
+                  <Route
+                    path="/chat/drafts"
+                    element={
+                      <ProtectedRoute>
+                        <LazyRoute>
+                          <ChatPage />
+                        </LazyRoute>
+                      </ProtectedRoute>
+                    }
+                  />
+
                   {/* Agents builder routes (org admins + AGENTS domain admins) */}
                   <Route
                     path="/agents"

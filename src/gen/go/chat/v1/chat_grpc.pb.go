@@ -23,6 +23,7 @@ const (
 	ChatService_GetChannel_FullMethodName                       = "/chat.v1.ChatService/GetChannel"
 	ChatService_UpdateChannel_FullMethodName                    = "/chat.v1.ChatService/UpdateChannel"
 	ChatService_ArchiveChannel_FullMethodName                   = "/chat.v1.ChatService/ArchiveChannel"
+	ChatService_UnarchiveChannel_FullMethodName                 = "/chat.v1.ChatService/UnarchiveChannel"
 	ChatService_DeleteChannel_FullMethodName                    = "/chat.v1.ChatService/DeleteChannel"
 	ChatService_ListChannels_FullMethodName                     = "/chat.v1.ChatService/ListChannels"
 	ChatService_JoinChannel_FullMethodName                      = "/chat.v1.ChatService/JoinChannel"
@@ -96,6 +97,7 @@ type ChatServiceClient interface {
 	GetChannel(ctx context.Context, in *GetChannelRequest, opts ...grpc.CallOption) (*GetChannelResponse, error)
 	UpdateChannel(ctx context.Context, in *UpdateChannelRequest, opts ...grpc.CallOption) (*UpdateChannelResponse, error)
 	ArchiveChannel(ctx context.Context, in *ArchiveChannelRequest, opts ...grpc.CallOption) (*ArchiveChannelResponse, error)
+	UnarchiveChannel(ctx context.Context, in *UnarchiveChannelRequest, opts ...grpc.CallOption) (*UnarchiveChannelResponse, error)
 	DeleteChannel(ctx context.Context, in *DeleteChannelRequest, opts ...grpc.CallOption) (*DeleteChannelResponse, error)
 	ListChannels(ctx context.Context, in *ListChannelsRequest, opts ...grpc.CallOption) (*ListChannelsResponse, error)
 	// Membership
@@ -249,6 +251,16 @@ func (c *chatServiceClient) ArchiveChannel(ctx context.Context, in *ArchiveChann
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ArchiveChannelResponse)
 	err := c.cc.Invoke(ctx, ChatService_ArchiveChannel_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *chatServiceClient) UnarchiveChannel(ctx context.Context, in *UnarchiveChannelRequest, opts ...grpc.CallOption) (*UnarchiveChannelResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UnarchiveChannelResponse)
+	err := c.cc.Invoke(ctx, ChatService_UnarchiveChannel_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -866,6 +878,7 @@ type ChatServiceServer interface {
 	GetChannel(context.Context, *GetChannelRequest) (*GetChannelResponse, error)
 	UpdateChannel(context.Context, *UpdateChannelRequest) (*UpdateChannelResponse, error)
 	ArchiveChannel(context.Context, *ArchiveChannelRequest) (*ArchiveChannelResponse, error)
+	UnarchiveChannel(context.Context, *UnarchiveChannelRequest) (*UnarchiveChannelResponse, error)
 	DeleteChannel(context.Context, *DeleteChannelRequest) (*DeleteChannelResponse, error)
 	ListChannels(context.Context, *ListChannelsRequest) (*ListChannelsResponse, error)
 	// Membership
@@ -996,6 +1009,9 @@ func (UnimplementedChatServiceServer) UpdateChannel(context.Context, *UpdateChan
 }
 func (UnimplementedChatServiceServer) ArchiveChannel(context.Context, *ArchiveChannelRequest) (*ArchiveChannelResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ArchiveChannel not implemented")
+}
+func (UnimplementedChatServiceServer) UnarchiveChannel(context.Context, *UnarchiveChannelRequest) (*UnarchiveChannelResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method UnarchiveChannel not implemented")
 }
 func (UnimplementedChatServiceServer) DeleteChannel(context.Context, *DeleteChannelRequest) (*DeleteChannelResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method DeleteChannel not implemented")
@@ -1266,6 +1282,24 @@ func _ChatService_ArchiveChannel_Handler(srv interface{}, ctx context.Context, d
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ChatServiceServer).ArchiveChannel(ctx, req.(*ArchiveChannelRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ChatService_UnarchiveChannel_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UnarchiveChannelRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChatServiceServer).UnarchiveChannel(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ChatService_UnarchiveChannel_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChatServiceServer).UnarchiveChannel(ctx, req.(*UnarchiveChannelRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -2372,6 +2406,10 @@ var ChatService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ArchiveChannel",
 			Handler:    _ChatService_ArchiveChannel_Handler,
+		},
+		{
+			MethodName: "UnarchiveChannel",
+			Handler:    _ChatService_UnarchiveChannel_Handler,
 		},
 		{
 			MethodName: "DeleteChannel",

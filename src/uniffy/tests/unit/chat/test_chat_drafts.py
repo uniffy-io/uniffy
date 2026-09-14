@@ -1,12 +1,9 @@
-"""Tests for chat draft operations, send-pipeline clear, and stream decode.
-
-The SQL surface is exercised against captured statements and mocked
-sessions; the fanout is asserted via a monkeypatched publisher.
-"""
+"""Chat draft persistence and stream behavior."""
 
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -66,6 +63,7 @@ def _row_result(value):
     result = MagicMock()
     result.first.return_value = value
     result.scalar_one_or_none.return_value = value
+    result.one_or_none.return_value = value
     return result
 
 
@@ -121,7 +119,10 @@ async def test_save_draft_thread_branch_validates_root_and_targets_thread_index(
     channel_id = generate_id()
     root_id = generate_id()
     executed: list = []
-    ops = _make_ops(executed=executed, execute_results=[_row_result(channel_id)])
+    ops = _make_ops(
+        executed=executed,
+        execute_results=[_row_result(SimpleNamespace(channel_id=channel_id, root_id=None))],
+    )
     ops.access.get_channel = AsyncMock(return_value=MagicMock(id=channel_id))
     publish = AsyncMock()
     monkeypatch.setattr(draft_ops_module, "publish_user_chat_event", publish)
@@ -140,7 +141,9 @@ async def test_save_draft_thread_branch_validates_root_and_targets_thread_index(
 
 async def test_save_draft_rejects_root_from_other_channel():
     channel_id = generate_id()
-    ops = _make_ops(execute_results=[_row_result(generate_id())])
+    ops = _make_ops(
+        execute_results=[_row_result(SimpleNamespace(channel_id=generate_id(), root_id=None))]
+    )
     ops.access.get_channel = AsyncMock(return_value=MagicMock(id=channel_id))
     with pytest.raises(NotFoundError):
         await ops.save_draft(generate_id(), generate_id(), channel_id, generate_id(), "hello")

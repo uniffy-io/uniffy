@@ -2,6 +2,7 @@ import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import type { ChatMessage, ThreadInboxItem } from "@/features/chat/types";
 import type { RootState } from "@/app/store";
 import { deleteMessage, updateMessage } from "@/features/chat/store/chatMessagesSlice";
+import { REACTOR_PREVIEW_LIMIT } from "@/features/chat/utils/limits";
 
 interface ChatThreadsState {
   activeThreadId: string | null;
@@ -98,11 +99,15 @@ export const chatThreadsSlice = createSlice({
         if (!msg.reactions) msg.reactions = [];
         const group = msg.reactions.find((r) => r.emoji === emoji);
         if (group) {
-          if (!group.userIds.includes(userId)) {
+          // Mirrors the channel slice: already-counted reactors never count twice,
+          // and past the bounded list `currentUserReacted` is the only per-reactor fact.
+          const isSelf = userId === currentUserId;
+          const counted = isSelf ? group.currentUserReacted : group.userIds.includes(userId);
+          if (!counted) {
             group.count += 1;
-            group.userIds.push(userId);
+            if (group.userIds.length < REACTOR_PREVIEW_LIMIT) group.userIds.push(userId);
           }
-          if (userId === currentUserId) group.currentUserReacted = true;
+          if (isSelf) group.currentUserReacted = true;
         } else {
           msg.reactions.push({
             emoji,
@@ -129,9 +134,11 @@ export const chatThreadsSlice = createSlice({
         if (!msg?.reactions) continue;
         const group = msg.reactions.find((r) => r.emoji === emoji);
         if (!group) continue;
+        const isSelf = userId === currentUserId;
+        if (isSelf && !group.currentUserReacted) return;
         group.count = Math.max(0, group.count - 1);
         group.userIds = group.userIds.filter((id) => id !== userId);
-        if (userId === currentUserId) group.currentUserReacted = false;
+        if (isSelf) group.currentUserReacted = false;
         if (group.count === 0) {
           msg.reactions = msg.reactions.filter((r) => r.emoji !== emoji);
         }

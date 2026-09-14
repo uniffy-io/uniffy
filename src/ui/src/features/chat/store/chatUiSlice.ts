@@ -14,6 +14,7 @@ interface ChatUiState {
   channelHeaderExpanded: boolean;
   channelsSectionCollapsed: boolean;
   dmSectionCollapsed: boolean;
+  archivedSectionCollapsed: boolean;
   agentChatsSectionCollapsed: boolean;
   collapsedAgentFolders: Record<string, boolean>;
   agentChatPickerOpen: boolean;
@@ -51,6 +52,7 @@ const initialState: ChatUiState = {
   channelHeaderExpanded: false,
   channelsSectionCollapsed: false,
   dmSectionCollapsed: false,
+  archivedSectionCollapsed: true,
   agentChatsSectionCollapsed: false,
   collapsedAgentFolders: {},
   agentChatPickerOpen: false,
@@ -127,6 +129,9 @@ export const chatUiSlice = createSlice({
     },
     toggleDmSection: (state) => {
       state.dmSectionCollapsed = !state.dmSectionCollapsed;
+    },
+    toggleArchivedSection: (state) => {
+      state.archivedSectionCollapsed = !state.archivedSectionCollapsed;
     },
     toggleAgentChatsSection: (state) => {
       state.agentChatsSectionCollapsed = !state.agentChatsSectionCollapsed;
@@ -252,6 +257,7 @@ export const {
   toggleChannelHeaderExpanded,
   toggleChannelsSection,
   toggleDmSection,
+  toggleArchivedSection,
   toggleAgentChatsSection,
   toggleAgentFolderCollapsed,
   revealAgentFolder,

@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { chatStreamApi } from "@/features/chat/api/chatApi";
-import { messageToPlain, channelToPlain, timestampToIso } from "@/features/chat/api/chatConverters";
+import { messageToPlain, timestampToIso } from "@/features/chat/api/chatConverters";
 import {
   appendMessage,
   updateMessage,
@@ -19,9 +19,12 @@ import {
   appendAgentThinking,
   restrictForwardsFromChannel,
   restrictForwardsFromMessage,
+  clearChannelMessages,
 } from "@/features/chat/store/chatMessagesSlice";
 import {
   fetchMembers,
+  fetchChannel,
+  fetchChannels,
   fetchThreadsInbox,
   fetchDrafts,
   fetchChatPolicy,
@@ -40,17 +43,15 @@ import {
   selectActiveThreadChannelId,
 } from "@/features/chat/store/chatThreadsSlice";
 import {
-  updateChannel,
   incrementUnreadCount,
   updateUnreadCounts,
-  addChannel,
   removeChannel,
   touchChannelActivity,
   setMemberRole,
+  invalidateArchivedChannels,
+  invalidateChannel,
 } from "@/features/chat/store/chatChannelsSlice";
 import { isDocumentVisible } from "@/shared/utils/documentVisibility";
-import { chatApi } from "@/features/chat/api/chatApi";
-import { channelToPlain as apiChannelToPlain } from "@/features/chat/api/chatConverters";
 import { ChatEventType, UserChatEventType } from "@uniffy/proto/chat/v1/chat_stream_pb";
 import { ChannelRole } from "@uniffy/proto/chat/v1/chat_pb";
 import { handleCallStreamEvent } from "@/features/calls/streamHandlers";
@@ -64,27 +65,8 @@ let _activeController: AbortController | null = null;
 const MAX_BACKOFF_MS = 30_000;
 const INITIAL_BACKOFF_MS = 1_000;
 
-/** Pull the authoritative channel row and fold it into the sidebar.
- *
- *  Lifecycle events carry an id, not a channel: hydrating through GetChannel
- *  gives every session the same row the channel list would have loaded,
- *  including the per-user fields (role, membership, agent retirement) a
- *  broadcast payload cannot carry.
- */
-function hydrateChannel(
-  organizationId: string,
-  channelId: string,
-  dispatch: AppDispatch,
-  mode: "add" | "update",
-): void {
-  chatApi
-    .getChannel({ organizationId, channelId })
-    .then((res) => {
-      if (!res.channel) return;
-      const plain = channelToPlain(res.channel);
-      dispatch(mode === "add" ? addChannel(plain) : updateChannel(plain));
-    })
-    .catch(() => {});
+function hydrateChannel(channelId: string, dispatch: AppDispatch): void {
+  void dispatch(fetchChannel(channelId));
 }
 
 /**
@@ -103,7 +85,6 @@ function handleChannelEvent(
   event: StreamUserChatEventsResponse,
   live: LiveChannels,
   currentUserId: string,
-  organizationId: string,
   dispatch: AppDispatch,
   getMessageById: (id: string) => import("@/features/chat/types").ChatMessage | undefined,
 ): void {
@@ -118,18 +99,21 @@ function handleChannelEvent(
   // Channel lifecycle applies to every session of every member, whatever
   // channel each one happens to be looking at.
   if (ce.eventType === ChatEventType.CHANNEL_CREATED) {
-    hydrateChannel(organizationId, channelId, dispatch, "add");
+    hydrateChannel(channelId, dispatch);
     return;
   }
 
   if (ce.eventType === ChatEventType.CHANNEL_UPDATED) {
+    dispatch(invalidateChannel(channelId));
+    dispatch(invalidateArchivedChannels({}));
     if (ce.payload.case === "channelUpdated" && ce.payload.value?.isArchived) {
       dispatch(restrictForwardsFromChannel(channelId));
       dispatch(restrictThreadForwardsFromChannel(channelId));
+      dispatch(clearChannelMessages(channelId));
       dispatch(removeChannel(channelId));
       return;
     }
-    hydrateChannel(organizationId, channelId, dispatch, "update");
+    hydrateChannel(channelId, dispatch);
     return;
   }
 
@@ -138,16 +122,7 @@ function handleChannelEvent(
     if (ce.payload.case === "member" && ce.payload.value) {
       const joinedUserId = ce.payload.value.userId;
       if (joinedUserId === currentUserId) {
-        chatApi
-          .getChannel({ organizationId, channelId })
-          .then((res) => {
-            if (res.channel) {
-              const plain = channelToPlain(res.channel);
-              plain.unreadCount = 1;
-              dispatch(addChannel(plain));
-            }
-          })
-          .catch(() => {});
+        hydrateChannel(channelId, dispatch);
       }
     }
     if (isPane) {
@@ -162,6 +137,7 @@ function handleChannelEvent(
       if (leftUserId === currentUserId) {
         dispatch(restrictForwardsFromChannel(channelId));
         dispatch(restrictThreadForwardsFromChannel(channelId));
+        dispatch(clearChannelMessages(channelId));
         dispatch(removeChannel(channelId));
         return;
       }
@@ -191,16 +167,7 @@ function handleChannelEvent(
     if (ce.payload.case === "membersChanged" && ce.payload.value) {
       const ids = ce.payload.value.userIds || [];
       if (ids.includes(currentUserId)) {
-        chatApi
-          .getChannel({ organizationId, channelId })
-          .then((res) => {
-            if (res.channel) {
-              const plain = channelToPlain(res.channel);
-              plain.unreadCount = 1;
-              dispatch(addChannel(plain));
-            }
-          })
-          .catch(() => {});
+        hydrateChannel(channelId, dispatch);
         return;
       }
     }
@@ -209,7 +176,7 @@ function handleChannelEvent(
     if (isPane) {
       dispatch(fetchMembers(channelId));
     }
-    hydrateChannel(organizationId, channelId, dispatch, "update");
+    hydrateChannel(channelId, dispatch);
     return;
   }
 
@@ -219,6 +186,7 @@ function handleChannelEvent(
       if (ids.includes(currentUserId)) {
         dispatch(restrictForwardsFromChannel(channelId));
         dispatch(restrictThreadForwardsFromChannel(channelId));
+        dispatch(clearChannelMessages(channelId));
         dispatch(removeChannel(channelId));
         return;
       }
@@ -226,7 +194,7 @@ function handleChannelEvent(
     if (isPane) {
       dispatch(fetchMembers(channelId));
     }
-    hydrateChannel(organizationId, channelId, dispatch, "update");
+    hydrateChannel(channelId, dispatch);
     return;
   }
 
@@ -571,7 +539,15 @@ function usePersistentChatStream() {
 
     let backoff = INITIAL_BACKOFF_MS;
     let mounted = true;
+    let reconnecting = false;
     let controller: AbortController;
+    let wakeRetry: (() => void) | undefined;
+
+    const onOnline = () => {
+      backoff = INITIAL_BACKOFF_MS;
+      controller?.abort();
+      wakeRetry?.();
+    };
 
     async function connect() {
       while (mounted) {
@@ -593,6 +569,9 @@ function usePersistentChatStream() {
           // outage.
           void dispatch(syncActiveCalls());
           void dispatch(fetchDrafts());
+          dispatch(invalidateArchivedChannels({ clear: true }));
+          if (reconnecting) void dispatch(fetchChannels());
+          reconnecting = true;
 
           for await (const event of stream) {
             if (!mounted) break;
@@ -637,22 +616,9 @@ function usePersistentChatStream() {
                     organizationId
                   ) {
                     fetchingChannelsRef.current.add(p.channelId);
-                    chatApi
-                      .getChannel({ organizationId, channelId: p.channelId })
-                      .then((res) => {
-                        if (res.channel) {
-                          const plain = apiChannelToPlain(res.channel);
-                          plain.unreadCount = 1;
-                          if (p.mentionCount > 0) plain.mentionCount = p.mentionCount;
-                          dispatch(addChannel(plain));
-                        }
-                      })
-                      .catch(() => {
-                        // Non-fatal; appears on next full refresh.
-                      })
-                      .finally(() => {
-                        fetchingChannelsRef.current.delete(p.channelId);
-                      });
+                    void dispatch(fetchChannel(p.channelId)).finally(() => {
+                      fetchingChannelsRef.current.delete(p.channelId);
+                    });
                   } else {
                     dispatch(
                       incrementUnreadCount({
@@ -673,7 +639,6 @@ function usePersistentChatStream() {
                     threadChannelId: threadChannelIdRef.current,
                   },
                   userIdRef.current,
-                  organizationId!,
                   dispatch,
                   (id) => byIdRef.current[id],
                 );
@@ -720,16 +685,29 @@ function usePersistentChatStream() {
         if (!mounted) break;
 
         const jitter = Math.random() * 1000;
-        await new Promise((resolve) => setTimeout(resolve, backoff + jitter));
+        await new Promise<void>((resolve) => {
+          const timer = setTimeout(() => {
+            wakeRetry = undefined;
+            resolve();
+          }, backoff + jitter);
+          wakeRetry = () => {
+            clearTimeout(timer);
+            wakeRetry = undefined;
+            resolve();
+          };
+        });
         backoff = Math.min(backoff * 2, MAX_BACKOFF_MS);
       }
     }
 
+    window.addEventListener("online", onOnline);
     connect();
 
     return () => {
       mounted = false;
+      window.removeEventListener("online", onOnline);
       _activeController?.abort();
+      wakeRetry?.();
       if (_activeController === controller!) {
         _activeController = null;
       }

@@ -34,10 +34,10 @@ import {
   convertGroupDmToChannel,
 } from "@/features/chat/store/chatThunks";
 import { getChannelDisplayName } from "@/features/chat/utils/channelDisplay";
+import { GROUP_DM_MAX_PARTICIPANTS } from "@/features/chat/utils/limits";
 import { ChannelType } from "@uniffy/proto/chat/v1/chat_pb";
 import type { ChatChannelMember } from "@/features/chat/types";
 
-const GROUP_DM_MEMBER_CAP = 4;
 const MAX_NAME_LENGTH = 50;
 
 /** DM-type counterpart of ChannelSettingsModal: members, group-DM add/remove, convert to channel. */
@@ -89,7 +89,7 @@ export function DmMembersModal() {
     () => members.filter((m) => m.subjectType === "USER" && m.role === "OWNER").length,
     [members],
   );
-  const atCap = isGroupDm && userIds.length >= GROUP_DM_MEMBER_CAP;
+  const atCap = isGroupDm && userIds.length >= GROUP_DM_MAX_PARTICIPANTS;
   const canAdd = isGroupDm && !atCap;
 
   const {
@@ -211,7 +211,7 @@ export function DmMembersModal() {
                 <p className="text-xs text-muted-foreground">
                   {isGroupDm ? "Group chat" : "Direct message"} &middot; {members.length}{" "}
                   {members.length === 1 ? "member" : "members"}
-                  {isGroupDm && ` of ${GROUP_DM_MEMBER_CAP}`}
+                  {isGroupDm && ` of ${GROUP_DM_MAX_PARTICIPANTS}`}
                 </p>
               </div>
             </div>
@@ -292,7 +292,7 @@ export function DmMembersModal() {
                 className="mx-6 mt-4 rounded-lg border border-yellow-300 bg-yellow-100 p-3.5 text-sm text-yellow-800 dark:border-yellow-900/50 dark:bg-yellow-900/30 dark:text-yellow-400"
                 data-testid="chat-dm-members-cap-notice"
               >
-                Group chats are limited to {GROUP_DM_MEMBER_CAP} people.
+                Group chats are limited to {GROUP_DM_MAX_PARTICIPANTS} people.
                 {isOwner
                   ? " Convert this conversation to a channel to keep adding people."
                   : " The conversation owner can convert it to a channel to keep adding people."}

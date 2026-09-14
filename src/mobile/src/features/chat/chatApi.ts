@@ -8,6 +8,7 @@ import {
   CreateChannelRequestSchema,
   UpdateChannelRequestSchema,
   ArchiveChannelRequestSchema,
+  UnarchiveChannelRequestSchema,
   DeleteChannelRequestSchema,
   JoinChannelRequestSchema,
   LeaveChannelRequestSchema,
@@ -69,9 +70,14 @@ const clientSessionId = `${Date.now().toString(36)}-${Math.random().toString(36)
 export const draftClientSessionId = clientSessionId;
 
 export const chatApi = {
-  listChannels: (req: MessageInitShape<typeof ListChannelsRequestSchema>) =>
-    client.listChannels(req),
-  getChannel: (req: MessageInitShape<typeof GetChannelRequestSchema>) => client.getChannel(req),
+  listChannels: (
+    req: MessageInitShape<typeof ListChannelsRequestSchema>,
+    options?: { signal?: AbortSignal },
+  ) => client.listChannels(req, options),
+  getChannel: (
+    req: MessageInitShape<typeof GetChannelRequestSchema>,
+    options?: { signal?: AbortSignal },
+  ) => client.getChannel(req, options),
   getChatPolicy: (req: MessageInitShape<typeof GetChatPolicyRequestSchema>) =>
     client.getChatPolicy(req),
   createChannel: (req: MessageInitShape<typeof CreateChannelRequestSchema>) =>
@@ -80,6 +86,8 @@ export const chatApi = {
     client.updateChannel(req),
   archiveChannel: (req: MessageInitShape<typeof ArchiveChannelRequestSchema>) =>
     client.archiveChannel(req),
+  unarchiveChannel: (req: MessageInitShape<typeof UnarchiveChannelRequestSchema>) =>
+    client.unarchiveChannel(req),
   deleteChannel: (req: MessageInitShape<typeof DeleteChannelRequestSchema>) =>
     client.deleteChannel(req),
 

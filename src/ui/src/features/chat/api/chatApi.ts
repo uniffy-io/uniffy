@@ -6,6 +6,7 @@ import {
   GetChannelRequestSchema,
   UpdateChannelRequestSchema,
   ArchiveChannelRequestSchema,
+  UnarchiveChannelRequestSchema,
   DeleteChannelRequestSchema,
   ListChannelsRequestSchema,
   CreateAgentChatRequestSchema,
@@ -84,6 +85,8 @@ export const chatApi = {
     chatClient.updateChannel(req),
   archiveChannel: (req: MessageInitShape<typeof ArchiveChannelRequestSchema>) =>
     chatClient.archiveChannel(req),
+  unarchiveChannel: (req: MessageInitShape<typeof UnarchiveChannelRequestSchema>) =>
+    chatClient.unarchiveChannel(req),
   deleteChannel: (req: MessageInitShape<typeof DeleteChannelRequestSchema>) =>
     chatClient.deleteChannel(req),
   listChannels: (req: MessageInitShape<typeof ListChannelsRequestSchema>) =>
