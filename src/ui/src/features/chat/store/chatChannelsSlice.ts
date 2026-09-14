@@ -40,6 +40,10 @@ interface ChatChannelsState {
    *  auto-mark-read paths until the channel is reopened, or the badge the user
    *  just asked for would clear itself under them. */
   manualUnread: Record<string, true>;
+  /** Whether GetUnreadCounts has answered at least once. Opening a channel
+   *  marks it read, so the divider has to be latched before that happens -
+   *  which means waiting for the read cursor to exist rather than racing it. */
+  unreadCountsLoaded: boolean;
 }
 
 const initialState: ChatChannelsState = {
@@ -62,6 +66,7 @@ const initialState: ChatChannelsState = {
   revision: 0,
   revisionsById: {},
   manualUnread: {},
+  unreadCountsLoaded: false,
 };
 
 function storeChannel(state: ChatChannelsState, channel: ChatChannel): void {
@@ -167,15 +172,19 @@ export const chatChannelsSlice = createSlice({
       delete state.channelPreferences[channelId];
     },
     setActiveChannel: (state, action: PayloadAction<string | null>) => {
-      // Reopening a channel is what ends a manual unread; re-selecting the one
-      // already open (a re-render, a split-pane swap) must not end it early.
-      if (action.payload && action.payload !== state.activeChannelId) {
-        delete state.manualUnread[action.payload];
-      }
       state.activeChannelId = action.payload;
     },
     setManualUnread: (state, action: PayloadAction<string>) => {
       state.manualUnread[action.payload] = true;
+    },
+    // Dispatched when a channel is opened, which is what ends a manual unread.
+    // Leaving the chat route never clears activeChannelId, so the open itself
+    // is the only reliable signal - comparing ids would never fire.
+    clearManualUnread: (state, action: PayloadAction<string>) => {
+      delete state.manualUnread[action.payload];
+    },
+    markUnreadCountsLoaded: (state) => {
+      state.unreadCountsLoaded = true;
     },
     updateChannel: (state, action: PayloadAction<ChatChannel>) => {
       if (state.byId[action.payload.id]) storeChannel(state, action.payload);
@@ -353,6 +362,8 @@ export const {
   removeChannel,
   setActiveChannel,
   setManualUnread,
+  clearManualUnread,
+  markUnreadCountsLoaded,
   updateChannel,
   updateUnreadCounts,
   incrementUnreadCount,
@@ -423,6 +434,9 @@ export const selectAgentChats = createSelector([selectChannels], (channels) =>
 
 export const selectIsManuallyUnread = (state: RootState, channelId: string): boolean =>
   state.chatChannels.manualUnread[channelId] === true;
+
+export const selectUnreadCountsLoaded = (state: RootState): boolean =>
+  state.chatChannels.unreadCountsLoaded;
 
 export const selectChannelMembers = (state: RootState, channelId: string): ChatChannelMember[] =>
   state.chatChannels.channelMembers[channelId] ?? [];

@@ -43,6 +43,8 @@ import {
   setActiveChannel,
   setManualUnread,
   selectIsManuallyUnread,
+  selectUnreadCountsLoaded,
+  markUnreadCountsLoaded,
   setOrgChatPolicy,
   clearChannelCategory,
   type OrgChatPolicy,
@@ -556,7 +558,13 @@ export const fetchMessages = createAsyncThunk<
       dispatch(setMessages({ channelId: params.channelId, messages, windowed }));
       dispatch(fetchChannelPendingApprovals({ channelId: params.channelId }));
     } else {
-      // Compute unread separator before marking the channel as read.
+      // Latch the unread separator before the channel is marked read, and so
+      // before the cursor it anchors on moves. On a cold load this request
+      // outruns GetUnreadCounts, so wait for the cursor instead of racing it -
+      // otherwise the divider is computed against empty state and never shows.
+      if (!selectUnreadCountsLoaded(getState())) {
+        await dispatch(fetchUnreadCounts());
+      }
       const state = getState();
       const channel = state.chatChannels.byId[params.channelId];
       const unreadCount = channel?.unreadCount ?? 0;
@@ -1254,6 +1262,7 @@ export const fetchUnreadCounts = createAsyncThunk<
         })),
       ),
     );
+    dispatch(markUnreadCountsLoaded());
 
     const prefs: Record<
       string,

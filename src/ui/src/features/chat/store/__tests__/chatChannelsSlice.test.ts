@@ -37,6 +37,7 @@ import {
   setChannelPreferences,
   setSplitChannel,
   setManualUnread,
+  clearManualUnread,
   updateUnreadCounts,
   archivedLoadStarted,
   setArchivedChannels,
@@ -519,22 +520,30 @@ describe("fetchMessages", () => {
 describe("manual unread", () => {
   const seeded = () => reducer(undefined, addChannel(channel));
 
-  it("keeps the flag while the same channel stays selected", () => {
+  it("survives re-selecting the channel the user is already standing in", () => {
     let state = reducer(seeded(), setActiveChannel(channel.id));
     state = reducer(state, setManualUnread(channel.id));
-    // A re-render re-selects the open channel; that is not the user reopening it.
+    // Leaving the chat route never clears activeChannelId, so selection alone
+    // cannot tell a re-render apart from a genuine reopen - only the open does.
     state = reducer(state, setActiveChannel(channel.id));
 
     expect(state.manualUnread[channel.id]).toBe(true);
   });
 
-  it("clears the flag when the channel is reopened", () => {
-    let state = reducer(seeded(), setActiveChannel(channel.id));
-    state = reducer(state, setManualUnread(channel.id));
-    state = reducer(state, setActiveChannel("channel-2"));
-    state = reducer(state, setActiveChannel(channel.id));
+  it("clears when the channel is opened", () => {
+    let state = reducer(seeded(), setManualUnread(channel.id));
+    state = reducer(state, clearManualUnread(channel.id));
 
     expect(state.manualUnread[channel.id]).toBeUndefined();
+  });
+
+  it("leaves other channels' flags alone", () => {
+    let state = reducer(seeded(), setManualUnread(channel.id));
+    state = reducer(state, setManualUnread("channel-2"));
+    state = reducer(state, clearManualUnread(channel.id));
+
+    expect(state.manualUnread[channel.id]).toBeUndefined();
+    expect(state.manualUnread["channel-2"]).toBe(true);
   });
 });
 
