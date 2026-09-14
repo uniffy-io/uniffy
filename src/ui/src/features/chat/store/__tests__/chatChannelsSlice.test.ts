@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   deleteCategory: vi.fn(),
   getChannelPendingApprovals: vi.fn(),
   getMessages: vi.fn(),
+  getUnreadCounts: vi.fn().mockResolvedValue({ channels: [] }),
   getThread: vi.fn(),
   getChannel: vi.fn(),
   listCategories: vi.fn(),
@@ -20,6 +21,7 @@ vi.mock("@/features/chat/api/chatApi", () => ({
     deleteCategory: mocks.deleteCategory,
     getChannelPendingApprovals: mocks.getChannelPendingApprovals,
     getMessages: mocks.getMessages,
+    getUnreadCounts: mocks.getUnreadCounts,
     getThread: mocks.getThread,
     getChannel: mocks.getChannel,
     listCategories: mocks.listCategories,
@@ -57,7 +59,7 @@ import {
   deleteChannel,
   fetchMessages,
   fetchArchivedChannels,
-  fetchDraftRoot,
+  fetchThreadRoot,
   fetchChannel,
 } from "@/features/chat/store/chatThunks";
 import type { RootState } from "@/app/store";
@@ -116,7 +118,7 @@ const message: ChatMessage = {
   updatedAt: "2026-08-26T00:00:00.000Z",
 };
 
-describe("draft roots", () => {
+describe("thread roots", () => {
   const makeStore = () =>
     configureStore({
       reducer: {
@@ -136,7 +138,7 @@ describe("draft roots", () => {
     store.dispatch(setMessages({ channelId: channel.id, messages: [message] }));
     mocks.getThread.mockResolvedValue({ rootMessage: root });
     await store.dispatch(
-      fetchDraftRoot({ channelId: channel.id, rootMessageId: root.id }) as never,
+      fetchThreadRoot({ channelId: channel.id, rootMessageId: root.id }) as never,
     );
     expect(store.getState().chatMessages.byId[root.id]?.content).toBe(root.content);
     expect(store.getState().chatMessages.idsByChannel[channel.id]).toEqual([message.id]);
@@ -155,7 +157,7 @@ describe("draft roots", () => {
       }),
     );
     const request = store.dispatch(
-      fetchDraftRoot({ channelId: channel.id, rootMessageId: root.id }) as never,
+      fetchThreadRoot({ channelId: channel.id, rootMessageId: root.id }) as never,
     );
     store.dispatch(removeChannel(channel.id));
     finish({ rootMessage: root });
@@ -167,9 +169,9 @@ describe("draft roots", () => {
     const store = makeStore();
     mocks.getThread.mockResolvedValue({});
     const result = await store.dispatch(
-      fetchDraftRoot({ channelId: channel.id, rootMessageId: root.id }) as never,
+      fetchThreadRoot({ channelId: channel.id, rootMessageId: root.id }) as never,
     );
-    expect(fetchDraftRoot.rejected.match(result)).toBe(true);
+    expect(fetchThreadRoot.rejected.match(result)).toBe(true);
     expect(store.getState().chatMessages.byId[root.id]).toBeUndefined();
   });
 });

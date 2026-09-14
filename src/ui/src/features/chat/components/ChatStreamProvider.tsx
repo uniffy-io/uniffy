@@ -606,6 +606,8 @@ function usePersistentChatStream() {
                           channelId: p.channelId,
                           unreadCount: p.unreadCount,
                           mentionCount: p.mentionCount,
+                          lastReadMessageId: p.lastReadMessageId,
+                          firstUnreadMessageId: p.firstUnreadMessageId,
                         },
                       ]),
                     );

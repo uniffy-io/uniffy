@@ -37,6 +37,7 @@ interface HoverActionsToolbarProps {
   senderId: string;
   isPinned: boolean;
   canReplyInThread: boolean;
+  canMarkUnread: boolean;
   content: string;
   /** Edit-window policy decision, evaluated when the menu opens; the server is the boundary. */
   isEditAllowed?: () => boolean;
@@ -52,6 +53,7 @@ function HoverActionsToolbarInner({
   senderId,
   isPinned,
   canReplyInThread,
+  canMarkUnread,
   content,
   isEditAllowed,
   onQuoteReply,
@@ -336,14 +338,16 @@ function HoverActionsToolbarInner({
               <LinkSimple size={14} />
               <span>Copy link</span>
             </ActionMenuItem>
-            <ActionMenuItem
-              role="menuitem"
-              onClick={handleMarkUnread}
-              data-testid={`chat-message-mark-unread-${messageId}`}
-            >
-              <EnvelopeSimple size={14} />
-              <span>Mark as unread</span>
-            </ActionMenuItem>
+            {canMarkUnread && (
+              <ActionMenuItem
+                role="menuitem"
+                onClick={handleMarkUnread}
+                data-testid={`chat-message-mark-unread-${messageId}`}
+              >
+                <EnvelopeSimple size={14} />
+                <span>Mark as unread</span>
+              </ActionMenuItem>
+            )}
             <ActionMenuItem
               role="menuitem"
 

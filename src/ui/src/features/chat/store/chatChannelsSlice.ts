@@ -40,6 +40,7 @@ interface ChatChannelsState {
    *  auto-mark-read paths until the channel is reopened, or the badge the user
    *  just asked for would clear itself under them. */
   manualUnread: Record<string, true>;
+  manualUnreadRequests: Record<string, string>;
   /** Whether GetUnreadCounts has answered at least once. Opening a channel
    *  marks it read, so the divider has to be latched before that happens -
    *  which means waiting for the read cursor to exist rather than racing it. */
@@ -66,6 +67,7 @@ const initialState: ChatChannelsState = {
   revision: 0,
   revisionsById: {},
   manualUnread: {},
+  manualUnreadRequests: {},
   unreadCountsLoaded: false,
 };
 
@@ -170,6 +172,8 @@ export const chatChannelsSlice = createSlice({
       if (state.splitChannelId === channelId) state.splitChannelId = null;
       delete state.channelMembers[channelId];
       delete state.channelPreferences[channelId];
+      delete state.manualUnread[channelId];
+      delete state.manualUnreadRequests[channelId];
     },
     setActiveChannel: (state, action: PayloadAction<string | null>) => {
       state.activeChannelId = action.payload;
@@ -182,6 +186,24 @@ export const chatChannelsSlice = createSlice({
     // is the only reliable signal - comparing ids would never fire.
     clearManualUnread: (state, action: PayloadAction<string>) => {
       delete state.manualUnread[action.payload];
+      delete state.manualUnreadRequests[action.payload];
+    },
+    beginManualUnread: (state, action: PayloadAction<{ channelId: string; requestId: string }>) => {
+      state.manualUnread[action.payload.channelId] = true;
+      state.manualUnreadRequests[action.payload.channelId] = action.payload.requestId;
+    },
+    finishManualUnread: (
+      state,
+      action: PayloadAction<{
+        channelId: string;
+        requestId: string;
+        restoreRead?: boolean;
+      }>,
+    ) => {
+      const { channelId, requestId, restoreRead } = action.payload;
+      if (state.manualUnreadRequests[channelId] !== requestId) return;
+      delete state.manualUnreadRequests[channelId];
+      if (restoreRead) delete state.manualUnread[channelId];
     },
     markUnreadCountsLoaded: (state) => {
       state.unreadCountsLoaded = true;
@@ -198,6 +220,7 @@ export const chatChannelsSlice = createSlice({
           mentionCount: number;
           lastReadMessageId?: string;
           latestMessageId?: string;
+          firstUnreadMessageId?: string;
         }>
       >,
     ) => {
@@ -211,6 +234,9 @@ export const chatChannelsSlice = createSlice({
         ) {
           channel.unreadCount = item.unreadCount;
           channel.mentionCount = item.mentionCount;
+        }
+        if (item.firstUnreadMessageId !== undefined || item.unreadCount === 0) {
+          channel.firstUnreadMessageId = item.firstUnreadMessageId ?? "";
         }
         if (item.lastReadMessageId !== undefined) {
           channel.lastReadMessageId = item.lastReadMessageId;
@@ -362,6 +388,8 @@ export const {
   removeChannel,
   setActiveChannel,
   setManualUnread,
+  beginManualUnread,
+  finishManualUnread,
   clearManualUnread,
   markUnreadCountsLoaded,
   updateChannel,

@@ -41,7 +41,8 @@ import {
   setLoading,
   updateUnreadCounts,
   setActiveChannel,
-  setManualUnread,
+  beginManualUnread,
+  finishManualUnread,
   selectIsManuallyUnread,
   selectUnreadCountsLoaded,
   markUnreadCountsLoaded,
@@ -98,7 +99,6 @@ import {
   loadLastOpenedChannel,
 } from "@/features/chat/utils/lastOpenedChannel";
 import { chooseChatLanding } from "@/features/chat/utils/landing";
-import { firstUnreadMessageId } from "@/features/chat/utils/readCursor";
 import {
   isChatSessionCurrent,
   loadChatInitialization,
@@ -546,7 +546,7 @@ export const fetchMessages = createAsyncThunk<
     ) {
       return { messages: [], hasMore: false };
     }
-    const { messages } = response;
+    let { messages } = response;
 
     if (params.beforeId) {
       dispatch(prependMessages({ channelId: params.channelId, messages }));
@@ -558,33 +558,52 @@ export const fetchMessages = createAsyncThunk<
       dispatch(setMessages({ channelId: params.channelId, messages, windowed }));
       dispatch(fetchChannelPendingApprovals({ channelId: params.channelId }));
     } else {
-      // Latch the unread separator before the channel is marked read, and so
-      // before the cursor it anchors on moves. On a cold load this request
-      // outruns GetUnreadCounts, so wait for the cursor instead of racing it -
-      // otherwise the divider is computed against empty state and never shows.
-      if (!selectUnreadCountsLoaded(getState())) {
+      const initialChannel = getState().chatChannels.byId[params.channelId];
+      if (
+        !selectUnreadCountsLoaded(getState()) ||
+        (initialChannel?.unreadCount && !initialChannel.firstUnreadMessageId)
+      ) {
         await dispatch(fetchUnreadCounts());
       }
-      const state = getState();
-      const channel = state.chatChannels.byId[params.channelId];
-      const unreadCount = channel?.unreadCount ?? 0;
-      if (unreadCount > 0 && messages.length > 0) {
-        const firstUnreadId = firstUnreadMessageId(
-          messages.map((m) => m.id),
-          channel?.lastReadMessageId,
-        );
-        if (firstUnreadId) {
-          dispatch(setUnreadSeparator({ channelId: params.channelId, messageId: firstUnreadId }));
+      if (
+        !isChatSessionCurrent(currentState.auth, getState().auth) ||
+        !getState().chatChannels.byId[params.channelId]
+      ) {
+        return { messages: [], hasMore: false };
+      }
+      const channel = getState().chatChannels.byId[params.channelId];
+      const firstUnreadId = channel.unreadCount ? channel.firstUnreadMessageId : undefined;
+      const windowed = !!firstUnreadId && !messages.some((m) => m.id === firstUnreadId);
+      if (windowed) {
+        response = await loadMessagePage({ ...request, aroundId: firstUnreadId });
+        messages = response.messages;
+        if (
+          !isChatSessionCurrent(currentState.auth, getState().auth) ||
+          !getState().chatChannels.byId[params.channelId]
+        ) {
+          return { messages: [], hasMore: false };
         }
       }
-
-      dispatch(setMessages({ channelId: params.channelId, messages }));
+      const targetLoaded = !!firstUnreadId && messages.some((m) => m.id === firstUnreadId);
+      dispatch(
+        setUnreadSeparator({ channelId: params.channelId, messageId: firstUnreadId ?? null }),
+      );
+      if (targetLoaded) dispatch(jumpToMessage(firstUnreadId));
+      dispatch(
+        setMessages({ channelId: params.channelId, messages, windowed: windowed && targetLoaded }),
+      );
+      const state = getState();
 
       // Re-hydrate any pending agent approval cards still live in Valkey (24h TTL) but dropped from Redux on reload.
       dispatch(fetchChannelPendingApprovals({ channelId: params.channelId }));
 
       const lastMessage = messages[messages.length - 1];
-      if (lastMessage && !selectIsManuallyUnread(state, params.channelId)) {
+      if (
+        lastMessage &&
+        !windowed &&
+        selectUnreadCountsLoaded(state) &&
+        !selectIsManuallyUnread(state, params.channelId)
+      ) {
         dispatch(
           markChannelRead({
             channelId: params.channelId,
@@ -930,11 +949,11 @@ export const fetchThread = createAsyncThunk<
   }
 });
 
-export const fetchDraftRoot = createAsyncThunk<
+export const fetchThreadRoot = createAsyncThunk<
   void,
   { channelId: string; rootMessageId: string },
   { state: RootState; rejectValue: string }
->("chat/fetchDraftRoot", async (params, { getState, dispatch, rejectWithValue, signal }) => {
+>("chat/fetchThreadRoot", async (params, { getState, dispatch, rejectWithValue, signal }) => {
   const { auth, chatChannels } = getState();
   try {
     const response = await chatApi.getThread({
@@ -949,13 +968,15 @@ export const fetchDraftRoot = createAsyncThunk<
       chatChannels.revisionsById[params.channelId] !==
         getState().chatChannels.revisionsById[params.channelId]
     )
-      return rejectWithValue("Conversation changed. Open draft again.");
+      return rejectWithValue("Conversation changed. Open thread again.");
     if (!response.rootMessage || response.rootMessage.isDeleted) {
       return rejectWithValue("Message not found");
     }
     dispatch(cacheMessage(messageToPlain(response.rootMessage)));
   } catch (error) {
-    return rejectWithValue(error instanceof Error ? error.message : "Failed to load draft message");
+    return rejectWithValue(
+      error instanceof Error ? error.message : "Failed to load thread message",
+    );
   }
 });
 
@@ -1066,38 +1087,16 @@ export const jumpToChannelMessage = createAsyncThunk<
   }
 });
 
-/** Scroll a channel to where the viewer left off, loading the cursor's page when it is out of window. */
 export const jumpToFirstUnread = createAsyncThunk<
   void,
   { channelId: string },
   { state: RootState; rejectValue: string }
 >("chat/jumpToFirstUnread", async ({ channelId }, { getState, dispatch }) => {
   const state = getState();
-  const cursor = state.chatChannels.byId[channelId]?.lastReadMessageId;
-  const loadedIds = state.chatMessages.idsByChannel[channelId] ?? [];
-
-  // Cursor is in the window: the message right after it is the target.
-  if (cursor && state.chatMessages.idSetByChannel[channelId]?.[cursor] === true) {
-    const target = firstUnreadMessageId(loadedIds, cursor);
-    if (target) await dispatch(jumpToChannelMessage({ channelId, messageId: target }));
-    return;
-  }
-
-  // Unread runs past the loaded page or the 100 cap, so the first unread is not
-  // in the window. The cursor is, by definition, the row before it - load that
-  // page and step forward one.
-  if (cursor) {
-    const { messages } = await dispatch(fetchMessages({ channelId, aroundId: cursor })).unwrap();
-    const target = firstUnreadMessageId(
-      messages.map((m) => m.id),
-      cursor,
-    );
-    if (target) dispatch(jumpToMessage(target));
-    return;
-  }
-
-  // Never read: the oldest row we hold is the closest thing to the start.
-  if (loadedIds[0]) dispatch(jumpToMessage(loadedIds[0]));
+  const target =
+    state.chatMessages.unreadSeparatorByChannel[channelId] ??
+    state.chatChannels.byId[channelId]?.firstUnreadMessageId;
+  if (target) await dispatch(jumpToChannelMessage({ channelId, messageId: target }));
 });
 
 export const fetchThreadsInbox = createAsyncThunk<
@@ -1194,34 +1193,59 @@ export const markChannelUnread = createAsyncThunk<
   void,
   { channelId: string; messageId: string },
   { state: RootState; rejectValue: string }
->("chat/markChannelUnread", async (params, { getState, dispatch, rejectWithValue }) => {
-  try {
-    const organizationId = getOrganizationId(getState());
-    // Set before the call so the auto-mark-read paths cannot race the response
-    // and clear the badge the user just asked for.
-    dispatch(setManualUnread(params.channelId));
-    const response = await chatApi.markChannelUnread({
-      organizationId,
-      channelId: params.channelId,
-      messageId: params.messageId,
-    });
-    dispatch(
-      updateUnreadCounts([
-        {
+>(
+  "chat/markChannelUnread",
+  async (params, { getState, dispatch, rejectWithValue, requestId }) => {
+    const initial = getState();
+    const wasManuallyUnread = selectIsManuallyUnread(initial, params.channelId);
+    const isCurrent = () =>
+      isChatSessionCurrent(initial.auth, getState().auth) &&
+      getState().chatChannels.manualUnreadRequests[params.channelId] === requestId;
+    dispatch(beginManualUnread({ channelId: params.channelId, requestId }));
+    try {
+      const response = await chatApi.markChannelUnread({
+        organizationId: getOrganizationId(initial),
+        channelId: params.channelId,
+        messageId: params.messageId,
+      });
+      if (!isCurrent()) return;
+      dispatch(
+        updateUnreadCounts([
+          {
+            channelId: params.channelId,
+            unreadCount: response.unreadCount,
+            mentionCount: response.mentionCount,
+            lastReadMessageId: response.lastReadMessageId,
+            firstUnreadMessageId: response.firstUnreadMessageId ?? "",
+          },
+        ]),
+      );
+      dispatch(
+        setUnreadSeparator({
           channelId: params.channelId,
-          unreadCount: response.unreadCount,
-          mentionCount: response.mentionCount,
-          lastReadMessageId: response.lastReadMessageId,
-        },
-      ]),
-    );
-    dispatch(setUnreadSeparator({ channelId: params.channelId, messageId: params.messageId }));
-  } catch (error) {
-    return rejectWithValue(
-      error instanceof Error ? error.message : "Failed to mark channel unread",
-    );
-  }
-});
+          messageId: response.firstUnreadMessageId || null,
+        }),
+      );
+      dispatch(finishManualUnread({ channelId: params.channelId, requestId }));
+    } catch (error) {
+      if (!isCurrent()) return;
+      dispatch(
+        finishManualUnread({
+          channelId: params.channelId,
+          requestId,
+          restoreRead: !wasManuallyUnread,
+        }),
+      );
+      return rejectWithValue(
+        error instanceof Error ? error.message : "Failed to mark channel unread",
+      );
+    }
+  },
+  {
+    condition: ({ channelId }, { getState }) =>
+      !getState().chatChannels.manualUnreadRequests[channelId],
+  },
+);
 
 export const markThreadRead = createAsyncThunk<
   void,
@@ -1244,6 +1268,7 @@ export const fetchUnreadCounts = createAsyncThunk<
   void,
   { state: RootState; rejectValue: string }
 >("chat/fetchUnreadCounts", async (_, { getState, dispatch, rejectWithValue }) => {
+  const initial = getState();
   try {
     const nlMap: Record<number, "ALL" | "MENTIONS" | "NONE"> = {
       [ChatNotificationLevel.ALL]: "ALL",
@@ -1251,15 +1276,17 @@ export const fetchUnreadCounts = createAsyncThunk<
       [ChatNotificationLevel.NONE]: "NONE",
     };
 
-    const organizationId = getOrganizationId(getState());
+    const organizationId = getOrganizationId(initial);
     const response = await chatApi.getUnreadCounts({ organizationId });
+    if (!isChatSessionCurrent(initial.auth, getState().auth)) return;
     dispatch(
       updateUnreadCounts(
         response.channels.map((c) => ({
           channelId: c.channelId,
           unreadCount: c.unreadCount,
           mentionCount: c.mentionCount,
-          lastReadMessageId: c.lastReadMessageId,
+          lastReadMessageId: c.lastReadMessageId ?? "",
+          firstUnreadMessageId: c.firstUnreadMessageId ?? "",
           latestMessageId: c.latestMessageId,
         })),
       ),

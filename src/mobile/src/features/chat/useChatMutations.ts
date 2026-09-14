@@ -1,3 +1,4 @@
+import type { UnreadMap } from "@features/chat/unreadCounts";
 import { useMutation, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { AgentConfirmationDecision } from "@uniffy/proto/chat/v1/chat_pb";
 import { SubjectType } from "@uniffy/proto/common/v1/common_pb";
@@ -310,22 +311,16 @@ export function useMarkChannelUnread(channelId: string) {
         messageId,
       }),
     onSuccess: (res) => {
-      // Write the returned counts through rather than refetching: the poll
-      // interval would otherwise leave the badge stale for seconds.
-      queryClient.setQueryData<
-        Record<string, { unread: number; mentions: number; lastReadMessageId?: string }>
-      >(["chat", "unread", organizationId], (prev) =>
-        prev
-          ? {
-              ...prev,
-              [channelId]: {
-                unread: res.unreadCount,
-                mentions: res.mentionCount,
-                lastReadMessageId: res.lastReadMessageId || undefined,
-              },
-            }
-          : prev,
-      );
+      queryClient.setQueryData<UnreadMap>(["chat", "unread", organizationId], (prev) => ({
+        ...prev,
+        [channelId]: {
+          ...prev?.[channelId],
+          unread: res.unreadCount,
+          mentions: res.mentionCount,
+          lastReadMessageId: res.lastReadMessageId,
+          firstUnreadMessageId: res.firstUnreadMessageId,
+        },
+      }));
     },
   });
 }

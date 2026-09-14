@@ -309,15 +309,13 @@ export function MessageList({ channelId: channelIdProp }: MessageListProps) {
   const unreadSeparatorId = useAppSelector((state) =>
     effectiveChannelId ? selectUnreadSeparatorForChannel(state, effectiveChannelId) : null,
   );
-  // With the cursor outside the loaded window the divider sits at the top of the
-  // page rather than at the real first unread, so offer the jump that loads it.
-  const cursorLoaded = useAppSelector((state) => {
-    const cursor = effectiveChannelId
-      ? state.chatChannels.byId[effectiveChannelId]?.lastReadMessageId
-      : undefined;
-    if (!effectiveChannelId || !cursor) return true;
-    return state.chatMessages.idSetByChannel[effectiveChannelId]?.[cursor] === true;
-  });
+  const unreadTargetLoaded =
+    !!unreadSeparatorId && messages.some((m) => m.id === unreadSeparatorId);
+  const displayedSeparatorId = unreadTargetLoaded
+    ? unreadSeparatorId
+    : unreadSeparatorId
+      ? messages[0]?.id
+      : null;
   const currentUserId = useAppSelector((state) => state.auth.user?.id);
   const allTypingUsers = useAppSelector((state) =>
     effectiveChannelId ? selectTypingUsers(state, effectiveChannelId) : [],
@@ -379,6 +377,8 @@ export function MessageList({ channelId: channelIdProp }: MessageListProps) {
   );
 
   const grouped = useMemo(() => groupMessages(rootMessages), [rootMessages]);
+
+  const entryIndex = grouped.findIndex((g) => g.message.id === unreadSeparatorId);
 
   const jumpIndex = useMemo(
     () => (jumpToMessageId ? grouped.findIndex((g) => g.message.id === jumpToMessageId) : -1),
@@ -571,8 +571,8 @@ export function MessageList({ channelId: channelIdProp }: MessageListProps) {
         data-message-kind={resolveMessageKind(g.message)}
       >
         {g.showDateSeparator && <DateSeparator label={g.dateLabel} />}
-        {unreadSeparatorId === g.message.id && (
-          <UnreadSeparator onJump={cursorLoaded ? undefined : handleJumpToFirstUnread} />
+        {displayedSeparatorId === g.message.id && (
+          <UnreadSeparator onJump={unreadTargetLoaded ? undefined : handleJumpToFirstUnread} />
         )}
         <MessageItem
           message={g.message}
@@ -583,7 +583,7 @@ export function MessageList({ channelId: channelIdProp }: MessageListProps) {
         />
       </div>
     ),
-    [unreadSeparatorId, highlightedId, cursorLoaded, handleJumpToFirstUnread],
+    [displayedSeparatorId, highlightedId, unreadTargetLoaded, handleJumpToFirstUnread],
   );
 
   const currentUserName = useAppSelector((s) => s.auth.user?.fullName ?? "");
@@ -702,7 +702,13 @@ export function MessageList({ channelId: channelIdProp }: MessageListProps) {
         className="flex-1"
         data={grouped}
         firstItemIndex={firstItemIndex}
-        initialTopMostItemIndex={jumpIndex >= 0 ? jumpIndex : Math.max(0, grouped.length - 1)}
+        initialTopMostItemIndex={
+          jumpIndex >= 0
+            ? jumpIndex
+            : entryIndex >= 0
+              ? entryIndex
+              : Math.max(0, grouped.length - 1)
+        }
         followOutput={(isAtBottom) => (isAtBottom && !isWindowed ? "auto" : false)}
         startReached={startReached}
         atBottomStateChange={handleAtBottomChange}

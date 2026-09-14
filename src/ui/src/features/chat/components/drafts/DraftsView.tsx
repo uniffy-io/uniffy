@@ -9,7 +9,7 @@ import { stripMarkdownAndTruncate } from "@/features/search/utils/stripMarkdown"
 import { setActiveChannel } from "@/features/chat/store/chatChannelsSlice";
 import { setActiveThread } from "@/features/chat/store/chatThreadsSlice";
 import { closeThreadPanel, openThreadPanel } from "@/features/chat/store/chatUiSlice";
-import { deleteDraftOnServer, fetchDraftRoot } from "@/features/chat/store/chatThunks";
+import { deleteDraftOnServer, fetchThreadRoot } from "@/features/chat/store/chatThunks";
 import { selectDraftRows, type ChatDraftRow } from "@/features/chat/store/chatDraftsSlice";
 import { getChannelDisplayName } from "@/features/chat/utils/channelDisplay";
 import type { ChatChannel } from "@/features/chat/types";
@@ -84,7 +84,7 @@ export function DraftsView() {
   const navigate = useNavigate();
   const drafts = useAppSelector(selectDraftRows);
   const channelsById = useAppSelector((state) => state.chatChannels.byId);
-  const pendingOpen = useRef<ReturnType<ReturnType<typeof fetchDraftRoot>> | null>(null);
+  const pendingOpen = useRef<ReturnType<ReturnType<typeof fetchThreadRoot>> | null>(null);
   useEffect(() => () => pendingOpen.current?.abort(), []);
 
   const rows = useMemo(
@@ -98,7 +98,7 @@ export function DraftsView() {
       pendingOpen.current = null;
       if (draft.rootMessageId) {
         const request = dispatch(
-          fetchDraftRoot({
+          fetchThreadRoot({
             channelId: draft.channelId,
             rootMessageId: draft.rootMessageId,
           }),

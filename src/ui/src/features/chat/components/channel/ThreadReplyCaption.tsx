@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import { ChatText } from "@phosphor-icons/react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { setActiveThread } from "@/features/chat/store/chatThreadsSlice";
@@ -5,27 +6,48 @@ import { openThreadPanel } from "@/features/chat/store/chatUiSlice";
 import { selectMessageById } from "@/features/chat/store/chatMessagesSlice";
 import type { ThreadReplyContext } from "@/features/chat/types";
 
+import { fetchThreadRoot } from "@/features/chat/store/chatThunks";
+import { stripMarkdownAndTruncate } from "@/features/search/utils/stripMarkdown";
+
 const PREVIEW_LENGTH = 90;
 
-/**
- * Marks a channel message that was posted alongside a thread reply, and opens
- * that thread. Both rows live in the same channel, so the root message is
- * normally already loaded; without it the caption drops the preview rather
- * than fetching, since it is a label, not content.
- */
-export function ThreadReplyCaption({ context }: { context: ThreadReplyContext }) {
+export function ThreadReplyCaption({
+  context,
+  channelId,
+}: {
+  context: ThreadReplyContext;
+  channelId: string;
+}) {
   const dispatch = useAppDispatch();
   const rootMessage = useAppSelector((state) => selectMessageById(state, context.rootMessageId));
 
-  const preview = rootMessage?.content.replace(/\s+/g, " ").trim().slice(0, PREVIEW_LENGTH) ?? "";
+  const [loading, setLoading] = useState(false);
+  const pending = useRef<ReturnType<ReturnType<typeof fetchThreadRoot>> | null>(null);
+  useEffect(() => () => pending.current?.abort(), []);
+  const preview = stripMarkdownAndTruncate(rootMessage?.content ?? "", PREVIEW_LENGTH);
+
+  const openThread = async () => {
+    setLoading(true);
+    try {
+      const request = dispatch(
+        fetchThreadRoot({ channelId, rootMessageId: context.rootMessageId }),
+      );
+      pending.current = request;
+      const result = await request;
+      if (!fetchThreadRoot.fulfilled.match(result)) return;
+      dispatch(setActiveThread(context.rootMessageId));
+      dispatch(openThreadPanel());
+    } finally {
+      pending.current = null;
+      setLoading(false);
+    }
+  };
 
   return (
     <button
       type="button"
-      onClick={() => {
-        dispatch(setActiveThread(context.rootMessageId));
-        dispatch(openThreadPanel());
-      }}
+      onClick={() => void openThread()}
+      disabled={loading}
       className="focus-ring mt-1 flex max-w-full items-center gap-1.5 rounded px-1 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
       data-testid={`chat-thread-reply-caption-${context.replyMessageId}`}
     >

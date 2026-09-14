@@ -1,3 +1,4 @@
+import type { UnreadMap } from "@features/chat/unreadCounts";
 import { useCallback, useMemo, useRef, useState } from "react";
 import {
   useInfiniteQuery,
@@ -45,8 +46,6 @@ const UNREAD_POLL_STREAMING_MS = 30000;
 function isStreamHealthy(queryClient: QueryClient): boolean {
   return queryClient.getQueryData<boolean>(STREAM_HEALTH_KEY) === true;
 }
-
-type UnreadMap = Record<string, { unread: number; mentions: number; lastReadMessageId?: string }>;
 
 export function useArchivedChannels(enabled: boolean) {
   const { organizationId } = useAuth();
@@ -111,7 +110,7 @@ export function useChannels() {
 }
 
 /** Live unread/mention counts keyed by channel id. Shared cache across the chat UI. */
-function useUnreadCounts() {
+export function useUnreadCounts() {
   const { organizationId } = useAuth();
   const queryClient = useQueryClient();
   return useQuery({
@@ -127,6 +126,7 @@ function useUnreadCounts() {
           unread: c.unreadCount,
           mentions: c.mentionCount,
           lastReadMessageId: c.lastReadMessageId,
+          firstUnreadMessageId: c.firstUnreadMessageId,
         };
       }
       return map;

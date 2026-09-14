@@ -414,6 +414,7 @@ function MessageItemInner({
         senderId={message.senderId}
         isPinned={message.isPinned}
         canReplyInThread={!isInThread && !message.rootId}
+        canMarkUnread={!message.rootId}
         content={message.content}
         isEditAllowed={isEditAllowed}
         onQuoteReply={handleQuoteReply}
@@ -586,7 +587,10 @@ function MessageItemInner({
               <MessageContent content={message.content} />
             )}
             {message.threadReplyContext && (
-              <ThreadReplyCaption context={message.threadReplyContext} />
+              <ThreadReplyCaption
+                context={message.threadReplyContext}
+                channelId={message.channelId}
+              />
             )}
             {message.editedAt && (
               <span className="relative inline-block">

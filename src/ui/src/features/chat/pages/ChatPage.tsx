@@ -1,3 +1,4 @@
+import { clearUnreadSeparator } from "@/features/chat/store/chatMessagesSlice";
 import { Suspense, useEffect, useCallback, useRef, type ReactNode } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { SpinnerGap } from "@phosphor-icons/react";
@@ -319,6 +320,7 @@ export function ChatPage() {
     // Opening the channel is what ends a manual unread, and it has to land
     // before the load below decides whether to mark the channel read.
     dispatch(clearManualUnread(channelId));
+    dispatch(clearUnreadSeparator(channelId));
     // With a hash the deep-link effect below loads the window around the target instead.
     if (!hashMessageId) {
       dispatch(fetchMessages({ channelId }));
@@ -352,6 +354,8 @@ export function ChatPage() {
 
   useEffect(() => {
     if (splitChannelId) {
+      dispatch(clearUnreadSeparator(splitChannelId));
+      dispatch(clearManualUnread(splitChannelId));
       dispatch(fetchMessages({ channelId: splitChannelId }));
     }
   }, [splitChannelId, dispatch]);

@@ -38,8 +38,8 @@ import {
   Phone,
   PhoneSlash,
 } from "phosphor-react-native";
-import { router, useLocalSearchParams } from "expo-router";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { router, useLocalSearchParams, useFocusEffect } from "expo-router";
+import { useQuery } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { useAnimatedStyle, useSharedValue } from "react-native-reanimated";
 import { useReanimatedKeyboardAnimation } from "react-native-keyboard-controller";
@@ -74,6 +74,7 @@ import { useAuth } from "@core/providers/AuthContext";
 import { useUniffy } from "@core/providers/UniffyContext";
 import {
   useChannel,
+  useUnreadCounts,
   useMessages,
   useChannelMembers,
   useChannelPendingApprovals,
@@ -289,10 +290,10 @@ export function ChatConversationScreen() {
 
   const { user, organizationId } = useAuth();
   const { pendingReference, clearPendingReference, openAt } = useUniffy();
-  const queryClient = useQueryClient();
 
   useChatStream();
   const channelQuery = useChannel(channelId);
+  const unreadQuery = useUnreadCounts();
   const messagesQuery = useMessages(channelId);
   const membersQuery = useChannelMembers(channelId);
   const approvalsQuery = useChannelPendingApprovals(channelId, true);
@@ -545,56 +546,27 @@ export function ChatConversationScreen() {
     [directory.subjects, agentsQuery.data],
   );
 
-  // Snapshot the unread count on entry, before mark-as-read zeroes it out. It
-  // has to be a lazily filled ref rather than a useState initializer: the org
-  // may still be resolving on the first render, and the snapshot has to be taken
-  // on whichever render first has it.
-  const entryUnreadRef = useRef<number | null>(null);
-  const entryCursorRef = useRef<string | undefined>(undefined);
-  // eslint-disable-next-line react/react-compiler
-  if (entryUnreadRef.current === null && organizationId) {
-    const unreadMap = queryClient.getQueryData<
-      Record<string, { unread: number; lastReadMessageId?: string }>
-    >(["chat", "unread", organizationId]);
-    entryUnreadRef.current = unreadMap?.[channelId]?.unread ?? 0;
+  const manualUnreadRef = useRef(false);
+  const landedOnUnreadRef = useRef(false);
+  const [entryVisit, setEntryVisit] = useState(0);
+  const entryKey = `${organizationId ?? ""}:${user?.id ?? ""}:${channelId}:${entryVisit}`;
+  const [entryUnread, setEntryUnread] = useState<{ key: string; target: string | null } | null>(
+    null,
+  );
+  useEffect(() => {
+    if (!organizationId || !unreadQuery.data || entryUnread?.key === entryKey) return;
+    manualUnreadRef.current = false;
+    landedOnUnreadRef.current = false;
+    const unread = unreadQuery.data[channelId];
+    // Capture once when this channel's unread snapshot becomes available.
     // eslint-disable-next-line react/react-compiler
-    entryCursorRef.current = unreadMap?.[channelId]?.lastReadMessageId;
-  }
-
-  // Anchor the "New messages" divider to the first unread message of the
-  // initial load; locked once so later polls do not move it.
-  const unreadAnchorRef = useRef<string | null | undefined>(undefined);
-  const firstUnreadId = useMemo(() => {
-    // eslint-disable-next-line react/react-compiler
-    if (unreadAnchorRef.current !== undefined) return unreadAnchorRef.current;
-    const loaded = messagesQuery.data;
-    if (!loaded || loaded.length === 0) return null;
-    // The anchor is latched in a ref, not state: it must be picked from the very
-    // first non-empty page and then survive every later poll unchanged, and a
-    // state write here would re-render the whole thread to reach the same value.
-    // eslint-disable-next-line react/react-compiler
-    const unread = entryUnreadRef.current ?? 0;
-    // eslint-disable-next-line react/react-compiler
-    const cursor = entryCursorRef.current;
-    // The list is newest-first, so the first unread sits one index BEFORE the
-    // cursor. Counting back from the tail instead breaks once unread exceeds
-    // the loaded page or the server's 100 cap.
-    let anchor: string | null = null;
-    if (unread > 0) {
-      // eslint-disable-next-line react/react-compiler
-      const cursorIndex = cursor ? loaded.findIndex((m) => m.id === cursor) : -1;
-      anchor =
-        cursorIndex > 0
-          ? loaded[cursorIndex - 1].id
-          : // Cursor out of window (or never read): everything loaded is unread.
-            cursorIndex === -1
-            ? (loaded[loaded.length - 1]?.id ?? null)
-            : null;
-    }
-    // eslint-disable-next-line react/react-compiler
-    unreadAnchorRef.current = anchor;
-    return anchor;
-  }, [messagesQuery.data]);
+    setEntryUnread({
+      key: entryKey,
+      target: unread?.unread ? (unread.firstUnreadMessageId ?? null) : null,
+    });
+  }, [organizationId, channelId, entryKey, entryUnread?.key, unreadQuery.data]);
+  const entryReady = entryUnread?.key === entryKey;
+  const firstUnreadId = entryReady ? entryUnread.target : null;
 
   // Typing entries are patched into this cache by the chat stream provider;
   // the query only subscribes, it never fetches.
@@ -694,16 +666,15 @@ export function ChatConversationScreen() {
 
   // Holds off the newest-id auto-mark-read after the user marks something
   // unread, or the badge they just asked for clears on the next poll.
-  const manualUnreadRef = useRef(false);
 
   const newestId = messages[0]?.id;
   useEffect(() => {
-    if (manualUnreadRef.current) return;
+    if (!entryReady || !screenFocused.current || manualUnreadRef.current) return;
     if (newestId && !newestId.startsWith("optimistic-")) {
       markRead.mutate(newestId);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [newestId]);
+  }, [newestId, entryReady]);
 
   // A reference picked in the @ overlay is inserted at the cursor as @label.
   // Focus-guarded: the thread screen stacks on top with its own composer.
@@ -920,15 +891,17 @@ export function ChatConversationScreen() {
   // Entering a busy channel otherwise lands at the newest message with no way
   // back to where the user left off. Fires once per channel entry; the anchor
   // itself is latched, so later polls never re-trigger it.
-  const landedOnUnreadRef = useRef(false);
+  useFocusEffect(
+    useCallback(() => {
+      setEntryVisit((visit) => visit + 1);
+    }, []),
+  );
   useEffect(() => {
     if (landedOnUnreadRef.current || !firstUnreadId || rows.length === 0) return;
+    if (!rows.some((row) => row.message.id === firstUnreadId)) return;
     landedOnUnreadRef.current = true;
     jumpToMessage(firstUnreadId);
-    // firstUnreadId is latched in a ref above, which the compiler analysis
-    // treats as a render-time ref read even though this runs in an effect.
-    // eslint-disable-next-line react/react-compiler
-  }, [firstUnreadId, rows.length, jumpToMessage]);
+  }, [firstUnreadId, rows, jumpToMessage]);
 
   const renderItem = useCallback(
     ({ item, index }: { item: MessageRowItem; index: number }) => {
@@ -1383,8 +1356,14 @@ export function ChatConversationScreen() {
           const msg = actionMessage;
           setActionMessage(null);
           if (!msg || msg.id.startsWith("optimistic-")) return;
+          if (markUnread.isPending) return;
+          const wasManuallyUnread = manualUnreadRef.current;
           manualUnreadRef.current = true;
-          markUnread.mutate(msg.id);
+          markUnread.mutate(msg.id, {
+            onError: () => {
+              manualUnreadRef.current = wasManuallyUnread;
+            },
+          });
         }}
         onDelete={() => {
           const msg = actionMessage;
