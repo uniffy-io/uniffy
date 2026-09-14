@@ -336,9 +336,7 @@ class TestAddMemberReactivation:
         assert membership.is_active is True
         assert membership.role is OrganizationRole.ADMIN
 
-    async def test_reactivation_restores_the_org_gate(
-        self, session, access, monkeypatch
-    ) -> None:
+    async def test_reactivation_restores_the_org_gate(self, session, access, monkeypatch) -> None:
         monkeypatch.setattr(
             "uniffy.domains.directory.projection.UserDirectoryProjection.index_for_organization",
             AsyncMock(),
@@ -608,21 +606,10 @@ class TestCalendarAttendeeFloor:
 
 
 class TestCallRosterMembershipGate:
-    """The active-call roster is a live view of who is meeting with whom, by name,
-    so it carries the same membership precondition as the rest of the domain.
-
-    Channel-member and participant rows outlive the membership that justified
-    them, which is exactly why the gate cannot be inferred from either.
-    """
+    """Retained channel and participant rows must not bypass deactivation."""
 
     @pytest.fixture(autouse=True)
     def _livekit_env(self, monkeypatch):
-        """`CallOperations` mints tokens, so it needs credible config to exist.
-
-        Supplied here rather than inherited from the environment, so the gate is
-        what these tests measure and not whichever secret the shell happens to
-        carry.
-        """
         monkeypatch.setattr(calls_config, "_config", None)
         monkeypatch.setenv("LIVEKIT_HOST", "http://livekit:7880")
         monkeypatch.setenv("LIVEKIT_API_KEY", "devkey")
@@ -637,8 +624,6 @@ class TestCallRosterMembershipGate:
             await CallOperations(session).list_active_calls_for_user(access.ghost_id, access.org_id)
 
     async def test_being_in_the_call_does_not_survive_deactivation(self, session, access) -> None:
-        """The harsher case: their own participant row is still open, which is
-        what the query reads access from when nothing gates it."""
         channel = await _channel(session, access)
         await _active_call(session, access, channel, participant_id=access.ghost_id)
 

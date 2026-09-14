@@ -10,26 +10,13 @@ class LiveKitConfigError(RuntimeError):
     pass
 
 
-# This secret signs the credentials that admit someone to a call and verifies the
-# events the media service sends back, so anyone holding it can mint admission to
-# any call in the deployment and forge the presence we trust. Values that have
-# shipped in this repository are public knowledge; refusing them is the only thing
-# that stops a self-hosted deployment running on one.
-_PUBLISHED_SECRETS = frozenset({
-    "devsecret-change-me-in-prod-32chars-min",
-    "devsecret",
-    "changeme",
-    "secret",
-})
+# Public credentials remain unsafe regardless of length.
+_PUBLISHED_SECRET = "devsecret-change-me-in-prod-32chars-min"
 _MIN_SECRET_LENGTH = 32
 
 
 def default_screen_share_quality() -> ScreenShareQuality:
-    """Deploy-time screen-share ceiling for many-viewer calls (self-host safe).
-
-    A 1:1 DIRECT call overrides this to MAX at resolve time; this only governs
-    channel / group calls where egress scales with the viewer count.
-    """
+    """Channel and group calls need a deploy-time ceiling on screen-share egress."""
     raw = os.getenv("CALLS_DEFAULT_SCREEN_SHARE_QUALITY", "BALANCED").strip().upper()
     try:
         return ScreenShareQuality[raw]
@@ -56,16 +43,15 @@ class LiveKitConfig:
             raise LiveKitConfigError(
                 "LIVEKIT_HOST, LIVEKIT_API_KEY and LIVEKIT_API_SECRET are required"
             )
-        _require_credible_secret(api_secret)
+        _validate_api_secret(api_secret)
         return cls(host=host, api_key=api_key, api_secret=api_secret, ws_url=ws_url)
 
 
-def _require_credible_secret(api_secret: str) -> None:
-    """Refuse a secret the whole internet can read, or one too short to guess badly."""
-    if api_secret.strip().lower() in _PUBLISHED_SECRETS:
+def _validate_api_secret(api_secret: str) -> None:
+    if api_secret == _PUBLISHED_SECRET:
         raise LiveKitConfigError(
-            "LIVEKIT_API_SECRET is a placeholder that ships in this repository and is "
-            "therefore public. Generate one with `openssl rand -hex 32` and set it on "
+            "LIVEKIT_API_SECRET matches a published placeholder. "
+            "Generate one with `openssl rand -hex 32` and set it on "
             "the backend and the LiveKit server together."
         )
     if len(api_secret) < _MIN_SECRET_LENGTH:
@@ -78,11 +64,7 @@ def _require_credible_secret(api_secret: str) -> None:
 
 @dataclass(frozen=True)
 class TurnConfig:
-    """Ephemeral TURN credential settings (k8s/STUNner relayed-media mode).
-
-    Unset TURN_SERVER_URLS means direct media (embedded TURN via LiveKit
-    signaling) and resolves to None everywhere.
-    """
+    """External TURN settings are optional for direct-media deployments."""
 
     server_urls: tuple[str, ...]
     shared_secret: str

@@ -1,13 +1,11 @@
-"""Slim async client for the LiveKit RoomService Twirp API.
-
-Covers only the admin calls the backend needs (kick, mute, reconcile). Kept
-SDK-free on purpose: the token format and Twirp JSON surface are stable, and
-riding pyqwest (already the ConnectRPC transport) avoids pulling the LiveKit
-SDK dependency tree into the self-host bundle.
-"""
+"""LiveKit administration with bounded requests and outage suppression."""
 
 import asyncio
 import time
+from collections.abc import Iterator
+from contextlib import contextmanager
+from contextvars import ContextVar
+from dataclasses import dataclass
 from typing import Any
 
 from loguru import logger
@@ -33,7 +31,12 @@ class LiveKitApiError(RuntimeError):
 
 
 class LiveKitUnavailableError(LiveKitApiError):
-    """Raised while the circuit breaker is open; callers surface 'calls unavailable'."""
+    """Transport failures and server outages share one retryable boundary."""
+
+
+@dataclass
+class MediaAvailability:
+    reachable: bool = True
 
 
 class _CircuitBreaker:
@@ -64,11 +67,32 @@ class LiveKitAdminClient:
         self._minter = LiveKitTokenMinter(config)
         self._breaker = _CircuitBreaker()
         self._http = Client()
+        self._availability: ContextVar[MediaAvailability | None] = ContextVar(
+            "livekit_availability", default=None
+        )
+
+    @contextmanager
+    def stop_after_unavailable(self) -> Iterator[MediaAvailability]:
+        """One maintenance pass stops media I/O without blocking other tasks."""
+        availability = MediaAvailability()
+        token = self._availability.set(availability)
+        try:
+            yield availability
+        finally:
+            self._availability.reset(token)
 
     async def _call(
         self, method: str, payload: dict[str, Any], *, room: str | None = None
     ) -> dict[str, Any]:
-        self._breaker.check()
+        availability = self._availability.get()
+        if availability is not None and not availability.reachable:
+            raise LiveKitUnavailableError("LiveKit unavailable during this maintenance pass")
+        try:
+            self._breaker.check()
+        except LiveKitUnavailableError:
+            if availability is not None:
+                availability.reachable = False
+            raise
         token = self._minter.mint_admin_token(room=room)
         try:
             response = await asyncio.wait_for(
@@ -84,11 +108,15 @@ class LiveKitAdminClient:
             )
         except _TRANSPORT_ERRORS as exc:
             self._breaker.record_failure()
-            raise LiveKitApiError(f"LiveKit {method} transport error: {exc}") from exc
+            if availability is not None:
+                availability.reachable = False
+            raise LiveKitUnavailableError(f"LiveKit {method} transport error: {exc}") from exc
 
         if response.status >= 500:
             self._breaker.record_failure()
-            raise LiveKitApiError(
+            if availability is not None:
+                availability.reachable = False
+            raise LiveKitUnavailableError(
                 f"LiveKit {method} failed: {response.status}", status_code=response.status
             )
         if response.status >= 400:
