@@ -812,7 +812,7 @@ def format_cmd(service, stack):
 @click.option(
     "--service",
     "-s",
-    type=click.Choice(["backend", "ui", "cli", "integration"]),
+    type=click.Choice(["backend", "ui", "mobile", "cli", "integration"]),
     default="backend",
     show_default=True,
 )
@@ -825,8 +825,8 @@ def test(args, service, stack):
         workspace_cmd(
             "backend", stack, ["run", "pytest", "src/uniffy/tests/integration/", "-v", *args]
         )
-    elif service == "ui":
-        workspace_cmd("ui", stack, ["test", *args])
+    elif service in ("ui", "mobile"):
+        workspace_cmd(service, stack, ["test", *args])
     else:
         sh(["go", "test", "./...", *args], cwd=ROOT / "src/unictl")
 

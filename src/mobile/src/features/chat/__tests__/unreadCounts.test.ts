@@ -1,7 +1,7 @@
 import { create } from "@bufbuild/protobuf";
 import { describe, expect, it } from "vitest";
 import { UnreadCountPayloadSchema } from "@uniffy/proto/chat/v1/chat_stream_pb";
-import { applyUnreadCount } from "@/../../mobile/src/features/chat/unreadCounts";
+import { applyUnreadCount } from "@features/chat/unreadCounts";
 
 describe("mobile unread events", () => {
   it("replaces absolute totals and preserves both cursor fields through deltas", () => {

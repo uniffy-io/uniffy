@@ -68,7 +68,7 @@ All project commands go through `./manage.py`, a PEP 723 uv script (click). Ever
 # Quality
 ./manage.py lint [-s backend|ui|mobile|cli]  # ruff / oxlint + oxfmt --check / go vet
 ./manage.py format [-s backend|ui|mobile]    # ruff format (backend) / oxfmt (ui, mobile)
-./manage.py test [-s backend|ui|cli]         # pytest / vitest / go test
+./manage.py test [-s backend|ui|mobile|cli]  # pytest / vitest / go test
 ./manage.py bench                            # backend benchmarks
 ./manage.py gitleaks                         # full-history secret scan (allowlist: .gitleaks.toml)
 
@@ -83,7 +83,7 @@ All project commands go through `./manage.py`, a PEP 723 uv script (click). Ever
 ./manage.py landing build|preview|deploy     # preview on :8788; deploy needs CLOUDFLARE_API_TOKEN in host env
 ```
 
-Before committing: `./manage.py proto` (if protos changed) and `./manage.py lint -s backend` (if Python changed). Backend tests split by what they need: `src/uniffy/tests/unit/{domain}/` needs nothing and runs in CI, `src/uniffy/tests/integration/{area}/{suite}/` needs a live service and is local-only (`test -s integration`; `internal/database` needs Postgres, `agents/providers` needs paid API keys), benchmarks in `src/uniffy/tests/benchmarks/`. Frontend tests are in `src/ui/`.
+Before committing: `./manage.py proto` (if protos changed) and `./manage.py lint -s backend` (if Python changed). Backend tests split by what they need: `src/uniffy/tests/unit/{domain}/` needs nothing and runs in CI, `src/uniffy/tests/integration/{area}/{suite}/` needs a live service and is local-only (`test -s integration`; `internal/database` needs Postgres, `agents/providers` needs paid API keys), benchmarks in `src/uniffy/tests/benchmarks/`. Web tests are in `src/ui/` and mobile tests in `src/mobile/` (`test -s mobile`); neither imports across the workspace.
 
 Stack and container invariants:
 

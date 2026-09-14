@@ -9,6 +9,8 @@
     "doctor": "expo-doctor",
     "format": "oxfmt src",
     "format:check": "oxfmt --check src",
+    "test": "vitest run",
+    "test:ci": "vitest run --reporter=default --reporter=junit --outputFile=../../reports/vitest-mobile-report.xml",
     "android": "expo run:android",
     "ios": "expo run:ios"
   },
@@ -85,7 +87,8 @@
     "oxfmt": "^0.62.0",
     "oxlint": "^1.77.0",
     "oxlint-config-universe": "^0.0.3",
-    "typescript": "~6.0.3"
+    "typescript": "~6.0.3",
+    "vitest": "^4.1.0"
   },
   "private": true
 }
