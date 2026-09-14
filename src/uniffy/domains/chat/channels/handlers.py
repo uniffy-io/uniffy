@@ -38,6 +38,8 @@ from uniffy_proto.chat.v1.chat_pb2 import (
     ListChannelsResponse,
     MarkChannelReadRequest,
     MarkChannelReadResponse,
+    MarkChannelUnreadRequest,
+    MarkChannelUnreadResponse,
     MarkThreadReadRequest,
     MarkThreadReadResponse,
     RemoveMembersRequest,
@@ -1127,6 +1129,57 @@ class ChannelHandlers:
             )
 
             return MarkChannelReadResponse()
+
+    async def mark_channel_unread(
+        self,
+        request: MarkChannelUnreadRequest,
+        ctx: RequestContext,
+    ) -> MarkChannelUnreadResponse:
+        user_id = current_user_id()
+        try:
+            org_id = resolve_organization_id(request.organization_id)
+            channel_id = UUID(request.channel_id)
+            message_id = UUID(request.message_id)
+        except ValueError:
+            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
+
+        async with open_session() as session:
+            from uniffy.domains.chat.channels.operations import ChatChannelOperations
+            from uniffy.domains.chat.reads.operations import ChatReadStateOperations
+            from uniffy.domains.chat.streaming.events import UNREAD_COUNT_CHANGED
+            from uniffy.domains.chat.streaming.publisher import publish_user_chat_event
+
+            ch_ops = ChatChannelOperations(
+                session,
+                storage=self.storage,
+                search_indexer=self.search_indexer,
+            )
+            await ch_ops.get_by_id(user_id, org_id, channel_id)
+
+            read_ops = ChatReadStateOperations(session)
+            cursor_id, _ = await read_ops.mark_channel_unread(user_id, channel_id, message_id)
+
+            counts = await read_ops.get_unread_counts(user_id, org_id, [channel_id])
+            channel_counts = counts.get(channel_id, {"unread_count": 0, "mention_count": 0})
+
+            # The actor's other tabs and devices hold their own badge state; the send
+            # path's delta event cannot express a cursor that moved backwards.
+            await publish_user_chat_event(
+                user_id,
+                UNREAD_COUNT_CHANGED,
+                {
+                    "channel_id": str(channel_id),
+                    "unread_count": channel_counts["unread_count"],
+                    "mention_count": channel_counts["mention_count"],
+                    "absolute": True,
+                },
+            )
+
+            return MarkChannelUnreadResponse(
+                unread_count=channel_counts["unread_count"],
+                mention_count=channel_counts["mention_count"],
+                last_read_message_id=str(cursor_id) if cursor_id else "",
+            )
 
     async def mark_thread_read(
         self,

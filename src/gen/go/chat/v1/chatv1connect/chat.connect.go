@@ -118,6 +118,9 @@ const (
 	// ChatServiceMarkChannelReadProcedure is the fully-qualified name of the ChatService's
 	// MarkChannelRead RPC.
 	ChatServiceMarkChannelReadProcedure = "/chat.v1.ChatService/MarkChannelRead"
+	// ChatServiceMarkChannelUnreadProcedure is the fully-qualified name of the ChatService's
+	// MarkChannelUnread RPC.
+	ChatServiceMarkChannelUnreadProcedure = "/chat.v1.ChatService/MarkChannelUnread"
 	// ChatServiceMarkThreadReadProcedure is the fully-qualified name of the ChatService's
 	// MarkThreadRead RPC.
 	ChatServiceMarkThreadReadProcedure = "/chat.v1.ChatService/MarkThreadRead"
@@ -258,6 +261,7 @@ type ChatServiceClient interface {
 	// Typing and read state
 	SetTyping(context.Context, *connect.Request[v1.SetTypingRequest]) (*connect.Response[v1.SetTypingResponse], error)
 	MarkChannelRead(context.Context, *connect.Request[v1.MarkChannelReadRequest]) (*connect.Response[v1.MarkChannelReadResponse], error)
+	MarkChannelUnread(context.Context, *connect.Request[v1.MarkChannelUnreadRequest]) (*connect.Response[v1.MarkChannelUnreadResponse], error)
 	MarkThreadRead(context.Context, *connect.Request[v1.MarkThreadReadRequest]) (*connect.Response[v1.MarkThreadReadResponse], error)
 	GetUnreadCounts(context.Context, *connect.Request[v1.GetUnreadCountsRequest]) (*connect.Response[v1.GetUnreadCountsResponse], error)
 	// Drafts - per-user unsent composer text, synced across devices.
@@ -538,6 +542,12 @@ func NewChatServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(chatServiceMethods.ByName("MarkChannelRead")),
 			connect.WithClientOptions(opts...),
 		),
+		markChannelUnread: connect.NewClient[v1.MarkChannelUnreadRequest, v1.MarkChannelUnreadResponse](
+			httpClient,
+			baseURL+ChatServiceMarkChannelUnreadProcedure,
+			connect.WithSchema(chatServiceMethods.ByName("MarkChannelUnread")),
+			connect.WithClientOptions(opts...),
+		),
 		markThreadRead: connect.NewClient[v1.MarkThreadReadRequest, v1.MarkThreadReadResponse](
 			httpClient,
 			baseURL+ChatServiceMarkThreadReadProcedure,
@@ -773,6 +783,7 @@ type chatServiceClient struct {
 	removeReaction                   *connect.Client[v1.RemoveReactionRequest, v1.RemoveReactionResponse]
 	setTyping                        *connect.Client[v1.SetTypingRequest, v1.SetTypingResponse]
 	markChannelRead                  *connect.Client[v1.MarkChannelReadRequest, v1.MarkChannelReadResponse]
+	markChannelUnread                *connect.Client[v1.MarkChannelUnreadRequest, v1.MarkChannelUnreadResponse]
 	markThreadRead                   *connect.Client[v1.MarkThreadReadRequest, v1.MarkThreadReadResponse]
 	getUnreadCounts                  *connect.Client[v1.GetUnreadCountsRequest, v1.GetUnreadCountsResponse]
 	saveDraft                        *connect.Client[v1.SaveDraftRequest, v1.SaveDraftResponse]
@@ -966,6 +977,11 @@ func (c *chatServiceClient) SetTyping(ctx context.Context, req *connect.Request[
 // MarkChannelRead calls chat.v1.ChatService.MarkChannelRead.
 func (c *chatServiceClient) MarkChannelRead(ctx context.Context, req *connect.Request[v1.MarkChannelReadRequest]) (*connect.Response[v1.MarkChannelReadResponse], error) {
 	return c.markChannelRead.CallUnary(ctx, req)
+}
+
+// MarkChannelUnread calls chat.v1.ChatService.MarkChannelUnread.
+func (c *chatServiceClient) MarkChannelUnread(ctx context.Context, req *connect.Request[v1.MarkChannelUnreadRequest]) (*connect.Response[v1.MarkChannelUnreadResponse], error) {
+	return c.markChannelUnread.CallUnary(ctx, req)
 }
 
 // MarkThreadRead calls chat.v1.ChatService.MarkThreadRead.
@@ -1175,6 +1191,7 @@ type ChatServiceHandler interface {
 	// Typing and read state
 	SetTyping(context.Context, *connect.Request[v1.SetTypingRequest]) (*connect.Response[v1.SetTypingResponse], error)
 	MarkChannelRead(context.Context, *connect.Request[v1.MarkChannelReadRequest]) (*connect.Response[v1.MarkChannelReadResponse], error)
+	MarkChannelUnread(context.Context, *connect.Request[v1.MarkChannelUnreadRequest]) (*connect.Response[v1.MarkChannelUnreadResponse], error)
 	MarkThreadRead(context.Context, *connect.Request[v1.MarkThreadReadRequest]) (*connect.Response[v1.MarkThreadReadResponse], error)
 	GetUnreadCounts(context.Context, *connect.Request[v1.GetUnreadCountsRequest]) (*connect.Response[v1.GetUnreadCountsResponse], error)
 	// Drafts - per-user unsent composer text, synced across devices.
@@ -1451,6 +1468,12 @@ func NewChatServiceHandler(svc ChatServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(chatServiceMethods.ByName("MarkChannelRead")),
 		connect.WithHandlerOptions(opts...),
 	)
+	chatServiceMarkChannelUnreadHandler := connect.NewUnaryHandler(
+		ChatServiceMarkChannelUnreadProcedure,
+		svc.MarkChannelUnread,
+		connect.WithSchema(chatServiceMethods.ByName("MarkChannelUnread")),
+		connect.WithHandlerOptions(opts...),
+	)
 	chatServiceMarkThreadReadHandler := connect.NewUnaryHandler(
 		ChatServiceMarkThreadReadProcedure,
 		svc.MarkThreadRead,
@@ -1715,6 +1738,8 @@ func NewChatServiceHandler(svc ChatServiceHandler, opts ...connect.HandlerOption
 			chatServiceSetTypingHandler.ServeHTTP(w, r)
 		case ChatServiceMarkChannelReadProcedure:
 			chatServiceMarkChannelReadHandler.ServeHTTP(w, r)
+		case ChatServiceMarkChannelUnreadProcedure:
+			chatServiceMarkChannelUnreadHandler.ServeHTTP(w, r)
 		case ChatServiceMarkThreadReadProcedure:
 			chatServiceMarkThreadReadHandler.ServeHTTP(w, r)
 		case ChatServiceGetUnreadCountsProcedure:
@@ -1916,6 +1941,10 @@ func (UnimplementedChatServiceHandler) SetTyping(context.Context, *connect.Reque
 
 func (UnimplementedChatServiceHandler) MarkChannelRead(context.Context, *connect.Request[v1.MarkChannelReadRequest]) (*connect.Response[v1.MarkChannelReadResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("chat.v1.ChatService.MarkChannelRead is not implemented"))
+}
+
+func (UnimplementedChatServiceHandler) MarkChannelUnread(context.Context, *connect.Request[v1.MarkChannelUnreadRequest]) (*connect.Response[v1.MarkChannelUnreadResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("chat.v1.ChatService.MarkChannelUnread is not implemented"))
 }
 
 func (UnimplementedChatServiceHandler) MarkThreadRead(context.Context, *connect.Request[v1.MarkThreadReadRequest]) (*connect.Response[v1.MarkThreadReadResponse], error) {

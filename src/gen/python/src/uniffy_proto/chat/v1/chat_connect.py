@@ -114,6 +114,9 @@ class ChatService(Protocol):
     async def mark_channel_read(self, request: chat_dot_v1_dot_chat__pb2.MarkChannelReadRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.MarkChannelReadResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
+    async def mark_channel_unread(self, request: chat_dot_v1_dot_chat__pb2.MarkChannelUnreadRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.MarkChannelUnreadResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
     async def mark_thread_read(self, request: chat_dot_v1_dot_chat__pb2.MarkThreadReadRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.MarkThreadReadResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
@@ -538,6 +541,16 @@ class ChatServiceASGIApplication(ConnectASGIApplication[ChatService]):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.mark_channel_read,
+                ),
+                "/chat.v1.ChatService/MarkChannelUnread": Endpoint.unary(
+                    method=MethodInfo(
+                        name="MarkChannelUnread",
+                        service_name="chat.v1.ChatService",
+                        input=chat_dot_v1_dot_chat__pb2.MarkChannelUnreadRequest,
+                        output=chat_dot_v1_dot_chat__pb2.MarkChannelUnreadResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.mark_channel_unread,
                 ),
                 "/chat.v1.ChatService/MarkThreadRead": Endpoint.unary(
                     method=MethodInfo(
@@ -1523,6 +1536,26 @@ class ChatServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
+    async def mark_channel_unread(
+        self,
+        request: chat_dot_v1_dot_chat__pb2.MarkChannelUnreadRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> chat_dot_v1_dot_chat__pb2.MarkChannelUnreadResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="MarkChannelUnread",
+                service_name="chat.v1.ChatService",
+                input=chat_dot_v1_dot_chat__pb2.MarkChannelUnreadRequest,
+                output=chat_dot_v1_dot_chat__pb2.MarkChannelUnreadResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
     async def mark_thread_read(
         self,
         request: chat_dot_v1_dot_chat__pb2.MarkThreadReadRequest,
@@ -2252,6 +2285,8 @@ class ChatServiceSync(Protocol):
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def mark_channel_read(self, request: chat_dot_v1_dot_chat__pb2.MarkChannelReadRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.MarkChannelReadResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def mark_channel_unread(self, request: chat_dot_v1_dot_chat__pb2.MarkChannelUnreadRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.MarkChannelUnreadResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def mark_thread_read(self, request: chat_dot_v1_dot_chat__pb2.MarkThreadReadRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.MarkThreadReadResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def get_unread_counts(self, request: chat_dot_v1_dot_chat__pb2.GetUnreadCountsRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.GetUnreadCountsResponse:
@@ -2643,6 +2678,16 @@ class ChatServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.mark_channel_read,
+                ),
+                "/chat.v1.ChatService/MarkChannelUnread": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="MarkChannelUnread",
+                        service_name="chat.v1.ChatService",
+                        input=chat_dot_v1_dot_chat__pb2.MarkChannelUnreadRequest,
+                        output=chat_dot_v1_dot_chat__pb2.MarkChannelUnreadResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.mark_channel_unread,
                 ),
                 "/chat.v1.ChatService/MarkThreadRead": EndpointSync.unary(
                     method=MethodInfo(
@@ -3622,6 +3667,26 @@ class ChatServiceClientSync(ConnectClientSync):
                 service_name="chat.v1.ChatService",
                 input=chat_dot_v1_dot_chat__pb2.MarkChannelReadRequest,
                 output=chat_dot_v1_dot_chat__pb2.MarkChannelReadResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def mark_channel_unread(
+        self,
+        request: chat_dot_v1_dot_chat__pb2.MarkChannelUnreadRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> chat_dot_v1_dot_chat__pb2.MarkChannelUnreadResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="MarkChannelUnread",
+                service_name="chat.v1.ChatService",
+                input=chat_dot_v1_dot_chat__pb2.MarkChannelUnreadRequest,
+                output=chat_dot_v1_dot_chat__pb2.MarkChannelUnreadResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

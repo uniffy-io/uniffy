@@ -51,6 +51,7 @@ const (
 	ChatService_RemoveReaction_FullMethodName                   = "/chat.v1.ChatService/RemoveReaction"
 	ChatService_SetTyping_FullMethodName                        = "/chat.v1.ChatService/SetTyping"
 	ChatService_MarkChannelRead_FullMethodName                  = "/chat.v1.ChatService/MarkChannelRead"
+	ChatService_MarkChannelUnread_FullMethodName                = "/chat.v1.ChatService/MarkChannelUnread"
 	ChatService_MarkThreadRead_FullMethodName                   = "/chat.v1.ChatService/MarkThreadRead"
 	ChatService_GetUnreadCounts_FullMethodName                  = "/chat.v1.ChatService/GetUnreadCounts"
 	ChatService_SaveDraft_FullMethodName                        = "/chat.v1.ChatService/SaveDraft"
@@ -132,6 +133,7 @@ type ChatServiceClient interface {
 	// Typing and read state
 	SetTyping(ctx context.Context, in *SetTypingRequest, opts ...grpc.CallOption) (*SetTypingResponse, error)
 	MarkChannelRead(ctx context.Context, in *MarkChannelReadRequest, opts ...grpc.CallOption) (*MarkChannelReadResponse, error)
+	MarkChannelUnread(ctx context.Context, in *MarkChannelUnreadRequest, opts ...grpc.CallOption) (*MarkChannelUnreadResponse, error)
 	MarkThreadRead(ctx context.Context, in *MarkThreadReadRequest, opts ...grpc.CallOption) (*MarkThreadReadResponse, error)
 	GetUnreadCounts(ctx context.Context, in *GetUnreadCountsRequest, opts ...grpc.CallOption) (*GetUnreadCountsResponse, error)
 	// Drafts - per-user unsent composer text, synced across devices.
@@ -537,6 +539,16 @@ func (c *chatServiceClient) MarkChannelRead(ctx context.Context, in *MarkChannel
 	return out, nil
 }
 
+func (c *chatServiceClient) MarkChannelUnread(ctx context.Context, in *MarkChannelUnreadRequest, opts ...grpc.CallOption) (*MarkChannelUnreadResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(MarkChannelUnreadResponse)
+	err := c.cc.Invoke(ctx, ChatService_MarkChannelUnread_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *chatServiceClient) MarkThreadRead(ctx context.Context, in *MarkThreadReadRequest, opts ...grpc.CallOption) (*MarkThreadReadResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(MarkThreadReadResponse)
@@ -913,6 +925,7 @@ type ChatServiceServer interface {
 	// Typing and read state
 	SetTyping(context.Context, *SetTypingRequest) (*SetTypingResponse, error)
 	MarkChannelRead(context.Context, *MarkChannelReadRequest) (*MarkChannelReadResponse, error)
+	MarkChannelUnread(context.Context, *MarkChannelUnreadRequest) (*MarkChannelUnreadResponse, error)
 	MarkThreadRead(context.Context, *MarkThreadReadRequest) (*MarkThreadReadResponse, error)
 	GetUnreadCounts(context.Context, *GetUnreadCountsRequest) (*GetUnreadCountsResponse, error)
 	// Drafts - per-user unsent composer text, synced across devices.
@@ -1093,6 +1106,9 @@ func (UnimplementedChatServiceServer) SetTyping(context.Context, *SetTypingReque
 }
 func (UnimplementedChatServiceServer) MarkChannelRead(context.Context, *MarkChannelReadRequest) (*MarkChannelReadResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method MarkChannelRead not implemented")
+}
+func (UnimplementedChatServiceServer) MarkChannelUnread(context.Context, *MarkChannelUnreadRequest) (*MarkChannelUnreadResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method MarkChannelUnread not implemented")
 }
 func (UnimplementedChatServiceServer) MarkThreadRead(context.Context, *MarkThreadReadRequest) (*MarkThreadReadResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method MarkThreadRead not implemented")
@@ -1786,6 +1802,24 @@ func _ChatService_MarkChannelRead_Handler(srv interface{}, ctx context.Context, 
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ChatServiceServer).MarkChannelRead(ctx, req.(*MarkChannelReadRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ChatService_MarkChannelUnread_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MarkChannelUnreadRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChatServiceServer).MarkChannelUnread(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ChatService_MarkChannelUnread_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChatServiceServer).MarkChannelUnread(ctx, req.(*MarkChannelUnreadRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -2518,6 +2552,10 @@ var ChatService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "MarkChannelRead",
 			Handler:    _ChatService_MarkChannelRead_Handler,
+		},
+		{
+			MethodName: "MarkChannelUnread",
+			Handler:    _ChatService_MarkChannelUnread_Handler,
 		},
 		{
 			MethodName: "MarkThreadRead",

@@ -979,6 +979,26 @@ class MarkChannelReadResponse(_message.Message):
     __slots__ = ()
     def __init__(self) -> None: ...
 
+class MarkChannelUnreadRequest(_message.Message):
+    __slots__ = ("organization_id", "channel_id", "message_id")
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    CHANNEL_ID_FIELD_NUMBER: _ClassVar[int]
+    MESSAGE_ID_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    channel_id: str
+    message_id: str
+    def __init__(self, organization_id: _Optional[str] = ..., channel_id: _Optional[str] = ..., message_id: _Optional[str] = ...) -> None: ...
+
+class MarkChannelUnreadResponse(_message.Message):
+    __slots__ = ("unread_count", "mention_count", "last_read_message_id")
+    UNREAD_COUNT_FIELD_NUMBER: _ClassVar[int]
+    MENTION_COUNT_FIELD_NUMBER: _ClassVar[int]
+    LAST_READ_MESSAGE_ID_FIELD_NUMBER: _ClassVar[int]
+    unread_count: int
+    mention_count: int
+    last_read_message_id: str
+    def __init__(self, unread_count: _Optional[int] = ..., mention_count: _Optional[int] = ..., last_read_message_id: _Optional[str] = ...) -> None: ...
+
 class MarkThreadReadRequest(_message.Message):
     __slots__ = ("organization_id", "root_message_id")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]

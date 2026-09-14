@@ -4,11 +4,13 @@ from datetime import UTC, datetime
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import select, text
+from sqlalchemy import select, text, tuple_
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.content.references import BROADCAST_URNS
+from uniffy.core.errors import NotFoundError
+from uniffy.core.models.chat.message import ChatMessage
 from uniffy.core.models.chat.read_cursor import ChatReadCursor, ChatThreadReadCursor
 from uniffy.domains.directory.membership import user_team_ids
 
@@ -64,6 +66,97 @@ class ChatReadStateOperations:
                 )
 
         await self._upsert_channel_cursor_pg(user_id, channel_id, last_read_message_id, now)
+
+    async def mark_channel_unread(
+        self,
+        user_id: UUID,
+        channel_id: UUID,
+        message_id: UUID,
+    ) -> tuple[UUID | None, datetime]:
+        """Park the cursor just before message_id so it reads as the first unread.
+
+        Stamps the predecessor's own `created_at` rather than now(): the unread
+        aggregate compares on timestamp, so a now() stamp would count nothing.
+        """
+        predecessor = await self._preceding_message(channel_id, message_id)
+
+        if predecessor is None:
+            # Nothing precedes the target, so every message is unread. The Valkey
+            # value cannot encode a null id, and leaving a stale key there would
+            # win over PG on read - drop it and let the cursor live in PG alone.
+            await self._clear_cached_channel_cursor(user_id, channel_id)
+            await self._upsert_channel_cursor_pg(user_id, channel_id, None, _EPOCH)
+            return None, _EPOCH
+
+        cursor_id, cursor_at = predecessor
+        key = _CHANNEL_READ_KEY.format(user_id=user_id, channel_id=channel_id)
+
+        client = _get_valkey_client()
+        if client is not None:
+            try:
+                await client.set(key, f"{cursor_id}:{cursor_at.isoformat()}", ex=_READ_CURSOR_TTL)
+                await client.sadd(_DIRTY_CHANNEL_SET, f"{user_id}:{channel_id}")
+                return cursor_id, cursor_at
+            except Exception:
+                logger.warning(
+                    f"Valkey SET failed for {key}, falling back to PG",
+                    component=LOGGER_COMPONENT,
+                )
+
+        await self._upsert_channel_cursor_pg(user_id, channel_id, cursor_id, cursor_at)
+        return cursor_id, cursor_at
+
+    async def _preceding_message(
+        self,
+        channel_id: UUID,
+        message_id: UUID,
+    ) -> tuple[UUID, datetime] | None:
+        """Keyset lookup of the row before message_id, over the rows unread counts see.
+
+        Raises NotFoundError when the target is not a live root message of the channel,
+        which is also how the handler validates the requested id.
+        """
+        target = (
+            await self.session.execute(
+                select(ChatMessage.created_at).where(
+                    ChatMessage.id == message_id,
+                    ChatMessage.channel_id == channel_id,
+                    ChatMessage.is_deleted.is_(False),
+                    ChatMessage.root_id.is_(None),
+                )
+            )
+        ).one_or_none()
+        if target is None:
+            raise NotFoundError("message", str(message_id))
+
+        # (created_at, id) is the same total order the message list pages on, so a
+        # shared created_at cannot make the cursor straddle two rows.
+        result = await self.session.execute(
+            select(ChatMessage.id, ChatMessage.created_at)
+            .where(
+                ChatMessage.channel_id == channel_id,
+                ChatMessage.is_deleted.is_(False),
+                ChatMessage.root_id.is_(None),
+                tuple_(ChatMessage.created_at, ChatMessage.id) < tuple_(target[0], message_id),
+            )
+            .order_by(ChatMessage.created_at.desc(), ChatMessage.id.desc())
+            .limit(1)
+        )
+        row = result.one_or_none()
+        return (row[0], row[1]) if row else None
+
+    async def _clear_cached_channel_cursor(self, user_id: UUID, channel_id: UUID) -> None:
+        client = _get_valkey_client()
+        if client is None:
+            return
+        key = _CHANNEL_READ_KEY.format(user_id=user_id, channel_id=channel_id)
+        try:
+            await client.delete(key)
+        except Exception:
+            logger.warning(
+                f"Valkey DEL failed for {key}; PG cursor may stay shadowed",
+                component=LOGGER_COMPONENT,
+            )
 
     async def mark_thread_read(
         self,
@@ -324,7 +417,7 @@ class ChatReadStateOperations:
         self,
         user_id: UUID,
         channel_id: UUID,
-        last_read_message_id: UUID,
+        last_read_message_id: UUID | None,
         last_read_at: datetime,
     ) -> None:
         await self.session.execute(

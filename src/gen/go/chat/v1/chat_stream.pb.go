@@ -2081,10 +2081,15 @@ func (x *DraftChangedPayload) GetClientSessionId() string {
 }
 
 type UnreadCountPayload struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ChannelId     string                 `protobuf:"bytes,1,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
-	UnreadCount   int32                  `protobuf:"varint,2,opt,name=unread_count,json=unreadCount,proto3" json:"unread_count,omitempty"`
-	MentionCount  int32                  `protobuf:"varint,3,opt,name=mention_count,json=mentionCount,proto3" json:"mention_count,omitempty"`
+	state        protoimpl.MessageState `protogen:"open.v1"`
+	ChannelId    string                 `protobuf:"bytes,1,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
+	UnreadCount  int32                  `protobuf:"varint,2,opt,name=unread_count,json=unreadCount,proto3" json:"unread_count,omitempty"`
+	MentionCount int32                  `protobuf:"varint,3,opt,name=mention_count,json=mentionCount,proto3" json:"mention_count,omitempty"`
+	// Sends publish a delta the client adds to its badge, because recomputing a
+	// per-member aggregate on every send would be one query per member. Cursor
+	// moves publish the recomputed totals instead and set this, so the client
+	// replaces the badge rather than adding to it.
+	Absolute      bool `protobuf:"varint,4,opt,name=absolute,proto3" json:"absolute,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2138,6 +2143,13 @@ func (x *UnreadCountPayload) GetMentionCount() int32 {
 		return x.MentionCount
 	}
 	return 0
+}
+
+func (x *UnreadCountPayload) GetAbsolute() bool {
+	if x != nil {
+		return x.Absolute
+	}
+	return false
 }
 
 type ThreadActivityPayload struct {
@@ -2465,12 +2477,13 @@ const file_chat_v1_chat_stream_proto_rawDesc = "" +
 	"\n" +
 	"updated_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12*\n" +
 	"\x11client_session_id\x18\x06 \x01(\tR\x0fclientSessionIdB\x12\n" +
-	"\x10_root_message_id\"{\n" +
+	"\x10_root_message_id\"\x97\x01\n" +
 	"\x12UnreadCountPayload\x12\x1d\n" +
 	"\n" +
 	"channel_id\x18\x01 \x01(\tR\tchannelId\x12!\n" +
 	"\funread_count\x18\x02 \x01(\x05R\vunreadCount\x12#\n" +
-	"\rmention_count\x18\x03 \x01(\x05R\fmentionCount\"\xe2\x01\n" +
+	"\rmention_count\x18\x03 \x01(\x05R\fmentionCount\x12\x1a\n" +
+	"\babsolute\x18\x04 \x01(\bR\babsolute\"\xe2\x01\n" +
 	"\x15ThreadActivityPayload\x12&\n" +
 	"\x0froot_message_id\x18\x01 \x01(\tR\rrootMessageId\x12\x1d\n" +
 	"\n" +

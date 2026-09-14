@@ -570,6 +570,7 @@ def _payload_to_user_event(payload: dict) -> StreamUserChatEventsResponse | None
                 channel_id=payload.get("channel_id", ""),
                 unread_count=payload.get("unread_count", 0),
                 mention_count=payload.get("mention_count", 0),
+                absolute=payload.get("absolute", False),
             ),
         )
 
