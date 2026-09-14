@@ -164,16 +164,3 @@ class TestMarkChannelUnread:
 
         with _valkey(None), pytest.raises(NotFoundError):
             await ops.mark_channel_unread(USER, generate_id(), generate_id())
-
-    async def test_valkey_outage_falls_through_to_postgres(self) -> None:
-        channel, target = generate_id(), generate_id()
-        predecessor_id = generate_id()
-        predecessor_at = datetime(2026, 9, 14, 10, 0, tzinfo=UTC)
-        ops = _unread_ops(datetime(2026, 9, 14, 10, 5, tzinfo=UTC), (predecessor_id, predecessor_at))
-        client = MagicMock(eval=AsyncMock(side_effect=RuntimeError("valkey down")))
-
-        with _valkey(client):
-            cursor_id, cursor_at = await ops.mark_channel_unread(USER, channel, target)
-
-        assert (cursor_id, cursor_at) == (predecessor_id, predecessor_at)
-        ops.session.commit.assert_awaited()

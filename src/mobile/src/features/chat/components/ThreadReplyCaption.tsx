@@ -5,12 +5,7 @@ import type { ThemeColors } from "@theme/theme";
 import { FONT } from "@theme/typography";
 import type { SerializedThreadReplyContext } from "@features/chat/chatSerializer";
 
-/**
- * Marks a channel message that was posted alongside a thread reply, and opens
- * that thread. Both rows live in the same channel, so the root is normally
- * already loaded; without it the caption drops the preview rather than
- * fetching, since it is a label, not content.
- */
+/** The optional preview uses a cached root; opening the thread fetches its content. */
 export function ThreadReplyCaption({
   context,
   rootPreview,

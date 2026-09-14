@@ -103,7 +103,10 @@ export const chatApi = {
     client.updateChannelMember(req),
 
   sendMessage: (req: MessageInitShape<typeof SendMessageRequestSchema>) => client.sendMessage(req),
-  getMessages: (req: MessageInitShape<typeof GetMessagesRequestSchema>) => client.getMessages(req),
+  getMessages: (
+    req: MessageInitShape<typeof GetMessagesRequestSchema>,
+    options?: { signal?: AbortSignal },
+  ) => client.getMessages(req, options),
   updateMessage: (req: MessageInitShape<typeof UpdateMessageRequestSchema>) =>
     client.updateMessage(req),
   getMessageRevisions: (req: MessageInitShape<typeof GetMessageRevisionsRequestSchema>) =>

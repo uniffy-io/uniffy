@@ -52,7 +52,7 @@ class ChannelCursor:
             UUID(revision), UUID(message_id) if message_id else None, datetime.fromisoformat(read_at)
         )
 
-    def row(self, user_id: UUID, channel_id: UUID) -> dict[str, UUID | datetime | None]:
+    def row(self, user_id: UUID, channel_id: UUID) -> dict[str, UUID | datetime | bool | None]:
         return {
             "channel_id": channel_id,
             "user_id": user_id,
@@ -102,7 +102,7 @@ async def clean_cursors(client: Redis, snapshots: list[tuple[str, str, str]]) ->
         )
 
 
-def upsert_cursors(rows: list[dict[str, UUID | datetime | None]]) -> Insert:
+def upsert_cursors(rows: list[dict[str, UUID | datetime | bool | None]]) -> Insert:
     stmt = insert(ChatReadCursor).values(rows)
     return stmt.on_conflict_do_update(
         index_elements=["channel_id", "user_id"],
@@ -110,6 +110,7 @@ def upsert_cursors(rows: list[dict[str, UUID | datetime | None]]) -> Insert:
             "last_read_message_id": stmt.excluded.last_read_message_id,
             "last_read_at": stmt.excluded.last_read_at,
             "revision": stmt.excluded.revision,
+            "needs_cache_refresh": stmt.excluded.needs_cache_refresh,
         },
         where=ChatReadCursor.revision < stmt.excluded.revision,
     )

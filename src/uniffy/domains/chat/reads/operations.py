@@ -46,6 +46,7 @@ class ChatReadStateOperations:
 
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
+        self._fallback_cursors: dict[tuple[UUID, UUID], ChannelCursor] = {}
 
     async def mark_channel_read(
         self,
@@ -85,8 +86,25 @@ class ChatReadStateOperations:
                 return
             except Exception:
                 logger.opt(exception=True).warning("Cursor cache write failed; persisting directly")
-        await self.session.execute(upsert_cursors([cursor.row(user_id, channel_id)]))
+        row = cursor.row(user_id, channel_id)
+        row["needs_cache_refresh"] = True
+        await self.session.execute(upsert_cursors([row]))
         await self.session.commit()
+        stored = (
+            await self.session.execute(
+                select(ChatReadCursor)
+                .where(
+                    ChatReadCursor.user_id == user_id,
+                    ChatReadCursor.channel_id == channel_id,
+                )
+                .execution_options(populate_existing=True)
+            )
+        ).scalar_one()
+        self._fallback_cursors[user_id, channel_id] = ChannelCursor(
+            stored.revision,
+            stored.last_read_message_id,
+            stored.last_read_at.replace(tzinfo=UTC) if stored.last_read_at else _EPOCH,
+        )
 
     async def _preceding_message(
         self,
@@ -197,6 +215,12 @@ class ChatReadStateOperations:
                         await warm_cursor(client, user_id, cid, cursor)
                     except Exception:
                         logger.opt(exception=True).warning("Cursor cache warm failed")
+        for cid in channel_ids:
+            fallback = self._fallback_cursors.get((user_id, cid))
+            if fallback is not None and (
+                cid not in cursors or cursors[cid].revision < fallback.revision
+            ):
+                cursors[cid] = fallback
         return cursors
 
     async def get_unread_counts(

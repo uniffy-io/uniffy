@@ -212,7 +212,8 @@ async def test_existing_cursor_accepts_first_revision(cursor_db):
     async with AsyncSession(bind=cursor_db) as session:
         await session.execute(
             text(
-                "INSERT INTO chat_read_cursors (user_id, channel_id, last_read_message_id, last_read_at) "
+                "INSERT INTO chat_read_cursors "
+                "(user_id, channel_id, last_read_message_id, last_read_at) "
                 "VALUES (:user, :channel, :message, :at)"
             ),
             {"user": user, "channel": channel, "message": message, "at": AT},
@@ -254,3 +255,67 @@ async def test_failed_flush_retains_pending_cursor(cursor_cache):
 
     assert await flush._flush_channel_cursors(client, unavailable_database) == 0
     assert await client.sismember(dirty, f"{user}:{channel}")
+
+
+@pytest.mark.parametrize("later_write", [False, True])
+async def test_database_fallback_reconciles_surviving_cache(
+    cursor_db, cursor_cache, monkeypatch, later_write
+):
+    client, _, key = cursor_cache
+    user, channel, message = [generate_id() for _ in range(3)]
+    cache_key = key(user, channel)
+    earlier = ChannelCursor(generate_id(), message, AT)
+    await cache_cursor(client, user, channel, earlier)
+    monkeypatch.setattr(operations, "cache_cursor", AsyncMock(side_effect=TimeoutError))
+
+    @asynccontextmanager
+    async def session_factory():
+        async with AsyncSession(bind=cursor_db) as session:
+            yield session
+
+    async with AsyncSession(bind=cursor_db) as session:
+        ops = ChatReadStateOperations(session)
+        monkeypatch.setattr(ops, "_preceding_message", AsyncMock(return_value=None))
+        await ops.mark_channel_unread(user, channel, message)
+        assert await ops.get_channel_read_cursor(user, channel) == (None, EPOCH)
+    assert ChannelCursor.decode(await client.get(cache_key)) == earlier
+    latest = ChannelCursor(generate_id(), message, AT)
+    if later_write:
+        await cache_cursor(client, user, channel, latest)
+    assert await flush.reconcile_channel_cursors(client, session_factory) == 1
+    async with AsyncSession(bind=cursor_db) as session:
+        assert await ChatReadStateOperations(session).get_channel_read_cursor(user, channel) == (
+            (message, AT) if later_write else (None, EPOCH)
+        )
+        assert not (
+            await session.execute(text("SELECT needs_cache_refresh FROM chat_read_cursors"))
+        ).scalar_one()
+    await flush._flush_channel_cursors(client, session_factory)
+    await client.delete(cache_key)
+    async with AsyncSession(bind=cursor_db) as session:
+        assert await ChatReadStateOperations(session).get_channel_read_cursor(user, channel) == (
+            (message, AT) if later_write else (None, EPOCH)
+        )
+
+
+async def test_failed_reconciliation_retains_database_intent(cursor_db, cursor_cache, monkeypatch):
+    client, _, key = cursor_cache
+    user, channel = generate_id(), generate_id()
+    key(user, channel)
+    row = ChannelCursor(generate_id(), None, EPOCH).row(user, channel)
+    row["needs_cache_refresh"] = True
+    async with AsyncSession(bind=cursor_db) as session:
+        await session.execute(upsert_cursors([row]))
+        await session.commit()
+    monkeypatch.setattr(flush, "cache_cursor", AsyncMock(side_effect=TimeoutError))
+
+    @asynccontextmanager
+    async def session_factory():
+        async with AsyncSession(bind=cursor_db) as session:
+            yield session
+
+    assert await flush.reconcile_channel_cursors(client, session_factory) == 0
+    async with AsyncSession(bind=cursor_db) as session:
+        assert (
+            await session.execute(text("SELECT needs_cache_refresh FROM chat_read_cursors"))
+        ).scalar_one()

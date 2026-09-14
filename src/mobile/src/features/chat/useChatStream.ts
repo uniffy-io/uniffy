@@ -383,6 +383,7 @@ function applyChannelEvent(orgId: string, queryClient: QueryClient, ce: ChatEven
       queryClient.setQueryData<SerializedMessage[]>(msgKey, (old) =>
         old ? old.filter((m) => m.id !== p.messageId) : old,
       );
+      void queryClient.invalidateQueries({ queryKey: [...msgKey, "window"] });
       break;
     }
     case "reaction":

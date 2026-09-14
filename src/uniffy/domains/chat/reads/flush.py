@@ -1,20 +1,23 @@
 """ARQ cron: flush dirty Valkey read cursors to PostgreSQL every 30s."""
 
 import contextlib
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any, cast
 from uuid import UUID
 
 from loguru import logger
+from sqlalchemy import select, tuple_, update
 from sqlalchemy.dialects.postgresql import insert
 from valkey.asyncio import Redis
 
 from uniffy.core.database import SESSION_FACTORY_CTX_KEY, SessionFactory
-from uniffy.core.models.chat.read_cursor import ChatThreadReadCursor
+from uniffy.core.models.chat.read_cursor import ChatReadCursor, ChatThreadReadCursor
 from uniffy.domains.chat.reads.cursors import (
     CURSOR_KEY,
     DIRTY_CURSORS,
+    EPOCH,
     ChannelCursor,
+    cache_cursor,
     clean_cursors,
     upsert_cursors,
 )
@@ -23,12 +26,59 @@ from uniffy.infrastructure.valkey.ops import get_ops_client, ops_call
 logger = logger.bind(component="chat.reads.flush")
 
 
+async def reconcile_channel_cursors(client: Redis, session_factory: SessionFactory) -> int:
+    repaired: list[tuple[UUID, UUID, UUID]] = []
+    async with session_factory() as session:
+        rows = (
+            (
+                await session.execute(
+                    select(ChatReadCursor)
+                    .where(
+                        ChatReadCursor.needs_cache_refresh.is_(True),
+                    )
+                    .order_by(ChatReadCursor.revision)
+                    .limit(500)
+                )
+            )
+            .scalars()
+            .all()
+        )
+        for row in rows:
+            cursor = ChannelCursor(
+                row.revision,
+                row.last_read_message_id,
+                row.last_read_at.replace(tzinfo=UTC) if row.last_read_at else EPOCH,
+            )
+            try:
+                await cache_cursor(client, row.user_id, row.channel_id, cursor)
+            except Exception:
+                logger.opt(exception=True).warning("Cursor cache reconciliation remains pending")
+                break
+            repaired.append((row.user_id, row.channel_id, cursor.revision))
+        if repaired:
+            await session.execute(
+                update(ChatReadCursor)
+                .where(
+                    tuple_(
+                        ChatReadCursor.user_id, ChatReadCursor.channel_id, ChatReadCursor.revision
+                    ).in_(repaired),
+                )
+                .values(needs_cache_refresh=False)
+            )
+        await session.commit()
+    return len(repaired)
+
+
 async def flush_chat_read_cursors(ctx: dict[str, Any]) -> dict[str, Any]:
     client = get_ops_client()
     if client is None:
         return {"status": "skipped", "reason": "valkey not available"}
 
     session_factory = cast(SessionFactory, ctx[SESSION_FACTORY_CTX_KEY])
+    try:
+        await reconcile_channel_cursors(client, session_factory)
+    except Exception:
+        logger.opt(exception=True).warning("Failed to reconcile persisted channel cursors")
     channel_count = await _flush_channel_cursors(client, session_factory)
     thread_count = await _flush_thread_cursors(client, session_factory)
 

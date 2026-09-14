@@ -90,11 +90,7 @@ class MessageDelivery:
         member_ids: list[UUID],
         index_message: ChatMessage | None = None,
     ) -> None:
-        """Run the independent, non-authoritative post-send projections.
-
-        `index_message` redirects the search document to the channel-visible twin
-        of a thread reply, so one logical message keeps one document.
-        """
+        """Index the channel-visible twin so a broadcast has one search document."""
         # Membership and join messages embed a mention urn for the member the
         # event is about. That urn is the copy, not a ping: nobody gets
         # "Mentioned you" or a mention badge for their own membership event.

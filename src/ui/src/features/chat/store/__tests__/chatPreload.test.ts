@@ -9,6 +9,7 @@ const api = vi.hoisted(() => ({
   listCategories: vi.fn(),
   listAgentFolders: vi.fn(),
   getMessages: vi.fn(),
+  getUnreadCounts: vi.fn(),
   markChannelRead: vi.fn(),
   getChannelPendingApprovals: vi.fn(),
   batchListAttachments: vi.fn(),
@@ -79,6 +80,7 @@ beforeEach(() => {
   api.listCategories.mockResolvedValue({ categories: [] });
   api.listAgentFolders.mockResolvedValue({ folders: [] });
   api.getMessages.mockResolvedValue(page);
+  api.getUnreadCounts.mockResolvedValue({ channels: [] });
   api.batchListAttachments.mockResolvedValue({ groups: [] });
   api.markChannelRead.mockResolvedValue({});
   api.getChannelPendingApprovals.mockResolvedValue({ approvals: [] });

@@ -76,6 +76,7 @@ import {
   useChannel,
   useUnreadCounts,
   useMessages,
+  useUnreadMessageWindow,
   useChannelMembers,
   useChannelPendingApprovals,
   usePinnedMessages,
@@ -294,7 +295,34 @@ export function ChatConversationScreen() {
   useChatStream();
   const channelQuery = useChannel(channelId);
   const unreadQuery = useUnreadCounts();
-  const messagesQuery = useMessages(channelId);
+  const manualUnreadRef = useRef(false);
+  const landedOnUnreadRef = useRef(false);
+  const [entryVisit, setEntryVisit] = useState(0);
+  const entryKey = `${organizationId ?? ""}:${user?.id ?? ""}:${channelId}:${entryVisit}`;
+  const [entryUnread, setEntryUnread] = useState<{ key: string; target: string | null } | null>(
+    null,
+  );
+  useEffect(() => {
+    if (!organizationId || !unreadQuery.data || entryUnread?.key === entryKey) return;
+    manualUnreadRef.current = false;
+    landedOnUnreadRef.current = false;
+    const unread = unreadQuery.data[channelId];
+    // Capture once when this channel's unread snapshot becomes available.
+    // eslint-disable-next-line react/react-compiler
+    setEntryUnread({
+      key: entryKey,
+      target: unread?.unread ? (unread.firstUnreadMessageId ?? null) : null,
+    });
+  }, [organizationId, channelId, entryKey, entryUnread?.key, unreadQuery.data]);
+  const entryReady = entryUnread?.key === entryKey;
+  const firstUnreadId = entryReady ? entryUnread.target : null;
+
+  const messageHead = useMessages(channelId);
+  const messagesQuery = useUnreadMessageWindow(
+    channelId,
+    { key: entryKey, target: firstUnreadId, ready: entryReady },
+    messageHead,
+  );
   const membersQuery = useChannelMembers(channelId);
   const approvalsQuery = useChannelPendingApprovals(channelId, true);
   const sendMessage = useSendMessage(channelId);
@@ -546,28 +574,6 @@ export function ChatConversationScreen() {
     [directory.subjects, agentsQuery.data],
   );
 
-  const manualUnreadRef = useRef(false);
-  const landedOnUnreadRef = useRef(false);
-  const [entryVisit, setEntryVisit] = useState(0);
-  const entryKey = `${organizationId ?? ""}:${user?.id ?? ""}:${channelId}:${entryVisit}`;
-  const [entryUnread, setEntryUnread] = useState<{ key: string; target: string | null } | null>(
-    null,
-  );
-  useEffect(() => {
-    if (!organizationId || !unreadQuery.data || entryUnread?.key === entryKey) return;
-    manualUnreadRef.current = false;
-    landedOnUnreadRef.current = false;
-    const unread = unreadQuery.data[channelId];
-    // Capture once when this channel's unread snapshot becomes available.
-    // eslint-disable-next-line react/react-compiler
-    setEntryUnread({
-      key: entryKey,
-      target: unread?.unread ? (unread.firstUnreadMessageId ?? null) : null,
-    });
-  }, [organizationId, channelId, entryKey, entryUnread?.key, unreadQuery.data]);
-  const entryReady = entryUnread?.key === entryKey;
-  const firstUnreadId = entryReady ? entryUnread.target : null;
-
   // Typing entries are patched into this cache by the chat stream provider;
   // the query only subscribes, it never fetches.
   const typingQuery = useQuery<TypingEntry[]>({
@@ -669,12 +675,18 @@ export function ChatConversationScreen() {
 
   const newestId = messages[0]?.id;
   useEffect(() => {
-    if (!entryReady || !screenFocused.current || manualUnreadRef.current) return;
+    if (
+      !entryReady ||
+      messagesQuery.blocksRead ||
+      !screenFocused.current ||
+      manualUnreadRef.current
+    )
+      return;
     if (newestId && !newestId.startsWith("optimistic-")) {
       markRead.mutate(newestId);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [newestId, entryReady]);
+  }, [newestId, entryReady, messagesQuery.blocksRead]);
 
   // A reference picked in the @ overlay is inserted at the cursor as @label.
   // Focus-guarded: the thread screen stacks on top with its own composer.
@@ -708,19 +720,20 @@ export function ChatConversationScreen() {
       flushOnSend();
       resetCompose();
       attachments.clear();
+      messagesQuery.jumpToLatest();
       sendMessage.mutate({ content, replyToId: replyId, attachmentFileIds });
       // Only a scrolled-up sender needs snapping back to the newest message
       // (offset 0 in the inverted list). Firing it unconditionally animates the
       // list while it is already pinned there, which fights the insert the
       // anchor is busy absorbing. Deferred a frame so the optimistic row lands
       // first.
-      if (scrollOffsetRef.current > NEAR_BOTTOM_PX) {
+      if (messagesQuery.windowed || scrollOffsetRef.current > NEAR_BOTTOM_PX) {
         requestAnimationFrame(() => {
           listRef.current?.scrollToOffset({ offset: 0, animated: true });
         });
       }
     },
-    [flushOnSend, resetCompose, attachments, sendMessage],
+    [flushOnSend, resetCompose, attachments, sendMessage, messagesQuery],
   );
 
   const handleSend = useCallback(() => {
@@ -1126,7 +1139,17 @@ export function ChatConversationScreen() {
         <View style={styles.loadingWrap}>
           <ActivityIndicator size="large" color={T.accent} />
         </View>
-      ) : messages.length === 0 ? (
+      ) : messagesQuery.error ? (
+        <View style={styles.emptyWrap}>
+          <Text style={[styles.emptySub, { color: T.textDim }]}>Could not load messages</Text>
+          <TouchableOpacity onPress={messagesQuery.retry} accessibilityRole="button">
+            <Text style={{ color: T.accent }}>Retry</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={messagesQuery.jumpToLatest} accessibilityRole="button">
+            <Text style={{ color: T.accent }}>Jump to latest</Text>
+          </TouchableOpacity>
+        </View>
+      ) : messages.length === 0 && !messagesQuery.windowed ? (
         channel?.isAgentDm ? (
           <View style={styles.emptyWrap}>
             <Robot size={40} color={T.accent} weight="duotone" />
@@ -1200,6 +1223,36 @@ export function ChatConversationScreen() {
               windowSize={11}
               initialNumToRender={14}
               maxToRenderPerBatch={8}
+              ListHeaderComponent={
+                messagesQuery.windowed ? (
+                  <View style={styles.loadOlderWrap}>
+                    {messagesQuery.error ? (
+                      <TouchableOpacity onPress={messagesQuery.retry} accessibilityRole="button">
+                        <Text style={{ color: T.accent }}>Retry loading messages</Text>
+                      </TouchableOpacity>
+                    ) : messagesQuery.hasNewer ? (
+                      <TouchableOpacity
+                        onPress={messagesQuery.loadNewer}
+                        disabled={messagesQuery.isLoadingNewer}
+                        accessibilityRole="button"
+                      >
+                        <Text style={{ color: T.accent }}>
+                          {messagesQuery.isLoadingNewer ? "Loading messages" : "Newer messages"}
+                        </Text>
+                      </TouchableOpacity>
+                    ) : null}
+                    <TouchableOpacity
+                      onPress={() => {
+                        messagesQuery.jumpToLatest();
+                        listRef.current?.scrollToOffset({ offset: 0, animated: false });
+                      }}
+                      accessibilityRole="button"
+                    >
+                      <Text style={{ color: T.accent }}>Jump to latest</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : null
+              }
               ListFooterComponent={
                 messagesQuery.isLoadingOlder ? (
                   <View style={styles.loadOlderWrap}>
