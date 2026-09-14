@@ -19,12 +19,14 @@ from uniffy.core.models.chat.channel import ChannelType, ChatChannel
 from uniffy.core.models.chat.channel_member import (
     ChannelRole,
 )
-from uniffy.core.models.chat.message import SenderType
-from uniffy.core.models.permissions.content_access_request import ContentAccessRequest
+from uniffy.core.models.chat.message import ChatMessage, SenderType
 from uniffy.core.types import (
+    AccessMode,
+    ContentRole,
     ContentType,
     slugify,
 )
+from uniffy.domains.chat.attachments import lock_channel_attachment_policy
 from uniffy.domains.chat.cache import (
     invalidate_cached_dm_peers,
     invalidate_cached_member_ids,
@@ -36,7 +38,9 @@ from uniffy.domains.chat.search import (
     record_chat_search_acl_refresh,
 )
 from uniffy.domains.chat.senders import SenderResolver
+from uniffy.domains.files.attachments.derived import stage_attachment_parent_policy
 from uniffy.domains.permissions.requests.dismissal import (
+    DismissedAccessRequest,
     publish_dismissed_requests,
     stage_dismiss_pending_requests,
 )
@@ -197,7 +201,8 @@ class ChannelUpdates:
         target_type: ChannelType,
     ) -> ChatChannel:
         """Owner-only PUBLIC <-> PRIVATE flip; history is re-indexed to match."""
-        channel = await self.get_by_id(user_id, organization_id, channel_id)
+        await self.get_by_id(user_id, organization_id, channel_id)
+        channel = await lock_channel_attachment_policy(self.session, channel_id, organization_id)
         if target_type not in (ChannelType.PUBLIC, ChannelType.PRIVATE):
             raise ValidationError("channel_type", "Channels can only be public or private")
         if channel.channel_type not in (ChannelType.PUBLIC, ChannelType.PRIVATE):
@@ -219,6 +224,19 @@ class ChannelUpdates:
         channel.channel_type = target_type
         channel.updated_at = datetime.now(UTC)
 
+        await stage_attachment_parent_policy(
+            self.session,
+            organization_id=organization_id,
+            content_type=ContentType.CHAT_MESSAGE,
+            content_ids=select(ChatMessage.id).where(ChatMessage.channel_id == channel_id),
+            access_mode=(
+                AccessMode.OPEN_TO_ORG
+                if target_type == ChannelType.PUBLIC
+                else AccessMode.OWNER_ONLY
+            ),
+            baseline_role=ContentRole.VIEWER if target_type == ChannelType.PUBLIC else None,
+        )
+
         await write_audit_event(
             self.session,
             organization_id=organization_id,
@@ -237,7 +255,7 @@ class ChannelUpdates:
             channel_id=channel_id,
         )
 
-        dismissed: list[ContentAccessRequest] = []
+        dismissed: list[DismissedAccessRequest] = []
         if target_type == ChannelType.PUBLIC:
             # Anyone in the org can read it now, so a pending ask has nothing left
             # to ask for.

@@ -1,16 +1,11 @@
-"""Closing pending access requests that the content itself has made moot.
+"""Cancel pending requests when their target becomes accessible."""
 
-The capability another domain reaches for when a mutation grants the access a
-request was asking for - opening a channel to the organization, for instance.
-Deliberately free of `operations.py` so the owning domain can import it without
-pulling the access-grant machinery, which imports back into chat.
-"""
-
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import select
+from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 from uniffy_proto.permissions.v1.permissions_pb2 import ACCESS_REQUEST_STATE_CANCELED
 
@@ -24,45 +19,46 @@ from uniffy.core.types import ContentType
 logger = logger.bind(component="permissions.requests.dismissal")
 
 
+@dataclass(frozen=True, slots=True)
+class DismissedAccessRequest:
+    id: UUID
+    requester_id: UUID
+    requested_urn: str
+
+
 async def stage_dismiss_pending_requests(
     session: AsyncSession,
     *,
     organization_id: UUID,
     content_type: ContentType,
     content_id: UUID,
-) -> list[ContentAccessRequest]:
-    """Cancel every pending request for this content; returns the rows to publish.
-
-    Joins the caller's transaction and never commits, so the dismissal and the
-    mutation that granted the access land together. CANCELED rather than
-    APPROVED: nobody decided anything, and no grant row was written - the
-    request simply has nothing left to ask for.
-    """
-    rows = (
-        (
-            await session.execute(
-                select(ContentAccessRequest).where(
-                    ContentAccessRequest.organization_id == organization_id,
-                    ContentAccessRequest.canonical_content_type == content_type,
-                    ContentAccessRequest.canonical_content_id == content_id,
-                    ContentAccessRequest.state == ContentAccessRequestState.PENDING,
-                )
-            )
-        )
-        .scalars()
-        .all()
-    )
-
+) -> list[DismissedAccessRequest]:
+    """Join the target mutation without overwriting concurrent terminal decisions."""
     now = datetime.now(UTC)
-    for row in rows:
-        row.state = ContentAccessRequestState.CANCELED
-        row.responded_at = now
-        row.updated_at = now
-        session.add(row)
-    return list(rows)
+    rows = await session.execute(
+        update(ContentAccessRequest)
+        .where(
+            ContentAccessRequest.organization_id == organization_id,
+            ContentAccessRequest.canonical_content_type == content_type,
+            ContentAccessRequest.canonical_content_id == content_id,
+            ContentAccessRequest.state == ContentAccessRequestState.PENDING,
+        )
+        .values(
+            state=ContentAccessRequestState.CANCELED,
+            responded_at=now,
+            updated_at=now,
+        )
+        .returning(
+            ContentAccessRequest.id,
+            ContentAccessRequest.requester_id,
+            ContentAccessRequest.requested_urn,
+        )
+        .execution_options(synchronize_session=False)
+    )
+    return [DismissedAccessRequest(*row) for row in rows]
 
 
-async def publish_dismissed_requests(requests: list[ContentAccessRequest]) -> None:
+async def publish_dismissed_requests(requests: list[DismissedAccessRequest]) -> None:
     """Tell each requester their pending chip is resolved. Post-commit only."""
     for request in requests:
         try:

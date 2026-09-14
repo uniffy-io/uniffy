@@ -6,13 +6,14 @@ with it, the durable refresh fact the search rewrite depends on, and the pending
 access request an open-up makes moot.
 """
 
+import asyncio
 from types import SimpleNamespace as NS
 from unittest.mock import AsyncMock
 
 import pytest
 import pytest_asyncio
-from sqlalchemy import delete, select
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import delete, select, update
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
 from uniffy.core.audit.actions import Action
 from uniffy.core.errors import PermissionDeniedError, ValidationError
@@ -20,6 +21,8 @@ from uniffy.core.models.audit.event import AuditEvent
 from uniffy.core.models.chat.channel import ChannelType, ChatChannel, ChatChannelStats
 from uniffy.core.models.chat.channel_member import ChannelRole, ChatChannelMember
 from uniffy.core.models.chat.search_acl_refresh import ChatSearchAclRefresh
+from uniffy.core.models.files.file import File
+from uniffy.core.models.files.folder import Folder
 from uniffy.core.models.login.organization import Organization
 from uniffy.core.models.login.organization_member import OrganizationMember, OrganizationRole
 from uniffy.core.models.login.user import User
@@ -29,6 +32,8 @@ from uniffy.core.models.permissions.content_access_request import (
 )
 from uniffy.core.types import ContentType, SubjectType, generate_id
 from uniffy.domains.chat.channels.operations import ChatChannelOperations
+from uniffy.domains.permissions.requests.dismissal import stage_dismiss_pending_requests
+from uniffy.infrastructure.database.session import get_database_url
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
@@ -99,6 +104,15 @@ async def _seed(db_session: AsyncSession) -> NS:
 async def _teardown(db_session: AsyncSession, env: NS) -> None:
     await db_session.rollback()
     await db_session.execute(
+        update(File)
+        .where(File.organization_id == env.org_id)
+        .values(
+            current_version_id=None,
+        )
+    )
+    await db_session.execute(delete(File).where(File.organization_id == env.org_id))
+    await db_session.execute(delete(Folder).where(Folder.organization_id == env.org_id))
+    await db_session.execute(
         delete(ContentAccessRequest).where(ContentAccessRequest.organization_id == env.org_id)
     )
     await db_session.execute(
@@ -115,9 +129,7 @@ async def _teardown(db_session: AsyncSession, env: NS) -> None:
         delete(OrganizationMember).where(OrganizationMember.organization_id == env.org_id)
     )
     await db_session.execute(delete(Organization).where(Organization.id == env.org_id))
-    await db_session.execute(
-        delete(User).where(User.id.in_([env.owner_id, env.outsider_id]))
-    )
+    await db_session.execute(delete(User).where(User.id.in_([env.owner_id, env.outsider_id])))
     await db_session.commit()
 
 
@@ -191,9 +203,7 @@ async def test_open_up_records_a_refresh_even_though_membership_paths_skip_publi
 ) -> None:
     ops = _operations(session)
 
-    await ops.change_channel_visibility(
-        env.owner_id, env.org_id, env.private_id, ChannelType.PUBLIC
-    )
+    await ops.change_channel_visibility(env.owner_id, env.org_id, env.private_id, ChannelType.PUBLIC)
 
     stored = await session.get(ChatChannel, env.private_id)
     await session.refresh(stored)
@@ -215,9 +225,7 @@ async def test_open_up_cancels_a_pending_access_request(session, env: NS) -> Non
     await session.commit()
 
     ops = _operations(session)
-    await ops.change_channel_visibility(
-        env.owner_id, env.org_id, env.private_id, ChannelType.PUBLIC
-    )
+    await ops.change_channel_visibility(env.owner_id, env.org_id, env.private_id, ChannelType.PUBLIC)
 
     await session.refresh(request)
     assert request.state == ContentAccessRequestState.CANCELED
@@ -258,3 +266,63 @@ async def test_a_rejected_flip_leaves_no_audit_or_refresh_row(session, env: NS) 
 
     assert await _audit_rows(session, env.public_id) == []
     assert await _refresh_row(session, env.public_id) is None
+
+
+@pytest.mark.parametrize(
+    "terminal",
+    [
+        ContentAccessRequestState.APPROVED,
+        ContentAccessRequestState.DENIED,
+        ContentAccessRequestState.CANCELED,
+    ],
+)
+async def test_visibility_dismissal_preserves_an_in_flight_terminal_decision(session, env, terminal):
+    request = ContentAccessRequest(
+        organization_id=env.org_id,
+        requester_id=env.outsider_id,
+        requested_urn=f"urn:uniffy:content:CHAT:{env.private_id}",
+        original_content_type=ContentType.CHAT,
+        original_content_id=env.private_id,
+        canonical_content_type=ContentType.CHAT,
+        canonical_content_id=env.private_id,
+    )
+    session.add(request)
+    await session.commit()
+    engine = create_async_engine(get_database_url())
+    try:
+        async with AsyncSession(engine, expire_on_commit=False) as deciding:
+            decided = (
+                await deciding.execute(
+                    select(ContentAccessRequest)
+                    .where(
+                        ContentAccessRequest.id == request.id,
+                    )
+                    .with_for_update()
+                )
+            ).scalar_one()
+            decided.state = terminal
+            decided.responded_by_user_id = env.owner_id
+            decided.decision_note = "Decision is final"
+            await deciding.flush()
+
+            async def dismiss():
+                rows = await stage_dismiss_pending_requests(
+                    session,
+                    organization_id=env.org_id,
+                    content_type=ContentType.CHAT,
+                    content_id=env.private_id,
+                )
+                await session.commit()
+                return rows
+
+            pending = asyncio.create_task(dismiss())
+            with pytest.raises(TimeoutError):
+                await asyncio.wait_for(asyncio.shield(pending), 0.1)
+            await deciding.commit()
+            assert await asyncio.wait_for(pending, 5) == []
+        await session.refresh(request)
+        assert request.state == terminal
+        assert request.responded_by_user_id == env.owner_id
+        assert request.decision_note == decided.decision_note
+    finally:
+        await engine.dispose()

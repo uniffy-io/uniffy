@@ -17,6 +17,8 @@ from uniffy.domains.chat.channels import updates as updates_module
 from uniffy.domains.chat.channels.operations import ChatChannelOperations
 from uniffy.domains.chat.jobs import jobs as jobs_module
 
+COMPLETE = "complete"
+
 
 def _channel(channel_type: ChannelType, *, is_default: bool = False) -> ChatChannel:
     channel = ChatChannel(
@@ -50,6 +52,9 @@ def _operations(
     operations.session = MagicMock()
     operations.session.commit = AsyncMock()
     operations.session.refresh = AsyncMock()
+    result = MagicMock()
+    result.scalar_one_or_none.return_value = channel
+    operations.session.execute = AsyncMock(return_value=result)
     operations.get_by_id = AsyncMock(return_value=channel)
     operations.access = MagicMock()
     operations.access.get_membership = AsyncMock(
@@ -66,6 +71,8 @@ def _operations(
 def _isolate(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(updates_module, "invalidate_cached_member_ids", AsyncMock())
     monkeypatch.setattr(updates_module, "publish_dismissed_requests", AsyncMock())
+    monkeypatch.setattr(updates_module, "stage_attachment_parent_policy", AsyncMock())
+    monkeypatch.setattr(jobs_module, "refresh_attachment_parent_search", AsyncMock())
 
 
 @pytest.fixture
@@ -288,16 +295,14 @@ class TestRefreshJobDerivation:
 
         monkeypatch.setattr(jobs_module, "open_session", _open)
 
-    async def test_public_channel_derives_open_to_org(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    async def test_public_channel_derives_open_to_org(self, monkeypatch: pytest.MonkeyPatch) -> None:
         session = self._session(ChannelType.PUBLIC, [generate_id()])
         self._patched(monkeypatch, session)
         search = MagicMock(update_chat_message_sharing=AsyncMock(return_value=7))
 
         result = await jobs_module._process_channel(generate_id(), search)
 
-        assert result["status"] == "complete"
+        assert result["status"] == COMPLETE
         sent = search.update_chat_message_sharing.await_args.kwargs
         assert sent["access_mode"] == AccessMode.OPEN_TO_ORG.value
         assert sent["baseline_role"] == ContentRole.VIEWER.value
@@ -369,9 +374,8 @@ class TestMessageDocPatch:
         )
 
         patch = self._sent(engine)
-        assert patch["access_mode"] == "EXPLICIT_MEMBERS"
+        assert patch["access_mode"] == AccessMode.EXPLICIT_MEMBERS.value
         # Written explicitly: an omitted key leaves OPEN_TO_ORG's VIEWER in place.
-        assert "baseline_role" in patch
         assert patch["baseline_role"] is None
         assert patch["shared_user_ids"] == [str(member)]
 
@@ -387,8 +391,8 @@ class TestMessageDocPatch:
         )
 
         patch = self._sent(engine)
-        assert patch["access_mode"] == "OPEN_TO_ORG"
-        assert patch["baseline_role"] == "VIEWER"
+        assert patch["access_mode"] == AccessMode.OPEN_TO_ORG.value
+        assert patch["baseline_role"] == ContentRole.VIEWER.value
         # The old roster must not linger on a doc that now grants org-wide.
         assert patch["shared_user_ids"] == []
 
@@ -403,5 +407,4 @@ class TestMessageDocPatch:
         )
 
         patch = self._sent(engine)
-        assert "access_mode" not in patch
-        assert "baseline_role" not in patch
+        assert patch.keys().isdisjoint({"access_mode", "baseline_role"})

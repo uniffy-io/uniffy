@@ -17,9 +17,10 @@ from uniffy.core.models.chat.search_acl_refresh import ChatSearchAclRefresh
 from uniffy.core.models.login.organization_member import OrganizationMember
 from uniffy.core.search import SEARCH_INDEXER_CTX_KEY, SearchIndexer
 from uniffy.core.search.workspace import WORKSPACE_SEARCH_CTX_KEY, WorkspaceSearch
-from uniffy.core.types import AccessMode, ContentRole, SubjectType
+from uniffy.core.types import AccessMode, ContentRole, ContentType, SubjectType
 from uniffy.domains.chat.jobs.contracts import REFRESH_CHAT_SEARCH_ACL
 from uniffy.domains.chat.messages.operations import ChatMessageOperations
+from uniffy.domains.files.attachments.derived import refresh_attachment_parent_search
 from uniffy.infrastructure.database import open_session
 from uniffy.infrastructure.valkey.ops import get_ops_client
 from uniffy.vendor.arq import Retry
@@ -186,6 +187,13 @@ async def _process_channel(
                 shared_user_ids=[] if is_public else member_ids,
                 access_mode=access_mode,
                 baseline_role=baseline_role,
+            )
+            await refresh_attachment_parent_search(
+                session,
+                SearchIndexer(search),
+                organization_id=row.organization_id,
+                content_type=ContentType.CHAT_MESSAGE,
+                content_ids=select(ChatMessage.id).where(ChatMessage.channel_id == channel_id),
             )
         except Exception:
             await session.rollback()
