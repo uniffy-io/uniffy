@@ -1233,37 +1233,43 @@ export function ChatConversationScreen() {
           />
         ) : null}
 
-        <ChatComposer
-          T={T}
-          inputRef={inputRef}
-          draft={draft}
-          onChangeDraft={setDraft}
-          onSelectionChange={(e) => {
-            selectionRef.current = e.nativeEvent.selection;
-            setCursor(e.nativeEvent.selection.start);
-          }}
-          placeholder={editing ? "Edit message" : `Message ${title}`}
-          canSend={canSend}
-          editing={!!editing}
-          onSend={handleSend}
-          tools={{
-            onEmoji: () => setEmojiTarget("compose"),
-            onMention: () => openAt(true),
-            onAttach: attachments.handleAttach,
-            onWrap: wrapSelection,
-          }}
-          model={
-            dmAgentId
-              ? {
-                  label: dmModelLabel,
-                  onPress: () => setModelSheetOpen(true),
-                  pickerOpen: modelSheetOpen,
-                }
-              : undefined
-          }
-          attachments={attachments.pending}
-          onRemoveAttachment={attachments.remove}
-        />
+        {channel?.isArchived ? (
+          <Text style={{ color: T.textDim, padding: 16, textAlign: "center" }}>
+            This channel is archived. Restore it to send messages.
+          </Text>
+        ) : (
+          <ChatComposer
+            T={T}
+            inputRef={inputRef}
+            draft={draft}
+            onChangeDraft={setDraft}
+            onSelectionChange={(e) => {
+              selectionRef.current = e.nativeEvent.selection;
+              setCursor(e.nativeEvent.selection.start);
+            }}
+            placeholder={editing ? "Edit message" : `Message ${title}`}
+            canSend={canSend}
+            editing={!!editing}
+            onSend={handleSend}
+            tools={{
+              onEmoji: () => setEmojiTarget("compose"),
+              onMention: () => openAt(true),
+              onAttach: attachments.handleAttach,
+              onWrap: wrapSelection,
+            }}
+            model={
+              dmAgentId
+                ? {
+                    label: dmModelLabel,
+                    onPress: () => setModelSheetOpen(true),
+                    pickerOpen: modelSheetOpen,
+                  }
+                : undefined
+            }
+            attachments={attachments.pending}
+            onRemoveAttachment={attachments.remove}
+          />
+        )}
       </View>
 
       <MessageActionSheet

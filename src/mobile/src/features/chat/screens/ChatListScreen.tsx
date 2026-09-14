@@ -133,7 +133,10 @@ export function ChatListScreen() {
   const { canManageChat } = useChatPermissions();
   const unarchiveChannel = useUnarchiveChannel();
   const archivedQuery = useArchivedChannels(!collapsed.archived);
-  const archivedChannels = archivedQuery.data ?? [];
+  const archivedChannels = useMemo(
+    () => archivedQuery.data?.pages.flatMap((page) => page.channels) ?? [],
+    [archivedQuery.data],
+  );
   const createAgentChat = useCreateAgentChat();
   const agentFolders = useAgentFolders();
   const createAgentFolder = useCreateAgentFolder();
@@ -608,7 +611,7 @@ export function ChatListScreen() {
               <Text style={[styles.sectionEmptyText, styles.archivedNote, { color: T.textDim }]}>
                 Loading...
               </Text>
-            ) : archivedChannels.length === 0 ? (
+            ) : archivedChannels.length === 0 && !archivedQuery.isError ? (
               <Text style={[styles.sectionEmptyText, styles.archivedNote, { color: T.textDim }]}>
                 No archived channels
               </Text>
@@ -625,6 +628,22 @@ export function ChatListScreen() {
                 />
               ))
             )}
+            {archivedQuery.isError ? (
+              <TouchableOpacity onPress={() => archivedQuery.refetch()} style={styles.archivedMain}>
+                <Text style={{ color: T.textDim }}>Archived channels could not load. Retry</Text>
+              </TouchableOpacity>
+            ) : null}
+            {archivedQuery.hasNextPage ? (
+              <TouchableOpacity
+                onPress={() => archivedQuery.fetchNextPage()}
+                disabled={archivedQuery.isFetchingNextPage}
+                style={styles.archivedMain}
+              >
+                <Text style={{ color: T.textDim }}>
+                  {archivedQuery.isFetchingNextPage ? "Loading..." : "Load more"}
+                </Text>
+              </TouchableOpacity>
+            ) : null}
           </CategorySection>
         </ScrollView>
       )}
@@ -1630,6 +1649,7 @@ const styles = StyleSheet.create({
   archivedNote: { paddingHorizontal: 16, paddingVertical: 10 },
   archivedRow: { flexDirection: "row", alignItems: "center", minHeight: 44 },
   archivedMain: {
+    minHeight: 44,
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
@@ -1638,7 +1658,13 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   archivedName: { flex: 1, fontSize: 15, fontFamily: FONT.regular },
-  archivedRestore: { paddingHorizontal: 16, paddingVertical: 10 },
+  archivedRestore: {
+    minHeight: 44,
+    minWidth: 44,
+    justifyContent: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
   dmCapNotice: { fontSize: 12, fontFamily: FONT.regular, marginTop: 10 },
   dmName: { fontSize: 15, fontFamily: FONT.medium },
   dmEmail: { fontSize: 12, fontFamily: FONT.regular, marginTop: 1 },

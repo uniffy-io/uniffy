@@ -1,14 +1,15 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Hash, Lock, ChatTeardrop, NotePencil, Trash } from "@phosphor-icons/react";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
+import { PaneHeader, PaneHeaderBar } from "@/components/ui/pane-header";
 import { formatRelativeTime } from "@/shared/utils/dateFormatting";
 import { stripMarkdownAndTruncate } from "@/features/search/utils/stripMarkdown";
 import { setActiveChannel } from "@/features/chat/store/chatChannelsSlice";
 import { setActiveThread } from "@/features/chat/store/chatThreadsSlice";
-import { openThreadPanel } from "@/features/chat/store/chatUiSlice";
-import { deleteDraftOnServer } from "@/features/chat/store/chatThunks";
+import { closeThreadPanel, openThreadPanel } from "@/features/chat/store/chatUiSlice";
+import { deleteDraftOnServer, fetchDraftRoot } from "@/features/chat/store/chatThunks";
 import { selectDraftRows, type ChatDraftRow } from "@/features/chat/store/chatDraftsSlice";
 import { getChannelDisplayName } from "@/features/chat/utils/channelDisplay";
 import type { ChatChannel } from "@/features/chat/types";
@@ -40,7 +41,7 @@ function DraftRow({
       <button
         type="button"
         onClick={() => onOpen(draft)}
-        className="flex flex-1 min-w-0 items-start gap-3 px-4 py-3 text-left"
+        className="focus-ring flex flex-1 min-w-0 items-start gap-3 px-4 py-3 text-left"
       >
         <ChannelIcon size={16} className="text-muted-foreground shrink-0 mt-0.5" />
         <div className="flex-1 min-w-0">
@@ -66,7 +67,7 @@ function DraftRow({
         aria-label="Discard draft"
         title="Discard draft"
         className={cn(
-          "mt-3 mr-3 shrink-0 rounded-lg p-1.5 text-muted-foreground transition-all",
+          "focus-ring mt-1 mr-1 flex min-h-11 min-w-11 items-center justify-center shrink-0 rounded-lg text-muted-foreground transition-all",
           "hover:bg-red-500/10 hover:text-red-500 focus:opacity-100",
           "md:opacity-0 md:group-hover:opacity-100",
         )}
@@ -83,6 +84,8 @@ export function DraftsView() {
   const navigate = useNavigate();
   const drafts = useAppSelector(selectDraftRows);
   const channelsById = useAppSelector((state) => state.chatChannels.byId);
+  const pendingOpen = useRef<ReturnType<ReturnType<typeof fetchDraftRoot>> | null>(null);
+  useEffect(() => () => pendingOpen.current?.abort(), []);
 
   const rows = useMemo(
     () => drafts.map((draft) => ({ draft, channel: channelsById[draft.channelId] })),
@@ -90,11 +93,32 @@ export function DraftsView() {
   );
 
   const handleOpen = useCallback(
-    (draft: ChatDraftRow) => {
+    async (draft: ChatDraftRow) => {
+      pendingOpen.current?.abort();
+      pendingOpen.current = null;
+      if (draft.rootMessageId) {
+        const request = dispatch(
+          fetchDraftRoot({
+            channelId: draft.channelId,
+            rootMessageId: draft.rootMessageId,
+          }),
+        );
+        pendingOpen.current = request;
+        try {
+          await request.unwrap();
+        } catch {
+          return;
+        }
+        if (pendingOpen.current !== request) return;
+        pendingOpen.current = null;
+      }
       dispatch(setActiveChannel(draft.channelId));
       if (draft.rootMessageId) {
         dispatch(setActiveThread(draft.rootMessageId));
         dispatch(openThreadPanel());
+      } else {
+        dispatch(setActiveThread(null));
+        dispatch(closeThreadPanel());
       }
       navigate(`/chat/${draft.channelId}`);
     },
@@ -115,14 +139,17 @@ export function DraftsView() {
 
   return (
     <div className="flex flex-col h-full" data-testid="chat-drafts-view">
-      <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-card">
-        <span className="text-sm font-semibold text-foreground">Drafts</span>
-        {drafts.length > 0 && (
-          <span className="text-xs text-muted-foreground">
-            {drafts.length} unsent {drafts.length === 1 ? "message" : "messages"}
-          </span>
-        )}
-      </div>
+      <PaneHeader>
+        <PaneHeaderBar
+          icon={NotePencil}
+          title="Drafts"
+          subtitle={
+            drafts.length > 0
+              ? `${drafts.length} unsent ${drafts.length === 1 ? "message" : "messages"}`
+              : undefined
+          }
+        />
+      </PaneHeader>
 
       <div className="flex-1 overflow-y-auto">
         {rows.length === 0 ? (

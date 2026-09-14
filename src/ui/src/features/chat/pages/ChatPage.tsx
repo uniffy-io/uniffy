@@ -35,6 +35,7 @@ import {
   initializeChat,
   hydrateChat,
   fetchMessages,
+  fetchChannel,
   resolveThreadForMessage,
   jumpToChannelMessage,
 } from "@/features/chat/store/chatThunks";
@@ -135,12 +136,17 @@ export function ChatPage() {
   const initializedRef = useRef(false);
   const hydrationStartedRef = useRef(false);
   const landingNavigationStartedRef = useRef(false);
+  const channelRequestRef = useRef<string | null>(null);
   const { isMobile, isMobileOrTablet } = useBreakpoint();
 
   const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
   const userId = useAppSelector((state) => state.auth.user?.id);
   const channels = useAppSelector(selectChannels);
   const channelsLoaded = useAppSelector(selectChannelsLoaded);
+  const channelRevision = useAppSelector(
+    (state) =>
+      `${state.chatChannels.revision}:${state.chatChannels.revisionsById[channelId ?? ""] ?? 0}`,
+  );
   const channelInStore = useAppSelector((state) =>
     channelId ? !!state.chatChannels.byId[channelId] : false,
   );
@@ -158,6 +164,36 @@ export function ChatPage() {
   const isThreadsInboxRoute = !channelId && currentPath === "/chat/threads";
   const isUnreadsRoute = !channelId && currentPath === "/chat/unreads";
   const isDraftsRoute = !channelId && currentPath === "/chat/drafts";
+
+  useEffect(() => {
+    if (channelInStore) {
+      channelRequestRef.current = null;
+      return;
+    }
+    if (!channelId || !organizationId || !channelsLoaded || !routeSnapshotIsCurrent(currentPath))
+      return;
+    const key = `${organizationId}:${userId}:${channelId}:${channelRevision}`;
+    if (channelRequestRef.current === key) return;
+    channelRequestRef.current = key;
+    void dispatch(fetchChannel(channelId))
+      .unwrap()
+      .catch(() => {
+        if (channelRequestRef.current !== key || !routeSnapshotIsCurrent(currentPath) || !userId)
+          return;
+        clearLastOpenedChannel(organizationId, userId);
+        navigate("/chat", { replace: true });
+      });
+  }, [
+    channelId,
+    channelRevision,
+    organizationId,
+    userId,
+    channelInStore,
+    channelsLoaded,
+    currentPath,
+    dispatch,
+    navigate,
+  ]);
 
   useEffect(() => {
     if (
@@ -193,21 +229,6 @@ export function ChatPage() {
       saveLastOpenedChannel(organizationId, userId, channelId);
     }
   }, [channelId, channelInStore, organizationId, userId, currentPath]);
-
-  useEffect(() => {
-    if (
-      channelId &&
-      channelsLoaded &&
-      !channelInStore &&
-      organizationId &&
-      userId &&
-      routeSnapshotIsCurrent(currentPath) &&
-      loadLastOpenedChannel(organizationId, userId) === channelId
-    ) {
-      clearLastOpenedChannel(organizationId, userId);
-      navigate("/chat", { replace: true });
-    }
-  }, [channelId, channelsLoaded, channelInStore, organizationId, userId, navigate, currentPath]);
 
   const activeChannel = useAppSelector((state) =>
     state.chatChannels.activeChannelId

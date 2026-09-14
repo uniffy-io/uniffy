@@ -243,7 +243,11 @@ export function ChannelView({
     </div>
   );
 
-  const compose = agentRetired ? (
+  const compose = activeChannel.isArchived ? (
+    <p className="px-4 py-3 text-sm text-muted-foreground" data-testid="chat-archived-notice">
+      This channel is archived. History remains readable. An owner or admin can restore it.
+    </p>
+  ) : agentRetired ? (
     retiredNotice
   ) : (
     <MessageCompose

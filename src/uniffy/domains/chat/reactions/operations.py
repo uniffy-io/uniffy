@@ -36,7 +36,6 @@ class ChatReactionOperations:
         emoji: str,
         display_name: str = "",
     ) -> ChatReaction:
-        """Idempotent reaction add via ON CONFLICT DO NOTHING RETURNING."""
         await self._verify_message_access(user_id, organization_id, channel_id, message_id)
         await check_chat_mutation_limit(
             REACTION_ADD,
@@ -67,6 +66,8 @@ class ChatReactionOperations:
             emoji=emoji,
             created_at=created_at,
         )
+        if returned is None:
+            return reaction
 
         member_ids = await self._get_channel_member_ids(channel_id)
         await self._publish_reaction_event(
@@ -92,14 +93,18 @@ class ChatReactionOperations:
     ) -> None:
         await self._verify_message_access(user_id, organization_id, channel_id, message_id)
 
-        await self.session.execute(
-            delete(ChatReaction).where(
+        result = await self.session.execute(
+            delete(ChatReaction)
+            .where(
                 ChatReaction.message_id == message_id,
                 ChatReaction.user_id == user_id,
                 ChatReaction.emoji == emoji,
             )
+            .returning(ChatReaction.message_id)
         )
         await self.session.commit()
+        if result.scalar_one_or_none() is None:
+            return
 
         member_ids = await self._get_channel_member_ids(channel_id)
         await self._publish_reaction_event(

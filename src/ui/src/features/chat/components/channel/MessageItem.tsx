@@ -630,6 +630,7 @@ function MessageItemInner({
           <div ref={addReactionRef}>
             {(reactions.length > 0 || showReactionPicker) && (
               <ReactionBar
+                channelId={message.channelId}
                 reactions={reactions}
                 onToggleReaction={handleToggleReaction}
                 onAddReaction={() => setShowReactionPicker(true)}

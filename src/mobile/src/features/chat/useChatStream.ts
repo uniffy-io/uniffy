@@ -220,6 +220,8 @@ async function runLoop(orgId: string, queryClient: QueryClient, ctl: AbortContro
       // up whatever changed while the stream was down.
       void resyncActiveCalls(orgId, queryClient, attempt.signal);
       void queryClient.invalidateQueries({ queryKey: draftsKey(orgId) });
+      void queryClient.resetQueries({ queryKey: ["chat", "archived-channels", orgId] });
+      void queryClient.invalidateQueries({ queryKey: ["chat", "channels", orgId] });
       for await (const event of stream) {
         if (attempt.signal.aborted) break;
         lastEventAtMs = Date.now();
@@ -343,15 +345,16 @@ function applyChannelEvent(orgId: string, queryClient: QueryClient, ce: ChatEven
       void queryClient.invalidateQueries({ queryKey: channelsKey });
       return;
     case ChatEventType.CHANNEL_UPDATED: {
-      // Archive and delete both arrive as is_archived, and the row is then
-      // gone for this member: only the list has anything left to show.
-      const removed = ce.payload.case === "channelUpdated" && ce.payload.value.isArchived;
-      if (!removed) void queryClient.invalidateQueries({ queryKey: channelKey });
+      void queryClient.resetQueries({ queryKey: ["chat", "archived-channels", orgId] });
+      void queryClient.resetQueries({ queryKey: channelKey });
       void queryClient.invalidateQueries({ queryKey: channelsKey });
       return;
     }
     case ChatEventType.MEMBERS_ADDED:
     case ChatEventType.MEMBERS_REMOVED:
+    case ChatEventType.MEMBER_LEFT:
+    case ChatEventType.MEMBER_JOINED:
+      void queryClient.resetQueries({ queryKey: ["chat", "archived-channels", orgId] });
       // An agent-only change carries no user_ids, so the roster and the member
       // count refresh off the event type alone. The list refetch is what makes
       // the channel appear or disappear when the changed member is this user.

@@ -23,7 +23,9 @@ import { bulkUpsertTags, tagToPlain } from "@/features/tags";
 import {
   setChannels,
   setArchivedChannels,
-  archivedChannelRestored,
+  archivedLoadStarted,
+  archivedLoadFailed,
+  invalidateArchivedChannels,
   addChannel,
   removeChannel,
   updateChannel,
@@ -47,6 +49,7 @@ import {
   setMessages,
   prependMessages,
   appendMessage,
+  cacheMessage,
   updateMessage,
   deleteMessage,
   clearChannelMessages,
@@ -201,6 +204,32 @@ export const fetchPublicChannels = createAsyncThunk<
   }
 });
 
+export const fetchChannel = createAsyncThunk<
+  ChatChannel | null,
+  string,
+  { state: RootState; rejectValue: string }
+>("chat/fetchChannel", async (channelId, { getState, dispatch, rejectWithValue }) => {
+  const { auth, chatChannels } = getState();
+  try {
+    const organizationId = getOrganizationId(getState());
+    const response = await chatApi.getChannel({ organizationId, channelId });
+    if (
+      !isChatSessionCurrent(auth, getState().auth) ||
+      chatChannels.revision !== getState().chatChannels.revision ||
+      chatChannels.revisionsById[channelId] !== getState().chatChannels.revisionsById[channelId]
+    ) {
+      return null;
+    }
+    if (!response.channel) return rejectWithValue("Channel not found");
+    const channel = channelToPlain(response.channel);
+    hydrateChannelTags(dispatch, [response.channel]);
+    dispatch(addChannel(channel));
+    return channel;
+  } catch (error) {
+    return rejectWithValue(error instanceof Error ? error.message : "Failed to load channel");
+  }
+});
+
 export const createChannel = createAsyncThunk<
   ChatChannel,
   {
@@ -343,11 +372,6 @@ export const archiveChannel = createAsyncThunk<
     const organizationId = getOrganizationId(getState());
     await chatApi.archiveChannel({ organizationId, channelId });
     removeChannelLocally(getState(), dispatch, organizationId, channelId);
-    // The archived list is a cached page; refresh it so a reopened section
-    // shows what was just archived.
-    if (getState().chatChannels.archivedLoaded) {
-      void dispatch(fetchArchivedChannels());
-    }
     return channelId;
   } catch (error) {
     return rejectWithValue(error instanceof Error ? error.message : "Failed to archive channel");
@@ -356,19 +380,47 @@ export const archiveChannel = createAsyncThunk<
 
 export const fetchArchivedChannels = createAsyncThunk<
   void,
-  void,
+  { cursor?: string } | void,
   { state: RootState; rejectValue: string }
->("chat/fetchArchivedChannels", async (_, { getState, dispatch, rejectWithValue }) => {
-  try {
-    const organizationId = getOrganizationId(getState());
-    const response = await chatApi.listChannels({ organizationId, archivedOnly: true });
-    dispatch(setArchivedChannels(response.channels.map(channelToPlain)));
-  } catch (error) {
-    return rejectWithValue(
-      error instanceof Error ? error.message : "Failed to load archived channels",
-    );
-  }
-});
+>(
+  "chat/fetchArchivedChannels",
+  async (params, { getState, dispatch, rejectWithValue, requestId }) => {
+    const auth = getState().auth;
+    dispatch(archivedLoadStarted(requestId));
+    try {
+      const organizationId = getOrganizationId(getState());
+      const response = await chatApi.listChannels({
+        organizationId,
+        archivedOnly: true,
+        cursor: params?.cursor,
+      });
+      if (
+        !isChatSessionCurrent(auth, getState().auth) ||
+        getState().chatChannels.archivedRequestId !== requestId
+      )
+        return;
+      hydrateChannelTags(dispatch, response.channels);
+      dispatch(
+        setArchivedChannels({
+          requestId,
+          channels: response.channels.map(channelToPlain),
+          nextCursor: response.nextCursor || null,
+          append: !!params?.cursor,
+        }),
+      );
+    } catch (error) {
+      if (
+        !isChatSessionCurrent(auth, getState().auth) ||
+        getState().chatChannels.archivedRequestId !== requestId
+      )
+        return;
+      const message = error instanceof Error ? error.message : "Failed to load archived channels";
+      dispatch(archivedLoadFailed({ requestId, error: message }));
+      return rejectWithValue(message);
+    }
+  },
+  { condition: (_, { getState }) => !getState().chatChannels.archivedRequestId },
+);
 
 export const unarchiveChannel = createAsyncThunk<
   string,
@@ -378,7 +430,7 @@ export const unarchiveChannel = createAsyncThunk<
   try {
     const organizationId = getOrganizationId(getState());
     const response = await chatApi.unarchiveChannel({ organizationId, channelId });
-    dispatch(archivedChannelRestored(channelId));
+    dispatch(invalidateArchivedChannels({}));
     if (response.channel) {
       dispatch(addChannel(channelToPlain(response.channel)));
     }
@@ -863,6 +915,35 @@ export const fetchThread = createAsyncThunk<
     return rejectWithValue(error instanceof Error ? error.message : "Failed to fetch thread");
   } finally {
     dispatch(setLoadingThread(false));
+  }
+});
+
+export const fetchDraftRoot = createAsyncThunk<
+  void,
+  { channelId: string; rootMessageId: string },
+  { state: RootState; rejectValue: string }
+>("chat/fetchDraftRoot", async (params, { getState, dispatch, rejectWithValue, signal }) => {
+  const { auth, chatChannels } = getState();
+  try {
+    const response = await chatApi.getThread({
+      organizationId: getOrganizationId(getState()),
+      channelId: params.channelId,
+      rootMessageId: params.rootMessageId,
+    });
+    if (
+      signal.aborted ||
+      !isChatSessionCurrent(auth, getState().auth) ||
+      chatChannels.revision !== getState().chatChannels.revision ||
+      chatChannels.revisionsById[params.channelId] !==
+        getState().chatChannels.revisionsById[params.channelId]
+    )
+      return rejectWithValue("Conversation changed. Open draft again.");
+    if (!response.rootMessage || response.rootMessage.isDeleted) {
+      return rejectWithValue("Message not found");
+    }
+    dispatch(cacheMessage(messageToPlain(response.rootMessage)));
+  } catch (error) {
+    return rejectWithValue(error instanceof Error ? error.message : "Failed to load draft message");
   }
 });
 

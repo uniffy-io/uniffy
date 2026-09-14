@@ -37,6 +37,7 @@ import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable"
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
 import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { SidebarOverlayContext } from "@/components/layout/CollapsibleSidebarRail";
 import {
   setSplitChannel,
@@ -219,6 +220,9 @@ export function ChatSidebar() {
   const draftCount = useAppSelector(selectDraftCount);
   const archivedChannels = useAppSelector(selectArchivedChannels);
   const archivedLoaded = useAppSelector(selectArchivedLoaded);
+  const archivedLoading = useAppSelector((state) => !!state.chatChannels.archivedRequestId);
+  const archivedError = useAppSelector((state) => state.chatChannels.archivedError);
+  const archivedNextCursor = useAppSelector((state) => state.chatChannels.archivedNextCursor);
   const archivedSectionCollapsed = useAppSelector((state) => state.chatUi.archivedSectionCollapsed);
   const currentUserId = useAppSelector((state) => state.auth.user?.id ?? "");
   const allChannelMembers = useAppSelector((state) => state.chatChannels.channelMembers);
@@ -441,13 +445,15 @@ export function ChatSidebar() {
     [sortableCategoryIds, categories, dispatch],
   );
 
-  const handleToggleArchived = useCallback(() => {
-    // Paged in on first open only; archived channels are cold data.
-    if (archivedSectionCollapsed && !archivedLoaded) {
+  useEffect(() => {
+    if (!archivedSectionCollapsed && !archivedLoaded && !archivedLoading && !archivedError) {
       void dispatch(fetchArchivedChannels());
     }
+  }, [dispatch, archivedSectionCollapsed, archivedLoaded, archivedLoading, archivedError]);
+
+  const handleToggleArchived = useCallback(() => {
     dispatch(toggleArchivedSection());
-  }, [dispatch, archivedSectionCollapsed, archivedLoaded]);
+  }, [dispatch]);
 
   const handleThreadsClick = useCallback(() => {
     navigate("/chat/threads");
@@ -763,7 +769,7 @@ export function ChatSidebar() {
           <button
             type="button"
             onClick={handleToggleArchived}
-            className="flex items-center gap-1 w-full px-3 py-1.5 text-xs uppercase font-medium tracking-wider text-muted-foreground hover:text-foreground transition-colors"
+            className="focus-ring flex min-h-11 items-center gap-1 w-full px-3 py-1.5 text-xs uppercase font-medium tracking-wider text-muted-foreground hover:text-foreground transition-colors"
             data-testid="chat-sidebar-archived-toggle"
           >
             {archivedSectionCollapsed ? <CaretRight size={10} /> : <CaretDown size={10} />}
@@ -773,9 +779,9 @@ export function ChatSidebar() {
 
           {!archivedSectionCollapsed && (
             <div className="space-y-px">
-              {!archivedLoaded ? (
+              {!archivedLoaded && !archivedError ? (
                 <p className="px-3 py-1.5 text-xs text-subtle-foreground">Loading...</p>
-              ) : archivedChannels.length === 0 ? (
+              ) : archivedChannels.length === 0 && !archivedError ? (
                 <p className="px-3 py-1.5 text-xs text-subtle-foreground">No archived channels</p>
               ) : (
                 archivedChannels.map((channel) => (
@@ -787,6 +793,30 @@ export function ChatSidebar() {
                     onRestore={() => dispatch(unarchiveChannel(channel.id))}
                   />
                 ))
+              )}
+              {archivedError && (
+                <div className="px-3 py-2">
+                  <p className="text-xs text-muted-foreground">Archived channels could not load.</p>
+                  <Button
+                    variant="ghost"
+                    onClick={() =>
+                      dispatch(fetchArchivedChannels({ cursor: archivedNextCursor ?? undefined }))
+                    }
+                  >
+                    Retry
+                  </Button>
+                </div>
+              )}
+              {archivedLoaded && archivedNextCursor && !archivedError && (
+                <Button
+                  variant="ghost"
+                  className="w-full"
+                  disabled={archivedLoading}
+                  onClick={() => dispatch(fetchArchivedChannels({ cursor: archivedNextCursor }))}
+                  data-testid="chat-sidebar-archived-more"
+                >
+                  {archivedLoading ? "Loading..." : "Load more"}
+                </Button>
               )}
             </div>
           )}
@@ -818,7 +848,7 @@ function ArchivedChannelItem({
       <button
         type="button"
         onClick={() => onSelect(channel.id)}
-        className="flex flex-1 min-w-0 items-center gap-2 px-3 py-1.5 text-left text-[0.9rem] text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-colors"
+        className="focus-ring flex min-h-11 flex-1 min-w-0 items-center gap-2 px-3 py-1.5 text-left text-[0.9rem] text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-colors"
       >
         <TypeIcon size={14} className="shrink-0" />
         <span className="truncate font-[450]">{getChannelDisplayName(channel)}</span>
@@ -829,7 +859,7 @@ function ArchivedChannelItem({
           onClick={onRestore}
           aria-label={`Restore ${getChannelDisplayName(channel)}`}
           title="Restore channel"
-          className="shrink-0 rounded p-1 text-muted-foreground opacity-100 transition-opacity hover:text-foreground md:opacity-0 md:group-hover:opacity-100 focus:opacity-100"
+          className="focus-ring flex min-h-11 min-w-11 items-center justify-center shrink-0 rounded p-1 text-muted-foreground opacity-100 transition-opacity hover:text-foreground md:opacity-0 md:group-hover:opacity-100 focus:opacity-100"
           data-testid={`chat-sidebar-archived-restore-${channel.id}`}
         >
           <ArrowCounterClockwise size={14} />

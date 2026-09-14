@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { Plus } from "@phosphor-icons/react";
 
 import { useAppSelector } from "@/app/hooks";
-import { useSubjectResolver } from "@/components/subject/hooks/useSubjectResolver";
+import { useReactorNames } from "@/features/chat/hooks/useReactorNames";
 import { popoverShellClass } from "@/components/ui/popover";
 import { cn } from "@/shared/utils/cn";
 import { buildReactorNames } from "@/features/chat/utils/reactorNames";
@@ -88,17 +88,18 @@ function ReactorCard({
 
 function ReactionChip({
   reaction,
-  nameById,
+  channelId,
   currentUserId,
   onToggleReaction,
 }: {
   reaction: ReactionView;
-  nameById: Record<string, string>;
+  channelId: string;
   currentUserId: string | undefined;
   onToggleReaction?: (emoji: string) => void;
 }) {
   const buttonRef = useRef<HTMLButtonElement>(null);
   const [anchor, setAnchor] = useState<DOMRect | null>(null);
+  const nameById = useReactorNames(channelId, reaction.userIds, anchor !== null);
 
   const { names, remaining } = useMemo(
     () => buildReactorNames(reaction, nameById, currentUserId),
@@ -116,12 +117,13 @@ function ReactionChip({
       <button
         ref={buttonRef}
         className={cn(
-          "inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full border text-xs cursor-pointer transition-colors",
+          "focus-ring inline-flex items-center justify-center min-h-11 min-w-11 gap-1 px-1.5 py-0.5 rounded-full border text-xs cursor-pointer transition-colors",
           reaction.hasCurrentUser
             ? "border-primary/50 bg-primary/10 text-primary"
             : "border-border bg-muted/50 hover:bg-muted",
         )}
-        aria-label={`${names.join(", ")}${remaining > 0 ? ` and ${remaining} more` : ""} reacted`}
+        aria-label={`${reaction.emoji.replaceAll("_", " ")}: ${reaction.count} ${reaction.count === 1 ? "reaction" : "reactions"}. ${names.join(", ")}${remaining > 0 ? ` and ${remaining} more` : ""} reacted`}
+        aria-pressed={reaction.hasCurrentUser}
         onMouseEnter={show}
         onMouseLeave={hide}
         onFocus={show}
@@ -142,20 +144,19 @@ function ReactionChip({
 }
 
 interface ReactionBarProps {
+  channelId: string;
   reactions: ReactionView[];
   onAddReaction?: () => void;
   onToggleReaction?: (emoji: string) => void;
 }
 
-function ReactionBarInner({ reactions, onAddReaction, onToggleReaction }: ReactionBarProps) {
+function ReactionBarInner({
+  channelId,
+  reactions,
+  onAddReaction,
+  onToggleReaction,
+}: ReactionBarProps) {
   const currentUserId = useAppSelector((state) => state.auth.user?.id);
-  const reactorIds = useMemo(() => [...new Set(reactions.flatMap((r) => r.userIds))], [reactions]);
-  const { subjects } = useSubjectResolver(reactorIds);
-  const nameById = useMemo(() => {
-    const map: Record<string, string> = {};
-    for (const subject of subjects) map[subject.id] = subject.name;
-    return map;
-  }, [subjects]);
 
   if (reactions.length === 0) return null;
 
@@ -165,14 +166,14 @@ function ReactionBarInner({ reactions, onAddReaction, onToggleReaction }: Reacti
         <ReactionChip
           key={reaction.emoji}
           reaction={reaction}
-          nameById={nameById}
+          channelId={channelId}
           currentUserId={currentUserId}
           onToggleReaction={onToggleReaction}
         />
       ))}
       <button
         className={cn(
-          "inline-flex items-center justify-center px-1.5 py-0.5 rounded-full",
+          "focus-ring inline-flex items-center justify-center min-h-11 min-w-11 px-1.5 py-0.5 rounded-full",
           "border border-dashed border-border hover:border-primary/50",
           "text-muted-foreground hover:text-foreground transition-colors cursor-pointer",
         )}

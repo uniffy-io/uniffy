@@ -341,27 +341,33 @@ export function ChatThreadScreen() {
         />
       ) : null}
 
-      <ChatComposer
-        T={T}
-        inputRef={inputRef}
-        draft={draft}
-        onChangeDraft={setDraft}
-        onSelectionChange={(e) => {
-          selectionRef.current = e.nativeEvent.selection;
-          setCursor(e.nativeEvent.selection.start);
-        }}
-        placeholder="Reply in thread"
-        canSend={canSend}
-        onSend={handleSend}
-        tools={{
-          onEmoji: () => setEmojiOpen(true),
-          onMention: () => openAt(true),
-          onAttach: attachments.handleAttach,
-          onWrap: wrapSelection,
-        }}
-        attachments={attachments.pending}
-        onRemoveAttachment={attachments.remove}
-      />
+      {channelQuery.data?.isArchived ? (
+        <Text style={{ color: T.textDim, padding: 16, textAlign: "center" }}>
+          This channel is archived. Restore it to reply.
+        </Text>
+      ) : (
+        <ChatComposer
+          T={T}
+          inputRef={inputRef}
+          draft={draft}
+          onChangeDraft={setDraft}
+          onSelectionChange={(e) => {
+            selectionRef.current = e.nativeEvent.selection;
+            setCursor(e.nativeEvent.selection.start);
+          }}
+          placeholder="Reply in thread"
+          canSend={canSend}
+          onSend={handleSend}
+          tools={{
+            onEmoji: () => setEmojiOpen(true),
+            onMention: () => openAt(true),
+            onAttach: attachments.handleAttach,
+            onWrap: wrapSelection,
+          }}
+          attachments={attachments.pending}
+          onRemoveAttachment={attachments.remove}
+        />
+      )}
 
       <EmojiPickerSheet
         visible={emojiOpen}

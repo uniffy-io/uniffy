@@ -60,6 +60,9 @@ export const chatMessagesSlice = createSlice({
   name: "chatMessages",
   initialState,
   reducers: {
+    cacheMessage: (state, action: PayloadAction<ChatMessage>) => {
+      state.byId[action.payload.id] = action.payload;
+    },
     setMessages: (
       state,
       action: PayloadAction<{
@@ -227,9 +230,8 @@ export const chatMessagesSlice = createSlice({
     },
     clearChannelMessages: (state, action: PayloadAction<string>) => {
       const channelId = action.payload;
-      const ids = state.idsByChannel[channelId];
-      if (ids) {
-        for (const id of ids) {
+      for (const [id, message] of Object.entries(state.byId)) {
+        if (message.channelId === channelId) {
           delete state.byId[id];
         }
       }
@@ -486,6 +488,7 @@ export const chatMessagesSlice = createSlice({
 });
 
 export const {
+  cacheMessage,
   setMessages,
   appendMessage,
   prependMessages,

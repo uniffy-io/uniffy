@@ -1,11 +1,8 @@
-"""Who reacted, bounded and ordered, asserted against the real engine.
-
-The reactor list is an `array_agg` sliced inside Postgres, so its bound and its
-oldest-first order only exist there; a mocked session would prove nothing.
-"""
+"""PostgreSQL reaction previews and idempotent mutation events."""
 
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace as NS
+from unittest.mock import AsyncMock
 
 import pytest
 import pytest_asyncio
@@ -208,3 +205,47 @@ async def test_a_message_without_reactions_has_no_entry(session, reactions) -> N
     )
 
     assert reactions.quiet_message_id not in result
+
+
+async def test_duplicate_add_outside_preview_emits_no_event(session, reactions, monkeypatch) -> None:
+    ops = ChatReactionOperations(session)
+    publish = AsyncMock()
+    monkeypatch.setattr(ops, "_publish_reaction_event", publish)
+    user_id = reactions.user_ids[-1]
+
+    await ops.add_reaction(
+        user_id, reactions.org_id, reactions.channel_id, reactions.message_id, "fire"
+    )
+    await ops.add_reaction(
+        user_id, reactions.org_id, reactions.channel_id, reactions.message_id, "fire"
+    )
+
+    publish.assert_not_awaited()
+    result = await ops.get_reactions_for_messages([reactions.message_id], user_id)
+    assert _group(result[reactions.message_id], "fire")["count"] == REACTOR_COUNT
+
+
+async def test_only_database_transitions_emit_reaction_events(
+    session, reactions, monkeypatch
+) -> None:
+    ops = ChatReactionOperations(session)
+    publish = AsyncMock()
+    monkeypatch.setattr(ops, "_publish_reaction_event", publish)
+    monkeypatch.setattr(
+        ops, "_get_channel_member_ids", AsyncMock(return_value=[reactions.user_ids[0]])
+    )
+    user_id = reactions.user_ids[0]
+    args = (user_id, reactions.org_id, reactions.channel_id, reactions.quiet_message_id, "fire")
+
+    await ops.add_reaction(*args)
+    await ops.add_reaction(*args)
+    result = await ops.get_reactions_for_messages([reactions.quiet_message_id], user_id)
+    assert _group(result[reactions.quiet_message_id], "fire")["count"] == 1
+    assert publish.await_count == 1
+    assert publish.await_args.kwargs["added"] is True
+
+    await ops.remove_reaction(*args)
+    await ops.remove_reaction(*args)
+    assert publish.await_count == 2
+    assert publish.await_args.kwargs["added"] is False
+    assert await ops.get_reactions_for_messages([reactions.quiet_message_id], user_id) == {}

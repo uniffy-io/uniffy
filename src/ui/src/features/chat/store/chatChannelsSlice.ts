@@ -17,9 +17,6 @@ export interface OrgChatPolicy {
   agentsEnabled: boolean;
 }
 
-// Channels are normalized (byId + ids) so per-channel mutations - unread
-// bumps, activity touches - invalidate only that channel's subscribers.
-// A flat array made every message org-wide re-render every consumer.
 interface ChatChannelsState {
   byId: Record<string, ChatChannel>;
   ids: string[];
@@ -32,10 +29,13 @@ interface ChatChannelsState {
   orgPolicy: OrgChatPolicy | null;
   isLoading: boolean;
   channelsLoaded: boolean;
-  // Archived channels live apart from `byId`: they are paged in only when the
-  // sidebar section is opened and must never reach the active channel lists.
-  archived: ChatChannel[];
+  archivedIds: string[];
   archivedLoaded: boolean;
+  archivedRequestId: string | null;
+  archivedError: string | null;
+  archivedNextCursor: string | null;
+  revision: number;
+  revisionsById: Record<string, number>;
 }
 
 const initialState: ChatChannelsState = {
@@ -50,45 +50,108 @@ const initialState: ChatChannelsState = {
   orgPolicy: null,
   isLoading: false,
   channelsLoaded: false,
-  archived: [],
+  archivedIds: [],
   archivedLoaded: false,
+  archivedRequestId: null,
+  archivedError: null,
+  archivedNextCursor: null,
+  revision: 0,
+  revisionsById: {},
 };
+
+function storeChannel(state: ChatChannelsState, channel: ChatChannel): void {
+  const existing = state.byId[channel.id];
+  state.byId[channel.id] = {
+    ...channel,
+    // Single-channel reads omit the folder assigned by ListChannels.
+    agentFolderId: channel.agentFolderId ?? existing?.agentFolderId ?? null,
+  };
+  if (channel.isArchived) {
+    state.ids = state.ids.filter((id) => id !== channel.id);
+    if (!state.archivedIds.includes(channel.id)) state.archivedIds.push(channel.id);
+  } else {
+    state.archivedIds = state.archivedIds.filter((id) => id !== channel.id);
+    if (!state.ids.includes(channel.id)) state.ids.push(channel.id);
+  }
+}
+
+function invalidateArchive(state: ChatChannelsState): void {
+  state.archivedLoaded = false;
+  state.archivedRequestId = null;
+  state.archivedError = null;
+  state.archivedNextCursor = null;
+}
 
 export const chatChannelsSlice = createSlice({
   name: "chatChannels",
   initialState,
   reducers: {
     setChannels: (state, action: PayloadAction<ChatChannel[]>) => {
-      state.byId = {};
+      state.byId = Object.fromEntries(
+        Object.entries(state.byId).filter(([, channel]) => channel.isArchived),
+      );
       state.ids = [];
       for (const channel of action.payload) {
         state.byId[channel.id] = channel;
         state.ids.push(channel.id);
       }
+      state.archivedIds = state.archivedIds.filter((id) => state.byId[id]?.isArchived);
       state.channelsLoaded = true;
     },
-    setArchivedChannels: (state, action: PayloadAction<ChatChannel[]>) => {
-      state.archived = action.payload;
-      state.archivedLoaded = true;
+    archivedLoadStarted: (state, action: PayloadAction<string>) => {
+      state.archivedRequestId = action.payload;
+      state.archivedError = null;
     },
-    archivedChannelRestored: (state, action: PayloadAction<string>) => {
-      state.archived = state.archived.filter((channel) => channel.id !== action.payload);
+    setArchivedChannels: (
+      state,
+      action: PayloadAction<{
+        requestId: string;
+        channels: ChatChannel[];
+        nextCursor: string | null;
+        append: boolean;
+      }>,
+    ) => {
+      const { requestId, channels, nextCursor, append } = action.payload;
+      if (state.archivedRequestId !== requestId) return;
+      if (!append) {
+        for (const id of state.archivedIds) delete state.byId[id];
+        state.archivedIds = [];
+      }
+      const ids = new Set(state.archivedIds);
+      for (const channel of channels) {
+        state.byId[channel.id] = channel;
+        ids.add(channel.id);
+      }
+      state.archivedIds = [...ids];
+      state.ids = state.ids.filter((id) => !ids.has(id));
+      state.archivedLoaded = true;
+      state.archivedNextCursor = nextCursor;
+      state.archivedRequestId = null;
+    },
+    archivedLoadFailed: (state, action: PayloadAction<{ requestId: string; error: string }>) => {
+      if (state.archivedRequestId !== action.payload.requestId) return;
+      state.archivedRequestId = null;
+      state.archivedError = action.payload.error;
+    },
+    invalidateArchivedChannels: (state, action: PayloadAction<{ clear?: boolean }>) => {
+      if (action.payload.clear) {
+        state.revision += 1;
+        for (const id of state.archivedIds) delete state.byId[id];
+        state.archivedIds = [];
+      }
+      invalidateArchive(state);
+    },
+    invalidateChannel: (state, action: PayloadAction<string>) => {
+      state.revisionsById[action.payload] = (state.revisionsById[action.payload] ?? 0) + 1;
     },
     addChannel: (state, action: PayloadAction<ChatChannel>) => {
-      // Idempotent: backend dedups DMs and may return an id we already hold.
-      const existing = state.byId[action.payload.id];
-      if (!existing) {
-        state.ids.push(action.payload.id);
-      }
-      // Only ListChannels populates the per-user folder id; a single-channel
-      // fetch or stream payload carrying null must not unfile the chat.
-      state.byId[action.payload.id] = {
-        ...action.payload,
-        agentFolderId: action.payload.agentFolderId ?? existing?.agentFolderId ?? null,
-      };
+      storeChannel(state, action.payload);
     },
     removeChannel: (state, action: PayloadAction<string>) => {
       const channelId = action.payload;
+      state.revisionsById[channelId] = (state.revisionsById[channelId] ?? 0) + 1;
+      state.archivedIds = state.archivedIds.filter((id) => id !== channelId);
+      invalidateArchive(state);
       if (state.byId[channelId]) {
         delete state.byId[channelId];
         state.ids = state.ids.filter((id) => id !== channelId);
@@ -102,13 +165,7 @@ export const chatChannelsSlice = createSlice({
       state.activeChannelId = action.payload;
     },
     updateChannel: (state, action: PayloadAction<ChatChannel>) => {
-      const existing = state.byId[action.payload.id];
-      if (existing) {
-        state.byId[action.payload.id] = {
-          ...action.payload,
-          agentFolderId: action.payload.agentFolderId ?? existing.agentFolderId ?? null,
-        };
-      }
+      if (state.byId[action.payload.id]) storeChannel(state, action.payload);
     },
     updateUnreadCounts: (
       state,
@@ -260,9 +317,12 @@ export const chatChannelsSlice = createSlice({
 });
 
 export const {
+  invalidateChannel,
   setChannels,
   setArchivedChannels,
-  archivedChannelRestored,
+  archivedLoadStarted,
+  archivedLoadFailed,
+  invalidateArchivedChannels,
   addChannel,
   removeChannel,
   setActiveChannel,
@@ -362,8 +422,13 @@ export const selectSplitChannel = (state: RootState): ChatChannel | undefined =>
     ? state.chatChannels.byId[state.chatChannels.splitChannelId]
     : undefined;
 
-export const selectArchivedChannels = (state: RootState): ChatChannel[] =>
-  state.chatChannels.archived;
+export const selectArchivedChannels = createSelector(
+  [
+    (state: RootState) => state.chatChannels.byId,
+    (state: RootState) => state.chatChannels.archivedIds,
+  ],
+  (byId, ids): ChatChannel[] => ids.map((id) => byId[id]),
+);
 
 export const selectArchivedLoaded = (state: RootState): boolean =>
   state.chatChannels.archivedLoaded;

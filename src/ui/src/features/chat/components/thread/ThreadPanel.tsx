@@ -44,6 +44,9 @@ export function ThreadPanel({ overlay = false }: ThreadPanelProps) {
   const rootMessage = useAppSelector((state) =>
     activeThreadId ? (state.chatMessages.byId[activeThreadId] ?? null) : null,
   );
+  const isArchived = useAppSelector((state) =>
+    rootMessage ? !!state.chatChannels.byId[rootMessage.channelId]?.isArchived : false,
+  );
 
   const channelName = useAppSelector((state) => {
     if (!rootMessage) return "";
@@ -277,23 +280,29 @@ export function ThreadPanel({ overlay = false }: ThreadPanelProps) {
           </div>
         </div>
         <ComposeDock testId="chat-thread-compose-dock">
-          <MessageCompose
-            // Remount per thread so one thread's text never leaks into another.
-            key={`${organizationId}:${activeThreadId}`}
-            channelName=""
-            // Channel + org context feed the broadcast/team-mention guards and
-            // attachment uploads.
-            channelId={rootMessage?.channelId}
-            threadRootId={activeThreadId ?? undefined}
-            organizationId={organizationId ?? undefined}
-            placeholder="Reply..."
-            onSend={handleSend}
-            replyTo={replyToMessage}
-            onCancelReply={handleCancelReply}
-            initialDraft={initialDraft}
-            remoteDraft={remoteDraft}
-            onDraftChange={onDraftChange}
-          />
+          {isArchived ? (
+            <p className="px-4 py-3 text-sm text-muted-foreground">
+              This channel is archived. Replies are read-only.
+            </p>
+          ) : (
+            <MessageCompose
+              // Remount per thread so one thread's text never leaks into another.
+              key={`${organizationId}:${activeThreadId}`}
+              channelName=""
+              // Channel + org context feed the broadcast/team-mention guards and
+              // attachment uploads.
+              channelId={rootMessage?.channelId}
+              threadRootId={activeThreadId ?? undefined}
+              organizationId={organizationId ?? undefined}
+              placeholder="Reply..."
+              onSend={handleSend}
+              replyTo={replyToMessage}
+              onCancelReply={handleCancelReply}
+              initialDraft={initialDraft}
+              remoteDraft={remoteDraft}
+              onDraftChange={onDraftChange}
+            />
+          )}
         </ComposeDock>
       </div>
     </div>
