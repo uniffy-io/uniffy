@@ -21,12 +21,14 @@ import { Image } from "expo-image";
 import {
   At,
   Check,
+  CheckSquare,
   Code,
   Faders,
   PaperPlaneRight,
   Paperclip,
   Plus,
   Smiley,
+  Square,
   TextB,
   X,
 } from "phosphor-react-native";
@@ -48,6 +50,13 @@ export type ComposerModel = {
   onPress: () => void;
   /** Keeps the composer open while the picker covers it. */
   pickerOpen?: boolean;
+};
+
+/** A per-send choice offered beside the send button, off again after each send. */
+export type ComposerSendOption = {
+  label: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
 };
 
 // Vertical space the action row claims when the composer is open: the round
@@ -103,6 +112,7 @@ export function ChatComposer({
   onSend,
   tools,
   model,
+  sendOption,
   attachments = [],
   onRemoveAttachment,
 }: {
@@ -117,6 +127,7 @@ export function ChatComposer({
   onSend: () => void;
   tools: ComposerTools;
   model?: ComposerModel;
+  sendOption?: ComposerSendOption;
   attachments?: PendingAttachment[];
   onRemoveAttachment?: (localId: string) => void;
 }) {
@@ -130,7 +141,15 @@ export function ChatComposer({
   // most: reaching the emoji picker, the @ overlay or the attach sheet blurs the
   // input, and the composer must not fold away underneath the sheet the user
   // just asked for.
-  const expanded = focused || toolsOpen || editing || draft.length > 0 || attachments.length > 0;
+  const expanded =
+    focused ||
+    toolsOpen ||
+    editing ||
+    draft.length > 0 ||
+    attachments.length > 0 ||
+    // A choice already made has to stay visible and revocable; folding the row
+    // away would send it silently on the next tap.
+    !!sendOption?.checked;
 
   // Tapping the message list or the Android back key hides the keyboard without
   // always blurring the input, which would leave the composer open with a live
@@ -291,6 +310,37 @@ export function ChatComposer({
           </View>
         ) : null}
         <View style={styles.spacer} />
+        {sendOption ? (
+          <TouchableOpacity
+            style={[
+              styles.sendOptionChip,
+              {
+                backgroundColor: sendOption.checked ? T.accentSoft : T.bg,
+                borderColor: sendOption.checked ? T.accent : T.border,
+              },
+            ]}
+            onPress={() => sendOption.onChange(!sendOption.checked)}
+            activeOpacity={0.7}
+            accessibilityRole="switch"
+            accessibilityState={{ checked: sendOption.checked }}
+            accessibilityLabel={sendOption.label}
+          >
+            {sendOption.checked ? (
+              <CheckSquare size={14} color={T.accent} weight="fill" />
+            ) : (
+              <Square size={14} color={T.textDim} weight="bold" />
+            )}
+            <Text
+              style={[
+                styles.sendOptionChipText,
+                { color: sendOption.checked ? T.accent : T.textDim },
+              ]}
+              numberOfLines={1}
+            >
+              {sendOption.label}
+            </Text>
+          </TouchableOpacity>
+        ) : null}
         {model ? (
           <TouchableOpacity
             style={[styles.modelChip, { backgroundColor: T.bg, borderColor: T.border }]}
@@ -378,6 +428,19 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
   },
   modelChipText: { fontSize: 11, fontFamily: FONT.semibold, flexShrink: 1 },
+  // Shares the model chip's metrics so the two read as one family of controls,
+  // and shrinks the same way when the tool row leaves little width.
+  sendOptionChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    flexShrink: 1,
+    paddingHorizontal: 10,
+    height: 30,
+    borderRadius: 15,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  sendOptionChipText: { fontSize: 11, fontFamily: FONT.semibold, flexShrink: 1 },
   roundBtn: {
     width: 38,
     height: 38,

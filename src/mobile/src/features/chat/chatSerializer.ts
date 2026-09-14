@@ -39,6 +39,12 @@ export interface SerializedReplyContext {
   contentPreview: string;
 }
 
+/** Present on the channel copy of a thread reply sent with "Also send to #channel". */
+export interface SerializedThreadReplyContext {
+  rootMessageId: string;
+  replyMessageId: string;
+}
+
 export interface SerializedAttachment {
   id: string;
   fileId: string;
@@ -87,6 +93,7 @@ export interface SerializedMessage {
   rootId: string | null;
   replyToId: string | null;
   replyContext: SerializedReplyContext | null;
+  threadReplyContext: SerializedThreadReplyContext | null;
   editedAtSeconds: number | null;
   isDeleted: boolean;
   isPinned: boolean;
@@ -245,6 +252,12 @@ export function messageToPlain(proto: ProtoChatMessage): SerializedMessage {
           id: proto.replyContext.id,
           senderName: proto.replyContext.senderName,
           contentPreview: proto.replyContext.contentPreview,
+        }
+      : null,
+    threadReplyContext: proto.threadReplyContext
+      ? {
+          rootMessageId: proto.threadReplyContext.rootMessageId,
+          replyMessageId: proto.threadReplyContext.replyMessageId,
         }
       : null,
     editedAtSeconds: proto.editedAt ? tsToSeconds(proto.editedAt) : null,

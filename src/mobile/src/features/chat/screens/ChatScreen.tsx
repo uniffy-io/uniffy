@@ -54,6 +54,7 @@ import { SwipeToReply } from "@features/chat/components/SwipeToReply";
 import { MarkdownRenderer } from "@shared/components/MarkdownRenderer";
 import { SystemMessage } from "@features/chat/components/SystemMessage";
 import { MessageAttachments } from "@features/chat/components/MessageAttachments";
+import { ThreadReplyCaption } from "@features/chat/components/ThreadReplyCaption";
 import { AgentMessageBody, isSpecialAgentKind } from "@features/agents/components/AgentMessageBody";
 import { ThinkingPane } from "@features/agents/components/ThinkingPane";
 import { AgentApprovalCard } from "@features/agents/components/AgentApprovalCard";
@@ -155,6 +156,8 @@ const QUICK_EMOJIS = ["👍", "❤️", "😂", "🎉", "👀", "🙏"];
 // The send path snapshots the quoted message as content[:150], so an expanded
 // quote can only ever show that much of a longer original.
 const REPLY_PREVIEW_MAX_CHARS = 150;
+// One line's worth at the caption's size; the row truncates anything longer.
+const THREAD_ROOT_PREVIEW_MAX_CHARS = 90;
 const REPLY_BODY_GAP = 5;
 // Offset 0 is the newest message in the inverted list. Within this much of it
 // the reader counts as "at the bottom" and new rows are followed automatically,
@@ -433,6 +436,22 @@ export function ChatConversationScreen() {
     (toolCallId: string) => toolResultsById.get(toolCallId),
     [toolResultsById],
   );
+
+  // Roots quoted by the caption on a thread reply's channel copy. Built only
+  // when such a copy is on screen, so an ordinary channel pays nothing, and
+  // holding only the quoted roots keeps it small in one that has many.
+  const threadRootContentById = useMemo(() => {
+    const wanted = new Set<string>();
+    for (const m of messages) {
+      if (m.threadReplyContext) wanted.add(m.threadReplyContext.rootMessageId);
+    }
+    if (wanted.size === 0) return null;
+    const map = new Map<string, string>();
+    for (const m of messages) {
+      if (wanted.has(m.id)) map.set(m.id, m.content);
+    }
+    return map;
+  }, [messages]);
 
   // A run of consecutive tool calls from one agent is one activity pane rather
   // than one row per call. The transcript is newest-first, so a run is walked
@@ -985,6 +1004,12 @@ export function ChatConversationScreen() {
               }
               onPressFailed={promptFailedSend}
               onPressThread={openThreadFor}
+              onPressThreadRoot={openThread}
+              threadRootContent={
+                message.threadReplyContext
+                  ? threadRootContentById?.get(message.threadReplyContext.rootMessageId)
+                  : undefined
+              }
               onPressReplyContext={jumpToReplyContext}
               onToggleReaction={handleReact}
               onShowReactors={setReactorsTarget}
@@ -1012,6 +1037,8 @@ export function ChatConversationScreen() {
       elevatedHistoryViewer,
       chatPolicy?.editHistoryVisibleTo,
       openThreadFor,
+      openThread,
+      threadRootContentById,
       presenceByUser,
       hideReplyContext,
       startReply,
@@ -1650,6 +1677,8 @@ const MessageRow = React.memo(function MessageRow({
   onPressEdited,
   onPressFailed,
   onPressThread,
+  onPressThreadRoot,
+  threadRootContent,
   onPressReplyContext,
   onToggleReaction,
   onShowReactors,
@@ -1676,6 +1705,9 @@ const MessageRow = React.memo(function MessageRow({
   onPressEdited?: (message: SerializedMessage) => void;
   onPressFailed: (message: SerializedMessage) => void;
   onPressThread: (message: SerializedMessage) => void;
+  onPressThreadRoot: (rootMessageId: string) => void;
+  /** Content of the thread root this message's caption quotes, when it is loaded. */
+  threadRootContent?: string;
   onPressReplyContext: (message: SerializedMessage) => void;
   onToggleReaction: (message: SerializedMessage, emoji: string) => void;
   onShowReactors: (reaction: SerializedReaction) => void;
@@ -1693,6 +1725,13 @@ const MessageRow = React.memo(function MessageRow({
     return preview.length >= REPLY_PREVIEW_MAX_CHARS ? `${display}...` : display;
   }, [message.replyContext?.contentPreview]);
   const [replyExpanded, setReplyExpanded] = useState(false);
+  const threadRootPreview = useMemo(() => {
+    if (!threadRootContent) return undefined;
+    return parseMentions(threadRootContent)
+      .display.replace(/\s+/g, " ")
+      .trim()
+      .slice(0, THREAD_ROOT_PREVIEW_MAX_CHARS);
+  }, [threadRootContent]);
   const isAgent = message.senderType === "AGENT";
 
   const toggleReplyExpanded = useCallback(() => setReplyExpanded((open) => !open), []);
@@ -1727,6 +1766,7 @@ const MessageRow = React.memo(function MessageRow({
     !isAgent &&
     message.attachments.length === 0 &&
     !(!hideReplyContext && message.replyContext) &&
+    !message.threadReplyContext &&
     !message.editedAtSeconds &&
     !failed;
   const noteTextWidth = useCallback((width: number) => {
@@ -1901,6 +1941,14 @@ const MessageRow = React.memo(function MessageRow({
               attachments={message.attachments}
               organizationId={organizationId}
               T={T}
+            />
+          ) : null}
+          {message.threadReplyContext ? (
+            <ThreadReplyCaption
+              context={message.threadReplyContext}
+              rootPreview={threadRootPreview}
+              T={T}
+              onPress={onPressThreadRoot}
             />
           ) : null}
           {message.editedAtSeconds ? (

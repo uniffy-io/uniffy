@@ -85,6 +85,9 @@ export function ChatThreadScreen() {
 
   const [draft, setDraft] = useState("");
   const [emojiOpen, setEmojiOpen] = useState(false);
+  // Deliberately not persisted with the draft: broadcasting to the channel is a
+  // decision about one reply, not a standing preference.
+  const [alsoSendToChannel, setAlsoSendToChannel] = useState(false);
   const mentionsRef = useRef<MentionEntry[]>([]);
   const selectionRef = useRef({ start: 0, end: 0 });
   const inputRef = useRef<TextInput>(null);
@@ -106,6 +109,14 @@ export function ChatThreadScreen() {
     [canBroadcast],
   );
   const mentionTypeahead = useMentionTypeahead(draft, cursor, broadcastSuggestions);
+  // A DM carries no channel name worth prefixing with a hash, so it is named
+  // the way every other surface names it.
+  const alsoSendLabel = useMemo(() => {
+    const c = channelQuery.data;
+    if (!c) return "Also send to channel";
+    const isDm = c.channelType === "DIRECT" || c.channelType === "GROUP_DM";
+    return `Also send to ${isDm ? c.displayName || "the chat" : `#${c.name}`}`;
+  }, [channelQuery.data]);
   const attachments = useComposerAttachments();
   const screenFocused = useScreenFocusRef();
 
@@ -185,9 +196,10 @@ export function ChatThreadScreen() {
       setDraft("");
       mentionsRef.current = [];
       attachments.clear();
-      sendReply.mutate({ content, attachmentFileIds });
+      sendReply.mutate({ content, attachmentFileIds, alsoSendToChannel });
+      setAlsoSendToChannel(false);
     },
-    [attachments, sendReply, flushOnSend],
+    [attachments, sendReply, flushOnSend, alsoSendToChannel],
   );
 
   const handleSend = useCallback(() => {
@@ -363,6 +375,11 @@ export function ChatThreadScreen() {
             onMention: () => openAt(true),
             onAttach: attachments.handleAttach,
             onWrap: wrapSelection,
+          }}
+          sendOption={{
+            label: alsoSendLabel,
+            checked: alsoSendToChannel,
+            onChange: setAlsoSendToChannel,
           }}
           attachments={attachments.pending}
           onRemoveAttachment={attachments.remove}

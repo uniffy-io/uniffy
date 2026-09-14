@@ -82,6 +82,7 @@ export function useSendMessage(channelId: string) {
         rootId: null,
         replyToId: args.replyToId ?? null,
         replyContext: null,
+        threadReplyContext: null,
         editedAtSeconds: null,
         isDeleted: false,
         isPinned: false,
@@ -220,13 +221,18 @@ export function useSendThreadReply(channelId: string, rootMessageId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (args: { content: string; attachmentFileIds?: string[] }) =>
+    mutationFn: (args: {
+      content: string;
+      attachmentFileIds?: string[];
+      alsoSendToChannel?: boolean;
+    }) =>
       chatApi.sendMessage({
         organizationId: organizationId!,
         channelId,
         content: args.content,
         rootId: rootMessageId,
         attachmentFileIds: args.attachmentFileIds,
+        alsoSendToChannel: args.alsoSendToChannel,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({

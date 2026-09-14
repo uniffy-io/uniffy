@@ -2441,6 +2441,26 @@ Needs a channel with more than one page of history and a second browser signed i
 - [ ] Mobile: entering a channel with unreads lands on the divider rather than the newest message,
       and the action sheet's "Mark as unread" leaves the badge set for the rest of the visit.
 
+## Chat: also send a thread reply to the channel
+
+A reply sent with the toggle on writes two rows: the reply in the thread, and a separate root message
+in the channel that links back. Needs a channel with at least one thread and a second member.
+
+- [ ] The "Also send to #channel" toggle appears in the thread composer only; the channel composer
+      never offers it.
+- [ ] Send a reply with the toggle on: it lands in the thread, and a copy appears in the channel
+      carrying a "Replied to a thread" caption with a preview of the root message.
+- [ ] Tap or click that caption: the thread opens on the right root.
+- [ ] The thread's reply count goes up by one, not two, and the root's "N replies" line agrees.
+- [ ] The toggle resets to off after sending; the next reply stays in the thread unless you set it
+      again.
+- [ ] The second member sees the channel copy arrive live, already captioned, with no reload.
+- [ ] Search for the text of a broadcast reply: exactly one result comes back, and opening it lands
+      on the channel copy rather than the thread reply.
+- [ ] Send a broadcast reply that @-mentions an agent: the agent answers once, not twice.
+- [ ] Mobile: the same toggle sits beside the send button in the thread composer, and the channel
+      copy renders the caption and opens the thread on tap.
+
 ## Pre-release sweep
 
 - [ ] All linters green: `./manage.py lint`.
