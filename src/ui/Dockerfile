@@ -50,7 +50,7 @@ LABEL org.opencontainers.image.title="Uniffy frontend" \
 
 # The pinned base predates Alpine's latest security updates; apply them at
 # build time, then drop back to the base image's nginx user.
-USER root
+USER 0
 RUN apk upgrade --no-cache
 USER 101
 
