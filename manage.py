@@ -1203,6 +1203,17 @@ def _previous_release(tag: str, ref: str) -> str | None:
     return max(stable, key=_release_version, default=None)
 
 
+def _release_tags(tag: str) -> list[str]:
+    """Image tags the release carries, mirroring the merge job: a stable release gets
+    MAJOR.MINOR.PATCH, MAJOR.MINOR, MAJOR from 1.0 on, and latest; a candidate its
+    version only."""
+    major, minor, _, stable, _ = _release_version(tag)
+    version = tag[1:]
+    if not stable:
+        return [version]
+    return [version, f"{major}.{minor}", *([str(major)] if major else []), "latest"]
+
+
 def _release_commits(range_spec: str) -> list[tuple[str, str, list[str]]]:
     """(sha, subject, paths) for every non-merge commit in the range, newest first."""
     out = git_out(
@@ -1254,7 +1265,7 @@ def _release_notes(tag: str, ref: str, pins: list[str]) -> str:
             shown.append(f"- and {len(entries) - len(shown)} more in the [full history]({history})")
         lines += ["", f"### {area}", "", *(shown or ["No changes."])]
 
-    by_tag = [f"{repo}:{tag[1:]}" for _, repo in IMAGES.values()]
+    by_tag = [f"{repo}:{t}" for _, repo in IMAGES.values() for t in _release_tags(tag)]
     refs = pins or [f"{repo}@sha256:<digest from images.txt>" for _, repo in IMAGES.values()]
     identity = f"{REPO_URL}/.github/workflows/release.yml@refs/tags/{tag}"
     flags = '--certificate-oidc-issuer "$COSIGN_ISSUER" --certificate-identity "$COSIGN_IDENTITY"'
