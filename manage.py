@@ -11,6 +11,7 @@ import shlex
 import subprocess
 import sys
 import tomllib
+from datetime import UTC, datetime
 from pathlib import Path
 
 import click
@@ -26,6 +27,32 @@ NODE_SERVICES = {
     "landing": ("landing", "uniffy-landing", "dev"),
     "mobile": ("mobile", "uniffy-mobile", "mobile"),
 }
+
+# Production images: (dockerfile, registry repository). Both build from the
+# repo root through the whitelist in .dockerignore.
+IMAGES = {
+    "backend": ("src/uniffy/Dockerfile", "ghcr.io/uniffy-io/uniffy"),
+    "frontend": ("src/ui/Dockerfile", "ghcr.io/uniffy-io/uniffy-frontend"),
+}
+
+# Image tooling runs from digest-pinned images, never from a host install.
+IMAGE_TOOLS = {
+    "hadolint": (
+        "hadolint/hadolint:v2.15.1"
+        "@sha256:32dac94127fd60b7b7e3fbfc65e1383b9b5e25c9bfd7b8536de7a539fe68a12d"
+    ),
+    # v1.16.0; the registry publishes no version tags, so the digest is the pin.
+    "structure-test": (
+        "gcr.io/gcp-runtimes/container-structure-test:latest"
+        "@sha256:377f9a9bc00376b9fa6dc6a3a020dbe40e84ebe9481b71969aa3ff9d1c9ea17e"
+    ),
+    "trivy": (
+        "aquasec/trivy:0.74.0"
+        "@sha256:62b1e65e8869bc4b4c6aa4fa2b21595256c7c2f6018a9d9ad61caf87187c1969"
+    ),
+}
+
+DOCKER_SOCKET = "/var/run/docker.sock"
 
 PASSTHROUGH = {"ignore_unknown_options": True}
 
@@ -45,10 +72,22 @@ EXEC_AS_HOST = (
 )
 
 
-def sh(cmd: list[str], cwd: Path | None = None, check: bool = True, env: dict | None = None) -> int:
+def sh(
+    cmd: list[str],
+    cwd: Path | None = None,
+    check: bool = True,
+    env: dict | None = None,
+    stdin=None,
+) -> int:
     click.secho(f"$ {shlex.join(cmd)}", fg="cyan", err=True)
     full_env = {**os.environ, **HOST_IDS, **(env or {})}
-    return subprocess.run(cmd, cwd=cwd or ROOT, check=check, env=full_env).returncode
+    return subprocess.run(cmd, cwd=cwd or ROOT, check=check, env=full_env, stdin=stdin).returncode
+
+
+def git_out(*args: str) -> str:
+    return subprocess.run(
+        ["git", *args], cwd=ROOT, capture_output=True, text=True, check=True
+    ).stdout.strip()
 
 
 def sh_ok(cmd: list[str]) -> bool:
@@ -973,6 +1012,153 @@ def landing_deploy(ctx, stack):
     else:
         sh(["pnpm", "exec", "wrangler", *deploy_args], cwd=ROOT / "src/landing")
     click.echo("Deploy complete. Geo-block active: only cf-ipcountry=BG is served.")
+
+
+@cli.group()
+def image():
+    """Production images: build, lint, test, scan. Host docker daemon only, no --stack."""
+
+
+image_option = click.option(
+    "--service", "-s", type=click.Choice([*IMAGES, "all"]), default="all", show_default=True
+)
+tag_option = click.option("--tag", default="dev", show_default=True, help="Image tag.")
+
+
+def _image_targets(service: str) -> list[tuple[str, str, str]]:
+    names = list(IMAGES) if service == "all" else [service]
+    return [(name, *IMAGES[name]) for name in names]
+
+
+@image.command("build")
+@image_option
+@tag_option
+@click.option("--platform", help="Target platform(s), e.g. linux/amd64,linux/arm64.")
+@click.option("--push", is_flag=True, help="Push to the registry instead of loading locally.")
+def image_build(service, tag, platform, push):
+    """Build with the names, build args, and labels the release pipeline uses."""
+    if platform and "," in platform and not push:
+        raise click.BadParameter("a multi-platform build cannot be loaded locally; add --push")
+    version = git_out("describe", "--tags", "--always", "--dirty")
+    revision = git_out("rev-parse", "HEAD")
+    created = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+    for _, dockerfile, repo in _image_targets(service):
+        cmd = [
+            "docker",
+            "buildx",
+            "build",
+            "--file",
+            dockerfile,
+            "--tag",
+            f"{repo}:{tag}",
+            "--build-arg",
+            f"VERSION={version}",
+            "--build-arg",
+            f"REVISION={revision}",
+            "--label",
+            f"org.opencontainers.image.created={created}",
+        ]
+        if platform:
+            cmd += ["--platform", platform]
+        cmd += ["--push" if push else "--load", "."]
+        sh(cmd)
+
+
+@image.command("lint")
+@image_option
+def image_lint(service):
+    """hadolint over the production Dockerfiles."""
+    config = ROOT / ".docker/prod/hadolint.yaml"
+    for _, dockerfile, _ in _image_targets(service):
+        with open(ROOT / dockerfile, "rb") as handle:
+            sh(
+                [
+                    "docker",
+                    "run",
+                    "--rm",
+                    "-i",
+                    "-v",
+                    f"{config}:/.config/hadolint.yaml:ro",
+                    IMAGE_TOOLS["hadolint"],
+                ],
+                stdin=handle,
+            )
+
+
+@image.command("test")
+@image_option
+@tag_option
+def image_test(service, tag):
+    """container-structure-test specs from .docker/prod/tests against local images."""
+    tests = ROOT / ".docker/prod/tests"
+    for name, _, repo in _image_targets(service):
+        sh([
+            "docker",
+            "run",
+            "--rm",
+            "-v",
+            f"{DOCKER_SOCKET}:{DOCKER_SOCKET}",
+            "-v",
+            f"{tests}:/tests:ro",
+            IMAGE_TOOLS["structure-test"],
+            "test",
+            "--image",
+            f"{repo}:{tag}",
+            "--config",
+            f"/tests/{name}.yaml",
+        ])
+
+
+def _trivy(args: list[str], mounts: list[str] = ()) -> None:
+    cmd = ["docker", "run", "--rm", "-v", f"{DOCKER_SOCKET}:{DOCKER_SOCKET}"]
+    cmd += ["-v", "uniffy-trivy-cache:/root/.cache/"]
+    for mount in mounts:
+        cmd += ["-v", mount]
+    sh([*cmd, IMAGE_TOOLS["trivy"], "image", *args])
+
+
+@image.command("scan")
+@image_option
+@tag_option
+@click.option("--severity", default="CRITICAL,HIGH", show_default=True)
+def image_scan(service, tag, severity):
+    """Trivy scan of local images; fails on fixable findings at or above --severity."""
+    ignorefile = ROOT / ".docker/prod/trivyignore"
+    for _, _, repo in _image_targets(service):
+        _trivy(
+            [
+                "--scanners",
+                "vuln",
+                "--exit-code",
+                "1",
+                "--severity",
+                severity,
+                "--ignore-unfixed",
+                "--ignorefile",
+                "/trivyignore",
+                f"{repo}:{tag}",
+            ],
+            mounts=[f"{ignorefile}:/trivyignore:ro"],
+        )
+
+
+@image.command("sbom")
+@image_option
+@tag_option
+@click.option(
+    "--out-dir",
+    type=click.Path(file_okay=False, path_type=Path),
+    default=ROOT / "reports",
+    show_default=True,
+)
+def image_sbom(service, tag, out_dir):
+    """Write an SPDX JSON SBOM per image into --out-dir as sbom-<image>.spdx.json."""
+    out_dir.mkdir(parents=True, exist_ok=True)
+    for name, _, repo in _image_targets(service):
+        _trivy(
+            ["--format", "spdx-json", "--output", f"/out/sbom-{name}.spdx.json", f"{repo}:{tag}"],
+            mounts=[f"{out_dir.resolve()}:/out"],
+        )
 
 
 if __name__ == "__main__":

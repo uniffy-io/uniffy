@@ -1,0 +1,81 @@
+# container-structure-test spec for ghcr.io/uniffy-io/uniffy.
+schemaVersion: "2.0.0"
+
+metadataTest:
+  user: "10001:10001"
+  workdir: /app
+  exposedPorts: ["8000", "9091", "9092"]
+  cmd: ["python", "-m", "uniffy", "--backend"]
+  envVars:
+    - key: PYTHONPATH
+      value: /app/src
+    - key: PYTHONDONTWRITEBYTECODE
+      value: "1"
+    - key: HOME
+      value: /tmp
+  labels:
+    - key: org.opencontainers.image.licenses
+      value: FSL-1.1-Apache-2.0
+    - key: org.opencontainers.image.source
+      value: https://github.com/uniffy-io/uniffy
+
+fileExistenceTests:
+  - name: venv interpreter
+    path: /app/.venv/bin/python
+    shouldExist: true
+  - name: alembic config next to the package
+    path: /app/src/uniffy/alembic.ini
+    shouldExist: true
+  - name: precompiled bytecode
+    path: /app/src/uniffy/__pycache__
+    shouldExist: true
+  - name: starter docs
+    path: /app/docs/documentation/SHARING.md
+    shouldExist: true
+  - name: ffmpeg
+    path: /usr/local/bin/ffmpeg
+    shouldExist: true
+    isExecutableBy: other
+  - name: no compiler
+    path: /usr/bin/gcc
+    shouldExist: false
+  - name: no pip
+    path: /usr/local/bin/pip
+    shouldExist: false
+  - name: no ensurepip
+    path: /usr/local/lib/python3.14/ensurepip
+    shouldExist: false
+  - name: no uv
+    path: /usr/local/bin/uv
+    shouldExist: false
+  - name: no tests
+    path: /app/src/uniffy/tests
+    shouldExist: false
+  - name: no env file
+    path: /app/.env
+    shouldExist: false
+
+commandTests:
+  - name: runs as the unprivileged user
+    command: id
+    args: ["-u"]
+    expectedOutput: ["^10001\n$"]
+  - name: entrypoint help
+    command: python
+    args: ["-m", "uniffy", "--help"]
+    exitCode: 0
+  - name: native dependencies import
+    command: python
+    args:
+      - "-c"
+      - "import av, fitz, PIL, libvalkey, asyncpg, granian, pycrdt, orjson, psycopg2, cryptography, argon2"
+    exitCode: 0
+  - name: app factory imports
+    command: python
+    args: ["-c", "import uniffy.factory"]
+    exitCode: 0
+  - name: ffmpeg has the H.264 and AAC encoders transcode needs
+    command: ffmpeg
+    args: ["-hide_banner", "-encoders"]
+    expectedOutput: ["libx264", " aac "]
+    exitCode: 0

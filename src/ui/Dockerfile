@@ -1,89 +1,63 @@
-FROM node:24.0-slim AS builder
+# Production image for the browser app: static assets behind nginx on 8080,
+# running as the unprivileged nginx user with pid and temp files under /tmp.
+# The API is reached at /api on the same origin, so the build takes no API
+# URL; the edge in front routes /api, /livekit, and /healthz elsewhere.
 
-# Build arguments for Vite environment variables
-ARG VITE_API_URL=https://localhost
-ARG VITE_ENV=production
+ARG NODE_IMAGE=node:24.21.0-slim@sha256:2fe369e969550cde8e867afc3fe370b260140cab4a23d467074295b42163d553
+ARG NGINX_IMAGE=nginxinc/nginx-unprivileged:1.29.8-alpine-slim@sha256:59678856b05324b7f6371f26eb1520be7fcd8bdc8ab380fc4913db8503e5a842
+
+# The bundle is platform independent: a multi-arch build compiles it once on
+# the build host and only the nginx stage is produced per target platform.
+FROM --platform=$BUILDPLATFORM ${NODE_IMAGE} AS builder
 
 RUN npm install -g pnpm@11.20.0
 
+ENV CI=true \
+    npm_config_store_dir=/pnpm-store
+
 WORKDIR /app
 
-# Copy workspace config
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
-
-# Copy package.json files for all workspace members needed by the UI build
 COPY src/gen/typescript/package.json src/gen/typescript/package.json
 COPY src/ui/package.json src/ui/package.json
+RUN --mount=type=cache,target=/pnpm-store \
+    pnpm install --frozen-lockfile --filter uniffy-ui...
 
-# Install deps (pnpm workspace)
-RUN pnpm install --frozen-lockfile
+COPY src/gen/typescript src/gen/typescript
+# The nginx config belongs to the runtime stage; keeping it out of this
+# layer means a config-only change does not rebuild the bundle.
+COPY --exclude=nginx src/ui src/ui
 
-# Copy gen package (needed at build time for imports)
-COPY src/gen/typescript/ src/gen/typescript/
+# Precompressed siblings let nginx serve gzip bodies without per-request CPU.
+RUN pnpm --filter uniffy-ui build \
+    && find src/ui/dist -type f \
+        \( -name '*.js' -o -name '*.css' -o -name '*.svg' -o -name '*.json' \
+           -o -name '*.wasm' -o -name '*.html' -o -name '*.webmanifest' \) \
+        -exec gzip -9 -k {} +
 
-# Copy UI source
-COPY src/ui/ src/ui/
 
-# Set env vars for Vite build
-ENV VITE_API_URL=$VITE_API_URL
-ENV VITE_ENV=$VITE_ENV
+FROM ${NGINX_IMAGE} AS runtime
 
-RUN pnpm --filter uniffy-ui build
+ARG VERSION=0.0.0-dev
+ARG REVISION=unknown
 
-# Production stage - serve with nginx
-FROM nginx:alpine
+LABEL org.opencontainers.image.title="Uniffy frontend" \
+      org.opencontainers.image.description="Uniffy browser app served by nginx" \
+      org.opencontainers.image.source="https://github.com/uniffy-io/uniffy" \
+      org.opencontainers.image.licenses="FSL-1.1-Apache-2.0" \
+      org.opencontainers.image.version="${VERSION}" \
+      org.opencontainers.image.revision="${REVISION}"
 
-# Copy built assets
+# The pinned base predates Alpine's latest security updates; apply them at
+# build time, then drop back to the base image's nginx user.
+USER root
+RUN apk upgrade --no-cache
+USER 101
+
+COPY src/ui/nginx/headers.conf /etc/nginx/uniffy-headers.conf
+COPY src/ui/nginx/default.conf /etc/nginx/conf.d/default.conf
 COPY --from=builder /app/src/ui/dist /usr/share/nginx/html
 
-# Copy nginx configuration for SPA routing
-RUN echo 'map $http_user_agent $loggable { \
-    ~^kube-probe 0; \
-    default 1; \
-} \
-\
-types { \
-    application/javascript mjs; \
-} \
-\
-server { \
-    listen 80; \
-    server_name localhost; \
-    root /usr/share/nginx/html; \
-    index index.html; \
-    \
-    # Disable logging for health checks \
-    access_log /var/log/nginx/access.log combined if=$loggable; \
-    \
-    # Gzip compression \
-    gzip on; \
-    gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript; \
-    \
-    # Cache static assets in /assets/ \
-    location /assets/ { \
-        expires 1y; \
-        add_header Cache-Control "public, immutable"; \
-    } \
-    \
-    # Service worker: always revalidate so a new version is picked up on the next update check \
-    location = /notification-worker.js { \
-        try_files $uri =404; \
-        add_header Cache-Control "no-cache"; \
-    } \
-    \
-    # Serve static files at root (favicons, manifest, etc.) - must be before SPA fallback \
-    location ~* ^/[^/]+\\.(js|css|map|ico|png|svg|jpg|jpeg|gif|woff|woff2|ttf|eot)$ { \
-        try_files $uri =404; \
-        expires 1d; \
-        add_header Cache-Control "public"; \
-    } \
-    \
-    # SPA fallback - serve index.html for all routes \
-    location / { \
-        try_files $uri $uri/ /index.html; \
-    } \
-}' > /etc/nginx/conf.d/default.conf
+RUN nginx -t
 
-EXPOSE 80
-
-CMD ["nginx", "-g", "daemon off;"]
+EXPOSE 8080

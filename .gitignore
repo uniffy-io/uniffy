@@ -249,3 +249,6 @@ AGENTS.override.md
 
 # Local Playwright verification screenshots
 screenshots/
+
+# Test, benchmark, and SBOM reports written by CI and manage.py
+/reports/
