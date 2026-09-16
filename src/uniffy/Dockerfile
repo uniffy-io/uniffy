@@ -1,10 +1,13 @@
-# Production image for the backend, both worker fleets, and the break-glass
-# CLI. The command selects the process: --backend (default), --worker-core,
+# Backend image for the API, both worker fleets, and the break-glass CLI.
+# The command selects the process: --backend (default), --worker-core,
 # --worker-egress, --mfa-reset.
 #
-# The runtime stage carries no compiler, no pip, and no package manager use,
-# runs as uid 10001, and needs /tmp as its only writable path (Prometheus
-# multiprocess files and transcode scratch space).
+# Two targets share one toolchain stage, so dev and production run the same
+# interpreter, uv, and ffmpeg: `runtime` (last, the default) is the
+# production image; `dev` is what the compose stack builds. The runtime stage
+# carries no compiler, no pip, and no package manager use, runs as uid 10001,
+# and needs /tmp as its only writable path (Prometheus multiprocess files and
+# transcode scratch space).
 
 ARG PYTHON_IMAGE=python:3.14.7-slim-trixie@sha256:cad9a2c871761c413caa6fdd6441c783451e740a48aaeba60ae62a8b53525ef6
 ARG UV_IMAGE=ghcr.io/astral-sh/uv:0.11.12@sha256:3a59a3cdd5f7c217faa36e32dbc7fddbb0412889c2a0a5229f6d790e5a019dd7
@@ -14,10 +17,11 @@ FROM ${UV_IMAGE} AS uv
 FROM ${FFMPEG_IMAGE} AS ffmpeg
 
 
-FROM ${PYTHON_IMAGE} AS builder
+FROM ${PYTHON_IMAGE} AS toolchain
 
 # libvalkey ships no Python 3.14 wheel and compiles from source; every other
-# native dependency arrives as a manylinux wheel. The toolchain stays here.
+# native dependency arrives as a manylinux wheel. The compiler lives here and
+# never reaches the runtime stage.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends build-essential \
     && rm -rf /var/lib/apt/lists/*
@@ -30,6 +34,9 @@ ENV UV_COMPILE_BYTECODE=1 \
 
 WORKDIR /app
 
+
+FROM toolchain AS builder
+
 # Dependency layer: the workspace manifests plus the generated proto package,
 # a workspace member that installs next to the third-party packages.
 COPY pyproject.toml uv.lock README.md .python-version ./
@@ -41,6 +48,24 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 # migrations, and shipped data resolve relative to the package directory.
 COPY src/uniffy src/uniffy
 RUN python -m compileall -q -j 0 src/uniffy
+
+
+# Compose stack target. The checkout is bind-mounted at /app and the venv is
+# a volume the entrypoint syncs from the lockfile, so no source is baked in.
+# The compiler stays because that sync compiles libvalkey too. Starts as root
+# so the entrypoint can own the volumes, then drops to the host uid.
+FROM toolchain AS dev
+
+COPY --from=ffmpeg /ffmpeg /usr/local/bin/ffmpeg
+
+ENV PATH="/app/.venv/bin:$PATH" \
+    PYTHONPATH="/app/src" \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1
+
+COPY --chmod=755 .docker/dev/backend-entrypoint.sh /entrypoint.sh
+
+ENTRYPOINT ["/entrypoint.sh"]
 
 
 FROM ${PYTHON_IMAGE} AS runtime

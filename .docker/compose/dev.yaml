@@ -47,9 +47,12 @@ x-backend-base: &backend-base
     <<: *contained
     build:
         context: ../..
-        dockerfile: src/uniffy/dev.Dockerfile
+        dockerfile: src/uniffy/Dockerfile
+        target: dev
     image: uniffy-dev-backend
     pull_policy: never
+    # docker-init as PID 1 reaps and forwards signals to watchfiles and its child.
+    init: true
     restart: unless-stopped
     networks: [uniffy-network]
     env_file:
