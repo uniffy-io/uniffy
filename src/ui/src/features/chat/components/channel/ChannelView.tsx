@@ -6,7 +6,6 @@ import { ChannelHeader } from "@/features/chat/components/channel/ChannelHeader"
 import {
   AgentAuroraBackdrop,
   AgentDmGreeting,
-  AgentDmHero,
 } from "@/features/chat/components/channel/AgentDmHero";
 import { MessageList } from "@/features/chat/components/channel/MessageList";
 import { MessageCompose } from "@/features/chat/components/compose/MessageCompose";
@@ -287,33 +286,40 @@ export function ChannelView({
         bare={heroPhase !== "off"}
       />
       {effectiveChannelId && <CallSection channelId={effectiveChannelId} />}
-      {heroPhase === "off" && (
-        <div className={cn("relative flex min-h-0 flex-1 flex-col", heroExit && "hero-enter")}>
-          <MessageList channelId={effectiveChannelId ?? undefined} />
-          <ComposeDock testId="chat-compose-dock">{compose}</ComposeDock>
-          {heroExit && (
-            <div className="pointer-events-none absolute inset-0 z-20 flex flex-col items-center justify-center gap-7 px-4 py-10">
-              <AgentDmGreeting
-                agentName={resolvedName}
-                avatarKey={dmAgent?.avatarKey}
-                avatarEmoji={dmAgent?.avatarEmoji}
-                exiting
-              />
-              <div className="h-28 w-full max-w-2xl" />
-            </div>
-          )}
-        </div>
-      )}
-      {heroPhase === "hero" && (
-        <AgentDmHero
-          agentName={resolvedName}
-          avatarKey={dmAgent?.avatarKey}
-          avatarEmoji={dmAgent?.avatarEmoji}
-        >
-          {compose}
-        </AgentDmHero>
-      )}
-      {heroPhase === "pending" && <div className="flex-1" />}
+      <div
+        className={cn(
+          "relative flex min-h-0 flex-1 flex-col",
+          heroPhase === "hero" &&
+            "z-10 items-center justify-center gap-7 overflow-y-auto px-4 py-10",
+          heroExit && "hero-enter",
+        )}
+        data-testid={heroPhase === "hero" ? "chat-agent-dm-hero" : undefined}
+      >
+        {heroPhase === "off" && <MessageList channelId={effectiveChannelId ?? undefined} />}
+        {heroPhase === "hero" && (
+          <AgentDmGreeting
+            agentName={resolvedName}
+            avatarKey={dmAgent?.avatarKey}
+            avatarEmoji={dmAgent?.avatarEmoji}
+          />
+        )}
+        {heroPhase !== "pending" && (
+          <ComposeDock testId="chat-compose-dock" centered={heroPhase === "hero"}>
+            {compose}
+          </ComposeDock>
+        )}
+        {heroPhase === "off" && heroExit && (
+          <div className="pointer-events-none absolute inset-0 z-20 flex flex-col items-center justify-center gap-7 px-4 py-10">
+            <AgentDmGreeting
+              agentName={resolvedName}
+              avatarKey={dmAgent?.avatarKey}
+              avatarEmoji={dmAgent?.avatarEmoji}
+              exiting
+            />
+            <div className="h-28 w-full max-w-2xl" />
+          </div>
+        )}
+      </div>
       {hostsThread && <ThreadSlideOver />}
     </div>
   );

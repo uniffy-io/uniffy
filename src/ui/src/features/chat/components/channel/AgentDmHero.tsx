@@ -1,4 +1,4 @@
-import type { CSSProperties, ReactNode } from "react";
+import type { CSSProperties } from "react";
 import { cn } from "@/shared/utils/cn";
 import { AgentAvatar } from "@/features/agents/components/AgentAvatar";
 
@@ -13,12 +13,7 @@ const enter = (delayMs: number): CSSProperties => ({
   animationFillMode: "backwards",
 });
 
-/**
- * Landing-hero aurora as a persistent pane background. Stays mounted across
- * the empty-to-conversation flip so the intensity change reads as one slow
- * dim instead of a scene cut. 'hero' = full spectrum (empty agent DM),
- * 'flat' = hairline only (every conversation with messages, human DMs, channels).
- */
+/** Keeps the backdrop mounted while an empty agent DM becomes a conversation. */
 export function AgentAuroraBackdrop({ intensity }: { intensity: "hero" | "flat" }) {
   return (
     <div
@@ -128,28 +123,6 @@ export function AgentDmGreeting({
       >
         Just the two of you. Pick a model, tune it, ask away.
       </p>
-    </div>
-  );
-}
-
-interface AgentDmHeroProps {
-  agentName: string;
-  avatarKey?: string;
-  avatarEmoji?: string;
-  /** The composer slot, rendered as the centered card. */
-  children: ReactNode;
-}
-
-export function AgentDmHero({ agentName, avatarKey, avatarEmoji, children }: AgentDmHeroProps) {
-  return (
-    <div
-      className="relative z-10 flex flex-1 min-h-0 flex-col items-center justify-center gap-7 overflow-y-auto px-4 py-10"
-      data-testid="chat-agent-dm-hero"
-    >
-      <AgentDmGreeting agentName={agentName} avatarKey={avatarKey} avatarEmoji={avatarEmoji} />
-      <div className="hero-enter w-full max-w-2xl" style={enter(280)}>
-        {children}
-      </div>
     </div>
   );
 }
