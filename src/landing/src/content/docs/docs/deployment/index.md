@@ -16,6 +16,8 @@ Uniffy self hosted runs on Kubernetes. There are two supported paths, and both e
 
 Every release ships a **pinset**: the chart version, the image digests, and the component versions we tested together. Install from the pinset and you are running a combination that passed our release checks. Assemble your own combination and you are your own test lab.
 
+Every image in the pinset is signed, and the pinset file itself is signed. You can refuse anything we did not build, by hand or with an admission policy in your cluster. [Verify a Release](/docs/deployment/verify/) has the commands.
+
 The edge that fronts Uniffy has a strict contract. It must speak HTTP/2 in cleartext to the backend, pass websockets untouched, and carry streams that never time out and never buffer. We ship and test that contract as Envoy Gateway resources, and calls media relays through STUNner. Other Gateway API implementations may meet the contract on paper. We do not test them and we do not support them. If calls are off, STUNner is optional; Envoy Gateway is not.
 
 ## Fully isolated deployments
@@ -27,6 +29,7 @@ Uniffy never calls home, fetches nothing from third party CDNs at runtime, and k
 - [Install on a VM](/docs/deployment/install-k3s/): one command on a fresh Ubuntu machine.
 - [Install on Kubernetes](/docs/deployment/install-kubernetes/): the Helm chart on your cluster.
 - [Upgrades](/docs/deployment/upgrades/): pinsets, forward only migrations, and the honest rollback story.
+- [Verify a Release](/docs/deployment/verify/): check the signatures on the pinset, the images, and the SBOM before you trust them.
 - [Backups and Restore](/docs/deployment/backups/): continuous Postgres backups to S3, point in time recovery, the master key ritual.
 - [Configure Uniffy](/docs/deployment/configure/): every environment variable.
 - [System Architecture](/docs/deployment/system-architecture/): services, data stores, scaling, and ports.

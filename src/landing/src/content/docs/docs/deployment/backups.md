@@ -3,7 +3,7 @@ title: Backups and Restore
 description: Continuous Postgres backups to S3 with point in time recovery, the master key ritual, what not to bother backing up, and the restore procedures for both install paths.
 sidebar:
   label: Backups and Restore
-  order: 4
+  order: 5
 ---
 
 Two things in a Uniffy deployment are irreplaceable: the Postgres database and the `APP_MASTER_KEY`. Everything on this page exists to make losing either impossible, and to make the restore a procedure instead of an improvisation.
