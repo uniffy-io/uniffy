@@ -7,6 +7,7 @@
 
 import json
 import os
+import re
 import shlex
 import subprocess
 import sys
@@ -53,6 +54,19 @@ IMAGE_TOOLS = {
 }
 
 DOCKER_SOCKET = "/var/run/docker.sock"
+
+REPO_URL = "https://github.com/uniffy-io/uniffy"
+VERIFY_DOCS_URL = "https://uniffy.io/docs/deployment/verify/"
+RELEASE_TAG = re.compile(r"^v(\d+)\.(\d+)\.(\d+)(?:-rc\.(\d+))?$")
+
+# Release notes list commits per area by the paths they touch. Anything outside
+# these prefixes is core; a commit spanning areas is listed under each.
+RELEASE_AREAS = {
+    "Landing": ("src/landing/",),
+    "Mobile": ("src/mobile/",),
+}
+# GitHub caps a release body at 125000 characters; the rest is one link away.
+RELEASE_NOTES_MAX_COMMITS = 200
 
 PASSTHROUGH = {"ignore_unknown_options": True}
 
@@ -1159,6 +1173,154 @@ def image_sbom(service, tag, out_dir):
             ["--format", "spdx-json", "--output", f"/out/sbom-{name}.spdx.json", f"{repo}:{tag}"],
             mounts=[f"{out_dir.resolve()}:/out"],
         )
+
+
+@cli.group()
+def release():
+    """Release helpers the release workflow runs; usable locally for a preview."""
+
+
+def _release_version(tag: str) -> tuple[int, int, int, int, int]:
+    """Sort key for a release tag; a stable release orders after its candidates."""
+    match = RELEASE_TAG.match(tag)
+    if match is None:
+        raise click.BadParameter(f"{tag} is not vMAJOR.MINOR.PATCH or vMAJOR.MINOR.PATCH-rc.N")
+    major, minor, patch, rc = match.groups()
+    return (int(major), int(minor), int(patch), 1 if rc is None else 0, int(rc or 0))
+
+
+def _previous_release(tag: str, ref: str) -> str | None:
+    """Closest earlier release reachable from ref; a stable release skips candidates
+    when an earlier stable exists, so its notes span them."""
+    version = _release_version(tag)
+    earlier = [
+        candidate
+        for candidate in git_out("tag", "--merged", ref, "--list", "v*").split()
+        if RELEASE_TAG.match(candidate) and _release_version(candidate) < version
+    ]
+    if version[3] == 1:
+        stable = [candidate for candidate in earlier if _release_version(candidate)[3] == 1]
+        earlier = stable or earlier
+    return max(earlier, key=_release_version, default=None)
+
+
+def _release_commits(range_spec: str) -> list[tuple[str, str, list[str]]]:
+    """(sha, subject, paths) for every non-merge commit in the range, newest first."""
+    out = git_out(
+        "-c",
+        "core.quotePath=false",
+        "log",
+        "--no-merges",
+        "--format=%x00%H %s",
+        "--name-only",
+        range_spec,
+    )
+    commits = []
+    for chunk in out.split("\x00")[1:]:
+        head, _, body = chunk.partition("\n")
+        sha, _, subject = head.partition(" ")
+        commits.append((sha, subject, [line for line in body.splitlines() if line]))
+    return commits
+
+
+def _release_areas(paths: list[str]) -> list[str]:
+    prefixes = tuple(prefix for group in RELEASE_AREAS.values() for prefix in group)
+    areas = ["Core"] if not paths or any(not p.startswith(prefixes) for p in paths) else []
+    areas += [
+        area for area, group in RELEASE_AREAS.items() if any(p.startswith(group) for p in paths)
+    ]
+    return areas
+
+
+def _release_notes(tag: str, ref: str, pins: list[str]) -> str:
+    previous = _previous_release(tag, ref)
+    commits = _release_commits(f"{previous}..{ref}" if previous else ref)
+    grouped: dict[str, list[str]] = {area: [] for area in ("Core", *RELEASE_AREAS)}
+    for sha, subject, paths in commits:
+        for area in _release_areas(paths):
+            grouped[area].append(f"- {subject} ([{sha[:8]}]({REPO_URL}/commit/{sha}))")
+
+    if previous:
+        history = f"{REPO_URL}/compare/{previous}...{tag}"
+        lines = [
+            f"{len(commits)} commits since [{previous}]({REPO_URL}/releases/tag/{previous})"
+            f" ([compare]({history}))."
+        ]
+    else:
+        history = f"{REPO_URL}/commits/{tag}"
+        lines = [f"First release, {len(commits)} commits ([history]({history}))."]
+    for area, entries in grouped.items():
+        shown = entries[:RELEASE_NOTES_MAX_COMMITS]
+        if len(entries) > len(shown):
+            shown.append(f"- and {len(entries) - len(shown)} more in the [full history]({history})")
+        lines += ["", f"## {area}", "", *(shown or ["No changes."])]
+
+    refs = pins or [f"{repo}@sha256:<digest from images.txt>" for _, repo in IMAGES.values()]
+    identity = f"{REPO_URL}/.github/workflows/release.yml@refs/tags/{tag}"
+    flags = '--certificate-oidc-issuer "$COSIGN_ISSUER" --certificate-identity "$COSIGN_IDENTITY"'
+    lines += [
+        "",
+        "## Images",
+        "",
+        "Each line is one multi-arch index for linux/amd64 and linux/arm64."
+        " Pull and pin by digest, not by tag.",
+        "",
+        "```",
+        *refs,
+        "```",
+        "",
+        "## Verify",
+        "",
+        "`images.txt` below is this list, signed. Both digests are signed as well, and each"
+        " carries its SBOM as an attestation. The signing identity is the release workflow"
+        " running for this tag. Check with cosign 3.0 or newer:",
+        "",
+        "```bash",
+        "COSIGN_ISSUER=https://token.actions.githubusercontent.com",
+        f"COSIGN_IDENTITY={identity}",
+        "cosign verify-blob images.txt --bundle images.txt.sigstore.json \\",
+        f"  {flags}",
+        *(line for ref in refs for line in (f"cosign verify {ref} \\", f"  {flags}")),
+        "```",
+        "",
+        "`Verified OK` on every command means you hold what this run built. The SBOM check,"
+        f" the GitHub CLI route, and a Kyverno policy for your cluster are in {VERIFY_DOCS_URL}",
+        "",
+    ]
+    return "\n".join(lines)
+
+
+@release.command("notes")
+@click.argument("tag")
+@click.option(
+    "--ref", help="Commit the range ends at; defaults to TAG, so HEAD previews an unpushed tag."
+)
+@click.option(
+    "--images",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    help="The release pinset; its image lines fill the verify section.",
+)
+@click.option(
+    "--out",
+    type=click.Path(dir_okay=False, path_type=Path),
+    help="Write the notes here instead of stdout.",
+)
+def release_notes(tag, ref, images, out):
+    """Markdown notes for TAG: commits since the previous release by area, images, verification."""
+    _release_version(tag)
+    pins = []
+    if images:
+        pins = [
+            stripped
+            for line in images.read_text().splitlines()
+            if (stripped := line.strip()) and not stripped.startswith("#")
+        ]
+    text = _release_notes(tag, ref or tag, pins)
+    if out:
+        out.write_text(text)
+        click.secho(f"wrote {out}", fg="green", err=True)
+    else:
+        click.echo(text, nl=False)
 
 
 if __name__ == "__main__":

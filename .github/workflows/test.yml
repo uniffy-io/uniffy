@@ -173,31 +173,6 @@ jobs:
       - name: Check formatting
         run: pnpm --filter uniffy-ui format:check
 
-  build-frontend:
-    needs: changes
-    if: needs.changes.outputs.frontend == 'true' || needs.changes.outputs.proto == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          fetch-depth: 1
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: "pnpm"
-          cache-dependency-path: pnpm-lock.yaml
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile --filter uniffy-ui...
-
-      - name: Build (tsc + vite)
-        run: pnpm --filter uniffy-ui build
-
   lint-mobile:
     needs: changes
     if: needs.changes.outputs.mobile == 'true' || needs.changes.outputs.proto == 'true'
@@ -472,15 +447,17 @@ jobs:
 
   # Production images: hadolint, an amd64 build, the structure tests, and the
   # vulnerability gate. Source changes count because they change what the
-  # image imports and ships; the release workflow reruns this for the tagged
-  # commit and then builds both architectures.
+  # image imports and ships; the frontend build (tsc and vite) runs inside
+  # this build, so it has no host-side job. The release workflow reruns this
+  # for the tagged commit and then builds both architectures.
   docker-images:
-    name: docker-${{ matrix.image }}
+    name: docker-build-${{ matrix.image }}
     needs: changes
     if: >
       needs.changes.outputs.docker == 'true' ||
       needs.changes.outputs.backend == 'true' ||
-      needs.changes.outputs.frontend == 'true'
+      needs.changes.outputs.frontend == 'true' ||
+      needs.changes.outputs.proto == 'true'
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
@@ -519,7 +496,10 @@ jobs:
             VERSION=0.0.0-ci
             REVISION=${{ github.sha }}
           cache-from: type=gha,scope=${{ matrix.image }}-amd64
-          cache-to: type=gha,mode=max,scope=${{ matrix.image }}-amd64
+          # Only main writes the cache. A pull request or a tag reads main's
+          # entries anyway; writing a copy under its own ref costs half a
+          # minute per run and crowds main's entries out of the cache quota.
+          cache-to: ${{ github.ref == 'refs/heads/main' && format('type=gha,mode=max,scope={0}-amd64', matrix.image) || '' }}
 
       - uses: ./.github/actions/container-structure-test
         with:
@@ -539,7 +519,6 @@ jobs:
       - lint-proto
       - lint-python
       - lint-frontend
-      - build-frontend
       - lint-mobile
       - format-mobile
       - typecheck-mobile
