@@ -14,11 +14,13 @@ from uniffy.core.json_codec import OPTION_INDENT_2, dumps_str
 from uniffy.core.models.notes.note import Note
 from uniffy.core.models.shared import NodeType
 from uniffy.core.types import ContentType
+from uniffy.domains.agents.runtime.output_format import OutputSurface
 from uniffy.domains.agents.tools.builtin.args import (
     MARKDOWN_CONTENT_DOC,
     MAX_PAGE,
     clamp_int,
     clamp_page,
+    markdown_body,
     parse_uuid,
 )
 from uniffy.domains.agents.tools.builtin.content import (
@@ -418,7 +420,7 @@ async def _execute_create_note(ctx: ToolContext, args: dict) -> ToolResult:
         user_id=ctx.user_id,
         organization_id=ctx.organization_id,
         title=title,
-        content=args.get("content", ""),
+        content=markdown_body(ctx, args.get("content", ""), OutputSurface.NOTE),
         parent_id=parent_id,
         access_mode=access_mode,
     )
@@ -541,7 +543,7 @@ async def _execute_update_note(ctx: ToolContext, args: dict) -> ToolResult:
             organization_id=ctx.organization_id,
             note_id=note_id,
             title=title,
-            content=content,
+            content=markdown_body(ctx, content, OutputSurface.NOTE),
             expected_content_version=expected_version,
         )
     except StaleContentVersionError:

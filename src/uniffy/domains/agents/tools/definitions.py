@@ -34,6 +34,8 @@ class ToolContext:
     agent_id: UUID | None = None
     session_id: UUID | None = None
     user_timezone: str | None = None
+    output_provider: str | None = None
+    output_model: str | None = None
     # True when the run belongs to a test-drawer session: memory write tools
     # return a structured error instead of persisting anything.
     is_test_session: bool = False

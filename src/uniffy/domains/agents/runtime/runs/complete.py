@@ -24,6 +24,8 @@ from uniffy.domains.agents.runtime.models.calls import (
     ModelCallTarget,
     safety_identifier,
 )
+from uniffy.domains.agents.runtime.output import prepare_model_markdown
+from uniffy.domains.agents.runtime.output_format import OutputSurface
 from uniffy.domains.agents.runtime.runs.records import RunRecorder
 from uniffy.domains.agents.runtime.runs.usage import RunUsageAccumulator
 from uniffy.domains.agents.runtime.settings.operations import get_runtime_settings
@@ -160,13 +162,24 @@ class CompletionToolLoop:
             })
 
             turn_traces: dict[str, dict] = {}
+            output_provider = (
+                call_controller.target.provider_name
+                if call_controller
+                else ModelCallTarget(provider, provider_key_id, model).provider_name
+            )
+            stored_content = prepare_model_markdown(
+                result.content,
+                surface=OutputSurface.SESSION,
+                provider=output_provider,
+                model=result.model,
+            )
             for tool_call in result.tool_calls:
                 await self._session_operations.add_message(
                     user_id=user_id,
                     organization_id=organization_id,
                     session_id=session_id,
                     role="assistant",
-                    content=result.content,
+                    content=stored_content,
                     tool_name=tool_call.name,
                     tool_call_id=tool_call.id,
                     tool_args=tool_call.input,
@@ -183,6 +196,8 @@ class CompletionToolLoop:
 
             registry = executor.registry
             base_context = executor.context
+            base_context.output_provider = output_provider
+            base_context.output_model = result.model
             read_calls, write_calls = split_read_write(registry, result.tool_calls)
             tool_results: dict[str, ToolResult] = await gather_read_tool_results(
                 registry,
@@ -382,7 +397,12 @@ class CompletionRunner:
             organization_id=organization_id,
             session_id=session_id,
             role="assistant",
-            content=result.content,
+            content=prepare_model_markdown(
+                result.content,
+                surface=OutputSurface.SESSION,
+                provider=controller.target.provider_name,
+                model=result.model,
+            ),
             input_tokens=result.input_tokens,
             output_tokens=result.output_tokens,
             cache_creation_input_tokens=result.cache_creation_input_tokens,

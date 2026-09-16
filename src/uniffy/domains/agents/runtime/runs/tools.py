@@ -103,6 +103,7 @@ class StreamingToolLoop:
                     cache_creation_input_tokens=result.cache_creation_input_tokens,
                     cache_read_input_tokens=result.cache_read_input_tokens,
                     model=result.model,
+                    provider=call_controller.target.provider_name,
                     thinking=pending_thinking,
                 )
                 pending_thinking = None
@@ -123,6 +124,8 @@ class StreamingToolLoop:
             tool_registry = get_tool_registry()
             registry = executor.registry
             base_context = executor.context
+            base_context.output_provider = call_controller.target.provider_name
+            base_context.output_model = result.model
             read_calls, write_calls = split_read_write(registry, result.tool_calls)
             read_results = await gather_read_tool_results(
                 registry,
@@ -290,6 +293,7 @@ class StreamingToolLoop:
                         cache_creation_input_tokens=result.cache_creation_input_tokens,
                         cache_read_input_tokens=result.cache_read_input_tokens,
                         model=result.model,
+                        provider=call_controller.target.provider_name,
                         thinking=stream_result.thinking or None,
                     )
                 else:
@@ -301,6 +305,7 @@ class StreamingToolLoop:
                         cache_creation_input_tokens=result.cache_creation_input_tokens,
                         cache_read_input_tokens=result.cache_read_input_tokens,
                         model=result.model,
+                        provider=call_controller.target.provider_name,
                         thinking=stream_result.thinking or None,
                     )
                 yield StreamEvent(
@@ -311,7 +316,7 @@ class StreamingToolLoop:
                 return
 
             if stream_result.placeholder_id is not None:
-                await writer.finalize_assistant_placeholder(
+                intermediate_message = await writer.finalize_assistant_placeholder(
                     message_id=stream_result.placeholder_id,
                     content=result.content or "",
                     input_tokens=result.input_tokens,
@@ -319,8 +324,10 @@ class StreamingToolLoop:
                     cache_creation_input_tokens=result.cache_creation_input_tokens,
                     cache_read_input_tokens=result.cache_read_input_tokens,
                     model=result.model,
+                    provider=call_controller.target.provider_name,
                     thinking=stream_result.thinking or None,
                 )
+                yield StreamEvent(type=EventType.MESSAGE_STORED, message=intermediate_message)
             else:
                 pending_thinking = stream_result.thinking or None
 

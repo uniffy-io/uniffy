@@ -5,6 +5,9 @@ from __future__ import annotations
 from uuid import UUID
 
 from uniffy.core.data_files import DATA_DIR
+from uniffy.domains.agents.runtime.output import prepare_model_markdown
+from uniffy.domains.agents.runtime.output_format import OutputSurface
+from uniffy.domains.agents.tools.definitions import ToolContext
 
 MARKDOWN_CONTENT_DOC = (
     (DATA_DIR / "prompts" / "markdown-content.md").read_text(encoding="utf-8").strip()
@@ -12,6 +15,14 @@ MARKDOWN_CONTENT_DOC = (
 
 # Bound model-supplied pages to avoid deep OFFSET scans.
 MAX_PAGE = 200
+
+
+def markdown_body(ctx: ToolContext, value: str | None, surface: OutputSurface) -> str | None:
+    if value is None:
+        return None
+    return prepare_model_markdown(
+        value, surface=surface, provider=ctx.output_provider, model=ctx.output_model
+    )
 
 
 def clamp_int(value: object, default: int, minimum: int, maximum: int) -> int:

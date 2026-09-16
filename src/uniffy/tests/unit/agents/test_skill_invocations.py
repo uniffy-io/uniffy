@@ -392,7 +392,10 @@ async def test_runtime_uses_final_tools_and_skips_ordinary_skill_reads(
     runtime_type = send.MessageSender if destination_kind == "unary" else stream.MessageStreamer
     runtime = runtime_type.__new__(runtime_type)
     agent = SimpleNamespace(
-        id=generate_id(), enabled_tools=["github.get_issue"], enabled_skills=[str(version.skill_id)]
+        id=generate_id(),
+        name="Agent",
+        enabled_tools=["github.get_issue"],
+        enabled_skills=[str(version.skill_id)],
     )
     session_row = SimpleNamespace(
         id=generate_id(),

@@ -1,5 +1,11 @@
 from prometheus_client import Counter, Gauge, Histogram
 
+AGENT_OUTPUT_REPAIRS_TOTAL = Counter(
+    "uniffy_agent_output_repairs_total",
+    "Model-authored bodies repaired by syntax kind, surface and producing provider",
+    ["kind", "surface", "provider"],
+)
+
 APPROVAL_STORE_PENDING_SIZE = Gauge(
     "uniffy_approval_store_pending_size",
     "In-process pending approvals awaiting user decision",
