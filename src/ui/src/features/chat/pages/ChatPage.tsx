@@ -1,7 +1,6 @@
 import { clearUnreadSeparator } from "@/features/chat/store/chatMessagesSlice";
 import { Suspense, useEffect, useCallback, useRef, type ReactNode } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
-import { SpinnerGap } from "@phosphor-icons/react";
 import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
 import { lazyImport } from "@/shared/utils/lazyImport";
@@ -13,6 +12,7 @@ import { cn } from "@/shared/utils/cn";
 import { ChatLayout } from "@/features/chat/components/ChatLayout";
 import { ChatSidebar } from "@/features/chat/components/sidebar/ChatSidebar";
 import { ChannelView } from "@/features/chat/components/channel/ChannelView";
+import { ChatDialogs } from "@/features/chat/components/modals/ChatDialogs";
 import {
   selectChannels,
   selectChannelsLoaded,
@@ -70,59 +70,9 @@ const DraftsView = lazyImport(
   () => import("@/features/chat/components/drafts/DraftsView"),
   "DraftsView",
 );
-const CreateChannelModal = lazyImport(
-  () => import("@/features/chat/components/modals/CreateChannelModal"),
-  "CreateChannelModal",
-);
-const CreateCategoryModal = lazyImport(
-  () => import("@/features/chat/components/modals/CreateCategoryModal"),
-  "CreateCategoryModal",
-);
-const BrowseChannelsModal = lazyImport(
-  () => import("@/features/chat/components/modals/BrowseChannelsModal"),
-  "BrowseChannelsModal",
-);
-const NewDmModal = lazyImport(
-  () => import("@/features/chat/components/modals/NewDmModal"),
-  "NewDmModal",
-);
-const ChannelSettingsModal = lazyImport(
-  () => import("@/features/chat/components/modals/ChannelSettingsModal"),
-  "ChannelSettingsModal",
-);
-const DmMembersModal = lazyImport(
-  () => import("@/features/chat/components/modals/DmMembersModal"),
-  "DmMembersModal",
-);
-const AgentChatPickerModal = lazyImport(
-  () => import("@/features/chat/components/modals/AgentChatPickerModal"),
-  "AgentChatPickerModal",
-);
-const RenameAgentChatDialog = lazyImport(
-  () => import("@/features/chat/components/modals/RenameAgentChatDialog"),
-  "RenameAgentChatDialog",
-);
 
 function DeferredChatSurface({ children }: { children: ReactNode }) {
   return <Suspense fallback={<PageLoader className="h-full min-h-0" />}>{children}</Suspense>;
-}
-
-function DeferredChatDialog({ children }: { children: ReactNode }) {
-  return (
-    <Suspense
-      fallback={
-        <div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-background/70 backdrop-blur-sm"
-          role="status"
-          aria-label="Loading dialog"
-        >
-          <SpinnerGap size={32} className="animate-spin text-primary" />
-        </div>
-      }
-    >
-      {children}
-    </Suspense>
-  );
 }
 
 function routeSnapshotIsCurrent(pathname: string): boolean {
@@ -232,11 +182,6 @@ export function ChatPage() {
     }
   }, [channelId, channelInStore, organizationId, userId, currentPath]);
 
-  const activeChannel = useAppSelector((state) =>
-    state.chatChannels.activeChannelId
-      ? state.chatChannels.byId[state.chatChannels.activeChannelId]
-      : undefined,
-  );
   useEffect(() => {
     if (!routeSnapshotIsCurrent(currentPath) || !organizationId || !userId || !routeChannel) {
       return;
@@ -257,13 +202,6 @@ export function ChatPage() {
   const threadPane = useAppSelector(selectThreadPane);
   const splitChannelId = useAppSelector((state) => state.chatChannels.splitChannelId);
   const focusedPane = useAppSelector((state) => state.chatUi.focusedPane);
-  const createChannelOpen = useAppSelector((state) => state.chatUi.createChannelModalOpen);
-  const createCategoryOpen = useAppSelector((state) => state.chatUi.createCategoryModalOpen);
-  const browseChannelsOpen = useAppSelector((state) => state.chatUi.browseChannelsModalOpen);
-  const newDmOpen = useAppSelector((state) => state.chatUi.newDmModalOpen);
-  const channelSettingsOpen = useAppSelector((state) => state.chatUi.channelSettingsModalOpen);
-  const agentChatPickerOpen = useAppSelector((state) => state.chatUi.agentChatPickerOpen);
-  const renameAgentChatChannelId = useAppSelector((state) => state.chatUi.renameAgentChatChannelId);
   const pageTitle = isThreadsInboxRoute
     ? "Threads"
     : isUnreadsRoute
@@ -455,46 +393,7 @@ export function ChatPage() {
         splitView={splitView}
         rightPanel={rightPanel}
       />
-      {createChannelOpen && (
-        <DeferredChatDialog>
-          <CreateChannelModal />
-        </DeferredChatDialog>
-      )}
-      {createCategoryOpen && (
-        <DeferredChatDialog>
-          <CreateCategoryModal />
-        </DeferredChatDialog>
-      )}
-      {browseChannelsOpen && (
-        <DeferredChatDialog>
-          <BrowseChannelsModal />
-        </DeferredChatDialog>
-      )}
-      {newDmOpen && (
-        <DeferredChatDialog>
-          <NewDmModal />
-        </DeferredChatDialog>
-      )}
-      {channelSettingsOpen &&
-        (activeChannel?.channelType === "DIRECT" || activeChannel?.channelType === "GROUP_DM" ? (
-          <DeferredChatDialog>
-            <DmMembersModal />
-          </DeferredChatDialog>
-        ) : (
-          <DeferredChatDialog>
-            <ChannelSettingsModal />
-          </DeferredChatDialog>
-        ))}
-      {agentChatPickerOpen && (
-        <DeferredChatDialog>
-          <AgentChatPickerModal />
-        </DeferredChatDialog>
-      )}
-      {renameAgentChatChannelId && (
-        <DeferredChatDialog>
-          <RenameAgentChatDialog />
-        </DeferredChatDialog>
-      )}
+      <ChatDialogs />
     </>
   );
 }
