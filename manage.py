@@ -1252,23 +1252,31 @@ def _release_notes(tag: str, ref: str, pins: list[str]) -> str:
         shown = entries[:RELEASE_NOTES_MAX_COMMITS]
         if len(entries) > len(shown):
             shown.append(f"- and {len(entries) - len(shown)} more in the [full history]({history})")
-        lines += ["", f"## {area}", "", *(shown or ["No changes."])]
+        lines += ["", f"### {area}", "", *(shown or ["No changes."])]
 
+    by_tag = [f"{repo}:{tag[1:]}" for _, repo in IMAGES.values()]
     refs = pins or [f"{repo}@sha256:<digest from images.txt>" for _, repo in IMAGES.values()]
     identity = f"{REPO_URL}/.github/workflows/release.yml@refs/tags/{tag}"
     flags = '--certificate-oidc-issuer "$COSIGN_ISSUER" --certificate-identity "$COSIGN_IDENTITY"'
     lines += [
         "",
-        "## Images",
+        "### Container Images",
         "",
-        "Each line is one multi-arch index for linux/amd64 and linux/arm64."
-        " Pull and pin by digest, not by tag.",
+        "Both images are multi-arch indexes for linux/amd64 and linux/arm64.",
         "",
-        "```",
-        *refs,
-        "```",
+        "- By tag",
         "",
-        "## Verify",
+        "  ```",
+        *(f"  {ref}" for ref in by_tag),
+        "  ```",
+        "",
+        "- By digest (recommended for deployment pins)",
+        "",
+        "  ```",
+        *(f"  {ref}" for ref in refs),
+        "  ```",
+        "",
+        "### Verify",
         "",
         "`images.txt` below is this list, signed. Both digests are signed as well, and each"
         " carries its SBOM as an attestation. The signing identity is the release workflow"
