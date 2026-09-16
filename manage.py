@@ -1190,18 +1190,17 @@ def _release_version(tag: str) -> tuple[int, int, int, int, int]:
 
 
 def _previous_release(tag: str, ref: str) -> str | None:
-    """Closest earlier release reachable from ref; a stable release skips candidates
-    when an earlier stable exists, so its notes span them."""
+    """Latest stable release before tag that is reachable from ref. Candidates never
+    count, so a candidate's notes span everything since the current release."""
     version = _release_version(tag)
-    earlier = [
+    stable = [
         candidate
         for candidate in git_out("tag", "--merged", ref, "--list", "v*").split()
-        if RELEASE_TAG.match(candidate) and _release_version(candidate) < version
+        if RELEASE_TAG.match(candidate)
+        and _release_version(candidate) < version
+        and _release_version(candidate)[3] == 1
     ]
-    if version[3] == 1:
-        stable = [candidate for candidate in earlier if _release_version(candidate)[3] == 1]
-        earlier = stable or earlier
-    return max(earlier, key=_release_version, default=None)
+    return max(stable, key=_release_version, default=None)
 
 
 def _release_commits(range_spec: str) -> list[tuple[str, str, list[str]]]:
@@ -1240,15 +1239,15 @@ def _release_notes(tag: str, ref: str, pins: list[str]) -> str:
         for area in _release_areas(paths):
             grouped[area].append(f"- {subject} ([{sha[:8]}]({REPO_URL}/commit/{sha}))")
 
+    count = f"{len(commits)} commit" + ("" if len(commits) == 1 else "s")
     if previous:
         history = f"{REPO_URL}/compare/{previous}...{tag}"
         lines = [
-            f"{len(commits)} commits since [{previous}]({REPO_URL}/releases/tag/{previous})"
-            f" ([compare]({history}))."
+            f"{count} since [{previous}]({REPO_URL}/releases/tag/{previous}) ([compare]({history}))."
         ]
     else:
         history = f"{REPO_URL}/commits/{tag}"
-        lines = [f"First release, {len(commits)} commits ([history]({history}))."]
+        lines = [f"First release, {count} ([history]({history}))."]
     for area, entries in grouped.items():
         shown = entries[:RELEASE_NOTES_MAX_COMMITS]
         if len(entries) > len(shown):
