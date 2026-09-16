@@ -95,6 +95,7 @@ jobs:
     env:
       # Mirrors IMAGES in manage.py; local commands and CI publish the same names.
       IMAGE: ghcr.io/uniffy-io/${{ matrix.name }}
+      CACHE: ghcr.io/uniffy-io/uniffy-buildcache:${{ matrix.name }}-${{ matrix.arch }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -114,6 +115,10 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # The layer cache lives in a registry package that only release runs
+      # write, so the next release starts warm on both architectures. Main's
+      # Actions cache is the amd64 fallback; a tag ref cannot write it and
+      # never has its own.
       - name: Build and push by digest
         id: build
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
@@ -129,8 +134,10 @@ jobs:
             org.opencontainers.image.revision=${{ github.sha }}
             org.opencontainers.image.created=${{ steps.now.outputs.created }}
           outputs: type=image,name=${{ env.IMAGE }},push-by-digest=true,name-canonical=true,push=true
-          cache-from: type=gha,scope=${{ matrix.image }}-${{ matrix.arch }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.image }}-${{ matrix.arch }}
+          cache-from: |
+            type=registry,ref=${{ env.CACHE }}
+            type=gha,scope=${{ matrix.image }}-${{ matrix.arch }}
+          cache-to: type=registry,ref=${{ env.CACHE }},mode=max,image-manifest=true,oci-mediatypes=true
           provenance: mode=max
           sbom: true
 
