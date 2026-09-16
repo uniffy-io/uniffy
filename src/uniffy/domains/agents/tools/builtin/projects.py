@@ -3,6 +3,7 @@
 import contextlib
 from uuid import UUID
 
+from uniffy.domains.agents.tools.builtin.args import MARKDOWN_CONTENT_DOC
 from uniffy.domains.agents.tools.builtin.content import (
     creation_space_schema,
     parse_creation_space,
@@ -649,7 +650,7 @@ create_task = ToolDefinition(
             "title": {"type": "string", "description": "Task title."},
             "description": {
                 "type": "string",
-                "description": "Markdown description. Supports [[[label|urn]]] mentions.",
+                "description": MARKDOWN_CONTENT_DOC,
             },
             "status": {
                 "type": "string",
@@ -716,7 +717,7 @@ update_task = ToolDefinition(
         "properties": {
             "task_id": {"type": "string", "description": "UUID of the task."},
             "title": {"type": "string", "description": "New task title."},
-            "description": {"type": "string", "description": "New markdown description."},
+            "description": {"type": "string", "description": MARKDOWN_CONTENT_DOC},
             "status": {
                 "type": "string",
                 "description": (

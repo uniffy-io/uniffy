@@ -5,7 +5,11 @@ from uuid import UUID
 from zoneinfo import ZoneInfo
 
 from uniffy.core.types import EventStatus, EventTransparency, RecurrencePattern
-from uniffy.domains.agents.tools.builtin.args import parse_uuid, parse_uuid_list
+from uniffy.domains.agents.tools.builtin.args import (
+    MARKDOWN_CONTENT_DOC,
+    parse_uuid,
+    parse_uuid_list,
+)
 from uniffy.domains.agents.tools.definitions import ToolContext, ToolDefinition, ToolResult
 from uniffy.domains.scheduling.calendar.recurrence import OCCURRENCE_ID_SEPARATOR
 from uniffy.domains.tags.operations import TagOperations
@@ -839,7 +843,7 @@ create_event = ToolDefinition(
             },
             "description": {
                 "type": "string",
-                "description": "Event description in markdown format.",
+                "description": MARKDOWN_CONTENT_DOC,
             },
             "is_all_day": {
                 "type": "boolean",
@@ -902,7 +906,7 @@ update_event = ToolDefinition(
             "title": {"type": "string", "description": "New event title."},
             "description": {
                 "type": "string",
-                "description": "New description in markdown.",
+                "description": MARKDOWN_CONTENT_DOC,
             },
             "start_time": {
                 "type": "string",

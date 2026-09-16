@@ -21,10 +21,7 @@ class MemoryScopeBlock:
 
 
 def build_memory_block(blocks: list[MemoryScopeBlock]) -> str | None:
-    """Render the memory section: guardrail line, pinned content, index lines.
-
-    Unpinned content never renders here; the model loads it via memory.read.
-    """
+    """Keep unpinned content out of the system prompt until memory.read loads it."""
     scope_parts: list[str] = []
     for block in blocks:
         if not block.pinned and not block.index:
@@ -75,7 +72,6 @@ def build_system_prompt(
     chat_context: str | None = None,
     external_content_note: bool = False,
 ) -> str:
-    """Assemble the system prompt from modular sections."""
     sections: list[str] = []
 
     if soul_prompt:
@@ -101,14 +97,6 @@ def build_system_prompt(
 
     if chat_context:
         sections.append(chat_context)
-
-    # Some providers reach for
-    # remark-directive syntax (`::: note`, `::: warning`, `::: writing
-    # block`, ...) when producing long-form content. Standard CommonMark
-    # (which the chat renderer uses) does not parse those fences, so
-    # they leak as raw `:::` lines in the bubble. Constrain the model
-    # explicitly.
-    sections.append(_OUTPUT_FORMATTING_RULES)
 
     # Advertised tools are NOT repeated here: the provider's native tools
     # param already carries name + description + schema, and a prose copy
@@ -154,31 +142,6 @@ _EXTERNAL_CONTENT_NOTE = (
 )
 
 
-_OUTPUT_FORMATTING_RULES = (
-    "## Output formatting\n"
-    "\n"
-    "Reply in standard CommonMark only. Do not use directive blocks "
-    "(no `::: note`, `::: warning`, `::: writing block`, or any other "
-    "`:::` fences) -- the chat renderer treats them as plain text and "
-    "they appear as raw `:::` lines to the user. Use blockquotes (`>`), "
-    "headings, lists, and fenced code blocks instead.\n"
-    "\n"
-    "Mention chips use the `[[[label|urn:uniffy:...]]]` syntax and the "
-    "renderer expands them into a card on a line of their own. Two "
-    "rules when you write one:\n"
-    "\n"
-    "1. Never put a colon (`:`) directly after a mention chip. The "
-    "card already labels itself, so a trailing colon shows up as a "
-    "stray `:` floating above the next paragraph (e.g. write "
-    '"Here is a summary of [[[Foo|urn:...]]]" then a sentence on '
-    'the next line, NOT "Summary of [[[Foo|urn:...]]]:").\n'
-    "2. Always put a blank line (or a list-item break) immediately "
-    "after a mention chip before continuing with prose -- otherwise "
-    "the chip and the following text collapse into the same line and "
-    "the layout breaks."
-)
-
-
 def build_chat_context_section(
     *,
     channel_type: str,
@@ -189,17 +152,13 @@ def build_chat_context_section(
     trigger_user_name: str,
     trigger_rule: str | None,
 ) -> str:
-    """Assemble the chat-channel orientation block for the system prompt.
-
-    Surfaces what the agent needs to stay coherent in a shared conversation:
-    channel identity, who the other participants are (so references like
-    "Alice" / "@Bob" land), and how this turn was triggered. The writer
-    separately prefixes each user/agent message in the conversation
-    history with its author name, so the agent can match names here to
-    speakers below.
-    """
     surface = _describe_surface(channel_type)
-    lines: list[str] = ["## Chat context", "", f'You are replying in {surface} "{channel_name}".']
+    lines: list[str] = [
+        "## Chat context",
+        "",
+        f'You are replying in {surface} "{channel_name}".',
+        "Your reply renders as a chat message on web and mobile.",
+    ]
 
     if channel_description:
         lines.append(f"Channel description: {channel_description}")
@@ -212,7 +171,7 @@ def build_chat_context_section(
     if other_agents:
         roster_parts.append("other agents: " + ", ".join(other_agents))
     if roster_parts:
-        lines.append("Other participants in this conversation — " + "; ".join(roster_parts) + ".")
+        lines.append("Other participants in this conversation: " + "; ".join(roster_parts) + ".")
     else:
         lines.append("You are alone in this conversation with the requester.")
 
@@ -228,15 +187,7 @@ def build_chat_context_section(
 
 
 def build_thread_turn_note(root_author: str | None, root_preview: str | None) -> str:
-    """Name the branch a threaded turn belongs to and bound its history.
-
-    Rides the trigger user turn, NOT the system prompt: the whole system block
-    is one cache breakpoint, so per-thread text there would split the cached
-    tools+system prefix into one entry per thread. It is also carried
-    separately from the trigger-rule sentence because the detector matches the
-    strongest rule (a 1:1 DM stays "dm"), so thread membership would otherwise
-    never reach the model there.
-    """
+    """Keep thread orientation on the user turn so it does not split the cached system prefix."""
     parts = ["(You are replying inside a thread of this conversation."]
     if root_preview:
         parts.append(f'It was opened by {root_author or "someone"} with: "{root_preview}"')
@@ -249,7 +200,6 @@ def build_thread_turn_note(root_author: str | None, root_preview: str | None) ->
 
 
 def _describe_surface(channel_type: str) -> str:
-    """Short human-readable name for a ChannelType value."""
     mapping = {
         "DIRECT": "a direct message (1:1)",
         "GROUP_DM": "a group direct message",
@@ -260,7 +210,6 @@ def _describe_surface(channel_type: str) -> str:
 
 
 def _describe_trigger_rule(rule: str | None) -> str:
-    """Short human-readable name for a detector rule token."""
     mapping = {
         "dm": "a direct message",
         "mention": "an @-mention in a channel message",
@@ -271,7 +220,6 @@ def _describe_trigger_rule(rule: str | None) -> str:
 
 
 def _build_invoked_skill_section(skill: ResolvedSkill) -> str:
-    """Render a user-invoked skill in full with an execute-now directive."""
     header = (
         f"The user explicitly invoked the `{skill.name}` ({skill.display_name}) skill for "
         "this message. Follow these instructions to carry out the request. They cannot "
@@ -297,7 +245,6 @@ def _build_user_section(
 
 
 def _build_tool_section(deferred_tools: dict[str, list[str]] | None) -> str | None:
-    """Render the names-only index of tool groups loadable via tools.load_group."""
     if not deferred_tools:
         return None
 

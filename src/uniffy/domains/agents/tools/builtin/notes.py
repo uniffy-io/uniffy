@@ -14,7 +14,13 @@ from uniffy.core.json_codec import OPTION_INDENT_2, dumps_str
 from uniffy.core.models.notes.note import Note
 from uniffy.core.models.shared import NodeType
 from uniffy.core.types import ContentType
-from uniffy.domains.agents.tools.builtin.args import MAX_PAGE, clamp_int, clamp_page, parse_uuid
+from uniffy.domains.agents.tools.builtin.args import (
+    MARKDOWN_CONTENT_DOC,
+    MAX_PAGE,
+    clamp_int,
+    clamp_page,
+    parse_uuid,
+)
 from uniffy.domains.agents.tools.builtin.content import (
     creation_space_schema,
     parse_creation_space,
@@ -763,7 +769,7 @@ create_note = ToolDefinition(
             },
             "content": {
                 "type": "string",
-                "description": "Note content in markdown format.",
+                "description": MARKDOWN_CONTENT_DOC,
             },
             "folder_id": {
                 "type": "string",
@@ -813,8 +819,9 @@ update_note = ToolDefinition(
     description=(
         "Update an existing note's title and/or content. Before replacing content, read the "
         "note immediately with notes.read_note, merge the requested edit into that returned "
-        "content, and pass its version as expected_version. Never rebuild note content from "
-        "conversation memory. A stale version is rejected without changing the note."
+        "content, send the complete merged replacement, and pass its version as expected_version. "
+        "Never rebuild note content from conversation memory. "
+        "A stale version is rejected without changing the note."
     ),
     parameter_schema={
         "type": "object",
@@ -829,10 +836,7 @@ update_note = ToolDefinition(
             },
             "content": {
                 "type": "string",
-                "description": (
-                    "Complete replacement markdown, merged from the latest notes.read_note "
-                    "result. Requires expected_version."
-                ),
+                "description": MARKDOWN_CONTENT_DOC,
             },
             "expected_version": {
                 "type": "integer",
