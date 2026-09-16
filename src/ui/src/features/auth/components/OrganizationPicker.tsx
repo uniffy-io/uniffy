@@ -37,6 +37,9 @@ import { clearPeople } from "@/features/people/store/peopleSlice";
 import { resetCalendarState, resetCalendarUiState } from "@/features/calendar/store";
 import { setAccentColor, setFontFamily } from "@/config/theme/themeSlice";
 import { UniffyLogo } from "@/components/ui/uniffy-logo";
+import { Card } from "@/components/ui/card";
+import { getAvatarGradientStyle, getInitials } from "@/components/subject/utils";
+import { cn } from "@/shared/utils/cn";
 import { unaryTransport, setMemoryAccessToken, clearMemoryAccessToken } from "@/config";
 import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 import {
@@ -46,39 +49,31 @@ import {
   Plus,
   CircleNotch,
   ShieldWarning,
+  WarningCircle,
 } from "@phosphor-icons/react";
 
 function getRoleLabel(role: OrganizationRole): string {
   switch (role) {
     case OrganizationRole.OWNER:
-      return "owner";
+      return "Owner";
     case OrganizationRole.ADMIN:
-      return "admin";
+      return "Admin";
     case OrganizationRole.MEMBER:
-      return "member";
+      return "Member";
     default:
-      return "member";
+      return "Member";
   }
 }
 
 function getRoleBadgeClasses(role: OrganizationRole): string {
   switch (role) {
     case OrganizationRole.OWNER:
-      return "bg-primary/10 text-primary";
+      return "bg-gradient-to-r from-amber-100 to-amber-200 text-amber-700 dark:from-amber-950 dark:to-amber-900 dark:text-amber-300";
     case OrganizationRole.ADMIN:
-      return "bg-primary/10 text-primary";
+      return "bg-gradient-to-r from-blue-100 to-blue-200 text-blue-700 dark:from-blue-950 dark:to-blue-900 dark:text-blue-300";
     default:
       return "bg-muted text-muted-foreground";
   }
-}
-
-function getOrgInitials(name: string): string {
-  return name
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((w) => w[0])
-    .join("")
-    .toUpperCase();
 }
 
 export function OrganizationPicker() {
@@ -293,12 +288,7 @@ export function OrganizationPicker() {
               className="mb-5 flex items-start gap-3 rounded-lg border border-destructive/20 bg-destructive/5 p-3.5 text-sm text-destructive"
               style={{ animation: "org-slide-up 0.3s ease-out forwards" }}
             >
-              <svg className="h-4 w-4 mt-0.5 flex-shrink-0" viewBox="0 0 16 16" fill="currentColor">
-                <path
-                  fillRule="evenodd"
-                  d="M8 15A7 7 0 108 1a7 7 0 000 14zm.75-10.25a.75.75 0 00-1.5 0v4.5a.75.75 0 001.5 0v-4.5zM8 12a1 1 0 100-2 1 1 0 000 2z"
-                />
-              </svg>
+              <WarningCircle className="h-4 w-4 mt-0.5 flex-shrink-0" weight="fill" />
               <span>{error}</span>
             </div>
           )}
@@ -316,8 +306,9 @@ export function OrganizationPicker() {
               <p className="text-sm text-muted-foreground">Loading workspaces...</p>
             </div>
           ) : organizations.length === 0 ? (
-            <div
-              className="rounded-xl border border-border bg-card p-10 text-center opacity-0"
+            <Card
+              tone="surface"
+              className="p-10 text-center opacity-0"
               style={{ animation: "org-slide-up 0.5s ease-out 0.2s forwards" }}
             >
               <div className="mx-auto w-12 h-12 rounded-xl bg-muted flex items-center justify-center mb-4">
@@ -346,20 +337,20 @@ export function OrganizationPicker() {
                   Create New Organization
                 </Button>
               )}
-            </div>
+            </Card>
           ) : (
             <div className="space-y-2">
               {user?.isSystemAdmin && (
                 <button
                   type="button"
                   onClick={() => navigate("/platform")}
-                  className="w-full text-left rounded-xl border border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10 hover:border-amber-500/50 transition-all duration-200 group cursor-pointer opacity-0"
+                  className="w-full text-left rounded-xl bg-surface shadow-edge hover:shadow-edge-strong transition-shadow duration-150 group cursor-pointer opacity-0"
                   style={{
                     animation: "org-slide-up 0.4s ease-out 0.1s forwards",
                   }}
                 >
                   <div className="flex items-center gap-4 p-4">
-                    <div className="w-10 h-10 rounded-lg bg-amber-500/15 border border-amber-500/30 flex items-center justify-center flex-shrink-0">
+                    <div className="w-10 h-10 rounded-lg bg-amber-500/15 flex items-center justify-center flex-shrink-0">
                       <ShieldWarning
                         className="h-5 w-5 text-amber-700 dark:text-amber-300"
                         weight="duotone"
@@ -384,26 +375,23 @@ export function OrganizationPicker() {
                     key={myOrg.organization?.id}
                     onClick={() => handleSelectOrg(slug)}
                     disabled={selectingSlug !== null}
-                    className={`
-                      w-full text-left rounded-xl border bg-card
-                      transition-all duration-200 group cursor-pointer
-                      opacity-0
-                      ${
-                        isSelecting
-                          ? "border-primary ring-2 ring-primary/20 shadow-sm"
-                          : "border-border hover:border-border-strong hover:shadow-sm"
-                      }
-                      ${selectingSlug !== null && !isSelecting ? "opacity-60" : ""}
-                    `}
+                    className={cn(
+                      "w-full text-left rounded-xl transition-shadow duration-150 group cursor-pointer opacity-0",
+                      isSelecting
+                        ? "bg-primary/5 shadow-edge-primary"
+                        : "bg-surface shadow-edge hover:shadow-edge-strong",
+                      selectingSlug !== null && !isSelecting && "opacity-60",
+                    )}
                     style={{
                       animation: `org-slide-up 0.4s ease-out ${0.15 + index * 0.06}s forwards`,
                     }}
                   >
                     <div className="flex items-center gap-4 p-4">
-                      <div className="w-10 h-10 rounded-lg bg-primary/10 border border-primary/10 flex items-center justify-center flex-shrink-0">
-                        <span className="text-primary font-bold text-sm">
-                          {getOrgInitials(myOrg.organization?.name || "?")}
-                        </span>
+                      <div
+                        className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 text-white font-semibold text-sm"
+                        style={getAvatarGradientStyle(myOrg.organization?.name || "?")}
+                      >
+                        {getInitials(myOrg.organization?.name || "?")}
                       </div>
 
                       <div className="flex-1 min-w-0">
@@ -412,7 +400,10 @@ export function OrganizationPicker() {
                         </div>
                         <div className="flex items-center gap-2 mt-0.5">
                           <span
-                            className={`inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium rounded capitalize ${getRoleBadgeClasses(myOrg.role)}`}
+                            className={cn(
+                              "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold",
+                              getRoleBadgeClasses(myOrg.role),
+                            )}
                           >
                             {getRoleLabel(myOrg.role)}
                           </span>
