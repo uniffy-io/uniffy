@@ -1063,6 +1063,8 @@ def image_build(service, tag, platform, push):
             "build",
             "--file",
             dockerfile,
+            "--target",
+            "runtime",
             "--tag",
             f"{repo}:{tag}",
             "--build-arg",

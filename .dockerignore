@@ -1,6 +1,6 @@
-# Whitelist. Both production Dockerfiles build from the repo root, so only
-# what they COPY may enter the build context. Everything else stays out:
-# the git history, .env files, vendored checkouts, core dumps, node_modules.
+# Whitelist. Every Dockerfile builds from the repo root, so only what one of
+# them COPYs may enter the build context. Everything else stays out: the git
+# history, .env files, vendored checkouts, core dumps, node_modules.
 *
 !pyproject.toml
 !uv.lock
@@ -15,6 +15,7 @@
 !src/ui
 !docs/*.md
 !docs/documentation
+!.docker/dev
 
 # Inside the allowed trees
 **/node_modules

@@ -123,6 +123,7 @@ jobs:
         with:
           context: .
           file: ${{ matrix.dockerfile }}
+          target: runtime
           platforms: linux/${{ matrix.arch }}
           build-args: |
             VERSION=${{ needs.verify.outputs.version }}
