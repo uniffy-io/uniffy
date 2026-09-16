@@ -1,0 +1,46 @@
+# container-structure-test spec for ghcr.io/uniffy-io/uniffy-frontend.
+schemaVersion: "2.0.0"
+
+metadataTest:
+  user: "101"
+  exposedPorts: ["8080"]
+  labels:
+    - key: org.opencontainers.image.licenses
+      value: FSL-1.1-Apache-2.0
+    - key: org.opencontainers.image.source
+      value: https://github.com/uniffy-io/uniffy
+
+fileExistenceTests:
+  - name: app shell
+    path: /usr/share/nginx/html/index.html
+    shouldExist: true
+  - name: precompressed app shell
+    path: /usr/share/nginx/html/index.html.gz
+    shouldExist: true
+  - name: notification worker
+    path: /usr/share/nginx/html/notification-worker.js
+    shouldExist: true
+  - name: server config
+    path: /etc/nginx/conf.d/default.conf
+    shouldExist: true
+  - name: shared headers
+    path: /etc/nginx/uniffy-headers.conf
+    shouldExist: true
+
+fileContentTests:
+  - name: unprivileged port and no version banner
+    path: /etc/nginx/conf.d/default.conf
+    expectedContents:
+      - "listen 8080;"
+      - "server_tokens off;"
+      - "gzip_static on;"
+
+commandTests:
+  - name: config is valid
+    command: nginx
+    args: ["-t"]
+    exitCode: 0
+  - name: runs as the nginx user
+    command: id
+    args: ["-u"]
+    expectedOutput: ["^101\n$"]

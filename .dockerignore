@@ -1,24 +1,31 @@
+# Whitelist. Both production Dockerfiles build from the repo root, so only
+# what they COPY may enter the build context. Everything else stays out:
+# the git history, .env files, vendored checkouts, core dumps, node_modules.
+*
+!pyproject.toml
+!uv.lock
+!README.md
+!.python-version
+!package.json
+!pnpm-workspace.yaml
+!pnpm-lock.yaml
+!src/uniffy
+!src/gen/python
+!src/gen/typescript
+!src/ui
+!docs/*.md
+!docs/documentation
+
+# Inside the allowed trees
 **/node_modules
-__pycache__/
-*.py[codz]
-*$py.class
-
-# C extensions
-*.so
-
-# Distribution / packaging
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-share/python-wheels/
-
+**/__pycache__
+**/*.py[cod]
+**/.venv
+**/.env
+**/.env.*
+**/dist
+**/reports
+**/.ruff_cache
+**/.pytest_cache
+**/*.log
+src/uniffy/tests

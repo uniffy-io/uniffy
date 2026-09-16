@@ -3,7 +3,7 @@ title: Configure Uniffy
 description: Reference for every environment variable Uniffy reads at startup. What each setting does, its default, and when to override it.
 sidebar:
   label: Configure Uniffy
-  order: 5
+  order: 6
 ---
 
 Uniffy is configured through environment variables. The backend, workers, and supporting services all read from the same set. A working starting point lives at `.env.example` in the repository; copy it to `.env` and edit before running the stack.

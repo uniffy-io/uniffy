@@ -1,0 +1,376 @@
+name: Release
+
+# Version tags only. The gate job refuses a tag whose commit is not on main,
+# then the whole test workflow runs for the tagged commit and the images are
+# built only after it passes. Images are signed keyless with cosign under this
+# workflow's identity, their SBOMs are attested, and the pinset file is signed
+# too. Every action is pinned to a commit; scanners run from digest-pinned
+# images through ./manage.py image.
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.tag.outputs.version }}
+      prerelease: ${{ steps.tag.outputs.prerelease }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Parse the tag
+        id: tag
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-rc\.[0-9]+)?$ ]]; then
+            echo "::error::tag '$TAG' is not vMAJOR.MINOR.PATCH or vMAJOR.MINOR.PATCH-rc.N"
+            exit 1
+          fi
+          echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
+          if [[ "$TAG" == *-rc.* ]]; then
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Require the commit on main
+        run: |
+          git fetch --no-tags origin main
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "::error::$GITHUB_SHA is not on main; release tags are cut from main only"
+            exit 1
+          fi
+
+  # Every lint, test, and the amd64 image checks, for exactly this commit.
+  tests:
+    needs: verify
+    uses: ./.github/workflows/test.yml
+    with:
+      run_all: true
+    permissions:
+      contents: read
+      checks: write
+      pull-requests: write
+
+  build:
+    name: build-${{ matrix.image }}-${{ matrix.arch }}
+    needs: [verify, tests]
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: true
+      matrix:
+        image: [backend, frontend]
+        arch: [amd64, arm64]
+        include:
+          - image: backend
+            name: uniffy
+            dockerfile: src/uniffy/Dockerfile
+          - image: frontend
+            name: uniffy-frontend
+            dockerfile: src/ui/Dockerfile
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    env:
+      # Mirrors IMAGES in manage.py; local commands and CI publish the same names.
+      IMAGE: ghcr.io/uniffy-io/${{ matrix.name }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+
+      - name: Build timestamp
+        id: now
+        run: echo "created=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push by digest
+        id: build
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          platforms: linux/${{ matrix.arch }}
+          build-args: |
+            VERSION=${{ needs.verify.outputs.version }}
+            REVISION=${{ github.sha }}
+          labels: |
+            org.opencontainers.image.version=${{ needs.verify.outputs.version }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.created=${{ steps.now.outputs.created }}
+          outputs: type=image,name=${{ env.IMAGE }},push-by-digest=true,name-canonical=true,push=true
+          cache-from: type=gha,scope=${{ matrix.image }}-${{ matrix.arch }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image }}-${{ matrix.arch }}
+          provenance: mode=max
+          sbom: true
+
+      # The digest is untagged in the registry until the merge job runs, so a
+      # failed check below leaves no release tag behind.
+      - name: Pull the digest for the local checks
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          docker pull "$IMAGE@$DIGEST"
+          docker tag "$IMAGE@$DIGEST" "$IMAGE:ci"
+
+      - uses: ./.github/actions/container-structure-test
+        with:
+          image: ${{ env.IMAGE }}:ci
+          config: .docker/prod/tests/${{ matrix.image }}.yaml
+          arch: ${{ matrix.arch }}
+
+      - name: Vulnerability scan
+        run: ./manage.py image scan -s ${{ matrix.image }} --tag ci
+
+      - name: SBOM
+        env:
+          ARCH: ${{ matrix.arch }}
+          NAME: ${{ matrix.name }}
+        run: |
+          ./manage.py image sbom -s ${{ matrix.image }} --tag ci --out-dir reports
+          mv "reports/sbom-${{ matrix.image }}.spdx.json" "reports/sbom-${NAME}-linux-${ARCH}.spdx.json"
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: sbom-${{ matrix.name }}-${{ matrix.arch }}
+          path: reports/sbom-*.spdx.json
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Export the digest
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          mkdir -p /tmp/digests
+          touch "/tmp/digests/${DIGEST#sha256:}"
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: digests-${{ matrix.image }}-${{ matrix.arch }}
+          path: /tmp/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  merge:
+    name: merge-${{ matrix.image }}
+    needs: [verify, build]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        include:
+          - image: backend
+            name: uniffy
+          - image: frontend
+            name: uniffy-frontend
+    env:
+      IMAGE: ghcr.io/uniffy-io/${{ matrix.name }}
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          path: /tmp/digests
+          pattern: digests-${{ matrix.image }}-*
+          merge-multiple: true
+
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Stable releases get MAJOR.MINOR.PATCH, MAJOR.MINOR, MAJOR (from 1.0 on)
+      # and latest. Release candidates get their exact version only.
+      - name: Create the multi-arch manifest
+        env:
+          VERSION: ${{ needs.verify.outputs.version }}
+          PRERELEASE: ${{ needs.verify.outputs.prerelease }}
+        run: |
+          tags=(-t "$IMAGE:$VERSION")
+          if [[ "$PRERELEASE" == "false" ]]; then
+            major="${VERSION%%.*}"
+            minor="${VERSION#*.}"; minor="${minor%%.*}"
+            tags+=(-t "$IMAGE:$major.$minor" -t "$IMAGE:latest")
+            if [[ "$major" != "0" ]]; then
+              tags+=(-t "$IMAGE:$major")
+            fi
+          fi
+          refs=()
+          for f in /tmp/digests/*; do refs+=("$IMAGE@sha256:$(basename "$f")"); done
+          docker buildx imagetools create "${tags[@]}" "${refs[@]}"
+
+      - name: Record the index digest
+        env:
+          VERSION: ${{ needs.verify.outputs.version }}
+        run: |
+          digest=$(docker buildx imagetools inspect "$IMAGE:$VERSION" --format '{{.Manifest.Digest}}')
+          docker buildx imagetools inspect "$IMAGE:$VERSION"
+          mkdir -p /tmp/index
+          echo "$IMAGE@$digest" > "/tmp/index/${{ matrix.name }}"
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: index-${{ matrix.image }}
+          path: /tmp/index/*
+          if-no-files-found: error
+          retention-days: 1
+
+  attest:
+    name: sign-${{ matrix.image }}
+    needs: merge
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
+      artifact-metadata: write
+    strategy:
+      matrix:
+        include:
+          - image: backend
+            name: uniffy
+          - image: frontend
+            name: uniffy-frontend
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: index-${{ matrix.image }}
+          path: /tmp/index
+
+      - name: Read the index digest
+        id: index
+        run: |
+          ref=$(cat "/tmp/index/${{ matrix.name }}")
+          echo "digest=${ref#*@}" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          path: /tmp/sbom
+          pattern: sbom-${{ matrix.name }}-*
+          merge-multiple: true
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: ./.github/actions/cosign
+
+      # Keyless: the certificate carries this workflow's identity and the tag
+      # ref, the signature lands in the public transparency log. One SBOM
+      # attestation per architecture hangs off the index digest.
+      - name: Sign the image and attest its SBOMs
+        env:
+          IMAGE: ghcr.io/uniffy-io/${{ matrix.name }}
+          NAME: ${{ matrix.name }}
+          DIGEST: ${{ steps.index.outputs.digest }}
+        run: |
+          cosign sign --yes "$IMAGE@$DIGEST"
+          for arch in amd64 arm64; do
+            cosign attest --yes --type spdxjson \
+              --predicate "/tmp/sbom/sbom-${NAME}-linux-${arch}.spdx.json" \
+              "$IMAGE@$DIGEST"
+          done
+
+      # GitHub attestations on a private repository need GitHub Enterprise Cloud;
+      # the cosign signature above covers the release until the repository is public.
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        if: ${{ !github.event.repository.private }}
+        with:
+          subject-name: ghcr.io/uniffy-io/${{ matrix.name }}
+          subject-digest: ${{ steps.index.outputs.digest }}
+          push-to-registry: true
+
+  release:
+    needs: [verify, merge, attest]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+      artifact-metadata: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          path: /tmp/index
+          pattern: index-*
+          merge-multiple: true
+
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          path: /tmp/sbom
+          pattern: sbom-*
+          merge-multiple: true
+
+      - name: Write images.txt
+        env:
+          VERSION: ${{ needs.verify.outputs.version }}
+        run: |
+          {
+            echo "# Uniffy $VERSION release images. One index per line, linux/amd64 and linux/arm64."
+            echo "# Verification: https://uniffy.io/docs/deployment/verify/"
+            cat /tmp/index/uniffy /tmp/index/uniffy-frontend
+          } > images.txt
+          cat images.txt
+
+      - uses: ./.github/actions/cosign
+
+      - name: Sign images.txt
+        run: cosign sign-blob --yes --bundle images.txt.sigstore.json images.txt
+
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        if: ${{ !github.event.repository.private }}
+        with:
+          subject-path: images.txt
+
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+          VERSION: ${{ needs.verify.outputs.version }}
+          PRERELEASE: ${{ needs.verify.outputs.prerelease }}
+        run: |
+          args=(--verify-tag --generate-notes --title "Uniffy $VERSION")
+          if [[ "$PRERELEASE" == "true" ]]; then args+=(--prerelease); fi
+          gh release create "$TAG" "${args[@]}" images.txt images.txt.sigstore.json /tmp/sbom/*.spdx.json

@@ -10,7 +10,7 @@ Upgrades are where self hosted software earns or loses trust, so this page is bl
 
 ## The pinset
 
-Every release ships a **pinset**: the chart version, the image digests, and the platform component versions we tested together. Upgrading means moving from one pinset to the next. The upgrade tooling never resolves `latest` for anything; it applies the pinset or it does nothing.
+Every release ships a **pinset**: the chart version, the image digests, and the platform component versions we tested together. Upgrading means moving from one pinset to the next. The upgrade tooling never resolves `latest` for anything; it applies the pinset or it does nothing. The pinset and every image in it are signed, and [Verify a Release](/docs/deployment/verify/) shows how to check them before an upgrade touches your cluster.
 
 Two rules ride on that:
 

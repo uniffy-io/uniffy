@@ -3,7 +3,7 @@ title: Harden the Edge
 description: Lock the platform operator API to your private network with one chart value. What it blocks, what it renders, how to verify it, and when the client IP lies.
 sidebar:
   label: Harden the Edge
-  order: 8
+  order: 9
 ---
 
 This page is for someone running Uniffy themselves who wants the operator surface unreachable from the internet. One value in your chart configuration gets you there.

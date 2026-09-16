@@ -1,0 +1,12 @@
+# Both production Dockerfiles pin their base images by digest. The single apt
+# install lives in the backend builder stage and never reaches the runtime,
+# so pinning that toolchain's package versions (DL3008) buys nothing and
+# breaks on every Debian point release.
+#
+# The runtime stages run the distribution's upgrade (DL3005) on purpose: a
+# digest-pinned base is frozen at its build date, and the security updates
+# Debian and Alpine publish afterwards are the fix for what the scanner gate
+# would otherwise fail on.
+ignored:
+  - DL3005
+  - DL3008

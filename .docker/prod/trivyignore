@@ -1,0 +1,3 @@
+# Accepted scanner findings for the production images. One CVE per line with
+# an expiry so nothing is ignored forever, for example:
+# CVE-2026-00000 exp:2026-12-31

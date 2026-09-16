@@ -3,7 +3,7 @@ title: System Architecture
 description: What a running Uniffy deployment is made of. Services, the traffic plane, data stores, worker fleets, sizing, ports, boot order, and what an operator must know to run and debug it.
 sidebar:
   label: System Architecture
-  order: 6
+  order: 7
 ---
 
 This page is the map a platform team needs of a running Uniffy. Read it before sizing infrastructure, planning an upgrade, or debugging an incident. How the code inside is organized is not here; this is about processes, ports, and data.

@@ -3,7 +3,7 @@ title: Admins and Operators
 description: The two admin jobs in a Uniffy deployment. What an org admin runs, what the platform operator runs, the wall between them, and whether to hold both roles in one account.
 sidebar:
   label: Admins and Operators
-  order: 7
+  order: 8
 ---
 
 Uniffy has two different admin jobs, and running your own deployment means you probably hold both. This page says what each job is, where the wall between them stands, and how to set up your own accounts so the wall protects you too.

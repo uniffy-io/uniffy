@@ -3,7 +3,7 @@ title: Behind an Edge
 description: Running Cloudflare, a CDN, a WAF, or a corporate load balancer in front of Uniffy. What must pass untouched, what to switch off, and where the TURN record must never point.
 sidebar:
   label: Behind an Edge
-  order: 9
+  order: 10
 ---
 
 Plenty of deployments put something in front of Uniffy: Cloudflare for DDoS cover, a corporate WAF because policy says so, a load balancer that terminates all company TLS. All of that can work. This page is the contract an edge has to honor, the Cloudflare specifics, and the two mistakes that produce an app that looks healthy while parts of it quietly die.

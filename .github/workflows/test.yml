@@ -4,6 +4,13 @@ on:
   push:
     branches: [main]
   pull_request:
+  # The release workflow calls this one for the tagged commit and waits for it.
+  workflow_call:
+    inputs:
+      run_all:
+        description: Run every job regardless of changed paths.
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -20,13 +27,16 @@ jobs:
   changes:
     runs-on: ubuntu-latest
     outputs:
-      backend: ${{ steps.filter.outputs.backend }}
-      frontend: ${{ steps.filter.outputs.frontend }}
-      mobile: ${{ steps.filter.outputs.mobile }}
-      proto: ${{ steps.filter.outputs.proto }}
+      backend: ${{ inputs.run_all || steps.filter.outputs.backend == 'true' }}
+      frontend: ${{ inputs.run_all || steps.filter.outputs.frontend == 'true' }}
+      mobile: ${{ inputs.run_all || steps.filter.outputs.mobile == 'true' }}
+      proto: ${{ inputs.run_all || steps.filter.outputs.proto == 'true' }}
+      docker: ${{ inputs.run_all || steps.filter.outputs.docker == 'true' }}
     steps:
       - uses: actions/checkout@v5
+        if: ${{ !inputs.run_all }}
       - uses: dorny/paths-filter@v3
+        if: ${{ !inputs.run_all }}
         id: filter
         with:
           filters: |
@@ -53,6 +63,17 @@ jobs:
               - 'src/proto/**'
               - 'buf.gen.yaml'
               - 'buf.yaml'
+            docker:
+              - 'src/uniffy/Dockerfile'
+              - 'src/ui/Dockerfile'
+              - 'src/ui/nginx/**'
+              - '.dockerignore'
+              - '.docker/prod/**'
+              - '.github/actions/**'
+              - '.github/workflows/test.yml'
+              - 'manage.py'
+              - 'uv.lock'
+              - 'pnpm-lock.yaml'
 
   # No path filter: a secret can land in any file, and the scan covers the
   # full history, so a skipped run would let an old leak ride in unnoticed.
@@ -449,6 +470,66 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
+  # Production images: hadolint, an amd64 build, the structure tests, and the
+  # vulnerability gate. Source changes count because they change what the
+  # image imports and ships; the release workflow reruns this for the tagged
+  # commit and then builds both architectures.
+  docker-images:
+    name: docker-${{ matrix.image }}
+    needs: changes
+    if: >
+      needs.changes.outputs.docker == 'true' ||
+      needs.changes.outputs.backend == 'true' ||
+      needs.changes.outputs.frontend == 'true'
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: backend
+            name: uniffy
+            dockerfile: src/uniffy/Dockerfile
+          - image: frontend
+            name: uniffy-frontend
+            dockerfile: src/ui/Dockerfile
+    env:
+      # Mirrors IMAGES in manage.py; local commands and CI use the same names.
+      IMAGE: ghcr.io/uniffy-io/${{ matrix.name }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - name: hadolint
+        run: ./manage.py image lint -s ${{ matrix.image }}
+
+      - name: Build
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          platforms: linux/amd64
+          load: true
+          tags: ${{ env.IMAGE }}:ci
+          build-args: |
+            VERSION=0.0.0-ci
+            REVISION=${{ github.sha }}
+          cache-from: type=gha,scope=${{ matrix.image }}-amd64
+          cache-to: type=gha,mode=max,scope=${{ matrix.image }}-amd64
+
+      - uses: ./.github/actions/container-structure-test
+        with:
+          image: ${{ env.IMAGE }}:ci
+          config: .docker/prod/tests/${{ matrix.image }}.yaml
+          arch: amd64
+
+      - name: Vulnerability scan
+        run: ./manage.py image scan -s ${{ matrix.image }} --tag ci
+
   all-green:
     name: All checks passed
     if: always()
@@ -465,6 +546,7 @@ jobs:
       - test-python
       - test-frontend
       - test-mobile
+      - docker-images
     runs-on: ubuntu-latest
     steps:
       - name: Verify required jobs succeeded or were skipped

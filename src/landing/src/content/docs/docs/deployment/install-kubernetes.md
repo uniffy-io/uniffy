@@ -259,6 +259,8 @@ helm test uniffy -n uniffy
 
 The chart's test suite checks the pieces that fail quietly: the h2c path to the backend, the websocket route, and a TURN allocation against `turn.example.com:3478` with a minted credential. Green tests mean chat streams and calls media both actually flow. Then sign in with the initial admin credentials and change the password.
 
+Before any of this, [verify the release](/docs/deployment/verify/). The pinset file and every image in it are signed; ten seconds with cosign tells you the digests you are about to run are the ones we published.
+
 ## Day two
 
 - [Upgrades](/docs/deployment/upgrades/): pinsets, the maintenance window, and why the Postgres dump comes first.
@@ -268,7 +270,7 @@ The chart's test suite checks the pieces that fail quietly: the h2c path to the 
 
 ## Private registries and isolated clusters
 
-Each release ships `images.txt`, the full image list with digests, and `mirror.sh`, which copies all of them into your registry:
+Each release ships `images.txt`, the full image list with digests, and `mirror.sh`, which copies all of them into your registry, signatures and attestations included:
 
 ```bash
 ./mirror.sh registry.internal/uniffy
@@ -281,6 +283,6 @@ global:
   imageRegistry: registry.internal/uniffy
 ```
 
-Charts install from local files the same way, so a cluster with no internet path runs the same pinset as everyone else.
+Charts install from local files the same way, so a cluster with no internet path runs the same pinset as everyone else. [Verify a Release](/docs/deployment/verify/) covers checking the signatures against your own registry, with or without a connection.
 
 The short version of this page: you own the endpoints, we own the traffic plane. Postgres, storage, mail, and certificates plug in wherever yours live. The path a request takes between the user and Uniffy is ours, because that is the part that breaks in ways only we can test.
