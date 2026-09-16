@@ -21,7 +21,6 @@ concurrency:
 
 jobs:
   verify:
-    name: Check the tag
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -59,7 +58,6 @@ jobs:
 
   # Every lint, test, and the amd64 image checks, for exactly this commit.
   tests:
-    name: Tests
     needs: verify
     uses: ./.github/workflows/test.yml
     with:
@@ -70,7 +68,7 @@ jobs:
       pull-requests: write
 
   build:
-    name: Build ${{ matrix.image }} ${{ matrix.arch }}
+    name: build-${{ matrix.image }}-${{ matrix.arch }}
     needs: [verify, tests]
     runs-on: ${{ matrix.runner }}
     permissions:
@@ -182,7 +180,7 @@ jobs:
           retention-days: 1
 
   merge:
-    name: Publish ${{ matrix.image }} tags
+    name: merge-${{ matrix.image }}
     needs: [verify, build]
     runs-on: ubuntu-24.04
     permissions:
@@ -249,7 +247,7 @@ jobs:
           retention-days: 1
 
   attest:
-    name: Sign and attest ${{ matrix.image }}
+    name: sign-${{ matrix.image }}
     needs: merge
     runs-on: ubuntu-24.04
     permissions:
@@ -321,7 +319,6 @@ jobs:
           push-to-registry: true
 
   release:
-    name: GitHub release
     needs: [verify, merge, attest]
     runs-on: ubuntu-24.04
     permissions:

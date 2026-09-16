@@ -475,7 +475,7 @@ jobs:
   # image imports and ships; the release workflow reruns this for the tagged
   # commit and then builds both architectures.
   docker-images:
-    name: Docker ${{ matrix.image }}
+    name: docker-${{ matrix.image }}
     needs: changes
     if: >
       needs.changes.outputs.docker == 'true' ||
