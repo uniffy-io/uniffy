@@ -15,61 +15,61 @@ requires-python = ">=3.14"
 dependencies = [
   "uniffy-proto",
   "aiofiles>=25.1.0",
-  "alembic>=1.18.5",
+  "alembic>=1.20.0",
   "asyncpg>=0.30.0",
   "bcrypt>=4.2.1",
   "argon2-cffi>=25.1.0",
-  "cryptography>=49.0.0",
+  "cryptography>=50.0.1",
   # MFA (TOTP)
-  "pyotp>=2.9.0",
+  "pyotp>=2.10.0",
   "segno>=1.6.6",
   "colorama>=0.4.6",
-  "aiosmtplib>=5.1.0",
-  "fastapi>=0.139.2",
-  "starlette>=1.3.1",
+  "aiosmtplib>=5.1.3",
+  "fastapi>=0.141.1",
+  "starlette>=1.6.0",
   "jinja2>=3.1.6",
   "loguru>=0.7.3",
-  "meilisearch-python-sdk[orjson]>=7.5.0",
-  "psycopg2-binary>=2.9.10",
-  "pydantic[email]>=2.13.4",
-  "pyjwt>=2.10.0",
-  "python-dotenv>=1.2.1",
+  "meilisearch-python-sdk[orjson]>=7.5.2",
+  "psycopg2-binary>=2.9.13",
+  "pydantic[email]>=2.13.5",
+  "pyjwt>=2.14.0",
+  "python-dotenv>=1.2.3",
   "python-multipart>=0.0.32",
-  "sqlmodel>=0.0.39",
-  "sqlalchemy>=2.0.51",
-  "granian>=2.8.2",
+  "sqlmodel>=0.0.42",
+  "sqlalchemy>=2.0.54",
+  "granian>=2.8.3",
   "aioboto3>=13.0.0",
-  "types-aiobotocore[s3]>=2.15.0",
+  "types-aiobotocore[s3]>=3.9.1",
   # Background jobs: arq is vendored under uniffy.vendor.arq (valkey-backed); it needs click.
   "valkey[libvalkey]>=6.1.1",
-  "click>=8.0",
+  "click>=8.5.0",
   # Image processing
-  "pillow>=11.0.0",
+  "pillow>=12.3.0",
   # PDF thumbnail generation
-  "pymupdf>=1.28.0",
+  "pymupdf>=1.28.2",
   # Video: PyAV (in-process libav) decodes thumbnail frames; transcode still shells to the ffmpeg binary
-  "av>=18.0.0",
+  "av>=18.1.0",
   # Audio metadata extraction
-  "mutagen>=1.47.0",
+  "mutagen>=1.48.1",
   # Document text extraction
   "python-docx>=1.1.0",
   "openpyxl>=3.1.0",
   "python-pptx>=1.0.0",
   # Web Push notifications (VAPID)
-  "pywebpush>=2.0.0",
+  "pywebpush>=2.5.0",
   # Prometheus metrics
-  "prometheus-client>=0.21.0",
+  "prometheus-client>=0.26.0",
   # LLM provider SDKs
   "anthropic>=0.117.0",
-  "openai>=2.46.0",
+  "openai>=3.14.1",
   # Cron expression parsing
-  "croniter>=6.0.0",
-  "google-genai>=2.12.1",
+  "croniter>=6.2.4",
+  "google-genai>=2.23.0",
   "connectrpc>=0.10.0",
-  "pyqwest>=0.7.0",
+  "pyqwest>=0.10.0",
   # Realtime collaboration (CRDT)
   "pycrdt>=0.13.0",
-  "pycrdt-websocket>=0.16.1",
+  "pycrdt-websocket>=0.16.2",
   "orjson>=3.12.0",
   # iCalendar (RFC 5545) serialization and parsing
   "icalendar>=7.3.0",
@@ -77,16 +77,28 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-  "import-linter>=2.13",
-  "pip-licenses>=5.5.0",
+  "import-linter>=2.15",
+  "pip-licenses>=5.5.5",
   "protoc-gen-connectrpc>=0.10.0",
-  "pytest>=8.0.0",
+  "pytest>=9.1.1",
   "pytest-asyncio>=1.4.0",
-  "pytest-benchmark>=5.0.0",
+  "pytest-benchmark>=5.3.0",
   "ruff>=0.16.3",
   "ty>=0.0.72",
   # Worker hot reload
-  "watchfiles>=1.0.0",
+  "watchfiles>=1.2.0",
+]
+
+[tool.uv]
+# Security floors for transitive packages the image scanner flagged; the
+# lock cannot resolve below them even when a direct dependency would allow it.
+constraint-dependencies = [
+  "aiohttp>=3.14.3",
+  "httpx2>=2.13.0",
+  "lxml>=6.1.3",
+  "mako>=1.4.1",
+  "pyasn1>=0.6.4",
+  "urllib3>=2.8.0",
 ]
 
 [tool.uv.workspace]
