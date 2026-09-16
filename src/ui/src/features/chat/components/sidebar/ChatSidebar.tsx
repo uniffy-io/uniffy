@@ -56,7 +56,11 @@ import {
   unarchiveChannel,
 } from "@/features/chat/store/chatThunks";
 import { AgentChatFolderGroup } from "@/features/chat/components/sidebar/AgentChatFolderGroup";
-import { selectChannelsWithDrafts, selectDraftCount } from "@/features/chat/store/chatDraftsSlice";
+import {
+  selectActiveDraftKey,
+  selectChannelsWithDrafts,
+  selectDraftCount,
+} from "@/features/chat/store/chatDraftsSlice";
 import {
   toggleDmSection,
   toggleAgentChatsSection,
@@ -216,8 +220,9 @@ export function ChatSidebar() {
   );
   const { canManageChat } = useChatPermissions();
   const channelPreferences = useAppSelector(selectChannelPreferences);
-  const draftChannels = useAppSelector(selectChannelsWithDrafts);
-  const draftCount = useAppSelector(selectDraftCount);
+  const activeDraftKey = useAppSelector((state) => selectActiveDraftKey(state, currentPath));
+  const draftChannels = useAppSelector((state) => selectChannelsWithDrafts(state, activeDraftKey));
+  const draftCount = useAppSelector((state) => selectDraftCount(state, activeDraftKey));
   const archivedChannels = useAppSelector(selectArchivedChannels);
   const archivedLoaded = useAppSelector(selectArchivedLoaded);
   const archivedLoading = useAppSelector((state) => !!state.chatChannels.archivedRequestId);

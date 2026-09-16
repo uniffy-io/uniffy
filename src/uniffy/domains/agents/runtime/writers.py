@@ -20,6 +20,8 @@ from uniffy.core.models.chat.message import (
     ChatMessageVisibility,
     SenderType,
 )
+from uniffy.domains.agents.runtime.output import prepare_model_markdown
+from uniffy.domains.agents.runtime.output_format import OutputSurface
 from uniffy.domains.chat.agents import (
     AGENT_THREAD_REPLY_KINDS,
     SenderResolver,
@@ -84,6 +86,7 @@ class MessageWriter(Protocol):
         cache_creation_input_tokens: int = 0,
         cache_read_input_tokens: int = 0,
         model: str | None = None,
+        provider: str | None = None,
         tool_name: str | None = None,
         tool_call_id: str | None = None,
         tool_args: dict | None = None,
@@ -94,12 +97,7 @@ class MessageWriter(Protocol):
         invoked_skill_name: str | None = None,
         thinking: list[dict] | None = None,
     ) -> AgentMessage:
-        """Persist a message and return an `AgentMessage`-shaped envelope.
-
-        `tool_metadata` is machine-readable result detail for the client and
-        only reaches chat rows; `agents_messages` carries no metadata column,
-        so the session writer accepts and drops it.
-        """
+        """Return an AgentMessage envelope; only chat rows persist tool_metadata."""
 
     async def reserve_assistant_placeholder(self) -> AgentMessage | None:
         """Insert an empty in-flight assistant row that streamed deltas patch.
@@ -118,6 +116,7 @@ class MessageWriter(Protocol):
         cache_creation_input_tokens: int = 0,
         cache_read_input_tokens: int = 0,
         model: str | None = None,
+        provider: str | None = None,
         thinking: list[dict] | None = None,
     ) -> AgentMessage:
         """Persist final content + token usage onto a reserved placeholder."""
@@ -186,6 +185,7 @@ class SessionMessageWriter:
         cache_creation_input_tokens: int = 0,
         cache_read_input_tokens: int = 0,
         model: str | None = None,
+        provider: str | None = None,
         tool_name: str | None = None,
         tool_call_id: str | None = None,
         tool_args: dict | None = None,
@@ -196,6 +196,10 @@ class SessionMessageWriter:
         invoked_skill_name: str | None = None,
         thinking: list[dict] | None = None,
     ) -> AgentMessage:
+        if role == AgentMessageRole.ASSISTANT and content and not is_thinking:
+            content = prepare_model_markdown(
+                content, surface=OutputSurface.SESSION, provider=provider, model=model
+            )
         return await self._session_ops.add_message(
             user_id=self._user_id,
             organization_id=self._organization_id,
@@ -230,6 +234,7 @@ class SessionMessageWriter:
         cache_creation_input_tokens: int = 0,
         cache_read_input_tokens: int = 0,
         model: str | None = None,
+        provider: str | None = None,
         thinking: list[dict] | None = None,
     ) -> AgentMessage:
         raise NotImplementedError(
@@ -260,11 +265,7 @@ class SessionMessageWriter:
 
 
 class ChatChannelMessageWriter:
-    """Persist runtime steps into `chat_messages` as `sender_type=AGENT`.
-
-    Approval scope is the channel id so destructive-tool approvals in
-    different DMs never collide.
-    """
+    """Channel-scoped persistence keeps replies and tool approvals in their conversation."""
 
     def __init__(
         self,
@@ -277,6 +278,7 @@ class ChatChannelMessageWriter:
         agent_id: UUID,
         trigger_message_id: UUID,
         thread_root_id: UUID | None = None,
+        agent_name: str | None = None,
     ) -> None:
         self._session = session
         self._search_indexer = search_indexer
@@ -284,6 +286,7 @@ class ChatChannelMessageWriter:
         self._organization_id = organization_id
         self._channel_id = channel_id
         self._agent_id = agent_id
+        self._agent_name = agent_name
         self._trigger_message_id = trigger_message_id
         # Inherited by every agent-authored row so tool cards, results, and
         # the final reply all land inside the trigger's thread.
@@ -369,6 +372,7 @@ class ChatChannelMessageWriter:
         cache_creation_input_tokens: int = 0,
         cache_read_input_tokens: int = 0,
         model: str | None = None,
+        provider: str | None = None,
         tool_name: str | None = None,
         tool_call_id: str | None = None,
         tool_args: dict | None = None,
@@ -379,13 +383,7 @@ class ChatChannelMessageWriter:
         invoked_skill_name: str | None = None,
         thinking: list[dict] | None = None,
     ) -> AgentMessage:
-        """Persist a runtime-step message into `chat_messages`.
-
-        `role="user"` is a no-op (the trigger user message is already in the
-        channel); returns an envelope to keep the MESSAGE_STORED event
-        uniform. Other roles persist a `sender_type=AGENT` row whose
-        `metadata.kind` drives the renderer card choice.
-        """
+        """The triggering user message already exists and must never be written again."""
         if role == AgentMessageRole.USER:
             return AgentMessage(
                 id=self._trigger_message_id,
@@ -397,6 +395,14 @@ class ChatChannelMessageWriter:
             )
 
         kind = _metadata_kind_for(role, tool_call_id)
+        if kind is ChatMessageMetadataKind.FINAL and content and not is_thinking:
+            content = prepare_model_markdown(
+                content,
+                surface=OutputSurface.CHAT,
+                provider=provider,
+                model=model,
+                agent_name=self._agent_name,
+            )
         meta: dict = {
             "kind": kind,
             "agent_id": str(self._agent_id),
@@ -549,13 +555,10 @@ class ChatChannelMessageWriter:
         cache_creation_input_tokens: int = 0,
         cache_read_input_tokens: int = 0,
         model: str | None = None,
+        provider: str | None = None,
         thinking: list[dict] | None = None,
     ) -> AgentMessage:
-        """Write final content + token usage onto a reserved placeholder.
-
-        Clears `metadata.streaming` so subscribers know the row is settled.
-        Falls back to `add_message` if the row vanished.
-        """
+        """Settle a stable reply row or recreate it if its placeholder vanished."""
         chat_msg = await self._session.get(ChatMessage, message_id)
         if chat_msg is None:
             return await self.add_message(
@@ -566,9 +569,17 @@ class ChatChannelMessageWriter:
                 cache_creation_input_tokens=cache_creation_input_tokens,
                 cache_read_input_tokens=cache_read_input_tokens,
                 model=model,
+                provider=provider,
                 thinking=thinking,
             )
 
+        content = prepare_model_markdown(
+            content,
+            surface=OutputSurface.CHAT,
+            provider=provider,
+            model=model,
+            agent_name=self._agent_name,
+        )
         chat_msg.content = content or ""
         # Same broadcast strip as the insert path: finalize rewrites the row.
         urn_mentions = (

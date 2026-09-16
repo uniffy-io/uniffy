@@ -3,7 +3,8 @@
 import contextlib
 from uuid import UUID
 
-from uniffy.domains.agents.tools.builtin.args import MARKDOWN_CONTENT_DOC
+from uniffy.domains.agents.runtime.output_format import OutputSurface
+from uniffy.domains.agents.tools.builtin.args import MARKDOWN_CONTENT_DOC, markdown_body
 from uniffy.domains.agents.tools.builtin.content import (
     creation_space_schema,
     parse_creation_space,
@@ -307,6 +308,8 @@ async def _execute_create_task(ctx: ToolContext, args: dict) -> ToolResult:
         kwargs["sprint_id"] = sprint_id
 
     ops = TaskOperations(ctx.session, ctx.required_storage, ctx.required_search)
+    if "description" in kwargs:  # noqa: PLR2004
+        kwargs["description"] = markdown_body(ctx, kwargs["description"], OutputSurface.TASK)
     task = await ops.create(
         user_id=ctx.user_id,
         organization_id=ctx.organization_id,
@@ -322,7 +325,6 @@ async def _execute_create_task(ctx: ToolContext, args: dict) -> ToolResult:
 
 
 async def _execute_update_task(ctx: ToolContext, args: dict) -> ToolResult:
-    """Update a task."""
     from uniffy.domains.projects.operations import TaskOperations
 
     task_id_str = args.get("task_id", "")
@@ -335,7 +337,6 @@ async def _execute_update_task(ctx: ToolContext, args: dict) -> ToolResult:
 
     kwargs: dict = {}
 
-    # Simple string fields
     _UPDATE_STRING_FIELDS = (
         "title",
         "description",
@@ -402,6 +403,8 @@ async def _execute_update_task(ctx: ToolContext, args: dict) -> ToolResult:
         )
 
     ops = TaskOperations(ctx.session, ctx.required_storage, ctx.required_search)
+    if "description" in kwargs:  # noqa: PLR2004
+        kwargs["description"] = markdown_body(ctx, kwargs["description"], OutputSurface.TASK)
     task, _ = await ops.update(
         user_id=ctx.user_id,
         organization_id=ctx.organization_id,

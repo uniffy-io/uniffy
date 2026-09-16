@@ -164,24 +164,8 @@ class MessageStreamer:
 
             if isinstance(destination, SessionDestination):
                 session_id = destination.session_id
-                writer = SessionMessageWriter(
-                    session_ops=self._session_operations,
-                    user_id=user_id,
-                    organization_id=organization_id,
-                    session_id=session_id,
-                )
             else:
                 channel_id = destination.channel_id
-                writer = ChatChannelMessageWriter(
-                    session=self._session,
-                    search_indexer=self._search_indexer,
-                    user_id=user_id,
-                    organization_id=organization_id,
-                    channel_id=destination.channel_id,
-                    agent_id=destination.agent_id,
-                    trigger_message_id=destination.trigger_message_id,
-                    thread_root_id=destination.thread_root_id,
-                )
 
             membership = await self._org_operations.require_org_member(
                 user_id,
@@ -218,6 +202,25 @@ class MessageStreamer:
                 organization_id,
                 agent_id,
             )
+            if isinstance(destination, SessionDestination):
+                writer = SessionMessageWriter(
+                    session_ops=self._session_operations,
+                    user_id=user_id,
+                    organization_id=organization_id,
+                    session_id=destination.session_id,
+                )
+            else:
+                writer = ChatChannelMessageWriter(
+                    session=self._session,
+                    search_indexer=self._search_indexer,
+                    user_id=user_id,
+                    organization_id=organization_id,
+                    channel_id=destination.channel_id,
+                    agent_id=destination.agent_id,
+                    trigger_message_id=destination.trigger_message_id,
+                    thread_root_id=destination.thread_root_id,
+                    agent_name=agent.name,
+                )
             organization = await self._org_operations.get_by_id(organization_id)
             user = await self._user_operations.get_by_id(user_id)
             role = membership.role

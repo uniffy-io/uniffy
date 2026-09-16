@@ -5,8 +5,10 @@ from uuid import UUID
 from zoneinfo import ZoneInfo
 
 from uniffy.core.types import EventStatus, EventTransparency, RecurrencePattern
+from uniffy.domains.agents.runtime.output_format import OutputSurface
 from uniffy.domains.agents.tools.builtin.args import (
     MARKDOWN_CONTENT_DOC,
+    markdown_body,
     parse_uuid,
     parse_uuid_list,
 )
@@ -286,7 +288,6 @@ async def _execute_read_event(ctx: ToolContext, args: dict) -> ToolResult:
 
 
 async def _execute_create_event(ctx: ToolContext, args: dict) -> ToolResult:
-    """Create a new calendar event."""
     from uniffy.domains.scheduling.calendar import queries as cal_queries
     from uniffy.domains.scheduling.calendar.operations import CalendarEventOperations
 
@@ -344,7 +345,7 @@ async def _execute_create_event(ctx: ToolContext, args: dict) -> ToolResult:
 
     # Build kwargs from optional fields
     kwargs: dict = {
-        "description": args.get("description", ""),
+        "description": markdown_body(ctx, args.get("description", ""), OutputSurface.EVENT),
     }
 
     kwargs["is_all_day"] = is_all_day
@@ -432,7 +433,6 @@ async def _execute_create_event(ctx: ToolContext, args: dict) -> ToolResult:
 
 
 async def _execute_update_event(ctx: ToolContext, args: dict) -> ToolResult:
-    """Update a calendar event."""
     from uniffy.domains.scheduling.calendar.operations import CalendarEventOperations
 
     event_id_str = args.get("event_id", "")
@@ -445,10 +445,11 @@ async def _execute_update_event(ctx: ToolContext, args: dict) -> ToolResult:
 
     kwargs: dict = {}
 
-    # Simple string fields
     for field in ("title", "description", "location", "meeting_url", "timezone"):
         if field in args:
             kwargs[field] = args[field]
+    if "description" in kwargs:  # noqa: PLR2004
+        kwargs["description"] = markdown_body(ctx, kwargs["description"], OutputSurface.EVENT)
 
     # Datetime fields
     tz = ctx.user_timezone

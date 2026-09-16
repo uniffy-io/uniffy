@@ -1,5 +1,6 @@
 import type { UnreadMap } from "@features/chat/unreadCounts";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { usePathname } from "expo-router";
 import {
   useInfiniteQuery,
   useQuery,
@@ -13,6 +14,7 @@ import { filesApi } from "@features/files/filesApi";
 import { STREAM_HEALTH_KEY } from "@features/chat/useChatStream";
 import { draftsKey, agentFoldersKey } from "@features/chat/useChatMutations";
 import { messageWindowOptions, MESSAGE_WINDOW_SIZE } from "@features/chat/messageWindow";
+import { draftChannelIds } from "@features/chat/draftIndicators";
 import {
   channelToPlain,
   messageToPlain,
@@ -153,14 +155,11 @@ export function useDrafts() {
   });
 }
 
-/** Channel ids carrying a draft; a thread draft marks its parent channel. */
+/** Indicators omit the open composer while its draft continues to autosave. */
 function useDraftChannelIds(): Set<string> {
   const draftsQuery = useDrafts();
-  return useMemo(() => {
-    const ids = new Set<string>();
-    for (const draft of Object.values(draftsQuery.data ?? {})) ids.add(draft.channelId);
-    return ids;
-  }, [draftsQuery.data]);
+  const pathname = usePathname();
+  return useMemo(() => draftChannelIds(draftsQuery.data, pathname), [draftsQuery.data, pathname]);
 }
 
 /** The user's named agent chats, merged with live unread counts. */

@@ -56,13 +56,7 @@ class RuntimeStreamPublisher(Protocol):
 
 
 class ChatStreamPublisher:
-    """Translate runtime events into chat-surface events.
-
-    Behaviour-preserving extraction of the original
-    ``AgentChatBridge._publish_runtime_event`` switch: same chat events,
-    same DB side-effects (placeholder announcement, error-message
-    persistence), same dedupe via the ``announced_placeholders`` set.
-    """
+    """Publish stored chat rows and transient agent activity to channel members."""
 
     def __init__(
         self,
@@ -85,12 +79,7 @@ class ChatStreamPublisher:
         self._announced_placeholders: set[UUID] = set()
 
     async def publish(self, event: StreamEvent) -> None:
-        """Translate and fan one runtime event into chat events.
-
-        Block-framing events without a chat rendering (text/tool block
-        start/end, model call framing, reply start) are dropped here;
-        the chat surface reconstructs state from deltas + tool status.
-        """
+        """Chat reconstructs activity from deltas and replaces text from stored rows."""
         match event.type:
             case EventType.TEXT_BLOCK_DELTA:
                 await self._publish_text_delta(event)
@@ -99,8 +88,11 @@ class ChatStreamPublisher:
             case EventType.MESSAGE_STORED:
                 envelope = event.message
                 if envelope.role == AgentMessageRole.ASSISTANT and envelope.id is not None:
-                    self._announced_placeholders.add(envelope.id)
-                    await self._publish_message_created(envelope.id)
+                    if envelope.id in self._announced_placeholders:
+                        await self._publish_settled_message(envelope.id)
+                    else:
+                        self._announced_placeholders.add(envelope.id)
+                        await self._publish_message_created(envelope.id)
             case EventType.TOOL_RESULT_START:
                 if event.message_id is not None:
                     await self._publish_message_created(event.message_id)
@@ -155,27 +147,9 @@ class ChatStreamPublisher:
                 )
             case EventType.DONE:
                 if event.assistant_message is not None:
-                    msg_id = event.assistant_message.id
-                    if msg_id in self._announced_placeholders:
-                        await publish_channel_event_to_members(
-                            self._member_ids,
-                            chat_evt.AGENT_TOKEN_DELTA,
-                            chat_evt.build_agent_token_delta_payload(
-                                message_id=msg_id,
-                                agent_id=self._agent_id,
-                                delta="",
-                                sequence=2_000_000_000,
-                                final=True,
-                            ),
-                            channel_id=self._channel_id,
-                        )
-                        await self._publish_message_event(
-                            msg_id, chat_evt.MESSAGE_UPDATED, skill_invocation=event.skill_invocation
-                        )
-                    else:
-                        await self._publish_message_event(
-                            msg_id, chat_evt.MESSAGE_CREATED, skill_invocation=event.skill_invocation
-                        )
+                    await self._publish_settled_message(
+                        event.assistant_message.id, skill_invocation=event.skill_invocation
+                    )
             case EventType.ERROR:
                 logger.warning(
                     f"Agent runtime error for agent={self._agent_id} "
@@ -187,6 +161,29 @@ class ChatStreamPublisher:
                     logger.exception("Failed to write agent error message to chat")
             case _:
                 pass
+
+    async def _publish_settled_message(
+        self, message_id: UUID, *, skill_invocation: dict[str, str] | None = None
+    ) -> None:
+        announced = message_id in self._announced_placeholders
+        if announced:
+            await publish_channel_event_to_members(
+                self._member_ids,
+                chat_evt.AGENT_TOKEN_DELTA,
+                chat_evt.build_agent_token_delta_payload(
+                    message_id=message_id,
+                    agent_id=self._agent_id,
+                    delta="",
+                    sequence=2_000_000_000,
+                    final=True,
+                ),
+                channel_id=self._channel_id,
+            )
+        await self._publish_message_event(
+            message_id,
+            chat_evt.MESSAGE_UPDATED if announced else chat_evt.MESSAGE_CREATED,
+            skill_invocation=skill_invocation,
+        )
 
     async def close(self) -> None:
         """No buffers to flush; kept for protocol parity."""

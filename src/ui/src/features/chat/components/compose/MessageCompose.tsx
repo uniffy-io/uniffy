@@ -1,6 +1,6 @@
 /** ContentEditable compose; mention chips serialize back to `[[[label|urn]]]` on send. */
 
-import { useRef, useEffect, useCallback, useMemo, useState } from "react";
+import { useRef, useEffect, useLayoutEffect, useCallback, useMemo, useState } from "react";
 import {
   Plus,
   Smiley,
@@ -40,6 +40,7 @@ import { AgentModelPicker } from "@/features/chat/components/compose/AgentModelP
 import { AgentParamsPopover } from "@/features/chat/components/compose/AgentParamsPopover";
 import { useChannelAgentConfig } from "@/features/chat/hooks/useChannelAgentConfig";
 import { AttachmentPreviewBar } from "@/features/chat/components/compose/AttachmentPreviewBar";
+import { restoreComposeFocus } from "@/features/chat/components/compose/composeFocus";
 import {
   needsTeamMentionConfirm,
   resolveTeamMentionTotal,
@@ -311,6 +312,8 @@ export function MessageCompose({
   // params popover's schema; the hook no-ops for non-agent channels.
   const agentConfig = useChannelAgentConfig(channelId, agentDmAgentId);
   const editorRef = useRef<HTMLDivElement>(null);
+  const composeRef = useRef<HTMLDivElement>(null);
+  const focusAfterSendRef = useRef(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const emojiButtonRef = useRef<HTMLButtonElement>(null);
   const [isEmpty, setIsEmpty] = useState(true);
@@ -375,6 +378,12 @@ export function MessageCompose({
   const runnableSkills = useAppSelector(selectRunnableSkillsForAgent(skillAgentId, "chat"));
   const [isSending, setIsSending] = useState(false);
   const sendingRef = useRef(false);
+
+  useLayoutEffect(() => {
+    if (isSending || !focusAfterSendRef.current) return;
+    focusAfterSendRef.current = false;
+    restoreComposeFocus(composeRef.current, editorRef.current);
+  });
 
   useEffect(() => {
     if (skillAgentId && organizationId) {
@@ -767,6 +776,7 @@ export function MessageCompose({
         // The rejected send thunk owns the error toast; keep the draft for retry.
       } finally {
         sendingRef.current = false;
+        focusAfterSendRef.current = true;
         setIsSending(false);
       }
     },
@@ -1165,6 +1175,7 @@ export function MessageCompose({
         onChange={handleFileInputChange}
       />
       <div
+        ref={composeRef}
         className={cn(
           "relative bg-card/60 backdrop-blur-lg backdrop-saturate-150 shadow-float",
           "focus-ring-within transition-all",

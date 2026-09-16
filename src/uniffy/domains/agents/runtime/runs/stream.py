@@ -178,7 +178,7 @@ class StreamingRunner:
             if invocation is not None:
                 invocation.response_message_id = None
             if stream_result.placeholder_id is not None:
-                await writer.finalize_assistant_placeholder(
+                intermediate_message = await writer.finalize_assistant_placeholder(
                     message_id=stream_result.placeholder_id,
                     content=completion.content or "",
                     input_tokens=completion.input_tokens,
@@ -186,8 +186,10 @@ class StreamingRunner:
                     cache_creation_input_tokens=completion.cache_creation_input_tokens,
                     cache_read_input_tokens=completion.cache_read_input_tokens,
                     model=completion.model,
+                    provider=controller.target.provider_name,
                     thinking=stream_result.thinking or None,
                 )
+                yield StreamEvent(type=EventType.MESSAGE_STORED, message=intermediate_message)
 
             terminal_error: str | None = None
             async for event in self._tool_loop.run(
@@ -260,6 +262,7 @@ class StreamingRunner:
                 cache_creation_input_tokens=completion.cache_creation_input_tokens,
                 cache_read_input_tokens=completion.cache_read_input_tokens,
                 model=completion.model,
+                provider=controller.target.provider_name,
                 thinking=stream_result.thinking or None,
             )
         else:
@@ -271,6 +274,7 @@ class StreamingRunner:
                 cache_creation_input_tokens=completion.cache_creation_input_tokens,
                 cache_read_input_tokens=completion.cache_read_input_tokens,
                 model=completion.model,
+                provider=controller.target.provider_name,
                 thinking=stream_result.thinking or None,
             )
 

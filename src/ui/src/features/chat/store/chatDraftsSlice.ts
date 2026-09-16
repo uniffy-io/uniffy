@@ -58,12 +58,33 @@ export const { setDrafts, draftUpserted, draftRemoved, clearChatDrafts } = chatD
 export const selectDraft = (state: RootState, key: string): ChatDraftEntry | undefined =>
   state.chatDrafts.byKey[key];
 
+export function selectActiveDraftKey(state: RootState, pathname: string): string | null {
+  if (pathname !== "/chat" && !pathname.startsWith("/chat/")) return null;
+  const channelId =
+    state.chatUi.splitActive && state.chatUi.focusedPane === "right"
+      ? state.chatChannels.splitChannelId
+      : pathname === "/chat"
+        ? state.chatChannels.activeChannelId
+        : /^\/chat\/([^/]+)\/?$/.exec(pathname)?.[1];
+  const channel = channelId ? state.chatChannels.byId[channelId] : undefined;
+  if (!channel || channel.isArchived || channel.agentIsRetired) return null;
+  const rootId = state.chatUi.threadPanelOpen ? state.chatThreads.activeThreadId : null;
+  if (rootId && state.chatMessages.byId[rootId]?.channelId === channel.id) {
+    return draftKey(channel.id, rootId);
+  }
+  return channel.id;
+}
+
 // Thread keys collapse to their channel so the sidebar pencil covers both draft kinds.
 export const selectChannelsWithDrafts = createSelector(
-  [(state: RootState) => state.chatDrafts.byKey],
-  (byKey): Set<string> => {
+  [
+    (state: RootState) => state.chatDrafts.byKey,
+    (_state: RootState, activeKey: string | null = null) => activeKey,
+  ],
+  (byKey, activeKey): Set<string> => {
     const channels = new Set<string>();
     for (const key of Object.keys(byKey)) {
+      if (key === activeKey) continue;
       const separator = key.indexOf(":");
       channels.add(separator === -1 ? key : key.slice(0, separator));
     }
@@ -89,7 +110,7 @@ export const selectDraftRows = createSelector(
       .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)),
 );
 
-export const selectDraftCount = (state: RootState): number =>
-  Object.keys(state.chatDrafts.byKey).length;
+export const selectDraftCount = (state: RootState, activeKey: string | null = null): number =>
+  Object.keys(state.chatDrafts.byKey).filter((key) => key !== activeKey).length;
 
 export const chatDraftsReducer = chatDraftsSlice.reducer;
