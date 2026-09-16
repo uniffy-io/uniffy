@@ -9,6 +9,7 @@ import {
   selectChannelsWithDrafts,
   selectDraftCount,
   selectDraftRows,
+  selectActiveDraftKey,
 } from "@/features/chat/store/chatDraftsSlice";
 import type { PlainDraft } from "@/features/chat/api/chatConverters";
 import type { RootState } from "@/app/store";
@@ -201,5 +202,92 @@ describe("selectDraftCount", () => {
       ),
     ).toBe(3);
     expect(selectDraftCount(toRootState({}))).toBe(0);
+  });
+});
+
+describe("draft indicators while composing", () => {
+  function viewingState(): RootState {
+    return {
+      chatDrafts: emptyState,
+      chatChannels: {
+        activeChannelId: "ch-1",
+        splitChannelId: "ch-2",
+        byId: { "ch-1": { id: "ch-1" }, "ch-2": { id: "ch-2" } },
+      },
+      chatUi: { splitActive: false, focusedPane: "left", threadPanelOpen: false },
+      chatThreads: { activeThreadId: "root-9" },
+      chatMessages: { byId: { "root-9": { channelId: "ch-1" } } },
+    } as unknown as RootState;
+  }
+
+  function count(state: RootState, path: string) {
+    return selectDraftCount(state, selectActiveDraftKey(state, path));
+  }
+
+  it("keeps delayed autosaves out of indicators until the conversation is left", () => {
+    const state = viewingState();
+    state.chatDrafts = chatDraftsReducer(state.chatDrafts, draftUpserted(buildDraft()));
+    expect(count(state, "/chat/ch-1")).toBe(0);
+    expect(selectChannelsWithDrafts(state, selectActiveDraftKey(state, "/chat/ch-1"))).toEqual(
+      new Set(),
+    );
+    state.chatDrafts = chatDraftsReducer(
+      state.chatDrafts,
+      setDrafts([buildDraft({ content: "still typing" })]),
+    );
+    expect(count(state, "/chat/ch-1")).toBe(0);
+    expect(selectDraftRows(state)[0].content).toBe("still typing");
+    expect(count(state, "/chat/ch-2")).toBe(1);
+    expect(count(state, "/chat/ch-1")).toBe(0);
+  });
+
+  it.each(["/notes", "/chat/drafts", "/chat/threads", "/chat/unreads"])(
+    "counts the saved draft on %s despite the retained active channel",
+    (path) => {
+      const state = viewingState();
+      state.chatDrafts = chatDraftsReducer(state.chatDrafts, draftUpserted(buildDraft()));
+      expect(count(state, path)).toBe(1);
+    },
+  );
+
+  it("excludes only the open thread, retaining other drafts in its channel", () => {
+    const state = viewingState();
+    state.chatUi.threadPanelOpen = true;
+    state.chatDrafts = chatDraftsReducer(
+      state.chatDrafts,
+      setDrafts([
+        buildDraft(),
+        buildDraft({ rootMessageId: "root-9" }),
+        buildDraft({ rootMessageId: "root-10" }),
+      ]),
+    );
+    const active = selectActiveDraftKey(state, "/chat/ch-1");
+    expect(active).toBe("ch-1:root-9");
+    expect(selectDraftCount(state, active)).toBe(2);
+    expect(selectChannelsWithDrafts(state, active)).toEqual(new Set(["ch-1"]));
+    state.chatUi.threadPanelOpen = false;
+    expect(selectActiveDraftKey(state, "/chat/ch-1")).toBe("ch-1");
+  });
+
+  it("follows the selected split pane and releases its draft when leaving chat", () => {
+    const state = viewingState();
+    state.chatUi.splitActive = true;
+    state.chatUi.focusedPane = "right";
+    state.chatDrafts = chatDraftsReducer(
+      state.chatDrafts,
+      draftUpserted(buildDraft({ channelId: "ch-2" })),
+    );
+    expect(count(state, "/chat/ch-1")).toBe(0);
+    state.chatUi.focusedPane = "left";
+    expect(count(state, "/chat/ch-1")).toBe(1);
+    state.chatUi.focusedPane = "right";
+    expect(count(state, "/notes")).toBe(1);
+  });
+
+  it("does not hide drafts when the channel has no writable composer", () => {
+    const state = viewingState();
+    state.chatDrafts = chatDraftsReducer(state.chatDrafts, draftUpserted(buildDraft()));
+    state.chatChannels.byId["ch-1"].isArchived = true;
+    expect(count(state, "/chat/ch-1")).toBe(1);
   });
 });
