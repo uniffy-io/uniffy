@@ -1,0 +1,42 @@
+name: container-structure-test
+description: Run a container-structure-test spec against a local image with the pinned, checksummed release binary.
+
+inputs:
+  image:
+    description: Local image reference to test.
+    required: true
+  config:
+    description: Path to the structure test spec.
+    required: true
+  arch:
+    description: Runner architecture, amd64 or arm64.
+    required: false
+    default: amd64
+
+runs:
+  using: composite
+  steps:
+    - name: Install container-structure-test (pinned, checksummed)
+      shell: bash
+      env:
+        ARCH: ${{ inputs.arch }}
+        CST_VERSION: v1.22.1
+        CST_SHA256_AMD64: fa35e89512a8978585f76cf41397956d2e3a30c62c2ad3fb857b1597074d14ca
+        CST_SHA256_ARM64: 801826ed107222120eb6df8c143b7de752cfebbe3aebfeea576e7098486917c2
+      run: |
+        case "$ARCH" in
+          amd64) sum="$CST_SHA256_AMD64" ;;
+          arm64) sum="$CST_SHA256_ARM64" ;;
+          *) echo "::error::unsupported arch '$ARCH'"; exit 1 ;;
+        esac
+        curl -sSfL "https://github.com/GoogleContainerTools/container-structure-test/releases/download/${CST_VERSION}/container-structure-test-linux-${ARCH}" -o "$RUNNER_TEMP/cst"
+        echo "$sum  $RUNNER_TEMP/cst" | sha256sum -c -
+        chmod +x "$RUNNER_TEMP/cst"
+
+    - name: Structure tests
+      shell: bash
+      env:
+        IMAGE: ${{ inputs.image }}
+        CONFIG: ${{ inputs.config }}
+      run: |
+        "$RUNNER_TEMP/cst" test --image "$IMAGE" --config "$CONFIG"
