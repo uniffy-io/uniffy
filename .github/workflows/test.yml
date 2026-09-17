@@ -568,6 +568,7 @@ jobs:
         with:
           name: scan-image-${{ matrix.image }}
           path: ${{ runner.temp }}/image.tar
+          overwrite: true
           compression-level: 1
           if-no-files-found: error
           retention-days: 1
