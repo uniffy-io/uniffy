@@ -2497,6 +2497,49 @@ a second user who is not a member of it.
       fans out to members only) but every fresh fetch is denied, and no message they had not already
       loaded arrives.
 
+## Projects: parent links and blocked markers
+
+Needs a project with a parent task and three subtasks (one assigned only to a second person, one
+blocked by an open task, one blocked by a completed task), a subtask of a subtask, a top-level task
+blocked by an open task, a task whose only blocker was deleted, and a completed task with a past
+due date. A second project should have a custom completed status: in project settings add a status,
+then set its `semantic` to `completed` (and remove it from the old one) through `./manage.py db
+shell`, since no screen assigns semantics.
+
+- [ ] `(both products)` Web board: subtask cards show the parent's key, and clicking it opens the
+      parent without starting a drag. "Blocked (n)" and the yellow edge appear only on the task with
+      an open blocker, counting open blockers only; the task blocked by the completed task and the
+      one whose blocker was deleted show nothing.
+- [ ] Complete the open blocker: every Blocked marker it caused clears without a reload, on web and
+      mobile, and the graph node turns free.
+- [ ] Web table with Outline off: every subtask row shows the parent chip and it opens the parent.
+      With Outline on, subtasks nest under the parent as before. The blocked icon shows in both.
+- [ ] Web backlog, roadmap and resources rows carry the blocked icon on the same tasks. Filter the
+      roadmap so a parent drops out: the promoted subtask row names its parent.
+- [ ] Resources lists top-level tasks only on web and mobile: the person assigned only to a subtask
+      has no row on either. Web resource rows show `done/total` for parents.
+- [ ] The completed task with a past due date is not marked overdue on the web board, backlog,
+      resources, table or detail panel. A task with 0 minutes logged and no estimate shows no stray
+      `0` on the board card or resource row.
+- [ ] In the custom-status project, ticking a subtask done in the detail panel (web and mobile) moves
+      it to the custom completed status, the parent's count goes up, the sprint card counts it, and
+      the board lane progress counts that lane.
+- [ ] Status editors (project settings, board "Manage statuses", mobile settings) do not delete the
+      to do, in progress or completed status; the web delete button is disabled with a tooltip.
+- [ ] Delete a status that tasks use, from web settings and from the board dialog: the editor asks
+      where the tasks go, moves them, then removes the status. Removing a used status through the
+      API is refused with "Move the tasks in ... to another status".
+- [ ] Mobile project settings: rename, recolor, reorder and delete a status. Each save succeeds and
+      the web settings page shows the change after a reload.
+- [ ] Mobile table: parent rows show `done/total` and a caret; tapping the caret lists the subtasks
+      indented under the parent with their own status chip, down to five levels. Long-press the
+      parent and drag it to another status: its expanded subtasks travel with it and stay put in
+      their own statuses. A long press on a subtask row does not start a drag.
+- [ ] Mobile table with a search or filter: matches are flat rows, subtasks name their parent, and
+      tapping the key opens the parent. In selection mode the key does not open anything.
+- [ ] Mobile board shows subtask cards with the parent key; mobile backlog and roadmap rows show the
+      Blocked marker on the same tasks as web.
+
 ## Pre-release sweep
 
 - [ ] All linters green: `./manage.py lint`.
