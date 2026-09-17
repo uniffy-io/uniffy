@@ -85,9 +85,10 @@ export const fetchProjectTasks = createAsyncThunk<
       hasSubtasks?: boolean;
       minDepth?: number;
       maxDepth?: number;
+      firstPageOnly?: boolean;
     },
   { dispatch: AppDispatch; rejectValue: string }
->("projects/fetchProjectTasks", async (arg, { getState, dispatch, rejectWithValue }) => {
+>("projects/fetchProjectTasks", async (arg, { getState, dispatch, rejectWithValue, signal }) => {
   try {
     const state = getState() as RootState;
     const orgId = state.auth.currentOrganizationId;
@@ -102,6 +103,8 @@ export const fetchProjectTasks = createAsyncThunk<
       hasSubtasks: params.hasSubtasks,
       minDepth: params.minDepth,
       maxDepth: params.maxDepth,
+      firstPageOnly: params.firstPageOnly,
+      signal,
     });
     hydrateTaskTags(dispatch, response.protoTasks);
     return response.tasks;

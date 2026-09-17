@@ -61,11 +61,21 @@ export function ProjectsPage() {
   }, [dispatch, projectId]);
 
   const currentProjectId = currentProject?.id;
+  // A project load spans several pages; a newer load or a project switch cancels the pending one.
+  const tasksLoadRef = useRef<{ abort: () => void } | null>(null);
+  const loadProjectTasks = useCallback(
+    (id: string) => {
+      tasksLoadRef.current?.abort();
+      tasksLoadRef.current = dispatch(fetchProjectTasks(id));
+    },
+    [dispatch],
+  );
+
   useEffect(() => {
-    if (currentProjectId) {
-      dispatch(fetchProjectTasks(currentProjectId));
-    }
-  }, [dispatch, currentProjectId]);
+    if (!currentProjectId) return;
+    loadProjectTasks(currentProjectId);
+    return () => tasksLoadRef.current?.abort();
+  }, [loadProjectTasks, currentProjectId]);
 
   // Live refresh on project access changes (shared / flipped to OPEN_TO_ORG ->
   // refetch the list) and on a task created in the open project (child_added ->
@@ -76,13 +86,13 @@ export function ProjectsPage() {
       (change) => {
         if (change.action === "child_added") {
           if (change.contentId === currentProjectId) {
-            dispatch(fetchProjectTasks(currentProjectId));
+            loadProjectTasks(currentProjectId);
           }
           return;
         }
         dispatch(fetchProjects());
       },
-      [dispatch, currentProjectId],
+      [dispatch, currentProjectId, loadProjectTasks],
     ),
   );
 

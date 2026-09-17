@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@core/providers/AuthContext";
+import { fetchAllPages } from "@shared/lib/fetchAllPages";
 import { projectsApi } from "@features/projects/projectsApi";
 import {
   projectToPlain,
@@ -40,17 +41,30 @@ export function useProject(projectId: string | undefined) {
   });
 }
 
+// Each page must finish inside the default interactive RPC deadline on a mobile network.
+const TASK_PAGE_SIZE = 500;
+
 export function useProjectTasks(projectId: string | undefined) {
   const { organizationId } = useAuth();
 
   return useQuery({
     queryKey: ["tasks", organizationId, projectId],
-    queryFn: async () => {
-      const response = await projectsApi.listTasks({
-        organizationId: organizationId!,
-        projectId: projectId!,
-      });
-      return response.tasks.map(taskToPlain);
+    queryFn: async ({ signal }) => {
+      const tasks = await fetchAllPages(
+        async (page) => {
+          const response = await projectsApi.listTasks(
+            {
+              organizationId: organizationId!,
+              projectId: projectId!,
+              pagination: { page, pageSize: TASK_PAGE_SIZE },
+            },
+            { signal },
+          );
+          return { items: response.tasks, totalPages: response.pagination?.totalPages ?? 1 };
+        },
+        { key: (task) => task.id },
+      );
+      return tasks.map(taskToPlain);
     },
     enabled: !!organizationId && !!projectId,
   });

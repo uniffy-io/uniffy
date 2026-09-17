@@ -45,8 +45,10 @@ export const projectsApi = {
   deleteProject: (request: MessageInitShape<typeof DeleteProjectRequestSchema>) =>
     client.deleteProject(request),
 
-  listTasks: (request: MessageInitShape<typeof ListTasksRequestSchema>) =>
-    client.listTasks(request),
+  listTasks: (
+    request: MessageInitShape<typeof ListTasksRequestSchema>,
+    options?: { signal?: AbortSignal },
+  ) => client.listTasks(request, { signal: options?.signal }),
 
   getTask: (request: MessageInitShape<typeof GetTaskRequestSchema>) => client.getTask(request),
 

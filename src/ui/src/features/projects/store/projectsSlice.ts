@@ -217,6 +217,8 @@ export const projectsSlice = createSlice({
         });
       })
       .addCase(fetchProjectTasks.rejected, (state, action) => {
+        // A superseded load settles after its replacement started; its outcome is not this state's.
+        if (action.meta.aborted) return;
         state.loading.tasks = false;
         state.errors.tasks =
           (action.payload as string) || action.error.message || "Failed to fetch tasks";
