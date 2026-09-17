@@ -719,3 +719,18 @@ class TestManageOverrides:
                 content_id=content.id,
                 new_owner_user_id=generate_id(),
             )
+
+
+class TestChildContent:
+    """Child content resolves access through its parent and has no members of its own."""
+
+    async def test_member_ops_reject_content_without_a_policy(self) -> None:
+        ops = _make_ops()
+        task = SimpleNamespace(id=generate_id(), owner_id=generate_id())
+        loader = AsyncMock(return_value=task)
+        with (
+            patch("uniffy.domains.permissions.members.get_content_loader", return_value=loader),
+            pytest.raises(ValidationError, match="follows its parent"),
+        ):
+            await ops.list_members(generate_id(), generate_id(), ContentType.TASK, generate_id())
+        ops.session.execute.assert_not_called()

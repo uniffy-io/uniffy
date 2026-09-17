@@ -24,7 +24,6 @@ import { DomainHeader, domainHeaderHeight } from "@shared/components/DomainHeade
 import { ScreenError } from "@shared/components/ScreenError";
 import { MarkdownRenderer } from "@shared/components/MarkdownRenderer";
 import { CommentButton } from "@shared/comments/CommentsSheet";
-import { ShareButton } from "@shared/permissions/ShareSheet";
 import { ContentType } from "@uniffy/proto/common/v1/common_pb";
 import { ActionSheet } from "@shared/components/ActionSheet";
 import { Avatar } from "@shared/components/Avatar";
@@ -255,8 +254,8 @@ export function TaskDetailScreen() {
           translucent
           rightActions={
             <>
+              {/* No share control: a task's access is its project's, shared from the project. */}
               <CommentButton contentType={ContentType.TASK} contentId={task.id} color={T.accent} />
-              <ShareButton contentType={ContentType.TASK} contentId={task.id} color={T.accent} />
               <TouchableOpacity
                 onPress={() => toggleWatcher.mutate(task.id)}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
