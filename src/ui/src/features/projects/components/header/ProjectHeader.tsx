@@ -123,7 +123,8 @@ export function ProjectHeader({ project }: ProjectHeaderProps) {
   const tableOutlineEnabled = useAppSelector(selectTableOutlineEnabled);
   const rootOnlyFilter = useAppSelector(selectRootOnlyFilter);
   const inEpicFilter = useAppSelector(selectInEpicFilter);
-  const projectTasks = useAppSelector(selectTasksForProject(project.id));
+  const selectProjectTasks = useMemo(() => selectTasksForProject(project.id), [project.id]);
+  const projectTasks = useAppSelector(selectProjectTasks);
   const epicOptions = useMemo(
     () =>
       projectTasks

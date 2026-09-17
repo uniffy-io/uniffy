@@ -2326,7 +2326,7 @@ function resolveSystemColumnWidth(
 interface ColumnsVisibilityMenuProps {
   projectId: string;
   allFields: FieldDefinition[];
-  hiddenIds: string[];
+  hiddenIds: readonly string[];
   onClose: () => void;
 }
 

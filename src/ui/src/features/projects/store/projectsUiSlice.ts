@@ -354,14 +354,18 @@ export const selectRootOnlyFilter = (state: RootState) => state.projectsUi.rootO
 export const selectInEpicFilter = (state: RootState) => state.projectsUi.inEpicFilter;
 export const selectEditingCell = (state: RootState) => state.projectsUi.editingCell;
 export const selectFocusedCell = (state: RootState) => state.projectsUi.focusedCell;
+// Shared empties keep these selectors stable for projects with no saved column layout.
+const NO_COLUMN_WIDTHS: Readonly<Record<string, number>> = Object.freeze({});
+const NO_HIDDEN_COLUMNS: readonly string[] = Object.freeze([]);
+
 export const selectColumnWidthsForProject =
   (projectId: string) =>
-  (state: RootState): Record<string, number> =>
-    state.projectsUi.columnWidths?.[projectId] ?? {};
+  (state: RootState): Readonly<Record<string, number>> =>
+    state.projectsUi.columnWidths?.[projectId] ?? NO_COLUMN_WIDTHS;
 export const selectHiddenColumnsForProject =
   (projectId: string) =>
-  (state: RootState): string[] =>
-    state.projectsUi.hiddenColumns?.[projectId] ?? [];
+  (state: RootState): readonly string[] =>
+    state.projectsUi.hiddenColumns?.[projectId] ?? NO_HIDDEN_COLUMNS;
 export const selectUndoStack = (state: RootState) => state.projectsUi.undoStack;
 export const selectRedoStack = (state: RootState) => state.projectsUi.redoStack;
 export const selectEditProjectId = (state: RootState) => state.projectsUi.editProjectId;

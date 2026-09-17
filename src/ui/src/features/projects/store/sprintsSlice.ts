@@ -1,4 +1,4 @@
-import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
+import { createSelector, createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import type { RootState } from "@/app/store";
 import type { Sprint } from "@/features/projects/types/project";
 
@@ -64,15 +64,24 @@ export const {
   clearSprints,
 } = sprintsSlice.actions;
 
+// Memoized per project id so every row that reads a project's sprints gets the same array.
+const selectSortedProjectSprints = createSelector(
+  [
+    (state: RootState) => state.sprints.sprints,
+    (state: RootState) => state.sprints.sprintsByProject,
+    (_state: RootState, projectId: string) => projectId,
+  ],
+  (sprints, sprintsByProject, projectId): Sprint[] =>
+    (sprintsByProject[projectId] ?? [])
+      .map((id) => sprints[id])
+      .filter(Boolean)
+      .sort((a, b) => a.sortOrder - b.sortOrder),
+);
+
 export const selectSprintsForProject =
   (projectId: string) =>
-  (state: RootState): Sprint[] => {
-    const ids = state.sprints.sprintsByProject[projectId] ?? [];
-    return ids
-      .map((id) => state.sprints.sprints[id])
-      .filter(Boolean)
-      .sort((a, b) => a.sortOrder - b.sortOrder);
-  };
+  (state: RootState): Sprint[] =>
+    selectSortedProjectSprints(state, projectId);
 
 export const selectActiveSprint =
   (projectId: string) =>
