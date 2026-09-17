@@ -2,7 +2,10 @@ import pytest
 
 from uniffy.core.errors import ValidationError
 from uniffy.core.models.projects.field_definition import TaskStatusSemantic
-from uniffy.domains.projects.statuses import parse_task_status_semantics
+from uniffy.domains.projects.statuses import (
+    parse_task_status_semantics,
+    removed_status_labels,
+)
 
 
 def test_status_semantics_use_configured_ids() -> None:
@@ -53,3 +56,18 @@ def test_status_semantics_support_unmigrated_canonical_ids() -> None:
 def test_status_semantics_reject_missing_or_duplicate_required_roles(options: list[dict]) -> None:
     with pytest.raises(ValidationError):
         parse_task_status_semantics({"options": options}, require_explicit=True)
+
+
+def test_removed_status_labels_lists_only_dropped_options() -> None:
+    previous = {
+        "options": [
+            {"id": "queue", "label": "Queue", "semantic": "todo"},
+            {"id": "blocked", "label": "Blocked"},
+            {"id": "parked"},
+        ]
+    }
+    updated = {"options": [{"id": "queue", "label": "Backlog", "semantic": "todo"}]}
+
+    assert removed_status_labels(previous, updated) == {"blocked": "Blocked", "parked": "parked"}
+    assert removed_status_labels(previous, previous) == {}
+    assert removed_status_labels(None, updated) == {}

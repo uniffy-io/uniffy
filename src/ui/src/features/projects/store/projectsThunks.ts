@@ -288,10 +288,10 @@ export const createFieldThunk = createAsyncThunk<
 export const updateFieldThunk = createAsyncThunk<
   FieldDefinition,
   { projectId: string; fieldId: string; updates: Partial<FieldDefinition> },
-  { rejectValue: string }
+  { dispatch: AppDispatch; rejectValue: string }
 >(
   "projects/updateField",
-  async ({ projectId, fieldId, updates }, { getState, rejectWithValue }) => {
+  async ({ projectId, fieldId, updates }, { getState, dispatch, rejectWithValue }) => {
     try {
       const state = getState() as RootState;
       const orgId = state.auth.currentOrganizationId;
@@ -300,6 +300,8 @@ export const updateFieldThunk = createAsyncThunk<
       const response = await projectsApi.updateField(projectId, fieldId, updates, orgId);
       return response.field;
     } catch (error) {
+      // Callers show the edit before it is saved; reloading the project drops a refused one.
+      void dispatch(fetchProject(projectId));
       return rejectWithValue(error instanceof Error ? error.message : "Failed to update field");
     }
   },
@@ -401,6 +403,27 @@ export const bulkUpdateTasksThunk = createAsyncThunk<
         error instanceof Error ? error.message : "Failed to bulk update tasks",
       );
     }
+  },
+);
+
+/**
+ * Moves the loaded tasks of one status to another, ahead of removing the first. Resolves to
+ * false when the move failed; the bulk update has already reported why.
+ */
+export const moveTasksOutOfStatus = createAsyncThunk<
+  boolean,
+  { projectId: string; fromStatus: string; toStatus: string },
+  { dispatch: AppDispatch }
+>(
+  "projects/moveTasksOutOfStatus",
+  async ({ projectId, fromStatus, toStatus }, { getState, dispatch }) => {
+    const state = getState() as RootState;
+    const taskIds = Object.values(state.projects.tasks)
+      .filter((t) => t.projectId === projectId && t.status === fromStatus && !t.deletedAt)
+      .map((t) => t.id);
+    if (taskIds.length === 0) return true;
+    const moved = await dispatch(bulkUpdateTasksThunk({ taskIds, updates: { status: toStatus } }));
+    return bulkUpdateTasksThunk.fulfilled.match(moved);
   },
 );
 

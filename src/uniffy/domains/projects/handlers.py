@@ -112,7 +112,10 @@ from uniffy.domains.projects.operations import (
     WatcherOperations,
 )
 from uniffy.domains.projects.status_colors import assign_status_colors
-from uniffy.domains.projects.statuses import parse_task_status_semantics
+from uniffy.domains.projects.statuses import (
+    ensure_removed_statuses_unused,
+    parse_task_status_semantics,
+)
 from uniffy.domains.tags.reader import TagReader
 from uniffy.infrastructure.database import open_session
 
@@ -1142,6 +1145,9 @@ class ProjectsHandlers:
                         raise ConnectError(Code.INVALID_ARGUMENT, "Invalid config_json") from exc
                     if field.id == SystemProjectFieldId.STATUS:
                         parse_task_status_semantics(config, require_explicit=True)
+                        await ensure_removed_statuses_unused(
+                            session, project_id, field.config, config
+                        )
                         config = assign_status_colors(config)
                     field.config = config
                     flag_modified(field, "config")

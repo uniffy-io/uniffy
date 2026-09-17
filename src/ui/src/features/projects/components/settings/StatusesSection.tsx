@@ -7,12 +7,12 @@ import {
   Check,
   DotsSixVertical,
 } from "@phosphor-icons/react";
-import { useAppDispatch } from "@/app/hooks";
+import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Input, controlShellClass } from "@/components/ui/input";
-import { updateFieldThunk } from "@/features/projects/store/projectsThunks";
+import { moveTasksOutOfStatus, updateFieldThunk } from "@/features/projects/store/projectsThunks";
 import { updateFieldDefinition } from "@/features/projects/store/projectsSlice";
 import { SYSTEM_FIELD_IDS } from "@/features/projects/types";
 import { requiredStatusHint } from "@/features/projects/utils/statusSemantics";
@@ -99,13 +99,35 @@ export function StatusesSection({ project }: StatusesSectionProps) {
     persistOptions(newItems);
   };
 
-  const handleDeleteConfirm = () => {
+  // The server refuses to drop a status that live tasks still use, so they move first.
+  const deleteTargetTaskCount = useAppSelector((state) => {
+    if (!deleteTarget) return 0;
+    let count = 0;
+    for (const task of Object.values(state.projects.tasks)) {
+      if (task.projectId === project.id && task.status === deleteTarget.id && !task.deletedAt) {
+        count += 1;
+      }
+    }
+    return count;
+  });
+
+  const handleDeleteConfirm = async () => {
     if (!deleteTarget) return;
-    const newItems = items.filter((item) => item.id !== deleteTarget.id);
-    setItems(newItems);
-    persistOptions(newItems);
+    const target = deleteTarget;
+    const toStatus = migrationTargetId;
+    const mustMove = deleteTargetTaskCount > 0;
     setDeleteTarget(null);
     setMigrationTargetId("");
+    if (mustMove) {
+      if (!toStatus) return;
+      const moved = await dispatch(
+        moveTasksOutOfStatus({ projectId: project.id, fromStatus: target.id, toStatus }),
+      ).unwrap();
+      if (!moved) return;
+    }
+    const newItems = items.filter((item) => item.id !== target.id);
+    setItems(newItems);
+    persistOptions(newItems);
   };
 
   const handleAddNew = () => {
@@ -341,10 +363,13 @@ export function StatusesSection({ project }: StatusesSectionProps) {
         message={
           <div className="space-y-3">
             <p>
-              Are you sure you want to delete the status &quot;{deleteTarget?.label}
-              &quot;? Tasks using this status will need to be migrated to another status.
+              {deleteTargetTaskCount === 0
+                ? `No task uses "${deleteTarget?.label}".`
+                : deleteTargetTaskCount === 1
+                  ? `1 task uses "${deleteTarget?.label}". It moves to the status you pick first.`
+                  : `${deleteTargetTaskCount} tasks use "${deleteTarget?.label}". They move to the status you pick first.`}
             </p>
-            {items.filter((i) => i.id !== deleteTarget?.id).length > 0 && (
+            {deleteTargetTaskCount > 0 && (
               <div>
                 <label className="block text-sm font-medium mb-1">Move tasks to:</label>
                 <select
