@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef } from "react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import type { AppDispatch } from "@/app/store";
 import { fetchNotes } from "@/features/notes/store/notesThunks";
+import { fetchNotifications } from "@/features/notifications/store/notificationsSlice";
 import { initializeFilesData } from "@/features/files/store/filesSlice";
 import { fetchEventsInRange, fetchCategories } from "@/features/calendar/store/calendarThunks";
 import { fetchProjects, fetchProjectTasks } from "@/features/projects/store/projectsThunks";
@@ -58,6 +59,9 @@ export function useDashboardFetch(): { refresh: () => void } {
       dispatch(fetchProjects());
     }
 
+    // The bell only loads the list when its panel opens, and live pushes alone never backfill it.
+    dispatch(fetchNotifications());
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orgId]);
 
@@ -78,6 +82,7 @@ export function useDashboardFetch(): { refresh: () => void } {
     dispatch(fetchNotes({ page: 1, pageSize: 50 }));
     dispatch(initializeFilesData());
     fetchUpcomingEvents(dispatch);
+    dispatch(fetchNotifications());
     void dispatch(fetchProjects())
       .unwrap()
       .then((fresh) => {

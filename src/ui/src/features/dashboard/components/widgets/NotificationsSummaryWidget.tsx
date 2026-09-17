@@ -1,74 +1,53 @@
-import { useMemo } from "react";
+import { useCallback } from "react";
 import { Link } from "react-router-dom";
-import { Bell, ArrowRight, CheckCircle } from "@phosphor-icons/react";
-import { useAppSelector } from "@/app/hooks";
-import { cn } from "@/shared/utils/cn";
+import { Bell, ArrowRight } from "@phosphor-icons/react";
+import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import {
   WidgetCard,
   EmptyWidget,
   WidgetSkeleton,
 } from "@/features/dashboard/components/widgets/WidgetCard";
-import { formatRelativeTime } from "@/shared/utils/dateFormatting";
-import { notificationHref } from "@/features/notifications/utils/notificationTarget";
-import type { SerializedNotification } from "@/features/notifications/store/notificationsSlice";
+import { NotificationItem } from "@/features/notifications/components/NotificationItem";
+import { useNotificationAction } from "@/features/notifications/hooks/useNotificationAction";
+import {
+  deleteNotification,
+  markNotificationAsRead,
+} from "@/features/notifications/store/notificationsSlice";
 
-function NotificationItem({ notification }: { notification: SerializedNotification }) {
-  const path = notificationHref(notification) ?? "/notifications";
-
-  return (
-    <Link
-      to={path}
-      className={cn(
-        "group flex items-start gap-2.5 rounded-lg p-2 -mx-2 transition-colors",
-        "hover:bg-muted/50",
-      )}
-    >
-      {notification.actorAvatarUrl ? (
-        <img
-          src={notification.actorAvatarUrl}
-          alt=""
-          className="w-6 h-6 rounded-full shrink-0 mt-0.5"
-        />
-      ) : (
-        <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
-          <Bell size={12} className="text-primary" weight="fill" />
-        </div>
-      )}
-      <div className="min-w-0 flex-1">
-        <p className="text-xs font-medium text-foreground truncate group-hover:text-primary transition-colors">
-          {notification.title}
-        </p>
-        <p className="text-[10px] text-muted-foreground truncate mt-0.5">
-          {notification.actorName && `${notification.actorName} - `}
-          {formatRelativeTime(notification.createdAt)}
-        </p>
-      </div>
-    </Link>
-  );
-}
+const MAX_NOTIFICATIONS = 4;
 
 export function NotificationsSummaryWidget() {
-  const notifications = useAppSelector((state) => state.notifications?.notifications ?? []);
-  const unreadCount = useAppSelector((state) => state.notifications?.unreadCount ?? 0);
-  const isLoading = useAppSelector((state) => state.notifications?.loading ?? false);
+  const dispatch = useAppDispatch();
+  const notifications = useAppSelector((state) => state.notifications.notifications);
+  const unreadCount = useAppSelector((state) => state.notifications.unreadCount);
+  const isLoading = useAppSelector((state) => state.notifications.loading);
 
-  const unreadNotifications = useMemo(() => {
-    return notifications.filter((n: SerializedNotification) => !n.isRead).slice(0, 3);
-  }, [notifications]);
+  const markAsRead = useCallback(
+    (id: string) => {
+      dispatch(markNotificationAsRead(id));
+    },
+    [dispatch],
+  );
+  const remove = useCallback(
+    (id: string) => {
+      dispatch(deleteNotification(id));
+    },
+    [dispatch],
+  );
+  const openNotification = useNotificationAction(undefined, markAsRead);
 
-  const isEmpty = unreadCount === 0 && !isLoading;
+  const recent = notifications.slice(0, MAX_NOTIFICATIONS);
 
   return (
     <WidgetCard
       title="Notifications"
       icon={Bell}
-      colSpan={1}
-      compact
+      colSpan={2}
       priority={2}
       action={
         unreadCount > 0 ? (
-          <span className="flex items-center justify-center w-5 h-5 rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
-            {unreadCount > 9 ? "9+" : unreadCount}
+          <span className="flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
+            {unreadCount > 99 ? "99+" : unreadCount}
           </span>
         ) : null
       }
@@ -82,18 +61,26 @@ export function NotificationsSummaryWidget() {
         </Link>
       }
     >
-      {isLoading && notifications.length === 0 ? (
+      {isLoading && recent.length === 0 ? (
         <WidgetSkeleton rows={3} />
-      ) : isEmpty ? (
+      ) : recent.length === 0 ? (
         <EmptyWidget
-          icon={CheckCircle}
-          title="All caught up!"
-          description="No unread notifications"
+          icon={Bell}
+          title="No notifications yet"
+          description="Shares, mentions and task updates will show up here"
         />
       ) : (
-        <div className="space-y-0.5">
-          {unreadNotifications.map((n: SerializedNotification) => (
-            <NotificationItem key={n.id} notification={n} />
+        // Rows run edge to edge so the unread highlight spans the card, as in the bell panel.
+        <div className="-mx-6">
+          {recent.map((notification) => (
+            <NotificationItem
+              key={notification.id}
+              notification={notification}
+              onMarkAsRead={markAsRead}
+              onDelete={remove}
+              onClick={openNotification}
+              className="px-6"
+            />
           ))}
         </div>
       )}
