@@ -92,6 +92,9 @@ export const fetchOrganizationOverview = createAsyncThunk<
   return serializeOrgOverview(response.overview);
 });
 
+/** `fetchMembers` replaces the member list with its page, so every directory loader asks for this size. */
+export const DIRECTORY_MEMBERS_PAGE_SIZE = 200;
+
 export const fetchMembers = createAsyncThunk<
   { members: SerializedMemberInfo[]; totalCount: number },
   { page?: number; pageSize?: number; roleFilter?: number; search?: string },

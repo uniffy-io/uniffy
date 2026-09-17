@@ -9,7 +9,7 @@
 
 import { useEffect, useMemo } from "react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
-import { fetchMembers } from "@/features/admin/store/adminThunks";
+import { DIRECTORY_MEMBERS_PAGE_SIZE, fetchMembers } from "@/features/admin/store/adminThunks";
 import { avatarVersionFromUrl, buildAvatarUrl, type AvatarVariant } from "@/shared/utils/fileUrls";
 import type { SerializedMemberInfo } from "@/features/admin/store/adminSlice";
 
@@ -32,7 +32,7 @@ export function useAvatarUrl(userId: string, size: AvatarVariant = "sm"): string
       return;
     }
     directoryInFlight = true;
-    void dispatch(fetchMembers({ pageSize: 200 })).finally(() => {
+    void dispatch(fetchMembers({ pageSize: DIRECTORY_MEMBERS_PAGE_SIZE })).finally(() => {
       directoryInFlight = false;
     });
   }, [dispatch, userId, organizationId, membersFetched, membersLoading]);

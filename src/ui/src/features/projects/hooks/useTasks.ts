@@ -13,9 +13,10 @@ import {
   moveTask,
   deleteTask,
 } from "@/features/projects/store/projectsThunks";
+import { useSubjectResolver } from "@/components/subject/hooks/useSubjectResolver";
 import { applyFilters, buildTaskHierarchyIndex } from "@/features/projects/utils/filterTasks";
+import { personSortIds, sortTasks } from "@/features/projects/utils/sortTasks";
 import type {
-  Task,
   CreateTaskRequest,
   UpdateTaskRequest,
   MoveTaskRequest,
@@ -102,7 +103,9 @@ interface UseFilteredTasksOptions {
 
 export function useFilteredTasks(projectId: string, options: UseFilteredTasksOptions = {}) {
   const { includeSubtasks = false } = options;
-  const tasks = useAppSelector(selectTasksForProject(projectId));
+  // One selector instance per project, so the task array keeps its identity between renders.
+  const selectProjectTasks = useMemo(() => selectTasksForProject(projectId), [projectId]);
+  const tasks = useAppSelector(selectProjectTasks);
   const searchQuery = useAppSelector((state) => state.projectsUi.searchQuery);
   const sortConfig = useAppSelector((state) => state.projectsUi.activeSortConfig);
   const filterConfig = useAppSelector((state) => state.projectsUi.activeFilterConfig);
@@ -110,9 +113,26 @@ export function useFilteredTasks(projectId: string, options: UseFilteredTasksOpt
   const taskTypeFilter = useAppSelector((state) => state.projectsUi.taskTypeFilter);
   const rootOnlyFilter = useAppSelector((state) => state.projectsUi.rootOnlyFilter);
   const inEpicFilter = useAppSelector((state) => state.projectsUi.inEpicFilter);
+  const fieldDefinitions = useAppSelector(
+    (state) => state.projects.projects[projectId]?.fieldDefinitions,
+  );
 
   // Hierarchy index walks the full task set so ancestry stays correct when quick filters hide a parent.
   const hierarchyIndex = useMemo(() => buildTaskHierarchyIndex(tasks), [tasks]);
+
+  const fieldsById = useMemo(
+    () => new Map((fieldDefinitions ?? []).map((field) => [field.id, field])),
+    [fieldDefinitions],
+  );
+  const personIds = useMemo(
+    () => personSortIds(tasks, sortConfig, fieldsById),
+    [tasks, sortConfig, fieldsById],
+  );
+  const { subjects: sortSubjects } = useSubjectResolver(personIds);
+  const subjectNameById = useMemo(
+    () => new Map(sortSubjects.map((subject) => [subject.id, subject.name])),
+    [sortSubjects],
+  );
 
   const filteredTasks = useMemo(() => {
     let result = includeSubtasks ? tasks.slice() : tasks.filter((t) => !t.parentId);
@@ -148,26 +168,7 @@ export function useFilteredTasks(projectId: string, options: UseFilteredTasksOpt
 
     result = applyFilters(result, filterConfig, hierarchyIndex);
 
-    if (sortConfig) {
-      result.sort((a, b) => {
-        const aVal = getFieldValue(a, sortConfig.fieldId);
-        const bVal = getFieldValue(b, sortConfig.fieldId);
-
-        if (aVal === bVal) return 0;
-        if (aVal === null || aVal === undefined) return 1;
-        if (bVal === null || bVal === undefined) return -1;
-
-        const comparison = aVal < bVal ? -1 : 1;
-        return sortConfig.direction === "asc" ? comparison : -comparison;
-      });
-    } else {
-      result.sort((a, b) => {
-        if (a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder;
-        return a.number - b.number;
-      });
-    }
-
-    return result;
+    return sortTasks(result, sortConfig, { fieldsById, subjectNameById });
   }, [
     tasks,
     searchQuery,
@@ -179,26 +180,9 @@ export function useFilteredTasks(projectId: string, options: UseFilteredTasksOpt
     inEpicFilter,
     includeSubtasks,
     hierarchyIndex,
+    fieldsById,
+    subjectNameById,
   ]);
 
   return filteredTasks;
-}
-
-function getFieldValue(task: Task, fieldId: string): unknown {
-  switch (fieldId) {
-    case "field_title":
-      return task.title;
-    case "field_status":
-      return task.status;
-    case "field_priority":
-      return task.priority;
-    case "field_assignee":
-      return task.assigneeIds[0];
-    case "field_start_date":
-      return task.startDate;
-    case "field_due_date":
-      return task.dueDate;
-    default:
-      return task.fieldValues[fieldId];
-  }
 }
