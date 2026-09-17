@@ -375,6 +375,7 @@ class SearchOperations:
                     Task.task_type,
                     Task.number,
                     Task.blocked_by_task_ids,
+                    Task.completed_at,
                     Task.project_id,
                     Project.name.label("project_name"),
                     Project.slug.label("project_slug"),
@@ -423,6 +424,12 @@ class SearchOperations:
 
             # Batch-load subtask counts
             subtask_counts = await self._get_subtask_counts(task_ids)
+            open_blocker_ids = await self._get_open_task_ids({
+                blocker_id
+                for row in task_rows
+                if row.completed_at is None
+                for blocker_id in row.blocked_by_task_ids or []
+            })
 
             # Apply enrichment to results
             id_to_urn = {v: k for k, v in urn_to_id.items()}
@@ -455,9 +462,13 @@ class SearchOperations:
                         sr.priority_color = opt.get("color")
                         break
 
-                # Blocked-by count
-                if row.blocked_by_task_ids:
-                    sr.blocked_by_count = len(row.blocked_by_task_ids)
+                # Only live, still-open blockers hold a task up, as the completion guard decides.
+                if row.completed_at is None and row.blocked_by_task_ids:
+                    sr.blocked_by_count = sum(
+                        1
+                        for blocker_id in row.blocked_by_task_ids
+                        if _canonical_id(blocker_id) in open_blocker_ids
+                    )
 
                 # Subtask counts
                 sub_total, sub_done = subtask_counts.get(row.id, (0, 0))
@@ -497,6 +508,21 @@ class SearchOperations:
             if row.config and "options" in row.config:  # noqa: PLR2004
                 field_map.setdefault(row.project_id, {})[row.id] = row.config["options"]
         return field_map
+
+    async def _get_open_task_ids(self, raw_ids: set[str]) -> set[str]:
+        ids = {UUID(canonical) for canonical in map(_canonical_id, raw_ids) if canonical}
+        if not ids:
+            return set()
+        result = await self.session.execute(
+            select(Task.id).where(
+                and_(
+                    Task.id.in_(ids),
+                    Task.is_deleted == False,  # noqa: E712
+                    Task.completed_at.is_(None),
+                )
+            )
+        )
+        return {str(task_id) for task_id in result.scalars()}
 
     async def _get_subtask_counts(
         self,
@@ -804,3 +830,11 @@ def _build_reference_result(
         availability=availability,
         can_request_access=can_request_access,
     )
+
+
+def _canonical_id(raw: str) -> str:
+    """Stored blocker ids are free-form JSON strings; an unparsable one names no task."""
+    try:
+        return str(UUID(raw))
+    except TypeError, ValueError, AttributeError:
+        return ""
