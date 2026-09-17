@@ -5,6 +5,8 @@ import { useAppSelector } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
 import { UrnType } from "@/shared/utils/urnTypes";
 import { getContentTypeConfig } from "@/config/theme/contentTypes";
+import type { TaskStatusSemantic } from "@/features/projects/types/fields";
+import { statusOptionsOf, statusSemanticOf } from "@/features/projects/utils/statusSemantics";
 import {
   WidgetCard,
   EmptyWidget,
@@ -45,29 +47,15 @@ function timestampToString(ts: { seconds: number; nanos: number } | undefined): 
   return new Date(ts.seconds * 1000).toISOString();
 }
 
-function taskStatusDot(status: string): string {
-  switch (status) {
-    case "status_done":
+function taskStatusDot(semantic: TaskStatusSemantic | null): string {
+  switch (semantic) {
+    case "completed":
       return "bg-green-500";
-    case "status_in_progress":
+    case "in_progress":
+    case "review":
       return "bg-blue-500";
-    case "status_todo":
-      return "bg-muted-foreground/40";
     default:
       return "bg-muted-foreground/40";
-  }
-}
-
-function taskStatusText(status: string): string {
-  switch (status) {
-    case "status_done":
-      return "Done";
-    case "status_in_progress":
-      return "In progress";
-    case "status_todo":
-      return "To do";
-    default:
-      return status.replace("status_", "");
   }
 }
 
@@ -230,7 +218,8 @@ export function RecentActivityWidget() {
     Object.values(tasks).forEach((task: Task) => {
       if (!task.deletedAt) {
         const project = task.projectId ? projects[task.projectId] : undefined;
-        const parts = [taskStatusText(task.status), priorityText(task.priority)].filter(Boolean);
+        const status = statusOptionsOf(project?.fieldDefinitions).find((o) => o.id === task.status);
+        const parts = [status?.label, priorityText(task.priority)].filter(Boolean);
         items.push({
           id: task.id,
           title: task.title,
@@ -241,7 +230,7 @@ export function RecentActivityWidget() {
           extra: [project?.name, task.dueDate ? `Due ${formatSmartDateTime(task.dueDate)}` : null]
             .filter(Boolean)
             .join(" \u00b7 "),
-          statusDot: taskStatusDot(task.status),
+          statusDot: taskStatusDot(status ? statusSemanticOf(status) : null),
         });
       }
     });

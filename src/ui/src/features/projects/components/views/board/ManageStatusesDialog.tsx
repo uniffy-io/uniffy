@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { popoverShellClass } from "@/components/ui/popover";
 import { statusPaint } from "@/features/projects/utils/statusPaint";
+import { requiredStatusHint } from "@/features/projects/utils/statusSemantics";
 import type { SelectOption } from "../../../types";
 
 interface ManageStatusesDialogProps {
@@ -125,7 +126,7 @@ export function ManageStatusesDialog({ options, onSave, onClose }: ManageStatuse
               <>
                 <span className="flex-1 truncate font-medium">{item.label}</span>
 
-                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="flex items-center gap-1 transition-opacity md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100">
                   <button
                     onClick={() => setEditingId(item.id)}
                     className="p-1 text-muted-foreground hover:text-foreground hover:bg-muted rounded"
@@ -134,9 +135,11 @@ export function ManageStatusesDialog({ options, onSave, onClose }: ManageStatuse
                     <PencilSimple size={14} />
                   </button>
                   <button
+                    disabled={requiredStatusHint(item) !== null}
                     onClick={() => handleDeleteItem(item.id)}
-                    className="p-1 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded"
-                    title="Delete"
+                    className="p-1 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:text-muted-foreground disabled:hover:bg-transparent"
+                    title={requiredStatusHint(item) ?? "Delete"}
+                    aria-label={`Delete ${item.label}`}
                   >
                     <Trash size={14} />
                   </button>

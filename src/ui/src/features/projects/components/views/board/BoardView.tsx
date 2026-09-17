@@ -28,6 +28,7 @@ import { moveTask, updateFieldThunk, updateTask } from "@/features/projects/stor
 import { checkReparent } from "@/features/projects/utils/reparent";
 import { getHierarchyRuleViolation } from "@/features/projects/utils/taskTypes";
 import { statusPaint } from "@/features/projects/utils/statusPaint";
+import { statusSemanticOf } from "@/features/projects/utils/statusSemantics";
 import {
   selectSearchQuery,
   selectActiveGroupByFieldId,
@@ -167,11 +168,8 @@ export function BoardView() {
       )
     : {};
 
-  // Status IDs that count toward "done" in lane progress badges.
   const doneStatusIds = new Set(
-    statusOptions
-      .filter((s) => s.id === "status_done" || s.label.toLowerCase().includes("done"))
-      .map((s) => s.id),
+    statusOptions.filter((s) => statusSemanticOf(s) === "completed").map((s) => s.id),
   );
 
   const handleTaskClick = (taskId: string) => {
@@ -426,7 +424,7 @@ export function BoardView() {
           )}
           <span className="text-muted-foreground">|</span>
           <span className="text-muted-foreground">
-            {tasks.filter((t) => t.status === "status_done").length}/{tasks.length} done
+            {tasks.filter((t) => t.completedAt).length}/{tasks.length} done
           </span>
         </div>
       )}

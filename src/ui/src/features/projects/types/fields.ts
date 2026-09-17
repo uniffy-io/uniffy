@@ -7,11 +7,16 @@ export type FieldType =
   | "person"
   | "reference";
 
+/** The stage a status stands for; the backend decides completion from it, never from the id. */
+export type TaskStatusSemantic = "todo" | "in_progress" | "review" | "completed";
+
 export interface SelectOption {
   id: string;
   label: string;
   color: string;
   sortOrder: number;
+  /** Set on status options only. */
+  semantic?: TaskStatusSemantic;
 }
 
 export interface FieldConfig {
@@ -117,10 +122,16 @@ export const SYSTEM_FIELD_IDS = {
 // Mirrors the backend defaults; the hex is the brand-axis start for each slot and is only a
 // courtesy for readers that cannot derive paint from order (see utils/statusPaint.ts).
 export const DEFAULT_STATUS_OPTIONS: SelectOption[] = [
-  { id: "status_todo", label: "To Do", color: "#694aff", sortOrder: 0 },
-  { id: "status_in_progress", label: "In Progress", color: "#8c56fa", sortOrder: 1 },
-  { id: "status_review", label: "Review", color: "#ae62f5", sortOrder: 2 },
-  { id: "status_done", label: "Done", color: "#d16ef0", sortOrder: 3 },
+  { id: "status_todo", label: "To Do", color: "#694aff", sortOrder: 0, semantic: "todo" },
+  {
+    id: "status_in_progress",
+    label: "In Progress",
+    color: "#8c56fa",
+    sortOrder: 1,
+    semantic: "in_progress",
+  },
+  { id: "status_review", label: "Review", color: "#ae62f5", sortOrder: 2, semantic: "review" },
+  { id: "status_done", label: "Done", color: "#d16ef0", sortOrder: 3, semantic: "completed" },
 ];
 
 export const DEFAULT_PRIORITY_OPTIONS: SelectOption[] = [

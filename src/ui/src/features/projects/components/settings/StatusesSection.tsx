@@ -15,6 +15,7 @@ import { Input, controlShellClass } from "@/components/ui/input";
 import { updateFieldThunk } from "@/features/projects/store/projectsThunks";
 import { updateFieldDefinition } from "@/features/projects/store/projectsSlice";
 import { SYSTEM_FIELD_IDS } from "@/features/projects/types";
+import { requiredStatusHint } from "@/features/projects/utils/statusSemantics";
 import type { Project, SelectOption } from "@/features/projects/types";
 import { STATUS_SWATCHES, statusPaint } from "@/features/projects/utils/statusPaint";
 
@@ -251,7 +252,7 @@ export function StatusesSection({ project }: StatusesSectionProps) {
                   />
                   <span className="flex-1 text-sm font-medium truncate">{item.label}</span>
 
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="flex items-center gap-1 transition-opacity md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100">
                     <button
                       type="button"
                       onClick={() => setEditingId(item.id)}
@@ -263,13 +264,15 @@ export function StatusesSection({ project }: StatusesSectionProps) {
                     {items.length > 1 && (
                       <button
                         type="button"
+                        disabled={requiredStatusHint(item) !== null}
                         onClick={() => {
                           setDeleteTarget(item);
                           const firstOther = items.find((i) => i.id !== item.id);
                           setMigrationTargetId(firstOther?.id || "");
                         }}
-                        className="p-1 text-muted-foreground hover:text-red-500 hover:bg-red-500/10 rounded"
-                        title="Delete"
+                        className="p-1 text-muted-foreground hover:text-red-500 hover:bg-red-500/10 rounded disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:text-muted-foreground disabled:hover:bg-transparent"
+                        title={requiredStatusHint(item) ?? "Delete"}
+                        aria-label={`Delete ${item.label}`}
                       >
                         <Trash size={14} />
                       </button>

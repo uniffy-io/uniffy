@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { Plus, Circle, CheckCircle, CaretRight, CaretDown } from "@phosphor-icons/react";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
@@ -13,9 +13,8 @@ import { selectTask } from "@/features/projects/store/projectsUiSlice";
 import { createTask, updateTask } from "@/features/projects/store/projectsThunks";
 import { useTaskPermission } from "@/features/projects/hooks/useProjectPermissions";
 import type { Task } from "@/features/projects/types/project";
+import { statusIdForSemantic, statusOptionsOf } from "@/features/projects/utils/statusSemantics";
 
-const STATUS_DONE = "status_done";
-const STATUS_TODO = "status_todo";
 const MAX_DEPTH = 5;
 
 interface SubtasksListProps {
@@ -46,7 +45,6 @@ export function SubtasksList({ taskId, parentCompleted }: SubtasksListProps) {
           projectId: project.id,
           title,
           parentId: addingForParentId || taskId,
-          status: STATUS_TODO,
         }),
       );
     }
@@ -66,10 +64,16 @@ export function SubtasksList({ taskId, parentCompleted }: SubtasksListProps) {
     [handleSubmit],
   );
 
+  const statusOptions = useMemo(
+    () => statusOptionsOf(project?.fieldDefinitions),
+    [project?.fieldDefinitions],
+  );
+
   const handleToggle = useCallback(
     (subtask: Task) => {
       const isDone = !!subtask.completedAt;
-      const newStatus = isDone ? STATUS_TODO : STATUS_DONE;
+      const newStatus = statusIdForSemantic(statusOptions, isDone ? "todo" : "completed");
+      if (!newStatus) return;
       dispatch(
         optimisticUpdateTask({
           id: subtask.id,
@@ -79,7 +83,7 @@ export function SubtasksList({ taskId, parentCompleted }: SubtasksListProps) {
       );
       dispatch(updateTask({ id: subtask.id, status: newStatus }));
     },
-    [dispatch],
+    [dispatch, statusOptions],
   );
 
   const handleCreateSubtask = useCallback((parentId: string) => {

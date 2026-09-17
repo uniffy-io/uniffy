@@ -3,6 +3,7 @@ import type { RootState } from "@/app/store";
 import type { Project, Task } from "../types/project";
 import type { FieldDefinition } from "../types/fields";
 import type { TaskActivity } from "../types/activity";
+import { isCompletedStatus, statusOptionsOf } from "@/features/projects/utils/statusSemantics";
 import type { LoadingState, ErrorState } from "../types/ui";
 import {
   fetchProjects,
@@ -83,19 +84,25 @@ export const projectsSlice = createSlice({
       if (task) {
         state._pendingTaskSnapshot = { ...task };
         state._pendingParentSnapshots = {};
-        if (updates.status && task.parentId && state.tasks[task.parentId]) {
-          const parent = state.tasks[task.parentId];
-          state._pendingParentSnapshots[parent.id] = { ...parent };
-          const wasDone = task.status === "status_done";
-          const nowDone = updates.status === "status_done";
-          if (wasDone && !nowDone) {
-            parent.subtaskCompleted = Math.max(0, parent.subtaskCompleted - 1);
-          } else if (!wasDone && nowDone) {
-            parent.subtaskCompleted = parent.subtaskCompleted + 1;
+        if (updates.status && updates.status !== task.status) {
+          // Mirrors the server: completion follows the status semantic, and completedAt moves
+          // only when the status crosses into or out of the completed stage.
+          const options = statusOptionsOf(state.projects[task.projectId]?.fieldDefinitions);
+          const wasDone = isCompletedStatus(options, task.status);
+          const nowDone = isCompletedStatus(options, updates.status);
+          if (wasDone !== nowDone && !("completedAt" in updates)) {
+            updates.completedAt = nowDone ? new Date().toISOString() : null;
+          }
+          if (wasDone !== nowDone && task.parentId && state.tasks[task.parentId]) {
+            const parent = state.tasks[task.parentId];
+            state._pendingParentSnapshots[parent.id] = { ...parent };
+            parent.subtaskCompleted = nowDone
+              ? parent.subtaskCompleted + 1
+              : Math.max(0, parent.subtaskCompleted - 1);
           }
         }
         if ("parentId" in updates && updates.parentId !== task.parentId) {
-          const wasDone = task.status === "status_done";
+          const wasDone = !!task.completedAt;
           if (task.parentId && state.tasks[task.parentId]) {
             const oldParent = state.tasks[task.parentId];
             if (!state._pendingParentSnapshots[oldParent.id]) {
@@ -366,7 +373,7 @@ export const projectsSlice = createSlice({
         if (task?.parentId && state.tasks[task.parentId]) {
           const parent = state.tasks[task.parentId];
           parent.subtaskTotal = Math.max(0, parent.subtaskTotal - 1);
-          if (task.status === "status_done") {
+          if (task.completedAt) {
             parent.subtaskCompleted = Math.max(0, parent.subtaskCompleted - 1);
           }
         }
@@ -389,7 +396,7 @@ export const projectsSlice = createSlice({
           if (task?.parentId && state.tasks[task.parentId]) {
             const parent = state.tasks[task.parentId];
             parent.subtaskTotal = Math.max(0, parent.subtaskTotal - 1);
-            if (task.status === "status_done") {
+            if (task.completedAt) {
               parent.subtaskCompleted = Math.max(0, parent.subtaskCompleted - 1);
             }
           }
