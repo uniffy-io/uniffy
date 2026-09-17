@@ -3,7 +3,7 @@ import { ChartLine } from "@phosphor-icons/react";
 import { useAppSelector } from "@/app/hooks";
 import { WidgetCard, EmptyWidget } from "@/features/dashboard/components/widgets/WidgetCard";
 import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
-import { AreaChart, Area, Tooltip, ResponsiveContainer, XAxis } from "recharts";
+import { AreaChart, Area, Tooltip, XAxis } from "recharts";
 import type { Task } from "@/features/projects/types/project";
 
 function getDayLabel(date: Date): string {
@@ -102,45 +102,48 @@ export function PersonalAnalyticsWidget() {
       ) : (
         <div className="space-y-3">
           <div className="h-32">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData} margin={{ top: 4, right: 4, bottom: 0, left: 4 }}>
-                <defs>
-                  <linearGradient id="activityGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <XAxis
-                  dataKey="name"
-                  tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
-                  tickLine={false}
-                  axisLine={false}
-                  interval="preserveStartEnd"
-                />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "hsl(var(--card))",
-                    border: "1px solid hsl(var(--border))",
-                    borderRadius: "8px",
-                    fontSize: "12px",
-                    padding: "6px 10px",
-                  }}
-                  labelStyle={{
-                    color: "hsl(var(--foreground))",
-                    fontWeight: 600,
-                  }}
-                  itemStyle={{ color: "hsl(var(--muted-foreground))" }}
-                  formatter={(value) => [value as number, "Items"]}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="activity"
-                  stroke="hsl(var(--primary))"
-                  strokeWidth={2}
-                  fill="url(#activityGradient)"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
+            <AreaChart
+              responsive
+              style={{ width: "100%", height: "100%" }}
+              data={chartData}
+              margin={{ top: 4, right: 4, bottom: 0, left: 4 }}
+            >
+              <defs>
+                <linearGradient id="activityGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <XAxis
+                dataKey="name"
+                tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+                tickLine={false}
+                axisLine={false}
+                interval="preserveStartEnd"
+              />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: "hsl(var(--card))",
+                  border: "1px solid hsl(var(--border))",
+                  borderRadius: "8px",
+                  fontSize: "12px",
+                  padding: "6px 10px",
+                }}
+                labelStyle={{
+                  color: "hsl(var(--foreground))",
+                  fontWeight: 600,
+                }}
+                itemStyle={{ color: "hsl(var(--muted-foreground))" }}
+                formatter={(value) => [value as number, "Items"]}
+              />
+              <Area
+                type="monotone"
+                dataKey="activity"
+                stroke="hsl(var(--primary))"
+                strokeWidth={2}
+                fill="url(#activityGradient)"
+              />
+            </AreaChart>
           </div>
 
           {(weekSummary.tasks > 0 || weekSummary.notes > 0) && (
