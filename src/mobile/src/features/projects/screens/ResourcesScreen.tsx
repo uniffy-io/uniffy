@@ -11,56 +11,7 @@ import { BOTTOM_NAV_HEIGHT } from "@theme/theme";
 import { FONT } from "@theme/typography";
 import { useProject, useProjectTasks } from "@features/projects/useProjects";
 import { formatMinutes } from "@features/projects/timeFormatting";
-import { isTaskOverdue } from "@features/projects/taskFilters";
-import type { SerializedTask } from "@features/projects/projectsSerializer";
-
-const UNASSIGNED = "__unassigned__";
-
-interface Bucket {
-  subjectId: string;
-  open: number;
-  done: number;
-  overdue: number;
-  estimated: number;
-  spent: number;
-}
-
-/**
- * A task assigned to several people counts once for each of them, so the
- * per-person totals do not sum to the project total. That is deliberate: this
- * answers "how much is on this person", not "how is the project split up".
- */
-function buildBuckets(tasks: SerializedTask[]): Bucket[] {
-  const bySubject = new Map<string, Bucket>();
-
-  const bucketFor = (subjectId: string): Bucket => {
-    let bucket = bySubject.get(subjectId);
-    if (!bucket) {
-      bucket = { subjectId, open: 0, done: 0, overdue: 0, estimated: 0, spent: 0 };
-      bySubject.set(subjectId, bucket);
-    }
-    return bucket;
-  };
-
-  for (const task of tasks) {
-    const owners = task.assigneeIds.length > 0 ? task.assigneeIds : [UNASSIGNED];
-    for (const subjectId of owners) {
-      const bucket = bucketFor(subjectId);
-      if (task.completedAt) bucket.done += 1;
-      else bucket.open += 1;
-      if (isTaskOverdue(task.dueDate, task.completedAt)) bucket.overdue += 1;
-      bucket.estimated += task.estimatedMinutes ?? 0;
-      bucket.spent += task.timeSpentMinutes ?? 0;
-    }
-  }
-
-  // Busiest first; unassigned always sinks to the bottom.
-  return [...bySubject.values()].sort((a, b) => {
-    if (a.subjectId === UNASSIGNED) return 1;
-    if (b.subjectId === UNASSIGNED) return -1;
-    return b.open - a.open || b.overdue - a.overdue;
-  });
-}
+import { buildResourceBuckets, UNASSIGNED } from "@features/projects/resourceBuckets";
 
 export function ResourcesScreen() {
   const { projectId } = useLocalSearchParams<{ projectId: string }>();
@@ -72,7 +23,7 @@ export function ResourcesScreen() {
   const { byId } = useDirectory();
 
   const tasks = useMemo(() => tasksQuery.data ?? [], [tasksQuery.data]);
-  const buckets = useMemo(() => buildBuckets(tasks), [tasks]);
+  const buckets = useMemo(() => buildResourceBuckets(tasks), [tasks]);
   const busiest = buckets.reduce((max, b) => Math.max(max, b.open + b.done), 0);
 
   const project = projectQuery.data;
