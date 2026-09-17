@@ -4,6 +4,7 @@ import { Kanban, Cpu, List, MagnifyingGlass } from "@phosphor-icons/react";
 import type { Icon } from "@phosphor-icons/react";
 import { UserMenu } from "@/components/layout/UserMenu";
 import { GlobalSearch } from "@/features/search/components/GlobalSearch";
+import { openSpotlightSearch } from "@/features/search/hooks/useSpotlightTrigger";
 import { NotificationBell } from "@/features/notifications/components/NotificationBell";
 import { CalendarQuickView } from "@/features/calendar/components/quick-view/CalendarQuickView";
 import { RecordingNavTrigger } from "@/features/recording/components/RecordingNavTrigger";
@@ -15,7 +16,6 @@ import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { useAgentsBuilderAccess } from "@/features/agents/hooks/useAgentsBuilderAccess";
 import { UniffyLogo } from "@/components/ui/uniffy-logo";
 import { Drawer } from "@/components/ui/drawer";
-import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
 import { preloadChatPage } from "@/features/chat/pages/chatPageLoader";
 import { loadLastOpenedChannel } from "@/features/chat/utils/lastOpenedChannel";
 import {
@@ -236,7 +236,6 @@ export function AppHeader() {
   const isZenMode = useAppSelector((state) => state.zenMode.isActive);
   const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
   const userId = useAppSelector((state) => state.auth.user?.id);
-  const { isMobile } = useBreakpoint();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const visibleNavItems = useVisibleNavItems();
   const lastOpenedChannelId =
@@ -317,17 +316,18 @@ export function AppHeader() {
             </nav>
           </div>
 
+          {/* Centered, the full box collides with the nav icons and the right cluster below lg. */}
           <div
             className={cn(
               "absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10",
-              "hidden sm:block",
+              "hidden lg:block",
             )}
           >
             <GlobalSearch />
           </div>
 
           <div className="flex items-center gap-2 z-20">
-            {isMobile && <MobileSearchButton />}
+            <CompactSearchButton />
             <CallHeaderPill />
             <RecordingNavTrigger />
             <CalendarQuickView />
@@ -347,16 +347,12 @@ export function AppHeader() {
   );
 }
 
-function MobileSearchButton() {
-  const handleClick = () => {
-    // Trigger spotlight via the registered keyboard shortcut.
-    window.dispatchEvent(new KeyboardEvent("keydown", { key: "k", metaKey: true }));
-  };
-
+function CompactSearchButton() {
   return (
     <button
-      onClick={handleClick}
-      className="flex items-center justify-center w-7 h-7 rounded-md border border-border-nav text-muted-foreground hover:text-primary hover:border-primary/30 transition-colors sm:hidden"
+      type="button"
+      onClick={openSpotlightSearch}
+      className="flex items-center justify-center w-7 h-7 rounded-md border border-border-nav text-muted-foreground hover:text-primary hover:border-primary/30 transition-colors lg:hidden"
       aria-label="Search"
     >
       <MagnifyingGlass size={20} weight="duotone" />

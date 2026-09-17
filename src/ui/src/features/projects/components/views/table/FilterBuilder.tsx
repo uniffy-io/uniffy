@@ -103,6 +103,8 @@ interface FilterBuilderProps {
   onClose: () => void;
   /** Optional Epic-task options for the "In Epic" pseudo-field. */
   epicOptions?: { value: string; label: string }[];
+  /** Placement overrides when the popover anchors to something other than its trigger. */
+  className?: string;
 }
 
 const TEXT_OPERATORS: { value: FilterOperator; label: string }[] = [
@@ -176,6 +178,7 @@ export function FilterBuilder({
   onApply,
   onClose,
   epicOptions,
+  className,
 }: FilterBuilderProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   // The unified-tags filter and the hierarchy filters are exposed as
@@ -254,7 +257,11 @@ export function FilterBuilder({
   return (
     <div
       ref={containerRef}
-      className={cn(popoverShellClass, "absolute top-full right-0 z-50 mt-2 w-[520px]")}
+      className={cn(
+        popoverShellClass,
+        "absolute top-full right-0 z-50 mt-2 w-[min(520px,calc(100vw-2rem))]",
+        className,
+      )}
     >
       <div className="p-3 border-b border-border">
         <span className="text-sm font-medium text-foreground">Filter tasks</span>

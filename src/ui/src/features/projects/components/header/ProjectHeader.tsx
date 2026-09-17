@@ -152,7 +152,19 @@ export function ProjectHeader({ project }: ProjectHeaderProps) {
     observer.observe(el);
     return () => observer.disconnect();
   }, []);
-  const showViewLabels = controlBarWidth === 0 ? isDesktop : controlBarWidth > 1040;
+  // The row never wraps, so a narrower bar sheds labels: first the inactive views, then Filter and
+  // Display (search starts shrinking), then the active view's.
+  const viewLabels: ViewLabels =
+    controlBarWidth === 0
+      ? isDesktop
+        ? "all"
+        : "active"
+      : controlBarWidth > 1040
+        ? "all"
+        : controlBarWidth >= 440
+          ? "active"
+          : "none";
+  const compactControls = isMobile || (controlBarWidth > 0 && controlBarWidth < 720);
 
   const statusField = project.fieldDefinitions.find((f) => f.id === SYSTEM_FIELD_IDS.STATUS);
   const statusOptions = statusField?.config.options || [];
@@ -394,14 +406,10 @@ export function ProjectHeader({ project }: ProjectHeaderProps) {
         </PaneHeaderBar>
 
         {/* Control bar: view switcher (left) vs slice controls (right) */}
-        <PaneHeaderControls ref={controlBarRef} className="flex-nowrap">
-          <ViewSwitcher
-            viewMode={viewMode}
-            onChange={handleViewChange}
-            showLabels={showViewLabels}
-          />
+        <PaneHeaderControls ref={controlBarRef} className="relative flex-nowrap">
+          <ViewSwitcher viewMode={viewMode} onChange={handleViewChange} labels={viewLabels} />
 
-          {activeSprint && !isMobile && (
+          {activeSprint && !compactControls && (
             <span className="shrink-0 text-xs font-medium bg-primary/10 text-primary px-2 py-0.5 rounded-full">
               {activeSprint.name}
             </span>
@@ -439,7 +447,7 @@ export function ProjectHeader({ project }: ProjectHeaderProps) {
               </Button>
             )
           ) : (
-            <div className="relative w-56 lg:w-64 shrink-0">
+            <div className="relative w-56 lg:w-64 min-w-28 shrink">
               <MagnifyingGlass
                 size={16}
                 className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
@@ -454,16 +462,17 @@ export function ProjectHeader({ project }: ProjectHeaderProps) {
             </div>
           )}
 
-          {/* Advanced filter builder */}
-          <div className="relative shrink-0">
+          {/* Advanced filter builder; a compact bar anchors the popover to the whole row so it fits. */}
+          <div className={cn("shrink-0", !compactControls && "relative")}>
             <Button
               variant="ghost"
               size="sm"
               className={cn("h-8 gap-1.5", nonTagConditions.length > 0 && "text-primary")}
               onClick={() => setIsFilterOpen(!isFilterOpen)}
+              title="Filter"
             >
               <Funnel size={16} weight={nonTagConditions.length > 0 ? "fill" : "regular"} />
-              {!isMobile && "Filter"}
+              {!compactControls && "Filter"}
               {nonTagConditions.length > 0 && (
                 <span className="text-xs bg-primary text-primary-foreground rounded-full px-1.5 min-w-[18px] text-center">
                   {nonTagConditions.length}
@@ -477,6 +486,11 @@ export function ProjectHeader({ project }: ProjectHeaderProps) {
                 onApply={(config) => dispatch(setFilterConfig(config))}
                 onClose={() => setIsFilterOpen(false)}
                 epicOptions={epicOptions}
+                className={
+                  compactControls
+                    ? "right-3 max-w-[calc(100%-1.5rem)] md:right-4 md:max-w-[calc(100%-2rem)]"
+                    : undefined
+                }
               />
             )}
           </div>
@@ -488,9 +502,10 @@ export function ProjectHeader({ project }: ProjectHeaderProps) {
               size="sm"
               className={cn("h-8 gap-1.5", displayDirtyCount > 0 && "text-primary")}
               onClick={() => setIsDisplayOpen(!isDisplayOpen)}
+              title="Display"
             >
               <SlidersHorizontal size={16} weight={displayDirtyCount > 0 ? "fill" : "regular"} />
-              {!isMobile && "Display"}
+              {!compactControls && "Display"}
               {displayDirtyCount > 0 && (
                 <span className="text-xs bg-primary text-primary-foreground rounded-full px-1.5 min-w-[18px] text-center">
                   {displayDirtyCount}
@@ -622,28 +637,36 @@ export function ProjectHeader({ project }: ProjectHeaderProps) {
   );
 }
 
+type ViewLabels = "all" | "active" | "none";
+
 interface ViewSwitcherProps {
   viewMode: ViewType;
   onChange: (view: ViewType) => void;
-  showLabels: boolean;
+  labels: ViewLabels;
 }
 
-function ViewSwitcher({ viewMode, onChange, showLabels }: ViewSwitcherProps) {
+function ViewSwitcher({ viewMode, onChange, labels }: ViewSwitcherProps) {
   return (
-    <div className="inline-flex items-center gap-0.5 rounded-lg bg-muted/60 p-0.5 shrink-0">
+    <div
+      className={cn(
+        "inline-flex items-center gap-0.5 rounded-lg bg-muted/60 p-0.5",
+        // Icon-only on a phone: the switcher gives way (and scrolls) before Filter and Display do.
+        labels === "none" ? "min-w-0 shrink overflow-x-auto" : "shrink-0",
+      )}
+    >
       {VIEWS.map((view) => {
         const isActive = viewMode === view.value;
-        // Always label the active tab so the current view is legible even when
-        // the rest collapse to icons on tablet/mobile.
-        const withLabel = showLabels || isActive;
+        const withLabel = labels === "all" || (labels === "active" && isActive);
         return (
           <button
             key={view.value}
             type="button"
             onClick={() => onChange(view.value)}
             title={view.label}
+            aria-pressed={isActive}
             className={cn(
-              "flex items-center gap-1.5 px-2.5 py-1 rounded-md text-sm transition-all",
+              "flex shrink-0 items-center gap-1.5 py-1 rounded-md text-sm transition-all",
+              labels === "none" ? "px-2" : "px-2.5",
               isActive
                 ? "bg-card text-foreground shadow-sm font-medium"
                 : "text-muted-foreground hover:text-foreground",
