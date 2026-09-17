@@ -6,6 +6,7 @@ import { Input, controlShellClass } from "@/components/ui/input";
 import { NumberInput } from "@/components/ui/number-input";
 import { popoverShellClass } from "@/components/ui/popover";
 import { TagPicker } from "@/features/tags";
+import { PersonFilterInput } from "@/features/projects/components/views/table/PersonFilterInput";
 import type { FieldDefinition } from "@/features/projects/types";
 import type {
   FilterCondition,
@@ -137,8 +138,8 @@ const NUMBER_OPERATORS: { value: FilterOperator; label: string }[] = [
 ];
 
 const PERSON_OPERATORS: { value: FilterOperator; label: string }[] = [
-  { value: "equals", label: "is" },
-  { value: "not_equals", label: "is not" },
+  { value: "equals", label: "is any of" },
+  { value: "not_equals", label: "is none of" },
   { value: "is_empty", label: "is empty" },
   { value: "is_not_empty", label: "is not empty" },
 ];
@@ -190,9 +191,10 @@ export function FilterBuilder({
   const [conditions, setConditions] = useState<FilterCondition[]>(filterConfig?.conditions ?? []);
   const [logic, setLogic] = useState<"and" | "or">(filterConfig?.logic ?? "and");
 
-  // Close on outside click
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
+      // The person picker renders in a body portal; a pick there must not discard the draft.
+      if (e.target instanceof Element && e.target.closest("[data-select-portal]")) return;
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         onClose();
       }
@@ -545,6 +547,10 @@ function ConditionValueInput({
         className={VALUE_INPUT_CLASS}
       />
     );
+  }
+
+  if (field.type === "person") {
+    return <PersonFilterInput value={value} onChange={onChange} />;
   }
 
   if (field.type === "single_select" || field.type === "multi_select") {
