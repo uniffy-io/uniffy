@@ -47,6 +47,7 @@ import { NO_EPIC_LANE_ID, parseSwimlaneDropId } from "./swimlaneDropId";
 import { AddStatusDialog } from "./AddStatusDialog";
 import { EmptyState } from "../table/EmptyState";
 import { useProjectPermission } from "@/features/projects/hooks/useProjectPermissions";
+import { randomUUID } from "@/shared/utils/uuid";
 
 export function BoardView() {
   const dispatch = useAppDispatch();
@@ -191,7 +192,7 @@ export function BoardView() {
 
     // Empty colour: the backend assigns the new slot on the brand axis when it saves.
     const newOption: SelectOption = {
-      id: `status_${crypto.randomUUID().slice(0, 8)}`,
+      id: `status_${randomUUID().slice(0, 8)}`,
       label,
       color: "",
       sortOrder: maxSortOrder + 1,

@@ -17,6 +17,7 @@ import { updateFieldDefinition } from "@/features/projects/store/projectsSlice";
 import { SYSTEM_FIELD_IDS } from "@/features/projects/types";
 import type { Project, SelectOption } from "@/features/projects/types";
 import { STATUS_SWATCHES, statusPaint } from "@/features/projects/utils/statusPaint";
+import { randomUUID } from "@/shared/utils/uuid";
 
 interface StatusesSectionProps {
   project: Project;
@@ -112,7 +113,7 @@ export function StatusesSection({ project }: StatusesSectionProps) {
     const maxSortOrder = items.reduce((max, item) => Math.max(max, item.sortOrder), -1);
     // Empty colour: the backend assigns the new slot on the brand axis when it saves.
     const newOption: SelectOption = {
-      id: `status_${crypto.randomUUID().slice(0, 8)}`,
+      id: `status_${randomUUID().slice(0, 8)}`,
       label: newLabel.trim(),
       color: "",
       sortOrder: maxSortOrder + 1,

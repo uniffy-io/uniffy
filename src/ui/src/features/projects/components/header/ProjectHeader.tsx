@@ -84,6 +84,7 @@ import { TagPicker } from "@/features/tags";
 import { TAGS_FILTER_FIELD_ID } from "@/features/projects/utils/filterTasks";
 import type { FilterCondition } from "@/features/projects/types/views";
 import type { AppDispatch } from "@/app/store";
+import { randomUUID } from "@/shared/utils/uuid";
 
 interface ProjectHeaderProps {
   project: Project;
@@ -229,7 +230,7 @@ export function ProjectHeader({ project }: ProjectHeaderProps) {
         return;
       }
       const next: FilterCondition = {
-        id: tagCondition?.id ?? crypto.randomUUID(),
+        id: tagCondition?.id ?? randomUUID(),
         fieldId: TAGS_FILTER_FIELD_ID,
         operator: "contains",
         value: nextTagIds,

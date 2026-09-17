@@ -20,6 +20,7 @@ import {
   HIERARCHY_ROOT_ONLY_FIELD_ID,
   TAGS_FILTER_FIELD_ID,
 } from "@/features/projects/utils/filterTasks";
+import { randomUUID } from "@/shared/utils/uuid";
 
 const TAGS_PSEUDO_FIELD: FieldDefinition = {
   id: TAGS_FILTER_FIELD_ID,
@@ -210,7 +211,7 @@ export function FilterBuilder({
     setConditions([
       ...conditions,
       {
-        id: crypto.randomUUID(),
+        id: randomUUID(),
         fieldId: firstField.id,
         operator: operators[0].value,
         value: null,
