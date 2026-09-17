@@ -72,9 +72,11 @@ export function NotificationsPage() {
     dateTo,
   ]);
 
+  const showAnalytics = !analyticsCollapsed && !isMobile;
+
   useEffect(() => {
-    dispatch(fetchPageNotificationStats());
-  }, [dispatch, analyticsTimeRange]);
+    if (showAnalytics) dispatch(fetchPageNotificationStats());
+  }, [dispatch, analyticsTimeRange, showAnalytics]);
 
   useEffect(() => {
     return () => {
@@ -100,7 +102,7 @@ export function NotificationsPage() {
     <div className="flex flex-col h-full overflow-hidden">
       <NotificationsPageHeader />
 
-      {!analyticsCollapsed && !isMobile && <NotificationsAnalytics />}
+      {showAnalytics && <NotificationsAnalytics />}
 
       <div className="flex-1 overflow-y-auto">
         {viewMode === "list" ? <NotificationsListView /> : <NotificationsGroupedView />}
@@ -138,8 +140,9 @@ export function NotificationsPage() {
             <>
               <Panel
                 id="notifications-sidebar"
-                defaultSize={isMobileOrTablet ? 200 : 260}
-                minSize={160}
+                defaultSize={isMobileOrTablet ? 220 : 260}
+                // Wide enough for the longest filter label ("Access requested") and its count.
+                minSize={220}
                 maxSize={isMobileOrTablet ? 300 : 400}
                 className="bg-nav overflow-hidden"
               >
