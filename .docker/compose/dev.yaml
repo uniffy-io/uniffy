@@ -58,7 +58,7 @@ x-backend-base: &backend-base
     env_file:
         - ../../.env
         - ../dev/backend.env
-    environment:
+    environment: &backend-environment
         UV_CACHE_DIR: /uv-cache
         HOST_UID: "${HOST_UID:-1000}"
         HOST_GID: "${HOST_GID:-1000}"
@@ -121,6 +121,30 @@ services:
         ports:
             - "9092:9092"
 
+    worker-media:
+        <<: *backend-base
+        build:
+            context: ../..
+            dockerfile: src/uniffy/Dockerfile
+            target: media-dev
+        image: uniffy-dev-media-worker
+        container_name: uniffy-dev-worker-media
+        command: uv run watchfiles --filter python "python -m uniffy --worker-media" src/uniffy/ src/gen/python/
+        cpus: 2
+        mem_limit: 2g
+        environment:
+            <<: *backend-environment
+            MEDIA_SCRATCH_DIRECTORY: /var/lib/uniffy/media
+        volumes:
+            - ../../:/app
+            - uv-cache:/uv-cache
+            - /app/.venv
+            - /app/.ruff_cache
+            - /app/.pytest_cache
+            - media-scratch:/var/lib/uniffy/media
+        ports:
+            - "9093:9093"
+
     # One-shot demo seeder. Runs on every `stack up`: waits for the backend
     # bootstrap, seeds the demo company into a fresh database, and exits fast
     # on later starts (a deployment_settings sentinel marks a completed run).
@@ -144,7 +168,7 @@ services:
         pull_policy: never
         restart: unless-stopped
         # verify-deps-before-run is off in every container (flag on service
-        # commands, npm_config env on deps-manager). It is a freshness check,
+        # commands, pnpm_config env on deps-manager). It is a freshness check,
         # not a security rail, and in-container it is wrong on all counts:
         # the entrypoint's frozen install is the single authority and the
         # node_modules volumes are container-private, so state cannot drift;
@@ -162,10 +186,10 @@ services:
             PNPM_FILTER: "uniffy-ui..."
             HOST_UID: "${HOST_UID:-1000}"
             HOST_GID: "${HOST_GID:-1000}"
-            npm_config_store_dir: /pnpm-store
-            npm_config_confirm_modules_purge: "false"
-            npm_config_strict_dep_builds: "false"
-            npm_config_verify_deps_before_run: "false"
+            pnpm_config_store_dir: /pnpm-store
+            pnpm_config_confirm_modules_purge: "false"
+            pnpm_config_strict_dep_builds: "false"
+            pnpm_config_verify_deps_before_run: "false"
         env_file:
             - ../dev/ui.env
         volumes: &node-volumes
@@ -211,10 +235,10 @@ services:
             PNPM_FILTER: "uniffy-landing..."
             HOST_UID: "${HOST_UID:-1000}"
             HOST_GID: "${HOST_GID:-1000}"
-            npm_config_store_dir: /pnpm-store
-            npm_config_confirm_modules_purge: "false"
-            npm_config_strict_dep_builds: "false"
-            npm_config_verify_deps_before_run: "false"
+            pnpm_config_store_dir: /pnpm-store
+            pnpm_config_confirm_modules_purge: "false"
+            pnpm_config_strict_dep_builds: "false"
+            pnpm_config_verify_deps_before_run: "false"
             ASTRO_TELEMETRY_DISABLED: "1"
         volumes: *node-volumes
         ports:
@@ -242,10 +266,10 @@ services:
             # Skips the React Native DevTools chromium install, which cannot
             # run inside the container (no SUID/userns sandbox available)
             EXPO_UNSTABLE_HEADLESS: "1"
-            npm_config_store_dir: /pnpm-store
-            npm_config_confirm_modules_purge: "false"
-            npm_config_strict_dep_builds: "false"
-            npm_config_verify_deps_before_run: "false"
+            pnpm_config_store_dir: /pnpm-store
+            pnpm_config_confirm_modules_purge: "false"
+            pnpm_config_strict_dep_builds: "false"
+            pnpm_config_verify_deps_before_run: "false"
         volumes: *node-volumes
         ports:
             - "8081:8081"
@@ -275,16 +299,16 @@ services:
             UV_CACHE_DIR: /uv-cache
             HOST_UID: "${HOST_UID:-1000}"
             HOST_GID: "${HOST_GID:-1000}"
-            npm_config_store_dir: /pnpm-store
+            pnpm_config_store_dir: /pnpm-store
             # dlx unpacks executables into the pnpm cache; /tmp (the HOME
             # fallback) is a noexec tmpfs, so the cache lives on the store
             # volume where execution is allowed.
-            npm_config_cache_dir: /pnpm-store/cache
-            npm_config_confirm_modules_purge: "false"
-            npm_config_strict_dep_builds: "false"
+            pnpm_config_cache_dir: /pnpm-store/cache
+            pnpm_config_confirm_modules_purge: "false"
+            pnpm_config_strict_dep_builds: "false"
             # env form because the toolbox runs arbitrary pnpm commands;
             # rationale in the ui service note.
-            npm_config_verify_deps_before_run: "false"
+            pnpm_config_verify_deps_before_run: "false"
         volumes:
             - ../../:/app
             - pnpm-store:/pnpm-store
@@ -306,6 +330,7 @@ networks:
         driver: bridge
 
 volumes:
+    media-scratch:
     pnpm-store:
     uv-cache:
     deps-venv:

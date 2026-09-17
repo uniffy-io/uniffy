@@ -33,6 +33,7 @@ NODE_SERVICES = {
 # repo root through the whitelist in .dockerignore.
 IMAGES = {
     "backend": ("src/uniffy/Dockerfile", "ghcr.io/uniffy-io/uniffy"),
+    "media-worker": ("src/uniffy/Dockerfile", "ghcr.io/uniffy-io/uniffy-media-worker"),
     "frontend": ("src/ui/Dockerfile", "ghcr.io/uniffy-io/uniffy-frontend"),
 }
 
@@ -181,11 +182,11 @@ def docker_pnpm(
         )
 
 
-def docker_uv(args: list[str]) -> None:
-    if container_running("backend"):
-        sh(compose("exec", *EXEC_AS_HOST, "backend", "uv", *args))
+def docker_uv(args: list[str], service: str = "backend") -> None:
+    if container_running(service):
+        sh(compose("exec", *EXEC_AS_HOST, service, "uv", *args))
     else:
-        sh(compose("run", "--rm", "--no-deps", "backend", "uv", *args, profiles=["dev"]))
+        sh(compose("run", "--rm", "--no-deps", service, "uv", *args, profiles=["dev"]))
 
 
 def toolbox_run(args: list[str]) -> None:
@@ -225,7 +226,12 @@ service_option = click.option(
 stack_option = click.option("--stack", type=Stack, default="docker", show_default=True)
 
 
-BACKEND_COMPOSE_SERVICES = (("backend", "dev"), ("worker-core", "dev"), ("worker-egress", "dev"))
+BACKEND_COMPOSE_SERVICES = (
+    ("backend", "dev"),
+    ("worker-core", "dev"),
+    ("worker-egress", "dev"),
+    ("worker-media", "dev"),
+)
 
 
 def _docker_sync(compose_svc: str, profile: str) -> None:
@@ -417,7 +423,9 @@ def _image_siblings(target: str) -> list[tuple[str, str]]:
     """
     node = [(name, prof) for name, (_, _, prof) in NODE_SERVICES.items()]
     if target in ("backend", "worker-core", "worker-egress"):
-        return list(BACKEND_COMPOSE_SERVICES)
+        return [
+            (name, profile) for name, profile in BACKEND_COMPOSE_SERVICES if name != "worker-media"
+        ]
     if target in NODE_SERVICES:
         return node
     return [(target, "dev")]
@@ -427,7 +435,7 @@ def _image_siblings(target: str) -> list[tuple[str, str]]:
 @click.argument("services", nargs=-1)
 def stack_rebuild(services):
     """Rebuild dev images without cache (after a Dockerfile change) and recreate the running containers on them."""
-    targets = services or ("backend", "ui", "deps-manager")
+    targets = services or ("backend", "worker-media", "ui", "deps-manager")
     sh(compose("build", "--no-cache", *targets, profiles=["dev"]))
     by_profile: dict[str, list[str]] = {}
     for svc, profile in {s: p for t in targets for s, p in _image_siblings(t)}.items():
@@ -498,7 +506,7 @@ def stack_reset_data():
     sh(compose("rm", "-f", *infra))
     sh(["docker", "volume", "rm", *volumes])
     sh(compose("up", "-d", *infra))
-    sh(compose("restart", "backend", "worker-core", "worker-egress"))
+    sh(compose("restart", "backend", "worker-core", "worker-egress", "worker-media"))
     sh(compose("up", "-d", "--no-deps", "seeder"))
     click.echo("Done. Tail migrations with: ./manage.py logs -s backend")
     click.echo("Demo data reseeds in the background: ./manage.py logs -s seeder")
@@ -544,6 +552,16 @@ def serve_worker_egress(reload):
     )
 
 
+@serve.command("worker-media")
+@click.option("--reload/--no-reload", default=True, show_default=True)
+def serve_worker_media(reload):
+    sh(
+        _watch("worker-media")
+        if reload
+        else ["uv", "run", "python", "-m", "uniffy", "--worker-media"]
+    )
+
+
 @serve.command("ui")
 def serve_ui():
     sh(["pnpm", "--filter", "uniffy-ui", "dev"])
@@ -563,14 +581,14 @@ def serve_mobile(web):
 
 @serve.command("all")
 def serve_all():
-    """Backend + both workers + vite, all native with hot reload."""
+    """Backend, workers and Vite with hot reload."""
     LOG_DIR.mkdir(exist_ok=True)
-    click.echo("Backend :8000, Frontend :5173, workers core + egress")
+    click.echo("Backend :8000, Frontend :5173, workers core + egress + media")
     click.echo(
         "Backend/worker output goes to .logs/*.log - tail with: ./manage.py logs --stack local"
     )
     procs = []
-    for target in ("backend", "worker-core", "worker-egress"):
+    for target in ("backend", "worker-core", "worker-egress", "worker-media"):
         log = (LOG_DIR / f"{target}.log").open("ab")
         procs.append(
             subprocess.Popen(_watch(target), cwd=ROOT, stdout=log, stderr=subprocess.STDOUT)
@@ -663,10 +681,53 @@ def proto(stack):
     click.echo("Protobuf code generated (python, typescript, go)")
 
 
+def native_media_licenses() -> str:
+    dockerfile = (ROOT / "src/uniffy/Dockerfile").read_text()
+    sources = {
+        name: (url, checksum)
+        for checksum, url, name in re.findall(
+            r"^ADD --checksum=sha256:([a-f0-9]{64}) (https://\S+) /sources/(\w+)\.tar$",
+            dockerfile,
+            re.MULTILINE,
+        )
+    }
+    licenses = {
+        "ffmpeg": "GPL-2.0-or-later",
+        "x264": "GPL-2.0-or-later",
+        "dav1d": "BSD-2-Clause",
+        "zimg": "WTFPL",
+    }
+    rows = []
+    for name, license_name in licenses.items():
+        if name not in sources:
+            raise click.ClickException(f"Missing pinned {name} source in src/uniffy/Dockerfile")
+        url, checksum = sources[name]
+        version = re.fullmatch(
+            rf"(?:{name}-|release-)(.+)\.tar\.(?:xz|bz2|gz)", url.rsplit("/", 1)[-1]
+        )
+        if version is None:
+            raise click.ClickException(f"Cannot parse {name} source version from {url}")
+        rows.append(f"| {name} | [{version[1]}]({url}) | {license_name} | `{checksum}` |")
+    return (
+        "\n## Native media dependencies\n\n"
+        "Versions, source links, and SHA-256 hashes below come from "
+        "[src/uniffy/Dockerfile](../src/uniffy/Dockerfile).\n\n"
+        "| Component | Version and source | License | SHA-256 |\n"
+        "|-----------|--------------------|---------|---------|\n"
+        + "\n".join(rows)
+        + "\n\nFFmpeg includes GPL components. Its license differs from Uniffy's application "
+        "license. Exact upstream notices ship at `/usr/share/uniffy/media/licenses` in "
+        "media worker images. Build configuration lives at `/usr/share/uniffy/media/buildconf.txt`. "
+        "Matching source archives and build scripts ship at `/usr/share/uniffy/media-sources`. "
+        "Preserve these files when redistributing images.\n\n"
+        "PDFium license and dependency notices ship inside the installed pypdfium2 package.\n"
+    )
+
+
 @cli.command()
 @click.option("--stack", type=Stack, default="docker", show_default=True)
 def licenses(stack):
-    """Regenerate docs/LICENSES.md from the python and node dependency trees."""
+    """Regenerate docs/LICENSES.md from dependency trees and pinned native sources."""
     if stack == "docker":
         toolbox_run(["uv", "run", "manage.py", "licenses", "--stack", "local"])
         return
@@ -695,25 +756,24 @@ def licenses(stack):
         capture_output=True,
         text=True,
     ).stdout
-    node_json = subprocess.run(
-        ["pnpm", "licenses", "list", "--prod", "--json"],
-        cwd=ROOT / "src/ui",
-        check=True,
-        capture_output=True,
-        text=True,
-    ).stdout
-    rows = []
-    for license_name, pkgs in json.loads(node_json).items():
-        for pkg in pkgs:
-            rows.append((
-                f"{pkg['name']}@{pkg['versions'][0]}",
-                license_name,
-                pkg.get("homepage", ""),
-            ))
+    rows = set()
+    for workspace in ("ui", "mobile"):
+        node_json = subprocess.run(
+            ["pnpm", "licenses", "list", "--prod", "--json"],
+            cwd=ROOT / "src" / workspace,
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout
+        for license_name, pkgs in json.loads(node_json).items():
+            for pkg in pkgs:
+                for version in pkg["versions"]:
+                    rows.add((f"{pkg['name']}@{version}", license_name, pkg.get("homepage", "")))
     node_table = "\n".join(f"| {name} | {lic} | {home} |" for name, lic, home in sorted(rows))
     out.write_text(
         f"{header}{python_rows}\n## Node.js Dependencies\n\n"
         f"| Package | License | Homepage |\n|---------|---------|----------|\n{node_table}\n"
+        f"{native_media_licenses()}"
     )
     click.echo(f"Third-party licenses generated in {out.relative_to(ROOT)}")
 
@@ -865,7 +925,7 @@ def format_cmd(service, stack):
 @click.option(
     "--service",
     "-s",
-    type=click.Choice(["backend", "ui", "mobile", "cli", "integration"]),
+    type=click.Choice(["backend", "ui", "mobile", "cli", "integration", "media"]),
     default="backend",
     show_default=True,
 )
@@ -875,9 +935,17 @@ def test(args, service, stack):
     if service == "backend":
         workspace_cmd("backend", stack, ["run", "pytest", "src/uniffy/tests/unit/", *args])
     elif service == "integration":
-        workspace_cmd(
-            "backend", stack, ["run", "pytest", "src/uniffy/tests/integration/", "-v", *args]
-        )
+        command = ["run", "pytest", "src/uniffy/tests/integration/", "-v", *args]
+        sh(["uv", *command]) if stack == "local" else docker_uv(command, "worker-media")
+    elif service == "media":
+        command = [
+            "run",
+            "pytest",
+            "src/uniffy/tests/integration/internal/media/",
+            "src/uniffy/tests/integration/internal/database/test_file_playback.py",
+            *args,
+        ]
+        sh(["uv", *command]) if stack == "local" else docker_uv(command, "worker-media")
     elif service in ("ui", "mobile"):
         workspace_cmd(service, stack, ["test", *args])
     else:
@@ -1056,7 +1124,7 @@ def image_build(service, tag, platform, push):
     version = git_out("describe", "--tags", "--always", "--dirty")
     revision = git_out("rev-parse", "HEAD")
     created = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
-    for _, dockerfile, repo in _image_targets(service):
+    for name, dockerfile, repo in _image_targets(service):
         cmd = [
             "docker",
             "buildx",
@@ -1064,7 +1132,7 @@ def image_build(service, tag, platform, push):
             "--file",
             dockerfile,
             "--target",
-            "runtime",
+            "media-runtime" if name == "media-worker" else "runtime",
             "--tag",
             f"{repo}:{tag}",
             "--build-arg",

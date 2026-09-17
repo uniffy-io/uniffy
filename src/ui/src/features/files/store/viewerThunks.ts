@@ -25,6 +25,7 @@ const fileToPlain = (file: File): SerializedFile => ({
   version: file.version,
   extractionStatus: file.extractionStatus,
   transcodeStatus: file.transcodeStatus,
+  playbackStatus: file.playbackStatus,
   isDeleted: file.isDeleted,
   createdAt: file.createdAt
     ? {

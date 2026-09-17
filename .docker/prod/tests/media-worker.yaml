@@ -1,0 +1,119 @@
+# container-structure-test spec for ghcr.io/uniffy-io/uniffy-media-worker.
+schemaVersion: "2.0.0"
+
+metadataTest:
+  user: "10001:10001"
+  workdir: /app
+  exposedPorts: ["8000", "9091", "9092", "9093"]
+  cmd: ["python", "-m", "uniffy", "--worker-media"]
+  envVars:
+    - key: PYTHONPATH
+      value: /app/src
+    - key: PYTHONDONTWRITEBYTECODE
+      value: "1"
+    - key: HOME
+      value: /tmp
+  labels:
+    - key: org.opencontainers.image.licenses
+      value: FSL-1.1-Apache-2.0
+    - key: org.opencontainers.image.source
+      value: https://github.com/uniffy-io/uniffy
+
+fileExistenceTests:
+  - name: venv interpreter
+    path: /app/.venv/bin/python
+    shouldExist: true
+  - name: alembic config next to the package
+    path: /app/src/uniffy/alembic.ini
+    shouldExist: true
+  - name: precompiled bytecode
+    path: /app/src/uniffy/__pycache__
+    shouldExist: true
+  - name: starter docs
+    path: /app/docs/documentation/SHARING.md
+    shouldExist: true
+  - name: ffmpeg
+    path: /usr/local/bin/ffmpeg
+    shouldExist: true
+    isExecutableBy: other
+  - name: no fixture generator
+    path: /usr/local/bin/ffmpeg-fixtures
+    shouldExist: false
+  - name: no compiler
+    path: /usr/bin/gcc
+    shouldExist: false
+  - name: native source distribution
+    path: /usr/share/uniffy/media-sources/ffmpeg.tar
+    shouldExist: true
+  - name: native build configuration
+    path: /usr/share/uniffy/media/buildconf.txt
+    shouldExist: true
+  - name: native license notice
+    path: /usr/share/uniffy/media/licenses/ffmpeg.txt
+    shouldExist: true
+  - name: no pip
+    path: /usr/local/bin/pip
+    shouldExist: false
+  - name: no ensurepip
+    path: /usr/local/lib/python3.14/ensurepip
+    shouldExist: false
+  - name: no uv
+    path: /usr/local/bin/uv
+    shouldExist: false
+  - name: no tests
+    path: /app/src/uniffy/tests
+    shouldExist: false
+  - name: no env file
+    path: /app/.env
+    shouldExist: false
+
+commandTests:
+  - name: runs as the unprivileged user
+    command: id
+    args: ["-u"]
+    expectedOutput: ["^10001\n$"]
+  - name: entrypoint help
+    command: python
+    args: ["-m", "uniffy", "--help"]
+    exitCode: 0
+  - name: native dependencies import
+    command: python
+    args:
+      - "-c"
+      - "import pypdfium2, PIL, libvalkey, asyncpg, granian, pycrdt, orjson, psycopg2, cryptography, argon2"
+    exitCode: 0
+  - name: app factory imports
+    command: python
+    args: ["-c", "import uniffy.factory"]
+    exitCode: 0
+  - name: duplicate media libraries absent
+    command: python
+    args: ["-c", "import importlib.util; assert importlib.util.find_spec('av') is None; assert importlib.util.find_spec('fitz') is None"]
+    exitCode: 0
+  - name: ffmpeg has the H.264 and AAC encoders transcode needs
+    command: ffmpeg
+    args: ["-hide_banner", "-encoders"]
+    expectedOutput: ["libx264", " aac "]
+    exitCode: 0
+
+  - name: ffprobe runs
+    command: ffprobe
+    args: ["-version"]
+    exitCode: 0
+  - name: local media protocols only
+    command: ffmpeg
+    args: ["-hide_banner", "-protocols"]
+    expectedOutput: ["file", "pipe"]
+    excludedOutput: ["http", "tcp", "udp", "tls"]
+    exitCode: 0
+  - name: media input decoders
+    command: ffmpeg
+    args: ["-hide_banner", "-decoders"]
+    expectedOutput: ["hevc", "vp9", "libdav1d", "prores", "vc1", "opus", "eac3"]
+    exitCode: 0
+  - name: offline S3 client
+    command: python
+    args:
+      - "-c"
+      - "import boto3; c=boto3.client('s3', endpoint_url='http://127.0.0.1:1', aws_access_key_id='test', aws_secret_access_key='test'); assert c.meta.service_model.operation_model('CreateMultipartUpload')"
+    exitCode: 0

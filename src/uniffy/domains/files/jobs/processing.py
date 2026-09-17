@@ -6,6 +6,7 @@ from uniffy.core.jobs import JobRef
 from uniffy.core.models.files.file import (
     ExtractionStatus,
     File,
+    PlaybackStatus,
     ThumbnailStatus,
     TranscodeStatus,
 )
@@ -15,6 +16,7 @@ from uniffy.domains.files.jobs.contracts import (
     EXTRACT_IMAGE_METADATA,
     GENERATE_IMAGE_THUMBNAIL,
     GENERATE_PDF_THUMBNAIL,
+    GENERATE_PLAYBACK_RENDITION,
     GENERATE_VIDEO_THUMBNAIL,
     TRANSCODE_VIDEO_TO_MP4,
 )
@@ -34,7 +36,11 @@ _EXTRACTION_JOB_REFS = frozenset({
     EXTRACT_AUDIO_METADATA,
     EXTRACT_DOCUMENT_CONTENT,
 })
-_PROCESSING_JOB_REFS = _THUMBNAIL_JOB_REFS | _EXTRACTION_JOB_REFS | {TRANSCODE_VIDEO_TO_MP4}
+_PROCESSING_JOB_REFS = (
+    _THUMBNAIL_JOB_REFS
+    | _EXTRACTION_JOB_REFS
+    | {TRANSCODE_VIDEO_TO_MP4, GENERATE_PLAYBACK_RENDITION}
+)
 
 
 def initial_thumbnail_status(mime_type: str) -> ThumbnailStatus:
@@ -47,6 +53,32 @@ def initial_extraction_status(mime_type: str) -> ExtractionStatus:
     if supports_extraction(mime_type):
         return ExtractionStatus.PENDING
     return ExtractionStatus.SKIPPED
+
+
+def initial_transcode_status(mime_type: str, filename: str) -> TranscodeStatus:
+    if mime_type.split(";")[0].strip().lower() == "video/webm" and filename.lower().endswith(".mp4"):  # noqa: PLR2004 - MIME boundary.
+        return TranscodeStatus.PENDING
+    return TranscodeStatus.NOT_NEEDED
+
+
+def initial_playback_status(
+    mime_type: str, transcode_status: TranscodeStatus = TranscodeStatus.NOT_NEEDED
+) -> PlaybackStatus:
+    if (
+        mime_type.split(";")[0].strip().lower().startswith("video/")
+        and transcode_status == TranscodeStatus.NOT_NEEDED
+    ):
+        return PlaybackStatus.PENDING
+    return PlaybackStatus.NOT_NEEDED
+
+
+def reset_playback(file: File) -> None:
+    file.playback_status = initial_playback_status(file.mime_type, file.transcode_status)
+    file.playback_key = None
+    file.playback_version = None
+    file.playback_attempts = 0
+    file.playback_started_at = None
+    file.playback_error = None
 
 
 def pending_jobs_for_file(file: File) -> tuple[JobRef, ...]:
@@ -64,6 +96,10 @@ def pending_jobs_for_file(file: File) -> tuple[JobRef, ...]:
             or (
                 ref is TRANSCODE_VIDEO_TO_MP4
                 and file.transcode_status in (TranscodeStatus.PENDING, TranscodeStatus.PROCESSING)
+            )
+            or (
+                ref is GENERATE_PLAYBACK_RENDITION
+                and file.playback_status in (PlaybackStatus.PENDING, PlaybackStatus.PROCESSING)
             )
         )
         if is_unfinished:

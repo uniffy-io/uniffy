@@ -21,6 +21,7 @@ from uniffy.core.types import (
 from uniffy.domains.files.folders.operations import FolderOperations
 from uniffy.domains.files.jobs.processing import (
     pending_jobs_for_file,
+    reset_playback,
 )
 from uniffy.domains.files.quota.operations import QuotaOperations
 from uniffy.domains.files.uploads import _file_uploaded_audit_enabled
@@ -98,6 +99,7 @@ class FileVersionOperations:
             file.mime_type,
             file.filename,
         )
+        reset_playback(file)
         file.updated_at = datetime.now(UTC)
 
         upload.status = UploadStatus.COMPLETED
@@ -221,6 +223,7 @@ class FileVersionOperations:
             file.mime_type,
             file.filename,
         )
+        reset_playback(file)
         file.updated_at = datetime.now(UTC)
 
         await write_audit_event(

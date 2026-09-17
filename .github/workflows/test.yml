@@ -32,6 +32,8 @@ jobs:
       mobile: ${{ inputs.run_all || steps.filter.outputs.mobile == 'true' }}
       proto: ${{ inputs.run_all || steps.filter.outputs.proto == 'true' }}
       docker: ${{ inputs.run_all || steps.filter.outputs.docker == 'true' }}
+      media_image: ${{ inputs.run_all || steps.filter.outputs.media_image == 'true' }}
+      image_matrix: ${{ steps.images.outputs.matrix }}
     steps:
       - uses: actions/checkout@v5
         if: ${{ !inputs.run_all }}
@@ -74,6 +76,39 @@ jobs:
               - 'manage.py'
               - 'uv.lock'
               - 'pnpm-lock.yaml'
+            media_image:
+              - 'src/uniffy/Dockerfile'
+              - '.docker/media/**'
+              - '.docker/prod/tests/media-worker.yaml'
+              - '.dockerignore'
+              - '.github/actions/container-structure-test/**'
+              - '.github/workflows/test.yml'
+              - 'manage.py'
+              - 'pyproject.toml'
+              - 'uv.lock'
+              - '.python-version'
+              - 'src/gen/python/pyproject.toml'
+              - 'docs/LICENSES.md'
+              - 'src/uniffy/__main__.py'
+              - 'src/uniffy/main.py'
+              - 'src/uniffy/factory.py'
+              - 'src/uniffy/workers/**'
+              - 'src/uniffy/core/jobs/**'
+              - 'src/uniffy/infrastructure/valkey/queue.py'
+              - 'src/uniffy/domains/files/jobs/**'
+
+      - name: Select image checks
+        id: images
+        env:
+          MEDIA_IMAGE: ${{ inputs.run_all || steps.filter.outputs.media_image == 'true' }}
+        run: |
+          matrix=$(jq -cn --argjson media "$MEDIA_IMAGE" '{include: ([
+            {image: "backend", name: "uniffy", dockerfile: "src/uniffy/Dockerfile", target: "runtime"},
+            {image: "frontend", name: "uniffy-frontend", dockerfile: "src/ui/Dockerfile", target: "runtime"}
+          ] + (if $media then [
+            {image: "media-worker", name: "uniffy-media-worker", dockerfile: "src/uniffy/Dockerfile", target: "media-runtime"}
+          ] else [] end))}')
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
 
   # No path filter: a secret can land in any file, and the scan covers the
   # full history, so a skipped run would let an old leak ride in unnoticed.
@@ -445,11 +480,8 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
-  # Production images: hadolint, an amd64 build, the structure tests, and the
-  # vulnerability gate. Source changes count because they change what the
-  # image imports and ships; the frontend build (tsc and vite) runs inside
-  # this build, so it has no host-side job. The release workflow reruns this
-  # for the tagged commit and then builds both architectures.
+  # Media checks follow native build inputs, dependencies, and worker paths.
+  # Releases request every image check before building both architectures.
   docker-images:
     name: docker-build-${{ matrix.image }}
     needs: changes
@@ -457,18 +489,12 @@ jobs:
       needs.changes.outputs.docker == 'true' ||
       needs.changes.outputs.backend == 'true' ||
       needs.changes.outputs.frontend == 'true' ||
-      needs.changes.outputs.proto == 'true'
+      needs.changes.outputs.proto == 'true' ||
+      needs.changes.outputs.media_image == 'true'
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - image: backend
-            name: uniffy
-            dockerfile: src/uniffy/Dockerfile
-          - image: frontend
-            name: uniffy-frontend
-            dockerfile: src/ui/Dockerfile
+      matrix: ${{ fromJSON(needs.changes.outputs.image_matrix) }}
     env:
       # Mirrors IMAGES in manage.py; local commands and CI use the same names.
       IMAGE: ghcr.io/uniffy-io/${{ matrix.name }}
@@ -489,7 +515,7 @@ jobs:
         with:
           context: .
           file: ${{ matrix.dockerfile }}
-          target: runtime
+          target: ${{ matrix.target }}
           platforms: linux/amd64
           load: true
           tags: ${{ env.IMAGE }}:ci

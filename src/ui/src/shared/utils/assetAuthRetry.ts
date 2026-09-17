@@ -9,6 +9,7 @@ const retried = new WeakSet<Element>();
 let refreshInFlight: Promise<unknown> | null = null;
 
 function retryAuthedAsset(el: HTMLImageElement | HTMLMediaElement): void {
+  if (el.closest("[data-managed-playback]")) return;
   if (retried.has(el)) return; // one retry per element - a persistent failure is not an auth lapse
   const src = el.getAttribute("src");
   if (!src) return;

@@ -1,4 +1,4 @@
-"""Validate domain handlers and build definitions for both worker fleets."""
+"""Validate domain handlers and build definitions for each worker fleet."""
 
 from typing import Any
 
@@ -127,6 +127,7 @@ from uniffy.domains.files.jobs.contracts import (
     FILE_SCHEDULED_JOB_REFS,
     GENERATE_IMAGE_THUMBNAIL,
     GENERATE_PDF_THUMBNAIL,
+    GENERATE_PLAYBACK_RENDITION,
     GENERATE_VIDEO_THUMBNAIL,
     REAP_EXPIRED_MULTIPART_UPLOADS,
     REAP_EXPIRED_MULTIPART_UPLOADS_SCHEDULE,
@@ -141,6 +142,8 @@ from uniffy.domains.files.jobs.multipart import (
     reap_expired_multipart_uploads,
 )
 from uniffy.domains.files.jobs.quota import recalculate_all_storage_usage
+from uniffy.domains.files.jobs.renditions import generate_playback_rendition
+from uniffy.domains.files.jobs.settings import MEDIA_SETTINGS
 from uniffy.domains.files.jobs.thumbnails import (
     generate_image_thumbnail,
     generate_pdf_thumbnail,
@@ -259,19 +262,29 @@ def _bind_schedule(
     return ScheduledJobRegistration(ref=ref, handler=handler, **schedule)
 
 
-CORE_JOB_REGISTRATIONS = (
+MEDIA_JOB_REGISTRATIONS = (
     _bind(GENERATE_IMAGE_THUMBNAIL, generate_image_thumbnail),
     _bind(GENERATE_PDF_THUMBNAIL, generate_pdf_thumbnail),
     _bind(GENERATE_VIDEO_THUMBNAIL, generate_video_thumbnail),
     _bind(
+        GENERATE_PLAYBACK_RENDITION,
+        generate_playback_rendition,
+        timeout=MEDIA_SETTINGS.job_timeout,
+        keep_result=0,
+    ),
+    _bind(
         TRANSCODE_VIDEO_TO_MP4,
         transcode_video_to_mp4,
         timeout=TRANSCODE_JOB_TIMEOUT_SECONDS,
+        keep_result=0,
     ),
-    _bind(DELETE_S3_OBJECT, delete_s3_object),
     _bind(EXTRACT_IMAGE_METADATA, extract_image_metadata),
     _bind(EXTRACT_AUDIO_METADATA, extract_audio_metadata),
     _bind(EXTRACT_DOCUMENT_CONTENT, extract_document_content),
+)
+
+CORE_JOB_REGISTRATIONS = (
+    _bind(DELETE_S3_OBJECT, delete_s3_object),
     _bind(PROCESS_NOTIFICATION_EVENT, process_notification_event),
     _bind(DELIVER_PUSH_NOTIFICATION, deliver_push_notification),
     _bind(SEND_EMAIL, send_email),
@@ -485,7 +498,7 @@ _SCHEDULED_JOB_REFS = (
 )
 
 validate_job_catalogs(
-    (*CORE_JOB_REGISTRATIONS, *EGRESS_JOB_REGISTRATIONS),
+    (*CORE_JOB_REGISTRATIONS, *EGRESS_JOB_REGISTRATIONS, *MEDIA_JOB_REGISTRATIONS),
     (*CORE_SCHEDULED_REGISTRATIONS, *EGRESS_SCHEDULED_REGISTRATIONS),
     _JOB_REFS,
     _SCHEDULED_JOB_REFS,
@@ -502,10 +515,13 @@ _egress_definitions = build_worker_definitions(
     EGRESS_SCHEDULED_REGISTRATIONS,
 )
 
+_media_definitions = build_worker_definitions(QueueName.MEDIA, MEDIA_JOB_REGISTRATIONS)
+
 CORE_JOBS = _core_definitions.functions
 CORE_CRON_JOBS = _core_definitions.cron_jobs
 EGRESS_JOBS = _egress_definitions.functions
 EGRESS_CRON_JOBS = _egress_definitions.cron_jobs
+MEDIA_JOBS = _media_definitions.functions
 
 __all__ = [
     "CORE_CRON_JOBS",
@@ -516,4 +532,6 @@ __all__ = [
     "EGRESS_JOBS",
     "EGRESS_JOB_REGISTRATIONS",
     "EGRESS_SCHEDULED_REGISTRATIONS",
+    "MEDIA_JOBS",
+    "MEDIA_JOB_REGISTRATIONS",
 ]

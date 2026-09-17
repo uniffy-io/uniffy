@@ -1,4 +1,9 @@
-import type { File, TreeNode } from "@uniffy/proto/files/v1/files_pb";
+import type {
+  File,
+  TreeNode,
+  PlaybackStatus,
+  TranscodeStatus,
+} from "@uniffy/proto/files/v1/files_pb";
 
 export interface SerializedFileTag {
   id: string;
@@ -27,6 +32,8 @@ export interface SerializedFile {
   mimeType: string;
   size: string;
   version: number;
+  playbackStatus: PlaybackStatus;
+  transcodeStatus: TranscodeStatus;
   description?: string;
   editedAt: string;
   createdAt: string;
@@ -85,6 +92,8 @@ export function fileToPlain(file: File): SerializedFile {
     mimeType: file.mimeType,
     size: formatSize(Number(file.sizeBytes)),
     version: file.version,
+    playbackStatus: file.playbackStatus,
+    transcodeStatus: file.transcodeStatus,
     description: file.description,
     editedAt: tsToIso(file.updatedAt),
     createdAt: tsToIso(file.createdAt),

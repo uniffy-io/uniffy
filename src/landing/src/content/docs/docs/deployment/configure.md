@@ -90,10 +90,11 @@ Backs universal `@` mention lookup and full-text search.
 
 ## Workers
 
-The backend runs two separate ARQ worker fleets. Each has its own tunables.
+Uniffy runs three ARQ worker fleets. Each has its own queue and concurrency settings.
 
-- **Core** handles thumbnails, extraction, notifications, reminders, storage, chat-mute. Tight SLA, local I/O.
-- **Egress** handles agent runtime, conversation compaction, cron, and external API integrations. Slow, retry-heavy, I/O bound.
+- **Core** handles notifications, reminders, storage cleanup and recovery schedules.
+- **Egress** handles agent runtime, conversation compaction, cron and external API integrations.
+- **Media** handles video conversion, thumbnails, metadata and document extraction. Its separate `uniffy-media-worker` image contains FFmpeg and ffprobe. PDF and Office parsers also remain in the backend image for agent document reads.
 
 | Variable | Default | Purpose |
 |---|---|---|
@@ -101,6 +102,9 @@ The backend runs two separate ARQ worker fleets. Each has its own tunables.
 | `CORE_WORKER_POLL_DELAY` | `0.5` | Seconds between queue polls. |
 | `EGRESS_WORKER_MAX_JOBS` | `50` | Concurrent jobs per egress worker. Higher because most jobs are I/O waiting. |
 | `EGRESS_WORKER_POLL_DELAY` | `0.05` | Aggressive polling for low queue latency. |
+| `MEDIA_WORKER_MAX_JOBS` | `2` | Concurrent jobs per media process. |
+| `MEDIA_WORKER_POLL_DELAY` | `0.5` | Seconds between media queue polls. |
+| `MEDIA_WORKER_JOB_TIMEOUT` | `300` | Default media job timeout in seconds. Video conversions have a longer duration based limit. |
 | `WORKER_JOB_TIMEOUT` | `300` | Per-job timeout for the core fleet, in seconds. |
 | `EGRESS_WORKER_JOB_TIMEOUT` | `900` | Per-job timeout for the egress fleet. Agent runtime jobs may legitimately run up to `MAX_TOOL_ITERATIONS * 60s` when slow tools fan out. |
 | `WORKER_KEEP_RESULT` | `3600` | Seconds to retain completed job results in Valkey. |
@@ -108,13 +112,19 @@ The backend runs two separate ARQ worker fleets. Each has its own tunables.
 | `WORKER_HEALTH_CHECK_INTERVAL` | `30` | Seconds between worker health pings. |
 | `CORE_WORKER_METRICS_PORT` | `9091` | Prometheus `/metrics` port for the core fleet. |
 | `EGRESS_WORKER_METRICS_PORT` | `9092` | Prometheus `/metrics` port for the egress fleet. |
+| `MEDIA_WORKER_METRICS_PORT` | `9093` | Prometheus `/metrics` port for the media fleet. |
 
-Run the two fleets as separate processes or Deployments:
+Run each fleet as a separate process or Deployment. Core and egress use the backend image. Media uses `ghcr.io/uniffy-io/uniffy-media-worker` with the same release tag:
 
 ```sh
 python -m uniffy --worker-core
 python -m uniffy --worker-egress
+python -m uniffy --worker-media
 ```
+
+Set CPU and memory requests and limits in the Kubernetes Deployment. Size media resources for accepted inputs and concurrency, and provide disk backed scratch space. Development limits live in the Compose service definition.
+
+When upgrading from a release that runs media jobs on core, pause new uploads and let existing core media jobs finish before replacing workers. Start all fleets at the same release version. Pending durable file work is also recovered from PostgreSQL onto the media queue.
 
 ## Object storage (S3-compatible)
 
@@ -137,6 +147,27 @@ Stores user file uploads, attachments, and generated thumbnails. Any S3-compatib
 | Variable | Default | Purpose |
 |---|---|---|
 | `CHAT_TYPING_MEMBER_LIMIT` | `50` | Channels larger than this skip the typing-indicator fan-out to protect Valkey pub/sub from large membership broadcasts. |
+
+## Video processing
+
+Core workers prepare completed MP4 copies when original formats need conversion. Originals remain in storage. Recording conversions and playback copies share a global encode limit. Use the same settings across backend and worker replicas.
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `MEDIA_RENDITIONS_ENABLED` | `true` | Allow new playback conversions. When false, pending copies terminate as failed. Existing copies and original playback stay available. Recording swaps remain active. |
+| `TRANSCODE_MAX_CONCURRENT` | `1` | Global encode slots across media workers, capped at `MEDIA_WORKER_MAX_JOBS`. Raise alongside CPU, memory and scratch capacity. |
+| `TRANSCODE_MAX_SOURCE_BYTES` | `4294967296` | Maximum downloaded source size, 4 GiB. Also bounds video thumbnail source downloads. |
+| `TRANSCODE_MAX_OUTPUT_BYTES` | `4294967296` | Maximum encoded file size, 4 GiB. Incomplete output is rejected. |
+| `TRANSCODE_MAX_DURATION_SECONDS` | `7200` | Maximum conversion duration, two hours. |
+| `TRANSCODE_FFMPEG_TIMEOUT` | `1800` | Minimum encoder deadline. Longer videos receive four times their duration. Worker deadline includes ten extra minutes for storage work. |
+| `TRANSCODE_THREADS` | `2` | Decoder and encoder thread budget. Filter processing uses one thread. |
+| `MEDIA_SCRATCH_DIRECTORY` | system temporary directory | Existing writable directory for source and output files. Mount it in every media worker. Compose uses `/var/lib/uniffy/media` on a disk volume. |
+
+Compose gives media worker a disk backed scratch volume. A conversion can hold source plus output, up to 8 GiB with default byte limits. Concurrent thumbnail downloads need extra space. On Kubernetes, mount writable disk space and set `MEDIA_SCRATCH_DIRECTORY`; memory backed `/tmp` counts against worker RAM. Set byte limits below available capacity. A storage error leaves the original available and retries transient conversion failures up to three attempts.
+
+Recovery runs every five minutes. It retries pending work and reclaims processing claims after their maximum lifetime. Expired cleanup records remove abandoned objects after live references are checked. Configure your object store to abort incomplete multipart uploads after one day to cover a process dying before its upload identifier reaches PostgreSQL.
+
+Disabling conversion does not cancel an encoder already running. Apply environment changes by recreating backend and core worker containers. Failed copies are terminal for that file version; replacing or restoring the file starts a new attempt budget.
 
 ## Calls (LiveKit)
 

@@ -36,11 +36,11 @@ This page is the map a platform team needs of a running Uniffy. Read it before s
         ^        ^              ^       ^
         |        |              |       | queue + pub/sub
       +-+--------+--------------+-------+-+
-      |   Core + egress worker fleets     |
+      | Core + egress + media workers     |
       +-----------------------------------+
 ```
 
-Two things enter from the internet and nothing else: HTTP on the Envoy Gateway, calls media on the STUNner gateway. The **backend** is the control plane. The two **worker fleets** consume queues from Valkey and do background work. Realtime presence and notifications fan out through Valkey pub/sub. Calls media never touches the backend.
+Two things enter from the internet and nothing else: HTTP on the Envoy Gateway, calls media on the STUNner gateway. The **backend** is the control plane. Three **worker fleets** consume queues from Valkey and do background work. Realtime presence and notifications fan out through Valkey pub/sub. Calls media never touches the backend.
 
 One deployment serves any number of organizations. A new organization is a database row, not new infrastructure.
 
@@ -51,8 +51,9 @@ One deployment serves any number of organizations. A new organization is a datab
 | Envoy Gateway | Operator + managed Envoy pods | TLS termination, HTTP routing, the operator API allowlist. |
 | STUNner | Operator + TURN gateway pods | Relays WebRTC media into the cluster on one UDP/TCP port. |
 | Backend | Granian, 3 pods default | RPC entrypoint. Auth, content, search proxy, realtime streams, migrations on boot. |
-| Core worker | ARQ, 3 pods default | Tight deadline jobs: thumbnails, text extraction, notifications, reminders, storage hygiene. |
+| Core worker | ARQ | Notifications, reminders, storage cleanup and recovery schedules. |
 | Egress worker | ARQ, 3 pods default | Slow or retry heavy jobs: agent runtime, LLM calls, cron, external integrations. |
+| Media worker | ARQ, separate image | Video conversion, thumbnails, metadata and document extraction. Independent CPU, memory and scratch limits. |
 | Frontend | nginx | The browser app as static assets. |
 | PostgreSQL 18 | CloudNativePG cluster, or external | Primary data store. All durable state. |
 | Meilisearch | Single pod | Typo tolerant index behind universal `@` mention lookup and search. |
@@ -76,14 +77,15 @@ The request timeout on these routes is zero and buffering is off. An agent answe
 
 ## Worker fleet split
 
-Two ARQ fleets run from the one backend image:
+Core and egress use the backend image. Media uses `ghcr.io/uniffy-io/uniffy-media-worker`, which adds FFmpeg and ffprobe. All images use the same release tag.
 
 | Fleet | Default concurrency | Default timeout | Typical work |
 |---|---|---|---|
-| Core | 10 jobs per process | 300s | Thumbnails, document text extraction, push notifications, reminder dispatch, storage GC. |
+| Core | 10 jobs per process | 300s | Push notifications, reminder dispatch, storage cleanup and recovery schedules. |
 | Egress | 50 jobs per process | 900s | Agent runtime, long running LLM calls, conversation compaction, cron, webhook delivery. |
+| Media | 2 jobs per process | 300s, longer for video | Video conversion, thumbnails, metadata and document text extraction. |
 
-The split exists so a slow third party LLM call cannot starve the local I/O fleet. Scale them independently: core scales with user activity, egress scales with agent usage.
+Separate queues keep slow LLM calls and media processing from occupying core worker slots. Scale core with user activity, egress with agent usage, and media with processing demand. Bound media CPU and memory, and provide disk backed scratch space.
 
 ## Data stores
 
@@ -97,6 +99,7 @@ Connection budget per pod is `WORKERS * (DB_POOL_SIZE + DB_MAX_OVERFLOW)`. With 
 max_connections >= n_backend_pods * 100
                  + n_core_worker_pods * 100
                  + n_egress_worker_pods * 100
+                 + n_media_worker_pods * 100
                  + headroom for pgbouncer / psql
 ```
 
@@ -154,7 +157,7 @@ Cluster internal, never exposed:
 | 7700 | Meilisearch. |
 | 7880 | LiveKit signaling, reached only through the `/livekit` route. |
 | 7881/7882 | LiveKit media, reached only through STUNner. |
-| 9091/9092 | Worker metrics, scraped in cluster. |
+| 9091/9092/9093 | Core, egress and media worker metrics. |
 
 ## Boot order and health
 
@@ -168,7 +171,7 @@ Cluster internal, never exposed:
 
 | Stateless, replace freely | Stateful, back up |
 |---|---|
-| Backend, both worker fleets, frontend, gateway pods, STUNner pods. | PostgreSQL, object storage, `APP_MASTER_KEY`. |
+| Backend, worker fleets, frontend, gateway pods, STUNner pods. | PostgreSQL, object storage, `APP_MASTER_KEY`. |
 | | Meilisearch and Valkey sit in between: losing them costs a reindex window and a queue drain, not data. |
 
 Postgres, the master key, and object storage are the non negotiable three. [Backups and Restore](/docs/deployment/backups/) covers all of them, including the continuous archive that makes Postgres restorable to a point in time.

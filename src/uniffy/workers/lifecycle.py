@@ -113,6 +113,9 @@ EGRESS_RESOURCE_PROFILE = FleetResourceProfile(
 )
 
 
+MEDIA_RESOURCE_PROFILE = FleetResourceProfile(queue=QueueName.MEDIA, resources=_SHARED_RESOURCES)
+
+
 async def _on_startup_shared(
     ctx: dict[str, Any],
     profile: FleetResourceProfile,
@@ -254,6 +257,16 @@ async def core_on_shutdown(ctx: dict[str, Any]) -> None:
                 name=name,
                 exc=exc,
             )
+    await _on_shutdown_shared(ctx)
+
+
+async def media_on_startup(ctx: dict[str, Any]) -> None:
+    await _on_startup_shared(ctx, MEDIA_RESOURCE_PROFILE)
+    WORKER_READY.labels(queue=QueueName.MEDIA).set(1)
+
+
+async def media_on_shutdown(ctx: dict[str, Any]) -> None:
+    WORKER_READY.labels(queue=QueueName.MEDIA).set(0)
     await _on_shutdown_shared(ctx)
 
 

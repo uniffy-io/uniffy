@@ -46,9 +46,7 @@ dependencies = [
   # Image processing
   "pillow>=12.3.0",
   # PDF thumbnail generation
-  "pymupdf>=1.28.2",
-  # Video: PyAV (in-process libav) decodes thumbnail frames; transcode still shells to the ffmpeg binary
-  "av>=18.1.0",
+  "pypdfium2>=5.13.0",
   # Audio metadata extraction
   "mutagen>=1.48.1",
   # Document text extraction
@@ -83,6 +81,7 @@ dev = [
   "pytest>=9.1.1",
   "pytest-asyncio>=1.4.0",
   "pytest-benchmark>=5.3.0",
+  "reportlab>=5.0.1",
   "ruff>=0.16.3",
   "ty>=0.0.72",
   # Worker hot reload

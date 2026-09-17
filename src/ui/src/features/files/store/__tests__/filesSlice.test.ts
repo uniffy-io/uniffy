@@ -27,6 +27,7 @@ function file(id: string, overrides: Partial<SerializedFile> = {}): SerializedFi
     version: 1,
     extractionStatus: 0,
     transcodeStatus: 0,
+    playbackStatus: 0,
     isDeleted: false,
     createdAt: undefined,
     updatedAt: undefined,

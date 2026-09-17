@@ -38,7 +38,9 @@ from uniffy.domains.files.attachments.folders import (
 from uniffy.domains.files.jobs.processing import (
     file_processing_job_id,
     initial_extraction_status,
+    initial_playback_status,
     initial_thumbnail_status,
+    initial_transcode_status,
     pending_jobs_for_file,
 )
 from uniffy.domains.files.quota.operations import QuotaOperations
@@ -649,6 +651,11 @@ class AttachmentOperations:
             description=source_file.description,
             extraction_status=extraction_status,
             thumbnail_status=thumbnail_status,
+            transcode_status=initial_transcode_status(source_file.mime_type, source_file.filename),
+            playback_status=initial_playback_status(
+                source_file.mime_type,
+                initial_transcode_status(source_file.mime_type, source_file.filename),
+            ),
         )
         self._session.add(new_file)
         await self._session.flush()

@@ -9,7 +9,7 @@ cd /app
 # the host checkout.
 if [[ "$(id -u)" == "0" && -n "${HOST_UID:-}" ]]; then
     HOST_GID="${HOST_GID:-$HOST_UID}"
-    for d in /uv-cache /app/.venv /app/.ruff_cache /app/.pytest_cache; do
+    for d in /uv-cache /app/.venv /app/.ruff_cache /app/.pytest_cache /var/lib/uniffy/media; do
         if [[ -e "$d" && "$(stat -c %u "$d")" != "$HOST_UID" ]]; then
             chown -R "$HOST_UID:$HOST_GID" "$d"
         fi

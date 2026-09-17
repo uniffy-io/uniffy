@@ -223,6 +223,15 @@ enum TranscodeStatus {
   TRANSCODE_STATUS_FAILED = 5;
 }
 
+enum PlaybackStatus {
+  PLAYBACK_STATUS_UNSPECIFIED = 0;
+  PLAYBACK_STATUS_NOT_NEEDED = 1;
+  PLAYBACK_STATUS_PENDING = 2;
+  PLAYBACK_STATUS_PROCESSING = 3;
+  PLAYBACK_STATUS_COMPLETED = 4;
+  PLAYBACK_STATUS_FAILED = 5;
+}
+
 // UPLOAD MESSAGES
 
 message InitiateUploadRequest {
@@ -362,6 +371,7 @@ message File {
   // Server-side transcode pipeline state. UI uses this to gate the download
   // button while a WebM screen recording is being remuxed to MP4.
   TranscodeStatus transcode_status = 24;
+  PlaybackStatus playback_status = 25;
 }
 
 // Wrapper so the caller can distinguish "leave tags alone" from

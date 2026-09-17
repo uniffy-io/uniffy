@@ -16,6 +16,7 @@ import { useTheme } from "@shared/hooks/useTheme";
 import { FONT } from "@theme/typography";
 import { buildFileUrl, assetAuthHeaders } from "@features/files/fileUrls";
 import { FILE_COLORS } from "@theme/theme";
+import { VideoPreview } from "@features/files/components/VideoPreview";
 import { FullscreenViewer } from "@features/files/components/FullscreenViewer";
 
 const TEXT_EXTS = new Set([
@@ -124,6 +125,7 @@ export function FilePreview({
       </>
     );
   }
+  if (kind === "video") return <VideoPreview fileId={fileId} organizationId={organizationId} />;
   if (kind === "audio") return <AudioPreview uri={uri} filename={filename} />;
   if (kind === "pdf") {
     return (

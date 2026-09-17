@@ -301,7 +301,7 @@ invariants they operate on. Every domain owner uses its `jobs/contracts.py` and 
 parent-context child such as `scheduling/calendar` keeps the same shape below that child. A large
 surface may keep additional focused, one-word collaborators beside those files rather than breaching
 the 500-line soft cap. `core/jobs/` owns only the generic contract types and dispatch helpers;
-`workers/` is the composition root that validates registrations, builds the core and egress fleets,
+`workers/` is the composition root that validates registrations, builds the core, egress and media fleets,
 manages their resources, and renders the executable inventory.
 
 ### Creating a job
@@ -313,7 +313,7 @@ manages their resources, and renders the executable inventory.
    Core-owned subsystems follow the same owner-local split; never create a domain handler under
    `workers/`.
 2. **Classify the ref explicitly.** Give it a stable ARQ `name`, a `JobWorkload`, its matching
-   `QueueName`, and a `JobReliability`. `CONTROL`, `DELIVERY`, and `MEDIA` run on `CORE`; `AGENT` and
+   `QueueName`, and a `JobReliability`. `CONTROL` and `DELIVERY` run on `CORE`; `MEDIA` runs on `MEDIA`; `AGENT` and
    `INTEGRATION` run on `EGRESS`. Scheduled refs use the `cron:` name prefix and a `_SCHEDULE`
    constant; changing an existing name or queue is a compatibility migration, not a refactor.
 3. **Make durability concrete.** A `DURABLE` ref declares `JobRecovery` with the exact PostgreSQL

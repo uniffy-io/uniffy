@@ -4,7 +4,7 @@ from uniffy.core.jobs import JobRecovery, JobRef, JobReliability, JobWorkload, Q
 
 GENERATE_IMAGE_THUMBNAIL = JobRef(
     name="generate_image_thumbnail",
-    queue=QueueName.CORE,
+    queue=QueueName.MEDIA,
     workload=JobWorkload.MEDIA,
     reliability=JobReliability.DURABLE,
     recovery=JobRecovery(
@@ -14,7 +14,7 @@ GENERATE_IMAGE_THUMBNAIL = JobRef(
 )
 GENERATE_PDF_THUMBNAIL = JobRef(
     name="generate_pdf_thumbnail",
-    queue=QueueName.CORE,
+    queue=QueueName.MEDIA,
     workload=JobWorkload.MEDIA,
     reliability=JobReliability.DURABLE,
     recovery=JobRecovery(
@@ -24,7 +24,7 @@ GENERATE_PDF_THUMBNAIL = JobRef(
 )
 GENERATE_VIDEO_THUMBNAIL = JobRef(
     name="generate_video_thumbnail",
-    queue=QueueName.CORE,
+    queue=QueueName.MEDIA,
     workload=JobWorkload.MEDIA,
     reliability=JobReliability.DURABLE,
     recovery=JobRecovery(
@@ -32,9 +32,19 @@ GENERATE_VIDEO_THUMBNAIL = JobRef(
         trigger="file-processing recovery schedule",
     ),
 )
+GENERATE_PLAYBACK_RENDITION = JobRef(
+    name="generate_playback_rendition",
+    queue=QueueName.MEDIA,
+    workload=JobWorkload.MEDIA,
+    reliability=JobReliability.DURABLE,
+    recovery=JobRecovery(
+        fact="files_files playback_status pending/processing and files_renditions cleanup rows",
+        trigger="file-processing recovery schedule",
+    ),
+)
 TRANSCODE_VIDEO_TO_MP4 = JobRef(
     name="transcode_video_to_mp4",
-    queue=QueueName.CORE,
+    queue=QueueName.MEDIA,
     workload=JobWorkload.MEDIA,
     reliability=JobReliability.DURABLE,
     recovery=JobRecovery(
@@ -45,12 +55,12 @@ TRANSCODE_VIDEO_TO_MP4 = JobRef(
 DELETE_S3_OBJECT = JobRef(
     name="delete_s3_object",
     queue=QueueName.CORE,
-    workload=JobWorkload.MEDIA,
+    workload=JobWorkload.CONTROL,
     reliability=JobReliability.BEST_EFFORT,
 )
 EXTRACT_IMAGE_METADATA = JobRef(
     name="extract_image_metadata",
-    queue=QueueName.CORE,
+    queue=QueueName.MEDIA,
     workload=JobWorkload.MEDIA,
     reliability=JobReliability.DURABLE,
     recovery=JobRecovery(
@@ -60,7 +70,7 @@ EXTRACT_IMAGE_METADATA = JobRef(
 )
 EXTRACT_AUDIO_METADATA = JobRef(
     name="extract_audio_metadata",
-    queue=QueueName.CORE,
+    queue=QueueName.MEDIA,
     workload=JobWorkload.MEDIA,
     reliability=JobReliability.DURABLE,
     recovery=JobRecovery(
@@ -70,7 +80,7 @@ EXTRACT_AUDIO_METADATA = JobRef(
 )
 EXTRACT_DOCUMENT_CONTENT = JobRef(
     name="extract_document_content",
-    queue=QueueName.CORE,
+    queue=QueueName.MEDIA,
     workload=JobWorkload.MEDIA,
     reliability=JobReliability.DURABLE,
     recovery=JobRecovery(
@@ -114,7 +124,7 @@ RECOVER_PENDING_FILE_PROCESSING_SCHEDULE = JobRef(
     workload=JobWorkload.CONTROL,
     reliability=JobReliability.DURABLE,
     recovery=JobRecovery(
-        fact="stale files_files thumbnail, extraction, or transcode pending/processing rows",
+        fact="stale files_files processing states and files_renditions cleanup rows",
         trigger="five-minute core schedule",
     ),
 )
@@ -124,6 +134,7 @@ FILE_JOB_REFS = (
     GENERATE_PDF_THUMBNAIL,
     GENERATE_VIDEO_THUMBNAIL,
     TRANSCODE_VIDEO_TO_MP4,
+    GENERATE_PLAYBACK_RENDITION,
     DELETE_S3_OBJECT,
     EXTRACT_IMAGE_METADATA,
     EXTRACT_AUDIO_METADATA,

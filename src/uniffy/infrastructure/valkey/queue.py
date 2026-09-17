@@ -1,4 +1,4 @@
-"""Generic ARQ queue-pool lifecycle for the core and egress fleets."""
+"""Generic ARQ queue-pool lifecycle."""
 
 import asyncio
 
@@ -17,7 +17,6 @@ _reinit_locks: dict[QueueName, asyncio.Lock] = {name: asyncio.Lock() for name in
 
 
 async def init_queue(name: QueueName) -> ArqValkey:
-    """Initialise the ``core`` or ``egress`` pool."""
     config = ValkeyConfig.from_env()
     pool = await create_pool(
         config.to_arq_valkey_settings(),

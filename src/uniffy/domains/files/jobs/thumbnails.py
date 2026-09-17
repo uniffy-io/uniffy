@@ -1,20 +1,23 @@
 """Generate JPEG thumbnails for images, PDFs, and videos; upload to S3."""
 
-import contextlib
 import io
+import tempfile
+from pathlib import Path
 from typing import Any, cast
 from uuid import UUID
 
-import av
-import fitz  # PyMuPDF
 from loguru import logger
 from PIL import Image, ImageOps
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from uniffy.core.events.realtime import NotificationPayloadType, publish_notification
+from uniffy.core.extraction.pdf import render_pdf_page
 from uniffy.core.models.files.file import File, ThumbnailStatus
 from uniffy.core.models.files.media_info import FileMediaInfo
 from uniffy.core.storage import OBJECT_STORAGE_CTX_KEY, ObjectStorage
+from uniffy.domains.files.jobs.media import probe, run_media, thumbnail_args
+from uniffy.domains.files.jobs.scratch import download_source
+from uniffy.domains.files.jobs.settings import MEDIA_SETTINGS
 from uniffy.infrastructure.database.session import open_session
 from uniffy.vendor.arq import Retry
 
@@ -138,7 +141,7 @@ async def generate_pdf_thumbnail(
     file_id: str,
     organization_id: str,
 ) -> dict[str, Any]:
-    """Render the first page of a PDF via PyMuPDF and upload it as a JPEG thumbnail."""
+    """Render the first PDF page within the thumbnail size budget."""
     log = logger.bind(task="thumbnail", kind="pdf", file_id=file_id)
     log.info("Started")
 
@@ -235,7 +238,7 @@ async def generate_video_thumbnail(
     file_id: str,
     organization_id: str,
 ) -> dict[str, Any]:
-    """Decode a video frame in-process and upload it as a JPEG thumbnail."""
+    """Decode a bounded frame outside the worker process."""
     log = logger.bind(task="thumbnail", kind="video", file_id=file_id)
     log.info("Started")
 
@@ -257,10 +260,16 @@ async def generate_video_thumbnail(
         await session.commit()
 
         try:
-            video_bytes = await storage.download_bytes(file.storage_key)
-            log.info("Downloaded video", bytes=len(video_bytes))
-
-            thumbnail_bytes, thumb_width, thumb_height = _create_video_thumbnail(video_bytes)
+            with tempfile.TemporaryDirectory(
+                prefix="uniffy-thumbnail-", dir=MEDIA_SETTINGS.scratch_directory
+            ) as directory:
+                source = Path(directory) / "source"
+                await download_source(
+                    storage, file.storage_key, source, MEDIA_SETTINGS.max_source_bytes
+                )
+                info = await probe(source)
+                frame = await run_media("ffmpeg", thumbnail_args(source, info), 60)
+                thumbnail_bytes, thumb_width, thumb_height = _create_thumbnail(frame)
 
             thumb_key = get_thumbnail_key(org_uuid, file_uuid)
             await storage.upload_bytes(
@@ -354,64 +363,4 @@ def _create_thumbnail(image_bytes: bytes) -> tuple[bytes, int, int]:
 
 
 def _create_pdf_thumbnail(pdf_bytes: bytes) -> tuple[bytes, int, int]:
-    """Render the first page of a PDF to a JPEG thumbnail."""
-    doc = fitz.open(stream=pdf_bytes, filetype="pdf")
-    try:
-        page = doc[0]
-
-        page_rect = page.rect
-        width_ratio = THUMB_MAX_SIZE[0] / page_rect.width
-        height_ratio = THUMB_MAX_SIZE[1] / page_rect.height
-        zoom = min(width_ratio, height_ratio, 2.0)  # Cap at 2x; beyond that quality flattens.
-
-        mat = fitz.Matrix(zoom, zoom)
-
-        pix = page.get_pixmap(matrix=mat, alpha=False)
-
-        img = Image.frombytes("RGB", (pix.width, pix.height), pix.samples)
-
-        img.thumbnail(THUMB_MAX_SIZE, Image.Resampling.LANCZOS)
-
-        width, height = img.size
-
-        buffer = io.BytesIO()
-        img.save(buffer, format=THUMB_FORMAT, quality=THUMB_QUALITY, optimize=True)
-        return buffer.getvalue(), width, height
-    finally:
-        doc.close()
-
-
-def _first_video_frame(
-    container: av.container.InputContainer,
-    stream: av.video.stream.VideoStream,
-) -> Image.Image | None:
-    for frame in container.decode(stream):
-        return frame.to_image()
-    return None
-
-
-def _create_video_thumbnail(video_bytes: bytes) -> tuple[bytes, int, int]:
-    """Decode a representative frame in-process (PyAV) and encode it as a JPEG thumbnail."""
-    with av.open(io.BytesIO(video_bytes)) as container:
-        stream = container.streams.video[0]
-        stream.thread_type = "AUTO"
-        # Seek ~1s in for a representative frame; short clips rewind to the first frame.
-        with contextlib.suppress(av.FFmpegError):
-            container.seek(1_000_000, backward=True)
-        image = _first_video_frame(container, stream)
-        if image is None:
-            container.seek(0, backward=True)
-            image = _first_video_frame(container, stream)
-
-    if image is None:
-        raise RuntimeError("ffmpeg: no decodable video frame")
-
-    if image.mode != "RGB":  # noqa: PLR2004
-        image = image.convert("RGB")
-
-    image.thumbnail(THUMB_MAX_SIZE, Image.Resampling.LANCZOS)
-    width, height = image.size
-
-    buffer = io.BytesIO()
-    image.save(buffer, format=THUMB_FORMAT, quality=THUMB_QUALITY, optimize=True)
-    return buffer.getvalue(), width, height
+    return _create_thumbnail(render_pdf_page(pdf_bytes, THUMB_MAX_SIZE))

@@ -126,6 +126,29 @@ async def test_egress_lifecycle_owns_provider_and_integration_subscribers(monkey
     resources["close_queue"].assert_awaited_once_with(QueueName.EGRESS)
 
 
+async def test_media_lifecycle_owns_its_queue_without_delivery_or_provider_subscribers(monkeypatch):
+    resources = _patch_shared_resources(monkeypatch)
+    delivery = MagicMock()
+    providers = AsyncMock()
+    monkeypatch.setattr(lifecycle, "build_delivery_adapters", delivery)
+    monkeypatch.setattr(lifecycle, "init_provider_invalidation_subscriber", providers)
+    ctx = {}
+
+    await lifecycle.media_on_startup(ctx)
+    assert WORKER_READY.labels(queue=QueueName.MEDIA)._value.get() == 1
+    await lifecycle.media_on_shutdown(ctx)
+
+    assert WORKER_READY.labels(queue=QueueName.MEDIA)._value.get() == 0
+    resources["init_db"].assert_awaited_once_with(
+        skip_migrations=True, application_name="uniffy-worker-media"
+    )
+    resources["init_queue"].assert_awaited_once_with(QueueName.MEDIA)
+    resources["close_queue"].assert_awaited_once_with(QueueName.MEDIA)
+    resources["storage"].shutdown.assert_awaited_once_with()
+    delivery.assert_not_called()
+    providers.assert_not_awaited()
+
+
 async def test_job_lifecycle_records_attempt_state_and_start_delay() -> None:
     labels = {"queue": QueueName.CORE, "job_name": "test_worker_telemetry"}
     started = WORKER_JOBS_STARTED_TOTAL.labels(**labels)
