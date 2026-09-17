@@ -6,11 +6,7 @@ import { confirmDestructive } from "@shared/lib/confirmDestructive";
 import { FONT } from "@theme/typography";
 import { formatMinutes } from "@features/projects/timeFormatting";
 import { BacklogTaskRow } from "@features/projects/components/BacklogTaskRow";
-import {
-  DONE_STATUS_ID,
-  SPRINT_STATUS_LABEL,
-  sprintStatusTint,
-} from "@features/projects/projectsSerializer";
+import { SPRINT_STATUS_LABEL, sprintStatusTint } from "@features/projects/projectsSerializer";
 import type {
   SerializedSprint,
   SerializedTask,
@@ -54,7 +50,7 @@ export function SprintCard({
   // screen every time the board is opened.
   const [collapsed, setCollapsed] = useState(sprint.status === "closed");
 
-  const done = tasks.filter((t) => t.status === DONE_STATUS_ID).length;
+  const done = tasks.filter((t) => !!t.completedAt).length;
   const progress = tasks.length > 0 ? Math.round((done / tasks.length) * 100) : 0;
   const estimated = tasks.reduce((sum, t) => sum + (t.estimatedMinutes ?? 0), 0);
   const spent = tasks.reduce((sum, t) => sum + (t.timeSpentMinutes ?? 0), 0);

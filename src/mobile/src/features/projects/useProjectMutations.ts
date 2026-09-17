@@ -3,8 +3,9 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Code, ConnectError } from "@connectrpc/connect";
 import { useAuth } from "@core/providers/AuthContext";
 import { projectsApi } from "@features/projects/projectsApi";
-import { DONE_STATUS_ID, visibilityStringToProto } from "@features/projects/projectsSerializer";
-import type { SerializedTask } from "@features/projects/projectsSerializer";
+import { getStatusOptions, visibilityStringToProto } from "@features/projects/projectsSerializer";
+import type { SerializedProject, SerializedTask } from "@features/projects/projectsSerializer";
+import { isCompletedStatus } from "@features/projects/statusSemantics";
 import type { TaskMove } from "@features/projects/taskOrdering";
 
 export function useCreateProject() {
@@ -358,6 +359,9 @@ export function useMoveTasks() {
       const key = ["tasks", organizationId, args.projectId];
       await queryClient.cancelQueries({ queryKey: key });
       const previous = queryClient.getQueryData<SerializedTask[]>(key);
+      const statusOptions = getStatusOptions(
+        queryClient.getQueryData<SerializedProject>(["project", organizationId, args.projectId]),
+      );
 
       // A card that snaps back to where it started while the round trip runs
       // reads as a rejected drop, so the drop is applied locally first.
@@ -367,19 +371,16 @@ export function useMoveTasks() {
         return tasks.map((task) => {
           const move = byId.get(task.id);
           if (!move) return task;
-          const wasDone = !!task.completedAt;
-          const isDone = move.status === DONE_STATUS_ID;
+          const wasDone = isCompletedStatus(statusOptions, task.status);
+          const isDone = isCompletedStatus(statusOptions, move.status);
           return {
             ...task,
             status: move.status,
             sortOrder: move.sortOrder,
-            // Mirrors what the server stamps, so progress and the struck-through
-            // title update with the drop rather than a round trip later.
-            completedAt: isDone
-              ? (task.completedAt ?? new Date().toISOString())
-              : wasDone
-                ? undefined
-                : task.completedAt,
+            // Mirrors what the server stamps, so progress, blocked markers and the
+            // struck-through title update with the drop rather than a round trip later.
+            completedAt:
+              isDone === wasDone ? task.completedAt : isDone ? new Date().toISOString() : undefined,
           };
         });
       });

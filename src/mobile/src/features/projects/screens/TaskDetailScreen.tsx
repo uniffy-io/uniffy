@@ -67,9 +67,8 @@ import {
   getPriorityOptions,
   getOptionById,
   activityActionLabel,
-  DONE_STATUS_ID,
-  TODO_STATUS_ID,
 } from "@features/projects/projectsSerializer";
+import { statusIdForSemantic } from "@features/projects/statusSemantics";
 import type { SerializedTask } from "@features/projects/projectsSerializer";
 
 type EditableField = "status" | "priority" | null;
@@ -195,14 +194,11 @@ export function TaskDetailScreen() {
 
   function toggleSubtask(sub: SerializedTask) {
     const isNowDone = !sub.completedAt;
-    // The canonical ids, not the ends of the list: a project can add a status
-    // after Done or reorder one in front of To Do, and ticking a box would then
-    // write a status the server never treats as completion.
-    updateTask.mutate({
-      taskId: sub.id,
-      projectId: task!.projectId,
-      status: isNowDone ? DONE_STATUS_ID : TODO_STATUS_ID,
-    });
+    // Resolved by semantic, not by list position: a project can add a status after its
+    // completed one or reorder one in front of its to-do one.
+    const status = statusIdForSemantic(statusOptions, isNowDone ? "completed" : "todo");
+    if (!status) return;
+    updateTask.mutate({ taskId: sub.id, projectId: task!.projectId, status });
   }
 
   // Activity rows store raw ids - option ids for status/priority changes, user

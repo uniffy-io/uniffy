@@ -35,12 +35,8 @@ import {
   useBulkUpdateTasks,
   useDeleteProject,
 } from "@features/projects/useProjectMutations";
-import {
-  buildFieldConfigJson,
-  STATUS_FIELD_ID,
-  PROTECTED_STATUS_IDS,
-  DONE_STATUS_ID,
-} from "@features/projects/projectsSerializer";
+import { buildFieldConfigJson, STATUS_FIELD_ID } from "@features/projects/projectsSerializer";
+import { isRequiredStatusOption, statusIdForSemantic } from "@features/projects/statusSemantics";
 import { StatusEditorSheet } from "@features/projects/components/StatusEditorSheet";
 import { OptionPickerSheet } from "@features/projects/components/OptionPickerSheet";
 import type { PlainSelectOption } from "@features/projects/projectsSerializer";
@@ -77,7 +73,8 @@ export function ProjectSettingsScreen() {
     () => [...(statusField?.options ?? [])].sort((a, b) => a.sortOrder - b.sortOrder),
     [statusField],
   );
-  const missingDoneStatus = statuses.length > 0 && !statuses.some((s) => s.id === DONE_STATUS_ID);
+  const missingDoneStatus =
+    statuses.length > 0 && statusIdForSemantic(statuses, "completed") === null;
   const canManage = project ? roleCanManage(project.userRole) : false;
 
   const bottomPad =
@@ -204,8 +201,8 @@ export function ProjectSettingsScreen() {
             <View style={[styles.notice, { backgroundColor: T.red + "14", borderColor: T.red }]}>
               <Info size={15} color={T.red} weight="fill" />
               <Text style={[styles.noticeText, { color: T.red }]}>
-                The built-in Done status is missing, so nothing in this project can be marked
-                complete. Recreating it is not possible from here - restore it on the web app.
+                No status in this project marks work as completed, so nothing can be finished and
+                status changes cannot be saved. An administrator has to repair the status list.
               </Text>
             </View>
           )}
@@ -223,7 +220,7 @@ export function ProjectSettingsScreen() {
               </Text>
             )}
             {statuses.map((option, index) => {
-              const isProtected = PROTECTED_STATUS_IDS.includes(option.id);
+              const isProtected = isRequiredStatusOption(option);
               const inUse = taskCountByStatus.get(option.id) ?? 0;
               return (
                 <View
@@ -307,8 +304,9 @@ export function ProjectSettingsScreen() {
           <View style={styles.hintRow}>
             <Info size={13} color={T.textDim} weight="duotone" />
             <Text style={[styles.sectionHint, { color: T.textDim, flex: 1 }]}>
-              To Do, In Progress and Done can be renamed and recoloured but not deleted - task
-              completion, recurring tasks and blocker checks are keyed to them.
+              Locked statuses mark to do, in progress and completed work. They can be renamed,
+              recoloured and reordered but not deleted - task completion, recurring tasks and
+              blocker checks rely on them.
             </Text>
           </View>
         </View>

@@ -9,11 +9,27 @@ import { ActivityAction } from "@uniffy/proto/projects/v1/projects_pb";
 import { AccessMode } from "@uniffy/proto/common/v1/common_pb";
 import type { ThemeColors } from "@theme/theme";
 
+/** The stage a status stands for; the server decides completion from it, never from the id. */
+export type TaskStatusSemantic = "todo" | "in_progress" | "review" | "completed";
+
+const STATUS_SEMANTICS: ReadonlySet<string> = new Set<TaskStatusSemantic>([
+  "todo",
+  "in_progress",
+  "review",
+  "completed",
+]);
+
+export function isTaskStatusSemantic(value: unknown): value is TaskStatusSemantic {
+  return typeof value === "string" && STATUS_SEMANTICS.has(value);
+}
+
 export interface PlainSelectOption {
   id: string;
   label: string;
   color: string;
   sortOrder: number;
+  /** Set on status options only. */
+  semantic?: TaskStatusSemantic;
 }
 
 export interface SerializedFieldDefinition {
@@ -123,23 +139,16 @@ export interface ProjectStats {
 export const STATUS_FIELD_ID = "field_status";
 const PRIORITY_FIELD_ID = "field_priority";
 
-/**
- * The server keys behaviour off these exact option ids, not off labels or sort
- * order: `status_done` drives `completed_at`, parent auto-completion, blocker
- * enforcement and recurrence spawning; `status_todo` is the status every new
- * task gets; `status_in_progress` is where a parent lands when a subtask is
- * reopened. Renaming and recolouring them is safe, deleting them is not.
- */
-export const DONE_STATUS_ID = "status_done";
-export const TODO_STATUS_ID = "status_todo";
-const IN_PROGRESS_STATUS_ID = "status_in_progress";
-
-export const PROTECTED_STATUS_IDS = [TODO_STATUS_ID, IN_PROGRESS_STATUS_ID, DONE_STATUS_ID];
-
 const DEFAULT_STATUS_OPTIONS: PlainSelectOption[] = [
-  { id: "status_todo", label: "To Do", color: "#6b7280", sortOrder: 0 },
-  { id: "status_in_progress", label: "In Progress", color: "#3b82f6", sortOrder: 1 },
-  { id: "status_done", label: "Done", color: "#22c55e", sortOrder: 2 },
+  { id: "status_todo", label: "To Do", color: "#6b7280", sortOrder: 0, semantic: "todo" },
+  {
+    id: "status_in_progress",
+    label: "In Progress",
+    color: "#3b82f6",
+    sortOrder: 1,
+    semantic: "in_progress",
+  },
+  { id: "status_done", label: "Done", color: "#22c55e", sortOrder: 2, semantic: "completed" },
 ];
 
 const DEFAULT_PRIORITY_OPTIONS: PlainSelectOption[] = [
@@ -170,43 +179,52 @@ function tsToIso(ts?: { seconds: bigint; nanos: number }): string | undefined {
   return new Date(Number(ts.seconds) * 1000 + Math.floor(ts.nanos / 1e6)).toISOString();
 }
 
-function fieldDefinitionToPlain(field: FieldDefinition): SerializedFieldDefinition {
-  let options: PlainSelectOption[] = [];
-  if (field.configJson) {
-    try {
-      const config = JSON.parse(field.configJson);
-      if (Array.isArray(config?.options)) {
-        options = config.options.map(
-          (o: { id: string; label?: string; color?: string; sortOrder?: number }) => ({
-            id: String(o.id),
-            label: String(o.label ?? o.id),
-            color: String(o.color ?? "#909296"),
-            sortOrder: Number(o.sortOrder ?? 0),
-          }),
-        );
-      }
-    } catch {
-      // Malformed config from server - leave options empty
-    }
+function parseConfig(configJson: string): Record<string, unknown> {
+  if (!configJson) return {};
+  try {
+    const parsed = JSON.parse(configJson);
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) return parsed;
+  } catch {
+    // Malformed config from server - treat as empty
   }
+  return {};
+}
+
+type StoredOption = Record<string, unknown> & { id: unknown };
+
+function storedOptions(config: Record<string, unknown>): StoredOption[] {
+  if (!Array.isArray(config.options)) return [];
+  return config.options.filter((o): o is StoredOption => !!o && typeof o === "object" && "id" in o);
+}
+
+function fieldDefinitionToPlain(field: FieldDefinition): SerializedFieldDefinition {
+  const options = storedOptions(parseConfig(field.configJson)).map((o) => {
+    const option: PlainSelectOption = {
+      id: String(o.id),
+      label: String(o.label ?? o.id),
+      color: String(o.color ?? "#909296"),
+      sortOrder: Number(o.sortOrder ?? 0),
+    };
+    if (isTaskStatusSemantic(o.semantic)) option.semantic = o.semantic;
+    return option;
+  });
   return { id: field.id, name: field.name, options, configJson: field.configJson };
 }
 
-/** Replaces just the `options` key, so nothing else the server stores is lost. */
+/**
+ * Replaces the `options` key and keeps every other stored key, including per-option keys this
+ * client does not model, so an edit never drops what the server saved.
+ */
 export function buildFieldConfigJson(
   field: SerializedFieldDefinition,
   options: PlainSelectOption[],
 ): string {
-  let config: Record<string, unknown> = {};
-  if (field.configJson) {
-    try {
-      const parsed = JSON.parse(field.configJson);
-      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) config = parsed;
-    } catch {
-      // Malformed config from server - start from just the options
-    }
-  }
-  return JSON.stringify({ ...config, options });
+  const config = parseConfig(field.configJson);
+  const storedById = new Map(storedOptions(config).map((o) => [String(o.id), o]));
+  return JSON.stringify({
+    ...config,
+    options: options.map((o) => ({ ...storedById.get(o.id), ...o })),
+  });
 }
 
 export function projectToPlain(project: Project): SerializedProject {
