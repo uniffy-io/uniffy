@@ -24,7 +24,12 @@ interface VideoViewerProps {
 
 export function VideoViewer({ file }: VideoViewerProps) {
   const { url, error } = useMedia(file.id);
-  if (!url) return <div className="viewer-error"><p>{error ?? "Unable to load video"}</p></div>;
+  if (!url)
+    return (
+      <div className="viewer-error">
+        <p>{error ?? "Unable to load video"}</p>
+      </div>
+    );
   return <VideoPlayer key={`${file.id}:${file.version}:${url}`} file={file} streamUrl={url} />;
 }
 
