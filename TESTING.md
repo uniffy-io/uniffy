@@ -2497,6 +2497,103 @@ a second user who is not a member of it.
       fans out to members only) but every fresh fetch is denied, and no message they had not already
       loaded arrives.
 
+## Projects: table sort, assignee filter and large projects
+
+A project with tasks in every status and priority, assigned to at least three people (one task with
+two assignees, one unassigned), plus a second project seeded past the old 500-task page. Seed the
+large project from `./manage.py db shell`, replacing `<SLUG>` with its key; the shared `sort_order`
+and `created_at` exercise the page tie-break:
+
+```sql
+WITH p AS (
+  SELECT id, organization_id, owner_id, task_counter FROM projects_projects WHERE slug = '<SLUG>'
+)
+INSERT INTO projects_tasks (id, project_id, organization_id, owner_id, title, sort_order, number,
+                            created_at, updated_at)
+SELECT gen_random_uuid(), p.id, p.organization_id, p.owner_id, 'Bulk ' || g, 0,
+       p.task_counter + g, now(), now()
+FROM p, generate_series(1, 1200) g;
+UPDATE projects_projects SET task_counter = task_counter + 1200 WHERE slug = '<SLUG>';
+```
+
+- [ ] `(both products)` Table view, click the Status header once: rows read To Do, In Progress,
+      Review, Done. Click again: Done first. The same holds for Priority (Low to Urgent).
+- [ ] `(both products)` Sort by Assignee: rows follow the assignee's display name, the two-assignee
+      task sorts by its first assignee, and unassigned tasks stay last in both directions. A custom
+      person or select field sorts the same way; a number field sorts 2 before 10.
+- [ ] `(both products)` Filter, add Assignee "is any of", click the value: a person picker opens.
+      Picking two people keeps the filter panel open and shows both avatars; Apply leaves only tasks
+      assigned to either of them, including the two-assignee task.
+- [ ] `(both products)` Switch the operator to "is none of": their tasks disappear and unassigned
+      tasks stay. Remove every person from the picker and apply: the table is unfiltered again.
+- [ ] `(both products)` Open the large project: the table and board contain all seeded tasks
+      (search "Bulk 1199" finds it), and the row count matches
+      `SELECT count(*) FROM projects_tasks WHERE project_id = ... AND NOT is_deleted`. The network
+      panel shows `ListTasks` pages of 1000.
+- [ ] `(both products)` With the large project open, create a task from a second browser: the first
+      browser shows it once, with no duplicated rows. Switch projects while the pages are still
+      loading: no error toast, and the new project shows its own tasks.
+- [ ] `(both products)` Home dashboard: My Tasks renders, and the network panel shows one
+      `ListTasks` request per project.
+- [ ] `(both products)` Mobile: open the large project; the list reaches the last seeded task, and
+      the task picker in the create screen can find it.
+
+## Dashboard: My tasks and overdue links
+
+A user assigned to at least two overdue tasks, one task due today, one due later and one with no
+due date, spread over two projects.
+
+- [ ] `(both products)` The header line ("N tasks due"), the "Tasks due" tile, the overdue banner
+      and the My Tasks sections all report the same numbers.
+- [ ] `(both products)` Click "View tasks" on the overdue banner: a "My tasks" dialog opens on
+      Overdue and lists exactly the overdue tasks, each with its project and task key.
+- [ ] `(both products)` Click the "Tasks due" tile: the dialog opens on Due today. "View all N
+      tasks" under My Tasks opens it on All with Overdue, Due today and Upcoming sections.
+- [ ] `(both products)` Click a task in the dialog or in the widget: the task opens in its own
+      project with the detail panel showing it, even when another project was open before.
+- [ ] `(both products)` Open a project, return Home through the app nav: the banner and My Tasks
+      still include tasks from every other project.
+- [ ] `(both products)` Click the refresh control next to the time: the network panel shows one
+      `ListProjects` and one `ListTasks` per project.
+- [ ] `(both products)` Set Settings > Time zone to a zone west of UTC (for example
+      `America/Los_Angeles`) and look in the evening: a task due today stays under Due today, never
+      Overdue.
+- [ ] `(both products)` At 375 px the dialog fits: all four segments are visible without scrolling
+      and each section header shows its count.
+- [ ] `(both products)` Switch between Overdue, Due today, Upcoming and All: the dialog's top edge
+      and the tab bar stay put; only the bottom edge moves. On a short window the All list
+      scrolls inside the dialog and Close stays visible. On a phone the sheet keeps one height.
+- [ ] `(both products)` Load Home with the browser console open: no "returned a different result"
+      selector warning and no Recharts "width(-1) and height(-1)" warning.
+- [ ] `(both products)` With unread and read notifications, load Home directly (bell panel never
+      opened): the Notifications card is as wide as Your Activity and lists the four latest
+      notifications, unread ones highlighted, with the same unread count as the bell.
+- [ ] `(both products)` Click a notification in that card: it opens its target the way the bell
+      panel does and the unread count drops by one. On a phone the mark-read and delete buttons
+      are visible without hovering.
+- [ ] `(both products)` When cards in one dashboard row differ in height, each card's footer link
+      sits on its bottom edge.
+- [ ] `(both products)` Open a project and switch between Table, Board and Backlog with the console
+      open: no "returned a different result" selector warning.
+- [ ] `(both products)` Add a custom Person field to a project and leave it empty: its table cells
+      show "-", not the task's assignees. Set it through the API to a single user id: the cell
+      shows that user, and the cell editor opens with that user checked.
+- [ ] `(both products)` At 768 px and 1024 px, the app header's nav icons, search and right-hand
+      icons never overlap. Below 1024 px the search icon opens Spotlight, including on Windows,
+      Linux and Android.
+- [ ] `(both products)` At 375 px, 768 px (sidebar open and collapsed) and 1280 px, the project
+      toolbar keeps Filter and Display inside the pane. Opening Filter keeps the popover inside
+      the pane, and the table does not shift sideways.
+- [ ] `(both products)` On Notifications, the chart button in the header shows the analytics
+      panel: both charts draw, the 7d/14d/30d/90d buttons reload them, and the button hides the
+      panel again. No stats request is sent while the panel is hidden, and the button is absent
+      on a phone.
+- [ ] `(both products)` On Notifications at 768 px, the title and unread badge are not cut off, the
+      search field sits above the date filters, and every filter label in the sidebar is readable.
+- [ ] `(both products)` In dark theme, the notifications analytics axis numbers, dates and grid
+      lines are readable, the chart tooltip is readable, and the org chart's "team lead" edge
+      labels are readable.
+
 ## Pre-release sweep
 
 - [ ] All linters green: `./manage.py lint`.
