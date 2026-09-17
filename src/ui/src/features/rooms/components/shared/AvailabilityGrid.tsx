@@ -7,7 +7,7 @@ const START_HOUR = 8;
 const END_HOUR = 20;
 
 interface AvailabilityGridProps {
-  slots: TimeSlot[];
+  slots: readonly TimeSlot[];
   onSlotClick?: (startHour: number, endHour: number) => void;
   className?: string;
 }
@@ -16,7 +16,7 @@ function getHour(isoString: string): number {
   return new Date(isoString).getHours();
 }
 
-function buildHourMap(slots: TimeSlot[]): Map<number, TimeSlot> {
+function buildHourMap(slots: readonly TimeSlot[]): Map<number, TimeSlot> {
   const map = new Map<number, TimeSlot>();
   for (const slot of slots) {
     const startHour = getHour(slot.startTime);
