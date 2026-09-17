@@ -28,6 +28,7 @@ import { FONT } from "@theme/typography";
 import { useProjectSprints } from "@features/projects/useProjects";
 import { GraphTaskNode } from "@features/projects/components/GraphTaskNode";
 import { buildGraphLayout, edgeGeometry, NODE_W, NODE_H } from "@features/projects/graphLayout";
+import type { TaskRelations } from "@features/projects/taskRelations";
 import type { NodeState } from "@features/projects/graphLayout";
 import type {
   SerializedProject,
@@ -53,6 +54,7 @@ function clamp(value: number, min: number, max: number): number {
 export function ProjectGraphView({
   project,
   tasks,
+  relations,
   statusOptions,
   priorityOptions,
   accentColor,
@@ -65,6 +67,8 @@ export function ProjectGraphView({
    * blockers too.
    */
   tasks: SerializedTask[];
+  /** Built from every loaded task, not just the visible ones. */
+  relations: TaskRelations;
   statusOptions: PlainSelectOption[];
   priorityOptions: PlainSelectOption[];
   accentColor: string;
@@ -86,7 +90,10 @@ export function ProjectGraphView({
   const [viewport, setViewport] = useState({ width: 0, height: 0 });
   const [userView, setUserView] = useState<ViewTransform | null>(null);
 
-  const layout = useMemo(() => buildGraphLayout(tasks, sprints), [tasks, sprints]);
+  const layout = useMemo(
+    () => buildGraphLayout(tasks, sprints, relations.byId),
+    [tasks, sprints, relations.byId],
+  );
 
   const statusById = useMemo(() => {
     const map = new Map<string, { color: string; label: string }>();

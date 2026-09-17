@@ -6,6 +6,7 @@ import { confirmDestructive } from "@shared/lib/confirmDestructive";
 import { FONT } from "@theme/typography";
 import { formatMinutes } from "@features/projects/timeFormatting";
 import { BacklogTaskRow } from "@features/projects/components/BacklogTaskRow";
+import type { TaskRelations } from "@features/projects/taskRelations";
 import { SPRINT_STATUS_LABEL, sprintStatusTint } from "@features/projects/projectsSerializer";
 import type {
   SerializedSprint,
@@ -16,6 +17,7 @@ import type {
 export function SprintCard({
   sprint,
   tasks,
+  relations,
   projectSlug,
   statusOptions,
   priorityOptions,
@@ -31,6 +33,7 @@ export function SprintCard({
 }: {
   sprint: SerializedSprint;
   tasks: SerializedTask[];
+  relations: TaskRelations;
   projectSlug: string;
   statusOptions: PlainSelectOption[];
   priorityOptions: PlainSelectOption[];
@@ -166,6 +169,7 @@ export function SprintCard({
             <BacklogTaskRow
               key={task.id}
               task={task}
+              relations={relations}
               projectSlug={projectSlug}
               statusOptions={statusOptions}
               priorityOptions={priorityOptions}

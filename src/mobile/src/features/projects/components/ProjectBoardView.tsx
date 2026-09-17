@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React from "react";
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from "react-native";
 import { Plus, CheckCircle } from "phosphor-react-native";
 import { SubjectAvatarStack } from "@shared/directory/SubjectAvatarStack";
@@ -8,7 +8,9 @@ import { getTaskTypeConfig } from "@features/projects/taskTypes";
 import { TaskMetaChips, TaskDueDate } from "@features/projects/components/TaskMetaChips";
 import { DraggableTask } from "@features/projects/components/DraggableTask";
 import { DragShift } from "@features/projects/components/DragShift";
+import { isTaskBlocked, parentKeyOf } from "@features/projects/taskRelations";
 import type { TaskDragController } from "@features/projects/useTaskDrag";
+import type { TaskRelations } from "@features/projects/taskRelations";
 import type { SerializedTask, PlainSelectOption } from "@features/projects/projectsSerializer";
 
 /** Also the distance a card slides when the one next to it is lifted away. */
@@ -20,46 +22,37 @@ export interface BoardColumn {
   color: string;
 }
 
-/** Subtask tallies keyed by parent id, so a card never scans the task list. */
-type SubtaskCounts = Map<string, { total: number; done: number }>;
-
-function countSubtasks(tasks: SerializedTask[]): SubtaskCounts {
-  const counts: SubtaskCounts = new Map();
-  for (const task of tasks) {
-    if (!task.parentId) continue;
-    const entry = counts.get(task.parentId) ?? { total: 0, done: 0 };
-    entry.total += 1;
-    if (task.completedAt) entry.done += 1;
-    counts.set(task.parentId, entry);
-  }
-  return counts;
-}
-
+/** Primitives only, so the memo holds while the rest of the board changes. */
 const TaskCard = React.memo(function TaskCard({
   task,
-  subtaskCounts,
+  subtaskTotal,
+  subtasksDone,
+  blocked,
+  parentKey,
   priorityOptions,
   selecting,
   selected,
   selectionColor,
   onPress,
   onToggleSelect,
+  onOpenParent,
 }: {
   task: SerializedTask;
-  subtaskCounts: SubtaskCounts;
+  subtaskTotal: number;
+  subtasksDone: number;
+  blocked: boolean;
+  parentKey: string | null;
   priorityOptions: PlainSelectOption[];
   selecting: boolean;
   selected: boolean;
   selectionColor: string;
   onPress: (taskId: string) => void;
   onToggleSelect: (taskId: string) => void;
+  onOpenParent: (parentId: string) => void;
 }) {
   const T = useTheme();
   const isDone = !!task.completedAt;
-  const isBlocked = task.blockedByTaskIds.length > 0;
-  const subtasks = subtaskCounts.get(task.id);
-  const subtaskTotal = subtasks?.total ?? 0;
-  const subtasksDone = subtasks?.done ?? 0;
+  const parentId = task.parentId;
   const TypeIcon = getTaskTypeConfig(task.taskType).Icon;
 
   return (
@@ -102,9 +95,15 @@ const TaskCard = React.memo(function TaskCard({
 
       {/* Under the title, matching the table row: the name is what identifies
           the card, the badges qualify it. */}
-      {(task.priority || isBlocked || task.tags.length > 0) && (
+      {(task.priority || blocked || parentKey || task.tags.length > 0) && (
         <View style={styles.taskTags}>
-          <TaskMetaChips task={task} priorityOptions={priorityOptions} />
+          <TaskMetaChips
+            task={task}
+            priorityOptions={priorityOptions}
+            blocked={blocked}
+            parentKey={parentKey}
+            onOpenParent={parentId && !selecting ? () => onOpenParent(parentId) : undefined}
+          />
         </View>
       )}
 
@@ -123,9 +122,11 @@ const TaskCard = React.memo(function TaskCard({
   );
 });
 
+/** Every visible task, subtasks included, as a card in its status column. */
 export function ProjectBoardView({
   columns,
-  allTasks,
+  relations,
+  projectSlug,
   tasksFor,
   priorityOptions,
   accentColor,
@@ -137,10 +138,13 @@ export function ProjectBoardView({
   onOpen,
   onToggleSelect,
   onToggleGroup,
+  onOpenParent,
   onAddTask,
 }: {
   columns: BoardColumn[];
-  allTasks: SerializedTask[];
+  /** Built from every loaded task, not just the visible ones. */
+  relations: TaskRelations;
+  projectSlug: string;
   tasksFor: (statusId: string) => SerializedTask[];
   priorityOptions: PlainSelectOption[];
   accentColor: string;
@@ -153,11 +157,11 @@ export function ProjectBoardView({
   onOpen: (taskId: string) => void;
   onToggleSelect: (taskId: string) => void;
   onToggleGroup: (statusId: string) => void;
+  onOpenParent: (parentId: string) => void;
   onAddTask: (statusId: string) => void;
 }) {
   const T = useTheme();
   const dragging = drag.draggingId !== null;
-  const subtaskCounts = useMemo(() => countSubtasks(allTasks), [allTasks]);
 
   return (
     <View style={styles.fill} {...drag.containerProps}>
@@ -198,28 +202,35 @@ export function ProjectBoardView({
                 </TouchableOpacity>
 
                 <View style={styles.cardList} onLayout={(e) => drag.registerList(col.key, e)}>
-                  {colTasks.map((task, index) => (
-                    <DraggableTask
-                      key={task.id}
-                      gesture={drag.gestureFor(task.id)}
-                      offset={drag.offsetFor(col.key, index)}
-                      animate={dragging}
-                      lifted={drag.draggingId === task.id}
-                      onLayout={(event) => drag.registerItem(col.key, task.id, event)}
-                      onUnmount={() => drag.unregisterItem(task.id)}
-                    >
-                      <TaskCard
-                        task={task}
-                        subtaskCounts={subtaskCounts}
-                        priorityOptions={priorityOptions}
-                        selecting={selecting}
-                        selected={selectedIds.includes(task.id)}
-                        selectionColor={accentColor}
-                        onPress={onOpen}
-                        onToggleSelect={onToggleSelect}
-                      />
-                    </DraggableTask>
-                  ))}
+                  {colTasks.map((task, index) => {
+                    const counts = relations.subtaskCounts.get(task.id);
+                    return (
+                      <DraggableTask
+                        key={task.id}
+                        gesture={drag.gestureFor(task.id)}
+                        offset={drag.offsetFor(col.key, index)}
+                        animate={dragging}
+                        lifted={drag.draggingId === task.id}
+                        onLayout={(event) => drag.registerItem(col.key, task.id, event)}
+                        onUnmount={() => drag.unregisterItem(task.id)}
+                      >
+                        <TaskCard
+                          task={task}
+                          subtaskTotal={counts?.total ?? 0}
+                          subtasksDone={counts?.done ?? 0}
+                          blocked={isTaskBlocked(task, relations.byId)}
+                          parentKey={parentKeyOf(task, relations.byId, projectSlug)}
+                          priorityOptions={priorityOptions}
+                          selecting={selecting}
+                          selected={selectedIds.includes(task.id)}
+                          selectionColor={accentColor}
+                          onPress={onOpen}
+                          onToggleSelect={onToggleSelect}
+                          onOpenParent={onOpenParent}
+                        />
+                      </DraggableTask>
+                    );
+                  })}
                 </View>
 
                 <DragShift offset={drag.tailOffsetFor(col.key)} animate={dragging}>

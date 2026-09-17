@@ -69,6 +69,7 @@ import {
   activityActionLabel,
 } from "@features/projects/projectsSerializer";
 import { statusIdForSemantic } from "@features/projects/statusSemantics";
+import { isTaskBlocked } from "@features/projects/taskRelations";
 import type { SerializedTask } from "@features/projects/projectsSerializer";
 
 type EditableField = "status" | "priority" | null;
@@ -178,9 +179,11 @@ export function TaskDetailScreen() {
   const subtasks = allTasks.filter((t) => t.parentId === task.id);
   const subtasksDone = subtasks.filter((t) => t.completedAt).length;
 
+  const tasksById = new Map(allTasks.map((t) => [t.id, t]));
   const blockers = task.blockedByTaskIds
-    .map((blockId) => allTasks.find((t) => t.id === blockId))
+    .map((blockId) => tasksById.get(blockId))
     .filter(Boolean) as SerializedTask[];
+  const blocked = isTaskBlocked(task, tasksById);
 
   const typeConfig = getTaskTypeConfig(task.taskType);
   const TypeIcon = typeConfig.Icon;
@@ -292,7 +295,7 @@ export function TaskDetailScreen() {
             </View>
           )}
           {priorityOpt && <TaskPriorityBadge priority={task.priority} options={priorityOptions} />}
-          {task.blockedByTaskIds.length > 0 && (
+          {blocked && (
             <View style={[styles.badge, { backgroundColor: T.red + "18" }]}>
               <Warning size={10} color={T.red} weight="bold" />
               <Text style={[styles.badgeText, { color: T.red }]}>Blocked</Text>

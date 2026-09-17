@@ -24,6 +24,7 @@ import { SprintCard } from "@features/projects/components/SprintCard";
 import { BacklogTaskRow } from "@features/projects/components/BacklogTaskRow";
 import { SprintCompleteSheet } from "@features/projects/components/SprintCompleteSheet";
 import { SprintPickerSheet } from "@features/projects/components/SprintPickerSheet";
+import type { TaskRelations } from "@features/projects/taskRelations";
 import type {
   SerializedProject,
   SerializedTask,
@@ -34,6 +35,7 @@ export function ProjectBacklogView({
   project,
   tasks: visibleTasks,
   allTasks,
+  relations,
   statusOptions,
   priorityOptions,
   accentColor,
@@ -49,6 +51,7 @@ export function ProjectBacklogView({
    * to carry over the tasks a filter is hiding as well.
    */
   allTasks: SerializedTask[];
+  relations: TaskRelations;
   statusOptions: PlainSelectOption[];
   priorityOptions: PlainSelectOption[];
   accentColor: string;
@@ -151,6 +154,7 @@ export function ProjectBacklogView({
 
   const sprintCardProps = {
     projectSlug: project.slug,
+    relations,
     statusOptions,
     priorityOptions,
     accentColor,
@@ -229,6 +233,7 @@ export function ProjectBacklogView({
               <BacklogTaskRow
                 key={task.id}
                 task={task}
+                relations={relations}
                 projectSlug={project.slug}
                 statusOptions={statusOptions}
                 priorityOptions={priorityOptions}
