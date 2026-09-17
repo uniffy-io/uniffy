@@ -8,6 +8,8 @@ import { LAYOUT } from "@/features/projects/constants";
 import { statusPaint, type StatusPaint } from "@/features/projects/utils/statusPaint";
 import { statusSemanticOf } from "@/features/projects/utils/statusSemantics";
 import { TaskTypeIcon } from "@/features/projects/components/TaskTypeIcon";
+import { TaskParentChip } from "@/features/projects/components/TaskParentChip";
+import { BlockedBadge } from "@/features/projects/components/BlockedBadge";
 import type { Task, SelectOption, TaskStatusSemantic } from "@/features/projects/types";
 import type { RoadmapRow } from "./roadmapRows";
 
@@ -190,7 +192,10 @@ function RoadmapTaskRow({
         color={paint.solid}
       />
 
-      {/* Type + title */}
+      {/* Type + title; a root row with a parent is a subtask whose parent is filtered out */}
+      {depth === 0 && task.parentId && (
+        <TaskParentChip task={task} projectSlug={projectSlug} className="text-xs max-w-[120px]" />
+      )}
       <TaskTypeIcon type={task.taskType} className="text-muted-foreground" />
       <span
         className={cn(
@@ -200,6 +205,7 @@ function RoadmapTaskRow({
       >
         {task.title}
       </span>
+      <BlockedBadge task={task} variant="icon" />
 
       {/* Subtask progress */}
       {task.subtaskTotal > 0 && (

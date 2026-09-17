@@ -492,7 +492,10 @@ export function TaskDetailPanel({ taskId, variant = "sidebar" }: TaskDetailPanel
                   <div
                     className={cn(
                       "flex-1 min-w-0",
-                      task.dueDate && isOverdue(task.dueDate) && "text-destructive",
+                      !task.completedAt &&
+                        task.dueDate &&
+                        isOverdue(task.dueDate) &&
+                        "text-destructive",
                     )}
                   >
                     <DatePicker

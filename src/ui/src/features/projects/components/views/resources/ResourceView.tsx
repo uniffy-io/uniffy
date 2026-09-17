@@ -1,5 +1,12 @@
 import { useState, useMemo, useCallback } from "react";
-import { CaretDown, CaretRight, User, CalendarBlank, Clock } from "@phosphor-icons/react";
+import {
+  CaretDown,
+  CaretRight,
+  User,
+  CalendarBlank,
+  Clock,
+  CheckCircle,
+} from "@phosphor-icons/react";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -12,6 +19,7 @@ import { formatMinutes } from "@/features/projects/utils/timeFormatting";
 import { formatDateShort, isOverdue } from "@/shared/utils/dateFormatting";
 import { SYSTEM_FIELD_IDS } from "@/features/projects/types";
 import { statusPaint } from "@/features/projects/utils/statusPaint";
+import { BlockedBadge } from "@/features/projects/components/BlockedBadge";
 import type { Task, SelectOption } from "@/features/projects/types";
 import type { Subject } from "@/components/subject/types";
 
@@ -25,6 +33,7 @@ interface AssigneeGroup {
 export function ResourceView() {
   const dispatch = useAppDispatch();
   const project = useAppSelector(selectCurrentProject);
+  // Top-level tasks only: a subtask's work is counted through its parent.
   const tasks = useFilteredTasks(project?.id ?? "");
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
 
@@ -194,7 +203,8 @@ export function ResourceView() {
                   {group.tasks.map((task) => {
                     const status = statusOptions[task.status];
                     const priority = priorityOptions[task.priority];
-                    const taskOverdue = task.dueDate ? isOverdue(task.dueDate) : false;
+                    const taskOverdue =
+                      !task.completedAt && !!task.dueDate && isOverdue(task.dueDate);
 
                     return (
                       <div
@@ -223,6 +233,22 @@ export function ResourceView() {
                         >
                           {task.title}
                         </span>
+                        <BlockedBadge task={task} variant="icon" />
+
+                        {task.subtaskTotal > 0 && (
+                          <span
+                            className="flex items-center gap-1 text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded shrink-0"
+                            title="Completed subtasks"
+                          >
+                            <CheckCircle
+                              size={10}
+                              className={
+                                task.subtaskCompleted === task.subtaskTotal ? "text-green-500" : ""
+                              }
+                            />
+                            {task.subtaskCompleted}/{task.subtaskTotal}
+                          </span>
+                        )}
 
                         {/* Priority */}
                         {priority && (
@@ -251,7 +277,7 @@ export function ResourceView() {
                         )}
 
                         {/* Time */}
-                        {(task.estimatedMinutes || task.timeSpentMinutes) && (
+                        {((task.estimatedMinutes ?? 0) > 0 || (task.timeSpentMinutes ?? 0) > 0) && (
                           <span
                             className={cn(
                               "text-[10px] shrink-0",
