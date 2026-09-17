@@ -3,6 +3,7 @@ import { useParams, useNavigate, Navigate } from "react-router-dom";
 import { useAppSelector } from "@/app/hooks";
 import { PageLoader } from "@/components/feedback/PageLoader";
 import { projectsApi } from "@/features/projects/api/projectsApi";
+import { taskPath } from "@/features/projects/utils/taskPath";
 
 export function TaskRedirectPage() {
   const { taskId } = useParams<{ taskId: string }>();
@@ -17,7 +18,7 @@ export function TaskRedirectPage() {
       .getTask(taskId, orgId)
       .then((res) => {
         if (!res.task) return;
-        navigate(`/projects/${res.task.projectId}/tasks/${res.task.id}`, {
+        navigate(taskPath(res.task.projectId, res.task.id), {
           replace: true,
         });
       })

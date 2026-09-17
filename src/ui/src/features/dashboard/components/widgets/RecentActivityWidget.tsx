@@ -16,6 +16,7 @@ import {
   formatSmartDateTime,
 } from "@/shared/utils/dateFormatting";
 import type { Task } from "@/features/projects/types/project";
+import { taskPath } from "@/features/projects/utils/taskPath";
 import type { CalendarEvent } from "@/features/calendar/types";
 
 interface ActivityItem {
@@ -236,7 +237,7 @@ export function RecentActivityWidget() {
           title: task.title,
           type: UrnType.TASK,
           updatedAt: task.updatedAt,
-          href: `/projects/${task.projectId}?task=${task.id}`,
+          href: taskPath(task.projectId, task.id),
           meta: parts.join(" \u00b7 "),
           extra: [project?.name, task.dueDate ? `Due ${formatSmartDateTime(task.dueDate)}` : null]
             .filter(Boolean)

@@ -8,10 +8,12 @@ const PRESENCE_INTERVAL = 30_000;
 interface UseDashboardRefreshOptions {
   onRefreshActivity?: () => void;
   onRefreshPresence?: () => void;
+  /** Heavier reload that only the refresh button triggers, never the timers. */
+  onManualRefresh?: () => void;
 }
 
 export function useDashboardRefresh(options: UseDashboardRefreshOptions = {}) {
-  const { onRefreshActivity, onRefreshPresence } = options;
+  const { onRefreshActivity, onRefreshPresence, onManualRefresh } = options;
   const [lastRefreshed, setLastRefreshed] = useState<Date>(() => new Date());
   const [isRefreshing, setIsRefreshing] = useState(false);
   const activityTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -47,6 +49,7 @@ export function useDashboardRefresh(options: UseDashboardRefreshOptions = {}) {
 
   const manualRefresh = useCallback(() => {
     setIsRefreshing(true);
+    onManualRefresh?.();
     onRefreshActivity?.();
     onRefreshPresence?.();
     setLastRefreshed(new Date());
@@ -56,7 +59,7 @@ export function useDashboardRefresh(options: UseDashboardRefreshOptions = {}) {
     setTimeout(() => {
       setIsRefreshing(false);
     }, 500);
-  }, [onRefreshActivity, onRefreshPresence, startTimers]);
+  }, [onManualRefresh, onRefreshActivity, onRefreshPresence, startTimers]);
 
   useEffect(() => {
     const handleVisibilityChange = () => {
