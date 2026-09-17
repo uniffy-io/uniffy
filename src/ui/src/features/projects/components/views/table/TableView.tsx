@@ -1654,11 +1654,7 @@ function EditableFieldCell({
 
   // Person fields: avatar stack + "+" trigger, assignee picker appears below when editing
   if (isPersonField) {
-    const assigneeIds = (
-      Array.isArray(getTaskFieldValue(task, field.id))
-        ? getTaskFieldValue(task, field.id)
-        : task.assigneeIds
-    ) as string[];
+    const assigneeIds = toIdList(getTaskFieldValue(task, field.id));
     return (
       <div
         className="w-full h-full flex items-center justify-between cursor-pointer relative"
@@ -2193,11 +2189,11 @@ function FieldCell({ task, field }: FieldCellProps) {
     }
 
     case "person": {
-      const assigneeIds = Array.isArray(value) ? value : task.assigneeIds;
-      if (assigneeIds.length === 0) {
+      const personIds = toIdList(value);
+      if (personIds.length === 0) {
         return <span className="text-muted-foreground text-sm">-</span>;
       }
-      return <AvatarStack ids={assigneeIds} />;
+      return <AvatarStack ids={personIds} />;
     }
 
     case "date": {
