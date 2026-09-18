@@ -25,6 +25,8 @@ class SystemProjectFieldId(StrEnum):
     STATUS = "field_status"
     PRIORITY = "field_priority"
     ASSIGNEE = "field_assignee"
+    START_DATE = "field_start_date"
+    DUE_DATE = "field_due_date"
     TYPE = "field_type"
 
 

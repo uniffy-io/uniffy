@@ -22,6 +22,7 @@ class ContentAccessAction(StrEnum):
     REVOKED = "revoked"
     ACCESS_MODE_CHANGED = "access_mode_changed"
     CHILD_ADDED = "child_added"
+    VIEWS_CHANGED = "views_changed"
 
 
 def notification_channel(user_id: UUID) -> str:

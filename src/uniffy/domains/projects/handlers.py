@@ -6,7 +6,6 @@ from uuid import UUID
 from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
-from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -27,8 +26,6 @@ from uniffy_proto.projects.v1.projects_pb2 import (
     CreateSprintResponse,
     CreateTaskRequest,
     CreateTaskResponse,
-    CreateViewRequest,
-    CreateViewResponse,
     DeleteFieldRequest,
     DeleteFieldResponse,
     DeleteProjectRequest,
@@ -39,8 +36,6 @@ from uniffy_proto.projects.v1.projects_pb2 import (
     DeleteTaskResponse,
     DeleteTasksRequest,
     DeleteTasksResponse,
-    DeleteViewRequest,
-    DeleteViewResponse,
     GetProjectRequest,
     GetProjectResponse,
     GetTaskRequest,
@@ -69,8 +64,6 @@ from uniffy_proto.projects.v1.projects_pb2 import (
     UpdateSprintResponse,
     UpdateTaskRequest,
     UpdateTaskResponse,
-    UpdateViewRequest,
-    UpdateViewResponse,
 )
 from uniffy_proto.projects.v1.projects_pb2 import (
     TagFilterMode as ProtoTagFilterMode,
@@ -87,7 +80,6 @@ from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationE
 from uniffy.core.json_codec import JSONDecodeError, loads
 from uniffy.core.models.projects.field_definition import FieldDefinition, SystemProjectFieldId
 from uniffy.core.models.projects.project import Project
-from uniffy.core.models.projects.view_config import ViewConfig
 from uniffy.core.models.tags.tag import Tag
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import ContentType
@@ -100,8 +92,6 @@ from uniffy.domains.projects.converters import (
     project_to_proto,
     sprint_to_proto,
     task_to_proto,
-    view_to_proto,
-    view_type_from_proto,
 )
 from uniffy.domains.projects.operations import (
     ProjectOperations,
@@ -111,6 +101,7 @@ from uniffy.domains.projects.operations import (
     TaskReader,
     WatcherOperations,
 )
+from uniffy.domains.projects.rpc import map_domain_error, parse_uuid
 from uniffy.domains.projects.status_colors import assign_status_colors
 from uniffy.domains.projects.statuses import (
     ensure_removed_statuses_unused,
@@ -118,15 +109,6 @@ from uniffy.domains.projects.statuses import (
 )
 from uniffy.domains.tags.reader import TagReader
 from uniffy.infrastructure.database import open_session
-
-logger = logger.bind(component="projects.handlers")
-
-
-def _parse_uuid(value: str, field: str) -> UUID:
-    try:
-        return UUID(value)
-    except ValueError as exc:
-        raise ConnectError(Code.INVALID_ARGUMENT, f"Invalid {field}: {exc}") from exc
 
 
 def _parse_tag_ids(raw_ids) -> list[UUID]:
@@ -230,17 +212,6 @@ async def _resolve_project_effective_policy(
     )
 
 
-def _map_domain_error(operation: str, exc: Exception) -> ConnectError:
-    if isinstance(exc, NotFoundError):
-        return ConnectError(Code.NOT_FOUND, str(exc) or "Not found")
-    if isinstance(exc, ValidationError):
-        return ConnectError(Code.FAILED_PRECONDITION, str(exc))
-    if isinstance(exc, PermissionDeniedError):
-        return ConnectError(Code.PERMISSION_DENIED, str(exc) or "Access denied")
-    logger.exception(f"Error in {operation}: {exc}")
-    return ConnectError(Code.INTERNAL, "Internal server error")
-
-
 class ProjectsHandlers:
     async def create_project(
         self,
@@ -248,7 +219,7 @@ class ProjectsHandlers:
         ctx: RequestContext,
     ) -> CreateProjectResponse:
         user_id = current_user_id()
-        organization_id = _parse_uuid(request.organization_id, "organization_id")
+        organization_id = parse_uuid(request.organization_id, "organization_id")
 
         access_mode = access_mode_from_proto(request.access_mode) if request.access_mode else None
         baseline_role = (
@@ -275,7 +246,7 @@ class ProjectsHandlers:
                 )
                 user_role = await ops._resolve_role(user_id, organization_id, project)
                 fields = await queries.get_fields_for_project(session, project.id)
-                views = await queries.get_views_for_project(session, project.id)
+                views = await queries.get_views_for_project(session, project.id, user_id)
                 tags_by_id = await _hydrate_project_tags(session, organization_id, [project.id])
                 eff_mode, eff_baseline = await _resolve_project_effective_policy(
                     session,
@@ -296,7 +267,7 @@ class ProjectsHandlers:
         except ConnectError:
             raise
         except Exception as exc:
-            raise _map_domain_error("create_project", exc) from exc
+            raise map_domain_error("create_project", exc) from exc
 
     async def get_project(
         self,
@@ -304,8 +275,8 @@ class ProjectsHandlers:
         ctx: RequestContext,
     ) -> GetProjectResponse:
         user_id = current_user_id()
-        organization_id = _parse_uuid(request.organization_id, "organization_id")
-        project_id = _parse_uuid(request.project_id, "project_id")
+        organization_id = parse_uuid(request.organization_id, "organization_id")
+        project_id = parse_uuid(request.project_id, "project_id")
 
         try:
             async with open_session() as session:
@@ -314,7 +285,7 @@ class ProjectsHandlers:
                 user_role = await ops._resolve_role(user_id, organization_id, project)
 
                 fields = await queries.get_fields_for_project(session, project.id)
-                views = await queries.get_views_for_project(session, project.id)
+                views = await queries.get_views_for_project(session, project.id, user_id)
                 tags_by_id = await _hydrate_project_tags(session, organization_id, [project.id])
                 eff_mode, eff_baseline = await _resolve_project_effective_policy(
                     session,
@@ -344,7 +315,7 @@ class ProjectsHandlers:
         except ConnectError:
             raise
         except Exception as exc:
-            raise _map_domain_error("get_project", exc) from exc
+            raise map_domain_error("get_project", exc) from exc
 
     async def update_project(
         self,
@@ -352,8 +323,8 @@ class ProjectsHandlers:
         ctx: RequestContext,
     ) -> UpdateProjectResponse:
         user_id = current_user_id()
-        organization_id = _parse_uuid(request.organization_id, "organization_id")
-        project_id = _parse_uuid(request.project_id, "project_id")
+        organization_id = parse_uuid(request.organization_id, "organization_id")
+        project_id = parse_uuid(request.project_id, "project_id")
 
         updates: dict = {}
         if request.HasField("name"):
@@ -392,7 +363,7 @@ class ProjectsHandlers:
 
                 user_role = await ops._resolve_role(user_id, organization_id, project)
                 fields = await queries.get_fields_for_project(session, project.id)
-                views = await queries.get_views_for_project(session, project.id)
+                views = await queries.get_views_for_project(session, project.id, user_id)
                 tags_by_id = await _hydrate_project_tags(session, organization_id, [project.id])
                 eff_mode, eff_baseline = await _resolve_project_effective_policy(
                     session,
@@ -421,7 +392,7 @@ class ProjectsHandlers:
         except ConnectError:
             raise
         except Exception as exc:
-            raise _map_domain_error("update_project", exc) from exc
+            raise map_domain_error("update_project", exc) from exc
 
     async def delete_project(
         self,
@@ -429,8 +400,8 @@ class ProjectsHandlers:
         ctx: RequestContext,
     ) -> DeleteProjectResponse:
         user_id = current_user_id()
-        organization_id = _parse_uuid(request.organization_id, "organization_id")
-        project_id = _parse_uuid(request.project_id, "project_id")
+        organization_id = parse_uuid(request.organization_id, "organization_id")
+        project_id = parse_uuid(request.project_id, "project_id")
 
         try:
             async with open_session() as session:
@@ -440,7 +411,7 @@ class ProjectsHandlers:
         except ConnectError:
             raise
         except Exception as exc:
-            raise _map_domain_error("delete_project", exc) from exc
+            raise map_domain_error("delete_project", exc) from exc
 
     async def list_projects(
         self,
@@ -448,7 +419,7 @@ class ProjectsHandlers:
         ctx: RequestContext,
     ) -> ListProjectsResponse:
         user_id = current_user_id()
-        organization_id = _parse_uuid(request.organization_id, "organization_id")
+        organization_id = parse_uuid(request.organization_id, "organization_id")
 
         page = 1
         page_size = 50
@@ -477,7 +448,7 @@ class ProjectsHandlers:
 
                 project_ids = [p.id for p in projects]
                 fields_map = await queries.get_fields_for_projects(session, project_ids)
-                views_map = await queries.get_views_for_projects(session, project_ids)
+                views_map = await queries.get_views_for_projects(session, project_ids, user_id)
                 tags_by_id = await _hydrate_project_tags(session, organization_id, project_ids)
                 rollups = await _load_project_rollups(session, organization_id, project_ids)
 
@@ -535,7 +506,7 @@ class ProjectsHandlers:
         except ConnectError:
             raise
         except Exception as exc:
-            raise _map_domain_error("list_projects", exc) from exc
+            raise map_domain_error("list_projects", exc) from exc
 
     async def create_task(
         self,
@@ -543,8 +514,8 @@ class ProjectsHandlers:
         ctx: RequestContext,
     ) -> CreateTaskResponse:
         user_id = current_user_id()
-        organization_id = _parse_uuid(request.organization_id, "organization_id")
-        project_id = _parse_uuid(request.project_id, "project_id")
+        organization_id = parse_uuid(request.organization_id, "organization_id")
+        project_id = parse_uuid(request.project_id, "project_id")
 
         kwargs: dict = {
             "description": request.description if request.HasField("description") else "",
@@ -561,7 +532,7 @@ class ProjectsHandlers:
             kwargs["due_date"] = request.due_date
         if request.HasField("parent_id"):
             kwargs["parent_id"] = (
-                _parse_uuid(request.parent_id, "parent_id") if request.parent_id else None
+                parse_uuid(request.parent_id, "parent_id") if request.parent_id else None
             )
         if request.blocked_by_task_ids:
             kwargs["blocked_by_task_ids"] = list(request.blocked_by_task_ids)
@@ -571,7 +542,7 @@ class ProjectsHandlers:
             kwargs["recurrence_rule"] = request.recurrence_rule
         if request.HasField("sprint_id"):
             kwargs["sprint_id"] = (
-                _parse_uuid(request.sprint_id, "sprint_id") if request.sprint_id else None
+                parse_uuid(request.sprint_id, "sprint_id") if request.sprint_id else None
             )
         if request.HasField("estimated_minutes"):
             kwargs["estimated_minutes"] = request.estimated_minutes or None
@@ -632,7 +603,7 @@ class ProjectsHandlers:
         except ConnectError:
             raise
         except Exception as exc:
-            raise _map_domain_error("create_task", exc) from exc
+            raise map_domain_error("create_task", exc) from exc
 
     async def get_task(
         self,
@@ -640,8 +611,8 @@ class ProjectsHandlers:
         ctx: RequestContext,
     ) -> GetTaskResponse:
         user_id = current_user_id()
-        organization_id = _parse_uuid(request.organization_id, "organization_id")
-        task_id = _parse_uuid(request.task_id, "task_id")
+        organization_id = parse_uuid(request.organization_id, "organization_id")
+        task_id = parse_uuid(request.task_id, "task_id")
 
         try:
             async with open_session() as session:
@@ -661,7 +632,7 @@ class ProjectsHandlers:
         except ConnectError:
             raise
         except Exception as exc:
-            raise _map_domain_error("get_task", exc) from exc
+            raise map_domain_error("get_task", exc) from exc
 
     async def update_task(
         self,
@@ -669,8 +640,8 @@ class ProjectsHandlers:
         ctx: RequestContext,
     ) -> UpdateTaskResponse:
         user_id = current_user_id()
-        organization_id = _parse_uuid(request.organization_id, "organization_id")
-        task_id = _parse_uuid(request.task_id, "task_id")
+        organization_id = parse_uuid(request.organization_id, "organization_id")
+        task_id = parse_uuid(request.task_id, "task_id")
 
         updates: dict = {}
         if request.HasField("title"):
@@ -689,7 +660,7 @@ class ProjectsHandlers:
             updates["due_date"] = request.due_date or None
         if request.HasField("parent_id"):
             updates["parent_id"] = (
-                _parse_uuid(request.parent_id, "parent_id") if request.parent_id else None
+                parse_uuid(request.parent_id, "parent_id") if request.parent_id else None
             )
         if request.blocked_by_task_ids:
             updates["blocked_by_task_ids"] = list(request.blocked_by_task_ids)
@@ -703,7 +674,7 @@ class ProjectsHandlers:
             updates["task_type"] = request.task_type
         if request.HasField("sprint_id"):
             updates["sprint_id"] = (
-                _parse_uuid(request.sprint_id, "sprint_id") if request.sprint_id else None
+                parse_uuid(request.sprint_id, "sprint_id") if request.sprint_id else None
             )
         if request.HasField("estimated_minutes"):
             updates["estimated_minutes"] = request.estimated_minutes or None
@@ -774,7 +745,7 @@ class ProjectsHandlers:
         except ConnectError:
             raise
         except Exception as exc:
-            raise _map_domain_error("update_task", exc) from exc
+            raise map_domain_error("update_task", exc) from exc
 
     async def move_task(
         self,
@@ -782,8 +753,8 @@ class ProjectsHandlers:
         ctx: RequestContext,
     ) -> MoveTaskResponse:
         user_id = current_user_id()
-        organization_id = _parse_uuid(request.organization_id, "organization_id")
-        task_id = _parse_uuid(request.task_id, "task_id")
+        organization_id = parse_uuid(request.organization_id, "organization_id")
+        task_id = parse_uuid(request.task_id, "task_id")
 
         try:
             async with open_session() as session:
@@ -845,7 +816,7 @@ class ProjectsHandlers:
         except ConnectError:
             raise
         except Exception as exc:
-            raise _map_domain_error("move_task", exc) from exc
+            raise map_domain_error("move_task", exc) from exc
 
     async def bulk_update_tasks(
         self,
@@ -853,7 +824,7 @@ class ProjectsHandlers:
         ctx: RequestContext,
     ) -> BulkUpdateTasksResponse:
         user_id = current_user_id()
-        organization_id = _parse_uuid(request.organization_id, "organization_id")
+        organization_id = parse_uuid(request.organization_id, "organization_id")
 
         changes: dict = {}
         if request.HasField("status"):
@@ -864,7 +835,7 @@ class ProjectsHandlers:
             changes["assignee_ids"] = list(request.assignee_ids)
         if request.HasField("sprint_id"):
             changes["sprint_id"] = (
-                _parse_uuid(request.sprint_id, "sprint_id") if request.sprint_id else None
+                parse_uuid(request.sprint_id, "sprint_id") if request.sprint_id else None
             )
 
         try:
@@ -896,7 +867,7 @@ class ProjectsHandlers:
         except ConnectError:
             raise
         except Exception as exc:
-            raise _map_domain_error("bulk_update_tasks", exc) from exc
+            raise map_domain_error("bulk_update_tasks", exc) from exc
 
     async def delete_task(
         self,
@@ -904,8 +875,8 @@ class ProjectsHandlers:
         ctx: RequestContext,
     ) -> DeleteTaskResponse:
         user_id = current_user_id()
-        organization_id = _parse_uuid(request.organization_id, "organization_id")
-        task_id = _parse_uuid(request.task_id, "task_id")
+        organization_id = parse_uuid(request.organization_id, "organization_id")
+        task_id = parse_uuid(request.task_id, "task_id")
 
         try:
             async with open_session() as session:
@@ -919,7 +890,7 @@ class ProjectsHandlers:
         except ConnectError:
             raise
         except Exception as exc:
-            raise _map_domain_error("delete_task", exc) from exc
+            raise map_domain_error("delete_task", exc) from exc
 
     async def delete_tasks(
         self,
@@ -927,7 +898,7 @@ class ProjectsHandlers:
         ctx: RequestContext,
     ) -> DeleteTasksResponse:
         user_id = current_user_id()
-        organization_id = _parse_uuid(request.organization_id, "organization_id")
+        organization_id = parse_uuid(request.organization_id, "organization_id")
 
         try:
             async with open_session() as session:
@@ -950,7 +921,7 @@ class ProjectsHandlers:
         except ConnectError:
             raise
         except Exception as exc:
-            raise _map_domain_error("delete_tasks", exc) from exc
+            raise map_domain_error("delete_tasks", exc) from exc
 
     async def list_tasks(
         self,
@@ -958,8 +929,8 @@ class ProjectsHandlers:
         ctx: RequestContext,
     ) -> ListTasksResponse:
         user_id = current_user_id()
-        organization_id = _parse_uuid(request.organization_id, "organization_id")
-        project_id = _parse_uuid(request.project_id, "project_id")
+        organization_id = parse_uuid(request.organization_id, "organization_id")
+        project_id = parse_uuid(request.project_id, "project_id")
 
         page = 1
         page_size = 500
@@ -972,11 +943,11 @@ class ProjectsHandlers:
 
         parent_id: UUID | None = None
         if request.HasField("parent_id") and request.parent_id:
-            parent_id = _parse_uuid(request.parent_id, "parent_id")
+            parent_id = parse_uuid(request.parent_id, "parent_id")
 
         sprint_id_filter = None
         if request.HasField("sprint_id"):
-            sprint_id_filter = _parse_uuid(request.sprint_id, "sprint_id")
+            sprint_id_filter = parse_uuid(request.sprint_id, "sprint_id")
 
         backlog_only = request.backlog_only if request.HasField("backlog_only") else False
         tag_ids_filter = _parse_tag_ids(list(request.tag_ids))
@@ -994,7 +965,7 @@ class ProjectsHandlers:
 
         in_epic_id_filter: UUID | None = None
         if request.HasField("in_epic_id") and request.in_epic_id:
-            in_epic_id_filter = _parse_uuid(request.in_epic_id, "in_epic_id")
+            in_epic_id_filter = parse_uuid(request.in_epic_id, "in_epic_id")
 
         root_only = request.root_only if request.HasField("root_only") else False
         has_subtasks_filter: bool | None = (
@@ -1062,7 +1033,7 @@ class ProjectsHandlers:
         except ConnectError:
             raise
         except Exception as exc:
-            raise _map_domain_error("list_tasks", exc) from exc
+            raise map_domain_error("list_tasks", exc) from exc
 
     async def create_field(
         self,
@@ -1070,8 +1041,8 @@ class ProjectsHandlers:
         ctx: RequestContext,
     ) -> CreateFieldResponse:
         user_id = current_user_id()
-        organization_id = _parse_uuid(request.organization_id, "organization_id")
-        project_id = _parse_uuid(request.project_id, "project_id")
+        organization_id = parse_uuid(request.organization_id, "organization_id")
+        project_id = parse_uuid(request.project_id, "project_id")
 
         config: dict = {}
         if request.HasField("config_json"):
@@ -1105,7 +1076,7 @@ class ProjectsHandlers:
         except ConnectError:
             raise
         except Exception as exc:
-            raise _map_domain_error("create_field", exc) from exc
+            raise map_domain_error("create_field", exc) from exc
 
     async def update_field(
         self,
@@ -1113,8 +1084,8 @@ class ProjectsHandlers:
         ctx: RequestContext,
     ) -> UpdateFieldResponse:
         user_id = current_user_id()
-        organization_id = _parse_uuid(request.organization_id, "organization_id")
-        project_id = _parse_uuid(request.project_id, "project_id")
+        organization_id = parse_uuid(request.organization_id, "organization_id")
+        project_id = parse_uuid(request.project_id, "project_id")
 
         try:
             async with open_session() as session:
@@ -1160,7 +1131,7 @@ class ProjectsHandlers:
         except ConnectError:
             raise
         except Exception as exc:
-            raise _map_domain_error("update_field", exc) from exc
+            raise map_domain_error("update_field", exc) from exc
 
     async def delete_field(
         self,
@@ -1168,8 +1139,8 @@ class ProjectsHandlers:
         ctx: RequestContext,
     ) -> DeleteFieldResponse:
         user_id = current_user_id()
-        organization_id = _parse_uuid(request.organization_id, "organization_id")
-        project_id = _parse_uuid(request.project_id, "project_id")
+        organization_id = parse_uuid(request.organization_id, "organization_id")
+        project_id = parse_uuid(request.project_id, "project_id")
 
         try:
             async with open_session() as session:
@@ -1197,127 +1168,7 @@ class ProjectsHandlers:
         except ConnectError:
             raise
         except Exception as exc:
-            raise _map_domain_error("delete_field", exc) from exc
-
-    async def create_view(
-        self,
-        request: CreateViewRequest,
-        ctx: RequestContext,
-    ) -> CreateViewResponse:
-        user_id = current_user_id()
-        organization_id = _parse_uuid(request.organization_id, "organization_id")
-        project_id = _parse_uuid(request.project_id, "project_id")
-
-        config: dict = {}
-        if request.HasField("config_json"):
-            try:
-                config = loads(request.config_json)
-            except JSONDecodeError as exc:
-                raise ConnectError(Code.INVALID_ARGUMENT, "Invalid config_json") from exc
-
-        try:
-            async with open_session() as session:
-                project_ops = ProjectOperations(session, self.storage, self.search_indexer)
-                project = await project_ops.get_by_id(user_id, organization_id, project_id)
-                await project_ops._require_manage(user_id, organization_id, project)
-
-                view_id = f"view_{secrets.token_hex(8)}"
-                view = ViewConfig(
-                    id=view_id,
-                    project_id=project_id,
-                    name=request.name,
-                    type=view_type_from_proto(request.type),
-                    is_default=request.is_default if request.HasField("is_default") else False,
-                    config=config if config else None,
-                )
-                session.add(view)
-                await session.commit()
-                await session.refresh(view)
-
-                return CreateViewResponse(view=view_to_proto(view))
-        except ConnectError:
-            raise
-        except Exception as exc:
-            raise _map_domain_error("create_view", exc) from exc
-
-    async def update_view(
-        self,
-        request: UpdateViewRequest,
-        ctx: RequestContext,
-    ) -> UpdateViewResponse:
-        user_id = current_user_id()
-        organization_id = _parse_uuid(request.organization_id, "organization_id")
-        project_id = _parse_uuid(request.project_id, "project_id")
-
-        try:
-            async with open_session() as session:
-                project_ops = ProjectOperations(session, self.storage, self.search_indexer)
-                project = await project_ops.get_by_id(user_id, organization_id, project_id)
-                await project_ops._require_manage(user_id, organization_id, project)
-
-                result = await session.execute(
-                    select(ViewConfig).where(
-                        ViewConfig.id == request.view_id,
-                        ViewConfig.project_id == project_id,
-                    )
-                )
-                view = result.scalar_one_or_none()
-                if not view:
-                    raise NotFoundError("View", request.view_id)
-
-                if request.HasField("name"):
-                    view.name = request.name
-                if request.HasField("is_default"):
-                    view.is_default = request.is_default
-                if request.HasField("config_json"):
-                    try:
-                        view.config = loads(request.config_json)
-                    except JSONDecodeError as exc:
-                        raise ConnectError(Code.INVALID_ARGUMENT, "Invalid config_json") from exc
-
-                view.updated_at = datetime.now(UTC)
-                await session.commit()
-                await session.refresh(view)
-
-                return UpdateViewResponse(view=view_to_proto(view))
-        except ConnectError:
-            raise
-        except Exception as exc:
-            raise _map_domain_error("update_view", exc) from exc
-
-    async def delete_view(
-        self,
-        request: DeleteViewRequest,
-        ctx: RequestContext,
-    ) -> DeleteViewResponse:
-        user_id = current_user_id()
-        organization_id = _parse_uuid(request.organization_id, "organization_id")
-        project_id = _parse_uuid(request.project_id, "project_id")
-
-        try:
-            async with open_session() as session:
-                project_ops = ProjectOperations(session, self.storage, self.search_indexer)
-                project = await project_ops.get_by_id(user_id, organization_id, project_id)
-                await project_ops._require_manage(user_id, organization_id, project)
-
-                result = await session.execute(
-                    select(ViewConfig).where(
-                        ViewConfig.id == request.view_id,
-                        ViewConfig.project_id == project_id,
-                    )
-                )
-                view = result.scalar_one_or_none()
-                if not view:
-                    raise NotFoundError("View", request.view_id)
-
-                await session.delete(view)
-                await session.commit()
-
-                return DeleteViewResponse(success=True)
-        except ConnectError:
-            raise
-        except Exception as exc:
-            raise _map_domain_error("delete_view", exc) from exc
+            raise map_domain_error("delete_field", exc) from exc
 
     async def list_activities(
         self,
@@ -1325,8 +1176,8 @@ class ProjectsHandlers:
         ctx: RequestContext,
     ) -> ListActivitiesResponse:
         user_id = current_user_id()
-        organization_id = _parse_uuid(request.organization_id, "organization_id")
-        task_id = _parse_uuid(request.task_id, "task_id")
+        organization_id = parse_uuid(request.organization_id, "organization_id")
+        task_id = parse_uuid(request.task_id, "task_id")
 
         page = 1
         page_size = 50
@@ -1363,7 +1214,7 @@ class ProjectsHandlers:
         except ConnectError:
             raise
         except Exception as exc:
-            raise _map_domain_error("list_activities", exc) from exc
+            raise map_domain_error("list_activities", exc) from exc
 
 
 class SprintHandlers:
@@ -1373,8 +1224,8 @@ class SprintHandlers:
         ctx: RequestContext,
     ) -> CreateSprintResponse:
         user_id = current_user_id()
-        organization_id = _parse_uuid(request.organization_id, "organization_id")
-        project_id = _parse_uuid(request.project_id, "project_id")
+        organization_id = parse_uuid(request.organization_id, "organization_id")
+        project_id = parse_uuid(request.project_id, "project_id")
 
         try:
             async with open_session() as session:
@@ -1392,7 +1243,7 @@ class SprintHandlers:
         except ConnectError:
             raise
         except Exception as exc:
-            raise _map_domain_error("create_sprint", exc) from exc
+            raise map_domain_error("create_sprint", exc) from exc
 
     async def update_sprint(
         self,
@@ -1400,8 +1251,8 @@ class SprintHandlers:
         ctx: RequestContext,
     ) -> UpdateSprintResponse:
         user_id = current_user_id()
-        organization_id = _parse_uuid(request.organization_id, "organization_id")
-        sprint_id = _parse_uuid(request.sprint_id, "sprint_id")
+        organization_id = parse_uuid(request.organization_id, "organization_id")
+        sprint_id = parse_uuid(request.sprint_id, "sprint_id")
 
         try:
             async with open_session() as session:
@@ -1419,7 +1270,7 @@ class SprintHandlers:
         except ConnectError:
             raise
         except Exception as exc:
-            raise _map_domain_error("update_sprint", exc) from exc
+            raise map_domain_error("update_sprint", exc) from exc
 
     async def start_sprint(
         self,
@@ -1427,8 +1278,8 @@ class SprintHandlers:
         ctx: RequestContext,
     ) -> StartSprintResponse:
         user_id = current_user_id()
-        organization_id = _parse_uuid(request.organization_id, "organization_id")
-        sprint_id = _parse_uuid(request.sprint_id, "sprint_id")
+        organization_id = parse_uuid(request.organization_id, "organization_id")
+        sprint_id = parse_uuid(request.sprint_id, "sprint_id")
 
         try:
             async with open_session() as session:
@@ -1444,7 +1295,7 @@ class SprintHandlers:
         except ConnectError:
             raise
         except Exception as exc:
-            raise _map_domain_error("start_sprint", exc) from exc
+            raise map_domain_error("start_sprint", exc) from exc
 
     async def complete_sprint(
         self,
@@ -1452,8 +1303,8 @@ class SprintHandlers:
         ctx: RequestContext,
     ) -> CompleteSprintResponse:
         user_id = current_user_id()
-        organization_id = _parse_uuid(request.organization_id, "organization_id")
-        sprint_id = _parse_uuid(request.sprint_id, "sprint_id")
+        organization_id = parse_uuid(request.organization_id, "organization_id")
+        sprint_id = parse_uuid(request.sprint_id, "sprint_id")
 
         try:
             async with open_session() as session:
@@ -1467,7 +1318,7 @@ class SprintHandlers:
         except ConnectError:
             raise
         except Exception as exc:
-            raise _map_domain_error("complete_sprint", exc) from exc
+            raise map_domain_error("complete_sprint", exc) from exc
 
     async def delete_sprint(
         self,
@@ -1475,8 +1326,8 @@ class SprintHandlers:
         ctx: RequestContext,
     ) -> DeleteSprintResponse:
         user_id = current_user_id()
-        organization_id = _parse_uuid(request.organization_id, "organization_id")
-        sprint_id = _parse_uuid(request.sprint_id, "sprint_id")
+        organization_id = parse_uuid(request.organization_id, "organization_id")
+        sprint_id = parse_uuid(request.sprint_id, "sprint_id")
 
         try:
             async with open_session() as session:
@@ -1490,7 +1341,7 @@ class SprintHandlers:
         except ConnectError:
             raise
         except Exception as exc:
-            raise _map_domain_error("delete_sprint", exc) from exc
+            raise map_domain_error("delete_sprint", exc) from exc
 
     async def list_sprints(
         self,
@@ -1498,8 +1349,8 @@ class SprintHandlers:
         ctx: RequestContext,
     ) -> ListSprintsResponse:
         user_id = current_user_id()
-        organization_id = _parse_uuid(request.organization_id, "organization_id")
-        project_id = _parse_uuid(request.project_id, "project_id")
+        organization_id = parse_uuid(request.organization_id, "organization_id")
+        project_id = parse_uuid(request.project_id, "project_id")
 
         try:
             async with open_session() as session:
@@ -1526,7 +1377,7 @@ class SprintHandlers:
         except ConnectError:
             raise
         except Exception as exc:
-            raise _map_domain_error("list_sprints", exc) from exc
+            raise map_domain_error("list_sprints", exc) from exc
 
 
 class WatcherHandlers:
@@ -1536,8 +1387,8 @@ class WatcherHandlers:
         ctx: RequestContext,
     ) -> ToggleTaskWatcherResponse:
         user_id = current_user_id()
-        organization_id = _parse_uuid(request.organization_id, "organization_id")
-        task_id = _parse_uuid(request.task_id, "task_id")
+        organization_id = parse_uuid(request.organization_id, "organization_id")
+        task_id = parse_uuid(request.task_id, "task_id")
 
         try:
             async with open_session() as session:
@@ -1551,7 +1402,7 @@ class WatcherHandlers:
         except ConnectError:
             raise
         except Exception as exc:
-            raise _map_domain_error("toggle_task_watcher", exc) from exc
+            raise map_domain_error("toggle_task_watcher", exc) from exc
 
     async def list_task_watchers(
         self,
@@ -1559,8 +1410,8 @@ class WatcherHandlers:
         ctx: RequestContext,
     ) -> ListTaskWatchersResponse:
         user_id = current_user_id()
-        organization_id = _parse_uuid(request.organization_id, "organization_id")
-        task_id = _parse_uuid(request.task_id, "task_id")
+        organization_id = parse_uuid(request.organization_id, "organization_id")
+        task_id = parse_uuid(request.task_id, "task_id")
 
         try:
             async with open_session() as session:
@@ -1578,7 +1429,7 @@ class WatcherHandlers:
         except ConnectError:
             raise
         except Exception as exc:
-            raise _map_domain_error("list_task_watchers", exc) from exc
+            raise map_domain_error("list_task_watchers", exc) from exc
 
     async def bulk_check_task_watchers(
         self,
@@ -1586,7 +1437,7 @@ class WatcherHandlers:
         ctx: RequestContext,
     ) -> BulkCheckTaskWatchersResponse:
         user_id = current_user_id()
-        _parse_uuid(request.organization_id, "organization_id")
+        parse_uuid(request.organization_id, "organization_id")
 
         try:
             async with open_session() as session:
@@ -1596,4 +1447,4 @@ class WatcherHandlers:
         except ConnectError:
             raise
         except Exception as exc:
-            raise _map_domain_error("bulk_check_task_watchers", exc) from exc
+            raise map_domain_error("bulk_check_task_watchers", exc) from exc
