@@ -14,4 +14,6 @@ Playback copies fit within 1920 by 1080 pixels and retain source frame rate. Sma
 
 Downloads preserve your original upload. Screen recordings are the exception: Uniffy converts its WebM recording into the promised MP4. Download becomes available when that conversion finishes. Devices that understand the recording source can play it earlier.
 
-If conversion fails or your device cannot play either version, download the file to watch with another player. Your access to playback follows the same sharing rules as the file.
+Your deployment can limit the size and length of videos it converts. An uploaded video outside those limits can still play if your browser supports the original. You can download the original upload to watch with another player.
+
+Playback copies do not grant extra access. An attached video follows access to its note, task, or conversation. If that access is removed, a separate file share or ownership must still allow you to read it. Knowing the video link does not grant permission.

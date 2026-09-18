@@ -6,7 +6,7 @@ sidebar:
   order: 5
 ---
 
-Two things in a Uniffy deployment are irreplaceable: the Postgres database and the `APP_MASTER_KEY`. Everything on this page exists to make losing either impossible, and to make the restore a procedure instead of an improvisation.
+Back up three things to restore Uniffy: PostgreSQL, object storage, and `APP_MASTER_KEY`. The database holds content and permissions. Object storage holds files. The master key makes stored secrets readable after a restore.
 
 ## What needs backing up, what does not
 
@@ -14,11 +14,14 @@ Two things in a Uniffy deployment are irreplaceable: the Postgres database and t
 |---|---|---|
 | PostgreSQL | Every note, message, task, permission, and setting | Back up continuously. This page. |
 | `APP_MASTER_KEY` | The key wrapping every tenant secret | One copy, offline, once. Below. |
-| Object storage | File bytes | Cluster path: your provider's durability. VM path: covered by the Postgres plus volume story below. |
+| Object storage | Originals, retained versions, thumbnails, and completed video copies | Protect the bucket with a backup or versioning and recovery policy. On a VM, back up the file store volume too. |
+| Media scratch | Temporary conversion inputs and outputs | No backup. Disk backed `emptyDir` can be discarded when a pod is removed. |
 | Meilisearch | Search index | Nothing. Rebuilt from Postgres by a background job. |
 | Valkey | Queues and caches | Nothing. Queues drain, caches refill. |
 
-A backup of Postgres without the master key restores an app where every stored credential, provider key, and identity secret is unreadable. They are one backup in two parts.
+A database backup without the master key leaves stored credentials unreadable. Without object storage, file metadata can return while downloads and videos stay missing. Storage durability protects against hardware failure; it does not replace a recovery plan for deleted or overwritten objects.
+
+Media scratch is disposable. Pending video work can restart from object storage after recovery reclaims an expired processing claim. Keep stored originals and completed copies in your file backup policy.
 
 ## Continuous Postgres backups to S3
 
@@ -50,7 +53,9 @@ This applies to bundled Postgres only. If you brought an external database, its 
 
 The same values work in `/etc/uniffy/values.yaml`, then `sudo uniffy-k3s upgrade` applies them. One rule matters more here than anywhere: the bucket must be off the machine. Any S3 provider, another building, another company, anywhere that is not this VM.
 
-The local dumps you already have, the two kept under `/var/backups/uniffy/` by the upgrade command and `uniffy-k3s backup`, live on the same disk as the database. They are for walking back a bad upgrade, not for surviving a dead machine. The S3 archive is what survives the machine. With it enabled, the VM path needs no other backup: Postgres history in the bucket, files in the bundled object store covered by your VM volume snapshots if you take them, and a database restore brings back everything else.
+Local dumps under `/var/backups/uniffy/` live on the same disk as the database. They help recover from a bad upgrade, but cannot survive a dead machine. Keep the Postgres archive off the VM.
+
+Back up the bundled object store separately through volume snapshots or a file bucket backup. Keep those backups off the VM too. PostgreSQL archiving does not include uploaded files or completed playback copies. A media worker's temporary scratch volume needs no snapshot.
 
 ## The master key
 
@@ -85,4 +90,6 @@ The pre upgrade dump is the faster path when the database is minutes old and the
 
 ## Believe nothing you have not restored
 
-`kubectl -n uniffy get backups` shows the base backups CloudNativePG has taken and whether the last one completed. Look at it after enabling, and put a quarterly restore drill on the calendar: recover into a scratch namespace or a scratch VM, log in, open a note. An hour a quarter buys you the only proof that matters, because a backup that has never been restored is a hope with a retention policy.
+`kubectl -n uniffy get backups` shows the base backups CloudNativePG has taken and whether the last one completed. Check it after turning on backups, then schedule a quarterly restore drill in a separate namespace or VM.
+
+Log in, open a note, download a stored file, and play a video from the restored object store. Check an encrypted credential too. A backup you have never restored is an assumption, not proof that your data can return.

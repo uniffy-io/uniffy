@@ -12,6 +12,14 @@ Every Uniffy release is signed, and this page is the check you run before you tr
 
 A release on GitHub carries `images.txt`, the pinset. One line per image, `name@sha256:...`, both architectures behind one digest. Next to it sits `images.txt.sigstore.json`, the signature of that file, and one SBOM per image and architecture in SPDX JSON.
 
+Each release publishes three application images under `ghcr.io/uniffy-io`:
+
+| Image | Processes | Platforms |
+|---|---|---|
+| `uniffy` | Backend, core worker, egress worker | `linux/amd64`, `linux/arm64` |
+| `uniffy-media-worker` | Media worker, with FFmpeg and ffprobe | `linux/amd64`, `linux/arm64` |
+| `uniffy-frontend` | Browser app | `linux/amd64`, `linux/arm64` |
+
 Each image digest in the pinset is signed, and carries its SBOMs as attestations. The signatures live in the registry next to the image and in the public Sigstore transparency log. GitHub records a build provenance attestation for the same digests.
 
 All of it is produced by one thing: the release workflow in the `uniffy-io/uniffy` repository, running for a version tag, after the full test suite passed for that exact commit. That workflow is the identity you verify against.
@@ -54,7 +62,7 @@ cosign verify ghcr.io/uniffy-io/uniffy@sha256:... \
   --certificate-identity-regexp "$COSIGN_IDENTITY"
 ```
 
-Same for `ghcr.io/uniffy-io/uniffy-frontend`. Verify the digest from the pinset, not a tag. A tag can move; a digest cannot, and the signature is over the digest.
+Repeat this check for `ghcr.io/uniffy-io/uniffy-media-worker` and `ghcr.io/uniffy-io/uniffy-frontend`. Take all three digests from the same release's verified pinset. A tag can move; a digest cannot, and the signature is over the digest.
 
 ## Read the SBOM
 

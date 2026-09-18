@@ -20,7 +20,7 @@ This page documents every variable.
 | `LOG_LEVEL` | `info` | One of `debug`, `info`, `warning`, `error`, `critical`. |
 | `LOG_FORMAT` | `console` | Use `console` for human readable output or `json` for structured logs. |
 | `ENVIRONMENT` | `development` | One of `development`, `staging`, `production`. Controls deployment sensitive safety defaults. |
-| `CORS_ORIGINS` | `*` | Comma-separated list of allowed origins, or `*`. Use `*` only in development. |
+| `CORS_ORIGINS` | `*` | Comma separated list of allowed origins, or `*`. Use `*` only in development. |
 
 ## PostgreSQL
 
@@ -31,7 +31,7 @@ The primary store. Uniffy targets PostgreSQL 18 and requires async (`asyncpg`).
 | `POSTGRES_HOST` | `localhost` | Hostname or IP. |
 | `POSTGRES_PORT` | `5432` | TCP port. |
 | `POSTGRES_USER` | `uniffy` | Database role. |
-| `POSTGRES_PASSWORD` | `uniffy` | Role password. Override for any non-dev deploy. |
+| `POSTGRES_PASSWORD` | `uniffy` | Role password. Override outside development. |
 | `POSTGRES_DB` | `uniffy` | Database name. |
 | `SQL_ECHO` | `false` | Echo every SQL statement to logs. Debug only. |
 | `DB_POOL_SIZE` | `30` | Base connection pool per process. |
@@ -39,9 +39,9 @@ The primary store. Uniffy targets PostgreSQL 18 and requires async (`asyncpg`).
 | `DB_POOL_RECYCLE` | `1800` | Seconds before a pooled connection is replaced. Prevents stale connections. |
 | `DB_POOL_TIMEOUT` | `10` | Seconds to wait for a free connection before failing the request. |
 | `DB_STATEMENT_TIMEOUT_MS` | `30000` | Milliseconds. Applied per SQL statement via `SET statement_timeout`. |
-| `DB_COMMAND_TIMEOUT` | `30` | Seconds. `asyncpg` command-level timeout. |
+| `DB_COMMAND_TIMEOUT` | `30` | Seconds. `asyncpg` timeout per command. |
 
-Total max connections per backend pod is `WORKERS * (DB_POOL_SIZE + DB_MAX_OVERFLOW)`. Size your Postgres `max_connections` accordingly across backend, worker-core, and worker-egress.
+Total max connections per backend pod is `WORKERS * (DB_POOL_SIZE + DB_MAX_OVERFLOW)`. Include backend, core, egress, and media pods when sizing Postgres `max_connections`.
 
 ## Authentication and encryption
 
@@ -49,25 +49,25 @@ Total max connections per backend pod is `WORKERS * (DB_POOL_SIZE + DB_MAX_OVERF
 |---|---|---|
 | `JWT_SECRET_KEY` | placeholder | HMAC key for signing access tokens. Generate with `openssl rand -hex 32`. Required. |
 | `JWT_ACCESS_TOKEN_EXPIRE_MINUTES` | `15` | Access token lifetime. Refresh is handled separately by the auth flow. |
-| `APP_MASTER_KEY` | empty | Master Key Encryption Key (KEK). Wraps every per-org Data Encryption Key in `org_encryption_keys` and app-wide secrets such as the VAPID private key. Generate with `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`. Must be set before first boot. Losing this key permanently locks every encrypted column. |
+| `APP_MASTER_KEY` | empty | Master Key Encryption Key (KEK). Wraps every organization Data Encryption Key in `org_encryption_keys` and application secrets such as the VAPID private key. Generate with `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`. Must be set before first boot. Losing this key permanently locks every encrypted column. |
 
-**`APP_MASTER_KEY` is the single hardest dependency in the system. Treat it like a root password: store it in a secrets manager, back it up out of band, and never log it.**
+Store `APP_MASTER_KEY` in a secrets manager and back it up outside the deployment. Never log it. A database backup without this key cannot restore encrypted secrets.
 
 ## Initial seed and registration
 
-These are read once during first-boot seeding and on every start to gate the registration RPC.
+These settings control the first database seed and whether registration is open.
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `ALLOW_PUBLIC_REGISTRATION` | `false` | When `false`, accounts can only be created via org-invite. The `Register` RPC returns `INVALID_ARGUMENT` and the `/auth/register` page hides its form. Set `true` for dev or open self-hosted deployments. |
+| `ALLOW_PUBLIC_REGISTRATION` | `false` | When `false`, accounts can only be created by invitation. The `Register` RPC returns `INVALID_ARGUMENT` and the `/auth/register` page hides its form. Set `true` for development or open self hosted deployments. |
 | `INITIAL_ADMIN_EMAIL` | `admin@uniffy.io` | Email of the seeded admin user; also used as the VAPID contact email for web push. |
 | `INITIAL_ADMIN_PASSWORD` | `admin` | Seed password. Change immediately after first login. Development only. |
 | `DEFAULT_ORG_NAME` | `Default` | Name of the org created at seed. |
-| `DEFAULT_ORG_SLUG` | derived from name | Slug used in URLs. Leave empty to auto-generate. |
+| `DEFAULT_ORG_SLUG` | derived from name | Slug used in URLs. Leave empty to generate it from the name. |
 
 ## Valkey
 
-Valkey (Redis-compatible) backs the ARQ job queue, pub/sub channels, and the operational cache.
+Valkey backs the ARQ job queue, pub/sub channels, and the operational cache.
 
 | Variable | Default | Purpose |
 |---|---|---|
@@ -76,11 +76,11 @@ Valkey (Redis-compatible) backs the ARQ job queue, pub/sub channels, and the ope
 | `VALKEY_PASSWORD` | `uniffy-valkey-dev` | Auth password. |
 | `VALKEY_DATABASE` | `0` | Logical DB used by app code. |
 
-Per-tier connection profiles (queue, pub/sub, ops cache) live in code and are not env-tunable. The ops client also wraps cache calls in a 150 ms deadline guard so a slow Valkey degrades into a cache miss instead of stalling the user request.
+Queue, pub/sub, and cache connection profiles are set in code. Cache calls have a 150 ms deadline, so a slow Valkey becomes a cache miss instead of stalling the request.
 
 ## Meilisearch
 
-Backs universal `@` mention lookup and full-text search.
+Backs universal `@` mention lookup and full text search.
 
 | Variable | Default | Purpose |
 |---|---|---|
@@ -92,9 +92,9 @@ Backs universal `@` mention lookup and full-text search.
 
 Uniffy runs three ARQ worker fleets. Each has its own queue and concurrency settings.
 
-- **Core** handles notifications, reminders, storage cleanup and recovery schedules.
-- **Egress** handles agent runtime, conversation compaction, cron and external API integrations.
-- **Media** handles video conversion, thumbnails, metadata and document extraction. Its separate `uniffy-media-worker` image contains FFmpeg and ffprobe. PDF and Office parsers also remain in the backend image for agent document reads.
+The **core worker** handles notifications, reminders, storage cleanup and recovery schedules. The **egress worker** handles agent runtime, conversation compaction, cron and external API integrations.
+
+The **media worker** handles video conversion, thumbnails, metadata and document extraction. Its separate `uniffy-media-worker` image contains FFmpeg and ffprobe. PDF and Office parsers also remain in the backend image for agent document reads.
 
 | Variable | Default | Purpose |
 |---|---|---|
@@ -105,7 +105,7 @@ Uniffy runs three ARQ worker fleets. Each has its own queue and concurrency sett
 | `MEDIA_WORKER_MAX_JOBS` | `2` | Concurrent jobs per media process. |
 | `MEDIA_WORKER_POLL_DELAY` | `0.5` | Seconds between media queue polls. |
 | `MEDIA_WORKER_JOB_TIMEOUT` | `300` | Default media job timeout in seconds. Video conversions have a longer duration based limit. |
-| `WORKER_JOB_TIMEOUT` | `300` | Per-job timeout for the core fleet, in seconds. |
+| `WORKER_JOB_TIMEOUT` | `300` | Timeout per core job, in seconds. |
 | `EGRESS_WORKER_JOB_TIMEOUT` | `900` | Per-job timeout for the egress fleet. Agent runtime jobs may legitimately run up to `MAX_TOOL_ITERATIONS * 60s` when slow tools fan out. |
 | `WORKER_KEEP_RESULT` | `3600` | Seconds to retain completed job results in Valkey. |
 | `WORKER_MAX_TRIES` | `3` | Retry attempts before a job is marked failed. |
@@ -124,11 +124,11 @@ python -m uniffy --worker-media
 
 Set CPU and memory requests and limits in the Kubernetes Deployment. Size media resources for accepted inputs and concurrency, and provide disk backed scratch space. Development limits live in the Compose service definition.
 
-When upgrading from a release that runs media jobs on core, pause new uploads and let existing core media jobs finish before replacing workers. Start all fleets at the same release version. Pending durable file work is also recovered from PostgreSQL onto the media queue.
+When upgrading from a release that runs media jobs on core, pause new uploads and recordings, then let existing core media jobs finish before replacing workers. Start all fleets at the same release version. Pending durable file work is also recovered from PostgreSQL onto the media queue. See [Upgrades](/docs/deployment/upgrades/#moving-media-work-off-core).
 
-## Object storage (S3-compatible)
+## Object storage (S3 compatible)
 
-Stores user file uploads, attachments, and generated thumbnails. Any S3-compatible service works: AWS S3, Cloudflare R2, MinIO, RustFS, Backblaze B2, etc.
+Stores original uploads, attachments, file versions, thumbnails, and completed video playback copies. Any S3 compatible service works: AWS S3, Cloudflare R2, MinIO, RustFS, Backblaze B2, etc.
 
 | Variable | Default | Purpose |
 |---|---|---|
@@ -137,7 +137,7 @@ Stores user file uploads, attachments, and generated thumbnails. Any S3-compatib
 | `S3_SECRET_KEY` | `rustfsadmin` | Secret key (password). |
 | `S3_BUCKET_NAME` | `uniffy-files` | Bucket for stored objects. Must exist before first write. |
 | `S3_REGION` | `us-east-1` | Region. Required even on providers that ignore it. |
-| `S3_USE_SSL` | `false` | Enable HTTPS to the endpoint. `true` for any non-local provider. |
+| `S3_USE_SSL` | `false` | Use HTTPS to the endpoint. Set `true` for any remote provider. |
 | `S3_CONNECT_TIMEOUT` | `10` | Seconds. |
 | `S3_READ_TIMEOUT` | `30` | Seconds. |
 | `S3_MAX_RETRIES` | `3` | Adaptive backoff. |
@@ -146,11 +146,13 @@ Stores user file uploads, attachments, and generated thumbnails. Any S3-compatib
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `CHAT_TYPING_MEMBER_LIMIT` | `50` | Channels larger than this skip the typing-indicator fan-out to protect Valkey pub/sub from large membership broadcasts. |
+| `CHAT_TYPING_MEMBER_LIMIT` | `50` | Channels larger than this skip typing broadcasts to bound Valkey pub/sub work. |
 
 ## Video processing
 
-Core workers prepare completed MP4 copies when original formats need conversion. Originals remain in storage. Recording conversions and playback copies share a global encode limit. Use the same settings across backend and worker replicas.
+Media workers prepare completed MP4 copies for uploaded videos. Browsers try the original first and use the copy if original playback fails. Uploaded originals remain in storage; screen recordings replace their WebM source with the promised MP4 after conversion succeeds.
+
+Recording conversions and playback copies share a global encode limit. Use the same settings across backend and worker replicas. LiveKit calls do not use these workers or settings.
 
 | Variable | Default | Purpose |
 |---|---|---|
@@ -158,16 +160,70 @@ Core workers prepare completed MP4 copies when original formats need conversion.
 | `TRANSCODE_MAX_CONCURRENT` | `1` | Global encode slots across media workers, capped at `MEDIA_WORKER_MAX_JOBS`. Raise alongside CPU, memory and scratch capacity. |
 | `TRANSCODE_MAX_SOURCE_BYTES` | `4294967296` | Maximum downloaded source size, 4 GiB. Also bounds video thumbnail source downloads. |
 | `TRANSCODE_MAX_OUTPUT_BYTES` | `4294967296` | Maximum encoded file size, 4 GiB. Incomplete output is rejected. |
-| `TRANSCODE_MAX_DURATION_SECONDS` | `7200` | Maximum conversion duration, two hours. |
+| `TRANSCODE_MAX_DURATION_SECONDS` | `7200` | Maximum video length accepted for conversion, two hours. |
 | `TRANSCODE_FFMPEG_TIMEOUT` | `1800` | Minimum encoder deadline. Longer videos receive four times their duration. Worker deadline includes ten extra minutes for storage work. |
 | `TRANSCODE_THREADS` | `2` | Decoder and encoder thread budget. Filter processing uses one thread. |
 | `MEDIA_SCRATCH_DIRECTORY` | system temporary directory | Existing writable directory for source and output files. Mount it in every media worker. Compose uses `/var/lib/uniffy/media` on a disk volume. |
 
-Compose gives media worker a disk backed scratch volume. A conversion can hold source plus output, up to 8 GiB with default byte limits. Concurrent thumbnail downloads need extra space. On Kubernetes, mount writable disk space and set `MEDIA_SCRATCH_DIRECTORY`; memory backed `/tmp` counts against worker RAM. Set byte limits below available capacity. A storage error leaves the original available and retries transient conversion failures up to three attempts.
+These byte limits bound processing, not the general upload quota. Files outside conversion limits may still play in a compatible browser or be downloaded as originals.
 
-Recovery runs every five minutes. It retries pending work and reclaims processing claims after their maximum lifetime. Expired cleanup records remove abandoned objects after live references are checked. Configure your object store to abort incomplete multipart uploads after one day to cover a process dying before its upload identifier reaches PostgreSQL.
+A conversion can hold source plus output, up to 8 GiB with default byte limits. Concurrent thumbnail downloads need extra space. Compose gives media workers a disk backed scratch volume. Kubernetes settings are below.
 
-Disabling conversion does not cancel an encoder already running. Apply environment changes by recreating backend and core worker containers. Failed copies are terminal for that file version; replacing or restoring the file starts a new attempt budget.
+An occupied encode slot delays work without consuming a conversion attempt. Transient conversion failures retry up to three attempts. Recovery runs every five minutes to find pending work and reclaim processing claims after their maximum lifetime. Expired cleanup records remove abandoned objects after live references are checked.
+
+Configure your object store to abort incomplete multipart uploads after one day. This covers a process dying before its upload identifier reaches PostgreSQL.
+
+Disabling conversion does not cancel an encoder already running. Apply environment changes by restarting backend and all worker Deployments with matching settings. Failed copies are terminal for that file version; replacing or restoring the file starts a new attempt budget.
+
+### Media scratch on Kubernetes
+
+Use a disk backed `emptyDir` for temporary files. Originals and completed copies live in object storage, so the media worker needs no PVC. Set both `MEDIA_SCRATCH_DIRECTORY` and `TMPDIR` to the mount so conversion files and other temporary work use the same disk. A memory backed volume counts against pod RAM.
+
+This pod template fragment starts with one media replica, two job slots, and one global encode slot. Apply it to the media Deployment, with the same configuration and Secret references as the backend. Replace `RELEASE_VERSION` with the backend's release version, or use the media image digest from that release's verified `images.txt`.
+
+```yaml
+spec:
+  replicas: 1
+  template:
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+      containers:
+        - name: worker-media
+          image: ghcr.io/uniffy-io/uniffy-media-worker:RELEASE_VERSION
+          command: [python, -m, uniffy, --worker-media]
+          env:
+            - name: MEDIA_SCRATCH_DIRECTORY
+              value: /var/lib/uniffy/media
+            - name: TMPDIR
+              value: /var/lib/uniffy/media
+          ports:
+            - name: metrics
+              containerPort: 9093
+          resources:
+            requests:
+              cpu: "1"
+              memory: 1Gi
+              ephemeral-storage: 16Gi
+            limits:
+              cpu: "2"
+              memory: 2Gi
+              ephemeral-storage: 20Gi
+          volumeMounts:
+            - name: media-scratch
+              mountPath: /var/lib/uniffy/media
+      volumes:
+        - name: media-scratch
+          emptyDir:
+            sizeLimit: 16Gi
+```
+
+These are starting budgets, not a guarantee for every codec or resolution. At default concurrency, 16 GiB leaves room for one 8 GiB conversion, a concurrent video thumbnail download of up to 4 GiB, and overhead. The pod's 20 GiB ephemeral storage limit also covers logs and writable container layers. Nodes need enough free disk for every scheduled media pod.
+
+Set CPU, memory, and ephemeral storage budgets in Kubernetes. Raise them alongside byte limits or concurrency, then measure with your accepted video formats. An `emptyDir` survives a container restart within the same pod, but disappears when that pod is removed. Recovery can restart interrupted work from stored originals; it does not resume a half written output.
 
 ## Calls (LiveKit)
 

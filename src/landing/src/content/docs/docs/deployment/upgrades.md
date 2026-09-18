@@ -6,15 +6,17 @@ sidebar:
   order: 3
 ---
 
-Upgrades are where self hosted software earns or loses trust, so this page is blunt about what happens, what we promise, and what we refuse to pretend.
+Use this procedure to move a self hosted deployment to a new release with a verified backup and matching application images.
 
 ## The pinset
 
 Every release ships a **pinset**: the chart version, the image digests, and the platform component versions we tested together. Upgrading means moving from one pinset to the next. The upgrade tooling never resolves `latest` for anything; it applies the pinset or it does nothing. The pinset and every image in it are signed, and [Verify a Release](/docs/deployment/verify/) shows how to check them before an upgrade touches your cluster.
 
+The application images are `uniffy`, `uniffy-media-worker`, and `uniffy-frontend`, all under `ghcr.io/uniffy-io`. Core and egress use the `uniffy` image. Keep all three images on the same release, including any media Deployment managed outside Helm.
+
 Two rules ride on that:
 
-- Upgrades are forward only. There is no downgrade path, because database migrations run forward on startup and we do not write reverse migrations.
+- Upgrades are forward only. Running older pods does not reverse database migrations. Restore the database to roll back a release.
 - One major version at a time. The tooling refuses to jump majors and tells you which release to pass through.
 
 ## Before every upgrade: the dump
@@ -51,13 +53,28 @@ helm upgrade uniffy oci://ghcr.io/uniffy-io/charts/uniffy \
 
 # 3. watch the rollout, then verify
 kubectl -n uniffy rollout status deploy/uniffy-backend
+kubectl -n uniffy rollout status deploy/uniffy-worker-core
+kubectl -n uniffy rollout status deploy/uniffy-worker-egress
+kubectl -n uniffy rollout status deploy/uniffy-worker-media
 curl -f https://uniffy.example.com/healthz
 helm test uniffy -n uniffy
 ```
 
 The first new backend pod runs the migrations on boot; the rest join once it is healthy. We do not promise zero downtime upgrades today, and we would rather say so than sell you a rolling upgrade that gambles on old pods tolerating a new schema. If the window matters to you, upgrades are fast: the window is the backend restart plus the migration time, minutes not hours.
 
+Use the Deployment names from your rendered manifests if they differ. Update any separately managed media Deployment to the verified media image before checking its rollout. Let backend migrations finish before workers consume jobs against the new schema.
+
 Mirror the new pinset first with `mirror.sh` if you run a private registry. Platform components move less often; when a pinset bumps one, the release notes say so and the same pinned `helm upgrade` commands from the install page apply.
+
+### Moving media work off core
+
+When upgrading from a release that processes media on core workers, pause new uploads and recordings. Let queued and running core media jobs finish before stopping those workers. This prevents job names from being handed to a fleet that no longer registers them.
+
+Apply the release migrations, then start core, egress, and media at matching versions. Give the media worker the shared configuration and Secrets, plus [disk scratch and resource limits](/docs/deployment/configure/#media-scratch-on-kubernetes). Keep uploads paused until all fleets are ready.
+
+Pending durable video work is recovered from PostgreSQL onto the media queue. Recovery runs every five minutes, but processing claims must expire before abandoned work can restart. A new pod does not resume a partial encode from its predecessor's scratch files.
+
+Before ending the maintenance window, upload a video that needs conversion. Confirm playback, seeking, and original download. Check thumbnail and document extraction jobs too, since they share the media fleet.
 
 ## What rollback really means
 
@@ -72,4 +89,4 @@ This is also why the tooling refuses downgrades: it will not offer a button that
 
 Uniffy never calls home, so nothing in your deployment checks for updates on its own. The running version is visible on the platform pages, and releases are announced on the GitHub releases feed, which works fine in a feed reader. If you want a check anyway, there is an opt in setting that fetches a static version file over plain HTTPS and nothing else. It is off by default and stays off.
 
-We would rather you upgrade on your schedule with a dump in hand than have software update itself under your feet. The pinset, the automatic dump, and the refusal to downgrade are the same opinion applied three times: an upgrade should be boring, and when it is not, you should be holding everything needed to walk it back.
+Upgrade on your schedule with a verified dump in hand. A healthy backend alone is not enough: every worker fleet must be running the same release and processing its jobs.

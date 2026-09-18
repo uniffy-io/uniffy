@@ -6,7 +6,7 @@ sidebar:
   order: 7
 ---
 
-This page is the map a platform team needs of a running Uniffy. Read it before sizing infrastructure, planning an upgrade, or debugging an incident. How the code inside is organized is not here; this is about processes, ports, and data.
+This page maps Uniffy's services, storage, and traffic. Read it before sizing infrastructure, planning an upgrade, or debugging an incident.
 
 ## Topology at a glance
 
@@ -63,11 +63,11 @@ One deployment serves any number of organizations. A new organization is a datab
 
 ## The traffic plane
 
-Every client request is an HTTP POST to an RPC path with a JSON or binary protobuf body, plus one WebSocket for realtime and long lived streamed responses for agents. The chart encodes that into the gateway routes, and the route table is worth knowing by heart when debugging:
+RPCs use HTTP POST with JSON or binary protobuf bodies. File downloads and video playback use authenticated HTTP GET requests, including byte ranges for seeking. Realtime uses a WebSocket, and agent responses stream over HTTP. The gateway routes these paths:
 
 | Path | Goes to | Upstream protocol | Why |
 |---|---|---|---|
-| `/api/realtime` | backend | HTTP/1.1 | The WebSocket. Websockets over HTTP/2 are unreliable across the ecosystem, so this path is pinned down a version. |
+| `/api/realtime` | backend | HTTP/1.1 | WebSocket upgrades need HTTP/1.1 on this route. |
 | `/api/superadmin.v1.` | backend | h2c | Named route rule so the [operator allowlist](/docs/deployment/hardening/) can target exactly it. |
 | `/api/` and `/healthz` | backend | h2c | HTTP/2 cleartext for RPC multiplexing and streaming. |
 | `/livekit/` | LiveKit 7880, prefix stripped | HTTP/1.1 | Calls signaling WebSocket. |
@@ -79,13 +79,37 @@ The request timeout on these routes is zero and buffering is off. An agent answe
 
 Core and egress use the backend image. Media uses `ghcr.io/uniffy-io/uniffy-media-worker`, which adds FFmpeg and ffprobe. All images use the same release tag.
 
+```text
+                      Valkey queues
+                            |
+          +-----------------+-----------------+
+          v                 v                 v
+  +---------------+ +---------------+ +---------------+
+  | Core workers  | | Egress workers| | Media workers |
+  | Backend image | | Backend image| | Media image   |
+  +---------------+ +---------------+ +-------+-------+
+                                              |
+                                              v
+                                      +---------------+
+                                      | Disk emptyDir |
+                                      | Source/output |
+                                      +---------------+
+
+  All fleets connect to shared data stores.
+  Object storage holds originals and completed playback copies.
+```
+
 | Fleet | Default concurrency | Default timeout | Typical work |
 |---|---|---|---|
 | Core | 10 jobs per process | 300s | Push notifications, reminder dispatch, storage cleanup and recovery schedules. |
 | Egress | 50 jobs per process | 900s | Agent runtime, long running LLM calls, conversation compaction, cron, webhook delivery. |
 | Media | 2 jobs per process | 300s, longer for video | Video conversion, thumbnails, metadata and document text extraction. |
 
-Separate queues keep slow LLM calls and media processing from occupying core worker slots. Scale core with user activity, egress with agent usage, and media with processing demand. Bound media CPU and memory, and provide disk backed scratch space.
+Separate queues keep slow LLM calls and media processing from occupying core worker slots. Scale core with user activity, egress with agent usage, and media with processing demand. LiveKit carries live calls independently of these queues.
+
+Media accepts two jobs per process by default, but video encodes share one global slot across replicas. More replicas alone do not raise that encode limit. Raise concurrency only with enough CPU, memory, disk space, and database connections. PDF and Office parsers also remain in the backend image for direct agent document reads.
+
+Media workers need writable disk scratch, not a persistent volume. One conversion can hold 4 GiB of source and 4 GiB of output at default limits. Thumbnail jobs need extra space. [Configure Uniffy](/docs/deployment/configure/#media-scratch-on-kubernetes) gives an `emptyDir` example and its resource budget.
 
 ## Data stores
 
@@ -119,6 +143,8 @@ LiveKit keeps its room registry in a separate Valkey database (db 1) so registry
 
 Any S3 compatible service, always yours on the cluster path. Every upload and download flows through the backend, which checks permissions per request; browsers never talk to the storage endpoint, so it stays on a private network with no CORS and no public exposure. File bytes ride backend bandwidth, which is why upload heavy orgs scale backend pods, not storage networking.
 
+Storage includes uploaded originals, retained file versions, thumbnails, and completed playback copies. Budget for those copies alongside original uploads. Worker scratch holds temporary inputs and outputs; it is not the file store.
+
 ## Scaling
 
 | Component | Bottleneck | Scaling pattern |
@@ -126,6 +152,7 @@ Any S3 compatible service, always yours on the cluster path. Every upload and do
 | Backend | CPU on RPC handlers, Postgres pool, upload bandwidth | Horizontal. Stateless pods. Watch the connection budget. |
 | Core worker | Local I/O | Horizontal, or raise `CORE_WORKER_MAX_JOBS`. |
 | Egress worker | External API latency | Horizontal. Default concurrency of 50 is high on purpose. |
+| Media worker | CPU, memory, scratch capacity and disk I/O | Set pod resources first. Scale replicas and the shared encode limit together when needed. |
 | PostgreSQL | Connections, write throughput | Vertical first, then read replicas. |
 | Meilisearch | RAM, index size | Vertical. Plan for full rebuild capacity. |
 | Valkey | Memory, network | Vertical first. |
@@ -175,6 +202,8 @@ Cluster internal, never exposed:
 | | Meilisearch and Valkey sit in between: losing them costs a reindex window and a queue drain, not data. |
 
 Postgres, the master key, and object storage are the non negotiable three. [Backups and Restore](/docs/deployment/backups/) covers all of them, including the continuous archive that makes Postgres restorable to a point in time.
+
+Losing a media pod can interrupt processing. Its scratch files can be discarded. Durable pending video work is recovered from PostgreSQL and retried from object storage after any active claim expires; recovery is not immediate.
 
 ## Where to go next
 

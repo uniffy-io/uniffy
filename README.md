@@ -22,7 +22,7 @@
 
 ---
 
-Notes, Diagrams, Chat, Files, Projects, Calendar. One private workspace, everything talks back. Plus an agent harness on top of it designed for Work Infrastructure
+Notes, diagrams, chat, files, projects, and calendar in one private workspace. Agents work with the same content and permissions as your team.
 
 Every piece of information can be referenced from anywhere with a universal `@` mention. Use it on our cloud or on your own hardware. Same code, same features, no user limit. No trackers, no data harvesting, no training on your data. AI agents are opt in and yours to control: you choose the model, the skills, and the permissions.
 
@@ -40,6 +40,8 @@ Every piece of information can be referenced from anywhere with a universal `@` 
 - [Search](docs/documentation/SEARCHING.md)
 - [Transparency](docs/TRANSPARENCY.md)
 - [Licenses](docs/LICENSES.md)
+- [Deployment and worker architecture](https://uniffy.io/docs/deployment/system-architecture/)
+- [Video playback](https://uniffy.io/docs/user/video/)
 
 ## Development
 
@@ -78,7 +80,7 @@ View logs:
 ```bash
 ./manage.py logs --stack docker               # all services combined
 ./manage.py logs --stack docker -s backend    # one service: backend, ui, landing, mobile,
-./manage.py logs --stack docker -s postgres   #   worker-core, worker-egress, postgres, livekit, ...
+./manage.py logs --stack docker -s postgres   #   worker-core, worker-egress, worker-media, postgres, livekit, ...
 ```
 
 Manage dependencies (resolution runs inside the containers; package.json / lockfiles change in your working tree as usual):
@@ -103,14 +105,16 @@ Quality and codegen, containerized:
 ```bash
 ./manage.py start --stack local  # installs host deps if missing, infra up, backend + workers + vite
 ./manage.py serve backend        # or run individual processes in separate terminals:
-./manage.py serve ui             #   backend, worker-core, worker-egress, ui, landing, mobile
+./manage.py serve ui             #   backend, worker-core, worker-egress, worker-media, ui, landing, mobile
 ```
+
+The media worker needs `ffmpeg` and `ffprobe` on its PATH. Docker development includes both in its separate media image.
 
 View logs:
 
 ```bash
 ./manage.py logs --stack local              # host processes started by `start --stack local` / `serve all`
-./manage.py logs --stack local -s backend   # one process: backend, worker-core, worker-egress
+./manage.py logs --stack local -s backend   # one process: backend, worker-core, worker-egress, worker-media
 ./manage.py logs --stack docker -s postgres # infra logs still come from docker
 ```
 
@@ -154,6 +158,7 @@ uniffy/
       go/               Go module for future CLI
     uniffy/             Python backend  (FastAPI + ConnectRPC)
     ui/                 React web app   (Vite + Redux + Tailwind)
+    landing/            Website and docs (Astro + Starlight)
     mobile/             React Native    (Expo)
     unictl/             Go CLI for Uniffy
   pyproject.toml        uv workspace root
@@ -215,16 +220,53 @@ Direct media mode (default):
                                     v
                               +-----------+
                               | Workers   |
-                              | core +    |
+                              | core      |
                               | egress    |
+                              | media     |
                               +-----------+
 ```
 
-Relayed media mode (Kubernetes / STUNner) changes only the media path; everything else stays as above:
+Relayed media mode (Kubernetes / STUNner) changes the live call path:
 
+```text
+Clients -> Reverse Proxy -> Backend  RPCs, streams, and files on TCP 443
+                         -> LiveKit  Call signaling on the same TLS endpoint
+Clients -> STUNner -> LiveKit         Calls through TURN on UDP/TCP 3478
+                                     Backend issues temporary TURN credentials
 ```
-Clients --443/tcp--> Reverse Proxy --/livekit/*--> LiveKit    (app + call signaling)
-Clients --3478/udp--> STUNner (TURN) --udp--> LiveKit         (ALL media, relay-only ICE,
-                                                               per-user ephemeral credentials
-                                                               minted by the backend)
+
+### Background work
+
+Three worker fleets consume separate Valkey queues. Core handles notifications, reminders, cleanup, and recovery. Egress handles agents and external integrations. Media handles video conversion, thumbnails, metadata, and document extraction.
+
+```text
+                      Valkey queues
+                            |
+          +-----------------+-----------------+
+          v                 v                 v
+  +---------------+ +---------------+ +---------------+
+  | Core workers  | | Egress workers| | Media workers |
+  | Backend image | | Backend image| | Media image   |
+  +---------------+ +---------------+ +-------+-------+
+                                              |
+                                              v
+                                      +---------------+
+                                      | Disk scratch  |
+                                      | K8s: emptyDir |
+                                      +---------------+
+
+  All fleets use shared Postgres, Valkey, and object storage.
+  Originals and completed playback copies live in object storage.
 ```
+
+Each release publishes three images. Use versions from the same release, or their verified digests from `images.txt`.
+
+| Image | Runs |
+|---|---|
+| `ghcr.io/uniffy-io/uniffy` | Backend, core worker, egress worker |
+| `ghcr.io/uniffy-io/uniffy-media-worker` | Media worker, including FFmpeg and ffprobe |
+| `ghcr.io/uniffy-io/uniffy-frontend` | Browser app |
+
+FFmpeg belongs to the media image. PDF and Office parsers also stay in the backend image because agents can read documents directly. LiveKit carries live calls separately from these background jobs.
+
+Media scratch needs no persistent volume. Kubernetes can use a disk backed `emptyDir`; Compose uses a disk volume. With default limits, one encode can need 8 GiB for source and output, plus space for concurrent thumbnail work. Set CPU, memory, and ephemeral storage budgets in the Deployment. See [media storage and limits](https://uniffy.io/docs/deployment/configure/#media-scratch-on-kubernetes) before sizing nodes.
