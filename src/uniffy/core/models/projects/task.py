@@ -1,6 +1,7 @@
 """Task model for the projects feature."""
 
 from datetime import UTC, datetime
+from enum import StrEnum
 from typing import Any
 from uuid import UUID
 
@@ -9,6 +10,14 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, SQLModel
 
 from uniffy.core.types import generate_id
+
+
+class TaskType(StrEnum):
+    TASK = "task"
+    BUG = "bug"
+    FEATURE = "feature"
+    STORY = "story"
+    EPIC = "epic"
 
 
 class Task(SQLModel, table=True):

@@ -17,6 +17,7 @@ from uniffy.core.errors import ValidationError
 from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.projects.project import Project
 from uniffy.core.models.projects.task import Task
+from uniffy.core.models.projects.view_config import ProjectViewVisibility
 from uniffy.core.search.engine import SearchTerm, all_of
 from uniffy.core.search.indexer import SearchIndexer, build_content_urn
 from uniffy.core.storage import ObjectStorage
@@ -154,7 +155,7 @@ class ProjectOperations(BaseContentOperations[Project]):
         try:
             await self.session.flush()
             await stage_default_project_fields(self.session, project.id)
-            project.default_view_id = await stage_default_project_views(self.session, project.id)
+            project.default_view_id = await stage_default_project_views(self.session, project)
 
             members_ops = ContentMembersOperations(self.session, self.search_indexer)
             for gid in group_ids or []:
@@ -254,6 +255,11 @@ class ProjectOperations(BaseContentOperations[Project]):
 
         name_changed = "name" in kwargs and kwargs["name"] != project.name  # noqa: PLR2004
 
+        if "default_view_id" in kwargs:  # noqa: PLR2004 - update keyword name
+            project.default_view_id = await self._resolve_default_view_id(
+                project.id, kwargs.pop("default_view_id")
+            )
+
         for key, value in kwargs.items():
             if value is not None and hasattr(project, key):
                 setattr(project, key, value)
@@ -288,6 +294,17 @@ class ProjectOperations(BaseContentOperations[Project]):
                 )
 
         return project
+
+    async def _resolve_default_view_id(self, project_id: UUID, view_id: str | None) -> str | None:
+        """An empty id clears the default; anything else must be a shared view of the project."""
+        if not view_id:
+            return None
+        view = await queries.get_view(self.session, project_id, view_id)
+        if view is None or view.visibility != ProjectViewVisibility.SHARED:
+            raise ValidationError(
+                "default_view_id", "The default view must be a shared view of this project"
+            )
+        return view_id
 
     async def delete(
         self,

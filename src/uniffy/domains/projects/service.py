@@ -7,9 +7,10 @@ from uniffy.domains.projects.handlers import (
     SprintHandlers,
     WatcherHandlers,
 )
+from uniffy.domains.projects.views.handlers import ViewHandlers
 
 
-class ProjectsServiceImpl(ProjectsHandlers, SprintHandlers, WatcherHandlers):
+class ProjectsServiceImpl(ProjectsHandlers, SprintHandlers, WatcherHandlers, ViewHandlers):
     def __init__(self, storage: ObjectStorage, search_indexer: SearchIndexer) -> None:
         self.storage = storage
         self.search_indexer = search_indexer
