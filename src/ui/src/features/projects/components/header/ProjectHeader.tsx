@@ -81,7 +81,7 @@ import { TASK_TYPES } from "@/features/projects/utils/taskTypes";
 import type { SelectOption, Sprint } from "@/features/projects/types";
 import { useProjectPermission } from "@/features/projects/hooks/useProjectPermissions";
 import { TagPicker } from "@/features/tags";
-import { TAGS_FILTER_FIELD_ID } from "@/features/projects/utils/filterTasks";
+import { TAGS_FILTER_FIELD_ID } from "@/features/projects/utils/taskAttributeFields";
 import type { FilterCondition } from "@/features/projects/types/views";
 import type { AppDispatch } from "@/app/store";
 import { randomUUID } from "@/shared/utils/uuid";

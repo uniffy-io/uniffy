@@ -132,6 +132,8 @@ export interface UpdateProjectRequest {
   icon?: string;
   color?: string;
   slug?: string;
+  /** A shared view of this project; an empty string clears the default. */
+  defaultViewId?: string;
   typeFieldSchemas?: Record<string, TypeFieldSchema>;
   tagIds?: string[];
 }

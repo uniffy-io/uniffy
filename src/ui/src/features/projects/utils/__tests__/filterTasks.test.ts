@@ -3,14 +3,13 @@ import { SYSTEM_FIELD_IDS } from "@/features/projects/types";
 import type { Task } from "@/features/projects/types/project";
 import { makeTask } from "@/features/projects/utils/__tests__/taskFixtures";
 import type { FilterCondition, FilterConfig } from "@/features/projects/types/views";
+import { applyFilters, buildTaskHierarchyIndex } from "@/features/projects/utils/filterTasks";
 import {
   HIERARCHY_DEPTH_FIELD_ID,
   HIERARCHY_HAS_SUBTASKS_FIELD_ID,
   HIERARCHY_IN_EPIC_FIELD_ID,
   HIERARCHY_ROOT_ONLY_FIELD_ID,
-  applyFilters,
-  buildTaskHierarchyIndex,
-} from "@/features/projects/utils/filterTasks";
+} from "@/features/projects/utils/taskAttributeFields";
 
 /**
  *  epic

@@ -7,8 +7,9 @@ import {
 
 /**
  * Refetch a page's data when content of `contentType` changes: shared with the
- * user, access removed, access mode flipped, or a child added to a container
- * (e.g. a task created in a project). Page-scoped: only fires while the calling
+ * user, access removed, access mode flipped, a child added to a container
+ * (e.g. a task created in a project), or a shared project view changed.
+ * Page-scoped: only fires while the calling
  * component is mounted. Debounced so a burst collapses into a single refetch;
  * the callback receives the latest change so it can branch on action/id.
  */

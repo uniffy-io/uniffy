@@ -11,11 +11,12 @@ import type {
   MoveTaskRequest,
 } from "../types/project";
 import type { FieldDefinition } from "../types/fields";
-import type { ViewConfig } from "../types/views";
+import type { ViewConfig, ViewDefinition } from "../types/views";
 import type { TaskActivity } from "../types/activity";
 import type {
   Project as ProtoProject,
   Task as ProtoTask,
+  ViewVisibility,
 } from "@uniffy/proto/projects/v1/projects_pb";
 import { bulkUpsertTags, tagToPlain } from "@/features/tags";
 
@@ -329,24 +330,40 @@ export const deleteFieldThunk = createAsyncThunk<
 
 export const createViewThunk = createAsyncThunk<
   ViewConfig,
-  { projectId: string; view: Omit<ViewConfig, "id" | "projectId" | "createdAt" | "updatedAt"> },
+  {
+    projectId: string;
+    name: string;
+    definition: ViewDefinition;
+    visibility: ViewVisibility;
+  },
   { rejectValue: string }
->("projects/createView", async ({ projectId, view }, { getState, rejectWithValue }) => {
-  try {
-    const state = getState() as RootState;
-    const orgId = state.auth.currentOrganizationId;
-    if (!orgId) return rejectWithValue("No organization selected");
+>(
+  "projects/createView",
+  async ({ projectId, name, definition, visibility }, { getState, rejectWithValue }) => {
+    try {
+      const state = getState() as RootState;
+      const orgId = state.auth.currentOrganizationId;
+      if (!orgId) return rejectWithValue("No organization selected");
 
-    const response = await projectsApi.createView(projectId, view, orgId);
-    return response.view;
-  } catch (error) {
-    return rejectWithValue(error instanceof Error ? error.message : "Failed to create view");
-  }
-});
+      const response = await projectsApi.createView(
+        projectId,
+        { name, definition, visibility },
+        orgId,
+      );
+      return response.view;
+    } catch (error) {
+      return rejectWithValue(error instanceof Error ? error.message : "Failed to create view");
+    }
+  },
+);
 
 export const updateViewThunk = createAsyncThunk<
   ViewConfig,
-  { projectId: string; viewId: string; updates: Partial<ViewConfig> },
+  {
+    projectId: string;
+    viewId: string;
+    updates: { name?: string; definition?: ViewDefinition; visibility?: ViewVisibility };
+  },
   { rejectValue: string }
 >("projects/updateView", async ({ projectId, viewId, updates }, { getState, rejectWithValue }) => {
   try {
@@ -377,6 +394,26 @@ export const deleteViewThunk = createAsyncThunk<
     return rejectWithValue(error instanceof Error ? error.message : "Failed to delete view");
   }
 });
+
+export const reorderViewsThunk = createAsyncThunk<
+  { projectId: string; views: ViewConfig[] },
+  { projectId: string; visibility: ViewVisibility; viewIds: string[] },
+  { rejectValue: string }
+>(
+  "projects/reorderViews",
+  async ({ projectId, visibility, viewIds }, { getState, rejectWithValue }) => {
+    try {
+      const state = getState() as RootState;
+      const orgId = state.auth.currentOrganizationId;
+      if (!orgId) return rejectWithValue("No organization selected");
+
+      const response = await projectsApi.reorderViews(projectId, visibility, viewIds, orgId);
+      return { projectId, views: response.views };
+    } catch (error) {
+      return rejectWithValue(error instanceof Error ? error.message : "Failed to reorder views");
+    }
+  },
+);
 
 export const bulkUpdateTasksThunk = createAsyncThunk<
   Task[],

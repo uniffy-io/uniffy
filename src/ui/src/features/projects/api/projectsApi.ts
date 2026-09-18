@@ -6,16 +6,15 @@ import { fetchAllPages } from "@/shared/utils/fetchAllPages";
 import { ProjectsService, TypeFieldSchemaSchema } from "@uniffy/proto/projects/v1/projects_pb";
 import {
   FieldType as ProtoFieldType,
-  ViewType as ProtoViewType,
   ActivityAction as ProtoActivityAction,
   TagFilterMode as ProtoTagFilterMode,
+  type ViewVisibility,
 } from "@uniffy/proto/projects/v1/projects_pb";
 import type { TypeFieldSchema as ProtoTypeFieldSchema } from "@uniffy/proto/projects/v1/projects_pb";
 import type {
   Project as ProtoProject,
   Task as ProtoTask,
   FieldDefinition as ProtoFieldDefinition,
-  ViewConfig as ProtoViewConfig,
   TaskActivity as ProtoTaskActivity,
   Sprint as ProtoSprint,
 } from "@uniffy/proto/projects/v1/projects_pb";
@@ -33,8 +32,9 @@ import type {
   StartSprintRequest as FrontendStartSprintRequest,
 } from "../types/project";
 import type { FieldDefinition, FieldValue } from "../types/fields";
-import type { ViewConfig, ViewSpecificConfig } from "../types/views";
+import type { ViewConfig, ViewDefinition } from "../types/views";
 import type { TaskActivity, ActivityAction } from "../types/activity";
+import { frontendViewDefinitionToProto, protoViewConfigToFrontend } from "./viewConverters";
 
 const projectsClient = createClient(ProjectsService, unaryTransport);
 
@@ -80,32 +80,6 @@ function protoFieldTypeToFrontend(type: ProtoFieldType): string {
       return "reference";
     default:
       return "text";
-  }
-}
-
-function frontendViewTypeToProto(type: string): ProtoViewType {
-  switch (type.toLowerCase()) {
-    case "table":
-      return ProtoViewType.TABLE;
-    case "board":
-      return ProtoViewType.BOARD;
-    case "roadmap":
-      return ProtoViewType.ROADMAP;
-    default:
-      return ProtoViewType.TABLE;
-  }
-}
-
-function protoViewTypeToFrontend(type: ProtoViewType): string {
-  switch (type) {
-    case ProtoViewType.TABLE:
-      return "table";
-    case ProtoViewType.BOARD:
-      return "board";
-    case ProtoViewType.ROADMAP:
-      return "roadmap";
-    default:
-      return "table";
   }
 }
 
@@ -221,32 +195,6 @@ function protoFieldDefinitionToFrontend(proto: ProtoFieldDefinition): FieldDefin
     isSystem: proto.isSystem,
     sortOrder: proto.sortOrder,
     config,
-    createdAt: proto.createdAt
-      ? timestampDate(proto.createdAt).toISOString()
-      : new Date().toISOString(),
-    updatedAt: proto.updatedAt
-      ? timestampDate(proto.updatedAt).toISOString()
-      : new Date().toISOString(),
-  };
-}
-
-function protoViewConfigToFrontend(proto: ProtoViewConfig): ViewConfig {
-  let config: Record<string, unknown> = {};
-  if (proto.configJson) {
-    try {
-      config = JSON.parse(proto.configJson);
-    } catch {
-      // Malformed JSON from server - fall back to empty config
-    }
-  }
-
-  return {
-    id: proto.id,
-    projectId: proto.projectId,
-    name: proto.name,
-    type: protoViewTypeToFrontend(proto.type) as ViewConfig["type"],
-    isDefault: proto.isDefault,
-    config: config as unknown as ViewSpecificConfig,
     createdAt: proto.createdAt
       ? timestampDate(proto.createdAt).toISOString()
       : new Date().toISOString(),
@@ -401,6 +349,7 @@ export const projectsApi = {
       description: data.description,
       icon: data.icon,
       color: data.color,
+      defaultViewId: data.defaultViewId,
       ...(data.typeFieldSchemas ? { typeFieldSchemas } : {}),
       ...(data.tagIds !== undefined ? { tagIds: { ids: data.tagIds } } : {}),
     });
@@ -708,16 +657,15 @@ export const projectsApi = {
 
   createView: async (
     projectId: string,
-    view: Omit<ViewConfig, "id" | "projectId" | "createdAt" | "updatedAt">,
+    view: { name: string; definition: ViewDefinition; visibility: ViewVisibility },
     organizationId: string,
   ): Promise<{ view: ViewConfig }> => {
     const response = await projectsClient.createView({
       organizationId,
       projectId,
       name: view.name,
-      type: frontendViewTypeToProto(view.type),
-      isDefault: view.isDefault,
-      configJson: JSON.stringify(view.config),
+      definition: frontendViewDefinitionToProto(view.definition),
+      visibility: view.visibility,
     });
     return {
       view: protoViewConfigToFrontend(response.view!),
@@ -727,7 +675,7 @@ export const projectsApi = {
   updateView: async (
     projectId: string,
     viewId: string,
-    updates: Partial<ViewConfig>,
+    updates: { name?: string; definition?: ViewDefinition; visibility?: ViewVisibility },
     organizationId: string,
   ): Promise<{ view: ViewConfig }> => {
     const response = await projectsClient.updateView({
@@ -735,8 +683,10 @@ export const projectsApi = {
       projectId,
       viewId,
       name: updates.name,
-      isDefault: updates.isDefault,
-      configJson: updates.config ? JSON.stringify(updates.config) : undefined,
+      definition: updates.definition
+        ? frontendViewDefinitionToProto(updates.definition)
+        : undefined,
+      visibility: updates.visibility,
     });
     return {
       view: protoViewConfigToFrontend(response.view!),
@@ -755,6 +705,23 @@ export const projectsApi = {
     });
     return {
       success: response.success,
+    };
+  },
+
+  reorderViews: async (
+    projectId: string,
+    visibility: ViewVisibility,
+    viewIds: string[],
+    organizationId: string,
+  ): Promise<{ views: ViewConfig[] }> => {
+    const response = await projectsClient.reorderViews({
+      organizationId,
+      projectId,
+      visibility,
+      viewIds,
+    });
+    return {
+      views: response.views.map(protoViewConfigToFrontend),
     };
   },
 
