@@ -132,9 +132,10 @@ export function GeneralSection({ project }: GeneralSectionProps) {
               </label>
               <Input
                 type="text"
-                placeholder="e.g. product-launch"
+                placeholder="e.g. PROD"
                 value={slug}
-                onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
+                maxLength={5}
+                onChange={(e) => setSlug(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""))}
                 disabled={isSubmitting}
               />
             </div>
