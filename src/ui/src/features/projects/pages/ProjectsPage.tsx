@@ -16,7 +16,7 @@ import {
   selectSelectedTaskId,
   selectIsDetailPanelOpen,
 } from "../store/projectsUiSlice";
-import { fetchProjects, fetchProjectTasks } from "../store/projectsThunks";
+import { fetchProject, fetchProjects, fetchProjectTasks } from "../store/projectsThunks";
 import { useProjectPermission } from "../hooks/useProjectPermissions";
 import { useContentAccessRefetch } from "@/features/notifications/hooks/useContentAccessRefetch";
 import { taskPath } from "@/features/projects/utils/taskPath";
@@ -79,12 +79,19 @@ export function ProjectsPage() {
   }, [loadProjectTasks, currentProjectId]);
 
   // Live refresh on project access changes (shared / flipped to OPEN_TO_ORG ->
-  // refetch the list) and on a task created in the open project (child_added ->
-  // refetch that project's task board).
+  // refetch the list), on a task created in the open project (child_added ->
+  // refetch that project's task board), and on a shared view change in the open
+  // project (views_changed -> refetch that project).
   useContentAccessRefetch(
     ContentType.PROJECT,
     useCallback(
       (change) => {
+        if (change.action === "views_changed") {
+          if (change.contentId === currentProjectId) {
+            dispatch(fetchProject(currentProjectId));
+          }
+          return;
+        }
         if (change.action === "child_added") {
           if (change.contentId === currentProjectId) {
             loadProjectTasks(currentProjectId);

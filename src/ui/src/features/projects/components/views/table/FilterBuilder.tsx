@@ -19,49 +19,9 @@ import {
   HIERARCHY_IN_EPIC_FIELD_ID,
   HIERARCHY_ROOT_ONLY_FIELD_ID,
   TAGS_FILTER_FIELD_ID,
-} from "@/features/projects/utils/filterTasks";
+  TASK_ATTRIBUTE_PSEUDO_FIELDS,
+} from "@/features/projects/utils/taskAttributeFields";
 import { randomUUID } from "@/shared/utils/uuid";
-
-const TAGS_PSEUDO_FIELD: FieldDefinition = {
-  id: TAGS_FILTER_FIELD_ID,
-  projectId: "",
-  name: "Tags",
-  type: "text",
-  isRequired: false,
-  isSystem: true,
-  sortOrder: 999,
-  config: {},
-  createdAt: "",
-  updatedAt: "",
-};
-
-function _makePseudoField(
-  id: string,
-  name: string,
-  type: FieldDefinition["type"],
-): FieldDefinition {
-  return {
-    id,
-    projectId: "",
-    name,
-    type,
-    isRequired: false,
-    isSystem: true,
-    sortOrder: 1000,
-    config: {},
-    createdAt: "",
-    updatedAt: "",
-  };
-}
-
-const IN_EPIC_PSEUDO_FIELD = _makePseudoField(HIERARCHY_IN_EPIC_FIELD_ID, "In Epic", "text");
-const ROOT_ONLY_PSEUDO_FIELD = _makePseudoField(HIERARCHY_ROOT_ONLY_FIELD_ID, "Root only", "text");
-const HAS_SUBTASKS_PSEUDO_FIELD = _makePseudoField(
-  HIERARCHY_HAS_SUBTASKS_FIELD_ID,
-  "Has subtasks",
-  "text",
-);
-const DEPTH_PSEUDO_FIELD = _makePseudoField(HIERARCHY_DEPTH_FIELD_ID, "Depth", "number");
 
 const IN_EPIC_OPERATORS: { value: FilterOperator; label: string }[] = [
   { value: "equals", label: "is" },
@@ -184,14 +144,7 @@ export function FilterBuilder({
   // The unified-tags filter and the hierarchy filters are exposed as
   // pseudo-fields so they slot into the existing condition row UI without
   // parallel infrastructure.
-  const fields = [
-    ...rawFields,
-    TAGS_PSEUDO_FIELD,
-    IN_EPIC_PSEUDO_FIELD,
-    ROOT_ONLY_PSEUDO_FIELD,
-    HAS_SUBTASKS_PSEUDO_FIELD,
-    DEPTH_PSEUDO_FIELD,
-  ];
+  const fields = [...rawFields, ...TASK_ATTRIBUTE_PSEUDO_FIELDS];
   const [conditions, setConditions] = useState<FilterCondition[]>(filterConfig?.conditions ?? []);
   const [logic, setLogic] = useState<"and" | "or">(filterConfig?.logic ?? "and");
 

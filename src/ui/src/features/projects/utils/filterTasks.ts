@@ -1,13 +1,13 @@
 import type { Task } from "@/features/projects/types";
 import type { FilterConfig, FilterCondition } from "@/features/projects/types/views";
+import {
+  HIERARCHY_DEPTH_FIELD_ID,
+  HIERARCHY_HAS_SUBTASKS_FIELD_ID,
+  HIERARCHY_IN_EPIC_FIELD_ID,
+  HIERARCHY_ROOT_ONLY_FIELD_ID,
+  TAGS_FILTER_FIELD_ID,
+} from "@/features/projects/utils/taskAttributeFields";
 import { getTaskFieldValue, toIdList } from "@/features/projects/utils/taskFieldValue";
-
-export const TAGS_FILTER_FIELD_ID = "__tags__";
-
-export const HIERARCHY_IN_EPIC_FIELD_ID = "__hierarchy_in_epic__";
-export const HIERARCHY_ROOT_ONLY_FIELD_ID = "__hierarchy_root_only__";
-export const HIERARCHY_HAS_SUBTASKS_FIELD_ID = "__hierarchy_has_subtasks__";
-export const HIERARCHY_DEPTH_FIELD_ID = "__hierarchy_depth__";
 
 const HIERARCHY_FIELD_IDS = new Set([
   HIERARCHY_IN_EPIC_FIELD_ID,

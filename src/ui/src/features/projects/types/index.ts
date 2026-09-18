@@ -31,10 +31,18 @@ export {
 export type {
   ViewType,
   ViewConfig,
-  ViewSpecificConfig,
-  TableViewConfig,
-  BoardViewConfig,
-  RoadmapViewConfig,
+  ViewDefinition,
+  ViewLayout,
+  ViewFieldRef,
+  ViewFilterGroup,
+  ViewFilterNode,
+  ViewFilterCondition,
+  ViewFilterValue,
+  ViewFilterIdSet,
+  ViewFilterDate,
+  ViewSortKey,
+  ViewGroupBy,
+  ViewColumnWidth,
   SortDirection,
   RoadmapZoomLevel,
   FilterOperator,
@@ -42,8 +50,6 @@ export type {
   FilterConfig,
   SortConfig,
 } from "./views";
-
-export { createDefaultViews } from "./views";
 
 export type {
   LoadingState,
