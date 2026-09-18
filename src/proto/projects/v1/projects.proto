@@ -39,6 +39,7 @@ service ProjectsService {
   rpc CreateView(CreateViewRequest) returns (CreateViewResponse);
   rpc UpdateView(UpdateViewRequest) returns (UpdateViewResponse);
   rpc DeleteView(DeleteViewRequest) returns (DeleteViewResponse);
+  rpc ReorderViews(ReorderViewsRequest) returns (ReorderViewsResponse);
 
   // ----- Activities -----
   rpc ListActivities(ListActivitiesRequest) returns (ListActivitiesResponse);
@@ -77,6 +78,87 @@ enum ViewType {
   VIEW_TYPE_TABLE = 1;
   VIEW_TYPE_BOARD = 2;
   VIEW_TYPE_ROADMAP = 3;
+  VIEW_TYPE_BACKLOG = 4;
+  VIEW_TYPE_GRAPH = 5;
+  VIEW_TYPE_RESOURCES = 6;
+}
+
+enum ViewVisibility {
+  VIEW_VISIBILITY_UNSPECIFIED = 0;
+  VIEW_VISIBILITY_PERSONAL = 1;
+  VIEW_VISIBILITY_SHARED = 2;
+}
+
+// Task attributes a view can reference that are not project field definitions.
+enum TaskPseudoField {
+  TASK_PSEUDO_FIELD_UNSPECIFIED = 0;
+  TASK_PSEUDO_FIELD_TAGS = 1;
+  TASK_PSEUDO_FIELD_SPRINT = 2;
+  TASK_PSEUDO_FIELD_TASK_TYPE = 3;
+  TASK_PSEUDO_FIELD_CREATOR = 4;
+  TASK_PSEUDO_FIELD_PARENT = 5;
+  // Filter: the task or one of its ancestors is a listed epic. Group: nearest epic ancestor.
+  TASK_PSEUDO_FIELD_EPIC = 6;
+  TASK_PSEUDO_FIELD_HAS_SUBTASKS = 7;
+  TASK_PSEUDO_FIELD_DEPTH = 8;
+  TASK_PSEUDO_FIELD_IS_MILESTONE = 9;
+  // Incomplete, with at least one live incomplete blocker.
+  TASK_PSEUDO_FIELD_IS_BLOCKED = 10;
+  TASK_PSEUDO_FIELD_BLOCKED_BY = 11;
+  TASK_PSEUDO_FIELD_CREATED_AT = 12;
+  TASK_PSEUDO_FIELD_UPDATED_AT = 13;
+  TASK_PSEUDO_FIELD_COMPLETED_AT = 14;
+  TASK_PSEUDO_FIELD_ESTIMATED_MINUTES = 15;
+  TASK_PSEUDO_FIELD_TIME_SPENT_MINUTES = 16;
+  TASK_PSEUDO_FIELD_NUMBER = 17;
+}
+
+enum TaskFilterOperator {
+  TASK_FILTER_OPERATOR_UNSPECIFIED = 0;
+  TASK_FILTER_OPERATOR_IS = 1;
+  TASK_FILTER_OPERATOR_IS_NOT = 2;
+  TASK_FILTER_OPERATOR_IS_ANY_OF = 3;
+  TASK_FILTER_OPERATOR_IS_NONE_OF = 4;
+  TASK_FILTER_OPERATOR_IS_ALL_OF = 5;
+  TASK_FILTER_OPERATOR_CONTAINS = 6;
+  TASK_FILTER_OPERATOR_NOT_CONTAINS = 7;
+  TASK_FILTER_OPERATOR_IS_EMPTY = 8;
+  TASK_FILTER_OPERATOR_IS_NOT_EMPTY = 9;
+  TASK_FILTER_OPERATOR_GREATER_THAN = 10;
+  TASK_FILTER_OPERATOR_LESS_THAN = 11;
+  TASK_FILTER_OPERATOR_BETWEEN = 12;
+  TASK_FILTER_OPERATOR_BEFORE = 13;
+  TASK_FILTER_OPERATOR_AFTER = 14;
+  TASK_FILTER_OPERATOR_ON_OR_BEFORE = 15;
+  TASK_FILTER_OPERATOR_ON_OR_AFTER = 16;
+}
+
+enum FilterLogic {
+  FILTER_LOGIC_UNSPECIFIED = 0;
+  FILTER_LOGIC_AND = 1;
+  FILTER_LOGIC_OR = 2;
+}
+
+enum SortDirection {
+  SORT_DIRECTION_UNSPECIFIED = 0;
+  SORT_DIRECTION_ASC = 1;
+  SORT_DIRECTION_DESC = 2;
+}
+
+enum RelativeDateAnchor {
+  RELATIVE_DATE_ANCHOR_UNSPECIFIED = 0;
+  RELATIVE_DATE_ANCHOR_TODAY = 1;
+  RELATIVE_DATE_ANCHOR_START_OF_WEEK = 2;
+  RELATIVE_DATE_ANCHOR_END_OF_WEEK = 3;
+  RELATIVE_DATE_ANCHOR_START_OF_MONTH = 4;
+  RELATIVE_DATE_ANCHOR_END_OF_MONTH = 5;
+}
+
+enum RoadmapZoom {
+  ROADMAP_ZOOM_UNSPECIFIED = 0;
+  ROADMAP_ZOOM_DAY = 1;
+  ROADMAP_ZOOM_WEEK = 2;
+  ROADMAP_ZOOM_MONTH = 3;
 }
 
 // Filter mode for tag list-tasks queries. ALL = task carries every tag id
@@ -198,15 +280,149 @@ message TypeFieldSchema {
   repeated string required_field_ids = 2;
 }
 
+message TaskFieldRef {
+  oneof ref {
+    // FieldDefinition.id on the project, system or custom.
+    string field_id = 1;
+    TaskPseudoField pseudo = 2;
+  }
+}
+
+message TaskFilterIdSet {
+  repeated string ids = 1;
+  // Person fields and the creator: the caller, resolved at evaluation time.
+  bool include_current_user = 2;
+  // Unassigned, no sprint, untagged, no value.
+  bool include_empty = 3;
+  // Sprint only: the project's active sprint at evaluation time.
+  bool include_active_sprint = 4;
+}
+
+message RelativeDate {
+  RelativeDateAnchor anchor = 1;
+  int32 offset_days = 2;
+}
+
+message TaskFilterDate {
+  oneof value {
+    // YYYY-MM-DD
+    string fixed = 1;
+    RelativeDate relative = 2;
+  }
+}
+
+// Inclusive on both ends.
+message TaskFilterDateRange {
+  TaskFilterDate start = 1;
+  TaskFilterDate end = 2;
+}
+
+// Inclusive on both ends.
+message TaskFilterNumberRange {
+  double min = 1;
+  double max = 2;
+}
+
+message TaskFilterValue {
+  oneof value {
+    TaskFilterIdSet ids = 1;
+    string text = 2;
+    double number = 3;
+    TaskFilterNumberRange number_range = 4;
+    TaskFilterDate date = 5;
+    TaskFilterDateRange date_range = 6;
+    bool flag = 7;
+  }
+}
+
+message TaskFilterCondition {
+  TaskFieldRef field = 1;
+  TaskFilterOperator operator = 2;
+  // Absent for IS_EMPTY and IS_NOT_EMPTY.
+  optional TaskFilterValue value = 3;
+}
+
+message TaskFilterNode {
+  oneof node {
+    TaskFilterCondition condition = 1;
+    TaskFilterGroup group = 2;
+  }
+}
+
+message TaskFilterGroup {
+  FilterLogic logic = 1;
+  repeated TaskFilterNode nodes = 2;
+}
+
+message TaskSort {
+  TaskFieldRef field = 1;
+  SortDirection direction = 2;
+}
+
+message TaskGroupBy {
+  TaskFieldRef field = 1;
+  SortDirection direction = 2;
+  bool hide_empty = 3;
+}
+
+message TableLayout {
+  // Subtasks as flat rows instead of nested under their parent.
+  bool flat = 1;
+}
+
+message BoardLayout {
+  // Single-select field that forms the columns; empty means the status field.
+  string column_field_id = 1;
+}
+
+message RoadmapLayout {
+  RoadmapZoom zoom = 1;
+}
+
+message BacklogLayout {}
+
+message GraphLayout {
+  bool hide_parent_edges = 1;
+}
+
+message ResourcesLayout {}
+
+message ColumnWidth {
+  TaskFieldRef field = 1;
+  int32 width = 2;
+}
+
+message ViewDefinition {
+  oneof layout {
+    TableLayout table = 1;
+    BoardLayout board = 2;
+    RoadmapLayout roadmap = 3;
+    BacklogLayout backlog = 4;
+    GraphLayout graph = 5;
+    ResourcesLayout resources = 6;
+  }
+  TaskFilterGroup filter = 7;
+  repeated TaskSort sort = 8;
+  optional TaskGroupBy group_by = 9;
+  repeated TaskFieldRef visible_fields = 10;
+  repeated ColumnWidth column_widths = 11;
+  repeated string collapsed_group_keys = 12;
+}
+
 message ViewConfig {
+  reserved 5, 6;
+  reserved "is_default", "config_json";
   string id = 1;
   string project_id = 2;
   string name = 3;
+  // Derived from definition.layout; a view's layout never changes.
   ViewType type = 4;
-  bool is_default = 5;
-  string config_json = 6;
   google.protobuf.Timestamp created_at = 7;
   google.protobuf.Timestamp updated_at = 8;
+  ViewDefinition definition = 9;
+  string owner_id = 10;
+  ViewVisibility visibility = 11;
+  int32 sort_order = 12;
 }
 
 message TaskActivity {
@@ -273,6 +489,7 @@ message UpdateProjectRequest {
   optional string icon = 5;
   optional string color = 6;
   optional common.v1.AccessMode access_mode = 7;
+  // Id of a shared view of this project; an empty string clears the default.
   optional string default_view_id = 8;
   optional string slug = 9;
   map<string, TypeFieldSchema> type_field_schemas = 10;
@@ -539,21 +756,24 @@ message DeleteFieldResponse {
 // ============================================================================
 
 message CreateViewRequest {
+  reserved 4, 5, 6;
+  reserved "type", "is_default", "config_json";
   string organization_id = 1;
   string project_id = 2;
   string name = 3;
-  ViewType type = 4;
-  optional bool is_default = 5;
-  optional string config_json = 6;
+  ViewDefinition definition = 7;
+  ViewVisibility visibility = 8;
 }
 
 message UpdateViewRequest {
+  reserved 5, 6;
+  reserved "is_default", "config_json";
   string organization_id = 1;
   string project_id = 2;
   string view_id = 3;
   optional string name = 4;
-  optional bool is_default = 5;
-  optional string config_json = 6;
+  optional ViewDefinition definition = 7;
+  optional ViewVisibility visibility = 8;
 }
 
 message DeleteViewRequest {
@@ -572,6 +792,19 @@ message UpdateViewResponse {
 
 message DeleteViewResponse {
   bool success = 1;
+}
+
+// view_ids is the complete ordered set of the caller's scope: every shared view
+// of the project, or every personal view the caller owns in it.
+message ReorderViewsRequest {
+  string organization_id = 1;
+  string project_id = 2;
+  ViewVisibility visibility = 3;
+  repeated string view_ids = 4;
+}
+
+message ReorderViewsResponse {
+  repeated ViewConfig views = 1;
 }
 
 // ============================================================================

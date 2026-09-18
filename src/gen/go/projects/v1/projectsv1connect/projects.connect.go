@@ -89,6 +89,9 @@ const (
 	// ProjectsServiceDeleteViewProcedure is the fully-qualified name of the ProjectsService's
 	// DeleteView RPC.
 	ProjectsServiceDeleteViewProcedure = "/projects.v1.ProjectsService/DeleteView"
+	// ProjectsServiceReorderViewsProcedure is the fully-qualified name of the ProjectsService's
+	// ReorderViews RPC.
+	ProjectsServiceReorderViewsProcedure = "/projects.v1.ProjectsService/ReorderViews"
 	// ProjectsServiceListActivitiesProcedure is the fully-qualified name of the ProjectsService's
 	// ListActivities RPC.
 	ProjectsServiceListActivitiesProcedure = "/projects.v1.ProjectsService/ListActivities"
@@ -146,6 +149,7 @@ type ProjectsServiceClient interface {
 	CreateView(context.Context, *connect.Request[v1.CreateViewRequest]) (*connect.Response[v1.CreateViewResponse], error)
 	UpdateView(context.Context, *connect.Request[v1.UpdateViewRequest]) (*connect.Response[v1.UpdateViewResponse], error)
 	DeleteView(context.Context, *connect.Request[v1.DeleteViewRequest]) (*connect.Response[v1.DeleteViewResponse], error)
+	ReorderViews(context.Context, *connect.Request[v1.ReorderViewsRequest]) (*connect.Response[v1.ReorderViewsResponse], error)
 	// ----- Activities -----
 	ListActivities(context.Context, *connect.Request[v1.ListActivitiesRequest]) (*connect.Response[v1.ListActivitiesResponse], error)
 	// ----- Sprints -----
@@ -286,6 +290,12 @@ func NewProjectsServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(projectsServiceMethods.ByName("DeleteView")),
 			connect.WithClientOptions(opts...),
 		),
+		reorderViews: connect.NewClient[v1.ReorderViewsRequest, v1.ReorderViewsResponse](
+			httpClient,
+			baseURL+ProjectsServiceReorderViewsProcedure,
+			connect.WithSchema(projectsServiceMethods.ByName("ReorderViews")),
+			connect.WithClientOptions(opts...),
+		),
 		listActivities: connect.NewClient[v1.ListActivitiesRequest, v1.ListActivitiesResponse](
 			httpClient,
 			baseURL+ProjectsServiceListActivitiesProcedure,
@@ -370,6 +380,7 @@ type projectsServiceClient struct {
 	createView            *connect.Client[v1.CreateViewRequest, v1.CreateViewResponse]
 	updateView            *connect.Client[v1.UpdateViewRequest, v1.UpdateViewResponse]
 	deleteView            *connect.Client[v1.DeleteViewRequest, v1.DeleteViewResponse]
+	reorderViews          *connect.Client[v1.ReorderViewsRequest, v1.ReorderViewsResponse]
 	listActivities        *connect.Client[v1.ListActivitiesRequest, v1.ListActivitiesResponse]
 	createSprint          *connect.Client[v1.CreateSprintRequest, v1.CreateSprintResponse]
 	updateSprint          *connect.Client[v1.UpdateSprintRequest, v1.UpdateSprintResponse]
@@ -477,6 +488,11 @@ func (c *projectsServiceClient) DeleteView(ctx context.Context, req *connect.Req
 	return c.deleteView.CallUnary(ctx, req)
 }
 
+// ReorderViews calls projects.v1.ProjectsService.ReorderViews.
+func (c *projectsServiceClient) ReorderViews(ctx context.Context, req *connect.Request[v1.ReorderViewsRequest]) (*connect.Response[v1.ReorderViewsResponse], error) {
+	return c.reorderViews.CallUnary(ctx, req)
+}
+
 // ListActivities calls projects.v1.ProjectsService.ListActivities.
 func (c *projectsServiceClient) ListActivities(ctx context.Context, req *connect.Request[v1.ListActivitiesRequest]) (*connect.Response[v1.ListActivitiesResponse], error) {
 	return c.listActivities.CallUnary(ctx, req)
@@ -552,6 +568,7 @@ type ProjectsServiceHandler interface {
 	CreateView(context.Context, *connect.Request[v1.CreateViewRequest]) (*connect.Response[v1.CreateViewResponse], error)
 	UpdateView(context.Context, *connect.Request[v1.UpdateViewRequest]) (*connect.Response[v1.UpdateViewResponse], error)
 	DeleteView(context.Context, *connect.Request[v1.DeleteViewRequest]) (*connect.Response[v1.DeleteViewResponse], error)
+	ReorderViews(context.Context, *connect.Request[v1.ReorderViewsRequest]) (*connect.Response[v1.ReorderViewsResponse], error)
 	// ----- Activities -----
 	ListActivities(context.Context, *connect.Request[v1.ListActivitiesRequest]) (*connect.Response[v1.ListActivitiesResponse], error)
 	// ----- Sprints -----
@@ -688,6 +705,12 @@ func NewProjectsServiceHandler(svc ProjectsServiceHandler, opts ...connect.Handl
 		connect.WithSchema(projectsServiceMethods.ByName("DeleteView")),
 		connect.WithHandlerOptions(opts...),
 	)
+	projectsServiceReorderViewsHandler := connect.NewUnaryHandler(
+		ProjectsServiceReorderViewsProcedure,
+		svc.ReorderViews,
+		connect.WithSchema(projectsServiceMethods.ByName("ReorderViews")),
+		connect.WithHandlerOptions(opts...),
+	)
 	projectsServiceListActivitiesHandler := connect.NewUnaryHandler(
 		ProjectsServiceListActivitiesProcedure,
 		svc.ListActivities,
@@ -788,6 +811,8 @@ func NewProjectsServiceHandler(svc ProjectsServiceHandler, opts ...connect.Handl
 			projectsServiceUpdateViewHandler.ServeHTTP(w, r)
 		case ProjectsServiceDeleteViewProcedure:
 			projectsServiceDeleteViewHandler.ServeHTTP(w, r)
+		case ProjectsServiceReorderViewsProcedure:
+			projectsServiceReorderViewsHandler.ServeHTTP(w, r)
 		case ProjectsServiceListActivitiesProcedure:
 			projectsServiceListActivitiesHandler.ServeHTTP(w, r)
 		case ProjectsServiceCreateSprintProcedure:
@@ -891,6 +916,10 @@ func (UnimplementedProjectsServiceHandler) UpdateView(context.Context, *connect.
 
 func (UnimplementedProjectsServiceHandler) DeleteView(context.Context, *connect.Request[v1.DeleteViewRequest]) (*connect.Response[v1.DeleteViewResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("projects.v1.ProjectsService.DeleteView is not implemented"))
+}
+
+func (UnimplementedProjectsServiceHandler) ReorderViews(context.Context, *connect.Request[v1.ReorderViewsRequest]) (*connect.Response[v1.ReorderViewsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("projects.v1.ProjectsService.ReorderViews is not implemented"))
 }
 
 func (UnimplementedProjectsServiceHandler) ListActivities(context.Context, *connect.Request[v1.ListActivitiesRequest]) (*connect.Response[v1.ListActivitiesResponse], error) {

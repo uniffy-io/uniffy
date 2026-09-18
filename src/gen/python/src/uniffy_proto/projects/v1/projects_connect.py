@@ -75,6 +75,9 @@ class ProjectsService(Protocol):
     async def delete_view(self, request: projects_dot_v1_dot_projects__pb2.DeleteViewRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.DeleteViewResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
+    async def reorder_views(self, request: projects_dot_v1_dot_projects__pb2.ReorderViewsRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.ReorderViewsResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
     async def list_activities(self, request: projects_dot_v1_dot_projects__pb2.ListActivitiesRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.ListActivitiesResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
@@ -300,6 +303,16 @@ class ProjectsServiceASGIApplication(ConnectASGIApplication[ProjectsService]):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.delete_view,
+                ),
+                "/projects.v1.ProjectsService/ReorderViews": Endpoint.unary(
+                    method=MethodInfo(
+                        name="ReorderViews",
+                        service_name="projects.v1.ProjectsService",
+                        input=projects_dot_v1_dot_projects__pb2.ReorderViewsRequest,
+                        output=projects_dot_v1_dot_projects__pb2.ReorderViewsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.reorder_views,
                 ),
                 "/projects.v1.ProjectsService/ListActivities": Endpoint.unary(
                     method=MethodInfo(
@@ -795,6 +808,26 @@ class ProjectsServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
+    async def reorder_views(
+        self,
+        request: projects_dot_v1_dot_projects__pb2.ReorderViewsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> projects_dot_v1_dot_projects__pb2.ReorderViewsResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ReorderViews",
+                service_name="projects.v1.ProjectsService",
+                input=projects_dot_v1_dot_projects__pb2.ReorderViewsRequest,
+                output=projects_dot_v1_dot_projects__pb2.ReorderViewsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
     async def list_activities(
         self,
         request: projects_dot_v1_dot_projects__pb2.ListActivitiesRequest,
@@ -1038,6 +1071,8 @@ class ProjectsServiceSync(Protocol):
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def delete_view(self, request: projects_dot_v1_dot_projects__pb2.DeleteViewRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.DeleteViewResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def reorder_views(self, request: projects_dot_v1_dot_projects__pb2.ReorderViewsRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.ReorderViewsResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def list_activities(self, request: projects_dot_v1_dot_projects__pb2.ListActivitiesRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.ListActivitiesResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def create_sprint(self, request: projects_dot_v1_dot_projects__pb2.CreateSprintRequest, ctx: RequestContext) -> projects_dot_v1_dot_projects__pb2.CreateSprintResponse:
@@ -1253,6 +1288,16 @@ class ProjectsServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.delete_view,
+                ),
+                "/projects.v1.ProjectsService/ReorderViews": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="ReorderViews",
+                        service_name="projects.v1.ProjectsService",
+                        input=projects_dot_v1_dot_projects__pb2.ReorderViewsRequest,
+                        output=projects_dot_v1_dot_projects__pb2.ReorderViewsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.reorder_views,
                 ),
                 "/projects.v1.ProjectsService/ListActivities": EndpointSync.unary(
                     method=MethodInfo(
@@ -1742,6 +1787,26 @@ class ProjectsServiceClientSync(ConnectClientSync):
                 service_name="projects.v1.ProjectsService",
                 input=projects_dot_v1_dot_projects__pb2.DeleteViewRequest,
                 output=projects_dot_v1_dot_projects__pb2.DeleteViewResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def reorder_views(
+        self,
+        request: projects_dot_v1_dot_projects__pb2.ReorderViewsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> projects_dot_v1_dot_projects__pb2.ReorderViewsResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ReorderViews",
+                service_name="projects.v1.ProjectsService",
+                input=projects_dot_v1_dot_projects__pb2.ReorderViewsRequest,
+                output=projects_dot_v1_dot_projects__pb2.ReorderViewsResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

@@ -794,7 +794,8 @@ export type ContentAccessChangedPayload = Message<"notifications.v1.ContentAcces
   contentId: string;
 
   /**
-   * What happened: "granted", "revoked", or "access_mode_changed"
+   * What happened: "granted", "revoked", "access_mode_changed", "child_added"
+   * (a task was created in the project) or "views_changed" (a shared view changed)
    *
    * @generated from field: string action = 3;
    */

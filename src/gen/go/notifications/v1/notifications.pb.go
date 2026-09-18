@@ -1493,7 +1493,8 @@ type ContentAccessChangedPayload struct {
 	ContentType v1.ContentType `protobuf:"varint,1,opt,name=content_type,json=contentType,proto3,enum=common.v1.ContentType" json:"content_type,omitempty"`
 	// ID of the content whose access changed
 	ContentId string `protobuf:"bytes,2,opt,name=content_id,json=contentId,proto3" json:"content_id,omitempty"`
-	// What happened: "granted", "revoked", or "access_mode_changed"
+	// What happened: "granted", "revoked", "access_mode_changed", "child_added"
+	// (a task was created in the project) or "views_changed" (a shared view changed)
 	Action        string `protobuf:"bytes,3,opt,name=action,proto3" json:"action,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache

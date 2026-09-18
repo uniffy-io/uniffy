@@ -29,6 +29,84 @@ class ViewType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     VIEW_TYPE_TABLE: _ClassVar[ViewType]
     VIEW_TYPE_BOARD: _ClassVar[ViewType]
     VIEW_TYPE_ROADMAP: _ClassVar[ViewType]
+    VIEW_TYPE_BACKLOG: _ClassVar[ViewType]
+    VIEW_TYPE_GRAPH: _ClassVar[ViewType]
+    VIEW_TYPE_RESOURCES: _ClassVar[ViewType]
+
+class ViewVisibility(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
+    __slots__ = ()
+    VIEW_VISIBILITY_UNSPECIFIED: _ClassVar[ViewVisibility]
+    VIEW_VISIBILITY_PERSONAL: _ClassVar[ViewVisibility]
+    VIEW_VISIBILITY_SHARED: _ClassVar[ViewVisibility]
+
+class TaskPseudoField(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
+    __slots__ = ()
+    TASK_PSEUDO_FIELD_UNSPECIFIED: _ClassVar[TaskPseudoField]
+    TASK_PSEUDO_FIELD_TAGS: _ClassVar[TaskPseudoField]
+    TASK_PSEUDO_FIELD_SPRINT: _ClassVar[TaskPseudoField]
+    TASK_PSEUDO_FIELD_TASK_TYPE: _ClassVar[TaskPseudoField]
+    TASK_PSEUDO_FIELD_CREATOR: _ClassVar[TaskPseudoField]
+    TASK_PSEUDO_FIELD_PARENT: _ClassVar[TaskPseudoField]
+    TASK_PSEUDO_FIELD_EPIC: _ClassVar[TaskPseudoField]
+    TASK_PSEUDO_FIELD_HAS_SUBTASKS: _ClassVar[TaskPseudoField]
+    TASK_PSEUDO_FIELD_DEPTH: _ClassVar[TaskPseudoField]
+    TASK_PSEUDO_FIELD_IS_MILESTONE: _ClassVar[TaskPseudoField]
+    TASK_PSEUDO_FIELD_IS_BLOCKED: _ClassVar[TaskPseudoField]
+    TASK_PSEUDO_FIELD_BLOCKED_BY: _ClassVar[TaskPseudoField]
+    TASK_PSEUDO_FIELD_CREATED_AT: _ClassVar[TaskPseudoField]
+    TASK_PSEUDO_FIELD_UPDATED_AT: _ClassVar[TaskPseudoField]
+    TASK_PSEUDO_FIELD_COMPLETED_AT: _ClassVar[TaskPseudoField]
+    TASK_PSEUDO_FIELD_ESTIMATED_MINUTES: _ClassVar[TaskPseudoField]
+    TASK_PSEUDO_FIELD_TIME_SPENT_MINUTES: _ClassVar[TaskPseudoField]
+    TASK_PSEUDO_FIELD_NUMBER: _ClassVar[TaskPseudoField]
+
+class TaskFilterOperator(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
+    __slots__ = ()
+    TASK_FILTER_OPERATOR_UNSPECIFIED: _ClassVar[TaskFilterOperator]
+    TASK_FILTER_OPERATOR_IS: _ClassVar[TaskFilterOperator]
+    TASK_FILTER_OPERATOR_IS_NOT: _ClassVar[TaskFilterOperator]
+    TASK_FILTER_OPERATOR_IS_ANY_OF: _ClassVar[TaskFilterOperator]
+    TASK_FILTER_OPERATOR_IS_NONE_OF: _ClassVar[TaskFilterOperator]
+    TASK_FILTER_OPERATOR_IS_ALL_OF: _ClassVar[TaskFilterOperator]
+    TASK_FILTER_OPERATOR_CONTAINS: _ClassVar[TaskFilterOperator]
+    TASK_FILTER_OPERATOR_NOT_CONTAINS: _ClassVar[TaskFilterOperator]
+    TASK_FILTER_OPERATOR_IS_EMPTY: _ClassVar[TaskFilterOperator]
+    TASK_FILTER_OPERATOR_IS_NOT_EMPTY: _ClassVar[TaskFilterOperator]
+    TASK_FILTER_OPERATOR_GREATER_THAN: _ClassVar[TaskFilterOperator]
+    TASK_FILTER_OPERATOR_LESS_THAN: _ClassVar[TaskFilterOperator]
+    TASK_FILTER_OPERATOR_BETWEEN: _ClassVar[TaskFilterOperator]
+    TASK_FILTER_OPERATOR_BEFORE: _ClassVar[TaskFilterOperator]
+    TASK_FILTER_OPERATOR_AFTER: _ClassVar[TaskFilterOperator]
+    TASK_FILTER_OPERATOR_ON_OR_BEFORE: _ClassVar[TaskFilterOperator]
+    TASK_FILTER_OPERATOR_ON_OR_AFTER: _ClassVar[TaskFilterOperator]
+
+class FilterLogic(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
+    __slots__ = ()
+    FILTER_LOGIC_UNSPECIFIED: _ClassVar[FilterLogic]
+    FILTER_LOGIC_AND: _ClassVar[FilterLogic]
+    FILTER_LOGIC_OR: _ClassVar[FilterLogic]
+
+class SortDirection(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
+    __slots__ = ()
+    SORT_DIRECTION_UNSPECIFIED: _ClassVar[SortDirection]
+    SORT_DIRECTION_ASC: _ClassVar[SortDirection]
+    SORT_DIRECTION_DESC: _ClassVar[SortDirection]
+
+class RelativeDateAnchor(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
+    __slots__ = ()
+    RELATIVE_DATE_ANCHOR_UNSPECIFIED: _ClassVar[RelativeDateAnchor]
+    RELATIVE_DATE_ANCHOR_TODAY: _ClassVar[RelativeDateAnchor]
+    RELATIVE_DATE_ANCHOR_START_OF_WEEK: _ClassVar[RelativeDateAnchor]
+    RELATIVE_DATE_ANCHOR_END_OF_WEEK: _ClassVar[RelativeDateAnchor]
+    RELATIVE_DATE_ANCHOR_START_OF_MONTH: _ClassVar[RelativeDateAnchor]
+    RELATIVE_DATE_ANCHOR_END_OF_MONTH: _ClassVar[RelativeDateAnchor]
+
+class RoadmapZoom(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
+    __slots__ = ()
+    ROADMAP_ZOOM_UNSPECIFIED: _ClassVar[RoadmapZoom]
+    ROADMAP_ZOOM_DAY: _ClassVar[RoadmapZoom]
+    ROADMAP_ZOOM_WEEK: _ClassVar[RoadmapZoom]
+    ROADMAP_ZOOM_MONTH: _ClassVar[RoadmapZoom]
 
 class TagFilterMode(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     __slots__ = ()
@@ -61,6 +139,63 @@ VIEW_TYPE_UNSPECIFIED: ViewType
 VIEW_TYPE_TABLE: ViewType
 VIEW_TYPE_BOARD: ViewType
 VIEW_TYPE_ROADMAP: ViewType
+VIEW_TYPE_BACKLOG: ViewType
+VIEW_TYPE_GRAPH: ViewType
+VIEW_TYPE_RESOURCES: ViewType
+VIEW_VISIBILITY_UNSPECIFIED: ViewVisibility
+VIEW_VISIBILITY_PERSONAL: ViewVisibility
+VIEW_VISIBILITY_SHARED: ViewVisibility
+TASK_PSEUDO_FIELD_UNSPECIFIED: TaskPseudoField
+TASK_PSEUDO_FIELD_TAGS: TaskPseudoField
+TASK_PSEUDO_FIELD_SPRINT: TaskPseudoField
+TASK_PSEUDO_FIELD_TASK_TYPE: TaskPseudoField
+TASK_PSEUDO_FIELD_CREATOR: TaskPseudoField
+TASK_PSEUDO_FIELD_PARENT: TaskPseudoField
+TASK_PSEUDO_FIELD_EPIC: TaskPseudoField
+TASK_PSEUDO_FIELD_HAS_SUBTASKS: TaskPseudoField
+TASK_PSEUDO_FIELD_DEPTH: TaskPseudoField
+TASK_PSEUDO_FIELD_IS_MILESTONE: TaskPseudoField
+TASK_PSEUDO_FIELD_IS_BLOCKED: TaskPseudoField
+TASK_PSEUDO_FIELD_BLOCKED_BY: TaskPseudoField
+TASK_PSEUDO_FIELD_CREATED_AT: TaskPseudoField
+TASK_PSEUDO_FIELD_UPDATED_AT: TaskPseudoField
+TASK_PSEUDO_FIELD_COMPLETED_AT: TaskPseudoField
+TASK_PSEUDO_FIELD_ESTIMATED_MINUTES: TaskPseudoField
+TASK_PSEUDO_FIELD_TIME_SPENT_MINUTES: TaskPseudoField
+TASK_PSEUDO_FIELD_NUMBER: TaskPseudoField
+TASK_FILTER_OPERATOR_UNSPECIFIED: TaskFilterOperator
+TASK_FILTER_OPERATOR_IS: TaskFilterOperator
+TASK_FILTER_OPERATOR_IS_NOT: TaskFilterOperator
+TASK_FILTER_OPERATOR_IS_ANY_OF: TaskFilterOperator
+TASK_FILTER_OPERATOR_IS_NONE_OF: TaskFilterOperator
+TASK_FILTER_OPERATOR_IS_ALL_OF: TaskFilterOperator
+TASK_FILTER_OPERATOR_CONTAINS: TaskFilterOperator
+TASK_FILTER_OPERATOR_NOT_CONTAINS: TaskFilterOperator
+TASK_FILTER_OPERATOR_IS_EMPTY: TaskFilterOperator
+TASK_FILTER_OPERATOR_IS_NOT_EMPTY: TaskFilterOperator
+TASK_FILTER_OPERATOR_GREATER_THAN: TaskFilterOperator
+TASK_FILTER_OPERATOR_LESS_THAN: TaskFilterOperator
+TASK_FILTER_OPERATOR_BETWEEN: TaskFilterOperator
+TASK_FILTER_OPERATOR_BEFORE: TaskFilterOperator
+TASK_FILTER_OPERATOR_AFTER: TaskFilterOperator
+TASK_FILTER_OPERATOR_ON_OR_BEFORE: TaskFilterOperator
+TASK_FILTER_OPERATOR_ON_OR_AFTER: TaskFilterOperator
+FILTER_LOGIC_UNSPECIFIED: FilterLogic
+FILTER_LOGIC_AND: FilterLogic
+FILTER_LOGIC_OR: FilterLogic
+SORT_DIRECTION_UNSPECIFIED: SortDirection
+SORT_DIRECTION_ASC: SortDirection
+SORT_DIRECTION_DESC: SortDirection
+RELATIVE_DATE_ANCHOR_UNSPECIFIED: RelativeDateAnchor
+RELATIVE_DATE_ANCHOR_TODAY: RelativeDateAnchor
+RELATIVE_DATE_ANCHOR_START_OF_WEEK: RelativeDateAnchor
+RELATIVE_DATE_ANCHOR_END_OF_WEEK: RelativeDateAnchor
+RELATIVE_DATE_ANCHOR_START_OF_MONTH: RelativeDateAnchor
+RELATIVE_DATE_ANCHOR_END_OF_MONTH: RelativeDateAnchor
+ROADMAP_ZOOM_UNSPECIFIED: RoadmapZoom
+ROADMAP_ZOOM_DAY: RoadmapZoom
+ROADMAP_ZOOM_WEEK: RoadmapZoom
+ROADMAP_ZOOM_MONTH: RoadmapZoom
 TAG_FILTER_MODE_UNSPECIFIED: TagFilterMode
 TAG_FILTER_MODE_ALL: TagFilterMode
 TAG_FILTER_MODE_ANY: TagFilterMode
@@ -246,25 +381,211 @@ class TypeFieldSchema(_message.Message):
     required_field_ids: _containers.RepeatedScalarFieldContainer[str]
     def __init__(self, shown_field_ids: _Optional[_Iterable[str]] = ..., required_field_ids: _Optional[_Iterable[str]] = ...) -> None: ...
 
+class TaskFieldRef(_message.Message):
+    __slots__ = ("field_id", "pseudo")
+    FIELD_ID_FIELD_NUMBER: _ClassVar[int]
+    PSEUDO_FIELD_NUMBER: _ClassVar[int]
+    field_id: str
+    pseudo: TaskPseudoField
+    def __init__(self, field_id: _Optional[str] = ..., pseudo: _Optional[_Union[TaskPseudoField, str]] = ...) -> None: ...
+
+class TaskFilterIdSet(_message.Message):
+    __slots__ = ("ids", "include_current_user", "include_empty", "include_active_sprint")
+    IDS_FIELD_NUMBER: _ClassVar[int]
+    INCLUDE_CURRENT_USER_FIELD_NUMBER: _ClassVar[int]
+    INCLUDE_EMPTY_FIELD_NUMBER: _ClassVar[int]
+    INCLUDE_ACTIVE_SPRINT_FIELD_NUMBER: _ClassVar[int]
+    ids: _containers.RepeatedScalarFieldContainer[str]
+    include_current_user: bool
+    include_empty: bool
+    include_active_sprint: bool
+    def __init__(self, ids: _Optional[_Iterable[str]] = ..., include_current_user: _Optional[bool] = ..., include_empty: _Optional[bool] = ..., include_active_sprint: _Optional[bool] = ...) -> None: ...
+
+class RelativeDate(_message.Message):
+    __slots__ = ("anchor", "offset_days")
+    ANCHOR_FIELD_NUMBER: _ClassVar[int]
+    OFFSET_DAYS_FIELD_NUMBER: _ClassVar[int]
+    anchor: RelativeDateAnchor
+    offset_days: int
+    def __init__(self, anchor: _Optional[_Union[RelativeDateAnchor, str]] = ..., offset_days: _Optional[int] = ...) -> None: ...
+
+class TaskFilterDate(_message.Message):
+    __slots__ = ("fixed", "relative")
+    FIXED_FIELD_NUMBER: _ClassVar[int]
+    RELATIVE_FIELD_NUMBER: _ClassVar[int]
+    fixed: str
+    relative: RelativeDate
+    def __init__(self, fixed: _Optional[str] = ..., relative: _Optional[_Union[RelativeDate, _Mapping]] = ...) -> None: ...
+
+class TaskFilterDateRange(_message.Message):
+    __slots__ = ("start", "end")
+    START_FIELD_NUMBER: _ClassVar[int]
+    END_FIELD_NUMBER: _ClassVar[int]
+    start: TaskFilterDate
+    end: TaskFilterDate
+    def __init__(self, start: _Optional[_Union[TaskFilterDate, _Mapping]] = ..., end: _Optional[_Union[TaskFilterDate, _Mapping]] = ...) -> None: ...
+
+class TaskFilterNumberRange(_message.Message):
+    __slots__ = ("min", "max")
+    MIN_FIELD_NUMBER: _ClassVar[int]
+    MAX_FIELD_NUMBER: _ClassVar[int]
+    min: float
+    max: float
+    def __init__(self, min: _Optional[float] = ..., max: _Optional[float] = ...) -> None: ...
+
+class TaskFilterValue(_message.Message):
+    __slots__ = ("ids", "text", "number", "number_range", "date", "date_range", "flag")
+    IDS_FIELD_NUMBER: _ClassVar[int]
+    TEXT_FIELD_NUMBER: _ClassVar[int]
+    NUMBER_FIELD_NUMBER: _ClassVar[int]
+    NUMBER_RANGE_FIELD_NUMBER: _ClassVar[int]
+    DATE_FIELD_NUMBER: _ClassVar[int]
+    DATE_RANGE_FIELD_NUMBER: _ClassVar[int]
+    FLAG_FIELD_NUMBER: _ClassVar[int]
+    ids: TaskFilterIdSet
+    text: str
+    number: float
+    number_range: TaskFilterNumberRange
+    date: TaskFilterDate
+    date_range: TaskFilterDateRange
+    flag: bool
+    def __init__(self, ids: _Optional[_Union[TaskFilterIdSet, _Mapping]] = ..., text: _Optional[str] = ..., number: _Optional[float] = ..., number_range: _Optional[_Union[TaskFilterNumberRange, _Mapping]] = ..., date: _Optional[_Union[TaskFilterDate, _Mapping]] = ..., date_range: _Optional[_Union[TaskFilterDateRange, _Mapping]] = ..., flag: _Optional[bool] = ...) -> None: ...
+
+class TaskFilterCondition(_message.Message):
+    __slots__ = ("field", "operator", "value")
+    FIELD_FIELD_NUMBER: _ClassVar[int]
+    OPERATOR_FIELD_NUMBER: _ClassVar[int]
+    VALUE_FIELD_NUMBER: _ClassVar[int]
+    field: TaskFieldRef
+    operator: TaskFilterOperator
+    value: TaskFilterValue
+    def __init__(self, field: _Optional[_Union[TaskFieldRef, _Mapping]] = ..., operator: _Optional[_Union[TaskFilterOperator, str]] = ..., value: _Optional[_Union[TaskFilterValue, _Mapping]] = ...) -> None: ...
+
+class TaskFilterNode(_message.Message):
+    __slots__ = ("condition", "group")
+    CONDITION_FIELD_NUMBER: _ClassVar[int]
+    GROUP_FIELD_NUMBER: _ClassVar[int]
+    condition: TaskFilterCondition
+    group: TaskFilterGroup
+    def __init__(self, condition: _Optional[_Union[TaskFilterCondition, _Mapping]] = ..., group: _Optional[_Union[TaskFilterGroup, _Mapping]] = ...) -> None: ...
+
+class TaskFilterGroup(_message.Message):
+    __slots__ = ("logic", "nodes")
+    LOGIC_FIELD_NUMBER: _ClassVar[int]
+    NODES_FIELD_NUMBER: _ClassVar[int]
+    logic: FilterLogic
+    nodes: _containers.RepeatedCompositeFieldContainer[TaskFilterNode]
+    def __init__(self, logic: _Optional[_Union[FilterLogic, str]] = ..., nodes: _Optional[_Iterable[_Union[TaskFilterNode, _Mapping]]] = ...) -> None: ...
+
+class TaskSort(_message.Message):
+    __slots__ = ("field", "direction")
+    FIELD_FIELD_NUMBER: _ClassVar[int]
+    DIRECTION_FIELD_NUMBER: _ClassVar[int]
+    field: TaskFieldRef
+    direction: SortDirection
+    def __init__(self, field: _Optional[_Union[TaskFieldRef, _Mapping]] = ..., direction: _Optional[_Union[SortDirection, str]] = ...) -> None: ...
+
+class TaskGroupBy(_message.Message):
+    __slots__ = ("field", "direction", "hide_empty")
+    FIELD_FIELD_NUMBER: _ClassVar[int]
+    DIRECTION_FIELD_NUMBER: _ClassVar[int]
+    HIDE_EMPTY_FIELD_NUMBER: _ClassVar[int]
+    field: TaskFieldRef
+    direction: SortDirection
+    hide_empty: bool
+    def __init__(self, field: _Optional[_Union[TaskFieldRef, _Mapping]] = ..., direction: _Optional[_Union[SortDirection, str]] = ..., hide_empty: _Optional[bool] = ...) -> None: ...
+
+class TableLayout(_message.Message):
+    __slots__ = ("flat",)
+    FLAT_FIELD_NUMBER: _ClassVar[int]
+    flat: bool
+    def __init__(self, flat: _Optional[bool] = ...) -> None: ...
+
+class BoardLayout(_message.Message):
+    __slots__ = ("column_field_id",)
+    COLUMN_FIELD_ID_FIELD_NUMBER: _ClassVar[int]
+    column_field_id: str
+    def __init__(self, column_field_id: _Optional[str] = ...) -> None: ...
+
+class RoadmapLayout(_message.Message):
+    __slots__ = ("zoom",)
+    ZOOM_FIELD_NUMBER: _ClassVar[int]
+    zoom: RoadmapZoom
+    def __init__(self, zoom: _Optional[_Union[RoadmapZoom, str]] = ...) -> None: ...
+
+class BacklogLayout(_message.Message):
+    __slots__ = ()
+    def __init__(self) -> None: ...
+
+class GraphLayout(_message.Message):
+    __slots__ = ("hide_parent_edges",)
+    HIDE_PARENT_EDGES_FIELD_NUMBER: _ClassVar[int]
+    hide_parent_edges: bool
+    def __init__(self, hide_parent_edges: _Optional[bool] = ...) -> None: ...
+
+class ResourcesLayout(_message.Message):
+    __slots__ = ()
+    def __init__(self) -> None: ...
+
+class ColumnWidth(_message.Message):
+    __slots__ = ("field", "width")
+    FIELD_FIELD_NUMBER: _ClassVar[int]
+    WIDTH_FIELD_NUMBER: _ClassVar[int]
+    field: TaskFieldRef
+    width: int
+    def __init__(self, field: _Optional[_Union[TaskFieldRef, _Mapping]] = ..., width: _Optional[int] = ...) -> None: ...
+
+class ViewDefinition(_message.Message):
+    __slots__ = ("table", "board", "roadmap", "backlog", "graph", "resources", "filter", "sort", "group_by", "visible_fields", "column_widths", "collapsed_group_keys")
+    TABLE_FIELD_NUMBER: _ClassVar[int]
+    BOARD_FIELD_NUMBER: _ClassVar[int]
+    ROADMAP_FIELD_NUMBER: _ClassVar[int]
+    BACKLOG_FIELD_NUMBER: _ClassVar[int]
+    GRAPH_FIELD_NUMBER: _ClassVar[int]
+    RESOURCES_FIELD_NUMBER: _ClassVar[int]
+    FILTER_FIELD_NUMBER: _ClassVar[int]
+    SORT_FIELD_NUMBER: _ClassVar[int]
+    GROUP_BY_FIELD_NUMBER: _ClassVar[int]
+    VISIBLE_FIELDS_FIELD_NUMBER: _ClassVar[int]
+    COLUMN_WIDTHS_FIELD_NUMBER: _ClassVar[int]
+    COLLAPSED_GROUP_KEYS_FIELD_NUMBER: _ClassVar[int]
+    table: TableLayout
+    board: BoardLayout
+    roadmap: RoadmapLayout
+    backlog: BacklogLayout
+    graph: GraphLayout
+    resources: ResourcesLayout
+    filter: TaskFilterGroup
+    sort: _containers.RepeatedCompositeFieldContainer[TaskSort]
+    group_by: TaskGroupBy
+    visible_fields: _containers.RepeatedCompositeFieldContainer[TaskFieldRef]
+    column_widths: _containers.RepeatedCompositeFieldContainer[ColumnWidth]
+    collapsed_group_keys: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, table: _Optional[_Union[TableLayout, _Mapping]] = ..., board: _Optional[_Union[BoardLayout, _Mapping]] = ..., roadmap: _Optional[_Union[RoadmapLayout, _Mapping]] = ..., backlog: _Optional[_Union[BacklogLayout, _Mapping]] = ..., graph: _Optional[_Union[GraphLayout, _Mapping]] = ..., resources: _Optional[_Union[ResourcesLayout, _Mapping]] = ..., filter: _Optional[_Union[TaskFilterGroup, _Mapping]] = ..., sort: _Optional[_Iterable[_Union[TaskSort, _Mapping]]] = ..., group_by: _Optional[_Union[TaskGroupBy, _Mapping]] = ..., visible_fields: _Optional[_Iterable[_Union[TaskFieldRef, _Mapping]]] = ..., column_widths: _Optional[_Iterable[_Union[ColumnWidth, _Mapping]]] = ..., collapsed_group_keys: _Optional[_Iterable[str]] = ...) -> None: ...
+
 class ViewConfig(_message.Message):
-    __slots__ = ("id", "project_id", "name", "type", "is_default", "config_json", "created_at", "updated_at")
+    __slots__ = ("id", "project_id", "name", "type", "created_at", "updated_at", "definition", "owner_id", "visibility", "sort_order")
     ID_FIELD_NUMBER: _ClassVar[int]
     PROJECT_ID_FIELD_NUMBER: _ClassVar[int]
     NAME_FIELD_NUMBER: _ClassVar[int]
     TYPE_FIELD_NUMBER: _ClassVar[int]
-    IS_DEFAULT_FIELD_NUMBER: _ClassVar[int]
-    CONFIG_JSON_FIELD_NUMBER: _ClassVar[int]
     CREATED_AT_FIELD_NUMBER: _ClassVar[int]
     UPDATED_AT_FIELD_NUMBER: _ClassVar[int]
+    DEFINITION_FIELD_NUMBER: _ClassVar[int]
+    OWNER_ID_FIELD_NUMBER: _ClassVar[int]
+    VISIBILITY_FIELD_NUMBER: _ClassVar[int]
+    SORT_ORDER_FIELD_NUMBER: _ClassVar[int]
     id: str
     project_id: str
     name: str
     type: ViewType
-    is_default: bool
-    config_json: str
     created_at: _timestamp_pb2.Timestamp
     updated_at: _timestamp_pb2.Timestamp
-    def __init__(self, id: _Optional[str] = ..., project_id: _Optional[str] = ..., name: _Optional[str] = ..., type: _Optional[_Union[ViewType, str]] = ..., is_default: _Optional[bool] = ..., config_json: _Optional[str] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+    definition: ViewDefinition
+    owner_id: str
+    visibility: ViewVisibility
+    sort_order: int
+    def __init__(self, id: _Optional[str] = ..., project_id: _Optional[str] = ..., name: _Optional[str] = ..., type: _Optional[_Union[ViewType, str]] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., definition: _Optional[_Union[ViewDefinition, _Mapping]] = ..., owner_id: _Optional[str] = ..., visibility: _Optional[_Union[ViewVisibility, str]] = ..., sort_order: _Optional[int] = ...) -> None: ...
 
 class TaskActivity(_message.Message):
     __slots__ = ("id", "task_id", "actor_id", "action", "timestamp", "field_id", "previous_value", "new_value")
@@ -792,36 +1113,34 @@ class DeleteFieldResponse(_message.Message):
     def __init__(self, success: _Optional[bool] = ...) -> None: ...
 
 class CreateViewRequest(_message.Message):
-    __slots__ = ("organization_id", "project_id", "name", "type", "is_default", "config_json")
+    __slots__ = ("organization_id", "project_id", "name", "definition", "visibility")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     PROJECT_ID_FIELD_NUMBER: _ClassVar[int]
     NAME_FIELD_NUMBER: _ClassVar[int]
-    TYPE_FIELD_NUMBER: _ClassVar[int]
-    IS_DEFAULT_FIELD_NUMBER: _ClassVar[int]
-    CONFIG_JSON_FIELD_NUMBER: _ClassVar[int]
+    DEFINITION_FIELD_NUMBER: _ClassVar[int]
+    VISIBILITY_FIELD_NUMBER: _ClassVar[int]
     organization_id: str
     project_id: str
     name: str
-    type: ViewType
-    is_default: bool
-    config_json: str
-    def __init__(self, organization_id: _Optional[str] = ..., project_id: _Optional[str] = ..., name: _Optional[str] = ..., type: _Optional[_Union[ViewType, str]] = ..., is_default: _Optional[bool] = ..., config_json: _Optional[str] = ...) -> None: ...
+    definition: ViewDefinition
+    visibility: ViewVisibility
+    def __init__(self, organization_id: _Optional[str] = ..., project_id: _Optional[str] = ..., name: _Optional[str] = ..., definition: _Optional[_Union[ViewDefinition, _Mapping]] = ..., visibility: _Optional[_Union[ViewVisibility, str]] = ...) -> None: ...
 
 class UpdateViewRequest(_message.Message):
-    __slots__ = ("organization_id", "project_id", "view_id", "name", "is_default", "config_json")
+    __slots__ = ("organization_id", "project_id", "view_id", "name", "definition", "visibility")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     PROJECT_ID_FIELD_NUMBER: _ClassVar[int]
     VIEW_ID_FIELD_NUMBER: _ClassVar[int]
     NAME_FIELD_NUMBER: _ClassVar[int]
-    IS_DEFAULT_FIELD_NUMBER: _ClassVar[int]
-    CONFIG_JSON_FIELD_NUMBER: _ClassVar[int]
+    DEFINITION_FIELD_NUMBER: _ClassVar[int]
+    VISIBILITY_FIELD_NUMBER: _ClassVar[int]
     organization_id: str
     project_id: str
     view_id: str
     name: str
-    is_default: bool
-    config_json: str
-    def __init__(self, organization_id: _Optional[str] = ..., project_id: _Optional[str] = ..., view_id: _Optional[str] = ..., name: _Optional[str] = ..., is_default: _Optional[bool] = ..., config_json: _Optional[str] = ...) -> None: ...
+    definition: ViewDefinition
+    visibility: ViewVisibility
+    def __init__(self, organization_id: _Optional[str] = ..., project_id: _Optional[str] = ..., view_id: _Optional[str] = ..., name: _Optional[str] = ..., definition: _Optional[_Union[ViewDefinition, _Mapping]] = ..., visibility: _Optional[_Union[ViewVisibility, str]] = ...) -> None: ...
 
 class DeleteViewRequest(_message.Message):
     __slots__ = ("organization_id", "project_id", "view_id")
@@ -850,6 +1169,24 @@ class DeleteViewResponse(_message.Message):
     SUCCESS_FIELD_NUMBER: _ClassVar[int]
     success: bool
     def __init__(self, success: _Optional[bool] = ...) -> None: ...
+
+class ReorderViewsRequest(_message.Message):
+    __slots__ = ("organization_id", "project_id", "visibility", "view_ids")
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    PROJECT_ID_FIELD_NUMBER: _ClassVar[int]
+    VISIBILITY_FIELD_NUMBER: _ClassVar[int]
+    VIEW_IDS_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    project_id: str
+    visibility: ViewVisibility
+    view_ids: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, organization_id: _Optional[str] = ..., project_id: _Optional[str] = ..., visibility: _Optional[_Union[ViewVisibility, str]] = ..., view_ids: _Optional[_Iterable[str]] = ...) -> None: ...
+
+class ReorderViewsResponse(_message.Message):
+    __slots__ = ("views",)
+    VIEWS_FIELD_NUMBER: _ClassVar[int]
+    views: _containers.RepeatedCompositeFieldContainer[ViewConfig]
+    def __init__(self, views: _Optional[_Iterable[_Union[ViewConfig, _Mapping]]] = ...) -> None: ...
 
 class CreateSprintRequest(_message.Message):
     __slots__ = ("organization_id", "project_id", "name", "goal", "start_date", "end_date")
