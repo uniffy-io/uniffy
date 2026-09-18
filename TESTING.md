@@ -2636,6 +2636,37 @@ due date, spread over two projects.
       lines are readable, the chart tooltip is readable, and the org chart's "team lead" edge
       labels are readable.
 
+## Projects: personal and shared views
+
+Views have no management screen yet, so most checks read the `GetProject` and `ListProjects`
+responses in the browser's network tab. Needs two browsers: the project owner, and a second user
+who has the project shared with them as a viewer. On a local stack the view calls can be made from
+the browser console, where the dev server exposes the app's own API module:
+`const { projectsApi } = await import("/src/features/projects/api/projectsApi.ts")`.
+
+- [ ] `(both products)` After upgrading, every existing project lists six shared views (Table,
+      Board, Roadmap, Backlog, Graph, Resources) in that order, each with a `definition` and an
+      `ownerId`, and no `configJson`. `defaultViewId` is `view_table`.
+- [ ] A project created after the upgrade has the same six views and the same default.
+- [ ] As the viewer, create a personal view (`projectsApi.createView(projectId, { name: "Mine",
+      definition: { layout: { type: "table", flat: false }, filter: null, sort: [], groupBy: null,
+      visibleFields: [], columnWidths: [], collapsedGroupKeys: [] }, visibility: 1 }, orgId)`). It
+      comes back with `visibility` 1 and the viewer as owner. The viewer's next `GetProject` lists
+      it after the shared views; the owner's does not.
+- [ ] As the viewer, create the same view with `visibility: 2` (shared): it fails with a
+      permission error toast and nothing is created.
+- [ ] As the owner, create a shared view. The viewer's open project page issues a `GetProject`
+      within a second, with no reload and no `ListProjects` call.
+- [ ] As the owner, set the project default to the viewer's personal view id with
+      `UpdateProject`: it fails with "The default view must be a shared view of this project".
+- [ ] As the owner, delete `view_table`: the next `GetProject` has an empty `defaultViewId`.
+- [ ] Save a definition whose filter names a field id that does not exist: the call fails with a
+      message naming that field, not a generic error.
+- [ ] Reorder the shared views as an editor who is not an admin: permission error. As the owner
+      with the complete list of shared view ids: the next `GetProject` lists them in the new order.
+- [ ] `(self-hosted)` `./manage.py db migrate` on a copy of a database from before the upgrade
+      completes, and every project has six views afterwards.
+
 ## Pre-release sweep
 
 - [ ] All linters green: `./manage.py lint`.
