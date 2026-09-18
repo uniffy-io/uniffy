@@ -328,9 +328,14 @@ export const viewerSlice = createSlice({
       // An access revocation removes the row; a viewer left open on it would
       // keep showing content the user can no longer read.
       .addCase(removeFile, (state, action) => {
-        if (state.isOpen && state.currentFileId === action.payload) {
+        state.playlist = state.playlist.filter((id) => id !== action.payload);
+        state.playlistIndex = state.currentFileId ? state.playlist.indexOf(state.currentFileId) : 0;
+        if (state.currentFileId === action.payload) {
           state.isOpen = false;
           state.isFullscreen = false;
+          state.fileData = null;
+          state.currentFileId = null;
+          state.isPlaying = false;
         }
       });
   },

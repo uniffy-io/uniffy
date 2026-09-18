@@ -29,6 +29,7 @@ from uniffy.domains.files.jobs.slots import media_slot
 from uniffy.domains.files.operations import FileOperations
 from uniffy.infrastructure.database.session import open_session
 from uniffy.infrastructure.valkey.ops import get_ops_client
+from uniffy.vendor.arq import Retry
 
 logger = logger.bind(component="files.jobs.transcode")
 
@@ -95,7 +96,7 @@ async def transcode_video_to_mp4(
         return {"status": "error", "error": "invalid_uuid"}
     async with media_slot() as acquired:
         if not acquired:
-            return {"status": "skipped", "reason": "capacity", "file_id": file_id}
+            raise Retry(defer=5, count_attempt=False)
         async with asyncio.timeout(TRANSCODE_JOB_TIMEOUT_SECONDS - 30):
             return await _transcode_video_to_mp4(ctx, file_id, organization_id)
 

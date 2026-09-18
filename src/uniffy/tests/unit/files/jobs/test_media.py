@@ -115,3 +115,49 @@ async def test_stderr_retains_tail_and_nonzero_exit_fails(monkeypatch):
     with pytest.raises(media.MediaError, match="actual failure") as error:
         await media.run_media("ffmpeg", [], 60)
     assert len(str(error.value)) < 8300
+
+
+async def test_probe_scans_packets_only_when_duration_is_absent(monkeypatch):
+    calls = []
+
+    async def run(executable, args, timeout, *, stdout_line=None):
+        calls.append(args)
+        if stdout_line:
+            for line in (
+                b"pts_time=-0.007|duration_time=0.020",
+                b"pts_time=2.960|duration_time=0.040",
+            ):
+                stdout_line(line)
+            return b""
+        return dumps_bytes({
+            "format": {"format_name": "matroska,webm"},
+            "streams": [{"codec_type": "video", "width": 640, "height": 360}],
+        })
+
+    monkeypatch.setattr(media, "run_media", run)
+    info = await media.probe(Path("recording.webm"))
+    assert info.duration == pytest.approx(3.007)
+    assert len(calls) == 2
+
+
+@pytest.mark.parametrize("timestamp", [b"nan", b"inf", b"bad", b"7201"])
+async def test_packet_scan_rejects_invalid_or_excessive_timestamps(monkeypatch, timestamp):
+    async def run(*args, stdout_line):
+        stdout_line(b"pts_time=0|duration_time=0.040")
+        stdout_line(b"pts_time=" + timestamp + b"|duration_time=0.040")
+
+    monkeypatch.setattr(media, "run_media", run)
+    with pytest.raises(media.MediaError):
+        await media.packet_duration(Path("recording.webm"))
+
+
+async def test_packet_scan_limit_kills_and_reaps_child(monkeypatch):
+    process = Process(stdout=b"x" * 70000 + b"\n")
+
+    async def spawn(*args, **kwargs):
+        return process
+
+    monkeypatch.setattr(media.asyncio, "create_subprocess_exec", spawn)
+    with pytest.raises(media.MediaError, match="line exceeds capture limit"):
+        await media.packet_duration(Path("recording.webm"))
+    assert process.killed and process.done.is_set()

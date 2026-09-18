@@ -145,18 +145,14 @@ class AttachmentOperations:
             content_id,
         )
         parent_mode = target_policy.access_mode
-        parent_baseline = target_policy.baseline_role
 
-        # Org-wide parent -> org Attachments folder + OPEN_TO_ORG/EDITOR file.
-        # Otherwise -> attacher's personal folder, OWNER_ONLY.
+        # Parent access is resolved live so an independent baseline cannot bypass a denial.
+        file_access_mode = AccessMode.OWNER_ONLY
+        file_baseline_role = None
         if parent_mode == AccessMode.OPEN_TO_ORG:
             folder = await self.get_or_create_org_attachments_folder(organization_id)
-            file_access_mode = AccessMode.OPEN_TO_ORG
-            file_baseline_role = parent_baseline or ContentRole.EDITOR
         else:
             folder = await self.get_or_create_attachments_folder(user_id, organization_id)
-            file_access_mode = AccessMode.OWNER_ONLY
-            file_baseline_role = None
 
         # A staged upload is linked in place, never copied: the editor/composer
         # already embedded ITS id in the content, so the id the readers resolve

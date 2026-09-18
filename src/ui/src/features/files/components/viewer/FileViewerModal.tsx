@@ -28,6 +28,8 @@ import type { SerializedFile } from "@/features/files/store/filesThunks";
 import { getDownloadGateState } from "@/features/files/utils/transcodeGate";
 import { roleCanEdit } from "@/shared/utils/contentRoles";
 import { ContentRole } from "@uniffy/proto/common/v1/common_pb";
+import { onContentAccessChanged } from "@/features/notifications/contentAccessEmitter";
+import { revalidateViewerAccess } from "@/features/files/store/viewerThunks";
 
 // Import viewer-specific styles
 import "../../styles/viewer.css";
@@ -66,6 +68,20 @@ export function FileViewerModal() {
   const hasPrev = playlistIndex > 0;
 
   usePlaylistPrefetch();
+
+  useEffect(() => {
+    if (!isOpen) return;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const unsubscribe = onContentAccessChanged((change) => {
+      if (change.action === "child_added") return;
+      clearTimeout(timer);
+      timer = setTimeout(() => void dispatch(revalidateViewerAccess()), 100);
+    });
+    return () => {
+      clearTimeout(timer);
+      unsubscribe();
+    };
+  }, [dispatch, isOpen]);
 
   // Check if current file is a PDF
   const isPdf = useMemo(() => file?.mimeType === "application/pdf", [file?.mimeType]);

@@ -17,6 +17,7 @@ from uniffy.domains.files.jobs.playback import claim_playback, finish_playback, 
 from uniffy.domains.files.jobs.scratch import download_source, upload_video
 from uniffy.domains.files.jobs.settings import MEDIA_SETTINGS
 from uniffy.domains.files.jobs.slots import media_slot
+from uniffy.vendor.arq import Retry
 
 logger = logger.bind(component="files.jobs.renditions")
 
@@ -30,7 +31,7 @@ async def generate_playback_rendition(
         return
     async with media_slot() as acquired:
         if not acquired:
-            return
+            raise Retry(defer=5, count_attempt=False)
         claim = await claim_playback(file_uuid, org_uuid)
         if claim is None:
             return

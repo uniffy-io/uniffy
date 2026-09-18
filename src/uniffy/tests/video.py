@@ -85,6 +85,17 @@ async def make_videos(directory: Path) -> Path:
         "-an",
         str(directory / "av1.mkv"),
     )
+    for audio in (False, True):
+        await _encode(
+            "-i",
+            str(directory / "vp9.webm"),
+            "-c",
+            "copy",
+            *([] if audio else ["-an"]),
+            "-live",
+            "1",
+            str(directory / f"recording-{'audio' if audio else 'silent'}.webm"),
+        )
     await _encode(
         "-display_rotation:v:0",
         "90",

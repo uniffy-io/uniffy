@@ -67,8 +67,8 @@ async def stage_attachment_parent_policy(
             update(File)
             .where(File.organization_id == organization_id, File.id.in_(file_ids))
             .values(
-                access_mode=access_mode,
-                baseline_role=baseline_role if access_mode == AccessMode.OPEN_TO_ORG else None,
+                access_mode=AccessMode.OWNER_ONLY,
+                baseline_role=None,
                 folder_id=folder_id,
             )
         )

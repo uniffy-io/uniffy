@@ -3,6 +3,7 @@ import io
 import pytest
 from PIL import Image
 
+from uniffy.core.json_codec import loads
 from uniffy.domains.files.jobs.media import (
     MediaError,
     is_web_safe,
@@ -12,6 +13,7 @@ from uniffy.domains.files.jobs.media import (
     thumbnail_args,
 )
 from uniffy.domains.files.jobs.settings import MediaSettings
+from uniffy.domains.files.jobs.transcode import _run_ffmpeg
 
 
 @pytest.mark.parametrize(
@@ -71,3 +73,24 @@ async def test_corrupt_video_fails_with_bounded_error(tmp_path):
     with pytest.raises(MediaError) as error:
         await probe(source)
     assert len(str(error.value)) < 9000
+
+
+@pytest.mark.parametrize("kind", ["silent", "audio"])
+async def test_streamed_recording_without_indexed_duration(kind, tmp_path, video_samples):
+    source = video_samples / f"recording-{kind}.webm"
+    metadata = loads(
+        await run_media("ffprobe", ["-v", "error", "-show_format", "-of", "json", str(source)], 30)
+    )
+    assert "duration" not in metadata["format"]
+    info = await probe(source)
+    assert 0.9 <= info.duration <= 1.1
+    assert bool(info.audio) == (kind == "audio")
+    frame = await run_media("ffmpeg", thumbnail_args(source, info), 30)
+    with Image.open(io.BytesIO(frame)) as image:
+        assert image.size == (192, 108)
+    output = tmp_path / "recording.mp4"
+    await _run_ffmpeg(source, output)
+    result = await probe(output)
+    assert is_web_safe(result)
+    assert bool(result.audio) == bool(info.audio)
+    assert result.duration >= info.duration - 0.1

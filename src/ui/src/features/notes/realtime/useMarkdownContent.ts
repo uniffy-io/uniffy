@@ -23,9 +23,7 @@ export function useRealtimeMarkdownContent(
     fallbackRef.current = fallback;
   });
 
-  // Sync confirmation is per doc: a plain boolean stays stale across note
-  // switches (the hook instance survives, the ydoc swaps) and made note B
-  // render empty instead of its fallback until its own sync landed.
+  // Sync confirmation belongs to one document, including an authoritative empty value.
   const syncedDocRef = useRef<Y.Doc | null>(null);
 
   const initialFor = (doc: Y.Doc | null): string => {
@@ -91,5 +89,5 @@ export function useRealtimeMarkdownContent(
     // `fallback` read via ref so parent bumping note.content does not re-subscribe.
   }, [ydoc, debounce, whenSynced]);
 
-  return content;
+  return ydoc ? content : fallback;
 }
