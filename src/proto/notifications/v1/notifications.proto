@@ -307,7 +307,8 @@ message ContentAccessChangedPayload {
   common.v1.ContentType content_type = 1;
   // ID of the content whose access changed
   string content_id = 2;
-  // What happened: "granted", "revoked", or "access_mode_changed"
+  // What happened: "granted", "revoked", "access_mode_changed", "child_added"
+  // (a task was created in the project) or "views_changed" (a shared view changed)
   string action = 3;
 }
 
