@@ -35,9 +35,9 @@ jobs:
       media_image: ${{ inputs.run_all || steps.filter.outputs.media_image == 'true' }}
       image_matrix: ${{ steps.images.outputs.matrix }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         if: ${{ !inputs.run_all }}
-      - uses: dorny/paths-filter@v3
+      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
         if: ${{ !inputs.run_all }}
         id: filter
         with:
@@ -49,6 +49,7 @@ jobs:
               - '.github/workflows/test.yml'
               - 'pyproject.toml'
               - 'uv.lock'
+              - '.python-version'
             frontend:
               - 'src/ui/**'
               - 'src/gen/typescript/**'
@@ -100,14 +101,24 @@ jobs:
       - name: Select image checks
         id: images
         env:
-          MEDIA_IMAGE: ${{ inputs.run_all || steps.filter.outputs.media_image == 'true' }}
+          BACKEND_IMAGE: ${{ inputs.run_all || steps.filter.outputs.backend == 'true' || steps.filter.outputs.proto == 'true' || steps.filter.outputs.docker == 'true' }}
+          FRONTEND_IMAGE: ${{ inputs.run_all || steps.filter.outputs.frontend == 'true' || steps.filter.outputs.proto == 'true' || steps.filter.outputs.docker == 'true' }}
+          MEDIA_IMAGE: ${{ inputs.run_all || steps.filter.outputs.backend == 'true' || steps.filter.outputs.proto == 'true' || steps.filter.outputs.docker == 'true' || steps.filter.outputs.media_image == 'true' }}
         run: |
-          matrix=$(jq -cn --argjson media "$MEDIA_IMAGE" '{include: ([
-            {image: "backend", name: "uniffy", dockerfile: "src/uniffy/Dockerfile", target: "runtime"},
-            {image: "frontend", name: "uniffy-frontend", dockerfile: "src/ui/Dockerfile", target: "runtime"}
-          ] + (if $media then [
-            {image: "media-worker", name: "uniffy-media-worker", dockerfile: "src/uniffy/Dockerfile", target: "media-runtime"}
-          ] else [] end))}')
+          matrix=$(jq -cn \
+            --argjson backend "$BACKEND_IMAGE" \
+            --argjson frontend "$FRONTEND_IMAGE" \
+            --argjson media "$MEDIA_IMAGE" '{include: [
+              (if $backend then
+                {image: "backend", name: "uniffy", dockerfile: "src/uniffy/Dockerfile", target: "runtime"}
+              else empty end),
+              (if $frontend then
+                {image: "frontend", name: "uniffy-frontend", dockerfile: "src/ui/Dockerfile", target: "runtime"}
+              else empty end),
+              (if $media then
+                {image: "media-worker", name: "uniffy-media-worker", dockerfile: "src/uniffy/Dockerfile", target: "media-runtime"}
+              else empty end)
+            ]}')
           echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
 
   # No path filter: a secret can land in any file, and the scan covers the
@@ -115,7 +126,7 @@ jobs:
   secrets-scan:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
 
@@ -133,12 +144,12 @@ jobs:
     if: needs.changes.outputs.proto == 'true'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
 
       - name: Setup buf
-        uses: bufbuild/buf-setup-action@v1
+        uses: bufbuild/buf-setup-action@a47c93e0b1648d5651a065437926377d060baa99 # v1.50.0
         with:
           github_token: ${{ github.token }}
 
@@ -158,17 +169,17 @@ jobs:
     if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.proto == 'true'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 1
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
         with:
           version: "latest"
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version-file: ".python-version"
 
@@ -185,15 +196,15 @@ jobs:
     if: needs.changes.outputs.frontend == 'true' || needs.changes.outputs.proto == 'true'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 1
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 22
           cache: "pnpm"
@@ -215,15 +226,15 @@ jobs:
     env:
       EXPO_NO_TELEMETRY: "1"
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 1
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 22
           cache: "pnpm"
@@ -247,15 +258,15 @@ jobs:
     if: needs.changes.outputs.mobile == 'true' || needs.changes.outputs.proto == 'true'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 1
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 22
           cache: "pnpm"
@@ -272,15 +283,15 @@ jobs:
     if: needs.changes.outputs.mobile == 'true' || needs.changes.outputs.proto == 'true'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 1
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 22
           cache: "pnpm"
@@ -297,17 +308,17 @@ jobs:
     if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.proto == 'true'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 1
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
         with:
           version: "latest"
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version-file: ".python-version"
 
@@ -328,7 +339,7 @@ jobs:
 
       - name: Upload pytest JUnit report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: pytest-report
           path: reports/pytest-report.xml
@@ -337,7 +348,7 @@ jobs:
 
       - name: Publish test report (native)
         if: success() || failure()
-        uses: mikepenz/action-junit-report@v5
+        uses: mikepenz/action-junit-report@a9170d5795813c01ab4901ffb045b52bab4ab09d # v6.5.0
         with:
           report_paths: reports/pytest-report.xml
           check_name: Pytest Results
@@ -351,15 +362,15 @@ jobs:
     if: needs.changes.outputs.frontend == 'true' || needs.changes.outputs.proto == 'true'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 1
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 22
           cache: "pnpm"
@@ -373,7 +384,7 @@ jobs:
 
       - name: Upload Vitest JUnit report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: vitest-report
           path: reports/vitest-report.xml
@@ -382,7 +393,7 @@ jobs:
 
       - name: Publish test report
         if: success() || failure()
-        uses: mikepenz/action-junit-report@v5
+        uses: mikepenz/action-junit-report@a9170d5795813c01ab4901ffb045b52bab4ab09d # v6.5.0
         with:
           report_paths: reports/vitest-report.xml
           check_name: Vitest Results
@@ -396,15 +407,15 @@ jobs:
     if: needs.changes.outputs.mobile == 'true' || needs.changes.outputs.proto == 'true'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 1
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 22
           cache: "pnpm"
@@ -418,7 +429,7 @@ jobs:
 
       - name: Upload Vitest JUnit report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: vitest-mobile-report
           path: reports/vitest-mobile-report.xml
@@ -427,7 +438,7 @@ jobs:
 
       - name: Publish test report
         if: success() || failure()
-        uses: mikepenz/action-junit-report@v5
+        uses: mikepenz/action-junit-report@a9170d5795813c01ab4901ffb045b52bab4ab09d # v6.5.0
         with:
           report_paths: reports/vitest-mobile-report.xml
           check_name: Vitest Mobile Results
@@ -443,17 +454,17 @@ jobs:
       (needs.changes.outputs.backend == 'true' || needs.changes.outputs.proto == 'true')
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 1
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
         with:
           version: "latest"
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version-file: ".python-version"
 
@@ -473,7 +484,7 @@ jobs:
             --color=yes
 
       - name: Upload benchmark results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: benchmark-results
           path: reports/benchmark.json

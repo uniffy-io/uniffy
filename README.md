@@ -31,6 +31,7 @@ Every piece of information can be referenced from anywhere with a universal `@` 
 - [Documentation](#documentation)
 - [Development](#development)
   - [Setup](#setup)
+- [Why we pin actions and images](#why-we-pin-actions-and-images)
 - [Repository Structure](#repository-structure)
 - [System Architecture](#system-architecture)
 
@@ -143,6 +144,18 @@ docker compose --profile core --profile dev up        # infra + app (== ./manage
 docker compose --profile core --profile adminuis up   # infra + db inspection UIs
 docker compose --profile all up                       # everything
 ```
+
+## Why we pin actions and images
+
+Tags can move. An upstream publisher can point the same action or Docker tag at different code without changing anything in our repository. Hash pins keep the selected dependency fixed until we change its reference. That makes updates visible in a pull request and gives us an exact revision to investigate when something breaks.
+
+For **GitHub Actions**, a full commit SHA selects one revision of the action. A version comment next to it helps people read the workflow; the SHA controls what GitHub checks out. This prevents a moved tag from silently replacing that action's code. See [GitHub's guidance on action pinning](https://docs.github.com/en/actions/reference/security/secure-use#using-third-party-actions).
+
+For **Docker images**, `image:version@sha256:...` selects content by digest. The version tag is a readable label; the digest fixes the image manifest and the layers it references. Rebuilding after an upstream tag moves still uses the pinned image. See [Docker's guidance on image pinning](https://docs.docker.com/build/building/best-practices/#pin-base-image-versions).
+
+Every external action reference in the [test](.github/workflows/test.yml) and [release](.github/workflows/release.yml) workflows uses a full commit SHA with a version comment. Local actions and reusable workflows run from the same repository revision as their caller. Production [backend](src/uniffy/Dockerfile) and [frontend](src/ui/Dockerfile) base images use digests.
+
+A hash identifies content; it does not prove that content is safe or pin everything an action downloads later. Review the upstream source and release when changing a pin, update its readable version alongside it, and run the relevant checks. Pins also hold back security fixes until updated. Keep them current through reviewed changes. For published Uniffy images, [verify release signatures](https://uniffy.io/docs/deployment/verify/) as well as pinning digests.
 
 ## Repository Structure
 
