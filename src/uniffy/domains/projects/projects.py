@@ -260,6 +260,9 @@ class ProjectOperations(BaseContentOperations[Project]):
                 project.id, kwargs.pop("default_view_id")
             )
 
+        if "slug" in kwargs:  # noqa: PLR2004 - update keyword name
+            project.slug = await self._resolve_renamed_slug(project, kwargs.pop("slug"))
+
         for key, value in kwargs.items():
             if value is not None and hasattr(project, key):
                 setattr(project, key, value)
@@ -436,20 +439,42 @@ class ProjectOperations(BaseContentOperations[Project]):
         requested_slug: str | None,
     ) -> str:
         candidate = requested_slug.upper() if requested_slug else self._generate_slug_candidate(name)
+        self._require_slug_shape(candidate)
+        for suffix in ["", "2", "3", "4", "5", "6", "7", "8", "9"]:
+            slug_to_try = candidate + suffix
+            if not await self._slug_taken(organization_id, slug_to_try):
+                return slug_to_try
+        return candidate[:4] + secrets.token_hex(1).upper()
+
+    def _require_slug_shape(self, candidate: str) -> None:
         if not _SLUG_PATTERN.match(candidate):
             raise ValidationError(
                 "slug",
                 f"Slug '{candidate}' must be 2-5 uppercase letters/digits starting with a letter",
             )
-        for suffix in ["", "2", "3", "4", "5", "6", "7", "8", "9"]:
-            slug_to_try = candidate + suffix
-            exists = await self.session.execute(
-                select(Project).where(
-                    Project.organization_id == organization_id,
-                    Project.slug == slug_to_try,
-                    Project.is_deleted == False,  # noqa: E712
-                )
-            )
-            if exists.scalar_one_or_none() is None:
-                return slug_to_try
-        return candidate[:4] + secrets.token_hex(1).upper()
+
+    async def _slug_taken(
+        self,
+        organization_id: UUID,
+        slug: str,
+        *,
+        exclude_project_id: UUID | None = None,
+    ) -> bool:
+        query = select(Project.id).where(
+            Project.organization_id == organization_id,
+            Project.slug == slug,
+            Project.is_deleted == False,  # noqa: E712
+        )
+        if exclude_project_id is not None:
+            query = query.where(Project.id != exclude_project_id)
+        return await self.session.scalar(query.limit(1)) is not None
+
+    async def _resolve_renamed_slug(self, project: Project, requested_slug: str) -> str:
+        """A rename keeps the caller's slug or fails; task keys read it, so no silent suffix."""
+        candidate = requested_slug.strip().upper()
+        if candidate == project.slug:
+            return project.slug
+        self._require_slug_shape(candidate)
+        if await self._slug_taken(project.organization_id, candidate, exclude_project_id=project.id):
+            raise ValidationError("slug", f"Slug '{candidate}' is already used by another project")
+        return candidate

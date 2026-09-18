@@ -350,6 +350,7 @@ export const projectsApi = {
       icon: data.icon,
       color: data.color,
       defaultViewId: data.defaultViewId,
+      slug: data.slug,
       ...(data.typeFieldSchemas ? { typeFieldSchemas } : {}),
       ...(data.tagIds !== undefined ? { tagIds: { ids: data.tagIds } } : {}),
     });
