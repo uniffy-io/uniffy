@@ -1,13 +1,6 @@
 name: Release
 
-# Version tags only. The gate job refuses a tag whose commit is not on main,
-# then the whole test workflow runs for the tagged commit and the images are
-# built only after it passes. Images are signed keyless with cosign under this
-# workflow's identity, their SBOMs are attested, and the pinset file is signed
-# too. The release notes list every commit since the previous tag by area
-# and carry the pinset with the commands that verify it. Every action is
-# pinned to a commit; scanners run from digest-pinned images through
-# ./manage.py image.
+# Release checks run on the tagged commit. Each published image is checked by digest.
 
 on:
   push:
@@ -58,12 +51,12 @@ jobs:
             exit 1
           fi
 
-  # Every lint, test, and the amd64 image checks, for exactly this commit.
   tests:
     needs: verify
     uses: ./.github/workflows/test.yml
     with:
       run_all: true
+      skip_images: true
     permissions:
       contents: read
       checks: write
@@ -223,8 +216,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Stable releases get MAJOR.MINOR.PATCH, MAJOR.MINOR, MAJOR (from 1.0 on)
-      # and latest. Release candidates get their exact version only.
+      # Release candidates must not move latest.
       - name: Create the multi-arch manifest
         env:
           VERSION: ${{ needs.verify.outputs.version }}
@@ -232,12 +224,7 @@ jobs:
         run: |
           tags=(-t "$IMAGE:$VERSION")
           if [[ "$PRERELEASE" == "false" ]]; then
-            major="${VERSION%%.*}"
-            minor="${VERSION#*.}"; minor="${minor%%.*}"
-            tags+=(-t "$IMAGE:$major.$minor" -t "$IMAGE:latest")
-            if [[ "$major" != "0" ]]; then
-              tags+=(-t "$IMAGE:$major")
-            fi
+            tags+=(-t "$IMAGE:latest")
           fi
           refs=()
           for f in /tmp/digests/*; do refs+=("$IMAGE@sha256:$(basename "$f")"); done
@@ -342,12 +329,9 @@ jobs:
       attestations: write
       artifact-metadata: write
     steps:
-      # Full history and tags: the notes walk back to the previous release.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          fetch-depth: 0
-
-      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+          fetch-depth: 1
 
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
@@ -382,13 +366,6 @@ jobs:
         with:
           subject-path: images.txt
 
-      - name: Release notes
-        env:
-          TAG: ${{ github.ref_name }}
-        run: |
-          ./manage.py release notes "$TAG" --images images.txt --out /tmp/notes.md
-          cat /tmp/notes.md
-
       - name: Create the release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -396,6 +373,6 @@ jobs:
           VERSION: ${{ needs.verify.outputs.version }}
           PRERELEASE: ${{ needs.verify.outputs.prerelease }}
         run: |
-          args=(--verify-tag --notes-file /tmp/notes.md --title "Uniffy $VERSION")
+          args=(--verify-tag --notes "Release notes are being prepared." --title "$VERSION")
           if [[ "$PRERELEASE" == "true" ]]; then args+=(--prerelease); fi
           gh release create "$TAG" "${args[@]}" images.txt images.txt.sigstore.json /tmp/sbom/*.spdx.json

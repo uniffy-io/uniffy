@@ -8,7 +8,11 @@ on:
   workflow_call:
     inputs:
       run_all:
-        description: Run every job regardless of changed paths.
+        description: Run all source checks regardless of changed paths and select every image.
+        type: boolean
+        default: false
+      skip_images:
+        description: Skip CI image builds and scans when the caller checks its own images.
         type: boolean
         default: false
 
@@ -27,6 +31,7 @@ jobs:
   changes:
     runs-on: ubuntu-latest
     outputs:
+      run_checks: ${{ github.event_name == 'pull_request' || inputs.run_all }}
       backend: ${{ inputs.run_all || steps.filter.outputs.backend == 'true' }}
       frontend: ${{ inputs.run_all || steps.filter.outputs.frontend == 'true' }}
       mobile: ${{ inputs.run_all || steps.filter.outputs.mobile == 'true' }}
@@ -56,16 +61,21 @@ jobs:
               - 'lint/**'
               - 'pnpm-workspace.yaml'
               - 'package.json'
+              - 'pnpm-lock.yaml'
+              - '.github/workflows/test.yml'
             mobile:
               - 'src/mobile/**'
               - 'src/gen/typescript/**'
               - 'lint/**'
               - 'pnpm-workspace.yaml'
               - 'package.json'
+              - 'pnpm-lock.yaml'
+              - '.github/workflows/test.yml'
             proto:
               - 'src/proto/**'
               - 'buf.gen.yaml'
               - 'buf.yaml'
+              - '.github/workflows/test.yml'
             docker:
               - 'src/uniffy/Dockerfile'
               - 'src/ui/Dockerfile'
@@ -121,9 +131,10 @@ jobs:
             ]}')
           echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
 
-  # No path filter: a secret can land in any file, and the scan covers the
-  # full history, so a skipped run would let an old leak ride in unnoticed.
+  # Scan every PR and release because secrets can land outside domain paths.
   secrets-scan:
+    needs: changes
+    if: needs.changes.outputs.run_checks == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -141,7 +152,7 @@ jobs:
 
   lint-proto:
     needs: changes
-    if: needs.changes.outputs.proto == 'true'
+    if: needs.changes.outputs.run_checks == 'true' && needs.changes.outputs.proto == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -166,7 +177,9 @@ jobs:
 
   lint-python:
     needs: changes
-    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.proto == 'true'
+    if: >
+      needs.changes.outputs.run_checks == 'true' &&
+      (needs.changes.outputs.backend == 'true' || needs.changes.outputs.proto == 'true')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -193,7 +206,9 @@ jobs:
 
   lint-frontend:
     needs: changes
-    if: needs.changes.outputs.frontend == 'true' || needs.changes.outputs.proto == 'true'
+    if: >
+      needs.changes.outputs.run_checks == 'true' &&
+      (needs.changes.outputs.frontend == 'true' || needs.changes.outputs.proto == 'true')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -221,7 +236,9 @@ jobs:
 
   lint-mobile:
     needs: changes
-    if: needs.changes.outputs.mobile == 'true' || needs.changes.outputs.proto == 'true'
+    if: >
+      needs.changes.outputs.run_checks == 'true' &&
+      (needs.changes.outputs.mobile == 'true' || needs.changes.outputs.proto == 'true')
     runs-on: ubuntu-latest
     env:
       EXPO_NO_TELEMETRY: "1"
@@ -255,7 +272,9 @@ jobs:
 
   format-mobile:
     needs: changes
-    if: needs.changes.outputs.mobile == 'true' || needs.changes.outputs.proto == 'true'
+    if: >
+      needs.changes.outputs.run_checks == 'true' &&
+      (needs.changes.outputs.mobile == 'true' || needs.changes.outputs.proto == 'true')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -280,7 +299,9 @@ jobs:
 
   typecheck-mobile:
     needs: changes
-    if: needs.changes.outputs.mobile == 'true' || needs.changes.outputs.proto == 'true'
+    if: >
+      needs.changes.outputs.run_checks == 'true' &&
+      (needs.changes.outputs.mobile == 'true' || needs.changes.outputs.proto == 'true')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -305,7 +326,9 @@ jobs:
 
   test-python:
     needs: changes
-    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.proto == 'true'
+    if: >
+      needs.changes.outputs.run_checks == 'true' &&
+      (needs.changes.outputs.backend == 'true' || needs.changes.outputs.proto == 'true')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -359,7 +382,9 @@ jobs:
 
   test-frontend:
     needs: changes
-    if: needs.changes.outputs.frontend == 'true' || needs.changes.outputs.proto == 'true'
+    if: >
+      needs.changes.outputs.run_checks == 'true' &&
+      (needs.changes.outputs.frontend == 'true' || needs.changes.outputs.proto == 'true')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -404,7 +429,9 @@ jobs:
 
   test-mobile:
     needs: changes
-    if: needs.changes.outputs.mobile == 'true' || needs.changes.outputs.proto == 'true'
+    if: >
+      needs.changes.outputs.run_checks == 'true' &&
+      (needs.changes.outputs.mobile == 'true' || needs.changes.outputs.proto == 'true')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -494,11 +521,12 @@ jobs:
   lint-docker:
     needs: changes
     if: >
-      needs.changes.outputs.docker == 'true' ||
-      needs.changes.outputs.backend == 'true' ||
-      needs.changes.outputs.frontend == 'true' ||
-      needs.changes.outputs.proto == 'true' ||
-      needs.changes.outputs.media_image == 'true'
+      needs.changes.outputs.run_checks == 'true' &&
+      (needs.changes.outputs.docker == 'true' ||
+       needs.changes.outputs.backend == 'true' ||
+       needs.changes.outputs.frontend == 'true' ||
+       needs.changes.outputs.proto == 'true' ||
+       needs.changes.outputs.media_image == 'true')
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -509,7 +537,7 @@ jobs:
         run: ./manage.py image lint
 
   # Path-filtered jobs may be skipped. Failures and cancellations block builds.
-  # Releases request every image check before building both architectures.
+  # Main builds refresh shared caches. PR builds also check the images.
   docker-images:
     name: docker-build-${{ matrix.image }}
     needs:
@@ -528,6 +556,7 @@ jobs:
       - benchmark-python
     if: >
       !cancelled() &&
+      !inputs.skip_images &&
       !contains(needs.*.result, 'failure') &&
       !contains(needs.*.result, 'cancelled') &&
       (needs.changes.outputs.docker == 'true' ||
@@ -556,7 +585,7 @@ jobs:
           file: ${{ matrix.dockerfile }}
           target: ${{ matrix.target }}
           platforms: linux/amd64
-          load: true
+          load: ${{ needs.changes.outputs.run_checks == 'true' }}
           tags: ${{ env.IMAGE }}:ci
           build-args: |
             VERSION=0.0.0-ci
@@ -567,15 +596,18 @@ jobs:
           cache-to: ${{ (github.ref == 'refs/heads/main' || (github.event_name == 'pull_request' && matrix.image == 'media-worker')) && format('type=gha,mode=max,scope={0}-amd64', matrix.image) || '' }}
 
       - uses: ./.github/actions/container-structure-test
+        if: needs.changes.outputs.run_checks == 'true'
         with:
           image: ${{ env.IMAGE }}:ci
           config: .docker/prod/tests/${{ matrix.image }}.yaml
           arch: amd64
 
       - name: Export image for scan
+        if: needs.changes.outputs.run_checks == 'true'
         run: docker save "$IMAGE:ci" -o "$RUNNER_TEMP/image.tar"
 
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: needs.changes.outputs.run_checks == 'true'
         with:
           name: scan-image-${{ matrix.image }}
           path: ${{ runner.temp }}/image.tar
@@ -587,7 +619,10 @@ jobs:
   docker-scans:
     name: security-scan-${{ matrix.image }}
     needs: [changes, docker-images]
-    if: ${{ !cancelled() && needs.docker-images.result == 'success' }}
+    if: >
+      !cancelled() &&
+      needs.changes.outputs.run_checks == 'true' &&
+      needs.docker-images.result == 'success'
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
@@ -610,7 +645,7 @@ jobs:
 
   all-green:
     name: All checks passed
-    if: always()
+    if: always() && (github.event_name == 'pull_request' || inputs.run_all)
     needs:
       - changes
       - secrets-scan
