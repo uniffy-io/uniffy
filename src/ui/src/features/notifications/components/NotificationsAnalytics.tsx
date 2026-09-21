@@ -6,7 +6,6 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip as RechartsTooltip,
-  ResponsiveContainer,
   BarChart,
   Bar,
 } from "recharts";
@@ -121,47 +120,45 @@ export function NotificationsAnalytics() {
             Notifications over time
           </p>
           <div className="h-[120px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={dailyData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.5} />
-                <XAxis
-                  dataKey="date"
-                  tick={{ fontSize: 9, fill: "var(--muted-foreground)" }}
-                  tickLine={false}
-                  axisLine={false}
-                />
-                <YAxis
-                  tick={{ fontSize: 9, fill: "var(--muted-foreground)" }}
-                  tickLine={false}
-                  axisLine={false}
-                  width={30}
-                />
-                <RechartsTooltip
-                  contentStyle={{
-                    backgroundColor: "var(--card)",
-                    border: "1px solid var(--border)",
-                    borderRadius: "8px",
-                    fontSize: "11px",
-                  }}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="read"
-                  stackId="1"
-                  stroke={CHART_COLORS.read}
-                  fill={CHART_COLORS.read}
-                  fillOpacity={0.2}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="unread"
-                  stackId="1"
-                  stroke={CHART_COLORS.unread}
-                  fill={CHART_COLORS.unread}
-                  fillOpacity={0.3}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
+            <AreaChart responsive style={{ width: "100%", height: "100%" }} data={dailyData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" opacity={0.5} />
+              <XAxis
+                dataKey="date"
+                tick={{ fontSize: 9, fill: "var(--color-muted-foreground)" }}
+                tickLine={false}
+                axisLine={false}
+              />
+              <YAxis
+                tick={{ fontSize: 9, fill: "var(--color-muted-foreground)" }}
+                tickLine={false}
+                axisLine={false}
+                width={30}
+              />
+              <RechartsTooltip
+                contentStyle={{
+                  backgroundColor: "var(--color-popover)",
+                  border: "1px solid var(--color-border)",
+                  borderRadius: "8px",
+                  fontSize: "11px",
+                }}
+              />
+              <Area
+                type="monotone"
+                dataKey="read"
+                stackId="1"
+                stroke={CHART_COLORS.read}
+                fill={CHART_COLORS.read}
+                fillOpacity={0.2}
+              />
+              <Area
+                type="monotone"
+                dataKey="unread"
+                stackId="1"
+                stroke={CHART_COLORS.unread}
+                fill={CHART_COLORS.unread}
+                fillOpacity={0.3}
+              />
+            </AreaChart>
           </div>
         </div>
 
@@ -169,39 +166,42 @@ export function NotificationsAnalytics() {
           <div>
             <p className="text-[10px] font-medium text-muted-foreground mb-2">By type</p>
             <div className="h-[120px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={typeData} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.5} />
-                  <XAxis
-                    type="number"
-                    tick={{ fontSize: 9, fill: "var(--muted-foreground)" }}
-                    tickLine={false}
-                    axisLine={false}
-                  />
-                  <YAxis
-                    type="category"
-                    dataKey="name"
-                    tick={{ fontSize: 9, fill: "var(--muted-foreground)" }}
-                    tickLine={false}
-                    axisLine={false}
-                    width={80}
-                  />
-                  <RechartsTooltip
-                    contentStyle={{
-                      backgroundColor: "var(--card)",
-                      border: "1px solid var(--border)",
-                      borderRadius: "8px",
-                      fontSize: "11px",
-                    }}
-                  />
-                  <Bar
-                    dataKey="count"
-                    fill={CHART_COLORS.total}
-                    radius={[0, 4, 4, 0]}
-                    maxBarSize={16}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
+              <BarChart
+                responsive
+                style={{ width: "100%", height: "100%" }}
+                data={typeData}
+                layout="vertical"
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" opacity={0.5} />
+                <XAxis
+                  type="number"
+                  tick={{ fontSize: 9, fill: "var(--color-muted-foreground)" }}
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <YAxis
+                  type="category"
+                  dataKey="name"
+                  tick={{ fontSize: 9, fill: "var(--color-muted-foreground)" }}
+                  tickLine={false}
+                  axisLine={false}
+                  width={80}
+                />
+                <RechartsTooltip
+                  contentStyle={{
+                    backgroundColor: "var(--color-popover)",
+                    border: "1px solid var(--color-border)",
+                    borderRadius: "8px",
+                    fontSize: "11px",
+                  }}
+                />
+                <Bar
+                  dataKey="count"
+                  fill={CHART_COLORS.total}
+                  radius={[0, 4, 4, 0]}
+                  maxBarSize={16}
+                />
+              </BarChart>
             </div>
           </div>
         )}

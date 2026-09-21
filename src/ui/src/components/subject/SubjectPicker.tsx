@@ -205,6 +205,7 @@ export function SubjectPicker({
   const dropdownContent = (
     <div
       ref={dropdownRef}
+      data-select-portal={portal ? "" : undefined}
       style={
         portal && position
           ? {

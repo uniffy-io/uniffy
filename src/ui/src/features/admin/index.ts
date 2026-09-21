@@ -42,6 +42,7 @@ export {
   fetchPermissionDefaults,
   updatePermissionDefaults,
   fetchOrganizationOverview,
+  DIRECTORY_MEMBERS_PAGE_SIZE,
   fetchMembers,
   updateMemberRole,
   removeMember,

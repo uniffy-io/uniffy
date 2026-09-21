@@ -1,6 +1,10 @@
 import { useEffect, useMemo } from "react";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
-import { fetchMembers, fetchGroups } from "@/features/admin/store/adminThunks";
+import {
+  DIRECTORY_MEMBERS_PAGE_SIZE,
+  fetchMembers,
+  fetchGroups,
+} from "@/features/admin/store/adminThunks";
 import type { SerializedMemberInfo, SerializedGroupInfo } from "@/features/admin/store/adminSlice";
 import { SUBJECT_TYPE, type Subject } from "@/components/subject/types";
 import { subjectKindFromGroupKind } from "@/components/subject/utils";
@@ -36,7 +40,7 @@ export function useSubjectResolver(ids: string[]): {
       return;
     }
     membersRequestInFlight = true;
-    void dispatch(fetchMembers({ pageSize: 200 })).finally(() => {
+    void dispatch(fetchMembers({ pageSize: DIRECTORY_MEMBERS_PAGE_SIZE })).finally(() => {
       membersRequestInFlight = false;
     });
   }, [dispatch, organizationId, membersFetched, membersLoading]);

@@ -23,7 +23,7 @@ import { CreateTaskModal } from "@/features/projects/components/modals/CreateTas
 import { CreateProjectModal } from "@/features/projects/components/modals/CreateProjectModal";
 import { EditProjectModal } from "@/features/projects/components/modals/EditProjectModal";
 import { fetchSprints } from "@/features/projects/store/sprintsThunks";
-import { fetchMembers } from "@/features/admin";
+import { DIRECTORY_MEMBERS_PAGE_SIZE, fetchMembers } from "@/features/admin";
 import {
   selectEditProjectId,
   selectIsDetailPanelOpen,
@@ -77,7 +77,7 @@ export function ProjectsLayout() {
   const membersLoading = useAppSelector((state) => state.admin.membersLoading);
   useEffect(() => {
     if (!membersFetched && !membersLoading) {
-      dispatch(fetchMembers({ pageSize: 50 }));
+      dispatch(fetchMembers({ pageSize: DIRECTORY_MEMBERS_PAGE_SIZE }));
     }
   }, [dispatch, membersFetched, membersLoading]);
 

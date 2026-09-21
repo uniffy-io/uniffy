@@ -88,6 +88,7 @@ import { useProjectPermission } from "@/features/projects/hooks/useProjectPermis
 import { TaskTypeIcon } from "@/features/projects/components/TaskTypeIcon";
 import { TASK_TYPES } from "@/features/projects/utils/taskTypes";
 import { parseMultiSelectValue } from "@/features/projects/utils/multiSelectParsers";
+import { getTaskFieldValue, toIdList } from "@/features/projects/utils/taskFieldValue";
 import { selectSprintsForProject } from "@/features/projects/store/sprintsSlice";
 import { checkReparent } from "@/features/projects/utils/reparent";
 import { getHierarchyRuleViolation } from "@/features/projects/utils/taskTypes";
@@ -286,12 +287,7 @@ export function TableView() {
       const buckets = new Map<string, Task[]>();
       const unassigned: Task[] = [];
       for (const task of filteredTasks) {
-        const val = getFieldValue(task, groupByFieldId);
-        const ids = Array.isArray(val)
-          ? (val as unknown[]).filter((v): v is string => typeof v === "string" && v.length > 0)
-          : typeof val === "string" && val.length > 0
-            ? [val]
-            : [];
+        const ids = toIdList(getTaskFieldValue(task, groupByFieldId));
         if (ids.length === 0) {
           unassigned.push(task);
           continue;
@@ -332,14 +328,14 @@ export function TableView() {
         color:
           field.id === SYSTEM_FIELD_IDS.STATUS ? statusPaint(options, opt.id).solid : opt.color,
         tasks: filteredTasks.filter((t) => {
-          const val = getFieldValue(t, groupByFieldId);
+          const val = getTaskFieldValue(t, groupByFieldId);
           return val === opt.id;
         }),
       }));
 
       // Add "No value" group for tasks without a value
       const ungrouped = filteredTasks.filter((t) => {
-        const val = getFieldValue(t, groupByFieldId);
+        const val = getTaskFieldValue(t, groupByFieldId);
         return !val || !options.some((o) => o.id === val);
       });
       if (ungrouped.length > 0) {
@@ -358,7 +354,7 @@ export function TableView() {
     const ungrouped: Task[] = [];
 
     for (const task of filteredTasks) {
-      const val = getFieldValue(task, groupByFieldId);
+      const val = getTaskFieldValue(task, groupByFieldId);
       if (val === null || val === undefined || val === "") {
         ungrouped.push(task);
       } else {
@@ -1600,7 +1596,7 @@ function EditableFieldCell({
                 ? (o) => statusPaint(field.config.options ?? [], o.id).gradient
                 : undefined
             }
-            currentValue={String(getFieldValue(task, field.id) ?? "")}
+            currentValue={String(getTaskFieldValue(task, field.id) ?? "")}
             onSave={onSave}
             onClose={onEndEdit}
           />
@@ -1624,7 +1620,7 @@ function EditableFieldCell({
         {isEditing && (
           <InlineMultiSelectEditor
             options={field.config.options ?? []}
-            currentValue={parseMultiSelectValue(getFieldValue(task, field.id))}
+            currentValue={parseMultiSelectValue(getTaskFieldValue(task, field.id))}
             onSave={(ids) => onSave(ids.length > 0 ? ids : null)}
             onClose={onEndEdit}
           />
@@ -1647,7 +1643,7 @@ function EditableFieldCell({
         <CaretDown size={12} className="text-muted-foreground shrink-0 ml-1" />
         {isEditing && (
           <InlineDateEditor
-            currentValue={String(getFieldValue(task, field.id) ?? "")}
+            currentValue={String(getTaskFieldValue(task, field.id) ?? "")}
             onSave={onSave}
             onClose={onEndEdit}
           />
@@ -1658,11 +1654,7 @@ function EditableFieldCell({
 
   // Person fields: avatar stack + "+" trigger, assignee picker appears below when editing
   if (isPersonField) {
-    const assigneeIds = (
-      Array.isArray(getFieldValue(task, field.id))
-        ? getFieldValue(task, field.id)
-        : task.assigneeIds
-    ) as string[];
+    const assigneeIds = toIdList(getTaskFieldValue(task, field.id));
     return (
       <div
         className="w-full h-full flex items-center justify-between cursor-pointer relative"
@@ -1698,7 +1690,7 @@ function EditableFieldCell({
     );
   }
 
-  const value = getFieldValue(task, field.id);
+  const value = getTaskFieldValue(task, field.id);
 
   switch (field.type) {
     case "text":
@@ -2163,7 +2155,7 @@ interface FieldCellProps {
 }
 
 function FieldCell({ task, field }: FieldCellProps) {
-  const value = getFieldValue(task, field.id);
+  const value = getTaskFieldValue(task, field.id);
 
   switch (field.type) {
     case "single_select": {
@@ -2197,11 +2189,11 @@ function FieldCell({ task, field }: FieldCellProps) {
     }
 
     case "person": {
-      const assigneeIds = Array.isArray(value) ? value : task.assigneeIds;
-      if (assigneeIds.length === 0) {
+      const personIds = toIdList(value);
+      if (personIds.length === 0) {
         return <span className="text-muted-foreground text-sm">-</span>;
       }
-      return <AvatarStack ids={assigneeIds} />;
+      return <AvatarStack ids={personIds} />;
     }
 
     case "date": {
@@ -2256,23 +2248,6 @@ function PersonGroupHeader({ subject, fallbackKey }: PersonGroupHeaderProps) {
       <span className="text-sm font-medium text-foreground truncate">{subject.name}</span>
     </span>
   );
-}
-
-function getFieldValue(task: Task, fieldId: string): unknown {
-  switch (fieldId) {
-    case SYSTEM_FIELD_IDS.STATUS:
-      return task.status;
-    case SYSTEM_FIELD_IDS.PRIORITY:
-      return task.priority;
-    case SYSTEM_FIELD_IDS.ASSIGNEE:
-      return task.assigneeIds;
-    case SYSTEM_FIELD_IDS.START_DATE:
-      return task.startDate;
-    case SYSTEM_FIELD_IDS.DUE_DATE:
-      return task.dueDate;
-    default:
-      return task.fieldValues[fieldId];
-  }
 }
 
 // Read-only tag chip row for the synthetic Tags column. Editing happens
@@ -2347,7 +2322,7 @@ function resolveSystemColumnWidth(
 interface ColumnsVisibilityMenuProps {
   projectId: string;
   allFields: FieldDefinition[];
-  hiddenIds: string[];
+  hiddenIds: readonly string[];
   onClose: () => void;
 }
 

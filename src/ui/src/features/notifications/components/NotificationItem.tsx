@@ -218,6 +218,7 @@ interface NotificationItemProps {
   onDelete: (id: string) => void;
   onClick?: (notification: SerializedNotification) => void;
   hideRowBackground?: boolean;
+  className?: string;
 }
 
 export function NotificationItem({
@@ -226,6 +227,7 @@ export function NotificationItem({
   onDelete,
   onClick,
   hideRowBackground = false,
+  className,
 }: NotificationItemProps) {
   const dispatch = useAppDispatch();
   const typeConfig = NOTIFICATION_TYPE_CONFIG[notification.notificationType] ?? DEFAULT_TYPE_CONFIG;
@@ -275,6 +277,7 @@ export function NotificationItem({
               "px-4",
               notification.isRead ? "hover:bg-muted/30" : "bg-primary/10 hover:bg-primary/15",
             ),
+        className,
       )}
       onClick={() => onClick?.(notification)}
     >
@@ -282,7 +285,7 @@ export function NotificationItem({
         <span className="absolute left-0 top-0 bottom-0 w-1 bg-primary" />
       )}
 
-      <div className="relative shrink-0 mt-0.5">
+      <div className="relative shrink-0 self-start mt-0.5">
         {actorSubject ? (
           <SubjectAvatar subject={actorSubject} size="md" />
         ) : (
@@ -413,7 +416,7 @@ export function NotificationItem({
       <div
         className={cn(
           "flex items-start gap-0.5 pt-0.5 shrink-0",
-          "opacity-0 group-hover:opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity",
+          "md:opacity-0 md:group-hover:opacity-100 transition-opacity",
         )}
       >
         {!notification.isRead && (

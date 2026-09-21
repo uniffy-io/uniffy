@@ -111,7 +111,8 @@ class TaskReader(TaskContentOperations):
         count_result = await self.session.execute(select(func.count()).select_from(query.subquery()))
         total = count_result.scalar_one()
 
-        query = query.order_by(Task.sort_order.asc(), Task.created_at.asc())
+        # ``id`` makes the order total, so offset pages partition the set even when keys tie.
+        query = query.order_by(Task.sort_order.asc(), Task.created_at.asc(), Task.id.asc())
         query = query.offset((page - 1) * page_size).limit(page_size)
 
         result = await self.session.execute(query)

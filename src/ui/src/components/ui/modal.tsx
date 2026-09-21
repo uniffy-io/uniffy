@@ -18,6 +18,12 @@ interface ModalProps {
   className?: string;
   /** Accessible name for a dialog that renders no ModalHeader. */
   ariaLabel?: string;
+  /**
+   * "top" pins the top edge so a body that changes height (tabs, filters) grows downward
+   * instead of re-centering. The shell becomes a height-capped flex column (fixed height on
+   * phones), so pair it with `<ModalBody scrollable={false} className="flex-1 min-h-0 overflow-y-auto">`.
+   */
+  anchor?: "center" | "top";
 }
 
 /**
@@ -31,6 +37,7 @@ export function Modal({
   maxWidth = "max-w-lg",
   className,
   ariaLabel,
+  anchor = "center",
 }: ModalProps) {
   const [phase, setPhase] = useState<"entering" | "open" | "exiting">("entering");
   const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -71,7 +78,12 @@ export function Modal({
   // Modal's scale transition) would otherwise become the containing
   // block for `fixed` and clip nested dialogs.
   return createPortal(
-    <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center">
+    <div
+      className={cn(
+        "fixed inset-0 z-[100] flex items-end justify-center",
+        anchor === "top" ? "sm:items-start sm:pt-[12dvh]" : "sm:items-center",
+      )}
+    >
       <div
         className={cn(
           "absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-150",
@@ -90,6 +102,7 @@ export function Modal({
           "relative w-[calc(100vw-2rem)] rounded-t-xl sm:rounded-xl overflow-hidden",
           "transition-all duration-150 ease-out",
           isVisible ? "opacity-100 scale-100 translate-y-0" : "opacity-0 scale-95 translate-y-2",
+          anchor === "top" && "flex flex-col h-[85dvh] sm:h-auto sm:max-h-[76dvh]",
           maxWidth,
           className,
         )}

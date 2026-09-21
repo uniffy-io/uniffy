@@ -42,7 +42,8 @@ export function WidgetCard({
   return (
     <div
       className={cn(
-        "rounded-xl bg-surface text-card-foreground shadow-edge",
+        // A column, so a card stretched to its grid row keeps the footer on the bottom edge.
+        "flex flex-col rounded-xl bg-surface text-card-foreground shadow-edge",
         "transition-shadow duration-200 hover:shadow-edge-strong",
         colSpanClass,
         className,
@@ -64,7 +65,9 @@ export function WidgetCard({
         {action && <div className="flex-shrink-0 ml-2">{action}</div>}
       </div>
 
-      <div className={cn(compact ? "px-4 pb-4" : "px-6 pb-6", loading && "animate-pulse")}>
+      <div
+        className={cn("flex-1", compact ? "px-4 pb-4" : "px-6 pb-6", loading && "animate-pulse")}
+      >
         {children}
       </div>
 

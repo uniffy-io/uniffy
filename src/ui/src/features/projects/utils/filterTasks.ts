@@ -1,6 +1,6 @@
-import { SYSTEM_FIELD_IDS } from "@/features/projects/types";
 import type { Task } from "@/features/projects/types";
 import type { FilterConfig, FilterCondition } from "@/features/projects/types/views";
+import { getTaskFieldValue, toIdList } from "@/features/projects/utils/taskFieldValue";
 
 export const TAGS_FILTER_FIELD_ID = "__tags__";
 
@@ -94,29 +94,24 @@ function evaluateHierarchyCondition(
   return true;
 }
 
-function getFieldValue(task: Task, fieldId: string): unknown {
-  switch (fieldId) {
-    case SYSTEM_FIELD_IDS.TITLE:
-      return task.title;
-    case SYSTEM_FIELD_IDS.STATUS:
-      return task.status;
-    case SYSTEM_FIELD_IDS.PRIORITY:
-      return task.priority;
-    case SYSTEM_FIELD_IDS.ASSIGNEE:
-      return task.assigneeIds;
-    case SYSTEM_FIELD_IDS.START_DATE:
-      return task.startDate;
-    case SYSTEM_FIELD_IDS.DUE_DATE:
-      return task.dueDate;
-    default:
-      return task.fieldValues[fieldId];
-  }
+function isIncompleteValue(value: FilterCondition["value"]): boolean {
+  return (
+    value === null ||
+    value === undefined ||
+    value === "" ||
+    (Array.isArray(value) && value.length === 0)
+  );
+}
+
+/** A list condition value (people, multi-picked ids) matches when the task holds any of them. */
+function matchesAnyId(taskValue: unknown, wanted: string[]): boolean {
+  const have = toIdList(taskValue);
+  return wanted.some((id) => have.includes(id));
 }
 
 function evaluateTagCondition(task: Task, condition: FilterCondition): boolean {
   const taskTagSet = new Set(task.tagIds ?? []);
-  const raw = condition.value;
-  const tagIds: string[] = Array.isArray(raw) ? (raw as string[]) : raw ? [String(raw)] : [];
+  const tagIds = toIdList(condition.value);
   if (
     tagIds.length === 0 &&
     condition.operator !== "is_empty" &&
@@ -154,7 +149,7 @@ function evaluateCondition(
   if (HIERARCHY_FIELD_IDS.has(condition.fieldId) && hierarchyIndex) {
     return evaluateHierarchyCondition(task, condition, hierarchyIndex);
   }
-  const value = getFieldValue(task, condition.fieldId);
+  const value = getTaskFieldValue(task, condition.fieldId);
 
   switch (condition.operator) {
     case "is_empty":
@@ -174,10 +169,14 @@ function evaluateCondition(
       );
 
     case "equals":
+      if (isIncompleteValue(condition.value)) return true;
+      if (Array.isArray(condition.value)) return matchesAnyId(value, toIdList(condition.value));
       if (Array.isArray(value)) return value.includes(condition.value as string);
       return String(value) === String(condition.value);
 
     case "not_equals":
+      if (isIncompleteValue(condition.value)) return true;
+      if (Array.isArray(condition.value)) return !matchesAnyId(value, toIdList(condition.value));
       if (Array.isArray(value)) return !value.includes(condition.value as string);
       return String(value) !== String(condition.value);
 

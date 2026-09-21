@@ -394,7 +394,7 @@ export function OrgChartCanvas({
           ...(inherited && {
             style: { strokeDasharray: "5 4" },
             label: "team lead",
-            labelStyle: { fontSize: 9, fill: "var(--muted-foreground, #888)" },
+            labelStyle: { fontSize: 9, fill: "var(--color-muted-foreground)" },
             labelBgStyle: { fillOpacity: 0 },
           }),
         },

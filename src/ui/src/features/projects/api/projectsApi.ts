@@ -2,6 +2,7 @@ import { createClient } from "@connectrpc/connect";
 import { unaryTransport } from "@/config/api";
 import { create } from "@bufbuild/protobuf";
 import { timestampDate } from "@bufbuild/protobuf/wkt";
+import { fetchAllPages } from "@/shared/utils/fetchAllPages";
 import { ProjectsService, TypeFieldSchemaSchema } from "@uniffy/proto/projects/v1/projects_pb";
 import {
   FieldType as ProtoFieldType,
@@ -36,6 +37,9 @@ import type { ViewConfig, ViewSpecificConfig } from "../types/views";
 import type { TaskActivity, ActivityAction } from "../types/activity";
 
 const projectsClient = createClient(ProjectsService, unaryTransport);
+
+// The ListTasks handler clamps larger requests to this size.
+const TASK_PAGE_SIZE = 1000;
 
 function frontendFieldTypeToProto(type: string): ProtoFieldType {
   switch (type.toLowerCase()) {
@@ -428,6 +432,9 @@ export const projectsApi = {
       hasSubtasks?: boolean;
       minDepth?: number;
       maxDepth?: number;
+      /** Stop after one page instead of loading the whole project. */
+      firstPageOnly?: boolean;
+      signal?: AbortSignal;
     } = {},
   ): Promise<{ tasks: Task[]; protoTasks: ProtoTask[] }> => {
     const tagFilterMode =
@@ -436,7 +443,7 @@ export const projectsApi = {
         : options.tagFilterMode === "none"
           ? ProtoTagFilterMode.NONE
           : ProtoTagFilterMode.ALL;
-    const response = await projectsClient.listTasks({
+    const request = {
       organizationId,
       projectId,
       ...(options.tagIds && options.tagIds.length ? { tagIds: options.tagIds, tagFilterMode } : {}),
@@ -445,10 +452,23 @@ export const projectsApi = {
       ...(options.hasSubtasks !== undefined ? { hasSubtasks: options.hasSubtasks } : {}),
       ...(options.minDepth !== undefined ? { minDepth: options.minDepth } : {}),
       ...(options.maxDepth !== undefined ? { maxDepth: options.maxDepth } : {}),
-    });
+    };
+    const protoTasks = await fetchAllPages(
+      async (page) => {
+        const response = await projectsClient.listTasks(
+          { ...request, pagination: { page, pageSize: TASK_PAGE_SIZE } },
+          { signal: options.signal },
+        );
+        return {
+          items: response.tasks,
+          totalPages: options.firstPageOnly ? 1 : (response.pagination?.totalPages ?? 1),
+        };
+      },
+      { key: (task) => task.id },
+    );
     return {
-      tasks: response.tasks.map(protoTaskToFrontend),
-      protoTasks: response.tasks,
+      tasks: protoTasks.map(protoTaskToFrontend),
+      protoTasks,
     };
   },
 

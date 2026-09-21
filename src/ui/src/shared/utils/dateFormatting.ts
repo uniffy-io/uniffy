@@ -111,10 +111,14 @@ export function formatProtoDateTime(timestamp?: {
   });
 }
 
+/** Calendar day of a date-only string as written, or of a timestamp in the effective zone. */
+export function calendarDayKey(value: string): string {
+  return isDateOnly(value) ? value : effectiveDayKey(new Date(value));
+}
+
 export function isOverdue(dateStr: string): boolean {
   // Due dates are calendar dates; "today" is the effective zone's calendar day.
-  const dueDay = isDateOnly(dateStr) ? dateStr : effectiveDayKey(new Date(dateStr));
-  return dueDay < effectiveDayKey(new Date());
+  return calendarDayKey(dateStr) < effectiveDayKey(new Date());
 }
 
 /** "Just now" / "5m ago" / "3d ago"; falls back to short date past 7 days. */

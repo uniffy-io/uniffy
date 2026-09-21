@@ -393,8 +393,11 @@ export const selectRoomsPagination = (state: RootState): RoomsState["pagination"
 export const selectRoomBookings = (state: RootState): RoomBooking[] =>
   state.rooms.bookingIds.map((id) => state.rooms.bookings[id]).filter(Boolean);
 
-export const selectRoomAvailability = (state: RootState, roomId: string): TimeSlot[] =>
-  state.rooms.availability[roomId] || [];
+// A shared empty list keeps the selector's result stable for rooms with no loaded slots.
+const EMPTY_SLOTS: readonly TimeSlot[] = Object.freeze([]);
+
+export const selectRoomAvailability = (state: RootState, roomId: string): readonly TimeSlot[] =>
+  state.rooms.availability[roomId] ?? EMPTY_SLOTS;
 
 export const selectAvailableRoomIds = (state: RootState): string[] | null =>
   state.rooms.availableRoomIds;

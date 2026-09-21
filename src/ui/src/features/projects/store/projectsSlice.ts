@@ -31,6 +31,8 @@ export interface ProjectsState {
   tasks: Record<string, Task>;
   currentProjectId: string | null;
   activities: Record<string, TaskActivity[]>;
+  /** Projects whose task list was fetched this session; single-task reads do not count. */
+  taskListLoadedIds: Record<string, true>;
   loading: LoadingState;
   errors: ErrorState;
   /** Snapshot for reverting failed optimistic task updates. */
@@ -44,6 +46,7 @@ const initialState: ProjectsState = {
   tasks: {},
   currentProjectId: null,
   activities: {},
+  taskListLoadedIds: {},
   loading: {
     projects: false,
     tasks: false,
@@ -69,6 +72,7 @@ export const projectsSlice = createSlice({
     clearProjects: (state) => {
       state.projects = {};
       state.tasks = {};
+      state.taskListLoadedIds = {};
       state.currentProjectId = null;
       state.errors = { projects: null, tasks: null, general: null };
     },
@@ -225,8 +229,12 @@ export const projectsSlice = createSlice({
         action.payload.forEach((task) => {
           if (state.projects[task.projectId]) state.tasks[task.id] = task;
         });
+        const { arg } = action.meta;
+        state.taskListLoadedIds[typeof arg === "string" ? arg : arg.projectId] = true;
       })
       .addCase(fetchProjectTasks.rejected, (state, action) => {
+        // A superseded load settles after its replacement started; its outcome is not this state's.
+        if (action.meta.aborted) return;
         state.loading.tasks = false;
         state.errors.tasks =
           (action.payload as string) || action.error.message || "Failed to fetch tasks";
@@ -268,6 +276,7 @@ export const projectsSlice = createSlice({
       .addCase(deleteProject.fulfilled, (state, action) => {
         state.loading.deleting = null;
         delete state.projects[action.meta.arg];
+        delete state.taskListLoadedIds[action.meta.arg];
         if (state.currentProjectId === action.meta.arg) {
           const remaining = Object.keys(state.projects);
           state.currentProjectId = remaining.length > 0 ? remaining[0] : null;
@@ -523,6 +532,8 @@ export const selectAllTasks = createSelector([selectProjectsState], (state) =>
 );
 
 export const selectTasksMap = (state: RootState) => state.projects.tasks;
+
+export const selectTaskListLoadedIds = (state: RootState) => state.projects.taskListLoadedIds;
 
 export const selectTaskById = (id: string) =>
   createSelector([selectProjectsState], (state) => state.tasks[id]);
