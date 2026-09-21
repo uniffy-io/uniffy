@@ -7,12 +7,6 @@ description: Draft or publish Uniffy release notes from commit diffs and shipped
 
 Write release notes for `uniffy-io/uniffy` from changes that shipped. Commit subjects and PR descriptions are clues, not evidence of scope or behavior. One commit can contain several unrelated changes, and one feature can span several commits.
 
-## Invocation and output
-
-- `$release-log v0.0.3`: draft notes for that tag.
-- `$release-log from v0.0.2 to HEAD`: draft notes for an upcoming release.
-- `$release-log v0.0.3 publish`: write notes and publish them to that existing GitHub release.
-
 ## Establish release range
 
 Use refs supplied by user. If target is omitted, resolve latest published stable GitHub release and state that choice. If request is explicitly for upcoming work, resolve `HEAD`. Ask only when request does not establish which of these is intended.
