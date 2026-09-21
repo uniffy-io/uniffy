@@ -76,6 +76,40 @@ class Process:
         return self.returncode
 
 
+@pytest.mark.parametrize("executable", ["ffmpeg", "ffprobe"])
+async def test_decoder_does_not_inherit_worker_environment(monkeypatch, executable):
+    inherited = {
+        "S3_SECRET_KEY",
+        "POSTGRES_PASSWORD",
+        "JWT_SECRET_KEY",
+        "APP_MASTER_KEY",
+        "UNRECOGNIZED_FUTURE_SECRET",
+        "LD_PRELOAD",
+        "LD_LIBRARY_PATH",
+        "HTTP_PROXY",
+        "http_proxy",
+        "FFREPORT",
+        "HOME",
+    }
+    for name in inherited:
+        monkeypatch.setenv(name, "worker-only-sentinel")
+    monkeypatch.setenv("PATH", "/untrusted-bin")
+    process = Process(code=0)
+
+    async def spawn(command, *args, env=None, **kwargs):
+        assert command == executable
+        assert env is not None
+        assert inherited.isdisjoint(env)
+        assert "worker-only-sentinel" not in env.values()
+        assert "/untrusted-bin" not in env["PATH"].split(":")
+        assert "/usr/local/bin" in env["PATH"].split(":")
+        return process
+
+    monkeypatch.setattr(media.asyncio, "create_subprocess_exec", spawn)
+    await media.run_media(executable, [], 1)
+    assert process.done.is_set()
+
+
 async def test_timeout_reaps_child(monkeypatch):
     process = Process()
 
@@ -115,6 +149,44 @@ async def test_stderr_retains_tail_and_nonzero_exit_fails(monkeypatch):
     with pytest.raises(media.MediaError, match="actual failure") as error:
         await media.run_media("ffmpeg", [], 60)
     assert len(str(error.value)) < 8300
+
+
+@pytest.mark.parametrize("executable", ["ffmpeg", "ffprobe"])
+@pytest.mark.parametrize("prefix", [b"", b"x" * 65520])
+async def test_native_errors_redact_source_urls_and_tokens(monkeypatch, executable, prefix):
+    token = "temporary-media-token_0123456789"
+    url = f"http://127.0.0.1:43210/{token}"
+    failure = f"Error opening '{url}'\nInput /{token}: Invalid data\n{url}\n".encode()
+    process = Process(code=1, stderr=prefix + failure)
+
+    async def spawn(*args, **kwargs):
+        return process
+
+    monkeypatch.setattr(media.asyncio, "create_subprocess_exec", spawn)
+    with pytest.raises(media.MediaError, match="Invalid data") as error:
+        await media.run_media(executable, ["-i", url], 1)
+    assert url not in str(error.value)
+    assert token not in str(error.value)
+    assert "[media source]" in str(error.value)
+    assert "[media token]" in str(error.value)
+    assert len(str(error.value)) < 8300
+
+
+async def test_native_errors_redact_token_when_capture_truncates_url_origin(monkeypatch):
+    token = "temporary-media-token_0123456789"
+    url = f"http://127.0.0.1:43210/{token}"
+    failure = b"\nInvalid data"
+    padding = b"x" * (8192 - len(token) - len(failure))
+    process = Process(code=1, stderr=url.encode() + padding + failure)
+
+    async def spawn(*args, **kwargs):
+        return process
+
+    monkeypatch.setattr(media.asyncio, "create_subprocess_exec", spawn)
+    with pytest.raises(media.MediaError, match="Invalid data") as error:
+        await media.run_media("ffprobe", [url], 1)
+    assert token not in str(error.value)
+    assert "[media token]" in str(error.value)
 
 
 async def test_probe_scans_packets_only_when_duration_is_absent(monkeypatch):

@@ -14,9 +14,10 @@ from uniffy.core.models.files.file import PlaybackStatus
 from uniffy.core.storage import OBJECT_STORAGE_CTX_KEY, ObjectStorage
 from uniffy.domains.files.jobs.media import MediaError, is_web_safe, probe, rendition_args, run_media
 from uniffy.domains.files.jobs.playback import claim_playback, finish_playback, record_multipart
-from uniffy.domains.files.jobs.scratch import download_source, upload_video
+from uniffy.domains.files.jobs.scratch import upload_video
 from uniffy.domains.files.jobs.settings import MEDIA_SETTINGS
-from uniffy.domains.files.jobs.slots import media_slot
+from uniffy.domains.files.jobs.slots import MEDIA_SLOTS_CTX_KEY, MediaSlots
+from uniffy.domains.files.jobs.source import MEDIA_SOURCE_CTX_KEY, MediaSourceServer
 from uniffy.vendor.arq import Retry
 
 logger = logger.bind(component="files.jobs.renditions")
@@ -29,7 +30,8 @@ async def generate_playback_rendition(
     if not MEDIA_SETTINGS.enabled:
         await claim_playback(file_uuid, org_uuid)
         return
-    async with media_slot() as acquired:
+    slots = cast(MediaSlots, ctx[MEDIA_SLOTS_CTX_KEY])
+    async with slots.acquire() as acquired:
         if not acquired:
             raise Retry(defer=5, count_attempt=False)
         claim = await claim_playback(file_uuid, org_uuid)
@@ -43,21 +45,23 @@ async def generate_playback_rendition(
                 with tempfile.TemporaryDirectory(
                     prefix="uniffy-playback-", dir=MEDIA_SETTINGS.scratch_directory
                 ) as directory:
-                    source, output = Path(directory) / "source", Path(directory) / "playback.mp4"
-                    await download_source(
-                        storage, claim.source_key, source, MEDIA_SETTINGS.max_source_bytes
-                    )
-                    info = await probe(source)
+                    output = Path(directory) / "playback.mp4"
+                    sources = cast(MediaSourceServer, ctx[MEDIA_SOURCE_CTX_KEY])
+                    async with sources.open(
+                        claim.source_key, MEDIA_SETTINGS.max_source_bytes
+                    ) as source:
+                        info = await probe(source)
+                        if not is_web_safe(info):
+                            if info.duration > MEDIA_SETTINGS.max_duration_seconds:
+                                raise MediaError("Video exceeds duration limit")
+                            await run_media(
+                                "ffmpeg",
+                                rendition_args(source, output, info, MEDIA_SETTINGS),
+                                max(MEDIA_SETTINGS.timeout_floor, info.duration * 4),
+                            )
                     if is_web_safe(info):
                         await finish_playback(claim, PlaybackStatus.NOT_NEEDED)
                         return
-                    if info.duration > MEDIA_SETTINGS.max_duration_seconds:
-                        raise MediaError("Video exceeds duration limit")
-                    await run_media(
-                        "ffmpeg",
-                        rendition_args(source, output, info, MEDIA_SETTINGS),
-                        max(MEDIA_SETTINGS.timeout_floor, info.duration * 4),
-                    )
                     result = await probe(output)
                     if (
                         not is_web_safe(result)

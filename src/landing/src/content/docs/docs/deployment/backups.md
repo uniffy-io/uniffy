@@ -15,7 +15,7 @@ Back up three things to restore Uniffy: PostgreSQL, object storage, and `APP_MAS
 | PostgreSQL | Every note, message, task, permission, and setting | Back up continuously. This page. |
 | `APP_MASTER_KEY` | The key wrapping every tenant secret | One copy, offline, once. Below. |
 | Object storage | Originals, retained versions, thumbnails, and completed video copies | Protect the bucket with a backup or versioning and recovery policy. On a VM, back up the file store volume too. |
-| Media scratch | Temporary conversion inputs and outputs | No backup. Disk backed `emptyDir` can be discarded when a pod is removed. |
+| Media scratch | Temporary conversion outputs | No backup. Disk backed `emptyDir` can be discarded when a pod is removed. |
 | Meilisearch | Search index | Nothing. Rebuilt from Postgres by a background job. |
 | Valkey | Queues and caches | Nothing. Queues drain, caches refill. |
 

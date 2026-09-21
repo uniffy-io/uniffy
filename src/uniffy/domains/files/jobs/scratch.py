@@ -14,19 +14,6 @@ logger = logger.bind(component="files.jobs.scratch")
 _PART_BYTES = 8 * 1024**2
 
 
-async def download_source(storage: ObjectStorage, key: str, path: Path, limit: int) -> None:
-    metadata = await storage.get_object_info(key)
-    if int(metadata.get("ContentLength", 0)) > limit:
-        raise MediaError("Video exceeds source size limit")
-    size = 0
-    async with aiofiles.open(path, "wb") as target:
-        async for chunk, _, _ in storage.download_stream(key, chunk_size=1024**2):
-            size += len(chunk)
-            if size > limit:
-                raise MediaError("Video exceeds source size limit")
-            await target.write(chunk)
-
-
 async def upload_video(
     storage: ObjectStorage,
     key: str,

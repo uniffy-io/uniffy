@@ -107,9 +107,9 @@ Core and egress use the backend image. Media uses `ghcr.io/uniffy-io/uniffy-medi
 
 Separate queues keep slow LLM calls and media processing from occupying core worker slots. Scale core with user activity, egress with agent usage, and media with processing demand. LiveKit carries live calls independently of these queues.
 
-Media accepts two jobs per process by default, but video encodes share one global slot across replicas. More replicas alone do not raise that encode limit. Raise concurrency only with enough CPU, memory, disk space, and database connections. PDF and Office parsers also remain in the backend image for direct agent document reads.
+Media accepts two jobs per process by default, with one video encode slot per process. Run one media worker process per pod. Each replica adds its own encode slots, so more pods can process more videos at once. Raise concurrency within a pod only with enough CPU, memory and disk space. Allow for database connections across all replicas. PDF and Office parsers also remain in the backend image for direct agent document reads.
 
-Media workers need writable disk scratch, not a persistent volume. One conversion can hold 4 GiB of source and 4 GiB of output at default limits. Thumbnail jobs need extra space. [Configure Uniffy](/docs/deployment/configure/#media-scratch-on-kubernetes) gives an `emptyDir` example and its resource budget.
+Media workers need writable disk scratch, not a persistent volume. Video sources up to 8 GiB stay in object storage and are read through Range requests. Each conversion writes one MP4 capped at 4 GiB. Video thumbnails need no source file on disk. Jobs reserve output space before starting and defer when scratch is full. [Configure Uniffy](/docs/deployment/configure/#media-scratch-on-kubernetes) gives a 16 GiB `emptyDir` example for two encode slots per pod.
 
 ## Data stores
 
@@ -143,7 +143,7 @@ LiveKit keeps its room registry in a separate Valkey database (db 1) so registry
 
 Any S3 compatible service, always yours on the cluster path. Every upload and download flows through the backend, which checks permissions per request; browsers never talk to the storage endpoint, so it stays on a private network with no CORS and no public exposure. File bytes ride backend bandwidth, which is why upload heavy orgs scale backend pods, not storage networking.
 
-Storage includes uploaded originals, retained file versions, thumbnails, and completed playback copies. Budget for those copies alongside original uploads. Worker scratch holds temporary inputs and outputs; it is not the file store.
+Storage includes uploaded originals, retained file versions, thumbnails, and completed playback copies. Budget for those copies alongside original uploads. Worker scratch holds temporary conversion outputs and other temporary work; it is not the file store.
 
 ## Scaling
 
@@ -152,7 +152,7 @@ Storage includes uploaded originals, retained file versions, thumbnails, and com
 | Backend | CPU on RPC handlers, Postgres pool, upload bandwidth | Horizontal. Stateless pods. Watch the connection budget. |
 | Core worker | Local I/O | Horizontal, or raise `CORE_WORKER_MAX_JOBS`. |
 | Egress worker | External API latency | Horizontal. Default concurrency of 50 is high on purpose. |
-| Media worker | CPU, memory, scratch capacity and disk I/O | Set pod resources first. Scale replicas and the shared encode limit together when needed. |
+| Media worker | CPU, memory, scratch capacity and disk I/O | Horizontal. Each pod adds its own encode slots. Size resources and scratch for each pod's concurrency. |
 | PostgreSQL | Connections, write throughput | Vertical first, then read replicas. |
 | Meilisearch | RAM, index size | Vertical. Plan for full rebuild capacity. |
 | Valkey | Memory, network | Vertical first. |

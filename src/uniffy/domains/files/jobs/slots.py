@@ -1,69 +1,56 @@
-"""Owned global encode leases release core capacity when busy."""
+"""Keep encode admission within each media worker's resource budget."""
 
 import asyncio
+import os
+import shutil
+import tempfile
 from collections.abc import AsyncIterator
-from contextlib import asynccontextmanager, suppress
+from contextlib import asynccontextmanager
 
-from loguru import logger
+from uniffy.domains.files.jobs.settings import MediaSettings
 
-from uniffy.core.jobs.locks import acquire_owned_job_lock, release_owned_job_lock
-from uniffy.domains.files.jobs.settings import MEDIA_SETTINGS
-from uniffy.infrastructure.valkey.ops import get_ops_client
-
-logger = logger.bind(component="files.jobs.slots")
-
-_LEASE_SECONDS = 90
-_RENEW_SCRIPT = """
-if redis.call('get', KEYS[1]) == ARGV[1] then
-    return redis.call('expire', KEYS[1], ARGV[2])
-end
-return 0
-"""
+MEDIA_SLOTS_CTX_KEY = "media_slots"
 
 
-@asynccontextmanager
-async def media_slot() -> AsyncIterator[bool]:
-    client = get_ops_client()
-    if client is None:
-        yield False
-        return
-    token = None
-    key = ""
-    try:
-        async with asyncio.timeout(2):
-            for index in range(MEDIA_SETTINGS.max_concurrent):
-                key = f"media:encode:slot:{index}"
-                token = await acquire_owned_job_lock(client, key, _LEASE_SECONDS)
-                if token:
-                    break
-    except Exception:
-        logger.opt(exception=True).warning("Media slot acquisition unavailable")
-    if not token:
-        yield False
-        return
-    owner = asyncio.current_task()
+def _available_bytes(directory: str, budget: int) -> int:
+    used = 0
+    for root, _, names in os.walk(directory):
+        for name in names:
+            try:
+                used += os.stat(os.path.join(root, name), follow_symlinks=False).st_blocks * 512
+            except FileNotFoundError:
+                continue
+    return min(budget - used, shutil.disk_usage(directory).free)
 
-    async def renew() -> None:
+
+class MediaSlots:
+    def __init__(self, capacity: int, settings: MediaSettings) -> None:
+        self._capacity = max(1, capacity)
+        self._active = 0
+        self._directory = settings.scratch_directory or tempfile.gettempdir()
+        self._budget = settings.scratch_max_bytes
+        # FFmpeg's byte cap can overshoot by a packet and MP4 finalization metadata.
+        self._reservation = settings.max_output_bytes + 256 * 1024**2
+        self._headroom = 256 * 1024**2
+        if self._reservation + self._headroom > self._budget:
+            raise ValueError("Media scratch budget cannot fit one capped output and overhead")
+        self._admission = asyncio.Lock()
+
+    @asynccontextmanager
+    async def acquire(self) -> AsyncIterator[bool]:
+        if self._active >= self._capacity:
+            yield False
+            return
+        async with self._admission:
+            free = await asyncio.to_thread(_available_bytes, self._directory, self._budget)
+            required = (self._active + 1) * self._reservation + self._headroom
+            admitted = self._active < self._capacity and required <= free
+            if admitted:
+                self._active += 1
+        if not admitted:
+            yield False
+            return
         try:
-            while True:
-                await asyncio.sleep(20)
-                async with asyncio.timeout(2):
-                    renewed = await client.eval(_RENEW_SCRIPT, 1, key, token, str(_LEASE_SECONDS))
-                if not renewed:
-                    raise RuntimeError("Media lease lost")
-        except Exception:
-            logger.opt(exception=True).warning("Stopping media work after lease loss")
-            owner.cancel()
-
-    heartbeat = asyncio.create_task(renew())
-    try:
-        yield True
-    finally:
-        heartbeat.cancel()
-        with suppress(asyncio.CancelledError):
-            await heartbeat
-        try:
-            async with asyncio.timeout(2):
-                await release_owned_job_lock(client, key, token)
-        except Exception:
-            logger.opt(exception=True).warning("Media slot release failed")
+            yield True
+        finally:
+            self._active -= 1

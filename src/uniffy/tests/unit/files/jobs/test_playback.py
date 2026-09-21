@@ -12,7 +12,7 @@ from uniffy.domains.files.jobs.processing import (
     pending_jobs_for_file,
     reset_playback,
 )
-from uniffy.domains.files.jobs.scratch import download_source, upload_video
+from uniffy.domains.files.jobs.scratch import upload_video
 
 
 def example_file():
@@ -68,14 +68,6 @@ def test_reset_and_recovery_include_playback():
 
 def test_playback_status_proto_mapping_is_total():
     assert set(PLAYBACK_STATUS_TO_PROTO) == set(PlaybackStatus)
-
-
-async def test_oversized_source_is_rejected_before_download(tmp_path):
-    storage = AsyncMock()
-    storage.get_object_info.return_value = {"ContentLength": 101}
-    with pytest.raises(RuntimeError, match="size limit"):
-        await download_source(storage, "key", tmp_path / "input", 100)
-    storage.download_stream.assert_not_called()
 
 
 async def test_failed_upload_aborts_multipart(tmp_path):

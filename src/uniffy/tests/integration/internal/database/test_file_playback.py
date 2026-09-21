@@ -1,6 +1,5 @@
 from datetime import UTC, datetime, timedelta
 from dataclasses import replace
-from contextlib import asynccontextmanager
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -18,10 +17,26 @@ from uniffy.domains.files.jobs import cleanup, renditions, transcode
 from uniffy.domains.files.jobs.cleanup import expired_renditions_query
 from uniffy.domains.files.jobs.processing import reset_playback
 from uniffy.domains.files.jobs.media import probe, is_web_safe
+from uniffy.domains.files.jobs.slots import MEDIA_SLOTS_CTX_KEY, MediaSlots
+from uniffy.domains.files.jobs.settings import MEDIA_SETTINGS
+from uniffy.domains.files.jobs.source import MEDIA_SOURCE_CTX_KEY, MediaSourceServer
 from uniffy.domains.files.routes import stream_media
 from uniffy.infrastructure.storage import S3Storage
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
+
+
+@pytest_asyncio.fixture(loop_scope="session")
+async def media_sources():
+    storage = S3Storage()
+    await storage.startup()
+    sources = MediaSourceServer(storage)
+    await sources.startup()
+    try:
+        yield storage, sources
+    finally:
+        await sources.shutdown()
+        await storage.shutdown()
 
 
 @pytest_asyncio.fixture(loop_scope="session")
@@ -119,20 +134,15 @@ async def test_cleanup_retains_current_copy_but_survives_file_purge(session, vid
 
 
 async def test_real_storage_conversion_range_copy_and_cleanup(
-    session, video, monkeypatch, tmp_path, video_samples
+    session, video, monkeypatch, tmp_path, video_samples, media_sources
 ):
-    storage = S3Storage()
+    storage, sources = media_sources
     source = video_samples / "hevc.mp4"
     original = source.read_bytes()
     source_key = video.storage_key
     copied_key = source_key + "/copied"
     file_id, org_id, owner_id = video.id, video.organization_id, video.owner_id
 
-    @asynccontextmanager
-    async def slot():
-        yield True
-
-    monkeypatch.setattr(renditions, "media_slot", slot)
     monkeypatch.setattr(renditions, "publish_notification", AsyncMock())
     query = cleanup.expired_renditions_query
     monkeypatch.setattr(
@@ -144,7 +154,13 @@ async def test_real_storage_conversion_range_copy_and_cleanup(
     try:
         await storage.upload_bytes(source_key, original, "video/mp4")
         await renditions.generate_playback_rendition(
-            {OBJECT_STORAGE_CTX_KEY: storage}, str(file_id), str(org_id)
+            {
+                OBJECT_STORAGE_CTX_KEY: storage,
+                MEDIA_SLOTS_CTX_KEY: MediaSlots(1, MEDIA_SETTINGS),
+                MEDIA_SOURCE_CTX_KEY: sources,
+            },
+            str(file_id),
+            str(org_id),
         )
         await session.refresh(video)
         assert video.playback_status == PlaybackStatus.COMPLETED
@@ -191,9 +207,9 @@ async def test_real_storage_conversion_range_copy_and_cleanup(
 
 
 async def test_recording_prune_failure_keeps_published_mp4(
-    session, video, monkeypatch, video_samples
+    session, video, monkeypatch, video_samples, media_sources
 ):
-    storage = S3Storage()
+    storage, sources = media_sources
     source = video_samples / "vp9.webm"
     video.filename = "recording.mp4"
     video.mime_type = "video/webm"
@@ -214,7 +230,11 @@ async def test_recording_prune_failure_keeps_published_mp4(
     try:
         await storage.upload_bytes(source_key, source.read_bytes(), "video/webm")
         result = await transcode._transcode_video_to_mp4(
-            {OBJECT_STORAGE_CTX_KEY: storage, SEARCH_INDEXER_CTX_KEY: MagicMock()},
+            {
+                OBJECT_STORAGE_CTX_KEY: storage,
+                SEARCH_INDEXER_CTX_KEY: MagicMock(),
+                MEDIA_SOURCE_CTX_KEY: sources,
+            },
             str(file_id),
             str(org_id),
         )

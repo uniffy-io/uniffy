@@ -1,4 +1,4 @@
-"""Bounded local media probing and encoding."""
+"""Bounded media probing and encoding."""
 
 import asyncio
 import math
@@ -19,6 +19,29 @@ class MissingDurationError(MediaError):
     pass
 
 
+@dataclass(frozen=True)
+class MediaSource:
+    url: str
+
+    def __str__(self) -> str:
+        return self.url
+
+
+def input_args(source: Path | MediaSource, container: str | None = None) -> list[str]:
+    remote = isinstance(source, MediaSource)
+    args = [
+        "-protocol_whitelist",
+        "http,tcp" if remote else "file,pipe",
+        "-format_whitelist",
+        "mov,matroska,webm,avi,asf,mpeg,mpegts,ogg,flv",
+    ]
+    if container is None or "mov" in container.split(","):  # noqa: PLR2004 - ffprobe container.
+        args.extend(["-enable_drefs", "0", "-use_absolute_path", "0"])
+    if remote:
+        args.extend(["-rw_timeout", "30000000", "-http_proxy", "", "-seekable", "1"])
+    return args
+
+
 async def run_media(
     executable: str,
     args: list[str],
@@ -29,7 +52,12 @@ async def run_media(
     if executable not in {"ffmpeg", "ffprobe"}:
         raise ValueError("Unsupported media executable")
     proc = await asyncio.create_subprocess_exec(
-        executable, *args, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+        executable,
+        *args,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+        # Decoders need no worker credentials, proxy settings or loader overrides.
+        env={"PATH": "/usr/local/bin:/usr/bin:/bin", "LANG": "C", "LC_ALL": "C"},
     )
 
     async def read_bounded(stream: asyncio.StreamReader, limit: int, tail: bool) -> bytes:
@@ -71,7 +99,15 @@ async def run_media(
             except* MediaError as exc:
                 raise exc.exceptions[0] from None
         if proc.returncode:
-            raise MediaError(f"{executable} failed: {errors.result().decode(errors='replace')}")
+            detail = errors.result().decode(errors="replace")
+            for argument in args:
+                if argument.startswith("http://127.0.0.1:"):
+                    detail = detail.replace(argument, "[media source]")
+                    # FFmpeg can print only the path, or the capture can cut off the origin.
+                    token = argument.rsplit("/", 1)[-1]
+                    if token:
+                        detail = detail.replace(token, "[media token]")
+            raise MediaError(f"{executable} failed: {detail}")
         return output.result()
     finally:
         if proc.returncode is None:
@@ -126,14 +162,13 @@ def parse_probe(data: bytes, *, duration: float | None = None) -> ProbeResult:
     return ProbeResult(value.get("format", {}).get("format_name", ""), duration, videos, audio)
 
 
-async def probe(path: Path) -> ProbeResult:
+async def probe(path: Path | MediaSource) -> ProbeResult:
     data = await run_media(
         "ffprobe",
         [
             "-v",
             "error",
-            "-protocol_whitelist",
-            "file,pipe",
+            *input_args(path),
             "-show_format",
             "-show_streams",
             "-print_format",
@@ -148,7 +183,7 @@ async def probe(path: Path) -> ProbeResult:
         return parse_probe(data, duration=await packet_duration(path))
 
 
-async def packet_duration(path: Path) -> float:
+async def packet_duration(path: Path | MediaSource) -> float:
     first: float | None = None
     last: float | None = None
 
@@ -175,8 +210,7 @@ async def packet_duration(path: Path) -> float:
         [
             "-v",
             "error",
-            "-protocol_whitelist",
-            "file,pipe",
+            *input_args(path),
             "-show_entries",
             "packet=pts_time,duration_time",
             "-of",
@@ -223,14 +257,15 @@ def video_filter(info: ProbeResult, width: int, height: int) -> str:
     return ",".join(filters)
 
 
-def rendition_args(src: Path, output: Path, info: ProbeResult, settings: MediaSettings) -> list[str]:
+def rendition_args(
+    src: Path | MediaSource, output: Path, info: ProbeResult, settings: MediaSettings
+) -> list[str]:
     return [
         "-y",
         "-nostdin",
         "-v",
         "error",
-        "-protocol_whitelist",
-        "file,pipe",
+        *input_args(src, info.container),
         "-threads",
         str(settings.threads),
         "-i",
@@ -271,13 +306,12 @@ def rendition_args(src: Path, output: Path, info: ProbeResult, settings: MediaSe
     ]
 
 
-def thumbnail_args(src: Path, info: ProbeResult) -> list[str]:
+def thumbnail_args(src: Path | MediaSource, info: ProbeResult) -> list[str]:
     return [
         "-nostdin",
         "-v",
         "error",
-        "-protocol_whitelist",
-        "file,pipe",
+        *input_args(src, info.container),
         "-threads",
         "1",
         "-i",

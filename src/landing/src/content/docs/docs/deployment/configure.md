@@ -152,22 +152,25 @@ Stores original uploads, attachments, file versions, thumbnails, and completed v
 
 Media workers prepare completed MP4 copies for uploaded videos. Browsers try the original first and use the copy if original playback fails. Uploaded originals remain in storage; screen recordings replace their WebM source with the promised MP4 after conversion succeeds.
 
-Recording conversions and playback copies share a global encode limit. Use the same settings across backend and worker replicas. LiveKit calls do not use these workers or settings.
+Recording conversions and playback copies share an encode limit within each media worker process. Run one media worker process per pod. Each pod gets its own slots: three pods with two encode slots each can run six conversions at once. LiveKit calls do not use these workers or settings.
 
 | Variable | Default | Purpose |
 |---|---|---|
 | `MEDIA_RENDITIONS_ENABLED` | `true` | Allow new playback conversions. When false, pending copies terminate as failed. Existing copies and original playback stay available. Recording swaps remain active. |
-| `TRANSCODE_MAX_CONCURRENT` | `1` | Global encode slots across media workers, capped at `MEDIA_WORKER_MAX_JOBS`. Raise alongside CPU, memory and scratch capacity. |
-| `TRANSCODE_MAX_SOURCE_BYTES` | `4294967296` | Maximum downloaded source size, 4 GiB. Also bounds video thumbnail source downloads. |
+| `TRANSCODE_MAX_CONCURRENT` | `1` | Encode slots per media worker process, capped at that worker's `MEDIA_WORKER_MAX_JOBS`. Raise alongside pod CPU, memory and scratch capacity. Replicas add independent capacity. |
+| `TRANSCODE_MAX_SOURCE_BYTES` | `8589934592` | Maximum video source size, 8 GiB. Probes, thumbnails and conversions read object storage through HTTP Range without a local source copy. |
 | `TRANSCODE_MAX_OUTPUT_BYTES` | `4294967296` | Maximum encoded file size, 4 GiB. Incomplete output is rejected. |
 | `TRANSCODE_MAX_DURATION_SECONDS` | `7200` | Maximum video length accepted for conversion, two hours. |
 | `TRANSCODE_FFMPEG_TIMEOUT` | `1800` | Minimum encoder deadline. Longer videos receive four times their duration. Worker deadline includes ten extra minutes for storage work. |
 | `TRANSCODE_THREADS` | `2` | Decoder and encoder thread budget. Filter processing uses one thread. |
-| `MEDIA_SCRATCH_DIRECTORY` | system temporary directory | Existing writable directory for source and output files. Mount it in every media worker. Compose uses `/var/lib/uniffy/media` on a disk volume. |
+| `MEDIA_SCRATCH_DIRECTORY` | system temporary directory | Existing writable directory for output files. Mount it in every media worker. Compose uses `/var/lib/uniffy/media` on a disk volume. |
+| `MEDIA_SCRATCH_MAX_BYTES` | `17179869184` | Scratch admission budget, 16 GiB. Match the disk volume size. Existing files, output reservations and free disk can defer new encodes. |
 
 These byte limits bound processing, not the general upload quota. Files outside conversion limits may still play in a compatible browser or be downloaded as originals.
 
-A conversion can hold source plus output, up to 8 GiB with default byte limits. Concurrent thumbnail downloads need extra space. Compose gives media workers a disk backed scratch volume. Kubernetes settings are below.
+Only encoded MP4 output needs video scratch space. Sources stay in object storage, including during thumbnail generation. A full conversion still transfers source bytes over the network and can reread ranges. Compose gives media workers a disk backed scratch volume. Kubernetes settings are below.
+
+`MEDIA_SCRATCH_MAX_BYTES` defaults to `17179869184` (16 GiB). Match it to the scratch volume's size limit. Each encode reserves its output cap plus 256 MiB for packet and MP4 finalization overhead. The worker keeps another 256 MiB free and checks existing scratch files and filesystem free space before admission. Insufficient space defers the job without consuming an attempt. Reservations are conservative and can reduce concurrency before the disk fills.
 
 An occupied encode slot delays work without consuming a conversion attempt. Transient conversion failures retry up to three attempts. Recovery runs every five minutes to find pending work and reclaim processing claims after their maximum lifetime. Expired cleanup records remove abandoned objects after live references are checked.
 
@@ -179,23 +182,37 @@ Disabling conversion does not cancel an encoder already running. Apply environme
 
 Use a disk backed `emptyDir` for temporary files. Originals and completed copies live in object storage, so the media worker needs no PVC. Set both `MEDIA_SCRATCH_DIRECTORY` and `TMPDIR` to the mount so conversion files and other temporary work use the same disk. A memory backed volume counts against pod RAM.
 
-This pod template fragment starts with one media replica, two job slots, and one global encode slot. Apply it to the media Deployment, with the same configuration and Secret references as the backend. Replace `RELEASE_VERSION` with the backend's release version, or use the media image digest from that release's verified `images.txt`.
+This pod template fragment starts with one media replica, four job slots, and two encode slots per pod, matching `.env.example`. Apply it to the media Deployment, with the same configuration and Secret references as the backend. Replace `RELEASE_VERSION` with the backend's release version, or use the media image digest from that release's verified `images.txt`.
 
 ```yaml
 spec:
   replicas: 1
   template:
     spec:
+      automountServiceAccountToken: false
       securityContext:
         runAsNonRoot: true
         runAsUser: 10001
         runAsGroup: 10001
         fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: worker-media
           image: ghcr.io/uniffy-io/uniffy-media-worker:RELEASE_VERSION
           command: [python, -m, uniffy, --worker-media]
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
           env:
+            - name: MEDIA_WORKER_MAX_JOBS
+              value: "4"
+            - name: TRANSCODE_MAX_CONCURRENT
+              value: "2"
+            - name: MEDIA_SCRATCH_MAX_BYTES
+              value: "17179869184"
             - name: MEDIA_SCRATCH_DIRECTORY
               value: /var/lib/uniffy/media
             - name: TMPDIR
@@ -221,7 +238,13 @@ spec:
             sizeLimit: 16Gi
 ```
 
-These are starting budgets, not a guarantee for every codec or resolution. At default concurrency, 16 GiB leaves room for one 8 GiB conversion, a concurrent video thumbnail download of up to 4 GiB, and overhead. The pod's 20 GiB ephemeral storage limit also covers logs and writable container layers. Nodes need enough free disk for every scheduled media pod.
+Keep the root filesystem read only and mount scratch for temporary writes. FFmpeg and ffprobe receive only a fixed binary search path and locale settings. Worker credentials stay out of their environment.
+
+Restrict media pod egress to your DNS, PostgreSQL, Valkey, Meilisearch and object storage endpoints with a [NetworkPolicy](https://kubernetes.io/docs/concepts/services-networking/network-policies/). Match selectors and ports to your deployment, including external storage or node local DNS where used. Your network plugin must enforce these policies. The decoder still shares the worker's user, filesystem and network; these controls do not provide a separate decoder sandbox.
+
+Two encodes reserve 8.5 GiB with the 4 GiB output cap. Another 256 MiB stays free. The 16 GiB scratch volume leaves room for temporary work and conservative admission checks. The pod's 20 GiB ephemeral storage limit also covers logs and writable container layers. Nodes need enough free disk for every scheduled media pod.
+
+Normal completion and cancellation remove output files. A killed process can leave scratch files until pod replacement discards `emptyDir`. Those files count against admission. If scratch pressure persists after jobs stop, replace the media pod so pending jobs can retry with an empty volume.
 
 Set CPU, memory, and ephemeral storage budgets in Kubernetes. Raise them alongside byte limits or concurrency, then measure with your accepted video formats. An `emptyDir` survives a container restart within the same pod, but disappears when that pod is removed. Recovery can restart interrupted work from stored originals; it does not resume a half written output.
 

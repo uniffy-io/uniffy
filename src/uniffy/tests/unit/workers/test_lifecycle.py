@@ -1,8 +1,12 @@
+from contextlib import AsyncExitStack
+from dataclasses import replace
 from unittest.mock import AsyncMock, MagicMock
 
 from uniffy.core.database import SESSION_FACTORY_CTX_KEY
 from uniffy.core.search import SEARCH_INDEXER_CTX_KEY, WORKSPACE_SEARCH_CTX_KEY
 from uniffy.core.jobs import QueueName
+from uniffy.domains.files.jobs.slots import MEDIA_SLOTS_CTX_KEY
+from uniffy.domains.files.jobs import slots as slots_mod
 from uniffy.domains.notifications.delivery import DELIVERY_ADAPTERS_CTX_KEY
 from uniffy.workers.metrics import (
     WORKER_JOB_START_DELAY,
@@ -20,6 +24,7 @@ from uniffy.workers import lifecycle
 
 
 def _patch_shared_resources(monkeypatch):
+    monkeypatch.setattr(slots_mod, "_available_bytes", lambda *args: 64 * 1024**3)
     functions = (
         "init_db",
         "init_queue",
@@ -147,6 +152,35 @@ async def test_media_lifecycle_owns_its_queue_without_delivery_or_provider_subsc
     resources["storage"].shutdown.assert_awaited_once_with()
     delivery.assert_not_called()
     providers.assert_not_awaited()
+
+
+async def test_media_workers_start_with_independent_encode_capacity(monkeypatch) -> None:
+    _patch_shared_resources(monkeypatch)
+    monkeypatch.setattr(
+        lifecycle, "MEDIA_SETTINGS", replace(lifecycle.MEDIA_SETTINGS, max_concurrent=2)
+    )
+    first, second = {}, {}
+    await lifecycle.media_on_startup(first)
+    await lifecycle.media_on_startup(second)
+    try:
+        async with AsyncExitStack() as held:
+            for ctx in (first, second):
+                slots = ctx[MEDIA_SLOTS_CTX_KEY]
+                for _ in range(2):
+                    assert await held.enter_async_context(slots.acquire())
+                async with slots.acquire() as acquired:
+                    assert not acquired
+    finally:
+        await lifecycle.media_on_shutdown(first)
+        await lifecycle.media_on_shutdown(second)
+    assert MEDIA_SLOTS_CTX_KEY not in first
+    assert MEDIA_SLOTS_CTX_KEY not in second
+    await lifecycle.media_on_startup(first)
+    try:
+        async with first[MEDIA_SLOTS_CTX_KEY].acquire() as acquired:
+            assert acquired
+    finally:
+        await lifecycle.media_on_shutdown(first)
 
 
 async def test_job_lifecycle_records_attempt_state_and_start_delay() -> None:

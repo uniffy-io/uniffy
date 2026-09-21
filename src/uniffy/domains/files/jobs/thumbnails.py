@@ -1,8 +1,6 @@
 """Generate JPEG thumbnails for images, PDFs, and videos; upload to S3."""
 
 import io
-import tempfile
-from pathlib import Path
 from typing import Any, cast
 from uuid import UUID
 
@@ -16,8 +14,8 @@ from uniffy.core.models.files.file import File, ThumbnailStatus
 from uniffy.core.models.files.media_info import FileMediaInfo
 from uniffy.core.storage import OBJECT_STORAGE_CTX_KEY, ObjectStorage
 from uniffy.domains.files.jobs.media import probe, run_media, thumbnail_args
-from uniffy.domains.files.jobs.scratch import download_source
 from uniffy.domains.files.jobs.settings import MEDIA_SETTINGS
+from uniffy.domains.files.jobs.source import MEDIA_SOURCE_CTX_KEY, MediaSourceServer
 from uniffy.infrastructure.database.session import open_session
 from uniffy.vendor.arq import Retry
 
@@ -260,13 +258,8 @@ async def generate_video_thumbnail(
         await session.commit()
 
         try:
-            with tempfile.TemporaryDirectory(
-                prefix="uniffy-thumbnail-", dir=MEDIA_SETTINGS.scratch_directory
-            ) as directory:
-                source = Path(directory) / "source"
-                await download_source(
-                    storage, file.storage_key, source, MEDIA_SETTINGS.max_source_bytes
-                )
+            sources = cast(MediaSourceServer, ctx[MEDIA_SOURCE_CTX_KEY])
+            async with sources.open(file.storage_key, MEDIA_SETTINGS.max_source_bytes) as source:
                 info = await probe(source)
                 frame = await run_media("ffmpeg", thumbnail_args(source, info), 60)
                 thumbnail_bytes, thumb_width, thumb_height = _create_thumbnail(frame)

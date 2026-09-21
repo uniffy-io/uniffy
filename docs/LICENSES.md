@@ -29,7 +29,7 @@ Third-party trademarks (provider names and logos) are covered separately in [TRA
 | annotated-doc          | 0.0.4       | MIT                                                 | https://github.com/fastapi/annotated-doc                                           |
 | annotated-types        | 0.7.0       | MIT License                                         | https://github.com/annotated-types/annotated-types                                 |
 | anthropic              | 0.117.0     | MIT License                                         | https://github.com/anthropics/anthropic-sdk-python                                 |
-| anyio                  | 4.12.1      | MIT                                                 | https://anyio.readthedocs.io/en/stable/versionhistory.html                         |
+| anyio                  | 4.14.2      | MIT                                                 | https://anyio.readthedocs.io/en/stable/versionhistory.html                         |
 | argon2-cffi            | 25.1.0      | MIT                                                 | https://github.com/hynek/argon2-cffi/blob/main/CHANGELOG.md                        |
 | argon2-cffi-bindings   | 25.1.0      | MIT                                                 | https://github.com/hynek/argon2-cffi-bindings/blob/main/CHANGELOG.md               |
 | asyncpg                | 0.31.0      | Apache-2.0                                          | UNKNOWN                                                                            |
@@ -1668,6 +1668,4 @@ Versions, source links, and SHA-256 hashes below come from [src/uniffy/Dockerfil
 | dav1d | [1.5.3](https://code.videolan.org/videolan/dav1d/-/archive/1.5.3/dav1d-1.5.3.tar.bz2) | BSD-2-Clause | `e099f53253f6c247580c554d53a13f1040638f2066edc3c740e4c2f15174ce22` |
 | zimg | [3.0.5](https://github.com/sekrit-twc/zimg/archive/refs/tags/release-3.0.5.tar.gz) | WTFPL | `a9a0226bf85e0d83c41a8ebe4e3e690e1348682f6a2a7838f1b8cbff1b799bcf` |
 
-FFmpeg includes GPL components. Its license differs from Uniffy's application license. Exact upstream notices ship at `/usr/share/uniffy/media/licenses` in media worker images. Build configuration lives at `/usr/share/uniffy/media/buildconf.txt`. Matching source archives and build scripts ship at `/usr/share/uniffy/media-sources`. Preserve these files when redistributing images.
-
-PDFium license and dependency notices ship inside the installed pypdfium2 package.
+FFmpeg includes GPL components. Its license differs from Uniffy's application license. Exact upstream notices ship at `/usr/share/uniffy/media/licenses` in `ghcr.io/uniffy-io/uniffy-media-worker` images. Build configuration lives at `/usr/share/uniffy/media/buildconf.txt`. Matching source archives and build scripts ship at `/usr/share/uniffy/media-sources`.

@@ -8,12 +8,13 @@ from dataclasses import dataclass
 class MediaSettings:
     enabled: bool = True
     max_concurrent: int = 1
-    max_source_bytes: int = 4 * 1024**3
+    max_source_bytes: int = 8 * 1024**3
     max_output_bytes: int = 4 * 1024**3
     max_duration_seconds: int = 7200
     timeout_floor: int = 1800
     threads: int = 2
     scratch_directory: str | None = None
+    scratch_max_bytes: int = 16 * 1024**3
 
     @property
     def job_timeout(self) -> int:
@@ -26,12 +27,13 @@ class MediaSettings:
         return cls(
             enabled=os.getenv("MEDIA_RENDITIONS_ENABLED", "true").lower() in {"true", "1", "yes"},
             max_concurrent=min(concurrency, media_capacity),
-            max_source_bytes=max(1, int(os.getenv("TRANSCODE_MAX_SOURCE_BYTES", str(4 * 1024**3)))),
+            max_source_bytes=max(1, int(os.getenv("TRANSCODE_MAX_SOURCE_BYTES", str(8 * 1024**3)))),
             max_output_bytes=max(1, int(os.getenv("TRANSCODE_MAX_OUTPUT_BYTES", str(4 * 1024**3)))),
             max_duration_seconds=max(1, int(os.getenv("TRANSCODE_MAX_DURATION_SECONDS", "7200"))),
             timeout_floor=max(1, int(os.getenv("TRANSCODE_FFMPEG_TIMEOUT", "1800"))),
             threads=max(1, int(os.getenv("TRANSCODE_THREADS", "2"))),
             scratch_directory=os.getenv("MEDIA_SCRATCH_DIRECTORY") or None,
+            scratch_max_bytes=max(1, int(os.getenv("MEDIA_SCRATCH_MAX_BYTES", str(16 * 1024**3)))),
         )
 
 

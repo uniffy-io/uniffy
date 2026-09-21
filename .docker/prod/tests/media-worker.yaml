@@ -100,11 +100,11 @@ commandTests:
     command: ffprobe
     args: ["-version"]
     exitCode: 0
-  - name: local media protocols only
+  - name: media file and loopback HTTP protocols
     command: ffmpeg
     args: ["-hide_banner", "-protocols"]
-    expectedOutput: ["file", "pipe"]
-    excludedOutput: ["http", "tcp", "udp", "tls"]
+    expectedOutput: ["file", "pipe", "http", "tcp"]
+    excludedOutput: ["https", "udp", "tls", "ftp", "concat"]
     exitCode: 0
   - name: media input decoders
     command: ffmpeg

@@ -21,11 +21,12 @@ from uniffy.core.search.indexer import SEARCH_INDEXER_CTX_KEY, SearchIndexer, bu
 from uniffy.core.storage import OBJECT_STORAGE_CTX_KEY, ObjectStorage
 from uniffy.core.types import ContentType, generate_id
 from uniffy.domains.files.jobs.contracts import DELETE_S3_OBJECT
-from uniffy.domains.files.jobs.media import MediaError, probe, rendition_args, run_media
+from uniffy.domains.files.jobs.media import MediaError, MediaSource, probe, rendition_args, run_media
 from uniffy.domains.files.jobs.playback import record_multipart
-from uniffy.domains.files.jobs.scratch import download_source, upload_video
+from uniffy.domains.files.jobs.scratch import upload_video
 from uniffy.domains.files.jobs.settings import MEDIA_SETTINGS
-from uniffy.domains.files.jobs.slots import media_slot
+from uniffy.domains.files.jobs.slots import MEDIA_SLOTS_CTX_KEY, MediaSlots
+from uniffy.domains.files.jobs.source import MEDIA_SOURCE_CTX_KEY, MediaSourceServer
 from uniffy.domains.files.operations import FileOperations
 from uniffy.infrastructure.database.session import open_session
 from uniffy.infrastructure.valkey.ops import get_ops_client
@@ -69,7 +70,7 @@ async def _release_lock(file_id: UUID, token: str) -> None:
         logger.warning(f"transcode_video_to_mp4: DEL failed for file {file_id}")
 
 
-async def _run_ffmpeg(input_path: Path, output_path: Path) -> None:
+async def _run_ffmpeg(input_path: Path | MediaSource, output_path: Path) -> None:
     info = await probe(input_path)
     if info.duration > MEDIA_SETTINGS.max_duration_seconds:
         raise MediaError("Recording exceeds duration limit")
@@ -94,7 +95,8 @@ async def transcode_video_to_mp4(
         UUID(organization_id)
     except ValueError:
         return {"status": "error", "error": "invalid_uuid"}
-    async with media_slot() as acquired:
+    slots = cast(MediaSlots, ctx[MEDIA_SLOTS_CTX_KEY])
+    async with slots.acquire() as acquired:
         if not acquired:
             raise Retry(defer=5, count_attempt=False)
         async with asyncio.timeout(TRANSCODE_JOB_TIMEOUT_SECONDS - 30):
@@ -160,17 +162,11 @@ async def _transcode_video_to_mp4(
         with tempfile.TemporaryDirectory(
             prefix="uniffy-transcode-", dir=MEDIA_SETTINGS.scratch_directory
         ) as tmpdir:
-            tmp_path = Path(tmpdir)
-            webm_path = tmp_path / "in.webm"
-            mp4_path = tmp_path / "out.mp4"
-
-            log.info("Downloading WebM source")
-            await download_source(
-                storage, old_storage_key, webm_path, MEDIA_SETTINGS.max_source_bytes
-            )
-
-            log.info("Running ffmpeg")
-            await _run_ffmpeg(webm_path, mp4_path)
+            mp4_path = Path(tmpdir) / "out.mp4"
+            sources = cast(MediaSourceServer, ctx[MEDIA_SOURCE_CTX_KEY])
+            async with sources.open(old_storage_key, MEDIA_SETTINGS.max_source_bytes) as source:
+                log.info("Running ffmpeg")
+                await _run_ffmpeg(source, mp4_path)
 
             mp4_size = mp4_path.stat().st_size
             if mp4_size <= 0:

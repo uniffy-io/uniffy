@@ -717,10 +717,9 @@ def native_media_licenses() -> str:
         + "\n".join(rows)
         + "\n\nFFmpeg includes GPL components. Its license differs from Uniffy's application "
         "license. Exact upstream notices ship at `/usr/share/uniffy/media/licenses` in "
-        "media worker images. Build configuration lives at `/usr/share/uniffy/media/buildconf.txt`. "
-        "Matching source archives and build scripts ship at `/usr/share/uniffy/media-sources`. "
-        "Preserve these files when redistributing images.\n\n"
-        "PDFium license and dependency notices ship inside the installed pypdfium2 package.\n"
+        "`ghcr.io/uniffy-io/uniffy-media-worker` images. "
+        "Build configuration lives at `/usr/share/uniffy/media/buildconf.txt`. "
+        "Matching source archives and build scripts ship at `/usr/share/uniffy/media-sources`.\n"
     )
 
 

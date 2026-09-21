@@ -199,7 +199,7 @@ The stack needs a separate media Deployment running `ghcr.io/uniffy-io/uniffy-me
 
 Check the manifests rendered by your chart version before applying them. They must include this worker, its shared configuration and Secret references, and writable scratch storage. If your chart does not render a media worker, add a Deployment alongside it. [Configure Uniffy](/docs/deployment/configure/#media-scratch-on-kubernetes) provides the pod template fragment and resource budget; it is Kubernetes YAML, not a Helm values block.
 
-Use a disk backed `emptyDir`, with `MEDIA_SCRATCH_DIRECTORY` and `TMPDIR` pointing at its mount. Originals and completed playback copies stay in object storage, so this worker needs no PVC. The example starts at 16 GiB of scratch for default processing limits. More replicas do not raise the shared encode limit by themselves.
+Use a disk backed `emptyDir`, with `MEDIA_SCRATCH_DIRECTORY` and `TMPDIR` pointing at its mount. Originals and completed playback copies stay in object storage, so this worker needs no PVC. The example starts at 16 GiB of scratch for default processing limits. Run one media worker process per pod. Each replica adds its own encode slots and scratch budget.
 
 Expose port 9093 through an internal metrics Service and select it with a ServiceMonitor if you use Prometheus Operator. The media worker needs access to the same database, Valkey, search, and object storage services as the other workers. It needs no public route.
 

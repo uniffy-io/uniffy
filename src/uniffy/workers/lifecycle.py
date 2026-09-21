@@ -1,9 +1,9 @@
-"""Manage process resources and metrics for both ARQ worker fleets."""
+"""Manage process resources and metrics for ARQ worker fleets."""
 
 import time
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import Any
+from typing import Any, cast
 
 from loguru import logger
 
@@ -27,6 +27,9 @@ from uniffy.domains.agents.providers.clients import (
 from uniffy.domains.audit.jobs.jobs import provision_audit_partitions
 from uniffy.domains.calls.channels import CallsChannelLifecycle
 from uniffy.domains.chat.lifecycle import CALL_LIFECYCLE_CTX_KEY
+from uniffy.domains.files.jobs.settings import MEDIA_SETTINGS
+from uniffy.domains.files.jobs.slots import MEDIA_SLOTS_CTX_KEY, MediaSlots
+from uniffy.domains.files.jobs.source import MEDIA_SOURCE_CTX_KEY, MediaSourceServer
 from uniffy.domains.files.registration import register_file_content
 from uniffy.domains.integrations.clients import (
     close_integration_invalidation_subscriber,
@@ -77,6 +80,8 @@ class WorkerResource(StrEnum):
     DELIVERY_ADAPTERS = "delivery_adapters"
     PROVIDER_INVALIDATIONS = "provider_invalidations"
     INTEGRATION_INVALIDATIONS = "integration_invalidations"
+    MEDIA_SLOTS = "media_slots"
+    MEDIA_SOURCE = "media_source"
 
 
 @dataclass(frozen=True, slots=True)
@@ -113,7 +118,10 @@ EGRESS_RESOURCE_PROFILE = FleetResourceProfile(
 )
 
 
-MEDIA_RESOURCE_PROFILE = FleetResourceProfile(queue=QueueName.MEDIA, resources=_SHARED_RESOURCES)
+MEDIA_RESOURCE_PROFILE = FleetResourceProfile(
+    queue=QueueName.MEDIA,
+    resources=(*_SHARED_RESOURCES, WorkerResource.MEDIA_SLOTS, WorkerResource.MEDIA_SOURCE),
+)
 
 
 async def _on_startup_shared(
@@ -262,12 +270,26 @@ async def core_on_shutdown(ctx: dict[str, Any]) -> None:
 
 async def media_on_startup(ctx: dict[str, Any]) -> None:
     await _on_startup_shared(ctx, MEDIA_RESOURCE_PROFILE)
+    try:
+        ctx[MEDIA_SLOTS_CTX_KEY] = MediaSlots(MEDIA_SETTINGS.max_concurrent, MEDIA_SETTINGS)
+        source = MediaSourceServer(cast(ObjectStorage, ctx[OBJECT_STORAGE_CTX_KEY]))
+        await source.startup()
+        ctx[MEDIA_SOURCE_CTX_KEY] = source
+    except BaseException:
+        ctx.pop(MEDIA_SLOTS_CTX_KEY, None)
+        await _on_shutdown_shared(ctx)
+        raise
     WORKER_READY.labels(queue=QueueName.MEDIA).set(1)
 
 
 async def media_on_shutdown(ctx: dict[str, Any]) -> None:
     WORKER_READY.labels(queue=QueueName.MEDIA).set(0)
-    await _on_shutdown_shared(ctx)
+    ctx.pop(MEDIA_SLOTS_CTX_KEY, None)
+    try:
+        if source := ctx.pop(MEDIA_SOURCE_CTX_KEY, None):
+            await source.shutdown()
+    finally:
+        await _on_shutdown_shared(ctx)
 
 
 async def egress_on_startup(ctx: dict[str, Any]) -> None:
