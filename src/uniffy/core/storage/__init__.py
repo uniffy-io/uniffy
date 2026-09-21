@@ -40,6 +40,8 @@ class ObjectStorage(Protocol):
         start_byte: int | None = None,
         end_byte: int | None = None,
         chunk_size: int = DEFAULT_CHUNK_SIZE,
+        *,
+        etag: str | None = None,
     ) -> AsyncIterator[tuple[bytes, int, int, int]]: ...
 
     async def create_multipart_upload(

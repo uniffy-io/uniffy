@@ -292,7 +292,7 @@ Default is ConnectRPC. Plain FastAPI HTTP routes (`domains/{feature}/routes.py`,
 
 ## Attachments (sub-feature of files)
 
-Attachments link a file to content via a generic `(content_type, content_id)` row; RPCs live on `files.v1.FilesService`. `AttachFile` copies the source file into an Attachments folder and writes one `Attachment` row (`file_id` unique - each attachment owns its copy). Folder + file policy follow the PARENT's effective access mode (`OPEN_TO_ORG` parent -> shared org attachments folder; otherwise the attacher's personal `OWNER_ONLY` folder). `DetachFile` deletes the row AND the file copy. Permissions: attach = VIEW on source + edit-equivalent on target (chat delegates to `ChatAccessChecker`); view/list = VIEW on parent; detach = attacher or EDIT on parent. Key files: `core/models/files/attachment.py`, `domains/files/attachments/`.
+Attachments link a file to content via a generic `(content_type, content_id)` row; RPCs live on `files.v1.FilesService`. `AttachFile` copies the source file into an Attachments folder and writes one `Attachment` row (`file_id` unique - each attachment owns its copy). Folder placement follows the parent's effective access mode (`OPEN_TO_ORG` parent -> shared org attachments folder; otherwise the attacher's personal folder). Attachment copies stay `OWNER_ONLY` with no baseline. Live parent authorization grants read access, so an independent organization baseline cannot bypass a parent denial. Intentional independent file grants remain valid. `DetachFile` deletes the row AND the file copy. Permissions: attach = VIEW on source + edit-equivalent on target (chat delegates to `ChatAccessChecker`); view/list = VIEW on parent; detach = attacher or EDIT on parent. Key files: `core/models/files/attachment.py`, `domains/files/attachments/`.
 
 ## Background jobs (ARQ + Valkey)
 
@@ -301,7 +301,7 @@ invariants they operate on. Every domain owner uses its `jobs/contracts.py` and 
 parent-context child such as `scheduling/calendar` keeps the same shape below that child. A large
 surface may keep additional focused, one-word collaborators beside those files rather than breaching
 the 500-line soft cap. `core/jobs/` owns only the generic contract types and dispatch helpers;
-`workers/` is the composition root that validates registrations, builds the core and egress fleets,
+`workers/` is the composition root that validates registrations, builds the core, egress and media fleets,
 manages their resources, and renders the executable inventory.
 
 ### Creating a job
@@ -313,7 +313,7 @@ manages their resources, and renders the executable inventory.
    Core-owned subsystems follow the same owner-local split; never create a domain handler under
    `workers/`.
 2. **Classify the ref explicitly.** Give it a stable ARQ `name`, a `JobWorkload`, its matching
-   `QueueName`, and a `JobReliability`. `CONTROL`, `DELIVERY`, and `MEDIA` run on `CORE`; `AGENT` and
+   `QueueName`, and a `JobReliability`. `CONTROL` and `DELIVERY` run on `CORE`; `MEDIA` runs on `MEDIA`; `AGENT` and
    `INTEGRATION` run on `EGRESS`. Scheduled refs use the `cron:` name prefix and a `_SCHEDULE`
    constant; changing an existing name or queue is a compatibility migration, not a refactor.
 3. **Make durability concrete.** A `DURABLE` ref declares `JobRecovery` with the exact PostgreSQL

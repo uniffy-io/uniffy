@@ -38,7 +38,9 @@ from uniffy.domains.files.attachments.folders import (
 from uniffy.domains.files.jobs.processing import (
     file_processing_job_id,
     initial_extraction_status,
+    initial_playback_status,
     initial_thumbnail_status,
+    initial_transcode_status,
     pending_jobs_for_file,
 )
 from uniffy.domains.files.quota.operations import QuotaOperations
@@ -143,18 +145,14 @@ class AttachmentOperations:
             content_id,
         )
         parent_mode = target_policy.access_mode
-        parent_baseline = target_policy.baseline_role
 
-        # Org-wide parent -> org Attachments folder + OPEN_TO_ORG/EDITOR file.
-        # Otherwise -> attacher's personal folder, OWNER_ONLY.
+        # Parent access is resolved live so an independent baseline cannot bypass a denial.
+        file_access_mode = AccessMode.OWNER_ONLY
+        file_baseline_role = None
         if parent_mode == AccessMode.OPEN_TO_ORG:
             folder = await self.get_or_create_org_attachments_folder(organization_id)
-            file_access_mode = AccessMode.OPEN_TO_ORG
-            file_baseline_role = parent_baseline or ContentRole.EDITOR
         else:
             folder = await self.get_or_create_attachments_folder(user_id, organization_id)
-            file_access_mode = AccessMode.OWNER_ONLY
-            file_baseline_role = None
 
         # A staged upload is linked in place, never copied: the editor/composer
         # already embedded ITS id in the content, so the id the readers resolve
@@ -649,6 +647,11 @@ class AttachmentOperations:
             description=source_file.description,
             extraction_status=extraction_status,
             thumbnail_status=thumbnail_status,
+            transcode_status=initial_transcode_status(source_file.mime_type, source_file.filename),
+            playback_status=initial_playback_status(
+                source_file.mime_type,
+                initial_transcode_status(source_file.mime_type, source_file.filename),
+            ),
         )
         self._session.add(new_file)
         await self._session.flush()

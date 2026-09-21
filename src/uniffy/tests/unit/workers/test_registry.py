@@ -5,7 +5,8 @@ import pytest
 from uniffy.core.jobs import JobRef, JobReliability, JobWorkload
 from uniffy.core.jobs import QueueName
 from uniffy.vendor.arq.worker import create_worker
-from uniffy.workers.fleets import CoreWorkerSettings, EgressWorkerSettings
+from uniffy.workers.fleets import CoreWorkerSettings, EgressWorkerSettings, MediaWorkerSettings
+from uniffy.domains.files.jobs.contracts import FILE_JOB_REFS
 from uniffy.workers.registration import (
     JobRegistration,
     build_worker_definitions,
@@ -78,7 +79,9 @@ def test_catalog_validation_rejects_an_unbound_scheduled_ref() -> None:
         validate_job_catalogs((), (), (), (_ref(),))
 
 
-@pytest.mark.parametrize("settings_cls", (CoreWorkerSettings, EgressWorkerSettings))
+@pytest.mark.parametrize(
+    "settings_cls", (CoreWorkerSettings, EgressWorkerSettings, MediaWorkerSettings)
+)
 def test_production_fleet_constructs_with_real_registry(settings_cls: type) -> None:
     worker = create_worker(settings_cls, handle_signals=False)
 
@@ -87,3 +90,15 @@ def test_production_fleet_constructs_with_real_registry(settings_cls: type) -> N
     assert all(
         inspect.iscoroutinefunction(definition.coroutine) for definition in worker.functions.values()
     )
+
+
+def test_media_jobs_are_consumed_only_by_media_workers() -> None:
+    media = create_worker(MediaWorkerSettings, handle_signals=False)
+    core = create_worker(CoreWorkerSettings, handle_signals=False)
+    egress = create_worker(EgressWorkerSettings, handle_signals=False)
+    for ref in FILE_JOB_REFS:
+        if ref.workload is JobWorkload.MEDIA:
+            assert ref.queue.valkey_name == media.queue_name
+            assert ref.name in media.functions
+            assert ref.name not in core.functions
+            assert ref.name not in egress.functions

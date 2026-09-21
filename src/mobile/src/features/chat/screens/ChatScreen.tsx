@@ -721,6 +721,7 @@ export function ChatConversationScreen() {
 
   const dispatchSend = useCallback(
     (content: string, replyId: string | undefined, attachmentFileIds: string[]) => {
+      if (attachments.uploading) return;
       flushOnSend();
       resetCompose();
       attachments.clear();
@@ -741,6 +742,7 @@ export function ChatConversationScreen() {
   );
 
   const handleSend = useCallback(() => {
+    if (attachments.uploading) return;
     const text = draft.trim();
     if (editing) {
       if (!text) return;

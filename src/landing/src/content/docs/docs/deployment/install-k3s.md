@@ -10,13 +10,47 @@ One virtual machine, one command, a running Uniffy. This page is for a team that
 
 ## What you need
 
-- A fresh VM running Ubuntu 22.04 or newer. 4 CPU cores, 8 GB RAM, 60 GB disk.
+- A fresh VM running Ubuntu 22.04 or newer. Start with 4 vCPU, 8 GB RAM and 60 GB of SSD storage. Use the [machine sizing guide](#choose-a-machine) below before buying capacity for your team.
 - A DNS A record pointing your hostname at the VM, for example `uniffy.example.com`.
 - Inbound ports open: 80 and 443 over TCP, 3478 over UDP and TCP.
 - Optional: SMTP credentials. Without them Uniffy runs, but invites and password resets stay off until you add a mail server in the admin pages.
 - Optional: a TLS certificate you own. Without one the installer gets a free certificate from Let's Encrypt.
 
 Port 3478 carries calls media. Everything else works without it, and calls quietly do not, which is why the installer probes it and tells you.
+
+## Choose a machine
+
+Size your VM for the work your team does during busy hours. Notes, tasks and messages need less capacity than overlapping video conversions, large imports and calls. Use team size to choose a starting point, then adjust for your workload.
+
+These are starting budgets for total team size. We have not load tested these user counts. They assume daily notes, tasks, chat and documents, occasional video uploads, small calls and an external AI provider. They do not promise that every member can run heavy work at once.
+
+| Team size | vCPU | RAM |
+|---|---|---|
+| 1 to 20 people | 4 | 8 GB |
+| 21 to 100 people | 8 | 16 GB |
+| 101 to 200 people | 8 to 16 | 16 to 32 GB |
+
+Use the lower end of each budget for lighter workloads. Allow more CPU and RAM when uploads, indexing and calls overlap often, even with a small team. Measure your busiest hours before relying on a size.
+
+These budgets cover the whole host: Uniffy, its workers, data stores, calls service, k3s and the operating system. Use SSD storage. [K3s also recommends SSDs](https://docs.k3s.io/installation/requirements#disks) because database performance matters. A local AI model needs its own CPU, RAM or GPU budget.
+
+### Leave room for video and calls
+
+Start with one media worker. The [media configuration example](/docs/deployment/configure/#media-scratch-on-kubernetes) allows four jobs and two video conversions at once per worker. Video conversions share those four job slots with document processing and thumbnails. Long recordings can queue without needing a larger machine for every team member.
+
+Keep CPU and memory available for the rest of the stack while conversions run. Add a second media worker when conversion wait times become a problem and the host has spare capacity. Each worker needs its own CPU, memory and scratch budget. Adding a replica on a saturated host does not add capacity.
+
+Size calls separately if large meetings are routine. Simultaneous cameras, screen shares and subscribers drive CPU and network demand. [LiveKit's benchmarking guide](https://docs.livekit.io/transport/self-hosting/benchmark/) explains those factors. Team size alone cannot tell you whether the VM's network connection is enough.
+
+### Size disk for your files
+
+The 60 GB starting disk is for a small installation. Grow it with stored files and retained versions. Allow space for playback copies, PostgreSQL, search indexes, container images and logs too.
+
+Within your disk budget, keep 16 GiB free per media worker for temporary work, separate from stored files. That space can live on the same SSD. Originals stay in object storage while conversions write their outputs to scratch. Scratch disappears when the pod is replaced; your stored files must persist. Keep backups off the VM.
+
+### Know when to grow
+
+Watch response times, CPU saturation, memory pressure, disk space, disk latency and how long jobs wait. Resize when those signals show pressure. A large file collection can need more RAM and disk even with a small team. These sizes are planning guidance; the installer does not select a profile from your member count.
 
 ## The command
 
@@ -81,4 +115,4 @@ sudo uniffy-k3s upgrade
 
 One command, a Postgres dump first, about a minute of downtime while the backend restarts. The full story, including what rollback really means, is on the [Upgrades](/docs/deployment/upgrades/) page.
 
-This page made every choice for you on purpose. The moment you want a different Postgres, a different certificate flow per team, or three backend replicas, you have outgrown the VM. The [cluster path](/docs/deployment/install-kubernetes/) is the same product with the choices handed back to you.
+A single VM keeps operations small, but a host failure takes the whole service down. Move to the [cluster path](/docs/deployment/install-kubernetes/) when you need services on separate machines or availability through a host failure. Plan redundant data stores and backups too.

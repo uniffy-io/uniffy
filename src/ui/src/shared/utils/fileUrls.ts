@@ -90,3 +90,7 @@ export function parseMediaUrl(url: string): ParsedFileUrl | null {
 export function extractFileId(url: string): string | null {
   return parseFileUrl(url)?.fileId ?? parseMediaUrl(url)?.fileId ?? null;
 }
+
+export function buildPlaybackUrl(organizationId: string, fileId: string, version: number): string {
+  return `${buildMediaUrl(organizationId, fileId)}/playback/${version}`;
+}

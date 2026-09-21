@@ -6,12 +6,14 @@ from datetime import timedelta
 from uniffy.core.jobs import JobRef, QueueName
 from uniffy.workers.fleets.core import CoreWorkerSettings
 from uniffy.workers.fleets.egress import EgressWorkerSettings
+from uniffy.workers.fleets.media import MediaWorkerSettings
 from uniffy.workers.registration import JobRegistration, ScheduledJobRegistration, Seconds
 from uniffy.workers.registry import (
     CORE_JOB_REGISTRATIONS,
     CORE_SCHEDULED_REGISTRATIONS,
     EGRESS_JOB_REGISTRATIONS,
     EGRESS_SCHEDULED_REGISTRATIONS,
+    MEDIA_JOB_REGISTRATIONS,
 )
 
 _JOBS_PACKAGE = "jobs"
@@ -70,7 +72,11 @@ def _trigger(registration: JobRegistration | ScheduledJobRegistration) -> str:
 
 
 def _fleet_defaults(queue: QueueName) -> tuple[int, int]:
-    settings = CoreWorkerSettings if queue is QueueName.CORE else EgressWorkerSettings
+    settings = {
+        QueueName.CORE: CoreWorkerSettings,
+        QueueName.EGRESS: EgressWorkerSettings,
+        QueueName.MEDIA: MediaWorkerSettings,
+    }[queue]
     return settings.job_timeout, settings.max_tries
 
 
@@ -93,6 +99,7 @@ def worker_inventory() -> tuple[JobInventoryEntry, ...]:
         *CORE_SCHEDULED_REGISTRATIONS,
         *EGRESS_JOB_REGISTRATIONS,
         *EGRESS_SCHEDULED_REGISTRATIONS,
+        *MEDIA_JOB_REGISTRATIONS,
     )
     return tuple(_entry(registration) for registration in registrations)
 
@@ -103,7 +110,7 @@ def _cell(value: object) -> str:
 
 def render_worker_inventory() -> str:
     lines = ["Worker resources"]
-    for settings in (CoreWorkerSettings, EgressWorkerSettings):
+    for settings in (CoreWorkerSettings, EgressWorkerSettings, MediaWorkerSettings):
         resources = ", ".join(resource.value for resource in settings.resource_profile.resources)
         lines.append(f"- {settings.resource_profile.queue.value}: {resources}")
 

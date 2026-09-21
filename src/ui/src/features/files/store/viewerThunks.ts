@@ -1,4 +1,7 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
+import { Code, ConnectError } from "@connectrpc/connect";
+import { removeFile, setFile } from "@/features/files/store/filesSlice";
+import { removeCachedBlob } from "@/features/files/components/viewer/hooks/blobCache";
 import { filesApi } from "@/features/files/api/filesApi";
 import { openViewer, setFileData, setError } from "@/features/files/store/viewerSlice";
 import { bulkUpsertTags, tagToPlain } from "@/features/tags";
@@ -25,6 +28,7 @@ const fileToPlain = (file: File): SerializedFile => ({
   version: file.version,
   extractionStatus: file.extractionStatus,
   transcodeStatus: file.transcodeStatus,
+  playbackStatus: file.playbackStatus,
   isDeleted: file.isDeleted,
   createdAt: file.createdAt
     ? {
@@ -132,3 +136,34 @@ export const openViewerWithFetch = createAsyncThunk<
     return rejectWithValue(message);
   }
 });
+
+export const revalidateViewerAccess = createAsyncThunk<void, void, { state: RootState }>(
+  "fileViewer/revalidateAccess",
+  async (_, { dispatch, getState }) => {
+    const state = getState();
+    const { isOpen, currentFileId: fileId } = state.fileViewer;
+    const organizationId = state.auth.currentOrganizationId;
+    if (!isOpen || !fileId || !organizationId) return;
+
+    try {
+      const response = await filesApi.getFile({ organizationId, fileId });
+      if (getState().auth.currentOrganizationId !== organizationId) return;
+      if (response.file) {
+        const file = fileToPlain(response.file);
+        dispatch(setFile(file));
+        if (getState().fileViewer.currentFileId === fileId) dispatch(setFileData(file));
+        return;
+      }
+    } catch (error) {
+      if (
+        !(error instanceof ConnectError) ||
+        (error.code !== Code.PermissionDenied && error.code !== Code.NotFound)
+      ) {
+        return;
+      }
+    }
+    if (getState().auth.currentOrganizationId !== organizationId) return;
+    removeCachedBlob(fileId);
+    dispatch(removeFile(fileId));
+  },
+);

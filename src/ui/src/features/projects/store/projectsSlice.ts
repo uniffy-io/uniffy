@@ -193,8 +193,18 @@ export const projectsSlice = createSlice({
           },
           {} as Record<string, Project>,
         );
-        if (!state.currentProjectId && action.payload.length > 0) {
-          state.currentProjectId = action.payload[0].id;
+        for (const [id, task] of Object.entries(state.tasks)) {
+          if (!state.projects[task.projectId]) {
+            delete state.tasks[id];
+            delete state.activities[id];
+          }
+        }
+        if (!state.currentProjectId || !state.projects[state.currentProjectId]) {
+          state.currentProjectId = action.payload[0]?.id ?? null;
+        }
+        if (state._pendingTaskSnapshot && !state.projects[state._pendingTaskSnapshot.projectId]) {
+          delete state._pendingTaskSnapshot;
+          delete state._pendingParentSnapshots;
         }
       })
       .addCase(fetchProjects.rejected, (state, action) => {
@@ -217,7 +227,7 @@ export const projectsSlice = createSlice({
       .addCase(fetchProjectTasks.fulfilled, (state, action) => {
         state.loading.tasks = false;
         action.payload.forEach((task) => {
-          state.tasks[task.id] = task;
+          if (state.projects[task.projectId]) state.tasks[task.id] = task;
         });
         const { arg } = action.meta;
         state.taskListLoadedIds[typeof arg === "string" ? arg : arg.projectId] = true;

@@ -155,8 +155,9 @@ async def test_private_flip_denies_historical_file_point_reference_and_bytes(
     for id in (root_file, reply_file):
         file = await session.get(File, id)
         await session.refresh(file)
-        assert (file.access_mode, file.baseline_role) == (AccessMode.OPEN_TO_ORG, ContentRole.VIEWER)
+        assert (file.access_mode, file.baseline_role) == (AccessMode.OWNER_ONLY, None)
         assert (await session.get(Folder, file.folder_id)).is_org_attachments
+        await FileOperations(session).get_by_id(env.outsider_id, env.org_id, id)
     unrelated = await session.get(File, unrelated_file)
     assert unrelated.access_mode == AccessMode.OWNER_ONLY
 
@@ -172,7 +173,7 @@ async def test_failed_flip_rolls_back_channel_and_file_policy(session, env, monk
     channel = await _quiet_operations(session).get_by_id(env.outsider_id, env.org_id, env.public_id)
     file = await FileOperations(session).get_by_id(env.outsider_id, env.org_id, file_id)
     assert channel.channel_type == ChannelType.PUBLIC
-    assert file.access_mode == AccessMode.OPEN_TO_ORG
+    assert file.access_mode == AccessMode.OWNER_ONLY
     assert await session.get(ChatSearchAclRefresh, env.public_id) is None
 
 
@@ -310,4 +311,3 @@ async def test_attachment_policy_reads_run_side_by_side_and_a_flip_waits(session
     finally:
         await session.rollback()
         await engine.dispose()
-

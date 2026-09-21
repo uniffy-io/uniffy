@@ -32,12 +32,26 @@ fileExistenceTests:
   - name: starter docs
     path: /app/docs/documentation/SHARING.md
     shouldExist: true
-  - name: ffmpeg
+  - name: no ffmpeg
     path: /usr/local/bin/ffmpeg
-    shouldExist: true
-    isExecutableBy: other
+    shouldExist: false
+  - name: no ffprobe
+    path: /usr/local/bin/ffprobe
+    shouldExist: false
+  - name: no fixture generator
+    path: /usr/local/bin/ffmpeg-fixtures
+    shouldExist: false
   - name: no compiler
     path: /usr/bin/gcc
+    shouldExist: false
+  - name: no native media sources
+    path: /usr/share/uniffy/media-sources/ffmpeg.tar
+    shouldExist: false
+  - name: no native media build
+    path: /usr/share/uniffy/media/buildconf.txt
+    shouldExist: false
+  - name: no native media binary notice
+    path: /usr/share/uniffy/media/licenses/ffmpeg.txt
     shouldExist: false
   - name: no pip
     path: /usr/local/bin/pip
@@ -68,14 +82,23 @@ commandTests:
     command: python
     args:
       - "-c"
-      - "import av, fitz, PIL, libvalkey, asyncpg, granian, pycrdt, orjson, psycopg2, cryptography, argon2"
+      - "import pypdfium2, PIL, libvalkey, asyncpg, granian, pycrdt, orjson, psycopg2, cryptography, argon2"
     exitCode: 0
   - name: app factory imports
     command: python
     args: ["-c", "import uniffy.factory"]
     exitCode: 0
-  - name: ffmpeg has the H.264 and AAC encoders transcode needs
-    command: ffmpeg
-    args: ["-hide_banner", "-encoders"]
-    expectedOutput: ["libx264", " aac "]
+  - name: duplicate media libraries absent
+    command: python
+    args: ["-c", "import importlib.util; assert importlib.util.find_spec('av') is None; assert importlib.util.find_spec('fitz') is None"]
+    exitCode: 0
+  - name: worker fleets import without video tools
+    command: python
+    args: ["-c", "from uniffy.workers.fleets import CoreWorkerSettings, EgressWorkerSettings"]
+    exitCode: 0
+  - name: offline S3 client
+    command: python
+    args:
+      - "-c"
+      - "import boto3; c=boto3.client('s3', endpoint_url='http://127.0.0.1:1', aws_access_key_id='test', aws_secret_access_key='test'); assert c.meta.service_model.operation_model('CreateMultipartUpload')"
     exitCode: 0

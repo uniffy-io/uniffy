@@ -16,6 +16,7 @@
 !docs/*.md
 !docs/documentation
 !.docker/dev
+!.docker/media
 
 # Inside the allowed trees
 **/node_modules
