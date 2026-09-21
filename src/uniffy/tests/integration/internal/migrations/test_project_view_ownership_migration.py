@@ -101,10 +101,10 @@ def _views(project_id: str):
 
 
 async def test_views_gain_ownership_and_definitions(scratch_database: str) -> None:
-    await _provision_to(scratch_database, "102")
+    await _provision_to(scratch_database, "104")
     with_views, without_views, owner_id = await _seed_legacy_projects()
 
-    _migrate_to("103")
+    _migrate_to("105")
 
     rows = _views(with_views)
     assert [row[0] for row in rows] == [
@@ -152,11 +152,11 @@ async def test_views_gain_ownership_and_definitions(scratch_database: str) -> No
 
 
 async def test_downgrade_restores_the_legacy_shape(scratch_database: str) -> None:
-    await _provision_to(scratch_database, "102")
+    await _provision_to(scratch_database, "104")
     with_views, _, _ = await _seed_legacy_projects()
-    _migrate_to("103")
+    _migrate_to("105")
 
-    _downgrade_to("102")
+    _downgrade_to("104")
 
     rows = _query(
         "SELECT id, type, is_default, config FROM projects_views "

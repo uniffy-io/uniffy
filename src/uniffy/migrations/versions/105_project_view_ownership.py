@@ -5,8 +5,8 @@ config is rewritten into the definition shape, every project gets whichever of
 the six default views it lacks, and a missing or dangling default view points
 at the table view.
 
-Revision ID: 103
-Revises: 102
+Revision ID: 105
+Revises: 104
 Create Date: 2026-09-17
 """
 
@@ -19,8 +19,8 @@ from sqlalchemy.dialects import postgresql
 
 from uniffy.core.json_codec import dumps_str
 
-revision: str = "103"
-down_revision: str | None = "102"
+revision: str = "105"
+down_revision: str | None = "104"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

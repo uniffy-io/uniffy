@@ -581,7 +581,7 @@ def test_migration_seed_matches_application_defaults() -> None:
         Path(__file__).resolve().parents[3]
         / "migrations"
         / "versions"
-        / "103_project_view_ownership.py"
+        / "105_project_view_ownership.py"
     )
     spec = importlib.util.spec_from_file_location("project_view_ownership", path)
     assert spec and spec.loader
