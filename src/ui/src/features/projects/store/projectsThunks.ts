@@ -409,10 +409,6 @@ export const bulkUpdateTasksThunk = createAsyncThunk<
   },
 );
 
-/**
- * Moves the loaded tasks of one status to another, ahead of removing the first. Resolves to
- * false when the move failed; the bulk update has already reported why.
- */
 export const moveTasksOutOfStatus = createAsyncThunk<
   boolean,
   { projectId: string; fromStatus: string; toStatus: string },
@@ -426,6 +422,8 @@ export const moveTasksOutOfStatus = createAsyncThunk<
       .map((t) => t.id);
     if (taskIds.length === 0) return true;
     const moved = await dispatch(bulkUpdateTasksThunk({ taskIds, updates: { status: toStatus } }));
+    // Bulk updates can commit before failure and omit parent counters on success.
+    await dispatch(fetchProjectTasks(projectId));
     return bulkUpdateTasksThunk.fulfilled.match(moved);
   },
 );
