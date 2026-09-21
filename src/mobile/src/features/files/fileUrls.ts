@@ -41,3 +41,7 @@ export function supportsThumbnail(mimeType?: string): boolean {
   if (!mimeType) return false;
   return THUMBNAIL_MIME_TYPES.has(mimeType.split(";")[0].trim().toLowerCase());
 }
+
+export function buildPlaybackUrl(organizationId: string, fileId: string, version: number): string {
+  return `${buildMediaUrl(organizationId, fileId)}/playback/${version}`;
+}

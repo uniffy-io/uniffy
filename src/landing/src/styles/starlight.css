@@ -106,6 +106,8 @@ mobile-starlight-toc {
 
 html {
   font-family: var(--sl-font);
+  background-color: var(--sl-color-bg);
+  color: var(--sl-color-text);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
@@ -113,7 +115,7 @@ html {
 
 body {
   font-feature-settings: "ss01", "cv11";
-  background-color: #0d111e;
+  background-color: var(--sl-color-bg);
   background-image:
     radial-gradient(ellipse 80% 60% at 78% 12%, rgba(105, 74, 255, 0.13) 0%, rgba(13, 17, 30, 0) 60%),
     radial-gradient(ellipse 70% 60% at 12% 90%, rgba(1, 183, 127, 0.07) 0%, rgba(13, 17, 30, 0) 58%),
@@ -262,4 +264,3 @@ starlight-menu-button + nav a[aria-current="page"],
 .sl-markdown-content .accent {
   color: var(--sl-color-accent);
 }
-

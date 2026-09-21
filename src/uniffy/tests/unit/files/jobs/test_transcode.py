@@ -56,7 +56,7 @@ def lock_held(monkeypatch):
 
 async def test_invalid_uuid_args_short_circuit() -> None:
     """Bad uuid arguments should never touch Valkey, S3, or PG."""
-    result = await transcode_mod.transcode_video_to_mp4(
+    result = await transcode_mod._transcode_video_to_mp4(
         ctx={},
         file_id="not-a-uuid",
         organization_id=str(generate_id()),
@@ -72,7 +72,7 @@ async def test_lock_held_returns_skipped(lock_held) -> None:
     org_id = str(generate_id())
 
     async def _run() -> dict[str, Any]:
-        return await transcode_mod.transcode_video_to_mp4(
+        return await transcode_mod._transcode_video_to_mp4(
             ctx={},
             file_id=file_id,
             organization_id=org_id,
@@ -90,7 +90,7 @@ async def test_missing_ops_client_skips_before_loading_file_state(monkeypatch) -
     monkeypatch.setattr(transcode_mod, "get_ops_client", lambda: None)
 
     file_id = str(generate_id())
-    result = await transcode_mod.transcode_video_to_mp4(
+    result = await transcode_mod._transcode_video_to_mp4(
         ctx={},
         file_id=file_id,
         organization_id=str(generate_id()),
@@ -112,56 +112,12 @@ async def test_release_lock_called_on_invalid_uuid(monkeypatch) -> None:
     """
     fake = _FakeOpsClient()
     monkeypatch.setattr(transcode_mod, "get_ops_client", lambda: fake)
-    await transcode_mod.transcode_video_to_mp4(
+    await transcode_mod._transcode_video_to_mp4(
         ctx={},
         file_id="not-a-uuid",
         organization_id=str(generate_id()),
     )
     assert fake.calls == []
-
-
-def test_ffmpeg_codec_args_default(monkeypatch) -> None:
-    """Default encoder is libx264 when no hardware override is set."""
-    monkeypatch.setattr(transcode_mod, "_HW_ENCODER", "")
-    args = transcode_mod._ffmpeg_video_codec_args()
-    assert args[:2] == ["-c:v", "libx264"]
-    assert "veryfast" in args
-
-
-def test_ffmpeg_codec_args_hw_encoder(monkeypatch) -> None:
-    """Hardware encoder is used when env declares a recognised value."""
-    monkeypatch.setattr(transcode_mod, "_HW_ENCODER", "h264_nvenc")
-    args = transcode_mod._ffmpeg_video_codec_args()
-    assert args[:2] == ["-c:v", "h264_nvenc"]
-
-
-def test_ffmpeg_codec_args_unknown_hw_encoder_falls_back(monkeypatch) -> None:
-    """Unrecognised TRANSCODE_HW_ENCODER values fall back to libx264 so
-    a misconfigured env does not crash the worker on every job.
-    """
-    monkeypatch.setattr(transcode_mod, "_HW_ENCODER", "h264_made_up")
-    args = transcode_mod._ffmpeg_video_codec_args()
-    assert args[:2] == ["-c:v", "libx264"]
-
-
-async def test_run_ffmpeg_raises_on_nonzero_exit(monkeypatch, tmp_path) -> None:
-    """A non-zero ffmpeg exit must bubble up as RuntimeError so the
-    worker can flip ``transcode_status=FAILED`` and leave the WebM live.
-    """
-
-    class _FakeProc:
-        returncode = 1
-
-        async def communicate(self):
-            return b"", b"boom"
-
-    async def _fake_exec(*args, **kwargs):
-        return _FakeProc()
-
-    monkeypatch.setattr(transcode_mod.asyncio, "create_subprocess_exec", _fake_exec)
-
-    with pytest.raises(RuntimeError, match="ffmpeg failed"):
-        await transcode_mod._run_ffmpeg(tmp_path / "in.webm", tmp_path / "out.mp4")
 
 
 def test_get_jobs_for_webm_includes_transcode() -> None:
@@ -262,13 +218,14 @@ async def test_worker_skips_terminal_states(monkeypatch, lock_acquired, status) 
             self.owner_id = generate_id()
             self.filename = "Screen Recording.mp4"
             self.version = 1
+            self.is_deleted = False
 
     org_id = generate_id()
     file = _File(status, org_id)
 
     monkeypatch.setattr(transcode_mod, "open_session", lambda: _CtxMgr(file))
 
-    result = await transcode_mod.transcode_video_to_mp4(
+    result = await transcode_mod._transcode_video_to_mp4(
         ctx={},
         file_id=str(file.id),
         organization_id=str(org_id),

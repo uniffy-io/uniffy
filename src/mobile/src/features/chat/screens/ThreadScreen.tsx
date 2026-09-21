@@ -192,6 +192,7 @@ export function ChatThreadScreen() {
 
   const dispatchSend = useCallback(
     (content: string, attachmentFileIds: string[]) => {
+      if (attachments.uploading) return;
       flushOnSend();
       setDraft("");
       mentionsRef.current = [];
@@ -203,6 +204,7 @@ export function ChatThreadScreen() {
   );
 
   const handleSend = useCallback(() => {
+    if (attachments.uploading) return;
     const text = draft.trim();
     const attachmentFileIds = attachments.readyFileIds;
     if (!text && attachmentFileIds.length === 0) return;

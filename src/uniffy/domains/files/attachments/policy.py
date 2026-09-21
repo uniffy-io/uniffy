@@ -28,12 +28,8 @@ async def migrate_attachment_policy(
     if effective_mode == AccessMode.OPEN_TO_ORG:
         org_folder = await get_or_create_org_attachments_folder(session, organization_id)
         target_folder_id = org_folder.id
-        target_mode = AccessMode.OPEN_TO_ORG
-        target_baseline = effective_baseline or ContentRole.EDITOR
     else:
         target_folder_id = None
-        target_mode = AccessMode.OWNER_ONLY
-        target_baseline = None
 
     for content_type, content_id in affected:
         attachments = (
@@ -65,8 +61,8 @@ async def migrate_attachment_policy(
                     organization_id,
                 )
                 file_row.folder_id = user_folder.id
-            file_row.access_mode = target_mode
-            file_row.baseline_role = target_baseline
+            file_row.access_mode = AccessMode.OWNER_ONLY
+            file_row.baseline_role = None
             await session.flush()
             await FileSearchOperations(session, search_indexer)._index_for_search(
                 model=file_row,

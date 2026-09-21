@@ -32,7 +32,9 @@ from uniffy.domains.files.folders.operations import FolderOperations
 from uniffy.domains.files.jobs.processing import (
     file_processing_job_id,
     initial_extraction_status,
+    initial_playback_status,
     initial_thumbnail_status,
+    initial_transcode_status,
     pending_jobs_for_file,
 )
 from uniffy.domains.files.quota.operations import QuotaOperations
@@ -337,6 +339,7 @@ class FileUploadOperations:
             extraction_status=extraction_status,
             thumbnail_status=thumbnail_status,
             transcode_status=transcode_status,
+            playback_status=initial_playback_status(upload.mime_type, transcode_status),
         )
 
         staged_tags = None
@@ -515,10 +518,7 @@ class FileUploadOperations:
 
     @staticmethod
     def _get_initial_transcode_status(mime_type: str, filename: str) -> TranscodeStatus:
-        # video/webm with .mp4 filename = screen recording; transcode required.
-        if mime_type == "video/webm" and filename.lower().endswith(".mp4"):  # noqa: PLR2004
-            return TranscodeStatus.PENDING
-        return TranscodeStatus.NOT_NEEDED
+        return initial_transcode_status(mime_type, filename)
 
     @staticmethod
     def _get_initial_extraction_status(mime_type: str) -> ExtractionStatus:

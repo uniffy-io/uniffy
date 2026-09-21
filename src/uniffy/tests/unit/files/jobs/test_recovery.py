@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from uniffy.core.jobs import JobRef
+from uniffy.core.jobs import JobRef, QueueName
 from uniffy.core.models.files.file import (
     ExtractionStatus,
     File,
@@ -108,6 +108,10 @@ async def test_pending_file_is_recovered_after_initial_enqueue_failure(
     assert [call.kwargs["_job_id"] for call in queue.enqueue_job.await_args_list] == [
         file_processing_job_id(ref, file.id, file.version) for ref in expected_refs
     ]
+    assert all(
+        call.kwargs["_queue_name"] == QueueName.MEDIA.valkey_name
+        for call in queue.enqueue_job.await_args_list
+    )
 
 
 async def test_recovery_queues_only_the_transcode_still_pending(

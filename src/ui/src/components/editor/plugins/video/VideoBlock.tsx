@@ -5,23 +5,37 @@ import videojs from "video.js";
 import type Player from "video.js/dist/types/player";
 import "video.js/dist/video-js.css";
 import "@/features/files/styles/videojs-uniffy.css";
+import { usePlaybackSource } from "@/features/files/hooks/usePlaybackSource";
+import { PREPARING_VIDEO, UNSUPPORTED_VIDEO } from "@/features/files/utils/playbackSource";
 import { VideoCamera } from "@phosphor-icons/react";
 
 interface VideoBlockProps {
   src: string;
   title?: string;
+  mimeType?: string;
   selected?: boolean;
 }
 
-export function VideoBlock({ src, title, selected }: VideoBlockProps) {
+export function VideoBlock(props: VideoBlockProps) {
+  return <VideoContent key={props.src} {...props} />;
+}
+
+function VideoContent({ src, title, selected, mimeType }: VideoBlockProps) {
+  const playback = usePlaybackSource(src, mimeType);
+  const { src: playbackSrc, type, kind, onError } = playback;
   const containerRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<Player | null>(null);
 
   const isUploading = src.startsWith("uploading:");
 
-  // Initialize Video.js player
   useEffect(() => {
-    if (isUploading || !src || !containerRef.current) return;
+    if (
+      isUploading ||
+      !playbackSrc ||
+      !containerRef.current ||
+      (kind !== "original" && kind !== "fallback")
+    )
+      return;
 
     const videoElement = document.createElement("video-js");
     videoElement.classList.add("vjs-big-play-centered", "vjs-fluid");
@@ -32,9 +46,16 @@ export function VideoBlock({ src, title, selected }: VideoBlockProps) {
       autoplay: false,
       preload: "metadata",
       fluid: true,
-      sources: [{ src, type: "video/mp4" }],
+      sources: [{ src: playbackSrc, type }],
     });
 
+    player.on("error", () => {
+      void onError(player.error()?.code);
+    });
+    player.on("loadedmetadata", () => {
+      // Browsers can accept the audio track while ignoring an unsupported video codec.
+      if (!player.videoWidth() || !player.videoHeight()) void onError(4);
+    });
     playerRef.current = player;
 
     return () => {
@@ -43,7 +64,7 @@ export function VideoBlock({ src, title, selected }: VideoBlockProps) {
         playerRef.current = null;
       }
     };
-  }, [src, isUploading]);
+  }, [playbackSrc, type, kind, onError, isUploading]);
 
   if (isUploading) {
     return (
@@ -92,7 +113,29 @@ export function VideoBlock({ src, title, selected }: VideoBlockProps) {
           <span className="video-block-header-title">{title}</span>
         </div>
       )}
-      <div ref={containerRef} className="video-block-player-wrapper" data-vjs-player />
+      {kind === "preparing" ? (
+        <p className="p-4 text-sm">{PREPARING_VIDEO}</p>
+      ) : kind === "unsupported" || kind === "unavailable" ? (
+        <div className="p-4 text-sm">
+          <p>
+            {kind === "unsupported"
+              ? UNSUPPORTED_VIDEO
+              : "Unable to load video. Check your connection and access."}
+          </p>
+          {kind === "unsupported" && (
+            <a className="text-primary underline" href={playback.downloadUrl} download={title}>
+              Download video
+            </a>
+          )}
+        </div>
+      ) : (
+        <div
+          ref={containerRef}
+          className="video-block-player-wrapper"
+          data-vjs-player
+          data-managed-playback
+        />
+      )}
     </div>
   );
 }

@@ -126,14 +126,11 @@ def func(
 
 
 class Retry(RuntimeError):
-    """
-    Special exception to retry the job (if ``max_tries`` hasn't been reached).
+    """Defer execution, optionally preserving attempts when no work could start."""
 
-    :param defer: duration to wait before rerunning the job
-    """
-
-    def __init__(self, defer: Optional['SecondsTimedelta'] = None):
+    def __init__(self, defer: Optional['SecondsTimedelta'] = None, *, count_attempt: bool = True):
         self.defer_score: Optional[int] = to_ms(defer)
+        self.count_attempt = count_attempt
 
     def __repr__(self) -> str:
         return f'<Retry defer {(self.defer_score or 0) / 1000:0.2f}s>'
@@ -685,6 +682,7 @@ class Worker:
         result = no_result
         exc_extra = None
         finish = False
+        keep_job_try = False
         timeout_s = self.job_timeout_s if function.timeout_s is None else function.timeout_s
         incr_score: Optional[int] = None
 
@@ -724,6 +722,7 @@ class Worker:
             finished_ms = timestamp_ms()
             if self.retry_jobs and isinstance(e, Retry):
                 incr_score = e.defer_score
+                keep_job_try = not e.count_attempt
                 job_status = _JOB_STATUS_RETRY
                 logger.info(
                     'Retrying job %s in %0.2fs',
@@ -843,6 +842,7 @@ class Worker:
                 keep_result_forever,
                 incr_score,
                 keep_in_progress,
+                keep_job_try=keep_job_try,
             )
         )
 
@@ -858,6 +858,8 @@ class Worker:
         keep_result_forever: bool,
         incr_score: Optional[int],
         keep_in_progress: Optional[float],
+        *,
+        keep_job_try: bool = False,
     ) -> None:
         async with self.pool.pipeline(transaction=True) as tr:
             delete_keys = []
@@ -874,8 +876,11 @@ class Worker:
                 delete_keys += [retry_key_prefix + job_id, job_key_prefix + job_id]
                 tr.zrem(abort_jobs_ss, job_id)
                 tr.zrem(self.queue_name, job_id)
-            elif incr_score:
-                tr.zincrby(self.queue_name, incr_score, job_id)
+            else:
+                if incr_score:
+                    tr.zincrby(self.queue_name, incr_score, job_id)
+                if keep_job_try:
+                    tr.decr(retry_key_prefix + job_id)
             if delete_keys:
                 tr.delete(*delete_keys)
             await tr.execute()

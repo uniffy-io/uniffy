@@ -177,7 +177,11 @@ function MessageAttachmentsInner({ attachments, organizationId }: MessageAttachm
           key={att.id}
           className="relative max-w-lg rounded-lg overflow-hidden border border-border group/media"
         >
-          <VideoBlock src={buildMediaUrl(organizationId, att.fileId)} title={att.filename} />
+          <VideoBlock
+            src={buildMediaUrl(organizationId, att.fileId)}
+            title={att.filename}
+            mimeType={att.mimeType}
+          />
           <button
             type="button"
             onClick={() => handleOpen(att.fileId)}

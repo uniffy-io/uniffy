@@ -7,6 +7,7 @@ from uniffy.domains.files.jobs.contracts import (
     EXTRACT_IMAGE_METADATA,
     GENERATE_IMAGE_THUMBNAIL,
     GENERATE_PDF_THUMBNAIL,
+    GENERATE_PLAYBACK_RENDITION,
     GENERATE_VIDEO_THUMBNAIL,
     TRANSCODE_VIDEO_TO_MP4,
 )
@@ -26,6 +27,11 @@ THUMBNAIL_MIME_TYPES: dict[str, JobRef] = {
     "video/x-matroska": GENERATE_VIDEO_THUMBNAIL,
     "video/mpeg": GENERATE_VIDEO_THUMBNAIL,
     "video/ogg": GENERATE_VIDEO_THUMBNAIL,
+    "video/x-ms-wmv": GENERATE_VIDEO_THUMBNAIL,
+    "video/mp2t": GENERATE_VIDEO_THUMBNAIL,
+    "video/x-flv": GENERATE_VIDEO_THUMBNAIL,
+    "video/avi": GENERATE_VIDEO_THUMBNAIL,
+    "video/matroska": GENERATE_VIDEO_THUMBNAIL,
 }
 
 # WebM ships from MediaRecorder but macOS Finder, iOS Files/Photos, AirDrop
@@ -88,6 +94,9 @@ def get_jobs_for_mime_type(mime_type: str) -> list[JobRef]:
 
     if base in TRANSCODE_MIME_TYPES:
         jobs.append(TRANSCODE_MIME_TYPES[base])
+
+    if base.startswith("video/"):
+        jobs.append(GENERATE_PLAYBACK_RENDITION)
 
     if base in EXTRACTION_MIME_TYPES:
         jobs.append(EXTRACTION_MIME_TYPES[base])

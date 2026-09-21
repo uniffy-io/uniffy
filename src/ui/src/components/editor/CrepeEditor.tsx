@@ -510,7 +510,6 @@ export function CrepeEditor({
   const crepeRef = useRef<Crepe | null>(null);
   const viewRef = useRef<EditorView | null>(null);
   const unregisterEditorRef = useRef<(() => void) | null>(null);
-  const contentRef = useRef<string>("");
   const initializedNoteIdRef = useRef<string | null>(null);
   const handleScopeRef = useRef<object>({});
   const onEditorReadyRef = useRef(onEditorReady);
@@ -696,7 +695,8 @@ export function CrepeEditor({
     };
   }, [readonly]);
 
-  // Initialize Crepe editor
+  const readonlyContent = readonly ? content : null;
+
   useEffect(() => {
     if (!editorRef.current) return;
 
@@ -716,7 +716,6 @@ export function CrepeEditor({
     // Clear the container to prevent duplication
     clearContainer(container);
 
-    contentRef.current = content;
     initializedNoteIdRef.current = contentId;
 
     const crepe = new Crepe(
@@ -1130,108 +1129,11 @@ export function CrepeEditor({
   }, [
     contentId,
     readonly,
+    readonlyContent,
     imageUploadHandler,
     videoUploadHandler,
     audioUploadHandler,
     realtime?.ydoc,
-  ]);
-
-  // Separate effect to handle content updates in readonly mode only
-  useEffect(() => {
-    // Only run this effect for readonly mode after initial mount
-    if (!readonly || !crepeRef.current) return;
-
-    // Check if content actually changed
-    if (contentRef.current === content) return;
-
-    const container = editorRef.current;
-    if (!container) return;
-
-    let cancelled = false;
-
-    if (unregisterEditorRef.current) {
-      unregisterEditorRef.current();
-      unregisterEditorRef.current = null;
-    }
-    const view = viewRef.current;
-    viewRef.current = null;
-
-    destroyCrepeAfterPendingViews(crepeRef.current, view);
-    crepeRef.current = null;
-
-    clearContainer(container);
-
-    contentRef.current = content;
-
-    const crepe = new Crepe(
-      createCrepeConfig(
-        container,
-        content,
-        true,
-        compact,
-        placeholder,
-        undefined,
-        undefined,
-        undefined,
-        floatingToolbar,
-        false,
-        allowImages,
-      ),
-    );
-
-    // Register plugins before create (same as above)
-    try {
-      const editor = crepe.editor;
-      editor.use(videoPlugins);
-      editor.use(audioPlugins);
-      editor.use(tagPlugins);
-      editor.use(tocPlugins);
-      editor.use(mentionPlugins);
-      editor.use(highlightPlugins);
-      editor.use(underlinePlugins);
-      if (allowImages) editor.use(imageResizeView);
-    } catch {
-      // Plugin registration failed silently
-    }
-
-    crepe.create().then(() => {
-      if (cancelled) {
-        destroyCrepeAfterPendingViews(crepe);
-        return;
-      }
-      crepeRef.current = crepe;
-
-      try {
-        const editor = crepe.editor;
-        editor.action((ctx) => {
-          const editorView = ctx.get(editorViewCtx);
-          if (editorView && !editorView.isDestroyed) {
-            viewRef.current = editorView;
-            unregisterEditorRef.current = registerEditor({ editor, view: editorView });
-            if (autoEmbedMedia && organizationId) {
-              autoEmbedMediaMentions(editorView, organizationId);
-            }
-          }
-        });
-      } catch {
-        // Editor action failed silently
-      }
-
-      crepe.setReadonly(true);
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    content,
-    readonly,
-    compact,
-    placeholder,
-    autoEmbedMedia,
-    organizationId,
-    allowImages,
-    floatingToolbar,
   ]);
 
   // Get shortcut matching function from settings

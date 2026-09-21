@@ -79,15 +79,21 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        image: [backend, frontend]
+        image: [backend, frontend, media-worker]
         arch: [amd64, arm64]
         include:
           - image: backend
             name: uniffy
             dockerfile: src/uniffy/Dockerfile
+            target: runtime
           - image: frontend
             name: uniffy-frontend
             dockerfile: src/ui/Dockerfile
+            target: runtime
+          - image: media-worker
+            name: uniffy-media-worker
+            dockerfile: src/uniffy/Dockerfile
+            target: media-runtime
           - arch: amd64
             runner: ubuntu-24.04
           - arch: arm64
@@ -123,7 +129,7 @@ jobs:
         with:
           context: .
           file: ${{ matrix.dockerfile }}
-          target: runtime
+          target: ${{ matrix.target }}
           platforms: linux/${{ matrix.arch }}
           build-args: |
             VERSION=${{ needs.verify.outputs.version }}
@@ -198,6 +204,8 @@ jobs:
             name: uniffy
           - image: frontend
             name: uniffy-frontend
+          - image: media-worker
+            name: uniffy-media-worker
     env:
       IMAGE: ghcr.io/uniffy-io/${{ matrix.name }}
     steps:
@@ -268,6 +276,8 @@ jobs:
             name: uniffy
           - image: frontend
             name: uniffy-frontend
+          - image: media-worker
+            name: uniffy-media-worker
     steps:
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
@@ -358,7 +368,7 @@ jobs:
           {
             echo "# Uniffy $VERSION release images. One index per line, linux/amd64 and linux/arm64."
             echo "# Verification: https://uniffy.io/docs/deployment/verify/"
-            cat /tmp/index/uniffy /tmp/index/uniffy-frontend
+            cat /tmp/index/uniffy /tmp/index/uniffy-frontend /tmp/index/uniffy-media-worker
           } > images.txt
           cat images.txt
 

@@ -324,6 +324,7 @@ export function MessageCompose({
   const mentionStartNodeRef = useRef<Node | null>(null);
   const mentionStartOffsetRef = useRef(0);
   const [pendingFiles, setPendingFiles] = useState<PendingFile[]>([]);
+  const hasPendingUploads = pendingFiles.some((file) => !file.fileId);
   const [pendingTeamSend, setPendingTeamSend] = useState<PendingTeamSend | null>(null);
   const [pendingBroadcastSend, setPendingBroadcastSend] = useState<PendingBroadcastSend | null>(
     null,
@@ -377,6 +378,7 @@ export function MessageCompose({
   } | null>(null);
   const runnableSkills = useAppSelector(selectRunnableSkillsForAgent(skillAgentId, "chat"));
   const [isSending, setIsSending] = useState(false);
+  const sendDisabled = isSending || hasPendingUploads || (isEmpty && !pendingInvokedSkill);
   const sendingRef = useRef(false);
 
   useLayoutEffect(() => {
@@ -756,7 +758,7 @@ export function MessageCompose({
 
   const performSend = useCallback(
     async (content: string, fileIds: string[], metadata?: Record<string, string>) => {
-      if (!onSend || sendingRef.current) return;
+      if (!onSend || sendingRef.current || hasPendingUploads) return;
       const el = editorRef.current;
       const html = el?.innerHTML;
       sendingRef.current = true;
@@ -780,11 +782,11 @@ export function MessageCompose({
         setIsSending(false);
       }
     },
-    [onSend, closeSlash, updateState],
+    [onSend, closeSlash, updateState, hasPendingUploads],
   );
 
   const handleSend = useCallback(async () => {
-    if (sendingRef.current) return;
+    if (sendingRef.current || hasPendingUploads) return;
     const el = editorRef.current;
     if (!el) return;
 
@@ -860,6 +862,7 @@ export function MessageCompose({
     performSend,
     updateState,
     pendingFiles,
+    hasPendingUploads,
     editingMessage,
     onSaveEdit,
     onCancelEdit,
@@ -1389,16 +1392,16 @@ export function MessageCompose({
             <button
               type="button"
               onClick={handleSend}
-              disabled={isSending || (isEmpty && !pendingInvokedSkill)}
+              disabled={sendDisabled}
               aria-label="Send message"
               className={cn(
                 "p-1.5 rounded-md transition-colors",
-                !isEmpty
+                !sendDisabled
                   ? "text-primary hover:bg-primary/10 cursor-pointer"
                   : "text-subtle-foreground cursor-not-allowed",
               )}
               data-testid="chat-compose-send-button"
-              data-disabled={isEmpty ? "true" : "false"}
+              data-disabled={sendDisabled ? "true" : "false"}
             >
               <PaperPlaneRight size={18} />
             </button>

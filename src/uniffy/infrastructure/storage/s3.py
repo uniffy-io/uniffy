@@ -198,6 +198,8 @@ class S3Storage:
         start_byte: int | None = None,
         end_byte: int | None = None,
         chunk_size: int = DEFAULT_CHUNK_SIZE,
+        *,
+        etag: str | None = None,
     ) -> AsyncIterator[tuple[bytes, int, int, int]]:
         """HTTP-Range-style byte fetch yielding ``(chunk, total_size, range_start, range_end)``."""
         op_start = time.perf_counter()
@@ -222,12 +224,14 @@ class S3Storage:
                     Bucket=self.config.bucket_name,
                     Key=key,
                     Range=range_header,
+                    **({"IfMatch": etag} if etag is not None else {}),
                 )
 
                 body = response["Body"]
-                async for chunk in body.iter_chunks(chunk_size=chunk_size):
-                    S3_BYTES_TRANSFERRED.labels(direction="download").inc(len(chunk))
-                    yield chunk, total_size, start, end
+                async with body:
+                    async for chunk in body.iter_chunks(chunk_size=chunk_size):
+                        S3_BYTES_TRANSFERRED.labels(direction="download").inc(len(chunk))
+                        yield chunk, total_size, start, end
 
             S3_OPERATION_DURATION.labels(operation="download_range").observe(
                 time.perf_counter() - op_start

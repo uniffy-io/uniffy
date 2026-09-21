@@ -7,6 +7,7 @@ from enum import StrEnum
 class QueueName(StrEnum):
     CORE = "core"
     EGRESS = "egress"
+    MEDIA = "media"
 
     @property
     def valkey_name(self) -> str:

@@ -18,6 +18,7 @@ from uniffy_proto.files.v1.files_pb2 import (
 from uniffy_proto.files.v1.files_pb2 import (
     Folder as ProtoFolder,
 )
+from uniffy_proto.files.v1.files_pb2 import PlaybackStatus as ProtoPlaybackStatus
 from uniffy_proto.files.v1.files_pb2 import (
     TranscodeStatus as ProtoTranscodeStatus,
 )
@@ -33,7 +34,7 @@ from uniffy.core.converters.common_proto import (
     access_mode_to_proto,
     content_role_to_proto,
 )
-from uniffy.core.models.files.file import ExtractionStatus, File, TranscodeStatus
+from uniffy.core.models.files.file import ExtractionStatus, File, PlaybackStatus, TranscodeStatus
 from uniffy.core.models.files.file_version import FileVersion
 from uniffy.core.models.files.folder import Folder
 from uniffy.core.models.files.media_info import FileMediaInfo
@@ -56,6 +57,14 @@ TRANSCODE_STATUS_TO_PROTO = {
     TranscodeStatus.PROCESSING: ProtoTranscodeStatus.TRANSCODE_STATUS_PROCESSING,
     TranscodeStatus.COMPLETED: ProtoTranscodeStatus.TRANSCODE_STATUS_COMPLETED,
     TranscodeStatus.FAILED: ProtoTranscodeStatus.TRANSCODE_STATUS_FAILED,
+}
+
+PLAYBACK_STATUS_TO_PROTO = {
+    PlaybackStatus.NOT_NEEDED: ProtoPlaybackStatus.PLAYBACK_STATUS_NOT_NEEDED,
+    PlaybackStatus.PENDING: ProtoPlaybackStatus.PLAYBACK_STATUS_PENDING,
+    PlaybackStatus.PROCESSING: ProtoPlaybackStatus.PLAYBACK_STATUS_PROCESSING,
+    PlaybackStatus.COMPLETED: ProtoPlaybackStatus.PLAYBACK_STATUS_COMPLETED,
+    PlaybackStatus.FAILED: ProtoPlaybackStatus.PLAYBACK_STATUS_FAILED,
 }
 
 UPLOAD_STATUS_TO_PROTO = {
@@ -101,6 +110,9 @@ def file_to_proto(
         version=file.version,
         extraction_status=proto_extraction,
         transcode_status=proto_transcode,
+        playback_status=PLAYBACK_STATUS_TO_PROTO.get(
+            file.playback_status, ProtoPlaybackStatus.PLAYBACK_STATUS_NOT_NEEDED
+        ),
         is_deleted=file.is_deleted,
         created_at=datetime_to_timestamp(file.created_at),
         updated_at=datetime_to_timestamp(file.updated_at),

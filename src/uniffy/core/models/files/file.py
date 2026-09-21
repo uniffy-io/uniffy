@@ -33,14 +33,16 @@ class ThumbnailStatus(str, Enum):
 
 
 class TranscodeStatus(str, Enum):
-    """Server-side transcode state.
+    """Recording conversion gates downloads until the promised MP4 is available."""
 
-    Gates the download button: the user always sees a `.mp4` filename, but
-    storage may still hold WebM until the swap. Allowing download while
-    PENDING/PROCESSING would deliver mismatched bytes. On FAILED we serve
-    the original WebM rather than block the user.
-    """
+    NOT_NEEDED = "NOT_NEEDED"
+    PENDING = "PENDING"
+    PROCESSING = "PROCESSING"
+    COMPLETED = "COMPLETED"
+    FAILED = "FAILED"
 
+
+class PlaybackStatus(str, Enum):
     NOT_NEEDED = "NOT_NEEDED"
     PENDING = "PENDING"
     PROCESSING = "PROCESSING"
@@ -133,6 +135,22 @@ class File(SQLModel, table=True):
             server_default="NOT_NEEDED",
         ),
     )
+    playback_status: PlaybackStatus = Field(
+        default=PlaybackStatus.NOT_NEEDED,
+        sa_column=Column(
+            SAEnum(PlaybackStatus, name="playbackstatus", create_type=False),
+            nullable=False,
+            server_default="NOT_NEEDED",
+            index=True,
+        ),
+    )
+    playback_key: str | None = Field(default=None, max_length=1000)
+    playback_version: int | None = Field(default=None)
+    playback_attempts: int = Field(default=0, nullable=False)
+    playback_started_at: datetime | None = Field(
+        default=None, sa_column=Column(DateTime(timezone=True))
+    )
+    playback_error: str | None = Field(default=None, max_length=2000)
     is_deleted: bool = Field(default=False, nullable=False)
     deleted_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True)))
     created_at: datetime = Field(

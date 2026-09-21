@@ -37,6 +37,15 @@ class TranscodeStatus(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     TRANSCODE_STATUS_PROCESSING: _ClassVar[TranscodeStatus]
     TRANSCODE_STATUS_COMPLETED: _ClassVar[TranscodeStatus]
     TRANSCODE_STATUS_FAILED: _ClassVar[TranscodeStatus]
+
+class PlaybackStatus(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
+    __slots__ = ()
+    PLAYBACK_STATUS_UNSPECIFIED: _ClassVar[PlaybackStatus]
+    PLAYBACK_STATUS_NOT_NEEDED: _ClassVar[PlaybackStatus]
+    PLAYBACK_STATUS_PENDING: _ClassVar[PlaybackStatus]
+    PLAYBACK_STATUS_PROCESSING: _ClassVar[PlaybackStatus]
+    PLAYBACK_STATUS_COMPLETED: _ClassVar[PlaybackStatus]
+    PLAYBACK_STATUS_FAILED: _ClassVar[PlaybackStatus]
 UPLOAD_STATUS_UNSPECIFIED: UploadStatus
 UPLOAD_STATUS_ACTIVE: UploadStatus
 UPLOAD_STATUS_COMPLETED: UploadStatus
@@ -54,6 +63,12 @@ TRANSCODE_STATUS_PENDING: TranscodeStatus
 TRANSCODE_STATUS_PROCESSING: TranscodeStatus
 TRANSCODE_STATUS_COMPLETED: TranscodeStatus
 TRANSCODE_STATUS_FAILED: TranscodeStatus
+PLAYBACK_STATUS_UNSPECIFIED: PlaybackStatus
+PLAYBACK_STATUS_NOT_NEEDED: PlaybackStatus
+PLAYBACK_STATUS_PENDING: PlaybackStatus
+PLAYBACK_STATUS_PROCESSING: PlaybackStatus
+PLAYBACK_STATUS_COMPLETED: PlaybackStatus
+PLAYBACK_STATUS_FAILED: PlaybackStatus
 
 class InitiateUploadRequest(_message.Message):
     __slots__ = ("organization_id", "filename", "mime_type", "total_size", "folder_id", "access_mode", "baseline_role")
@@ -202,7 +217,7 @@ class DownloadFileResponse(_message.Message):
     def __init__(self, data: _Optional[bytes] = ..., chunk_number: _Optional[int] = ..., total_chunks: _Optional[int] = ..., filename: _Optional[str] = ..., mime_type: _Optional[str] = ..., total_size: _Optional[int] = ...) -> None: ...
 
 class File(_message.Message):
-    __slots__ = ("id", "urn", "organization_id", "owner_id", "access_mode", "filename", "original_filename", "mime_type", "size_bytes", "folder_id", "description", "version", "extraction_status", "is_deleted", "created_at", "updated_at", "deleted_at", "group_ids", "user_role", "owner_info", "metadata", "baseline_role", "tags", "transcode_status")
+    __slots__ = ("id", "urn", "organization_id", "owner_id", "access_mode", "filename", "original_filename", "mime_type", "size_bytes", "folder_id", "description", "version", "extraction_status", "is_deleted", "created_at", "updated_at", "deleted_at", "group_ids", "user_role", "owner_info", "metadata", "baseline_role", "tags", "transcode_status", "playback_status")
     ID_FIELD_NUMBER: _ClassVar[int]
     URN_FIELD_NUMBER: _ClassVar[int]
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
@@ -227,6 +242,7 @@ class File(_message.Message):
     BASELINE_ROLE_FIELD_NUMBER: _ClassVar[int]
     TAGS_FIELD_NUMBER: _ClassVar[int]
     TRANSCODE_STATUS_FIELD_NUMBER: _ClassVar[int]
+    PLAYBACK_STATUS_FIELD_NUMBER: _ClassVar[int]
     id: str
     urn: str
     organization_id: str
@@ -251,7 +267,8 @@ class File(_message.Message):
     baseline_role: _common_pb2.ContentRole
     tags: _containers.RepeatedCompositeFieldContainer[_tags_pb2.Tag]
     transcode_status: TranscodeStatus
-    def __init__(self, id: _Optional[str] = ..., urn: _Optional[str] = ..., organization_id: _Optional[str] = ..., owner_id: _Optional[str] = ..., access_mode: _Optional[_Union[_common_pb2.AccessMode, str]] = ..., filename: _Optional[str] = ..., original_filename: _Optional[str] = ..., mime_type: _Optional[str] = ..., size_bytes: _Optional[int] = ..., folder_id: _Optional[str] = ..., description: _Optional[str] = ..., version: _Optional[int] = ..., extraction_status: _Optional[_Union[ExtractionStatus, str]] = ..., is_deleted: _Optional[bool] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., deleted_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., group_ids: _Optional[_Iterable[str]] = ..., user_role: _Optional[_Union[_common_pb2.ContentRole, str]] = ..., owner_info: _Optional[_Union[FileOwner, _Mapping]] = ..., metadata: _Optional[_Union[FileMetadata, _Mapping]] = ..., baseline_role: _Optional[_Union[_common_pb2.ContentRole, str]] = ..., tags: _Optional[_Iterable[_Union[_tags_pb2.Tag, _Mapping]]] = ..., transcode_status: _Optional[_Union[TranscodeStatus, str]] = ...) -> None: ...
+    playback_status: PlaybackStatus
+    def __init__(self, id: _Optional[str] = ..., urn: _Optional[str] = ..., organization_id: _Optional[str] = ..., owner_id: _Optional[str] = ..., access_mode: _Optional[_Union[_common_pb2.AccessMode, str]] = ..., filename: _Optional[str] = ..., original_filename: _Optional[str] = ..., mime_type: _Optional[str] = ..., size_bytes: _Optional[int] = ..., folder_id: _Optional[str] = ..., description: _Optional[str] = ..., version: _Optional[int] = ..., extraction_status: _Optional[_Union[ExtractionStatus, str]] = ..., is_deleted: _Optional[bool] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., deleted_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., group_ids: _Optional[_Iterable[str]] = ..., user_role: _Optional[_Union[_common_pb2.ContentRole, str]] = ..., owner_info: _Optional[_Union[FileOwner, _Mapping]] = ..., metadata: _Optional[_Union[FileMetadata, _Mapping]] = ..., baseline_role: _Optional[_Union[_common_pb2.ContentRole, str]] = ..., tags: _Optional[_Iterable[_Union[_tags_pb2.Tag, _Mapping]]] = ..., transcode_status: _Optional[_Union[TranscodeStatus, str]] = ..., playback_status: _Optional[_Union[PlaybackStatus, str]] = ...) -> None: ...
 
 class FileTagIds(_message.Message):
     __slots__ = ("ids",)
