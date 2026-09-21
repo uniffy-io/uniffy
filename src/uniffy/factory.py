@@ -364,6 +364,12 @@ async def lifespan(app: FastAPI):
         logger.warning(f"Egress job queue not available: {e}")
 
     try:
+        await init_queue(QueueName.MEDIA)
+        logger.info("Media job queue initialized")
+    except Exception as e:
+        logger.warning(f"Media job queue not available: {e}")
+
+    try:
         await init_pubsub()
         logger.info("Pub/Sub initialized successfully")
     except Exception as e:
@@ -462,6 +468,7 @@ async def lifespan(app: FastAPI):
     await close_pubsub()
     await close_queue(QueueName.CORE)
     await close_queue(QueueName.EGRESS)
+    await close_queue(QueueName.MEDIA)
     await storage.shutdown()
     await search.shutdown()
     await close_db()

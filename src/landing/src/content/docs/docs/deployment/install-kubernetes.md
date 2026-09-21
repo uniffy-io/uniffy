@@ -6,7 +6,7 @@ sidebar:
   order: 2
 ---
 
-This page is for a platform team putting Uniffy on a cluster they already run. It is a contract page as much as a procedure page: it says exactly what you bring, what the chart brings, and where the flexibility starts and stops. For one team on one machine, the [VM install](/docs/deployment/install-k3s/) is less work and the same product.
+Use this guide to deploy Uniffy on a Kubernetes cluster you already run. It covers infrastructure, application settings, and checks before people use it. For one team on one machine, the [VM install](/docs/deployment/install-k3s/) needs less setup.
 
 ## What you bring, what we bring
 
@@ -81,7 +81,7 @@ kubectl -n uniffy create secret tls uniffy-tls \
 
 The certificate must be the full chain. Leaf only files fail on phones and corporate networks.
 
-**Sizing.** Defaults: three backend replicas, three of each worker fleet. Valkey and Meilisearch run as singletons and scale vertically; their ceilings and every other scaling lever are in [System Architecture](/docs/deployment/system-architecture/).
+**Sizing.** The example below runs three backend, core, and egress replicas. Start media processing with one separate worker and disk scratch, then size it for your files and processing demand. Valkey and Meilisearch run as singletons. [System Architecture](/docs/deployment/system-architecture/) covers scaling and the database connection budget.
 
 ## Create the secret
 
@@ -186,12 +186,22 @@ config:                         # application settings, next section
 #   - uniffy-extra-secrets
 ```
 
-Every workload block (`backend`, `workerCore`, `workerEgress`, `frontend`, `livekit`, and `meilisearch`, `valkey`, `rustfs` when bundled) accepts the same scheduling keys: `replicas`, `resources`, `podLabels`, `podAnnotations`, `nodeSelector`, `tolerations`, and `affinity`. A key set on the workload wins over the same key under `global`; a key set nowhere is left to the scheduler. That covers the usual fleet policies without chart surgery: pin media to network optimized nodes, push the egress fleet onto burst capacity, keep cost labels on everything for the billing exporter.
+Every workload block (`backend`, `workerCore`, `workerEgress`, `frontend`, `livekit`, and `meilisearch`, `valkey`, `rustfs` when bundled) accepts the same scheduling keys: `replicas`, `resources`, `podLabels`, `podAnnotations`, `nodeSelector`, `tolerations`, and `affinity`. A workload setting takes precedence over `global`. Use these settings to place LiveKit on nodes with enough network bandwidth or egress workers on burst capacity. The media worker needs its own CPU, memory, and ephemeral storage budget.
 
 ```bash
 helm upgrade --install uniffy oci://ghcr.io/uniffy-io/charts/uniffy \
   --version 1.0.0 -n uniffy -f values.yaml
 ```
+
+## Media worker
+
+The stack needs a separate media Deployment running `ghcr.io/uniffy-io/uniffy-media-worker` with `python -m uniffy --worker-media`. Pin it to the same release as the backend. It processes video, thumbnails, metadata, and document extraction. LiveKit continues to handle live calls.
+
+Check the manifests rendered by your chart version before applying them. They must include this worker, its shared configuration and Secret references, and writable scratch storage. If your chart does not render a media worker, add a Deployment alongside it. [Configure Uniffy](/docs/deployment/configure/#media-scratch-on-kubernetes) provides the pod template fragment and resource budget; it is Kubernetes YAML, not a Helm values block.
+
+Use a disk backed `emptyDir`, with `MEDIA_SCRATCH_DIRECTORY` and `TMPDIR` pointing at its mount. Originals and completed playback copies stay in object storage, so this worker needs no PVC. The example starts at 16 GiB of scratch for default processing limits. Run one media worker process per pod. Each replica adds its own encode slots and scratch budget.
+
+Expose port 9093 through an internal metrics Service and select it with a ServiceMonitor if you use Prometheus Operator. The media worker needs access to the same database, Valkey, search, and object storage services as the other workers. It needs no public route.
 
 ## Application settings
 
@@ -201,7 +211,7 @@ Uniffy itself is configured through environment variables, and [Configure Uniffy
 
 **Yours.** Everything that is policy rather than plumbing goes under `config:` in your values and lands in the app's environment as written. Secrets never go here: values files live in git, and a password in `config:` is a password in your history.
 
-**Secret settings** ride in Secrets instead. The credentials the chart knows about live in `uniffy-secret`. For anything sensitive beyond that list, create your own Secret and name it under `configSecrets:`; the chart attaches every listed Secret to the backend and both worker fleets as environment, exactly like `config:` but out of the values file:
+**Secrets** carry credentials. The credentials the chart knows about live in `uniffy-secret`. For anything sensitive beyond that list, create a Secret and name it under `configSecrets:`. The chart attaches these to the backend and worker Deployments it renders. Attach the same references to a media Deployment managed outside the chart:
 
 ```yaml
 configSecrets:
@@ -215,7 +225,7 @@ kubectl -n uniffy create secret generic uniffy-extra-secrets \
 
 Sources apply in order and later wins: `config:`, then `uniffy-secret`, then `configSecrets` entries in list order. That precedence is what makes an external secret manager clean: point ExternalSecrets, a Vault agent, or SOPS at materializing the Secret, list its name, and a key there overrides the same key anywhere earlier, rotation included.
 
-Changing `config:` and running `helm upgrade` restarts the affected pods on its own; the pods carry a checksum of their configuration, so a config change is a rollout, not a mystery about which pod read what. The checksum only covers what the chart renders: when an external manager rotates a `configSecrets` Secret behind the chart's back, follow with `kubectl -n uniffy rollout restart deploy`, or let your secret operator's own reload annotation handle it. The same `config:` block works in `/etc/uniffy/values.yaml` on the VM path.
+Changing `config:` and running `helm upgrade` restarts affected chart workloads through a configuration checksum. That checksum only covers what the chart renders. Restart a separately managed media Deployment when its settings change. When an external manager rotates a Secret, restart every Deployment that reads it, or use your secret operator's reload mechanism. The same `config:` block works in `/etc/uniffy/values.yaml` on the VM path.
 
 Three blocks cover most real deployments.
 
@@ -259,13 +269,15 @@ helm test uniffy -n uniffy
 
 The chart's test suite checks the pieces that fail quietly: the h2c path to the backend, the websocket route, and a TURN allocation against `turn.example.com:3478` with a minted credential. Green tests mean chat streams and calls media both actually flow. Then sign in with the initial admin credentials and change the password.
 
+Check media processing separately. Upload a video that needs conversion on your browser, wait for its playback copy, then play and seek it. Download it and confirm you still get the original upload. Check media worker logs and metrics if processing stays pending. [Video playback](/docs/user/video/) explains the behavior users should see.
+
 Before any of this, [verify the release](/docs/deployment/verify/). The pinset file and every image in it are signed; ten seconds with cosign tells you the digests you are about to run are the ones we published.
 
 ## Day two
 
 - [Upgrades](/docs/deployment/upgrades/): pinsets, the maintenance window, and why the Postgres dump comes first.
-- [Backups and Restore](/docs/deployment/backups/): two things are non negotiable, Postgres and `APP_MASTER_KEY`. Turn on the continuous S3 backups the same day you install; the page has the four values it takes.
-- Monitoring: the chart ships ServiceMonitors for the backend and both worker fleets, so metrics flow into whatever Prometheus stack the cluster runs.
+- [Backups and Restore](/docs/deployment/backups/): protect Postgres, object storage, and `APP_MASTER_KEY`. Temporary media scratch needs no backup.
+- Monitoring: scrape the backend and all three worker fleets. Media exposes `/metrics` on port 9093. Include its ServiceMonitor when managing it separately from the chart.
 - [Harden the Edge](/docs/deployment/hardening/): one chart value keeps the operator API off the internet. Do it the same week.
 
 ## Private registries and isolated clusters
@@ -285,4 +297,6 @@ global:
 
 Charts install from local files the same way, so a cluster with no internet path runs the same pinset as everyone else. [Verify a Release](/docs/deployment/verify/) covers checking the signatures against your own registry, with or without a connection.
 
-The short version of this page: you own the endpoints, we own the traffic plane. Postgres, storage, mail, and certificates plug in wherever yours live. The path a request takes between the user and Uniffy is ours, because that is the part that breaks in ways only we can test.
+Mirror all three application images, including `uniffy-media-worker`. Update a separately managed media Deployment to use the mirrored image too; chart settings cannot change that manifest for you.
+
+Treat a successful login as the start of verification. Confirm calls, background processing, and restore procedures before people depend on the deployment.

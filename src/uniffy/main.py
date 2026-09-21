@@ -78,10 +78,27 @@ def _run_worker_egress() -> None:
     )
 
 
+def _run_worker_media() -> None:
+    from uniffy.infrastructure.observability.bootstrap import bootstrap_multiproc_metrics
+
+    bootstrap_multiproc_metrics("worker-media")
+
+    from uniffy.workers.fleets import MediaWorkerSettings
+    from uniffy.workers.runner import run_worker_with_restart
+
+    run_worker_with_restart(
+        MediaWorkerSettings,
+        app_name="uniffy-worker-media",
+        metrics_port=int(os.getenv("MEDIA_WORKER_METRICS_PORT", "9093")),
+        queue=MediaWorkerSettings.resource_profile.queue,
+    )
+
+
 _MODES = {
     "backend": _run_backend,
     "worker-core": _run_worker_core,
     "worker-egress": _run_worker_egress,
+    "worker-media": _run_worker_media,
 }
 
 
@@ -119,6 +136,14 @@ def main() -> None:
         action="store_const",
         const="worker-egress",
         help="Run the egress ARQ worker (uniffy:queue:egress).",
+    )
+
+    group.add_argument(
+        "--worker-media",
+        dest="mode",
+        action="store_const",
+        const="worker-media",
+        help="Run the media ARQ worker (uniffy:queue:media).",
     )
 
     args = parser.parse_args()

@@ -66,6 +66,7 @@ import { agentCronReducer } from "@/features/agents/store/agentCronSlice";
 import { agentMemoriesReducer } from "@/features/agents/store/agentMemoriesSlice";
 import { integrationsReducer } from "@/features/integrations/store/integrationsSlice";
 import { errorToastMiddleware } from "@/app/errorToastMiddleware";
+import { contentAccessMiddleware } from "@/app/contentAccessMiddleware";
 import { presenceReducer } from "@/features/presence/store/presenceSlice";
 import { sprintsReducer } from "@/features/projects/store/sprintsSlice";
 import { roomsReducer } from "@/features/rooms/store/roomsSlice";
@@ -333,7 +334,7 @@ export const store = configureStore({
       serializableCheck: {
         ignoredActions: [FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER],
       },
-    }).concat(errorToastMiddleware),
+    }).concat(errorToastMiddleware, contentAccessMiddleware),
 });
 
 setStoreRef(store);
@@ -358,5 +359,5 @@ store.subscribe(() => {
 
 export const persistor = persistStore(store);
 
-export type RootState = ReturnType<typeof store.getState>;
+export type RootState = ReturnType<typeof persistedReducer>;
 export type AppDispatch = typeof store.dispatch;

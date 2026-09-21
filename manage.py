@@ -33,6 +33,7 @@ NODE_SERVICES = {
 # repo root through the whitelist in .dockerignore.
 IMAGES = {
     "backend": ("src/uniffy/Dockerfile", "ghcr.io/uniffy-io/uniffy"),
+    "media-worker": ("src/uniffy/Dockerfile", "ghcr.io/uniffy-io/uniffy-media-worker"),
     "frontend": ("src/ui/Dockerfile", "ghcr.io/uniffy-io/uniffy-frontend"),
 }
 
@@ -54,19 +55,6 @@ IMAGE_TOOLS = {
 }
 
 DOCKER_SOCKET = "/var/run/docker.sock"
-
-REPO_URL = "https://github.com/uniffy-io/uniffy"
-VERIFY_DOCS_URL = "https://uniffy.io/docs/deployment/verify/"
-RELEASE_TAG = re.compile(r"^v(\d+)\.(\d+)\.(\d+)(?:-rc\.(\d+))?$")
-
-# Release notes list commits per area by the paths they touch. Anything outside
-# these prefixes is core; a commit spanning areas is listed under each.
-RELEASE_AREAS = {
-    "Landing": ("src/landing/",),
-    "Mobile": ("src/mobile/",),
-}
-# GitHub caps a release body at 125000 characters; the rest is one link away.
-RELEASE_NOTES_MAX_COMMITS = 200
 
 PASSTHROUGH = {"ignore_unknown_options": True}
 
@@ -181,11 +169,11 @@ def docker_pnpm(
         )
 
 
-def docker_uv(args: list[str]) -> None:
-    if container_running("backend"):
-        sh(compose("exec", *EXEC_AS_HOST, "backend", "uv", *args))
+def docker_uv(args: list[str], service: str = "backend") -> None:
+    if container_running(service):
+        sh(compose("exec", *EXEC_AS_HOST, service, "uv", *args))
     else:
-        sh(compose("run", "--rm", "--no-deps", "backend", "uv", *args, profiles=["dev"]))
+        sh(compose("run", "--rm", "--no-deps", service, "uv", *args, profiles=["dev"]))
 
 
 def toolbox_run(args: list[str]) -> None:
@@ -225,7 +213,12 @@ service_option = click.option(
 stack_option = click.option("--stack", type=Stack, default="docker", show_default=True)
 
 
-BACKEND_COMPOSE_SERVICES = (("backend", "dev"), ("worker-core", "dev"), ("worker-egress", "dev"))
+BACKEND_COMPOSE_SERVICES = (
+    ("backend", "dev"),
+    ("worker-core", "dev"),
+    ("worker-egress", "dev"),
+    ("worker-media", "dev"),
+)
 
 
 def _docker_sync(compose_svc: str, profile: str) -> None:
@@ -417,7 +410,9 @@ def _image_siblings(target: str) -> list[tuple[str, str]]:
     """
     node = [(name, prof) for name, (_, _, prof) in NODE_SERVICES.items()]
     if target in ("backend", "worker-core", "worker-egress"):
-        return list(BACKEND_COMPOSE_SERVICES)
+        return [
+            (name, profile) for name, profile in BACKEND_COMPOSE_SERVICES if name != "worker-media"
+        ]
     if target in NODE_SERVICES:
         return node
     return [(target, "dev")]
@@ -427,7 +422,7 @@ def _image_siblings(target: str) -> list[tuple[str, str]]:
 @click.argument("services", nargs=-1)
 def stack_rebuild(services):
     """Rebuild dev images without cache (after a Dockerfile change) and recreate the running containers on them."""
-    targets = services or ("backend", "ui", "deps-manager")
+    targets = services or ("backend", "worker-media", "ui", "deps-manager")
     sh(compose("build", "--no-cache", *targets, profiles=["dev"]))
     by_profile: dict[str, list[str]] = {}
     for svc, profile in {s: p for t in targets for s, p in _image_siblings(t)}.items():
@@ -498,7 +493,7 @@ def stack_reset_data():
     sh(compose("rm", "-f", *infra))
     sh(["docker", "volume", "rm", *volumes])
     sh(compose("up", "-d", *infra))
-    sh(compose("restart", "backend", "worker-core", "worker-egress"))
+    sh(compose("restart", "backend", "worker-core", "worker-egress", "worker-media"))
     sh(compose("up", "-d", "--no-deps", "seeder"))
     click.echo("Done. Tail migrations with: ./manage.py logs -s backend")
     click.echo("Demo data reseeds in the background: ./manage.py logs -s seeder")
@@ -544,6 +539,16 @@ def serve_worker_egress(reload):
     )
 
 
+@serve.command("worker-media")
+@click.option("--reload/--no-reload", default=True, show_default=True)
+def serve_worker_media(reload):
+    sh(
+        _watch("worker-media")
+        if reload
+        else ["uv", "run", "python", "-m", "uniffy", "--worker-media"]
+    )
+
+
 @serve.command("ui")
 def serve_ui():
     sh(["pnpm", "--filter", "uniffy-ui", "dev"])
@@ -563,14 +568,14 @@ def serve_mobile(web):
 
 @serve.command("all")
 def serve_all():
-    """Backend + both workers + vite, all native with hot reload."""
+    """Backend, workers and Vite with hot reload."""
     LOG_DIR.mkdir(exist_ok=True)
-    click.echo("Backend :8000, Frontend :5173, workers core + egress")
+    click.echo("Backend :8000, Frontend :5173, workers core + egress + media")
     click.echo(
         "Backend/worker output goes to .logs/*.log - tail with: ./manage.py logs --stack local"
     )
     procs = []
-    for target in ("backend", "worker-core", "worker-egress"):
+    for target in ("backend", "worker-core", "worker-egress", "worker-media"):
         log = (LOG_DIR / f"{target}.log").open("ab")
         procs.append(
             subprocess.Popen(_watch(target), cwd=ROOT, stdout=log, stderr=subprocess.STDOUT)
@@ -663,10 +668,52 @@ def proto(stack):
     click.echo("Protobuf code generated (python, typescript, go)")
 
 
+def native_media_licenses() -> str:
+    dockerfile = (ROOT / "src/uniffy/Dockerfile").read_text()
+    sources = {
+        name: (url, checksum)
+        for checksum, url, name in re.findall(
+            r"^ADD --checksum=sha256:([a-f0-9]{64}) (https://\S+) /sources/(\w+)\.tar$",
+            dockerfile,
+            re.MULTILINE,
+        )
+    }
+    licenses = {
+        "ffmpeg": "GPL-2.0-or-later",
+        "x264": "GPL-2.0-or-later",
+        "dav1d": "BSD-2-Clause",
+        "zimg": "WTFPL",
+    }
+    rows = []
+    for name, license_name in licenses.items():
+        if name not in sources:
+            raise click.ClickException(f"Missing pinned {name} source in src/uniffy/Dockerfile")
+        url, checksum = sources[name]
+        version = re.fullmatch(
+            rf"(?:{name}-|release-)(.+)\.tar\.(?:xz|bz2|gz)", url.rsplit("/", 1)[-1]
+        )
+        if version is None:
+            raise click.ClickException(f"Cannot parse {name} source version from {url}")
+        rows.append(f"| {name} | [{version[1]}]({url}) | {license_name} | `{checksum}` |")
+    return (
+        "\n## Native media dependencies\n\n"
+        "Versions, source links, and SHA-256 hashes below come from "
+        "[src/uniffy/Dockerfile](../src/uniffy/Dockerfile).\n\n"
+        "| Component | Version and source | License | SHA-256 |\n"
+        "|-----------|--------------------|---------|---------|\n"
+        + "\n".join(rows)
+        + "\n\nFFmpeg includes GPL components. Its license differs from Uniffy's application "
+        "license. Exact upstream notices ship at `/usr/share/uniffy/media/licenses` in "
+        "`ghcr.io/uniffy-io/uniffy-media-worker` images. "
+        "Build configuration lives at `/usr/share/uniffy/media/buildconf.txt`. "
+        "Matching source archives and build scripts ship at `/usr/share/uniffy/media-sources`.\n"
+    )
+
+
 @cli.command()
 @click.option("--stack", type=Stack, default="docker", show_default=True)
 def licenses(stack):
-    """Regenerate docs/LICENSES.md from the python and node dependency trees."""
+    """Regenerate docs/LICENSES.md from dependency trees and pinned native sources."""
     if stack == "docker":
         toolbox_run(["uv", "run", "manage.py", "licenses", "--stack", "local"])
         return
@@ -695,25 +742,24 @@ def licenses(stack):
         capture_output=True,
         text=True,
     ).stdout
-    node_json = subprocess.run(
-        ["pnpm", "licenses", "list", "--prod", "--json"],
-        cwd=ROOT / "src/ui",
-        check=True,
-        capture_output=True,
-        text=True,
-    ).stdout
-    rows = []
-    for license_name, pkgs in json.loads(node_json).items():
-        for pkg in pkgs:
-            rows.append((
-                f"{pkg['name']}@{pkg['versions'][0]}",
-                license_name,
-                pkg.get("homepage", ""),
-            ))
+    rows = set()
+    for workspace in ("ui", "mobile"):
+        node_json = subprocess.run(
+            ["pnpm", "licenses", "list", "--prod", "--json"],
+            cwd=ROOT / "src" / workspace,
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout
+        for license_name, pkgs in json.loads(node_json).items():
+            for pkg in pkgs:
+                for version in pkg["versions"]:
+                    rows.add((f"{pkg['name']}@{version}", license_name, pkg.get("homepage", "")))
     node_table = "\n".join(f"| {name} | {lic} | {home} |" for name, lic, home in sorted(rows))
     out.write_text(
         f"{header}{python_rows}\n## Node.js Dependencies\n\n"
         f"| Package | License | Homepage |\n|---------|---------|----------|\n{node_table}\n"
+        f"{native_media_licenses()}"
     )
     click.echo(f"Third-party licenses generated in {out.relative_to(ROOT)}")
 
@@ -865,7 +911,7 @@ def format_cmd(service, stack):
 @click.option(
     "--service",
     "-s",
-    type=click.Choice(["backend", "ui", "mobile", "cli", "integration"]),
+    type=click.Choice(["backend", "ui", "mobile", "cli", "integration", "media"]),
     default="backend",
     show_default=True,
 )
@@ -875,9 +921,17 @@ def test(args, service, stack):
     if service == "backend":
         workspace_cmd("backend", stack, ["run", "pytest", "src/uniffy/tests/unit/", *args])
     elif service == "integration":
-        workspace_cmd(
-            "backend", stack, ["run", "pytest", "src/uniffy/tests/integration/", "-v", *args]
-        )
+        command = ["run", "pytest", "src/uniffy/tests/integration/", "-v", *args]
+        sh(["uv", *command]) if stack == "local" else docker_uv(command, "worker-media")
+    elif service == "media":
+        command = [
+            "run",
+            "pytest",
+            "src/uniffy/tests/integration/internal/media/",
+            "src/uniffy/tests/integration/internal/database/test_file_playback.py",
+            *args,
+        ]
+        sh(["uv", *command]) if stack == "local" else docker_uv(command, "worker-media")
     elif service in ("ui", "mobile"):
         workspace_cmd(service, stack, ["test", *args])
     else:
@@ -1056,7 +1110,7 @@ def image_build(service, tag, platform, push):
     version = git_out("describe", "--tags", "--always", "--dirty")
     revision = git_out("rev-parse", "HEAD")
     created = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
-    for _, dockerfile, repo in _image_targets(service):
+    for name, dockerfile, repo in _image_targets(service):
         cmd = [
             "docker",
             "buildx",
@@ -1064,7 +1118,7 @@ def image_build(service, tag, platform, push):
             "--file",
             dockerfile,
             "--target",
-            "runtime",
+            "media-runtime" if name == "media-worker" else "runtime",
             "--tag",
             f"{repo}:{tag}",
             "--build-arg",
@@ -1175,172 +1229,6 @@ def image_sbom(service, tag, out_dir):
             ["--format", "spdx-json", "--output", f"/out/sbom-{name}.spdx.json", f"{repo}:{tag}"],
             mounts=[f"{out_dir.resolve()}:/out"],
         )
-
-
-@cli.group()
-def release():
-    """Release helpers the release workflow runs; usable locally for a preview."""
-
-
-def _release_version(tag: str) -> tuple[int, int, int, int, int]:
-    """Sort key for a release tag; a stable release orders after its candidates."""
-    match = RELEASE_TAG.match(tag)
-    if match is None:
-        raise click.BadParameter(f"{tag} is not vMAJOR.MINOR.PATCH or vMAJOR.MINOR.PATCH-rc.N")
-    major, minor, patch, rc = match.groups()
-    return (int(major), int(minor), int(patch), 1 if rc is None else 0, int(rc or 0))
-
-
-def _previous_release(tag: str, ref: str) -> str | None:
-    """Latest stable release before tag that is reachable from ref. Candidates never
-    count, so a candidate's notes span everything since the current release."""
-    version = _release_version(tag)
-    stable = [
-        candidate
-        for candidate in git_out("tag", "--merged", ref, "--list", "v*").split()
-        if RELEASE_TAG.match(candidate)
-        and _release_version(candidate) < version
-        and _release_version(candidate)[3] == 1
-    ]
-    return max(stable, key=_release_version, default=None)
-
-
-def _release_tags(tag: str) -> list[str]:
-    """Image tags the release carries, mirroring the merge job: a stable release gets
-    MAJOR.MINOR.PATCH, MAJOR.MINOR, MAJOR from 1.0 on, and latest; a candidate its
-    version only."""
-    major, minor, _, stable, _ = _release_version(tag)
-    version = tag[1:]
-    if not stable:
-        return [version]
-    return [version, f"{major}.{minor}", *([str(major)] if major else []), "latest"]
-
-
-def _release_commits(range_spec: str) -> list[tuple[str, str, list[str]]]:
-    """(sha, subject, paths) for every non-merge commit in the range, newest first."""
-    out = git_out(
-        "-c",
-        "core.quotePath=false",
-        "log",
-        "--no-merges",
-        "--format=%x00%H %s",
-        "--name-only",
-        range_spec,
-    )
-    commits = []
-    for chunk in out.split("\x00")[1:]:
-        head, _, body = chunk.partition("\n")
-        sha, _, subject = head.partition(" ")
-        commits.append((sha, subject, [line for line in body.splitlines() if line]))
-    return commits
-
-
-def _release_areas(paths: list[str]) -> list[str]:
-    prefixes = tuple(prefix for group in RELEASE_AREAS.values() for prefix in group)
-    areas = ["Core"] if not paths or any(not p.startswith(prefixes) for p in paths) else []
-    areas += [
-        area for area, group in RELEASE_AREAS.items() if any(p.startswith(group) for p in paths)
-    ]
-    return areas
-
-
-def _release_notes(tag: str, ref: str, pins: list[str]) -> str:
-    previous = _previous_release(tag, ref)
-    commits = _release_commits(f"{previous}..{ref}" if previous else ref)
-    grouped: dict[str, list[str]] = {area: [] for area in ("Core", *RELEASE_AREAS)}
-    for sha, subject, paths in commits:
-        for area in _release_areas(paths):
-            grouped[area].append(f"- {subject} ([{sha[:8]}]({REPO_URL}/commit/{sha}))")
-
-    count = f"{len(commits)} commit" + ("" if len(commits) == 1 else "s")
-    if previous:
-        history = f"{REPO_URL}/compare/{previous}...{tag}"
-        lines = [
-            f"{count} since [{previous}]({REPO_URL}/releases/tag/{previous}) ([compare]({history}))."
-        ]
-    else:
-        history = f"{REPO_URL}/commits/{tag}"
-        lines = [f"First release, {count} ([history]({history}))."]
-    for area, entries in grouped.items():
-        shown = entries[:RELEASE_NOTES_MAX_COMMITS]
-        if len(entries) > len(shown):
-            shown.append(f"- and {len(entries) - len(shown)} more in the [full history]({history})")
-        lines += ["", f"### {area}", "", *(shown or ["No changes."])]
-
-    by_tag = [f"{repo}:{t}" for _, repo in IMAGES.values() for t in _release_tags(tag)]
-    refs = pins or [f"{repo}@sha256:<digest from images.txt>" for _, repo in IMAGES.values()]
-    identity = f"{REPO_URL}/.github/workflows/release.yml@refs/tags/{tag}"
-    flags = '--certificate-oidc-issuer "$COSIGN_ISSUER" --certificate-identity "$COSIGN_IDENTITY"'
-    lines += [
-        "",
-        "### Container Images",
-        "",
-        "Both images are multi-arch indexes for linux/amd64 and linux/arm64.",
-        "",
-        "- By tag",
-        "",
-        "  ```",
-        *(f"  {ref}" for ref in by_tag),
-        "  ```",
-        "",
-        "- By digest (recommended for deployment pins)",
-        "",
-        "  ```",
-        *(f"  {ref}" for ref in refs),
-        "  ```",
-        "",
-        "### Verify",
-        "",
-        "`images.txt` below is this list, signed. Both digests are signed as well, and each"
-        " carries its SBOM as an attestation. The signing identity is the release workflow"
-        " running for this tag. Check with cosign 3.0 or newer:",
-        "",
-        "```bash",
-        "COSIGN_ISSUER=https://token.actions.githubusercontent.com",
-        f"COSIGN_IDENTITY={identity}",
-        "cosign verify-blob images.txt --bundle images.txt.sigstore.json \\",
-        f"  {flags}",
-        *(line for ref in refs for line in (f"cosign verify {ref} \\", f"  {flags}")),
-        "```",
-        "",
-        "`Verified OK` on every command means you hold what this run built. The SBOM check,"
-        f" the GitHub CLI route, and a Kyverno policy for your cluster are in {VERIFY_DOCS_URL}",
-        "",
-    ]
-    return "\n".join(lines)
-
-
-@release.command("notes")
-@click.argument("tag")
-@click.option(
-    "--ref", help="Commit the range ends at; defaults to TAG, so HEAD previews an unpushed tag."
-)
-@click.option(
-    "--images",
-    type=click.Path(exists=True, dir_okay=False, path_type=Path),
-    help="The release pinset; its image lines fill the verify section.",
-)
-@click.option(
-    "--out",
-    type=click.Path(dir_okay=False, path_type=Path),
-    help="Write the notes here instead of stdout.",
-)
-def release_notes(tag, ref, images, out):
-    """Markdown notes for TAG: commits since the previous release by area, images, verification."""
-    _release_version(tag)
-    pins = []
-    if images:
-        pins = [
-            stripped
-            for line in images.read_text().splitlines()
-            if (stripped := line.strip()) and not stripped.startswith("#")
-        ]
-    text = _release_notes(tag, ref or tag, pins)
-    if out:
-        out.write_text(text)
-        click.secho(f"wrote {out}", fg="green", err=True)
-    else:
-        click.echo(text, nl=False)
 
 
 if __name__ == "__main__":

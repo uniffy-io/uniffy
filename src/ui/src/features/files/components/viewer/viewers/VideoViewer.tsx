@@ -1,11 +1,11 @@
-/** Plays through the `/api/media` Range route; a file still being transcoded shows a processing state instead of a player. */
+/** Original playback falls back to a completed compatibility copy. */
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { Spinner } from "@phosphor-icons/react";
 import videojs from "video.js";
 import type Player from "video.js/dist/types/player";
 import "video.js/dist/video-js.css";
-import "../../../styles/videojs-uniffy.css";
+import "@/features/files/styles/videojs-uniffy.css";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import {
   setPlaying,
@@ -13,70 +13,40 @@ import {
   setDuration,
   setViewerLoading,
 } from "@/features/files/store/viewerSlice";
-import { fetchFile } from "@/features/files/store/filesThunks";
 import { useMedia } from "@/features/files/components/viewer/hooks/useMedia";
-import { isTranscodePending } from "@/features/files/utils/transcodeGate";
+import { usePlaybackSource } from "@/features/files/hooks/usePlaybackSource";
+import { PREPARING_VIDEO, UNSUPPORTED_VIDEO } from "@/features/files/utils/playbackSource";
 import type { SerializedFile } from "@/features/files/store/filesThunks";
-
-// Formats that browsers typically don't support
-// Note: video/quicktime (.mov) removed - many .mov files use H.264/AAC which browsers support
-// The player will show an error if the specific codec isn't supported
-const UNSUPPORTED_FORMATS = ["video/x-msvideo", "video/x-ms-wmv"];
-
-// FILE_UPDATED only reaches the owner's stream; polling covers shared viewers
-// and dropped connections.
-const TRANSCODE_POLL_MS = 5000;
-
-const UNSUPPORTED_MESSAGE =
-  "This video format is not supported by your browser. Try downloading the file instead.";
 
 interface VideoViewerProps {
   file: SerializedFile;
 }
 
 export function VideoViewer({ file }: VideoViewerProps) {
-  const dispatch = useAppDispatch();
-  const transcoding = isTranscodePending(file.transcodeStatus);
-
-  useEffect(() => {
-    if (!transcoding) return;
-    const timer = window.setInterval(() => {
-      void dispatch(fetchFile(file.id));
-    }, TRANSCODE_POLL_MS);
-    return () => window.clearInterval(timer);
-  }, [transcoding, file.id, dispatch]);
-
-  if (transcoding) {
+  const { url, error } = useMedia(file.id);
+  if (!url)
     return (
-      <div className="viewer-loading flex-col gap-4 p-8 text-center">
-        <Spinner size={48} className="animate-spin" />
-        <p>Preparing this video for playback. It will be ready in about a minute.</p>
+      <div className="viewer-error">
+        <p>{error ?? "Unable to load video"}</p>
       </div>
     );
-  }
-
-  // Keyed per file so paging in the playlist never carries a previous file's error state.
-  return <VideoPlayer key={file.id} file={file} />;
+  return <VideoPlayer key={`${file.id}:${file.version}:${url}`} file={file} streamUrl={url} />;
 }
 
-function VideoPlayer({ file }: VideoViewerProps) {
+function VideoPlayer({ file, streamUrl }: VideoViewerProps & { streamUrl: string }) {
   const dispatch = useAppDispatch();
-  // Per-field subscriptions -- subscribing to the whole slice re-rendered
-  // the player on every timeupdate (currentTime changes every ~250ms),
-  // which thrashed videojs and caused intermittent stream errors.
+  // Playback time updates must not recreate the player.
   const isPlaying = useAppSelector((state) => state.fileViewer.isPlaying);
   const volume = useAppSelector((state) => state.fileViewer.volume);
   const isMuted = useAppSelector((state) => state.fileViewer.isMuted);
-  const { url: streamUrl, error: mediaError } = useMedia(file.id);
-  const [error, setError] = useState<string | null>(null);
+  const playback = usePlaybackSource(streamUrl, file.mimeType, file.version);
+  const { src, type, kind, onError } = playback;
 
   const videoContainerRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<Player | null>(null);
 
-  const isUnsupportedFormat = UNSUPPORTED_FORMATS.includes(file.mimeType);
-
   useEffect(() => {
-    if (!videoContainerRef.current || !streamUrl) {
+    if (!videoContainerRef.current || !src || (kind !== "original" && kind !== "fallback")) {
       return;
     }
 
@@ -94,8 +64,8 @@ function VideoPlayer({ file }: VideoViewerProps) {
       playbackRates: [0.5, 0.75, 1, 1.25, 1.5, 2],
       sources: [
         {
-          src: streamUrl,
-          type: file.mimeType,
+          src,
+          type,
         },
       ],
     });
@@ -103,6 +73,10 @@ function VideoPlayer({ file }: VideoViewerProps) {
     playerRef.current = player;
 
     player.on("loadedmetadata", () => {
+      if (!player.videoWidth() || !player.videoHeight()) {
+        void onError(4);
+        return;
+      }
       dispatch(setDuration(player.duration() || 0));
       dispatch(setViewerLoading(false));
     });
@@ -125,25 +99,7 @@ function VideoPlayer({ file }: VideoViewerProps) {
 
     player.on("error", () => {
       dispatch(setViewerLoading(false));
-      const err = player.error();
-      console.error("[VideoViewer] Playback error:", {
-        code: err?.code,
-        message: err?.message,
-        mimeType: file.mimeType,
-      });
-      if (err?.code !== 4) {
-        setError("Failed to play video");
-        return;
-      }
-      // A file whose transcode started after this row was loaded answers 425 and
-      // surfaces here as an unsupported source. Refresh the row first: a pending
-      // status hands over to the processing state instead of an error.
-      void dispatch(fetchFile(file.id))
-        .unwrap()
-        .then((fresh) => {
-          if (!isTranscodePending(fresh.transcodeStatus)) setError(UNSUPPORTED_MESSAGE);
-        })
-        .catch(() => setError(UNSUPPORTED_MESSAGE));
+      void onError(player.error()?.code);
     });
 
     return () => {
@@ -152,7 +108,7 @@ function VideoPlayer({ file }: VideoViewerProps) {
         playerRef.current = null;
       }
     };
-  }, [streamUrl, file.id, file.mimeType, dispatch]);
+  }, [src, type, kind, onError, dispatch]);
 
   useEffect(() => {
     const player = playerRef.current;
@@ -171,7 +127,7 @@ function VideoPlayer({ file }: VideoViewerProps) {
 
   useEffect(() => {
     const player = playerRef.current;
-    if (!player || error) return;
+    if (!player) return;
 
     try {
       player.volume(volume);
@@ -179,28 +135,45 @@ function VideoPlayer({ file }: VideoViewerProps) {
     } catch {
       // Ignore errors if player is in error state
     }
-  }, [volume, isMuted, error]);
+  }, [volume, isMuted]);
 
-  if (mediaError || !streamUrl) {
+  if (kind === "preparing") {
     return (
-      <div className="viewer-error">
-        <p>{mediaError ?? "Unable to load video"}</p>
+      <div className="viewer-loading flex-col gap-4 p-8 text-center">
+        <Spinner size={48} className="animate-spin" />
+        <p>{PREPARING_VIDEO}</p>
       </div>
     );
   }
-
-  if (error || isUnsupportedFormat) {
+  if (kind === "unsupported" || kind === "unavailable") {
     return (
       <div className="viewer-error">
-        <p>{error || "This video format is not supported by your browser."}</p>
-        <p className="text-sm mt-2 text-slate-500">Format: {file.mimeType}</p>
+        <p>
+          {kind === "unsupported"
+            ? UNSUPPORTED_VIDEO
+            : "Unable to load video. Check your connection and access."}
+        </p>
+        {kind === "unsupported" && (
+          <a
+            className="text-primary underline"
+            href={playback.downloadUrl}
+            download={file.filename}
+          >
+            Download video
+          </a>
+        )}
       </div>
     );
   }
 
   return (
-    <div className="w-full h-full flex items-center justify-center bg-[#0a0a0f]">
-      <div ref={videoContainerRef} className="w-full max-w-6xl max-h-full" data-vjs-player />
+    <div className="w-full h-full flex items-center justify-center bg-background">
+      <div
+        ref={videoContainerRef}
+        className="w-full max-w-6xl max-h-full"
+        data-vjs-player
+        data-managed-playback
+      />
     </div>
   );
 }

@@ -18,7 +18,7 @@ type CronWeekday = CronOption | str
 _WORKLOAD_QUEUES = {
     JobWorkload.CONTROL: QueueName.CORE,
     JobWorkload.DELIVERY: QueueName.CORE,
-    JobWorkload.MEDIA: QueueName.CORE,
+    JobWorkload.MEDIA: QueueName.MEDIA,
     JobWorkload.AGENT: QueueName.EGRESS,
     JobWorkload.INTEGRATION: QueueName.EGRESS,
 }

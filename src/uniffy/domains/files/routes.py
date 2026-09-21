@@ -11,7 +11,7 @@ from loguru import logger
 
 from uniffy.core.auth.http import get_current_user_id
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
-from uniffy.core.models.files.file import TranscodeStatus
+from uniffy.core.models.files.file import PlaybackStatus, TranscodeStatus
 from uniffy.core.storage import ObjectStorage
 from uniffy.domains.files.naming import content_disposition
 from uniffy.domains.files.operations import FileOperations
@@ -21,6 +21,11 @@ logger = logger.bind(component="files.routes")
 
 _TOO_EARLY_RETRY_AFTER_SECONDS = 60
 _RANGE_RE = re.compile(r"bytes=(\d*)-(\d*)")
+
+
+def media_content_type(mime_type: str) -> str:
+    base = mime_type.split(";")[0].strip().lower()
+    return "video/mp4" if base == "video/quicktime" else base or "application/octet-stream"  # noqa: PLR2004 - MIME boundary.
 
 
 def _parse_range(range_header: str, total_size: int) -> tuple[int, int]:
@@ -230,6 +235,7 @@ async def stream_media(
     file_id: UUID,
     user_id: Annotated[UUID, Depends(get_current_user_id)],
     range_header: Annotated[str | None, Header(alias="range")] = None,
+    playback_version: int | None = None,
 ) -> StreamingResponse:
     """Range-capable media stream so <video>/<audio> can seek; authed by cookie or Bearer."""
     try:
@@ -244,16 +250,21 @@ async def stream_media(
                     detail="File content not available",
                 )
 
-            if file.transcode_status in (
-                TranscodeStatus.PENDING,
-                TranscodeStatus.PROCESSING,
-            ):
-                return _too_early_response()
-
-            mime_type = file.mime_type or "application/octet-stream"
+            storage_key = file.storage_key
+            mime_type = media_content_type(file.mime_type)
+            if playback_version is not None:
+                if (
+                    playback_version != file.version
+                    or file.playback_version != file.version
+                    or file.playback_status != PlaybackStatus.COMPLETED
+                    or not file.playback_key
+                ):
+                    raise HTTPException(status_code=404, detail="Playback copy not available")
+                storage_key = file.playback_key
+                mime_type = "video/mp4"
 
             try:
-                metadata = await storage.get_object_info(file.storage_key)
+                metadata = await storage.get_object_info(storage_key)
                 total_size = int(metadata.get("ContentLength", 0))
             except Exception:
                 total_size = 0
@@ -261,8 +272,8 @@ async def stream_media(
             headers = {
                 "Accept-Ranges": "bytes",
                 # private: permission-gated media stays out of shared caches.
-                "Cache-Control": "private, max-age=300, must-revalidate",
-                "ETag": f'"{file_id}.v{file.version}"',
+                "Cache-Control": "private, no-store",
+                "ETag": f'"{file_id}.v{file.version}.{bool(playback_version)}"',
                 "Content-Disposition": content_disposition("inline", file.filename),
             }
 
@@ -276,8 +287,6 @@ async def stream_media(
                 if total_size:
                     headers["Content-Length"] = str(total_size)
                 status_code = status.HTTP_200_OK
-
-            storage_key = file.storage_key
 
             async def stream_media_content(
                 _storage=storage,
@@ -329,4 +338,7 @@ def create_file_routers(
     thumbnails.add_api_route(path, partial(get_thumbnail, storage), methods=["GET"])
     files.add_api_route(path, partial(stream_file, storage), methods=["GET"])
     media.add_api_route(path, partial(stream_media, storage), methods=["GET"])
+    media.add_api_route(
+        path + "/playback/{playback_version}", partial(stream_media, storage), methods=["GET"]
+    )
     return thumbnails, files, media

@@ -16,9 +16,10 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 interface FileVersionsTabProps {
   file: SerializedFile;
+  onConfirmOpenChange?: (open: boolean) => void;
 }
 
-export function FileVersionsTab({ file }: FileVersionsTabProps) {
+export function FileVersionsTab({ file, onConfirmOpenChange }: FileVersionsTabProps) {
   const dispatch = useAppDispatch();
   const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
   const currentUserId = useAppSelector((state) => state.auth.user?.id);
@@ -28,6 +29,11 @@ export function FileVersionsTab({ file }: FileVersionsTabProps) {
   const [confirmVersion, setConfirmVersion] = useState<SerializedFileVersion | null>(null);
   const [restoring, setRestoring] = useState(false);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    onConfirmOpenChange?.(confirmVersion !== null);
+    return () => onConfirmOpenChange?.(false);
+  }, [confirmVersion, onConfirmOpenChange]);
 
   // List-loaded files carry no userRole; the owner check covers them until
   // the fetchFile hydration below fills the role in.

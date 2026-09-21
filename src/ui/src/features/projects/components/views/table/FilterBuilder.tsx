@@ -6,6 +6,7 @@ import { Input, controlShellClass } from "@/components/ui/input";
 import { NumberInput } from "@/components/ui/number-input";
 import { popoverShellClass } from "@/components/ui/popover";
 import { TagPicker } from "@/features/tags";
+import { PersonFilterInput } from "@/features/projects/components/views/table/PersonFilterInput";
 import type { FieldDefinition } from "@/features/projects/types";
 import type {
   FilterCondition,
@@ -19,6 +20,7 @@ import {
   HIERARCHY_ROOT_ONLY_FIELD_ID,
   TAGS_FILTER_FIELD_ID,
 } from "@/features/projects/utils/filterTasks";
+import { randomUUID } from "@/shared/utils/uuid";
 
 const TAGS_PSEUDO_FIELD: FieldDefinition = {
   id: TAGS_FILTER_FIELD_ID,
@@ -101,6 +103,8 @@ interface FilterBuilderProps {
   onClose: () => void;
   /** Optional Epic-task options for the "In Epic" pseudo-field. */
   epicOptions?: { value: string; label: string }[];
+  /** Placement overrides when the popover anchors to something other than its trigger. */
+  className?: string;
 }
 
 const TEXT_OPERATORS: { value: FilterOperator; label: string }[] = [
@@ -137,8 +141,8 @@ const NUMBER_OPERATORS: { value: FilterOperator; label: string }[] = [
 ];
 
 const PERSON_OPERATORS: { value: FilterOperator; label: string }[] = [
-  { value: "equals", label: "is" },
-  { value: "not_equals", label: "is not" },
+  { value: "equals", label: "is any of" },
+  { value: "not_equals", label: "is none of" },
   { value: "is_empty", label: "is empty" },
   { value: "is_not_empty", label: "is not empty" },
 ];
@@ -174,6 +178,7 @@ export function FilterBuilder({
   onApply,
   onClose,
   epicOptions,
+  className,
 }: FilterBuilderProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   // The unified-tags filter and the hierarchy filters are exposed as
@@ -190,9 +195,10 @@ export function FilterBuilder({
   const [conditions, setConditions] = useState<FilterCondition[]>(filterConfig?.conditions ?? []);
   const [logic, setLogic] = useState<"and" | "or">(filterConfig?.logic ?? "and");
 
-  // Close on outside click
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
+      // The person picker renders in a body portal; a pick there must not discard the draft.
+      if (e.target instanceof Element && e.target.closest("[data-select-portal]")) return;
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         onClose();
       }
@@ -208,7 +214,7 @@ export function FilterBuilder({
     setConditions([
       ...conditions,
       {
-        id: crypto.randomUUID(),
+        id: randomUUID(),
         fieldId: firstField.id,
         operator: operators[0].value,
         value: null,
@@ -251,7 +257,11 @@ export function FilterBuilder({
   return (
     <div
       ref={containerRef}
-      className={cn(popoverShellClass, "absolute top-full right-0 z-50 mt-2 w-[520px]")}
+      className={cn(
+        popoverShellClass,
+        "absolute top-full right-0 z-50 mt-2 w-[min(520px,calc(100vw-2rem))]",
+        className,
+      )}
     >
       <div className="p-3 border-b border-border">
         <span className="text-sm font-medium text-foreground">Filter tasks</span>
@@ -545,6 +555,10 @@ function ConditionValueInput({
         className={VALUE_INPUT_CLASS}
       />
     );
+  }
+
+  if (field.type === "person") {
+    return <PersonFilterInput value={value} onChange={onChange} />;
   }
 
   if (field.type === "single_select" || field.type === "multi_select") {

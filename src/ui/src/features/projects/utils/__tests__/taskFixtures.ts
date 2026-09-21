@@ -1,0 +1,38 @@
+import type { Task } from "@/features/projects/types/project";
+
+export function makeTask(overrides: Partial<Task> & { id: string }): Task {
+  return {
+    projectId: "proj-1",
+    organizationId: "org-1",
+    ownerId: "user-1",
+    title: `Task ${overrides.id}`,
+    description: "",
+    status: "status_todo",
+    priority: "priority_medium",
+    assigneeIds: [],
+    startDate: null,
+    dueDate: null,
+    completedAt: null,
+    parentId: null,
+    blockedByTaskIds: [],
+    isMilestone: false,
+    recurrenceRule: null,
+    sortOrder: 0,
+    fieldValues: {},
+    outgoingReferences: [],
+    createdAt: "",
+    updatedAt: "",
+    deletedAt: null,
+    urn: `urn:uniffy:content:TASK:${overrides.id}`,
+    userRole: 0,
+    number: 1,
+    taskType: "task",
+    sprintId: null,
+    subtaskTotal: 0,
+    subtaskCompleted: 0,
+    estimatedMinutes: null,
+    timeSpentMinutes: null,
+    tagIds: [],
+    ...overrides,
+  };
+}

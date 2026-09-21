@@ -135,3 +135,91 @@ async def test_audit_resource_type_migration_normalizes_append_only_rows(
     assert _query("SELECT resource_type FROM audit_events WHERE action = 'migration.probe'") == [
         ("organization",)
     ]
+
+
+async def test_playback_backfill_and_reversible_schema(scratch_database: str) -> None:
+    await _provision_to(scratch_database, "102")
+    _execute(
+        "INSERT INTO login_organizations (name, slug, created_at) VALUES ('media', 'media', now())"
+    )
+    _execute(
+        "INSERT INTO login_users (email, username, cache_key_seed, created_at) VALUES ('media@test.local', 'media', decode(repeat('00', 32), 'hex'), now())"
+    )
+    _execute("""
+        INSERT INTO files_files (organization_id, owner_id, filename, original_filename,
+            mime_type, size_bytes, storage_key, storage_bucket, created_at, transcode_status)
+        SELECT o.id, u.id, v.name, v.name, v.mime, 1, v.name, 'test', now(),
+            v.status::transcodestatus
+        FROM login_organizations o CROSS JOIN login_users u CROSS JOIN
+            (VALUES ('video', 'video/quicktime', 'NOT_NEEDED'),
+                    ('recording', 'video/webm', 'PENDING'),
+                    ('document', 'application/pdf', 'NOT_NEEDED')) AS v(name, mime, status)
+    """)
+    _migrate_to("103")
+    assert _query(
+        "SELECT storage_key, playback_status::text, playback_attempts FROM files_files ORDER BY storage_key"
+    ) == [("document", "NOT_NEEDED", 0), ("recording", "NOT_NEEDED", 0), ("video", "PENDING", 0)]
+    config = Config(str(ALEMBIC_INI_PATH))
+    config.attributes["configure_logger"] = False
+    command.downgrade(config, "102")
+    assert _query("SELECT count(*) FROM files_files") == [(3,)]
+    assert _query("SELECT to_regclass('files_renditions')") == [(None,)]
+    _migrate_to("103")
+    assert _query("SELECT playback_status::text FROM files_files WHERE storage_key = 'video'") == [
+        ("PENDING",)
+    ]
+
+
+async def test_attachment_backfill_preserves_source_policy_and_explicit_grants(
+    scratch_database: str,
+) -> None:
+    await _provision_to(scratch_database, "103")
+    _execute(
+        "INSERT INTO login_organizations (name, slug, created_at) VALUES ('attachments', 'attachments', now())"
+    )
+    _execute(
+        "INSERT INTO login_users (email, username, cache_key_seed, created_at) VALUES ('attachments@test.local', 'attachments', decode(repeat('00', 32), 'hex'), now())"
+    )
+    _execute("""
+        INSERT INTO files_files (organization_id, owner_id, filename, original_filename,
+            mime_type, size_bytes, storage_key, storage_bucket, created_at, access_mode, baseline_role)
+        SELECT o.id, u.id, v.name, v.name, 'video/mp4', 1, v.name, 'test', now(),
+            v.mode::accessmode, 'VIEWER'::contentrole
+        FROM login_organizations o CROSS JOIN login_users u CROSS JOIN
+            (VALUES ('source', 'OPEN_TO_ORG'), ('copy', 'OPEN_TO_ORG'), ('inherited', NULL)) AS v(name, mode)
+    """)
+    _execute("""
+        INSERT INTO attachments_attachments (id, organization_id, file_id, source_file_id,
+            content_type, content_id, attached_by_user_id, attached_at)
+        SELECT gen_random_uuid(), f.organization_id, f.id, s.id, 'NOTE', gen_random_uuid(), f.owner_id, now()
+        FROM files_files f CROSS JOIN files_files s
+        WHERE f.storage_key IN ('copy', 'inherited') AND s.storage_key = 'source'
+    """)
+    _execute("""
+        INSERT INTO permissions_content_members (id, organization_id, content_type, content_id,
+            subject_type, subject_id, role, added_by_user_id, added_at)
+        SELECT gen_random_uuid(), organization_id, 'FILE', id, 'USER', owner_id, 'VIEWER', owner_id, now()
+        FROM files_files WHERE storage_key = 'copy'
+    """)
+    _migrate_to("104")
+    expected = [
+        ("copy", "OWNER_ONLY", None),
+        ("inherited", "OWNER_ONLY", None),
+        ("source", "OPEN_TO_ORG", "VIEWER"),
+    ]
+    assert (
+        _query(
+            "SELECT storage_key, access_mode::text, baseline_role::text FROM files_files ORDER BY storage_key"
+        )
+        == expected
+    )
+    assert _query("SELECT role::text FROM permissions_content_members") == [("VIEWER",)]
+    config = Config(str(ALEMBIC_INI_PATH))
+    config.attributes["configure_logger"] = False
+    command.downgrade(config, "103")
+    assert (
+        _query(
+            "SELECT storage_key, access_mode::text, baseline_role::text FROM files_files ORDER BY storage_key"
+        )
+        == expected
+    )

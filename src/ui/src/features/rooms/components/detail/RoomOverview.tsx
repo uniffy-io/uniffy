@@ -11,7 +11,7 @@ import { formatDateShort } from "@/shared/utils/dateFormatting";
 interface RoomOverviewProps {
   room: Room;
   bookings: RoomBooking[];
-  availability: TimeSlot[];
+  availability: readonly TimeSlot[];
   loadingBookings?: boolean;
   loadingAvailability?: boolean;
   onCancelBooking?: (bookingId: string) => void;

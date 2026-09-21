@@ -10,6 +10,7 @@ import { popoverShellClass } from "@/components/ui/popover";
 import { statusPaint } from "@/features/projects/utils/statusPaint";
 import { requiredStatusHint } from "@/features/projects/utils/statusSemantics";
 import type { SelectOption } from "../../../types";
+import { randomUUID } from "@/shared/utils/uuid";
 
 interface ManageStatusesDialogProps {
   options: SelectOption[];
@@ -100,7 +101,7 @@ export function ManageStatusesDialog({ options, onSave, onClose }: ManageStatuse
 
     // Empty colour: the backend assigns the new slot on the brand axis when it saves.
     const newOption: SelectOption = {
-      id: `status_${crypto.randomUUID().slice(0, 8)}`,
+      id: `status_${randomUUID().slice(0, 8)}`,
       label: newLabel.trim(),
       color: "",
       sortOrder: maxSortOrder + 1,

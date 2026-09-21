@@ -1,30 +1,39 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Bell, Target, CalendarDots, Users, ArrowRight } from "@phosphor-icons/react";
 import type { Icon } from "@phosphor-icons/react";
 import { useAppSelector } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
+import { effectiveDayKey } from "@/shared/utils/dateFormatting";
 import type { CalendarEvent } from "@/features/calendar/types";
-import type { Task } from "@/features/projects/types/project";
+import { useMyTasks } from "@/features/dashboard/hooks/useMyTasks";
+import { MyTasksDialog } from "@/features/dashboard/components/MyTasksDialog";
 
 interface StatCardProps {
   icon: Icon;
   label: string;
   value: number;
-  href: string;
+  /** Either a route to open or an in-page action. */
+  target: { href: string } | { onSelect: () => void };
   iconColor: string;
   loading?: boolean;
 }
 
-function StatCard({ icon: IconComponent, label, value, href, iconColor, loading }: StatCardProps) {
-  return (
-    <Link
-      to={href}
-      className={cn(
-        "group relative flex items-center gap-3 rounded-xl bg-surface p-3.5 shadow-edge transition-shadow duration-200",
-        "hover:shadow-edge-primary",
-      )}
-    >
+const STAT_CARD_CLASS = cn(
+  "group relative flex items-center gap-3 rounded-xl bg-surface p-3.5 shadow-edge transition-shadow duration-200",
+  "hover:shadow-edge-primary text-left w-full",
+);
+
+function StatCard({
+  icon: IconComponent,
+  label,
+  value,
+  target,
+  iconColor,
+  loading,
+}: StatCardProps) {
+  const body = (
+    <>
       <div className={cn("rounded-lg p-2", iconColor)}>
         <IconComponent size={18} weight="fill" className="text-white" />
       </div>
@@ -40,7 +49,20 @@ function StatCard({ icon: IconComponent, label, value, href, iconColor, loading 
         size={14}
         className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground opacity-0 transition-all duration-200 group-hover:opacity-100"
       />
-    </Link>
+    </>
+  );
+
+  if ("href" in target) {
+    return (
+      <Link to={target.href} className={STAT_CARD_CLASS}>
+        {body}
+      </Link>
+    );
+  }
+  return (
+    <button type="button" onClick={target.onSelect} className={cn(STAT_CARD_CLASS, "focus-ring")}>
+      {body}
+    </button>
   );
 }
 
@@ -48,40 +70,20 @@ export function QuickStatsWidget() {
   const unreadCount = useAppSelector((state) => state.notifications?.unreadCount ?? 0);
   const notificationsLoading = useAppSelector((state) => state.notifications?.loading ?? false);
 
-  const tasks = useAppSelector((state) => state.projects?.tasks ?? {});
   const tasksLoading = useAppSelector((state) => state.projects?.loading?.tasks ?? false);
-  const userId = useAppSelector((state) => state.auth.user?.id ?? "");
+  const { dueToday } = useMyTasks();
+  const [isDueTodayOpen, setIsDueTodayOpen] = useState(false);
 
   const events = useAppSelector((state) => state.calendar?.events ?? {});
   const eventsLoading = useAppSelector((state) => state.calendar?.loading?.events ?? false);
 
   const presenceStatuses = useAppSelector((state) => state.presence?.statuses ?? {});
 
-  const tasksDueToday = useMemo(() => {
-    const now = new Date();
-    return Object.values(tasks).filter((task: Task) => {
-      if (task.deletedAt || task.completedAt) return false;
-      if (!task.assigneeIds.includes(userId)) return false;
-      if (!task.dueDate) return false;
-      const due = new Date(task.dueDate);
-      return (
-        due.getFullYear() === now.getFullYear() &&
-        due.getMonth() === now.getMonth() &&
-        due.getDate() === now.getDate()
-      );
-    }).length;
-  }, [tasks, userId]);
-
   const eventsToday = useMemo(() => {
-    const now = new Date();
-    return Object.values(events).filter((event: CalendarEvent) => {
-      const start = new Date(event.startTime);
-      return (
-        start.getFullYear() === now.getFullYear() &&
-        start.getMonth() === now.getMonth() &&
-        start.getDate() === now.getDate()
-      );
-    }).length;
+    const todayKey = effectiveDayKey(new Date());
+    return Object.values(events).filter(
+      (event: CalendarEvent) => effectiveDayKey(new Date(event.startTime)) === todayKey,
+    ).length;
   }, [events]);
 
   const teamOnline = useMemo(() => {
@@ -95,15 +97,15 @@ export function QuickStatsWidget() {
       icon: Bell,
       label: "Unread",
       value: unreadCount,
-      href: "/notifications",
+      target: { href: "/notifications" },
       iconColor: "bg-gradient-to-br from-amber-500 to-amber-600",
       loading: notificationsLoading,
     },
     {
       icon: Target,
       label: "Tasks due",
-      value: tasksDueToday,
-      href: "/projects",
+      value: dueToday.length,
+      target: { onSelect: () => setIsDueTodayOpen(true) },
       iconColor: "bg-gradient-to-br from-teal-500 to-teal-600",
       loading: tasksLoading,
     },
@@ -111,7 +113,7 @@ export function QuickStatsWidget() {
       icon: CalendarDots,
       label: "Events today",
       value: eventsToday,
-      href: "/calendar",
+      target: { href: "/calendar" },
       iconColor: "bg-gradient-to-br from-rose-500 to-rose-600",
       loading: eventsLoading,
     },
@@ -119,17 +121,22 @@ export function QuickStatsWidget() {
       icon: Users,
       label: "Team online",
       value: teamOnline,
-      href: "/chat",
+      target: { href: "/chat" },
       iconColor: "bg-gradient-to-br from-emerald-500 to-emerald-600",
       loading: false,
     },
   ];
 
   return (
-    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-      {stats.map((stat) => (
-        <StatCard key={stat.label} {...stat} />
-      ))}
-    </div>
+    <>
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {stats.map((stat) => (
+          <StatCard key={stat.label} {...stat} />
+        ))}
+      </div>
+      {isDueTodayOpen && (
+        <MyTasksDialog initialView="dueToday" onClose={() => setIsDueTodayOpen(false)} />
+      )}
+    </>
   );
 }

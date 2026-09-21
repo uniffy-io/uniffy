@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ArrowCounterClockwise,
   Bell,
+  ChartBar,
   Check,
   CheckCircle,
   GearSix,
@@ -39,6 +40,7 @@ import {
   setDateRange,
   setActorFilter,
   clearLastAction,
+  toggleAnalyticsCollapsed,
 } from "@/features/notifications/store/notificationsPageSlice";
 import type { PageViewMode } from "@/features/notifications/store/notificationsPageSlice";
 
@@ -125,7 +127,7 @@ const DATE_PRESETS: { key: DatePreset; label: string }[] = [
 export function NotificationsPageHeader() {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
-  const { isMobile } = useBreakpoint();
+  const { isMobile, isMobileOrTablet } = useBreakpoint();
 
   const searchQuery = useAppSelector((s) => s.notificationsPage.searchQuery);
   const viewMode = useAppSelector((s) => s.notificationsPage.viewMode);
@@ -136,6 +138,7 @@ export function NotificationsPageHeader() {
   const dateFrom = useAppSelector((s) => s.notificationsPage.dateFrom);
   const dateTo = useAppSelector((s) => s.notificationsPage.dateTo);
   const actorId = useAppSelector((s) => s.notificationsPage.actorId);
+  const analyticsCollapsed = useAppSelector((s) => s.notificationsPage.analyticsCollapsed);
 
   const { subjects: actorSubjects } = useSubjectResolver(actorId ? [actorId] : []);
   const actorSubject = actorSubjects.length > 0 ? actorSubjects[0] : null;
@@ -240,7 +243,8 @@ export function NotificationsPageHeader() {
           </>
         }
       >
-        {!isMobile && (
+        {/* Below desktop the search moves to the controls row so the title keeps its room. */}
+        {!isMobileOrTablet && (
           <SearchField
             size="sm"
             value={searchQuery}
@@ -259,6 +263,17 @@ export function NotificationsPageHeader() {
               { value: "grouped", content: <SquaresFour size={14} />, title: "Grouped view" },
             ]}
           />
+        )}
+        {/* The analytics panel only renders from tablet up. */}
+        {!isMobile && (
+          <PaneIconButton
+            onClick={() => dispatch(toggleAnalyticsCollapsed())}
+            active={!analyticsCollapsed}
+            aria-pressed={!analyticsCollapsed}
+            title={analyticsCollapsed ? "Show analytics" : "Hide analytics"}
+          >
+            <ChartBar size={16} />
+          </PaneIconButton>
         )}
         {lastActionMessage && (
           <span className="hidden text-xs text-muted-foreground md:inline">
@@ -287,7 +302,7 @@ export function NotificationsPageHeader() {
       </PaneHeaderBar>
 
       <PaneHeaderControls>
-        {isMobile && (
+        {isMobileOrTablet && (
           <SearchField
             size="sm"
             value={searchQuery}

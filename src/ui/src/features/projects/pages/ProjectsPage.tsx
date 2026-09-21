@@ -19,6 +19,7 @@ import {
 import { fetchProjects, fetchProjectTasks } from "../store/projectsThunks";
 import { useProjectPermission } from "../hooks/useProjectPermissions";
 import { useContentAccessRefetch } from "@/features/notifications/hooks/useContentAccessRefetch";
+import { taskPath } from "@/features/projects/utils/taskPath";
 import { ContentType } from "@uniffy/proto/common/v1/common_pb";
 
 export function ProjectsPage() {
@@ -61,11 +62,21 @@ export function ProjectsPage() {
   }, [dispatch, projectId]);
 
   const currentProjectId = currentProject?.id;
+  // A project load spans several pages; a newer load or a project switch cancels the pending one.
+  const tasksLoadRef = useRef<{ abort: () => void } | null>(null);
+  const loadProjectTasks = useCallback(
+    (id: string) => {
+      tasksLoadRef.current?.abort();
+      tasksLoadRef.current = dispatch(fetchProjectTasks(id));
+    },
+    [dispatch],
+  );
+
   useEffect(() => {
-    if (currentProjectId) {
-      dispatch(fetchProjectTasks(currentProjectId));
-    }
-  }, [dispatch, currentProjectId]);
+    if (!currentProjectId) return;
+    loadProjectTasks(currentProjectId);
+    return () => tasksLoadRef.current?.abort();
+  }, [loadProjectTasks, currentProjectId]);
 
   // Live refresh on project access changes (shared / flipped to OPEN_TO_ORG ->
   // refetch the list) and on a task created in the open project (child_added ->
@@ -76,13 +87,13 @@ export function ProjectsPage() {
       (change) => {
         if (change.action === "child_added") {
           if (change.contentId === currentProjectId) {
-            dispatch(fetchProjectTasks(currentProjectId));
+            loadProjectTasks(currentProjectId);
           }
           return;
         }
         dispatch(fetchProjects());
       },
-      [dispatch, currentProjectId],
+      [dispatch, currentProjectId, loadProjectTasks],
     ),
   );
 
@@ -103,17 +114,20 @@ export function ProjectsPage() {
   useEffect(() => {
     const openProjectId = currentProject?.id;
     if (!openProjectId) return;
+    // On arrival the store still names the previously open project; rewriting the URL from it
+    // would move a task deep link into the wrong project. The route wins until the store follows.
+    if (projectId && projectId !== openProjectId) return;
 
     if (selectedTaskId && isDetailPanelOpen) {
       if (taskId !== selectedTaskId) {
         isProgrammaticNav.current = true;
-        navigate(`/projects/${openProjectId}/tasks/${selectedTaskId}`, { replace: true });
+        navigate(taskPath(openProjectId, selectedTaskId), { replace: true });
       }
     } else if (taskId) {
       isProgrammaticNav.current = true;
       navigate(`/projects/${openProjectId}`, { replace: true });
     }
-  }, [selectedTaskId, isDetailPanelOpen, currentProject?.id, taskId, navigate]);
+  }, [selectedTaskId, isDetailPanelOpen, currentProject?.id, projectId, taskId, navigate]);
 
   return (
     <>

@@ -59,8 +59,9 @@
 html {
   font-family: var(--font-sans);
   font-weight: 430;
-  background: var(--color-paper);
-  color: var(--color-ink);
+  background: var(--color-night);
+  color: var(--color-night-text);
+  overscroll-behavior-y: none;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }

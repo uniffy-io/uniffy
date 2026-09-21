@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { SYSTEM_FIELD_IDS } from "@/features/projects/types";
 import type { Task } from "@/features/projects/types/project";
+import { makeTask } from "@/features/projects/utils/__tests__/taskFixtures";
 import type { FilterCondition, FilterConfig } from "@/features/projects/types/views";
 import {
   HIERARCHY_DEPTH_FIELD_ID,
@@ -9,43 +11,6 @@ import {
   applyFilters,
   buildTaskHierarchyIndex,
 } from "@/features/projects/utils/filterTasks";
-
-function makeTask(overrides: Partial<Task> & { id: string }): Task {
-  return {
-    projectId: "proj-1",
-    organizationId: "org-1",
-    ownerId: "user-1",
-    title: `Task ${overrides.id}`,
-    description: "",
-    status: "status_todo",
-    priority: "priority_medium",
-    assigneeIds: [],
-    startDate: null,
-    dueDate: null,
-    completedAt: null,
-    parentId: null,
-    blockedByTaskIds: [],
-    isMilestone: false,
-    recurrenceRule: null,
-    sortOrder: 0,
-    fieldValues: {},
-    outgoingReferences: [],
-    createdAt: "",
-    updatedAt: "",
-    deletedAt: null,
-    urn: `urn:uniffy:content:TASK:${overrides.id}`,
-    userRole: 0,
-    number: 1,
-    taskType: "task",
-    sprintId: null,
-    subtaskTotal: 0,
-    subtaskCompleted: 0,
-    estimatedMinutes: null,
-    timeSpentMinutes: null,
-    tagIds: [],
-    ...overrides,
-  };
-}
 
 /**
  *  epic
@@ -252,5 +217,108 @@ describe("applyFilters - composing hierarchy filters", () => {
     };
     const result = applyFilters(tasks, config, buildTaskHierarchyIndex(tasks));
     expect(result.map((t) => t.id)).toEqual(["epic"]);
+  });
+});
+
+describe("applyFilters - person fields", () => {
+  function buildAssignedTasks(): Task[] {
+    return [
+      makeTask({ id: "only-a", assigneeIds: ["user-a"] }),
+      makeTask({ id: "only-b", assigneeIds: ["user-b"] }),
+      makeTask({ id: "b-and-c", assigneeIds: ["user-b", "user-c"] }),
+      makeTask({ id: "only-c", assigneeIds: ["user-c"] }),
+      makeTask({ id: "nobody", assigneeIds: [] }),
+    ];
+  }
+
+  function ids(tasks: Task[]): string[] {
+    return tasks.map((t) => t.id).sort();
+  }
+
+  it("equals with several people matches a task holding any of them", () => {
+    const result = applyOne(buildAssignedTasks(), {
+      id: "c1",
+      fieldId: SYSTEM_FIELD_IDS.ASSIGNEE,
+      operator: "equals",
+      value: ["user-a", "user-b"],
+    });
+    expect(ids(result)).toEqual(["b-and-c", "only-a", "only-b"]);
+  });
+
+  it("not_equals excludes every task holding any picked person", () => {
+    const result = applyOne(buildAssignedTasks(), {
+      id: "c1",
+      fieldId: SYSTEM_FIELD_IDS.ASSIGNEE,
+      operator: "not_equals",
+      value: ["user-c"],
+    });
+    expect(ids(result)).toEqual(["nobody", "only-a", "only-b"]);
+  });
+
+  it("a single id stored as a string still matches", () => {
+    const result = applyOne(buildAssignedTasks(), {
+      id: "c1",
+      fieldId: SYSTEM_FIELD_IDS.ASSIGNEE,
+      operator: "equals",
+      value: "user-c",
+    });
+    expect(ids(result)).toEqual(["b-and-c", "only-c"]);
+  });
+
+  it.each([
+    ["an empty list", [] as string[]],
+    ["no value", null],
+  ])("keeps every task when the picker holds %s", (_label, value) => {
+    const tasks = buildAssignedTasks();
+    for (const operator of ["equals", "not_equals"] as const) {
+      const result = applyOne(tasks, {
+        id: "c1",
+        fieldId: SYSTEM_FIELD_IDS.ASSIGNEE,
+        operator,
+        value,
+      });
+      expect(result).toHaveLength(tasks.length);
+    }
+  });
+
+  it("is_empty keeps only unassigned tasks", () => {
+    const result = applyOne(buildAssignedTasks(), {
+      id: "c1",
+      fieldId: SYSTEM_FIELD_IDS.ASSIGNEE,
+      operator: "is_empty",
+      value: null,
+    });
+    expect(ids(result)).toEqual(["nobody"]);
+  });
+
+  it("matches a custom person field holding a single id", () => {
+    const tasks = [
+      makeTask({ id: "reported-by-a", fieldValues: { field_reporter: "user-a" } }),
+      makeTask({ id: "reported-by-b", fieldValues: { field_reporter: ["user-b"] } }),
+      makeTask({ id: "no-reporter" }),
+    ];
+    const result = applyOne(tasks, {
+      id: "c1",
+      fieldId: "field_reporter",
+      operator: "equals",
+      value: ["user-a", "user-b"],
+    });
+    expect(ids(result)).toEqual(["reported-by-a", "reported-by-b"]);
+  });
+});
+
+describe("applyFilters - incomplete conditions", () => {
+  it("a select condition without a value does not narrow the list", () => {
+    const tasks = [
+      makeTask({ id: "todo", status: "status_todo" }),
+      makeTask({ id: "done", status: "status_done" }),
+    ];
+    const result = applyOne(tasks, {
+      id: "c1",
+      fieldId: SYSTEM_FIELD_IDS.STATUS,
+      operator: "equals",
+      value: null,
+    });
+    expect(result.map((t) => t.id)).toEqual(["todo", "done"]);
   });
 });

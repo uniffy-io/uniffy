@@ -11,10 +11,14 @@ from sqlalchemy.sql import Select
 from uniffy.core.models.files.file import (
     ExtractionStatus,
     File,
+    PlaybackStatus,
     ThumbnailStatus,
     TranscodeStatus,
 )
+from uniffy.core.storage import OBJECT_STORAGE_CTX_KEY
+from uniffy.domains.files.jobs.cleanup import cleanup_renditions
 from uniffy.domains.files.jobs.processing import file_processing_job_id, pending_jobs_for_file
+from uniffy.domains.files.jobs.settings import MEDIA_SETTINGS
 from uniffy.domains.files.jobs.transcode import TRANSCODE_JOB_TIMEOUT_SECONDS
 from uniffy.infrastructure.database import open_session
 
@@ -46,6 +50,7 @@ def pending_file_processing_query(
                     File.thumbnail_status == ThumbnailStatus.PENDING,
                     File.extraction_status == ExtractionStatus.PENDING,
                     File.transcode_status == TranscodeStatus.PENDING,
+                    File.playback_status == PlaybackStatus.PENDING,
                 ),
             ),
             and_(
@@ -53,6 +58,14 @@ def pending_file_processing_query(
                 or_(
                     File.thumbnail_status == ThumbnailStatus.PROCESSING,
                     File.extraction_status == ExtractionStatus.PROCESSING,
+                ),
+            ),
+            and_(
+                File.playback_status == PlaybackStatus.PROCESSING,
+                or_(
+                    File.playback_started_at.is_(None),
+                    File.playback_started_at
+                    <= now - timedelta(seconds=MEDIA_SETTINGS.job_timeout + 60),
                 ),
             ),
             and_(
@@ -77,6 +90,8 @@ async def recover_pending_file_processing(ctx: dict[str, Any]) -> dict[str, Any]
     if queue is None:
         return {"status": "skipped", "reason": "queue_unavailable"}
 
+    if storage := ctx.get(OBJECT_STORAGE_CTX_KEY):
+        await cleanup_renditions(storage)
     now = datetime.now(UTC)
     cursor: RecoveryCursor | None = None
     scanned = 0
@@ -107,6 +122,7 @@ async def recover_pending_file_processing(ctx: dict[str, Any]) -> dict[str, Any]
                         str(file.id),
                         str(file.organization_id),
                         _job_id=file_processing_job_id(ref, file.id, file.version),
+                        _queue_name=ref.queue.valkey_name,
                     )
                     if job is None:
                         deduplicated += 1

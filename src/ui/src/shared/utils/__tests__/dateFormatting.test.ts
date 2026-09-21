@@ -1,5 +1,6 @@
-import { describe, it, expect } from "vitest";
+import { afterEach, describe, it, expect } from "vitest";
 import {
+  calendarDayKey,
   formatDateShort,
   formatDateFull,
   formatDateWithWeekday,
@@ -12,6 +13,7 @@ import {
   formatTimeInZone,
   parseCalendarDate,
 } from "@/shared/utils/dateFormatting";
+import { setPreferredTimeZone } from "@/shared/utils/timezone";
 
 function localDateString(d: Date): string {
   const month = String(d.getMonth() + 1).padStart(2, "0");
@@ -90,6 +92,22 @@ describe("formatProtoDateTime", () => {
     const result = formatProtoDateTime({ seconds: 1768435200, nanos: 0 });
     expect(result).not.toBe("-");
     expect(result.length).toBeGreaterThan(5);
+  });
+});
+
+describe("calendarDayKey", () => {
+  afterEach(() => setPreferredTimeZone(null));
+
+  it("keeps a date-only value as written in every zone", () => {
+    setPreferredTimeZone("America/Los_Angeles");
+    expect(calendarDayKey("2026-09-17")).toBe("2026-09-17");
+  });
+
+  it("reads a timestamp on the effective zone's calendar", () => {
+    setPreferredTimeZone("America/Los_Angeles");
+    expect(calendarDayKey("2026-09-17T03:00:00Z")).toBe("2026-09-16");
+    setPreferredTimeZone("Asia/Tokyo");
+    expect(calendarDayKey("2026-09-16T20:00:00Z")).toBe("2026-09-17");
   });
 });
 

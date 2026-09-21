@@ -1,8 +1,9 @@
-import { useMemo } from "react";
-import { Link } from "react-router-dom";
+import { useMemo, useState } from "react";
 import { useAppSelector } from "@/app/hooks";
 import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 import { useDashboardFetch } from "@/features/dashboard/hooks/useDashboardFetch";
+import { useMyTasks } from "@/features/dashboard/hooks/useMyTasks";
+import { MyTasksDialog } from "@/features/dashboard/components/MyTasksDialog";
 import { cn } from "@/shared/utils/cn";
 import { QuickStatsWidget } from "@/features/dashboard/components/widgets/QuickStatsWidget";
 import { QuickActionsWidget } from "@/features/dashboard/components/widgets/QuickActionsWidget";
@@ -27,7 +28,6 @@ import { ArrowsClockwise, WarningCircle, ArrowRight } from "@phosphor-icons/reac
 import { formatInTimeZone } from "date-fns-tz";
 import { effectiveDayKey, formatTimeInZone } from "@/shared/utils/dateFormatting";
 import { getEffectiveTimeZone } from "@/shared/utils/timezone";
-import type { Task } from "@/features/projects/types/project";
 import type { CalendarEvent } from "@/features/calendar/types";
 
 // Greeting, date line and "today" buckets all live on the display zone's clock.
@@ -48,18 +48,10 @@ function formatTodayDate(): string {
   });
 }
 
-const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
-
-/** Due dates are calendar dates; instants collapse to the display zone's day. */
-function dayKeyOf(value: string): string {
-  return DATE_ONLY.test(value) ? value : effectiveDayKey(new Date(value));
-}
-
 function useContextualSummary() {
   const events = useAppSelector((state) => state.calendar?.events ?? {});
-  const tasks = useAppSelector((state) => state.projects?.tasks ?? {});
   const unreadCount = useAppSelector((state) => state.notifications?.unreadCount ?? 0);
-  const userId = useAppSelector((state) => state.auth.user?.id ?? "");
+  const { overdue, dueToday } = useMyTasks();
 
   return useMemo(() => {
     const todayKey = effectiveDayKey(new Date());
@@ -68,19 +60,7 @@ function useContextualSummary() {
       (event: CalendarEvent) => effectiveDayKey(new Date(event.startTime)) === todayKey,
     ).length;
 
-    let overdueCount = 0;
-    let tasksDueToday = 0;
-    Object.values(tasks).forEach((task: Task) => {
-      if (task.deletedAt || task.completedAt) return;
-      if (!task.assigneeIds.includes(userId)) return;
-      if (!task.dueDate) return;
-      const dueKey = dayKeyOf(task.dueDate);
-      if (dueKey < todayKey) {
-        overdueCount++;
-      } else if (dueKey === todayKey) {
-        tasksDueToday++;
-      }
-    });
+    const tasksDueToday = dueToday.length;
 
     const parts: string[] = [];
     if (eventsToday > 0) parts.push(`${eventsToday} event${eventsToday !== 1 ? "s" : ""} today`);
@@ -88,18 +68,20 @@ function useContextualSummary() {
     if (unreadCount > 0)
       parts.push(`${unreadCount} unread notification${unreadCount !== 1 ? "s" : ""}`);
 
-    return { summary: parts.join(", "), overdueCount };
-  }, [events, tasks, unreadCount, userId]);
+    return { summary: parts.join(", "), overdueCount: overdue.length };
+  }, [events, overdue, dueToday, unreadCount]);
 }
 
 export function Dashboard() {
   useDocumentTitle();
-  useDashboardFetch();
+  const { refresh } = useDashboardFetch();
 
   const { user } = useAppSelector((state) => state.auth);
   const isZenMode = useAppSelector((state) => state.zenMode.isActive);
 
-  const { lastRefreshed, isRefreshing, manualRefresh } = useDashboardRefresh();
+  const { lastRefreshed, isRefreshing, manualRefresh } = useDashboardRefresh({
+    onManualRefresh: refresh,
+  });
   const {
     widgets,
     isEditing,
@@ -113,6 +95,7 @@ export function Dashboard() {
   } = useDashboardLayout();
 
   const { summary, overdueCount } = useContextualSummary();
+  const [isOverdueDialogOpen, setIsOverdueDialogOpen] = useState(false);
   const displayName = user?.fullName?.split(" ")[0] || user?.username || "there";
 
   if (isZenMode) {
@@ -170,14 +153,18 @@ export function Dashboard() {
               You have {overdueCount} overdue task{overdueCount !== 1 ? "s" : ""}
             </p>
           </div>
-          <Link
-            to="/projects"
+          <button
+            type="button"
+            onClick={() => setIsOverdueDialogOpen(true)}
             className="flex items-center gap-1 text-xs font-medium text-red-700 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 transition-colors shrink-0"
           >
             View tasks
             <ArrowRight size={12} />
-          </Link>
+          </button>
         </div>
+      )}
+      {isOverdueDialogOpen && (
+        <MyTasksDialog initialView="overdue" onClose={() => setIsOverdueDialogOpen(false)} />
       )}
 
       {isEditing && (

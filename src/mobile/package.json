@@ -56,6 +56,7 @@
     "expo-status-bar": "~57.0.0",
     "expo-symbols": "~57.0.0",
     "expo-system-ui": "~57.0.0",
+    "expo-video": "~57.0.4",
     "expo-web-browser": "~57.0.0",
     "lib0": "^0.2.117",
     "livekit-client": "2.20.0",

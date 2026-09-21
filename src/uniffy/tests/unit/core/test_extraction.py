@@ -13,6 +13,7 @@ from uniffy.core.extraction import (
 )
 from uniffy.core.extraction.markup import extract_html_text, extract_rtf_text
 from uniffy.core.extraction.text import extract_csv_text, extract_plain_text
+from uniffy.tests.pdf import make_pdf
 
 
 class TestCanExtract:
@@ -201,46 +202,22 @@ class TestRtfExtraction:
 
 
 class TestPdfExtraction:
-    """Tests for PDF text extraction."""
-
     def test_basic_pdf(self) -> None:
-        import fitz
-
-        doc = fitz.open()
-        page = doc.new_page()
-        page.insert_text((72, 72), "Hello PDF World")
-        pdf_bytes = doc.tobytes()
-        doc.close()
-
-        result = extract_text(pdf_bytes, "application/pdf")
+        data = make_pdf()
+        result = extract_text(data, "application/pdf")
         assert "Hello PDF World" in result.text
         assert result.page_count == 1
 
     def test_multipage_pdf(self) -> None:
-        import fitz
-
-        doc = fitz.open()
-        for i in range(3):
-            page = doc.new_page()
-            page.insert_text((72, 72), f"Page {i + 1} content")
-        pdf_bytes = doc.tobytes()
-        doc.close()
-
-        result = extract_text(pdf_bytes, "application/pdf")
+        data = make_pdf([f"Page {index}" for index in range(1, 4)])
+        result = extract_text(data, "application/pdf")
         assert result.page_count == 3
         assert "Page 1" in result.text
         assert "Page 3" in result.text
 
     def test_pdf_max_chars(self) -> None:
-        import fitz
-
-        doc = fitz.open()
-        page = doc.new_page()
-        page.insert_text((72, 72), "x" * 500)
-        pdf_bytes = doc.tobytes()
-        doc.close()
-
-        result = extract_text(pdf_bytes, "application/pdf", max_chars=100)
+        data = make_pdf(["Long document text. " * 10] * 3)
+        result = extract_text(data, "application/pdf", max_chars=100)
         assert len(result.text) <= 100
         assert result.truncated is True
 

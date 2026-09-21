@@ -26,8 +26,8 @@ export function meetingChannelIdFor(notification: NotificationTarget): string | 
 }
 
 /**
- * Href for surfaces that navigate rather than dispatch - the dashboard widget
- * and the push-click redirect. A bound meeting resolves to the channel carrying
+ * Href for surfaces that navigate rather than dispatch, such as the push-click
+ * redirect. A bound meeting resolves to the channel carrying
  * the join intent, which the chat page consumes on arrival; everything else
  * routes normally.
  */

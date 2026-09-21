@@ -43,7 +43,7 @@ Uniffy uses **domain-driven vertical slices**. Each feature is self-contained:
 handlers under its `jobs/contracts.py` and `jobs/jobs.py`. Large job surfaces may keep additional
 focused, one-word collaborators beside those canonical files.
 `core/jobs/` is the generic type and dispatch boundary, while `workers/` only composes owner-defined
-jobs into the validated core and egress ARQ fleets and manages their process lifecycle.
+jobs into the validated core, egress and media ARQ fleets and manages their process lifecycle.
 
 ---
 
