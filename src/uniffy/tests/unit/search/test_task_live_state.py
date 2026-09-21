@@ -52,16 +52,21 @@ async def _enrich(rows: list[SimpleNamespace]) -> dict[str, SearchResult]:
     session = MagicMock()
     rows_result = MagicMock()
     rows_result.all.return_value = rows
-    open_result = MagicMock()
-    open_result.scalars.return_value = [OPEN_BLOCKER]
-    session.execute = AsyncMock(side_effect=[rows_result, open_result])
+    session.execute = AsyncMock(return_value=rows_result)
     operations = SearchOperations(session, MagicMock(spec=WorkspaceSearch))
     operations._load_field_options = AsyncMock(return_value={})
     operations._get_subtask_counts = AsyncMock(return_value={})
+    operations._get_open_task_ids = AsyncMock(return_value={OPEN_BLOCKER})
 
     results = {_result(row.id).urn: _result(row.id) for row in rows}
     urn_to_id = {urn: row.id for urn, row in zip(results, rows, strict=True)}
-    await operations._enrich_tasks(results, [row.id for row in rows], urn_to_id)
+    await operations._enrich_tasks(
+        results,
+        [row.id for row in rows],
+        urn_to_id,
+        organization_id=generate_id(),
+        user_id=generate_id(),
+    )
     return results
 
 

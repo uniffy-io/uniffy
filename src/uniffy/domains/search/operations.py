@@ -2,6 +2,7 @@
 
 import asyncio
 from functools import partial
+from itertools import batched
 from uuid import UUID
 
 from loguru import logger
@@ -30,6 +31,7 @@ from uniffy.core.search.policy import SearchCandidateScope
 from uniffy.core.search.workspace import WorkspaceSearch
 from uniffy.core.types import AccessMode, ContentType
 from uniffy.domains.permissions.access import (
+    MAX_RESOURCE_PAGE,
     ResourceAccessPurpose,
     ResourceAccessResolver,
     ResourceKey,
@@ -342,7 +344,9 @@ class SearchOperations:
                 continue
 
         if task_ids:
-            await self._enrich_tasks(results, task_ids, urn_to_id)
+            await self._enrich_tasks(
+                results, task_ids, urn_to_id, organization_id=organization_id, user_id=user_id
+            )
         if file_ids:
             await self._enrich_files(results, file_ids, urn_to_id)
         if project_ids:
@@ -363,6 +367,9 @@ class SearchOperations:
         results: dict[str, SearchResult],
         task_ids: list[UUID],
         urn_to_id: dict[str, UUID],
+        *,
+        organization_id: UUID,
+        user_id: UUID,
     ) -> None:
         try:
             stmt = (
@@ -385,6 +392,7 @@ class SearchOperations:
                 .where(
                     and_(
                         Task.id.in_(task_ids),
+                        Task.organization_id == organization_id,
                         Task.is_deleted == False,  # noqa: E712
                     )
                 )
@@ -424,12 +432,16 @@ class SearchOperations:
 
             # Batch-load subtask counts
             subtask_counts = await self._get_subtask_counts(task_ids)
-            open_blocker_ids = await self._get_open_task_ids({
-                blocker_id
-                for row in task_rows
-                if row.completed_at is None
-                for blocker_id in row.blocked_by_task_ids or []
-            })
+            open_blocker_ids = await self._get_open_task_ids(
+                {
+                    blocker_id
+                    for row in task_rows
+                    if row.completed_at is None
+                    for blocker_id in row.blocked_by_task_ids or []
+                },
+                organization_id=organization_id,
+                user_id=user_id,
+            )
 
             # Apply enrichment to results
             id_to_urn = {v: k for k, v in urn_to_id.items()}
@@ -462,7 +474,7 @@ class SearchOperations:
                         sr.priority_color = opt.get("color")
                         break
 
-                # Only live, still-open blockers hold a task up, as the completion guard decides.
+                # Blocker state is visible only through its own project access policy.
                 if row.completed_at is None and row.blocked_by_task_ids:
                     sr.blocked_by_count = sum(
                         1
@@ -509,20 +521,32 @@ class SearchOperations:
                 field_map.setdefault(row.project_id, {})[row.id] = row.config["options"]
         return field_map
 
-    async def _get_open_task_ids(self, raw_ids: set[str]) -> set[str]:
+    async def _get_open_task_ids(
+        self, raw_ids: set[str], *, organization_id: UUID, user_id: UUID
+    ) -> set[str]:
         ids = {UUID(canonical) for canonical in map(_canonical_id, raw_ids) if canonical}
-        if not ids:
-            return set()
-        result = await self.session.execute(
-            select(Task.id).where(
-                and_(
-                    Task.id.in_(ids),
-                    Task.is_deleted == False,  # noqa: E712
+        visible_ids: set[str] = set()
+        for batch in batched(ids, MAX_RESOURCE_PAGE, strict=False):
+            result = await self.session.execute(
+                select(Task.id).where(
+                    Task.id.in_(batch),
+                    Task.organization_id == organization_id,
+                    Task.is_deleted.is_(False),
                     Task.completed_at.is_(None),
                 )
             )
-        )
-        return {str(task_id) for task_id in result.scalars()}
+            keys = [ResourceKey(ContentType.TASK, task_id) for task_id in result.scalars()]
+            if not keys:
+                continue
+            decisions = await self.resource_access.resolve_page(
+                actor_id=user_id,
+                organization_id=organization_id,
+                keys=keys,
+            )
+            visible_ids.update(
+                str(key.content_id) for key, decision in decisions.items() if decision.can_view
+            )
+        return visible_ids
 
     async def _get_subtask_counts(
         self,
