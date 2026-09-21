@@ -1273,14 +1273,12 @@ def _previous_release(tag: str, ref: str) -> str | None:
 
 
 def _release_tags(tag: str) -> list[str]:
-    """Image tags the release carries, mirroring the merge job: a stable release gets
-    MAJOR.MINOR.PATCH, MAJOR.MINOR, MAJOR from 1.0 on, and latest; a candidate its
-    version only."""
-    major, minor, _, stable, _ = _release_version(tag)
+    """Release candidates must not move latest."""
+    *_, stable, _ = _release_version(tag)
     version = tag[1:]
     if not stable:
         return [version]
-    return [version, f"{major}.{minor}", *([str(major)] if major else []), "latest"]
+    return [version, "latest"]
 
 
 def _release_commits(range_spec: str) -> list[tuple[str, str, list[str]]]:
@@ -1342,7 +1340,7 @@ def _release_notes(tag: str, ref: str, pins: list[str]) -> str:
         "",
         "### Container Images",
         "",
-        "Both images are multi-arch indexes for linux/amd64 and linux/arm64.",
+        "All images are multi-arch indexes for linux/amd64 and linux/arm64.",
         "",
         "- By tag",
         "",
@@ -1358,7 +1356,7 @@ def _release_notes(tag: str, ref: str, pins: list[str]) -> str:
         "",
         "### Verify",
         "",
-        "`images.txt` below is this list, signed. Both digests are signed as well, and each"
+        "`images.txt` below is this list, signed. All digests are signed as well, and each"
         " carries its SBOM as an attestation. The signing identity is the release workflow"
         " running for this tag. Check with cosign 3.0 or newer:",
         "",
