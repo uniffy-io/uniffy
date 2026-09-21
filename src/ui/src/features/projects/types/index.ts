@@ -17,6 +17,7 @@ export type {
   FieldValue,
   FieldTypeInfo,
   SelectOption,
+  TaskStatusSemantic,
 } from "./fields";
 
 export {

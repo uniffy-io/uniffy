@@ -873,6 +873,12 @@ class ContentMembersOperations:
         content = await loader(self.session, organization_id, content_id)
         if content is None:
             raise NotFoundError(content_type.value, content_id)
+        # Child content such as a task has no policy of its own; its parent's members govern it.
+        if not hasattr(content, "access_mode"):
+            raise ValidationError(
+                "content_type",
+                f"{content_type.value} access follows its parent; manage the parent's members",
+            )
         return content
 
     async def _record_child_acl_refresh(

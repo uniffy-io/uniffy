@@ -10,7 +10,15 @@ import Animated, {
 } from "react-native-reanimated";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Svg, { Path, Polygon } from "react-native-svg";
-import { CaretDown, CaretRight, CalendarBlank, Check, Flag } from "phosphor-react-native";
+import {
+  ArrowElbowDownRight,
+  CaretDown,
+  CaretRight,
+  CalendarBlank,
+  Check,
+  Flag,
+  Warning,
+} from "phosphor-react-native";
 import { useTheme } from "@shared/hooks/useTheme";
 import { FONT } from "@theme/typography";
 import { getOptionById } from "@features/projects/projectsSerializer";
@@ -39,6 +47,8 @@ import type {
   Timeline,
   ZoomLevel,
 } from "@features/projects/roadmapLayout";
+import { isTaskBlocked, parentKeyOf } from "@features/projects/taskRelations";
+import type { TaskRelations } from "@features/projects/taskRelations";
 import type { SerializedTask, PlainSelectOption } from "@features/projects/projectsSerializer";
 
 const ZOOM_LABEL: Record<ZoomLevel, string> = { day: "Day", week: "Week", month: "Month" };
@@ -55,12 +65,17 @@ const HANDLE_WIDTH = 18;
 
 export function ProjectRoadmapView({
   tasks,
+  relations,
+  projectSlug,
   statusOptions,
   accentColor,
   bottomPad,
   onOpenTask,
 }: {
   tasks: SerializedTask[];
+  /** Built from every loaded task, not just the visible ones. */
+  relations: TaskRelations;
+  projectSlug: string;
   statusOptions: PlainSelectOption[];
   accentColor: string;
   bottomPad: number;
@@ -208,6 +223,11 @@ export function ProjectRoadmapView({
                 <RoadmapLabel
                   key={row.task.id}
                   row={row}
+                  blocked={isTaskBlocked(row.task, relations.byId)}
+                  parentKey={
+                    // A root with a parent is a subtask whose parent is filtered out.
+                    row.depth === 0 ? parentKeyOf(row.task, relations.byId, projectSlug) : null
+                  }
                   bar={bars.get(row.task.id)}
                   collapsed={collapsed.includes(row.task.id)}
                   onToggle={() => toggleCollapsed(row.task.id)}
@@ -268,7 +288,12 @@ export function ProjectRoadmapView({
           </View>
 
           {unscheduled.length > 0 && (
-            <UnscheduledSection tasks={unscheduled} onOpenTask={onOpenTask} />
+            <UnscheduledSection
+              tasks={unscheduled}
+              relations={relations}
+              projectSlug={projectSlug}
+              onOpenTask={onOpenTask}
+            />
           )}
         </ScrollView>
 
@@ -474,12 +499,16 @@ function TimelineGrid({ timeline, rowCount }: { timeline: Timeline; rowCount: nu
 
 function RoadmapLabel({
   row,
+  blocked,
+  parentKey,
   bar,
   collapsed,
   onToggle,
   onPress,
 }: {
   row: RoadmapRow;
+  blocked: boolean;
+  parentKey: string | null;
   bar: TaskBar | undefined;
   collapsed: boolean;
   onToggle: () => void;
@@ -512,24 +541,43 @@ function RoadmapLabel({
         <View style={styles.caret} />
       )}
       <View style={styles.labelText}>
-        <Text
-          style={[
-            styles.labelTitle,
-            {
-              color: done ? T.textDim : T.textBright,
-              textDecorationLine: done ? "line-through" : "none",
-            },
-          ]}
-          numberOfLines={1}
-        >
-          {task.title}
-        </Text>
-        <Text
-          style={[styles.labelRange, { color: isOverdue(task) ? T.red : T.textDim }]}
-          numberOfLines={1}
-        >
-          {range}
-        </Text>
+        <View style={styles.labelTitleLine}>
+          <Text
+            style={[
+              styles.labelTitle,
+              {
+                color: done ? T.textDim : T.textBright,
+                textDecorationLine: done ? "line-through" : "none",
+              },
+            ]}
+            numberOfLines={1}
+          >
+            {task.title}
+          </Text>
+          {blocked && (
+            <View accessible accessibilityLabel="Blocked">
+              <Warning size={11} color={T.red} weight="bold" />
+            </View>
+          )}
+        </View>
+        <View style={styles.labelTitleLine}>
+          {parentKey && (
+            <>
+              <ArrowElbowDownRight size={9} color={T.textDim} weight="bold" />
+              <Text style={[styles.labelRange, { color: T.textDim }]}>{parentKey}</Text>
+            </>
+          )}
+          <Text
+            style={[
+              styles.labelRange,
+              styles.labelRangeText,
+              { color: isOverdue(task) ? T.red : T.textDim },
+            ]}
+            numberOfLines={1}
+          >
+            {range}
+          </Text>
+        </View>
       </View>
     </TouchableOpacity>
   );
@@ -632,9 +680,13 @@ function RoadmapBar({
 
 function UnscheduledSection({
   tasks,
+  relations,
+  projectSlug,
   onOpenTask,
 }: {
   tasks: SerializedTask[];
+  relations: TaskRelations;
+  projectSlug: string;
   onOpenTask: (taskId: string) => void;
 }) {
   const T = useTheme();
@@ -661,6 +713,7 @@ function UnscheduledSection({
       {open &&
         tasks.map((task) => {
           const TypeIcon = getTaskTypeConfig(task.taskType).Icon;
+          const parentKey = parentKeyOf(task, relations.byId, projectSlug);
           return (
             <TouchableOpacity
               key={task.id}
@@ -669,9 +722,17 @@ function UnscheduledSection({
               activeOpacity={0.7}
             >
               <TypeIcon size={12} color={T.textDim} weight="fill" />
+              {parentKey && (
+                <Text style={[styles.unscheduledHint, { color: T.textDim }]}>{parentKey}</Text>
+              )}
               <Text style={[styles.unscheduledTask, { color: T.textBright }]} numberOfLines={1}>
                 {task.title}
               </Text>
+              {isTaskBlocked(task, relations.byId) && (
+                <View accessible accessibilityLabel="Blocked">
+                  <Warning size={11} color={T.red} weight="bold" />
+                </View>
+              )}
               <Text style={[styles.unscheduledHint, { color: T.textDim }]}>No dates</Text>
             </TouchableOpacity>
           );
@@ -765,8 +826,10 @@ const styles = StyleSheet.create({
   },
   caret: { width: 13, alignItems: "center" },
   labelText: { flex: 1, gap: 1 },
-  labelTitle: { fontSize: 12, fontFamily: FONT.medium },
+  labelTitleLine: { flexDirection: "row", alignItems: "center", gap: 3 },
+  labelTitle: { flexShrink: 1, fontSize: 12, fontFamily: FONT.medium },
   labelRange: { fontSize: 9.5, fontFamily: FONT.regular },
+  labelRangeText: { flexShrink: 1 },
   gridColumn: { position: "absolute", top: 0, borderLeftWidth: StyleSheet.hairlineWidth },
   gridRow: { position: "absolute", left: 0, right: 0, borderBottomWidth: StyleSheet.hairlineWidth },
   barRow: { position: "absolute", left: 0, right: 0, height: ROW_HEIGHT, justifyContent: "center" },

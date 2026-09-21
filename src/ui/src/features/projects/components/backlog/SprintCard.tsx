@@ -26,7 +26,7 @@ export function SprintCard({ sprint, tasks, projectId, projectSlug }: SprintCard
   const [isStarting, setIsStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const completedCount = tasks.filter((t) => t.status === "status_done").length;
+  const completedCount = tasks.filter((t) => t.completedAt).length;
   const totalCount = tasks.length;
   const progressPct = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
   const sprintEstimated = tasks.reduce((sum, t) => sum + (t.estimatedMinutes ?? 0), 0);
@@ -201,7 +201,7 @@ export function SprintCard({ sprint, tasks, projectId, projectSlug }: SprintCard
           sprint={sprint}
           projectId={projectId}
           projectSlug={projectSlug}
-          incompleteTasks={tasks.filter((t) => t.status !== "status_done")}
+          incompleteTasks={tasks.filter((t) => !t.completedAt)}
           onClose={() => setIsCompletionDialogOpen(false)}
         />
       )}

@@ -5,12 +5,9 @@ import {
   WarningCircle,
   ArrowsClockwise,
   Clock,
-  ArrowElbowDownRight,
   CaretRight,
 } from "@phosphor-icons/react";
 import { cn } from "@/shared/utils/cn";
-import { useAppSelector, useAppDispatch } from "@/app/hooks";
-import { selectTask, openDetailPanel } from "@/features/projects/store/projectsUiSlice";
 import { useTagsByIds } from "@/features/tags/store/selectors";
 import { formatMinutes } from "@/features/projects/utils/timeFormatting";
 import { formatDateShort, isOverdue } from "@/shared/utils/dateFormatting";
@@ -19,6 +16,9 @@ import { MentionChipCompact } from "@/components/mention";
 import { useMentionState } from "@/components/mention/useMentionState";
 import type { Task, SelectOption } from "@/features/projects/types";
 import { TaskTypeIcon } from "@/features/projects/components/TaskTypeIcon";
+import { TaskParentChip } from "@/features/projects/components/TaskParentChip";
+import { BlockedBadge } from "@/features/projects/components/BlockedBadge";
+import { useOpenBlockerCount } from "@/features/projects/hooks/useOpenBlockerCount";
 import { extractFallbackLabel } from "@/shared/utils/mentionUtils";
 import { TagChip } from "@/features/tags";
 
@@ -52,17 +52,11 @@ export function TaskCard({
     transition,
   };
 
-  const taskOverdue = task.dueDate && task.status !== "status_done" && isOverdue(task.dueDate);
-  const hasUnresolvedBlockers =
-    task.blockedByTaskIds && task.blockedByTaskIds.length > 0 && task.status !== "status_done";
+  const taskOverdue = !task.completedAt && !!task.dueDate && isOverdue(task.dueDate);
+  const isBlocked = useOpenBlockerCount(task) > 0;
+  const hasTimeTracking = (task.estimatedMinutes ?? 0) > 0 || (task.timeSpentMinutes ?? 0) > 0;
 
   const ticketId = `${projectSlug}-${task.number}`;
-
-  const dispatch = useAppDispatch();
-  // Narrow subscription: re-renders only when this card's own parent changes.
-  const parentTask = useAppSelector((state) =>
-    task.parentId ? state.projects.tasks[task.parentId] : undefined,
-  );
 
   const visibleTags = useTagsByIds(task.tagIds ?? []);
   const shownTags = visibleTags.slice(0, 3);
@@ -81,7 +75,7 @@ export function TaskCard({
         "hover:shadow-edge-primary",
         isDragging && "opacity-50 shadow-lg",
         reparentHintActive && "outline-2 outline-dashed outline-primary/70 -outline-offset-2",
-        hasUnresolvedBlockers && "border-l-2 border-l-yellow-500 dark:border-l-yellow-400",
+        isBlocked && "border-l-2 border-l-yellow-500 dark:border-l-yellow-400",
       )}
       onClick={onClick}
     >
@@ -91,20 +85,7 @@ export function TaskCard({
           <TaskTypeIcon type={task.taskType} size={12} className="text-muted-foreground" />
           {task.parentId && (
             <>
-              <button
-                type="button"
-                onPointerDown={(e) => e.stopPropagation()}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  dispatch(selectTask(task.parentId!));
-                  dispatch(openDetailPanel());
-                }}
-                className="flex items-center gap-0.5 text-[10px] font-mono text-muted-foreground/70 hover:text-foreground transition-colors truncate max-w-[100px] shrink-0"
-                title={parentTask ? `Subtask of ${parentTask.title}` : "Subtask"}
-              >
-                <ArrowElbowDownRight size={10} weight="bold" className="shrink-0" />
-                {parentTask ? `${projectSlug}-${parentTask.number}` : "Subtask"}
-              </button>
+              <TaskParentChip task={task} projectSlug={projectSlug} />
               <CaretRight size={9} className="text-subtle-foreground shrink-0" />
             </>
           )}
@@ -135,7 +116,7 @@ export function TaskCard({
             <div className="flex flex-col items-end gap-0.5 text-[10px] text-muted-foreground shrink-0 leading-tight">
               {task.startDate && <span>Start: {formatDateShort(task.startDate)}</span>}
               {task.dueDate && (
-                <span className={isOverdue(task.dueDate) ? "text-destructive font-medium" : ""}>
+                <span className={taskOverdue ? "text-destructive font-medium" : ""}>
                   Due: {formatDateShort(task.dueDate)}
                 </span>
               )}
@@ -158,16 +139,7 @@ export function TaskCard({
             </span>
           )}
 
-          {/* Blocked Indicator */}
-          {hasUnresolvedBlockers && (
-            <span
-              className="flex items-center px-1.5 py-0.5 rounded gap-1 text-[10px] bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
-              title={`Blocked by ${task.blockedByTaskIds.length} task(s)`}
-            >
-              <WarningCircle size={10} weight="fill" />
-              Blocked ({task.blockedByTaskIds.length})
-            </span>
-          )}
+          <BlockedBadge task={task} />
 
           {/* Overdue Indicator */}
           {taskOverdue && (
@@ -192,7 +164,7 @@ export function TaskCard({
           )}
 
           {/* Time tracking */}
-          {(task.estimatedMinutes || task.timeSpentMinutes) && (
+          {hasTimeTracking && (
             <span
               className={cn(
                 "flex items-center px-1.5 py-0.5 rounded gap-1 text-[10px]",

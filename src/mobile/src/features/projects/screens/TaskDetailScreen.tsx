@@ -24,7 +24,6 @@ import { DomainHeader, domainHeaderHeight } from "@shared/components/DomainHeade
 import { ScreenError } from "@shared/components/ScreenError";
 import { MarkdownRenderer } from "@shared/components/MarkdownRenderer";
 import { CommentButton } from "@shared/comments/CommentsSheet";
-import { ShareButton } from "@shared/permissions/ShareSheet";
 import { ContentType } from "@uniffy/proto/common/v1/common_pb";
 import { ActionSheet } from "@shared/components/ActionSheet";
 import { Avatar } from "@shared/components/Avatar";
@@ -67,9 +66,9 @@ import {
   getPriorityOptions,
   getOptionById,
   activityActionLabel,
-  DONE_STATUS_ID,
-  TODO_STATUS_ID,
 } from "@features/projects/projectsSerializer";
+import { statusIdForSemantic } from "@features/projects/statusSemantics";
+import { isTaskBlocked } from "@features/projects/taskRelations";
 import type { SerializedTask } from "@features/projects/projectsSerializer";
 
 type EditableField = "status" | "priority" | null;
@@ -179,9 +178,11 @@ export function TaskDetailScreen() {
   const subtasks = allTasks.filter((t) => t.parentId === task.id);
   const subtasksDone = subtasks.filter((t) => t.completedAt).length;
 
+  const tasksById = new Map(allTasks.map((t) => [t.id, t]));
   const blockers = task.blockedByTaskIds
-    .map((blockId) => allTasks.find((t) => t.id === blockId))
+    .map((blockId) => tasksById.get(blockId))
     .filter(Boolean) as SerializedTask[];
+  const blocked = isTaskBlocked(task, tasksById);
 
   const typeConfig = getTaskTypeConfig(task.taskType);
   const TypeIcon = typeConfig.Icon;
@@ -195,14 +196,11 @@ export function TaskDetailScreen() {
 
   function toggleSubtask(sub: SerializedTask) {
     const isNowDone = !sub.completedAt;
-    // The canonical ids, not the ends of the list: a project can add a status
-    // after Done or reorder one in front of To Do, and ticking a box would then
-    // write a status the server never treats as completion.
-    updateTask.mutate({
-      taskId: sub.id,
-      projectId: task!.projectId,
-      status: isNowDone ? DONE_STATUS_ID : TODO_STATUS_ID,
-    });
+    // Resolved by semantic, not by list position: a project can add a status after its
+    // completed one or reorder one in front of its to-do one.
+    const status = statusIdForSemantic(statusOptions, isNowDone ? "completed" : "todo");
+    if (!status) return;
+    updateTask.mutate({ taskId: sub.id, projectId: task!.projectId, status });
   }
 
   // Activity rows store raw ids - option ids for status/priority changes, user
@@ -256,8 +254,8 @@ export function TaskDetailScreen() {
           translucent
           rightActions={
             <>
+              {/* No share control: a task's access is its project's, shared from the project. */}
               <CommentButton contentType={ContentType.TASK} contentId={task.id} color={T.accent} />
-              <ShareButton contentType={ContentType.TASK} contentId={task.id} color={T.accent} />
               <TouchableOpacity
                 onPress={() => toggleWatcher.mutate(task.id)}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -296,7 +294,7 @@ export function TaskDetailScreen() {
             </View>
           )}
           {priorityOpt && <TaskPriorityBadge priority={task.priority} options={priorityOptions} />}
-          {task.blockedByTaskIds.length > 0 && (
+          {blocked && (
             <View style={[styles.badge, { backgroundColor: T.red + "18" }]}>
               <Warning size={10} color={T.red} weight="bold" />
               <Text style={[styles.badgeText, { color: T.red }]}>Blocked</Text>

@@ -76,6 +76,8 @@ import { useProjectCollapsedSet } from "@/features/projects/hooks/useProjectColl
 import { moveTask } from "@/features/projects/store/projectsThunks";
 import { LAYOUT, TABLE_COLUMNS } from "@/features/projects/constants";
 import { statusPaint, type StatusPaint } from "@/features/projects/utils/statusPaint";
+import { TaskParentChip } from "@/features/projects/components/TaskParentChip";
+import { BlockedBadge } from "@/features/projects/components/BlockedBadge";
 import { SYSTEM_FIELD_IDS } from "@/features/projects/types";
 import type { Task, FieldDefinition, SelectOption } from "@/features/projects/types";
 import { SubjectAvatar, SubjectAvatarStack, SubjectPicker } from "@/components/subject";
@@ -1496,7 +1498,7 @@ function TableRow({
             +{collapsedSubtaskCount}
           </span>
         )}
-        <TaskTitleCell task={task} />
+        <TaskTitleCell task={task} showParent={!isSubtask} />
       </div>
 
       {/* Field Columns */}
@@ -2140,11 +2142,14 @@ function TaskIdCell({ task }: { task: Task }) {
   );
 }
 
-function TaskTitleCell({ task }: { task: Task }) {
+/** `showParent` is off for outline rows, which already sit under their parent. */
+function TaskTitleCell({ task, showParent }: { task: Task; showParent: boolean }) {
   return (
     <div className="flex items-center gap-2 min-w-0">
+      {showParent && <TaskParentChip task={task} className="text-xs max-w-[120px]" />}
       <TaskTypeIcon type={task.taskType} className="text-muted-foreground" />
       <span className="truncate text-foreground text-sm">{task.title}</span>
+      <BlockedBadge task={task} variant="icon" />
     </div>
   );
 }
@@ -2198,7 +2203,8 @@ function FieldCell({ task, field }: FieldCellProps) {
 
     case "date": {
       if (!value) return <span className="text-muted-foreground text-sm">-</span>;
-      const overdue = field.id === SYSTEM_FIELD_IDS.DUE_DATE && isOverdue(value as string);
+      const overdue =
+        field.id === SYSTEM_FIELD_IDS.DUE_DATE && !task.completedAt && isOverdue(value as string);
       return (
         <span className={cn("text-sm", overdue && "text-destructive")}>
           {formatDateShort(value as string)}

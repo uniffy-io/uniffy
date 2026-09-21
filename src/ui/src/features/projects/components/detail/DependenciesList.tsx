@@ -35,6 +35,8 @@ export function DependenciesList({
   const hasBlocks = blocksTaskIds.length > 0;
 
   const [isPickerOpen, setIsPickerOpen] = useState(false);
+  // Once this task is complete it no longer holds anything up.
+  const isComplete = useAppSelector((state) => !!selectTasksMap(state)[taskId]?.completedAt);
 
   const handleAddBlocker = (blockerId: string) => {
     const updated = [...blockedByTaskIds, blockerId];
@@ -94,7 +96,7 @@ export function DependenciesList({
           </h3>
           <div className="space-y-1.5">
             {blocksTaskIds.map((id) => (
-              <BlocksItem key={id} taskId={id} />
+              <BlocksItem key={id} taskId={id} blockerComplete={isComplete} />
             ))}
           </div>
         </div>
@@ -228,7 +230,7 @@ function BlockedByItem({ taskId, onRemove }: { taskId: string; onRemove: (id: st
         )}
         <button
           type="button"
-          className="p-0.5 rounded text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-foreground hover:bg-muted transition-all"
+          className="p-0.5 rounded text-muted-foreground md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 hover:text-foreground hover:bg-muted transition-all"
           onClick={() => onRemove(taskId)}
           title="Remove blocker"
         >
@@ -239,7 +241,7 @@ function BlockedByItem({ taskId, onRemove }: { taskId: string; onRemove: (id: st
   );
 }
 
-function BlocksItem({ taskId }: { taskId: string }) {
+function BlocksItem({ taskId, blockerComplete }: { taskId: string; blockerComplete: boolean }) {
   const task = useAppSelector((state) => selectTasksMap(state)[taskId]);
 
   if (!task) return null;
@@ -258,7 +260,7 @@ function BlocksItem({ taskId }: { taskId: string }) {
           <CheckCircle size={10} weight="fill" />
           Done
         </Badge>
-      ) : (
+      ) : blockerComplete ? null : (
         <Badge
           variant="outline"
           className="text-xs border-blue-500/50 text-blue-600 bg-blue-500/10 gap-1 shrink-0"

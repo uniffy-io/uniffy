@@ -7,14 +7,15 @@ import {
   Check,
   DotsSixVertical,
 } from "@phosphor-icons/react";
-import { useAppDispatch } from "@/app/hooks";
+import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Input, controlShellClass } from "@/components/ui/input";
-import { updateFieldThunk } from "@/features/projects/store/projectsThunks";
+import { moveTasksOutOfStatus, updateFieldThunk } from "@/features/projects/store/projectsThunks";
 import { updateFieldDefinition } from "@/features/projects/store/projectsSlice";
 import { SYSTEM_FIELD_IDS } from "@/features/projects/types";
+import { requiredStatusHint } from "@/features/projects/utils/statusSemantics";
 import type { Project, SelectOption } from "@/features/projects/types";
 import { STATUS_SWATCHES, statusPaint } from "@/features/projects/utils/statusPaint";
 import { randomUUID } from "@/shared/utils/uuid";
@@ -99,13 +100,35 @@ export function StatusesSection({ project }: StatusesSectionProps) {
     persistOptions(newItems);
   };
 
-  const handleDeleteConfirm = () => {
+  // The server refuses to drop a status that live tasks still use, so they move first.
+  const deleteTargetTaskCount = useAppSelector((state) => {
+    if (!deleteTarget) return 0;
+    let count = 0;
+    for (const task of Object.values(state.projects.tasks)) {
+      if (task.projectId === project.id && task.status === deleteTarget.id && !task.deletedAt) {
+        count += 1;
+      }
+    }
+    return count;
+  });
+
+  const handleDeleteConfirm = async () => {
     if (!deleteTarget) return;
-    const newItems = items.filter((item) => item.id !== deleteTarget.id);
-    setItems(newItems);
-    persistOptions(newItems);
+    const target = deleteTarget;
+    const toStatus = migrationTargetId;
+    const mustMove = deleteTargetTaskCount > 0;
     setDeleteTarget(null);
     setMigrationTargetId("");
+    if (mustMove) {
+      if (!toStatus) return;
+      const moved = await dispatch(
+        moveTasksOutOfStatus({ projectId: project.id, fromStatus: target.id, toStatus }),
+      ).unwrap();
+      if (!moved) return;
+    }
+    const newItems = items.filter((item) => item.id !== target.id);
+    setItems(newItems);
+    persistOptions(newItems);
   };
 
   const handleAddNew = () => {
@@ -252,7 +275,7 @@ export function StatusesSection({ project }: StatusesSectionProps) {
                   />
                   <span className="flex-1 text-sm font-medium truncate">{item.label}</span>
 
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="flex items-center gap-1 transition-opacity md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100">
                     <button
                       type="button"
                       onClick={() => setEditingId(item.id)}
@@ -264,13 +287,15 @@ export function StatusesSection({ project }: StatusesSectionProps) {
                     {items.length > 1 && (
                       <button
                         type="button"
+                        disabled={requiredStatusHint(item) !== null}
                         onClick={() => {
                           setDeleteTarget(item);
                           const firstOther = items.find((i) => i.id !== item.id);
                           setMigrationTargetId(firstOther?.id || "");
                         }}
-                        className="p-1 text-muted-foreground hover:text-red-500 hover:bg-red-500/10 rounded"
-                        title="Delete"
+                        className="p-1 text-muted-foreground hover:text-red-500 hover:bg-red-500/10 rounded disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:text-muted-foreground disabled:hover:bg-transparent"
+                        title={requiredStatusHint(item) ?? "Delete"}
+                        aria-label={`Delete ${item.label}`}
                       >
                         <Trash size={14} />
                       </button>
@@ -339,10 +364,13 @@ export function StatusesSection({ project }: StatusesSectionProps) {
         message={
           <div className="space-y-3">
             <p>
-              Are you sure you want to delete the status &quot;{deleteTarget?.label}
-              &quot;? Tasks using this status will need to be migrated to another status.
+              {deleteTargetTaskCount === 0
+                ? `No task uses "${deleteTarget?.label}".`
+                : deleteTargetTaskCount === 1
+                  ? `1 task uses "${deleteTarget?.label}". It moves to the status you pick first.`
+                  : `${deleteTargetTaskCount} tasks use "${deleteTarget?.label}". They move to the status you pick first.`}
             </p>
-            {items.filter((i) => i.id !== deleteTarget?.id).length > 0 && (
+            {deleteTargetTaskCount > 0 && (
               <div>
                 <label className="block text-sm font-medium mb-1">Move tasks to:</label>
                 <select

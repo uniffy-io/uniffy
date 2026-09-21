@@ -1,5 +1,6 @@
 import { computeCriticalPath } from "@features/projects/criticalPath";
 import type { CriticalPathResult } from "@features/projects/criticalPath";
+import { isTaskBlocked } from "@features/projects/taskRelations";
 import type { SerializedTask, SerializedSprint } from "@features/projects/projectsSerializer";
 
 /**
@@ -60,14 +61,10 @@ export interface GraphLayout {
 function computeNodeState(
   task: SerializedTask,
   blockerSet: Set<string>,
-  tasksMap: Map<string, SerializedTask>,
+  allById: ReadonlyMap<string, SerializedTask>,
 ): NodeState {
   if (task.completedAt) return "completed";
-  // A blocker outside the graph is unknown, not open: treating a missing lookup
-  // as incomplete paints a free task "blocked" with no edge to explain it.
-  if (task.blockedByTaskIds.some((bid) => tasksMap.has(bid) && !tasksMap.get(bid)!.completedAt)) {
-    return "blocked";
-  }
+  if (isTaskBlocked(task, allById)) return "blocked";
   if (blockerSet.has(task.id)) return "blocker";
   if (task.blockedByTaskIds.length > 0) return "free";
   return "neutral";
@@ -152,9 +149,11 @@ function layoutTaskGroup(
   return { nodes, width: maxX - startX, height: maxY - startY };
 }
 
+/** `allById` holds every loaded task, so a blocker hidden by a filter still counts. */
 export function buildGraphLayout(
   tasks: SerializedTask[],
   sprints: SerializedSprint[],
+  allById: ReadonlyMap<string, SerializedTask>,
 ): GraphLayout | null {
   if (tasks.length === 0) return null;
 
@@ -181,7 +180,7 @@ export function buildGraphLayout(
   }
 
   const stateMap = new Map<string, NodeState>();
-  for (const t of tasks) stateMap.set(t.id, computeNodeState(t, blockerSet, tasksMap));
+  for (const t of tasks) stateMap.set(t.id, computeNodeState(t, blockerSet, allById));
 
   const criticalPath = computeCriticalPath(
     tasks.map((t) => t.id),

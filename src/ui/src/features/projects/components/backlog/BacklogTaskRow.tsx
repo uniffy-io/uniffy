@@ -8,6 +8,8 @@ import { updateTask } from "@/features/projects/store/projectsThunks";
 import { selectSprintsForProject } from "@/features/projects/store/sprintsSlice";
 import { selectCurrentProject } from "@/features/projects/store/projectsSlice";
 import { TaskTypeIcon } from "@/features/projects/components/TaskTypeIcon";
+import { TaskParentChip } from "@/features/projects/components/TaskParentChip";
+import { BlockedBadge } from "@/features/projects/components/BlockedBadge";
 import { statusPaint } from "@/features/projects/utils/statusPaint";
 import { SYSTEM_FIELD_IDS } from "@/features/projects/types";
 import type { Task, SelectOption } from "@/features/projects/types";
@@ -89,7 +91,7 @@ export function BacklogTaskRow({
     );
   };
 
-  const dueDateOverdue = task.dueDate ? isOverdue(task.dueDate) : false;
+  const dueDateOverdue = !task.completedAt && !!task.dueDate && isOverdue(task.dueDate);
 
   return (
     <div className="group flex items-center gap-3 px-4 py-2.5 hover:bg-muted/50 transition-colors">
@@ -99,8 +101,10 @@ export function BacklogTaskRow({
       </span>
 
       {/* Type + title */}
+      <TaskParentChip task={task} projectSlug={projectSlug} className="text-xs max-w-[120px]" />
       <TaskTypeIcon type={task.taskType} className="text-muted-foreground" />
       <span className="text-sm text-foreground truncate flex-1 min-w-0">{task.title}</span>
+      <BlockedBadge task={task} className="shrink-0" />
 
       {/* Due date */}
       {task.dueDate && (

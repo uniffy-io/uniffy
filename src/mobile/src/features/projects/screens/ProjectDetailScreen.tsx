@@ -56,6 +56,7 @@ import { ProjectGraphView } from "@features/projects/components/ProjectGraphView
 import { TaskDragPreview } from "@features/projects/components/TaskDragPreview";
 import { useTaskDrag } from "@features/projects/useTaskDrag";
 import { planTaskMove } from "@features/projects/taskOrdering";
+import { buildTaskRelations } from "@features/projects/taskRelations";
 import {
   filterTasks,
   isNarrowed,
@@ -73,6 +74,20 @@ const VIEWS: ViewMode[] = ["Table", "Board", "Roadmap", "Backlog", "Graph"];
 /** The views built from status columns, and so the only ones that drag or select. */
 const COLUMN_VIEWS: ViewMode[] = ["Table", "Board"];
 
+function groupByStatus(
+  columns: { key: string }[],
+  tasks: SerializedTask[],
+): Map<string, SerializedTask[]> {
+  const byStatus = new Map<string, SerializedTask[]>();
+  for (const col of columns) {
+    byStatus.set(
+      col.key,
+      tasks.filter((t) => t.status === col.key).sort((a, b) => a.sortOrder - b.sortOrder),
+    );
+  }
+  return byStatus;
+}
+
 export function ProjectBoardScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const T = useTheme();
@@ -85,6 +100,11 @@ export function ProjectBoardScreen() {
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [collapsed, setCollapsed] = useState<string[]>([]);
+  // Keyed by project, so a screen reused for another project starts folded.
+  const [expansion, setExpansion] = useState<{ projectId: string; taskIds: string[] }>({
+    projectId: id,
+    taskIds: [],
+  });
   const [bulkBarHeight, setBulkBarHeight] = useState(0);
   const [bulkSheet, setBulkSheet] = useState<"status" | "priority" | "assignees" | null>(null);
 
@@ -129,6 +149,9 @@ export function ProjectBoardScreen() {
   // Progress reads the whole project, not the current filter - the header would
   // otherwise claim the project is complete the moment someone filters to Done.
   const stats = useMemo(() => computeProjectStats(tasks), [tasks]);
+  // Over every loaded task: a parent or blocker hidden by a filter still counts.
+  const relations = useMemo(() => buildTaskRelations(tasks), [tasks]);
+  const expanded = expansion.projectId === id ? expansion.taskIds : [];
 
   const narrowed = isNarrowed(filters, query);
   const filterCount = activeFilterCount(filters);
@@ -139,20 +162,18 @@ export function ProjectBoardScreen() {
     [statusOptions],
   );
 
-  // Subtasks are normally folded into their parent row. While a search or
-  // filter is on, a match has to surface wherever it sits in the hierarchy.
-  const tasksByStatus = useMemo(() => {
-    const byStatus = new Map<string, SerializedTask[]>();
-    for (const col of columns) {
-      byStatus.set(
-        col.key,
-        visibleTasks
-          .filter((t) => t.status === col.key && (narrowed || !t.parentId))
-          .sort((a, b) => a.sortOrder - b.sortOrder),
-      );
-    }
-    return byStatus;
-  }, [columns, visibleTasks, narrowed]);
+  // Table rows are top-level tasks with their subtasks folded under them. While
+  // a search or filter is on, a match has to surface wherever it sits in the
+  // hierarchy. The board shows every task as a card, as the web board does.
+  const tableTasksByStatus = useMemo(
+    () => groupByStatus(columns, narrowed ? visibleTasks : visibleTasks.filter((t) => !t.parentId)),
+    [columns, visibleTasks, narrowed],
+  );
+  const boardTasksByStatus = useMemo(
+    () => groupByStatus(columns, visibleTasks),
+    [columns, visibleTasks],
+  );
+  const tasksByStatus = activeView === "Board" ? boardTasksByStatus : tableTasksByStatus;
 
   const tasksFor = useCallback(
     (statusId: string) => tasksByStatus.get(statusId) ?? [],
@@ -247,7 +268,24 @@ export function ProjectBoardScreen() {
     });
   };
 
-  const openTask = (taskId: string) => router.push(`/projects/task/${taskId}` as any);
+  const openTask = useCallback(
+    (taskId: string) => router.push(`/projects/task/${taskId}` as any),
+    [],
+  );
+
+  const toggleExpanded = useCallback(
+    (taskId: string) =>
+      setExpansion((prev) => {
+        const current = prev.projectId === id ? prev.taskIds : [];
+        return {
+          projectId: id,
+          taskIds: current.includes(taskId)
+            ? current.filter((t) => t !== taskId)
+            : [...current, taskId],
+        };
+      }),
+    [id],
+  );
 
   // A tap opens the task, unless selection mode is on, where it picks instead.
   const openOrSelect = (taskId: string) => {
@@ -444,6 +482,9 @@ export function ProjectBoardScreen() {
         <ProjectTableView
           columns={columns}
           tasksFor={tasksFor}
+          relations={relations}
+          projectSlug={project.slug}
+          statusOptions={statusOptions}
           priorityOptions={priorityOptions}
           accentColor={T.accent}
           bottomPad={bottomPad}
@@ -452,12 +493,15 @@ export function ProjectBoardScreen() {
           selecting={selecting}
           selectedIds={selectedIds}
           collapsed={collapsed}
+          expanded={expanded}
           drag={drag}
           overlay={dragOverlay}
           onOpen={openOrSelect}
+          onOpenParent={openTask}
           onToggleSelect={toggleSelected}
           onToggleGroup={toggleGroup}
           onToggleCollapsed={toggleCollapsed}
+          onToggleExpand={toggleExpanded}
           onAddTask={() =>
             router.push({ pathname: "/projects/task/create" as any, params: { projectId: id } })
           }
@@ -465,7 +509,8 @@ export function ProjectBoardScreen() {
       ) : activeView === "Board" ? (
         <ProjectBoardView
           columns={columns}
-          allTasks={tasks}
+          relations={relations}
+          projectSlug={project.slug}
           tasksFor={tasksFor}
           priorityOptions={priorityOptions}
           accentColor={T.accent}
@@ -477,6 +522,7 @@ export function ProjectBoardScreen() {
           onOpen={openOrSelect}
           onToggleSelect={toggleSelected}
           onToggleGroup={toggleGroup}
+          onOpenParent={openTask}
           onAddTask={(status) =>
             router.push({
               pathname: "/projects/task/create" as any,
@@ -487,6 +533,8 @@ export function ProjectBoardScreen() {
       ) : activeView === "Roadmap" ? (
         <ProjectRoadmapView
           tasks={visibleTasks}
+          relations={relations}
+          projectSlug={project.slug}
           statusOptions={statusOptions}
           accentColor={T.accent}
           bottomPad={bottomPad}
@@ -497,6 +545,7 @@ export function ProjectBoardScreen() {
           project={project}
           tasks={visibleTasks}
           allTasks={tasks}
+          relations={relations}
           statusOptions={statusOptions}
           priorityOptions={priorityOptions}
           accentColor={T.accent}
@@ -508,6 +557,7 @@ export function ProjectBoardScreen() {
         <ProjectGraphView
           project={project}
           tasks={visibleTasks}
+          relations={relations}
           statusOptions={statusOptions}
           priorityOptions={priorityOptions}
           accentColor={T.accent}

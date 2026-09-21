@@ -50,7 +50,7 @@ export function BoardSwimlane({
 
   const epicStatusOption = epic ? statusOptions.find((o) => o.id === epic.status) : undefined;
   const epicPaint = epicStatusOption ? statusPaint(statusOptions, epicStatusOption.id) : null;
-  const epicOverdue = epic?.dueDate && isOverdue(epic.dueDate);
+  const epicOverdue = !!epic && !epic.completedAt && !!epic.dueDate && isOverdue(epic.dueDate);
 
   return (
     <div className="flex flex-col mb-3 last:mb-0">

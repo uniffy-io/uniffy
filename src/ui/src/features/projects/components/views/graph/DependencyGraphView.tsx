@@ -12,7 +12,7 @@ import {
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
 import { SubjectAvatarStack } from "@/components/subject";
-import { selectCurrentProject } from "@/features/projects/store/projectsSlice";
+import { selectCurrentProject, selectTasksMap } from "@/features/projects/store/projectsSlice";
 import { useFilteredTasks } from "@/features/projects/hooks/useTasks";
 import {
   selectTask,
@@ -25,6 +25,7 @@ import { statusPaint } from "@/features/projects/utils/statusPaint";
 import type { Task, Sprint } from "@/features/projects/types";
 import { TaskTypeIcon } from "@/features/projects/components/TaskTypeIcon";
 import { computeCriticalPath } from "@/features/projects/utils/criticalPath";
+import { isTaskBlocked, type TaskLookup } from "@/features/projects/utils/taskRelations";
 import type { CriticalPathResult } from "@/features/projects/utils/criticalPath";
 
 const NODE_W = 280;
@@ -99,16 +100,9 @@ interface PanState {
 
 // Layout algorithm
 
-function computeNodeState(
-  task: Task,
-  blockerSet: Set<string>,
-  tasksMap: Map<string, Task>,
-): NodeState {
+function computeNodeState(task: Task, blockerSet: Set<string>, lookup: TaskLookup): NodeState {
   if (task.completedAt) return "completed";
-
-  const hasPendingBlockers = task.blockedByTaskIds.some((bid) => !tasksMap.get(bid)?.completedAt);
-
-  if (hasPendingBlockers) return "blocked";
+  if (isTaskBlocked(task, lookup)) return "blocked";
   if (blockerSet.has(task.id)) return "blocker";
   if (task.blockedByTaskIds.length > 0) return "free";
   return "neutral";
@@ -202,7 +196,12 @@ function layoutTaskGroup(
   };
 }
 
-function buildGraphLayout(tasks: Task[], sprints: Sprint[]): GraphLayout | null {
+/** `lookup` reaches every loaded task, so a blocker hidden by a filter still counts. */
+function buildGraphLayout(
+  tasks: Task[],
+  sprints: Sprint[],
+  lookup: TaskLookup,
+): GraphLayout | null {
   if (tasks.length === 0) return null;
 
   const tasksMap = new Map(tasks.map((t) => [t.id, t]));
@@ -236,7 +235,7 @@ function buildGraphLayout(tasks: Task[], sprints: Sprint[]): GraphLayout | null 
   // Compute states
   const stateMap = new Map<string, NodeState>();
   for (const t of tasks) {
-    stateMap.set(t.id, computeNodeState(t, blockerSet, tasksMap));
+    stateMap.set(t.id, computeNodeState(t, blockerSet, lookup));
   }
 
   // Compute critical path
@@ -377,7 +376,11 @@ export function DependencyGraphView() {
     return map;
   }, [currentProject]);
 
-  const layout = useMemo(() => buildGraphLayout(tasks, sprints), [tasks, sprints]);
+  const allTasks = useAppSelector(selectTasksMap);
+  const layout = useMemo(
+    () => buildGraphLayout(tasks, sprints, (id) => allTasks[id]),
+    [tasks, sprints, allTasks],
+  );
 
   // Critical path toggle
   const [showCriticalPath, setShowCriticalPath] = useState(false);

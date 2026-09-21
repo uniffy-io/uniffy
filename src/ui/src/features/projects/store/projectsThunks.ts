@@ -291,10 +291,10 @@ export const createFieldThunk = createAsyncThunk<
 export const updateFieldThunk = createAsyncThunk<
   FieldDefinition,
   { projectId: string; fieldId: string; updates: Partial<FieldDefinition> },
-  { rejectValue: string }
+  { dispatch: AppDispatch; rejectValue: string }
 >(
   "projects/updateField",
-  async ({ projectId, fieldId, updates }, { getState, rejectWithValue }) => {
+  async ({ projectId, fieldId, updates }, { getState, dispatch, rejectWithValue }) => {
     try {
       const state = getState() as RootState;
       const orgId = state.auth.currentOrganizationId;
@@ -303,6 +303,8 @@ export const updateFieldThunk = createAsyncThunk<
       const response = await projectsApi.updateField(projectId, fieldId, updates, orgId);
       return response.field;
     } catch (error) {
+      // Callers show the edit before it is saved; reloading the project drops a refused one.
+      void dispatch(fetchProject(projectId));
       return rejectWithValue(error instanceof Error ? error.message : "Failed to update field");
     }
   },
@@ -404,6 +406,25 @@ export const bulkUpdateTasksThunk = createAsyncThunk<
         error instanceof Error ? error.message : "Failed to bulk update tasks",
       );
     }
+  },
+);
+
+export const moveTasksOutOfStatus = createAsyncThunk<
+  boolean,
+  { projectId: string; fromStatus: string; toStatus: string },
+  { dispatch: AppDispatch }
+>(
+  "projects/moveTasksOutOfStatus",
+  async ({ projectId, fromStatus, toStatus }, { getState, dispatch }) => {
+    const state = getState() as RootState;
+    const taskIds = Object.values(state.projects.tasks)
+      .filter((t) => t.projectId === projectId && t.status === fromStatus && !t.deletedAt)
+      .map((t) => t.id);
+    if (taskIds.length === 0) return true;
+    const moved = await dispatch(bulkUpdateTasksThunk({ taskIds, updates: { status: toStatus } }));
+    // Bulk updates can commit before failure and omit parent counters on success.
+    await dispatch(fetchProjectTasks(projectId));
+    return bulkUpdateTasksThunk.fulfilled.match(moved);
   },
 );
 

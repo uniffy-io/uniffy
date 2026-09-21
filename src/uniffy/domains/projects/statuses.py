@@ -14,6 +14,7 @@ from uniffy.core.models.projects.field_definition import (
     SystemProjectFieldId,
     TaskStatusSemantic,
 )
+from uniffy.core.models.projects.task import Task
 
 _LEGACY_SEMANTICS = {
     DefaultTaskStatusId.TODO: TaskStatusSemantic.TODO,
@@ -109,3 +110,57 @@ async def load_task_status_semantics(
     if config is None:
         raise ValidationError("status", "The project status field is missing")
     return parse_task_status_semantics(config)
+
+
+def _option_labels(config: dict[str, Any] | None) -> dict[str, str]:
+    options = (config or {}).get("options")
+    if not isinstance(options, list):
+        return {}
+    labels: dict[str, str] = {}
+    for option in options:
+        if isinstance(option, dict) and isinstance(option.get("id"), str) and option["id"]:
+            label = option.get("label")
+            labels[option["id"]] = label if isinstance(label, str) and label else option["id"]
+    return labels
+
+
+def removed_status_labels(
+    previous: dict[str, Any] | None,
+    updated: dict[str, Any] | None,
+) -> dict[str, str]:
+    """Options present before an edit and missing after it, keyed by id."""
+    kept = _option_labels(updated)
+    return {
+        option_id: label
+        for option_id, label in _option_labels(previous).items()
+        if option_id not in kept
+    }
+
+
+async def ensure_removed_statuses_unused(
+    session: AsyncSession,
+    project_id: UUID,
+    previous: dict[str, Any] | None,
+    updated: dict[str, Any] | None,
+) -> None:
+    """A task whose status disappears drops off every board column, so its move comes first."""
+    removed = removed_status_labels(previous, updated)
+    if not removed:
+        return
+    result = await session.execute(
+        select(Task.status)
+        .where(
+            Task.project_id == project_id,
+            Task.is_deleted.is_(False),
+            Task.status.in_(list(removed)),
+        )
+        .distinct()
+        .order_by(Task.status)
+    )
+    in_use = [removed[status] for status in result.scalars()]
+    if in_use:
+        raise ValidationError(
+            "config_json",
+            f"Move the tasks in {', '.join(repr(label) for label in in_use)} to another status "
+            "before removing it",
+        )

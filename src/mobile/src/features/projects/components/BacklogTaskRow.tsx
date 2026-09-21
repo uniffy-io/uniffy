@@ -7,10 +7,13 @@ import { FONT } from "@theme/typography";
 import { getTaskTypeConfig } from "@features/projects/taskTypes";
 import { getOptionById } from "@features/projects/projectsSerializer";
 import { TaskMetaChips, TaskDueDate } from "@features/projects/components/TaskMetaChips";
+import { isTaskBlocked } from "@features/projects/taskRelations";
+import type { TaskRelations } from "@features/projects/taskRelations";
 import type { SerializedTask, PlainSelectOption } from "@features/projects/projectsSerializer";
 
 export const BacklogTaskRow = React.memo(function BacklogTaskRow({
   task,
+  relations,
   projectSlug,
   statusOptions,
   priorityOptions,
@@ -19,6 +22,8 @@ export const BacklogTaskRow = React.memo(function BacklogTaskRow({
   onMove,
 }: {
   task: SerializedTask;
+  /** Built from every loaded task, not just the visible ones. */
+  relations: TaskRelations;
   projectSlug: string;
   statusOptions: PlainSelectOption[];
   priorityOptions: PlainSelectOption[];
@@ -31,6 +36,7 @@ export const BacklogTaskRow = React.memo(function BacklogTaskRow({
   const TypeIcon = getTaskTypeConfig(task.taskType).Icon;
   const status = getOptionById(statusOptions, task.status);
   const isDone = !!task.completedAt;
+  const subtasks = relations.subtaskCounts.get(task.id);
 
   return (
     <TouchableOpacity
@@ -62,16 +68,21 @@ export const BacklogTaskRow = React.memo(function BacklogTaskRow({
         </View>
 
         <View style={styles.metaLine}>
-          <TaskMetaChips task={task} priorityOptions={priorityOptions} statusOption={status} />
-          {task.subtaskTotal > 0 && (
+          <TaskMetaChips
+            task={task}
+            priorityOptions={priorityOptions}
+            statusOption={status}
+            blocked={isTaskBlocked(task, relations.byId)}
+          />
+          {subtasks && (
             <View style={styles.metaItem}>
               <CheckCircle
                 size={11}
-                color={task.subtaskCompleted === task.subtaskTotal ? T.green : T.textDim}
+                color={subtasks.done === subtasks.total ? T.green : T.textDim}
                 weight="duotone"
               />
               <Text style={[styles.metaText, { color: T.textDim }]}>
-                {task.subtaskCompleted}/{task.subtaskTotal}
+                {subtasks.done}/{subtasks.total}
               </Text>
             </View>
           )}

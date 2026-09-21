@@ -6,8 +6,11 @@ import { SubjectAvatarStack } from "@/components/subject";
 import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
 import { LAYOUT } from "@/features/projects/constants";
 import { statusPaint, type StatusPaint } from "@/features/projects/utils/statusPaint";
+import { statusSemanticOf } from "@/features/projects/utils/statusSemantics";
 import { TaskTypeIcon } from "@/features/projects/components/TaskTypeIcon";
-import type { Task, SelectOption } from "@/features/projects/types";
+import { TaskParentChip } from "@/features/projects/components/TaskParentChip";
+import { BlockedBadge } from "@/features/projects/components/BlockedBadge";
+import type { Task, SelectOption, TaskStatusSemantic } from "@/features/projects/types";
 import type { RoadmapRow } from "./roadmapRows";
 
 interface RoadmapTaskListProps {
@@ -184,9 +187,15 @@ function RoadmapTaskRow({
       </span>
 
       {/* Status icon */}
-      <StatusIcon statusId={statusOption?.id} color={paint.solid} />
+      <StatusIcon
+        semantic={statusOption ? statusSemanticOf(statusOption) : null}
+        color={paint.solid}
+      />
 
-      {/* Type + title */}
+      {/* Type + title; a root row with a parent is a subtask whose parent is filtered out */}
+      {depth === 0 && task.parentId && (
+        <TaskParentChip task={task} projectSlug={projectSlug} className="text-xs max-w-[120px]" />
+      )}
       <TaskTypeIcon type={task.taskType} className="text-muted-foreground" />
       <span
         className={cn(
@@ -196,6 +205,7 @@ function RoadmapTaskRow({
       >
         {task.title}
       </span>
+      <BlockedBadge task={task} variant="icon" />
 
       {/* Subtask progress */}
       {task.subtaskTotal > 0 && (
@@ -222,11 +232,11 @@ function RoadmapTaskRow({
 }
 
 interface StatusIconProps {
-  statusId?: string;
+  semantic: TaskStatusSemantic | null;
   color: string;
 }
 
-function StatusIcon({ statusId, color }: StatusIconProps) {
+function StatusIcon({ semantic, color }: StatusIconProps) {
   const iconProps = {
     size: 16,
     weight: "fill" as const,
@@ -234,14 +244,10 @@ function StatusIcon({ statusId, color }: StatusIconProps) {
     style: { color },
   };
 
-  if (!statusId) {
-    return <Circle {...iconProps} />;
-  }
-
-  if (statusId.includes("done") || statusId.includes("complete")) {
+  if (semantic === "completed") {
     return <CheckCircle {...iconProps} />;
   }
-  if (statusId.includes("progress")) {
+  if (semantic === "in_progress" || semantic === "review") {
     return <Spinner {...iconProps} />;
   }
   return <Circle {...iconProps} />;
