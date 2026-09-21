@@ -329,12 +329,9 @@ jobs:
       attestations: write
       artifact-metadata: write
     steps:
-      # Full history and tags: the notes walk back to the previous release.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          fetch-depth: 0
-
-      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+          fetch-depth: 1
 
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
@@ -369,13 +366,6 @@ jobs:
         with:
           subject-path: images.txt
 
-      - name: Release notes
-        env:
-          TAG: ${{ github.ref_name }}
-        run: |
-          ./manage.py release notes "$TAG" --images images.txt --out /tmp/notes.md
-          cat /tmp/notes.md
-
       - name: Create the release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -383,6 +373,6 @@ jobs:
           VERSION: ${{ needs.verify.outputs.version }}
           PRERELEASE: ${{ needs.verify.outputs.prerelease }}
         run: |
-          args=(--verify-tag --notes-file /tmp/notes.md --title "$VERSION")
+          args=(--verify-tag --notes "Release notes are being prepared." --title "$VERSION")
           if [[ "$PRERELEASE" == "true" ]]; then args+=(--prerelease); fi
           gh release create "$TAG" "${args[@]}" images.txt images.txt.sigstore.json /tmp/sbom/*.spdx.json
