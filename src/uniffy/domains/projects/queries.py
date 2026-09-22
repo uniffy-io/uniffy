@@ -65,10 +65,12 @@ async def get_view(
     view_id: str,
 ) -> ViewConfig | None:
     result = await session.execute(
-        select(ViewConfig).where(
+        select(ViewConfig)
+        .where(
             ViewConfig.project_id == project_id,
             ViewConfig.id == view_id,
         )
+        .execution_options(populate_existing=True)
     )
     return result.scalar_one_or_none()
 
@@ -90,7 +92,7 @@ async def get_views_in_scope(
         query = query.where(ViewConfig.owner_id == owner_id)
     query = query.order_by(ViewConfig.sort_order.asc(), ViewConfig.created_at.asc())
     if for_update:
-        query = query.with_for_update()
+        query = query.with_for_update().execution_options(populate_existing=True)
     result = await session.execute(query)
     return list(result.scalars().all())
 

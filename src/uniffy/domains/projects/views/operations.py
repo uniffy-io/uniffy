@@ -31,11 +31,7 @@ _RESOURCE = "project view"
 
 
 class ProjectViewOperations:
-    """Personal views belong to their owner; shared views need EDITOR, their order ADMIN.
-
-    Every call first requires VIEW on the project, so a caller who lost access to the
-    project reaches none of its views, their own personal ones included.
-    """
+    """Project access is required even for a caller's own personal views."""
 
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
@@ -44,7 +40,7 @@ class ProjectViewOperations:
         self, user_id: UUID, organization_id: UUID, project_id: UUID
     ) -> tuple[Project, ContentRole | None]:
         project_ops = ProjectOperations(self.session)
-        project = await project_ops.get_by_id(user_id, organization_id, project_id)
+        project = await project_ops.get_for_view_mutation(user_id, organization_id, project_id)
         role = await project_ops._resolve_role(user_id, organization_id, project)
         return project, role
 
@@ -105,7 +101,6 @@ class ProjectViewOperations:
         )
         self.session.add(view)
         await self.session.commit()
-        await self.session.refresh(view)
 
         if visibility == ProjectViewVisibility.SHARED:
             await self._publish_views_changed(project)
@@ -150,7 +145,6 @@ class ProjectViewOperations:
 
         view.updated_at = datetime.now(UTC)
         await self.session.commit()
-        await self.session.refresh(view)
 
         if was_shared or view.visibility == ProjectViewVisibility.SHARED:
             await self._publish_views_changed(project)

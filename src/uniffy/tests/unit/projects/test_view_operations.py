@@ -47,7 +47,7 @@ def harness(monkeypatch: pytest.MonkeyPatch) -> Harness:
     session.refresh = AsyncMock()
     session.delete = AsyncMock()
 
-    monkeypatch.setattr(ProjectOperations, "get_by_id", AsyncMock(return_value=project))
+    monkeypatch.setattr(ProjectOperations, "get_for_view_mutation", AsyncMock(return_value=project))
     monkeypatch.setattr(queries, "get_fields_for_project", AsyncMock(return_value=[]))
     monkeypatch.setattr(queries, "get_views_for_project", AsyncMock(return_value=[]))
     monkeypatch.setattr(view_operations, "resolve_project_audience", AsyncMock(return_value=None))
