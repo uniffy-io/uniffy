@@ -151,6 +151,99 @@ async def test_views_gain_ownership_and_definitions(scratch_database: str) -> No
     assert "is_default" not in columns
 
 
+async def test_malformed_config_fields_do_not_block_upgrade(scratch_database: str) -> None:
+    await _provision_to(scratch_database, "104")
+    project_id, _, _ = await _seed_legacy_projects()
+    configs = [
+        None,
+        False,
+        5,
+        "field_title",
+        [],
+        {"visibleFieldIds": 5, "zoomLevel": {}},
+        {"visibleFieldIds": True, "zoomLevel": []},
+        {"visibleFieldIds": "field_title", "zoomLevel": True},
+        {"visibleFieldIds": {"field_title": True}, "columnWidths": [200]},
+        {
+            "visibleFieldIds": [None, {}, [], 5, "__tags__", "field_title", "field_title"],
+            "zoomLevel": "month",
+            "columnWidths": {
+                "field_status": False,
+                "field_title": 180.5,
+                "field_assignee": {},
+                "field_due_date": "200",
+            },
+            "sortFieldId": "field_title",
+            "sortDirection": "desc",
+        },
+    ]
+    engine = create_async_engine(get_database_url())
+    try:
+        async with engine.begin() as connection:
+            await connection.execute(
+                text(
+                    "INSERT INTO projects_views (id, project_id, name, type, config, created_at) "
+                    "VALUES (:id, :project, 'Malformed config', 'roadmap', CAST(:config AS jsonb), now())"
+                ),
+                [
+                    {"id": f"malformed_{index}", "project": project_id, "config": dumps_str(config)}
+                    for index, config in enumerate(configs)
+                ],
+            )
+    finally:
+        await engine.dispose()
+
+    _migrate_to("105")
+
+    definitions = dict(
+        _query("SELECT id, definition FROM projects_views WHERE id LIKE 'malformed_%'")
+    )
+    assert len(definitions) == len(configs)
+    for index in range(len(configs) - 1):
+        assert definitions[f"malformed_{index}"] == {"roadmap": {}}
+    assert definitions[f"malformed_{len(configs) - 1}"] == {
+        "roadmap": {"zoom": "ROADMAP_ZOOM_MONTH"},
+        "visible_fields": [{"field_id": "field_title"}],
+        "column_widths": [{"field": {"field_id": "field_title"}, "width": 180}],
+        "sort": [{"field": {"field_id": "field_title"}, "direction": "SORT_DIRECTION_DESC"}],
+    }
+    assert _query("SELECT version_num FROM alembic_version") == [("105",)]
+
+
+async def test_definition_pages_preserve_identical_view_ids_across_projects(
+    scratch_database: str,
+) -> None:
+    await _provision_to(scratch_database, "104")
+    await _seed_legacy_projects()
+    engine = create_async_engine(get_database_url())
+    try:
+        async with engine.begin() as connection:
+            await connection.execute(
+                text("UPDATE projects_views SET id='a_offset' WHERE id='view_abc'")
+            )
+            await connection.execute(
+                text(
+                    "INSERT INTO projects_views (id, project_id, name, type, config, created_at) "
+                    "SELECT 'paged_' || lpad(i::text, 4, '0'), p.id, 'Paged view', 'table', "
+                    "CAST(:config AS jsonb), now() "
+                    "FROM generate_series(1, 501) AS i CROSS JOIN projects_projects AS p"
+                ),
+                {"config": dumps_str({"visibleFieldIds": ["field_title"]})},
+            )
+    finally:
+        await engine.dispose()
+
+    _migrate_to("105")
+
+    rows = _query("SELECT id, definition, sort_order FROM projects_views WHERE id LIKE 'paged_%'")
+    assert len(rows) == 1002
+    assert len({row[0] for row in rows}) == 501
+    assert all(
+        row[1] == {"table": {}, "visible_fields": [{"field_id": "field_title"}]} for row in rows
+    )
+    assert all(row[2] >= 100 for row in rows)
+
+
 async def test_downgrade_restores_the_legacy_shape(scratch_database: str) -> None:
     await _provision_to(scratch_database, "104")
     with_views, _, _ = await _seed_legacy_projects()

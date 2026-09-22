@@ -5,14 +5,7 @@ import {
   type ContentAccessChange,
 } from "@/features/notifications/contentAccessEmitter";
 
-/**
- * Refetch a page's data when content of `contentType` changes: shared with the
- * user, access removed, access mode flipped, a child added to a container
- * (e.g. a task created in a project), or a shared project view changed.
- * Page-scoped: only fires while the calling
- * component is mounted. Debounced so a burst collapses into a single refetch;
- * the callback receives the latest change so it can branch on action/id.
- */
+/** Coalesce repeated events without dropping distinct resources or actions. */
 export function useContentAccessRefetch(
   contentType: ContentType | ContentType[],
   refetch: (change: ContentAccessChange) => void,
@@ -29,14 +22,16 @@ export function useContentAccessRefetch(
   useEffect(() => {
     const types = new Set(typeKey.split(",").map(Number));
     let timer: ReturnType<typeof setTimeout> | null = null;
-    let latest: ContentAccessChange | null = null;
+    const pending = new Map<string, ContentAccessChange>();
     const unsubscribe = onContentAccessChanged((change) => {
       if (!types.has(change.contentType)) return;
-      latest = change;
+      pending.set(`${change.contentType}:${change.contentId}:${change.action}`, change);
       if (timer) clearTimeout(timer);
       timer = setTimeout(() => {
         timer = null;
-        if (latest) refetchRef.current(latest);
+        const changes = [...pending.values()];
+        pending.clear();
+        changes.forEach((event) => refetchRef.current(event));
       }, debounceMs);
     });
     return () => {

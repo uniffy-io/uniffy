@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import Action
 from uniffy.core.content.base_operations import BaseContentOperations
-from uniffy.core.errors import ValidationError
+from uniffy.core.errors import NotFoundError, ValidationError
 from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.projects.project import Project
 from uniffy.core.models.projects.task import Task
@@ -238,6 +238,25 @@ class ProjectOperations(BaseContentOperations[Project]):
                 project_id=str(project.id),
             )
 
+    async def get_for_view_mutation(
+        self, user_id: UUID, organization_id: UUID, project_id: UUID
+    ) -> Project:
+        """Serialize view mutations with default selection and refresh cached project state."""
+        project = await self.session.scalar(
+            select(Project)
+            .where(
+                Project.id == project_id,
+                Project.organization_id == organization_id,
+                Project.is_deleted.is_(False),
+            )
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        )
+        if project is None:
+            raise NotFoundError(self.content_type.value, project_id)
+        await self._require_view(user_id, organization_id, project)
+        return project
+
     async def update(
         self,
         user_id: UUID,
@@ -246,7 +265,11 @@ class ProjectOperations(BaseContentOperations[Project]):
         **kwargs,
     ) -> Project:
         """Access-policy changes go through ``permissions.v1.MembersService``, never this method."""
-        project = await self.get_by_id(user_id, organization_id, project_id)
+        project = (
+            await self.get_for_view_mutation(user_id, organization_id, project_id)
+            if "default_view_id" in kwargs  # noqa: PLR2004 - update keyword name
+            else await self.get_by_id(user_id, organization_id, project_id)
+        )
         await self._require_manage(user_id, organization_id, project)
 
         kwargs.pop("access_mode", None)

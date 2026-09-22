@@ -1,16 +1,12 @@
 """Give project views an owner, a visibility, an order and a typed definition.
 
-Existing views become shared views owned by the project owner, their free-form
-config is rewritten into the definition shape, every project gets whichever of
-the six default views it lacks, and a missing or dangling default view points
-at the table view.
-
 Revision ID: 105
 Revises: 104
 Create Date: 2026-09-17
 """
 
 from collections.abc import Sequence
+from math import isfinite
 from typing import Any
 
 import sqlalchemy as sa
@@ -77,17 +73,19 @@ def _is_field_id(value: Any) -> bool:
     return isinstance(value, str) and bool(value) and not value.startswith("__")
 
 
-def _translate_legacy(view_type: str, config: dict[str, Any] | None) -> dict[str, Any]:
+def _translate_config(view_type: str, config: Any) -> dict[str, Any]:
     """Carry the parts of a free-form config that still mean something."""
     config = config if isinstance(config, dict) else {}
     layout = view_type if view_type in _LAYOUTS else "table"
     layout_settings: dict[str, Any] = {}
-    if layout == "roadmap" and config.get("zoomLevel") in _ZOOMS:
-        layout_settings["zoom"] = _ZOOMS[config["zoomLevel"]]
+    zoom = config.get("zoomLevel")
+    if layout == "roadmap" and isinstance(zoom, str) and zoom in _ZOOMS:
+        layout_settings["zoom"] = _ZOOMS[zoom]
     definition: dict[str, Any] = {layout: layout_settings}
 
     visible: list[str] = []
-    for field_id in config.get("visibleFieldIds") or []:
+    raw_visible = config.get("visibleFieldIds")
+    for field_id in raw_visible if isinstance(raw_visible, list) else []:
         if _is_field_id(field_id) and field_id not in visible:
             visible.append(field_id)
     if visible:
@@ -96,8 +94,11 @@ def _translate_legacy(view_type: str, config: dict[str, Any] | None) -> dict[str
     widths = []
     raw_widths = config.get("columnWidths")
     for field_id, width in (raw_widths if isinstance(raw_widths, dict) else {}).items():
-        if _is_field_id(field_id) and isinstance(width, int | float):
-            widths.append({"field": {"field_id": field_id}, "width": min(max(int(width), 40), 2000)})
+        if not _is_field_id(field_id) or type(width) not in (int, float):
+            continue
+        if isinstance(width, float) and not isfinite(width):
+            continue
+        widths.append({"field": {"field_id": field_id}, "width": int(min(max(width, 40), 2000))})
     if widths:
         definition["column_widths"] = widths
 
@@ -111,29 +112,44 @@ def _translate_legacy(view_type: str, config: dict[str, Any] | None) -> dict[str
 
 
 def _rewrite_definitions(bind: sa.Connection) -> None:
-    rows = bind.execute(sa.text("SELECT id, project_id, type, config FROM projects_views")).all()
-    updates = []
-    for row in rows:
-        if row.id in SEED_VIEWS:
-            _, _, definition = SEED_VIEWS[row.id]
-            sort_order = list(SEED_VIEWS).index(row.id)
-        else:
-            definition = _translate_legacy(row.type, row.config)
-            sort_order = None
-        updates.append({
-            "id": row.id,
-            "project_id": row.project_id,
-            "definition": dumps_str(definition),
-            "sort_order": sort_order,
-        })
-
     statement = sa.text(
         "UPDATE projects_views SET definition = CAST(:definition AS jsonb), "
         "sort_order = COALESCE(:sort_order, sort_order) "
         "WHERE id = :id AND project_id = :project_id"
     )
-    for start in range(0, len(updates), _BATCH_SIZE):
-        bind.execute(statement, updates[start : start + _BATCH_SIZE])
+    cursor = None
+    while True:
+        where = "WHERE (id, project_id) > (:id, :project_id) " if cursor else ""
+        parameters: dict[str, Any] = {"limit": _BATCH_SIZE}
+        if cursor:
+            parameters.update(id=cursor[0], project_id=cursor[1])
+        rows = bind.execute(
+            sa.text(
+                "SELECT id, project_id, type, config FROM projects_views "
+                + where
+                + "ORDER BY id, project_id LIMIT :limit"
+            ),
+            parameters,
+        ).all()
+        if not rows:
+            return
+
+        updates = []
+        for row in rows:
+            if row.id in SEED_VIEWS:
+                _, _, definition = SEED_VIEWS[row.id]
+                sort_order = list(SEED_VIEWS).index(row.id)
+            else:
+                definition = _translate_config(row.type, row.config)
+                sort_order = None
+            updates.append({
+                "id": row.id,
+                "project_id": row.project_id,
+                "definition": dumps_str(definition),
+                "sort_order": sort_order,
+            })
+        bind.execute(statement, updates)
+        cursor = (rows[-1].id, rows[-1].project_id)
 
 
 def upgrade() -> None:

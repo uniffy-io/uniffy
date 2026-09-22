@@ -30,7 +30,7 @@ import type {
   ViewFilterValue,
   ViewLayout,
   ViewType,
-} from "../types/views";
+} from "@/features/projects/types/views";
 
 type FieldRefInit = MessageInitShape<typeof TaskFieldRefSchema>;
 type FilterGroupInit = MessageInitShape<typeof TaskFilterGroupSchema>;
