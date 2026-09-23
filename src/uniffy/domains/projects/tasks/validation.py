@@ -32,6 +32,7 @@ class TaskValidator:
             select(Task.id, Task.title, Task.status, Task.number).where(
                 and_(
                     Task.id.in_(blocker_ids),
+                    Task.project_id == task.project_id,
                     Task.is_deleted == False,  # noqa: E712
                     Task.completed_at.is_(None),
                 )
@@ -47,6 +48,21 @@ class TaskValidator:
             }
             for row in unresolved
         ]
+
+    async def validate_in_project(
+        self, project_id: UUID, task_ids: list[UUID], field_name: str
+    ) -> None:
+        """Parents and blockers are tasks of the same project; a deleted one still counts, so an
+        edit that keeps a blocker deleted since is not refused.
+        """
+        wanted = set(task_ids)
+        if not wanted:
+            return
+        result = await self.session.execute(
+            select(Task.id).where(and_(Task.id.in_(wanted), Task.project_id == project_id))
+        )
+        if wanted - set(result.scalars().all()):
+            raise ValidationError(field_name, "Link only tasks of this project")
 
     async def validate_no_circular_dependency(
         self,

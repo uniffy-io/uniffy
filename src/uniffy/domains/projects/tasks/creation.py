@@ -70,7 +70,16 @@ class TaskCreateOperations:
         if parent_id is not None:
             if isinstance(parent_id, str):
                 parent_id = UUID(parent_id)
+            await TaskValidator(self.session).validate_in_project(
+                project_id, [parent_id], "parent_id"
+            )
             await TaskValidator(self.session).validate_no_circular_parent(None, parent_id)
+        if kwargs.get("blocked_by_task_ids"):
+            await TaskValidator(self.session).validate_in_project(
+                project_id,
+                [UUID(str(blocker)) for blocker in kwargs["blocked_by_task_ids"]],
+                "blocked_by",
+            )
 
         description = kwargs.get("description", "")
         outgoing_references = queries.extract_urns_from_content(description) if description else []
@@ -126,9 +135,9 @@ class TaskCreateOperations:
 
         watcher_user_ids = [user_id]
         if task.assignee_ids:
-            watcher_user_ids += await TaskNotifications(self.session).expand_assignees_to_users([
-                UUID(uid) for uid in task.assignee_ids
-            ])
+            watcher_user_ids += await TaskNotifications(self.session).expand_assignees_to_users(
+                organization_id, [UUID(uid) for uid in task.assignee_ids]
+            )
         await WatcherOperations(self.session).ensure_watching(
             watcher_user_ids, organization_id, task.id
         )
