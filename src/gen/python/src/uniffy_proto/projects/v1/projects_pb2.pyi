@@ -108,13 +108,6 @@ class RoadmapZoom(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     ROADMAP_ZOOM_WEEK: _ClassVar[RoadmapZoom]
     ROADMAP_ZOOM_MONTH: _ClassVar[RoadmapZoom]
 
-class TagFilterMode(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
-    __slots__ = ()
-    TAG_FILTER_MODE_UNSPECIFIED: _ClassVar[TagFilterMode]
-    TAG_FILTER_MODE_ALL: _ClassVar[TagFilterMode]
-    TAG_FILTER_MODE_ANY: _ClassVar[TagFilterMode]
-    TAG_FILTER_MODE_NONE: _ClassVar[TagFilterMode]
-
 class ActivityAction(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     __slots__ = ()
     ACTIVITY_ACTION_UNSPECIFIED: _ClassVar[ActivityAction]
@@ -196,10 +189,6 @@ ROADMAP_ZOOM_UNSPECIFIED: RoadmapZoom
 ROADMAP_ZOOM_DAY: RoadmapZoom
 ROADMAP_ZOOM_WEEK: RoadmapZoom
 ROADMAP_ZOOM_MONTH: RoadmapZoom
-TAG_FILTER_MODE_UNSPECIFIED: TagFilterMode
-TAG_FILTER_MODE_ALL: TagFilterMode
-TAG_FILTER_MODE_ANY: TagFilterMode
-TAG_FILTER_MODE_NONE: TagFilterMode
 ACTIVITY_ACTION_UNSPECIFIED: ActivityAction
 ACTIVITY_ACTION_CREATED: ActivityAction
 ACTIVITY_ACTION_STATUS_CHANGED: ActivityAction
@@ -945,36 +934,24 @@ class DeleteTasksRequest(_message.Message):
     def __init__(self, organization_id: _Optional[str] = ..., task_ids: _Optional[_Iterable[str]] = ..., permanent: _Optional[bool] = ...) -> None: ...
 
 class ListTasksRequest(_message.Message):
-    __slots__ = ("organization_id", "project_id", "pagination", "include_deleted", "parent_id", "sprint_id", "backlog_only", "tag_ids", "tag_filter_mode", "in_epic_id", "root_only", "has_subtasks", "min_depth", "max_depth")
+    __slots__ = ("organization_id", "project_id", "pagination", "include_deleted", "parent_id", "filter", "sort", "time_zone")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     PROJECT_ID_FIELD_NUMBER: _ClassVar[int]
     PAGINATION_FIELD_NUMBER: _ClassVar[int]
     INCLUDE_DELETED_FIELD_NUMBER: _ClassVar[int]
     PARENT_ID_FIELD_NUMBER: _ClassVar[int]
-    SPRINT_ID_FIELD_NUMBER: _ClassVar[int]
-    BACKLOG_ONLY_FIELD_NUMBER: _ClassVar[int]
-    TAG_IDS_FIELD_NUMBER: _ClassVar[int]
-    TAG_FILTER_MODE_FIELD_NUMBER: _ClassVar[int]
-    IN_EPIC_ID_FIELD_NUMBER: _ClassVar[int]
-    ROOT_ONLY_FIELD_NUMBER: _ClassVar[int]
-    HAS_SUBTASKS_FIELD_NUMBER: _ClassVar[int]
-    MIN_DEPTH_FIELD_NUMBER: _ClassVar[int]
-    MAX_DEPTH_FIELD_NUMBER: _ClassVar[int]
+    FILTER_FIELD_NUMBER: _ClassVar[int]
+    SORT_FIELD_NUMBER: _ClassVar[int]
+    TIME_ZONE_FIELD_NUMBER: _ClassVar[int]
     organization_id: str
     project_id: str
     pagination: _common_pb2.PaginationRequest
     include_deleted: bool
     parent_id: str
-    sprint_id: str
-    backlog_only: bool
-    tag_ids: _containers.RepeatedScalarFieldContainer[str]
-    tag_filter_mode: TagFilterMode
-    in_epic_id: str
-    root_only: bool
-    has_subtasks: bool
-    min_depth: int
-    max_depth: int
-    def __init__(self, organization_id: _Optional[str] = ..., project_id: _Optional[str] = ..., pagination: _Optional[_Union[_common_pb2.PaginationRequest, _Mapping]] = ..., include_deleted: _Optional[bool] = ..., parent_id: _Optional[str] = ..., sprint_id: _Optional[str] = ..., backlog_only: _Optional[bool] = ..., tag_ids: _Optional[_Iterable[str]] = ..., tag_filter_mode: _Optional[_Union[TagFilterMode, str]] = ..., in_epic_id: _Optional[str] = ..., root_only: _Optional[bool] = ..., has_subtasks: _Optional[bool] = ..., min_depth: _Optional[int] = ..., max_depth: _Optional[int] = ...) -> None: ...
+    filter: TaskFilterGroup
+    sort: _containers.RepeatedCompositeFieldContainer[TaskSort]
+    time_zone: str
+    def __init__(self, organization_id: _Optional[str] = ..., project_id: _Optional[str] = ..., pagination: _Optional[_Union[_common_pb2.PaginationRequest, _Mapping]] = ..., include_deleted: _Optional[bool] = ..., parent_id: _Optional[str] = ..., filter: _Optional[_Union[TaskFilterGroup, _Mapping]] = ..., sort: _Optional[_Iterable[_Union[TaskSort, _Mapping]]] = ..., time_zone: _Optional[str] = ...) -> None: ...
 
 class CreateTaskResponse(_message.Message):
     __slots__ = ("task", "updated_parent", "spawned_task")

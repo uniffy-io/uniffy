@@ -7,7 +7,6 @@ import { ProjectsService, TypeFieldSchemaSchema } from "@uniffy/proto/projects/v
 import {
   FieldType as ProtoFieldType,
   ActivityAction as ProtoActivityAction,
-  TagFilterMode as ProtoTagFilterMode,
   type ViewVisibility,
 } from "@uniffy/proto/projects/v1/projects_pb";
 import type { TypeFieldSchema as ProtoTypeFieldSchema } from "@uniffy/proto/projects/v1/projects_pb";
@@ -375,34 +374,12 @@ export const projectsApi = {
     projectId: string,
     organizationId: string,
     options: {
-      tagIds?: string[];
-      tagFilterMode?: "all" | "any" | "none";
-      inEpicId?: string;
-      rootOnly?: boolean;
-      hasSubtasks?: boolean;
-      minDepth?: number;
-      maxDepth?: number;
       /** Stop after one page instead of loading the whole project. */
       firstPageOnly?: boolean;
       signal?: AbortSignal;
     } = {},
   ): Promise<{ tasks: Task[]; protoTasks: ProtoTask[] }> => {
-    const tagFilterMode =
-      options.tagFilterMode === "any"
-        ? ProtoTagFilterMode.ANY
-        : options.tagFilterMode === "none"
-          ? ProtoTagFilterMode.NONE
-          : ProtoTagFilterMode.ALL;
-    const request = {
-      organizationId,
-      projectId,
-      ...(options.tagIds && options.tagIds.length ? { tagIds: options.tagIds, tagFilterMode } : {}),
-      ...(options.inEpicId ? { inEpicId: options.inEpicId } : {}),
-      ...(options.rootOnly ? { rootOnly: true } : {}),
-      ...(options.hasSubtasks !== undefined ? { hasSubtasks: options.hasSubtasks } : {}),
-      ...(options.minDepth !== undefined ? { minDepth: options.minDepth } : {}),
-      ...(options.maxDepth !== undefined ? { maxDepth: options.maxDepth } : {}),
-    };
+    const request = { organizationId, projectId };
     const protoTasks = await fetchAllPages(
       async (page) => {
         const response = await projectsClient.listTasks(

@@ -161,17 +161,6 @@ enum RoadmapZoom {
   ROADMAP_ZOOM_MONTH = 3;
 }
 
-// Filter mode for tag list-tasks queries. ALL = task carries every tag id
-// in the request (intersection); ANY = task carries at least one
-// (union); NONE = task carries none (anti-join). Mirrors Jira labels.
-// UNSPECIFIED is treated as ALL by the server (default behaviour).
-enum TagFilterMode {
-  TAG_FILTER_MODE_UNSPECIFIED = 0;
-  TAG_FILTER_MODE_ALL = 1;
-  TAG_FILTER_MODE_ANY = 2;
-  TAG_FILTER_MODE_NONE = 3;
-}
-
 enum ActivityAction {
   ACTIVITY_ACTION_UNSPECIFIED = 0;
   ACTIVITY_ACTION_CREATED = 1;
@@ -641,28 +630,21 @@ message DeleteTasksRequest {
 }
 
 message ListTasksRequest {
+  reserved 6 to 14;
+  reserved "sprint_id", "backlog_only", "tag_ids", "tag_filter_mode", "in_epic_id", "root_only", "has_subtasks", "min_depth", "max_depth";
   string organization_id = 1;
   string project_id = 2;
   optional common.v1.PaginationRequest pagination = 3;
   optional bool include_deleted = 4;
-  // Literal parent task id. Use ``root_only`` for top-level filtering.
+  // Children of one task, for the subtask list; not a view dimension.
   optional string parent_id = 5;
-  optional string sprint_id = 6;
-  optional bool backlog_only = 7;
-  // Filter tasks by unified-tag ids. Combined with ``tag_filter_mode``
-  // for ALL / ANY / NONE semantics. Empty = no tag filter.
-  repeated string tag_ids = 8;
-  optional TagFilterMode tag_filter_mode = 9;
-  // Return tasks whose ancestor chain contains the given Epic task id
-  // (the Epic itself is included).
-  optional string in_epic_id = 10;
-  // Return only tasks with no parent (top-level).
-  optional bool root_only = 11;
-  // Return only tasks referenced as parent by at least one other task.
-  optional bool has_subtasks = 12;
-  // Inclusive bounds on depth in the parent chain (0 = root).
-  optional int32 min_depth = 13;
-  optional int32 max_depth = 14;
+  // The same tree a saved view holds; validated against the project's fields.
+  TaskFilterGroup filter = 15;
+  // Empty values sort last in both directions; ties fall back to the manual order.
+  repeated TaskSort sort = 16;
+  // IANA zone of the caller's clock, for relative dates and timestamp days when the profile
+  // names no zone.
+  optional string time_zone = 17;
 }
 
 message CreateTaskResponse {

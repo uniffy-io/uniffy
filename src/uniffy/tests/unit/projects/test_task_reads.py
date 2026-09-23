@@ -19,7 +19,7 @@ async def test_list_tasks_does_not_require_search_writer(
     tasks_result.scalars.return_value.all.return_value = []
 
     session = MagicMock()
-    session.execute = AsyncMock(side_effect=[count_result, tasks_result])
+    session.execute = AsyncMock(side_effect=[tasks_result, count_result])
     get_project = AsyncMock(return_value=MagicMock())
     monkeypatch.setattr(ProjectOperations, "get_by_id", get_project)
 
@@ -42,7 +42,7 @@ async def test_list_tasks_orders_by_id_last(monkeypatch: pytest.MonkeyPatch) -> 
     tasks_result.scalars.return_value.all.return_value = []
 
     session = MagicMock()
-    session.execute = AsyncMock(side_effect=[count_result, tasks_result])
+    session.execute = AsyncMock(side_effect=[tasks_result, count_result])
     monkeypatch.setattr(ProjectOperations, "get_by_id", AsyncMock(return_value=MagicMock()))
 
     await TaskReader(session).list_tasks(
@@ -53,9 +53,9 @@ async def test_list_tasks_orders_by_id_last(monkeypatch: pytest.MonkeyPatch) -> 
         page_size=3,
     )
 
-    page_query = session.execute.await_args_list[1].args[0]
+    page_query = session.execute.await_args_list[0].args[0]
     sql = str(page_query.compile(dialect=postgresql.dialect()))
     order_by = sql.split("ORDER BY", 1)[1].split("LIMIT", 1)[0].strip()
     assert order_by == (
-        "projects_tasks.sort_order ASC, projects_tasks.created_at ASC, projects_tasks.id ASC"
+        "projects_tasks.sort_order ASC, projects_tasks.number ASC, projects_tasks.id ASC"
     )

@@ -2714,6 +2714,25 @@ server exposes the app's own API module:
       offers Save as new and Discard but no Save, and Save as new offers only Personal. The viewer's
       own view offers Rename, Duplicate, Copy link and Delete, and no Make shared.
 
+### Tasks filtered on the server
+
+The web still loads a whole project and filters it in the browser; the server filter serves the
+agent tool, the API and mobile. Needs an agent with the Tasks tools and a project with a few
+assigned, dated and tagged tasks.
+
+- [ ] Ask the agent for "my open tasks in <project>": its `tasks.list_tasks` call carries a filter
+      with the current user, and the reply lists exactly what a web view "Assignee is Me" shows.
+- [ ] Ask for the tasks of a shared view by name: the call names the view and the reply matches
+      that tab on the web. A misspelled view name comes back with the project's views listed.
+      The second user asking for the same "Assignee is Me" view gets their own tasks.
+- [ ] Ask for tasks due this week with the profile time zone set far from UTC (Settings >
+      Appearance): the reply matches a web view "Due on or before End of week".
+- [ ] Ask for a filter on a custom field that was deleted in project settings: the agent gets an
+      error that names the field instead of an empty list. A saved view that still names the
+      deleted field lists the same tasks through the agent as its tab does on the web.
+- [ ] Sort a view by title with tasks "Task 9" and "Task 10": the agent lists them in the order
+      the web table shows, 9 before 10.
+
 ## Pre-release sweep
 
 - [ ] All linters green: `./manage.py lint`.

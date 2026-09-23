@@ -3,7 +3,7 @@
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import String, cast, func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.auth.permissions.defaults import (
@@ -13,7 +13,6 @@ from uniffy.core.auth.permissions.defaults import (
 from uniffy.core.content.base_operations import BaseContentOperations
 from uniffy.core.models.projects.project import Project
 from uniffy.core.models.projects.task import Task
-from uniffy.core.models.tags.tag import TagAssignment
 from uniffy.core.search.indexer import SearchIndexer, build_content_urn
 from uniffy.core.storage import ObjectStorage
 from uniffy.core.types import (
@@ -95,29 +94,6 @@ class TaskContentOperations(BaseContentOperations[Task]):
             organization_id=task.organization_id,
             content_urn=build_content_urn(self.content_type, task.id),
             tag_ids=tag_ids,
-        )
-
-    def _tag_filter_subquery(self, tag_ids: list[UUID]):
-        """Task ids that carry every tag id (ALL)."""
-        urn_prefix = "urn:uniffy:content:TASK:"
-        urn_expr = func.concat(urn_prefix, cast(Task.id, String))
-        return (
-            select(Task.id)
-            .join(TagAssignment, TagAssignment.content_urn == urn_expr)
-            .where(TagAssignment.tag_id.in_(tag_ids))
-            .group_by(Task.id)
-            .having(func.count(func.distinct(TagAssignment.tag_id)) == len(tag_ids))
-        )
-
-    def _tag_any_subquery(self, tag_ids: list[UUID]):
-        """Task ids that carry at least one tag id (ANY)."""
-        urn_prefix = "urn:uniffy:content:TASK:"
-        urn_expr = func.concat(urn_prefix, cast(Task.id, String))
-        return (
-            select(Task.id)
-            .join(TagAssignment, TagAssignment.content_urn == urn_expr)
-            .where(TagAssignment.tag_id.in_(tag_ids))
-            .distinct()
         )
 
     async def _resolve_role(

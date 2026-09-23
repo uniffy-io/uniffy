@@ -2,6 +2,7 @@
 
 import math
 import re
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import date
 from enum import StrEnum
@@ -23,6 +24,7 @@ from uniffy_proto.projects.v1.projects_pb2 import (
     TaskFilterOperator,
     TaskFilterValue,
     TaskPseudoField,
+    TaskSort,
     ViewDefinition,
 )
 
@@ -85,17 +87,17 @@ class LayoutCase(StrEnum):
     RESOURCES = "resources"
 
 
-class _RefCase(StrEnum):
+class RefCase(StrEnum):
     FIELD_ID = "field_id"
     PSEUDO = "pseudo"
 
 
-class _NodeCase(StrEnum):
+class NodeCase(StrEnum):
     CONDITION = "condition"
     GROUP = "group"
 
 
-class _ValueCase(StrEnum):
+class ValueCase(StrEnum):
     IDS = "ids"
     TEXT = "text"
     NUMBER = "number"
@@ -105,7 +107,7 @@ class _ValueCase(StrEnum):
     FLAG = "flag"
 
 
-class _DateCase(StrEnum):
+class DateCase(StrEnum):
     FIXED = "fixed"
     RELATIVE = "relative"
 
@@ -167,7 +169,7 @@ def _normalize_group(group: TaskFilterGroup) -> None:
     if group.logic == FilterLogic.FILTER_LOGIC_UNSPECIFIED:
         group.logic = FilterLogic.FILTER_LOGIC_AND
     for node in group.nodes:
-        if node.WhichOneof("node") == _NodeCase.GROUP:
+        if node.WhichOneof("node") == NodeCase.GROUP:
             _normalize_group(node.group)
 
 
@@ -194,26 +196,31 @@ def normalize_definition(definition: ViewDefinition) -> ViewDefinition:
 
 
 class _Validator:
-    def __init__(self, fields: list[FieldDefinition]) -> None:
+    def __init__(self, fields: list[FieldDefinition], *, stored: bool = False) -> None:
         self.fields = {field.id: field for field in fields}
         self.node_count = 0
+        # A stored view may name fields and options deleted since; those match nothing.
+        self.stored = stored
 
     def resolve(self, ref: TaskFieldRef, where: str) -> _ResolvedField:
         case = ref.WhichOneof("ref")
-        if case == _RefCase.FIELD_ID:
+        if case == RefCase.FIELD_ID:
             field = self.fields.get(ref.field_id)
             kind = FIELD_TYPE_KINDS.get(ProjectFieldType(field.type)) if field else None
             if field is None or kind is None:
                 raise ValidationError("definition", f"{where}: unknown field '{ref.field_id}'")
             # The id rides along so a client can point at the offending condition.
             return _ResolvedField(kind, f"{field.name} ({field.id})", field, None)
-        if case == _RefCase.PSEUDO:
+        if case == RefCase.PSEUDO:
             kind = PSEUDO_FIELD_KINDS.get(ref.pseudo)
             if kind is None:
                 raise ValidationError("definition", f"{where}: unknown task attribute")
             label = _enum_label(TaskPseudoField.Name(ref.pseudo), "TASK_PSEUDO_FIELD_")
             return _ResolvedField(kind, label, None, ref.pseudo)
         raise ValidationError("definition", f"{where}: a field is required")
+
+    def is_gone(self, ref: TaskFieldRef) -> bool:
+        return ref.WhichOneof("ref") == RefCase.FIELD_ID and ref.field_id not in self.fields
 
     def filter_group(self, group: TaskFilterGroup, path: str, depth: int) -> None:
         if depth > MAX_FILTER_DEPTH:
@@ -226,14 +233,16 @@ class _Validator:
                 _fail(f"A filter holds at most {MAX_FILTER_NODES} conditions and groups")
             where = f"{path}.{index}" if path else str(index)
             case = node.WhichOneof("node")
-            if case == _NodeCase.CONDITION:
+            if case == NodeCase.CONDITION:
                 self.condition(node.condition, f"Filter condition {where}")
-            elif case == _NodeCase.GROUP:
+            elif case == NodeCase.GROUP:
                 self.filter_group(node.group, where, depth + 1)
             else:
                 _fail(f"Filter node {where} is empty")
 
     def condition(self, condition: TaskFilterCondition, where: str) -> None:
+        if self.stored and self.is_gone(condition.field):
+            return
         resolved = self.resolve(condition.field, where)
         operator = condition.operator
         label = resolved.label
@@ -261,7 +270,7 @@ class _Validator:
             self.number_value(operator, value, where, label)
         elif kind in (FieldKind.DATE, FieldKind.TIMESTAMP):
             self.date_condition_value(operator, value, where, label)
-        elif kind is FieldKind.BOOLEAN and value.WhichOneof("value") != _ValueCase.FLAG:
+        elif kind is FieldKind.BOOLEAN and value.WhichOneof("value") != ValueCase.FLAG:
             _fail(f"{where}: '{label}' needs yes or no")
 
     def id_value(
@@ -272,7 +281,7 @@ class _Validator:
         where: str,
     ) -> None:
         label = resolved.label
-        if value.WhichOneof("value") != _ValueCase.IDS:
+        if value.WhichOneof("value") != ValueCase.IDS:
             _fail(f"{where}: '{label}' needs a list of values")
         id_set = value.ids
         flags = _id_flags(id_set)
@@ -293,7 +302,11 @@ class _Validator:
             _fail(f"{where}: '{label}' lists a value twice")
 
         kind = resolved.kind
-        if kind in (FieldKind.SINGLE_SELECT, FieldKind.MULTI_SELECT) and resolved.field:
+        if (
+            kind in (FieldKind.SINGLE_SELECT, FieldKind.MULTI_SELECT)
+            and resolved.field
+            and not self.stored
+        ):
             known = option_ids(resolved.field.config or {})
             unknown = [option for option in ids if option not in known]
             if unknown:
@@ -310,7 +323,7 @@ class _Validator:
                     _fail(f"{where}: '{label}' has an invalid id '{raw}'")
 
     def text_value(self, value: TaskFilterValue, where: str, label: str) -> None:
-        if value.WhichOneof("value") != _ValueCase.TEXT or not value.text.strip():
+        if value.WhichOneof("value") != ValueCase.TEXT or not value.text.strip():
             _fail(f"{where}: '{label}' needs text")
         if len(value.text) > MAX_TEXT_LENGTH:
             _fail(f"{where}: '{label}' text is at most {MAX_TEXT_LENGTH} characters")
@@ -320,13 +333,13 @@ class _Validator:
     ) -> None:
         case = value.WhichOneof("value")
         if operator == TaskFilterOperator.TASK_FILTER_OPERATOR_BETWEEN:
-            if case != _ValueCase.NUMBER_RANGE:
+            if case != ValueCase.NUMBER_RANGE:
                 _fail(f"{where}: '{label}' needs a number range")
             bounds = (value.number_range.min, value.number_range.max)
             if not all(math.isfinite(bound) for bound in bounds) or bounds[0] > bounds[1]:
                 _fail(f"{where}: '{label}' needs a range whose start is not after its end")
             return
-        if case != _ValueCase.NUMBER or not math.isfinite(value.number):
+        if case != ValueCase.NUMBER or not math.isfinite(value.number):
             _fail(f"{where}: '{label}' needs a number")
 
     def date_condition_value(
@@ -334,27 +347,27 @@ class _Validator:
     ) -> None:
         case = value.WhichOneof("value")
         if operator == TaskFilterOperator.TASK_FILTER_OPERATOR_BETWEEN:
-            if case != _ValueCase.DATE_RANGE:
+            if case != ValueCase.DATE_RANGE:
                 _fail(f"{where}: '{label}' needs a date range")
             start = self.date_value(value.date_range.start, where, label)
             end = self.date_value(value.date_range.end, where, label)
             if start and end and start > end:
                 _fail(f"{where}: '{label}' needs a range whose start is not after its end")
             return
-        if case != _ValueCase.DATE:
+        if case != ValueCase.DATE:
             _fail(f"{where}: '{label}' needs a date")
         self.date_value(value.date, where, label)
 
     def date_value(self, value: TaskFilterDate, where: str, label: str) -> date | None:
         case = value.WhichOneof("value")
-        if case == _DateCase.FIXED:
+        if case == DateCase.FIXED:
             if not _DATE_PATTERN.match(value.fixed):
                 _fail(f"{where}: '{label}' needs a date as YYYY-MM-DD")
             try:
                 return date.fromisoformat(value.fixed)
             except ValueError:
                 _fail(f"{where}: '{value.fixed}' is not a calendar date")
-        if case == _DateCase.RELATIVE:
+        if case == DateCase.RELATIVE:
             if value.relative.anchor not in _ANCHORS:
                 _fail(f"{where}: '{label}' has a relative date without an anchor")
             if abs(value.relative.offset_days) > MAX_RELATIVE_OFFSET_DAYS:
@@ -362,11 +375,11 @@ class _Validator:
             return None
         _fail(f"{where}: '{label}' needs a date")
 
-    def sort(self, definition: ViewDefinition) -> None:
-        if len(definition.sort) > MAX_SORT_KEYS:
+    def sort(self, keys: Sequence[TaskSort]) -> None:
+        if len(keys) > MAX_SORT_KEYS:
             _fail(f"A view sorts by at most {MAX_SORT_KEYS} fields")
         seen: set[tuple[str | None, str, int]] = set()
-        for index, key in enumerate(definition.sort, start=1):
+        for index, key in enumerate(keys, start=1):
             where = f"Sort key {index}"
             resolved = self.resolve(key.field, where)
             if resolved.kind not in SORTABLE_KINDS:
@@ -451,9 +464,46 @@ def validate_definition(definition: ViewDefinition, fields: list[FieldDefinition
     validator.layout(definition)
     if definition.HasField("filter"):
         validator.filter_group(definition.filter, "", 1)
-    validator.sort(definition)
+    validator.sort(definition.sort)
     validator.group_by(definition)
     validator.columns(definition)
+
+
+def validate_task_filter(
+    task_filter: TaskFilterGroup, fields: list[FieldDefinition], *, stored: bool = False
+) -> TaskFilterGroup:
+    """A task list's filter, held to the rules a saved view's is; ``stored`` for a saved view's
+    own filter, which may name fields and options deleted since it was saved.
+    """
+    normalized = TaskFilterGroup()
+    normalized.CopyFrom(task_filter)
+    _normalize_group(normalized)
+    try:
+        _Validator(fields, stored=stored).filter_group(normalized, "", 1)
+    except ValidationError as exc:
+        raise ValidationError("query", exc.message) from None
+    return normalized
+
+
+def validate_task_sort(
+    sort: Sequence[TaskSort], fields: list[FieldDefinition], *, stored: bool = False
+) -> list[TaskSort]:
+    """A task list's sort keys; ``stored`` drops keys on fields deleted since, as the web does."""
+    validator = _Validator(fields, stored=stored)
+    keys = []
+    for key in sort:
+        if stored and validator.is_gone(key.field):
+            continue
+        normalized = TaskSort()
+        normalized.CopyFrom(key)
+        if normalized.direction == SortDirection.SORT_DIRECTION_UNSPECIFIED:
+            normalized.direction = SortDirection.SORT_DIRECTION_ASC
+        keys.append(normalized)
+    try:
+        validator.sort(keys)
+    except ValidationError as exc:
+        raise ValidationError("query", exc.message) from None
+    return keys
 
 
 def prepare_definition(
