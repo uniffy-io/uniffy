@@ -1,4 +1,4 @@
-import type { ViewType, FilterConfig, SortConfig } from "./views";
+import type { ViewDefinition } from "./views";
 
 export type ProjectScope = "all" | "personal" | "organization";
 
@@ -42,8 +42,15 @@ export interface HistoryEntry {
 }
 
 export interface ProjectsUiState {
-  viewMode: ViewType;
-  currentViewId: string | null;
+  /** Last opened view per project id. */
+  activeViewIds: Record<string, string>;
+  /**
+   * Unsaved edits per project id, then per view id (view ids repeat across projects). A view with
+   * no entry shows its saved definition; an entry is dropped once it matches the saved one again.
+   */
+  viewDrafts: Record<string, Record<string, ViewDefinition>>;
+  /** Expanded parent rows of the table outline per project; row state, never part of a view. */
+  outlineExpanded: Record<string, string[]>;
 
   selectedTaskId: string | null;
   selectedTaskIds: string[];
@@ -67,32 +74,12 @@ export interface ProjectsUiState {
 
   focusedCell: { taskId: string; fieldId: string } | null;
 
-  /** Keyed by projectId -> fieldId -> px width. */
-  columnWidths: Record<string, Record<string, number>>;
-
-  /** Keyed by projectId -> hidden field ids. */
-  hiddenColumns: Record<string, string[]>;
-
   projectScope: ProjectScope;
 
-  /** Transient filter/sort/group state - not persisted to view config. */
-  activeFilterConfig: FilterConfig | null;
-  activeSortConfig: SortConfig | null;
-  activeGroupByFieldId: string | null;
+  /** Transient: a search never belongs to a view and never makes one dirty. */
   searchQuery: string;
 
-  /** Sprint ID, `__backlog__` for unassigned, or null for all. */
-  sprintFilter: string | null;
-  taskTypeFilter: string | null;
-  /** Only top-level tasks (parent_id IS NULL). */
-  rootOnlyFilter: boolean;
-  /** Scope tasks to the ancestry of this epic. */
-  inEpicFilter: string | null;
-
-  tableOutlineEnabled: boolean;
-
   roadmapStartDate: string;
-  roadmapZoomLevel: "day" | "week" | "month";
 
   autosave: AutosaveState;
 
@@ -107,11 +94,10 @@ function localTodayString(): string {
   return `${now.getFullYear()}-${month}-${day}`;
 }
 
-import { loadColumnWidths, loadHiddenColumns } from "@/features/projects/utils/tableColumnStorage";
-
 export const initialProjectsUiState: ProjectsUiState = {
-  viewMode: "table",
-  currentViewId: null,
+  activeViewIds: {},
+  viewDrafts: {},
+  outlineExpanded: {},
 
   selectedTaskId: null,
   selectedTaskIds: [],
@@ -135,25 +121,11 @@ export const initialProjectsUiState: ProjectsUiState = {
 
   focusedCell: null,
 
-  columnWidths: loadColumnWidths(),
-  hiddenColumns: loadHiddenColumns(),
-
   projectScope: "all",
 
-  activeFilterConfig: null,
-  activeSortConfig: null,
-  activeGroupByFieldId: null,
   searchQuery: "",
 
-  sprintFilter: null,
-  taskTypeFilter: null,
-  rootOnlyFilter: false,
-  inEpicFilter: null,
-
-  tableOutlineEnabled: true,
-
   roadmapStartDate: localTodayString(),
-  roadmapZoomLevel: "week",
 
   autosave: {
     isSaving: {},

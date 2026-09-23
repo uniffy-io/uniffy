@@ -45,10 +45,6 @@ export type {
   ViewColumnWidth,
   SortDirection,
   RoadmapZoomLevel,
-  FilterOperator,
-  FilterCondition,
-  FilterConfig,
-  SortConfig,
 } from "./views";
 
 export type {

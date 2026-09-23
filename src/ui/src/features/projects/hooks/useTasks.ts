@@ -4,8 +4,16 @@ import {
   selectTasksForProject,
   selectTasksByStatus,
   selectCurrentProjectId,
+  selectTasksMap,
   optimisticUpdateTask,
 } from "@/features/projects/store/projectsSlice";
+import {
+  selectActiveSprint,
+  selectSprintsForProject,
+} from "@/features/projects/store/sprintsSlice";
+import { selectDraftFilter, selectDraftSort } from "@/features/projects/store/viewSelectors";
+import { effectiveDayKey } from "@/shared/utils/dateFormatting";
+import { getWeekStartsOn } from "@/shared/utils/weekStart";
 import {
   fetchProjectTasks,
   createTask,
@@ -14,9 +22,14 @@ import {
   deleteTask,
 } from "@/features/projects/store/projectsThunks";
 import { useSubjectResolver } from "@/components/subject/hooks/useSubjectResolver";
-import { applyFilters, buildTaskHierarchyIndex } from "@/features/projects/utils/filterTasks";
+import {
+  applyFilters,
+  buildTaskHierarchyIndex,
+  type FilterContext,
+} from "@/features/projects/utils/filterTasks";
 import { personSortIds, sortTasks } from "@/features/projects/utils/sortTasks";
 import type {
+  Task,
   CreateTaskRequest,
   UpdateTaskRequest,
   MoveTaskRequest,
@@ -101,32 +114,54 @@ interface UseFilteredTasksOptions {
   includeSubtasks?: boolean;
 }
 
+/** Everything the view filter needs beyond the task itself, for the given project. */
+export function useTaskFilterContext(projectId: string, tasks: Task[]): FilterContext {
+  const fieldDefinitions = useAppSelector(
+    (state) => state.projects.projects[projectId]?.fieldDefinitions,
+  );
+  const tasksById = useAppSelector(selectTasksMap);
+  const currentUserId = useAppSelector((state) => state.auth.user?.id ?? null);
+  const activeSprintId = useAppSelector(
+    (state) => selectActiveSprint(projectId)(state)?.id ?? null,
+  );
+  const today = effectiveDayKey(new Date());
+
+  // Hierarchy index walks the full task set so ancestry stays correct when a filter hides a parent.
+  const hierarchy = useMemo(() => buildTaskHierarchyIndex(tasks), [tasks]);
+  const fieldsById = useMemo(
+    () => new Map((fieldDefinitions ?? []).map((field) => [field.id, field])),
+    [fieldDefinitions],
+  );
+
+  return useMemo(
+    () => ({
+      hierarchy,
+      fieldsById,
+      lookup: (id: string) => tasksById[id],
+      currentUserId,
+      activeSprintId,
+      today,
+      weekStartsOn: getWeekStartsOn(),
+    }),
+    [hierarchy, fieldsById, tasksById, currentUserId, activeSprintId, today],
+  );
+}
+
+/** The open view's tasks: its draft filter and sort, plus the transient search. */
 export function useFilteredTasks(projectId: string, options: UseFilteredTasksOptions = {}) {
   const { includeSubtasks = false } = options;
   // One selector instance per project, so the task array keeps its identity between renders.
   const selectProjectTasks = useMemo(() => selectTasksForProject(projectId), [projectId]);
   const tasks = useAppSelector(selectProjectTasks);
   const searchQuery = useAppSelector((state) => state.projectsUi.searchQuery);
-  const sortConfig = useAppSelector((state) => state.projectsUi.activeSortConfig);
-  const filterConfig = useAppSelector((state) => state.projectsUi.activeFilterConfig);
-  const sprintFilter = useAppSelector((state) => state.projectsUi.sprintFilter);
-  const taskTypeFilter = useAppSelector((state) => state.projectsUi.taskTypeFilter);
-  const rootOnlyFilter = useAppSelector((state) => state.projectsUi.rootOnlyFilter);
-  const inEpicFilter = useAppSelector((state) => state.projectsUi.inEpicFilter);
-  const fieldDefinitions = useAppSelector(
-    (state) => state.projects.projects[projectId]?.fieldDefinitions,
-  );
+  const filter = useAppSelector(selectDraftFilter(projectId));
+  const sort = useAppSelector(selectDraftSort(projectId));
+  const sprints = useAppSelector(selectSprintsForProject(projectId));
+  const ctx = useTaskFilterContext(projectId, tasks);
 
-  // Hierarchy index walks the full task set so ancestry stays correct when quick filters hide a parent.
-  const hierarchyIndex = useMemo(() => buildTaskHierarchyIndex(tasks), [tasks]);
-
-  const fieldsById = useMemo(
-    () => new Map((fieldDefinitions ?? []).map((field) => [field.id, field])),
-    [fieldDefinitions],
-  );
   const personIds = useMemo(
-    () => personSortIds(tasks, sortConfig, fieldsById),
-    [tasks, sortConfig, fieldsById],
+    () => personSortIds(tasks, sort, ctx.fieldsById),
+    [tasks, sort, ctx.fieldsById],
   );
   const { subjects: sortSubjects } = useSubjectResolver(personIds);
   const subjectNameById = useMemo(
@@ -134,18 +169,8 @@ export function useFilteredTasks(projectId: string, options: UseFilteredTasksOpt
     [sortSubjects],
   );
 
-  const filteredTasks = useMemo(() => {
+  return useMemo(() => {
     let result = includeSubtasks ? tasks.slice() : tasks.filter((t) => !t.parentId);
-
-    if (rootOnlyFilter) {
-      result = result.filter((t) => !t.parentId);
-    }
-
-    if (inEpicFilter) {
-      result = result.filter(
-        (t) => t.id === inEpicFilter || hierarchyIndex.ancestorIdsById.get(t.id)?.has(inEpicFilter),
-      );
-    }
 
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
@@ -156,33 +181,14 @@ export function useFilteredTasks(projectId: string, options: UseFilteredTasksOpt
       );
     }
 
-    if (sprintFilter === "__backlog__") {
-      result = result.filter((task) => task.sprintId === null);
-    } else if (sprintFilter) {
-      result = result.filter((task) => task.sprintId === sprintFilter);
-    }
+    result = applyFilters(result, filter, ctx);
 
-    if (taskTypeFilter) {
-      result = result.filter((task) => (task.taskType || "task") === taskTypeFilter);
-    }
-
-    result = applyFilters(result, filterConfig, hierarchyIndex);
-
-    return sortTasks(result, sortConfig, { fieldsById, subjectNameById });
-  }, [
-    tasks,
-    searchQuery,
-    sortConfig,
-    filterConfig,
-    sprintFilter,
-    taskTypeFilter,
-    rootOnlyFilter,
-    inEpicFilter,
-    includeSubtasks,
-    hierarchyIndex,
-    fieldsById,
-    subjectNameById,
-  ]);
-
-  return filteredTasks;
+    return sortTasks(result, sort, {
+      fieldsById: ctx.fieldsById,
+      subjectNameById,
+      sprints,
+      hierarchy: ctx.hierarchy,
+      lookup: ctx.lookup,
+    });
+  }, [tasks, searchQuery, filter, sort, includeSubtasks, ctx, subjectNameById, sprints]);
 }

@@ -2667,6 +2667,23 @@ the browser console, where the dev server exposes the app's own API module:
 - [ ] `(self-hosted)` `./manage.py db migrate` on a copy of a database from before the upgrade
       completes, and every project has six views afterwards.
 
+### Working state of a view
+
+- [ ] Open a project: the switcher lists its views, and the project default opens. Reload after
+      opening another view: that view opens again.
+- [ ] In the Table view pick a type in Display, group by Priority, collapse a group, resize the Title
+      column, hide a column and shift-click two headers to sort by both. Reload: all of it is still
+      there.
+- [ ] Switch to the Board view: none of the Table edits show there. Back on Table they are intact.
+- [ ] Set a sprint or type filter in one project, then open another project: it shows its default
+      view with no filter.
+- [ ] The Type, Sprint, Epic, Tags and Top-level chips come from the filter; removing one chip
+      removes only that condition. A condition added in Filter shows as "Conditions · 1".
+- [ ] Roadmap zoom (Day, Week, Month) belongs to the roadmap view: it survives a reload and belongs
+      to that view only.
+- [ ] Log out and back in as someone else in the same browser: no view edits of the first account
+      are left.
+
 ## Pre-release sweep
 
 - [ ] All linters green: `./manage.py lint`.

@@ -17,6 +17,9 @@ import {
   openCreateTaskModal,
 } from "@/features/projects/store/projectsUiSlice";
 import { useFilteredTasks } from "@/features/projects/hooks/useTasks";
+import { selectActiveDefinition } from "@/features/projects/store/viewSelectors";
+import { setDraftLayout } from "@/features/projects/store/viewDraftThunks";
+import { RoadmapZoom } from "@uniffy/proto/projects/v1/projects_pb";
 import { useProjectPermission } from "@/features/projects/hooks/useProjectPermissions";
 import { selectSprintsForProject } from "@/features/projects/store/sprintsSlice";
 import { SYSTEM_FIELD_IDS } from "@/features/projects/types";
@@ -96,6 +99,19 @@ function computeRollupSpans(tasks: Task[]): Map<string, RollupSpan> {
   return spans;
 }
 
+const ZOOM_LEVELS: Record<RoadmapZoom, ZoomLevel> = {
+  [RoadmapZoom.UNSPECIFIED]: "week",
+  [RoadmapZoom.DAY]: "day",
+  [RoadmapZoom.WEEK]: "week",
+  [RoadmapZoom.MONTH]: "month",
+};
+
+const ROADMAP_ZOOMS: Record<ZoomLevel, RoadmapZoom> = {
+  day: RoadmapZoom.DAY,
+  week: RoadmapZoom.WEEK,
+  month: RoadmapZoom.MONTH,
+};
+
 export function RoadmapView() {
   const dispatch = useAppDispatch();
   const project = useAppSelector(selectCurrentProject);
@@ -107,8 +123,9 @@ export function RoadmapView() {
   const searchQuery = useAppSelector(selectSearchQuery);
   const { canEdit } = useProjectPermission();
 
-  // Zoom level state
-  const [zoom, setZoom] = useState<ZoomLevel>("week");
+  const definition = useAppSelector(selectActiveDefinition(project?.id ?? ""));
+  const zoom: ZoomLevel =
+    definition.layout.type === "roadmap" ? ZOOM_LEVELS[definition.layout.zoom] : "week";
 
   // Collapsed parents; descendants drop out of the ordered rows entirely.
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
@@ -217,11 +234,16 @@ export function RoadmapView() {
   }, [zoom]);
 
   // Handle zoom change - also scroll to today
-  const handleZoomChange = useCallback((newZoom: ZoomLevel) => {
-    setZoom(newZoom);
-    setBaseDate(getStartOfPeriod(new Date(), newZoom));
-    setScrollLeft(PERIODS_BEFORE * COLUMN_WIDTHS[newZoom] - 200);
-  }, []);
+  const handleZoomChange = useCallback(
+    (newZoom: ZoomLevel) => {
+      if (project) {
+        dispatch(setDraftLayout(project.id, { type: "roadmap", zoom: ROADMAP_ZOOMS[newZoom] }));
+      }
+      setBaseDate(getStartOfPeriod(new Date(), newZoom));
+      setScrollLeft(PERIODS_BEFORE * COLUMN_WIDTHS[newZoom] - 200);
+    },
+    [dispatch, project],
+  );
 
   // Handle task list wheel: directly scroll the timeline element (browser clamps)
   const handleTaskListWheel = useCallback((deltaY: number) => {

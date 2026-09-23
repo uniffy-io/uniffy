@@ -6,10 +6,6 @@ import {
   setSprintsForProject,
   sprintsReducer,
 } from "@/features/projects/store/sprintsSlice";
-import {
-  selectColumnWidthsForProject,
-  selectHiddenColumnsForProject,
-} from "@/features/projects/store/projectsUiSlice";
 import type { Sprint } from "@/features/projects/types/project";
 
 function sprint(id: string, sortOrder: number): Sprint {
@@ -64,18 +60,5 @@ describe("selectSprintsForProject", () => {
     expect(empty).toEqual([]);
     expect(selectSprintsForProject("project-1")(state)).toHaveLength(2);
     expect(selectSprintsForProject("project-2")(state)).toBe(empty);
-  });
-});
-
-describe("table column selectors", () => {
-  const state = { projectsUi: { columnWidths: {}, hiddenColumns: {} } } as unknown as RootState;
-
-  it("return stable empties for a project with no saved layout", () => {
-    expect(selectColumnWidthsForProject("project-1")(state)).toBe(
-      selectColumnWidthsForProject("project-2")(state),
-    );
-    expect(selectHiddenColumnsForProject("project-1")(state)).toBe(
-      selectHiddenColumnsForProject("project-2")(state),
-    );
   });
 });
