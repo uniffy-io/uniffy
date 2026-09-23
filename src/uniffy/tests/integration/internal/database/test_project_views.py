@@ -43,7 +43,7 @@ PERSONAL = ProjectViewVisibility.PERSONAL
 @pytest.fixture(autouse=True)
 def quiet_realtime():
     with patch(
-        "uniffy.domains.projects.views.operations.publish_content_access_changed",
+        "uniffy.domains.projects.audience.publish_content_access_changed",
         AsyncMock(),
     ):
         yield
