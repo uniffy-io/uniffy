@@ -33,6 +33,7 @@ from uniffy.domains.permissions.members import (
     StagedContentMemberAdd,
 )
 from uniffy.domains.projects import queries
+from uniffy.domains.projects.audience import publish_views_changed
 from uniffy.domains.projects.defaults import (
     stage_default_project_fields,
     stage_default_project_views,
@@ -278,10 +279,13 @@ class ProjectOperations(BaseContentOperations[Project]):
 
         name_changed = "name" in kwargs and kwargs["name"] != project.name  # noqa: PLR2004
 
+        default_changed = False
         if "default_view_id" in kwargs:  # noqa: PLR2004 - update keyword name
-            project.default_view_id = await self._resolve_default_view_id(
+            default_view_id = await self._resolve_default_view_id(
                 project.id, kwargs.pop("default_view_id")
             )
+            default_changed = default_view_id != project.default_view_id
+            project.default_view_id = default_view_id
 
         if "slug" in kwargs:  # noqa: PLR2004 - update keyword name
             project.slug = await self._resolve_renamed_slug(project, kwargs.pop("slug"))
@@ -304,6 +308,9 @@ class ProjectOperations(BaseContentOperations[Project]):
 
         await self._index_for_search(project)
         await self.session.commit()
+
+        if default_changed:
+            await publish_views_changed(self.session, project)
 
         if name_changed:
             try:

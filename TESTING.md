@@ -2638,10 +2638,11 @@ due date, spread over two projects.
 
 ## Projects: personal and shared views
 
-Views have no management screen yet, so most checks read the `GetProject` and `ListProjects`
-responses in the browser's network tab. Needs two browsers: the project owner, and a second user
-who has the project shared with them as a viewer. On a local stack the view calls can be made from
-the browser console, where the dev server exposes the app's own API module:
+Views are managed from the tab strip in the project header; the server-rule checks below read
+the `GetProject` and `ListProjects` responses in the browser's network tab. Needs two browsers:
+the project owner, and a second user who has the project shared with them (as an editor, then as
+a viewer). On a local stack the view calls can be made from the browser console, where the dev
+server exposes the app's own API module:
 `const { projectsApi } = await import("/src/features/projects/api/projectsApi.ts")`.
 
 - [ ] `(both products)` After upgrading, every existing project lists six shared views (Table,
@@ -2669,20 +2670,49 @@ the browser console, where the dev server exposes the app's own API module:
 
 ### Working state of a view
 
-- [ ] Open a project: the switcher lists its views, and the project default opens. Reload after
-      opening another view: that view opens again.
+- [ ] Open a project: the tabs are its views, and the project default opens. Reload after opening
+      another view: that view opens again.
 - [ ] In the Table view pick a type in Display, group by Priority, collapse a group, resize the Title
-      column, hide a column and shift-click two headers to sort by both. Reload: all of it is still
-      there.
+      column, hide a column and shift-click two headers to sort by both. The tab shows a dot; reload:
+      all of it is still there and the dot remains.
 - [ ] Switch to the Board view: none of the Table edits show there. Back on Table they are intact.
 - [ ] Set a sprint or type filter in one project, then open another project: it shows its default
       view with no filter.
 - [ ] The Type, Sprint, Epic, Tags and Top-level chips come from the filter; removing one chip
       removes only that condition. A condition added in Filter shows as "Conditions · 1".
-- [ ] Roadmap zoom (Day, Week, Month) belongs to the roadmap view: it survives a reload and belongs
-      to that view only.
+- [ ] Typing in the search field never puts a dot on the tab.
+- [ ] Roadmap zoom (Day, Week, Month) belongs to the roadmap view: it survives a reload and dirties
+      that view only.
 - [ ] Log out and back in as someone else in the same browser: no view edits of the first account
       are left.
+
+### View tabs
+
+- [ ] Only the open view shows its name; the other tabs show their layout icon, and hovering one
+      shows its name. Opening another tab moves the name to it.
+- [ ] With more views than the bar fits, the strip scrolls, the "All views" menu lists every view,
+      and "+" stays visible. At 768 px the same; at 375 px the tabs become a select with the options
+      and "+" beside it.
+- [ ] Edit a shared view as an editor: Save, Save as new and Discard appear. Discard restores the
+      saved view. Save clears the dot, a reload shows the saved state, and the second browser shows
+      it without a reload.
+- [ ] Save as new from an edited shared view, choosing Personal: the new view opens with the edits,
+      the shared view keeps its saved state with no dot, and the second browser does not list it.
+- [ ] "+" offers the six layouts and creates a personal view named after the layout ("Board 2" when
+      "Board" exists).
+- [ ] Rename inline (Enter saves, Escape cancels), Duplicate (a personal copy of what the view shows),
+      Make shared, Make personal and Delete (with a confirmation) each update the tab row without a
+      reload; shared changes reach the second browser. Deleting the open view opens the default.
+- [ ] As the owner, Set as project default: the tab shows "Project default" in both browsers
+      without a reload. The default view offers no Make personal.
+- [ ] As the owner, drag a shared tab to a new place: both browsers show the new order. As an editor,
+      shared tabs do not drag.
+- [ ] `?view=` follows the open view on the project and on an open task. A link to a shared view
+      opens it for the second user; a link to the owner's personal view opens the default for the
+      second user and replaces the parameter. Copy link puts the view link on the clipboard.
+- [ ] As a viewer: the menu on a shared view has only Duplicate and Copy link, an edited shared view
+      offers Save as new and Discard but no Save, and Save as new offers only Personal. The viewer's
+      own view offers Rename, Duplicate, Copy link and Delete, and no Make shared.
 
 ## Pre-release sweep
 

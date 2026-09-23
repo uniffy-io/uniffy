@@ -29,7 +29,6 @@ import {
 import { popoverShellClass } from "@/components/ui/popover";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import {
-  openView,
   setSearchQuery,
   selectSearchQuery,
   selectSelectedTaskIds,
@@ -44,7 +43,7 @@ import { deleteTasks, bulkUpdateTasksThunk } from "@/features/projects/store/pro
 import { ProjectIcon } from "@/features/projects/utils/projectIcons";
 import { SYSTEM_FIELD_IDS } from "@/features/projects/types";
 import { statusPaint } from "@/features/projects/utils/statusPaint";
-import type { Project, ViewConfig } from "@/features/projects/types";
+import type { Project } from "@/features/projects/types";
 import { FilterBuilder } from "@/features/projects/components/views/table/FilterBuilder";
 import { ManageStatusesDialog } from "@/features/projects/components/views/board/ManageStatusesDialog";
 import {
@@ -66,9 +65,12 @@ import type { ViewGroupBy } from "@/features/projects/types/views";
 import {
   selectActiveDefinition,
   selectActiveView,
+  selectDirtyViewIds,
   selectProjectViews,
 } from "@/features/projects/store/viewSelectors";
-import { VIEW_TYPE_ICONS } from "@/features/projects/utils/viewTypes";
+import { ViewTabs } from "@/features/projects/components/header/ViewTabs";
+import { ViewDraftActions } from "@/features/projects/components/header/ViewDraftActions";
+import { viewGates } from "@/features/projects/utils/viewGates";
 import {
   setDraftFilter,
   setDraftGroupBy,
@@ -101,10 +103,12 @@ interface Option {
 export function ProjectHeader({ project }: ProjectHeaderProps) {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
-  const { isMobile, isMobileOrTablet, isDesktop } = useBreakpoint();
+  const { isMobile, isMobileOrTablet } = useBreakpoint();
   const views = useAppSelector(selectProjectViews(project.id));
   const activeView = useAppSelector(selectActiveView(project.id));
   const definition = useAppSelector(selectActiveDefinition(project.id));
+  const dirtyViewIds = useAppSelector(selectDirtyViewIds(project.id));
+  const currentUserId = useAppSelector((state) => state.auth.user?.id ?? null);
   const viewMode = definition.layout.type;
   const filter = definition.filter;
   const searchQuery = useAppSelector(selectSearchQuery);
@@ -112,6 +116,14 @@ export function ProjectHeader({ project }: ProjectHeaderProps) {
   const isSidebarOpen = useAppSelector(selectIsSidebarOpen);
   const detailViewMode = useAppSelector(selectDetailViewMode);
   const { canEdit, canManage } = useProjectPermission();
+  const activeGates = activeView
+    ? viewGates(activeView, {
+        canEdit,
+        canManage,
+        currentUserId,
+        isDefault: project.defaultViewId === activeView.id,
+      })
+    : null;
   const activeSprint = useAppSelector(selectActiveSprint(project.id));
   const allSprints = useAppSelector(selectSprintsForProject(project.id));
   const { chips, otherCount } = useMemo(() => summarizeFilter(filter), [filter]);
@@ -141,7 +153,7 @@ export function ProjectHeader({ project }: ProjectHeaderProps) {
 
   // Label visibility tracks the real control-bar width, not the viewport: the
   // surrounding panels are resizable, so a wide viewport can still leave the
-  // bar narrow. Full labels only appear once the whole switcher fits.
+  // bar narrow.
   const controlBarRef = useRef<HTMLDivElement>(null);
   const [controlBarWidth, setControlBarWidth] = useState(0);
   useEffect(() => {
@@ -151,18 +163,9 @@ export function ProjectHeader({ project }: ProjectHeaderProps) {
     observer.observe(el);
     return () => observer.disconnect();
   }, []);
-  // The row never wraps, so a narrower bar sheds labels: first the inactive views, then Filter and
-  // Display (search starts shrinking), then the active view's.
-  const viewLabels: ViewLabels =
-    controlBarWidth === 0
-      ? isDesktop
-        ? "all"
-        : "active"
-      : controlBarWidth > 1040
-        ? "all"
-        : controlBarWidth >= 440
-          ? "active"
-          : "none";
+  // The row never wraps, so a narrower bar sheds labels: first Filter and Display (search starts
+  // shrinking), then the active view's name.
+  const showActiveViewLabel = controlBarWidth === 0 || controlBarWidth >= 440;
   const compactControls = isMobile || (controlBarWidth > 0 && controlBarWidth < 720);
 
   const statusField = project.fieldDefinitions.find((f) => f.id === SYSTEM_FIELD_IDS.STATUS);
@@ -187,10 +190,6 @@ export function ProjectHeader({ project }: ProjectHeaderProps) {
         updates: { config: updatedConfig },
       }),
     );
-  };
-
-  const handleViewChange = (viewId: string) => {
-    dispatch(openView({ projectId: project.id, viewId }));
   };
 
   const applyQuickFilter = (kind: QuickFilterKind, values: string[]) => {
@@ -353,12 +352,26 @@ export function ProjectHeader({ project }: ProjectHeaderProps) {
 
         {/* Control bar: view switcher (left) vs slice controls (right) */}
         <PaneHeaderControls ref={controlBarRef} className="relative flex-nowrap">
-          <ViewSwitcher
+          <ViewTabs
+            project={project}
             views={views}
             activeViewId={activeView?.id ?? null}
-            onChange={handleViewChange}
-            labels={viewLabels}
+            dirtyViewIds={dirtyViewIds}
+            showActiveLabel={showActiveViewLabel}
+            compact={isMobile}
+            canEdit={canEdit}
+            canManage={canManage}
           />
+
+          {activeView && dirtyViewIds.includes(activeView.id) && (
+            <ViewDraftActions
+              projectId={project.id}
+              view={activeView}
+              canSave={activeGates?.canEdit ?? false}
+              canShare={canEdit}
+              compact={compactControls}
+            />
+          )}
 
           {activeSprint && !compactControls && (
             <span className="shrink-0 text-xs font-medium bg-primary/10 text-primary px-2 py-0.5 rounded-full">
@@ -575,51 +588,6 @@ export function ProjectHeader({ project }: ProjectHeaderProps) {
         loading={isDeleting}
       />
     </>
-  );
-}
-
-type ViewLabels = "all" | "active" | "none";
-
-interface ViewSwitcherProps {
-  views: readonly ViewConfig[];
-  activeViewId: string | null;
-  onChange: (viewId: string) => void;
-  labels: ViewLabels;
-}
-
-function ViewSwitcher({ views, activeViewId, onChange, labels }: ViewSwitcherProps) {
-  return (
-    <div
-      className={cn(
-        "inline-flex items-center gap-0.5 rounded-lg bg-muted/60 p-0.5",
-        // Icon-only on a phone: the switcher gives way (and scrolls) before Filter and Display do.
-        labels === "none" ? "min-w-0 shrink overflow-x-auto" : "shrink-0",
-      )}
-    >
-      {views.map((view) => {
-        const isActive = view.id === activeViewId;
-        const withLabel = labels === "all" || (labels === "active" && isActive);
-        return (
-          <button
-            key={view.id}
-            type="button"
-            onClick={() => onChange(view.id)}
-            title={view.name}
-            aria-pressed={isActive}
-            className={cn(
-              "flex shrink-0 items-center gap-1.5 py-1 rounded-md text-sm transition-all",
-              labels === "none" ? "px-2" : "px-2.5",
-              isActive
-                ? "bg-card text-foreground shadow-sm font-medium"
-                : "text-muted-foreground hover:text-foreground",
-            )}
-          >
-            <span className="shrink-0 flex items-center">{VIEW_TYPE_ICONS[view.type]}</span>
-            {withLabel && <span className="truncate">{view.name}</span>}
-          </button>
-        );
-      })}
-    </div>
   );
 }
 

@@ -4,28 +4,23 @@ import secrets
 from datetime import UTC, datetime
 from uuid import UUID
 
-from loguru import logger
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from uniffy_proto.projects.v1.projects_pb2 import ViewDefinition
 
 from uniffy.core.auth.permissions.roles import role_can_edit, role_can_manage
-from uniffy.core.converters.common_proto import content_type_to_proto
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
-from uniffy.core.events.realtime import ContentAccessAction, publish_content_access_changed
 from uniffy.core.models.projects.project import Project
 from uniffy.core.models.projects.view_config import ProjectViewVisibility, ViewConfig
-from uniffy.core.types import ContentRole, ContentType
+from uniffy.core.types import ContentRole
 from uniffy.domains.projects import queries
-from uniffy.domains.projects.audience import resolve_project_audience
+from uniffy.domains.projects.audience import publish_views_changed
 from uniffy.domains.projects.projects import ProjectOperations
 from uniffy.domains.projects.views.definition import (
     definition_to_dict,
     prepare_definition,
     validate_view_name,
 )
-
-logger = logger.bind(component="projects.views.operations")
 
 _RESOURCE = "project view"
 
@@ -200,17 +195,4 @@ class ProjectViewOperations:
         return await queries.get_views_for_project(self.session, project_id, user_id)
 
     async def _publish_views_changed(self, project: Project) -> None:
-        """Runs after commit; a failed publish leaves clients to refetch on their next load."""
-        try:
-            audience = await resolve_project_audience(self.session, project.organization_id, project)
-            await publish_content_access_changed(
-                content_type=content_type_to_proto(ContentType.PROJECT),
-                content_id=project.id,
-                action=ContentAccessAction.VIEWS_CHANGED,
-                organization_id=project.organization_id,
-                target_user_ids=audience,
-            )
-        except Exception:
-            logger.opt(exception=True).warning(
-                "Publishing a project view change failed", project_id=str(project.id)
-            )
+        await publish_views_changed(self.session, project)

@@ -16,10 +16,10 @@ from uniffy.core.models.projects.view_config import (
     ViewConfig,
 )
 from uniffy.core.types import ContentRole
-from uniffy.domains.projects import queries
+from uniffy.domains.projects import audience, queries
+from uniffy.domains.projects import projects as project_operations
 from uniffy.domains.projects.projects import ProjectOperations
 from uniffy.domains.projects.rpc import map_domain_error
-from uniffy.domains.projects.views import operations as view_operations
 from uniffy.domains.projects.views.operations import ProjectViewOperations
 
 SHARED = ProjectViewVisibility.SHARED
@@ -50,9 +50,9 @@ def harness(monkeypatch: pytest.MonkeyPatch) -> Harness:
     monkeypatch.setattr(ProjectOperations, "get_for_view_mutation", AsyncMock(return_value=project))
     monkeypatch.setattr(queries, "get_fields_for_project", AsyncMock(return_value=[]))
     monkeypatch.setattr(queries, "get_views_for_project", AsyncMock(return_value=[]))
-    monkeypatch.setattr(view_operations, "resolve_project_audience", AsyncMock(return_value=None))
+    monkeypatch.setattr(audience, "resolve_project_audience", AsyncMock(return_value=None))
     publish = AsyncMock()
-    monkeypatch.setattr(view_operations, "publish_content_access_changed", publish)
+    monkeypatch.setattr(audience, "publish_content_access_changed", publish)
 
     return Harness(
         session=session, project=project, publish=publish, user_id=user_id, other_id=other_id
@@ -402,3 +402,35 @@ def test_validation_errors_map_to_invalid_argument() -> None:
     error = map_domain_error("update_view", ValidationError("definition", "bad"))
 
     assert error.code == Code.INVALID_ARGUMENT
+
+
+def project_update_stubs(monkeypatch: pytest.MonkeyPatch, harness: Harness) -> AsyncMock:
+    monkeypatch.setattr(ProjectOperations, "_require_manage", AsyncMock())
+    monkeypatch.setattr(ProjectOperations, "_sync_project_tags", AsyncMock())
+    monkeypatch.setattr(ProjectOperations, "_index_for_search", AsyncMock())
+    monkeypatch.setattr(
+        ProjectOperations, "_resolve_default_view_id", AsyncMock(side_effect=lambda _, v: v or None)
+    )
+    harness.project.version = 1
+    publish = AsyncMock()
+    monkeypatch.setattr(project_operations, "publish_views_changed", publish)
+    return publish
+
+
+async def test_changing_the_default_view_tells_other_clients(monkeypatch, harness) -> None:
+    publish = project_update_stubs(monkeypatch, harness)
+    ops = ProjectOperations(harness.session, search_indexer=MagicMock(), storage=MagicMock())
+
+    await ops.update(harness.user_id, uuid4(), harness.project.id, default_view_id="view_board")
+
+    assert harness.project.default_view_id == "view_board"
+    publish.assert_awaited_once_with(harness.session, harness.project)
+
+
+async def test_keeping_the_default_view_publishes_nothing(monkeypatch, harness) -> None:
+    publish = project_update_stubs(monkeypatch, harness)
+    ops = ProjectOperations(harness.session, search_indexer=MagicMock(), storage=MagicMock())
+
+    await ops.update(harness.user_id, uuid4(), harness.project.id, default_view_id="view_table")
+
+    publish.assert_not_awaited()
