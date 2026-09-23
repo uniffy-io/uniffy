@@ -20,6 +20,8 @@ enum CallEndReason {
   CALL_END_REASON_MAX_DURATION = 3;
   CALL_END_REASON_SOLO_TIMEOUT = 4;
   CALL_END_REASON_CHANNEL_ARCHIVED = 5;
+  CALL_END_REASON_ORG_SUSPENDED = 6;
+  CALL_END_REASON_ORG_DELETED = 7;
 }
 
 // Ceiling for the publisher's top screen-share layer. Simulcast still adds lower

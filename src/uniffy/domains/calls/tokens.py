@@ -18,7 +18,9 @@ from uniffy.core.json_codec import dumps_str, loads
 from uniffy.core.webhooks import WebhookVerificationError
 from uniffy.domains.calls.config import LiveKitConfig
 
-USER_TOKEN_TTL_SECONDS = 6 * 3600
+# Bounds how long an evicted participant can keep reconnecting before the join
+# webhook kicks them again; clients refresh well before it expires.
+USER_TOKEN_TTL_SECONDS = 30 * 60
 ADMIN_TOKEN_TTL_SECONDS = 5 * 60
 # Tolerates client/server clock skew on nbf/exp validation.
 CLOCK_SKEW_LEEWAY_SECONDS = 5 * 60

@@ -37,6 +37,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from uniffy.core.audit import client_ip_for_rate_limit, write_audit_event
 from uniffy.core.audit.actions import Action
 from uniffy.core.auth.passwords.crypto import hash_password
+from uniffy.core.auth.revocation import mark_sessions_revoked, mark_token_version_revoked
+from uniffy.core.auth.sessions import revoke_user_sessions
 from uniffy.core.jobs import enqueue_job
 from uniffy.core.json_codec import dumps_str
 from uniffy.core.models.audit.event import AuditResourceType
@@ -45,6 +47,7 @@ from uniffy.core.models.login.organization_member import OrganizationMember
 from uniffy.core.models.login.password_reset_token import PasswordResetToken
 from uniffy.core.models.login.user import User
 from uniffy.core.rate_limit import check_rate_limit
+from uniffy.domains.calls.lifecycle import CallEvictionReason, CallRevocationLifecycle
 from uniffy.domains.mail.jobs.contracts import SEND_EMAIL
 from uniffy.domains.organizations.security import SecurityOperations
 
@@ -245,7 +248,13 @@ class PasswordResetOperations:
             expires_at=token_record.expires_at,
         )
 
-    async def consume(self, raw_token: str, new_password: str) -> User:
+    async def consume(
+        self,
+        raw_token: str,
+        new_password: str,
+        *,
+        call_lifecycle: CallRevocationLifecycle,
+    ) -> User:
         """Apply the new password + invalidate all existing sessions.
 
         Per-IP throttle bounds brute-force attempts against the token
@@ -271,6 +280,7 @@ class PasswordResetOperations:
         user.hashed_password = hash_password(new_password)
         user.token_version = (user.token_version or 0) + 1
         token_record.used_at = datetime.now(UTC)
+        revoked_session_ids = await revoke_user_sessions(self._session, user.id)
 
         primary_org_id, _ = await self._resolve_primary_org(user.id)
         await write_audit_event(
@@ -288,11 +298,16 @@ class PasswordResetOperations:
         await self._session.commit()
         await self._session.refresh(user)
 
-        from uniffy.core.auth.revocation import mark_token_version_revoked
         from uniffy.core.realtime.publisher import publish_token_revoke
 
         await mark_token_version_revoked(user.id, user.token_version)
+        await mark_sessions_revoked(revoked_session_ids)
         await publish_token_revoke(user.id, user.token_version)
+        await call_lifecycle.evict_user(
+            self._session,
+            user.id,
+            reason=CallEvictionReason.SESSION_REVOKED,
+        )
         return user
 
     async def _load_active_token(

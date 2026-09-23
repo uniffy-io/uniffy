@@ -107,7 +107,7 @@ class TestBeginEnrollmentRefuseWhenEnabled:
             _result(scalar=user),
             _result(scalar=mfa),
         ])
-        ops = MfaOperations(session)
+        ops = MfaOperations(session, AsyncMock())
 
         with pytest.raises(PermissionDeniedError):
             await ops.begin_enrollment(user_id)
@@ -119,7 +119,7 @@ class TestBeginEnrollmentRefuseWhenEnabled:
         user_id = generate_id()
         user = _User(id=user_id, is_active=False)
         session = _session([_result(scalar=user)])
-        ops = MfaOperations(session)
+        ops = MfaOperations(session, AsyncMock())
 
         with pytest.raises(AuthenticationError):
             await ops.begin_enrollment(user_id)
@@ -140,7 +140,7 @@ class TestBeginEnrollmentRefuseWhenEnabled:
             _result(scalar=mfa),
             org_ids_result,
         ])
-        ops = MfaOperations(session)
+        ops = MfaOperations(session, AsyncMock())
 
         async def _fake_decrypt(_session, ciphertext):
             return "REUSED-SECRET-B32"
@@ -190,7 +190,7 @@ class TestBeginEnrollmentIdempotent:
             org_ids_result,
         ])
         session.flush = AsyncMock()
-        ops = MfaOperations(session)
+        ops = MfaOperations(session, AsyncMock())
 
         async def _fake_encrypt(_session, secret):
             return "freshly-inserted"
@@ -232,7 +232,7 @@ class TestVerifyMfaTokenBinding:
         user = _User(id=user_id, is_active=False, token_version=3)
         payload = self._build_challenge_payload(user_id, tkv=3)
         session = _session([_result(scalar=user)])
-        ops = MfaOperations(session)
+        ops = MfaOperations(session, AsyncMock())
 
         with (
             patch.object(mfa_ops, "decode_mfa_challenge_token", return_value=payload),
@@ -251,7 +251,7 @@ class TestVerifyMfaTokenBinding:
         user = _User(id=user_id, is_active=True, token_version=5)
         payload = self._build_challenge_payload(user_id, tkv=4)
         session = _session([_result(scalar=user)])
-        ops = MfaOperations(session)
+        ops = MfaOperations(session, AsyncMock())
 
         with (
             patch.object(mfa_ops, "decode_mfa_challenge_token", return_value=payload),
@@ -270,7 +270,7 @@ class TestVerifyMfaTokenBinding:
         user = _User(id=user_id, is_active=True, token_version=2)
         payload = {"sub": str(user_id), "type": "mfa_challenge"}
         session = _session([_result(scalar=user)])
-        ops = MfaOperations(session)
+        ops = MfaOperations(session, AsyncMock())
 
         with (
             patch.object(mfa_ops, "decode_mfa_challenge_token", return_value=payload),
@@ -288,7 +288,7 @@ class TestVerifyMfaTokenBinding:
         user_id = generate_id()
         payload = self._build_challenge_payload(user_id, tkv=1)
         session = _session([])
-        ops = MfaOperations(session)
+        ops = MfaOperations(session, AsyncMock())
 
         with (
             patch.object(mfa_ops, "decode_mfa_challenge_token", return_value=payload),
@@ -320,7 +320,7 @@ class TestTotpCounterDetection:
         monkeypatch.setattr(mfa_ops, "decrypt_totp_secret", _fake)
 
     def _build_ops(self) -> MfaOperations:
-        return MfaOperations(MagicMock())
+        return MfaOperations(MagicMock(), AsyncMock())
 
     async def test_returns_now_counter_for_current_code(self, monkeypatch) -> None:
         secret = pyotp.random_base32()
@@ -402,7 +402,7 @@ class TestAuditFanOutToOrgs:
         result.scalars = lambda: scalars
         session = MagicMock()
         session.execute = AsyncMock(return_value=result)
-        ops = MfaOperations(session)
+        ops = MfaOperations(session, AsyncMock())
 
         writer = AsyncMock(return_value=None)
         with patch.object(mfa_ops, "write_audit_event", writer):
@@ -423,7 +423,7 @@ class TestAuditFanOutToOrgs:
         result.scalars = lambda: scalars
         session = MagicMock()
         session.execute = AsyncMock(return_value=result)
-        ops = MfaOperations(session)
+        ops = MfaOperations(session, AsyncMock())
 
         writer = AsyncMock(return_value=None)
         with patch.object(mfa_ops, "write_audit_event", writer):
@@ -463,7 +463,7 @@ class TestRecoveryCodeConditionalUpdate:
 
         session = MagicMock()
         session.execute = AsyncMock(side_effect=[select_result, update_result])
-        ops = MfaOperations(session)
+        ops = MfaOperations(session, AsyncMock())
 
         with patch.object(mfa_ops, "verify_recovery_code", return_value=True):
             consumed = await ops._consume_recovery_code(user_id, "code")
@@ -486,7 +486,7 @@ class TestRecoveryCodeConditionalUpdate:
 
         session = MagicMock()
         session.execute = AsyncMock(side_effect=[select_result, update_result])
-        ops = MfaOperations(session)
+        ops = MfaOperations(session, AsyncMock())
 
         with patch.object(mfa_ops, "verify_recovery_code", return_value=True):
             consumed = await ops._consume_recovery_code(user_id, "code")
@@ -505,9 +505,76 @@ class TestRecoveryCodeConditionalUpdate:
 
         session = MagicMock()
         session.execute = AsyncMock(side_effect=[select_result])
-        ops = MfaOperations(session)
+        ops = MfaOperations(session, AsyncMock())
 
         with patch.object(mfa_ops, "verify_recovery_code", return_value=False):
             consumed = await ops._consume_recovery_code(user_id, "code")
 
         assert consumed is False
+
+
+class TestSessionRevocationReachesCalls:
+    """Every MFA path that kills sessions revokes the rows the call reconciler keys on."""
+
+    def _ops(self, user: _User, mfa: _Mfa) -> tuple[MfaOperations, MagicMock, AsyncMock]:
+        session = _session([])
+        lifecycle = AsyncMock()
+        ops = MfaOperations(session, lifecycle)
+        ops._load_user = AsyncMock(return_value=user)
+        ops._load_mfa = AsyncMock(return_value=mfa)
+        ops._verify_totp = AsyncMock(return_value=True)
+        ops._bump_token_version = AsyncMock()
+        ops._audit_mfa_self_event = AsyncMock()
+        return ops, session, lifecycle
+
+    async def test_disable_revokes_every_session_and_evicts_from_calls(self) -> None:
+        user = _User(id=generate_id())
+        ops, session, lifecycle = self._ops(user, _Mfa(user_id=user.id, enabled=True))
+        revoked = [generate_id(), generate_id()]
+        session.execute = AsyncMock()
+
+        with (
+            patch.object(mfa_ops, "revoke_user_sessions", AsyncMock(return_value=revoked)) as revoke,
+            patch.object(mfa_ops, "mark_sessions_revoked", AsyncMock()) as mark,
+            patch.object(mfa_ops, "mark_token_version_revoked", AsyncMock()),
+        ):
+            await ops.disable_mfa(user.id, "123456")
+
+        revoke.assert_awaited_once_with(session, user.id)
+        mark.assert_awaited_once_with(revoked)
+        lifecycle.evict_user.assert_awaited_once_with(
+            session, user.id, reason=mfa_ops.CallEvictionReason.SESSION_REVOKED
+        )
+
+    async def test_enrollment_keeps_the_callers_call_and_evicts_the_rest(self) -> None:
+        user = _User(id=generate_id())
+        ops, session, lifecycle = self._ops(user, _Mfa(user_id=user.id))
+        ops._resolve_pending_org = AsyncMock(return_value=(None, None, None, None))
+        caller_session = generate_id()
+        revoked = [caller_session, generate_id()]
+        commits_before_transfer: list[int] = []
+        lifecycle.transfer_session.side_effect = lambda *_: commits_before_transfer.append(
+            session.commit.await_count
+        )
+
+        with (
+            patch.object(mfa_ops, "replace_recovery_codes", AsyncMock()),
+            patch.object(mfa_ops, "revoke_user_sessions", AsyncMock(return_value=revoked)) as revoke,
+            patch.object(mfa_ops, "mark_sessions_revoked", AsyncMock()),
+            patch.object(mfa_ops, "mark_token_version_revoked", AsyncMock()),
+        ):
+            result = await ops.confirm_enrollment(
+                user.id, "123456", replaced_session_id=caller_session
+            )
+
+        revoke.assert_awaited_once_with(session, user.id, keep_session_id=result.session_id)
+        lifecycle.transfer_session.assert_awaited_once_with(
+            session, caller_session, result.session_id
+        )
+        lifecycle.evict_user.assert_awaited_once_with(
+            session,
+            user.id,
+            reason=mfa_ops.CallEvictionReason.SESSION_REVOKED,
+            session_ids=revoked,
+        )
+        assert commits_before_transfer == [0]

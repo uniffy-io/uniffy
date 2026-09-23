@@ -9,6 +9,7 @@ from uniffy.core.models.login.organization_member import OrganizationRole
 from uniffy.core.models.login.user import User
 from uniffy.core.models.people.identity import IdentitySource, IdentitySourceKind
 from uniffy.core.types import generate_id
+from uniffy.domains.calls.lifecycle import CallEvictionReason
 from uniffy.domains.directory.sync import reconcile, records
 from uniffy.domains.directory.sync.base import LocalSourceConfig
 from uniffy.domains.directory.sync.local import LocalDirectoryProvider
@@ -231,6 +232,7 @@ class TestDeprovision:
                 source,
                 user_id,
                 search_indexer,
+                AsyncMock(),
                 active_owner_ids={user_id},
             )
         assert done is False
@@ -259,6 +261,7 @@ class TestDeprovision:
                 source,
                 user_id,
                 search_indexer,
+                AsyncMock(),
                 active_owner_ids=set(),
             )
 
@@ -274,7 +277,9 @@ class TestDeprovision:
         links = [(f"ext-{i}", generate_id()) for i in range(10)]
         session = _session([_result(rows=links), _result(scalar=20)])
         with patch.object(reconcile, "deprovision_user", AsyncMock()) as deprovision:
-            await reconcile._deprovision_pass(session, source, MagicMock(), set(), report)
+            await reconcile._deprovision_pass(
+                session, source, MagicMock(), AsyncMock(), set(), report
+            )
         assert report.aborted is True
         assert report.users_deprovisioned == 0
         deprovision.assert_not_awaited()
@@ -292,12 +297,50 @@ class TestDeprovision:
                 session,
                 source,
                 MagicMock(),
+                AsyncMock(),
                 {"ext-keep"},
                 report,
             )
         assert report.aborted is False
         assert report.users_deprovisioned == 1
         assert deprovision.await_args.args[2] == drop_id
+
+
+class TestDeprovisionUser:
+    async def test_deprovision_commits_then_evicts_from_the_orgs_calls(self) -> None:
+        source = _source()
+        user_id = generate_id()
+        membership = MagicMock(is_active=True, role=OrganizationRole.MEMBER)
+        session = _session([])
+        lifecycle = AsyncMock()
+        commits_before_evict: list[int] = []
+        lifecycle.evict_user.side_effect = lambda *_a, **_k: commits_before_evict.append(
+            session.commit.await_count
+        )
+        projection = MagicMock()
+        projection.return_value.remove_from_organization = AsyncMock()
+        with (
+            patch.object(
+                reconcile.OrganizationOperations,
+                "get_membership",
+                AsyncMock(return_value=membership),
+            ),
+            patch.object(reconcile, "invalidate_person", AsyncMock()),
+            patch.object(reconcile, "UserDirectoryProjection", projection),
+            patch.object(reconcile, "publish_mention_state", AsyncMock()),
+        ):
+            assert await reconcile.deprovision_user(
+                session, source, user_id, MagicMock(), lifecycle, active_owner_ids=set()
+            )
+
+        assert membership.is_active is False
+        assert commits_before_evict == [1]
+        lifecycle.evict_user.assert_awaited_once_with(
+            session,
+            user_id,
+            reason=CallEvictionReason.MEMBERSHIP_REVOKED,
+            organization_id=source.organization_id,
+        )
 
 
 class TestRunFullSync:
@@ -311,7 +354,9 @@ class TestRunFullSync:
             patch.object(reconcile, "invalidate_directory", AsyncMock()) as invalidate,
             patch.object(reconcile, "sync_people_search", AsyncMock()) as search,
         ):
-            report = await reconcile.run_full_sync(session, source, provider, search_indexer)
+            report = await reconcile.run_full_sync(
+                session, source, provider, search_indexer, AsyncMock()
+            )
 
         assert source.last_sync_status == "succeeded"
         assert source.last_sync_at is not None

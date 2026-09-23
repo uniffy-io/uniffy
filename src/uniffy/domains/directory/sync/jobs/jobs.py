@@ -4,7 +4,7 @@ Idempotent via a Valkey `SET NX` lock keyed `directory:sync:{source_id}` so a
 double-enqueued Trigger cannot race two runs against the same source.
 """
 
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 from loguru import logger
@@ -14,6 +14,10 @@ from uniffy.core.errors import ValidationError
 from uniffy.core.jobs.locks import acquire_owned_job_lock, release_owned_job_lock
 from uniffy.core.models.people.identity import IdentitySource
 from uniffy.core.search import SEARCH_INDEXER_CTX_KEY
+from uniffy.domains.calls.lifecycle import (
+    CALL_LIFECYCLE_CTX_KEY,
+    CallRevocationLifecycle,
+)
 from uniffy.domains.directory.sync.reconcile import run_full_sync
 from uniffy.domains.directory.sync.registry import build_provider
 from uniffy.infrastructure.database import open_session
@@ -97,6 +101,7 @@ async def sync_identity_source(ctx: dict[str, Any], source_id: str) -> dict[str,
                 source,
                 provider,
                 ctx[SEARCH_INDEXER_CTX_KEY],
+                cast(CallRevocationLifecycle, ctx[CALL_LIFECYCLE_CTX_KEY]),
             )
             return {"status": "complete", **report.as_dict()}
     except ValidationError as e:

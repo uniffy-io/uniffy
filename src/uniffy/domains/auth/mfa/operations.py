@@ -19,7 +19,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from uniffy.core.audit import audit_ip_var, client_ip_for_rate_limit, write_audit_event
 from uniffy.core.audit.actions import Action
 from uniffy.core.auth.devices import parse_device_label
-from uniffy.core.auth.revocation import mark_token_version_revoked
+from uniffy.core.auth.revocation import mark_sessions_revoked, mark_token_version_revoked
+from uniffy.core.auth.sessions import revoke_user_sessions
 from uniffy.core.auth.tokens import create_access_token, create_refresh_token
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
 from uniffy.core.models.audit.event import AuditResourceType
@@ -52,6 +53,7 @@ from uniffy.domains.auth.mfa.limits import (
     record_verify_attempt,
     totp_counter_now,
 )
+from uniffy.domains.calls.lifecycle import CallEvictionReason, CallRevocationLifecycle
 
 logger = logger.bind(component="auth.mfa.operations")
 
@@ -108,8 +110,13 @@ class MfaStatus:
 class MfaOperations:
     """All MFA business logic. One instance per request, one DB session."""
 
-    def __init__(self, session: AsyncSession) -> None:
+    def __init__(
+        self,
+        session: AsyncSession,
+        call_lifecycle: CallRevocationLifecycle,
+    ) -> None:
         self._session = session
+        self._call_lifecycle = call_lifecycle
 
     async def begin_enrollment(self, user_id: UUID) -> EnrollmentChallenge:
         """Generate (or reuse) the pending secret and return enrollment material.
@@ -152,11 +159,13 @@ class MfaOperations:
         code: str,
         user_agent: str = "",
         pending_organization_id: UUID | None = None,
+        replaced_session_id: UUID | None = None,
     ) -> ConfirmEnrollmentResult:
         """Verify the pending TOTP code, flip enabled, mint a fresh session.
 
         Bumps `User.token_version` so every prior session dies; the caller
         receives new tokens in the response and does not have to re-login.
+        The caller's own live call moves to the new session instead of being evicted.
         """
         user = await self._load_user(user_id)
         if not user.is_active:
@@ -194,6 +203,13 @@ class MfaOperations:
         )
         self._session.add(session_record)
         await self._session.flush()
+        revoked_session_ids = await revoke_user_sessions(
+            self._session, user.id, keep_session_id=session_record.id
+        )
+        if replaced_session_id is not None:
+            await self._call_lifecycle.transfer_session(
+                self._session, replaced_session_id, session_record.id
+            )
 
         access = create_access_token(
             user.id,
@@ -217,6 +233,13 @@ class MfaOperations:
         )
         await self._session.commit()
         await mark_token_version_revoked(user.id, user.token_version)
+        await mark_sessions_revoked(revoked_session_ids)
+        await self._call_lifecycle.evict_user(
+            self._session,
+            user.id,
+            reason=CallEvictionReason.SESSION_REVOKED,
+            session_ids=revoked_session_ids,
+        )
 
         return ConfirmEnrollmentResult(
             recovery_codes=recovery_codes,
@@ -374,10 +397,17 @@ class MfaOperations:
         )
         await self._session.execute(delete(UserMfa).where(UserMfa.user_id == user_id))
         await self._bump_token_version(user)
+        revoked_session_ids = await revoke_user_sessions(self._session, user_id)
 
         await self._audit_mfa_self_event(user_id=user_id, action=Action.AUTH_MFA_DISABLED)
         await self._session.commit()
         await mark_token_version_revoked(user.id, user.token_version)
+        await mark_sessions_revoked(revoked_session_ids)
+        await self._call_lifecycle.evict_user(
+            self._session,
+            user_id,
+            reason=CallEvictionReason.SESSION_REVOKED,
+        )
 
     async def regenerate_recovery_codes(self, user_id: UUID, code: str) -> list[str]:
         """Re-issue 10 fresh recovery codes. Requires a current TOTP code."""
@@ -690,13 +720,11 @@ class MfaOperations:
         org_name_for_mail: str = "Uniffy",
     ) -> None:
         """Shared reset path: delete rows, bump tkv, audit, best-effort mail."""
-        from uniffy.core.auth.revocation import mark_sessions_revoked
         from uniffy.core.mail.errors import (
             MailNotConfiguredError,
             MailSuppressedError,
         )
         from uniffy.core.mail.sender import MailSender
-        from uniffy.core.models.login.user_session import UserSession
 
         await self._session.execute(
             delete(UserRecoveryCode).where(UserRecoveryCode.user_id == target.id)
@@ -708,22 +736,7 @@ class MfaOperations:
         # until their 15-min natural expiry. Flip every UserSession row AND
         # publish per-sid revoked markers so the interceptor rejects every
         # outstanding token on the next RPC.
-        now = datetime.now(UTC)
-        session_rows = (
-            await self._session.execute(
-                select(UserSession.id).where(
-                    UserSession.user_id == target.id,
-                    UserSession.is_revoked.is_(False),
-                )
-            )
-        ).all()
-        revoked_session_ids = [row[0] for row in session_rows]
-        if revoked_session_ids:
-            await self._session.execute(
-                update(UserSession)
-                .where(UserSession.id.in_(revoked_session_ids))
-                .values(is_revoked=True, revoked_at=now)
-            )
+        revoked_session_ids = await revoke_user_sessions(self._session, target.id)
 
         details = {
             "target_user_id": str(target.id),
@@ -754,6 +767,11 @@ class MfaOperations:
         from uniffy.core.realtime.publisher import publish_token_revoke
 
         await publish_token_revoke(target.id, target.token_version)
+        await self._call_lifecycle.evict_user(
+            self._session,
+            target.id,
+            reason=CallEvictionReason.SESSION_REVOKED,
+        )
 
         try:
             await MailSender().send(
@@ -977,14 +995,13 @@ class MfaOperations:
         from uniffy.domains.auth.operations import AuthOperations
 
         try:
+            auth_ops = AuthOperations(self._session, self._call_lifecycle)
             (
                 org_id,
                 slug,
                 role,
                 domain_admins,
-            ) = await AuthOperations(self._session)._verify_org_membership_by_id(
-                user_id, organization_id
-            )
+            ) = await auth_ops._verify_org_membership_by_id(user_id, organization_id)
         except AuthenticationError:
             return None, None, None, None
         return org_id, slug, role, domain_admins

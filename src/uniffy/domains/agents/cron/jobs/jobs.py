@@ -12,7 +12,8 @@ from uniffy.core.models.agents.run_log import AgentRunKind, AgentRunStatus
 from uniffy.core.models.agents.session import AgentSessionKind
 from uniffy.core.search import SEARCH_INDEXER_CTX_KEY
 from uniffy.core.storage import OBJECT_STORAGE_CTX_KEY, ObjectStorage
-from uniffy.domains.chat.lifecycle import CALL_LIFECYCLE_CTX_KEY, ChannelCallLifecycle
+from uniffy.domains.calls.lifecycle import CALL_LIFECYCLE_CTX_KEY
+from uniffy.domains.chat.lifecycle import ChannelCallLifecycle
 
 logger = logger.bind(component="agents.cron.jobs.jobs")
 

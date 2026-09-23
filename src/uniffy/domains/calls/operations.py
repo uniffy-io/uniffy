@@ -5,6 +5,7 @@ property of its channel, not standalone content. Stream events publish after
 commit so receivers never observe state the DB does not hold yet.
 """
 
+from collections.abc import Sequence
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
@@ -30,12 +31,14 @@ from uniffy.core.models.calls import (
 from uniffy.core.models.chat.channel import ChannelType, ChatChannel
 from uniffy.core.models.chat.channel_member import ChatChannelMember
 from uniffy.core.models.chat.message import ChatMessageMetadataKind
+from uniffy.core.models.login.user_session import UserSession
 from uniffy.core.types import SubjectType
 from uniffy.domains.calls.config import (
     default_screen_share_quality,
     get_livekit_config,
 )
 from uniffy.domains.calls.converters import call_to_event_dict, participant_to_event_dict
+from uniffy.domains.calls.lifecycle import CallEvictionReason
 from uniffy.domains.calls.livekit import LiveKitApiError, get_livekit_admin_client
 from uniffy.domains.calls.policy import (
     DEFAULT_MAX_PARTICIPANTS,
@@ -105,6 +108,7 @@ class CallOperations:
         channel_id: UUID,
         device_id: str,
         device_label: str | None = None,
+        auth_session_id: UUID | None = None,
     ) -> tuple[Call, list[CallParticipant], MintedToken, bool]:
         """Start a call, or join the channel's active call when one exists.
 
@@ -112,6 +116,7 @@ class CallOperations:
         """
         channel = await self.access.get_channel(channel_id, organization_id)
         await self.access.check_access(user_id, organization_id, channel)
+        await self._require_live_auth_session(user_id, auth_session_id)
         if channel.is_archived:
             raise ValidationError("channel", "Channel is archived")
         await self._require_calls_enabled(organization_id)
@@ -120,7 +125,7 @@ class CallOperations:
         existing = await self.get_active_call_row(channel_id)
         if existing is not None:
             token, participants = await self._join(
-                existing, channel, user_id, device_id, device_label
+                existing, channel, user_id, device_id, device_label, auth_session_id
             )
             return existing, participants, token, True
 
@@ -143,7 +148,7 @@ class CallOperations:
             if existing is None:
                 raise
             token, participants = await self._join(
-                existing, channel, user_id, device_id, device_label
+                existing, channel, user_id, device_id, device_label, auth_session_id
             )
             return existing, participants, token, True
 
@@ -161,7 +166,7 @@ class CallOperations:
             },
         )
         token, participants = await self._join(
-            call, channel, user_id, device_id, device_label, is_start=True
+            call, channel, user_id, device_id, device_label, auth_session_id, is_start=True
         )
         await self._ring_callees(call, channel, user_id)
         info = (await self.resolve_profiles([user_id])).get(user_id)
@@ -180,17 +185,21 @@ class CallOperations:
         call_id: UUID,
         device_id: str,
         device_label: str | None = None,
+        auth_session_id: UUID | None = None,
     ) -> tuple[Call, list[CallParticipant], MintedToken]:
         call = await self._get_call(call_id, organization_id, require_active=True)
         channel = await self.access.get_channel(call.channel_id, organization_id)
         await self.access.check_access(user_id, organization_id, channel)
+        await self._require_live_auth_session(user_id, auth_session_id)
         if channel.is_archived:
             raise ValidationError("channel", "Channel is archived")
         await self._require_calls_enabled(organization_id)
         await self._require_not_in_another_call(
             user_id, organization_id, exclude_channel=call.channel_id
         )
-        token, participants = await self._join(call, channel, user_id, device_id, device_label)
+        token, participants = await self._join(
+            call, channel, user_id, device_id, device_label, auth_session_id
+        )
         return call, participants, token
 
     async def leave_call(
@@ -219,9 +228,15 @@ class CallOperations:
         await self.end_call_internal(call, reason, actor_user_id=user_id)
 
     async def refresh_token(
-        self, user_id: UUID, organization_id: UUID, call_id: UUID, device_id: str
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        call_id: UUID,
+        device_id: str,
+        auth_session_id: UUID | None = None,
     ) -> MintedToken:
         call = await self._get_call(call_id, organization_id, require_active=True)
+        await self._require_live_auth_session(user_id, auth_session_id)
         identity = participant_identity(user_id, device_id)
         participant = await self.get_active_participant(call_id, identity)
         if participant is None:
@@ -242,6 +257,8 @@ class CallOperations:
         # session_jti stays put: the live SFU session keeps emitting its original
         # jti because the refreshed token is never handed to the Room.
         participant.token_jti = token.jti
+        if auth_session_id is not None:
+            participant.auth_session_id = auth_session_id
         self.session.add(participant)
         await self.session.commit()
         return token
@@ -536,6 +553,77 @@ class CallOperations:
             return
         await self.reassign_host_if_absent(call)
 
+    async def evict_user(
+        self,
+        user_id: UUID,
+        *,
+        reason: CallEvictionReason,
+        organization_id: UUID | None = None,
+        session_ids: Sequence[UUID] | None = None,
+        actor_user_id: UUID | None = None,
+    ) -> int:
+        """Drop the user's live devices, optionally scoped to one tenant or to auth sessions."""
+        if session_ids is not None and not session_ids:
+            return 0
+
+        query = (
+            select(Call, CallParticipant)
+            .join(CallParticipant, CallParticipant.call_id == Call.id)
+            .where(
+                CallParticipant.user_id == user_id,
+                CallParticipant.left_at.is_(None),
+                Call.ended_at.is_(None),
+            )
+        )
+        if organization_id is not None:
+            query = query.where(Call.organization_id == organization_id)
+        if session_ids is not None:
+            query = query.where(CallParticipant.auth_session_id.in_(list(session_ids)))
+        rows = (await self.session.execute(query)).all()
+        if not rows:
+            return 0
+
+        evicted = 0
+        for call, participant in rows:
+            if not await self._force_leave(call, participant):
+                continue
+            evicted += 1
+            await write_audit_event(
+                self.session,
+                organization_id=call.organization_id,
+                actor_user_id=actor_user_id,
+                action=Action.CALL_PARTICIPANT_EVICTED,
+                resource_type=AuditResourceType.CALL,
+                resource_id=call.id,
+                details={
+                    "channel_id": str(call.channel_id),
+                    "target_user_id": str(user_id),
+                    "target_identity": participant.identity,
+                    "reason": reason.value,
+                },
+            )
+            await self.session.commit()
+        return evicted
+
+    async def end_calls_for_organization(
+        self,
+        organization_id: UUID,
+        reason: CallEndReason,
+        *,
+        actor_user_id: UUID | None = None,
+    ) -> int:
+        rows = await self.session.execute(
+            select(Call).where(
+                Call.organization_id == organization_id,
+                Call.ended_at.is_(None),
+            )
+        )
+        ended = 0
+        for call in rows.scalars().all():
+            if await self.end_call_internal(call, reason, actor_user_id=actor_user_id):
+                ended += 1
+        return ended
+
     async def remove_channel_member(self, call: Call, user_id: UUID) -> None:
         """Remove every active device after chat membership is revoked."""
         rows = await self.session.execute(
@@ -545,16 +633,21 @@ class CallOperations:
                 CallParticipant.left_at.is_(None),
             )
         )
-        client = get_livekit_admin_client()
         for participant in rows.scalars().all():
-            try:
-                await client.remove_participant(call.livekit_room_name, participant.identity)
-            except LiveKitApiError as exc:
-                if exc.status_code != 404:
-                    logger.warning(
-                        f"call kick remove_participant failed for {participant.identity}: {exc}"
-                    )
-            await self.mark_participant_left(call, participant)
+            await self._force_leave(call, participant)
+
+    async def _force_leave(self, call: Call, participant: CallParticipant) -> bool:
+        """Close the row before the SFU remove so a racing leave webhook cannot steal the audit."""
+        won = await self.mark_participant_left(call, participant)
+        try:
+            await get_livekit_admin_client().remove_participant(
+                call.livekit_room_name, participant.identity
+            )
+        except LiveKitApiError as exc:
+            # 404 means the SFU already dropped it; the reconciler sweeps any other failure.
+            if exc.status_code != 404:
+                logger.warning(f"call remove_participant failed for {participant.identity}: {exc}")
+        return won
 
     async def end_call_internal(
         self, call: Call, reason: CallEndReason, actor_user_id: UUID | None = None
@@ -731,7 +824,12 @@ class CallOperations:
         set_committed_value(participant, "missing_since", value)
 
     async def _reopen_participant_row(
-        self, call: Call, row: CallParticipant, token: MintedToken, device_label: str | None
+        self,
+        call: Call,
+        row: CallParticipant,
+        token: MintedToken,
+        device_label: str | None,
+        auth_session_id: UUID | None = None,
     ) -> bool:
         """Reclaim a returning device's active row via CAS so a concurrent ghost retire wins cleanly.
 
@@ -746,6 +844,7 @@ class CallOperations:
                 session_jti=token.jti,
                 missing_since=None,
                 device_label=device_label or row.device_label,
+                auth_session_id=auth_session_id or row.auth_session_id,
             )
             .returning(CallParticipant.id)
             .execution_options(synchronize_session=False)
@@ -755,10 +854,25 @@ class CallOperations:
         set_committed_value(row, "token_jti", token.jti)
         set_committed_value(row, "session_jti", token.jti)
         set_committed_value(row, "missing_since", None)
+        if auth_session_id:
+            set_committed_value(row, "auth_session_id", auth_session_id)
         if device_label:
             set_committed_value(row, "device_label", device_label)
         await self.session.commit()
         return True
+
+    async def _require_live_auth_session(self, user_id: UUID, auth_session_id: UUID | None) -> None:
+        """Refuse a revoked auth session in PostgreSQL; the Valkey marker fails open."""
+        if auth_session_id is None:
+            return
+        revoked = await self.session.scalar(
+            select(UserSession.is_revoked).where(
+                UserSession.id == auth_session_id,
+                UserSession.user_id == user_id,
+            )
+        )
+        if revoked is not False:
+            raise PermissionDeniedError("call", "Session has been revoked")
 
     async def _join(
         self,
@@ -767,6 +881,7 @@ class CallOperations:
         user_id: UUID,
         device_id: str,
         device_label: str | None,
+        auth_session_id: UUID | None = None,
         *,
         is_start: bool = False,
     ) -> tuple[MintedToken, list[CallParticipant]]:
@@ -793,7 +908,9 @@ class CallOperations:
         )
 
         if existing_row is not None:
-            if await self._reopen_participant_row(call, existing_row, token, device_label):
+            if await self._reopen_participant_row(
+                call, existing_row, token, device_label, auth_session_id
+            ):
                 return token, await self.list_active_participants(call.id)
             # A concurrent ghost sweep retired the row; fall through to a fresh insert.
 
@@ -804,6 +921,7 @@ class CallOperations:
             device_id=device_id,
             identity=identity,
             device_label=device_label,
+            auth_session_id=auth_session_id,
             token_jti=token.jti,
             session_jti=token.jti,
             # Second device joins muted; the client honors this on connect.
@@ -819,7 +937,7 @@ class CallOperations:
             await self.session.refresh(call)
             existing_row = await self.get_active_participant(call.id, identity)
             if existing_row is None or not await self._reopen_participant_row(
-                call, existing_row, token, device_label
+                call, existing_row, token, device_label, auth_session_id
             ):
                 raise
             return token, await self.list_active_participants(call.id)

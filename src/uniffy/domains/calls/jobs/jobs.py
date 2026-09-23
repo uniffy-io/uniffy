@@ -4,13 +4,20 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 from typing import Any
+from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.jobs.locks import acquire_owned_job_lock, release_owned_job_lock
 from uniffy.core.models.calls import Call, CallEndReason, CallParticipant
+from uniffy.core.models.login.organization import Organization
+from uniffy.core.models.login.organization_member import OrganizationMember
+from uniffy.core.models.login.user import User
+from uniffy.core.models.login.user_session import UserSession
 from uniffy.domains.calls.config import LiveKitConfigError, get_livekit_config
+from uniffy.domains.calls.lifecycle import CallEvictionReason
 from uniffy.domains.calls.livekit import (
     LiveKitApiError,
     LiveKitUnavailableError,
@@ -68,6 +75,78 @@ def _livekit_ready() -> bool:
         return False
 
 
+async def _organization_end_reason(session: AsyncSession, call: Call) -> CallEndReason | None:
+    row = (
+        await session.execute(
+            select(Organization.is_suspended, Organization.deleted_at).where(
+                Organization.id == call.organization_id
+            )
+        )
+    ).one_or_none()
+    if row is None:
+        return None
+    if row.deleted_at is not None:
+        return CallEndReason.ORG_DELETED
+    if row.is_suspended:
+        return CallEndReason.ORG_SUSPENDED
+    return None
+
+
+async def _evict_revoked_participants(session: AsyncSession, ops: CallOperations, call: Call) -> int:
+    """Backstop for inline eviction; a revoked session drops only the devices on it."""
+    rows = await session.execute(
+        select(
+            CallParticipant.user_id,
+            CallParticipant.auth_session_id,
+            User.is_active,
+            OrganizationMember.id,
+            OrganizationMember.is_active,
+            UserSession.is_revoked,
+        )
+        .select_from(CallParticipant)
+        .join(User, User.id == CallParticipant.user_id)
+        .outerjoin(
+            OrganizationMember,
+            (OrganizationMember.user_id == CallParticipant.user_id)
+            & (OrganizationMember.organization_id == call.organization_id),
+        )
+        .outerjoin(UserSession, UserSession.id == CallParticipant.auth_session_id)
+        .where(
+            CallParticipant.call_id == call.id,
+            CallParticipant.left_at.is_(None),
+            or_(
+                User.is_active.is_(False),
+                OrganizationMember.id.is_(None),
+                OrganizationMember.is_active.is_(False),
+                UserSession.is_revoked.is_(True),
+            ),
+        )
+    )
+    user_reasons: dict[UUID, CallEvictionReason] = {}
+    revoked_sessions: dict[UUID, set[UUID]] = {}
+    for user_id, session_id, user_active, member_id, member_active, _ in rows.all():
+        if not user_active:
+            user_reasons[user_id] = CallEvictionReason.USER_DEACTIVATED
+        elif member_id is None or not member_active:
+            user_reasons.setdefault(user_id, CallEvictionReason.MEMBERSHIP_REVOKED)
+        elif session_id is not None:
+            revoked_sessions.setdefault(user_id, set()).add(session_id)
+
+    evicted = 0
+    for user_id, reason in user_reasons.items():
+        evicted += await ops.evict_user(user_id, reason=reason, organization_id=call.organization_id)
+    for user_id, session_ids in revoked_sessions.items():
+        if user_id in user_reasons:
+            continue
+        evicted += await ops.evict_user(
+            user_id,
+            reason=CallEvictionReason.SESSION_REVOKED,
+            organization_id=call.organization_id,
+            session_ids=sorted(session_ids),
+        )
+    return evicted
+
+
 async def reconcile_calls(ctx: dict[str, Any]) -> dict[str, Any]:
     """Every 5 min: drop ghost participants, enforce duration/solo policies."""
     del ctx
@@ -79,6 +158,7 @@ async def reconcile_calls(ctx: dict[str, Any]) -> dict[str, Any]:
 
     ended = 0
     ghosts = 0
+    revoked = 0
     try:
         client = get_livekit_admin_client()
         with client.stop_after_unavailable() as media:
@@ -91,6 +171,16 @@ async def reconcile_calls(ctx: dict[str, Any]) -> dict[str, Any]:
                 for call in active_calls:
                     ops = CallOperations(session)
                     now = datetime.now(UTC)
+
+                    org_end_reason = await _organization_end_reason(session, call)
+                    if org_end_reason is not None:
+                        if await ops.end_call_internal(call, org_end_reason):
+                            ended += 1
+                        continue
+                    revoked += await _evict_revoked_participants(session, ops, call)
+                    if call.ended_at is not None:
+                        ended += 1
+                        continue
 
                     max_minutes = DEFAULT_MAX_DURATION_MINUTES
                     policy = await ops.get_org_policy(call.organization_id)
@@ -175,6 +265,7 @@ async def reconcile_calls(ctx: dict[str, Any]) -> dict[str, Any]:
             "status": "success",
             "ended": ended,
             "ghost_participants": ghosts,
+            "revoked_participants": revoked,
             "media_reachable": media.reachable,
         }
     except Exception as exc:

@@ -5,7 +5,9 @@ export type CallEndReason =
   | "ALL_LEFT"
   | "MAX_DURATION"
   | "SOLO_TIMEOUT"
-  | "CHANNEL_ARCHIVED";
+  | "CHANNEL_ARCHIVED"
+  | "ORG_SUSPENDED"
+  | "ORG_DELETED";
 
 export interface CallParticipantData {
   userId: string;

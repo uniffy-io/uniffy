@@ -14,6 +14,7 @@ import pytest
 
 from uniffy.core.audit.actions import Action
 from uniffy.core.types import generate_id
+from uniffy.domains.calls.lifecycle import CallEvictionReason
 from uniffy.domains.auth.passwords.reset import (
     PasswordResetOperations,
     PasswordResetTokenExpiredError,
@@ -240,30 +241,48 @@ class TestVerifyAndConsume:
         with pytest.raises(PasswordResetTokenNotFoundError):
             await PasswordResetOperations(session).verify("raw-token")
 
-    async def test_consume_bumps_token_version_and_marks_used(self) -> None:
+    async def test_consume_revokes_sessions_and_evicts_from_calls(self) -> None:
         token, user = self._token_row()
         # Order: load token+user; resolve primary-org (returns None for simplicity)
         session = _session([
             _result(first=(token, user)),
             _result(first=None),
         ])
+        revoked_session_id = generate_id()
+        call_lifecycle = AsyncMock()
         with (
             patch("uniffy.domains.auth.passwords.reset.write_audit_event", new=AsyncMock()) as audit,
             patch(
                 "uniffy.domains.auth.passwords.reset.hash_password",
                 return_value=_NEW_PASSWORD_HASH,
             ),
+            patch(
+                "uniffy.domains.auth.passwords.reset.revoke_user_sessions",
+                new=AsyncMock(return_value=[revoked_session_id]),
+            ) as revoke_sessions,
+            patch(
+                "uniffy.domains.auth.passwords.reset.mark_sessions_revoked", new=AsyncMock()
+            ) as mark_revoked,
         ):
-            updated = await PasswordResetOperations(session).consume("raw-token", "newpassword1")
+            updated = await PasswordResetOperations(session).consume(
+                "raw-token", "newpassword1", call_lifecycle=call_lifecycle
+            )
         assert updated.hashed_password == _NEW_PASSWORD_HASH
         assert updated.token_version == 1
         assert token.used_at is not None
         actions = [c.kwargs["action"] for c in audit.call_args_list]
         assert Action.AUTH_PASSWORD_RESET_COMPLETED in actions
+        revoke_sessions.assert_awaited_once_with(session, user.id)
+        mark_revoked.assert_awaited_once_with([revoked_session_id])
+        call_lifecycle.evict_user.assert_awaited_once_with(
+            session, user.id, reason=CallEvictionReason.SESSION_REVOKED
+        )
 
     async def test_consume_rejects_short_password(self) -> None:
         from uniffy.core.errors import ValidationError
 
         session = _session([])
         with pytest.raises(ValidationError, match="at least 8"):
-            await PasswordResetOperations(session).consume("raw-token", "short")
+            await PasswordResetOperations(session).consume(
+                "raw-token", "short", call_lifecycle=AsyncMock()
+            )

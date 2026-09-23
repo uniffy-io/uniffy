@@ -16,6 +16,8 @@ const END_REASON_COPY: Record<CallEndReason, string> = {
   MAX_DURATION: "The call reached its maximum duration.",
   SOLO_TIMEOUT: "The call ended because you were alone for a while.",
   CHANNEL_ARCHIVED: "The call ended because the channel was archived.",
+  ORG_SUSPENDED: "The call ended because the organization was suspended.",
+  ORG_DELETED: "The call ended because the organization was deleted.",
 };
 
 export function CallEndedModal() {

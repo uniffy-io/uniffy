@@ -40,7 +40,7 @@ def _audited_actions(session: MagicMock) -> list[str]:
 
 class TestUpdateUserRequiresAReason:
     async def test_blank_reason_rejected(self) -> None:
-        ops = PlatformDirectoryOperations(MagicMock())
+        ops = PlatformDirectoryOperations(MagicMock(), AsyncMock())
         ops._user_ops.require_system_admin = AsyncMock(return_value=_make_user())
 
         with (
@@ -61,7 +61,7 @@ class TestUpdateUserRequiresAReason:
 class TestDeactivationGuards:
     async def test_cannot_deactivate_self(self) -> None:
         actor = _make_user(is_system_admin=True)
-        ops = PlatformDirectoryOperations(MagicMock())
+        ops = PlatformDirectoryOperations(MagicMock(), AsyncMock())
         ops._user_ops.require_system_admin = AsyncMock(return_value=actor)
         ops._require_user = AsyncMock(return_value=actor)
 
@@ -85,7 +85,7 @@ class TestDeactivationGuards:
         session = MagicMock()
         session.execute = AsyncMock(return_value=MagicMock(scalar_one=lambda: 0))
 
-        ops = PlatformDirectoryOperations(session)
+        ops = PlatformDirectoryOperations(session, AsyncMock())
         ops._user_ops.require_system_admin = AsyncMock(return_value=actor)
         ops._require_user = AsyncMock(return_value=target)
 
@@ -113,7 +113,7 @@ class TestUpdateUserAuditAndRevocation:
         session.add = MagicMock()
         session.commit = AsyncMock()
 
-        ops = PlatformDirectoryOperations(session)
+        ops = PlatformDirectoryOperations(session, AsyncMock())
         ops._user_ops.require_system_admin = AsyncMock(return_value=actor)
         ops._require_user = AsyncMock(return_value=target)
         ops.get_user = AsyncMock(return_value="detail")
@@ -159,7 +159,7 @@ class TestUpdateUserAuditAndRevocation:
         session.add = MagicMock()
         session.commit = AsyncMock()
 
-        ops = PlatformDirectoryOperations(session)
+        ops = PlatformDirectoryOperations(session, AsyncMock())
         ops._user_ops.require_system_admin = AsyncMock(return_value=actor)
         ops._require_user = AsyncMock(return_value=target)
         ops.get_user = AsyncMock(return_value="detail")
@@ -209,7 +209,7 @@ class TestUpdateUserAuditAndRevocation:
         session.add = MagicMock()
         session.commit = AsyncMock()
 
-        ops = PlatformDirectoryOperations(session)
+        ops = PlatformDirectoryOperations(session, AsyncMock())
         ops._user_ops.require_system_admin = AsyncMock(return_value=actor)
         ops._require_user = AsyncMock(return_value=target)
         ops.get_user = AsyncMock(return_value="detail")
@@ -238,7 +238,7 @@ class TestOrganizationDeletion:
         session.add = MagicMock()
         session.commit = AsyncMock()
 
-        ops = PlatformDirectoryOperations(session)
+        ops = PlatformDirectoryOperations(session, AsyncMock())
         ops._user_ops.require_system_admin = AsyncMock(return_value=_make_user())
         org = MagicMock(
             id=organization_id,
@@ -290,7 +290,7 @@ class TestCreateUserTransaction:
         session.commit = AsyncMock()
         session.rollback = AsyncMock()
 
-        ops = PlatformDirectoryOperations(session)
+        ops = PlatformDirectoryOperations(session, AsyncMock())
         ops._user_ops.require_system_admin = AsyncMock(return_value=actor)
         ops._require_org = AsyncMock(return_value=MagicMock(id=generate_id(), deleted_at=None))
 
@@ -333,7 +333,7 @@ class TestCreateUserTransaction:
         assert Action.USER_CREATED not in _audited_actions(session)
 
     async def test_reason_is_required(self) -> None:
-        ops = PlatformDirectoryOperations(MagicMock())
+        ops = PlatformDirectoryOperations(MagicMock(), AsyncMock())
         ops._user_ops.require_system_admin = AsyncMock(return_value=_make_user())
 
         with (

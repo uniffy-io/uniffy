@@ -20,10 +20,14 @@ from sqlalchemy import delete, select, update
 from uniffy.cli import MFA_RESET_FLAG
 from uniffy.core.audit.actions import Action
 from uniffy.core.audit.writer import write_audit_event
+from uniffy.core.auth.revocation import mark_sessions_revoked, mark_token_version_revoked
+from uniffy.core.auth.sessions import revoke_user_sessions
 from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.login.user import User
 from uniffy.core.models.login.user_mfa import UserMfa
 from uniffy.core.models.login.user_recovery_code import UserRecoveryCode
+from uniffy.domains.calls.channels import CallsLifecycle
+from uniffy.domains.calls.lifecycle import CallEvictionReason
 from uniffy.infrastructure.database.session import open_session
 
 ENV_GATE = "ENABLE_BREAK_GLASS_CLI"
@@ -111,6 +115,7 @@ async def _reset(email: str, reason: str, *, operator: str) -> None:
         await session.execute(
             update(User).where(User.id == user.id).values(token_version=new_version)
         )
+        revoked_session_ids = await revoke_user_sessions(session, user.id)
 
         await write_audit_event(
             session,
@@ -126,9 +131,17 @@ async def _reset(email: str, reason: str, *, operator: str) -> None:
                 "operator": operator,
                 "reason": reason.strip(),
                 "ran_at": datetime.now(UTC).isoformat(),
+                "revoked_session_count": len(revoked_session_ids),
             },
         )
         await session.commit()
+        await mark_token_version_revoked(user.id, new_version)
+        await mark_sessions_revoked(revoked_session_ids)
+        await CallsLifecycle().evict_user(
+            session,
+            user.id,
+            reason=CallEvictionReason.SESSION_REVOKED,
+        )
 
     logger.info(
         "mfa.break_glass: reset {email} by operator {operator}",

@@ -23,6 +23,8 @@ class CallEndReason(str, Enum):
     MAX_DURATION = "MAX_DURATION"
     SOLO_TIMEOUT = "SOLO_TIMEOUT"
     CHANNEL_ARCHIVED = "CHANNEL_ARCHIVED"
+    ORG_SUSPENDED = "ORG_SUSPENDED"
+    ORG_DELETED = "ORG_DELETED"
 
 
 class Call(SQLModel, table=True):
@@ -122,6 +124,13 @@ class CallParticipant(SQLModel, table=True):
     # LiveKit identity "{user_id}:{device_id}" - webhook events key on this.
     identity: str = Field(max_length=120, nullable=False)
     device_label: str | None = Field(default=None, max_length=120)
+    # Auth session the device joined or last refreshed on; revoking it evicts this row.
+    auth_session_id: UUID | None = Field(
+        default=None,
+        sa_column=Column(
+            ForeignKey("login_user_sessions.id", ondelete="SET NULL"), nullable=True, index=True
+        ),
+    )
     # jti of the participant's most recently minted token; advances on refresh.
     token_jti: str | None = Field(default=None, max_length=64)
     # jti the live SFU media session presents in its webhook events. Set at join,

@@ -91,6 +91,7 @@ from uniffy.domains.auth.types import (
     MfaChallengeRequired,
     MfaEnrollmentRequired,
 )
+from uniffy.domains.calls.lifecycle import CallRevocationLifecycle
 from uniffy.domains.organizations.invitations import (
     InvitationAlreadyUsedError,
     InvitationEmailConflictError,
@@ -184,8 +185,13 @@ def _login_outcome_to_proto(
 class AuthHandlers:
     """Auth RPC handlers - authentication only."""
 
-    def __init__(self, search_indexer: SearchIndexer) -> None:
+    def __init__(
+        self,
+        search_indexer: SearchIndexer,
+        call_lifecycle: CallRevocationLifecycle,
+    ) -> None:
         self.search_indexer = search_indexer
+        self.call_lifecycle = call_lifecycle
 
     async def register(
         self,
@@ -197,7 +203,7 @@ class AuthHandlers:
             user_agent = request_user_agent(ctx)
 
             async with open_session() as session:
-                auth_ops = AuthOperations(session)
+                auth_ops = AuthOperations(session, self.call_lifecycle)
                 result = await auth_ops.register(
                     email=request.email,
                     username=request.username,
@@ -236,7 +242,7 @@ class AuthHandlers:
             user_agent = request_user_agent(ctx)
 
             async with open_session() as session:
-                auth_ops = AuthOperations(session)
+                auth_ops = AuthOperations(session, self.call_lifecycle)
                 result = await auth_ops.authenticate(
                     email=request.email,
                     password=request.password,
@@ -267,7 +273,7 @@ class AuthHandlers:
         """Refresh access token."""
         try:
             async with open_session() as session:
-                auth_ops = AuthOperations(session)
+                auth_ops = AuthOperations(session, self.call_lifecycle)
                 result = await auth_ops.refresh_token(
                     refresh_token=request.refresh_token,
                     organization_slug=(
@@ -308,7 +314,7 @@ class AuthHandlers:
         try:
             user_agent = request_user_agent(ctx)
             async with open_session() as session:
-                auth_ops = AuthOperations(session)
+                auth_ops = AuthOperations(session, self.call_lifecycle)
                 result = await auth_ops.switch_organization(
                     refresh_token=request.refresh_token,
                     organization_slug=request.organization_slug,
@@ -369,7 +375,7 @@ class AuthHandlers:
 
             if session_id and user_id:
                 async with open_session() as session:
-                    auth_ops = AuthOperations(session)
+                    auth_ops = AuthOperations(session, self.call_lifecycle)
                     await auth_ops.logout_session(user_id, session_id)
 
             _clear_asset_cookie(ctx)
@@ -392,7 +398,7 @@ class AuthHandlers:
 
         try:
             async with open_session() as session:
-                auth_ops = AuthOperations(session)
+                auth_ops = AuthOperations(session, self.call_lifecycle)
                 sessions = await auth_ops.list_sessions(user_id)
 
                 return ListSessionsResponse(
@@ -417,7 +423,7 @@ class AuthHandlers:
 
         try:
             async with open_session() as session:
-                auth_ops = AuthOperations(session)
+                auth_ops = AuthOperations(session, self.call_lifecycle)
                 await auth_ops.revoke_session(user_id, target_session_id)
                 return RevokeSessionResponse(success=True)
         except TokenError as e:
@@ -443,7 +449,7 @@ class AuthHandlers:
 
         try:
             async with open_session() as session:
-                auth_ops = AuthOperations(session)
+                auth_ops = AuthOperations(session, self.call_lifecycle)
                 revoked_count = await auth_ops.revoke_other_sessions(user_id, session_id)
                 return RevokeOtherSessionsResponse(revoked_count=revoked_count)
         except Exception as e:
@@ -460,7 +466,7 @@ class AuthHandlers:
 
         try:
             async with open_session() as session:
-                auth_ops = AuthOperations(session)
+                auth_ops = AuthOperations(session, self.call_lifecycle)
                 seed = await auth_ops.get_cache_key_seed(user_id)
                 return GetCacheKeySeedResponse(cache_key_seed=seed)
         except AuthenticationError as e:
@@ -497,7 +503,7 @@ class AuthHandlers:
 
         try:
             async with open_session() as session:
-                auth_ops = AuthOperations(session)
+                auth_ops = AuthOperations(session, self.call_lifecycle)
                 new_seed = await auth_ops.rotate_cache_key_seed(user_id, target_user_id)
                 return RotateCacheKeySeedResponse(new_cache_key_seed=new_seed)
         except Exception as e:
@@ -670,7 +676,11 @@ class AuthHandlers:
         try:
             async with open_session() as session:
                 ops = PasswordResetOperations(session)
-                await ops.consume(request.token, request.new_password)
+                await ops.consume(
+                    request.token,
+                    request.new_password,
+                    call_lifecycle=self.call_lifecycle,
+                )
                 return ResetPasswordResponse(success=True)
         except RateLimitExceededError as exc:
             raise ConnectError(Code.RESOURCE_EXHAUSTED, str(exc))
