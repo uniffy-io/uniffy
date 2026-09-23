@@ -546,7 +546,8 @@ class TestSessionRevocationReachesCalls:
             session, user.id, reason=mfa_ops.CallEvictionReason.SESSION_REVOKED
         )
 
-    async def test_enrollment_keeps_the_callers_call_and_evicts_the_rest(self) -> None:
+    async def test_enrollment_keeps_the_callers_call_and_evicts_the_rest(self, monkeypatch) -> None:
+        monkeypatch.setenv("JWT_SECRET_KEY", "unit-test-secret-of-at-least-32-bytes")
         user = _User(id=generate_id())
         ops, session, lifecycle = self._ops(user, _Mfa(user_id=user.id))
         ops._resolve_pending_org = AsyncMock(return_value=(None, None, None, None))
