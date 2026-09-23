@@ -65,9 +65,6 @@ from uniffy_proto.projects.v1.projects_pb2 import (
     UpdateTaskRequest,
     UpdateTaskResponse,
 )
-from uniffy_proto.projects.v1.projects_pb2 import (
-    TagFilterMode as ProtoTagFilterMode,
-)
 
 from uniffy.core.auth.permissions import resolve_effective_policy
 from uniffy.core.auth.permissions.checker import PermissionChecker
@@ -95,7 +92,6 @@ from uniffy.domains.projects.converters import (
 )
 from uniffy.domains.projects.operations import (
     ProjectOperations,
-    ProjectTagFilterMode,
     SprintOperations,
     TaskOperations,
     TaskReader,
@@ -945,35 +941,6 @@ class ProjectsHandlers:
         if request.HasField("parent_id") and request.parent_id:
             parent_id = parse_uuid(request.parent_id, "parent_id")
 
-        sprint_id_filter = None
-        if request.HasField("sprint_id"):
-            sprint_id_filter = parse_uuid(request.sprint_id, "sprint_id")
-
-        backlog_only = request.backlog_only if request.HasField("backlog_only") else False
-        tag_ids_filter = _parse_tag_ids(list(request.tag_ids))
-
-        if request.HasField("tag_filter_mode"):
-            mode_value = request.tag_filter_mode
-        else:
-            mode_value = ProtoTagFilterMode.TAG_FILTER_MODE_ALL
-
-        tag_filter_mode = {
-            ProtoTagFilterMode.TAG_FILTER_MODE_ALL: ProjectTagFilterMode.ALL,
-            ProtoTagFilterMode.TAG_FILTER_MODE_ANY: ProjectTagFilterMode.ANY,
-            ProtoTagFilterMode.TAG_FILTER_MODE_NONE: ProjectTagFilterMode.NONE,
-        }.get(mode_value, ProjectTagFilterMode.ALL)
-
-        in_epic_id_filter: UUID | None = None
-        if request.HasField("in_epic_id") and request.in_epic_id:
-            in_epic_id_filter = parse_uuid(request.in_epic_id, "in_epic_id")
-
-        root_only = request.root_only if request.HasField("root_only") else False
-        has_subtasks_filter: bool | None = (
-            request.has_subtasks if request.HasField("has_subtasks") else None
-        )
-        min_depth_filter: int | None = request.min_depth if request.HasField("min_depth") else None
-        max_depth_filter: int | None = request.max_depth if request.HasField("max_depth") else None
-
         try:
             async with open_session() as session:
                 ops = TaskReader(session)
@@ -985,15 +952,9 @@ class ProjectsHandlers:
                         request.include_deleted if request.HasField("include_deleted") else False
                     ),
                     parent_id=parent_id,
-                    sprint_id=sprint_id_filter,
-                    backlog_only=backlog_only,
-                    tag_ids=tag_ids_filter or None,
-                    tag_filter_mode=tag_filter_mode,
-                    in_epic_id=in_epic_id_filter,
-                    root_only=root_only,
-                    has_subtasks=has_subtasks_filter,
-                    min_depth=min_depth_filter,
-                    max_depth=max_depth_filter,
+                    task_filter=request.filter if request.HasField("filter") else None,
+                    sort=list(request.sort),
+                    time_zone=request.time_zone if request.HasField("time_zone") else None,
                     page=page,
                     page_size=page_size,
                 )

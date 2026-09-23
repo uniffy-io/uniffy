@@ -76,18 +76,7 @@ export const fetchProject = createAsyncThunk<
 
 export const fetchProjectTasks = createAsyncThunk<
   Task[],
-  | string
-  | {
-      projectId: string;
-      tagIds?: string[];
-      tagFilterMode?: "all" | "any" | "none";
-      inEpicId?: string;
-      rootOnly?: boolean;
-      hasSubtasks?: boolean;
-      minDepth?: number;
-      maxDepth?: number;
-      firstPageOnly?: boolean;
-    },
+  string | { projectId: string; firstPageOnly?: boolean },
   { dispatch: AppDispatch; rejectValue: string }
 >("projects/fetchProjectTasks", async (arg, { getState, dispatch, rejectWithValue, signal }) => {
   try {
@@ -97,13 +86,6 @@ export const fetchProjectTasks = createAsyncThunk<
 
     const params = typeof arg === "string" ? { projectId: arg } : arg;
     const response = await projectsApi.listTasks(params.projectId, orgId, {
-      tagIds: params.tagIds,
-      tagFilterMode: params.tagFilterMode,
-      inEpicId: params.inEpicId,
-      rootOnly: params.rootOnly,
-      hasSubtasks: params.hasSubtasks,
-      minDepth: params.minDepth,
-      maxDepth: params.maxDepth,
       firstPageOnly: params.firstPageOnly,
       signal,
     });

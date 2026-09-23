@@ -31,6 +31,13 @@ class Task(SQLModel, table=True):
             "updated_at",
             postgresql_where=text("is_deleted = false AND outgoing_references IS NOT NULL"),
         ),
+        Index("ix_projects_tasks_assignee_ids", "assignee_ids", postgresql_using="gin"),
+        Index(
+            "ix_projects_tasks_field_values",
+            text("field_values jsonb_path_ops"),
+            postgresql_using="gin",
+        ),
+        Index("ix_projects_tasks_project_due_date", "project_id", "due_date"),
     )
 
     id: UUID = Field(default_factory=generate_id, primary_key=True, nullable=False)

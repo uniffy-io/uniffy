@@ -50,6 +50,7 @@ jobs:
             backend:
               - 'src/uniffy/**'
               - 'src/gen/python/**'
+              - 'src/proto/**/testdata/**'
               - 'manage.py'
               - '.github/workflows/test.yml'
               - 'pyproject.toml'
@@ -58,6 +59,7 @@ jobs:
             frontend:
               - 'src/ui/**'
               - 'src/gen/typescript/**'
+              - 'src/proto/**/testdata/**'
               - 'lint/**'
               - 'pnpm-workspace.yaml'
               - 'package.json'

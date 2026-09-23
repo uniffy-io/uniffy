@@ -3,14 +3,44 @@
 import contextlib
 from uuid import UUID
 
+from google.protobuf import json_format
+from uniffy_proto.projects.v1.projects_pb2 import TaskFilterGroup, TaskSort
+
 from uniffy.domains.agents.runtime.output_format import OutputSurface
-from uniffy.domains.agents.tools.builtin.args import MARKDOWN_CONTENT_DOC, markdown_body
+from uniffy.domains.agents.tools.builtin.args import (
+    MARKDOWN_CONTENT_DOC,
+    clamp_int,
+    clamp_page,
+    markdown_body,
+)
 from uniffy.domains.agents.tools.builtin.content import (
     creation_space_schema,
     parse_creation_space,
     space_for_access_mode,
 )
 from uniffy.domains.agents.tools.definitions import ToolContext, ToolDefinition, ToolResult
+
+_FILTER_DOC = (
+    'A filter tree: {"logic": "FILTER_LOGIC_AND" or "FILTER_LOGIC_OR", "nodes": [...]}, each '
+    'node either {"condition": {...}} or {"group": <nested tree>}, three levels at most. A '
+    'condition is {"field": {"field_id": <project field id>} or {"pseudo": <attribute>}, '
+    '"operator": <TASK_FILTER_OPERATOR_...>, "value": {...}}. System field ids: field_title, '
+    "field_status, field_priority, field_assignee, field_start_date, field_due_date; custom "
+    "field ids come from the project. Attributes: TASK_PSEUDO_FIELD_TAGS, _SPRINT, _TASK_TYPE, "
+    "_CREATOR, _PARENT, _EPIC, _HAS_SUBTASKS, _DEPTH, _IS_MILESTONE, _IS_BLOCKED, _BLOCKED_BY, "
+    "_CREATED_AT, _UPDATED_AT, _COMPLETED_AT, _ESTIMATED_MINUTES, _TIME_SPENT_MINUTES, _NUMBER."
+    " Operators: IS, IS_NOT, IS_ANY_OF, IS_NONE_OF, IS_ALL_OF, CONTAINS, NOT_CONTAINS, "
+    "IS_EMPTY, IS_NOT_EMPTY, GREATER_THAN, LESS_THAN, BETWEEN, BEFORE, AFTER, ON_OR_BEFORE, "
+    'ON_OR_AFTER. Values: {"ids": {"ids": [...], "include_current_user": true, "include_empty":'
+    ' true, "include_active_sprint": true}}, {"text": "..."}, {"number": 3}, {"number_range": '
+    '{"min": 1, "max": 5}}, {"flag": true}, {"date": {"fixed": "YYYY-MM-DD"}} or {"date": '
+    '{"relative": {"anchor": "RELATIVE_DATE_ANCHOR_TODAY", "offset_days": -7}}}, {"date_range":'
+    ' {"start": ..., "end": ...}}; IS_EMPTY and IS_NOT_EMPTY take no value. Examples: my tasks '
+    'is field_assignee IS_ANY_OF {"ids": {"include_current_user": true}}; top-level tasks is '
+    'TASK_PSEUDO_FIELD_DEPTH IS {"number": 0}; tasks in an epic is TASK_PSEUDO_FIELD_EPIC IS '
+    '{"ids": {"ids": [<epic task id>]}}; overdue is field_due_date BEFORE {"date": {"relative":'
+    ' {"anchor": "RELATIVE_DATE_ANCHOR_TODAY"}}} and TASK_PSEUDO_FIELD_COMPLETED_AT IS_EMPTY.'
+)
 
 
 async def _execute_create_project(ctx: ToolContext, args: dict) -> ToolResult:
@@ -441,8 +471,27 @@ async def _execute_delete_task(ctx: ToolContext, args: dict) -> ToolResult:
     return ToolResult(success=True, data="Task deleted successfully.")
 
 
+def _parse_task_query(
+    args: dict,
+) -> tuple[TaskFilterGroup | None, list[TaskSort] | None, str | None]:
+    task_filter: TaskFilterGroup | None = None
+    sort: list[TaskSort] | None = None
+    try:
+        if args.get("filter"):
+            task_filter = json_format.ParseDict(args["filter"], TaskFilterGroup())
+        if args.get("sort"):
+            sort = [json_format.ParseDict(key, TaskSort()) for key in args["sort"]]
+    except (json_format.ParseError, TypeError) as exc:
+        return None, None, f"Invalid filter or sort: {exc}"
+    return task_filter, sort, None
+
+
+_TASK_PAGE_SIZE = 100
+_MAX_TASK_PAGE_SIZE = 200
+
+
 async def _execute_list_tasks(ctx: ToolContext, args: dict) -> ToolResult:
-    """List tasks in a project with optional filters."""
+    """List tasks in a project, optionally through a saved view, a filter tree and sort keys."""
     from uniffy.domains.projects.operations import TaskReader
 
     project_id_str = args.get("project_id", "")
@@ -453,54 +502,37 @@ async def _execute_list_tasks(ctx: ToolContext, args: dict) -> ToolResult:
     if err:
         return ToolResult(success=False, data="", error=err)
 
-    # Build filter kwargs
-    list_kwargs: dict = {}
-
-    if "parent_id" in args and args["parent_id"]:  # noqa: PLR2004
+    parent_id: UUID | None = None
+    if args.get("parent_id"):
         parent_id, err = _parse_uuid(args["parent_id"], "parent_id")
         if err:
             return ToolResult(success=False, data="", error=err)
-        list_kwargs["parent_id"] = parent_id
 
-    if "sprint_id" in args:  # noqa: PLR2004
-        sprint_id, err = _parse_uuid(args["sprint_id"], "sprint_id")
-        if err:
-            return ToolResult(success=False, data="", error=err)
-        list_kwargs["sprint_id"] = sprint_id
+    task_filter, sort, err = _parse_task_query(args)
+    if err:
+        return ToolResult(success=False, data="", error=err)
 
-    if args.get("backlog_only"):
-        list_kwargs["backlog_only"] = True
-
-    if "in_epic_id" in args and args["in_epic_id"]:  # noqa: PLR2004
-        in_epic_id, err = _parse_uuid(args["in_epic_id"], "in_epic_id")
-        if err:
-            return ToolResult(success=False, data="", error=err)
-        list_kwargs["in_epic_id"] = in_epic_id
-
-    if args.get("root_only"):
-        list_kwargs["root_only"] = True
-
-    if "has_subtasks" in args:  # noqa: PLR2004
-        list_kwargs["has_subtasks"] = bool(args["has_subtasks"])
-
-    if "min_depth" in args and args["min_depth"] is not None:  # noqa: PLR2004
-        list_kwargs["min_depth"] = int(args["min_depth"])
-
-    if "max_depth" in args and args["max_depth"] is not None:  # noqa: PLR2004
-        list_kwargs["max_depth"] = int(args["max_depth"])
-
-    ops = TaskReader(ctx.session)
-    tasks, total = await ops.list_tasks(
+    limit = clamp_int(args.get("limit", _TASK_PAGE_SIZE), _TASK_PAGE_SIZE, 1, _MAX_TASK_PAGE_SIZE)
+    page = clamp_page(args.get("page", 1))
+    tasks, total = await TaskReader(ctx.session).list_tasks(
         user_id=ctx.user_id,
         organization_id=ctx.organization_id,
         project_id=project_id,
-        **list_kwargs,
+        parent_id=parent_id,
+        task_filter=task_filter,
+        sort=sort,
+        view=str(args["view"]) if args.get("view") else None,
+        time_zone=ctx.user_timezone,
+        page=page,
+        page_size=limit,
     )
 
     if not tasks:
         return ToolResult(success=True, data="No tasks found matching the filters.")
 
-    lines = [f"Found {total} tasks:"]
+    first = (page - 1) * limit + 1
+    last = first + len(tasks) - 1
+    lines = [f"Found {total} tasks (showing {first}-{last}):"]
     for t in tasks:
         urn = f"urn:uniffy:content:TASK:{t.id}"
         meta_parts = [f"{t.status}", f"priority:{t.priority}", f"type:{t.task_type}"]
@@ -520,6 +552,10 @@ async def _execute_list_tasks(ctx: ToolContext, args: dict) -> ToolResult:
             meta_parts.append(f"sprint:{t.sprint_id}")
         meta = " | ".join(meta_parts)
         lines.append(f"- [[[{t.title}|{urn}]]] ({meta})")
+    if last < total:
+        lines.append(
+            f"{total - last} more not shown. Ask for page {page + 1}, or narrow the filter."
+        )
 
     return ToolResult(success=True, data="\n".join(lines))
 
@@ -795,8 +831,8 @@ list_tasks = ToolDefinition(
     group="Tasks",
     description=(
         "List tasks in a project with full details (status, priority, type, assignees, dates, "
-        "dependencies, subtask hierarchy, sprint). Supports filtering by parent, sprint, backlog, "
-        "and hierarchy (in-epic, root-only, has-subtasks, depth)."
+        "dependencies, subtask hierarchy, sprint). Name a saved view to get exactly the tasks"
+        " it shows, or pass a filter tree and sort keys of your own."
     ),
     parameter_schema={
         "type": "object",
@@ -804,43 +840,37 @@ list_tasks = ToolDefinition(
             "project_id": {"type": "string", "description": "UUID of the project."},
             "parent_id": {
                 "type": "string",
-                "description": (
-                    "Filter by literal parent task UUID. Use ``root_only`` for top-level filtering."
-                ),
+                "description": "Only the direct subtasks of this task UUID.",
             },
-            "sprint_id": {
-                "type": "string",
-                "description": "Filter by sprint UUID.",
-            },
-            "backlog_only": {
-                "type": "boolean",
-                "description": "If true, only show unassigned sprint tasks.",
-            },
-            "in_epic_id": {
+            "view": {
                 "type": "string",
                 "description": (
-                    "Return tasks whose ancestor chain contains the given Epic task UUID "
-                    "(the Epic itself is included)."
+                    "A saved view of the project, by name or id; an unknown one returns the "
+                    "project's views. Its filter and sort apply unless ``filter`` or ``sort`` is "
+                    "also given."
                 ),
             },
-            "root_only": {
-                "type": "boolean",
-                "description": "If true, only return tasks with no parent (top-level).",
+            "filter": {
+                "type": "object",
+                "description": _FILTER_DOC,
             },
-            "has_subtasks": {
-                "type": "boolean",
+            "sort": {
+                "type": "array",
+                "items": {"type": "object"},
                 "description": (
-                    "If true, only return tasks that have at least one subtask. "
-                    "If false, only return tasks without subtasks."
+                    'Sort keys in order, e.g. [{"field": {"field_id": "field_due_date"}, '
+                    '"direction": "SORT_DIRECTION_ASC"}]. Empty values sort last.'
                 ),
             },
-            "min_depth": {
+            "limit": {
                 "type": "integer",
-                "description": "Inclusive lower bound on depth in the parent chain (0 = root).",
+                "description": (
+                    f"Tasks per page (default {_TASK_PAGE_SIZE}, max {_MAX_TASK_PAGE_SIZE})."
+                ),
             },
-            "max_depth": {
+            "page": {
                 "type": "integer",
-                "description": "Inclusive upper bound on depth in the parent chain (0 = root).",
+                "description": "Page number for pagination (default 1).",
             },
         },
         "required": ["project_id"],

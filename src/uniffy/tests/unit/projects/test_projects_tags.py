@@ -162,20 +162,3 @@ class TestHydrateHelpers:
         out = await _hydrate_project_tags(session, generate_id(), [])
         assert out == {}
         session.execute.assert_not_called()
-
-
-class TestTagFilterModeMapping:
-    def test_handler_maps_tag_filter_mode_enum_to_operations_string(self) -> None:
-        # Sanity: the proto enum names line up with the operations layer's
-        # expected strings ("all" / "any" / "none"). Regression guard for
-        # the handler's mode mapping dict.
-        from uniffy_proto.projects.v1.projects_pb2 import TagFilterMode
-
-        mapping = {
-            TagFilterMode.TAG_FILTER_MODE_ALL: "all",
-            TagFilterMode.TAG_FILTER_MODE_ANY: "any",
-            TagFilterMode.TAG_FILTER_MODE_NONE: "none",
-        }
-        assert mapping[TagFilterMode.TAG_FILTER_MODE_ALL] == "all"
-        assert mapping[TagFilterMode.TAG_FILTER_MODE_ANY] == "any"
-        assert mapping[TagFilterMode.TAG_FILTER_MODE_NONE] == "none"
