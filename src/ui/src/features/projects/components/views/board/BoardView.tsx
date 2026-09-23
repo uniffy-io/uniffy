@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -31,16 +31,17 @@ import { statusPaint } from "@/features/projects/utils/statusPaint";
 import { statusSemanticOf } from "@/features/projects/utils/statusSemantics";
 import {
   selectSearchQuery,
-  selectActiveGroupByFieldId,
   selectTask,
   openDetailPanel,
   openCreateTaskModal,
 } from "@/features/projects/store/projectsUiSlice";
 import { useFilteredTasks } from "@/features/projects/hooks/useTasks";
-import { useSwimlaneCollapse } from "@/features/projects/hooks/useSwimlaneCollapse";
+import { selectActiveDefinition } from "@/features/projects/store/viewSelectors";
+import { toggleDraftCollapsedGroup } from "@/features/projects/store/viewDraftThunks";
+import { isPseudoRef } from "@/features/projects/utils/viewFields";
+import { TaskPseudoField } from "@uniffy/proto/projects/v1/projects_pb";
 import { SYSTEM_FIELD_IDS } from "@/features/projects/types";
 import type { Task, SelectOption } from "@/features/projects/types";
-import { GROUP_BY_EPIC_KEY } from "@/features/projects/components/header/ProjectHeader";
 import { BoardColumn } from "./BoardColumn";
 import { TaskCard } from "./TaskCard";
 import { BoardSwimlane, SwimlaneStatusHeaderRow } from "./BoardSwimlane";
@@ -55,11 +56,12 @@ export function BoardView() {
   const project = useAppSelector(selectCurrentProject);
   const tasks = useFilteredTasks(project?.id ?? "", { includeSubtasks: true });
   const searchQuery = useAppSelector(selectSearchQuery);
-  const groupBy = useAppSelector(selectActiveGroupByFieldId);
+  const definition = useAppSelector(selectActiveDefinition(project?.id ?? ""));
   const activeSprint = useAppSelector(selectActiveSprint(project?.id ?? ""));
   const allSprints = useAppSelector(selectSprintsForProject(project?.id ?? ""));
   const hasSprints = allSprints.length > 0;
-  const isSwimlaneMode = groupBy === GROUP_BY_EPIC_KEY;
+  const isSwimlaneMode =
+    definition.groupBy !== null && isPseudoRef(definition.groupBy.field, TaskPseudoField.EPIC);
 
   const { canEdit } = useProjectPermission();
   const [activeTask, setActiveTask] = useState<Task | null>(null);
@@ -67,7 +69,13 @@ export function BoardView() {
   const altHeldRef = useRef(false);
   const pointerYRef = useRef<number | null>(null);
   const [reparentHintActive, setReparentHintActive] = useState(false);
-  const { isCollapsed, toggle: toggleLane } = useSwimlaneCollapse(project?.id ?? "");
+  const collapsedLanes = useMemo(
+    () => new Set(definition.collapsedGroupKeys),
+    [definition.collapsedGroupKeys],
+  );
+  const isCollapsed = (laneId: string) => collapsedLanes.has(laneId);
+  const toggleLane = (laneId: string) =>
+    dispatch(toggleDraftCollapsedGroup(project?.id ?? "", laneId));
 
   const pointerSensor = useSensor(PointerSensor, {
     activationConstraint: {

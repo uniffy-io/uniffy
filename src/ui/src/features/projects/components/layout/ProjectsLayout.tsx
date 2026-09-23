@@ -30,12 +30,12 @@ import {
   selectDetailViewMode,
   selectIsSidebarOpen,
   selectSelectedTaskId,
-  selectViewMode,
   toggleSidebar,
   closeDetailPanel,
   selectTask,
 } from "@/features/projects/store/projectsUiSlice";
 import { selectCurrentProject, selectProjects } from "@/features/projects/store/projectsSlice";
+import { selectActiveDefinition, selectActiveView } from "@/features/projects/store/viewSelectors";
 import { ProjectsEmptyState } from "@/features/projects/components/ProjectsEmptyState";
 import {
   CollapsibleSidebarRail,
@@ -55,9 +55,12 @@ export function ProjectsLayout() {
   const isSidebarOpen = useAppSelector(selectIsSidebarOpen);
   const isDetailPanelOpen = useAppSelector(selectIsDetailPanelOpen);
   const selectedTaskId = useAppSelector(selectSelectedTaskId);
-  const viewMode = useAppSelector(selectViewMode);
   const currentProject = useAppSelector(selectCurrentProject);
   const currentProjectId = currentProject?.id;
+  const activeView = useAppSelector(selectActiveView(currentProjectId ?? ""));
+  const viewType = useAppSelector(selectActiveDefinition(currentProjectId ?? "")).layout.type;
+  // Keyed by view so a switch between two views of one layout starts from fresh layout state.
+  const viewKey = activeView?.id ?? viewType;
   const isCreateTaskModalOpen = useAppSelector((state) => state.projectsUi.isCreateTaskModalOpen);
   const { canEdit: canEditProject } = useProjectPermission();
   const isCreateProjectModalOpen = useAppSelector(
@@ -165,12 +168,12 @@ export function ProjectsLayout() {
               >
                 <ProjectHeader project={currentProject} />
                 <div className="flex-1 overflow-hidden">
-                  {viewMode === "table" && <TableView />}
-                  {viewMode === "board" && <BoardView />}
-                  {viewMode === "roadmap" && <RoadmapView />}
-                  {viewMode === "backlog" && <BacklogView />}
-                  {viewMode === "graph" && <DependencyGraphView />}
-                  {viewMode === "resources" && <ResourceView />}
+                  {viewType === "table" && <TableView key={viewKey} />}
+                  {viewType === "board" && <BoardView key={viewKey} />}
+                  {viewType === "roadmap" && <RoadmapView key={viewKey} />}
+                  {viewType === "backlog" && <BacklogView key={viewKey} />}
+                  {viewType === "graph" && <DependencyGraphView key={viewKey} />}
+                  {viewType === "resources" && <ResourceView key={viewKey} />}
                 </div>
               </div>
             ) : (

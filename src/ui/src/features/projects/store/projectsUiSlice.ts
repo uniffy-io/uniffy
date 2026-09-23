@@ -1,23 +1,52 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import type { RootState } from "@/app/store";
 import type { DragState, HistoryEntry, ProjectScope } from "../types/ui";
-import type { ViewType, FilterConfig, SortConfig } from "../types/views";
+import type { ViewDefinition } from "../types/views";
 import { initialProjectsUiState } from "../types/ui";
 import { deleteTasks } from "./projectsThunks";
-import { saveColumnWidths, saveHiddenColumns } from "@/features/projects/utils/tableColumnStorage";
+import { AUTH_ACTION_TYPES } from "@/features/auth/store/authActions";
+
+interface ViewKey {
+  projectId: string;
+  viewId: string;
+}
 
 export const projectsUiSlice = createSlice({
   name: "projectsUi",
   initialState: initialProjectsUiState,
   reducers: {
     // Checkbox selection is a per-view gesture: not every view can show it, so it never carries across.
-    setViewMode: (state, action: PayloadAction<ViewType>) => {
-      if (state.viewMode !== action.payload) state.selectedTaskIds = [];
-      state.viewMode = action.payload;
+    openView: (state, action: PayloadAction<ViewKey>) => {
+      const { projectId, viewId } = action.payload;
+      if (state.activeViewIds[projectId] !== viewId) state.selectedTaskIds = [];
+      state.activeViewIds[projectId] = viewId;
     },
 
-    setCurrentView: (state, action: PayloadAction<string | null>) => {
-      state.currentViewId = action.payload;
+    putViewDraft: (state, action: PayloadAction<ViewKey & { definition: ViewDefinition }>) => {
+      const { projectId, viewId, definition } = action.payload;
+      state.viewDrafts[projectId] = { ...state.viewDrafts[projectId], [viewId]: definition };
+    },
+
+    dropViewDraft: (state, action: PayloadAction<ViewKey>) => {
+      const { projectId, viewId } = action.payload;
+      const drafts = state.viewDrafts[projectId];
+      if (!drafts || !(viewId in drafts)) return;
+      delete drafts[viewId];
+      if (Object.keys(drafts).length === 0) delete state.viewDrafts[projectId];
+    },
+
+    toggleOutlineRow: (state, action: PayloadAction<{ projectId: string; taskId: string }>) => {
+      const { projectId, taskId } = action.payload;
+      const expanded = state.outlineExpanded[projectId] ?? [];
+      state.outlineExpanded[projectId] = expanded.includes(taskId)
+        ? expanded.filter((id) => id !== taskId)
+        : [...expanded, taskId];
+    },
+
+    expandOutlineRow: (state, action: PayloadAction<{ projectId: string; taskId: string }>) => {
+      const { projectId, taskId } = action.payload;
+      const expanded = state.outlineExpanded[projectId] ?? [];
+      if (!expanded.includes(taskId)) state.outlineExpanded[projectId] = [...expanded, taskId];
     },
 
     // The task open in the detail panel and the checkbox selection are independent:
@@ -132,95 +161,16 @@ export const projectsUiSlice = createSlice({
       state.focusedCell = action.payload;
     },
 
-    setColumnWidths: (
-      state,
-      action: PayloadAction<{ projectId: string; widths: Record<string, number> }>,
-    ) => {
-      if (!state.columnWidths) state.columnWidths = {};
-      state.columnWidths[action.payload.projectId] = action.payload.widths;
-      saveColumnWidths(state.columnWidths);
-    },
-
-    setColumnWidth: (
-      state,
-      action: PayloadAction<{ projectId: string; fieldId: string; width: number }>,
-    ) => {
-      const { projectId, fieldId, width } = action.payload;
-      if (!state.columnWidths) state.columnWidths = {};
-      if (!state.columnWidths[projectId]) {
-        state.columnWidths[projectId] = {};
-      }
-      state.columnWidths[projectId][fieldId] = width;
-      saveColumnWidths(state.columnWidths);
-    },
-
-    hideColumn: (state, action: PayloadAction<{ projectId: string; fieldId: string }>) => {
-      const { projectId, fieldId } = action.payload;
-      if (!state.hiddenColumns) state.hiddenColumns = {};
-      const current = state.hiddenColumns[projectId] ?? [];
-      if (!current.includes(fieldId)) {
-        state.hiddenColumns[projectId] = [...current, fieldId];
-        saveHiddenColumns(state.hiddenColumns);
-      }
-    },
-
-    showColumn: (state, action: PayloadAction<{ projectId: string; fieldId: string }>) => {
-      const { projectId, fieldId } = action.payload;
-      if (!state.hiddenColumns) state.hiddenColumns = {};
-      const current = state.hiddenColumns[projectId] ?? [];
-      const next = current.filter((id) => id !== fieldId);
-      if (next.length !== current.length) {
-        state.hiddenColumns[projectId] = next;
-        saveHiddenColumns(state.hiddenColumns);
-      }
-    },
-
     setProjectScope: (state, action: PayloadAction<ProjectScope>) => {
       state.projectScope = action.payload;
-    },
-
-    setFilterConfig: (state, action: PayloadAction<FilterConfig | null>) => {
-      state.activeFilterConfig = action.payload;
-    },
-
-    setSortConfig: (state, action: PayloadAction<SortConfig | null>) => {
-      state.activeSortConfig = action.payload;
-    },
-
-    setGroupBy: (state, action: PayloadAction<string | null>) => {
-      state.activeGroupByFieldId = action.payload;
-    },
-
-    setTableOutlineEnabled: (state, action: PayloadAction<boolean>) => {
-      state.tableOutlineEnabled = action.payload;
     },
 
     setSearchQuery: (state, action: PayloadAction<string>) => {
       state.searchQuery = action.payload;
     },
 
-    setSprintFilter: (state, action: PayloadAction<string | null>) => {
-      state.sprintFilter = action.payload;
-    },
-
-    setTaskTypeFilter: (state, action: PayloadAction<string | null>) => {
-      state.taskTypeFilter = action.payload;
-    },
-
-    setRootOnlyFilter: (state, action: PayloadAction<boolean>) => {
-      state.rootOnlyFilter = action.payload;
-    },
-
-    setInEpicFilter: (state, action: PayloadAction<string | null>) => {
-      state.inEpicFilter = action.payload;
-    },
-
     setRoadmapStartDate: (state, action: PayloadAction<string>) => {
       state.roadmapStartDate = action.payload;
-    },
-
-    setRoadmapZoom: (state, action: PayloadAction<"day" | "week" | "month">) => {
-      state.roadmapZoomLevel = action.payload;
     },
 
     setTaskSaving: (state, action: PayloadAction<{ taskId: string; isSaving: boolean }>) => {
@@ -266,6 +216,13 @@ export const projectsUiSlice = createSlice({
     resetUiState: () => initialProjectsUiState,
   },
   extraReducers: (builder) => {
+    // Drafts and the last opened views describe one person's work; the next account starts clean.
+    builder.addCase(AUTH_ACTION_TYPES.LOGOUT, (state) => {
+      state.activeViewIds = {};
+      state.viewDrafts = {};
+      state.outlineExpanded = {};
+      state.searchQuery = "";
+    });
     builder.addCase(deleteTasks.fulfilled, (state, action) => {
       const deleted = new Set(action.payload);
       state.selectedTaskIds = state.selectedTaskIds.filter((id) => !deleted.has(id));
@@ -278,8 +235,11 @@ export const projectsUiSlice = createSlice({
 });
 
 export const {
-  setViewMode,
-  setCurrentView,
+  openView,
+  putViewDraft,
+  dropViewDraft,
+  toggleOutlineRow,
+  expandOutlineRow,
   selectTask,
   toggleTaskSelection,
   selectAllTasks,
@@ -306,22 +266,9 @@ export const {
   setFocusedCell,
   startDrag,
   endDrag,
-  setColumnWidths,
-  setColumnWidth,
-  hideColumn,
-  showColumn,
   setProjectScope,
-  setFilterConfig,
-  setSortConfig,
-  setGroupBy,
-  setTableOutlineEnabled,
   setSearchQuery,
-  setSprintFilter,
-  setTaskTypeFilter,
-  setRootOnlyFilter,
-  setInEpicFilter,
   setRoadmapStartDate,
-  setRoadmapZoom,
   setTaskSaving,
   setTaskLastSaved,
   setTaskHasChanges,
@@ -332,8 +279,6 @@ export const {
   resetUiState,
 } = projectsUiSlice.actions;
 
-export const selectViewMode = (state: RootState) => state.projectsUi.viewMode;
-export const selectCurrentViewId = (state: RootState) => state.projectsUi.currentViewId;
 export const selectSelectedTaskId = (state: RootState) => state.projectsUi.selectedTaskId;
 export const selectSelectedTaskIds = (state: RootState) => state.projectsUi.selectedTaskIds;
 export const selectIsDetailPanelOpen = (state: RootState) => state.projectsUi.isDetailPanelOpen;
@@ -343,29 +288,14 @@ export const selectDragState = (state: RootState) => state.projectsUi.dragState;
 export const selectProjectScope = (state: RootState) => state.projectsUi.projectScope;
 export const selectSearchQuery = (state: RootState) => state.projectsUi.searchQuery;
 export const selectAutosaveState = (state: RootState) => state.projectsUi.autosave;
-export const selectActiveSortConfig = (state: RootState) => state.projectsUi.activeSortConfig;
-export const selectActiveFilterConfig = (state: RootState) => state.projectsUi.activeFilterConfig;
-export const selectActiveGroupByFieldId = (state: RootState) =>
-  state.projectsUi.activeGroupByFieldId;
-export const selectTableOutlineEnabled = (state: RootState) => state.projectsUi.tableOutlineEnabled;
-export const selectSprintFilter = (state: RootState) => state.projectsUi.sprintFilter;
-export const selectTaskTypeFilter = (state: RootState) => state.projectsUi.taskTypeFilter;
-export const selectRootOnlyFilter = (state: RootState) => state.projectsUi.rootOnlyFilter;
-export const selectInEpicFilter = (state: RootState) => state.projectsUi.inEpicFilter;
 export const selectEditingCell = (state: RootState) => state.projectsUi.editingCell;
 export const selectFocusedCell = (state: RootState) => state.projectsUi.focusedCell;
-// Shared empties keep these selectors stable for projects with no saved column layout.
-const NO_COLUMN_WIDTHS: Readonly<Record<string, number>> = Object.freeze({});
-const NO_HIDDEN_COLUMNS: readonly string[] = Object.freeze([]);
+const NO_EXPANDED_ROWS: readonly string[] = Object.freeze([]);
 
-export const selectColumnWidthsForProject =
-  (projectId: string) =>
-  (state: RootState): Readonly<Record<string, number>> =>
-    state.projectsUi.columnWidths?.[projectId] ?? NO_COLUMN_WIDTHS;
-export const selectHiddenColumnsForProject =
+export const selectOutlineExpanded =
   (projectId: string) =>
   (state: RootState): readonly string[] =>
-    state.projectsUi.hiddenColumns?.[projectId] ?? NO_HIDDEN_COLUMNS;
+    state.projectsUi.outlineExpanded[projectId] ?? NO_EXPANDED_ROWS;
 export const selectUndoStack = (state: RootState) => state.projectsUi.undoStack;
 export const selectRedoStack = (state: RootState) => state.projectsUi.redoStack;
 export const selectEditProjectId = (state: RootState) => state.projectsUi.editProjectId;

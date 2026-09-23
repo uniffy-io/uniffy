@@ -101,31 +101,3 @@ export interface ViewConfig {
   createdAt: string;
   updatedAt: string;
 }
-
-export type FilterOperator =
-  | "equals"
-  | "not_equals"
-  | "contains"
-  | "not_contains"
-  | "is_empty"
-  | "is_not_empty"
-  | "greater_than"
-  | "less_than"
-  | "between";
-
-export interface FilterCondition {
-  id: string;
-  fieldId: string;
-  operator: FilterOperator;
-  value: string | number | string[] | null;
-}
-
-export interface FilterConfig {
-  conditions: FilterCondition[];
-  logic: "and" | "or";
-}
-
-export interface SortConfig {
-  fieldId: string;
-  direction: SortDirection;
-}

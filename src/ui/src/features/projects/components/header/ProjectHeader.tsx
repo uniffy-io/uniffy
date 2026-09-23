@@ -2,19 +2,13 @@ import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   MagnifyingGlass,
-  Table,
-  Columns,
-  ChartLine,
   Trash,
   X,
   Funnel,
   SquaresFour,
   CaretDown,
   Plus,
-  Archive,
-  ShareNetwork,
   SidebarSimple,
-  Users,
   FrameCorners,
   Gear,
   TreeView,
@@ -35,25 +29,10 @@ import {
 import { popoverShellClass } from "@/components/ui/popover";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import {
-  setViewMode,
+  openView,
   setSearchQuery,
-  setFilterConfig,
-  setGroupBy,
-  setSprintFilter,
-  setTaskTypeFilter,
-  setTableOutlineEnabled,
-  setRootOnlyFilter,
-  setInEpicFilter,
-  selectViewMode,
   selectSearchQuery,
   selectSelectedTaskIds,
-  selectActiveFilterConfig,
-  selectActiveGroupByFieldId,
-  selectSprintFilter,
-  selectTaskTypeFilter,
-  selectTableOutlineEnabled,
-  selectRootOnlyFilter,
-  selectInEpicFilter,
   clearSelection,
   openCreateTaskModal,
   toggleSidebar,
@@ -65,7 +44,7 @@ import { deleteTasks, bulkUpdateTasksThunk } from "@/features/projects/store/pro
 import { ProjectIcon } from "@/features/projects/utils/projectIcons";
 import { SYSTEM_FIELD_IDS } from "@/features/projects/types";
 import { statusPaint } from "@/features/projects/utils/statusPaint";
-import type { Project, ViewType } from "@/features/projects/types";
+import type { Project, ViewConfig } from "@/features/projects/types";
 import { FilterBuilder } from "@/features/projects/components/views/table/FilterBuilder";
 import { ManageStatusesDialog } from "@/features/projects/components/views/board/ManageStatusesDialog";
 import {
@@ -81,10 +60,34 @@ import { TASK_TYPES } from "@/features/projects/utils/taskTypes";
 import type { SelectOption, Sprint } from "@/features/projects/types";
 import { useProjectPermission } from "@/features/projects/hooks/useProjectPermissions";
 import { TagPicker } from "@/features/tags";
-import { TAGS_FILTER_FIELD_ID } from "@/features/projects/utils/taskAttributeFields";
-import type { FilterCondition } from "@/features/projects/types/views";
 import type { AppDispatch } from "@/app/store";
-import { randomUUID } from "@/shared/utils/uuid";
+import { SortDirection, TaskPseudoField } from "@uniffy/proto/projects/v1/projects_pb";
+import type { ViewGroupBy } from "@/features/projects/types/views";
+import {
+  selectActiveDefinition,
+  selectActiveView,
+  selectProjectViews,
+} from "@/features/projects/store/viewSelectors";
+import { VIEW_TYPE_ICONS } from "@/features/projects/utils/viewTypes";
+import {
+  setDraftFilter,
+  setDraftGroupBy,
+  setDraftLayout,
+} from "@/features/projects/store/viewDraftThunks";
+import {
+  NO_SPRINT,
+  clearBuilderNodes,
+  removeFilterNode,
+  setQuickFilter,
+  summarizeFilter,
+  type QuickFilterKind,
+} from "@/features/projects/utils/viewDraft";
+import {
+  fieldRef,
+  fieldRefFromKey,
+  fieldRefKey,
+  pseudoRef,
+} from "@/features/projects/utils/viewFields";
 
 interface ProjectHeaderProps {
   project: Project;
@@ -95,34 +98,30 @@ interface Option {
   label: string;
 }
 
-const VIEWS: { value: ViewType; label: string; icon: React.ReactNode }[] = [
-  { value: "table", label: "Table", icon: <Table size={16} /> },
-  { value: "board", label: "Board", icon: <Columns size={16} /> },
-  { value: "roadmap", label: "Roadmap", icon: <ChartLine size={16} /> },
-  { value: "backlog", label: "Backlog", icon: <Archive size={16} /> },
-  { value: "graph", label: "Graph", icon: <ShareNetwork size={16} /> },
-  { value: "resources", label: "Resources", icon: <Users size={16} /> },
-];
-
 export function ProjectHeader({ project }: ProjectHeaderProps) {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const { isMobile, isMobileOrTablet, isDesktop } = useBreakpoint();
-  const viewMode = useAppSelector(selectViewMode);
+  const views = useAppSelector(selectProjectViews(project.id));
+  const activeView = useAppSelector(selectActiveView(project.id));
+  const definition = useAppSelector(selectActiveDefinition(project.id));
+  const viewMode = definition.layout.type;
+  const filter = definition.filter;
   const searchQuery = useAppSelector(selectSearchQuery);
   const selectedTaskIds = useAppSelector(selectSelectedTaskIds);
-  const activeFilterConfig = useAppSelector(selectActiveFilterConfig);
-  const activeGroupByFieldId = useAppSelector(selectActiveGroupByFieldId);
   const isSidebarOpen = useAppSelector(selectIsSidebarOpen);
   const detailViewMode = useAppSelector(selectDetailViewMode);
   const { canEdit, canManage } = useProjectPermission();
   const activeSprint = useAppSelector(selectActiveSprint(project.id));
   const allSprints = useAppSelector(selectSprintsForProject(project.id));
-  const sprintFilter = useAppSelector(selectSprintFilter);
-  const taskTypeFilter = useAppSelector(selectTaskTypeFilter);
-  const tableOutlineEnabled = useAppSelector(selectTableOutlineEnabled);
-  const rootOnlyFilter = useAppSelector(selectRootOnlyFilter);
-  const inEpicFilter = useAppSelector(selectInEpicFilter);
+  const { chips, otherCount } = useMemo(() => summarizeFilter(filter), [filter]);
+  const chipOf = (kind: QuickFilterKind) => chips.find((chip) => chip.kind === kind) ?? null;
+  const quickSprint = chipOf("sprint")?.values[0] ?? null;
+  const quickType = chipOf("taskType")?.values[0] ?? null;
+  const quickEpic = chipOf("epic")?.values[0] ?? null;
+  const selectedTagIds = chipOf("tags")?.values ?? [];
+  const quickRootOnly = chipOf("rootOnly") !== null;
+  const tableOutlineEnabled = definition.layout.type === "table" && !definition.layout.flat;
   const selectProjectTasks = useMemo(() => selectTasksForProject(project.id), [project.id]);
   const projectTasks = useAppSelector(selectProjectTasks);
   const epicOptions = useMemo(
@@ -190,8 +189,12 @@ export function ProjectHeader({ project }: ProjectHeaderProps) {
     );
   };
 
-  const handleViewChange = (view: ViewType) => {
-    dispatch(setViewMode(view));
+  const handleViewChange = (viewId: string) => {
+    dispatch(openView({ projectId: project.id, viewId }));
+  };
+
+  const applyQuickFilter = (kind: QuickFilterKind, values: string[]) => {
+    dispatch(setDraftFilter(project.id, setQuickFilter(filter, kind, values)));
   };
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -209,72 +212,12 @@ export function ProjectHeader({ project }: ProjectHeaderProps) {
     }
   };
 
-  const filterableFields = project.fieldDefinitions.filter((f) => f.id !== SYSTEM_FIELD_IDS.TITLE);
-
   const hasSelection = selectedTaskIds.length > 0;
-
-  // Tags live inside the shared FilterConfig; pull them out so they can be
-  // surfaced as their own quick control and chip.
-  const tagCondition = activeFilterConfig?.conditions.find(
-    (c) => c.fieldId === TAGS_FILTER_FIELD_ID,
-  );
-  const selectedTagIds: string[] = Array.isArray(tagCondition?.value)
-    ? (tagCondition!.value as string[])
-    : tagCondition?.value
-      ? [String(tagCondition.value)]
-      : [];
-  const nonTagConditions = (activeFilterConfig?.conditions ?? []).filter(
-    (c) => c.fieldId !== TAGS_FILTER_FIELD_ID,
-  );
-
-  const applyTags = useCallback(
-    (nextTagIds: string[]) => {
-      const others = (activeFilterConfig?.conditions ?? []).filter(
-        (c) => c.fieldId !== TAGS_FILTER_FIELD_ID,
-      );
-      if (nextTagIds.length === 0) {
-        dispatch(
-          setFilterConfig(
-            others.length === 0
-              ? null
-              : { conditions: others, logic: activeFilterConfig?.logic ?? "and" },
-          ),
-        );
-        return;
-      }
-      const next: FilterCondition = {
-        id: tagCondition?.id ?? randomUUID(),
-        fieldId: TAGS_FILTER_FIELD_ID,
-        operator: "contains",
-        value: nextTagIds,
-      };
-      dispatch(
-        setFilterConfig({
-          conditions: [...others, next],
-          logic: activeFilterConfig?.logic ?? "and",
-        }),
-      );
-    },
-    [activeFilterConfig, tagCondition, dispatch],
-  );
-
-  const clearBuilderConditions = useCallback(() => {
-    const tagsOnly = (activeFilterConfig?.conditions ?? []).filter(
-      (c) => c.fieldId === TAGS_FILTER_FIELD_ID,
-    );
-    dispatch(
-      setFilterConfig(
-        tagsOnly.length === 0
-          ? null
-          : { conditions: tagsOnly, logic: activeFilterConfig?.logic ?? "and" },
-      ),
-    );
-  }, [activeFilterConfig, dispatch]);
 
   const sprintOptions: Option[] = useMemo(
     () => [
       { value: null, label: "All sprints" },
-      { value: "__backlog__", label: "Backlog" },
+      { value: NO_SPRINT, label: "Backlog" },
       ...allSprints
         .filter((s) => s.status !== "closed")
         .map((s) => ({ value: s.id, label: s.name })),
@@ -303,47 +246,50 @@ export function ProjectHeader({ project }: ProjectHeaderProps) {
     if (viewMode === "board") return BOARD_GROUP_BY_OPTIONS;
     return hasSprintsWithTasks
       ? GROUP_BY_OPTIONS
-      : GROUP_BY_OPTIONS.filter((o) => o.value !== "__sprint__");
+      : GROUP_BY_OPTIONS.filter((o) => o.value !== GROUP_BY_SPRINT_KEY);
   }, [viewMode, hasSprintsWithTasks]);
+  const activeGroupByKey = definition.groupBy ? fieldRefKey(definition.groupBy.field) : null;
   const groupByValue =
     viewMode === "board"
-      ? activeGroupByFieldId === GROUP_BY_EPIC_KEY
+      ? activeGroupByKey === GROUP_BY_EPIC_KEY
         ? GROUP_BY_EPIC_KEY
         : null
-      : activeGroupByFieldId;
+      : activeGroupByKey;
+
+  const handleGroupBy = (key: string | null) => {
+    const field = key ? fieldRefFromKey(key) : null;
+    const groupBy: ViewGroupBy | null = field
+      ? { field, direction: SortDirection.ASC, hideEmpty: false }
+      : null;
+    dispatch(setDraftGroupBy(project.id, groupBy));
+  };
 
   // Resolve human labels for the active-filter chips.
-  const typeLabel = TASK_TYPES.find((t) => t.value === taskTypeFilter)?.label ?? taskTypeFilter;
+  const typeLabel = TASK_TYPES.find((t) => t.value === quickType)?.label ?? quickType;
   const sprintLabel =
-    sprintFilter === "__backlog__"
+    quickSprint === NO_SPRINT
       ? "Backlog"
-      : (allSprints.find((s) => s.id === sprintFilter)?.name ?? sprintFilter);
-  const epicLabel = epicOptions.find((e) => e.value === inEpicFilter)?.label ?? inEpicFilter;
+      : (allSprints.find((s) => s.id === quickSprint)?.name ?? quickSprint);
+  const epicLabel = epicOptions.find((e) => e.value === quickEpic)?.label ?? quickEpic;
 
-  const activeFilterCount =
-    nonTagConditions.length +
-    (selectedTagIds.length > 0 ? 1 : 0) +
-    (taskTypeFilter ? 1 : 0) +
-    (sprintFilter ? 1 : 0) +
-    (inEpicFilter ? 1 : 0) +
-    (rootOnlyFilter ? 1 : 0);
-  const hasActiveFilters = activeFilterCount > 0;
+  const hasActiveFilters = chips.length + otherCount > 0;
 
   const displayDirtyCount =
-    (taskTypeFilter ? 1 : 0) +
-    (sprintFilter && showSprintControl ? 1 : 0) +
-    (inEpicFilter && showEpicControl ? 1 : 0) +
+    (quickType ? 1 : 0) +
+    (quickSprint && showSprintControl ? 1 : 0) +
+    (quickEpic && showEpicControl ? 1 : 0) +
     (selectedTagIds.length > 0 ? 1 : 0) +
-    (rootOnlyFilter ? 1 : 0) +
+    (quickRootOnly ? 1 : 0) +
     (groupByValue && showGroupBy ? 1 : 0) +
     (tableOutlineEnabled && showOutline ? 1 : 0);
 
   const clearAllFilters = () => {
-    dispatch(setTaskTypeFilter(null));
-    dispatch(setSprintFilter(null));
-    dispatch(setInEpicFilter(null));
-    dispatch(setRootOnlyFilter(false));
-    dispatch(setFilterConfig(null));
+    dispatch(setDraftFilter(project.id, null));
+  };
+
+  const removeChip = (kind: QuickFilterKind) => {
+    const chip = chipOf(kind);
+    if (chip) dispatch(setDraftFilter(project.id, removeFilterNode(filter, chip.index)));
   };
 
   return (
@@ -407,7 +353,12 @@ export function ProjectHeader({ project }: ProjectHeaderProps) {
 
         {/* Control bar: view switcher (left) vs slice controls (right) */}
         <PaneHeaderControls ref={controlBarRef} className="relative flex-nowrap">
-          <ViewSwitcher viewMode={viewMode} onChange={handleViewChange} labels={viewLabels} />
+          <ViewSwitcher
+            views={views}
+            activeViewId={activeView?.id ?? null}
+            onChange={handleViewChange}
+            labels={viewLabels}
+          />
 
           {activeSprint && !compactControls && (
             <span className="shrink-0 text-xs font-medium bg-primary/10 text-primary px-2 py-0.5 rounded-full">
@@ -467,25 +418,25 @@ export function ProjectHeader({ project }: ProjectHeaderProps) {
             <Button
               variant="ghost"
               size="sm"
-              className={cn("h-8 gap-1.5", nonTagConditions.length > 0 && "text-primary")}
+              className={cn("h-8 gap-1.5", otherCount > 0 && "text-primary")}
               onClick={() => setIsFilterOpen(!isFilterOpen)}
               title="Filter"
             >
-              <Funnel size={16} weight={nonTagConditions.length > 0 ? "fill" : "regular"} />
+              <Funnel size={16} weight={otherCount > 0 ? "fill" : "regular"} />
               {!compactControls && "Filter"}
-              {nonTagConditions.length > 0 && (
+              {otherCount > 0 && (
                 <span className="text-xs bg-primary text-primary-foreground rounded-full px-1.5 min-w-[18px] text-center">
-                  {nonTagConditions.length}
+                  {otherCount}
                 </span>
               )}
             </Button>
             {isFilterOpen && (
               <FilterBuilder
-                fields={filterableFields}
-                filterConfig={activeFilterConfig}
-                onApply={(config) => dispatch(setFilterConfig(config))}
+                projectId={project.id}
+                fields={project.fieldDefinitions}
+                filter={filter}
+                onApply={(next) => dispatch(setDraftFilter(project.id, next))}
                 onClose={() => setIsFilterOpen(false)}
-                epicOptions={epicOptions}
                 className={
                   compactControls
                     ? "right-3 max-w-[calc(100%-1.5rem)] md:right-4 md:max-w-[calc(100%-2rem)]"
@@ -516,27 +467,29 @@ export function ProjectHeader({ project }: ProjectHeaderProps) {
               <DisplayPanel
                 onClose={() => setIsDisplayOpen(false)}
                 typeOptions={typeOptions}
-                taskTypeFilter={taskTypeFilter}
-                onType={(v) => dispatch(setTaskTypeFilter(v))}
+                quickType={quickType}
+                onType={(v) => applyQuickFilter("taskType", v ? [v] : [])}
                 showSprint={showSprintControl}
                 sprintOptions={sprintOptions}
-                sprintFilter={sprintFilter}
-                onSprint={(v) => dispatch(setSprintFilter(v))}
+                quickSprint={quickSprint}
+                onSprint={(v) => applyQuickFilter("sprint", v ? [v] : [])}
                 showEpic={showEpicControl}
                 epicOptions={epicFilterOptions}
-                inEpicFilter={inEpicFilter}
-                onEpic={(v) => dispatch(setInEpicFilter(v))}
+                quickEpic={quickEpic}
+                onEpic={(v) => applyQuickFilter("epic", v ? [v] : [])}
                 selectedTagIds={selectedTagIds}
-                onTags={applyTags}
-                rootOnlyFilter={rootOnlyFilter}
-                onRootOnly={() => dispatch(setRootOnlyFilter(!rootOnlyFilter))}
+                onTags={(ids) => applyQuickFilter("tags", ids)}
+                quickRootOnly={quickRootOnly}
+                onRootOnly={() => applyQuickFilter("rootOnly", quickRootOnly ? [] : ["root"])}
                 showGroupBy={showGroupBy}
                 groupByOptions={groupByOptions}
                 groupByValue={groupByValue}
-                onGroupBy={(v) => dispatch(setGroupBy(v))}
+                onGroupBy={handleGroupBy}
                 showOutline={showOutline}
                 tableOutlineEnabled={tableOutlineEnabled}
-                onOutline={() => dispatch(setTableOutlineEnabled(!tableOutlineEnabled))}
+                onOutline={() =>
+                  dispatch(setDraftLayout(project.id, { type: "table", flat: tableOutlineEnabled }))
+                }
                 showManageStatuses={showManageStatuses}
                 onManageStatuses={() => {
                   setIsDisplayOpen(false);
@@ -560,42 +513,30 @@ export function ProjectHeader({ project }: ProjectHeaderProps) {
         {hasActiveFilters && !hasSelection && (
           <div className="flex flex-wrap items-center gap-1.5 px-3 md:px-4 pb-2">
             <span className="text-xs text-muted-foreground mr-0.5">Filters</span>
-            {nonTagConditions.length > 0 && (
+            {otherCount > 0 && (
               <FilterChip
-                label={`Conditions · ${nonTagConditions.length}`}
+                label={`Conditions · ${otherCount}`}
                 onClick={() => setIsFilterOpen(true)}
-                onRemove={clearBuilderConditions}
+                onRemove={() => dispatch(setDraftFilter(project.id, clearBuilderNodes(filter)))}
               />
             )}
-            {taskTypeFilter && (
-              <FilterChip
-                label={`Type · ${typeLabel}`}
-                onRemove={() => dispatch(setTaskTypeFilter(null))}
-              />
+            {quickType && (
+              <FilterChip label={`Type · ${typeLabel}`} onRemove={() => removeChip("taskType")} />
             )}
-            {sprintFilter && (
-              <FilterChip
-                label={`Sprint · ${sprintLabel}`}
-                onRemove={() => dispatch(setSprintFilter(null))}
-              />
+            {quickSprint && (
+              <FilterChip label={`Sprint · ${sprintLabel}`} onRemove={() => removeChip("sprint")} />
             )}
-            {inEpicFilter && (
-              <FilterChip
-                label={`Epic · ${epicLabel}`}
-                onRemove={() => dispatch(setInEpicFilter(null))}
-              />
+            {quickEpic && (
+              <FilterChip label={`Epic · ${epicLabel}`} onRemove={() => removeChip("epic")} />
             )}
             {selectedTagIds.length > 0 && (
               <FilterChip
                 label={`Tags · ${selectedTagIds.length}`}
-                onRemove={() => applyTags([])}
+                onRemove={() => removeChip("tags")}
               />
             )}
-            {rootOnlyFilter && (
-              <FilterChip
-                label="Top-level only"
-                onRemove={() => dispatch(setRootOnlyFilter(false))}
-              />
+            {quickRootOnly && (
+              <FilterChip label="Top-level only" onRemove={() => removeChip("rootOnly")} />
             )}
             <button
               type="button"
@@ -640,12 +581,13 @@ export function ProjectHeader({ project }: ProjectHeaderProps) {
 type ViewLabels = "all" | "active" | "none";
 
 interface ViewSwitcherProps {
-  viewMode: ViewType;
-  onChange: (view: ViewType) => void;
+  views: readonly ViewConfig[];
+  activeViewId: string | null;
+  onChange: (viewId: string) => void;
   labels: ViewLabels;
 }
 
-function ViewSwitcher({ viewMode, onChange, labels }: ViewSwitcherProps) {
+function ViewSwitcher({ views, activeViewId, onChange, labels }: ViewSwitcherProps) {
   return (
     <div
       className={cn(
@@ -654,15 +596,15 @@ function ViewSwitcher({ viewMode, onChange, labels }: ViewSwitcherProps) {
         labels === "none" ? "min-w-0 shrink overflow-x-auto" : "shrink-0",
       )}
     >
-      {VIEWS.map((view) => {
-        const isActive = viewMode === view.value;
+      {views.map((view) => {
+        const isActive = view.id === activeViewId;
         const withLabel = labels === "all" || (labels === "active" && isActive);
         return (
           <button
-            key={view.value}
+            key={view.id}
             type="button"
-            onClick={() => onChange(view.value)}
-            title={view.label}
+            onClick={() => onChange(view.id)}
+            title={view.name}
             aria-pressed={isActive}
             className={cn(
               "flex shrink-0 items-center gap-1.5 py-1 rounded-md text-sm transition-all",
@@ -672,8 +614,8 @@ function ViewSwitcher({ viewMode, onChange, labels }: ViewSwitcherProps) {
                 : "text-muted-foreground hover:text-foreground",
             )}
           >
-            <span className="shrink-0 flex items-center">{view.icon}</span>
-            {withLabel && <span className="truncate">{view.label}</span>}
+            <span className="shrink-0 flex items-center">{VIEW_TYPE_ICONS[view.type]}</span>
+            {withLabel && <span className="truncate">{view.name}</span>}
           </button>
         );
       })}
@@ -710,17 +652,17 @@ function FilterChip({ label, onRemove, onClick }: FilterChipProps) {
   );
 }
 
-export const GROUP_BY_TAGS_KEY = "__tags__";
-export const GROUP_BY_EPIC_KEY = "__epic__";
+const GROUP_BY_EPIC_KEY = fieldRefKey(pseudoRef(TaskPseudoField.EPIC));
+const GROUP_BY_SPRINT_KEY = fieldRefKey(pseudoRef(TaskPseudoField.SPRINT));
 
 const GROUP_BY_OPTIONS: Option[] = [
   { value: null, label: "No grouping" },
-  { value: SYSTEM_FIELD_IDS.STATUS, label: "Status" },
-  { value: SYSTEM_FIELD_IDS.PRIORITY, label: "Priority" },
-  { value: SYSTEM_FIELD_IDS.ASSIGNEE, label: "Assignee" },
-  { value: "__sprint__", label: "Sprint" },
-  { value: "__task_type__", label: "Task Type" },
-  { value: GROUP_BY_TAGS_KEY, label: "Tags" },
+  { value: fieldRefKey(fieldRef(SYSTEM_FIELD_IDS.STATUS)), label: "Status" },
+  { value: fieldRefKey(fieldRef(SYSTEM_FIELD_IDS.PRIORITY)), label: "Priority" },
+  { value: fieldRefKey(fieldRef(SYSTEM_FIELD_IDS.ASSIGNEE)), label: "Assignee" },
+  { value: GROUP_BY_SPRINT_KEY, label: "Sprint" },
+  { value: fieldRefKey(pseudoRef(TaskPseudoField.TASK_TYPE)), label: "Task Type" },
+  { value: fieldRefKey(pseudoRef(TaskPseudoField.TAGS)), label: "Tags" },
 ];
 
 const BOARD_GROUP_BY_OPTIONS: Option[] = [
@@ -731,19 +673,19 @@ const BOARD_GROUP_BY_OPTIONS: Option[] = [
 interface DisplayPanelProps {
   onClose: () => void;
   typeOptions: Option[];
-  taskTypeFilter: string | null;
+  quickType: string | null;
   onType: (v: string | null) => void;
   showSprint: boolean;
   sprintOptions: Option[];
-  sprintFilter: string | null;
+  quickSprint: string | null;
   onSprint: (v: string | null) => void;
   showEpic: boolean;
   epicOptions: Option[];
-  inEpicFilter: string | null;
+  quickEpic: string | null;
   onEpic: (v: string | null) => void;
   selectedTagIds: string[];
   onTags: (ids: string[]) => void;
-  rootOnlyFilter: boolean;
+  quickRootOnly: boolean;
   onRootOnly: () => void;
   showGroupBy: boolean;
   groupByOptions: Option[];
@@ -785,7 +727,7 @@ function DisplayPanel(props: DisplayPanelProps) {
         <PanelRow label="Type">
           <OptionChips
             options={props.typeOptions}
-            value={props.taskTypeFilter}
+            value={props.quickType}
             onSelect={props.onType}
           />
         </PanelRow>
@@ -793,7 +735,7 @@ function DisplayPanel(props: DisplayPanelProps) {
           <PanelRow label="Sprint">
             <OptionChips
               options={props.sprintOptions}
-              value={props.sprintFilter}
+              value={props.quickSprint}
               onSelect={props.onSprint}
             />
           </PanelRow>
@@ -802,7 +744,7 @@ function DisplayPanel(props: DisplayPanelProps) {
           <PanelRow label="Epic">
             <OptionChips
               options={props.epicOptions}
-              value={props.inEpicFilter}
+              value={props.quickEpic}
               onSelect={props.onEpic}
             />
           </PanelRow>
@@ -818,7 +760,7 @@ function DisplayPanel(props: DisplayPanelProps) {
           icon={<SquaresFour size={16} />}
           label="Top-level only"
           description="Hide subtasks; show parent tasks"
-          active={props.rootOnlyFilter}
+          active={props.quickRootOnly}
           onToggle={props.onRootOnly}
         />
       </PanelSection>

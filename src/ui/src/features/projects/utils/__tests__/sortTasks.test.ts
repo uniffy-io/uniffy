@@ -7,7 +7,10 @@ import {
   type SelectOption,
 } from "@/features/projects/types";
 import type { Task } from "@/features/projects/types/project";
-import type { SortConfig } from "@/features/projects/types/views";
+import type { ViewSortKey } from "@/features/projects/types/views";
+import { SortDirection, TaskPseudoField } from "@uniffy/proto/projects/v1/projects_pb";
+import { buildTaskHierarchyIndex } from "@/features/projects/utils/filterTasks";
+import { fieldRef, pseudoRef } from "@/features/projects/utils/viewFields";
 import {
   personSortIds,
   sortTasks,
@@ -61,20 +64,27 @@ const NAMES = new Map([
   ["group-ops", "Ops Team"],
 ]);
 
-function context(names: ReadonlyMap<string, string> = NAMES): TaskSortContext {
-  return { fieldsById: new Map(FIELDS.map((f) => [f.id, f])), subjectNameById: names };
+function context(names: ReadonlyMap<string, string> = NAMES, tasks: Task[] = []): TaskSortContext {
+  const byId = new Map(tasks.map((task) => [task.id, task]));
+  return {
+    fieldsById: new Map(FIELDS.map((f) => [f.id, f])),
+    subjectNameById: names,
+    sprints: [],
+    hierarchy: buildTaskHierarchyIndex(tasks),
+    lookup: (id) => byId.get(id),
+  };
 }
 
-function sortIds(tasks: Task[], sort: SortConfig | null, names?: Map<string, string>): string[] {
-  return sortTasks(tasks.slice(), sort, context(names)).map((t) => t.id);
+function sortIds(tasks: Task[], sort: ViewSortKey[] | null, names?: Map<string, string>): string[] {
+  return sortTasks(tasks.slice(), sort ?? [], context(names, tasks)).map((t) => t.id);
 }
 
-function asc(fieldId: string): SortConfig {
-  return { fieldId, direction: "asc" };
+function asc(fieldId: string): ViewSortKey[] {
+  return [{ field: fieldRef(fieldId), direction: SortDirection.ASC }];
 }
 
-function desc(fieldId: string): SortConfig {
-  return { fieldId, direction: "desc" };
+function desc(fieldId: string): ViewSortKey[] {
+  return [{ field: fieldRef(fieldId), direction: SortDirection.DESC }];
 }
 
 describe("sortTasks - select fields", () => {
@@ -209,7 +219,7 @@ describe("sortTasks - person fields", () => {
     ]);
     const statusIds = personSortIds(tasks, asc(SYSTEM_FIELD_IDS.STATUS), fieldsById);
     expect(statusIds).toEqual([]);
-    expect(personSortIds(tasks, null, fieldsById)).toBe(statusIds);
+    expect(personSortIds(tasks, [], fieldsById)).toBe(statusIds);
   });
 });
 
@@ -270,5 +280,50 @@ describe("sortTasks - default order", () => {
   it("breaks ties between equal keys with the default order", () => {
     const tied = tasks.map((t) => ({ ...t, status: "status_todo" }));
     expect(sortIds(tied, desc(SYSTEM_FIELD_IDS.STATUS))).toEqual(["first-a", "first-b", "second"]);
+  });
+});
+
+describe("sortTasks - several keys and task attributes", () => {
+  it("breaks ties on the first key with the second", () => {
+    const tasks = [
+      makeTask({ id: "todo-low", status: "status_todo", priority: "priority_low" }),
+      makeTask({ id: "done-high", status: "status_done", priority: "priority_high" }),
+      makeTask({ id: "todo-high", status: "status_todo", priority: "priority_high" }),
+    ];
+    const keys: ViewSortKey[] = [
+      { field: fieldRef(SYSTEM_FIELD_IDS.STATUS), direction: SortDirection.ASC },
+      { field: fieldRef(SYSTEM_FIELD_IDS.PRIORITY), direction: SortDirection.DESC },
+    ];
+    expect(sortIds(tasks, keys)).toEqual(["todo-high", "todo-low", "done-high"]);
+  });
+
+  it("orders by task type in the catalog order", () => {
+    const tasks = [
+      makeTask({ id: "bug", taskType: "bug" }),
+      makeTask({ id: "task", taskType: "task" }),
+      makeTask({ id: "epic", taskType: "epic" }),
+    ];
+    const keys = [{ field: pseudoRef(TaskPseudoField.TASK_TYPE), direction: SortDirection.ASC }];
+    expect(sortIds(tasks, keys)).toEqual(["task", "bug", "epic"]);
+  });
+
+  it("orders by the task number and by blocked tasks first when descending", () => {
+    const tasks = [
+      makeTask({ id: "blocker", number: 3 }),
+      makeTask({ id: "blocked", number: 1, blockedByTaskIds: ["blocker"] }),
+      makeTask({ id: "free", number: 2 }),
+    ];
+    const byNumber = [{ field: pseudoRef(TaskPseudoField.NUMBER), direction: SortDirection.DESC }];
+    expect(sortIds(tasks, byNumber)).toEqual(["blocker", "free", "blocked"]);
+    const byBlocked = [
+      { field: pseudoRef(TaskPseudoField.IS_BLOCKED), direction: SortDirection.DESC },
+    ];
+    expect(sortIds(tasks, byBlocked)[0]).toBe("blocked");
+  });
+
+  it("asks the resolver for creators when sorting by creator", () => {
+    const tasks = [makeTask({ id: "a", ownerId: "user-zoe" })];
+    const keys = [{ field: pseudoRef(TaskPseudoField.CREATOR), direction: SortDirection.ASC }];
+    expect(personSortIds(tasks, keys, context().fieldsById)).toEqual(["user-zoe"]);
   });
 });
