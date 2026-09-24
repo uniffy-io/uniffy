@@ -159,16 +159,18 @@ A hash identifies content; it does not prove that content is safe or pin everyth
 
 ## Repository Structure
 
-Uniffy is a monorepo managed with [uv](https://github.com/astral-sh/uv) (Python) and [pnpm workspaces](https://pnpm.io/workspaces) (TypeScript). Protocol Buffer definitions in `src/proto/` are the single source of truth for all API contracts. A single `./manage.py proto` generates code for all three languages into shared packages.
+Uniffy is a monorepo managed with [uv](https://github.com/astral-sh/uv) (Python) and [pnpm workspaces](https://pnpm.io/workspaces) (TypeScript). Protocol Buffer definitions in `src/proto/schema/` are the single source of truth for all API contracts. A single `./manage.py proto` generates code for all three languages into shared packages under `src/proto/gen/`.
 
 ```
 uniffy/
   src/
-    proto/              Source .proto definitions
-    gen/
-      python/           uniffy-proto    (uv workspace member)
-      typescript/       @uniffy/proto   (pnpm workspace member)
-      go/               Go module for future CLI
+    proto/
+      schema/           Source .proto definitions, grouped by domain and version
+      gen/
+        python/         uniffy-proto    (uv workspace member)
+        typescript/     @uniffy/proto   (pnpm workspace member)
+        go/             Go module for CLI
+      tests/fixtures/   Shared filter and sort cases
     uniffy/             Python backend  (FastAPI + ConnectRPC)
     ui/                 React web app   (Vite + Redux + Tailwind)
     landing/            Website and docs (Astro + Starlight)

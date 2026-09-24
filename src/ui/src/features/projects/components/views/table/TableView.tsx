@@ -52,9 +52,6 @@ import {
   clearSelection,
   openDetailPanel,
   openCreateTaskModal,
-  setSortConfig,
-  selectActiveSortConfig,
-  selectActiveGroupByFieldId,
   setEditingCell,
   selectEditingCell,
   setFocusedCell,
@@ -64,15 +61,18 @@ import {
   popRedo,
   selectUndoStack,
   selectRedoStack,
-  selectColumnWidthsForProject,
-  setColumnWidth,
-  selectHiddenColumnsForProject,
-  hideColumn,
-  showColumn,
-  selectTableOutlineEnabled,
+  selectOutlineExpanded,
+  toggleOutlineRow,
+  expandOutlineRow,
 } from "@/features/projects/store/projectsUiSlice";
+import { selectActiveDefinition } from "@/features/projects/store/viewSelectors";
+import {
+  setDraftColumnWidth,
+  setDraftSort,
+  setDraftVisibleFields,
+  toggleDraftCollapsedGroup,
+} from "@/features/projects/store/viewDraftThunks";
 import { useFilteredTasks } from "@/features/projects/hooks/useTasks";
-import { useProjectCollapsedSet } from "@/features/projects/hooks/useProjectCollapsedSet";
 import { moveTask } from "@/features/projects/store/projectsThunks";
 import { LAYOUT, TABLE_COLUMNS } from "@/features/projects/constants";
 import { statusPaint, type StatusPaint } from "@/features/projects/utils/statusPaint";
@@ -95,6 +95,21 @@ import { selectSprintsForProject } from "@/features/projects/store/sprintsSlice"
 import { checkReparent } from "@/features/projects/utils/reparent";
 import { getHierarchyRuleViolation } from "@/features/projects/utils/taskTypes";
 import { toast } from "sonner";
+import { SortDirection, TaskPseudoField } from "@uniffy/proto/projects/v1/projects_pb";
+import type { ViewColumnWidth, ViewFieldRef, ViewGroupBy } from "@/features/projects/types/views";
+import {
+  fieldRef,
+  fieldKindOf,
+  isPseudoRef,
+  isSortableKind,
+  pseudoRef,
+  sameFieldRef,
+} from "@/features/projects/utils/viewFields";
+import {
+  isFieldVisible,
+  toggleSortKey,
+  toggleVisibleField,
+} from "@/features/projects/utils/viewDraft";
 
 type RowDropZone = "before" | "reparent" | "after";
 interface DropIndicator {
@@ -123,31 +138,49 @@ export function TableView() {
   const project = useAppSelector(selectCurrentProject);
   const selectedTaskIds = useAppSelector(selectSelectedTaskIds);
   const searchQuery = useAppSelector(selectSearchQuery);
-  const activeSortConfig = useAppSelector(selectActiveSortConfig);
-  const groupByFieldId = useAppSelector(selectActiveGroupByFieldId);
+  const projectId = project?.id ?? "";
+  const fieldsById = useMemo(
+    () => new Map(project?.fieldDefinitions.map((field) => [field.id, field])),
+    [project?.fieldDefinitions],
+  );
+  const definition = useAppSelector(selectActiveDefinition(projectId));
+  const sortKeys = definition.sort;
+  const groupBy = definition.groupBy;
+  const groupByFieldId = groupByColumnKey(groupBy);
   const { canEdit } = useProjectPermission();
   const editingCell = useAppSelector(selectEditingCell);
   const focusedCell = useAppSelector(selectFocusedCell);
   const undoStack = useAppSelector(selectUndoStack);
   const redoStack = useAppSelector(selectRedoStack);
   const allTasks = useAppSelector((state) => state.projects.tasks);
-  const outlineEnabled = useAppSelector(selectTableOutlineEnabled);
-  const filteredTasks = useFilteredTasks(project?.id ?? "", {
+  const outlineEnabled = definition.layout.type === "table" && !definition.layout.flat;
+  const filteredTasks = useFilteredTasks(projectId, {
     includeSubtasks: !outlineEnabled,
   });
-  const sprints = useAppSelector(selectSprintsForProject(project?.id ?? ""));
-  const columnWidths = useAppSelector(selectColumnWidthsForProject(project?.id ?? ""));
-  const hiddenColumnIds = useAppSelector(selectHiddenColumnsForProject(project?.id ?? ""));
-
-  // Track collapsed group sections
-  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
-  // Track expanded parent tasks (for outline subtask rows). Persisted per
-  // project so a user's expand/collapse choices survive reload.
-  const {
-    has: isParentExpanded,
-    toggle: toggleParentExpand,
-    add: markParentExpanded,
-  } = useProjectCollapsedSet("table:outline-expanded", project?.id ?? "");
+  const sprints = useAppSelector(selectSprintsForProject(projectId));
+  const columnWidths = useMemo(
+    () => columnWidthsByKey(definition.columnWidths),
+    [definition.columnWidths],
+  );
+  const collapsedGroups = useMemo(
+    () => new Set(definition.collapsedGroupKeys),
+    [definition.collapsedGroupKeys],
+  );
+  // Expanded outline rows are the viewer's own row state; they survive a reload but never dirty a view.
+  const expandedRows = useAppSelector(selectOutlineExpanded(projectId));
+  const expandedRowSet = useMemo(() => new Set(expandedRows), [expandedRows]);
+  const isParentExpanded = useCallback(
+    (taskId: string) => expandedRowSet.has(taskId),
+    [expandedRowSet],
+  );
+  const toggleParentExpand = useCallback(
+    (taskId: string) => dispatch(toggleOutlineRow({ projectId, taskId })),
+    [dispatch, projectId],
+  );
+  const markParentExpanded = useCallback(
+    (taskId: string) => dispatch(expandOutlineRow({ projectId, taskId })),
+    [dispatch, projectId],
+  );
   // Track create field dialog
   const [isColumnsMenuOpen, setIsColumnsMenuOpen] = useState(false);
   // Track known task IDs so we can detect newly created subtasks
@@ -185,17 +218,35 @@ export function TableView() {
     return [...real, TAGS_VIRTUAL_FIELD];
   }, [project]);
 
-  // Get visible fields (system + custom, excluding title and hidden columns)
-  const hiddenSet = useMemo(() => new Set(hiddenColumnIds), [hiddenColumnIds]);
+  // A view that lists its fields shows them in its own order; one that lists none shows them all.
   const visibleFields = useMemo(() => {
-    return allNonTitleFields.filter((f) => !hiddenSet.has(f.id));
-  }, [allNonTitleFields, hiddenSet]);
+    const listed = definition.visibleFields;
+    if (listed.length === 0) return allNonTitleFields;
+    return listed
+      .map((ref) => allNonTitleFields.find((field) => sameFieldRef(columnRef(field.id), ref)))
+      .filter((field): field is FieldDefinition => field !== undefined);
+  }, [allNonTitleFields, definition.visibleFields]);
+  const allColumnRefs = useMemo(
+    () => [fieldRef(SYSTEM_FIELD_IDS.TITLE), ...allNonTitleFields.map((f) => columnRef(f.id))],
+    [allNonTitleFields],
+  );
+  const setColumnVisible = useCallback(
+    (fieldId: string, show: boolean) => {
+      dispatch(
+        setDraftVisibleFields(
+          projectId,
+          toggleVisibleField(definition.visibleFields, columnRef(fieldId), allColumnRefs, show),
+        ),
+      );
+    },
+    [dispatch, projectId, definition.visibleFields, allColumnRefs],
+  );
 
   // Tag store for tag-grouping (memoised) — shallow read of byId.
   const tagsById = useAppSelector((state) => state.tags.byId);
 
   // Compute groups
-  const groups = useMemo((): TaskGroup[] | null => {
+  const rawGroups = useMemo((): TaskGroup[] | null => {
     if (!groupByFieldId || !project) return null;
 
     // Virtual group: Tags. Each task with N tags appears in N groups
@@ -254,7 +305,7 @@ export function TableView() {
     }
 
     // Virtual group: Sprint
-    if (groupByFieldId === "__sprint__") {
+    if (groupByFieldId === SPRINT_GROUP_KEY) {
       const sprintMap = new Map(sprints.map((s) => [s.id, s]));
       const grouped: TaskGroup[] = sprints.map((s) => ({
         key: s.id,
@@ -269,7 +320,7 @@ export function TableView() {
     }
 
     // Virtual group: Task Type
-    if (groupByFieldId === "__task_type__") {
+    if (groupByFieldId === TASK_TYPE_GROUP_KEY) {
       const grouped: TaskGroup[] = TASK_TYPES.map((tt) => ({
         key: tt.value,
         label: tt.label,
@@ -380,6 +431,8 @@ export function TableView() {
 
     return result;
   }, [groupByFieldId, project, filteredTasks, sprints, tagsById]);
+
+  const groups = useMemo(() => arrangeGroups(rawGroups, groupBy), [rawGroups, groupBy]);
 
   const personGroupIds = useMemo(() => {
     if (!groups) return [];
@@ -672,19 +725,13 @@ export function TableView() {
     dispatch(openCreateTaskModal());
   }, [dispatch]);
 
+  // Click sorts by this column alone; shift-click adds it as a further key.
   const handleHeaderClick = useCallback(
-    (fieldId: string) => {
-      if (activeSortConfig?.fieldId === fieldId) {
-        if (activeSortConfig.direction === "asc") {
-          dispatch(setSortConfig({ fieldId, direction: "desc" }));
-        } else {
-          dispatch(setSortConfig(null));
-        }
-      } else {
-        dispatch(setSortConfig({ fieldId, direction: "asc" }));
-      }
+    (fieldId: string, e: React.MouseEvent) => {
+      if (!isSortableKind(fieldKindOf(columnRef(fieldId), fieldsById))) return;
+      dispatch(setDraftSort(projectId, toggleSortKey(sortKeys, columnRef(fieldId), e.shiftKey)));
     },
-    [dispatch, activeSortConfig],
+    [dispatch, projectId, fieldsById, sortKeys],
   );
 
   const handleStartEdit = useCallback(
@@ -763,17 +810,10 @@ export function TableView() {
     [dispatch, allTasks, canEdit],
   );
 
-  const toggleGroup = useCallback((groupKey: string) => {
-    setCollapsedGroups((prev) => {
-      const next = new Set(prev);
-      if (next.has(groupKey)) {
-        next.delete(groupKey);
-      } else {
-        next.add(groupKey);
-      }
-      return next;
-    });
-  }, []);
+  const toggleGroup = useCallback(
+    (groupKey: string) => dispatch(toggleDraftCollapsedGroup(projectId, groupKey)),
+    [dispatch, projectId],
+  );
 
   const handleCellClick = useCallback(
     (taskId: string, fieldId: string) => {
@@ -1061,15 +1101,10 @@ export function TableView() {
             <div
               className="shrink-0 flex items-center px-3 border-r border-border cursor-pointer hover:bg-muted/30 transition-colors select-none relative"
               style={{ width: titleColumnWidth }}
-              onClick={() => handleHeaderClick(SYSTEM_FIELD_IDS.TITLE)}
+              onClick={(e) => handleHeaderClick(SYSTEM_FIELD_IDS.TITLE, e)}
             >
               <span className="text-xs font-medium text-muted-foreground flex-1">Title</span>
-              {activeSortConfig?.fieldId === SYSTEM_FIELD_IDS.TITLE &&
-                (activeSortConfig.direction === "asc" ? (
-                  <ArrowUp size={12} className="text-primary ml-1 shrink-0" />
-                ) : (
-                  <ArrowDown size={12} className="text-primary ml-1 shrink-0" />
-                ))}
+              <SortIndicator sortKeys={sortKeys} columnKey={SYSTEM_FIELD_IDS.TITLE} />
               {project && (
                 <ColumnResizeHandle
                   columnKey={TITLE_COLUMN_KEY}
@@ -1084,33 +1119,25 @@ export function TableView() {
             {visibleFields.map((field) => (
               <div
                 key={field.id}
-                className="shrink-0 flex items-center px-3 border-r border-border cursor-pointer hover:bg-muted/30 transition-colors select-none group relative"
+                className={cn(
+                  "shrink-0 flex items-center px-3 border-r border-border transition-colors select-none group relative",
+                  isSortableKind(fieldKindOf(columnRef(field.id), fieldsById)) &&
+                    "cursor-pointer hover:bg-muted/30",
+                )}
                 style={{ width: resolveColumnWidth(field, columnWidths) }}
-                onClick={() => handleHeaderClick(field.id)}
+                onClick={(e) => handleHeaderClick(field.id, e)}
               >
                 <span className="text-xs font-medium text-muted-foreground flex-1 truncate">
                   {field.name}
                 </span>
-                {activeSortConfig?.fieldId === field.id &&
-                  (activeSortConfig.direction === "asc" ? (
-                    <ArrowUp size={12} className="text-primary ml-1 shrink-0" />
-                  ) : (
-                    <ArrowDown size={12} className="text-primary ml-1 shrink-0" />
-                  ))}
+                <SortIndicator sortKeys={sortKeys} columnKey={field.id} />
                 <button
                   type="button"
                   className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground ml-1 shrink-0"
                   title="Hide column"
                   onClick={(e) => {
                     e.stopPropagation();
-                    if (project) {
-                      dispatch(
-                        hideColumn({
-                          projectId: project.id,
-                          fieldId: field.id,
-                        }),
-                      );
-                    }
+                    setColumnVisible(field.id, false);
                   }}
                 >
                   <EyeSlash size={12} />
@@ -1139,9 +1166,11 @@ export function TableView() {
               </Button>
               {isColumnsMenuOpen && project && (
                 <ColumnsVisibilityMenu
-                  projectId={project.id}
                   allFields={allNonTitleFields}
-                  hiddenIds={hiddenColumnIds}
+                  isVisible={(fieldId) =>
+                    isFieldVisible(definition.visibleFields, columnRef(fieldId))
+                  }
+                  onToggle={setColumnVisible}
                   onClose={() => setIsColumnsMenuOpen(false)}
                 />
               )}
@@ -2286,10 +2315,12 @@ function TagsRowCell({ task }: { task: Task }) {
   );
 }
 
-// Special column keys for system columns (id, title) not in fieldDefinitions
+// Column keys of the table chrome; everything else is keyed by its field id.
 const ID_COLUMN_KEY = "__id__";
-const TITLE_COLUMN_KEY = "__title__";
-export const TAGS_COLUMN_KEY = "__tags__";
+const TITLE_COLUMN_KEY = SYSTEM_FIELD_IDS.TITLE;
+const TAGS_COLUMN_KEY = "__tags__";
+const SPRINT_GROUP_KEY = "__sprint__";
+const TASK_TYPE_GROUP_KEY = "__task_type__";
 
 const TAGS_VIRTUAL_FIELD: FieldDefinition = {
   id: TAGS_COLUMN_KEY,
@@ -2303,6 +2334,71 @@ const TAGS_VIRTUAL_FIELD: FieldDefinition = {
   createdAt: "",
   updatedAt: "",
 };
+
+/** The saved-view field a table column stands for: the ID column is the task number. */
+function columnRef(columnKey: string): ViewFieldRef {
+  if (columnKey === ID_COLUMN_KEY) return pseudoRef(TaskPseudoField.NUMBER);
+  if (columnKey === TAGS_COLUMN_KEY) return pseudoRef(TaskPseudoField.TAGS);
+  return fieldRef(columnKey);
+}
+
+function columnKeyOf(ref: ViewFieldRef): string | null {
+  if (ref.kind === "field") return ref.fieldId;
+  if (ref.pseudo === TaskPseudoField.NUMBER) return ID_COLUMN_KEY;
+  if (ref.pseudo === TaskPseudoField.TAGS) return TAGS_COLUMN_KEY;
+  return null;
+}
+
+function columnWidthsByKey(widths: readonly ViewColumnWidth[]): Record<string, number> {
+  const byKey: Record<string, number> = {};
+  for (const { field, width } of widths) {
+    const key = columnKeyOf(field);
+    if (key) byKey[key] = width;
+  }
+  return byKey;
+}
+
+/** Grouping key the table understands for a view's group-by; other attributes are not offered here. */
+function groupByColumnKey(groupBy: ViewGroupBy | null): string | null {
+  if (!groupBy) return null;
+  const ref = groupBy.field;
+  if (ref.kind === "field") return ref.fieldId;
+  if (isPseudoRef(ref, TaskPseudoField.TAGS)) return TAGS_COLUMN_KEY;
+  if (isPseudoRef(ref, TaskPseudoField.SPRINT)) return SPRINT_GROUP_KEY;
+  if (isPseudoRef(ref, TaskPseudoField.TASK_TYPE)) return TASK_TYPE_GROUP_KEY;
+  return null;
+}
+
+const EMPTY_GROUP_KEYS = new Set(["__none__", "__untagged__", "__backlog__", UNASSIGNED_GROUP_KEY]);
+
+/** Descending reverses the groups; the empty bucket stays last, or goes when the view hides it. */
+function arrangeGroups(
+  groups: TaskGroup[] | null,
+  groupBy: ViewGroupBy | null,
+): TaskGroup[] | null {
+  if (!groups || !groupBy) return groups;
+  const filled = groups.filter((group) => !EMPTY_GROUP_KEYS.has(group.key));
+  const empty = groupBy.hideEmpty ? [] : groups.filter((group) => EMPTY_GROUP_KEYS.has(group.key));
+  return [...(groupBy.direction === SortDirection.DESC ? filled.reverse() : filled), ...empty];
+}
+
+function SortIndicator({
+  sortKeys,
+  columnKey,
+}: {
+  sortKeys: readonly { field: ViewFieldRef; direction: SortDirection }[];
+  columnKey: string;
+}) {
+  const index = sortKeys.findIndex((key) => sameFieldRef(key.field, columnRef(columnKey)));
+  if (index === -1) return null;
+  const Arrow = sortKeys[index].direction === SortDirection.DESC ? ArrowDown : ArrowUp;
+  return (
+    <span className="flex items-center ml-1 shrink-0 text-primary">
+      <Arrow size={12} />
+      {sortKeys.length > 1 && <span className="text-[10px] font-medium">{index + 1}</span>}
+    </span>
+  );
+}
 
 function getDefaultColumnWidth(field: FieldDefinition): number {
   const defaultWidth = TABLE_COLUMNS.DEFAULT_WIDTHS[field.type];
@@ -2326,21 +2422,19 @@ function resolveSystemColumnWidth(
 }
 
 interface ColumnsVisibilityMenuProps {
-  projectId: string;
   allFields: FieldDefinition[];
-  hiddenIds: readonly string[];
+  isVisible: (fieldId: string) => boolean;
+  onToggle: (fieldId: string, show: boolean) => void;
   onClose: () => void;
 }
 
 function ColumnsVisibilityMenu({
-  projectId,
   allFields,
-  hiddenIds,
+  isVisible,
+  onToggle,
   onClose,
 }: ColumnsVisibilityMenuProps) {
-  const dispatch = useAppDispatch();
   const containerRef = useRef<HTMLDivElement>(null);
-  const hiddenSet = useMemo(() => new Set(hiddenIds), [hiddenIds]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -2351,14 +2445,6 @@ function ColumnsVisibilityMenu({
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [onClose]);
-
-  const toggle = (fieldId: string, isVisible: boolean) => {
-    if (isVisible) {
-      dispatch(hideColumn({ projectId, fieldId }));
-    } else {
-      dispatch(showColumn({ projectId, fieldId }));
-    }
-  };
 
   return (
     <div
@@ -2377,16 +2463,16 @@ function ColumnsVisibilityMenu({
           <div className="px-3 py-2 text-xs text-muted-foreground">No columns available</div>
         )}
         {allFields.map((field) => {
-          const isVisible = !hiddenSet.has(field.id);
+          const visible = isVisible(field.id);
           return (
             <button
               key={field.id}
               type="button"
-              onClick={() => toggle(field.id, isVisible)}
+              onClick={() => onToggle(field.id, !visible)}
               className="flex w-full items-center justify-between gap-2 px-3 py-1.5 text-sm text-left text-foreground hover:bg-muted transition-colors"
             >
               <span className="truncate">{field.name}</span>
-              {isVisible ? (
+              {visible ? (
                 <Eye size={14} className="text-muted-foreground shrink-0" />
               ) : (
                 <EyeSlash size={14} className="text-subtle-foreground shrink-0" />
@@ -2440,7 +2526,7 @@ function ColumnResizeHandle({
       const nextWidth = Math.min(maxWidth, Math.max(minWidth, startWidthRef.current + delta));
       if (nextWidth !== latestWidthRef.current) {
         latestWidthRef.current = nextWidth;
-        dispatch(setColumnWidth({ projectId, fieldId: columnKey, width: nextWidth }));
+        dispatch(setDraftColumnWidth(projectId, columnRef(columnKey), nextWidth));
       }
     };
 

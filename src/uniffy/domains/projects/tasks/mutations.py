@@ -73,6 +73,11 @@ class TaskMutationOperations:
                 )
 
         if "blocked_by_task_ids" in kwargs and kwargs["blocked_by_task_ids"]:  # noqa: PLR2004
+            await TaskValidator(self.session).validate_in_project(
+                task.project_id,
+                [UUID(str(blocker)) for blocker in kwargs["blocked_by_task_ids"]],
+                "blocked_by",
+            )
             await TaskValidator(self.session).validate_no_circular_dependency(
                 task_id, kwargs["blocked_by_task_ids"]
             )
@@ -82,6 +87,9 @@ class TaskMutationOperations:
             if isinstance(proposed_parent, str):
                 proposed_parent = UUID(proposed_parent)
             if proposed_parent != task.parent_id:
+                await TaskValidator(self.session).validate_in_project(
+                    task.project_id, [proposed_parent], "parent_id"
+                )
                 await TaskValidator(self.session).validate_no_circular_parent(
                     task_id, proposed_parent
                 )
@@ -207,9 +215,9 @@ class TaskMutationOperations:
         if "assignee_ids" in kwargs:  # noqa: PLR2004
             newly_assigned = set(task.assignee_ids or []) - set(old_assignee_ids or [])
             if newly_assigned:
-                member_ids = await TaskNotifications(self.session).expand_assignees_to_users([
-                    UUID(uid) for uid in newly_assigned
-                ])
+                member_ids = await TaskNotifications(self.session).expand_assignees_to_users(
+                    task.organization_id, [UUID(uid) for uid in newly_assigned]
+                )
                 if member_ids:
                     await WatcherOperations(self.session).ensure_watching(
                         member_ids, organization_id, task.id

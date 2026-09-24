@@ -11,7 +11,7 @@ if [[ "$(id -u)" == "0" && -n "${HOST_UID:-}" ]]; then
     HOST_GID="${HOST_GID:-$HOST_UID}"
     for d in /pnpm-store /uv-cache /go-cache /app/.venv /app/node_modules \
         /app/src/ui/node_modules /app/src/mobile/node_modules \
-        /app/src/landing/node_modules /app/src/gen/typescript/node_modules \
+        /app/src/landing/node_modules /app/src/proto/gen/typescript/node_modules \
         /app/src/e2e/node_modules; do
         if [[ -e "$d" && "$(stat -c %u "$d")" != "$HOST_UID" ]]; then
             chown -R "$HOST_UID:$HOST_GID" "$d"

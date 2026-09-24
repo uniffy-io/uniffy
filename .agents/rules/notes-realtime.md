@@ -4,7 +4,7 @@ paths:
   - "src/uniffy/core/models/realtime/**/*.py"
   - "src/uniffy/domains/notes/**/*.py"
   - "src/uniffy/core/models/notes/**/*.py"
-  - "src/proto/notes/**/*.proto"
+  - "src/proto/schema/notes/**/*.proto"
   - "src/ui/src/features/notes/**/*.ts"
   - "src/ui/src/features/notes/**/*.tsx"
   - "src/ui/src/features/realtime/**/*.ts"

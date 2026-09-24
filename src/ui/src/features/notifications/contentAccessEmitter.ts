@@ -2,7 +2,12 @@
 
 import { ContentType } from "@uniffy/proto/common/v1/common_pb";
 
-export type ContentAccessAction = "granted" | "revoked" | "access_mode_changed" | "child_added";
+export type ContentAccessAction =
+  | "granted"
+  | "revoked"
+  | "access_mode_changed"
+  | "child_added"
+  | "views_changed";
 
 export interface ContentAccessChange {
   contentType: ContentType;

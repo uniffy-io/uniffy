@@ -3,6 +3,17 @@
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
+from uniffy_proto.projects.v1.projects_pb2 import (
+    BacklogLayout,
+    BoardLayout,
+    GraphLayout,
+    ResourcesLayout,
+    RoadmapLayout,
+    RoadmapZoom,
+    TableLayout,
+    TaskFieldRef,
+    ViewDefinition,
+)
 
 from uniffy.core.models.projects.field_definition import (
     DefaultTaskStatusId,
@@ -11,8 +22,14 @@ from uniffy.core.models.projects.field_definition import (
     SystemProjectFieldId,
     TaskStatusSemantic,
 )
-from uniffy.core.models.projects.view_config import ViewConfig
+from uniffy.core.models.projects.project import Project
+from uniffy.core.models.projects.view_config import (
+    DefaultProjectViewId,
+    ProjectViewVisibility,
+    ViewConfig,
+)
 from uniffy.domains.projects.status_colors import brand_ramp_color
+from uniffy.domains.projects.views.definition import definition_to_dict, view_type_for
 
 
 async def stage_default_project_fields(session: AsyncSession, project_id: UUID) -> None:
@@ -143,62 +160,69 @@ async def stage_default_project_fields(session: AsyncSession, project_id: UUID) 
     await session.flush()
 
 
-async def stage_default_project_views(session: AsyncSession, project_id: UUID) -> str:
-    """Create the default views (table, board, roadmap) for a project."""
-    default_views = [
-        ViewConfig(
-            id="view_table",
-            project_id=project_id,
-            name="Table",
-            type="table",
-            is_default=True,
-            config={
-                "type": "table",
-                "visibleFieldIds": [
-                    "field_title",
-                    "field_status",
-                    "field_priority",
-                    "field_assignee",
-                    "field_due_date",
-                ],
-                "columnWidths": {},
-                "sortFieldId": None,
-                "sortDirection": "asc",
-                "groupByFieldId": None,
-            },
+def default_view_definitions() -> list[tuple[DefaultProjectViewId, str, ViewDefinition]]:
+    """Shared views every project starts with, in tab order."""
+
+    def fields(*field_ids: str) -> list[TaskFieldRef]:
+        return [TaskFieldRef(field_id=field_id) for field_id in field_ids]
+
+    return [
+        (
+            DefaultProjectViewId.TABLE,
+            "Table",
+            ViewDefinition(
+                table=TableLayout(),
+                visible_fields=fields(
+                    SystemProjectFieldId.TITLE,
+                    SystemProjectFieldId.STATUS,
+                    SystemProjectFieldId.PRIORITY,
+                    SystemProjectFieldId.ASSIGNEE,
+                    SystemProjectFieldId.DUE_DATE,
+                ),
+            ),
         ),
-        ViewConfig(
-            id="view_board",
-            project_id=project_id,
-            name="Board",
-            type="board",
-            is_default=False,
-            config={
-                "type": "board",
-                "statusFieldId": "field_status",
-                "visibleFieldIds": ["field_priority", "field_assignee", "field_due_date"],
-                "collapsedColumnIds": [],
-            },
+        (
+            DefaultProjectViewId.BOARD,
+            "Board",
+            ViewDefinition(
+                board=BoardLayout(),
+                visible_fields=fields(
+                    SystemProjectFieldId.PRIORITY,
+                    SystemProjectFieldId.ASSIGNEE,
+                    SystemProjectFieldId.DUE_DATE,
+                ),
+            ),
         ),
-        ViewConfig(
-            id="view_roadmap",
-            project_id=project_id,
-            name="Roadmap",
-            type="roadmap",
-            is_default=False,
-            config={
-                "type": "roadmap",
-                "startDateFieldId": "field_start_date",
-                "endDateFieldId": "field_due_date",
-                "zoomLevel": "week",
-                "visibleFieldIds": ["field_status", "field_priority"],
-            },
+        (
+            DefaultProjectViewId.ROADMAP,
+            "Roadmap",
+            ViewDefinition(
+                roadmap=RoadmapLayout(zoom=RoadmapZoom.ROADMAP_ZOOM_WEEK),
+                visible_fields=fields(SystemProjectFieldId.STATUS, SystemProjectFieldId.PRIORITY),
+            ),
         ),
+        (DefaultProjectViewId.BACKLOG, "Backlog", ViewDefinition(backlog=BacklogLayout())),
+        (DefaultProjectViewId.GRAPH, "Graph", ViewDefinition(graph=GraphLayout())),
+        (DefaultProjectViewId.RESOURCES, "Resources", ViewDefinition(resources=ResourcesLayout())),
     ]
 
-    for view in default_views:
-        session.add(view)
+
+async def stage_default_project_views(session: AsyncSession, project: Project) -> str:
+    for sort_order, (view_id, name, definition) in enumerate(default_view_definitions()):
+        session.add(
+            ViewConfig(
+                id=view_id,
+                project_id=project.id,
+                organization_id=project.organization_id,
+                owner_id=project.owner_id,
+                name=name,
+                type=view_type_for(definition),
+                visibility=ProjectViewVisibility.SHARED,
+                sort_order=sort_order,
+                definition=definition_to_dict(definition),
+            )
+        )
 
     await session.flush()
 
-    return "view_table"
+    return DefaultProjectViewId.TABLE

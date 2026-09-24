@@ -21,7 +21,7 @@ importers:
         version: 2.1.1(@bufbuild/protobuf@2.12.0)(@connectrpc/connect@2.1.1(@bufbuild/protobuf@2.12.0))
       '@uniffy/proto':
         specifier: workspace:*
-        version: link:../gen/typescript
+        version: link:../proto/gen/typescript
     devDependencies:
       '@playwright/test':
         specifier: ^1.50.0
@@ -36,7 +36,7 @@ importers:
         specifier: ~6.0.3
         version: 6.0.3
 
-  src/gen/typescript:
+  src/proto/gen/typescript:
     dependencies:
       '@bufbuild/protobuf':
         specifier: ^2.12.0
@@ -140,7 +140,7 @@ importers:
         version: 1.3.3
       '@uniffy/proto':
         specifier: workspace:*
-        version: link:../gen/typescript
+        version: link:../proto/gen/typescript
       expo:
         specifier: ^57.0.4
         version: 57.0.4(d98aedabd6274537950414df8d8ee7d0)
@@ -411,7 +411,7 @@ importers:
         version: 2.11.2(react-redux@9.2.0(@types/react@19.2.14)(react@19.2.4)(redux@5.0.1))(react@19.2.4)
       '@uniffy/proto':
         specifier: workspace:*
-        version: link:../gen/typescript
+        version: link:../proto/gen/typescript
       '@xyflow/react':
         specifier: ^12.10.0
         version: 12.10.1(@types/react@19.2.14)(immer@11.1.4)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)

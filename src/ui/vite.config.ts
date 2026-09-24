@@ -68,7 +68,7 @@ export default defineConfig(({ command, mode }) => {
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
-      '@uniffy/proto': path.resolve(__dirname, '../gen/typescript'),
+      '@uniffy/proto': path.resolve(__dirname, '../proto/gen/typescript'),
     },
     extensions: ['.ts', '.tsx', '.js', '.jsx'],
   },

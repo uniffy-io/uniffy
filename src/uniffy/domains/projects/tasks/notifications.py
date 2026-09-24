@@ -14,6 +14,7 @@ from uniffy.core.events import (
 )
 from uniffy.core.models.login.group import Group
 from uniffy.core.models.login.group_member import GroupMember
+from uniffy.core.models.login.organization_member import OrganizationMember
 from uniffy.core.models.projects.activity import TaskActivity
 from uniffy.core.models.projects.field_definition import FieldDefinition, SystemProjectFieldId
 from uniffy.core.models.projects.task import Task
@@ -52,16 +53,22 @@ class TaskNotifications:
                     break
         return resolved
 
-    async def expand_assignees_to_users(self, assignee_ids: list[UUID]) -> list[UUID]:
+    async def expand_assignees_to_users(
+        self, organization_id: UUID, assignee_ids: list[UUID]
+    ) -> list[UUID]:
         """Expand any group ids among assignees into active member user ids.
 
-        Assignees can be users or groups (the picker allows both), but only
-        users can hold a watcher row or receive a notification.
+        Assignees can be users or groups (the picker allows both), but only active members of
+        the task's organization can hold a watcher row or receive a notification.
         """
         if not assignee_ids:
             return []
 
-        group_rows = await self.session.execute(select(Group.id).where(Group.id.in_(assignee_ids)))
+        group_rows = await self.session.execute(
+            select(Group.id).where(
+                and_(Group.id.in_(assignee_ids), Group.organization_id == organization_id)
+            )
+        )
         group_ids = {row[0] for row in group_rows.all()}
 
         resolved: set[UUID] = {uid for uid in assignee_ids if uid not in group_ids}
@@ -76,8 +83,19 @@ class TaskNotifications:
                 )
             )
             resolved.update(row[0] for row in member_rows.all())
+        if not resolved:
+            return []
 
-        return list(resolved)
+        members = await self.session.execute(
+            select(OrganizationMember.user_id).where(
+                and_(
+                    OrganizationMember.user_id.in_(resolved),
+                    OrganizationMember.organization_id == organization_id,
+                    OrganizationMember.is_active.is_(True),
+                )
+            )
+        )
+        return [row[0] for row in members.all()]
 
     async def emit_assignment_notifications(
         self,
@@ -93,7 +111,9 @@ class TaskNotifications:
         if not added:
             return
 
-        recipient_ids = await self.expand_assignees_to_users([UUID(uid) for uid in added])
+        recipient_ids = await self.expand_assignees_to_users(
+            task.organization_id, [UUID(uid) for uid in added]
+        )
         recipient_ids = [uid for uid in recipient_ids if uid != actor_id]
 
         if not recipient_ids:

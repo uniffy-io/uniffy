@@ -13,10 +13,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import Action
 from uniffy.core.content.base_operations import BaseContentOperations
-from uniffy.core.errors import ValidationError
+from uniffy.core.errors import NotFoundError, ValidationError
 from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.projects.project import Project
 from uniffy.core.models.projects.task import Task
+from uniffy.core.models.projects.view_config import ProjectViewVisibility
 from uniffy.core.search.engine import SearchTerm, all_of
 from uniffy.core.search.indexer import SearchIndexer, build_content_urn
 from uniffy.core.storage import ObjectStorage
@@ -32,6 +33,7 @@ from uniffy.domains.permissions.members import (
     StagedContentMemberAdd,
 )
 from uniffy.domains.projects import queries
+from uniffy.domains.projects.audience import publish_views_changed
 from uniffy.domains.projects.defaults import (
     stage_default_project_fields,
     stage_default_project_views,
@@ -154,7 +156,7 @@ class ProjectOperations(BaseContentOperations[Project]):
         try:
             await self.session.flush()
             await stage_default_project_fields(self.session, project.id)
-            project.default_view_id = await stage_default_project_views(self.session, project.id)
+            project.default_view_id = await stage_default_project_views(self.session, project)
 
             members_ops = ContentMembersOperations(self.session, self.search_indexer)
             for gid in group_ids or []:
@@ -237,6 +239,25 @@ class ProjectOperations(BaseContentOperations[Project]):
                 project_id=str(project.id),
             )
 
+    async def get_for_view_mutation(
+        self, user_id: UUID, organization_id: UUID, project_id: UUID
+    ) -> Project:
+        """Serialize view mutations with default selection and refresh cached project state."""
+        project = await self.session.scalar(
+            select(Project)
+            .where(
+                Project.id == project_id,
+                Project.organization_id == organization_id,
+                Project.is_deleted.is_(False),
+            )
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        )
+        if project is None:
+            raise NotFoundError(self.content_type.value, project_id)
+        await self._require_view(user_id, organization_id, project)
+        return project
+
     async def update(
         self,
         user_id: UUID,
@@ -245,7 +266,11 @@ class ProjectOperations(BaseContentOperations[Project]):
         **kwargs,
     ) -> Project:
         """Access-policy changes go through ``permissions.v1.MembersService``, never this method."""
-        project = await self.get_by_id(user_id, organization_id, project_id)
+        project = (
+            await self.get_for_view_mutation(user_id, organization_id, project_id)
+            if "default_view_id" in kwargs  # noqa: PLR2004 - update keyword name
+            else await self.get_by_id(user_id, organization_id, project_id)
+        )
         await self._require_manage(user_id, organization_id, project)
 
         kwargs.pop("access_mode", None)
@@ -253,6 +278,17 @@ class ProjectOperations(BaseContentOperations[Project]):
         tag_ids = kwargs.pop("tag_ids", None)
 
         name_changed = "name" in kwargs and kwargs["name"] != project.name  # noqa: PLR2004
+
+        default_changed = False
+        if "default_view_id" in kwargs:  # noqa: PLR2004 - update keyword name
+            default_view_id = await self._resolve_default_view_id(
+                project.id, kwargs.pop("default_view_id")
+            )
+            default_changed = default_view_id != project.default_view_id
+            project.default_view_id = default_view_id
+
+        if "slug" in kwargs:  # noqa: PLR2004 - update keyword name
+            project.slug = await self._resolve_renamed_slug(project, kwargs.pop("slug"))
 
         for key, value in kwargs.items():
             if value is not None and hasattr(project, key):
@@ -273,6 +309,9 @@ class ProjectOperations(BaseContentOperations[Project]):
         await self._index_for_search(project)
         await self.session.commit()
 
+        if default_changed:
+            await publish_views_changed(self.session, project)
+
         if name_changed:
             try:
                 project_urn = build_content_urn(self.content_type, project.id)
@@ -288,6 +327,17 @@ class ProjectOperations(BaseContentOperations[Project]):
                 )
 
         return project
+
+    async def _resolve_default_view_id(self, project_id: UUID, view_id: str | None) -> str | None:
+        """An empty id clears the default; anything else must be a shared view of the project."""
+        if not view_id:
+            return None
+        view = await queries.get_view(self.session, project_id, view_id)
+        if view is None or view.visibility != ProjectViewVisibility.SHARED:
+            raise ValidationError(
+                "default_view_id", "The default view must be a shared view of this project"
+            )
+        return view_id
 
     async def delete(
         self,
@@ -419,20 +469,42 @@ class ProjectOperations(BaseContentOperations[Project]):
         requested_slug: str | None,
     ) -> str:
         candidate = requested_slug.upper() if requested_slug else self._generate_slug_candidate(name)
+        self._require_slug_shape(candidate)
+        for suffix in ["", "2", "3", "4", "5", "6", "7", "8", "9"]:
+            slug_to_try = candidate + suffix
+            if not await self._slug_taken(organization_id, slug_to_try):
+                return slug_to_try
+        return candidate[:4] + secrets.token_hex(1).upper()
+
+    def _require_slug_shape(self, candidate: str) -> None:
         if not _SLUG_PATTERN.match(candidate):
             raise ValidationError(
                 "slug",
                 f"Slug '{candidate}' must be 2-5 uppercase letters/digits starting with a letter",
             )
-        for suffix in ["", "2", "3", "4", "5", "6", "7", "8", "9"]:
-            slug_to_try = candidate + suffix
-            exists = await self.session.execute(
-                select(Project).where(
-                    Project.organization_id == organization_id,
-                    Project.slug == slug_to_try,
-                    Project.is_deleted == False,  # noqa: E712
-                )
-            )
-            if exists.scalar_one_or_none() is None:
-                return slug_to_try
-        return candidate[:4] + secrets.token_hex(1).upper()
+
+    async def _slug_taken(
+        self,
+        organization_id: UUID,
+        slug: str,
+        *,
+        exclude_project_id: UUID | None = None,
+    ) -> bool:
+        query = select(Project.id).where(
+            Project.organization_id == organization_id,
+            Project.slug == slug,
+            Project.is_deleted == False,  # noqa: E712
+        )
+        if exclude_project_id is not None:
+            query = query.where(Project.id != exclude_project_id)
+        return await self.session.scalar(query.limit(1)) is not None
+
+    async def _resolve_renamed_slug(self, project: Project, requested_slug: str) -> str:
+        """A rename keeps the caller's slug or fails; task keys read it, so no silent suffix."""
+        candidate = requested_slug.strip().upper()
+        if candidate == project.slug:
+            return project.slug
+        self._require_slug_shape(candidate)
+        if await self._slug_taken(project.organization_id, candidate, exclude_project_id=project.id):
+            raise ValidationError("slug", f"Slug '{candidate}' is already used by another project")
+        return candidate

@@ -1,7 +1,9 @@
 import { createSlice, createSelector, type PayloadAction } from "@reduxjs/toolkit";
 import type { RootState } from "@/app/store";
+import { ViewVisibility } from "@uniffy/proto/projects/v1/projects_pb";
 import type { Project, Task } from "../types/project";
 import type { FieldDefinition } from "../types/fields";
+import type { ViewConfig } from "../types/views";
 import type { TaskActivity } from "../types/activity";
 import { isCompletedStatus, statusOptionsOf } from "@/features/projects/utils/statusSemantics";
 import type { LoadingState, ErrorState } from "../types/ui";
@@ -26,6 +28,15 @@ import {
   bulkUpdateTasksThunk,
   fetchActivities,
 } from "./projectsThunks";
+
+/** Shared views first, each group in its stored order: the order the server lists them in. */
+function sortViews(views: ViewConfig[]): ViewConfig[] {
+  const rank = (view: ViewConfig) => (view.visibility === ViewVisibility.SHARED ? 0 : 1);
+  return [...views].sort(
+    (a, b) =>
+      rank(a) - rank(b) || a.sortOrder - b.sortOrder || a.createdAt.localeCompare(b.createdAt),
+  );
+}
 
 export interface ProjectsState {
   projects: Record<string, Project>;
@@ -464,23 +475,15 @@ export const projectsSlice = createSlice({
       const view = action.payload;
       const project = state.projects[view.projectId];
       if (project) {
-        const idx = project.views.findIndex((v) => v.id === view.id);
-        if (idx !== -1) {
-          project.views[idx] = view;
-        } else {
-          project.views.push(view);
-        }
+        project.views = sortViews([...project.views.filter((v) => v.id !== view.id), view]);
       }
     });
 
     builder.addCase(updateViewThunk.fulfilled, (state, action) => {
       const view = action.payload;
       const project = state.projects[view.projectId];
-      if (project) {
-        const idx = project.views.findIndex((v) => v.id === view.id);
-        if (idx !== -1) {
-          project.views[idx] = view;
-        }
+      if (project && project.views.some((v) => v.id === view.id)) {
+        project.views = sortViews(project.views.map((v) => (v.id === view.id ? view : v)));
       }
     });
 
@@ -489,6 +492,9 @@ export const projectsSlice = createSlice({
       const project = state.projects[projectId];
       if (project) {
         project.views = project.views.filter((v) => v.id !== viewId);
+        if (project.defaultViewId === viewId) {
+          project.defaultViewId = "";
+        }
       }
     });
 

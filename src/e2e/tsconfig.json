@@ -14,7 +14,7 @@
     "jsx": "react-jsx",
     "paths": {
       "@e2e/*": ["./*"],
-      "@uniffy/proto/*": ["../gen/typescript/*"]
+      "@uniffy/proto/*": ["../proto/gen/typescript/*"]
     }
   },
   "include": ["**/*.ts"],

@@ -9,7 +9,7 @@
       "@shared/*": ["./src/shared/*"],
       "@core/*": ["./src/core/*"],
       "@theme/*": ["./src/theme/*"],
-      "@uniffy/proto/*": ["../gen/typescript/*"]
+      "@uniffy/proto/*": ["../proto/gen/typescript/*"]
     }
   },
   "include": ["**/*.ts", "**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts"]

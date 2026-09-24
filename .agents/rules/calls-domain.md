@@ -3,7 +3,7 @@ paths:
   - "src/uniffy/domains/calls/**/*.py"
   - "src/uniffy/core/models/calls/**/*.py"
   - "src/uniffy/domains/calls/jobs/**/*.py"
-  - "src/proto/calls/**/*.proto"
+  - "src/proto/schema/calls/**/*.proto"
   - "src/ui/src/features/calls/**/*.ts"
   - "src/ui/src/features/calls/**/*.tsx"
 ---
@@ -133,7 +133,7 @@ path. LiveKit's coordination registry shares the app's Valkey instance.
 
 | File | Purpose |
 |------|---------|
-| `src/proto/calls/v1/calls.proto` | `CallService` contract (source of truth; run `./manage.py proto` after edits) |
+| `src/proto/schema/calls/v1/calls.proto` | `CallService` contract (source of truth; run `./manage.py proto` after edits) |
 | `src/uniffy/domains/calls/operations.py` | Call lifecycle business logic + fanout |
 | `src/uniffy/domains/calls/handlers.py` | Thin ConnectRPC handlers |
 | `src/uniffy/domains/calls/webhook.py` | LiveKit webhook processor (join eviction, leave/abort, room-ended) |

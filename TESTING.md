@@ -2636,6 +2636,107 @@ due date, spread over two projects.
       lines are readable, the chart tooltip is readable, and the org chart's "team lead" edge
       labels are readable.
 
+## Projects: personal and shared views
+
+Views are managed from the tab strip in the project header; the server-rule checks below read
+the `GetProject` and `ListProjects` responses in the browser's network tab. Needs two browsers:
+the project owner, and a second user who has the project shared with them (as an editor, then as
+a viewer). On a local stack the view calls can be made from the browser console, where the dev
+server exposes the app's own API module:
+`const { projectsApi } = await import("/src/features/projects/api/projectsApi.ts")`.
+
+- [ ] `(both products)` After upgrading, every existing project lists six shared views (Table,
+      Board, Roadmap, Backlog, Graph, Resources) in that order, each with a `definition` and an
+      `ownerId`, and no `configJson`. `defaultViewId` is `view_table`.
+- [ ] A project created after the upgrade has the same six views and the same default.
+- [ ] As the viewer, create a personal view (`projectsApi.createView(projectId, { name: "Mine",
+      definition: { layout: { type: "table", flat: false }, filter: null, sort: [], groupBy: null,
+      visibleFields: [], columnWidths: [], collapsedGroupKeys: [] }, visibility: 1 }, orgId)`). It
+      comes back with `visibility` 1 and the viewer as owner. The viewer's next `GetProject` lists
+      it after the shared views; the owner's does not.
+- [ ] As the viewer, create the same view with `visibility: 2` (shared): it fails with a
+      permission error toast and nothing is created.
+- [ ] As the owner, create a shared view. The viewer's open project page issues a `GetProject`
+      within a second, with no reload and no `ListProjects` call.
+- [ ] As the owner, set the project default to the viewer's personal view id with
+      `UpdateProject`: it fails with "The default view must be a shared view of this project".
+- [ ] As the owner, delete `view_table`: the next `GetProject` has an empty `defaultViewId`.
+- [ ] Save a definition whose filter names a field id that does not exist: the call fails with a
+      message naming that field, not a generic error.
+- [ ] Call `ReorderViews` directly for shared views as an editor who is not an admin: permission
+      error. As the owner with the complete list of shared view ids: the next `GetProject` lists
+      them in the new server order. Header dragging saves personal order in browser preferences.
+- [ ] `(self-hosted)` `./manage.py db migrate` on a copy of a database from before the upgrade
+      completes, and every project has six views afterwards.
+
+### Working state of a view
+
+- [ ] Open a project: the tabs are its views, and the project default opens. Reload after opening
+      another view: that view opens again.
+- [ ] In the Table view pick a type in Display, group by Priority, collapse a group, resize the Title
+      column, hide a column and shift-click two headers to sort by both. The tab shows a dot; reload:
+      all of it is still there and the dot remains.
+- [ ] Switch to the Board view: none of the Table edits show there. Back on Table they are intact.
+- [ ] Set a sprint or type filter in one project, then open another project: it shows its default
+      view with no filter.
+- [ ] The Type, Sprint, Epic, Tags and Top-level chips come from the filter; removing one chip
+      removes only that condition. A condition added in Filter shows as "Conditions · 1".
+- [ ] Typing in the search field never puts a dot on the tab.
+- [ ] Roadmap zoom (Day, Week, Month) belongs to the roadmap view: it survives a reload and dirties
+      that view only.
+- [ ] Log out and back in as someone else in the same browser: no view edits of the first account
+      are left.
+
+### View tabs
+
+- [ ] Only the open view shows its name; the other tabs show their layout icon, and hovering one
+      shows its name. Opening another tab moves the name to it.
+- [ ] With more views than the bar fits, the strip scrolls, the "All views" menu lists every view,
+      and "+" stays visible. At 768 px the same; at 375 px the tabs become a select with the options
+      and "+" beside it.
+- [ ] Edit a shared view as an editor: Save, Save as new and Discard appear. Discard restores the
+      saved view. Save clears the dot, a reload shows the saved state, and the second browser shows
+      it without a reload.
+- [ ] Save as new from an edited shared view, choosing Personal: the new view opens with the edits,
+      the shared view keeps its saved state with no dot, and the second browser does not list it.
+- [ ] "+" offers the six layouts and creates a personal view named after the layout ("Board 2" when
+      "Board" exists).
+- [ ] Rename inline (Enter saves, Escape cancels), Duplicate (a personal copy of what the view shows),
+      Make shared, Make personal and Delete (with a confirmation) each update the tab row without a
+      reload; shared changes reach the second browser. Deleting the open view opens the default.
+- [ ] As the owner, Set as project default: the tab shows "Project default" in both browsers
+      without a reload. The default view offers no Make personal.
+- [ ] As a viewer, editor or owner, drag shared and personal tabs across each other: the new order
+      appears immediately, survives reload in that browser, and leaves the second browser unchanged.
+      Dragging does not dirty a view or send `ReorderViews`. Logout clears the personal order.
+- [ ] After setting a personal order, create another view: it appears at the end. Delete a view:
+      its tab disappears and the remaining tabs keep their order. Another project keeps its own order.
+- [ ] `?view=` follows the open view on the project and on an open task. A link to a shared view
+      opens it for the second user; a link to the owner's personal view opens the default for the
+      second user and replaces the parameter. Copy link puts the view link on the clipboard.
+- [ ] As a viewer: the menu on a shared view has only Duplicate and Copy link, an edited shared view
+      offers Save as new and Discard but no Save, and Save as new offers only Personal. The viewer's
+      own view offers Rename, Duplicate, Copy link and Delete, and no Make shared.
+
+### Tasks filtered on the server
+
+The web still loads a whole project and filters it in the browser; the server filter serves the
+agent tool, the API and mobile. Needs an agent with the Tasks tools and a project with a few
+assigned, dated and tagged tasks.
+
+- [ ] Ask the agent for "my open tasks in <project>": its `tasks.list_tasks` call carries a filter
+      with the current user, and the reply lists exactly what a web view "Assignee is Me" shows.
+- [ ] Ask for the tasks of a shared view by name: the call names the view and the reply matches
+      that tab on the web. A misspelled view name comes back with the project's views listed.
+      The second user asking for the same "Assignee is Me" view gets their own tasks.
+- [ ] Ask for tasks due this week with the profile time zone set far from UTC (Settings >
+      Appearance): the reply matches a web view "Due on or before End of week".
+- [ ] Ask for a filter on a custom field that was deleted in project settings: the agent gets an
+      error that names the field instead of an empty list. A saved view that still names the
+      deleted field lists the same tasks through the agent as its tab does on the web.
+- [ ] Sort a view by title with tasks "Task 9" and "Task 10": the agent lists them in the order
+      the web table shows, 9 before 10.
+
 ## Pre-release sweep
 
 - [ ] All linters green: `./manage.py lint`.

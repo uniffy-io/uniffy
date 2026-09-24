@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useMemo, useCallback } from "react";
 import {
   CaretDown,
   CaretRight,
@@ -15,6 +15,8 @@ import { useSubjectResolver } from "@/components/subject/hooks/useSubjectResolve
 import { selectCurrentProject } from "@/features/projects/store/projectsSlice";
 import { selectTask, openDetailPanel } from "@/features/projects/store/projectsUiSlice";
 import { useFilteredTasks } from "@/features/projects/hooks/useTasks";
+import { selectActiveDefinition } from "@/features/projects/store/viewSelectors";
+import { toggleDraftCollapsedGroup } from "@/features/projects/store/viewDraftThunks";
 import { formatMinutes } from "@/features/projects/utils/timeFormatting";
 import { formatDateShort, isOverdue } from "@/shared/utils/dateFormatting";
 import { SYSTEM_FIELD_IDS } from "@/features/projects/types";
@@ -35,7 +37,9 @@ export function ResourceView() {
   const project = useAppSelector(selectCurrentProject);
   // Top-level tasks only: a subtask's work is counted through its parent.
   const tasks = useFilteredTasks(project?.id ?? "");
-  const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
+  const projectId = project?.id ?? "";
+  const collapsedKeys = useAppSelector(selectActiveDefinition(projectId)).collapsedGroupKeys;
+  const collapsedSections = useMemo(() => new Set(collapsedKeys), [collapsedKeys]);
 
   // Collect all unique assignee IDs
   const allAssigneeIds = useMemo(() => {
@@ -114,14 +118,10 @@ export function ResourceView() {
     return map;
   }, [project]);
 
-  const toggleSection = useCallback((key: string) => {
-    setCollapsedSections((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      return next;
-    });
-  }, []);
+  const toggleSection = useCallback(
+    (key: string) => dispatch(toggleDraftCollapsedGroup(projectId, key)),
+    [dispatch, projectId],
+  );
 
   const handleTaskClick = useCallback(
     (taskId: string) => {

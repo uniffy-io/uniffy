@@ -28,7 +28,7 @@ from uniffy.core.types import generate_id
 from uniffy.domains.auth.interceptors import PUBLIC_METHODS, AuthenticationInterceptor
 from uniffy.factory import _create_api_dispatcher
 
-_GEN_ROOT = pathlib.Path("src/gen/python/src/uniffy_proto")
+_GEN_ROOT = pathlib.Path("src/proto/gen/python/src/uniffy_proto")
 _METHOD_RE = re.compile(
     r'MethodInfo\(\s*name="(?P<name>[^"]+)",\s*service_name="(?P<service>[^"]+)"',
     re.S,

@@ -69,7 +69,7 @@ def _validate_single_field(field_def: FieldDefinition, value: Any) -> str | None
                 return "must be a numeric value"
 
     elif field_type == ProjectFieldType.SINGLE_SELECT:
-        options = _get_option_ids(config)
+        options = option_ids(config)
         if options and str(value) not in options:
             labels = _get_option_labels(config)
             return f"must be one of: {', '.join(labels)}"
@@ -77,7 +77,7 @@ def _validate_single_field(field_def: FieldDefinition, value: Any) -> str | None
     elif field_type == ProjectFieldType.MULTI_SELECT:
         if not isinstance(value, list):
             return "must be a list of values"
-        options = _get_option_ids(config)
+        options = option_ids(config)
         if options:
             invalid = [str(v) for v in value if str(v) not in options]
             if invalid:
@@ -105,7 +105,7 @@ def _validate_single_field(field_def: FieldDefinition, value: Any) -> str | None
     return None
 
 
-def _get_option_ids(config: dict) -> set[str]:
+def option_ids(config: dict) -> set[str]:
     options = config.get("options", [])
     return {str(opt.get("id", opt.get("label", ""))) for opt in options if isinstance(opt, dict)}
 

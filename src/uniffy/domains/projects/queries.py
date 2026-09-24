@@ -6,14 +6,14 @@ from datetime import UTC, datetime
 from typing import NamedTuple
 from uuid import UUID
 
-from sqlalchemy import and_, case, delete, func, or_, select
+from sqlalchemy import Select, and_, case, delete, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.models.permissions.content_member import ContentMember
 from uniffy.core.models.projects.activity import TaskActivity
 from uniffy.core.models.projects.field_definition import FieldDefinition
 from uniffy.core.models.projects.task import Task
-from uniffy.core.models.projects.view_config import ViewConfig
+from uniffy.core.models.projects.view_config import ProjectViewVisibility, ViewConfig
 from uniffy.core.models.shared import ContentRole, ContentType
 
 
@@ -29,11 +29,71 @@ async def get_fields_for_project(
     return list(result.scalars().all())
 
 
+def _visible_views(viewer_id: UUID) -> Select[tuple[ViewConfig]]:
+    """Every shared view plus the viewer's own personal views, shared first."""
+    return (
+        select(ViewConfig)
+        .where(
+            or_(
+                ViewConfig.visibility == ProjectViewVisibility.SHARED,
+                ViewConfig.owner_id == viewer_id,
+            )
+        )
+        .order_by(
+            case((ViewConfig.visibility == ProjectViewVisibility.SHARED, 0), else_=1),
+            ViewConfig.sort_order.asc(),
+            ViewConfig.created_at.asc(),
+            ViewConfig.id.asc(),
+        )
+    )
+
+
 async def get_views_for_project(
     session: AsyncSession,
     project_id: UUID,
+    viewer_id: UUID,
 ) -> list[ViewConfig]:
-    result = await session.execute(select(ViewConfig).where(ViewConfig.project_id == project_id))
+    result = await session.execute(
+        _visible_views(viewer_id).where(ViewConfig.project_id == project_id)
+    )
+    return list(result.scalars().all())
+
+
+async def get_view(
+    session: AsyncSession,
+    project_id: UUID,
+    view_id: str,
+) -> ViewConfig | None:
+    result = await session.execute(
+        select(ViewConfig)
+        .where(
+            ViewConfig.project_id == project_id,
+            ViewConfig.id == view_id,
+        )
+        .execution_options(populate_existing=True)
+    )
+    return result.scalar_one_or_none()
+
+
+async def get_views_in_scope(
+    session: AsyncSession,
+    project_id: UUID,
+    visibility: ProjectViewVisibility,
+    owner_id: UUID,
+    *,
+    for_update: bool = False,
+) -> list[ViewConfig]:
+    """Shared views of the project, or ``owner_id``'s personal views in it."""
+    query = select(ViewConfig).where(
+        ViewConfig.project_id == project_id,
+        ViewConfig.visibility == visibility,
+    )
+    if visibility is ProjectViewVisibility.PERSONAL:
+        query = query.where(ViewConfig.owner_id == owner_id)
+    query = query.order_by(ViewConfig.sort_order.asc(), ViewConfig.created_at.asc())
+    if for_update:
+        query = query.with_for_update().execution_options(populate_existing=True)
+    result = await session.execute(query)
     return list(result.scalars().all())
 
 
@@ -61,11 +121,14 @@ async def get_fields_for_projects(
 async def get_views_for_projects(
     session: AsyncSession,
     project_ids: list[UUID],
+    viewer_id: UUID,
 ) -> dict[str, list[ViewConfig]]:
     if not project_ids:
         return {}
 
-    result = await session.execute(select(ViewConfig).where(ViewConfig.project_id.in_(project_ids)))
+    result = await session.execute(
+        _visible_views(viewer_id).where(ViewConfig.project_id.in_(project_ids))
+    )
     views = result.scalars().all()
 
     grouped: dict[str, list[ViewConfig]] = defaultdict(list)

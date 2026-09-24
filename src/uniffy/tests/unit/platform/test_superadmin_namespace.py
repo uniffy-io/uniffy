@@ -14,8 +14,8 @@ from pathlib import Path
 import uniffy
 
 SRC_DIR = Path(uniffy.__file__).parent.parent
-SUPERADMIN_PROTO_DIR = SRC_DIR / "proto" / "superadmin" / "v1"
-SUPPORT_CONSENT_PROTO = SRC_DIR / "proto" / "support" / "v1" / "support_consent.proto"
+SUPERADMIN_PROTO_DIR = SRC_DIR / "proto" / "schema" / "superadmin" / "v1"
+SUPPORT_CONSENT_PROTO = SRC_DIR / "proto" / "schema" / "support" / "v1" / "support_consent.proto"
 FACTORY = SRC_DIR / "uniffy" / "factory.py"
 DOMAINS = SRC_DIR / "uniffy" / "domains"
 
@@ -114,9 +114,9 @@ def _ungated_rpcs(proto_text: str, handlers: tuple[Path, ...]) -> list[str]:
 
 class TestNamespaceIsTheSurface:
     def test_every_superadmin_proto_has_handlers(self) -> None:
-        missing = [
-            path.name for path in SUPERADMIN_PROTO_DIR.glob("*.proto") if not _handler_modules(path)
-        ]
+        protos = list(SUPERADMIN_PROTO_DIR.glob("*.proto"))
+        assert protos, "No operator schemas found for authorization checks"
+        missing = [path.name for path in protos if not _handler_modules(path)]
         assert missing == []
 
     def test_every_superadmin_rpc_is_sysadmin_gated(self) -> None:

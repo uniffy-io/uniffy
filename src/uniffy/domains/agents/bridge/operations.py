@@ -42,7 +42,7 @@ from uniffy.domains.chat.agents import (
 )
 from uniffy.domains.chat.lifecycle import ChannelCallLifecycle
 from uniffy.domains.files.attachments.operations import AttachmentOperations
-from uniffy.domains.settings.operations import get_user_timezone
+from uniffy.domains.settings.preferences import get_user_timezone
 
 logger = logger.bind(component="agents.bridge.operations")
 

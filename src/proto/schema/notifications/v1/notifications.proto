@@ -1,0 +1,425 @@
+syntax = "proto3";
+
+package notifications.v1;
+
+import "common/v1/common.proto";
+import "google/protobuf/timestamp.proto";
+import "permissions/v1/permissions.proto";
+
+option go_package = "github.com/uniffy-io/uniffy-proto-go/notifications/v1;notificationsv1";
+
+// NotificationsService provides notification management and real-time streaming
+service NotificationsService {
+  // List notifications for the current user with pagination and filters
+  rpc ListNotifications(ListNotificationsRequest) returns (ListNotificationsResponse) {}
+
+  // Get the count of unread notifications
+  rpc GetUnreadCount(GetUnreadCountRequest) returns (GetUnreadCountResponse) {}
+
+  // Mark a single notification as read
+  rpc MarkAsRead(MarkAsReadRequest) returns (MarkAsReadResponse) {}
+
+  // Mark all notifications as read in an organization
+  rpc MarkAllAsRead(MarkAllAsReadRequest) returns (MarkAllAsReadResponse) {}
+
+  // Delete a notification
+  rpc DeleteNotification(DeleteNotificationRequest) returns (DeleteNotificationResponse) {}
+
+  // Register a Web Push subscription for the current user
+  rpc RegisterPushSubscription(RegisterPushSubscriptionRequest) returns (RegisterPushSubscriptionResponse) {}
+
+  // Unregister a Web Push subscription
+  rpc UnregisterPushSubscription(UnregisterPushSubscriptionRequest) returns (UnregisterPushSubscriptionResponse) {}
+
+  // Server streaming: real-time notification feed via Valkey Pub/Sub
+  rpc StreamNotifications(StreamNotificationsRequest) returns (stream StreamNotificationsResponse) {}
+
+  // Get the VAPID public key for Web Push subscription
+  rpc GetVapidPublicKey(GetVapidPublicKeyRequest) returns (GetVapidPublicKeyResponse) {}
+
+  // Search notifications with full-text search and advanced filters
+  rpc SearchNotifications(SearchNotificationsRequest) returns (SearchNotificationsResponse) {}
+
+  // Get aggregated notification statistics for analytics
+  rpc GetNotificationStats(GetNotificationStatsRequest) returns (GetNotificationStatsResponse) {}
+
+  // Mark multiple notifications as read in bulk
+  rpc BulkMarkAsRead(BulkMarkAsReadRequest) returns (BulkMarkAsReadResponse) {}
+
+  // Delete multiple notifications in bulk
+  rpc BulkDeleteNotifications(BulkDeleteNotificationsRequest) returns (BulkDeleteNotificationsResponse) {}
+}
+
+// Notification type enum
+enum NotificationType {
+  NOTIFICATION_TYPE_UNSPECIFIED = 0;
+  NOTIFICATION_TYPE_CONTENT_SHARED = 1;
+  NOTIFICATION_TYPE_CONTENT_MENTIONED = 2;
+  NOTIFICATION_TYPE_CONTENT_EDITED = 3;
+  NOTIFICATION_TYPE_CALENDAR_REMINDER = 4;
+  NOTIFICATION_TYPE_CALENDAR_INVITE = 5;
+  NOTIFICATION_TYPE_CALENDAR_RESPONSE = 6;
+  NOTIFICATION_TYPE_PERMISSION_GRANTED = 7;
+  NOTIFICATION_TYPE_PERMISSION_REVOKED = 8;
+  NOTIFICATION_TYPE_SYSTEM_ANNOUNCEMENT = 9;
+  NOTIFICATION_TYPE_TASK_ASSIGNED = 10;
+  NOTIFICATION_TYPE_TASK_DUE_SOON = 11;
+  NOTIFICATION_TYPE_TASK_OVERDUE = 12;
+  NOTIFICATION_TYPE_CHAT_MENTION = 13;
+  NOTIFICATION_TYPE_CHAT_DM = 14;
+  NOTIFICATION_TYPE_CHAT_CHANNEL_INVITE = 15;
+  NOTIFICATION_TYPE_CHAT_CHANNEL_REMOVED = 16;
+  NOTIFICATION_TYPE_CHAT_THREAD_REPLY = 17;
+  NOTIFICATION_TYPE_ACCESS_REQUESTED = 18;
+  NOTIFICATION_TYPE_ACCESS_REQUEST_DENIED = 19;
+  NOTIFICATION_TYPE_COMMENT_ADDED = 20;
+  NOTIFICATION_TYPE_COMMENT_REPLY = 21;
+  NOTIFICATION_TYPE_COMMENT_MENTIONED = 22;
+  NOTIFICATION_TYPE_COMMENT_RESOLVED = 23;
+  NOTIFICATION_TYPE_AGENTS_BUDGET_ALERT = 24;
+  NOTIFICATION_TYPE_SUPPORT_SESSION_REQUESTED = 25;
+  NOTIFICATION_TYPE_SUPPORT_SESSION_STARTED = 26;
+  NOTIFICATION_TYPE_SUPPORT_SESSION_REVOKED = 27;
+  NOTIFICATION_TYPE_SUPPORT_SESSION_EXPIRED = 28;
+  NOTIFICATION_TYPE_CALENDAR_CANCELLED = 29;
+}
+
+// Notification model
+message Notification {
+  // Unique identifier
+  string id = 1;
+  // Organization context
+  string organization_id = 2;
+  // Recipient user ID
+  string user_id = 3;
+  // Notification type
+  NotificationType notification_type = 4;
+  // Short title
+  string title = 5;
+  // Body content (Markdown with URN mentions)
+  string body = 6;
+  // URN of the related content
+  string source_urn = 7;
+  // User who triggered the notification
+  string actor_id = 8;
+  // Whether the notification has been read
+  bool is_read = 9;
+  // When the notification was read
+  google.protobuf.Timestamp read_at = 10;
+  // When the notification was created
+  google.protobuf.Timestamp created_at = 11;
+  // When the notification expires
+  google.protobuf.Timestamp expires_at = 12;
+  // Display name of the actor who triggered the notification
+  string actor_name = 13;
+  // Avatar URL of the actor (optional)
+  string actor_avatar_url = 14;
+  // Deep-link context the source URN cannot carry on its own (chat message_id,
+  // root_message_id, channel_id, ...)
+  map<string, string> metadata = 15;
+}
+
+// Request to list notifications
+message ListNotificationsRequest {
+  // Organization context
+  string organization_id = 1;
+  // Page number (1-indexed)
+  int32 page = 2;
+  // Page size (default 20)
+  int32 page_size = 3;
+  // Filter by read status (omit for all)
+  optional bool is_read = 4;
+  // Filter by notification type
+  repeated NotificationType notification_types = 5;
+}
+
+// Response for listing notifications
+message ListNotificationsResponse {
+  // List of notifications
+  repeated Notification notifications = 1;
+  // Total count matching filters
+  int32 total_count = 2;
+  // Number of unread notifications (regardless of filters)
+  int32 unread_count = 3;
+}
+
+// Request to get unread count
+message GetUnreadCountRequest {
+  // Organization context
+  string organization_id = 1;
+}
+
+// Response with unread count
+message GetUnreadCountResponse {
+  // Number of unread notifications
+  int32 unread_count = 1;
+}
+
+// Request to mark a notification as read
+message MarkAsReadRequest {
+  // Notification ID
+  string notification_id = 1;
+}
+
+// Response for mark as read
+message MarkAsReadResponse {
+  // The updated notification
+  Notification notification = 1;
+}
+
+// Request to mark all notifications as read
+message MarkAllAsReadRequest {
+  // Organization context
+  string organization_id = 1;
+}
+
+// Response for mark all as read
+message MarkAllAsReadResponse {
+  // Number of notifications marked as read
+  int32 updated_count = 1;
+}
+
+// Request to delete a notification
+message DeleteNotificationRequest {
+  // Notification ID
+  string notification_id = 1;
+}
+
+// Response for delete
+message DeleteNotificationResponse {
+  // Success flag
+  bool success = 1;
+}
+
+// Request to register a push subscription
+message RegisterPushSubscriptionRequest {
+  // Web Push endpoint URL
+  string endpoint = 1;
+  // VAPID p256dh public key
+  string p256dh_key = 2;
+  // VAPID auth secret
+  string auth_key = 3;
+  // Browser user agent (optional)
+  string user_agent = 4;
+}
+
+// Response for push subscription registration
+message RegisterPushSubscriptionResponse {
+  // Subscription ID
+  string id = 1;
+}
+
+// Request to unregister a push subscription
+message UnregisterPushSubscriptionRequest {
+  // Web Push endpoint URL to unregister
+  string endpoint = 1;
+}
+
+// Response for push subscription unregistration
+message UnregisterPushSubscriptionResponse {
+  // Success flag
+  bool success = 1;
+}
+
+// Request to start streaming notifications
+message StreamNotificationsRequest {
+  // Organization context
+  string organization_id = 1;
+}
+
+// Payload for file update events (processing completed)
+message FileUpdatePayload {
+  // File ID that was updated
+  string file_id = 1;
+  // Organization context
+  string organization_id = 2;
+}
+
+// Event sent via the streaming RPC
+message StreamNotificationsResponse {
+  // Event type
+  enum EventType {
+    EVENT_TYPE_UNSPECIFIED = 0;
+    // New notification received
+    EVENT_TYPE_NEW_NOTIFICATION = 1;
+    // Heartbeat (keep-alive)
+    EVENT_TYPE_HEARTBEAT = 2;
+    // File processing completed
+    EVENT_TYPE_FILE_UPDATED = 3;
+    // Presence state changed for a user
+    EVENT_TYPE_PRESENCE_CHANGED = 4;
+    // Mention state changed for content (task status, event time, etc.)
+    EVENT_TYPE_MENTION_STATE_CHANGED = 5;
+    // User's permissions changed (domain admin granted/revoked) - triggers refetch
+    EVENT_TYPE_PERMISSIONS_CHANGED = 6;
+    // The set of content the user can see changed (shared with them, or content
+    // became/ceased OPEN_TO_ORG) - triggers a sidebar/tree refresh
+    EVENT_TYPE_CONTENT_ACCESS_CHANGED = 7;
+    // A persisted access request changed independently of notification preferences
+    EVENT_TYPE_ACCESS_REQUEST_CHANGED = 8;
+  }
+
+  // Type of this event
+  EventType event_type = 1;
+  // The notification (present for NEW_NOTIFICATION events)
+  Notification notification = 2;
+  // Server timestamp (present for HEARTBEAT events)
+  google.protobuf.Timestamp timestamp = 3;
+  // File update payload (present for FILE_UPDATED events)
+  FileUpdatePayload file_update = 4;
+  // Presence change payload (present for PRESENCE_CHANGED events)
+  PresenceChangedPayload presence_changed = 5;
+  // Mention state change payload (present for MENTION_STATE_CHANGED events)
+  MentionStateChangedPayload mention_state_changed = 6;
+  // Content access change payload (present for CONTENT_ACCESS_CHANGED events)
+  ContentAccessChangedPayload content_access_changed = 7;
+  // Access request payload (present for ACCESS_REQUEST_CHANGED events)
+  AccessRequestChangedPayload access_request_changed = 8;
+}
+
+// Payload for presence change events
+message PresenceChangedPayload {
+  // User whose presence changed
+  string user_id = 1;
+  // New status: "online", "away", "dnd", "offline"
+  string status = 2;
+  // When the user was last active
+  google.protobuf.Timestamp last_active = 3;
+  // Custom status emoji (empty if not set)
+  string status_emoji = 4;
+  // Custom status text (empty if not set)
+  string status_text = 5;
+  // When the custom status expires (unset if no expiry)
+  google.protobuf.Timestamp status_expires_at = 6;
+}
+
+// Payload for mention state change events (task status, event time, etc.)
+message MentionStateChangedPayload {
+  // URN of the content whose state changed
+  string urn = 1;
+  // Changed fields as key-value pairs (field_name -> new_value)
+  map<string, string> changes = 2;
+}
+
+// Payload for content access change events (sidebar/tree refresh signal)
+message ContentAccessChangedPayload {
+  // Type of content whose access changed
+  common.v1.ContentType content_type = 1;
+  // ID of the content whose access changed
+  string content_id = 2;
+  // What happened: "granted", "revoked", "access_mode_changed", "child_added"
+  // (a task was created in the project) or "views_changed" (a shared view changed)
+  string action = 3;
+}
+
+message AccessRequestChangedPayload {
+  string request_id = 1;
+  string requested_urn = 2;
+  permissions.v1.AccessRequestState state = 3;
+  google.protobuf.Timestamp can_request_again_at = 4;
+}
+
+// Request to get VAPID public key
+message GetVapidPublicKeyRequest {}
+
+// Response with VAPID public key
+message GetVapidPublicKeyResponse {
+  // Base64url-encoded VAPID public key for pushManager.subscribe()
+  string public_key = 1;
+}
+
+// Request to search notifications with full-text and filters
+message SearchNotificationsRequest {
+  // Organization context
+  string organization_id = 1;
+  // Free-text search query (matches title and body)
+  string query = 2;
+  // Page number (1-indexed)
+  int32 page = 3;
+  // Page size (default 20)
+  int32 page_size = 4;
+  // Filter by read status (omit for all)
+  optional bool is_read = 5;
+  // Filter by notification types
+  repeated NotificationType notification_types = 6;
+  // Filter by date range start (inclusive)
+  google.protobuf.Timestamp date_from = 7;
+  // Filter by date range end (inclusive)
+  google.protobuf.Timestamp date_to = 8;
+  // Filter by actor user ID
+  string actor_id = 9;
+}
+
+// Response for search notifications
+message SearchNotificationsResponse {
+  // Matching notifications
+  repeated Notification notifications = 1;
+  // Total count matching filters
+  int32 total_count = 2;
+  // Number of unread notifications (regardless of filters)
+  int32 unread_count = 3;
+}
+
+// Request to get notification statistics
+message GetNotificationStatsRequest {
+  // Organization context
+  string organization_id = 1;
+  // Number of days to include in stats (default 30)
+  int32 days = 2;
+}
+
+// Stat entry for a single day
+message DailyNotificationStat {
+  // Date string (YYYY-MM-DD)
+  string date = 1;
+  // Total notifications on this day
+  int32 total = 2;
+  // Unread notifications on this day
+  int32 unread = 3;
+  // Read notifications on this day
+  int32 read = 4;
+}
+
+// Stat entry for a notification type
+message TypeNotificationStat {
+  // Notification type
+  NotificationType notification_type = 1;
+  // Count of notifications of this type
+  int32 count = 2;
+}
+
+// Response with notification statistics
+message GetNotificationStatsResponse {
+  // Daily breakdown
+  repeated DailyNotificationStat daily_stats = 1;
+  // Breakdown by type
+  repeated TypeNotificationStat type_stats = 2;
+  // Overall totals
+  int32 total_count = 3;
+  int32 unread_count = 4;
+  int32 read_count = 5;
+}
+
+// Request to bulk mark notifications as read
+message BulkMarkAsReadRequest {
+  // Notification IDs to mark as read
+  repeated string notification_ids = 1;
+}
+
+// Response for bulk mark as read
+message BulkMarkAsReadResponse {
+  // Number of notifications marked as read
+  int32 updated_count = 1;
+}
+
+// Request to bulk delete notifications
+message BulkDeleteNotificationsRequest {
+  // Notification IDs to delete
+  repeated string notification_ids = 1;
+}
+
+// Response for bulk delete
+message BulkDeleteNotificationsResponse {
+  // Number of notifications deleted
+  int32 deleted_count = 1;
+}

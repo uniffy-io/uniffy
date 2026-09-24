@@ -4,18 +4,21 @@ import { cn } from "@/shared/utils/cn";
 import { controlShellClass } from "@/components/ui/input";
 import { SubjectAvatarStack, SubjectPicker } from "@/components/subject";
 import { useSubjectResolver } from "@/components/subject/hooks/useSubjectResolver";
-import type { FilterCondition } from "@/features/projects/types/views";
-import { toIdList } from "@/features/projects/utils/taskFieldValue";
-
 interface PersonFilterInputProps {
-  value: FilterCondition["value"];
-  onChange: (value: string[] | null) => void;
+  ids: readonly string[];
+  /** One person at most: a new pick replaces the previous one. */
+  single?: boolean;
+  onChange: (ids: string[]) => void;
 }
 
-export function PersonFilterInput({ value, onChange }: PersonFilterInputProps) {
+export function PersonFilterInput({
+  ids: rawIds,
+  single = false,
+  onChange,
+}: PersonFilterInputProps) {
   const [isOpen, setIsOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
-  const ids = useMemo(() => toIdList(value), [value]);
+  const ids = useMemo(() => [...rawIds], [rawIds]);
   const { subjects } = useSubjectResolver(ids);
 
   const label =
@@ -62,7 +65,10 @@ export function PersonFilterInput({ value, onChange }: PersonFilterInputProps) {
           mode="multi"
           subjectTypes="all"
           value={ids}
-          onChange={(next) => onChange(next.length > 0 ? next : null)}
+          onChange={(next) => {
+            const added = next.filter((id) => !ids.includes(id));
+            onChange(single ? added.slice(-1) : next);
+          }}
           portal
           anchorRef={triggerRef}
           onClose={() => setIsOpen(false)}

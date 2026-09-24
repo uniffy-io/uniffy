@@ -31,8 +31,8 @@ from uniffy.domains.settings.defaults import (
     get_notifications_defaults_dict,
     get_scheduling_defaults_dict,
 )
+from uniffy.domains.settings.preferences import WEEK_START_WEEKDAYS
 
-_WEEK_START_VALUES = {"monday", "saturday", "sunday"}
 _MAX_REMINDER_MINUTES = 4 * 7 * 24 * 60
 _CLOCK_RE = re.compile(r"^(?:[01]\d|2[0-3]):[0-5]\d$")
 _NOTIFICATION_CHANNELS = {"in_app", "browser", "email"}
@@ -48,7 +48,7 @@ def _validate_appearance(appearance: dict[str, Any] | None) -> None:
         except (KeyError, ValueError) as exc:
             raise ValidationError("timezone", f"Unknown timezone '{tz}'") from exc
     week_start = appearance.get("week_start")
-    if week_start and week_start not in _WEEK_START_VALUES:
+    if week_start and week_start not in WEEK_START_WEEKDAYS:
         raise ValidationError("week_start", f"Unknown week start '{week_start}'")
 
 
@@ -198,14 +198,6 @@ async def get_users_scheduling_context(
             workdays=tuple(workdays),
         )
     return contexts
-
-
-async def get_user_timezone(session: AsyncSession, user_id: UUID) -> str | None:
-    """Stored display timezone from the user's default profile; None = automatic."""
-    profile = await SettingsOperations(session).get_default_profile(user_id)
-    if not profile or not profile.appearance:
-        return None
-    return profile.appearance.get("timezone") or None
 
 
 async def get_user_reminder_defaults(session: AsyncSession, user_id: UUID) -> list[int]:

@@ -11,11 +11,12 @@ import type {
   MoveTaskRequest,
 } from "../types/project";
 import type { FieldDefinition } from "../types/fields";
-import type { ViewConfig } from "../types/views";
+import type { ViewConfig, ViewDefinition } from "../types/views";
 import type { TaskActivity } from "../types/activity";
 import type {
   Project as ProtoProject,
   Task as ProtoTask,
+  ViewVisibility,
 } from "@uniffy/proto/projects/v1/projects_pb";
 import { bulkUpsertTags, tagToPlain } from "@/features/tags";
 
@@ -75,18 +76,7 @@ export const fetchProject = createAsyncThunk<
 
 export const fetchProjectTasks = createAsyncThunk<
   Task[],
-  | string
-  | {
-      projectId: string;
-      tagIds?: string[];
-      tagFilterMode?: "all" | "any" | "none";
-      inEpicId?: string;
-      rootOnly?: boolean;
-      hasSubtasks?: boolean;
-      minDepth?: number;
-      maxDepth?: number;
-      firstPageOnly?: boolean;
-    },
+  string | { projectId: string; firstPageOnly?: boolean },
   { dispatch: AppDispatch; rejectValue: string }
 >("projects/fetchProjectTasks", async (arg, { getState, dispatch, rejectWithValue, signal }) => {
   try {
@@ -96,13 +86,6 @@ export const fetchProjectTasks = createAsyncThunk<
 
     const params = typeof arg === "string" ? { projectId: arg } : arg;
     const response = await projectsApi.listTasks(params.projectId, orgId, {
-      tagIds: params.tagIds,
-      tagFilterMode: params.tagFilterMode,
-      inEpicId: params.inEpicId,
-      rootOnly: params.rootOnly,
-      hasSubtasks: params.hasSubtasks,
-      minDepth: params.minDepth,
-      maxDepth: params.maxDepth,
       firstPageOnly: params.firstPageOnly,
       signal,
     });
@@ -329,24 +312,40 @@ export const deleteFieldThunk = createAsyncThunk<
 
 export const createViewThunk = createAsyncThunk<
   ViewConfig,
-  { projectId: string; view: Omit<ViewConfig, "id" | "projectId" | "createdAt" | "updatedAt"> },
+  {
+    projectId: string;
+    name: string;
+    definition: ViewDefinition;
+    visibility: ViewVisibility;
+  },
   { rejectValue: string }
->("projects/createView", async ({ projectId, view }, { getState, rejectWithValue }) => {
-  try {
-    const state = getState() as RootState;
-    const orgId = state.auth.currentOrganizationId;
-    if (!orgId) return rejectWithValue("No organization selected");
+>(
+  "projects/createView",
+  async ({ projectId, name, definition, visibility }, { getState, rejectWithValue }) => {
+    try {
+      const state = getState() as RootState;
+      const orgId = state.auth.currentOrganizationId;
+      if (!orgId) return rejectWithValue("No organization selected");
 
-    const response = await projectsApi.createView(projectId, view, orgId);
-    return response.view;
-  } catch (error) {
-    return rejectWithValue(error instanceof Error ? error.message : "Failed to create view");
-  }
-});
+      const response = await projectsApi.createView(
+        projectId,
+        { name, definition, visibility },
+        orgId,
+      );
+      return response.view;
+    } catch (error) {
+      return rejectWithValue(error instanceof Error ? error.message : "Failed to create view");
+    }
+  },
+);
 
 export const updateViewThunk = createAsyncThunk<
   ViewConfig,
-  { projectId: string; viewId: string; updates: Partial<ViewConfig> },
+  {
+    projectId: string;
+    viewId: string;
+    updates: { name?: string; definition?: ViewDefinition; visibility?: ViewVisibility };
+  },
   { rejectValue: string }
 >("projects/updateView", async ({ projectId, viewId, updates }, { getState, rejectWithValue }) => {
   try {

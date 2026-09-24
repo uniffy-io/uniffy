@@ -31,7 +31,7 @@ from uniffy.domains.notifications.preferences import (
     resolve_email_frequency,
 )
 from uniffy.domains.settings.defaults import EmailFrequency
-from uniffy.domains.settings.operations import get_user_timezone
+from uniffy.domains.settings.preferences import get_user_timezone
 
 logger = logger.bind(component="notifications.delivery.email")
 

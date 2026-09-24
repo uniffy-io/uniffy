@@ -103,21 +103,21 @@ services:
     backend:
         <<: *backend-base
         container_name: uniffy-dev-backend
-        command: uv run watchfiles --filter python "python -m uniffy --backend" src/uniffy/ src/gen/python/
+        command: uv run watchfiles --filter python "python -m uniffy --backend" src/uniffy/ src/proto/gen/python/
         ports:
             - "8000:8000"
 
     worker-core:
         <<: *backend-base
         container_name: uniffy-dev-worker-core
-        command: uv run watchfiles --filter python "python -m uniffy --worker-core" src/uniffy/ src/gen/python/
+        command: uv run watchfiles --filter python "python -m uniffy --worker-core" src/uniffy/ src/proto/gen/python/
         ports:
             - "9091:9091"
 
     worker-egress:
         <<: *backend-base
         container_name: uniffy-dev-worker-egress
-        command: uv run watchfiles --filter python "python -m uniffy --worker-egress" src/uniffy/ src/gen/python/
+        command: uv run watchfiles --filter python "python -m uniffy --worker-egress" src/uniffy/ src/proto/gen/python/
         ports:
             - "9092:9092"
 
@@ -129,7 +129,7 @@ services:
             target: media-dev
         image: uniffy-dev-media-worker
         container_name: uniffy-dev-worker-media
-        command: uv run watchfiles --filter python "python -m uniffy --worker-media" src/uniffy/ src/gen/python/
+        command: uv run watchfiles --filter python "python -m uniffy --worker-media" src/uniffy/ src/proto/gen/python/
         cpus: 2
         mem_limit: 2g
         environment:
@@ -201,7 +201,7 @@ services:
             - /app/src/ui/node_modules
             - /app/src/mobile/node_modules
             - /app/src/landing/node_modules
-            - /app/src/gen/typescript/node_modules
+            - /app/src/proto/gen/typescript/node_modules
             - /app/src/e2e/node_modules
         ports:
             - "5173:5173"
@@ -318,7 +318,7 @@ services:
             - deps-ui-node-modules:/app/src/ui/node_modules
             - deps-mobile-node-modules:/app/src/mobile/node_modules
             - deps-landing-node-modules:/app/src/landing/node_modules
-            - deps-gen-ts-node-modules:/app/src/gen/typescript/node_modules
+            - deps-gen-ts-node-modules:/app/src/proto/gen/typescript/node_modules
             - deps-e2e-node-modules:/app/src/e2e/node_modules
             - deps-go-cache:/go-cache
         networks: [uniffy-network]

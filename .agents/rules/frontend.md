@@ -3,7 +3,7 @@ paths:
   - "src/ui/**/*.ts"
   - "src/ui/**/*.tsx"
   - "src/ui/**/*.css"
-  - "src/gen/typescript/**/*.ts"
+  - "src/proto/gen/typescript/**/*.ts"
 ---
 
 # Frontend Patterns
@@ -22,7 +22,7 @@ src/ui/src/
 └── workers/       # Web-worker utilities (media range parsing)
 ```
 
-Routes live in `src/ui/src/App.tsx`. Generated proto code is the `@uniffy/proto` workspace package (`src/gen/typescript/`); import `@uniffy/proto/{service}/v1/{service}_pb` / `_connect`.
+Routes live in `src/ui/src/App.tsx`. Generated proto code is the `@uniffy/proto` workspace package (`src/proto/gen/typescript/`); import `@uniffy/proto/{service}/v1/{service}_pb` / `_connect`.
 
 ## Feature module shape
 

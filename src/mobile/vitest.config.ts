@@ -11,7 +11,7 @@ export default defineConfig({
       "@shared": dir("./src/shared"),
       "@core": dir("./src/core"),
       "@theme": dir("./src/theme"),
-      "@uniffy/proto": dir("../gen/typescript"),
+      "@uniffy/proto": dir("../proto/gen/typescript"),
       "@": dir("./src"),
     },
   },

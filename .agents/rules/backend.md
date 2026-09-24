@@ -1,8 +1,8 @@
 ---
 paths:
   - "src/uniffy/**/*.py"
-  - "src/proto/**/*.proto"
-  - "src/gen/python/**/*.py"
+  - "src/proto/schema/**/*.proto"
+  - "src/proto/gen/python/**/*.py"
 ---
 
 # Backend Patterns
@@ -32,7 +32,7 @@ to retain an internal import path.
 
 Adding a new domain:
 
-1. Define proto in `src/proto/{service}/v1/{service}.proto`, run `./manage.py proto`
+1. Define proto in `src/proto/schema/{service}/v1/{service}.proto`, run `./manage.py proto`
 2. Model in `core/models/{feature}/` if needed, plus Alembic migration
 3. Domain module in `domains/{feature}/`
 4. Mount in `factory.py`: `app.mount("/feature.v1.FeatureService", FeatureServiceASGIApplication(service))`

@@ -3,7 +3,7 @@ paths:
   - "src/uniffy/domains/files/**/*.py"
   - "src/uniffy/core/storage/**/*.py"
   - "src/uniffy/core/models/files/**/*.py"
-  - "src/proto/files/**/*.proto"
+  - "src/proto/schema/files/**/*.proto"
   - "src/uniffy/core/auth/cookies.py"
   - "src/uniffy/core/auth/http.py"
   - "src/ui/src/features/files/**/*.ts"

@@ -45,7 +45,7 @@ Every import uses an alias. Relative imports across modules are not used (only s
 | `@shared/*` | `src/shared/*` |
 | `@core/*` | `src/core/*` |
 | `@theme/*` | `src/theme/*` |
-| `@uniffy/proto/*` | generated proto (`src/gen/typescript`) |
+| `@uniffy/proto/*` | generated proto (`src/proto/gen/typescript`) |
 
 `@/*` maps to `src/*` and exists only as a fallback. Prefer the layer aliases; they make the dependency direction visible at the import site.
 

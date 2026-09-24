@@ -3,7 +3,7 @@
   "entry": ["src/main.tsx"],
   "project": ["src/**/*.{ts,tsx}"],
   "ignore": [
-    "src/gen/**",
+    "../proto/gen/typescript/**",
     "src/types/**"
   ],
   "ignoreDependencies": [

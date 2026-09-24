@@ -281,6 +281,16 @@ export function useNotificationStream() {
               }
             }
 
+            // A shared project view changed. Nobody's access moved, so the
+            // member and mention caches stay; only the open project refetches.
+            if (
+              event.eventType === StreamNotificationsResponse_EventType.CONTENT_ACCESS_CHANGED &&
+              event.contentAccessChanged?.action === "views_changed"
+            ) {
+              const { contentType, contentId } = event.contentAccessChanged;
+              emitContentAccessChanged({ contentType, contentId, action: "views_changed" });
+            }
+
             // CONTENT_ACCESS_CHANGED: the user's accessible-content set
             // shifted (shared with them, or content became/ceased
             // OPEN_TO_ORG). Notes keeps a global store, so refresh it
@@ -289,7 +299,8 @@ export function useNotificationStream() {
             // useContentAccessRefetch - relay through the emitter.
             if (
               event.eventType === StreamNotificationsResponse_EventType.CONTENT_ACCESS_CHANGED &&
-              event.contentAccessChanged
+              event.contentAccessChanged &&
+              event.contentAccessChanged.action !== "views_changed"
             ) {
               const { contentType, contentId, action } = event.contentAccessChanged;
               // Membership changed server-side, so a cached member list for

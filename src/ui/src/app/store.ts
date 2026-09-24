@@ -47,7 +47,7 @@ import { sessionsReducer } from "@/features/settings/store/sessionsSlice";
 import { commentsReducer } from "@/features/comments/store/commentsSlice";
 import { projectsReducer } from "@/features/projects/store/projectsSlice";
 import { projectsUiReducer } from "@/features/projects/store/projectsUiSlice";
-import { loadColumnWidths, loadHiddenColumns } from "@/features/projects/utils/tableColumnStorage";
+import { projectsUiTransform } from "@/features/projects/store/projectsUiPersist";
 import { agentsUiReducer } from "@/features/agents/store/agentsUiSlice";
 import { agentsReducer } from "@/features/agents/store/agentsSlice";
 import { agentSessionsReducer } from "@/features/agents/store/agentSessionsSlice";
@@ -112,37 +112,28 @@ const calendarUiTransform = createTransform(
   { whitelist: ["calendarUi"] },
 );
 
-/** Preserve layout prefs; reset selections, modals, drag, undo, autosave. Column state lives in localStorage. */
-const projectsUiTransform = createTransform(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (inboundState: any) => {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { columnWidths, hiddenColumns, ...rest } = inboundState ?? {};
-    return rest;
-  },
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (outboundState: any) => ({
-    ...outboundState,
-    columnWidths: loadColumnWidths(),
-    hiddenColumns: loadHiddenColumns(),
-    selectedTaskId: null,
-    selectedTaskIds: [],
-    isCreateProjectModalOpen: false,
-    editProjectId: null,
-    isCreateTaskModalOpen: false,
-    isFieldPickerOpen: false,
-    isViewConfigOpen: false,
-    editingFieldId: null,
-    dragState: null,
-    editingCell: null,
-    focusedCell: null,
-    searchQuery: "",
-    undoStack: [],
-    redoStack: [],
-    autosave: { isSaving: {}, lastSaved: {}, hasChanges: {} },
-  }),
-  { whitelist: ["projectsUi"] },
-);
+/** Keys older clients wrote beside the redux store; the version 5 migration deletes them. */
+const LEGACY_PROJECTS_STORAGE_KEYS = [
+  "uniffy-projects-column-widths",
+  "uniffy-projects-hidden-columns",
+];
+const LEGACY_PROJECTS_STORAGE_PREFIXES = [
+  "projects:table:outline-expanded:",
+  "projects:board:lane-collapse:",
+];
+
+function removeLegacyProjectsStorage(): void {
+  try {
+    const stale = Object.keys(localStorage).filter(
+      (key) =>
+        LEGACY_PROJECTS_STORAGE_KEYS.includes(key) ||
+        LEGACY_PROJECTS_STORAGE_PREFIXES.some((prefix) => key.startsWith(prefix)),
+    );
+    for (const key of stale) localStorage.removeItem(key);
+  } catch {
+    // Storage can be unavailable (private mode); the stale keys are harmless there.
+  }
+}
 
 /** Force `idle` on rehydrate - MediaRecorder/MediaStream can't survive a reload. Picker prefs persist. */
 const recordingTransform = createTransform(
@@ -296,13 +287,17 @@ const migrations: MigrationManifest = {
     }
     return state;
   },
+  5: (state: PersistedState) => {
+    removeLegacyProjectsStorage();
+    return state;
+  },
 };
 
 type RootReducerState = ReturnType<typeof rootReducer>;
 
 const persistConfig: Parameters<typeof persistReducer<RootReducerState>>[0] = {
   key: "root",
-  version: 4,
+  version: 5,
   storage,
   whitelist: [
     "auth",

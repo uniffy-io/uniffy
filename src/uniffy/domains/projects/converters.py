@@ -4,6 +4,7 @@ from uniffy_proto.projects.v1.projects_pb2 import (
     ActivityAction,
     FieldType,
     ViewType,
+    ViewVisibility,
 )
 from uniffy_proto.projects.v1.projects_pb2 import (
     FieldDefinition as ProtoFieldDefinition,
@@ -32,15 +33,21 @@ from uniffy.core.converters.common_proto import (
     content_role_to_proto,
 )
 from uniffy.core.converters.proto import datetime_to_timestamp
+from uniffy.core.errors import ValidationError
 from uniffy.core.json_codec import dumps_str
 from uniffy.core.models.projects.activity import TaskActivity
 from uniffy.core.models.projects.field_definition import FieldDefinition
 from uniffy.core.models.projects.project import Project
 from uniffy.core.models.projects.sprint import Sprint
 from uniffy.core.models.projects.task import Task
-from uniffy.core.models.projects.view_config import ViewConfig
+from uniffy.core.models.projects.view_config import (
+    ProjectViewType,
+    ProjectViewVisibility,
+    ViewConfig,
+)
 from uniffy.core.models.tags.tag import Tag
 from uniffy.core.types import AccessMode, ContentRole
+from uniffy.domains.projects.views.definition import definition_from_dict
 from uniffy.domains.tags.converters import tag_to_proto
 
 FIELD_TYPE_TO_PROTO: dict[str, FieldType.ValueType] = {
@@ -58,12 +65,23 @@ FIELD_TYPE_FROM_PROTO: dict[FieldType.ValueType, str] = {
 }
 
 VIEW_TYPE_TO_PROTO: dict[str, ViewType.ValueType] = {
-    "table": ViewType.VIEW_TYPE_TABLE,
-    "board": ViewType.VIEW_TYPE_BOARD,
-    "roadmap": ViewType.VIEW_TYPE_ROADMAP,
+    ProjectViewType.TABLE: ViewType.VIEW_TYPE_TABLE,
+    ProjectViewType.BOARD: ViewType.VIEW_TYPE_BOARD,
+    ProjectViewType.ROADMAP: ViewType.VIEW_TYPE_ROADMAP,
+    ProjectViewType.BACKLOG: ViewType.VIEW_TYPE_BACKLOG,
+    ProjectViewType.GRAPH: ViewType.VIEW_TYPE_GRAPH,
+    ProjectViewType.RESOURCES: ViewType.VIEW_TYPE_RESOURCES,
 }
 
-VIEW_TYPE_FROM_PROTO: dict[ViewType.ValueType, str] = {v: k for k, v in VIEW_TYPE_TO_PROTO.items()}
+VIEW_VISIBILITY_TO_PROTO: dict[str, ViewVisibility.ValueType] = {
+    ProjectViewVisibility.PERSONAL: ViewVisibility.VIEW_VISIBILITY_PERSONAL,
+    ProjectViewVisibility.SHARED: ViewVisibility.VIEW_VISIBILITY_SHARED,
+}
+
+VIEW_VISIBILITY_FROM_PROTO: dict[ViewVisibility.ValueType, ProjectViewVisibility] = {
+    ViewVisibility.VIEW_VISIBILITY_PERSONAL: ProjectViewVisibility.PERSONAL,
+    ViewVisibility.VIEW_VISIBILITY_SHARED: ProjectViewVisibility.SHARED,
+}
 
 ACTIVITY_ACTION_TO_PROTO: dict[str, ActivityAction.ValueType] = {
     "created": ActivityAction.ACTIVITY_ACTION_CREATED,
@@ -90,8 +108,11 @@ def view_type_to_proto(view_type: str) -> ViewType.ValueType:
     return VIEW_TYPE_TO_PROTO.get(view_type, ViewType.VIEW_TYPE_UNSPECIFIED)
 
 
-def view_type_from_proto(proto_type: ViewType.ValueType) -> str:
-    return VIEW_TYPE_FROM_PROTO.get(proto_type, "table")
+def view_visibility_from_proto(visibility: ViewVisibility.ValueType) -> ProjectViewVisibility:
+    resolved = VIEW_VISIBILITY_FROM_PROTO.get(visibility)
+    if resolved is None:
+        raise ValidationError("visibility", "A view must be personal or shared")
+    return resolved
 
 
 def activity_action_to_proto(action: str) -> ActivityAction.ValueType:
@@ -248,15 +269,15 @@ def field_to_proto(field: FieldDefinition) -> ProtoFieldDefinition:
 
 
 def view_to_proto(view: ViewConfig) -> ProtoViewConfig:
-    config_json = dumps_str(view.config) if view.config else "{}"
-
     return ProtoViewConfig(
         id=view.id,
         project_id=str(view.project_id),
         name=view.name,
         type=view_type_to_proto(view.type),
-        is_default=view.is_default,
-        config_json=config_json,
+        definition=definition_from_dict(view.definition, ProjectViewType(view.type)),
+        owner_id=str(view.owner_id),
+        visibility=VIEW_VISIBILITY_TO_PROTO[view.visibility],
+        sort_order=view.sort_order,
         created_at=datetime_to_timestamp(view.created_at),
         updated_at=datetime_to_timestamp(view.updated_at),
     )

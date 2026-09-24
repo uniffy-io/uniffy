@@ -1,5 +1,5 @@
 {
   "protobuf.includes": [
-    "${workspaceFolder}/src/proto"
+    "${workspaceFolder}/src/proto/schema"
   ]
 }
