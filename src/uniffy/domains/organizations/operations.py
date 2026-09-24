@@ -675,6 +675,13 @@ class OrganizationOperations:
 
         await self._session.commit()
 
+        await call_lifecycle.evict_user(
+            self._session,
+            target_user_id,
+            reason=CallEvictionReason.MEMBERSHIP_REVOKED,
+            organization_id=org_id,
+            actor_user_id=admin_user_id,
+        )
         try:
             await UserDirectoryProjection(
                 self._session,
@@ -700,14 +707,6 @@ class OrganizationOperations:
                         if channel_id in private_channel_ids
                     ),
                 )
-        await call_lifecycle.evict_user(
-            self._session,
-            target_user_id,
-            reason=CallEvictionReason.MEMBERSHIP_REVOKED,
-            organization_id=org_id,
-            actor_user_id=admin_user_id,
-        )
-
         return True
 
     async def get_permission_defaults(

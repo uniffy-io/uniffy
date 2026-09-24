@@ -577,7 +577,7 @@ def _create_api_dispatcher(
             StreamDisconnectMiddleware(StreamRevokeWatchMiddleware(application)),
         )
 
-    call_lifecycle = CallsLifecycle()
+    call_lifecycle = CallsLifecycle(open_session)
 
     add_rpc(
         "/auth.v1.AuthService",

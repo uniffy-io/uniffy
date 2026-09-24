@@ -13,6 +13,7 @@ from uniffy.core.models.rooms.room import Room
 from uniffy.domains.calls.channels import CallsLifecycle
 from uniffy.domains.scheduling.calendar import queries as calendar_queries
 from uniffy.domains.scheduling.calendar.operations import CalendarEventOperations
+from uniffy.infrastructure.database import open_session
 from uniffy.scripts.demo_company.context import (
     DemoContext,
     DomainResult,
@@ -120,7 +121,7 @@ async def apply_event_mentions(
             organization_id=ctx.organization_id,
             event_id=event_id,
             description=linked,
-            call_lifecycle=CallsLifecycle(),
+            call_lifecycle=CallsLifecycle(open_session),
         )
         updated += 1
         logger.info(f"Linked mentions in event {spec.title!r}")

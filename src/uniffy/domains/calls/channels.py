@@ -7,6 +7,7 @@ from loguru import logger
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from uniffy.core.database import SessionFactory
 from uniffy.core.models.calls import Call, CallEndReason, CallParticipant
 from uniffy.domains.calls.config import LiveKitConfigError
 from uniffy.domains.calls.lifecycle import CallEvictionReason
@@ -16,6 +17,9 @@ logger = logger.bind(component="calls.channels")
 
 
 class CallsLifecycle:
+    def __init__(self, session_factory: SessionFactory) -> None:
+        self._session_factory = session_factory
+
     async def end_for_channel_archive(
         self,
         session: AsyncSession,
@@ -66,27 +70,24 @@ class CallsLifecycle:
         session_ids: Sequence[UUID] | None = None,
         actor_user_id: UUID | None = None,
     ) -> None:
+        del session
         try:
-            operations = CallOperations(session)
+            async with self._session_factory() as call_session:
+                await CallOperations(call_session).evict_user(
+                    user_id,
+                    reason=reason,
+                    organization_id=organization_id,
+                    session_ids=session_ids,
+                    actor_user_id=actor_user_id,
+                )
         except LiveKitConfigError:
             return
-        # The revocation itself is already committed, so a failure here degrades
-        # to the reconciler. The rollback keeps the caller's session usable.
-        try:
-            await operations.evict_user(
-                user_id,
-                reason=reason,
-                organization_id=organization_id,
-                session_ids=session_ids,
-                actor_user_id=actor_user_id,
-            )
         except Exception:
-            await session.rollback()
             logger.opt(exception=True).warning(
                 f"call eviction deferred to the reconciler for user={user_id} reason={reason.value}"
             )
 
-    async def transfer_session(
+    async def stage_transfer_session(
         self,
         session: AsyncSession,
         from_session_id: UUID,
@@ -109,16 +110,15 @@ class CallsLifecycle:
         reason: CallEndReason,
         actor_user_id: UUID | None = None,
     ) -> None:
+        del session
         try:
-            operations = CallOperations(session)
+            async with self._session_factory() as call_session:
+                await CallOperations(call_session).end_calls_for_organization(
+                    organization_id, reason, actor_user_id=actor_user_id
+                )
         except LiveKitConfigError:
             return
-        try:
-            await operations.end_calls_for_organization(
-                organization_id, reason, actor_user_id=actor_user_id
-            )
         except Exception:
-            await session.rollback()
             logger.opt(exception=True).warning(
                 f"org call teardown deferred to the reconciler for org={organization_id}"
             )

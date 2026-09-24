@@ -20,7 +20,7 @@ from uniffy.core.audit import audit_ip_var, client_ip_for_rate_limit, write_audi
 from uniffy.core.audit.actions import Action
 from uniffy.core.auth.devices import parse_device_label
 from uniffy.core.auth.revocation import mark_sessions_revoked, mark_token_version_revoked
-from uniffy.core.auth.sessions import revoke_user_sessions
+from uniffy.core.auth.sessions import stage_revoke_user_sessions
 from uniffy.core.auth.tokens import create_access_token, create_refresh_token
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
 from uniffy.core.models.audit.event import AuditResourceType
@@ -203,11 +203,11 @@ class MfaOperations:
         )
         self._session.add(session_record)
         await self._session.flush()
-        revoked_session_ids = await revoke_user_sessions(
+        revoked_session_ids = await stage_revoke_user_sessions(
             self._session, user.id, keep_session_id=session_record.id
         )
         if replaced_session_id is not None:
-            await self._call_lifecycle.transfer_session(
+            await self._call_lifecycle.stage_transfer_session(
                 self._session, replaced_session_id, session_record.id
             )
 
@@ -397,7 +397,7 @@ class MfaOperations:
         )
         await self._session.execute(delete(UserMfa).where(UserMfa.user_id == user_id))
         await self._bump_token_version(user)
-        revoked_session_ids = await revoke_user_sessions(self._session, user_id)
+        revoked_session_ids = await stage_revoke_user_sessions(self._session, user_id)
 
         await self._audit_mfa_self_event(user_id=user_id, action=Action.AUTH_MFA_DISABLED)
         await self._session.commit()
@@ -736,7 +736,7 @@ class MfaOperations:
         # until their 15-min natural expiry. Flip every UserSession row AND
         # publish per-sid revoked markers so the interceptor rejects every
         # outstanding token on the next RPC.
-        revoked_session_ids = await revoke_user_sessions(self._session, target.id)
+        revoked_session_ids = await stage_revoke_user_sessions(self._session, target.id)
 
         details = {
             "target_user_id": str(target.id),

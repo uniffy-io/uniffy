@@ -152,7 +152,7 @@ async def _on_startup_shared(
     ctx[WORKSPACE_SEARCH_CTX_KEY] = search
     search_indexer = SearchIndexer(search)
     ctx[SEARCH_INDEXER_CTX_KEY] = search_indexer
-    ctx[CALL_LIFECYCLE_CTX_KEY] = CallsLifecycle()
+    ctx[CALL_LIFECYCLE_CTX_KEY] = CallsLifecycle(open_session)
     register_note_realtime_adapter(search_indexer)
     logger.info("Worker: Search engine initialized")
 

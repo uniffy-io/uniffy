@@ -19,7 +19,7 @@ from uniffy.core.auth.revocation import (
     mark_sessions_revoked,
     mark_token_version_revoked,
 )
-from uniffy.core.auth.sessions import revoke_user_sessions
+from uniffy.core.auth.sessions import stage_revoke_user_sessions
 from uniffy.core.auth.tokens import (
     create_access_token,
     create_refresh_token,
@@ -656,7 +656,7 @@ class AuthOperations:
         signal - either the attacker or the legitimate client is racing the
         other on the next refresh, so the safe move is to kill both.
         """
-        revoked_ids = await revoke_user_sessions(self._session, user.id)
+        revoked_ids = await stage_revoke_user_sessions(self._session, user.id)
 
         user.token_version = (user.token_version or 0) + 1
         new_version = user.token_version

@@ -1,8 +1,4 @@
-"""LiveKit webhook provider: SFU state changes reconcile into call state.
-
-Events arrive at-least-once and possibly out of order, so every handler is
-idempotent: it re-checks current DB state before mutating.
-"""
+"""Reconcile reordered LiveKit events against current call state."""
 
 from typing import Any
 from uuid import UUID
@@ -10,38 +6,15 @@ from uuid import UUID
 from loguru import logger
 from sqlalchemy import select
 
-from uniffy.core.json_codec import loads
 from uniffy.core.models.calls import Call, CallEndReason
+from uniffy.domains.calls.admission import MediaAdmission, is_stale_session_event
 from uniffy.domains.calls.config import get_livekit_config
-from uniffy.domains.calls.livekit import LiveKitApiError, get_livekit_admin_client
+from uniffy.domains.calls.livekit import get_livekit_admin_client
 from uniffy.domains.calls.operations import CallOperations
 from uniffy.domains.calls.tokens import LiveKitTokenMinter, parse_room_call_id
 from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="calls.webhook")
-
-
-def _participant_jti(participant: dict[str, Any]) -> str:
-    """jti of the token the SFU session was established with (from minted metadata)."""
-    try:
-        return (loads(participant.get("metadata") or "") or {}).get("jti", "")
-    except ValueError:
-        return ""
-
-
-def _is_stale_session_event(
-    participant_data: dict[str, Any], row_jti: str | None, session_jti: str | None = None
-) -> bool:
-    """An event whose jti matches neither the latest token nor the jti the live SFU session was
-    established with belongs to a session already replaced by a grace rejoin, so it must not touch
-    current state. Matching session_jti keeps a live session's events flowing across a mid-call
-    token refresh, which advances token_jti but is never handed to the Room."""
-    event_jti = _participant_jti(participant_data)
-    if not event_jti:
-        return False
-    if event_jti in (row_jti, session_jti):
-        return False
-    return bool(row_jti or session_jti)
 
 
 class LiveKitWebhookProvider:
@@ -74,35 +47,13 @@ class LiveKitWebhookProvider:
     async def _on_participant_joined(
         self, call_id: UUID, room_name: str, event: dict[str, Any]
     ) -> None:
-        """Evict a live SFU session that has no active membership row.
-
-        A legitimate join always has a row because it commits before the client ever receives its
-        token. The DB is the single authority: a revoked, stolen, or otherwise orphaned session
-        (including one whose participant_joined we never saw) is converged here and by the
-        reconciler.
-        """
-        participant = event.get("participant") or {}
-        identity = participant.get("identity", "")
+        identity = (event.get("participant") or {}).get("identity", "")
         if not identity:
             return
         async with open_session() as session:
-            call = await _load_call(session, call_id)
-            ops = CallOperations(session)
-            if (
-                call is None
-                or call.ended_at is not None
-                or await ops.get_active_participant(call_id, identity) is None
-            ):
-                logger.warning(
-                    f"Evicting SFU session with no active membership "
-                    f"on call={call_id} identity={identity}"
-                )
-                client = get_livekit_admin_client()
-                try:
-                    await client.remove_participant(room_name, identity)
-                except LiveKitApiError as exc:
-                    if exc.status_code != 404:
-                        raise
+            await MediaAdmission(session, get_livekit_admin_client()).evict_if_unauthorized(
+                call_id, room_name, identity
+            )
 
     async def _on_participant_left(self, call_id: UUID, event: dict[str, Any]) -> None:
         participant_data = event.get("participant") or {}
@@ -117,7 +68,7 @@ class LiveKitWebhookProvider:
             participant = await ops.get_active_participant(call_id, identity)
             if participant is None:
                 return
-            if _is_stale_session_event(
+            if is_stale_session_event(
                 participant_data, participant.token_jti, participant.session_jti
             ):
                 return

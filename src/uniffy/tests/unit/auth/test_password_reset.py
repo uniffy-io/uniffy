@@ -14,7 +14,6 @@ import pytest
 
 from uniffy.core.audit.actions import Action
 from uniffy.core.types import generate_id
-from uniffy.domains.calls.lifecycle import CallEvictionReason
 from uniffy.domains.auth.passwords.reset import (
     PasswordResetOperations,
     PasswordResetTokenExpiredError,
@@ -22,6 +21,7 @@ from uniffy.domains.auth.passwords.reset import (
     PasswordResetTokenUsedError,
     _hash_token,
 )
+from uniffy.domains.calls.lifecycle import CallEvictionReason
 from uniffy.domains.organizations.security import SecuritySettings
 
 _NO_USER_OUTCOME = "no_user"
@@ -257,7 +257,7 @@ class TestVerifyAndConsume:
                 return_value=_NEW_PASSWORD_HASH,
             ),
             patch(
-                "uniffy.domains.auth.passwords.reset.revoke_user_sessions",
+                "uniffy.domains.auth.passwords.reset.stage_revoke_user_sessions",
                 new=AsyncMock(return_value=[revoked_session_id]),
             ) as revoke_sessions,
             patch(

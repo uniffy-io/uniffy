@@ -21,7 +21,7 @@ from uniffy.cli import MFA_RESET_FLAG
 from uniffy.core.audit.actions import Action
 from uniffy.core.audit.writer import write_audit_event
 from uniffy.core.auth.revocation import mark_sessions_revoked, mark_token_version_revoked
-from uniffy.core.auth.sessions import revoke_user_sessions
+from uniffy.core.auth.sessions import stage_revoke_user_sessions
 from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.login.user import User
 from uniffy.core.models.login.user_mfa import UserMfa
@@ -115,7 +115,7 @@ async def _reset(email: str, reason: str, *, operator: str) -> None:
         await session.execute(
             update(User).where(User.id == user.id).values(token_version=new_version)
         )
-        revoked_session_ids = await revoke_user_sessions(session, user.id)
+        revoked_session_ids = await stage_revoke_user_sessions(session, user.id)
 
         await write_audit_event(
             session,
@@ -137,7 +137,7 @@ async def _reset(email: str, reason: str, *, operator: str) -> None:
         await session.commit()
         await mark_token_version_revoked(user.id, new_version)
         await mark_sessions_revoked(revoked_session_ids)
-        await CallsLifecycle().evict_user(
+        await CallsLifecycle(open_session).evict_user(
             session,
             user.id,
             reason=CallEvictionReason.SESSION_REVOKED,

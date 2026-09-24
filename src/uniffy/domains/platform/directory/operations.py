@@ -19,7 +19,7 @@ from uniffy.core.auth.emails import normalize_email
 from uniffy.core.auth.passwords.crypto import hash_password
 from uniffy.core.auth.passwords.policy import validate_password
 from uniffy.core.auth.revocation import mark_sessions_revoked, mark_token_version_revoked
-from uniffy.core.auth.sessions import revoke_user_sessions
+from uniffy.core.auth.sessions import stage_revoke_user_sessions
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.jobs import enqueue_job
 from uniffy.core.json_codec import dumps_str
@@ -560,10 +560,10 @@ class PlatformDirectoryOperations:
         for member_id in bumped_user_ids:
             await invalidate_user_profile(member_id)
 
-        await self._publish_member_token_revokes(bumped_user_ids)
         await self._call_lifecycle.end_for_organization(
             self._session, org.id, CallEndReason.ORG_SUSPENDED
         )
+        await self._publish_member_token_revokes(bumped_user_ids)
 
         return await self.get_organization(user_id=user_id, organization_id=organization_id)
 
@@ -653,10 +653,10 @@ class PlatformDirectoryOperations:
 
         for member_id in bumped_user_ids:
             await invalidate_user_profile(member_id)
-        await self._publish_member_token_revokes(bumped_user_ids)
         await self._call_lifecycle.end_for_organization(
             self._session, org.id, CallEndReason.ORG_DELETED
         )
+        await self._publish_member_token_revokes(bumped_user_ids)
 
         await self._enqueue_org_deleted_emails(org, reason)
 
@@ -1030,7 +1030,7 @@ class PlatformDirectoryOperations:
         if revoke_tokens:
             target.token_version += 1
             new_version = target.token_version
-            revoked_session_ids = await revoke_user_sessions(self._session, target.id)
+            revoked_session_ids = await stage_revoke_user_sessions(self._session, target.id)
         self._session.add(target)
 
         await write_audit_event(
@@ -1125,7 +1125,7 @@ class PlatformDirectoryOperations:
         target.token_version += 1
         new_version = target.token_version
         self._session.add(target)
-        revoked_session_ids = await revoke_user_sessions(self._session, target.id)
+        revoked_session_ids = await stage_revoke_user_sessions(self._session, target.id)
 
         await write_audit_event(
             self._session,

@@ -1,9 +1,4 @@
-"""Call lifecycle business logic.
-
-Access rides on chat channel membership via ChatAccessChecker - a call is a
-property of its channel, not standalone content. Stream events publish after
-commit so receivers never observe state the DB does not hold yet.
-"""
+"""Channel calls with committed lifecycle state and post-commit media effects."""
 
 from collections.abc import Sequence
 from datetime import UTC, datetime, timedelta
@@ -110,13 +105,8 @@ class CallOperations:
         device_label: str | None = None,
         auth_session_id: UUID | None = None,
     ) -> tuple[Call, list[CallParticipant], MintedToken, bool]:
-        """Start a call, or join the channel's active call when one exists.
-
-        Returns (call, active_participants, token, joined_existing).
-        """
         channel = await self.access.get_channel(channel_id, organization_id)
         await self.access.check_access(user_id, organization_id, channel)
-        await self._require_live_auth_session(user_id, auth_session_id)
         if channel.is_archived:
             raise ValidationError("channel", "Channel is archived")
         await self._require_calls_enabled(organization_id)
@@ -190,7 +180,6 @@ class CallOperations:
         call = await self._get_call(call_id, organization_id, require_active=True)
         channel = await self.access.get_channel(call.channel_id, organization_id)
         await self.access.check_access(user_id, organization_id, channel)
-        await self._require_live_auth_session(user_id, auth_session_id)
         if channel.is_archived:
             raise ValidationError("channel", "Channel is archived")
         await self._require_calls_enabled(organization_id)
@@ -484,25 +473,32 @@ class CallOperations:
         )
 
     async def mark_participant_left(self, call: Call, participant: CallParticipant) -> bool:
-        """Close one active row via compare-and-set; the leave side-effects run only on the win.
+        won = await self._stage_participant_left(participant)
+        await self.session.commit()
+        if won:
+            await self._finalize_participant_left(call, participant)
+        return won
 
-        The RPC leave and the participant_left webhook fire near-simultaneously for the same
-        row; gating fanout and auto-end on the CAS keeps the audit log and host handoff single.
-        """
+    async def _stage_participant_left(
+        self,
+        participant: CallParticipant,
+        session_ids: Sequence[UUID] | None = None,
+    ) -> bool:
         now = datetime.now(UTC)
+        query = update(CallParticipant).where(
+            CallParticipant.id == participant.id, CallParticipant.left_at.is_(None)
+        )
+        if session_ids is not None:
+            query = query.where(CallParticipant.auth_session_id.in_(list(session_ids)))
         won = await self.session.execute(
-            update(CallParticipant)
-            .where(CallParticipant.id == participant.id, CallParticipant.left_at.is_(None))
+            query
             .values(left_at=now)
             .returning(CallParticipant.id)
             .execution_options(synchronize_session=False)
         )
         if won.scalar_one_or_none() is None:
-            await self.session.commit()
             return False
         set_committed_value(participant, "left_at", now)
-        await self.session.commit()
-        await self._finalize_participant_left(call, participant)
         return True
 
     async def retire_ghost_participant(
@@ -585,24 +581,14 @@ class CallOperations:
 
         evicted = 0
         for call, participant in rows:
-            if not await self._force_leave(call, participant):
-                continue
-            evicted += 1
-            await write_audit_event(
-                self.session,
-                organization_id=call.organization_id,
+            if await self._force_leave(
+                call,
+                participant,
+                reason=reason,
+                session_ids=session_ids,
                 actor_user_id=actor_user_id,
-                action=Action.CALL_PARTICIPANT_EVICTED,
-                resource_type=AuditResourceType.CALL,
-                resource_id=call.id,
-                details={
-                    "channel_id": str(call.channel_id),
-                    "target_user_id": str(user_id),
-                    "target_identity": participant.identity,
-                    "reason": reason.value,
-                },
-            )
-            await self.session.commit()
+            ):
+                evicted += 1
         return evicted
 
     async def end_calls_for_organization(
@@ -636,9 +622,34 @@ class CallOperations:
         for participant in rows.scalars().all():
             await self._force_leave(call, participant)
 
-    async def _force_leave(self, call: Call, participant: CallParticipant) -> bool:
-        """Close the row before the SFU remove so a racing leave webhook cannot steal the audit."""
-        won = await self.mark_participant_left(call, participant)
+    async def _force_leave(
+        self,
+        call: Call,
+        participant: CallParticipant,
+        *,
+        reason: CallEvictionReason | None = None,
+        session_ids: Sequence[UUID] | None = None,
+        actor_user_id: UUID | None = None,
+    ) -> bool:
+        if not await self._stage_participant_left(participant, session_ids):
+            await self.session.commit()
+            return False
+        if reason is not None:
+            await write_audit_event(
+                self.session,
+                organization_id=call.organization_id,
+                actor_user_id=actor_user_id,
+                action=Action.CALL_PARTICIPANT_EVICTED,
+                resource_type=AuditResourceType.CALL,
+                resource_id=call.id,
+                details={
+                    "channel_id": str(call.channel_id),
+                    "target_user_id": str(participant.user_id),
+                    "target_identity": participant.identity,
+                    "reason": reason.value,
+                },
+            )
+        await self.session.commit()
         try:
             await get_livekit_admin_client().remove_participant(
                 call.livekit_room_name, participant.identity
@@ -647,16 +658,13 @@ class CallOperations:
             # 404 means the SFU already dropped it; the reconciler sweeps any other failure.
             if exc.status_code != 404:
                 logger.warning(f"call remove_participant failed for {participant.identity}: {exc}")
-        return won
+        await self._finalize_participant_left(call, participant)
+        return True
 
     async def end_call_internal(
         self, call: Call, reason: CallEndReason, actor_user_id: UUID | None = None
     ) -> bool:
-        """End the call via compare-and-set; audit, fanout, and room delete run only on the win.
-
-        actor_user_id is None for system ends (all-left, reconciler, webhook). The CAS is the
-        guard: an in-memory ended_at check is stale across sessions (expire_on_commit=False).
-        """
+        """Only the terminal-update winner audits and publishes the call end."""
         now = datetime.now(UTC)
         won = await self.session.execute(
             update(Call)
@@ -695,6 +703,13 @@ class CallOperations:
         )
         await self.session.commit()
 
+        client = get_livekit_admin_client()
+        try:
+            await client.delete_room(call.livekit_room_name)
+        except LiveKitApiError as exc:
+            if exc.status_code != 404:
+                logger.warning(f"LiveKit room delete failed for call={call.id}: {exc}")
+
         # Include the just-closed participants: a PUBLIC-channel joiner has no
         # member row but must still receive CALL_ENDED to clear its indicator.
         member_ids = list(set(await self.member_user_ids(call.channel_id)) | set(closed_user_ids))
@@ -707,12 +722,6 @@ class CallOperations:
 
         await self._post_call_ended_summary(call, reason, actor_user_id, now)
 
-        client = get_livekit_admin_client()
-        try:
-            await client.delete_room(call.livekit_room_name)
-        except LiveKitApiError as exc:
-            if exc.status_code != 404:
-                logger.warning(f"LiveKit room delete failed for call={call.id}: {exc}")
         return True
 
     async def _post_call_ended_summary(
@@ -862,14 +871,16 @@ class CallOperations:
         return True
 
     async def _require_live_auth_session(self, user_id: UUID, auth_session_id: UUID | None) -> None:
-        """Refuse a revoked auth session in PostgreSQL; the Valkey marker fails open."""
+        """Order participant writes before concurrent session revocation."""
         if auth_session_id is None:
             return
         revoked = await self.session.scalar(
-            select(UserSession.is_revoked).where(
+            select(UserSession.is_revoked)
+            .where(
                 UserSession.id == auth_session_id,
                 UserSession.user_id == user_id,
             )
+            .with_for_update(read=True)
         )
         if revoked is not False:
             raise PermissionDeniedError("call", "Session has been revoked")
@@ -885,6 +896,7 @@ class CallOperations:
         *,
         is_start: bool = False,
     ) -> tuple[MintedToken, list[CallParticipant]]:
+        await self._require_live_auth_session(user_id, auth_session_id)
         identity = participant_identity(user_id, device_id)
         info = await self.chat.resolve_profile(user_id)
 
@@ -935,6 +947,7 @@ class CallOperations:
             # active-identity unique index; reclaim the row the winner inserted.
             await self.session.rollback()
             await self.session.refresh(call)
+            await self._require_live_auth_session(user_id, auth_session_id)
             existing_row = await self.get_active_participant(call.id, identity)
             if existing_row is None or not await self._reopen_participant_row(
                 call, existing_row, token, device_label, auth_session_id

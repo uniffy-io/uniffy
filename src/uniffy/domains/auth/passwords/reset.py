@@ -38,7 +38,7 @@ from uniffy.core.audit import client_ip_for_rate_limit, write_audit_event
 from uniffy.core.audit.actions import Action
 from uniffy.core.auth.passwords.crypto import hash_password
 from uniffy.core.auth.revocation import mark_sessions_revoked, mark_token_version_revoked
-from uniffy.core.auth.sessions import revoke_user_sessions
+from uniffy.core.auth.sessions import stage_revoke_user_sessions
 from uniffy.core.jobs import enqueue_job
 from uniffy.core.json_codec import dumps_str
 from uniffy.core.models.audit.event import AuditResourceType
@@ -280,7 +280,7 @@ class PasswordResetOperations:
         user.hashed_password = hash_password(new_password)
         user.token_version = (user.token_version or 0) + 1
         token_record.used_at = datetime.now(UTC)
-        revoked_session_ids = await revoke_user_sessions(self._session, user.id)
+        revoked_session_ids = await stage_revoke_user_sessions(self._session, user.id)
 
         primary_org_id, _ = await self._resolve_primary_org(user.id)
         await write_audit_event(
@@ -296,7 +296,6 @@ class PasswordResetOperations:
             },
         )
         await self._session.commit()
-        await self._session.refresh(user)
 
         from uniffy.core.realtime.publisher import publish_token_revoke
 
@@ -308,6 +307,7 @@ class PasswordResetOperations:
             user.id,
             reason=CallEvictionReason.SESSION_REVOKED,
         )
+        await self._session.refresh(user)
         return user
 
     async def _load_active_token(

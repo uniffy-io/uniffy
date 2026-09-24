@@ -1,8 +1,4 @@
-"""Call revocation capability consumed by auth, platform and directory owners.
-
-Kept free of heavy calls imports so a consumer can depend on the contract
-without pulling the whole domain in.
-"""
+"""Call revocation contract for auth, platform and directory owners."""
 
 from collections.abc import Sequence
 from enum import Enum
@@ -34,7 +30,7 @@ class CallRevocationLifecycle(Protocol):
         actor_user_id: UUID | None = None,
     ) -> None: ...
 
-    async def transfer_session(
+    async def stage_transfer_session(
         self,
         session: AsyncSession,
         from_session_id: UUID,

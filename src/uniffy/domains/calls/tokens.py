@@ -44,16 +44,16 @@ def participant_identity(user_id: UUID, device_id: str) -> str:
     return f"{user_id}:{device_id}"
 
 
-def parse_room_call_id(room_name: str) -> UUID | None:
-    """Inverse of livekit_room_name; None for rooms Uniffy does not own."""
-    marker = ":call_"
-    idx = room_name.find(marker)
-    if idx < 0:
-        return None
+def parse_room_call_id(name: str) -> UUID | None:
     try:
-        return UUID(room_name[idx + len(marker) :])
-    except ValueError:
+        organization, call = name.split(":call_")
+        if not organization.startswith("org_"):
+            return None
+        organization_id = UUID(organization.removeprefix("org_"))
+        call_id = UUID(call)
+    except ValueError, TypeError:
         return None
+    return call_id if name == livekit_room_name(organization_id, call_id) else None
 
 
 class LiveKitTokenMinter:

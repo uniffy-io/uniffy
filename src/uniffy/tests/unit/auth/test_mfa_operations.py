@@ -34,8 +34,8 @@ from uniffy.domains.auth.errors import (
     TokenError,
 )
 from uniffy.domains.auth.mfa import operations as mfa_ops
-from uniffy.domains.auth.mfa.operations import MfaOperations
 from uniffy.domains.auth.mfa.limits import VerifyLockStatus
+from uniffy.domains.auth.mfa.operations import MfaOperations
 
 
 @dataclass
@@ -534,7 +534,9 @@ class TestSessionRevocationReachesCalls:
         session.execute = AsyncMock()
 
         with (
-            patch.object(mfa_ops, "revoke_user_sessions", AsyncMock(return_value=revoked)) as revoke,
+            patch.object(
+                mfa_ops, "stage_revoke_user_sessions", AsyncMock(return_value=revoked)
+            ) as revoke,
             patch.object(mfa_ops, "mark_sessions_revoked", AsyncMock()) as mark,
             patch.object(mfa_ops, "mark_token_version_revoked", AsyncMock()),
         ):
@@ -554,13 +556,15 @@ class TestSessionRevocationReachesCalls:
         caller_session = generate_id()
         revoked = [caller_session, generate_id()]
         commits_before_transfer: list[int] = []
-        lifecycle.transfer_session.side_effect = lambda *_: commits_before_transfer.append(
+        lifecycle.stage_transfer_session.side_effect = lambda *_: commits_before_transfer.append(
             session.commit.await_count
         )
 
         with (
             patch.object(mfa_ops, "replace_recovery_codes", AsyncMock()),
-            patch.object(mfa_ops, "revoke_user_sessions", AsyncMock(return_value=revoked)) as revoke,
+            patch.object(
+                mfa_ops, "stage_revoke_user_sessions", AsyncMock(return_value=revoked)
+            ) as revoke,
             patch.object(mfa_ops, "mark_sessions_revoked", AsyncMock()),
             patch.object(mfa_ops, "mark_token_version_revoked", AsyncMock()),
         ):
@@ -569,7 +573,7 @@ class TestSessionRevocationReachesCalls:
             )
 
         revoke.assert_awaited_once_with(session, user.id, keep_session_id=result.session_id)
-        lifecycle.transfer_session.assert_awaited_once_with(
+        lifecycle.stage_transfer_session.assert_awaited_once_with(
             session, caller_session, result.session_id
         )
         lifecycle.evict_user.assert_awaited_once_with(

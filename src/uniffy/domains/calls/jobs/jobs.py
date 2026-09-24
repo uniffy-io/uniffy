@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from contextlib import suppress
 from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
@@ -16,9 +17,11 @@ from uniffy.core.models.login.organization import Organization
 from uniffy.core.models.login.organization_member import OrganizationMember
 from uniffy.core.models.login.user import User
 from uniffy.core.models.login.user_session import UserSession
+from uniffy.domains.calls.admission import MediaAdmission, matches_media_session
 from uniffy.domains.calls.config import LiveKitConfigError, get_livekit_config
 from uniffy.domains.calls.lifecycle import CallEvictionReason
 from uniffy.domains.calls.livekit import (
+    LiveKitAdminClient,
     LiveKitApiError,
     LiveKitUnavailableError,
     get_livekit_admin_client,
@@ -43,6 +46,7 @@ DEFAULT_MAX_DURATION_MINUTES = 480
 _RECONCILE_LOCK = "calls_reconcile:lock"
 _ORPHAN_LOCK = "calls_orphan_cleanup:lock"
 CALL_MAINTENANCE_JOB_TIMEOUT_SECONDS = 300
+ROOM_LOOKUP_BATCH_SIZE = 500
 _LOCK_TTL_SECONDS = CALL_MAINTENANCE_JOB_TIMEOUT_SECONDS + 30
 
 
@@ -159,6 +163,7 @@ async def reconcile_calls(ctx: dict[str, Any]) -> dict[str, Any]:
     ended = 0
     ghosts = 0
     revoked = 0
+    closed_rooms = 0
     try:
         client = get_livekit_admin_client()
         with client.stop_after_unavailable() as media:
@@ -167,6 +172,9 @@ async def reconcile_calls(ctx: dict[str, Any]) -> dict[str, Any]:
                     select(Call).where(Call.ended_at.is_(None)).order_by(Call.id)
                 )
                 active_calls = list(result.scalars().all())
+                await session.commit()
+                with suppress(LiveKitUnavailableError):
+                    closed_rooms = await _cleanup_orphan_rooms(session, client)
 
                 for call in active_calls:
                     ops = CallOperations(session)
@@ -226,14 +234,22 @@ async def reconcile_calls(ctx: dict[str, Any]) -> dict[str, Any]:
                         ended += 1
                         continue
 
-                    db_active = {r.identity for r in await ops.list_active_participants(call.id)}
+                    db_active = {r.identity: r for r in await ops.list_active_participants(call.id)}
                     await session.commit()  # no open transaction across the LiveKit remove HTTP
                     for entry in live:
                         identity = entry.get("identity", "")
-                        if not identity or identity in db_active:
+                        participant = db_active.get(identity)
+                        if not identity or (
+                            participant is not None
+                            and matches_media_session(
+                                entry, participant.token_jti, participant.session_jti
+                            )
+                        ):
                             continue
                         try:
-                            await client.remove_participant(call.livekit_room_name, identity)
+                            await MediaAdmission(session, client).evict_if_unauthorized(
+                                call.id, call.livekit_room_name, identity
+                            )
                         except LiveKitApiError as exc:
                             if exc.status_code != 404:
                                 logger.warning(
@@ -266,6 +282,7 @@ async def reconcile_calls(ctx: dict[str, Any]) -> dict[str, Any]:
             "ended": ended,
             "ghost_participants": ghosts,
             "revoked_participants": revoked,
+            "closed_rooms": closed_rooms,
             "media_reachable": media.reachable,
         }
     except Exception as exc:
@@ -284,27 +301,11 @@ async def cleanup_orphan_call_rooms(ctx: dict[str, Any]) -> dict[str, Any]:
     if lock_token is None:
         return {"status": "skipped", "reason": "lock_held"}
 
-    closed = 0
     try:
         client = get_livekit_admin_client()
-        rooms = await client.list_rooms()
-        async with open_session() as session:
-            for room in rooms:
-                name = room.get("name", "")
-                call_id = parse_room_call_id(name)
-                if call_id is None:
-                    continue
-                result = await session.execute(
-                    select(Call.id).where(Call.id == call_id, Call.ended_at.is_(None))
-                )
-                if result.scalar_one_or_none() is not None:
-                    continue
-                try:
-                    await client.delete_room(name)
-                    closed += 1
-                except LiveKitApiError as exc:
-                    if exc.status_code != 404:
-                        logger.warning(f"orphan room delete failed for {name}: {exc}")
+        with client.stop_after_unavailable():
+            async with open_session() as session:
+                closed = await _cleanup_orphan_rooms(session, client)
 
         return {"status": "success", "closed": closed}
     except LiveKitUnavailableError:
@@ -314,3 +315,31 @@ async def cleanup_orphan_call_rooms(ctx: dict[str, Any]) -> dict[str, Any]:
         return {"status": "error", "error": str(exc)[:500]}
     finally:
         await _release_lock(_ORPHAN_LOCK, lock_token)
+
+
+async def _cleanup_orphan_rooms(session: AsyncSession, client: LiveKitAdminClient) -> int:
+    rooms = await client.list_rooms()
+    names = [room["name"] for room in rooms if parse_room_call_id(room.get("name", "")) is not None]
+    closed = 0
+    for start in range(0, len(names), ROOM_LOOKUP_BATCH_SIZE):
+        batch = names[start : start + ROOM_LOOKUP_BATCH_SIZE]
+        # Read after the SFU snapshot so a concurrent valid join cannot look orphaned.
+        rows = await session.scalars(
+            select(Call.livekit_room_name).where(
+                Call.livekit_room_name.in_(batch), Call.ended_at.is_(None)
+            )
+        )
+        active = set(rows.all())
+        await session.commit()
+        for name in batch:
+            if name in active:
+                continue
+            try:
+                await client.delete_room(name)
+                closed += 1
+            except LiveKitUnavailableError:
+                raise
+            except LiveKitApiError as exc:
+                if exc.status_code != 404:
+                    logger.warning(f"orphan room delete failed for {name}: {exc}")
+    return closed

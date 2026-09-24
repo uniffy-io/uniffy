@@ -8,7 +8,7 @@ RECONCILE_CALLS_SCHEDULE = JobRef(
     workload=JobWorkload.CONTROL,
     reliability=JobReliability.DURABLE,
     recovery=JobRecovery(
-        fact="active calls and call_participants rows",
+        fact="active call participants and ended or absent calls compared with LiveKit rooms",
         trigger="five-minute core schedule",
     ),
 )

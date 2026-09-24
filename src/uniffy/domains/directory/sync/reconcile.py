@@ -66,6 +66,12 @@ async def deprovision_user(
     membership.updated_at = datetime.now(UTC)
     await session.commit()
 
+    await call_lifecycle.evict_user(
+        session,
+        user_id,
+        reason=CallEvictionReason.MEMBERSHIP_REVOKED,
+        organization_id=org_id,
+    )
     active_owner_ids.discard(user_id)
     await invalidate_person(org_id, user_id)
 
@@ -75,12 +81,6 @@ async def deprovision_user(
         org_id,
     )
     await publish_mention_state(org_id, urn, {"urn_status": "DELETED"})
-    await call_lifecycle.evict_user(
-        session,
-        user_id,
-        reason=CallEvictionReason.MEMBERSHIP_REVOKED,
-        organization_id=org_id,
-    )
     return True
 
 
