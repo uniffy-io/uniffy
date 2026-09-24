@@ -75,7 +75,7 @@ async def test_registration_rolls_back_user_and_session_when_audit_fails(
         ),
         pytest.raises(RuntimeError, match="audit unavailable"),
     ):
-        await AuthOperations(session).register(
+        await AuthOperations(session, AsyncMock()).register(
             email=auth_transaction_env.register_email,
             username=auth_transaction_env.register_username,
             password="valid-password-1",
@@ -112,7 +112,7 @@ async def test_registration_commits_user_session_and_audit_together(
         patch("uniffy.domains.auth.operations.create_access_token", return_value="access"),
         patch("uniffy.domains.auth.operations.create_refresh_token", return_value="refresh"),
     ):
-        result = await AuthOperations(session).register(
+        result = await AuthOperations(session, AsyncMock()).register(
             email=auth_transaction_env.register_email,
             username=auth_transaction_env.register_username,
             password="valid-password-1",

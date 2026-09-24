@@ -11,6 +11,8 @@ const CAUSE_COPY: Record<CallEndCause, string> = {
   MAX_DURATION: "The call reached its time limit",
   SOLO_TIMEOUT: "The call ended - you were the only one left",
   CHANNEL_ARCHIVED: "The channel was archived",
+  ORG_SUSPENDED: "The organization was suspended",
+  ORG_DELETED: "The organization was deleted",
   KICKED: "You were removed from the call",
   CONNECTION_LOST: "Lost connection to the call",
   UNKNOWN: "The call ended",

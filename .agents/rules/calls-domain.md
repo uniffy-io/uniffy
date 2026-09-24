@@ -54,6 +54,31 @@ claim. The signature is the gate; network placement is defense-in-depth (the rou
 edge). Self-hosters MUST make the backend reachable from their LiveKit instance and keep the shared
 `api_key`/secret matched on both sides, or presence silently breaks.
 
+## Revocation reaches live calls
+
+Every path that deactivates a user, removes or deactivates a membership, or revokes sessions calls
+`CallRevocationLifecycle` (`domains/calls/lifecycle.py`) after its commit, so the person leaves any
+call they are sitting in. Each participant row carries the `auth_session_id` it joined or last
+refreshed on: a per-session revoke evicts only that device, while user- and membership-wide
+revocations evict every device in scope. The reconciler is the backstop and reads only PostgreSQL:
+`User.is_active`, the org membership, `UserSession.is_revoked`, and the organization's suspended or
+deleted state. A `token_version` bump alone is invisible to it, so any "kill every session" path also
+flags the session rows through `core/auth/sessions.py::stage_revoke_user_sessions`. JoinCall and
+RefreshCallToken refuse a revoked session in PostgreSQL because the Valkey marker fails open.
+They hold a shared row lock on that session until the participant write commits, so concurrent
+revocation cannot miss an admitted participant. Scoped eviction repeats its session filter in the
+terminal update so a concurrent MFA session transfer cannot evict the replacement session.
+
+Post-commit revocation uses an injected session factory. Failures roll back only the call-owned
+session. Callers invoke it before starting projection reads. Participant closure and its eviction
+audit commit together, then media removal runs before profile or event publication.
+
+Media admission matches the current SFU participant's metadata JTI against the active row's issued
+or connected token generation. A user/device identity alone is not authorization. Delayed join
+webhooks read the current SFU participant and recheck its SID before removal. The five-minute
+reconciler also closes canonical SFU rooms with no active PostgreSQL call, including failed inline
+deletions. It reads active room names after the SFU snapshot to preserve concurrently created calls.
+
 ## Media state (mic/camera/screen) is client-reported
 
 LiveKit emits NO mute webhook and a muted mic stays published, so roster media flags cannot be inferred

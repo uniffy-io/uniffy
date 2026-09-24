@@ -12,7 +12,7 @@ class TestRegisterGate:
     async def test_rejects_when_disabled(self) -> None:
         session = AsyncMock()
         session.add = MagicMock()
-        ops = AuthOperations(session)
+        ops = AuthOperations(session, AsyncMock())
         with (
             patch(
                 "uniffy.domains.auth.operations.public_registration_enabled",
@@ -35,7 +35,7 @@ class TestRegisterGate:
     async def test_allows_when_enabled(self) -> None:
         session = AsyncMock()
         session.add = MagicMock()
-        ops = AuthOperations(session)
+        ops = AuthOperations(session, AsyncMock())
         with (
             patch(
                 "uniffy.domains.auth.operations.public_registration_enabled",

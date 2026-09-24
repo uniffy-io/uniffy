@@ -16,6 +16,8 @@ export type CallEndReason =
   | "MAX_DURATION"
   | "SOLO_TIMEOUT"
   | "CHANNEL_ARCHIVED"
+  | "ORG_SUSPENDED"
+  | "ORG_DELETED"
   | "UNKNOWN";
 
 export interface PlainParticipant {
@@ -63,6 +65,8 @@ const END_REASON_MAP: Record<number, CallEndReason> = {
   [ProtoCallEndReason.MAX_DURATION]: "MAX_DURATION",
   [ProtoCallEndReason.SOLO_TIMEOUT]: "SOLO_TIMEOUT",
   [ProtoCallEndReason.CHANNEL_ARCHIVED]: "CHANNEL_ARCHIVED",
+  [ProtoCallEndReason.ORG_SUSPENDED]: "ORG_SUSPENDED",
+  [ProtoCallEndReason.ORG_DELETED]: "ORG_DELETED",
 };
 
 function tsToSeconds(ts: Timestamp | undefined): number {

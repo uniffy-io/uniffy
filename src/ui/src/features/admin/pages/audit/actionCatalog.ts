@@ -239,6 +239,7 @@ export const ACTION_GROUPS: readonly ActionGroup[] = [
       { value: "call.started", label: "Started" },
       { value: "call.ended", label: "Ended" },
       { value: "call.participant_kicked", label: "Participant kicked" },
+      { value: "call.participant_evicted", label: "Participant evicted" },
       { value: "call.participant_muted", label: "Participant muted" },
     ],
   },

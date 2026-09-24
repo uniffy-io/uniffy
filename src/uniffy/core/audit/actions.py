@@ -208,6 +208,7 @@ class Action:
     CALL_STARTED = "call.started"
     CALL_ENDED = "call.ended"
     CALL_PARTICIPANT_KICKED = "call.participant_kicked"
+    CALL_PARTICIPANT_EVICTED = "call.participant_evicted"
     CALL_PARTICIPANT_MUTED = "call.participant_muted"
 
     # Mail

@@ -31,6 +31,7 @@ from uniffy.domains.agents.bootstrap import (
     finish_default_agent_after_commit,
     stage_default_agent,
 )
+from uniffy.domains.calls.lifecycle import CallEvictionReason, CallRevocationLifecycle
 from uniffy.domains.chat.cache import (
     invalidate_cached_dm_peers,
     invalidate_cached_member_ids,
@@ -39,7 +40,6 @@ from uniffy.domains.chat.channels import stage_default_channel_memberships
 from uniffy.domains.chat.channels.operations import ChatChannelOperations
 from uniffy.domains.chat.channels.state import StagedChatChannelCreate
 from uniffy.domains.chat.cleanup import cleanup_chat_membership_for_organization
-from uniffy.domains.chat.lifecycle import ChannelCallLifecycle
 from uniffy.domains.chat.search import enqueue_chat_search_acl_refresh
 from uniffy.domains.directory.projection import UserDirectoryProjection
 from uniffy.domains.files.attachments import stage_personal_attachments_folder
@@ -637,7 +637,7 @@ class OrganizationOperations:
         target_user_id: UUID,
         *,
         search_indexer: SearchIndexer,
-        call_lifecycle: ChannelCallLifecycle,
+        call_lifecycle: CallRevocationLifecycle,
     ) -> bool:
         await self.require_org_admin(admin_user_id, org_id)
 
@@ -675,6 +675,13 @@ class OrganizationOperations:
 
         await self._session.commit()
 
+        await call_lifecycle.evict_user(
+            self._session,
+            target_user_id,
+            reason=CallEvictionReason.MEMBERSHIP_REVOKED,
+            organization_id=org_id,
+            actor_user_id=admin_user_id,
+        )
         try:
             await UserDirectoryProjection(
                 self._session,
@@ -700,13 +707,6 @@ class OrganizationOperations:
                         if channel_id in private_channel_ids
                     ),
                 )
-            for channel_id in chat_cleanup.channel_ids:
-                await call_lifecycle.remove_member(
-                    self._session,
-                    channel_id,
-                    target_user_id,
-                )
-
         return True
 
     async def get_permission_defaults(
