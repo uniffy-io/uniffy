@@ -21,16 +21,15 @@ from uniffy.core.models import (
     Group,
     Note,
     OrganizationMember,
-    Project,
     ProviderKey,
     Tag,
-    Task,
     User,
 )
 from uniffy.core.models.rooms.room import Room
 from uniffy.core.types import NodeType
 from uniffy.scripts.demo_company.context import DemoContext
 from uniffy.scripts.demo_company.loader import DEMO_MESSAGE_KEY, DemoContent
+from uniffy.scripts.demo_company.project_timeline import spread_projects
 
 logger = logger.bind(component="scripts.demo_company.timeline")
 
@@ -304,44 +303,8 @@ async def _spread_events(ctx: DemoContext, content: DemoContent) -> int:
 
 
 async def _spread_projects(ctx: DemoContext, content: DemoContent) -> int:
-    slugs = [spec.slug for spec in content.projects]
-    projects = list(
-        (
-            await ctx.session.execute(
-                select(Project).where(
-                    Project.organization_id == ctx.organization_id,
-                    Project.slug.in_(slugs),
-                    Project.is_deleted.is_(False),
-                )
-            )
-        )
-        .scalars()
-        .all()
-    )
-    by_slug = {row.slug: row for row in projects}
-    ordered_projects = [by_slug[slug] for slug in slugs if slug in by_slug]
-
-    tasks = list(
-        (
-            await ctx.session.execute(
-                select(Task).where(
-                    Task.project_id.in_([row.id for row in ordered_projects]),
-                    Task.is_deleted.is_(False),
-                )
-            )
-        )
-        .scalars()
-        .all()
-    )
-    task_map = {(row.project_id, row.title): row for row in tasks}
-    ordered_tasks = [
-        task_map[(project.id, task.title)]
-        for spec in content.projects
-        if (project := by_slug.get(spec.slug)) is not None
-        for task in spec.tasks
-        if (project.id, task.title) in task_map
-    ]
-    return _stamp_rows(ctx, [*ordered_projects, *ordered_tasks])
+    undated, dated = await spread_projects(ctx, content)
+    return dated + _stamp_rows(ctx, undated)
 
 
 async def _spread_agents(ctx: DemoContext, content: DemoContent) -> int:

@@ -21,6 +21,17 @@
     { "name": "onboarding", "color": "#eab308" },
     { "name": "people", "color": "#ec4899" },
     { "name": "infra", "color": "#14b8a6" },
-    { "name": "archive", "color": "#64748b" }
+    { "name": "archive", "color": "#64748b" },
+    { "name": "frontend", "color": "#8b5cf6" },
+    { "name": "backend", "color": "#0891b2" },
+    { "name": "mobile", "color": "#f97316" },
+    { "name": "design", "color": "#d946ef" },
+    { "name": "security", "color": "#dc2626" },
+    { "name": "performance", "color": "#84cc16" },
+    { "name": "reliability", "color": "#0d9488" },
+    { "name": "accessibility", "color": "#2563eb" },
+    { "name": "customer-request", "color": "#f59e0b" },
+    { "name": "tech-debt", "color": "#78716c" },
+    { "name": "docs", "color": "#475569" }
   ]
 }

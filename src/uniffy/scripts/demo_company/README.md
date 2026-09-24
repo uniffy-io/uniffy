@@ -94,6 +94,7 @@ content/
 ├── people.json       the roster with profiles, the team tree, the access groups
 ├── agents.json       provider keys (env-var driven) and one agent per provider
 ├── projects.json     projects with their tasks
+├── project_series.json  large generated projects: epics, stories, subtasks, sprints
 ├── notes/*.md        frontmatter: title, slug, folder, tags
 ├── files/<Folder>/*  uploaded into a workspace folder named after the directory
 ├── files.json        optional descriptions and tags, keyed by "Folder/filename"
@@ -107,8 +108,15 @@ Notes live in `Handbook/Policies`-style paths under the manifest's
 `root_folder`. Events use `day_offset` (0 = Monday of the anchor week) plus a
 `HH:MM` wall-clock `start` in the manifest timezone, and book a room by name.
 Chat messages carry `minutes_ago`, so the conversation lands spread over the
-past few days rather than all at once. Tasks carry `due_in_days` relative to
-the run (negative = already done, no due date).
+past few days rather than all at once. Task dates (`start_in_days`,
+`due_in_days`, `created_in_days`, `completed_in_days`) and sprint windows are day
+offsets from the run; negative means the past.
+
+`project_series.json` expands templates into big projects for scale testing
+(100, 200 and 1200 tasks by default; change `task_count` to resize). The
+expansion is seeded by the project slug, so every run renders the same tasks.
+Status, sprint and completion follow each task's dates: past sprints close, the
+one spanning today starts, and parents roll up their children.
 
 ## Generated binaries
 

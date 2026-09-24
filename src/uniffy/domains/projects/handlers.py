@@ -1,4 +1,3 @@
-import secrets
 from datetime import UTC, datetime
 from typing import NamedTuple
 from uuid import UUID
@@ -90,7 +89,9 @@ from uniffy.domains.projects.converters import (
     sprint_to_proto,
     task_to_proto,
 )
+from uniffy.domains.projects.fields import DEFAULT_CUSTOM_FIELD_SORT_ORDER
 from uniffy.domains.projects.operations import (
+    FieldOperations,
     ProjectOperations,
     SprintOperations,
     TaskOperations,
@@ -1014,25 +1015,20 @@ class ProjectsHandlers:
 
         try:
             async with open_session() as session:
-                project_ops = ProjectOperations(session, self.storage, self.search_indexer)
-                project = await project_ops.get_by_id(user_id, organization_id, project_id)
-                await project_ops._require_manage(user_id, organization_id, project)
-
-                field_id = f"field_{secrets.token_hex(8)}"
-                field = FieldDefinition(
-                    id=field_id,
-                    project_id=project_id,
+                field = await FieldOperations(session).create(
+                    user_id,
+                    organization_id,
+                    project_id,
                     name=request.name,
-                    type=field_type_from_proto(request.type),
-                    is_required=(request.is_required if request.HasField("is_required") else False),
-                    is_system=False,
-                    sort_order=request.sort_order if request.HasField("sort_order") else 999,
-                    config=config if config else None,
+                    field_type=field_type_from_proto(request.type),
+                    config=config,
+                    is_required=request.is_required if request.HasField("is_required") else False,
+                    sort_order=(
+                        request.sort_order
+                        if request.HasField("sort_order")
+                        else DEFAULT_CUSTOM_FIELD_SORT_ORDER
+                    ),
                 )
-                session.add(field)
-                await session.commit()
-                await session.refresh(field)
-
                 return CreateFieldResponse(field=field_to_proto(field))
         except ConnectError:
             raise
