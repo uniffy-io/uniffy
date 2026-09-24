@@ -10,8 +10,8 @@ import {
   createViewOfType,
   duplicateView,
   nextViewName,
+  moveView,
   removeView,
-  reorderedGroupIds,
   saveViewAs,
   saveViewDraft,
 } from "@/features/projects/store/viewActions";
@@ -21,6 +21,7 @@ import {
   selectActiveView,
   selectIsActiveViewDirty,
   selectIsViewSaving,
+  selectProjectViews,
 } from "@/features/projects/store/viewSelectors";
 import {
   persistedProjectsUi,
@@ -309,17 +310,87 @@ describe("nextViewName", () => {
   });
 });
 
-describe("reorderedGroupIds", () => {
-  const views = [TABLE, BOARD, view("graph", "graph", ViewVisibility.SHARED, 2), MINE];
+describe("personal tab order", () => {
+  it("moves personal tabs before shared tabs without changing saved views", () => {
+    const { dispatch, state } = makeStore();
+    dispatch(openView({ projectId: "p", viewId: MINE.id }));
 
-  it("moves a view within its group and sends the whole group", () => {
-    expect(reorderedGroupIds(views, "graph", "view_table")).toEqual({
-      visibility: ViewVisibility.SHARED,
-      ids: ["graph", "view_table", "view_board"],
-    });
+    expect(dispatch(moveView("p", MINE.id, TABLE.id))).toBe(true);
+
+    expect(selectProjectViews("p")(state()).map((item) => item.id)).toEqual([
+      MINE.id,
+      TABLE.id,
+      BOARD.id,
+    ]);
+    expect(state().projects.projects.p.views).toEqual([TABLE, BOARD, MINE]);
+    expect(selectActiveView("p")(state())?.id).toBe(MINE.id);
+    expect(selectIsActiveViewDirty("p")(state())).toBe(false);
   });
 
-  it("refuses a move across personal and shared views", () => {
-    expect(reorderedGroupIds(views, "mine", "view_table")).toBeNull();
+  it("restores mixed tab order after reload and clears it on logout", () => {
+    const { dispatch, state } = makeStore();
+    dispatch(moveView("p", MINE.id, TABLE.id));
+    const projectsUi = rehydrateProjectsUi(persistedProjectsUi(state().projectsUi));
+    expect(selectProjectViews("p")({ ...state(), projectsUi }).map((item) => item.id)).toEqual([
+      MINE.id,
+      TABLE.id,
+      BOARD.id,
+    ]);
+
+    dispatch({ type: AUTH_ACTION_TYPES.LOGOUT });
+    expect(selectProjectViews("p")(state())).toEqual([TABLE, BOARD, MINE]);
+  });
+
+  it("keeps order through server refreshes and hides views no longer returned", () => {
+    const { dispatch, state } = makeStore();
+    dispatch(moveView("p", BOARD.id, TABLE.id));
+    dispatch(moveView("p", MINE.id, BOARD.id));
+    const current = state();
+    const graph = view("graph", "graph");
+    const refreshed = {
+      ...current,
+      projects: {
+        ...current.projects,
+        projects: { p: { ...current.projects.projects.p, views: [TABLE, BOARD, graph] } },
+      },
+    };
+    expect(selectProjectViews("p")(refreshed).map((item) => item.id)).toEqual([
+      BOARD.id,
+      TABLE.id,
+      graph.id,
+    ]);
+  });
+
+  it("scopes ordering by project even when view ids repeat", () => {
+    const { dispatch, state } = makeStore();
+    dispatch(moveView("p", MINE.id, TABLE.id));
+    const current = state();
+    const withOtherProject = {
+      ...current,
+      projects: {
+        ...current.projects,
+        projects: {
+          ...current.projects.projects,
+          q: {
+            ...current.projects.projects.p,
+            id: "q",
+            views: [TABLE, BOARD, MINE].map((item) => ({ ...item, projectId: "q" })),
+          },
+        },
+      },
+    };
+    expect(selectProjectViews("q")(withOtherProject).map((item) => item.id)).toEqual([
+      TABLE.id,
+      BOARD.id,
+      MINE.id,
+    ]);
+  });
+
+  it("ignores drops onto the same tab or missing tabs", () => {
+    const { dispatch, state } = makeStore();
+    expect(dispatch(moveView("p", MINE.id, MINE.id))).toBe(false);
+    expect(dispatch(moveView("p", "missing", TABLE.id))).toBe(false);
+    expect(dispatch(moveView("p", TABLE.id, "missing"))).toBe(false);
+    expect(selectProjectViews("p")(state())).toEqual([TABLE, BOARD, MINE]);
   });
 });

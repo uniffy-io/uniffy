@@ -44,6 +44,8 @@ export interface HistoryEntry {
 export interface ProjectsUiState {
   /** Last opened view per project id. */
   activeViewIds: Record<string, string>;
+  /** Personal tab order per project, independent of shared view definitions. */
+  viewTabOrder: Record<string, string[]>;
   /** Drafts are scoped by project because view ids repeat across projects. */
   viewDrafts: Record<string, Record<string, ViewDefinition>>;
   viewSaveRequests: Record<string, Record<string, string>>;
@@ -94,6 +96,7 @@ function localTodayString(): string {
 
 export const initialProjectsUiState: ProjectsUiState = {
   activeViewIds: {},
+  viewTabOrder: {},
   viewDrafts: {},
   viewSaveRequests: {},
   outlineExpanded: {},

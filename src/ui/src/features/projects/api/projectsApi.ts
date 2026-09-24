@@ -686,23 +686,6 @@ export const projectsApi = {
     };
   },
 
-  reorderViews: async (
-    projectId: string,
-    visibility: ViewVisibility,
-    viewIds: string[],
-    organizationId: string,
-  ): Promise<{ views: ViewConfig[] }> => {
-    const response = await projectsClient.reorderViews({
-      organizationId,
-      projectId,
-      visibility,
-      viewIds,
-    });
-    return {
-      views: response.views.map(protoViewConfigToFrontend),
-    };
-  },
-
   listActivities: async (
     taskId: string,
     organizationId: string,

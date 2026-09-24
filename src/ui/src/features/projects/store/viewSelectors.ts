@@ -4,6 +4,7 @@ import type { ViewConfig, ViewDefinition, ViewType } from "@/features/projects/t
 import { definitionsEqual, emptyDefinition } from "@/features/projects/utils/viewDraft";
 
 const NO_VIEWS: readonly ViewConfig[] = Object.freeze([]);
+const NO_VIEW_ORDER: readonly string[] = Object.freeze([]);
 const NO_DRAFTS: Readonly<Record<string, ViewDefinition>> = Object.freeze({});
 const NO_DIRTY_VIEWS: readonly string[] = Object.freeze([]);
 const FALLBACK_DEFINITION: ViewDefinition = Object.freeze(emptyDefinition("table"));
@@ -21,9 +22,27 @@ function perProject<T>(build: (projectId: string) => (state: RootState) => T) {
   };
 }
 
-/** The views the caller can see, in the order the server lists them: shared first. */
-export const selectProjectViews = (projectId: string) => (state: RootState) =>
-  state.projects.projects[projectId]?.views ?? NO_VIEWS;
+/** Apply personal order only to visible views, appending views absent from that order. */
+export const selectProjectViews = perProject((projectId) =>
+  createSelector(
+    [
+      (state: RootState) => state.projects.projects[projectId]?.views ?? NO_VIEWS,
+      (state: RootState) => state.projectsUi.viewTabOrder[projectId] ?? NO_VIEW_ORDER,
+    ],
+    (views, order): readonly ViewConfig[] => {
+      if (order.length === 0) return views;
+      const remaining = new Map(views.map((view) => [view.id, view]));
+      const ordered: ViewConfig[] = [];
+      for (const id of order) {
+        const view = remaining.get(id);
+        if (!view) continue;
+        ordered.push(view);
+        remaining.delete(id);
+      }
+      return [...ordered, ...remaining.values()];
+    },
+  ),
+);
 
 const selectDrafts = (projectId: string) => (state: RootState) =>
   state.projectsUi.viewDrafts[projectId] ?? NO_DRAFTS;

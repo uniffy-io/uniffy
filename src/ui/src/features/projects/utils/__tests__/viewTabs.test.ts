@@ -33,7 +33,6 @@ describe("viewGates", () => {
     });
     expect(own).toEqual({
       canEdit: true,
-      canReorder: true,
       canSetDefault: false,
       canMakeShared: false,
       canMakePersonal: false,
@@ -46,13 +45,13 @@ describe("viewGates", () => {
     expect(Object.values(shared).some(Boolean)).toBe(false);
   });
 
-  it("lets an editor change and share views but not order them or pick the default", () => {
+  it("lets an editor change and share views but not pick the default", () => {
     const shared = viewGates(view(ViewVisibility.SHARED), {
       ...EDITOR,
       currentUserId: "me",
       isDefault: false,
     });
-    expect(shared).toMatchObject({ canEdit: true, canReorder: false, canSetDefault: false });
+    expect(shared).toMatchObject({ canEdit: true, canSetDefault: false });
     const own = viewGates(view(ViewVisibility.PERSONAL, "me"), {
       ...EDITOR,
       currentUserId: "me",
@@ -61,10 +60,9 @@ describe("viewGates", () => {
     expect(own.canMakeShared).toBe(true);
   });
 
-  it("lets an admin order shared views and pick any shared view but the current default", () => {
+  it("lets an admin pick any shared view but the current default", () => {
     const ctx = { ...ADMIN, currentUserId: "me" };
     expect(viewGates(view(ViewVisibility.SHARED), { ...ctx, isDefault: false })).toMatchObject({
-      canReorder: true,
       canSetDefault: true,
     });
     expect(viewGates(view(ViewVisibility.SHARED), { ...ctx, isDefault: true }).canSetDefault).toBe(

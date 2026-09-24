@@ -23,6 +23,10 @@ export const projectsUiSlice = createSlice({
       state.activeViewIds[projectId] = viewId;
     },
 
+    setViewTabOrder: (state, action: PayloadAction<{ projectId: string; viewIds: string[] }>) => {
+      state.viewTabOrder[action.payload.projectId] = action.payload.viewIds;
+    },
+
     putViewDraft: (state, action: PayloadAction<ViewKey & { definition: ViewDefinition }>) => {
       const { projectId, viewId, definition } = action.payload;
       state.viewDrafts[projectId] = { ...state.viewDrafts[projectId], [viewId]: definition };
@@ -244,6 +248,7 @@ export const projectsUiSlice = createSlice({
     // Drafts and the last opened views describe one person's work; the next account starts clean.
     builder.addCase(AUTH_ACTION_TYPES.LOGOUT, (state) => {
       state.activeViewIds = {};
+      state.viewTabOrder = {};
       state.viewDrafts = {};
       state.viewSaveRequests = {};
       state.outlineExpanded = {};
@@ -262,6 +267,7 @@ export const projectsUiSlice = createSlice({
 
 export const {
   openView,
+  setViewTabOrder,
   putViewDraft,
   dropViewDraft,
   beginViewSave,

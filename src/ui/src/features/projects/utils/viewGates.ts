@@ -13,23 +13,17 @@ export interface ViewGateContext {
 export interface ViewGates {
   /** Save, rename and delete. */
   canEdit: boolean;
-  canReorder: boolean;
   canSetDefault: boolean;
   canMakeShared: boolean;
   canMakePersonal: boolean;
 }
 
-/**
- * Mirrors the backend view rules so menus only offer what will work: personal views belong to
- * their owner, shared views to the project's editors, order and default to its admins. The
- * backend stays the gate.
- */
+/** Menus mirror backend mutation gates; personal tab ordering needs only project access. */
 export function viewGates(view: ViewConfig, ctx: ViewGateContext): ViewGates {
   const isOwner = ctx.currentUserId !== null && view.ownerId === ctx.currentUserId;
   if (view.visibility !== ViewVisibility.SHARED) {
     return {
       canEdit: isOwner,
-      canReorder: isOwner,
       canSetDefault: false,
       canMakeShared: isOwner && ctx.canEdit,
       canMakePersonal: false,
@@ -37,7 +31,6 @@ export function viewGates(view: ViewConfig, ctx: ViewGateContext): ViewGates {
   }
   return {
     canEdit: ctx.canEdit,
-    canReorder: ctx.canManage,
     canSetDefault: ctx.canManage && !ctx.isDefault,
     canMakeShared: false,
     canMakePersonal: isOwner && ctx.canEdit && !ctx.isDefault,

@@ -2663,8 +2663,9 @@ server exposes the app's own API module:
 - [ ] As the owner, delete `view_table`: the next `GetProject` has an empty `defaultViewId`.
 - [ ] Save a definition whose filter names a field id that does not exist: the call fails with a
       message naming that field, not a generic error.
-- [ ] Reorder the shared views as an editor who is not an admin: permission error. As the owner
-      with the complete list of shared view ids: the next `GetProject` lists them in the new order.
+- [ ] Call `ReorderViews` directly for shared views as an editor who is not an admin: permission
+      error. As the owner with the complete list of shared view ids: the next `GetProject` lists
+      them in the new server order. Header dragging saves personal order in browser preferences.
 - [ ] `(self-hosted)` `./manage.py db migrate` on a copy of a database from before the upgrade
       completes, and every project has six views afterwards.
 
@@ -2705,8 +2706,11 @@ server exposes the app's own API module:
       reload; shared changes reach the second browser. Deleting the open view opens the default.
 - [ ] As the owner, Set as project default: the tab shows "Project default" in both browsers
       without a reload. The default view offers no Make personal.
-- [ ] As the owner, drag a shared tab to a new place: both browsers show the new order. As an editor,
-      shared tabs do not drag.
+- [ ] As a viewer, editor or owner, drag shared and personal tabs across each other: the new order
+      appears immediately, survives reload in that browser, and leaves the second browser unchanged.
+      Dragging does not dirty a view or send `ReorderViews`. Logout clears the personal order.
+- [ ] After setting a personal order, create another view: it appears at the end. Delete a view:
+      its tab disappears and the remaining tabs keep their order. Another project keeps its own order.
 - [ ] `?view=` follows the open view on the project and on an open task. A link to a shared view
       opens it for the second user; a link to the owner's personal view opens the default for the
       second user and replaces the parameter. Copy link puts the view link on the clipboard.

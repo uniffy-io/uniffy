@@ -6,7 +6,6 @@ import { projectsSlice, type ProjectsState } from "@/features/projects/store/pro
 import {
   createViewThunk,
   deleteViewThunk,
-  reorderViewsThunk,
   updateViewThunk,
 } from "@/features/projects/store/projectsThunks";
 
@@ -103,19 +102,5 @@ describe("project view reducers", () => {
     );
 
     expect(deleted.projects["proj-1"].defaultViewId).toBe("view_table");
-  });
-
-  it("replaces the list with the reordered one", () => {
-    const reordered = [{ ...BOARD, sortOrder: 0 }, { ...TABLE, sortOrder: 1 }, MINE];
-    const state = reducer(
-      stateWith([TABLE, BOARD, MINE]),
-      reorderViewsThunk.fulfilled({ projectId: "proj-1", views: reordered }, "req", {
-        projectId: "proj-1",
-        visibility: ViewVisibility.SHARED,
-        viewIds: ["view_board", "view_table"],
-      }),
-    );
-
-    expect(viewIds(state)).toEqual(["view_board", "view_table", "view_mine"]);
   });
 });

@@ -25,7 +25,6 @@ import {
   createViewThunk,
   updateViewThunk,
   deleteViewThunk,
-  reorderViewsThunk,
   bulkUpdateTasksThunk,
   fetchActivities,
 } from "./projectsThunks";
@@ -496,13 +495,6 @@ export const projectsSlice = createSlice({
         if (project.defaultViewId === viewId) {
           project.defaultViewId = "";
         }
-      }
-    });
-
-    builder.addCase(reorderViewsThunk.fulfilled, (state, action) => {
-      const project = state.projects[action.payload.projectId];
-      if (project) {
-        project.views = action.payload.views;
       }
     });
 

@@ -4,6 +4,7 @@ import { initialProjectsUiState, type ProjectsUiState } from "@/features/project
 /** Layout prefs, open views and unsaved view drafts survive a reload; everything else starts fresh. */
 const PERSISTED_KEYS = [
   "activeViewIds",
+  "viewTabOrder",
   "viewDrafts",
   "outlineExpanded",
   "isSidebarOpen",

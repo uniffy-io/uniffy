@@ -39,19 +39,15 @@ function renderTabs(canEdit: boolean, canManage: boolean, visibility = ViewVisib
   );
 }
 
-it.each([false, true])("keeps shared tabs and options accessible with canEdit=%s", (canEdit) => {
-  const markup = renderTabs(canEdit, false);
-  expect(markup.match(/aria-disabled="true"/g)).toBeNull();
+it.each([
+  ["viewer", false, false, ViewVisibility.SHARED],
+  ["editor", true, false, ViewVisibility.SHARED],
+  ["admin", true, true, ViewVisibility.SHARED],
+  ["personal owner", false, false, ViewVisibility.PERSONAL],
+] as const)("keeps %s tabs accessible and sortable", (_role, canEdit, canManage, visibility) => {
+  const markup = renderTabs(canEdit, canManage, visibility);
   expect(markup).toContain('role="tab"');
   expect(markup).toContain('aria-label="Table options"');
-  expect(markup).not.toContain('aria-roledescription="sortable"');
-});
-
-it.each([
-  [true, true, ViewVisibility.SHARED],
-  [false, false, ViewVisibility.PERSONAL],
-] as const)("keeps permitted views sortable (%s, %s, %s)", (canEdit, canManage, visibility) => {
-  const markup = renderTabs(canEdit, canManage, visibility);
   expect(markup).toContain('aria-roledescription="sortable"');
   expect(markup).toContain('tabindex="0"');
   expect(markup.match(/aria-disabled="true"/g)).toBeNull();

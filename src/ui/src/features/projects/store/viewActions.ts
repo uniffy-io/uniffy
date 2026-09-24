@@ -6,7 +6,6 @@ import type { ViewConfig, ViewDefinition, ViewType } from "@/features/projects/t
 import {
   createViewThunk,
   deleteViewThunk,
-  reorderViewsThunk,
   updateProject,
   updateViewThunk,
 } from "@/features/projects/store/projectsThunks";
@@ -15,6 +14,7 @@ import {
   dropViewDraft,
   finishViewSave,
   openView,
+  setViewTabOrder,
 } from "@/features/projects/store/projectsUiSlice";
 import { selectIsViewSaving, selectProjectViews } from "@/features/projects/store/viewSelectors";
 import { definitionsEqual, emptyDefinition } from "@/features/projects/utils/viewDraft";
@@ -152,39 +152,17 @@ export function setDefaultView(projectId: string, viewId: string): ViewThunk<boo
   };
 }
 
-/** The ids of one visibility group with `viewId` moved to where `targetViewId` sits. */
-export function reorderedGroupIds(
-  views: readonly ViewConfig[],
-  viewId: string,
-  targetViewId: string,
-): { visibility: ViewVisibility; ids: string[] } | null {
-  const moving = views.find((view) => view.id === viewId);
-  const target = views.find((view) => view.id === targetViewId);
-  if (!moving || !target || moving.visibility !== target.visibility || viewId === targetViewId) {
-    return null;
-  }
-  const ids = views.filter((view) => view.visibility === moving.visibility).map((view) => view.id);
-  return {
-    visibility: moving.visibility,
-    ids: arrayMove(ids, ids.indexOf(viewId), ids.indexOf(targetViewId)),
-  };
-}
-
 export function moveView(
   projectId: string,
   viewId: string,
   targetViewId: string,
-): ViewThunk<boolean> {
-  return async (dispatch, getState) => {
-    const order = reorderedGroupIds(
-      selectProjectViews(projectId)(getState()),
-      viewId,
-      targetViewId,
-    );
-    if (!order) return false;
-    const result = await dispatch(
-      reorderViewsThunk({ projectId, visibility: order.visibility, viewIds: order.ids }),
-    );
-    return reorderViewsThunk.fulfilled.match(result);
+): ThunkAction<boolean, RootState, undefined, UnknownAction> {
+  return (dispatch, getState) => {
+    const ids = selectProjectViews(projectId)(getState()).map((view) => view.id);
+    const from = ids.indexOf(viewId);
+    const to = ids.indexOf(targetViewId);
+    if (from === -1 || to === -1 || from === to) return false;
+    dispatch(setViewTabOrder({ projectId, viewIds: arrayMove(ids, from, to) }));
+    return true;
   };
 }

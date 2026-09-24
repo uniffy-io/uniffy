@@ -231,7 +231,6 @@ export function ViewTabs({
                     isDirty={dirtyViewIds.includes(view.id)}
                     isDefault={project.defaultViewId === view.id}
                     showLabel={showActiveLabel && view.id === activeViewId}
-                    canReorder={gatesFor(view).canReorder}
                     isRenaming={renamingViewId === view.id}
                     onOpen={() => open(view.id)}
                     onOpenMenu={(trigger) => openMenu(view, trigger)}
@@ -390,7 +389,6 @@ interface ViewTabProps {
   isDirty: boolean;
   isDefault: boolean;
   showLabel: boolean;
-  canReorder: boolean;
   isRenaming: boolean;
   onOpen: () => void;
   onOpenMenu: (trigger: HTMLButtonElement) => void;
@@ -404,14 +402,13 @@ function ViewTab({
   isDirty,
   isDefault,
   showLabel,
-  canReorder,
   isRenaming,
   onOpen,
   onOpenMenu,
   onRename,
   onCancelRename,
 }: ViewTabProps) {
-  const canDrag = canReorder && !isRenaming;
+  const canDrag = !isRenaming;
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: view.id,
     disabled: !canDrag,

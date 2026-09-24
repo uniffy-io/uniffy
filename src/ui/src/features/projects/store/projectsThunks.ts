@@ -377,26 +377,6 @@ export const deleteViewThunk = createAsyncThunk<
   }
 });
 
-export const reorderViewsThunk = createAsyncThunk<
-  { projectId: string; views: ViewConfig[] },
-  { projectId: string; visibility: ViewVisibility; viewIds: string[] },
-  { rejectValue: string }
->(
-  "projects/reorderViews",
-  async ({ projectId, visibility, viewIds }, { getState, rejectWithValue }) => {
-    try {
-      const state = getState() as RootState;
-      const orgId = state.auth.currentOrganizationId;
-      if (!orgId) return rejectWithValue("No organization selected");
-
-      const response = await projectsApi.reorderViews(projectId, visibility, viewIds, orgId);
-      return { projectId, views: response.views };
-    } catch (error) {
-      return rejectWithValue(error instanceof Error ? error.message : "Failed to reorder views");
-    }
-  },
-);
-
 export const bulkUpdateTasksThunk = createAsyncThunk<
   Task[],
   {
