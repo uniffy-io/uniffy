@@ -415,9 +415,9 @@ class TaskFilterCompiler:
             bounds = (resolve(value.date_range.start), resolve(value.date_range.end))
         else:
             day = resolve(value.date)
-            if (
-                condition.operator == _OP.TASK_FILTER_OPERATOR_BEFORE and day == date.min
-            ) or (condition.operator == _OP.TASK_FILTER_OPERATOR_AFTER and day == date.max):
+            if (condition.operator == _OP.TASK_FILTER_OPERATOR_BEFORE and day == date.min) or (
+                condition.operator == _OP.TASK_FILTER_OPERATOR_AFTER and day == date.max
+            ):
                 return false()
             bounds = _DAY_BOUNDS[condition.operator](day)
         if kind is FieldKind.TIMESTAMP:
