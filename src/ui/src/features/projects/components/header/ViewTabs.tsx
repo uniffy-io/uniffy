@@ -411,9 +411,10 @@ function ViewTab({
   onRename,
   onCancelRename,
 }: ViewTabProps) {
+  const canDrag = canReorder && !isRenaming;
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: view.id,
-    disabled: !canReorder || isRenaming,
+    disabled: !canDrag,
   });
   const shared = view.visibility === ViewVisibility.SHARED;
   const visibilityLabel = shared ? "Shared view" : "Personal view";
@@ -430,8 +431,7 @@ function ViewTab({
         isDragging && "z-10 opacity-80",
       )}
       data-view-id={view.id}
-      {...attributes}
-      {...listeners}
+      {...(canDrag ? { ...attributes, ...listeners } : {})}
       role="presentation"
     >
       {isRenaming ? (
@@ -486,7 +486,7 @@ function ViewTab({
           onPointerDown={(event) => event.stopPropagation()}
           title="View options"
           aria-label={`${view.name} options`}
-          className="focus-ring mr-0.5 flex h-6 w-5 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
+          className="focus-ring mr-0.5 flex h-11 w-11 lg:h-6 lg:w-5 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
         >
           <CaretDown size={12} />
         </button>
