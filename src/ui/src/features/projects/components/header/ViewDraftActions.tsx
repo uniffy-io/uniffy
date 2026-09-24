@@ -16,7 +16,6 @@ interface ViewDraftActionsProps {
   compact: boolean;
 }
 
-/** Save, save as new and discard for a view whose draft differs from what is saved. */
 export function ViewDraftActions({
   projectId,
   view,
@@ -46,7 +45,7 @@ export function ViewDraftActions({
       {canSave && (
         <Button
           size="sm"
-          className="h-7 gap-1 px-2 text-xs"
+          className="h-11 min-w-11 lg:h-7 lg:min-w-0 gap-1 px-2 text-xs"
           onClick={handleSave}
           loading={isSaving}
           title="Save changes to this view"
@@ -58,7 +57,7 @@ export function ViewDraftActions({
       <Button
         size="sm"
         variant={canSave ? "ghost" : "default"}
-        className="h-7 gap-1 px-2 text-xs"
+        className="h-11 min-w-11 lg:h-7 lg:min-w-0 gap-1 px-2 text-xs"
         onClick={() => setIsSaveAsOpen(true)}
         title="Save as a new view"
       >
@@ -68,7 +67,7 @@ export function ViewDraftActions({
       <Button
         size="sm"
         variant="ghost"
-        className="h-7 gap-1 px-2 text-xs text-muted-foreground"
+        className="h-11 min-w-11 lg:h-7 lg:min-w-0 gap-1 px-2 text-xs text-muted-foreground"
         onClick={() => dispatch(dropViewDraft({ projectId, viewId: view.id }))}
         title="Discard changes"
       >

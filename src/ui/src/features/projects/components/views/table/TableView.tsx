@@ -99,7 +99,9 @@ import { SortDirection, TaskPseudoField } from "@uniffy/proto/projects/v1/projec
 import type { ViewColumnWidth, ViewFieldRef, ViewGroupBy } from "@/features/projects/types/views";
 import {
   fieldRef,
+  fieldKindOf,
   isPseudoRef,
+  isSortableKind,
   pseudoRef,
   sameFieldRef,
 } from "@/features/projects/utils/viewFields";
@@ -137,6 +139,10 @@ export function TableView() {
   const selectedTaskIds = useAppSelector(selectSelectedTaskIds);
   const searchQuery = useAppSelector(selectSearchQuery);
   const projectId = project?.id ?? "";
+  const fieldsById = useMemo(
+    () => new Map(project?.fieldDefinitions.map((field) => [field.id, field])),
+    [project?.fieldDefinitions],
+  );
   const definition = useAppSelector(selectActiveDefinition(projectId));
   const sortKeys = definition.sort;
   const groupBy = definition.groupBy;
@@ -722,9 +728,10 @@ export function TableView() {
   // Click sorts by this column alone; shift-click adds it as a further key.
   const handleHeaderClick = useCallback(
     (fieldId: string, e: React.MouseEvent) => {
+      if (!isSortableKind(fieldKindOf(columnRef(fieldId), fieldsById))) return;
       dispatch(setDraftSort(projectId, toggleSortKey(sortKeys, columnRef(fieldId), e.shiftKey)));
     },
-    [dispatch, projectId, sortKeys],
+    [dispatch, projectId, fieldsById, sortKeys],
   );
 
   const handleStartEdit = useCallback(
@@ -1112,7 +1119,11 @@ export function TableView() {
             {visibleFields.map((field) => (
               <div
                 key={field.id}
-                className="shrink-0 flex items-center px-3 border-r border-border cursor-pointer hover:bg-muted/30 transition-colors select-none group relative"
+                className={cn(
+                  "shrink-0 flex items-center px-3 border-r border-border transition-colors select-none group relative",
+                  isSortableKind(fieldKindOf(columnRef(field.id), fieldsById)) &&
+                    "cursor-pointer hover:bg-muted/30",
+                )}
                 style={{ width: resolveColumnWidth(field, columnWidths) }}
                 onClick={(e) => handleHeaderClick(field.id, e)}
               >

@@ -12,7 +12,7 @@ import {
 } from "@/features/projects/store/projectsThunks";
 import { dropViewDraft, openView } from "@/features/projects/store/projectsUiSlice";
 import { selectProjectViews } from "@/features/projects/store/viewSelectors";
-import { emptyDefinition } from "@/features/projects/utils/viewDraft";
+import { definitionsEqual, emptyDefinition } from "@/features/projects/utils/viewDraft";
 import { VIEW_TYPE_OPTIONS } from "@/features/projects/utils/viewTypes";
 
 type ViewThunk<T = void> = ThunkAction<Promise<T>, RootState, undefined, UnknownAction>;
@@ -30,14 +30,16 @@ function draftOf(state: RootState, projectId: string, viewId: string): ViewDefin
   return state.projectsUi.viewDrafts[projectId]?.[viewId];
 }
 
-/** Writes the open draft into its view; the draft goes once the server has the definition. */
 export function saveViewDraft(projectId: string, viewId: string): ViewThunk<boolean> {
   return async (dispatch, getState) => {
     const definition = draftOf(getState(), projectId, viewId);
     if (!definition) return false;
     const result = await dispatch(updateViewThunk({ projectId, viewId, updates: { definition } }));
     if (!updateViewThunk.fulfilled.match(result)) return false;
-    dispatch(dropViewDraft({ projectId, viewId }));
+    const current = draftOf(getState(), projectId, viewId);
+    if (current && definitionsEqual(current, definition)) {
+      dispatch(dropViewDraft({ projectId, viewId }));
+    }
     return true;
   };
 }
@@ -49,7 +51,6 @@ interface CreateViewArgs {
   visibility: ViewVisibility;
 }
 
-/** Creates a view and opens it. */
 export function createAndOpenView(args: CreateViewArgs): ViewThunk<ViewConfig | null> {
   return async (dispatch) => {
     const result = await dispatch(createViewThunk(args));
@@ -59,10 +60,6 @@ export function createAndOpenView(args: CreateViewArgs): ViewThunk<ViewConfig | 
   };
 }
 
-/**
- * Saves what a view currently shows as a new view. The source view keeps its saved definition:
- * its draft moves to the new view instead of staying behind as unsaved edits.
- */
 export function saveViewAs(
   projectId: string,
   source: ViewConfig,
@@ -72,7 +69,10 @@ export function saveViewAs(
   return async (dispatch, getState) => {
     const definition = draftOf(getState(), projectId, source.id) ?? source.definition;
     const created = await dispatch(createAndOpenView({ projectId, name, definition, visibility }));
-    if (created) dispatch(dropViewDraft({ projectId, viewId: source.id }));
+    const current = draftOf(getState(), projectId, source.id);
+    if (created && current && definitionsEqual(current, definition)) {
+      dispatch(dropViewDraft({ projectId, viewId: source.id }));
+    }
     return created;
   };
 }

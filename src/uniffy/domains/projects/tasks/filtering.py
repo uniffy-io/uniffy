@@ -415,6 +415,10 @@ class TaskFilterCompiler:
             bounds = (resolve(value.date_range.start), resolve(value.date_range.end))
         else:
             day = resolve(value.date)
+            if (
+                condition.operator == _OP.TASK_FILTER_OPERATOR_BEFORE and day == date.min
+            ) or (condition.operator == _OP.TASK_FILTER_OPERATOR_AFTER and day == date.max):
+                return false()
             bounds = _DAY_BOUNDS[condition.operator](day)
         if kind is FieldKind.TIMESTAMP:
             return self._instant_between(_timestamp_column(ref.pseudo), bounds)
@@ -443,7 +447,7 @@ class TaskFilterCompiler:
         if start is not None:
             conditions.append(column >= day_start(start, self.ctx.zone))
         if end is not None:
-            conditions.append(column < day_start(end + timedelta(days=1), self.ctx.zone))
+            conditions.append(column < day_start(end, self.ctx.zone, offset=1))
         return and_(*conditions)
 
 

@@ -28,7 +28,7 @@ from uniffy.domains.settings.defaults import (
     get_effective_notification_channels,
     wants_transactional_email,
 )
-from uniffy.domains.settings.operations import get_user_timezone
+from uniffy.domains.settings.preferences import get_user_timezone
 
 _DIGEST_LIMIT = 500
 _LEASE_DURATION = timedelta(minutes=10)

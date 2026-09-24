@@ -91,39 +91,105 @@ describe("viewGates", () => {
 describe("nextViewParamStep", () => {
   const viewIds = ["table", "board", "mine"];
 
+  it("opens the same view id when navigating to another project", () => {
+    expect(
+      nextViewParamStep({
+        projectId: "b",
+        param: "board",
+        settled: { projectId: "a", param: "board" },
+        activeViewId: "table",
+        viewIds,
+      }),
+    ).toEqual({
+      step: { kind: "open", viewId: "board" },
+      settled: { projectId: "b", param: "board" },
+    });
+  });
+
   it("opens a deep-linked view the caller can see", () => {
     expect(
-      nextViewParamStep({ param: "board", settled: null, activeViewId: "table", viewIds }),
-    ).toEqual({ step: { kind: "open", viewId: "board" }, settled: "board" });
+      nextViewParamStep({
+        projectId: "p",
+        param: "board",
+        settled: null,
+        activeViewId: "table",
+        viewIds,
+      }),
+    ).toEqual({
+      step: { kind: "open", viewId: "board" },
+      settled: { projectId: "p", param: "board" },
+    });
   });
 
   it("replaces an unknown or someone else's view with the open one", () => {
     expect(
-      nextViewParamStep({ param: "theirs", settled: null, activeViewId: "table", viewIds }),
-    ).toEqual({ step: { kind: "write", viewId: "table" }, settled: "table" });
+      nextViewParamStep({
+        projectId: "p",
+        param: "theirs",
+        settled: null,
+        activeViewId: "table",
+        viewIds,
+      }),
+    ).toEqual({
+      step: { kind: "write", viewId: "table" },
+      settled: { projectId: "p", param: "table" },
+    });
   });
 
   it("writes the view the caller opened", () => {
     expect(
-      nextViewParamStep({ param: "table", settled: "table", activeViewId: "board", viewIds }),
-    ).toEqual({ step: { kind: "write", viewId: "board" }, settled: "board" });
+      nextViewParamStep({
+        projectId: "p",
+        param: "table",
+        settled: { projectId: "p", param: "table" },
+        activeViewId: "board",
+        viewIds,
+      }),
+    ).toEqual({
+      step: { kind: "write", viewId: "board" },
+      settled: { projectId: "p", param: "board" },
+    });
   });
 
   it("adds the parameter to a project link without one", () => {
     expect(
-      nextViewParamStep({ param: null, settled: "board", activeViewId: "table", viewIds }),
-    ).toEqual({ step: { kind: "write", viewId: "table" }, settled: "table" });
+      nextViewParamStep({
+        projectId: "p",
+        param: null,
+        settled: { projectId: "p", param: "board" },
+        activeViewId: "table",
+        viewIds,
+      }),
+    ).toEqual({
+      step: { kind: "write", viewId: "table" },
+      settled: { projectId: "p", param: "table" },
+    });
   });
 
   it("follows the URL on back and forward", () => {
     expect(
-      nextViewParamStep({ param: "mine", settled: "board", activeViewId: "board", viewIds }),
-    ).toEqual({ step: { kind: "open", viewId: "mine" }, settled: "mine" });
+      nextViewParamStep({
+        projectId: "p",
+        param: "mine",
+        settled: { projectId: "p", param: "board" },
+        activeViewId: "board",
+        viewIds,
+      }),
+    ).toEqual({
+      step: { kind: "open", viewId: "mine" },
+      settled: { projectId: "p", param: "mine" },
+    });
   });
 
   it("settles once the URL and the open view agree", () => {
     expect(
-      nextViewParamStep({ param: "board", settled: "board", activeViewId: "board", viewIds }),
-    ).toEqual({ step: { kind: "none" }, settled: "board" });
+      nextViewParamStep({
+        projectId: "p",
+        param: "board",
+        settled: { projectId: "p", param: "board" },
+        activeViewId: "board",
+        viewIds,
+      }),
+    ).toEqual({ step: { kind: "none" }, settled: { projectId: "p", param: "board" } });
   });
 });

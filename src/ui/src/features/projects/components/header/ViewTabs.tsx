@@ -168,7 +168,7 @@ export function ViewTabs({
       onClick={() => setIsAddOpen(true)}
       title="New view"
       aria-label="New view"
-      className="focus-ring flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+      className="focus-ring flex h-11 w-11 lg:h-7 lg:w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
     >
       <Plus size={14} weight="bold" />
     </button>
@@ -188,7 +188,7 @@ export function ViewTabs({
             }))}
             size="sm"
             ariaLabel="View"
-            className="min-w-0 max-w-44"
+            className="min-w-0 max-w-44 [&>button]:min-h-11"
           />
           {activeViewId && (
             <button
@@ -199,7 +199,7 @@ export function ViewTabs({
               }}
               title="View options"
               aria-label="View options"
-              className="focus-ring flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted"
+              className="focus-ring flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted"
             >
               <CaretDown size={14} />
             </button>
@@ -210,7 +210,7 @@ export function ViewTabs({
         <div className="flex min-w-0 shrink items-center gap-0.5">
           <div
             ref={stripRef}
-            className="flex min-w-0 shrink items-center gap-0.5 overflow-x-auto rounded-lg bg-muted/60 p-0.5 [scrollbar-width:none]"
+            className="flex min-w-0 shrink items-center gap-0.5 overflow-x-auto rounded-lg bg-muted/60 p-0.5"
             role="tablist"
             aria-label="Views"
           >
@@ -249,7 +249,7 @@ export function ViewTabs({
               onClick={() => setIsAllViewsOpen(true)}
               title="All views"
               aria-label="All views"
-              className="focus-ring flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+              className="focus-ring flex h-11 w-11 lg:h-7 lg:w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
             >
               <DotsThree size={16} weight="bold" />
             </button>
@@ -457,7 +457,7 @@ function ViewTab({
           aria-label={showLabel ? undefined : view.name}
           onClick={onOpen}
           title={`${view.name} · ${visibilityLabel}${isDefault ? " · Project default" : ""}`}
-          className="focus-ring flex items-center gap-1.5 rounded-md py-1 pl-2.5 pr-2"
+          className="focus-ring flex min-h-11 min-w-11 lg:min-h-0 lg:min-w-0 items-center gap-1.5 rounded-md py-1 pl-2.5 pr-2"
         >
           <span className="flex shrink-0 items-center">{VIEW_TYPE_ICONS[view.type]}</span>
           {showLabel && <span className="max-w-40 truncate">{view.name}</span>}

@@ -23,7 +23,7 @@ from uniffy.domains.projects.views.definition import (
     validate_task_filter,
     validate_task_sort,
 )
-from uniffy.domains.settings.operations import get_user_calendar_preferences
+from uniffy.domains.settings.preferences import get_user_calendar_preferences
 
 # The longest IANA zone name is 32 characters.
 _MAX_ZONE_LENGTH = 64

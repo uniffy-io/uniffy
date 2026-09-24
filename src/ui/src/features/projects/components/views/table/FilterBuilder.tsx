@@ -15,7 +15,6 @@ import { TagPicker } from "@/features/tags";
 import { PersonFilterInput } from "@/features/projects/components/views/table/PersonFilterInput";
 import { selectTasksForProject } from "@/features/projects/store/projectsSlice";
 import { selectSprintsForProject } from "@/features/projects/store/sprintsSlice";
-import { SYSTEM_FIELD_IDS } from "@/features/projects/types";
 import type { FieldDefinition } from "@/features/projects/types";
 import type {
   ViewFieldRef,
@@ -135,7 +134,7 @@ function isComplete(condition: ViewFilterCondition): boolean {
 
 export function FilterBuilder({
   projectId,
-  fields: rawFields,
+  fields,
   filter,
   onApply,
   onClose,
@@ -145,14 +144,7 @@ export function FilterBuilder({
   const [rows, setRows] = useState<Row[]>(() => toRows(filter));
   const [logic, setLogic] = useState<FilterLogic>(filter?.logic ?? FilterLogic.AND);
 
-  const fields = useMemo(
-    () => rawFields.filter((field) => field.id !== SYSTEM_FIELD_IDS.TITLE),
-    [rawFields],
-  );
-  const fieldsById = useMemo(
-    () => new Map(rawFields.map((field) => [field.id, field])),
-    [rawFields],
-  );
+  const fieldsById = useMemo(() => new Map(fields.map((field) => [field.id, field])), [fields]);
   const fieldChoices: Choice[] = useMemo(
     () => [
       ...fields.map((field) => ({ value: fieldRefKey(fieldRef(field.id)), label: field.name })),

@@ -12,6 +12,7 @@ from uniffy.core.models.projects.field_definition import (
 )
 from uniffy.core.models.projects.sprint import Sprint
 from uniffy.core.models.projects.task import Task, TaskType
+from uniffy.domains.directory.subjects import subject_names
 from uniffy.domains.projects.tasks.expressions import (
     as_uuid,
     has_subtasks,
@@ -19,7 +20,6 @@ from uniffy.domains.projects.tasks.expressions import (
     json_first_id,
     json_number,
     json_text,
-    member_names,
     natural,
     task_column,
 )
@@ -71,9 +71,8 @@ class _SortCompiler:
         return self._depth
 
     def person(self, user_id: ColumnElement, as_text: ColumnElement[str]) -> ColumnElement[str]:
-        """The person's name; an id that names no member sorts by the id itself."""
-        names = member_names(self.ctx.organization_id)
-        self.query = self.query.outerjoin(names, names.c.user_id == user_id)
+        names = subject_names(self.ctx.organization_id, self.ctx.current_user_id)
+        self.query = self.query.outerjoin(names, names.c.subject_id == user_id)
         return natural(func.coalesce(names.c.name, as_text))
 
     def person_by_text(self, raw: ColumnElement[str]) -> ColumnElement[str]:

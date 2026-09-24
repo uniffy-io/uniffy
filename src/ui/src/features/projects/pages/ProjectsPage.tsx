@@ -69,14 +69,14 @@ export function ProjectsPage() {
   const currentProjectId = currentProject?.id;
   const projectViews = useAppSelector(selectProjectViews(currentProjectId ?? ""));
   const activeViewId = useAppSelector(selectActiveView(currentProjectId ?? ""))?.id ?? null;
-  // The parameter value the view sync last settled on; a different one came from the URL itself.
-  const settledViewParam = useRef<string | null>(null);
+  const settledViewParam = useRef<ReturnType<typeof nextViewParamStep>["settled"] | null>(null);
 
   useEffect(() => {
     // Until the routed project and its views are in the store, a deep-linked view cannot be told
     // apart from one the caller cannot see, so the parameter is left alone.
     if (!currentProjectId || currentProjectId !== projectId || projectViews.length === 0) return;
     const { step, settled } = nextViewParamStep({
+      projectId: currentProjectId,
       param: viewParam,
       settled: settledViewParam.current,
       activeViewId,
@@ -120,27 +120,33 @@ export function ProjectsPage() {
     return () => tasksLoadRef.current?.abort();
   }, [loadProjectTasks, currentProjectId]);
 
-  // Live refresh on project access changes (shared / flipped to OPEN_TO_ORG ->
-  // refetch the list), on a task created in the open project (child_added ->
-  // refetch that project's task board), and on a shared view change in the open
-  // project (views_changed -> refetch that project).
   useContentAccessRefetch(
     ContentType.PROJECT,
     useCallback(
-      (change) => {
-        if (change.action === "views_changed") {
-          if (change.contentId === currentProjectId) {
-            dispatch(fetchProject(currentProjectId));
-          }
-          return;
+      (changes) => {
+        if (
+          currentProjectId &&
+          changes.some(
+            (change) => change.action === "views_changed" && change.contentId === currentProjectId,
+          )
+        ) {
+          dispatch(fetchProject(currentProjectId));
         }
-        if (change.action === "child_added") {
-          if (change.contentId === currentProjectId) {
-            loadProjectTasks(currentProjectId);
-          }
-          return;
+        if (
+          currentProjectId &&
+          changes.some(
+            (change) => change.action === "child_added" && change.contentId === currentProjectId,
+          )
+        ) {
+          loadProjectTasks(currentProjectId);
         }
-        dispatch(fetchProjects());
+        if (
+          changes.some(
+            (change) => change.action !== "views_changed" && change.action !== "child_added",
+          )
+        ) {
+          dispatch(fetchProjects());
+        }
       },
       [dispatch, currentProjectId, loadProjectTasks],
     ),
