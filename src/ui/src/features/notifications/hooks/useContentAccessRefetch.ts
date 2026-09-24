@@ -8,7 +8,7 @@ import {
 /** Coalesce repeated events without dropping distinct resources or actions. */
 export function useContentAccessRefetch(
   contentType: ContentType | ContentType[],
-  refetch: (change: ContentAccessChange) => void,
+  refetch: (changes: readonly ContentAccessChange[]) => void,
   debounceMs = 500,
 ): void {
   const refetchRef = useRef(refetch);
@@ -31,7 +31,7 @@ export function useContentAccessRefetch(
         timer = null;
         const changes = [...pending.values()];
         pending.clear();
-        changes.forEach((event) => refetchRef.current(event));
+        refetchRef.current(changes);
       }, debounceMs);
     });
     return () => {

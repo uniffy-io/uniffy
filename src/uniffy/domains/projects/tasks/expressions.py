@@ -1,12 +1,14 @@
 """SQL for the task values a view filters and sorts by that are not a plain column."""
 
-from datetime import date, datetime, time
+from datetime import date
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
 from sqlalchemy import (
     CTE,
     ColumnElement,
+    Date,
+    DateTime,
     Numeric,
     String,
     and_,
@@ -24,15 +26,13 @@ from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import aliased
 
 from uniffy.core.content.references import CONTENT_URN_PREFIX
-from uniffy.core.models.login.organization_member import OrganizationMember
-from uniffy.core.models.login.user import User
 from uniffy.core.models.projects.task import Task
 from uniffy.core.types import ContentType
 
 TASK_URN_PREFIX = f"{CONTENT_URN_PREFIX}{ContentType.TASK.value}:"
 # Cycles in parent_id stop here instead of recursing forever; the web index stops at the same depth.
 MAX_ANCESTRY_DEPTH = 64
-# Created by migration 106: case- and accent-blind, digits compared as numbers ("Task 9" before
+# Case- and accent-blind, digits compared as numbers ("Task 9" before
 # "Task 10"), the order of the web's ``Intl.Collator({numeric: true, sensitivity: "base"})``.
 NATURAL_COLLATION = "natural_sort"
 # ICU lower-cases the way JavaScript and Python do ("İ" keeps its dot, a final sigma stays final).
@@ -173,25 +173,6 @@ def lower_text(value: ColumnElement[str]) -> ColumnElement[str]:
     return func.lower(value.collate(_CASE_COLLATION))
 
 
-def member_names(organization_id: UUID):
-    """``(user_id, name)`` of the organization's members, the people a view can name."""
-    return (
-        select(
-            User.id.label("user_id"),
-            func.coalesce(func.nullif(User.full_name, ""), User.username).label("name"),
-        )
-        .where(
-            exists().where(
-                and_(
-                    OrganizationMember.user_id == User.id,
-                    OrganizationMember.organization_id == organization_id,
-                )
-            )
-        )
-        .subquery()
-    )
-
-
 def has_subtasks(project_id: UUID) -> ColumnElement[bool]:
     child = aliased(Task)
     return exists().where(
@@ -228,5 +209,7 @@ def is_blocked(project_id: UUID) -> ColumnElement[bool]:
     return and_(Task.completed_at.is_(None), open_blocker)
 
 
-def day_start(day: date, zone: ZoneInfo) -> datetime:
-    return datetime.combine(day, time(), tzinfo=zone)
+def day_start(day: date, zone: ZoneInfo, offset: int = 0) -> ColumnElement:
+    # PostgreSQL can represent the day after 9999-12-31; Python datetime cannot.
+    calendar_day = cast(literal(day.isoformat()), Date) + offset
+    return func.timezone(zone.key, cast(calendar_day, DateTime))

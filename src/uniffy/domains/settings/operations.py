@@ -18,7 +18,6 @@ from uniffy.core.models.settings.settings_profile import SettingsProfile
 from uniffy.core.types import NotificationType
 from uniffy.domains.notifications.cache import invalidate_cached_settings
 from uniffy.domains.settings.defaults import (
-    APPEARANCE_DEFAULTS,
     DEFAULT_REMINDER_INTERVALS,
     SCHEDULING_DEFAULTS,
     WORKDAY_NAMES,
@@ -32,9 +31,8 @@ from uniffy.domains.settings.defaults import (
     get_notifications_defaults_dict,
     get_scheduling_defaults_dict,
 )
+from uniffy.domains.settings.preferences import WEEK_START_WEEKDAYS
 
-# Weekday each week start names, Monday being 0 as ``date.weekday`` counts.
-WEEK_START_WEEKDAYS = {"monday": 0, "saturday": 5, "sunday": 6}
 _MAX_REMINDER_MINUTES = 4 * 7 * 24 * 60
 _CLOCK_RE = re.compile(r"^(?:[01]\d|2[0-3]):[0-5]\d$")
 _NOTIFICATION_CHANNELS = {"in_app", "browser", "email"}
@@ -200,32 +198,6 @@ async def get_users_scheduling_context(
             workdays=tuple(workdays),
         )
     return contexts
-
-
-async def get_user_timezone(session: AsyncSession, user_id: UUID) -> str | None:
-    """Stored display timezone from the user's default profile; None = automatic."""
-    return (await get_user_calendar_preferences(session, user_id)).timezone
-
-
-@dataclass(frozen=True)
-class UserCalendarPreferences:
-    # None means the client's own zone.
-    timezone: str | None
-    # Weekday the week starts on, Monday being 0.
-    week_start: int
-
-
-async def get_user_calendar_preferences(
-    session: AsyncSession, user_id: UUID
-) -> UserCalendarPreferences:
-    profile = await SettingsOperations(session).get_default_profile(user_id)
-    appearance = (profile.appearance if profile else None) or {}
-    return UserCalendarPreferences(
-        timezone=appearance.get("timezone") or None,
-        week_start=WEEK_START_WEEKDAYS.get(
-            appearance.get("week_start") or APPEARANCE_DEFAULTS.week_start, 0
-        ),
-    )
 
 
 async def get_user_reminder_defaults(session: AsyncSession, user_id: UUID) -> list[int]:

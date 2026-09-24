@@ -15,6 +15,8 @@ from uniffy_proto.projects.v1.projects_pb2 import (
     TableLayout,
     TaskFieldRef,
     TaskFilterCondition,
+    TaskFilterDate,
+    TaskFilterDateRange,
     TaskFilterGroup,
     TaskFilterIdSet,
     TaskFilterNode,
@@ -26,6 +28,8 @@ from uniffy_proto.projects.v1.projects_pb2 import (
 )
 
 from uniffy.core.errors import ValidationError
+from uniffy.core.models.login.group import Group
+from uniffy.core.models.login.group_member import GroupMember
 from uniffy.core.models.login.user import User
 from uniffy.core.models.permissions.content_member import ContentMember
 from uniffy.core.models.projects.field_definition import FieldDefinition
@@ -222,6 +226,60 @@ async def test_every_filter_case_keeps_what_the_web_keeps(session, env, seeded) 
     assert mismatches == {}
 
 
+async def test_extreme_calendar_bounds_return_rows_without_overflow(session, env, seeded) -> None:
+    fields = [
+        TaskFieldRef(field_id="field_due_date"),
+        TaskFieldRef(pseudo=TaskPseudoField.TASK_PSEUDO_FIELD_CREATED_AT),
+    ]
+    operators = TaskFilterOperator
+    for field in fields:
+        for zone in ("UTC", "Asia/Tokyo", "America/Los_Angeles"):
+            for day, operator, matches in (
+                ("0001-01-01", operators.TASK_FILTER_OPERATOR_BEFORE, False),
+                ("0001-01-01", operators.TASK_FILTER_OPERATOR_ON_OR_AFTER, True),
+                ("9999-12-31", operators.TASK_FILTER_OPERATOR_AFTER, False),
+                ("9999-12-31", operators.TASK_FILTER_OPERATOR_IS, False),
+                ("9999-12-31", operators.TASK_FILTER_OPERATOR_ON_OR_BEFORE, True),
+            ):
+                group = TaskFilterGroup(
+                    nodes=[
+                        TaskFilterNode(
+                            condition=TaskFilterCondition(
+                                field=field,
+                                operator=operator,
+                                value=TaskFilterValue(date=TaskFilterDate(fixed=day)),
+                            )
+                        )
+                    ]
+                )
+                kept = await _list(session, env, seeded, task_filter=group, time_zone=zone)
+                expected = [
+                    row["id"]
+                    for row in CASES["tasks"]
+                    if matches and (field.pseudo or row.get("due_date"))
+                ]
+                assert sorted(kept) == sorted(expected), (field, zone, day, operator)
+    full_range = TaskFilterGroup(
+        nodes=[
+            TaskFilterNode(
+                condition=TaskFilterCondition(
+                    field=fields[1],
+                    operator=operators.TASK_FILTER_OPERATOR_BETWEEN,
+                    value=TaskFilterValue(
+                        date_range=TaskFilterDateRange(
+                            start=TaskFilterDate(fixed="0001-01-01"),
+                            end=TaskFilterDate(fixed="9999-12-31"),
+                        )
+                    ),
+                )
+            )
+        ]
+    )
+    assert set(await _list(session, env, seeded, task_filter=full_range)) == {
+        row["id"] for row in CASES["tasks"]
+    }
+
+
 async def test_a_filter_on_an_unknown_field_is_refused(session, env, seeded) -> None:
     for case in CASES["rejected_filters"]:
         with pytest.raises(ValidationError, match="gone"):
@@ -364,6 +422,53 @@ async def test_a_person_outside_the_organization_sorts_by_id(session, env, seede
         )
         await session.execute(delete(User).where(User.id == stranger.id))
         await session.commit()
+
+
+@pytest.mark.parametrize("field_id", ["field_assignee", "reviewer"])
+async def test_person_fields_sort_groups_by_visible_names(
+    session, env, second_env, seeded, field_id
+) -> None:
+    groups = [
+        Group(
+            id=UUID(identifier),
+            organization_id=organization_id,
+            name=name,
+            slug=generate_id().hex,
+            created_by_user_id=env.admin_id,
+            is_private=private,
+        )
+        for identifier, organization_id, name, private in (
+            ("ffffffff-0000-4000-8000-000000000001", env.org_id, "Alpha team", False),
+            ("11111111-0000-4000-8000-000000000002", env.org_id, "Zulu team", False),
+            ("22222222-0000-4000-8000-000000000003", env.org_id, "Middle private", True),
+            ("33333333-0000-4000-8000-000000000004", second_env.org_id, "Foreign secret", False),
+        )
+    ]
+    session.add_all(groups)
+    await session.flush()
+    task_names = ["task-a", "task-b", "story", "loose"]
+    for name, group in zip(task_names, groups, strict=True):
+        task = await session.get(Task, seeded.ids[name])
+        if field_id == "field_assignee":
+            task.assignee_ids = [str(group.id)]
+        else:
+            task.field_values = {**task.field_values, field_id: [str(group.id)]}
+    await session.commit()
+    by_person = [TaskSort(field=TaskFieldRef(field_id=field_id))]
+
+    async def ordered():
+        return [
+            name for name in await _list(session, env, seeded, sort=by_person) if name in task_names
+        ]
+
+    assert await ordered() == ["story", "loose", "task-a", "task-b"]
+    membership = GroupMember(group_id=groups[2].id, user_id=env.admin_id)
+    session.add(membership)
+    await session.commit()
+    assert await ordered() == ["loose", "task-a", "story", "task-b"]
+    membership.is_active = False
+    await session.commit()
+    assert await ordered() == ["story", "loose", "task-a", "task-b"]
 
 
 async def test_a_blocker_in_another_project_does_not_count(session, env, seeded) -> None:

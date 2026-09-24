@@ -83,6 +83,32 @@ function makeStore() {
 beforeEach(() => vi.resetAllMocks());
 
 describe("saving a draft", () => {
+  it.each(["save", "save as"])("keeps edits made while %s is pending", async (action) => {
+    const { dispatch, state } = makeStore();
+    dispatch(setDraftSort("p", SORT));
+    const saved = { ...TABLE, definition: { ...TABLE.definition, sort: SORT } };
+    let resolveResponse!: (response: { view: ViewConfig }) => void;
+    const response = new Promise<{ view: ViewConfig }>((resolve) => {
+      resolveResponse = resolve;
+    });
+    vi.mocked(projectsApi.updateView).mockReturnValue(response);
+    vi.mocked(projectsApi.createView).mockReturnValue(response);
+    const pending =
+      action === "save"
+        ? dispatch(saveViewDraft("p", TABLE.id))
+        : dispatch(saveViewAs("p", TABLE, "Copy", ViewVisibility.PERSONAL));
+    const laterSort = [{ field: fieldRef("field_due_date"), direction: SortDirection.DESC }];
+    dispatch(setDraftSort("p", laterSort));
+
+    resolveResponse({ view: action === "save" ? saved : { ...saved, id: "copy" } });
+    await pending;
+
+    expect(state().projectsUi.viewDrafts.p[TABLE.id].sort).toEqual(laterSort);
+    expect(
+      state().projects.projects.p.views.find((item) => item.id === saved.id)?.definition,
+    ).toEqual(action === "save" ? saved.definition : TABLE.definition);
+  });
+
   it("saves the draft into the view and leaves it clean", async () => {
     const { dispatch, state } = makeStore();
     dispatch(setDraftSort("p", SORT));

@@ -59,7 +59,7 @@ describe("useContentAccessRefetch", () => {
     vi.advanceTimersByTime(499);
     expect(refetch).not.toHaveBeenCalled();
     vi.advanceTimersByTime(1);
-    expect(refetch.mock.calls).toEqual([[change(first)], [change(second)]]);
+    expect(refetch.mock.calls).toEqual([[[change(first), change(second)]]]);
   });
 
   it("coalesces repeated actions on one resource", () => {
@@ -68,7 +68,7 @@ describe("useContentAccessRefetch", () => {
       emitContentAccessChanged(change("views_changed"));
     }
     vi.advanceTimersByTime(500);
-    expect(refetch.mock.calls).toEqual([[change("views_changed")]]);
+    expect(refetch.mock.calls).toEqual([[[change("views_changed")]]]);
     emitContentAccessChanged(change("views_changed"));
     vi.advanceTimersByTime(500);
     expect(refetch).toHaveBeenCalledTimes(2);
@@ -80,9 +80,19 @@ describe("useContentAccessRefetch", () => {
     emitContentAccessChanged(change("views_changed", "project-2"));
     vi.advanceTimersByTime(500);
     expect(refetch.mock.calls).toEqual([
-      [change("views_changed", "project-1")],
-      [change("views_changed", "project-2")],
+      [[change("views_changed", "project-1"), change("views_changed", "project-2")]],
     ]);
+  });
+
+  it("reloads a list once for a burst of distinct grants", () => {
+    const refetch = mount(ContentType.FILE);
+    const changes = Array.from({ length: 10 }, (_, index) => ({
+      ...change("granted", `file-${index}`),
+      contentType: ContentType.FILE,
+    }));
+    changes.forEach(emitContentAccessChanged);
+    vi.advanceTimersByTime(500);
+    expect(refetch.mock.calls).toEqual([[changes]]);
   });
 
   it("ignores other content types", () => {
@@ -99,7 +109,7 @@ describe("useContentAccessRefetch", () => {
     emitContentAccessChanged(project);
     emitContentAccessChanged(note);
     vi.advanceTimersByTime(500);
-    expect(refetch.mock.calls).toEqual([[project], [note]]);
+    expect(refetch.mock.calls).toEqual([[[project, note]]]);
   });
 
   it("discards pending work and unsubscribes on unmount", () => {

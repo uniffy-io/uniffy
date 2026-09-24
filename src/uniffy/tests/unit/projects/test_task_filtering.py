@@ -48,7 +48,7 @@ from uniffy.domains.projects.views.definition import (
     validate_task_filter,
     validate_task_sort,
 )
-from uniffy.domains.settings.operations import UserCalendarPreferences
+from uniffy.domains.settings.preferences import UserCalendarPreferences
 from uniffy.tests.view_filter_cases import (
     CASES,
     field_definitions,
