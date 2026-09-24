@@ -1,4 +1,5 @@
 import gzip
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -16,6 +17,11 @@ from uniffy_proto.cal.v1.calendar_pb import (
     PreviewCalendarImportResponse,
 )
 from uniffy_proto.files.v1.files_pb import UploadChunkRequest, UploadChunkResponse
+from uniffy_proto.presence.v1.presence_pb import (
+    GetBulkPresenceRequest,
+    GetBulkPresenceResponse,
+    PresenceStatus,
+)
 from uniffy_proto.users.v1.users_pb import UploadAvatarRequest, UploadAvatarResponse
 
 from uniffy.core.auth.principal import current_principal
@@ -28,6 +34,7 @@ from uniffy.core.types import generate_id
 from uniffy.domains.agents.agents.service import AgentsServiceImpl
 from uniffy.domains.files.service import FilesServiceImpl
 from uniffy.domains.files.uploads import SMALL_CHUNK_SIZE, XLARGE_CHUNK_SIZE
+from uniffy.domains.presence.operations import PresenceOperations
 from uniffy.domains.scheduling.calendar.ical.parse import MAX_IMPORT_BYTES
 from uniffy.domains.scheduling.calendar.service import CalendarServiceImpl
 from uniffy.domains.users.service import UsersServiceImpl
@@ -67,6 +74,67 @@ def test_private_rpc_authenticates_before_decoding(monkeypatch: pytest.MonkeyPat
     assert response.status_code == 401
     assert response.json()["code"] == Code.UNAUTHENTICATED.name.lower()
     assert body.decode() not in response.text
+
+
+@pytest.mark.parametrize("codec_name", ["proto", "json"])
+@pytest.mark.parametrize("populated", [False, True])
+def test_bulk_presence_preserves_status_and_optional_timestamps(
+    monkeypatch: pytest.MonkeyPatch, codec_name: str, populated: bool
+) -> None:
+    organization_id = generate_id()
+    online_id, away_id, offline_id, missing_id = [generate_id() for _ in range(4)]
+    results = {
+        str(online_id): {
+            "status": "online",
+            "last_active": "2026-09-24T12:34:56.123456+02:00",
+            "custom_status": {
+                "text": "Focused",
+                "expires_at": "2026-09-24T15:00:00+02:00",
+            },
+        },
+        str(away_id): {"status": "away", "custom_status": {"text": "Back soon"}},
+        str(offline_id): {},
+    }
+    get_presence = AsyncMock(return_value=results if populated else {})
+    monkeypatch.setattr(PresenceOperations, "get_bulk_presence", get_presence)
+    monkeypatch.setattr(
+        "uniffy.domains.presence.handlers.open_session",
+        MagicMock(return_value=AsyncMock()),
+    )
+    codec = next(codec for codec in strict_request_codecs() if codec.name() == codec_name)
+    user_ids = [online_id, away_id, offline_id, missing_id]
+    request = GetBulkPresenceRequest(
+        organization_id=str(organization_id), user_ids=[str(uid) for uid in user_ids]
+    )
+    response = _rpc_client(monkeypatch).post(
+        "/presence.v1.PresenceService/GetBulkPresence",
+        content=codec.encode(request),
+        headers={"content-type": f"application/{codec_name}"},
+    )
+
+    assert response.status_code == 200
+    get_presence.assert_awaited_once_with(organization_id, user_ids)
+    decoded = codec.decode(response.content, GetBulkPresenceResponse)
+    assert set(decoded.presences) == (set(results) if populated else set())
+    if not populated:
+        return
+
+    online = decoded.presences[str(online_id)]
+    assert online.status == PresenceStatus.ONLINE
+    assert online.status_text == "Focused"
+    assert online.status_emoji == ""
+    assert online.last_active.to_datetime() == datetime(2026, 9, 24, 10, 34, 56, 123456, tzinfo=UTC)
+    assert online.status_expires_at.to_datetime() == datetime(2026, 9, 24, 13, tzinfo=UTC)
+    away = decoded.presences[str(away_id)]
+    assert away.status == PresenceStatus.AWAY
+    assert away.status_text == "Back soon"
+    assert not away.has_field("last_active")
+    assert not away.has_field("status_expires_at")
+    offline = decoded.presences[str(offline_id)]
+    assert offline.status == PresenceStatus.OFFLINE
+    assert offline.status_text == ""
+    assert not offline.has_field("last_active")
+    assert not offline.has_field("status_expires_at")
 
 
 @pytest.mark.parametrize("body", [b"{private-parser-detail", b'{"unknown_field": 1}'])

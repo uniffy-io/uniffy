@@ -7,7 +7,6 @@ from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
-from protobuf.wkt import Timestamp
 from uniffy_proto.presence.v1.presence_pb import (
     ClearCustomStatusRequest,
     ClearCustomStatusResponse,
@@ -87,28 +86,26 @@ class PresenceHandlers:
 
                 response = GetBulkPresenceResponse()
                 for uid, data in results.items():
-                    # Protobuf maps don't allow direct message assignment; access in-place.
-                    presence = response.presences[uid]
-                    presence.status = string_to_proto_status(
-                        data.get("status", "offline"),
+                    presence = UserPresence(
+                        status=string_to_proto_status(data.get("status", "offline")),
                     )
 
                     last_active = data.get("last_active")
                     if last_active:
-                        ts = Timestamp()
-                        ts = datetime_to_timestamp(datetime.fromisoformat(last_active))
-                        presence.last_active = ts
+                        presence.last_active = datetime_to_timestamp(
+                            datetime.fromisoformat(last_active)
+                        )
 
                     custom = data.get("custom_status")
                     if custom:
                         presence.status_emoji = custom.get("emoji", "")
                         presence.status_text = custom.get("text", "")
                         if custom.get("expires_at"):
-                            exp_ts = Timestamp()
-                            exp_ts = datetime_to_timestamp(
+                            presence.status_expires_at = datetime_to_timestamp(
                                 datetime.fromisoformat(custom["expires_at"])
                             )
-                            presence.status_expires_at = exp_ts
+
+                    response.presences[uid] = presence
 
                 return response
 
@@ -154,9 +151,9 @@ class PresenceHandlers:
                     status_text=custom_data.get("text", ""),
                 )
                 if custom_data.get("expires_at"):
-                    ts = Timestamp()
-                    ts = datetime_to_timestamp(datetime.fromisoformat(custom_data["expires_at"]))
-                    presence.status_expires_at = ts
+                    presence.status_expires_at = datetime_to_timestamp(
+                        datetime.fromisoformat(custom_data["expires_at"])
+                    )
 
                 return SetCustomStatusResponse(presence=presence)
 
