@@ -1,7 +1,7 @@
 """Give project views an owner, a visibility, an order and a typed definition.
 
-Revision ID: 105
-Revises: 104
+Revision ID: 106
+Revises: 105
 Create Date: 2026-09-17
 """
 
@@ -15,8 +15,8 @@ from sqlalchemy.dialects import postgresql
 
 from uniffy.core.json_codec import dumps_str
 
-revision: str = "105"
-down_revision: str | None = "104"
+revision: str = "106"
+down_revision: str | None = "105"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

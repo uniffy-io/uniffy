@@ -1,7 +1,7 @@
 """Index the task columns a view filter narrows by, and add the collation task sorts use.
 
-Revision ID: 106
-Revises: 105
+Revision ID: 107
+Revises: 106
 Create Date: 2026-09-23
 
 The indexes are built ``CONCURRENTLY`` so a populated ``projects_tasks`` keeps taking writes.
@@ -12,8 +12,8 @@ from collections.abc import Sequence
 
 from alembic import op
 
-revision: str = "106"
-down_revision: str | None = "105"
+revision: str = "107"
+down_revision: str | None = "106"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

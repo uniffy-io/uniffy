@@ -101,10 +101,10 @@ def _views(project_id: str):
 
 
 async def test_views_gain_ownership_and_definitions(scratch_database: str) -> None:
-    await _provision_to(scratch_database, "104")
+    await _provision_to(scratch_database, "105")
     with_views, without_views, owner_id = await _seed_legacy_projects()
 
-    _migrate_to("105")
+    _migrate_to("106")
 
     rows = _views(with_views)
     assert [row[0] for row in rows] == [
@@ -152,7 +152,7 @@ async def test_views_gain_ownership_and_definitions(scratch_database: str) -> No
 
 
 async def test_malformed_config_fields_do_not_block_upgrade(scratch_database: str) -> None:
-    await _provision_to(scratch_database, "104")
+    await _provision_to(scratch_database, "105")
     project_id, _, _ = await _seed_legacy_projects()
     configs = [
         None,
@@ -193,7 +193,7 @@ async def test_malformed_config_fields_do_not_block_upgrade(scratch_database: st
     finally:
         await engine.dispose()
 
-    _migrate_to("105")
+    _migrate_to("106")
 
     definitions = dict(
         _query("SELECT id, definition FROM projects_views WHERE id LIKE 'malformed_%'")
@@ -207,13 +207,13 @@ async def test_malformed_config_fields_do_not_block_upgrade(scratch_database: st
         "column_widths": [{"field": {"field_id": "field_title"}, "width": 180}],
         "sort": [{"field": {"field_id": "field_title"}, "direction": "SORT_DIRECTION_DESC"}],
     }
-    assert _query("SELECT version_num FROM alembic_version") == [("105",)]
+    assert _query("SELECT version_num FROM alembic_version") == [("106",)]
 
 
 async def test_definition_pages_preserve_identical_view_ids_across_projects(
     scratch_database: str,
 ) -> None:
-    await _provision_to(scratch_database, "104")
+    await _provision_to(scratch_database, "105")
     await _seed_legacy_projects()
     engine = create_async_engine(get_database_url())
     try:
@@ -233,7 +233,7 @@ async def test_definition_pages_preserve_identical_view_ids_across_projects(
     finally:
         await engine.dispose()
 
-    _migrate_to("105")
+    _migrate_to("106")
 
     rows = _query("SELECT id, definition, sort_order FROM projects_views WHERE id LIKE 'paged_%'")
     assert len(rows) == 1002
@@ -245,11 +245,11 @@ async def test_definition_pages_preserve_identical_view_ids_across_projects(
 
 
 async def test_downgrade_restores_the_legacy_shape(scratch_database: str) -> None:
-    await _provision_to(scratch_database, "104")
+    await _provision_to(scratch_database, "105")
     with_views, _, _ = await _seed_legacy_projects()
-    _migrate_to("105")
+    _migrate_to("106")
 
-    _downgrade_to("104")
+    _downgrade_to("105")
 
     rows = _query(
         "SELECT id, type, is_default, config FROM projects_views "
