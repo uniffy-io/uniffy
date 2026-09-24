@@ -233,7 +233,7 @@ See `.env.example` for the full list. Critical ones:
 | Var | Default | Purpose |
 |---|---|---|
 | `E2E_BASE_URL` | `http://localhost:5173` | Where the browser navigates |
-| `E2E_API_URL` | `http://localhost:8000` | Where node-side ConnectRPC clients hit the API |
+| `E2E_API_URL` | `http://localhost:8000/api` | Where node-side ConnectRPC clients hit the API |
 | `E2E_LLM_STUB` | `0` | Mirror of backend `LLM_STUB`. Set to `1` for agent specs |
 | `E2E_ADMIN_TOKEN` | (empty) | Bearer used by the `/api/_e2e/llm_stub` debug route |
 | `E2E_ORG_SLUG` | (empty) | Optional org slug for login. Empty = first org for the user |

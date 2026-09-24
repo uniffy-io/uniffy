@@ -1,12 +1,12 @@
-import { createConnectTransport } from '@connectrpc/connect-node';
-import { createClient, type Interceptor } from '@connectrpc/connect';
-import { AuthService } from '@uniffy/proto/auth/v1/auth_pb';
-import { ChatService } from '@uniffy/proto/chat/v1/chat_pb';
-import { AgentsService } from '@uniffy/proto/agents/v1/agents_pb';
-import { SessionsService } from '@uniffy/proto/agents/v1/sessions_pb';
-import { RuntimeService } from '@uniffy/proto/agents/v1/runtime_pb';
+import { createConnectTransport } from "@connectrpc/connect-node";
+import { createClient, type Interceptor } from "@connectrpc/connect";
+import { AuthService } from "@uniffy/proto/auth/v1/auth_pb";
+import { ChatService } from "@uniffy/proto/chat/v1/chat_pb";
+import { AgentsService } from "@uniffy/proto/agents/v1/agents_pb";
+import { SessionsService } from "@uniffy/proto/agents/v1/sessions_pb";
+import { RuntimeService } from "@uniffy/proto/agents/v1/runtime_pb";
 
-const DEFAULT_API_URL = 'http://localhost:8000';
+const DEFAULT_API_URL = "http://localhost:8000/api";
 
 export function apiUrl(): string {
   return process.env.E2E_API_URL ?? DEFAULT_API_URL;
@@ -15,7 +15,7 @@ export function apiUrl(): string {
 function bearer(token: string | undefined): Interceptor | undefined {
   if (!token) return undefined;
   return (next) => (req) => {
-    req.header.set('Authorization', `Bearer ${token}`);
+    req.header.set("Authorization", `Bearer ${token}`);
     return next(req);
   };
 }
@@ -24,7 +24,7 @@ function transport(token?: string) {
   const interceptors = [bearer(token)].filter(Boolean) as Interceptor[];
   return createConnectTransport({
     baseUrl: apiUrl(),
-    httpVersion: '1.1',
+    httpVersion: "1.1",
     interceptors,
     useBinaryFormat: false,
   });
@@ -70,13 +70,19 @@ export async function loginViaApi(
     password,
     organizationSlug: slug,
   });
+  if (res.result.case !== "authResult") {
+    throw new Error(
+      `E2E login requires completed authentication, received ${res.result.case ?? "no result"}`,
+    );
+  }
+  const auth = res.result.value;
   return {
-    accessToken: res.accessToken,
-    refreshToken: res.refreshToken,
-    userId: res.userId,
-    organizationId: res.organizationId || undefined,
-    organizationRole: res.organizationRole || undefined,
-    sessionId: res.sessionId || undefined,
+    accessToken: auth.accessToken,
+    refreshToken: auth.refreshToken,
+    userId: auth.userId,
+    organizationId: auth.organizationId || undefined,
+    organizationRole: auth.organizationRole || undefined,
+    sessionId: auth.sessionId || undefined,
   };
 }
 
@@ -99,7 +105,7 @@ export async function getCurrentUserViaApi(token: string): Promise<CurrentUser> 
     id: res.id,
     email: res.email,
     username: res.username,
-    fullName: res.fullName ?? '',
+    fullName: res.fullName ?? "",
     isActive: res.isActive,
     isSystemAdmin: res.isSystemAdmin,
     emailVerified: res.emailVerified,
