@@ -121,7 +121,7 @@ from uniffy.domains.auth.interceptors import AuthenticationInterceptor
 from uniffy.domains.auth.mfa.handlers import MfaHandlers
 from uniffy.domains.auth.mfa.operations import MfaOperations
 from uniffy.domains.bookmarks.service import BookmarksServiceImpl
-from uniffy.domains.calls.channels import CallsChannelLifecycle
+from uniffy.domains.calls.channels import CallsLifecycle
 from uniffy.domains.calls.config import LiveKitConfigError
 from uniffy.domains.calls.handlers import CallHandlers
 from uniffy.domains.calls.webhook import LiveKitWebhookProvider
@@ -577,14 +577,18 @@ def _create_api_dispatcher(
             StreamDisconnectMiddleware(StreamRevokeWatchMiddleware(application)),
         )
 
-    call_lifecycle = CallsChannelLifecycle()
+    call_lifecycle = CallsLifecycle(open_session)
 
     add_rpc(
         "/auth.v1.AuthService",
         AuthServiceASGIApplication,
-        AuthHandlers(search_indexer),
+        AuthHandlers(search_indexer, call_lifecycle),
     )
-    add_rpc("/auth.v1.MfaService", MfaServiceASGIApplication, MfaHandlers())
+    add_rpc(
+        "/auth.v1.MfaService",
+        MfaServiceASGIApplication,
+        MfaHandlers(call_lifecycle),
+    )
     add_rpc(
         "/notes.v1.NotesService",
         NotesServiceASGIApplication,
@@ -669,12 +673,12 @@ def _create_api_dispatcher(
     add_rpc(
         "/superadmin.v1.SystemOrganizationsService",
         SystemOrganizationsServiceASGIApplication,
-        SystemOrganizationsServiceImpl(storage, search_indexer),
+        SystemOrganizationsServiceImpl(storage, search_indexer, call_lifecycle),
     )
     add_rpc(
         "/superadmin.v1.SystemUsersService",
         SystemUsersServiceASGIApplication,
-        SystemUsersServiceImpl(search_indexer),
+        SystemUsersServiceImpl(search_indexer, call_lifecycle),
     )
     add_rpc(
         "/superadmin.v1.SupportService",
@@ -684,7 +688,7 @@ def _create_api_dispatcher(
     add_rpc(
         "/superadmin.v1.SystemMfaService",
         SystemMfaServiceASGIApplication,
-        SystemMfaHandlers(MfaOperations),
+        SystemMfaHandlers(lambda session: MfaOperations(session, call_lifecycle)),
     )
     add_rpc(
         "/superadmin.v1.PlatformAuditService",

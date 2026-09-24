@@ -25,6 +25,8 @@ class CallEndReason(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     CALL_END_REASON_MAX_DURATION: _ClassVar[CallEndReason]
     CALL_END_REASON_SOLO_TIMEOUT: _ClassVar[CallEndReason]
     CALL_END_REASON_CHANNEL_ARCHIVED: _ClassVar[CallEndReason]
+    CALL_END_REASON_ORG_SUSPENDED: _ClassVar[CallEndReason]
+    CALL_END_REASON_ORG_DELETED: _ClassVar[CallEndReason]
 
 class ScreenShareQuality(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     __slots__ = ()
@@ -48,6 +50,8 @@ CALL_END_REASON_ALL_LEFT: CallEndReason
 CALL_END_REASON_MAX_DURATION: CallEndReason
 CALL_END_REASON_SOLO_TIMEOUT: CallEndReason
 CALL_END_REASON_CHANNEL_ARCHIVED: CallEndReason
+CALL_END_REASON_ORG_SUSPENDED: CallEndReason
+CALL_END_REASON_ORG_DELETED: CallEndReason
 SCREEN_SHARE_QUALITY_UNSPECIFIED: ScreenShareQuality
 SCREEN_SHARE_QUALITY_BALANCED: ScreenShareQuality
 SCREEN_SHARE_QUALITY_HIGH: ScreenShareQuality

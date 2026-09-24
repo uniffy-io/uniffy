@@ -5,8 +5,6 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-CALL_LIFECYCLE_CTX_KEY = "call_lifecycle"
-
 
 class ChannelCallLifecycle(Protocol):
     async def end_for_channel_archive(

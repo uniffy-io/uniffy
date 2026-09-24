@@ -18,12 +18,14 @@ from uniffy.core.audit.actions import Action
 from uniffy.core.auth.emails import normalize_email
 from uniffy.core.auth.passwords.crypto import hash_password
 from uniffy.core.auth.passwords.policy import validate_password
-from uniffy.core.auth.revocation import mark_token_version_revoked
+from uniffy.core.auth.revocation import mark_sessions_revoked, mark_token_version_revoked
+from uniffy.core.auth.sessions import stage_revoke_user_sessions
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.jobs import enqueue_job
 from uniffy.core.json_codec import dumps_str
 from uniffy.core.mail.config import MAIL_FROM_ADDRESS_KEY, MAIL_NAMESPACE, MailConfig
 from uniffy.core.models.audit.event import AuditEvent, AuditResourceType
+from uniffy.core.models.calls import CallEndReason
 from uniffy.core.models.crypto.org_encryption_key import OrgEncryptionKey
 from uniffy.core.models.login.organization import Organization
 from uniffy.core.models.login.organization_member import (
@@ -39,6 +41,7 @@ from uniffy.core.search import SearchIndexer
 from uniffy.core.storage import ObjectStorage
 from uniffy.core.types import slugify
 from uniffy.core.users.cache import invalidate_user_profile
+from uniffy.domains.calls.lifecycle import CallEvictionReason, CallRevocationLifecycle
 from uniffy.domains.mail.jobs.contracts import SEND_EMAIL
 from uniffy.domains.organizations.operations import OrganizationOperations
 from uniffy.domains.users.operations import UserOperations
@@ -246,9 +249,14 @@ def _audit_user_ids(user_ids: list[UUID]) -> list[str]:
 class PlatformDirectoryOperations:
     """Platform-operator org + user directory; gated on ``is_system_admin``."""
 
-    def __init__(self, session: AsyncSession) -> None:
+    def __init__(
+        self,
+        session: AsyncSession,
+        call_lifecycle: CallRevocationLifecycle,
+    ) -> None:
         self._session = session
         self._user_ops = UserOperations(session)
+        self._call_lifecycle = call_lifecycle
 
     async def list_organizations(
         self,
@@ -552,6 +560,9 @@ class PlatformDirectoryOperations:
         for member_id in bumped_user_ids:
             await invalidate_user_profile(member_id)
 
+        await self._call_lifecycle.end_for_organization(
+            self._session, org.id, CallEndReason.ORG_SUSPENDED
+        )
         await self._publish_member_token_revokes(bumped_user_ids)
 
         return await self.get_organization(user_id=user_id, organization_id=organization_id)
@@ -642,6 +653,9 @@ class PlatformDirectoryOperations:
 
         for member_id in bumped_user_ids:
             await invalidate_user_profile(member_id)
+        await self._call_lifecycle.end_for_organization(
+            self._session, org.id, CallEndReason.ORG_DELETED
+        )
         await self._publish_member_token_revokes(bumped_user_ids)
 
         await self._enqueue_org_deleted_emails(org, reason)
@@ -1012,9 +1026,11 @@ class PlatformDirectoryOperations:
             return await self.get_user(user_id=user_id, target_user_id=target_user_id)
 
         new_version: int | None = None
+        revoked_session_ids: list[UUID] = []
         if revoke_tokens:
             target.token_version += 1
             new_version = target.token_version
+            revoked_session_ids = await stage_revoke_user_sessions(self._session, target.id)
         self._session.add(target)
 
         await write_audit_event(
@@ -1064,7 +1080,17 @@ class PlatformDirectoryOperations:
 
         if new_version is not None:
             await mark_token_version_revoked(target.id, new_version)
+            await mark_sessions_revoked(revoked_session_ids)
             await _safe_publish_token_revoke(target.id, new_version)
+            await self._call_lifecycle.evict_user(
+                self._session,
+                target.id,
+                reason=(
+                    CallEvictionReason.USER_DEACTIVATED
+                    if is_active is False
+                    else CallEvictionReason.SESSION_REVOKED
+                ),
+            )
         await invalidate_user_profile(target.id)
 
         return await self.get_user(user_id=user_id, target_user_id=target_user_id)
@@ -1099,6 +1125,7 @@ class PlatformDirectoryOperations:
         target.token_version += 1
         new_version = target.token_version
         self._session.add(target)
+        revoked_session_ids = await stage_revoke_user_sessions(self._session, target.id)
 
         await write_audit_event(
             self._session,
@@ -1112,8 +1139,14 @@ class PlatformDirectoryOperations:
         await self._session.commit()
 
         await mark_token_version_revoked(target.id, new_version)
+        await mark_sessions_revoked(revoked_session_ids)
         await invalidate_user_profile(target.id)
         await _safe_publish_token_revoke(target.id, new_version)
+        await self._call_lifecycle.evict_user(
+            self._session,
+            target.id,
+            reason=CallEvictionReason.SESSION_REVOKED,
+        )
 
     async def set_system_admin(
         self,

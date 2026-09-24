@@ -27,7 +27,11 @@ from uniffy_proto.auth.v1.mfa_pb2 import (
 
 from uniffy.core.auth.cookies import attach_asset_cookie
 from uniffy.core.auth.devices import request_user_agent
-from uniffy.core.auth.principal import current_user_id, resolve_organization_id
+from uniffy.core.auth.principal import (
+    current_session_id,
+    current_user_id,
+    resolve_organization_id,
+)
 from uniffy.core.converters import datetime_to_timestamp, domain_type_to_proto
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
 from uniffy.core.models.shared import DomainType
@@ -39,6 +43,7 @@ from uniffy.domains.auth.errors import (
 from uniffy.domains.auth.mfa.challenge import ENROLLMENT_ALLOWED_RPCS
 from uniffy.domains.auth.mfa.context import enrollment_organization_id, enrollment_user_id
 from uniffy.domains.auth.mfa.operations import MfaOperations
+from uniffy.domains.calls.lifecycle import CallRevocationLifecycle
 from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="auth.mfa.handlers")
@@ -66,6 +71,9 @@ class MfaHandlers:
     request body).
     """
 
+    def __init__(self, call_lifecycle: CallRevocationLifecycle) -> None:
+        self.call_lifecycle = call_lifecycle
+
     async def begin_enrollment(
         self,
         request: BeginEnrollmentRequest,
@@ -74,7 +82,7 @@ class MfaHandlers:
         user_id = _user_for_enrollment(ctx, rpc="BeginEnrollment")
         try:
             async with open_session() as session:
-                ops = MfaOperations(session)
+                ops = MfaOperations(session, self.call_lifecycle)
                 challenge = await ops.begin_enrollment(user_id)
                 return BeginEnrollmentResponse(
                     secret_b32=challenge.secret_b32,
@@ -101,12 +109,13 @@ class MfaHandlers:
         pending_org_id = enrollment_organization_id(ctx)
         try:
             async with open_session() as session:
-                ops = MfaOperations(session)
+                ops = MfaOperations(session, self.call_lifecycle)
                 result = await ops.confirm_enrollment(
                     user_id,
                     request.code,
                     user_agent=user_agent,
                     pending_organization_id=pending_org_id,
+                    replaced_session_id=_caller_session_id(),
                 )
                 asset_cookie = attach_asset_cookie(
                     ctx,
@@ -146,7 +155,7 @@ class MfaHandlers:
         user_agent = request_user_agent(ctx)
         try:
             async with open_session() as session:
-                ops = MfaOperations(session)
+                ops = MfaOperations(session, self.call_lifecycle)
                 result = await ops.verify_mfa(
                     challenge_token=request.challenge_token,
                     code=request.code,
@@ -197,7 +206,7 @@ class MfaHandlers:
         user_id = current_user_id()
         try:
             async with open_session() as session:
-                ops = MfaOperations(session)
+                ops = MfaOperations(session, self.call_lifecycle)
                 await ops.disable_mfa(user_id, request.code)
                 return DisableMfaResponse(success=True)
         except AuthenticationError as exc:
@@ -216,7 +225,7 @@ class MfaHandlers:
         user_id = current_user_id()
         try:
             async with open_session() as session:
-                ops = MfaOperations(session)
+                ops = MfaOperations(session, self.call_lifecycle)
                 codes = await ops.regenerate_recovery_codes(user_id, request.code)
                 return RegenerateRecoveryCodesResponse(recovery_codes=codes)
         except AuthenticationError as exc:
@@ -235,7 +244,7 @@ class MfaHandlers:
         user_id = _user_for_enrollment(ctx, rpc="GetMfaStatus")
         try:
             async with open_session() as session:
-                ops = MfaOperations(session)
+                ops = MfaOperations(session, self.call_lifecycle)
                 status = await ops.get_status(user_id)
                 response = GetMfaStatusResponse(
                     enabled=status.enabled,
@@ -258,7 +267,7 @@ class MfaHandlers:
         actor_id = current_user_id()
         try:
             async with open_session() as session:
-                ops = MfaOperations(session)
+                ops = MfaOperations(session, self.call_lifecycle)
                 await ops.admin_reset_mfa(
                     actor_user_id=actor_id,
                     organization_id=resolve_organization_id(request.organization_id),
@@ -275,6 +284,14 @@ class MfaHandlers:
         except Exception as exc:
             logger.exception(f"AdminResetMfa failed: {exc}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
+
+
+def _caller_session_id() -> UUID | None:
+    """An enrollment-only token carries no principal and therefore no session."""
+    try:
+        return current_session_id()
+    except ConnectError:
+        return None
 
 
 def _user_for_enrollment(ctx: RequestContext, *, rpc: str) -> UUID:

@@ -19,7 +19,7 @@ from uniffy.core.types import generate_id
 from uniffy.domains.agents.providers.base import EventType, StreamEvent
 from uniffy.domains.agents.runtime.jobs import jobs as agent_run_mod
 from uniffy.domains.agents.runtime.jobs.contracts import DELETE_RUN_STREAM
-from uniffy.domains.chat.lifecycle import CALL_LIFECYCLE_CTX_KEY
+from uniffy.domains.calls.lifecycle import CALL_LIFECYCLE_CTX_KEY
 
 
 @pytest.fixture(autouse=True)

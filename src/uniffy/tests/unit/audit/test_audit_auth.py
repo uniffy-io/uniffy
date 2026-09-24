@@ -63,7 +63,7 @@ def _make_user(*, hashed_password: bytes = b"$argon2id$v=19$placeholder") -> Use
 async def test_login_success_emits_login_success() -> None:
     user = _make_user()
     session = _session_for_login(user, OrganizationRole.MEMBER)
-    ops = AuthOperations(session)
+    ops = AuthOperations(session, AsyncMock())
 
     with (
         patch("uniffy.domains.auth.operations.verify_password", return_value=True),
@@ -97,7 +97,7 @@ async def test_login_success_emits_login_success() -> None:
 
 async def test_login_failure_unknown_email_emits_failure_without_user() -> None:
     session = _session_for_login(user=None)
-    ops = AuthOperations(session)
+    ops = AuthOperations(session, AsyncMock())
 
     with pytest.raises(AuthenticationError):
         await ops.authenticate(_UNKNOWN_EMAIL, "pw")
@@ -114,7 +114,7 @@ async def test_login_failure_unknown_email_emits_failure_without_user() -> None:
 async def test_login_failure_bad_password_carries_user_attribution() -> None:
     user = _make_user()
     session = _session_for_login(user)
-    ops = AuthOperations(session)
+    ops = AuthOperations(session, AsyncMock())
 
     with (
         patch("uniffy.domains.auth.operations.verify_password", return_value=False),
@@ -138,7 +138,7 @@ async def test_refresh_token_emits_token_refreshed_with_dedupe() -> None:
     session.execute = AsyncMock(side_effect=[user_lookup, role_lookup])
     session.add = MagicMock()
     session.commit = AsyncMock()
-    ops = AuthOperations(session)
+    ops = AuthOperations(session, AsyncMock())
 
     valkey = MagicMock()
     valkey.set = AsyncMock(return_value=True)
@@ -174,7 +174,7 @@ async def test_refresh_token_dedupe_suppresses_rapid_writes() -> None:
     session.execute = AsyncMock(side_effect=[_scalar(user), _scalar(OrganizationRole.MEMBER)])
     session.add = MagicMock()
     session.commit = AsyncMock()
-    ops = AuthOperations(session)
+    ops = AuthOperations(session, AsyncMock())
 
     valkey = MagicMock()
     valkey.set = AsyncMock(return_value=False)  # lock already held
@@ -206,7 +206,7 @@ async def test_revoke_session_emits_session_terminated() -> None:
     session.execute = AsyncMock(side_effect=[_scalar(session_record)])
     session.add = MagicMock()
     session.commit = AsyncMock()
-    ops = AuthOperations(session)
+    ops = AuthOperations(session, AsyncMock())
 
     await ops.revoke_session(user_id, session_id)
 
@@ -231,7 +231,7 @@ async def test_revoke_other_sessions_emits_token_revoked() -> None:
     )
     session.add = MagicMock()
     session.commit = AsyncMock()
-    ops = AuthOperations(session)
+    ops = AuthOperations(session, AsyncMock())
 
     await ops.revoke_other_sessions(user_id, current_session)
 
@@ -249,7 +249,7 @@ async def test_token_error_does_not_emit_audit_row() -> None:
     session.add = MagicMock()
     session.execute = AsyncMock()
     session.commit = AsyncMock()
-    ops = AuthOperations(session)
+    ops = AuthOperations(session, AsyncMock())
 
     with (
         patch(

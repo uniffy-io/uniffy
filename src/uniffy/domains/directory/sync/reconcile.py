@@ -17,6 +17,7 @@ from uniffy.core.models.login.user import User
 from uniffy.core.models.people.identity import IdentityLink, IdentitySource
 from uniffy.core.search import SearchIndexer
 from uniffy.core.types import SubjectType
+from uniffy.domains.calls.lifecycle import CallEvictionReason, CallRevocationLifecycle
 from uniffy.domains.directory.groups.projection import TeamSearchIndexer
 from uniffy.domains.directory.projection import (
     UserDirectoryProjection,
@@ -49,6 +50,7 @@ async def deprovision_user(
     source: IdentitySource,
     user_id: UUID,
     search_indexer: SearchIndexer,
+    call_lifecycle: CallRevocationLifecycle,
     *,
     active_owner_ids: set[UUID],
 ) -> bool:
@@ -64,6 +66,12 @@ async def deprovision_user(
     membership.updated_at = datetime.now(UTC)
     await session.commit()
 
+    await call_lifecycle.evict_user(
+        session,
+        user_id,
+        reason=CallEvictionReason.MEMBERSHIP_REVOKED,
+        organization_id=org_id,
+    )
     active_owner_ids.discard(user_id)
     await invalidate_person(org_id, user_id)
 
@@ -132,6 +140,7 @@ async def _deprovision_pass(
     session: AsyncSession,
     source: IdentitySource,
     search_indexer: SearchIndexer,
+    call_lifecycle: CallRevocationLifecycle,
     seen_external_ids: set[str],
     report: ReconcileReport,
 ) -> None:
@@ -184,6 +193,7 @@ async def _deprovision_pass(
             source,
             user_id,
             search_indexer,
+            call_lifecycle,
             active_owner_ids=active_owner_ids,
         ):
             report.users_deprovisioned += 1
@@ -196,6 +206,7 @@ async def run_full_sync(
     source: IdentitySource,
     provider: DirectorySyncProvider,
     search_indexer: SearchIndexer,
+    call_lifecycle: CallRevocationLifecycle,
 ) -> ReconcileReport:
     started = time.monotonic()
     report = ReconcileReport()
@@ -301,7 +312,7 @@ async def run_full_sync(
         )
 
     if provider.capabilities.supports_pull_users:
-        await _deprovision_pass(session, source, search_indexer, seen_active, report)
+        await _deprovision_pass(session, source, search_indexer, call_lifecycle, seen_active, report)
 
     touched_list = list(touched)
     for start in range(0, len(touched_list), CHUNK_SIZE):

@@ -37,7 +37,7 @@ from uniffy_proto.calls.v1.calls_pb2 import (
     UpdateOrgCallPolicyResponse,
 )
 
-from uniffy.core.auth.principal import current_user_id
+from uniffy.core.auth.principal import current_session_id, current_user_id
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models.calls import ScreenShareQuality
 from uniffy.domains.calls.config import LiveKitConfigError, get_livekit_config, get_turn_config
@@ -114,7 +114,12 @@ class CallHandlers:
             try:
                 ops = CallOperations(session)
                 call, participants, token, joined_existing = await ops.initiate_call(
-                    user_id, organization_id, channel_id, device_id, device_label
+                    user_id,
+                    organization_id,
+                    channel_id,
+                    device_id,
+                    device_label,
+                    current_session_id(),
                 )
                 profiles = await ops.resolve_profiles([p.user_id for p in participants])
                 cap = await ops.resolve_screen_share_ceiling(organization_id, call.call_type)
@@ -142,7 +147,12 @@ class CallHandlers:
             try:
                 ops = CallOperations(session)
                 call, participants, token = await ops.join_call(
-                    user_id, organization_id, call_id, device_id, device_label
+                    user_id,
+                    organization_id,
+                    call_id,
+                    device_id,
+                    device_label,
+                    current_session_id(),
                 )
                 profiles = await ops.resolve_profiles([p.user_id for p in participants])
                 cap = await ops.resolve_screen_share_ceiling(organization_id, call.call_type)
@@ -196,7 +206,7 @@ class CallHandlers:
         async with open_session() as session:
             try:
                 token = await CallOperations(session).refresh_token(
-                    user_id, organization_id, call_id, device_id
+                    user_id, organization_id, call_id, device_id, current_session_id()
                 )
             except Exception as exc:
                 raise _map_domain_error("refresh_call_token", exc) from exc

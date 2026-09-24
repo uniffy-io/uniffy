@@ -25,8 +25,8 @@ from uniffy.domains.agents.providers.clients import (
     init_provider_invalidation_subscriber,
 )
 from uniffy.domains.audit.jobs.jobs import provision_audit_partitions
-from uniffy.domains.calls.channels import CallsChannelLifecycle
-from uniffy.domains.chat.lifecycle import CALL_LIFECYCLE_CTX_KEY
+from uniffy.domains.calls.channels import CallsLifecycle
+from uniffy.domains.calls.lifecycle import CALL_LIFECYCLE_CTX_KEY
 from uniffy.domains.files.jobs.settings import MEDIA_SETTINGS
 from uniffy.domains.files.jobs.slots import MEDIA_SLOTS_CTX_KEY, MediaSlots
 from uniffy.domains.files.jobs.source import MEDIA_SOURCE_CTX_KEY, MediaSourceServer
@@ -152,7 +152,7 @@ async def _on_startup_shared(
     ctx[WORKSPACE_SEARCH_CTX_KEY] = search
     search_indexer = SearchIndexer(search)
     ctx[SEARCH_INDEXER_CTX_KEY] = search_indexer
-    ctx[CALL_LIFECYCLE_CTX_KEY] = CallsChannelLifecycle()
+    ctx[CALL_LIFECYCLE_CTX_KEY] = CallsLifecycle(open_session)
     register_note_realtime_adapter(search_indexer)
     logger.info("Worker: Search engine initialized")
 

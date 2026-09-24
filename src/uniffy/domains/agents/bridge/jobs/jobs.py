@@ -9,7 +9,8 @@ from uniffy.core.database import SESSION_FACTORY_CTX_KEY, SessionFactory
 from uniffy.core.search import SEARCH_INDEXER_CTX_KEY
 from uniffy.core.storage import OBJECT_STORAGE_CTX_KEY, ObjectStorage
 from uniffy.domains.agents.bridge.operations import AgentChatBridge
-from uniffy.domains.chat.lifecycle import CALL_LIFECYCLE_CTX_KEY, ChannelCallLifecycle
+from uniffy.domains.calls.lifecycle import CALL_LIFECYCLE_CTX_KEY
+from uniffy.domains.chat.lifecycle import ChannelCallLifecycle
 
 logger = logger.bind(component="agents.bridge.jobs.jobs")
 

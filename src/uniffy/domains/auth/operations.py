@@ -19,6 +19,7 @@ from uniffy.core.auth.revocation import (
     mark_sessions_revoked,
     mark_token_version_revoked,
 )
+from uniffy.core.auth.sessions import stage_revoke_user_sessions
 from uniffy.core.auth.tokens import (
     create_access_token,
     create_refresh_token,
@@ -50,6 +51,7 @@ from uniffy.domains.auth.types import (
     MfaChallengeRequired,
     MfaEnrollmentRequired,
 )
+from uniffy.domains.calls.lifecycle import CallEvictionReason, CallRevocationLifecycle
 
 logger = logger.bind(component="auth.operations")
 
@@ -84,8 +86,13 @@ async def _publish_session_revoke_safe(user_id: UUID, session_id: UUID) -> None:
 
 
 class AuthOperations:
-    def __init__(self, session: AsyncSession) -> None:
+    def __init__(
+        self,
+        session: AsyncSession,
+        call_lifecycle: CallRevocationLifecycle,
+    ) -> None:
         self._session = session
+        self._call_lifecycle = call_lifecycle
 
     async def authenticate(
         self,
@@ -585,6 +592,12 @@ class AuthOperations:
             if old_session_id is not None:
                 await mark_session_revoked(old_session_id)
                 await _publish_session_revoke_safe(user_id, old_session_id)
+                await self._call_lifecycle.evict_user(
+                    self._session,
+                    user_id,
+                    reason=CallEvictionReason.SESSION_REVOKED,
+                    session_ids=[old_session_id],
+                )
 
             AUTH_ATTEMPTS_TOTAL.labels(operation="switch_org", outcome="success").inc()
 
@@ -643,19 +656,7 @@ class AuthOperations:
         signal - either the attacker or the legitimate client is racing the
         other on the next refresh, so the safe move is to kill both.
         """
-        now = datetime.now(UTC)
-        await self._session.execute(
-            update(UserSession)
-            .where(
-                UserSession.user_id == user.id,
-                UserSession.is_revoked.is_(False),
-            )
-            .values(is_revoked=True, revoked_at=now)
-        )
-        all_active = (
-            await self._session.execute(select(UserSession.id).where(UserSession.user_id == user.id))
-        ).all()
-        revoked_ids = [row[0] for row in all_active]
+        revoked_ids = await stage_revoke_user_sessions(self._session, user.id)
 
         user.token_version = (user.token_version or 0) + 1
         new_version = user.token_version
@@ -690,6 +691,11 @@ class AuthOperations:
         from uniffy.core.realtime.publisher import publish_token_revoke
 
         await publish_token_revoke(user.id, new_version)
+        await self._call_lifecycle.evict_user(
+            self._session,
+            user.id,
+            reason=CallEvictionReason.SESSION_REVOKED,
+        )
         logger.warning(
             "auth.refresh_reuse_detected",
             user_id=str(user.id),
@@ -742,6 +748,12 @@ class AuthOperations:
         await self._session.commit()
         await mark_session_revoked(session_id)
         await _publish_session_revoke_safe(user_id, session_id)
+        await self._call_lifecycle.evict_user(
+            self._session,
+            user_id,
+            reason=CallEvictionReason.SESSION_REVOKED,
+            session_ids=[session_id],
+        )
 
         logger.info(f"Session {session_id} revoked for user {user_id}")
         return True
@@ -802,6 +814,12 @@ class AuthOperations:
         await mark_sessions_revoked(target_session_ids)
         for sid in target_session_ids:
             await _publish_session_revoke_safe(user_id, sid)
+        await self._call_lifecycle.evict_user(
+            self._session,
+            user_id,
+            reason=CallEvictionReason.SESSION_REVOKED,
+            session_ids=target_session_ids,
+        )
 
         logger.info(
             f"Revoked {revoked_count} other sessions for user {user_id}, "
@@ -859,6 +877,12 @@ class AuthOperations:
             await self._session.commit()
             await mark_session_revoked(session_id)
             await _publish_session_revoke_safe(user_id, session_id)
+            await self._call_lifecycle.evict_user(
+                self._session,
+                user_id,
+                reason=CallEvictionReason.SESSION_REVOKED,
+                session_ids=[session_id],
+            )
             logger.info(f"Logout: session {session_id} revoked for user {user_id}")
 
     async def _audit_register_rejected(
@@ -888,51 +912,6 @@ class AuthOperations:
             details=details,
         )
         await self._session.commit()
-
-    async def revoke_all_user_sessions(
-        self,
-        user_id: UUID,
-        *,
-        reason: str,
-    ) -> list[UUID]:
-        """Mark every active session for ``user_id`` revoked + publish Valkey markers.
-
-        Used by refresh-token reuse detection, admin MFA reset, and any
-        other "kill every device" path that does NOT want to bump
-        ``token_version`` for an unrelated reason.
-        """
-        now = datetime.now(UTC)
-        rows = (
-            await self._session.execute(
-                select(UserSession.id).where(
-                    UserSession.user_id == user_id,
-                    UserSession.is_revoked.is_(False),
-                )
-            )
-        ).all()
-        session_ids = [row[0] for row in rows]
-        if session_ids:
-            await self._session.execute(
-                update(UserSession)
-                .where(UserSession.id.in_(session_ids))
-                .values(is_revoked=True, revoked_at=now)
-            )
-            await write_audit_event(
-                self._session,
-                organization_id=None,
-                actor_user_id=user_id,
-                action=Action.AUTH_TOKEN_REVOKED,
-                resource_type=AuditResourceType.USER,
-                resource_id=user_id,
-                details={
-                    "actor": "system",
-                    "reason": reason,
-                    "revoked_session_count": len(session_ids),
-                },
-            )
-            await self._session.commit()
-            await mark_sessions_revoked(session_ids)
-        return session_ids
 
     async def _stage_session(
         self,

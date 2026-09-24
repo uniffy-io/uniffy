@@ -280,10 +280,9 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       const delay = Math.max(expiry - Date.now() - TOKEN_REFRESH_LEAD_MS, 30_000);
       refreshTimerRef.current = setTimeout(async () => {
         try {
-          // The backend blacklists the previous jti on refresh. The SDK's own
-          // full-reconnect would replay the stale token and get kicked, so any
-          // disconnect after this point goes through our JoinCall rejoin path,
-          // which always mints a fresh token.
+          // The refreshed token is never handed to the Room: the server pushes
+          // its own refresh over signaling, and any disconnect goes through the
+          // JoinCall rejoin path, which always mints a fresh token.
           const newToken = await dispatch(refreshCallToken(callId)).unwrap();
           tokenRef.current = newToken;
           scheduleTokenRefresh(newToken, callId);

@@ -45,6 +45,7 @@ from uniffy.core.auth.principal import current_user_id
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.search import SearchIndexer
 from uniffy.core.storage import ObjectStorage
+from uniffy.domains.calls.lifecycle import CallRevocationLifecycle
 from uniffy.domains.platform.directory.converters import (
     org_detail_to_proto,
     org_summary_to_proto,
@@ -82,9 +83,15 @@ def _map_domain_error(exc: Exception) -> ConnectError:
 
 
 class SystemOrganizationsHandlers:
-    def __init__(self, storage: ObjectStorage, search_indexer: SearchIndexer) -> None:
+    def __init__(
+        self,
+        storage: ObjectStorage,
+        search_indexer: SearchIndexer,
+        call_lifecycle: CallRevocationLifecycle,
+    ) -> None:
         self.storage = storage
         self.search_indexer = search_indexer
+        self.call_lifecycle = call_lifecycle
 
     async def list_organizations(
         self, request: ListOrganizationsRequest, ctx: RequestContext
@@ -92,7 +99,8 @@ class SystemOrganizationsHandlers:
         user_id = current_user_id()
         try:
             async with open_session() as session:
-                page = await PlatformDirectoryOperations(session).list_organizations(
+                operations = PlatformDirectoryOperations(session, self.call_lifecycle)
+                page = await operations.list_organizations(
                     user_id=user_id,
                     page=request.page,
                     page_size=request.page_size,
@@ -118,9 +126,8 @@ class SystemOrganizationsHandlers:
         org_id = _parse_uuid(request.organization_id, "organization_id")
         try:
             async with open_session() as session:
-                detail = await PlatformDirectoryOperations(session).get_organization(
-                    user_id=user_id, organization_id=org_id
-                )
+                operations = PlatformDirectoryOperations(session, self.call_lifecycle)
+                detail = await operations.get_organization(user_id=user_id, organization_id=org_id)
         except ConnectError:
             raise
         except Exception as exc:
@@ -133,7 +140,8 @@ class SystemOrganizationsHandlers:
         user_id = current_user_id()
         try:
             async with open_session() as session:
-                detail = await PlatformDirectoryOperations(session).create_organization(
+                operations = PlatformDirectoryOperations(session, self.call_lifecycle)
+                detail = await operations.create_organization(
                     user_id=user_id,
                     name=request.name,
                     slug=request.slug,
@@ -156,7 +164,8 @@ class SystemOrganizationsHandlers:
         org_id = _parse_uuid(request.organization_id, "organization_id")
         try:
             async with open_session() as session:
-                detail = await PlatformDirectoryOperations(session).update_organization(
+                operations = PlatformDirectoryOperations(session, self.call_lifecycle)
+                detail = await operations.update_organization(
                     user_id=user_id,
                     organization_id=org_id,
                     reason=request.reason,
@@ -179,7 +188,8 @@ class SystemOrganizationsHandlers:
         org_id = _parse_uuid(request.organization_id, "organization_id")
         try:
             async with open_session() as session:
-                detail = await PlatformDirectoryOperations(session).suspend_organization(
+                operations = PlatformDirectoryOperations(session, self.call_lifecycle)
+                detail = await operations.suspend_organization(
                     user_id=user_id,
                     organization_id=org_id,
                     reason=request.reason,
@@ -197,7 +207,8 @@ class SystemOrganizationsHandlers:
         org_id = _parse_uuid(request.organization_id, "organization_id")
         try:
             async with open_session() as session:
-                detail = await PlatformDirectoryOperations(session).unsuspend_organization(
+                operations = PlatformDirectoryOperations(session, self.call_lifecycle)
+                detail = await operations.unsuspend_organization(
                     user_id=user_id,
                     organization_id=org_id,
                     reason=request.reason,
@@ -215,7 +226,8 @@ class SystemOrganizationsHandlers:
         org_id = _parse_uuid(request.organization_id, "organization_id")
         try:
             async with open_session() as session:
-                detail = await PlatformDirectoryOperations(session).delete_organization(
+                operations = PlatformDirectoryOperations(session, self.call_lifecycle)
+                detail = await operations.delete_organization(
                     user_id=user_id,
                     organization_id=org_id,
                     confirm_slug=request.confirm_slug,
@@ -234,7 +246,8 @@ class SystemOrganizationsHandlers:
         org_id = _parse_uuid(request.organization_id, "organization_id")
         try:
             async with open_session() as session:
-                detail = await PlatformDirectoryOperations(session).restore_organization(
+                operations = PlatformDirectoryOperations(session, self.call_lifecycle)
+                detail = await operations.restore_organization(
                     user_id=user_id,
                     organization_id=org_id,
                     reason=request.reason,
@@ -247,14 +260,20 @@ class SystemOrganizationsHandlers:
 
 
 class SystemUsersHandlers:
-    def __init__(self, search_indexer: SearchIndexer) -> None:
+    def __init__(
+        self,
+        search_indexer: SearchIndexer,
+        call_lifecycle: CallRevocationLifecycle,
+    ) -> None:
         self.search_indexer = search_indexer
+        self.call_lifecycle = call_lifecycle
 
     async def list_users(self, request: ListUsersRequest, ctx: RequestContext) -> ListUsersResponse:
         user_id = current_user_id()
         try:
             async with open_session() as session:
-                page = await PlatformDirectoryOperations(session).list_users(
+                operations = PlatformDirectoryOperations(session, self.call_lifecycle)
+                page = await operations.list_users(
                     user_id=user_id,
                     page=request.page,
                     page_size=request.page_size,
@@ -278,9 +297,8 @@ class SystemUsersHandlers:
         target_id = _parse_uuid(request.user_id, "user_id")
         try:
             async with open_session() as session:
-                detail = await PlatformDirectoryOperations(session).get_user(
-                    user_id=user_id, target_user_id=target_id
-                )
+                operations = PlatformDirectoryOperations(session, self.call_lifecycle)
+                detail = await operations.get_user(user_id=user_id, target_user_id=target_id)
         except ConnectError:
             raise
         except Exception as exc:
@@ -298,7 +316,8 @@ class SystemUsersHandlers:
         )
         try:
             async with open_session() as session:
-                detail = await PlatformDirectoryOperations(session).create_user(
+                operations = PlatformDirectoryOperations(session, self.call_lifecycle)
+                detail = await operations.create_user(
                     user_id=user_id,
                     email=request.email,
                     username=request.username,
@@ -324,7 +343,8 @@ class SystemUsersHandlers:
         target_id = _parse_uuid(request.user_id, "user_id")
         try:
             async with open_session() as session:
-                detail = await PlatformDirectoryOperations(session).update_user(
+                operations = PlatformDirectoryOperations(session, self.call_lifecycle)
+                detail = await operations.update_user(
                     user_id=user_id,
                     target_user_id=target_id,
                     reason=request.reason,
@@ -350,7 +370,8 @@ class SystemUsersHandlers:
         target_id = _parse_uuid(request.user_id, "user_id")
         try:
             async with open_session() as session:
-                await PlatformDirectoryOperations(session).force_logout_user(
+                operations = PlatformDirectoryOperations(session, self.call_lifecycle)
+                await operations.force_logout_user(
                     user_id=user_id,
                     target_user_id=target_id,
                     reason=request.reason,
@@ -368,7 +389,8 @@ class SystemUsersHandlers:
         target_id = _parse_uuid(request.user_id, "user_id")
         try:
             async with open_session() as session:
-                detail = await PlatformDirectoryOperations(session).set_system_admin(
+                operations = PlatformDirectoryOperations(session, self.call_lifecycle)
+                detail = await operations.set_system_admin(
                     user_id=user_id,
                     target_user_id=target_id,
                     is_system_admin=request.is_system_admin,
