@@ -14,7 +14,7 @@
 FROM node:24-trixie-slim
 
 COPY --from=ghcr.io/astral-sh/uv:0.11.12 /uv /uvx /usr/local/bin/
-COPY --from=bufbuild/buf:1.69.0 /usr/local/bin/buf /usr/local/bin/buf
+COPY --from=bufbuild/buf:1.73.0 /usr/local/bin/buf /usr/local/bin/buf
 COPY --from=ghcr.io/gitleaks/gitleaks:v8.29.0 /usr/bin/gitleaks /usr/local/bin/gitleaks
 # Go toolchain for `go mod tidy` in src/proto/gen/go after buf regenerates
 COPY --from=golang:1.26-trixie /usr/local/go /usr/local/go

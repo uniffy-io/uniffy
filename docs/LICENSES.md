@@ -44,7 +44,7 @@ Third-party trademarks (provider names and logos) are covered separately in [TRA
 | charset-normalizer     | 3.4.4       | MIT                                                 | https://github.com/jawah/charset_normalizer/blob/master/CHANGELOG.md               |
 | click                  | 8.5.0       | BSD-3-Clause                                        | https://github.com/pallets/click/                                                  |
 | colorama               | 0.4.6       | BSD License                                         | https://github.com/tartley/colorama                                                |
-| connectrpc             | 0.10.0      | Apache-2.0                                          | https://github.com/connectrpc/connect-python                                       |
+| connectrpc             | 0.12.1      | Apache-2.0                                          | https://github.com/connectrpc/connect-py                                           |
 | croniter               | 6.2.4       | MIT                                                 | https://github.com/pallets-eco/croniter                                            |
 | cryptography           | 50.0.1      | Apache-2.0 OR BSD-3-Clause                          | https://github.com/pyca/cryptography                                               |
 | distro                 | 1.9.0       | Apache Software License                             | https://github.com/python-distro/distro                                            |
@@ -92,8 +92,10 @@ Third-party trademarks (provider names and logos) are covered separately in [TRA
 | pluggy                 | 1.6.0       | MIT License                                         | UNKNOWN                                                                            |
 | prometheus_client      | 0.26.0      | Apache-2.0 AND BSD-2-Clause                         | https://github.com/prometheus/client_python                                        |
 | propcache              | 0.4.1       | Apache Software License                             | https://github.com/aio-libs/propcache                                              |
-| protobuf               | 7.36.1      | 3-Clause BSD License                                | https://developers.google.com/protocol-buffers/                                    |
-| protoc-gen-connectrpc  | 0.10.0      | Apache-2.0                                          | https://github.com/connectrpc/connect-python                                       |
+| protobuf               | 7.36.2      | 3-Clause BSD License                                | https://developers.google.com/protocol-buffers/                                    |
+| protobuf-py            | 0.5.0       | Apache-2.0                                          | https://github.com/bufbuild/protobuf-py                                            |
+| protobuf-py-ext        | 0.5.0       | UNKNOWN                                             | https://github.com/bufbuild/protobuf-py                                            |
+| protoc-gen-connectrpc  | 0.12.1      | Apache-2.0                                          | https://github.com/connectrpc/connect-py                                           |
 | psycopg2-binary        | 2.9.13      | GNU Library or Lesser General Public License (LGPL) | https://psycopg.org/                                                               |
 | py-cpuinfo2            | 10.1.1      | MIT                                                 | https://github.com/akx/py-cpuinfo2                                                 |
 | py-vapid               | 1.9.4       | MPL-2.0                                             | https://github.com/mozilla-services/vapid                                          |
@@ -269,8 +271,8 @@ Third-party trademarks (provider names and logos) are covered separately in [TRA
 | @bacons/apple-targets@5.0.0 | MIT | https://github.com/evanbacon/expo-apple-targets |
 | @bacons/xcode@1.0.0-alpha.32 | MIT | https://github.com/EvanBacon/xcode#readme |
 | @bruits/satteri-linux-x64-gnu@0.9.4 | Unknown | https://github.com/bruits/satteri#readme |
-| @bufbuild/protobuf@1.10.1 | (Apache-2.0 AND BSD-3-Clause) | https://github.com/bufbuild/protobuf-es#readme |
-| @bufbuild/protobuf@2.12.0 | (Apache-2.0 AND BSD-3-Clause) | https://github.com/bufbuild/protobuf-es#readme |
+| @bufbuild/protobuf@1.10.1 | (Apache-2.0 AND BSD-3-Clause) | https://protobufes.com/ |
+| @bufbuild/protobuf@2.15.0 | (Apache-2.0 AND BSD-3-Clause) | https://protobufes.com/ |
 | @callstack/liquid-glass@0.8.0 | MIT | https://github.com/callstack/liquid-glass#readme |
 | @capsizecss/unpack@4.0.0 | MIT | https://github.com/seek-oss/capsize#readme |
 | @clack/core@1.3.1 | MIT | https://github.com/bombshell-dev/clack/tree/main/packages/core#readme |
@@ -307,9 +309,9 @@ Third-party trademarks (provider names and logos) are covered separately in [TRA
 | @codemirror/theme-one-dark@6.1.3 | MIT | https://github.com/codemirror/theme-one-dark#readme |
 | @codemirror/view@6.40.0 | MIT | https://github.com/codemirror/view#readme |
 | @config-plugins/react-native-webrtc@13.0.0 | MIT | https://github.com/expo/config-plugins#readme |
-| @connectrpc/connect-node@2.1.1 | Apache-2.0 | https://github.com/connectrpc/connect-es#readme |
-| @connectrpc/connect-web@2.1.1 | Apache-2.0 | https://github.com/connectrpc/connect-es#readme |
-| @connectrpc/connect@2.1.1 | Apache-2.0 | https://github.com/connectrpc/connect-es#readme |
+| @connectrpc/connect-node@2.2.0 | Apache-2.0 | https://github.com/connectrpc/connect-es#readme |
+| @connectrpc/connect-web@2.2.0 | Apache-2.0 | https://github.com/connectrpc/connect-es#readme |
+| @connectrpc/connect@2.2.0 | Apache-2.0 | https://github.com/connectrpc/connect-es#readme |
 | @ctrl/tinycolor@4.2.0 | MIT | https://tinycolor.vercel.app |
 | @dnd-kit/accessibility@3.1.1 | MIT | https://github.com/clauderic/dnd-kit#readme |
 | @dnd-kit/core@6.3.1 | MIT | https://github.com/clauderic/dnd-kit#readme |

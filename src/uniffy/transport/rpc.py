@@ -6,7 +6,8 @@ from contextvars import ContextVar
 from typing import Any
 
 from connectrpc.code import Code
-from connectrpc.codec import Codec, proto_binary_codec, proto_json_codec
+from connectrpc.codec import Codec
+from connectrpc.compat import google_protobuf_binary_codec, google_protobuf_json_codec
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
@@ -63,10 +64,7 @@ def code_for_domain_error(error: UNIFFYError) -> Code | None:
 
 
 class StrictDecodeCodec:
-    """Request decoding runs before the interceptor chain, so a malformed body
-    (bad JSON, unknown field, garbage bytes) would otherwise reach the wire as
-    UNKNOWN on a 500 with the raw parser text. Decode failures become a bare
-    INVALID_ARGUMENT instead; encoding is server-built and stays untouched."""
+    """Keep parser details out of client-visible decoding errors."""
 
     def __init__(self, inner: Codec, name: str | None = None) -> None:
         self._inner = inner
@@ -78,9 +76,9 @@ class StrictDecodeCodec:
     def encode(self, message: Any) -> bytes:
         return self._inner.encode(message)
 
-    def decode(self, data: bytes | bytearray, message: Any) -> Any:
+    def decode(self, data: bytes | bytearray, message_class: type[Any]) -> Any:
         try:
-            return self._inner.decode(data, message)
+            return self._inner.decode(data, message_class)
         except ConnectError:
             raise
         except Exception as e:
@@ -89,9 +87,9 @@ class StrictDecodeCodec:
 
 
 def strict_request_codecs() -> list[Codec]:
-    json_codec = proto_json_codec()
+    json_codec = google_protobuf_json_codec(ignore_unknown_fields=False)
     return [
-        StrictDecodeCodec(proto_binary_codec()),
+        StrictDecodeCodec(google_protobuf_binary_codec()),
         StrictDecodeCodec(json_codec),
         # connect-go compatibility: the charset-suffixed content type is its
         # own codec name in the registry.
@@ -100,7 +98,7 @@ def strict_request_codecs() -> list[Codec]:
 
 
 def _rpc_labels(ctx: RequestContext) -> tuple[str, str]:
-    method_info = ctx.method()
+    method_info = ctx.method
     full_method = method_info.name if method_info else "unknown"
 
     if full_method and full_method != "unknown" and "/" in full_method:  # noqa: PLR2004

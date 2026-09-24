@@ -4,6 +4,7 @@ import os
 from collections.abc import Callable
 from contextlib import asynccontextmanager
 
+from connectrpc.server import DEFAULT_READ_MAX_BYTES
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -189,6 +190,11 @@ from uniffy.infrastructure.valkey.queue import close_queue, init_queue
 from uniffy.infrastructure.valkey.streams import close_streams_client, init_streams_client
 from uniffy.transport.http import setup_request_logging
 from uniffy.transport.rpc import LoggingInterceptor, http_version_var, strict_request_codecs
+
+# JSON adds base64 overhead to 5 MiB avatars, 10 MiB imports, and 50 MiB chunks.
+AVATAR_RPC_READ_MAX_BYTES = 8 * 1024**2
+CALENDAR_RPC_READ_MAX_BYTES = 16 * 1024**2
+FILES_RPC_READ_MAX_BYTES = 72 * 1024**2
 
 
 class HttpVersionMiddleware:
@@ -556,10 +562,17 @@ def _create_api_dispatcher(
         prefix: str,
         application_factory: Callable[..., ASGIApp],
         implementation: object,
+        *,
+        read_max_bytes: int = DEFAULT_READ_MAX_BYTES,
     ) -> None:
         dispatcher.add_service(
             prefix,
-            application_factory(implementation, interceptors=interceptors, codecs=codecs),
+            application_factory(
+                implementation,
+                interceptors=interceptors,
+                codecs=codecs,
+                read_max_bytes=read_max_bytes,
+            ),
         )
 
     def add_streaming_rpc(
@@ -622,6 +635,7 @@ def _create_api_dispatcher(
         "/users.v1.UsersService",
         UsersServiceASGIApplication,
         UsersServiceImpl(storage, search_indexer),
+        read_max_bytes=AVATAR_RPC_READ_MAX_BYTES,
     )
     add_rpc(
         "/organizations.v1.OrganizationsService",
@@ -642,11 +656,13 @@ def _create_api_dispatcher(
         "/cal.v1.CalendarService",
         CalendarServiceASGIApplication,
         CalendarServiceImpl(search_indexer, call_lifecycle),
+        read_max_bytes=CALENDAR_RPC_READ_MAX_BYTES,
     )
     add_rpc(
         "/files.v1.FilesService",
         FilesServiceASGIApplication,
         FilesServiceImpl(storage, search_indexer),
+        read_max_bytes=FILES_RPC_READ_MAX_BYTES,
     )
     add_rpc("/audit.v1.AuditService", AuditServiceASGIApplication, AuditServiceImpl())
     add_rpc("/mail.v1.OrgMailService", OrgMailServiceASGIApplication, OrgMailServiceImpl())
@@ -723,6 +739,7 @@ def _create_api_dispatcher(
         "/agents.v1.AgentsService",
         AgentsServiceASGIApplication,
         AgentsServiceImpl(storage, search_indexer),
+        read_max_bytes=AVATAR_RPC_READ_MAX_BYTES,
     )
     add_rpc("/agents.v1.SkillsService", SkillsServiceASGIApplication, SkillsHandlers())
     add_rpc(

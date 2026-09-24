@@ -24,10 +24,16 @@ files, chat attachments, editor paste, recording. It is framework-agnostic (no R
 outside the component tree, so uploads survive SPA navigation and belong to no page.
 
 Pipeline: `enqueue(inputs)` -> drain loop (concurrency `UPLOAD_MAX_CONCURRENT` = 4) -> per upload
-`filesApi.initiateUpload` -> `fileWorkerManager.uploadChunks` (slice + base64 + `UploadChunk` POSTs in a Web
-Worker pool, off the main thread, Bearer with 401-refresh) -> `filesApi.completeUpload`. Progress is throttled
-(<=200ms) before reaching subscribers; status changes emit immediately. Cancel passes an `operationId` so the
-worker loop actually aborts.
+`filesApi.initiateUpload` -> `fileWorkerManager.uploadChunks` (slice + binary protobuf through a generated
+Connect client in a dedicated upload worker, off the main thread, Bearer with auth-refresh) -> `filesApi.completeUpload`.
+All files share that worker's chunk budget. HTTP/1.1 or unknown protocol permits two chunks per file and
+three across uploads; observed HTTP/2 or HTTP/3 permits four per file and eight across uploads. Raw chunk
+buffers share a 128 MiB budget, acquired before reading a slice. Serialization can allocate additional copies.
+ZIP and concatenation use the remaining workers. Cancellation aborts active requests and queued slices;
+part failures settle sibling requests before reporting failure. Simultaneous auth failures share one refresh
+per upload. Resumed and out-of-order parts advance progress by completed count, not part number.
+Progress is throttled (<=200ms) before reaching subscribers; status changes emit immediately. Cancel passes
+an `operationId` so the worker loop actually aborts.
 
 Consumption (the engine owns its own state - a `Map` of `UploadRecord` + a blob map; read via
 `subscribe(listener)` / `getRecords()`):

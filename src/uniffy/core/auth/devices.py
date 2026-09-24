@@ -32,7 +32,7 @@ _APP_CLIENT_PATTERNS = [
 
 
 def request_user_agent(ctx: RequestContext) -> str:
-    return ctx.request_headers().get("user-agent", "")
+    return ctx.request_headers.get("user-agent", "")
 
 
 def parse_device_label(user_agent: str) -> str:

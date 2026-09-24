@@ -94,9 +94,9 @@ export class FileWorkerManager {
   }
 
   private getNextWorker(): { worker: Worker; index: number } {
-    const index = this.nextWorkerIndex;
+    const index = 1 + this.nextWorkerIndex;
     const worker = this.workers[index];
-    this.nextWorkerIndex = (this.nextWorkerIndex + 1) % this.workerCount;
+    this.nextWorkerIndex = (this.nextWorkerIndex + 1) % (this.workerCount - 1);
     return { worker, index };
   }
 
@@ -116,7 +116,13 @@ export class FileWorkerManager {
     }
 
     if (response.type === "TOKEN_NEEDED") {
-      const newToken = await this.refreshToken();
+      let newToken: string | null;
+      try {
+        newToken = await this.refreshToken();
+      } catch {
+        newToken = null;
+      }
+      if (!this.pendingOperations.has(response.id)) return;
       if (newToken) {
         this.workers[workerIndex].postMessage({
           type: "TOKEN_REFRESH",
@@ -124,6 +130,7 @@ export class FileWorkerManager {
           token: newToken,
         });
       } else {
+        this.workers[workerIndex].postMessage({ type: "ABORT", id: response.id });
         const op = this.pendingOperations.get(response.id);
         if (op) {
           op.reject(new Error("Authentication failed: could not refresh token"));
@@ -166,7 +173,11 @@ export class FileWorkerManager {
     }
 
     return new Promise((resolve, reject) => {
-      const { worker, index } = this.getNextWorker();
+      // All uploads share one worker's request budget; ZIP work uses the remaining pool.
+      const { worker, index } =
+        request.type === "UPLOAD_CHUNKS"
+          ? { worker: this.workers[0], index: 0 }
+          : this.getNextWorker();
 
       this.pendingOperations.set(request.id, {
         resolve: resolve as (value: unknown) => void,
@@ -212,6 +223,7 @@ export class FileWorkerManager {
         totalChunks,
         token,
         apiUrl,
+        httpProtocol: this.uploadProtocol(apiUrl),
         completedChunks,
       },
       undefined,
@@ -239,6 +251,23 @@ export class FileWorkerManager {
     );
   }
 
+  private uploadProtocol(apiUrl: string): string {
+    const base = new URL(apiUrl, location.href);
+    const prefix = base.href.replace(/\/$/, "") + "/";
+    const requests = performance.getEntriesByType("resource") as PerformanceResourceTiming[];
+    const observed = requests
+      .reverse()
+      .find((entry) => entry.name.startsWith(prefix) && entry.nextHopProtocol);
+    if (observed) return observed.nextHopProtocol;
+    if (base.origin === location.origin) {
+      return (
+        (performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming | undefined)
+          ?.nextHopProtocol ?? ""
+      );
+    }
+    return "";
+  }
+
   async concatChunks(chunks: ArrayBuffer[], mimeType: string): Promise<ArrayBuffer> {
     const id = generateId();
 
@@ -254,12 +283,9 @@ export class FileWorkerManager {
   }
 
   abort(operationId: string): void {
-    for (const worker of this.workers) {
-      worker.postMessage({ type: "ABORT", id: operationId });
-    }
-
     const op = this.pendingOperations.get(operationId);
     if (op) {
+      this.workers[op.workerIndex].postMessage({ type: "ABORT", id: operationId });
       op.reject(new Error("Operation aborted"));
       this.pendingOperations.delete(operationId);
     }

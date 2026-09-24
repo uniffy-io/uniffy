@@ -13,7 +13,7 @@ logger = logger.bind(component="auth.mfa.context")
 
 
 def _bearer_token(ctx: RequestContext) -> str | None:
-    authorization = ctx.request_headers().get("authorization", "")
+    authorization = ctx.request_headers.get("authorization", "")
     if not authorization.startswith("Bearer "):
         return None
     return authorization[7:]

@@ -158,7 +158,7 @@ def _set_asset_cookie(ctx: RequestContext, result: AuthResult) -> str:
 
 
 def _clear_asset_cookie(ctx: RequestContext) -> None:
-    ctx.response_headers().add("set-cookie", build_clear_cookie(resolve_asset_cookie_config()))
+    ctx.response_headers.add("set-cookie", build_clear_cookie(resolve_asset_cookie_config()))
 
 
 def _login_outcome_to_proto(
