@@ -1,9 +1,10 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import type { RootState } from "@/app/store";
-import type { DragState, HistoryEntry, ProjectScope } from "../types/ui";
-import type { ViewDefinition } from "../types/views";
-import { initialProjectsUiState } from "../types/ui";
-import { deleteTasks } from "./projectsThunks";
+import type { DragState, HistoryEntry, ProjectScope } from "@/features/projects/types/ui";
+import type { ViewDefinition } from "@/features/projects/types/views";
+import { initialProjectsUiState } from "@/features/projects/types/ui";
+import { deleteTasks } from "@/features/projects/store/projectsThunks";
+import { definitionsEqual } from "@/features/projects/utils/viewDraft";
 import { AUTH_ACTION_TYPES } from "@/features/auth/store/authActions";
 
 interface ViewKey {
@@ -33,6 +34,30 @@ export const projectsUiSlice = createSlice({
       if (!drafts || !(viewId in drafts)) return;
       delete drafts[viewId];
       if (Object.keys(drafts).length === 0) delete state.viewDrafts[projectId];
+    },
+
+    beginViewSave: (state, action: PayloadAction<ViewKey & { requestId: string }>) => {
+      const { projectId, viewId, requestId } = action.payload;
+      state.viewSaveRequests[projectId] = {
+        ...state.viewSaveRequests[projectId],
+        [viewId]: requestId,
+      };
+    },
+
+    finishViewSave: (
+      state,
+      action: PayloadAction<ViewKey & { requestId: string; definition?: ViewDefinition }>,
+    ) => {
+      const { projectId, viewId, requestId, definition } = action.payload;
+      const requests = state.viewSaveRequests[projectId];
+      if (requests?.[viewId] !== requestId) return;
+      delete requests[viewId];
+      if (Object.keys(requests).length === 0) delete state.viewSaveRequests[projectId];
+      const drafts = state.viewDrafts[projectId];
+      if (drafts?.[viewId] && definition && definitionsEqual(drafts[viewId], definition)) {
+        delete drafts[viewId];
+        if (Object.keys(drafts).length === 0) delete state.viewDrafts[projectId];
+      }
     },
 
     toggleOutlineRow: (state, action: PayloadAction<{ projectId: string; taskId: string }>) => {
@@ -220,6 +245,7 @@ export const projectsUiSlice = createSlice({
     builder.addCase(AUTH_ACTION_TYPES.LOGOUT, (state) => {
       state.activeViewIds = {};
       state.viewDrafts = {};
+      state.viewSaveRequests = {};
       state.outlineExpanded = {};
       state.searchQuery = "";
     });
@@ -238,6 +264,8 @@ export const {
   openView,
   putViewDraft,
   dropViewDraft,
+  beginViewSave,
+  finishViewSave,
   toggleOutlineRow,
   expandOutlineRow,
   selectTask,

@@ -28,6 +28,9 @@ export const selectProjectViews = (projectId: string) => (state: RootState) =>
 const selectDrafts = (projectId: string) => (state: RootState) =>
   state.projectsUi.viewDrafts[projectId] ?? NO_DRAFTS;
 
+export const selectIsViewSaving = (projectId: string, viewId: string) => (state: RootState) =>
+  Boolean(state.projectsUi.viewSaveRequests[projectId]?.[viewId]);
+
 /**
  * The view opened last, else the project default, else the first view. A remembered id the caller
  * can no longer see (deleted, or made personal by someone else) falls through the same way.

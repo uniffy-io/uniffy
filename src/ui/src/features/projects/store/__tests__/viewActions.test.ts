@@ -2,6 +2,7 @@ import { combineReducers, configureStore } from "@reduxjs/toolkit";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SortDirection, ViewVisibility } from "@uniffy/proto/projects/v1/projects_pb";
 import type { AppDispatch, RootState } from "@/app/store";
+import { AUTH_ACTION_TYPES } from "@/features/auth/store/authActions";
 import { projectsApi } from "@/features/projects/api/projectsApi";
 import { projectsReducer } from "@/features/projects/store/projectsSlice";
 import { openView, projectsUiReducer } from "@/features/projects/store/projectsUiSlice";
@@ -15,7 +16,16 @@ import {
   saveViewDraft,
 } from "@/features/projects/store/viewActions";
 import { setDraftSort } from "@/features/projects/store/viewDraftThunks";
-import { selectActiveView, selectIsActiveViewDirty } from "@/features/projects/store/viewSelectors";
+import {
+  selectActiveDefinition,
+  selectActiveView,
+  selectIsActiveViewDirty,
+  selectIsViewSaving,
+} from "@/features/projects/store/viewSelectors";
+import {
+  persistedProjectsUi,
+  rehydrateProjectsUi,
+} from "@/features/projects/store/projectsUiPersist";
 import type { Project } from "@/features/projects/types/project";
 import type { ViewConfig, ViewDefinition, ViewType } from "@/features/projects/types/views";
 import { emptyDefinition } from "@/features/projects/utils/viewDraft";
@@ -82,7 +92,102 @@ function makeStore() {
 
 beforeEach(() => vi.resetAllMocks());
 
+function deferUpdate() {
+  let resolve!: (response: { view: ViewConfig }) => void;
+  let reject!: (error: Error) => void;
+  vi.mocked(projectsApi.updateView).mockReturnValue(
+    new Promise((resolveResponse, rejectResponse) => {
+      resolve = resolveResponse;
+      reject = rejectResponse;
+    }),
+  );
+  return { resolve, reject };
+}
+
 describe("saving a draft", () => {
+  it.each(["success", "failure"])(
+    "preserves an edit back to the saved definition on %s",
+    async (outcome) => {
+      const { dispatch, state } = makeStore();
+      dispatch(setDraftSort("p", SORT));
+      const saved = { ...TABLE, definition: { ...TABLE.definition, sort: SORT } };
+      const response = deferUpdate();
+      const pending = dispatch(saveViewDraft("p", TABLE.id));
+      dispatch(setDraftSort("p", []));
+      expect(selectIsViewSaving("p", TABLE.id)(state())).toBe(true);
+
+      if (outcome === "success") response.resolve({ view: saved });
+      else response.reject(new Error("save failed"));
+      expect(await pending).toBe(outcome === "success");
+
+      expect(selectActiveDefinition("p")(state()).sort).toEqual([]);
+      expect(selectIsActiveViewDirty("p")(state())).toBe(outcome === "success");
+      expect(selectActiveView("p")(state())?.definition.sort).toEqual(
+        outcome === "success" ? SORT : [],
+      );
+      expect(state().projectsUi.viewSaveRequests).toEqual({});
+      if (outcome === "failure") expect(state().projectsUi.viewDrafts).toEqual({});
+    },
+  );
+
+  it("blocks overlapping saves of one view while preserving later edits", async () => {
+    const { dispatch, state } = makeStore();
+    dispatch(setDraftSort("p", SORT));
+    const response = deferUpdate();
+    const pending = dispatch(saveViewDraft("p", TABLE.id));
+    dispatch(setDraftSort("p", []));
+    dispatch(openView({ projectId: "p", viewId: BOARD.id }));
+    expect(selectIsViewSaving("p", BOARD.id)(state())).toBe(false);
+    dispatch(openView({ projectId: "p", viewId: TABLE.id }));
+
+    expect(await dispatch(saveViewDraft("p", TABLE.id))).toBe(false);
+    expect(projectsApi.updateView).toHaveBeenCalledTimes(1);
+    response.resolve({ view: { ...TABLE, definition: { ...TABLE.definition, sort: SORT } } });
+    await pending;
+
+    expect(selectActiveDefinition("p")(state()).sort).toEqual([]);
+    expect(selectIsViewSaving("p", TABLE.id)(state())).toBe(false);
+  });
+
+  it("clears pending state on logout and ignores completion of that save", async () => {
+    const { dispatch, state } = makeStore();
+    dispatch(setDraftSort("p", SORT));
+    const firstResponse = deferUpdate();
+    const first = dispatch(saveViewDraft("p", TABLE.id));
+    dispatch({ type: AUTH_ACTION_TYPES.LOGOUT });
+    expect(state().projectsUi.viewSaveRequests).toEqual({});
+    expect(state().projectsUi.viewDrafts).toEqual({});
+
+    dispatch(setDraftSort("p", SORT));
+    const secondResponse = deferUpdate();
+    const second = dispatch(saveViewDraft("p", TABLE.id));
+    const saved = { ...TABLE, definition: { ...TABLE.definition, sort: SORT } };
+    firstResponse.resolve({ view: saved });
+    await first;
+
+    expect(selectIsViewSaving("p", TABLE.id)(state())).toBe(true);
+    expect(state().projectsUi.viewDrafts.p[TABLE.id].sort).toEqual(SORT);
+    secondResponse.resolve({ view: saved });
+    await second;
+    expect(state().projectsUi.viewSaveRequests).toEqual({});
+    expect(state().projectsUi.viewDrafts).toEqual({});
+  });
+
+  it("persists edits made during a save without persisting the pending request", async () => {
+    const { dispatch, state } = makeStore();
+    dispatch(setDraftSort("p", SORT));
+    const response = deferUpdate();
+    const pending = dispatch(saveViewDraft("p", TABLE.id));
+    dispatch(setDraftSort("p", []));
+
+    const restored = rehydrateProjectsUi(persistedProjectsUi(state().projectsUi));
+    expect(restored.viewSaveRequests).toEqual({});
+    expect(restored.viewDrafts.p[TABLE.id].sort).toEqual([]);
+
+    response.resolve({ view: { ...TABLE, definition: { ...TABLE.definition, sort: SORT } } });
+    await pending;
+  });
+
   it.each(["save", "save as"])("keeps edits made while %s is pending", async (action) => {
     const { dispatch, state } = makeStore();
     dispatch(setDraftSort("p", SORT));

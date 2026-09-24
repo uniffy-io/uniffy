@@ -1,4 +1,4 @@
-import type { ThunkAction, UnknownAction } from "@reduxjs/toolkit";
+import { nanoid, type ThunkAction, type UnknownAction } from "@reduxjs/toolkit";
 import { arrayMove } from "@dnd-kit/sortable";
 import { ViewVisibility } from "@uniffy/proto/projects/v1/projects_pb";
 import type { RootState } from "@/app/store";
@@ -10,8 +10,13 @@ import {
   updateProject,
   updateViewThunk,
 } from "@/features/projects/store/projectsThunks";
-import { dropViewDraft, openView } from "@/features/projects/store/projectsUiSlice";
-import { selectProjectViews } from "@/features/projects/store/viewSelectors";
+import {
+  beginViewSave,
+  dropViewDraft,
+  finishViewSave,
+  openView,
+} from "@/features/projects/store/projectsUiSlice";
+import { selectIsViewSaving, selectProjectViews } from "@/features/projects/store/viewSelectors";
 import { definitionsEqual, emptyDefinition } from "@/features/projects/utils/viewDraft";
 import { VIEW_TYPE_OPTIONS } from "@/features/projects/utils/viewTypes";
 
@@ -32,15 +37,20 @@ function draftOf(state: RootState, projectId: string, viewId: string): ViewDefin
 
 export function saveViewDraft(projectId: string, viewId: string): ViewThunk<boolean> {
   return async (dispatch, getState) => {
-    const definition = draftOf(getState(), projectId, viewId);
-    if (!definition) return false;
-    const result = await dispatch(updateViewThunk({ projectId, viewId, updates: { definition } }));
-    if (!updateViewThunk.fulfilled.match(result)) return false;
-    const current = draftOf(getState(), projectId, viewId);
-    if (current && definitionsEqual(current, definition)) {
-      dispatch(dropViewDraft({ projectId, viewId }));
+    const state = getState();
+    const definition = draftOf(state, projectId, viewId);
+    if (!definition || selectIsViewSaving(projectId, viewId)(state)) return false;
+    const requestId = nanoid();
+    dispatch(beginViewSave({ projectId, viewId, requestId }));
+    try {
+      const result = await dispatch(
+        updateViewThunk({ projectId, viewId, updates: { definition } }),
+      );
+      return updateViewThunk.fulfilled.match(result);
+    } finally {
+      const saved = selectProjectViews(projectId)(getState()).find((view) => view.id === viewId);
+      dispatch(finishViewSave({ projectId, viewId, requestId, definition: saved?.definition }));
     }
-    return true;
   };
 }
 

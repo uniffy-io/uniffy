@@ -9,7 +9,11 @@ import type {
   ViewSortKey,
 } from "@/features/projects/types/views";
 import { dropViewDraft, putViewDraft } from "@/features/projects/store/projectsUiSlice";
-import { selectActiveDefinition, selectActiveView } from "@/features/projects/store/viewSelectors";
+import {
+  selectActiveDefinition,
+  selectActiveView,
+  selectIsViewSaving,
+} from "@/features/projects/store/viewSelectors";
 import {
   definitionsEqual,
   toggleCollapsedKey,
@@ -18,10 +22,7 @@ import {
 
 type DraftThunk = ThunkAction<void, RootState, undefined, UnknownAction>;
 
-/**
- * Applies an edit to the open view of a project. The result is kept as a draft only while it
- * differs from the saved definition, so undoing an edit by hand leaves the view clean.
- */
+/** Keep edits during a save even when they match the definition that save will replace. */
 export function editActiveDraft(
   projectId: string,
   edit: (definition: ViewDefinition) => ViewDefinition,
@@ -31,7 +32,7 @@ export function editActiveDraft(
     const view = selectActiveView(projectId)(state);
     if (!view) return;
     const next = edit(selectActiveDefinition(projectId)(state));
-    if (definitionsEqual(next, view.definition)) {
+    if (!selectIsViewSaving(projectId, view.id)(state) && definitionsEqual(next, view.definition)) {
       dispatch(dropViewDraft({ projectId, viewId: view.id }));
     } else {
       dispatch(putViewDraft({ projectId, viewId: view.id, definition: next }));

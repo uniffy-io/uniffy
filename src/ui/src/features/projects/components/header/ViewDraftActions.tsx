@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { ArrowCounterClockwise, CopySimple, FloppyDisk } from "@phosphor-icons/react";
 import { ViewVisibility } from "@uniffy/proto/projects/v1/projects_pb";
-import { useAppDispatch } from "@/app/hooks";
+import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { Button } from "@/components/ui/button";
 import type { ViewConfig } from "@/features/projects/types";
 import { dropViewDraft } from "@/features/projects/store/projectsUiSlice";
 import { saveViewAs, saveViewDraft } from "@/features/projects/store/viewActions";
+import { selectIsViewSaving } from "@/features/projects/store/viewSelectors";
 import { ViewNameDialog } from "@/features/projects/components/header/ViewNameDialog";
 
 interface ViewDraftActionsProps {
@@ -24,17 +25,8 @@ export function ViewDraftActions({
   compact,
 }: ViewDraftActionsProps) {
   const dispatch = useAppDispatch();
-  const [isSaving, setIsSaving] = useState(false);
+  const isSaving = useAppSelector(selectIsViewSaving(projectId, view.id));
   const [isSaveAsOpen, setIsSaveAsOpen] = useState(false);
-
-  const handleSave = async () => {
-    setIsSaving(true);
-    try {
-      await dispatch(saveViewDraft(projectId, view.id));
-    } finally {
-      setIsSaving(false);
-    }
-  };
 
   return (
     <div
@@ -46,7 +38,7 @@ export function ViewDraftActions({
         <Button
           size="sm"
           className="h-11 min-w-11 lg:h-7 lg:min-w-0 gap-1 px-2 text-xs"
-          onClick={handleSave}
+          onClick={() => dispatch(saveViewDraft(projectId, view.id))}
           loading={isSaving}
           title="Save changes to this view"
         >

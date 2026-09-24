@@ -1,4 +1,4 @@
-import type { ViewDefinition } from "./views";
+import type { ViewDefinition } from "@/features/projects/types/views";
 
 export type ProjectScope = "all" | "personal" | "organization";
 
@@ -44,11 +44,9 @@ export interface HistoryEntry {
 export interface ProjectsUiState {
   /** Last opened view per project id. */
   activeViewIds: Record<string, string>;
-  /**
-   * Unsaved edits per project id, then per view id (view ids repeat across projects). A view with
-   * no entry shows its saved definition; an entry is dropped once it matches the saved one again.
-   */
+  /** Drafts are scoped by project because view ids repeat across projects. */
   viewDrafts: Record<string, Record<string, ViewDefinition>>;
+  viewSaveRequests: Record<string, Record<string, string>>;
   /** Expanded parent rows of the table outline per project; row state, never part of a view. */
   outlineExpanded: Record<string, string[]>;
 
@@ -97,6 +95,7 @@ function localTodayString(): string {
 export const initialProjectsUiState: ProjectsUiState = {
   activeViewIds: {},
   viewDrafts: {},
+  viewSaveRequests: {},
   outlineExpanded: {},
 
   selectedTaskId: null,
