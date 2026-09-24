@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
+from uniffy.core.errors import PermissionDeniedError, ValidationError
 from uniffy.core.models.agents.skill import AgentSkill, AgentSkillSource, AgentSkillStatus
 from uniffy.core.models.agents.skill_version import AgentSkillVersion
 from uniffy.core.types import generate_id
@@ -218,7 +218,7 @@ class TestRunnableSkills:
         proto = runnable_skill_to_proto(skill)
         assert proto.name == "report"
         # the menu payload must not carry skill content (progressive disclosure on the wire)
-        assert "content" not in proto.DESCRIPTOR.fields_by_name
+        assert "content" not in {field.name for field in proto.desc().fields}
 
     def testparse_invoked_skill_id_from_metadata(self) -> None:
         from uniffy.domains.agents.invocation import parse_invoked_skill_id
@@ -333,7 +333,7 @@ class TestSkillDraftConverters:
         assert proto.author_kind == "agent"
         assert proto.change_summary == "Edited via draft"
         # No author_id set -> the optional proto field stays unset.
-        assert not proto.HasField("author_id")
+        assert not proto.has_field("author_id")
 
 
 def _edit_ops(monkeypatch):

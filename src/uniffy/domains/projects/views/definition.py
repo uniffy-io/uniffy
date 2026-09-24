@@ -3,19 +3,26 @@
 import math
 import re
 from collections.abc import Sequence
+from copy import deepcopy
 from dataclasses import dataclass
 from datetime import date
 from enum import StrEnum
 from typing import Any, NoReturn
 from uuid import UUID
 
-from google.protobuf import json_format
 from loguru import logger
-from uniffy_proto.projects.v1.projects_pb2 import (
+from protobuf import Oneof
+from uniffy_proto.projects.v1.projects_pb import (
+    BacklogLayout,
+    BoardLayout,
     FilterLogic,
+    GraphLayout,
     RelativeDateAnchor,
+    ResourcesLayout,
+    RoadmapLayout,
     RoadmapZoom,
     SortDirection,
+    TableLayout,
     TaskFieldRef,
     TaskFilterCondition,
     TaskFilterDate,
@@ -29,6 +36,7 @@ from uniffy_proto.projects.v1.projects_pb2 import (
 )
 
 from uniffy.core.errors import ValidationError
+from uniffy.core.json_codec import dumps_bytes, loads
 from uniffy.core.models.projects.field_definition import FieldDefinition, ProjectFieldType
 from uniffy.core.models.projects.task import TaskType
 from uniffy.core.models.projects.view_config import ProjectViewType
@@ -65,16 +73,14 @@ MAX_VIEW_NAME_LENGTH = 100
 MAX_RELATIVE_OFFSET_DAYS = 3660
 
 _DATE_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2}$")
-_DIRECTIONS = frozenset({SortDirection.SORT_DIRECTION_ASC, SortDirection.SORT_DIRECTION_DESC})
-_LOGICS = frozenset({FilterLogic.FILTER_LOGIC_AND, FilterLogic.FILTER_LOGIC_OR})
+_DIRECTIONS = frozenset({SortDirection.ASC, SortDirection.DESC})
+_LOGICS = frozenset({FilterLogic.AND, FilterLogic.OR})
 _ZOOMS = frozenset({
-    RoadmapZoom.ROADMAP_ZOOM_DAY,
-    RoadmapZoom.ROADMAP_ZOOM_WEEK,
-    RoadmapZoom.ROADMAP_ZOOM_MONTH,
+    RoadmapZoom.DAY,
+    RoadmapZoom.WEEK,
+    RoadmapZoom.MONTH,
 })
-_ANCHORS = frozenset(RelativeDateAnchor.values()) - {
-    RelativeDateAnchor.RELATIVE_DATE_ANCHOR_UNSPECIFIED
-}
+_ANCHORS = frozenset(tuple(RelativeDateAnchor)) - {RelativeDateAnchor.UNSPECIFIED}
 _TASK_TYPES = frozenset(TaskType)
 
 
@@ -142,15 +148,19 @@ def _enum_label(name: str, prefix: str) -> str:
 
 
 def _operator_label(operator: TaskFilterOperator) -> str:
-    return _enum_label(TaskFilterOperator.Name(operator), "TASK_FILTER_OPERATOR_")
+    return _enum_label(TaskFilterOperator(operator).name, "TASK_FILTER_OPERATOR_")
 
 
 def _ref_key(ref: TaskFieldRef) -> tuple[str | None, str, int]:
-    return ref.WhichOneof("ref"), ref.field_id, ref.pseudo
+    if ref.ref is None:
+        return None, "", 0
+    if ref.ref.field == RefCase.FIELD_ID:
+        return ref.ref.field, ref.ref.value, 0
+    return ref.ref.field, "", ref.ref.value
 
 
 def view_type_for(definition: ViewDefinition) -> ProjectViewType:
-    case = definition.WhichOneof("layout")
+    case = definition.layout.field if definition.layout is not None else None
     if case is None:
         raise ValidationError("definition", "A view needs a layout")
     return VIEW_TYPE_BY_LAYOUT[LayoutCase(case)]
@@ -166,32 +176,30 @@ def validate_view_name(name: str) -> str:
 
 
 def _normalize_group(group: TaskFilterGroup) -> None:
-    if group.logic == FilterLogic.FILTER_LOGIC_UNSPECIFIED:
-        group.logic = FilterLogic.FILTER_LOGIC_AND
+    if group.logic == FilterLogic.UNSPECIFIED:
+        group.logic = FilterLogic.AND
     for node in group.nodes:
-        if node.WhichOneof("node") == NodeCase.GROUP:
-            _normalize_group(node.group)
+        if (node.node.field if node.node is not None else None) == NodeCase.GROUP:
+            _normalize_group(node.node.value)
 
 
 def normalize_definition(definition: ViewDefinition) -> ViewDefinition:
     """Unset enums take their documented defaults so stored definitions never carry them."""
-    normalized = ViewDefinition()
-    normalized.CopyFrom(definition)
-    if normalized.HasField("filter"):
+    normalized = deepcopy(definition)
+    if normalized.has_field("filter"):
         _normalize_group(normalized.filter)
     for key in normalized.sort:
-        if key.direction == SortDirection.SORT_DIRECTION_UNSPECIFIED:
-            key.direction = SortDirection.SORT_DIRECTION_ASC
+        if key.direction == SortDirection.UNSPECIFIED:
+            key.direction = SortDirection.ASC
     if (
-        normalized.HasField("group_by")
-        and normalized.group_by.direction == SortDirection.SORT_DIRECTION_UNSPECIFIED
+        normalized.has_field("group_by")
+        and normalized.group_by.direction == SortDirection.UNSPECIFIED
     ):
-        normalized.group_by.direction = SortDirection.SORT_DIRECTION_ASC
+        normalized.group_by.direction = SortDirection.ASC
     if (
-        normalized.WhichOneof("layout") == LayoutCase.ROADMAP
-        and normalized.roadmap.zoom == RoadmapZoom.ROADMAP_ZOOM_UNSPECIFIED
-    ):
-        normalized.roadmap.zoom = RoadmapZoom.ROADMAP_ZOOM_WEEK
+        normalized.layout.field if normalized.layout is not None else None
+    ) == LayoutCase.ROADMAP and normalized.layout.value.zoom == RoadmapZoom.UNSPECIFIED:
+        normalized.layout.value.zoom = RoadmapZoom.WEEK
     return normalized
 
 
@@ -202,25 +210,31 @@ class _Validator:
         # A stored view may name fields and options deleted since; those match nothing.
         self.stored = stored
 
-    def resolve(self, ref: TaskFieldRef, where: str) -> _ResolvedField:
-        case = ref.WhichOneof("ref")
+    def resolve(self, ref: TaskFieldRef | None, where: str) -> _ResolvedField:
+        if ref is None:
+            _fail(f"{where}: select a field or task attribute")
+        case = ref.ref.field if ref.ref is not None else None
         if case == RefCase.FIELD_ID:
-            field = self.fields.get(ref.field_id)
+            field = self.fields.get(ref.ref.value)
             kind = FIELD_TYPE_KINDS.get(ProjectFieldType(field.type)) if field else None
             if field is None or kind is None:
-                raise ValidationError("definition", f"{where}: unknown field '{ref.field_id}'")
+                raise ValidationError("definition", f"{where}: unknown field '{ref.ref.value}'")
             # The id rides along so a client can point at the offending condition.
             return _ResolvedField(kind, f"{field.name} ({field.id})", field, None)
         if case == RefCase.PSEUDO:
-            kind = PSEUDO_FIELD_KINDS.get(ref.pseudo)
+            kind = PSEUDO_FIELD_KINDS.get(ref.ref.value)
             if kind is None:
                 raise ValidationError("definition", f"{where}: unknown task attribute")
-            label = _enum_label(TaskPseudoField.Name(ref.pseudo), "TASK_PSEUDO_FIELD_")
-            return _ResolvedField(kind, label, None, ref.pseudo)
+            label = _enum_label(TaskPseudoField(ref.ref.value).name, "TASK_PSEUDO_FIELD_")
+            return _ResolvedField(kind, label, None, ref.ref.value)
         raise ValidationError("definition", f"{where}: a field is required")
 
-    def is_gone(self, ref: TaskFieldRef) -> bool:
-        return ref.WhichOneof("ref") == RefCase.FIELD_ID and ref.field_id not in self.fields
+    def is_gone(self, ref: TaskFieldRef | None) -> bool:
+        if ref is None:
+            return False
+        return (
+            ref.ref.field if ref.ref is not None else None
+        ) == RefCase.FIELD_ID and ref.ref.value not in self.fields
 
     def filter_group(self, group: TaskFilterGroup, path: str, depth: int) -> None:
         if depth > MAX_FILTER_DEPTH:
@@ -232,11 +246,11 @@ class _Validator:
             if self.node_count > MAX_FILTER_NODES:
                 _fail(f"A filter holds at most {MAX_FILTER_NODES} conditions and groups")
             where = f"{path}.{index}" if path else str(index)
-            case = node.WhichOneof("node")
+            case = node.node.field if node.node is not None else None
             if case == NodeCase.CONDITION:
-                self.condition(node.condition, f"Filter condition {where}")
+                self.condition(node.node.value, f"Filter condition {where}")
             elif case == NodeCase.GROUP:
-                self.filter_group(node.group, where, depth + 1)
+                self.filter_group(node.node.value, where, depth + 1)
             else:
                 _fail(f"Filter node {where} is empty")
 
@@ -249,15 +263,15 @@ class _Validator:
         if operator not in operators_for(resolved.kind, resolved.pseudo):
             name = (
                 _operator_label(operator)
-                if operator in TaskFilterOperator.values()
+                if operator in tuple(TaskFilterOperator)
                 else "unknown operator"
             )
             _fail(f"{where}: '{label}' does not support '{name}'")
         if operator in EMPTINESS_OPERATORS:
-            if condition.HasField("value"):
+            if condition.has_field("value"):
                 _fail(f"{where}: '{label}' takes no value for '{_operator_label(operator)}'")
             return
-        if not condition.HasField("value"):
+        if not condition.has_field("value"):
             _fail(f"{where}: '{label}' needs a value")
 
         value = condition.value
@@ -270,7 +284,10 @@ class _Validator:
             self.number_value(operator, value, where, label)
         elif kind in (FieldKind.DATE, FieldKind.TIMESTAMP):
             self.date_condition_value(operator, value, where, label)
-        elif kind is FieldKind.BOOLEAN and value.WhichOneof("value") != ValueCase.FLAG:
+        elif (
+            kind is FieldKind.BOOLEAN
+            and (value.value.field if value.value is not None else None) != ValueCase.FLAG
+        ):
             _fail(f"{where}: '{label}' needs yes or no")
 
     def id_value(
@@ -281,14 +298,14 @@ class _Validator:
         where: str,
     ) -> None:
         label = resolved.label
-        if value.WhichOneof("value") != ValueCase.IDS:
+        if (value.value.field if value.value is not None else None) != ValueCase.IDS:
             _fail(f"{where}: '{label}' needs a list of values")
-        id_set = value.ids
+        id_set = value.value.value
         flags = _id_flags(id_set)
         allowed = ID_FLAGS[resolved.kind]
         if flags - allowed:
             _fail(f"{where}: '{label}' does not accept {_flag_label(min(flags - allowed))}")
-        if operator == TaskFilterOperator.TASK_FILTER_OPERATOR_IS_ALL_OF and IdFlag.EMPTY in flags:
+        if operator == TaskFilterOperator.IS_ALL_OF and IdFlag.EMPTY in flags:
             _fail(f"{where}: '{label}' cannot require an empty value alongside others")
         ids = list(id_set.ids)
         count = len(ids) + len(flags)
@@ -323,54 +340,58 @@ class _Validator:
                     _fail(f"{where}: '{label}' has an invalid id '{raw}'")
 
     def text_value(self, value: TaskFilterValue, where: str, label: str) -> None:
-        if value.WhichOneof("value") != ValueCase.TEXT or not value.text.strip():
+        if (
+            value.value.field if value.value is not None else None
+        ) != ValueCase.TEXT or not value.value.value.strip():
             _fail(f"{where}: '{label}' needs text")
-        if len(value.text) > MAX_TEXT_LENGTH:
+        if len(value.value.value) > MAX_TEXT_LENGTH:
             _fail(f"{where}: '{label}' text is at most {MAX_TEXT_LENGTH} characters")
 
     def number_value(
         self, operator: TaskFilterOperator, value: TaskFilterValue, where: str, label: str
     ) -> None:
-        case = value.WhichOneof("value")
-        if operator == TaskFilterOperator.TASK_FILTER_OPERATOR_BETWEEN:
+        case = value.value.field if value.value is not None else None
+        if operator == TaskFilterOperator.BETWEEN:
             if case != ValueCase.NUMBER_RANGE:
                 _fail(f"{where}: '{label}' needs a number range")
-            bounds = (value.number_range.min, value.number_range.max)
+            bounds = (value.value.value.min, value.value.value.max)
             if not all(math.isfinite(bound) for bound in bounds) or bounds[0] > bounds[1]:
                 _fail(f"{where}: '{label}' needs a range whose start is not after its end")
             return
-        if case != ValueCase.NUMBER or not math.isfinite(value.number):
+        if case != ValueCase.NUMBER or not math.isfinite(value.value.value):
             _fail(f"{where}: '{label}' needs a number")
 
     def date_condition_value(
         self, operator: TaskFilterOperator, value: TaskFilterValue, where: str, label: str
     ) -> None:
-        case = value.WhichOneof("value")
-        if operator == TaskFilterOperator.TASK_FILTER_OPERATOR_BETWEEN:
+        case = value.value.field if value.value is not None else None
+        if operator == TaskFilterOperator.BETWEEN:
             if case != ValueCase.DATE_RANGE:
                 _fail(f"{where}: '{label}' needs a date range")
-            start = self.date_value(value.date_range.start, where, label)
-            end = self.date_value(value.date_range.end, where, label)
+            start = self.date_value(value.value.value.start, where, label)
+            end = self.date_value(value.value.value.end, where, label)
             if start and end and start > end:
                 _fail(f"{where}: '{label}' needs a range whose start is not after its end")
             return
         if case != ValueCase.DATE:
             _fail(f"{where}: '{label}' needs a date")
-        self.date_value(value.date, where, label)
+        self.date_value(value.value.value, where, label)
 
-    def date_value(self, value: TaskFilterDate, where: str, label: str) -> date | None:
-        case = value.WhichOneof("value")
+    def date_value(self, value: TaskFilterDate | None, where: str, label: str) -> date | None:
+        if value is None:
+            _fail(f"{where}: '{label}' needs a date")
+        case = value.value.field if value.value is not None else None
         if case == DateCase.FIXED:
-            if not _DATE_PATTERN.match(value.fixed):
+            if not _DATE_PATTERN.match(value.value.value):
                 _fail(f"{where}: '{label}' needs a date as YYYY-MM-DD")
             try:
-                return date.fromisoformat(value.fixed)
+                return date.fromisoformat(value.value.value)
             except ValueError:
-                _fail(f"{where}: '{value.fixed}' is not a calendar date")
+                _fail(f"{where}: '{value.value.value}' is not a calendar date")
         if case == DateCase.RELATIVE:
-            if value.relative.anchor not in _ANCHORS:
+            if value.value.value.anchor not in _ANCHORS:
                 _fail(f"{where}: '{label}' has a relative date without an anchor")
-            if abs(value.relative.offset_days) > MAX_RELATIVE_OFFSET_DAYS:
+            if abs(value.value.value.offset_days) > MAX_RELATIVE_OFFSET_DAYS:
                 _fail(f"{where}: '{label}' offsets at most {MAX_RELATIVE_OFFSET_DAYS} days")
             return None
         _fail(f"{where}: '{label}' needs a date")
@@ -391,7 +412,7 @@ class _Validator:
                 _fail(f"{where}: unknown direction")
 
     def group_by(self, definition: ViewDefinition) -> None:
-        if not definition.HasField("group_by"):
+        if not definition.has_field("group_by"):
             return
         resolved = self.resolve(definition.group_by.field, "Group by")
         if resolved.kind not in GROUPABLE_KINDS:
@@ -429,12 +450,12 @@ class _Validator:
             _fail(f"Collapsed group keys are at most {MAX_GROUP_KEY_LENGTH} characters")
 
     def layout(self, definition: ViewDefinition) -> None:
-        case = definition.WhichOneof("layout")
-        if case == LayoutCase.BOARD and definition.board.column_field_id:
-            field = self.fields.get(definition.board.column_field_id)
+        case = definition.layout.field if definition.layout is not None else None
+        if case == LayoutCase.BOARD and definition.layout.value.column_field_id:
+            field = self.fields.get(definition.layout.value.column_field_id)
             if field is None or ProjectFieldType(field.type) is not ProjectFieldType.SINGLE_SELECT:
                 _fail("Board columns need a single-select field of this project")
-        if case == LayoutCase.ROADMAP and definition.roadmap.zoom not in _ZOOMS:
+        if case == LayoutCase.ROADMAP and definition.layout.value.zoom not in _ZOOMS:
             _fail("Roadmap zoom is unknown")
 
 
@@ -462,7 +483,7 @@ def validate_definition(definition: ViewDefinition, fields: list[FieldDefinition
     view_type_for(definition)
     validator = _Validator(fields)
     validator.layout(definition)
-    if definition.HasField("filter"):
+    if definition.has_field("filter"):
         validator.filter_group(definition.filter, "", 1)
     validator.sort(definition.sort)
     validator.group_by(definition)
@@ -475,8 +496,7 @@ def validate_task_filter(
     """A task list's filter, held to the rules a saved view's is; ``stored`` for a saved view's
     own filter, which may name fields and options deleted since it was saved.
     """
-    normalized = TaskFilterGroup()
-    normalized.CopyFrom(task_filter)
+    normalized = deepcopy(task_filter)
     _normalize_group(normalized)
     try:
         _Validator(fields, stored=stored).filter_group(normalized, "", 1)
@@ -494,10 +514,9 @@ def validate_task_sort(
     for key in sort:
         if stored and validator.is_gone(key.field):
             continue
-        normalized = TaskSort()
-        normalized.CopyFrom(key)
-        if normalized.direction == SortDirection.SORT_DIRECTION_UNSPECIFIED:
-            normalized.direction = SortDirection.SORT_DIRECTION_ASC
+        normalized = deepcopy(key)
+        if normalized.direction == SortDirection.UNSPECIFIED:
+            normalized.direction = SortDirection.ASC
         keys.append(normalized)
     try:
         validator.sort(keys)
@@ -515,25 +534,35 @@ def prepare_definition(
 
 
 def layout_only_definition(view_type: ProjectViewType) -> ViewDefinition:
-    definition = ViewDefinition()
-    getattr(definition, LAYOUT_BY_VIEW_TYPE[view_type].value).SetInParent()
-    return definition
+    match view_type:
+        case ProjectViewType.TABLE:
+            return ViewDefinition(layout=Oneof(field="table", value=TableLayout()))
+        case ProjectViewType.BOARD:
+            return ViewDefinition(layout=Oneof(field="board", value=BoardLayout()))
+        case ProjectViewType.ROADMAP:
+            return ViewDefinition(layout=Oneof(field="roadmap", value=RoadmapLayout()))
+        case ProjectViewType.BACKLOG:
+            return ViewDefinition(layout=Oneof(field="backlog", value=BacklogLayout()))
+        case ProjectViewType.GRAPH:
+            return ViewDefinition(layout=Oneof(field="graph", value=GraphLayout()))
+        case ProjectViewType.RESOURCES:
+            return ViewDefinition(layout=Oneof(field="resources", value=ResourcesLayout()))
+    raise ValidationError("definition", "Unknown view layout")
 
 
 def definition_to_dict(definition: ViewDefinition) -> dict[str, Any]:
-    return json_format.MessageToDict(definition, preserving_proto_field_name=True)
+    return loads(definition.to_json(use_proto_field_name=True))
 
 
 def definition_from_dict(data: dict[str, Any], view_type: ProjectViewType) -> ViewDefinition:
     """A stored definition that no longer parses degrades to its bare layout."""
-    definition = ViewDefinition()
     try:
-        json_format.ParseDict(data, definition, ignore_unknown_fields=True)
-    except json_format.ParseError:
+        definition = ViewDefinition.from_json(dumps_bytes(data), ignore_unknown_fields=True)
+    except ValueError:
         logger.opt(exception=True).warning(
             "Stored view definition does not parse", view_type=str(view_type)
         )
         return layout_only_definition(view_type)
-    if definition.WhichOneof("layout") is None:
+    if (definition.layout.field if definition.layout is not None else None) is None:
         return layout_only_definition(view_type)
     return definition

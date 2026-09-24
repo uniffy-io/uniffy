@@ -3,7 +3,7 @@
 from uuid import UUID
 
 from connectrpc.request import RequestContext
-from uniffy_proto.agents.v1 import rules_pb2 as pb
+from uniffy_proto.agents.v1 import rules_pb as pb
 
 from uniffy.core.auth.principal import current_user_id, resolve_organization_id
 from uniffy.core.errors import ValidationError

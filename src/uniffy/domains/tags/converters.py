@@ -1,19 +1,19 @@
 from collections.abc import Iterable
 from uuid import UUID
 
-from uniffy_proto.tags.v1.tags_pb2 import (
+from uniffy_proto.tags.v1.tags_pb import (
     Tag as ProtoTag,
 )
-from uniffy_proto.tags.v1.tags_pb2 import (
+from uniffy_proto.tags.v1.tags_pb import (
     TagAssignment as ProtoTagAssignment,
 )
-from uniffy_proto.tags.v1.tags_pb2 import (
+from uniffy_proto.tags.v1.tags_pb import (
     TaggedContentItem as ProtoTaggedContentItem,
 )
-from uniffy_proto.tags.v1.tags_pb2 import (
+from uniffy_proto.tags.v1.tags_pb import (
     TagSort as ProtoTagSort,
 )
-from uniffy_proto.tags.v1.tags_pb2 import (
+from uniffy_proto.tags.v1.tags_pb import (
     TagSource as ProtoTagSource,
 )
 
@@ -24,18 +24,18 @@ from uniffy.core.types import ContentType
 from uniffy.domains.tags.reader import SOURCE_INLINE, SOURCE_MANUAL, TagSort
 
 _SORT_FROM_PROTO: dict[int, TagSort] = {
-    ProtoTagSort.TAG_SORT_UNSPECIFIED: TagSort.RECENT_DESC,
-    ProtoTagSort.TAG_SORT_COUNT_DESC: TagSort.RECENT_DESC,
-    ProtoTagSort.TAG_SORT_COUNT_ASC: TagSort.RECENT_DESC,
-    ProtoTagSort.TAG_SORT_ALPHA_ASC: TagSort.ALPHA_ASC,
-    ProtoTagSort.TAG_SORT_ALPHA_DESC: TagSort.ALPHA_DESC,
-    ProtoTagSort.TAG_SORT_RECENT_DESC: TagSort.RECENT_DESC,
+    ProtoTagSort.UNSPECIFIED: TagSort.RECENT_DESC,
+    ProtoTagSort.COUNT_DESC: TagSort.RECENT_DESC,
+    ProtoTagSort.COUNT_ASC: TagSort.RECENT_DESC,
+    ProtoTagSort.ALPHA_ASC: TagSort.ALPHA_ASC,
+    ProtoTagSort.ALPHA_DESC: TagSort.ALPHA_DESC,
+    ProtoTagSort.RECENT_DESC: TagSort.RECENT_DESC,
 }
 
 _SOURCE_FROM_PROTO: dict[int, str | None] = {
-    ProtoTagSource.TAG_SOURCE_UNSPECIFIED: None,
-    ProtoTagSource.TAG_SOURCE_MANUAL: SOURCE_MANUAL,
-    ProtoTagSource.TAG_SOURCE_INLINE: SOURCE_INLINE,
+    ProtoTagSource.UNSPECIFIED: None,
+    ProtoTagSource.MANUAL: SOURCE_MANUAL,
+    ProtoTagSource.INLINE: SOURCE_INLINE,
 }
 
 
@@ -67,7 +67,7 @@ def tag_to_proto(tag: Tag, *, usage_count: int = 0) -> ProtoTag:
     )
     last_used = optional_timestamp(tag.last_used_at)
     if last_used is not None:
-        proto.last_used_at.CopyFrom(last_used)
+        proto.last_used_at = last_used
     return proto
 
 

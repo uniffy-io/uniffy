@@ -6,10 +6,10 @@ from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
-from uniffy_proto.chat.v1.chat_pb2 import (
+from uniffy_proto.chat.v1.chat_pb import (
     ChatMessage as ProtoChatMessage,
 )
-from uniffy_proto.chat.v1.chat_pb2 import (
+from uniffy_proto.chat.v1.chat_pb import (
     FollowThreadRequest,
     FollowThreadResponse,
     GetThreadMessagesRequest,
@@ -99,7 +99,7 @@ class ThreadHandlers:
                     is_following=is_following,
                 )
                 if stats and stats.last_reply_at:
-                    resp.last_reply_at.CopyFrom(datetime_to_timestamp(stats.last_reply_at))
+                    resp.last_reply_at = datetime_to_timestamp(stats.last_reply_at)
                 attributions = await read_response_skill_attributions(
                     session,
                     organization_id=org_id,
@@ -126,9 +126,9 @@ class ThreadHandlers:
 
         before_id = None
         after_id = None
-        if request.HasField("before_id"):
+        if request.has_field("before_id"):
             before_id = UUID(request.before_id)
-        if request.HasField("after_id"):
+        if request.has_field("after_id"):
             after_id = UUID(request.after_id)
 
         try:
@@ -238,7 +238,7 @@ class ThreadHandlers:
         if sender_avatar:
             root_proto.sender_avatar_url = sender_avatar
         if row.created_at:
-            root_proto.created_at.CopyFrom(datetime_to_timestamp(row.created_at))
+            root_proto.created_at = datetime_to_timestamp(row.created_at)
 
         item = ThreadInboxItem(
             root_message_id=str(row.thread.root_message_id),
@@ -248,7 +248,7 @@ class ThreadHandlers:
             reply_count=row.stats.reply_count,
         )
         if row.stats.last_reply_at:
-            item.last_reply_at.CopyFrom(datetime_to_timestamp(row.stats.last_reply_at))
+            item.last_reply_at = datetime_to_timestamp(row.stats.last_reply_at)
         return item
 
     async def follow_thread(

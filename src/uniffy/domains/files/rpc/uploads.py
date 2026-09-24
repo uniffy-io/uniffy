@@ -7,7 +7,7 @@ from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
-from uniffy_proto.files.v1.files_pb2 import (
+from uniffy_proto.files.v1.files_pb import (
     AbortUploadRequest,
     AbortUploadResponse,
     CompleteUploadRequest,
@@ -71,7 +71,7 @@ class UploadHandlers:
                     baseline_role = content_role_from_proto(request.baseline_role)
 
                 folder_id = None
-                if request.HasField("folder_id"):
+                if request.has_field("folder_id"):
                     try:
                         folder_id = UUID(request.folder_id)
                     except ValueError:

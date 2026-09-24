@@ -10,8 +10,8 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import UUID
 
 import pytest
-from uniffy_proto.common.v1.common_pb2 import ContentType as ProtoContentType
-from uniffy_proto.tags.v1.tags_pb2 import TagFilterCriteria as ProtoTagFilterCriteria
+from uniffy_proto.common.v1.common_pb import ContentType as ProtoContentType
+from uniffy_proto.tags.v1.tags_pb import TagFilterCriteria as ProtoTagFilterCriteria
 
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
 from uniffy.core.models.tags.saved_filter import SavedTagFilter
@@ -171,7 +171,7 @@ def test_criteria_round_trip_basic() -> None:
         owner_ids=["u1"],
         sources=[SOURCE_MANUAL],
     )
-    proto.content_types.extend([ProtoContentType.CONTENT_TYPE_NOTE])
+    proto.content_types.extend([ProtoContentType.NOTE])
     proto.untagged_only = False
 
     out = criteria_from_proto(proto)
@@ -185,7 +185,7 @@ def test_criteria_round_trip_basic() -> None:
     assert list(proto2.tag_ids) == ["a", "b"]
     assert list(proto2.owner_ids) == ["u1"]
     assert list(proto2.sources) == [SOURCE_MANUAL]
-    assert list(proto2.content_types) == [ProtoContentType.CONTENT_TYPE_NOTE]
+    assert list(proto2.content_types) == [ProtoContentType.NOTE]
 
 
 def test_criteria_strips_unknown_sources() -> None:
@@ -205,7 +205,7 @@ def test_criteria_untagged_only_round_trip() -> None:
 def test_criteria_to_proto_handles_iso_dates() -> None:
     started = datetime(2026, 1, 1, tzinfo=UTC).isoformat()
     proto = criteria_to_proto({"created_after": started})
-    assert proto.HasField("created_after")
+    assert proto.has_field("created_after")
     assert proto.created_after.seconds > 0
 
 

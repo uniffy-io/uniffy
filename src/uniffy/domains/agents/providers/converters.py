@@ -1,9 +1,9 @@
 """Proto <-> domain converters for providers."""
 
-from uniffy_proto.agents.v1.providers_pb2 import (
+from uniffy_proto.agents.v1.providers_pb import (
     ModelInfo as ProtoModelInfo,
 )
-from uniffy_proto.agents.v1.providers_pb2 import ProviderKeyInfo
+from uniffy_proto.agents.v1.providers_pb import ProviderKeyInfo
 
 from uniffy.core.converters import datetime_to_timestamp
 from uniffy.core.json_codec import dumps_str
@@ -39,10 +39,10 @@ def provider_key_to_proto(
     )
 
     if key.last_validated_at:
-        info.last_validated_at.CopyFrom(datetime_to_timestamp(key.last_validated_at))
+        info.last_validated_at = datetime_to_timestamp(key.last_validated_at)
 
     if key.last_used_at:
-        info.last_used_at.CopyFrom(datetime_to_timestamp(key.last_used_at))
+        info.last_used_at = datetime_to_timestamp(key.last_used_at)
 
     if include_diagnostics and key.last_error:
         info.last_error = key.last_error

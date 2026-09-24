@@ -146,7 +146,7 @@ class TestEditAffordances:
 
     def test_absent_field_stays_unset_rather_than_empty(self) -> None:
         person = profile_to_proto(_payload(mobile_phone=None), relation=ViewerRelation.SELF)
-        assert not person.HasField("mobile_phone")
+        assert not person.has_field("mobile_phone")
 
 
 class TestNoContentBypass:

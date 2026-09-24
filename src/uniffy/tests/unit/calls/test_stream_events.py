@@ -2,8 +2,8 @@
 
 from datetime import UTC, datetime
 
-from uniffy_proto.calls.v1.calls_pb2 import CallType as ProtoCallType
-from uniffy_proto.chat.v1.chat_stream_pb2 import ChatEventType
+from uniffy_proto.calls.v1.calls_pb import CallType as ProtoCallType
+from uniffy_proto.chat.v1.chat_stream_pb import ChatEventType
 
 from uniffy.core.types import generate_id
 from uniffy.domains.chat.streaming import events as evt
@@ -63,11 +63,11 @@ def test_call_started_carries_snapshot():
     event = _payload_to_channel_event(
         _wire(evt.CALL_STARTED, evt.build_call_lifecycle_payload(call))
     )
-    assert event.event_type == ChatEventType.CHAT_EVENT_TYPE_CALL_STARTED
+    assert event.event_type == ChatEventType.CALL_STARTED
     assert event.channel_id == "chan-1"
-    assert event.call_lifecycle.call.id == call_id
-    assert event.call_lifecycle.call.call_type == ProtoCallType.CALL_TYPE_CHANNEL
-    assert event.call_lifecycle.call.participants[0].identity == "u1:d1"
+    assert event.payload.value.call.id == call_id
+    assert event.payload.value.call.call_type == ProtoCallType.CHANNEL
+    assert event.payload.value.call.participants[0].identity == "u1:d1"
 
 
 def test_call_ended_maps_end_reason():
@@ -84,22 +84,22 @@ def test_call_ended_maps_end_reason():
         "participants": [],
     }
     event = _payload_to_channel_event(_wire(evt.CALL_ENDED, evt.build_call_lifecycle_payload(call)))
-    assert event.event_type == ChatEventType.CHAT_EVENT_TYPE_CALL_ENDED
-    assert event.call_lifecycle.call.HasField("ended_at")
+    assert event.event_type == ChatEventType.CALL_ENDED
+    assert event.payload.value.call.has_field("ended_at")
 
 
 def test_participant_events_carry_count():
     call_id = generate_id()
     for event_name, proto_type in (
-        (evt.CALL_PARTICIPANT_JOINED, ChatEventType.CHAT_EVENT_TYPE_CALL_PARTICIPANT_JOINED),
-        (evt.CALL_PARTICIPANT_LEFT, ChatEventType.CHAT_EVENT_TYPE_CALL_PARTICIPANT_LEFT),
-        (evt.CALL_PARTICIPANT_STATE, ChatEventType.CHAT_EVENT_TYPE_CALL_PARTICIPANT_STATE),
+        (evt.CALL_PARTICIPANT_JOINED, ChatEventType.CALL_PARTICIPANT_JOINED),
+        (evt.CALL_PARTICIPANT_LEFT, ChatEventType.CALL_PARTICIPANT_LEFT),
+        (evt.CALL_PARTICIPANT_STATE, ChatEventType.CALL_PARTICIPANT_STATE),
     ):
         payload = evt.build_call_participant_payload(call_id, _participant_dict(), 3)
         event = _payload_to_channel_event(_wire(event_name, payload))
         assert event.event_type == proto_type
-        assert event.call_participant.call_id == str(call_id)
-        assert event.call_participant.active_participant_count == 3
+        assert event.payload.value.call_id == str(call_id)
+        assert event.payload.value.active_participant_count == 3
 
 
 def test_call_ring_payload():
@@ -115,16 +115,16 @@ def test_call_ring_payload():
         expires_at=datetime.now(UTC),
     )
     event = _payload_to_channel_event(_wire(evt.CALL_RING, payload))
-    assert event.event_type == ChatEventType.CHAT_EVENT_TYPE_CALL_RING
-    assert event.call_ring.call_id == str(call_id)
-    assert event.call_ring.call_type == ProtoCallType.CALL_TYPE_GROUP_DM
-    assert event.call_ring.caller_name == "Alice"
-    assert event.call_ring.HasField("expires_at")
+    assert event.event_type == ChatEventType.CALL_RING
+    assert event.payload.value.call_id == str(call_id)
+    assert event.payload.value.call_type == ProtoCallType.GROUP_DM
+    assert event.payload.value.caller_name == "Alice"
+    assert event.payload.value.has_field("expires_at")
 
 
 def test_call_host_changed():
     call_id, new_host = generate_id(), generate_id()
     payload = evt.build_call_host_changed_payload(call_id, new_host)
     event = _payload_to_channel_event(_wire(evt.CALL_HOST_CHANGED, payload))
-    assert event.event_type == ChatEventType.CHAT_EVENT_TYPE_CALL_HOST_CHANGED
-    assert event.call_host_changed.new_host_user_id == str(new_host)
+    assert event.event_type == ChatEventType.CALL_HOST_CHANGED
+    assert event.payload.value.new_host_user_id == str(new_host)

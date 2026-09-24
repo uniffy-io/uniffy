@@ -5,6 +5,7 @@ from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
+from uniffy.core.converters.proto import timestamp_to_datetime
 from uniffy.core.models.calendar.feed_token import CalendarFeedToken
 from uniffy.domains.scheduling.calendar.rpc.interop import InteropHandlers
 
@@ -72,8 +73,8 @@ class TestGet:
         )
 
         assert response.url == "https://example.test/api/calendar/feed/live-token.ics"
-        assert response.created_at.ToDatetime(tzinfo=UTC) == MINTED_AT
-        assert response.last_used_at.ToDatetime(tzinfo=UTC) == FETCHED_AT
+        assert timestamp_to_datetime(response.created_at) == MINTED_AT
+        assert timestamp_to_datetime(response.last_used_at) == FETCHED_AT
 
     async def test_no_feed_reports_an_empty_url(self):
         response = await _call(
@@ -81,7 +82,7 @@ class TestGet:
         )
 
         assert response.url == ""
-        assert not response.HasField("created_at")
+        assert not response.has_field("created_at")
 
     async def test_a_feed_never_fetched_reports_no_last_use(self):
         response = await _call(
@@ -91,8 +92,8 @@ class TestGet:
             feed_url=lambda token: f"https://example.test/{token}",
         )
 
-        assert not response.HasField("last_used_at")
-        assert response.HasField("created_at")
+        assert not response.has_field("last_used_at")
+        assert response.has_field("created_at")
 
 
 class TestRegenerate:
@@ -105,7 +106,7 @@ class TestRegenerate:
         )
 
         assert response.url.endswith("fresh-token.ics")
-        assert response.created_at.ToDatetime(tzinfo=UTC) == MINTED_AT
+        assert timestamp_to_datetime(response.created_at) == MINTED_AT
 
     async def test_it_mints_for_the_caller_on_the_named_calendar(self):
         issuer = AsyncMock(return_value=("fresh-token", _row()))

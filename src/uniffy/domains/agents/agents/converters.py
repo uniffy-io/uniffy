@@ -1,7 +1,7 @@
 """Proto <-> domain converters for the agents domain."""
 
-from uniffy_proto.agents.v1.agents_pb2 import AgentInfo, ToolInfo
-from uniffy_proto.agents.v1.agents_pb2 import AgentTemplate as AgentTemplateProto
+from uniffy_proto.agents.v1.agents_pb import AgentInfo, ToolInfo
+from uniffy_proto.agents.v1.agents_pb import AgentTemplate as AgentTemplateProto
 
 from uniffy.core.avatars import get_avatar_url
 from uniffy.core.converters import datetime_to_timestamp
@@ -75,7 +75,7 @@ def agent_to_proto(
     )
 
     if agent.deleted_at is not None:
-        proto.deleted_at.CopyFrom(datetime_to_timestamp(agent.deleted_at))
+        proto.deleted_at = datetime_to_timestamp(agent.deleted_at)
 
     if resolved_baseline is not None:
         proto.baseline_role = content_role_to_proto(resolved_baseline)

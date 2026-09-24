@@ -1,26 +1,25 @@
 import pytest
-from google.protobuf.descriptor_pb2 import DescriptorProto
-from uniffy_proto.agents.v1 import sessions_pb2, skills_pb2
-from uniffy_proto.chat.v1 import chat_pb2
+from uniffy_proto.agents.v1 import sessions_pb, skills_pb
+from uniffy_proto.chat.v1 import chat_pb
 
 
 def test_sessions_expose_no_rating_rpc_or_payloads():
-    service = sessions_pb2.DESCRIPTOR.services_by_name["SessionsService"]
-    assert "SubmitMessageFeedback" not in service.methods_by_name
+    service = next(item for item in sessions_pb.desc().services if item.name == "SessionsService")
+    assert "SubmitMessageFeedback" not in {method.name for method in service.methods}
     assert not {
         "SubmitMessageFeedbackRequest",
         "SubmitMessageFeedbackResponse",
         "MessageFeedback",
-    }.intersection(sessions_pb2.DESCRIPTOR.message_types_by_name)
+    }.intersection(message.name for message in sessions_pb.desc().messages)
 
 
 @pytest.mark.parametrize(
     ("message", "removed"),
     [
-        (sessions_pb2.MessageInfo, {20: "feedback_rating"}),
-        (chat_pb2.ChatMessage, {13: "feedback_rating"}),
+        (sessions_pb.MessageInfo, {20: "feedback_rating"}),
+        (chat_pb.ChatMessage, {13: "feedback_rating"}),
         (
-            skills_pb2.SkillMetric,
+            skills_pb.SkillMetric,
             {
                 15: "rated_response_count",
                 16: "positive_feedback_count",
@@ -33,10 +32,9 @@ def test_sessions_expose_no_rating_rpc_or_payloads():
     ],
 )
 def test_removed_rating_fields_are_reserved(message, removed):
-    descriptor = DescriptorProto()
-    message.DESCRIPTOR.CopyToProto(descriptor)
+    descriptor = message.desc().proto
     for number, name in removed.items():
-        assert name not in message.DESCRIPTOR.fields_by_name
-        assert number not in message.DESCRIPTOR.fields_by_number
+        assert name not in {field.name for field in message.desc().fields}
+        assert number not in {field.number for field in message.desc().fields}
         assert name in descriptor.reserved_name
         assert any(span.start <= number < span.end for span in descriptor.reserved_range)

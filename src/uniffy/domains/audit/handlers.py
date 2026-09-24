@@ -13,15 +13,14 @@ from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
-from uniffy_proto.audit.v1.audit_pb2 import (
-    EXPORT_FORMAT_CSV,
-    EXPORT_FORMAT_JSON,
-    SORT_ORDER_TIME_ASC,
+from uniffy_proto.audit.v1.audit_pb import (
     ExportEventsRequest,
     ExportEventsResponse,
     ListEventsRequest,
     ListEventsResponse,
 )
+from uniffy_proto.audit.v1.audit_pb import ExportFormat as _ProtoExportFormat
+from uniffy_proto.audit.v1.audit_pb import SortOrder as _ProtoSortOrder
 
 from uniffy.core.auth.principal import current_user_id
 from uniffy.core.converters.proto import timestamp_to_datetime
@@ -78,12 +77,12 @@ class AuditHandlers:
 
         actor_user_id = (
             _parse_uuid(request.actor_user_id, "actor_user_id")
-            if request.HasField("actor_user_id")
+            if request.has_field("actor_user_id")
             else None
         )
         resource_id = (
             _parse_uuid(request.resource_id, "resource_id")
-            if request.HasField("resource_id")
+            if request.has_field("resource_id")
             else None
         )
 
@@ -93,20 +92,22 @@ class AuditHandlers:
             actions=tuple(request.actions),
             resource_type=(
                 _parse_resource_type(request.resource_type)
-                if request.HasField("resource_type")
+                if request.has_field("resource_type")
                 else None
             ),
             resource_id=resource_id,
             from_time=(
-                timestamp_to_datetime(request.from_time) if request.HasField("from_time") else None
+                timestamp_to_datetime(request.from_time) if request.has_field("from_time") else None
             ),
             to_time=(
-                timestamp_to_datetime(request.to_time) if request.HasField("to_time") else None
+                timestamp_to_datetime(request.to_time) if request.has_field("to_time") else None
             ),
             page_size=request.page_size,
-            page_token=request.page_token if request.HasField("page_token") else None,
+            page_token=request.page_token if request.has_field("page_token") else None,
             order=(
-                SortOrder.TIME_ASC if request.order == SORT_ORDER_TIME_ASC else SortOrder.TIME_DESC
+                SortOrder.TIME_ASC
+                if request.order == _ProtoSortOrder.TIME_ASC
+                else SortOrder.TIME_DESC
             ),
         )
 
@@ -132,11 +133,11 @@ class AuditHandlers:
     ) -> AsyncIterator[ExportEventsResponse]:
         """Stream a CSV / NDJSON dump of every row matching the filter."""
         user_id = current_user_id()
-        filter_msg = request.filter
+        filter_msg = request.filter if request.filter is not None else ListEventsRequest()
 
-        if request.format == EXPORT_FORMAT_CSV:
+        if request.format == _ProtoExportFormat.CSV:
             export_format = ExportFormat.CSV
-        elif request.format == EXPORT_FORMAT_JSON:
+        elif request.format == _ProtoExportFormat.JSON:
             export_format = ExportFormat.NDJSON
         else:
             raise ConnectError(
@@ -147,12 +148,12 @@ class AuditHandlers:
         organization_id = _parse_uuid(filter_msg.organization_id, "organization_id")
         actor_user_id = (
             _parse_uuid(filter_msg.actor_user_id, "actor_user_id")
-            if filter_msg.HasField("actor_user_id")
+            if filter_msg.has_field("actor_user_id")
             else None
         )
         resource_id = (
             _parse_uuid(filter_msg.resource_id, "resource_id")
-            if filter_msg.HasField("resource_id")
+            if filter_msg.has_field("resource_id")
             else None
         )
 
@@ -162,17 +163,19 @@ class AuditHandlers:
             actions=tuple(filter_msg.actions),
             resource_type=(
                 _parse_resource_type(filter_msg.resource_type)
-                if filter_msg.HasField("resource_type")
+                if filter_msg.has_field("resource_type")
                 else None
             ),
             resource_id=resource_id,
             from_time=(
                 timestamp_to_datetime(filter_msg.from_time)
-                if filter_msg.HasField("from_time")
+                if filter_msg.has_field("from_time")
                 else None
             ),
             to_time=(
-                timestamp_to_datetime(filter_msg.to_time) if filter_msg.HasField("to_time") else None
+                timestamp_to_datetime(filter_msg.to_time)
+                if filter_msg.has_field("to_time")
+                else None
             ),
         )
 

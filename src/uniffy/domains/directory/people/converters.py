@@ -8,7 +8,7 @@ from datetime import UTC, datetime, time
 from datetime import date as date_type
 from typing import Any
 
-from uniffy_proto.people.v1 import people_pb2 as pb
+from uniffy_proto.people.v1 import people_pb as pb
 
 from uniffy.core.avatars import get_avatar_url
 from uniffy.core.converters import datetime_to_timestamp, org_role_to_proto
@@ -21,10 +21,10 @@ from uniffy.domains.directory.people.access import ViewerRelation
 from uniffy.domains.directory.people.policy import ResolvedProfilePolicy
 
 _SOURCE_KIND_TO_PROTO = {
-    IdentitySourceKind.LOCAL: pb.IDENTITY_SOURCE_KIND_LOCAL,
-    IdentitySourceKind.SCIM: pb.IDENTITY_SOURCE_KIND_SCIM,
-    IdentitySourceKind.LDAP: pb.IDENTITY_SOURCE_KIND_LDAP,
-    IdentitySourceKind.OIDC: pb.IDENTITY_SOURCE_KIND_OIDC,
+    IdentitySourceKind.LOCAL: pb.IdentitySourceKind.LOCAL,
+    IdentitySourceKind.SCIM: pb.IdentitySourceKind.SCIM,
+    IdentitySourceKind.LDAP: pb.IdentitySourceKind.LDAP,
+    IdentitySourceKind.OIDC: pb.IdentitySourceKind.OIDC,
 }
 SOURCE_KIND_FROM_PROTO = {proto: kind for kind, proto in _SOURCE_KIND_TO_PROTO.items()}
 
@@ -97,7 +97,7 @@ def identity_source_to_proto(source: IdentitySource) -> pb.IdentitySource:
         created_at=datetime_to_timestamp(source.created_at),
     )
     if source.last_sync_at:
-        message.last_sync_at.CopyFrom(datetime_to_timestamp(source.last_sync_at))
+        message.last_sync_at = datetime_to_timestamp(source.last_sync_at)
     if source.last_sync_status:
         message.last_sync_status = source.last_sync_status
     if source.last_sync_error:
@@ -190,7 +190,7 @@ def profile_to_proto(
         start = datetime.combine(
             date_type.fromisoformat(payload["start_date"]), time.min, tzinfo=UTC
         )
-        person.start_date.CopyFrom(datetime_to_timestamp(start))
+        person.start_date = datetime_to_timestamp(start)
     person.links.extend(
         pb.ProfileLink(label=link.get("label", ""), url=link.get("url", ""))
         for link in payload["links"]

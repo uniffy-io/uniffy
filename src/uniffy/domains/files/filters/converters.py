@@ -2,13 +2,13 @@
 
 from typing import Any
 
-from uniffy_proto.files.v1.files_pb2 import (
+from uniffy_proto.files.v1.files_pb import (
     FilterCriteria as ProtoFilterCriteria,
 )
-from uniffy_proto.files.v1.files_pb2 import (
+from uniffy_proto.files.v1.files_pb import (
     IconValue as ProtoIconValue,
 )
-from uniffy_proto.files.v1.files_pb2 import (
+from uniffy_proto.files.v1.files_pb import (
     SavedFilter as ProtoSavedFilter,
 )
 
@@ -17,6 +17,7 @@ from uniffy.core.converters.common_proto import (
     access_mode_from_proto,
     access_mode_to_proto,
 )
+from uniffy.core.json_codec import loads
 from uniffy.core.models.files.saved_filter import SavedFileFilter
 from uniffy.core.types import AccessMode
 
@@ -37,7 +38,7 @@ def saved_filter_to_proto(filter_model: SavedFileFilter) -> ProtoSavedFilter:
         proto.description = filter_model.description
 
     if filter_model.icon:
-        proto.icon.CopyFrom(icon_to_proto(filter_model.icon))
+        proto.icon = icon_to_proto(filter_model.icon)
 
     if filter_model.sort_by:
         proto.sort_by = filter_model.sort_by
@@ -86,12 +87,12 @@ def criteria_to_proto(criteria: dict[str, Any]) -> ProtoFilterCriteria:
     if "created_after" in criteria and criteria["created_after"]:  # noqa: PLR2004
         ts = timestamp_to_datetime(criteria["created_after"])
         if ts:
-            proto.created_after.CopyFrom(datetime_to_timestamp(ts))
+            proto.created_after = datetime_to_timestamp(ts)
 
     if "created_before" in criteria and criteria["created_before"]:  # noqa: PLR2004
         ts = timestamp_to_datetime(criteria["created_before"])
         if ts:
-            proto.created_before.CopyFrom(datetime_to_timestamp(ts))
+            proto.created_before = datetime_to_timestamp(ts)
 
     return proto
 
@@ -116,16 +117,16 @@ def criteria_from_proto(proto: ProtoFilterCriteria) -> dict[str, Any]:
         if mode is not None:
             criteria["access_mode"] = mode.value
 
-    if proto.HasField("size_min_bytes"):
+    if proto.has_field("size_min_bytes"):
         criteria["size_min_bytes"] = proto.size_min_bytes
 
-    if proto.HasField("size_max_bytes"):
+    if proto.has_field("size_max_bytes"):
         criteria["size_max_bytes"] = proto.size_max_bytes
 
-    if proto.HasField("created_after"):
-        criteria["created_after"] = proto.created_after.ToJsonString()
+    if proto.has_field("created_after"):
+        criteria["created_after"] = loads(proto.created_after.to_json())
 
-    if proto.HasField("created_before"):
-        criteria["created_before"] = proto.created_before.ToJsonString()
+    if proto.has_field("created_before"):
+        criteria["created_before"] = loads(proto.created_before.to_json())
 
     return criteria

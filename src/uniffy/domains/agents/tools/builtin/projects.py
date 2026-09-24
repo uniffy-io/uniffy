@@ -3,9 +3,9 @@
 import contextlib
 from uuid import UUID
 
-from google.protobuf import json_format
-from uniffy_proto.projects.v1.projects_pb2 import TaskFilterGroup, TaskSort
+from uniffy_proto.projects.v1.projects_pb import TaskFilterGroup, TaskSort
 
+from uniffy.core.json_codec import dumps_bytes
 from uniffy.domains.agents.runtime.output_format import OutputSurface
 from uniffy.domains.agents.tools.builtin.args import (
     MARKDOWN_CONTENT_DOC,
@@ -478,10 +478,10 @@ def _parse_task_query(
     sort: list[TaskSort] | None = None
     try:
         if args.get("filter"):
-            task_filter = json_format.ParseDict(args["filter"], TaskFilterGroup())
+            task_filter = TaskFilterGroup.from_json(dumps_bytes(args["filter"]))
         if args.get("sort"):
-            sort = [json_format.ParseDict(key, TaskSort()) for key in args["sort"]]
-    except (json_format.ParseError, TypeError) as exc:
+            sort = [TaskSort.from_json(dumps_bytes(key)) for key in args["sort"]]
+    except (ValueError, TypeError) as exc:
         return None, None, f"Invalid filter or sort: {exc}"
     return task_filter, sort, None
 

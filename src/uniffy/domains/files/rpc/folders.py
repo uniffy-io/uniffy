@@ -6,7 +6,7 @@ from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
-from uniffy_proto.files.v1.files_pb2 import (
+from uniffy_proto.files.v1.files_pb import (
     CreateFolderRequest,
     CreateFolderResponse,
     DeleteFolderRequest,
@@ -60,7 +60,7 @@ class FolderHandlers:
         user_id = current_user_id()
 
         parent_id = None
-        if request.HasField("parent_id"):
+        if request.has_field("parent_id"):
             try:
                 parent_id = UUID(request.parent_id)
             except ValueError:
@@ -120,7 +120,7 @@ class FolderHandlers:
         user_id = current_user_id()
 
         parent_id = None
-        if request.HasField("parent_id"):
+        if request.has_field("parent_id"):
             if request.parent_id == "":
                 parent_id = ""  # Move to root
             else:
@@ -161,7 +161,7 @@ class FolderHandlers:
                     user_id=user_id,
                     organization_id=organization_id,
                     folder_id=folder_id,
-                    name=request.name if request.HasField("name") else None,
+                    name=request.name if request.has_field("name") else None,
                     parent_id=parent_id,
                 )
                 eff_mode, eff_baseline = await _resolve_folder_effective_policy(
@@ -245,7 +245,7 @@ class FolderHandlers:
         user_id = current_user_id()
 
         root_folder_id = None
-        if request.HasField("root_folder_id"):
+        if request.has_field("root_folder_id"):
             try:
                 root_folder_id = UUID(request.root_folder_id)
             except ValueError:

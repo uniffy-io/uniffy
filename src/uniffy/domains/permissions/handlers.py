@@ -7,8 +7,8 @@ from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
-from uniffy_proto.common.v1.common_pb2 import PaginationResponse
-from uniffy_proto.permissions.v1.permissions_pb2 import (
+from uniffy_proto.common.v1.common_pb import PaginationResponse
+from uniffy_proto.permissions.v1.permissions_pb import (
     AddMemberRequest,
     AddMemberResponse,
     ListMemberEventsRequest,
@@ -196,7 +196,7 @@ class MembersHandlers:
         role = _resolve_role(request.role)
 
         expires_at = None
-        if request.HasField("expires_at"):
+        if request.has_field("expires_at"):
             expires_at = timestamp_to_datetime(request.expires_at)
 
         try:
@@ -377,7 +377,7 @@ class MembersHandlers:
 
         page = 1
         page_size = 50
-        if request.HasField("pagination"):
+        if request.has_field("pagination"):
             if request.pagination.page > 0:
                 page = request.pagination.page
             if request.pagination.page_size > 0:
@@ -394,10 +394,10 @@ class MembersHandlers:
                 action_filter = audit_action_for_member_action(domain_action)
 
         after = None
-        if request.HasField("after"):
+        if request.has_field("after"):
             after = timestamp_to_datetime(request.after)
         before = None
-        if request.HasField("before"):
+        if request.has_field("before"):
             before = timestamp_to_datetime(request.before)
 
         offset = (page - 1) * page_size
@@ -426,13 +426,11 @@ class MembersHandlers:
                 # Best-effort total derived from the page to avoid an extra count query.
                 approx_total = offset + len(events)
                 total_pages = max(1, ceil(approx_total / page_size)) if page_size else 1
-                response.pagination.CopyFrom(
-                    PaginationResponse(
-                        page=page,
-                        page_size=page_size,
-                        total_count=approx_total,
-                        total_pages=total_pages,
-                    )
+                response.pagination = PaginationResponse(
+                    page=page,
+                    page_size=page_size,
+                    total_count=approx_total,
+                    total_pages=total_pages,
                 )
                 return response
         except ConnectError:

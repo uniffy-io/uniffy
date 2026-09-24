@@ -653,9 +653,7 @@ def proto(stack):
     sh(["buf", "generate"], env={"PATH": f"{ROOT}/src/ui/node_modules/.bin:{os.environ['PATH']}"})
     for generated in gen_python.rglob("*_connect.py"):
         generated.write_text(re.sub(r"[ \t]+\n", "\n", generated.read_text()))
-    (gen_python / "__init__.py").write_text(
-        "import os\nimport sys\n\nsys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))\n"
-    )
+    (gen_python / "__init__.py").touch()
     for pkg in packages:
         (gen_python / pkg / "v1").mkdir(parents=True, exist_ok=True)
         (gen_python / pkg / "__init__.py").touch()

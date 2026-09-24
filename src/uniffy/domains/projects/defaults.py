@@ -2,8 +2,9 @@
 
 from uuid import UUID
 
+from protobuf import Oneof
 from sqlalchemy.ext.asyncio import AsyncSession
-from uniffy_proto.projects.v1.projects_pb2 import (
+from uniffy_proto.projects.v1.projects_pb import (
     BacklogLayout,
     BoardLayout,
     GraphLayout,
@@ -164,14 +165,14 @@ def default_view_definitions() -> list[tuple[DefaultProjectViewId, str, ViewDefi
     """Shared views every project starts with, in tab order."""
 
     def fields(*field_ids: str) -> list[TaskFieldRef]:
-        return [TaskFieldRef(field_id=field_id) for field_id in field_ids]
+        return [TaskFieldRef(ref=Oneof(field="field_id", value=field_id)) for field_id in field_ids]
 
     return [
         (
             DefaultProjectViewId.TABLE,
             "Table",
             ViewDefinition(
-                table=TableLayout(),
+                layout=Oneof(field="table", value=TableLayout()),
                 visible_fields=fields(
                     SystemProjectFieldId.TITLE,
                     SystemProjectFieldId.STATUS,
@@ -185,7 +186,7 @@ def default_view_definitions() -> list[tuple[DefaultProjectViewId, str, ViewDefi
             DefaultProjectViewId.BOARD,
             "Board",
             ViewDefinition(
-                board=BoardLayout(),
+                layout=Oneof(field="board", value=BoardLayout()),
                 visible_fields=fields(
                     SystemProjectFieldId.PRIORITY,
                     SystemProjectFieldId.ASSIGNEE,
@@ -197,13 +198,25 @@ def default_view_definitions() -> list[tuple[DefaultProjectViewId, str, ViewDefi
             DefaultProjectViewId.ROADMAP,
             "Roadmap",
             ViewDefinition(
-                roadmap=RoadmapLayout(zoom=RoadmapZoom.ROADMAP_ZOOM_WEEK),
+                layout=Oneof(field="roadmap", value=RoadmapLayout(zoom=RoadmapZoom.WEEK)),
                 visible_fields=fields(SystemProjectFieldId.STATUS, SystemProjectFieldId.PRIORITY),
             ),
         ),
-        (DefaultProjectViewId.BACKLOG, "Backlog", ViewDefinition(backlog=BacklogLayout())),
-        (DefaultProjectViewId.GRAPH, "Graph", ViewDefinition(graph=GraphLayout())),
-        (DefaultProjectViewId.RESOURCES, "Resources", ViewDefinition(resources=ResourcesLayout())),
+        (
+            DefaultProjectViewId.BACKLOG,
+            "Backlog",
+            ViewDefinition(layout=Oneof(field="backlog", value=BacklogLayout())),
+        ),
+        (
+            DefaultProjectViewId.GRAPH,
+            "Graph",
+            ViewDefinition(layout=Oneof(field="graph", value=GraphLayout())),
+        ),
+        (
+            DefaultProjectViewId.RESOURCES,
+            "Resources",
+            ViewDefinition(layout=Oneof(field="resources", value=ResourcesLayout())),
+        ),
     ]
 
 

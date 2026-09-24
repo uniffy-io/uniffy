@@ -6,7 +6,7 @@ from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
-from uniffy_proto.tags.v1.tags_pb2 import (
+from uniffy_proto.tags.v1.tags_pb import (
     CreateSavedFilterRequest,
     CreateSavedFilterResponse,
     DeleteSavedFilterRequest,
@@ -56,18 +56,18 @@ class SavedTagFilterHandlersMixin:
             async with open_session() as session:
                 ops = SavedTagFilterOperations(session)
                 criteria = (
-                    criteria_from_proto(request.criteria) if request.HasField("criteria") else {}
+                    criteria_from_proto(request.criteria) if request.has_field("criteria") else {}
                 )
-                icon = icon_from_proto(request.icon) if request.HasField("icon") else None
+                icon = icon_from_proto(request.icon) if request.has_field("icon") else None
                 saved = await ops.create(
                     user_id=user_id,
                     organization_id=organization_id,
                     name=request.name,
-                    description=request.description if request.HasField("description") else "",
+                    description=request.description if request.has_field("description") else "",
                     icon=icon,
                     criteria=criteria,
-                    sort_by=request.sort_by if request.HasField("sort_by") else "count",
-                    sort_order=request.sort_order if request.HasField("sort_order") else "desc",
+                    sort_by=request.sort_by if request.has_field("sort_by") else "count",
+                    sort_order=request.sort_order if request.has_field("sort_order") else "desc",
                 )
                 return CreateSavedFilterResponse(
                     filter=await saved_filter_to_proto(saved, session=session)
@@ -91,19 +91,19 @@ class SavedTagFilterHandlersMixin:
             async with open_session() as session:
                 ops = SavedTagFilterOperations(session)
                 criteria = (
-                    criteria_from_proto(request.criteria) if request.HasField("criteria") else None
+                    criteria_from_proto(request.criteria) if request.has_field("criteria") else None
                 )
-                icon = icon_from_proto(request.icon) if request.HasField("icon") else None
+                icon = icon_from_proto(request.icon) if request.has_field("icon") else None
                 saved = await ops.update(
                     user_id=user_id,
                     organization_id=organization_id,
                     filter_id=filter_id,
-                    name=request.name if request.HasField("name") else None,
-                    description=request.description if request.HasField("description") else None,
+                    name=request.name if request.has_field("name") else None,
+                    description=request.description if request.has_field("description") else None,
                     icon=icon,
                     criteria=criteria,
-                    sort_by=request.sort_by if request.HasField("sort_by") else None,
-                    sort_order=request.sort_order if request.HasField("sort_order") else None,
+                    sort_by=request.sort_by if request.has_field("sort_by") else None,
+                    sort_order=request.sort_order if request.has_field("sort_order") else None,
                 )
                 return UpdateSavedFilterResponse(
                     filter=await saved_filter_to_proto(saved, session=session)

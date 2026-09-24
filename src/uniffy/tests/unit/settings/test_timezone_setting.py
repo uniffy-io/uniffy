@@ -1,7 +1,7 @@
 """The timezone appearance key: defaults, validation, proto round trip."""
 
 import pytest
-from uniffy_proto.settings.v1.settings_pb2 import AppearanceSettings
+from uniffy_proto.settings.v1.settings_pb import AppearanceSettings
 
 from uniffy.core.errors import ValidationError
 from uniffy.domains.settings.converters import (

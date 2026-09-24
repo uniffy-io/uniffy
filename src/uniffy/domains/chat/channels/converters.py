@@ -2,28 +2,28 @@
 
 from uuid import UUID
 
-from uniffy_proto.chat.v1.chat_pb2 import (
+from uniffy_proto.chat.v1.chat_pb import (
     ChannelRole as ProtoChannelRole,
 )
-from uniffy_proto.chat.v1.chat_pb2 import (
+from uniffy_proto.chat.v1.chat_pb import (
     ChannelType as ProtoChannelType,
 )
-from uniffy_proto.chat.v1.chat_pb2 import (
+from uniffy_proto.chat.v1.chat_pb import (
     ChatChannel as ProtoChatChannel,
 )
-from uniffy_proto.chat.v1.chat_pb2 import (
+from uniffy_proto.chat.v1.chat_pb import (
     ChatChannelCategory as ProtoChatChannelCategory,
 )
-from uniffy_proto.chat.v1.chat_pb2 import (
+from uniffy_proto.chat.v1.chat_pb import (
     ChatChannelMember as ProtoChatChannelMember,
 )
-from uniffy_proto.chat.v1.chat_pb2 import (
+from uniffy_proto.chat.v1.chat_pb import (
     ChatNotificationLevel as ProtoNotificationLevel,
 )
-from uniffy_proto.chat.v1.chat_pb2 import (
+from uniffy_proto.chat.v1.chat_pb import (
     ChatSubject as ProtoChatSubject,
 )
-from uniffy_proto.common.v1.common_pb2 import SubjectType as ProtoSubjectType
+from uniffy_proto.common.v1.common_pb import SubjectType as ProtoSubjectType
 
 from uniffy.core.avatars import get_avatar_url
 from uniffy.core.converters import datetime_to_timestamp
@@ -40,47 +40,47 @@ from uniffy.core.types import SubjectType
 from uniffy.domains.tags.converters import tag_to_proto
 
 _SUBJECT_TYPE_TO_PROTO = {
-    SubjectType.USER: ProtoSubjectType.SUBJECT_TYPE_USER,
-    SubjectType.GROUP: ProtoSubjectType.SUBJECT_TYPE_GROUP,
-    SubjectType.ORGANIZATION: ProtoSubjectType.SUBJECT_TYPE_ORGANIZATION,
-    SubjectType.AGENT: ProtoSubjectType.SUBJECT_TYPE_AGENT,
+    SubjectType.USER: ProtoSubjectType.USER,
+    SubjectType.GROUP: ProtoSubjectType.GROUP,
+    SubjectType.ORGANIZATION: ProtoSubjectType.ORGANIZATION,
+    SubjectType.AGENT: ProtoSubjectType.AGENT,
 }
 
 CHANNEL_TYPE_TO_PROTO = {
-    ChannelType.PUBLIC: ProtoChannelType.CHANNEL_TYPE_PUBLIC,
-    ChannelType.PRIVATE: ProtoChannelType.CHANNEL_TYPE_PRIVATE,
-    ChannelType.DIRECT: ProtoChannelType.CHANNEL_TYPE_DIRECT,
-    ChannelType.GROUP_DM: ProtoChannelType.CHANNEL_TYPE_GROUP_DM,
+    ChannelType.PUBLIC: ProtoChannelType.PUBLIC,
+    ChannelType.PRIVATE: ProtoChannelType.PRIVATE,
+    ChannelType.DIRECT: ProtoChannelType.DIRECT,
+    ChannelType.GROUP_DM: ProtoChannelType.GROUP_DM,
 }
 
 CHANNEL_TYPE_FROM_PROTO = {
-    ProtoChannelType.CHANNEL_TYPE_PUBLIC: ChannelType.PUBLIC,
-    ProtoChannelType.CHANNEL_TYPE_PRIVATE: ChannelType.PRIVATE,
-    ProtoChannelType.CHANNEL_TYPE_DIRECT: ChannelType.DIRECT,
-    ProtoChannelType.CHANNEL_TYPE_GROUP_DM: ChannelType.GROUP_DM,
+    ProtoChannelType.PUBLIC: ChannelType.PUBLIC,
+    ProtoChannelType.PRIVATE: ChannelType.PRIVATE,
+    ProtoChannelType.DIRECT: ChannelType.DIRECT,
+    ProtoChannelType.GROUP_DM: ChannelType.GROUP_DM,
 }
 
 CHANNEL_ROLE_TO_PROTO = {
-    ChannelRole.OWNER: ProtoChannelRole.CHANNEL_ROLE_OWNER,
-    ChannelRole.ADMIN: ProtoChannelRole.CHANNEL_ROLE_ADMIN,
-    ChannelRole.MEMBER: ProtoChannelRole.CHANNEL_ROLE_MEMBER,
+    ChannelRole.OWNER: ProtoChannelRole.OWNER,
+    ChannelRole.ADMIN: ProtoChannelRole.ADMIN,
+    ChannelRole.MEMBER: ProtoChannelRole.MEMBER,
 }
 
 CHANNEL_ROLE_FROM_PROTO = {
-    ProtoChannelRole.CHANNEL_ROLE_OWNER: ChannelRole.OWNER,
-    ProtoChannelRole.CHANNEL_ROLE_ADMIN: ChannelRole.ADMIN,
-    ProtoChannelRole.CHANNEL_ROLE_MEMBER: ChannelRole.MEMBER,
+    ProtoChannelRole.OWNER: ChannelRole.OWNER,
+    ProtoChannelRole.ADMIN: ChannelRole.ADMIN,
+    ProtoChannelRole.MEMBER: ChannelRole.MEMBER,
 }
 
 NOTIFICATION_LEVEL_TO_PROTO = {
-    ChatNotificationLevel.ALL: ProtoNotificationLevel.CHAT_NOTIFICATION_LEVEL_ALL,
-    ChatNotificationLevel.MENTIONS: ProtoNotificationLevel.CHAT_NOTIFICATION_LEVEL_MENTIONS,
-    ChatNotificationLevel.NONE: ProtoNotificationLevel.CHAT_NOTIFICATION_LEVEL_NONE,
+    ChatNotificationLevel.ALL: ProtoNotificationLevel.ALL,
+    ChatNotificationLevel.MENTIONS: ProtoNotificationLevel.MENTIONS,
+    ChatNotificationLevel.NONE: ProtoNotificationLevel.NONE,
 }
 
 
 def channel_type_from_proto(
-    proto_type: ProtoChannelType.ValueType,
+    proto_type: ProtoChannelType,
 ) -> ChannelType:
     ct = CHANNEL_TYPE_FROM_PROTO.get(proto_type)
     if ct is None:
@@ -105,9 +105,7 @@ def channel_to_proto(
         name=channel.name,
         slug=channel.slug,
         description=channel.description or "",
-        channel_type=CHANNEL_TYPE_TO_PROTO.get(
-            channel.channel_type, ProtoChannelType.CHANNEL_TYPE_PUBLIC
-        ),
+        channel_type=CHANNEL_TYPE_TO_PROTO.get(channel.channel_type, ProtoChannelType.PUBLIC),
         is_archived=channel.is_archived,
         is_default=channel.is_default,
         icon=channel.icon or "",
@@ -126,22 +124,22 @@ def channel_to_proto(
         proto.agent_folder_id = str(agent_folder_id)
 
     if channel.created_at:
-        proto.created_at.CopyFrom(datetime_to_timestamp(channel.created_at))
+        proto.created_at = datetime_to_timestamp(channel.created_at)
     if channel.updated_at:
-        proto.updated_at.CopyFrom(datetime_to_timestamp(channel.updated_at))
+        proto.updated_at = datetime_to_timestamp(channel.updated_at)
 
     if stats:
         proto.message_count = stats.message_count
         proto.root_message_count = stats.root_message_count
         proto.member_count = stats.member_count
         if stats.last_message_at:
-            proto.last_message_at.CopyFrom(datetime_to_timestamp(stats.last_message_at))
+            proto.last_message_at = datetime_to_timestamp(stats.last_message_at)
         if stats.last_root_message_at:
-            proto.last_root_message_at.CopyFrom(datetime_to_timestamp(stats.last_root_message_at))
+            proto.last_root_message_at = datetime_to_timestamp(stats.last_root_message_at)
 
     if current_user_role is not None:
         proto.current_user_role = CHANNEL_ROLE_TO_PROTO.get(
-            current_user_role, ProtoChannelRole.CHANNEL_ROLE_MEMBER
+            current_user_role, ProtoChannelRole.MEMBER
         )
     if is_member is not None:
         proto.is_member = is_member
@@ -165,22 +163,22 @@ def member_to_proto(
     proto = ProtoChatChannelMember(
         channel_id=str(member.channel_id),
         user_id=str(member.user_id) if member.user_id is not None else "",
-        role=CHANNEL_ROLE_TO_PROTO.get(member.role, ProtoChannelRole.CHANNEL_ROLE_MEMBER),
+        role=CHANNEL_ROLE_TO_PROTO.get(member.role, ProtoChannelRole.MEMBER),
         notification_level=NOTIFICATION_LEVEL_TO_PROTO.get(
             member.notification_level,
-            ProtoNotificationLevel.CHAT_NOTIFICATION_LEVEL_ALL,
+            ProtoNotificationLevel.ALL,
         ),
         is_muted=member.is_muted,
         follow_all_threads=member.follow_all_threads,
         subject=ProtoChatSubject(
-            type=_SUBJECT_TYPE_TO_PROTO.get(member.subject_type, ProtoSubjectType.SUBJECT_TYPE_USER),
+            type=_SUBJECT_TYPE_TO_PROTO.get(member.subject_type, ProtoSubjectType.USER),
             id=str(member.subject_id),
         ),
     )
     if member.joined_at:
-        proto.joined_at.CopyFrom(datetime_to_timestamp(member.joined_at))
+        proto.joined_at = datetime_to_timestamp(member.joined_at)
     if member.muted_until:
-        proto.muted_until.CopyFrom(datetime_to_timestamp(member.muted_until))
+        proto.muted_until = datetime_to_timestamp(member.muted_until)
 
     if user:
         proto.display_name = user.full_name or ""
@@ -209,7 +207,7 @@ def category_to_proto(
         position=category.position,
     )
     if category.created_at:
-        proto.created_at.CopyFrom(datetime_to_timestamp(category.created_at))
+        proto.created_at = datetime_to_timestamp(category.created_at)
     if category.updated_at:
-        proto.updated_at.CopyFrom(datetime_to_timestamp(category.updated_at))
+        proto.updated_at = datetime_to_timestamp(category.updated_at)
     return proto

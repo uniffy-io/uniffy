@@ -7,7 +7,7 @@ from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
-from uniffy_proto.agents.v1.agents_pb2 import (
+from uniffy_proto.agents.v1.agents_pb import (
     CreateAgentRequest,
     CreateAgentResponse,
     DeleteAgentAvatarRequest,
@@ -31,7 +31,7 @@ from uniffy_proto.agents.v1.agents_pb2 import (
     UploadAgentAvatarRequest,
     UploadAgentAvatarResponse,
 )
-from uniffy_proto.common.v1.common_pb2 import PaginationResponse
+from uniffy_proto.common.v1.common_pb import PaginationResponse
 
 from uniffy.core.auth.permissions import resolve_effective_policy
 from uniffy.core.auth.permissions.checker import PermissionChecker
@@ -178,13 +178,13 @@ class AgentsHandlers:
         user_id = current_user_id()
         org_id = _parse_uuid(request.organization_id, "organization_id")
 
-        soul_prompt = request.soul_prompt if request.HasField("soul_prompt") else ""
+        soul_prompt = request.soul_prompt if request.has_field("soul_prompt") else ""
         # Empty when omitted so a name-only agent inherits the org default model
         # at run time; a hardcoded fallback here would shadow that default.
-        primary_model = request.primary_model if request.HasField("primary_model") else ""
-        avatar_emoji = request.avatar_emoji if request.HasField("avatar_emoji") else ""
-        theme_color = request.theme_color if request.HasField("theme_color") else ""
-        is_default = request.is_default if request.HasField("is_default") else False
+        primary_model = request.primary_model if request.has_field("primary_model") else ""
+        avatar_emoji = request.avatar_emoji if request.has_field("avatar_emoji") else ""
+        theme_color = request.theme_color if request.has_field("theme_color") else ""
+        is_default = request.is_default if request.has_field("is_default") else False
 
         access_mode = access_mode_from_proto(request.access_mode) if request.access_mode else None
         baseline_role = (
@@ -196,34 +196,34 @@ class AgentsHandlers:
             if request.group_ids
             else None
         )
-        image_model = request.image_model if request.HasField("image_model") else ""
+        image_model = request.image_model if request.has_field("image_model") else ""
         primary_provider_key_id = (
             _parse_uuid(request.primary_provider_key_id, "primary_provider_key_id")
-            if request.HasField("primary_provider_key_id") and request.primary_provider_key_id
+            if request.has_field("primary_provider_key_id") and request.primary_provider_key_id
             else None
         )
         image_provider_key_id = (
             _parse_uuid(request.image_provider_key_id, "image_provider_key_id")
-            if request.HasField("image_provider_key_id") and request.image_provider_key_id
+            if request.has_field("image_provider_key_id") and request.image_provider_key_id
             else None
         )
         tag_ids = _parse_tag_ids(list(request.tag_ids))
         model_params = (
             _parse_params(request.model_params, "model_params")
-            if request.HasField("model_params")
+            if request.has_field("model_params")
             else None
         )
         image_params = (
             _parse_params(request.image_params, "image_params")
-            if request.HasField("image_params")
+            if request.has_field("image_params")
             else None
         )
         image_style_prompt = (
-            request.image_style_prompt if request.HasField("image_style_prompt") else None
+            request.image_style_prompt if request.has_field("image_style_prompt") else None
         )
         integration_connections = (
             _parse_params(request.integration_connections, "integration_connections")
-            if request.HasField("integration_connections")
+            if request.has_field("integration_connections")
             else None
         )
 
@@ -321,12 +321,12 @@ class AgentsHandlers:
 
         access_mode = access_mode_from_proto(request.access_mode) if request.access_mode else None
         group_id = (
-            _parse_uuid(request.group_id, "group_id") if request.HasField("group_id") else None
+            _parse_uuid(request.group_id, "group_id") if request.has_field("group_id") else None
         )
 
         page = 1
         page_size = 100
-        if request.HasField("pagination"):
+        if request.has_field("pagination"):
             page = request.pagination.page or 1
             page_size = request.pagination.page_size or 100
 
@@ -464,17 +464,17 @@ class AgentsHandlers:
         org_id = _parse_uuid(request.organization_id, "organization_id")
         agent_id = _parse_uuid(request.agent_id, "agent_id")
 
-        name = request.name if request.HasField("name") else None
-        soul_prompt = request.soul_prompt if request.HasField("soul_prompt") else None
-        primary_model = request.primary_model if request.HasField("primary_model") else None
-        avatar_emoji = request.avatar_emoji if request.HasField("avatar_emoji") else None
-        theme_color = request.theme_color if request.HasField("theme_color") else None
-        is_default = request.is_default if request.HasField("is_default") else None
-        image_model = request.image_model if request.HasField("image_model") else None
+        name = request.name if request.has_field("name") else None
+        soul_prompt = request.soul_prompt if request.has_field("soul_prompt") else None
+        primary_model = request.primary_model if request.has_field("primary_model") else None
+        avatar_emoji = request.avatar_emoji if request.has_field("avatar_emoji") else None
+        theme_color = request.theme_color if request.has_field("theme_color") else None
+        is_default = request.is_default if request.has_field("is_default") else None
+        image_model = request.image_model if request.has_field("image_model") else None
 
         primary_provider_key_id = None
         clear_primary_provider_key = False
-        if request.HasField("primary_provider_key_id"):
+        if request.has_field("primary_provider_key_id"):
             if request.primary_provider_key_id:
                 primary_provider_key_id = _parse_uuid(
                     request.primary_provider_key_id, "primary_provider_key_id"
@@ -484,7 +484,7 @@ class AgentsHandlers:
 
         image_provider_key_id = None
         clear_image_provider_key = False
-        if request.HasField("image_provider_key_id"):
+        if request.has_field("image_provider_key_id"):
             if request.image_provider_key_id:
                 image_provider_key_id = _parse_uuid(
                     request.image_provider_key_id, "image_provider_key_id"
@@ -497,25 +497,25 @@ class AgentsHandlers:
         enabled_tools = list(request.enabled_tools)
 
         tag_ids: list[UUID] | None = None
-        if request.HasField("tag_ids"):
+        if request.has_field("tag_ids"):
             tag_ids = _parse_tag_ids(list(request.tag_ids.ids))
 
         model_params = (
             _parse_params(request.model_params, "model_params")
-            if request.HasField("model_params")
+            if request.has_field("model_params")
             else None
         )
         image_params = (
             _parse_params(request.image_params, "image_params")
-            if request.HasField("image_params")
+            if request.has_field("image_params")
             else None
         )
         image_style_prompt = (
-            request.image_style_prompt if request.HasField("image_style_prompt") else None
+            request.image_style_prompt if request.has_field("image_style_prompt") else None
         )
         integration_connections = (
             _parse_params(request.integration_connections, "integration_connections")
-            if request.HasField("integration_connections")
+            if request.has_field("integration_connections")
             else None
         )
 

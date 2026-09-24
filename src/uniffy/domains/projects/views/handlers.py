@@ -3,7 +3,7 @@
 from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
-from uniffy_proto.projects.v1.projects_pb2 import (
+from uniffy_proto.projects.v1.projects_pb import (
     CreateViewRequest,
     CreateViewResponse,
     DeleteViewRequest,
@@ -30,7 +30,7 @@ class ViewHandlers:
         user_id = current_user_id()
         organization_id = parse_uuid(request.organization_id, "organization_id")
         project_id = parse_uuid(request.project_id, "project_id")
-        if not request.HasField("definition"):
+        if not request.has_field("definition"):
             raise ConnectError(Code.INVALID_ARGUMENT, "A view needs a definition")
 
         try:
@@ -65,11 +65,11 @@ class ViewHandlers:
                     organization_id,
                     project_id,
                     request.view_id,
-                    name=request.name if request.HasField("name") else None,
-                    definition=request.definition if request.HasField("definition") else None,
+                    name=request.name if request.has_field("name") else None,
+                    definition=request.definition if request.has_field("definition") else None,
                     visibility=(
                         view_visibility_from_proto(request.visibility)
-                        if request.HasField("visibility")
+                        if request.has_field("visibility")
                         else None
                     ),
                 )

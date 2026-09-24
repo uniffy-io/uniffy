@@ -10,10 +10,10 @@ from uuid import UUID
 from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
-from google.protobuf.timestamp_pb2 import Timestamp
 from loguru import logger
+from protobuf.wkt import Timestamp
 from sqlalchemy import select
-from uniffy_proto.notifications.v1.notifications_pb2 import (
+from uniffy_proto.notifications.v1.notifications_pb import (
     AccessRequestChangedPayload,
     BulkDeleteNotificationsRequest,
     BulkDeleteNotificationsResponse,
@@ -48,14 +48,14 @@ from uniffy_proto.notifications.v1.notifications_pb2 import (
     UnregisterPushSubscriptionRequest,
     UnregisterPushSubscriptionResponse,
 )
-from uniffy_proto.notifications.v1.notifications_pb2 import (
+from uniffy_proto.notifications.v1.notifications_pb import (
     Notification as ProtoNotification,
 )
 
 from uniffy.core.auth.membership import is_active_member
 from uniffy.core.auth.principal import current_user_id, resolve_organization_id
 from uniffy.core.config.push import get_vapid_config
-from uniffy.core.converters.proto import timestamp_to_datetime
+from uniffy.core.converters.proto import datetime_to_timestamp, timestamp_to_datetime
 from uniffy.core.events.realtime import NotificationPayloadType
 from uniffy.core.models.login.user import User
 from uniffy.core.realtime.reauth import REAUTH_INTERVAL_SECONDS
@@ -96,7 +96,7 @@ class NotificationsHandlers:
         page_size = min(page_size, 100)
 
         is_read = None
-        if request.HasField("is_read"):
+        if request.has_field("is_read"):
             is_read = request.is_read
 
         notification_types = None
@@ -337,7 +337,7 @@ class NotificationsHandlers:
         page_size = min(page_size, 100)
 
         is_read = None
-        if request.HasField("is_read"):
+        if request.has_field("is_read"):
             is_read = request.is_read
 
         notification_types = None
@@ -349,11 +349,11 @@ class NotificationsHandlers:
                     notification_types.append(nt)
 
         date_from = None
-        if request.HasField("date_from"):
+        if request.has_field("date_from"):
             date_from = timestamp_to_datetime(request.date_from)
 
         date_to = None
-        if request.HasField("date_to"):
+        if request.has_field("date_to"):
             date_to = timestamp_to_datetime(request.date_to)
 
         actor_id = None
@@ -584,9 +584,9 @@ class NotificationsHandlers:
                         # Poll timeout tick - send heartbeat if interval elapsed.
                         if now - last_send >= heartbeat_interval:
                             ts = Timestamp()
-                            ts.FromDatetime(datetime.now(UTC))
+                            ts = datetime_to_timestamp(datetime.now(UTC))
                             yield StreamNotificationsResponse(
-                                event_type=StreamNotificationsResponse.EVENT_TYPE_HEARTBEAT,
+                                event_type=StreamNotificationsResponse.EventType.HEARTBEAT,
                                 timestamp=ts,
                             )
                             last_send = now
@@ -594,7 +594,7 @@ class NotificationsHandlers:
 
                     if payload.get("_type") == NotificationPayloadType.FILE_UPDATED:
                         yield StreamNotificationsResponse(
-                            event_type=StreamNotificationsResponse.EVENT_TYPE_FILE_UPDATED,
+                            event_type=StreamNotificationsResponse.EventType.FILE_UPDATED,
                             file_update=FileUpdatePayload(
                                 file_id=payload.get("file_id", ""),
                                 organization_id=payload.get("organization_id", ""),
@@ -605,7 +605,7 @@ class NotificationsHandlers:
 
                     if payload.get("_type") == NotificationPayloadType.PRESENCE_CHANGED:
                         ts = Timestamp()
-                        ts.FromDatetime(datetime.fromisoformat(payload["last_active"]))
+                        ts = datetime_to_timestamp(datetime.fromisoformat(payload["last_active"]))
                         presence_payload = PresenceChangedPayload(
                             user_id=payload.get("user_id", ""),
                             status=payload.get("status", ""),
@@ -617,10 +617,12 @@ class NotificationsHandlers:
                             presence_payload.status_text = custom.get("text", "")
                             if custom.get("expires_at"):
                                 exp_ts = Timestamp()
-                                exp_ts.FromDatetime(datetime.fromisoformat(custom["expires_at"]))
-                                presence_payload.status_expires_at.CopyFrom(exp_ts)
+                                exp_ts = datetime_to_timestamp(
+                                    datetime.fromisoformat(custom["expires_at"])
+                                )
+                                presence_payload.status_expires_at = exp_ts
                         yield StreamNotificationsResponse(
-                            event_type=StreamNotificationsResponse.EVENT_TYPE_PRESENCE_CHANGED,
+                            event_type=StreamNotificationsResponse.EventType.PRESENCE_CHANGED,
                             presence_changed=presence_payload,
                         )
                         last_send = now
@@ -628,14 +630,14 @@ class NotificationsHandlers:
 
                     if payload.get("_type") == NotificationPayloadType.PERMISSIONS_CHANGED:
                         yield StreamNotificationsResponse(
-                            event_type=StreamNotificationsResponse.EVENT_TYPE_PERMISSIONS_CHANGED,
+                            event_type=StreamNotificationsResponse.EventType.PERMISSIONS_CHANGED,
                         )
                         last_send = now
                         continue
 
                     if payload.get("_type") == NotificationPayloadType.CONTENT_ACCESS_CHANGED:
                         yield StreamNotificationsResponse(
-                            event_type=StreamNotificationsResponse.EVENT_TYPE_CONTENT_ACCESS_CHANGED,
+                            event_type=StreamNotificationsResponse.EventType.CONTENT_ACCESS_CHANGED,
                             content_access_changed=ContentAccessChangedPayload(
                                 content_type=payload.get("content_type", 0),
                                 content_id=payload.get("content_id", ""),
@@ -653,13 +655,13 @@ class NotificationsHandlers:
                         )
                         if payload.get("can_request_again_at"):
                             retry_at = Timestamp()
-                            retry_at.FromDatetime(
+                            retry_at = datetime_to_timestamp(
                                 datetime.fromisoformat(payload["can_request_again_at"])
                             )
-                            changed.can_request_again_at.CopyFrom(retry_at)
+                            changed.can_request_again_at = retry_at
                         yield StreamNotificationsResponse(
                             event_type=(
-                                StreamNotificationsResponse.EVENT_TYPE_ACCESS_REQUEST_CHANGED
+                                StreamNotificationsResponse.EventType.ACCESS_REQUEST_CHANGED
                             ),
                             access_request_changed=changed,
                         )
@@ -674,7 +676,7 @@ class NotificationsHandlers:
                             changes=payload.get("changes", {}),
                         )
                         yield StreamNotificationsResponse(
-                            event_type=StreamNotificationsResponse.EVENT_TYPE_MENTION_STATE_CHANGED,
+                            event_type=StreamNotificationsResponse.EventType.MENTION_STATE_CHANGED,
                             mention_state_changed=mention_payload,
                         )
                         last_send = now
@@ -689,7 +691,7 @@ class NotificationsHandlers:
                             if not urn:
                                 continue
                             yield StreamNotificationsResponse(
-                                event_type=StreamNotificationsResponse.EVENT_TYPE_MENTION_STATE_CHANGED,
+                                event_type=StreamNotificationsResponse.EventType.MENTION_STATE_CHANGED,
                                 mention_state_changed=MentionStateChangedPayload(
                                     urn=urn,
                                     changes=changes,
@@ -717,11 +719,11 @@ class NotificationsHandlers:
 
                     if "created_at" in payload:  # noqa: PLR2004
                         ts = Timestamp()
-                        ts.FromDatetime(datetime.fromisoformat(payload["created_at"]))
-                        proto_notification.created_at.CopyFrom(ts)
+                        ts = datetime_to_timestamp(datetime.fromisoformat(payload["created_at"]))
+                        proto_notification.created_at = ts
 
                     yield StreamNotificationsResponse(
-                        event_type=StreamNotificationsResponse.EVENT_TYPE_NEW_NOTIFICATION,
+                        event_type=StreamNotificationsResponse.EventType.NEW_NOTIFICATION,
                         notification=proto_notification,
                     )
                     last_send = now

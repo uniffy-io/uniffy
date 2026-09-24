@@ -6,7 +6,7 @@ from uuid import UUID
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from uniffy_proto.projects.v1.projects_pb2 import ViewDefinition
+from uniffy_proto.projects.v1.projects_pb import ViewDefinition
 
 from uniffy.core.auth.permissions.roles import role_can_edit, role_can_manage
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError

@@ -1,22 +1,22 @@
 from datetime import datetime
 from uuid import UUID
 
-from uniffy_proto.rooms.v1.rooms_pb2 import (
+from uniffy_proto.rooms.v1.rooms_pb import (
     BookingStatus as ProtoBookingStatus,
 )
-from uniffy_proto.rooms.v1.rooms_pb2 import (
+from uniffy_proto.rooms.v1.rooms_pb import (
     Room as ProtoRoom,
 )
-from uniffy_proto.rooms.v1.rooms_pb2 import (
+from uniffy_proto.rooms.v1.rooms_pb import (
     RoomBooking as ProtoRoomBooking,
 )
-from uniffy_proto.rooms.v1.rooms_pb2 import (
+from uniffy_proto.rooms.v1.rooms_pb import (
     RoomStatus as ProtoRoomStatus,
 )
-from uniffy_proto.rooms.v1.rooms_pb2 import (
+from uniffy_proto.rooms.v1.rooms_pb import (
     RoomType as ProtoRoomType,
 )
-from uniffy_proto.rooms.v1.rooms_pb2 import (
+from uniffy_proto.rooms.v1.rooms_pb import (
     TimeSlot as ProtoTimeSlot,
 )
 
@@ -29,51 +29,51 @@ from uniffy.core.models.rooms.booking import RoomBooking
 from uniffy.core.models.rooms.room import Room
 from uniffy.core.types import AccessMode, BookingStatus, ContentRole, RoomStatus, RoomType
 
-ROOM_TYPE_TO_PROTO: dict[RoomType, ProtoRoomType.ValueType] = {
-    RoomType.MEETING_ROOM: ProtoRoomType.ROOM_TYPE_MEETING_ROOM,
-    RoomType.CONFERENCE_ROOM: ProtoRoomType.ROOM_TYPE_CONFERENCE_ROOM,
-    RoomType.OFFICE: ProtoRoomType.ROOM_TYPE_OFFICE,
-    RoomType.OTHER: ProtoRoomType.ROOM_TYPE_OTHER,
+ROOM_TYPE_TO_PROTO: dict[RoomType, ProtoRoomType] = {
+    RoomType.MEETING_ROOM: ProtoRoomType.MEETING_ROOM,
+    RoomType.CONFERENCE_ROOM: ProtoRoomType.CONFERENCE_ROOM,
+    RoomType.OFFICE: ProtoRoomType.OFFICE,
+    RoomType.OTHER: ProtoRoomType.OTHER,
 }
 
-ROOM_TYPE_FROM_PROTO: dict[ProtoRoomType.ValueType, RoomType] = {
-    ProtoRoomType.ROOM_TYPE_UNSPECIFIED: RoomType.MEETING_ROOM,
-    ProtoRoomType.ROOM_TYPE_MEETING_ROOM: RoomType.MEETING_ROOM,
-    ProtoRoomType.ROOM_TYPE_CONFERENCE_ROOM: RoomType.CONFERENCE_ROOM,
-    ProtoRoomType.ROOM_TYPE_OFFICE: RoomType.OFFICE,
-    ProtoRoomType.ROOM_TYPE_OTHER: RoomType.OTHER,
+ROOM_TYPE_FROM_PROTO: dict[ProtoRoomType, RoomType] = {
+    ProtoRoomType.UNSPECIFIED: RoomType.MEETING_ROOM,
+    ProtoRoomType.MEETING_ROOM: RoomType.MEETING_ROOM,
+    ProtoRoomType.CONFERENCE_ROOM: RoomType.CONFERENCE_ROOM,
+    ProtoRoomType.OFFICE: RoomType.OFFICE,
+    ProtoRoomType.OTHER: RoomType.OTHER,
 }
 
-ROOM_STATUS_TO_PROTO: dict[RoomStatus, ProtoRoomStatus.ValueType] = {
-    RoomStatus.ACTIVE: ProtoRoomStatus.ROOM_STATUS_ACTIVE,
-    RoomStatus.MAINTENANCE: ProtoRoomStatus.ROOM_STATUS_MAINTENANCE,
-    RoomStatus.RETIRED: ProtoRoomStatus.ROOM_STATUS_RETIRED,
+ROOM_STATUS_TO_PROTO: dict[RoomStatus, ProtoRoomStatus] = {
+    RoomStatus.ACTIVE: ProtoRoomStatus.ACTIVE,
+    RoomStatus.MAINTENANCE: ProtoRoomStatus.MAINTENANCE,
+    RoomStatus.RETIRED: ProtoRoomStatus.RETIRED,
 }
 
-ROOM_STATUS_FROM_PROTO: dict[ProtoRoomStatus.ValueType, RoomStatus] = {
-    ProtoRoomStatus.ROOM_STATUS_UNSPECIFIED: RoomStatus.ACTIVE,
-    ProtoRoomStatus.ROOM_STATUS_ACTIVE: RoomStatus.ACTIVE,
-    ProtoRoomStatus.ROOM_STATUS_MAINTENANCE: RoomStatus.MAINTENANCE,
-    ProtoRoomStatus.ROOM_STATUS_RETIRED: RoomStatus.RETIRED,
+ROOM_STATUS_FROM_PROTO: dict[ProtoRoomStatus, RoomStatus] = {
+    ProtoRoomStatus.UNSPECIFIED: RoomStatus.ACTIVE,
+    ProtoRoomStatus.ACTIVE: RoomStatus.ACTIVE,
+    ProtoRoomStatus.MAINTENANCE: RoomStatus.MAINTENANCE,
+    ProtoRoomStatus.RETIRED: RoomStatus.RETIRED,
 }
 
-BOOKING_STATUS_TO_PROTO: dict[BookingStatus, ProtoBookingStatus.ValueType] = {
-    BookingStatus.CONFIRMED: ProtoBookingStatus.BOOKING_STATUS_CONFIRMED,
-    BookingStatus.CANCELLED: ProtoBookingStatus.BOOKING_STATUS_CANCELLED,
+BOOKING_STATUS_TO_PROTO: dict[BookingStatus, ProtoBookingStatus] = {
+    BookingStatus.CONFIRMED: ProtoBookingStatus.CONFIRMED,
+    BookingStatus.CANCELLED: ProtoBookingStatus.CANCELLED,
 }
 
-BOOKING_STATUS_FROM_PROTO: dict[ProtoBookingStatus.ValueType, BookingStatus] = {
-    ProtoBookingStatus.BOOKING_STATUS_UNSPECIFIED: BookingStatus.CONFIRMED,
-    ProtoBookingStatus.BOOKING_STATUS_CONFIRMED: BookingStatus.CONFIRMED,
-    ProtoBookingStatus.BOOKING_STATUS_CANCELLED: BookingStatus.CANCELLED,
+BOOKING_STATUS_FROM_PROTO: dict[ProtoBookingStatus, BookingStatus] = {
+    ProtoBookingStatus.UNSPECIFIED: BookingStatus.CONFIRMED,
+    ProtoBookingStatus.CONFIRMED: BookingStatus.CONFIRMED,
+    ProtoBookingStatus.CANCELLED: BookingStatus.CANCELLED,
 }
 
 
-def room_type_from_proto(proto_type: ProtoRoomType.ValueType) -> RoomType:
+def room_type_from_proto(proto_type: ProtoRoomType) -> RoomType:
     return ROOM_TYPE_FROM_PROTO.get(proto_type, RoomType.MEETING_ROOM)
 
 
-def room_status_from_proto(proto_status: ProtoRoomStatus.ValueType) -> RoomStatus:
+def room_status_from_proto(proto_status: ProtoRoomStatus) -> RoomStatus:
     return ROOM_STATUS_FROM_PROTO.get(proto_status, RoomStatus.ACTIVE)
 
 
@@ -85,11 +85,11 @@ def room_to_proto(
 ) -> ProtoRoom:
     proto_room_type = ROOM_TYPE_TO_PROTO.get(
         room.room_type,
-        ProtoRoomType.ROOM_TYPE_MEETING_ROOM,
+        ProtoRoomType.MEETING_ROOM,
     )
     proto_status = ROOM_STATUS_TO_PROTO.get(
         room.status,
-        ProtoRoomStatus.ROOM_STATUS_ACTIVE,
+        ProtoRoomStatus.ACTIVE,
     )
 
     resolved_mode = effective_access_mode if effective_access_mode is not None else room.access_mode
@@ -136,7 +136,7 @@ def booking_to_proto(
 ) -> ProtoRoomBooking:
     proto_status = BOOKING_STATUS_TO_PROTO.get(
         booking.status,
-        ProtoBookingStatus.BOOKING_STATUS_CONFIRMED,
+        ProtoBookingStatus.CONFIRMED,
     )
 
     proto_booking = ProtoRoomBooking(

@@ -3,7 +3,7 @@
 from collections.abc import AsyncIterator
 
 from connectrpc.request import RequestContext
-from uniffy_proto.audit.v1.audit_pb2 import (
+from uniffy_proto.audit.v1.audit_pb import (
     ExportEventsRequest,
     ExportEventsResponse,
     ListEventsRequest,

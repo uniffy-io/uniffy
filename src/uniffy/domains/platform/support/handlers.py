@@ -8,7 +8,7 @@ from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
-from uniffy_proto.superadmin.v1.support_session_pb2 import (
+from uniffy_proto.superadmin.v1.support_session_pb import (
     ListAllSessionsRequest,
     ListAllSessionsResponse,
     ListMySessionsRequest,
@@ -16,7 +16,7 @@ from uniffy_proto.superadmin.v1.support_session_pb2 import (
     RequestSessionRequest,
     RequestSessionResponse,
 )
-from uniffy_proto.support.v1.support_consent_pb2 import (
+from uniffy_proto.support.v1.support_consent_pb import (
     ApproveSessionRequest,
     ApproveSessionResponse,
     GetOrgConsentModeRequest,

@@ -1,31 +1,31 @@
 """Proto <-> domain converters for files domain."""
 
-from uniffy_proto.files.v1.files_pb2 import (
+from uniffy_proto.files.v1.files_pb import (
     ExtractionStatus as ProtoExtractionStatus,
 )
-from uniffy_proto.files.v1.files_pb2 import (
+from uniffy_proto.files.v1.files_pb import (
     File as ProtoFile,
 )
-from uniffy_proto.files.v1.files_pb2 import (
+from uniffy_proto.files.v1.files_pb import (
     FileMetadata as ProtoFileMetadata,
 )
-from uniffy_proto.files.v1.files_pb2 import (
+from uniffy_proto.files.v1.files_pb import (
     FileOwner as ProtoFileOwner,
 )
-from uniffy_proto.files.v1.files_pb2 import (
+from uniffy_proto.files.v1.files_pb import (
     FileVersion as ProtoFileVersion,
 )
-from uniffy_proto.files.v1.files_pb2 import (
+from uniffy_proto.files.v1.files_pb import (
     Folder as ProtoFolder,
 )
-from uniffy_proto.files.v1.files_pb2 import PlaybackStatus as ProtoPlaybackStatus
-from uniffy_proto.files.v1.files_pb2 import (
+from uniffy_proto.files.v1.files_pb import PlaybackStatus as ProtoPlaybackStatus
+from uniffy_proto.files.v1.files_pb import (
     TranscodeStatus as ProtoTranscodeStatus,
 )
-from uniffy_proto.files.v1.files_pb2 import (
+from uniffy_proto.files.v1.files_pb import (
     TreeNode as ProtoTreeNode,
 )
-from uniffy_proto.files.v1.files_pb2 import (
+from uniffy_proto.files.v1.files_pb import (
     UploadStatus as ProtoUploadStatus,
 )
 
@@ -44,34 +44,34 @@ from uniffy.core.types import AccessMode, ContentRole
 from uniffy.domains.tags.converters import tag_to_proto
 
 EXTRACTION_STATUS_TO_PROTO = {
-    ExtractionStatus.PENDING: ProtoExtractionStatus.EXTRACTION_STATUS_PENDING,
-    ExtractionStatus.PROCESSING: ProtoExtractionStatus.EXTRACTION_STATUS_PROCESSING,
-    ExtractionStatus.COMPLETED: ProtoExtractionStatus.EXTRACTION_STATUS_COMPLETED,
-    ExtractionStatus.FAILED: ProtoExtractionStatus.EXTRACTION_STATUS_FAILED,
-    ExtractionStatus.SKIPPED: ProtoExtractionStatus.EXTRACTION_STATUS_SKIPPED,
+    ExtractionStatus.PENDING: ProtoExtractionStatus.PENDING,
+    ExtractionStatus.PROCESSING: ProtoExtractionStatus.PROCESSING,
+    ExtractionStatus.COMPLETED: ProtoExtractionStatus.COMPLETED,
+    ExtractionStatus.FAILED: ProtoExtractionStatus.FAILED,
+    ExtractionStatus.SKIPPED: ProtoExtractionStatus.SKIPPED,
 }
 
 TRANSCODE_STATUS_TO_PROTO = {
-    TranscodeStatus.NOT_NEEDED: ProtoTranscodeStatus.TRANSCODE_STATUS_NOT_NEEDED,
-    TranscodeStatus.PENDING: ProtoTranscodeStatus.TRANSCODE_STATUS_PENDING,
-    TranscodeStatus.PROCESSING: ProtoTranscodeStatus.TRANSCODE_STATUS_PROCESSING,
-    TranscodeStatus.COMPLETED: ProtoTranscodeStatus.TRANSCODE_STATUS_COMPLETED,
-    TranscodeStatus.FAILED: ProtoTranscodeStatus.TRANSCODE_STATUS_FAILED,
+    TranscodeStatus.NOT_NEEDED: ProtoTranscodeStatus.NOT_NEEDED,
+    TranscodeStatus.PENDING: ProtoTranscodeStatus.PENDING,
+    TranscodeStatus.PROCESSING: ProtoTranscodeStatus.PROCESSING,
+    TranscodeStatus.COMPLETED: ProtoTranscodeStatus.COMPLETED,
+    TranscodeStatus.FAILED: ProtoTranscodeStatus.FAILED,
 }
 
 PLAYBACK_STATUS_TO_PROTO = {
-    PlaybackStatus.NOT_NEEDED: ProtoPlaybackStatus.PLAYBACK_STATUS_NOT_NEEDED,
-    PlaybackStatus.PENDING: ProtoPlaybackStatus.PLAYBACK_STATUS_PENDING,
-    PlaybackStatus.PROCESSING: ProtoPlaybackStatus.PLAYBACK_STATUS_PROCESSING,
-    PlaybackStatus.COMPLETED: ProtoPlaybackStatus.PLAYBACK_STATUS_COMPLETED,
-    PlaybackStatus.FAILED: ProtoPlaybackStatus.PLAYBACK_STATUS_FAILED,
+    PlaybackStatus.NOT_NEEDED: ProtoPlaybackStatus.NOT_NEEDED,
+    PlaybackStatus.PENDING: ProtoPlaybackStatus.PENDING,
+    PlaybackStatus.PROCESSING: ProtoPlaybackStatus.PROCESSING,
+    PlaybackStatus.COMPLETED: ProtoPlaybackStatus.COMPLETED,
+    PlaybackStatus.FAILED: ProtoPlaybackStatus.FAILED,
 }
 
 UPLOAD_STATUS_TO_PROTO = {
-    UploadStatus.ACTIVE: ProtoUploadStatus.UPLOAD_STATUS_ACTIVE,
-    UploadStatus.COMPLETED: ProtoUploadStatus.UPLOAD_STATUS_COMPLETED,
-    UploadStatus.ABORTED: ProtoUploadStatus.UPLOAD_STATUS_ABORTED,
-    UploadStatus.EXPIRED: ProtoUploadStatus.UPLOAD_STATUS_EXPIRED,
+    UploadStatus.ACTIVE: ProtoUploadStatus.ACTIVE,
+    UploadStatus.COMPLETED: ProtoUploadStatus.COMPLETED,
+    UploadStatus.ABORTED: ProtoUploadStatus.ABORTED,
+    UploadStatus.EXPIRED: ProtoUploadStatus.EXPIRED,
 }
 
 
@@ -86,11 +86,11 @@ def file_to_proto(
 ) -> ProtoFile:
     proto_extraction = EXTRACTION_STATUS_TO_PROTO.get(
         file.extraction_status,
-        ProtoExtractionStatus.EXTRACTION_STATUS_PENDING,
+        ProtoExtractionStatus.PENDING,
     )
     proto_transcode = TRANSCODE_STATUS_TO_PROTO.get(
         file.transcode_status,
-        ProtoTranscodeStatus.TRANSCODE_STATUS_NOT_NEEDED,
+        ProtoTranscodeStatus.NOT_NEEDED,
     )
 
     resolved_mode = effective_access_mode if effective_access_mode is not None else file.access_mode
@@ -111,7 +111,7 @@ def file_to_proto(
         extraction_status=proto_extraction,
         transcode_status=proto_transcode,
         playback_status=PLAYBACK_STATUS_TO_PROTO.get(
-            file.playback_status, ProtoPlaybackStatus.PLAYBACK_STATUS_NOT_NEEDED
+            file.playback_status, ProtoPlaybackStatus.NOT_NEEDED
         ),
         is_deleted=file.is_deleted,
         created_at=datetime_to_timestamp(file.created_at),
@@ -133,19 +133,17 @@ def file_to_proto(
         proto_file.description = file.description
 
     if file.deleted_at:
-        proto_file.deleted_at.CopyFrom(datetime_to_timestamp(file.deleted_at))
+        proto_file.deleted_at = datetime_to_timestamp(file.deleted_at)
 
     if owner_info:
-        proto_file.owner_info.CopyFrom(
-            ProtoFileOwner(
-                id=str(owner_info.get("id", "")),
-                name=owner_info.get("name", ""),
-                email=owner_info.get("email", ""),
-            )
+        proto_file.owner_info = ProtoFileOwner(
+            id=str(owner_info.get("id", "")),
+            name=owner_info.get("name", ""),
+            email=owner_info.get("email", ""),
         )
 
     if file.media_info:
-        proto_file.metadata.CopyFrom(_build_file_metadata_from_model(file.media_info))
+        proto_file.metadata = _build_file_metadata_from_model(file.media_info)
 
     return proto_file
 
@@ -234,7 +232,7 @@ def file_version_to_proto(version: FileVersion) -> ProtoFileVersion:
 def upload_to_proto_status(upload: MultipartUpload) -> ProtoUploadStatus:
     return UPLOAD_STATUS_TO_PROTO.get(
         upload.status,
-        ProtoUploadStatus.UPLOAD_STATUS_ACTIVE,
+        ProtoUploadStatus.ACTIVE,
     )
 
 

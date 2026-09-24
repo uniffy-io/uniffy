@@ -1,7 +1,7 @@
 """ConnectRPC service bindings for ``superadmin.v1`` directory services."""
 
 from connectrpc.request import RequestContext
-from uniffy_proto.superadmin.v1.system_directory_pb2 import (
+from uniffy_proto.superadmin.v1.system_directory_pb import (
     CreateOrganizationRequest,
     CreateOrganizationResponse,
     CreateUserRequest,

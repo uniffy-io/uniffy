@@ -5,9 +5,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import UUID
 
 import pytest
+from protobuf import Oneof
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from uniffy_proto.projects.v1.projects_pb2 import (
+from uniffy_proto.projects.v1.projects_pb import (
     FilterLogic,
     TableLayout,
     TaskFieldRef,
@@ -99,7 +100,7 @@ async def _create_view(
         env.org_id,
         project_id,
         name="Mine",
-        definition=ViewDefinition(table=TableLayout()),
+        definition=ViewDefinition(layout=Oneof(field="table", value=TableLayout())),
         visibility=visibility,
     )
 
@@ -212,15 +213,20 @@ async def test_view_on_a_deleted_field_loads_but_no_longer_saves(
         )
         await session.commit()
         definition = ViewDefinition(
-            table=TableLayout(),
+            layout=Oneof(field="table", value=TableLayout()),
             filter=TaskFilterGroup(
-                logic=FilterLogic.FILTER_LOGIC_AND,
+                logic=FilterLogic.AND,
                 nodes=[
                     TaskFilterNode(
-                        condition=TaskFilterCondition(
-                            field=TaskFieldRef(field_id="field_effort"),
-                            operator=TaskFilterOperator.TASK_FILTER_OPERATOR_GREATER_THAN,
-                            value=TaskFilterValue(number=3),
+                        node=Oneof(
+                            field="condition",
+                            value=TaskFilterCondition(
+                                field=TaskFieldRef(
+                                    ref=Oneof(field="field_id", value="field_effort")
+                                ),
+                                operator=TaskFilterOperator.GREATER_THAN,
+                                value=TaskFilterValue(value=Oneof(field="number", value=3)),
+                            ),
                         )
                     )
                 ],
@@ -237,9 +243,9 @@ async def test_view_on_a_deleted_field_loads_but_no_longer_saves(
         view_id = view.id
 
         await session.execute(
-            delete(FieldDefinition).where(FieldDefinition.id == "field_effort").where(
-                FieldDefinition.project_id == project_id
-            )
+            delete(FieldDefinition)
+            .where(FieldDefinition.id == "field_effort")
+            .where(FieldDefinition.project_id == project_id)
         )
         await session.commit()
 

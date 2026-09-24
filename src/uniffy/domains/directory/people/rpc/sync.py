@@ -6,7 +6,7 @@ from connectrpc.request import RequestContext
 from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from uniffy_proto.people.v1 import people_pb2 as pb
+from uniffy_proto.people.v1 import people_pb as pb
 
 from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import Action
@@ -153,7 +153,7 @@ class IdentitySourceHandlers:
                 session.add(source)
                 await session.flush()
 
-                if request.HasField("secret") and request.secret:
+                if request.has_field("secret") and request.secret:
                     await OrgSettingsOperations(session).set(
                         organization_id=org_id,
                         namespace=IDENTITY_SECRET_NAMESPACE,
@@ -200,22 +200,22 @@ class IdentitySourceHandlers:
                 source = await _load_source(session, org_id, request.source_id)
 
                 changed: list[str] = []
-                if request.HasField("name"):
+                if request.has_field("name"):
                     source.name = _require_source_name(request.name)
                     changed.append("name")
-                if request.HasField("config_json"):
+                if request.has_field("config_json"):
                     config = _parse_config_json(request.config_json)
                     parse_source_config(source.kind, config)
                     source.config = config
                     changed.append("config")
-                if request.HasField("is_active"):
+                if request.has_field("is_active"):
                     if source.kind is IdentitySourceKind.LOCAL and not request.is_active:
                         raise ValidationError("is_active", "the LOCAL source cannot be deactivated")
                     if request.is_active and source.kind is not IdentitySourceKind.LOCAL:
                         await _require_single_active_source(session, org_id, exclude_id=source.id)
                     source.is_active = request.is_active
                     changed.append("is_active")
-                if request.HasField("secret") and request.secret:
+                if request.has_field("secret") and request.secret:
                     await OrgSettingsOperations(session).set(
                         organization_id=org_id,
                         namespace=IDENTITY_SECRET_NAMESPACE,

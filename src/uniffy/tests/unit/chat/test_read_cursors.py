@@ -21,10 +21,10 @@ def test_absolute_unread_event_carries_explicit_null_cursor() -> None:
         "first_unread_message_id": target,
     })
     assert event is not None
-    assert event.unread_count.absolute
-    assert event.unread_count.HasField("last_read_message_id")
-    assert event.unread_count.last_read_message_id == ""
-    assert event.unread_count.first_unread_message_id == target
+    assert event.payload.value.absolute
+    assert event.payload.value.has_field("last_read_message_id")
+    assert event.payload.value.last_read_message_id == ""
+    assert event.payload.value.first_unread_message_id == target
 
 
 def test_unread_delta_leaves_cursor_fields_absent() -> None:
@@ -34,10 +34,10 @@ def test_unread_delta_leaves_cursor_fields_absent() -> None:
         "unread_count": 1,
     })
     assert event is not None
-    assert not event.unread_count.absolute
-    assert not event.unread_count.HasField("last_read_message_id")
-    assert not event.unread_count.HasField("first_unread_message_id")
-    assert not event.unread_count.HasField("message_id")
+    assert not event.payload.value.absolute
+    assert not event.payload.value.has_field("last_read_message_id")
+    assert not event.payload.value.has_field("first_unread_message_id")
+    assert not event.payload.value.has_field("message_id")
 
 
 def test_send_delta_names_the_root_row() -> None:
@@ -49,7 +49,7 @@ def test_send_delta_names_the_root_row() -> None:
         "message_id": root,
     })
     assert event is not None
-    assert event.unread_count.message_id == root
+    assert event.payload.value.message_id == root
 
 
 async def test_send_delta_fans_the_root_row_to_every_member_but_the_sender() -> None:
@@ -80,7 +80,7 @@ async def test_thread_reply_delta_carries_no_anchor() -> None:
     publish = AsyncMock()
     with patch("uniffy.domains.chat.messages.notifications.publish_user_chat_events", publish):
         await MessageNotifications()._publish_unread_notifications(channel, sender, [member])
-    (_, _, payload), = publish.await_args.args[0]
+    ((_, _, payload),) = publish.await_args.args[0]
     assert "message_id" not in payload
 
 

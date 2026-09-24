@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from connectrpc.code import Code
 from connectrpc.errors import ConnectError
-from uniffy_proto.auth.v1.auth_pb2 import RefreshTokenRequest
+from uniffy_proto.auth.v1.auth_pb import RefreshTokenRequest
 
 from uniffy.domains.auth.errors import AuthenticationError
 from uniffy.domains.auth.handlers import AuthHandlers

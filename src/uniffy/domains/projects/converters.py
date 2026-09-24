@@ -1,30 +1,30 @@
 """Projects proto converters."""
 
-from uniffy_proto.projects.v1.projects_pb2 import (
+from uniffy_proto.projects.v1.projects_pb import (
     ActivityAction,
     FieldType,
     ViewType,
     ViewVisibility,
 )
-from uniffy_proto.projects.v1.projects_pb2 import (
+from uniffy_proto.projects.v1.projects_pb import (
     FieldDefinition as ProtoFieldDefinition,
 )
-from uniffy_proto.projects.v1.projects_pb2 import (
+from uniffy_proto.projects.v1.projects_pb import (
     Project as ProtoProject,
 )
-from uniffy_proto.projects.v1.projects_pb2 import (
+from uniffy_proto.projects.v1.projects_pb import (
     Sprint as ProtoSprint,
 )
-from uniffy_proto.projects.v1.projects_pb2 import (
+from uniffy_proto.projects.v1.projects_pb import (
     Task as ProtoTask,
 )
-from uniffy_proto.projects.v1.projects_pb2 import (
+from uniffy_proto.projects.v1.projects_pb import (
     TaskActivity as ProtoTaskActivity,
 )
-from uniffy_proto.projects.v1.projects_pb2 import (
+from uniffy_proto.projects.v1.projects_pb import (
     TypeFieldSchema as ProtoTypeFieldSchema,
 )
-from uniffy_proto.projects.v1.projects_pb2 import (
+from uniffy_proto.projects.v1.projects_pb import (
     ViewConfig as ProtoViewConfig,
 )
 
@@ -50,73 +50,71 @@ from uniffy.core.types import AccessMode, ContentRole
 from uniffy.domains.projects.views.definition import definition_from_dict
 from uniffy.domains.tags.converters import tag_to_proto
 
-FIELD_TYPE_TO_PROTO: dict[str, FieldType.ValueType] = {
-    "text": FieldType.FIELD_TYPE_TEXT,
-    "number": FieldType.FIELD_TYPE_NUMBER,
-    "single_select": FieldType.FIELD_TYPE_SINGLE_SELECT,
-    "multi_select": FieldType.FIELD_TYPE_MULTI_SELECT,
-    "date": FieldType.FIELD_TYPE_DATE,
-    "person": FieldType.FIELD_TYPE_PERSON,
-    "reference": FieldType.FIELD_TYPE_REFERENCE,
+FIELD_TYPE_TO_PROTO: dict[str, FieldType] = {
+    "text": FieldType.TEXT,
+    "number": FieldType.NUMBER,
+    "single_select": FieldType.SINGLE_SELECT,
+    "multi_select": FieldType.MULTI_SELECT,
+    "date": FieldType.DATE,
+    "person": FieldType.PERSON,
+    "reference": FieldType.REFERENCE,
 }
 
-FIELD_TYPE_FROM_PROTO: dict[FieldType.ValueType, str] = {
-    v: k for k, v in FIELD_TYPE_TO_PROTO.items()
+FIELD_TYPE_FROM_PROTO: dict[FieldType, str] = {v: k for k, v in FIELD_TYPE_TO_PROTO.items()}
+
+VIEW_TYPE_TO_PROTO: dict[str, ViewType] = {
+    ProjectViewType.TABLE: ViewType.TABLE,
+    ProjectViewType.BOARD: ViewType.BOARD,
+    ProjectViewType.ROADMAP: ViewType.ROADMAP,
+    ProjectViewType.BACKLOG: ViewType.BACKLOG,
+    ProjectViewType.GRAPH: ViewType.GRAPH,
+    ProjectViewType.RESOURCES: ViewType.RESOURCES,
 }
 
-VIEW_TYPE_TO_PROTO: dict[str, ViewType.ValueType] = {
-    ProjectViewType.TABLE: ViewType.VIEW_TYPE_TABLE,
-    ProjectViewType.BOARD: ViewType.VIEW_TYPE_BOARD,
-    ProjectViewType.ROADMAP: ViewType.VIEW_TYPE_ROADMAP,
-    ProjectViewType.BACKLOG: ViewType.VIEW_TYPE_BACKLOG,
-    ProjectViewType.GRAPH: ViewType.VIEW_TYPE_GRAPH,
-    ProjectViewType.RESOURCES: ViewType.VIEW_TYPE_RESOURCES,
+VIEW_VISIBILITY_TO_PROTO: dict[str, ViewVisibility] = {
+    ProjectViewVisibility.PERSONAL: ViewVisibility.PERSONAL,
+    ProjectViewVisibility.SHARED: ViewVisibility.SHARED,
 }
 
-VIEW_VISIBILITY_TO_PROTO: dict[str, ViewVisibility.ValueType] = {
-    ProjectViewVisibility.PERSONAL: ViewVisibility.VIEW_VISIBILITY_PERSONAL,
-    ProjectViewVisibility.SHARED: ViewVisibility.VIEW_VISIBILITY_SHARED,
+VIEW_VISIBILITY_FROM_PROTO: dict[ViewVisibility, ProjectViewVisibility] = {
+    ViewVisibility.PERSONAL: ProjectViewVisibility.PERSONAL,
+    ViewVisibility.SHARED: ProjectViewVisibility.SHARED,
 }
 
-VIEW_VISIBILITY_FROM_PROTO: dict[ViewVisibility.ValueType, ProjectViewVisibility] = {
-    ViewVisibility.VIEW_VISIBILITY_PERSONAL: ProjectViewVisibility.PERSONAL,
-    ViewVisibility.VIEW_VISIBILITY_SHARED: ProjectViewVisibility.SHARED,
-}
-
-ACTIVITY_ACTION_TO_PROTO: dict[str, ActivityAction.ValueType] = {
-    "created": ActivityAction.ACTIVITY_ACTION_CREATED,
-    "status_changed": ActivityAction.ACTIVITY_ACTION_STATUS_CHANGED,
-    "priority_changed": ActivityAction.ACTIVITY_ACTION_PRIORITY_CHANGED,
-    "field_updated": ActivityAction.ACTIVITY_ACTION_FIELD_UPDATED,
-    "blocked_by_added": ActivityAction.ACTIVITY_ACTION_BLOCKED_BY_ADDED,
-    "blocked_by_removed": ActivityAction.ACTIVITY_ACTION_BLOCKED_BY_REMOVED,
-    "assigned": ActivityAction.ACTIVITY_ACTION_ASSIGNED,
-    "type_changed": ActivityAction.ACTIVITY_ACTION_TYPE_CHANGED,
-    "sprint_changed": ActivityAction.ACTIVITY_ACTION_SPRINT_CHANGED,
+ACTIVITY_ACTION_TO_PROTO: dict[str, ActivityAction] = {
+    "created": ActivityAction.CREATED,
+    "status_changed": ActivityAction.STATUS_CHANGED,
+    "priority_changed": ActivityAction.PRIORITY_CHANGED,
+    "field_updated": ActivityAction.FIELD_UPDATED,
+    "blocked_by_added": ActivityAction.BLOCKED_BY_ADDED,
+    "blocked_by_removed": ActivityAction.BLOCKED_BY_REMOVED,
+    "assigned": ActivityAction.ASSIGNED,
+    "type_changed": ActivityAction.TYPE_CHANGED,
+    "sprint_changed": ActivityAction.SPRINT_CHANGED,
 }
 
 
-def field_type_to_proto(field_type: str) -> FieldType.ValueType:
-    return FIELD_TYPE_TO_PROTO.get(field_type, FieldType.FIELD_TYPE_UNSPECIFIED)
+def field_type_to_proto(field_type: str) -> FieldType:
+    return FIELD_TYPE_TO_PROTO.get(field_type, FieldType.UNSPECIFIED)
 
 
-def field_type_from_proto(proto_type: FieldType.ValueType) -> str:
+def field_type_from_proto(proto_type: FieldType) -> str:
     return FIELD_TYPE_FROM_PROTO.get(proto_type, "text")
 
 
-def view_type_to_proto(view_type: str) -> ViewType.ValueType:
-    return VIEW_TYPE_TO_PROTO.get(view_type, ViewType.VIEW_TYPE_UNSPECIFIED)
+def view_type_to_proto(view_type: str) -> ViewType:
+    return VIEW_TYPE_TO_PROTO.get(view_type, ViewType.UNSPECIFIED)
 
 
-def view_visibility_from_proto(visibility: ViewVisibility.ValueType) -> ProjectViewVisibility:
+def view_visibility_from_proto(visibility: ViewVisibility) -> ProjectViewVisibility:
     resolved = VIEW_VISIBILITY_FROM_PROTO.get(visibility)
     if resolved is None:
         raise ValidationError("visibility", "A view must be personal or shared")
     return resolved
 
 
-def activity_action_to_proto(action: str) -> ActivityAction.ValueType:
-    return ACTIVITY_ACTION_TO_PROTO.get(action, ActivityAction.ACTIVITY_ACTION_UNSPECIFIED)
+def activity_action_to_proto(action: str) -> ActivityAction:
+    return ACTIVITY_ACTION_TO_PROTO.get(action, ActivityAction.UNSPECIFIED)
 
 
 def project_to_proto(
@@ -180,7 +178,7 @@ def project_to_proto(
         proto.user_role = content_role_to_proto(user_role)
 
     if project.deleted_at:
-        proto.deleted_at.CopyFrom(datetime_to_timestamp(project.deleted_at))
+        proto.deleted_at = datetime_to_timestamp(project.deleted_at)
 
     return proto
 
@@ -229,7 +227,7 @@ def task_to_proto(
     if task.due_date:
         proto.due_date = task.due_date
     if task.completed_at:
-        proto.completed_at.CopyFrom(datetime_to_timestamp(task.completed_at))
+        proto.completed_at = datetime_to_timestamp(task.completed_at)
     if task.parent_id:
         proto.parent_id = str(task.parent_id)
     if task.blocked_by_task_ids:
@@ -237,7 +235,7 @@ def task_to_proto(
     if task.recurrence_rule:
         proto.recurrence_rule = task.recurrence_rule
     if task.deleted_at:
-        proto.deleted_at.CopyFrom(datetime_to_timestamp(task.deleted_at))
+        proto.deleted_at = datetime_to_timestamp(task.deleted_at)
     if task.sprint_id:
         proto.sprint_id = str(task.sprint_id)
     if task.estimated_minutes is not None:

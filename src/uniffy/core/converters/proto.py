@@ -2,19 +2,17 @@
 
 from datetime import UTC, datetime
 
-from google.protobuf.timestamp_pb2 import Timestamp
+from protobuf.wkt import Timestamp
 
 
 def datetime_to_timestamp(dt: datetime) -> Timestamp:
-    timestamp = Timestamp()
-    timestamp.FromDatetime(dt)
-    return timestamp
+    # Naive database values represent UTC, regardless of the process timezone.
+    return Timestamp.from_datetime(dt.replace(tzinfo=UTC) if dt.tzinfo is None else dt)
 
 
 def timestamp_to_datetime(ts: Timestamp) -> datetime:
-    """``ToDatetime()`` returns a naive UTC value; stamp the tz so Postgres reads it correctly."""
-    naive_dt = ts.ToDatetime()
-    return naive_dt.replace(tzinfo=UTC)
+    # Datetimes carry microseconds; discard sub-microsecond precision on conversion.
+    return datetime.fromtimestamp(ts.seconds, UTC).replace(microsecond=ts.nanos // 1000)
 
 
 def optional_timestamp(dt: datetime | None) -> Timestamp | None:

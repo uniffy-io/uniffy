@@ -6,17 +6,17 @@ from connectrpc.code import Code
 from connectrpc.request import RequestContext
 from connectrpc.server import DEFAULT_READ_MAX_BYTES
 from fastapi.testclient import TestClient
-from google.protobuf.message import Message
-from uniffy_proto.agents.v1.agents_pb2 import UploadAgentAvatarRequest, UploadAgentAvatarResponse
-from uniffy_proto.auth.v1.auth_pb2 import LoginRequest
-from uniffy_proto.cal.v1.calendar_pb2 import (
+from protobuf import Message
+from uniffy_proto.agents.v1.agents_pb import UploadAgentAvatarRequest, UploadAgentAvatarResponse
+from uniffy_proto.auth.v1.auth_pb import LoginRequest
+from uniffy_proto.cal.v1.calendar_pb import (
     ApplyCalendarImportRequest,
     ApplyCalendarImportResponse,
     PreviewCalendarImportRequest,
     PreviewCalendarImportResponse,
 )
-from uniffy_proto.files.v1.files_pb2 import UploadChunkRequest, UploadChunkResponse
-from uniffy_proto.users.v1.users_pb2 import UploadAvatarRequest, UploadAvatarResponse
+from uniffy_proto.files.v1.files_pb import UploadChunkRequest, UploadChunkResponse
+from uniffy_proto.users.v1.users_pb import UploadAvatarRequest, UploadAvatarResponse
 
 from uniffy.core.auth.principal import current_principal
 from uniffy.core.auth.tokens import create_access_token

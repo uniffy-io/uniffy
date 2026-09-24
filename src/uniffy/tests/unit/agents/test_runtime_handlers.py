@@ -11,7 +11,7 @@ from uuid import UUID
 import pytest
 from connectrpc.code import Code
 from connectrpc.errors import ConnectError
-from uniffy_proto.agents.v1.runtime_pb2 import (
+from uniffy_proto.agents.v1.runtime_pb import (
     RespondToConfirmationRequest,
     SendMessageRequest,
     StreamSendMessageRequest,
@@ -480,9 +480,13 @@ class TestStreamSendMessage:
 
         # First event is the run_id header (no oneof set).
         assert collected[0].event.run_id == str(run_id)
-        assert collected[0].event.WhichOneof("event") is None
+        assert (
+            collected[0].event.event.field if collected[0].event.event is not None else None
+        ) is None
 
-        cases = [ev.event.WhichOneof("event") for ev in collected[1:]]
+        cases = [
+            (ev.event.event.field if ev.event.event is not None else None) for ev in collected[1:]
+        ]
         assert cases == [
             "message_stored",
             "text_block_delta",
@@ -527,8 +531,10 @@ class TestStreamSendMessage:
         # run_id header + synthetic error proto envelope
         assert len(collected) == 2
         assert collected[0].event.run_id == str(run_id)
-        assert collected[1].event.WhichOneof("event") == "error"
-        assert collected[1].event.error.message == handlers_mod.SUBSCRIBE_TIMEOUT_MESSAGE
+        assert (
+            collected[1].event.event.field if collected[1].event.event is not None else None
+        ) == "error"
+        assert collected[1].event.event.value.message == handlers_mod.SUBSCRIBE_TIMEOUT_MESSAGE
         assert collected[1].event.run_id == str(run_id)
 
 
@@ -842,9 +848,13 @@ class TestSubscribeToRun:
         assert captured == [run_id]
         # First event is the run_id header (no oneof set).
         assert collected[0].event.run_id == str(run_id)
-        assert collected[0].event.WhichOneof("event") is None
+        assert (
+            collected[0].event.event.field if collected[0].event.event is not None else None
+        ) is None
 
-        cases = [ev.event.WhichOneof("event") for ev in collected[1:]]
+        cases = [
+            (ev.event.event.field if ev.event.event is not None else None) for ev in collected[1:]
+        ]
         assert cases == ["text_block_delta", "done"]
         for ev in collected:
             assert ev.event.run_id == str(run_id)

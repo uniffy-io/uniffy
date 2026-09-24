@@ -79,6 +79,7 @@ dev = [
   "import-linter>=2.15",
   "pip-licenses>=5.5.5",
   "protoc-gen-connectrpc>=0.12.1",
+  "protoc-gen-py==0.5.0",
   "pytest>=9.1.1",
   "pytest-asyncio>=1.4.0",
   "pytest-benchmark>=5.3.0",

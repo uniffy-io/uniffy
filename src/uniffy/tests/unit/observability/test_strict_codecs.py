@@ -1,7 +1,7 @@
 import pytest
 from connectrpc.code import Code
 from connectrpc.errors import ConnectError
-from uniffy_proto.auth.v1.auth_pb2 import LoginRequest
+from uniffy_proto.auth.v1.auth_pb import LoginRequest
 
 from uniffy.transport.rpc import strict_request_codecs
 

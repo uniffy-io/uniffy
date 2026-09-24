@@ -2,7 +2,7 @@ from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
-from uniffy_proto.users.v1.users_pb2 import (
+from uniffy_proto.users.v1.users_pb import (
     DeleteAvatarRequest,
     DeleteAvatarResponse,
     GetMyProfileRequest,
@@ -53,9 +53,9 @@ class UsersHandlers:
                 ops = UserOperations(session, self.search_indexer)
                 user = await ops.update_profile(
                     user_id=user_id,
-                    accent_color=request.accent_color if request.HasField("accent_color") else None,
-                    font_family=request.font_family if request.HasField("font_family") else None,
-                    pronouns=request.pronouns if request.HasField("pronouns") else None,
+                    accent_color=request.accent_color if request.has_field("accent_color") else None,
+                    font_family=request.font_family if request.has_field("font_family") else None,
+                    pronouns=request.pronouns if request.has_field("pronouns") else None,
                 )
                 return UpdateMyProfileResponse(user=user_to_profile(user))
         except NotFoundError as e:

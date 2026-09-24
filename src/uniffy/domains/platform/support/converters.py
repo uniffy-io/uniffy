@@ -4,23 +4,24 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from google.protobuf.timestamp_pb2 import Timestamp
-from uniffy_proto.support.v1.support_consent_pb2 import (
+from protobuf.wkt import Timestamp
+from uniffy_proto.support.v1.support_consent_pb import (
     SupportConsentMode as SupportConsentModeProto,
 )
-from uniffy_proto.support.v1.support_consent_pb2 import (
+from uniffy_proto.support.v1.support_consent_pb import (
     SupportConsentModeView as SupportConsentModeViewProto,
 )
-from uniffy_proto.support.v1.support_consent_pb2 import (
+from uniffy_proto.support.v1.support_consent_pb import (
     SupportSession as SupportSessionProto,
 )
-from uniffy_proto.support.v1.support_consent_pb2 import (
+from uniffy_proto.support.v1.support_consent_pb import (
     SupportSessionScope as SupportSessionScopeProto,
 )
-from uniffy_proto.support.v1.support_consent_pb2 import (
+from uniffy_proto.support.v1.support_consent_pb import (
     SupportSessionState as SupportSessionStateProto,
 )
 
+from uniffy.core.converters.proto import datetime_to_timestamp
 from uniffy.core.models.platform.support_session import (
     SupportSessionScope,
     SupportSessionState,
@@ -32,14 +33,14 @@ from uniffy.domains.platform.support.operations import (
 from uniffy.domains.platform.support.policy import ConsentMode
 
 _CONSENT_TO_PROTO: dict[ConsentMode, int] = {
-    ConsentMode.OWNER_APPROVED: SupportConsentModeProto.SUPPORT_CONSENT_MODE_OWNER_APPROVED,
-    ConsentMode.OPERATOR_JUSTIFIED: SupportConsentModeProto.SUPPORT_CONSENT_MODE_OPERATOR_JUSTIFIED,
+    ConsentMode.OWNER_APPROVED: SupportConsentModeProto.OWNER_APPROVED,
+    ConsentMode.OPERATOR_JUSTIFIED: SupportConsentModeProto.OPERATOR_JUSTIFIED,
 }
 
 _CONSENT_FROM_PROTO: dict[int, ConsentMode | None] = {
-    SupportConsentModeProto.SUPPORT_CONSENT_MODE_UNSPECIFIED: None,
-    SupportConsentModeProto.SUPPORT_CONSENT_MODE_OWNER_APPROVED: ConsentMode.OWNER_APPROVED,
-    SupportConsentModeProto.SUPPORT_CONSENT_MODE_OPERATOR_JUSTIFIED: ConsentMode.OPERATOR_JUSTIFIED,
+    SupportConsentModeProto.UNSPECIFIED: None,
+    SupportConsentModeProto.OWNER_APPROVED: ConsentMode.OWNER_APPROVED,
+    SupportConsentModeProto.OPERATOR_JUSTIFIED: ConsentMode.OPERATOR_JUSTIFIED,
 }
 
 
@@ -50,7 +51,7 @@ def consent_mode_from_proto(value: int) -> ConsentMode | None:
 
 def _consent_to_proto(mode: ConsentMode | None) -> int:
     if mode is None:
-        return SupportConsentModeProto.SUPPORT_CONSENT_MODE_UNSPECIFIED
+        return SupportConsentModeProto.UNSPECIFIED
     return _CONSENT_TO_PROTO[mode]
 
 
@@ -64,29 +65,29 @@ def consent_view_to_proto(view: ConsentModeView) -> SupportConsentModeViewProto:
 
 
 _SCOPE_TO_PROTO: dict[SupportSessionScope, int] = {
-    SupportSessionScope.READ_ONLY: SupportSessionScopeProto.SUPPORT_SESSION_SCOPE_READ_ONLY,
-    SupportSessionScope.READ_WRITE: SupportSessionScopeProto.SUPPORT_SESSION_SCOPE_READ_WRITE,
+    SupportSessionScope.READ_ONLY: SupportSessionScopeProto.READ_ONLY,
+    SupportSessionScope.READ_WRITE: SupportSessionScopeProto.READ_WRITE,
 }
 
 _SCOPE_FROM_PROTO: dict[int, SupportSessionScope] = {
-    SupportSessionScopeProto.SUPPORT_SESSION_SCOPE_READ_ONLY: SupportSessionScope.READ_ONLY,
-    SupportSessionScopeProto.SUPPORT_SESSION_SCOPE_READ_WRITE: SupportSessionScope.READ_WRITE,
+    SupportSessionScopeProto.READ_ONLY: SupportSessionScope.READ_ONLY,
+    SupportSessionScopeProto.READ_WRITE: SupportSessionScope.READ_WRITE,
 }
 
 _STATE_TO_PROTO: dict[SupportSessionState, int] = {
-    SupportSessionState.PENDING: SupportSessionStateProto.SUPPORT_SESSION_STATE_PENDING,
-    SupportSessionState.ACTIVE: SupportSessionStateProto.SUPPORT_SESSION_STATE_ACTIVE,
-    SupportSessionState.EXPIRED: SupportSessionStateProto.SUPPORT_SESSION_STATE_EXPIRED,
-    SupportSessionState.REVOKED: SupportSessionStateProto.SUPPORT_SESSION_STATE_REVOKED,
-    SupportSessionState.REJECTED: SupportSessionStateProto.SUPPORT_SESSION_STATE_REJECTED,
+    SupportSessionState.PENDING: SupportSessionStateProto.PENDING,
+    SupportSessionState.ACTIVE: SupportSessionStateProto.ACTIVE,
+    SupportSessionState.EXPIRED: SupportSessionStateProto.EXPIRED,
+    SupportSessionState.REVOKED: SupportSessionStateProto.REVOKED,
+    SupportSessionState.REJECTED: SupportSessionStateProto.REJECTED,
 }
 
 _STATE_FROM_PROTO: dict[int, SupportSessionState] = {
-    SupportSessionStateProto.SUPPORT_SESSION_STATE_PENDING: SupportSessionState.PENDING,
-    SupportSessionStateProto.SUPPORT_SESSION_STATE_ACTIVE: SupportSessionState.ACTIVE,
-    SupportSessionStateProto.SUPPORT_SESSION_STATE_EXPIRED: SupportSessionState.EXPIRED,
-    SupportSessionStateProto.SUPPORT_SESSION_STATE_REVOKED: SupportSessionState.REVOKED,
-    SupportSessionStateProto.SUPPORT_SESSION_STATE_REJECTED: SupportSessionState.REJECTED,
+    SupportSessionStateProto.PENDING: SupportSessionState.PENDING,
+    SupportSessionStateProto.ACTIVE: SupportSessionState.ACTIVE,
+    SupportSessionStateProto.EXPIRED: SupportSessionState.EXPIRED,
+    SupportSessionStateProto.REVOKED: SupportSessionState.REVOKED,
+    SupportSessionStateProto.REJECTED: SupportSessionState.REJECTED,
 }
 
 
@@ -104,7 +105,7 @@ def _to_timestamp(value: datetime | None) -> Timestamp | None:
     if value is None:
         return None
     ts = Timestamp()
-    ts.FromDatetime(value)
+    ts = datetime_to_timestamp(value)
     return ts
 
 
@@ -134,22 +135,22 @@ def session_to_proto(view: SupportSessionView) -> SupportSessionProto:
 
     requested_at = _to_timestamp(view.requested_at)
     if requested_at is not None:
-        msg.requested_at.CopyFrom(requested_at)
+        msg.requested_at = requested_at
     if view.granted_at is not None:
         granted_at = _to_timestamp(view.granted_at)
         if granted_at is not None:
-            msg.granted_at.CopyFrom(granted_at)
+            msg.granted_at = granted_at
     expires_at = _to_timestamp(view.expires_at)
     if expires_at is not None:
-        msg.expires_at.CopyFrom(expires_at)
+        msg.expires_at = expires_at
     if view.revoked_at is not None:
         revoked_at = _to_timestamp(view.revoked_at)
         if revoked_at is not None:
-            msg.revoked_at.CopyFrom(revoked_at)
+            msg.revoked_at = revoked_at
     created_at = _to_timestamp(view.created_at)
     if created_at is not None:
-        msg.created_at.CopyFrom(created_at)
+        msg.created_at = created_at
     updated_at = _to_timestamp(view.updated_at)
     if updated_at is not None:
-        msg.updated_at.CopyFrom(updated_at)
+        msg.updated_at = updated_at
     return msg

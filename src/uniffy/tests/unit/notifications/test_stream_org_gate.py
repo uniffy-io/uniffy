@@ -16,13 +16,13 @@ from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.method import IdempotencyLevel, MethodInfo
 from connectrpc.request import Headers, RequestContext
-from uniffy_proto.notifications.v1.notifications_pb2 import (
+from uniffy_proto.notifications.v1.notifications_pb import (
     StreamNotificationsRequest,
     StreamNotificationsResponse,
 )
 
-from uniffy.core.types import generate_id
 from uniffy.core.events.realtime import NotificationPayloadType
+from uniffy.core.types import generate_id
 from uniffy.domains.auth.interceptors import AuthenticationInterceptor
 from uniffy.domains.notifications.handlers import NotificationsHandlers
 
@@ -132,7 +132,7 @@ async def test_an_active_member_streams_on_the_jwt_resolved_org() -> None:
         f"content:{ORG_A}",
     )
     assert len(responses) == 1
-    assert responses[0].event_type == StreamNotificationsResponse.EVENT_TYPE_NEW_NOTIFICATION
+    assert responses[0].event_type == StreamNotificationsResponse.EventType.NEW_NOTIFICATION
     assert responses[0].notification.id == "n-1"
 
 

@@ -1,5 +1,5 @@
 from connectrpc.request import RequestContext
-from uniffy_proto.superadmin.v1.system_config_pb2 import (
+from uniffy_proto.superadmin.v1.system_config_pb import (
     GetMfaPolicyRequest,
     GetMfaPolicyResponse,
     GetSystemConfigRequest,

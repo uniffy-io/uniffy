@@ -8,8 +8,7 @@ from connectrpc.request import RequestContext
 from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from uniffy_proto.agents.v1.memories_pb2 import (
-    MEMORY_CATEGORY_UNSPECIFIED,
+from uniffy_proto.agents.v1.memories_pb import (
     CreateMemoryRequest,
     CreateMemoryResponse,
     DeleteMemoryRequest,
@@ -25,7 +24,8 @@ from uniffy_proto.agents.v1.memories_pb2 import (
     UpdateMemoryRequest,
     UpdateMemoryResponse,
 )
-from uniffy_proto.common.v1.common_pb2 import PaginationResponse
+from uniffy_proto.agents.v1.memories_pb import MemoryCategory as _ProtoMemoryCategory
+from uniffy_proto.common.v1.common_pb import PaginationResponse
 
 from uniffy.core.auth.membership import is_active_member
 from uniffy.core.auth.principal import current_user_id, resolve_organization_id
@@ -148,20 +148,20 @@ class MemoriesHandlers:
 
         ref = _parse_scope_ref(
             request.scope,
-            channel_id=request.channel_id if request.HasField("channel_id") else None,
-            session_id=request.session_id if request.HasField("session_id") else None,
-            agent_id=request.agent_id if request.HasField("agent_id") else None,
+            channel_id=request.channel_id if request.has_field("channel_id") else None,
+            session_id=request.session_id if request.has_field("session_id") else None,
+            agent_id=request.agent_id if request.has_field("agent_id") else None,
             user_id=user_id,
         )
 
         category: str = "facts"
-        if request.category != MEMORY_CATEGORY_UNSPECIFIED:
+        if request.category != _ProtoMemoryCategory.UNSPECIFIED:
             resolved = memory_category_from_proto(request.category)
             if resolved:
                 category = resolved
 
         importance: float = 0.5
-        if request.HasField("importance"):
+        if request.has_field("importance"):
             importance = request.importance
 
         try:
@@ -198,21 +198,21 @@ class MemoriesHandlers:
 
         ref = _parse_scope_ref(
             request.scope,
-            channel_id=request.channel_id if request.HasField("channel_id") else None,
-            session_id=request.session_id if request.HasField("session_id") else None,
-            agent_id=request.agent_id if request.HasField("agent_id") else None,
+            channel_id=request.channel_id if request.has_field("channel_id") else None,
+            session_id=request.session_id if request.has_field("session_id") else None,
+            agent_id=request.agent_id if request.has_field("agent_id") else None,
             user_id=user_id,
         )
 
         category: str | None = None
-        if request.category != MEMORY_CATEGORY_UNSPECIFIED:
+        if request.category != _ProtoMemoryCategory.UNSPECIFIED:
             category = memory_category_from_proto(request.category)
 
         search: str | None = request.search if request.search else None
 
         page = 1
         page_size = 50
-        if request.HasField("pagination"):
+        if request.has_field("pagination"):
             page = request.pagination.page if request.pagination.page > 0 else 1
             page_size = min(
                 request.pagination.page_size if request.pagination.page_size > 0 else 50,
@@ -259,12 +259,12 @@ class MemoriesHandlers:
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
 
-        content: str | None = request.content if request.HasField("content") else None
-        importance: float | None = request.importance if request.HasField("importance") else None
-        description: str | None = request.description if request.HasField("description") else None
+        content: str | None = request.content if request.has_field("content") else None
+        importance: float | None = request.importance if request.has_field("importance") else None
+        description: str | None = request.description if request.has_field("description") else None
 
         category: str | None = None
-        if request.HasField("category") and request.category != MEMORY_CATEGORY_UNSPECIFIED:
+        if request.has_field("category") and request.category != _ProtoMemoryCategory.UNSPECIFIED:
             category = memory_category_from_proto(request.category)
 
         try:

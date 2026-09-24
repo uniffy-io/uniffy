@@ -7,7 +7,7 @@ from uuid import UUID
 from loguru import logger
 from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
-from uniffy_proto.permissions.v1.permissions_pb2 import ACCESS_REQUEST_STATE_CANCELED
+from uniffy_proto.permissions.v1.permissions_pb import AccessRequestState as _ProtoAccessRequestState
 
 from uniffy.core.events.realtime import publish_access_request_changed
 from uniffy.core.models.permissions.content_access_request import (
@@ -66,7 +66,7 @@ async def publish_dismissed_requests(requests: list[DismissedAccessRequest]) -> 
                 user_id=request.requester_id,
                 request_id=request.id,
                 requested_urn=request.requested_urn,
-                state=ACCESS_REQUEST_STATE_CANCELED,
+                state=_ProtoAccessRequestState.CANCELED,
             )
         except Exception:
             logger.opt(exception=True).warning(

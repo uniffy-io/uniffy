@@ -1,5 +1,6 @@
 """Status, visibility, transparency, and out-of-office behavior."""
 
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -19,8 +20,6 @@ from uniffy.domains.scheduling.calendar.operations import (
     _activity_value,
     event_details_hidden,
 )
-
-from datetime import UTC, datetime
 
 
 def _event(**overrides) -> CalendarEvent:
@@ -79,8 +78,8 @@ class TestEventProtoRedaction:
         assert proto.description == ""
         assert proto.location == ""
         assert proto.category_id == ""
-        assert not proto.HasField("meeting_url")
-        assert not proto.HasField("channel_id")
+        assert not proto.has_field("meeting_url")
+        assert not proto.has_field("channel_id")
         assert len(proto.attendees) == 0
         assert len(proto.outgoing_references) == 0
         assert proto.is_out_of_office is True
@@ -96,19 +95,19 @@ class TestEventProtoRedaction:
 
         assert proto.details_hidden is False
         assert proto.title == "Quarterly review"
-        from uniffy_proto.cal.v1.calendar_pb2 import (
+        from uniffy_proto.cal.v1.calendar_pb import (
             EventStatus as ProtoEventStatus,
         )
-        from uniffy_proto.cal.v1.calendar_pb2 import (
+        from uniffy_proto.cal.v1.calendar_pb import (
             EventTransparency as ProtoEventTransparency,
         )
-        from uniffy_proto.cal.v1.calendar_pb2 import (
+        from uniffy_proto.cal.v1.calendar_pb import (
             EventVisibility as ProtoEventVisibility,
         )
 
-        assert proto.status == ProtoEventStatus.EVENT_STATUS_TENTATIVE
-        assert proto.visibility == ProtoEventVisibility.EVENT_VISIBILITY_STANDARD
-        assert proto.transparency == ProtoEventTransparency.EVENT_TRANSPARENCY_TRANSPARENT
+        assert proto.status == ProtoEventStatus.TENTATIVE
+        assert proto.visibility == ProtoEventVisibility.STANDARD
+        assert proto.transparency == ProtoEventTransparency.TRANSPARENT
 
 
 class TestSearchMetadata:

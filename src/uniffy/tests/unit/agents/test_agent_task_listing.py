@@ -1,7 +1,7 @@
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from uniffy_proto.projects.v1.projects_pb2 import (
+from uniffy_proto.projects.v1.projects_pb import (
     FilterLogic,
     SortDirection,
     TaskFilterOperator,
@@ -51,11 +51,11 @@ async def test_a_filter_tree_and_sort_reach_the_reader(reader: MagicMock) -> Non
 
     assert result.success
     call = reader.list_tasks.await_args.kwargs
-    condition = call["task_filter"].nodes[0].condition
-    assert call["task_filter"].logic == FilterLogic.FILTER_LOGIC_AND
-    assert condition.field.pseudo == TaskPseudoField.TASK_PSEUDO_FIELD_DEPTH
-    assert condition.operator == TaskFilterOperator.TASK_FILTER_OPERATOR_IS
-    assert call["sort"][0].direction == SortDirection.SORT_DIRECTION_DESC
+    condition = call["task_filter"].nodes[0].node.value
+    assert call["task_filter"].logic == FilterLogic.AND
+    assert condition.field.ref.value == TaskPseudoField.DEPTH
+    assert condition.operator == TaskFilterOperator.IS
+    assert call["sort"][0].direction == SortDirection.DESC
     assert call["time_zone"] == "Europe/Sofia"
     assert call["view"] is None
 
@@ -68,7 +68,7 @@ async def test_a_view_leaves_unset_what_the_call_leaves_out(reader: MagicMock) -
     call = reader.list_tasks.await_args.kwargs
     assert call["view"] == "Board"
     assert call["task_filter"] is None
-    assert call["sort"][0].direction == SortDirection.SORT_DIRECTION_DESC
+    assert call["sort"][0].direction == SortDirection.DESC
 
 
 async def test_a_full_page_says_how_many_more_there_are(reader: MagicMock) -> None:

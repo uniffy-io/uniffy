@@ -6,7 +6,7 @@ from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
-from uniffy_proto.agents.v1.sessions_pb2 import (
+from uniffy_proto.agents.v1.sessions_pb import (
     CreateSessionRequest,
     CreateSessionResponse,
     EditMessageRequest,
@@ -18,7 +18,7 @@ from uniffy_proto.agents.v1.sessions_pb2 import (
     RetryMessageRequest,
     RetryMessageResponse,
 )
-from uniffy_proto.common.v1.common_pb2 import PaginationResponse
+from uniffy_proto.common.v1.common_pb import PaginationResponse
 
 from uniffy.core.auth.principal import current_user_id, resolve_organization_id
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
@@ -67,8 +67,8 @@ class SessionsHandlers:
 
         kind = session_kind_from_proto(request.kind)
 
-        display_name = request.display_name if request.HasField("display_name") else None
-        model_override = request.model_override if request.HasField("model_override") else None
+        display_name = request.display_name if request.has_field("display_name") else None
+        model_override = request.model_override if request.has_field("model_override") else None
 
         try:
             async with open_session() as session:
@@ -173,7 +173,7 @@ class SessionsHandlers:
         # Parse pagination
         page = 1
         page_size = 50
-        if request.HasField("pagination"):
+        if request.has_field("pagination"):
             page = request.pagination.page if request.pagination.page > 0 else 1
             page_size = min(
                 request.pagination.page_size if request.pagination.page_size > 0 else 50,
@@ -181,7 +181,7 @@ class SessionsHandlers:
             )
 
         include_compacted = (
-            request.include_compacted if request.HasField("include_compacted") else False
+            request.include_compacted if request.has_field("include_compacted") else False
         )
 
         try:

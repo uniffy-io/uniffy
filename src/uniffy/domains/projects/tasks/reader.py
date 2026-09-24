@@ -6,7 +6,7 @@ from uuid import UUID
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from sqlalchemy import Select, and_, func, select
-from uniffy_proto.projects.v1.projects_pb2 import TaskFilterGroup, TaskSort
+from uniffy_proto.projects.v1.projects_pb import TaskFilterGroup, TaskSort
 
 from uniffy.core.errors import ValidationError
 from uniffy.core.models.projects.field_definition import FieldDefinition
@@ -136,7 +136,7 @@ class TaskReader(TaskContentOperations):
                 "view", f"No view '{view[:MAX_VIEW_NAME_LENGTH]}' in this project. Views: {known}"
             )
         definition = definition_from_dict(match.definition, match.type)
-        task_filter = definition.filter if definition.HasField("filter") else None
+        task_filter = definition.filter if definition.has_field("filter") else None
         return task_filter, list(definition.sort)
 
     async def _filter_context(

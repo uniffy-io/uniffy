@@ -1,4 +1,4 @@
-from uniffy_proto.users.v1.users_pb2 import UserProfile
+from uniffy_proto.users.v1.users_pb import UserProfile
 
 from uniffy.core.converters import datetime_to_timestamp
 from uniffy.core.models.login.user import User

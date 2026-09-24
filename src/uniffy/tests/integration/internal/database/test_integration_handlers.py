@@ -11,7 +11,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from connectrpc.code import Code
 from connectrpc.errors import ConnectError
-from uniffy_proto.integrations.v1.integrations_pb2 import (
+from uniffy_proto.integrations.v1.integrations_pb import (
     AddConnectionRequest,
     ListConnectionsRequest,
     ListIntegrationProvidersRequest,
@@ -116,7 +116,7 @@ async def test_list_connections_reveals_last_error_only_to_admins(session, env) 
         response = await handlers.list_connections(request, MagicMock())
     assert len(response.connections) == 1
     assert response.connections[0].is_valid is False
-    assert not response.connections[0].HasField("last_error")
+    assert not response.connections[0].has_field("last_error")
 
     with _ctx_as(env.admin_id, env.org_id):
         response = await handlers.list_connections(request, MagicMock())

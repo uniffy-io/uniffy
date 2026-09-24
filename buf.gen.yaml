@@ -1,14 +1,11 @@
 version: v2
 plugins:
-    # Generated Python code requires a runtime at least as recent as the compiler.
-    - remote: buf.build/protocolbuffers/python:v36.2
+    - local: .venv/bin/protoc-gen-py
       out: src/proto/gen/python/src/uniffy_proto
-    - remote: buf.build/protocolbuffers/pyi:v36.2
-      out: src/proto/gen/python/src/uniffy_proto
+      strategy: all
     - local: .venv/bin/protoc-gen-connectrpc
       out: src/proto/gen/python/src/uniffy_proto
       strategy: all
-      opt: protobuf=google
 
     - local: protoc-gen-es
       out: src/proto/gen/typescript

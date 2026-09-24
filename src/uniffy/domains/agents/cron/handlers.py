@@ -7,7 +7,7 @@ from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
-from uniffy_proto.agents.v1.cron_pb2 import (
+from uniffy_proto.agents.v1.cron_pb import (
     CreateCronTaskRequest,
     CreateCronTaskResponse,
     DeleteCronTaskRequest,
@@ -23,7 +23,7 @@ from uniffy_proto.agents.v1.cron_pb2 import (
     UpdateCronTaskRequest,
     UpdateCronTaskResponse,
 )
-from uniffy_proto.common.v1.common_pb2 import PaginationResponse
+from uniffy_proto.common.v1.common_pb import PaginationResponse
 
 from uniffy.core.auth.permissions import resolve_effective_policy
 from uniffy.core.auth.permissions.checker import PermissionChecker
@@ -103,8 +103,8 @@ class CronHandlers:
         baseline_role = (
             content_role_from_proto(request.baseline_role) if request.baseline_role else None
         )
-        timezone = request.timezone if request.HasField("timezone") else "UTC"
-        description = request.description if request.HasField("description") else ""
+        timezone = request.timezone if request.has_field("timezone") else "UTC"
+        description = request.description if request.has_field("description") else ""
 
         try:
             async with open_session() as session:
@@ -183,12 +183,12 @@ class CronHandlers:
         org_id = _parse_uuid(request.organization_id, "organization_id")
 
         agent_id = None
-        if request.HasField("agent_id") and request.agent_id:
+        if request.has_field("agent_id") and request.agent_id:
             agent_id = _parse_uuid(request.agent_id, "agent_id")
 
         page = 1
         page_size = 50
-        if request.HasField("pagination"):
+        if request.has_field("pagination"):
             page = max(request.pagination.page, 1)
             page_size = min(max(request.pagination.page_size, 1), 100)
 
@@ -254,17 +254,17 @@ class CronHandlers:
         task_id = _parse_uuid(request.task_id, "task_id")
 
         kwargs: dict = {}
-        if request.HasField("name"):
+        if request.has_field("name"):
             kwargs["name"] = request.name
-        if request.HasField("prompt"):
+        if request.has_field("prompt"):
             kwargs["prompt"] = request.prompt
-        if request.HasField("cron_expression"):
+        if request.has_field("cron_expression"):
             kwargs["cron_expression"] = request.cron_expression
-        if request.HasField("timezone"):
+        if request.has_field("timezone"):
             kwargs["timezone"] = request.timezone
-        if request.HasField("description"):
+        if request.has_field("description"):
             kwargs["description"] = request.description
-        if request.HasField("is_enabled"):
+        if request.has_field("is_enabled"):
             kwargs["is_enabled"] = request.is_enabled
 
         if not kwargs:
@@ -334,7 +334,7 @@ class CronHandlers:
 
         page = 1
         page_size = 20
-        if request.HasField("pagination"):
+        if request.has_field("pagination"):
             page = max(request.pagination.page, 1)
             page_size = min(max(request.pagination.page_size, 1), 50)
 

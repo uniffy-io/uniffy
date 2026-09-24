@@ -6,8 +6,7 @@ from contextvars import ContextVar
 from typing import Any
 
 from connectrpc.code import Code
-from connectrpc.codec import Codec
-from connectrpc.compat import google_protobuf_binary_codec, google_protobuf_json_codec
+from connectrpc.codec import Codec, proto_binary_codec, proto_json_codec
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
@@ -87,9 +86,9 @@ class StrictDecodeCodec:
 
 
 def strict_request_codecs() -> list[Codec]:
-    json_codec = google_protobuf_json_codec(ignore_unknown_fields=False)
+    json_codec = proto_json_codec(ignore_unknown_fields=False)
     return [
-        StrictDecodeCodec(google_protobuf_binary_codec()),
+        StrictDecodeCodec(proto_binary_codec()),
         StrictDecodeCodec(json_codec),
         # connect-go compatibility: the charset-suffixed content type is its
         # own codec name in the registry.

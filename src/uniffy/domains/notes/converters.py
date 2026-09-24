@@ -1,21 +1,21 @@
 """Proto <-> domain converters for the notes domain."""
 
-from uniffy_proto.notes.v1.notes_pb2 import (
+from uniffy_proto.notes.v1.notes_pb import (
     NodeType as ProtoNodeType,
 )
-from uniffy_proto.notes.v1.notes_pb2 import (
+from uniffy_proto.notes.v1.notes_pb import (
     Note as ProtoNote,
 )
-from uniffy_proto.notes.v1.notes_pb2 import (
+from uniffy_proto.notes.v1.notes_pb import (
     NoteIcon as ProtoNoteIcon,
 )
-from uniffy_proto.notes.v1.notes_pb2 import (
+from uniffy_proto.notes.v1.notes_pb import (
     NoteOwner as ProtoNoteOwner,
 )
-from uniffy_proto.notes.v1.notes_pb2 import (
+from uniffy_proto.notes.v1.notes_pb import (
     NoteReference,
 )
-from uniffy_proto.notes.v1.notes_pb2 import (
+from uniffy_proto.notes.v1.notes_pb import (
     NoteShareTarget as ProtoNoteShareTarget,
 )
 
@@ -30,23 +30,23 @@ from uniffy.core.models.tags.tag import Tag
 from uniffy.core.types import AccessMode, ContentRole, NodeType
 from uniffy.domains.tags.converters import tag_to_proto
 
-NODE_TYPE_TO_PROTO: dict[NodeType, ProtoNodeType.ValueType] = {
-    NodeType.NOTE: ProtoNodeType.NODE_TYPE_NOTE,
-    NodeType.FOLDER: ProtoNodeType.NODE_TYPE_FOLDER,
-    NodeType.TEMPLATE: ProtoNodeType.NODE_TYPE_TEMPLATE,
-    NodeType.CANVAS: ProtoNodeType.NODE_TYPE_CANVAS,
+NODE_TYPE_TO_PROTO: dict[NodeType, ProtoNodeType] = {
+    NodeType.NOTE: ProtoNodeType.NOTE,
+    NodeType.FOLDER: ProtoNodeType.FOLDER,
+    NodeType.TEMPLATE: ProtoNodeType.TEMPLATE,
+    NodeType.CANVAS: ProtoNodeType.CANVAS,
 }
 
-NODE_TYPE_FROM_PROTO: dict[ProtoNodeType.ValueType, NodeType] = {
-    ProtoNodeType.NODE_TYPE_UNSPECIFIED: NodeType.NOTE,
-    ProtoNodeType.NODE_TYPE_NOTE: NodeType.NOTE,
-    ProtoNodeType.NODE_TYPE_FOLDER: NodeType.FOLDER,
-    ProtoNodeType.NODE_TYPE_TEMPLATE: NodeType.TEMPLATE,
-    ProtoNodeType.NODE_TYPE_CANVAS: NodeType.CANVAS,
+NODE_TYPE_FROM_PROTO: dict[ProtoNodeType, NodeType] = {
+    ProtoNodeType.UNSPECIFIED: NodeType.NOTE,
+    ProtoNodeType.NOTE: NodeType.NOTE,
+    ProtoNodeType.FOLDER: NodeType.FOLDER,
+    ProtoNodeType.TEMPLATE: NodeType.TEMPLATE,
+    ProtoNodeType.CANVAS: NodeType.CANVAS,
 }
 
 
-def node_type_from_proto(value: ProtoNodeType.ValueType) -> NodeType:
+def node_type_from_proto(value: ProtoNodeType) -> NodeType:
     return NODE_TYPE_FROM_PROTO.get(value, NodeType.NOTE)
 
 
@@ -70,7 +70,7 @@ def note_to_proto(
         organization_id=str(note.organization_id),
         owner_id=str(note.owner_id),
         access_mode=access_mode_to_proto(resolved_mode) if resolved_mode is not None else 0,
-        node_type=NODE_TYPE_TO_PROTO.get(note.node_type, ProtoNodeType.NODE_TYPE_NOTE),
+        node_type=NODE_TYPE_TO_PROTO.get(note.node_type, ProtoNodeType.NOTE),
         title=note.title,
         content="" if exclude_content else _serialize_body(note),
         slug=note.slug,
@@ -90,19 +90,17 @@ def note_to_proto(
     if note.parent_id:
         proto_note.parent_id = str(note.parent_id)
     if note.deleted_at:
-        proto_note.deleted_at.CopyFrom(datetime_to_timestamp(note.deleted_at))
+        proto_note.deleted_at = datetime_to_timestamp(note.deleted_at)
 
     icon = _build_icon_proto(note)
     if icon is not None:
-        proto_note.icon.CopyFrom(icon)
+        proto_note.icon = icon
 
     if owner_info:
-        proto_note.owner_info.CopyFrom(
-            ProtoNoteOwner(
-                id=str(owner_info.get("id", "")),
-                name=owner_info.get("name", ""),
-                email=owner_info.get("email", ""),
-            )
+        proto_note.owner_info = ProtoNoteOwner(
+            id=str(owner_info.get("id", "")),
+            name=owner_info.get("name", ""),
+            email=owner_info.get("email", ""),
         )
 
     if shared_with:
@@ -129,7 +127,7 @@ def note_to_reference(
         owner_id=str(note.owner_id),
         updated_at=datetime_to_timestamp(note.updated_at),
         access_mode=access_mode_to_proto(resolved_mode) if resolved_mode is not None else 0,
-        node_type=NODE_TYPE_TO_PROTO.get(note.node_type, ProtoNodeType.NODE_TYPE_NOTE),
+        node_type=NODE_TYPE_TO_PROTO.get(note.node_type, ProtoNodeType.NOTE),
     )
     if resolved_baseline is not None:
         ref.baseline_role = content_role_to_proto(resolved_baseline)

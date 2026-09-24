@@ -92,10 +92,10 @@ Third-party trademarks (provider names and logos) are covered separately in [TRA
 | pluggy                 | 1.6.0       | MIT License                                         | UNKNOWN                                                                            |
 | prometheus_client      | 0.26.0      | Apache-2.0 AND BSD-2-Clause                         | https://github.com/prometheus/client_python                                        |
 | propcache              | 0.4.1       | Apache Software License                             | https://github.com/aio-libs/propcache                                              |
-| protobuf               | 7.36.2      | 3-Clause BSD License                                | https://developers.google.com/protocol-buffers/                                    |
 | protobuf-py            | 0.5.0       | Apache-2.0                                          | https://github.com/bufbuild/protobuf-py                                            |
 | protobuf-py-ext        | 0.5.0       | UNKNOWN                                             | https://github.com/bufbuild/protobuf-py                                            |
 | protoc-gen-connectrpc  | 0.12.1      | Apache-2.0                                          | https://github.com/connectrpc/connect-py                                           |
+| protoc-gen-py          | 0.5.0       | Apache-2.0                                          | https://github.com/bufbuild/protobuf-py                                            |
 | psycopg2-binary        | 2.9.13      | GNU Library or Lesser General Public License (LGPL) | https://psycopg.org/                                                               |
 | py-cpuinfo2            | 10.1.1      | MIT                                                 | https://github.com/akx/py-cpuinfo2                                                 |
 | py-vapid               | 1.9.4       | MPL-2.0                                             | https://github.com/mozilla-services/vapid                                          |

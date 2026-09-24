@@ -1,3 +1,5 @@
+from uniffy.core.converters.proto import timestamp_to_datetime
+
 """Unit tests for the agents-in-chat integration.
 
 Covers the pure-logic + asyncio-only pieces that don't require a live DB or
@@ -15,7 +17,7 @@ from uuid import UUID
 import pytest
 from connectrpc.code import Code
 from connectrpc.errors import ConnectError
-from uniffy_proto.chat.v1.chat_pb2 import (
+from uniffy_proto.chat.v1.chat_pb import (
     GetChannelAgentConfigRequest,
     UpdateChannelAgentConfigRequest,
 )
@@ -537,13 +539,13 @@ class TestStatsToProto:
 
     def test_omits_manual_reset_at_when_none(self) -> None:
         proto = _stats_to_proto(_stats(manual_reset_at=None))
-        assert not proto.HasField("manual_reset_at")
+        assert not proto.has_field("manual_reset_at")
 
     def test_serialises_manual_reset_at_when_set(self) -> None:
         when = datetime(2026, 4, 23, 12, 30, 0, tzinfo=UTC)
         proto = _stats_to_proto(_stats(manual_reset_at=when, was_reset=True))
-        assert proto.HasField("manual_reset_at")
-        assert proto.manual_reset_at.ToDatetime(tzinfo=UTC) == when
+        assert proto.has_field("manual_reset_at")
+        assert timestamp_to_datetime(proto.manual_reset_at) == when
         assert proto.was_reset is True
 
 

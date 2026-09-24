@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock
 from uuid import UUID
 
@@ -112,47 +111,34 @@ class TestTransitionGuard:
 
 class TestConverters:
     def test_scope_round_trip(self) -> None:
-        from uniffy_proto.support.v1.support_consent_pb2 import (
+        from uniffy_proto.support.v1.support_consent_pb import (
             SupportSessionScope as ScopeProto,
         )
 
-        assert (
-            scope_from_proto(ScopeProto.SUPPORT_SESSION_SCOPE_READ_ONLY)
-            is SupportSessionScope.READ_ONLY
-        )
-        assert (
-            scope_from_proto(ScopeProto.SUPPORT_SESSION_SCOPE_READ_WRITE)
-            is SupportSessionScope.READ_WRITE
-        )
+        assert scope_from_proto(ScopeProto.READ_ONLY) is SupportSessionScope.READ_ONLY
+        assert scope_from_proto(ScopeProto.READ_WRITE) is SupportSessionScope.READ_WRITE
 
     def test_scope_unspecified_defaults_to_read_only(self) -> None:
-        from uniffy_proto.support.v1.support_consent_pb2 import (
+        from uniffy_proto.support.v1.support_consent_pb import (
             SupportSessionScope as ScopeProto,
         )
 
-        assert (
-            scope_from_proto(ScopeProto.SUPPORT_SESSION_SCOPE_UNSPECIFIED)
-            is SupportSessionScope.READ_ONLY
-        )
+        assert scope_from_proto(ScopeProto.UNSPECIFIED) is SupportSessionScope.READ_ONLY
 
     def test_state_unspecified_returns_none(self) -> None:
-        from uniffy_proto.support.v1.support_consent_pb2 import (
+        from uniffy_proto.support.v1.support_consent_pb import (
             SupportSessionState as StateProto,
         )
 
-        assert state_from_proto(StateProto.SUPPORT_SESSION_STATE_UNSPECIFIED) is None
+        assert state_from_proto(StateProto.UNSPECIFIED) is None
 
     def test_state_round_trip(self) -> None:
-        from uniffy_proto.support.v1.support_consent_pb2 import (
+        from uniffy_proto.support.v1.support_consent_pb import (
             SupportSessionState as StateProto,
         )
 
-        assert (
-            state_from_proto(StateProto.SUPPORT_SESSION_STATE_ACTIVE) is SupportSessionState.ACTIVE
-        )
-        assert (
-            state_from_proto(StateProto.SUPPORT_SESSION_STATE_PENDING) is SupportSessionState.PENDING
-        )
+        assert state_from_proto(StateProto.ACTIVE) is SupportSessionState.ACTIVE
+        assert state_from_proto(StateProto.PENDING) is SupportSessionState.PENDING
 
 
 class TestContextVar:

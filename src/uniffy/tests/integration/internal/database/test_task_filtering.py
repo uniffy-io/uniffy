@@ -7,9 +7,10 @@ from uuid import UUID
 
 import pytest
 import pytest_asyncio
+from protobuf import Oneof
 from sqlalchemy import delete, update
 from sqlalchemy.ext.asyncio import AsyncSession
-from uniffy_proto.projects.v1.projects_pb2 import (
+from uniffy_proto.projects.v1.projects_pb import (
     FilterLogic,
     SortDirection,
     TableLayout,
@@ -228,26 +229,36 @@ async def test_every_filter_case_keeps_what_the_web_keeps(session, env, seeded) 
 
 async def test_extreme_calendar_bounds_return_rows_without_overflow(session, env, seeded) -> None:
     fields = [
-        TaskFieldRef(field_id="field_due_date"),
-        TaskFieldRef(pseudo=TaskPseudoField.TASK_PSEUDO_FIELD_CREATED_AT),
+        TaskFieldRef(ref=Oneof(field="field_id", value="field_due_date")),
+        TaskFieldRef(ref=Oneof(field="pseudo", value=TaskPseudoField.CREATED_AT)),
     ]
     operators = TaskFilterOperator
     for field in fields:
         for zone in ("UTC", "Asia/Tokyo", "America/Los_Angeles"):
             for day, operator, matches in (
-                ("0001-01-01", operators.TASK_FILTER_OPERATOR_BEFORE, False),
-                ("0001-01-01", operators.TASK_FILTER_OPERATOR_ON_OR_AFTER, True),
-                ("9999-12-31", operators.TASK_FILTER_OPERATOR_AFTER, False),
-                ("9999-12-31", operators.TASK_FILTER_OPERATOR_IS, False),
-                ("9999-12-31", operators.TASK_FILTER_OPERATOR_ON_OR_BEFORE, True),
+                ("0001-01-01", operators.BEFORE, False),
+                ("0001-01-01", operators.ON_OR_AFTER, True),
+                ("9999-12-31", operators.AFTER, False),
+                ("9999-12-31", operators.IS, False),
+                ("9999-12-31", operators.ON_OR_BEFORE, True),
             ):
                 group = TaskFilterGroup(
                     nodes=[
                         TaskFilterNode(
-                            condition=TaskFilterCondition(
-                                field=field,
-                                operator=operator,
-                                value=TaskFilterValue(date=TaskFilterDate(fixed=day)),
+                            node=Oneof(
+                                field="condition",
+                                value=TaskFilterCondition(
+                                    field=field,
+                                    operator=operator,
+                                    value=TaskFilterValue(
+                                        value=Oneof(
+                                            field="date",
+                                            value=TaskFilterDate(
+                                                value=Oneof(field="fixed", value=day)
+                                            ),
+                                        )
+                                    ),
+                                ),
                             )
                         )
                     ]
@@ -256,20 +267,30 @@ async def test_extreme_calendar_bounds_return_rows_without_overflow(session, env
                 expected = [
                     row["id"]
                     for row in CASES["tasks"]
-                    if matches and (field.pseudo or row.get("due_date"))
+                    if matches and (field.has_field("pseudo") or row.get("due_date"))
                 ]
                 assert sorted(kept) == sorted(expected), (field, zone, day, operator)
     full_range = TaskFilterGroup(
         nodes=[
             TaskFilterNode(
-                condition=TaskFilterCondition(
-                    field=fields[1],
-                    operator=operators.TASK_FILTER_OPERATOR_BETWEEN,
-                    value=TaskFilterValue(
-                        date_range=TaskFilterDateRange(
-                            start=TaskFilterDate(fixed="0001-01-01"),
-                            end=TaskFilterDate(fixed="9999-12-31"),
-                        )
+                node=Oneof(
+                    field="condition",
+                    value=TaskFilterCondition(
+                        field=fields[1],
+                        operator=operators.BETWEEN,
+                        value=TaskFilterValue(
+                            value=Oneof(
+                                field="date_range",
+                                value=TaskFilterDateRange(
+                                    start=TaskFilterDate(
+                                        value=Oneof(field="fixed", value="0001-01-01")
+                                    ),
+                                    end=TaskFilterDate(
+                                        value=Oneof(field="fixed", value="9999-12-31")
+                                    ),
+                                ),
+                            )
+                        ),
                     ),
                 )
             )
@@ -297,13 +318,20 @@ async def test_every_sort_case_orders_as_the_web_does(session, env, seeded) -> N
 
 async def test_the_current_user_in_a_shared_view_is_each_caller(session, env, seeded) -> None:
     mine = TaskFilterGroup(
-        logic=FilterLogic.FILTER_LOGIC_AND,
+        logic=FilterLogic.AND,
         nodes=[
             TaskFilterNode(
-                condition=TaskFilterCondition(
-                    field=TaskFieldRef(field_id="field_assignee"),
-                    operator=TaskFilterOperator.TASK_FILTER_OPERATOR_IS_ANY_OF,
-                    value=TaskFilterValue(ids=TaskFilterIdSet(include_current_user=True)),
+                node=Oneof(
+                    field="condition",
+                    value=TaskFilterCondition(
+                        field=TaskFieldRef(ref=Oneof(field="field_id", value="field_assignee")),
+                        operator=TaskFilterOperator.IS_ANY_OF,
+                        value=TaskFilterValue(
+                            value=Oneof(
+                                field="ids", value=TaskFilterIdSet(include_current_user=True)
+                            )
+                        ),
+                    ),
                 )
             )
         ],
@@ -314,7 +342,7 @@ async def test_the_current_user_in_a_shared_view_is_each_caller(session, env, se
             env.org_id,
             seeded.project_id,
             name="My tasks",
-            definition=ViewDefinition(table=TableLayout(), filter=mine),
+            definition=ViewDefinition(layout=Oneof(field="table", value=TableLayout()), filter=mine),
             visibility=ProjectViewVisibility.SHARED,
         )
 
@@ -333,10 +361,13 @@ async def test_an_unknown_view_lists_the_views_the_caller_has(session, env, seed
 
 def _on(field_id: str, operator: int, ids: list[str]) -> TaskFilterNode:
     return TaskFilterNode(
-        condition=TaskFilterCondition(
-            field=TaskFieldRef(field_id=field_id),
-            operator=operator,
-            value=TaskFilterValue(ids=TaskFilterIdSet(ids=ids)),
+        node=Oneof(
+            field="condition",
+            value=TaskFilterCondition(
+                field=TaskFieldRef(ref=Oneof(field="field_id", value=field_id)),
+                operator=operator,
+                value=TaskFilterValue(value=Oneof(field="ids", value=TaskFilterIdSet(ids=ids))),
+            ),
         )
     )
 
@@ -345,14 +376,14 @@ async def test_a_view_on_a_deleted_field_keeps_what_the_web_keeps(session, env, 
     # Once "size" is gone, "size is not s" matches nothing rather than every task, and the size
     # sort key drops, as the web evaluates the same stored view.
     either = TaskFilterGroup(
-        logic=FilterLogic.FILTER_LOGIC_OR,
+        logic=FilterLogic.OR,
         nodes=[
-            _on("size", TaskFilterOperator.TASK_FILTER_OPERATOR_IS_NOT, ["s"]),
-            _on("labels", TaskFilterOperator.TASK_FILTER_OPERATOR_IS_ANY_OF, ["l-ui"]),
+            _on("size", TaskFilterOperator.IS_NOT, ["s"]),
+            _on("labels", TaskFilterOperator.IS_ANY_OF, ["l-ui"]),
         ],
     )
     by_size = TaskSort(
-        field=TaskFieldRef(field_id="size"), direction=SortDirection.SORT_DIRECTION_DESC
+        field=TaskFieldRef(ref=Oneof(field="field_id", value="size")), direction=SortDirection.DESC
     )
     with patch("uniffy.domains.projects.audience.publish_content_access_changed", AsyncMock()):
         await ProjectViewOperations(session).create(
@@ -360,7 +391,9 @@ async def test_a_view_on_a_deleted_field_keeps_what_the_web_keeps(session, env, 
             env.org_id,
             seeded.project_id,
             name="Sized",
-            definition=ViewDefinition(table=TableLayout(), filter=either, sort=[by_size]),
+            definition=ViewDefinition(
+                layout=Oneof(field="table", value=TableLayout()), filter=either, sort=[by_size]
+            ),
             visibility=ProjectViewVisibility.SHARED,
         )
     await session.execute(
@@ -384,13 +417,16 @@ async def _soft_delete(session, task_id) -> None:
 async def test_a_subtask_of_a_deleted_task_stays_one_level_down(session, env, seeded) -> None:
     await _soft_delete(session, seeded.ids["epic-task"])
     top_level = TaskFilterGroup(
-        logic=FilterLogic.FILTER_LOGIC_AND,
+        logic=FilterLogic.AND,
         nodes=[
             TaskFilterNode(
-                condition=TaskFilterCondition(
-                    field=TaskFieldRef(pseudo=TaskPseudoField.TASK_PSEUDO_FIELD_DEPTH),
-                    operator=TaskFilterOperator.TASK_FILTER_OPERATOR_IS,
-                    value=TaskFilterValue(number=0),
+                node=Oneof(
+                    field="condition",
+                    value=TaskFilterCondition(
+                        field=TaskFieldRef(ref=Oneof(field="pseudo", value=TaskPseudoField.DEPTH)),
+                        operator=TaskFilterOperator.IS,
+                        value=TaskFilterValue(value=Oneof(field="number", value=0)),
+                    ),
                 )
             )
         ],
@@ -412,7 +448,9 @@ async def test_a_person_outside_the_organization_sorts_by_id(session, env, seede
     )
     await session.commit()
     try:
-        by_assignee = [TaskSort(field=TaskFieldRef(field_id="field_assignee"))]
+        by_assignee = [
+            TaskSort(field=TaskFieldRef(ref=Oneof(field="field_id", value="field_assignee")))
+        ]
         ordered = await _list(session, env, seeded, sort=by_assignee)
         # Not a member, so the name stays hidden and the id text, digits first, sorts ahead.
         assert ordered[:3] == ["loose", "task-b", "story"]
@@ -454,7 +492,7 @@ async def test_person_fields_sort_groups_by_visible_names(
         else:
             task.field_values = {**task.field_values, field_id: [str(group.id)]}
     await session.commit()
-    by_person = [TaskSort(field=TaskFieldRef(field_id=field_id))]
+    by_person = [TaskSort(field=TaskFieldRef(ref=Oneof(field="field_id", value=field_id)))]
 
     async def ordered():
         return [
@@ -497,13 +535,18 @@ async def test_a_blocker_in_another_project_does_not_count(session, env, seeded)
     )
     await session.commit()
     blocked = TaskFilterGroup(
-        logic=FilterLogic.FILTER_LOGIC_AND,
+        logic=FilterLogic.AND,
         nodes=[
             TaskFilterNode(
-                condition=TaskFilterCondition(
-                    field=TaskFieldRef(pseudo=TaskPseudoField.TASK_PSEUDO_FIELD_IS_BLOCKED),
-                    operator=TaskFilterOperator.TASK_FILTER_OPERATOR_IS,
-                    value=TaskFilterValue(flag=True),
+                node=Oneof(
+                    field="condition",
+                    value=TaskFilterCondition(
+                        field=TaskFieldRef(
+                            ref=Oneof(field="pseudo", value=TaskPseudoField.IS_BLOCKED)
+                        ),
+                        operator=TaskFilterOperator.IS,
+                        value=TaskFilterValue(value=Oneof(field="flag", value=True)),
+                    ),
                 )
             )
         ],

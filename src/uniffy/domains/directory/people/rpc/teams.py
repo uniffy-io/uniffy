@@ -4,7 +4,7 @@ from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
-from uniffy_proto.people.v1 import people_pb2 as pb
+from uniffy_proto.people.v1 import people_pb as pb
 
 from uniffy.core.auth.principal import current_user_id, resolve_organization_id
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
@@ -76,13 +76,13 @@ class TeamHandlers:
             group_id = UUID(request.group_id)
             if request.clear_lead:
                 lead: UUID | None | object = None
-            elif request.HasField("lead_user_id"):
+            elif request.has_field("lead_user_id"):
                 lead = UUID(request.lead_user_id)
             else:
                 lead = team_ops.UNSET
             if request.clear_parent:
                 parent: UUID | None | object = None
-            elif request.HasField("parent_group_id"):
+            elif request.has_field("parent_group_id"):
                 parent = UUID(request.parent_group_id)
             else:
                 parent = team_ops.UNSET

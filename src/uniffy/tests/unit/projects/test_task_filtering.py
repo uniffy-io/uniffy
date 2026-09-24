@@ -5,9 +5,10 @@ from unittest.mock import AsyncMock, MagicMock
 from zoneinfo import ZoneInfo
 
 import pytest
+from protobuf import Oneof
 from sqlalchemy import select
 from sqlalchemy.dialects import postgresql
-from uniffy_proto.projects.v1.projects_pb2 import (
+from uniffy_proto.projects.v1.projects_pb import (
     FilterLogic,
     RelativeDate,
     RelativeDateAnchor,
@@ -80,24 +81,24 @@ def _compiles(statement) -> str:
 def _kinds(group: TaskFilterGroup) -> set[FieldKind]:
     kinds: set[FieldKind] = set()
     for node in group.nodes:
-        if node.WhichOneof("node") == NodeCase.GROUP:
-            kinds |= _kinds(node.group)
+        if (node.node.field if node.node is not None else None) == NodeCase.GROUP:
+            kinds |= _kinds(node.node.value)
             continue
-        ref = node.condition.field
-        if ref.WhichOneof("ref") == RefCase.PSEUDO:
-            kinds.add(PSEUDO_FIELD_KINDS[ref.pseudo])
-        elif ref.field_id in CTX.fields:
-            kinds.add(FIELD_TYPE_KINDS[CTX.fields[ref.field_id].type])
+        ref = node.node.value.field
+        if (ref.ref.field if ref.ref is not None else None) == RefCase.PSEUDO:
+            kinds.add(PSEUDO_FIELD_KINDS[ref.ref.value])
+        elif ref.ref.value in CTX.fields:
+            kinds.add(FIELD_TYPE_KINDS[CTX.fields[ref.ref.value].type])
     return kinds
 
 
 def _operators(group: TaskFilterGroup) -> set[int]:
     operators: set[int] = set()
     for node in group.nodes:
-        if node.WhichOneof("node") == NodeCase.GROUP:
-            operators |= _operators(node.group)
+        if (node.node.field if node.node is not None else None) == NodeCase.GROUP:
+            operators |= _operators(node.node.value)
         else:
-            operators.add(node.condition.operator)
+            operators.add(node.node.value.operator)
     return operators
 
 
@@ -128,9 +129,7 @@ def test_cases_reach_every_operator_and_field_kind() -> None:
     groups = [task_filter(case, IDS) for case in CASES["filters"]]
     operators = set().union(*(_operators(group) for group in groups))
     kinds = set().union(*(_kinds(group) for group in groups))
-    every_operator = set(TaskFilterOperator.values()) - {
-        TaskFilterOperator.TASK_FILTER_OPERATOR_UNSPECIFIED
-    }
+    every_operator = set(tuple(TaskFilterOperator)) - {TaskFilterOperator.UNSPECIFIED}
     assert every_operator - operators == set()
     assert set(FieldKind) - kinds == set()
 
@@ -139,15 +138,17 @@ def test_cases_reach_every_operator_and_field_kind() -> None:
         for key in sort_keys(case, IDS):
             ref = key.field
             sorted_kinds.add(
-                PSEUDO_FIELD_KINDS[ref.pseudo]
-                if ref.WhichOneof("ref") == RefCase.PSEUDO
-                else FIELD_TYPE_KINDS[CTX.fields[ref.field_id].type]
+                PSEUDO_FIELD_KINDS[ref.ref.value]
+                if (ref.ref.field if ref.ref is not None else None) == RefCase.PSEUDO
+                else FIELD_TYPE_KINDS[CTX.fields[ref.ref.value].type]
             )
     assert SORTABLE_KINDS - sorted_kinds == set()
 
 
 def _relative(anchor: int, offset: int = 0) -> TaskFilterDate:
-    return TaskFilterDate(relative=RelativeDate(anchor=anchor, offset_days=offset))
+    return TaskFilterDate(
+        value=Oneof(field="relative", value=RelativeDate(anchor=anchor, offset_days=offset))
+    )
 
 
 @pytest.mark.parametrize(
@@ -156,19 +157,21 @@ def _relative(anchor: int, offset: int = 0) -> TaskFilterDate:
 )
 def test_weeks_start_on_the_preferred_day(week_start: int, expected: date) -> None:
     today = date(2026, 9, 23)
-    start = _relative(_Anchor.RELATIVE_DATE_ANCHOR_START_OF_WEEK)
-    end = _relative(_Anchor.RELATIVE_DATE_ANCHOR_END_OF_WEEK)
+    start = _relative(_Anchor.START_OF_WEEK)
+    end = _relative(_Anchor.END_OF_WEEK)
     assert resolve_filter_date(start, today, week_start) == expected
     assert (resolve_filter_date(end, today, week_start) - expected).days == 6
 
 
 def test_month_ends_and_offsets() -> None:
     today = date(2026, 2, 10)
-    end = _relative(_Anchor.RELATIVE_DATE_ANCHOR_END_OF_MONTH, 1)
-    start = _relative(_Anchor.RELATIVE_DATE_ANCHOR_START_OF_MONTH, -1)
+    end = _relative(_Anchor.END_OF_MONTH, 1)
+    start = _relative(_Anchor.START_OF_MONTH, -1)
     assert resolve_filter_date(end, today, 0) == date(2026, 3, 1)
     assert resolve_filter_date(start, today, 0) == date(2026, 1, 31)
-    assert resolve_filter_date(TaskFilterDate(fixed="2026-01-02"), today, 0) == date(2026, 1, 2)
+    assert resolve_filter_date(
+        TaskFilterDate(value=Oneof(field="fixed", value="2026-01-02")), today, 0
+    ) == date(2026, 1, 2)
 
 
 async def _context(
@@ -224,17 +227,21 @@ async def test_a_stored_zone_this_server_does_not_know_falls_back(
 
 
 def _condition(ref: TaskFieldRef, operator: int, value: TaskFilterValue) -> TaskFilterNode:
-    return TaskFilterNode(condition=TaskFilterCondition(field=ref, operator=operator, value=value))
+    return TaskFilterNode(
+        node=Oneof(
+            field="condition", value=TaskFilterCondition(field=ref, operator=operator, value=value)
+        )
+    )
 
 
 def _depth_is(depth: int) -> TaskFilterGroup:
     return TaskFilterGroup(
-        logic=FilterLogic.FILTER_LOGIC_AND,
+        logic=FilterLogic.AND,
         nodes=[
             _condition(
-                TaskFieldRef(pseudo=TaskPseudoField.TASK_PSEUDO_FIELD_DEPTH),
-                TaskFilterOperator.TASK_FILTER_OPERATOR_IS,
-                TaskFilterValue(number=depth),
+                TaskFieldRef(ref=Oneof(field="pseudo", value=TaskPseudoField.DEPTH)),
+                TaskFilterOperator.IS,
+                TaskFilterValue(value=Oneof(field="number", value=depth)),
             )
         ],
     )
@@ -243,19 +250,19 @@ def _depth_is(depth: int) -> TaskFilterGroup:
 def test_a_depth_filter_and_a_depth_sort_share_one_ancestry() -> None:
     compiler = TaskFilterCompiler(CTX)
     query = select(Task).where(compiler.compile(_depth_is(1)))
-    by_depth = [TaskSort(field=TaskFieldRef(pseudo=TaskPseudoField.TASK_PSEUDO_FIELD_DEPTH))]
+    by_depth = [TaskSort(field=TaskFieldRef(ref=Oneof(field="pseudo", value=TaskPseudoField.DEPTH)))]
     sql = _compiles(apply_task_sort(query, by_depth, compiler))
     assert sql.count("RECURSIVE task_ancestry(") == 1
 
 
 def _on_gone_field() -> TaskFilterGroup:
     return TaskFilterGroup(
-        logic=FilterLogic.FILTER_LOGIC_OR,
+        logic=FilterLogic.OR,
         nodes=[
             _condition(
-                TaskFieldRef(field_id="gone"),
-                TaskFilterOperator.TASK_FILTER_OPERATOR_IS_NONE_OF,
-                TaskFilterValue(ids=TaskFilterIdSet(ids=["x"])),
+                TaskFieldRef(ref=Oneof(field="field_id", value="gone")),
+                TaskFilterOperator.IS_NONE_OF,
+                TaskFilterValue(value=Oneof(field="ids", value=TaskFilterIdSet(ids=["x"]))),
             )
         ],
     )
@@ -270,12 +277,18 @@ def test_a_stored_view_on_a_deleted_field_matches_nothing() -> None:
 
 def test_a_stored_sort_drops_keys_on_deleted_fields() -> None:
     keys = [
-        TaskSort(field=TaskFieldRef(field_id="gone"), direction=SortDirection.SORT_DIRECTION_ASC),
-        TaskSort(field=TaskFieldRef(field_id="points"), direction=SortDirection.SORT_DIRECTION_ASC),
+        TaskSort(
+            field=TaskFieldRef(ref=Oneof(field="field_id", value="gone")),
+            direction=SortDirection.ASC,
+        ),
+        TaskSort(
+            field=TaskFieldRef(ref=Oneof(field="field_id", value="points")),
+            direction=SortDirection.ASC,
+        ),
     ]
     with pytest.raises(ValidationError, match="gone"):
         validate_task_sort(keys, FIELDS)
-    assert [key.field.field_id for key in validate_task_sort(keys, FIELDS, stored=True)] == [
+    assert [key.field.ref.value for key in validate_task_sort(keys, FIELDS, stored=True)] == [
         "points"
     ]
 
@@ -283,12 +296,14 @@ def test_a_stored_sort_drops_keys_on_deleted_fields() -> None:
 def test_an_id_in_capitals_names_the_same_row() -> None:
     person = str(IDS["user-other"])
     group = TaskFilterGroup(
-        logic=FilterLogic.FILTER_LOGIC_AND,
+        logic=FilterLogic.AND,
         nodes=[
             _condition(
-                TaskFieldRef(field_id="field_assignee"),
-                TaskFilterOperator.TASK_FILTER_OPERATOR_IS_ANY_OF,
-                TaskFilterValue(ids=TaskFilterIdSet(ids=[person.upper()])),
+                TaskFieldRef(ref=Oneof(field="field_id", value="field_assignee")),
+                TaskFilterOperator.IS_ANY_OF,
+                TaskFilterValue(
+                    value=Oneof(field="ids", value=TaskFilterIdSet(ids=[person.upper()]))
+                ),
             )
         ],
     )

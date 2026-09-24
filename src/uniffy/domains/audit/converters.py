@@ -1,6 +1,6 @@
 """Proto <-> domain converters for ``audit.v1``."""
 
-from uniffy_proto.audit.v1.audit_pb2 import AuditEvent as ProtoAuditEvent
+from uniffy_proto.audit.v1.audit_pb import AuditEvent as ProtoAuditEvent
 
 from uniffy.core.converters.proto import datetime_to_timestamp
 from uniffy.core.json_codec import dumps_str

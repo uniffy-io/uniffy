@@ -1,7 +1,7 @@
 """ConnectRPC service binding for ``superadmin.v1.SystemEncryptionService``."""
 
 from connectrpc.request import RequestContext
-from uniffy_proto.superadmin.v1.system_encryption_pb2 import (
+from uniffy_proto.superadmin.v1.system_encryption_pb import (
     GetDeploymentEncryptionStatusRequest,
     GetDeploymentEncryptionStatusResponse,
     RotateDeploymentDekRequest,

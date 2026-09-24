@@ -2,7 +2,7 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from uniffy_proto.agents.v1.agents_pb2 import PreviewSystemPromptRequest
+from uniffy_proto.agents.v1.agents_pb import PreviewSystemPromptRequest
 
 from uniffy.core.errors import PermissionDeniedError, ValidationError
 from uniffy.core.models.agents.rule import AgentRule, RuleSource, RuleStatus

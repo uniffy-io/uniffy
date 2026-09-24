@@ -9,7 +9,7 @@ from connectrpc.request import RequestContext
 from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from uniffy_proto.chat.v1.chat_pb2 import (
+from uniffy_proto.chat.v1.chat_pb import (
     AddMembersRequest,
     AddMembersResponse,
     ArchiveChannelRequest,
@@ -60,7 +60,7 @@ from uniffy_proto.chat.v1.chat_pb2 import (
     UpdateMemberRoleRequest,
     UpdateMemberRoleResponse,
 )
-from uniffy_proto.chat.v1.chat_pb2 import (
+from uniffy_proto.chat.v1.chat_pb import (
     ChatNotificationLevel as ProtoNL,
 )
 
@@ -230,7 +230,7 @@ class ChannelHandlers:
         )
 
         category_id = None
-        if request.HasField("category_id"):
+        if request.has_field("category_id"):
             try:
                 category_id = UUID(request.category_id)
             except ValueError:
@@ -260,9 +260,9 @@ class ChannelHandlers:
                         organization_id=org_id,
                         name=request.name,
                         channel_type=channel_type,
-                        description=request.description if request.HasField("description") else "",
-                        icon=request.icon if request.HasField("icon") else "",
-                        is_default=request.is_default if request.HasField("is_default") else False,
+                        description=request.description if request.has_field("description") else "",
+                        icon=request.icon if request.has_field("icon") else "",
+                        is_default=request.is_default if request.has_field("is_default") else False,
                         category_id=category_id,
                         member_ids=user_member_ids or None,
                         tag_ids=tag_ids or None,
@@ -368,15 +368,15 @@ class ChannelHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
 
         updates = {}
-        if request.HasField("name"):
+        if request.has_field("name"):
             updates["name"] = request.name
-        if request.HasField("description"):
+        if request.has_field("description"):
             updates["description"] = request.description
-        if request.HasField("icon"):
+        if request.has_field("icon"):
             updates["icon"] = request.icon
-        if request.HasField("is_default"):
+        if request.has_field("is_default"):
             updates["is_default"] = request.is_default
-        if request.HasField("tag_ids"):
+        if request.has_field("tag_ids"):
             updates["tag_ids"] = _parse_tag_ids(list(request.tag_ids.ids))
 
         try:
@@ -415,7 +415,7 @@ class ChannelHandlers:
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
 
-        custom_name = request.custom_name if request.HasField("custom_name") else None
+        custom_name = request.custom_name if request.has_field("custom_name") else None
 
         try:
             async with open_session() as session:
@@ -462,7 +462,7 @@ class ChannelHandlers:
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
 
-        custom_name = request.custom_name if request.HasField("custom_name") else None
+        custom_name = request.custom_name if request.has_field("custom_name") else None
 
         try:
             async with open_session() as session:
@@ -499,14 +499,14 @@ class ChannelHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
 
         agent_filter: UUID | None = None
-        if request.HasField("agent_id"):
+        if request.has_field("agent_id"):
             try:
                 agent_filter = UUID(request.agent_id)
             except ValueError:
                 raise ConnectError(Code.INVALID_ARGUMENT, "Invalid agent_id")
 
-        cursor = request.cursor if request.HasField("cursor") else None
-        limit = request.page_size if request.HasField("page_size") else 0
+        cursor = request.cursor if request.has_field("cursor") else None
+        limit = request.page_size if request.has_field("page_size") else 0
 
         try:
             async with open_session() as session:
@@ -565,7 +565,7 @@ class ChannelHandlers:
         request,
         ctx: RequestContext,
     ):
-        from uniffy_proto.chat.v1.chat_pb2 import ConvertGroupDmToChannelResponse
+        from uniffy_proto.chat.v1.chat_pb import ConvertGroupDmToChannelResponse
 
         user_id = current_user_id()
         try:
@@ -738,9 +738,9 @@ class ChannelHandlers:
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
 
-        cursor = request.cursor if request.HasField("cursor") else None
+        cursor = request.cursor if request.has_field("cursor") else None
         page_size = (
-            request.page_size if request.HasField("page_size") and request.page_size > 0 else None
+            request.page_size if request.has_field("page_size") and request.page_size > 0 else None
         )
         tag_ids = _parse_tag_ids(list(request.tag_ids))
 
@@ -977,9 +977,9 @@ class ChannelHandlers:
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
 
-        cursor = request.cursor if request.HasField("cursor") else None
+        cursor = request.cursor if request.has_field("cursor") else None
         page_size = (
-            request.page_size if request.HasField("page_size") and request.page_size > 0 else None
+            request.page_size if request.has_field("page_size") and request.page_size > 0 else None
         )
 
         try:
@@ -1024,26 +1024,26 @@ class ChannelHandlers:
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
 
-        is_muted = request.is_muted if request.HasField("is_muted") else None
+        is_muted = request.is_muted if request.has_field("is_muted") else None
         notification_level = None
-        if request.HasField("notification_level"):
+        if request.has_field("notification_level"):
             nl_map = {
-                ProtoNL.CHAT_NOTIFICATION_LEVEL_ALL: "ALL",
-                ProtoNL.CHAT_NOTIFICATION_LEVEL_MENTIONS: "MENTIONS",
-                ProtoNL.CHAT_NOTIFICATION_LEVEL_NONE: "NONE",
+                ProtoNL.ALL: "ALL",
+                ProtoNL.MENTIONS: "MENTIONS",
+                ProtoNL.NONE: "NONE",
             }
             notification_level = nl_map.get(request.notification_level)
 
         muted_until = ChatChannelOperations._MUTED_UNTIL_UNSET
-        if request.HasField("muted_until"):
+        if request.has_field("muted_until"):
             muted_until = timestamp_to_datetime(request.muted_until)
 
         follow_all_threads = None
-        if request.HasField("follow_all_threads"):
+        if request.has_field("follow_all_threads"):
             follow_all_threads = request.follow_all_threads
 
         badge_all_messages = None
-        if request.HasField("badge_all_messages"):
+        if request.has_field("badge_all_messages"):
             badge_all_messages = request.badge_all_messages
 
         try:
@@ -1283,11 +1283,7 @@ class ChannelHandlers:
             items = []
             for cid, data in counts.items():
                 is_muted, nl, muted_until = prefs_map.get(cid, (False, None, None))
-                nl_proto = (
-                    NOTIFICATION_LEVEL_TO_PROTO.get(nl, ProtoNL.CHAT_NOTIFICATION_LEVEL_ALL)
-                    if nl
-                    else ProtoNL.CHAT_NOTIFICATION_LEVEL_ALL
-                )
+                nl_proto = NOTIFICATION_LEVEL_TO_PROTO.get(nl, ProtoNL.ALL) if nl else ProtoNL.ALL
                 item = ChannelUnreadCount(
                     channel_id=str(cid),
                     unread_count=data["unread_count"],
@@ -1302,7 +1298,7 @@ class ChannelHandlers:
                 if data["first_unread_message_id"]:
                     item.first_unread_message_id = str(data["first_unread_message_id"])
                 if muted_until:
-                    item.muted_until.CopyFrom(datetime_to_timestamp(muted_until))
+                    item.muted_until = datetime_to_timestamp(muted_until)
                 items.append(item)
 
             return GetUnreadCountsResponse(channels=items)
@@ -1331,7 +1327,7 @@ class ChannelHandlers:
 
                 ops = ChatResourceOperations(session)
                 ct_filter = None
-                if request.HasField("content_type_filter"):
+                if request.has_field("content_type_filter"):
                     ct_filter = request.content_type_filter
 
                 resources, total = await ops.get_channel_resources(
@@ -1348,7 +1344,7 @@ class ChannelHandlers:
                     user_id,
                 )
 
-                from uniffy_proto.chat.v1.chat_pb2 import ChatResource as ProtoChatResource
+                from uniffy_proto.chat.v1.chat_pb import ChatResource as ProtoChatResource
 
                 # Collect URNs from mention-tracked resources to dedupe against inline attachments.
                 mention_urns: set[str] = set()
@@ -1422,7 +1418,7 @@ class ChannelHandlers:
             )
             rows = result.all()
 
-            from uniffy_proto.chat.v1.chat_pb2 import ChatResource as ProtoChatResource
+            from uniffy_proto.chat.v1.chat_pb import ChatResource as ProtoChatResource
 
             items = []
             for row in rows:

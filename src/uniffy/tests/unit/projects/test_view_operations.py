@@ -6,7 +6,8 @@ from uuid import uuid4
 
 import pytest
 from connectrpc.code import Code
-from uniffy_proto.projects.v1.projects_pb2 import BoardLayout, TableLayout, ViewDefinition
+from protobuf import Oneof
+from uniffy_proto.projects.v1.projects_pb import BoardLayout, TableLayout, ViewDefinition
 
 from uniffy.core.errors import PermissionDeniedError, ValidationError
 from uniffy.core.events.realtime import ContentAccessAction
@@ -24,7 +25,7 @@ from uniffy.domains.projects.views.operations import ProjectViewOperations
 
 SHARED = ProjectViewVisibility.SHARED
 PERSONAL = ProjectViewVisibility.PERSONAL
-TABLE = ViewDefinition(table=TableLayout())
+TABLE = ViewDefinition(layout=Oneof(field="table", value=TableLayout()))
 
 
 class Harness(SimpleNamespace):
@@ -285,7 +286,7 @@ async def test_layout_cannot_change(monkeypatch, harness) -> None:
             harness.project.organization_id,
             harness.project.id,
             "view_abc",
-            definition=ViewDefinition(board=BoardLayout()),
+            definition=ViewDefinition(layout=Oneof(field="board", value=BoardLayout())),
         )
 
 

@@ -111,13 +111,13 @@ class TestChannelBindingConverter:
     def test_converter_passes_channel_binding(self) -> None:
         cid = generate_id()
         proto = event_to_proto(_make_event(channel_id=cid, channel_auto_created=True))
-        assert proto.HasField("channel_id")
+        assert proto.has_field("channel_id")
         assert proto.channel_id == str(cid)
         assert proto.channel_auto_created is True
 
     def test_converter_omits_unset_channel_id(self) -> None:
         proto = event_to_proto(_make_event())
-        assert not proto.HasField("channel_id")
+        assert not proto.has_field("channel_id")
         assert proto.channel_auto_created is False
 
 
@@ -370,7 +370,9 @@ class TestAutoCreatedRoomMembership:
         assert calls["add"] == []
         assert calls["remove"] == []
 
-    async def test_stage_failure_prevents_calendar_commit(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    async def test_stage_failure_prevents_calendar_commit(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         _patch_room_membership(monkeypatch, stage_error=RuntimeError("chat down"))
         ops = _make_ops()
         event = _make_event(channel_id=generate_id(), channel_auto_created=True)

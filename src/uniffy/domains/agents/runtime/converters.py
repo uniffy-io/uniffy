@@ -4,7 +4,8 @@ from dataclasses import fields
 from typing import Any
 from uuid import UUID
 
-from uniffy_proto.agents.v1.runtime_pb2 import (
+from protobuf import Oneof
+from uniffy_proto.agents.v1.runtime_pb import (
     AgentStreamEvent,
     AgentUsageInfo,
     CronTaskUsage,
@@ -92,166 +93,227 @@ def runtime_stream_event_to_proto(event: StreamEvent) -> AgentStreamEvent:
     """
     match event.type:
         case EventType.REPLY_START:
-            return AgentStreamEvent(reply_start=StreamReplyStartEvent(role="assistant"))
+            return AgentStreamEvent(
+                event=Oneof(field="reply_start", value=StreamReplyStartEvent(role="assistant"))
+            )
         case EventType.MODEL_CALL_START:
-            return AgentStreamEvent(model_call_start=StreamModelCallStartEvent(model=event.model))
+            return AgentStreamEvent(
+                event=Oneof(
+                    field="model_call_start", value=StreamModelCallStartEvent(model=event.model)
+                )
+            )
         case EventType.MODEL_CALL_END:
             return AgentStreamEvent(
-                model_call_end=StreamModelCallEndEvent(
-                    model=event.model,
-                    input_tokens=event.input_tokens,
-                    output_tokens=event.output_tokens,
-                    cache_creation_input_tokens=(event.cache_creation_input_tokens),
-                    cache_read_input_tokens=event.cache_read_input_tokens,
-                    thinking_tokens=event.thinking_tokens,
+                event=Oneof(
+                    field="model_call_end",
+                    value=StreamModelCallEndEvent(
+                        model=event.model,
+                        input_tokens=event.input_tokens,
+                        output_tokens=event.output_tokens,
+                        cache_creation_input_tokens=(event.cache_creation_input_tokens),
+                        cache_read_input_tokens=event.cache_read_input_tokens,
+                        thinking_tokens=event.thinking_tokens,
+                    ),
                 )
             )
         case EventType.TEXT_BLOCK_START:
             return AgentStreamEvent(
-                text_block_start=StreamTextBlockStartEvent(
-                    block_id=event.block_id,
-                    message_id=_message_id_str(event),
-                    sequence=event.sequence,
+                event=Oneof(
+                    field="text_block_start",
+                    value=StreamTextBlockStartEvent(
+                        block_id=event.block_id,
+                        message_id=_message_id_str(event),
+                        sequence=event.sequence,
+                    ),
                 )
             )
         case EventType.TEXT_BLOCK_DELTA:
             return AgentStreamEvent(
-                text_block_delta=StreamTextBlockDeltaEvent(
-                    block_id=event.block_id,
-                    delta=event.delta,
-                    message_id=_message_id_str(event),
-                    sequence=event.sequence,
+                event=Oneof(
+                    field="text_block_delta",
+                    value=StreamTextBlockDeltaEvent(
+                        block_id=event.block_id,
+                        delta=event.delta,
+                        message_id=_message_id_str(event),
+                        sequence=event.sequence,
+                    ),
                 )
             )
         case EventType.TEXT_BLOCK_END:
             return AgentStreamEvent(
-                text_block_end=StreamTextBlockEndEvent(
-                    block_id=event.block_id,
-                    message_id=_message_id_str(event),
-                    sequence=event.sequence,
+                event=Oneof(
+                    field="text_block_end",
+                    value=StreamTextBlockEndEvent(
+                        block_id=event.block_id,
+                        message_id=_message_id_str(event),
+                        sequence=event.sequence,
+                    ),
                 )
             )
         case EventType.THINKING_BLOCK_START:
             return AgentStreamEvent(
-                thinking_block_start=StreamThinkingBlockStartEvent(
-                    block_id=event.block_id,
-                    message_id=_message_id_str(event),
-                    sequence=event.sequence,
+                event=Oneof(
+                    field="thinking_block_start",
+                    value=StreamThinkingBlockStartEvent(
+                        block_id=event.block_id,
+                        message_id=_message_id_str(event),
+                        sequence=event.sequence,
+                    ),
                 )
             )
         case EventType.THINKING_BLOCK_DELTA:
             return AgentStreamEvent(
-                thinking_block_delta=StreamThinkingBlockDeltaEvent(
-                    block_id=event.block_id,
-                    delta=event.delta,
-                    message_id=_message_id_str(event),
-                    sequence=event.sequence,
+                event=Oneof(
+                    field="thinking_block_delta",
+                    value=StreamThinkingBlockDeltaEvent(
+                        block_id=event.block_id,
+                        delta=event.delta,
+                        message_id=_message_id_str(event),
+                        sequence=event.sequence,
+                    ),
                 )
             )
         case EventType.THINKING_BLOCK_END:
             return AgentStreamEvent(
-                thinking_block_end=StreamThinkingBlockEndEvent(
-                    block_id=event.block_id,
-                    message_id=_message_id_str(event),
-                    sequence=event.sequence,
-                    elapsed_ms=event.elapsed_ms,
+                event=Oneof(
+                    field="thinking_block_end",
+                    value=StreamThinkingBlockEndEvent(
+                        block_id=event.block_id,
+                        message_id=_message_id_str(event),
+                        sequence=event.sequence,
+                        elapsed_ms=event.elapsed_ms,
+                    ),
                 )
             )
         case EventType.TOOL_CALL_START:
             return AgentStreamEvent(
-                tool_call_start=StreamToolCallStartEvent(
-                    block_id=event.block_id,
-                    tool_call_id=event.tool_call_id,
-                    tool_name=event.tool_name,
-                    message_id=_message_id_str(event),
-                    sequence=event.sequence,
+                event=Oneof(
+                    field="tool_call_start",
+                    value=StreamToolCallStartEvent(
+                        block_id=event.block_id,
+                        tool_call_id=event.tool_call_id,
+                        tool_name=event.tool_name,
+                        message_id=_message_id_str(event),
+                        sequence=event.sequence,
+                    ),
                 )
             )
         case EventType.TOOL_CALL_DELTA:
             return AgentStreamEvent(
-                tool_call_delta=StreamToolCallDeltaEvent(
-                    block_id=event.block_id,
-                    tool_call_id=event.tool_call_id,
-                    tool_name=event.tool_name,
-                    delta=event.delta,
-                    message_id=_message_id_str(event),
-                    sequence=event.sequence,
+                event=Oneof(
+                    field="tool_call_delta",
+                    value=StreamToolCallDeltaEvent(
+                        block_id=event.block_id,
+                        tool_call_id=event.tool_call_id,
+                        tool_name=event.tool_name,
+                        delta=event.delta,
+                        message_id=_message_id_str(event),
+                        sequence=event.sequence,
+                    ),
                 )
             )
         case EventType.TOOL_CALL_END:
             return AgentStreamEvent(
-                tool_call_end=StreamToolCallEndEvent(
-                    block_id=event.block_id,
-                    tool_call_id=event.tool_call_id,
-                    tool_name=event.tool_name,
-                    tool_args_json=_args_json(event.tool_args),
-                    message_id=_message_id_str(event),
-                    sequence=event.sequence,
+                event=Oneof(
+                    field="tool_call_end",
+                    value=StreamToolCallEndEvent(
+                        block_id=event.block_id,
+                        tool_call_id=event.tool_call_id,
+                        tool_name=event.tool_name,
+                        tool_args_json=_args_json(event.tool_args),
+                        message_id=_message_id_str(event),
+                        sequence=event.sequence,
+                    ),
                 )
             )
         case EventType.TOOL_RESULT_START:
             return AgentStreamEvent(
-                tool_result_start=StreamToolResultStartEvent(
-                    tool_call_id=event.tool_call_id,
-                    tool_name=event.tool_name,
-                    tool_args_json=_args_json(event.tool_args),
-                    message_id=_message_id_str(event),
+                event=Oneof(
+                    field="tool_result_start",
+                    value=StreamToolResultStartEvent(
+                        tool_call_id=event.tool_call_id,
+                        tool_name=event.tool_name,
+                        tool_args_json=_args_json(event.tool_args),
+                        message_id=_message_id_str(event),
+                    ),
                 )
             )
         case EventType.TOOL_RESULT_DELTA:
             return AgentStreamEvent(
-                tool_result_delta=StreamToolResultDeltaEvent(
-                    tool_call_id=event.tool_call_id,
-                    delta=event.delta,
-                    message_id=_message_id_str(event),
+                event=Oneof(
+                    field="tool_result_delta",
+                    value=StreamToolResultDeltaEvent(
+                        tool_call_id=event.tool_call_id,
+                        delta=event.delta,
+                        message_id=_message_id_str(event),
+                    ),
                 )
             )
         case EventType.TOOL_RESULT_END:
             return AgentStreamEvent(
-                tool_result_end=StreamToolResultEndEvent(
-                    tool_call_id=event.tool_call_id,
-                    tool_name=event.tool_name,
-                    success=event.success,
-                    result=event.tool_result,
-                    message_id=_message_id_str(event),
+                event=Oneof(
+                    field="tool_result_end",
+                    value=StreamToolResultEndEvent(
+                        tool_call_id=event.tool_call_id,
+                        tool_name=event.tool_name,
+                        success=event.success,
+                        result=event.tool_result,
+                        message_id=_message_id_str(event),
+                    ),
                 )
             )
         case EventType.CONFIRMATION_REQUIRED:
             return AgentStreamEvent(
-                confirmation_required=StreamConfirmationRequiredEvent(
-                    tool_call_id=event.tool_call_id,
-                    tool_name=event.tool_name,
-                    tool_args_json=_args_json(event.tool_args),
-                    description=event.description,
+                event=Oneof(
+                    field="confirmation_required",
+                    value=StreamConfirmationRequiredEvent(
+                        tool_call_id=event.tool_call_id,
+                        tool_name=event.tool_name,
+                        tool_args_json=_args_json(event.tool_args),
+                        description=event.description,
+                    ),
                 )
             )
         case EventType.FAILOVER:
             return AgentStreamEvent(
-                failover=StreamFailoverEvent(
-                    from_provider_key_id=event.from_provider_key_id,
-                    to_provider_key_id=event.to_provider_key_id,
-                    to_model=event.to_model,
-                    reason=event.reason,
-                    attempt=event.attempt,
+                event=Oneof(
+                    field="failover",
+                    value=StreamFailoverEvent(
+                        from_provider_key_id=event.from_provider_key_id,
+                        to_provider_key_id=event.to_provider_key_id,
+                        to_model=event.to_model,
+                        reason=event.reason,
+                        attempt=event.attempt,
+                    ),
                 )
             )
         case EventType.EXCEED_MAX_ITERS:
-            return AgentStreamEvent(exceed_max_iters=StreamExceedMaxItersEvent())
+            return AgentStreamEvent(
+                event=Oneof(field="exceed_max_iters", value=StreamExceedMaxItersEvent())
+            )
         case EventType.MESSAGE_STORED:
             return AgentStreamEvent(
-                message_stored=StreamMessageStoredEvent(message=message_to_proto(event.message))
+                event=Oneof(
+                    field="message_stored",
+                    value=StreamMessageStoredEvent(message=message_to_proto(event.message)),
+                )
             )
         case EventType.DONE:
             return AgentStreamEvent(
-                done=StreamDoneEvent(
-                    assistant_message=message_to_proto(
-                        event.assistant_message, skill_invocation=event.skill_invocation
+                event=Oneof(
+                    field="done",
+                    value=StreamDoneEvent(
+                        assistant_message=message_to_proto(
+                            event.assistant_message, skill_invocation=event.skill_invocation
+                        ),
+                        model_used=event.model,
                     ),
-                    model_used=event.model,
                 )
             )
         case EventType.ERROR:
-            return AgentStreamEvent(error=StreamErrorEvent(message=event.error))
+            return AgentStreamEvent(
+                event=Oneof(field="error", value=StreamErrorEvent(message=event.error))
+            )
         case _:
             raise ValueError(f"Event type not wire-mapped: {event.type!r}")
 

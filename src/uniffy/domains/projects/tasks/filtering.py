@@ -24,7 +24,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.types import Text
-from uniffy_proto.projects.v1.projects_pb2 import (
+from uniffy_proto.projects.v1.projects_pb import (
     FilterLogic,
     RelativeDateAnchor,
     TaskFieldRef,
@@ -94,25 +94,21 @@ class FilterContext:
 
 def resolve_filter_date(value: TaskFilterDate, today: date, week_start: int) -> date:
     """Relative dates count whole calendar days, so a DST change never moves them."""
-    if value.WhichOneof("value") == DateCase.FIXED:
-        return date.fromisoformat(value.fixed)
-    anchor = value.relative.anchor
+    if (value.value.field if value.value is not None else None) == DateCase.FIXED:
+        return date.fromisoformat(value.value.value)
+    anchor = value.value.value.anchor
     base = today
     if anchor in (
-        RelativeDateAnchor.RELATIVE_DATE_ANCHOR_START_OF_WEEK,
-        RelativeDateAnchor.RELATIVE_DATE_ANCHOR_END_OF_WEEK,
+        RelativeDateAnchor.START_OF_WEEK,
+        RelativeDateAnchor.END_OF_WEEK,
     ):
         start = today - timedelta(days=(today.weekday() - week_start) % 7)
-        base = (
-            start
-            if anchor == RelativeDateAnchor.RELATIVE_DATE_ANCHOR_START_OF_WEEK
-            else start + timedelta(days=6)
-        )
-    elif anchor == RelativeDateAnchor.RELATIVE_DATE_ANCHOR_START_OF_MONTH:
+        base = start if anchor == RelativeDateAnchor.START_OF_WEEK else start + timedelta(days=6)
+    elif anchor == RelativeDateAnchor.START_OF_MONTH:
         base = today.replace(day=1)
-    elif anchor == RelativeDateAnchor.RELATIVE_DATE_ANCHOR_END_OF_MONTH:
+    elif anchor == RelativeDateAnchor.END_OF_MONTH:
         base = today.replace(day=calendar.monthrange(today.year, today.month)[1])
-    return base + timedelta(days=value.relative.offset_days)
+    return base + timedelta(days=value.value.value.offset_days)
 
 
 class _Ids(Protocol):
@@ -258,39 +254,41 @@ class TaskFilterCompiler:
         nodes = [self._node(node) for node in group.nodes]
         if not nodes:
             return true()
-        return or_(*nodes) if group.logic == FilterLogic.FILTER_LOGIC_OR else and_(*nodes)
+        return or_(*nodes) if group.logic == FilterLogic.OR else and_(*nodes)
 
     def _node(self, node) -> ColumnElement[bool]:
-        if node.WhichOneof("node") == NodeCase.GROUP:
-            return self.compile(node.group)
-        return self._condition(node.condition)
+        if (node.node.field if node.node is not None else None) == NodeCase.GROUP:
+            return self.compile(node.node.value)
+        return self._condition(node.node.value)
 
     def _kind(self, ref: TaskFieldRef) -> FieldKind:
-        if ref.WhichOneof("ref") == RefCase.PSEUDO:
-            return PSEUDO_FIELD_KINDS[ref.pseudo]
-        return FIELD_TYPE_KINDS[ProjectFieldType(self.ctx.fields[ref.field_id].type)]
+        if (ref.ref.field if ref.ref is not None else None) == RefCase.PSEUDO:
+            return PSEUDO_FIELD_KINDS[ref.ref.value]
+        return FIELD_TYPE_KINDS[ProjectFieldType(self.ctx.fields[ref.ref.value].type)]
 
     def _condition(self, condition: TaskFilterCondition) -> ColumnElement[bool]:
         ref = condition.field
-        if ref.WhichOneof("ref") == RefCase.FIELD_ID and ref.field_id not in self.ctx.fields:
+        if (
+            ref.ref.field if ref.ref is not None else None
+        ) == RefCase.FIELD_ID and ref.ref.value not in self.ctx.fields:
             # A saved view outlives a field it names; that condition matches nothing.
             return false()
         kind = self._kind(ref)
         operator = condition.operator
-        if operator == _OP.TASK_FILTER_OPERATOR_IS_EMPTY:
+        if operator == _OP.IS_EMPTY:
             return self._empty(ref, kind)
-        if operator == _OP.TASK_FILTER_OPERATOR_IS_NOT_EMPTY:
+        if operator == _OP.IS_NOT_EMPTY:
             return not_(self._empty(ref, kind))
         if kind is FieldKind.BOOLEAN:
             expression = self._flag(ref)
-            return expression if condition.value.flag else not_(expression)
+            return expression if condition.value.value.value else not_(expression)
         if kind is FieldKind.TEXT:
             return self._text(self._text_value(ref), condition)
         if kind is FieldKind.NUMBER:
             return self._number(ref, condition)
         if kind in (FieldKind.DATE, FieldKind.TIMESTAMP):
             return self._date(ref, kind, condition)
-        return self._ids(self._id_source(ref), kind, operator, condition.value.ids)
+        return self._ids(self._id_source(ref), kind, operator, condition.value.value.value)
 
     def _wanted(self, id_set: TaskFilterIdSet, kind: FieldKind) -> list[str]:
         # Stored ids are lower-case; an id written in capitals still names the same row.
@@ -309,87 +307,87 @@ class TaskFilterCompiler:
         id_set: TaskFilterIdSet,
     ) -> ColumnElement[bool]:
         wanted = self._wanted(id_set, kind)
-        if operator == _OP.TASK_FILTER_OPERATOR_IS_ALL_OF:
+        if operator == _OP.IS_ALL_OF:
             return source.all_of(wanted) if wanted else false()
         hit = source.any_of(wanted) if wanted else false()
         if id_set.include_empty:
             hit = or_(hit, source.empty())
-        if operator in (_OP.TASK_FILTER_OPERATOR_IS_NOT, _OP.TASK_FILTER_OPERATOR_IS_NONE_OF):
+        if operator in (_OP.IS_NOT, _OP.IS_NONE_OF):
             # A task with no value is "not" every value: NULL is not true.
             return hit.is_not(true())
         return hit
 
     def _id_source(self, ref: TaskFieldRef) -> _Ids:
-        if ref.WhichOneof("ref") == RefCase.FIELD_ID:
-            if ref.field_id in (_FIELD.STATUS, _FIELD.PRIORITY):
-                return _ScalarIds(task_column(ref.field_id))
-            if ref.field_id == _FIELD.ASSIGNEE:
+        if (ref.ref.field if ref.ref is not None else None) == RefCase.FIELD_ID:
+            if ref.ref.value in (_FIELD.STATUS, _FIELD.PRIORITY):
+                return _ScalarIds(task_column(ref.ref.value))
+            if ref.ref.value == _FIELD.ASSIGNEE:
                 return _JsonColumnIds(Task.assignee_ids)
-            return _CustomFieldIds(ref.field_id)
-        pseudo = ref.pseudo
-        if pseudo == _PSEUDO.TASK_PSEUDO_FIELD_TAGS:
+            return _CustomFieldIds(ref.ref.value)
+        pseudo = ref.ref.value
+        if pseudo == _PSEUDO.TAGS:
             return _TagIds()
-        if pseudo == _PSEUDO.TASK_PSEUDO_FIELD_EPIC:
+        if pseudo == _PSEUDO.EPIC:
             return _EpicIds(self.ancestry)
-        if pseudo == _PSEUDO.TASK_PSEUDO_FIELD_BLOCKED_BY:
+        if pseudo == _PSEUDO.BLOCKED_BY:
             return _JsonColumnIds(Task.blocked_by_task_ids)
-        if pseudo == _PSEUDO.TASK_PSEUDO_FIELD_TASK_TYPE:
+        if pseudo == _PSEUDO.TASK_TYPE:
             return _ScalarIds(func.coalesce(func.nullif(Task.task_type, ""), TaskType.TASK.value))
         columns = {
-            _PSEUDO.TASK_PSEUDO_FIELD_SPRINT: Task.sprint_id,
-            _PSEUDO.TASK_PSEUDO_FIELD_CREATOR: Task.owner_id,
-            _PSEUDO.TASK_PSEUDO_FIELD_PARENT: Task.parent_id,
+            _PSEUDO.SPRINT: Task.sprint_id,
+            _PSEUDO.CREATOR: Task.owner_id,
+            _PSEUDO.PARENT: Task.parent_id,
         }
         return _ScalarIds(columns[pseudo], UUID)
 
     def _empty(self, ref: TaskFieldRef, kind: FieldKind) -> ColumnElement[bool]:
-        if ref.WhichOneof("ref") == RefCase.FIELD_ID:
-            if ref.field_id in _TEXT_COLUMN_FIELDS:
-                column = task_column(ref.field_id)
+        if (ref.ref.field if ref.ref is not None else None) == RefCase.FIELD_ID:
+            if ref.ref.value in _TEXT_COLUMN_FIELDS:
+                column = task_column(ref.ref.value)
                 return or_(column.is_(None), column == "")
-            if ref.field_id == _FIELD.ASSIGNEE:
+            if ref.ref.value == _FIELD.ASSIGNEE:
                 return json_is_empty(Task.assignee_ids)
-            return json_is_empty(Task.field_values[ref.field_id])
-        pseudo = ref.pseudo
+            return json_is_empty(Task.field_values[ref.ref.value])
+        pseudo = ref.ref.value
         if kind in (FieldKind.TAGS, FieldKind.EPIC, FieldKind.TASK_REF_SET):
             return self._id_source(ref).empty()
         columns = {
-            _PSEUDO.TASK_PSEUDO_FIELD_SPRINT: Task.sprint_id,
-            _PSEUDO.TASK_PSEUDO_FIELD_PARENT: Task.parent_id,
-            _PSEUDO.TASK_PSEUDO_FIELD_COMPLETED_AT: Task.completed_at,
-            _PSEUDO.TASK_PSEUDO_FIELD_ESTIMATED_MINUTES: Task.estimated_minutes,
-            _PSEUDO.TASK_PSEUDO_FIELD_TIME_SPENT_MINUTES: Task.time_spent_minutes,
+            _PSEUDO.SPRINT: Task.sprint_id,
+            _PSEUDO.PARENT: Task.parent_id,
+            _PSEUDO.COMPLETED_AT: Task.completed_at,
+            _PSEUDO.ESTIMATED_MINUTES: Task.estimated_minutes,
+            _PSEUDO.TIME_SPENT_MINUTES: Task.time_spent_minutes,
         }
         column = columns.get(pseudo)
         # The validator refuses emptiness on attributes that always hold a value.
         return column.is_(None) if column is not None else false()
 
     def _flag(self, ref: TaskFieldRef) -> ColumnElement[bool]:
-        if ref.pseudo == _PSEUDO.TASK_PSEUDO_FIELD_HAS_SUBTASKS:
+        if ref.ref.value == _PSEUDO.HAS_SUBTASKS:
             return has_subtasks(self.ctx.project_id)
-        if ref.pseudo == _PSEUDO.TASK_PSEUDO_FIELD_IS_BLOCKED:
+        if ref.ref.value == _PSEUDO.IS_BLOCKED:
             return is_blocked(self.ctx.project_id)
         return Task.is_milestone
 
     def _text_value(self, ref: TaskFieldRef) -> ColumnElement[str]:
-        if ref.field_id == _FIELD.TITLE:
+        if ref.ref.value == _FIELD.TITLE:
             return func.coalesce(Task.title, "")
-        return json_text(Task.field_values[ref.field_id])
+        return json_text(Task.field_values[ref.ref.value])
 
     def _text(self, have: ColumnElement[str], condition: TaskFilterCondition) -> ColumnElement[bool]:
         # Both sides lower-case through the same function, so no character folds differently.
-        wanted = lower_text(literal(condition.value.text.strip(TEXT_WHITESPACE)))
+        wanted = lower_text(literal(condition.value.value.value.strip(TEXT_WHITESPACE)))
         lowered = lower_text(have)
         operator = condition.operator
-        if operator in (_OP.TASK_FILTER_OPERATOR_CONTAINS, _OP.TASK_FILTER_OPERATOR_NOT_CONTAINS):
+        if operator in (_OP.CONTAINS, _OP.NOT_CONTAINS):
             hit = func.strpos(lowered, wanted) > 0
-            return hit if operator == _OP.TASK_FILTER_OPERATOR_CONTAINS else not_(hit)
+            return hit if operator == _OP.CONTAINS else not_(hit)
         same = func.btrim(lowered, TEXT_WHITESPACE) == wanted
-        return same if operator == _OP.TASK_FILTER_OPERATOR_IS else not_(same)
+        return same if operator == _OP.IS else not_(same)
 
     def _number(self, ref: TaskFieldRef, condition: TaskFilterCondition) -> ColumnElement[bool]:
-        if ref.WhichOneof("ref") == RefCase.PSEUDO:
-            if ref.pseudo == _PSEUDO.TASK_PSEUDO_FIELD_DEPTH:
+        if (ref.ref.field if ref.ref is not None else None) == RefCase.PSEUDO:
+            if ref.ref.value == _PSEUDO.DEPTH:
                 ancestry = self.ancestry
                 depth = func.max(ancestry.c.depth)
                 matching = (
@@ -399,29 +397,29 @@ class TaskFilterCompiler:
                 )
                 return Task.id.in_(matching)
             columns = {
-                _PSEUDO.TASK_PSEUDO_FIELD_ESTIMATED_MINUTES: Task.estimated_minutes,
-                _PSEUDO.TASK_PSEUDO_FIELD_TIME_SPENT_MINUTES: Task.time_spent_minutes,
-                _PSEUDO.TASK_PSEUDO_FIELD_NUMBER: Task.number,
+                _PSEUDO.ESTIMATED_MINUTES: Task.estimated_minutes,
+                _PSEUDO.TIME_SPENT_MINUTES: Task.time_spent_minutes,
+                _PSEUDO.NUMBER: Task.number,
             }
-            return _compare_number(columns[ref.pseudo], condition)
-        return _compare_number(json_number(Task.field_values[ref.field_id]), condition)
+            return _compare_number(columns[ref.ref.value], condition)
+        return _compare_number(json_number(Task.field_values[ref.ref.value]), condition)
 
     def _date(
         self, ref: TaskFieldRef, kind: FieldKind, condition: TaskFilterCondition
     ) -> ColumnElement[bool]:
         value = condition.value
         resolve = self._resolve_date
-        if condition.operator == _OP.TASK_FILTER_OPERATOR_BETWEEN:
-            bounds = (resolve(value.date_range.start), resolve(value.date_range.end))
+        if condition.operator == _OP.BETWEEN:
+            bounds = (resolve(value.value.value.start), resolve(value.value.value.end))
         else:
-            day = resolve(value.date)
-            if (condition.operator == _OP.TASK_FILTER_OPERATOR_BEFORE and day == date.min) or (
-                condition.operator == _OP.TASK_FILTER_OPERATOR_AFTER and day == date.max
+            day = resolve(value.value.value)
+            if (condition.operator == _OP.BEFORE and day == date.min) or (
+                condition.operator == _OP.AFTER and day == date.max
             ):
                 return false()
             bounds = _DAY_BOUNDS[condition.operator](day)
         if kind is FieldKind.TIMESTAMP:
-            return self._instant_between(_timestamp_column(ref.pseudo), bounds)
+            return self._instant_between(_timestamp_column(ref.ref.value), bounds)
         have = self._day_text(ref)
         start, end = bounds
         conditions = [have != ""]
@@ -435,9 +433,9 @@ class TaskFilterCompiler:
         return resolve_filter_date(value, self.ctx.today, self.ctx.week_start)
 
     def _day_text(self, ref: TaskFieldRef) -> ColumnElement[str]:
-        if ref.field_id in (_FIELD.START_DATE, _FIELD.DUE_DATE):
-            return task_column(ref.field_id)
-        return json_text(Task.field_values[ref.field_id])
+        if ref.ref.value in (_FIELD.START_DATE, _FIELD.DUE_DATE):
+            return task_column(ref.ref.value)
+        return json_text(Task.field_values[ref.ref.value])
 
     def _instant_between(
         self, column: ColumnElement, bounds: tuple[date | None, date | None]
@@ -453,34 +451,34 @@ class TaskFilterCompiler:
 
 def _timestamp_column(pseudo: int) -> ColumnElement:
     return {
-        _PSEUDO.TASK_PSEUDO_FIELD_CREATED_AT: Task.created_at,
-        _PSEUDO.TASK_PSEUDO_FIELD_UPDATED_AT: Task.updated_at,
-        _PSEUDO.TASK_PSEUDO_FIELD_COMPLETED_AT: Task.completed_at,
+        _PSEUDO.CREATED_AT: Task.created_at,
+        _PSEUDO.UPDATED_AT: Task.updated_at,
+        _PSEUDO.COMPLETED_AT: Task.completed_at,
     }[pseudo]
 
 
 # Inclusive calendar-day bounds per comparison; None leaves that side open.
 _DAY_BOUNDS: dict[int, Callable[[date], tuple[date | None, date | None]]] = {
-    _OP.TASK_FILTER_OPERATOR_IS: lambda day: (day, day),
-    _OP.TASK_FILTER_OPERATOR_BEFORE: lambda day: (None, day - timedelta(days=1)),
-    _OP.TASK_FILTER_OPERATOR_AFTER: lambda day: (day + timedelta(days=1), None),
-    _OP.TASK_FILTER_OPERATOR_ON_OR_BEFORE: lambda day: (None, day),
-    _OP.TASK_FILTER_OPERATOR_ON_OR_AFTER: lambda day: (day, None),
+    _OP.IS: lambda day: (day, day),
+    _OP.BEFORE: lambda day: (None, day - timedelta(days=1)),
+    _OP.AFTER: lambda day: (day + timedelta(days=1), None),
+    _OP.ON_OR_BEFORE: lambda day: (None, day),
+    _OP.ON_OR_AFTER: lambda day: (day, None),
 }
 
 
 def _compare_number(have: ColumnElement, condition: TaskFilterCondition) -> ColumnElement[bool]:
     value = condition.value
     operator = condition.operator
-    if operator == _OP.TASK_FILTER_OPERATOR_IS_NOT:
-        return or_(have.is_(None), have != value.number)
-    if operator == _OP.TASK_FILTER_OPERATOR_IS:
-        return have == value.number
-    if operator == _OP.TASK_FILTER_OPERATOR_GREATER_THAN:
-        return have > value.number
-    if operator == _OP.TASK_FILTER_OPERATOR_LESS_THAN:
-        return have < value.number
-    return and_(have >= value.number_range.min, have <= value.number_range.max)
+    if operator == _OP.IS_NOT:
+        return or_(have.is_(None), have != value.value.value)
+    if operator == _OP.IS:
+        return have == value.value.value
+    if operator == _OP.GREATER_THAN:
+        return have > value.value.value
+    if operator == _OP.LESS_THAN:
+        return have < value.value.value
+    return and_(have >= value.value.value.min, have <= value.value.value.max)
 
 
 def compile_task_filter(group: TaskFilterGroup, ctx: FilterContext) -> ColumnElement[bool]:

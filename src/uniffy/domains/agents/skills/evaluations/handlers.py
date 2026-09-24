@@ -1,7 +1,8 @@
 from uuid import UUID
 
 from connectrpc.request import RequestContext
-from uniffy_proto.agents.v1 import skill_evaluations_pb2 as proto
+from protobuf import Oneof
+from uniffy_proto.agents.v1 import skill_evaluations_pb as proto
 
 from uniffy.core.auth.principal import current_user_id, resolve_organization_id
 from uniffy.core.errors import ValidationError
@@ -20,30 +21,34 @@ def parse_id(value: str) -> UUID:
         raise ValidationError("id", "Invalid evaluation identifier") from exc
 
 
-def parse_scope(scope: proto.EvaluationScope) -> EvaluationScope:
-    match scope.WhichOneof("scope"):
-        case "skill_id":
-            return EvaluationScope(skill_id=parse_id(scope.skill_id))
-        case "draft_id":
-            return EvaluationScope(draft_id=parse_id(scope.draft_id))
+def parse_scope(scope: proto.EvaluationScope | None) -> EvaluationScope:
+    match scope.scope if scope is not None else None:
+        case Oneof(field="skill_id", value=identifier):
+            return EvaluationScope(skill_id=parse_id(identifier))
+        case Oneof(field="draft_id", value=identifier):
+            return EvaluationScope(draft_id=parse_id(identifier))
         case _:
             raise ValidationError("scope", "Select one skill or pending draft")
 
 
-def parse_target(target: proto.EvaluationTarget) -> EvaluationTarget:
-    draft_content = target.draft_content if target.HasField("draft_content") else None
-    match target.WhichOneof("target"):
-        case "skill_version_id":
+def parse_target(target: proto.EvaluationTarget | None) -> EvaluationTarget:
+    if target is None:
+        raise ValidationError("target", "Select one skill version or pending draft")
+    draft_content = target.draft_content if target.has_field("draft_content") else None
+    match target.target:
+        case Oneof(field="skill_version_id", value=identifier):
             return EvaluationTarget(
-                skill_version_id=parse_id(target.skill_version_id), draft_content=draft_content
+                skill_version_id=parse_id(identifier), draft_content=draft_content
             )
-        case "draft_id":
-            return EvaluationTarget(draft_id=parse_id(target.draft_id), draft_content=draft_content)
+        case Oneof(field="draft_id", value=identifier):
+            return EvaluationTarget(draft_id=parse_id(identifier), draft_content=draft_content)
         case _:
             raise ValidationError("target", "Select one skill version or pending draft")
 
 
-def parse_fields(fields: proto.EvaluationCaseFields) -> dict:
+def parse_fields(fields: proto.EvaluationCaseFields | None) -> dict:
+    if fields is None:
+        fields = proto.EvaluationCaseFields()
     return {
         "name": fields.name,
         "input": fields.input,

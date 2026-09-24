@@ -1,52 +1,52 @@
-from uniffy_proto.search.v1.search_pb2 import (
+from uniffy_proto.search.v1.search_pb import (
     SearchResultItem,
     SearchResultType,
     UrnMetadata,
 )
-from uniffy_proto.search.v1.search_pb2 import (
+from uniffy_proto.search.v1.search_pb import (
     UrnAvailability as ProtoUrnAvailability,
 )
 
 from uniffy.domains.search.queries import SearchResult, UrnAvailability
 
 ENTITY_TYPE_TO_PROTO: dict[str, SearchResultType] = {
-    "note": SearchResultType.SEARCH_RESULT_TYPE_NOTE,
-    "file": SearchResultType.SEARCH_RESULT_TYPE_FILE,
-    "chat": SearchResultType.SEARCH_RESULT_TYPE_CHAT,
-    "user": SearchResultType.SEARCH_RESULT_TYPE_USER,
-    "calendar_event": SearchResultType.SEARCH_RESULT_TYPE_CALENDAR_EVENT,
-    "project": SearchResultType.SEARCH_RESULT_TYPE_PROJECT,
-    "task": SearchResultType.SEARCH_RESULT_TYPE_TASK,
-    "agent": SearchResultType.SEARCH_RESULT_TYPE_AGENT,
-    "chat_message": SearchResultType.SEARCH_RESULT_TYPE_CHAT_MESSAGE,
-    "room": SearchResultType.SEARCH_RESULT_TYPE_ROOM,
-    "agent_chat": SearchResultType.SEARCH_RESULT_TYPE_AGENT_CHAT,
-    "tag": SearchResultType.SEARCH_RESULT_TYPE_TAG,
-    "folder": SearchResultType.SEARCH_RESULT_TYPE_FOLDER,
-    "agent_folder": SearchResultType.SEARCH_RESULT_TYPE_AGENT_FOLDER,
-    "team": SearchResultType.SEARCH_RESULT_TYPE_TEAM,
-    "agent_cron_task": SearchResultType.SEARCH_RESULT_TYPE_AGENT_CRON_TASK,
+    "note": SearchResultType.NOTE,
+    "file": SearchResultType.FILE,
+    "chat": SearchResultType.CHAT,
+    "user": SearchResultType.USER,
+    "calendar_event": SearchResultType.CALENDAR_EVENT,
+    "project": SearchResultType.PROJECT,
+    "task": SearchResultType.TASK,
+    "agent": SearchResultType.AGENT,
+    "chat_message": SearchResultType.CHAT_MESSAGE,
+    "room": SearchResultType.ROOM,
+    "agent_chat": SearchResultType.AGENT_CHAT,
+    "tag": SearchResultType.TAG,
+    "folder": SearchResultType.FOLDER,
+    "agent_folder": SearchResultType.AGENT_FOLDER,
+    "team": SearchResultType.TEAM,
+    "agent_cron_task": SearchResultType.AGENT_CRON_TASK,
 }
 
 PROTO_TO_ENTITY_TYPE: dict[SearchResultType, str] = {v: k for k, v in ENTITY_TYPE_TO_PROTO.items()}
 
 URN_AVAILABILITY_TO_PROTO: dict[UrnAvailability, ProtoUrnAvailability] = {
-    UrnAvailability.AVAILABLE: ProtoUrnAvailability.URN_AVAILABILITY_AVAILABLE,
-    UrnAvailability.RESTRICTED: ProtoUrnAvailability.URN_AVAILABILITY_RESTRICTED,
-    UrnAvailability.DELETED: ProtoUrnAvailability.URN_AVAILABILITY_DELETED,
-    UrnAvailability.UNAVAILABLE: ProtoUrnAvailability.URN_AVAILABILITY_UNAVAILABLE,
+    UrnAvailability.AVAILABLE: ProtoUrnAvailability.AVAILABLE,
+    UrnAvailability.RESTRICTED: ProtoUrnAvailability.RESTRICTED,
+    UrnAvailability.DELETED: ProtoUrnAvailability.DELETED,
+    UrnAvailability.UNAVAILABLE: ProtoUrnAvailability.UNAVAILABLE,
 }
 
 
 def entity_type_to_proto(entity_type: str) -> SearchResultType:
     return ENTITY_TYPE_TO_PROTO.get(
         entity_type.lower(),
-        SearchResultType.SEARCH_RESULT_TYPE_UNSPECIFIED,
+        SearchResultType.UNSPECIFIED,
     )
 
 
 def proto_to_entity_type(proto_type: SearchResultType) -> str | None:
-    if proto_type == SearchResultType.SEARCH_RESULT_TYPE_UNSPECIFIED:
+    if proto_type == SearchResultType.UNSPECIFIED:
         return None
     return PROTO_TO_ENTITY_TYPE.get(proto_type)
 

@@ -2,29 +2,22 @@
 
 from uuid import UUID
 
-from uniffy_proto.permissions.v1.permissions_pb2 import (
-    ACCESS_REQUEST_STATE_APPROVED,
-    ACCESS_REQUEST_STATE_CANCELED,
-    ACCESS_REQUEST_STATE_DENIED,
-    ACCESS_REQUEST_STATE_PENDING,
-    ACCESS_REQUEST_STATE_UNSPECIFIED,
-    REQUEST_ACCESS_OUTCOME_ALREADY_ACCESSIBLE,
-    REQUEST_ACCESS_OUTCOME_ALREADY_PENDING,
-    REQUEST_ACCESS_OUTCOME_COOLDOWN,
-    REQUEST_ACCESS_OUTCOME_CREATED,
-    AccessRequestStatus,
-)
-from uniffy_proto.permissions.v1.permissions_pb2 import (
+from uniffy_proto.permissions.v1.permissions_pb import AccessRequestState as _ProtoAccessRequestState
+from uniffy_proto.permissions.v1.permissions_pb import AccessRequestStatus
+from uniffy_proto.permissions.v1.permissions_pb import (
     ContentAccessPolicy as ProtoContentAccessPolicy,
 )
-from uniffy_proto.permissions.v1.permissions_pb2 import (
+from uniffy_proto.permissions.v1.permissions_pb import (
     ContentAccessRequest as ProtoContentAccessRequest,
 )
-from uniffy_proto.permissions.v1.permissions_pb2 import (
+from uniffy_proto.permissions.v1.permissions_pb import (
     ContentMember as ProtoContentMember,
 )
-from uniffy_proto.permissions.v1.permissions_pb2 import (
+from uniffy_proto.permissions.v1.permissions_pb import (
     ContentMemberEvent as ProtoContentMemberEvent,
+)
+from uniffy_proto.permissions.v1.permissions_pb import (
+    RequestAccessOutcome as _ProtoRequestAccessOutcome,
 )
 
 from uniffy.core.audit.actions import Action
@@ -69,17 +62,17 @@ _ACTION_TO_AUDIT: dict[ContentMemberAction, str] = {
 }
 
 _ACCESS_REQUEST_STATE_TO_PROTO = {
-    ContentAccessRequestState.PENDING: ACCESS_REQUEST_STATE_PENDING,
-    ContentAccessRequestState.APPROVED: ACCESS_REQUEST_STATE_APPROVED,
-    ContentAccessRequestState.DENIED: ACCESS_REQUEST_STATE_DENIED,
-    ContentAccessRequestState.CANCELED: ACCESS_REQUEST_STATE_CANCELED,
+    ContentAccessRequestState.PENDING: _ProtoAccessRequestState.PENDING,
+    ContentAccessRequestState.APPROVED: _ProtoAccessRequestState.APPROVED,
+    ContentAccessRequestState.DENIED: _ProtoAccessRequestState.DENIED,
+    ContentAccessRequestState.CANCELED: _ProtoAccessRequestState.CANCELED,
 }
 
 _REQUEST_ACCESS_OUTCOME_TO_PROTO = {
-    RequestAccessOutcome.CREATED: REQUEST_ACCESS_OUTCOME_CREATED,
-    RequestAccessOutcome.ALREADY_PENDING: REQUEST_ACCESS_OUTCOME_ALREADY_PENDING,
-    RequestAccessOutcome.ALREADY_ACCESSIBLE: REQUEST_ACCESS_OUTCOME_ALREADY_ACCESSIBLE,
-    RequestAccessOutcome.COOLDOWN: REQUEST_ACCESS_OUTCOME_COOLDOWN,
+    RequestAccessOutcome.CREATED: _ProtoRequestAccessOutcome.CREATED,
+    RequestAccessOutcome.ALREADY_PENDING: _ProtoRequestAccessOutcome.ALREADY_PENDING,
+    RequestAccessOutcome.ALREADY_ACCESSIBLE: _ProtoRequestAccessOutcome.ALREADY_ACCESSIBLE,
+    RequestAccessOutcome.COOLDOWN: _ProtoRequestAccessOutcome.COOLDOWN,
 }
 
 
@@ -98,7 +91,7 @@ def content_member_to_proto(member: ContentMember) -> ProtoContentMember:
     )
     expires_ts = optional_timestamp(member.expires_at)
     if expires_ts is not None:
-        proto.expires_at.CopyFrom(expires_ts)
+        proto.expires_at = expires_ts
     return proto
 
 
@@ -131,10 +124,10 @@ def access_request_view_to_proto(view: AccessRequestView) -> ProtoContentAccessR
         proto.responded_by_user_id = str(request.responded_by_user_id)
     responded_at = optional_timestamp(request.responded_at)
     if responded_at is not None:
-        proto.responded_at.CopyFrom(responded_at)
+        proto.responded_at = responded_at
     can_request_again_at = optional_timestamp(view.can_request_again_at)
     if can_request_again_at is not None:
-        proto.can_request_again_at.CopyFrom(can_request_again_at)
+        proto.can_request_again_at = can_request_again_at
     return proto
 
 
@@ -144,7 +137,7 @@ def access_request_status_to_proto(view: AccessRequestStatusView) -> AccessReque
         state=(
             _ACCESS_REQUEST_STATE_TO_PROTO[view.state]
             if view.state is not None
-            else ACCESS_REQUEST_STATE_UNSPECIFIED
+            else _ProtoAccessRequestState.UNSPECIFIED
         ),
         requester_has_access=view.requester_has_access,
     )
@@ -152,7 +145,7 @@ def access_request_status_to_proto(view: AccessRequestStatusView) -> AccessReque
         proto.request_id = str(view.request_id)
     can_request_again_at = optional_timestamp(view.can_request_again_at)
     if can_request_again_at is not None:
-        proto.can_request_again_at.CopyFrom(can_request_again_at)
+        proto.can_request_again_at = can_request_again_at
     return proto
 
 

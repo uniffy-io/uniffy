@@ -4,7 +4,7 @@ from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
-from uniffy_proto.tags.v1.tags_pb2 import (
+from uniffy_proto.tags.v1.tags_pb import (
     AssignTagsRequest,
     AssignTagsResponse,
     CreateTagRequest,
@@ -147,9 +147,9 @@ class TagsHandlers:
                     actor_id=actor_id,
                     organization_id=organization_id,
                     tag_id=tag_id,
-                    name=request.name if request.HasField("name") else None,
-                    color=request.color if request.HasField("color") else None,
-                    description=(request.description if request.HasField("description") else None),
+                    name=request.name if request.has_field("name") else None,
+                    color=request.color if request.has_field("color") else None,
+                    description=(request.description if request.has_field("description") else None),
                 )
                 affected_urns: list[str] = []
                 if slug_changed:
@@ -415,7 +415,7 @@ class TagsHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "tag is required")
 
         criteria_dict: dict = {}
-        if request.HasField("criteria"):
+        if request.has_field("criteria"):
             criteria_dict = criteria_from_proto(request.criteria)
 
         criteria_types = criteria_dict.get("content_types") or []

@@ -3,7 +3,7 @@
 from unittest.mock import AsyncMock, patch
 
 import pytest
-from uniffy_proto.settings.v1.settings_pb2 import NotificationsSettings
+from uniffy_proto.settings.v1.settings_pb import NotificationsSettings
 
 from uniffy.core.errors import ValidationError
 from uniffy.core.models.settings.settings_profile import SettingsProfile
