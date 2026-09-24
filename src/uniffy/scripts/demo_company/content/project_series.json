@@ -1,0 +1,318 @@
+[
+  {
+    "name": "Customer Portal Refresh",
+    "slug": "PRTL",
+    "description": "Rebuild of the customer self-service portal: sign-in, billing, support tickets and the usage dashboard, shipped behind a private beta first.",
+    "color": "#8b5cf6",
+    "icon": "folder",
+    "tags": ["engineering", "frontend"],
+    "task_count": 100,
+    "start_in_days": -56,
+    "end_in_days": 42,
+    "sprint_days": 14,
+    "sprint_goals": [
+      "Land the new shell and sign-in flow",
+      "Billing pages ready for internal dogfood",
+      "Support ticket center feature complete",
+      "Private beta polish and accessibility fixes"
+    ],
+    "team": [
+      "teodora@uniffy.io",
+      "alice@uniffy.io",
+      "kristina@uniffy.io",
+      "yana@uniffy.io",
+      "ralitsa@uniffy.io",
+      "nevena@uniffy.io",
+      "gabriela@uniffy.io"
+    ],
+    "task_tags": ["frontend", "backend", "design", "accessibility", "customer-request", "docs"],
+    "fields": [
+      { "name": "Story points", "type": "number", "values": [1, 2, 3, 5, 8] },
+      { "name": "Component", "type": "single_select", "options": ["Web app", "API", "Design system", "Docs"] },
+      { "name": "Browsers", "type": "multi_select", "options": ["Chrome", "Firefox", "Safari", "Edge"] },
+      { "name": "Requested by", "type": "text", "values": ["Northwind Logistics", "Balkan Retail Group", "Orbit Health", "Helios Energy", "Internal support"] },
+      { "name": "Reviewer", "type": "person" },
+      { "name": "Target release", "type": "date" }
+    ],
+    "epics": [
+      "Sign-in and account settings",
+      "Billing and invoices",
+      "Support ticket center",
+      "Usage dashboard",
+      "Accessibility pass"
+    ],
+    "stories": [
+      "Redesign the {epic} {surface}",
+      "Add {feature} to {epic}",
+      "Wire the {surface} to the new API",
+      "Empty and error states for the {surface}",
+      "Keyboard navigation for the {surface}",
+      "Copy review for {epic}",
+      "Track {feature} usage in the {surface}"
+    ],
+    "bugs": [
+      "{surface} shows {symptom}",
+      "{epic}: {symptom} after sign-in",
+      "{surface} breaks on narrow screens"
+    ],
+    "subtasks": [
+      "Figma handoff",
+      "Build the component",
+      "API contract review",
+      "Unit tests",
+      "Visual regression snapshot",
+      "QA pass on staging",
+      "Update the help center article"
+    ],
+    "variables": {
+      "surface": ["overview page", "settings panel", "invoice list", "ticket form", "profile drawer", "navigation rail", "chart card"],
+      "feature": ["CSV export", "saved filters", "dark mode", "inline editing", "bulk actions", "search"],
+      "symptom": ["a blank state", "stale totals", "a double scrollbar", "the wrong currency", "a spinner that never stops"]
+    },
+    "descriptions": [
+      "Part of **{epic}**. Customers reach the {surface} daily, so this ships behind the portal beta flag until support signs off.",
+      "Scope for the {surface} in {epic}. Match the approved design, keep the API calls paginated, and log the rollout in the release notes.",
+      "Support asked for this after the last customer review. Keep the change small and measurable, and link the ticket in the pull request."
+    ],
+    "acceptance": [
+      "Works in light and dark theme",
+      "Screen reader announces every state change",
+      "Loading, empty and error states covered",
+      "Copy approved by support",
+      "Behind the portal beta flag",
+      "Metrics event fires once per action"
+    ],
+    "milestones": ["Private beta", "Public launch"],
+    "recurring": [{ "title": "Weekly design review", "pattern": "weekly" }]
+  },
+  {
+    "name": "Mobile App 3.0",
+    "slug": "MOB",
+    "description": "The 3.0 release of the iOS and Android apps: offline sync, a rebuilt chat composer, tablet layouts and faster cold start.",
+    "color": "#f97316",
+    "icon": "folder",
+    "tags": ["engineering", "mobile"],
+    "task_count": 200,
+    "start_in_days": -98,
+    "end_in_days": 56,
+    "sprint_days": 14,
+    "sprint_goals": [
+      "Offline sync reads and writes notes",
+      "Push notification preferences end to end",
+      "New composer in the internal build",
+      "Tablet layout for chat and files",
+      "Crash-free sessions above 99.5 percent",
+      "Store assets and release candidate"
+    ],
+    "team": [
+      "stefan@uniffy.io",
+      "bob@uniffy.io",
+      "gergana@uniffy.io",
+      "plamen@uniffy.io",
+      "milena@uniffy.io",
+      "lora@uniffy.io",
+      "bozhidar@uniffy.io",
+      "todor@uniffy.io",
+      "anna@uniffy.io"
+    ],
+    "task_tags": ["mobile", "frontend", "backend", "performance", "design", "tech-debt", "accessibility"],
+    "fields": [
+      { "name": "Story points", "type": "number", "values": [1, 2, 3, 5, 8, 13] },
+      { "name": "Platforms", "type": "multi_select", "options": ["iOS", "Android", "iPadOS"] },
+      { "name": "Release", "type": "single_select", "options": ["3.0", "3.0.1", "3.1"] },
+      { "name": "Device", "type": "text", "values": ["iPhone 13 mini", "Pixel 7", "Galaxy A54", "iPad Air", "Moto G Power"] },
+      { "name": "QA owner", "type": "person" },
+      { "name": "QA sign-off", "type": "date" }
+    ],
+    "epics": [
+      "Offline sync",
+      "Push notifications",
+      "Chat composer",
+      "Files and camera upload",
+      "Calendar widget",
+      "Onboarding flow",
+      "Tablet layout",
+      "Release engineering"
+    ],
+    "stories": [
+      "{epic}: {screen} for {platform}",
+      "Add {feature} to the {screen}",
+      "Persist {screen} state across restarts",
+      "Measure cold start of the {screen}",
+      "Haptics and motion on the {screen}",
+      "Accessibility labels for the {screen}",
+      "Migrate the {screen} to the new navigation stack"
+    ],
+    "bugs": [
+      "{screen} crashes on {platform} when {trigger}",
+      "{epic}: {screen} loses input when {trigger}",
+      "Badge count wrong after {trigger}"
+    ],
+    "subtasks": [
+      "Implement on iOS",
+      "Implement on Android",
+      "Snapshot tests",
+      "Device lab pass",
+      "Analytics events",
+      "Localisation strings",
+      "Release note entry"
+    ],
+    "variables": {
+      "screen": ["home feed", "chat thread", "file viewer", "note editor", "settings screen", "sign-in screen", "calendar day view"],
+      "platform": ["iOS", "Android", "iPadOS"],
+      "feature": ["pull to refresh", "swipe actions", "share sheet", "offline banner", "quick reply", "widgets"],
+      "trigger": ["the app resumes from background", "the network drops", "the device rotates", "a push arrives", "storage is almost full"]
+    },
+    "descriptions": [
+      "**{epic}** work for 3.0. Build it on both platforms in the same sprint and keep the shared logic in the core module.",
+      "The {screen} needs this before the store submission. Test on the device lab matrix, including the low-memory Android devices.",
+      "Reported by the QA pod in Plovdiv during the regression pass. Reproduce on {platform} first, then check the other platform."
+    ],
+    "acceptance": [
+      "Works offline and syncs on reconnect",
+      "Cold start stays under 1.5 seconds on the reference device",
+      "VoiceOver and TalkBack read every control",
+      "No new crash signatures in the internal build",
+      "Strings added for every shipped locale",
+      "Covered by snapshot tests"
+    ],
+    "milestones": ["TestFlight beta", "Store submission", "3.0 launch"],
+    "recurring": [
+      { "title": "Crash report triage", "pattern": "weekly" },
+      { "title": "Release train cut", "pattern": "biweekly" }
+    ]
+  },
+  {
+    "name": "Platform Reliability Program",
+    "slug": "REL",
+    "description": "Year-long program across infrastructure and backend: database and search upgrades, queue isolation, failover drills, SLOs and the self-hosted installer.",
+    "color": "#14b8a6",
+    "icon": "folder",
+    "tags": ["engineering", "infra", "reliability"],
+    "task_count": 1200,
+    "start_in_days": -196,
+    "end_in_days": 84,
+    "sprint_days": 14,
+    "sprint_goals": [
+      "Burn down the upgrade blockers",
+      "Error budget back above 50 percent",
+      "Failover drill dry run",
+      "Queue fleets isolated in staging",
+      "Search cluster resharded",
+      "Backups verified end to end",
+      "Close the audit evidence gaps"
+    ],
+    "team": [
+      "georgi@uniffy.io",
+      "sofia@uniffy.io",
+      "ivan@uniffy.io",
+      "nikolay@uniffy.io",
+      "dimitar@uniffy.io",
+      "charlie@uniffy.io",
+      "radoslav@uniffy.io",
+      "vasil@uniffy.io",
+      "hristo@uniffy.io",
+      "anton@uniffy.io",
+      "borislava@uniffy.io",
+      "miroslav@uniffy.io",
+      "nadia@uniffy.io",
+      "pavel@uniffy.io",
+      "yoana@uniffy.io",
+      "stoyan@uniffy.io",
+      "radina@uniffy.io",
+      "kamen@uniffy.io",
+      "alice@uniffy.io",
+      "bob@uniffy.io"
+    ],
+    "task_tags": ["infra", "backend", "performance", "security", "reliability", "tech-debt", "docs"],
+    "fields": [
+      { "name": "Story points", "type": "number", "values": [1, 2, 3, 5, 8, 13, 21] },
+      { "name": "Service", "type": "single_select", "options": ["API", "Realtime", "Search", "Workers", "Object storage", "Database", "Mail", "Calls"] },
+      { "name": "Environments", "type": "multi_select", "options": ["Cloud", "Self-hosted", "Staging"] },
+      { "name": "Risk", "type": "single_select", "options": ["Low", "Medium", "High"] },
+      { "name": "Runbook", "type": "text", "values": ["Release and Deploy Runbook", "Incident Response Runbook", "Support Escalation Runbook", "Backup restore checklist"] },
+      { "name": "Change approver", "type": "person" },
+      { "name": "Change window", "type": "date" }
+    ],
+    "epics": [
+      "Postgres 18 upgrade",
+      "Search cluster sharding",
+      "Queue fleet isolation",
+      "Realtime gateway scaling",
+      "Object storage lifecycle",
+      "Observability and SLOs",
+      "Incident tooling",
+      "Backup and restore drills",
+      "Multi-region failover",
+      "Rate limiting",
+      "Cost efficiency",
+      "Security hardening",
+      "Dependency upgrades",
+      "CI pipeline speed",
+      "Self-hosted installer",
+      "Load testing harness"
+    ],
+    "stories": [
+      "{epic}: {action} for {service}",
+      "{action} in {environment}",
+      "Alert on {signal} for {service}",
+      "Dashboard for {service} {signal}",
+      "Runbook update: {epic}",
+      "Capacity plan for {service}",
+      "Remove the {service} {debt}",
+      "Game day: {service} {failure}"
+    ],
+    "bugs": [
+      "{service} {signal} spikes during {event}",
+      "{service} drops connections during {event}",
+      "{epic}: flaky check in {environment}",
+      "{service} retries forever after {failure}"
+    ],
+    "subtasks": [
+      "Write the design note",
+      "Change request and approval",
+      "Staging rollout",
+      "Canary rollout",
+      "Production rollout",
+      "Verify dashboards and alerts",
+      "Update the runbook",
+      "Post-change review",
+      "Self-hosted upgrade notes"
+    ],
+    "variables": {
+      "service": ["API", "realtime", "search", "workers", "object storage", "Postgres", "Valkey", "mail relay", "calls SFU"],
+      "action": ["Automate failover", "Add connection pooling", "Shard the index", "Split the queue", "Tune autovacuum", "Rotate credentials", "Add a circuit breaker", "Move to managed backups"],
+      "environment": ["staging", "the canary org group", "production", "the self-hosted reference install"],
+      "signal": ["p99 latency", "error rate", "queue depth", "replication lag", "disk usage", "memory pressure"],
+      "debt": ["legacy cron", "manual deploy step", "shared credential", "unused index", "hand-rolled retry loop"],
+      "failure": ["node loss", "zone outage", "disk full", "certificate expiry", "network partition"],
+      "event": ["the nightly reindex", "a deploy", "backup windows", "the Monday login peak", "a failover drill"]
+    },
+    "descriptions": [
+      "Part of **{epic}**. Changes to {service} go through the change calendar and roll out staging, canary, then production.",
+      "Driven by the last quarterly reliability review. The goal is fewer pages for {service} and a measurable drop in {signal}.",
+      "Needed on both products: the hosted cloud and the self-hosted images ship from the same pipeline, so document the self-hosted path too.",
+      "Follow-up from the incident review. Keep the fix small, add the alert that would have caught it, and link the review note."
+    ],
+    "acceptance": [
+      "Dashboard and alert in place before rollout",
+      "Rollback tested in staging",
+      "Self-hosted upgrade path documented",
+      "Error budget impact reviewed",
+      "Runbook updated and linked",
+      "Change approved in the change calendar"
+    ],
+    "milestones": [
+      "Q3 reliability review",
+      "Failover game day",
+      "Audit evidence freeze",
+      "Q4 reliability review",
+      "Program close"
+    ],
+    "recurring": [
+      { "title": "On-call handover", "pattern": "weekly" },
+      { "title": "Weekly SLO review", "pattern": "weekly" },
+      { "title": "Monthly capacity review", "pattern": "monthly" }
+    ]
+  }
+]

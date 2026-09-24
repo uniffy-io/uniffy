@@ -8,6 +8,7 @@ import os
 import sys
 import time
 from datetime import UTC, datetime
+from functools import partial
 from pathlib import Path
 
 from loguru import logger
@@ -235,8 +236,7 @@ async def _init_valkey() -> None:
     job is queued and no notification is published.
     """
     for name, start in (
-        ("core queue", lambda: init_queue(QueueName.CORE)),
-        ("egress queue", lambda: init_queue(QueueName.EGRESS)),
+        *((f"{queue} queue", partial(init_queue, queue)) for queue in QueueName),
         ("pubsub", init_pubsub),
         ("ops client", init_ops_client),
     ):
@@ -248,8 +248,7 @@ async def _init_valkey() -> None:
 
 async def _close_valkey() -> None:
     for close in (
-        lambda: close_queue(QueueName.CORE),
-        lambda: close_queue(QueueName.EGRESS),
+        *(partial(close_queue, queue) for queue in QueueName),
         close_pubsub,
         close_ops_client,
     ):

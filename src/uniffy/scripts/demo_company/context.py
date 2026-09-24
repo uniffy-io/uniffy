@@ -146,8 +146,16 @@ async def resolve_member_ids(
     emails: tuple[str, ...],
 ) -> list[UUID]:
     """Attendee lookup that tolerates a demo dataset naming users this org lacks."""
+    return list((await resolve_member_map(session, organization_id, emails)).values())
+
+
+async def resolve_member_map(
+    session: AsyncSession,
+    organization_id: UUID,
+    emails: tuple[str, ...],
+) -> dict[str, UUID]:
     if not emails:
-        return []
+        return {}
 
     rows = (
         await session.execute(
@@ -161,10 +169,10 @@ async def resolve_member_ids(
         )
     ).all()
 
-    found = {row.email for row in rows}
-    for missing in sorted(set(emails) - found):
-        logger.warning(f"Attendee {missing} is not a member of this organization, skipping")
-    return [row.id for row in rows]
+    found = {row.email: row.id for row in rows}
+    for missing in sorted(set(emails) - set(found)):
+        logger.warning(f"Member {missing} is not in this organization, skipping")
+    return found
 
 
 def anchor_from_date(day: datetime | None, timezone: str) -> datetime:

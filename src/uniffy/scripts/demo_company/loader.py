@@ -10,6 +10,12 @@ from loguru import logger
 from uniffy.core.data_files import load_documents
 from uniffy.core.json_codec import JSONDecodeError, loads
 from uniffy.core.types import RecurrencePattern
+from uniffy.scripts.demo_company.project_series import load_project_series
+from uniffy.scripts.demo_company.project_specs import (
+    ProjectContentError,
+    ProjectSpec,
+    load_projects,
+)
 
 logger = logger.bind(component="scripts.demo_company.loader")
 
@@ -233,28 +239,6 @@ class AgentsContent:
 
 
 @dataclass(frozen=True)
-class TaskSpec:
-    title: str
-    description: str
-    status: str
-    priority: str
-    task_type: str
-    due_in_days: int | None
-    assignees: tuple[str, ...]
-
-
-@dataclass(frozen=True)
-class ProjectSpec:
-    name: str
-    slug: str
-    description: str
-    color: str
-    icon: str
-    tags: tuple[str, ...]
-    tasks: tuple[TaskSpec, ...]
-
-
-@dataclass(frozen=True)
 class DemoContent:
     manifest: Manifest
     people: PeopleContent
@@ -298,7 +282,7 @@ def load_demo_content(directory: Path | None = None, *, password: str | None = N
         files=files,
         chat=_load_chat(root / "chat.json", root / "chat_series.json"),
         agents=_load_agents(root / "agents.json"),
-        projects=_load_projects(root / "projects.json"),
+        projects=_load_projects(root / "projects.json", root / "project_series.json"),
     )
     logger.info(
         f"Loaded {manifest.company} content from {root}: "
@@ -779,48 +763,20 @@ def _load_agents(path: Path) -> AgentsContent:
     return AgentsContent(soul_prompt=soul_prompt, agents=tuple(agents))
 
 
-def _load_projects(path: Path) -> tuple[ProjectSpec, ...]:
-    if not path.is_file():
-        return ()
-
-    raw = _read_json(path)
-    if not isinstance(raw, list):
-        raise ContentError(f"{path.name} must hold a JSON array")
-
-    projects: list[ProjectSpec] = []
-    for entry in raw:
-        for key in ("name", "slug"):
-            if not entry.get(key):
-                raise ContentError(f"{path.name}: every project needs '{key}'")
-
-        tasks: list[TaskSpec] = []
-        for task in entry.get("tasks", []):
-            if not task.get("title"):
-                raise ContentError(f"{path.name}: every task needs a 'title'")
-            tasks.append(
-                TaskSpec(
-                    title=task["title"],
-                    description=task.get("description", ""),
-                    status=task.get("status", "status_todo"),
-                    priority=task.get("priority", "priority_medium"),
-                    task_type=task.get("type", "task"),
-                    due_in_days=task.get("due_in_days"),
-                    assignees=tuple(task.get("assignees", [])),
-                )
-            )
-
-        projects.append(
-            ProjectSpec(
-                name=entry["name"],
-                slug=entry["slug"],
-                description=entry.get("description", ""),
-                color=entry.get("color", "#0d9488"),
-                icon=entry.get("icon", "folder"),
-                tags=tuple(entry.get("tags", [])),
-                tasks=tuple(tasks),
-            )
+def _load_projects(path: Path, series_path: Path) -> tuple[ProjectSpec, ...]:
+    try:
+        written = load_projects(path, _read_json(path)) if path.is_file() else ()
+        series = (
+            load_project_series(series_path, _read_json(series_path))
+            if series_path.is_file()
+            else ()
         )
-    return tuple(projects)
+    except ProjectContentError as exc:
+        raise ContentError(str(exc)) from exc
+    slugs = [project.slug for project in (*written, *series)]
+    if len(slugs) != len(set(slugs)):
+        raise ContentError(f"{path.name} and {series_path.name} repeat a project slug")
+    return (*written, *series)
 
 
 def _load_files(directory: Path, metadata_path: Path) -> tuple[FileSpec, ...]:
