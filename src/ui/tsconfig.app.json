@@ -25,7 +25,7 @@
     "noUncheckedSideEffectImports": true,
     "paths": {
       "@/*": ["./src/*"],
-      "@uniffy/proto/*": ["../gen/typescript/*"]
+      "@uniffy/proto/*": ["../proto/gen/typescript/*"]
     }
   },
   "include": ["src"]

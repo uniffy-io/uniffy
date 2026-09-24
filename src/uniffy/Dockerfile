@@ -44,7 +44,7 @@ FROM toolchain AS builder
 # Dependency layer: the workspace manifests plus the generated proto package,
 # a workspace member that installs next to the third-party packages.
 COPY pyproject.toml uv.lock README.md .python-version ./
-COPY src/gen/python src/gen/python
+COPY src/proto/gen/python src/proto/gen/python
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev --no-install-project --no-editable
 

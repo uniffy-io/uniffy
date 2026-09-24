@@ -2,7 +2,7 @@
 paths:
   - "src/uniffy/domains/chat/**/*.py"
   - "src/uniffy/core/models/chat/**/*.py"
-  - "src/proto/chat/**/*.proto"
+  - "src/proto/schema/chat/**/*.proto"
   - "src/ui/src/features/chat/**/*.ts"
   - "src/ui/src/features/chat/**/*.tsx"
 ---
@@ -47,7 +47,7 @@ Chat uses **channel membership**, not `access_mode`. `ChatAccessChecker` (`domai
 
 | File | Purpose |
 |---|---|
-| `src/proto/chat/v1/chat.proto` + `chat_stream.proto` | Service + stream contracts |
+| `src/proto/schema/chat/v1/chat.proto` + `chat_stream.proto` | Service + stream contracts |
 | `src/uniffy/domains/chat/access.py` | `ChatAccessChecker` - the single access gate |
 | `src/uniffy/domains/chat/cache.py` | Valkey helpers for hot reads |
 | `src/uniffy/domains/chat/streaming/handlers.py` | User-stream fanout, `_CHANNEL_EVENT_TYPES` |

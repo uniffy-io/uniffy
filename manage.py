@@ -283,7 +283,7 @@ def deps_install(service: str, stack: str):
         sh(["pnpm", "install", "--filter", f"{NODE_SERVICES[service][1]}..."])
     elif service == "all":
         sh(["pnpm", "install"])
-        sh(["go", "mod", "tidy"], cwd=ROOT / "src/gen/go")
+        sh(["go", "mod", "tidy"], cwd=ROOT / "src/proto/gen/go")
         sh(["go", "mod", "tidy"], cwd=ROOT / "src/unictl")
 
 
@@ -513,7 +513,7 @@ def _watch(target: str) -> list[str]:
         "python",
         f"python -m uniffy --{target}",
         "src/uniffy/",
-        "src/gen/python/",
+        "src/proto/gen/python/",
     ]
 
 
@@ -642,16 +642,14 @@ def proto(stack):
     """Generate protobuf code for python, typescript, and go."""
     if stack == "docker":
         toolbox_run(["uv", "run", "manage.py", "proto", "--stack", "local"])
-        sh(["go", "mod", "tidy"], cwd=ROOT / "src/gen/go", check=False)
-        sh(["go", "mod", "tidy"], cwd=ROOT / "src/unictl", check=False)
         return
     click.echo("Generating protobuf code...")
-    gen_python = ROOT / "src/gen/python/src/uniffy_proto"
+    gen_python = ROOT / "src/proto/gen/python/src/uniffy_proto"
     sh(["rm", "-rf", str(gen_python)])
-    packages = sorted(p.name for p in (ROOT / "src/proto").iterdir() if p.is_dir())
+    packages = sorted(p.name for p in (ROOT / "src/proto/schema").iterdir() if p.is_dir())
     for pkg in packages:
-        sh(["rm", "-rf", str(ROOT / "src/gen/typescript" / pkg)])
-    sh(["find", "src/gen/go", "-name", "*.go", "-delete"], check=False)
+        sh(["rm", "-rf", str(ROOT / "src/proto/gen/typescript" / pkg)])
+    sh(["find", "src/proto/gen/go", "-name", "*.go", "-delete"], check=False)
     sh(["buf", "generate"], env={"PATH": f"{ROOT}/src/ui/node_modules/.bin:{os.environ['PATH']}"})
     (gen_python / "__init__.py").write_text(
         "import os\nimport sys\n\nsys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))\n"
@@ -660,11 +658,8 @@ def proto(stack):
         (gen_python / pkg / "v1").mkdir(parents=True, exist_ok=True)
         (gen_python / pkg / "__init__.py").touch()
         (gen_python / pkg / "v1" / "__init__.py").touch()
-    # go mod tidy needs go, absent in the toolbox image; the docker branch
-    # runs it on the host after generation
-    if stack == "local":
-        sh(["go", "mod", "tidy"], cwd=ROOT / "src/gen/go", check=False)
-        sh(["go", "mod", "tidy"], cwd=ROOT / "src/unictl", check=False)
+    sh(["go", "mod", "tidy"], cwd=ROOT / "src/proto/gen/go")
+    sh(["go", "mod", "tidy"], cwd=ROOT / "src/unictl")
     click.echo("Protobuf code generated (python, typescript, go)")
 
 
@@ -767,11 +762,11 @@ def licenses(stack):
 @cli.command()
 def clean():
     """Remove generated code and build caches."""
-    sh(["rm", "-rf", "src/gen/python/src/uniffy_proto"])
-    for pkg in (ROOT / "src/proto").iterdir():
+    sh(["rm", "-rf", "src/proto/gen/python/src/uniffy_proto"])
+    for pkg in (ROOT / "src/proto/schema").iterdir():
         if pkg.is_dir():
-            sh(["rm", "-rf", f"src/gen/typescript/{pkg.name}"])
-    sh(["find", "src/gen/go", "-name", "*.go", "-delete"], check=False)
+            sh(["rm", "-rf", f"src/proto/gen/typescript/{pkg.name}"])
+    sh(["find", "src/proto/gen/go", "-name", "*.go", "-delete"], check=False)
     sh(["rm", "-rf", "src/ui/dist", "src/ui/node_modules/.vite"])
     sh(
         [
@@ -808,7 +803,7 @@ def lint(service, stack, fix):
             ["run", "python", "lint/capabilities.py", "src/uniffy"],
         )
         workspace_cmd("backend", stack, ["run", "ty", "check", "src/uniffy"])
-        ruff_args = ["run", "ruff", "check", "src/uniffy/", "--exclude", "src/gen"]
+        ruff_args = ["run", "ruff", "check", "src/uniffy/", "--exclude", "src/proto/gen"]
         if fix:
             ruff_args.append("--fix")
         workspace_cmd(
@@ -819,7 +814,7 @@ def lint(service, stack, fix):
         workspace_cmd(
             "backend",
             stack,
-            ["run", "ruff", "format", "src/uniffy/", "--exclude", "src/gen", "--check"],
+            ["run", "ruff", "format", "src/uniffy/", "--exclude", "src/proto/gen", "--check"],
         )
     if service in ("ui", "all"):
         workspace_cmd("ui", stack, ["lint"])
@@ -864,7 +859,7 @@ def _lint_backend_security(stack: str) -> None:
             "check",
             "src/uniffy/",
             "--exclude",
-            "src/gen",
+            "src/proto/gen",
             "--select",
             ",".join(_ruff_security_selectors()),
             "--ignore-noqa",
@@ -898,7 +893,7 @@ def format_cmd(service, stack):
     """Format code (ruff for backend, oxfmt for the node workspaces)."""
     if service in ("backend", "all"):
         workspace_cmd(
-            "backend", stack, ["run", "ruff", "format", "src/uniffy/", "--exclude", "src/gen"]
+            "backend", stack, ["run", "ruff", "format", "src/uniffy/", "--exclude", "src/proto/gen"]
         )
     if service in ("ui", "all"):
         workspace_cmd("ui", stack, ["format"])

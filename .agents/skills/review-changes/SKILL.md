@@ -13,7 +13,7 @@ This skill is the methodology for reviewing what is about to become a PR. The sh
 1. `git fetch origin` (offline is fine; note it and continue).
 2. Scope the changes: `git status` + `git diff HEAD --stat` for uncommitted work, `git log --oneline origin/main..HEAD` and `git diff origin/main...HEAD --stat` for the branch delta. On `main` with uncommitted work, the uncommitted set IS the review scope.
 3. **Upstream alignment before anything else**: `git log --oneline HEAD..origin/main`. If upstream landed commits touching the same files, read those commits first and review against the merged reality, not the stale base. Overlaps and likely conflicts go in the review header.
-4. Bucket the changed files by area (backend / ui / mobile / proto / landing docs / infra) and drop `src/gen/**` from the review set. Generated code is never reviewed; review the `.proto` source and confirm `./manage.py proto` was run (a proto edit without its regenerated files is itself a finding).
+4. Bucket the changed files by area (backend / ui / mobile / proto / landing docs / infra) and drop `src/proto/gen/**` from the review set. Generated code is never reviewed; review the `.proto` source and confirm `./manage.py proto` was run (a proto edit without its regenerated files is itself a finding).
 5. Check `.agents/local/plans/backlogs/` for a companion backlog. It carries the intent; a review that does not know what the change was trying to do misjudges half of it.
 
 ## 2. Load the rules the diff touches
@@ -23,7 +23,7 @@ The rules in `.agents/rules/` are the judging criteria, not background reading. 
 | Changed paths | Rules to read |
 |---|---|
 | anything | `architecture.md`, `permissions.md`, `comment-discipline.md`, CLAUDE.md "Two Product Targets" |
-| `src/uniffy/**`, `src/proto/**` | `backend.md` |
+| `src/uniffy/**`, `src/proto/schema/**` | `backend.md` |
 | `src/ui/**` | `frontend.md` |
 | `src/mobile/**` | `mobile.md` |
 | files / chat / calls / agents / notes / mentions domains | the matching domain rule file |

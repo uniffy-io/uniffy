@@ -4,27 +4,27 @@ plugins:
     # reproducible; an unpinned remote tracks latest and bumps the gencode
     # version guard ahead of the installed runtime)
     - remote: buf.build/protocolbuffers/python:v35.0
-      out: src/gen/python/src/uniffy_proto
+      out: src/proto/gen/python/src/uniffy_proto
     - remote: buf.build/protocolbuffers/pyi:v35.0
-      out: src/gen/python/src/uniffy_proto
+      out: src/proto/gen/python/src/uniffy_proto
     - local: .venv/bin/protoc-gen-connectrpc
-      out: src/gen/python/src/uniffy_proto
+      out: src/proto/gen/python/src/uniffy_proto
       strategy: all
 
     # TypeScript (v2: protoc-gen-es emits services inline)
     - local: protoc-gen-es
-      out: src/gen/typescript
+      out: src/proto/gen/typescript
       opt:
         - target=ts
         - import_extension=js
 
     # Go
     - remote: buf.build/protocolbuffers/go
-      out: src/gen/go
+      out: src/proto/gen/go
       opt: module=github.com/uniffy-io/uniffy-proto-go
     - remote: buf.build/grpc/go
-      out: src/gen/go
+      out: src/proto/gen/go
       opt: module=github.com/uniffy-io/uniffy-proto-go
     - remote: buf.build/connectrpc/go
-      out: src/gen/go
+      out: src/proto/gen/go
       opt: module=github.com/uniffy-io/uniffy-proto-go

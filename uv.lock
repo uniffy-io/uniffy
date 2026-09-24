@@ -2355,7 +2355,7 @@ requires-dist = [
     { name = "sqlmodel", specifier = ">=0.0.42" },
     { name = "starlette", specifier = ">=1.6.0" },
     { name = "types-aiobotocore", extras = ["s3"], specifier = ">=3.9.1" },
-    { name = "uniffy-proto", editable = "src/gen/python" },
+    { name = "uniffy-proto", editable = "src/proto/gen/python" },
     { name = "valkey", extras = ["libvalkey"], specifier = ">=6.1.1" },
 ]
 
@@ -2376,7 +2376,7 @@ dev = [
 [[package]]
 name = "uniffy-proto"
 version = "0.0.0"
-source = { editable = "src/gen/python" }
+source = { editable = "src/proto/gen/python" }
 dependencies = [
     { name = "connectrpc" },
     { name = "protobuf" },

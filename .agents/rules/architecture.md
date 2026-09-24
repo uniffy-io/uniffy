@@ -31,7 +31,7 @@ Uniffy uses **domain-driven vertical slices**. Each feature is self-contained:
   `src/uniffy/domains/{context}/{subdomain}/`, decomposed by owned use case rather than a required
   flat set of layer files
 - **Frontend**: `src/ui/src/features/{feature}/` with api, store, components, pages, hooks
-- **Proto**: `src/proto/{service}/v1/{service}.proto` defines the API contract
+- **Proto**: `src/proto/schema/{service}/v1/{service}.proto` defines the API contract
 
 **API layer**: ConnectRPC (Protocol Buffers + Connect). All API communication goes through generated clients rather than REST. Proto definitions are the source of truth. Generated code is imported as `from uniffy_proto.` (Python) and `@uniffy/proto/` (TypeScript).
 
@@ -130,11 +130,13 @@ rules and executable boundaries live in `backend.md` and root `pyproject.toml`.
 ```
 uniffy/
 ├── src/
-│   ├── proto/            # Protocol Buffer definitions (source of truth)
-│   ├── gen/              # Generated code from proto (DO NOT EDIT)
-│   │   ├── python/       # Python package: uniffy-proto (uv workspace member)
-│   │   ├── typescript/   # TypeScript package: @uniffy/proto (pnpm workspace member)
-│   │   └── go/           # Go module: github.com/uniffy-io/uniffy-proto-go
+│   ├── proto/            # Shared API schemas, generated packages and test fixtures
+│   │   ├── schema/       # Source .proto definitions, grouped by domain and version
+│   │   ├── gen/          # Generated code (DO NOT EDIT)
+│   │   │   ├── python/   # Python package: uniffy-proto (uv workspace member)
+│   │   │   ├── typescript/ # TypeScript package: @uniffy/proto (pnpm workspace member)
+│   │   │   └── go/       # Go module: github.com/uniffy-io/uniffy-proto-go
+│   │   └── tests/fixtures/ # Shared web and SQL filter/sort cases
 │   ├── uniffy/           # Python backend (Granian + FastAPI + ConnectRPC)
 │   │   ├── core/         # Shared application kernel, contracts, models, auth, search policy
 │   │   ├── domains/      # Product/capability contexts and owned vertical use cases
@@ -152,13 +154,13 @@ uniffy/
 │   │       ├── features/ # Domain modules (auth, notes, files, etc.)
 │   │       └── shared/   # Shared hooks, utils, layouts
 │   └── mobile/           # React Native mobile app (Expo)
-├── pyproject.toml        # uv workspace root (backend + gen/python)
-├── pnpm-workspace.yaml   # pnpm workspace root (ui + mobile + gen/typescript)
+├── pyproject.toml        # uv workspace root (backend + proto/gen/python)
+├── pnpm-workspace.yaml   # pnpm workspace root (ui + mobile + proto/gen/typescript)
 ├── buf.yaml              # Protobuf lint/breaking config
 └── buf.gen.yaml          # Protobuf codegen (all languages, single pass)
 ```
 
-**Workspace architecture**: Generated protobuf code lives in `src/gen/` as shared packages consumed by all projects. Python uses `uniffy-proto` via uv workspace. TypeScript uses `@uniffy/proto` via pnpm workspace. Go uses a Go module with `replace` directives for local dev.
+**Workspace architecture**: Generated protobuf code lives in `src/proto/gen/` as shared packages consumed by all projects. Python uses `uniffy-proto` via uv workspace. TypeScript uses `@uniffy/proto` via pnpm workspace. Go uses a Go module with `replace` directives for local dev.
 
 ---
 
@@ -195,8 +197,8 @@ When adding a new content type (e.g., `TASK`), update these files:
 **Proto** (run `./manage.py proto` after):
 | File | Update |
 |------|--------|
-| `src/proto/search/v1/search.proto` | Add `SEARCH_RESULT_TYPE_{TYPE}` |
-| `src/proto/common/v1/common.proto` | Add `CONTENT_TYPE_{TYPE}` |
+| `src/proto/schema/search/v1/search.proto` | Add `SEARCH_RESULT_TYPE_{TYPE}` |
+| `src/proto/schema/common/v1/common.proto` | Add `CONTENT_TYPE_{TYPE}` |
 
 **Backend:**
 | File | Update |

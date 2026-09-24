@@ -3,7 +3,7 @@ packages:
   - src/ui
   - src/mobile
   - src/landing
-  - src/gen/typescript
+  - src/proto/gen/typescript
   - src/e2e
 allowBuilds:
   canvas: false

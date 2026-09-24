@@ -49,8 +49,8 @@ jobs:
           filters: |
             backend:
               - 'src/uniffy/**'
-              - 'src/gen/python/**'
-              - 'src/proto/**/testdata/**'
+              - 'src/proto/gen/python/**'
+              - 'src/proto/tests/fixtures/**'
               - 'manage.py'
               - '.github/workflows/test.yml'
               - 'pyproject.toml'
@@ -58,8 +58,8 @@ jobs:
               - '.python-version'
             frontend:
               - 'src/ui/**'
-              - 'src/gen/typescript/**'
-              - 'src/proto/**/testdata/**'
+              - 'src/proto/gen/typescript/**'
+              - 'src/proto/tests/fixtures/**'
               - 'lint/**'
               - 'pnpm-workspace.yaml'
               - 'package.json'
@@ -67,14 +67,14 @@ jobs:
               - '.github/workflows/test.yml'
             mobile:
               - 'src/mobile/**'
-              - 'src/gen/typescript/**'
+              - 'src/proto/gen/typescript/**'
               - 'lint/**'
               - 'pnpm-workspace.yaml'
               - 'package.json'
               - 'pnpm-lock.yaml'
               - '.github/workflows/test.yml'
             proto:
-              - 'src/proto/**'
+              - 'src/proto/schema/**'
               - 'buf.gen.yaml'
               - 'buf.yaml'
               - '.github/workflows/test.yml'
@@ -100,7 +100,7 @@ jobs:
               - 'pyproject.toml'
               - 'uv.lock'
               - '.python-version'
-              - 'src/gen/python/pyproject.toml'
+              - 'src/proto/gen/python/pyproject.toml'
               - 'docs/LICENSES.md'
               - 'src/uniffy/__main__.py'
               - 'src/uniffy/main.py'

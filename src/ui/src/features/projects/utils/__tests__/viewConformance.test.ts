@@ -58,7 +58,7 @@ interface CaseFile {
 
 const CASES: CaseFile = JSON.parse(
   readFileSync(
-    new URL("../../../../../../proto/projects/v1/testdata/view_filter_cases.json", import.meta.url),
+    new URL("../../../../../../proto/tests/fixtures/view_filter_cases.json", import.meta.url),
     "utf8",
   ),
 );

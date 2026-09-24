@@ -10,8 +10,8 @@
 !pnpm-workspace.yaml
 !pnpm-lock.yaml
 !src/uniffy
-!src/gen/python
-!src/gen/typescript
+!src/proto/gen/python
+!src/proto/gen/typescript
 !src/ui
 !docs/*.md
 !docs/documentation

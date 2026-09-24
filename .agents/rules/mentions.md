@@ -8,7 +8,7 @@ paths:
   - "src/uniffy/core/search/**/*.py"
   - "src/uniffy/core/content/base_operations.py"
   - "src/uniffy/core/content/mentions.py"
-  - "src/proto/search/v1/search.proto"
+  - "src/proto/schema/search/v1/search.proto"
 ---
 
 # Mention Chips
@@ -321,7 +321,7 @@ Concrete checklist when, e.g., adding `assignee_count` to project mentions:
 
 | File | Purpose |
 |------|---------|
-| `src/proto/search/v1/search.proto` | `UrnMetadata` shape. Add new typed fields here when the metadata-dict-only path is too loose. |
+| `src/proto/schema/search/v1/search.proto` | `UrnMetadata` shape. Add new typed fields here when the metadata-dict-only path is too loose. |
 | `src/uniffy/core/content/base_operations.py` | `_get_search_metadata_async` hook + canonical `_index_for_search`. |
 | `src/uniffy/core/search/indexer.py` | `SearchIndexer.index` / `remove`. |
 | `src/uniffy/core/content/mentions.py` | `publish_mention_state`. |

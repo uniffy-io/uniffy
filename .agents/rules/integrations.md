@@ -1,14 +1,14 @@
 ---
 paths:
   - "src/uniffy/domains/integrations/**"
-  - "src/proto/integrations/**"
+  - "src/proto/schema/integrations/**"
   - "src/ui/src/features/integrations/**"
   - "src/ui/src/features/admin/components/integrations/**"
 ---
 
 # Integrations Domain
 
-Org-wide credentials for external services (GitHub first) plus the agent tool packs that use them. The slice generalizes the LLM provider-key slice: same trust model, same caching discipline, same admin surface shape. Protos in `src/proto/integrations/v1/`, model in `core/models/integrations/`, domain in `domains/integrations/`, admin UI at `/admin/integrations`.
+Org-wide credentials for external services (GitHub first) plus the agent tool packs that use them. The slice generalizes the LLM provider-key slice: same trust model, same caching discipline, same admin surface shape. Protos in `src/proto/schema/integrations/v1/`, model in `core/models/integrations/`, domain in `domains/integrations/`, admin UI at `/admin/integrations`.
 
 ## Invariants
 

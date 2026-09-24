@@ -2,14 +2,14 @@
 paths:
   - "src/uniffy/domains/agents/**/*.py"
   - "src/uniffy/core/models/agents/**/*.py"
-  - "src/proto/agents/**/*.proto"
+  - "src/proto/schema/agents/**/*.proto"
   - "src/ui/src/features/agents/**/*.ts"
   - "src/ui/src/features/agents/**/*.tsx"
 ---
 
 # Agents Domain
 
-LLM-powered assistants (Anthropic, OpenAI, Google, OpenRouter, xAI) that act on other domains through a built-in tool system. Sub-domains, each its own ConnectRPC service mounted in `factory.py`: `agents/agents/` (CRUD), `providers/`, `runtime/` (also hosts `RuntimeSettingsService`), `sessions/`, `skills/`, `memories/`, `cron/`, `budgets/`, and `limits/`; `bridge/` mounts its handlers on the chat service, and `tools/` (registry + builtin executors) has no service. Models in `core/models/agents/`, protos in `src/proto/agents/v1/`.
+LLM-powered assistants (Anthropic, OpenAI, Google, OpenRouter, xAI) that act on other domains through a built-in tool system. Sub-domains, each its own ConnectRPC service mounted in `factory.py`: `agents/agents/` (CRUD), `providers/`, `runtime/` (also hosts `RuntimeSettingsService`), `sessions/`, `skills/`, `memories/`, `cron/`, `budgets/`, and `limits/`; `bridge/` mounts its handlers on the chat service, and `tools/` (registry + builtin executors) has no service. Models in `core/models/agents/`, protos in `src/proto/schema/agents/v1/`.
 
 This is one of the two performance-critical domains - the backend rules' "Performance-critical domains" section applies to every change here.
 

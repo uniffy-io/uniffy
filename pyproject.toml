@@ -103,7 +103,7 @@ constraint-dependencies = [
 ]
 
 [tool.uv.workspace]
-members = ["src/gen/python"]
+members = ["src/proto/gen/python"]
 
 [tool.uv.sources]
 uniffy-proto = { workspace = true }
@@ -149,7 +149,7 @@ exclude = [
   "venv",
   "tests/",
   "src/uniffy/tests",
-  "src/gen",
+  "src/proto/gen",
 ]
 # Third-party code and historical migrations stay unchanged; extend-exclude survives
 # the CLI --exclude that manage.py passes, unlike exclude.

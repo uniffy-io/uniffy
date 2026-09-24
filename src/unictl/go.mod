@@ -14,4 +14,4 @@ require (
 	google.golang.org/protobuf v1.36.10 // indirect
 )
 
-replace github.com/uniffy-io/uniffy-proto-go => ../gen/go
+replace github.com/uniffy-io/uniffy-proto-go => ../proto/gen/go

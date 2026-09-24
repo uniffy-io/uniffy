@@ -14,12 +14,7 @@ from uniffy.core.models.projects.field_definition import FieldDefinition, Projec
 from uniffy.core.types import generate_id
 
 CASE_FILE = (
-    Path(__file__).resolve().parents[2]
-    / "proto"
-    / "projects"
-    / "v1"
-    / "testdata"
-    / "view_filter_cases.json"
+    Path(__file__).resolve().parents[2] / "proto" / "tests" / "fixtures" / "view_filter_cases.json"
 )
 
 CASES: dict[str, Any] = loads(CASE_FILE.read_bytes())

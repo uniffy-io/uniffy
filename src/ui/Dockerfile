@@ -18,12 +18,12 @@ ENV CI=true \
 WORKDIR /app
 
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
-COPY src/gen/typescript/package.json src/gen/typescript/package.json
+COPY src/proto/gen/typescript/package.json src/proto/gen/typescript/package.json
 COPY src/ui/package.json src/ui/package.json
 RUN --mount=type=cache,target=/pnpm-store \
     pnpm install --frozen-lockfile --filter uniffy-ui...
 
-COPY src/gen/typescript src/gen/typescript
+COPY src/proto/gen/typescript src/proto/gen/typescript
 # The nginx config belongs to the runtime stage; keeping it out of this
 # layer means a config-only change does not rebuild the bundle.
 COPY --exclude=nginx src/ui src/ui
