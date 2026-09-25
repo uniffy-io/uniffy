@@ -14,7 +14,7 @@ import {
 } from "@/features/projects/store/projectsUiSlice";
 import { createProject, fetchProjectTasks } from "@/features/projects/store/projectsThunks";
 import { ProjectIcon, type ProjectIconName } from "@/features/projects/utils/projectIcons";
-import { TagPicker } from "@/features/tags";
+import { TagPicker, type TagPickerHandle } from "@/features/tags";
 
 const ICON_OPTIONS: ProjectIconName[] = [
   "kanban",
@@ -43,6 +43,7 @@ export function CreateProjectModal() {
   const [manualSlug, setManualSlug] = useState<string | null>(null);
   const [tagIds, setTagIds] = useState<string[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
+  const tagPickerRef = useRef<TagPickerHandle>(null);
 
   const slug = useMemo(() => {
     if (manualSlug !== null) return manualSlug;
@@ -77,10 +78,12 @@ export function CreateProjectModal() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    if (!name.trim() || isSubmitting) return;
 
     setIsSubmitting(true);
     try {
+      const committedTagIds = (await tagPickerRef.current?.commit()) ?? null;
+      if (committedTagIds === null) return;
       const result = await dispatch(
         createProject({
           name: name.trim(),
@@ -88,7 +91,7 @@ export function CreateProjectModal() {
           icon,
           accessMode: isOrgScope ? AccessMode.OPEN_TO_ORG : AccessMode.OWNER_ONLY,
           slug: slug || undefined,
-          tagIds: tagIds.length ? tagIds : undefined,
+          tagIds: committedTagIds.length ? committedTagIds : undefined,
         }),
       ).unwrap();
       dispatch(fetchProjectTasks(result.id));
@@ -158,6 +161,7 @@ export function CreateProjectModal() {
           <div>
             <label className="block text-sm text-muted-foreground mb-1">Tags (optional)</label>
             <TagPicker
+              ref={tagPickerRef}
               selectedTagIds={tagIds}
               onChange={setTagIds}
               disabled={isSubmitting}
