@@ -5,6 +5,7 @@ import { cn } from "@/shared/utils/cn";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { TagPicker } from "@/features/tags";
 import { updateProject } from "@/features/projects/store/projectsThunks";
 import { ProjectIcon, type ProjectIconName } from "@/features/projects/utils/projectIcons";
 import type { Project } from "@/features/projects/types";
@@ -24,6 +25,10 @@ const ICON_OPTIONS: ProjectIconName[] = [
   "heart",
 ];
 
+function sameIds(a: readonly string[], b: readonly string[]): boolean {
+  return a.length === b.length && a.every((id) => b.includes(id));
+}
+
 interface GeneralSectionProps {
   project: Project;
 }
@@ -36,6 +41,7 @@ export function GeneralSection({ project }: GeneralSectionProps) {
   const [description, setDescription] = useState(project.description || "");
   const [slug, setSlug] = useState(project.slug || "");
   const [icon, setIcon] = useState<ProjectIconName>((project.icon || "kanban") as ProjectIconName);
+  const [tagIds, setTagIds] = useState<string[]>(project.tagIds ?? []);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [saved, setSaved] = useState(false);
 
@@ -46,13 +52,17 @@ export function GeneralSection({ project }: GeneralSectionProps) {
     setDescription(project.description || "");
     setSlug(project.slug || "");
     setIcon((project.icon || "kanban") as ProjectIconName);
-  }, [project.id, project.name, project.description, project.slug, project.icon]);
+    setTagIds(project.tagIds ?? []);
+  }, [project.id, project.name, project.description, project.slug, project.icon, project.tagIds]);
+
+  const tagsChanged = !sameIds(tagIds, project.tagIds ?? []);
 
   const isDirty =
     name !== project.name ||
     description !== (project.description || "") ||
     slug !== (project.slug || "") ||
-    icon !== (project.icon || "kanban");
+    icon !== (project.icon || "kanban") ||
+    tagsChanged;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,6 +77,7 @@ export function GeneralSection({ project }: GeneralSectionProps) {
           description: description.trim(),
           icon,
           slug: slug.trim(),
+          ...(tagsChanged ? { tagIds } : {}),
         }),
       ).unwrap();
       setSaved(true);
@@ -119,6 +130,20 @@ export function GeneralSection({ project }: GeneralSectionProps) {
                 onChange={(e) => setDescription(e.target.value)}
                 disabled={isSubmitting}
                 rows={3}
+              />
+            </div>
+
+            {/* Tags */}
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1.5">
+                Tags
+                <span className="text-muted-foreground font-normal ml-1">(optional)</span>
+              </label>
+              <TagPicker
+                selectedTagIds={tagIds}
+                onChange={setTagIds}
+                disabled={isSubmitting}
+                placeholder="Add a tag"
               />
             </div>
 
