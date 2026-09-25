@@ -113,6 +113,21 @@ export async function listIncomplete(): Promise<UploadRecord[]> {
   }
 }
 
+export async function clearUploadRecords(): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  try {
+    const tx = db.transaction([RECORDS_STORE, BLOBS_STORE], "readwrite");
+    await Promise.all([
+      tx.objectStore(RECORDS_STORE).clear(),
+      tx.objectStore(BLOBS_STORE).clear(),
+      tx.done,
+    ]);
+  } catch (err) {
+    console.warn("[uploads] IndexedDB clear failed", err);
+  }
+}
+
 interface ChunkRow {
   key: string;
   uploadId: string;

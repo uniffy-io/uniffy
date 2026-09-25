@@ -15,8 +15,7 @@ import { teardownStorageEncryption } from "@/shared/crypto/storageEncryption";
 
 /** Caches outside the store that hold one organization's content; Redux state is reset by `withSessionScope`. */
 export function clearSessionCaches(dispatch: AppDispatch): void {
-  // The upload engine is module-level; cancel in-flight uploads before the tray projection resets.
-  uploadService.cancelAll();
+  uploadService.reset();
   clearLibraryScope(dispatch);
   clearBlobCache();
   clearNotesCache().catch(console.error);

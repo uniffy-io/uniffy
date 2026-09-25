@@ -1,14 +1,10 @@
-import type { Action, Reducer } from "@reduxjs/toolkit";
-import { AUTH_ACTION_TYPES, resetOrganizationScope } from "@/features/auth/store/authActions";
+import type { Reducer } from "@reduxjs/toolkit";
+import { endsOrganizationScope } from "@/features/auth/store/authActions";
+import { resetFilesScope, type FilesState } from "@/features/files/store/filesSlice";
 import { projectsUiLayout } from "@/features/projects/store/projectsUiPersist";
 import type { ProjectsUiState } from "@/features/projects/types/ui";
 
-/**
- * Slices that survive a sign-out or an organization switch. Everything else holds data
- * loaded for one user in one organization and restarts from its initial state, so a
- * slice added later is cleared without being listed anywhere. `auth` and `recording`
- * stay here because their own reducers handle `logout`.
- */
+/** Device preferences survive; auth and recording handle logout in their own reducers. */
 const SESSION_INDEPENDENT_SLICES = [
   "auth",
   "theme",
@@ -19,11 +15,7 @@ const SESSION_INDEPENDENT_SLICES = [
   "recording",
 ] as const;
 
-function endsOrganizationScope(action: Action): boolean {
-  return action.type === AUTH_ACTION_TYPES.LOGOUT || resetOrganizationScope.match(action);
-}
-
-export function withSessionScope<S extends { projectsUi: ProjectsUiState }>(
+export function withSessionScope<S extends { projectsUi: ProjectsUiState; files?: FilesState }>(
   reducer: Reducer<S>,
 ): Reducer<S> {
   return (state, action) => {
@@ -31,6 +23,9 @@ export function withSessionScope<S extends { projectsUi: ProjectsUiState }>(
       return reducer(state, action);
     }
     const kept: Partial<S> = { projectsUi: projectsUiLayout(state.projectsUi) } as Partial<S>;
+    if (state.files) {
+      kept.files = resetFilesScope(state.files);
+    }
     for (const key of SESSION_INDEPENDENT_SLICES) {
       if (key in state) {
         kept[key as keyof S] = state[key as keyof S];

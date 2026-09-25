@@ -2756,6 +2756,16 @@ appears after sign-in. Stored state is readable from the browser console with
       same stored state as above, and the `uniffy-notes-cache` IndexedDB store is empty.
 - [ ] In an organization with no notes, open Notes: the editor pane says "No note selected", not
       a spinner that never ends.
+- [ ] Select a saved Files tag filter in A and reload. Clear it, change Files to list view,
+      then switch to B. B's files remain visible, the old filter stays cleared, and list view
+      remains selected. Repeat with sign-out and sign-in as another user.
+- [ ] With an agent test run active, sign out or switch orgs. The sessionStorage key
+      `uniffy.agentRuntime.activeRunId` is absent. Reloading never restores the previous run ID.
+- [ ] Delay a Projects list or detail response, switch orgs, then release the response.
+      No previous-org projects, tags or error toasts appear. Repeat switching A to B to A.
+- [ ] Complete one upload, fail another, and leave a large upload running. Sign out or switch
+      orgs, then start an upload in the new session. The tray contains only the new upload.
+      Late completion responses and reload recovery never restore the previous uploads.
 
 ## Pre-release sweep
 

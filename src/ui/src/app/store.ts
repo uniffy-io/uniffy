@@ -33,6 +33,7 @@ import { agentsGovernanceReducer } from "@/features/admin/store/agentsGovernance
 import { agentRuntimeSettingsReducer } from "@/features/admin/store/agentRuntimeSettingsSlice";
 import { setStoreRef } from "@/app/storeRef";
 import { withSessionScope } from "@/app/sessionScope";
+import { sessionScopeMiddleware } from "@/app/sessionScopeMiddleware";
 import { calendarReducer, calendarUiReducer } from "@/features/calendar/store";
 import { zenModeReducer } from "@/app/zenModeSlice";
 import { filesReducer } from "@/features/files/store/filesSlice";
@@ -333,7 +334,9 @@ export const store = configureStore({
       serializableCheck: {
         ignoredActions: [FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER],
       },
-    }).concat(errorToastMiddleware, contentAccessMiddleware),
+    })
+      .prepend(sessionScopeMiddleware)
+      .concat(errorToastMiddleware, contentAccessMiddleware),
 });
 
 setStoreRef(store);
