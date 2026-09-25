@@ -45,12 +45,7 @@ import { SYSTEM_FIELD_IDS } from "@/features/projects/types";
 import { statusPaint } from "@/features/projects/utils/statusPaint";
 import type { Project } from "@/features/projects/types";
 import { FilterBuilder } from "@/features/projects/components/views/table/FilterBuilder";
-import { ManageStatusesDialog } from "@/features/projects/components/views/board/ManageStatusesDialog";
-import {
-  updateFieldDefinition,
-  selectTasksForProject,
-} from "@/features/projects/store/projectsSlice";
-import { updateFieldThunk } from "@/features/projects/store/projectsThunks";
+import { selectTasksForProject } from "@/features/projects/store/projectsSlice";
 import {
   selectActiveSprint,
   selectSprintsForProject,
@@ -148,7 +143,6 @@ export function ProjectHeader({ project }: ProjectHeaderProps) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isDisplayOpen, setIsDisplayOpen] = useState(false);
-  const [isManageStatusesOpen, setIsManageStatusesOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   // Label visibility tracks the real control-bar width, not the viewport: the
@@ -170,27 +164,6 @@ export function ProjectHeader({ project }: ProjectHeaderProps) {
 
   const statusField = project.fieldDefinitions.find((f) => f.id === SYSTEM_FIELD_IDS.STATUS);
   const statusOptions = statusField?.config.options || [];
-
-  const handleUpdateStatuses = (newOptions: SelectOption[]) => {
-    if (!statusField) return;
-    const updatedConfig = { ...statusField.config, options: newOptions };
-
-    dispatch(
-      updateFieldDefinition({
-        projectId: project.id,
-        fieldId: SYSTEM_FIELD_IDS.STATUS,
-        changes: { config: updatedConfig },
-      }),
-    );
-
-    dispatch(
-      updateFieldThunk({
-        projectId: project.id,
-        fieldId: SYSTEM_FIELD_IDS.STATUS,
-        updates: { config: updatedConfig },
-      }),
-    );
-  };
 
   const applyQuickFilter = (kind: QuickFilterKind, values: string[]) => {
     dispatch(setDraftFilter(project.id, setQuickFilter(filter, kind, values)));
@@ -506,18 +479,9 @@ export function ProjectHeader({ project }: ProjectHeaderProps) {
                 showManageStatuses={showManageStatuses}
                 onManageStatuses={() => {
                   setIsDisplayOpen(false);
-                  setIsManageStatusesOpen(true);
+                  navigate(`/projects/${project.id}/settings?section=statuses`);
                 }}
               />
-            )}
-            {isManageStatusesOpen && (
-              <div className="absolute top-full right-0 z-50 mt-1.5">
-                <ManageStatusesDialog
-                  options={statusOptions}
-                  onSave={handleUpdateStatuses}
-                  onClose={() => setIsManageStatusesOpen(false)}
-                />
-              </div>
             )}
           </div>
         </PaneHeaderControls>

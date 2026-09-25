@@ -2767,6 +2767,15 @@ appears after sign-in. Stored state is readable from the browser console with
       orgs, then start an upload in the new session. The tray contains only the new upload.
       Late completion responses and reload recovery never restore the previous uploads.
 
+## Projects: tags in settings, status link and task key search
+
+- [ ] Project settings > General shows a Tags field. Add an existing tag and save: the tag is still
+      there after a reload and the project sidebar shows it. Remove it and save: it is gone after a
+      reload. Changing only the tags enables Save.
+- [ ] On a board view, Display > Manage statuses opens the project settings on the Statuses section.
+- [ ] In a project with slug `PROD`, the header search finds a task by `#12`, by `PROD-12` in any
+      case, and still by words in its title or description.
+
 ## Pre-release sweep
 
 - [ ] All linters green: `./manage.py lint`.
