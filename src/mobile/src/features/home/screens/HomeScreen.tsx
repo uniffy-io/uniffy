@@ -17,6 +17,7 @@ import { useTheme } from "@shared/hooks/useTheme";
 import { parseCalendarDate } from "@shared/lib/dateFormatting";
 import { zonedDayKey } from "@shared/lib/zonedTime";
 import { useEventsInRange } from "@features/calendar/useCalendar";
+import { NoteGlyph } from "@features/notes/components/NoteGlyph";
 import { eventDisplayState } from "@features/calendar/eventDisplay";
 import type { SerializedEvent } from "@features/calendar/calendarSerializer";
 import { useNotesList } from "@features/notes/useNotes";
@@ -332,11 +333,7 @@ export function HomeScreen() {
                     activeOpacity={0.7}
                   >
                     <View style={styles.glyphColumn}>
-                      {note.icon?.type === "emoji" ? (
-                        <Text style={styles.noteEmoji}>{note.icon.value}</Text>
-                      ) : (
-                        <NotePencil size={16} color={T.accent} weight="duotone" />
-                      )}
+                      <NoteGlyph icon={note.icon} size={16} color={T.accent} />
                     </View>
                     <View style={styles.rowBody}>
                       <Text style={titleStyle} numberOfLines={1}>
@@ -562,7 +559,6 @@ const styles = StyleSheet.create({
     width: GLYPH_COL,
     alignItems: "center",
   },
-  noteEmoji: { fontSize: 15 },
   rowBody: { flex: 1 },
   rowTitle: {
     fontSize: 14,
