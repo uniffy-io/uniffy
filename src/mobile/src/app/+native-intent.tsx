@@ -1,3 +1,6 @@
-export function redirectSystemPath({ path, initial }: { path: string; initial: boolean }) {
-  return "/";
+import { getServerUrl } from "@core/config/serverUrl";
+import { appPathForLink } from "@shared/lib/appLinks";
+
+export function redirectSystemPath({ path }: { path: string; initial: boolean }) {
+  return appPathForLink(path, getServerUrl()) ?? "/";
 }
