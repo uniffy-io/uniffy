@@ -25,7 +25,7 @@ from uniffy.domains.projects.rpc import map_domain_error, parse_uuid
 from uniffy.infrastructure.database import open_session
 
 
-def _parse_config(raw: str) -> dict[str, Any]:
+def _parse_config(raw: str) -> dict[str, Any] | None:
     try:
         return loads(raw)
     except JSONDecodeError as exc:
@@ -73,7 +73,9 @@ class FieldHandlers:
         user_id = current_user_id()
         organization_id = parse_uuid(request.organization_id, "organization_id")
         project_id = parse_uuid(request.project_id, "project_id")
-        config = _parse_config(request.config_json) if request.has_field("config_json") else None
+        config_change: dict[str, Any] = {}
+        if request.has_field("config_json"):
+            config_change["config"] = _parse_config(request.config_json)
 
         try:
             async with open_session() as session:
@@ -85,7 +87,7 @@ class FieldHandlers:
                     name=request.name if request.has_field("name") else None,
                     is_required=request.is_required if request.has_field("is_required") else None,
                     sort_order=request.sort_order if request.has_field("sort_order") else None,
-                    config=config,
+                    **config_change,
                 )
                 return UpdateFieldResponse(field=field_to_proto(field))
         except ConnectError:

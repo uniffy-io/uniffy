@@ -2,6 +2,7 @@
 
 import secrets
 from datetime import UTC, datetime
+from enum import Enum
 from typing import Any
 from uuid import UUID
 
@@ -23,6 +24,10 @@ from uniffy.domains.projects.statuses import (
 )
 
 DEFAULT_CUSTOM_FIELD_SORT_ORDER = 999
+
+
+class _ConfigUnset(Enum):
+    VALUE = "unset"
 
 
 class ProjectFieldOperations:
@@ -86,7 +91,7 @@ class ProjectFieldOperations:
         name: str | None = None,
         is_required: bool | None = None,
         sort_order: int | None = None,
-        config: dict[str, Any] | None = None,
+        config: dict[str, Any] | None | _ConfigUnset = _ConfigUnset.VALUE,
     ) -> FieldDefinition:
         """A status config must keep explicit semantics and every option live tasks still use."""
         await self._require_project_manage(user_id, organization_id, project_id)
@@ -98,11 +103,14 @@ class ProjectFieldOperations:
             field.is_required = is_required
         if sort_order is not None:
             field.sort_order = sort_order
-        if config is not None:
+        if not isinstance(config, _ConfigUnset):
             if field.id == SystemProjectFieldId.STATUS:
-                parse_task_status_semantics(config, require_explicit=True)
-                await ensure_removed_statuses_unused(self.session, project_id, field.config, config)
-                config = assign_status_colors(config)
+                status_config = config or {}
+                parse_task_status_semantics(status_config, require_explicit=True)
+                await ensure_removed_statuses_unused(
+                    self.session, project_id, field.config, status_config
+                )
+                config = assign_status_colors(status_config)
             field.config = config
             flag_modified(field, "config")
 

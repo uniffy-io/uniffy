@@ -1,13 +1,20 @@
 """Custom field changes require manage on the project, and a status config stays valid."""
 
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
+from connectrpc.code import Code
+from connectrpc.errors import ConnectError
+from uniffy_proto.projects.v1.projects_pb import UpdateFieldRequest
 
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
+from uniffy.core.json_codec import loads
 from uniffy.core.models.projects.field_definition import FieldDefinition, SystemProjectFieldId
+from uniffy.domains.projects.fields import handlers as field_handlers
 from uniffy.domains.projects.fields import operations as field_operations
 from uniffy.domains.projects.fields.operations import ProjectFieldOperations
 from uniffy.domains.projects.projects import ProjectOperations
@@ -126,7 +133,10 @@ async def test_update_of_a_field_outside_the_project_is_not_found(harness) -> No
     harness.session.commit.assert_not_awaited()
 
 
-async def test_status_update_requires_explicit_semantics(harness) -> None:
+@pytest.mark.parametrize("config", [None, {}, {"options": [{"id": "queue", "label": "Queue"}]}])
+async def test_status_update_requires_explicit_semantics(
+    harness: Harness, config: dict | None
+) -> None:
     stored_field(harness, SystemProjectFieldId.STATUS, is_system=True, config=STATUS_CONFIG)
 
     with pytest.raises(ValidationError):
@@ -135,9 +145,58 @@ async def test_status_update_requires_explicit_semantics(harness) -> None:
             harness.organization_id,
             harness.project_id,
             SystemProjectFieldId.STATUS,
-            config={"options": [{"id": "queue", "label": "Queue"}]},
+            config=config,
         )
     harness.session.commit.assert_not_awaited()
+
+
+@pytest.mark.parametrize("config", [None, {}])
+async def test_custom_field_config_can_be_cleared(harness: Harness, config: dict | None) -> None:
+    field = stored_field(harness, config={"precision": 2})
+
+    await ops(harness).update(
+        harness.user_id, harness.organization_id, harness.project_id, field.id, config=config
+    )
+
+    assert field.config == config
+    harness.session.commit.assert_awaited_once()
+
+
+@pytest.mark.parametrize("field_id", ["field_abc", SystemProjectFieldId.STATUS])
+@pytest.mark.parametrize("config_json", [None, "null", "{}"])
+async def test_update_field_preserves_config_presence(
+    monkeypatch: pytest.MonkeyPatch,
+    harness: Harness,
+    field_id: str,
+    config_json: str | None,
+) -> None:
+    field = stored_field(harness, field_id, config=STATUS_CONFIG)
+
+    @asynccontextmanager
+    async def open_session() -> AsyncIterator[MagicMock]:
+        yield harness.session
+
+    monkeypatch.setattr(field_handlers, "open_session", open_session)
+    monkeypatch.setattr(field_handlers, "current_user_id", lambda: harness.user_id)
+    request = UpdateFieldRequest(
+        organization_id=str(harness.organization_id),
+        project_id=str(harness.project_id),
+        field_id=field_id,
+        **({"config_json": config_json} if config_json is not None else {}),
+    )
+
+    if field_id == SystemProjectFieldId.STATUS and config_json is not None:
+        with pytest.raises(ConnectError) as caught:
+            await field_handlers.FieldHandlers().update_field(request, MagicMock())
+        assert caught.value.code == Code.INVALID_ARGUMENT
+        assert field.config == STATUS_CONFIG
+        harness.session.commit.assert_not_awaited()
+    else:
+        response = await field_handlers.FieldHandlers().update_field(request, MagicMock())
+        expected = STATUS_CONFIG if config_json is None else loads(config_json)
+        assert field.config == expected
+        assert loads(response.field.config_json) == (expected or {})
+        harness.session.commit.assert_awaited_once()
 
 
 async def test_status_update_checks_removed_options_and_assigns_colors(
