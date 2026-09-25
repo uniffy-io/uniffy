@@ -8,17 +8,14 @@ const PERSISTED_KEYS = [
   "viewDrafts",
   "outlineExpanded",
   "isSidebarOpen",
-  "detailPanelWidth",
   "sidebarWidth",
   "detailViewMode",
   "projectScope",
-  "roadmapStartDate",
 ] as const satisfies readonly (keyof ProjectsUiState)[];
 
 /** Per-device layout that outlives a sign-out or an organization switch; views and drafts name one org's projects. */
 const LAYOUT_KEYS = [
   "isSidebarOpen",
-  "detailPanelWidth",
   "sidebarWidth",
   "detailViewMode",
   "projectScope",
