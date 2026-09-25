@@ -131,6 +131,30 @@ class BaseContentOperations[TModel](ABC):
         await self._require_comment(user_id, organization_id, content)
         return content
 
+    async def get_for_manage(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        content_id: UUID,
+    ) -> TModel:
+        content = await self._fetch_by_id(content_id, organization_id)
+        if not content or getattr(content, "is_deleted", False):
+            raise NotFoundError(self.content_type.value, content_id)
+        await self._require_manage(user_id, organization_id, content)
+        return content
+
+    async def get_for_delete(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        content_id: UUID,
+    ) -> TModel:
+        content = await self._fetch_by_id(content_id, organization_id)
+        if not content or getattr(content, "is_deleted", False):
+            raise NotFoundError(self.content_type.value, content_id)
+        await self._require_delete(user_id, organization_id, content)
+        return content
+
     async def list_accessible(
         self,
         user_id: UUID,
