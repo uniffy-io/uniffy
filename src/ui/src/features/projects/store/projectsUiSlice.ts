@@ -241,8 +241,6 @@ export const projectsUiSlice = createSlice({
       state.undoStack = [];
       state.redoStack = [];
     },
-
-    resetUiState: () => initialProjectsUiState,
   },
   extraReducers: (builder) => {
     // Drafts and the last opened views describe one person's work; the next account starts clean.
@@ -310,7 +308,6 @@ export const {
   popUndo,
   popRedo,
   clearHistory,
-  resetUiState,
 } = projectsUiSlice.actions;
 
 export const selectSelectedTaskId = (state: RootState) => state.projectsUi.selectedTaskId;
