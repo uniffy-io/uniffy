@@ -3,10 +3,21 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Code, ConnectError } from "@connectrpc/connect";
 import { useAuth } from "@core/providers/AuthContext";
 import { projectsApi } from "@features/projects/projectsApi";
-import { getStatusOptions, visibilityStringToProto } from "@features/projects/projectsSerializer";
-import type { SerializedProject, SerializedTask } from "@features/projects/projectsSerializer";
+import { ViewVisibility } from "@uniffy/proto/projects/v1/projects_pb";
+import type { ViewDefinition } from "@uniffy/proto/projects/v1/projects_pb";
+import {
+  getStatusOptions,
+  viewToPlain,
+  visibilityStringToProto,
+} from "@features/projects/projectsSerializer";
+import type {
+  SerializedProject,
+  SerializedTask,
+  SerializedView,
+} from "@features/projects/projectsSerializer";
 import { isCompletedStatus } from "@features/projects/statusSemantics";
 import type { TaskMove } from "@features/projects/taskOrdering";
+import type { GroupDrop } from "@features/projects/taskGrouping";
 
 export function useCreateProject() {
   const { organizationId } = useAuth();
@@ -493,6 +504,155 @@ export function useMoveTasksToSprint() {
     },
     onError: (error) => {
       Alert.alert("Could not move tasks", serverMessage(error, "The tasks could not be moved"));
+    },
+  });
+}
+
+/**
+ * Writes the value of the group a task was dropped on. Applied to every loaded list of the
+ * project first, so the row lands in its new group without waiting for the round trip.
+ */
+export function useDropTaskOnGroup() {
+  const { organizationId } = useAuth();
+  const queryClient = useQueryClient();
+
+  const patch = (task: SerializedTask, drop: Exclude<GroupDrop, { kind: "status" }>) => {
+    switch (drop.kind) {
+      case "priority":
+        return { ...task, priority: drop.priority };
+      case "sprint":
+        return { ...task, sprintId: drop.sprintId ?? undefined };
+      case "select":
+        return {
+          ...task,
+          fieldValues: { ...task.fieldValues, [drop.fieldId]: drop.optionId ?? "" },
+        };
+    }
+  };
+
+  return useMutation({
+    mutationFn: (args: {
+      projectId: string;
+      taskId: string;
+      drop: Exclude<GroupDrop, { kind: "status" }>;
+    }) => {
+      const { drop } = args;
+      return projectsApi.updateTask({
+        organizationId: organizationId!,
+        taskId: args.taskId,
+        priority: drop.kind === "priority" ? drop.priority : undefined,
+        // Absent leaves the sprint alone, so clearing it has to send "".
+        sprintId: drop.kind === "sprint" ? (drop.sprintId ?? "") : undefined,
+        // Custom values travel JSON-encoded; null clears the field.
+        fieldValues:
+          drop.kind === "select" ? { [drop.fieldId]: JSON.stringify(drop.optionId) } : undefined,
+      });
+    },
+    onMutate: async (args) => {
+      const key = ["tasks", organizationId, args.projectId];
+      await queryClient.cancelQueries({ queryKey: key });
+      const previous = queryClient.getQueriesData<SerializedTask[]>({ queryKey: key });
+      queryClient.setQueriesData<SerializedTask[]>({ queryKey: key }, (tasks) =>
+        tasks?.map((task) => (task.id === args.taskId ? patch(task, args.drop) : task)),
+      );
+      return { previous };
+    },
+    onError: (error, _args, context) => {
+      for (const [key, data] of context?.previous ?? []) queryClient.setQueryData(key, data);
+      Alert.alert("Could not move task", serverMessage(error, "The task could not be moved"));
+    },
+    onSettled: (_data, _error, args) => {
+      queryClient.invalidateQueries({ queryKey: ["tasks", organizationId, args.projectId] });
+      queryClient.invalidateQueries({ queryKey: ["sprints", organizationId, args.projectId] });
+    },
+  });
+}
+
+/** Puts the server's copy of a view into the cached project, so its tab shows without a refetch. */
+function useStoreView() {
+  const { organizationId } = useAuth();
+  const queryClient = useQueryClient();
+
+  return (projectId: string, change: { view?: SerializedView; removedId?: string }) => {
+    queryClient.setQueryData<SerializedProject>(
+      ["project", organizationId, projectId],
+      (project) => {
+        if (!project) return project;
+        const views = project.views.filter(
+          (view) => view.id !== change.removedId && view.id !== change.view?.id,
+        );
+        return { ...project, views: change.view ? [...views, change.view] : views };
+      },
+    );
+    queryClient.invalidateQueries({ queryKey: ["project", organizationId, projectId] });
+  };
+}
+
+export function useCreateView() {
+  const { organizationId } = useAuth();
+  const storeView = useStoreView();
+
+  return useMutation({
+    mutationFn: async (args: { projectId: string; name: string; definition: ViewDefinition }) => {
+      const response = await projectsApi.createView({
+        organizationId: organizationId!,
+        projectId: args.projectId,
+        name: args.name,
+        definition: args.definition,
+        visibility: ViewVisibility.PERSONAL,
+      });
+      if (!response.view) throw new Error("The view was not created");
+      return viewToPlain(response.view);
+    },
+    onSuccess: (view, args) => storeView(args.projectId, { view }),
+    onError: (error) => {
+      Alert.alert("Could not save view", serverMessage(error, "The view was not created"));
+    },
+  });
+}
+
+export function useUpdateView() {
+  const { organizationId } = useAuth();
+  const storeView = useStoreView();
+
+  return useMutation({
+    mutationFn: async (args: {
+      projectId: string;
+      viewId: string;
+      name?: string;
+      definition?: ViewDefinition;
+    }) => {
+      const response = await projectsApi.updateView({
+        organizationId: organizationId!,
+        projectId: args.projectId,
+        viewId: args.viewId,
+        name: args.name,
+        definition: args.definition,
+      });
+      if (!response.view) throw new Error("The view was not saved");
+      return viewToPlain(response.view);
+    },
+    onSuccess: (view, args) => storeView(args.projectId, { view }),
+    onError: (error) => {
+      Alert.alert("Could not save view", serverMessage(error, "The changes were not saved"));
+    },
+  });
+}
+
+export function useDeleteView() {
+  const { organizationId } = useAuth();
+  const storeView = useStoreView();
+
+  return useMutation({
+    mutationFn: (args: { projectId: string; viewId: string }) =>
+      projectsApi.deleteView({
+        organizationId: organizationId!,
+        projectId: args.projectId,
+        viewId: args.viewId,
+      }),
+    onSuccess: (_data, args) => storeView(args.projectId, { removedId: args.viewId }),
+    onError: (error) => {
+      Alert.alert("Could not delete view", serverMessage(error, "The view was not deleted"));
     },
   });
 }

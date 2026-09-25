@@ -1,5 +1,7 @@
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import type { ViewDefinition } from "@uniffy/proto/projects/v1/projects_pb";
 import { useAuth } from "@core/providers/AuthContext";
+import { getEffectiveTimeZone } from "@core/datetimePrefs";
 import { fetchAllPages } from "@shared/lib/fetchAllPages";
 import { projectsApi } from "@features/projects/projectsApi";
 import {
@@ -8,6 +10,7 @@ import {
   activityToPlain,
   sprintToPlain,
 } from "@features/projects/projectsSerializer";
+import { resultKey, shapesResults } from "@features/projects/viewDefinition";
 
 export function useProjectsList() {
   const { organizationId } = useAuth();
@@ -67,6 +70,43 @@ export function useProjectTasks(projectId: string | undefined) {
       return tasks.map(taskToPlain);
     },
     enabled: !!organizationId && !!projectId,
+  });
+}
+
+/**
+ * The view's tasks in the view's order, filtered and sorted by the server. Idle while the
+ * definition neither filters nor sorts: the unfiltered list already answers that. The previous
+ * result stays on screen while a changed filter is fetched.
+ */
+export function useViewTasks(projectId: string | undefined, definition: ViewDefinition) {
+  const { organizationId } = useAuth();
+  const active = shapesResults(definition);
+
+  return useQuery({
+    // Under the project's task key, so every task mutation that refreshes the list refreshes this too.
+    queryKey: ["tasks", organizationId, projectId, "view", resultKey(definition)],
+    queryFn: async ({ signal }) => {
+      const tasks = await fetchAllPages(
+        async (page) => {
+          const response = await projectsApi.listTasks(
+            {
+              organizationId: organizationId!,
+              projectId: projectId!,
+              pagination: { page, pageSize: TASK_PAGE_SIZE },
+              filter: definition.filter,
+              sort: definition.sort,
+              timeZone: getEffectiveTimeZone(),
+            },
+            { signal },
+          );
+          return { items: response.tasks, totalPages: response.pagination?.totalPages ?? 1 };
+        },
+        { key: (task) => task.id },
+      );
+      return tasks.map(taskToPlain);
+    },
+    enabled: !!organizationId && !!projectId && active,
+    placeholderData: keepPreviousData,
   });
 }
 

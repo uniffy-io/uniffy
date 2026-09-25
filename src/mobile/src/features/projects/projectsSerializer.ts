@@ -4,8 +4,17 @@ import type {
   TaskActivity,
   FieldDefinition,
   Sprint,
+  ViewConfig,
+  ViewDefinition,
 } from "@uniffy/proto/projects/v1/projects_pb";
-import { ActivityAction } from "@uniffy/proto/projects/v1/projects_pb";
+import {
+  ActivityAction,
+  FieldType,
+  ViewDefinitionSchema,
+  ViewType,
+  ViewVisibility,
+} from "@uniffy/proto/projects/v1/projects_pb";
+import { create } from "@bufbuild/protobuf";
 import { AccessMode } from "@uniffy/proto/common/v1/common_pb";
 import type { ThemeColors } from "@theme/theme";
 
@@ -35,6 +44,8 @@ export interface PlainSelectOption {
 export interface SerializedFieldDefinition {
   id: string;
   name: string;
+  type: FieldType;
+  isSystem: boolean;
   options: PlainSelectOption[];
   /** Kept raw so an edit to `options` can preserve any other config keys. */
   configJson: string;
@@ -61,8 +72,33 @@ export interface SerializedProject {
   estimatedMinutes: number;
   timeSpentMinutes: number;
   fieldDefinitions: SerializedFieldDefinition[];
+  /** Shared views and the caller's own personal views, as the server lists them. */
+  views: SerializedView[];
+  defaultViewId: string;
   createdAt?: string;
   updatedAt?: string;
+}
+
+export type SerializedViewLayout =
+  | "table"
+  | "board"
+  | "roadmap"
+  | "backlog"
+  | "graph"
+  | "resources";
+
+/**
+ * The definition stays the proto message: the phone edits a few top-level filter facets, the sort
+ * and the grouping, and a save has to carry every other node and key the web wrote unchanged.
+ */
+export interface SerializedView {
+  id: string;
+  name: string;
+  layout: SerializedViewLayout;
+  visibility: "personal" | "shared";
+  ownerId: string;
+  sortOrder: number;
+  definition: ViewDefinition;
 }
 
 export interface SerializedTask {
@@ -137,7 +173,9 @@ export interface ProjectStats {
 }
 
 export const STATUS_FIELD_ID = "field_status";
-const PRIORITY_FIELD_ID = "field_priority";
+export const PRIORITY_FIELD_ID = "field_priority";
+export const ASSIGNEE_FIELD_ID = "field_assignee";
+export const DUE_DATE_FIELD_ID = "field_due_date";
 
 const DEFAULT_STATUS_OPTIONS: PlainSelectOption[] = [
   { id: "status_todo", label: "To Do", color: "#6b7280", sortOrder: 0, semantic: "todo" },
@@ -208,7 +246,36 @@ function fieldDefinitionToPlain(field: FieldDefinition): SerializedFieldDefiniti
     if (isTaskStatusSemantic(o.semantic)) option.semantic = o.semantic;
     return option;
   });
-  return { id: field.id, name: field.name, options, configJson: field.configJson };
+  return {
+    id: field.id,
+    name: field.name,
+    type: field.type,
+    isSystem: field.isSystem,
+    options,
+    configJson: field.configJson,
+  };
+}
+
+const VIEW_LAYOUTS: Record<ViewType, SerializedViewLayout> = {
+  [ViewType.UNSPECIFIED]: "table",
+  [ViewType.TABLE]: "table",
+  [ViewType.BOARD]: "board",
+  [ViewType.ROADMAP]: "roadmap",
+  [ViewType.BACKLOG]: "backlog",
+  [ViewType.GRAPH]: "graph",
+  [ViewType.RESOURCES]: "resources",
+};
+
+export function viewToPlain(view: ViewConfig): SerializedView {
+  return {
+    id: view.id,
+    name: view.name,
+    layout: VIEW_LAYOUTS[view.type] ?? "table",
+    visibility: view.visibility === ViewVisibility.PERSONAL ? "personal" : "shared",
+    ownerId: view.ownerId,
+    sortOrder: view.sortOrder,
+    definition: view.definition ?? create(ViewDefinitionSchema),
+  };
 }
 
 /**
@@ -249,6 +316,8 @@ export function projectToPlain(project: Project): SerializedProject {
     estimatedMinutes: project.estimatedMinutes,
     timeSpentMinutes: project.timeSpentMinutes,
     fieldDefinitions: project.fieldDefinitions.map(fieldDefinitionToPlain),
+    views: project.views.map(viewToPlain),
+    defaultViewId: project.defaultViewId,
     createdAt: tsToIso(project.createdAt),
     updatedAt: tsToIso(project.updatedAt),
   };

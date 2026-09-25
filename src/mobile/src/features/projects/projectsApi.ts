@@ -24,6 +24,9 @@ import {
   DeleteTasksRequestSchema,
   ToggleTaskWatcherRequestSchema,
   ListTaskWatchersRequestSchema,
+  CreateViewRequestSchema,
+  UpdateViewRequestSchema,
+  DeleteViewRequestSchema,
 } from "@uniffy/proto/projects/v1/projects_pb";
 import { transport } from "@core/api/transport";
 
@@ -95,4 +98,13 @@ export const projectsApi = {
 
   deleteSprint: (request: MessageInitShape<typeof DeleteSprintRequestSchema>) =>
     client.deleteSprint(request),
+
+  createView: (request: MessageInitShape<typeof CreateViewRequestSchema>) =>
+    client.createView(request),
+
+  updateView: (request: MessageInitShape<typeof UpdateViewRequestSchema>) =>
+    client.updateView(request),
+
+  deleteView: (request: MessageInitShape<typeof DeleteViewRequestSchema>) =>
+    client.deleteView(request),
 };
