@@ -19,6 +19,7 @@ import { FloatingFormattingToolbar } from "@/features/notes/components/editor/Fl
 import { useNoteRealtimeSession } from "@/features/notes/realtime/useNoteRealtimeSession";
 import { useCanvasRealtimeSession } from "@/features/notes/realtime/useCanvasRealtimeSession";
 import { ErrorBoundary } from "@/components/feedback";
+import { isNoteLoading } from "@/features/notes/utils/noteLoading";
 import { EditorErrorFallback } from "@/features/notes/components/editor/EditorErrorFallback";
 
 function renderEditorErrorFallback({ reset }: { error: Error; reset: () => void }) {
@@ -39,7 +40,7 @@ export function NotesEditor() {
   const userSelectedMode = settings?.editorMode || "crepe";
 
   const currentNote = currentNoteId ? notes[currentNoteId] : null;
-  const isLoadingCurrentNote = loadingNoteId === currentNoteId;
+  const isLoadingCurrentNote = isNoteLoading(loadingNoteId ?? null, currentNoteId);
   const canvasTitleHidden = settings?.canvasTitleHidden ?? false;
 
   // Pass note's userRole so hook skips a fetch; UNSPECIFIED (0) falls through.

@@ -1,7 +1,6 @@
 export {
   projectsSlice,
   setCurrentProject,
-  clearProjects,
   clearErrors,
   optimisticUpdateTask,
   bulkUpdateTasks,
@@ -60,7 +59,6 @@ export {
   popUndo,
   popRedo,
   clearHistory,
-  resetUiState,
   selectSelectedTaskId,
   selectSelectedTaskIds,
   selectIsDetailPanelOpen,

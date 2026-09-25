@@ -81,7 +81,7 @@ function persistViewState(state: FilesState): void {
   });
 }
 
-interface FilesState {
+export interface FilesState {
   files: Record<string, SerializedFile>;
   deletedFileIds: string[];
   currentFileId: string | null;
@@ -193,6 +193,23 @@ const initialState: FilesState = {
     loading: false,
   },
 };
+
+export function resetFilesScope(state: FilesState): FilesState {
+  const reset: FilesState = {
+    ...initialState,
+    activeFilter: { id: null, name: null, criteria: null },
+    viewMode: state.viewMode,
+    iconSize: state.iconSize,
+    sidebarOpen: state.sidebarOpen,
+    filters: {
+      ...initialState.filters,
+      sortBy: state.filters.sortBy,
+      sortOrder: state.filters.sortOrder,
+    },
+  };
+  persistViewState(reset);
+  return reset;
+}
 
 export const filesSlice = createSlice({
   name: "files",

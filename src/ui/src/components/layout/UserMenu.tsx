@@ -12,45 +12,11 @@ import {
   UsersThree,
 } from "@phosphor-icons/react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
-import { logout } from "@/features/auth/store/authSlice";
-import { resetSettings } from "@/features/settings/store/settingsSlice";
-import { clearNotes } from "@/features/notes/store/notesSlice";
-import { clearTree } from "@/features/notes/store/notesTreeSlice";
-import { clearAllCache as clearNotesCache } from "@/features/notes/utils/notesCache";
-import { clearLibraryScope } from "@/features/library/store/clearLibraryScope";
-import { clearNotifications } from "@/features/notifications/store/notificationsSlice";
-import { cancelRecording } from "@/features/recording/store/recordingThunks";
-import { clearPresence } from "@/features/presence/store/presenceSlice";
+import { useSignOut } from "@/features/auth/hooks/useSignOut";
 import { useCustomStatus } from "@/features/presence/hooks/useCustomStatus";
 import { CustomStatusPicker } from "@/features/presence/components/CustomStatusPicker";
-import { clearPermissions } from "@/features/permissions/store/permissionsSlice";
-import { clearAdmin } from "@/features/admin/store/adminSlice";
 import { useAdminAccess } from "@/features/admin/hooks/useAdminHooks";
-import { clearBlobCache } from "@/features/files/components/viewer/hooks/blobCache";
-import { clearComments } from "@/features/comments/store/commentsSlice";
-import {
-  clearChatChannels,
-  clearChatMessages,
-  clearChatThreads,
-  clearChatUi,
-  clearChatDrafts,
-} from "@/features/chat/store";
-import { clearAgentMessages } from "@/features/agents/store/agentMessagesSlice";
-import { clearAgentMemories } from "@/features/agents/store/agentMemoriesSlice";
-import { clearAgentProviders } from "@/features/agents/store/agentProvidersSlice";
-import { clearAgentRuntimeSettings } from "@/features/admin/store/agentRuntimeSettingsSlice";
-import { clearIntegrations } from "@/features/integrations/store/integrationsSlice";
-import { clearTags } from "@/features/tags/store/tagsSlice";
-import { clearPeople } from "@/features/people/store/peopleSlice";
 import { fetchProfilePolicyThunk } from "@/features/people/store/peopleThunks";
-import { clearCalls } from "@/features/calls/store/callsSlice";
-import { clearRooms } from "@/features/rooms/store/roomsSlice";
-import { resetCalendarState, resetCalendarUiState } from "@/features/calendar/store";
-import { clearMemoryAccessToken } from "@/config/api";
-import { teardownStorageEncryption } from "@/shared/crypto/storageEncryption";
-import { createClient } from "@connectrpc/connect";
-import { unaryTransport } from "@/config/api";
-import { AuthService } from "@uniffy/proto/auth/v1/auth_pb";
 import { useTheme } from "@/config/theme/themeContext";
 import { cn } from "@/shared/utils/cn";
 import { popoverShellClass } from "@/components/ui/popover";
@@ -62,7 +28,8 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 export function UserMenu() {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
-  const { user, refreshToken } = useAppSelector((state) => state.auth);
+  const user = useAppSelector((state) => state.auth.user);
+  const signOut = useSignOut();
   const recordingState = useAppSelector((state) => state.recording.state);
   const { canAccessAdmin, isSystemAdmin } = useAdminAccess();
   const { themeMode, setTheme, availableModes } = useTheme();
@@ -127,46 +94,7 @@ export function UserMenu() {
 
   const performLogout = () => {
     setConfirmingLogout(false);
-    handleLogout();
-  };
-
-  const handleLogout = () => {
-    void dispatch(cancelRecording());
-    if (refreshToken) {
-      const client = createClient(AuthService, unaryTransport);
-      client.logout({ refreshToken }).catch(() => {});
-    }
-    clearMemoryAccessToken();
-    teardownStorageEncryption();
-    dispatch(logout());
-    dispatch(resetSettings());
-    dispatch(clearNotes());
-    dispatch(clearTree());
-    clearLibraryScope(dispatch);
-    dispatch(clearNotifications());
-    dispatch(clearPresence());
-    dispatch(clearPermissions());
-    dispatch(clearAdmin());
-    dispatch(clearComments());
-    dispatch(clearChatChannels());
-    dispatch(clearChatMessages());
-    dispatch(clearChatThreads());
-    dispatch(clearChatUi());
-    dispatch(clearChatDrafts());
-    dispatch(clearAgentMessages());
-    dispatch(clearAgentMemories());
-    dispatch(clearAgentProviders());
-    dispatch(clearAgentRuntimeSettings());
-    dispatch(clearIntegrations());
-    dispatch(clearTags());
-    dispatch(clearPeople());
-    dispatch(clearCalls());
-    dispatch(clearRooms());
-    dispatch(resetCalendarState());
-    dispatch(resetCalendarUiState());
-    clearNotesCache().catch(console.error);
-    clearBlobCache();
-    navigate("/auth");
+    signOut();
   };
 
   const displayName = user.fullName || user.username || "User";
