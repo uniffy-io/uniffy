@@ -2737,6 +2737,26 @@ assigned, dated and tagged tasks.
 - [ ] Sort a view by title with tasks "Task 9" and "Task 10": the agent lists them in the order
       the web table shows, 9 before 10.
 
+## Sign-out and organization switch reset
+
+Needs a user who belongs to two organizations; the org picker lives at `/select-org` and also
+appears after sign-in. Stored state is readable from the browser console with
+`JSON.parse(JSON.parse(localStorage.getItem("persist:root")).projectsUi)`.
+
+- [ ] `(both products)` In organization A, open a project, change its view (hide a column) so the
+      tab shows the unsaved dot, and pick "Modal view" for task details. Go to `/select-org` and
+      pick organization B. Projects shows only B's projects, Chat shows only B's channels, the
+      notification badge shows B's count, and the stored `viewDrafts` and `activeViewIds` are
+      empty. The user is still signed in.
+- [ ] Switch back to A: the project opens on its default view with no unsaved dot, and task
+      details still open as a modal.
+- [ ] Sign out from the user menu: the stored `auth` has no user, `viewDrafts` is empty, and the
+      detail-mode preference is kept.
+- [ ] Sign in, pick an organization, go back to `/select-org` and use its Sign out button: the
+      same stored state as above, and the `uniffy-notes-cache` IndexedDB store is empty.
+- [ ] In an organization with no notes, open Notes: the editor pane says "No note selected", not
+      a spinner that never ends.
+
 ## Pre-release sweep
 
 - [ ] All linters green: `./manage.py lint`.
