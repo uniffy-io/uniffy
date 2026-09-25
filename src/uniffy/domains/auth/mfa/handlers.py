@@ -8,7 +8,7 @@ from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
-from uniffy_proto.auth.v1.mfa_pb2 import (
+from uniffy_proto.auth.v1.mfa_pb import (
     AdminResetMfaRequest,
     AdminResetMfaResponse,
     BeginEnrollmentRequest,
@@ -251,9 +251,9 @@ class MfaHandlers:
                     remaining_recovery_codes=status.remaining_recovery_codes,
                 )
                 if status.enrolled_at is not None:
-                    response.enrolled_at.CopyFrom(datetime_to_timestamp(status.enrolled_at))
+                    response.enrolled_at = datetime_to_timestamp(status.enrolled_at)
                 if status.last_used_at is not None:
-                    response.last_used_at.CopyFrom(datetime_to_timestamp(status.last_used_at))
+                    response.last_used_at = datetime_to_timestamp(status.last_used_at)
                 return response
         except Exception as exc:
             logger.exception(f"GetMfaStatus failed: {exc}")

@@ -1,48 +1,48 @@
 """Bidirectional mapping between domain enums/models and ``common.v1`` proto types."""
 
-from uniffy_proto.common.v1.common_pb2 import (
+from uniffy_proto.common.v1.common_pb import (
     AccessMode as ProtoAccessMode,
 )
-from uniffy_proto.common.v1.common_pb2 import (
+from uniffy_proto.common.v1.common_pb import (
     ContentMemberAction as ProtoContentMemberAction,
 )
-from uniffy_proto.common.v1.common_pb2 import (
+from uniffy_proto.common.v1.common_pb import (
     ContentRole as ProtoContentRole,
 )
-from uniffy_proto.common.v1.common_pb2 import (
+from uniffy_proto.common.v1.common_pb import (
     ContentType as ProtoContentType,
 )
-from uniffy_proto.common.v1.common_pb2 import (
+from uniffy_proto.common.v1.common_pb import (
     DomainAdminInfo as ProtoDomainAdminInfo,
 )
-from uniffy_proto.common.v1.common_pb2 import (
+from uniffy_proto.common.v1.common_pb import (
     DomainType as ProtoDomainType,
 )
-from uniffy_proto.common.v1.common_pb2 import (
+from uniffy_proto.common.v1.common_pb import (
     GroupInfo as ProtoGroupInfo,
 )
-from uniffy_proto.common.v1.common_pb2 import (
+from uniffy_proto.common.v1.common_pb import (
     GroupKind as ProtoGroupKind,
 )
-from uniffy_proto.common.v1.common_pb2 import (
+from uniffy_proto.common.v1.common_pb import (
     GroupMemberInfo as ProtoGroupMemberInfo,
 )
-from uniffy_proto.common.v1.common_pb2 import (
+from uniffy_proto.common.v1.common_pb import (
     GroupRole as ProtoGroupRole,
 )
-from uniffy_proto.common.v1.common_pb2 import (
+from uniffy_proto.common.v1.common_pb import (
     MemberInfo as ProtoMemberInfo,
 )
-from uniffy_proto.common.v1.common_pb2 import (
+from uniffy_proto.common.v1.common_pb import (
     OrganizationInfo as ProtoOrgInfo,
 )
-from uniffy_proto.common.v1.common_pb2 import (
+from uniffy_proto.common.v1.common_pb import (
     OrganizationRole as ProtoOrgRole,
 )
-from uniffy_proto.common.v1.common_pb2 import (
+from uniffy_proto.common.v1.common_pb import (
     SubjectType as ProtoSubjectType,
 )
-from uniffy_proto.common.v1.common_pb2 import (
+from uniffy_proto.common.v1.common_pb import (
     UserInfo as ProtoUserInfo,
 )
 
@@ -64,184 +64,174 @@ from uniffy.core.types import ContentType as DomainContentType
 from uniffy.core.types import DomainType as DomainDomainType
 from uniffy.core.types import SubjectType as DomainSubjectType
 
-CONTENT_TYPE_TO_PROTO: dict[DomainContentType, ProtoContentType.ValueType] = {
-    DomainContentType.NOTE: ProtoContentType.CONTENT_TYPE_NOTE,
-    DomainContentType.FILE: ProtoContentType.CONTENT_TYPE_FILE,
-    DomainContentType.FOLDER: ProtoContentType.CONTENT_TYPE_FOLDER,
-    DomainContentType.CALENDAR_EVENT: ProtoContentType.CONTENT_TYPE_CALENDAR_EVENT,
-    DomainContentType.CHAT_MESSAGE: ProtoContentType.CONTENT_TYPE_CHAT_MESSAGE,
-    DomainContentType.USER: ProtoContentType.CONTENT_TYPE_USER,
-    DomainContentType.PROJECT: ProtoContentType.CONTENT_TYPE_PROJECT,
-    DomainContentType.TASK: ProtoContentType.CONTENT_TYPE_TASK,
-    DomainContentType.AGENT: ProtoContentType.CONTENT_TYPE_AGENT,
-    DomainContentType.PROVIDER_KEY: ProtoContentType.CONTENT_TYPE_PROVIDER_KEY,
-    DomainContentType.CHAT: ProtoContentType.CONTENT_TYPE_CHAT,
-    DomainContentType.AGENT_CHAT: ProtoContentType.CONTENT_TYPE_AGENT_CHAT,
-    DomainContentType.AGENT_FOLDER: ProtoContentType.CONTENT_TYPE_AGENT_FOLDER,
-    DomainContentType.ROOM: ProtoContentType.CONTENT_TYPE_ROOM,
-    DomainContentType.AGENT_CRON_TASK: ProtoContentType.CONTENT_TYPE_AGENT_CRON_TASK,
-    DomainContentType.TAG: ProtoContentType.CONTENT_TYPE_TAG,
-    DomainContentType.TEAM: ProtoContentType.CONTENT_TYPE_TEAM,
+CONTENT_TYPE_TO_PROTO: dict[DomainContentType, ProtoContentType] = {
+    DomainContentType.NOTE: ProtoContentType.NOTE,
+    DomainContentType.FILE: ProtoContentType.FILE,
+    DomainContentType.FOLDER: ProtoContentType.FOLDER,
+    DomainContentType.CALENDAR_EVENT: ProtoContentType.CALENDAR_EVENT,
+    DomainContentType.CHAT_MESSAGE: ProtoContentType.CHAT_MESSAGE,
+    DomainContentType.USER: ProtoContentType.USER,
+    DomainContentType.PROJECT: ProtoContentType.PROJECT,
+    DomainContentType.TASK: ProtoContentType.TASK,
+    DomainContentType.AGENT: ProtoContentType.AGENT,
+    DomainContentType.PROVIDER_KEY: ProtoContentType.PROVIDER_KEY,
+    DomainContentType.CHAT: ProtoContentType.CHAT,
+    DomainContentType.AGENT_CHAT: ProtoContentType.AGENT_CHAT,
+    DomainContentType.AGENT_FOLDER: ProtoContentType.AGENT_FOLDER,
+    DomainContentType.ROOM: ProtoContentType.ROOM,
+    DomainContentType.AGENT_CRON_TASK: ProtoContentType.AGENT_CRON_TASK,
+    DomainContentType.TAG: ProtoContentType.TAG,
+    DomainContentType.TEAM: ProtoContentType.TEAM,
 }
 
-CONTENT_TYPE_FROM_PROTO: dict[ProtoContentType.ValueType, DomainContentType] = {
+CONTENT_TYPE_FROM_PROTO: dict[ProtoContentType, DomainContentType] = {
     v: k for k, v in CONTENT_TYPE_TO_PROTO.items()
 }
 
-CONTENT_ROLE_TO_PROTO: dict[DomainContentRole, ProtoContentRole.ValueType] = {
-    DomainContentRole.VIEWER: ProtoContentRole.CONTENT_ROLE_VIEWER,
-    DomainContentRole.COMMENTER: ProtoContentRole.CONTENT_ROLE_COMMENTER,
-    DomainContentRole.EDITOR: ProtoContentRole.CONTENT_ROLE_EDITOR,
-    DomainContentRole.ADMIN: ProtoContentRole.CONTENT_ROLE_ADMIN,
-    DomainContentRole.OWNER: ProtoContentRole.CONTENT_ROLE_OWNER,
-    DomainContentRole.BLOCKED: ProtoContentRole.CONTENT_ROLE_BLOCKED,
+CONTENT_ROLE_TO_PROTO: dict[DomainContentRole, ProtoContentRole] = {
+    DomainContentRole.VIEWER: ProtoContentRole.VIEWER,
+    DomainContentRole.COMMENTER: ProtoContentRole.COMMENTER,
+    DomainContentRole.EDITOR: ProtoContentRole.EDITOR,
+    DomainContentRole.ADMIN: ProtoContentRole.ADMIN,
+    DomainContentRole.OWNER: ProtoContentRole.OWNER,
+    DomainContentRole.BLOCKED: ProtoContentRole.BLOCKED,
 }
 
-CONTENT_ROLE_FROM_PROTO: dict[ProtoContentRole.ValueType, DomainContentRole] = {
+CONTENT_ROLE_FROM_PROTO: dict[ProtoContentRole, DomainContentRole] = {
     v: k for k, v in CONTENT_ROLE_TO_PROTO.items()
 }
 
-ACCESS_MODE_TO_PROTO: dict[DomainAccessMode, ProtoAccessMode.ValueType] = {
-    DomainAccessMode.OWNER_ONLY: ProtoAccessMode.ACCESS_MODE_OWNER_ONLY,
-    DomainAccessMode.EXPLICIT_MEMBERS: ProtoAccessMode.ACCESS_MODE_EXPLICIT_MEMBERS,
-    DomainAccessMode.OPEN_TO_ORG: ProtoAccessMode.ACCESS_MODE_OPEN_TO_ORG,
+ACCESS_MODE_TO_PROTO: dict[DomainAccessMode, ProtoAccessMode] = {
+    DomainAccessMode.OWNER_ONLY: ProtoAccessMode.OWNER_ONLY,
+    DomainAccessMode.EXPLICIT_MEMBERS: ProtoAccessMode.EXPLICIT_MEMBERS,
+    DomainAccessMode.OPEN_TO_ORG: ProtoAccessMode.OPEN_TO_ORG,
 }
 
-ACCESS_MODE_FROM_PROTO: dict[ProtoAccessMode.ValueType, DomainAccessMode] = {
+ACCESS_MODE_FROM_PROTO: dict[ProtoAccessMode, DomainAccessMode] = {
     v: k for k, v in ACCESS_MODE_TO_PROTO.items()
 }
 
 _cma = ProtoContentMemberAction  # alias to keep the dict entries short
-CONTENT_MEMBER_ACTION_TO_PROTO: dict[
-    DomainContentMemberAction, ProtoContentMemberAction.ValueType
-] = {
-    DomainContentMemberAction.MEMBER_ADDED: _cma.CONTENT_MEMBER_ACTION_MEMBER_ADDED,
-    DomainContentMemberAction.MEMBER_ROLE_CHANGED: _cma.CONTENT_MEMBER_ACTION_MEMBER_ROLE_CHANGED,
-    DomainContentMemberAction.MEMBER_REMOVED: _cma.CONTENT_MEMBER_ACTION_MEMBER_REMOVED,
-    DomainContentMemberAction.ACCESS_MODE_CHANGED: _cma.CONTENT_MEMBER_ACTION_ACCESS_MODE_CHANGED,
-    DomainContentMemberAction.BASELINE_ROLE_CHANGED: (
-        _cma.CONTENT_MEMBER_ACTION_BASELINE_ROLE_CHANGED
-    ),
-    DomainContentMemberAction.OWNERSHIP_TRANSFERRED: (
-        _cma.CONTENT_MEMBER_ACTION_OWNERSHIP_TRANSFERRED
-    ),
+CONTENT_MEMBER_ACTION_TO_PROTO: dict[DomainContentMemberAction, ProtoContentMemberAction] = {
+    DomainContentMemberAction.MEMBER_ADDED: _cma.MEMBER_ADDED,
+    DomainContentMemberAction.MEMBER_ROLE_CHANGED: _cma.MEMBER_ROLE_CHANGED,
+    DomainContentMemberAction.MEMBER_REMOVED: _cma.MEMBER_REMOVED,
+    DomainContentMemberAction.ACCESS_MODE_CHANGED: _cma.ACCESS_MODE_CHANGED,
+    DomainContentMemberAction.BASELINE_ROLE_CHANGED: (_cma.BASELINE_ROLE_CHANGED),
+    DomainContentMemberAction.OWNERSHIP_TRANSFERRED: (_cma.OWNERSHIP_TRANSFERRED),
 }
 
-CONTENT_MEMBER_ACTION_FROM_PROTO: dict[
-    ProtoContentMemberAction.ValueType, DomainContentMemberAction
-] = {v: k for k, v in CONTENT_MEMBER_ACTION_TO_PROTO.items()}
-
-SUBJECT_TYPE_TO_PROTO: dict[DomainSubjectType, ProtoSubjectType.ValueType] = {
-    DomainSubjectType.USER: ProtoSubjectType.SUBJECT_TYPE_USER,
-    DomainSubjectType.GROUP: ProtoSubjectType.SUBJECT_TYPE_GROUP,
-    DomainSubjectType.ORGANIZATION: ProtoSubjectType.SUBJECT_TYPE_ORGANIZATION,
-    DomainSubjectType.AGENT: ProtoSubjectType.SUBJECT_TYPE_AGENT,
+CONTENT_MEMBER_ACTION_FROM_PROTO: dict[ProtoContentMemberAction, DomainContentMemberAction] = {
+    v: k for k, v in CONTENT_MEMBER_ACTION_TO_PROTO.items()
 }
 
-SUBJECT_TYPE_FROM_PROTO: dict[ProtoSubjectType.ValueType, DomainSubjectType] = {
+SUBJECT_TYPE_TO_PROTO: dict[DomainSubjectType, ProtoSubjectType] = {
+    DomainSubjectType.USER: ProtoSubjectType.USER,
+    DomainSubjectType.GROUP: ProtoSubjectType.GROUP,
+    DomainSubjectType.ORGANIZATION: ProtoSubjectType.ORGANIZATION,
+    DomainSubjectType.AGENT: ProtoSubjectType.AGENT,
+}
+
+SUBJECT_TYPE_FROM_PROTO: dict[ProtoSubjectType, DomainSubjectType] = {
     v: k for k, v in SUBJECT_TYPE_TO_PROTO.items()
 }
 
-ORG_ROLE_TO_PROTO: dict[DomainOrgRole, ProtoOrgRole.ValueType] = {
-    DomainOrgRole.MEMBER: ProtoOrgRole.ORGANIZATION_ROLE_MEMBER,
-    DomainOrgRole.ADMIN: ProtoOrgRole.ORGANIZATION_ROLE_ADMIN,
-    DomainOrgRole.OWNER: ProtoOrgRole.ORGANIZATION_ROLE_OWNER,
+ORG_ROLE_TO_PROTO: dict[DomainOrgRole, ProtoOrgRole] = {
+    DomainOrgRole.MEMBER: ProtoOrgRole.MEMBER,
+    DomainOrgRole.ADMIN: ProtoOrgRole.ADMIN,
+    DomainOrgRole.OWNER: ProtoOrgRole.OWNER,
 }
 
-ORG_ROLE_FROM_PROTO: dict[ProtoOrgRole.ValueType, DomainOrgRole] = {
-    v: k for k, v in ORG_ROLE_TO_PROTO.items()
+ORG_ROLE_FROM_PROTO: dict[ProtoOrgRole, DomainOrgRole] = {v: k for k, v in ORG_ROLE_TO_PROTO.items()}
+
+GROUP_ROLE_TO_PROTO: dict[DomainGroupRole, ProtoGroupRole] = {
+    DomainGroupRole.MEMBER: ProtoGroupRole.MEMBER,
+    DomainGroupRole.ADMIN: ProtoGroupRole.ADMIN,
 }
 
-GROUP_ROLE_TO_PROTO: dict[DomainGroupRole, ProtoGroupRole.ValueType] = {
-    DomainGroupRole.MEMBER: ProtoGroupRole.GROUP_ROLE_MEMBER,
-    DomainGroupRole.ADMIN: ProtoGroupRole.GROUP_ROLE_ADMIN,
-}
-
-GROUP_ROLE_FROM_PROTO: dict[ProtoGroupRole.ValueType, DomainGroupRole] = {
+GROUP_ROLE_FROM_PROTO: dict[ProtoGroupRole, DomainGroupRole] = {
     v: k for k, v in GROUP_ROLE_TO_PROTO.items()
 }
 
-DOMAIN_TYPE_TO_PROTO: dict[DomainDomainType, ProtoDomainType.ValueType] = {
-    DomainDomainType.CHAT: ProtoDomainType.DOMAIN_TYPE_CHAT,
-    DomainDomainType.FILES: ProtoDomainType.DOMAIN_TYPE_FILES,
-    DomainDomainType.NOTES: ProtoDomainType.DOMAIN_TYPE_NOTES,
-    DomainDomainType.CALENDAR: ProtoDomainType.DOMAIN_TYPE_CALENDAR,
-    DomainDomainType.PROJECTS: ProtoDomainType.DOMAIN_TYPE_PROJECTS,
-    DomainDomainType.AGENTS: ProtoDomainType.DOMAIN_TYPE_AGENTS,
+DOMAIN_TYPE_TO_PROTO: dict[DomainDomainType, ProtoDomainType] = {
+    DomainDomainType.CHAT: ProtoDomainType.CHAT,
+    DomainDomainType.FILES: ProtoDomainType.FILES,
+    DomainDomainType.NOTES: ProtoDomainType.NOTES,
+    DomainDomainType.CALENDAR: ProtoDomainType.CALENDAR,
+    DomainDomainType.PROJECTS: ProtoDomainType.PROJECTS,
+    DomainDomainType.AGENTS: ProtoDomainType.AGENTS,
 }
 
-DOMAIN_TYPE_FROM_PROTO: dict[ProtoDomainType.ValueType, DomainDomainType] = {
+DOMAIN_TYPE_FROM_PROTO: dict[ProtoDomainType, DomainDomainType] = {
     v: k for k, v in DOMAIN_TYPE_TO_PROTO.items()
 }
 
 
-def content_type_to_proto(ct: DomainContentType) -> ProtoContentType.ValueType:
-    return CONTENT_TYPE_TO_PROTO.get(ct, ProtoContentType.CONTENT_TYPE_UNSPECIFIED)
+def content_type_to_proto(ct: DomainContentType) -> ProtoContentType:
+    return CONTENT_TYPE_TO_PROTO.get(ct, ProtoContentType.UNSPECIFIED)
 
 
-def content_type_from_proto(ct: ProtoContentType.ValueType) -> DomainContentType | None:
+def content_type_from_proto(ct: ProtoContentType) -> DomainContentType | None:
     return CONTENT_TYPE_FROM_PROTO.get(ct)
 
 
-def subject_type_to_proto(st: DomainSubjectType) -> ProtoSubjectType.ValueType:
-    return SUBJECT_TYPE_TO_PROTO.get(st, ProtoSubjectType.SUBJECT_TYPE_UNSPECIFIED)
+def subject_type_to_proto(st: DomainSubjectType) -> ProtoSubjectType:
+    return SUBJECT_TYPE_TO_PROTO.get(st, ProtoSubjectType.UNSPECIFIED)
 
 
-def subject_type_from_proto(st: ProtoSubjectType.ValueType) -> DomainSubjectType | None:
+def subject_type_from_proto(st: ProtoSubjectType) -> DomainSubjectType | None:
     return SUBJECT_TYPE_FROM_PROTO.get(st)
 
 
-def content_role_to_proto(role: DomainContentRole) -> ProtoContentRole.ValueType:
-    return CONTENT_ROLE_TO_PROTO.get(role, ProtoContentRole.CONTENT_ROLE_UNSPECIFIED)
+def content_role_to_proto(role: DomainContentRole) -> ProtoContentRole:
+    return CONTENT_ROLE_TO_PROTO.get(role, ProtoContentRole.UNSPECIFIED)
 
 
-def content_role_from_proto(role: ProtoContentRole.ValueType) -> DomainContentRole | None:
+def content_role_from_proto(role: ProtoContentRole) -> DomainContentRole | None:
     return CONTENT_ROLE_FROM_PROTO.get(role)
 
 
-def access_mode_to_proto(mode: DomainAccessMode) -> ProtoAccessMode.ValueType:
-    return ACCESS_MODE_TO_PROTO.get(mode, ProtoAccessMode.ACCESS_MODE_UNSPECIFIED)
+def access_mode_to_proto(mode: DomainAccessMode) -> ProtoAccessMode:
+    return ACCESS_MODE_TO_PROTO.get(mode, ProtoAccessMode.UNSPECIFIED)
 
 
-def access_mode_from_proto(mode: ProtoAccessMode.ValueType) -> DomainAccessMode | None:
+def access_mode_from_proto(mode: ProtoAccessMode) -> DomainAccessMode | None:
     return ACCESS_MODE_FROM_PROTO.get(mode)
 
 
 def content_member_action_to_proto(
     action: DomainContentMemberAction,
-) -> ProtoContentMemberAction.ValueType:
-    return CONTENT_MEMBER_ACTION_TO_PROTO.get(
-        action, ProtoContentMemberAction.CONTENT_MEMBER_ACTION_UNSPECIFIED
-    )
+) -> ProtoContentMemberAction:
+    return CONTENT_MEMBER_ACTION_TO_PROTO.get(action, ProtoContentMemberAction.UNSPECIFIED)
 
 
 def content_member_action_from_proto(
-    action: ProtoContentMemberAction.ValueType,
+    action: ProtoContentMemberAction,
 ) -> DomainContentMemberAction | None:
     return CONTENT_MEMBER_ACTION_FROM_PROTO.get(action)
 
 
-def org_role_to_proto(role: DomainOrgRole) -> ProtoOrgRole.ValueType:
-    return ORG_ROLE_TO_PROTO.get(role, ProtoOrgRole.ORGANIZATION_ROLE_UNSPECIFIED)
+def org_role_to_proto(role: DomainOrgRole) -> ProtoOrgRole:
+    return ORG_ROLE_TO_PROTO.get(role, ProtoOrgRole.UNSPECIFIED)
 
 
-def org_role_from_proto(role: ProtoOrgRole.ValueType) -> DomainOrgRole | None:
+def org_role_from_proto(role: ProtoOrgRole) -> DomainOrgRole | None:
     return ORG_ROLE_FROM_PROTO.get(role)
 
 
-def group_role_to_proto(role: DomainGroupRole) -> ProtoGroupRole.ValueType:
-    return GROUP_ROLE_TO_PROTO.get(role, ProtoGroupRole.GROUP_ROLE_UNSPECIFIED)
+def group_role_to_proto(role: DomainGroupRole) -> ProtoGroupRole:
+    return GROUP_ROLE_TO_PROTO.get(role, ProtoGroupRole.UNSPECIFIED)
 
 
-def group_role_from_proto(role: ProtoGroupRole.ValueType) -> DomainGroupRole | None:
+def group_role_from_proto(role: ProtoGroupRole) -> DomainGroupRole | None:
     return GROUP_ROLE_FROM_PROTO.get(role)
 
 
-def domain_type_to_proto(dt: DomainDomainType) -> ProtoDomainType.ValueType:
-    return DOMAIN_TYPE_TO_PROTO.get(dt, ProtoDomainType.DOMAIN_TYPE_UNSPECIFIED)
+def domain_type_to_proto(dt: DomainDomainType) -> ProtoDomainType:
+    return DOMAIN_TYPE_TO_PROTO.get(dt, ProtoDomainType.UNSPECIFIED)
 
 
-def domain_type_from_proto(dt: ProtoDomainType.ValueType) -> DomainDomainType | None:
+def domain_type_from_proto(dt: ProtoDomainType) -> DomainDomainType | None:
     return DOMAIN_TYPE_FROM_PROTO.get(dt)
 
 
@@ -289,22 +279,22 @@ def org_info_to_proto(org: Organization) -> ProtoOrgInfo:
     )
 
 
-GROUP_KIND_TO_PROTO: dict[DomainGroupKind, ProtoGroupKind.ValueType] = {
-    DomainGroupKind.TEAM: ProtoGroupKind.GROUP_KIND_TEAM,
-    DomainGroupKind.ACCESS: ProtoGroupKind.GROUP_KIND_ACCESS,
+GROUP_KIND_TO_PROTO: dict[DomainGroupKind, ProtoGroupKind] = {
+    DomainGroupKind.TEAM: ProtoGroupKind.TEAM,
+    DomainGroupKind.ACCESS: ProtoGroupKind.ACCESS,
 }
 
-GROUP_KIND_FROM_PROTO: dict[ProtoGroupKind.ValueType, DomainGroupKind] = {
-    ProtoGroupKind.GROUP_KIND_TEAM: DomainGroupKind.TEAM,
-    ProtoGroupKind.GROUP_KIND_ACCESS: DomainGroupKind.ACCESS,
+GROUP_KIND_FROM_PROTO: dict[ProtoGroupKind, DomainGroupKind] = {
+    ProtoGroupKind.TEAM: DomainGroupKind.TEAM,
+    ProtoGroupKind.ACCESS: DomainGroupKind.ACCESS,
 }
 
 
-def group_kind_to_proto(kind: DomainGroupKind) -> ProtoGroupKind.ValueType:
+def group_kind_to_proto(kind: DomainGroupKind) -> ProtoGroupKind:
     return GROUP_KIND_TO_PROTO[kind]
 
 
-def group_kind_from_proto(kind: ProtoGroupKind.ValueType) -> DomainGroupKind | None:
+def group_kind_from_proto(kind: ProtoGroupKind) -> DomainGroupKind | None:
     return GROUP_KIND_FROM_PROTO.get(kind)
 
 

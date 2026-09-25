@@ -2,7 +2,7 @@
 
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
-from uniffy_proto.cal.v1.calendar_pb2 import (
+from uniffy_proto.cal.v1.calendar_pb import (
     CreateCategoryRequest,
     CreateCategoryResponse,
     DeleteCategoryRequest,
@@ -38,7 +38,7 @@ class CategoryHandlers:
                     organization_id=organization_id,
                     name=request.name,
                     color=request.color,
-                    icon=request.icon if request.HasField("icon") else None,
+                    icon=request.icon if request.has_field("icon") else None,
                 )
                 return CreateCategoryResponse(category=category_to_proto(category))
         except ConnectError:
@@ -81,10 +81,10 @@ class CategoryHandlers:
                     user_id=user_id,
                     category_id=category_id,
                     organization_id=organization_id,
-                    name=request.name if request.HasField("name") else None,
-                    color=request.color if request.HasField("color") else None,
-                    icon=request.icon if request.HasField("icon") else None,
-                    sort_order=request.sort_order if request.HasField("sort_order") else None,
+                    name=request.name if request.has_field("name") else None,
+                    color=request.color if request.has_field("color") else None,
+                    icon=request.icon if request.has_field("icon") else None,
+                    sort_order=request.sort_order if request.has_field("sort_order") else None,
                 )
                 return UpdateCategoryResponse(category=category_to_proto(category))
         except ConnectError:

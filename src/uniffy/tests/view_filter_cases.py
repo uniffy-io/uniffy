@@ -6,10 +6,9 @@ from typing import Any
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
-from google.protobuf import json_format
-from uniffy_proto.projects.v1.projects_pb2 import TaskFilterGroup, TaskSort
+from uniffy_proto.projects.v1.projects_pb import TaskFilterGroup, TaskSort
 
-from uniffy.core.json_codec import loads
+from uniffy.core.json_codec import dumps_bytes, loads
 from uniffy.core.models.projects.field_definition import FieldDefinition, ProjectFieldType
 from uniffy.core.types import generate_id
 
@@ -46,11 +45,11 @@ def _bind(value: Any, ids: dict[str, UUID]) -> Any:
 
 
 def task_filter(case: dict[str, Any], ids: dict[str, UUID]) -> TaskFilterGroup:
-    return json_format.ParseDict(_bind(case["filter"], ids), TaskFilterGroup())
+    return TaskFilterGroup.from_json(dumps_bytes(_bind(case["filter"], ids)))
 
 
 def sort_keys(case: dict[str, Any], ids: dict[str, UUID]) -> list[TaskSort]:
-    return [json_format.ParseDict(_bind(key, ids), TaskSort()) for key in case["sort"]]
+    return [TaskSort.from_json(dumps_bytes(_bind(key, ids))) for key in case["sort"]]
 
 
 def field_definitions(project_id: UUID) -> list[FieldDefinition]:

@@ -4,7 +4,7 @@ from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
-from uniffy_proto.agents.v1.runtime_pb2 import (
+from uniffy_proto.agents.v1.runtime_pb import (
     GetRuntimeSettingsRequest,
     GetRuntimeSettingsResponse,
     RuntimeSettings,
@@ -80,7 +80,7 @@ class RuntimeSettingsHandlers:
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id format")
 
-        s = request.settings
+        s = request.settings if request.settings is not None else RuntimeSettings()
         try:
             async with open_session() as session:
                 ops = RuntimeSettingsOperations(session)

@@ -2,10 +2,10 @@
 
 from datetime import UTC, datetime
 
-from uniffy_proto.organizations.v1.organizations_pb2 import (
+from uniffy_proto.organizations.v1.organizations_pb import (
     Invitation as InvitationProto,
 )
-from uniffy_proto.organizations.v1.organizations_pb2 import (
+from uniffy_proto.organizations.v1.organizations_pb import (
     InvitationStatus,
 )
 
@@ -14,15 +14,15 @@ from uniffy.core.models.login.invitation import Invitation
 from uniffy.core.models.login.user import User
 
 
-def derive_status(invitation: Invitation) -> InvitationStatus.ValueType:
+def derive_status(invitation: Invitation) -> InvitationStatus:
     """Compute the public ``InvitationStatus`` for a row."""
     if invitation.accepted_at is not None:
-        return InvitationStatus.INVITATION_STATUS_ACCEPTED
+        return InvitationStatus.ACCEPTED
     if invitation.revoked_at is not None:
-        return InvitationStatus.INVITATION_STATUS_REVOKED
+        return InvitationStatus.REVOKED
     if invitation.expires_at < datetime.now(UTC):
-        return InvitationStatus.INVITATION_STATUS_EXPIRED
-    return InvitationStatus.INVITATION_STATUS_PENDING
+        return InvitationStatus.EXPIRED
+    return InvitationStatus.PENDING
 
 
 def _inviter_name(user: User | None) -> str | None:
@@ -46,9 +46,9 @@ def invitation_to_proto(
         status=derive_status(invitation),
     )
     if invitation.accepted_at is not None:
-        proto.accepted_at.CopyFrom(datetime_to_timestamp(invitation.accepted_at))
+        proto.accepted_at = datetime_to_timestamp(invitation.accepted_at)
     if invitation.revoked_at is not None:
-        proto.revoked_at.CopyFrom(datetime_to_timestamp(invitation.revoked_at))
+        proto.revoked_at = datetime_to_timestamp(invitation.revoked_at)
     proto.invited_by_user_id = str(invitation.invited_by_user_id)
     label = _inviter_name(inviter)
     if label:

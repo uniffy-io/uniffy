@@ -7,7 +7,7 @@ from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from sqlalchemy.ext.asyncio import AsyncSession
-from uniffy_proto.notes.v1.notes_pb2 import (
+from uniffy_proto.notes.v1.notes_pb import (
     CreateNoteRequest,
     CreateNoteResponse,
     DeleteNoteRequest,
@@ -82,11 +82,11 @@ class NoteMutationHandlers:
         )
         node_type = node_type_from_proto(request.node_type)
         parent_id = (
-            parse_uuid(request.parent_id, "parent_id") if request.HasField("parent_id") else None
+            parse_uuid(request.parent_id, "parent_id") if request.has_field("parent_id") else None
         )
         group_ids = [parse_uuid(group_id, "group_id") for group_id in request.group_ids] or None
         metadata = dict(request.metadata) if request.metadata else {}
-        if request.HasField("icon"):
+        if request.has_field("icon"):
             metadata["icon"] = {
                 "type": request.icon.icon_type,
                 "value": request.icon.value,
@@ -112,7 +112,7 @@ class NoteMutationHandlers:
                     title=request.title,
                     content=content,
                     canvas_content=canvas_content,
-                    slug=request.slug if request.HasField("slug") else None,
+                    slug=request.slug if request.has_field("slug") else None,
                     access_mode=access_mode,
                     baseline_role=baseline_role,
                     node_type=node_type,
@@ -138,18 +138,18 @@ class NoteMutationHandlers:
         organization_id = parse_uuid(request.organization_id, "organization_id")
         note_id = parse_uuid(request.note_id, "note_id")
         parent_id: UUID | str | None = None
-        if request.HasField("parent_id"):
+        if request.has_field("parent_id"):
             parent_id = "" if request.parent_id == "" else parse_uuid(request.parent_id, "parent_id")
         metadata = dict(request.metadata) if request.metadata else None
-        if request.HasField("icon"):
+        if request.has_field("icon"):
             metadata = metadata or {}
             metadata["icon"] = {
                 "type": request.icon.icon_type,
                 "value": request.icon.value,
             }
-        content = request.content if request.HasField("content") else None
+        content = request.content if request.has_field("content") else None
         canvas_content = parse_canvas_content(content) if content is not None else None
-        tag_ids = parse_tag_ids(list(request.tag_ids.ids)) if request.HasField("tag_ids") else None
+        tag_ids = parse_tag_ids(list(request.tag_ids.ids)) if request.has_field("tag_ids") else None
 
         try:
             async with open_session() as session:
@@ -161,10 +161,10 @@ class NoteMutationHandlers:
                     user_id=user_id,
                     organization_id=organization_id,
                     note_id=note_id,
-                    title=request.title if request.HasField("title") else None,
+                    title=request.title if request.has_field("title") else None,
                     content=content,
                     canvas_content=canvas_content,
-                    slug=request.slug if request.HasField("slug") else None,
+                    slug=request.slug if request.has_field("slug") else None,
                     parent_id=parent_id,
                     tag_ids=tag_ids,
                     metadata=metadata,

@@ -10,7 +10,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from connectrpc.code import Code
 from connectrpc.errors import ConnectError
-from uniffy_proto.integrations.v1.integrations_pb2 import (
+from uniffy_proto.integrations.v1.integrations_pb import (
     ListConnectionsRequest,
     RemoveConnectionRequest,
     ToggleConnectionRequest,
@@ -96,7 +96,7 @@ def test_base_url_rejects_unsafe_shapes(raw: str) -> None:
 def test_converter_hides_last_error_unless_diagnostics_requested() -> None:
     row = _connection_row()
 
-    assert not connection_to_proto(row).HasField("last_error")
+    assert not connection_to_proto(row).has_field("last_error")
     assert connection_to_proto(row, include_diagnostics=True).last_error == row.last_error
 
 
@@ -104,10 +104,10 @@ def test_converter_leaves_optional_fields_unset_when_none() -> None:
     row = _connection_row()
 
     info = connection_to_proto(row)
-    assert not info.HasField("base_url")
-    assert not info.HasField("account_login")
-    assert not info.HasField("last_validated_at")
-    assert not info.HasField("last_used_at")
+    assert not info.has_field("base_url")
+    assert not info.has_field("account_login")
+    assert not info.has_field("last_validated_at")
+    assert not info.has_field("last_used_at")
 
     populated = connection_to_proto(
         _connection_row(base_url="https://ghe.example.com/api/v3", account_login="octocat")

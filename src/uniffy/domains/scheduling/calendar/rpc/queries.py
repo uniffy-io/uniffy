@@ -2,7 +2,8 @@
 
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
-from uniffy_proto.cal.v1.calendar_pb2 import (
+from protobuf.wkt import Timestamp
+from uniffy_proto.cal.v1.calendar_pb import (
     GetEventRequest,
     GetEventResponse,
     GetEventsInRangeRequest,
@@ -91,16 +92,16 @@ class EventQueryHandlers:
         organization_id = resolve_organization_id(request.organization_id)
 
         calendar_id = None
-        if request.HasField("calendar_id"):
+        if request.has_field("calendar_id"):
             calendar_id = parse_uuid(request.calendar_id, "calendar_id")
         category_id = None
-        if request.HasField("category_id"):
+        if request.has_field("category_id"):
             category_id = parse_uuid(request.category_id, "category_id")
         start_date = None
-        if request.HasField("start_date"):
+        if request.has_field("start_date"):
             start_date = timestamp_to_datetime(request.start_date)
         end_date = None
-        if request.HasField("end_date"):
+        if request.has_field("end_date"):
             end_date = timestamp_to_datetime(request.end_date)
         tag_ids = parse_tag_id_list(request.tag_ids) if request.tag_ids else None
 
@@ -109,7 +110,7 @@ class EventQueryHandlers:
         sort_by = request.sort_by or CURSOR_SORT_FIELD
         # An absent field means the caller pages by number; an empty one asks
         # for the first cursor page.
-        by_cursor = request.HasField("page_token")
+        by_cursor = request.has_field("page_token")
         page_token = request.page_token or None
 
         try:
@@ -217,7 +218,7 @@ class EventQueryHandlers:
         if request.category_ids:
             category_ids = [parse_uuid(value, "category_id") for value in request.category_ids]
         channel_id = None
-        if request.HasField("channel_id"):
+        if request.has_field("channel_id"):
             channel_id = parse_uuid(request.channel_id, "channel_id")
 
         try:
@@ -226,8 +227,12 @@ class EventQueryHandlers:
                 events = await operations.get_events_in_range(
                     user_id=user_id,
                     organization_id=organization_id,
-                    start_date=timestamp_to_datetime(request.start_date),
-                    end_date=timestamp_to_datetime(request.end_date),
+                    start_date=timestamp_to_datetime(
+                        request.start_date if request.start_date is not None else Timestamp()
+                    ),
+                    end_date=timestamp_to_datetime(
+                        request.end_date if request.end_date is not None else Timestamp()
+                    ),
                     calendar_ids=calendar_ids,
                     category_ids=category_ids,
                     channel_id=channel_id,

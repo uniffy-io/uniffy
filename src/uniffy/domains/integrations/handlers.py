@@ -6,7 +6,7 @@ from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
-from uniffy_proto.integrations.v1.integrations_pb2 import (
+from uniffy_proto.integrations.v1.integrations_pb import (
     AddConnectionRequest,
     AddConnectionResponse,
     ListConnectionsRequest,
@@ -99,7 +99,7 @@ class IntegrationsHandlers:
         user_id = current_user_id()
         org_id = resolve_organization_id(request.organization_id)
 
-        provider = request.provider if request.HasField("provider") else None
+        provider = request.provider if request.has_field("provider") else None
 
         try:
             async with open_session() as session:
@@ -137,7 +137,7 @@ class IntegrationsHandlers:
                     provider=request.provider,
                     name=request.name,
                     credential=request.credential,
-                    base_url=request.base_url if request.HasField("base_url") else None,
+                    base_url=request.base_url if request.has_field("base_url") else None,
                     allow_writes=request.allow_writes,
                 )
                 # add_connection is org-admin gated, so the caller may see diagnostics.
@@ -159,13 +159,13 @@ class IntegrationsHandlers:
         connection_id = _parse_uuid(request.connection_id, "connection_id")
 
         kwargs: dict = {}
-        if request.HasField("name"):
+        if request.has_field("name"):
             kwargs["name"] = request.name
-        if request.HasField("base_url"):
+        if request.has_field("base_url"):
             kwargs["base_url"] = request.base_url
-        if request.HasField("allow_writes"):
+        if request.has_field("allow_writes"):
             kwargs["allow_writes"] = request.allow_writes
-        if request.HasField("credential"):
+        if request.has_field("credential"):
             kwargs["credential"] = request.credential
 
         try:

@@ -1,15 +1,13 @@
 """Proto <-> domain converters for skills."""
 
-from uniffy_proto.agents.v1.skills_pb2 import (
-    SKILL_SOURCE_BUNDLED,
-    SKILL_SOURCE_ORGANIZATION,
-    SKILL_SOURCE_UNSPECIFIED,
+from uniffy_proto.agents.v1.skills_pb import (
     RunnableSkill,
     SkillDraft,
     SkillInfo,
     SkillSource,
     SkillVersion,
 )
+from uniffy_proto.agents.v1.skills_pb import SkillSource as _ProtoSkillSource
 
 from uniffy.core.converters import datetime_to_timestamp
 from uniffy.core.models.agents.skill import AgentSkill
@@ -18,18 +16,18 @@ from uniffy.core.models.agents.skill_version import AgentSkillVersion
 from uniffy.domains.agents.skills.resolution import SkillSummary
 
 SKILL_SOURCE_TO_PROTO: dict[str, SkillSource] = {
-    "bundled": SKILL_SOURCE_BUNDLED,
-    "organization": SKILL_SOURCE_ORGANIZATION,
+    "bundled": _ProtoSkillSource.BUNDLED,
+    "organization": _ProtoSkillSource.ORGANIZATION,
 }
 
 SKILL_SOURCE_FROM_PROTO: dict[int, str] = {
-    SKILL_SOURCE_BUNDLED: "bundled",
-    SKILL_SOURCE_ORGANIZATION: "organization",
+    _ProtoSkillSource.BUNDLED: "bundled",
+    _ProtoSkillSource.ORGANIZATION: "organization",
 }
 
 
 def skill_source_to_proto(source: str) -> SkillSource:
-    return SKILL_SOURCE_TO_PROTO.get(source, SKILL_SOURCE_UNSPECIFIED)
+    return SKILL_SOURCE_TO_PROTO.get(source, _ProtoSkillSource.UNSPECIFIED)
 
 
 def skill_source_from_proto(proto_source: SkillSource) -> str:

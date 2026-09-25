@@ -6,7 +6,7 @@ from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
-from uniffy_proto.agents.v1.skills_pb2 import (
+from uniffy_proto.agents.v1.skills_pb import (
     CreateSkillDraftRequest,
     CreateSkillDraftResponse,
     CreateSkillRequest,
@@ -44,9 +44,10 @@ from uniffy_proto.agents.v1.skills_pb2 import (
     UpdateSkillRequest,
     UpdateSkillResponse,
 )
-from uniffy_proto.common.v1.common_pb2 import PaginationResponse
+from uniffy_proto.common.v1.common_pb import PaginationResponse
 
 from uniffy.core.auth.principal import current_user_id, resolve_organization_id
+from uniffy.core.converters.proto import datetime_to_timestamp
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models.agents.skill import SkillSurface
 from uniffy.domains.agents.skills.converters import (
@@ -184,7 +185,7 @@ class SkillsHandlers(SkillGenerationHandlers):
 
         page = 1
         page_size = 50
-        if request.HasField("pagination"):
+        if request.has_field("pagination"):
             page = request.pagination.page if request.pagination.page > 0 else 1
             page_size = min(
                 request.pagination.page_size if request.pagination.page_size > 0 else 50,
@@ -235,12 +236,12 @@ class SkillsHandlers(SkillGenerationHandlers):
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
 
-        name = request.name if request.HasField("name") else None
-        display_name = request.display_name if request.HasField("display_name") else None
-        description = request.description if request.HasField("description") else None
-        content = request.content if request.HasField("content") else None
+        name = request.name if request.has_field("name") else None
+        display_name = request.display_name if request.has_field("display_name") else None
+        description = request.description if request.has_field("description") else None
+        content = request.content if request.has_field("content") else None
         requires_tools = (
-            list(request.requires_tools.names) if request.HasField("requires_tools") else None
+            list(request.requires_tools.names) if request.has_field("requires_tools") else None
         )
 
         try:
@@ -323,7 +324,7 @@ class SkillsHandlers(SkillGenerationHandlers):
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization ID format")
 
         target_skill_id: UUID | None = None
-        if request.HasField("target_skill_id") and request.target_skill_id:
+        if request.has_field("target_skill_id") and request.target_skill_id:
             try:
                 target_skill_id = UUID(request.target_skill_id)
             except ValueError:
@@ -404,10 +405,10 @@ class SkillsHandlers(SkillGenerationHandlers):
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization ID format")
 
-        status = request.status if request.HasField("status") else "pending"
+        status = request.status if request.has_field("status") else "pending"
         page = 1
         page_size = 50
-        if request.HasField("pagination"):
+        if request.has_field("pagination"):
             page = request.pagination.page if request.pagination.page > 0 else 1
             page_size = min(
                 request.pagination.page_size if request.pagination.page_size > 0 else 50,
@@ -540,7 +541,7 @@ class SkillsHandlers(SkillGenerationHandlers):
 
         page = 1
         page_size = 50
-        if request.HasField("pagination"):
+        if request.has_field("pagination"):
             page = request.pagination.page if request.pagination.page > 0 else 1
             page_size = min(
                 request.pagination.page_size if request.pagination.page_size > 0 else 50,
@@ -629,7 +630,7 @@ class SkillsHandlers(SkillGenerationHandlers):
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
 
-        version_number = request.version_number if request.HasField("version_number") else None
+        version_number = request.version_number if request.has_field("version_number") else None
 
         try:
             async with open_session() as session:
@@ -728,8 +729,8 @@ class SkillsHandlers(SkillGenerationHandlers):
                     metrics=[SkillMetric(**metric) for metric in page.metrics],
                     next_cursor=page.next_cursor,
                 )
-                response.window_start.FromDatetime(page.window_start)
-                response.window_end.FromDatetime(page.window_end)
+                response.window_start = datetime_to_timestamp(page.window_start)
+                response.window_end = datetime_to_timestamp(page.window_end)
                 return response
 
         except ValidationError as e:

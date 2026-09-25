@@ -74,7 +74,7 @@ def attach_asset_cookie(
         session_id=session_id,
     )
     config = resolve_asset_cookie_config()
-    ctx.response_headers().add("set-cookie", build_set_cookie(config, token))
+    ctx.response_headers.add("set-cookie", build_set_cookie(config, token))
     return f"{config.name}={token}"
 
 

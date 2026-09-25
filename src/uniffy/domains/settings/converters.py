@@ -1,24 +1,24 @@
 from typing import Any
 
-from uniffy_proto.settings.v1.settings_pb2 import (
+from uniffy_proto.settings.v1.settings_pb import (
     AppearanceSettings as ProtoAppearance,
 )
-from uniffy_proto.settings.v1.settings_pb2 import (
+from uniffy_proto.settings.v1.settings_pb import (
     EffectiveSettings as ProtoEffectiveSettings,
 )
-from uniffy_proto.settings.v1.settings_pb2 import (
+from uniffy_proto.settings.v1.settings_pb import (
     KeyboardShortcutsSettings as ProtoKeyboardShortcuts,
 )
-from uniffy_proto.settings.v1.settings_pb2 import (
+from uniffy_proto.settings.v1.settings_pb import (
     NotificationChannelPreference as ProtoChannelPreference,
 )
-from uniffy_proto.settings.v1.settings_pb2 import (
+from uniffy_proto.settings.v1.settings_pb import (
     NotificationsSettings as ProtoNotifications,
 )
-from uniffy_proto.settings.v1.settings_pb2 import (
+from uniffy_proto.settings.v1.settings_pb import (
     SchedulingSettings as ProtoScheduling,
 )
-from uniffy_proto.settings.v1.settings_pb2 import (
+from uniffy_proto.settings.v1.settings_pb import (
     SettingsProfile as ProtoSettingsProfile,
 )
 
@@ -37,18 +37,18 @@ def profile_to_proto(profile: SettingsProfile) -> ProtoSettingsProfile:
     )
 
     if profile.appearance:
-        proto_profile.appearance.CopyFrom(appearance_dict_to_proto(profile.appearance))
+        proto_profile.appearance = appearance_dict_to_proto(profile.appearance)
 
     if profile.keyboard_shortcuts:
-        proto_profile.keyboard_shortcuts.CopyFrom(
-            keyboard_shortcuts_dict_to_proto(profile.keyboard_shortcuts)
+        proto_profile.keyboard_shortcuts = keyboard_shortcuts_dict_to_proto(
+            profile.keyboard_shortcuts
         )
 
     if profile.notifications:
-        proto_profile.notifications.CopyFrom(notifications_dict_to_proto(profile.notifications))
+        proto_profile.notifications = notifications_dict_to_proto(profile.notifications)
 
     if profile.scheduling:
-        proto_profile.scheduling.CopyFrom(scheduling_dict_to_proto(profile.scheduling))
+        proto_profile.scheduling = scheduling_dict_to_proto(profile.scheduling)
 
     return proto_profile
 
@@ -81,10 +81,10 @@ def scheduling_from_proto(proto: ProtoScheduling | None) -> dict[str, Any] | Non
 
     result: dict[str, Any] = {}
 
-    if proto.HasField("workday_start"):
+    if proto.has_field("workday_start"):
         result["workday_start"] = proto.workday_start or None
 
-    if proto.HasField("workday_end"):
+    if proto.has_field("workday_end"):
         result["workday_end"] = proto.workday_end or None
 
     if proto.workdays:
@@ -187,7 +187,7 @@ def notifications_dict_to_proto(settings: dict[str, Any] | None) -> ProtoNotific
             pref.browser = channels["browser"]
         if channels.get("email") is not None:
             pref.email = channels["email"]
-        proto.channel_overrides[notif_type].CopyFrom(pref)
+        proto.channel_overrides[notif_type] = pref
 
     reminder_intervals = settings.get("default_reminder_intervals")
     if reminder_intervals:
@@ -212,38 +212,38 @@ def appearance_from_proto(proto: ProtoAppearance | None) -> dict[str, Any] | Non
 
     result: dict[str, Any] = {}
 
-    if proto.HasField("theme"):
+    if proto.has_field("theme"):
         result["theme"] = proto.theme
 
-    if proto.HasField("accent_color"):
+    if proto.has_field("accent_color"):
         result["accent_color"] = proto.accent_color
 
-    if proto.HasField("font_family"):
+    if proto.has_field("font_family"):
         result["font_family"] = proto.font_family
 
-    if proto.HasField("sidebar_collapsed"):
+    if proto.has_field("sidebar_collapsed"):
         result["sidebar_collapsed"] = proto.sidebar_collapsed
 
-    if proto.HasField("compact_mode"):
+    if proto.has_field("compact_mode"):
         result["compact_mode"] = proto.compact_mode
 
-    if proto.HasField("default_editor"):
+    if proto.has_field("default_editor"):
         result["default_editor"] = proto.default_editor
 
-    if proto.HasField("mention_display"):
+    if proto.has_field("mention_display"):
         result["mention_display"] = proto.mention_display
 
-    if proto.HasField("markdown_show_preview"):
+    if proto.has_field("markdown_show_preview"):
         result["markdown_show_preview"] = proto.markdown_show_preview
 
-    if proto.HasField("markdown_show_line_numbers"):
+    if proto.has_field("markdown_show_line_numbers"):
         result["markdown_show_line_numbers"] = proto.markdown_show_line_numbers
 
-    if proto.HasField("timezone"):
+    if proto.has_field("timezone"):
         # Empty string clears the preference back to automatic.
         result["timezone"] = proto.timezone or None
 
-    if proto.HasField("week_start"):
+    if proto.has_field("week_start"):
         result["week_start"] = proto.week_start or None
 
     return result if result else None
@@ -266,39 +266,39 @@ def notifications_from_proto(proto: ProtoNotifications | None) -> dict[str, Any]
 
     result: dict[str, Any] = {}
 
-    if proto.HasField("browser_enabled"):
+    if proto.has_field("browser_enabled"):
         result["browser_enabled"] = proto.browser_enabled
 
-    if proto.HasField("email_enabled"):
+    if proto.has_field("email_enabled"):
         result["email_enabled"] = proto.email_enabled
 
-    if proto.HasField("sound_enabled"):
+    if proto.has_field("sound_enabled"):
         result["sound_enabled"] = proto.sound_enabled
 
-    if proto.HasField("email_frequency"):
+    if proto.has_field("email_frequency"):
         result["email_frequency"] = proto.email_frequency
 
-    if proto.HasField("email_digest_time"):
+    if proto.has_field("email_digest_time"):
         result["email_digest_time"] = proto.email_digest_time
 
-    if proto.HasField("quiet_hours_start"):
+    if proto.has_field("quiet_hours_start"):
         result["quiet_hours_start"] = proto.quiet_hours_start or None
 
-    if proto.HasField("quiet_hours_end"):
+    if proto.has_field("quiet_hours_end"):
         result["quiet_hours_end"] = proto.quiet_hours_end or None
 
-    if proto.HasField("toast_enabled"):
+    if proto.has_field("toast_enabled"):
         result["toast_enabled"] = proto.toast_enabled
 
     if proto.channel_overrides:
         overrides: dict[str, dict[str, bool]] = {}
         for notif_type, pref in proto.channel_overrides.items():
             channels: dict[str, bool] = {}
-            if pref.HasField("in_app"):
+            if pref.has_field("in_app"):
                 channels["in_app"] = pref.in_app
-            if pref.HasField("browser"):
+            if pref.has_field("browser"):
                 channels["browser"] = pref.browser
-            if pref.HasField("email"):
+            if pref.has_field("email"):
                 channels["email"] = pref.email
             if channels:
                 overrides[notif_type] = channels

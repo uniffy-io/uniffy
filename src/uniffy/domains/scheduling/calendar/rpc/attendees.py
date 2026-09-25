@@ -2,7 +2,7 @@
 
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
-from uniffy_proto.cal.v1.calendar_pb2 import (
+from uniffy_proto.cal.v1.calendar_pb import (
     AddAttendeesRequest,
     AddAttendeesResponse,
     ListEventActivitiesRequest,
@@ -14,7 +14,7 @@ from uniffy_proto.cal.v1.calendar_pb2 import (
     UpdateAttendeeStatusRequest,
     UpdateAttendeeStatusResponse,
 )
-from uniffy_proto.common.v1.common_pb2 import PaginationResponse
+from uniffy_proto.common.v1.common_pb import PaginationResponse
 
 from uniffy.core.auth.principal import current_user_id, resolve_organization_id
 from uniffy.core.search.indexer import build_content_urn
@@ -182,7 +182,7 @@ class AttendeeHandlers:
 
         page = 1
         page_size = 50
-        if request.HasField("pagination"):
+        if request.has_field("pagination"):
             page = request.pagination.page if request.pagination.page > 0 else 1
             if request.pagination.page_size > 0:
                 page_size = min(request.pagination.page_size, 200)

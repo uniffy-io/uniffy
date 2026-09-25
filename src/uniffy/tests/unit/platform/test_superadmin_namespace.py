@@ -55,7 +55,7 @@ def _awaited_callee_names(method_source: str) -> set[str]:
 
 
 def _handler_modules(proto_path: Path) -> tuple[Path, ...]:
-    proto_import = f"uniffy_proto.superadmin.v1.{proto_path.stem}_pb2"
+    proto_import = f"uniffy_proto.superadmin.v1.{proto_path.stem}_pb"
     return tuple(path for path in DOMAINS.rglob("*handlers.py") if proto_import in path.read_text())
 
 

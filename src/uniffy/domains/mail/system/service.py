@@ -1,7 +1,7 @@
 """ConnectRPC service binding for ``superadmin.v1.SystemMailService``."""
 
 from connectrpc.request import RequestContext
-from uniffy_proto.superadmin.v1.system_mail_pb2 import (
+from uniffy_proto.superadmin.v1.system_mail_pb import (
     ClearSystemMailConfigRequest,
     ClearSystemMailConfigResponse,
     ForceClearOrgConfigRequest,

@@ -6,7 +6,7 @@ from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
-from uniffy_proto.chat.v1.chat_pb2 import (
+from uniffy_proto.chat.v1.chat_pb import (
     CreateCategoryRequest,
     CreateCategoryResponse,
     DeleteCategoryRequest,
@@ -77,7 +77,7 @@ class CategoryHandlers:
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
 
-        name = request.name if request.HasField("name") else None
+        name = request.name if request.has_field("name") else None
 
         try:
             async with open_session() as session:
@@ -153,7 +153,7 @@ class CategoryHandlers:
             org_id = resolve_organization_id(request.organization_id)
             channel_id = UUID(request.channel_id)
             cat_id = None
-            if request.HasField("category_id") and request.category_id:
+            if request.has_field("category_id") and request.category_id:
                 cat_id = UUID(request.category_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")

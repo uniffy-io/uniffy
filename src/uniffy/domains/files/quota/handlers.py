@@ -6,7 +6,7 @@ from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
-from uniffy_proto.files.v1.files_pb2 import (
+from uniffy_proto.files.v1.files_pb import (
     CheckStorageQuotaRequest,
     CheckStorageQuotaResponse,
     GetOrgFileVersionPolicyRequest,
@@ -105,19 +105,19 @@ class QuotaHandlersMixin:
                 ops = QuotaOperations(session)
 
                 org_quota_bytes = None
-                if request.HasField("org_quota_bytes"):
+                if request.has_field("org_quota_bytes"):
                     org_quota_bytes = request.org_quota_bytes
 
                 default_user_quota_bytes = None
-                if request.HasField("default_user_quota_bytes"):
+                if request.has_field("default_user_quota_bytes"):
                     default_user_quota_bytes = request.default_user_quota_bytes
 
                 warn_at_percent = None
-                if request.HasField("warn_at_percent"):
+                if request.has_field("warn_at_percent"):
                     warn_at_percent = request.warn_at_percent
 
                 enforce = None
-                if request.HasField("enforce"):
+                if request.has_field("enforce"):
                     enforce = request.enforce
 
                 quota = await ops.set_org_quota(
@@ -183,7 +183,7 @@ class QuotaHandlersMixin:
                     response.effective_quota_bytes = effective_quota
 
                 if override:
-                    response.override.CopyFrom(user_quota_override_to_proto(override))
+                    response.override = user_quota_override_to_proto(override)
 
                 return response
 
@@ -217,7 +217,7 @@ class QuotaHandlersMixin:
                     organization_id=organization_id,
                     user_id=target_user_id,
                     quota_bytes=request.quota_bytes,
-                    note=request.note if request.HasField("note") else None,
+                    note=request.note if request.has_field("note") else None,
                 )
 
                 return SetUserStorageQuotaOverrideResponse(
@@ -316,7 +316,7 @@ class QuotaHandlersMixin:
         user_id = current_user_id()
 
         target_user_id = user_id
-        if request.HasField("user_id"):
+        if request.has_field("user_id"):
             try:
                 target_user_id = UUID(request.user_id)
             except ValueError:
@@ -406,7 +406,7 @@ class QuotaHandlersMixin:
                 ops = QuotaOperations(session)
                 await ops._require_admin(user_id, organization_id)
 
-                if request.HasField("user_id"):
+                if request.has_field("user_id"):
                     try:
                         target_user_id = UUID(request.user_id)
                     except ValueError:

@@ -5,12 +5,12 @@ from uuid import UUID
 from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
-from google.protobuf.timestamp_pb2 import Timestamp
 from loguru import logger
-from uniffy_proto.chat.v1.chat_pb2 import (
+from protobuf.wkt import Timestamp
+from uniffy_proto.chat.v1.chat_pb import (
     ChatDraft as ProtoChatDraft,
 )
-from uniffy_proto.chat.v1.chat_pb2 import (
+from uniffy_proto.chat.v1.chat_pb import (
     DeleteDraftRequest,
     DeleteDraftResponse,
     ListDraftsRequest,
@@ -20,6 +20,7 @@ from uniffy_proto.chat.v1.chat_pb2 import (
 )
 
 from uniffy.core.auth.principal import current_user_id, resolve_organization_id
+from uniffy.core.converters.proto import datetime_to_timestamp
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models.chat.draft import ChatDraft
 from uniffy.domains.chat.drafts.operations import ChatDraftOperations
@@ -48,13 +49,13 @@ def draft_to_proto(draft: ChatDraft) -> ProtoChatDraft:
         proto.root_message_id = str(draft.root_message_id)
     if draft.updated_at is not None:
         ts = Timestamp()
-        ts.FromDatetime(draft.updated_at)
-        proto.updated_at.CopyFrom(ts)
+        ts = datetime_to_timestamp(draft.updated_at)
+        proto.updated_at = ts
     return proto
 
 
 def _parse_root_message_id(request: SaveDraftRequest | DeleteDraftRequest) -> UUID | None:
-    if not request.HasField("root_message_id"):
+    if not request.has_field("root_message_id"):
         return None
     try:
         return UUID(request.root_message_id)

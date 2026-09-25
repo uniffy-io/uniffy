@@ -5,8 +5,8 @@ membership, an upload record readable across tenants, and a platform
 operator reading org-wide usage from a plain member seat.
 """
 
-from contextlib import asynccontextmanager
 import ast
+from contextlib import asynccontextmanager
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -102,7 +102,7 @@ def _upload_status_ctx(session):
 
 async def test_get_upload_status_hides_another_users_upload() -> None:
     """The response carries filename and size, so a foreign hit is a leak."""
-    from uniffy_proto.files.v1.files_pb2 import GetUploadStatusRequest
+    from uniffy_proto.files.v1.files_pb import GetUploadStatusRequest
 
     from uniffy.domains.files.handlers import FilesHandlers
 

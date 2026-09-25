@@ -2,7 +2,7 @@
 
 from enum import StrEnum
 
-from uniffy_proto.projects.v1.projects_pb2 import TaskFilterOperator, TaskPseudoField
+from uniffy_proto.projects.v1.projects_pb import TaskFilterOperator, TaskPseudoField
 
 from uniffy.core.models.projects.field_definition import ProjectFieldType
 
@@ -46,94 +46,92 @@ FIELD_TYPE_KINDS: dict[ProjectFieldType, FieldKind] = {
 }
 
 PSEUDO_FIELD_KINDS: dict[PseudoField, FieldKind] = {
-    TaskPseudoField.TASK_PSEUDO_FIELD_TAGS: FieldKind.TAGS,
-    TaskPseudoField.TASK_PSEUDO_FIELD_SPRINT: FieldKind.SPRINT,
-    TaskPseudoField.TASK_PSEUDO_FIELD_TASK_TYPE: FieldKind.TASK_TYPE,
-    TaskPseudoField.TASK_PSEUDO_FIELD_CREATOR: FieldKind.SINGLE_PERSON,
-    TaskPseudoField.TASK_PSEUDO_FIELD_PARENT: FieldKind.TASK_REF,
-    TaskPseudoField.TASK_PSEUDO_FIELD_EPIC: FieldKind.EPIC,
-    TaskPseudoField.TASK_PSEUDO_FIELD_HAS_SUBTASKS: FieldKind.BOOLEAN,
-    TaskPseudoField.TASK_PSEUDO_FIELD_DEPTH: FieldKind.NUMBER,
-    TaskPseudoField.TASK_PSEUDO_FIELD_IS_MILESTONE: FieldKind.BOOLEAN,
+    TaskPseudoField.TAGS: FieldKind.TAGS,
+    TaskPseudoField.SPRINT: FieldKind.SPRINT,
+    TaskPseudoField.TASK_TYPE: FieldKind.TASK_TYPE,
+    TaskPseudoField.CREATOR: FieldKind.SINGLE_PERSON,
+    TaskPseudoField.PARENT: FieldKind.TASK_REF,
+    TaskPseudoField.EPIC: FieldKind.EPIC,
+    TaskPseudoField.HAS_SUBTASKS: FieldKind.BOOLEAN,
+    TaskPseudoField.DEPTH: FieldKind.NUMBER,
+    TaskPseudoField.IS_MILESTONE: FieldKind.BOOLEAN,
     # Same rule as TaskValidator.blockers_resolved: incomplete with a live incomplete blocker.
-    TaskPseudoField.TASK_PSEUDO_FIELD_IS_BLOCKED: FieldKind.BOOLEAN,
-    TaskPseudoField.TASK_PSEUDO_FIELD_BLOCKED_BY: FieldKind.TASK_REF_SET,
-    TaskPseudoField.TASK_PSEUDO_FIELD_CREATED_AT: FieldKind.TIMESTAMP,
-    TaskPseudoField.TASK_PSEUDO_FIELD_UPDATED_AT: FieldKind.TIMESTAMP,
-    TaskPseudoField.TASK_PSEUDO_FIELD_COMPLETED_AT: FieldKind.TIMESTAMP,
-    TaskPseudoField.TASK_PSEUDO_FIELD_ESTIMATED_MINUTES: FieldKind.NUMBER,
-    TaskPseudoField.TASK_PSEUDO_FIELD_TIME_SPENT_MINUTES: FieldKind.NUMBER,
-    TaskPseudoField.TASK_PSEUDO_FIELD_NUMBER: FieldKind.NUMBER,
+    TaskPseudoField.IS_BLOCKED: FieldKind.BOOLEAN,
+    TaskPseudoField.BLOCKED_BY: FieldKind.TASK_REF_SET,
+    TaskPseudoField.CREATED_AT: FieldKind.TIMESTAMP,
+    TaskPseudoField.UPDATED_AT: FieldKind.TIMESTAMP,
+    TaskPseudoField.COMPLETED_AT: FieldKind.TIMESTAMP,
+    TaskPseudoField.ESTIMATED_MINUTES: FieldKind.NUMBER,
+    TaskPseudoField.TIME_SPENT_MINUTES: FieldKind.NUMBER,
+    TaskPseudoField.NUMBER: FieldKind.NUMBER,
 }
 
 NEVER_EMPTY_PSEUDO_FIELDS: frozenset[PseudoField] = frozenset({
-    TaskPseudoField.TASK_PSEUDO_FIELD_TASK_TYPE,
-    TaskPseudoField.TASK_PSEUDO_FIELD_CREATOR,
-    TaskPseudoField.TASK_PSEUDO_FIELD_DEPTH,
-    TaskPseudoField.TASK_PSEUDO_FIELD_CREATED_AT,
-    TaskPseudoField.TASK_PSEUDO_FIELD_UPDATED_AT,
-    TaskPseudoField.TASK_PSEUDO_FIELD_NUMBER,
+    TaskPseudoField.TASK_TYPE,
+    TaskPseudoField.CREATOR,
+    TaskPseudoField.DEPTH,
+    TaskPseudoField.CREATED_AT,
+    TaskPseudoField.UPDATED_AT,
+    TaskPseudoField.NUMBER,
 })
 
 _OP = TaskFilterOperator
 EMPTINESS_OPERATORS: frozenset[Operator] = frozenset({
-    _OP.TASK_FILTER_OPERATOR_IS_EMPTY,
-    _OP.TASK_FILTER_OPERATOR_IS_NOT_EMPTY,
+    _OP.IS_EMPTY,
+    _OP.IS_NOT_EMPTY,
 })
 ID_OPERATORS: frozenset[Operator] = frozenset({
-    _OP.TASK_FILTER_OPERATOR_IS,
-    _OP.TASK_FILTER_OPERATOR_IS_NOT,
-    _OP.TASK_FILTER_OPERATOR_IS_ANY_OF,
-    _OP.TASK_FILTER_OPERATOR_IS_NONE_OF,
-    _OP.TASK_FILTER_OPERATOR_IS_ALL_OF,
+    _OP.IS,
+    _OP.IS_NOT,
+    _OP.IS_ANY_OF,
+    _OP.IS_NONE_OF,
+    _OP.IS_ALL_OF,
 })
 SINGLE_ID_OPERATORS: frozenset[Operator] = frozenset({
-    _OP.TASK_FILTER_OPERATOR_IS,
-    _OP.TASK_FILTER_OPERATOR_IS_NOT,
+    _OP.IS,
+    _OP.IS_NOT,
 })
 DATE_COMPARISON_OPERATORS: frozenset[Operator] = frozenset({
-    _OP.TASK_FILTER_OPERATOR_IS,
-    _OP.TASK_FILTER_OPERATOR_BEFORE,
-    _OP.TASK_FILTER_OPERATOR_AFTER,
-    _OP.TASK_FILTER_OPERATOR_ON_OR_BEFORE,
-    _OP.TASK_FILTER_OPERATOR_ON_OR_AFTER,
+    _OP.IS,
+    _OP.BEFORE,
+    _OP.AFTER,
+    _OP.ON_OR_BEFORE,
+    _OP.ON_OR_AFTER,
 })
 
 _SINGLE_ID_SET = (
     frozenset({
-        _OP.TASK_FILTER_OPERATOR_IS,
-        _OP.TASK_FILTER_OPERATOR_IS_NOT,
-        _OP.TASK_FILTER_OPERATOR_IS_ANY_OF,
-        _OP.TASK_FILTER_OPERATOR_IS_NONE_OF,
+        _OP.IS,
+        _OP.IS_NOT,
+        _OP.IS_ANY_OF,
+        _OP.IS_NONE_OF,
     })
     | EMPTINESS_OPERATORS
 )
 _MULTI_ID_SET = (
     frozenset({
-        _OP.TASK_FILTER_OPERATOR_IS_ANY_OF,
-        _OP.TASK_FILTER_OPERATOR_IS_ALL_OF,
-        _OP.TASK_FILTER_OPERATOR_IS_NONE_OF,
+        _OP.IS_ANY_OF,
+        _OP.IS_ALL_OF,
+        _OP.IS_NONE_OF,
     })
     | EMPTINESS_OPERATORS
 )
-_DATE_SET = (
-    DATE_COMPARISON_OPERATORS | frozenset({_OP.TASK_FILTER_OPERATOR_BETWEEN}) | EMPTINESS_OPERATORS
-)
+_DATE_SET = DATE_COMPARISON_OPERATORS | frozenset({_OP.BETWEEN}) | EMPTINESS_OPERATORS
 
 OPERATORS: dict[FieldKind, frozenset[Operator]] = {
     FieldKind.TEXT: frozenset({
-        _OP.TASK_FILTER_OPERATOR_CONTAINS,
-        _OP.TASK_FILTER_OPERATOR_NOT_CONTAINS,
-        _OP.TASK_FILTER_OPERATOR_IS,
-        _OP.TASK_FILTER_OPERATOR_IS_NOT,
+        _OP.CONTAINS,
+        _OP.NOT_CONTAINS,
+        _OP.IS,
+        _OP.IS_NOT,
     })
     | EMPTINESS_OPERATORS,
     FieldKind.NUMBER: frozenset({
-        _OP.TASK_FILTER_OPERATOR_IS,
-        _OP.TASK_FILTER_OPERATOR_IS_NOT,
-        _OP.TASK_FILTER_OPERATOR_GREATER_THAN,
-        _OP.TASK_FILTER_OPERATOR_LESS_THAN,
-        _OP.TASK_FILTER_OPERATOR_BETWEEN,
+        _OP.IS,
+        _OP.IS_NOT,
+        _OP.GREATER_THAN,
+        _OP.LESS_THAN,
+        _OP.BETWEEN,
     })
     | EMPTINESS_OPERATORS,
     FieldKind.SINGLE_SELECT: _SINGLE_ID_SET,
@@ -148,7 +146,7 @@ OPERATORS: dict[FieldKind, frozenset[Operator]] = {
     FieldKind.PERSON: _SINGLE_ID_SET | _MULTI_ID_SET,
     FieldKind.DATE: _DATE_SET,
     FieldKind.TIMESTAMP: _DATE_SET,
-    FieldKind.BOOLEAN: frozenset({_OP.TASK_FILTER_OPERATOR_IS}),
+    FieldKind.BOOLEAN: frozenset({_OP.IS}),
     FieldKind.REFERENCE: EMPTINESS_OPERATORS,
 }
 

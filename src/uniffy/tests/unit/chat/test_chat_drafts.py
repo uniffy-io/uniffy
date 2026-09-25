@@ -283,8 +283,8 @@ def test_draft_changed_is_user_level_event():
         "client_session_id": client_session_id,
     })
     assert decoded is not None
-    assert decoded.draft_changed.channel_id == channel_id
-    assert decoded.draft_changed.root_message_id == root_message_id
-    assert decoded.draft_changed.content == content
-    assert decoded.draft_changed.client_session_id == client_session_id
-    assert decoded.draft_changed.deleted is False
+    assert decoded.payload.value.channel_id == channel_id
+    assert decoded.payload.value.root_message_id == root_message_id
+    assert decoded.payload.value.content == content
+    assert decoded.payload.value.client_session_id == client_session_id
+    assert decoded.payload.value.deleted is False

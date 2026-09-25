@@ -4,8 +4,8 @@ from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
-from uniffy_proto.common.v1 import common_pb2 as common
-from uniffy_proto.people.v1 import people_pb2 as pb
+from uniffy_proto.common.v1 import common_pb as common
+from uniffy_proto.people.v1 import people_pb as pb
 
 from uniffy.core.auth.principal import current_user_id, resolve_organization_id
 from uniffy.core.converters.proto import timestamp_to_datetime
@@ -58,12 +58,12 @@ def _profile_changes(
 ) -> dict:
     changes: dict = {}
     for name in scalar_fields:
-        if request.HasField(name):
+        if request.has_field(name):
             value = getattr(request, name)
             changes[name] = value if value else None
-    if with_start_date and request.HasField("start_date"):
+    if with_start_date and request.has_field("start_date"):
         changes["start_date"] = timestamp_to_datetime(request.start_date).date()
-    if with_links and request.HasField("links"):
+    if with_links and request.has_field("links"):
         changes["links"] = [{"label": link.label, "url": link.url} for link in request.links.links]
     return changes
 
@@ -80,12 +80,12 @@ class PeopleHandlers:
         try:
             async with open_session() as session:
                 include_inactive = (
-                    request.include_inactive if request.HasField("include_inactive") else False
+                    request.include_inactive if request.has_field("include_inactive") else False
                 )
 
                 page = 1
                 page_size = DEFAULT_PAGE_SIZE
-                if request.HasField("pagination"):
+                if request.has_field("pagination"):
                     page = max(1, request.pagination.page or 1)
                     page_size = min(
                         max(1, request.pagination.page_size or DEFAULT_PAGE_SIZE),
@@ -97,9 +97,9 @@ class PeopleHandlers:
                     organization_id=org_id,
                     page=page,
                     page_size=page_size,
-                    search=request.search if request.HasField("search") else None,
-                    department=request.department if request.HasField("department") else None,
-                    team_id=UUID(request.team_id) if request.HasField("team_id") else None,
+                    search=request.search if request.has_field("search") else None,
+                    department=request.department if request.has_field("department") else None,
+                    team_id=UUID(request.team_id) if request.has_field("team_id") else None,
                     include_inactive=include_inactive,
                 )
                 people = [
@@ -258,7 +258,7 @@ class PeopleHandlers:
         try:
             target_id = UUID(request.user_id)
             manager_id = (
-                UUID(request.manager_user_id) if request.HasField("manager_user_id") else None
+                UUID(request.manager_user_id) if request.has_field("manager_user_id") else None
             )
             async with open_session() as session:
                 membership = await OrganizationOperations(session).require_org_member(

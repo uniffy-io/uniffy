@@ -6,7 +6,7 @@ from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
-from uniffy_proto.comments.v1.comments_pb2 import (
+from uniffy_proto.comments.v1.comments_pb import (
     AddReactionRequest,
     AddReactionResponse,
     CreateCommentRequest,
@@ -63,7 +63,7 @@ class CommentsHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Comment body is required")
 
         parent_comment_id = None
-        if request.HasField("parent_comment_id"):
+        if request.has_field("parent_comment_id"):
             try:
                 parent_comment_id = UUID(request.parent_comment_id)
             except ValueError:
@@ -72,10 +72,8 @@ class CommentsHandlers:
         anchor_type = anchor_type_from_proto(request.anchor_type)
 
         anchor_data = None
-        if request.HasField("anchor_data"):
-            from google.protobuf.json_format import MessageToDict
-
-            anchor_data = MessageToDict(request.anchor_data)
+        if request.has_field("anchor_data"):
+            anchor_data = request.anchor_data.to_python()
 
         try:
             async with open_session() as session:
@@ -101,7 +99,7 @@ class CommentsHandlers:
                 )
 
                 response = CreateCommentResponse()
-                response.comment.CopyFrom(proto_comment)
+                response.comment = proto_comment
                 return response
 
         except NotFoundError as e:
@@ -152,7 +150,7 @@ class CommentsHandlers:
                 )
 
                 response = UpdateCommentResponse()
-                response.comment.CopyFrom(proto_comment)
+                response.comment = proto_comment
                 return response
 
         except NotFoundError as e:
@@ -218,11 +216,11 @@ class CommentsHandlers:
         page_size = min(page_size, 100)
 
         is_resolved = None
-        if request.HasField("is_resolved"):
+        if request.has_field("is_resolved"):
             is_resolved = request.is_resolved
 
         anchor_type = None
-        if request.HasField("anchor_type"):
+        if request.has_field("anchor_type"):
             anchor_type = anchor_type_from_proto(request.anchor_type)
 
         try:
@@ -352,7 +350,7 @@ class CommentsHandlers:
                 )
 
                 response = GetCommentResponse()
-                response.comment.CopyFrom(proto_comment)
+                response.comment = proto_comment
                 return response
 
         except NotFoundError as e:
@@ -399,7 +397,7 @@ class CommentsHandlers:
                 )
 
                 response = ResolveCommentResponse()
-                response.comment.CopyFrom(proto_comment)
+                response.comment = proto_comment
                 return response
 
         except NotFoundError as e:
@@ -446,7 +444,7 @@ class CommentsHandlers:
                 )
 
                 response = ReopenCommentResponse()
-                response.comment.CopyFrom(proto_comment)
+                response.comment = proto_comment
                 return response
 
         except NotFoundError as e:

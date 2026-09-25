@@ -8,7 +8,7 @@ from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
-from uniffy_proto.superadmin.v1.system_mfa_pb2 import (
+from uniffy_proto.superadmin.v1.system_mfa_pb import (
     ApprovePeerResetRequest,
     ApprovePeerResetResponse,
     ListPeerResetsRequest,
@@ -18,7 +18,7 @@ from uniffy_proto.superadmin.v1.system_mfa_pb2 import (
     ResetUserMfaRequest,
     ResetUserMfaResponse,
 )
-from uniffy_proto.superadmin.v1.system_mfa_pb2 import (
+from uniffy_proto.superadmin.v1.system_mfa_pb import (
     PendingPeerReset as PendingPeerResetProto,
 )
 
@@ -78,7 +78,7 @@ class SystemMfaHandlers:
                 response = RequestPeerResetResponse(
                     request_id=str(request_id),
                 )
-                response.expires_at.CopyFrom(datetime_to_timestamp(expires_at))
+                response.expires_at = datetime_to_timestamp(expires_at)
                 return response
         except PermissionDeniedError as exc:
             raise ConnectError(Code.PERMISSION_DENIED, str(exc))
@@ -115,8 +115,8 @@ class SystemMfaHandlers:
                 target_email=p.target_email,
                 reason=p.reason,
             )
-            row.created_at.CopyFrom(datetime_to_timestamp(p.created_at))
-            row.expires_at.CopyFrom(datetime_to_timestamp(p.expires_at))
+            row.created_at = datetime_to_timestamp(p.created_at)
+            row.expires_at = datetime_to_timestamp(p.expires_at)
             response.requests.append(row)
         return response
 

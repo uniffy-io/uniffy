@@ -2,55 +2,55 @@
 
 from datetime import UTC, datetime
 
-from uniffy_proto.cal.v1.calendar_pb2 import (
+from uniffy_proto.cal.v1.calendar_pb import (
     Attendee as ProtoAttendee,
 )
-from uniffy_proto.cal.v1.calendar_pb2 import (
+from uniffy_proto.cal.v1.calendar_pb import (
     AttendeeRole as ProtoAttendeeRole,
 )
-from uniffy_proto.cal.v1.calendar_pb2 import (
+from uniffy_proto.cal.v1.calendar_pb import (
     AttendeeStatus as ProtoAttendeeStatus,
 )
-from uniffy_proto.cal.v1.calendar_pb2 import (
+from uniffy_proto.cal.v1.calendar_pb import (
     CalendarEvent as ProtoCalendarEvent,
 )
-from uniffy_proto.cal.v1.calendar_pb2 import (
+from uniffy_proto.cal.v1.calendar_pb import (
     Category as ProtoCategory,
 )
-from uniffy_proto.cal.v1.calendar_pb2 import (
+from uniffy_proto.cal.v1.calendar_pb import (
     DayOfWeek as ProtoDayOfWeek,
 )
-from uniffy_proto.cal.v1.calendar_pb2 import (
+from uniffy_proto.cal.v1.calendar_pb import (
     EventActivity as ProtoEventActivity,
 )
-from uniffy_proto.cal.v1.calendar_pb2 import (
+from uniffy_proto.cal.v1.calendar_pb import (
     EventActivityAction as ProtoEventActivityAction,
 )
-from uniffy_proto.cal.v1.calendar_pb2 import (
+from uniffy_proto.cal.v1.calendar_pb import (
     EventStatus as ProtoEventStatus,
 )
-from uniffy_proto.cal.v1.calendar_pb2 import (
+from uniffy_proto.cal.v1.calendar_pb import (
     EventTemplate as ProtoEventTemplate,
 )
-from uniffy_proto.cal.v1.calendar_pb2 import (
+from uniffy_proto.cal.v1.calendar_pb import (
     EventTransparency as ProtoEventTransparency,
 )
-from uniffy_proto.cal.v1.calendar_pb2 import (
+from uniffy_proto.cal.v1.calendar_pb import (
     EventVisibility as ProtoEventVisibility,
 )
-from uniffy_proto.cal.v1.calendar_pb2 import (
+from uniffy_proto.cal.v1.calendar_pb import (
     LinkedResource as ProtoLinkedResource,
 )
-from uniffy_proto.cal.v1.calendar_pb2 import (
+from uniffy_proto.cal.v1.calendar_pb import (
     RecurrenceConfig as ProtoRecurrenceConfig,
 )
-from uniffy_proto.cal.v1.calendar_pb2 import (
+from uniffy_proto.cal.v1.calendar_pb import (
     RecurrenceEditScope as ProtoRecurrenceEditScope,
 )
-from uniffy_proto.cal.v1.calendar_pb2 import (
+from uniffy_proto.cal.v1.calendar_pb import (
     RecurrencePattern as ProtoRecurrencePattern,
 )
-from uniffy_proto.cal.v1.calendar_pb2 import (
+from uniffy_proto.cal.v1.calendar_pb import (
     ResourceType as ProtoResourceType,
 )
 
@@ -82,128 +82,126 @@ from uniffy.domains.tags.converters import tag_to_proto
 # Domain-local enum maps. ``access_mode`` and ``content_role`` are shared
 # across every domain so they live in ``core.converters.common_proto``.
 RECURRENCE_TO_PROTO = {
-    RecurrencePattern.NONE: ProtoRecurrencePattern.RECURRENCE_PATTERN_NONE,
-    RecurrencePattern.DAILY: ProtoRecurrencePattern.RECURRENCE_PATTERN_DAILY,
-    RecurrencePattern.WEEKLY: ProtoRecurrencePattern.RECURRENCE_PATTERN_WEEKLY,
-    RecurrencePattern.BIWEEKLY: ProtoRecurrencePattern.RECURRENCE_PATTERN_BIWEEKLY,
-    RecurrencePattern.MONTHLY: ProtoRecurrencePattern.RECURRENCE_PATTERN_MONTHLY,
-    RecurrencePattern.YEARLY: ProtoRecurrencePattern.RECURRENCE_PATTERN_YEARLY,
+    RecurrencePattern.NONE: ProtoRecurrencePattern.NONE,
+    RecurrencePattern.DAILY: ProtoRecurrencePattern.DAILY,
+    RecurrencePattern.WEEKLY: ProtoRecurrencePattern.WEEKLY,
+    RecurrencePattern.BIWEEKLY: ProtoRecurrencePattern.BIWEEKLY,
+    RecurrencePattern.MONTHLY: ProtoRecurrencePattern.MONTHLY,
+    RecurrencePattern.YEARLY: ProtoRecurrencePattern.YEARLY,
 }
 
 RECURRENCE_FROM_PROTO = {
-    ProtoRecurrencePattern.RECURRENCE_PATTERN_UNSPECIFIED: RecurrencePattern.NONE,
-    ProtoRecurrencePattern.RECURRENCE_PATTERN_NONE: RecurrencePattern.NONE,
-    ProtoRecurrencePattern.RECURRENCE_PATTERN_DAILY: RecurrencePattern.DAILY,
-    ProtoRecurrencePattern.RECURRENCE_PATTERN_WEEKLY: RecurrencePattern.WEEKLY,
-    ProtoRecurrencePattern.RECURRENCE_PATTERN_BIWEEKLY: RecurrencePattern.BIWEEKLY,
-    ProtoRecurrencePattern.RECURRENCE_PATTERN_MONTHLY: RecurrencePattern.MONTHLY,
-    ProtoRecurrencePattern.RECURRENCE_PATTERN_YEARLY: RecurrencePattern.YEARLY,
+    ProtoRecurrencePattern.UNSPECIFIED: RecurrencePattern.NONE,
+    ProtoRecurrencePattern.NONE: RecurrencePattern.NONE,
+    ProtoRecurrencePattern.DAILY: RecurrencePattern.DAILY,
+    ProtoRecurrencePattern.WEEKLY: RecurrencePattern.WEEKLY,
+    ProtoRecurrencePattern.BIWEEKLY: RecurrencePattern.BIWEEKLY,
+    ProtoRecurrencePattern.MONTHLY: RecurrencePattern.MONTHLY,
+    ProtoRecurrencePattern.YEARLY: RecurrencePattern.YEARLY,
 }
 
 EVENT_STATUS_TO_PROTO = {
-    EventStatus.CONFIRMED: ProtoEventStatus.EVENT_STATUS_CONFIRMED,
-    EventStatus.TENTATIVE: ProtoEventStatus.EVENT_STATUS_TENTATIVE,
-    EventStatus.CANCELLED: ProtoEventStatus.EVENT_STATUS_CANCELLED,
+    EventStatus.CONFIRMED: ProtoEventStatus.CONFIRMED,
+    EventStatus.TENTATIVE: ProtoEventStatus.TENTATIVE,
+    EventStatus.CANCELLED: ProtoEventStatus.CANCELLED,
 }
 
 EVENT_STATUS_FROM_PROTO = {
-    ProtoEventStatus.EVENT_STATUS_UNSPECIFIED: EventStatus.CONFIRMED,
-    ProtoEventStatus.EVENT_STATUS_CONFIRMED: EventStatus.CONFIRMED,
-    ProtoEventStatus.EVENT_STATUS_TENTATIVE: EventStatus.TENTATIVE,
-    ProtoEventStatus.EVENT_STATUS_CANCELLED: EventStatus.CANCELLED,
+    ProtoEventStatus.UNSPECIFIED: EventStatus.CONFIRMED,
+    ProtoEventStatus.CONFIRMED: EventStatus.CONFIRMED,
+    ProtoEventStatus.TENTATIVE: EventStatus.TENTATIVE,
+    ProtoEventStatus.CANCELLED: EventStatus.CANCELLED,
 }
 
 EVENT_VISIBILITY_TO_PROTO = {
-    EventVisibility.STANDARD: ProtoEventVisibility.EVENT_VISIBILITY_STANDARD,
-    EventVisibility.PRIVATE: ProtoEventVisibility.EVENT_VISIBILITY_PRIVATE,
+    EventVisibility.STANDARD: ProtoEventVisibility.STANDARD,
+    EventVisibility.PRIVATE: ProtoEventVisibility.PRIVATE,
 }
 
 EVENT_VISIBILITY_FROM_PROTO = {
-    ProtoEventVisibility.EVENT_VISIBILITY_UNSPECIFIED: EventVisibility.STANDARD,
-    ProtoEventVisibility.EVENT_VISIBILITY_STANDARD: EventVisibility.STANDARD,
-    ProtoEventVisibility.EVENT_VISIBILITY_PRIVATE: EventVisibility.PRIVATE,
+    ProtoEventVisibility.UNSPECIFIED: EventVisibility.STANDARD,
+    ProtoEventVisibility.STANDARD: EventVisibility.STANDARD,
+    ProtoEventVisibility.PRIVATE: EventVisibility.PRIVATE,
 }
 
 EVENT_TRANSPARENCY_TO_PROTO = {
-    EventTransparency.OPAQUE: ProtoEventTransparency.EVENT_TRANSPARENCY_OPAQUE,
-    EventTransparency.TRANSPARENT: ProtoEventTransparency.EVENT_TRANSPARENCY_TRANSPARENT,
+    EventTransparency.OPAQUE: ProtoEventTransparency.OPAQUE,
+    EventTransparency.TRANSPARENT: ProtoEventTransparency.TRANSPARENT,
 }
 
 EVENT_TRANSPARENCY_FROM_PROTO = {
-    ProtoEventTransparency.EVENT_TRANSPARENCY_OPAQUE: EventTransparency.OPAQUE,
-    ProtoEventTransparency.EVENT_TRANSPARENCY_TRANSPARENT: EventTransparency.TRANSPARENT,
+    ProtoEventTransparency.OPAQUE: EventTransparency.OPAQUE,
+    ProtoEventTransparency.TRANSPARENT: EventTransparency.TRANSPARENT,
 }
 
 ATTENDEE_STATUS_TO_PROTO = {
-    AttendeeStatus.PENDING: ProtoAttendeeStatus.ATTENDEE_STATUS_PENDING,
-    AttendeeStatus.ACCEPTED: ProtoAttendeeStatus.ATTENDEE_STATUS_ACCEPTED,
-    AttendeeStatus.TENTATIVE: ProtoAttendeeStatus.ATTENDEE_STATUS_TENTATIVE,
-    AttendeeStatus.DECLINED: ProtoAttendeeStatus.ATTENDEE_STATUS_DECLINED,
+    AttendeeStatus.PENDING: ProtoAttendeeStatus.PENDING,
+    AttendeeStatus.ACCEPTED: ProtoAttendeeStatus.ACCEPTED,
+    AttendeeStatus.TENTATIVE: ProtoAttendeeStatus.TENTATIVE,
+    AttendeeStatus.DECLINED: ProtoAttendeeStatus.DECLINED,
 }
 
 ATTENDEE_STATUS_FROM_PROTO = {
-    ProtoAttendeeStatus.ATTENDEE_STATUS_UNSPECIFIED: AttendeeStatus.PENDING,
-    ProtoAttendeeStatus.ATTENDEE_STATUS_PENDING: AttendeeStatus.PENDING,
-    ProtoAttendeeStatus.ATTENDEE_STATUS_ACCEPTED: AttendeeStatus.ACCEPTED,
-    ProtoAttendeeStatus.ATTENDEE_STATUS_TENTATIVE: AttendeeStatus.TENTATIVE,
-    ProtoAttendeeStatus.ATTENDEE_STATUS_DECLINED: AttendeeStatus.DECLINED,
+    ProtoAttendeeStatus.UNSPECIFIED: AttendeeStatus.PENDING,
+    ProtoAttendeeStatus.PENDING: AttendeeStatus.PENDING,
+    ProtoAttendeeStatus.ACCEPTED: AttendeeStatus.ACCEPTED,
+    ProtoAttendeeStatus.TENTATIVE: AttendeeStatus.TENTATIVE,
+    ProtoAttendeeStatus.DECLINED: AttendeeStatus.DECLINED,
 }
 
 ATTENDEE_ROLE_TO_PROTO = {
-    AttendeeRole.ORGANIZER: ProtoAttendeeRole.ATTENDEE_ROLE_ORGANIZER,
-    AttendeeRole.REQUIRED: ProtoAttendeeRole.ATTENDEE_ROLE_REQUIRED,
-    AttendeeRole.OPTIONAL: ProtoAttendeeRole.ATTENDEE_ROLE_OPTIONAL,
+    AttendeeRole.ORGANIZER: ProtoAttendeeRole.ORGANIZER,
+    AttendeeRole.REQUIRED: ProtoAttendeeRole.REQUIRED,
+    AttendeeRole.OPTIONAL: ProtoAttendeeRole.OPTIONAL,
 }
 
 ATTENDEE_ROLE_FROM_PROTO = {
-    ProtoAttendeeRole.ATTENDEE_ROLE_UNSPECIFIED: AttendeeRole.REQUIRED,
-    ProtoAttendeeRole.ATTENDEE_ROLE_ORGANIZER: AttendeeRole.ORGANIZER,
-    ProtoAttendeeRole.ATTENDEE_ROLE_REQUIRED: AttendeeRole.REQUIRED,
-    ProtoAttendeeRole.ATTENDEE_ROLE_OPTIONAL: AttendeeRole.OPTIONAL,
+    ProtoAttendeeRole.UNSPECIFIED: AttendeeRole.REQUIRED,
+    ProtoAttendeeRole.ORGANIZER: AttendeeRole.ORGANIZER,
+    ProtoAttendeeRole.REQUIRED: AttendeeRole.REQUIRED,
+    ProtoAttendeeRole.OPTIONAL: AttendeeRole.OPTIONAL,
 }
 
 RESOURCE_TYPE_TO_PROTO = {
-    ResourceType.NOTE: ProtoResourceType.RESOURCE_TYPE_NOTE,
-    ResourceType.FILE: ProtoResourceType.RESOURCE_TYPE_FILE,
-    ResourceType.CHAT: ProtoResourceType.RESOURCE_TYPE_CHAT,
+    ResourceType.NOTE: ProtoResourceType.NOTE,
+    ResourceType.FILE: ProtoResourceType.FILE,
+    ResourceType.CHAT: ProtoResourceType.CHAT,
 }
 
 DAY_OF_WEEK_MAP = {
-    "MONDAY": ProtoDayOfWeek.DAY_OF_WEEK_MONDAY,
-    "TUESDAY": ProtoDayOfWeek.DAY_OF_WEEK_TUESDAY,
-    "WEDNESDAY": ProtoDayOfWeek.DAY_OF_WEEK_WEDNESDAY,
-    "THURSDAY": ProtoDayOfWeek.DAY_OF_WEEK_THURSDAY,
-    "FRIDAY": ProtoDayOfWeek.DAY_OF_WEEK_FRIDAY,
-    "SATURDAY": ProtoDayOfWeek.DAY_OF_WEEK_SATURDAY,
-    "SUNDAY": ProtoDayOfWeek.DAY_OF_WEEK_SUNDAY,
+    "MONDAY": ProtoDayOfWeek.MONDAY,
+    "TUESDAY": ProtoDayOfWeek.TUESDAY,
+    "WEDNESDAY": ProtoDayOfWeek.WEDNESDAY,
+    "THURSDAY": ProtoDayOfWeek.THURSDAY,
+    "FRIDAY": ProtoDayOfWeek.FRIDAY,
+    "SATURDAY": ProtoDayOfWeek.SATURDAY,
+    "SUNDAY": ProtoDayOfWeek.SUNDAY,
 }
 
 DAY_OF_WEEK_FROM_PROTO = {v: k for k, v in DAY_OF_WEEK_MAP.items()}
 
 ACTIVITY_ACTION_TO_PROTO = {
-    "created": ProtoEventActivityAction.EVENT_ACTIVITY_ACTION_CREATED,
-    "title_changed": ProtoEventActivityAction.EVENT_ACTIVITY_ACTION_TITLE_CHANGED,
-    "schedule_changed": ProtoEventActivityAction.EVENT_ACTIVITY_ACTION_SCHEDULE_CHANGED,
-    "location_changed": ProtoEventActivityAction.EVENT_ACTIVITY_ACTION_LOCATION_CHANGED,
-    "meeting_changed": ProtoEventActivityAction.EVENT_ACTIVITY_ACTION_MEETING_CHANGED,
-    "description_changed": ProtoEventActivityAction.EVENT_ACTIVITY_ACTION_DESCRIPTION_CHANGED,
-    "category_changed": ProtoEventActivityAction.EVENT_ACTIVITY_ACTION_CATEGORY_CHANGED,
-    "calendar_changed": ProtoEventActivityAction.EVENT_ACTIVITY_ACTION_CALENDAR_CHANGED,
-    "recurrence_changed": ProtoEventActivityAction.EVENT_ACTIVITY_ACTION_RECURRENCE_CHANGED,
-    "reminders_changed": ProtoEventActivityAction.EVENT_ACTIVITY_ACTION_REMINDERS_CHANGED,
-    "attendees_added": ProtoEventActivityAction.EVENT_ACTIVITY_ACTION_ATTENDEES_ADDED,
-    "attendees_removed": ProtoEventActivityAction.EVENT_ACTIVITY_ACTION_ATTENDEES_REMOVED,
-    "response_changed": ProtoEventActivityAction.EVENT_ACTIVITY_ACTION_RESPONSE_CHANGED,
-    "field_updated": ProtoEventActivityAction.EVENT_ACTIVITY_ACTION_FIELD_UPDATED,
+    "created": ProtoEventActivityAction.CREATED,
+    "title_changed": ProtoEventActivityAction.TITLE_CHANGED,
+    "schedule_changed": ProtoEventActivityAction.SCHEDULE_CHANGED,
+    "location_changed": ProtoEventActivityAction.LOCATION_CHANGED,
+    "meeting_changed": ProtoEventActivityAction.MEETING_CHANGED,
+    "description_changed": ProtoEventActivityAction.DESCRIPTION_CHANGED,
+    "category_changed": ProtoEventActivityAction.CATEGORY_CHANGED,
+    "calendar_changed": ProtoEventActivityAction.CALENDAR_CHANGED,
+    "recurrence_changed": ProtoEventActivityAction.RECURRENCE_CHANGED,
+    "reminders_changed": ProtoEventActivityAction.REMINDERS_CHANGED,
+    "attendees_added": ProtoEventActivityAction.ATTENDEES_ADDED,
+    "attendees_removed": ProtoEventActivityAction.ATTENDEES_REMOVED,
+    "response_changed": ProtoEventActivityAction.RESPONSE_CHANGED,
+    "field_updated": ProtoEventActivityAction.FIELD_UPDATED,
 }
 
 RECURRENCE_EDIT_SCOPE_FROM_PROTO = {
-    ProtoRecurrenceEditScope.RECURRENCE_EDIT_SCOPE_UNSPECIFIED: RecurrenceEditScope.ALL_EVENTS,
-    ProtoRecurrenceEditScope.RECURRENCE_EDIT_SCOPE_THIS_EVENT: RecurrenceEditScope.THIS_EVENT,
-    ProtoRecurrenceEditScope.RECURRENCE_EDIT_SCOPE_ALL_EVENTS: RecurrenceEditScope.ALL_EVENTS,
-    ProtoRecurrenceEditScope.RECURRENCE_EDIT_SCOPE_THIS_AND_FOLLOWING: (
-        RecurrenceEditScope.THIS_AND_FOLLOWING
-    ),
+    ProtoRecurrenceEditScope.UNSPECIFIED: RecurrenceEditScope.ALL_EVENTS,
+    ProtoRecurrenceEditScope.THIS_EVENT: RecurrenceEditScope.THIS_EVENT,
+    ProtoRecurrenceEditScope.ALL_EVENTS: RecurrenceEditScope.ALL_EVENTS,
+    ProtoRecurrenceEditScope.THIS_AND_FOLLOWING: (RecurrenceEditScope.THIS_AND_FOLLOWING),
 }
 
 
@@ -223,22 +221,22 @@ def attendee_role_from_proto(proto_role: ProtoAttendeeRole) -> AttendeeRole:
 
 
 def recurrence_edit_scope_from_proto(
-    proto_scope: ProtoRecurrenceEditScope.ValueType,
+    proto_scope: ProtoRecurrenceEditScope,
 ) -> RecurrenceEditScope:
     """Convert proto RecurrenceEditScope to its domain value."""
     return RECURRENCE_EDIT_SCOPE_FROM_PROTO.get(proto_scope, RecurrenceEditScope.ALL_EVENTS)
 
 
-def event_status_from_proto(proto_status: ProtoEventStatus.ValueType) -> EventStatus:
+def event_status_from_proto(proto_status: ProtoEventStatus) -> EventStatus:
     return EVENT_STATUS_FROM_PROTO.get(proto_status, EventStatus.CONFIRMED)
 
 
-def event_visibility_from_proto(proto_visibility: ProtoEventVisibility.ValueType) -> EventVisibility:
+def event_visibility_from_proto(proto_visibility: ProtoEventVisibility) -> EventVisibility:
     return EVENT_VISIBILITY_FROM_PROTO.get(proto_visibility, EventVisibility.STANDARD)
 
 
 def event_transparency_from_proto(
-    proto_transparency: ProtoEventTransparency.ValueType,
+    proto_transparency: ProtoEventTransparency,
 ) -> EventTransparency | None:
     """UNSPECIFIED maps to None so the operations layer can apply its own default."""
     return EVENT_TRANSPARENCY_FROM_PROTO.get(proto_transparency)
@@ -251,7 +249,7 @@ def activity_to_proto(activity: EventActivity) -> ProtoEventActivity:
         actor_id=str(activity.actor_id),
         action=ACTIVITY_ACTION_TO_PROTO.get(
             activity.action,
-            ProtoEventActivityAction.EVENT_ACTIVITY_ACTION_UNSPECIFIED,
+            ProtoEventActivityAction.UNSPECIFIED,
         ),
         timestamp=datetime_to_timestamp(activity.timestamp),
     )
@@ -293,7 +291,7 @@ def event_to_proto(
     """
     proto_recurrence = RECURRENCE_TO_PROTO.get(
         event.recurrence_pattern,
-        ProtoRecurrencePattern.RECURRENCE_PATTERN_NONE,
+        ProtoRecurrencePattern.NONE,
     )
 
     proto_event = ProtoCalendarEvent(
@@ -316,12 +314,10 @@ def event_to_proto(
         outgoing_references=(event.outgoing_references or []) if not details_hidden else [],
         created_at=datetime_to_timestamp(event.created_at),
         updated_at=datetime_to_timestamp(event.updated_at),
-        status=EVENT_STATUS_TO_PROTO.get(event.status, ProtoEventStatus.EVENT_STATUS_CONFIRMED),
-        visibility=EVENT_VISIBILITY_TO_PROTO.get(
-            event.visibility, ProtoEventVisibility.EVENT_VISIBILITY_STANDARD
-        ),
+        status=EVENT_STATUS_TO_PROTO.get(event.status, ProtoEventStatus.CONFIRMED),
+        visibility=EVENT_VISIBILITY_TO_PROTO.get(event.visibility, ProtoEventVisibility.STANDARD),
         transparency=EVENT_TRANSPARENCY_TO_PROTO.get(
-            event.transparency, ProtoEventTransparency.EVENT_TRANSPARENCY_OPAQUE
+            event.transparency, ProtoEventTransparency.OPAQUE
         ),
         is_out_of_office=event.is_out_of_office,
         details_hidden=details_hidden,
@@ -349,7 +345,7 @@ def event_to_proto(
         proto_event.channel_id = str(event.channel_id)
 
     if event.deleted_at:
-        proto_event.deleted_at.CopyFrom(datetime_to_timestamp(event.deleted_at))
+        proto_event.deleted_at = datetime_to_timestamp(event.deleted_at)
 
     if event.linked_resources and not details_hidden:
         for resource in event.linked_resources:
@@ -357,7 +353,7 @@ def event_to_proto(
                 id=resource.get("id", ""),
                 type=RESOURCE_TYPE_TO_PROTO.get(
                     ResourceType(resource.get("type", "NOTE")),
-                    ProtoResourceType.RESOURCE_TYPE_NOTE,
+                    ProtoResourceType.NOTE,
                 ),
                 name=resource.get("name", ""),
             )
@@ -387,10 +383,10 @@ def event_to_proto(
             else:
                 # JSONB may hold a bare date; date-only midnight is UTC by convention.
                 end_dt = datetime(end_dt.year, end_dt.month, end_dt.day, tzinfo=UTC)
-            proto_recurrence_config.end_date.CopyFrom(datetime_to_timestamp(end_dt))
+            proto_recurrence_config.end_date = datetime_to_timestamp(end_dt)
         if config.get("max_occurrences"):
             proto_recurrence_config.max_occurrences = config["max_occurrences"]
-        proto_event.recurrence.CopyFrom(proto_recurrence_config)
+        proto_event.recurrence = proto_recurrence_config
 
     if attendees and not details_hidden:
         for attendee, user_info in attendees:
@@ -401,11 +397,11 @@ def event_to_proto(
                 initials=user_info.get("initials", ""),
                 status=ATTENDEE_STATUS_TO_PROTO.get(
                     attendee.status,
-                    ProtoAttendeeStatus.ATTENDEE_STATUS_PENDING,
+                    ProtoAttendeeStatus.PENDING,
                 ),
                 role=ATTENDEE_ROLE_TO_PROTO.get(
                     attendee.role,
-                    ProtoAttendeeRole.ATTENDEE_ROLE_REQUIRED,
+                    ProtoAttendeeRole.REQUIRED,
                 ),
             )
             if user_info.get("avatar_url"):
@@ -467,13 +463,13 @@ def recurrence_config_from_proto(proto_config: ProtoRecurrenceConfig) -> dict:
             DAY_OF_WEEK_FROM_PROTO.get(day, "MONDAY") for day in proto_config.days_of_week
         ]
 
-    if proto_config.HasField("day_of_month"):
+    if proto_config.has_field("day_of_month"):
         config["day_of_month"] = proto_config.day_of_month
 
-    if proto_config.HasField("end_date"):
+    if proto_config.has_field("end_date"):
         config["end_date"] = timestamp_to_datetime(proto_config.end_date).isoformat()
 
-    if proto_config.HasField("max_occurrences"):
+    if proto_config.has_field("max_occurrences"):
         config["max_occurrences"] = proto_config.max_occurrences
 
     return config

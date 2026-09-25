@@ -7,7 +7,8 @@ from uuid import UUID
 from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
-from uniffy_proto.cal.v1.calendar_pb2 import (
+from protobuf.wkt import Timestamp
+from uniffy_proto.cal.v1.calendar_pb import (
     CreateEventRequest,
     CreateEventResponse,
     DeleteEventRequest,
@@ -54,12 +55,12 @@ class EventMutationHandlers:
         organization_id = resolve_organization_id(request.organization_id)
 
         category_id = None
-        if request.HasField("category_id"):
+        if request.has_field("category_id"):
             category_id = parse_uuid(request.category_id, "category_id")
 
         recurrence_config = None
         recurrence_pattern = RecurrencePattern.NONE
-        if request.HasField("recurrence"):
+        if request.has_field("recurrence"):
             recurrence_config = recurrence_config_from_proto(request.recurrence)
             recurrence_pattern = recurrence_from_proto(request.recurrence.pattern)
 
@@ -85,11 +86,11 @@ class EventMutationHandlers:
             ]
 
         room_id = None
-        if request.HasField("room_id") and request.room_id:
+        if request.has_field("room_id") and request.room_id:
             room_id = parse_uuid(request.room_id, "room_id")
 
         channel_id = None
-        if request.HasField("channel_id") and request.channel_id:
+        if request.has_field("channel_id") and request.channel_id:
             channel_id = parse_uuid(request.channel_id, "channel_id")
 
         tag_ids = parse_tag_id_list(request.tag_ids) if request.tag_ids else None
@@ -113,14 +114,18 @@ class EventMutationHandlers:
                     user_id=user_id,
                     organization_id=organization_id,
                     title=request.title,
-                    start_time=timestamp_to_datetime(request.start_time),
-                    end_time=timestamp_to_datetime(request.end_time),
+                    start_time=timestamp_to_datetime(
+                        request.start_time if request.start_time is not None else Timestamp()
+                    ),
+                    end_time=timestamp_to_datetime(
+                        request.end_time if request.end_time is not None else Timestamp()
+                    ),
                     calendar_id=calendar_id,
-                    description=request.description if request.HasField("description") else "",
+                    description=request.description if request.has_field("description") else "",
                     is_all_day=request.is_all_day,
-                    timezone=request.timezone if request.HasField("timezone") else "UTC",
-                    location=request.location if request.HasField("location") else "",
-                    meeting_url=request.meeting_url if request.HasField("meeting_url") else None,
+                    timezone=request.timezone if request.has_field("timezone") else "UTC",
+                    location=request.location if request.has_field("location") else "",
+                    meeting_url=request.meeting_url if request.has_field("meeting_url") else None,
                     category_id=category_id,
                     attendee_ids=attendee_ids,
                     attendee_roles=attendee_roles,
@@ -189,20 +194,20 @@ class EventMutationHandlers:
             "is_out_of_office",
         )
         for field in optional_fields:
-            if request.HasField(field):
+            if request.has_field(field):
                 kwargs[field] = getattr(request, field)
         for field in ("start_time", "end_time"):
-            if request.HasField(field):
+            if request.has_field(field):
                 kwargs[field] = timestamp_to_datetime(getattr(request, field))
-        if request.HasField("calendar_id"):
+        if request.has_field("calendar_id"):
             kwargs["calendar_id"] = parse_uuid(request.calendar_id, "calendar_id")
-        if request.HasField("category_id"):
+        if request.has_field("category_id"):
             kwargs["category_id"] = (
                 parse_uuid(request.category_id, "category_id") if request.category_id else None
             )
-        if request.HasField("recurrence"):
+        if request.has_field("recurrence"):
             kwargs["recurrence_config"] = recurrence_config_from_proto(request.recurrence)
-        if request.HasField("tag_ids"):
+        if request.has_field("tag_ids"):
             kwargs["tag_ids"] = parse_tag_id_list(request.tag_ids.ids)
         if request.linked_resource_urns:
             kwargs["linked_resources"] = [
@@ -215,20 +220,20 @@ class EventMutationHandlers:
         reminders = parse_reminders(request.reminders, explicit_empty=request.clear_reminders)
         if reminders is not None:
             kwargs["reminders"] = reminders
-        if request.HasField("recurrence_edit_scope"):
+        if request.has_field("recurrence_edit_scope"):
             kwargs["recurrence_edit_scope"] = recurrence_edit_scope_from_proto(
                 request.recurrence_edit_scope
             )
-        if request.HasField("occurrence_date"):
+        if request.has_field("occurrence_date"):
             try:
                 kwargs["occurrence_date"] = date_type.fromisoformat(request.occurrence_date)
             except ValueError as exc:
                 raise ConnectError(Code.INVALID_ARGUMENT, f"Invalid occurrence_date: {exc}") from exc
-        if request.HasField("status"):
+        if request.has_field("status"):
             kwargs["status"] = event_status_from_proto(request.status)
-        if request.HasField("visibility"):
+        if request.has_field("visibility"):
             kwargs["visibility"] = event_visibility_from_proto(request.visibility)
-        if request.HasField("transparency"):
+        if request.has_field("transparency"):
             kwargs["transparency"] = event_transparency_from_proto(request.transparency)
 
         try:
@@ -272,9 +277,9 @@ class EventMutationHandlers:
 
         edit_scope = None
         occurrence_date = None
-        if request.HasField("recurrence_edit_scope"):
+        if request.has_field("recurrence_edit_scope"):
             edit_scope = recurrence_edit_scope_from_proto(request.recurrence_edit_scope)
-        if request.HasField("occurrence_date"):
+        if request.has_field("occurrence_date"):
             try:
                 occurrence_date = date_type.fromisoformat(request.occurrence_date)
             except ValueError as exc:

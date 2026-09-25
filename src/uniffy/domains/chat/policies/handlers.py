@@ -4,7 +4,7 @@ from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
-from uniffy_proto.chat.v1.chat_pb2 import (
+from uniffy_proto.chat.v1.chat_pb import (
     ChatBroadcastMinRole,
     ChatEditHistoryVisibility,
     ChatPolicy,
@@ -28,16 +28,14 @@ from uniffy.infrastructure.database import open_session
 logger = logger.bind(component="chat.policies.handlers")
 
 _MIN_ROLE_TO_PROTO = {
-    BroadcastMinRole.MEMBER: ChatBroadcastMinRole.CHAT_BROADCAST_MIN_ROLE_MEMBER,
-    BroadcastMinRole.ADMIN: ChatBroadcastMinRole.CHAT_BROADCAST_MIN_ROLE_ADMIN,
+    BroadcastMinRole.MEMBER: ChatBroadcastMinRole.MEMBER,
+    BroadcastMinRole.ADMIN: ChatBroadcastMinRole.ADMIN,
 }
 _MIN_ROLE_FROM_PROTO = {proto: role for role, proto in _MIN_ROLE_TO_PROTO.items()}
 
 _EDIT_HISTORY_TO_PROTO = {
-    EditHistoryVisibility.ADMINS: ChatEditHistoryVisibility.CHAT_EDIT_HISTORY_VISIBILITY_ADMINS,
-    EditHistoryVisibility.EVERYONE: (
-        ChatEditHistoryVisibility.CHAT_EDIT_HISTORY_VISIBILITY_EVERYONE
-    ),
+    EditHistoryVisibility.ADMINS: ChatEditHistoryVisibility.ADMINS,
+    EditHistoryVisibility.EVERYONE: (ChatEditHistoryVisibility.EVERYONE),
 }
 _EDIT_HISTORY_FROM_PROTO = {proto: value for value, proto in _EDIT_HISTORY_TO_PROTO.items()}
 
@@ -104,7 +102,7 @@ class ChatPolicyHandlers:
         if edit_history_visible_to is None:
             raise ConnectError(Code.INVALID_ARGUMENT, "edit_history_visible_to is required")
         edit_window_minutes = (
-            request.edit_window_minutes if request.HasField("edit_window_minutes") else None
+            request.edit_window_minutes if request.has_field("edit_window_minutes") else None
         )
 
         try:

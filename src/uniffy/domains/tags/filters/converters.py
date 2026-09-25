@@ -2,16 +2,16 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from google.protobuf.timestamp_pb2 import Timestamp
+from protobuf.wkt import Timestamp
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
-from uniffy_proto.tags.v1.tags_pb2 import (
+from uniffy_proto.tags.v1.tags_pb import (
     IconValue as ProtoIconValue,
 )
-from uniffy_proto.tags.v1.tags_pb2 import (
+from uniffy_proto.tags.v1.tags_pb import (
     SavedTagFilter as ProtoSavedTagFilter,
 )
-from uniffy_proto.tags.v1.tags_pb2 import (
+from uniffy_proto.tags.v1.tags_pb import (
     TagFilterCriteria as ProtoTagFilterCriteria,
 )
 
@@ -25,6 +25,7 @@ from uniffy.core.converters.common_proto import (
     content_type_from_proto,
     content_type_to_proto,
 )
+from uniffy.core.json_codec import loads
 from uniffy.core.models.tags.saved_filter import SavedTagFilter
 from uniffy.core.models.tags.tag import Tag
 from uniffy.core.types import AccessMode, ContentType
@@ -79,7 +80,7 @@ def criteria_to_proto(criteria: dict[str, Any]) -> ProtoTagFilterCriteria:
     for key in ("created_after", "created_before", "updated_after", "updated_before"):
         ts = _iso_to_timestamp(criteria.get(key))
         if ts is not None:
-            getattr(proto, key).CopyFrom(ts)
+            setattr(proto, key, ts)
 
     if criteria.get("access_mode"):
         try:
@@ -108,14 +109,14 @@ def criteria_from_proto(proto: ProtoTagFilterCriteria) -> dict[str, Any]:
     if proto.sources:
         out["sources"] = [s for s in proto.sources if s in _VALID_SOURCES]
 
-    if proto.HasField("created_after"):
-        out["created_after"] = proto.created_after.ToJsonString()
-    if proto.HasField("created_before"):
-        out["created_before"] = proto.created_before.ToJsonString()
-    if proto.HasField("updated_after"):
-        out["updated_after"] = proto.updated_after.ToJsonString()
-    if proto.HasField("updated_before"):
-        out["updated_before"] = proto.updated_before.ToJsonString()
+    if proto.has_field("created_after"):
+        out["created_after"] = loads(proto.created_after.to_json())
+    if proto.has_field("created_before"):
+        out["created_before"] = loads(proto.created_before.to_json())
+    if proto.has_field("updated_after"):
+        out["updated_after"] = loads(proto.updated_after.to_json())
+    if proto.has_field("updated_before"):
+        out["updated_before"] = loads(proto.updated_before.to_json())
 
     if proto.access_mode:
         mode = access_mode_from_proto(proto.access_mode)
@@ -179,10 +180,10 @@ async def saved_filter_to_proto(
     if saved_filter.description:
         proto.description = saved_filter.description
     if saved_filter.icon:
-        proto.icon.CopyFrom(icon_to_proto(saved_filter.icon))
+        proto.icon = icon_to_proto(saved_filter.icon)
 
     last_used = optional_timestamp(saved_filter.updated_at)
     if last_used is not None:
-        proto.updated_at.CopyFrom(last_used)
+        proto.updated_at = last_used
 
     return proto

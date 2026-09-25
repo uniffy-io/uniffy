@@ -1,7 +1,7 @@
 """ConnectRPC service binding for ``superadmin.v1.SupportService``."""
 
 from connectrpc.request import RequestContext
-from uniffy_proto.superadmin.v1.support_session_pb2 import (
+from uniffy_proto.superadmin.v1.support_session_pb import (
     ListAllSessionsRequest,
     ListAllSessionsResponse,
     ListMySessionsRequest,

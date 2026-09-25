@@ -130,7 +130,9 @@ class TestOverrideApplied:
 
         await run()
         user_call = next(
-            call for call in check.await_args_list if call.kwargs["key"].startswith("rl:agent_msg:user")
+            call
+            for call in check.await_args_list
+            if call.kwargs["key"].startswith("rl:agent_msg:user")
         )
         assert user_call.kwargs["limit"] == 1
         assert user_call.kwargs["window_seconds"] == 60
@@ -222,13 +224,13 @@ class TestConverters:
             assert rate_limit_kind_from_proto(proto) == kind
 
     def test_unspecified_returns_none(self) -> None:
-        from uniffy_proto.common.v1.common_pb2 import RATE_LIMIT_KIND_UNSPECIFIED
+        from uniffy_proto.common.v1.common_pb import RateLimitKind as _ProtoRateLimitKind
 
         from uniffy.domains.agents.limits.converters import (
             rate_limit_kind_from_proto,
         )
 
-        assert rate_limit_kind_from_proto(RATE_LIMIT_KIND_UNSPECIFIED) is None
+        assert rate_limit_kind_from_proto(_ProtoRateLimitKind.UNSPECIFIED) is None
 
     def test_row_to_proto_default_row(self) -> None:
         from uniffy.domains.agents.limits.converters import rate_limit_row_to_proto

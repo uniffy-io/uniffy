@@ -7,14 +7,12 @@ from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
-from uniffy_proto.common.v1.common_pb2 import PaginationResponse
-from uniffy_proto.permissions.v1.permissions_pb2 import (
-    ACCESS_REQUEST_DECISION_APPROVE,
-    ACCESS_REQUEST_DECISION_DENY,
-    ACCESS_REQUEST_STATE_APPROVED,
-    ACCESS_REQUEST_STATE_CANCELED,
-    ACCESS_REQUEST_STATE_DENIED,
-    ACCESS_REQUEST_STATE_PENDING,
+from uniffy_proto.common.v1.common_pb import PaginationResponse
+from uniffy_proto.permissions.v1.permissions_pb import (
+    AccessRequestDecision as _ProtoAccessRequestDecision,
+)
+from uniffy_proto.permissions.v1.permissions_pb import AccessRequestState as _ProtoAccessRequestState
+from uniffy_proto.permissions.v1.permissions_pb import (
     CancelAccessRequestRequest,
     CancelAccessRequestResponse,
     GetAccessRequestRequest,
@@ -93,10 +91,10 @@ def _map_domain_error(exc: Exception) -> ConnectError:
 
 def _state_from_proto(value: int) -> ContentAccessRequestState:
     mapping = {
-        ACCESS_REQUEST_STATE_PENDING: ContentAccessRequestState.PENDING,
-        ACCESS_REQUEST_STATE_APPROVED: ContentAccessRequestState.APPROVED,
-        ACCESS_REQUEST_STATE_DENIED: ContentAccessRequestState.DENIED,
-        ACCESS_REQUEST_STATE_CANCELED: ContentAccessRequestState.CANCELED,
+        _ProtoAccessRequestState.PENDING: ContentAccessRequestState.PENDING,
+        _ProtoAccessRequestState.APPROVED: ContentAccessRequestState.APPROVED,
+        _ProtoAccessRequestState.DENIED: ContentAccessRequestState.DENIED,
+        _ProtoAccessRequestState.CANCELED: ContentAccessRequestState.CANCELED,
     }
     state = mapping.get(value)
     if state is None:
@@ -105,9 +103,9 @@ def _state_from_proto(value: int) -> ContentAccessRequestState:
 
 
 def _decision_from_proto(value: int) -> AccessRequestDecision:
-    if value == ACCESS_REQUEST_DECISION_APPROVE:
+    if value == _ProtoAccessRequestDecision.APPROVE:
         return AccessRequestDecision.APPROVE
-    if value == ACCESS_REQUEST_DECISION_DENY:
+    if value == _ProtoAccessRequestDecision.DENY:
         return AccessRequestDecision.DENY
     raise ConnectError(Code.INVALID_ARGUMENT, "Invalid access request decision")
 
@@ -134,10 +132,10 @@ class AccessRequestHandlers:
                     outcome=access_request_outcome_to_proto(result.outcome)
                 )
                 if result.view is not None:
-                    response.access_request.CopyFrom(access_request_view_to_proto(result.view))
+                    response.access_request = access_request_view_to_proto(result.view)
                 retry_at = optional_timestamp(result.can_request_again_at)
                 if retry_at is not None:
-                    response.can_request_again_at.CopyFrom(retry_at)
+                    response.can_request_again_at = retry_at
                 return response
         except ConnectError:
             raise
@@ -201,19 +199,19 @@ class AccessRequestHandlers:
         user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         canonical_content_type = None
-        if request.HasField("canonical_content_type"):
+        if request.has_field("canonical_content_type"):
             canonical_content_type = _resolve_content_type(request.canonical_content_type)
         canonical_content_id = None
-        if request.HasField("canonical_content_id"):
+        if request.has_field("canonical_content_id"):
             canonical_content_id = _parse_uuid(
                 request.canonical_content_id,
                 "canonical_content_id",
             )
-        state = _state_from_proto(request.state) if request.HasField("state") else None
+        state = _state_from_proto(request.state) if request.has_field("state") else None
 
         page = 1
         page_size = 50
-        if request.HasField("pagination"):
+        if request.has_field("pagination"):
             page = max(request.pagination.page, 1)
             page_size = min(max(request.pagination.page_size, 1), 100)
 
@@ -259,7 +257,7 @@ class AccessRequestHandlers:
         request_id = _parse_uuid(request.request_id, "request_id")
         decision = _decision_from_proto(request.decision)
         approved_role = (
-            _resolve_role(request.approved_role) if request.HasField("approved_role") else None
+            _resolve_role(request.approved_role) if request.has_field("approved_role") else None
         )
         try:
             async with open_session() as session:

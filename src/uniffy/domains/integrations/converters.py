@@ -1,6 +1,6 @@
 """Proto <-> domain converters for integrations."""
 
-from uniffy_proto.integrations.v1.integrations_pb2 import (
+from uniffy_proto.integrations.v1.integrations_pb import (
     IntegrationConnectionInfo,
     IntegrationProviderInfo,
 )
@@ -40,10 +40,10 @@ def connection_to_proto(
         info.account_login = row.account_login
 
     if row.last_validated_at:
-        info.last_validated_at.CopyFrom(datetime_to_timestamp(row.last_validated_at))
+        info.last_validated_at = datetime_to_timestamp(row.last_validated_at)
 
     if row.last_used_at:
-        info.last_used_at.CopyFrom(datetime_to_timestamp(row.last_used_at))
+        info.last_used_at = datetime_to_timestamp(row.last_used_at)
 
     if include_diagnostics and row.last_error:
         info.last_error = row.last_error

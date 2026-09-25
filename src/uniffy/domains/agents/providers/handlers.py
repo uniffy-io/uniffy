@@ -6,7 +6,7 @@ from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
-from uniffy_proto.agents.v1.providers_pb2 import (
+from uniffy_proto.agents.v1.providers_pb import (
     AddProviderKeyRequest,
     AddProviderKeyResponse,
     ListAvailableModelsRequest,
@@ -98,7 +98,7 @@ class ProvidersHandlers:
         user_id = current_user_id()
         org_id = _parse_uuid(request.organization_id, "organization_id")
 
-        provider = request.provider if request.HasField("provider") else None
+        provider = request.provider if request.has_field("provider") else None
 
         try:
             async with open_session() as session:
@@ -177,7 +177,7 @@ class ProvidersHandlers:
         user_id = current_user_id()
         org_id = _parse_uuid(request.organization_id, "organization_id")
 
-        provider = request.provider if request.HasField("provider") else None
+        provider = request.provider if request.has_field("provider") else None
 
         try:
             async with open_session() as session:

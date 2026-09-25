@@ -5,7 +5,7 @@ from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
-from uniffy_proto.search.v1.search_pb2 import (
+from uniffy_proto.search.v1.search_pb import (
     ContentGraphEdge,
     GetContentGraphRequest,
     GetContentGraphResponse,

@@ -15,7 +15,6 @@ import pytest
 from fastapi import Depends, FastAPI
 from fastapi.testclient import TestClient
 
-from uniffy.core.types import generate_id
 from uniffy.core.auth.cookies import (
     attach_asset_cookie,
     build_clear_cookie,
@@ -30,6 +29,7 @@ from uniffy.core.auth.tokens import (
     decode_asset_read_token,
     get_asset_token_expire_minutes,
 )
+from uniffy.core.types import generate_id
 
 _TEST_SECRET = "test-32-byte-secret-padding-for-asset-cookie-01"
 
@@ -179,6 +179,7 @@ def test_attach_asset_cookie_returns_the_pair_it_sets(
             headers.append((key, value))
 
     class _Ctx:
+        @property
         def response_headers(self) -> _Headers:
             return _Headers()
 

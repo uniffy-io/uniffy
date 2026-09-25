@@ -19,9 +19,7 @@ async def test_unhandled_unary_error_is_sanitized() -> None:
         name = "notes.v1.NotesService/GetNote"
 
     class Context:
-        @staticmethod
-        def method() -> Method:
-            return Method()
+        method = Method()
 
     async def raise_secret(request: Any, context: Any) -> None:
         raise RuntimeError("database password leaked")

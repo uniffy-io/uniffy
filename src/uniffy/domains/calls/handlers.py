@@ -6,8 +6,7 @@ from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
-from uniffy_proto.calls.v1.calls_pb2 import (
-    ICE_TRANSPORT_POLICY_RELAY,
+from uniffy_proto.calls.v1.calls_pb import (
     DeclineCallRequest,
     DeclineCallResponse,
     EndCallRequest,
@@ -36,6 +35,7 @@ from uniffy_proto.calls.v1.calls_pb2 import (
     UpdateOrgCallPolicyRequest,
     UpdateOrgCallPolicyResponse,
 )
+from uniffy_proto.calls.v1.calls_pb import IceTransportPolicy as _ProtoIceTransportPolicy
 
 from uniffy.core.auth.principal import current_session_id, current_user_id
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
@@ -65,7 +65,7 @@ def _require_device_id(value: str) -> str:
 
 
 def _optional_device_label(request) -> str | None:
-    if not request.HasField("device_label"):
+    if not request.has_field("device_label"):
         return None
     # Column cap; the label is display-only, so truncation beats rejection.
     return request.device_label[:120]
@@ -81,7 +81,7 @@ def _ice_fields(user_id: UUID) -> dict:
         "ice_servers": [
             IceServer(urls=list(creds.urls), username=creds.username, credential=creds.credential)
         ],
-        "ice_transport_policy": ICE_TRANSPORT_POLICY_RELAY,
+        "ice_transport_policy": _ProtoIceTransportPolicy.RELAY,
     }
 
 

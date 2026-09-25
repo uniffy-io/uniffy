@@ -7,9 +7,10 @@ request on the way in. Plaintext never appears on a response message.
 
 from __future__ import annotations
 
-from google.protobuf.timestamp_pb2 import Timestamp
-from uniffy_proto.mail.v1.mail_pb2 import OrgMailConfigView
+from protobuf.wkt import Timestamp
+from uniffy_proto.mail.v1.mail_pb import OrgMailConfigView
 
+from uniffy.core.converters.proto import datetime_to_timestamp
 from uniffy.domains.mail.operations import OrgMailConfigSummary
 
 
@@ -17,7 +18,7 @@ def _to_timestamp(value) -> Timestamp | None:
     if value is None:
         return None
     ts = Timestamp()
-    ts.FromDatetime(value)
+    ts = datetime_to_timestamp(value)
     return ts
 
 
@@ -38,10 +39,10 @@ def summary_to_proto(summary: OrgMailConfigSummary) -> OrgMailConfigView:
     )
     verified = _to_timestamp(summary.verified_at)
     if verified is not None:
-        view.verified_at.CopyFrom(verified)
+        view.verified_at = verified
     last_test = _to_timestamp(summary.last_test_at)
     if last_test is not None:
-        view.last_test_at.CopyFrom(last_test)
+        view.last_test_at = last_test
     if summary.last_test_status is not None:
         view.last_test_status = summary.last_test_status
     if summary.last_test_error is not None:

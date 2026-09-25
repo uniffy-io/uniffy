@@ -3,7 +3,7 @@ from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from uniffy_proto.chat.v1.chat_pb2 import ForwardContext as ProtoForwardContext
+from uniffy_proto.chat.v1.chat_pb import ForwardContext as ProtoForwardContext
 
 from uniffy.core.models.chat.channel import ChatChannel
 from uniffy.core.models.chat.message import ChatMessage, ChatMessageMetadataKey

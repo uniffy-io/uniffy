@@ -4,26 +4,27 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from google.protobuf.timestamp_pb2 import Timestamp
-from uniffy_proto.superadmin.v1.system_directory_pb2 import (
+from protobuf.wkt import Timestamp
+from uniffy_proto.superadmin.v1.system_directory_pb import (
     PlatformOrganizationDetail as PlatformOrganizationDetailProto,
 )
-from uniffy_proto.superadmin.v1.system_directory_pb2 import (
+from uniffy_proto.superadmin.v1.system_directory_pb import (
     PlatformOrganizationSummary as PlatformOrganizationSummaryProto,
 )
-from uniffy_proto.superadmin.v1.system_directory_pb2 import (
+from uniffy_proto.superadmin.v1.system_directory_pb import (
     PlatformOrgOwner as PlatformOrgOwnerProto,
 )
-from uniffy_proto.superadmin.v1.system_directory_pb2 import (
+from uniffy_proto.superadmin.v1.system_directory_pb import (
     PlatformUserDetail as PlatformUserDetailProto,
 )
-from uniffy_proto.superadmin.v1.system_directory_pb2 import (
+from uniffy_proto.superadmin.v1.system_directory_pb import (
     PlatformUserMembership as PlatformUserMembershipProto,
 )
-from uniffy_proto.superadmin.v1.system_directory_pb2 import (
+from uniffy_proto.superadmin.v1.system_directory_pb import (
     PlatformUserSummary as PlatformUserSummaryProto,
 )
 
+from uniffy.core.converters.proto import datetime_to_timestamp
 from uniffy.domains.platform.directory.operations import (
     PlatformOrgDetail,
     PlatformOrgOwner,
@@ -38,7 +39,7 @@ def _to_timestamp(value: datetime | None) -> Timestamp | None:
     if value is None:
         return None
     ts = Timestamp()
-    ts.FromDatetime(value)
+    ts = datetime_to_timestamp(value)
     return ts
 
 
@@ -55,19 +56,19 @@ def org_summary_to_proto(summary: PlatformOrgSummary) -> PlatformOrganizationSum
     )
     last_activity = _to_timestamp(summary.last_activity_at)
     if last_activity is not None:
-        msg.last_activity_at.CopyFrom(last_activity)
+        msg.last_activity_at = last_activity
     last_login = _to_timestamp(summary.last_login_at)
     if last_login is not None:
-        msg.last_login_at.CopyFrom(last_login)
+        msg.last_login_at = last_login
     deleted_at = _to_timestamp(summary.deleted_at)
     if deleted_at is not None:
-        msg.deleted_at.CopyFrom(deleted_at)
+        msg.deleted_at = deleted_at
     purge_at = _to_timestamp(summary.purge_at)
     if purge_at is not None:
-        msg.purge_at.CopyFrom(purge_at)
+        msg.purge_at = purge_at
     created_at = _to_timestamp(summary.created_at)
     if created_at is not None:
-        msg.created_at.CopyFrom(created_at)
+        msg.created_at = created_at
     return msg
 
 
@@ -80,7 +81,7 @@ def owner_to_proto(owner: PlatformOrgOwner) -> PlatformOrgOwnerProto:
         msg.full_name = owner.full_name
     joined_at = _to_timestamp(owner.joined_at)
     if joined_at is not None:
-        msg.joined_at.CopyFrom(joined_at)
+        msg.joined_at = joined_at
     return msg
 
 
@@ -115,10 +116,10 @@ def user_summary_to_proto(summary: PlatformUserSummary) -> PlatformUserSummaryPr
         msg.full_name = summary.full_name
     last_login = _to_timestamp(summary.last_login_at)
     if last_login is not None:
-        msg.last_login_at.CopyFrom(last_login)
+        msg.last_login_at = last_login
     created_at = _to_timestamp(summary.created_at)
     if created_at is not None:
-        msg.created_at.CopyFrom(created_at)
+        msg.created_at = created_at
     return msg
 
 
@@ -135,10 +136,10 @@ def user_membership_to_proto(
     )
     joined_at = _to_timestamp(membership.joined_at)
     if joined_at is not None:
-        msg.joined_at.CopyFrom(joined_at)
+        msg.joined_at = joined_at
     deleted_at = _to_timestamp(membership.deleted_at)
     if deleted_at is not None:
-        msg.deleted_at.CopyFrom(deleted_at)
+        msg.deleted_at = deleted_at
     return msg
 
 

@@ -2,23 +2,24 @@
 
 from typing import Any
 
-from google.protobuf.timestamp_pb2 import Timestamp
-from uniffy_proto.calls.v1.calls_pb2 import (
+from protobuf.wkt import Timestamp
+from uniffy_proto.calls.v1.calls_pb import (
     Call as ProtoCall,
 )
-from uniffy_proto.calls.v1.calls_pb2 import (
+from uniffy_proto.calls.v1.calls_pb import (
     CallEndReason as ProtoCallEndReason,
 )
-from uniffy_proto.calls.v1.calls_pb2 import (
+from uniffy_proto.calls.v1.calls_pb import (
     CallParticipant as ProtoCallParticipant,
 )
-from uniffy_proto.calls.v1.calls_pb2 import (
+from uniffy_proto.calls.v1.calls_pb import (
     CallType as ProtoCallType,
 )
-from uniffy_proto.calls.v1.calls_pb2 import (
+from uniffy_proto.calls.v1.calls_pb import (
     OrgCallPolicy as ProtoOrgCallPolicy,
 )
 
+from uniffy.core.converters.proto import datetime_to_timestamp
 from uniffy.core.models.calls import (
     Call,
     CallEndReason,
@@ -28,25 +29,25 @@ from uniffy.core.models.calls import (
 from uniffy.domains.calls.policy import ResolvedCallPolicy
 
 CALL_TYPE_TO_PROTO = {
-    CallType.DIRECT: ProtoCallType.CALL_TYPE_DIRECT,
-    CallType.GROUP_DM: ProtoCallType.CALL_TYPE_GROUP_DM,
-    CallType.CHANNEL: ProtoCallType.CALL_TYPE_CHANNEL,
+    CallType.DIRECT: ProtoCallType.DIRECT,
+    CallType.GROUP_DM: ProtoCallType.GROUP_DM,
+    CallType.CHANNEL: ProtoCallType.CHANNEL,
 }
 
 CALL_END_REASON_TO_PROTO = {
-    CallEndReason.HOST_ENDED: ProtoCallEndReason.CALL_END_REASON_HOST_ENDED,
-    CallEndReason.ALL_LEFT: ProtoCallEndReason.CALL_END_REASON_ALL_LEFT,
-    CallEndReason.MAX_DURATION: ProtoCallEndReason.CALL_END_REASON_MAX_DURATION,
-    CallEndReason.SOLO_TIMEOUT: ProtoCallEndReason.CALL_END_REASON_SOLO_TIMEOUT,
-    CallEndReason.CHANNEL_ARCHIVED: ProtoCallEndReason.CALL_END_REASON_CHANNEL_ARCHIVED,
-    CallEndReason.ORG_SUSPENDED: ProtoCallEndReason.CALL_END_REASON_ORG_SUSPENDED,
-    CallEndReason.ORG_DELETED: ProtoCallEndReason.CALL_END_REASON_ORG_DELETED,
+    CallEndReason.HOST_ENDED: ProtoCallEndReason.HOST_ENDED,
+    CallEndReason.ALL_LEFT: ProtoCallEndReason.ALL_LEFT,
+    CallEndReason.MAX_DURATION: ProtoCallEndReason.MAX_DURATION,
+    CallEndReason.SOLO_TIMEOUT: ProtoCallEndReason.SOLO_TIMEOUT,
+    CallEndReason.CHANNEL_ARCHIVED: ProtoCallEndReason.CHANNEL_ARCHIVED,
+    CallEndReason.ORG_SUSPENDED: ProtoCallEndReason.ORG_SUSPENDED,
+    CallEndReason.ORG_DELETED: ProtoCallEndReason.ORG_DELETED,
 }
 
 
 def _ts(dt) -> Timestamp:
     ts = Timestamp()
-    ts.FromDatetime(dt)
+    ts = datetime_to_timestamp(dt)
     return ts
 
 
@@ -81,7 +82,7 @@ def call_to_proto(
         id=str(call.id),
         organization_id=str(call.organization_id),
         channel_id=str(call.channel_id),
-        call_type=CALL_TYPE_TO_PROTO.get(call.call_type, ProtoCallType.CALL_TYPE_UNSPECIFIED),
+        call_type=CALL_TYPE_TO_PROTO.get(call.call_type, ProtoCallType.UNSPECIFIED),
         initiator_user_id=str(call.initiator_user_id),
         host_user_id=str(call.host_user_id),
         started_at=_ts(call.started_at),
@@ -95,10 +96,10 @@ def call_to_proto(
         ],
     )
     if call.ended_at is not None:
-        proto.ended_at.CopyFrom(_ts(call.ended_at))
+        proto.ended_at = _ts(call.ended_at)
     if call.end_reason is not None:
         proto.end_reason = CALL_END_REASON_TO_PROTO.get(
-            call.end_reason, ProtoCallEndReason.CALL_END_REASON_UNSPECIFIED
+            call.end_reason, ProtoCallEndReason.UNSPECIFIED
         )
     return proto
 

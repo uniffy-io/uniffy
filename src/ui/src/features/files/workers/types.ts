@@ -7,6 +7,7 @@ export interface UploadChunksRequest {
   totalChunks: number;
   token: string;
   apiUrl: string;
+  httpProtocol?: string;
   /** Part numbers already stored server-side; skipped on a resumed upload. */
   completedChunks?: number[];
 }

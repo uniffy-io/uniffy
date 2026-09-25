@@ -8,7 +8,7 @@ from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
-from uniffy_proto.superadmin.v1.platform_audit_pb2 import (
+from uniffy_proto.superadmin.v1.platform_audit_pb import (
     ListPlatformActionsRequest,
     ListPlatformActionsResponse,
     ListPlatformAuditRequest,
@@ -57,8 +57,8 @@ class PlatformAuditHandlers:
         actor_id = current_user_id()
         org_id = _parse_optional_uuid(request.organization_id, "organization_id")
         actor_filter = _parse_optional_uuid(request.actor_user_id, "actor_user_id")
-        from_ts = timestamp_to_datetime(request.from_ts) if request.HasField("from_ts") else None
-        to_ts = timestamp_to_datetime(request.to_ts) if request.HasField("to_ts") else None
+        from_ts = timestamp_to_datetime(request.from_ts) if request.has_field("from_ts") else None
+        to_ts = timestamp_to_datetime(request.to_ts) if request.has_field("to_ts") else None
         try:
             async with open_session() as session:
                 page = await PlatformAuditOperations(session).list_events(

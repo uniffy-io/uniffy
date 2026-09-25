@@ -4,7 +4,7 @@ from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
-from uniffy_proto.settings.v1.settings_pb2 import (
+from uniffy_proto.settings.v1.settings_pb import (
     CreateProfileRequest,
     CreateProfileResponse,
     DeleteProfileRequest,
@@ -117,8 +117,8 @@ class SettingsHandlers:
             async with open_session() as session:
                 ops = SettingsOperations(session)
 
-                name = request.name if request.HasField("name") else None
-                is_default = request.is_default if request.HasField("is_default") else None
+                name = request.name if request.has_field("name") else None
+                is_default = request.is_default if request.has_field("is_default") else None
 
                 profile = await ops.update_profile(
                     user_id=user_id,
@@ -205,7 +205,7 @@ class SettingsHandlers:
             async with open_session() as session:
                 ops = SettingsOperations(session)
 
-                if request.HasField("profile_id"):
+                if request.has_field("profile_id"):
                     try:
                         profile_id = UUID(request.profile_id)
                         profile = await ops.get_profile(user_id, profile_id)

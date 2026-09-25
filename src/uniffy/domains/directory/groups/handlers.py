@@ -5,8 +5,8 @@ from uuid import UUID
 from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
-from uniffy_proto.common.v1 import common_pb2 as common
-from uniffy_proto.groups.v1 import groups_pb2 as pb
+from uniffy_proto.common.v1 import common_pb as common
+from uniffy_proto.groups.v1 import groups_pb as pb
 
 from uniffy.core.auth.principal import (
     current_user_id,
@@ -40,7 +40,7 @@ class GroupsHandlers:
 
         page = 1
         page_size = 20
-        if request.HasField("pagination"):
+        if request.has_field("pagination"):
             page = request.pagination.page or 1
             page_size = request.pagination.page_size or 20
 
@@ -51,9 +51,9 @@ class GroupsHandlers:
                 actor_user_id=user_id,
                 page=page,
                 page_size=page_size,
-                search=request.search if request.HasField("search") else None,
+                search=request.search if request.has_field("search") else None,
                 include_private=(
-                    request.include_private if request.HasField("include_private") else False
+                    request.include_private if request.has_field("include_private") else False
                 ),
             )
 
@@ -97,16 +97,16 @@ class GroupsHandlers:
                     organization_id=org_id,
                     name=request.name,
                     created_by_user_id=user_id,
-                    description=request.description if request.HasField("description") else None,
+                    description=request.description if request.has_field("description") else None,
                     is_private=request.is_private,
                     kind=group_kind_from_proto(request.kind) or GroupKind.ACCESS,
                     parent_group_id=(
                         UUID(request.parent_group_id)
-                        if request.HasField("parent_group_id")
+                        if request.has_field("parent_group_id")
                         else None
                     ),
                     lead_user_id=(
-                        UUID(request.lead_user_id) if request.HasField("lead_user_id") else None
+                        UUID(request.lead_user_id) if request.has_field("lead_user_id") else None
                     ),
                 )
         except NotFoundError as e:
@@ -127,13 +127,13 @@ class GroupsHandlers:
 
         if request.clear_parent_group:
             parent_group_id: UUID | None | object = None
-        elif request.HasField("parent_group_id"):
+        elif request.has_field("parent_group_id"):
             parent_group_id = UUID(request.parent_group_id)
         else:
             parent_group_id = UNSET
         if request.clear_lead:
             lead_user_id: UUID | None | object = None
-        elif request.HasField("lead_user_id"):
+        elif request.has_field("lead_user_id"):
             lead_user_id = UUID(request.lead_user_id)
         else:
             lead_user_id = UNSET
@@ -145,10 +145,12 @@ class GroupsHandlers:
                     group_id=group_id,
                     organization_id=org_id,
                     actor_user_id=user_id,
-                    name=request.name if request.HasField("name") else None,
-                    description=request.description if request.HasField("description") else None,
-                    is_private=request.is_private if request.HasField("is_private") else None,
-                    kind=(group_kind_from_proto(request.kind) if request.HasField("kind") else None),
+                    name=request.name if request.has_field("name") else None,
+                    description=request.description if request.has_field("description") else None,
+                    is_private=request.is_private if request.has_field("is_private") else None,
+                    kind=(
+                        group_kind_from_proto(request.kind) if request.has_field("kind") else None
+                    ),
                     parent_group_id=parent_group_id,
                     lead_user_id=lead_user_id,
                 )
@@ -185,12 +187,12 @@ class GroupsHandlers:
 
         page = 1
         page_size = 20
-        if request.HasField("pagination"):
+        if request.has_field("pagination"):
             page = request.pagination.page or 1
             page_size = request.pagination.page_size or 20
 
         role_filter = None
-        if request.HasField("role_filter"):
+        if request.has_field("role_filter"):
             role_filter = group_role_from_proto(request.role_filter)
 
         async with open_session() as session:

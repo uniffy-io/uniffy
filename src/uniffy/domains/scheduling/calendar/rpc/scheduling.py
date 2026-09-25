@@ -7,10 +7,11 @@ from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
-from uniffy_proto.cal.v1.calendar_pb2 import (
+from protobuf.wkt import Timestamp
+from uniffy_proto.cal.v1.calendar_pb import (
     BusyInterval as ProtoBusyInterval,
 )
-from uniffy_proto.cal.v1.calendar_pb2 import (
+from uniffy_proto.cal.v1.calendar_pb import (
     GetFreeBusyRequest,
     GetFreeBusyResponse,
     MeetingTimeSuggestion,
@@ -80,8 +81,12 @@ class SchedulingHandlers:
         user_id = current_user_id()
         organization_id = resolve_organization_id(request.organization_id)
         user_ids = _parse_user_ids(list(request.user_ids), "user_ids")
-        window_start = timestamp_to_datetime(request.window_start)
-        window_end = timestamp_to_datetime(request.window_end)
+        window_start = timestamp_to_datetime(
+            request.window_start if request.window_start is not None else Timestamp()
+        )
+        window_end = timestamp_to_datetime(
+            request.window_end if request.window_end is not None else Timestamp()
+        )
 
         try:
             async with open_session() as session:
@@ -92,7 +97,7 @@ class SchedulingHandlers:
                 )
                 schedule_by_user = await get_users_scheduling_context(session, user_ids)
                 room_busy = []
-                if request.HasField("room_id"):
+                if request.has_field("room_id"):
                     room_busy = await _room_busy_for(
                         session,
                         user_id,
@@ -134,8 +139,12 @@ class SchedulingHandlers:
         ]
         if not required_ids:
             raise ConnectError(Code.INVALID_ARGUMENT, "required_user_ids must not be empty")
-        window_start = timestamp_to_datetime(request.window_start)
-        window_end = timestamp_to_datetime(request.window_end)
+        window_start = timestamp_to_datetime(
+            request.window_start if request.window_start is not None else Timestamp()
+        )
+        window_end = timestamp_to_datetime(
+            request.window_end if request.window_end is not None else Timestamp()
+        )
 
         try:
             if not MIN_DURATION_MINUTES <= request.duration_minutes <= MAX_DURATION_MINUTES:
@@ -152,7 +161,7 @@ class SchedulingHandlers:
                 )
                 schedule_by_user = await get_users_scheduling_context(session, all_ids)
                 room_busy = []
-                if request.HasField("room_id"):
+                if request.has_field("room_id"):
                     room_busy = await _room_busy_for(
                         session,
                         user_id,

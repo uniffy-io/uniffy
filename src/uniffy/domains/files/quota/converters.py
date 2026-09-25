@@ -1,12 +1,12 @@
 """Proto <-> domain converters for storage quota types."""
 
-from uniffy_proto.files.v1.files_pb2 import (
+from uniffy_proto.files.v1.files_pb import (
     OrgStorageQuota as ProtoOrgStorageQuota,
 )
-from uniffy_proto.files.v1.files_pb2 import (
+from uniffy_proto.files.v1.files_pb import (
     StorageUsageInfo as ProtoStorageUsageInfo,
 )
-from uniffy_proto.files.v1.files_pb2 import (
+from uniffy_proto.files.v1.files_pb import (
     UserStorageQuotaOverrideInfo as ProtoUserStorageQuotaOverrideInfo,
 )
 
@@ -33,7 +33,7 @@ def storage_quota_to_proto(quota: StorageQuota) -> ProtoOrgStorageQuota:
         proto.default_user_quota_bytes = quota.default_user_quota_bytes
 
     if quota.updated_at:
-        proto.updated_at.CopyFrom(datetime_to_timestamp(quota.updated_at))
+        proto.updated_at = datetime_to_timestamp(quota.updated_at)
 
     return proto
 
@@ -54,7 +54,7 @@ def user_quota_override_to_proto(
         proto.note = override.note
 
     if override.updated_at:
-        proto.updated_at.CopyFrom(datetime_to_timestamp(override.updated_at))
+        proto.updated_at = datetime_to_timestamp(override.updated_at)
 
     return proto
 
@@ -81,7 +81,7 @@ def storage_usage_to_proto(
         proto.effective_quota_bytes = effective_quota_bytes
 
     if usage.last_recalculated_at:
-        proto.last_recalculated_at.CopyFrom(datetime_to_timestamp(usage.last_recalculated_at))
+        proto.last_recalculated_at = datetime_to_timestamp(usage.last_recalculated_at)
 
     return proto
 
@@ -105,6 +105,6 @@ def user_usage_row_to_proto(row: UserUsageRow) -> ProtoStorageUsageInfo:
         proto.effective_quota_bytes = row.effective_quota_bytes
 
     if row.last_recalculated_at:
-        proto.last_recalculated_at.CopyFrom(datetime_to_timestamp(row.last_recalculated_at))
+        proto.last_recalculated_at = datetime_to_timestamp(row.last_recalculated_at)
 
     return proto

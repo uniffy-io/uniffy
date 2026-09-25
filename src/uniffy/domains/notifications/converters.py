@@ -1,9 +1,9 @@
 """Proto <-> domain converters for notifications domain."""
 
-from uniffy_proto.notifications.v1.notifications_pb2 import (
+from uniffy_proto.notifications.v1.notifications_pb import (
     Notification as ProtoNotification,
 )
-from uniffy_proto.notifications.v1.notifications_pb2 import (
+from uniffy_proto.notifications.v1.notifications_pb import (
     NotificationType as ProtoNotificationType,
 )
 
@@ -12,55 +12,35 @@ from uniffy.core.models.notifications.notification import Notification
 from uniffy.core.models.shared import NotificationType
 
 NOTIFICATION_TYPE_TO_PROTO: dict[NotificationType, int] = {
-    NotificationType.CONTENT_SHARED: ProtoNotificationType.NOTIFICATION_TYPE_CONTENT_SHARED,
-    NotificationType.CONTENT_MENTIONED: ProtoNotificationType.NOTIFICATION_TYPE_CONTENT_MENTIONED,
-    NotificationType.CONTENT_EDITED: ProtoNotificationType.NOTIFICATION_TYPE_CONTENT_EDITED,
-    NotificationType.CALENDAR_REMINDER: ProtoNotificationType.NOTIFICATION_TYPE_CALENDAR_REMINDER,
-    NotificationType.CALENDAR_INVITE: ProtoNotificationType.NOTIFICATION_TYPE_CALENDAR_INVITE,
-    NotificationType.CALENDAR_RESPONSE: ProtoNotificationType.NOTIFICATION_TYPE_CALENDAR_RESPONSE,
-    NotificationType.CALENDAR_CANCELLED: (
-        ProtoNotificationType.NOTIFICATION_TYPE_CALENDAR_CANCELLED
-    ),
-    NotificationType.PERMISSION_GRANTED: ProtoNotificationType.NOTIFICATION_TYPE_PERMISSION_GRANTED,
-    NotificationType.PERMISSION_REVOKED: ProtoNotificationType.NOTIFICATION_TYPE_PERMISSION_REVOKED,
-    NotificationType.SYSTEM_ANNOUNCEMENT: (
-        ProtoNotificationType.NOTIFICATION_TYPE_SYSTEM_ANNOUNCEMENT
-    ),
-    NotificationType.TASK_ASSIGNED: ProtoNotificationType.NOTIFICATION_TYPE_TASK_ASSIGNED,
-    NotificationType.TASK_DUE_SOON: ProtoNotificationType.NOTIFICATION_TYPE_TASK_DUE_SOON,
-    NotificationType.TASK_OVERDUE: ProtoNotificationType.NOTIFICATION_TYPE_TASK_OVERDUE,
-    NotificationType.CHAT_MENTION: ProtoNotificationType.NOTIFICATION_TYPE_CHAT_MENTION,
-    NotificationType.CHAT_DM: ProtoNotificationType.NOTIFICATION_TYPE_CHAT_DM,
-    NotificationType.CHAT_CHANNEL_INVITE: (
-        ProtoNotificationType.NOTIFICATION_TYPE_CHAT_CHANNEL_INVITE
-    ),
-    NotificationType.CHAT_CHANNEL_REMOVED: (
-        ProtoNotificationType.NOTIFICATION_TYPE_CHAT_CHANNEL_REMOVED
-    ),
-    NotificationType.CHAT_THREAD_REPLY: (ProtoNotificationType.NOTIFICATION_TYPE_CHAT_THREAD_REPLY),
-    NotificationType.ACCESS_REQUESTED: ProtoNotificationType.NOTIFICATION_TYPE_ACCESS_REQUESTED,
-    NotificationType.ACCESS_REQUEST_DENIED: (
-        ProtoNotificationType.NOTIFICATION_TYPE_ACCESS_REQUEST_DENIED
-    ),
-    NotificationType.COMMENT_ADDED: ProtoNotificationType.NOTIFICATION_TYPE_COMMENT_ADDED,
-    NotificationType.COMMENT_REPLY: ProtoNotificationType.NOTIFICATION_TYPE_COMMENT_REPLY,
-    NotificationType.COMMENT_MENTIONED: ProtoNotificationType.NOTIFICATION_TYPE_COMMENT_MENTIONED,
-    NotificationType.COMMENT_RESOLVED: ProtoNotificationType.NOTIFICATION_TYPE_COMMENT_RESOLVED,
-    NotificationType.AGENTS_BUDGET_ALERT: (
-        ProtoNotificationType.NOTIFICATION_TYPE_AGENTS_BUDGET_ALERT
-    ),
-    NotificationType.SUPPORT_SESSION_REQUESTED: (
-        ProtoNotificationType.NOTIFICATION_TYPE_SUPPORT_SESSION_REQUESTED
-    ),
-    NotificationType.SUPPORT_SESSION_STARTED: (
-        ProtoNotificationType.NOTIFICATION_TYPE_SUPPORT_SESSION_STARTED
-    ),
-    NotificationType.SUPPORT_SESSION_REVOKED: (
-        ProtoNotificationType.NOTIFICATION_TYPE_SUPPORT_SESSION_REVOKED
-    ),
-    NotificationType.SUPPORT_SESSION_EXPIRED: (
-        ProtoNotificationType.NOTIFICATION_TYPE_SUPPORT_SESSION_EXPIRED
-    ),
+    NotificationType.CONTENT_SHARED: ProtoNotificationType.CONTENT_SHARED,
+    NotificationType.CONTENT_MENTIONED: ProtoNotificationType.CONTENT_MENTIONED,
+    NotificationType.CONTENT_EDITED: ProtoNotificationType.CONTENT_EDITED,
+    NotificationType.CALENDAR_REMINDER: ProtoNotificationType.CALENDAR_REMINDER,
+    NotificationType.CALENDAR_INVITE: ProtoNotificationType.CALENDAR_INVITE,
+    NotificationType.CALENDAR_RESPONSE: ProtoNotificationType.CALENDAR_RESPONSE,
+    NotificationType.CALENDAR_CANCELLED: (ProtoNotificationType.CALENDAR_CANCELLED),
+    NotificationType.PERMISSION_GRANTED: ProtoNotificationType.PERMISSION_GRANTED,
+    NotificationType.PERMISSION_REVOKED: ProtoNotificationType.PERMISSION_REVOKED,
+    NotificationType.SYSTEM_ANNOUNCEMENT: (ProtoNotificationType.SYSTEM_ANNOUNCEMENT),
+    NotificationType.TASK_ASSIGNED: ProtoNotificationType.TASK_ASSIGNED,
+    NotificationType.TASK_DUE_SOON: ProtoNotificationType.TASK_DUE_SOON,
+    NotificationType.TASK_OVERDUE: ProtoNotificationType.TASK_OVERDUE,
+    NotificationType.CHAT_MENTION: ProtoNotificationType.CHAT_MENTION,
+    NotificationType.CHAT_DM: ProtoNotificationType.CHAT_DM,
+    NotificationType.CHAT_CHANNEL_INVITE: (ProtoNotificationType.CHAT_CHANNEL_INVITE),
+    NotificationType.CHAT_CHANNEL_REMOVED: (ProtoNotificationType.CHAT_CHANNEL_REMOVED),
+    NotificationType.CHAT_THREAD_REPLY: (ProtoNotificationType.CHAT_THREAD_REPLY),
+    NotificationType.ACCESS_REQUESTED: ProtoNotificationType.ACCESS_REQUESTED,
+    NotificationType.ACCESS_REQUEST_DENIED: (ProtoNotificationType.ACCESS_REQUEST_DENIED),
+    NotificationType.COMMENT_ADDED: ProtoNotificationType.COMMENT_ADDED,
+    NotificationType.COMMENT_REPLY: ProtoNotificationType.COMMENT_REPLY,
+    NotificationType.COMMENT_MENTIONED: ProtoNotificationType.COMMENT_MENTIONED,
+    NotificationType.COMMENT_RESOLVED: ProtoNotificationType.COMMENT_RESOLVED,
+    NotificationType.AGENTS_BUDGET_ALERT: (ProtoNotificationType.AGENTS_BUDGET_ALERT),
+    NotificationType.SUPPORT_SESSION_REQUESTED: (ProtoNotificationType.SUPPORT_SESSION_REQUESTED),
+    NotificationType.SUPPORT_SESSION_STARTED: (ProtoNotificationType.SUPPORT_SESSION_STARTED),
+    NotificationType.SUPPORT_SESSION_REVOKED: (ProtoNotificationType.SUPPORT_SESSION_REVOKED),
+    NotificationType.SUPPORT_SESSION_EXPIRED: (ProtoNotificationType.SUPPORT_SESSION_EXPIRED),
 }
 
 NOTIFICATION_TYPE_FROM_PROTO: dict[int, NotificationType] = {
@@ -69,7 +49,7 @@ NOTIFICATION_TYPE_FROM_PROTO: dict[int, NotificationType] = {
 
 
 def notification_type_to_proto(nt: NotificationType) -> int:
-    return NOTIFICATION_TYPE_TO_PROTO.get(nt, ProtoNotificationType.NOTIFICATION_TYPE_UNSPECIFIED)
+    return NOTIFICATION_TYPE_TO_PROTO.get(nt, ProtoNotificationType.UNSPECIFIED)
 
 
 def notification_type_from_proto(proto_val: int) -> NotificationType | None:
@@ -107,10 +87,10 @@ def notification_to_proto(
 
     read_at = optional_timestamp(notification.read_at)
     if read_at:
-        proto.read_at.CopyFrom(read_at)
+        proto.read_at = read_at
 
     expires_at = optional_timestamp(notification.expires_at)
     if expires_at:
-        proto.expires_at.CopyFrom(expires_at)
+        proto.expires_at = expires_at
 
     return proto

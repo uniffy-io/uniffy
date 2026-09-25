@@ -6,7 +6,7 @@ from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
-from uniffy_proto.chat.v1.chat_pb2 import (
+from uniffy_proto.chat.v1.chat_pb import (
     AgentChatFolder,
     CreateAgentFolderRequest,
     CreateAgentFolderResponse,
@@ -129,7 +129,7 @@ class AgentFolderHandlers:
             channel_id = UUID(request.channel_id)
             folder_id = (
                 UUID(request.folder_id)
-                if request.HasField("folder_id") and request.folder_id
+                if request.has_field("folder_id") and request.folder_id
                 else None
             )
         except ValueError:

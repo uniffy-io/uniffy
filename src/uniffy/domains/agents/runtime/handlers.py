@@ -12,7 +12,7 @@ from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
-from uniffy_proto.agents.v1.runtime_pb2 import (
+from uniffy_proto.agents.v1.runtime_pb import (
     AgentStreamEvent,
     CancelStreamRequest,
     CancelStreamResponse,

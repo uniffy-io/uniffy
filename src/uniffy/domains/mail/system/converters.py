@@ -9,16 +9,17 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from google.protobuf.timestamp_pb2 import Timestamp
-from uniffy_proto.superadmin.v1.system_mail_pb2 import (
+from protobuf.wkt import Timestamp
+from uniffy_proto.superadmin.v1.system_mail_pb import (
     GlobalDeliveryEntry,
     GlobalSuppressionEntry,
     SystemMailConfigView,
 )
-from uniffy_proto.superadmin.v1.system_mail_pb2 import (
+from uniffy_proto.superadmin.v1.system_mail_pb import (
     OrgMailConfigSummary as OrgMailConfigSummaryProto,
 )
 
+from uniffy.core.converters.proto import datetime_to_timestamp
 from uniffy.core.models.mail.suppression import EmailSuppression
 from uniffy.domains.mail.system.operations import (
     DeliveryRow,
@@ -31,7 +32,7 @@ def _to_timestamp(value: datetime | None) -> Timestamp | None:
     if value is None:
         return None
     ts = Timestamp()
-    ts.FromDatetime(value)
+    ts = datetime_to_timestamp(value)
     return ts
 
 
@@ -65,10 +66,10 @@ def org_row_to_proto(row: OrgMailConfigRow) -> OrgMailConfigSummaryProto:
     )
     verified = _to_timestamp(row.verified_at)
     if verified is not None:
-        msg.verified_at.CopyFrom(verified)
+        msg.verified_at = verified
     last_test = _to_timestamp(row.last_test_at)
     if last_test is not None:
-        msg.last_test_at.CopyFrom(last_test)
+        msg.last_test_at = last_test
     if row.last_test_status is not None:
         msg.last_test_status = row.last_test_status
     return msg
@@ -83,7 +84,7 @@ def suppression_to_proto(entry: EmailSuppression) -> GlobalSuppressionEntry:
     )
     ts = _to_timestamp(entry.created_at)
     if ts is not None:
-        msg.created_at.CopyFrom(ts)
+        msg.created_at = ts
     return msg
 
 
@@ -95,7 +96,7 @@ def delivery_to_proto(row: DeliveryRow) -> GlobalDeliveryEntry:
     )
     ts = _to_timestamp(row.created_at)
     if ts is not None:
-        msg.created_at.CopyFrom(ts)
+        msg.created_at = ts
     if row.organization_id is not None:
         msg.organization_id = str(row.organization_id)
     if row.organization_name is not None:

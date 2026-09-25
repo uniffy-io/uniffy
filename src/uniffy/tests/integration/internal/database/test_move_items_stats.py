@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from sqlalchemy import delete
-from uniffy_proto.files.v1.files_pb2 import MoveItemsRequest
+from uniffy_proto.files.v1.files_pb import MoveItemsRequest
 
 from uniffy.core.models.files.file import File
 from uniffy.core.models.files.folder import Folder

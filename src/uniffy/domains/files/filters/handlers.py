@@ -6,7 +6,7 @@ from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
-from uniffy_proto.files.v1.files_pb2 import (
+from uniffy_proto.files.v1.files_pb import (
     CreateSavedFilterRequest,
     CreateSavedFilterResponse,
     DeleteSavedFilterRequest,
@@ -53,11 +53,11 @@ class SavedFilterHandlersMixin:
                 ops = SavedFilterOperations(session)
 
                 criteria = {}
-                if request.HasField("criteria"):
+                if request.has_field("criteria"):
                     criteria = criteria_from_proto(request.criteria)
 
                 icon = None
-                if request.HasField("icon"):
+                if request.has_field("icon"):
                     icon = icon_from_proto(request.icon)
 
                 saved_filter = await ops.create(
@@ -65,10 +65,10 @@ class SavedFilterHandlersMixin:
                     organization_id=organization_id,
                     name=request.name.strip(),
                     criteria=criteria,
-                    description=request.description if request.HasField("description") else None,
+                    description=request.description if request.has_field("description") else None,
                     icon=icon,
-                    sort_by=request.sort_by if request.HasField("sort_by") else None,
-                    sort_order=request.sort_order if request.HasField("sort_order") else None,
+                    sort_by=request.sort_by if request.has_field("sort_by") else None,
+                    sort_order=request.sort_order if request.has_field("sort_order") else None,
                 )
 
                 return CreateSavedFilterResponse(filter=saved_filter_to_proto(saved_filter))
@@ -126,23 +126,23 @@ class SavedFilterHandlersMixin:
                 ops = SavedFilterOperations(session)
 
                 criteria = None
-                if request.HasField("criteria"):
+                if request.has_field("criteria"):
                     criteria = criteria_from_proto(request.criteria)
 
                 icon = None
-                if request.HasField("icon"):
+                if request.has_field("icon"):
                     icon = icon_from_proto(request.icon)
 
                 saved_filter = await ops.update(
                     user_id=user_id,
                     organization_id=organization_id,
                     filter_id=filter_id,
-                    name=request.name if request.HasField("name") else None,
-                    description=request.description if request.HasField("description") else None,
+                    name=request.name if request.has_field("name") else None,
+                    description=request.description if request.has_field("description") else None,
                     icon=icon,
                     criteria=criteria,
-                    sort_by=request.sort_by if request.HasField("sort_by") else None,
-                    sort_order=request.sort_order if request.HasField("sort_order") else None,
+                    sort_by=request.sort_by if request.has_field("sort_by") else None,
+                    sort_order=request.sort_order if request.has_field("sort_order") else None,
                 )
 
                 return UpdateSavedFilterResponse(filter=saved_filter_to_proto(saved_filter))

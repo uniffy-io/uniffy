@@ -1,7 +1,7 @@
 """ConnectRPC service binding for ``support.v1.SupportConsentService``."""
 
 from connectrpc.request import RequestContext
-from uniffy_proto.support.v1.support_consent_pb2 import (
+from uniffy_proto.support.v1.support_consent_pb import (
     ApproveSessionRequest,
     ApproveSessionResponse,
     GetOrgConsentModeRequest,

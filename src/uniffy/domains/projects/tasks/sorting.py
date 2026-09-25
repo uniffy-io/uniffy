@@ -3,7 +3,7 @@
 from collections.abc import Sequence
 
 from sqlalchemy import ColumnElement, Integer, Select, String, case, cast, func, literal, select
-from uniffy_proto.projects.v1.projects_pb2 import SortDirection, TaskPseudoField, TaskSort
+from uniffy_proto.projects.v1.projects_pb import SortDirection, TaskPseudoField, TaskSort
 
 from uniffy.core.models.projects.field_definition import (
     FieldDefinition,
@@ -80,9 +80,9 @@ class _SortCompiler:
 
     def value(self, key: TaskSort) -> ColumnElement | None:
         ref = key.field
-        if ref.WhichOneof("ref") == RefCase.PSEUDO:
-            return self.pseudo_value(ref.pseudo)
-        field = self.ctx.fields.get(ref.field_id)
+        if (ref.ref.field if ref.ref is not None else None) == RefCase.PSEUDO:
+            return self.pseudo_value(ref.ref.value)
+        field = self.ctx.fields.get(ref.ref.value)
         # A saved view outlives a field it sorts by; the web drops that key.
         return self.field_value(field) if field is not None else None
 
@@ -107,35 +107,35 @@ class _SortCompiler:
 
     def pseudo_value(self, pseudo: int) -> ColumnElement:
         project_id = self.ctx.project_id
-        if pseudo == _PSEUDO.TASK_PSEUDO_FIELD_SPRINT:
+        if pseudo == _PSEUDO.SPRINT:
             return (
                 select(Sprint.sort_order)
                 .where(Sprint.id == Task.sprint_id, Sprint.project_id == project_id)
                 .scalar_subquery()
             )
-        if pseudo == _PSEUDO.TASK_PSEUDO_FIELD_TASK_TYPE:
+        if pseudo == _PSEUDO.TASK_TYPE:
             task_type = func.coalesce(func.nullif(Task.task_type, ""), TaskType.TASK.value)
             return case(
                 *((task_type == value, rank) for value, rank in _TASK_TYPE_RANK.items()),
                 else_=None,
             )
-        if pseudo == _PSEUDO.TASK_PSEUDO_FIELD_CREATOR:
+        if pseudo == _PSEUDO.CREATOR:
             return self.person(Task.owner_id, cast(Task.owner_id, String))
-        if pseudo == _PSEUDO.TASK_PSEUDO_FIELD_DEPTH:
+        if pseudo == _PSEUDO.DEPTH:
             return func.coalesce(self.depth(), 0)
-        if pseudo == _PSEUDO.TASK_PSEUDO_FIELD_HAS_SUBTASKS:
+        if pseudo == _PSEUDO.HAS_SUBTASKS:
             return _as_rank(has_subtasks(project_id))
-        if pseudo == _PSEUDO.TASK_PSEUDO_FIELD_IS_MILESTONE:
+        if pseudo == _PSEUDO.IS_MILESTONE:
             return cast(Task.is_milestone, Integer)
-        if pseudo == _PSEUDO.TASK_PSEUDO_FIELD_IS_BLOCKED:
+        if pseudo == _PSEUDO.IS_BLOCKED:
             return _as_rank(is_blocked(project_id))
         columns = {
-            _PSEUDO.TASK_PSEUDO_FIELD_CREATED_AT: Task.created_at,
-            _PSEUDO.TASK_PSEUDO_FIELD_UPDATED_AT: Task.updated_at,
-            _PSEUDO.TASK_PSEUDO_FIELD_COMPLETED_AT: Task.completed_at,
-            _PSEUDO.TASK_PSEUDO_FIELD_ESTIMATED_MINUTES: Task.estimated_minutes,
-            _PSEUDO.TASK_PSEUDO_FIELD_TIME_SPENT_MINUTES: Task.time_spent_minutes,
-            _PSEUDO.TASK_PSEUDO_FIELD_NUMBER: Task.number,
+            _PSEUDO.CREATED_AT: Task.created_at,
+            _PSEUDO.UPDATED_AT: Task.updated_at,
+            _PSEUDO.COMPLETED_AT: Task.completed_at,
+            _PSEUDO.ESTIMATED_MINUTES: Task.estimated_minutes,
+            _PSEUDO.TIME_SPENT_MINUTES: Task.time_spent_minutes,
+            _PSEUDO.NUMBER: Task.number,
         }
         return columns[pseudo]
 
@@ -148,7 +148,7 @@ def apply_task_sort(query: Select, keys: Sequence[TaskSort], filters: TaskFilter
         value = compiler.value(key)
         if value is None:
             continue
-        ordered = value.desc() if key.direction == SortDirection.SORT_DIRECTION_DESC else value.asc()
+        ordered = value.desc() if key.direction == SortDirection.DESC else value.asc()
         order.append(ordered.nulls_last())
     # ``id`` makes the order total, so offset pages partition the set even when keys tie.
     return compiler.query.order_by(*order, Task.sort_order.asc(), Task.number.asc(), Task.id.asc())

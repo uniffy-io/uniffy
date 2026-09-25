@@ -4,12 +4,7 @@ from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from uniffy_proto.permissions.v1.permissions_pb2 import (
-    ACCESS_REQUEST_STATE_APPROVED,
-    ACCESS_REQUEST_STATE_CANCELED,
-    ACCESS_REQUEST_STATE_DENIED,
-    ACCESS_REQUEST_STATE_PENDING,
-)
+from uniffy_proto.permissions.v1.permissions_pb import AccessRequestState as _ProtoAccessRequestState
 
 from uniffy.core.auth.membership import is_active_member
 from uniffy.core.events import NotificationEvent, emit_notification
@@ -30,10 +25,10 @@ from uniffy.domains.permissions.access.targets import (
 from uniffy.domains.permissions.requests.queries import DENIAL_COOLDOWN
 
 _REQUEST_STATE_TO_PROTO = {
-    ContentAccessRequestState.PENDING: ACCESS_REQUEST_STATE_PENDING,
-    ContentAccessRequestState.APPROVED: ACCESS_REQUEST_STATE_APPROVED,
-    ContentAccessRequestState.DENIED: ACCESS_REQUEST_STATE_DENIED,
-    ContentAccessRequestState.CANCELED: ACCESS_REQUEST_STATE_CANCELED,
+    ContentAccessRequestState.PENDING: _ProtoAccessRequestState.PENDING,
+    ContentAccessRequestState.APPROVED: _ProtoAccessRequestState.APPROVED,
+    ContentAccessRequestState.DENIED: _ProtoAccessRequestState.DENIED,
+    ContentAccessRequestState.CANCELED: _ProtoAccessRequestState.CANCELED,
 }
 
 

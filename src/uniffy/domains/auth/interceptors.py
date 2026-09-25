@@ -44,8 +44,8 @@ class AuthenticationInterceptor:
         self,
         ctx: RequestContext,
     ) -> Token[AuthenticatedPrincipal | None] | None:
-        authorization = ctx.request_headers().get("authorization", "")
-        is_public = f"{ctx.method().service_name}/{ctx.method().name}" in PUBLIC_METHODS
+        authorization = ctx.request_headers.get("authorization", "")
+        is_public = f"{ctx.method.service_name}/{ctx.method.name}" in PUBLIC_METHODS
 
         if not authorization.startswith("Bearer "):
             if is_public:

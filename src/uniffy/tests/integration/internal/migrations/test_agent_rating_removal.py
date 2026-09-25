@@ -6,8 +6,8 @@ from alembic import command
 from alembic.config import Config
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
-from uniffy_proto.agents.v1.sessions_pb2 import ListMessagesRequest
-from uniffy_proto.chat.v1.chat_pb2 import GetThreadMessagesRequest
+from uniffy_proto.agents.v1.sessions_pb import ListMessagesRequest
+from uniffy_proto.chat.v1.chat_pb import GetThreadMessagesRequest
 
 import uniffy.core.models  # noqa: F401
 from uniffy.core.json_codec import dumps_str

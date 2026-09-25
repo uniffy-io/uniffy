@@ -4,12 +4,13 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from google.protobuf.timestamp_pb2 import Timestamp
-from uniffy_proto.superadmin.v1.platform_audit_pb2 import (
+from protobuf.wkt import Timestamp
+from uniffy_proto.superadmin.v1.platform_audit_pb import (
     PlatformActionEntry,
     PlatformAuditEvent,
 )
 
+from uniffy.core.converters.proto import datetime_to_timestamp
 from uniffy.domains.platform.audit.operations import PlatformAuditView
 
 
@@ -17,7 +18,7 @@ def _to_timestamp(value: datetime | None) -> Timestamp | None:
     if value is None:
         return None
     ts = Timestamp()
-    ts.FromDatetime(value)
+    ts = datetime_to_timestamp(value)
     return ts
 
 
@@ -29,7 +30,7 @@ def event_to_proto(view: PlatformAuditView) -> PlatformAuditEvent:
     )
     created_at = _to_timestamp(view.created_at)
     if created_at is not None:
-        msg.created_at.CopyFrom(created_at)
+        msg.created_at = created_at
     if view.organization_id is not None:
         msg.organization_id = str(view.organization_id)
     if view.organization_name is not None:

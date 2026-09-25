@@ -1,21 +1,8 @@
 """Proto <-> domain converters for sessions and messages."""
 
-from uniffy_proto.agents.v1.sessions_pb2 import (
-    MESSAGE_ROLE_ASSISTANT,
-    MESSAGE_ROLE_SUMMARY,
-    MESSAGE_ROLE_SYSTEM,
-    MESSAGE_ROLE_TOOL,
-    MESSAGE_ROLE_UNSPECIFIED,
-    MESSAGE_ROLE_USER,
-    SESSION_KIND_DIRECT,
-    SESSION_KIND_GLOBAL,
-    SESSION_KIND_GROUP,
-    SESSION_KIND_UNSPECIFIED,
-    MessageInfo,
-    MessageRole,
-    SessionInfo,
-    SessionKind,
-)
+from uniffy_proto.agents.v1.sessions_pb import MessageInfo, MessageRole, SessionInfo, SessionKind
+from uniffy_proto.agents.v1.sessions_pb import MessageRole as _ProtoMessageRole
+from uniffy_proto.agents.v1.sessions_pb import SessionKind as _ProtoSessionKind
 
 from uniffy.core.converters import datetime_to_timestamp
 from uniffy.core.json_codec import dumps_str
@@ -23,15 +10,15 @@ from uniffy.core.models.agents.message import AgentMessage
 from uniffy.core.models.agents.session import AgentSession
 
 SESSION_KIND_TO_PROTO: dict[str, SessionKind] = {
-    "direct": SESSION_KIND_DIRECT,
-    "group": SESSION_KIND_GROUP,
-    "global": SESSION_KIND_GLOBAL,
+    "direct": _ProtoSessionKind.DIRECT,
+    "group": _ProtoSessionKind.GROUP,
+    "global": _ProtoSessionKind.GLOBAL,
 }
 
 SESSION_KIND_FROM_PROTO: dict[int, str] = {
-    SESSION_KIND_DIRECT: "direct",
-    SESSION_KIND_GROUP: "group",
-    SESSION_KIND_GLOBAL: "global",
+    _ProtoSessionKind.DIRECT: "direct",
+    _ProtoSessionKind.GROUP: "group",
+    _ProtoSessionKind.GLOBAL: "global",
 }
 
 
@@ -49,7 +36,7 @@ def session_kind_to_proto(kind: str) -> SessionKind:
         Proto enum value.
 
     """
-    return SESSION_KIND_TO_PROTO.get(kind, SESSION_KIND_UNSPECIFIED)
+    return SESSION_KIND_TO_PROTO.get(kind, _ProtoSessionKind.UNSPECIFIED)
 
 
 def session_kind_from_proto(proto_kind: SessionKind) -> str:
@@ -70,19 +57,19 @@ def session_kind_from_proto(proto_kind: SessionKind) -> str:
 
 
 MESSAGE_ROLE_TO_PROTO: dict[str, MessageRole] = {
-    "user": MESSAGE_ROLE_USER,
-    "assistant": MESSAGE_ROLE_ASSISTANT,
-    "tool": MESSAGE_ROLE_TOOL,
-    "system": MESSAGE_ROLE_SYSTEM,
-    "summary": MESSAGE_ROLE_SUMMARY,
+    "user": _ProtoMessageRole.USER,
+    "assistant": _ProtoMessageRole.ASSISTANT,
+    "tool": _ProtoMessageRole.TOOL,
+    "system": _ProtoMessageRole.SYSTEM,
+    "summary": _ProtoMessageRole.SUMMARY,
 }
 
 MESSAGE_ROLE_FROM_PROTO: dict[int, str] = {
-    MESSAGE_ROLE_USER: "user",
-    MESSAGE_ROLE_ASSISTANT: "assistant",
-    MESSAGE_ROLE_TOOL: "tool",
-    MESSAGE_ROLE_SYSTEM: "system",
-    MESSAGE_ROLE_SUMMARY: "summary",
+    _ProtoMessageRole.USER: "user",
+    _ProtoMessageRole.ASSISTANT: "assistant",
+    _ProtoMessageRole.TOOL: "tool",
+    _ProtoMessageRole.SYSTEM: "system",
+    _ProtoMessageRole.SUMMARY: "summary",
 }
 
 
@@ -100,7 +87,7 @@ def message_role_to_proto(role: str) -> MessageRole:
         Proto enum value.
 
     """
-    return MESSAGE_ROLE_TO_PROTO.get(role, MESSAGE_ROLE_UNSPECIFIED)
+    return MESSAGE_ROLE_TO_PROTO.get(role, _ProtoMessageRole.UNSPECIFIED)
 
 
 def message_role_from_proto(proto_role: MessageRole) -> str:
@@ -203,7 +190,7 @@ def message_to_proto(
     info.is_invalidated = bool(message.is_invalidated)
     info.was_cancelled = bool(message.was_cancelled)
     if message.edited_at is not None:
-        info.edited_at.CopyFrom(datetime_to_timestamp(message.edited_at))
+        info.edited_at = datetime_to_timestamp(message.edited_at)
     if message.previous_content is not None:
         info.previous_content = message.previous_content
     if message.invoked_skill_name:

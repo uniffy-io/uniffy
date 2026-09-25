@@ -1,6 +1,6 @@
 """Proto <-> domain converters for the budgets sub-service."""
 
-from uniffy_proto.agents.v1.budgets_pb2 import (
+from uniffy_proto.agents.v1.budgets_pb import (
     CurrencyRate,
     OrgBudget,
     SpendSummary,
@@ -28,8 +28,8 @@ def org_budget_to_proto(row: AgentBudget) -> OrgBudget:
         msg.monthly_limit = str(row.monthly_limit)
     if row.image_monthly_limit is not None:
         msg.image_monthly_limit = int(row.image_monthly_limit)
-    msg.created_at.CopyFrom(datetime_to_timestamp(row.created_at))
-    msg.updated_at.CopyFrom(datetime_to_timestamp(row.updated_at))
+    msg.created_at = datetime_to_timestamp(row.created_at)
+    msg.updated_at = datetime_to_timestamp(row.updated_at)
     return msg
 
 
@@ -50,8 +50,8 @@ def user_quota_to_proto(row: AgentUserQuota) -> UserQuota:
         msg.daily_image_limit = int(row.daily_image_limit)
     if row.monthly_image_limit is not None:
         msg.monthly_image_limit = int(row.monthly_image_limit)
-    msg.created_at.CopyFrom(datetime_to_timestamp(row.created_at))
-    msg.updated_at.CopyFrom(datetime_to_timestamp(row.updated_at))
+    msg.created_at = datetime_to_timestamp(row.created_at)
+    msg.updated_at = datetime_to_timestamp(row.updated_at)
     return msg
 
 
@@ -63,8 +63,8 @@ def spend_summary_to_proto(summary: DomainSpendSummary) -> SpendSummary:
         image_count=int(summary.image_count),
         currency=summary.currency,
     )
-    msg.period_start.CopyFrom(datetime_to_timestamp(summary.period_start))
-    msg.period_end.CopyFrom(datetime_to_timestamp(summary.period_end))
+    msg.period_start = datetime_to_timestamp(summary.period_start)
+    msg.period_end = datetime_to_timestamp(summary.period_end)
     if summary.pct_of_limit is not None:
         msg.pct_of_limit = int(summary.pct_of_limit)
     if summary.user_id is not None:
@@ -81,5 +81,5 @@ def currency_rate_to_proto(row: AgentCurrencyRate) -> CurrencyRate:
         to_currency=row.to_currency,
         rate=str(row.rate),
     )
-    msg.updated_at.CopyFrom(datetime_to_timestamp(row.updated_at))
+    msg.updated_at = datetime_to_timestamp(row.updated_at)
     return msg

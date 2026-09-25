@@ -1,8 +1,8 @@
 from datetime import UTC, datetime
 from unittest.mock import AsyncMock, patch
 
-from uniffy_proto.permissions.v1.permissions_pb2 import ACCESS_REQUEST_STATE_DENIED
-from uniffy_proto.notifications.v1.notifications_pb2 import NotificationType as ProtoNotificationType
+from uniffy_proto.notifications.v1.notifications_pb import NotificationType as ProtoNotificationType
+from uniffy_proto.permissions.v1.permissions_pb import AccessRequestState as _ProtoAccessRequestState
 
 from uniffy.core.events import realtime
 from uniffy.core.events.realtime import NotificationPayloadType
@@ -17,11 +17,11 @@ def test_access_request_notification_types_round_trip() -> None:
     for notification_type, proto_type in (
         (
             NotificationType.ACCESS_REQUESTED,
-            ProtoNotificationType.NOTIFICATION_TYPE_ACCESS_REQUESTED,
+            ProtoNotificationType.ACCESS_REQUESTED,
         ),
         (
             NotificationType.ACCESS_REQUEST_DENIED,
-            ProtoNotificationType.NOTIFICATION_TYPE_ACCESS_REQUEST_DENIED,
+            ProtoNotificationType.ACCESS_REQUEST_DENIED,
         ),
     ):
         assert notification_type_to_proto(notification_type) == proto_type
@@ -39,7 +39,7 @@ async def test_access_request_stream_publisher_targets_requester() -> None:
             user_id=requester_id,
             request_id=request_id,
             requested_urn="urn:uniffy:content:NOTE:019fc01f-12b6-7c82-bb38-2849821c22cb",
-            state=ACCESS_REQUEST_STATE_DENIED,
+            state=_ProtoAccessRequestState.DENIED,
             can_request_again_at=retry_at,
         )
 
@@ -49,7 +49,7 @@ async def test_access_request_stream_publisher_targets_requester() -> None:
             "_type": NotificationPayloadType.ACCESS_REQUEST_CHANGED,
             "request_id": str(request_id),
             "requested_urn": "urn:uniffy:content:NOTE:019fc01f-12b6-7c82-bb38-2849821c22cb",
-            "state": ACCESS_REQUEST_STATE_DENIED,
+            "state": _ProtoAccessRequestState.DENIED,
             "can_request_again_at": retry_at.isoformat(),
         },
     )

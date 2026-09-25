@@ -8,7 +8,7 @@ from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
 from sqlalchemy import select
-from uniffy_proto.files.v1.files_pb2 import (
+from uniffy_proto.files.v1.files_pb import (
     DeleteFileRequest,
     DeleteFileResponse,
     DownloadFileRequest,
@@ -194,16 +194,16 @@ class FileItemHandlers:
                     )
 
                 tag_ids: list[UUID] | None = None
-                if request.HasField("tag_ids"):
+                if request.has_field("tag_ids"):
                     tag_ids = _parse_tag_id_list(list(request.tag_ids.ids))
 
                 file = await ops.update(
                     user_id=user_id,
                     organization_id=organization_id,
                     file_id=file_id,
-                    filename=request.filename if request.HasField("filename") else None,
+                    filename=request.filename if request.has_field("filename") else None,
                     tag_ids=tag_ids,
-                    description=request.description if request.HasField("description") else None,
+                    description=request.description if request.has_field("description") else None,
                 )
 
                 tags_by_urn = await _hydrate_file_tags(session, organization_id, [file])
@@ -331,7 +331,7 @@ class FileItemHandlers:
         user_id = current_user_id()
 
         folder_id = None
-        if request.HasField("folder_id"):
+        if request.has_field("folder_id"):
             if request.folder_id == ParentSelection.ALL:
                 folder_id = ParentSelection.ALL
             elif request.folder_id == "":
@@ -343,7 +343,7 @@ class FileItemHandlers:
                     raise ConnectError(Code.INVALID_ARGUMENT, "Invalid folder_id")
 
         group_id = None
-        if request.HasField("group_id"):
+        if request.has_field("group_id"):
             try:
                 group_id = UUID(request.group_id)
             except ValueError:

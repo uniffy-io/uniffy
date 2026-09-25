@@ -4,7 +4,7 @@ from uuid import UUID
 
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
-from uniffy_proto.notes.v1.notes_pb2 import (
+from uniffy_proto.notes.v1.notes_pb import (
     GetBacklinksRequest,
     GetBacklinksResponse,
     GetNoteRequest,
@@ -83,9 +83,11 @@ class NoteQueryHandlers:
     ) -> ListNotesResponse:
         user_id = current_user_id()
         organization_id = parse_uuid(request.organization_id, "organization_id")
-        group_id = parse_uuid(request.group_id, "group_id") if request.HasField("group_id") else None
+        group_id = (
+            parse_uuid(request.group_id, "group_id") if request.has_field("group_id") else None
+        )
         parent_id: UUID | ParentSelection | None = None
-        if request.HasField("parent_id"):
+        if request.has_field("parent_id"):
             parent_id = (
                 ParentSelection.ROOT
                 if request.parent_id == ""

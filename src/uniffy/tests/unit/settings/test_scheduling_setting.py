@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from uniffy_proto.settings.v1.settings_pb2 import SchedulingSettings
+from uniffy_proto.settings.v1.settings_pb import SchedulingSettings
 
 from uniffy.core.errors import ValidationError
 from uniffy.domains.settings.converters import (
@@ -34,9 +34,11 @@ def test_override_merges_into_effective() -> None:
 def test_validate_accepts_absent_and_valid() -> None:
     _validate_scheduling(None)
     _validate_scheduling({})
-    _validate_scheduling(
-        {"workday_start": "08:00", "workday_end": "16:30", "workdays": ["monday", "saturday"]}
-    )
+    _validate_scheduling({
+        "workday_start": "08:00",
+        "workday_end": "16:30",
+        "workdays": ["monday", "saturday"],
+    })
 
 
 def test_validate_rejects_bad_clock() -> None:
@@ -65,7 +67,7 @@ def test_proto_round_trip_is_sparse() -> None:
     assert parsed == {"workday_start": "10:00", "workdays": ["tuesday"]}
     back = scheduling_dict_to_proto(parsed)
     assert back.workday_start == "10:00"
-    assert not back.HasField("workday_end")
+    assert not back.has_field("workday_end")
     assert list(back.workdays) == ["tuesday"]
 
 

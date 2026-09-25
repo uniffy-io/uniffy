@@ -10,7 +10,7 @@ from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
-from uniffy_proto.superadmin.v1.system_directory_pb2 import (
+from uniffy_proto.superadmin.v1.system_directory_pb import (
     CreateOrganizationRequest,
     CreateOrganizationResponse,
     CreateUserRequest,
@@ -169,11 +169,11 @@ class SystemOrganizationsHandlers:
                     user_id=user_id,
                     organization_id=org_id,
                     reason=request.reason,
-                    name=request.name if request.HasField("name") else None,
-                    slug=request.slug if request.HasField("slug") else None,
-                    domain=request.domain if request.HasField("domain") else None,
-                    plan=request.plan if request.HasField("plan") else None,
-                    max_members=request.max_members if request.HasField("max_members") else None,
+                    name=request.name if request.has_field("name") else None,
+                    slug=request.slug if request.has_field("slug") else None,
+                    domain=request.domain if request.has_field("domain") else None,
+                    plan=request.plan if request.has_field("plan") else None,
+                    max_members=request.max_members if request.has_field("max_members") else None,
                 )
         except ConnectError:
             raise
@@ -348,14 +348,14 @@ class SystemUsersHandlers:
                     user_id=user_id,
                     target_user_id=target_id,
                     reason=request.reason,
-                    email=request.email if request.HasField("email") else None,
-                    username=request.username if request.HasField("username") else None,
-                    full_name=request.full_name if request.HasField("full_name") else None,
-                    is_active=request.is_active if request.HasField("is_active") else None,
+                    email=request.email if request.has_field("email") else None,
+                    username=request.username if request.has_field("username") else None,
+                    full_name=request.full_name if request.has_field("full_name") else None,
+                    is_active=request.is_active if request.has_field("is_active") else None,
                     email_verified=request.email_verified
-                    if request.HasField("email_verified")
+                    if request.has_field("email_verified")
                     else None,
-                    password=request.password if request.HasField("password") else None,
+                    password=request.password if request.has_field("password") else None,
                 )
         except ConnectError:
             raise

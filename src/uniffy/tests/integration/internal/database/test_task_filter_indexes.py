@@ -6,8 +6,9 @@ from types import SimpleNamespace
 
 import pytest
 import pytest_asyncio
+from protobuf import Oneof
 from sqlalchemy import delete, insert, select, text
-from uniffy_proto.projects.v1.projects_pb2 import (
+from uniffy_proto.projects.v1.projects_pb import (
     FilterLogic,
     TaskFieldRef,
     TaskFilterCondition,
@@ -51,10 +52,13 @@ TAG_BY_TAG_INDEX = "ix_tag_assignments_tag_content_type"
 
 def _condition(field: TaskFieldRef, ids: list[str]) -> TaskFilterNode:
     return TaskFilterNode(
-        condition=TaskFilterCondition(
-            field=field,
-            operator=TaskFilterOperator.TASK_FILTER_OPERATOR_IS_ANY_OF,
-            value=TaskFilterValue(ids=TaskFilterIdSet(ids=ids)),
+        node=Oneof(
+            field="condition",
+            value=TaskFilterCondition(
+                field=field,
+                operator=TaskFilterOperator.IS_ANY_OF,
+                value=TaskFilterValue(value=Oneof(field="ids", value=TaskFilterIdSet(ids=ids))),
+            ),
         )
     )
 
@@ -168,20 +172,28 @@ async def _seed_large(session, env) -> SimpleNamespace:
     await session.commit()
 
     conditions = {
-        "field": _condition(TaskFieldRef(field_id="size"), ["size-3"]),
+        "field": _condition(TaskFieldRef(ref=Oneof(field="field_id", value="size")), ["size-3"]),
         "tag": _condition(
-            TaskFieldRef(pseudo=TaskPseudoField.TASK_PSEUDO_FIELD_TAGS), [str(tag_ids[3])]
+            TaskFieldRef(ref=Oneof(field="pseudo", value=TaskPseudoField.TAGS)), [str(tag_ids[3])]
         ),
-        "assignee": _condition(TaskFieldRef(field_id="field_assignee"), [people[3]]),
+        "assignee": _condition(
+            TaskFieldRef(ref=Oneof(field="field_id", value="field_assignee")), [people[3]]
+        ),
         "due": TaskFilterNode(
-            condition=TaskFilterCondition(
-                field=TaskFieldRef(field_id="field_due_date"),
-                operator=TaskFilterOperator.TASK_FILTER_OPERATOR_BETWEEN,
-                value=TaskFilterValue(
-                    date_range=TaskFilterDateRange(
-                        start=TaskFilterDate(fixed="2026-03-01"),
-                        end=TaskFilterDate(fixed="2026-03-07"),
-                    )
+            node=Oneof(
+                field="condition",
+                value=TaskFilterCondition(
+                    field=TaskFieldRef(ref=Oneof(field="field_id", value="field_due_date")),
+                    operator=TaskFilterOperator.BETWEEN,
+                    value=TaskFilterValue(
+                        value=Oneof(
+                            field="date_range",
+                            value=TaskFilterDateRange(
+                                start=TaskFilterDate(value=Oneof(field="fixed", value="2026-03-01")),
+                                end=TaskFilterDate(value=Oneof(field="fixed", value="2026-03-07")),
+                            ),
+                        )
+                    ),
                 ),
             )
         ),
@@ -205,9 +217,7 @@ async def _cleanup_large(session, env) -> None:
 
 
 def _view(large: SimpleNamespace, *names: str) -> TaskFilterGroup:
-    return TaskFilterGroup(
-        logic=FilterLogic.FILTER_LOGIC_AND, nodes=[large.conditions[name] for name in names]
-    )
+    return TaskFilterGroup(logic=FilterLogic.AND, nodes=[large.conditions[name] for name in names])
 
 
 async def test_a_three_condition_view_keeps_where_all_three_meet(session, large_project) -> None:

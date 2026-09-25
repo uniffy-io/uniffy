@@ -10,12 +10,12 @@ change the proto output.
 from datetime import UTC, datetime
 from uuid import UUID
 
-from uniffy_proto.common.v1.common_pb2 import (
+from uniffy_proto.common.v1.common_pb import (
     ContentMemberAction as ProtoContentMemberAction,
 )
-from uniffy_proto.common.v1.common_pb2 import ContentRole as ProtoContentRole
-from uniffy_proto.common.v1.common_pb2 import ContentType as ProtoContentType
-from uniffy_proto.common.v1.common_pb2 import SubjectType as ProtoSubjectType
+from uniffy_proto.common.v1.common_pb import ContentRole as ProtoContentRole
+from uniffy_proto.common.v1.common_pb import ContentType as ProtoContentType
+from uniffy_proto.common.v1.common_pb import SubjectType as ProtoSubjectType
 
 from uniffy.core.audit.actions import Action
 from uniffy.core.models.audit.event import AuditEvent
@@ -52,11 +52,11 @@ def test_member_added_projection() -> None:
 
     proto = audit_event_to_content_member_event_proto(event)
 
-    assert proto.action == ProtoContentMemberAction.CONTENT_MEMBER_ACTION_MEMBER_ADDED
-    assert proto.content_type == ProtoContentType.CONTENT_TYPE_NOTE
-    assert proto.subject_type == ProtoSubjectType.SUBJECT_TYPE_USER
+    assert proto.action == ProtoContentMemberAction.MEMBER_ADDED
+    assert proto.content_type == ProtoContentType.NOTE
+    assert proto.subject_type == ProtoSubjectType.USER
     assert proto.subject_id == "018f0000-0000-7000-8000-000000000040"
-    assert proto.new_role == ProtoContentRole.CONTENT_ROLE_EDITOR
+    assert proto.new_role == ProtoContentRole.EDITOR
     assert proto.note == "from picker"
 
 
@@ -76,7 +76,7 @@ def test_ownership_transferred_projection() -> None:
 
     proto = audit_event_to_content_member_event_proto(event)
 
-    assert proto.action == ProtoContentMemberAction.CONTENT_MEMBER_ACTION_OWNERSHIP_TRANSFERRED
+    assert proto.action == ProtoContentMemberAction.OWNERSHIP_TRANSFERRED
     assert proto.previous_owner_id == previous_owner
     assert proto.new_owner_id == new_owner
     assert proto.subject_id == new_owner

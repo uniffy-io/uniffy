@@ -4,7 +4,7 @@ import re
 
 from connectrpc.request import RequestContext
 from sqlalchemy import select
-from uniffy_proto.cal.v1.calendar_pb2 import (
+from uniffy_proto.cal.v1.calendar_pb import (
     ApplyCalendarImportRequest,
     ApplyCalendarImportResponse,
     ExportCalendarRequest,
@@ -104,9 +104,9 @@ class InteropHandlers:
         organization_id = resolve_organization_id(request.organization_id)
 
         start_time = (
-            timestamp_to_datetime(request.start_time) if request.HasField("start_time") else None
+            timestamp_to_datetime(request.start_time) if request.has_field("start_time") else None
         )
-        end_time = timestamp_to_datetime(request.end_time) if request.HasField("end_time") else None
+        end_time = timestamp_to_datetime(request.end_time) if request.has_field("end_time") else None
         try:
             if start_time and end_time and end_time < start_time:
                 raise ValidationError("range", "Range end precedes its start")
@@ -239,9 +239,9 @@ class InteropHandlers:
 
         raw_token, row = existing
         response = GetCalendarFeedUrlResponse(url=feed_url(raw_token))
-        response.created_at.CopyFrom(datetime_to_timestamp(row.created_at))
+        response.created_at = datetime_to_timestamp(row.created_at)
         if row.last_used_at is not None:
-            response.last_used_at.CopyFrom(datetime_to_timestamp(row.last_used_at))
+            response.last_used_at = datetime_to_timestamp(row.last_used_at)
         return response
 
     async def regenerate_calendar_feed(
@@ -268,7 +268,7 @@ class InteropHandlers:
             raise map_domain_error("regenerate_calendar_feed", exc) from exc
 
         response = RegenerateCalendarFeedResponse(url=feed_url(raw_token))
-        response.created_at.CopyFrom(datetime_to_timestamp(created_at))
+        response.created_at = datetime_to_timestamp(created_at)
         return response
 
     async def revoke_calendar_feed(

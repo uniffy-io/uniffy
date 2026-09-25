@@ -2,18 +2,18 @@ from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from uniffy_proto.permissions.v1.permissions_pb2 import ACCESS_REQUEST_STATE_DENIED
+from uniffy_proto.permissions.v1.permissions_pb import AccessRequestState as _ProtoAccessRequestState
 
 from uniffy.core.models.permissions.content_access_request import (
     ContentAccessRequest,
     ContentAccessRequestState,
 )
 from uniffy.core.types import ContentType, NotificationType, generate_id
-from uniffy.domains.permissions.requests.notifications import AccessRequestNotifier
 from uniffy.domains.permissions.access.targets import (
     AccessGrantKind,
     AccessRequestTarget,
 )
+from uniffy.domains.permissions.requests.notifications import AccessRequestNotifier
 
 
 def _request() -> ContentAccessRequest:
@@ -101,7 +101,7 @@ async def test_denied_state_stream_includes_cooldown() -> None:
         user_id=request.requester_id,
         request_id=request.id,
         requested_urn=request.requested_urn,
-        state=ACCESS_REQUEST_STATE_DENIED,
+        state=_ProtoAccessRequestState.DENIED,
         can_request_again_at=responded_at + timedelta(hours=24),
     )
 

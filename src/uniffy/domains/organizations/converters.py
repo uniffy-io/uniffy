@@ -1,6 +1,6 @@
 """Proto <-> domain converters for organizations domain."""
 
-from uniffy_proto.organizations.v1.organizations_pb2 import (
+from uniffy_proto.organizations.v1.organizations_pb import (
     ContentTypeCount,
     ContentTypeDefaults,
     MyOrganization,

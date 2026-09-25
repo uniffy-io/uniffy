@@ -6,7 +6,7 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from uniffy_proto.agents.v1.providers_pb2 import ListProviderKeysRequest
+from uniffy_proto.agents.v1.providers_pb import ListProviderKeysRequest
 
 from uniffy.core.types import generate_id
 from uniffy.domains.agents.providers.converters import provider_key_to_proto
@@ -37,7 +37,7 @@ def _key_row(**overrides):
 def test_converter_hides_last_error_unless_diagnostics_requested() -> None:
     key = _key_row()
 
-    assert not provider_key_to_proto(key).HasField("last_error")
+    assert not provider_key_to_proto(key).has_field("last_error")
     assert provider_key_to_proto(key, include_diagnostics=True).last_error == key.last_error
 
 
@@ -91,7 +91,7 @@ async def test_list_keys_hides_the_validation_error_from_a_plain_member() -> Non
 
     rendered, _ = await _list_keys_as(org_admin=False, keys=[key])
 
-    assert not rendered[0].HasField("last_error")
+    assert not rendered[0].has_field("last_error")
     assert rendered[0].key_hint == key.key_hint
     assert rendered[0].is_valid is False
 

@@ -2,7 +2,7 @@
 
 from uuid import UUID
 
-from uniffy_proto.auth.v1.auth_pb2 import GetCurrentUserResponse, SessionInfo
+from uniffy_proto.auth.v1.auth_pb import GetCurrentUserResponse, SessionInfo
 
 from uniffy.core.avatars import get_avatar_url
 from uniffy.core.models.login.user import User

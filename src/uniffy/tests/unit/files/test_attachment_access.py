@@ -2,13 +2,12 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from uniffy_proto.common.v1.common_pb2 import ContentType as ProtoContentType
+from uniffy_proto.common.v1.common_pb import ContentType as ProtoContentType
 
 from uniffy.core.errors import PermissionDeniedError
 from uniffy.core.types import AccessMode, ContentRole, ContentType, generate_id
 from uniffy.domains.chat.attachments import ChatAttachmentPolicy
 from uniffy.domains.files.attachments import access as access_module
-from uniffy.domains.files.attachments import operations as operations_module
 from uniffy.domains.files.attachments.access import AttachmentTargetAccess
 from uniffy.domains.files.attachments.converters import content_type_from_proto
 from uniffy.domains.files.attachments.operations import AttachmentOperations
@@ -148,4 +147,4 @@ async def test_attacher_still_needs_current_parent_access(
 
 
 def test_user_profile_is_not_an_attachment_target() -> None:
-    assert content_type_from_proto(ProtoContentType.CONTENT_TYPE_USER) is None
+    assert content_type_from_proto(ProtoContentType.USER) is None

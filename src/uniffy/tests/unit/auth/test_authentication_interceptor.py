@@ -1,11 +1,4 @@
-"""Default-deny authentication across every ConnectRPC method.
-
-Authentication used to be opt-in per handler, so a forgotten
-``current_user_id`` left an RPC reachable with no credentials.
-These tests pin the inverse: a method is private unless it appears in
-``PUBLIC_METHODS``, and every entry in that allowlist names a method that
-actually exists.
-"""
+"""Every RPC requires authentication unless explicitly declared public."""
 
 import pathlib
 import re
@@ -101,7 +94,7 @@ async def test_malformed_tokens_are_denied(bearer: str) -> None:
         )
 
 
-def test_every_mounted_service_carries_the_authentication_interceptor() -> None:
+def test_every_mounted_service_authenticates_before_parsing() -> None:
     search = WorkspaceSearch(MagicMock(spec=SearchEngine))
     dispatcher = _create_api_dispatcher(
         MagicMock(spec=ObjectStorage),
@@ -119,7 +112,7 @@ def test_every_mounted_service_carries_the_authentication_interceptor() -> None:
         discovered.append(prefix)
         if not any(
             isinstance(interceptor, AuthenticationInterceptor)
-            for interceptor in application._interceptors
+            for interceptor in application._metadata_interceptors
         ):
             unguarded.append(prefix)
 

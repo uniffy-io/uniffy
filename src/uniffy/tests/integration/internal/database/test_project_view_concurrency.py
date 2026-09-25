@@ -9,9 +9,10 @@ from uuid import UUID
 
 import pytest
 import pytest_asyncio
+from protobuf import Oneof
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
-from uniffy_proto.projects.v1.projects_pb2 import TableLayout, ViewDefinition
+from uniffy_proto.projects.v1.projects_pb import TableLayout, ViewDefinition
 
 from uniffy.core.errors import PermissionDeniedError, ValidationError
 from uniffy.core.models.permissions.content_member import ContentMember
@@ -163,7 +164,8 @@ async def test_editor_response_excludes_later_private_definition(
                     view_id,
                     visibility=PERSONAL,
                     definition=ViewDefinition(
-                        table=TableLayout(), collapsed_group_keys=["private-group"]
+                        layout=Oneof(field="table", value=TableLayout()),
+                        collapsed_group_keys=["private-group"],
                     ),
                 )
                 assert private.definition["collapsed_group_keys"] == ["private-group"]

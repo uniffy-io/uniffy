@@ -1,4 +1,5 @@
-from uniffy_proto.agents.v1 import skill_evaluations_pb2 as proto
+from protobuf import Oneof
+from uniffy_proto.agents.v1 import skill_evaluations_pb as proto
 
 from uniffy.core.converters import datetime_to_timestamp
 from uniffy.core.models.agents.skill_evaluation_case import AgentSkillEvaluationCase
@@ -8,12 +9,12 @@ from uniffy.core.models.agents.skill_evaluation_run import (
 )
 
 STATUS_TO_PROTO = {
-    SkillEvaluationStatus.QUEUED: proto.EVALUATION_STATUS_QUEUED,
-    SkillEvaluationStatus.RUNNING: proto.EVALUATION_STATUS_RUNNING,
-    SkillEvaluationStatus.PASSED: proto.EVALUATION_STATUS_PASSED,
-    SkillEvaluationStatus.FAILED: proto.EVALUATION_STATUS_FAILED,
-    SkillEvaluationStatus.INCONCLUSIVE: proto.EVALUATION_STATUS_INCONCLUSIVE,
-    SkillEvaluationStatus.ERROR: proto.EVALUATION_STATUS_ERROR,
+    SkillEvaluationStatus.QUEUED: proto.EvaluationStatus.QUEUED,
+    SkillEvaluationStatus.RUNNING: proto.EvaluationStatus.RUNNING,
+    SkillEvaluationStatus.PASSED: proto.EvaluationStatus.PASSED,
+    SkillEvaluationStatus.FAILED: proto.EvaluationStatus.FAILED,
+    SkillEvaluationStatus.INCONCLUSIVE: proto.EvaluationStatus.INCONCLUSIVE,
+    SkillEvaluationStatus.ERROR: proto.EvaluationStatus.ERROR,
 }
 
 
@@ -30,9 +31,9 @@ def fields_to_proto(fields: dict) -> proto.EvaluationCaseFields:
 
 def case_to_proto(case: AgentSkillEvaluationCase) -> proto.EvaluationCase:
     scope = (
-        proto.EvaluationScope(skill_id=str(case.skill_id))
+        proto.EvaluationScope(scope=Oneof(field="skill_id", value=str(case.skill_id)))
         if case.skill_id
-        else proto.EvaluationScope(draft_id=str(case.draft_id))
+        else proto.EvaluationScope(scope=Oneof(field="draft_id", value=str(case.draft_id)))
     )
     return proto.EvaluationCase(
         id=str(case.id),
@@ -80,7 +81,7 @@ def run_to_proto(run: AgentSkillEvaluationRun) -> proto.EvaluationRun:
         outcome_reason=run.observations.get("reason") or "",
     )
     if run.completed_at:
-        result.completed_at.CopyFrom(datetime_to_timestamp(run.completed_at))
+        result.completed_at = datetime_to_timestamp(run.completed_at)
     for field in ("skill_id", "skill_version_id", "draft_id", "run_log_id"):
         value = getattr(run, field)
         if value is not None:

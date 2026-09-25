@@ -9,8 +9,8 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.attributes import flag_modified
-from uniffy_proto.common.v1.common_pb2 import PaginationResponse
-from uniffy_proto.projects.v1.projects_pb2 import (
+from uniffy_proto.common.v1.common_pb import PaginationResponse
+from uniffy_proto.projects.v1.projects_pb import (
     BulkCheckTaskWatchersRequest,
     BulkCheckTaskWatchersResponse,
     BulkUpdateTasksRequest,
@@ -222,7 +222,7 @@ class ProjectsHandlers:
         baseline_role = (
             content_role_from_proto(request.baseline_role) if request.baseline_role else None
         )
-        slug = request.slug if request.HasField("slug") else None
+        slug = request.slug if request.has_field("slug") else None
 
         tag_ids = _parse_tag_ids(list(request.tag_ids))
 
@@ -233,9 +233,9 @@ class ProjectsHandlers:
                     user_id=user_id,
                     organization_id=organization_id,
                     name=request.name,
-                    description=request.description if request.HasField("description") else "",
-                    icon=request.icon if request.HasField("icon") else "folder",
-                    color=request.color if request.HasField("color") else "#3b82f6",
+                    description=request.description if request.has_field("description") else "",
+                    icon=request.icon if request.has_field("icon") else "folder",
+                    color=request.color if request.has_field("color") else "#3b82f6",
                     access_mode=access_mode,
                     baseline_role=baseline_role,
                     slug=slug,
@@ -324,17 +324,17 @@ class ProjectsHandlers:
         project_id = parse_uuid(request.project_id, "project_id")
 
         updates: dict = {}
-        if request.HasField("name"):
+        if request.has_field("name"):
             updates["name"] = request.name
-        if request.HasField("description"):
+        if request.has_field("description"):
             updates["description"] = request.description
-        if request.HasField("icon"):
+        if request.has_field("icon"):
             updates["icon"] = request.icon
-        if request.HasField("color"):
+        if request.has_field("color"):
             updates["color"] = request.color
-        if request.HasField("default_view_id"):
+        if request.has_field("default_view_id"):
             updates["default_view_id"] = request.default_view_id
-        if request.HasField("slug"):
+        if request.has_field("slug"):
             updates["slug"] = request.slug
         if request.type_field_schemas:
             updates["type_field_schemas"] = {
@@ -344,7 +344,7 @@ class ProjectsHandlers:
                 }
                 for type_name, schema in request.type_field_schemas.items()
             }
-        if request.HasField("tag_ids"):
+        if request.has_field("tag_ids"):
             updates["tag_ids"] = _parse_tag_ids(list(request.tag_ids.ids))
 
         try:
@@ -420,7 +420,7 @@ class ProjectsHandlers:
 
         page = 1
         page_size = 50
-        if request.HasField("pagination"):
+        if request.has_field("pagination"):
             page = request.pagination.page if request.pagination.page > 0 else 1
             page_size = min(
                 request.pagination.page_size if request.pagination.page_size > 0 else 50,
@@ -437,7 +437,7 @@ class ProjectsHandlers:
                     organization_id=organization_id,
                     access_mode=access_mode,
                     include_deleted=(
-                        request.include_deleted if request.HasField("include_deleted") else False
+                        request.include_deleted if request.has_field("include_deleted") else False
                     ),
                     page=page,
                     page_size=page_size,
@@ -515,35 +515,35 @@ class ProjectsHandlers:
         project_id = parse_uuid(request.project_id, "project_id")
 
         kwargs: dict = {
-            "description": request.description if request.HasField("description") else "",
-            "status": request.status if request.HasField("status") else "status_todo",
-            "priority": (request.priority if request.HasField("priority") else "priority_medium"),
-            "task_type": request.task_type if request.HasField("task_type") else "task",
+            "description": request.description if request.has_field("description") else "",
+            "status": request.status if request.has_field("status") else "status_todo",
+            "priority": (request.priority if request.has_field("priority") else "priority_medium"),
+            "task_type": request.task_type if request.has_field("task_type") else "task",
         }
 
         if request.assignee_ids:
             kwargs["assignee_ids"] = list(request.assignee_ids)
-        if request.HasField("start_date"):
+        if request.has_field("start_date"):
             kwargs["start_date"] = request.start_date
-        if request.HasField("due_date"):
+        if request.has_field("due_date"):
             kwargs["due_date"] = request.due_date
-        if request.HasField("parent_id"):
+        if request.has_field("parent_id"):
             kwargs["parent_id"] = (
                 parse_uuid(request.parent_id, "parent_id") if request.parent_id else None
             )
         if request.blocked_by_task_ids:
             kwargs["blocked_by_task_ids"] = list(request.blocked_by_task_ids)
-        if request.HasField("is_milestone"):
+        if request.has_field("is_milestone"):
             kwargs["is_milestone"] = request.is_milestone
-        if request.HasField("recurrence_rule"):
+        if request.has_field("recurrence_rule"):
             kwargs["recurrence_rule"] = request.recurrence_rule
-        if request.HasField("sprint_id"):
+        if request.has_field("sprint_id"):
             kwargs["sprint_id"] = (
                 parse_uuid(request.sprint_id, "sprint_id") if request.sprint_id else None
             )
-        if request.HasField("estimated_minutes"):
+        if request.has_field("estimated_minutes"):
             kwargs["estimated_minutes"] = request.estimated_minutes or None
-        if request.HasField("time_spent_minutes"):
+        if request.has_field("time_spent_minutes"):
             kwargs["time_spent_minutes"] = request.time_spent_minutes or None
         if request.field_values:
             field_values: dict = {}
@@ -641,41 +641,41 @@ class ProjectsHandlers:
         task_id = parse_uuid(request.task_id, "task_id")
 
         updates: dict = {}
-        if request.HasField("title"):
+        if request.has_field("title"):
             updates["title"] = request.title
-        if request.HasField("description"):
+        if request.has_field("description"):
             updates["description"] = request.description
-        if request.HasField("status"):
+        if request.has_field("status"):
             updates["status"] = request.status
-        if request.HasField("priority"):
+        if request.has_field("priority"):
             updates["priority"] = request.priority
-        if request.HasField("assignee_ids"):
+        if request.has_field("assignee_ids"):
             updates["assignee_ids"] = list(request.assignee_ids.ids)
-        if request.HasField("start_date"):
+        if request.has_field("start_date"):
             updates["start_date"] = request.start_date or None
-        if request.HasField("due_date"):
+        if request.has_field("due_date"):
             updates["due_date"] = request.due_date or None
-        if request.HasField("parent_id"):
+        if request.has_field("parent_id"):
             updates["parent_id"] = (
                 parse_uuid(request.parent_id, "parent_id") if request.parent_id else None
             )
         if request.blocked_by_task_ids:
             updates["blocked_by_task_ids"] = list(request.blocked_by_task_ids)
-        if request.HasField("is_milestone"):
+        if request.has_field("is_milestone"):
             updates["is_milestone"] = request.is_milestone
-        if request.HasField("recurrence_rule"):
+        if request.has_field("recurrence_rule"):
             updates["recurrence_rule"] = request.recurrence_rule
-        if request.HasField("sort_order"):
+        if request.has_field("sort_order"):
             updates["sort_order"] = request.sort_order
-        if request.HasField("task_type"):
+        if request.has_field("task_type"):
             updates["task_type"] = request.task_type
-        if request.HasField("sprint_id"):
+        if request.has_field("sprint_id"):
             updates["sprint_id"] = (
                 parse_uuid(request.sprint_id, "sprint_id") if request.sprint_id else None
             )
-        if request.HasField("estimated_minutes"):
+        if request.has_field("estimated_minutes"):
             updates["estimated_minutes"] = request.estimated_minutes or None
-        if request.HasField("time_spent_minutes"):
+        if request.has_field("time_spent_minutes"):
             updates["time_spent_minutes"] = request.time_spent_minutes or None
         if request.field_values:
             field_values: dict = {}
@@ -685,7 +685,7 @@ class ProjectsHandlers:
                 except ValueError:
                     field_values[key] = value
             updates["field_values"] = field_values
-        if request.HasField("tag_ids"):
+        if request.has_field("tag_ids"):
             updates["tag_ids"] = _parse_tag_ids(list(request.tag_ids.ids))
 
         try:
@@ -824,13 +824,13 @@ class ProjectsHandlers:
         organization_id = parse_uuid(request.organization_id, "organization_id")
 
         changes: dict = {}
-        if request.HasField("status"):
+        if request.has_field("status"):
             changes["status"] = request.status
-        if request.HasField("priority"):
+        if request.has_field("priority"):
             changes["priority"] = request.priority
         if request.assignee_ids:
             changes["assignee_ids"] = list(request.assignee_ids)
-        if request.HasField("sprint_id"):
+        if request.has_field("sprint_id"):
             changes["sprint_id"] = (
                 parse_uuid(request.sprint_id, "sprint_id") if request.sprint_id else None
             )
@@ -931,7 +931,7 @@ class ProjectsHandlers:
 
         page = 1
         page_size = 500
-        if request.HasField("pagination"):
+        if request.has_field("pagination"):
             page = request.pagination.page if request.pagination.page > 0 else 1
             page_size = min(
                 request.pagination.page_size if request.pagination.page_size > 0 else 500,
@@ -939,7 +939,7 @@ class ProjectsHandlers:
             )
 
         parent_id: UUID | None = None
-        if request.HasField("parent_id") and request.parent_id:
+        if request.has_field("parent_id") and request.parent_id:
             parent_id = parse_uuid(request.parent_id, "parent_id")
 
         try:
@@ -950,12 +950,12 @@ class ProjectsHandlers:
                     organization_id=organization_id,
                     project_id=project_id,
                     include_deleted=(
-                        request.include_deleted if request.HasField("include_deleted") else False
+                        request.include_deleted if request.has_field("include_deleted") else False
                     ),
                     parent_id=parent_id,
-                    task_filter=request.filter if request.HasField("filter") else None,
+                    task_filter=request.filter if request.has_field("filter") else None,
                     sort=list(request.sort),
-                    time_zone=request.time_zone if request.HasField("time_zone") else None,
+                    time_zone=request.time_zone if request.has_field("time_zone") else None,
                     page=page,
                     page_size=page_size,
                 )
@@ -1007,7 +1007,7 @@ class ProjectsHandlers:
         project_id = parse_uuid(request.project_id, "project_id")
 
         config: dict = {}
-        if request.HasField("config_json"):
+        if request.has_field("config_json"):
             try:
                 config = loads(request.config_json)
             except JSONDecodeError as exc:
@@ -1022,10 +1022,10 @@ class ProjectsHandlers:
                     name=request.name,
                     field_type=field_type_from_proto(request.type),
                     config=config,
-                    is_required=request.is_required if request.HasField("is_required") else False,
+                    is_required=request.is_required if request.has_field("is_required") else False,
                     sort_order=(
                         request.sort_order
-                        if request.HasField("sort_order")
+                        if request.has_field("sort_order")
                         else DEFAULT_CUSTOM_FIELD_SORT_ORDER
                     ),
                 )
@@ -1060,13 +1060,13 @@ class ProjectsHandlers:
                 if not field:
                     raise NotFoundError("Field", request.field_id)
 
-                if request.HasField("name"):
+                if request.has_field("name"):
                     field.name = request.name
-                if request.HasField("is_required"):
+                if request.has_field("is_required"):
                     field.is_required = request.is_required
-                if request.HasField("sort_order"):
+                if request.has_field("sort_order"):
                     field.sort_order = request.sort_order
-                if request.HasField("config_json"):
+                if request.has_field("config_json"):
                     try:
                         config = loads(request.config_json)
                     except JSONDecodeError as exc:
@@ -1138,7 +1138,7 @@ class ProjectsHandlers:
 
         page = 1
         page_size = 50
-        if request.HasField("pagination"):
+        if request.has_field("pagination"):
             page = request.pagination.page if request.pagination.page > 0 else 1
             if request.pagination.page_size > 0:
                 page_size = min(request.pagination.page_size, 200)
@@ -1192,9 +1192,9 @@ class SprintHandlers:
                     organization_id=organization_id,
                     project_id=project_id,
                     name=request.name,
-                    goal=request.goal if request.HasField("goal") else "",
-                    start_date=request.start_date if request.HasField("start_date") else None,
-                    end_date=request.end_date if request.HasField("end_date") else None,
+                    goal=request.goal if request.has_field("goal") else "",
+                    start_date=request.start_date if request.has_field("start_date") else None,
+                    end_date=request.end_date if request.has_field("end_date") else None,
                 )
                 return CreateSprintResponse(sprint=sprint_to_proto(sprint))
         except ConnectError:
@@ -1218,10 +1218,10 @@ class SprintHandlers:
                     user_id=user_id,
                     organization_id=organization_id,
                     sprint_id=sprint_id,
-                    name=request.name if request.HasField("name") else None,
-                    goal=request.goal if request.HasField("goal") else None,
-                    start_date=request.start_date if request.HasField("start_date") else None,
-                    end_date=request.end_date if request.HasField("end_date") else None,
+                    name=request.name if request.has_field("name") else None,
+                    goal=request.goal if request.has_field("goal") else None,
+                    start_date=request.start_date if request.has_field("start_date") else None,
+                    end_date=request.end_date if request.has_field("end_date") else None,
                 )
                 return UpdateSprintResponse(sprint=sprint_to_proto(sprint))
         except ConnectError:
@@ -1245,8 +1245,8 @@ class SprintHandlers:
                     user_id=user_id,
                     organization_id=organization_id,
                     sprint_id=sprint_id,
-                    start_date=request.start_date if request.HasField("start_date") else None,
-                    end_date=request.end_date if request.HasField("end_date") else None,
+                    start_date=request.start_date if request.has_field("start_date") else None,
+                    end_date=request.end_date if request.has_field("end_date") else None,
                 )
                 return StartSprintResponse(sprint=sprint_to_proto(sprint))
         except ConnectError:
@@ -1313,7 +1313,7 @@ class SprintHandlers:
             async with open_session() as session:
                 ops = SprintOperations(session)
                 include_closed = (
-                    request.include_closed if request.HasField("include_closed") else False
+                    request.include_closed if request.has_field("include_closed") else False
                 )
                 sprints = await ops.list_sprints(
                     user_id=user_id,

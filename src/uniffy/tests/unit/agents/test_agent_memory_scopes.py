@@ -643,13 +643,13 @@ class TestMemoryBridge:
 class TestHandlersScopeParse:
     def test_channel_scope_requires_channel_id(self):
         from connectrpc.errors import ConnectError
-        from uniffy_proto.agents.v1.memories_pb2 import MEMORY_SCOPE_CHANNEL
+        from uniffy_proto.agents.v1.memories_pb import MemoryScope as _ProtoMemoryScope
 
         from uniffy.domains.agents.memories.handlers import _parse_scope_ref
 
         with pytest.raises((ConnectError, ValidationError)):
             _parse_scope_ref(
-                MEMORY_SCOPE_CHANNEL,
+                _ProtoMemoryScope.CHANNEL,
                 channel_id=None,
                 session_id=None,
                 agent_id=None,
@@ -657,12 +657,12 @@ class TestHandlersScopeParse:
             )
 
     def test_unspecified_defaults_to_caller_user_scope(self):
-        from uniffy_proto.agents.v1.memories_pb2 import MEMORY_SCOPE_UNSPECIFIED
+        from uniffy_proto.agents.v1.memories_pb import MemoryScope as _ProtoMemoryScope
 
         from uniffy.domains.agents.memories.handlers import _parse_scope_ref
 
         ref = _parse_scope_ref(
-            MEMORY_SCOPE_UNSPECIFIED,
+            _ProtoMemoryScope.UNSPECIFIED,
             channel_id=None,
             session_id=None,
             agent_id=None,
@@ -671,13 +671,13 @@ class TestHandlersScopeParse:
         assert ref == MemoryScopeRef.user(USER_ID)
 
     def test_agent_binding_rejected_outside_org_scope(self):
-        from uniffy_proto.agents.v1.memories_pb2 import MEMORY_SCOPE_USER
+        from uniffy_proto.agents.v1.memories_pb import MemoryScope as _ProtoMemoryScope
 
         from uniffy.domains.agents.memories.handlers import _parse_scope_ref
 
         with pytest.raises(ValidationError):
             _parse_scope_ref(
-                MEMORY_SCOPE_USER,
+                _ProtoMemoryScope.USER,
                 channel_id=None,
                 session_id=None,
                 agent_id=str(generate_id()),
@@ -685,13 +685,13 @@ class TestHandlersScopeParse:
             )
 
     def test_org_scope_keeps_the_agent_binding(self):
-        from uniffy_proto.agents.v1.memories_pb2 import MEMORY_SCOPE_ORG
+        from uniffy_proto.agents.v1.memories_pb import MemoryScope as _ProtoMemoryScope
 
         from uniffy.domains.agents.memories.handlers import _parse_scope_ref
 
         agent_id = generate_id()
         ref = _parse_scope_ref(
-            MEMORY_SCOPE_ORG,
+            _ProtoMemoryScope.ORG,
             channel_id=None,
             session_id=None,
             agent_id=str(agent_id),

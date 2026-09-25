@@ -4,7 +4,7 @@ from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
-from uniffy_proto.bookmarks.v1.bookmarks_pb2 import (
+from uniffy_proto.bookmarks.v1.bookmarks_pb import (
     BulkCheckBookmarksRequest,
     BulkCheckBookmarksResponse,
     ListBookmarkItemsRequest,
@@ -50,7 +50,7 @@ class BookmarksHandlers:
                 )
                 response = ToggleBookmarkResponse(is_bookmarked=is_bookmarked)
                 if bookmark is not None:
-                    response.bookmark.CopyFrom(bookmark_to_proto(bookmark))
+                    response.bookmark = bookmark_to_proto(bookmark)
                 return response
         except ConnectError, UNIFFYError:
             raise
@@ -67,7 +67,7 @@ class BookmarksHandlers:
         organization_id = resolve_organization_id(request.organization_id)
         content_types = _content_types_from_proto(request.content_types)
         page_size = min(request.page_size or DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE)
-        page_token = request.page_token if request.HasField("page_token") else None
+        page_token = request.page_token if request.has_field("page_token") else None
 
         try:
             async with open_session() as session:

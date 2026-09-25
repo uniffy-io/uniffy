@@ -6,7 +6,7 @@ from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
-from uniffy_proto.files.v1.files_pb2 import (
+from uniffy_proto.files.v1.files_pb import (
     CreatedFolderInfo,
     CreateFolderTreeRequest,
     CreateFolderTreeResponse,
@@ -48,7 +48,7 @@ class TreeHandlers:
         user_id = current_user_id()
 
         parent_folder_id = None
-        if request.HasField("parent_folder_id"):
+        if request.has_field("parent_folder_id"):
             try:
                 parent_folder_id = UUID(request.parent_folder_id)
             except ValueError:

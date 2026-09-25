@@ -1,7 +1,7 @@
 """ConnectRPC service binding for ``mail.v1.OrgMailService``."""
 
 from connectrpc.request import RequestContext
-from uniffy_proto.mail.v1.mail_pb2 import (
+from uniffy_proto.mail.v1.mail_pb import (
     ClearMailConfigRequest,
     ClearMailConfigResponse,
     GetMailConfigRequest,

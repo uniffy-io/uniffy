@@ -1,6 +1,6 @@
 """Rule response projections."""
 
-from uniffy_proto.agents.v1 import rules_pb2 as pb
+from uniffy_proto.agents.v1 import rules_pb as pb
 
 from uniffy.core.converters import datetime_to_timestamp
 from uniffy.core.models.agents.rule import AgentRule, RuleSource, RuleStatus
@@ -11,14 +11,14 @@ def rule_to_proto(rule: AgentRule, *, include_content: bool = True) -> pb.RuleIn
     return pb.RuleInfo(
         id=str(rule.id),
         organization_id=str(rule.organization_id) if rule.organization_id else None,
-        source=pb.RULE_SOURCE_BUNDLED
+        source=pb.RuleSource.BUNDLED
         if rule.source == RuleSource.BUNDLED
-        else pb.RULE_SOURCE_ORGANIZATION,
+        else pb.RuleSource.ORGANIZATION,
         name=rule.name,
         display_name=rule.display_name,
         description=rule.description,
         content=rule.content if include_content else "",
-        status=pb.RULE_STATUS_ACTIVE if rule.status == RuleStatus.ACTIVE else pb.RULE_STATUS_RETIRED,
+        status=pb.RuleStatus.ACTIVE if rule.status == RuleStatus.ACTIVE else pb.RuleStatus.RETIRED,
         latest_version_number=rule.latest_version_number,
         active_version_id=str(rule.active_version_id) if rule.active_version_id else "",
         active_version_pinned=rule.active_version_pinned,

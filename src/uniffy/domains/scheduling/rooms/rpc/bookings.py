@@ -3,7 +3,7 @@ from uuid import UUID
 
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
-from uniffy_proto.rooms.v1.rooms_pb2 import (
+from uniffy_proto.rooms.v1.rooms_pb import (
     CancelBookingRequest,
     CancelBookingResponse,
     CheckAvailabilityRequest,
@@ -49,7 +49,9 @@ class BookingHandlers:
         user_id = current_user_id()
         organization_id = parse_uuid(request.organization_id, "organization_id")
         room_id = parse_uuid(request.room_id, "room_id")
-        event_id = parse_uuid(request.event_id, "event_id") if request.HasField("event_id") else None
+        event_id = (
+            parse_uuid(request.event_id, "event_id") if request.has_field("event_id") else None
+        )
 
         try:
             async with open_session() as session:
@@ -59,8 +61,8 @@ class BookingHandlers:
                     room_id=room_id,
                     start_time=timestamp_to_datetime(request.start_time),
                     end_time=timestamp_to_datetime(request.end_time),
-                    title=request.title if request.HasField("title") else "",
-                    notes=request.notes if request.HasField("notes") else "",
+                    title=request.title if request.has_field("title") else "",
+                    notes=request.notes if request.has_field("notes") else "",
                     event_id=event_id,
                 )
                 room_name, booker_name = await load_booking_names(session, booking.room_id, user_id)
@@ -127,13 +129,13 @@ class BookingHandlers:
     ) -> ListBookingsResponse:
         user_id = current_user_id()
         organization_id = parse_uuid(request.organization_id, "organization_id")
-        room_id = parse_uuid(request.room_id, "room_id") if request.HasField("room_id") else None
+        room_id = parse_uuid(request.room_id, "room_id") if request.has_field("room_id") else None
         start_date = (
-            timestamp_to_datetime(request.start_date) if request.HasField("start_date") else None
+            timestamp_to_datetime(request.start_date) if request.has_field("start_date") else None
         )
-        end_date = timestamp_to_datetime(request.end_date) if request.HasField("end_date") else None
+        end_date = timestamp_to_datetime(request.end_date) if request.has_field("end_date") else None
         status = (
-            BOOKING_STATUS_FROM_PROTO.get(request.status) if request.HasField("status") else None
+            BOOKING_STATUS_FROM_PROTO.get(request.status) if request.has_field("status") else None
         )
 
         try:
@@ -208,9 +210,9 @@ class BookingHandlers:
     ) -> FindAvailableRoomsResponse:
         user_id = current_user_id()
         organization_id = parse_uuid(request.organization_id, "organization_id")
-        min_capacity = request.min_capacity if request.HasField("min_capacity") else None
+        min_capacity = request.min_capacity if request.has_field("min_capacity") else None
         room_type = (
-            room_type_from_proto(request.room_type) if request.HasField("room_type") else None
+            room_type_from_proto(request.room_type) if request.has_field("room_type") else None
         )
 
         try:

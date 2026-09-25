@@ -1,7 +1,7 @@
 import pytest
 from connectrpc.code import Code
 from connectrpc.errors import ConnectError
-from uniffy_proto.auth.v1.auth_pb2 import LoginRequest
+from uniffy_proto.auth.v1.auth_pb import LoginRequest
 
 from uniffy.transport.rpc import strict_request_codecs
 
@@ -28,7 +28,7 @@ def test_registry_covers_the_default_codec_names() -> None:
 )
 def test_decode_failure_is_invalid_argument_without_parser_text(name: str, body: bytes) -> None:
     with pytest.raises(ConnectError) as exc_info:
-        _codec(name).decode(body, LoginRequest())
+        _codec(name).decode(body, LoginRequest)
 
     assert exc_info.value.code == Code.INVALID_ARGUMENT
     assert exc_info.value.message == "Malformed request body"
@@ -38,6 +38,6 @@ def test_well_formed_bodies_round_trip() -> None:
     request = LoginRequest(email="a@b.c", password="pw")
     for name in ("json", "proto"):
         codec = _codec(name)
-        decoded = codec.decode(codec.encode(request), LoginRequest())
+        decoded = codec.decode(codec.encode(request), LoginRequest)
         assert decoded.email == "a@b.c"
         assert decoded.password == "pw"

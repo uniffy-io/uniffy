@@ -4,6 +4,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from uniffy.core.converters.proto import timestamp_to_datetime
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.json_codec import dumps_str, loads
 from uniffy.core.models.chat.channel import ChannelType, ChatChannel
@@ -313,17 +314,17 @@ def test_forward_metadata_projects_to_typed_proto_context() -> None:
     proto = message_to_proto(forwarded, forward_context=forward_context)
 
     assert proto.is_forwarded
-    assert proto.HasField("forward_context")
+    assert proto.has_field("forward_context")
     assert proto.forward_context.source_message_id == str(source.id)
     assert proto.forward_context.source_channel_name == SOURCE_CHANNEL_NAME
     assert proto.forward_context.sender_name == SOURCE_SENDER_NAME
-    assert proto.forward_context.created_at.ToDatetime(tzinfo=UTC) == CREATED_AT
+    assert timestamp_to_datetime(proto.forward_context.created_at) == CREATED_AT
     assert proto.forward_context.attachments[0].filename == ATTACHMENT_FILENAME
     assert FORWARD_METADATA_KEY not in proto.metadata
 
     restricted = message_to_proto(forwarded)
     assert restricted.is_forwarded
-    assert not restricted.HasField(FORWARD_CONTEXT_FIELD)
+    assert not restricted.has_field(FORWARD_CONTEXT_FIELD)
     assert FORWARD_METADATA_KEY not in restricted.metadata
 
 
@@ -339,7 +340,7 @@ def test_malformed_forward_metadata_does_not_break_message_conversion() -> None:
     proto = message_to_proto(message)
 
     assert not proto.is_forwarded
-    assert not proto.HasField(FORWARD_CONTEXT_FIELD)
+    assert not proto.has_field(FORWARD_CONTEXT_FIELD)
     assert FORWARD_METADATA_KEY not in proto.metadata
 
 

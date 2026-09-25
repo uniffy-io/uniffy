@@ -5,7 +5,7 @@ from uuid import UUID
 
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
-from uniffy_proto.cal.v1.calendar_pb2 import (
+from uniffy_proto.cal.v1.calendar_pb import (
     CreateEventTemplateRequest,
     CreateEventTemplateResponse,
     DeleteEventTemplateRequest,
@@ -124,9 +124,9 @@ class TemplateHandlers:
 
         update_data: dict = {}
         for field in ("title", "description", "duration_minutes", "location", "meeting_url"):
-            if request.HasField(field):
+            if request.has_field(field):
                 update_data[field] = getattr(request, field)
-        if request.HasField("category_id"):
+        if request.has_field("category_id"):
             try:
                 update_data["category_id"] = UUID(request.category_id)
             except ValueError:

@@ -1,7 +1,7 @@
 """ConnectRPC service binding for ``superadmin.v1.PlatformAuditService``."""
 
 from connectrpc.request import RequestContext
-from uniffy_proto.superadmin.v1.platform_audit_pb2 import (
+from uniffy_proto.superadmin.v1.platform_audit_pb import (
     ListPlatformActionsRequest,
     ListPlatformActionsResponse,
     ListPlatformAuditRequest,

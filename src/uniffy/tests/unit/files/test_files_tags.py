@@ -14,7 +14,7 @@ Live-DB integration coverage runs under the files-domain harness.
 
 from unittest.mock import MagicMock
 
-from uniffy_proto.files.v1.files_pb2 import FilterCriteria as ProtoFilterCriteria
+from uniffy_proto.files.v1.files_pb import FilterCriteria as ProtoFilterCriteria
 
 from uniffy.core.models.files.file import ExtractionStatus, File
 from uniffy.core.models.files.media_info import FileMediaInfo

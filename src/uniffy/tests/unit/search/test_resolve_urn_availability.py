@@ -2,7 +2,7 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import UUID
 
 import pytest
-from uniffy_proto.search.v1.search_pb2 import UrnAvailability as ProtoUrnAvailability
+from uniffy_proto.search.v1.search_pb import UrnAvailability as ProtoUrnAvailability
 
 from uniffy.core.search.workspace import WorkspaceSearch
 from uniffy.core.types import AccessMode, ContentRole, ContentType, generate_id
@@ -112,7 +112,9 @@ async def test_resolve_composes_postgres_decisions_with_raw_previews(
         _decision(live_unindexed_urn, can_view=True),
         _decision(raw_failure_urn, can_view=True),
     ]
-    resolver.resource_access.resolve.return_value = {decision.key: decision for decision in decisions}
+    resolver.resource_access.resolve.return_value = {
+        decision.key: decision for decision in decisions
+    }
 
     result = await resolver.resolve_urns(
         generate_id(),
@@ -148,13 +150,13 @@ async def test_resolve_composes_postgres_decisions_with_raw_previews(
     assert restricted.owner_id == organization_id
 
     restricted_proto = search_result_to_urn_metadata(restricted)
-    assert restricted_proto.availability == ProtoUrnAvailability.URN_AVAILABILITY_RESTRICTED
+    assert restricted_proto.availability == ProtoUrnAvailability.RESTRICTED
     assert restricted_proto.can_request_access is True
     assert restricted_proto.title == ""
     assert dict(restricted_proto.metadata) == {}
 
     deleted_proto = search_result_to_urn_metadata(result[deleted_urn])
-    assert deleted_proto.availability == ProtoUrnAvailability.URN_AVAILABILITY_DELETED
+    assert deleted_proto.availability == ProtoUrnAvailability.DELETED
     assert deleted_proto.urn_status == "DELETED"
     assert deleted_proto.metadata["urn_status"] == "DELETED"
 

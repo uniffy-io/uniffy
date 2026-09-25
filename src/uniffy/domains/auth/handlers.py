@@ -7,7 +7,8 @@ from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
-from uniffy_proto.auth.v1.auth_pb2 import (
+from protobuf import Oneof
+from uniffy_proto.auth.v1.auth_pb import (
     AcceptInvitationRequest,
     AcceptInvitationResponse,
     GetAuthConfigRequest,
@@ -43,13 +44,13 @@ from uniffy_proto.auth.v1.auth_pb2 import (
     VerifyPasswordResetTokenRequest,
     VerifyPasswordResetTokenResponse,
 )
-from uniffy_proto.auth.v1.auth_pb2 import (
+from uniffy_proto.auth.v1.auth_pb import (
     AuthResult as AuthResultProto,
 )
-from uniffy_proto.auth.v1.auth_pb2 import (
+from uniffy_proto.auth.v1.auth_pb import (
     EnrollmentRequired as EnrollmentRequiredProto,
 )
-from uniffy_proto.auth.v1.auth_pb2 import (
+from uniffy_proto.auth.v1.auth_pb import (
     MfaChallenge as MfaChallengeProto,
 )
 
@@ -158,7 +159,7 @@ def _set_asset_cookie(ctx: RequestContext, result: AuthResult) -> str:
 
 
 def _clear_asset_cookie(ctx: RequestContext) -> None:
-    ctx.response_headers().add("set-cookie", build_clear_cookie(resolve_asset_cookie_config()))
+    ctx.response_headers.add("set-cookie", build_clear_cookie(resolve_asset_cookie_config()))
 
 
 def _login_outcome_to_proto(
@@ -166,20 +167,23 @@ def _login_outcome_to_proto(
 ) -> LoginResponse:
     """Map the operations-layer union into the wire-level oneof."""
     if isinstance(outcome, AuthResult):
-        return LoginResponse(auth_result=_auth_result_to_proto(outcome))
+        return LoginResponse(result=Oneof(field="auth_result", value=_auth_result_to_proto(outcome)))
     if isinstance(outcome, MfaChallengeRequired):
         return LoginResponse(
-            mfa_challenge=MfaChallengeProto(
-                challenge_token=outcome.challenge_token,
-                methods=list(outcome.methods),
+            result=Oneof(
+                field="mfa_challenge",
+                value=MfaChallengeProto(
+                    challenge_token=outcome.challenge_token,
+                    methods=list(outcome.methods),
+                ),
             )
         )
     enrollment = EnrollmentRequiredProto(
         enrollment_token=outcome.enrollment_token,
     )
     if outcome.grace_expires_at is not None:
-        enrollment.grace_expires_at.CopyFrom(datetime_to_timestamp(outcome.grace_expires_at))
-    return LoginResponse(enrollment_required=enrollment)
+        enrollment.grace_expires_at = datetime_to_timestamp(outcome.grace_expires_at)
+    return LoginResponse(result=Oneof(field="enrollment_required", value=enrollment))
 
 
 class AuthHandlers:
@@ -208,7 +212,7 @@ class AuthHandlers:
                     email=request.email,
                     username=request.username,
                     password=request.password,
-                    full_name=request.full_name if request.HasField("full_name") else None,
+                    full_name=request.full_name if request.has_field("full_name") else None,
                     user_agent=user_agent,
                 )
 
@@ -247,14 +251,14 @@ class AuthHandlers:
                     email=request.email,
                     password=request.password,
                     organization_slug=(
-                        request.organization_slug if request.HasField("organization_slug") else None
+                        request.organization_slug if request.has_field("organization_slug") else None
                     ),
                     user_agent=user_agent,
                 )
 
                 response = _login_outcome_to_proto(result)
-                if isinstance(result, AuthResult):
-                    response.auth_result.asset_cookie = _set_asset_cookie(ctx, result)
+                if isinstance(result, AuthResult) and response.result is not None:
+                    response.result.value.asset_cookie = _set_asset_cookie(ctx, result)
                 return response
         except RateLimitExceededError as e:
             raise ConnectError(Code.RESOURCE_EXHAUSTED, str(e))
@@ -277,7 +281,7 @@ class AuthHandlers:
                 result = await auth_ops.refresh_token(
                     refresh_token=request.refresh_token,
                     organization_slug=(
-                        request.organization_slug if request.HasField("organization_slug") else None
+                        request.organization_slug if request.has_field("organization_slug") else None
                     ),
                 )
 
@@ -357,7 +361,7 @@ class AuthHandlers:
             session_id: UUID | None = None
             user_id: UUID | None = None
 
-            if request.HasField("refresh_token") and request.refresh_token:
+            if request.has_field("refresh_token") and request.refresh_token:
                 try:
                     payload = decode_refresh_token(request.refresh_token)
                     sid = payload.get("sid")
@@ -484,7 +488,7 @@ class AuthHandlers:
         user_id = current_user_id()
 
         target_user_id = None
-        if request.HasField("target_user_id") and request.target_user_id:
+        if request.has_field("target_user_id") and request.target_user_id:
             try:
                 target_user_id = UUID(request.target_user_id)
             except ValueError:
@@ -579,7 +583,7 @@ class AuthHandlers:
                     raw_token=request.token,
                     username=request.username,
                     password=request.password,
-                    full_name=(request.full_name if request.HasField("full_name") else None),
+                    full_name=(request.full_name if request.has_field("full_name") else None),
                     user_agent=user_agent,
                     search_indexer=self.search_indexer,
                 )
@@ -588,13 +592,13 @@ class AuthHandlers:
                         enrollment_token=outcome.enrollment_token,
                     )
                     if outcome.grace_expires_at is not None:
-                        enrollment.grace_expires_at.CopyFrom(
-                            datetime_to_timestamp(outcome.grace_expires_at)
-                        )
-                    return AcceptInvitationResponse(enrollment_required=enrollment)
+                        enrollment.grace_expires_at = datetime_to_timestamp(outcome.grace_expires_at)
+                    return AcceptInvitationResponse(
+                        result=Oneof(field="enrollment_required", value=enrollment)
+                    )
                 auth_result = _auth_result_to_proto(outcome)
                 auth_result.asset_cookie = _set_asset_cookie(ctx, outcome)
-                return AcceptInvitationResponse(auth_result=auth_result)
+                return AcceptInvitationResponse(result=Oneof(field="auth_result", value=auth_result))
         except RateLimitExceededError as e:
             raise ConnectError(Code.RESOURCE_EXHAUSTED, str(e))
         except InvitationNotFoundError as e:

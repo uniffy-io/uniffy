@@ -1,10 +1,11 @@
 from datetime import UTC, datetime
 
+from uniffy.core.converters.proto import timestamp_to_datetime
 from uniffy.core.json_codec import loads
 from uniffy.core.types import generate_id
 from uniffy.domains.chat.streaming import events
-from uniffy.domains.chat.streaming.handlers import _payload_to_channel_event
 from uniffy.domains.chat.streaming import publisher as publisher_module
+from uniffy.domains.chat.streaming.handlers import _payload_to_channel_event
 from uniffy.domains.chat.streaming.publisher import publish_user_chat_event
 
 
@@ -45,10 +46,8 @@ async def test_chat_datetime_payload_round_trips_through_handler(monkeypatch) ->
 
     event = _payload_to_channel_event(decoded)
     assert event is not None
-    assert event.message.created_at.ToDatetime(tzinfo=UTC) == created_at
-    assert loads(event.message.metadata["nested"]) == {
-        "sent_at": "2026-08-15T12:30:00+00:00"
-    }
+    assert timestamp_to_datetime(event.payload.value.created_at) == created_at
+    assert loads(event.payload.value.metadata["nested"]) == {"sent_at": "2026-08-15T12:30:00+00:00"}
 
 
 async def test_forward_context_round_trips_through_live_event(monkeypatch) -> None:
@@ -90,13 +89,13 @@ async def test_forward_context_round_trips_through_live_event(monkeypatch) -> No
     event = _payload_to_channel_event(decoded)
 
     assert event is not None
-    assert event.message.is_forwarded
-    assert event.message.HasField("forward_context")
-    assert event.message.forward_context.source_message_id == str(source_message_id)
-    assert event.message.forward_context.source_channel_id == str(source_channel_id)
-    assert event.message.forward_context.sender_name == "Alice Example"
-    assert event.message.forward_context.content == "Original"
-    assert "forward" not in event.message.metadata
+    assert event.payload.value.is_forwarded
+    assert event.payload.value.has_field("forward_context")
+    assert event.payload.value.forward_context.source_message_id == str(source_message_id)
+    assert event.payload.value.forward_context.source_channel_id == str(source_channel_id)
+    assert event.payload.value.forward_context.sender_name == "Alice Example"
+    assert event.payload.value.forward_context.content == "Original"
+    assert "forward" not in event.payload.value.metadata
 
 
 async def test_restricted_forward_live_event_contains_no_snapshot(monkeypatch) -> None:
@@ -121,6 +120,6 @@ async def test_restricted_forward_live_event_contains_no_snapshot(monkeypatch) -
     event = _payload_to_channel_event(decoded)
 
     assert event is not None
-    assert event.message.is_forwarded
-    assert not event.message.HasField("forward_context")
-    assert "forward" not in event.message.metadata
+    assert event.payload.value.is_forwarded
+    assert not event.payload.value.has_field("forward_context")
+    assert "forward" not in event.payload.value.metadata

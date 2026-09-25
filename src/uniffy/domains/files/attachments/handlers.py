@@ -7,7 +7,7 @@ from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
 from sqlalchemy import select
-from uniffy_proto.files.v1.files_pb2 import (
+from uniffy_proto.files.v1.files_pb import (
     AttachFileRequest,
     AttachFileResponse,
     BatchListAttachmentsGroup,

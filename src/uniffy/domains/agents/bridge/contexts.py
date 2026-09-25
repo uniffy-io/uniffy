@@ -5,15 +5,15 @@ from uuid import UUID
 from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
-from google.protobuf.timestamp_pb2 import Timestamp
 from loguru import logger
-from uniffy_proto.chat.v1.chat_pb2 import (
+from protobuf.wkt import Timestamp
+from uniffy_proto.chat.v1.chat_pb import (
     ChannelAgentConfig as ProtoChannelAgentConfig,
 )
-from uniffy_proto.chat.v1.chat_pb2 import (
+from uniffy_proto.chat.v1.chat_pb import (
     ChannelAgentContextStats as ProtoChannelAgentContextStats,
 )
-from uniffy_proto.chat.v1.chat_pb2 import (
+from uniffy_proto.chat.v1.chat_pb import (
     CompactChannelAgentContextRequest,
     CompactChannelAgentContextResponse,
     GetChannelAgentConfigRequest,
@@ -29,6 +29,7 @@ from uniffy_proto.chat.v1.chat_pb2 import (
 )
 
 from uniffy.core.auth.principal import current_user_id
+from uniffy.core.converters.proto import datetime_to_timestamp
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.json_codec import JSONDecodeError, dumps_str, loads
 from uniffy.core.models.agents.channel_binding import AgentChannelBinding
@@ -60,8 +61,8 @@ def _stats_to_proto(stats: ContextStats) -> ProtoChannelAgentContextStats:
     )
     if stats.manual_reset_at is not None:
         ts = Timestamp()
-        ts.FromDatetime(stats.manual_reset_at)
-        proto.manual_reset_at.CopyFrom(ts)
+        ts = datetime_to_timestamp(stats.manual_reset_at)
+        proto.manual_reset_at = ts
     return proto
 
 
@@ -168,7 +169,7 @@ class ChannelAgentContextHandlers:
                 )
                 response = GetChannelAgentContextStatsBatchResponse()
                 for agent_id, stats in stats_map.items():
-                    response.stats[str(agent_id)].CopyFrom(_stats_to_proto(stats))
+                    response.stats[str(agent_id)] = _stats_to_proto(stats)
                 return response
         except ConnectError:
             raise
@@ -240,7 +241,7 @@ class ChannelAgentContextHandlers:
                 )
 
                 reset_at_ts = Timestamp()
-                reset_at_ts.FromDatetime(result.reset_at)
+                reset_at_ts = datetime_to_timestamp(result.reset_at)
                 return ResetChannelAgentContextResponse(
                     divider_message_id=str(result.divider_message_id),
                     reset_at=reset_at_ts,
@@ -293,15 +294,15 @@ class ChannelAgentContextHandlers:
             request.organization_id, request.channel_id, request.agent_id
         )
 
-        model_override = request.model_override if request.HasField("model_override") else None
+        model_override = request.model_override if request.has_field("model_override") else None
         image_params_override = (
             _parse_params_json(request.image_params_override, "image_params_override")
-            if request.HasField("image_params_override")
+            if request.has_field("image_params_override")
             else None
         )
         model_params_override = (
             _parse_params_json(request.model_params_override)
-            if request.HasField("model_params_override")
+            if request.has_field("model_params_override")
             else None
         )
 

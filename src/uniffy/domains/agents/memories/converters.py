@@ -1,65 +1,52 @@
 """Proto <-> domain converters for agent memories."""
 
-from uniffy_proto.agents.v1.memories_pb2 import (
-    MEMORY_CATEGORY_CONTEXT,
-    MEMORY_CATEGORY_FACTS,
-    MEMORY_CATEGORY_INSTRUCTIONS,
-    MEMORY_CATEGORY_PREFERENCES,
-    MEMORY_CATEGORY_UNSPECIFIED,
-    MEMORY_SCOPE_CHANNEL,
-    MEMORY_SCOPE_ORG,
-    MEMORY_SCOPE_SESSION,
-    MEMORY_SCOPE_UNSPECIFIED,
-    MEMORY_SCOPE_USER,
-    MEMORY_SOURCE_MANUAL,
-    MEMORY_SOURCE_TOOL,
-    MEMORY_SOURCE_UNSPECIFIED,
-    MemoryCategory,
-    MemoryInfo,
-)
-from uniffy_proto.agents.v1.memories_pb2 import (
+from uniffy_proto.agents.v1.memories_pb import MemoryCategory, MemoryInfo
+from uniffy_proto.agents.v1.memories_pb import MemoryCategory as _ProtoMemoryCategory
+from uniffy_proto.agents.v1.memories_pb import (
     MemoryScope as MemoryScopeProto,
 )
+from uniffy_proto.agents.v1.memories_pb import MemoryScope as _ProtoMemoryScope
+from uniffy_proto.agents.v1.memories_pb import MemorySource as _ProtoMemorySource
 
 from uniffy.core.converters import datetime_to_timestamp
 from uniffy.core.models.agents.memory import AgentMemory, MemoryScope, MemorySource
 
 MEMORY_CATEGORY_TO_PROTO: dict[str, MemoryCategory] = {
-    "preferences": MEMORY_CATEGORY_PREFERENCES,
-    "facts": MEMORY_CATEGORY_FACTS,
-    "context": MEMORY_CATEGORY_CONTEXT,
-    "instructions": MEMORY_CATEGORY_INSTRUCTIONS,
+    "preferences": _ProtoMemoryCategory.PREFERENCES,
+    "facts": _ProtoMemoryCategory.FACTS,
+    "context": _ProtoMemoryCategory.CONTEXT,
+    "instructions": _ProtoMemoryCategory.INSTRUCTIONS,
 }
 
 MEMORY_CATEGORY_FROM_PROTO: dict[int, str] = {
-    MEMORY_CATEGORY_PREFERENCES: "preferences",
-    MEMORY_CATEGORY_FACTS: "facts",
-    MEMORY_CATEGORY_CONTEXT: "context",
-    MEMORY_CATEGORY_INSTRUCTIONS: "instructions",
+    _ProtoMemoryCategory.PREFERENCES: "preferences",
+    _ProtoMemoryCategory.FACTS: "facts",
+    _ProtoMemoryCategory.CONTEXT: "context",
+    _ProtoMemoryCategory.INSTRUCTIONS: "instructions",
 }
 
 MEMORY_SCOPE_TO_PROTO: dict[str, MemoryScopeProto] = {
-    MemoryScope.USER.value: MEMORY_SCOPE_USER,
-    MemoryScope.CHANNEL.value: MEMORY_SCOPE_CHANNEL,
-    MemoryScope.SESSION.value: MEMORY_SCOPE_SESSION,
-    MemoryScope.ORG.value: MEMORY_SCOPE_ORG,
+    MemoryScope.USER.value: _ProtoMemoryScope.USER,
+    MemoryScope.CHANNEL.value: _ProtoMemoryScope.CHANNEL,
+    MemoryScope.SESSION.value: _ProtoMemoryScope.SESSION,
+    MemoryScope.ORG.value: _ProtoMemoryScope.ORG,
 }
 
 MEMORY_SCOPE_FROM_PROTO: dict[int, MemoryScope] = {
-    MEMORY_SCOPE_USER: MemoryScope.USER,
-    MEMORY_SCOPE_CHANNEL: MemoryScope.CHANNEL,
-    MEMORY_SCOPE_SESSION: MemoryScope.SESSION,
-    MEMORY_SCOPE_ORG: MemoryScope.ORG,
+    _ProtoMemoryScope.USER: MemoryScope.USER,
+    _ProtoMemoryScope.CHANNEL: MemoryScope.CHANNEL,
+    _ProtoMemoryScope.SESSION: MemoryScope.SESSION,
+    _ProtoMemoryScope.ORG: MemoryScope.ORG,
 }
 
 _SOURCE_TO_PROTO = {
-    MemorySource.TOOL.value: MEMORY_SOURCE_TOOL,
-    MemorySource.MANUAL.value: MEMORY_SOURCE_MANUAL,
+    MemorySource.TOOL.value: _ProtoMemorySource.TOOL,
+    MemorySource.MANUAL.value: _ProtoMemorySource.MANUAL,
 }
 
 
 def memory_category_to_proto(category: str) -> MemoryCategory:
-    return MEMORY_CATEGORY_TO_PROTO.get(category, MEMORY_CATEGORY_UNSPECIFIED)
+    return MEMORY_CATEGORY_TO_PROTO.get(category, _ProtoMemoryCategory.UNSPECIFIED)
 
 
 def memory_category_from_proto(proto_category: MemoryCategory) -> str | None:
@@ -68,7 +55,7 @@ def memory_category_from_proto(proto_category: MemoryCategory) -> str | None:
 
 def memory_scope_from_proto(proto_scope: int) -> MemoryScope:
     """Unspecified defaults to USER: the caller's own entries."""
-    if proto_scope == MEMORY_SCOPE_UNSPECIFIED:
+    if proto_scope == _ProtoMemoryScope.UNSPECIFIED:
         return MemoryScope.USER
     scope = MEMORY_SCOPE_FROM_PROTO.get(proto_scope)
     if scope is None:
@@ -93,10 +80,10 @@ def memory_to_proto(
         access_count=memory.access_count,
         created_at=datetime_to_timestamp(memory.created_at),
         updated_at=datetime_to_timestamp(memory.updated_at),
-        scope=MEMORY_SCOPE_TO_PROTO.get(memory.scope, MEMORY_SCOPE_UNSPECIFIED),
+        scope=MEMORY_SCOPE_TO_PROTO.get(memory.scope, _ProtoMemoryScope.UNSPECIFIED),
         description=memory.description,
         pinned=memory.pinned,
-        source=_SOURCE_TO_PROTO.get(memory.source, MEMORY_SOURCE_UNSPECIFIED),
+        source=_SOURCE_TO_PROTO.get(memory.source, _ProtoMemorySource.UNSPECIFIED),
         created_by_user_id=str(memory.created_by_user_id),
         created_by_name=created_by_name,
         created_by_agent_name=created_by_agent_name,

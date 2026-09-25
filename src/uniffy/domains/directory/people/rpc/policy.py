@@ -2,7 +2,7 @@ from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
-from uniffy_proto.people.v1 import people_pb2 as pb
+from uniffy_proto.people.v1 import people_pb as pb
 
 from uniffy.core.auth.principal import current_user_id, resolve_organization_id
 from uniffy.core.errors import PermissionDeniedError, ValidationError
@@ -51,10 +51,11 @@ class ProfilePolicyHandlers:
         try:
             async with open_session() as session:
                 await OrganizationOperations(session).require_org_admin(user_id, org_id)
+                fields = request.policy if request.policy is not None else pb.ProfilePolicy()
                 policy = ResolvedProfilePolicy(
                     organization_id=org_id,
-                    directory_enabled=request.policy.directory_enabled,
-                    org_chart_enabled=request.policy.org_chart_enabled,
+                    directory_enabled=fields.directory_enabled,
+                    org_chart_enabled=fields.org_chart_enabled,
                 )
                 await save_profile_policy(session, policy=policy, updated_by_user_id=user_id)
                 await session.commit()

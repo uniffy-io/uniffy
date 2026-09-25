@@ -1,8 +1,8 @@
 """Protobuf conversion for bookmark rows and resolved items."""
 
-from uniffy_proto.bookmarks.v1.bookmarks_pb2 import Bookmark as ProtoBookmark
-from uniffy_proto.bookmarks.v1.bookmarks_pb2 import BookmarkItem as ProtoBookmarkItem
-from uniffy_proto.search.v1.search_pb2 import UrnAvailability, UrnMetadata
+from uniffy_proto.bookmarks.v1.bookmarks_pb import Bookmark as ProtoBookmark
+from uniffy_proto.bookmarks.v1.bookmarks_pb import BookmarkItem as ProtoBookmarkItem
+from uniffy_proto.search.v1.search_pb import UrnAvailability, UrnMetadata
 
 from uniffy.core.converters import datetime_to_timestamp
 from uniffy.core.models.bookmarks.bookmark import Bookmark
@@ -24,7 +24,7 @@ def bookmark_item_to_proto(item: BookmarkItem) -> ProtoBookmarkItem:
     content = (
         search_result_to_urn_metadata(item.content)
         if item.content is not None
-        else UrnMetadata(availability=UrnAvailability.URN_AVAILABILITY_UNAVAILABLE)
+        else UrnMetadata(availability=UrnAvailability.UNAVAILABLE)
     )
     return ProtoBookmarkItem(
         bookmark=bookmark_to_proto(item.bookmark),

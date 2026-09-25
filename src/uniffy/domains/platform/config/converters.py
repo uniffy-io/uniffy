@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from uniffy_proto.superadmin.v1.system_config_pb2 import (
+from uniffy_proto.superadmin.v1.system_config_pb import (
     SystemConfig as SystemConfigProto,
 )
-from uniffy_proto.superadmin.v1.system_config_pb2 import (
+from uniffy_proto.superadmin.v1.system_config_pb import (
     SystemFlag as SystemFlagProto,
 )
 
@@ -18,5 +18,5 @@ def config_to_proto(states: dict[str, PublicRegistrationState]) -> SystemConfigP
     msg = SystemConfigProto()
     public = states.get("public_registration")
     if public is not None:
-        msg.public_registration.CopyFrom(flag_to_proto(public))
+        msg.public_registration = flag_to_proto(public)
     return msg

@@ -1,10 +1,10 @@
 """Proto converters for file attachments."""
 
-from uniffy_proto.common.v1.common_pb2 import ContentType as ProtoContentType
-from uniffy_proto.files.v1.files_pb2 import (
+from uniffy_proto.common.v1.common_pb import ContentType as ProtoContentType
+from uniffy_proto.files.v1.files_pb import (
     AttachedFileOwner as ProtoAttachedFileOwner,
 )
-from uniffy_proto.files.v1.files_pb2 import (
+from uniffy_proto.files.v1.files_pb import (
     Attachment as ProtoAttachment,
 )
 
@@ -15,27 +15,27 @@ from uniffy.core.models.login.user import User
 from uniffy.core.models.shared import ContentType
 
 CONTENT_TYPE_TO_PROTO = {
-    ContentType.NOTE: ProtoContentType.CONTENT_TYPE_NOTE,
-    ContentType.FILE: ProtoContentType.CONTENT_TYPE_FILE,
-    ContentType.CALENDAR_EVENT: ProtoContentType.CONTENT_TYPE_CALENDAR_EVENT,
-    ContentType.CHAT_MESSAGE: ProtoContentType.CONTENT_TYPE_CHAT_MESSAGE,
-    ContentType.PROJECT: ProtoContentType.CONTENT_TYPE_PROJECT,
-    ContentType.TASK: ProtoContentType.CONTENT_TYPE_TASK,
+    ContentType.NOTE: ProtoContentType.NOTE,
+    ContentType.FILE: ProtoContentType.FILE,
+    ContentType.CALENDAR_EVENT: ProtoContentType.CALENDAR_EVENT,
+    ContentType.CHAT_MESSAGE: ProtoContentType.CHAT_MESSAGE,
+    ContentType.PROJECT: ProtoContentType.PROJECT,
+    ContentType.TASK: ProtoContentType.TASK,
 }
 
 CONTENT_TYPE_FROM_PROTO = {
-    ProtoContentType.CONTENT_TYPE_NOTE: ContentType.NOTE,
-    ProtoContentType.CONTENT_TYPE_FILE: ContentType.FILE,
-    ProtoContentType.CONTENT_TYPE_CALENDAR_EVENT: ContentType.CALENDAR_EVENT,
-    ProtoContentType.CONTENT_TYPE_CHAT_MESSAGE: ContentType.CHAT_MESSAGE,
-    ProtoContentType.CONTENT_TYPE_PROJECT: ContentType.PROJECT,
-    ProtoContentType.CONTENT_TYPE_TASK: ContentType.TASK,
+    ProtoContentType.NOTE: ContentType.NOTE,
+    ProtoContentType.FILE: ContentType.FILE,
+    ProtoContentType.CALENDAR_EVENT: ContentType.CALENDAR_EVENT,
+    ProtoContentType.CHAT_MESSAGE: ContentType.CHAT_MESSAGE,
+    ProtoContentType.PROJECT: ContentType.PROJECT,
+    ProtoContentType.TASK: ContentType.TASK,
 }
 
 
 def content_type_to_proto(content_type: ContentType) -> ProtoContentType:
     """Convert domain ContentType to proto enum."""
-    return CONTENT_TYPE_TO_PROTO.get(content_type, ProtoContentType.CONTENT_TYPE_UNSPECIFIED)
+    return CONTENT_TYPE_TO_PROTO.get(content_type, ProtoContentType.UNSPECIFIED)
 
 
 def content_type_from_proto(proto_type: ProtoContentType) -> ContentType | None:
@@ -73,12 +73,10 @@ def attachment_to_proto(
         proto.source_file_id = str(attachment.source_file_id)
 
     if owner:
-        proto.owner_info.CopyFrom(
-            ProtoAttachedFileOwner(
-                id=str(owner.id),
-                name=owner.full_name or owner.username or owner.email,
-                email=owner.email,
-            )
+        proto.owner_info = ProtoAttachedFileOwner(
+            id=str(owner.id),
+            name=owner.full_name or owner.username or owner.email,
+            email=owner.email,
         )
 
     return proto

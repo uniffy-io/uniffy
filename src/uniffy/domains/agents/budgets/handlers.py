@@ -6,7 +6,7 @@ from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
-from uniffy_proto.agents.v1.budgets_pb2 import (
+from uniffy_proto.agents.v1.budgets_pb import (
     DeleteCurrencyRateRequest,
     DeleteCurrencyRateResponse,
     DeleteOrgBudgetRequest,
@@ -34,7 +34,7 @@ from uniffy_proto.agents.v1.budgets_pb2 import (
     UpsertCurrencyRateRequest,
     UpsertCurrencyRateResponse,
 )
-from uniffy_proto.common.v1.common_pb2 import PaginationResponse
+from uniffy_proto.common.v1.common_pb import PaginationResponse
 
 from uniffy.core.auth.principal import (
     current_user_id,
@@ -76,7 +76,7 @@ class BudgetsHandlers:
                 row = await ops.get_org_budget(user_id=user_id, organization_id=org_id)
                 resp = GetOrgBudgetResponse()
                 if row is not None:
-                    resp.budget.CopyFrom(org_budget_to_proto(row))
+                    resp.budget = org_budget_to_proto(row)
                 return resp
 
         except PermissionDeniedError as e:
@@ -100,9 +100,9 @@ class BudgetsHandlers:
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id format")
 
-        monthly = request.monthly_limit if request.HasField("monthly_limit") else None
+        monthly = request.monthly_limit if request.has_field("monthly_limit") else None
         image_monthly = (
-            request.image_monthly_limit if request.HasField("image_monthly_limit") else None
+            request.image_monthly_limit if request.has_field("image_monthly_limit") else None
         )
 
         try:
@@ -183,7 +183,7 @@ class BudgetsHandlers:
                 )
                 resp = GetUserQuotaResponse()
                 if row is not None:
-                    resp.quota.CopyFrom(user_quota_to_proto(row))
+                    resp.quota = user_quota_to_proto(row)
                 return resp
 
         except PermissionDeniedError as e:
@@ -208,11 +208,11 @@ class BudgetsHandlers:
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
 
-        daily_dollar = request.daily_limit if request.HasField("daily_limit") else None
-        monthly_dollar = request.monthly_limit if request.HasField("monthly_limit") else None
-        daily_img = request.daily_image_limit if request.HasField("daily_image_limit") else None
+        daily_dollar = request.daily_limit if request.has_field("daily_limit") else None
+        monthly_dollar = request.monthly_limit if request.has_field("monthly_limit") else None
+        daily_img = request.daily_image_limit if request.has_field("daily_image_limit") else None
         monthly_img = (
-            request.monthly_image_limit if request.HasField("monthly_image_limit") else None
+            request.monthly_image_limit if request.has_field("monthly_image_limit") else None
         )
 
         try:
@@ -290,7 +290,7 @@ class BudgetsHandlers:
 
         page = 1
         page_size = 50
-        if request.HasField("pagination"):
+        if request.has_field("pagination"):
             page = request.pagination.page if request.pagination.page > 0 else 1
             page_size = min(
                 request.pagination.page_size if request.pagination.page_size > 0 else 50,
@@ -339,7 +339,7 @@ class BudgetsHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id format")
 
         target_id: UUID | None = None
-        if request.HasField("user_id"):
+        if request.has_field("user_id"):
             try:
                 target_id = UUID(request.user_id)
             except ValueError:

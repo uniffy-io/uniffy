@@ -6,10 +6,10 @@ from uuid import UUID
 from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
-from google.protobuf.timestamp_pb2 import Timestamp
 from loguru import logger
+from protobuf.wkt import Timestamp
 from sqlalchemy import select
-from uniffy_proto.chat.v1.chat_pb2 import (
+from uniffy_proto.chat.v1.chat_pb import (
     AgentConfirmationDecision,
     GetChannelPendingApprovalsRequest,
     GetChannelPendingApprovalsResponse,
@@ -21,6 +21,7 @@ from uniffy_proto.chat.v1.chat_pb2 import (
 )
 
 from uniffy.core.auth.principal import current_user_id, resolve_organization_id
+from uniffy.core.converters.proto import datetime_to_timestamp
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models.chat.channel import ChatChannel
 from uniffy.domains.agents.bridge.operations import AgentChatBridge
@@ -33,8 +34,8 @@ from uniffy.infrastructure.database import open_session
 logger = logger.bind(component="agents.bridge.handlers")
 
 _DECISION_TO_STRING = {
-    AgentConfirmationDecision.AGENT_CONFIRMATION_DECISION_APPROVE: "approved",
-    AgentConfirmationDecision.AGENT_CONFIRMATION_DECISION_DENY: "denied",
+    AgentConfirmationDecision.APPROVE: "approved",
+    AgentConfirmationDecision.DENY: "denied",
 }
 
 
@@ -72,7 +73,7 @@ class AgentConfirmationHandlers:
                 "decision must be APPROVE or DENY",
             )
 
-        rationale = request.rationale if request.HasField("rationale") else None
+        rationale = request.rationale if request.has_field("rationale") else None
 
         try:
             async with open_session() as session:
@@ -93,7 +94,7 @@ class AgentConfirmationHandlers:
                 )
 
                 decided_at = Timestamp()
-                decided_at.FromDatetime(datetime.now(UTC))
+                decided_at = datetime_to_timestamp(datetime.now(UTC))
                 return RespondToAgentConfirmationResponse(
                     decision=request.decision,
                     decided_at=decided_at,
@@ -185,11 +186,11 @@ def _pending_to_proto(row: dict) -> PendingAgentApproval:
     requested_at = Timestamp()
     if raw := row.get("requested_at"):
         try:
-            requested_at.FromDatetime(datetime.fromisoformat(raw))
+            requested_at = datetime_to_timestamp(datetime.fromisoformat(raw))
         except ValueError:
-            requested_at.FromDatetime(datetime.now(UTC))
+            requested_at = datetime_to_timestamp(datetime.now(UTC))
     else:
-        requested_at.FromDatetime(datetime.now(UTC))
+        requested_at = datetime_to_timestamp(datetime.now(UTC))
 
     args_value = row.get("args_json")
     args_preview = "" if args_value is None else str(args_value)

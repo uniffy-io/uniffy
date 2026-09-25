@@ -4,11 +4,12 @@ from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
+from protobuf import Oneof
 from sqlalchemy import select
-from uniffy_proto.common.v1.common_pb2 import (
+from uniffy_proto.common.v1.common_pb import (
     PaginationResponse,
 )
-from uniffy_proto.organizations.v1.organizations_pb2 import (
+from uniffy_proto.organizations.v1.organizations_pb import (
     AddMemberRequest,
     AddMemberResponse,
     GetOrganizationOverviewRequest,
@@ -53,7 +54,7 @@ from uniffy_proto.organizations.v1.organizations_pb2 import (
     UpdateSecuritySettingsRequest,
     UpdateSecuritySettingsResponse,
 )
-from uniffy_proto.organizations.v1.organizations_pb2 import (
+from uniffy_proto.organizations.v1.organizations_pb import (
     SecuritySettings as SecuritySettingsProto,
 )
 
@@ -172,9 +173,9 @@ class OrganizationsHandlers:
 
                 org = await ops.update(
                     org_id=org_id,
-                    name=request.name if request.HasField("name") else None,
-                    slug=request.slug if request.HasField("slug") else None,
-                    is_active=request.is_active if request.HasField("is_active") else None,
+                    name=request.name if request.has_field("name") else None,
+                    slug=request.slug if request.has_field("slug") else None,
+                    is_active=request.is_active if request.has_field("is_active") else None,
                     actor_user_id=user_id,
                 )
 
@@ -240,14 +241,14 @@ class OrganizationsHandlers:
 
                 page = 1
                 page_size = 50
-                if request.HasField("pagination"):
+                if request.has_field("pagination"):
                     page = request.pagination.page if request.pagination.page > 0 else 1
                     page_size = (
                         request.pagination.page_size if request.pagination.page_size > 0 else 50
                     )
 
                 role_filter = None
-                if request.HasField("role_filter"):
+                if request.has_field("role_filter"):
                     role_filter = org_role_from_proto(request.role_filter)
 
                 members, total = await ops.list_members(
@@ -255,9 +256,9 @@ class OrganizationsHandlers:
                     page=page,
                     page_size=page_size,
                     role_filter=role_filter,
-                    search=request.search if request.HasField("search") else None,
+                    search=request.search if request.has_field("search") else None,
                     include_inactive=(
-                        request.include_inactive if request.HasField("include_inactive") else False
+                        request.include_inactive if request.has_field("include_inactive") else False
                     ),
                 )
 
@@ -444,11 +445,11 @@ class OrganizationsHandlers:
                 ops = OrganizationOperations(session)
 
                 default_access_mode = None
-                if request.HasField("default_access_mode"):
+                if request.has_field("default_access_mode"):
                     default_access_mode = access_mode_from_proto(request.default_access_mode)
 
                 default_baseline_role = None
-                if request.HasField("default_baseline_role"):
+                if request.has_field("default_baseline_role"):
                     default_baseline_role = content_role_from_proto(request.default_baseline_role)
 
                 defaults = await ops.update_permission_defaults(
@@ -558,12 +559,12 @@ class OrganizationsHandlers:
                 await ops.require_org_admin(user_id, org_id)
 
                 domain_filter = None
-                if request.HasField("domain_filter"):
+                if request.has_field("domain_filter"):
                     domain_filter = domain_type_from_proto(request.domain_filter)
 
                 page = 1
                 page_size = 50
-                if request.HasField("pagination"):
+                if request.has_field("pagination"):
                     page = request.pagination.page if request.pagination.page > 0 else 1
                     page_size = (
                         request.pagination.page_size if request.pagination.page_size > 0 else 50
@@ -683,14 +684,19 @@ class OrganizationsHandlers:
                 if result.outcome == InviteOutcome.ADDED:
                     assert result.member is not None and result.member_user is not None
                     return InviteMemberResponse(
-                        added_member=member_info_to_proto(result.member_user, result.member)
+                        result=Oneof(
+                            field="added_member",
+                            value=member_info_to_proto(result.member_user, result.member),
+                        )
                     )
                 assert result.invitation is not None
                 inviter_row = (
                     await session.execute(select(User).where(User.id == user_id))
                 ).scalar_one_or_none()
                 return InviteMemberResponse(
-                    invitation=invitation_to_proto(result.invitation, inviter_row)
+                    result=Oneof(
+                        field="invitation", value=invitation_to_proto(result.invitation, inviter_row)
+                    )
                 )
         except PermissionDeniedError as e:
             raise ConnectError(Code.PERMISSION_DENIED, str(e))
@@ -718,8 +724,8 @@ class OrganizationsHandlers:
                 ops = InvitationOperations(session)
                 rows = await ops.list_for_org(org_id, actor_id=user_id)
                 protos = [invitation_to_proto(inv, inviter) for inv, inviter in rows]
-                if request.HasField("status"):
-                    wanted: InvitationStatus.ValueType = request.status
+                if request.has_field("status"):
+                    wanted: InvitationStatus = request.status
                     protos = [p for p in protos if p.status == wanted]
                 return ListInvitationsResponse(invitations=protos)
         except PermissionDeniedError as e:
@@ -836,19 +842,19 @@ class OrganizationsHandlers:
                 await org_ops.require_org_admin(user_id, org_id)
                 security_ops = SecurityOperations(session)
                 settings = await security_ops.get(org_id)
-                if request.HasField("password_reset_enabled"):
+                if request.has_field("password_reset_enabled"):
                     settings = await security_ops.set_password_reset_enabled(
                         organization_id=org_id,
                         enabled=request.password_reset_enabled,
                         actor_user_id=user_id,
                     )
-                if request.HasField("mfa_required_for_members"):
+                if request.has_field("mfa_required_for_members"):
                     settings = await security_ops.set_mfa_required_for_members(
                         organization_id=org_id,
                         required=request.mfa_required_for_members,
                         actor_user_id=user_id,
                     )
-                if request.HasField("mfa_required_for_admins"):
+                if request.has_field("mfa_required_for_admins"):
                     settings = await security_ops.set_mfa_required_for_admins(
                         organization_id=org_id,
                         required=request.mfa_required_for_admins,

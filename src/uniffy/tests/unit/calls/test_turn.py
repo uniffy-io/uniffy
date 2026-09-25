@@ -4,11 +4,8 @@ import time
 from uuid import UUID
 
 import pytest
-from uniffy_proto.calls.v1.calls_pb2 import (
-    ICE_TRANSPORT_POLICY_RELAY,
-    ICE_TRANSPORT_POLICY_UNSPECIFIED,
-    JoinCallResponse,
-)
+from uniffy_proto.calls.v1.calls_pb import IceTransportPolicy as _ProtoIceTransportPolicy
+from uniffy_proto.calls.v1.calls_pb import JoinCallResponse
 
 from uniffy.core.types import generate_id
 from uniffy.domains.calls import config as calls_config
@@ -109,7 +106,7 @@ def test_join_response_carries_ice_servers_when_turn_configured(turn_env):
     turn_env("turn:a:3478,turn:b:3478")
     user_id = generate_id()
     response = JoinCallResponse(livekit_token="tok", **_ice_fields(user_id))
-    assert response.ice_transport_policy == ICE_TRANSPORT_POLICY_RELAY
+    assert response.ice_transport_policy == _ProtoIceTransportPolicy.RELAY
     assert len(response.ice_servers) == 1
     server = response.ice_servers[0]
     assert list(server.urls) == ["turn:a:3478", "turn:b:3478"]
@@ -121,4 +118,4 @@ def test_join_response_has_no_ice_servers_in_direct_mode(turn_env):
     turn_env("")
     response = JoinCallResponse(livekit_token="tok", **_ice_fields(generate_id()))
     assert len(response.ice_servers) == 0
-    assert response.ice_transport_policy == ICE_TRANSPORT_POLICY_UNSPECIFIED
+    assert response.ice_transport_policy == _ProtoIceTransportPolicy.UNSPECIFIED

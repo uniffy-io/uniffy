@@ -2,7 +2,7 @@
 
 from datetime import timedelta
 
-from uniffy_proto.agents.v1.cron_pb2 import CronRunLogInfo, CronTaskInfo
+from uniffy_proto.agents.v1.cron_pb import CronRunLogInfo, CronTaskInfo
 
 from uniffy.core.converters import datetime_to_timestamp, optional_timestamp
 from uniffy.core.converters.common_proto import (
@@ -56,11 +56,11 @@ def cron_task_to_proto(
 
     last_run_ts = optional_timestamp(task.last_run_at)
     if last_run_ts:
-        info.last_run_at.CopyFrom(last_run_ts)
+        info.last_run_at = last_run_ts
 
     next_run_ts = optional_timestamp(task.next_run_at)
     if next_run_ts:
-        info.next_run_at.CopyFrom(next_run_ts)
+        info.next_run_at = next_run_ts
 
     if task.last_run_status:
         info.last_run_status = task.last_run_status
@@ -70,7 +70,7 @@ def cron_task_to_proto(
 
     updated_ts = optional_timestamp(task.updated_at)
     if updated_ts:
-        info.updated_at.CopyFrom(updated_ts)
+        info.updated_at = updated_ts
 
     if agent_name:
         info.agent_name = agent_name
@@ -106,6 +106,6 @@ def cron_run_log_to_proto(log: AgentRunLog) -> CronRunLogInfo:
 
     completed_ts = optional_timestamp(completed)
     if completed_ts:
-        info.completed_at.CopyFrom(completed_ts)
+        info.completed_at = completed_ts
 
     return info

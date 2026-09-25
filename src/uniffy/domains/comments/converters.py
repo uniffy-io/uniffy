@@ -1,13 +1,13 @@
 """Proto <-> domain converters for comments domain."""
 
-from google.protobuf.struct_pb2 import Struct
-from uniffy_proto.comments.v1.comments_pb2 import (
+from protobuf.wkt import Struct
+from uniffy_proto.comments.v1.comments_pb import (
     Comment as ProtoComment,
 )
-from uniffy_proto.comments.v1.comments_pb2 import (
+from uniffy_proto.comments.v1.comments_pb import (
     CommentAnchorType as ProtoAnchorType,
 )
-from uniffy_proto.comments.v1.comments_pb2 import (
+from uniffy_proto.comments.v1.comments_pb import (
     CommentReaction as ProtoCommentReaction,
 )
 
@@ -19,22 +19,22 @@ from uniffy.core.converters import (
 from uniffy.core.models.comments.comment import Comment, CommentAnchorType
 
 ANCHOR_TYPE_TO_PROTO: dict[CommentAnchorType, int] = {
-    CommentAnchorType.PAGE: ProtoAnchorType.COMMENT_ANCHOR_TYPE_PAGE,
-    CommentAnchorType.SELECTION: ProtoAnchorType.COMMENT_ANCHOR_TYPE_SELECTION,
-    CommentAnchorType.BLOCK: ProtoAnchorType.COMMENT_ANCHOR_TYPE_BLOCK,
-    CommentAnchorType.MEDIA: ProtoAnchorType.COMMENT_ANCHOR_TYPE_MEDIA,
+    CommentAnchorType.PAGE: ProtoAnchorType.PAGE,
+    CommentAnchorType.SELECTION: ProtoAnchorType.SELECTION,
+    CommentAnchorType.BLOCK: ProtoAnchorType.BLOCK,
+    CommentAnchorType.MEDIA: ProtoAnchorType.MEDIA,
 }
 
 ANCHOR_TYPE_FROM_PROTO: dict[int, CommentAnchorType] = {
-    ProtoAnchorType.COMMENT_ANCHOR_TYPE_PAGE: CommentAnchorType.PAGE,
-    ProtoAnchorType.COMMENT_ANCHOR_TYPE_SELECTION: CommentAnchorType.SELECTION,
-    ProtoAnchorType.COMMENT_ANCHOR_TYPE_BLOCK: CommentAnchorType.BLOCK,
-    ProtoAnchorType.COMMENT_ANCHOR_TYPE_MEDIA: CommentAnchorType.MEDIA,
+    ProtoAnchorType.PAGE: CommentAnchorType.PAGE,
+    ProtoAnchorType.SELECTION: CommentAnchorType.SELECTION,
+    ProtoAnchorType.BLOCK: CommentAnchorType.BLOCK,
+    ProtoAnchorType.MEDIA: CommentAnchorType.MEDIA,
 }
 
 
 def anchor_type_to_proto(anchor_type: CommentAnchorType) -> int:
-    return ANCHOR_TYPE_TO_PROTO.get(anchor_type, ProtoAnchorType.COMMENT_ANCHOR_TYPE_PAGE)
+    return ANCHOR_TYPE_TO_PROTO.get(anchor_type, ProtoAnchorType.PAGE)
 
 
 def anchor_type_from_proto(proto_type: int) -> CommentAnchorType:
@@ -72,9 +72,7 @@ def comment_to_proto(
         proto.author_avatar_url = author_avatar_url
 
     if comment.anchor_data:
-        anchor_struct = Struct()
-        anchor_struct.update(comment.anchor_data)
-        proto.anchor_data.CopyFrom(anchor_struct)
+        proto.anchor_data = Struct.from_python(comment.anchor_data)
 
     if comment.resolved_by:
         proto.resolved_by_id = str(comment.resolved_by)
@@ -83,12 +81,12 @@ def comment_to_proto(
     if comment.resolved_at:
         resolved_ts = optional_timestamp(comment.resolved_at)
         if resolved_ts:
-            proto.resolved_at.CopyFrom(resolved_ts)
+            proto.resolved_at = resolved_ts
 
     if comment.updated_at:
         updated_ts = optional_timestamp(comment.updated_at)
         if updated_ts:
-            proto.updated_at.CopyFrom(updated_ts)
+            proto.updated_at = updated_ts
 
     for reaction_data in reactions:
         proto.reactions.append(

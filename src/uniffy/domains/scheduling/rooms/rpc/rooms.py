@@ -1,6 +1,6 @@
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
-from uniffy_proto.rooms.v1.rooms_pb2 import (
+from uniffy_proto.rooms.v1.rooms_pb import (
     CreateRoomRequest,
     CreateRoomResponse,
     DeleteRoomRequest,
@@ -58,7 +58,7 @@ class RoomHandlers:
             group_ids = [parse_uuid(gid, "group_id") for gid in request.group_ids]
 
         image_file_id = None
-        if request.HasField("image_file_id"):
+        if request.has_field("image_file_id"):
             image_file_id = parse_uuid(request.image_file_id, "image_file_id")
 
         kwargs: dict = {
@@ -71,13 +71,13 @@ class RoomHandlers:
             "baseline_role": baseline_role,
         }
 
-        if request.HasField("description"):
+        if request.has_field("description"):
             kwargs["description"] = request.description
-        if request.HasField("floor"):
+        if request.has_field("floor"):
             kwargs["floor"] = request.floor
-        if request.HasField("building"):
+        if request.has_field("building"):
             kwargs["building"] = request.building
-        if request.HasField("location"):
+        if request.has_field("location"):
             kwargs["location"] = request.location
         if request.amenities:
             kwargs["amenities"] = list(request.amenities)
@@ -151,23 +151,23 @@ class RoomHandlers:
         room_id = parse_uuid(request.room_id, "room_id")
 
         kwargs: dict = {}
-        if request.HasField("name"):
+        if request.has_field("name"):
             kwargs["name"] = request.name
-        if request.HasField("description"):
+        if request.has_field("description"):
             kwargs["description"] = request.description
-        if request.HasField("room_type"):
+        if request.has_field("room_type"):
             kwargs["room_type"] = room_type_from_proto(request.room_type)
-        if request.HasField("status"):
+        if request.has_field("status"):
             kwargs["status"] = room_status_from_proto(request.status)
-        if request.HasField("capacity"):
+        if request.has_field("capacity"):
             kwargs["capacity"] = request.capacity
-        if request.HasField("floor"):
+        if request.has_field("floor"):
             kwargs["floor"] = request.floor
-        if request.HasField("building"):
+        if request.has_field("building"):
             kwargs["building"] = request.building
-        if request.HasField("location"):
+        if request.has_field("location"):
             kwargs["location"] = request.location
-        if request.HasField("image_file_id"):
+        if request.has_field("image_file_id"):
             kwargs["image_file_id"] = parse_uuid(request.image_file_id, "image_file_id")
         if request.replace_amenities:
             kwargs["amenities"] = list(request.amenities)
@@ -234,17 +234,17 @@ class RoomHandlers:
         organization_id = parse_uuid(request.organization_id, "organization_id")
 
         room_type = None
-        if request.HasField("room_type"):
+        if request.has_field("room_type"):
             room_type = room_type_from_proto(request.room_type)
 
         status = None
-        if request.HasField("status"):
+        if request.has_field("status"):
             status = room_status_from_proto(request.status)
 
-        min_capacity = request.min_capacity if request.HasField("min_capacity") else None
-        building = request.building if request.HasField("building") else None
-        floor = request.floor if request.HasField("floor") else None
-        search_query = request.search_query if request.HasField("search_query") else None
+        min_capacity = request.min_capacity if request.has_field("min_capacity") else None
+        building = request.building if request.has_field("building") else None
+        floor = request.floor if request.has_field("floor") else None
+        search_query = request.search_query if request.has_field("search_query") else None
 
         try:
             async with open_session() as session:

@@ -7,7 +7,7 @@ from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
-from uniffy_proto.chat.v1.chat_pb2 import (
+from uniffy_proto.chat.v1.chat_pb import (
     DeleteMessageRequest,
     DeleteMessageResponse,
     ForwardMessageRequest,
@@ -79,14 +79,14 @@ class MessageHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
 
         root_id = None
-        if request.HasField("root_id"):
+        if request.has_field("root_id"):
             try:
                 root_id = UUID(request.root_id)
             except ValueError:
                 raise ConnectError(Code.INVALID_ARGUMENT, "Invalid root_id")
 
         reply_to_id = None
-        if request.HasField("reply_to_id"):
+        if request.has_field("reply_to_id"):
             try:
                 reply_to_id = UUID(request.reply_to_id)
             except ValueError:
@@ -192,11 +192,11 @@ class MessageHandlers:
         before_id = None
         after_id = None
         around_id = None
-        if request.HasField("before_id"):
+        if request.has_field("before_id"):
             before_id = UUID(request.before_id)
-        if request.HasField("after_id"):
+        if request.has_field("after_id"):
             after_id = UUID(request.after_id)
-        if request.HasField("around_id"):
+        if request.has_field("around_id"):
             around_id = UUID(request.around_id)
 
         try:
@@ -534,7 +534,7 @@ class MessageHandlers:
                 s_name = rto_infos[sid].display_name if sid in rto_infos else "Unknown"
                 reply_context_map[rid] = (str(rid), s_name, content[:150])
 
-        from uniffy_proto.chat.v1.chat_pb2 import ReactionGroup as ProtoReactionGroup
+        from uniffy_proto.chat.v1.chat_pb import ReactionGroup as ProtoReactionGroup
 
         reaction_ops = ChatReactionOperations(session)
         reactions_map = await reaction_ops.get_reactions_for_messages(message_ids, user_id)
