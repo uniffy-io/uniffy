@@ -25,9 +25,7 @@ class SprintOperations:
     async def _verify_project_manage(
         self, user_id: UUID, organization_id: UUID, project_id: UUID
     ) -> None:
-        project_ops = ProjectOperations(self.session)
-        project = await project_ops.get_by_id(user_id, organization_id, project_id)
-        await project_ops._require_manage(user_id, organization_id, project)
+        await ProjectOperations(self.session).get_for_manage(user_id, organization_id, project_id)
 
     async def _get_sprint(self, sprint_id: UUID, organization_id: UUID) -> Sprint:
         result = await self.session.execute(
