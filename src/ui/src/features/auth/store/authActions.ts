@@ -1,5 +1,6 @@
 /** Plain action creators dispatchable via storeRef so api.ts avoids a circular import on authSlice. */
 
+import { createAction } from "@reduxjs/toolkit";
 import type { GetCurrentUserResponse } from "@uniffy/proto/auth/v1/auth_pb";
 
 const AUTH_SLICE_NAME = "auth";
@@ -65,3 +66,6 @@ export function createLogoutAction() {
     type: AUTH_ACTION_TYPES.LOGOUT,
   };
 }
+
+/** Drops the previous organization's data from every slice while the session itself stays signed in. */
+export const resetOrganizationScope = createAction(`${AUTH_SLICE_NAME}/resetOrganizationScope`);

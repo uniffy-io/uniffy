@@ -7,40 +7,17 @@ import type { MyOrganization } from "@uniffy/proto/organizations/v1/organization
 import { OrganizationRole } from "@uniffy/proto/common/v1/common_pb";
 import { Button } from "@/components/ui/button";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
-import { setCredentials, logout } from "@/features/auth/store/authSlice";
+import { setCredentials } from "@/features/auth/store/authSlice";
+import { resetOrganizationScope } from "@/features/auth/store/authActions";
+import { clearSessionCaches, useSignOut } from "@/features/auth/hooks/useSignOut";
 import { cancelRecording } from "@/features/recording/store/recordingThunks";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { resetSettings } from "@/features/settings/store/settingsSlice";
-import { clearNotes } from "@/features/notes/store/notesSlice";
-import { clearTree as clearNotesTree } from "@/features/notes/store/notesTreeSlice";
-import { clearLibraryScope } from "@/features/library/store/clearLibraryScope";
-import { clearPresence } from "@/features/presence/store/presenceSlice";
-import { clearPermissions } from "@/features/permissions/store/permissionsSlice";
-import { clearAdmin } from "@/features/admin/store/adminSlice";
-import { clearAgentProviders } from "@/features/agents/store/agentProvidersSlice";
-import { clearIntegrations } from "@/features/integrations/store/integrationsSlice";
-import { clearBlobCache } from "@/features/files/components/viewer/hooks/blobCache";
-import { clearFiles } from "@/features/files/store/filesSlice";
-import { clearTree as clearFilesTree } from "@/features/files/store/filesTreeSlice";
-import { clearUploads } from "@/features/files/store/uploadSlice";
-import { closeViewer } from "@/features/files/store/viewerSlice";
-import { clearSavedFilters } from "@/features/files/store/savedFiltersSlice";
-import { uploadService } from "@/features/files/upload";
-import {
-  clearChatChannels,
-  clearChatMessages,
-  clearChatThreads,
-  clearChatUi,
-} from "@/features/chat/store";
-import { clearTags } from "@/features/tags/store/tagsSlice";
-import { clearPeople } from "@/features/people/store/peopleSlice";
-import { resetCalendarState, resetCalendarUiState } from "@/features/calendar/store";
 import { setAccentColor, setFontFamily } from "@/config/theme/themeSlice";
 import { UniffyLogo } from "@/components/ui/uniffy-logo";
 import { Card } from "@/components/ui/card";
 import { getAvatarGradientStyle, getInitials } from "@/components/subject/utils";
 import { cn } from "@/shared/utils/cn";
-import { unaryTransport, setMemoryAccessToken, clearMemoryAccessToken } from "@/config";
+import { unaryTransport, setMemoryAccessToken } from "@/config";
 import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 import {
   Buildings,
@@ -87,6 +64,7 @@ export function OrganizationPicker() {
   const dispatch = useAppDispatch();
   const accessToken = useAppSelector((state) => state.auth?.accessToken);
   const refreshToken = useAppSelector((state) => state.auth?.refreshToken);
+  const handleLogout = useSignOut();
   const user = useAppSelector((state) => state.auth?.user);
   const recordingState = useAppSelector((state) => state.recording.state);
   const [pendingOrgSlug, setPendingOrgSlug] = useState<string | null>(null);
@@ -157,7 +135,8 @@ export function OrganizationPicker() {
         return;
       }
 
-      clearLibraryScope(dispatch);
+      clearSessionCaches(dispatch);
+      dispatch(resetOrganizationScope());
       setMemoryAccessToken(r.accessToken);
 
       if (user) {
@@ -195,41 +174,6 @@ export function OrganizationPicker() {
     setPendingOrgSlug(null);
     await dispatch(cancelRecording());
     await switchToOrg(slug);
-  };
-
-  const handleLogout = () => {
-    if (refreshToken) {
-      const client = createClient(AuthService, unaryTransport);
-      client.logout({ refreshToken }).catch(() => {});
-    }
-    clearMemoryAccessToken();
-    dispatch(logout());
-    dispatch(resetSettings());
-    dispatch(clearNotes());
-    dispatch(clearNotesTree());
-    dispatch(clearFiles());
-    dispatch(clearFilesTree());
-    // The upload engine is module-level; cancel in-flight uploads before resetting the tray projection.
-    uploadService.cancelAll();
-    dispatch(clearUploads());
-    dispatch(closeViewer());
-    dispatch(clearSavedFilters());
-    clearLibraryScope(dispatch);
-    dispatch(clearPresence());
-    dispatch(clearPermissions());
-    dispatch(clearAdmin());
-    dispatch(clearAgentProviders());
-    dispatch(clearIntegrations());
-    dispatch(clearChatChannels());
-    dispatch(clearChatMessages());
-    dispatch(clearChatThreads());
-    dispatch(clearChatUi());
-    dispatch(clearTags());
-    dispatch(clearPeople());
-    dispatch(resetCalendarState());
-    dispatch(resetCalendarUiState());
-    clearBlobCache();
-    navigate("/auth");
   };
 
   return (

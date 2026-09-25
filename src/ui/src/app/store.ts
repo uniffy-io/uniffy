@@ -32,6 +32,7 @@ import { adminReducer } from "@/features/admin/store/adminSlice";
 import { agentsGovernanceReducer } from "@/features/admin/store/agentsGovernanceSlice";
 import { agentRuntimeSettingsReducer } from "@/features/admin/store/agentRuntimeSettingsSlice";
 import { setStoreRef } from "@/app/storeRef";
+import { withSessionScope } from "@/app/sessionScope";
 import { calendarReducer, calendarUiReducer } from "@/features/calendar/store";
 import { zenModeReducer } from "@/app/zenModeSlice";
 import { filesReducer } from "@/features/files/store/filesSlice";
@@ -320,7 +321,10 @@ const persistConfig: Parameters<typeof persistReducer<RootReducerState>>[0] = {
   migrate: createMigrate(migrations, { debug: false }),
 };
 
-const persistedReducer = persistReducer<RootReducerState>(persistConfig, rootReducer);
+const persistedReducer = persistReducer<RootReducerState>(
+  persistConfig,
+  withSessionScope(rootReducer),
+);
 
 export const store = configureStore({
   reducer: persistedReducer,

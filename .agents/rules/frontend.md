@@ -146,7 +146,7 @@ Global pipeline: rejected thunk -> `errorToastMiddleware` -> `friendlyErrorMessa
 
 - Access tokens are memory-only (`memoryAccessToken` in `config/api.ts`) - **never persisted**; this is a security boundary. The interceptor auto-refreshes before calls; org context is stored separately from tokens.
 - Authenticated `<img>`/`<video>`/`<audio>` resources use the asset-read cookie - contract, URL builders (`shared/utils/fileUrls.ts`), and the 401-retry listener are owned by `files-domain.md`. There is no service-worker auth proxy.
-- Logout clears ALL user/org-scoped state: memory token plus every feature slice's clear/reset action, then navigate to `/auth`. When you add a slice holding user data, add its reset to the logout path.
+- Logout and organization switch clear ALL user/org-scoped state. `withSessionScope` (`app/sessionScope.ts`) resets every slice to its initial state on `logout` and `resetOrganizationScope`, except the per-device preference slices it lists; a new slice is covered without registration, and only a slice holding no user or org data belongs on that list. Caches outside Redux (upload engine, blob cache, URN metadata, notes cache) are cleared by `clearSessionCaches`; sign-out goes through `useSignOut`.
 
 ## Admin surfaces
 
