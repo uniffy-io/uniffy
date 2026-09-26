@@ -199,7 +199,7 @@ export function Select<T extends string | number = string>({
                 type="button"
                 onClick={() => handleSelect(option.value)}
                 className={cn(
-                  "flex w-full items-center justify-between gap-2 px-3 py-2 text-left",
+                  "flex w-full min-h-11 md:min-h-0 touch:min-h-11 items-center justify-between gap-2 px-3 py-2 text-left",
                   "transition-colors",
                   isSelected ? "bg-primary/10 text-primary" : "text-foreground hover:bg-muted",
                   size === "sm" ? "text-xs" : "text-sm",

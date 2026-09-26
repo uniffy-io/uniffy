@@ -257,7 +257,7 @@ export function SubjectPicker({
                 type="button"
                 onClick={option.onToggle}
                 className={cn(
-                  "flex w-full items-center gap-2 px-3 py-1.5 text-sm text-left transition-colors",
+                  "flex w-full min-h-11 md:min-h-0 touch:min-h-11 items-center gap-2 px-3 py-1.5 text-sm text-left transition-colors",
                   option.selected ? "bg-primary/10" : "hover:bg-muted",
                 )}
               >

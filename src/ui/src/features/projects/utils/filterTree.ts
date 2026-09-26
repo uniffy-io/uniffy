@@ -122,6 +122,19 @@ export function countNodes(root: EditorGroup): number {
   );
 }
 
+export function filterTreeLimitProblem(root: EditorGroup, limits: ViewFilterLimits): string | null {
+  const exceedsDepth = (group: EditorGroup, depth: number): boolean =>
+    depth > limits.maxDepth ||
+    group.children.some((child) => child.kind === "group" && exceedsDepth(child, depth + 1));
+  if (exceedsDepth(root, 1)) {
+    return `Use at most ${limits.maxDepth} levels of filter groups.`;
+  }
+  if (countNodes(root) > limits.maxNodes) {
+    return `Use at most ${limits.maxNodes} filter conditions and groups.`;
+  }
+  return null;
+}
+
 /**
  * Adds a node so it narrows what the tree matches: under an OR with more than one branch, the
  * existing branches become one nested group first.
