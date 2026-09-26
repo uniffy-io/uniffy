@@ -2765,6 +2765,40 @@ active), tags, an epic with children, and tasks due this week, overdue and compl
 - [ ] At 375 px the builder opens as a bottom sheet; every control is at least 44 px tall and a
       condition wraps field and operator on one line and the value below.
 
+### Group by and board lanes
+
+Needs a project with two sprints, tags, an epic with a story and a subtask, a custom
+single-select field, a custom number field, tasks with two assignees, unassigned tasks and
+estimates, and due dates overdue, today and next week.
+
+- [ ] Display > Group by lists Status, Priority, Assignee, Creator, Tags, Sprint, Type, Due Date,
+      Start Date, Milestone, Epic, then the custom person and select fields, and typing narrows it.
+      A project without custom fields still lists the system ones.
+- [ ] Table grouped by Assignee: a task with two assignees shows under both, unassigned tasks
+      under Unassigned last. Grouped by Tags: Untagged last. The reverse-order button flips the
+      groups and keeps the empty group last.
+- [ ] Group headers show the count and, when tasks carry them, Estimate and Spent; a visible
+      number column adds its sum. Narrowing the filter changes the sums.
+- [ ] Hide empty groups removes groups without tasks (select options, sprints, date buckets);
+      it survives Save and a reload.
+- [ ] Group by Due Date: Overdue holds unfinished past-due tasks only (a completed one sits in
+      Earlier), then Today, Later this week, Next week, Later, No date.
+- [ ] Board with Swimlanes = Sprint: drag a card from one sprint lane to another in the same
+      column; only its sprint changes. Drop it into Backlog; the sprint clears.
+- [ ] Swimlanes = Assignee: dragging a two-assignee task from Alice's lane to Bob's swaps Alice
+      for Bob and keeps the other assignee; into Unassigned clears the assignees. Swimlanes =
+      Tags adds and removes tags the same way; a custom select lane sets the field.
+- [ ] Swimlanes = Epic: a drop into another epic's lane reparents, No epic detaches, a cycle is
+      refused as before. Swimlanes = Due Date: a drop across lanes changes only the column and a
+      toast explains why.
+- [ ] Columns = Priority: four columns in option order, a drop writes priority and leaves status
+      alone; reordering inside a column keeps working. Columns = Status restores the default and
+      Add Status.
+- [ ] Collapsing a lane or group survives Save and a reload.
+- [ ] Roadmap grouped by Assignee: collapsible group rows with count and sums, bars aligned with
+      their rows, subtasks indented under their parent inside a group.
+- [ ] Backlog, graph and resources views offer no Group by.
+
 ## Sign-out and organization switch reset
 
 Needs a user who belongs to two organizations; the org picker lives at `/select-org` and also
