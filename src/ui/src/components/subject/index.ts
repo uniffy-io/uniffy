@@ -19,7 +19,7 @@ export { PresenceIndicator } from "@/components/subject/PresenceIndicator";
 export { SubjectAvatar, SubjectAvatarById } from "@/components/subject/SubjectAvatar";
 export { SubjectAvatarStack } from "@/components/subject/SubjectAvatarStack";
 export { SubjectChip } from "@/components/subject/SubjectChip";
-export { SubjectPicker } from "@/components/subject/SubjectPicker";
+export { SubjectPicker, type SubjectPickerPinnedOption } from "@/components/subject/SubjectPicker";
 export { SubjectSearchInput, SubjectSearchResults } from "@/components/subject/SubjectSearch";
 export { PersonHoverCard } from "@/components/subject/PersonHoverCard";
 

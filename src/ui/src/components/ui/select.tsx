@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useOverlayEscape } from "@/shared/hooks/useOverlayEscape";
 import { createPortal } from "react-dom";
-import { CaretDown, Check } from "@phosphor-icons/react";
+import { CaretDown, Check, MagnifyingGlass } from "@phosphor-icons/react";
 import { cn } from "@/shared/utils/cn";
 import { popoverShellClass } from "@/components/ui/popover";
 import { controlShellClass } from "@/components/ui/input";
@@ -24,6 +24,9 @@ interface SelectProps<T extends string | number = string> {
   /** Widens the dropdown past the trigger when labels are long. */
   menuMinWidth?: number;
   ariaLabel?: string;
+  /** A filter box above the options, for long lists. */
+  searchable?: boolean;
+  searchPlaceholder?: string;
 }
 
 interface DropdownPosition {
@@ -44,8 +47,11 @@ export function Select<T extends string | number = string>({
   size = "md",
   menuMinWidth = 120,
   ariaLabel,
+  searchable = false,
+  searchPlaceholder = "Search...",
 }: SelectProps<T>) {
   const [isOpen, setIsOpen] = useState(false);
+  const [query, setQuery] = useState("");
   const [position, setPosition] = useState<DropdownPosition | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -54,7 +60,7 @@ export function Select<T extends string | number = string>({
     if (!buttonRef.current) return;
 
     const rect = buttonRef.current.getBoundingClientRect();
-    const dropdownHeight = Math.min(options.length * 40 + 8, 240);
+    const dropdownHeight = Math.min(options.length * 40 + 8, 240) + (searchable ? 44 : 0);
     const viewportHeight = window.innerHeight;
     const spaceBelow = viewportHeight - rect.bottom;
     const spaceAbove = rect.top;
@@ -71,7 +77,7 @@ export function Select<T extends string | number = string>({
       width,
       openUpward,
     });
-  }, [options.length, menuMinWidth]);
+  }, [options.length, menuMinWidth, searchable]);
 
   useEffect(() => {
     if (isOpen) {
@@ -119,9 +125,15 @@ export function Select<T extends string | number = string>({
 
   const handleToggle = () => {
     if (!disabled) {
+      setQuery("");
       setIsOpen(!isOpen);
     }
   };
+
+  const needle = query.trim().toLowerCase();
+  const shownOptions = needle
+    ? options.filter((option) => option.label.toLowerCase().includes(needle))
+    : options;
 
   const handleSelect = (optionValue: T) => {
     onChange(optionValue);
@@ -149,8 +161,37 @@ export function Select<T extends string | number = string>({
           position.openUpward ? "slide-in-from-bottom-2" : "slide-in-from-top-2",
         )}
       >
+        {searchable && (
+          <div className="p-1.5 border-b border-border/60">
+            <div
+              className={cn(
+                controlShellClass,
+                "focus-ring-within flex items-center gap-1.5 px-2 py-1",
+              )}
+            >
+              <MagnifyingGlass size={12} className="text-muted-foreground shrink-0" />
+              <input
+                autoFocus
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && shownOptions.length > 0) {
+                    e.preventDefault();
+                    handleSelect(shownOptions[0].value);
+                  }
+                }}
+                placeholder={searchPlaceholder}
+                className="flex-1 min-w-0 bg-transparent outline-none text-xs text-foreground placeholder:text-subtle-foreground"
+              />
+            </div>
+          </div>
+        )}
         <div className="py-1 max-h-60 overflow-y-auto">
-          {options.map((option) => {
+          {shownOptions.length === 0 && (
+            <div className="px-3 py-2 text-xs text-muted-foreground">No matches</div>
+          )}
+          {shownOptions.map((option) => {
             const isSelected = option.value === value;
             return (
               <button

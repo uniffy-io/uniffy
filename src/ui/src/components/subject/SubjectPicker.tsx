@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback, type RefObject } from "react";
+import { useState, useRef, useEffect, useCallback, type ReactNode, type RefObject } from "react";
 import { createPortal } from "react-dom";
 import { MagnifyingGlass, Check, LockSimple } from "@phosphor-icons/react";
 import { cn } from "@/shared/utils/cn";
@@ -16,6 +16,15 @@ import { partitionSubjects } from "@/components/subject/utils";
 import { useSubjectSearch } from "@/components/subject/hooks/useSubjectSearch";
 import { useSubjectResolver } from "@/components/subject/hooks/useSubjectResolver";
 
+/** A row that is not a subject, listed above the results (a filter's "Me" or "Unassigned"). */
+export interface SubjectPickerPinnedOption {
+  id: string;
+  label: string;
+  icon?: ReactNode;
+  selected: boolean;
+  onToggle: () => void;
+}
+
 interface SubjectPickerProps {
   mode: SubjectPickerMode;
   subjectTypes?: SubjectTypeFilter;
@@ -30,6 +39,7 @@ interface SubjectPickerProps {
   disabled?: boolean;
   autoFocus?: boolean;
   dropdownWidth?: number;
+  pinnedOptions?: SubjectPickerPinnedOption[];
 }
 
 export function SubjectPicker({
@@ -45,6 +55,7 @@ export function SubjectPicker({
   disabled = false,
   autoFocus = false,
   dropdownWidth = 240,
+  pinnedOptions = [],
 }: SubjectPickerProps) {
   const [query, setQuery] = useState("");
   const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
@@ -238,6 +249,25 @@ export function SubjectPicker({
       </div>
 
       <div className="max-h-48 overflow-y-auto py-1">
+        {pinnedOptions.length > 0 && query.length < 2 && (
+          <div className="border-b border-border/60 pb-1 mb-1">
+            {pinnedOptions.map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                onClick={option.onToggle}
+                className={cn(
+                  "flex w-full items-center gap-2 px-3 py-1.5 text-sm text-left transition-colors",
+                  option.selected ? "bg-primary/10" : "hover:bg-muted",
+                )}
+              >
+                {option.icon}
+                <span className="flex-1 truncate text-foreground">{option.label}</span>
+                {option.selected && <Check size={14} className="text-primary shrink-0" />}
+              </button>
+            ))}
+          </div>
+        )}
         {loading && results.length === 0 ? (
           <div className="px-3 py-2 text-sm text-muted-foreground">Searching...</div>
         ) : query.length >= 2 && results.length === 0 ? (

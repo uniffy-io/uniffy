@@ -149,6 +149,7 @@ export function DatePicker({
     const dropdown = (
       <div
         ref={dropdownRef}
+        data-select-portal=""
         style={{
           position: "fixed",
           top: position.top,
