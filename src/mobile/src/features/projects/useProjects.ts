@@ -1,5 +1,11 @@
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
+import type { ViewDefinition } from "@uniffy/proto/projects/v1/projects_pb";
 import { useAuth } from "@core/providers/AuthContext";
+import { projectQueryKey } from "@features/projects/projectViewsCache";
+import { useDateTimePrefs } from "@core/datetimePrefs";
+import { sessionGeneration } from "@core/auth/sessionScope";
+import { zonedDayKey } from "@shared/lib/zonedTime";
 import { fetchAllPages } from "@shared/lib/fetchAllPages";
 import { projectsApi } from "@features/projects/projectsApi";
 import {
@@ -7,13 +13,15 @@ import {
   taskToPlain,
   activityToPlain,
   sprintToPlain,
+  type SerializedFieldDefinition,
 } from "@features/projects/projectsSerializer";
+import { resultKey, shapesResults, viewQueryDefinition } from "@features/projects/viewDefinition";
 
 export function useProjectsList() {
-  const { organizationId } = useAuth();
+  const { organizationId, user } = useAuth();
 
   return useQuery({
-    queryKey: ["projects", organizationId],
+    queryKey: ["projects", organizationId, user?.id],
     queryFn: async () => {
       const response = await projectsApi.listProjects({
         organizationId: organizationId!,
@@ -25,10 +33,10 @@ export function useProjectsList() {
 }
 
 export function useProject(projectId: string | undefined) {
-  const { organizationId } = useAuth();
+  const { organizationId, user } = useAuth();
 
   return useQuery({
-    queryKey: ["project", organizationId, projectId],
+    queryKey: projectQueryKey(organizationId, projectId, user?.id),
     queryFn: async () => {
       const response = await projectsApi.getProject({
         organizationId: organizationId!,
@@ -67,6 +75,67 @@ export function useProjectTasks(projectId: string | undefined) {
       return tasks.map(taskToPlain);
     },
     enabled: !!organizationId && !!projectId,
+  });
+}
+
+/** Unfiltered views reuse the project list; shaped views retain rows during filter changes. */
+export function useViewTasks(
+  projectId: string | undefined,
+  definition: ViewDefinition,
+  fields: SerializedFieldDefinition[] | undefined,
+) {
+  const { organizationId, user } = useAuth();
+  const { timeZone, weekStartsOn } = useDateTimePrefs();
+  const generation = sessionGeneration();
+  const today = zonedDayKey(new Date(), timeZone);
+  const active = shapesResults(definition);
+  const request = useMemo(
+    () => viewQueryDefinition(definition, fields ?? []),
+    [definition, fields],
+  );
+
+  return useQuery({
+    // Under the project's task key, so every task mutation that refreshes the list refreshes this too.
+    queryKey: [
+      "tasks",
+      organizationId,
+      projectId,
+      "view",
+      user?.id,
+      generation,
+      timeZone,
+      weekStartsOn,
+      today,
+      resultKey(request),
+    ],
+    queryFn: async ({ signal }) => {
+      const tasks = await fetchAllPages(
+        async (page) => {
+          const response = await projectsApi.listTasks(
+            {
+              organizationId: organizationId!,
+              projectId: projectId!,
+              pagination: { page, pageSize: TASK_PAGE_SIZE },
+              filter: request.filter,
+              sort: request.sort,
+              timeZone,
+            },
+            { signal },
+          );
+          return { items: response.tasks, totalPages: response.pagination?.totalPages ?? 1 };
+        },
+        { key: (task) => task.id },
+      );
+      return tasks.map(taskToPlain);
+    },
+    enabled: !!organizationId && !!user && !!projectId && !!fields && active,
+    placeholderData: (previous, query) =>
+      query?.queryKey[1] === organizationId &&
+      query.queryKey[2] === projectId &&
+      query.queryKey[4] === user?.id &&
+      query.queryKey[5] === generation
+        ? previous
+        : undefined,
   });
 }
 

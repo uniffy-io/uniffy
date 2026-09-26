@@ -1,40 +1,7 @@
 import type { SerializedTask } from "@features/projects/projectsSerializer";
+import type { TaskFacets } from "@features/projects/viewFacets";
 
-export interface TaskFilters {
-  statusIds: string[];
-  priorityIds: string[];
-  assigneeIds: string[];
-  tagIds: string[];
-  overdueOnly: boolean;
-}
-
-export const NO_TASK_FILTERS: TaskFilters = {
-  statusIds: [],
-  priorityIds: [],
-  assigneeIds: [],
-  tagIds: [],
-  overdueOnly: false,
-};
-
-export function activeFilterCount(filters: TaskFilters): number {
-  return (
-    filters.statusIds.length +
-    filters.priorityIds.length +
-    filters.assigneeIds.length +
-    filters.tagIds.length +
-    (filters.overdueOnly ? 1 : 0)
-  );
-}
-
-export function isNarrowed(filters: TaskFilters, query: string): boolean {
-  return query.trim().length > 0 || activeFilterCount(filters) > 0;
-}
-
-export function toggleValue(values: string[], value: string): string[] {
-  return values.includes(value) ? values.filter((v) => v !== value) : [...values, value];
-}
-
-function todayIso(): string {
+export function todayIso(): string {
   const now = new Date();
   const month = `${now.getMonth() + 1}`.padStart(2, "0");
   const day = `${now.getDate()}`.padStart(2, "0");
@@ -60,31 +27,22 @@ function matchesQuery(task: SerializedTask, needle: string): boolean {
 }
 
 /**
- * Selections within one facet are OR-ed, and the facets are AND-ed together -
- * picking two statuses widens, adding an assignee narrows.
+ * The server applies the whole view filter; the search box and the status and priority facets
+ * also apply here, so a tap narrows the list at once while the server result is on its way.
  */
-export function filterTasks(
+export function narrowTasks(
   tasks: SerializedTask[],
-  filters: TaskFilters,
   query: string,
+  facets: TaskFacets,
 ): SerializedTask[] {
   const needle = query.trim().toLowerCase();
-
-  return tasks.filter((task) => {
-    if (needle && !matchesQuery(task, needle)) return false;
-    if (filters.statusIds.length > 0 && !filters.statusIds.includes(task.status)) return false;
-    if (filters.priorityIds.length > 0 && !filters.priorityIds.includes(task.priority))
-      return false;
-    if (
-      filters.assigneeIds.length > 0 &&
-      !task.assigneeIds.some((id) => filters.assigneeIds.includes(id))
-    ) {
-      return false;
-    }
-    if (filters.tagIds.length > 0 && !task.tags.some((t) => filters.tagIds.includes(t.id))) {
-      return false;
-    }
-    if (filters.overdueOnly && !isTaskOverdue(task.dueDate, task.completedAt)) return false;
-    return true;
-  });
+  const statuses = facets.ids.status.ids;
+  const priorities = facets.ids.priority.ids;
+  if (!needle && statuses.length === 0 && priorities.length === 0) return tasks;
+  return tasks.filter(
+    (task) =>
+      (!needle || matchesQuery(task, needle)) &&
+      (statuses.length === 0 || statuses.includes(task.status)) &&
+      (priorities.length === 0 || priorities.includes(task.priority)),
+  );
 }
