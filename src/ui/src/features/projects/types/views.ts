@@ -7,6 +7,7 @@ import type {
   TaskPseudoField,
   ViewVisibility,
 } from "@uniffy/proto/projects/v1/projects_pb";
+import type { FieldType } from "./fields";
 
 export type ViewType = "table" | "board" | "roadmap" | "backlog" | "graph" | "resources";
 
@@ -100,4 +101,30 @@ export interface ViewConfig {
   sortOrder: number;
   createdAt: string;
   updatedAt: string;
+}
+
+export type ViewIdFlag = "includeCurrentUser" | "includeEmpty" | "includeActiveSprint";
+
+/** What a view may do with one field, as the server's definition validator allows it. */
+export interface ViewFieldCapabilities {
+  operators: TaskFilterOperator[];
+  idFlags: ViewIdFlag[];
+  sortable: boolean;
+  groupable: boolean;
+}
+
+export interface ViewFilterLimits {
+  /** The top-level group counts as the first level. */
+  maxDepth: number;
+  maxNodes: number;
+  maxIdsPerCondition: number;
+  maxTextLength: number;
+  maxRelativeOffsetDays: number;
+}
+
+export interface ViewCatalog {
+  fieldTypes: Partial<Record<FieldType, ViewFieldCapabilities>>;
+  /** Keyed by `TaskPseudoField`. */
+  pseudoFields: Partial<Record<number, ViewFieldCapabilities>>;
+  filterLimits: ViewFilterLimits;
 }

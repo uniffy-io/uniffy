@@ -11,7 +11,7 @@ import type {
   MoveTaskRequest,
 } from "../types/project";
 import type { FieldDefinition } from "../types/fields";
-import type { ViewConfig, ViewDefinition } from "../types/views";
+import type { ViewCatalog, ViewConfig, ViewDefinition } from "../types/views";
 import type { TaskActivity } from "../types/activity";
 import type {
   Project as ProtoProject,
@@ -376,6 +376,26 @@ export const deleteViewThunk = createAsyncThunk<
     return rejectWithValue(error instanceof Error ? error.message : "Failed to delete view");
   }
 });
+
+/** The catalog is the same for every project and caller, so one fetch serves the session. */
+export const fetchViewCatalog = createAsyncThunk<ViewCatalog, void, { rejectValue: string }>(
+  "projects/fetchViewCatalog",
+  async (_, { rejectWithValue }) => {
+    try {
+      return await projectsApi.getViewCatalog();
+    } catch (error) {
+      return rejectWithValue(
+        error instanceof Error ? error.message : "Failed to load the view catalog",
+      );
+    }
+  },
+  {
+    condition: (_, { getState }) => {
+      const state = getState() as RootState;
+      return state.projects.viewCatalog === null && !state.projects.viewCatalogLoading;
+    },
+  },
+);
 
 export const bulkUpdateTasksThunk = createAsyncThunk<
   Task[],

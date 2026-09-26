@@ -16,7 +16,7 @@ from connectrpc.server import ConnectASGIApplication, ConnectWSGIApplication, DE
 from protobuf import DescService
 
 from . import projects_pb
-from .projects_pb import BulkCheckTaskWatchersRequest, BulkCheckTaskWatchersResponse, BulkUpdateTasksRequest, BulkUpdateTasksResponse, CompleteSprintRequest, CompleteSprintResponse, CreateFieldRequest, CreateFieldResponse, CreateProjectRequest, CreateProjectResponse, CreateSprintRequest, CreateSprintResponse, CreateTaskRequest, CreateTaskResponse, CreateViewRequest, CreateViewResponse, DeleteFieldRequest, DeleteFieldResponse, DeleteProjectRequest, DeleteProjectResponse, DeleteSprintRequest, DeleteSprintResponse, DeleteTaskRequest, DeleteTaskResponse, DeleteTasksRequest, DeleteTasksResponse, DeleteViewRequest, DeleteViewResponse, GetProjectRequest, GetProjectResponse, GetTaskRequest, GetTaskResponse, ListActivitiesRequest, ListActivitiesResponse, ListProjectsRequest, ListProjectsResponse, ListSprintsRequest, ListSprintsResponse, ListTaskWatchersRequest, ListTaskWatchersResponse, ListTasksRequest, ListTasksResponse, MoveTaskRequest, MoveTaskResponse, ReorderViewsRequest, ReorderViewsResponse, StartSprintRequest, StartSprintResponse, ToggleTaskWatcherRequest, ToggleTaskWatcherResponse, UpdateFieldRequest, UpdateFieldResponse, UpdateProjectRequest, UpdateProjectResponse, UpdateSprintRequest, UpdateSprintResponse, UpdateTaskRequest, UpdateTaskResponse, UpdateViewRequest, UpdateViewResponse
+from .projects_pb import BulkCheckTaskWatchersRequest, BulkCheckTaskWatchersResponse, BulkUpdateTasksRequest, BulkUpdateTasksResponse, CompleteSprintRequest, CompleteSprintResponse, CreateFieldRequest, CreateFieldResponse, CreateProjectRequest, CreateProjectResponse, CreateSprintRequest, CreateSprintResponse, CreateTaskRequest, CreateTaskResponse, CreateViewRequest, CreateViewResponse, DeleteFieldRequest, DeleteFieldResponse, DeleteProjectRequest, DeleteProjectResponse, DeleteSprintRequest, DeleteSprintResponse, DeleteTaskRequest, DeleteTaskResponse, DeleteTasksRequest, DeleteTasksResponse, DeleteViewRequest, DeleteViewResponse, GetProjectRequest, GetProjectResponse, GetTaskRequest, GetTaskResponse, GetViewCatalogRequest, GetViewCatalogResponse, ListActivitiesRequest, ListActivitiesResponse, ListProjectsRequest, ListProjectsResponse, ListSprintsRequest, ListSprintsResponse, ListTaskWatchersRequest, ListTaskWatchersResponse, ListTasksRequest, ListTasksResponse, MoveTaskRequest, MoveTaskResponse, ReorderViewsRequest, ReorderViewsResponse, StartSprintRequest, StartSprintResponse, ToggleTaskWatcherRequest, ToggleTaskWatcherResponse, UpdateFieldRequest, UpdateFieldResponse, UpdateProjectRequest, UpdateProjectResponse, UpdateSprintRequest, UpdateSprintResponse, UpdateTaskRequest, UpdateTaskResponse, UpdateViewRequest, UpdateViewResponse
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Iterable, Mapping
@@ -98,6 +98,9 @@ class ProjectsService(Protocol):
         raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
 
     async def reorder_views(self, request: ReorderViewsRequest, ctx: RequestContext[ReorderViewsRequest, ReorderViewsResponse], /) -> ReorderViewsResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def get_view_catalog(self, request: GetViewCatalogRequest, ctx: RequestContext[GetViewCatalogRequest, GetViewCatalogResponse], /) -> GetViewCatalogResponse:
         raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
 
     async def list_activities(self, request: ListActivitiesRequest, ctx: RequestContext[ListActivitiesRequest, ListActivitiesResponse], /) -> ListActivitiesResponse:
@@ -356,6 +359,16 @@ class ProjectsServiceASGIApplication(ConnectASGIApplication[ProjectsService]):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.reorder_views,
+                ),
+                "/projects.v1.ProjectsService/GetViewCatalog": Endpoint.unary(
+                    method=MethodInfo(
+                        name="GetViewCatalog",
+                        service_name="projects.v1.ProjectsService",
+                        input=GetViewCatalogRequest,
+                        output=GetViewCatalogResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.get_view_catalog,
                 ),
                 "/projects.v1.ProjectsService/ListActivities": Endpoint.unary(
                     method=MethodInfo(
@@ -883,6 +896,26 @@ class ProjectsServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
+    async def get_view_catalog(
+        self,
+        request: GetViewCatalogRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> GetViewCatalogResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetViewCatalog",
+                service_name="projects.v1.ProjectsService",
+                input=GetViewCatalogRequest,
+                output=GetViewCatalogResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
     async def list_activities(
         self,
         request: ListActivitiesRequest,
@@ -1165,6 +1198,9 @@ class ProjectsServiceSync(Protocol):
     def reorder_views(self, request: ReorderViewsRequest, ctx: RequestContext[ReorderViewsRequest, ReorderViewsResponse], /) -> ReorderViewsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
 
+    def get_view_catalog(self, request: GetViewCatalogRequest, ctx: RequestContext[GetViewCatalogRequest, GetViewCatalogResponse], /) -> GetViewCatalogResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
     def list_activities(self, request: ListActivitiesRequest, ctx: RequestContext[ListActivitiesRequest, ListActivitiesResponse], /) -> ListActivitiesResponse:
         """
         ----- Activities -----
@@ -1419,6 +1455,16 @@ class ProjectsServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.reorder_views,
+                ),
+                "/projects.v1.ProjectsService/GetViewCatalog": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="GetViewCatalog",
+                        service_name="projects.v1.ProjectsService",
+                        input=GetViewCatalogRequest,
+                        output=GetViewCatalogResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.get_view_catalog,
                 ),
                 "/projects.v1.ProjectsService/ListActivities": EndpointSync.unary(
                     method=MethodInfo(
@@ -1921,6 +1967,25 @@ class ProjectsServiceClientSync(ConnectClientSync):
                 service_name="projects.v1.ProjectsService",
                 input=ReorderViewsRequest,
                 output=ReorderViewsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def get_view_catalog(
+        self,
+        request: GetViewCatalogRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> GetViewCatalogResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetViewCatalog",
+                service_name="projects.v1.ProjectsService",
+                input=GetViewCatalogRequest,
+                output=GetViewCatalogResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

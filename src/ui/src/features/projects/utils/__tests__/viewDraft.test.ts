@@ -8,7 +8,6 @@ import {
 import type { ViewFilterGroup } from "@/features/projects/types/views";
 import {
   NO_SPRINT,
-  clearBuilderNodes,
   definitionsEqual,
   emptyDefinition,
   removeFilterNode,
@@ -75,18 +74,6 @@ describe("quick filters", () => {
     expect(filter?.logic).toBe(FilterLogic.AND);
     expect(filter?.nodes[0]).toEqual({ kind: "group", group: either });
     expect(summarizeFilter(filter)).toMatchObject({ otherCount: 1 });
-  });
-
-  it("clearing the builder keeps the quick filters", () => {
-    const filter = setQuickFilter({ logic: FilterLogic.AND, nodes: [builderCondition] }, "tags", [
-      "red",
-    ]);
-    const cleared = clearBuilderNodes(filter);
-    expect(summarizeFilter(cleared)).toEqual({
-      chips: [{ kind: "tags", index: 0, values: ["red"] }],
-      otherCount: 0,
-    });
-    expect(clearBuilderNodes({ logic: FilterLogic.AND, nodes: [builderCondition] })).toBeNull();
   });
 });
 

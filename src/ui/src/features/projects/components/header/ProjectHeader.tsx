@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { Fragment, useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   MagnifyingGlass,
@@ -13,6 +13,7 @@ import {
   Gear,
   TreeView,
   SlidersHorizontal,
+  Warning,
 } from "@phosphor-icons/react";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
@@ -45,6 +46,12 @@ import { SYSTEM_FIELD_IDS } from "@/features/projects/types";
 import { statusPaint } from "@/features/projects/utils/statusPaint";
 import type { Project } from "@/features/projects/types";
 import { FilterBuilder } from "@/features/projects/components/views/table/FilterBuilder";
+import { useFilterLabels } from "@/features/projects/hooks/useFilterLabels";
+import {
+  conditionProblem,
+  describeNode,
+  hasFilterProblems,
+} from "@/features/projects/utils/filterTree";
 import { selectTasksForProject } from "@/features/projects/store/projectsSlice";
 import {
   selectActiveSprint,
@@ -55,7 +62,7 @@ import type { SelectOption, Sprint } from "@/features/projects/types";
 import { useProjectPermission } from "@/features/projects/hooks/useProjectPermissions";
 import { TagPicker } from "@/features/tags";
 import type { AppDispatch } from "@/app/store";
-import { SortDirection, TaskPseudoField } from "@uniffy/proto/projects/v1/projects_pb";
+import { FilterLogic, SortDirection, TaskPseudoField } from "@uniffy/proto/projects/v1/projects_pb";
 import type { ViewGroupBy } from "@/features/projects/types/views";
 import {
   selectActiveDefinition,
@@ -73,7 +80,6 @@ import {
 } from "@/features/projects/store/viewDraftThunks";
 import {
   NO_SPRINT,
-  clearBuilderNodes,
   removeFilterNode,
   setQuickFilter,
   summarizeFilter,
@@ -236,15 +242,12 @@ export function ProjectHeader({ project }: ProjectHeaderProps) {
     dispatch(setDraftGroupBy(project.id, groupBy));
   };
 
-  // Resolve human labels for the active-filter chips.
-  const typeLabel = TASK_TYPES.find((t) => t.value === quickType)?.label ?? quickType;
-  const sprintLabel =
-    quickSprint === NO_SPRINT
-      ? "Backlog"
-      : (allSprints.find((s) => s.id === quickSprint)?.name ?? quickSprint);
-  const epicLabel = epicOptions.find((e) => e.value === quickEpic)?.label ?? quickEpic;
-
-  const hasActiveFilters = chips.length + otherCount > 0;
+  const fieldsById = useMemo(
+    () => new Map(project.fieldDefinitions.map((field) => [field.id, field])),
+    [project.fieldDefinitions],
+  );
+  const filterLabels = useFilterLabels(project.id, filter, fieldsById);
+  const filterBlocksSave = hasFilterProblems(filter, fieldsById);
 
   const displayDirtyCount =
     (quickType ? 1 : 0) +
@@ -257,11 +260,6 @@ export function ProjectHeader({ project }: ProjectHeaderProps) {
 
   const clearAllFilters = () => {
     dispatch(setDraftFilter(project.id, null));
-  };
-
-  const removeChip = (kind: QuickFilterKind) => {
-    const chip = chipOf(kind);
-    if (chip) dispatch(setDraftFilter(project.id, removeFilterNode(filter, chip.index)));
   };
 
   return (
@@ -342,6 +340,11 @@ export function ProjectHeader({ project }: ProjectHeaderProps) {
               view={activeView}
               canSave={activeGates?.canEdit ?? false}
               canShare={canEdit}
+              blockedReason={
+                filterBlocksSave
+                  ? "A filter names a deleted field or option. Remove it to save."
+                  : null
+              }
               compact={compactControls}
             />
           )}
@@ -407,6 +410,7 @@ export function ProjectHeader({ project }: ProjectHeaderProps) {
               className={cn("h-8 gap-1.5", otherCount > 0 && "text-primary")}
               onClick={() => setIsFilterOpen(!isFilterOpen)}
               title="Filter"
+              data-filter-trigger
             >
               <Funnel size={16} weight={otherCount > 0 ? "fill" : "regular"} />
               {!compactControls && "Filter"}
@@ -486,39 +490,33 @@ export function ProjectHeader({ project }: ProjectHeaderProps) {
           </div>
         </PaneHeaderControls>
 
-        {/* Active filters: only present once something narrows the view */}
-        {hasActiveFilters && !hasSelection && (
+        {/* Active filters: one sentence per top-level condition; a nested group opens the builder */}
+        {filter && filter.nodes.length > 0 && !hasSelection && (
           <div className="flex flex-wrap items-center gap-1.5 px-3 md:px-4 pb-2">
             <span className="text-xs text-muted-foreground mr-0.5">Filters</span>
-            {otherCount > 0 && (
-              <FilterChip
-                label={`Conditions · ${otherCount}`}
-                onClick={() => setIsFilterOpen(true)}
-                onRemove={() => dispatch(setDraftFilter(project.id, clearBuilderNodes(filter)))}
-              />
-            )}
-            {quickType && (
-              <FilterChip label={`Type · ${typeLabel}`} onRemove={() => removeChip("taskType")} />
-            )}
-            {quickSprint && (
-              <FilterChip label={`Sprint · ${sprintLabel}`} onRemove={() => removeChip("sprint")} />
-            )}
-            {quickEpic && (
-              <FilterChip label={`Epic · ${epicLabel}`} onRemove={() => removeChip("epic")} />
-            )}
-            {selectedTagIds.length > 0 && (
-              <FilterChip
-                label={`Tags · ${selectedTagIds.length}`}
-                onRemove={() => removeChip("tags")}
-              />
-            )}
-            {quickRootOnly && (
-              <FilterChip label="Top-level only" onRemove={() => removeChip("rootOnly")} />
-            )}
+            {filter.nodes.map((node, index) => (
+              <Fragment key={index}>
+                {index > 0 && filter.logic === FilterLogic.OR && (
+                  <span className="text-xs text-muted-foreground">or</span>
+                )}
+                <FilterChip
+                  label={describeNode(node, fieldsById, filterLabels)}
+                  invalid={
+                    node.kind === "condition"
+                      ? conditionProblem(node.condition, fieldsById) !== null
+                      : hasFilterProblems(node.group, fieldsById)
+                  }
+                  onClick={() => setIsFilterOpen(true)}
+                  onRemove={() =>
+                    dispatch(setDraftFilter(project.id, removeFilterNode(filter, index)))
+                  }
+                />
+              </Fragment>
+            ))}
             <button
               type="button"
               onClick={clearAllFilters}
-              className="text-xs text-muted-foreground hover:text-foreground transition-colors ml-0.5"
+              className="h-11 md:h-auto text-xs text-muted-foreground hover:text-foreground transition-colors ml-0.5"
             >
               Clear all
             </button>
@@ -559,24 +557,40 @@ interface FilterChipProps {
   label: string;
   onRemove: () => void;
   onClick?: () => void;
+  /** Names a field or option deleted since; the view cannot be saved until it goes. */
+  invalid?: boolean;
 }
 
-function FilterChip({ label, onRemove, onClick }: FilterChipProps) {
+function FilterChip({ label, onRemove, onClick, invalid = false }: FilterChipProps) {
   return (
-    <span className="inline-flex items-center h-6 rounded-full bg-primary/10 text-primary text-xs">
+    <span
+      className={cn(
+        "inline-flex items-center h-11 md:h-6 rounded-full text-xs",
+        invalid ? "bg-red-500/10 text-red-600 dark:text-red-400" : "bg-primary/10 text-primary",
+      )}
+    >
       <button
         type="button"
         onClick={onClick}
         disabled={!onClick}
-        className={cn("pl-2.5 pr-1 py-0.5 max-w-[180px] truncate", onClick && "hover:underline")}
+        title={invalid ? `${label}: names something deleted` : label}
+        className={cn(
+          "inline-flex items-center gap-1 pl-2.5 pr-1 py-0.5 max-w-[240px]",
+          onClick && "hover:underline",
+        )}
       >
-        {label}
+        {invalid && <Warning size={12} className="shrink-0" />}
+        <span className="truncate">{label}</span>
       </button>
       <button
         type="button"
         onClick={onRemove}
-        className="px-1 h-full rounded-r-full hover:bg-primary/20 transition-colors"
+        className={cn(
+          "px-1.5 md:px-1 h-full rounded-r-full transition-colors",
+          invalid ? "hover:bg-red-500/20" : "hover:bg-primary/20",
+        )}
         title="Remove filter"
+        aria-label={`Remove filter: ${label}`}
       >
         <X size={12} weight="bold" />
       </button>

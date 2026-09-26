@@ -2737,6 +2737,34 @@ assigned, dated and tagged tasks.
 - [ ] Sort a view by title with tasks "Task 9" and "Task 10": the agent lists them in the order
       the web table shows, 9 before 10.
 
+### Filter builder
+
+Needs a project with a custom single-select field, a custom person field, two sprints (one
+active), tags, an epic with children, and tasks due this week, overdue and completed.
+
+- [ ] Build "Status is any of To Do, In Progress and (Assignee is me or Assignee is unassigned)
+      and Due on or before End of week" with Add group: the table keeps exactly those tasks, the
+      header reads it as three chips, and Save followed by a reload restores the same tree in the
+      builder.
+- [ ] Add group is offered two levels down and not below; the third level holds conditions only.
+- [ ] The field picker lists system fields, custom fields and task attributes with a type icon,
+      and typing narrows it. A reference field offers only is empty and is not empty; Creator and
+      Created offer no emptiness operators.
+- [ ] Person fields show Me and Unassigned above the people search; Creator shows Me only. Sprint
+      offers Active sprint, Backlog and each sprint; a task picker (Parent, Blocked by) searches.
+- [ ] Dates switch between an exact date (date picker) and Today, Yesterday, Tomorrow, start or
+      end of week or month, each with a +/- days field; Between takes two such dates.
+- [ ] Each preset (My tasks, Unassigned, Overdue, Due this week, Completed last 7 days) adds its
+      conditions; on a top-level OR it nests the OR first so the view narrows. Overdue saved on
+      the web shows as the Overdue due filter in the phone's filter sheet.
+- [ ] Chips read as sentences ("Assignee is me", "Due before the end of the week", "Overdue");
+      removing a chip removes only that node, and clicking one opens the builder.
+- [ ] Delete a custom field a condition uses: the chip turns red, the builder shows the error on
+      that row, and Save / Save as new are disabled until the condition is removed. Same for a
+      deleted option of a select field.
+- [ ] At 375 px the builder opens as a bottom sheet; every control is at least 44 px tall and a
+      condition wraps field and operator on one line and the value below.
+
 ### Views on mobile
 
 Needs the phone app signed in as the project owner, the web app as the same user, and a second

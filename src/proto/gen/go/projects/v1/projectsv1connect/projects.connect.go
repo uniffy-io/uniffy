@@ -92,6 +92,9 @@ const (
 	// ProjectsServiceReorderViewsProcedure is the fully-qualified name of the ProjectsService's
 	// ReorderViews RPC.
 	ProjectsServiceReorderViewsProcedure = "/projects.v1.ProjectsService/ReorderViews"
+	// ProjectsServiceGetViewCatalogProcedure is the fully-qualified name of the ProjectsService's
+	// GetViewCatalog RPC.
+	ProjectsServiceGetViewCatalogProcedure = "/projects.v1.ProjectsService/GetViewCatalog"
 	// ProjectsServiceListActivitiesProcedure is the fully-qualified name of the ProjectsService's
 	// ListActivities RPC.
 	ProjectsServiceListActivitiesProcedure = "/projects.v1.ProjectsService/ListActivities"
@@ -150,6 +153,7 @@ type ProjectsServiceClient interface {
 	UpdateView(context.Context, *connect.Request[v1.UpdateViewRequest]) (*connect.Response[v1.UpdateViewResponse], error)
 	DeleteView(context.Context, *connect.Request[v1.DeleteViewRequest]) (*connect.Response[v1.DeleteViewResponse], error)
 	ReorderViews(context.Context, *connect.Request[v1.ReorderViewsRequest]) (*connect.Response[v1.ReorderViewsResponse], error)
+	GetViewCatalog(context.Context, *connect.Request[v1.GetViewCatalogRequest]) (*connect.Response[v1.GetViewCatalogResponse], error)
 	// ----- Activities -----
 	ListActivities(context.Context, *connect.Request[v1.ListActivitiesRequest]) (*connect.Response[v1.ListActivitiesResponse], error)
 	// ----- Sprints -----
@@ -296,6 +300,12 @@ func NewProjectsServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(projectsServiceMethods.ByName("ReorderViews")),
 			connect.WithClientOptions(opts...),
 		),
+		getViewCatalog: connect.NewClient[v1.GetViewCatalogRequest, v1.GetViewCatalogResponse](
+			httpClient,
+			baseURL+ProjectsServiceGetViewCatalogProcedure,
+			connect.WithSchema(projectsServiceMethods.ByName("GetViewCatalog")),
+			connect.WithClientOptions(opts...),
+		),
 		listActivities: connect.NewClient[v1.ListActivitiesRequest, v1.ListActivitiesResponse](
 			httpClient,
 			baseURL+ProjectsServiceListActivitiesProcedure,
@@ -381,6 +391,7 @@ type projectsServiceClient struct {
 	updateView            *connect.Client[v1.UpdateViewRequest, v1.UpdateViewResponse]
 	deleteView            *connect.Client[v1.DeleteViewRequest, v1.DeleteViewResponse]
 	reorderViews          *connect.Client[v1.ReorderViewsRequest, v1.ReorderViewsResponse]
+	getViewCatalog        *connect.Client[v1.GetViewCatalogRequest, v1.GetViewCatalogResponse]
 	listActivities        *connect.Client[v1.ListActivitiesRequest, v1.ListActivitiesResponse]
 	createSprint          *connect.Client[v1.CreateSprintRequest, v1.CreateSprintResponse]
 	updateSprint          *connect.Client[v1.UpdateSprintRequest, v1.UpdateSprintResponse]
@@ -493,6 +504,11 @@ func (c *projectsServiceClient) ReorderViews(ctx context.Context, req *connect.R
 	return c.reorderViews.CallUnary(ctx, req)
 }
 
+// GetViewCatalog calls projects.v1.ProjectsService.GetViewCatalog.
+func (c *projectsServiceClient) GetViewCatalog(ctx context.Context, req *connect.Request[v1.GetViewCatalogRequest]) (*connect.Response[v1.GetViewCatalogResponse], error) {
+	return c.getViewCatalog.CallUnary(ctx, req)
+}
+
 // ListActivities calls projects.v1.ProjectsService.ListActivities.
 func (c *projectsServiceClient) ListActivities(ctx context.Context, req *connect.Request[v1.ListActivitiesRequest]) (*connect.Response[v1.ListActivitiesResponse], error) {
 	return c.listActivities.CallUnary(ctx, req)
@@ -569,6 +585,7 @@ type ProjectsServiceHandler interface {
 	UpdateView(context.Context, *connect.Request[v1.UpdateViewRequest]) (*connect.Response[v1.UpdateViewResponse], error)
 	DeleteView(context.Context, *connect.Request[v1.DeleteViewRequest]) (*connect.Response[v1.DeleteViewResponse], error)
 	ReorderViews(context.Context, *connect.Request[v1.ReorderViewsRequest]) (*connect.Response[v1.ReorderViewsResponse], error)
+	GetViewCatalog(context.Context, *connect.Request[v1.GetViewCatalogRequest]) (*connect.Response[v1.GetViewCatalogResponse], error)
 	// ----- Activities -----
 	ListActivities(context.Context, *connect.Request[v1.ListActivitiesRequest]) (*connect.Response[v1.ListActivitiesResponse], error)
 	// ----- Sprints -----
@@ -711,6 +728,12 @@ func NewProjectsServiceHandler(svc ProjectsServiceHandler, opts ...connect.Handl
 		connect.WithSchema(projectsServiceMethods.ByName("ReorderViews")),
 		connect.WithHandlerOptions(opts...),
 	)
+	projectsServiceGetViewCatalogHandler := connect.NewUnaryHandler(
+		ProjectsServiceGetViewCatalogProcedure,
+		svc.GetViewCatalog,
+		connect.WithSchema(projectsServiceMethods.ByName("GetViewCatalog")),
+		connect.WithHandlerOptions(opts...),
+	)
 	projectsServiceListActivitiesHandler := connect.NewUnaryHandler(
 		ProjectsServiceListActivitiesProcedure,
 		svc.ListActivities,
@@ -813,6 +836,8 @@ func NewProjectsServiceHandler(svc ProjectsServiceHandler, opts ...connect.Handl
 			projectsServiceDeleteViewHandler.ServeHTTP(w, r)
 		case ProjectsServiceReorderViewsProcedure:
 			projectsServiceReorderViewsHandler.ServeHTTP(w, r)
+		case ProjectsServiceGetViewCatalogProcedure:
+			projectsServiceGetViewCatalogHandler.ServeHTTP(w, r)
 		case ProjectsServiceListActivitiesProcedure:
 			projectsServiceListActivitiesHandler.ServeHTTP(w, r)
 		case ProjectsServiceCreateSprintProcedure:
@@ -920,6 +945,10 @@ func (UnimplementedProjectsServiceHandler) DeleteView(context.Context, *connect.
 
 func (UnimplementedProjectsServiceHandler) ReorderViews(context.Context, *connect.Request[v1.ReorderViewsRequest]) (*connect.Response[v1.ReorderViewsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("projects.v1.ProjectsService.ReorderViews is not implemented"))
+}
+
+func (UnimplementedProjectsServiceHandler) GetViewCatalog(context.Context, *connect.Request[v1.GetViewCatalogRequest]) (*connect.Response[v1.GetViewCatalogResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("projects.v1.ProjectsService.GetViewCatalog is not implemented"))
 }
 
 func (UnimplementedProjectsServiceHandler) ListActivities(context.Context, *connect.Request[v1.ListActivitiesRequest]) (*connect.Response[v1.ListActivitiesResponse], error) {

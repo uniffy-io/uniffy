@@ -3,7 +3,7 @@ import type { RootState } from "@/app/store";
 import { ViewVisibility } from "@uniffy/proto/projects/v1/projects_pb";
 import type { Project, Task } from "../types/project";
 import type { FieldDefinition } from "../types/fields";
-import type { ViewConfig } from "../types/views";
+import type { ViewCatalog, ViewConfig } from "../types/views";
 import type { TaskActivity } from "../types/activity";
 import { isCompletedStatus, statusOptionsOf } from "@/features/projects/utils/statusSemantics";
 import type { LoadingState, ErrorState } from "../types/ui";
@@ -25,6 +25,7 @@ import {
   createViewThunk,
   updateViewThunk,
   deleteViewThunk,
+  fetchViewCatalog,
   bulkUpdateTasksThunk,
   fetchActivities,
 } from "./projectsThunks";
@@ -45,6 +46,9 @@ export interface ProjectsState {
   activities: Record<string, TaskActivity[]>;
   /** Projects whose task list was fetched this session; single-task reads do not count. */
   taskListLoadedIds: Record<string, true>;
+  /** What views may filter, sort and group by; loaded once per session. */
+  viewCatalog: ViewCatalog | null;
+  viewCatalogLoading: boolean;
   loading: LoadingState;
   errors: ErrorState;
   /** Snapshot for reverting failed optimistic task updates. */
@@ -59,6 +63,8 @@ const initialState: ProjectsState = {
   currentProjectId: null,
   activities: {},
   taskListLoadedIds: {},
+  viewCatalog: null,
+  viewCatalogLoading: false,
   loading: {
     projects: false,
     tasks: false,
@@ -479,6 +485,18 @@ export const projectsSlice = createSlice({
       }
     });
 
+    builder
+      .addCase(fetchViewCatalog.pending, (state) => {
+        state.viewCatalogLoading = true;
+      })
+      .addCase(fetchViewCatalog.fulfilled, (state, action) => {
+        state.viewCatalogLoading = false;
+        state.viewCatalog = action.payload;
+      })
+      .addCase(fetchViewCatalog.rejected, (state) => {
+        state.viewCatalogLoading = false;
+      });
+
     builder.addCase(deleteViewThunk.fulfilled, (state, action) => {
       const { projectId, viewId } = action.payload;
       const project = state.projects[projectId];
@@ -588,6 +606,8 @@ export const selectProjectCompletion = createSelector([selectAllTasks], (tasks) 
 
 export const selectActivitiesForTask = (taskId: string) =>
   createSelector([selectProjectsState], (state) => state.activities[taskId] ?? []);
+
+export const selectViewCatalog = (state: RootState) => state.projects.viewCatalog;
 
 export const selectProjectsLoading = (state: RootState) => state.projects.loading;
 

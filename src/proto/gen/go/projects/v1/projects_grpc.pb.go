@@ -39,6 +39,7 @@ const (
 	ProjectsService_UpdateView_FullMethodName            = "/projects.v1.ProjectsService/UpdateView"
 	ProjectsService_DeleteView_FullMethodName            = "/projects.v1.ProjectsService/DeleteView"
 	ProjectsService_ReorderViews_FullMethodName          = "/projects.v1.ProjectsService/ReorderViews"
+	ProjectsService_GetViewCatalog_FullMethodName        = "/projects.v1.ProjectsService/GetViewCatalog"
 	ProjectsService_ListActivities_FullMethodName        = "/projects.v1.ProjectsService/ListActivities"
 	ProjectsService_CreateSprint_FullMethodName          = "/projects.v1.ProjectsService/CreateSprint"
 	ProjectsService_UpdateSprint_FullMethodName          = "/projects.v1.ProjectsService/UpdateSprint"
@@ -79,6 +80,7 @@ type ProjectsServiceClient interface {
 	UpdateView(ctx context.Context, in *UpdateViewRequest, opts ...grpc.CallOption) (*UpdateViewResponse, error)
 	DeleteView(ctx context.Context, in *DeleteViewRequest, opts ...grpc.CallOption) (*DeleteViewResponse, error)
 	ReorderViews(ctx context.Context, in *ReorderViewsRequest, opts ...grpc.CallOption) (*ReorderViewsResponse, error)
+	GetViewCatalog(ctx context.Context, in *GetViewCatalogRequest, opts ...grpc.CallOption) (*GetViewCatalogResponse, error)
 	// ----- Activities -----
 	ListActivities(ctx context.Context, in *ListActivitiesRequest, opts ...grpc.CallOption) (*ListActivitiesResponse, error)
 	// ----- Sprints -----
@@ -302,6 +304,16 @@ func (c *projectsServiceClient) ReorderViews(ctx context.Context, in *ReorderVie
 	return out, nil
 }
 
+func (c *projectsServiceClient) GetViewCatalog(ctx context.Context, in *GetViewCatalogRequest, opts ...grpc.CallOption) (*GetViewCatalogResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetViewCatalogResponse)
+	err := c.cc.Invoke(ctx, ProjectsService_GetViewCatalog_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *projectsServiceClient) ListActivities(ctx context.Context, in *ListActivitiesRequest, opts ...grpc.CallOption) (*ListActivitiesResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ListActivitiesResponse)
@@ -430,6 +442,7 @@ type ProjectsServiceServer interface {
 	UpdateView(context.Context, *UpdateViewRequest) (*UpdateViewResponse, error)
 	DeleteView(context.Context, *DeleteViewRequest) (*DeleteViewResponse, error)
 	ReorderViews(context.Context, *ReorderViewsRequest) (*ReorderViewsResponse, error)
+	GetViewCatalog(context.Context, *GetViewCatalogRequest) (*GetViewCatalogResponse, error)
 	// ----- Activities -----
 	ListActivities(context.Context, *ListActivitiesRequest) (*ListActivitiesResponse, error)
 	// ----- Sprints -----
@@ -512,6 +525,9 @@ func (UnimplementedProjectsServiceServer) DeleteView(context.Context, *DeleteVie
 }
 func (UnimplementedProjectsServiceServer) ReorderViews(context.Context, *ReorderViewsRequest) (*ReorderViewsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ReorderViews not implemented")
+}
+func (UnimplementedProjectsServiceServer) GetViewCatalog(context.Context, *GetViewCatalogRequest) (*GetViewCatalogResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetViewCatalog not implemented")
 }
 func (UnimplementedProjectsServiceServer) ListActivities(context.Context, *ListActivitiesRequest) (*ListActivitiesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListActivities not implemented")
@@ -924,6 +940,24 @@ func _ProjectsService_ReorderViews_Handler(srv interface{}, ctx context.Context,
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ProjectsService_GetViewCatalog_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetViewCatalogRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProjectsServiceServer).GetViewCatalog(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ProjectsService_GetViewCatalog_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProjectsServiceServer).GetViewCatalog(ctx, req.(*GetViewCatalogRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _ProjectsService_ListActivities_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ListActivitiesRequest)
 	if err := dec(in); err != nil {
@@ -1190,6 +1224,10 @@ var ProjectsService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ReorderViews",
 			Handler:    _ProjectsService_ReorderViews_Handler,
+		},
+		{
+			MethodName: "GetViewCatalog",
+			Handler:    _ProjectsService_GetViewCatalog_Handler,
 		},
 		{
 			MethodName: "ListActivities",

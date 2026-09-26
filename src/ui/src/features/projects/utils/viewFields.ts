@@ -4,12 +4,15 @@ import {
   TaskPseudoField as Pseudo,
 } from "@uniffy/proto/projects/v1/projects_pb";
 import type { FieldDefinition, FieldType } from "@/features/projects/types/fields";
-import type { ViewFieldRef } from "@/features/projects/types/views";
+import type {
+  ViewCatalog,
+  ViewFieldCapabilities,
+  ViewFieldRef,
+} from "@/features/projects/types/views";
 
 /**
- * Web mirror of the backend view catalog (`domains/projects/views/catalog.py`): which operators,
- * sorts and groupings each kind of field supports. It shapes what the UI offers; the backend
- * validator stays the gate, so a drift here surfaces as a refused save, never as a wider filter.
+ * What a field is, for choosing its value input and reading its value. What a view may do with it
+ * (operators, id flags, sort, group) comes from the server's catalog through `capabilitiesOf`.
  */
 export type FieldKind =
   | "text"
@@ -28,8 +31,6 @@ export type FieldKind =
   | "epic"
   | "boolean"
   | "reference";
-
-export type IdFlag = "includeCurrentUser" | "includeEmpty" | "includeActiveSprint";
 
 const FIELD_TYPE_KINDS: Record<FieldType, FieldKind> = {
   text: "text",
@@ -102,46 +103,7 @@ export const FILTERABLE_PSEUDO_FIELDS: readonly Pseudo[] = [
   Pseudo.NUMBER,
 ];
 
-const NEVER_EMPTY_PSEUDO_FIELDS: ReadonlySet<Pseudo> = new Set([
-  Pseudo.TASK_TYPE,
-  Pseudo.CREATOR,
-  Pseudo.DEPTH,
-  Pseudo.CREATED_AT,
-  Pseudo.UPDATED_AT,
-  Pseudo.NUMBER,
-]);
-
 const EMPTINESS: readonly Op[] = [Op.IS_EMPTY, Op.IS_NOT_EMPTY];
-const SINGLE_ID_SET: readonly Op[] = [Op.IS, Op.IS_NOT, Op.IS_ANY_OF, Op.IS_NONE_OF, ...EMPTINESS];
-const MULTI_ID_SET: readonly Op[] = [Op.IS_ANY_OF, Op.IS_ALL_OF, Op.IS_NONE_OF, ...EMPTINESS];
-const DATE_SET: readonly Op[] = [
-  Op.IS,
-  Op.BEFORE,
-  Op.AFTER,
-  Op.ON_OR_BEFORE,
-  Op.ON_OR_AFTER,
-  Op.BETWEEN,
-  ...EMPTINESS,
-];
-
-const OPERATORS: Record<FieldKind, readonly Op[]> = {
-  text: [Op.CONTAINS, Op.NOT_CONTAINS, Op.IS, Op.IS_NOT, ...EMPTINESS],
-  number: [Op.IS, Op.IS_NOT, Op.GREATER_THAN, Op.LESS_THAN, Op.BETWEEN, ...EMPTINESS],
-  single_select: SINGLE_ID_SET,
-  task_type: SINGLE_ID_SET,
-  sprint: SINGLE_ID_SET,
-  task_ref: SINGLE_ID_SET,
-  epic: SINGLE_ID_SET,
-  single_person: SINGLE_ID_SET,
-  multi_select: MULTI_ID_SET,
-  tags: MULTI_ID_SET,
-  task_ref_set: MULTI_ID_SET,
-  person: [Op.IS_ANY_OF, Op.IS_ALL_OF, Op.IS_NONE_OF, Op.IS, Op.IS_NOT, ...EMPTINESS],
-  date: DATE_SET,
-  timestamp: DATE_SET,
-  boolean: [Op.IS],
-  reference: EMPTINESS,
-};
 
 export const ID_KINDS: ReadonlySet<FieldKind> = new Set([
   "single_select",
@@ -153,45 +115,6 @@ export const ID_KINDS: ReadonlySet<FieldKind> = new Set([
   "task_type",
   "task_ref",
   "task_ref_set",
-  "epic",
-]);
-
-export const ID_FLAGS: Readonly<Partial<Record<FieldKind, readonly IdFlag[]>>> = {
-  single_select: ["includeEmpty"],
-  multi_select: ["includeEmpty"],
-  person: ["includeCurrentUser", "includeEmpty"],
-  single_person: ["includeCurrentUser"],
-  tags: ["includeEmpty"],
-  sprint: ["includeActiveSprint", "includeEmpty"],
-  task_ref: ["includeEmpty"],
-  task_ref_set: ["includeEmpty"],
-  epic: ["includeEmpty"],
-};
-
-const SORTABLE_KINDS: ReadonlySet<FieldKind> = new Set([
-  "text",
-  "number",
-  "single_select",
-  "date",
-  "timestamp",
-  "person",
-  "single_person",
-  "sprint",
-  "task_type",
-  "boolean",
-]);
-
-const GROUPABLE_KINDS: ReadonlySet<FieldKind> = new Set([
-  "single_select",
-  "multi_select",
-  "person",
-  "single_person",
-  "tags",
-  "sprint",
-  "task_type",
-  "date",
-  "timestamp",
-  "boolean",
   "epic",
 ]);
 
@@ -269,20 +192,16 @@ export function fieldRefLabel(
   return fieldsById.get(ref.fieldId)?.name ?? "Deleted field";
 }
 
-export function operatorsFor(kind: FieldKind, ref: ViewFieldRef): readonly Op[] {
-  const operators = OPERATORS[kind];
-  if (ref.kind === "pseudo" && NEVER_EMPTY_PSEUDO_FIELDS.has(ref.pseudo)) {
-    return operators.filter((operator) => !EMPTINESS_OPERATORS.has(operator));
-  }
-  return operators;
-}
-
-export function isSortableKind(kind: FieldKind | null): boolean {
-  return kind !== null && SORTABLE_KINDS.has(kind);
-}
-
-export function isGroupableKind(kind: FieldKind | null): boolean {
-  return kind !== null && GROUPABLE_KINDS.has(kind);
+/** Null for a deleted field, or before the catalog has loaded. */
+export function capabilitiesOf(
+  ref: ViewFieldRef,
+  fieldsById: ReadonlyMap<string, FieldDefinition>,
+  catalog: ViewCatalog | null,
+): ViewFieldCapabilities | null {
+  if (!catalog) return null;
+  if (ref.kind === "pseudo") return catalog.pseudoFields[ref.pseudo] ?? null;
+  const field = fieldsById.get(ref.fieldId);
+  return field ? (catalog.fieldTypes[field.type] ?? null) : null;
 }
 
 export function flipDirection(direction: SortDirection): SortDirection {

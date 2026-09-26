@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useOverlayEscape } from "@/shared/hooks/useOverlayEscape";
 import { createPortal } from "react-dom";
-import { CaretDown, Check, X } from "@phosphor-icons/react";
+import { CaretDown, Check, MagnifyingGlass, X } from "@phosphor-icons/react";
 import { cn } from "@/shared/utils/cn";
 import { popoverShellClass } from "@/components/ui/popover";
 import type { SelectOption } from "@/components/ui/select";
@@ -16,6 +16,10 @@ interface MultiSelectProps<T extends string | number = string> {
   className?: string;
   size?: "sm" | "md";
   ariaLabel?: string;
+  triggerClassName?: string;
+  /** A filter box above the options, for long lists. */
+  searchable?: boolean;
+  searchPlaceholder?: string;
 }
 
 interface DropdownPosition {
@@ -34,8 +38,12 @@ export function MultiSelect<T extends string | number = string>({
   className,
   size = "md",
   ariaLabel,
+  triggerClassName,
+  searchable = false,
+  searchPlaceholder = "Search...",
 }: MultiSelectProps<T>) {
   const [isOpen, setIsOpen] = useState(false);
+  const [query, setQuery] = useState("");
   const [position, setPosition] = useState<DropdownPosition | null>(null);
   const buttonRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -46,7 +54,7 @@ export function MultiSelect<T extends string | number = string>({
     if (!buttonRef.current) return;
 
     const rect = buttonRef.current.getBoundingClientRect();
-    const dropdownHeight = Math.min(options.length * 40 + 8, 240);
+    const dropdownHeight = Math.min(options.length * 40 + 8, 240) + (searchable ? 44 : 0);
     const viewportHeight = window.innerHeight;
     const spaceBelow = viewportHeight - rect.bottom;
     const spaceAbove = rect.top;
@@ -59,7 +67,7 @@ export function MultiSelect<T extends string | number = string>({
       width: rect.width,
       openUpward,
     });
-  }, [options.length]);
+  }, [options.length, searchable]);
 
   useEffect(() => {
     if (isOpen) {
@@ -113,6 +121,16 @@ export function MultiSelect<T extends string | number = string>({
   };
 
   const selectedOptions = options.filter((opt) => selectedSet.has(opt.value));
+  const needle = query.trim().toLowerCase();
+  const shownOptions = needle
+    ? options.filter((option) => option.label.toLowerCase().includes(needle))
+    : options;
+
+  const toggleOpen = () => {
+    if (disabled) return;
+    setQuery("");
+    setIsOpen(!isOpen);
+  };
 
   const sizeClasses = {
     sm: "px-2 py-1 text-xs",
@@ -125,6 +143,7 @@ export function MultiSelect<T extends string | number = string>({
     const dropdown = (
       <div
         ref={dropdownRef}
+        data-select-portal=""
         style={{
           position: "fixed",
           top: position.top,
@@ -139,8 +158,28 @@ export function MultiSelect<T extends string | number = string>({
           position.openUpward ? "slide-in-from-bottom-2" : "slide-in-from-top-2",
         )}
       >
+        {searchable && (
+          <div className="p-1.5 border-b border-border/60">
+            <div
+              className={cn(
+                controlShellClass,
+                "focus-ring-within flex items-center gap-1.5 px-2 py-1",
+              )}
+            >
+              <MagnifyingGlass size={12} className="text-muted-foreground shrink-0" />
+              <input
+                autoFocus
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder={searchPlaceholder}
+                className="flex-1 min-w-0 bg-transparent outline-none text-xs text-foreground placeholder:text-subtle-foreground"
+              />
+            </div>
+          </div>
+        )}
         <div className="py-1 max-h-60 overflow-y-auto">
-          {options.map((option) => {
+          {shownOptions.map((option) => {
             const isSelected = selectedSet.has(option.value);
             return (
               <button
@@ -149,7 +188,7 @@ export function MultiSelect<T extends string | number = string>({
                 disabled={disabled}
                 onClick={() => handleToggle(option.value)}
                 className={cn(
-                  "flex w-full items-center justify-between gap-2 px-3 py-2 text-left",
+                  "flex w-full min-h-11 md:min-h-0 touch:min-h-11 items-center justify-between gap-2 px-3 py-2 text-left",
                   "transition-colors",
                   isSelected ? "bg-primary/10 text-primary" : "text-foreground hover:bg-muted",
                   size === "sm" ? "text-xs" : "text-sm",
@@ -163,8 +202,10 @@ export function MultiSelect<T extends string | number = string>({
               </button>
             );
           })}
-          {options.length === 0 && (
-            <div className="px-3 py-2 text-sm text-muted-foreground">No options available</div>
+          {shownOptions.length === 0 && (
+            <div className="px-3 py-2 text-sm text-muted-foreground">
+              {options.length === 0 ? "No options available" : "No matches"}
+            </div>
           )}
         </div>
       </div>
@@ -182,11 +223,11 @@ export function MultiSelect<T extends string | number = string>({
         aria-disabled={disabled}
         tabIndex={disabled ? -1 : 0}
         aria-expanded={isOpen}
-        onClick={() => !disabled && setIsOpen(!isOpen)}
+        onClick={toggleOpen}
         onKeyDown={(e) => {
           if (e.key === "Enter" || e.key === " ") {
             e.preventDefault();
-            if (!disabled) setIsOpen(!isOpen);
+            toggleOpen();
           }
         }}
         className={cn(
@@ -195,6 +236,7 @@ export function MultiSelect<T extends string | number = string>({
           disabled ? "opacity-50 cursor-not-allowed hover:border-border" : "cursor-pointer",
           isOpen && "border-border-strong",
           sizeClasses[size],
+          triggerClassName,
         )}
       >
         {selectedOptions.length > 0 ? (
@@ -212,7 +254,7 @@ export function MultiSelect<T extends string | number = string>({
                   type="button"
                   aria-label={`Remove ${opt.label}`}
                   onClick={(e) => handleRemove(opt.value, e)}
-                  className="hover:bg-primary/20 rounded-sm p-0.5 transition-colors"
+                  className="inline-flex items-center justify-center min-h-11 min-w-11 md:min-h-0 md:min-w-0 touch:min-h-11 touch:min-w-11 hover:bg-primary/20 rounded-sm p-0.5 transition-colors"
                 >
                   <X size={10} weight="bold" />
                 </button>
