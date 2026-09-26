@@ -2,17 +2,31 @@ import { CaretDown, CaretRight } from "@phosphor-icons/react";
 import { cn } from "@/shared/utils/cn";
 import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
 import { LAYOUT } from "@/features/projects/constants";
-import { TaskTypeIcon } from "@/features/projects/components/TaskTypeIcon";
-import { statusPaint } from "@/features/projects/utils/statusPaint";
+import { statusPaint, type StatusPaint } from "@/features/projects/utils/statusPaint";
+import type { GroupSum, TaskGroup } from "@/features/projects/utils/groupTasks";
 import { formatDateShort, isOverdue } from "@/shared/utils/dateFormatting";
 import type { Task, SelectOption } from "@/features/projects/types";
+import {
+  GroupHeaderLabel,
+  GroupHeaderStats,
+} from "@/features/projects/components/views/GroupHeaderLabel";
 import { BoardColumn } from "./BoardColumn";
-import { buildSwimlaneDropId } from "./swimlaneDropId";
+import { buildLaneDropId } from "./boardDropIds";
+
+export interface BoardColumnSpec {
+  key: string;
+  label: string;
+  paint: StatusPaint;
+}
 
 interface BoardSwimlaneProps {
-  laneId: string;
+  group: TaskGroup;
+  /** The epic the lane stands for, when lanes are epics. */
   epic: Task | null;
-  tasksByStatus: Record<string, Task[]>;
+  columns: BoardColumnSpec[];
+  tasksByColumn: Record<string, Task[]>;
+  sums: readonly GroupSum[];
+  doneCount: number;
   statusOptions: SelectOption[];
   priorityOptions: SelectOption[];
   onTaskClick: (taskId: string) => void;
@@ -22,13 +36,15 @@ interface BoardSwimlaneProps {
   activeDragTaskId: string | null;
   collapsed: boolean;
   onToggleCollapse: () => void;
-  doneStatusIds: Set<string>;
 }
 
 export function BoardSwimlane({
-  laneId,
+  group,
   epic,
-  tasksByStatus,
+  columns,
+  tasksByColumn,
+  sums,
+  doneCount,
   statusOptions,
   priorityOptions,
   onTaskClick,
@@ -38,15 +54,8 @@ export function BoardSwimlane({
   activeDragTaskId,
   collapsed,
   onToggleCollapse,
-  doneStatusIds,
 }: BoardSwimlaneProps) {
   const { isMobile } = useBreakpoint();
-
-  const totalTasks = statusOptions.reduce((sum, s) => sum + (tasksByStatus[s.id]?.length ?? 0), 0);
-  const doneTasks = statusOptions.reduce(
-    (sum, s) => sum + (doneStatusIds.has(s.id) ? (tasksByStatus[s.id]?.length ?? 0) : 0),
-    0,
-  );
 
   const epicStatusOption = epic ? statusOptions.find((o) => o.id === epic.status) : undefined;
   const epicPaint = epicStatusOption ? statusPaint(statusOptions, epicStatusOption.id) : null;
@@ -57,45 +66,41 @@ export function BoardSwimlane({
       <button
         type="button"
         onClick={onToggleCollapse}
-        className="flex items-center gap-2 px-3 py-2 bg-muted/60 hover:bg-muted rounded-md text-left transition-colors"
+        aria-expanded={!collapsed}
+        className="flex items-center gap-2 px-3 min-h-11 md:min-h-9 py-2 bg-muted/60 hover:bg-muted rounded-md text-left transition-colors"
       >
         {collapsed ? (
           <CaretRight size={14} className="text-muted-foreground shrink-0" />
         ) : (
           <CaretDown size={14} className="text-muted-foreground shrink-0" />
         )}
-        {epic ? (
-          <>
-            <TaskTypeIcon type={epic.taskType || "epic"} className="text-muted-foreground" />
-            <span className="font-medium text-sm text-foreground truncate">{epic.title}</span>
-            {epicStatusOption && epicPaint && (
-              <span
-                className="px-1.5 py-0.5 rounded text-[10px] font-medium shrink-0"
-                style={{
-                  backgroundColor: epicPaint.translucent,
-                  color: epicPaint.solid,
-                }}
-              >
-                {epicStatusOption.label}
-              </span>
-            )}
-            {epic.dueDate && (
-              <span
-                className={cn(
-                  "text-[10px] shrink-0",
-                  epicOverdue ? "text-destructive font-medium" : "text-muted-foreground",
-                )}
-              >
-                Due {formatDateShort(epic.dueDate)}
-              </span>
-            )}
-          </>
-        ) : (
-          <span className="text-sm text-muted-foreground italic">No Epic</span>
+        <GroupHeaderLabel group={group} className="shrink min-w-0" />
+        {epicStatusOption && epicPaint && (
+          <span
+            className="px-1.5 py-0.5 rounded text-[10px] font-medium shrink-0"
+            style={{ backgroundColor: epicPaint.translucent, color: epicPaint.solid }}
+          >
+            {epicStatusOption.label}
+          </span>
         )}
-        <span className="ml-auto text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded shrink-0">
-          {doneTasks}/{totalTasks}
+        {epic?.dueDate && (
+          <span
+            className={cn(
+              "text-[10px] shrink-0",
+              epicOverdue ? "text-red-600 dark:text-red-400 font-medium" : "text-muted-foreground",
+            )}
+          >
+            Due {formatDateShort(epic.dueDate)}
+          </span>
+        )}
+        <span
+          className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded shrink-0"
+          title={`${doneCount} of ${group.tasks.length} done`}
+        >
+          {doneCount}/{group.tasks.length}
         </span>
+        {/* Beside the label, not at the far edge: a wide board scrolls that edge out of view. */}
+        <GroupHeaderStats sums={sums} className="shrink" />
       </button>
 
       {!collapsed && (
@@ -107,19 +112,20 @@ export function BoardSwimlane({
             minHeight: isMobile ? 140 : 180,
           }}
         >
-          {statusOptions.map((status) => (
+          {columns.map((column) => (
             <BoardColumn
-              key={status.id}
-              statusOption={status}
-              paint={statusPaint(statusOptions, status.id)}
-              tasks={tasksByStatus[status.id] || []}
+              key={column.key}
+              label={column.label}
+              paint={column.paint}
+              tasks={tasksByColumn[column.key] ?? []}
               priorityOptions={priorityOptions}
               onTaskClick={onTaskClick}
               onAddTask={onAddTask}
               projectSlug={projectSlug}
               reparentHintActive={reparentHintActive}
               activeDragTaskId={activeDragTaskId}
-              dropId={buildSwimlaneDropId(laneId, status.id)}
+              dropId={buildLaneDropId(group.key, column.key)}
+              laneKey={group.key}
               showHeader={false}
               showFooter={false}
             />
@@ -130,27 +136,23 @@ export function BoardSwimlane({
   );
 }
 
-interface SwimlaneStatusHeaderRowProps {
-  statusOptions: SelectOption[];
-}
-
-export function SwimlaneStatusHeaderRow({ statusOptions }: SwimlaneStatusHeaderRowProps) {
+export function SwimlaneColumnHeaderRow({ columns }: { columns: BoardColumnSpec[] }) {
   const { isMobile } = useBreakpoint();
   const columnWidth = isMobile ? 280 : LAYOUT.BOARD_COLUMN_WIDTH;
 
   return (
     <div className="flex gap-4 mb-2 min-w-max sticky top-0 z-10">
-      {statusOptions.map((status) => (
+      {columns.map((column) => (
         <div
-          key={status.id}
+          key={column.key}
           className="shrink-0 flex items-center gap-2 px-3 py-2 rounded-md border border-border bg-card"
           style={{ width: columnWidth }}
         >
           <span
             className="w-2.5 h-2.5 rounded-full shrink-0"
-            style={{ background: statusPaint(statusOptions, status.id).gradient }}
+            style={{ background: column.paint.gradient }}
           />
-          <span className="font-medium text-sm text-foreground truncate">{status.label}</span>
+          <span className="font-medium text-sm text-foreground truncate">{column.label}</span>
         </div>
       ))}
     </div>

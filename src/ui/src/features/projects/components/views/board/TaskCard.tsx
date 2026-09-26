@@ -34,6 +34,8 @@ interface TaskCardProps {
   onClick: (e: React.MouseEvent) => void;
   projectSlug: string;
   reparentHintActive?: boolean;
+  /** Drag id; defaults to the task id, a lane-scoped id when the task shows in several lanes. */
+  sortableId?: string;
 }
 
 export function TaskCard({
@@ -42,9 +44,10 @@ export function TaskCard({
   onClick,
   projectSlug,
   reparentHintActive = false,
+  sortableId,
 }: TaskCardProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: task.id,
+    id: sortableId ?? task.id,
   });
 
   const style = {

@@ -59,3 +59,19 @@ export function statusPaint(options: SelectOption[], statusId: string | undefine
     translucent: brandAlpha(color, 0.18),
   };
 }
+
+/** Paint for an option of any single-select field: status keeps its axis, others their own colour. */
+export function optionPaint(
+  options: SelectOption[],
+  optionId: string | undefined,
+  isStatus: boolean,
+): StatusPaint {
+  if (isStatus) return statusPaint(options, optionId);
+  const color = options.find((option) => option.id === optionId)?.color?.toLowerCase();
+  if (!color) return NEUTRAL;
+  return {
+    solid: color,
+    gradient: brandGradient({ start: color, end: mixHex(color, "#ffffff", 0.22) }),
+    translucent: brandAlpha(color, 0.18),
+  };
+}
