@@ -4,13 +4,16 @@ import { Plus } from "@phosphor-icons/react";
 import { cn } from "@/shared/utils/cn";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
-import { LAYOUT } from "../../../constants";
-import type { StatusPaint } from "../../../utils/statusPaint";
-import type { Task, SelectOption } from "../../../types";
-import { TaskCard } from "./TaskCard";
+import { LAYOUT } from "@/features/projects/constants";
+import type { StatusPaint } from "@/features/projects/utils/statusPaint";
+import type { GroupSum } from "@/features/projects/utils/groupTasks";
+import type { Task, SelectOption } from "@/features/projects/types";
+import { GroupHeaderStats } from "@/features/projects/components/views/GroupHeaderLabel";
+import { TaskCard } from "@/features/projects/components/views/board/TaskCard";
+import { buildLaneCardId } from "@/features/projects/components/views/board/boardDropIds";
 
 interface BoardColumnProps {
-  statusOption: SelectOption;
+  label: string;
   paint: StatusPaint;
   tasks: Task[];
   priorityOptions: SelectOption[];
@@ -19,13 +22,17 @@ interface BoardColumnProps {
   projectSlug: string;
   reparentHintActive?: boolean;
   activeDragTaskId?: string | null;
-  dropId?: string;
+  dropId: string;
+  dropDisabled?: boolean;
+  /** Lane the cards are drawn in, so a task shown in two lanes gets two drag ids. */
+  laneKey: string;
+  sums?: readonly GroupSum[];
   showHeader?: boolean;
   showFooter?: boolean;
 }
 
 export function BoardColumn({
-  statusOption,
+  label,
   paint,
   tasks,
   priorityOptions,
@@ -35,15 +42,16 @@ export function BoardColumn({
   reparentHintActive = false,
   activeDragTaskId = null,
   dropId,
+  dropDisabled = false,
+  laneKey,
+  sums = [],
   showHeader = true,
   showFooter = true,
 }: BoardColumnProps) {
   const { isMobile } = useBreakpoint();
-  const { setNodeRef, isOver } = useDroppable({
-    id: dropId ?? statusOption.id,
-  });
+  const { setNodeRef, isOver } = useDroppable({ id: dropId, disabled: dropDisabled });
+  const cardIds = tasks.map((task) => buildLaneCardId(laneKey, task.id));
 
-  // Get priority option for a task
   const getPriorityOption = (priorityId: string | null) => {
     if (!priorityId) return undefined;
     return priorityOptions.find((o) => o.id === priorityId);
@@ -55,19 +63,18 @@ export function BoardColumn({
       style={{ width: isMobile ? 280 : LAYOUT.BOARD_COLUMN_WIDTH }}
     >
       {showHeader && (
-        <div className="flex items-center gap-2 px-3 py-2.5 border-b border-border">
+        <div className="flex items-center gap-2 px-3 py-2.5 border-b border-border min-w-0">
           <div
             className="w-2.5 h-2.5 rounded-full flex-shrink-0"
             style={{ background: paint.gradient }}
           />
-          <span className="font-medium text-sm text-foreground truncate">{statusOption.label}</span>
-          <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-            {tasks.length}
+          <span className="font-medium text-sm text-foreground truncate shrink-0 max-w-[50%]">
+            {label}
           </span>
+          <GroupHeaderStats count={tasks.length} sums={sums} />
         </div>
       )}
 
-      {/* Cards Area */}
       <ScrollArea className="flex-1">
         <div
           ref={setNodeRef}
@@ -76,10 +83,11 @@ export function BoardColumn({
             isOver && "bg-primary/5 ring-2 ring-primary/20 ring-inset rounded",
           )}
         >
-          <SortableContext items={tasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
-            {tasks.map((task) => (
+          <SortableContext items={cardIds} strategy={verticalListSortingStrategy}>
+            {tasks.map((task, index) => (
               <TaskCard
-                key={task.id}
+                key={cardIds[index]}
+                sortableId={cardIds[index]}
                 task={task}
                 priorityOption={getPriorityOption(task.priority)}
                 onClick={() => onTaskClick(task.id)}
@@ -91,10 +99,9 @@ export function BoardColumn({
             ))}
           </SortableContext>
 
-          {/* Empty state for column */}
           {tasks.length === 0 && (
             <div className="flex items-center justify-center h-24 text-sm text-muted-foreground border-2 border-dashed border-border rounded-lg">
-              Drop tasks here
+              {dropDisabled ? "Row and column must match" : "Drop tasks here"}
             </div>
           )}
         </div>

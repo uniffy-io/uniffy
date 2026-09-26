@@ -1,5 +1,5 @@
-import React from "react";
-import { LAYOUT } from "../../../constants";
+import type { ReactNode } from "react";
+import { LAYOUT } from "@/features/projects/constants";
 
 const CORNER_RADIUS = 6;
 const STUB_LENGTH = 16; // horizontal stub out of bar before turning
@@ -7,6 +7,8 @@ const STUB_LENGTH = 16; // horizontal stub out of bar before turning
 interface DependencyLinesProps {
   tasks: Array<{
     id: string;
+    key: string;
+    groupKey: string | null;
     blockedByTaskIds: string[];
     row: number;
     left: number;
@@ -61,36 +63,33 @@ function buildOrthogonalPath(sx: number, sy: number, ex: number, ey: number): st
 
   return [
     `M ${sx} ${sy}`,
-    // Horizontal stub out
     `L ${stubEndX - r} ${sy}`,
-    // Corner 1: turn from horizontal-right to vertical
     `Q ${stubEndX} ${sy}, ${stubEndX} ${sy + ry}`,
-    // Vertical to midY
     `L ${stubEndX} ${midY - ry}`,
-    // Corner 2: turn from vertical to horizontal (toward enterX)
     `Q ${stubEndX} ${midY}, ${stubEndX + hx} ${midY}`,
-    // Horizontal to enterX
     `L ${enterX - hx} ${midY}`,
-    // Corner 3: turn from horizontal to vertical
     `Q ${enterX} ${midY}, ${enterX} ${midY + ry}`,
-    // Vertical to end Y
     `L ${enterX} ${ey - ry}`,
-    // Corner 4: turn from vertical to horizontal-right (into end)
     `Q ${enterX} ${ey}, ${enterX + r} ${ey}`,
-    // Horizontal into end
     `L ${ex} ${ey}`,
   ].join(" ");
 }
 
 export function DependencyLines({ tasks }: DependencyLinesProps) {
-  const taskMap = new Map(tasks.map((t) => [t.id, t]));
-  const lines: React.ReactNode[] = [];
+  const occurrences = new Map<string, DependencyLinesProps["tasks"]>();
+  for (const task of tasks) {
+    const rows = occurrences.get(task.id) ?? [];
+    rows.push(task);
+    occurrences.set(task.id, rows);
+  }
+  const lines: ReactNode[] = [];
 
   tasks.forEach((task) => {
     if (!task.blockedByTaskIds || task.blockedByTaskIds.length === 0) return;
 
     task.blockedByTaskIds.forEach((blockerId) => {
-      const blocker = taskMap.get(blockerId);
+      const candidates = occurrences.get(blockerId);
+      const blocker = candidates?.find((row) => row.groupKey === task.groupKey) ?? candidates?.[0];
       if (!blocker) return;
 
       const sx = blocker.left + blocker.width;
@@ -101,11 +100,11 @@ export function DependencyLines({ tasks }: DependencyLinesProps) {
       const d = buildOrthogonalPath(sx, sy, ex, ey);
 
       lines.push(
-        <g key={`${blocker.id}-${task.id}`}>
+        <g key={JSON.stringify([blocker.key, task.key])}>
           <path
             d={d}
             fill="none"
-            stroke="#64748b"
+            stroke="currentColor"
             strokeWidth="1.5"
             strokeDasharray="5 4"
             opacity="0.8"
@@ -120,12 +119,12 @@ export function DependencyLines({ tasks }: DependencyLinesProps) {
 
   return (
     <svg
-      className="absolute top-0 left-0 w-full h-full pointer-events-none z-0"
-      style={{ minHeight: tasks.length * LAYOUT.ROADMAP_ROW_HEIGHT }}
+      className="absolute top-0 left-0 w-full h-full pointer-events-none z-0 text-muted-foreground"
+      style={{ minHeight: (tasks.at(-1)!.row + 1) * LAYOUT.ROADMAP_ROW_HEIGHT }}
     >
       <defs>
         <marker id="dep-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
-          <polygon points="0 0, 8 3, 0 6" fill="#64748b" opacity="0.8" />
+          <polygon points="0 0, 8 3, 0 6" fill="currentColor" opacity="0.8" />
         </marker>
       </defs>
       {lines}

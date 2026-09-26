@@ -330,6 +330,16 @@ export function EmptyGanttRow({ rowIndex }: EmptyGanttRowProps) {
   );
 }
 
+/** Band behind a group header row, so the group reads across the timeline too. */
+export function GroupGanttRow({ rowIndex }: EmptyGanttRowProps) {
+  return (
+    <div
+      className="absolute inset-x-0 border-b border-border bg-muted/40"
+      style={{ top: rowIndex * LAYOUT.ROADMAP_ROW_HEIGHT, height: LAYOUT.ROADMAP_ROW_HEIGHT }}
+    />
+  );
+}
+
 interface SummaryBarProps {
   position: GanttBarPosition;
   rowIndex: number;

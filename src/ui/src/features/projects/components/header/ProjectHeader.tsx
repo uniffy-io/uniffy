@@ -13,6 +13,9 @@ import {
   Gear,
   TreeView,
   SlidersHorizontal,
+  SortAscending,
+  SortDescending,
+  EyeSlash,
   Warning,
 } from "@phosphor-icons/react";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
@@ -29,6 +32,7 @@ import {
 } from "@/components/ui/pane-header";
 import { popoverShellClass } from "@/components/ui/popover";
 import { SegmentedControl } from "@/components/ui/segmented-control";
+import { Select, type SelectOption as SelectMenuOption } from "@/components/ui/select";
 import {
   setSearchQuery,
   selectSearchQuery,
@@ -47,6 +51,8 @@ import { statusPaint } from "@/features/projects/utils/statusPaint";
 import type { Project } from "@/features/projects/types";
 import { FilterBuilder } from "@/features/projects/components/views/table/FilterBuilder";
 import { useFilterLabels } from "@/features/projects/hooks/useFilterLabels";
+import { useViewCatalog } from "@/features/projects/hooks/useViewCatalog";
+import { groupFieldOptions } from "@/features/projects/utils/filterFieldOptions";
 import {
   conditionProblem,
   describeNode,
@@ -62,7 +68,7 @@ import type { SelectOption, Sprint } from "@/features/projects/types";
 import { useProjectPermission } from "@/features/projects/hooks/useProjectPermissions";
 import { TagPicker } from "@/features/tags";
 import type { AppDispatch } from "@/app/store";
-import { FilterLogic, SortDirection, TaskPseudoField } from "@uniffy/proto/projects/v1/projects_pb";
+import { FilterLogic, SortDirection } from "@uniffy/proto/projects/v1/projects_pb";
 import type { ViewGroupBy } from "@/features/projects/types/views";
 import {
   selectActiveDefinition,
@@ -85,12 +91,7 @@ import {
   summarizeFilter,
   type QuickFilterKind,
 } from "@/features/projects/utils/viewDraft";
-import {
-  fieldRef,
-  fieldRefFromKey,
-  fieldRefKey,
-  pseudoRef,
-} from "@/features/projects/utils/viewFields";
+import { fieldRefFromKey, fieldRefKey, flipDirection } from "@/features/projects/utils/viewFields";
 
 interface ProjectHeaderProps {
   project: Project;
@@ -216,31 +217,50 @@ export function ProjectHeader({ project }: ProjectHeaderProps) {
 
   const showSprintControl = hasSprintsWithTasks && viewMode !== "backlog";
   const showEpicControl = epicOptions.length > 0;
-  const showGroupBy = viewMode === "table" || viewMode === "board";
+  const showGroupBy = viewMode === "table" || viewMode === "board" || viewMode === "roadmap";
   const showOutline = viewMode === "table";
   const showManageStatuses = viewMode === "board";
 
-  const groupByOptions: Option[] = useMemo(() => {
-    if (viewMode === "board") return BOARD_GROUP_BY_OPTIONS;
-    return hasSprintsWithTasks
-      ? GROUP_BY_OPTIONS
-      : GROUP_BY_OPTIONS.filter((o) => o.value !== GROUP_BY_SPRINT_KEY);
-  }, [viewMode, hasSprintsWithTasks]);
-  const activeGroupByKey = definition.groupBy ? fieldRefKey(definition.groupBy.field) : null;
-  const groupByValue =
-    viewMode === "board"
-      ? activeGroupByKey === GROUP_BY_EPIC_KEY
-        ? GROUP_BY_EPIC_KEY
-        : null
-      : activeGroupByKey;
+  const viewCatalog = useViewCatalog();
+  const fieldsByIdForGroups = useMemo(
+    () => new Map(project.fieldDefinitions.map((field) => [field.id, field])),
+    [project.fieldDefinitions],
+  );
+  const groupByOptions = useMemo(
+    () => groupFieldOptions(project.fieldDefinitions, fieldsByIdForGroups, viewCatalog),
+    [project.fieldDefinitions, fieldsByIdForGroups, viewCatalog],
+  );
+  const groupBy = definition.groupBy;
+  const groupByValue = groupBy ? fieldRefKey(groupBy.field) : null;
 
   const handleGroupBy = (key: string | null) => {
     const field = key ? fieldRefFromKey(key) : null;
-    const groupBy: ViewGroupBy | null = field
-      ? { field, direction: SortDirection.ASC, hideEmpty: false }
+    const next: ViewGroupBy | null = field
+      ? { field, direction: SortDirection.ASC, hideEmpty: groupBy?.hideEmpty ?? false }
       : null;
-    dispatch(setDraftGroupBy(project.id, groupBy));
+    dispatch(setDraftGroupBy(project.id, next));
   };
+  const updateGroupBy = (changes: Partial<ViewGroupBy>) => {
+    if (groupBy) dispatch(setDraftGroupBy(project.id, { ...groupBy, ...changes }));
+  };
+
+  const columnFieldOptions = useMemo(
+    () =>
+      project.fieldDefinitions
+        .filter((field) => field.type === "single_select")
+        .map((field) => ({ value: field.id, label: field.name })),
+    [project.fieldDefinitions],
+  );
+  const columnFieldId =
+    (definition.layout.type === "board" && definition.layout.columnFieldId) ||
+    SYSTEM_FIELD_IDS.STATUS;
+  const handleColumnField = (fieldId: string) =>
+    dispatch(
+      setDraftLayout(project.id, {
+        type: "board",
+        columnFieldId: fieldId === SYSTEM_FIELD_IDS.STATUS ? "" : fieldId,
+      }),
+    );
 
   const fieldsById = useMemo(
     () => new Map(project.fieldDefinitions.map((field) => [field.id, field])),
@@ -256,6 +276,7 @@ export function ProjectHeader({ project }: ProjectHeaderProps) {
     (selectedTagIds.length > 0 ? 1 : 0) +
     (quickRootOnly ? 1 : 0) +
     (groupByValue && showGroupBy ? 1 : 0) +
+    (showManageStatuses && columnFieldId !== SYSTEM_FIELD_IDS.STATUS ? 1 : 0) +
     (tableOutlineEnabled && showOutline ? 1 : 0);
 
   const clearAllFilters = () => {
@@ -444,6 +465,7 @@ export function ProjectHeader({ project }: ProjectHeaderProps) {
               className={cn("h-8 gap-1.5", displayDirtyCount > 0 && "text-primary")}
               onClick={() => setIsDisplayOpen(!isDisplayOpen)}
               title="Display"
+              data-display-trigger
             >
               <SlidersHorizontal size={16} weight={displayDirtyCount > 0 ? "fill" : "regular"} />
               {!compactControls && "Display"}
@@ -475,6 +497,18 @@ export function ProjectHeader({ project }: ProjectHeaderProps) {
                 groupByOptions={groupByOptions}
                 groupByValue={groupByValue}
                 onGroupBy={handleGroupBy}
+                groupDirection={groupBy?.direction ?? SortDirection.ASC}
+                onGroupDirection={() =>
+                  groupBy && updateGroupBy({ direction: flipDirection(groupBy.direction) })
+                }
+                hideEmptyGroups={groupBy?.hideEmpty ?? false}
+                onHideEmptyGroups={() =>
+                  groupBy && updateGroupBy({ hideEmpty: !groupBy.hideEmpty })
+                }
+                showColumnField={showManageStatuses}
+                columnFieldOptions={columnFieldOptions}
+                columnFieldId={columnFieldId}
+                onColumnField={handleColumnField}
                 showOutline={showOutline}
                 tableOutlineEnabled={tableOutlineEnabled}
                 onOutline={() =>
@@ -598,24 +632,6 @@ function FilterChip({ label, onRemove, onClick, invalid = false }: FilterChipPro
   );
 }
 
-const GROUP_BY_EPIC_KEY = fieldRefKey(pseudoRef(TaskPseudoField.EPIC));
-const GROUP_BY_SPRINT_KEY = fieldRefKey(pseudoRef(TaskPseudoField.SPRINT));
-
-const GROUP_BY_OPTIONS: Option[] = [
-  { value: null, label: "No grouping" },
-  { value: fieldRefKey(fieldRef(SYSTEM_FIELD_IDS.STATUS)), label: "Status" },
-  { value: fieldRefKey(fieldRef(SYSTEM_FIELD_IDS.PRIORITY)), label: "Priority" },
-  { value: fieldRefKey(fieldRef(SYSTEM_FIELD_IDS.ASSIGNEE)), label: "Assignee" },
-  { value: GROUP_BY_SPRINT_KEY, label: "Sprint" },
-  { value: fieldRefKey(pseudoRef(TaskPseudoField.TASK_TYPE)), label: "Task Type" },
-  { value: fieldRefKey(pseudoRef(TaskPseudoField.TAGS)), label: "Tags" },
-];
-
-const BOARD_GROUP_BY_OPTIONS: Option[] = [
-  { value: null, label: "Status" },
-  { value: GROUP_BY_EPIC_KEY, label: "Epic" },
-];
-
 interface DisplayPanelProps {
   onClose: () => void;
   typeOptions: Option[];
@@ -634,9 +650,17 @@ interface DisplayPanelProps {
   quickRootOnly: boolean;
   onRootOnly: () => void;
   showGroupBy: boolean;
-  groupByOptions: Option[];
+  groupByOptions: SelectMenuOption[];
   groupByValue: string | null;
   onGroupBy: (v: string | null) => void;
+  groupDirection: SortDirection;
+  onGroupDirection: () => void;
+  hideEmptyGroups: boolean;
+  onHideEmptyGroups: () => void;
+  showColumnField: boolean;
+  columnFieldOptions: SelectMenuOption[];
+  columnFieldId: string;
+  onColumnField: (fieldId: string) => void;
   showOutline: boolean;
   tableOutlineEnabled: boolean;
   onOutline: () => void;
@@ -650,6 +674,10 @@ function DisplayPanel(props: DisplayPanelProps) {
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
+      // A picked option lives in a portal outside the panel; picking it must not close the panel.
+      if (e.target instanceof Element && e.target.closest("[data-select-portal]")) return;
+      // The Display button toggles the panel itself; closing here too would reopen it on click.
+      if (e.target instanceof Element && e.target.closest("[data-display-trigger]")) return;
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         handleClose();
       }
@@ -713,14 +741,66 @@ function DisplayPanel(props: DisplayPanelProps) {
 
       {(props.showGroupBy || props.showOutline || props.showManageStatuses) && (
         <PanelSection label="Arrange">
-          {props.showGroupBy && (
-            <PanelRow label="Group by">
-              <OptionChips
-                options={props.groupByOptions}
-                value={props.groupByValue}
-                onSelect={props.onGroupBy}
+          {props.showColumnField && (
+            <PanelRow label="Columns">
+              <Select
+                value={props.columnFieldId}
+                onChange={props.onColumnField}
+                options={props.columnFieldOptions}
+                size="sm"
+                ariaLabel="Board columns"
+                className="w-full"
+                triggerClassName="w-full h-11 md:h-8 touch:h-11"
+                menuMinWidth={200}
               />
             </PanelRow>
+          )}
+          {props.showGroupBy && (
+            <PanelRow label={props.showColumnField ? "Swimlanes" : "Group by"}>
+              <div className="flex items-center gap-1.5">
+                <Select
+                  value={props.groupByValue ?? ""}
+                  onChange={(key) => props.onGroupBy(key || null)}
+                  options={[{ value: "", label: "No grouping" }, ...props.groupByOptions]}
+                  size="sm"
+                  searchable
+                  searchPlaceholder="Search fields..."
+                  ariaLabel={props.showColumnField ? "Swimlanes" : "Group by"}
+                  className="flex-1 min-w-0"
+                  triggerClassName="w-full h-11 md:h-8 touch:h-11"
+                  menuMinWidth={220}
+                />
+                {props.groupByValue && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-11 w-11 md:h-8 md:w-8 touch:h-11 touch:w-11 shrink-0"
+                    onClick={props.onGroupDirection}
+                    title={
+                      props.groupDirection === SortDirection.DESC
+                        ? "Groups in reverse order"
+                        : "Groups in order"
+                    }
+                    aria-label="Reverse group order"
+                  >
+                    {props.groupDirection === SortDirection.DESC ? (
+                      <SortDescending size={16} />
+                    ) : (
+                      <SortAscending size={16} />
+                    )}
+                  </Button>
+                )}
+              </div>
+            </PanelRow>
+          )}
+          {props.showGroupBy && props.groupByValue && (
+            <ToggleRow
+              icon={<EyeSlash size={16} />}
+              label="Hide empty groups"
+              description="Only show groups with tasks"
+              active={props.hideEmptyGroups}
+              onToggle={props.onHideEmptyGroups}
+            />
           )}
           {props.showOutline && (
             <ToggleRow

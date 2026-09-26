@@ -73,6 +73,12 @@ import {
   toggleDraftCollapsedGroup,
 } from "@/features/projects/store/viewDraftThunks";
 import { useFilteredTasks } from "@/features/projects/hooks/useTasks";
+import { useTaskGroups } from "@/features/projects/hooks/useTaskGroups";
+import { groupSums } from "@/features/projects/utils/groupTasks";
+import {
+  GroupHeaderLabel,
+  GroupHeaderStats,
+} from "@/features/projects/components/views/GroupHeaderLabel";
 import { moveTask } from "@/features/projects/store/projectsThunks";
 import { LAYOUT, TABLE_COLUMNS } from "@/features/projects/constants";
 import { statusPaint, type StatusPaint } from "@/features/projects/utils/statusPaint";
@@ -80,27 +86,22 @@ import { TaskParentChip } from "@/features/projects/components/TaskParentChip";
 import { BlockedBadge } from "@/features/projects/components/BlockedBadge";
 import { SYSTEM_FIELD_IDS } from "@/features/projects/types";
 import type { Task, FieldDefinition, SelectOption } from "@/features/projects/types";
-import { SubjectAvatar, SubjectAvatarStack, SubjectPicker } from "@/components/subject";
-import { useSubjectResolver } from "@/components/subject/hooks/useSubjectResolver";
-import type { Subject } from "@/components/subject/types";
+import { SubjectAvatarStack, SubjectPicker } from "@/components/subject";
 import { TagChip } from "@/features/tags";
 import { useTagsByIds } from "@/features/tags/store/selectors";
 import { EmptyState } from "./EmptyState";
 import { useProjectPermission } from "@/features/projects/hooks/useProjectPermissions";
 import { TaskTypeIcon } from "@/features/projects/components/TaskTypeIcon";
-import { TASK_TYPES } from "@/features/projects/utils/taskTypes";
 import { parseMultiSelectValue } from "@/features/projects/utils/multiSelectParsers";
 import { getTaskFieldValue, toIdList } from "@/features/projects/utils/taskFieldValue";
-import { selectSprintsForProject } from "@/features/projects/store/sprintsSlice";
 import { checkReparent } from "@/features/projects/utils/reparent";
 import { getHierarchyRuleViolation } from "@/features/projects/utils/taskTypes";
 import { toast } from "sonner";
 import { SortDirection, TaskPseudoField } from "@uniffy/proto/projects/v1/projects_pb";
-import type { ViewColumnWidth, ViewFieldRef, ViewGroupBy } from "@/features/projects/types/views";
+import type { ViewColumnWidth, ViewFieldRef } from "@/features/projects/types/views";
 import {
   capabilitiesOf,
   fieldRef,
-  isPseudoRef,
   pseudoRef,
   sameFieldRef,
 } from "@/features/projects/utils/viewFields";
@@ -119,20 +120,6 @@ interface DropIndicator {
 
 const MAX_SUBTASK_DEPTH = 5;
 
-const UNASSIGNED_GROUP_KEY = "__unassigned__";
-
-interface TaskGroup {
-  key: string;
-  label: string;
-  color?: string;
-  tasks: Task[];
-  /**
-   * Optional discriminator so the header can render type-specific chrome
-   * (e.g. avatar + name for `person`-field groups instead of the raw key).
-   */
-  kind?: "person";
-}
-
 export function TableView() {
   const dispatch = useAppDispatch();
   const project = useAppSelector(selectCurrentProject);
@@ -147,7 +134,6 @@ export function TableView() {
   const definition = useAppSelector(selectActiveDefinition(projectId));
   const sortKeys = definition.sort;
   const groupBy = definition.groupBy;
-  const groupByFieldId = groupByColumnKey(groupBy);
   const { canEdit } = useProjectPermission();
   const editingCell = useAppSelector(selectEditingCell);
   const focusedCell = useAppSelector(selectFocusedCell);
@@ -158,7 +144,6 @@ export function TableView() {
   const filteredTasks = useFilteredTasks(projectId, {
     includeSubtasks: !outlineEnabled,
   });
-  const sprints = useAppSelector(selectSprintsForProject(projectId));
   const columnWidths = useMemo(
     () => columnWidthsByKey(definition.columnWidths),
     [definition.columnWidths],
@@ -243,212 +228,11 @@ export function TableView() {
     [dispatch, projectId, definition.visibleFields, allColumnRefs],
   );
 
-  // Tag store for tag-grouping (memoised) — shallow read of byId.
-  const tagsById = useAppSelector((state) => state.tags.byId);
-
-  // Compute groups
-  const rawGroups = useMemo((): TaskGroup[] | null => {
-    if (!groupByFieldId || !project) return null;
-
-    // Virtual group: Tags. Each task with N tags appears in N groups
-    // (cross-membership, mirrors Jira labels). Tasks with no tags fall
-    // into a synthetic "Untagged" group rendered last.
-    if (groupByFieldId === TAGS_COLUMN_KEY) {
-      const buckets = new Map<
-        string,
-        { label: string; color?: string; tasks: Task[]; count: number }
-      >();
-      const untagged: Task[] = [];
-      for (const task of filteredTasks) {
-        const taskTagIds = task.tagIds ?? [];
-        if (taskTagIds.length === 0) {
-          untagged.push(task);
-          continue;
-        }
-        for (const id of taskTagIds) {
-          const tag = tagsById[id];
-          if (!tag) continue;
-          const existing = buckets.get(id);
-          if (existing) {
-            existing.tasks.push(task);
-            existing.count = existing.tasks.length;
-          } else {
-            buckets.set(id, {
-              label: tag.name,
-              color: tag.color || undefined,
-              tasks: [task],
-              count: 1,
-            });
-          }
-        }
-      }
-      const tagGroups: TaskGroup[] = Array.from(buckets.entries())
-        .map(([key, bucket]) => ({
-          key,
-          label: bucket.label,
-          color: bucket.color,
-          tasks: bucket.tasks,
-        }))
-        // Order: tag count desc, then alpha. Untagged always last.
-        .sort((a, b) => {
-          const countDiff = b.tasks.length - a.tasks.length;
-          if (countDiff !== 0) return countDiff;
-          return a.label.localeCompare(b.label);
-        });
-      if (untagged.length > 0) {
-        tagGroups.push({
-          key: "__untagged__",
-          label: "Untagged",
-          tasks: untagged,
-        });
-      }
-      return tagGroups;
-    }
-
-    // Virtual group: Sprint
-    if (groupByFieldId === SPRINT_GROUP_KEY) {
-      const sprintMap = new Map(sprints.map((s) => [s.id, s]));
-      const grouped: TaskGroup[] = sprints.map((s) => ({
-        key: s.id,
-        label: s.name,
-        tasks: filteredTasks.filter((t) => t.sprintId === s.id),
-      }));
-      const backlog = filteredTasks.filter((t) => !t.sprintId || !sprintMap.has(t.sprintId));
-      if (backlog.length > 0) {
-        grouped.push({ key: "__backlog__", label: "Backlog", tasks: backlog });
-      }
-      return grouped;
-    }
-
-    // Virtual group: Task Type
-    if (groupByFieldId === TASK_TYPE_GROUP_KEY) {
-      const grouped: TaskGroup[] = TASK_TYPES.map((tt) => ({
-        key: tt.value,
-        label: tt.label,
-        tasks: filteredTasks.filter((t) => (t.taskType || "task") === tt.value),
-      }));
-      return grouped.filter((g) => g.tasks.length > 0);
-    }
-
-    const field = project.fieldDefinitions.find((f) => f.id === groupByFieldId);
-    if (!field) return null;
-
-    // Person field (Assignee and any custom person-typed field, e.g. Reporter).
-    // Each task appears in every assignee's bucket so grouping by John shows
-    // every task John is on, mirroring Linear/Jira/ClickUp. Tasks with no
-    // assignees fall into a single Unassigned bucket rendered last.
-    if (field.type === "person") {
-      const buckets = new Map<string, Task[]>();
-      const unassigned: Task[] = [];
-      for (const task of filteredTasks) {
-        const ids = toIdList(getTaskFieldValue(task, groupByFieldId));
-        if (ids.length === 0) {
-          unassigned.push(task);
-          continue;
-        }
-        for (const id of ids) {
-          const existing = buckets.get(id);
-          if (existing) {
-            existing.push(task);
-          } else {
-            buckets.set(id, [task]);
-          }
-        }
-      }
-      const personGroups: TaskGroup[] = Array.from(buckets.entries())
-        .map(([key, tasks]) => ({ key, label: key, kind: "person" as const, tasks }))
-        .sort((a, b) => {
-          const countDiff = b.tasks.length - a.tasks.length;
-          if (countDiff !== 0) return countDiff;
-          return a.key.localeCompare(b.key);
-        });
-      if (unassigned.length > 0) {
-        personGroups.push({
-          key: UNASSIGNED_GROUP_KEY,
-          label: "Unassigned",
-          kind: "person",
-          tasks: unassigned,
-        });
-      }
-      return personGroups;
-    }
-
-    // For select fields, use option order
-    if (field.type === "single_select") {
-      const options = field.config.options ?? [];
-      const grouped: TaskGroup[] = options.map((opt) => ({
-        key: opt.id,
-        label: opt.label,
-        color:
-          field.id === SYSTEM_FIELD_IDS.STATUS ? statusPaint(options, opt.id).solid : opt.color,
-        tasks: filteredTasks.filter((t) => {
-          const val = getTaskFieldValue(t, groupByFieldId);
-          return val === opt.id;
-        }),
-      }));
-
-      // Add "No value" group for tasks without a value
-      const ungrouped = filteredTasks.filter((t) => {
-        const val = getTaskFieldValue(t, groupByFieldId);
-        return !val || !options.some((o) => o.id === val);
-      });
-      if (ungrouped.length > 0) {
-        grouped.push({
-          key: "__none__",
-          label: "No value",
-          tasks: ungrouped,
-        });
-      }
-
-      return grouped;
-    }
-
-    // For other field types, group by string value
-    const groupMap = new Map<string, Task[]>();
-    const ungrouped: Task[] = [];
-
-    for (const task of filteredTasks) {
-      const val = getTaskFieldValue(task, groupByFieldId);
-      if (val === null || val === undefined || val === "") {
-        ungrouped.push(task);
-      } else {
-        const key = Array.isArray(val) ? val.join(", ") : String(val);
-        const existing = groupMap.get(key);
-        if (existing) {
-          existing.push(task);
-        } else {
-          groupMap.set(key, [task]);
-        }
-      }
-    }
-
-    const result: TaskGroup[] = [];
-    for (const [key, tasks] of groupMap) {
-      result.push({ key, label: key, tasks });
-    }
-    if (ungrouped.length > 0) {
-      result.push({ key: "__none__", label: "No value", tasks: ungrouped });
-    }
-
-    return result;
-  }, [groupByFieldId, project, filteredTasks, sprints, tagsById]);
-
-  const groups = useMemo(() => arrangeGroups(rawGroups, groupBy), [rawGroups, groupBy]);
-
-  const personGroupIds = useMemo(() => {
-    if (!groups) return [];
-    return groups
-      .filter((g) => g.kind === "person" && g.key !== UNASSIGNED_GROUP_KEY)
-      .map((g) => g.key);
-  }, [groups]);
-  const { subjects: resolvedPersonGroupSubjects } = useSubjectResolver(personGroupIds);
-  const personGroupSubjectMap = useMemo(() => {
-    const map = new Map<string, Subject>();
-    for (const s of resolvedPersonGroupSubjects) {
-      map.set(s.id, s);
-    }
-    return map;
-  }, [resolvedPersonGroupSubjects]);
+  const { groups } = useTaskGroups(projectId, filteredTasks, groupBy);
+  const summedFields = useMemo(
+    () => visibleFields.filter((field) => field.type === "number"),
+    [visibleFields],
+  );
 
   // All tasks for select-all (respects grouping collapsed state)
   const allVisibleTaskIds = useMemo(() => {
@@ -1206,25 +990,11 @@ export function TableView() {
                         ) : (
                           <CaretDown size={14} className="text-muted-foreground shrink-0" />
                         )}
-                        {group.color && (
-                          <span
-                            className="w-2.5 h-2.5 rounded-full shrink-0"
-                            style={{ backgroundColor: group.color }}
-                          />
-                        )}
-                        {group.kind === "person" && group.key !== UNASSIGNED_GROUP_KEY ? (
-                          <PersonGroupHeader
-                            subject={personGroupSubjectMap.get(group.key)}
-                            fallbackKey={group.key}
-                          />
-                        ) : group.kind === "person" && group.key === UNASSIGNED_GROUP_KEY ? (
-                          <span className="text-sm font-medium italic text-muted-foreground">
-                            Unassigned
-                          </span>
-                        ) : (
-                          <span className="text-sm font-medium text-foreground">{group.label}</span>
-                        )}
-                        <span className="text-xs text-muted-foreground">{group.tasks.length}</span>
+                        <GroupHeaderLabel group={group} className="shrink min-w-0" />
+                        <GroupHeaderStats
+                          count={group.tasks.length}
+                          sums={groupSums(group.tasks, summedFields)}
+                        />
                       </div>
 
                       {/* Group Tasks - each group has its own sortable context */}
@@ -2265,27 +2035,6 @@ function AvatarStack({ ids }: { ids: string[] }) {
   return <SubjectAvatarStack subjectIds={ids} maxDisplay={3} size="sm" />;
 }
 
-interface PersonGroupHeaderProps {
-  subject: Subject | undefined;
-  fallbackKey: string;
-}
-
-function PersonGroupHeader({ subject, fallbackKey }: PersonGroupHeaderProps) {
-  if (!subject) {
-    return (
-      <span className="text-sm font-medium text-muted-foreground truncate">
-        {fallbackKey.slice(-6)}
-      </span>
-    );
-  }
-  return (
-    <span className="flex items-center gap-2 min-w-0">
-      <SubjectAvatar subject={subject} size="xs" />
-      <span className="text-sm font-medium text-foreground truncate">{subject.name}</span>
-    </span>
-  );
-}
-
 // Read-only tag chip row for the synthetic Tags column. Editing happens
 // from the task detail panel, mirroring the read-only chip pattern from
 // the files domain's list-view tag column.
@@ -2320,8 +2069,6 @@ function TagsRowCell({ task }: { task: Task }) {
 const ID_COLUMN_KEY = "__id__";
 const TITLE_COLUMN_KEY = SYSTEM_FIELD_IDS.TITLE;
 const TAGS_COLUMN_KEY = "__tags__";
-const SPRINT_GROUP_KEY = "__sprint__";
-const TASK_TYPE_GROUP_KEY = "__task_type__";
 
 const TAGS_VIRTUAL_FIELD: FieldDefinition = {
   id: TAGS_COLUMN_KEY,
@@ -2357,30 +2104,6 @@ function columnWidthsByKey(widths: readonly ViewColumnWidth[]): Record<string, n
     if (key) byKey[key] = width;
   }
   return byKey;
-}
-
-/** Grouping key the table understands for a view's group-by; other attributes are not offered here. */
-function groupByColumnKey(groupBy: ViewGroupBy | null): string | null {
-  if (!groupBy) return null;
-  const ref = groupBy.field;
-  if (ref.kind === "field") return ref.fieldId;
-  if (isPseudoRef(ref, TaskPseudoField.TAGS)) return TAGS_COLUMN_KEY;
-  if (isPseudoRef(ref, TaskPseudoField.SPRINT)) return SPRINT_GROUP_KEY;
-  if (isPseudoRef(ref, TaskPseudoField.TASK_TYPE)) return TASK_TYPE_GROUP_KEY;
-  return null;
-}
-
-const EMPTY_GROUP_KEYS = new Set(["__none__", "__untagged__", "__backlog__", UNASSIGNED_GROUP_KEY]);
-
-/** Descending reverses the groups; the empty bucket stays last, or goes when the view hides it. */
-function arrangeGroups(
-  groups: TaskGroup[] | null,
-  groupBy: ViewGroupBy | null,
-): TaskGroup[] | null {
-  if (!groups || !groupBy) return groups;
-  const filled = groups.filter((group) => !EMPTY_GROUP_KEYS.has(group.key));
-  const empty = groupBy.hideEmpty ? [] : groups.filter((group) => EMPTY_GROUP_KEYS.has(group.key));
-  return [...(groupBy.direction === SortDirection.DESC ? filled.reverse() : filled), ...empty];
 }
 
 function SortIndicator({

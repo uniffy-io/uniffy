@@ -38,6 +38,9 @@ vi.mock("@/features/projects/hooks/useProjectPermissions", () => ({
 vi.mock("@/features/projects/hooks/useTasks", () => ({
   useFilteredTasks: () => [{ id: "task-1", parentId: null, number: 1, sortOrder: 0 }],
 }));
+vi.mock("@/features/projects/hooks/useTaskGroups", () => ({
+  useTaskGroups: () => ({ groups: null }),
+}));
 vi.mock("@/components/subject/hooks/useSubjectResolver", () => ({
   useSubjectResolver: () => ({ subjects: [] }),
 }));

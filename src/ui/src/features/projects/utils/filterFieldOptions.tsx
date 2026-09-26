@@ -19,6 +19,7 @@ import {
 import type { SelectOption } from "@/components/ui/select";
 import type { FieldDefinition } from "@/features/projects/types";
 import type { ViewCatalog, ViewFieldRef } from "@/features/projects/types/views";
+import { groupableFields } from "@/features/projects/utils/groupTasks";
 import {
   FILTERABLE_PSEUDO_FIELDS,
   capabilitiesOf,
@@ -69,4 +70,21 @@ export function filterFieldOptions(
     ...fields.map((field) => option(fieldRef(field.id))),
     ...FILTERABLE_PSEUDO_FIELDS.map((pseudo) => option(pseudoRef(pseudo))),
   ].filter((entry): entry is SelectOption => entry !== null);
+}
+
+/** Every field the catalog lets a view group by, in the grouping menu's order, with its type icon. */
+export function groupFieldOptions(
+  fields: FieldDefinition[],
+  fieldsById: ReadonlyMap<string, FieldDefinition>,
+  catalog: ViewCatalog | null,
+): SelectOption[] {
+  return groupableFields(fields, catalog).map(({ ref, key, label }) => {
+    const kind = fieldKindOf(ref, fieldsById);
+    const Icon = kind ? KIND_ICONS[kind] : TextT;
+    return {
+      value: key,
+      label,
+      icon: <Icon size={14} className="text-muted-foreground shrink-0" />,
+    };
+  });
 }

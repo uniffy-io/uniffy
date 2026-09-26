@@ -6,7 +6,7 @@ import {
   projectsSlice,
   type ProjectsState,
 } from "@/features/projects/store/projectsSlice";
-import { deleteTask, deleteTasks } from "@/features/projects/store/projectsThunks";
+import { deleteTask, deleteTasks, updateTask } from "@/features/projects/store/projectsThunks";
 
 const reducer = projectsSlice.reducer;
 
@@ -149,4 +149,19 @@ describe("task deletion", () => {
     const next = reducer(state, deleteTasks.fulfilled(["sub"], "req", ["sub"]));
     expect(next.tasks.parent).toMatchObject({ subtaskTotal: 1, subtaskCompleted: 0 });
   });
+});
+
+it("rolls back every field and parent count when a combined board update fails", () => {
+  const task = makeTask("sub", { parentId: parent.id, assigneeIds: ["amy"], sortOrder: 1000 });
+  const original = stateWith([parent, task]);
+  const request = { id: task.id, status: "status_shipped", sortOrder: 0, assigneeIds: ["zoe"] };
+  const optimistic = reducer(original, optimisticUpdateTask(request));
+  expect(optimistic.tasks.parent.subtaskCompleted).toBe(1);
+  const rejected = reducer(
+    optimistic,
+    updateTask.rejected(null, "request", request, "Task is blocked"),
+  );
+  expect(rejected.tasks).toEqual(original.tasks);
+  expect(rejected._pendingTaskSnapshot).toBeUndefined();
+  expect(rejected._pendingParentSnapshots).toBeUndefined();
 });

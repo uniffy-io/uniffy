@@ -10,7 +10,17 @@ import { statusSemanticOf } from "@/features/projects/utils/statusSemantics";
 import { TaskTypeIcon } from "@/features/projects/components/TaskTypeIcon";
 import { TaskParentChip } from "@/features/projects/components/TaskParentChip";
 import { BlockedBadge } from "@/features/projects/components/BlockedBadge";
-import type { Task, SelectOption, TaskStatusSemantic } from "@/features/projects/types";
+import type {
+  FieldDefinition,
+  Task,
+  SelectOption,
+  TaskStatusSemantic,
+} from "@/features/projects/types";
+import { groupSums, type GroupSum, type TaskGroup } from "@/features/projects/utils/groupTasks";
+import {
+  GroupHeaderLabel,
+  GroupHeaderStats,
+} from "@/features/projects/components/views/GroupHeaderLabel";
 import type { RoadmapRow } from "./roadmapRows";
 
 interface RoadmapTaskListProps {
@@ -22,6 +32,9 @@ interface RoadmapTaskListProps {
   onTaskClick: (taskId: string, e: React.MouseEvent) => void;
   onCheckboxChange: (taskId: string) => void;
   onToggleCollapse: (taskId: string) => void;
+  onToggleGroup: (groupKey: string) => void;
+  /** Number fields a group header sums beside estimate and time spent. */
+  numberFields: FieldDefinition[];
   onWheel: (deltaY: number) => void;
   scrollTop: number;
 }
@@ -35,6 +48,8 @@ export function RoadmapTaskList({
   onTaskClick,
   onCheckboxChange,
   onToggleCollapse,
+  onToggleGroup,
+  numberFields,
   onWheel,
   scrollTop,
 }: RoadmapTaskListProps) {
@@ -77,13 +92,25 @@ export function RoadmapTaskList({
       {/* Task List - no independent scroll, mirrors timeline via transform */}
       <div ref={containerRef} className="flex-1 overflow-hidden border-r border-border">
         <div style={{ transform: `translateY(-${scrollTop}px)` }}>
-          {rows.map(({ task, depth, hasChildren }) => {
+          {rows.map((row) => {
+            if (row.kind === "group") {
+              return (
+                <RoadmapGroupHeader
+                  key={row.key}
+                  group={row.group}
+                  collapsed={row.collapsed}
+                  sums={groupSums(row.group.tasks, numberFields)}
+                  onToggle={() => onToggleGroup(row.group.key)}
+                />
+              );
+            }
+            const { task, depth, hasChildren } = row;
             const statusOption = statusOptions.find((s) => s.id === task.status);
             const hasDates = task.startDate && task.dueDate;
 
             return (
               <RoadmapTaskRow
-                key={task.id}
+                key={row.key}
                 task={task}
                 statusOption={statusOption}
                 paint={statusPaint(statusOptions, task.status)}
@@ -102,6 +129,36 @@ export function RoadmapTaskList({
         </div>
       </div>
     </div>
+  );
+}
+
+function RoadmapGroupHeader({
+  group,
+  collapsed,
+  sums,
+  onToggle,
+}: {
+  group: TaskGroup;
+  collapsed: boolean;
+  sums: GroupSum[];
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-expanded={!collapsed}
+      className="flex w-full items-center gap-2 px-3 border-b border-border bg-muted/40 hover:bg-muted/60 transition-colors text-left"
+      style={{ height: LAYOUT.ROADMAP_ROW_HEIGHT }}
+    >
+      {collapsed ? (
+        <CaretRight size={12} weight="bold" className="text-muted-foreground shrink-0" />
+      ) : (
+        <CaretDown size={12} weight="bold" className="text-muted-foreground shrink-0" />
+      )}
+      <GroupHeaderLabel group={group} className="shrink min-w-0" />
+      <GroupHeaderStats count={group.tasks.length} sums={sums} className="ml-auto justify-end" />
+    </button>
   );
 }
 

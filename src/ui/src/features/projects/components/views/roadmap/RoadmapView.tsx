@@ -18,7 +18,11 @@ import {
 } from "@/features/projects/store/projectsUiSlice";
 import { useFilteredTasks } from "@/features/projects/hooks/useTasks";
 import { selectActiveDefinition } from "@/features/projects/store/viewSelectors";
-import { setDraftLayout } from "@/features/projects/store/viewDraftThunks";
+import {
+  setDraftLayout,
+  toggleDraftCollapsedGroup,
+} from "@/features/projects/store/viewDraftThunks";
+import { useTaskGroups } from "@/features/projects/hooks/useTaskGroups";
 import { RoadmapZoom } from "@uniffy/proto/projects/v1/projects_pb";
 import { useProjectPermission } from "@/features/projects/hooks/useProjectPermissions";
 import { selectSprintsForProject } from "@/features/projects/store/sprintsSlice";
@@ -34,12 +38,21 @@ import {
   COLUMN_WIDTHS,
 } from "@/features/projects/utils/ganttPositioning";
 import { LAYOUT } from "@/features/projects/constants";
-import { RoadmapTaskList } from "./RoadmapTaskList";
-import { buildOrderedRows } from "./roadmapRows";
-import { TimelineGrid } from "./TimelineGrid";
-import { GanttBar, EmptyGanttRow, SummaryBar } from "./GanttBar";
-import { DependencyLines } from "./DependencyLines";
-import { EmptyState } from "../table/EmptyState";
+import { RoadmapTaskList } from "@/features/projects/components/views/roadmap/RoadmapTaskList";
+import {
+  buildGroupedRows,
+  buildOrderedRows,
+  type RoadmapRow,
+} from "@/features/projects/components/views/roadmap/roadmapRows";
+import { TimelineGrid } from "@/features/projects/components/views/roadmap/TimelineGrid";
+import {
+  GanttBar,
+  EmptyGanttRow,
+  GroupGanttRow,
+  SummaryBar,
+} from "@/features/projects/components/views/roadmap/GanttBar";
+import { DependencyLines } from "@/features/projects/components/views/roadmap/DependencyLines";
+import { EmptyState } from "@/features/projects/components/views/table/EmptyState";
 
 // Number of periods to show in each direction from center
 const PERIODS_BEFORE = 15;
@@ -129,9 +142,25 @@ export function RoadmapView() {
 
   // Collapsed parents; descendants drop out of the ordered rows entirely.
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
-  const rows = useMemo(
-    () => buildOrderedRows(filteredTasks, collapsedIds),
-    [filteredTasks, collapsedIds],
+  const { groups } = useTaskGroups(project?.id ?? "", filteredTasks, definition.groupBy);
+  const collapsedGroups = useMemo(
+    () => new Set(definition.collapsedGroupKeys),
+    [definition.collapsedGroupKeys],
+  );
+  // Grouped rows keep the hierarchy inside each group; a parent in another group leaves its
+  // children as roots there.
+  const rows = useMemo<RoadmapRow[]>(
+    () =>
+      groups
+        ? buildGroupedRows(groups, collapsedIds, collapsedGroups)
+        : buildOrderedRows(filteredTasks, collapsedIds),
+    [groups, filteredTasks, collapsedIds, collapsedGroups],
+  );
+  const toggleGroup = useCallback(
+    (groupKey: string) => {
+      if (project) dispatch(toggleDraftCollapsedGroup(project.id, groupKey));
+    },
+    [dispatch, project],
   );
   // Rollup spans are derived from the full task set, so a collapsed parent
   // still shows its aggregate bracket.
@@ -171,7 +200,9 @@ export function RoadmapView() {
   // Calculate dependency data for lines
   const dependencyData = useMemo(() => {
     return rows
-      .map(({ task }, index) => {
+      .map((row, index) => {
+        if (row.kind !== "task") return null;
+        const task = row.task;
         const hasOwnDates = !!(task.startDate && task.dueDate);
         const own = hasOwnDates
           ? calculateBarPosition(task.startDate, task.dueDate, timelineStart, timelineEnd, zoom)
@@ -185,6 +216,8 @@ export function RoadmapView() {
 
         return {
           id: task.id,
+          key: row.key,
+          groupKey: row.groupKey,
           blockedByTaskIds: task.blockedByTaskIds || [],
           row: index,
           left: position ? position.left : 0,
@@ -192,7 +225,7 @@ export function RoadmapView() {
           hasDates: !!position,
         };
       })
-      .filter((t) => t.hasDates);
+      .filter((t): t is NonNullable<typeof t> => t !== null && t.hasDates);
   }, [rows, rollupSpans, timelineStart, timelineEnd, zoom]);
 
   // Handle task click
@@ -341,6 +374,8 @@ export function RoadmapView() {
           onTaskClick={handleTaskClick}
           onCheckboxChange={handleCheckboxChange}
           onToggleCollapse={toggleCollapse}
+          onToggleGroup={toggleGroup}
+          numberFields={project.fieldDefinitions.filter((field) => field.type === "number")}
           onWheel={handleTaskListWheel}
           scrollTop={scrollTop}
         />
@@ -369,7 +404,11 @@ export function RoadmapView() {
                 zIndex: 10, // Ensure bars are above lines
               }}
             >
-              {rows.map(({ task }, index) => {
+              {rows.map((row, index) => {
+                if (row.kind === "group") {
+                  return <GroupGanttRow key={row.key} rowIndex={index} />;
+                }
+                const task = row.task;
                 const hasOwnDates = !!(task.startDate && task.dueDate);
                 const position = hasOwnDates
                   ? calculateBarPosition(
@@ -384,7 +423,7 @@ export function RoadmapView() {
                 if (position) {
                   return (
                     <GanttBar
-                      key={task.id}
+                      key={row.key}
                       task={task}
                       position={position}
                       paint={statusPaint(statusOptions, task.status)}
@@ -408,7 +447,7 @@ export function RoadmapView() {
                   if (rollupPosition) {
                     return (
                       <SummaryBar
-                        key={task.id}
+                        key={row.key}
                         position={rollupPosition}
                         rowIndex={index}
                         onClick={(e: React.MouseEvent) => handleTaskClick(task.id, e)}
@@ -417,7 +456,7 @@ export function RoadmapView() {
                   }
                 }
 
-                return <EmptyGanttRow key={task.id} rowIndex={index} />;
+                return <EmptyGanttRow key={row.key} rowIndex={index} />;
               })}
             </div>
           </TimelineGrid>
