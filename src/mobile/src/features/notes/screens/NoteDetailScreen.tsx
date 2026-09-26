@@ -11,7 +11,7 @@ import {
   useWindowDimensions,
 } from "react-native";
 import * as Clipboard from "expo-clipboard";
-import { Star, DotsThree, CaretRight, Graph, NotePencil } from "phosphor-react-native";
+import { Star, DotsThree, CaretRight, Folder, Graph } from "phosphor-react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { DomainHeader, domainHeaderHeight } from "@shared/components/DomainHeader";
@@ -223,6 +223,7 @@ export function NoteDetailScreen() {
       >
         {breadcrumb.length > 0 && (
           <View style={styles.breadcrumbRow}>
+            <Folder size={14} color={T.textDim} weight="duotone" />
             {breadcrumb.map((crumb, i) => (
               <React.Fragment key={crumb.id}>
                 {i > 0 && <CaretRight size={11} color={T.textDim} weight="bold" />}
@@ -239,20 +240,7 @@ export function NoteDetailScreen() {
           </View>
         )}
 
-        <View style={styles.titleRow}>
-          <TouchableOpacity
-            style={[styles.iconBtn, { backgroundColor: T.accentSoft }]}
-            onPress={() => setIconPickerOpen(true)}
-            activeOpacity={0.7}
-          >
-            {note.icon?.value ? (
-              <Text style={styles.iconGlyph}>{note.icon.value}</Text>
-            ) : (
-              <NotePencil size={20} color={T.accent} weight="duotone" />
-            )}
-          </TouchableOpacity>
-          <Text style={[styles.title, { color: T.textBright }]}>{note.title}</Text>
-        </View>
+        <Text style={[styles.title, { color: T.textBright }]}>{note.title}</Text>
 
         <View style={styles.authorRow}>
           <Avatar name={authorName} size={24} />
@@ -380,6 +368,15 @@ export function NoteDetailScreen() {
                   },
                 },
               ]),
+          {
+            icon: "smile",
+            label: "Change icon",
+            sublabel: "Shown in the notes list",
+            onPress: () => {
+              setSheetOpen(false);
+              setIconPickerOpen(true);
+            },
+          },
           {
             icon: "at-sign",
             label: "Copy reference link",
@@ -513,17 +510,7 @@ const styles = StyleSheet.create({
   canvasBody: { fontSize: 13, fontFamily: FONT.regular, textAlign: "center", lineHeight: 19 },
   breadcrumbRow: { flexDirection: "row", alignItems: "center", gap: 6, flexWrap: "wrap" },
   breadcrumb: { fontSize: 12, fontFamily: FONT.medium },
-  titleRow: { flexDirection: "row", alignItems: "center", gap: 12 },
-  iconBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-    flexShrink: 0,
-  },
-  iconGlyph: { fontSize: 22 },
-  title: { flex: 1, fontSize: 24, fontFamily: FONT.bold, lineHeight: 32 },
+  title: { fontSize: 24, fontFamily: FONT.bold, lineHeight: 32 },
   authorRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   authorName: { fontSize: 13, fontFamily: FONT.medium },
   editTime: { fontSize: 13, fontFamily: FONT.regular },
