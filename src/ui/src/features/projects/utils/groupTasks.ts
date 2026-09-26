@@ -4,6 +4,7 @@ import {
   TaskPseudoField as Pseudo,
 } from "@uniffy/proto/projects/v1/projects_pb";
 import { SYSTEM_FIELD_IDS } from "@/features/projects/types";
+import type { Subject } from "@/components/subject/types";
 import type { FieldDefinition, FieldValue } from "@/features/projects/types/fields";
 import type { Sprint, Task, UpdateTaskRequest } from "@/features/projects/types/project";
 import type { ViewCatalog, ViewFieldRef, ViewGroupBy } from "@/features/projects/types/views";
@@ -94,6 +95,7 @@ export type GroupValue =
 export type GroupDisplay = "plain" | "swatch" | "person" | "task_type" | "epic";
 
 export interface TaskGroup {
+  subject?: Subject;
   key: string;
   label: string;
   value: GroupValue;

@@ -38,12 +38,21 @@ import {
   COLUMN_WIDTHS,
 } from "@/features/projects/utils/ganttPositioning";
 import { LAYOUT } from "@/features/projects/constants";
-import { RoadmapTaskList } from "./RoadmapTaskList";
-import { buildGroupedRows, buildOrderedRows, type RoadmapRow } from "./roadmapRows";
-import { TimelineGrid } from "./TimelineGrid";
-import { GanttBar, EmptyGanttRow, GroupGanttRow, SummaryBar } from "./GanttBar";
-import { DependencyLines } from "./DependencyLines";
-import { EmptyState } from "../table/EmptyState";
+import { RoadmapTaskList } from "@/features/projects/components/views/roadmap/RoadmapTaskList";
+import {
+  buildGroupedRows,
+  buildOrderedRows,
+  type RoadmapRow,
+} from "@/features/projects/components/views/roadmap/roadmapRows";
+import { TimelineGrid } from "@/features/projects/components/views/roadmap/TimelineGrid";
+import {
+  GanttBar,
+  EmptyGanttRow,
+  GroupGanttRow,
+  SummaryBar,
+} from "@/features/projects/components/views/roadmap/GanttBar";
+import { DependencyLines } from "@/features/projects/components/views/roadmap/DependencyLines";
+import { EmptyState } from "@/features/projects/components/views/table/EmptyState";
 
 // Number of periods to show in each direction from center
 const PERIODS_BEFORE = 15;
@@ -207,6 +216,8 @@ export function RoadmapView() {
 
         return {
           id: task.id,
+          key: row.key,
+          groupKey: row.groupKey,
           blockedByTaskIds: task.blockedByTaskIds || [],
           row: index,
           left: position ? position.left : 0,

@@ -10,8 +10,8 @@ import {
   GroupHeaderLabel,
   GroupHeaderStats,
 } from "@/features/projects/components/views/GroupHeaderLabel";
-import { BoardColumn } from "./BoardColumn";
-import { buildLaneDropId } from "./boardDropIds";
+import { BoardColumn } from "@/features/projects/components/views/board/BoardColumn";
+import { buildLaneDropId } from "@/features/projects/components/views/board/boardDropIds";
 
 export interface BoardColumnSpec {
   key: string;
@@ -24,7 +24,8 @@ interface BoardSwimlaneProps {
   /** The epic the lane stands for, when lanes are epics. */
   epic: Task | null;
   columns: BoardColumnSpec[];
-  tasksByColumn: Record<string, Task[]>;
+  tasksByColumn: ReadonlyMap<string, Task[]>;
+  sameFieldAxes: boolean;
   sums: readonly GroupSum[];
   doneCount: number;
   statusOptions: SelectOption[];
@@ -43,6 +44,7 @@ export function BoardSwimlane({
   epic,
   columns,
   tasksByColumn,
+  sameFieldAxes,
   sums,
   doneCount,
   statusOptions,
@@ -67,7 +69,7 @@ export function BoardSwimlane({
         type="button"
         onClick={onToggleCollapse}
         aria-expanded={!collapsed}
-        className="flex items-center gap-2 px-3 min-h-11 md:min-h-9 py-2 bg-muted/60 hover:bg-muted rounded-md text-left transition-colors"
+        className="flex items-center gap-2 px-3 min-h-11 md:min-h-9 touch:min-h-11 py-2 bg-muted/60 hover:bg-muted rounded-md text-left transition-colors"
       >
         {collapsed ? (
           <CaretRight size={14} className="text-muted-foreground shrink-0" />
@@ -117,7 +119,8 @@ export function BoardSwimlane({
               key={column.key}
               label={column.label}
               paint={column.paint}
-              tasks={tasksByColumn[column.key] ?? []}
+              tasks={tasksByColumn.get(column.key) ?? []}
+              dropDisabled={sameFieldAxes && group.key !== column.key}
               priorityOptions={priorityOptions}
               onTaskClick={onTaskClick}
               onAddTask={onAddTask}

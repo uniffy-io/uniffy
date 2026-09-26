@@ -1,18 +1,12 @@
 import { SubjectAvatar } from "@/components/subject";
-import { useSubjectResolver } from "@/components/subject/hooks/useSubjectResolver";
 import { TaskTypeIcon } from "@/features/projects/components/TaskTypeIcon";
 import type { GroupSum, TaskGroup } from "@/features/projects/utils/groupTasks";
 import { formatMinutes } from "@/features/projects/utils/timeFormatting";
 import { cn } from "@/shared/utils/cn";
 
-const NO_IDS: string[] = [];
-
 /** A group's value as the table, board and roadmap headers draw it. */
 export function GroupHeaderLabel({ group, className }: { group: TaskGroup; className?: string }) {
-  const personIds =
-    group.display === "person" && group.value.kind === "id" ? [group.value.id] : NO_IDS;
-  const { subjects } = useSubjectResolver(personIds);
-  const subject = subjects[0];
+  const subject = group.subject;
   const isNone = group.value.kind === "none";
 
   return (

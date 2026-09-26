@@ -750,7 +750,7 @@ function DisplayPanel(props: DisplayPanelProps) {
                 size="sm"
                 ariaLabel="Board columns"
                 className="w-full"
-                triggerClassName="w-full h-11 md:h-8"
+                triggerClassName="w-full h-11 md:h-8 touch:h-11"
                 menuMinWidth={200}
               />
             </PanelRow>
@@ -767,14 +767,14 @@ function DisplayPanel(props: DisplayPanelProps) {
                   searchPlaceholder="Search fields..."
                   ariaLabel={props.showColumnField ? "Swimlanes" : "Group by"}
                   className="flex-1 min-w-0"
-                  triggerClassName="w-full h-11 md:h-8"
+                  triggerClassName="w-full h-11 md:h-8 touch:h-11"
                   menuMinWidth={220}
                 />
                 {props.groupByValue && (
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-11 w-11 md:h-8 md:w-8 shrink-0"
+                    className="h-11 w-11 md:h-8 md:w-8 touch:h-11 touch:w-11 shrink-0"
                     onClick={props.onGroupDirection}
                     title={
                       props.groupDirection === SortDirection.DESC

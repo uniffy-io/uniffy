@@ -64,10 +64,19 @@ export function useTaskGroups(
     };
   }, [filterCtx, sprints, epics, tagsById, subjects]);
 
-  const groups = useMemo(
-    () => (groupBy ? groupTasks(tasks, groupBy, ctx) : null),
-    [tasks, groupBy, ctx],
-  );
+  const groups = useMemo(() => {
+    if (!groupBy) return null;
+    const subjectsById = new Map(subjects.map((subject) => [subject.id, subject]));
+    return (
+      groupTasks(tasks, groupBy, ctx)?.map((group) => ({
+        ...group,
+        subject:
+          group.display === "person" && group.value.kind === "id"
+            ? subjectsById.get(group.value.id)
+            : undefined,
+      })) ?? null
+    );
+  }, [tasks, groupBy, ctx, subjects]);
 
   return { groups, ctx };
 }

@@ -9,8 +9,8 @@ import type { StatusPaint } from "@/features/projects/utils/statusPaint";
 import type { GroupSum } from "@/features/projects/utils/groupTasks";
 import type { Task, SelectOption } from "@/features/projects/types";
 import { GroupHeaderStats } from "@/features/projects/components/views/GroupHeaderLabel";
-import { TaskCard } from "./TaskCard";
-import { buildLaneCardId } from "./boardDropIds";
+import { TaskCard } from "@/features/projects/components/views/board/TaskCard";
+import { buildLaneCardId } from "@/features/projects/components/views/board/boardDropIds";
 
 interface BoardColumnProps {
   label: string;
@@ -23,6 +23,7 @@ interface BoardColumnProps {
   reparentHintActive?: boolean;
   activeDragTaskId?: string | null;
   dropId: string;
+  dropDisabled?: boolean;
   /** Lane the cards are drawn in, so a task shown in two lanes gets two drag ids. */
   laneKey: string;
   sums?: readonly GroupSum[];
@@ -41,13 +42,14 @@ export function BoardColumn({
   reparentHintActive = false,
   activeDragTaskId = null,
   dropId,
+  dropDisabled = false,
   laneKey,
   sums = [],
   showHeader = true,
   showFooter = true,
 }: BoardColumnProps) {
   const { isMobile } = useBreakpoint();
-  const { setNodeRef, isOver } = useDroppable({ id: dropId });
+  const { setNodeRef, isOver } = useDroppable({ id: dropId, disabled: dropDisabled });
   const cardIds = tasks.map((task) => buildLaneCardId(laneKey, task.id));
 
   const getPriorityOption = (priorityId: string | null) => {
@@ -99,7 +101,7 @@ export function BoardColumn({
 
           {tasks.length === 0 && (
             <div className="flex items-center justify-center h-24 text-sm text-muted-foreground border-2 border-dashed border-border rounded-lg">
-              Drop tasks here
+              {dropDisabled ? "Row and column must match" : "Drop tasks here"}
             </div>
           )}
         </div>

@@ -2794,9 +2794,16 @@ estimates, and due dates overdue, today and next week.
 - [ ] Columns = Priority: four columns in option order, a drop writes priority and leaves status
       alone; reordering inside a column keeps working. Columns = Status restores the default and
       Add Status.
+- [ ] Moving across status columns and assignee lanes saves both changes together. If blockers
+      prevent completion, both fields and parent completion counts return to their prior values.
+- [ ] Columns and Swimlanes = Priority: cells with different row and column values refuse drops.
+      Moving High/High to Low/Low updates priority and leaves the card at that destination.
+- [ ] A custom select option named `constructor`, `toString`, or `__proto__` renders its cards.
 - [ ] Collapsing a lane or group survives Save and a reload.
 - [ ] Roadmap grouped by Assignee: collapsible group rows with count and sums, bars aligned with
       their rows, subtasks indented under their parent inside a group.
+- [ ] A blocker and dependent shown in two assignee groups connect within each group. Collapsing
+      one group leaves the other arrow aligned. Cross-group dependencies use a visible blocker.
 - [ ] Backlog, graph and resources views offer no Group by.
 
 ### Views on mobile

@@ -39,7 +39,7 @@ import { useFilteredTasks } from "@/features/projects/hooks/useTasks";
 import { useTaskGroups } from "@/features/projects/hooks/useTaskGroups";
 import { selectActiveDefinition } from "@/features/projects/store/viewSelectors";
 import { toggleDraftCollapsedGroup } from "@/features/projects/store/viewDraftThunks";
-import { fieldRef, isPseudoRef } from "@/features/projects/utils/viewFields";
+import { fieldRef, isFieldRef, isPseudoRef } from "@/features/projects/utils/viewFields";
 import {
   groupSums,
   groupWrite,
@@ -56,12 +56,21 @@ import type {
   FieldDefinition,
   UpdateTaskRequest,
 } from "@/features/projects/types";
-import { BoardColumn } from "./BoardColumn";
-import { TaskCard } from "./TaskCard";
-import { BoardSwimlane, SwimlaneColumnHeaderRow, type BoardColumnSpec } from "./BoardSwimlane";
-import { SINGLE_LANE_KEY, buildLaneDropId, parseLaneCardId, parseLaneDropId } from "./boardDropIds";
-import { AddStatusDialog } from "./AddStatusDialog";
-import { EmptyState } from "../table/EmptyState";
+import { BoardColumn } from "@/features/projects/components/views/board/BoardColumn";
+import { TaskCard } from "@/features/projects/components/views/board/TaskCard";
+import {
+  BoardSwimlane,
+  SwimlaneColumnHeaderRow,
+  type BoardColumnSpec,
+} from "@/features/projects/components/views/board/BoardSwimlane";
+import {
+  SINGLE_LANE_KEY,
+  buildLaneDropId,
+  parseLaneCardId,
+  parseLaneDropId,
+} from "@/features/projects/components/views/board/boardDropIds";
+import { AddStatusDialog } from "@/features/projects/components/views/board/AddStatusDialog";
+import { EmptyState } from "@/features/projects/components/views/table/EmptyState";
 import { useProjectPermission } from "@/features/projects/hooks/useProjectPermissions";
 import { randomUUID } from "@/shared/utils/uuid";
 
@@ -69,6 +78,20 @@ import { randomUUID } from "@/shared/utils/uuid";
 const NONE_COLUMN_KEY = "__none__";
 
 const NO_FIELDS: FieldDefinition[] = [];
+
+function bucketByColumn(
+  tasks: readonly Task[],
+  keyOf: (task: Task) => string,
+): Map<string, Task[]> {
+  const result = new Map<string, Task[]>();
+  for (const task of tasks) {
+    const key = keyOf(task);
+    const bucket = result.get(key) ?? [];
+    bucket.push(task);
+    result.set(key, bucket);
+  }
+  return result;
+}
 
 export function BoardView() {
   const dispatch = useAppDispatch();
@@ -170,6 +193,7 @@ export function BoardView() {
   const layoutColumnField = layoutColumnId ? fieldsById.get(layoutColumnId) : undefined;
   const columnField = layoutColumnField?.type === "single_select" ? layoutColumnField : statusField;
   const isStatusColumns = columnField?.id === SYSTEM_FIELD_IDS.STATUS;
+  const sameFieldAxes = !!groupBy && !!columnField && isFieldRef(groupBy.field, columnField.id);
   const columnOptions = [...(columnField?.config.options ?? [])].sort(
     (a, b) => a.sortOrder - b.sortOrder,
   );
@@ -195,14 +219,6 @@ export function BoardView() {
       paint: optionPaint([], undefined, false),
     });
   }
-  const byColumn = (laneTaskList: readonly Task[]): Record<string, Task[]> => {
-    const result: Record<string, Task[]> = {};
-    for (const task of laneTaskList) {
-      const key = columnKeyOf(task);
-      (result[key] ??= []).push(task);
-    }
-    return result;
-  };
 
   const doneStatusIds = new Set(
     statusOptions.filter((s) => statusSemanticOf(s) === "completed").map((s) => s.id),
@@ -343,6 +359,8 @@ export function BoardView() {
       return;
     }
 
+    if (sameFieldAxes && destLane !== destColumn) return;
+
     const laneChange = isSwimlaneMode && destLane !== source.laneKey;
     const columnChange = destColumn !== columnKeyOf(task);
 
@@ -357,7 +375,6 @@ export function BoardView() {
 
     const update: Omit<UpdateTaskRequest, "id"> = {};
     const optimistic: Partial<Task> = {};
-    let status: string | null = null;
     let warning: string | null = null;
 
     const apply = (write: GroupWrite) => {
@@ -368,7 +385,10 @@ export function BoardView() {
           toast.info(write.reason);
           return;
         case "status":
-          status = write.status;
+          update.status = write.status;
+          update.sortOrder = 0;
+          optimistic.status = write.status;
+          optimistic.sortOrder = 0;
           return;
         case "reparent": {
           const parentId = write.parentId;
@@ -406,13 +426,9 @@ export function BoardView() {
       optimistic.fieldValues = { ...task.fieldValues, ...update.fieldValues };
     }
 
-    const hasUpdate = Object.keys(update).length > 0;
-    if (status === null && !hasUpdate) return;
-    dispatch(
-      optimisticUpdateTask({ id: task.id, ...optimistic, ...(status !== null ? { status } : {}) }),
-    );
-    if (status !== null) dispatch(moveTask({ id: task.id, status, sortOrder: 0 }));
-    if (hasUpdate) dispatch(updateTask({ id: task.id, ...update }));
+    if (Object.keys(update).length === 0) return;
+    dispatch(optimisticUpdateTask({ id: task.id, ...optimistic }));
+    dispatch(updateTask({ id: task.id, ...update }));
     if (warning) toast.warning(warning);
   };
 
@@ -437,7 +453,7 @@ export function BoardView() {
   const activePriorityOption = activeTask
     ? priorityOptions.find((o) => o.id === activeTask.priority)
     : undefined;
-  const singleLaneColumns = byColumn(tasks);
+  const singleLaneColumns = bucketByColumn(tasks, columnKeyOf);
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
@@ -478,7 +494,8 @@ export function BoardView() {
                       : null
                   }
                   columns={columns}
-                  tasksByColumn={byColumn(lane.tasks)}
+                  sameFieldAxes={sameFieldAxes}
+                  tasksByColumn={bucketByColumn(lane.tasks, columnKeyOf)}
                   sums={groupSums(lane.tasks, numberFields)}
                   doneCount={lane.tasks.filter((t) => doneStatusIds.has(t.status)).length}
                   statusOptions={statusOptions}
@@ -496,7 +513,7 @@ export function BoardView() {
           ) : (
             <div className="flex gap-4 p-4 h-full min-w-max">
               {columns.map((column) => {
-                const columnTasks = singleLaneColumns[column.key] ?? [];
+                const columnTasks = singleLaneColumns.get(column.key) ?? [];
                 return (
                   <BoardColumn
                     key={column.key}

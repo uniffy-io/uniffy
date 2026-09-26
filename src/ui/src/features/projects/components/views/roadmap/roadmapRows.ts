@@ -5,6 +5,7 @@ export interface RoadmapTaskRow {
   kind: "task";
   /** Unique across groups: a task with two assignees shows once under each. */
   key: string;
+  groupKey: string | null;
   task: Task;
   depth: number;
   hasChildren: boolean;
@@ -19,17 +20,11 @@ export interface RoadmapGroupRow {
 
 export type RoadmapRow = RoadmapTaskRow | RoadmapGroupRow;
 
-/**
- * Flatten tasks into hierarchical row order: each parent immediately followed
- * by its (indented) descendants, respecting the collapsed set. Children whose
- * parent is absent from the set are promoted to roots so nothing is dropped.
- * The same ordered array drives the task list, the bars, and the dependency
- * lines, keeping every row index aligned across the three.
- */
+/** Shared row order keeps task labels, bars, and dependency lines aligned. */
 export function buildOrderedRows(
   tasks: Task[],
   collapsedIds: Set<string>,
-  keyPrefix = "",
+  groupKey: string | null = null,
 ): RoadmapTaskRow[] {
   const present = new Set(tasks.map((t) => t.id));
   const childrenByParent = new Map<string, Task[]>();
@@ -46,7 +41,8 @@ export function buildOrderedRows(
     const kids = childrenByParent.get(task.id) ?? [];
     rows.push({
       kind: "task",
-      key: `${keyPrefix}${task.id}`,
+      key: groupKey === null ? task.id : `${groupKey}:${task.id}`,
+      groupKey,
       task,
       depth,
       hasChildren: kids.length > 0,
@@ -71,7 +67,7 @@ export function buildGroupedRows(
   for (const group of groups) {
     const collapsed = collapsedGroups.has(group.key);
     rows.push({ kind: "group", key: `group:${group.key}`, group, collapsed });
-    if (!collapsed) rows.push(...buildOrderedRows(group.tasks, collapsedIds, `${group.key}:`));
+    if (!collapsed) rows.push(...buildOrderedRows(group.tasks, collapsedIds, group.key));
   }
   return rows;
 }
