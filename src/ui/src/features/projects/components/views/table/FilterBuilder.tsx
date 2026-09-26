@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import { Plus, X, CaretDown, Check } from "@phosphor-icons/react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { CheckSquare, Plus, Trash, Warning, X } from "@phosphor-icons/react";
 import {
   FilterLogic,
   RelativeDateAnchor,
@@ -7,39 +7,59 @@ import {
 } from "@uniffy/proto/projects/v1/projects_pb";
 import { useAppSelector } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
+import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
 import { Button } from "@/components/ui/button";
-import { Input, controlShellClass } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
+import { Input } from "@/components/ui/input";
+import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/ui/modal";
+import { MultiSelect } from "@/components/ui/multi-select";
 import { NumberInput } from "@/components/ui/number-input";
 import { popoverShellClass } from "@/components/ui/popover";
+import { Select, type SelectOption } from "@/components/ui/select";
 import { TagPicker } from "@/features/tags";
 import { PersonFilterInput } from "@/features/projects/components/views/table/PersonFilterInput";
+import { filterFieldOptions } from "@/features/projects/utils/filterFieldOptions";
+import { useViewCatalog } from "@/features/projects/hooks/useViewCatalog";
 import { selectTasksForProject } from "@/features/projects/store/projectsSlice";
 import { selectSprintsForProject } from "@/features/projects/store/sprintsSlice";
 import type { FieldDefinition } from "@/features/projects/types";
 import type {
+  ViewCatalog,
+  ViewFieldCapabilities,
   ViewFieldRef,
   ViewFilterCondition,
   ViewFilterDate,
   ViewFilterGroup,
   ViewFilterIdSet,
-  ViewFilterNode,
   ViewFilterValue,
+  ViewIdFlag,
 } from "@/features/projects/types/views";
 import { TASK_TYPES } from "@/features/projects/utils/taskTypes";
 import {
+  FILTER_PRESETS,
+  NO_ID_SET,
+  appendChild,
+  conditionProblem,
+  countNodes,
+  editorGroup,
+  fromEditorTree,
+  mapNode,
+  removeNode,
+  toEditorTree,
+  withPreset,
+  type EditorGroup,
+  type EditorNode,
+} from "@/features/projects/utils/filterTree";
+import {
   EMPTINESS_OPERATORS,
-  FILTERABLE_PSEUDO_FIELDS,
-  ID_FLAGS,
   ID_KINDS,
   OPERATOR_LABELS,
   SINGLE_ID_OPERATORS,
+  capabilitiesOf,
   fieldKindOf,
-  fieldRef,
   fieldRefFromKey,
   fieldRefKey,
   fieldRefLabel,
-  operatorsFor,
-  pseudoRef,
   type FieldKind,
 } from "@/features/projects/utils/viewFields";
 import { randomUUID } from "@/shared/utils/uuid";
@@ -54,37 +74,107 @@ interface FilterBuilderProps {
   className?: string;
 }
 
-interface Row {
-  id: string;
-  node: ViewFilterNode;
-}
-
-interface Choice {
-  value: string;
-  label: string;
-  color?: string;
-}
-
-const ACTIVE_SPRINT_CHOICE = "__active_sprint__";
-
-const DATE_MODES: Choice[] = [
-  { value: "fixed", label: "Exact date" },
-  { value: String(RelativeDateAnchor.TODAY), label: "Today" },
-  { value: String(RelativeDateAnchor.START_OF_WEEK), label: "Start of week" },
-  { value: String(RelativeDateAnchor.END_OF_WEEK), label: "End of week" },
-  { value: String(RelativeDateAnchor.START_OF_MONTH), label: "Start of month" },
-  { value: String(RelativeDateAnchor.END_OF_MONTH), label: "End of month" },
+/** Operators in reading order: equality, sets, comparisons, emptiness last. */
+const OPERATOR_ORDER: readonly Op[] = [
+  Op.IS,
+  Op.IS_NOT,
+  Op.IS_ANY_OF,
+  Op.IS_NONE_OF,
+  Op.IS_ALL_OF,
+  Op.CONTAINS,
+  Op.NOT_CONTAINS,
+  Op.GREATER_THAN,
+  Op.LESS_THAN,
+  Op.BEFORE,
+  Op.AFTER,
+  Op.ON_OR_BEFORE,
+  Op.ON_OR_AFTER,
+  Op.BETWEEN,
+  Op.IS_EMPTY,
+  Op.IS_NOT_EMPTY,
 ];
 
-const NO_ID_SET: ViewFilterIdSet = {
-  ids: [],
-  includeCurrentUser: false,
-  includeEmpty: false,
-  includeActiveSprint: false,
+type DateMode =
+  | "fixed"
+  | "today"
+  | "yesterday"
+  | "tomorrow"
+  | "startOfWeek"
+  | "endOfWeek"
+  | "startOfMonth"
+  | "endOfMonth";
+
+const DATE_MODES: SelectOption<DateMode>[] = [
+  { value: "fixed", label: "Exact date" },
+  { value: "today", label: "Today" },
+  { value: "yesterday", label: "Yesterday" },
+  { value: "tomorrow", label: "Tomorrow" },
+  { value: "startOfWeek", label: "Start of week" },
+  { value: "endOfWeek", label: "End of week" },
+  { value: "startOfMonth", label: "Start of month" },
+  { value: "endOfMonth", label: "End of month" },
+];
+
+const MODE_DATES: Record<Exclude<DateMode, "fixed">, [RelativeDateAnchor, number]> = {
+  today: [RelativeDateAnchor.TODAY, 0],
+  yesterday: [RelativeDateAnchor.TODAY, -1],
+  tomorrow: [RelativeDateAnchor.TODAY, 1],
+  startOfWeek: [RelativeDateAnchor.START_OF_WEEK, 0],
+  endOfWeek: [RelativeDateAnchor.END_OF_WEEK, 0],
+  startOfMonth: [RelativeDateAnchor.START_OF_MONTH, 0],
+  endOfMonth: [RelativeDateAnchor.END_OF_MONTH, 0],
 };
 
-function toRows(filter: ViewFilterGroup | null): Row[] {
-  return (filter?.nodes ?? []).map((node) => ({ id: randomUUID(), node }));
+function dateModeOf(date: ViewFilterDate): DateMode {
+  if (date.kind === "fixed") return "fixed";
+  const match = (Object.keys(MODE_DATES) as Exclude<DateMode, "fixed">[]).find(
+    (mode) => MODE_DATES[mode][0] === date.anchor && MODE_DATES[mode][1] === date.offsetDays,
+  );
+  if (match) return match;
+  return (
+    (Object.keys(MODE_DATES) as Exclude<DateMode, "fixed">[]).find(
+      (mode) => MODE_DATES[mode][0] === date.anchor && MODE_DATES[mode][1] === 0,
+    ) ?? "today"
+  );
+}
+
+/** Flags a non-person id field offers as options, with the word each reads as. */
+const FLAG_LABELS: Record<ViewIdFlag, (kind: FieldKind) => string> = {
+  includeCurrentUser: () => "Me",
+  includeActiveSprint: () => "Active sprint",
+  includeEmpty: (kind) =>
+    kind === "sprint"
+      ? "Backlog"
+      : kind === "tags"
+        ? "Untagged"
+        : kind === "epic"
+          ? "No epic"
+          : kind === "task_ref"
+            ? "No parent"
+            : kind === "task_ref_set"
+              ? "Not blocked by anything"
+              : "No value",
+};
+
+const FLAG_PREFIX = "__flag:";
+
+/** The order flags are offered in: the viewer, then the active sprint, then "none". */
+const FLAG_ORDER: readonly ViewIdFlag[] = [
+  "includeCurrentUser",
+  "includeActiveSprint",
+  "includeEmpty",
+];
+
+function orderedOperators(capabilities: ViewFieldCapabilities | null): Op[] {
+  const allowed = new Set(capabilities?.operators ?? []);
+  return OPERATOR_ORDER.filter((operator) => allowed.has(operator));
+}
+
+function defaultOperator(capabilities: ViewFieldCapabilities | null): Op | null {
+  const operators = orderedOperators(capabilities);
+  if (operators.includes(Op.IS_ANY_OF)) return Op.IS_ANY_OF;
+  if (operators.includes(Op.CONTAINS)) return Op.CONTAINS;
+  return operators.find((operator) => !EMPTINESS_OPERATORS.has(operator)) ?? operators[0] ?? null;
 }
 
 function blankValue(kind: FieldKind, operator: Op): ViewFilterValue | null {
@@ -94,43 +184,7 @@ function blankValue(kind: FieldKind, operator: Op): ViewFilterValue | null {
   return null;
 }
 
-function idCount(set: ViewFilterIdSet): number {
-  return (
-    set.ids.length +
-    Number(set.includeCurrentUser) +
-    Number(set.includeEmpty) +
-    Number(set.includeActiveSprint)
-  );
-}
-
-function isDateComplete(date: ViewFilterDate): boolean {
-  return date.kind === "relative" || /^\d{4}-\d{2}-\d{2}$/.test(date.date);
-}
-
-/** Incomplete rows stay in the editor but never reach the view: the backend would refuse them. */
-function isComplete(condition: ViewFilterCondition): boolean {
-  if (EMPTINESS_OPERATORS.has(condition.operator)) return condition.value === null;
-  const value = condition.value;
-  if (!value) return false;
-  switch (value.kind) {
-    case "ids": {
-      const count = idCount(value.ids);
-      return SINGLE_ID_OPERATORS.has(condition.operator) ? count === 1 : count > 0;
-    }
-    case "text":
-      return value.text.trim().length > 0;
-    case "number":
-      return Number.isFinite(value.number);
-    case "numberRange":
-      return Number.isFinite(value.min) && Number.isFinite(value.max) && value.min <= value.max;
-    case "date":
-      return isDateComplete(value.date);
-    case "dateRange":
-      return isDateComplete(value.start) && isDateComplete(value.end);
-    case "flag":
-      return true;
-  }
-}
+const CONTROL = "h-11 md:h-7";
 
 export function FilterBuilder({
   projectId,
@@ -140,60 +194,30 @@ export function FilterBuilder({
   onClose,
   className,
 }: FilterBuilderProps) {
+  const { isMobile } = useBreakpoint();
+  const catalog = useViewCatalog();
   const containerRef = useRef<HTMLDivElement>(null);
-  const [rows, setRows] = useState<Row[]>(() => toRows(filter));
-  const [logic, setLogic] = useState<FilterLogic>(filter?.logic ?? FilterLogic.AND);
-
+  const [root, setRoot] = useState<EditorGroup>(() => toEditorTree(filter));
   const fieldsById = useMemo(() => new Map(fields.map((field) => [field.id, field])), [fields]);
-  const fieldChoices: Choice[] = useMemo(
-    () => [
-      ...fields.map((field) => ({ value: fieldRefKey(fieldRef(field.id)), label: field.name })),
-      ...FILTERABLE_PSEUDO_FIELDS.map((pseudo) => ({
-        value: fieldRefKey(pseudoRef(pseudo)),
-        label: fieldRefLabel(pseudoRef(pseudo), fieldsById),
-      })),
-    ],
-    [fields, fieldsById],
-  );
 
   useEffect(() => {
+    if (isMobile) return;
     const handleClickOutside = (e: MouseEvent) => {
       // Pickers render in body portals; a pick there must not discard the draft.
       if (e.target instanceof Element && e.target.closest("[data-select-portal]")) return;
+      // The trigger toggles the builder itself; closing here would reopen it on the click.
+      if (e.target instanceof Element && e.target.closest("[data-filter-trigger]")) return;
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         onClose();
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [onClose]);
-
-  const conditionFor = (ref: ViewFieldRef): ViewFilterCondition | null => {
-    const kind = fieldKindOf(ref, fieldsById);
-    if (!kind) return null;
-    const operator = operatorsFor(kind, ref)[0];
-    return { field: ref, operator, value: blankValue(kind, operator) };
-  };
-
-  const addCondition = () => {
-    const first = fields[0] ? fieldRef(fields[0].id) : pseudoRef(FILTERABLE_PSEUDO_FIELDS[0]);
-    const condition = conditionFor(first);
-    if (condition) {
-      setRows([...rows, { id: randomUUID(), node: { kind: "condition", condition } }]);
-    }
-  };
-
-  const updateCondition = (id: string, condition: ViewFilterCondition) => {
-    setRows(
-      rows.map((row) => (row.id === id ? { id, node: { kind: "condition", condition } } : row)),
-    );
-  };
+  }, [isMobile, onClose]);
 
   const handleApply = () => {
-    const nodes = rows
-      .map((row) => row.node)
-      .filter((node) => node.kind === "group" || isComplete(node.condition));
-    onApply(nodes.length === 0 ? null : { logic, nodes });
+    if (!catalog) return;
+    onApply(fromEditorTree(root, catalog.filterLimits));
     onClose();
   };
 
@@ -202,129 +226,315 @@ export function FilterBuilder({
     onClose();
   };
 
+  const body = catalog ? (
+    <FilterEditor
+      projectId={projectId}
+      fields={fields}
+      fieldsById={fieldsById}
+      catalog={catalog}
+      root={root}
+      onChange={setRoot}
+    />
+  ) : (
+    <p className="text-sm text-muted-foreground py-4 text-center">Loading filters...</p>
+  );
+
+  const actions = (
+    <>
+      {filter && (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-11 md:h-7 text-xs text-muted-foreground"
+          onClick={handleClear}
+        >
+          Clear all
+        </Button>
+      )}
+      <Button size="sm" className="h-11 md:h-7 text-xs" onClick={handleApply} disabled={!catalog}>
+        Apply
+      </Button>
+    </>
+  );
+
+  if (isMobile) {
+    return (
+      <Modal onClose={onClose} anchor="top" maxWidth="max-w-lg">
+        <ModalHeader title="Filter tasks" onClose={onClose} />
+        <ModalBody scrollable={false} className="flex-1 min-h-0 overflow-y-auto px-4 py-4">
+          {body}
+        </ModalBody>
+        <ModalFooter className="px-4 py-3">{actions}</ModalFooter>
+      </Modal>
+    );
+  }
+
   return (
     <div
       ref={containerRef}
       className={cn(
         popoverShellClass,
-        "absolute top-full right-0 z-50 mt-2 w-[min(560px,calc(100vw-2rem))]",
+        "absolute top-full right-0 z-50 mt-2 w-[min(680px,calc(100vw-2rem))]",
         className,
       )}
     >
       <div className="p-3 border-b border-border/60">
         <span className="text-sm font-medium text-foreground">Filter tasks</span>
       </div>
-
-      <div className="p-3 space-y-2 max-h-[320px] overflow-y-auto">
-        {rows.length === 0 && (
-          <p className="text-sm text-muted-foreground py-2 text-center">
-            No filters applied. Add a condition to filter tasks.
-          </p>
-        )}
-
-        {rows.map((row, index) => (
-          <div key={row.id} className="flex items-center gap-2">
-            {index === 0 ? (
-              <span className="w-12 text-xs text-muted-foreground text-right shrink-0">Where</span>
-            ) : (
-              <button
-                type="button"
-                onClick={() =>
-                  setLogic(logic === FilterLogic.OR ? FilterLogic.AND : FilterLogic.OR)
-                }
-                className="w-12 text-xs font-medium text-primary text-right shrink-0 hover:underline"
-              >
-                {logic === FilterLogic.OR ? "OR" : "AND"}
-              </button>
-            )}
-
-            {row.node.kind === "group" ? (
-              <span className="flex-1 text-xs text-muted-foreground">
-                A group of {row.node.group.nodes.length} conditions
-              </span>
-            ) : (
-              <ConditionRow
-                projectId={projectId}
-                condition={row.node.condition}
-                fieldChoices={fieldChoices}
-                fieldsById={fieldsById}
-                onFieldChange={(key) => {
-                  const ref = fieldRefFromKey(key);
-                  const condition = ref ? conditionFor(ref) : null;
-                  if (condition) updateCondition(row.id, condition);
-                }}
-                onChange={(condition) => updateCondition(row.id, condition)}
-              />
-            )}
-
-            <button
-              type="button"
-              onClick={() => setRows(rows.filter((other) => other.id !== row.id))}
-              className="p-1 rounded hover:bg-muted transition-colors shrink-0"
-              title="Remove condition"
-            >
-              <X size={12} className="text-muted-foreground" />
-            </button>
-          </div>
-        ))}
-      </div>
-
-      <div className="flex items-center justify-between p-3 border-t border-border/60">
-        <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={addCondition}>
-          <Plus size={12} className="mr-1" />
-          Add condition
-        </Button>
-
-        <div className="flex items-center gap-2">
-          {filter && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 text-xs text-muted-foreground"
-              onClick={handleClear}
-            >
-              Clear all
-            </Button>
-          )}
-          <Button size="sm" className="h-7 text-xs" onClick={handleApply}>
-            Apply
-          </Button>
-        </div>
+      <div className="p-3 max-h-[min(460px,60dvh)] overflow-y-auto">{body}</div>
+      <div className="flex items-center justify-end gap-2 p-3 border-t border-border/60">
+        {actions}
       </div>
     </div>
   );
 }
 
-interface ConditionRowProps {
+interface EditorContext {
   projectId: string;
-  condition: ViewFilterCondition;
-  fieldChoices: Choice[];
   fieldsById: ReadonlyMap<string, FieldDefinition>;
-  onFieldChange: (key: string) => void;
-  onChange: (condition: ViewFilterCondition) => void;
+  catalog: ViewCatalog;
+  fieldOptions: SelectOption[];
+  canAddNode: boolean;
+  update: (id: string, next: (node: EditorNode) => EditorNode) => void;
+  remove: (id: string) => void;
+  add: (groupId: string, node: EditorNode) => void;
+  newCondition: () => EditorNode | null;
+}
+
+function FilterEditor({
+  projectId,
+  fields,
+  fieldsById,
+  catalog,
+  root,
+  onChange,
+}: {
+  projectId: string;
+  fields: FieldDefinition[];
+  fieldsById: ReadonlyMap<string, FieldDefinition>;
+  catalog: ViewCatalog;
+  root: EditorGroup;
+  onChange: (root: EditorGroup) => void;
+}) {
+  const fieldOptions = useMemo(
+    () => filterFieldOptions(fields, fieldsById, catalog),
+    [fields, fieldsById, catalog],
+  );
+
+  const newCondition = (): EditorNode | null => {
+    const key = fieldOptions[0]?.value;
+    const ref = key ? fieldRefFromKey(key) : null;
+    const condition = ref ? conditionFor(ref, fieldsById, catalog) : null;
+    return condition ? { id: randomUUID(), kind: "condition", condition } : null;
+  };
+
+  const context: EditorContext = {
+    projectId,
+    fieldsById,
+    catalog,
+    fieldOptions,
+    canAddNode: countNodes(root) < catalog.filterLimits.maxNodes,
+    update: (id, next) => onChange(mapNode(root, id, next)),
+    remove: (id) => onChange(removeNode(root, id)),
+    add: (groupId, node) => onChange(appendChild(root, groupId, node)),
+    newCondition,
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center gap-1.5">
+        <span className="text-xs text-muted-foreground mr-1">Presets</span>
+        {FILTER_PRESETS.map(({ preset, label }) => (
+          <button
+            key={preset}
+            type="button"
+            disabled={!context.canAddNode}
+            onClick={() => onChange(withPreset(root, preset))}
+            className="h-11 md:h-6 px-2.5 rounded-full text-xs bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/70 transition-colors disabled:opacity-50"
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      <GroupEditor group={root} depth={1} context={context} />
+    </div>
+  );
+}
+
+function conditionFor(
+  ref: ViewFieldRef,
+  fieldsById: ReadonlyMap<string, FieldDefinition>,
+  catalog: ViewCatalog,
+): ViewFilterCondition | null {
+  const kind = fieldKindOf(ref, fieldsById);
+  const operator = defaultOperator(capabilitiesOf(ref, fieldsById, catalog));
+  if (!kind || operator === null) return null;
+  return { field: ref, operator, value: blankValue(kind, operator) };
+}
+
+function GroupEditor({
+  group,
+  depth,
+  context,
+  onRemove,
+}: {
+  group: EditorGroup;
+  depth: number;
+  context: EditorContext;
+  onRemove?: () => void;
+}) {
+  const nested = depth > 1;
+  const canNest = depth < context.catalog.filterLimits.maxDepth;
+  const toggleLogic = () =>
+    context.update(group.id, (node) =>
+      node.kind === "group"
+        ? { ...node, logic: node.logic === FilterLogic.OR ? FilterLogic.AND : FilterLogic.OR }
+        : node,
+    );
+
+  return (
+    <div className={cn("space-y-2", nested && "rounded-lg bg-muted/40 p-1.5 md:p-2")}>
+      {nested && (
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-xs text-muted-foreground">
+            {group.logic === FilterLogic.OR ? "Any of these" : "All of these"}
+          </span>
+          <button
+            type="button"
+            onClick={onRemove}
+            className="h-11 w-11 md:h-6 md:w-6 inline-flex items-center justify-center rounded hover:bg-muted transition-colors"
+            title="Remove group"
+          >
+            <Trash size={12} className="text-muted-foreground" />
+          </button>
+        </div>
+      )}
+
+      {group.children.length === 0 && (
+        <p className="text-sm text-muted-foreground py-2 text-center">
+          {nested
+            ? "An empty group matches every task."
+            : "No filters applied. Add a condition or pick a preset."}
+        </p>
+      )}
+
+      {group.children.map((child, index) => (
+        <div key={child.id} className="flex items-start gap-2">
+          {index === 0 ? (
+            <span className="w-9 md:w-12 pt-3 md:pt-1.5 text-xs text-muted-foreground text-right shrink-0">
+              Where
+            </span>
+          ) : (
+            <button
+              type="button"
+              onClick={toggleLogic}
+              className="w-9 md:w-12 h-11 md:h-7 text-xs font-medium text-primary text-right shrink-0 hover:underline"
+              title="Switch between and / or for this group"
+            >
+              {group.logic === FilterLogic.OR ? "or" : "and"}
+            </button>
+          )}
+          <div className="flex-1 min-w-0">
+            {child.kind === "group" ? (
+              <GroupEditor
+                group={child}
+                depth={depth + 1}
+                context={context}
+                onRemove={() => context.remove(child.id)}
+              />
+            ) : (
+              <ConditionRow
+                condition={child.condition}
+                context={context}
+                onChange={(condition) => context.update(child.id, () => ({ ...child, condition }))}
+                onRemove={() => context.remove(child.id)}
+              />
+            )}
+          </div>
+        </div>
+      ))}
+
+      <div className="flex flex-wrap items-center gap-1 pl-11 md:pl-14">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-11 md:h-7 text-xs"
+          disabled={!context.canAddNode}
+          onClick={() => {
+            const node = context.newCondition();
+            if (node) context.add(group.id, node);
+          }}
+        >
+          <Plus size={12} className="mr-1" />
+          Add condition
+        </Button>
+        {canNest && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-11 md:h-7 text-xs"
+            disabled={!context.canAddNode}
+            onClick={() => {
+              const node = context.newCondition();
+              context.add(
+                group.id,
+                editorGroup(
+                  group.logic === FilterLogic.OR ? FilterLogic.AND : FilterLogic.OR,
+                  node ? [node] : [],
+                ),
+              );
+            }}
+          >
+            <Plus size={12} className="mr-1" />
+            Add group
+          </Button>
+        )}
+      </div>
+    </div>
+  );
 }
 
 function ConditionRow({
-  projectId,
   condition,
-  fieldChoices,
-  fieldsById,
-  onFieldChange,
+  context,
   onChange,
-}: ConditionRowProps) {
+  onRemove,
+}: {
+  condition: ViewFilterCondition;
+  context: EditorContext;
+  onChange: (condition: ViewFilterCondition) => void;
+  onRemove: () => void;
+}) {
+  const { fieldsById, catalog } = context;
   const kind = fieldKindOf(condition.field, fieldsById);
-  const operators = kind ? operatorsFor(kind, condition.field) : [];
+  const capabilities = capabilitiesOf(condition.field, fieldsById, catalog);
+  const operators = orderedOperators(capabilities);
   const key = fieldRefKey(condition.field);
-  const choices = fieldChoices.some((choice) => choice.value === key)
-    ? fieldChoices
-    : [...fieldChoices, { value: key, label: fieldRefLabel(condition.field, fieldsById) }];
+  const problem = conditionProblem(condition, fieldsById);
+  const fieldOptions = context.fieldOptions.some((option) => option.value === key)
+    ? context.fieldOptions
+    : [
+        ...context.fieldOptions,
+        {
+          value: key,
+          label: fieldRefLabel(condition.field, fieldsById),
+          icon: <Warning size={14} className="text-red-600 dark:text-red-400 shrink-0" />,
+        },
+      ];
+
+  const changeField = (nextKey: string) => {
+    const ref = fieldRefFromKey(nextKey);
+    const next = ref ? conditionFor(ref, fieldsById, catalog) : null;
+    if (next) onChange(next);
+  };
 
   const changeOperator = (operator: Op) => {
     if (!kind) return;
     const keepsValue =
       !EMPTINESS_OPERATORS.has(operator) &&
       !EMPTINESS_OPERATORS.has(condition.operator) &&
-      (operator === Op.BETWEEN) === (condition.operator === Op.BETWEEN);
+      (operator === Op.BETWEEN) === (condition.operator === Op.BETWEEN) &&
+      SINGLE_ID_OPERATORS.has(operator) === SINGLE_ID_OPERATORS.has(condition.operator);
     onChange({
       ...condition,
       operator,
@@ -333,179 +543,101 @@ function ConditionRow({
   };
 
   return (
-    <>
-      <ChoiceSelect value={key} choices={choices} onChange={onFieldChange} minWidth={110} />
-      <ChoiceSelect
-        value={String(condition.operator)}
-        choices={operators.map((operator) => ({
-          value: String(operator),
-          label: OPERATOR_LABELS.get(operator) ?? "",
-        }))}
-        onChange={(value) => changeOperator(Number(value) as Op)}
-        minWidth={100}
-      />
-      {kind && !EMPTINESS_OPERATORS.has(condition.operator) && (
-        <ConditionValueInput
-          projectId={projectId}
-          kind={kind}
-          condition={condition}
-          fieldsById={fieldsById}
-          onChange={(value) => onChange({ ...condition, value })}
-        />
-      )}
-      {(!kind || EMPTINESS_OPERATORS.has(condition.operator)) && <span className="flex-1" />}
-    </>
-  );
-}
-
-interface ChoiceSelectProps {
-  value: string | string[];
-  choices: Choice[];
-  onChange: (value: string) => void;
-  placeholder?: string;
-  minWidth?: number;
-}
-
-/** A compact dropdown; with an array value each pick toggles one choice and the menu stays open. */
-function ChoiceSelect({ value, choices, onChange, placeholder, minWidth = 80 }: ChoiceSelectProps) {
-  const [isOpen, setIsOpen] = useState(false);
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-  const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0, width: 0 });
-  const multiple = Array.isArray(value);
-  const picked = multiple ? value : [value];
-  const selected = choices.filter((choice) => picked.includes(choice.value));
-  const label =
-    selected.length === 0
-      ? (placeholder ?? "Select...")
-      : selected.length === 1
-        ? selected[0].label
-        : `${selected[0].label} +${selected.length - 1}`;
-
-  const handleClose = useCallback(() => setIsOpen(false), []);
-
-  const handleToggle = useCallback(() => {
-    if (!isOpen && triggerRef.current) {
-      const rect = triggerRef.current.getBoundingClientRect();
-      setDropdownPos({ top: rect.bottom + 4, left: rect.left, width: Math.max(rect.width, 160) });
-    }
-    setIsOpen((prev) => !prev);
-  }, [isOpen]);
-
-  useEffect(() => {
-    if (!isOpen) return;
-    const handleClickOutside = (e: MouseEvent) => {
-      const target = e.target as Node;
-      if (!triggerRef.current?.contains(target) && !dropdownRef.current?.contains(target)) {
-        handleClose();
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isOpen, handleClose]);
-
-  return (
-    <div className="flex-1" style={{ minWidth }}>
-      <button
-        ref={triggerRef}
-        type="button"
-        onClick={handleToggle}
+    <div className="space-y-1">
+      <div
         className={cn(
-          controlShellClass,
-          "focus-ring flex items-center justify-between gap-1 w-full h-7 px-2 text-xs",
-          isOpen && "border-border-strong",
-          selected.length > 0 ? "text-foreground" : "text-subtle-foreground",
+          "flex flex-wrap md:flex-nowrap items-start gap-1.5",
+          problem && "rounded-md ring-1 ring-red-500/60 p-1",
         )}
       >
-        <span className="truncate flex-1 text-left">
-          {selected.length === 1 && selected[0].color && (
-            <span
-              className="inline-block w-2 h-2 rounded-full mr-1.5 align-middle"
-              style={{ backgroundColor: selected[0].color }}
-            />
-          )}
-          {label}
-        </span>
-        <CaretDown
-          size={10}
-          className={cn(
-            "shrink-0 text-muted-foreground transition-transform",
-            isOpen && "rotate-180",
-          )}
+        <Select
+          value={key}
+          options={fieldOptions}
+          onChange={changeField}
+          size="sm"
+          searchable
+          searchPlaceholder="Search fields..."
+          menuMinWidth={200}
+          className="w-[calc(100%-3.25rem)] md:w-40 shrink-0"
+          triggerClassName={cn(CONTROL, "w-full min-w-0")}
+          ariaLabel="Field"
         />
-      </button>
-
-      {isOpen && (
-        <div
-          ref={dropdownRef}
-          data-select-portal
-          className={cn(
-            popoverShellClass,
-            "fixed z-[100] py-1 max-h-56 overflow-y-auto animate-in fade-in-0 zoom-in-95",
-          )}
-          style={{ top: dropdownPos.top, left: dropdownPos.left, width: dropdownPos.width }}
+        <button
+          type="button"
+          onClick={onRemove}
+          className="h-11 w-11 inline-flex items-center justify-center rounded hover:bg-muted transition-colors shrink-0 md:hidden"
+          title="Remove condition"
         >
-          {choices.length === 0 && (
-            <div className="px-2.5 py-1.5 text-xs text-muted-foreground">Nothing to pick</div>
-          )}
-          {choices.map((choice) => {
-            const isActive = picked.includes(choice.value);
-            return (
-              <button
-                key={choice.value}
-                type="button"
-                onClick={() => {
-                  onChange(choice.value);
-                  if (!multiple) setIsOpen(false);
-                }}
-                className={cn(
-                  "flex w-full items-center gap-2 px-2.5 py-1.5 text-xs transition-colors",
-                  isActive ? "bg-primary/10 text-primary" : "text-foreground hover:bg-muted",
-                )}
-              >
-                {choice.color && (
-                  <span
-                    className="w-2 h-2 rounded-full shrink-0"
-                    style={{ backgroundColor: choice.color }}
-                  />
-                )}
-                <span className="flex-1 text-left truncate">{choice.label}</span>
-                {isActive && <Check size={12} weight="bold" className="shrink-0" />}
-              </button>
-            );
-          })}
-        </div>
+          <X size={12} className="text-muted-foreground" />
+        </button>
+        <Select
+          value={operators.includes(condition.operator) ? condition.operator : undefined}
+          options={operators.map((operator) => ({
+            value: operator,
+            label: OPERATOR_LABELS.get(operator) ?? "",
+          }))}
+          onChange={changeOperator}
+          size="sm"
+          placeholder="Operator"
+          className="w-full md:w-32 shrink-0"
+          triggerClassName={cn(CONTROL, "w-full min-w-0")}
+          ariaLabel="Operator"
+        />
+        {kind && !EMPTINESS_OPERATORS.has(condition.operator) ? (
+          <div className="w-full md:w-auto md:flex-1 min-w-0">
+            <ConditionValueInput
+              kind={kind}
+              condition={condition}
+              capabilities={capabilities}
+              context={context}
+              onChange={(value) => onChange({ ...condition, value })}
+            />
+          </div>
+        ) : (
+          <span className="hidden md:block flex-1" />
+        )}
+        <button
+          type="button"
+          onClick={onRemove}
+          className="hidden md:inline-flex h-7 w-7 items-center justify-center rounded hover:bg-muted transition-colors shrink-0"
+          title="Remove condition"
+        >
+          <X size={12} className="text-muted-foreground" />
+        </button>
+      </div>
+      {problem && (
+        <p className="flex items-center gap-1 text-xs text-red-600 dark:text-red-400">
+          <Warning size={12} className="shrink-0" />
+          {problem}
+        </p>
       )}
     </div>
   );
 }
 
-const VALUE_INPUT_CLASS = "h-7 px-2 text-xs flex-1 min-w-[80px]";
-
-interface ConditionValueInputProps {
-  projectId: string;
-  kind: FieldKind;
-  condition: ViewFilterCondition;
-  fieldsById: ReadonlyMap<string, FieldDefinition>;
-  onChange: (value: ViewFilterValue | null) => void;
-}
-
 function ConditionValueInput({
-  projectId,
   kind,
   condition,
-  fieldsById,
+  capabilities,
+  context,
   onChange,
-}: ConditionValueInputProps) {
+}: {
+  kind: FieldKind;
+  condition: ViewFilterCondition;
+  capabilities: ViewFieldCapabilities | null;
+  context: EditorContext;
+  onChange: (value: ViewFilterValue | null) => void;
+}) {
   const { operator, value } = condition;
+  const limits = context.catalog.filterLimits;
 
   if (ID_KINDS.has(kind)) {
     return (
       <IdValueInput
-        projectId={projectId}
         kind={kind}
         condition={condition}
-        fieldsById={fieldsById}
+        flags={capabilities?.idFlags ?? []}
+        context={context}
         set={value?.kind === "ids" ? value.ids : NO_ID_SET}
         onChange={(ids) => onChange({ kind: "ids", ids })}
       />
@@ -514,50 +646,45 @@ function ConditionValueInput({
 
   if (kind === "boolean") {
     return (
-      <ChoiceSelect
+      <Select
         value={value?.kind === "flag" && !value.flag ? "no" : "yes"}
-        choices={[
+        options={[
           { value: "yes", label: "Yes" },
           { value: "no", label: "No" },
         ]}
         onChange={(choice) => onChange({ kind: "flag", flag: choice === "yes" })}
+        size="sm"
+        triggerClassName={cn(CONTROL, "w-full")}
+        ariaLabel="Value"
       />
     );
   }
 
   if (kind === "number") {
+    const numberInput = (current: number, placeholder: string, set: (next: number) => void) => (
+      <NumberInput
+        value={Number.isFinite(current) ? String(current) : ""}
+        onChange={(e) => set(e.target.value ? Number(e.target.value) : NaN)}
+        placeholder={placeholder}
+        className={cn(CONTROL, "px-2 text-xs flex-1 min-w-0")}
+      />
+    );
     if (operator === Op.BETWEEN) {
       const range = value?.kind === "numberRange" ? value : { min: NaN, max: NaN };
-      const update = (min: number, max: number) => onChange({ kind: "numberRange", min, max });
       return (
-        <div className="flex items-center gap-1 flex-1 min-w-40">
-          <NumberInput
-            value={Number.isFinite(range.min) ? String(range.min) : ""}
-            onChange={(e) => update(e.target.value ? Number(e.target.value) : NaN, range.max)}
-            placeholder="Min"
-            className={VALUE_INPUT_CLASS}
-          />
-          <span className="text-xs text-muted-foreground">to</span>
-          <NumberInput
-            value={Number.isFinite(range.max) ? String(range.max) : ""}
-            onChange={(e) => update(range.min, e.target.value ? Number(e.target.value) : NaN)}
-            placeholder="Max"
-            className={VALUE_INPUT_CLASS}
-          />
+        <div className="flex items-center gap-1">
+          {numberInput(range.min, "Min", (min) =>
+            onChange({ kind: "numberRange", min, max: range.max }),
+          )}
+          <span className="text-xs text-muted-foreground">and</span>
+          {numberInput(range.max, "Max", (max) =>
+            onChange({ kind: "numberRange", min: range.min, max }),
+          )}
         </div>
       );
     }
-    return (
-      <NumberInput
-        value={
-          value?.kind === "number" && Number.isFinite(value.number) ? String(value.number) : ""
-        }
-        onChange={(e) =>
-          onChange(e.target.value ? { kind: "number", number: Number(e.target.value) } : null)
-        }
-        placeholder="Value..."
-        className={VALUE_INPUT_CLASS}
-      />
+    return numberInput(value?.kind === "number" ? value.number : NaN, "Value...", (number) =>
+      onChange(Number.isFinite(number) ? { kind: "number", number } : null),
     );
   }
 
@@ -568,14 +695,16 @@ function ConditionValueInput({
       const end: ViewFilterDate =
         value?.kind === "dateRange" ? value.end : { kind: "fixed", date: "" };
       return (
-        <div className="flex items-center gap-1 flex-1 min-w-60 flex-wrap">
+        <div className="space-y-1">
           <DateValueInput
             date={start}
+            maxOffset={limits.maxRelativeOffsetDays}
             onChange={(next) => onChange({ kind: "dateRange", start: next, end })}
           />
-          <span className="text-xs text-muted-foreground">to</span>
           <DateValueInput
             date={end}
+            prefix="and"
+            maxOffset={limits.maxRelativeOffsetDays}
             onChange={(next) => onChange({ kind: "dateRange", start, end: next })}
           />
         </div>
@@ -584,6 +713,7 @@ function ConditionValueInput({
     return (
       <DateValueInput
         date={value?.kind === "date" ? value.date : { kind: "fixed", date: "" }}
+        maxOffset={limits.maxRelativeOffsetDays}
         onChange={(date) => onChange({ kind: "date", date })}
       />
     );
@@ -593,175 +723,202 @@ function ConditionValueInput({
     <Input
       type="text"
       value={value?.kind === "text" ? value.text : ""}
+      maxLength={limits.maxTextLength}
       onChange={(e) => onChange(e.target.value ? { kind: "text", text: e.target.value } : null)}
       placeholder="Value..."
-      className={VALUE_INPUT_CLASS}
+      className={cn(CONTROL, "px-2 text-xs w-full")}
     />
   );
 }
 
 function DateValueInput({
   date,
+  prefix,
+  maxOffset,
   onChange,
 }: {
   date: ViewFilterDate;
+  prefix?: ReactNode;
+  maxOffset: number;
   onChange: (date: ViewFilterDate) => void;
 }) {
-  const mode = date.kind === "fixed" ? "fixed" : String(date.anchor);
+  const mode = dateModeOf(date);
   return (
-    <div className="flex items-center gap-1 flex-1 min-w-40">
-      <ChoiceSelect
+    <div className="flex items-center gap-1 min-w-0">
+      {prefix && <span className="text-xs text-muted-foreground w-7 shrink-0">{prefix}</span>}
+      <Select
         value={mode}
-        choices={DATE_MODES}
-        onChange={(next) =>
-          onChange(
-            next === "fixed"
-              ? { kind: "fixed", date: "" }
-              : { kind: "relative", anchor: Number(next) as RelativeDateAnchor, offsetDays: 0 },
-          )
-        }
-        minWidth={100}
+        options={DATE_MODES}
+        onChange={(next) => {
+          if (next === "fixed") {
+            onChange({ kind: "fixed", date: "" });
+            return;
+          }
+          const [anchor, offsetDays] = MODE_DATES[next];
+          onChange({ kind: "relative", anchor, offsetDays });
+        }}
+        size="sm"
+        className="w-32 min-w-0 shrink"
+        triggerClassName={cn(CONTROL, "w-full min-w-0")}
+        ariaLabel="Date"
       />
       {date.kind === "fixed" ? (
-        <Input
-          type="date"
+        <DatePicker
           value={date.date}
-          onChange={(e) => onChange({ kind: "fixed", date: e.target.value })}
-          className={VALUE_INPUT_CLASS}
+          onChange={(next) => onChange({ kind: "fixed", date: next })}
+          size="sm"
+          className="flex-1 min-w-0"
         />
       ) : (
         <NumberInput
           value={date.offsetDays === 0 ? "" : String(date.offsetDays)}
-          onChange={(e) =>
-            onChange({
-              ...date,
-              offsetDays: e.target.value ? Math.trunc(Number(e.target.value)) : 0,
-            })
-          }
+          onChange={(e) => {
+            const raw = e.target.value ? Math.trunc(Number(e.target.value)) : 0;
+            const offsetDays = Math.max(-maxOffset, Math.min(maxOffset, raw || 0));
+            onChange({ ...date, offsetDays });
+          }}
           placeholder="± days"
-          title="Days after (or, negative, before) the anchor"
-          className="h-7 px-2 text-xs w-20"
+          title="Days after (or, negative, before) the date picked"
+          className={cn(CONTROL, "px-2 text-xs w-16 min-w-0 shrink")}
         />
       )}
     </div>
   );
 }
 
-interface IdValueInputProps {
-  projectId: string;
-  kind: FieldKind;
-  condition: ViewFilterCondition;
-  fieldsById: ReadonlyMap<string, FieldDefinition>;
-  set: ViewFilterIdSet;
-  onChange: (set: ViewFilterIdSet) => void;
-}
-
 function IdValueInput({
-  projectId,
   kind,
   condition,
-  fieldsById,
+  flags,
+  context,
   set,
   onChange,
-}: IdValueInputProps) {
+}: {
+  kind: FieldKind;
+  condition: ViewFilterCondition;
+  flags: readonly ViewIdFlag[];
+  context: EditorContext;
+  set: ViewFilterIdSet;
+  onChange: (set: ViewFilterIdSet) => void;
+}) {
+  const { projectId, fieldsById } = context;
   const selectProjectTasks = useMemo(() => selectTasksForProject(projectId), [projectId]);
   const tasks = useAppSelector(selectProjectTasks);
   const sprints = useAppSelector(selectSprintsForProject(projectId));
   const single = SINGLE_ID_OPERATORS.has(condition.operator);
-  const flags = ID_FLAGS[kind] ?? [];
-
-  if (kind === "tags") {
-    return (
-      <div className="flex-1 min-w-[160px]">
-        <TagPicker
-          selectedTagIds={set.ids}
-          onChange={(ids) => onChange({ ...set, ids })}
-          placeholder="Pick tags"
-        />
-      </div>
-    );
-  }
+  // "Is all of" a set that includes empty is contradictory; the server refuses it.
+  const usableFlags = FLAG_ORDER.filter(
+    (flag) =>
+      flags.includes(flag) && !(flag === "includeEmpty" && condition.operator === Op.IS_ALL_OF),
+  );
 
   if (kind === "person" || kind === "single_person") {
-    const me = set.includeCurrentUser;
+    return <PersonFilterInput set={set} flags={usableFlags} single={single} onChange={onChange} />;
+  }
+
+  if (kind === "tags") {
+    const untagged = usableFlags.includes("includeEmpty");
     return (
-      <div className="flex items-center gap-1 flex-1 min-w-[180px]">
-        <PersonFilterInput
-          ids={set.ids}
-          single={single}
-          onChange={(ids) =>
-            onChange({ ...set, ids, includeCurrentUser: single && ids.length > 0 ? false : me })
-          }
-        />
-        {flags.includes("includeCurrentUser") && (
+      <div className="flex items-start gap-1">
+        <div className="flex-1 min-w-0">
+          <TagPicker
+            selectedTagIds={set.ids}
+            onChange={(ids) => onChange({ ...set, ids })}
+            placeholder="Pick tags"
+          />
+        </div>
+        {untagged && (
           <button
             type="button"
-            onClick={() =>
-              onChange({ ...set, ids: single && !me ? [] : set.ids, includeCurrentUser: !me })
-            }
+            onClick={() => onChange({ ...set, includeEmpty: !set.includeEmpty })}
             className={cn(
-              "h-7 px-2 rounded-md text-xs shrink-0 transition-colors",
-              me ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground",
+              "h-11 md:h-7 px-2 rounded-md text-xs shrink-0 transition-colors",
+              set.includeEmpty
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted text-muted-foreground",
             )}
-            title="Whoever is viewing"
           >
-            Me
+            Untagged
           </button>
         )}
       </div>
     );
   }
 
-  let choices: Choice[] = [];
+  let options: SelectOption[] = [];
   if (kind === "single_select" || kind === "multi_select") {
     const field =
       condition.field.kind === "field" ? fieldsById.get(condition.field.fieldId) : undefined;
-    choices = (field?.config.options ?? []).map((option) => ({
+    options = (field?.config.options ?? []).map((option) => ({
       value: option.id,
       label: option.label,
-      color: option.color,
+      icon: (
+        <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: option.color }} />
+      ),
     }));
   } else if (kind === "task_type") {
-    choices = TASK_TYPES.map((type) => ({ value: type.value, label: type.label }));
+    options = TASK_TYPES.map((type) => ({ value: type.value, label: type.label }));
   } else if (kind === "sprint") {
-    choices = [
-      { value: ACTIVE_SPRINT_CHOICE, label: "Active sprint" },
-      ...sprints.map((sprint) => ({ value: sprint.id, label: sprint.name })),
-    ];
+    options = sprints.map((sprint) => ({ value: sprint.id, label: sprint.name }));
   } else if (kind === "epic") {
-    choices = tasks
+    options = tasks
       .filter((task) => task.taskType === "epic")
       .map((task) => ({ value: task.id, label: task.title }));
   } else {
-    choices = tasks.map((task) => ({ value: task.id, label: task.title }));
+    options = tasks.map((task) => ({
+      value: task.id,
+      label: task.number ? `#${task.number} ${task.title}` : task.title,
+      icon: <CheckSquare size={12} className="text-muted-foreground shrink-0" />,
+    }));
   }
+  const flagOptions: SelectOption[] = usableFlags.map((flag) => ({
+    value: `${FLAG_PREFIX}${flag}`,
+    label: FLAG_LABELS[flag](kind),
+  }));
+  const allOptions = [...flagOptions, ...options];
+  const searchable = allOptions.length > 8;
 
-  const picked = [...set.ids, ...(set.includeActiveSprint ? [ACTIVE_SPRINT_CHOICE] : [])];
-
-  const pick = (choice: string) => {
-    const has = picked.includes(choice);
-    const base = single ? NO_ID_SET : set;
-    if (choice === ACTIVE_SPRINT_CHOICE) {
-      onChange({ ...base, includeActiveSprint: single ? true : !set.includeActiveSprint });
-      return;
+  const picked = [
+    ...usableFlags.filter((flag) => set[flag]).map((flag) => `${FLAG_PREFIX}${flag}`),
+    ...set.ids,
+  ];
+  const toSet = (values: string[]): ViewFilterIdSet => {
+    const next: ViewFilterIdSet = { ...NO_ID_SET, ids: [] };
+    for (const entry of values) {
+      if (entry.startsWith(FLAG_PREFIX)) next[entry.slice(FLAG_PREFIX.length) as ViewIdFlag] = true;
+      else next.ids.push(entry);
     }
-    if (single) {
-      onChange({ ...NO_ID_SET, ids: [choice] });
-      return;
-    }
-    onChange({
-      ...set,
-      ids: has ? set.ids.filter((id) => id !== choice) : [...set.ids, choice],
-    });
+    return next;
   };
 
+  if (single) {
+    return (
+      <Select
+        value={picked[0]}
+        options={allOptions}
+        onChange={(entry) => onChange(toSet([entry]))}
+        size="sm"
+        searchable={searchable}
+        menuMinWidth={220}
+        placeholder="Select..."
+        className="w-full"
+        triggerClassName={cn(CONTROL, "w-full min-w-0")}
+        ariaLabel="Value"
+      />
+    );
+  }
+
   return (
-    <ChoiceSelect
-      value={single ? (picked[0] ?? "") : picked}
-      choices={choices}
-      onChange={pick}
+    <MultiSelect
+      value={picked}
+      options={allOptions}
+      onChange={(values) => onChange(toSet(values))}
+      size="sm"
+      searchable={searchable}
       placeholder="Select..."
-      minWidth={140}
+      className="w-full"
+      triggerClassName="min-h-11 md:min-h-7 py-0.5"
+      ariaLabel="Values"
     />
   );
 }

@@ -98,13 +98,13 @@ import { toast } from "sonner";
 import { SortDirection, TaskPseudoField } from "@uniffy/proto/projects/v1/projects_pb";
 import type { ViewColumnWidth, ViewFieldRef, ViewGroupBy } from "@/features/projects/types/views";
 import {
+  capabilitiesOf,
   fieldRef,
-  fieldKindOf,
   isPseudoRef,
-  isSortableKind,
   pseudoRef,
   sameFieldRef,
 } from "@/features/projects/utils/viewFields";
+import { useViewCatalog } from "@/features/projects/hooks/useViewCatalog";
 import {
   isFieldVisible,
   toggleSortKey,
@@ -143,6 +143,7 @@ export function TableView() {
     () => new Map(project?.fieldDefinitions.map((field) => [field.id, field])),
     [project?.fieldDefinitions],
   );
+  const viewCatalog = useViewCatalog();
   const definition = useAppSelector(selectActiveDefinition(projectId));
   const sortKeys = definition.sort;
   const groupBy = definition.groupBy;
@@ -728,10 +729,10 @@ export function TableView() {
   // Click sorts by this column alone; shift-click adds it as a further key.
   const handleHeaderClick = useCallback(
     (fieldId: string, e: React.MouseEvent) => {
-      if (!isSortableKind(fieldKindOf(columnRef(fieldId), fieldsById))) return;
+      if (!capabilitiesOf(columnRef(fieldId), fieldsById, viewCatalog)?.sortable) return;
       dispatch(setDraftSort(projectId, toggleSortKey(sortKeys, columnRef(fieldId), e.shiftKey)));
     },
-    [dispatch, projectId, fieldsById, sortKeys],
+    [dispatch, projectId, fieldsById, viewCatalog, sortKeys],
   );
 
   const handleStartEdit = useCallback(
@@ -1121,7 +1122,7 @@ export function TableView() {
                 key={field.id}
                 className={cn(
                   "shrink-0 flex items-center px-3 border-r border-border transition-colors select-none group relative",
-                  isSortableKind(fieldKindOf(columnRef(field.id), fieldsById)) &&
+                  capabilitiesOf(columnRef(field.id), fieldsById, viewCatalog)?.sortable &&
                     "cursor-pointer hover:bg-muted/30",
                 )}
                 style={{ width: resolveColumnWidth(field, columnWidths) }}

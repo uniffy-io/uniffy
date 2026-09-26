@@ -45,6 +45,10 @@ export type {
   ViewColumnWidth,
   SortDirection,
   RoadmapZoomLevel,
+  ViewCatalog,
+  ViewFieldCapabilities,
+  ViewFilterLimits,
+  ViewIdFlag,
 } from "./views";
 
 export type { LoadingState, ErrorState, HistoryEntry, ProjectsUiState, ProjectScope } from "./ui";

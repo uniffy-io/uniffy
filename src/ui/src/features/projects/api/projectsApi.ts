@@ -7,6 +7,7 @@ import { ProjectsService, TypeFieldSchemaSchema } from "@uniffy/proto/projects/v
 import {
   FieldType as ProtoFieldType,
   ActivityAction as ProtoActivityAction,
+  ViewIdFlag as ProtoViewIdFlag,
   type ViewVisibility,
 } from "@uniffy/proto/projects/v1/projects_pb";
 import type { TypeFieldSchema as ProtoTypeFieldSchema } from "@uniffy/proto/projects/v1/projects_pb";
@@ -16,6 +17,7 @@ import type {
   FieldDefinition as ProtoFieldDefinition,
   TaskActivity as ProtoTaskActivity,
   Sprint as ProtoSprint,
+  ViewFieldCapabilities as ProtoViewFieldCapabilities,
 } from "@uniffy/proto/projects/v1/projects_pb";
 import type {
   Project,
@@ -30,8 +32,14 @@ import type {
   UpdateSprintRequest as FrontendUpdateSprintRequest,
   StartSprintRequest as FrontendStartSprintRequest,
 } from "../types/project";
-import type { FieldDefinition, FieldValue } from "../types/fields";
-import type { ViewConfig, ViewDefinition } from "../types/views";
+import type { FieldDefinition, FieldType, FieldValue } from "../types/fields";
+import type {
+  ViewCatalog,
+  ViewConfig,
+  ViewDefinition,
+  ViewFieldCapabilities,
+  ViewIdFlag,
+} from "../types/views";
 import type { TaskActivity, ActivityAction } from "../types/activity";
 import { frontendViewDefinitionToProto, protoViewConfigToFrontend } from "./viewConverters";
 
@@ -80,6 +88,23 @@ function protoFieldTypeToFrontend(type: ProtoFieldType): string {
     default:
       return "text";
   }
+}
+
+const VIEW_ID_FLAGS: Partial<Record<ProtoViewIdFlag, ViewIdFlag>> = {
+  [ProtoViewIdFlag.CURRENT_USER]: "includeCurrentUser",
+  [ProtoViewIdFlag.EMPTY]: "includeEmpty",
+  [ProtoViewIdFlag.ACTIVE_SPRINT]: "includeActiveSprint",
+};
+
+function capabilitiesFromProto(
+  proto: ProtoViewFieldCapabilities | undefined,
+): ViewFieldCapabilities {
+  return {
+    operators: [...(proto?.operators ?? [])],
+    idFlags: (proto?.idFlags ?? []).flatMap((flag) => VIEW_ID_FLAGS[flag] ?? []),
+    sortable: proto?.sortable ?? false,
+    groupable: proto?.groupable ?? false,
+  };
 }
 
 function protoProjectToFrontend(proto: ProtoProject): Project {
@@ -684,6 +709,30 @@ export const projectsApi = {
     return {
       success: response.success,
     };
+  },
+
+  getViewCatalog: async (): Promise<ViewCatalog> => {
+    const response = await projectsClient.getViewCatalog({});
+    const catalog: ViewCatalog = {
+      fieldTypes: {},
+      pseudoFields: {},
+      filterLimits: {
+        maxDepth: response.filterLimits?.maxDepth ?? 1,
+        maxNodes: response.filterLimits?.maxNodes ?? 0,
+        maxIdsPerCondition: response.filterLimits?.maxIdsPerCondition ?? 0,
+        maxTextLength: response.filterLimits?.maxTextLength ?? 0,
+        maxRelativeOffsetDays: response.filterLimits?.maxRelativeOffsetDays ?? 0,
+      },
+    };
+    for (const entry of response.fieldTypes) {
+      catalog.fieldTypes[protoFieldTypeToFrontend(entry.type) as FieldType] = capabilitiesFromProto(
+        entry.capabilities,
+      );
+    }
+    for (const entry of response.pseudoFields) {
+      catalog.pseudoFields[entry.pseudo] = capabilitiesFromProto(entry.capabilities);
+    }
+    return catalog;
   },
 
   listActivities: async (

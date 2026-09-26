@@ -251,14 +251,6 @@ export function removeFilterNode(
   return nodes.length === 0 ? null : { ...filter, nodes };
 }
 
-/** Drops everything the builder owns and keeps the quick filters. */
-export function clearBuilderNodes(filter: ViewFilterGroup | null): ViewFilterGroup | null {
-  const { chips } = summarizeFilter(filter);
-  if (!filter || chips.length === 0) return null;
-  const keep = new Set(chips.map((chip) => chip.index));
-  return withNodes(filter.nodes.filter((_, index) => keep.has(index)));
-}
-
 /**
  * Plain click sorts by this field alone and steps asc, desc, off; shift-click keeps the other
  * keys and appends this one, or steps its direction in place.

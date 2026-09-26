@@ -14,6 +14,8 @@ interface ViewDraftActionsProps {
   view: ViewConfig;
   canSave: boolean;
   canShare: boolean;
+  /** Why the draft cannot be saved right now; null when it can. */
+  blockedReason: string | null;
   compact: boolean;
 }
 
@@ -22,6 +24,7 @@ export function ViewDraftActions({
   view,
   canSave,
   canShare,
+  blockedReason,
   compact,
 }: ViewDraftActionsProps) {
   const dispatch = useAppDispatch();
@@ -40,7 +43,8 @@ export function ViewDraftActions({
           className="h-11 min-w-11 lg:h-7 lg:min-w-0 gap-1 px-2 text-xs"
           onClick={() => dispatch(saveViewDraft(projectId, view.id))}
           loading={isSaving}
-          title="Save changes to this view"
+          disabled={blockedReason !== null}
+          title={blockedReason ?? "Save changes to this view"}
         >
           <FloppyDisk size={14} />
           {!compact && "Save"}
@@ -51,7 +55,8 @@ export function ViewDraftActions({
         variant={canSave ? "ghost" : "default"}
         className="h-11 min-w-11 lg:h-7 lg:min-w-0 gap-1 px-2 text-xs"
         onClick={() => setIsSaveAsOpen(true)}
-        title="Save as a new view"
+        disabled={blockedReason !== null}
+        title={blockedReason ?? "Save as a new view"}
       >
         <CopySimple size={14} />
         {!compact && "Save as new"}

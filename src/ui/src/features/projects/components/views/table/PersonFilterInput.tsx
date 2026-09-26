@@ -1,35 +1,78 @@
 import { useMemo, useRef, useState } from "react";
-import { CaretDown } from "@phosphor-icons/react";
+import { CaretDown, User, UserCircleDashed } from "@phosphor-icons/react";
 import { cn } from "@/shared/utils/cn";
 import { controlShellClass } from "@/components/ui/input";
-import { SubjectAvatarStack, SubjectPicker } from "@/components/subject";
+import {
+  SubjectAvatarStack,
+  SubjectPicker,
+  type SubjectPickerPinnedOption,
+} from "@/components/subject";
 import { useSubjectResolver } from "@/components/subject/hooks/useSubjectResolver";
+import type { ViewFilterIdSet, ViewIdFlag } from "@/features/projects/types/views";
+import { NO_ID_SET } from "@/features/projects/utils/filterTree";
+
 interface PersonFilterInputProps {
-  ids: readonly string[];
-  /** One person at most: a new pick replaces the previous one. */
+  set: ViewFilterIdSet;
+  /** The id flags this field accepts, from the view catalog. */
+  flags: readonly ViewIdFlag[];
+  /** One value at most (is / is not): a new pick replaces the previous one. */
   single?: boolean;
-  onChange: (ids: string[]) => void;
+  onChange: (set: ViewFilterIdSet) => void;
+  className?: string;
 }
 
 export function PersonFilterInput({
-  ids: rawIds,
+  set,
+  flags,
   single = false,
   onChange,
+  className,
 }: PersonFilterInputProps) {
   const [isOpen, setIsOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
-  const ids = useMemo(() => [...rawIds], [rawIds]);
+  const ids = useMemo(() => [...set.ids], [set.ids]);
   const { subjects } = useSubjectResolver(ids);
 
+  const words = [
+    ...(set.includeCurrentUser ? ["Me"] : []),
+    ...subjects.map((subject) => subject.name),
+    ...(set.includeEmpty ? ["Unassigned"] : []),
+  ];
   const label =
-    subjects.length === 0
-      ? null
-      : subjects.length === 1
-        ? subjects[0].name
-        : `${subjects[0].name} +${subjects.length - 1}`;
+    words.length === 0 ? null : words.length === 1 ? words[0] : `${words[0]} +${words.length - 1}`;
+
+  const toggleFlag = (flag: "includeCurrentUser" | "includeEmpty") => {
+    const on = !set[flag];
+    onChange(single ? { ...NO_ID_SET, [flag]: on } : { ...set, [flag]: on });
+  };
+
+  const pinnedOptions: SubjectPickerPinnedOption[] = [
+    ...(flags.includes("includeCurrentUser")
+      ? [
+          {
+            id: "me",
+            label: "Me",
+            icon: <User size={16} className="text-muted-foreground" />,
+            selected: set.includeCurrentUser,
+            onToggle: () => toggleFlag("includeCurrentUser"),
+          },
+        ]
+      : []),
+    ...(flags.includes("includeEmpty")
+      ? [
+          {
+            id: "unassigned",
+            label: "Unassigned",
+            icon: <UserCircleDashed size={16} className="text-muted-foreground" />,
+            selected: set.includeEmpty,
+            onToggle: () => toggleFlag("includeEmpty"),
+          },
+        ]
+      : []),
+  ];
 
   return (
-    <div className="flex-1 min-w-[160px]">
+    <div className={cn("flex-1 min-w-[160px]", className)}>
       <button
         ref={triggerRef}
         type="button"
@@ -40,13 +83,13 @@ export function PersonFilterInput({
         onClick={() => setIsOpen((open) => !open)}
         className={cn(
           controlShellClass,
-          "focus-ring flex items-center gap-1.5 w-full h-7 px-2 text-xs",
+          "focus-ring flex items-center gap-1.5 w-full h-11 md:h-7 px-2 text-xs",
           isOpen && "border-border-strong",
         )}
       >
         {label ? (
           <>
-            <SubjectAvatarStack subjectIds={ids} maxDisplay={3} size="xs" />
+            {ids.length > 0 && <SubjectAvatarStack subjectIds={ids} maxDisplay={3} size="xs" />}
             <span className="flex-1 min-w-0 truncate text-left text-foreground">{label}</span>
           </>
         ) : (
@@ -65,9 +108,14 @@ export function PersonFilterInput({
           mode="multi"
           subjectTypes="all"
           value={ids}
+          pinnedOptions={pinnedOptions}
           onChange={(next) => {
+            if (!single) {
+              onChange({ ...set, ids: next });
+              return;
+            }
             const added = next.filter((id) => !ids.includes(id));
-            onChange(single ? added.slice(-1) : next);
+            onChange({ ...NO_ID_SET, ids: added.slice(-1) });
           }}
           portal
           anchorRef={triggerRef}

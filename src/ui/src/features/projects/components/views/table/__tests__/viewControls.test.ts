@@ -1,11 +1,7 @@
 import { Children, isValidElement, type ReactElement, type ReactNode } from "react";
 import { combineReducers, configureStore } from "@reduxjs/toolkit";
 import { beforeEach, expect, it, vi } from "vitest";
-import {
-  FilterLogic,
-  TaskFilterOperator,
-  ViewVisibility,
-} from "@uniffy/proto/projects/v1/projects_pb";
+import { TaskFilterOperator, ViewVisibility } from "@uniffy/proto/projects/v1/projects_pb";
 import type { RootState } from "@/app/store";
 import type { Project, FieldDefinition } from "@/features/projects/types";
 import { projectsReducer } from "@/features/projects/store/projectsSlice";
@@ -15,7 +11,8 @@ import { selectDraftSort } from "@/features/projects/store/viewSelectors";
 import { emptyDefinition } from "@/features/projects/utils/viewDraft";
 import { fieldRef } from "@/features/projects/utils/viewFields";
 import { TableView } from "@/features/projects/components/views/table/TableView";
-import { FilterBuilder } from "@/features/projects/components/views/table/FilterBuilder";
+import { filterFieldOptions } from "@/features/projects/utils/filterFieldOptions";
+import type { ViewCatalog } from "@/features/projects/types/views";
 
 const harness = vi.hoisted(() => ({ state: () => ({}), dispatch: vi.fn() }));
 vi.mock("react", async (original) => ({
@@ -51,6 +48,37 @@ const fields = [
   { id: "reference", name: "Reference", type: "reference", config: {} },
 ] as FieldDefinition[];
 
+const CATALOG: ViewCatalog = {
+  fieldTypes: {
+    text: {
+      operators: [TaskFilterOperator.CONTAINS],
+      idFlags: [],
+      sortable: true,
+      groupable: false,
+    },
+    multi_select: {
+      operators: [TaskFilterOperator.IS_ANY_OF],
+      idFlags: [],
+      sortable: false,
+      groupable: true,
+    },
+    reference: {
+      operators: [TaskFilterOperator.IS_EMPTY],
+      idFlags: [],
+      sortable: false,
+      groupable: false,
+    },
+  },
+  pseudoFields: {},
+  filterLimits: {
+    maxDepth: 3,
+    maxNodes: 50,
+    maxIdsPerCondition: 100,
+    maxTextLength: 500,
+    maxRelativeOffsetDays: 3660,
+  },
+};
+
 const reducer = combineReducers({
   projects: projectsReducer,
   projectsUi: projectsUiReducer,
@@ -66,6 +94,7 @@ function makeStore() {
       projects: {
         ...initial.projects,
         currentProjectId: "p",
+        viewCatalog: CATALOG,
         projects: {
           p: {
             id: "p",
@@ -123,25 +152,9 @@ it("ignores unsupported column clicks and still sorts Title", () => {
 });
 
 it("offers Title as a saved filter field", () => {
-  const tree = FilterBuilder({
-    projectId: "p",
-    fields,
-    onApply: vi.fn(),
-    onClose: vi.fn(),
-    filter: {
-      logic: FilterLogic.AND,
-      nodes: [
-        {
-          kind: "condition",
-          condition: {
-            field: fieldRef("field_title"),
-            operator: TaskFilterOperator.CONTAINS,
-            value: { kind: "text", text: "login" },
-          },
-        },
-      ],
-    },
+  const options = filterFieldOptions(fields, new Map(fields.map((f) => [f.id, f])), CATALOG);
+  expect(options.map(({ value, label }) => ({ value, label }))).toContainEqual({
+    value: "field:field_title",
+    label: "Title",
   });
-  const row = elements(tree).find((element) => element.props.fieldChoices);
-  expect(row?.props.fieldChoices).toContainEqual({ value: "field:field_title", label: "Title" });
 });

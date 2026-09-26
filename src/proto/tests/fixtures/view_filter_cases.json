@@ -2087,6 +2087,888 @@
       "expected": [
         "task-a"
       ]
+    },
+    {
+      "name": "custom person is all of the current user and another",
+      "filter": {
+        "logic": "FILTER_LOGIC_AND",
+        "nodes": [
+          {
+            "condition": {
+              "field": {
+                "field_id": "reviewer"
+              },
+              "operator": "TASK_FILTER_OPERATOR_IS_ALL_OF",
+              "value": {
+                "ids": {
+                  "ids": [
+                    "user-other"
+                  ],
+                  "include_current_user": true
+                }
+              }
+            }
+          }
+        ]
+      },
+      "expected": [
+        "story"
+      ]
+    },
+    {
+      "name": "person is not empty",
+      "filter": {
+        "logic": "FILTER_LOGIC_AND",
+        "nodes": [
+          {
+            "condition": {
+              "field": {
+                "field_id": "field_assignee"
+              },
+              "operator": "TASK_FILTER_OPERATOR_IS_NOT_EMPTY"
+            }
+          }
+        ]
+      },
+      "expected": [
+        "story",
+        "task-b"
+      ]
+    },
+    {
+      "name": "person is any of me or unassigned",
+      "filter": {
+        "logic": "FILTER_LOGIC_AND",
+        "nodes": [
+          {
+            "condition": {
+              "field": {
+                "field_id": "field_assignee"
+              },
+              "operator": "TASK_FILTER_OPERATOR_IS_ANY_OF",
+              "value": {
+                "ids": {
+                  "include_current_user": true,
+                  "include_empty": true
+                }
+              }
+            }
+          }
+        ]
+      },
+      "expected": [
+        "epic-task",
+        "loose",
+        "story",
+        "task-a"
+      ]
+    },
+    {
+      "name": "sprint is any of the active sprint or the backlog",
+      "filter": {
+        "logic": "FILTER_LOGIC_AND",
+        "nodes": [
+          {
+            "condition": {
+              "field": {
+                "pseudo": "TASK_PSEUDO_FIELD_SPRINT"
+              },
+              "operator": "TASK_FILTER_OPERATOR_IS_ANY_OF",
+              "value": {
+                "ids": {
+                  "include_active_sprint": true,
+                  "include_empty": true
+                }
+              }
+            }
+          }
+        ]
+      },
+      "expected": [
+        "epic-task",
+        "loose",
+        "story",
+        "task-b"
+      ]
+    },
+    {
+      "name": "sprint is any of a named sprint or the backlog",
+      "filter": {
+        "logic": "FILTER_LOGIC_AND",
+        "nodes": [
+          {
+            "condition": {
+              "field": {
+                "pseudo": "TASK_PSEUDO_FIELD_SPRINT"
+              },
+              "operator": "TASK_FILTER_OPERATOR_IS_ANY_OF",
+              "value": {
+                "ids": {
+                  "ids": [
+                    "sprint-2"
+                  ],
+                  "include_empty": true
+                }
+              }
+            }
+          }
+        ]
+      },
+      "expected": [
+        "loose",
+        "task-a",
+        "task-b"
+      ]
+    },
+    {
+      "name": "sprint is not a named sprint keeps the backlog",
+      "filter": {
+        "logic": "FILTER_LOGIC_AND",
+        "nodes": [
+          {
+            "condition": {
+              "field": {
+                "pseudo": "TASK_PSEUDO_FIELD_SPRINT"
+              },
+              "operator": "TASK_FILTER_OPERATOR_IS_NOT",
+              "value": {
+                "ids": {
+                  "ids": [
+                    "sprint-2"
+                  ]
+                }
+              }
+            }
+          }
+        ]
+      },
+      "expected": [
+        "epic-task",
+        "loose",
+        "story",
+        "task-b"
+      ]
+    },
+    {
+      "name": "custom single select is none of with the empty flag",
+      "filter": {
+        "logic": "FILTER_LOGIC_AND",
+        "nodes": [
+          {
+            "condition": {
+              "field": {
+                "field_id": "size"
+              },
+              "operator": "TASK_FILTER_OPERATOR_IS_NONE_OF",
+              "value": {
+                "ids": {
+                  "ids": [
+                    "s"
+                  ],
+                  "include_empty": true
+                }
+              }
+            }
+          }
+        ]
+      },
+      "expected": [
+        "story"
+      ]
+    },
+    {
+      "name": "tags is any of with the untagged flag",
+      "filter": {
+        "logic": "FILTER_LOGIC_AND",
+        "nodes": [
+          {
+            "condition": {
+              "field": {
+                "pseudo": "TASK_PSEUDO_FIELD_TAGS"
+              },
+              "operator": "TASK_FILTER_OPERATOR_IS_ANY_OF",
+              "value": {
+                "ids": {
+                  "ids": [
+                    "blue"
+                  ],
+                  "include_empty": true
+                }
+              }
+            }
+          }
+        ]
+      },
+      "expected": [
+        "epic-task",
+        "loose",
+        "task-a",
+        "task-b"
+      ]
+    },
+    {
+      "name": "tags is not empty",
+      "filter": {
+        "logic": "FILTER_LOGIC_AND",
+        "nodes": [
+          {
+            "condition": {
+              "field": {
+                "pseudo": "TASK_PSEUDO_FIELD_TAGS"
+              },
+              "operator": "TASK_FILTER_OPERATOR_IS_NOT_EMPTY"
+            }
+          }
+        ]
+      },
+      "expected": [
+        "story",
+        "task-a"
+      ]
+    },
+    {
+      "name": "epic is none of keeps tasks outside every epic",
+      "filter": {
+        "logic": "FILTER_LOGIC_AND",
+        "nodes": [
+          {
+            "condition": {
+              "field": {
+                "pseudo": "TASK_PSEUDO_FIELD_EPIC"
+              },
+              "operator": "TASK_FILTER_OPERATOR_IS_NONE_OF",
+              "value": {
+                "ids": {
+                  "ids": [
+                    "epic-task"
+                  ]
+                }
+              }
+            }
+          }
+        ]
+      },
+      "expected": [
+        "loose"
+      ]
+    },
+    {
+      "name": "epic is not empty",
+      "filter": {
+        "logic": "FILTER_LOGIC_AND",
+        "nodes": [
+          {
+            "condition": {
+              "field": {
+                "pseudo": "TASK_PSEUDO_FIELD_EPIC"
+              },
+              "operator": "TASK_FILTER_OPERATOR_IS_NOT_EMPTY"
+            }
+          }
+        ]
+      },
+      "expected": [
+        "epic-task",
+        "story",
+        "task-a",
+        "task-b"
+      ]
+    },
+    {
+      "name": "blocked by is none of",
+      "filter": {
+        "logic": "FILTER_LOGIC_AND",
+        "nodes": [
+          {
+            "condition": {
+              "field": {
+                "pseudo": "TASK_PSEUDO_FIELD_BLOCKED_BY"
+              },
+              "operator": "TASK_FILTER_OPERATOR_IS_NONE_OF",
+              "value": {
+                "ids": {
+                  "ids": [
+                    "loose"
+                  ]
+                }
+              }
+            }
+          }
+        ]
+      },
+      "expected": [
+        "epic-task",
+        "loose",
+        "story",
+        "task-b"
+      ]
+    },
+    {
+      "name": "blocked by is all of",
+      "filter": {
+        "logic": "FILTER_LOGIC_AND",
+        "nodes": [
+          {
+            "condition": {
+              "field": {
+                "pseudo": "TASK_PSEUDO_FIELD_BLOCKED_BY"
+              },
+              "operator": "TASK_FILTER_OPERATOR_IS_ALL_OF",
+              "value": {
+                "ids": {
+                  "ids": [
+                    "loose"
+                  ]
+                }
+              }
+            }
+          }
+        ]
+      },
+      "expected": [
+        "task-a"
+      ]
+    },
+    {
+      "name": "task type is any of",
+      "filter": {
+        "logic": "FILTER_LOGIC_AND",
+        "nodes": [
+          {
+            "condition": {
+              "field": {
+                "pseudo": "TASK_PSEUDO_FIELD_TASK_TYPE"
+              },
+              "operator": "TASK_FILTER_OPERATOR_IS_ANY_OF",
+              "value": {
+                "ids": {
+                  "ids": [
+                    "epic",
+                    "bug"
+                  ]
+                }
+              }
+            }
+          }
+        ]
+      },
+      "expected": [
+        "epic-task",
+        "loose"
+      ]
+    },
+    {
+      "name": "task type is not",
+      "filter": {
+        "logic": "FILTER_LOGIC_AND",
+        "nodes": [
+          {
+            "condition": {
+              "field": {
+                "pseudo": "TASK_PSEUDO_FIELD_TASK_TYPE"
+              },
+              "operator": "TASK_FILTER_OPERATOR_IS_NOT",
+              "value": {
+                "ids": {
+                  "ids": [
+                    "task"
+                  ]
+                }
+              }
+            }
+          }
+        ]
+      },
+      "expected": [
+        "epic-task",
+        "loose",
+        "story"
+      ]
+    },
+    {
+      "name": "creator is none of the current user",
+      "filter": {
+        "logic": "FILTER_LOGIC_AND",
+        "nodes": [
+          {
+            "condition": {
+              "field": {
+                "pseudo": "TASK_PSEUDO_FIELD_CREATOR"
+              },
+              "operator": "TASK_FILTER_OPERATOR_IS_NONE_OF",
+              "value": {
+                "ids": {
+                  "include_current_user": true
+                }
+              }
+            }
+          }
+        ]
+      },
+      "expected": [
+        "epic-task",
+        "story",
+        "task-a",
+        "task-b"
+      ]
+    },
+    {
+      "name": "created at after a relative day",
+      "filter": {
+        "logic": "FILTER_LOGIC_AND",
+        "nodes": [
+          {
+            "condition": {
+              "field": {
+                "pseudo": "TASK_PSEUDO_FIELD_CREATED_AT"
+              },
+              "operator": "TASK_FILTER_OPERATOR_AFTER",
+              "value": {
+                "date": {
+                  "relative": {
+                    "anchor": "RELATIVE_DATE_ANCHOR_TODAY",
+                    "offset_days": -2
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      "expected": [
+        "task-a",
+        "task-b"
+      ]
+    },
+    {
+      "name": "updated at on or before a fixed day",
+      "filter": {
+        "logic": "FILTER_LOGIC_AND",
+        "nodes": [
+          {
+            "condition": {
+              "field": {
+                "pseudo": "TASK_PSEUDO_FIELD_UPDATED_AT"
+              },
+              "operator": "TASK_FILTER_OPERATOR_ON_OR_BEFORE",
+              "value": {
+                "date": {
+                  "fixed": "2026-09-20"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "expected": [
+        "epic-task",
+        "loose"
+      ]
+    },
+    {
+      "name": "completed at is empty",
+      "filter": {
+        "logic": "FILTER_LOGIC_AND",
+        "nodes": [
+          {
+            "condition": {
+              "field": {
+                "pseudo": "TASK_PSEUDO_FIELD_COMPLETED_AT"
+              },
+              "operator": "TASK_FILTER_OPERATOR_IS_EMPTY"
+            }
+          }
+        ]
+      },
+      "expected": [
+        "epic-task",
+        "loose",
+        "story",
+        "task-a"
+      ]
+    },
+    {
+      "name": "date between yesterday and three days from today",
+      "filter": {
+        "logic": "FILTER_LOGIC_AND",
+        "nodes": [
+          {
+            "condition": {
+              "field": {
+                "field_id": "field_due_date"
+              },
+              "operator": "TASK_FILTER_OPERATOR_BETWEEN",
+              "value": {
+                "date_range": {
+                  "start": {
+                    "relative": {
+                      "anchor": "RELATIVE_DATE_ANCHOR_TODAY",
+                      "offset_days": -1
+                    }
+                  },
+                  "end": {
+                    "relative": {
+                      "anchor": "RELATIVE_DATE_ANCHOR_TODAY",
+                      "offset_days": 3
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      "expected": [
+        "epic-task",
+        "story"
+      ]
+    },
+    {
+      "name": "multi select is empty",
+      "filter": {
+        "logic": "FILTER_LOGIC_AND",
+        "nodes": [
+          {
+            "condition": {
+              "field": {
+                "field_id": "labels"
+              },
+              "operator": "TASK_FILTER_OPERATOR_IS_EMPTY"
+            }
+          }
+        ]
+      },
+      "expected": [
+        "epic-task",
+        "loose"
+      ]
+    },
+    {
+      "name": "text is empty counts blank text",
+      "filter": {
+        "logic": "FILTER_LOGIC_AND",
+        "nodes": [
+          {
+            "condition": {
+              "field": {
+                "field_id": "notes"
+              },
+              "operator": "TASK_FILTER_OPERATOR_IS_EMPTY"
+            }
+          }
+        ]
+      },
+      "expected": [
+        "epic-task",
+        "loose",
+        "story",
+        "task-b"
+      ]
+    },
+    {
+      "name": "text is not empty",
+      "filter": {
+        "logic": "FILTER_LOGIC_AND",
+        "nodes": [
+          {
+            "condition": {
+              "field": {
+                "field_id": "notes"
+              },
+              "operator": "TASK_FILTER_OPERATOR_IS_NOT_EMPTY"
+            }
+          }
+        ]
+      },
+      "expected": [
+        "task-a"
+      ]
+    },
+    {
+      "name": "reference is empty",
+      "filter": {
+        "logic": "FILTER_LOGIC_AND",
+        "nodes": [
+          {
+            "condition": {
+              "field": {
+                "field_id": "link"
+              },
+              "operator": "TASK_FILTER_OPERATOR_IS_EMPTY"
+            }
+          }
+        ]
+      },
+      "expected": [
+        "epic-task",
+        "loose",
+        "story",
+        "task-a"
+      ]
+    },
+    {
+      "name": "is not blocked",
+      "filter": {
+        "logic": "FILTER_LOGIC_AND",
+        "nodes": [
+          {
+            "condition": {
+              "field": {
+                "pseudo": "TASK_PSEUDO_FIELD_IS_BLOCKED"
+              },
+              "operator": "TASK_FILTER_OPERATOR_IS",
+              "value": {
+                "flag": false
+              }
+            }
+          }
+        ]
+      },
+      "expected": [
+        "epic-task",
+        "loose",
+        "story",
+        "task-b"
+      ]
+    },
+    {
+      "name": "overdue preset: due before today and not completed",
+      "filter": {
+        "logic": "FILTER_LOGIC_AND",
+        "nodes": [
+          {
+            "group": {
+              "logic": "FILTER_LOGIC_AND",
+              "nodes": [
+                {
+                  "condition": {
+                    "field": {
+                      "field_id": "field_due_date"
+                    },
+                    "operator": "TASK_FILTER_OPERATOR_BEFORE",
+                    "value": {
+                      "date": {
+                        "relative": {
+                          "anchor": "RELATIVE_DATE_ANCHOR_TODAY"
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "condition": {
+                    "field": {
+                      "pseudo": "TASK_PSEUDO_FIELD_COMPLETED_AT"
+                    },
+                    "operator": "TASK_FILTER_OPERATOR_IS_EMPTY"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expected": []
+    },
+    {
+      "name": "due this week preset",
+      "filter": {
+        "logic": "FILTER_LOGIC_AND",
+        "nodes": [
+          {
+            "condition": {
+              "field": {
+                "field_id": "field_due_date"
+              },
+              "operator": "TASK_FILTER_OPERATOR_BETWEEN",
+              "value": {
+                "date_range": {
+                  "start": {
+                    "relative": {
+                      "anchor": "RELATIVE_DATE_ANCHOR_START_OF_WEEK"
+                    }
+                  },
+                  "end": {
+                    "relative": {
+                      "anchor": "RELATIVE_DATE_ANCHOR_END_OF_WEEK"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      "expected": [
+        "epic-task",
+        "story"
+      ]
+    },
+    {
+      "name": "completed in the last 7 days preset",
+      "filter": {
+        "logic": "FILTER_LOGIC_AND",
+        "nodes": [
+          {
+            "condition": {
+              "field": {
+                "pseudo": "TASK_PSEUDO_FIELD_COMPLETED_AT"
+              },
+              "operator": "TASK_FILTER_OPERATOR_ON_OR_AFTER",
+              "value": {
+                "date": {
+                  "relative": {
+                    "anchor": "RELATIVE_DATE_ANCHOR_TODAY",
+                    "offset_days": -6
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      "expected": [
+        "task-b"
+      ]
+    },
+    {
+      "name": "open work for me or nobody due by the end of the week",
+      "filter": {
+        "logic": "FILTER_LOGIC_AND",
+        "nodes": [
+          {
+            "condition": {
+              "field": {
+                "field_id": "field_status"
+              },
+              "operator": "TASK_FILTER_OPERATOR_IS_ANY_OF",
+              "value": {
+                "ids": {
+                  "ids": [
+                    "status_todo",
+                    "status_in_progress"
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "group": {
+              "logic": "FILTER_LOGIC_OR",
+              "nodes": [
+                {
+                  "condition": {
+                    "field": {
+                      "field_id": "field_assignee"
+                    },
+                    "operator": "TASK_FILTER_OPERATOR_IS_ANY_OF",
+                    "value": {
+                      "ids": {
+                        "include_current_user": true
+                      }
+                    }
+                  }
+                },
+                {
+                  "condition": {
+                    "field": {
+                      "field_id": "field_assignee"
+                    },
+                    "operator": "TASK_FILTER_OPERATOR_IS_EMPTY"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "condition": {
+              "field": {
+                "field_id": "field_due_date"
+              },
+              "operator": "TASK_FILTER_OPERATOR_ON_OR_BEFORE",
+              "value": {
+                "date": {
+                  "relative": {
+                    "anchor": "RELATIVE_DATE_ANCHOR_END_OF_WEEK"
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      "expected": [
+        "epic-task",
+        "story"
+      ]
+    },
+    {
+      "name": "groups nest three levels deep",
+      "filter": {
+        "logic": "FILTER_LOGIC_AND",
+        "nodes": [
+          {
+            "group": {
+              "logic": "FILTER_LOGIC_OR",
+              "nodes": [
+                {
+                  "group": {
+                    "logic": "FILTER_LOGIC_AND",
+                    "nodes": [
+                      {
+                        "condition": {
+                          "field": {
+                            "pseudo": "TASK_PSEUDO_FIELD_TASK_TYPE"
+                          },
+                          "operator": "TASK_FILTER_OPERATOR_IS",
+                          "value": {
+                            "ids": {
+                              "ids": [
+                                "bug"
+                              ]
+                            }
+                          }
+                        }
+                      },
+                      {
+                        "condition": {
+                          "field": {
+                            "pseudo": "TASK_PSEUDO_FIELD_IS_MILESTONE"
+                          },
+                          "operator": "TASK_FILTER_OPERATOR_IS",
+                          "value": {
+                            "flag": true
+                          }
+                        }
+                      }
+                    ]
+                  }
+                },
+                {
+                  "condition": {
+                    "field": {
+                      "pseudo": "TASK_PSEUDO_FIELD_TAGS"
+                    },
+                    "operator": "TASK_FILTER_OPERATOR_IS_ANY_OF",
+                    "value": {
+                      "ids": {
+                        "ids": [
+                          "red"
+                        ]
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expected": [
+        "loose",
+        "story",
+        "task-a"
+      ]
     }
   ],
   "rejected_filters": [
