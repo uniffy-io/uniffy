@@ -25,6 +25,7 @@ import { authApi } from "@core/auth/authApi";
 import { isTokenExpiring } from "@core/auth/jwt";
 import { isAuthRejection, refreshSession } from "@core/auth/refresh";
 import { onSessionExpired } from "@core/auth/sessionEvents";
+import { resetSessionScope } from "@core/auth/sessionScope";
 import { hydrateServerUrl } from "@core/config/serverUrl";
 
 type AuthTokens = {
@@ -146,6 +147,7 @@ const REHYDRATE_RETRY_MAX_MS = 15000;
 // Wiping caches on every auth boundary keeps one user's content (query data,
 // decoded images on disk) from surviving into another session on the device.
 function clearSessionCaches(): void {
+  resetSessionScope();
   queryClient.clear();
   void Image.clearMemoryCache();
   void Image.clearDiskCache();
@@ -155,6 +157,7 @@ async function handleAuthResponse(
   response: AuthTokens,
   dispatch: React.Dispatch<AuthAction>,
 ): Promise<void> {
+  clearSessionCaches();
   setAccessToken(response.accessToken);
   setAssetCookie(response.assetCookie ?? null);
   await setRefreshToken(response.refreshToken);

@@ -1,12 +1,10 @@
 import { useCallback, useSyncExternalStore } from "react";
 import type { ViewDefinition } from "@uniffy/proto/projects/v1/projects_pb";
+import { definitionsEqual } from "@features/projects/viewDefinition";
 
-/**
- * Unsaved view edits, held for the app session so opening a task and coming back, or leaving the
- * project for a while, keeps them; only Discard or a save drops one. Keys carry the user and the
- * organization, so an edit never shows up for another account signed in on the same device.
- */
+/** Scoped drafts survive navigation while pending saves preserve subsequent edits. */
 const drafts = new Map<string, ViewDefinition>();
+const saves = new Map<string, ViewSave>();
 const listeners = new Set<() => void>();
 
 function subscribe(listener: () => void): () => void {
@@ -30,6 +28,41 @@ function draftKey(scope: DraftScope, viewId: string): string {
   return `${scope.userId}:${scope.organizationId}:${scope.projectId}:${viewId}`;
 }
 
+interface ViewSave {
+  key: string;
+  definition: ViewDefinition;
+}
+
+export function getViewDraft(scope: DraftScope, viewId: string): ViewDefinition | undefined {
+  return drafts.get(draftKey(scope, viewId));
+}
+
+export function isViewSaving(scope: DraftScope, viewId: string): boolean {
+  return saves.has(draftKey(scope, viewId));
+}
+
+export function beginViewSave(
+  scope: DraftScope,
+  viewId: string,
+  definition: ViewDefinition,
+): ViewSave | null {
+  const key = draftKey(scope, viewId);
+  if (saves.has(key)) return null;
+  const save = { key, definition };
+  saves.set(key, save);
+  return save;
+}
+
+export function finishViewSave(save: ViewSave, succeeded: boolean): void {
+  if (saves.get(save.key) !== save) return;
+  saves.delete(save.key);
+  const current = drafts.get(save.key);
+  if (succeeded && current && definitionsEqual(current, save.definition)) {
+    drafts.delete(save.key);
+    notify();
+  }
+}
+
 export function setViewDraft(
   scope: DraftScope,
   viewId: string,
@@ -41,12 +74,22 @@ export function setViewDraft(
   notify();
 }
 
+export function editViewDraft(
+  scope: DraftScope,
+  viewId: string,
+  next: ViewDefinition,
+  saved: ViewDefinition,
+): void {
+  const unchanged = definitionsEqual(next, saved) && !isViewSaving(scope, viewId);
+  setViewDraft(scope, viewId, unchanged ? null : next);
+}
+
 export function useViewDraft(
   scope: DraftScope | null,
   viewId: string | undefined,
 ): ViewDefinition | undefined {
   const read = useCallback(
-    () => (scope && viewId ? drafts.get(draftKey(scope, viewId)) : undefined),
+    () => (scope && viewId ? getViewDraft(scope, viewId) : undefined),
     [scope, viewId],
   );
   return useSyncExternalStore(subscribe, read, read);

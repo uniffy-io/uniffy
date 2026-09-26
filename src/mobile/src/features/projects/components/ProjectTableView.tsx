@@ -13,10 +13,6 @@ import type { TaskGroup } from "@features/projects/taskGrouping";
 import type { TaskRelations } from "@features/projects/taskRelations";
 import type { SerializedTask, PlainSelectOption } from "@features/projects/projectsSerializer";
 
-/**
- * Groups of top-level tasks whose subtasks unfold under them. While a search or
- * filter is on, every match is its own row and names its parent.
- */
 export function ProjectTableView({
   groups,
   statusColorOf,
@@ -27,6 +23,7 @@ export function ProjectTableView({
   accentColor,
   bottomPad,
   narrowed,
+  outline,
   noMatches,
   selecting,
   selectedIds,
@@ -52,6 +49,7 @@ export function ProjectTableView({
   accentColor: string;
   bottomPad: number;
   narrowed: boolean;
+  outline: boolean;
   noMatches: boolean;
   selecting: boolean;
   selectedIds: string[];
@@ -136,7 +134,7 @@ export function ProjectTableView({
                   ? null
                   : colTasks.map((task, index) => {
                       const counts = relations.subtaskCounts.get(task.id);
-                      const canExpand = !narrowed && !!counts;
+                      const canExpand = outline && !!counts;
                       const isExpanded = canExpand && expanded.includes(task.id);
                       return (
                         <DraggableTask
@@ -182,11 +180,11 @@ export function ProjectTableView({
                             selected={selectedIds.includes(task.id)}
                             blocked={isTaskBlocked(task, relations.byId)}
                             parentKey={
-                              narrowed ? parentKeyOf(task, relations.byId, projectSlug) : null
+                              outline ? null : parentKeyOf(task, relations.byId, projectSlug)
                             }
                             subtaskTotal={counts?.total ?? 0}
                             subtaskDone={counts?.done ?? 0}
-                            outline={!narrowed}
+                            outline={outline}
                             expanded={canExpand ? isExpanded : undefined}
                             onPress={onOpen}
                             onToggleSelect={onToggleSelect}

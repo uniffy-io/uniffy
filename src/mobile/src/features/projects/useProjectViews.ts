@@ -1,10 +1,20 @@
 import { useCallback, useMemo, useState } from "react";
 import type { ViewDefinition } from "@uniffy/proto/projects/v1/projects_pb";
 import { useAuth } from "@core/providers/AuthContext";
+import { isCurrentSession, sessionGeneration } from "@core/auth/sessionScope";
+import type { ProjectViewScope } from "@features/projects/projectViewsCache";
 import type { SerializedProject, SerializedView } from "@features/projects/projectsSerializer";
 import { rememberOpenedView, useLastOpenedView } from "@features/projects/lastOpenedViews";
-import { setViewDraft, useViewDraft, type DraftScope } from "@features/projects/viewDrafts";
+import {
+  beginViewSave,
+  editViewDraft,
+  finishViewSave,
+  setViewDraft,
+  useViewDraft,
+  type DraftScope,
+} from "@features/projects/viewDrafts";
 import { definitionsEqual } from "@features/projects/viewDefinition";
+import { resolveProjectView } from "@features/projects/viewSelection";
 import {
   useCreateView,
   useDeleteView,
@@ -17,11 +27,7 @@ function orderViews(views: readonly SerializedView[]): SerializedView[] {
   return [...views].sort((a, b) => rank(a) - rank(b) || a.sortOrder - b.sortOrder);
 }
 
-/**
- * The open view of a project and its working copy. A view named by a link wins, then the view
- * opened last on this device, then the project default. A remembered id the caller can no longer
- * see (deleted, or someone else's personal view) falls through the same way.
- */
+/** Inaccessible view ids fall back to the remembered view or the project default. */
 export function useProjectViews(project: SerializedProject | undefined, linkedViewId?: string) {
   const { user, organizationId } = useAuth();
   const userId = user?.id;
@@ -35,21 +41,17 @@ export function useProjectViews(project: SerializedProject | undefined, linkedVi
   const pickedId = picked?.key === pickKey ? picked.viewId : undefined;
 
   const active = useMemo(() => {
-    if (!project || (!last.ready && !linkedViewId && !pickedId)) return null;
-    const byId = (id: string | undefined) => (id ? views.find((v) => v.id === id) : undefined);
-    return (
-      byId(pickedId) ??
-      byId(linkedViewId) ??
-      byId(last.viewId) ??
-      byId(project.defaultViewId) ??
-      views[0] ??
-      null
-    );
+    if (!project || (views.length > 0 && !last.ready && !linkedViewId && !pickedId)) return null;
+    return resolveProjectView(views, [pickedId, linkedViewId, last.viewId, project.defaultViewId]);
   }, [project, views, pickedId, linkedViewId, last.ready, last.viewId]);
 
-  const scope = useMemo<DraftScope | null>(
-    () => (userId && organizationId && projectId ? { userId, organizationId, projectId } : null),
-    [userId, organizationId, projectId],
+  const generation = sessionGeneration();
+  const scope = useMemo<(DraftScope & ProjectViewScope) | null>(
+    () =>
+      userId && organizationId && projectId
+        ? { userId, organizationId, projectId, generation }
+        : null,
+    [userId, organizationId, projectId, generation],
   );
   const draft = useViewDraft(scope, active?.id);
   const definition = draft ?? active?.definition;
@@ -66,13 +68,15 @@ export function useProjectViews(project: SerializedProject | undefined, linkedVi
   const editDraft = useCallback(
     (next: ViewDefinition) => {
       if (!scope || !active) return;
-      setViewDraft(scope, active.id, definitionsEqual(next, active.definition) ? null : next);
+      editViewDraft(scope, active.id, next, active.definition);
     },
     [scope, active],
   );
 
   const discard = useCallback(() => {
-    if (scope && active) setViewDraft(scope, active.id, null);
+    if (scope && active) {
+      editViewDraft(scope, active.id, active.definition, active.definition);
+    }
   }, [scope, active]);
 
   const createView = useCreateView();
@@ -84,44 +88,61 @@ export function useProjectViews(project: SerializedProject | undefined, linkedVi
     [userId],
   );
 
-  const save = useCallback(() => {
-    if (!projectId || !active || !draft || !ownsView(active)) return;
-    updateView.mutate({ projectId, viewId: active.id, definition: draft }, { onSuccess: discard });
-  }, [projectId, active, draft, ownsView, updateView, discard]);
+  const save = useCallback(async () => {
+    if (!scope || !projectId || !active || !draft || !ownsView(active)) return;
+    const pending = beginViewSave(scope, active.id, draft);
+    if (!pending) return;
+    try {
+      await updateView.mutateAsync({ scope, projectId, viewId: active.id, definition: draft });
+      finishViewSave(pending, isCurrentSession(scope.generation));
+    } catch {
+      finishViewSave(pending, false);
+    }
+  }, [scope, projectId, active, draft, ownsView, updateView]);
 
-  /** The working copy becomes a new personal view; the view it started from goes back to saved. */
   const saveAsNew = useCallback(
-    (name: string, onDone?: () => void) => {
-      if (!projectId || !active || !definition) return;
-      createView.mutate(
-        { projectId, name, definition },
-        {
-          onSuccess: (view) => {
-            discard();
-            select(view.id);
-            onDone?.();
-          },
-        },
-      );
+    async (name: string, onDone?: () => void) => {
+      if (!scope || !projectId || !active || !definition) return;
+      const pending = beginViewSave(scope, active.id, definition);
+      if (!pending) return;
+      try {
+        const view = await createView.mutateAsync({ scope, projectId, name, definition });
+        const current = isCurrentSession(scope.generation);
+        finishViewSave(pending, current);
+        if (current) {
+          select(view.id);
+          onDone?.();
+        }
+      } catch {
+        finishViewSave(pending, false);
+      }
     },
-    [projectId, active, definition, createView, discard, select],
+    [scope, projectId, active, definition, createView, select],
   );
 
   const rename = useCallback(
     (view: SerializedView, name: string, onDone?: () => void) => {
-      if (!projectId || !ownsView(view)) return;
-      updateView.mutate({ projectId, viewId: view.id, name }, { onSuccess: () => onDone?.() });
+      if (!scope || !projectId || !ownsView(view)) return;
+      updateView.mutate(
+        { scope, projectId, viewId: view.id, name },
+        {
+          onSuccess: () => {
+            if (isCurrentSession(scope.generation)) onDone?.();
+          },
+        },
+      );
     },
-    [projectId, ownsView, updateView],
+    [scope, projectId, ownsView, updateView],
   );
 
   const remove = useCallback(
     (view: SerializedView) => {
       if (!projectId || !ownsView(view) || !scope) return;
       deleteView.mutate(
-        { projectId, viewId: view.id },
+        { scope, projectId, viewId: view.id },
         {
           onSuccess: () => {
+            if (!isCurrentSession(scope.generation)) return;
             setViewDraft(scope, view.id, null);
             // Deleting the open view lands on the project default, not on whatever
             // link or remembered view the screen happened to start from.

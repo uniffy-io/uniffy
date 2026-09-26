@@ -38,7 +38,8 @@ import { bottomBarBlockHeight } from "@shared/components/BottomNav";
 import { BOTTOM_NAV_HEIGHT } from "@theme/theme";
 import { FONT } from "@theme/typography";
 import { SubjectPickerSheet } from "@shared/directory/SubjectPickerSheet";
-import { getWeekStartsOn } from "@core/datetimePrefs";
+import { useDateTimePrefs } from "@core/datetimePrefs";
+import { zonedDayKey } from "@shared/lib/zonedTime";
 import { useDirectory } from "@shared/directory/useDirectory";
 import {
   useProject,
@@ -72,10 +73,11 @@ import { TaskDragPreview } from "@features/projects/components/TaskDragPreview";
 import { useTaskDrag } from "@features/projects/useTaskDrag";
 import { planTaskMove } from "@features/projects/taskOrdering";
 import { buildTaskRelations } from "@features/projects/taskRelations";
-import { narrowTasks, todayIso } from "@features/projects/taskFilters";
+import { narrowTasks } from "@features/projects/taskFilters";
 import { TASK_TYPES } from "@features/projects/taskTypes";
 import { activeFacetCount, readFacets } from "@features/projects/viewFacets";
 import { shapesResults, withFilter, isDescending } from "@features/projects/viewDefinition";
+import { tasksForView, usesTaskOutline } from "@features/projects/viewResults";
 import {
   buildTaskGroups,
   dimensionKey,
@@ -99,10 +101,6 @@ const DROP_DIMENSIONS: ReadonlySet<GroupDimension["kind"]> = new Set([
 
 const STATUS_DIMENSION: GroupDimension = { kind: "status" };
 const EMPTY_DEFINITION = create(ViewDefinitionSchema);
-
-function byManualOrder(tasks: SerializedTask[]): SerializedTask[] {
-  return [...tasks].sort((a, b) => a.sortOrder - b.sortOrder);
-}
 
 function groupByStatus(
   columns: { key: string }[],
@@ -179,7 +177,9 @@ export function ProjectBoardScreen() {
   const activeView = views.active;
   const layout = activeView?.layout ?? "table";
   const definition = views.definition ?? EMPTY_DEFINITION;
-  const viewTasksQuery = useViewTasks(id, definition);
+  const viewTasksQuery = useViewTasks(id, definition, project?.fieldDefinitions);
+  const { timeZone, weekStartsOn } = useDateTimePrefs();
+  const today = zonedDayKey(new Date(), timeZone);
 
   // The router slides screen content under the floating nav, so the bulk bar
   // is parked on top of that block rather than at the bottom of the screen.
@@ -207,16 +207,13 @@ export function ProjectBoardScreen() {
   const serverShaped = shapesResults(definition);
   const awaitingView = serverShaped && !viewTasksQuery.data && !viewTasksQuery.isError;
 
-  // The server decides which tasks the view holds and in what order; the rows
-  // themselves come from the full list, where a drop is applied the moment it
-  // lands rather than when the view's own refetch comes back.
-  const viewTasks = useMemo(() => {
-    if (!serverShaped) return byManualOrder(tasks);
-    const result = (viewTasksQuery.data ?? []).map((task) => relations.byId.get(task.id) ?? task);
-    return sorted ? result : byManualOrder(result);
-  }, [serverShaped, sorted, tasks, viewTasksQuery.data, relations]);
+  const viewTasks = useMemo(
+    () => tasksForView(tasks, viewTasksQuery.data, definition),
+    [tasks, viewTasksQuery.data, definition],
+  );
 
   const narrowed = query.trim().length > 0 || (definition.filter?.nodes.length ?? 0) > 0;
+  const outline = usesTaskOutline(definition, narrowed);
   const visibleTasks = useMemo(
     () => narrowTasks(viewTasks, query, facetReading.facets),
     [viewTasks, query, facetReading.facets],
@@ -246,13 +243,11 @@ export function ProjectBoardScreen() {
     [collapsedState, dimensionId],
   );
 
-  // Table rows are top-level tasks with their subtasks folded under them. While
-  // a search or filter is on, a match has to surface wherever it sits in the
-  // hierarchy.
+  // Search and flat views surface child rows without nesting them under parents.
   const tableGroups = useMemo<TaskGroup[]>(
     () =>
       buildTaskGroups(
-        narrowed ? visibleTasks : visibleTasks.filter((t) => !t.parentId),
+        outline ? visibleTasks.filter((t) => !t.parentId) : visibleTasks,
         dimension,
         {
           statusOptions,
@@ -261,8 +256,8 @@ export function ProjectBoardScreen() {
           sprints,
           taskTypes: TASK_TYPES,
           nameOf: (subjectId) => directory.get(subjectId)?.name ?? "Unknown",
-          today: todayIso(),
-          weekStartsOn: getWeekStartsOn(),
+          today,
+          weekStartsOn,
         },
         {
           hideEmpty: definition.groupBy?.hideEmpty ?? false,
@@ -270,7 +265,7 @@ export function ProjectBoardScreen() {
         },
       ),
     [
-      narrowed,
+      outline,
       visibleTasks,
       dimension,
       statusOptions,
@@ -279,6 +274,8 @@ export function ProjectBoardScreen() {
       sprints,
       directory,
       definition.groupBy,
+      today,
+      weekStartsOn,
     ],
   );
   // The board shows every task as a card, as the web board does.
@@ -694,6 +691,7 @@ export function ProjectBoardScreen() {
           accentColor={T.accent}
           bottomPad={bottomPad}
           narrowed={narrowed}
+          outline={outline}
           noMatches={narrowed && !awaitingView && visibleTasks.length === 0}
           selecting={selecting}
           selectedIds={selectedIds}

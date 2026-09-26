@@ -88,6 +88,20 @@ export function resultKey(definition: ViewDefinition): string {
   return toJsonString(ViewDefinitionSchema, create(ViewDefinitionSchema, { filter, sort }));
 }
 
+/** Deleted sort fields are ignored when reading a saved view, without changing its draft. */
+export function viewQueryDefinition(
+  definition: ViewDefinition,
+  fields: readonly { id: string }[],
+): ViewDefinition {
+  const ids = new Set(fields.map((field) => field.id));
+  return {
+    ...definition,
+    sort: definition.sort.filter(
+      (sort) => sort.field?.ref.case !== "fieldId" || ids.has(sort.field.ref.value),
+    ),
+  };
+}
+
 export function withFilter(
   definition: ViewDefinition,
   filter: TaskFilterGroup | undefined,

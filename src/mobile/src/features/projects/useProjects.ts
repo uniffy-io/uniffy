@@ -1,7 +1,11 @@
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import type { ViewDefinition } from "@uniffy/proto/projects/v1/projects_pb";
 import { useAuth } from "@core/providers/AuthContext";
-import { getEffectiveTimeZone } from "@core/datetimePrefs";
+import { projectQueryKey } from "@features/projects/projectViewsCache";
+import { useDateTimePrefs } from "@core/datetimePrefs";
+import { sessionGeneration } from "@core/auth/sessionScope";
+import { zonedDayKey } from "@shared/lib/zonedTime";
 import { fetchAllPages } from "@shared/lib/fetchAllPages";
 import { projectsApi } from "@features/projects/projectsApi";
 import {
@@ -9,14 +13,15 @@ import {
   taskToPlain,
   activityToPlain,
   sprintToPlain,
+  type SerializedFieldDefinition,
 } from "@features/projects/projectsSerializer";
-import { resultKey, shapesResults } from "@features/projects/viewDefinition";
+import { resultKey, shapesResults, viewQueryDefinition } from "@features/projects/viewDefinition";
 
 export function useProjectsList() {
-  const { organizationId } = useAuth();
+  const { organizationId, user } = useAuth();
 
   return useQuery({
-    queryKey: ["projects", organizationId],
+    queryKey: ["projects", organizationId, user?.id],
     queryFn: async () => {
       const response = await projectsApi.listProjects({
         organizationId: organizationId!,
@@ -28,10 +33,10 @@ export function useProjectsList() {
 }
 
 export function useProject(projectId: string | undefined) {
-  const { organizationId } = useAuth();
+  const { organizationId, user } = useAuth();
 
   return useQuery({
-    queryKey: ["project", organizationId, projectId],
+    queryKey: projectQueryKey(organizationId, projectId, user?.id),
     queryFn: async () => {
       const response = await projectsApi.getProject({
         organizationId: organizationId!,
@@ -73,18 +78,36 @@ export function useProjectTasks(projectId: string | undefined) {
   });
 }
 
-/**
- * The view's tasks in the view's order, filtered and sorted by the server. Idle while the
- * definition neither filters nor sorts: the unfiltered list already answers that. The previous
- * result stays on screen while a changed filter is fetched.
- */
-export function useViewTasks(projectId: string | undefined, definition: ViewDefinition) {
-  const { organizationId } = useAuth();
+/** Unfiltered views reuse the project list; shaped views retain rows during filter changes. */
+export function useViewTasks(
+  projectId: string | undefined,
+  definition: ViewDefinition,
+  fields: SerializedFieldDefinition[] | undefined,
+) {
+  const { organizationId, user } = useAuth();
+  const { timeZone, weekStartsOn } = useDateTimePrefs();
+  const generation = sessionGeneration();
+  const today = zonedDayKey(new Date(), timeZone);
   const active = shapesResults(definition);
+  const request = useMemo(
+    () => viewQueryDefinition(definition, fields ?? []),
+    [definition, fields],
+  );
 
   return useQuery({
     // Under the project's task key, so every task mutation that refreshes the list refreshes this too.
-    queryKey: ["tasks", organizationId, projectId, "view", resultKey(definition)],
+    queryKey: [
+      "tasks",
+      organizationId,
+      projectId,
+      "view",
+      user?.id,
+      generation,
+      timeZone,
+      weekStartsOn,
+      today,
+      resultKey(request),
+    ],
     queryFn: async ({ signal }) => {
       const tasks = await fetchAllPages(
         async (page) => {
@@ -93,9 +116,9 @@ export function useViewTasks(projectId: string | undefined, definition: ViewDefi
               organizationId: organizationId!,
               projectId: projectId!,
               pagination: { page, pageSize: TASK_PAGE_SIZE },
-              filter: definition.filter,
-              sort: definition.sort,
-              timeZone: getEffectiveTimeZone(),
+              filter: request.filter,
+              sort: request.sort,
+              timeZone,
             },
             { signal },
           );
@@ -105,8 +128,14 @@ export function useViewTasks(projectId: string | undefined, definition: ViewDefi
       );
       return tasks.map(taskToPlain);
     },
-    enabled: !!organizationId && !!projectId && active,
-    placeholderData: keepPreviousData,
+    enabled: !!organizationId && !!user && !!projectId && !!fields && active,
+    placeholderData: (previous, query) =>
+      query?.queryKey[1] === organizationId &&
+      query.queryKey[2] === projectId &&
+      query.queryKey[4] === user?.id &&
+      query.queryKey[5] === generation
+        ? previous
+        : undefined,
   });
 }
 

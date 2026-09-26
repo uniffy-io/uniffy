@@ -204,7 +204,7 @@ function conditionOf(node: TaskFilterNode): TaskFilterCondition | null {
   return node.node.case === "condition" ? node.node.value : null;
 }
 
-/** Due before today and not completed, as one nested AND group - the same rule mobile always used. */
+/** Due before today and not completed, kept together as one facet. */
 function isOverdueGroup(node: TaskFilterNode): boolean {
   if (node.node.case !== "group") return false;
   const group = node.node.value;

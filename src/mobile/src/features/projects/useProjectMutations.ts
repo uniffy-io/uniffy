@@ -2,6 +2,12 @@ import { Alert } from "react-native";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Code, ConnectError } from "@connectrpc/connect";
 import { useAuth } from "@core/providers/AuthContext";
+import { isCurrentSession } from "@core/auth/sessionScope";
+import {
+  projectQueryKey,
+  storeProjectView,
+  type ProjectViewScope,
+} from "@features/projects/projectViewsCache";
 import { projectsApi } from "@features/projects/projectsApi";
 import { ViewVisibility } from "@uniffy/proto/projects/v1/projects_pb";
 import type { ViewDefinition } from "@uniffy/proto/projects/v1/projects_pb";
@@ -10,11 +16,7 @@ import {
   viewToPlain,
   visibilityStringToProto,
 } from "@features/projects/projectsSerializer";
-import type {
-  SerializedProject,
-  SerializedTask,
-  SerializedView,
-} from "@features/projects/projectsSerializer";
+import type { SerializedProject, SerializedTask } from "@features/projects/projectsSerializer";
 import { isCompletedStatus } from "@features/projects/statusSemantics";
 import type { TaskMove } from "@features/projects/taskOrdering";
 import type { GroupDrop } from "@features/projects/taskGrouping";
@@ -345,7 +347,7 @@ function moveErrorMessage(error: unknown): string {
 }
 
 export function useMoveTasks() {
-  const { organizationId } = useAuth();
+  const { organizationId, user } = useAuth();
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -369,14 +371,16 @@ export function useMoveTasks() {
     onMutate: async (args) => {
       const key = ["tasks", organizationId, args.projectId];
       await queryClient.cancelQueries({ queryKey: key });
-      const previous = queryClient.getQueryData<SerializedTask[]>(key);
+      const previous = queryClient.getQueriesData<SerializedTask[]>({ queryKey: key });
       const statusOptions = getStatusOptions(
-        queryClient.getQueryData<SerializedProject>(["project", organizationId, args.projectId]),
+        queryClient.getQueryData<SerializedProject>(
+          projectQueryKey(organizationId, args.projectId, user?.id),
+        ),
       );
 
       // A card that snaps back to where it started while the round trip runs
       // reads as a rejected drop, so the drop is applied locally first.
-      queryClient.setQueryData<SerializedTask[]>(key, (tasks) => {
+      queryClient.setQueriesData<SerializedTask[]>({ queryKey: key }, (tasks) => {
         if (!tasks) return tasks;
         const byId = new Map(args.moves.map((m) => [m.taskId, m]));
         return tasks.map((task) => {
@@ -396,10 +400,10 @@ export function useMoveTasks() {
         });
       });
 
-      return { previous, key };
+      return { previous };
     },
     onError: (error, _args, context) => {
-      if (context?.previous) queryClient.setQueryData(context.key, context.previous);
+      for (const [key, data] of context?.previous ?? []) queryClient.setQueryData(key, data);
       Alert.alert("Could not move task", moveErrorMessage(error));
     },
     onSettled: (_data, _error, args) => {
@@ -568,34 +572,23 @@ export function useDropTaskOnGroup() {
   });
 }
 
-/** Puts the server's copy of a view into the cached project, so its tab shows without a refetch. */
-function useStoreView() {
-  const { organizationId } = useAuth();
-  const queryClient = useQueryClient();
-
-  return (projectId: string, change: { view?: SerializedView; removedId?: string }) => {
-    queryClient.setQueryData<SerializedProject>(
-      ["project", organizationId, projectId],
-      (project) => {
-        if (!project) return project;
-        const views = project.views.filter(
-          (view) => view.id !== change.removedId && view.id !== change.view?.id,
-        );
-        return { ...project, views: change.view ? [...views, change.view] : views };
-      },
-    );
-    queryClient.invalidateQueries({ queryKey: ["project", organizationId, projectId] });
-  };
+function requireViewSession(scope: ProjectViewScope): void {
+  if (!isCurrentSession(scope.generation)) throw new Error("Session changed");
 }
 
 export function useCreateView() {
-  const { organizationId } = useAuth();
-  const storeView = useStoreView();
+  const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (args: { projectId: string; name: string; definition: ViewDefinition }) => {
+    mutationFn: async (args: {
+      scope: ProjectViewScope;
+      projectId: string;
+      name: string;
+      definition: ViewDefinition;
+    }) => {
+      requireViewSession(args.scope);
       const response = await projectsApi.createView({
-        organizationId: organizationId!,
+        organizationId: args.scope.organizationId,
         projectId: args.projectId,
         name: args.name,
         definition: args.definition,
@@ -604,26 +597,28 @@ export function useCreateView() {
       if (!response.view) throw new Error("The view was not created");
       return viewToPlain(response.view);
     },
-    onSuccess: (view, args) => storeView(args.projectId, { view }),
-    onError: (error) => {
+    onSuccess: (view, args) => storeProjectView(queryClient, args.scope, args.projectId, { view }),
+    onError: (error, args) => {
+      if (!isCurrentSession(args.scope.generation)) return;
       Alert.alert("Could not save view", serverMessage(error, "The view was not created"));
     },
   });
 }
 
 export function useUpdateView() {
-  const { organizationId } = useAuth();
-  const storeView = useStoreView();
+  const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (args: {
+      scope: ProjectViewScope;
       projectId: string;
       viewId: string;
       name?: string;
       definition?: ViewDefinition;
     }) => {
+      requireViewSession(args.scope);
       const response = await projectsApi.updateView({
-        organizationId: organizationId!,
+        organizationId: args.scope.organizationId,
         projectId: args.projectId,
         viewId: args.viewId,
         name: args.name,
@@ -632,26 +627,30 @@ export function useUpdateView() {
       if (!response.view) throw new Error("The view was not saved");
       return viewToPlain(response.view);
     },
-    onSuccess: (view, args) => storeView(args.projectId, { view }),
-    onError: (error) => {
+    onSuccess: (view, args) => storeProjectView(queryClient, args.scope, args.projectId, { view }),
+    onError: (error, args) => {
+      if (!isCurrentSession(args.scope.generation)) return;
       Alert.alert("Could not save view", serverMessage(error, "The changes were not saved"));
     },
   });
 }
 
 export function useDeleteView() {
-  const { organizationId } = useAuth();
-  const storeView = useStoreView();
+  const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (args: { projectId: string; viewId: string }) =>
-      projectsApi.deleteView({
-        organizationId: organizationId!,
+    mutationFn: (args: { scope: ProjectViewScope; projectId: string; viewId: string }) => {
+      requireViewSession(args.scope);
+      return projectsApi.deleteView({
+        organizationId: args.scope.organizationId,
         projectId: args.projectId,
         viewId: args.viewId,
-      }),
-    onSuccess: (_data, args) => storeView(args.projectId, { removedId: args.viewId }),
-    onError: (error) => {
+      });
+    },
+    onSuccess: (_data, args) =>
+      storeProjectView(queryClient, args.scope, args.projectId, { removedId: args.viewId }),
+    onError: (error, args) => {
+      if (!isCurrentSession(args.scope.generation)) return;
       Alert.alert("Could not delete view", serverMessage(error, "The view was not deleted"));
     },
   });

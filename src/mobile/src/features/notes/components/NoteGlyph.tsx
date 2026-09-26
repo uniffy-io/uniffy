@@ -350,6 +350,7 @@ export function NoteGlyph({
   if (icon?.value && icon.type === "emoji") {
     return <Text style={{ fontSize: size - 2 }}>{icon.value}</Text>;
   }
-  const Named = (icon?.value && NOTE_ICONS[icon.value]) || FileText;
+  const Named =
+    icon?.value && Object.hasOwn(NOTE_ICONS, icon.value) ? NOTE_ICONS[icon.value] : FileText;
   return <Named size={size} color={color} />;
 }

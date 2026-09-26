@@ -146,7 +146,7 @@ export function groupByFor(dimension: GroupDimension, previous?: TaskGroupBy): T
 
 /**
  * Null when the view groups by something the phone does not render (milestone, epic, a
- * timestamp); the table then falls back to status, the way it always grouped.
+ * timestamp); the table falls back to status.
  */
 export function dimensionOf(
   groupBy: TaskGroupBy | undefined,
