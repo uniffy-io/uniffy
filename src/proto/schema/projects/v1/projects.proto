@@ -40,6 +40,7 @@ service ProjectsService {
   rpc UpdateView(UpdateViewRequest) returns (UpdateViewResponse);
   rpc DeleteView(DeleteViewRequest) returns (DeleteViewResponse);
   rpc ReorderViews(ReorderViewsRequest) returns (ReorderViewsResponse);
+  rpc GetViewCatalog(GetViewCatalogRequest) returns (GetViewCatalogResponse);
 
   // ----- Activities -----
   rpc ListActivities(ListActivitiesRequest) returns (ListActivitiesResponse);
@@ -152,6 +153,13 @@ enum RelativeDateAnchor {
   RELATIVE_DATE_ANCHOR_END_OF_WEEK = 3;
   RELATIVE_DATE_ANCHOR_START_OF_MONTH = 4;
   RELATIVE_DATE_ANCHOR_END_OF_MONTH = 5;
+}
+
+enum ViewIdFlag {
+  VIEW_ID_FLAG_UNSPECIFIED = 0;
+  VIEW_ID_FLAG_CURRENT_USER = 1;
+  VIEW_ID_FLAG_EMPTY = 2;
+  VIEW_ID_FLAG_ACTIVE_SPRINT = 3;
 }
 
 enum RoadmapZoom {
@@ -787,6 +795,41 @@ message ReorderViewsRequest {
 
 message ReorderViewsResponse {
   repeated ViewConfig views = 1;
+}
+
+// What a view may do with one field; the definition validator enforces the same rules.
+message ViewFieldCapabilities {
+  repeated TaskFilterOperator operators = 1;
+  repeated ViewIdFlag id_flags = 2;
+  bool sortable = 3;
+  bool groupable = 4;
+}
+
+message ViewCatalogFieldType {
+  FieldType type = 1;
+  ViewFieldCapabilities capabilities = 2;
+}
+
+message ViewCatalogPseudoField {
+  TaskPseudoField pseudo = 1;
+  ViewFieldCapabilities capabilities = 2;
+}
+
+message ViewFilterLimits {
+  // The top-level group counts as the first level.
+  int32 max_depth = 1;
+  int32 max_nodes = 2;
+  int32 max_ids_per_condition = 3;
+  int32 max_text_length = 4;
+  int32 max_relative_offset_days = 5;
+}
+
+message GetViewCatalogRequest {}
+
+message GetViewCatalogResponse {
+  repeated ViewCatalogFieldType field_types = 1;
+  repeated ViewCatalogPseudoField pseudo_fields = 2;
+  ViewFilterLimits filter_limits = 3;
 }
 
 // ============================================================================
