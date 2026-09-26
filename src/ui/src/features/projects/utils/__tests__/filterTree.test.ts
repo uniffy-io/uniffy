@@ -23,6 +23,7 @@ import {
   describeNode,
   editorGroup,
   fromEditorTree,
+  filterTreeLimitProblem,
   hasFilterProblems,
   isConditionComplete,
   isOverdueGroup,
@@ -98,6 +99,37 @@ function statusIs(...ids: string[]): ViewFilterCondition {
 }
 
 describe("editor tree", () => {
+  it("rejects a preset that wraps a maximum-depth OR tree", () => {
+    const root = editorGroup(FilterLogic.OR, [
+      ...toEditorTree({ logic: FilterLogic.OR, nodes: [presetNode("myTasks")] }).children,
+      editorGroup(FilterLogic.AND, [
+        editorGroup(
+          FilterLogic.OR,
+          toEditorTree({ logic: FilterLogic.OR, nodes: [presetNode("unassigned")] }).children,
+        ),
+      ]),
+    ]);
+    expect(filterTreeLimitProblem(root, LIMITS)).toBeNull();
+    const next = withPreset(root, "myTasks");
+    expect(filterTreeLimitProblem(next, LIMITS)).toBe("Use at most 3 levels of filter groups.");
+    expect(filterTreeLimitProblem(root, LIMITS)).toBeNull();
+  });
+
+  it("counts every node added by a preset or group", () => {
+    const root = toEditorTree({
+      logic: FilterLogic.AND,
+      nodes: Array.from({ length: 49 }, () => presetNode("myTasks")),
+    });
+    expect(filterTreeLimitProblem(withPreset(root, "myTasks"), LIMITS)).toBeNull();
+    expect(filterTreeLimitProblem(withPreset(root, "overdue"), LIMITS)).toBe(
+      "Use at most 50 filter conditions and groups.",
+    );
+    const group = toEditorTree({ logic: FilterLogic.OR, nodes: [presetNode("unassigned")] });
+    expect(filterTreeLimitProblem(appendChild(root, root.id, group), LIMITS)).toBe(
+      "Use at most 50 filter conditions and groups.",
+    );
+  });
+
   it("round-trips nested groups and drops rows the server would refuse", () => {
     const filter: ViewFilterGroup = {
       logic: FilterLogic.AND,

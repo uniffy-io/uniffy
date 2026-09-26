@@ -2,11 +2,24 @@ import { Alert } from "react-native";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Code, ConnectError } from "@connectrpc/connect";
 import { useAuth } from "@core/providers/AuthContext";
+import { isCurrentSession } from "@core/auth/sessionScope";
+import {
+  projectQueryKey,
+  storeProjectView,
+  type ProjectViewScope,
+} from "@features/projects/projectViewsCache";
 import { projectsApi } from "@features/projects/projectsApi";
-import { getStatusOptions, visibilityStringToProto } from "@features/projects/projectsSerializer";
+import { ViewVisibility } from "@uniffy/proto/projects/v1/projects_pb";
+import type { ViewDefinition } from "@uniffy/proto/projects/v1/projects_pb";
+import {
+  getStatusOptions,
+  viewToPlain,
+  visibilityStringToProto,
+} from "@features/projects/projectsSerializer";
 import type { SerializedProject, SerializedTask } from "@features/projects/projectsSerializer";
 import { isCompletedStatus } from "@features/projects/statusSemantics";
 import type { TaskMove } from "@features/projects/taskOrdering";
+import type { GroupDrop } from "@features/projects/taskGrouping";
 
 export function useCreateProject() {
   const { organizationId } = useAuth();
@@ -334,7 +347,7 @@ function moveErrorMessage(error: unknown): string {
 }
 
 export function useMoveTasks() {
-  const { organizationId } = useAuth();
+  const { organizationId, user } = useAuth();
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -358,14 +371,16 @@ export function useMoveTasks() {
     onMutate: async (args) => {
       const key = ["tasks", organizationId, args.projectId];
       await queryClient.cancelQueries({ queryKey: key });
-      const previous = queryClient.getQueryData<SerializedTask[]>(key);
+      const previous = queryClient.getQueriesData<SerializedTask[]>({ queryKey: key });
       const statusOptions = getStatusOptions(
-        queryClient.getQueryData<SerializedProject>(["project", organizationId, args.projectId]),
+        queryClient.getQueryData<SerializedProject>(
+          projectQueryKey(organizationId, args.projectId, user?.id),
+        ),
       );
 
       // A card that snaps back to where it started while the round trip runs
       // reads as a rejected drop, so the drop is applied locally first.
-      queryClient.setQueryData<SerializedTask[]>(key, (tasks) => {
+      queryClient.setQueriesData<SerializedTask[]>({ queryKey: key }, (tasks) => {
         if (!tasks) return tasks;
         const byId = new Map(args.moves.map((m) => [m.taskId, m]));
         return tasks.map((task) => {
@@ -385,10 +400,10 @@ export function useMoveTasks() {
         });
       });
 
-      return { previous, key };
+      return { previous };
     },
     onError: (error, _args, context) => {
-      if (context?.previous) queryClient.setQueryData(context.key, context.previous);
+      for (const [key, data] of context?.previous ?? []) queryClient.setQueryData(key, data);
       Alert.alert("Could not move task", moveErrorMessage(error));
     },
     onSettled: (_data, _error, args) => {
@@ -493,6 +508,150 @@ export function useMoveTasksToSprint() {
     },
     onError: (error) => {
       Alert.alert("Could not move tasks", serverMessage(error, "The tasks could not be moved"));
+    },
+  });
+}
+
+/**
+ * Writes the value of the group a task was dropped on. Applied to every loaded list of the
+ * project first, so the row lands in its new group without waiting for the round trip.
+ */
+export function useDropTaskOnGroup() {
+  const { organizationId } = useAuth();
+  const queryClient = useQueryClient();
+
+  const patch = (task: SerializedTask, drop: Exclude<GroupDrop, { kind: "status" }>) => {
+    switch (drop.kind) {
+      case "priority":
+        return { ...task, priority: drop.priority };
+      case "sprint":
+        return { ...task, sprintId: drop.sprintId ?? undefined };
+      case "select":
+        return {
+          ...task,
+          fieldValues: { ...task.fieldValues, [drop.fieldId]: drop.optionId ?? "" },
+        };
+    }
+  };
+
+  return useMutation({
+    mutationFn: (args: {
+      projectId: string;
+      taskId: string;
+      drop: Exclude<GroupDrop, { kind: "status" }>;
+    }) => {
+      const { drop } = args;
+      return projectsApi.updateTask({
+        organizationId: organizationId!,
+        taskId: args.taskId,
+        priority: drop.kind === "priority" ? drop.priority : undefined,
+        // Absent leaves the sprint alone, so clearing it has to send "".
+        sprintId: drop.kind === "sprint" ? (drop.sprintId ?? "") : undefined,
+        // Custom values travel JSON-encoded; null clears the field.
+        fieldValues:
+          drop.kind === "select" ? { [drop.fieldId]: JSON.stringify(drop.optionId) } : undefined,
+      });
+    },
+    onMutate: async (args) => {
+      const key = ["tasks", organizationId, args.projectId];
+      await queryClient.cancelQueries({ queryKey: key });
+      const previous = queryClient.getQueriesData<SerializedTask[]>({ queryKey: key });
+      queryClient.setQueriesData<SerializedTask[]>({ queryKey: key }, (tasks) =>
+        tasks?.map((task) => (task.id === args.taskId ? patch(task, args.drop) : task)),
+      );
+      return { previous };
+    },
+    onError: (error, _args, context) => {
+      for (const [key, data] of context?.previous ?? []) queryClient.setQueryData(key, data);
+      Alert.alert("Could not move task", serverMessage(error, "The task could not be moved"));
+    },
+    onSettled: (_data, _error, args) => {
+      queryClient.invalidateQueries({ queryKey: ["tasks", organizationId, args.projectId] });
+      queryClient.invalidateQueries({ queryKey: ["sprints", organizationId, args.projectId] });
+    },
+  });
+}
+
+function requireViewSession(scope: ProjectViewScope): void {
+  if (!isCurrentSession(scope.generation)) throw new Error("Session changed");
+}
+
+export function useCreateView() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (args: {
+      scope: ProjectViewScope;
+      projectId: string;
+      name: string;
+      definition: ViewDefinition;
+    }) => {
+      requireViewSession(args.scope);
+      const response = await projectsApi.createView({
+        organizationId: args.scope.organizationId,
+        projectId: args.projectId,
+        name: args.name,
+        definition: args.definition,
+        visibility: ViewVisibility.PERSONAL,
+      });
+      if (!response.view) throw new Error("The view was not created");
+      return viewToPlain(response.view);
+    },
+    onSuccess: (view, args) => storeProjectView(queryClient, args.scope, args.projectId, { view }),
+    onError: (error, args) => {
+      if (!isCurrentSession(args.scope.generation)) return;
+      Alert.alert("Could not save view", serverMessage(error, "The view was not created"));
+    },
+  });
+}
+
+export function useUpdateView() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (args: {
+      scope: ProjectViewScope;
+      projectId: string;
+      viewId: string;
+      name?: string;
+      definition?: ViewDefinition;
+    }) => {
+      requireViewSession(args.scope);
+      const response = await projectsApi.updateView({
+        organizationId: args.scope.organizationId,
+        projectId: args.projectId,
+        viewId: args.viewId,
+        name: args.name,
+        definition: args.definition,
+      });
+      if (!response.view) throw new Error("The view was not saved");
+      return viewToPlain(response.view);
+    },
+    onSuccess: (view, args) => storeProjectView(queryClient, args.scope, args.projectId, { view }),
+    onError: (error, args) => {
+      if (!isCurrentSession(args.scope.generation)) return;
+      Alert.alert("Could not save view", serverMessage(error, "The changes were not saved"));
+    },
+  });
+}
+
+export function useDeleteView() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (args: { scope: ProjectViewScope; projectId: string; viewId: string }) => {
+      requireViewSession(args.scope);
+      return projectsApi.deleteView({
+        organizationId: args.scope.organizationId,
+        projectId: args.projectId,
+        viewId: args.viewId,
+      });
+    },
+    onSuccess: (_data, args) =>
+      storeProjectView(queryClient, args.scope, args.projectId, { removedId: args.viewId }),
+    onError: (error, args) => {
+      if (!isCurrentSession(args.scope.generation)) return;
+      Alert.alert("Could not delete view", serverMessage(error, "The view was not deleted"));
     },
   });
 }

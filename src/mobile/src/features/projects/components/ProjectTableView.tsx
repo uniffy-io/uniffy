@@ -8,18 +8,14 @@ import { DragShift } from "@features/projects/components/DragShift";
 import { TaskTableRow } from "@features/projects/components/TaskTableRow";
 import { TaskSubtaskRows } from "@features/projects/components/TaskSubtaskRows";
 import { isTaskBlocked, parentKeyOf } from "@features/projects/taskRelations";
-import type { BoardColumn } from "@features/projects/components/ProjectBoardView";
 import type { TaskDragController } from "@features/projects/useTaskDrag";
+import type { TaskGroup } from "@features/projects/taskGrouping";
 import type { TaskRelations } from "@features/projects/taskRelations";
 import type { SerializedTask, PlainSelectOption } from "@features/projects/projectsSerializer";
 
-/**
- * Status groups of top-level tasks whose subtasks unfold under them. While a
- * search or filter is on, every match is its own row and names its parent.
- */
 export function ProjectTableView({
-  columns,
-  tasksFor,
+  groups,
+  statusColorOf,
   relations,
   projectSlug,
   statusOptions,
@@ -27,6 +23,7 @@ export function ProjectTableView({
   accentColor,
   bottomPad,
   narrowed,
+  outline,
   noMatches,
   selecting,
   selectedIds,
@@ -42,8 +39,8 @@ export function ProjectTableView({
   onToggleExpand,
   onAddTask,
 }: {
-  columns: BoardColumn[];
-  tasksFor: (statusId: string) => SerializedTask[];
+  groups: TaskGroup[];
+  statusColorOf: (task: SerializedTask) => string;
   /** Built from every loaded task, not just the visible ones. */
   relations: TaskRelations;
   projectSlug: string;
@@ -52,10 +49,11 @@ export function ProjectTableView({
   accentColor: string;
   bottomPad: number;
   narrowed: boolean;
+  outline: boolean;
   noMatches: boolean;
   selecting: boolean;
   selectedIds: string[];
-  /** Status ids whose rows are folded away. */
+  /** Group keys whose rows are folded away. */
   collapsed: string[];
   /** Task ids whose subtasks are shown. */
   expanded: string[];
@@ -65,13 +63,20 @@ export function ProjectTableView({
   onOpen: (taskId: string) => void;
   onOpenParent: (parentId: string) => void;
   onToggleSelect: (taskId: string) => void;
-  onToggleGroup: (statusId: string) => void;
-  onToggleCollapsed: (statusId: string) => void;
+  onToggleGroup: (groupKey: string) => void;
+  onToggleCollapsed: (groupKey: string) => void;
   onToggleExpand: (taskId: string) => void;
   onAddTask: () => void;
 }) {
   const T = useTheme();
   const dragging = drag.draggingId !== null;
+  // A task listed under several groups (two assignees, two tags) registers only its first row:
+  // the drag layer keys rows by task id, and those groupings never drag anyway.
+  const firstGroupOf = new Map<string, string>();
+  for (const group of groups) {
+    for (const task of group.tasks)
+      if (!firstGroupOf.has(task.id)) firstGroupOf.set(task.id, group.key);
+  }
 
   return (
     <View style={styles.fill} {...drag.containerProps}>
@@ -81,12 +86,12 @@ export function ProjectTableView({
         contentContainerStyle={{ paddingBottom: bottomPad }}
         keyboardShouldPersistTaps="handled"
       >
-        {columns.map((col) => {
-          const colTasks = tasksFor(col.key);
-          // Every status keeps its header so it stays a drop target even with
-          // nothing in it - a status you cannot drop into is a status you can
-          // never move the last task back out of. Search results are the one
-          // exception: there an empty status is just noise.
+        {groups.map((col) => {
+          const colTasks = col.tasks;
+          // A group that takes drops keeps its header even with nothing in it -
+          // a status you cannot drop into is a status you can never move the
+          // last task back out of. Search results are the one exception: there
+          // an empty group is just noise.
           if (colTasks.length === 0 && narrowed) return null;
           const isCollapsed = collapsed.includes(col.key);
 
@@ -115,7 +120,7 @@ export function ProjectTableView({
                 ) : (
                   <CaretDown size={12} color={T.textDim} weight="bold" />
                 )}
-                <View style={[styles.colDot, { backgroundColor: col.color }]} />
+                <View style={[styles.colDot, { backgroundColor: col.color ?? T.textDim }]} />
                 <Text style={[styles.groupTitle, { color: T.textBright }]}>{col.label}</Text>
                 <View style={[styles.colCount, { backgroundColor: T.surfaceHover }]}>
                   <Text style={[styles.colCountText, { color: T.textDim }]}>{colTasks.length}</Text>
@@ -129,7 +134,7 @@ export function ProjectTableView({
                   ? null
                   : colTasks.map((task, index) => {
                       const counts = relations.subtaskCounts.get(task.id);
-                      const canExpand = !narrowed && !!counts;
+                      const canExpand = outline && !!counts;
                       const isExpanded = canExpand && expanded.includes(task.id);
                       return (
                         <DraggableTask
@@ -138,8 +143,14 @@ export function ProjectTableView({
                           offset={drag.offsetFor(col.key, index)}
                           animate={dragging}
                           lifted={drag.draggingId === task.id}
-                          onLayout={(event) => drag.registerItem(col.key, task.id, event)}
-                          onUnmount={() => drag.unregisterItem(task.id)}
+                          onLayout={(event) => {
+                            if (firstGroupOf.get(task.id) === col.key) {
+                              drag.registerItem(col.key, task.id, event);
+                            }
+                          }}
+                          onUnmount={() => {
+                            if (firstGroupOf.get(task.id) === col.key) drag.unregisterItem(task.id);
+                          }}
                           trailing={
                             isExpanded ? (
                               <TaskSubtaskRows
@@ -162,18 +173,18 @@ export function ProjectTableView({
                           <TaskTableRow
                             task={task}
                             depth={0}
-                            statusColor={col.color}
+                            statusColor={statusColorOf(task)}
                             priorityOptions={priorityOptions}
                             accentColor={accentColor}
                             selecting={selecting}
                             selected={selectedIds.includes(task.id)}
                             blocked={isTaskBlocked(task, relations.byId)}
                             parentKey={
-                              narrowed ? parentKeyOf(task, relations.byId, projectSlug) : null
+                              outline ? null : parentKeyOf(task, relations.byId, projectSlug)
                             }
                             subtaskTotal={counts?.total ?? 0}
                             subtaskDone={counts?.done ?? 0}
-                            outline={!narrowed}
+                            outline={outline}
                             expanded={canExpand ? isExpanded : undefined}
                             onPress={onOpen}
                             onToggleSelect={onToggleSelect}

@@ -2799,6 +2799,44 @@ estimates, and due dates overdue, today and next week.
       their rows, subtasks indented under their parent inside a group.
 - [ ] Backlog, graph and resources views offer no Group by.
 
+### Views on mobile
+
+Needs the phone app signed in as the project owner, the web app as the same user, and a second
+account with the project shared as a viewer. A project with a few sprints, tags, assignees, due
+dates and one custom single-select field makes every check reachable.
+
+- [ ] The phone's tab row lists the shared views, then the caller's personal views with a person
+      mark. The project default opens first; open Board, kill the app and relaunch: Board opens.
+- [ ] On the web, save a shared view "Assignee is Me, due this week". On the phone it appears as a
+      tab and lists the same task ids as the web tab. Opened as the second account, it lists that
+      account's own tasks.
+- [ ] Filter sheet: Me, Unassigned, Creator Me, Type, Active sprint, Backlog, a named sprint, each
+      Due preset, Milestones only and an epic each narrow the list. Status and priority chips
+      narrow at once; the others show "Loading the view" or keep the old list until the server
+      answers. The tab shows a dot and the bar shows Unsaved changes.
+- [ ] A web view with a nested OR group shows "1 advanced condition from the web" on the phone.
+      Changing a facet keeps it (the list stays within the group); Clear drops only it.
+- [ ] Display sheet on Table: group by Assignee shows a task with two assignees under both and an
+      Unassigned group last, and a long press does not lift rows. Group by Priority, Sprint and the
+      custom select: dragging a row into another group writes that value (check it on the web);
+      dropping into Backlog or None clears it. Hide empty groups hides groups with no rows.
+- [ ] Sort by Due date ascending: undated tasks come last. Descending keeps them last. A web view
+      sorted by two keys says so in the sheet and keeps both until a field is picked.
+- [ ] Open a task and go back: filter, group and sort are unchanged. Discard restores the saved
+      view and clears the dot.
+- [ ] As the viewer, edit a shared view and Save as new: a personal view with the edits opens, the
+      shared view is back to saved, and the owner's phone and web do not list the new view. There
+      is no Save for a shared view on the phone.
+- [ ] Long press the personal view: Rename updates the tab (and the web tab after a reload);
+      Delete asks first, removes the tab and opens the default view. Long pressing a shared view
+      does nothing.
+- [ ] The Resources view shows a placeholder whose button opens the resources screen.
+- [ ] Post a web view link (`/projects/<id>?view=<view id>`) in a chat on this server and tap it
+      on the phone: the project opens on that view. A link to another host opens the browser.
+      `adb shell am start -a android.intent.action.VIEW -d "uniffy://projects/<id>?view=<view id>"`
+      opens the same view from outside the app.
+- [ ] Sign out and in as the second account on the same phone: no unsaved view edits or last
+      opened views of the first account appear.
 ## Sign-out and organization switch reset
 
 Needs a user who belongs to two organizations; the org picker lives at `/select-org` and also

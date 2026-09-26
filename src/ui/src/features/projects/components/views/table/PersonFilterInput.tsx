@@ -83,7 +83,7 @@ export function PersonFilterInput({
         onClick={() => setIsOpen((open) => !open)}
         className={cn(
           controlShellClass,
-          "focus-ring flex items-center gap-1.5 w-full h-11 md:h-7 px-2 text-xs",
+          "focus-ring flex items-center gap-1.5 w-full h-11 md:h-7 touch:h-11 px-2 text-xs",
           isOpen && "border-border-strong",
         )}
       >

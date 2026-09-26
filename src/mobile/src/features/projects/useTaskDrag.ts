@@ -23,12 +23,12 @@ interface Rect {
 
 /** A drop column and the ids it currently renders, top to bottom. */
 export interface DragColumn {
-  statusId: string;
+  columnKey: string;
   taskIds: string[];
 }
 
 export interface DropTarget {
-  statusId: string;
+  columnKey: string;
   /**
    * A slot in `taskIds` - which still contains the lifted task - so it runs
    * from 0 to `taskIds.length`.
@@ -38,7 +38,7 @@ export interface DropTarget {
 
 function sameTarget(a: DropTarget | null, b: DropTarget | null): boolean {
   if (!a || !b) return a === b;
-  return a.statusId === b.statusId && a.index === b.index;
+  return a.columnKey === b.columnKey && a.index === b.index;
 }
 
 /**
@@ -66,7 +66,7 @@ export function useTaskDrag(params: {
 
   const groupRects = useRef(new Map<string, Rect>());
   const listRects = useRef(new Map<string, Rect>());
-  const itemRects = useRef(new Map<string, { statusId: string; rect: Rect }>());
+  const itemRects = useRef(new Map<string, { columnKey: string; rect: Rect }>());
   const origin = useRef({ x: 0, y: 0 });
   const viewport = useRef({ width: 0, height: 0 });
   const content = useRef({ width: 0, height: 0 });
@@ -117,27 +117,30 @@ export function useTaskDrag(params: {
     });
   }, []);
 
-  const registerGroup = useCallback((statusId: string, event: LayoutChangeEvent) => {
-    groupRects.current.set(statusId, { ...event.nativeEvent.layout });
+  const registerGroup = useCallback((columnKey: string, event: LayoutChangeEvent) => {
+    groupRects.current.set(columnKey, { ...event.nativeEvent.layout });
   }, []);
 
-  const registerList = useCallback((statusId: string, event: LayoutChangeEvent) => {
-    listRects.current.set(statusId, { ...event.nativeEvent.layout });
+  const registerList = useCallback((columnKey: string, event: LayoutChangeEvent) => {
+    listRects.current.set(columnKey, { ...event.nativeEvent.layout });
   }, []);
 
-  const registerItem = useCallback((statusId: string, taskId: string, event: LayoutChangeEvent) => {
-    itemRects.current.set(taskId, { statusId, rect: { ...event.nativeEvent.layout } });
-  }, []);
+  const registerItem = useCallback(
+    (columnKey: string, taskId: string, event: LayoutChangeEvent) => {
+      itemRects.current.set(taskId, { columnKey, rect: { ...event.nativeEvent.layout } });
+    },
+    [],
+  );
 
   // A group that stops rendering - a status filtered away by a search, a row
   // that scrolls out of a windowed list - keeps its last rect otherwise, and a
   // hit test happily lands a card in a column that is no longer on screen.
-  const unregisterGroup = useCallback((statusId: string) => {
-    groupRects.current.delete(statusId);
+  const unregisterGroup = useCallback((columnKey: string) => {
+    groupRects.current.delete(columnKey);
   }, []);
 
-  const unregisterList = useCallback((statusId: string) => {
-    listRects.current.delete(statusId);
+  const unregisterList = useCallback((columnKey: string) => {
+    listRects.current.delete(columnKey);
   }, []);
 
   const unregisterItem = useCallback((taskId: string) => {
@@ -147,8 +150,8 @@ export function useTaskDrag(params: {
   const contentRectFor = useCallback((taskId: string): Rect | null => {
     const item = itemRects.current.get(taskId);
     if (!item) return null;
-    const group = groupRects.current.get(item.statusId);
-    const list = listRects.current.get(item.statusId);
+    const group = groupRects.current.get(item.columnKey);
+    const list = listRects.current.get(item.columnKey);
     if (!group || !list) return null;
     return {
       x: group.x + list.x + item.rect.x,
@@ -167,28 +170,28 @@ export function useTaskDrag(params: {
       const y = absY - origin.current.y + scroll.current.y;
       const along = axis === "horizontal" ? x : y;
 
-      let statusId: string | null = null;
-      let nearest: { statusId: string; distance: number } | null = null;
+      let columnKey: string | null = null;
+      let nearest: { columnKey: string; distance: number } | null = null;
       for (const column of columns) {
-        const rect = groupRects.current.get(column.statusId);
+        const rect = groupRects.current.get(column.columnKey);
         if (!rect) continue;
         const start = axis === "horizontal" ? rect.x : rect.y;
         const size = axis === "horizontal" ? rect.width : rect.height;
         if (along >= start && along <= start + size) {
-          statusId = column.statusId;
+          columnKey = column.columnKey;
           break;
         }
         // Dragging into the gap between two columns, or past the last one,
         // should still resolve rather than drop the card back where it was.
         const distance = Math.abs(along - (start + size / 2));
         if (!nearest || distance < nearest.distance) {
-          nearest = { statusId: column.statusId, distance };
+          nearest = { columnKey: column.columnKey, distance };
         }
       }
-      if (!statusId) statusId = nearest?.statusId ?? null;
-      if (!statusId) return null;
+      if (!columnKey) columnKey = nearest?.columnKey ?? null;
+      if (!columnKey) return null;
 
-      const taskIds = columns.find((c) => c.statusId === statusId)?.taskIds ?? [];
+      const taskIds = columns.find((c) => c.columnKey === columnKey)?.taskIds ?? [];
       let index = taskIds.length;
       for (let i = 0; i < taskIds.length; i += 1) {
         const rect = contentRectFor(taskIds[i]);
@@ -199,7 +202,7 @@ export function useTaskDrag(params: {
         }
       }
 
-      return { statusId, index };
+      return { columnKey, index };
     },
     [axis, contentRectFor],
   );
@@ -209,7 +212,7 @@ export function useTaskDrag(params: {
     if (sameTarget(previous, next)) return;
     // One tick when the card crosses into another column - reordering inside a
     // column fires on every row and turns into a buzz.
-    if (next && previous && next.statusId !== previous.statusId) {
+    if (next && previous && next.columnKey !== previous.columnKey) {
       Haptics.selectionAsync().catch(() => {});
     }
     dropTargetRef.current = next;
@@ -370,16 +373,16 @@ export function useTaskDrag(params: {
   const shift = useMemo(() => {
     if (!draggingId || !dropTarget) return null;
     const sourceColumn = params.columns.findIndex((c) => c.taskIds.includes(draggingId));
-    const destColumn = params.columns.findIndex((c) => c.statusId === dropTarget.statusId);
+    const destColumn = params.columns.findIndex((c) => c.columnKey === dropTarget.columnKey);
     if (sourceColumn < 0 || destColumn < 0) return null;
     const height = (lift?.height ?? 0) + itemGap;
     return {
       height,
       sourceColumn,
-      sourceStatusId: params.columns[sourceColumn].statusId,
+      sourceKey: params.columns[sourceColumn].columnKey,
       sourceIndex: params.columns[sourceColumn].taskIds.indexOf(draggingId),
       destColumn,
-      destStatusId: dropTarget.statusId,
+      destKey: dropTarget.columnKey,
       destIndex: dropTarget.index,
     };
   }, [draggingId, dropTarget, itemGap, lift, params.columns]);
@@ -391,12 +394,12 @@ export function useTaskDrag(params: {
    * where the card started looks like.
    */
   const offsetFor = useCallback(
-    (statusId: string, index: number): number => {
+    (columnKey: string, index: number): number => {
       if (!shift) return 0;
-      if (statusId === shift.sourceStatusId && index === shift.sourceIndex) return 0;
+      if (columnKey === shift.sourceKey && index === shift.sourceIndex) return 0;
       let offset = 0;
-      if (statusId === shift.sourceStatusId && index > shift.sourceIndex) offset -= shift.height;
-      if (statusId === shift.destStatusId && index >= shift.destIndex) offset += shift.height;
+      if (columnKey === shift.sourceKey && index > shift.sourceIndex) offset -= shift.height;
+      if (columnKey === shift.destKey && index >= shift.destIndex) offset += shift.height;
       return offset;
     },
     [shift],
@@ -404,11 +407,11 @@ export function useTaskDrag(params: {
 
   /** Whatever a column renders after its cards, which every card shift pushes. */
   const tailOffsetFor = useCallback(
-    (statusId: string): number => {
+    (columnKey: string): number => {
       if (!shift) return 0;
       let offset = 0;
-      if (statusId === shift.sourceStatusId) offset -= shift.height;
-      if (statusId === shift.destStatusId) offset += shift.height;
+      if (columnKey === shift.sourceKey) offset -= shift.height;
+      if (columnKey === shift.destKey) offset += shift.height;
       return offset;
     },
     [shift],
@@ -419,9 +422,9 @@ export function useTaskDrag(params: {
    * the next. Side-by-side columns are independent, so they never do.
    */
   const groupOffsetFor = useCallback(
-    (statusId: string): number => {
+    (columnKey: string): number => {
       if (!shift || axis === "horizontal") return 0;
-      const index = params.columns.findIndex((c) => c.statusId === statusId);
+      const index = params.columns.findIndex((c) => c.columnKey === columnKey);
       if (index < 0) return 0;
       let offset = 0;
       if (index > shift.sourceColumn) offset -= shift.height;

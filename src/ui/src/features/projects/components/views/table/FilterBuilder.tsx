@@ -43,6 +43,7 @@ import {
   countNodes,
   editorGroup,
   fromEditorTree,
+  filterTreeLimitProblem,
   mapNode,
   removeNode,
   toEditorTree,
@@ -184,7 +185,7 @@ function blankValue(kind: FieldKind, operator: Op): ViewFilterValue | null {
   return null;
 }
 
-const CONTROL = "h-11 md:h-7";
+const CONTROL = "h-11 md:h-7 touch:h-11";
 
 export function FilterBuilder({
   projectId,
@@ -198,7 +199,23 @@ export function FilterBuilder({
   const catalog = useViewCatalog();
   const containerRef = useRef<HTMLDivElement>(null);
   const [root, setRoot] = useState<EditorGroup>(() => toEditorTree(filter));
+  const [additionProblem, setAdditionProblem] = useState<string | null>(null);
   const fieldsById = useMemo(() => new Map(fields.map((field) => [field.id, field])), [fields]);
+  const limitProblem = catalog ? filterTreeLimitProblem(root, catalog.filterLimits) : null;
+
+  const changeRoot = (next: EditorGroup) => {
+    setAdditionProblem(null);
+    setRoot(next);
+  };
+  const addToRoot = (next: EditorGroup) => {
+    if (!catalog) return;
+    const problem = filterTreeLimitProblem(next, catalog.filterLimits);
+    if (problem) {
+      setAdditionProblem(problem);
+      return;
+    }
+    changeRoot(next);
+  };
 
   useEffect(() => {
     if (isMobile) return;
@@ -216,7 +233,7 @@ export function FilterBuilder({
   }, [isMobile, onClose]);
 
   const handleApply = () => {
-    if (!catalog) return;
+    if (!catalog || limitProblem) return;
     onApply(fromEditorTree(root, catalog.filterLimits));
     onClose();
   };
@@ -227,14 +244,22 @@ export function FilterBuilder({
   };
 
   const body = catalog ? (
-    <FilterEditor
-      projectId={projectId}
-      fields={fields}
-      fieldsById={fieldsById}
-      catalog={catalog}
-      root={root}
-      onChange={setRoot}
-    />
+    <div className="space-y-3">
+      {(additionProblem || limitProblem) && (
+        <p role="alert" className="text-sm text-red-600 dark:text-red-400">
+          {additionProblem || limitProblem}
+        </p>
+      )}
+      <FilterEditor
+        projectId={projectId}
+        fields={fields}
+        fieldsById={fieldsById}
+        catalog={catalog}
+        root={root}
+        onChange={changeRoot}
+        onAdd={addToRoot}
+      />
+    </div>
   ) : (
     <p className="text-sm text-muted-foreground py-4 text-center">Loading filters...</p>
   );
@@ -245,13 +270,18 @@ export function FilterBuilder({
         <Button
           variant="ghost"
           size="sm"
-          className="h-11 md:h-7 text-xs text-muted-foreground"
+          className="h-11 md:h-7 touch:h-11 text-xs text-muted-foreground"
           onClick={handleClear}
         >
           Clear all
         </Button>
       )}
-      <Button size="sm" className="h-11 md:h-7 text-xs" onClick={handleApply} disabled={!catalog}>
+      <Button
+        size="sm"
+        className="h-11 md:h-7 touch:h-11 text-xs"
+        onClick={handleApply}
+        disabled={!catalog || limitProblem !== null}
+      >
         Apply
       </Button>
     </>
@@ -308,6 +338,7 @@ function FilterEditor({
   catalog,
   root,
   onChange,
+  onAdd,
 }: {
   projectId: string;
   fields: FieldDefinition[];
@@ -315,6 +346,7 @@ function FilterEditor({
   catalog: ViewCatalog;
   root: EditorGroup;
   onChange: (root: EditorGroup) => void;
+  onAdd: (root: EditorGroup) => void;
 }) {
   const fieldOptions = useMemo(
     () => filterFieldOptions(fields, fieldsById, catalog),
@@ -336,7 +368,7 @@ function FilterEditor({
     canAddNode: countNodes(root) < catalog.filterLimits.maxNodes,
     update: (id, next) => onChange(mapNode(root, id, next)),
     remove: (id) => onChange(removeNode(root, id)),
-    add: (groupId, node) => onChange(appendChild(root, groupId, node)),
+    add: (groupId, node) => onAdd(appendChild(root, groupId, node)),
     newCondition,
   };
 
@@ -349,8 +381,8 @@ function FilterEditor({
             key={preset}
             type="button"
             disabled={!context.canAddNode}
-            onClick={() => onChange(withPreset(root, preset))}
-            className="h-11 md:h-6 px-2.5 rounded-full text-xs bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/70 transition-colors disabled:opacity-50"
+            onClick={() => onAdd(withPreset(root, preset))}
+            className="h-11 md:h-6 touch:h-11 px-2.5 rounded-full text-xs bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/70 transition-colors disabled:opacity-50"
           >
             {label}
           </button>
@@ -402,7 +434,7 @@ function GroupEditor({
           <button
             type="button"
             onClick={onRemove}
-            className="h-11 w-11 md:h-6 md:w-6 inline-flex items-center justify-center rounded hover:bg-muted transition-colors"
+            className="h-11 w-11 md:h-6 md:w-6 touch:h-11 touch:w-11 inline-flex items-center justify-center rounded hover:bg-muted transition-colors"
             title="Remove group"
           >
             <Trash size={12} className="text-muted-foreground" />
@@ -421,14 +453,14 @@ function GroupEditor({
       {group.children.map((child, index) => (
         <div key={child.id} className="flex items-start gap-2">
           {index === 0 ? (
-            <span className="w-9 md:w-12 pt-3 md:pt-1.5 text-xs text-muted-foreground text-right shrink-0">
+            <span className="w-11 md:w-12 pt-3 md:pt-1.5 text-xs text-muted-foreground text-right shrink-0">
               Where
             </span>
           ) : (
             <button
               type="button"
               onClick={toggleLogic}
-              className="w-9 md:w-12 h-11 md:h-7 text-xs font-medium text-primary text-right shrink-0 hover:underline"
+              className="w-11 md:w-12 h-11 md:h-7 touch:h-11 text-xs font-medium text-primary text-right shrink-0 hover:underline"
               title="Switch between and / or for this group"
             >
               {group.logic === FilterLogic.OR ? "or" : "and"}
@@ -454,11 +486,11 @@ function GroupEditor({
         </div>
       ))}
 
-      <div className="flex flex-wrap items-center gap-1 pl-11 md:pl-14">
+      <div className="flex flex-wrap items-center gap-1 pl-13 md:pl-14">
         <Button
           variant="ghost"
           size="sm"
-          className="h-11 md:h-7 text-xs"
+          className="h-11 md:h-7 touch:h-11 text-xs"
           disabled={!context.canAddNode}
           onClick={() => {
             const node = context.newCondition();
@@ -472,7 +504,7 @@ function GroupEditor({
           <Button
             variant="ghost"
             size="sm"
-            className="h-11 md:h-7 text-xs"
+            className="h-11 md:h-7 touch:h-11 text-xs"
             disabled={!context.canAddNode}
             onClick={() => {
               const node = context.newCondition();
@@ -599,7 +631,7 @@ function ConditionRow({
         <button
           type="button"
           onClick={onRemove}
-          className="hidden md:inline-flex h-7 w-7 items-center justify-center rounded hover:bg-muted transition-colors shrink-0"
+          className="hidden md:inline-flex h-7 w-7 touch:h-11 touch:w-11 items-center justify-center rounded hover:bg-muted transition-colors shrink-0"
           title="Remove condition"
         >
           <X size={12} className="text-muted-foreground" />
@@ -767,6 +799,7 @@ function DateValueInput({
           value={date.date}
           onChange={(next) => onChange({ kind: "fixed", date: next })}
           size="sm"
+          triggerClassName={CONTROL}
           className="flex-1 min-w-0"
         />
       ) : (
@@ -832,7 +865,7 @@ function IdValueInput({
             type="button"
             onClick={() => onChange({ ...set, includeEmpty: !set.includeEmpty })}
             className={cn(
-              "h-11 md:h-7 px-2 rounded-md text-xs shrink-0 transition-colors",
+              "h-11 md:h-7 touch:h-11 px-2 rounded-md text-xs shrink-0 transition-colors",
               set.includeEmpty
                 ? "bg-primary text-primary-foreground"
                 : "bg-muted text-muted-foreground",
@@ -917,7 +950,7 @@ function IdValueInput({
       searchable={searchable}
       placeholder="Select..."
       className="w-full"
-      triggerClassName="min-h-11 md:min-h-7 py-0.5"
+      triggerClassName="min-h-11 md:min-h-7 touch:min-h-11 py-0.5"
       ariaLabel="Values"
     />
   );

@@ -16,7 +16,6 @@ import {
   DotsThree,
   NotePencil,
   FolderSimple,
-  Graph,
   Trash,
   Rows,
   SquaresFour,
@@ -35,6 +34,8 @@ import { BOTTOM_NAV_HEIGHT } from "@theme/theme";
 import type { ThemeColors } from "@theme/theme";
 import { FONT } from "@theme/typography";
 import { useDeleteNote } from "@features/notes/useNoteMutations";
+import { NoteGlyph } from "@features/notes/components/NoteGlyph";
+import { FolderRow, NoteRow } from "@features/notes/components/NoteTreeRows";
 import { useNotesTree } from "@features/notes/useNotesTree";
 import type { TreeNode, TreeSection } from "@features/notes/useNotesTree";
 import { MoveNoteSheet } from "@features/notes/components/MoveNoteSheet";
@@ -474,96 +475,6 @@ function NotesListBody() {
   );
 }
 
-function NoteRow({
-  node,
-  T,
-  onPress,
-  onDots,
-}: {
-  node: TreeNode;
-  T: ThemeColors;
-  onPress: () => void;
-  onDots: () => void;
-}) {
-  return (
-    <TouchableOpacity
-      style={[styles.noteRow, { borderBottomColor: T.border }]}
-      onPress={onPress}
-      activeOpacity={0.7}
-    >
-      <View style={[styles.noteRowIcon, { backgroundColor: T.accentSoft }]}>
-        {node.icon?.value ? (
-          <Text style={styles.noteRowEmoji}>{node.icon.value}</Text>
-        ) : node.isCanvas ? (
-          <Graph size={16} color={T.accent} weight="duotone" />
-        ) : (
-          <NotePencil size={16} color={T.accent} weight="fill" />
-        )}
-      </View>
-      <View style={styles.noteRowBody}>
-        <Text style={[styles.noteRowTitle, { color: T.textBright }]} numberOfLines={1}>
-          {node.title || "Untitled"}
-        </Text>
-        {node.snippet ? (
-          <Text style={[styles.noteRowSnippet, { color: T.textDim }]} numberOfLines={1}>
-            {node.snippet}
-          </Text>
-        ) : null}
-      </View>
-      <View style={styles.noteRowRight}>
-        {node.editedAt ? (
-          <Text style={[styles.noteRowTime, { color: T.textDim }]}>{node.editedAt}</Text>
-        ) : null}
-        <TouchableOpacity onPress={onDots} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <DotsThree size={18} color={T.textDim} weight="bold" />
-        </TouchableOpacity>
-      </View>
-    </TouchableOpacity>
-  );
-}
-
-function FolderRow({
-  node,
-  T,
-  highlighted,
-  onPress,
-  onDots,
-}: {
-  node: TreeNode;
-  T: ThemeColors;
-  highlighted: boolean;
-  onPress: () => void;
-  onDots: () => void;
-}) {
-  const childCount = node.children?.length ?? 0;
-  return (
-    <TouchableOpacity
-      style={[
-        styles.folderRow,
-        { borderBottomColor: T.border },
-        highlighted && { backgroundColor: T.accentSoft },
-      ]}
-      onPress={onPress}
-      activeOpacity={0.7}
-    >
-      <View style={[styles.folderIcon, { backgroundColor: T.accentSoft }]}>
-        <FolderSimple size={24} color={T.accent} weight="fill" />
-      </View>
-      <View style={{ flex: 1 }}>
-        <Text style={[styles.itemName, { color: T.textBright }]} numberOfLines={1}>
-          {node.title || "Untitled"}
-        </Text>
-        <Text style={[styles.itemMeta, { color: T.textDim }]}>
-          {childCount} {childCount === 1 ? "item" : "items"}
-        </Text>
-      </View>
-      <TouchableOpacity onPress={onDots} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-        <DotsThree size={22} color={T.textDim} weight="bold" />
-      </TouchableOpacity>
-    </TouchableOpacity>
-  );
-}
-
 function FolderCard({
   node,
   T,
@@ -622,13 +533,7 @@ function NoteCard({
       activeOpacity={0.7}
     >
       <View style={styles.gridCardTop}>
-        {node.icon?.value ? (
-          <Text style={styles.gridCardEmoji}>{node.icon.value}</Text>
-        ) : node.isCanvas ? (
-          <Graph size={34} color={T.accent} weight="duotone" />
-        ) : (
-          <NotePencil size={34} color={T.accent} weight="duotone" />
-        )}
+        <NoteGlyph icon={node.icon} isCanvas={node.isCanvas} size={34} color={T.accent} />
         <TouchableOpacity onPress={onDots} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
           <DotsThree size={20} color={T.textDim} weight="bold" />
         </TouchableOpacity>
@@ -704,28 +609,6 @@ const styles = StyleSheet.create({
   },
   listContent: { paddingBottom: 24 },
   emptyContent: { flex: 1 },
-  noteRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 13,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  noteRowIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-    flexShrink: 0,
-  },
-  noteRowEmoji: { fontSize: 18 },
-  noteRowBody: { flex: 1, gap: 2 },
-  noteRowTitle: { fontSize: 15, fontFamily: FONT.semibold },
-  noteRowSnippet: { fontSize: 12, fontFamily: FONT.regular },
-  noteRowRight: { alignItems: "flex-end", gap: 4, flexShrink: 0 },
-  noteRowTime: { fontSize: 11, fontFamily: FONT.regular },
   sortBar: {
     flexShrink: 0,
     flexDirection: "row",
@@ -737,23 +620,6 @@ const styles = StyleSheet.create({
   },
   sortBtn: { flexDirection: "row", alignItems: "center", gap: 6 },
   sortText: { fontSize: 13, fontFamily: FONT.medium },
-  folderRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 14,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  folderIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  itemName: { fontSize: 15, fontFamily: FONT.semibold },
-  itemMeta: { fontSize: 12, fontFamily: FONT.regular, marginTop: 3 },
   gridContent: { padding: 16, gap: 12 },
   gridRow: { gap: 12 },
   gridItemWrap: { flex: 1 },
@@ -770,7 +636,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     minHeight: 44,
   },
-  gridCardEmoji: { fontSize: 32 },
   gridCardName: { fontSize: 13, fontFamily: FONT.semibold, lineHeight: 18 },
   gridCardMeta: { fontSize: 11, fontFamily: FONT.regular },
   sectionEmpty: {

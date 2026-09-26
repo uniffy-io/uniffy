@@ -188,7 +188,7 @@ export function MultiSelect<T extends string | number = string>({
                 disabled={disabled}
                 onClick={() => handleToggle(option.value)}
                 className={cn(
-                  "flex w-full items-center justify-between gap-2 px-3 py-2 text-left",
+                  "flex w-full min-h-11 md:min-h-0 touch:min-h-11 items-center justify-between gap-2 px-3 py-2 text-left",
                   "transition-colors",
                   isSelected ? "bg-primary/10 text-primary" : "text-foreground hover:bg-muted",
                   size === "sm" ? "text-xs" : "text-sm",
@@ -254,7 +254,7 @@ export function MultiSelect<T extends string | number = string>({
                   type="button"
                   aria-label={`Remove ${opt.label}`}
                   onClick={(e) => handleRemove(opt.value, e)}
-                  className="hover:bg-primary/20 rounded-sm p-0.5 transition-colors"
+                  className="inline-flex items-center justify-center min-h-11 min-w-11 md:min-h-0 md:min-w-0 touch:min-h-11 touch:min-w-11 hover:bg-primary/20 rounded-sm p-0.5 transition-colors"
                 >
                   <X size={10} weight="bold" />
                 </button>

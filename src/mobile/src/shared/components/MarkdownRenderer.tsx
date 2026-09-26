@@ -3,6 +3,8 @@ import { View, Text, StyleSheet, ScrollView, Platform, Linking } from "react-nat
 import { router } from "expo-router";
 import { useTheme } from "@shared/hooks/useTheme";
 import { FONT } from "@theme/typography";
+import { getServerUrl } from "@core/config/serverUrl";
+import { appPathForLink } from "@shared/lib/appLinks";
 import { ReferenceChip } from "@shared/mentions/ReferenceChip";
 import { isBroadcastUrn } from "@shared/mentions/broadcastMentions";
 import { MentionToken, isPeopleTokenUrnType } from "@shared/mentions/MentionToken";
@@ -41,8 +43,11 @@ type InlinePart =
 
 type ThemeColors = ReturnType<typeof useTheme>;
 
+// A link into this deployment's web app opens the matching screen here instead of the browser.
 function openLink(url: string) {
-  Linking.openURL(url).catch(() => {});
+  const appPath = appPathForLink(url, getServerUrl());
+  if (appPath) router.push(appPath as any);
+  else Linking.openURL(url).catch(() => {});
 }
 
 function parseInlineWithMentions(text: string): InlinePart[] {

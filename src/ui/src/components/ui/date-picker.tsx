@@ -29,6 +29,7 @@ interface DatePickerProps {
   placeholder?: string;
   disabled?: boolean;
   className?: string;
+  triggerClassName?: string;
   /** `sm` fits a pane header controls row. */
   size?: "sm" | "md";
 }
@@ -52,6 +53,7 @@ export function DatePicker({
   placeholder = "Pick a date",
   disabled = false,
   className,
+  triggerClassName,
   size = "md",
 }: DatePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -263,6 +265,8 @@ export function DatePicker({
           "disabled:opacity-50 disabled:cursor-not-allowed",
           isOpen && "border-border-strong",
           value ? "text-foreground" : "text-subtle-foreground",
+          "min-h-11 md:min-h-0 touch:min-h-11",
+          triggerClassName,
         )}
       >
         <CalendarBlank size={size === "sm" ? 14 : 16} className="text-muted-foreground shrink-0" />

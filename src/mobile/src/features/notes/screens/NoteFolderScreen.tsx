@@ -9,14 +9,7 @@ import {
   ActivityIndicator,
   RefreshControl,
 } from "react-native";
-import {
-  DotsThree,
-  NotePencil,
-  Plus,
-  FolderSimple,
-  CaretRight,
-  Graph,
-} from "phosphor-react-native";
+import { Plus, CaretRight } from "phosphor-react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { DomainHeader } from "@shared/components/DomainHeader";
@@ -26,11 +19,11 @@ import { AccessMode, ContentType } from "@uniffy/proto/common/v1/common_pb";
 import { useIsBookmarked, useToggleBookmark } from "@features/bookmarks/useBookmarks";
 import { useTheme } from "@shared/hooks/useTheme";
 import { BOTTOM_NAV_HEIGHT } from "@theme/theme";
-import type { ThemeColors } from "@theme/theme";
 import { FONT } from "@theme/typography";
 import { useDeleteNote } from "@features/notes/useNoteMutations";
 import { useNoteBreadcrumb, useNotesTree } from "@features/notes/useNotesTree";
 import type { TreeNode } from "@features/notes/useNotesTree";
+import { FolderRow, NoteRow } from "@features/notes/components/NoteTreeRows";
 import { MoveNoteSheet } from "@features/notes/components/MoveNoteSheet";
 import type { MoveTarget } from "@features/notes/components/MoveNoteSheet";
 import { CreateNoteSheet } from "@features/notes/components/CreateNoteSheet";
@@ -348,98 +341,6 @@ function NotesFolderBody() {
   );
 }
 
-function FolderRow({
-  node,
-  T,
-  highlighted,
-  onPress,
-  onDots,
-}: {
-  node: TreeNode;
-  T: ThemeColors;
-  highlighted: boolean;
-  onPress: () => void;
-  onDots: () => void;
-}) {
-  const childCount = node.children?.length ?? 0;
-  return (
-    <TouchableOpacity
-      style={[
-        styles.folderRow,
-        { borderBottomColor: T.border },
-        highlighted && { backgroundColor: T.accentSoft },
-      ]}
-      onPress={onPress}
-      activeOpacity={0.7}
-    >
-      <View style={[styles.folderIcon, { backgroundColor: T.accentSoft }]}>
-        <FolderSimple size={22} color={T.accent} weight="fill" />
-      </View>
-      <View style={styles.rowBody}>
-        <Text style={[styles.folderTitle, { color: T.textBright }]} numberOfLines={1}>
-          {node.title || "Untitled"}
-        </Text>
-        {childCount > 0 && (
-          <Text style={[styles.folderMeta, { color: T.textDim }]}>
-            {childCount} {childCount === 1 ? "item" : "items"}
-          </Text>
-        )}
-      </View>
-      <TouchableOpacity onPress={onDots} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-        <DotsThree size={22} color={T.textDim} weight="bold" />
-      </TouchableOpacity>
-    </TouchableOpacity>
-  );
-}
-
-function NoteRow({
-  node,
-  T,
-  onPress,
-  onDots,
-}: {
-  node: TreeNode;
-  T: ThemeColors;
-  onPress: () => void;
-  onDots: () => void;
-}) {
-  return (
-    <TouchableOpacity
-      style={[styles.noteRow, { borderBottomColor: T.border }]}
-      onPress={onPress}
-      activeOpacity={0.7}
-    >
-      <View style={[styles.noteIcon, { backgroundColor: T.accentSoft }]}>
-        {node.icon?.value ? (
-          <Text style={styles.noteEmoji}>{node.icon.value}</Text>
-        ) : node.isCanvas ? (
-          <Graph size={16} color={T.accent} weight="duotone" />
-        ) : (
-          <NotePencil size={16} color={T.accent} weight="fill" />
-        )}
-      </View>
-      <View style={styles.rowBody}>
-        <Text style={[styles.noteTitle, { color: T.textBright }]} numberOfLines={1}>
-          {node.title || "Untitled"}
-        </Text>
-        {node.snippet ? (
-          <Text style={[styles.noteSnippet, { color: T.textDim }]} numberOfLines={1}>
-            {node.snippet}
-          </Text>
-        ) : null}
-      </View>
-      <View style={styles.noteRight}>
-        {node.editedAt ? (
-          <Text style={[styles.noteTime, { color: T.textDim }]}>{node.editedAt}</Text>
-        ) : null}
-        <TouchableOpacity onPress={onDots} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <DotsThree size={18} color={T.textDim} weight="bold" />
-        </TouchableOpacity>
-      </View>
-    </TouchableOpacity>
-  );
-}
-
 const styles = StyleSheet.create({
   container: { flex: 1 },
   breadcrumbRow: {
@@ -454,46 +355,6 @@ const styles = StyleSheet.create({
   breadcrumb: { fontSize: 12, fontFamily: FONT.medium },
   listContent: { paddingBottom: 24 },
   emptyContent: { flex: 1 },
-  folderRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  folderIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 11,
-    alignItems: "center",
-    justifyContent: "center",
-    flexShrink: 0,
-  },
-  folderTitle: { fontSize: 15, fontFamily: FONT.semibold },
-  folderMeta: { fontSize: 12, fontFamily: FONT.regular, marginTop: 1 },
-  noteRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 13,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  noteIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 11,
-    alignItems: "center",
-    justifyContent: "center",
-    flexShrink: 0,
-  },
-  rowBody: { flex: 1, gap: 2 },
-  noteEmoji: { fontSize: 18 },
-  noteTitle: { fontSize: 15, fontFamily: FONT.semibold },
-  noteSnippet: { fontSize: 12, fontFamily: FONT.regular },
-  noteRight: { alignItems: "flex-end", gap: 4, flexShrink: 0 },
-  noteTime: { fontSize: 11, fontFamily: FONT.regular },
   emptyWrap: { paddingTop: 60, alignItems: "center", gap: 16 },
   emptyText: { fontSize: 14, fontFamily: FONT.regular },
   emptyCta: {
