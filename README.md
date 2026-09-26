@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/brand/uniffy-symbol.png" alt="The Uniffy mark, a cube with violet, pink, orange, and green faces" width="140">
+  <img src="assets/uniffy-symbol.png" alt="The Uniffy mark, a cube with violet, pink, orange, and green faces" width="140">
 </p>
 
 <h1 align="center">Uniffy</h1>
@@ -10,7 +10,7 @@
   <a href="https://github.com/uniffy-io/uniffy/actions/workflows/test.yml"><img src="https://github.com/uniffy-io/uniffy/actions/workflows/test.yml/badge.svg?branch=main" alt="CI status"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-FSL--1.1--Apache--2.0-694aff" alt="License: FSL-1.1-Apache-2.0"></a>
   <a href="https://uniffy.io/docs/deployment/"><img src="https://img.shields.io/badge/self%20hosting-free%20and%20unlimited-01b77f" alt="Self hosting: free and unlimited"></a>
-  <a href="docs/TRANSPARENCY.md"><img src="https://img.shields.io/badge/telemetry-none-fd7eea" alt="Telemetry: None"></a>
+  <a href="https://uniffy.io/docs/principles/"><img src="https://img.shields.io/badge/telemetry-none-fd7eea" alt="Telemetry: None"></a>
 </p>
 
 <p align="center">
@@ -37,10 +37,11 @@ Every piece of information can be referenced from anywhere with a universal `@` 
 
 ## Documentation
 
-- [Sharing and Permissions](docs/documentation/SHARING.md)
-- [Search](docs/documentation/SEARCHING.md)
-- [Transparency](docs/TRANSPARENCY.md)
-- [Licenses](docs/LICENSES.md)
+- [Sharing and Permissions](https://uniffy.io/docs/user/sharing/)
+- [Library and search](https://uniffy.io/docs/user/library/)
+- [Principles and transparency](https://uniffy.io/docs/principles/)
+- [Third party licenses](https://uniffy.io/docs/legal/licenses/)
+- [Trademarks](https://uniffy.io/docs/legal/trademarks/)
 - [Deployment and worker architecture](https://uniffy.io/docs/deployment/system-architecture/)
 - [Video playback](https://uniffy.io/docs/user/video/)
 

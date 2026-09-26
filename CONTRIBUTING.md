@@ -16,7 +16,7 @@ Pick the template that fits: **Bug**, **Feature**, **Performance**, or **Securit
 
 An issue we can act on says which deployment (`cloud.uniffy.io` or self hosted), what you expected and what happened instead, and the smallest sequence that reproduces it. For performance, give us a number. For anything visual, a screenshot beats a paragraph.
 
-Pasting a diff or snippet into an issue is welcome when it makes the report clearer. To keep that simple for everyone: **anything submitted through an issue is licensed to Uniffy, Inc. for any use, without restriction or attribution.** If you are not comfortable with that, describe the fix in prose and we will write it ourselves.
+Pasting a diff or snippet into an issue is welcome when it makes the report clearer. To keep that simple for everyone: **anything submitted through an issue is licensed to Uniffy Labs for any use, without restriction or attribution.** If you are not comfortable with that, describe the fix in prose and we will write it ourselves.
 
 ## Running it yourself
 

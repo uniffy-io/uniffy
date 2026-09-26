@@ -1,5 +1,5 @@
 // Identity colour rides the Unity Violet -> Belonging Pink axis and nothing
-// else (docs/brand/palette.md). Mirrors the web's brandGradients.ts so a type
+// else (assets/palette.md). Mirrors the web's brandGradients.ts so a type
 // is painted the same hue on both clients.
 import { BRAND } from "@theme/theme";
 

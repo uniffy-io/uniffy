@@ -164,11 +164,11 @@ A provider is not done when the backend can call it. Part of this lives in the f
 | 3 | `uniffy/data/models/catalog.json` | Provider entry: `params_base`, `provider_options`, and its models. Model listing is catalog-only, so an absent entry means empty pickers. |
 | 4 | That provider's request builder | Map the reasoning / sampling knobs (see "Model parameters"). |
 | 5 | `src/ui/src/features/agents/config/providerBrands.ts` | One entry keyed by the catalog's provider id: logo (added to the `@lobehub/icons-static-svg` imports), display label, key-shape placeholder, console URL, docs URL, and the one-line "where the key is created" help. |
-| 6 | `docs/TRADEMARKS.md` | A row for the new mark: owner and brand-guideline URL. |
+| 6 | `src/landing/src/content/docs/docs/legal/trademarks.md` | A row for the new mark: owner and brand-guideline URL. |
 
 `providerBrands.ts` is the whole frontend surface of a provider: `PROVIDER_BRAND_LIST` IS the add-key picker (an unlisted provider cannot have a key added), and the same record backs every mark, label, placeholder and key-onboarding link. The console URL renders as its bare host in the picker, so it must be the page a signed-in user actually lands on - check both URLs still resolve when adding or auditing a provider.
 
-Provider marks are trademarks, so the rules in `docs/TRADEMARKS.md` bind: never restyle or recolor a mark into the Uniffy palette, and never use one as the identity of a Uniffy feature (no agent avatars, no section icons). Marks appear only where they identify that provider's own service - provider keys, model pickers, usage breakdowns, and the "runs on" badge. Everything renders through `ProviderLogo`, which draws monochrome marks as a `currentColor` mask so they invert with the theme (an `<img>` cannot inherit `currentColor` and would go invisible on dark) and renders nothing for an unmapped provider. That fallback is why a partial step 5 degrades to plain text instead of breaking, and it is also the removal path if a provider ever objects.
+Provider marks are trademarks, so the rules in `src/landing/src/content/docs/docs/legal/trademarks.md` bind: never restyle or recolor a mark into the Uniffy palette, and never use one as the identity of a Uniffy feature (no agent avatars, no section icons). Marks appear only where they identify that provider's own service - provider keys, model pickers, usage breakdowns, and the "runs on" badge. Everything renders through `ProviderLogo`, which draws monochrome marks as a `currentColor` mask so they invert with the theme (an `<img>` cannot inherit `currentColor` and would go invisible on dark) and renders nothing for an unmapped provider. That fallback is why a partial step 5 degrades to plain text instead of breaking, and it is also the removal path if a provider ever objects.
 
 ## Model parameters
 
@@ -321,7 +321,7 @@ content, and metric labels never carry tenant/resource identifiers.
 | `src/ui/src/features/agents/config/providerBrands.ts` | Provider id -> mark, label, key placeholder, console + docs links; the add-key picker's source list |
 | `src/ui/src/features/agents/components/ProviderPicker.tsx` | Add-key provider tiles + the "how to get a key" card |
 | `src/ui/src/features/agents/components/ProviderLogo.tsx` | Renders a mark; nothing for an unmapped provider |
-| `docs/TRADEMARKS.md` | Trademark notice + per-provider brand-guideline links |
+| `src/landing/src/content/docs/docs/legal/trademarks.md` | Trademark notice + per-provider brand-guideline links |
 | `domains/agents/sessions/operations.py` | Session store, context query, compaction |
 | `domains/agents/cache.py` | Valkey helpers + reverse-index discipline |
 | `src/ui/src/features/agents/components/AgentTestDrawer.tsx` | Shared test / AI Builder drawer |

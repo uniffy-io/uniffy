@@ -10,6 +10,7 @@ from uuid import UUID
 
 from loguru import logger
 
+from uniffy.core.data_files import load_documents
 from uniffy.domains.organizations.starter.canvas import seed_welcome_canvas
 
 if TYPE_CHECKING:
@@ -22,6 +23,7 @@ if TYPE_CHECKING:
 logger = logger.bind(component="organizations.starter.docs")
 
 DOCS_DIR = Path(__file__).parents[5] / "docs"
+LEGAL_DOCS_DIR = DOCS_DIR.parent / "src/landing/src/content/docs/docs/legal"
 
 
 def starter_content_enabled() -> bool:
@@ -33,9 +35,7 @@ def starter_content_enabled() -> bool:
 
 
 def workspace_docs_available() -> bool:
-    """The docs tree is part of the repo/image; a deployment without it
-    skips starter docs instead of failing org creation.
-    """
+    """Missing starter docs must not prevent organization creation."""
     return (DOCS_DIR / "ABOUT.md").exists()
 
 
@@ -43,7 +43,8 @@ FILE_PATH_TO_SLUG: dict[str, str] = {
     "ABOUT.md": "about",
     "PLANS.md": "plans",
     "TRANSPARENCY.md": "transparency",
-    "LICENSES.md": "licenses",
+    "/docs/legal/licenses/": "licenses",
+    "https://uniffy.io/docs/legal/licenses/": "licenses",
     "documentation/SEARCHING.md": "searching",
     "documentation/SHARING.md": "sharing",
     "documentation/ENCRYPTION.md": "encryption",
@@ -61,12 +62,7 @@ def replace_markdown_links_with_urns(
         label = match.group(1)
         path = match.group(2)
 
-        if path.startswith(("http://", "https://", "#")):
-            return match.group(0)
-
-        normalized_path = path.lstrip("./")
-
-        slug = FILE_PATH_TO_SLUG.get(normalized_path)
+        slug = FILE_PATH_TO_SLUG.get(path) or FILE_PATH_TO_SLUG.get(path.lstrip("./"))
         if slug and slug in slug_to_urn:
             urn = slug_to_urn[slug]
             return f"[[[{label}|{urn}]]]"
@@ -77,7 +73,6 @@ def replace_markdown_links_with_urns(
 
 
 def build_note_urn(note_id: UUID) -> str:
-    """Build a URN string for a note."""
     return f"urn:uniffy:content:NOTE:{note_id}"
 
 
@@ -261,7 +256,8 @@ async def seed_workspace_docs(
         extract_urns_from_content(transparency_note.content) or None
     )
 
-    licenses_content = (DOCS_DIR / "LICENSES.md").read_text()
+    legal_docs = {document.path.stem: document.body for document in load_documents(LEGAL_DOCS_DIR)}
+    licenses_content = legal_docs["licenses"]
     licenses_note.content = replace_markdown_links_with_urns(licenses_content, slug_to_urn)
     licenses_note.outgoing_references = extract_urns_from_content(licenses_note.content) or None
 

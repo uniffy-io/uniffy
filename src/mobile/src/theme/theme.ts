@@ -1,4 +1,4 @@
-// Brand palette from docs/brand/palette.md (2026 brand book).
+// Brand palette from assets/palette.md (2026 brand book).
 export const BRAND = {
   violet: "#694aff",
   orange: "#ff5500",

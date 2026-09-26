@@ -13,8 +13,7 @@
 !src/proto/gen/python
 !src/proto/gen/typescript
 !src/ui
-!docs/*.md
-!docs/documentation
+!src/landing/src/content/docs/docs/legal
 !.docker/dev
 !.docker/media
 

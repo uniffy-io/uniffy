@@ -29,8 +29,11 @@ fileExistenceTests:
   - name: precompiled bytecode
     path: /app/src/uniffy/__pycache__
     shouldExist: true
-  - name: starter docs
-    path: /app/docs/documentation/SHARING.md
+  - name: dependency licenses
+    path: /app/src/landing/src/content/docs/docs/legal/licenses.md
+    shouldExist: true
+  - name: trademark notices
+    path: /app/src/landing/src/content/docs/docs/legal/trademarks.md
     shouldExist: true
   - name: ffmpeg
     path: /usr/local/bin/ffmpeg

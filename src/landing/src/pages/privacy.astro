@@ -1,16 +1,16 @@
 ---
 import LegalLayout from "@/layouts/LegalLayout.astro";
 
-const COMPANY = "Uniffy, Inc.";
+const COMPANY = "Uniffy Labs";
 const CONTACT = "support@uniffy.io";
 const EFFECTIVE = "24 August 2026";
 ---
 
 <LegalLayout
   title="Privacy Policy"
-  description="How Uniffy collects, uses, and protects your data across the Uniffy mobile app and the cloud.uniffy.io hosted service."
+  description={`How ${COMPANY} collects, uses, and protects your data across the Uniffy mobile app and the cloud.uniffy.io hosted service.`}
   effectiveDate={EFFECTIVE}
-  intro="This policy explains what data Uniffy collects, why, and the choices and rights you have. It covers the Uniffy mobile app and our hosted service at cloud.uniffy.io."
+  intro={`This policy explains what data ${COMPANY} collects, why, and the choices and rights you have. It covers the Uniffy mobile app and our hosted service at cloud.uniffy.io.`}
 >
   <div class="legal-note">
     <p>
@@ -99,8 +99,8 @@ const EFFECTIVE = "24 August 2026";
   <ul>
     <li><strong>With people you choose.</strong> Content is visible to the users, groups, and organizations you share it with, according to the permissions you set.</li>
     <li><strong>With service providers.</strong> Vetted providers that help us run the Service, such as cloud hosting, email delivery, push notification delivery, and AI model providers you route requests to. They process data on our instructions.</li>
-    <li><strong>For legal reasons.</strong> When required by law or to protect the rights, safety, and security of our users, the public, or Uniffy.</li>
-    <li><strong>In a business transfer.</strong> If Uniffy is involved in a merger, acquisition, or sale of assets, with notice to you and continued protection of your data.</li>
+    <li><strong>For legal reasons.</strong> When required by law or to protect the rights, safety, and security of our users, the public, or {COMPANY}.</li>
+    <li><strong>In a business transfer.</strong> If {COMPANY} is involved in a merger, acquisition, or sale of assets, with notice to you and continued protection of your data.</li>
   </ul>
 
   <h2 id="transfers" data-toc-label="9. International transfers"><span class="legal-prose__num">09</span>Where your data is stored</h2>

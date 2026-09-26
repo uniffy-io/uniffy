@@ -8,7 +8,7 @@ import { FONT } from "@theme/typography";
 import { PresenceDot } from "@shared/presence/PresenceDot";
 
 // Unity Violet <-> Belonging Pink axis only, mirror of
-// components/subject/utils.ts on web (docs/brand/palette.md).
+// components/subject/utils.ts on web (assets/palette.md).
 const GRADIENT_PAIRS: [string, string][] = [
   ["#694aff", "#fd7eea"],
   ["#fd7eea", "#694aff"],
