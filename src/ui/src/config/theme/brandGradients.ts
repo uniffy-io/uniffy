@@ -1,6 +1,6 @@
 /**
  * Identity gradients ride the Unity Violet -> Belonging Pink axis and nothing
- * else (docs/brand/palette.md). Avatars pick a pair off this axis by name hash
+ * else (assets/palette.md). Avatars pick a pair off this axis by name hash
  * (components/subject/utils.ts); ordered sets walk it end to end instead, so a
  * grid reads as one sweep rather than a set of unrelated hues.
  */

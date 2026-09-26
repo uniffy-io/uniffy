@@ -109,9 +109,8 @@ WORKDIR /app
 
 COPY --from=builder /app/.venv /app/.venv
 COPY --from=builder /app/src/uniffy /app/src/uniffy
-# Starter workspace content, read when an organization is created.
-COPY docs/LICENSES.md docs/TRANSPARENCY.md docs/TRADEMARKS.md /app/docs/
-COPY docs/documentation /app/docs/documentation
+# Dependency licenses and trademark notices ship with every image.
+COPY src/landing/src/content/docs/docs/legal /app/src/landing/src/content/docs/docs/legal
 
 ENV PATH="/app/.venv/bin:$PATH" \
     PYTHONPATH="/app/src" \

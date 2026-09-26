@@ -11,13 +11,16 @@ from uniffy.core.models.audit.event import AuditEvent
 from uniffy.core.models.chat.channel import ChatChannel, ChatChannelStats
 from uniffy.core.models.chat.channel_member import ChatChannelMember
 from uniffy.core.models.crypto.org_encryption_key import OrgEncryptionKey
+from uniffy.core.models.files.file import File
 from uniffy.core.models.files.folder import Folder
 from uniffy.core.models.files.saved_filter import SavedFileFilter
 from uniffy.core.models.login.organization import Organization
 from uniffy.core.models.login.organization_member import OrganizationMember, OrganizationRole
+from uniffy.core.models.notes.note import Note
 from uniffy.core.models.people.identity import IdentitySource
 from uniffy.core.models.permissions.org_permission_defaults import OrganizationPermissionDefaults
 from uniffy.core.models.tags.saved_filter import SavedTagFilter
+from uniffy.core.models.tags.tag import Tag
 from uniffy.core.types import generate_id
 from uniffy.domains.organizations.operations import OrganizationOperations
 from uniffy.infrastructure.database import open_session
@@ -90,7 +93,6 @@ async def test_organization_bootstrap_rolls_back_every_fact_when_audit_fails(
             name="Rollback organization",
             slug=slug,
             owner_user_id=env.admin_id,
-            storage=AsyncMock(),
             search_indexer=search_indexer,
         )
 
@@ -114,9 +116,8 @@ async def test_organization_bootstrap_commits_required_rows_and_audits_once(
             "uniffy.domains.chat.channels.creation.check_chat_mutation_limit",
             new=AsyncMock(),
         ),
-        patch.object(
-            operations,
-            "finish_organization_create_after_commit",
+        patch(
+            "uniffy.domains.organizations.operations.ChatChannelOperations.finish_channel_create_after_commit",
             new=AsyncMock(),
         ),
     ):
@@ -124,7 +125,6 @@ async def test_organization_bootstrap_commits_required_rows_and_audits_once(
             name="Atomic organization",
             slug=slug,
             owner_user_id=env.admin_id,
-            storage=AsyncMock(),
             search_indexer=search_indexer,
         )
 
@@ -207,6 +207,15 @@ async def test_organization_bootstrap_commits_required_rows_and_audits_once(
                     .where(SavedTagFilter.organization_id == organization.id)
                 ),
             }
+            for model in (Note, File, Tag):
+                assert (
+                    await isolated.scalar(
+                        select(func.count())
+                        .select_from(model)
+                        .where(model.organization_id == organization.id)
+                    )
+                    == 0
+                )
 
         assert membership.role == OrganizationRole.OWNER
         assert channel_member.user_id == env.admin_id
@@ -219,10 +228,19 @@ async def test_organization_bootstrap_commits_required_rows_and_audits_once(
         await _delete_organization(session, organization.id)
 
 
-async def test_organization_creation_survives_starter_content_failure(
+@pytest.mark.parametrize(
+    "failure_target",
+    [
+        "UserDirectoryProjection.index_for_organization",
+        "ChatChannelOperations.finish_channel_create_after_commit",
+        "finish_default_agent_after_commit",
+    ],
+)
+async def test_organization_creation_survives_projection_failure(
     session,
     env,
     search_indexer,
+    failure_target: str,
 ) -> None:
     slug = f"degraded-org-{generate_id().hex[:12]}"
     operations = OrganizationOperations(session)
@@ -244,23 +262,14 @@ async def test_organization_creation_survives_starter_content_failure(
             new=AsyncMock(),
         ),
         patch(
-            "uniffy.domains.organizations.operations.starter_content_enabled",
-            return_value=True,
-        ),
-        patch(
-            "uniffy.domains.organizations.operations.workspace_docs_available",
-            return_value=True,
-        ),
-        patch(
-            "uniffy.domains.organizations.operations.seed_workspace_docs",
-            new=AsyncMock(side_effect=RuntimeError("starter content unavailable")),
+            f"uniffy.domains.organizations.operations.{failure_target}",
+            new=AsyncMock(side_effect=RuntimeError("projection unavailable")),
         ),
     ):
         organization = await operations.create(
             name="Degraded organization",
             slug=slug,
             owner_user_id=env.admin_id,
-            storage=AsyncMock(),
             search_indexer=search_indexer,
         )
 

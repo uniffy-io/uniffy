@@ -33,7 +33,7 @@ Org-wide credentials for external services (GitHub first) plus the agent tool pa
 | 4 | Each `ToolDefinition` | `display_name`, `group`, `category=CATEGORY_EXTERNAL`. `requires_connection` is derived from the provider prefix, so the builder groups and gates the pack with no frontend edit |
 | 5 | `domains/agents/tools/catalog.py::GROUP_ORDER` | Add the group label to place it in the builder |
 | 6 | `src/ui/src/features/integrations/config/integrationBrands.ts` | Mark + label (phosphor or bundled asset; never a CDN fetch), the console URL where the service mints credentials, and the one-line "where the token is created" help. The add-connection tiles come from the BACKEND registry, so a missing brand entry degrades to the generic Plugs mark and drops the help card rather than hiding the service |
-| 7 | `docs/TRADEMARKS.md` | Owner + brand-guideline row |
+| 7 | `src/landing/src/content/docs/docs/legal/trademarks.md` | Owner + brand-guideline row |
 | 8 | Tests | Definition assertions, client URL/error tests, executor connection-resolution matrix |
 
 Provider marks are trademarks: never restyle into the palette, never use as a Uniffy feature identity; they appear only where they identify the connected service.

@@ -116,7 +116,7 @@ Exception - status colors use explicit pairs: success `bg-green-100 text-green-8
 
 **Icons:** `@phosphor-icons/react` for all icons.
 
-**Logo:** `UniffyLogo` component (`@/components/ui/uniffy-logo`) or `/uniffy-symbol.png`. The mark is multi-color and theme-agnostic - never recolor or `invert()` it. Regenerate icon sizes from `docs/brand/uniffy-symbol.png`, do not hand-edit.
+**Logo:** `UniffyLogo` component (`@/components/ui/uniffy-logo`) or `/uniffy-symbol.png`. The mark is multi-color and theme-agnostic - never recolor or `invert()` it. Regenerate icon sizes from `assets/uniffy-symbol.png`, do not hand-edit.
 
 ## Page contract
 

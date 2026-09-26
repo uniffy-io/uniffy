@@ -206,7 +206,7 @@ Both are `(namespace, key) -> value` KV rows: plaintext JSONB `value`, or `value
 
 ## Shipped content (`src/uniffy/data/`)
 
-Content we author and ship with the build - prompts, agent templates, bundled skills, the model catalog, seed assets. It is neither user data nor operator config: nobody edits it at runtime, and a release is the only thing that changes it. **All of it lives in `src/uniffy/data/{kind}/`, never in a python literal and never in a per-domain folder.** One directory means one place to look, one reader, and one packaging path (`COPY src/uniffy` ships it; it works air-gapped and self-hosters get updates on image upgrade).
+Content we author and ship with the build - prompts, agent templates, bundled skills, the model catalog. It is neither user data nor operator config: nobody edits it at runtime, and a release is the only thing that changes it. **All of it lives in `src/uniffy/data/{kind}/`, never in a python literal and never in a per-domain folder.** One directory means one place to look, one reader, and one packaging path (`COPY src/uniffy` ships it; it works air-gapped and self-hosters get updates on image upgrade).
 
 | Kind | Path | Consumed by |
 |---|---|---|
@@ -214,7 +214,6 @@ Content we author and ship with the build - prompts, agent templates, bundled sk
 | Bundled agent skills | `data/skills/*.md` | `domains/agents/skills/bundled.py` |
 | Platform prompts | `data/prompts/*.md` | `domains/agents/runtime/workspace.py` |
 | Model catalog | `data/models/catalog.json` | `domains/agents/providers/catalog/loader.py` |
-| Seed assets | `data/assets/` | `domains/organizations/starter/canvas.py` |
 
 `core/data_files.py` is the only reader: `DATA_DIR`, `load_documents(dir) -> list[DataDocument]`, and a deliberately tiny frontmatter parser (scalar `key: value` plus `- item` block lists - enough for this content, so no PyYAML dependency). Markdown-with-frontmatter is the default shape: metadata in the frontmatter, prose in the body, so prompt text stays readable and diffable instead of hiding inside a triple-quoted string.
 

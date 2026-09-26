@@ -18,7 +18,7 @@ We call Uniffy open source because the rights that matter are yours. Read every 
 
 ## Every release becomes Apache 2.0
 
-Two years after we publish a release, that release converts to the Apache License 2.0. This is not a promise in a blog post. It is an irrevocable grant written into the license text itself. If Uniffy the company disappears, the code opens on schedule anyway.
+Two years after we publish a release, that release converts to the Apache License 2.0. This is not a promise in a blog post. It is an irrevocable grant written into the license text itself. If Uniffy Labs disappears, the code opens on schedule anyway.
 
 The conversion runs per release. A version published in August 2026 becomes Apache 2.0 in August 2028. The version published next month follows two years behind it. At any moment, everything older than two years is plain open source.
 

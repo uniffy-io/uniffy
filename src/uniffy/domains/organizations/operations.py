@@ -24,7 +24,6 @@ from uniffy.core.models.login.organization_member import OrganizationMember, Org
 from uniffy.core.models.people.identity import IdentitySource, IdentitySourceKind
 from uniffy.core.models.permissions.domain_admin import DomainAdmin
 from uniffy.core.search.indexer import SearchIndexer
-from uniffy.core.storage import ObjectStorage
 from uniffy.core.types import AccessMode, ContentRole, ContentType, DomainType
 from uniffy.domains.agents.bootstrap import (
     StagedDefaultAgent,
@@ -44,11 +43,6 @@ from uniffy.domains.chat.search import enqueue_chat_search_acl_refresh
 from uniffy.domains.directory.projection import UserDirectoryProjection
 from uniffy.domains.files.attachments import stage_personal_attachments_folder
 from uniffy.domains.files.filters.presets import create_default_presets
-from uniffy.domains.organizations.starter.docs import (
-    seed_workspace_docs,
-    starter_content_enabled,
-    workspace_docs_available,
-)
 from uniffy.domains.permissions.jobs.contracts import REINDEX_ORG_CONTENT_FOR_DEFAULTS
 from uniffy.domains.tags.filters.presets import create_default_tag_filter_presets
 
@@ -91,7 +85,6 @@ class OrganizationOperations:
         plan: str = "free",
         actor_user_id: UUID | None = None,
         *,
-        storage: ObjectStorage,
         search_indexer: SearchIndexer,
     ) -> Organization:
         try:
@@ -111,7 +104,6 @@ class OrganizationOperations:
         await self._session.refresh(staged.organization)
         await self.finish_organization_create_after_commit(
             staged,
-            storage=storage,
             search_indexer=search_indexer,
         )
         await self._session.refresh(staged.organization)
@@ -194,7 +186,6 @@ class OrganizationOperations:
         self,
         staged: StagedOrganizationCreate,
         *,
-        storage: ObjectStorage,
         search_indexer: SearchIndexer,
     ) -> None:
         org = staged.organization
@@ -239,46 +230,11 @@ class OrganizationOperations:
             )
             await self._refresh_staged_organization(staged)
 
-        await self._provision_starter_content_after_commit(
-            staged,
-            storage=storage,
-            search_indexer=search_indexer,
-        )
-
     async def _refresh_staged_organization(self, staged: StagedOrganizationCreate) -> None:
         await self._session.refresh(staged.organization)
         await self._session.refresh(staged.owner)
         await self._session.refresh(staged.default_channel.channel)
         await self._session.refresh(staged.default_agent.agent)
-
-    async def _provision_starter_content_after_commit(
-        self,
-        staged: StagedOrganizationCreate,
-        *,
-        storage: ObjectStorage,
-        search_indexer: SearchIndexer,
-    ) -> None:
-        organization_id = staged.organization.id
-        if not starter_content_enabled():
-            return
-        if not workspace_docs_available():
-            logger.warning("Starter docs skipped: docs tree not present in this deployment")
-            return
-        try:
-            await seed_workspace_docs(
-                session=self._session,
-                org=staged.organization,
-                admin_user=staged.owner,
-                search_indexer=search_indexer,
-                storage=storage,
-            )
-            await self._session.commit()
-        except Exception:
-            await self._session.rollback()
-            logger.opt(exception=True).warning(
-                "Organization created without complete starter content",
-                organization_id=str(organization_id),
-            )
 
     async def update(
         self,

@@ -1,7 +1,4 @@
-"""Stress seed: create many organizations with many members each.
-
-Idempotent on re-run: existing users and orgs (matched by email / slug) are reused.
-"""
+"""Seed stress organizations and members, reusing existing emails and slugs."""
 
 from __future__ import annotations
 
@@ -18,11 +15,9 @@ from uniffy.core.auth.passwords.crypto import hash_password
 from uniffy.core.models import Organization, User
 from uniffy.core.models.login.organization_member import OrganizationRole
 from uniffy.core.search import SearchIndexer, WorkspaceSearch
-from uniffy.core.storage import ObjectStorage
 from uniffy.domains.organizations.operations import OrganizationOperations
 from uniffy.infrastructure.database.session import close_db, init_db, open_session
 from uniffy.infrastructure.search import MeiliSearchEngine
-from uniffy.infrastructure.storage import S3Storage
 
 _PLANS = ["free", "pro", "team", "business", "enterprise"]
 _FIRST_NAMES = [
@@ -156,7 +151,6 @@ async def _provision_org(
     password_hash: str,
     prefix: str,
     rng: random.Random,
-    storage: ObjectStorage,
     search_indexer: SearchIndexer,
 ) -> tuple[UUID, str, int]:
     name, slug = _org_name(org_idx, rng)
@@ -179,7 +173,6 @@ async def _provision_org(
             slug=slug,
             owner_user_id=owner.id,
             plan=rng.choice(_PLANS),
-            storage=storage,
             search_indexer=search_indexer,
         )
 
@@ -211,10 +204,8 @@ async def stress_seed(
     password_hash = hash_password(password)
 
     await init_db(skip_migrations=True)
-    storage = S3Storage()
     search = WorkspaceSearch(MeiliSearchEngine())
     search_indexer = SearchIndexer(search)
-    await storage.startup()
     await search.startup()
 
     logger.info(
@@ -237,7 +228,6 @@ async def stress_seed(
                     password_hash,
                     prefix,
                     rng,
-                    storage,
                     search_indexer,
                 )
             except Exception:
@@ -253,7 +243,6 @@ async def stress_seed(
                 elapsed = time.monotonic() - t0
                 logger.info(f"[{i}/{orgs}] {slug} +{added} members in {elapsed:.1f}s")
     finally:
-        await storage.shutdown()
         await search.shutdown()
         await close_db()
 

@@ -50,6 +50,10 @@ export default defineConfig({
           label: "Deployment Guide",
           items: [{ autogenerate: { directory: "docs/deployment" } }],
         },
+        {
+          label: "Legal",
+          items: [{ autogenerate: { directory: "docs/legal" } }],
+        },
       ],
       disable404Route: true,
     }),

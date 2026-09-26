@@ -168,16 +168,11 @@ async def _org_create(skill_rows: list[tuple[UUID, str]]):
             "uniffy.domains.organizations.operations.UserDirectoryProjection.index_for_organization",
             AsyncMock(),
         ),
-        patch(
-            "uniffy.domains.organizations.operations.starter_content_enabled",
-            return_value=False,
-        ),
     ):
         org = await ops.create(
             name="Acme",
             slug="acme",
             owner_user_id=owner_id,
-            storage=MagicMock(),
             search_indexer=MagicMock(),
         )
 

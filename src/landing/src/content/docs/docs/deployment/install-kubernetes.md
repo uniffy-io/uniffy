@@ -229,13 +229,12 @@ Changing `config:` and running `helm upgrade` restarts affected chart workloads 
 
 Three blocks cover most real deployments.
 
-Bootstrap policy for a company install. Invitation only registration, a named organization, a clean workspace without the starter notes, and the operator role split from the daily admin account:
+Bootstrap policy for a company install. Invitation only registration, a named organization, and the operator role split from the daily admin account:
 
 ```yaml
 config:
   ALLOW_PUBLIC_REGISTRATION: "false"
   DEFAULT_ORG_NAME: "Acme"
-  SEED_STARTER_CONTENT: "false"
   INITIAL_PLATFORM_ADMIN_EMAIL: "platform@acme.com"
 ```
 

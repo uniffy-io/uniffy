@@ -1,7 +1,7 @@
 ---
 import LegalLayout from "@/layouts/LegalLayout.astro";
 
-const COMPANY = "Uniffy, Inc.";
+const COMPANY = "Uniffy Labs";
 const CONTACT = "support@uniffy.io";
 const GOVERNING_LAW = "Bulgaria";
 const FORUM = "the courts of Sofia, Bulgaria";
@@ -12,7 +12,7 @@ const EFFECTIVE = "24 August 2026";
   title="Terms of Service"
   description="The terms that govern your use of Uniffy, including the Uniffy mobile app and the cloud.uniffy.io hosted service."
   effectiveDate={EFFECTIVE}
-  intro="These terms are a contract between you and Uniffy. They cover the Uniffy mobile app and our hosted service at cloud.uniffy.io. Please read them before you create an account or use the app."
+  intro={`These terms are a contract between you and ${COMPANY}. They cover the Uniffy mobile app and our hosted service at cloud.uniffy.io. Please read them before you create an account or use the app.`}
 >
   <h2 id="acceptance" data-toc-label="1. Acceptance"><span class="legal-prose__num">01</span>Acceptance of these terms</h2>
   <p>

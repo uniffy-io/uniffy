@@ -101,7 +101,7 @@ jobs:
               - 'uv.lock'
               - '.python-version'
               - 'src/proto/gen/python/pyproject.toml'
-              - 'docs/LICENSES.md'
+              - 'src/landing/src/content/docs/docs/legal/**'
               - 'src/uniffy/__main__.py'
               - 'src/uniffy/main.py'
               - 'src/uniffy/factory.py'

@@ -61,7 +61,7 @@ All project commands go through `./manage.py`, a PEP 723 uv script (click). Ever
 
 # Codegen / housekeeping
 ./manage.py proto                            # regenerate protobuf (run after ANY .proto edit)
-./manage.py licenses                         # regenerate docs/LICENSES.md
+./manage.py licenses                         # regenerate landing docs license page
 ./manage.py clean                            # remove generated code + build caches
 ./manage.py toolbox <cmd>                    # run in deps-manager container (pnpm/uv/buf); try: toolbox bash
 

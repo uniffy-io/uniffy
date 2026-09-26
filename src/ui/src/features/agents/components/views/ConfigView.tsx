@@ -197,7 +197,7 @@ function ModelCard({ model }: { model: SerializedModelInfo }) {
     >
       <div className="flex items-start gap-3">
         {/* No text color here: mono marks are currentColor masks, so a muted
-            tone would restyle the trademark (docs/TRADEMARKS.md). */}
+            tone would restyle the trademark. See https://uniffy.io/docs/legal/trademarks/. */}
         <span
           title={providerLabel(model.provider)}
           className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border bg-muted"

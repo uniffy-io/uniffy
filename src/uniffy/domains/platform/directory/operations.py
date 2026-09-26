@@ -38,7 +38,6 @@ from uniffy.core.models.settings.org_setting import OrgSetting
 from uniffy.core.rate_limit import check_rate_limit
 from uniffy.core.realtime.publisher import publish_token_revoke
 from uniffy.core.search import SearchIndexer
-from uniffy.core.storage import ObjectStorage
 from uniffy.core.types import slugify
 from uniffy.core.users.cache import invalidate_user_profile
 from uniffy.domains.calls.lifecycle import CallEvictionReason, CallRevocationLifecycle
@@ -386,12 +385,9 @@ class PlatformDirectoryOperations:
         owner_email: str,
         domain: str = "",
         plan: str = "",
-        storage: ObjectStorage,
         search_indexer: SearchIndexer,
     ) -> PlatformOrgDetail:
-        """Full tenant bootstrap via ``OrganizationOperations.create``:
-        owner membership, org cipher, default channel/agent/presets.
-        """
+        """Use the shared organization bootstrap so operator-created tenants get all defaults."""
         await self._user_ops.require_system_admin(user_id)
         await check_rate_limit(
             key=_operator_mutation_key(user_id, "create_org"),
@@ -426,7 +422,6 @@ class PlatformDirectoryOperations:
             domain=domain_value,
             plan=plan,
             actor_user_id=user_id,
-            storage=storage,
             search_indexer=search_indexer,
         )
         return await self.get_organization(user_id=user_id, organization_id=org.id)
