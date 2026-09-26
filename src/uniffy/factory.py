@@ -438,7 +438,7 @@ async def lifespan(app: FastAPI):
         raise
 
     try:
-        await bootstrap_deployment(storage, search_indexer)
+        await bootstrap_deployment(search_indexer)
         logger.info("Deployment bootstrap completed successfully")
     except Exception as e:
         logger.exception(f"Deployment bootstrap failed: {e}")
@@ -689,7 +689,7 @@ def _create_api_dispatcher(
     add_rpc(
         "/superadmin.v1.SystemOrganizationsService",
         SystemOrganizationsServiceASGIApplication,
-        SystemOrganizationsServiceImpl(storage, search_indexer, call_lifecycle),
+        SystemOrganizationsServiceImpl(search_indexer, call_lifecycle),
     )
     add_rpc(
         "/superadmin.v1.SystemUsersService",

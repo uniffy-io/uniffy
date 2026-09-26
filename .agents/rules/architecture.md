@@ -55,8 +55,7 @@ Parent contexts group cohesive child domains without erasing their ownership:
 domains/
 ├── organizations/
 │   ├── invitations/
-│   ├── security/
-│   └── starter/
+│   └── security/
 ├── platform/
 │   ├── audit/
 │   ├── config/

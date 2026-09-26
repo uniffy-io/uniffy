@@ -44,7 +44,6 @@ from uniffy_proto.superadmin.v1.system_directory_pb import (
 from uniffy.core.auth.principal import current_user_id
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.search import SearchIndexer
-from uniffy.core.storage import ObjectStorage
 from uniffy.domains.calls.lifecycle import CallRevocationLifecycle
 from uniffy.domains.platform.directory.converters import (
     org_detail_to_proto,
@@ -85,11 +84,9 @@ def _map_domain_error(exc: Exception) -> ConnectError:
 class SystemOrganizationsHandlers:
     def __init__(
         self,
-        storage: ObjectStorage,
         search_indexer: SearchIndexer,
         call_lifecycle: CallRevocationLifecycle,
     ) -> None:
-        self.storage = storage
         self.search_indexer = search_indexer
         self.call_lifecycle = call_lifecycle
 
@@ -148,7 +145,6 @@ class SystemOrganizationsHandlers:
                     owner_email=request.owner_email,
                     domain=request.domain,
                     plan=request.plan,
-                    storage=self.storage,
                     search_indexer=self.search_indexer,
                 )
         except ConnectError:

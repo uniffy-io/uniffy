@@ -33,7 +33,6 @@ from uniffy_proto.superadmin.v1.system_directory_pb import (
 )
 
 from uniffy.core.search import SearchIndexer
-from uniffy.core.storage import ObjectStorage
 from uniffy.domains.calls.lifecycle import CallRevocationLifecycle
 from uniffy.domains.platform.directory.handlers import (
     SystemOrganizationsHandlers,
@@ -44,11 +43,10 @@ from uniffy.domains.platform.directory.handlers import (
 class SystemOrganizationsServiceImpl:
     def __init__(
         self,
-        storage: ObjectStorage,
         search_indexer: SearchIndexer,
         call_lifecycle: CallRevocationLifecycle,
     ) -> None:
-        self._handlers = SystemOrganizationsHandlers(storage, search_indexer, call_lifecycle)
+        self._handlers = SystemOrganizationsHandlers(search_indexer, call_lifecycle)
 
     async def list_organizations(
         self, request: ListOrganizationsRequest, ctx: RequestContext

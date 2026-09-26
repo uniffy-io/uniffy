@@ -16,26 +16,19 @@ if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
     from uniffy.core.search import SearchIndexer
-    from uniffy.core.storage import ObjectStorage
 
 
 async def bootstrap_deployment(
-    storage: ObjectStorage,
     search_indexer: SearchIndexer,
 ) -> None:
-    """Provision the default organization if the database is empty.
-
-    Serialised across workers via advisory lock; the existing-org check inside
-    keeps the body idempotent for followers.
-    """
+    """Serialize empty-deployment bootstrap across workers with an advisory lock."""
     from uniffy.infrastructure.database.session import startup_advisory_lock
 
     with startup_advisory_lock(BOOTSTRAP_LOCK_ID, "deployment bootstrap"):
-        await _bootstrap_deployment_locked(storage, search_indexer)
+        await _bootstrap_deployment_locked(search_indexer)
 
 
 async def _bootstrap_deployment_locked(
-    storage: ObjectStorage,
     search_indexer: SearchIndexer,
 ) -> None:
     # Lazy imports avoid the auth-module circular dependency.
@@ -122,7 +115,6 @@ async def _bootstrap_deployment_locked(
                 slug=org_slug,
                 owner_user_id=admin_user.id,
                 plan="enterprise",
-                storage=storage,
                 search_indexer=search_indexer,
             )
             logger.info(f"Created default organization: {default_org.name} ({default_org.slug})")

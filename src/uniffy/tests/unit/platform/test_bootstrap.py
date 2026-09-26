@@ -7,7 +7,6 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from uniffy.core.search import SearchIndexer
-from uniffy.core.storage import ObjectStorage
 from uniffy.domains.organizations import operations as organization_operations
 from uniffy.domains.platform import bootstrap
 from uniffy.infrastructure.database import session as database_session
@@ -47,9 +46,8 @@ async def test_empty_deployment_passes_runtime_dependencies_to_organization_owne
     monkeypatch.setattr(organization_operations, "OrganizationOperations", constructor)
     monkeypatch.setattr(bootstrap, "_seed_vapid_keys", AsyncMock())
 
-    storage = MagicMock(spec=ObjectStorage)
     search_indexer = MagicMock(spec=SearchIndexer)
-    await bootstrap._bootstrap_deployment_locked(storage, search_indexer)
+    await bootstrap._bootstrap_deployment_locked(search_indexer)
 
     constructor.assert_called_once_with(session)
     operations.create.assert_awaited_once_with(
@@ -57,7 +55,6 @@ async def test_empty_deployment_passes_runtime_dependencies_to_organization_owne
         slug="default",
         owner_user_id=session.add.call_args_list[0].args[0].id,
         plan="enterprise",
-        storage=storage,
         search_indexer=search_indexer,
     )
     operations.create.assert_awaited_once()
