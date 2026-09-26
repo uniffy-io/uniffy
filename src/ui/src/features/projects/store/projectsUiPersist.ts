@@ -8,12 +8,25 @@ const PERSISTED_KEYS = [
   "viewDrafts",
   "outlineExpanded",
   "isSidebarOpen",
-  "detailPanelWidth",
   "sidebarWidth",
   "detailViewMode",
   "projectScope",
-  "roadmapStartDate",
 ] as const satisfies readonly (keyof ProjectsUiState)[];
+
+/** Per-device layout that outlives a sign-out or an organization switch; views and drafts name one org's projects. */
+const LAYOUT_KEYS = [
+  "isSidebarOpen",
+  "sidebarWidth",
+  "detailViewMode",
+  "projectScope",
+] as const satisfies readonly (typeof PERSISTED_KEYS)[number][];
+
+export function projectsUiLayout(state: ProjectsUiState): ProjectsUiState {
+  return {
+    ...initialProjectsUiState,
+    ...Object.fromEntries(LAYOUT_KEYS.map((key) => [key, state[key]])),
+  };
+}
 
 export function persistedProjectsUi(state: unknown): Partial<ProjectsUiState> {
   const source = (state ?? {}) as Record<string, unknown>;

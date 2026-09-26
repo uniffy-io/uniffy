@@ -28,6 +28,7 @@ import {
   type FilterContext,
 } from "@/features/projects/utils/filterTasks";
 import { personSortIds, sortTasks } from "@/features/projects/utils/sortTasks";
+import { taskMatchesSearch } from "@/features/projects/utils/taskSearch";
 import type {
   Task,
   CreateTaskRequest,
@@ -154,6 +155,7 @@ export function useFilteredTasks(projectId: string, options: UseFilteredTasksOpt
   const selectProjectTasks = useMemo(() => selectTasksForProject(projectId), [projectId]);
   const tasks = useAppSelector(selectProjectTasks);
   const searchQuery = useAppSelector((state) => state.projectsUi.searchQuery);
+  const projectSlug = useAppSelector((state) => state.projects.projects[projectId]?.slug);
   const filter = useAppSelector(selectDraftFilter(projectId));
   const sort = useAppSelector(selectDraftSort(projectId));
   const sprints = useAppSelector(selectSprintsForProject(projectId));
@@ -172,13 +174,8 @@ export function useFilteredTasks(projectId: string, options: UseFilteredTasksOpt
   return useMemo(() => {
     let result = includeSubtasks ? tasks.slice() : tasks.filter((t) => !t.parentId);
 
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      result = result.filter(
-        (task) =>
-          task.title.toLowerCase().includes(query) ||
-          task.description.toLowerCase().includes(query),
-      );
+    if (searchQuery.trim()) {
+      result = result.filter((task) => taskMatchesSearch(task, searchQuery, projectSlug));
     }
 
     result = applyFilters(result, filter, ctx);
@@ -190,5 +187,15 @@ export function useFilteredTasks(projectId: string, options: UseFilteredTasksOpt
       hierarchy: ctx.hierarchy,
       lookup: ctx.lookup,
     });
-  }, [tasks, searchQuery, filter, sort, includeSubtasks, ctx, subjectNameById, sprints]);
+  }, [
+    tasks,
+    searchQuery,
+    projectSlug,
+    filter,
+    sort,
+    includeSubtasks,
+    ctx,
+    subjectNameById,
+    sprints,
+  ]);
 }

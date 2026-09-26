@@ -1,12 +1,13 @@
 import { useCallback, useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { fetchNote } from "@/features/notes/store/notesSlice";
+import { isNoteLoading } from "@/features/notes/utils/noteLoading";
 
 export function useNoteLoader(noteId: string | null) {
   const dispatch = useAppDispatch();
   const note = useAppSelector((state) => (noteId ? state.notes.notes[noteId] : null));
   const loadingNoteId = useAppSelector((state) => state.notes.loadingNoteId);
-  const isLoading = loadingNoteId === noteId;
+  const isLoading = isNoteLoading(loadingNoteId, noteId);
 
   const loadNote = useCallback(() => {
     if (noteId && !note) {

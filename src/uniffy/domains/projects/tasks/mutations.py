@@ -31,7 +31,7 @@ from uniffy.domains.projects.tasks.content import TaskContentOperations
 from uniffy.domains.projects.tasks.notifications import TaskNotifications
 from uniffy.domains.projects.tasks.recurrence import spawn_next_recurring_instance
 from uniffy.domains.projects.tasks.validation import TaskValidator
-from uniffy.domains.projects.watchers import WatcherOperations
+from uniffy.domains.projects.watchers.operations import WatcherOperations
 from uniffy.domains.search.rename import propagate_rename
 from uniffy.domains.tags.operations import TagOperations
 
@@ -50,8 +50,7 @@ class TaskMutationOperations:
         task_id: UUID,
         **kwargs,
     ) -> tuple[Task, Task | None]:
-        task = await self.content.get_by_id(user_id, organization_id, task_id)
-        await self.content._require_edit(user_id, organization_id, task)
+        task = await self.content.get_for_edit(user_id, organization_id, task_id)
 
         tag_ids = kwargs.pop("tag_ids", None)
         status_semantics = await load_task_status_semantics(self.session, task.project_id)
@@ -364,8 +363,7 @@ class TaskMutationOperations:
         task_id: UUID,
         permanent: bool = False,
     ) -> bool:
-        task = await self.content.get_by_id(user_id, organization_id, task_id)
-        await self.content._require_delete(user_id, organization_id, task)
+        task = await self.content.get_for_delete(user_id, organization_id, task_id)
 
         if permanent:
             tag_ops = TagOperations(self.session, self.content.search_indexer)

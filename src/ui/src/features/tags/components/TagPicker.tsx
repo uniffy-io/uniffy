@@ -1,6 +1,12 @@
-/** Async autocomplete via `SuggestTags` (debounced, min 2 chars), free-text creation, hard 20-tag cap matching the backend. */
-
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+  type Ref,
+} from "react";
 import { Plus } from "@phosphor-icons/react";
 
 import { useAppDispatch } from "@/app/hooks";
@@ -15,9 +21,15 @@ const MAX_TAGS = 20;
 const MIN_PREFIX = 2;
 const DEBOUNCE_MS = 200;
 
+export interface TagPickerHandle {
+  commit: () => Promise<string[] | null>;
+}
+
 interface TagPickerProps {
+  ref?: Ref<TagPickerHandle>;
   selectedTagIds: string[];
   onChange: (tagIds: string[]) => void;
+  onPendingChange?: (pending: boolean) => void;
   placeholder?: string;
   disabled?: boolean;
   className?: string;
@@ -26,8 +38,10 @@ interface TagPickerProps {
 }
 
 export function TagPicker({
+  ref,
   selectedTagIds,
   onChange,
+  onPendingChange,
   placeholder = "Add tag...",
   disabled = false,
   className,
@@ -38,7 +52,28 @@ export function TagPicker({
   const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState<SerializedTag[]>([]);
   const [isEditing, setIsEditing] = useState(autoFocus);
+  const [isCreating, setIsCreating] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const selectionRef = useRef(selectedTagIds);
+  const pendingRef = useRef<Promise<string[] | null> | null>(null);
+  const blurTimerRef = useRef<number | null>(null);
+  const liveRef = useRef(true);
+
+  useEffect(() => {
+    selectionRef.current = selectedTagIds;
+  }, [selectedTagIds]);
+
+  useEffect(() => {
+    onPendingChange?.(query.trim().length >= MIN_PREFIX || isCreating);
+  }, [query, isCreating, onPendingChange]);
+
+  useEffect(() => {
+    liveRef.current = true;
+    return () => {
+      liveRef.current = false;
+      if (blurTimerRef.current !== null) window.clearTimeout(blurTimerRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     if (autoFocus) {
@@ -47,6 +82,7 @@ export function TagPicker({
   }, [autoFocus]);
 
   const reachedCap = selectedTagIds.length >= MAX_TAGS;
+  const isDisabled = disabled || isCreating;
 
   const selectedTags = useTagsByIds(selectedTagIds);
 
@@ -54,7 +90,8 @@ export function TagPicker({
 
   useEffect(() => {
     if (query.trim().length < MIN_PREFIX) {
-      // eslint-disable-next-line react/react-compiler -- clearing the picker dropdown when the user backspaces below the prefix threshold is a deliberate reset
+      // Clearing suggestions on backspace keeps them aligned with the visible prefix.
+      // eslint-disable-next-line react/react-compiler
       setSuggestions([]);
       return;
     }
@@ -79,36 +116,69 @@ export function TagPicker({
   }, []);
 
   const select = useCallback(
-    (tag: SerializedTag) => {
-      if (selectedTagIds.includes(tag.id)) return;
-      if (reachedCap) return;
+    (tag: SerializedTag, refocus = true) => {
+      const currentIds = selectionRef.current;
+      if (currentIds.includes(tag.id) || currentIds.length >= MAX_TAGS) return currentIds;
+      const nextIds = [...currentIds, tag.id];
+      selectionRef.current = nextIds;
       dispatch(bulkUpsertTags([tag]));
-      onChange([...selectedTagIds, tag.id]);
+      onChange(nextIds);
       setQuery("");
       setSuggestions([]);
-      window.setTimeout(() => inputRef.current?.focus(), 0);
+      if (refocus) window.setTimeout(() => inputRef.current?.focus(), 0);
+      return nextIds;
     },
-    [dispatch, onChange, reachedCap, selectedTagIds],
+    [dispatch, onChange],
   );
 
   const remove = useCallback(
     (tagId: string) => {
-      onChange(selectedTagIds.filter((id) => id !== tagId));
+      const nextIds = selectionRef.current.filter((id) => id !== tagId);
+      selectionRef.current = nextIds;
+      onChange(nextIds);
     },
-    [onChange, selectedTagIds],
+    [onChange],
   );
 
   const createAndSelect = useCallback(
-    async (name: string) => {
+    (name: string, refocus = true): Promise<string[] | null> => {
+      if (pendingRef.current) return pendingRef.current;
       const trimmed = name.trim();
-      if (!trimmed) return;
-      const action = await dispatch(createTagThunk({ name: trimmed }));
-      if (createTagThunk.fulfilled.match(action)) {
-        select(action.payload);
+      if (trimmed.length < MIN_PREFIX || selectionRef.current.length >= MAX_TAGS) {
+        return Promise.resolve(selectionRef.current);
       }
+      setIsCreating(true);
+      const pending = dispatch(createTagThunk({ name: trimmed }))
+        .then((action) => {
+          if (!liveRef.current || !createTagThunk.fulfilled.match(action)) return null;
+          return select(action.payload, refocus);
+        })
+        .finally(() => {
+          pendingRef.current = null;
+          if (liveRef.current) setIsCreating(false);
+        });
+      pendingRef.current = pending;
+      return pending;
     },
     [dispatch, select],
   );
+
+  const commit = useCallback((): Promise<string[] | null> => {
+    if (blurTimerRef.current !== null) {
+      window.clearTimeout(blurTimerRef.current);
+      blurTimerRef.current = null;
+    }
+    if (pendingRef.current) return pendingRef.current;
+    const trimmed = query.trim();
+    if (trimmed.length < MIN_PREFIX) return Promise.resolve(selectionRef.current);
+    const exact = suggestions.find(
+      (tag) =>
+        tag.name.toLowerCase() === trimmed.toLowerCase() || tag.slug === trimmed.toLowerCase(),
+    );
+    return exact ? Promise.resolve(select(exact, false)) : createAndSelect(trimmed, false);
+  }, [query, suggestions, select, createAndSelect]);
+
+  useImperativeHandle(ref, () => ({ commit }), [commit]);
 
   const onKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
     if (event.key === "Enter" || event.key === ",") {
@@ -131,17 +201,16 @@ export function TagPicker({
   };
 
   const onBlur = () => {
-    window.setTimeout(() => {
-      const trimmed = query.trim();
-      if (trimmed.length >= MIN_PREFIX) {
-        void createAndSelect(trimmed);
-      }
-      stopEditing();
+    blurTimerRef.current = window.setTimeout(() => {
+      blurTimerRef.current = null;
+      void commit().then((ids) => {
+        if (ids !== null && liveRef.current) stopEditing();
+      });
     }, 150);
   };
 
-  const showAddButton = !disabled && !isEditing && !reachedCap;
-  const dropdownOpen = isEditing && query.trim().length >= MIN_PREFIX;
+  const showAddButton = !isDisabled && !isEditing && !reachedCap;
+  const dropdownOpen = !isDisabled && isEditing && query.trim().length >= MIN_PREFIX;
 
   return (
     <div className={cn("relative", className)}>
@@ -150,7 +219,7 @@ export function TagPicker({
           <TagChip
             key={tag.id}
             tag={tag}
-            onRemove={disabled ? undefined : () => remove(tag.id)}
+            onRemove={isDisabled ? undefined : () => remove(tag.id)}
             removeDisabled={inlineOnlySet.has(tag.id)}
           />
         ))}
@@ -160,6 +229,7 @@ export function TagPicker({
             ref={inputRef}
             type="text"
             value={query}
+            disabled={isDisabled}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={onKeyDown}
             onBlur={onBlur}

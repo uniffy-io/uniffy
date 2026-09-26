@@ -2775,6 +2775,44 @@ dates and one custom single-select field makes every check reachable.
       opens the same view from outside the app.
 - [ ] Sign out and in as the second account on the same phone: no unsaved view edits or last
       opened views of the first account appear.
+## Sign-out and organization switch reset
+
+Needs a user who belongs to two organizations; the org picker lives at `/select-org` and also
+appears after sign-in. Stored state is readable from the browser console with
+`JSON.parse(JSON.parse(localStorage.getItem("persist:root")).projectsUi)`.
+
+- [ ] `(both products)` In organization A, open a project, change its view (hide a column) so the
+      tab shows the unsaved dot, and pick "Modal view" for task details. Go to `/select-org` and
+      pick organization B. Projects shows only B's projects, Chat shows only B's channels, the
+      notification badge shows B's count, and the stored `viewDrafts` and `activeViewIds` are
+      empty. The user is still signed in.
+- [ ] Switch back to A: the project opens on its default view with no unsaved dot, and task
+      details still open as a modal.
+- [ ] Sign out from the user menu: the stored `auth` has no user, `viewDrafts` is empty, and the
+      detail-mode preference is kept.
+- [ ] Sign in, pick an organization, go back to `/select-org` and use its Sign out button: the
+      same stored state as above, and the `uniffy-notes-cache` IndexedDB store is empty.
+- [ ] In an organization with no notes, open Notes: the editor pane says "No note selected", not
+      a spinner that never ends.
+- [ ] Select a saved Files tag filter in A and reload. Clear it, change Files to list view,
+      then switch to B. B's files remain visible, the old filter stays cleared, and list view
+      remains selected. Repeat with sign-out and sign-in as another user.
+- [ ] With an agent test run active, sign out or switch orgs. The sessionStorage key
+      `uniffy.agentRuntime.activeRunId` is absent. Reloading never restores the previous run ID.
+- [ ] Delay a Projects list or detail response, switch orgs, then release the response.
+      No previous-org projects, tags or error toasts appear. Repeat switching A to B to A.
+- [ ] Complete one upload, fail another, and leave a large upload running. Sign out or switch
+      orgs, then start an upload in the new session. The tray contains only the new upload.
+      Late completion responses and reload recovery never restore the previous uploads.
+
+## Projects: tags in settings, status link and task key search
+
+- [ ] Project settings > General shows a Tags field. Add an existing tag and save: the tag is still
+      there after a reload and the project sidebar shows it. Remove it and save: it is gone after a
+      reload. Changing only the tags enables Save.
+- [ ] On a board view, Display > Manage statuses opens the project settings on the Statuses section.
+- [ ] In a project with slug `PROD`, the header search finds a task by `#12`, by `PROD-12` in any
+      case, and still by words in its title or description.
 
 ## Pre-release sweep
 

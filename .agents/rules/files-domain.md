@@ -34,6 +34,9 @@ part failures settle sibling requests before reporting failure. Simultaneous aut
 per upload. Resumed and out-of-order parts advance progress by completed count, not part number.
 Progress is throttled (<=200ms) before reaching subscribers; status changes emit immediately. Cancel passes
 an `operationId` so the worker loop actually aborts.
+Session cleanup calls `reset()`: cancel active work, remove all in-memory records and blobs, clear persisted
+whole-file records and blobs, and publish an empty snapshot. Late responses and recovery reads cannot
+restore retired uploads. Recording chunk persistence keeps its own lifecycle.
 
 Consumption (the engine owns its own state - a `Map` of `UploadRecord` + a blob map; read via
 `subscribe(listener)` / `getRecords()`):

@@ -81,14 +81,6 @@ export const projectsSlice = createSlice({
       state.currentProjectId = action.payload;
     },
 
-    clearProjects: (state) => {
-      state.projects = {};
-      state.tasks = {};
-      state.taskListLoadedIds = {};
-      state.currentProjectId = null;
-      state.errors = { projects: null, tasks: null, general: null };
-    },
-
     clearErrors: (state) => {
       state.errors = { projects: null, tasks: null, general: null };
     },
@@ -512,7 +504,6 @@ export const projectsSlice = createSlice({
 
 export const {
   setCurrentProject,
-  clearProjects,
   clearErrors,
   optimisticUpdateTask,
   bulkUpdateTasks,

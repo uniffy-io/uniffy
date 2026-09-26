@@ -20,7 +20,7 @@ from uniffy.core.models.projects.field_definition import FieldDefinition, System
 from uniffy.core.models.projects.task import Task
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import ContentType, NotificationType
-from uniffy.domains.projects.watchers import WatcherOperations
+from uniffy.domains.projects.watchers.operations import WatcherOperations
 
 
 class TaskNotifications:

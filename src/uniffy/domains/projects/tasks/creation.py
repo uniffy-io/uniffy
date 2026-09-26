@@ -23,7 +23,7 @@ from uniffy.domains.projects.statuses import (
 from uniffy.domains.projects.tasks.content import TaskContentOperations
 from uniffy.domains.projects.tasks.notifications import TaskNotifications
 from uniffy.domains.projects.tasks.validation import TaskValidator
-from uniffy.domains.projects.watchers import WatcherOperations
+from uniffy.domains.projects.watchers.operations import WatcherOperations
 
 logger = logger.bind(component="projects.tasks.creation")
 
@@ -48,8 +48,7 @@ class TaskCreateOperations:
             self.session,
             search_indexer=self.content.search_indexer,
         )
-        project = await project_ops.get_by_id(user_id, organization_id, project_id)
-        await project_ops._require_edit(user_id, organization_id, project)
+        project = await project_ops.get_for_edit(user_id, organization_id, project_id)
 
         counter_result = await self.session.execute(
             text(

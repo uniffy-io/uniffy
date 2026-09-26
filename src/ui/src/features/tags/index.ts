@@ -1,5 +1,5 @@
 export { TagChip } from "@/features/tags/components/TagChip";
-export { TagPicker } from "@/features/tags/components/TagPicker";
+export { TagPicker, type TagPickerHandle } from "@/features/tags/components/TagPicker";
 
 export {
   bulkUpsertTags,

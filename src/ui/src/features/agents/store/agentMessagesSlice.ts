@@ -9,6 +9,7 @@ import {
 } from "@/features/agents/store/agentMessagesThunks";
 import { MessageRole } from "@uniffy/proto/agents/v1/sessions_pb";
 import { persistedThinkingBlocks } from "@/features/agents/utils/thinkingBlocks";
+import { endsOrganizationScope } from "@/features/auth/store/authActions";
 
 interface StreamingToolCall {
   toolCallId: string;
@@ -114,6 +115,11 @@ const initialState: AgentMessagesState = {
   loading: false,
   error: null,
 };
+
+function clearMessageState(): AgentMessagesState {
+  writePersistedRunId(null);
+  return { ...initialState, activeRunId: null };
+}
 
 export const agentMessagesSlice = createSlice({
   name: "agentMessages",
@@ -343,10 +349,7 @@ export const agentMessagesSlice = createSlice({
       state.activeRunId = null;
       writePersistedRunId(null);
     },
-    clearAgentMessages: () => {
-      writePersistedRunId(null);
-      return { ...initialState, activeRunId: null };
-    },
+    clearAgentMessages: clearMessageState,
   },
   extraReducers: (builder) => {
     builder
@@ -384,7 +387,8 @@ export const agentMessagesSlice = createSlice({
         if (!list) return;
         const anchor = list.find((m) => m.id === anchorMessageId);
         invalidateAfter(list, anchor?.createdAt, false);
-      });
+      })
+      .addMatcher(endsOrganizationScope, clearMessageState);
   },
 });
 

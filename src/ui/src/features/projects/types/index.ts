@@ -47,15 +47,6 @@ export type {
   RoadmapZoomLevel,
 } from "./views";
 
-export type {
-  LoadingState,
-  ErrorState,
-  DragState,
-  AutosaveState,
-  HistoryEntry,
-  ProjectsUiState,
-  ProjectScope,
-  PanelConfig,
-} from "./ui";
+export type { LoadingState, ErrorState, HistoryEntry, ProjectsUiState, ProjectScope } from "./ui";
 
-export { initialProjectsUiState, PANEL_CONFIG } from "./ui";
+export { initialProjectsUiState } from "./ui";

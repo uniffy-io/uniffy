@@ -148,7 +148,7 @@ class TestSyncProjectTags:
 
 class TestHydrateHelpers:
     async def test_hydrate_task_tags_no_op_on_empty_input(self) -> None:
-        from uniffy.domains.projects.handlers import _hydrate_task_tags
+        from uniffy.domains.projects.tasks.handlers import _hydrate_task_tags
 
         session = AsyncMock()
         out = await _hydrate_task_tags(session, generate_id(), [])

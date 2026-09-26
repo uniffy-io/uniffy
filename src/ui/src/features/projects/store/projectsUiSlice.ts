@@ -1,6 +1,6 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import type { RootState } from "@/app/store";
-import type { DragState, HistoryEntry, ProjectScope } from "@/features/projects/types/ui";
+import type { HistoryEntry, ProjectScope } from "@/features/projects/types/ui";
 import type { ViewDefinition } from "@/features/projects/types/views";
 import { initialProjectsUiState } from "@/features/projects/types/ui";
 import { deleteTasks } from "@/features/projects/store/projectsThunks";
@@ -110,16 +110,8 @@ export const projectsUiSlice = createSlice({
       state.isDetailPanelOpen = false;
     },
 
-    toggleDetailPanel: (state) => {
-      state.isDetailPanelOpen = !state.isDetailPanelOpen;
-    },
-
     setDetailViewMode: (state, action: PayloadAction<"sidebar" | "modal">) => {
       state.detailViewMode = action.payload;
-    },
-
-    setDetailPanelWidth: (state, action: PayloadAction<number>) => {
-      state.detailPanelWidth = action.payload;
     },
 
     toggleSidebar: (state) => {
@@ -138,48 +130,12 @@ export const projectsUiSlice = createSlice({
       state.isCreateProjectModalOpen = false;
     },
 
-    openEditProjectModal: (state, action: PayloadAction<string>) => {
-      state.editProjectId = action.payload;
-    },
-
-    closeEditProjectModal: (state) => {
-      state.editProjectId = null;
-    },
-
     openCreateTaskModal: (state) => {
       state.isCreateTaskModalOpen = true;
     },
 
     closeCreateTaskModal: (state) => {
       state.isCreateTaskModalOpen = false;
-    },
-
-    openFieldPicker: (state) => {
-      state.isFieldPickerOpen = true;
-    },
-
-    closeFieldPicker: (state) => {
-      state.isFieldPickerOpen = false;
-    },
-
-    openViewConfig: (state) => {
-      state.isViewConfigOpen = true;
-    },
-
-    closeViewConfig: (state) => {
-      state.isViewConfigOpen = false;
-    },
-
-    setEditingField: (state, action: PayloadAction<string | null>) => {
-      state.editingFieldId = action.payload;
-    },
-
-    startDrag: (state, action: PayloadAction<DragState>) => {
-      state.dragState = action.payload;
-    },
-
-    endDrag: (state) => {
-      state.dragState = null;
     },
 
     setEditingCell: (state, action: PayloadAction<{ taskId: string; fieldId: string } | null>) => {
@@ -196,23 +152,6 @@ export const projectsUiSlice = createSlice({
 
     setSearchQuery: (state, action: PayloadAction<string>) => {
       state.searchQuery = action.payload;
-    },
-
-    setRoadmapStartDate: (state, action: PayloadAction<string>) => {
-      state.roadmapStartDate = action.payload;
-    },
-
-    setTaskSaving: (state, action: PayloadAction<{ taskId: string; isSaving: boolean }>) => {
-      state.autosave.isSaving[action.payload.taskId] = action.payload.isSaving;
-    },
-
-    setTaskLastSaved: (state, action: PayloadAction<{ taskId: string; timestamp: string }>) => {
-      state.autosave.lastSaved[action.payload.taskId] = action.payload.timestamp;
-      state.autosave.hasChanges[action.payload.taskId] = false;
-    },
-
-    setTaskHasChanges: (state, action: PayloadAction<{ taskId: string; hasChanges: boolean }>) => {
-      state.autosave.hasChanges[action.payload.taskId] = action.payload.hasChanges;
     },
 
     pushUndo: (state, action: PayloadAction<HistoryEntry>) => {
@@ -236,13 +175,6 @@ export const projectsUiSlice = createSlice({
         state.undoStack.push(entry);
       }
     },
-
-    clearHistory: (state) => {
-      state.undoStack = [];
-      state.redoStack = [];
-    },
-
-    resetUiState: () => initialProjectsUiState,
   },
   extraReducers: (builder) => {
     // Drafts and the last opened views describe one person's work; the next account starts clean.
@@ -280,37 +212,20 @@ export const {
   clearSelection,
   openDetailPanel,
   closeDetailPanel,
-  toggleDetailPanel,
   setDetailViewMode,
-  setDetailPanelWidth,
   toggleSidebar,
   setSidebarWidth,
   openCreateProjectModal,
   closeCreateProjectModal,
-  openEditProjectModal,
-  closeEditProjectModal,
   openCreateTaskModal,
   closeCreateTaskModal,
-  openFieldPicker,
-  closeFieldPicker,
-  openViewConfig,
-  closeViewConfig,
-  setEditingField,
   setEditingCell,
   setFocusedCell,
-  startDrag,
-  endDrag,
   setProjectScope,
   setSearchQuery,
-  setRoadmapStartDate,
-  setTaskSaving,
-  setTaskLastSaved,
-  setTaskHasChanges,
   pushUndo,
   popUndo,
   popRedo,
-  clearHistory,
-  resetUiState,
 } = projectsUiSlice.actions;
 
 export const selectSelectedTaskId = (state: RootState) => state.projectsUi.selectedTaskId;
@@ -318,10 +233,8 @@ export const selectSelectedTaskIds = (state: RootState) => state.projectsUi.sele
 export const selectIsDetailPanelOpen = (state: RootState) => state.projectsUi.isDetailPanelOpen;
 export const selectDetailViewMode = (state: RootState) => state.projectsUi.detailViewMode;
 export const selectIsSidebarOpen = (state: RootState) => state.projectsUi.isSidebarOpen;
-export const selectDragState = (state: RootState) => state.projectsUi.dragState;
 export const selectProjectScope = (state: RootState) => state.projectsUi.projectScope;
 export const selectSearchQuery = (state: RootState) => state.projectsUi.searchQuery;
-export const selectAutosaveState = (state: RootState) => state.projectsUi.autosave;
 export const selectEditingCell = (state: RootState) => state.projectsUi.editingCell;
 export const selectFocusedCell = (state: RootState) => state.projectsUi.focusedCell;
 const NO_EXPANDED_ROWS: readonly string[] = Object.freeze([]);
@@ -332,7 +245,6 @@ export const selectOutlineExpanded =
     state.projectsUi.outlineExpanded[projectId] ?? NO_EXPANDED_ROWS;
 export const selectUndoStack = (state: RootState) => state.projectsUi.undoStack;
 export const selectRedoStack = (state: RootState) => state.projectsUi.redoStack;
-export const selectEditProjectId = (state: RootState) => state.projectsUi.editProjectId;
 export const selectCanUndo = (state: RootState) => state.projectsUi.undoStack.length > 0;
 export const selectCanRedo = (state: RootState) => state.projectsUi.redoStack.length > 0;
 

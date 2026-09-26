@@ -21,11 +21,9 @@ import { TaskDetailPanel } from "@/features/projects/components/detail/TaskDetai
 import { useProjectPermission } from "@/features/projects/hooks/useProjectPermissions";
 import { CreateTaskModal } from "@/features/projects/components/modals/CreateTaskModal";
 import { CreateProjectModal } from "@/features/projects/components/modals/CreateProjectModal";
-import { EditProjectModal } from "@/features/projects/components/modals/EditProjectModal";
 import { fetchSprints } from "@/features/projects/store/sprintsThunks";
 import { DIRECTORY_MEMBERS_PAGE_SIZE, fetchMembers } from "@/features/admin";
 import {
-  selectEditProjectId,
   selectIsDetailPanelOpen,
   selectDetailViewMode,
   selectIsSidebarOpen,
@@ -66,7 +64,6 @@ export function ProjectsLayout() {
   const isCreateProjectModalOpen = useAppSelector(
     (state) => state.projectsUi.isCreateProjectModalOpen,
   );
-  const editProjectId = useAppSelector(selectEditProjectId);
 
   // Fetch sprints whenever the current project changes
   useEffect(() => {
@@ -223,7 +220,6 @@ export function ProjectsLayout() {
       {/* Modals */}
       {isCreateTaskModalOpen && canEditProject && <CreateTaskModal />}
       {isCreateProjectModalOpen && <CreateProjectModal />}
-      {editProjectId && <EditProjectModal />}
     </>
   );
 }

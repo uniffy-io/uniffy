@@ -9,6 +9,7 @@ import {
   getBlob,
   deleteRecord,
   listIncomplete,
+  clearUploadRecords,
 } from "@/features/files/upload/uploadStore";
 import type {
   UploadInput,
@@ -58,6 +59,7 @@ class UploadService {
 
   private activeCount = 0;
   private flushScheduled = false;
+  private generation = 0;
 
   enqueue(inputs: UploadInput[]): UploadHandle[] {
     this.ensureWorker();
@@ -124,6 +126,19 @@ class UploadService {
     }
   }
 
+  reset(): void {
+    this.generation += 1;
+    this.cancelAll();
+    for (const id of this.deferreds.keys()) {
+      this.settle(id, new Error("Upload cancelled"));
+    }
+    this.records.clear();
+    this.blobs.clear();
+    this.activeCount = 0;
+    void clearUploadRecords();
+    this.emitNow();
+  }
+
   retry(id: string): void {
     const record = this.records.get(id);
     if (!record || !TERMINAL.has(record.status)) return;
@@ -162,12 +177,15 @@ class UploadService {
 
   /** Called once at app boot: re-queue uploads whose bytes survived a reload, fail the rest. */
   async recover(): Promise<void> {
+    const generation = this.generation;
     this.ensureWorker();
     const incomplete = await listIncomplete();
+    if (generation !== this.generation) return;
     for (const stored of incomplete) {
       if (this.records.has(stored.id)) continue;
 
       const blob = stored.uploadId ? await getBlob(stored.id) : undefined;
+      if (generation !== this.generation) return;
       if (!blob || !stored.uploadId) {
         // Metadata survived but the bytes did not (oversize/quota) - cannot auto-resume.
         this.records.set(stored.id, {
@@ -222,7 +240,9 @@ class UploadService {
 
       next.status = "uploading";
       this.activeCount += 1;
+      const generation = this.generation;
       void this.process(next.id).finally(() => {
+        if (generation !== this.generation) return;
         this.activeCount -= 1;
         this.drain();
       });
@@ -236,10 +256,10 @@ class UploadService {
     return undefined;
   }
 
-  // cancel() flips the live record's status mid-await from outside this method;
-  // re-read it so TS flow narrowing can't assume the status it had before the await.
+  // Cancellation and session cleanup can retire a record while a request is pending.
   private wasCancelled(id: string): boolean {
-    return this.records.get(id)?.status === "cancelled";
+    const record = this.records.get(id);
+    return !record || record.status === "cancelled";
   }
 
   private async process(id: string): Promise<void> {
@@ -257,6 +277,7 @@ class UploadService {
       if (record.uploadId) {
         // Resume after a reload: the server is the authority on which parts already exist.
         const status = await filesApi.getUploadStatus({ uploadId: record.uploadId });
+        if (this.wasCancelled(id)) return;
         if (status.status !== UploadStatus.ACTIVE) {
           this.blobs.delete(id);
           void deleteRecord(id);
@@ -274,7 +295,10 @@ class UploadService {
           accessMode: record.accessMode,
         });
 
-        if (this.wasCancelled(id)) return;
+        if (this.wasCancelled(id)) {
+          void filesApi.abortUpload({ uploadId: init.uploadId }).catch(() => undefined);
+          return;
+        }
 
         record.uploadId = init.uploadId;
         record.chunkSize = init.chunkSize;

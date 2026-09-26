@@ -13,7 +13,7 @@ from uniffy.core.models.projects.field_definition import FieldDefinition, Projec
 from uniffy.core.models.projects.project import Project
 from uniffy.core.types import AccessMode, ContentRole
 from uniffy.domains.projects.operations import (
-    FieldOperations,
+    ProjectFieldOperations,
     ProjectOperations,
     SprintOperations,
     TaskOperations,
@@ -131,7 +131,7 @@ async def _create_fields(
     project_id: UUID,
     specs: tuple[FieldSpec, ...],
 ) -> dict[str, FieldDefinition]:
-    ops = FieldOperations(ctx.session)
+    ops = ProjectFieldOperations(ctx.session)
     fields: dict[str, FieldDefinition] = {}
     for sort_order, spec in enumerate(specs, start=10):
         config = None
