@@ -853,6 +853,9 @@ browser for B/C, `db shell`, and mailcatcher. (both products)
 - [ ] Conflict flags follow the member's own time: two overlapping meetings on a calendar B only
       views show side by side with no red border or warning (web week/day, mobile day/week, and
       no month dot); an event B organizes or attends that overlaps another of B's still flags.
+- [ ] A transfers a personal calendar to B (row menu -> Share -> Transfer). Without closing the
+      dialog, A is listed as Admin and no longer sees Transfer; the calendar moves to B's "My
+      calendars" and to A's "Shared with me". B's dialog shows B as owner with Transfer.
 - [ ] Deactivate A: D still renames, shares and deletes the calendar and manages its events.
 - [ ] B hides the calendar (row click or eye icon): its events leave the grid and stay hidden
       after a reload and on another device; A's grid is unaffected. An invitation to B on a

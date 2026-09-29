@@ -16,6 +16,7 @@ from uniffy.core.models.audit.event import AuditEvent
 from uniffy.core.models.calendar.attendee import EventAttendee
 from uniffy.core.models.calendar.calendar import Calendar
 from uniffy.core.models.calendar.event import CalendarEvent
+from uniffy.core.models.login.organization_member import OrganizationMember
 from uniffy.core.models.login.user import User
 from uniffy.core.models.notifications.email_delivery import NotificationEmailDelivery
 from uniffy.core.models.permissions.content_member import ContentMember
@@ -589,3 +590,55 @@ class TestDelete:
             )
         await session.rollback()
         assert not await session.scalar(select(Calendar.is_deleted).where(Calendar.id == source_id))
+
+
+class TestDeactivatedOwner:
+    async def test_a_co_admin_keeps_managing_the_team_calendar(self, session, access) -> None:
+        operations = _operations(session)
+        calendar = await operations.create_calendar(
+            user_id=access.member_id,
+            organization_id=access.org_id,
+            name="On-call",
+            color="#f97316",
+            calendar_type=CalendarType.TEAM,
+            admin_user_ids=[access.peer_id],
+        )
+        event = await _event(session, access, calendar.id)
+        calendar_id, event_id = calendar.id, event.id
+        membership = await session.scalar(
+            select(OrganizationMember).where(
+                OrganizationMember.user_id == access.member_id,
+                OrganizationMember.organization_id == access.org_id,
+            )
+        )
+        membership.is_active = False
+        await session.commit()
+
+        renamed = await operations.update_calendar(
+            access.peer_id, access.org_id, calendar_id, name="On-call rota"
+        )
+        assert renamed.name == "On-call rota"
+        await ContentMembersOperations(session, AsyncMock()).add_member(
+            actor_user_id=access.peer_id,
+            organization_id=access.org_id,
+            content_type=ContentType.CALENDAR,
+            content_id=calendar_id,
+            subject_type=SubjectType.USER,
+            subject_id=access.admin_id,
+            role=ContentRole.VIEWER,
+        )
+        assert await _listing(session, access, access.admin_id, calendar_id) is not None
+        assert event_id in await _grid(session, access, access.peer_id)
+
+        target = await ensure_default_calendar(session, access.org_id, access.peer_id)
+        result = await operations.delete_calendar(
+            access.peer_id, access.org_id, calendar_id, target_calendar_id=target.id
+        )
+
+        assert (result.events_moved, result.events_deleted) == (1, 0)
+        assert (
+            await session.scalar(
+                select(CalendarEvent.calendar_id).where(CalendarEvent.id == event_id)
+            )
+            == target.id
+        )
