@@ -215,6 +215,8 @@ from uniffy.domains.scheduling.calendar.jobs.contracts import (
     CALENDAR_SCHEDULED_JOB_REFS,
     CHECK_CALENDAR_REMINDERS_SCHEDULE,
     DISPATCH_EVENT_MAIL_SCHEDULE,
+    FLUSH_CALENDAR_SEARCH_ACL_REFRESHES_SCHEDULE,
+    REFRESH_CALENDAR_SEARCH_ACL,
     SEND_EVENT_MAIL,
 )
 from uniffy.domains.scheduling.calendar.jobs.event_mail import (
@@ -222,6 +224,10 @@ from uniffy.domains.scheduling.calendar.jobs.event_mail import (
     send_calendar_event_mail,
 )
 from uniffy.domains.scheduling.calendar.jobs.jobs import check_calendar_reminders
+from uniffy.domains.scheduling.calendar.jobs.search import (
+    flush_calendar_search_acl_refreshes,
+    refresh_calendar_search_acl,
+)
 from uniffy.domains.search.jobs.contracts import (
     FLUSH_SEARCH_REMOVALS,
     FLUSH_SEARCH_REMOVALS_SCHEDULE,
@@ -310,6 +316,7 @@ CORE_JOB_REGISTRATIONS = (
     _bind(REFRESH_CHAT_SEARCH_ACL, refresh_chat_search_acl),
     _bind(POST_SEND_CHAT_MESSAGE, post_send_chat_message),
     _bind(REFRESH_PROJECT_SEARCH_ACL, refresh_project_search_acl),
+    _bind(REFRESH_CALENDAR_SEARCH_ACL, refresh_calendar_search_acl),
 )
 
 EGRESS_JOB_REGISTRATIONS = (
@@ -379,6 +386,11 @@ CORE_SCHEDULED_REGISTRATIONS = (
         FLUSH_PROJECT_SEARCH_ACL_REFRESHES_SCHEDULE,
         flush_project_search_acl_refreshes,
         second=(25,),
+    ),
+    _bind_schedule(
+        FLUSH_CALENDAR_SEARCH_ACL_REFRESHES_SCHEDULE,
+        flush_calendar_search_acl_refreshes,
+        second=(35,),
     ),
     _bind_schedule(
         AUTO_UNMUTE_CHANNELS_SCHEDULE,

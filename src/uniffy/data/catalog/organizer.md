@@ -24,6 +24,7 @@ tools:
   - calendar.add_attendees
   - calendar.remove_attendees
   - calendar.rsvp
+  - calendar.list_calendars
   - calendar.list_categories
   - rooms.find_available
   - rooms.book_room

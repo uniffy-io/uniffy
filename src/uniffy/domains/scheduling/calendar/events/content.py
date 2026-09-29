@@ -3,7 +3,7 @@
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import and_, select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import InstrumentedAttribute
 
@@ -13,10 +13,19 @@ from uniffy.core.events.realtime import ContentAccessAction, publish_content_acc
 from uniffy.core.models.calendar.attendee import EventAttendee
 from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.search.indexer import SearchIndexer, build_content_urn
+from uniffy.core.search.policy import SearchContainerAccess
 from uniffy.core.types import (
     ContentRole,
     ContentType,
 )
+from uniffy.domains.scheduling.calendar.calendars.access import (
+    accessible_calendar_ids,
+    calendar_role,
+    event_calendar_id,
+    event_role_from_calendar,
+    higher_role,
+)
+from uniffy.domains.scheduling.calendar.calendars.search import calendar_search_access
 from uniffy.domains.scheduling.calendar.events.state import _master_event_id
 from uniffy.domains.tags.reader import TagReader
 
@@ -35,6 +44,10 @@ class EventContentOperations(BaseContentOperations[CalendarEvent]):
         search_indexer: SearchIndexer | None = None,
     ) -> None:
         super().__init__(session, search_indexer)
+        # An import indexes thousands of events on one calendar; its audience is
+        # read once per operation. The hints are candidates only, and a sharing
+        # change refreshes them durably.
+        self._container_access: dict[tuple[UUID, UUID], SearchContainerAccess] = {}
 
     def _build_search_keywords(self, model: CalendarEvent) -> str:
         # Tag slugs land in the dedicated `tags` array via
@@ -96,11 +109,9 @@ class EventContentOperations(BaseContentOperations[CalendarEvent]):
         organization_id: UUID,
         content: CalendarEvent,
     ) -> ContentRole | None:
-        """Content permissions first, then the attendee floor.
+        """The event's own grants, its calendar's grants, then the attendee floor.
 
-        An invitation is an explicit grant by the organizer, so an attendee can
-        VIEW an event regardless of its access mode - mirroring the attendee
-        bypass in the list queries. An explicit BLOCKED grant still wins.
+        An explicit BLOCKED on the event beats both the calendar and the invitation.
         """
         # Expanded occurrences carry a synthetic string id; permissions live on
         # the master row, so every lookup below resolves to the master UUID.
@@ -114,18 +125,40 @@ class EventContentOperations(BaseContentOperations[CalendarEvent]):
             access_mode=content.access_mode,
             baseline_role=content.baseline_role,
         )
-        if role is not None:
+        if role == ContentRole.OWNER:
             return role
 
-        if not await self._is_attendee(user_id, organization_id, master_id):
-            return None
+        from_calendar = await self._calendar_derived_role(user_id, organization_id, content)
+        if role is not None:
+            return higher_role(role, from_calendar)
 
+        # effective_role answers None both for "no grant" and for "blocked", so
+        # a lift from the calendar or the invitation needs the explicit check.
+        if from_calendar is None and not await self._is_attendee(
+            user_id, organization_id, master_id
+        ):
+            return None
         if await self.permission_checker.is_blocked(
             user_id, organization_id, self.content_type, master_id
         ):
             return None
+        return from_calendar or ContentRole.VIEWER
 
-        return ContentRole.VIEWER
+    async def _calendar_derived_role(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        content: CalendarEvent,
+    ) -> ContentRole | None:
+        return event_role_from_calendar(
+            await calendar_role(
+                self.session,
+                self.permission_checker,
+                user_id,
+                organization_id,
+                await event_calendar_id(self.session, content),
+            )
+        )
 
     async def _is_attendee(self, user_id: UUID, organization_id: UUID, event_id: UUID) -> bool:
         """An invitation is a grant only while the invitee is still an active
@@ -163,12 +196,44 @@ class EventContentOperations(BaseContentOperations[CalendarEvent]):
             return False
         return and_(
             CalendarEvent.id.in_(attendee_subquery),
-            self.access_query.build_not_blocked_filter(
-                user_id=user_id,
-                organization_id=organization_id,
-                content_type=self.content_type,
-                content_id_column=CalendarEvent.id,
+            self._not_blocked_on_series(user_id, organization_id),
+        )
+
+    def _not_blocked_on_series(self, user_id: UUID, organization_id: UUID):
+        # Grants, BLOCKED included, live on the series master; an edited
+        # occurrence has its own id, so it is checked through the master.
+        return self.access_query.build_not_blocked_filter(
+            user_id=user_id,
+            organization_id=organization_id,
+            content_type=self.content_type,
+            content_id_column=func.coalesce(CalendarEvent.recurrence_id, CalendarEvent.id),
+        )
+
+    async def event_access_filter(self, user_id: UUID, organization_id: UUID):
+        """WHERE clause for every event list: own grants, attendance, or the calendar.
+
+        An explicit BLOCKED on the series removes every row of it, edited
+        occurrences included, whichever branch let it in.
+        """
+        own_access = await self.access_query.build_accessible_filter(
+            user_id=user_id,
+            organization_id=organization_id,
+            content_type=self.content_type,
+            content_id_column=CalendarEvent.id,
+            owner_id_column=CalendarEvent.organizer_id,
+            access_mode_column=CalendarEvent.access_mode,
+            baseline_role_column=CalendarEvent.baseline_role,
+        )
+        calendar_access = CalendarEvent.calendar_id.in_(
+            await accessible_calendar_ids(self.access_query, user_id, organization_id)
+        )
+        return and_(
+            or_(
+                own_access,
+                await self.attendee_access_filter(user_id, organization_id),
+                calendar_access,
             ),
+            self._not_blocked_on_series(user_id, organization_id),
         )
 
     async def _get_search_attendee_user_ids(self, model: CalendarEvent) -> list[UUID] | None:
@@ -179,6 +244,16 @@ class EventContentOperations(BaseContentOperations[CalendarEvent]):
         )
         ids = [row[0] for row in result.all()]
         return ids or None
+
+    async def _get_search_container_access(
+        self, model: CalendarEvent
+    ) -> SearchContainerAccess | None:
+        key = (model.organization_id, await event_calendar_id(self.session, model))
+        access = self._container_access.get(key)
+        if access is None:
+            access = await calendar_search_access(self.session, *key)
+            self._container_access[key] = access
+        return access
 
     async def _refresh_search_attendees(self, event: CalendarEvent) -> None:
         """Push the current attendee set into the search document; best-effort."""

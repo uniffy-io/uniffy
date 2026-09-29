@@ -170,6 +170,10 @@ class Action:
     FILE_VERSION_RESTORED = "file.version_restored"
 
     # Calendar
+    CALENDAR_CREATED = "calendar.created"
+    CALENDAR_UPDATED = "calendar.updated"
+    CALENDAR_DELETED = "calendar.deleted"
+    CALENDAR_POLICY_UPDATED = "calendar.policy_updated"
     CALENDAR_EVENT_DELETED = "calendar_event.deleted"
     CALENDAR_EVENT_RESTORED = "calendar_event.restored"
     CALENDAR_EVENT_PERMANENTLY_DELETED = "calendar_event.permanently_deleted"

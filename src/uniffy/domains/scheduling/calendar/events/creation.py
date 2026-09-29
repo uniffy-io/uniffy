@@ -30,9 +30,9 @@ from uniffy.core.types import (
     NotificationType,
     RecurrencePattern,
 )
+from uniffy.domains.scheduling.calendar.calendars.access import require_calendar_edit
 from uniffy.domains.scheduling.calendar.events.state import _StagedCalendarEventCreate
 from uniffy.domains.scheduling.calendar.mail.outbox import CalendarMailKind, stage_event_mail
-from uniffy.domains.scheduling.calendar.queries import require_own_calendar
 from uniffy.domains.scheduling.rooms.events import EventBookingOperations
 from uniffy.domains.settings.operations import get_user_reminder_defaults
 from uniffy.domains.tags.operations import TagOperations
@@ -78,14 +78,12 @@ class EventCreateOperations:
     ) -> CalendarEvent:
         """Create a new calendar event.
 
-        Events are invite-only: the row is always OWNER_ONLY and visibility
-        for non-organizers comes from the attendee floor in `_resolve_role`.
-
-        The target calendar is checked before anything else: `calendar_id`
-        arrives from the request, and an unchecked one would file the event on
-        somebody else's calendar, or on another tenant's.
+        The row is always OWNER_ONLY: everyone else reaches it through its
+        calendar or the attendee floor in `_resolve_role`. `calendar_id` arrives
+        from the request, so it is checked first; only a calendar the author can
+        edit may receive the event, which also keeps it inside the tenant.
         """
-        await require_own_calendar(self.session, user_id, organization_id, calendar_id)
+        await require_calendar_edit(self.session, user_id, organization_id, calendar_id)
 
         if transparency is None:
             # All-day entries have never blocked time; an out-of-office period

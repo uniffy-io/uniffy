@@ -29,7 +29,7 @@ from uniffy.core.errors import (
 )
 from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.models.chat.channel import ChannelType, ChatChannel
-from uniffy.core.types import AccessMode, generate_id
+from uniffy.core.types import AccessMode, ContentRole, generate_id
 from uniffy.domains.scheduling.calendar.converters import event_to_proto
 from uniffy.domains.scheduling.calendar.operations import CalendarEventOperations
 
@@ -55,12 +55,18 @@ def _make_event(
     )
 
 
-def _make_ops(calendar_owner: UUID | None = None) -> CalendarEventOperations:
-    """`calendar_owner` answers the ownership check `create()` runs first;
-    tests that never reach it can leave it unset."""
+@pytest.fixture(autouse=True)
+def _calendar_edit_allowed(monkeypatch):
+    """Event creation checks the target calendar first; these tests are about what follows."""
+    monkeypatch.setattr(
+        "uniffy.domains.scheduling.calendar.events.creation.require_calendar_edit",
+        AsyncMock(return_value=ContentRole.OWNER),
+    )
+
+
+def _make_ops() -> CalendarEventOperations:
     ops = CalendarEventOperations.__new__(CalendarEventOperations)
     ops.session = MagicMock()
-    ops.session.scalar = AsyncMock(return_value=calendar_owner)
     ops._call_lifecycle = MagicMock()
     ops._search_indexer = MagicMock()
     return ops
@@ -158,7 +164,7 @@ class TestValidateChannelBinding:
 class TestCreateMutualExclusion:
     async def test_create_rejects_meeting_url_and_channel_both_set(self) -> None:
         author = generate_id()
-        ops = _make_ops(author)
+        ops = _make_ops()
         now = datetime.now(UTC)
         with pytest.raises(ValidationError):
             await ops.create(
@@ -174,7 +180,7 @@ class TestCreateMutualExclusion:
 
     async def test_create_validates_channel_when_no_meeting_url(self) -> None:
         author = generate_id()
-        ops = _make_ops(author)
+        ops = _make_ops()
         ops._validate_channel_binding = AsyncMock(
             side_effect=ValidationError("channel_id", "denied")
         )

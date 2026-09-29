@@ -32,9 +32,8 @@ def _event(offset_minutes: int) -> CalendarEvent:
 
 def _operations(rows: list[CalendarEvent]) -> EventQueryOperations:
     events = MagicMock()
-    # Both access filters land inside or_(), so they have to be real SQL.
-    events.attendee_access_filter = AsyncMock(return_value=true())
-    events.access_query.build_accessible_filter = AsyncMock(return_value=true())
+    # The access filter lands in a WHERE clause, so it has to be real SQL.
+    events.event_access_filter = AsyncMock(return_value=true())
     events.session.execute = AsyncMock(
         return_value=MagicMock(scalars=MagicMock(return_value=MagicMock(all=lambda: rows)))
     )

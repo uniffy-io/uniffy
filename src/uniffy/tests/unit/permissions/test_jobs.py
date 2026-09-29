@@ -6,27 +6,26 @@ from uuid import uuid4
 
 import pytest
 
-from uniffy.core.search.indexer import build_content_urn
+from uniffy.core.search.indexer import SEARCH_INDEXER_CTX_KEY, build_content_urn
 from uniffy.core.types import AccessMode, ContentRole, ContentType
 from uniffy.domains.permissions.jobs.contracts import REINDEX_ORG_CONTENT_FOR_DEFAULTS
 from uniffy.domains.permissions.jobs.jobs import (
     _BATCH_SIZE,
-    _domain_for,
+    _model_for,
     reindex_org_content_for_defaults,
 )
 from uniffy.vendor.arq import Retry
 
 
-class _Operations:
-    bulk = AsyncMock()
-    defaults: tuple[AccessMode, ContentRole | None] = (AccessMode.OPEN_TO_ORG, ContentRole.EDITOR)
+class _Checker:
+    get_org_defaults = AsyncMock(return_value=(AccessMode.OPEN_TO_ORG, ContentRole.EDITOR))
 
     def __init__(self, session) -> None:
         self.session = session
-        self.permission_checker = SimpleNamespace(
-            get_org_defaults=AsyncMock(return_value=self.defaults)
-        )
-        self.search_indexer = SimpleNamespace(update_access_policy_bulk=self.bulk)
+
+
+def _ctx(bulk: AsyncMock, **extra) -> dict:
+    return {SEARCH_INDEXER_CTX_KEY: SimpleNamespace(update_access_policy_bulk=bulk), **extra}
 
 
 def _row(access_mode: AccessMode | None = None, baseline_role: ContentRole | None = None):
@@ -47,10 +46,8 @@ def _session_for(rows: list[SimpleNamespace]):
 @contextmanager
 def _worker_patches(open_session) -> Iterator[None]:
     with (
-        patch(
-            "uniffy.domains.permissions.jobs.jobs._domain_for",
-            return_value=(_Operations, object()),
-        ),
+        patch("uniffy.domains.permissions.jobs.jobs._model_for", return_value=object()),
+        patch("uniffy.domains.permissions.jobs.jobs.PermissionChecker", _Checker),
         patch(
             "uniffy.domains.permissions.jobs.jobs._keyset_query",
             return_value=object(),
@@ -61,13 +58,8 @@ def _worker_patches(open_session) -> Iterator[None]:
 
 
 def test_folder_and_room_have_defaults_reindexers() -> None:
-    folder_ops, folder_model = _domain_for(ContentType.FOLDER)
-    room_ops, room_model = _domain_for(ContentType.ROOM)
-
-    assert folder_ops is not None
-    assert folder_model.__name__ == "Folder"
-    assert room_ops is not None
-    assert room_model.__name__ == "Room"
+    assert _model_for(ContentType.FOLDER).__name__ == "Folder"
+    assert _model_for(ContentType.ROOM).__name__ == "Room"
 
 
 async def test_page_writes_one_batch_of_resolved_policies() -> None:
@@ -75,17 +67,17 @@ async def test_page_writes_one_batch_of_resolved_policies() -> None:
     inheriting = _row()
     open_without_baseline = _row(AccessMode.OPEN_TO_ORG, None)
     _session, open_session = _session_for([inheriting, open_without_baseline])
-    _Operations.bulk = AsyncMock()
+    bulk = AsyncMock()
 
     with _worker_patches(open_session):
         result = await reindex_org_content_for_defaults(
-            {"job_try": 1},
+            _ctx(bulk, job_try=1),
             str(organization_id),
             ContentType.NOTE.value,
         )
 
     assert result["processed"] == 2
-    _Operations.bulk.assert_awaited_once_with(
+    bulk.assert_awaited_once_with(
         organization_id,
         [
             (
@@ -106,7 +98,7 @@ async def test_project_reindex_records_and_enqueues_child_refresh() -> None:
     organization_id = uuid4()
     row = _row()
     session, open_session = _session_for([row])
-    _Operations.bulk = AsyncMock()
+    bulk = AsyncMock()
 
     with (
         _worker_patches(open_session),
@@ -120,7 +112,7 @@ async def test_project_reindex_records_and_enqueues_child_refresh() -> None:
         ) as enqueue,
     ):
         result = await reindex_org_content_for_defaults(
-            {"job_try": 1},
+            _ctx(bulk, job_try=1),
             str(organization_id),
             ContentType.PROJECT.value,
         )
@@ -138,11 +130,11 @@ async def test_project_reindex_records_and_enqueues_child_refresh() -> None:
 
 async def test_batch_failure_rolls_back_and_retries_the_page() -> None:
     session, open_session = _session_for([_row()])
-    _Operations.bulk = AsyncMock(side_effect=RuntimeError("index failed"))
+    bulk = AsyncMock(side_effect=RuntimeError("index failed"))
 
     with _worker_patches(open_session), pytest.raises(Retry):
         await reindex_org_content_for_defaults(
-            {"job_try": 2},
+            _ctx(bulk, job_try=2),
             str(uuid4()),
             ContentType.NOTE.value,
         )
@@ -156,7 +148,7 @@ async def test_full_page_enqueues_cursor_scoped_continuation() -> None:
     rows = [_row() for _ in range(_BATCH_SIZE)]
     rows.sort(key=lambda row: row.id)
     _session, open_session = _session_for(rows)
-    _Operations.bulk = AsyncMock()
+    bulk = AsyncMock()
     enqueue = AsyncMock()
 
     with (
@@ -164,7 +156,7 @@ async def test_full_page_enqueues_cursor_scoped_continuation() -> None:
         patch("uniffy.domains.permissions.jobs.jobs.enqueue_job", enqueue),
     ):
         result = await reindex_org_content_for_defaults(
-            {"job_try": 1, "job_id": "initial"},
+            _ctx(bulk, job_try=1, job_id="initial"),
             str(organization_id),
             ContentType.NOTE.value,
             run_id="revision",
@@ -172,7 +164,7 @@ async def test_full_page_enqueues_cursor_scoped_continuation() -> None:
 
     cursor = rows[-1].id
     assert result["status"] == "queued"
-    assert _Operations.bulk.await_count == 1
+    assert bulk.await_count == 1
     enqueue.assert_awaited_once_with(
         REINDEX_ORG_CONTENT_FOR_DEFAULTS,
         str(organization_id),
@@ -183,3 +175,49 @@ async def test_full_page_enqueues_cursor_scoped_continuation() -> None:
             f"reindex_defaults_page:{organization_id}:{ContentType.NOTE.value}:revision:{cursor}"
         ),
     )
+
+
+async def test_the_page_writes_through_the_worker_indexer() -> None:
+    """The real job is handed its indexer by the worker, never builds one."""
+    _session, open_session = _session_for([_row()])
+    bulk = AsyncMock()
+
+    with (
+        patch("uniffy.domains.permissions.jobs.jobs._keyset_query", return_value=object()),
+        patch("uniffy.domains.permissions.jobs.jobs.open_session", open_session),
+        patch("uniffy.domains.permissions.jobs.jobs.PermissionChecker", _Checker),
+    ):
+        await reindex_org_content_for_defaults(
+            _ctx(bulk, job_try=1), str(uuid4()), ContentType.CALENDAR_EVENT.value
+        )
+
+    bulk.assert_awaited_once()
+
+
+def test_calendars_reindex_when_their_default_changes() -> None:
+    assert _model_for(ContentType.CALENDAR).__name__ == "Calendar"
+
+
+async def test_calendar_reindex_records_and_enqueues_its_events_refresh() -> None:
+    organization_id = uuid4()
+    row = _row()
+    session, open_session = _session_for([row])
+    bulk = AsyncMock()
+
+    with (
+        _worker_patches(open_session),
+        patch(
+            "uniffy.domains.permissions.jobs.jobs.record_calendar_search_acl_refresh",
+            AsyncMock(),
+        ) as record,
+        patch(
+            "uniffy.domains.permissions.jobs.jobs.enqueue_calendar_search_acl_refresh",
+            AsyncMock(),
+        ) as enqueue,
+    ):
+        await reindex_org_content_for_defaults(
+            _ctx(bulk, job_try=1), str(organization_id), ContentType.CALENDAR.value
+        )
+
+    record.assert_awaited_once_with(session, organization_id, row.id)
+    enqueue.assert_awaited_once_with(row.id)

@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import Select, and_, func, or_, select
+from sqlalchemy import ColumnElement, Select, and_, func, or_, select
 from sqlalchemy.orm import aliased
 
 from uniffy.core.models.calendar.attendee import EventAttendee
@@ -87,25 +87,13 @@ class EventQueryOperations:
         end_date: datetime | None,
         include_deleted: bool,
         tag_ids: list[UUID] | None,
+        visibility_filter: ColumnElement[bool] | None = None,
     ) -> Select:
         query = select(CalendarEvent).where(CalendarEvent.organization_id == organization_id)
+        if visibility_filter is not None:
+            query = query.where(visibility_filter)
 
-        access_filter = await self.access_query.build_accessible_filter(
-            user_id=user_id,
-            organization_id=organization_id,
-            content_type=self.content_type,
-            content_id_column=CalendarEvent.id,
-            owner_id_column=CalendarEvent.organizer_id,
-            access_mode_column=CalendarEvent.access_mode,
-            baseline_role_column=CalendarEvent.baseline_role,
-        )
-
-        query = query.where(
-            or_(
-                access_filter,
-                await self.events.attendee_access_filter(user_id, organization_id),
-            )
-        )
+        query = query.where(await self.events.event_access_filter(user_id, organization_id))
 
         if calendar_id:
             query = query.where(CalendarEvent.calendar_id == calendar_id)
@@ -135,6 +123,7 @@ class EventQueryOperations:
         page_token: str | None = None,
         page_size: int = DEFAULT_PAGE_SIZE,
         sort_order: str = "asc",
+        visibility_filter: ColumnElement[bool] | None = None,
     ) -> EventPage:
         page_size = max(1, min(page_size, MAX_PAGE_SIZE))
         descending = sort_order == SortOrder.DESCENDING
@@ -148,6 +137,7 @@ class EventQueryOperations:
             end_date,
             include_deleted,
             tag_ids,
+            visibility_filter,
         )
 
         if page_token:
@@ -202,6 +192,7 @@ class EventQueryOperations:
         page_size: int = DEFAULT_PAGE_SIZE,
         sort_by: str = "start_time",
         sort_order: str = "asc",
+        visibility_filter: ColumnElement[bool] | None = None,
     ) -> tuple[list[CalendarEvent], int]:
         """Numbered pages serve bounded callers; growing lists use keyset pagination."""
         query = await self._accessible_events(
@@ -213,6 +204,7 @@ class EventQueryOperations:
             end_date,
             include_deleted,
             tag_ids,
+            visibility_filter,
         )
 
         count_query = select(func.count()).select_from(query.subquery())

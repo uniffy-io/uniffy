@@ -19,6 +19,7 @@ from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import ContentType
 from uniffy.domains.permissions.access import ResourceAccessResolver, ResourceKey
 from uniffy.domains.scheduling.calendar import queries
+from uniffy.domains.scheduling.calendar.calendars.reader import CalendarReader
 from uniffy.domains.scheduling.calendar.converters import event_to_proto
 from uniffy.domains.scheduling.calendar.events.reader import CalendarEventReader
 from uniffy.domains.scheduling.calendar.events.state import event_details_hidden
@@ -119,6 +120,13 @@ class EventQueryHandlers:
 
             async with open_session() as session:
                 operations = CalendarEventReader(session)
+                visibility_filter = (
+                    None
+                    if calendar_id
+                    else await CalendarReader(session).event_visibility_filter(
+                        user_id, organization_id
+                    )
+                )
                 total = 0
                 next_page_token = ""
                 if by_cursor:
@@ -134,6 +142,7 @@ class EventQueryHandlers:
                         page_token=page_token,
                         page_size=page_size,
                         sort_order=request.sort_order or "asc",
+                        visibility_filter=visibility_filter,
                     )
                     events = result.events
                     next_page_token = result.next_page_token or ""
@@ -151,6 +160,7 @@ class EventQueryHandlers:
                         page_size=page_size,
                         sort_by=sort_by,
                         sort_order=request.sort_order or "asc",
+                        visibility_filter=visibility_filter,
                     )
 
                 total_pages = (total + page_size - 1) // page_size
@@ -170,7 +180,11 @@ class EventQueryHandlers:
                 for event in events:
                     attendees = attendees_by_event.get(event.id, [])
                     room_info = room_info_by_event.get(event.id, {})
-                    user_role = decisions[ResourceKey(ContentType.CALENDAR_EVENT, event.id)].role
+                    decision = decisions[ResourceKey(ContentType.CALENDAR_EVENT, event.id)]
+                    # The SQL filter already decided; the resolver is the last word.
+                    if not decision.can_view:
+                        continue
+                    user_role = decision.role
                     proto_events.append(
                         event_to_proto(
                             event,
@@ -224,6 +238,15 @@ class EventQueryHandlers:
         try:
             async with open_session() as session:
                 operations = CalendarEventReader(session)
+                # A named calendar or a channel's meetings are asked for on purpose;
+                # only the general grid follows what the member has hidden.
+                visibility_filter = (
+                    None
+                    if calendar_ids or channel_id
+                    else await CalendarReader(session).event_visibility_filter(
+                        user_id, organization_id
+                    )
+                )
                 events = await operations.get_events_in_range(
                     user_id=user_id,
                     organization_id=organization_id,
@@ -236,6 +259,7 @@ class EventQueryHandlers:
                     calendar_ids=calendar_ids,
                     category_ids=category_ids,
                     channel_id=channel_id,
+                    visibility_filter=visibility_filter,
                 )
 
                 master_ids = list({parse_event_id(str(event.id)) for event in events})
@@ -253,7 +277,10 @@ class EventQueryHandlers:
                 proto_events = []
                 for event in events:
                     real_id = parse_event_id(str(event.id))
-                    user_role = decisions[ResourceKey(ContentType.CALENDAR_EVENT, real_id)].role
+                    decision = decisions[ResourceKey(ContentType.CALENDAR_EVENT, real_id)]
+                    if not decision.can_view:
+                        continue
+                    user_role = decision.role
                     attendees = attendees_by_event.get(real_id, [])
                     proto_events.append(
                         event_to_proto(

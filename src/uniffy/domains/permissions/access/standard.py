@@ -15,6 +15,7 @@ from uniffy.core.auth.permissions.defaults import (
 from uniffy.core.auth.permissions.roles import ROLE_ORDINAL
 from uniffy.core.models.agents.agent import Agent
 from uniffy.core.models.agents.cron_task import AgentCronTask
+from uniffy.core.models.calendar.calendar import Calendar
 from uniffy.core.models.files.file import File
 from uniffy.core.models.files.folder import Folder
 from uniffy.core.models.notes.note import Note
@@ -52,6 +53,7 @@ _DIRECT_MODELS = {
     ContentType.PROJECT: (Project, Project.owner_id),
     ContentType.AGENT: (Agent, Agent.owner_id),
     ContentType.ROOM: (Room, Room.owner_id),
+    ContentType.CALENDAR: (Calendar, Calendar.owner_id),
 }
 
 

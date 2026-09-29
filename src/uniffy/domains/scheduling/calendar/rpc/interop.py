@@ -29,6 +29,7 @@ from uniffy.core.errors import ValidationError
 from uniffy.core.models.calendar.calendar import Calendar
 from uniffy.core.types import RecurrencePattern
 from uniffy.domains.scheduling.calendar import queries
+from uniffy.domains.scheduling.calendar.calendars.access import require_calendar_view
 from uniffy.domains.scheduling.calendar.events.reader import CalendarEventReader
 from uniffy.domains.scheduling.calendar.ical.assemble import build_exports
 from uniffy.domains.scheduling.calendar.ical.emit import serialize_events
@@ -115,6 +116,8 @@ class InteropHandlers:
                 calendar_id = await _resolve_calendar_id(
                     session, request.calendar_id, user_id, organization_id
                 )
+                # The file carries the calendar's name, so the calendar itself is gated.
+                await require_calendar_view(session, user_id, organization_id, calendar_id)
                 reader = CalendarEventReader(session)
                 events, total = await reader.list_events_in_window(
                     user_id,
@@ -302,12 +305,7 @@ async def _resolve_calendar_id(
     user_id,
     organization_id,
 ):
-    """Resolve the calendar a request names, defaulting to the caller's own.
-
-    There is no calendar picker in the product yet - event creation already
-    treats an empty id as "mine" - so interop reads the same way rather than
-    forcing a client to discover an id it has no way to learn.
-    """
+    """The calendar a request names, or the caller's default when it names none."""
     if requested:
         return parse_uuid(requested, "calendar_id")
     default_calendar = await queries.ensure_default_calendar(session, organization_id, user_id)

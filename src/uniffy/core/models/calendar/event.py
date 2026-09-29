@@ -30,6 +30,13 @@ class CalendarEvent(SQLModel, table=True):
             "updated_at",
             postgresql_where=text("is_deleted = false AND outgoing_references IS NOT NULL"),
         ),
+        # Keyset paging over one calendar's live events (search access refresh).
+        Index(
+            "ix_calendar_events_calendar_live",
+            "calendar_id",
+            "id",
+            postgresql_where=text("NOT is_deleted"),
+        ),
     )
 
     id: UUID = Field(default_factory=generate_id, primary_key=True, nullable=False)

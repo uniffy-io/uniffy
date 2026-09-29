@@ -82,6 +82,7 @@ CONTENT_TYPE_TO_PROTO: dict[DomainContentType, ProtoContentType] = {
     DomainContentType.AGENT_CRON_TASK: ProtoContentType.AGENT_CRON_TASK,
     DomainContentType.TAG: ProtoContentType.TAG,
     DomainContentType.TEAM: ProtoContentType.TEAM,
+    DomainContentType.CALENDAR: ProtoContentType.CALENDAR,
 }
 
 CONTENT_TYPE_FROM_PROTO: dict[ProtoContentType, DomainContentType] = {
