@@ -10,7 +10,7 @@ vi.mock("@/app/hooks", () => ({
   useAppDispatch: () => vi.fn(),
 }));
 
-vi.mock("@/features/search", () => ({
+vi.mock("@/features/search/api/searchApi", () => ({
   searchApi: { resolveUrns: mocks.resolveUrns },
 }));
 
@@ -20,6 +20,7 @@ vi.mock("@/features/permissions/api/membersApi", () => ({
 
 import { SearchResultType, UrnAvailability } from "@uniffy/proto/search/v1/search_pb";
 import {
+  clearMentionStates,
   emitMentionStateChange,
   getMentionState,
   mergeMentionState,
@@ -50,8 +51,37 @@ function resolved(urn: string, type: SearchResultType, title: string, descriptio
 describe("preview cache live state", () => {
   beforeEach(() => {
     clearPreviewCache();
+    clearMentionStates();
     mocks.resolveUrns.mockReset();
     mocks.getMyAccessRequestStatuses.mockReset();
+  });
+
+  it.each(["omitted", "failed"])(
+    "publishes unavailable state for %s references",
+    async (outcome) => {
+      if (outcome === "omitted") mocks.resolveUrns.mockResolvedValue({ resolved: {} });
+      else mocks.resolveUrns.mockRejectedValue(new Error("Network unavailable"));
+
+      const preview = await resolveUrnBatched(NOTE_URN, ORG);
+
+      expect(preview?.availability).toBe(MentionAvailability.Unavailable);
+      expect(getMentionState(NOTE_URN)?.availability).toBe(MentionAvailability.Unavailable);
+      expect(getCachedPreview(NOTE_URN)?.availability).toBe(MentionAvailability.Unavailable);
+    },
+  );
+
+  it("recovers an unavailable reference on forced retry", async () => {
+    mocks.resolveUrns
+      .mockResolvedValueOnce({ resolved: {} })
+      .mockResolvedValueOnce(resolved(NOTE_URN, SearchResultType.NOTE, "Planning"));
+
+    await resolveUrnBatched(NOTE_URN, ORG);
+    const preview = await resolveUrnBatched(NOTE_URN, ORG, { force: true });
+
+    expect(preview?.availability).toBe(MentionAvailability.Available);
+    expect(getMentionState(NOTE_URN)?.title).toBe("Planning");
+    expect(getMentionState(NOTE_URN)?.availability).toBe(MentionAvailability.Available);
+    expect(mocks.resolveUrns).toHaveBeenCalledTimes(2);
   });
 
   it("applies a team rename so the next hover reads the new name", async () => {

@@ -1,7 +1,7 @@
 /** Coalesces concurrent URN-preview lookups into a single bulk `resolveUrns` RPC, flushed on the next microtask. Cache is process-wide. */
 
 import { useCallback } from "react";
-import { searchApi } from "@/features/search";
+import { resolveMentionBatch } from "@/components/mention/resolveMentionBatch";
 import { membersApi } from "@/features/permissions/api/membersApi";
 import { parseUrn, UrnType } from "@/shared/utils/urn";
 import {
@@ -146,29 +146,9 @@ async function flush(): Promise<void> {
   }
 
   const urns = Array.from(consumers.keys());
-  let resolved:
-    | Record<
-        string,
-        {
-          title?: string;
-          description?: string;
-          type: SearchResultType;
-          url?: string;
-          metadata?: Record<string, string>;
-          availability: ProtoUrnAvailability;
-          canRequestAccess: boolean;
-        }
-      >
-    | undefined;
+  const resolved = await resolveMentionBatch(orgId, urns);
 
-  try {
-    const resp = await searchApi.resolveUrns({ organizationId: orgId, urns });
-    resolved = resp.resolved;
-  } catch {
-    resolved = undefined;
-  }
-
-  const restrictedUrns = Object.entries(resolved ?? {})
+  const restrictedUrns = Object.entries(resolved)
     .filter(([, result]) => {
       const availability = previewAvailability(
         result.availability,
@@ -196,44 +176,29 @@ async function flush(): Promise<void> {
   }
 
   for (const [urn, callbacks] of consumers.entries()) {
-    const r = resolved?.[urn];
-    let data: UrnPreviewData | null = null;
-    if (r) {
-      const parsed = parseUrn(urn);
-      const availability = previewAvailability(r.availability, r.metadata?.["urn_status"]);
-      const accessRequestState = accessRequestStatusToLiveState(requestStatusByUrn.get(urn));
-      data = {
-        urn,
-        title:
-          r.title ||
-          (availability === MentionAvailability.Available ? getContentTypeLabel(parsed.type) : ""),
-        description: r.description || "",
-        type: searchResultTypeToUrnType(r.type),
-        url: r.url,
-        updatedAt: r.metadata?.["updated_at"] || undefined,
-        metadata: r.metadata,
-        availability,
-        canRequestAccess: r.canRequestAccess,
-        accessRequestId: accessRequestState.accessRequestId,
-        accessRequestStatus: accessRequestState.accessRequestStatus,
-        canRequestAgainAt: accessRequestState.canRequestAgainAt,
-      };
-      previewCache.set(urn, data);
-      // Wake up chips that subscribe via the module-level emitter (e.g. editor NodeViews outside the React provider).
-      publishMentionState(urn, previewDataToLiveState(urn, data));
-    } else {
-      const parsed = parseUrn(urn);
-      data = parsed.isValid
-        ? {
-            urn,
-            title: getContentTypeLabel(parsed.type),
-            description: `${parsed.type} content`,
-            type: parsed.type,
-            availability: MentionAvailability.Unavailable,
-            canRequestAccess: false,
-          }
-        : null;
-    }
+    const r = resolved[urn];
+    const parsed = parseUrn(urn);
+    const availability = previewAvailability(r.availability, r.metadata?.["urn_status"]);
+    const accessRequestState = accessRequestStatusToLiveState(requestStatusByUrn.get(urn));
+    const data: UrnPreviewData = {
+      urn,
+      title:
+        r.title ||
+        (availability === MentionAvailability.Available ? getContentTypeLabel(parsed.type) : ""),
+      description: r.description || "",
+      type: searchResultTypeToUrnType(r.type),
+      url: r.url,
+      updatedAt: r.metadata?.["updated_at"] || undefined,
+      metadata: r.metadata,
+      availability,
+      canRequestAccess: r.canRequestAccess,
+      accessRequestId: accessRequestState.accessRequestId,
+      accessRequestStatus: accessRequestState.accessRequestStatus,
+      canRequestAgainAt: accessRequestState.canRequestAgainAt,
+    };
+    previewCache.set(urn, data);
+    // Editor NodeViews outside the React provider subscribe through this emitter.
+    publishMentionState(urn, previewDataToLiveState(urn, data));
     for (const cb of callbacks) cb(data);
   }
 }

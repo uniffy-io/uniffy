@@ -11,7 +11,7 @@ import {
   streamChangesToLiveState,
 } from "@/components/mention/mentionLiveState";
 import { useAppSelector } from "@/app/hooks";
-import { searchApi } from "@/features/search/api/searchApi";
+import { resolveMentionBatch } from "@/components/mention/resolveMentionBatch";
 import { membersApi } from "@/features/permissions/api/membersApi";
 import {
   onMentionStateChange,
@@ -47,14 +47,9 @@ export function MentionStateProvider({ children }: MentionStateProviderProps) {
     pendingUrns.current.clear();
 
     try {
-      const response = await searchApi.resolveUrns({
-        organizationId,
-        urns,
-      });
+      const resolved = await resolveMentionBatch(organizationId, urns);
 
-      if (!response.resolved) return;
-
-      const restrictedUrns = Object.entries(response.resolved)
+      const restrictedUrns = Object.entries(resolved)
         .filter(([, metadata]) => {
           const meta = metadata as UrnMetadata;
           return (
@@ -81,9 +76,10 @@ export function MentionStateProvider({ children }: MentionStateProviderProps) {
         }
       }
 
+      if (disposed.current || previousOrganizationId.current !== organizationId) return;
       setStates((prev) => {
         const next = new Map(prev);
-        for (const [urn, metadata] of Object.entries(response.resolved)) {
+        for (const [urn, metadata] of Object.entries(resolved)) {
           const meta = metadata as UrnMetadata;
           const liveState = {
             ...metadataToLiveState(urn, meta),
@@ -99,7 +95,7 @@ export function MentionStateProvider({ children }: MentionStateProviderProps) {
         return next;
       });
     } catch {
-      // Non-fatal — chips render without live state.
+      // Mention hydration must not interrupt the surrounding content.
     }
   }, [organizationId]);
 
@@ -215,7 +211,7 @@ export function MentionStateProvider({ children }: MentionStateProviderProps) {
     }
   }, [organizationId, scheduleBatch]);
 
-  // Stable identity is mandatory — a fresh object every render would re-fire every consumer's `useEffect([context])` into an infinite loop.
+  // A fresh context object would re-fire consumer effects into an infinite loop.
   const value = useMemo<MentionStateContextValue>(
     () => ({ states, register, unregister, mentionDisplay }),
     [states, register, unregister, mentionDisplay],
