@@ -9,7 +9,7 @@ import type { ContentAccessPolicy } from "@/features/permissions/store/permissio
  */
 export function resolveMyContentRole(
   explicitRole: ContentRole | number | null | undefined,
-  policy: ContentAccessPolicy | undefined,
+  policy: ContentAccessPolicy | null | undefined,
   currentUserId: string,
 ): ContentRole | null {
   // UNSPECIFIED means "not set" - fall through rather than denying access.
