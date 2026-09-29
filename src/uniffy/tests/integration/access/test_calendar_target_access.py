@@ -14,12 +14,14 @@ import pytest
 from sqlalchemy import func, select
 
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
+from uniffy.core.models.calendar.attendee import EventAttendee
 from uniffy.core.models.calendar.calendar import Calendar
 from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.models.permissions.content_member import ContentMember
 from uniffy.core.search import SearchIndexer
 from uniffy.core.types import (
     AccessMode,
+    AttendeeStatus,
     ContentRole,
     ContentType,
     RecurrencePattern,
@@ -192,9 +194,7 @@ class TestMoveTargetsAnEditableCalendar:
             == mine_id
         )
 
-    async def test_a_calendar_editor_cannot_move_someone_elses_event(
-        self, session, access
-    ) -> None:
+    async def test_a_calendar_editor_cannot_move_someone_elses_event(self, session, access) -> None:
         """Moving changes who can read the event, so editing it is not enough."""
         team = await _calendar(
             session,
@@ -220,7 +220,7 @@ class TestMoveTargetsAnEditableCalendar:
             == team_id
         )
 
-    async def test_a_series_moves_with_its_edited_occurrences(self, session, access) -> None:
+    async def test_a_series_moves_with_its_occurrences_and_responses(self, session, access) -> None:
         mine = await _calendar(session, organization_id=access.org_id, owner_id=access.member_id)
         team = await _calendar(
             session,
@@ -252,7 +252,15 @@ class TestMoveTargetsAnEditableCalendar:
             end_time=start + timedelta(days=1, hours=1, minutes=15),
             access_mode=AccessMode.OWNER_ONLY,
         )
-        session.add(override)
+        session.add_all([
+            override,
+            EventAttendee(
+                event_id=master.id, user_id=access.peer_id, status=AttendeeStatus.ACCEPTED
+            ),
+            EventAttendee(
+                event_id=master.id, user_id=access.owner_id, status=AttendeeStatus.DECLINED
+            ),
+        ])
         await session.commit()
         master_id, override_id, team_id = master.id, override.id, team.id
 
@@ -268,6 +276,21 @@ class TestMoveTargetsAnEditableCalendar:
             ).scalars()
         )
         assert placed == {team_id}
+        series = await session.scalar(
+            select(CalendarEvent.recurrence_pattern).where(CalendarEvent.id == master_id)
+        )
+        assert series is RecurrencePattern.DAILY
+        responses = (
+            await session.execute(
+                select(EventAttendee.user_id, EventAttendee.status).where(
+                    EventAttendee.event_id == master_id
+                )
+            )
+        ).all()
+        assert set(responses) == {
+            (access.peer_id, AttendeeStatus.ACCEPTED),
+            (access.owner_id, AttendeeStatus.DECLINED),
+        }
 
     async def test_one_edited_occurrence_cannot_leave_its_series(self, session, access) -> None:
         mine = await _calendar(session, organization_id=access.org_id, owner_id=access.member_id)
