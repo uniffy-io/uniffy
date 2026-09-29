@@ -4,6 +4,7 @@ import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
 import { openEventModal, toggleSidebar } from "@/features/calendar/store";
 import { QuickAccess } from "@/features/calendar/components/sidebar/QuickAccess";
 import { MiniCalendar } from "@/features/calendar/components/sidebar/MiniCalendar";
+import { CalendarList } from "@/features/calendar/components/sidebar/CalendarList";
 import { CategoryList } from "@/features/calendar/components/sidebar/CategoryList";
 import { TagCloud } from "@/features/calendar/components/sidebar/TagCloud";
 import { TemplateList } from "@/features/calendar/components/sidebar/TemplateList";
@@ -50,6 +51,8 @@ export function LeftSidebar() {
         <QuickAccess />
 
         <MiniCalendar />
+
+        <CalendarList />
 
         <CategoryList />
 

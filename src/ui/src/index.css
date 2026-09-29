@@ -84,6 +84,9 @@
      sheet it floats over, plus a wide soft drop that says "lifted". */
   --shadow-float: var(--elevation-float);
   --shadow-float-lg: var(--elevation-float-lg);
+  /* Delete, remove and error affordances share the status error red. */
+  --color-destructive: var(--status-error);
+  --color-destructive-foreground: #fff;
 }
 
 /* The float elevations as plain custom properties, so stylesheets that cannot

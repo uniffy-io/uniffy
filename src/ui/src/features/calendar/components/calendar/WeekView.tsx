@@ -11,12 +11,13 @@ import { DayHeadersRow } from "@/features/calendar/components/calendar/DayHeader
 import { GridLines } from "@/features/calendar/components/calendar/GridLines";
 import { CurrentTimeIndicator } from "@/features/calendar/components/calendar/CurrentTimeIndicator";
 import { EventBlock } from "@/features/calendar/components/calendar/EventBlock";
-import { GRID, LAYOUT, ACCENT_EVENT_COLOR, eventTint } from "@/features/calendar/constants";
+import { GRID, LAYOUT, eventTint } from "@/features/calendar/constants";
 import { eventDisplayState } from "@/features/calendar/utils/eventDisplay";
 import { positionAllDayEvents } from "@/features/calendar/utils/eventPositioning";
 import { selectEvent } from "@/features/calendar/store/calendarUiSlice";
 import { cn } from "@/shared/utils/cn";
 import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
+import { resolveEventColor } from "@/features/calendar/utils/eventColor";
 
 export function WeekView() {
   const dispatch = useAppDispatch();
@@ -71,6 +72,7 @@ export function WeekView() {
   const allDayRowHeight = 26;
   const allDaySectionHeight = allDayMaxRow > 0 ? allDayMaxRow * allDayRowHeight + 6 : 0;
   const categories = useAppSelector((state) => state.calendar.categories);
+  const calendars = useAppSelector((state) => state.calendar.calendars);
   const selectedEventId = useAppSelector((state) => state.calendarUi.selectedEventId);
 
   const hourCount = GRID.END_HOUR - GRID.START_HOUR + 1;
@@ -284,8 +286,7 @@ export function WeekView() {
                   const adjustedSpan = adjustedEnd - adjustedStart;
                   if (adjustedSpan <= 0) return null;
 
-                  const category = event.categoryId ? categories[event.categoryId] : null;
-                  const color = category?.color ?? ACCENT_EVENT_COLOR;
+                  const color = resolveEventColor(event, categories, calendars);
                   const isSelected = selectedEventId === event.id;
                   const display = eventDisplayState(event);
 

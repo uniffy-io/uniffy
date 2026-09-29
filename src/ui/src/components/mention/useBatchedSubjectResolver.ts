@@ -115,6 +115,8 @@ function searchResultTypeToUrnType(type: SearchResultType): UrnType {
       return UrnType.USER;
     case SearchResultType.TEAM:
       return UrnType.TEAM;
+    case SearchResultType.CALENDAR:
+      return UrnType.CALENDAR;
     case SearchResultType.CALENDAR_EVENT:
       return UrnType.CALENDAR_EVENT;
     case SearchResultType.PROJECT:

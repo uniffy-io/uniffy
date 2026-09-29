@@ -116,6 +116,10 @@ const AdminAgentsPage = lazyImport(() => import("@/features/admin/pages/AgentsPa
 const StoragePage = lazyImport(() => import("@/features/admin/pages/StoragePage"), "StoragePage");
 const CallsAdminPage = lazyImport(() => import("@/features/admin/pages/CallsPage"), "CallsPage");
 const ChatAdminPage = lazyImport(() => import("@/features/admin/pages/ChatPage"), "ChatPage");
+const CalendarAdminPage = lazyImport(
+  () => import("@/features/admin/pages/CalendarPage"),
+  "CalendarPage",
+);
 const IntegrationsPage = lazyImport(
   () => import("@/features/admin/pages/IntegrationsPage"),
   "IntegrationsPage",
@@ -564,6 +568,14 @@ export function App() {
                       element={
                         <LazyRoute>
                           <ChatAdminPage />
+                        </LazyRoute>
+                      }
+                    />
+                    <Route
+                      path="calendar"
+                      element={
+                        <LazyRoute>
+                          <CalendarAdminPage />
                         </LazyRoute>
                       }
                     />

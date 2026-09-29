@@ -8,12 +8,13 @@ import {
   endDrag,
   updateEventThunk,
 } from "@/features/calendar/store";
-import { ACCENT_EVENT_COLOR, eventTint } from "@/features/calendar/constants";
+import { eventTint } from "@/features/calendar/constants";
 import { displayParts, instantFromDisplayParts } from "@/features/calendar/utils";
 import { eventDisplayState } from "@/features/calendar/utils/eventDisplay";
 import { LiveMeetingBadge } from "@/features/calendar/components/shared/LiveMeetingBadge";
 import { cn } from "@/shared/utils/cn";
 import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
+import { resolveEventColor } from "@/features/calendar/utils/eventColor";
 
 export function MonthView() {
   const dispatch = useAppDispatch();
@@ -21,6 +22,7 @@ export function MonthView() {
   const { monthColumns } = useCalendarNavigation();
   const { getEventsForDate, events } = useCalendarEvents();
   const categories = useAppSelector((state) => state.calendar.categories);
+  const calendars = useAppSelector((state) => state.calendar.calendars);
   const currentUserId = useAppSelector((state) => state.auth.user?.id);
   const draggedEventId = useAppSelector((state) => state.calendarUi.draggedEventId);
   // Chips render inside a map, so the whole lookup is selected once here rather
@@ -150,8 +152,7 @@ export function MonthView() {
 
                   <div className="space-y-0.5">
                     {displayEvents.map((event) => {
-                      const eventCategory = event.categoryId ? categories[event.categoryId] : null;
-                      const eventColor = eventCategory?.color ?? ACCENT_EVENT_COLOR;
+                      const eventColor = resolveEventColor(event, categories, calendars);
                       const attendee = currentUserId
                         ? event.attendees.find((a) => a.id === currentUserId)
                         : null;

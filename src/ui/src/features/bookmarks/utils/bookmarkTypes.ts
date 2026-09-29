@@ -12,6 +12,7 @@ export const URN_TYPE_TO_CONTENT_TYPE: Partial<Record<UrnType, ContentType>> = {
   [UrnType.CHAT_MESSAGE]: ContentType.CHAT_MESSAGE,
   [UrnType.USER]: ContentType.USER,
   [UrnType.TEAM]: ContentType.TEAM,
+  [UrnType.CALENDAR]: ContentType.CALENDAR,
   [UrnType.CALENDAR_EVENT]: ContentType.CALENDAR_EVENT,
   [UrnType.PROJECT]: ContentType.PROJECT,
   [UrnType.TASK]: ContentType.TASK,

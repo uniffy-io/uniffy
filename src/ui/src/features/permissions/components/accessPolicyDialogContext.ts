@@ -5,6 +5,8 @@ export interface AccessPolicyDialogContent {
   contentId: string;
   title?: string;
   explicitUserRole?: number | null;
+  /** `AccessMode` values the caller knows the server will refuse for this viewer. */
+  hiddenAccessModes?: number[];
 }
 
 export interface AccessPolicyDialogContextValue {
@@ -13,6 +15,7 @@ export interface AccessPolicyDialogContextValue {
     contentId: string,
     title?: string,
     explicitUserRole?: number | null,
+    hiddenAccessModes?: number[],
   ) => void;
   close: () => void;
   activeContent: AccessPolicyDialogContent | null;

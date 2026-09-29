@@ -89,6 +89,11 @@ export function urnToPath(urn: string): string {
     return `/projects/task/${parsed.id}`;
   }
 
+  // A calendar is a view of the calendar page, not a page of its own.
+  if (parsed.type === UrnType.CALENDAR) {
+    return `/calendar?calendar=${parsed.id}`;
+  }
+
   // Chat messages need a channel id (not encoded in the URN) to resolve `/chat/{channel}#{message}`;
   // callers must use the URL from mention state, never this fallback.
   if (parsed.type === UrnType.CHAT_MESSAGE) {

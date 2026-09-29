@@ -15,6 +15,7 @@ import {
   matchesQuickAccess,
 } from "@/features/calendar/utils";
 import { GRID } from "@/features/calendar/constants";
+import { useConflictScope } from "@/features/calendar/hooks/useCalendars";
 import { getWeekStartsOn } from "@/shared/utils/weekStart";
 
 export function useCalendarEvents() {
@@ -73,6 +74,8 @@ export function useCalendarEvents() {
     });
   }, [events, filters, quickAccessFilter]);
 
+  const conflictScope = useConflictScope();
+
   const getEventsForDate = useCallback(
     (date: Date | string) => {
       return visibleEvents.filter((event) => areSameDay(event.startTime, date));
@@ -82,9 +85,16 @@ export function useCalendarEvents() {
 
   const getPositionedEvents = useCallback(
     (date: Date | string): PositionedEvent[] => {
-      return getPositionedEventsForDay(visibleEvents, date, GRID.START_HOUR, GRID.HOUR_HEIGHT);
+      return getPositionedEventsForDay(
+        visibleEvents,
+        date,
+        GRID.START_HOUR,
+        GRID.HOUR_HEIGHT,
+        100,
+        conflictScope,
+      );
     },
-    [visibleEvents],
+    [visibleEvents, conflictScope],
   );
 
   const getPositionedEventsWeek = useCallback(
@@ -94,9 +104,10 @@ export function useCalendarEvents() {
         weekDates,
         GRID.START_HOUR,
         GRID.HOUR_HEIGHT,
+        conflictScope,
       );
     },
-    [visibleEvents],
+    [visibleEvents, conflictScope],
   );
 
   const selectedEvent = useMemo(() => {
