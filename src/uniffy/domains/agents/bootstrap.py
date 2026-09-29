@@ -70,7 +70,7 @@ async def finish_default_agent_after_commit(
         organization_id=agent.organization_id,
         title=agent.name,
         entity_type=ContentType.AGENT.value,
-        url_path=f"/agents/{agent.id}",
+        url_path=f"/agents/agents/{agent.id}/overview",
         access_mode=agent.access_mode.value if agent.access_mode is not None else None,
         baseline_role=(agent.baseline_role.value if agent.baseline_role is not None else None),
         owner_id=agent.owner_id,

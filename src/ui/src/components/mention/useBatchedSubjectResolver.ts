@@ -13,6 +13,7 @@ import { useAppSelector } from "@/app/hooks";
 import {
   onMentionStateChange,
   publishMentionState,
+  setMentionUrl,
 } from "@/components/mention/mentionStateEmitter";
 import {
   MentionAvailability,
@@ -197,6 +198,7 @@ async function flush(): Promise<void> {
       canRequestAgainAt: accessRequestState.canRequestAgainAt,
     };
     previewCache.set(urn, data);
+    if (data.url) setMentionUrl(urn, data.url);
     // Editor NodeViews outside the React provider subscribe through this emitter.
     publishMentionState(urn, previewDataToLiveState(urn, data));
     for (const cb of callbacks) cb(data);

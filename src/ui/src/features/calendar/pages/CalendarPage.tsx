@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
 import { useShortcutHandler } from "@/features/settings";
@@ -34,7 +34,9 @@ function displayHourOf(instant: string): number {
 
 export function CalendarPage() {
   const dispatch = useAppDispatch();
-  const { eventId } = useParams<{ eventId: string }>();
+  const { eventId: pathEventId } = useParams<{ eventId: string }>();
+  const [searchParams] = useSearchParams();
+  const eventId = pathEventId || searchParams.get("event");
   const currentDate = useAppSelector((state) => state.calendarUi.currentDate);
   const currentOrganizationId = useAppSelector((state) => state.auth.currentOrganizationId);
 
@@ -66,9 +68,12 @@ export function CalendarPage() {
     dispatch(fetchCategories());
   }, [dispatch, currentOrganizationId]);
 
-  // /calendar/:eventId opens an event from a URN mention.
+  // Search previews use ?event= while direct mentions can use /calendar/:eventId.
   useEffect(() => {
-    if (!currentOrganizationId || !eventId) return;
+    if (!currentOrganizationId || !eventId) {
+      handledEventIdRef.current = null;
+      return;
+    }
     if (handledEventIdRef.current === eventId) return;
 
     handledEventIdRef.current = eventId;
@@ -78,6 +83,7 @@ export function CalendarPage() {
     dispatch(fetchEvent(eventId))
       .unwrap()
       .then((event) => {
+        if (event.id !== eventId) dispatch(selectEvent(event.id));
         // Snap the calendar to the event's date so the selection is visible.
         const eventDate = instantDayKey(event.startTime);
         if (eventDate !== currentDate) {

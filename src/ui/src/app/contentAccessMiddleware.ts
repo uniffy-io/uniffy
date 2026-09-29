@@ -14,6 +14,7 @@ export const contentAccessMiddleware: Middleware<object, RootState> =
   ({ dispatch, getState }) =>
   (next) =>
   (action) => {
+    const previousProjects = fetchProjects.fulfilled.match(action) ? getState().projects : null;
     const result = next(action);
     if (removeChannel.match(action)) {
       emitContentAccessChanged({
@@ -22,13 +23,20 @@ export const contentAccessMiddleware: Middleware<object, RootState> =
         action: "revoked",
       });
     }
-    if (fetchProjects.fulfilled.match(action)) {
+    if (previousProjects) {
       const { projects, projectsUi } = getState();
-      if (projectsUi.selectedTaskId && !projects.tasks[projectsUi.selectedTaskId]) {
+      const removedTask = (id: string) => previousProjects.tasks[id] && !projects.tasks[id];
+      const lostCurrentProject =
+        previousProjects.currentProjectId && !projects.projects[previousProjects.currentProjectId];
+      // A linked task can still be loading when the project list refresh completes.
+      if (
+        projectsUi.selectedTaskId &&
+        (removedTask(projectsUi.selectedTaskId) || lostCurrentProject)
+      ) {
         dispatch(selectTask(null));
         dispatch(closeDetailPanel());
       }
-      if (projectsUi.selectedTaskIds.some((id) => !projects.tasks[id])) {
+      if (projectsUi.selectedTaskIds.some(removedTask) || lostCurrentProject) {
         dispatch(clearSelection());
       }
     }
