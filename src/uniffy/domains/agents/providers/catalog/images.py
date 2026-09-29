@@ -1,10 +1,4 @@
-"""Validate and resolve image-generation parameters against the catalog schema.
-
-Image params carry one layer chat params do not: the model picks some of them
-per call, because "make it wide" is the natural way a user asks. Precedence is
-therefore call args over conversation override over agent default, with the org
-ceiling clamping whatever comes out.
-"""
+"""Resolve image parameters within model capabilities and organization ceilings."""
 
 from enum import StrEnum
 
@@ -23,7 +17,7 @@ ASPECT_RATIO_KNOB = "aspect_ratio"
 # Ascending cost order, used to clamp against the org ceiling. A model whose
 # enum omits a tier simply never sees it.
 RESOLUTION_ORDER = ("512px", "1K", "2K", "4K")
-QUALITY_ORDER = ("low", "medium", "high")
+QUALITY_ORDER = ("low", "medium", "high", "xhigh", "max")
 
 
 class ImageBackground(StrEnum):
@@ -54,12 +48,7 @@ def validate_image_params(
     *,
     audience: str = "builder",
 ) -> None:
-    """Raise ``ValueError`` when ``params`` violates the model's image schema.
-
-    ``audience="user"`` additionally rejects builder-only knobs, so a
-    per-conversation override cannot loosen moderation or change the stored
-    output format.
-    """
+    """Conversation overrides cannot change builder-only image controls."""
     if not params:
         return
     pc = get_catalog().providers.get(provider)
@@ -92,11 +81,7 @@ def clamp_image_params(
     max_resolution: str | None = None,
     max_quality: str | None = None,
 ) -> dict:
-    """Clamp cost-driving knobs down to the org ceiling.
-
-    Clamping rather than rejecting keeps a run alive when a builder default or
-    an older override sits above a ceiling an admin lowered later.
-    """
+    """Keep existing configurations usable when an organization lowers its ceilings."""
     clamped = dict(params)
     for knob, ceiling, order in (
         (RESOLUTION_KNOB, max_resolution, RESOLUTION_ORDER),
@@ -105,15 +90,13 @@ def clamp_image_params(
         value = clamped.get(knob)
         if not ceiling or ceiling not in order:
             continue
-        # "auto" lets the provider pick, which can land above the ceiling.
-        effective = (
-            ImageQuality.MEDIUM if (knob == QUALITY_KNOB and value == ImageQuality.AUTO) else value
-        )
-        if effective is None and knob == QUALITY_KNOB:
-            effective = ImageQuality.MEDIUM
-        if effective not in order:
+        # Default or invalid quality must not fall back to an uncapped provider choice.
+        if knob == QUALITY_KNOB and value not in order:
+            clamped[knob] = ceiling
             continue
-        if order.index(effective) > order.index(ceiling):
+        if value not in order:
+            continue
+        if order.index(value) > order.index(ceiling):
             clamped[knob] = ceiling
     return clamped
 

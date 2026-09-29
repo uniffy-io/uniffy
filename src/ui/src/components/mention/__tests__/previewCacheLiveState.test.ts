@@ -10,7 +10,7 @@ vi.mock("@/app/hooks", () => ({
   useAppDispatch: () => vi.fn(),
 }));
 
-vi.mock("@/features/search", () => ({
+vi.mock("@/features/search/api/searchApi", () => ({
   searchApi: { resolveUrns: mocks.resolveUrns },
 }));
 
@@ -20,8 +20,10 @@ vi.mock("@/features/permissions/api/membersApi", () => ({
 
 import { SearchResultType, UrnAvailability } from "@uniffy/proto/search/v1/search_pb";
 import {
+  clearMentionStates,
   emitMentionStateChange,
   getMentionState,
+  getMentionUrl,
   mergeMentionState,
   replaceMentionState,
 } from "@/components/mention/mentionStateEmitter";
@@ -33,6 +35,7 @@ import {
   getCachedPreview,
   clearPreviewCache,
 } from "@/components/mention/useBatchedSubjectResolver";
+import { watchCalendarOccurrence } from "@/components/mention/calendarOccurrenceState";
 
 const ORG = "019fc01f-12b6-7c82-bb38-2849821c22cb";
 const TEAM_URN = "urn:uniffy:content:TEAM:019fc01f-12b6-7d85-b72c-376943518a98";
@@ -50,8 +53,114 @@ function resolved(urn: string, type: SearchResultType, title: string, descriptio
 describe("preview cache live state", () => {
   beforeEach(() => {
     clearPreviewCache();
+    clearMentionStates();
     mocks.resolveUrns.mockReset();
     mocks.getMyAccessRequestStatuses.mockReset();
+  });
+
+  it("re-resolves series patches without copying the master's date onto an occurrence", async () => {
+    const master = "urn:uniffy:content:CALENDAR_EVENT:019fc01f-12b6-7f11-a7f1-a3197c6cefca";
+    const occurrence = `${master}__occurrence__2026-09-28`;
+    const response = (start: string) => ({
+      resolved: {
+        [occurrence]: {
+          title: "Standup",
+          type: SearchResultType.CALENDAR_EVENT,
+          availability: UrnAvailability.AVAILABLE,
+          url: `/calendar?event=${occurrence.split(":")[4]}`,
+          metadata: { start_time: start },
+        },
+      },
+    });
+    mocks.resolveUrns
+      .mockResolvedValueOnce(response("2026-09-28T06:00:00Z"))
+      .mockResolvedValueOnce(response("2026-09-28T07:00:00Z"));
+    await resolveUrnBatched(occurrence, ORG);
+    const stop = watchCalendarOccurrence(occurrence, ORG);
+    try {
+      emitMentionStateChange(master, { eventStartTime: "2026-09-21T07:00:00Z" });
+      expect(getMentionState(occurrence)).toBeNull();
+      await vi.waitFor(() =>
+        expect(getMentionState(occurrence)?.eventStartTime).toBe("2026-09-28T07:00:00Z"),
+      );
+      expect(getMentionUrl(occurrence)).toBe(response("").resolved[occurrence].url);
+      expect(mocks.resolveUrns).toHaveBeenCalledTimes(2);
+    } finally {
+      stop();
+    }
+    emitMentionStateChange(master, { title: "Another update" });
+    expect(mocks.resolveUrns).toHaveBeenCalledTimes(2);
+  });
+
+  it("rechecks a rescheduled occurrence when its override loses access", async () => {
+    const master = "urn:uniffy:content:CALENDAR_EVENT:019fc01f-12b6-7f11-a7f1-a3197c6cefca";
+    const occurrence = `${master}__occurrence__2026-09-28`;
+    const overrideId = "019fc01f-12b6-7e34-a5c4-6bda0116e279";
+    mocks.resolveUrns
+      .mockResolvedValueOnce({
+        resolved: {
+          [occurrence]: {
+            title: "Rescheduled",
+            type: SearchResultType.CALENDAR_EVENT,
+            availability: UrnAvailability.AVAILABLE,
+            metadata: {},
+            url: `/calendar?event=${overrideId}`,
+          },
+        },
+      })
+      .mockResolvedValueOnce({
+        resolved: {
+          [occurrence]: {
+            title: "",
+            type: SearchResultType.CALENDAR_EVENT,
+            metadata: {},
+            availability: UrnAvailability.RESTRICTED,
+            canRequestAccess: false,
+          },
+        },
+      });
+    await resolveUrnBatched(occurrence, ORG);
+    const stop = watchCalendarOccurrence(occurrence, ORG);
+    try {
+      emitMentionStateChange(`urn:uniffy:content:CALENDAR_EVENT:${overrideId}`, {
+        title: "Changed",
+      });
+      await vi.waitFor(() =>
+        expect(getMentionState(occurrence)?.availability).toBe(MentionAvailability.Restricted),
+      );
+      expect(getMentionState(occurrence)?.title).toBeUndefined();
+      expect(getMentionUrl(occurrence)).toBeNull();
+    } finally {
+      stop();
+    }
+  });
+
+  it.each(["omitted", "failed"])(
+    "publishes unavailable state for %s references",
+    async (outcome) => {
+      if (outcome === "omitted") mocks.resolveUrns.mockResolvedValue({ resolved: {} });
+      else mocks.resolveUrns.mockRejectedValue(new Error("Network unavailable"));
+
+      const preview = await resolveUrnBatched(NOTE_URN, ORG);
+
+      expect(preview?.availability).toBe(MentionAvailability.Unavailable);
+      expect(getMentionState(NOTE_URN)?.availability).toBe(MentionAvailability.Unavailable);
+      expect(getCachedPreview(NOTE_URN)?.availability).toBe(MentionAvailability.Unavailable);
+    },
+  );
+
+  it("recovers an unavailable reference on forced retry", async () => {
+    mocks.resolveUrns
+      .mockResolvedValueOnce({ resolved: {} })
+      .mockResolvedValueOnce(resolved(NOTE_URN, SearchResultType.NOTE, "Planning"));
+
+    await resolveUrnBatched(NOTE_URN, ORG);
+    const preview = await resolveUrnBatched(NOTE_URN, ORG, { force: true });
+
+    expect(preview?.availability).toBe(MentionAvailability.Available);
+    expect(getMentionState(NOTE_URN)?.title).toBe("Planning");
+    expect(getMentionState(NOTE_URN)?.availability).toBe(MentionAvailability.Available);
+    expect(mocks.resolveUrns).toHaveBeenCalledTimes(2);
   });
 
   it("applies a team rename so the next hover reads the new name", async () => {

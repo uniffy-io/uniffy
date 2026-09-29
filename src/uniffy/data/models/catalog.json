@@ -80,6 +80,30 @@
           "supports_attachments": true
         },
         {
+          "id": "claude-opus-5-5",
+          "unsupported_params": [
+            "temperature",
+            "top_p"
+          ],
+          "name": "Claude Opus 5.5",
+          "cost_per_1m_in": 4,
+          "cost_per_1m_out": 20,
+          "cost_per_1m_in_cached": 5,
+          "cost_per_1m_out_cached": 0.2,
+          "context_window": 1000000,
+          "default_max_tokens": 128000,
+          "can_reason": true,
+          "reasoning_levels": [
+            "low",
+            "medium",
+            "high",
+            "xhigh",
+            "max"
+          ],
+          "default_reasoning_effort": "medium",
+          "supports_attachments": true
+        },
+        {
           "id": "claude-opus-5",
           "unsupported_params": [
             "temperature",
@@ -353,7 +377,9 @@
             "auto",
             "low",
             "medium",
-            "high"
+            "high",
+            "xhigh",
+            "max"
           ],
           "default": "auto"
         },
@@ -388,6 +414,80 @@
       },
       "models": [
         {
+          "id": "gpt-6-astra",
+          "unsupported_params": [
+            "temperature",
+            "top_p"
+          ],
+          "name": "GPT-6 Astra",
+          "cost_per_1m_in": 10,
+          "cost_per_1m_out": 50,
+          "cost_per_1m_in_cached": 12.5,
+          "cost_per_1m_out_cached": 1,
+          "context_window": 1050000,
+          "default_max_tokens": 128000,
+          "can_reason": true,
+          "reasoning_levels": [
+            "low",
+            "medium",
+            "high",
+            "xhigh",
+            "max"
+          ],
+          "default_reasoning_effort": "medium",
+          "supports_attachments": true
+        },
+        {
+          "id": "gpt-6-sol",
+          "unsupported_params": [
+            "temperature",
+            "top_p"
+          ],
+          "name": "GPT-6 Sol",
+          "cost_per_1m_in": 2,
+          "cost_per_1m_out": 10,
+          "cost_per_1m_in_cached": 2.5,
+          "cost_per_1m_out_cached": 0.2,
+          "context_window": 1050000,
+          "default_max_tokens": 128000,
+          "can_reason": true,
+          "reasoning_levels": [
+            "none",
+            "low",
+            "medium",
+            "high",
+            "xhigh",
+            "max"
+          ],
+          "default_reasoning_effort": "medium",
+          "supports_attachments": true
+        },
+        {
+          "id": "gpt-6-luna",
+          "unsupported_params": [
+            "temperature",
+            "top_p"
+          ],
+          "name": "GPT-6 Luna",
+          "cost_per_1m_in": 0.1,
+          "cost_per_1m_out": 0.5,
+          "cost_per_1m_in_cached": 0.125,
+          "cost_per_1m_out_cached": 0.01,
+          "context_window": 1050000,
+          "default_max_tokens": 128000,
+          "can_reason": true,
+          "reasoning_levels": [
+            "none",
+            "low",
+            "medium",
+            "high",
+            "xhigh",
+            "max"
+          ],
+          "default_reasoning_effort": "medium",
+          "supports_attachments": true
+        },
+        {
           "id": "gpt-5.6-sol",
           "unsupported_params": [
             "temperature",
@@ -397,10 +497,10 @@
           "aliases": [
             "gpt-5.6"
           ],
-          "cost_per_1m_in": 5,
-          "cost_per_1m_out": 30,
-          "cost_per_1m_in_cached": 6.25,
-          "cost_per_1m_out_cached": 0.5,
+          "cost_per_1m_in": 4,
+          "cost_per_1m_out": 20,
+          "cost_per_1m_in_cached": 5,
+          "cost_per_1m_out_cached": 0.4,
           "context_window": 1050000,
           "default_max_tokens": 128000,
           "can_reason": true,
@@ -992,6 +1092,80 @@
           "supports_attachments": true
         },
         {
+          "id": "gpt-image-2.5-flare",
+          "name": "GPT Image 2.5 Flare",
+          "context_window": 4096,
+          "can_reason": false,
+          "supports_attachments": true,
+          "supports_tools": false,
+          "supports_image_generation": true,
+          "image_prices": {
+            "1024x1024": {
+              "low": 0.00588,
+              "medium": 0.01317,
+              "high": 0.05268,
+              "xhigh": 0.09366,
+              "max": 0.21072
+            },
+            "1536x1024": {
+              "low": 0.00474,
+              "medium": 0.01029,
+              "high": 0.04116,
+              "xhigh": 0.07377,
+              "max": 0.16464
+            },
+            "1024x1536": {
+              "low": 0.00474,
+              "medium": 0.01029,
+              "high": 0.04116,
+              "xhigh": 0.07377,
+              "max": 0.16464
+            }
+          },
+          "image_price_scales_with_pixels": true,
+          "image_arbitrary_size": true,
+          "aliases": [
+            "gpt-image-2.5-flare-2026-09-08"
+          ]
+        },
+        {
+          "id": "gpt-image-2.5-sunburst",
+          "name": "GPT Image 2.5 Sunburst",
+          "context_window": 4096,
+          "can_reason": false,
+          "supports_attachments": true,
+          "supports_tools": false,
+          "supports_image_generation": true,
+          "image_prices": {
+            "1024x1024": {
+              "low": 0.00588,
+              "medium": 0.01317,
+              "high": 0.05268,
+              "xhigh": 0.09366,
+              "max": 0.21072
+            },
+            "1536x1024": {
+              "low": 0.00474,
+              "medium": 0.01029,
+              "high": 0.04116,
+              "xhigh": 0.07377,
+              "max": 0.16464
+            },
+            "1024x1536": {
+              "low": 0.00474,
+              "medium": 0.01029,
+              "high": 0.04116,
+              "xhigh": 0.07377,
+              "max": 0.16464
+            }
+          },
+          "image_price_scales_with_pixels": true,
+          "image_arbitrary_size": true,
+          "aliases": [
+            "gpt-image-2.5-sunburst-2026-09-08"
+          ]
+        },
+        {
           "id": "gpt-image-2",
           "name": "GPT Image 2",
           "aliases": [
@@ -1023,7 +1197,15 @@
             "background"
           ],
           "image_price_scales_with_pixels": true,
-          "image_arbitrary_size": true
+          "image_arbitrary_size": true,
+          "image_enums": {
+            "quality": [
+              "auto",
+              "low",
+              "medium",
+              "high"
+            ]
+          }
         },
         {
           "id": "chatgpt-image-latest",
@@ -1058,6 +1240,12 @@
             ],
             "resolution": [
               "1K"
+            ],
+            "quality": [
+              "auto",
+              "low",
+              "medium",
+              "high"
             ]
           },
           "deprecated": true,
@@ -1096,6 +1284,12 @@
             ],
             "resolution": [
               "1K"
+            ],
+            "quality": [
+              "auto",
+              "low",
+              "medium",
+              "high"
             ]
           },
           "deprecated": true,
@@ -1172,11 +1366,36 @@
       },
       "models": [
         {
-          "id": "gemini-3.7-flash",
-          "name": "Gemini 3.7 Flash",
+          "id": "gemini-3.8-flash",
+          "name": "Gemini 3.8 Flash",
+          "unsupported_params": [
+            "temperature",
+            "top_p"
+          ],
+          "unsupported_provider_options": [
+            "top_k"
+          ],
+          "cost_per_1m_in": 0.75,
+          "cost_per_1m_out": 3.75,
+          "cost_per_1m_in_cached": 0,
+          "cost_per_1m_out_cached": 0.075,
+          "context_window": 1048576,
+          "default_max_tokens": 65536,
+          "can_reason": true,
+          "reasoning_levels": [
+            "low",
+            "medium",
+            "high"
+          ],
+          "default_reasoning_effort": "medium",
+          "supports_attachments": true,
           "aliases": [
             "gemini-flash-latest"
-          ],
+          ]
+        },
+        {
+          "id": "gemini-3.7-flash",
+          "name": "Gemini 3.7 Flash",
           "unsupported_params": [
             "temperature",
             "top_p"
@@ -1300,7 +1519,9 @@
             "high"
           ],
           "default_reasoning_effort": "high",
-          "supports_attachments": true
+          "supports_attachments": true,
+          "deprecated": true,
+          "sunset_date": "2026-03-09"
         },
         {
           "id": "gemini-3-flash-preview",
@@ -1445,6 +1666,28 @@
               "4K"
             ]
           }
+        },
+        {
+          "id": "gemini-3.1-flash-lite-image",
+          "name": "Nano Banana 2 Lite",
+          "context_window": 65536,
+          "default_max_tokens": 4096,
+          "can_reason": true,
+          "supports_attachments": true,
+          "supports_tools": false,
+          "supports_image_generation": true,
+          "cost_per_image": 0.0336,
+          "image_enums": {
+            "resolution": [
+              "1K"
+            ]
+          },
+          "reasoning_levels": [
+            "minimal",
+            "high"
+          ],
+          "cost_per_1m_in": 0.25,
+          "cost_per_1m_out": 1.5
         }
       ]
     },
@@ -1486,6 +1729,31 @@
           "supports_attachments": false
         },
         {
+          "id": "~openai/gpt-sol-latest",
+          "unsupported_params": [
+            "temperature",
+            "top_p"
+          ],
+          "name": "OpenAI GPT Sol Latest",
+          "cost_per_1m_in": 2.0,
+          "cost_per_1m_out": 10.0,
+          "cost_per_1m_in_cached": 2.5,
+          "cost_per_1m_out_cached": 0.2,
+          "context_window": 1050000,
+          "default_max_tokens": 128000,
+          "can_reason": true,
+          "reasoning_levels": [
+            "none",
+            "low",
+            "medium",
+            "high",
+            "xhigh",
+            "max"
+          ],
+          "default_reasoning_effort": "medium",
+          "supports_attachments": true
+        },
+        {
           "id": "~openai/gpt-latest",
           "unsupported_params": [
             "temperature",
@@ -1508,7 +1776,8 @@
             "max"
           ],
           "default_reasoning_effort": "medium",
-          "supports_attachments": true
+          "supports_attachments": true,
+          "deprecated": true
         },
         {
           "id": "~openai/gpt-mini-latest",
@@ -1564,10 +1833,10 @@
             "top_p"
           ],
           "name": "Claude Opus Latest",
-          "cost_per_1m_in": 5,
-          "cost_per_1m_out": 25,
-          "cost_per_1m_in_cached": 6.25,
-          "cost_per_1m_out_cached": 0.5,
+          "cost_per_1m_in": 4.0,
+          "cost_per_1m_out": 20.0,
+          "cost_per_1m_in_cached": 5.0,
+          "cost_per_1m_out_cached": 0.2,
           "context_window": 1000000,
           "default_max_tokens": 128000,
           "can_reason": true,
@@ -1656,10 +1925,10 @@
         {
           "id": "~x-ai/grok-latest",
           "name": "Grok Latest",
-          "cost_per_1m_in": 2,
-          "cost_per_1m_out": 6,
+          "cost_per_1m_in": 1.6,
+          "cost_per_1m_out": 4.8,
           "cost_per_1m_in_cached": 0,
-          "cost_per_1m_out_cached": 0.5,
+          "cost_per_1m_out_cached": 0.4,
           "context_window": 500000,
           "can_reason": true,
           "reasoning_levels": [
@@ -1669,15 +1938,16 @@
             "xhigh"
           ],
           "default_reasoning_effort": "high",
-          "supports_attachments": true
+          "supports_attachments": true,
+          "default_max_tokens": 450000
         },
         {
           "id": "~z-ai/glm-latest",
           "name": "Z.ai GLM Latest",
-          "cost_per_1m_in": 1.17,
-          "cost_per_1m_out": 3.96,
+          "cost_per_1m_in": 0.3426,
+          "cost_per_1m_out": 2.574,
           "cost_per_1m_in_cached": 0,
-          "cost_per_1m_out_cached": 0.234,
+          "cost_per_1m_out_cached": 0.0595102,
           "context_window": 1310720,
           "default_max_tokens": 1048576,
           "can_reason": true,
@@ -1692,10 +1962,10 @@
         {
           "id": "~z-ai/glm-flash-latest",
           "name": "Z.ai GLM Flash Latest",
-          "cost_per_1m_in": 0.075,
-          "cost_per_1m_out": 0.25,
+          "cost_per_1m_in": 0.045,
+          "cost_per_1m_out": 0.14,
           "cost_per_1m_in_cached": 0,
-          "cost_per_1m_out_cached": 0.015,
+          "cost_per_1m_out_cached": 0.01,
           "context_window": 1310720,
           "default_max_tokens": 131072,
           "can_reason": true,
@@ -1708,10 +1978,10 @@
         {
           "id": "~deepseek/deepseek-v4-flash-latest",
           "name": "DeepSeek V4 Flash Latest",
-          "cost_per_1m_in": 0.05,
-          "cost_per_1m_out": 0.16,
+          "cost_per_1m_in": 0.021,
+          "cost_per_1m_out": 0.32,
           "cost_per_1m_in_cached": 0,
-          "cost_per_1m_out_cached": 0.013,
+          "cost_per_1m_out_cached": 0.016,
           "context_window": 1310720,
           "can_reason": true,
           "reasoning_levels": [
@@ -1725,10 +1995,10 @@
         {
           "id": "~moonshotai/kimi-latest",
           "name": "Kimi Latest",
-          "cost_per_1m_in": 2.55,
-          "cost_per_1m_out": 12.75,
+          "cost_per_1m_in": 0.9875,
+          "cost_per_1m_out": 5.53,
           "cost_per_1m_in_cached": 0,
-          "cost_per_1m_out_cached": 0.25599999,
+          "cost_per_1m_out_cached": 0.11455,
           "context_window": 1048576,
           "default_max_tokens": 1048576,
           "can_reason": true,
@@ -2068,10 +2338,10 @@
         {
           "id": "z-ai/glm-5.3-flash",
           "name": "Z.ai GLM 5.3 Flash",
-          "cost_per_1m_in": 0.075,
-          "cost_per_1m_out": 0.25,
+          "cost_per_1m_in": 0.045,
+          "cost_per_1m_out": 0.14,
           "cost_per_1m_in_cached": 0,
-          "cost_per_1m_out_cached": 0.015,
+          "cost_per_1m_out_cached": 0.01,
           "context_window": 1310720,
           "default_max_tokens": 131072,
           "can_reason": true,
@@ -2084,10 +2354,10 @@
         {
           "id": "deepseek/deepseek-v4-pro",
           "name": "DeepSeek V4 Pro",
-          "cost_per_1m_in": 1.04226,
-          "cost_per_1m_out": 2.08452,
+          "cost_per_1m_in": 0.348,
+          "cost_per_1m_out": 0.696,
           "cost_per_1m_in_cached": 0,
-          "cost_per_1m_out_cached": 0.086855,
+          "cost_per_1m_out_cached": 0.029,
           "context_window": 1048576,
           "default_max_tokens": 393216,
           "can_reason": true,
@@ -2101,10 +2371,10 @@
         {
           "id": "deepseek/deepseek-v4-pro-0813",
           "name": "DeepSeek V4 Pro 0813",
-          "cost_per_1m_in": 1.1154,
-          "cost_per_1m_out": 3.3462,
+          "cost_per_1m_in": 0.24502,
+          "cost_per_1m_out": 3.5,
           "cost_per_1m_in_cached": 0,
-          "cost_per_1m_out_cached": 0.03718,
+          "cost_per_1m_out_cached": 0.172,
           "context_window": 1048576,
           "default_max_tokens": 384000,
           "can_reason": true,
@@ -2118,8 +2388,8 @@
         {
           "id": "deepseek/deepseek-v4-flash-0731",
           "name": "DeepSeek V4 Flash 0731",
-          "cost_per_1m_in": 0.065,
-          "cost_per_1m_out": 0.18,
+          "cost_per_1m_in": 0.021,
+          "cost_per_1m_out": 0.32,
           "cost_per_1m_in_cached": 0,
           "cost_per_1m_out_cached": 0.016,
           "context_window": 1310720,
@@ -2135,10 +2405,10 @@
         {
           "id": "deepseek/deepseek-v4-flash",
           "name": "DeepSeek V4 Flash",
-          "cost_per_1m_in": 0.088606,
-          "cost_per_1m_out": 0.177212,
+          "cost_per_1m_in": 0.0469,
+          "cost_per_1m_out": 0.0938,
           "cost_per_1m_in_cached": 0,
-          "cost_per_1m_out_cached": 0.0177212,
+          "cost_per_1m_out_cached": 0.00938,
           "context_window": 1048576,
           "default_max_tokens": 393216,
           "can_reason": true,
@@ -2148,6 +2418,26 @@
           ],
           "default_reasoning_effort": "high",
           "supports_attachments": false
+        },
+        {
+          "id": "qwen/qwen3.8-max-0902",
+          "name": "Qwen 3.8 Max (0902)",
+          "cost_per_1m_in": 2.0,
+          "cost_per_1m_out": 6.0,
+          "cost_per_1m_in_cached": 2.5,
+          "cost_per_1m_out_cached": 0.25,
+          "context_window": 1000000,
+          "default_max_tokens": 131072,
+          "can_reason": true,
+          "reasoning_levels": [
+            "minimal",
+            "low",
+            "medium",
+            "high",
+            "xhigh"
+          ],
+          "default_reasoning_effort": "xhigh",
+          "supports_attachments": true
         },
         {
           "id": "qwen/qwen3.8-max",
@@ -2167,7 +2457,8 @@
             "xhigh"
           ],
           "default_reasoning_effort": "xhigh",
-          "supports_attachments": true
+          "supports_attachments": true,
+          "deprecated": true
         },
         {
           "id": "qwen/qwen3.8-2.4t-a95b",
@@ -2175,7 +2466,7 @@
           "cost_per_1m_in": 2,
           "cost_per_1m_out": 6,
           "cost_per_1m_in_cached": 0,
-          "cost_per_1m_out_cached": 0.2,
+          "cost_per_1m_out_cached": 0.25,
           "context_window": 1048576,
           "default_max_tokens": 262144,
           "can_reason": true,
@@ -2226,8 +2517,8 @@
         {
           "id": "meta-llama/llama-4-maverick",
           "name": "Llama 4 Maverick",
-          "cost_per_1m_in": 0.2,
-          "cost_per_1m_out": 0.696,
+          "cost_per_1m_in": 0.1875,
+          "cost_per_1m_out": 0.6525,
           "cost_per_1m_in_cached": 0,
           "cost_per_1m_out_cached": 0,
           "context_window": 1048576,
@@ -2273,6 +2564,25 @@
         }
       },
       "models": [
+        {
+          "id": "grok-4.7",
+          "name": "Grok 4.7",
+          "cost_per_1m_in": 2,
+          "cost_per_1m_out": 6,
+          "cost_per_1m_in_cached": 0,
+          "cost_per_1m_out_cached": 0.5,
+          "context_window": 500000,
+          "default_max_tokens": 500000,
+          "can_reason": true,
+          "reasoning_levels": [
+            "low",
+            "medium",
+            "high",
+            "xhigh"
+          ],
+          "default_reasoning_effort": "high",
+          "supports_attachments": true
+        },
         {
           "id": "grok-4.6",
           "name": "Grok 4.6",

@@ -39,6 +39,7 @@ from uniffy.domains.permissions.access import (
 )
 from uniffy.domains.search.authorization import AuthorizedSearch, AuthorizedSearchQuery
 from uniffy.domains.search.graph import GRAPH_MAX_ROWS_PER_TYPE, build_content_graph
+from uniffy.domains.search.occurrences import resolve_occurrence_references
 from uniffy.domains.search.queries import (
     SearchResult,
     UrnAvailability,
@@ -204,6 +205,19 @@ class SearchOperations:
         )
 
     async def resolve_urns(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        urns: list[str],
+    ) -> dict[str, SearchResult]:
+        return await resolve_occurrence_references(
+            self.session,
+            organization_id,
+            list(dict.fromkeys(urns[:100])),
+            partial(self._resolve_resource_urns, user_id, organization_id),
+        )
+
+    async def _resolve_resource_urns(
         self,
         user_id: UUID,
         organization_id: UUID,

@@ -11,6 +11,7 @@ import {
 } from "@/components/mention/mentionLiveState";
 import { getMentionState, onMentionStateChange } from "@/components/mention/mentionStateEmitter";
 import { resolveUrnBatched } from "@/components/mention/useBatchedSubjectResolver";
+import { watchCalendarOccurrence } from "@/components/mention/calendarOccurrenceState";
 import type { MentionLiveState } from "@/components/mention/types";
 import type { UrnMetadata } from "@uniffy/proto/search/v1/search_pb";
 
@@ -39,6 +40,11 @@ export function useMentionState(
 
   // Depend on stable callbacks, not the whole context — `states` mutates on every batch and would thrash register/unregister.
   const { register, unregister } = context;
+  useEffect(() => {
+    if (!organizationId) return;
+    return watchCalendarOccurrence(urn, organizationId);
+  }, [urn, organizationId]);
+
   useEffect(() => {
     if (!urn) return;
     register(urn, resolvedMetadata);

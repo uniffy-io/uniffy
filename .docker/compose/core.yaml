@@ -76,7 +76,7 @@ services:
 
   meilisearch:
     <<: *defaults
-    image: getmeili/meilisearch:v1.53
+    image: getmeili/meilisearch:v1.54
     container_name: uniffy-meilisearch
     environment:
       MEILI_MASTER_KEY: uniffy-dev-master-key

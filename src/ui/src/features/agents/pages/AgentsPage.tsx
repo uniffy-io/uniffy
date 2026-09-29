@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { AppHeader } from "@/components/layout/AppHeader";
@@ -19,9 +19,12 @@ const PANEL_ALIASES: Record<string, AgentPanel> = {
   skills: "capabilities",
 };
 
+const RESOURCE_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export function AgentsPage() {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
+  const { search, hash } = useLocation();
   const { tab, subId, panel } = useParams<{ tab?: string; subId?: string; panel?: string }>();
   const lastSection = useAppSelector(selectLastSection);
 
@@ -32,7 +35,19 @@ export function AgentsPage() {
       navigate(`/agents/${lastSection}`, { replace: true });
       return;
     }
-    // Agent conversations live in chat DMs; old /agents/chat links land there.
+    // Search projections and saved links can address the agent before the section segment.
+    if (RESOURCE_ID.test(tab)) {
+      const requestedPanel = PANEL_ALIASES[subId ?? ""] ?? subId;
+      const agentPanel = AGENT_PANELS.includes(requestedPanel as AgentPanel)
+        ? requestedPanel
+        : "overview";
+      const pathname =
+        subId === "cron" && panel && RESOURCE_ID.test(panel)
+          ? `/agents/automations/${panel}`
+          : `/agents/agents/${tab}/${agentPanel}`;
+      navigate({ pathname, search, hash }, { replace: true });
+      return;
+    }
     if (tab === "chat") {
       navigate("/chat", { replace: true });
       return;
@@ -53,7 +68,7 @@ export function AgentsPage() {
       }
     }
     dispatch(setLastSection(tab as AgentsSection));
-  }, [dispatch, navigate, tab, subId, panel, lastSection]);
+  }, [dispatch, navigate, tab, subId, panel, lastSection, search, hash]);
 
   return (
     <>

@@ -199,8 +199,7 @@ class AgentOperations(BaseContentOperations[Agent]):
         return model.name
 
     def _get_url_path(self, model: Agent) -> str:
-        """Return the frontend route for this agent."""
-        return f"/agents/{model.id}"
+        return f"/agents/agents/{model.id}/overview"
 
     async def resolve_role(
         self,

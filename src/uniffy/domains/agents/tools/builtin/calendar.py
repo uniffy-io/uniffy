@@ -4,7 +4,10 @@ from datetime import UTC, datetime, timedelta
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
-from uniffy.core.types import EventStatus, EventTransparency, RecurrencePattern
+from uniffy.core.content.references import sanitize_mention_label
+from uniffy.core.models.calendar.event import CalendarEvent
+from uniffy.core.search.indexer import build_content_urn
+from uniffy.core.types import ContentType, EventStatus, EventTransparency, RecurrencePattern
 from uniffy.domains.agents.runtime.output_format import OutputSurface
 from uniffy.domains.agents.tools.builtin.args import (
     MARKDOWN_CONTENT_DOC,
@@ -22,12 +25,7 @@ _RSVP_VALUES = ("ACCEPTED", "TENTATIVE", "DECLINED")
 
 
 def _parse_datetime(value: str, user_timezone: str | None = None) -> datetime | None:
-    """Parse an ISO 8601 datetime string, returning timezone-aware UTC.
-
-    If the string ends with Z, it is treated as UTC regardless of
-    user_timezone. Otherwise, naive datetimes are interpreted in
-    the user's local timezone and converted to UTC.
-    """
+    """Naive datetimes use the user's zone; explicit UTC takes precedence."""
     is_utc_explicit = value.endswith("Z")
 
     for fmt in ("%Y-%m-%dT%H:%M:%SZ", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%d"):
@@ -57,22 +55,27 @@ def _parse_datetime(value: str, user_timezone: str | None = None) -> datetime | 
     return dt.replace(tzinfo=local_tz).astimezone(UTC)
 
 
+def _event_urn(event_id: UUID | str) -> str:
+    # Virtual occurrence IDs are not resources; mentions address the stored series.
+    master_id = UUID(str(event_id).split(OCCURRENCE_ID_SEPARATOR)[0])
+    return build_content_urn(ContentType.CALENDAR_EVENT, master_id)
+
+
+def _event_mention(event: CalendarEvent) -> str:
+    return f"[[[{sanitize_mention_label(event.title)}|{_event_urn(event.id)}]]]"
+
+
 async def _format_event_result(
     prefix: str,
-    event,
+    event: CalendarEvent,
     *,
     ctx: ToolContext | None = None,
 ) -> str:
-    """Format a calendar event into a readable tool result.
-
-    When ``ctx`` is supplied, hydrates unified-tag slugs from
-    ``TagOperations`` and emits them as ``Tags: a, b, c``.
-    """
-    urn = f"urn:uniffy:content:CALENDAR_EVENT:{event.id}"
+    """Include unified tags when a tool context is available."""
     start = event.start_time.strftime("%Y-%m-%d %H:%M") if event.start_time else "?"
     end = event.end_time.strftime("%Y-%m-%d %H:%M") if event.end_time else "?"
 
-    lines = [f"{prefix}: [[[{event.title}|{urn}]]]"]
+    lines = [f"{prefix}: {_event_mention(event)}"]
 
     time_parts = []
     if event.is_all_day:
@@ -100,11 +103,7 @@ async def _format_event_result(
     if event.recurrence_pattern and event.recurrence_pattern != RecurrencePattern.NONE:
         fields.append(f"Recurrence: {event.recurrence_pattern.value}")
     if ctx is not None:
-        master_id = event.id
-        raw = str(master_id)
-        if OCCURRENCE_ID_SEPARATOR in raw:
-            master_id = UUID(raw.split(OCCURRENCE_ID_SEPARATOR)[0])
-        urn = f"urn:uniffy:content:CALENDAR_EVENT:{master_id}"
+        urn = _event_urn(event.id)
         tag_ops = TagOperations(ctx.session, ctx.search_indexer)
         tags_by_urn = await tag_ops.get_for_urns(
             organization_id=ctx.organization_id,
@@ -125,15 +124,8 @@ async def _format_event_result(
     return "\n".join(lines)
 
 
-# Executors
-
-
 async def _hidden_event_master_ids(ctx: ToolContext, events: list) -> set[UUID]:
-    """Master ids of PRIVATE events whose details the acting user may not see.
-
-    Tools run with the human user's identity, so a private event another
-    member shared with them still reads as a busy block in LLM context.
-    """
+    """Private events stay busy-only for shared viewers who are not attendees."""
     from sqlalchemy import select
 
     from uniffy.core.models.calendar.attendee import EventAttendee
@@ -157,7 +149,6 @@ async def _hidden_event_master_ids(ctx: ToolContext, events: list) -> set[UUID]:
 
 
 async def _execute_list_events(ctx: ToolContext, args: dict) -> ToolResult:
-    """List calendar events in a date range."""
     from uniffy.domains.scheduling.calendar.operations import CalendarEventReader
 
     start_str = args.get("start_date", "")
@@ -179,7 +170,6 @@ async def _execute_list_events(ctx: ToolContext, args: dict) -> ToolResult:
             error=("Invalid date format. Use ISO 8601 (e.g. 2026-02-22T10:00:00Z or 2026-02-22)."),
         )
 
-    # Optional filters
     calendar_ids: list[UUID] | None = None
     category_ids: list[UUID] | None = None
 
@@ -214,14 +204,13 @@ async def _execute_list_events(ctx: ToolContext, args: dict) -> ToolResult:
     for ev in events:
         start = ev.start_time.strftime("%Y-%m-%d %H:%M") if ev.start_time else "?"
         end = ev.end_time.strftime("%Y-%m-%d %H:%M") if ev.end_time else "?"
-        urn = f"urn:uniffy:content:CALENDAR_EVENT:{ev.id}"
         master = UUID(str(ev.id).split(OCCURRENCE_ID_SEPARATOR)[0])
 
         if master in hidden_ids:
             lines.append(f"- Busy ({start} to {end}) [private]")
             continue
 
-        parts = [f"- [[[{ev.title}|{urn}]]] ({start} to {end})"]
+        parts = [f"- {_event_mention(ev)} ({start} to {end})"]
         if ev.is_all_day:
             parts.append("[all-day]")
         if ev.status != EventStatus.CONFIRMED:
@@ -241,7 +230,6 @@ async def _execute_list_events(ctx: ToolContext, args: dict) -> ToolResult:
 
 
 async def _execute_read_event(ctx: ToolContext, args: dict) -> ToolResult:
-    """Read a single calendar event with full details including attendees."""
     from uniffy.domains.scheduling.calendar.operations import CalendarEventReader
 
     event_id_str = args.get("event_id", "")
@@ -524,7 +512,6 @@ async def _execute_update_event(ctx: ToolContext, args: dict) -> ToolResult:
 
 
 async def _execute_delete_event(ctx: ToolContext, args: dict) -> ToolResult:
-    """Delete a calendar event."""
     from uniffy.domains.scheduling.calendar.operations import CalendarEventOperations
 
     event_id_str = args.get("event_id", "")
@@ -546,7 +533,6 @@ async def _execute_delete_event(ctx: ToolContext, args: dict) -> ToolResult:
 
 
 async def _execute_add_attendees(ctx: ToolContext, args: dict) -> ToolResult:
-    """Add attendees to a calendar event."""
     from uniffy.core.models.shared import AttendeeRole
     from uniffy.domains.scheduling.calendar.operations import CalendarEventOperations
 
@@ -594,17 +580,15 @@ async def _execute_add_attendees(ctx: ToolContext, args: dict) -> ToolResult:
         call_lifecycle=ctx.required_call_lifecycle,
     )
 
-    urn = f"urn:uniffy:content:CALENDAR_EVENT:{event.id}"
     return ToolResult(
         success=True,
         data=(
-            f"Added {len(att_ids)} attendee(s) to [[[{event.title}|{urn}]]]"  # type: ignore[arg-type]
+            f"Added {len(att_ids)} attendee(s) to {_event_mention(event)}"  # type: ignore[arg-type]
         ),
     )
 
 
 async def _execute_remove_attendees(ctx: ToolContext, args: dict) -> ToolResult:
-    """Remove attendees from a calendar event."""
     from uniffy.domains.scheduling.calendar.operations import CalendarEventOperations
 
     event_id_str = args.get("event_id", "")
@@ -636,17 +620,15 @@ async def _execute_remove_attendees(ctx: ToolContext, args: dict) -> ToolResult:
         call_lifecycle=ctx.required_call_lifecycle,
     )
 
-    urn = f"urn:uniffy:content:CALENDAR_EVENT:{event.id}"
     return ToolResult(
         success=True,
         data=(
-            f"Removed {len(att_ids)} attendee(s) from [[[{event.title}|{urn}]]]"  # type: ignore[arg-type]
+            f"Removed {len(att_ids)} attendee(s) from {_event_mention(event)}"  # type: ignore[arg-type]
         ),
     )
 
 
 async def _execute_rsvp(ctx: ToolContext, args: dict) -> ToolResult:
-    """Update the current user's attendance status for an event."""
     from uniffy.core.models.shared import AttendeeStatus
     from uniffy.domains.scheduling.calendar.operations import CalendarEventOperations
 
@@ -685,7 +667,6 @@ async def _execute_rsvp(ctx: ToolContext, args: dict) -> ToolResult:
 
 
 async def _execute_list_categories(ctx: ToolContext, args: dict) -> ToolResult:
-    """List available event categories."""
     from uniffy.domains.scheduling.calendar.operations import CategoryOperations
 
     ops = CategoryOperations(ctx.session)
@@ -705,8 +686,6 @@ async def _execute_list_categories(ctx: ToolContext, args: dict) -> ToolResult:
 
     return ToolResult(success=True, data="\n".join(lines))
 
-
-# Shared schema fragments
 
 _DATETIME_DESC = (
     "ISO 8601 datetime in the user's local time "
@@ -756,8 +735,6 @@ _ATTENDEE_IDS_SCHEMA = {
     "description": "List of user UUIDs to invite as attendees.",
 }
 
-
-# Tool definitions
 
 list_events = ToolDefinition(
     name="calendar.list_events",

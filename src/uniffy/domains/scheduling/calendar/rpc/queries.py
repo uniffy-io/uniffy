@@ -49,23 +49,23 @@ class EventQueryHandlers:
     ) -> GetEventResponse:
         user_id = current_user_id()
         organization_id = resolve_organization_id(request.organization_id)
-        event_id = parse_event_id(request.event_id)
 
         try:
             async with open_session() as session:
                 operations = CalendarEventReader(session)
                 event, attendees = await operations.get_event_with_attendees(
-                    user_id, organization_id, event_id
+                    user_id, organization_id, request.event_id
                 )
+                event_id = parse_event_id(str(event.id))
                 room_info = await get_event_room_info(session, event_id)
-                tags_by_urn = await hydrate_event_tags(session, organization_id, [event.id])
+                tags_by_urn = await hydrate_event_tags(session, organization_id, [event_id])
                 user_role = await operations._resolve_role(user_id, organization_id, event)
                 return GetEventResponse(
                     event=event_to_proto(
                         event,
                         attendees,
                         tags=tags_by_urn.get(
-                            build_content_urn(ContentType.CALENDAR_EVENT, event.id),
+                            build_content_urn(ContentType.CALENDAR_EVENT, event_id),
                             [],
                         ),
                         user_role=user_role,

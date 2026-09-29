@@ -64,7 +64,7 @@ class CronTaskOperations(BaseContentOperations[AgentCronTask]):
         return model.name
 
     def _get_url_path(self, model: AgentCronTask) -> str:
-        return f"/agents/{model.agent_id}/cron/{model.id}"
+        return f"/agents/automations/{model.id}"
 
     def _get_search_description(self, model: AgentCronTask) -> str | None:
         if model.description:

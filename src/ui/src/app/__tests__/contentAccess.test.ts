@@ -132,4 +132,35 @@ describe("parent access refresh", () => {
     expect(store.getState().projects.tasks[task.id]).toEqual(task);
     expect(store.getState().projectsUi.isDetailPanelOpen).toBe(true);
   });
+
+  it("keeps a linked task selected while its project and tasks are loading", () => {
+    const store = makeStore();
+    const project = { id: "project", userRole: 1 } as Project;
+    const task = { id: "task", projectId: project.id } as Task;
+    store.dispatch(setCurrentProject(project.id));
+    store.dispatch(selectTask(task.id));
+    store.dispatch(openDetailPanel());
+
+    store.dispatch(fetchProjects.fulfilled([project], "projects"));
+    expect(store.getState().projectsUi).toMatchObject({
+      selectedTaskId: task.id,
+      isDetailPanelOpen: true,
+    });
+    store.dispatch(fetchProjectTasks.fulfilled([task], "tasks", project.id));
+    expect(store.getState().projects.tasks[task.id]).toEqual(task);
+    expect(store.getState().projectsUi.selectedTaskId).toBe(task.id);
+  });
+
+  it("closes an unloaded task when its routed project is inaccessible", () => {
+    const store = makeStore();
+    store.dispatch(setCurrentProject("denied-project"));
+    store.dispatch(selectTask("unloaded-task"));
+    store.dispatch(openDetailPanel());
+
+    store.dispatch(fetchProjects.fulfilled([], "projects"));
+    expect(store.getState().projectsUi).toMatchObject({
+      selectedTaskId: null,
+      isDetailPanelOpen: false,
+    });
+  });
 });
