@@ -10,6 +10,7 @@ from sqlalchemy import select
 
 from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.models.rooms.room import Room
+from uniffy.core.types import RecurrencePattern
 from uniffy.domains.calls.channels import CallsLifecycle
 from uniffy.domains.scheduling.calendar import queries as calendar_queries
 from uniffy.domains.scheduling.calendar.operations import CalendarEventOperations
@@ -53,7 +54,7 @@ async def seed_events(
         start = ctx.local_datetime(spec.day_offset, spec.start)
         end = start + timedelta(minutes=spec.duration_minutes)
 
-        existing_id = await _find_event_id(ctx, spec.title, start)
+        existing_id = await _find_event_id(ctx, spec, start)
         if existing_id is not None:
             registry.register(EVENT, spec.title, existing_id)
             result.skipped += 1
@@ -112,7 +113,7 @@ async def apply_event_mentions(
             continue
 
         start = ctx.local_datetime(spec.day_offset, spec.start)
-        event_id = await _find_event_id(ctx, spec.title, start)
+        event_id = await _find_event_id(ctx, spec, start)
         if event_id is None:
             continue
 
@@ -141,18 +142,20 @@ async def _room_ids(ctx: DemoContext) -> dict[str, UUID]:
     return {row.name: row.id for row in rows}
 
 
-async def _find_event_id(ctx: DemoContext, title: str, start: datetime) -> UUID | None:
-    return (
-        (
-            await ctx.session.execute(
-                select(CalendarEvent.id).where(
-                    CalendarEvent.organization_id == ctx.organization_id,
-                    CalendarEvent.title == title,
-                    CalendarEvent.start_time == start,
-                    CalendarEvent.is_deleted == False,  # noqa: E712
-                )
-            )
-        )
-        .scalars()
-        .first()
+async def _find_event_id(ctx: DemoContext, spec: EventSpec, start: datetime) -> UUID | None:
+    """A recurring series already covers every week, so it matches on title and pattern alone;
+    matching on this week's start would seed a second copy of it on each new week."""
+    query = select(CalendarEvent.id).where(
+        CalendarEvent.organization_id == ctx.organization_id,
+        CalendarEvent.title == spec.title,
+        CalendarEvent.recurrence_id.is_(None),
+        CalendarEvent.is_deleted == False,  # noqa: E712
     )
+    if spec.recurrence_pattern != RecurrencePattern.NONE:
+        query = query.where(
+            CalendarEvent.organizer_id == ctx.actor_id,
+            CalendarEvent.recurrence_pattern == spec.recurrence_pattern,
+        )
+    else:
+        query = query.where(CalendarEvent.start_time == start)
+    return (await ctx.session.execute(query.order_by(CalendarEvent.created_at))).scalars().first()
