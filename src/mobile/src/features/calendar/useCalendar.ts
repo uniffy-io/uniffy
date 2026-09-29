@@ -1,13 +1,17 @@
+import { useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { create } from "@bufbuild/protobuf";
 import { TimestampSchema } from "@bufbuild/protobuf/wkt";
 import { useAuth } from "@core/providers/AuthContext";
 import { calendarApi } from "@features/calendar/calendarApi";
+import { calendarLabel } from "@features/calendar/calendarList";
 import {
   activityToPlain,
+  calendarToPlain,
   eventToPlain,
   categoryToPlain,
   templateToPlain,
+  type SerializedCalendar,
 } from "@features/calendar/calendarSerializer";
 
 function isoToTimestamp(iso: string) {
@@ -94,6 +98,45 @@ export function useCategories() {
         organizationId: organizationId!,
       });
       return response.categories.map(categoryToPlain);
+    },
+    enabled: !!organizationId,
+  });
+}
+
+export const calendarsQueryKey = (organizationId: string | null | undefined) => [
+  "calendars",
+  organizationId,
+];
+
+/** The member's calendars in the server's list order. */
+export function useCalendars() {
+  const { organizationId, user } = useAuth();
+  const userId = user?.id;
+
+  return useQuery({
+    queryKey: calendarsQueryKey(organizationId),
+    queryFn: async () => {
+      const response = await calendarApi.listCalendars({ organizationId: organizationId! });
+      return response.calendars.map(calendarToPlain);
+    },
+    select: useCallback(
+      (calendars: SerializedCalendar[]) =>
+        calendars.map((calendar) => ({ ...calendar, label: calendarLabel(calendar, userId) })),
+      [userId],
+    ),
+    enabled: !!organizationId,
+  });
+}
+
+/** What the org policy lets this member do with calendars; the server enforces it regardless. */
+export function useCalendarPolicy() {
+  const { organizationId } = useAuth();
+
+  return useQuery({
+    queryKey: ["calendar-policy", organizationId],
+    queryFn: async () => {
+      const response = await calendarApi.getCalendarPolicy({ organizationId: organizationId! });
+      return { canShareCalendarsOrgWide: response.canShareCalendarsOrgWide };
     },
     enabled: !!organizationId,
   });

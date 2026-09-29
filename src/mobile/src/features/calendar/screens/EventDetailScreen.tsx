@@ -41,7 +41,7 @@ import { RecurrenceScopeSheet } from "@features/calendar/components/RecurrenceSc
 import { useAuth } from "@core/providers/AuthContext";
 import { roleCanDelete, roleCanEdit } from "@shared/permissions/contentRoles";
 import { userFacingError } from "@shared/lib/userFacingError";
-import { useEvent, useCategories } from "@features/calendar/useCalendar";
+import { useCalendars, useEvent, useCategories } from "@features/calendar/useCalendar";
 import { formatCalendarDate, OCCURRENCE_SEPARATOR } from "@features/calendar/calendarSerializer";
 import { zonedDayKey } from "@shared/lib/zonedTime";
 import { RSVP_COLORS, RSVP_OPTIONS } from "@features/calendar/rsvp";
@@ -79,6 +79,7 @@ export function EventDetailScreen() {
   const { user } = useAuth();
   const eventQuery = useEvent(id);
   const categoriesQuery = useCategories();
+  const calendarsQuery = useCalendars();
   const deleteEvent = useDeleteEvent();
   const addAttendees = useAddAttendees();
   const removeAttendees = useRemoveAttendees();
@@ -150,9 +151,10 @@ export function EventDetailScreen() {
   const event = eventQuery.data;
   if (!event) return null;
 
-  // Get event color from category
   const category = categoriesQuery.data?.find((c) => c.id === event.categoryId);
-  const eventColor = category?.color || T.accent;
+  // Attendees can open an event on a calendar they cannot see, so the calendar may be missing.
+  const calendar = calendarsQuery.data?.find((c) => c.id === event.calendarId);
+  const eventColor = calendar?.color || category?.color || T.accent;
 
   // Attendee ids ARE user ids (proto `Attendee.id`), so they feed the picker's
   // selection and the add/remove calls without a lookup.
@@ -311,16 +313,30 @@ export function EventDetailScreen() {
           </View>
         </View>
 
-        {/* Category badge */}
-        {category && (
-          <View
-            style={[
-              styles.categoryBadge,
-              { backgroundColor: eventColor + "14", borderColor: eventColor + "30" },
-            ]}
-          >
-            <View style={[styles.categoryBadgeDot, { backgroundColor: eventColor }]} />
-            <Text style={[styles.categoryBadgeText, { color: eventColor }]}>{category.name}</Text>
+        {(calendar || category) && (
+          <View style={styles.badgeRow}>
+            {[
+              calendar && { id: calendar.id, name: calendar.label, color: calendar.color },
+              category,
+            ].map((badge) =>
+              badge ? (
+                <View
+                  key={badge.id}
+                  style={[
+                    styles.categoryBadge,
+                    { backgroundColor: badge.color + "14", borderColor: badge.color + "30" },
+                  ]}
+                >
+                  <View style={[styles.categoryBadgeDot, { backgroundColor: badge.color }]} />
+                  <Text
+                    style={[styles.categoryBadgeText, { color: badge.color }]}
+                    numberOfLines={1}
+                  >
+                    {badge.name}
+                  </Text>
+                </View>
+              ) : null,
+            )}
           </View>
         )}
 
@@ -811,6 +827,7 @@ const styles = StyleSheet.create({
   tagsRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   tag: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8 },
   tagText: { fontSize: 12, fontFamily: FONT.medium },
+  badgeRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   categoryBadge: {
     flexDirection: "row",
     alignItems: "center",

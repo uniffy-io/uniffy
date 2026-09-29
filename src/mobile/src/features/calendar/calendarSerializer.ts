@@ -1,4 +1,5 @@
 import type {
+  Calendar,
   CalendarEvent,
   Category,
   EventActivity,
@@ -8,6 +9,7 @@ import { formatRelativeSeconds } from "@shared/lib/dateFormatting";
 import {
   AttendeeRole,
   AttendeeStatus,
+  CalendarListSection,
   DayOfWeek,
   EventStatus,
   EventTransparency,
@@ -77,6 +79,8 @@ export interface SerializedEvent {
   /** Bound chat channel for a Uniffy online meeting. Read-only on mobile. */
   channelId?: string;
   calendarId: string;
+  /** Set on an edited occurrence: the series row it belongs to. */
+  recurrenceId?: string;
   categoryId: string;
   /** Event creator; the "Mine" scope matches this or an attendee. */
   organizerId: string;
@@ -110,6 +114,45 @@ export interface SerializedCategory {
   name: string;
   color: string;
   icon?: string;
+}
+
+export type CalendarSection = "mine" | "shared" | "organization";
+
+export interface SerializedCalendar {
+  id: string;
+  ownerId: string;
+  ownerName: string;
+  name: string;
+  /** What this member sees; `useCalendars` names a colleague's default after its owner. */
+  label: string;
+  color: string;
+  isDefault: boolean;
+  /** Caller's effective role, advisory only - the backend stays the gate. */
+  userRole: ContentRole;
+  /** Hidden for the caller only; the server leaves its events out of range reads. */
+  isHidden: boolean;
+  section: CalendarSection;
+}
+
+const CALENDAR_SECTION: Record<number, CalendarSection> = {
+  [CalendarListSection.MINE]: "mine",
+  [CalendarListSection.SHARED]: "shared",
+  [CalendarListSection.ORGANIZATION]: "organization",
+};
+
+export function calendarToPlain(calendar: Calendar): SerializedCalendar {
+  return {
+    id: calendar.id,
+    ownerId: calendar.ownerId,
+    ownerName: calendar.ownerName,
+    name: calendar.name,
+    label: calendar.name,
+    color: calendar.color,
+    isDefault: calendar.isDefault,
+    userRole: calendar.userRole,
+    isHidden: calendar.isHidden,
+    section: CALENDAR_SECTION[calendar.section] ?? "mine",
+  };
 }
 
 const ATTENDEE_STATUS: Record<number, string> = {
@@ -246,6 +289,7 @@ export function eventToPlain(event: CalendarEvent): SerializedEvent {
     meetingUrl: event.meetingUrl,
     channelId: event.channelId,
     calendarId: event.calendarId,
+    recurrenceId: event.recurrenceId || undefined,
     categoryId: event.categoryId,
     organizerId: event.organizerId,
     userRole: event.userRole,

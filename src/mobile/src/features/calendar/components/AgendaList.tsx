@@ -5,11 +5,7 @@ import { useTheme } from "@shared/hooks/useTheme";
 import { FONT } from "@theme/typography";
 import { zonedDayKey } from "@shared/lib/zonedTime";
 import { eventDisplayState } from "@features/calendar/eventDisplay";
-import {
-  formatCalendarDate,
-  type SerializedCategory,
-  type SerializedEvent,
-} from "@features/calendar/calendarSerializer";
+import { formatCalendarDate, type SerializedEvent } from "@features/calendar/calendarSerializer";
 
 interface DateGroup {
   key: string;
@@ -26,7 +22,7 @@ function nextDayKey(key: string): string {
 
 export function AgendaList({
   events,
-  categoriesMap,
+  colorOf,
   liveChannelIds,
   bottomPad,
   onEventPress,
@@ -34,7 +30,7 @@ export function AgendaList({
   onRefresh,
 }: {
   events: SerializedEvent[];
-  categoriesMap: Map<string, SerializedCategory>;
+  colorOf: (event: SerializedEvent) => string;
   liveChannelIds: ReadonlySet<string>;
   bottomPad: number;
   onEventPress: (id: string) => void;
@@ -106,8 +102,7 @@ export function AgendaList({
           <Text style={[styles.groupLabel, { color: T.textDim }]}>{group.label}</Text>
           {group.events.map((event) => {
             const display = eventDisplayState(event);
-            const category = event.categoryId ? categoriesMap.get(event.categoryId) : undefined;
-            const color = category?.color || T.accent;
+            const color = colorOf(event);
             const live =
               !!event.channelId &&
               liveChannelIds.has(event.channelId) &&
