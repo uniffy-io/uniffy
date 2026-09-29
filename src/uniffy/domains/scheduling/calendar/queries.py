@@ -1,10 +1,11 @@
 """Calendar-specific database queries."""
 
 from collections.abc import Sequence
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy import and_, select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.errors import NotFoundError
@@ -13,6 +14,7 @@ from uniffy.core.models.calendar.calendar import Calendar
 from uniffy.core.models.calendar.category import Category
 from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.models.login.user import User
+from uniffy.core.types import AccessMode, CalendarType, generate_id
 
 
 async def get_events_in_range(
@@ -120,6 +122,7 @@ async def get_default_calendar(
                 Calendar.organization_id == organization_id,
                 Calendar.owner_id == owner_id,
                 Calendar.is_default == True,  # noqa: E712
+                Calendar.is_deleted == False,  # noqa: E712
             )
         )
         .limit(1)
@@ -154,21 +157,35 @@ async def ensure_default_calendar(
     if calendar:
         return calendar
 
-    # Create default calendar
-    from uniffy.core.models.shared import CalendarType
-
-    calendar = Calendar(
-        organization_id=organization_id,
-        owner_id=owner_id,
-        name="My Calendar",
-        color="#3b82f6",  # Blue
-        is_visible=True,
-        is_default=True,
-        calendar_type=CalendarType.PERSONAL,
+    # Concurrent first requests race on the one-default-per-member index; the
+    # loser reads the winner's row instead of failing.
+    await session.execute(
+        pg_insert(Calendar)
+        .values(
+            id=generate_id(),
+            organization_id=organization_id,
+            owner_id=owner_id,
+            name="My Calendar",
+            description="",
+            color="#3b82f6",
+            is_visible=True,
+            is_default=True,
+            is_deleted=False,
+            calendar_type=CalendarType.PERSONAL,
+            access_mode=AccessMode.OWNER_ONLY,
+            baseline_role=None,
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
+        )
+        .on_conflict_do_nothing(
+            index_elements=[Calendar.organization_id, Calendar.owner_id],
+            index_where=and_(Calendar.is_default, ~Calendar.is_deleted),
+        )
     )
-    session.add(calendar)
     await session.commit()
-    await session.refresh(calendar)
+    calendar = await get_default_calendar(session, organization_id, owner_id)
+    if calendar is None:
+        raise NotFoundError("Calendar", owner_id)
     return calendar
 
 
@@ -217,20 +234,3 @@ async def get_event_for_update(
         .with_for_update()
         .execution_options(populate_existing=True)
     )
-
-
-async def require_own_calendar(
-    session: AsyncSession,
-    user_id: UUID,
-    organization_id: UUID,
-    calendar_id: UUID,
-) -> None:
-    """Calendar containers admit only their active owner."""
-    owner = await session.scalar(
-        select(Calendar.owner_id).where(
-            Calendar.id == calendar_id,
-            Calendar.organization_id == organization_id,
-        )
-    )
-    if owner is None or owner != user_id:
-        raise NotFoundError("Calendar", calendar_id)

@@ -3,7 +3,7 @@
 from collections.abc import Sequence
 from uuid import UUID
 
-from sqlalchemy import or_, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.auth.permissions import ContentAccessQuery
@@ -131,16 +131,7 @@ async def build_content_graph(
         has_capacity = collector.add_rows(task_rows, ContentType.TASK)
 
     if has_capacity:
-        event_filter = await access_query.build_accessible_filter(
-            user_id=user_id,
-            organization_id=organization_id,
-            content_type=ContentType.CALENDAR_EVENT,
-            content_id_column=CalendarEvent.id,
-            owner_id_column=CalendarEvent.organizer_id,
-            access_mode_column=CalendarEvent.access_mode,
-            baseline_role_column=CalendarEvent.baseline_role,
-        )
-        attendee_filter = await CalendarEventReader(session).attendee_access_filter(
+        event_filter = await CalendarEventReader(session).event_access_filter(
             user_id, organization_id
         )
         event_rows = (
@@ -150,7 +141,7 @@ async def build_content_graph(
                     CalendarEvent.organization_id == organization_id,
                     CalendarEvent.is_deleted == False,  # noqa: E712
                     CalendarEvent.outgoing_references.isnot(None),
-                    or_(event_filter, attendee_filter),
+                    event_filter,
                 )
                 .order_by(CalendarEvent.updated_at.desc())
                 .limit(query_limit)

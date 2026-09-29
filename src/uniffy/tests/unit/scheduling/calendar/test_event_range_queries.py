@@ -53,7 +53,7 @@ async def test_inverted_range_is_refused_before_any_query() -> None:
 
 async def test_range_exactly_at_the_cap_is_accepted() -> None:
     operations = _operations()
-    operations.access_query.build_accessible_filter = AsyncMock(side_effect=_ReachedTheQuery)
+    operations.events.event_access_filter = AsyncMock(side_effect=_ReachedTheQuery)
 
     with pytest.raises(_ReachedTheQuery):
         await operations.get_events_in_range(

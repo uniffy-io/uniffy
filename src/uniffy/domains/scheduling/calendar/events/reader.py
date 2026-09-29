@@ -3,6 +3,7 @@
 from datetime import datetime
 from uuid import UUID
 
+from sqlalchemy import ColumnElement
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.errors import NotFoundError, ValidationError
@@ -45,6 +46,7 @@ class CalendarEventReader(EventContentOperations):
         calendar_ids: list[UUID] | None = None,
         category_ids: list[UUID] | None = None,
         channel_id: UUID | None = None,
+        visibility_filter: ColumnElement[bool] | None = None,
     ) -> list[CalendarEvent]:
         return await RecurrenceQueryOperations(self).get_events_in_range(
             user_id,
@@ -54,6 +56,7 @@ class CalendarEventReader(EventContentOperations):
             calendar_ids,
             category_ids,
             channel_id,
+            visibility_filter,
         )
 
     async def _expand_recurring_events(
@@ -86,6 +89,7 @@ class CalendarEventReader(EventContentOperations):
         page_size: int = 50,
         sort_by: str = "start_time",
         sort_order: str = "asc",
+        visibility_filter: ColumnElement[bool] | None = None,
     ) -> tuple[list[CalendarEvent], int]:
         return await EventQueryOperations(self).list_events(
             user_id,
@@ -100,6 +104,7 @@ class CalendarEventReader(EventContentOperations):
             page_size,
             sort_by,
             sort_order,
+            visibility_filter,
         )
 
     async def list_events_in_window(
@@ -134,6 +139,7 @@ class CalendarEventReader(EventContentOperations):
         page_token: str | None = None,
         page_size: int = DEFAULT_PAGE_SIZE,
         sort_order: str = "asc",
+        visibility_filter: ColumnElement[bool] | None = None,
     ) -> EventPage:
         return await EventQueryOperations(self).list_events_page(
             user_id,
@@ -147,6 +153,7 @@ class CalendarEventReader(EventContentOperations):
             page_token,
             page_size,
             sort_order,
+            visibility_filter,
         )
 
     async def get_event_with_attendees(

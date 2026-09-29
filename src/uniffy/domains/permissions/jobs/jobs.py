@@ -12,6 +12,7 @@ from uniffy.core.auth.permissions.defaults import (
 )
 from uniffy.core.jobs import enqueue_job
 from uniffy.core.models.agents.agent import Agent
+from uniffy.core.models.calendar.calendar import Calendar
 from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.models.files.file import File
 from uniffy.core.models.files.folder import Folder
@@ -24,6 +25,10 @@ from uniffy.domains.permissions.jobs.contracts import REINDEX_ORG_CONTENT_FOR_DE
 from uniffy.domains.projects.search.access import (
     enqueue_project_search_acl_refresh,
     record_project_search_acl_refresh,
+)
+from uniffy.domains.scheduling.calendar.operations import (
+    enqueue_calendar_search_acl_refresh,
+    record_calendar_search_acl_refresh,
 )
 from uniffy.infrastructure.database import open_session
 from uniffy.vendor.arq import Retry
@@ -39,6 +44,7 @@ _MODELS: dict[ContentType, Any] = {
     ContentType.FOLDER: Folder,
     ContentType.PROJECT: Project,
     ContentType.CALENDAR_EVENT: CalendarEvent,
+    ContentType.CALENDAR: Calendar,
     ContentType.AGENT: Agent,
     ContentType.ROOM: Room,
 }
@@ -64,6 +70,7 @@ async def reindex_org_content_for_defaults(
     search_indexer = cast(SearchIndexer, ctx[SEARCH_INDEXER_CTX_KEY])
     cursor = UUID(after_id) if after_id else None
     project_refresh_ids: list[UUID] = []
+    calendar_refresh_ids: list[UUID] = []
     async with open_session() as session:
         rows = list(
             (await session.execute(_keyset_query(model_cls, org_id, cursor))).scalars().all()
@@ -87,6 +94,10 @@ async def reindex_org_content_for_defaults(
             if content_type == ContentType.PROJECT:
                 await record_project_search_acl_refresh(session, org_id, row.id)
                 project_refresh_ids.append(row.id)
+            elif content_type == ContentType.CALENDAR:
+                # Its events carry the calendar's audience as search hints.
+                await record_calendar_search_acl_refresh(session, org_id, row.id)
+                calendar_refresh_ids.append(row.id)
 
         try:
             await search_indexer.update_access_policy_bulk(org_id, items)
@@ -100,6 +111,8 @@ async def reindex_org_content_for_defaults(
 
     for project_id in project_refresh_ids:
         await enqueue_project_search_acl_refresh(project_id)
+    for calendar_id in calendar_refresh_ids:
+        await enqueue_calendar_search_acl_refresh(calendar_id)
 
     has_more = len(rows) == REINDEX_BATCH_SIZE
     if has_more:

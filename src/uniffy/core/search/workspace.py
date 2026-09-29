@@ -24,10 +24,12 @@ from uniffy.core.search.policy import (
     SEARCH_HIT_FIELDS,
     WORKSPACE_SEARCH_SCHEMA,
     SearchCandidateScope,
+    SearchContainerAccess,
     SearchDocumentInput,
     build_candidate_filter,
     build_document_id,
     build_search_document,
+    container_fields,
 )
 
 logger = logger.bind(component="search.workspace")
@@ -200,6 +202,22 @@ class WorkspaceSearch:
                 "blocked_group_ids": [str(value) for value in blocked_group_ids],
             },
         )
+
+    async def update_container_access(
+        self,
+        document_ids: list[str],
+        container: SearchContainerAccess,
+    ) -> int:
+        """Patch known documents by id; one not indexed yet gets the fields when it is."""
+        if not document_ids:
+            return 0
+        changes = container_fields(container)
+        await self.engine.patch_documents(
+            [{"id": document_id, **changes} for document_id in document_ids],
+            create_missing=False,
+            wait=True,
+        )
+        return len(document_ids)
 
     async def _patch_matching(
         self,

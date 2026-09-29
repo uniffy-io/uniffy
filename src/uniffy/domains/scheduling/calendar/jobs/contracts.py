@@ -35,8 +35,31 @@ DISPATCH_EVENT_MAIL_SCHEDULE = JobRef(
     ),
 )
 
-CALENDAR_JOB_REFS = (SEND_EVENT_MAIL,)
+REFRESH_CALENDAR_SEARCH_ACL = JobRef(
+    name="refresh_calendar_search_acl",
+    queue=QueueName.CORE,
+    workload=JobWorkload.CONTROL,
+    reliability=JobReliability.DURABLE,
+    recovery=JobRecovery(
+        fact="calendar_search_acl_refresh_queue row",
+        trigger="35-second recovery schedule",
+    ),
+)
+
+FLUSH_CALENDAR_SEARCH_ACL_REFRESHES_SCHEDULE = JobRef(
+    name="cron:flush_calendar_search_acl_refreshes",
+    queue=QueueName.CORE,
+    workload=JobWorkload.CONTROL,
+    reliability=JobReliability.DURABLE,
+    recovery=JobRecovery(
+        fact="calendar_search_acl_refresh_queue rows",
+        trigger="35-second core schedule",
+    ),
+)
+
+CALENDAR_JOB_REFS = (SEND_EVENT_MAIL, REFRESH_CALENDAR_SEARCH_ACL)
 CALENDAR_SCHEDULED_JOB_REFS = (
     CHECK_CALENDAR_REMINDERS_SCHEDULE,
     DISPATCH_EVENT_MAIL_SCHEDULE,
+    FLUSH_CALENDAR_SEARCH_ACL_REFRESHES_SCHEDULE,
 )

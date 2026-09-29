@@ -4,10 +4,10 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from uniffy.core.auth.permissions.checker import PermissionChecker
 from uniffy.core.auth.permissions.roles import role_can_manage
 from uniffy.core.content.references import parse_urn
 from uniffy.core.content.registry import get_content_loader
+from uniffy.core.content.roles import resolve_content_role
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models.chat.channel import ChannelType, ChatChannel
 from uniffy.core.models.permissions.content_access_request import ContentAccessRequest
@@ -128,14 +128,13 @@ class AccessRequestTargetResolver:
             )
 
         row = target.canonical_row
-        role = await PermissionChecker(self.session).effective_role(
+        role = await resolve_content_role(
+            self.session,
             user_id=user_id,
             organization_id=organization_id,
             content_type=target.canonical_content_type,
             content_id=target.canonical_content_id,
-            owner_id=row.owner_id,
-            access_mode=row.access_mode,
-            baseline_role=row.baseline_role,
+            content=row,
         )
         return role_can_manage(role)
 

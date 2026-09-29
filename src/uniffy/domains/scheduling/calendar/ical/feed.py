@@ -12,15 +12,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.crypto import ReEncryptingConsumer, register_consumer
 from uniffy.core.crypto.org_cipher import OrgCipher
+from uniffy.core.errors import NotFoundError
 from uniffy.core.models.calendar.calendar import Calendar
 from uniffy.core.models.calendar.feed_token import CalendarFeedToken
 from uniffy.core.models.login.organization import Organization
 from uniffy.core.models.login.organization_member import OrganizationMember
 from uniffy.core.models.login.user import User
+from uniffy.domains.scheduling.calendar.calendars.access import require_calendar_view
 from uniffy.domains.scheduling.calendar.events.reader import CalendarEventReader
 from uniffy.domains.scheduling.calendar.ical.assemble import build_exports
 from uniffy.domains.scheduling.calendar.ical.emit import serialize_events
-from uniffy.domains.scheduling.calendar.queries import require_own_calendar
 
 logger = logger.bind(component="scheduling.calendar.ical.feed")
 
@@ -57,7 +58,7 @@ async def issue_feed(
     organization_id: UUID,
     calendar_id: UUID,
 ) -> tuple[str, CalendarFeedToken]:
-    await require_own_calendar(session, user_id, organization_id, calendar_id)
+    await require_calendar_view(session, user_id, organization_id, calendar_id)
 
     raw_token = secrets.token_urlsafe(TOKEN_BYTES)
     envelope = await OrgCipher(session).encrypt(organization_id, raw_token)
@@ -91,7 +92,7 @@ async def read_feed(
     organization_id: UUID,
     calendar_id: UUID,
 ) -> tuple[str, CalendarFeedToken] | None:
-    await require_own_calendar(session, user_id, organization_id, calendar_id)
+    await require_calendar_view(session, user_id, organization_id, calendar_id)
     row = await _load_own(session, user_id, organization_id, calendar_id)
     if row is None:
         return None
@@ -106,8 +107,11 @@ async def revoke_feed(
     organization_id: UUID,
     calendar_id: UUID,
 ) -> bool:
-    """Delete the subscription. Every URL handed out for it stops resolving."""
-    await require_own_calendar(session, user_id, organization_id, calendar_id)
+    """Delete the subscription. Every URL handed out for it stops resolving.
+
+    Only the caller's own token goes, so no calendar access is needed: someone
+    who lost the calendar can still withdraw the URL they handed out.
+    """
     result = await session.execute(
         delete(CalendarFeedToken).where(
             CalendarFeedToken.calendar_id == calendar_id,
@@ -127,13 +131,10 @@ async def resolve_feed(session: AsyncSession, raw_token: str) -> CalendarFeedTok
         return None
     if not await _subscriber_is_active(session, row):
         return None
-    calendar = await session.scalar(
-        select(Calendar.id).where(
-            Calendar.id == row.calendar_id,
-            Calendar.organization_id == row.organization_id,
-        )
-    )
-    if calendar is None:
+    # A subscription outlives the share that allowed it; losing the calendar ends it.
+    try:
+        await require_calendar_view(session, row.user_id, row.organization_id, row.calendar_id)
+    except NotFoundError:
         return None
     return row
 
