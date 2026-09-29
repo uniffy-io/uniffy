@@ -29,6 +29,7 @@ enum ContentType {
   CONTENT_TYPE_TAG = 15;
   CONTENT_TYPE_AGENT_FOLDER = 16;
   CONTENT_TYPE_TEAM = 17;
+  CONTENT_TYPE_CALENDAR = 18;
 }
 
 // SubjectType defines who can be granted permissions or participate in
