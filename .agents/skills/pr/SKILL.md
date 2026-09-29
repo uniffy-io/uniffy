@@ -58,8 +58,8 @@ Create or update a GitHub Pull Request for the current branch.
    - Never use emojis.
 
 8. **Create or update the PR:**
-   - **If a PR exists:** Update its body using `gh pr edit <number> --body "<body>"`. Keep the existing title unless it is clearly wrong.
-   - **If no PR exists:** Push the branch with `git push -u origin <branch>` if needed, then create the PR using `gh pr create --title "<title>" --body "<body>"`. The title should be short (under 70 chars), in imperative mood, and reflect the overall theme of the branch.
+   - **If a PR exists:** Update its body using `gh pr edit <number> --body "<body>"`. Keep the existing title unless it is clearly wrong or does not match the `[TYPE] Area: summary` convention below.
+   - **If no PR exists:** Push the branch with `git push -u origin <branch>` if needed, then create the PR using `gh pr create --title "<title>" --body "<body>"`. The title follows the repo convention `[TYPE] Area: summary`, where TYPE is `FEAT`, `FIX`, or `CHORE` (upper case, in brackets) and Area is the main domain touched (for example `Projects`, `Chat`, `Calls`, `Agents`, `Deploy`, `Docs`). The summary is lowercase after the colon, in imperative or plain noun style, and reflects the overall theme of the branch. Keep it short, ideally under 80 chars. Check `gh pr list --state all --limit 20` if unsure about area names. Do not use conventional-commit prefixes like `fix(scope):` in PR titles.
    - Always pass the body via a HEREDOC for correct formatting.
 
 9. **Report back.** Print the PR URL so the user can open it.
