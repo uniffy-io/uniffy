@@ -133,6 +133,8 @@ export function AccessPolicyPanel({
     setTransferring(true);
     try {
       await transfer(subject.id);
+      // The previous owner stays on as an admin member, which the response does not carry.
+      await refresh();
     } finally {
       setTransferring(false);
     }
