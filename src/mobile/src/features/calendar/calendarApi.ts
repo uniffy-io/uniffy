@@ -8,13 +8,16 @@ import {
   CreateEventTemplateRequestSchema,
   DeleteCategoryRequestSchema,
   DeleteEventRequestSchema,
+  GetCalendarPolicyRequestSchema,
   GetEventRequestSchema,
   GetEventsInRangeRequestSchema,
+  ListCalendarsRequestSchema,
   ListCategoriesRequestSchema,
   ListEventActivitiesRequestSchema,
   ListEventTemplatesRequestSchema,
   ListEventsRequestSchema,
   RemoveAttendeesRequestSchema,
+  SetCalendarVisibilityRequestSchema,
   UpdateAttendeeStatusRequestSchema,
   UpdateCategoryRequestSchema,
   UpdateEventRequestSchema,
@@ -40,6 +43,15 @@ export const calendarApi = {
 
   getEventsInRange: (request: MessageInitShape<typeof GetEventsInRangeRequestSchema>) =>
     client.getEventsInRange(request),
+
+  listCalendars: (request: MessageInitShape<typeof ListCalendarsRequestSchema>) =>
+    client.listCalendars(request),
+
+  getCalendarPolicy: (request: MessageInitShape<typeof GetCalendarPolicyRequestSchema>) =>
+    client.getCalendarPolicy(request),
+
+  setCalendarVisibility: (request: MessageInitShape<typeof SetCalendarVisibilityRequestSchema>) =>
+    client.setCalendarVisibility(request),
 
   listCategories: (request: MessageInitShape<typeof ListCategoriesRequestSchema>) =>
     client.listCategories(request),

@@ -1,4 +1,6 @@
 import React, { useState, useMemo, useCallback, useRef, useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { ContentType } from "@uniffy/proto/common/v1/common_pb";
 import {
   View,
   Text,
@@ -30,7 +32,15 @@ import {
   zonedParts,
 } from "@shared/lib/zonedTime";
 import { RecurrenceEditScope } from "@uniffy/proto/cal/v1/calendar_pb";
-import { useEventsInRange, useCategories } from "@features/calendar/useCalendar";
+import {
+  useCalendarPolicy,
+  useCalendars,
+  useEventsInRange,
+  useCategories,
+} from "@features/calendar/useCalendar";
+import { ShareSheet } from "@shared/permissions/ShareSheet";
+import { memberCommitments, resolveEventColor } from "@features/calendar/calendarList";
+import { useAuth } from "@core/providers/AuthContext";
 import { useUpdateEvent } from "@features/calendar/useCalendarMutations";
 import { blocksTime, eventDisplayState } from "@features/calendar/eventDisplay";
 import { CalendarFilterSheet } from "@features/calendar/components/CalendarFilterSheet";
@@ -40,7 +50,11 @@ import { PeriodRail } from "@features/calendar/components/PeriodRail";
 import { railUnitFor, resolveRailSelection, type RailItem } from "@features/calendar/periodRail";
 import { RecurrenceScopeSheet } from "@features/calendar/components/RecurrenceScopeSheet";
 import { OCCURRENCE_SEPARATOR } from "@features/calendar/calendarSerializer";
-import type { SerializedEvent, SerializedCategory } from "@features/calendar/calendarSerializer";
+import type {
+  SerializedCalendar,
+  SerializedCategory,
+  SerializedEvent,
+} from "@features/calendar/calendarSerializer";
 import { useActiveCalls } from "@features/calls/useCallsState";
 import { useTags } from "@features/tags/useTags";
 import { roleCanEdit } from "@shared/permissions/contentRoles";
@@ -178,9 +192,12 @@ function eventCoversDay(event: SerializedEvent, dayKey: string): boolean {
 
 // Timed blocking events only: cancelled and free events overlap without
 // clashing, and all-day events are expected to sit over the whole schedule.
-function dayHasConflict(events: SerializedEvent[]): boolean {
+function dayHasConflict(
+  events: SerializedEvent[],
+  countsAsConflict: (event: SerializedEvent) => boolean,
+): boolean {
   const spans = events
-    .filter((e) => !e.isAllDay && blocksTime(e) && e.startTime)
+    .filter((e) => !e.isAllDay && countsAsConflict(e) && e.startTime)
     .map((e) => {
       const startMin = zonedMinutesSinceMidnight(e.startTime);
       let endMin = e.endTime ? zonedMinutesSinceMidnight(e.endTime) : startMin + 30;
@@ -242,18 +259,6 @@ function packEventColumns(spans: EventSpan[]): Map<string, EventPlacement> {
   return placement;
 }
 
-function getEventColor(
-  event: SerializedEvent,
-  categoriesMap: Map<string, SerializedCategory>,
-  fallback: string,
-): string {
-  if (event.categoryId) {
-    const cat = categoriesMap.get(event.categoryId);
-    if (cat?.color) return cat.color;
-  }
-  return fallback;
-}
-
 const MAX_EVENTS_PER_CELL = 3;
 
 type MonthCell = {
@@ -299,7 +304,8 @@ function MonthGrid({
   today,
   onSelectDate,
   events,
-  categoriesMap,
+  colorOf,
+  countsAsConflict,
   weekStartsOn,
   dayLabels,
   liveChannelIds,
@@ -310,7 +316,8 @@ function MonthGrid({
   today: Date;
   onSelectDate: (d: Date) => void;
   events: SerializedEvent[];
-  categoriesMap: Map<string, SerializedCategory>;
+  colorOf: (event: SerializedEvent) => string;
+  countsAsConflict: (event: SerializedEvent) => boolean;
   weekStartsOn: WeekStartDay;
   dayLabels: string[];
   liveChannelIds: ReadonlySet<string>;
@@ -364,7 +371,7 @@ function MonthGrid({
             const cellEvents = eventsByDate.get(dateKey) ?? [];
             const visibleEvents = cellEvents.slice(0, MAX_EVENTS_PER_CELL);
             const moreCount = cellEvents.length - MAX_EVENTS_PER_CELL;
-            const conflict = dayHasConflict(cellEvents);
+            const conflict = dayHasConflict(cellEvents, countsAsConflict);
 
             return (
               <TouchableOpacity
@@ -396,7 +403,7 @@ function MonthGrid({
                 </View>
                 <View style={styles.monthCellEvents}>
                   {visibleEvents.map((evt) => {
-                    const color = getEventColor(evt, categoriesMap, T.accent);
+                    const color = colorOf(evt);
                     const display = eventDisplayState(evt);
                     return (
                       <View
@@ -446,7 +453,8 @@ function WeekGrid({
   today,
   now,
   events,
-  categoriesMap,
+  colorOf,
+  countsAsConflict,
   bottomPad,
   onSelectDay,
   onEventPress,
@@ -461,7 +469,8 @@ function WeekGrid({
   today: Date;
   now: Date;
   events: SerializedEvent[];
-  categoriesMap: Map<string, SerializedCategory>;
+  colorOf: (event: SerializedEvent) => string;
+  countsAsConflict: (event: SerializedEvent) => boolean;
   bottomPad: number;
   onSelectDay: (d: Date) => void;
   onEventPress: (id: string) => void;
@@ -513,7 +522,7 @@ function WeekGrid({
       // without clashing, so they get geometry above but no flag here.
       const conflictPlace = packEventColumns(
         spans
-          .filter((s) => blocksTime(s.event))
+          .filter((s) => countsAsConflict(s.event))
           .map((s) => ({ id: s.event.id, startMin: s.startMin, endMin: s.endMin })),
       );
       const dayLeft = TIME_COL_WIDTH + dayIdx * dayWidth;
@@ -600,7 +609,7 @@ function WeekGrid({
       });
     }
     return { timedBlocks: out, allDayBars: bars, allDayRows: occupied.length };
-  }, [events, weekDates, dayWidth]);
+  }, [events, weekDates, dayWidth, countsAsConflict]);
 
   const nowParts = zonedParts(now);
   const currentTimeTop = ((nowParts.hour * 60 + nowParts.minute) / 60) * HOUR_HEIGHT;
@@ -653,7 +662,7 @@ function WeekGrid({
               <AllDayEventChip
                 key={b.key}
                 event={b.event}
-                color={getEventColor(b.event, categoriesMap, T.accent)}
+                color={colorOf(b.event)}
                 live={
                   !!b.event.channelId &&
                   liveChannelIds.has(b.event.channelId) &&
@@ -781,7 +790,7 @@ function WeekGrid({
           )}
 
           {timedBlocks.map((b) => {
-            const color = getEventColor(b.event, categoriesMap, T.accent);
+            const color = colorOf(b.event);
             const display = eventDisplayState(b.event);
             return (
               <TouchableOpacity
@@ -860,6 +869,7 @@ export function CalendarScreen() {
   const [focusOnly, setFocusOnly] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
+  const [sharedCalendar, setSharedCalendar] = useState<SerializedCalendar | null>(null);
   const dayScrollRef = useRef<ScrollView>(null);
   const tagsQuery = useTags("");
   const activeCalls = useActiveCalls();
@@ -920,6 +930,27 @@ export function CalendarScreen() {
   }, [categoriesQuery.data]);
 
   const categories = categoriesQuery.data ?? [];
+
+  const calendarsQuery = useCalendars();
+  const calendarPolicy = useCalendarPolicy();
+  const queryClient = useQueryClient();
+  const calendarsById = useMemo(() => {
+    const map = new Map<string, SerializedCalendar>();
+    calendarsQuery.data?.forEach((c) => map.set(c.id, c));
+    return map;
+  }, [calendarsQuery.data]);
+  const { user } = useAuth();
+  const countsAsConflict = useMemo(() => {
+    const ownCalendarIds = new Set(
+      (calendarsQuery.data ?? []).filter((c) => c.section === "mine").map((c) => c.id),
+    );
+    const isMine = memberCommitments(user?.id, ownCalendarIds);
+    return (event: SerializedEvent) => blocksTime(event) && isMine(event);
+  }, [calendarsQuery.data, user?.id]);
+  const colorOf = useCallback(
+    (event: SerializedEvent) => resolveEventColor(event, calendarsById, categoriesMap, T.accent),
+    [calendarsById, categoriesMap, T.accent],
+  );
 
   const toggleCategory = useCallback((catId: string) => {
     setActiveCategoryIds((prev) => {
@@ -1016,7 +1047,7 @@ export function CalendarScreen() {
     // without clashing, so they get geometry but no flag.
     const timedConflict = packEventColumns(
       spans
-        .filter(({ event }) => blocksTime(event))
+        .filter(({ event }) => countsAsConflict(event))
         .map(({ event, startMin, endMin }) => ({ id: event.id, startMin, endMin })),
     );
     const areaWidth = windowWidth - (TIME_COL_WIDTH + 4) - 12;
@@ -1032,7 +1063,7 @@ export function CalendarScreen() {
         conflict: timedConflict.get(event.id)?.conflict ?? false,
       };
     });
-  }, [dayEvents, windowWidth, fontScale]);
+  }, [dayEvents, windowWidth, fontScale, countsAsConflict]);
 
   const rangeEvents = useMemo(() => {
     if (!eventsQuery.data) return [];
@@ -1307,7 +1338,7 @@ export function CalendarScreen() {
             style={styles.iconBtn}
             onPress={() => setFilterSheetOpen(true)}
             hitSlop={HITSLOP}
-            accessibilityLabel="Filter events"
+            accessibilityLabel="Calendars and filters"
           >
             <Funnel
               size={20}
@@ -1369,7 +1400,7 @@ export function CalendarScreen() {
                   <AllDayEventChip
                     key={event.id}
                     event={event}
-                    color={getEventColor(event, categoriesMap, T.accent)}
+                    color={colorOf(event)}
                     live={
                       !!event.channelId &&
                       liveChannelIds.has(event.channelId) &&
@@ -1447,7 +1478,7 @@ export function CalendarScreen() {
 
                   {/* Events positioned on the grid */}
                   {positionedEvents.map(({ event, top, height, left, width, conflict }) => {
-                    const color = getEventColor(event, categoriesMap, T.accent);
+                    const color = colorOf(event);
                     const display = eventDisplayState(event);
                     const attendeeLabel = event.attendees.map((a) => a.name).join(", ");
                     const fit = fitBlockText(height, fontScale);
@@ -1622,7 +1653,8 @@ export function CalendarScreen() {
             today={today}
             now={now}
             events={rangeEvents}
-            categoriesMap={categoriesMap}
+            colorOf={colorOf}
+            countsAsConflict={countsAsConflict}
             bottomPad={bottomPad}
             onSelectDay={(d) => {
               setSelectedDate(new Date(d));
@@ -1665,7 +1697,8 @@ export function CalendarScreen() {
                   setViewMode("day");
                 }}
                 events={rangeEvents}
-                categoriesMap={categoriesMap}
+                colorOf={colorOf}
+                countsAsConflict={countsAsConflict}
                 weekStartsOn={weekStartsOn}
                 dayLabels={dayLabels}
                 liveChannelIds={liveChannelIds}
@@ -1680,7 +1713,7 @@ export function CalendarScreen() {
       ) : (
         <AgendaList
           events={rangeEvents}
-          categoriesMap={categoriesMap}
+          colorOf={colorOf}
           liveChannelIds={liveChannelIds}
           bottomPad={bottomPad}
           onEventPress={(id) => router.push(`/calendar/${id}` as any)}
@@ -1692,6 +1725,11 @@ export function CalendarScreen() {
       <CalendarFilterSheet
         visible={filterSheetOpen}
         onClose={() => setFilterSheetOpen(false)}
+        calendars={calendarsQuery.data ?? []}
+        onShareCalendar={(calendar) => {
+          setFilterSheetOpen(false);
+          setSharedCalendar(calendar);
+        }}
         categories={categories}
         activeCategoryIds={activeCategoryIds}
         onToggle={toggleCategory}
@@ -1703,6 +1741,23 @@ export function CalendarScreen() {
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         onClear={clearFilters}
+      />
+
+      <ShareSheet
+        visible={sharedCalendar !== null}
+        onClose={() => {
+          setSharedCalendar(null);
+          // Leaving a calendar, or opening it to the org, changes this member's list and grid.
+          queryClient.invalidateQueries({ queryKey: ["calendars"] });
+          queryClient.invalidateQueries({ queryKey: ["events-range"] });
+        }}
+        contentType={ContentType.CALENDAR}
+        contentId={sharedCalendar?.id ?? ""}
+        color={sharedCalendar?.color ?? T.accent}
+        // Offer "whole organization" only where the org policy lets this member choose it.
+        hiddenModes={
+          calendarPolicy.data?.canShareCalendarsOrgWide === false ? ["OPEN_TO_ORG"] : undefined
+        }
       />
 
       <RecurrenceScopeSheet

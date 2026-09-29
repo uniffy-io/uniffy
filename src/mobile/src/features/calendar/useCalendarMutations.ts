@@ -1,3 +1,4 @@
+import { Alert } from "react-native";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { create } from "@bufbuild/protobuf";
 import { TimestampSchema } from "@bufbuild/protobuf/wkt";
@@ -12,9 +13,12 @@ import {
 } from "@uniffy/proto/cal/v1/calendar_pb";
 import { useAuth } from "@core/providers/AuthContext";
 import { calendarApi } from "@features/calendar/calendarApi";
+import { calendarsQueryKey } from "@features/calendar/useCalendar";
+import { userFacingError } from "@shared/lib/userFacingError";
 import type {
   AttendeeRoleValue,
   EventStatusValue,
+  SerializedCalendar,
   EventTransparencyValue,
   EventVisibilityValue,
   SerializedRecurrence,
@@ -98,6 +102,8 @@ export function useCreateEvent() {
       meetingUrl?: string;
       channelId?: string;
       channelAutoCreated?: boolean;
+      /** Omitted = the member's default calendar. */
+      calendarId?: string;
       categoryId?: string;
       attendeeIds?: string[];
       attendees?: { userId: string; role?: AttendeeRoleValue }[];
@@ -124,6 +130,7 @@ export function useCreateEvent() {
         meetingUrl: args.meetingUrl,
         channelId: args.channelId,
         channelAutoCreated: args.channelAutoCreated,
+        calendarId: args.calendarId ?? "",
         categoryId: args.categoryId,
         attendeeIds: args.attendeeIds ?? [],
         attendees: (args.attendees ?? []).map((a) => ({
@@ -163,6 +170,8 @@ export function useUpdateEvent() {
       meetingUrl?: string;
       channelId?: string;
       channelAutoCreated?: boolean;
+      /** Moves the whole series; undefined leaves it where it is. */
+      calendarId?: string;
       categoryId?: string;
       recurrenceEditScope?: RecurrenceEditScope;
       occurrenceDate?: string;
@@ -195,6 +204,7 @@ export function useUpdateEvent() {
         meetingUrl: args.meetingUrl,
         channelId: args.channelId,
         channelAutoCreated: args.channelAutoCreated,
+        calendarId: args.calendarId,
         categoryId: args.categoryId,
         isFocusTime: args.isFocusTime,
         reminders: args.reminders ?? [],
@@ -388,6 +398,49 @@ export function useUpdateAttendeeStatus() {
       // synthetic `{masterId}__occurrence__{date}` id, not the master id the
       // mutation was given.
       queryClient.invalidateQueries({ queryKey: ["event", organizationId] });
+    },
+  });
+}
+
+const VISIBILITY_MUTATION_KEY = ["calendar-visibility"];
+
+/**
+ * Hiding is per member and server-side: range reads leave a hidden calendar's
+ * events out, so the grid refetches rather than filtering locally. Toggles run
+ * one at a time in tap order so the last tap is the one the server keeps.
+ */
+export function useSetCalendarVisibility() {
+  const { organizationId } = useAuth();
+  const queryClient = useQueryClient();
+  const key = calendarsQueryKey(organizationId);
+
+  return useMutation({
+    mutationKey: VISIBILITY_MUTATION_KEY,
+    scope: { id: "calendar-visibility" },
+    mutationFn: (args: { calendarId: string; hidden: boolean }) =>
+      calendarApi.setCalendarVisibility({
+        organizationId: organizationId!,
+        calendarId: args.calendarId,
+        hidden: args.hidden,
+      }),
+    onMutate: async (args) => {
+      // A list fetch already in flight would land with the old flag and undo the tap.
+      await queryClient.cancelQueries({ queryKey: key });
+      queryClient.setQueryData<SerializedCalendar[]>(key, (calendars) =>
+        calendars?.map((calendar) =>
+          calendar.id === args.calendarId ? { ...calendar, isHidden: args.hidden } : calendar,
+        ),
+      );
+    },
+    onError: (error) => {
+      Alert.alert("Could not update calendar", userFacingError(error, "Please try again."));
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["events-range"] });
+      // Refetching while later taps are queued would flash them back to the server's older state.
+      if (queryClient.isMutating({ mutationKey: VISIBILITY_MUTATION_KEY }) <= 1) {
+        queryClient.invalidateQueries({ queryKey: key });
+      }
     },
   });
 }
