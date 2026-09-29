@@ -1,5 +1,6 @@
 """Normalized model params map onto each provider's native request shape."""
 
+import pytest
 from google.genai import types
 
 from uniffy.domains.agents.providers.anthropic.provider import AnthropicProvider
@@ -22,14 +23,15 @@ def _anthropic_kwargs(model: str, params: dict | None) -> dict:
     )
 
 
-def test_anthropic_adaptive_effort() -> None:
-    kwargs = _anthropic_kwargs("claude-opus-4-8", {"reasoning_effort": "xhigh"})
+@pytest.mark.parametrize("model", ["claude-opus-4-8", "claude-opus-5-5"])
+def test_anthropic_adaptive_effort(model: str) -> None:
+    kwargs = _anthropic_kwargs(model, {"reasoning_effort": "xhigh"})
     assert kwargs["thinking"] == {"type": "adaptive", "display": "summarized"}
     assert kwargs["output_config"] == {"effort": "xhigh"}
     assert kwargs["max_tokens"] == 8192
 
 
-def test_anthropic_legacy_budget_extends_ceiling() -> None:
+def test_anthropic_thinking_budget_extends_ceiling() -> None:
     kwargs = _anthropic_kwargs(
         "claude-opus-4-1-20250805",
         {"reasoning_effort": "on", "max_tokens": 2048},
@@ -136,16 +138,25 @@ def test_xai_older_model_sends_no_reasoning() -> None:
     assert "extra_body" not in kwargs
 
 
-def test_xai_grok_4_6_sends_reasoning_effort() -> None:
+@pytest.mark.parametrize("model", ["grok-4.6", "grok-4.7"])
+def test_xai_sends_reasoning_effort(model: str) -> None:
     provider = XAIProvider("xai-test")
-    kwargs = _openai_kwargs(provider, "grok-4.6", {"reasoning_effort": "xhigh"})
+    kwargs = _openai_kwargs(provider, model, {"reasoning_effort": "xhigh"})
     assert kwargs["reasoning_effort"] == "xhigh"
 
 
-def test_google_thinking_level() -> None:
+@pytest.mark.parametrize("model", ["grok-4.6", "grok-4.7"])
+def test_xai_off_omits_reasoning_effort(model: str) -> None:
+    provider = XAIProvider("xai-test")
+    kwargs = _openai_kwargs(provider, model, {"reasoning_effort": "off"})
+    assert "reasoning_effort" not in kwargs
+
+
+@pytest.mark.parametrize("model", ["gemini-3.5-flash", "gemini-3.8-flash"])
+def test_google_thinking_level(model: str) -> None:
     provider = GoogleProvider("g-test")
     config = provider._build_config(
-        model="gemini-3.5-flash",
+        model=model,
         system=None,
         tools=None,
         params={
