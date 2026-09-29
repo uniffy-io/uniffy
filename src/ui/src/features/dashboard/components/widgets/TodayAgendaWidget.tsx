@@ -12,6 +12,7 @@ import { effectiveDayKey, formatDateFull, formatTimeInZone } from "@/shared/util
 import { getEffectiveTimeZone } from "@/shared/utils/timezone";
 import type { CalendarEvent } from "@/features/calendar/types";
 import { eventDisplayState } from "@/features/calendar/utils/eventDisplay";
+import { resolveEventColor } from "@/features/calendar/utils/eventColor";
 
 function formatEventTime(event: CalendarEvent): string {
   if (event.isAllDay) return "All day";
@@ -109,6 +110,7 @@ export function TodayAgendaWidget() {
   const navigate = useNavigate();
   const events = useAppSelector((state) => state.calendar?.events ?? {});
   const categories = useAppSelector((state) => state.calendar?.categories ?? {});
+  const calendars = useAppSelector((state) => state.calendar?.calendars ?? {});
   const isLoading = useAppSelector((state) => state.calendar?.loading?.events ?? false);
 
   const { allDayEvents, timedEvents, nextEventOutsideToday } = useMemo(() => {
@@ -150,11 +152,6 @@ export function TodayAgendaWidget() {
   }, [events]);
 
   const allTimedEvents = [...timedEvents];
-
-  const getCategoryColor = (categoryId: string): string => {
-    const category = categories[categoryId];
-    return category?.color ?? "#f43f5e";
-  };
 
   const isEmpty = allDayEvents.length === 0 && timedEvents.length === 0 && !isLoading;
 
@@ -206,7 +203,7 @@ export function TodayAgendaWidget() {
             <EventItem
               key={event.id}
               event={event}
-              categoryColor={getCategoryColor(event.categoryId)}
+              categoryColor={resolveEventColor(event, categories, calendars)}
               isCurrent={isCurrentEvent(event)}
               isNext={false}
             />
@@ -218,7 +215,7 @@ export function TodayAgendaWidget() {
             <EventItem
               key={event.id}
               event={event}
-              categoryColor={getCategoryColor(event.categoryId)}
+              categoryColor={resolveEventColor(event, categories, calendars)}
               isCurrent={isCurrentEvent(event)}
               isNext={isNextEvent(event, allTimedEvents)}
             />

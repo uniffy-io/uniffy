@@ -38,3 +38,12 @@ export type {
 } from "@/features/calendar/types/template";
 
 export type { EventActivity, EventActivityAction } from "@/features/calendar/types/activity";
+
+export type {
+  CalendarInfo,
+  CalendarKind,
+  CalendarSection,
+  CalendarEventDisposition,
+  CalendarPolicyAudience,
+  CalendarPolicyInfo,
+} from "@/features/calendar/types/calendarInfo";

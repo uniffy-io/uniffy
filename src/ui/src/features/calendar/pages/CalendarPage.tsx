@@ -22,6 +22,11 @@ import {
   fetchCategories,
   fetchEvent,
 } from "@/features/calendar/store/calendarThunks";
+import {
+  fetchCalendarPolicy,
+  fetchCalendars,
+  setCalendarVisibility,
+} from "@/features/calendar/store/calendarsThunks";
 import { displayParts, instantDayKey, parseISO } from "@/features/calendar/utils";
 import { useContentAccessRefetch } from "@/features/notifications/hooks/useContentAccessRefetch";
 import { ContentType } from "@uniffy/proto/common/v1/common_pb";
@@ -35,8 +40,9 @@ function displayHourOf(instant: string): number {
 export function CalendarPage() {
   const dispatch = useAppDispatch();
   const { eventId: pathEventId } = useParams<{ eventId: string }>();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const eventId = pathEventId || searchParams.get("event");
+  const linkedCalendarId = searchParams.get("calendar");
   const currentDate = useAppSelector((state) => state.calendarUi.currentDate);
   const currentOrganizationId = useAppSelector((state) => state.auth.currentOrganizationId);
 
@@ -66,7 +72,33 @@ export function CalendarPage() {
     if (!currentOrganizationId) return;
 
     dispatch(fetchCategories());
+    dispatch(fetchCalendars());
+    dispatch(fetchCalendarPolicy());
   }, [dispatch, currentOrganizationId]);
+
+  // /calendar?calendar={id} opens from a calendar mention: make sure it is shown.
+  const calendars = useAppSelector((state) => state.calendar.calendars);
+  const calendarsSettled = useAppSelector(
+    (state) =>
+      !state.calendar.loading.calendars &&
+      (state.calendar.calendarOrder.length > 0 || state.calendar.errors.calendars !== null),
+  );
+  const linkedCalendar = linkedCalendarId ? calendars[linkedCalendarId] : undefined;
+  useEffect(() => {
+    if (!linkedCalendarId) return;
+    // A calendar the member cannot see never appears; drop the link once the list is in.
+    if (!linkedCalendar && !calendarsSettled) return;
+    if (linkedCalendar?.isHidden) {
+      dispatch(setCalendarVisibility({ calendarId: linkedCalendar.id, hidden: false }));
+    }
+    setSearchParams(
+      (params) => {
+        params.delete("calendar");
+        return params;
+      },
+      { replace: true },
+    );
+  }, [dispatch, linkedCalendarId, linkedCalendar, calendarsSettled, setSearchParams]);
 
   // Search previews use ?event= while direct mentions can use /calendar/:eventId.
   useEffect(() => {
@@ -117,6 +149,14 @@ export function CalendarPage() {
   // An event shared with this user or flipped to OPEN_TO_ORG won't be in the
   // current range fetch; refetch the visible window when access changes.
   useContentAccessRefetch(ContentType.CALENDAR_EVENT, refetchVisibleEvents);
+
+  // A calendar shared with, or withdrawn from, this member changes both the
+  // list and which events the grid holds.
+  const refetchCalendars = useCallback(() => {
+    dispatch(fetchCalendars());
+    refetchVisibleEvents();
+  }, [dispatch, refetchVisibleEvents]);
+  useContentAccessRefetch(ContentType.CALENDAR, refetchCalendars);
 
   return (
     <>

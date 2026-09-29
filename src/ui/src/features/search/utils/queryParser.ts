@@ -45,6 +45,7 @@ const TYPE_KEYWORD_MAP: Record<string, SearchResultType> = {
   calendar: SearchResultType.CALENDAR_EVENT,
   event: SearchResultType.CALENDAR_EVENT,
   events: SearchResultType.CALENDAR_EVENT,
+  calendars: SearchResultType.CALENDAR,
   chat: SearchResultType.CHAT,
   chats: SearchResultType.CHAT,
   agentchat: SearchResultType.AGENT_CHAT,
@@ -189,6 +190,8 @@ export function getTypeFilterLabel(type: SearchResultType): string {
       return "Users";
     case SearchResultType.TEAM:
       return "Teams";
+    case SearchResultType.CALENDAR:
+      return "Calendars";
     case SearchResultType.CALENDAR_EVENT:
       return "Events";
     case SearchResultType.CHAT:
@@ -226,6 +229,8 @@ export function getTypeFilterKeyword(type: SearchResultType): string {
       return "user";
     case SearchResultType.TEAM:
       return "team";
+    case SearchResultType.CALENDAR:
+      return "calendars";
     case SearchResultType.CALENDAR_EVENT:
       return "calendar";
     case SearchResultType.CHAT:
@@ -293,6 +298,7 @@ export const FILTER_HINTS = [
   { prefix: "folder:", description: "Search folders", example: "folder: invoices" },
   { prefix: "user:", description: "Search users", example: "user: john" },
   { prefix: "calendar:", description: "Search events", example: "calendar: standup" },
+  { prefix: "calendars:", description: "Search calendars", example: "calendars: support" },
   { prefix: "message:", description: "Search chat messages", example: "message: deploy" },
   { prefix: "tag:", description: "Filter by tag", example: "tag:work" },
   { prefix: "my:", description: "My content only", example: "my: drafts" },

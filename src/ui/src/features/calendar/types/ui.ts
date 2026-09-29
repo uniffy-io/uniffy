@@ -29,6 +29,7 @@ export type SidebarSectionId =
   | "quick_access"
   | "mini_calendar"
   | "calendars"
+  | "shared_calendars"
   | "organization"
   | "categories"
   | "templates"

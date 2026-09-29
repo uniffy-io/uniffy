@@ -3,6 +3,14 @@ import { unaryTransport } from "@/config/api";
 import {
   CalendarService,
   AddAttendeesRequestSchema,
+  CreateCalendarRequestSchema,
+  DeleteCalendarRequestSchema,
+  GetCalendarPolicyRequestSchema,
+  ListCalendarsRequestSchema,
+  ListEventsRequestSchema,
+  SetCalendarVisibilityRequestSchema,
+  UpdateCalendarPolicyRequestSchema,
+  UpdateCalendarRequestSchema,
   ApplyCalendarImportRequestSchema,
   CreateCategoryRequestSchema,
   CreateEventRequestSchema,
@@ -72,6 +80,42 @@ function activityFromProto(proto: ProtoEventActivity): EventActivity {
 const calendarClient = createClient(CalendarService, unaryTransport);
 
 export const calendarApi = {
+  listCalendars: async (request: MessageInitShape<typeof ListCalendarsRequestSchema>) => {
+    return calendarClient.listCalendars(request);
+  },
+
+  createCalendar: async (request: MessageInitShape<typeof CreateCalendarRequestSchema>) => {
+    return calendarClient.createCalendar(request);
+  },
+
+  updateCalendar: async (request: MessageInitShape<typeof UpdateCalendarRequestSchema>) => {
+    return calendarClient.updateCalendar(request);
+  },
+
+  deleteCalendar: async (request: MessageInitShape<typeof DeleteCalendarRequestSchema>) => {
+    return calendarClient.deleteCalendar(request);
+  },
+
+  setCalendarVisibility: async (
+    request: MessageInitShape<typeof SetCalendarVisibilityRequestSchema>,
+  ) => {
+    return calendarClient.setCalendarVisibility(request);
+  },
+
+  getCalendarPolicy: async (request: MessageInitShape<typeof GetCalendarPolicyRequestSchema>) => {
+    return calendarClient.getCalendarPolicy(request);
+  },
+
+  updateCalendarPolicy: async (
+    request: MessageInitShape<typeof UpdateCalendarPolicyRequestSchema>,
+  ) => {
+    return calendarClient.updateCalendarPolicy(request);
+  },
+
+  listEvents: async (request: MessageInitShape<typeof ListEventsRequestSchema>) => {
+    return calendarClient.listEvents(request);
+  },
+
   createEvent: async (request: MessageInitShape<typeof CreateEventRequestSchema>) => {
     return calendarClient.createEvent(request);
   },

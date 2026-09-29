@@ -7,6 +7,7 @@ import { fetchNotes } from "@/features/notes/store/notesThunks";
 import { fetchNotifications } from "@/features/notifications/store/notificationsSlice";
 import { initializeFilesData } from "@/features/files/store/filesSlice";
 import { fetchEventsInRange, fetchCategories } from "@/features/calendar/store/calendarThunks";
+import { fetchCalendars } from "@/features/calendar/store/calendarsThunks";
 import { fetchProjects, fetchProjectTasks } from "@/features/projects/store/projectsThunks";
 import { selectTaskListLoadedIds } from "@/features/projects/store/projectsSlice";
 
@@ -32,6 +33,7 @@ export function useDashboardFetch(): { refresh: () => void } {
   const notesCount = useAppSelector((state) => Object.keys(state.notes?.notes ?? {}).length);
   const filesCount = useAppSelector((state) => Object.keys(state.files?.files ?? {}).length);
   const eventsCount = useAppSelector((state) => Object.keys(state.calendar?.events ?? {}).length);
+  const calendarsCount = useAppSelector((state) => state.calendar.calendarOrder.length);
   const projectsCount = useAppSelector(
     (state) => Object.keys(state.projects?.projects ?? {}).length,
   );
@@ -53,6 +55,11 @@ export function useDashboardFetch(): { refresh: () => void } {
     if (eventsCount === 0) {
       fetchUpcomingEvents(dispatch);
       dispatch(fetchCategories());
+    }
+
+    // Events paint in their calendar's colour.
+    if (calendarsCount === 0) {
+      dispatch(fetchCalendars());
     }
 
     if (projectsCount === 0) {
