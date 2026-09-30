@@ -17,7 +17,7 @@ import type { SearchResultItem } from "@uniffy/proto/search/v1/search_pb";
 import { useTheme } from "@/config/theme/themeContext";
 import { createMarkdownEditorTheme } from "@/features/notes/components/editor/markdownEditorTheme";
 import { useRealtimeMarkdownContent } from "@/features/notes/realtime/useMarkdownContent";
-import { replaceMarkdownYText } from "@/features/notes/realtime/markdown";
+import { replaceMarkdownYText } from "@/features/realtime/markdown";
 
 interface MarkdownSplitEditorProps {
   note: SerializedNote;

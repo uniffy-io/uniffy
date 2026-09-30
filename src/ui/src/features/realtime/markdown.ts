@@ -1,6 +1,6 @@
 import * as Y from "yjs";
 import { prosemirrorToYXmlFragment, yXmlFragmentToProseMirrorRootNode } from "y-prosemirror";
-import { diffStrings } from "@/features/notes/realtime/textDiff";
+import { diffStrings } from "@/features/realtime/textDiff";
 import { editorViewCtx, serializerCtx } from "@milkdown/core";
 import type { Ctx } from "@milkdown/ctx";
 import type { Node } from "@milkdown/prose/model";
@@ -9,9 +9,10 @@ import { MARKDOWN_MIRROR_ORIGIN } from "@/features/realtime/persistence/encrypte
 export const MARKDOWN_TEXT_FIELD = "markdown";
 export const PROSEMIRROR_FRAGMENT_FIELD = "prosemirror";
 export const MARKDOWN_MIRROR_FIELD = "markdown_mirror";
+export const MIRROR_ACTIVE_KEY = "active";
 
 // Origin for the editor's Y.Text("markdown") mirror. Lives in the persistence
-// module because IDB writes filter on it; notes code imports it from here.
+// module because IDB writes filter on it; editor code imports it from here.
 export { MARKDOWN_MIRROR_ORIGIN } from "@/features/realtime/persistence/encryptedYjsPersistence";
 
 export function getMarkdownYText(ydoc: Y.Doc): Y.Text {
@@ -48,7 +49,7 @@ export function replaceMarkdownYText(ydoc: Y.Doc, next: string, origin: unknown)
   ydoc.transact(() => {
     if (delta.deleteCount > 0) ytext.delete(delta.index, delta.deleteCount);
     if (delta.insert.length > 0) ytext.insert(delta.index, delta.insert);
-    ydoc.getMap(MARKDOWN_MIRROR_FIELD).set("active", origin === MARKDOWN_MIRROR_ORIGIN);
+    ydoc.getMap(MARKDOWN_MIRROR_FIELD).set(MIRROR_ACTIVE_KEY, origin === MARKDOWN_MIRROR_ORIGIN);
   }, origin);
 }
 

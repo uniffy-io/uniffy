@@ -13,12 +13,13 @@ import {
   MARKDOWN_MIRROR_ORIGIN,
   MARKDOWN_MIRROR_FIELD,
   MARKDOWN_TEXT_FIELD,
+  MIRROR_ACTIVE_KEY,
   PROSEMIRROR_FRAGMENT_FIELD,
   fragmentHasRealContent,
   replaceMarkdownYText,
   replaceProsemirrorFragment,
   isMarkdownMirrorLeader,
-} from "@/features/notes/realtime/markdown";
+} from "@/features/realtime/markdown";
 import { HYDRATION_ORIGIN } from "@/features/realtime";
 import { identityPaint } from "@/config/theme/brandGradients";
 import { randomUUID } from "@/shared/utils/uuid";
@@ -838,7 +839,7 @@ export function CrepeEditor({
                 const markdown = rt.ydoc.getText(MARKDOWN_TEXT_FIELD);
                 const onMarkdown = () => {
                   if (!markdownMirrorReady || !ownsMirror()) return;
-                  if (mirrorMeta.get("active")) {
+                  if (mirrorMeta.get(MIRROR_ACTIVE_KEY)) {
                     schedule();
                     return;
                   }
@@ -851,7 +852,16 @@ export function CrepeEditor({
                   });
                 };
                 markdown.observe(onMarkdown);
-                rt.awareness.on("change", schedule);
+                // Awareness changes on every peer caret move; only a leadership
+                // handoff needs the newly elected editor to catch the text up.
+                let leader = false;
+                const onAwareness = () => {
+                  const next = ownsMirror();
+                  if (next === leader) return;
+                  leader = next;
+                  if (next) schedule();
+                };
+                rt.awareness.on("change", onAwareness);
                 if (!readonly) rt.awareness.setLocalStateField("markdownEditor", mirrorOwner);
                 void rt.whenSynced.then(schedule);
                 // Navigation does not destroy React node views before closing the document.
@@ -863,7 +873,7 @@ export function CrepeEditor({
                   disposed = true;
                   activeView = null;
                   markdown.unobserve(onMarkdown);
-                  rt.awareness.off("change", schedule);
+                  rt.awareness.off("change", onAwareness);
                   if (rt.awareness.getLocalState()?.markdownEditor === mirrorOwner) {
                     rt.awareness.setLocalStateField("markdownEditor", null);
                   }
@@ -1086,7 +1096,7 @@ export function CrepeEditor({
               if (!node) return;
               if (fragmentHasRealContent(fragment)) {
                 // A rendered mirror can lag or conflict after offline merges. Preserve primary blocks.
-                if (rtBinding.ydoc.getMap(MARKDOWN_MIRROR_FIELD).get("active")) {
+                if (rtBinding.ydoc.getMap(MARKDOWN_MIRROR_FIELD).get(MIRROR_ACTIVE_KEY)) {
                   markdownMirrorReady = true;
                   return;
                 }

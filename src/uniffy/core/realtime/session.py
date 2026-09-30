@@ -39,6 +39,7 @@ from uniffy.core.realtime.state import (
 from uniffy.core.realtime.wire import (
     YMessageType,
     YSyncMessageType,
+    create_auth_denied_message,
     create_sync_message,
     handle_sync_message,
     is_sync_write_frame,
@@ -201,10 +202,14 @@ async def _attach_doc(
 
     can_edit = role_can_edit(role)
     session, handle = await ydoc_manager.acquire(key, ws_session, can_edit=can_edit)
-    initial = create_sync_message(session.ydoc)
-    framed = encode_doc_frame(doc_name, initial)
+    frames: list[bytes] = []
+    if not can_edit:
+        # Ahead of SyncStep1, so a client holding a stale editable role never replies with a write.
+        frames.append(encode_doc_frame(doc_name, create_auth_denied_message("read only")))
+    frames.append(encode_doc_frame(doc_name, create_sync_message(session.ydoc)))
     try:
-        ws_session.outbound.put_nowait(framed)
+        for framed in frames:
+            ws_session.outbound.put_nowait(framed)
     except asyncio.QueueFull:
         logger.warning(
             f"outbound queue full during attach for conn {ws_session.conn_id}",

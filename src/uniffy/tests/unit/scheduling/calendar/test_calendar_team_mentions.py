@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uniffy.core.content.team_mentions import TeamExpansion
 from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.types import generate_id
+from uniffy.domains.scheduling.calendar.events.notifications import EventNotifications
 from uniffy.domains.scheduling.calendar.operations import CalendarEventOperations
 
 ORG = generate_id()
@@ -44,7 +45,9 @@ async def _emit(team_ids, excluded, expansions):
             AsyncMock(return_value=expansions),
         ) as expander,
     ):
-        await ops._emit_team_mention_notifications(_event(), ACTOR, ORG, team_ids, excluded)
+        await EventNotifications(ops)._emit_team_mention_notifications(
+            _event(), ACTOR, ORG, team_ids, excluded
+        )
     return emitted, expander
 
 

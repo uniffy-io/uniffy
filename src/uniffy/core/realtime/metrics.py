@@ -44,6 +44,12 @@ REALTIME_SNAPSHOT_DROPPED_TOTAL = Counter(
     ["content_type", "reason"],
 )
 
+REALTIME_RENDER_CONFLICTS_TOTAL = Counter(
+    "uniffy_realtime_render_conflicts_total",
+    "Domain renders that lost their version race and were handed to the worker retry",
+    ["content_type"],
+)
+
 REALTIME_UPDATE_MESSAGES_TOTAL = Counter(
     "uniffy_realtime_update_messages_total",
     "Yjs synchronization update frames observed per direction",

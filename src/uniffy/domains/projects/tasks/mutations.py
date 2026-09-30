@@ -224,7 +224,7 @@ class TaskMutationOperations:
                         member_ids, organization_id, task.id
                     )
 
-        if "description" in kwargs:  # noqa: PLR2004
+        if "description" in kwargs:  # noqa: PLR2004 - update keyword name
             await self.session.execute(
                 delete(RealtimeYjsSnapshot).where(
                     RealtimeYjsSnapshot.content_type == ContentType.TASK,
@@ -233,7 +233,7 @@ class TaskMutationOperations:
             )
         await self.session.commit()
         await self.session.refresh(task)
-        if "description" in kwargs:  # noqa: PLR2004
+        if "description" in kwargs:  # noqa: PLR2004 - update keyword name
             await publish_content_replace(ContentType.TASK, task_id, task.description)
 
         await self.content._sync_task_tags(actor_id=user_id, task=task, tag_ids=tag_ids)

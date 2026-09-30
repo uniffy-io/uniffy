@@ -96,6 +96,8 @@ class YDocSession:
     ydoc: pycrdt.Doc
     organization_id: UUID
     policy_key: DocKey | None = None
+    # Snapshots carry no request actor; the last live editor attributes their side effects.
+    last_editor_id: UUID | None = None
     clients: dict[int, ClientHandle] = field(default_factory=dict)
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
     eviction_task: asyncio.Task[None] | None = None

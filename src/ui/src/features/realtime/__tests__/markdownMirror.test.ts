@@ -5,7 +5,7 @@ import {
   MARKDOWN_MIRROR_FIELD,
   MARKDOWN_MIRROR_ORIGIN,
   replaceMarkdownYText,
-} from "@/features/notes/realtime/markdown";
+} from "@/features/realtime/markdown";
 
 describe("markdown mirror coordination", () => {
   it("elects one editable peer and ignores viewers", () => {

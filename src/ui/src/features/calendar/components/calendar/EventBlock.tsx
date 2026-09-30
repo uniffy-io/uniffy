@@ -4,6 +4,7 @@ import type { PositionedEvent } from "@/features/calendar/types";
 import { ACCENT_EVENT_COLOR, eventTint } from "@/features/calendar/constants";
 import { formatTimeRange } from "@/features/calendar/utils";
 import { eventDisplayState } from "@/features/calendar/utils/eventDisplay";
+import { isRecurringEvent } from "@/features/calendar/utils/recurrence";
 import { cn } from "@/shared/utils/cn";
 import { Warning, Users, ArrowsClockwise, AirplaneTilt, EyeSlash } from "@phosphor-icons/react";
 import { SubjectAvatar, SUBJECT_TYPE } from "@/components/subject";
@@ -191,16 +192,15 @@ export function EventBlock({ event, columnWidth }: EventBlockProps) {
                 <Users size={12} weight="duotone" className="text-muted-foreground flex-shrink-0" />
               </span>
             )}
-            {(event.isRecurring || (event.recurrence && event.recurrence.pattern !== "none")) &&
-              !event.recurrenceId && (
-                <span title="Recurring event">
-                  <ArrowsClockwise
-                    size={11}
-                    weight="bold"
-                    className="text-muted-foreground flex-shrink-0"
-                  />
-                </span>
-              )}
+            {isRecurringEvent(event) && !event.recurrenceId && (
+              <span title="Recurring event">
+                <ArrowsClockwise
+                  size={11}
+                  weight="bold"
+                  className="text-muted-foreground flex-shrink-0"
+                />
+              </span>
+            )}
             {event.hasConflict && (
               <span title={`Conflicts with ${event.conflictingEvents?.length || 0} other event(s)`}>
                 <Warning

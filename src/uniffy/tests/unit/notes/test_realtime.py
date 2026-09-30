@@ -1,16 +1,9 @@
-"""Pure-Python unit tests for the realtime scaffold.
-
-Covers wire framing, subprotocol bearer parsing, adapter registry, the
-``_enforce_role_change`` decision matrix, snapshot debounce, canvas
-hydration / render, multiplex VarString helpers, and the router
-dispatch + registry hygiene. WebSocket integration with Valkey fanout
-is covered separately by the live-stack harness.
-"""
+"""Pure-Python unit tests for the realtime scaffold; Valkey fanout lives in the live-stack harness."""
 
 import asyncio
 import base64
 import time
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, contextmanager
 from unittest.mock import AsyncMock, MagicMock, patch
 from urllib.parse import quote
 from uuid import UUID
@@ -38,6 +31,7 @@ from uniffy.core.realtime.auth import (
 from uniffy.core.realtime.job_contracts import SAVE_REALTIME_SNAPSHOT
 from uniffy.core.realtime.metrics import REALTIME_SNAPSHOT_DROPPED_TOTAL
 from uniffy.core.realtime.snapshot import SNAPSHOT_MAX_DELAY, SnapshotWriter, persist_snapshot
+from uniffy.core.realtime.wire import create_auth_denied_message
 from uniffy.core.realtime.wire import (
     YMessageType,
     YSyncMessageType,
@@ -231,52 +225,89 @@ class TestAdapterRegistry:
             get_realtime_adapter(ContentType.TASK)
 
 
-class TestEnforceRoleChange:
-    """Decision matrix for one perm-channel payload."""
+class TestReauthorizeDocs:
+    """PostgreSQL re-check of attached handles after a permission signal."""
 
-    async def test_blocked_closes_session(self) -> None:
+    @staticmethod
+    def _manager(*handles: ClientHandle) -> tuple[YDocManager, YDocSession]:
         manager = YDocManager()
-        handle = _make_handle(can_edit=True)
-        await manager._enforce_role_change(handle, "BLOCKED")
-        assert handle.closed is True
-        handle.ws.close.assert_awaited_once()
-        kwargs = handle.ws.close.call_args.kwargs
-        assert kwargs["code"] == WS_CLOSE_FORBIDDEN
+        session = _make_router_session()
+        for handle in handles:
+            handle.doc_key = session.key
+            session.clients[handle.conn_id] = handle
+        manager._sessions[session.key] = session
+        return manager, session
 
-    async def test_none_role_closes_session(self) -> None:
-        manager = YDocManager()
-        handle = _make_handle(can_edit=True)
-        await manager._enforce_role_change(handle, None)
-        assert handle.closed is True
-        handle.ws.close.assert_awaited_once()
+    @staticmethod
+    @contextmanager
+    def _patched(adapter: MagicMock):
+        @asynccontextmanager
+        async def fake_open_session():
+            yield MagicMock()
 
-    async def test_viewer_downgrades_edit(self) -> None:
-        manager = YDocManager()
+        with (
+            patch("uniffy.core.realtime.ydoc_manager.open_session", fake_open_session),
+            patch("uniffy.core.realtime.ydoc_manager.get_realtime_adapter", return_value=adapter),
+            patch("uniffy.core.realtime.ydoc_manager.enqueue_for_handle") as enqueue,
+        ):
+            yield enqueue
+
+    @staticmethod
+    def _adapter(role: ContentRole | None) -> MagicMock:
+        adapter = MagicMock()
+        adapter.authorize = AsyncMock(return_value=role)
+        return adapter
+
+    async def test_downgrade_flips_edit_and_tells_the_client(self) -> None:
         handle = _make_handle(can_edit=True)
-        await manager._enforce_role_change(handle, "VIEWER")
+        manager, session = self._manager(handle)
+        with self._patched(self._adapter(ContentRole.VIEWER)) as enqueue:
+            await manager._reauthorize_docs((session.key,), None)
         assert handle.can_edit is False
         assert handle.closed is False
-        handle.ws.close.assert_not_called()
+        enqueue.assert_called_once_with(
+            handle, create_auth_denied_message("edit access removed"), kind="auth"
+        )
 
-    async def test_commenter_stays_view_only(self) -> None:
-        manager = YDocManager()
-        handle = _make_handle(can_edit=True)
-        await manager._enforce_role_change(handle, "COMMENTER")
-        assert handle.can_edit is False
-        assert handle.closed is False
-
-    async def test_unknown_role_fails_closed(self) -> None:
-        manager = YDocManager()
-        handle = _make_handle(can_edit=True)
-        await manager._enforce_role_change(handle, "SUPERUSER")
-        assert handle.closed is True
-
-    async def test_editor_restores_edit(self) -> None:
-        manager = YDocManager()
+    async def test_viewer_staying_viewer_sends_nothing(self) -> None:
         handle = _make_handle(can_edit=False)
-        await manager._enforce_role_change(handle, "EDITOR")
-        assert handle.can_edit is True
-        assert handle.closed is False
+        manager, session = self._manager(handle)
+        with self._patched(self._adapter(ContentRole.VIEWER)) as enqueue:
+            await manager._reauthorize_docs((session.key,), None)
+        assert handle.can_edit is False
+        enqueue.assert_not_called()
+
+    async def test_revoked_role_closes_forbidden(self) -> None:
+        handle = _make_handle(can_edit=True)
+        manager, session = self._manager(handle)
+        with self._patched(self._adapter(None)):
+            await manager._reauthorize_docs((session.key,), None)
+        assert handle.closed is True
+        assert handle.ws.close.call_args.kwargs["code"] == WS_CLOSE_FORBIDDEN
+
+    async def test_targeted_user_only_rechecks_that_users_handles(self) -> None:
+        target = _make_handle(user_id=generate_id(), can_edit=True)
+        bystander = _make_handle(user_id=generate_id(), can_edit=True)
+        manager, session = self._manager(target, bystander)
+        adapter = self._adapter(ContentRole.EDITOR)
+        with self._patched(adapter):
+            await manager._reauthorize_docs((session.key,), target.user_id)
+        adapter.authorize.assert_awaited_once()
+        assert adapter.authorize.await_args.args[1] == target.user_id
+
+    async def test_one_checker_is_shared_across_handles_and_docs(self) -> None:
+        first = _make_handle(can_edit=True)
+        second = _make_handle(can_edit=True)
+        manager, session = self._manager(first, second)
+        other = _make_router_session()
+        other.clients[first.conn_id] = first
+        manager._sessions[other.key] = other
+        adapter = self._adapter(ContentRole.EDITOR)
+        with self._patched(adapter):
+            await manager._reauthorize_docs((session.key, other.key), None)
+        checkers = {call.kwargs["checker"] for call in adapter.authorize.await_args_list}
+        assert adapter.authorize.await_count == 3
+        assert len(checkers) == 1
 
     async def test_close_handle_idempotent(self) -> None:
         manager = YDocManager()
@@ -442,6 +473,27 @@ class TestSnapshotForceFlush:
             enqueue.assert_not_awaited()
 
         await go()
+
+    async def test_force_flush_conflict_hands_the_render_to_the_worker(self) -> None:
+        writer = SnapshotWriter(debounce_seconds=60.0)
+        session = _make_router_session()
+        session.ydoc["markdown"] = pycrdt.Text("hello")
+        session.last_editor_id = generate_id()
+
+        persist = AsyncMock(side_effect=RealtimeRenderConflict("contended"))
+        enqueue = AsyncMock(
+            return_value=JobEnqueueResult(job=object(), outcome=JobEnqueueOutcome.ENQUEUED)
+        )
+        with (
+            patch("uniffy.core.realtime.snapshot.persist_snapshot", persist),
+            patch("uniffy.core.realtime.snapshot.enqueue_job_reconnecting", enqueue),
+        ):
+            await writer.flush(session, force=True)
+
+        assert persist.await_args.kwargs == {"actor_id": session.last_editor_id}
+        enqueue.assert_awaited_once()
+        assert enqueue.await_args.args[0] is SAVE_REALTIME_SNAPSHOT
+        assert enqueue.await_args.args[6] == str(session.last_editor_id)
 
     async def test_missing_target_removes_snapshot_written_by_a_stale_job(self) -> None:
         ydoc = pycrdt.Doc()
@@ -1087,19 +1139,17 @@ class _StubCallbacks:
     def __init__(self) -> None:
         self.applied_updates: list[tuple[YDocSession, bytes]] = []
         self.content_replaced: list[tuple[DocKey, str]] = []
-        self.enforced: list[tuple[ClientHandle, str | None]] = []
         self.closed_stale: list[tuple[UUID, int]] = []
         self.closed_by_sid: list[tuple[UUID, UUID]] = []
-        self.reauthorized: list[DocKey] = []
+        self.reauthorized: list[tuple[tuple[DocKey, ...], UUID | None]] = []
 
-    async def apply_remote_update(self, session: YDocSession, update: bytes) -> None:
-        self.applied_updates.append((session, update))
+    async def apply_remote_update(
+        self, session: YDocSession, update: bytes, editor_id: UUID | None
+    ) -> None:
+        self.applied_updates.append((session, update, editor_id))
 
     async def apply_content_replace(self, key: DocKey, content: str) -> None:
         self.content_replaced.append((key, content))
-
-    async def enforce_role_change(self, handle: ClientHandle, new_role: str | None) -> None:
-        self.enforced.append((handle, new_role))
 
     async def close_stale_user_sessions(self, user_id: UUID, new_version: int) -> None:
         self.closed_stale.append((user_id, new_version))
@@ -1107,8 +1157,8 @@ class _StubCallbacks:
     async def close_user_session_by_sid(self, user_id: UUID, session_id: UUID) -> None:
         self.closed_by_sid.append((user_id, session_id))
 
-    async def reauthorize_doc(self, key: DocKey) -> None:
-        self.reauthorized.append(key)
+    async def reauthorize_docs(self, keys, user_id: UUID | None) -> None:
+        self.reauthorized.append((tuple(keys), user_id))
 
 
 def _make_router_with_callbacks() -> tuple[RealtimeRouter, _StubCallbacks]:
@@ -1118,10 +1168,9 @@ def _make_router_with_callbacks() -> tuple[RealtimeRouter, _StubCallbacks]:
         RouterCallbacks(
             apply_remote_update=cb.apply_remote_update,
             apply_content_replace=cb.apply_content_replace,
-            enforce_role_change=cb.enforce_role_change,
             close_stale_user_sessions=cb.close_stale_user_sessions,
             close_user_session_by_sid=cb.close_user_session_by_sid,
-            reauthorize_doc=cb.reauthorize_doc,
+            reauthorize_docs=cb.reauthorize_docs,
         )
     )
     return r, cb
@@ -1147,13 +1196,21 @@ class TestRouterDocDispatch:
         r.register_doc_session(sess.key, sess)
 
         update = b"\x01\x02\x03"
+        editor_id = generate_id()
         channel = f"realtime:doc:{sess.key[0].value}:{sess.key[1]}"
         payload = {
             "origin_replica": "other-replica",
+            "editor_id": str(editor_id),
             "update": base64.b64encode(update).decode(),
         }
         await r._handle_doc_message(channel, payload)
-        assert cb.applied_updates == [(sess, update)]
+        assert cb.applied_updates == [(sess, update, editor_id)]
+
+        await r._handle_doc_message(
+            channel,
+            {"origin_replica": "other-replica", "update": base64.b64encode(update).decode()},
+        )
+        assert cb.applied_updates[-1] == (sess, update, None)
 
     async def test_content_replace_dispatches_even_from_own_replica(self):
         # The publishing process may itself hold the live session, so the
@@ -1213,8 +1270,17 @@ class TestRouterPermDispatch:
             "new_role": "VIEWER",
         }
         await r._handle_perm_message(channel, payload)
-        assert cb.reauthorized == [key]
-        assert cb.enforced == []
+        assert cb.reauthorized == [((key,), target_user)]
+
+    async def test_targeted_user_without_handles_here_is_skipped(self):
+        r, cb = _make_router_with_callbacks()
+        key = (ContentType.NOTE, generate_id())
+        r.attach_handle(key, _make_handle(user_id=generate_id()))
+        await r._handle_perm_message(
+            f"realtime:perm:{key[0].value}:{key[1]}",
+            {"origin_replica": "other", "user_id": str(generate_id()), "new_role": "VIEWER"},
+        )
+        assert cb.reauthorized == []
 
     @pytest.mark.parametrize("targeted", [True, False])
     async def test_parent_permission_signal_reauthorizes_child(self, targeted):
@@ -1229,8 +1295,7 @@ class TestRouterPermDispatch:
             f"realtime:perm:PROJECT:{session.policy_key[1]}",
             {"user_id": str(handle.user_id) if targeted else None, "new_role": "OWNER"},
         )
-        assert cb.reauthorized == [session.key]
-        assert cb.enforced == []
+        assert cb.reauthorized == [((session.key,), handle.user_id if targeted else None)]
 
     async def test_parent_defaults_reauthorize_child_in_same_org(self):
         r, cb = _make_router_with_callbacks()
@@ -1239,7 +1304,7 @@ class TestRouterPermDispatch:
         session.policy_key = (ContentType.PROJECT, generate_id())
         r.register_doc_session(session.key, session)
         await r._handle_defaults_message(f"realtime:defaults:{session.organization_id}:PROJECT", {})
-        assert cb.reauthorized == [session.key]
+        assert cb.reauthorized == [((session.key,), None)]
         cb.reauthorized.clear()
         await r._handle_defaults_message(f"realtime:defaults:{generate_id()}:PROJECT", {})
         assert cb.reauthorized == []
@@ -1255,7 +1320,7 @@ class TestRouterPermDispatch:
             "new_role": None,
         }
         await r._handle_perm_message(channel, payload)
-        assert cb.reauthorized == [key]
+        assert cb.reauthorized == [((key,), None)]
 
 
 class TestRouterRevokeDispatch:

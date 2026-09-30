@@ -10,6 +10,8 @@ from uniffy.core.content.team_mentions import expand_team_mentions
 from uniffy.core.events import (
     NotificationEvent,
     emit_notification,
+    extract_mentioned_team_ids,
+    extract_mentioned_user_ids,
 )
 from uniffy.core.models.calendar.attendee import EventAttendee
 from uniffy.core.models.calendar.event import CalendarEvent
@@ -51,6 +53,44 @@ class EventNotifications:
                 source_urn=build_content_urn(ContentType.CALENDAR_EVENT, event.id),
                 target_user_ids=recipients,
             )
+        )
+
+    async def emit_mention_notifications(
+        self,
+        event: CalendarEvent,
+        actor_id: UUID,
+        organization_id: UUID,
+        old_references: list[str] | None,
+        excluded_ids: set[UUID],
+    ) -> None:
+        """Notify users and teams the description newly mentions; the worker gates each recipient."""
+        newly_mentioned = (
+            extract_mentioned_user_ids(event.outgoing_references)
+            - extract_mentioned_user_ids(old_references)
+            - excluded_ids
+        )
+        if newly_mentioned:
+            await emit_notification(
+                NotificationEvent(
+                    notification_type=NotificationType.CONTENT_MENTIONED,
+                    organization_id=organization_id,
+                    actor_id=actor_id,
+                    title=f"Mentioned you in: {event.title}",
+                    source_urn=build_content_urn(ContentType.CALENDAR_EVENT, event.id),
+                    target_user_ids=list(newly_mentioned),
+                )
+            )
+        old_teams = set(extract_mentioned_team_ids(old_references))
+        await self._emit_team_mention_notifications(
+            event,
+            actor_id,
+            organization_id,
+            [
+                team_id
+                for team_id in extract_mentioned_team_ids(event.outgoing_references)
+                if team_id not in old_teams
+            ],
+            excluded_ids | newly_mentioned,
         )
 
     async def _emit_team_mention_notifications(

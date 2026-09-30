@@ -73,6 +73,7 @@ async def publish_doc_update(
     update: bytes,
     *,
     source_conn_id: int,
+    editor_id: UUID | None = None,
 ) -> None:
     """Broadcast a Yjs update blob to peers across replicas."""
     await publish_to_channel(
@@ -80,6 +81,7 @@ async def publish_doc_update(
         {
             "origin_replica": replica_id(),
             "source_conn_id": source_conn_id,
+            "editor_id": str(editor_id) if editor_id is not None else None,
             "update": base64.b64encode(update).decode("ascii"),
             "published_at": time.time(),
         },

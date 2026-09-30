@@ -2,11 +2,17 @@ import { describe, expect, it } from "vitest";
 import type { Project, Task } from "@/features/projects/types/project";
 import { SYSTEM_FIELD_IDS, type SelectOption } from "@/features/projects/types/fields";
 import {
+  applyLiveDescription,
   optimisticUpdateTask,
   projectsSlice,
   type ProjectsState,
 } from "@/features/projects/store/projectsSlice";
-import { deleteTask, deleteTasks, updateTask } from "@/features/projects/store/projectsThunks";
+import {
+  deleteTask,
+  deleteTasks,
+  fetchProjectTasks,
+  updateTask,
+} from "@/features/projects/store/projectsThunks";
 
 const reducer = projectsSlice.reducer;
 
@@ -164,4 +170,51 @@ it("rolls back every field and parent count when a combined board update fails",
   expect(rejected.tasks).toEqual(original.tasks);
   expect(rejected._pendingTaskSnapshot).toBeUndefined();
   expect(rejected._pendingParentSnapshots).toBeUndefined();
+});
+
+describe("live descriptions", () => {
+  it("keeps the live text when a later server row still carries the old one", () => {
+    const task = makeTask("t1", { description: "old" });
+    const live = reducer(stateWith([task]), applyLiveDescription({ id: "t1", description: "new" }));
+    expect(live.tasks.t1.description).toBe("new");
+    expect(live._pendingTaskSnapshot).toBeUndefined();
+
+    const request = { id: "t1", status: "status_doing" };
+    const settled = reducer(
+      live,
+      updateTask.fulfilled({ task: { ...task, status: "status_doing" } }, "req", request),
+    );
+    expect(settled.tasks.t1).toMatchObject({ status: "status_doing", description: "new" });
+  });
+
+  it("accepts the server description when the request asked to change it", () => {
+    const task = makeTask("t1", { description: "old" });
+    const live = reducer(stateWith([task]), applyLiveDescription({ id: "t1", description: "new" }));
+    const request = { id: "t1", description: "typed" };
+    const settled = reducer(
+      live,
+      updateTask.fulfilled({ task: { ...task, description: "typed" } }, "req", request),
+    );
+    expect(settled.tasks.t1.description).toBe("typed");
+    expect(settled.liveDescriptionIds.t1).toBeUndefined();
+  });
+
+  it("does not roll the live text back when an unrelated update fails", () => {
+    const task = makeTask("t1", { description: "old" });
+    const live = reducer(stateWith([task]), applyLiveDescription({ id: "t1", description: "new" }));
+    const request = { id: "t1", status: "status_doing" };
+    const rejected = reducer(live, updateTask.rejected(null, "req", request, "blocked"));
+    expect(rejected.tasks.t1.description).toBe("new");
+  });
+
+  it("forgets live ownership once the task list is refetched", () => {
+    const task = makeTask("t1", { description: "old" });
+    const live = reducer(stateWith([task]), applyLiveDescription({ id: "t1", description: "new" }));
+    const refetched = reducer(
+      live,
+      fetchProjectTasks.fulfilled([{ ...task, description: "rendered" }], "req", "proj-1"),
+    );
+    expect(refetched.tasks.t1.description).toBe("rendered");
+    expect(refetched.liveDescriptionIds.t1).toBeUndefined();
+  });
 });

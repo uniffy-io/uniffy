@@ -1,7 +1,7 @@
 """In-memory YDoc cache + client-handle registry keyed by ``(content_type, content_id)``.
 
 Owns cold-start hydration, local peer fanout, snapshot debounce, 15-minute idle
-eviction, the role-change decision matrix, and the token-revoke close path.
+eviction, permission re-authorization, and the token-revoke close path.
 :class:`RealtimeRouter` dispatches Valkey payloads back here via
 :class:`RouterCallbacks`.
 """
@@ -9,15 +9,18 @@ eviction, the role-change decision matrix, and the token-revoke close path.
 import asyncio
 import contextlib
 import time
+from collections.abc import Sequence
 from uuid import UUID
 
 import pycrdt
 from loguru import logger
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.auth.permissions import role_can_edit, role_can_view
+from uniffy.core.auth.permissions.checker import PermissionChecker
 from uniffy.core.models.realtime.yjs_snapshot import RealtimeYjsSnapshot
-from uniffy.core.realtime.adapter import get_realtime_adapter
+from uniffy.core.realtime.adapter import RealtimeContentAdapter, get_realtime_adapter
 from uniffy.core.realtime.auth import (
     WS_CLOSE_FORBIDDEN,
     WS_CLOSE_TOKEN_REVOKED,
@@ -42,15 +45,12 @@ from uniffy.core.realtime.state import (
     YDocSession,
     doc_name_for,
 )
-from uniffy.core.realtime.wire import create_update_message
-from uniffy.core.types import ContentRole
+from uniffy.core.realtime.wire import create_auth_denied_message, create_update_message
 from uniffy.infrastructure.database.session import open_session
 
 __all__ = ["ClientHandle", "DocKey", "WSSession", "YDocManager", "YDocSession", "ydoc_manager"]
 
 IDLE_EVICTION_SECONDS = 15 * 60
-
-_ROLES_REQUIRING_CLOSE: frozenset[str | None] = frozenset({None, "BLOCKED"})
 
 LOGGER_COMPONENT = "realtime.manager"
 
@@ -73,10 +73,9 @@ class YDocManager:
         return RouterCallbacks(
             apply_remote_update=self._apply_remote_pubsub_update,
             apply_content_replace=self._apply_content_replace,
-            enforce_role_change=self._enforce_role_change,
             close_stale_user_sessions=self._close_stale_user_sessions,
             close_user_session_by_sid=self._close_user_session_by_sid,
-            reauthorize_doc=self._reauthorize_doc_by_key,
+            reauthorize_docs=self._reauthorize_docs,
         )
 
     async def acquire(
@@ -164,6 +163,10 @@ class YDocManager:
     ) -> None:
         """Apply a local client's update, fan out to other local clients, and publish to Valkey."""
         content_type_label = session.key[0].value
+        source = session.clients.get(source_conn_id)
+        editor_id = source.user_id if source is not None else None
+        if editor_id is not None:
+            session.last_editor_id = editor_id
         async with session.lock:
             session.ydoc.apply_update(update_bytes)
             frame = create_update_message(update_bytes)
@@ -180,6 +183,7 @@ class YDocManager:
             session.key[1],
             update_bytes,
             source_conn_id=source_conn_id,
+            editor_id=editor_id,
         )
         REALTIME_UPDATE_MESSAGES_TOTAL.labels(
             content_type=content_type_label, direction="pubsub_out"
@@ -282,9 +286,13 @@ class YDocManager:
             component=LOGGER_COMPONENT,
         )
 
-    async def _apply_remote_pubsub_update(self, session: YDocSession, update_bytes: bytes) -> None:
+    async def _apply_remote_pubsub_update(
+        self, session: YDocSession, update_bytes: bytes, editor_id: UUID | None = None
+    ) -> None:
         """Apply a peer-replica update and fan out to local clients without re-publishing."""
         content_type_label = session.key[0].value
+        if editor_id is not None:
+            session.last_editor_id = editor_id
         REALTIME_UPDATE_MESSAGES_TOTAL.labels(
             content_type=content_type_label, direction="pubsub_in"
         ).inc()
@@ -321,61 +329,71 @@ class YDocManager:
 
         await snapshot_writer.schedule(session)
 
-    async def _enforce_role_change(self, handle: ClientHandle, new_role: object) -> None:
-        if new_role in _ROLES_REQUIRING_CLOSE:
-            if handle.doc_key is not None:
-                REALTIME_PERMISSION_REJECTIONS_TOTAL.labels(
-                    content_type=handle.doc_key[0].value, reason="role_revoked"
-                ).inc()
-            await self._close_handle(handle, WS_CLOSE_FORBIDDEN, "access revoked")
-            return
-        # Same EDITOR floor as attach-time and reauthorize: COMMENTER and below
-        # are read-only on the doc. Unknown role values fail closed.
-        try:
-            role = new_role if isinstance(new_role, ContentRole) else ContentRole(str(new_role))
-        except ValueError:
-            await self._close_handle(handle, WS_CLOSE_FORBIDDEN, "access revoked")
-            return
-        handle.can_edit = role_can_edit(role)
+    async def _reauthorize_docs(self, keys: Sequence[DocKey], user_id: UUID | None) -> None:
+        """Re-run authorize for attached clients; ``user_id`` narrows to that user's handles.
 
-    async def _reauthorize_doc_by_key(self, key: DocKey) -> None:
-        """Re-run authorize for every attached client; downgrade or close per result."""
-        session = self._sessions.get(key)
-        if session is None or not session.clients:
-            return
-        await self._reauthorize_all(session)
-
-    async def _reauthorize_all(self, session: YDocSession) -> None:
-        content_type, content_id = session.key
-        adapter = get_realtime_adapter(content_type)
-        affected = list(session.clients.values())
-        if not affected:
+        One checker per call so authorization facts load once per user and policy row,
+        not once per handle.
+        """
+        targets: list[tuple[YDocSession, list[ClientHandle]]] = []
+        for key in keys:
+            session = self._sessions.get(key)
+            if session is None:
+                continue
+            handles = [
+                handle
+                for handle in session.clients.values()
+                if user_id is None or handle.user_id == user_id
+            ]
+            if handles:
+                targets.append((session, handles))
+        if not targets:
             return
 
         async with open_session() as db:
-            for handle in affected:
-                try:
-                    role = await adapter.authorize(
-                        db, handle.user_id, session.organization_id, content_id
-                    )
-                except Exception:
-                    logger.exception(
-                        "reauthorize failed; closing session as forbidden",
-                        component=LOGGER_COMPONENT,
-                    )
-                    REALTIME_PERMISSION_REJECTIONS_TOTAL.labels(
-                        content_type=content_type.value, reason="reauthorize_failed"
-                    ).inc()
-                    await self._close_handle(handle, WS_CLOSE_FORBIDDEN, "reauthorize failed")
-                    continue
+            checker = PermissionChecker(db)
+            for session, handles in targets:
+                adapter = get_realtime_adapter(session.key[0])
+                for handle in handles:
+                    await self._reauthorize_handle(db, checker, adapter, session, handle)
 
-                if role is None or not role_can_view(role):
-                    REALTIME_PERMISSION_REJECTIONS_TOTAL.labels(
-                        content_type=content_type.value, reason="role_revoked"
-                    ).inc()
-                    await self._close_handle(handle, WS_CLOSE_FORBIDDEN, "access revoked")
-                    continue
-                handle.can_edit = role_can_edit(role)
+    async def _reauthorize_handle(
+        self,
+        db: AsyncSession,
+        checker: PermissionChecker,
+        adapter: RealtimeContentAdapter,
+        session: YDocSession,
+        handle: ClientHandle,
+    ) -> None:
+        content_type, content_id = session.key
+        try:
+            role = await adapter.authorize(
+                db, handle.user_id, session.organization_id, content_id, checker=checker
+            )
+        except Exception:
+            logger.exception(
+                "reauthorize failed; closing session as forbidden",
+                component=LOGGER_COMPONENT,
+            )
+            REALTIME_PERMISSION_REJECTIONS_TOTAL.labels(
+                content_type=content_type.value, reason="reauthorize_failed"
+            ).inc()
+            await self._close_handle(handle, WS_CLOSE_FORBIDDEN, "reauthorize failed")
+            return
+
+        if role is None or not role_can_view(role):
+            REALTIME_PERMISSION_REJECTIONS_TOTAL.labels(
+                content_type=content_type.value, reason="role_revoked"
+            ).inc()
+            await self._close_handle(handle, WS_CLOSE_FORBIDDEN, "access revoked")
+            return
+        can_edit = role_can_edit(role)
+        if handle.can_edit and not can_edit:
+            # Without this frame the client keeps writing and its next frame closes the socket.
+            enqueue_for_handle(
+                handle, create_auth_denied_message("edit access removed"), kind="auth"
+            )
+        handle.can_edit = can_edit
 
     async def _close_stale_user_sessions(self, user_id: UUID, new_version: int) -> None:
         """Close every handle for ``user_id`` whose ``token_version`` predates ``new_version``."""

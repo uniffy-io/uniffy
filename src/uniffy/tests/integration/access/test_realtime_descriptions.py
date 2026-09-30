@@ -135,7 +135,7 @@ async def test_private_event_downgrade_closes_live_non_attendee(
         patch("uniffy.core.realtime.ydoc_manager.get_realtime_adapter", return_value=adapter),
         patch.object(manager, "_close_handle", new_callable=AsyncMock) as close,
     ):
-        await manager._reauthorize_doc_by_key(key)
+        await manager._reauthorize_docs((key,), None)
     close.assert_awaited_once_with(handle, 4403, "access revoked")
 
 
@@ -250,7 +250,7 @@ async def test_event_render_preserves_metadata_and_only_notifies_new_mentions(
             new_callable=AsyncMock,
         ) as index,
         patch(
-            "uniffy.domains.scheduling.calendar.events.realtime.emit_notification",
+            "uniffy.domains.scheduling.calendar.events.notifications.emit_notification",
             new_callable=AsyncMock,
         ) as notify,
     ):

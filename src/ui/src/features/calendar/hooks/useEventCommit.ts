@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
 import { useAppDispatch } from "@/app/hooks";
 import { updateEvent } from "@/features/calendar/store/calendarThunks";
+import { isRecurringEvent } from "@/features/calendar/utils/recurrence";
 import type {
   CalendarEvent,
   EventStatus,
@@ -72,9 +73,7 @@ export function useEventCommit(event: CalendarEvent | null) {
   const dispatch = useAppDispatch();
   const [pendingPatch, setPendingPatch] = useState<EventPatch | null>(null);
 
-  const isRecurring =
-    !!event &&
-    (event.isRecurring || (event.recurrence != null && event.recurrence.pattern !== "none"));
+  const isRecurring = !!event && isRecurringEvent(event);
 
   const dispatchPatch = useCallback(
     (patch: EventPatch, scope?: RecurrenceEditScope) => {

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import * as Y from "yjs";
-import { getMarkdownYText } from "@/features/notes/realtime/markdown";
+import { getMarkdownYText } from "@/features/realtime/markdown";
 
 interface RealtimeMarkdownOptions {
   // Before resolution we return `fallback` to avoid a blank-content flash; after, Y.Text is authoritative.

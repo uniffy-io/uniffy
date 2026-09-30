@@ -32,6 +32,8 @@ class NoteRealtimePersistence:
         note_id: UUID,
         content: str,
         canvas_content: dict[str, Any] | None,
+        *,
+        actor_id: UUID | None = None,
     ) -> Note | None:
         note = await self._load_note(organization_id, note_id)
         if not note:
@@ -92,7 +94,8 @@ class NoteRealtimePersistence:
             raise RealtimeRenderConflict(f"Note {note_id} remained contended after three attempts")
 
         await self.operations.session.refresh(note)
-        actor_id = note.owner_id
+        # The last live editor stands in for the missing request actor, else the owner.
+        actor_id = actor_id or note.owner_id
         await self.operations._sync_tags_after_save(
             user_id=actor_id,
             organization_id=organization_id,

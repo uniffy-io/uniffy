@@ -11,7 +11,7 @@ import {
 } from "@phosphor-icons/react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { deselectEvent } from "@/features/calendar/store";
-import { updateEvent as patchEventLocal } from "@/features/calendar/store/calendarSlice";
+import { applyLiveDescription } from "@/features/calendar/store/calendarSlice";
 import { eventSupportsRealtime } from "@/features/calendar/utils/realtimeEligibility";
 import {
   deleteEvent as deleteEventThunk,
@@ -121,7 +121,7 @@ export function EventDetailModal() {
   ) => {
     if (!selectedEvent) return;
     if (realtimeOwned) {
-      dispatch(patchEventLocal({ ...selectedEvent, description: markdown }));
+      dispatch(applyLiveDescription({ id: selectedEvent.id, description: markdown }));
       return;
     }
     // Trim-compare because the editor re-serializes markdown and can differ by trailing newlines alone.

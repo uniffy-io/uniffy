@@ -11,7 +11,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from uniffy.core.auth.permissions.checker import PermissionChecker
 from uniffy.core.models.notes.note import Note
 from uniffy.core.realtime.adapter import register_realtime_adapter
-from uniffy.core.realtime.markdown import replace_external_markdown
+from uniffy.core.realtime.markdown import (
+    markdown_text,
+    replace_external_markdown,
+    seed_markdown,
+)
 from uniffy.core.realtime.state import DocKey
 from uniffy.core.search import SearchIndexer
 from uniffy.core.types import ContentRole, ContentType, NodeType
@@ -47,6 +51,8 @@ class NoteRealtimeAdapter:
         user_id: UUID,
         organization_id: UUID,
         content_id: UUID,
+        *,
+        checker: PermissionChecker | None = None,
     ) -> ContentRole | None:
         note = (
             await session.execute(
@@ -59,7 +65,7 @@ class NoteRealtimeAdapter:
         if note is None or note.is_deleted:
             return None
 
-        return await PermissionChecker(session).effective_role(
+        return await (checker or PermissionChecker(session)).effective_role(
             user_id=user_id,
             organization_id=organization_id,
             content_type=ContentType.NOTE,
@@ -90,7 +96,7 @@ class NoteRealtimeAdapter:
         if note.node_type == NodeType.CANVAS:
             _seed_canvas_ydoc(ydoc, note.canvas_content)
         else:
-            ydoc["markdown"] = pycrdt.Text(note.content or "")
+            seed_markdown(ydoc, note.content or "")
 
     async def render_and_persist(
         self,
@@ -98,6 +104,8 @@ class NoteRealtimeAdapter:
         ydoc: pycrdt.Doc,
         content_id: UUID,
         organization_id: UUID,
+        *,
+        actor_id: UUID | None = None,
     ) -> bool:
         note = (
             await session.execute(
@@ -134,6 +142,7 @@ class NoteRealtimeAdapter:
             note_id=content_id,
             content=content,
             canvas_content=canvas_content,
+            actor_id=actor_id,
         )
         return saved is not None
 
@@ -205,10 +214,7 @@ def _build_node_map(node: dict[str, Any]) -> pycrdt.Map:
 
 
 def _render_markdown(ydoc: pycrdt.Doc) -> str:
-    # ``get(..., type=...)`` declares + retrieves so roots seeded purely via
-    # ``apply_update`` are read correctly.
-    ytext = ydoc.get("markdown", type=pycrdt.Text)
-    return str(ytext)
+    return str(markdown_text(ydoc))
 
 
 def _render_canvas_content(ydoc: pycrdt.Doc) -> dict[str, Any] | None:

@@ -18,28 +18,48 @@ from uniffy.domains.projects.tasks.notifications import TaskNotifications
 logger = logger.bind(component="projects.tasks.realtime")
 
 
+async def load_live_task(
+    session: AsyncSession,
+    task_id: UUID,
+    organization_id: UUID,
+    *,
+    populate_existing: bool = False,
+) -> Task | None:
+    """Task under a live project in the same org; the project carries the access policy."""
+    query = (
+        select(Task)
+        .join(Project, Project.id == Task.project_id)
+        .where(
+            Task.id == task_id,
+            Task.organization_id == organization_id,
+            Task.is_deleted.is_(False),
+            Project.organization_id == organization_id,
+            Project.is_deleted.is_(False),
+        )
+    )
+    if populate_existing:
+        query = query.execution_options(populate_existing=True)
+    return (await session.execute(query)).scalar_one_or_none()
+
+
 class TaskRealtimePersistence:
     def __init__(self, session: AsyncSession, search_indexer: SearchIndexer) -> None:
         self.session = session
         self.search_indexer = search_indexer
 
-    async def save(self, organization_id: UUID, task_id: UUID, content: str) -> Task | None:
+    async def save(
+        self,
+        organization_id: UUID,
+        task_id: UUID,
+        content: str,
+        *,
+        actor_id: UUID | None = None,
+    ) -> Task | None:
         references = extract_urns_from_content(content) or None
         for attempt in range(3):
-            task = (
-                await self.session.execute(
-                    select(Task)
-                    .join(Project, Project.id == Task.project_id)
-                    .where(
-                        Task.id == task_id,
-                        Task.organization_id == organization_id,
-                        Task.is_deleted.is_(False),
-                        Project.organization_id == organization_id,
-                        Project.is_deleted.is_(False),
-                    )
-                    .execution_options(populate_existing=True)
-                )
-            ).scalar_one_or_none()
+            task = await load_live_task(
+                self.session, task_id, organization_id, populate_existing=True
+            )
             if task is None:
                 return None
             old_refs = task.outgoing_references
@@ -76,7 +96,8 @@ class TaskRealtimePersistence:
         )._index_for_search(task)
         project = await self.session.get(Project, task.project_id)
         if project is not None:
+            # The last live editor stands in for the missing request actor, else the project owner.
             await TaskNotifications(self.session).emit_mention_notifications(
-                task, project.owner_id, old_refs, task.outgoing_references
+                task, actor_id or project.owner_id, old_refs, task.outgoing_references
             )
         return task

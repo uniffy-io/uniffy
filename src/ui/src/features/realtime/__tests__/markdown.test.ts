@@ -7,7 +7,7 @@ import {
   getProsemirrorFragment,
   replaceMarkdownYText,
   replaceProsemirrorFragment,
-} from "@/features/notes/realtime/markdown";
+} from "@/features/realtime/markdown";
 
 const schema = new Schema({
   nodes: {

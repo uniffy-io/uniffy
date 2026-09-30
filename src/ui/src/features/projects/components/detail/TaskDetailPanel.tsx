@@ -30,6 +30,7 @@ import {
   selectTasksMap,
   selectCurrentProject,
   selectTasksForProject,
+  applyLiveDescription,
   optimisticUpdateTask,
 } from "@/features/projects/store/projectsSlice";
 import { updateTask } from "@/features/projects/store/projectsThunks";
@@ -83,10 +84,14 @@ export function TaskDetailPanel({ taskId, variant = "sidebar" }: TaskDetailPanel
     { realtimeOwned }: { realtimeOwned: boolean },
   ) => {
     if (!task) return;
-    dispatch(optimisticUpdateTask({ id: task.id, description: markdown }));
-    if (!realtimeOwned && markdown.trim() !== task.description.trim()) {
-      dispatch(updateTask({ id: task.id, description: markdown }));
+    if (realtimeOwned) {
+      dispatch(applyLiveDescription({ id: task.id, description: markdown }));
+      return;
     }
+    // Trim-compare because the editor re-serializes markdown and can differ by trailing newlines alone.
+    if (markdown.trim() === task.description.trim()) return;
+    dispatch(optimisticUpdateTask({ id: task.id, description: markdown }));
+    dispatch(updateTask({ id: task.id, description: markdown }));
   };
 
   useOverlayEscape(() => {

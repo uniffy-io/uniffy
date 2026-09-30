@@ -45,9 +45,12 @@ class BaseContentOperations[TModel](ABC):
         self,
         session: AsyncSession,
         search_indexer: SearchIndexer | None = None,
+        *,
+        permission_checker: PermissionChecker | None = None,
     ) -> None:
         self.session = session
-        self.permission_checker = PermissionChecker(session)
+        # A caller resolving many rows in one pass shares a checker so facts load once per user.
+        self.permission_checker = permission_checker or PermissionChecker(session)
         self.access_query = ContentAccessQuery(session)
         self._search_indexer = search_indexer
 
