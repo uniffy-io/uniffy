@@ -19,6 +19,7 @@ async def save_realtime_snapshot(
     organization_id_str: str,
     update_b64: str,
     state_vector_b64: str,
+    actor_id_str: str = "",
 ) -> dict[str, Any]:
     content_type = ContentType(content_type_str)
     started = time.perf_counter()
@@ -30,8 +31,11 @@ async def save_realtime_snapshot(
             UUID(organization_id_str),
             base64.b64decode(update_b64),
             base64.b64decode(state_vector_b64),
+            actor_id=UUID(actor_id_str) if actor_id_str else None,
         )
     except RealtimeRenderConflict as exc:
+        # Seconds, not the usual tens: the loser of a version race only needs the
+        # competing metadata write to land, and the column should not lag the doc.
         raise Retry(defer=ctx.get("job_try", 1)) from exc
     finally:
         REALTIME_SNAPSHOT_TASK_DURATION.labels(content_type=content_type.value).observe(

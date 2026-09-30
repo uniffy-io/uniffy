@@ -4,7 +4,11 @@ import { Awareness } from "y-protocols/awareness";
 import * as syncProtocol from "y-protocols/sync";
 import * as encoding from "lib0/encoding";
 import * as decoding from "lib0/decoding";
-import { realtimeMultiplexer, type DocSubscription } from "@/features/realtime/multiplexer";
+import {
+  realtimeMultiplexer,
+  type DocSubscription,
+  type MultiplexerAttachOptions,
+} from "@/features/realtime/multiplexer";
 import { encodeDocFrame, peekVarString } from "@/features/realtime/multiplex";
 
 vi.mock("@/config/api", () => ({
@@ -12,6 +16,8 @@ vi.mock("@/config/api", () => ({
 }));
 
 const MESSAGE_SYNC = 0;
+const MESSAGE_AUTH = 2;
+const AUTH_PERMISSION_DENIED = 0;
 const SYNC_STEP1 = 0;
 const SYNC_STEP2 = 1;
 const SYNC_UPDATE = 2;
@@ -99,6 +105,14 @@ function serverSyncStep2Frame(
   return encodeDocFrame(docName, encoding.toUint8Array(enc));
 }
 
+function serverAuthDeniedFrame(docName: string, reason: string): Uint8Array {
+  const enc = encoding.createEncoder();
+  encoding.writeVarUint(enc, MESSAGE_AUTH);
+  encoding.writeVarUint(enc, AUTH_PERMISSION_DENIED);
+  encoding.writeVarString(enc, reason);
+  return encodeDocFrame(docName, encoding.toUint8Array(enc));
+}
+
 function applyClientFramesToServer(ws: FakeWebSocket, docName: string, serverDoc: Y.Doc): void {
   for (const bytes of ws.sent) {
     const { docName: name, payloadOffset } = peekVarString(bytes);
@@ -123,7 +137,10 @@ interface AttachedDoc {
 
 let attached: AttachedDoc[] = [];
 
-function attachDoc(contentId: string): AttachedDoc {
+function attachDoc(
+  contentId: string,
+  options: Partial<Pick<MultiplexerAttachOptions, "onWriteDenied" | "onStatus">> = {},
+): AttachedDoc {
   const ydoc = new Y.Doc();
   const awareness = new Awareness(ydoc);
   const onSync = vi.fn();
@@ -133,6 +150,7 @@ function attachDoc(contentId: string): AttachedDoc {
     ydoc,
     awareness,
     onSync,
+    ...options,
   });
   const doc: AttachedDoc = {
     docName: `NOTE:${contentId}`,
@@ -218,6 +236,34 @@ describe("read-only docs", () => {
     const subtypes = sentSyncSubtypes(currentWs(), doc.docName);
     expect(subtypes).not.toContain(SYNC_STEP2);
     expect(subtypes).not.toContain(SYNC_UPDATE);
+  });
+});
+
+describe("auth frames", () => {
+  it("marks a stale editable doc read-only and reports the denial once", () => {
+    const onWriteDenied = vi.fn();
+    const doc = attachDoc("downgraded", { onWriteDenied });
+    currentWs().open();
+
+    currentWs().receive(serverAuthDeniedFrame(doc.docName, "edit access removed"));
+    expect(onWriteDenied).toHaveBeenCalledWith("edit access removed");
+
+    doc.ydoc.getText("markdown").insert(0, "typed after the downgrade");
+    expect(sentSyncSubtypes(currentWs(), doc.docName)).not.toContain(SYNC_UPDATE);
+    expect(realtimeMultiplexer.isOutboundPending(doc.docName)).toBe(false);
+
+    currentWs().receive(serverAuthDeniedFrame(doc.docName, "read only"));
+    expect(onWriteDenied).toHaveBeenCalledTimes(1);
+  });
+
+  it("stays silent for a doc the client already treats as read-only", () => {
+    const onWriteDenied = vi.fn();
+    const doc = attachDoc("viewer-attach", { onWriteDenied });
+    currentWs().open();
+    realtimeMultiplexer.setDocReadOnly(doc.docName, true);
+
+    currentWs().receive(serverAuthDeniedFrame(doc.docName, "read only"));
+    expect(onWriteDenied).not.toHaveBeenCalled();
   });
 });
 

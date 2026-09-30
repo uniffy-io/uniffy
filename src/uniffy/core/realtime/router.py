@@ -6,7 +6,7 @@ import asyncio
 import base64
 import contextlib
 import time
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass
 from uuid import UUID
 
@@ -41,12 +41,22 @@ _RECONNECT_DELAY_MAX = 30.0
 class RouterCallbacks:
     """Hooks the ``YDocManager`` registers to receive routed payloads."""
 
-    apply_remote_update: Callable[[YDocSession, bytes], Awaitable[None]]
+    apply_remote_update: Callable[[YDocSession, bytes, UUID | None], Awaitable[None]]
     apply_content_replace: Callable[[DocKey, str], Awaitable[None]]
-    enforce_role_change: Callable[[ClientHandle, str | None], Awaitable[None]]
     close_stale_user_sessions: Callable[[UUID, int], Awaitable[None]]
     close_user_session_by_sid: Callable[[UUID, UUID], Awaitable[None]]
-    reauthorize_doc: Callable[[DocKey], Awaitable[None]]
+    # ``user_id`` narrows to that user's handles; ``None`` re-checks everyone on the docs.
+    reauthorize_docs: Callable[[Sequence[DocKey], UUID | None], Awaitable[None]]
+
+
+def _parse_editor_id(payload: dict[str, object]) -> UUID | None:
+    raw = payload.get("editor_id")
+    if not raw:
+        return None
+    try:
+        return UUID(str(raw))
+    except ValueError:
+        return None
 
 
 def _parse_doc_channel(channel: str) -> DocKey | None:
@@ -296,7 +306,7 @@ class RealtimeRouter:
         if callbacks is None:
             return
         _observe_pubsub_latency("doc", payload)
-        await callbacks.apply_remote_update(session, update)
+        await callbacks.apply_remote_update(session, update, _parse_editor_id(payload))
 
     async def _handle_perm_message(self, channel: str, payload: dict[str, object]) -> None:
         if payload.get("origin_replica") == self._self_replica:
@@ -313,8 +323,7 @@ class RealtimeRouter:
         user_id_raw = payload.get("user_id")
         targets = tuple(self._policy_docs.get(key) or {key})
         if user_id_raw is None:
-            for target in targets:
-                await callbacks.reauthorize_doc(target)
+            await callbacks.reauthorize_docs(targets, None)
             return
         try:
             user_id = UUID(str(user_id_raw))
@@ -324,10 +333,15 @@ class RealtimeRouter:
                 component=LOGGER_COMPONENT,
             )
             return
-        for target in targets:
-            bucket = self._doc_handles.get(target, {})
-            if any(handle.user_id == user_id for handle in bucket.values()):
-                await callbacks.reauthorize_doc(target)
+        affected = tuple(
+            target
+            for target in targets
+            if any(
+                handle.user_id == user_id for handle in self._doc_handles.get(target, {}).values()
+            )
+        )
+        if affected:
+            await callbacks.reauthorize_docs(affected, user_id)
 
     async def _handle_defaults_message(self, channel: str, payload: dict[str, object]) -> None:
         """Re-authorize every doc on this replica matching ``(org_id, content_type)``."""
@@ -339,9 +353,13 @@ class RealtimeRouter:
         if callbacks is None:
             return
         _observe_pubsub_latency("defaults", payload)
-        for key, session in list(self._doc_sessions.items()):
-            if (session.policy_key or key)[0] is content_type and session.organization_id == org_id:
-                await callbacks.reauthorize_doc(key)
+        affected = tuple(
+            key
+            for key, session in list(self._doc_sessions.items())
+            if (session.policy_key or key)[0] is content_type and session.organization_id == org_id
+        )
+        if affected:
+            await callbacks.reauthorize_docs(affected, None)
 
     async def _handle_revoke_message(self, channel: str, payload: dict[str, object]) -> None:
         user_id = _parse_revoke_channel(channel)

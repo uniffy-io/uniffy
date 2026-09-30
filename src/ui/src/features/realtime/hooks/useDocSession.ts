@@ -100,6 +100,8 @@ export function useDocSession(opts: UseDocSessionOptions): DocSession | null {
         const mapped = statusFromCloseCode(code);
         if (mapped) setStatus(mapped);
       },
+      // Doc-scoped, unlike a 4403 close: only this editor flips to view-only.
+      onWriteDenied: () => setStatus("permission_lost"),
     });
 
     sessionRef.current = {

@@ -12,8 +12,6 @@ from uniffy.core.errors import (
 from uniffy.core.events import (
     NotificationEvent,
     emit_notification,
-    extract_mentioned_team_ids,
-    extract_mentioned_user_ids,
 )
 from uniffy.core.events.realtime import ContentAccessAction
 from uniffy.core.models.calendar.attendee import EventAttendee
@@ -289,38 +287,16 @@ class EventCreateOperations:
                     event_id=str(event.id),
                 )
 
-        excluded_from_mentions = {event.owner_id, *staged.attendee_ids}
-        mentioned_ids = (
-            extract_mentioned_user_ids(event.outgoing_references) - excluded_from_mentions
-        )
-        if mentioned_ids:
-            try:
-                await emit_notification(
-                    NotificationEvent(
-                        notification_type=NotificationType.CONTENT_MENTIONED,
-                        organization_id=event.organization_id,
-                        actor_id=event.owner_id,
-                        title=f"Mentioned you in: {event.title}",
-                        source_urn=build_content_urn(ContentType.CALENDAR_EVENT, event.id),
-                        target_user_ids=list(mentioned_ids),
-                    )
-                )
-            except Exception:
-                logger.opt(exception=True).warning(
-                    "Calendar event created with degraded mention notifications",
-                    event_id=str(event.id),
-                )
-
         try:
-            await self.events._emit_team_mention_notifications(
+            await self.events.emit_mention_notifications(
                 event,
                 event.owner_id,
                 event.organization_id,
-                extract_mentioned_team_ids(event.outgoing_references),
-                excluded_from_mentions | mentioned_ids,
+                None,
+                {event.owner_id, *staged.attendee_ids},
             )
         except Exception:
             logger.opt(exception=True).warning(
-                "Calendar event created with degraded team-mention notifications",
+                "Calendar event created with degraded mention notifications",
                 event_id=str(event.id),
             )

@@ -21,12 +21,12 @@ def _task() -> Task:
     )
 
 
-def _session(task: Task | None) -> MagicMock:
+def _session(task: Task | None, project_owner_id=None) -> MagicMock:
     session = MagicMock()
     session.execute = AsyncMock(return_value=MagicMock(scalar_one_or_none=lambda: task))
     session.commit = AsyncMock()
     session.refresh = AsyncMock()
-    session.get = AsyncMock(return_value=MagicMock(owner_id=generate_id()))
+    session.get = AsyncMock(return_value=MagicMock(owner_id=project_owner_id or generate_id()))
     return session
 
 
@@ -61,6 +61,21 @@ async def test_authorization_uses_parent_role() -> None:
         resolve.assert_awaited_once_with(user_id, task.organization_id, task)
 
 
+async def test_authorization_threads_a_shared_checker_through() -> None:
+    task = _task()
+    session = _session(task)
+    checker = MagicMock()
+    with patch("uniffy.domains.projects.realtime.TaskContentOperations") as operations:
+        operations.return_value._resolve_role = AsyncMock(return_value=ContentRole.VIEWER)
+        assert (
+            await TaskRealtimeAdapter(MagicMock()).authorize(
+                session, generate_id(), task.organization_id, task.id, checker=checker
+            )
+            == ContentRole.VIEWER
+        )
+        operations.assert_called_once_with(session, permission_checker=checker)
+
+
 async def test_missing_task_denies_and_skips_render() -> None:
     adapter = TaskRealtimeAdapter(MagicMock())
     session = _session(None)
@@ -92,9 +107,12 @@ async def test_render_exhaustion_preserves_snapshot_as_retryable_failure() -> No
     session.refresh.assert_not_awaited()
 
 
-async def test_render_retries_then_indexes_and_notifies_mentions() -> None:
+@pytest.mark.parametrize("editor_known", [True, False])
+async def test_render_retries_then_indexes_and_attributes_mentions(editor_known: bool) -> None:
     task = _task()
-    session = _session(task)
+    project_owner = generate_id()
+    editor = generate_id()
+    session = _session(task, project_owner_id=project_owner)
     session.execute.side_effect = [
         MagicMock(scalar_one_or_none=lambda: task),
         MagicMock(rowcount=0),
@@ -109,9 +127,14 @@ async def test_render_retries_then_indexes_and_notifies_mentions() -> None:
         notifications.return_value.emit_mention_notifications = AsyncMock()
         assert (
             await TaskRealtimePersistence(session, MagicMock()).save(
-                task.organization_id, task.id, "Merged"
+                task.organization_id,
+                task.id,
+                "Merged",
+                actor_id=editor if editor_known else None,
             )
             is task
         )
         operations.return_value._index_for_search.assert_awaited_once_with(task)
-        notifications.return_value.emit_mention_notifications.assert_awaited_once()
+        notifications.return_value.emit_mention_notifications.assert_awaited_once_with(
+            task, editor if editor_known else project_owner, None, None
+        )

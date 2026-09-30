@@ -1,5 +1,6 @@
 import * as Y from "yjs";
 import { openDB, type IDBPDatabase } from "idb";
+import { docNameFor } from "@/features/realtime/docNames";
 import { randomUUID } from "@/shared/utils/uuid";
 import {
   ENCRYPTION_REKEY_EVENT,
@@ -100,7 +101,7 @@ export function attachEncryptedPersistence(
   opts: EncryptedPersistenceOptions,
 ): EncryptedPersistence {
   const { contentType, contentId, ydoc } = opts;
-  const docKey = `${contentType}:${contentId}`;
+  const docKey = docNameFor(contentType, contentId);
   const previousDisposal = pendingDisposals.get(docKey);
   const compactEvery = opts.compactEvery ?? 100;
 

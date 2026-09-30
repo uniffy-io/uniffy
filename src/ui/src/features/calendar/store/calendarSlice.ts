@@ -71,6 +71,23 @@ interface CalendarState {
     totalCount: number;
     hasMore: boolean;
   };
+  /** Events whose description a live editing session wrote; server rows keep the local text until a refetch. */
+  liveDescriptionIds: Record<string, true>;
+}
+
+/**
+ * A live editing session owns the description until the server render lands, so a
+ * server row from an unrelated write must not roll the text back in the meantime.
+ */
+function acceptServerEvent(
+  state: CalendarState,
+  event: CalendarEvent,
+  descriptionRequested = false,
+): void {
+  if (!state.events[event.id]) return;
+  if (descriptionRequested) delete state.liveDescriptionIds[event.id];
+  const live = state.liveDescriptionIds[event.id] ? state.events[event.id].description : undefined;
+  state.events[event.id] = live === undefined ? event : { ...event, description: live };
 }
 
 function createDefaultCategories(): Record<string, Category> {
@@ -132,6 +149,7 @@ const initialState: CalendarState = {
     totalCount: 0,
     hasMore: false,
   },
+  liveDescriptionIds: {},
 };
 
 const calendarSlice = createSlice({
@@ -160,6 +178,14 @@ const calendarSlice = createSlice({
       if (state.events[action.payload.id]) {
         state.events[action.payload.id] = action.payload;
       }
+    },
+
+    /** Description persisted by the realtime session; no RPC follows. */
+    applyLiveDescription: (state, action: PayloadAction<{ id: string; description: string }>) => {
+      const event = state.events[action.payload.id];
+      if (!event) return;
+      event.description = action.payload.description;
+      state.liveDescriptionIds[event.id] = true;
     },
 
     removeEvent: (state, action: PayloadAction<string>) => {
@@ -232,6 +258,7 @@ const calendarSlice = createSlice({
         });
         state.events = newEvents;
         state.visibleEventIds = action.payload.map((e) => e.id);
+        state.liveDescriptionIds = {};
       })
       .addCase(fetchEventsInRange.rejected, (state, action) => {
         state.loading.events = false;
@@ -244,6 +271,7 @@ const calendarSlice = createSlice({
       })
       .addCase(fetchEvent.fulfilled, (state, action) => {
         state.loading.eventDetail = false;
+        delete state.liveDescriptionIds[action.payload.id];
         state.events[action.payload.id] = action.payload;
         if (!state.visibleEventIds.includes(action.payload.id)) {
           state.visibleEventIds.push(action.payload.id);
@@ -277,9 +305,7 @@ const calendarSlice = createSlice({
       })
       .addCase(updateEventThunk.fulfilled, (state, action) => {
         state.loading.updating = false;
-        if (state.events[action.payload.id]) {
-          state.events[action.payload.id] = action.payload;
-        }
+        acceptServerEvent(state, action.payload, action.meta.arg.description !== undefined);
       })
       .addCase(updateEventThunk.rejected, (state, action) => {
         state.loading.updating = false;
@@ -336,15 +362,11 @@ const calendarSlice = createSlice({
     });
 
     builder.addCase(addAttendees.fulfilled, (state, action) => {
-      if (state.events[action.payload.id]) {
-        state.events[action.payload.id] = action.payload;
-      }
+      acceptServerEvent(state, action.payload);
     });
 
     builder.addCase(removeAttendees.fulfilled, (state, action) => {
-      if (state.events[action.payload.id]) {
-        state.events[action.payload.id] = action.payload;
-      }
+      acceptServerEvent(state, action.payload);
     });
 
     builder.addCase(updateAttendeeStatus.fulfilled, (state, action) => {
@@ -432,6 +454,7 @@ export const {
   setEvents,
   addEvent,
   updateEvent,
+  applyLiveDescription,
   removeEvent,
   updateCategory,
   setFilters,

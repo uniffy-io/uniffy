@@ -1,4 +1,4 @@
-const OCCURRENCE_ID_SEPARATOR = "__occurrence__";
+export const OCCURRENCE_ID_SEPARATOR = "__occurrence__";
 
 /**
  * Expanded occurrences carry `<masterId>__occurrence__<date>` as their id. Cross-domain RPCs

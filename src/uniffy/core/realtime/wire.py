@@ -9,9 +9,13 @@ from pycrdt import (
     handle_sync_message,
 )
 
+from uniffy.core.realtime.multiplex import write_var_string, write_var_uint
+
 __all__ = [
+    "Y_MESSAGE_AUTH",
     "YMessageType",
     "YSyncMessageType",
+    "create_auth_denied_message",
     "create_awareness_message",
     "create_sync_message",
     "create_update_message",
@@ -20,6 +24,17 @@ __all__ = [
     "peek_message_type",
     "peek_sync_sub_type",
 ]
+
+# y-protocols/auth: pycrdt only models SYNC and AWARENESS.
+Y_MESSAGE_AUTH = 2
+_AUTH_PERMISSION_DENIED = 0
+
+
+def create_auth_denied_message(reason: str) -> bytes:
+    """Tell one client its doc is read-only so it stops emitting write frames."""
+    return (
+        write_var_uint(Y_MESSAGE_AUTH) + write_var_uint(_AUTH_PERMISSION_DENIED)
+    ) + write_var_string(reason)
 
 
 def peek_message_type(frame: bytes) -> int | None:

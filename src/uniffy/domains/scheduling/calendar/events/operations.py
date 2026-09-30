@@ -504,19 +504,19 @@ class CalendarEventOperations(CalendarEventReader):
             occurrence_date,
         )
 
-    async def _emit_team_mention_notifications(
+    async def emit_mention_notifications(
         self,
         event: CalendarEvent,
         actor_id: UUID,
         organization_id: UUID,
-        team_ids: list[UUID],
+        old_references: list[str] | None,
         excluded_ids: set[UUID],
     ) -> None:
-        await EventNotifications(self)._emit_team_mention_notifications(
+        await EventNotifications(self).emit_mention_notifications(
             event,
             actor_id,
             organization_id,
-            team_ids,
+            old_references,
             excluded_ids,
         )
 

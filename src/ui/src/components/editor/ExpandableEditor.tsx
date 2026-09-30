@@ -15,7 +15,11 @@ import {
   docContentTypeName,
   RealtimeSessionStatus,
   useMarkdownDocSession,
+  useOutboundPending,
 } from "@/features/realtime";
+
+// Reopening inside this window resumes the same session instead of re-hydrating.
+const SESSION_CLOSE_GRACE_MS = 1000;
 
 interface ExpandableEditorProps {
   contentType: ContentType;
@@ -61,12 +65,12 @@ export function ExpandableEditor({
   const [editorKey, setEditorKey] = useState(0);
   const [draftInitial, setDraftInitial] = useState(value);
   const latestMarkdownRef = useRef(value);
-  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const openTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [sessionOpen, setSessionOpen] = useState(false);
+  const [closing, setClosing] = useState(false);
   const [syncedSessionId, setSyncedSessionId] = useState<string | null>(null);
   const realtimeActive = Boolean(realtime && contentId);
-  const { binding, status } = useMarkdownDocSession({
+  const { binding, status, docName } = useMarkdownDocSession({
     contentType: docContentTypeName(contentType),
     contentId,
     enabled: realtimeActive && sessionOpen,
@@ -85,9 +89,21 @@ export function ExpandableEditor({
       cancelled = true;
     };
   }, [whenSynced, sessionId]);
+
+  // Unsent edits only reach the server through this attached doc. Hold the session while
+  // frames are pending or the transport is down; a parent unmount still falls back to IDB.
+  const outboundPending = useOutboundPending(sessionOpen ? docName : null);
+  const transportDown = status === "disconnected" || status === "offline";
+  useEffect(() => {
+    if (!closing || outboundPending || transportDown) return;
+    const timer = setTimeout(() => {
+      setSessionOpen(false);
+      setClosing(false);
+    }, SESSION_CLOSE_GRACE_MS);
+    return () => clearTimeout(timer);
+  }, [closing, outboundPending, transportDown]);
   useEffect(
     () => () => {
-      if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
       if (openTimerRef.current) clearTimeout(openTimerRef.current);
     },
     [],
@@ -96,9 +112,8 @@ export function ExpandableEditor({
 
   const handleOpen = useCallback(() => {
     if (readonly) return;
-    if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
     if (openTimerRef.current) clearTimeout(openTimerRef.current);
-    closeTimerRef.current = null;
+    setClosing(false);
     setSessionOpen(true);
     setDraftInitial(value);
     latestMarkdownRef.current = value;
@@ -120,8 +135,7 @@ export function ExpandableEditor({
     setIsExpanded(false);
     setEditorReady(false);
     if (openTimerRef.current) clearTimeout(openTimerRef.current);
-    if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
-    closeTimerRef.current = setTimeout(() => setSessionOpen(false), 1000);
+    setClosing(true);
     onDone?.(markdown, { realtimeOwned });
   }, [onDone, editorHandle, realtimeOwned]);
 
@@ -313,7 +327,7 @@ export function ExpandableEditor({
                       floatingToolbar={false}
                       className="pt-6"
                     />
-                  ) : (
+                  ) : realtimeActive ? (
                     <div className="h-full overflow-y-auto p-6">
                       <p className="text-sm text-muted-foreground mb-4">
                         {status === "permission_lost" ? "Edit access removed." : "Connecting..."}
@@ -326,6 +340,10 @@ export function ExpandableEditor({
                         enableUpload={false}
                         floatingToolbar={false}
                       />
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-center h-full">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
                     </div>
                   )}
                 </div>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { diffStrings } from "@/features/notes/realtime/textDiff";
+import { diffStrings } from "@/features/realtime/textDiff";
 
 function applyDelta(prev: string, next: string): string {
   const delta = diffStrings(prev, next);

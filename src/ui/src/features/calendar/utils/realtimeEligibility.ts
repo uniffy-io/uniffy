@@ -1,7 +1,8 @@
 import type { CalendarEvent } from "@/features/calendar/types";
+import { isRecurringEvent } from "@/features/calendar/utils/recurrence";
+import { isUuid } from "@/shared/utils/uuid";
 
+/** Live editing needs a real row: non-recurring events and materialized overrides, never a master or a synthetic occurrence. */
 export function eventSupportsRealtime(event: CalendarEvent): boolean {
-  const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-  const recurring = event.isRecurring || (event.recurrence && event.recurrence.pattern !== "none");
-  return uuid.test(event.id) && (!recurring || Boolean(event.recurrenceId));
+  return isUuid(event.id) && (!isRecurringEvent(event) || Boolean(event.recurrenceId));
 }

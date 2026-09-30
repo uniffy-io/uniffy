@@ -15,9 +15,10 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from uniffy.core.jobs import JobEnqueueOutcome, enqueue_job_reconnecting
 from uniffy.core.models.realtime.yjs_snapshot import RealtimeYjsSnapshot
-from uniffy.core.realtime.adapter import get_realtime_adapter
+from uniffy.core.realtime.adapter import RealtimeRenderConflict, get_realtime_adapter
 from uniffy.core.realtime.job_contracts import SAVE_REALTIME_SNAPSHOT
 from uniffy.core.realtime.metrics import (
+    REALTIME_RENDER_CONFLICTS_TOTAL,
     REALTIME_SNAPSHOT_DROPPED_TOTAL,
     REALTIME_SNAPSHOT_DURATION,
 )
@@ -38,6 +39,8 @@ async def persist_snapshot(
     organization_id: UUID,
     update_bytes: bytes,
     state_vector: bytes,
+    *,
+    actor_id: UUID | None = None,
 ) -> bool:
     """UPSERT the snapshot row and run the domain render; ``False`` when no adapter is registered."""
     ydoc = pycrdt.Doc()
@@ -86,6 +89,7 @@ async def persist_snapshot(
                 ydoc,
                 content_id,
                 organization_id,
+                actor_id=actor_id,
             )
             if not target_exists:
                 await session.execute(
@@ -101,6 +105,10 @@ async def persist_snapshot(
                 ).inc()
                 return False
             await session.commit()
+        except RealtimeRenderConflict:
+            # The row above is committed; only the domain render is deferred to a retry.
+            REALTIME_RENDER_CONFLICTS_TOTAL.labels(content_type=content_type.value).inc()
+            raise
         except Exception:
             REALTIME_SNAPSHOT_DROPPED_TOTAL.labels(
                 content_type=content_type.value, reason="adapter_error"
@@ -165,16 +173,25 @@ class SnapshotWriter:
             ).inc()
             return
 
+        actor_id = session.last_editor_id
         if force:
             # Eviction must not depend on queue availability; write in-process.
-            await persist_snapshot(
-                content_type,
-                content_id,
-                session.organization_id,
-                update_bytes,
-                state_vector,
-            )
-            return
+            try:
+                await persist_snapshot(
+                    content_type,
+                    content_id,
+                    session.organization_id,
+                    update_bytes,
+                    state_vector,
+                    actor_id=actor_id,
+                )
+                return
+            except RealtimeRenderConflict:
+                # No retry loop here; the worker owns it, so hand the render over.
+                logger.warning(
+                    f"eviction render contended for {content_type_label}:{content_id}; queueing",
+                    component=LOGGER_COMPONENT,
+                )
 
         # Dedup keyed on the payload hash, not just ``(content_type, content_id)``.
         # ARQ caches completed-job results for ``WORKER_KEEP_RESULT`` seconds; a
@@ -188,6 +205,7 @@ class SnapshotWriter:
             str(session.organization_id),
             base64.b64encode(update_bytes).decode("ascii"),
             base64.b64encode(state_vector).decode("ascii"),
+            str(actor_id) if actor_id is not None else "",
             _job_id=f"snapshot:{content_type_label}:{content_id}:{content_hash}",
         )
         if enqueue_result.outcome is JobEnqueueOutcome.UNAVAILABLE:

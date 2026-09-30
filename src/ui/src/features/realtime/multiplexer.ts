@@ -23,11 +23,14 @@ import {
   WS_CLOSE_TOKEN_REVOKED,
   type RealtimeStatus,
 } from "@/features/realtime/protocol";
+import { docNameFor } from "@/features/realtime/docNames";
 
 // y-protocols message-type constants - upstream exposes them only as numeric literals.
 const MESSAGE_SYNC = 0;
 const MESSAGE_AWARENESS = 1;
+const MESSAGE_AUTH = 2;
 const MESSAGE_QUERY_AWARENESS = 3;
+const AUTH_PERMISSION_DENIED = 0;
 
 const AUTH_REFRESHED_EVENT = "uniffy:auth:refreshed";
 const AUTH_REVOKED_EVENT = "uniffy:auth:revoked";
@@ -63,6 +66,8 @@ export interface MultiplexerAttachOptions {
   onStatus?: (status: RealtimeStatus) => void;
   onSync?: () => void;
   onCloseCode?: (code: number) => void;
+  /** The server downgraded this doc to read-only while the client still believed it could edit. */
+  onWriteDenied?: (reason: string) => void;
 }
 
 export interface DocSubscription {
@@ -107,7 +112,7 @@ class RealtimeMultiplexer {
   private listenersAttached = false;
 
   attach(opts: MultiplexerAttachOptions): DocSubscription {
-    const docName = `${opts.contentType}:${opts.contentId}`;
+    const docName = docNameFor(opts.contentType, opts.contentId);
     if (this.docs.has(docName)) {
       // The original subscription owns the Y.Doc lifecycle; aliasing breaks teardown.
       throw new Error(`realtime: ${docName} already attached on this tab`);
@@ -468,6 +473,13 @@ class RealtimeMultiplexer {
       applyAwarenessUpdate(entry.awareness, decoding.readVarUint8Array(decoder), "remote");
     } else if (messageType === MESSAGE_QUERY_AWARENESS) {
       this.sendLocalAwareness(entry);
+    } else if (messageType === MESSAGE_AUTH) {
+      if (decoding.readVarUint(decoder) !== AUTH_PERMISSION_DENIED) return;
+      const reason = decoding.readVarString(decoder);
+      // A viewer already suppresses writes; only a stale editable doc has to learn it.
+      if (entry.readOnly) return;
+      this.setDocReadOnly(docName, true);
+      entry.options.onWriteDenied?.(reason);
     }
   }
 

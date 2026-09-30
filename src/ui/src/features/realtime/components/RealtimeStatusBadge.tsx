@@ -1,5 +1,5 @@
 import { cn } from "@/shared/utils/cn";
-import type { RealtimeStatus } from "@/features/realtime";
+import type { RealtimeStatus } from "@/features/realtime/protocol";
 
 interface RealtimeStatusBadgeProps {
   status: RealtimeStatus;

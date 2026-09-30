@@ -6,6 +6,7 @@ from uuid import UUID
 import pycrdt
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from uniffy.core.auth.permissions.checker import PermissionChecker
 from uniffy.core.realtime.state import DocKey
 from uniffy.core.types import ContentRole, ContentType
 
@@ -32,8 +33,13 @@ class RealtimeContentAdapter(Protocol):
         user_id: UUID,
         organization_id: UUID,
         content_id: UUID,
+        *,
+        checker: PermissionChecker | None = None,
     ) -> ContentRole | None:
-        """Effective role on this content item, or ``None`` for no access."""
+        """Effective role on this content item, or ``None`` for no access.
+
+        A fanout passes one ``checker`` so authorization facts load once per user.
+        """
         ...
 
     async def hydrate_ydoc(
@@ -52,8 +58,13 @@ class RealtimeContentAdapter(Protocol):
         ydoc: pycrdt.Doc,
         content_id: UUID,
         organization_id: UUID,
+        *,
+        actor_id: UUID | None = None,
     ) -> bool:
-        """Persist the rendered shape, or return false when the target no longer exists."""
+        """Persist the rendered shape, or return false when the target no longer exists.
+
+        ``actor_id`` is the last live editor when known; side effects attribute to it.
+        """
         ...
 
     def apply_external_content(self, ydoc: pycrdt.Doc, content: str) -> bool:

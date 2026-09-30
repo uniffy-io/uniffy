@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { isUuid } from "@/shared/utils/uuid";
 import { useAppSelector } from "@/app/hooks";
 import { getStoreRef } from "@/app/storeRef";
 import { fetchBulkPresence } from "@/features/presence/store/presenceThunks";
@@ -28,11 +29,9 @@ function flushPendingPresence() {
   (store.dispatch as AppDispatch)(fetchBulkPresence({ organizationId, userIds: ids }));
 }
 
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
 function requestPresence(userId: string) {
   // Backend raises INVALID_ARGUMENT on non-UUID subjects (agents, placeholders).
-  if (!userId || !UUID_RE.test(userId)) return;
+  if (!userId || !isUuid(userId)) return;
   pendingUserIds.add(userId);
   if (flushTimer) clearTimeout(flushTimer);
   flushTimer = setTimeout(flushPendingPresence, 150);
