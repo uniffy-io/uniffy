@@ -41,9 +41,11 @@ from uniffy.domains.notifications.delivery import (
     DELIVERY_ADAPTERS_CTX_KEY,
     build_delivery_adapters,
 )
+from uniffy.domains.projects.realtime import register_task_realtime_adapter
 from uniffy.domains.projects.registration import register_project_content
 from uniffy.domains.scheduling.calendar.events.registration import register_calendar_content
 from uniffy.domains.scheduling.calendar.ical.feed import register_calendar_crypto
+from uniffy.domains.scheduling.calendar.realtime import register_event_realtime_adapter
 from uniffy.infrastructure.database import close_db, init_db, open_session
 from uniffy.infrastructure.search import MeiliSearchEngine
 from uniffy.infrastructure.storage import S3Storage
@@ -154,6 +156,8 @@ async def _on_startup_shared(
     ctx[SEARCH_INDEXER_CTX_KEY] = search_indexer
     ctx[CALL_LIFECYCLE_CTX_KEY] = CallsLifecycle(open_session)
     register_note_realtime_adapter(search_indexer)
+    register_task_realtime_adapter(search_indexer)
+    register_event_realtime_adapter(search_indexer)
     logger.info("Worker: Search engine initialized")
 
     try:

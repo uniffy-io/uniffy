@@ -4,9 +4,11 @@ import { diffStrings } from "@/features/notes/realtime/textDiff";
 import { editorViewCtx, serializerCtx } from "@milkdown/core";
 import type { Ctx } from "@milkdown/ctx";
 import type { Node } from "@milkdown/prose/model";
+import { MARKDOWN_MIRROR_ORIGIN } from "@/features/realtime/persistence/encryptedYjsPersistence";
 
 export const MARKDOWN_TEXT_FIELD = "markdown";
 export const PROSEMIRROR_FRAGMENT_FIELD = "prosemirror";
+export const MARKDOWN_MIRROR_FIELD = "markdown_mirror";
 
 // Origin for the editor's Y.Text("markdown") mirror. Lives in the persistence
 // module because IDB writes filter on it; notes code imports it from here.
@@ -46,7 +48,18 @@ export function replaceMarkdownYText(ydoc: Y.Doc, next: string, origin: unknown)
   ydoc.transact(() => {
     if (delta.deleteCount > 0) ytext.delete(delta.index, delta.deleteCount);
     if (delta.insert.length > 0) ytext.insert(delta.index, delta.insert);
+    ydoc.getMap(MARKDOWN_MIRROR_FIELD).set("active", origin === MARKDOWN_MIRROR_ORIGIN);
   }, origin);
+}
+
+export function isMarkdownMirrorLeader(awareness: {
+  clientID: number;
+  getStates: () => Map<number, { markdownEditor?: string }>;
+}): boolean {
+  for (const [clientId, state] of awareness.getStates()) {
+    if (state.markdownEditor && clientId < awareness.clientID) return false;
+  }
+  return true;
 }
 
 /**

@@ -26,6 +26,7 @@ from uniffy.core.models.login.organization_member import (
     OrganizationMember,
 )
 from uniffy.core.models.login.user import User
+from uniffy.core.realtime.publisher import publish_perm_change
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import (
     AttendeeRole,
@@ -256,6 +257,7 @@ class AttendeeOperations:
         await self.session.refresh(event)
 
         if removed_ids:
+            await publish_perm_change(ContentType.CALENDAR_EVENT, event.id, None, None)
             await self.events._refresh_search_attendees(event)
             await self.events._publish_attendee_access_change(
                 event,

@@ -11,6 +11,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from uniffy.core.auth.permissions.checker import PermissionChecker
 from uniffy.core.models.notes.note import Note
 from uniffy.core.realtime.adapter import register_realtime_adapter
+from uniffy.core.realtime.markdown import replace_external_markdown
+from uniffy.core.realtime.state import DocKey
 from uniffy.core.search import SearchIndexer
 from uniffy.core.types import ContentRole, ContentType, NodeType
 from uniffy.domains.notes.projection import NoteProjectionOperations
@@ -33,6 +35,11 @@ class NoteRealtimeAdapter:
 
     def __init__(self, search_indexer: SearchIndexer) -> None:
         self.search_indexer = search_indexer
+
+    async def policy_key(
+        self, session: AsyncSession, content_id: UUID, organization_id: UUID
+    ) -> DocKey | None:
+        return None
 
     async def authorize(
         self,
@@ -131,17 +138,7 @@ class NoteRealtimeAdapter:
         return saved is not None
 
     def apply_external_content(self, ydoc: pycrdt.Doc, content: str) -> bool:
-        """Replace ``Y.Text("markdown")`` with a column write from the legacy
-        ``UpdateNote`` path. Markdown docs only; canvas writes never publish
-        a content replace.
-        """
-        ytext = ydoc.get("markdown", type=pycrdt.Text)
-        if str(ytext) == content:
-            return False
-        with ydoc.transaction():
-            del ytext[:]
-            ytext += content
-        return True
+        return replace_external_markdown(ydoc, content)
 
 
 def register_note_realtime_adapter(search_indexer: SearchIndexer) -> None:

@@ -18,6 +18,8 @@ from uniffy.core.models.projects.field_definition import (
     TaskStatusSemantic,
 )
 from uniffy.core.models.projects.task import Task
+from uniffy.core.models.realtime.yjs_snapshot import RealtimeYjsSnapshot
+from uniffy.core.realtime.publisher import publish_content_replace, publish_perm_change
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import (
     ContentType,
@@ -222,8 +224,17 @@ class TaskMutationOperations:
                         member_ids, organization_id, task.id
                     )
 
+        if "description" in kwargs:  # noqa: PLR2004
+            await self.session.execute(
+                delete(RealtimeYjsSnapshot).where(
+                    RealtimeYjsSnapshot.content_type == ContentType.TASK,
+                    RealtimeYjsSnapshot.content_id == task_id,
+                )
+            )
         await self.session.commit()
         await self.session.refresh(task)
+        if "description" in kwargs:  # noqa: PLR2004
+            await publish_content_replace(ContentType.TASK, task_id, task.description)
 
         await self.content._sync_task_tags(actor_id=user_id, task=task, tag_ids=tag_ids)
 
@@ -364,6 +375,12 @@ class TaskMutationOperations:
         permanent: bool = False,
     ) -> bool:
         task = await self.content.get_for_delete(user_id, organization_id, task_id)
+        await self.session.execute(
+            delete(RealtimeYjsSnapshot).where(
+                RealtimeYjsSnapshot.content_type == ContentType.TASK,
+                RealtimeYjsSnapshot.content_id == task_id,
+            )
+        )
 
         if permanent:
             tag_ops = TagOperations(self.session, self.content.search_indexer)
@@ -399,6 +416,7 @@ class TaskMutationOperations:
         )
 
         await self.session.commit()
+        await publish_perm_change(ContentType.TASK, task_id, None, None)
         await self.content.search_indexer.remove(
             build_content_urn(self.content.content_type, task_id), organization_id
         )

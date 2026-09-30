@@ -4,7 +4,7 @@ from datetime import UTC, date, datetime
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import and_, select
+from sqlalchemy import and_, delete, select
 
 from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import Action
@@ -24,6 +24,8 @@ from uniffy.core.events.realtime import ContentAccessAction
 from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.calendar.attendee import EventAttendee
 from uniffy.core.models.calendar.event import CalendarEvent
+from uniffy.core.models.realtime.yjs_snapshot import RealtimeYjsSnapshot
+from uniffy.core.realtime.publisher import publish_content_replace, publish_perm_change
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import (
     AttendeeRole,
@@ -373,8 +375,19 @@ class EventUpdateOperations:
             self.events.session, event.id, removed_attendee_ids, datetime.now(UTC)
         )
 
+        if description is not None:
+            await self.events.session.execute(
+                delete(RealtimeYjsSnapshot).where(
+                    RealtimeYjsSnapshot.content_type == ContentType.CALENDAR_EVENT,
+                    RealtimeYjsSnapshot.content_id == event.id,
+                )
+            )
         await self.events.session.commit()
         await self.events.session.refresh(event)
+        if visibility is not None or attendee_ids is not None:
+            await publish_perm_change(ContentType.CALENDAR_EVENT, event.id, None, None)
+        if description is not None:
+            await publish_content_replace(ContentType.CALENDAR_EVENT, event.id, event.description)
 
         if tag_ids is not None:
             tag_ops = TagOperations(

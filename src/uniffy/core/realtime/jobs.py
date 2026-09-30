@@ -5,9 +5,11 @@ import time
 from typing import Any
 from uuid import UUID
 
+from uniffy.core.realtime.adapter import RealtimeRenderConflict
 from uniffy.core.realtime.metrics import REALTIME_SNAPSHOT_TASK_DURATION
 from uniffy.core.realtime.snapshot import persist_snapshot
 from uniffy.core.types import ContentType
+from uniffy.vendor.arq import Retry
 
 
 async def save_realtime_snapshot(
@@ -18,8 +20,6 @@ async def save_realtime_snapshot(
     update_b64: str,
     state_vector_b64: str,
 ) -> dict[str, Any]:
-    del ctx
-
     content_type = ContentType(content_type_str)
     started = time.perf_counter()
 
@@ -31,6 +31,8 @@ async def save_realtime_snapshot(
             base64.b64decode(update_b64),
             base64.b64decode(state_vector_b64),
         )
+    except RealtimeRenderConflict as exc:
+        raise Retry(defer=ctx.get("job_try", 1)) from exc
     finally:
         REALTIME_SNAPSHOT_TASK_DURATION.labels(content_type=content_type.value).observe(
             time.perf_counter() - started

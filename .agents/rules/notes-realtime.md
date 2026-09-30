@@ -2,6 +2,10 @@
 paths:
   - "src/uniffy/core/realtime/**/*.py"
   - "src/uniffy/core/models/realtime/**/*.py"
+  - "src/uniffy/domains/projects/**/realtime.py"
+  - "src/uniffy/domains/scheduling/calendar/**/realtime.py"
+  - "src/ui/src/components/editor/CrepeEditor.tsx"
+  - "src/ui/src/components/editor/ExpandableEditor.tsx"
   - "src/uniffy/domains/notes/**/*.py"
   - "src/uniffy/core/models/notes/**/*.py"
   - "src/proto/schema/notes/**/*.proto"
@@ -16,7 +20,13 @@ paths:
 
 # Notes Domain + Realtime Collaboration (Yjs / pycrdt)
 
-Notes is the only live consumer of the generic realtime stack.
+Live consumers share one transport and snapshot pipeline:
+
+| Content type | Adapter | Stored content |
+|---|---|---|
+| NOTE | `domains/notes/adapter.py` | Markdown or canvas |
+| TASK | `domains/projects/realtime.py` | Task description |
+| CALENDAR_EVENT | `domains/scheduling/calendar/realtime.py` | Non-recurring event or materialized override description |
 
 ## 1. Big picture
 
@@ -76,19 +86,20 @@ Browser tab ────► ONE WebSocket  /api/realtime?org_id=<uuid>
 
 ## 2. Generic core vs domain adapter
 
-**`core/realtime/*` does not import from `domains/*`.** Domain coupling goes through `RealtimeContentAdapter`. Adding tasks / projects / comments realtime later means writing a new adapter rather than touching the core.
+**`core/realtime/*` does not import from `domains/*`.** Domain coupling goes through `RealtimeContentAdapter`. Additional content types provide adapters through explicit registration at web and worker roots.
 
 ```python
 class RealtimeContentAdapter(Protocol):
     content_type: ContentType
     async def authorize(session, user_id, organization_id, content_id) -> ContentRole | None: ...
+    async def policy_key(session, content_id, organization_id) -> DocKey | None: ...
     async def hydrate_ydoc(session, ydoc, content_id, organization_id) -> None: ...
     async def render_and_persist(session, ydoc, content_id, organization_id) -> bool: ...
 ```
 
-The notes adapter lives at `domains/notes/adapter.py`. `factory.create_app` and the core
-worker startup hook call `register_note_realtime_adapter()` explicitly; importing the notes package
-does not mutate the registry.
+`factory.create_app` and worker startup register all three adapters explicitly. Package imports do not mutate the registry.
+
+`policy_key` returns the parent policy document, or `None` for content with its own policy. Tasks return their project. Calendar overrides return their master. Hydration resolves this key even when a snapshot exists. Router `_policy_docs` maps policy keys to resident document keys and removes empty buckets on eviction.
 
 Adapter rules:
 - `authorize` returns `None` (rather than raising) for no access / missing row. Reach for `PermissionChecker.effective_role(...)` directly; `_require_view` raises and is the wrong fit here.
@@ -98,7 +109,7 @@ Adapter rules:
 - `render_and_persist` is idempotent. The ARQ job can fire repeatedly with the same state. Return
   `False` when the target row is missing or soft-deleted so a stale queued or idle-eviction flush
   removes its snapshot instead of recreating orphan state. Reach for `NoteOperations.realtime_save(...)`,
-  which mirrors `autosave()` minus the permission gate + optimistic-version check. Snapshot has no
+  which owns note rendering and retries optimistic version conflicts. Snapshot has no
   acting user, so mention notifications / inline tags use the note's `owner_id` as the actor.
 
 ---
@@ -161,6 +172,10 @@ Failure isolation: multiplexed transport has head-of-line blocking (slow doc can
 
 ## 6. Permission revoke / token revoke fanout
 
+All permission signals rerun adapter authorization against PostgreSQL. Payload roles are hints, never proof. Targeted user signals find affected documents through `_policy_docs`, then reauthorize their handles. Defaults fanout matches policy content type and organization.
+
+Task authorization requires a live parent project. Calendar authorization checks both effective role and private-detail visibility on master and override. A private non-attendee editor downgraded to viewer is denied with `4403`. Attendee removal retains an independent editor grant. Recurring masters and synthetic IDs cannot attach. Calendar attendee and visibility mutations publish permission refresh after commit. Deletion clears affected snapshots and refreshes live access.
+
 - `domains/permissions/members.py` publishes `realtime:perm:{content_type}:{content_id}` after every commit in `add_member`, `update_member_role`, `remove_member`, `set_access_mode`, `transfer_ownership`. Targeted user_id when the subject is a USER; content-wide (`user_id=None`) for GROUP / access-mode / ownership changes (re-authorizes every active client).
 - `domains/users/operations.py::update_user` publishes the realtime token-revoke fanout after every `token_version` bump (deactivation + password change). `core/auth/revocation.py` owns the Valkey-backed token and session revocation facts; `core/realtime/publisher.py` owns realtime channel publication.
 - Decision matrix (`_enforce_role_change` in `ydoc_manager.py`):
@@ -181,6 +196,12 @@ Failure isolation: multiplexed transport has head-of-line blocking (slow doc can
 
 ---
 
+Task rendering uses three CAS attempts on `Task.version`, then indexes and emits new mentions using project owner identity. Calendar rendering locks its row, changes description and outgoing references, then indexes and emits new mentions excluding organizer and attendees. Neither path sends watcher updates, calendar mail, or per-keystroke activity. Calendar rendering preserves `ical_sequence`.
+
+CAS exhaustion raises `RealtimeRenderConflict`. Snapshot remains available and worker raises vendored ARQ `Retry`. Returning `False` is reserved for missing or deleted content.
+
+Ordinary task and event description writes delete snapshots before commit and publish `content_replace` after commit. `core/realtime/markdown.py` grafts text and clears `markdown_mirror.active`, so open block editors apply external replacements. Metadata-only writes retain snapshots.
+
 ## 8. Frontend - generic `features/realtime/`
 
 ```
@@ -190,6 +211,10 @@ features/realtime/
 ├── protocol.ts            (close codes + RealtimeStatus type)
 ├── hooks/useDocSession.ts (per-doc Y.Doc/Awareness/UndoManager lifecycle)
 ├── hooks/useDocAwareness.ts
+├── hooks/useMarkdownDocSession.ts
+├── docNames.ts
+├── components/RealtimeStatusBadge.tsx
+├── components/RealtimeSessionStatus.tsx
 ├── persistence/encryptedYjsPersistence.ts
 └── components/RealtimePresence.tsx
 ```
@@ -200,10 +225,16 @@ Encrypted IDB persistence:
 - One DB `uniffy-realtime-yjs`, composite key `[contentType, contentId, seq]` where `seq` is `${epoch}:${counter}` with a random epoch per attach - sessions and concurrent tabs can never overwrite each other's rows, and there is no meta store (Yjs updates are commutative, so replay order across epochs does not matter). Registered in `ENCRYPTED_DB_NAMES` in `storageEncryption.ts` so cache-seed rotation wipes it.
 - Writes filter `HYDRATION_ORIGIN`, `REMOTE_ORIGIN`, and `MARKDOWN_MIRROR_ORIGIN` (all Symbols; the multiplexer applies server updates under `REMOTE_ORIGIN`) - only primary local edits get persisted.
 - Update bytes are base64-wrapped before `encryptForStorage` (the encrypt helper is JSON-only).
-- Compaction every 100 updates + on `beforeunload`. Listens for `uniffy:encryption:rekey` (re-seed) and `uniffy:encryption:teardown` (no-op writes via `isStorageEncryptionReady`).
+- Compaction every 100 updates, on `beforeunload`, and on session disposal. Disposal waits for pending encrypted writes before compacting and destroying the Y.Doc. Fresh attach waits for prior disposal of the same document before hydration. Listens for `uniffy:encryption:rekey` (re-seed) and `uniffy:encryption:teardown` (no-op writes via `isStorageEncryptionReady`).
 - Per-row decrypt failure -> skip + continue. Nuking the whole doc tends to lose recoverable rows.
 
 ---
+
+`useMarkdownDocSession` owns shared markdown undo, identity awareness, read-only transport state and outbound status. Notes wrap it to retain live-document registration.
+
+`ExpandableEditor` attaches while expanded and retains its session for a one-second close grace period. Reopen cancels detach. Before first sync it keeps the original read-only description. Done flushes the mirror and serializes the live editor, including peer edits, before calling `onDone(markdown, { realtimeOwned })`. Ownership is scoped to session identity after first sync. It suppresses host RPCs and is not a server persistence acknowledgment. Parent unmount flushes before document disposal. Task hosts and eligible event hosts update local previews without an RPC once owned. Recurring masters and synthetic occurrences retain Done with scope selection.
+
+Offline recovery requires initialized storage encryption. Browser tests must use HTTPS or localhost with `crypto.subtle` available. Plain HTTP on `host.docker.internal` disables Web Crypto and cannot exercise encrypted recovery.
 
 ## 9. Frontend - notes wiring
 
@@ -211,17 +242,18 @@ Encrypted IDB persistence:
 features/notes/realtime/
 ├── markdown.ts                  Y.Text / Y.XmlFragment helpers
 ├── canvasBinding.ts             Y.Map <-> React Flow diff
-├── useNoteRealtimeSession.ts    composes useDocSession for markdown
+├── useNoteRealtimeSession.ts    composes useMarkdownDocSession
 ├── useCanvasRealtimeSession.ts  composes useDocSession for canvas (incl. Y.Map "defaults")
 ├── useMarkdownContent.ts        live Y.Text("markdown") read with debounced fallback
-├── CanvasAwarenessOverlay.tsx   peer pointer labels on the canvas
-└── RealtimeStatusBadge.tsx
+└── CanvasAwarenessOverlay.tsx   peer pointer labels on the canvas
 ```
 
 Markdown:
-- `CrepeEditor` accepts a `realtime` binding. When present: skip `defaultValue` seeding (avoid seeding race), register `ySyncPlugin / yCursorPlugin / yUndoPlugin` via `$prose`, and mirror the serialized doc into `Y.Text("markdown")` so the snapshot pipeline reads canonical markdown. The mirror is a `$prose` plugin hooking `view.update` (Milkdown's `markdownUpdated` listener filters ySync transactions and must not be used), writes under `MARKDOWN_MIRROR_ORIGIN`, and stays OFF until the seed confirms the PM doc reflects `Y.Text` (`markdownMirrorReady`) - an unseeded empty doc must never overwrite real markdown. Only the ORIGIN tab mirrors: ySync-applied transactions (`isChangeOrigin`) are skipped, since their origin peer already mirrored them and N tabs re-serializing the same doc is discarded work. A pending debounced mirror write flushes on plugin destroy instead of being dropped (unmount inside the window must not leave `Y.Text` stale); the mirror writes minimal deltas via `diffStrings`, not whole-doc replaces.
-- Cold-start seed + reconciliation, gated on `whenSynced`: `Y.Text("markdown")` is canonical, the fragment yields. A placeholder-only fragment (ySync writes one empty paragraph on bind; `fragmentHasRealContent` tells it apart from real content) is rebuilt from `Y.Text`; a fragment with real but DIFFERENT content (Markdown mode edited `Y.Text` while the fragment kept old blocks) is also rebuilt - compared serialize-normalized, because markdown dialect drift makes raw string compare useless. The divergence rebuild is a SOLO-CLIENT self-heal only: with a live peer in awareness the fragment is the current CRDT state (their in-flight keystrokes; `Y.Text` trails by the mirror debounce), so rebuilding would broadcast a revert of their edits and the seed skips it. Empty `Y.Text` never wins over fragment content. Rebuilds are one `HYDRATION_ORIGIN` transaction via `replaceProsemirrorFragment`. StrictMode-cancelled Crepe instances must have their ySync binding muted (`muteSyncBinding`) or a zombie view observing the shared fragment throws mid-transact and wedges the mirror gate.
-- `RealtimeStatusBadge` derives Live / Syncing / Offline from the multiplexer's outbound-pending state; there is no server ack, so no literal "Saved" claim. The pending flag itself is per-keystroke honest (a send leaves a non-zero `bufferedAmount` that the 250ms drain poll clears), so the badge consumes it through `useOutboundSyncing` -> `createPendingHysteresis`: Syncing appears only after the backlog survives 1.2s and then stays up at least 800ms. Binding a label straight to `isOutboundPending` makes it strobe on every character.
+- `CrepeEditor` binds `ySyncPlugin`, `yCursorPlugin`, and `yUndoPlugin` to shared fragment. It skips default-value seeding and waits for first sync before initialization.
+- One editable peer mirrors merged fragment state into `Y.Text("markdown")`. Lowest awareness client ID with `markdownEditor` set owns the mirror. Viewers do not participate. Local and remote document changes schedule a 250ms minimal-delta write. Awareness changes trigger handoff. Disconnect clears remote presence so offline editing can mirror locally.
+- Mirror writes set `Y.Map("markdown_mirror").active = true` in the same transaction. Explicit Markdown-mode or backend writes set it false. Remote replay distinguishes a lagging derived mirror from an intentional external replacement. Elected editor applies external text to fragment. Cold start preserves real blocks when text is mirror-derived, including after offline merges. Empty placeholder fragments seed from text.
+- Done and layout cleanup flush before teardown. Observers and election state detach synchronously. Milkdown leaves listener debounce callbacks queued after destruction, so teardown clears markdown listeners before disposing context. Deferred node views and cancelled StrictMode instances must have ySync bindings muted.
+- Editor headers render `RealtimeSessionStatus` (avatar stack + `RealtimeStatusBadge`) once a session is attached. The badge is silent on healthy states (idle / connecting / connected / syncing); the avatar stack is the "live" signal. It only shows a chip for Offline (disconnected / offline) and the two access-loss states. There is no server ack, so no literal "Saved" claim anywhere. The `syncing` status stays in the transport: `useMarkdownDocSession` derives it through `useOutboundSyncing` -> `createPendingHysteresis` (visible only after the backlog survives 1.2s, then held at least 800ms) because the raw `isOutboundPending` flag flips on every keystroke. Consumers that surface it must keep the hysteresis.
 - Markdown + readonly view modes consume `Y.Text` live via `useRealtimeMarkdownContent(ydoc, fallback, {whenSynced, debounceMs})`. Without this, switching modes renders an empty editor while the YDoc holds current content.
 - Crepe `Feature.History` is NOT a `CrepeFeature` and currently coexists with `yUndoPlugin` (acceptable v1 known gap; revisit if double-undo is observed).
 

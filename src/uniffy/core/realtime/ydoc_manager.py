@@ -211,6 +211,7 @@ class YDocManager:
         source = "snapshot"
 
         async with open_session() as db:
+            adapter = get_realtime_adapter(content_type)
             snapshot = (
                 await db.execute(
                     select(RealtimeYjsSnapshot).where(
@@ -228,17 +229,19 @@ class YDocManager:
                 )
             else:
                 source = "domain"
-                adapter = get_realtime_adapter(content_type)
                 await adapter.hydrate_ydoc(db, ydoc, content_id, organization_id)
                 logger.debug(
                     f"hydrated {content_type.value}:{content_id} from domain row",
                     component=LOGGER_COMPONENT,
                 )
+            policy_key = await adapter.policy_key(db, content_id, organization_id)
 
         REALTIME_HYDRATION_DURATION.labels(content_type=content_type.value, source=source).observe(
             time.perf_counter() - started
         )
-        return YDocSession(key=key, ydoc=ydoc, organization_id=organization_id)
+        return YDocSession(
+            key=key, ydoc=ydoc, organization_id=organization_id, policy_key=policy_key
+        )
 
     async def _evict_after_idle(self, key: DocKey) -> None:
         """Drop the session from memory if no client reconnects within ``IDLE_EVICTION_SECONDS``."""

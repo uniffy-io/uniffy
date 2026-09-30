@@ -8,6 +8,7 @@ from sqlalchemy.sql.dml import Delete, Update
 
 from uniffy.core.errors import ConflictError, StaleContentVersionError
 from uniffy.core.models.notes.note import Note
+from uniffy.core.realtime.adapter import RealtimeRenderConflict
 from uniffy.core.types import AccessMode, NodeType, generate_id
 from uniffy.domains.notes.operations import NoteOperations
 
@@ -318,7 +319,7 @@ class TestRealtimeSave:
         assert second["version_1"] == 4
         assert second["version"] == 5
 
-    async def test_returns_none_after_exhausted_cas(self) -> None:
+    async def test_exhausted_cas_raises_retryable_conflict(self) -> None:
         note = _make_note(version=3)
         ops = _make_ops(note)
         ops.session.execute.side_effect = [
@@ -330,13 +331,12 @@ class TestRealtimeSave:
             MagicMock(rowcount=0),
         ]
 
-        result = await ops.realtime_save(
-            organization_id=note.organization_id,
-            note_id=note.id,
-            content="rendered",
-            canvas_content=None,
-        )
-
-        assert result is None
+        with pytest.raises(RealtimeRenderConflict):
+            await ops.realtime_save(
+                organization_id=note.organization_id,
+                note_id=note.id,
+                content="rendered",
+                canvas_content=None,
+            )
         assert ops.session.execute.await_count == 6
         ops._index_for_search.assert_not_awaited()

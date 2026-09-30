@@ -6,13 +6,25 @@ from uuid import UUID
 import pycrdt
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from uniffy.core.realtime.state import DocKey
 from uniffy.core.types import ContentRole, ContentType
+
+
+class RealtimeRenderConflict(Exception):
+    """Transient domain contention must preserve the persisted CRDT snapshot."""
 
 
 class RealtimeContentAdapter(Protocol):
     """Per-content-type plug-in for the generic realtime stack."""
 
     content_type: ContentType
+
+    async def policy_key(
+        self,
+        session: AsyncSession,
+        content_id: UUID,
+        organization_id: UUID,
+    ) -> DocKey | None: ...
 
     async def authorize(
         self,

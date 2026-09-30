@@ -1,11 +1,21 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
+import { serializerCtx } from "@milkdown/core";
 import { ArrowsOut, Check, PencilSimple } from "@phosphor-icons/react";
 import { CrepeEditor } from "@/components/editor/CrepeEditor";
+import { EditorHandleContext, type EditorHandle } from "@/components/editor/EditorHandle";
+import { EditorFormattingToolbar } from "@/components/editor/toolbar/EditorFormattingToolbar";
+import { FloatingFormattingToolbar } from "@/components/editor/toolbar/FloatingFormattingToolbar";
+import { Button } from "@/components/ui/button";
 import { dialogShellClass } from "@/components/ui/popover";
 import { useOverlayEscape } from "@/shared/hooks/useOverlayEscape";
 import { ContentType } from "@uniffy/proto/common/v1/common_pb";
 import { cn } from "@/shared/utils/cn";
+import {
+  docContentTypeName,
+  RealtimeSessionStatus,
+  useMarkdownDocSession,
+} from "@/features/realtime";
 
 interface ExpandableEditorProps {
   contentType: ContentType;
@@ -14,7 +24,8 @@ interface ExpandableEditorProps {
   /** Fires on every keystroke. Hosts that only want one write per edit can skip it and use `onDone`. */
   onChange?: (markdown: string) => void;
   /** Fires once when the overlay closes, carrying the final markdown. */
-  onDone?: (markdown: string) => void;
+  onDone?: (markdown: string, meta: { realtimeOwned: boolean }) => void;
+  realtime?: boolean;
   placeholder?: string;
   /** Defaults to true when `contentId` is provided. */
   enableUpload?: boolean;
@@ -38,6 +49,7 @@ export function ExpandableEditor({
   placeholder = "Click to add a description...",
   enableUpload = !!contentId,
   readonly = false,
+  realtime = false,
   label = "Description",
   onFileUploaded,
   fullPreview = false,
@@ -49,9 +61,45 @@ export function ExpandableEditor({
   const [editorKey, setEditorKey] = useState(0);
   const [draftInitial, setDraftInitial] = useState(value);
   const latestMarkdownRef = useRef(value);
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const openTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [sessionOpen, setSessionOpen] = useState(false);
+  const [syncedSessionId, setSyncedSessionId] = useState<string | null>(null);
+  const realtimeActive = Boolean(realtime && contentId);
+  const { binding, status } = useMarkdownDocSession({
+    contentType: docContentTypeName(contentType),
+    contentId,
+    enabled: realtimeActive && sessionOpen,
+    canEdit: !readonly,
+  });
+  const whenSynced = binding?.whenSynced;
+  const sessionId = binding?.sessionId;
+  const realtimeOwned = Boolean(sessionId && syncedSessionId === sessionId);
+  useEffect(() => {
+    if (!whenSynced || !sessionId) return;
+    let cancelled = false;
+    void whenSynced.then(() => {
+      if (!cancelled) setSyncedSessionId(sessionId);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [whenSynced, sessionId]);
+  useEffect(
+    () => () => {
+      if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+      if (openTimerRef.current) clearTimeout(openTimerRef.current);
+    },
+    [],
+  );
+  const [editorHandle, setEditorHandle] = useState<EditorHandle | null>(null);
 
   const handleOpen = useCallback(() => {
     if (readonly) return;
+    if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+    if (openTimerRef.current) clearTimeout(openTimerRef.current);
+    closeTimerRef.current = null;
+    setSessionOpen(true);
     setDraftInitial(value);
     latestMarkdownRef.current = value;
     setEditorReady(false);
@@ -59,16 +107,23 @@ export function ExpandableEditor({
     setIsExpanded(true);
 
     // Defer editor mount so the overlay can animate in first.
-    setTimeout(() => {
+    openTimerRef.current = setTimeout(() => {
       setEditorReady(true);
     }, 50);
   }, [readonly, value]);
 
   const handleClose = useCallback(() => {
+    editorHandle?.flushMarkdownMirror?.();
+    const markdown =
+      editorHandle?.run((ctx) => ctx.get(serializerCtx)(editorHandle.view.state.doc)) ??
+      latestMarkdownRef.current;
     setIsExpanded(false);
     setEditorReady(false);
-    onDone?.(latestMarkdownRef.current);
-  }, [onDone]);
+    if (openTimerRef.current) clearTimeout(openTimerRef.current);
+    if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+    closeTimerRef.current = setTimeout(() => setSessionOpen(false), 1000);
+    onDone?.(markdown, { realtimeOwned });
+  }, [onDone, editorHandle, realtimeOwned]);
 
   const handleEditorChange = useCallback(
     (markdown: string) => {
@@ -78,16 +133,15 @@ export function ExpandableEditor({
     [onChange],
   );
 
-  const editorPanelRef = useRef<HTMLDivElement>(null);
+  // The editor reports its handle once the ProseMirror view exists and clears it on unmount.
+  const handleEditorReady = useCallback((handle: EditorHandle | null) => {
+    setEditorHandle(handle);
+  }, []);
+
   useEffect(() => {
-    if (!isExpanded || !editorReady) return;
-    // Wait for CrepeEditor to mount and attach its ProseMirror DOM.
-    const timer = setTimeout(() => {
-      const pm = editorPanelRef.current?.querySelector(".ProseMirror") as HTMLElement | null;
-      pm?.focus();
-    }, 100);
-    return () => clearTimeout(timer);
-  }, [isExpanded, editorReady]);
+    if (!isExpanded || !editorHandle) return;
+    editorHandle.focus();
+  }, [isExpanded, editorHandle]);
 
   useOverlayEscape(handleClose, isExpanded);
 
@@ -211,45 +265,74 @@ export function ExpandableEditor({
             <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={handleClose} />
 
             {/* Editor panel */}
-            <div
-              className={cn(
-                dialogShellClass,
-                "relative w-full max-w-5xl mx-4 rounded-xl flex flex-col h-[85vh]",
-              )}
-            >
-              {/* Header */}
-              <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
-                <h3 className="text-sm font-semibold text-foreground">{label}</h3>
-                <button
-                  type="button"
-                  onClick={handleClose}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium text-primary-foreground bg-primary hover:bg-primary/90 transition-colors"
-                >
-                  <Check size={16} weight="bold" />
-                  Done
-                </button>
-              </div>
-
-              {/* Editor body - let CrepeEditor's own wrapper handle scrolling */}
-              <div ref={editorPanelRef} className="flex-1 min-h-0">
-                {editorReady ? (
-                  <CrepeEditor
-                    key={editorKey}
+            <EditorHandleContext.Provider value={editorHandle}>
+              <div
+                className={cn(
+                  dialogShellClass,
+                  "relative w-full max-w-5xl mx-4 rounded-xl flex flex-col h-[85vh]",
+                )}
+              >
+                <div className="shrink-0 rounded-t-xl overflow-hidden">
+                  <EditorFormattingToolbar
                     contentType={contentType}
                     contentId={contentId}
-                    value={draftInitial}
-                    onChange={handleEditorChange}
-                    placeholder={placeholder}
                     enableUpload={enableUpload}
                     onFileUploaded={onFileUploaded}
+                    trailing={
+                      <>
+                        <RealtimeSessionStatus
+                          status={status}
+                          awareness={binding?.awareness ?? null}
+                        />
+                        <Button type="button" size="md" onClick={handleClose}>
+                          <Check size={14} weight="bold" />
+                          Done
+                        </Button>
+                      </>
+                    }
                   />
-                ) : (
-                  <div className="flex items-center justify-center h-full">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-                  </div>
-                )}
+                </div>
+
+                {/* Editor body - let CrepeEditor's own wrapper handle scrolling */}
+                <div className="flex-1 min-h-0">
+                  {editorReady && (!realtimeActive || (binding && realtimeOwned)) ? (
+                    <CrepeEditor
+                      key={editorKey}
+                      contentType={contentType}
+                      contentId={contentId}
+                      value={draftInitial}
+                      realtime={binding ?? undefined}
+                      readonly={
+                        readonly || status === "permission_lost" || status === "token_revoked"
+                      }
+                      onChange={handleEditorChange}
+                      onEditorReady={handleEditorReady}
+                      placeholder={placeholder}
+                      enableUpload={enableUpload}
+                      onFileUploaded={onFileUploaded}
+                      floatingToolbar={false}
+                      className="pt-6"
+                    />
+                  ) : (
+                    <div className="h-full overflow-y-auto p-6">
+                      <p className="text-sm text-muted-foreground mb-4">
+                        {status === "permission_lost" ? "Edit access removed." : "Connecting..."}
+                      </p>
+                      <CrepeEditor
+                        contentType={contentType}
+                        contentId={contentId}
+                        value={draftInitial}
+                        readonly
+                        enableUpload={false}
+                        floatingToolbar={false}
+                      />
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
+              {/* Pinned bar above covers selection formatting; the floating one stays reachable via context menu. */}
+              <FloatingFormattingToolbar showOnSelection={false} />
+            </EditorHandleContext.Provider>
           </div>,
           document.body,
         )}
