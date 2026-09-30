@@ -1,10 +1,4 @@
-"""Process-wide Valkey dispatcher.
-
-Four pattern subscribers per process (doc updates, perm changes, defaults, token
-revoke) replace per-doc / per-user subscribers. ``YDocManager`` registers
-``RouterCallbacks`` at startup; the router calls back into the manager rather
-than importing it (cycle with ``snapshot.py``).
-"""
+"""Route process-wide realtime signals to locally attached documents."""
 
 from __future__ import annotations
 
@@ -147,6 +141,7 @@ class RealtimeRouter:
         self._doc_handles: dict[DocKey, dict[int, ClientHandle]] = {}
         self._user_handles: dict[UUID, dict[int, ClientHandle]] = {}
         self._doc_sessions: dict[DocKey, YDocSession] = {}
+        self._policy_docs: dict[DocKey, set[DocKey]] = {}
         self._self_replica = replica_id()
         self._tasks: list[asyncio.Task[None]] = []
         self._running = False
@@ -199,10 +194,20 @@ class RealtimeRouter:
         logger.info("realtime router stopped", component=LOGGER_COMPONENT)
 
     def register_doc_session(self, key: DocKey, session: YDocSession) -> None:
+        self.unregister_doc_session(key)
         self._doc_sessions[key] = session
+        self._policy_docs.setdefault(session.policy_key or key, set()).add(key)
 
     def unregister_doc_session(self, key: DocKey) -> None:
-        self._doc_sessions.pop(key, None)
+        session = self._doc_sessions.pop(key, None)
+        if session is None:
+            return
+        policy_key = session.policy_key or key
+        bucket = self._policy_docs.get(policy_key)
+        if bucket is not None:
+            bucket.discard(key)
+            if not bucket:
+                self._policy_docs.pop(policy_key, None)
 
     def attach_handle(self, key: DocKey, handle: ClientHandle) -> None:
         self._doc_handles.setdefault(key, {})[handle.conn_id] = handle
@@ -306,10 +311,10 @@ class RealtimeRouter:
             return
         _observe_pubsub_latency("perm", payload)
         user_id_raw = payload.get("user_id")
-        new_role = payload.get("new_role")
-        new_role_str = new_role if isinstance(new_role, str) else None
+        targets = tuple(self._policy_docs.get(key) or {key})
         if user_id_raw is None:
-            await callbacks.reauthorize_doc(key)
+            for target in targets:
+                await callbacks.reauthorize_doc(target)
             return
         try:
             user_id = UUID(str(user_id_raw))
@@ -319,13 +324,10 @@ class RealtimeRouter:
                 component=LOGGER_COMPONENT,
             )
             return
-        bucket = self._doc_handles.get(key)
-        if not bucket:
-            return
-        for handle in list(bucket.values()):
-            if handle.user_id != user_id:
-                continue
-            await callbacks.enforce_role_change(handle, new_role_str)
+        for target in targets:
+            bucket = self._doc_handles.get(target, {})
+            if any(handle.user_id == user_id for handle in bucket.values()):
+                await callbacks.reauthorize_doc(target)
 
     async def _handle_defaults_message(self, channel: str, payload: dict[str, object]) -> None:
         """Re-authorize every doc on this replica matching ``(org_id, content_type)``."""
@@ -338,7 +340,7 @@ class RealtimeRouter:
             return
         _observe_pubsub_latency("defaults", payload)
         for key, session in list(self._doc_sessions.items()):
-            if key[0] is content_type and session.organization_id == org_id:
+            if (session.policy_key or key)[0] is content_type and session.organization_id == org_id:
                 await callbacks.reauthorize_doc(key)
 
     async def _handle_revoke_message(self, channel: str, payload: dict[str, object]) -> None:

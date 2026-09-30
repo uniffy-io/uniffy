@@ -9,6 +9,7 @@ export interface EditorHandle {
   readonly scope: object;
   run<T>(fn: (ctx: Ctx) => T): T | undefined;
   focus(): void;
+  flushMarkdownMirror?: () => void;
   /** Open the inline-comment popover at the current selection. Present only when comments are enabled. */
   triggerComment?: () => void;
 }

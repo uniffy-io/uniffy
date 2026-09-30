@@ -16,7 +16,10 @@ from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.models.calendar.exception import RecurrenceException
 from uniffy.core.models.calendar.reminder import EventReminder
+from uniffy.core.models.realtime.yjs_snapshot import RealtimeYjsSnapshot
+from uniffy.core.realtime.publisher import publish_perm_change
 from uniffy.core.types import (
+    ContentType,
     RecurrenceEditScope,
 )
 from uniffy.domains.scheduling.calendar.events.recurrence.withdrawal import (
@@ -128,6 +131,12 @@ class EventDeleteOperations:
         affected = [event, *overrides]
         event_ids = [item.id for item in affected]
         await self.session.execute(
+            delete(RealtimeYjsSnapshot).where(
+                RealtimeYjsSnapshot.content_type == ContentType.CALENDAR_EVENT,
+                RealtimeYjsSnapshot.content_id.in_(event_ids),
+            )
+        )
+        await self.session.execute(
             delete(EventReminder).where(EventReminder.event_id.in_(event_ids))
         )
         await EventBookingOperations(self.session).stage_cancel(organization_id, event_ids)
@@ -167,6 +176,7 @@ class EventDeleteOperations:
         )
         await self.session.commit()
 
+        await publish_perm_change(ContentType.CALENDAR_EVENT, event.id, None, None)
         for staged in tag_removals:
             try:
                 await tag_ops.finish_unassign_all_after_commit(staged)

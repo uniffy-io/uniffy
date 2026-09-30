@@ -12,27 +12,15 @@ const OFFLINE_COPY = {
   title: "Edits stay on this device and sync when the connection returns.",
 };
 
+/** Healthy states render nothing; the presence stack is the "live" signal. Only problems get a chip. */
 const COPY: Record<
   RealtimeStatus,
   { label: string; tone: string; dotPulse?: boolean; title?: string } | null
 > = {
   idle: null,
-  connecting: {
-    label: "Connecting",
-    tone: "bg-amber-500/10 text-amber-600 dark:text-amber-300",
-    dotPulse: true,
-  },
-  connected: {
-    label: "Live",
-    tone: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-300",
-    title: "Edits sync live and are saved on the server within a few seconds.",
-  },
-  syncing: {
-    label: "Syncing",
-    tone: "bg-amber-500/10 text-amber-600 dark:text-amber-300",
-    dotPulse: true,
-    title: "Local edits are still being sent to the server.",
-  },
+  connecting: null,
+  connected: null,
+  syncing: null,
   disconnected: { ...OFFLINE_COPY, dotPulse: true },
   offline: OFFLINE_COPY,
   permission_lost: {

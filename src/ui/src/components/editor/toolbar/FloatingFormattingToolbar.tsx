@@ -18,17 +18,17 @@ import { useEditorHandle, type EditorHandle } from "@/components/editor/EditorHa
 import { cn } from "@/shared/utils/cn";
 import { useOverlayEscape } from "@/shared/hooks/useOverlayEscape";
 import { subscribeSelection } from "@/components/editor/utils/selectionVersionPlugin";
-import { useActiveMarks } from "@/features/notes/components/editor/toolbar/useActiveMarks";
-import { toolbarCommands } from "@/features/notes/components/editor/toolbar/toolbarCommands";
+import { useActiveMarks } from "@/components/editor/toolbar/useActiveMarks";
+import { toolbarCommands } from "@/components/editor/toolbar/toolbarCommands";
 import {
   ToolbarButton,
   ToolbarGroup,
   ToolbarSeparator,
-} from "@/features/notes/components/editor/toolbar/ToolbarButton";
-import { HeadingDropdown } from "@/features/notes/components/editor/toolbar/HeadingDropdown";
+} from "@/components/editor/toolbar/ToolbarButton";
+import { HeadingDropdown } from "@/components/editor/toolbar/HeadingDropdown";
 import { HighlightPicker } from "@/components/editor/plugins/highlight/HighlightPicker";
 import { highlightMark } from "@/components/editor/plugins/highlight";
-import { LinkPrompt } from "@/features/notes/components/editor/toolbar/LinkPrompt";
+import { LinkPrompt } from "@/components/editor/toolbar/LinkPrompt";
 
 interface SelectionAnchor {
   from: number;
@@ -269,7 +269,8 @@ function SelectionFormattingToolbar({
         top: position?.top ?? -9999,
         left: position?.left ?? -9999,
         visibility: position ? "visible" : "hidden",
-        zIndex: 60,
+        // Same tier as the toolbar popovers so it clears the expandable editor overlay.
+        zIndex: 1000,
       }}
       className={cn(
         popoverShellClass,

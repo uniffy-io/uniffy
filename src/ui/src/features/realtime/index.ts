@@ -1,6 +1,10 @@
 export { realtimeMultiplexer } from "@/features/realtime/multiplexer";
 export type { DocSubscription, MultiplexerAttachOptions } from "@/features/realtime/multiplexer";
 export { useDocSession } from "@/features/realtime/hooks/useDocSession";
+export { useMarkdownDocSession } from "@/features/realtime/hooks/useMarkdownDocSession";
+export { docContentTypeName } from "@/features/realtime/docNames";
+export { RealtimeStatusBadge } from "@/features/realtime/components/RealtimeStatusBadge";
+export { RealtimeSessionStatus } from "@/features/realtime/components/RealtimeSessionStatus";
 export type { DocSession, UseDocSessionOptions } from "@/features/realtime/hooks/useDocSession";
 export { useDocAwareness, setLocalAwareness } from "@/features/realtime/hooks/useDocAwareness";
 export { useOutboundSyncing } from "@/features/realtime/hooks/useOutboundSyncing";

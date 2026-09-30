@@ -11,9 +11,10 @@ from sqlalchemy import select
 from sqlalchemy import update as sql_update
 
 from uniffy.core.models.notes.note import Note
+from uniffy.core.realtime.adapter import RealtimeRenderConflict
+from uniffy.core.realtime.metrics import REALTIME_BLANK_CONTENT_OVERWRITES_TOTAL
 from uniffy.core.types import ContentType
 from uniffy.domains.notes.content.fields import extract_content_fields
-from uniffy.domains.notes.metrics import REALTIME_BLANK_CONTENT_OVERWRITES_TOTAL
 
 if TYPE_CHECKING:
     from uniffy.domains.notes.operations import NoteOperations
@@ -88,7 +89,7 @@ class NoteRealtimePersistence:
                 note_id=str(note_id),
                 organization_id=str(organization_id),
             )
-            return None
+            raise RealtimeRenderConflict(f"Note {note_id} remained contended after three attempts")
 
         await self.operations.session.refresh(note)
         actor_id = note.owner_id

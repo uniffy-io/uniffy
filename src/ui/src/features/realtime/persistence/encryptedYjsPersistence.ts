@@ -19,6 +19,7 @@ const UPDATES_STORE = "updates";
 registerEncryptedDatabase(DB_NAME);
 
 let dbPromise: Promise<IDBPDatabase> | null = null;
+const pendingDisposals = new Map<string, Promise<void>>();
 
 function getDB(): Promise<IDBPDatabase> {
   if (!dbPromise) {
@@ -99,6 +100,8 @@ export function attachEncryptedPersistence(
   opts: EncryptedPersistenceOptions,
 ): EncryptedPersistence {
   const { contentType, contentId, ydoc } = opts;
+  const docKey = `${contentType}:${contentId}`;
+  const previousDisposal = pendingDisposals.get(docKey);
   const compactEvery = opts.compactEvery ?? 100;
 
   const epoch = newPersistenceEpoch();
@@ -106,12 +109,16 @@ export function attachEncryptedPersistence(
   const hydratedSeqs = new Set<string>();
   let pendingCompact = false;
   let destroyed = false;
+  let destroyPromise: Promise<void> | null = null;
+  const pendingWrites = new Set<Promise<void>>();
 
   const onUpdate = (update: Uint8Array, origin: unknown) => {
     if (destroyed) return;
     if (!isPersistedOrigin(origin)) return;
     if (!isStorageEncryptionReady()) return;
-    void writeUpdate(update);
+    const pending = writeUpdate(update);
+    pendingWrites.add(pending);
+    void pending.finally(() => pendingWrites.delete(pending));
   };
 
   async function writeUpdate(update: Uint8Array): Promise<void> {
@@ -135,6 +142,8 @@ export function attachEncryptedPersistence(
   }
 
   async function hydrate(): Promise<void> {
+    await previousDisposal;
+    if (destroyed) return;
     if (!isStorageEncryptionReady()) return;
     try {
       const db = await getDB();
@@ -149,6 +158,7 @@ export function attachEncryptedPersistence(
       for (let i = 0; i < blobs.length; i++) {
         try {
           const encoded = await decryptFromStorage<string>(blobs[i]);
+          if (destroyed) return;
           const bytes = base64ToBytes(encoded);
           if (bytes.length > 0) Y.applyUpdate(ydoc, bytes, HYDRATION_ORIGIN);
           const key = keys[i] as [string, string, string];
@@ -200,13 +210,19 @@ export function attachEncryptedPersistence(
     }
   }
 
-  async function destroy(): Promise<void> {
-    if (destroyed) return;
+  function destroy(): Promise<void> {
+    if (destroyPromise) return destroyPromise;
     destroyed = true;
     ydoc.off("update", onUpdate);
     window.removeEventListener(ENCRYPTION_REKEY_EVENT, handleRekey);
     window.removeEventListener(ENCRYPTION_TEARDOWN_EVENT, handleTeardown);
     window.removeEventListener("beforeunload", handleBeforeUnload);
+    const disposal = Promise.all([...pendingWrites]).then(() => compact());
+    pendingDisposals.set(docKey, disposal);
+    destroyPromise = disposal.finally(() => {
+      if (pendingDisposals.get(docKey) === disposal) pendingDisposals.delete(docKey);
+    });
+    return destroyPromise;
   }
 
   const handleRekey = () => {

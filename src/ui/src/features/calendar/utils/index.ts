@@ -29,6 +29,8 @@ export {
 
 export { matchesQuickAccess } from "@/features/calendar/utils/quickAccess";
 
+export { masterEventId } from "@/features/calendar/utils/occurrenceIds";
+
 export {
   findConflicts,
   getPositionedEventsForDay,

@@ -120,8 +120,7 @@ export function useDocSession(opts: UseDocSessionOptions): DocSession | null {
       subscription.destroy();
       undoManager?.destroy();
       awareness.destroy();
-      void persistence.destroy();
-      ydoc.destroy();
+      void persistence.destroy().finally(() => ydoc.destroy());
       sessionRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -132,6 +131,7 @@ export function useDocSession(opts: UseDocSessionOptions): DocSession | null {
   // holds them and `tick` is the invalidation signal for this memo.
   /* eslint-disable react/react-compiler -- ref-held session republished through `tick` */
   return useMemo<DocSession | null>(() => {
+    if (!enabled) return null;
     const current = sessionRef.current;
     if (!current) return null;
     return {
@@ -143,6 +143,6 @@ export function useDocSession(opts: UseDocSessionOptions): DocSession | null {
       whenSynced: current.whenSynced,
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, tick]);
+  }, [status, tick, enabled]);
   /* eslint-enable react/react-compiler */
 }

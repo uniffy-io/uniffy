@@ -7,7 +7,7 @@ from datetime import UTC, datetime
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.audit import write_audit_event
@@ -18,6 +18,8 @@ from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.projects.project import Project
 from uniffy.core.models.projects.task import Task
 from uniffy.core.models.projects.view_config import ProjectViewVisibility
+from uniffy.core.models.realtime.yjs_snapshot import RealtimeYjsSnapshot
+from uniffy.core.realtime.publisher import publish_perm_change
 from uniffy.core.search.engine import SearchTerm, all_of
 from uniffy.core.search.indexer import SearchIndexer, build_content_urn
 from uniffy.core.storage import ObjectStorage
@@ -349,6 +351,15 @@ class ProjectOperations(BaseContentOperations[Project]):
         project = await self.get_by_id(user_id, organization_id, project_id)
         await self._require_delete(user_id, organization_id, project)
 
+        task_ids_query = select(Task.id).where(
+            Task.project_id == project_id, Task.organization_id == organization_id
+        )
+        await self.session.execute(
+            delete(RealtimeYjsSnapshot).where(
+                RealtimeYjsSnapshot.content_type == ContentType.TASK,
+                RealtimeYjsSnapshot.content_id.in_(task_ids_query),
+            )
+        )
         if permanent:
             tag_ops = TagOperations(self.session, self.search_indexer)
             project_urn = build_content_urn(self.content_type, project_id)
@@ -402,6 +413,7 @@ class ProjectOperations(BaseContentOperations[Project]):
         )
 
         await self.session.commit()
+        await publish_perm_change(ContentType.PROJECT, project_id, None, None)
         await self.search_indexer.remove(
             build_content_urn(self.content_type, project_id), organization_id
         )

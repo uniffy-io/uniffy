@@ -23,6 +23,7 @@ from uniffy.core.jobs import JobEnqueueOutcome, JobEnqueueResult
 from uniffy.core.models.realtime.yjs_snapshot import RealtimeYjsSnapshot
 from uniffy.core.realtime import ydoc_manager as ydoc_manager_module
 from uniffy.core.realtime.adapter import (
+    RealtimeRenderConflict,
     _adapters,
     get_realtime_adapter,
     register_realtime_adapter,
@@ -200,6 +201,9 @@ class _DummyAdapter:
 
     async def authorize(self, *args, **kwargs):  # type: ignore[no-untyped-def]
         return ContentRole.VIEWER
+
+    async def policy_key(self, *args, **kwargs):  # type: ignore[no-untyped-def]
+        return None
 
     async def hydrate_ydoc(self, *args, **kwargs):  # type: ignore[no-untyped-def]
         return None
@@ -390,6 +394,31 @@ class TestSnapshotWriterDebounce:
 
 
 class TestSnapshotForceFlush:
+    async def test_render_conflict_preserves_committed_snapshot(self) -> None:
+        ydoc = pycrdt.Doc()
+        ydoc["markdown"] = pycrdt.Text("pending edits")
+        db = MagicMock()
+        db.execute = AsyncMock()
+        db.commit = AsyncMock()
+        adapter = MagicMock()
+        adapter.render_and_persist = AsyncMock(side_effect=RealtimeRenderConflict("contended"))
+
+        @asynccontextmanager
+        async def fake_open_session():
+            yield db
+
+        with (
+            patch("uniffy.core.realtime.snapshot.open_session", fake_open_session),
+            patch("uniffy.core.realtime.snapshot.get_realtime_adapter", return_value=adapter),
+            pytest.raises(RealtimeRenderConflict),
+        ):
+            await persist_snapshot(
+                ContentType.TASK, generate_id(), generate_id(), ydoc.get_update(), ydoc.get_state()
+            )
+        assert db.execute.await_count == 1
+        assert not isinstance(db.execute.await_args.args[0], Delete)
+        db.commit.assert_awaited_once()
+
     async def test_force_flush_persists_in_process(self) -> None:
         async def go() -> None:
             writer = SnapshotWriter(debounce_seconds=60.0)
@@ -827,7 +856,7 @@ class TestQueryAwarenessRelay:
 class TestRealtimeSaveCAS:
     """``realtime_save`` must skip downstream side effects when CAS loses."""
 
-    async def test_cas_miss_returns_none_and_skips_side_effects(self) -> None:
+    async def test_cas_miss_raises_and_skips_side_effects(self) -> None:
         from unittest.mock import AsyncMock, MagicMock
 
         from uniffy.domains.notes.operations import NoteOperations
@@ -870,14 +899,13 @@ class TestRealtimeSaveCAS:
             ops._index_for_search = AsyncMock()
             ops._notify_new_mentions = AsyncMock()
 
-            result = await ops.realtime_save(
-                organization_id=generate_id(),
-                note_id=generate_id(),
-                content="new body",
-                canvas_content=None,
-            )
-
-            assert result is None
+            with pytest.raises(RealtimeRenderConflict):
+                await ops.realtime_save(
+                    organization_id=generate_id(),
+                    note_id=generate_id(),
+                    content="new body",
+                    canvas_content=None,
+                )
             ops._sync_tags_after_save.assert_not_called()
             ops._index_for_search.assert_not_called()
             ops._notify_new_mentions.assert_not_called()
@@ -1169,7 +1197,7 @@ class TestRouterDocDispatch:
 
 
 class TestRouterPermDispatch:
-    async def test_targeted_user_invokes_enforce(self):
+    async def test_targeted_user_reauthorizes_instead_of_trusting_payload(self):
         r, cb = _make_router_with_callbacks()
         key = (ContentType.NOTE, generate_id())
         target_user = generate_id()
@@ -1185,7 +1213,36 @@ class TestRouterPermDispatch:
             "new_role": "VIEWER",
         }
         await r._handle_perm_message(channel, payload)
-        assert cb.enforced == [(h_target, "VIEWER")]
+        assert cb.reauthorized == [key]
+        assert cb.enforced == []
+
+    @pytest.mark.parametrize("targeted", [True, False])
+    async def test_parent_permission_signal_reauthorizes_child(self, targeted):
+        r, cb = _make_router_with_callbacks()
+        session = _make_router_session()
+        session.key = (ContentType.TASK, generate_id())
+        session.policy_key = (ContentType.PROJECT, generate_id())
+        r.register_doc_session(session.key, session)
+        handle = _make_handle()
+        r.attach_handle(session.key, handle)
+        await r._handle_perm_message(
+            f"realtime:perm:PROJECT:{session.policy_key[1]}",
+            {"user_id": str(handle.user_id) if targeted else None, "new_role": "OWNER"},
+        )
+        assert cb.reauthorized == [session.key]
+        assert cb.enforced == []
+
+    async def test_parent_defaults_reauthorize_child_in_same_org(self):
+        r, cb = _make_router_with_callbacks()
+        session = _make_router_session()
+        session.key = (ContentType.TASK, generate_id())
+        session.policy_key = (ContentType.PROJECT, generate_id())
+        r.register_doc_session(session.key, session)
+        await r._handle_defaults_message(f"realtime:defaults:{session.organization_id}:PROJECT", {})
+        assert cb.reauthorized == [session.key]
+        cb.reauthorized.clear()
+        await r._handle_defaults_message(f"realtime:defaults:{generate_id()}:PROJECT", {})
+        assert cb.reauthorized == []
 
     async def test_content_wide_invokes_reauthorize(self):
         r, cb = _make_router_with_callbacks()
@@ -1220,6 +1277,16 @@ class TestRouterRevokeDispatch:
 
 
 class TestRouterRegistryHygiene:
+    def test_unregister_drops_parent_policy_bucket(self):
+        r, _ = _make_router_with_callbacks()
+        session = _make_router_session()
+        session.policy_key = (ContentType.PROJECT, generate_id())
+        r.register_doc_session(session.key, session)
+        assert r._policy_docs[session.policy_key] == {session.key}
+        r.unregister_doc_session(session.key)
+        assert r._policy_docs == {}
+        assert r._doc_sessions == {}
+
     def test_attach_detach_drops_empty_buckets(self):
         r, _ = _make_router_with_callbacks()
         key = (ContentType.NOTE, generate_id())

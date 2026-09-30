@@ -15,7 +15,7 @@ import { findHeadingBySlug } from "@/components/editor/utils/headingScroll";
 import { EditorHandleContext } from "@/components/editor/EditorHandle";
 import type { EditorHandle } from "@/components/editor/EditorHandle";
 import { NoteTitleBlock } from "@/features/notes/components/editor/NoteTitleBlock";
-import { FloatingFormattingToolbar } from "@/features/notes/components/editor/FloatingFormattingToolbar";
+import { FloatingFormattingToolbar } from "@/components/editor/toolbar/FloatingFormattingToolbar";
 import { useNoteRealtimeSession } from "@/features/notes/realtime/useNoteRealtimeSession";
 import { useCanvasRealtimeSession } from "@/features/notes/realtime/useCanvasRealtimeSession";
 import { ErrorBoundary } from "@/components/feedback";

@@ -296,6 +296,12 @@ class RealtimeMultiplexer {
     this.stopAwarenessKeepaliveTimer();
     this.stopOutboundDrainPoll();
     for (const entry of this.docs.values()) {
+      // Disconnected peers cannot maintain presence or coordinate local mirror writes.
+      removeAwarenessStates(
+        entry.awareness,
+        [...entry.awareness.getStates().keys()].filter((id) => id !== entry.awareness.clientID),
+        "remote",
+      );
       // Teardown loses socket-buffered bytes; the reconnect handshake
       // re-derives whatever the server is actually missing.
       if (entry.pendingLocalFrames) entry.droppedWhileDisconnected = true;

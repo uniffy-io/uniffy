@@ -1,8 +1,8 @@
 import { useState, type ComponentProps } from "react";
 import { CaretDown, Table } from "@phosphor-icons/react";
-import { ToolbarButton } from "@/features/notes/components/editor/toolbar/ToolbarButton";
-import { ToolbarPopover } from "@/features/notes/components/editor/toolbar/ToolbarPopover";
-import { toolbarCommands } from "@/features/notes/components/editor/toolbar/toolbarCommands";
+import { ToolbarButton } from "@/components/editor/toolbar/ToolbarButton";
+import { ToolbarPopover } from "@/components/editor/toolbar/ToolbarPopover";
+import { toolbarCommands } from "@/components/editor/toolbar/toolbarCommands";
 import { useEditorHandle } from "@/components/editor/EditorHandle";
 import { cn } from "@/shared/utils/cn";
 

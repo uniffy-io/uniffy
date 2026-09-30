@@ -181,6 +181,17 @@ afterEach(() => {
 });
 
 describe("read-only docs", () => {
+  it("drops stale peer presence on disconnect while retaining local editor identity", () => {
+    const doc = attachDoc("disconnect-presence");
+    const ws = currentWs();
+    ws.open();
+    doc.awareness.setLocalState({ markdownEditor: "local" });
+    doc.awareness.getStates().set(1, { markdownEditor: "peer" });
+    ws.serverClose(1000);
+    expect([...doc.awareness.getStates().keys()]).toEqual([doc.awareness.clientID]);
+    expect(doc.awareness.getLocalState()).toEqual({ markdownEditor: "local" });
+  });
+
   it("sends no SYNC write frames for local or hydration updates", () => {
     const doc = attachDoc("viewer-updates");
     currentWs().open();
