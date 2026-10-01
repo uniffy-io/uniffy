@@ -29,6 +29,8 @@ service ProjectsService {
   rpc MoveTask(MoveTaskRequest) returns (MoveTaskResponse);
   rpc BulkUpdateTasks(BulkUpdateTasksRequest) returns (BulkUpdateTasksResponse);
   rpc DeleteTasks(DeleteTasksRequest) returns (DeleteTasksResponse);
+  // Every task of one project, or of several, as a CSV or a zip bundle of CSVs.
+  rpc ExportTasks(ExportTasksRequest) returns (stream ExportTasksResponse);
 
   // ----- Field Definitions -----
   rpc CreateField(CreateFieldRequest) returns (CreateFieldResponse);
@@ -160,6 +162,19 @@ enum ViewIdFlag {
   VIEW_ID_FLAG_CURRENT_USER = 1;
   VIEW_ID_FLAG_EMPTY = 2;
   VIEW_ID_FLAG_ACTIVE_SPRINT = 3;
+}
+
+enum TaskExportFormat {
+  TASK_EXPORT_FORMAT_UNSPECIFIED = 0;
+  TASK_EXPORT_FORMAT_CSV = 1;
+}
+
+// Row order of a view export: FLAT filters every task; OUTLINE filters root tasks and lists all
+// live children depth-first under each, as the outline table shows them.
+enum TaskExportLayout {
+  TASK_EXPORT_LAYOUT_UNSPECIFIED = 0;
+  TASK_EXPORT_LAYOUT_FLAT = 1;
+  TASK_EXPORT_LAYOUT_OUTLINE = 2;
 }
 
 enum RoadmapZoom {
@@ -653,6 +668,28 @@ message ListTasksRequest {
   // IANA zone of the caller's clock, for relative dates and timestamp days when the profile
   // names no zone.
   optional string time_zone = 17;
+}
+
+message ExportTasksRequest {
+  string organization_id = 1;
+  repeated string project_ids = 2;
+  // filter, sort and view_id narrow a single-project export; a request naming several projects
+  // refuses them, since field ids differ per project.
+  TaskFilterGroup filter = 3;
+  repeated TaskSort sort = 4;
+  // A saved view by id; its filter and sort apply where the request carries none.
+  optional string view_id = 5;
+  TaskExportFormat format = 6;
+  // A zip of tasks.csv, sprints.csv, activities.csv, comments.csv and fields.csv.
+  bool include_bundle = 7;
+  TaskExportLayout layout = 8;
+  // IANA zone of the caller's clock, for relative dates when the profile names no zone.
+  optional string time_zone = 9;
+}
+
+message ExportTasksResponse {
+  // CSV: the header row arrives in the first chunk. Bundle: consecutive zip bytes.
+  bytes payload = 1;
 }
 
 message CreateTaskResponse {

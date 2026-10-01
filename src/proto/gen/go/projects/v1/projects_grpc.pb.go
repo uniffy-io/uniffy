@@ -32,6 +32,7 @@ const (
 	ProjectsService_MoveTask_FullMethodName              = "/projects.v1.ProjectsService/MoveTask"
 	ProjectsService_BulkUpdateTasks_FullMethodName       = "/projects.v1.ProjectsService/BulkUpdateTasks"
 	ProjectsService_DeleteTasks_FullMethodName           = "/projects.v1.ProjectsService/DeleteTasks"
+	ProjectsService_ExportTasks_FullMethodName           = "/projects.v1.ProjectsService/ExportTasks"
 	ProjectsService_CreateField_FullMethodName           = "/projects.v1.ProjectsService/CreateField"
 	ProjectsService_UpdateField_FullMethodName           = "/projects.v1.ProjectsService/UpdateField"
 	ProjectsService_DeleteField_FullMethodName           = "/projects.v1.ProjectsService/DeleteField"
@@ -71,6 +72,8 @@ type ProjectsServiceClient interface {
 	MoveTask(ctx context.Context, in *MoveTaskRequest, opts ...grpc.CallOption) (*MoveTaskResponse, error)
 	BulkUpdateTasks(ctx context.Context, in *BulkUpdateTasksRequest, opts ...grpc.CallOption) (*BulkUpdateTasksResponse, error)
 	DeleteTasks(ctx context.Context, in *DeleteTasksRequest, opts ...grpc.CallOption) (*DeleteTasksResponse, error)
+	// Every task of one project, or of several, as a CSV or a zip bundle of CSVs.
+	ExportTasks(ctx context.Context, in *ExportTasksRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[ExportTasksResponse], error)
 	// ----- Field Definitions -----
 	CreateField(ctx context.Context, in *CreateFieldRequest, opts ...grpc.CallOption) (*CreateFieldResponse, error)
 	UpdateField(ctx context.Context, in *UpdateFieldRequest, opts ...grpc.CallOption) (*UpdateFieldResponse, error)
@@ -233,6 +236,25 @@ func (c *projectsServiceClient) DeleteTasks(ctx context.Context, in *DeleteTasks
 	}
 	return out, nil
 }
+
+func (c *projectsServiceClient) ExportTasks(ctx context.Context, in *ExportTasksRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[ExportTasksResponse], error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	stream, err := c.cc.NewStream(ctx, &ProjectsService_ServiceDesc.Streams[0], ProjectsService_ExportTasks_FullMethodName, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &grpc.GenericClientStream[ExportTasksRequest, ExportTasksResponse]{ClientStream: stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type ProjectsService_ExportTasksClient = grpc.ServerStreamingClient[ExportTasksResponse]
 
 func (c *projectsServiceClient) CreateField(ctx context.Context, in *CreateFieldRequest, opts ...grpc.CallOption) (*CreateFieldResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
@@ -433,6 +455,8 @@ type ProjectsServiceServer interface {
 	MoveTask(context.Context, *MoveTaskRequest) (*MoveTaskResponse, error)
 	BulkUpdateTasks(context.Context, *BulkUpdateTasksRequest) (*BulkUpdateTasksResponse, error)
 	DeleteTasks(context.Context, *DeleteTasksRequest) (*DeleteTasksResponse, error)
+	// Every task of one project, or of several, as a CSV or a zip bundle of CSVs.
+	ExportTasks(*ExportTasksRequest, grpc.ServerStreamingServer[ExportTasksResponse]) error
 	// ----- Field Definitions -----
 	CreateField(context.Context, *CreateFieldRequest) (*CreateFieldResponse, error)
 	UpdateField(context.Context, *UpdateFieldRequest) (*UpdateFieldResponse, error)
@@ -504,6 +528,9 @@ func (UnimplementedProjectsServiceServer) BulkUpdateTasks(context.Context, *Bulk
 }
 func (UnimplementedProjectsServiceServer) DeleteTasks(context.Context, *DeleteTasksRequest) (*DeleteTasksResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method DeleteTasks not implemented")
+}
+func (UnimplementedProjectsServiceServer) ExportTasks(*ExportTasksRequest, grpc.ServerStreamingServer[ExportTasksResponse]) error {
+	return status.Error(codes.Unimplemented, "method ExportTasks not implemented")
 }
 func (UnimplementedProjectsServiceServer) CreateField(context.Context, *CreateFieldRequest) (*CreateFieldResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateField not implemented")
@@ -813,6 +840,17 @@ func _ProjectsService_DeleteTasks_Handler(srv interface{}, ctx context.Context, 
 	}
 	return interceptor(ctx, in, info, handler)
 }
+
+func _ProjectsService_ExportTasks_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(ExportTasksRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(ProjectsServiceServer).ExportTasks(m, &grpc.GenericServerStream[ExportTasksRequest, ExportTasksResponse]{ServerStream: stream})
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type ProjectsService_ExportTasksServer = grpc.ServerStreamingServer[ExportTasksResponse]
 
 func _ProjectsService_CreateField_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(CreateFieldRequest)
@@ -1270,6 +1308,12 @@ var ProjectsService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _ProjectsService_BulkCheckTaskWatchers_Handler,
 		},
 	},
-	Streams:  []grpc.StreamDesc{},
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "ExportTasks",
+			Handler:       _ProjectsService_ExportTasks_Handler,
+			ServerStreams: true,
+		},
+	},
 	Metadata: "projects/v1/projects.proto",
 }
