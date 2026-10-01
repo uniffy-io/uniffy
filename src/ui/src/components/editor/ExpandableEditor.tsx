@@ -1,6 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { serializerCtx } from "@milkdown/core";
 import { ArrowsOut, Check, PencilSimple } from "@phosphor-icons/react";
 import { CrepeEditor } from "@/components/editor/CrepeEditor";
 import { EditorHandleContext, type EditorHandle } from "@/components/editor/EditorHandle";
@@ -11,6 +10,7 @@ import { dialogShellClass } from "@/components/ui/popover";
 import { useOverlayEscape } from "@/shared/hooks/useOverlayEscape";
 import { ContentType } from "@uniffy/proto/common/v1/common_pb";
 import { cn } from "@/shared/utils/cn";
+import { serializeEditorMarkdown } from "@/features/realtime/markdown";
 import {
   docContentTypeName,
   RealtimeSessionStatus,
@@ -142,9 +142,7 @@ export function ExpandableEditor({
     // the host's description.
     if (realtimeActive && !seeded) return;
     editorHandle?.flushMarkdownMirror?.();
-    const markdown =
-      editorHandle?.run((ctx) => ctx.get(serializerCtx)(editorHandle.view.state.doc)) ??
-      latestMarkdownRef.current;
+    const markdown = editorHandle?.run(serializeEditorMarkdown) ?? latestMarkdownRef.current;
     onDone?.(markdown, { realtimeOwned });
   }, [onDone, editorHandle, realtimeOwned, realtimeActive, seeded]);
 

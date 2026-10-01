@@ -103,7 +103,12 @@ export function replaceProsemirrorFragment(ydoc: Y.Doc, node: Node, origin: unkn
 export function serializeEditorMarkdown(ctx: Ctx): string {
   const view = ctx.get(editorViewCtx);
   const serializer = ctx.get(serializerCtx);
-  return serializer(view.state.doc as Node);
+  return normalizeSerializedMarkdown(serializer(view.state.doc as Node));
+}
+
+export function normalizeSerializedMarkdown(markdown: string): string {
+  // Milkdown appends one document terminator. Preserve content whitespace.
+  return markdown.endsWith("\n") ? markdown.slice(0, -1) : markdown;
 }
 
 /** Cold-start hydration when PG has content but no snapshot blob. */

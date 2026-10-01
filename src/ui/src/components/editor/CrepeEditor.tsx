@@ -19,6 +19,7 @@ import {
   replaceMarkdownYText,
   replaceProsemirrorFragment,
   isMarkdownMirrorLeader,
+  normalizeSerializedMarkdown,
 } from "@/features/realtime/markdown";
 import {
   observeFragmentSeedDuplicates,
@@ -147,7 +148,7 @@ const TOC_ICON_SVG =
   '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 256 256" fill="currentColor"><path d="M88,64a8,8,0,0,1,8-8H216a8,8,0,0,1,0,16H96A8,8,0,0,1,88,64Zm128,56H96a8,8,0,0,0,0,16H216a8,8,0,0,0,0-16Zm0,64H96a8,8,0,0,0,0,16H216a8,8,0,0,0,0-16ZM44,52A12,12,0,1,0,56,64,12,12,0,0,0,44,52Zm0,64a12,12,0,1,0,12,12A12,12,0,0,0,44,116Zm0,64a12,12,0,1,0,12,12A12,12,0,0,0,44,180Z"/></svg>';
 
 // A missing seeder must not leave the editor read-only indefinitely.
-// A non-leader waits this long for the elected seeder before seeding itself.
+// An unassigned editor waits this long for the server's seeder before seeding itself.
 const COLD_SEED_LEADER_TIMEOUT_MS = 4000;
 // A closing non-leader gives the leader this long to mirror before writing itself.
 const MIRROR_LEAVE_SETTLE_MS = 600;
@@ -654,7 +655,7 @@ export function CrepeEditor({
   const handleContentChange = useCallback(
     (markdown: string) => {
       if (readonly) return;
-      onChange?.(markdown);
+      onChange?.(normalizeSerializedMarkdown(markdown));
     },
     [readonly, onChange],
   );
@@ -828,7 +829,7 @@ export function CrepeEditor({
             const ownsMirror = () => !readonly && isMarkdownMirrorLeader(rt.awareness);
             const serialize = (view: EditorView): string | null => {
               try {
-                return ctx.get(serializerCtx)(view.state.doc);
+                return normalizeSerializedMarkdown(ctx.get(serializerCtx)(view.state.doc));
               } catch {
                 // Serializer not ready yet - next update retries.
                 return null;
@@ -1183,7 +1184,10 @@ export function CrepeEditor({
                 // differences (bullet chars, escapes, spacing) make a raw
                 // string compare against Y.Text useless.
                 const serializer = ctx.get(serializerCtx);
-                if (serializer(view.state.doc) === serializer(node)) {
+                if (
+                  normalizeSerializedMarkdown(serializer(view.state.doc)) ===
+                  normalizeSerializedMarkdown(serializer(node))
+                ) {
                   markdownMirrorReady = true;
                   return;
                 }
