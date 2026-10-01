@@ -19,9 +19,10 @@ export function GraphNodeDetails({ node, meta }: GraphNodeDetailsProps) {
     [node.urn, meta],
   );
 
+  const rawDescription = meta?.description;
   const description = useMemo(
-    () => (meta?.description ? stripMarkdown(meta.description) : null),
-    [meta?.description],
+    () => (rawDescription ? stripMarkdown(rawDescription) : null),
+    [rawDescription],
   );
 
   if (!liveState) return null;

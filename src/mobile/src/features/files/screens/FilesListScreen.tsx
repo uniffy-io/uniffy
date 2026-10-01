@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useMemo, useRef } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -262,17 +262,17 @@ export function FilesListScreen() {
 
   // Deep link (`/files?folder=<id>`): seed the stack with the folder's ancestor
   // path once the tree is loaded. Consumed once per param value so in-screen
-  // navigation afterwards is not fought.
+  // navigation afterwards is not fought. Adjusted during render, React's pattern
+  // for state that follows an input, so the seeded stack lands in the same pass.
   const { folder: folderParam } = useLocalSearchParams<{ folder?: string }>();
-  const consumedFolderParamRef = useRef<string | null>(null);
-  useEffect(() => {
-    if (!folderParam || !filesTree.data) return;
-    if (consumedFolderParamRef.current === folderParam) return;
+  const [consumedFolderParam, setConsumedFolderParam] = useState<string | null>(null);
+  if (folderParam && filesTree.data && consumedFolderParam !== folderParam) {
     const path = findFolderPath(filesTree.data, folderParam);
-    if (!path) return;
-    consumedFolderParamRef.current = folderParam;
-    setFolderStack(path);
-  }, [folderParam, filesTree.data]);
+    if (path) {
+      setConsumedFolderParam(folderParam);
+      setFolderStack(path);
+    }
+  }
 
   // Switching scope changes the underlying tree, so drop navigation + selection
   // that referenced the previous scope's folders.
