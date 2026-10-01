@@ -39,6 +39,7 @@ from uniffy.core.realtime.metrics import (
 from uniffy.core.realtime.multiplex import encode_doc_frame
 from uniffy.core.realtime.publisher import publish_doc_update
 from uniffy.core.realtime.router import RouterCallbacks, router
+from uniffy.core.realtime.seeding import fragment_seeder_changes
 from uniffy.core.realtime.snapshot import snapshot_writer
 from uniffy.core.realtime.state import (
     ClientHandle,
@@ -47,7 +48,11 @@ from uniffy.core.realtime.state import (
     YDocSession,
     doc_name_for,
 )
-from uniffy.core.realtime.wire import create_auth_denied_message, create_update_message
+from uniffy.core.realtime.wire import (
+    create_auth_denied_message,
+    create_fragment_seeder_message,
+    create_update_message,
+)
 from uniffy.infrastructure.database.session import open_session
 
 __all__ = ["ClientHandle", "DocKey", "WSSession", "YDocManager", "YDocSession", "ydoc_manager"]
@@ -150,6 +155,7 @@ class YDocManager:
                 if handle.ws_session is not None:
                     handle.ws_session.doc_handles.pop(key, None)
                 REALTIME_ACTIVE_CLIENTS.labels(content_type=key[0].value).dec()
+            self.refresh_fragment_seeder(session)
             if not session.clients and session.eviction_task is None:
                 session.eviction_task = asyncio.create_task(self._evict_after_idle(key))
 
@@ -157,6 +163,10 @@ class YDocManager:
         """Tear down every doc attachment on ``ws_session``."""
         for key in list(ws_session.doc_handles.keys()):
             await self.release(key, ws_session.conn_id)
+
+    def refresh_fragment_seeder(self, session: YDocSession) -> None:
+        for handle, granted in fragment_seeder_changes(session):
+            enqueue_for_handle(handle, create_fragment_seeder_message(granted), kind="seeder")
 
     async def flush_all(self, *, timeout: float = SHUTDOWN_FLUSH_TIMEOUT_SECONDS) -> None:
         """Force-flush every live doc; a stopping process must not hold the only copy of edits."""
@@ -205,6 +215,7 @@ class YDocManager:
             session.last_editor_id = editor_id
         async with session.lock:
             session.ydoc.apply_update(update_bytes)
+            self.refresh_fragment_seeder(session)
             frame = create_update_message(update_bytes)
             for cid, peer in session.clients.items():
                 if cid == source_conn_id:
@@ -335,6 +346,7 @@ class YDocManager:
         ).inc()
         async with session.lock:
             session.ydoc.apply_update(update_bytes)
+            self.refresh_fragment_seeder(session)
             frame = create_update_message(update_bytes)
             for peer in session.clients.values():
                 enqueue_for_handle(peer, frame, kind="update")
@@ -431,6 +443,7 @@ class YDocManager:
                 handle, create_auth_denied_message("edit access removed"), kind="auth"
             )
         handle.can_edit = can_edit
+        self.refresh_fragment_seeder(session)
 
     async def _close_stale_user_sessions(self, user_id: UUID, new_version: int) -> None:
         """Close every handle for ``user_id`` whose ``token_version`` predates ``new_version``."""
@@ -470,6 +483,10 @@ class YDocManager:
         if handle.closed:
             return
         handle.closed = True
+        if handle.doc_key is not None:
+            session = self._sessions.get(handle.doc_key)
+            if session is not None:
+                self.refresh_fragment_seeder(session)
         with contextlib.suppress(BaseException):
             await handle.ws.close(code=code, reason=reason)
 

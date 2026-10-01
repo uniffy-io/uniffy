@@ -4,7 +4,11 @@ import { Awareness } from "y-protocols/awareness";
 import { useAppSelector } from "@/app/hooks";
 import { docNameFor } from "@/features/realtime/docNames";
 import { docGeneration } from "@/features/realtime/docGeneration";
-import { realtimeMultiplexer, type DocSubscription } from "@/features/realtime/multiplexer";
+import {
+  realtimeMultiplexer,
+  type DocSubscription,
+  type FragmentSeeder,
+} from "@/features/realtime/multiplexer";
 import {
   attachEncryptedPersistence,
   type EncryptedPersistence,
@@ -18,6 +22,7 @@ export interface DocSession {
   undoManager: Y.UndoManager | null;
   status: RealtimeStatus;
   sessionId: string;
+  fragmentSeeder: FragmentSeeder;
   /** Resolves once the first server `sync` AND the local IDB replay are done. */
   whenSynced: Promise<void>;
 }
@@ -182,6 +187,7 @@ export function useDocSession(opts: UseDocSessionOptions): DocSession | null {
       awareness: current.awareness,
       undoManager: current.undoManager,
       sessionId: current.sessionId,
+      fragmentSeeder: current.subscription,
       status,
       whenSynced: current.whenSynced,
     };

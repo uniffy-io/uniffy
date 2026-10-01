@@ -83,6 +83,7 @@ export function useMarkdownDocSession({
       awareness: session.awareness,
       undoManager,
       sessionId: session.sessionId,
+      fragmentSeeder: session.fragmentSeeder,
       whenSynced: session.whenSynced,
     };
   }, [session, undoManager]);

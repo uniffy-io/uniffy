@@ -13,9 +13,11 @@ from uniffy.core.realtime.multiplex import write_var_string, write_var_uint
 
 __all__ = [
     "Y_MESSAGE_AUTH",
+    "MESSAGE_FRAGMENT_SEEDER",
     "YMessageType",
     "YSyncMessageType",
     "create_auth_denied_message",
+    "create_fragment_seeder_message",
     "create_awareness_message",
     "create_sync_message",
     "create_update_message",
@@ -28,6 +30,11 @@ __all__ = [
 # y-protocols/auth: pycrdt only models SYNC and AWARENESS.
 Y_MESSAGE_AUTH = 2
 _AUTH_PERMISSION_DENIED = 0
+MESSAGE_FRAGMENT_SEEDER = 4
+
+
+def create_fragment_seeder_message(granted: bool) -> bytes:
+    return write_var_uint(MESSAGE_FRAGMENT_SEEDER) + write_var_uint(int(granted))
 
 
 def create_auth_denied_message(reason: str) -> bytes:

@@ -202,6 +202,7 @@ async def _attach_doc(
 
     can_edit = role_can_edit(role)
     session, handle = await ydoc_manager.acquire(key, ws_session, can_edit=can_edit)
+    ydoc_manager.refresh_fragment_seeder(session)
     frames: list[bytes] = []
     if not can_edit:
         # Ahead of SyncStep1, so a client holding a stale editable role never replies with a write.
