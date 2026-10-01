@@ -10,7 +10,7 @@ import asyncio
 import contextlib
 import time
 from collections.abc import Sequence
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import pycrdt
 from loguru import logger
@@ -26,6 +26,7 @@ from uniffy.core.realtime.auth import (
     WS_CLOSE_TOKEN_REVOKED,
 )
 from uniffy.core.realtime.identity import replica_id
+from uniffy.core.realtime.markdown import DOC_GENERATION_KEY, DOC_META_FIELD
 from uniffy.core.realtime.metrics import (
     REALTIME_ACTIVE_CLIENTS,
     REALTIME_ACTIVE_DOCS,
@@ -269,6 +270,7 @@ class YDocManager:
             else:
                 source = "domain"
                 await adapter.hydrate_ydoc(db, ydoc, content_id, organization_id)
+                ydoc.get(DOC_META_FIELD, type=pycrdt.Map)[DOC_GENERATION_KEY] = str(uuid4())
                 logger.debug(
                     f"hydrated {content_type.value}:{content_id} from domain row",
                     component=LOGGER_COMPONENT,

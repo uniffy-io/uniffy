@@ -1,6 +1,7 @@
 import * as Y from "yjs";
 import { openDB, type IDBPDatabase } from "idb";
 import { docNameFor } from "@/features/realtime/docNames";
+import { docGeneration } from "@/features/realtime/docGeneration";
 import { randomUUID } from "@/shared/utils/uuid";
 import {
   ENCRYPTION_REKEY_EVENT,
@@ -14,8 +15,11 @@ import {
 const DB_NAME = "uniffy-realtime-yjs";
 // Rebuildable cache: a key-shape change bumps the version and the upgrade
 // wipes the stores instead of migrating rows.
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 const UPDATES_STORE = "updates";
+type UpdateKey = [string, string, string, string];
+
+export const persistenceRecoveryStats = { generationMismatchRows: 0 };
 
 registerEncryptedDatabase(DB_NAME);
 
@@ -86,7 +90,7 @@ export interface EncryptedPersistenceOptions {
 }
 
 export interface EncryptedPersistence {
-  hydrate: () => Promise<void>;
+  hydrate: (options?: { serverGeneration: string | null }) => Promise<void>;
   compact: () => Promise<void>;
   /** `discard` drops this doc's rows instead of compacting them; for closes the server fully holds. */
   destroy: (options?: { discard?: boolean }) => Promise<void>;
@@ -127,10 +131,16 @@ export function attachEncryptedPersistence(
     // Counter allocation stays synchronous with the doc update, so any own
     // row at or below the counter compact() captures is inside its snapshot.
     const allocated = ++counter;
+    const generation = docGeneration(ydoc) ?? "";
     try {
       const blob = await encryptForStorage(bytesToBase64(update));
       const db = await getDB();
-      await db.put(UPDATES_STORE, blob, [contentType, contentId, updateRowSeq(epoch, allocated)]);
+      await db.put(UPDATES_STORE, blob, [
+        contentType,
+        contentId,
+        generation,
+        updateRowSeq(epoch, allocated),
+      ]);
       if (allocated % compactEvery === 0 && !pendingCompact) {
         pendingCompact = true;
         queueMicrotask(() => {
@@ -143,7 +153,7 @@ export function attachEncryptedPersistence(
     }
   }
 
-  async function hydrate(): Promise<void> {
+  async function hydrate(options?: { serverGeneration: string | null }): Promise<void> {
     await previousDisposal;
     if (destroyed) return;
     if (!isStorageEncryptionReady()) return;
@@ -157,14 +167,29 @@ export function attachEncryptedPersistence(
         store.getAll(range),
         tx.done,
       ]);
+      // The server value was captured before replay. Reading the merged map
+      // here would let a stale local LWW entry decide whether it is current.
+      const rejected = options
+        ? (keys as UpdateKey[]).filter((key) => key[2] !== (options.serverGeneration ?? ""))
+        : [];
+      if (rejected.length > 0) {
+        const cleanup = db.transaction(UPDATES_STORE, "readwrite");
+        await Promise.all([
+          ...rejected.map((key) => cleanup.objectStore(UPDATES_STORE).delete(key)),
+          cleanup.done,
+        ]);
+        persistenceRecoveryStats.generationMismatchRows += rejected.length;
+        console.warn("[realtime] dropped stale generation rows", { docKey, rows: rejected.length });
+      }
       for (let i = 0; i < blobs.length; i++) {
+        const key = keys[i] as UpdateKey;
+        if (options && key[2] !== (options.serverGeneration ?? "")) continue;
         try {
           const encoded = await decryptFromStorage<string>(blobs[i]);
           if (destroyed) return;
           const bytes = base64ToBytes(encoded);
           if (bytes.length > 0) Y.applyUpdate(ydoc, bytes, HYDRATION_ORIGIN);
-          const key = keys[i] as [string, string, string];
-          hydratedSeqs.add(key[2]);
+          hydratedSeqs.add(key[3]);
         } catch {
           // Skip rows that fail to decrypt (rotated DEK, corruption). They
           // also stay out of hydratedSeqs, so compact never deletes content
@@ -185,25 +210,22 @@ export function attachEncryptedPersistence(
       // this transaction) are left in place and re-applied by a later
       // hydrate, which is safe because Yjs updates are idempotent.
       const snapshotCounter = counter;
+      const generation = docGeneration(ydoc) ?? "";
       const snapshot = Y.encodeStateAsUpdate(ydoc);
       const blob = await encryptForStorage(bytesToBase64(snapshot));
       const db = await getDB();
       const tx = db.transaction(UPDATES_STORE, "readwrite");
       const store = tx.objectStore(UPDATES_STORE);
-      const keys = (await store.getAllKeys(rangeFor(contentType, contentId))) as [
-        string,
-        string,
-        string,
-      ][];
+      const keys = (await store.getAllKeys(rangeFor(contentType, contentId))) as UpdateKey[];
       const removable = selectCompactableSeqs(
-        keys.map((key) => key[2]),
+        keys.filter((key) => key[2] === generation).map((key) => key[3]),
         epoch,
         snapshotCounter,
         hydratedSeqs,
       );
       await Promise.all([
-        ...removable.map((seq) => store.delete([contentType, contentId, seq])),
-        store.put(blob, [contentType, contentId, updateRowSeq(epoch, ++counter)]),
+        ...removable.map((seq) => store.delete([contentType, contentId, generation, seq])),
+        store.put(blob, [contentType, contentId, generation, updateRowSeq(epoch, ++counter)]),
         tx.done,
       ]);
       for (const seq of removable) hydratedSeqs.delete(seq);

@@ -3,6 +3,7 @@ import * as Y from "yjs";
 import { Awareness } from "y-protocols/awareness";
 import { useAppSelector } from "@/app/hooks";
 import { docNameFor } from "@/features/realtime/docNames";
+import { docGeneration } from "@/features/realtime/docGeneration";
 import { realtimeMultiplexer, type DocSubscription } from "@/features/realtime/multiplexer";
 import {
   attachEncryptedPersistence,
@@ -85,7 +86,16 @@ export function useDocSession(opts: UseDocSessionOptions): DocSession | null {
       contentId,
       ydoc,
     });
-    const whenHydrated = persistence.hydrate();
+    let chooseReplay!: (options: { serverGeneration: string | null } | undefined) => void;
+    const replayGate = new Promise<{ serverGeneration: string | null } | undefined>((resolve) => {
+      chooseReplay = resolve;
+    });
+    let hydrationComplete = false;
+    const whenHydrated = replayGate
+      .then((options) => persistence.hydrate(options))
+      .then(() => {
+        hydrationComplete = true;
+      });
 
     const targets = Array.isArray(undoTarget) ? undoTarget : undoTarget ? [undoTarget] : null;
     const undoManager = targets
@@ -110,9 +120,12 @@ export function useDocSession(opts: UseDocSessionOptions): DocSession | null {
       awareness,
       onStatus: (next) => {
         transportStatus = next;
+        // Once replay starts offline, reconnect cannot unmerge that state.
+        if (next === "disconnected" || next === "offline") chooseReplay(undefined);
         setStatus(next);
       },
       onSync: () => {
+        chooseReplay({ serverGeneration: docGeneration(ydoc) });
         serverSynced = true;
         resolveServerSync();
       },
@@ -123,6 +136,7 @@ export function useDocSession(opts: UseDocSessionOptions): DocSession | null {
       // Doc-scoped, unlike a 4403 close: only this editor flips to view-only.
       onWriteDenied: () => setStatus("permission_lost"),
     });
+    if (!navigator.onLine) chooseReplay(undefined);
 
     sessionRef.current = {
       ydoc,
@@ -143,6 +157,7 @@ export function useDocSession(opts: UseDocSessionOptions): DocSession | null {
       const cleanClose =
         discardLocalOnCleanClose &&
         serverSynced &&
+        hydrationComplete &&
         transportStatus === "connected" &&
         !realtimeMultiplexer.isOutboundPending(docNameFor(contentType, contentId));
       subscription.destroy();

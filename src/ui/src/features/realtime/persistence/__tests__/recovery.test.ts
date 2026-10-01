@@ -3,11 +3,19 @@ import * as Y from "yjs";
 import {
   attachEncryptedPersistence,
   MARKDOWN_MIRROR_ORIGIN,
+  REMOTE_ORIGIN,
+  persistenceRecoveryStats,
 } from "@/features/realtime/persistence/encryptedYjsPersistence";
+import {
+  DOC_GENERATION_KEY,
+  DOC_META_FIELD,
+  docGeneration,
+} from "@/features/realtime/docGeneration";
 
 const storage = vi.hoisted(() => ({
   rows: new Map<string, unknown>(),
   encryptGate: Promise.resolve(),
+  version: 2,
 }));
 vi.mock("@/shared/crypto/storageEncryption", () => ({
   registerEncryptedDatabase: vi.fn(),
@@ -21,7 +29,15 @@ vi.mock("@/shared/crypto/storageEncryption", () => ({
   ENCRYPTION_TEARDOWN_EVENT: "teardown",
 }));
 vi.mock("idb", () => ({
-  openDB: async () => {
+  openDB: async (_dbName: string, version: number, options: { upgrade: (db: unknown) => void }) => {
+    if (storage.version < version) {
+      options.upgrade({
+        objectStoreNames: ["updates"],
+        deleteObjectStore: () => storage.rows.clear(),
+        createObjectStore: () => {},
+      });
+      storage.version = version;
+    }
     const matching = (range: { lower: string[] }) =>
       [...storage.rows.keys()]
         .map((key) => JSON.parse(key) as string[])
@@ -48,13 +64,106 @@ describe("realtime local recovery", () => {
   beforeEach(() => {
     storage.rows.clear();
     storage.encryptGate = Promise.resolve();
+    persistenceRecoveryStats.generationMismatchRows = 0;
     vi.stubGlobal("window", new EventTarget());
     vi.stubGlobal("IDBKeyRange", { bound: (lower: unknown) => ({ lower }) });
   });
-  afterEach(() => vi.unstubAllGlobals());
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  it("wipes rows without generation during schema upgrade", async () => {
+    storage.rows.set(JSON.stringify(["TASK", "task", "legacy:1"]), "legacy-row");
+    const doc = new Y.Doc();
+    const persistence = attachEncryptedPersistence({
+      contentType: "TASK",
+      contentId: "task",
+      ydoc: doc,
+    });
+    await persistence.hydrate({ serverGeneration: "current" });
+    expect(storage.version).toBe(3);
+    expect(storage.rows.size).toBe(0);
+    await persistence.destroy({ discard: true });
+    doc.destroy();
+  });
+
+  it("replays matching generation updates after server hydration", async () => {
+    const server = new Y.Doc();
+    server.getMap(DOC_META_FIELD).set(DOC_GENERATION_KEY, "same");
+    server.getText("markdown").insert(0, "baseline");
+    const local = new Y.Doc();
+    Y.applyUpdate(local, Y.encodeStateAsUpdate(server), REMOTE_ORIGIN);
+    const cached = attachEncryptedPersistence({
+      contentType: "TASK",
+      contentId: "task",
+      ydoc: local,
+    });
+    await cached.hydrate({ serverGeneration: docGeneration(local) });
+    local.getText("markdown").insert(8, " offline edit");
+    await cached.destroy();
+
+    const reopened = new Y.Doc();
+    Y.applyUpdate(reopened, Y.encodeStateAsUpdate(server), REMOTE_ORIGIN);
+    const recovery = attachEncryptedPersistence({
+      contentType: "TASK",
+      contentId: "task",
+      ydoc: reopened,
+    });
+    await recovery.hydrate({ serverGeneration: docGeneration(reopened) });
+    expect(reopened.getText("markdown").toString()).toBe("baseline offline edit");
+    expect(persistenceRecoveryStats.generationMismatchRows).toBe(0);
+    await recovery.destroy({ discard: true });
+    local.destroy();
+    reopened.destroy();
+    server.destroy();
+  });
+
+  it("drops mismatched cache before its LWW metadata or fragment can merge", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const stale = new Y.Doc();
+    stale.clientID = 4294967294;
+    stale.getMap(DOC_META_FIELD).set(DOC_GENERATION_KEY, "old");
+    stale.getMap("markdown_mirror").set("active", true);
+    stale.getXmlFragment("prosemirror").insert(0, [new Y.XmlText("old blocks")]);
+    const cached = attachEncryptedPersistence({
+      contentType: "TASK",
+      contentId: "task",
+      ydoc: stale,
+    });
+    await cached.destroy();
+
+    const server = new Y.Doc();
+    server.clientID = 1;
+    server.getMap(DOC_META_FIELD).set(DOC_GENERATION_KEY, "new");
+    server.getText("markdown").insert(0, "new column");
+    const reopened = new Y.Doc();
+    Y.applyUpdate(reopened, Y.encodeStateAsUpdate(server), REMOTE_ORIGIN);
+    const recovery = attachEncryptedPersistence({
+      contentType: "TASK",
+      contentId: "task",
+      ydoc: reopened,
+    });
+    await recovery.hydrate({ serverGeneration: docGeneration(reopened) });
+    expect(docGeneration(reopened)).toBe("new");
+    expect(reopened.getText("markdown").toString()).toBe("new column");
+    expect(reopened.getXmlFragment("prosemirror").length).toBe(0);
+    expect(reopened.getMap("markdown_mirror").get("active")).toBeUndefined();
+    expect(storage.rows.size).toBe(0);
+    expect(persistenceRecoveryStats.generationMismatchRows).toBe(1);
+    expect(console.warn).toHaveBeenCalledWith("[realtime] dropped stale generation rows", {
+      docKey: "TASK:task",
+      rows: 1,
+    });
+    await recovery.destroy({ discard: true });
+    stale.destroy();
+    reopened.destroy();
+    server.destroy();
+  });
 
   it("replays offline fragment and flushed markdown after disposal", async () => {
     const doc = new Y.Doc();
+    doc.getMap(DOC_META_FIELD).set(DOC_GENERATION_KEY, "offline-generation");
     const persistence = attachEncryptedPersistence({
       contentType: "TASK",
       contentId: "task",
@@ -78,6 +187,7 @@ describe("realtime local recovery", () => {
       ydoc: reopened,
     });
     await recovery.hydrate();
+    expect(docGeneration(reopened)).toBe("offline-generation");
     expect(reopened.getText("markdown").toString()).toBe("offline edits");
     expect(reopened.getXmlFragment("prosemirror").toString()).toContain("offline edits");
     await recovery.destroy();
