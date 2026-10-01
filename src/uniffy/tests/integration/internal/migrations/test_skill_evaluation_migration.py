@@ -1,7 +1,7 @@
 import pytest
 from alembic import command
 from alembic.config import Config
-from psycopg2.errors import CheckViolation
+from psycopg2 import errorcodes, errors
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
@@ -15,6 +15,9 @@ from uniffy.tests.integration.internal.migrations.test_migration_run import (
     _provision_to,
     _query,
 )
+
+# psycopg2 builds its exception classes at runtime; look the class up by SQLSTATE.
+CheckViolation = errors.lookup(errorcodes.CHECK_VIOLATION)
 
 
 async def test_evaluation_schema_preserves_skills_and_requires_scoped_targets(scratch_database):
