@@ -5,6 +5,7 @@ MARKDOWN_MIRROR_FIELD = "markdown_mirror"
 MIRROR_ACTIVE_KEY = "active"
 DOC_META_FIELD = "doc_meta"
 DOC_GENERATION_KEY = "generation"
+PROSEMIRROR_FRAGMENT_FIELD = "prosemirror"
 
 
 def markdown_text(ydoc: pycrdt.Doc) -> pycrdt.Text:

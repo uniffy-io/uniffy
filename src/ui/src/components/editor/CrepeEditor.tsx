@@ -19,8 +19,13 @@ import {
   replaceMarkdownYText,
   replaceProsemirrorFragment,
   isMarkdownMirrorLeader,
-  waitForFragmentContent,
 } from "@/features/realtime/markdown";
+import {
+  observeFragmentSeedDuplicates,
+  seedProsemirrorFragment,
+  waitForFragmentSeed,
+} from "@/features/realtime/fragmentSeeding";
+import type { FragmentSeeder } from "@/features/realtime/multiplexer";
 import { HYDRATION_ORIGIN } from "@/features/realtime";
 import { identityPaint } from "@/config/theme/brandGradients";
 import { randomUUID } from "@/shared/utils/uuid";
@@ -94,6 +99,7 @@ export interface CrepeRealtimeBinding {
   awareness: Awareness;
   undoManager: Y.UndoManager | null;
   sessionId: string;
+  fragmentSeeder: FragmentSeeder;
   /**
    * Resolves on the first ``sync`` event from the provider. Gates
    * cold-start seeding so we never race the SyncStep2 frame.
@@ -140,9 +146,7 @@ const RECORD_ICON_SVG =
 const TOC_ICON_SVG =
   '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 256 256" fill="currentColor"><path d="M88,64a8,8,0,0,1,8-8H216a8,8,0,0,1,0,16H96A8,8,0,0,1,88,64Zm128,56H96a8,8,0,0,0,0,16H216a8,8,0,0,0,0-16Zm0,64H96a8,8,0,0,0,0,16H216a8,8,0,0,0,0-16ZM44,52A12,12,0,1,0,56,64,12,12,0,0,0,44,52Zm0,64a12,12,0,1,0,12,12A12,12,0,0,0,44,116Zm0,64a12,12,0,1,0,12,12A12,12,0,0,0,44,180Z"/></svg>';
 
-// Two clients cold-opening at once would each seed the fragment and double the
-// document. Awareness gets this long to settle so one elected editor seeds.
-const COLD_SEED_SETTLE_MS = 500;
+// A missing seeder must not leave the editor read-only indefinitely.
 // A non-leader waits this long for the elected seeder before seeding itself.
 const COLD_SEED_LEADER_TIMEOUT_MS = 4000;
 // A closing non-leader gives the leader this long to mirror before writing itself.
@@ -888,6 +892,9 @@ export function CrepeEditor({
                 activeView = view;
                 const mirrorMeta = rt.ydoc.getMap(MARKDOWN_MIRROR_FIELD);
                 const markdown = rt.ydoc.getText(MARKDOWN_TEXT_FIELD);
+                const stopSeedHealing = readonly
+                  ? () => {}
+                  : observeFragmentSeedDuplicates(rt.ydoc);
                 const onMarkdown = () => {
                   if (!markdownMirrorReady || !ownsMirror()) return;
                   if (mirrorMeta.get(MIRROR_ACTIVE_KEY)) {
@@ -924,6 +931,7 @@ export function CrepeEditor({
                   window.removeEventListener("pagehide", onPageHide);
                   leaveFlush();
                   disposed = true;
+                  stopSeedHealing();
                   activeView = null;
                   markdown.unobserve(onMarkdown);
                   rt.awareness.off("change", onAwareness);
@@ -1137,25 +1145,17 @@ export function CrepeEditor({
               !fragmentHasRealContent(coldFragment) &&
               rtBinding.ydoc.get(MARKDOWN_TEXT_FIELD, Y.Text).toString()
             ) {
-              // Cold fragment: let awareness settle, then leave the seed to one elected editor.
-              // Keystrokes into the still-empty doc would be replaced by the seed, so hold input.
+              // Hold input until server assignment or peer seed protects these blocks.
               crepe.setReadonly(true);
-              await new Promise((resolve) => setTimeout(resolve, COLD_SEED_SETTLE_MS));
+              await waitForFragmentSeed(
+                coldFragment,
+                rtBinding.fragmentSeeder,
+                COLD_SEED_LEADER_TIMEOUT_MS,
+              );
               if (cancelled || !crepeRef.current) return;
-              if (
-                !fragmentHasRealContent(coldFragment) &&
-                !isMarkdownMirrorLeader(rtBinding.awareness)
-              ) {
-                const seeded = await waitForFragmentContent(
-                  coldFragment,
-                  COLD_SEED_LEADER_TIMEOUT_MS,
-                );
-                if (cancelled || !crepeRef.current) return;
-                if (seeded) {
-                  markdownMirrorReady = true;
-                  return;
-                }
-                // The elected seeder left before seeding; fall through and seed here.
+              if (fragmentHasRealContent(coldFragment)) {
+                markdownMirrorReady = true;
+                return;
               }
             }
             crepe.editor.action((ctx) => {
@@ -1206,7 +1206,11 @@ export function CrepeEditor({
               // throw must not leave the mirror off for a doc that already
               // reflects Y.Text.
               markdownMirrorReady = true;
-              replaceProsemirrorFragment(rtBinding.ydoc, node, HYDRATION_ORIGIN);
+              if (fragmentHasRealContent(fragment)) {
+                replaceProsemirrorFragment(rtBinding.ydoc, node, HYDRATION_ORIGIN);
+              } else {
+                seedProsemirrorFragment(rtBinding.ydoc, node);
+              }
             });
           } catch (err) {
             // Parse or serialize failure: keep showing the fragment with the

@@ -1,4 +1,4 @@
-"""Shared dataclasses for the realtime stack. Kept in its own module to break import cycles."""
+"""Shared realtime state keeps transport and persistence dependencies acyclic."""
 
 from __future__ import annotations
 
@@ -42,16 +42,7 @@ def parse_doc_name(doc_name: str) -> DocKey | None:
 
 @dataclass
 class WSSession:
-    """One WebSocket; owns the outbound queue and per-doc handles.
-
-    Auth binds at the WS level via the subprotocol JWT; per-doc role resolution
-    happens lazily on the first frame for each new docname. ``session_id`` is
-    the access-token ``sid`` claim, used by the router to close a single
-    revoked session without disturbing the user's other live tokens.
-    ``expires_at`` is the token's ``exp``, which bounds how long this socket may
-    live - a socket that outlives its token turns a stolen access token into an
-    unbounded channel.
-    """
+    """Socket identity bounds every attached document by token and session lifetime."""
 
     user_id: UUID
     organization_id: UUID
@@ -68,12 +59,7 @@ class WSSession:
 
 @dataclass
 class ClientHandle:
-    """One WS's attachment to a single shared ``YDocSession``.
-
-    ``can_edit`` lives on the handle so perm changes can flip it in place. The
-    router keys handles by ``(doc_key, conn_id)`` for fanout, by ``user_id``
-    for token-revoke, and by ``session_id`` for per-session revoke.
-    """
+    """Document attachment carries live edit permission for one socket."""
 
     conn_id: int
     user_id: UUID
@@ -98,6 +84,7 @@ class YDocSession:
     policy_key: DocKey | None = None
     # Snapshots carry no request actor; the last live editor attributes their side effects.
     last_editor_id: UUID | None = None
+    seeder_conn_id: int | None = None
     clients: dict[int, ClientHandle] = field(default_factory=dict)
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
     eviction_task: asyncio.Task[None] | None = None

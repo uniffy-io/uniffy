@@ -17,6 +17,7 @@ vi.mock("@/config/api", () => ({
 
 const MESSAGE_SYNC = 0;
 const MESSAGE_AUTH = 2;
+const MESSAGE_FRAGMENT_SEEDER = 4;
 const AUTH_PERMISSION_DENIED = 0;
 const SYNC_STEP1 = 0;
 const SYNC_STEP2 = 1;
@@ -113,6 +114,13 @@ function serverAuthDeniedFrame(docName: string, reason: string): Uint8Array {
   return encodeDocFrame(docName, encoding.toUint8Array(enc));
 }
 
+function serverSeederFrame(docName: string, granted: boolean): Uint8Array {
+  const encoder = encoding.createEncoder();
+  encoding.writeVarUint(encoder, MESSAGE_FRAGMENT_SEEDER);
+  encoding.writeVarUint(encoder, Number(granted));
+  return encodeDocFrame(docName, encoding.toUint8Array(encoder));
+}
+
 function applyClientFramesToServer(ws: FakeWebSocket, docName: string, serverDoc: Y.Doc): void {
   for (const bytes of ws.sent) {
     const { docName: name, payloadOffset } = peekVarString(bytes);
@@ -181,6 +189,29 @@ beforeAll(() => {
         ? JSON.stringify({ auth: JSON.stringify({ currentOrganizationId: "org-1" }) })
         : null,
   });
+});
+
+it("delivers and revokes fragment seed roles per doc and resets them on disconnect", () => {
+  const first = attachDoc("first");
+  const second = attachDoc("second");
+  const firstRoleChanged = vi.fn();
+  const secondRoleChanged = vi.fn();
+  first.subscription.subscribeFragmentSeeder(firstRoleChanged);
+  second.subscription.subscribeFragmentSeeder(secondRoleChanged);
+  const ws = currentWs();
+  ws.open();
+  ws.receive(serverSeederFrame(first.docName, true));
+  expect(first.subscription.isFragmentSeeder).toBe(true);
+  expect(second.subscription.isFragmentSeeder).toBe(false);
+  expect(firstRoleChanged).toHaveBeenCalledOnce();
+  expect(secondRoleChanged).not.toHaveBeenCalled();
+  ws.receive(serverSeederFrame(first.docName, false));
+  expect(first.subscription.isFragmentSeeder).toBe(false);
+  ws.receive(serverSeederFrame(second.docName, true));
+  expect(second.subscription.isFragmentSeeder).toBe(true);
+  ws.serverClose(1000);
+  expect(second.subscription.isFragmentSeeder).toBe(false);
+  expect(secondRoleChanged).toHaveBeenCalledTimes(2);
 });
 
 afterEach(() => {

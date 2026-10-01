@@ -30,6 +30,7 @@ const MESSAGE_SYNC = 0;
 const MESSAGE_AWARENESS = 1;
 const MESSAGE_AUTH = 2;
 const MESSAGE_QUERY_AWARENESS = 3;
+const MESSAGE_FRAGMENT_SEEDER = 4;
 const AUTH_PERMISSION_DENIED = 0;
 
 const AUTH_REFRESHED_EVENT = "uniffy:auth:refreshed";
@@ -72,14 +73,20 @@ export interface MultiplexerAttachOptions {
 
 export interface DocSubscription {
   readonly docName: string;
+  readonly isFragmentSeeder: boolean;
+  subscribeFragmentSeeder(listener: () => void): () => void;
   destroy(): void;
 }
+
+export type FragmentSeeder = Pick<DocSubscription, "isFragmentSeeder" | "subscribeFragmentSeeder">;
 
 interface DocEntry {
   docName: string;
   ydoc: Y.Doc;
   awareness: Awareness;
   resolvedSyncOnce: boolean;
+  fragmentSeeder: boolean;
+  seederListeners: Set<() => void>;
   // Read-only handles may not emit SYNC write frames; the server closes the
   // whole socket with 4403 on the first one. SyncStep1 and awareness stay allowed.
   readOnly: boolean;
@@ -125,6 +132,8 @@ class RealtimeMultiplexer {
       ydoc: opts.ydoc,
       awareness: opts.awareness,
       resolvedSyncOnce: false,
+      fragmentSeeder: false,
+      seederListeners: new Set(),
       readOnly: false,
       pendingLocalFrames: false,
       droppedWhileDisconnected: false,
@@ -177,6 +186,13 @@ class RealtimeMultiplexer {
 
     return {
       docName,
+      get isFragmentSeeder() {
+        return entry.fragmentSeeder;
+      },
+      subscribeFragmentSeeder: (listener) => {
+        entry.seederListeners.add(listener);
+        return () => entry.seederListeners.delete(listener);
+      },
       destroy: () => this.detach(docName),
     };
   }
@@ -200,6 +216,7 @@ class RealtimeMultiplexer {
       this.sendForDoc(docName, encoding.toUint8Array(enc));
     }
     this.docs.delete(docName);
+    entry.seederListeners.clear();
     if (this.docs.size === 0) this.scheduleIdleClose();
   }
 
@@ -301,6 +318,7 @@ class RealtimeMultiplexer {
     this.stopAwarenessKeepaliveTimer();
     this.stopOutboundDrainPoll();
     for (const entry of this.docs.values()) {
+      this.setFragmentSeeder(entry, false);
       // Disconnected peers cannot maintain presence or coordinate local mirror writes.
       removeAwarenessStates(
         entry.awareness,
@@ -480,7 +498,15 @@ class RealtimeMultiplexer {
       if (entry.readOnly) return;
       this.setDocReadOnly(docName, true);
       entry.options.onWriteDenied?.(reason);
+    } else if (messageType === MESSAGE_FRAGMENT_SEEDER) {
+      this.setFragmentSeeder(entry, decoding.readVarUint(decoder) === 1);
     }
+  }
+
+  private setFragmentSeeder(entry: DocEntry, granted: boolean): void {
+    if (entry.fragmentSeeder === granted) return;
+    entry.fragmentSeeder = granted;
+    for (const listener of entry.seederListeners) listener();
   }
 
   // Our reply to a server SyncStep1 carries every local update the server
