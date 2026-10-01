@@ -3,6 +3,8 @@ import pycrdt
 MARKDOWN_TEXT_FIELD = "markdown"
 MARKDOWN_MIRROR_FIELD = "markdown_mirror"
 MIRROR_ACTIVE_KEY = "active"
+DOC_META_FIELD = "doc_meta"
+DOC_GENERATION_KEY = "generation"
 
 
 def markdown_text(ydoc: pycrdt.Doc) -> pycrdt.Text:
