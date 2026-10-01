@@ -18,4 +18,6 @@ This guide is for everyone using Uniffy.
 
 [Library, tags and the knowledge graph](/docs/user/library/) covers finding your way back to your work. Private bookmarks, one tag vocabulary for the whole organization, and a graph drawn from your mentions.
 
+[Exporting projects](/docs/user/exporting-projects/) covers taking your tasks out as a CSV file, from one view, one project or several at once.
+
 Still to write: getting started, notes, files, chat, mentions and search, tasks and projects, calendar, keyboard shortcuts, and the mobile app.
