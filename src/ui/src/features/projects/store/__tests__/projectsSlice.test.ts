@@ -6,7 +6,13 @@ import {
   projectsSlice,
   type ProjectsState,
 } from "@/features/projects/store/projectsSlice";
-import { deleteTask, deleteTasks, updateTask } from "@/features/projects/store/projectsThunks";
+import {
+  deleteTask,
+  deleteTasks,
+  fetchProjects,
+  fetchProjectTasks,
+  updateTask,
+} from "@/features/projects/store/projectsThunks";
 
 const reducer = projectsSlice.reducer;
 
@@ -164,4 +170,33 @@ it("rolls back every field and parent count when a combined board update fails",
   expect(rejected.tasks).toEqual(original.tasks);
   expect(rejected._pendingTaskSnapshot).toBeUndefined();
   expect(rejected._pendingParentSnapshots).toBeUndefined();
+});
+
+describe("task list arriving around the project list", () => {
+  const project = { id: "proj-1" } as Project;
+  const listed = (projects: Project[]) =>
+    fetchProjects.fulfilled(projects, "list-request", undefined);
+  const tasksLoaded = (tasks: Task[]) =>
+    fetchProjectTasks.fulfilled(tasks, "tasks-request", "proj-1");
+
+  it("keeps tasks that land before the project list, then keeps them once it lists the project", () => {
+    let state = reducer(undefined, tasksLoaded([makeTask("a"), makeTask("b")]));
+    expect(Object.keys(state.tasks)).toEqual(["a", "b"]);
+    expect(state.taskListLoadedIds["proj-1"]).toBe(true);
+
+    state = reducer(state, listed([project]));
+    expect(Object.keys(state.tasks)).toEqual(["a", "b"]);
+  });
+
+  it("prunes early tasks when the project list leaves their project out", () => {
+    let state = reducer(undefined, tasksLoaded([makeTask("a")]));
+    state = reducer(state, listed([]));
+    expect(state.tasks).toEqual({});
+  });
+
+  it("drops a late task list for a project the loaded list no longer has", () => {
+    let state = reducer(undefined, listed([]));
+    state = reducer(state, tasksLoaded([makeTask("a")]));
+    expect(state.tasks).toEqual({});
+  });
 });

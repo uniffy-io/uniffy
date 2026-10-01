@@ -46,6 +46,8 @@ export interface ProjectsState {
   activities: Record<string, TaskActivity[]>;
   /** Projects whose task list was fetched this session; single-task reads do not count. */
   taskListLoadedIds: Record<string, true>;
+  /** The project list has loaded this session, so a project missing from it is one the user cannot open. */
+  projectsListed: boolean;
   /** What views may filter, sort and group by; loaded once per session. */
   viewCatalog: ViewCatalog | null;
   viewCatalogLoading: boolean;
@@ -63,6 +65,7 @@ const initialState: ProjectsState = {
   currentProjectId: null,
   activities: {},
   taskListLoadedIds: {},
+  projectsListed: false,
   viewCatalog: null,
   viewCatalogLoading: false,
   loading: {
@@ -202,6 +205,7 @@ export const projectsSlice = createSlice({
       })
       .addCase(fetchProjects.fulfilled, (state, action) => {
         state.loading.projects = false;
+        state.projectsListed = true;
         state.projects = action.payload.reduce(
           (acc, project) => {
             acc[project.id] = project;
@@ -242,8 +246,11 @@ export const projectsSlice = createSlice({
       })
       .addCase(fetchProjectTasks.fulfilled, (state, action) => {
         state.loading.tasks = false;
+        // A task list that lands before the project list is kept; the project list prunes
+        // tasks of projects it leaves out. Once that list is known, a project missing from it
+        // was lost to the user while its tasks were in flight, and they stay dropped.
         action.payload.forEach((task) => {
-          if (state.projects[task.projectId]) state.tasks[task.id] = task;
+          if (state.projects[task.projectId] || !state.projectsListed) state.tasks[task.id] = task;
         });
         const { arg } = action.meta;
         state.taskListLoadedIds[typeof arg === "string" ? arg : arg.projectId] = true;
