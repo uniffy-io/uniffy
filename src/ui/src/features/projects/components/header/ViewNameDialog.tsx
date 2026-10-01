@@ -4,7 +4,7 @@ import { ViewVisibility } from "@uniffy/proto/projects/v1/projects_pb";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/ui/modal";
-import { cn } from "@/shared/utils/cn";
+import { OptionTile } from "@/components/ui/option-tile";
 
 interface ViewNameDialogProps {
   title: string;
@@ -68,7 +68,7 @@ export function ViewNameDialog({
           </div>
           {visibility && (
             <div role="radiogroup" aria-label="Who sees this view" className="grid gap-2">
-              <VisibilityOption
+              <OptionTile
                 selected={chosen === ViewVisibility.PERSONAL}
                 icon={<LockSimple size={16} />}
                 label="Personal"
@@ -76,7 +76,7 @@ export function ViewNameDialog({
                 onSelect={() => setChosen(ViewVisibility.PERSONAL)}
               />
               {visibility.canShare && (
-                <VisibilityOption
+                <OptionTile
                   selected={chosen === ViewVisibility.SHARED}
                   icon={<UsersThree size={16} />}
                   label="Shared"
@@ -97,40 +97,5 @@ export function ViewNameDialog({
         </Button>
       </ModalFooter>
     </Modal>
-  );
-}
-
-function VisibilityOption({
-  selected,
-  icon,
-  label,
-  description,
-  onSelect,
-}: {
-  selected: boolean;
-  icon: React.ReactNode;
-  label: string;
-  description: string;
-  onSelect: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      role="radio"
-      aria-checked={selected}
-      onClick={onSelect}
-      className={cn(
-        "focus-ring flex items-start gap-3 rounded-lg bg-card p-3 text-left transition-shadow",
-        selected ? "bg-primary/5 shadow-edge-primary" : "shadow-edge hover:shadow-edge-strong",
-      )}
-    >
-      <span className={cn("mt-0.5", selected ? "text-primary" : "text-muted-foreground")}>
-        {icon}
-      </span>
-      <span>
-        <span className="block text-sm font-medium text-foreground">{label}</span>
-        <span className="block text-xs text-muted-foreground">{description}</span>
-      </span>
-    </button>
   );
 }
