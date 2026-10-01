@@ -1,10 +1,11 @@
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pycrdt
 import pytest
 
 from uniffy.core.models.projects.task import Task
-from uniffy.core.realtime.adapter import RealtimeRenderConflict
+from uniffy.core.realtime.adapter import RealtimeRenderConflict, RealtimeRenderSuperseded
 from uniffy.core.types import ContentRole, ContentType, generate_id
 from uniffy.domains.projects.realtime import TaskRealtimeAdapter
 from uniffy.domains.projects.tasks.realtime import TaskRealtimePersistence
@@ -138,3 +139,50 @@ async def test_render_retries_then_indexes_and_attributes_mentions(editor_known:
         notifications.return_value.emit_mention_notifications.assert_awaited_once_with(
             task, editor if editor_known else project_owner, None, None
         )
+
+
+async def test_render_refuses_to_overwrite_a_later_plain_write() -> None:
+    task = _task()
+    task.updated_at = datetime.now(UTC)
+    session = _session(task)
+    with pytest.raises(RealtimeRenderSuperseded):
+        await TaskRealtimePersistence(session, MagicMock()).save(
+            task.organization_id,
+            task.id,
+            "Stale live text",
+            supersede_after=task.updated_at - timedelta(seconds=5),
+        )
+    session.commit.assert_not_awaited()
+
+
+async def test_render_proceeds_when_the_plain_write_left_equal_text() -> None:
+    task = _task()
+    task.updated_at = datetime.now(UTC)
+    session = _session(task)
+    with (
+        patch("uniffy.domains.projects.tasks.realtime.TaskContentOperations") as operations,
+        patch("uniffy.domains.projects.tasks.realtime.TaskNotifications") as notifications,
+    ):
+        operations.return_value._index_for_search = AsyncMock()
+        notifications.return_value.emit_mention_notifications = AsyncMock()
+        saved = await TaskRealtimePersistence(session, MagicMock()).save(
+            task.organization_id,
+            task.id,
+            task.description,
+            supersede_after=task.updated_at - timedelta(seconds=5),
+        )
+    assert saved is task
+
+
+async def test_adapter_threads_the_supersede_floor_through() -> None:
+    task = _task()
+    session = _session(task)
+    floor = datetime.now(UTC)
+    doc = pycrdt.Doc()
+    doc["markdown"] = pycrdt.Text("Merged")
+    with patch("uniffy.domains.projects.realtime.TaskRealtimePersistence") as persistence:
+        persistence.return_value.save = AsyncMock(return_value=task)
+        assert await TaskRealtimeAdapter(MagicMock()).render_and_persist(
+            session, doc, task.id, task.organization_id, supersede_after=floor
+        )
+    assert persistence.return_value.save.await_args.kwargs["supersede_after"] == floor

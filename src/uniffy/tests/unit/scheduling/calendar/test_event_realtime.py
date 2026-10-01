@@ -5,6 +5,7 @@ import pycrdt
 import pytest
 
 from uniffy.core.models.calendar.event import CalendarEvent
+from uniffy.core.realtime.adapter import RealtimeRenderSuperseded
 from uniffy.core.types import (
     ContentRole,
     ContentType,
@@ -213,3 +214,47 @@ async def test_render_of_missing_event_returns_none() -> None:
         )
         is None
     )
+
+
+async def test_render_refuses_to_overwrite_a_later_plain_write() -> None:
+    event = _event()
+    event.updated_at = datetime.now(UTC)
+    session = MagicMock()
+    session.execute = AsyncMock(return_value=MagicMock(scalar_one_or_none=lambda: event))
+    session.commit = AsyncMock()
+    with pytest.raises(RealtimeRenderSuperseded):
+        await EventRealtimePersistence(session, MagicMock()).save(
+            event.organization_id,
+            event.id,
+            "Stale live agenda",
+            supersede_after=event.updated_at - timedelta(seconds=5),
+        )
+    session.commit.assert_not_awaited()
+    assert event.description == "Agenda"
+
+
+async def test_render_proceeds_when_the_plain_write_left_equal_text() -> None:
+    event = _event()
+    event.updated_at = datetime.now(UTC)
+    session = MagicMock()
+    session.execute = AsyncMock(
+        side_effect=[
+            MagicMock(scalar_one_or_none=lambda: event),
+            MagicMock(scalars=lambda: []),
+        ]
+    )
+    session.commit = AsyncMock()
+    session.refresh = AsyncMock()
+    with (
+        patch(f"{PERSISTENCE_MODULE}.EventContentOperations") as operations,
+        patch(f"{PERSISTENCE_MODULE}.EventNotifications") as notifications,
+    ):
+        operations.return_value._index_for_search = AsyncMock()
+        notifications.return_value.emit_mention_notifications = AsyncMock()
+        saved = await EventRealtimePersistence(session, MagicMock()).save(
+            event.organization_id,
+            event.id,
+            "Agenda",
+            supersede_after=event.updated_at - timedelta(seconds=5),
+        )
+    assert saved is event

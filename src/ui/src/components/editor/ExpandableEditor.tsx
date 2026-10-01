@@ -68,6 +68,8 @@ export function ExpandableEditor({
   const openTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [sessionOpen, setSessionOpen] = useState(false);
   const [closing, setClosing] = useState(false);
+  // The cold-start seed is elected after sync; the read-only preview stays up until then.
+  const [seeded, setSeeded] = useState(false);
   const [syncedSessionId, setSyncedSessionId] = useState<string | null>(null);
   const realtimeActive = Boolean(realtime && contentId);
   const { binding, status, docName } = useMarkdownDocSession({
@@ -75,6 +77,9 @@ export function ExpandableEditor({
     contentId,
     enabled: realtimeActive && sessionOpen,
     canEdit: !readonly,
+    // Descriptions have many plain writers (mobile, agents, API); a cache kept past a
+    // clean close would replay over their later writes on the next open.
+    discardLocalOnCleanClose: true,
   });
   const whenSynced = binding?.whenSynced;
   const sessionId = binding?.sessionId;
@@ -115,6 +120,7 @@ export function ExpandableEditor({
     if (openTimerRef.current) clearTimeout(openTimerRef.current);
     setClosing(false);
     setSessionOpen(true);
+    setSeeded(false);
     setDraftInitial(value);
     latestMarkdownRef.current = value;
     setEditorReady(false);
@@ -128,16 +134,21 @@ export function ExpandableEditor({
   }, [readonly, value]);
 
   const handleClose = useCallback(() => {
-    editorHandle?.flushMarkdownMirror?.();
-    const markdown =
-      editorHandle?.run((ctx) => ctx.get(serializerCtx)(editorHandle.view.state.doc)) ??
-      latestMarkdownRef.current;
     setIsExpanded(false);
     setEditorReady(false);
     if (openTimerRef.current) clearTimeout(openTimerRef.current);
     setClosing(true);
+    // Before the seed lands the editor holds nothing of the user's; reporting it would blank
+    // the host's description.
+    if (realtimeActive && !seeded) return;
+    editorHandle?.flushMarkdownMirror?.();
+    const markdown =
+      editorHandle?.run((ctx) => ctx.get(serializerCtx)(editorHandle.view.state.doc)) ??
+      latestMarkdownRef.current;
     onDone?.(markdown, { realtimeOwned });
-  }, [onDone, editorHandle, realtimeOwned]);
+  }, [onDone, editorHandle, realtimeOwned, realtimeActive, seeded]);
+
+  const handleRealtimeSeeded = useCallback(() => setSeeded(true), []);
 
   const handleEditorChange = useCallback(
     (markdown: string) => {
@@ -154,12 +165,29 @@ export function ExpandableEditor({
 
   useEffect(() => {
     if (!isExpanded || !editorHandle) return;
+    if (realtimeActive && !seeded) return;
     editorHandle.focus();
-  }, [isExpanded, editorHandle]);
+  }, [isExpanded, editorHandle, realtimeActive, seeded]);
 
   useOverlayEscape(handleClose, isExpanded);
 
   const hasContent = value && value.trim().length > 0;
+
+  const connectingPreview = (
+    <div className="h-full overflow-y-auto p-6">
+      <p className="text-sm text-muted-foreground mb-4">
+        {status === "permission_lost" ? "Edit access removed." : "Connecting..."}
+      </p>
+      <CrepeEditor
+        contentType={contentType}
+        contentId={contentId}
+        value={draftInitial}
+        readonly
+        enableUpload={false}
+        floatingToolbar={false}
+      />
+    </div>
+  );
 
   return (
     <>
@@ -308,39 +336,38 @@ export function ExpandableEditor({
                 </div>
 
                 {/* Editor body - let CrepeEditor's own wrapper handle scrolling */}
-                <div className="flex-1 min-h-0">
+                <div className="flex-1 min-h-0 relative">
                   {editorReady && (!realtimeActive || (binding && realtimeOwned)) ? (
-                    <CrepeEditor
-                      key={editorKey}
-                      contentType={contentType}
-                      contentId={contentId}
-                      value={draftInitial}
-                      realtime={binding ?? undefined}
-                      readonly={
-                        readonly || status === "permission_lost" || status === "token_revoked"
-                      }
-                      onChange={handleEditorChange}
-                      onEditorReady={handleEditorReady}
-                      placeholder={placeholder}
-                      enableUpload={enableUpload}
-                      onFileUploaded={onFileUploaded}
-                      floatingToolbar={false}
-                      className="pt-6"
-                    />
+                    <>
+                      <div
+                        className={cn(
+                          "h-full",
+                          realtimeActive && !seeded && "invisible absolute inset-0",
+                        )}
+                      >
+                        <CrepeEditor
+                          key={editorKey}
+                          contentType={contentType}
+                          contentId={contentId}
+                          value={draftInitial}
+                          realtime={binding ?? undefined}
+                          readonly={
+                            readonly || status === "permission_lost" || status === "token_revoked"
+                          }
+                          onChange={handleEditorChange}
+                          onEditorReady={handleEditorReady}
+                          onRealtimeSeeded={handleRealtimeSeeded}
+                          placeholder={placeholder}
+                          enableUpload={enableUpload}
+                          onFileUploaded={onFileUploaded}
+                          floatingToolbar={false}
+                          className="pt-6"
+                        />
+                      </div>
+                      {realtimeActive && !seeded && connectingPreview}
+                    </>
                   ) : realtimeActive ? (
-                    <div className="h-full overflow-y-auto p-6">
-                      <p className="text-sm text-muted-foreground mb-4">
-                        {status === "permission_lost" ? "Edit access removed." : "Connecting..."}
-                      </p>
-                      <CrepeEditor
-                        contentType={contentType}
-                        contentId={contentId}
-                        value={draftInitial}
-                        readonly
-                        enableUpload={false}
-                        floatingToolbar={false}
-                      />
-                    </div>
+                    connectingPreview
                   ) : (
                     <div className="flex items-center justify-center h-full">
                       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />

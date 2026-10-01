@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from uniffy.core.content.references import extract_all_outgoing_references
 from uniffy.core.models.calendar.attendee import EventAttendee
 from uniffy.core.models.calendar.event import CalendarEvent
+from uniffy.core.realtime.adapter import check_not_superseded
 from uniffy.core.realtime.metrics import REALTIME_BLANK_CONTENT_OVERWRITES_TOTAL
 from uniffy.core.search import SearchIndexer
 from uniffy.core.types import ContentType
@@ -46,10 +47,18 @@ class EventRealtimePersistence:
         content: str,
         *,
         actor_id: UUID | None = None,
+        supersede_after: datetime | None = None,
     ) -> CalendarEvent | None:
         event = await load_live_event(self.session, event_id, organization_id, for_update=True)
         if event is None:
             return None
+        check_not_superseded(
+            event.updated_at,
+            supersede_after,
+            stored=event.description,
+            rendered=content,
+            label=f"Event {event_id}",
+        )
         if event.description and not content:
             REALTIME_BLANK_CONTENT_OVERWRITES_TOTAL.labels(
                 content_type=ContentType.CALENDAR_EVENT.value

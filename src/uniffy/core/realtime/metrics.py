@@ -44,6 +44,12 @@ REALTIME_SNAPSHOT_DROPPED_TOTAL = Counter(
     ["content_type", "reason"],
 )
 
+REALTIME_SNAPSHOT_SUPERSEDED_TOTAL = Counter(
+    "uniffy_realtime_snapshot_superseded_total",
+    "Snapshot jobs skipped because a newer snapshot or a newer plain write landed first",
+    ["content_type", "reason"],
+)
+
 REALTIME_RENDER_CONFLICTS_TOTAL = Counter(
     "uniffy_realtime_render_conflicts_total",
     "Domain renders that lost their version race and were handed to the worker retry",

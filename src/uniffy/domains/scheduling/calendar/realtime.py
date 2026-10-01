@@ -1,3 +1,4 @@
+from datetime import datetime
 from uuid import UUID
 
 import pycrdt
@@ -75,9 +76,14 @@ class EventRealtimeAdapter:
         organization_id: UUID,
         *,
         actor_id: UUID | None = None,
+        supersede_after: datetime | None = None,
     ) -> bool:
         saved = await EventRealtimePersistence(session, self.search_indexer).save(
-            organization_id, content_id, str(markdown_text(ydoc)), actor_id=actor_id
+            organization_id,
+            content_id,
+            str(markdown_text(ydoc)),
+            actor_id=actor_id,
+            supersede_after=supersede_after,
         )
         return saved is not None
 

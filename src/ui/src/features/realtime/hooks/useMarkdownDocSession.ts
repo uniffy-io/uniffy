@@ -14,6 +14,8 @@ interface MarkdownDocSessionOptions {
   contentId: string | null;
   enabled: boolean;
   canEdit?: boolean;
+  /** See `UseDocSessionOptions.discardLocalOnCleanClose`. */
+  discardLocalOnCleanClose?: boolean;
 }
 
 export function useMarkdownDocSession({
@@ -21,12 +23,18 @@ export function useMarkdownDocSession({
   contentId,
   enabled,
   canEdit = true,
+  discardLocalOnCleanClose = false,
 }: MarkdownDocSessionOptions): {
   binding: CrepeRealtimeBinding | null;
   status: RealtimeStatus;
   docName: string | null;
 } {
-  const session = useDocSession({ contentType, contentId, enabled: enabled && Boolean(contentId) });
+  const session = useDocSession({
+    contentType,
+    contentId,
+    enabled: enabled && Boolean(contentId),
+    discardLocalOnCleanClose,
+  });
   const user = useAppSelector((state) => state.auth.user);
   const [undoManager, setUndoManager] = useState<Y.UndoManager | null>(null);
   const docName = contentId ? docNameFor(contentType, contentId) : null;

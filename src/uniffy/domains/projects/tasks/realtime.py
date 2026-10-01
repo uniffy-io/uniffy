@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.models.projects.project import Project
 from uniffy.core.models.projects.task import Task
-from uniffy.core.realtime.adapter import RealtimeRenderConflict
+from uniffy.core.realtime.adapter import RealtimeRenderConflict, check_not_superseded
 from uniffy.core.realtime.metrics import REALTIME_BLANK_CONTENT_OVERWRITES_TOTAL
 from uniffy.core.search import SearchIndexer
 from uniffy.core.types import ContentType
@@ -54,6 +54,7 @@ class TaskRealtimePersistence:
         content: str,
         *,
         actor_id: UUID | None = None,
+        supersede_after: datetime | None = None,
     ) -> Task | None:
         references = extract_urns_from_content(content) or None
         for attempt in range(3):
@@ -62,6 +63,14 @@ class TaskRealtimePersistence:
             )
             if task is None:
                 return None
+            if not attempt:
+                check_not_superseded(
+                    task.updated_at,
+                    supersede_after,
+                    stored=task.description,
+                    rendered=content,
+                    label=f"Task {task_id}",
+                )
             old_refs = task.outgoing_references
             if not attempt and task.description and not content:
                 REALTIME_BLANK_CONTENT_OVERWRITES_TOTAL.labels(
