@@ -1,6 +1,12 @@
 # Devcontainer overlay: a profile-less clone of deps-manager that idles so
 # VS Code can attach its language servers to the fully-installed workspace
 # (full node_modules + .venv volumes) without any host dependencies.
+#
+# deps-manager's hardening (read-only rootfs, noexec /tmp) carries over, so
+# the node user's home is a named volume: the only writable, executable place
+# the VS Code server can install into. Docker seeds it from the image's
+# node-owned /home/node, so it starts writable for uid 1000. Running as the
+# host uid keeps editor writes to the bind mount host-owned.
 services:
     devcontainer:
         extends:
@@ -8,4 +14,12 @@ services:
             service: deps-manager
         container_name: uniffy-devcontainer
         profiles: !override []
+        user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
+        environment:
+            HOME: /home/node
+        volumes:
+            - devcontainer-home:/home/node
         command: ["sleep", "infinity"]
+
+volumes:
+    devcontainer-home:
