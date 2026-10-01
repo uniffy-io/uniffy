@@ -11,6 +11,7 @@ import {
   SidebarSimple,
   FrameCorners,
   Gear,
+  DownloadSimple,
   TreeView,
   SlidersHorizontal,
   SortAscending,
@@ -78,6 +79,7 @@ import {
 } from "@/features/projects/store/viewSelectors";
 import { ViewTabs } from "@/features/projects/components/header/ViewTabs";
 import { ViewDraftActions } from "@/features/projects/components/header/ViewDraftActions";
+import { ExportTasksModal } from "@/features/projects/components/modals/ExportTasksModal";
 import { viewGates } from "@/features/projects/utils/viewGates";
 import {
   setDraftFilter,
@@ -151,6 +153,7 @@ export function ProjectHeader({ project }: ProjectHeaderProps) {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isDisplayOpen, setIsDisplayOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isExportOpen, setIsExportOpen] = useState(false);
 
   // Label visibility tracks the real control-bar width, not the viewport: the
   // surrounding panels are resizable, so a wide viewport can still leave the
@@ -331,6 +334,10 @@ export function ProjectHeader({ project }: ProjectHeaderProps) {
               { value: "modal", content: <FrameCorners size={14} />, title: "Modal view" },
             ]}
           />
+
+          <PaneIconButton onClick={() => setIsExportOpen(true)} title="Export tasks">
+            <DownloadSimple size={16} />
+          </PaneIconButton>
 
           {canManage && (
             <PaneIconButton
@@ -572,6 +579,16 @@ export function ProjectHeader({ project }: ProjectHeaderProps) {
           </div>
         )}
       </PaneHeader>
+
+      {isExportOpen && (
+        <ExportTasksModal
+          projectIds={[project.id]}
+          viewBlockedReason={
+            filterBlocksSave ? "This view's filter names a deleted field or option." : null
+          }
+          onClose={() => setIsExportOpen(false)}
+        />
+      )}
 
       <ConfirmDialog
         isOpen={showDeleteTasksConfirm}

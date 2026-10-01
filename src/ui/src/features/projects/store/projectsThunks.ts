@@ -18,7 +18,18 @@ import type {
   Task as ProtoTask,
   ViewVisibility,
 } from "@uniffy/proto/projects/v1/projects_pb";
+import { toast } from "sonner";
+import { TaskExportFormat } from "@uniffy/proto/projects/v1/projects_pb";
 import { bulkUpsertTags, tagToPlain } from "@/features/tags";
+import { selectActiveDefinition } from "./viewSelectors";
+import {
+  buildExportFilename,
+  exportNarrowingFromDefinition,
+  type ExportScope,
+} from "../utils/exportTasks";
+import { downloadBlob } from "@/shared/utils/download";
+import { formatFileSize } from "@/shared/utils/dateFormatting";
+import { getBrowserTimeZone } from "@/shared/utils/timezone";
 
 const hydrateProjectTags = (dispatch: AppDispatch, protos: (ProtoProject | undefined)[]): void => {
   const tags = protos
@@ -95,6 +106,59 @@ export const fetchProjectTasks = createAsyncThunk<
     return rejectWithValue(error instanceof Error ? error.message : "Failed to fetch tasks");
   }
 });
+
+/**
+ * Stream an export from the server and save it. "view" narrows one project to the active view's
+ * filter, sort and layout; "project" exports every task of each project.
+ */
+export const exportProjectTasks = createAsyncThunk<
+  void,
+  { projectIds: string[]; scope: ExportScope; includeBundle: boolean },
+  { rejectValue: string }
+>(
+  "projects/exportProjectTasks",
+  async ({ projectIds, scope, includeBundle }, { getState, rejectWithValue, signal }) => {
+    const state = getState() as RootState;
+    const orgId = state.auth.currentOrganizationId;
+    if (!orgId) return rejectWithValue("No organization selected");
+    const narrowing =
+      scope === "view" && projectIds.length === 1
+        ? exportNarrowingFromDefinition(selectActiveDefinition(projectIds[0])(state))
+        : {};
+    const filename = buildExportFilename({
+      orgSlug: state.auth.currentOrganizationSlug,
+      projectSlugs: projectIds.map((id) => state.projects.projects[id]?.slug ?? ""),
+      bundle: includeBundle,
+    });
+
+    const progress = toast.loading("Preparing export...");
+    try {
+      const chunks: Uint8Array[] = [];
+      const stream = projectsApi.exportTasks(
+        {
+          organizationId: orgId,
+          projectIds,
+          format: TaskExportFormat.CSV,
+          includeBundle,
+          timeZone: getBrowserTimeZone(),
+          ...narrowing,
+        },
+        signal,
+      );
+      for await (const chunk of stream) {
+        if (chunk.payload.length > 0) chunks.push(chunk.payload);
+      }
+      const blob = new Blob(chunks as BlobPart[], {
+        type: includeBundle ? "application/zip" : "text/csv;charset=utf-8",
+      });
+      downloadBlob(blob, filename);
+      toast.success(`Downloaded ${filename} (${formatFileSize(blob.size)})`, { id: progress });
+    } catch (error) {
+      toast.dismiss(progress);
+      return rejectWithValue(error instanceof Error ? error.message : "Failed to export tasks");
+    }
+  },
+);
 
 export const createProject = createAsyncThunk<
   Project,

@@ -1,9 +1,13 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Briefcase, Clock, WarningCircle } from "@phosphor-icons/react";
+import { Briefcase, Clock, DownloadSimple, WarningCircle } from "@phosphor-icons/react";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 import { cn } from "@/shared/utils/cn";
+import { ExportTasksModal } from "@/features/projects/components/modals/ExportTasksModal";
 import { selectProjects } from "@/features/projects/store/projectsSlice";
 import { fetchProjects } from "@/features/projects/store/projectsThunks";
 import { ProjectIcon } from "@/features/projects/utils/projectIcons";
@@ -71,6 +75,23 @@ export function PortfolioPage() {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const projects = useAppSelector(selectProjects);
+  const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
+  const [isExportOpen, setIsExportOpen] = useState(false);
+  // A project that left the list (deleted, access removed) drops out of the selection.
+  const selectedIds = useMemo(
+    () => projects.filter((project) => selected.has(project.id)).map((project) => project.id),
+    [projects, selected],
+  );
+  const selecting = selectedIds.length > 0;
+
+  const toggleSelected = (projectId: string, checked: boolean) => {
+    setSelected((previous) => {
+      const next = new Set(previous);
+      if (checked) next.add(projectId);
+      else next.delete(projectId);
+      return next;
+    });
+  };
 
   useEffect(() => {
     dispatch(fetchProjects());
@@ -94,11 +115,38 @@ export function PortfolioPage() {
 
   return (
     <div className="p-4 md:p-6 space-y-6 max-w-6xl mx-auto">
-      <div>
-        <h1 className="text-xl md:text-2xl font-bold text-foreground">Portfolio</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          {projects.length} project{projects.length !== 1 ? "s" : ""}
-        </p>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-xl md:text-2xl font-bold text-foreground">Portfolio</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            {selecting
+              ? `${selectedIds.length} of ${projects.length} selected`
+              : `${projects.length} project${projects.length !== 1 ? "s" : ""}`}
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          {selecting ? (
+            <Button variant="ghost" onClick={() => setSelected(new Set())}>
+              Clear
+            </Button>
+          ) : (
+            <Button
+              variant="ghost"
+              onClick={() => setSelected(new Set(projects.map((project) => project.id)))}
+            >
+              Select all
+            </Button>
+          )}
+          <Button
+            className="gap-1.5"
+            disabled={!selecting}
+            onClick={() => setIsExportOpen(true)}
+            title={selecting ? undefined : "Select projects to export their tasks"}
+          >
+            <DownloadSimple size={16} />
+            {selecting ? `Export ${selectedIds.length}` : "Export"}
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -107,12 +155,29 @@ export function PortfolioPage() {
           const healthConfig = HEALTH_CONFIG[health];
 
           return (
-            <div
+            <Card
               key={project.id}
-              className="border border-border rounded-lg p-4 hover:bg-muted/30 cursor-pointer transition-colors bg-card"
+              className={cn(
+                "group p-4 cursor-pointer transition-shadow duration-150 hover:shadow-edge-strong",
+                selected.has(project.id) && "bg-primary/5 shadow-edge-primary",
+              )}
               onClick={() => navigate(`/projects/${project.id}`)}
             >
               <div className="flex items-center gap-3 mb-3">
+                <div
+                  className={cn(
+                    "shrink-0 transition-opacity",
+                    !selecting &&
+                      "md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100",
+                  )}
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  <Checkbox
+                    aria-label={`Select ${project.name}`}
+                    checked={selected.has(project.id)}
+                    onChange={(event) => toggleSelected(project.id, event.target.checked)}
+                  />
+                </div>
                 <ProjectIcon
                   icon={project.icon}
                   size={20}
@@ -171,10 +236,14 @@ export function PortfolioPage() {
                   </span>
                 )}
               </div>
-            </div>
+            </Card>
           );
         })}
       </div>
+
+      {isExportOpen && (
+        <ExportTasksModal projectIds={selectedIds} onClose={() => setIsExportOpen(false)} />
+      )}
     </div>
   );
 }
