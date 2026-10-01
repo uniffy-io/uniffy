@@ -106,7 +106,7 @@ export function PaneBackLink({
 export const paneIconButtonClass =
   "shrink-0 rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-40";
 
-/** Icon-only action in a pane header; `active` paints it in the accent. */
+/** Icon-only action in a pane header; `active` paints it in the accent. Touch screens get a 44px target. */
 export const PaneIconButton = React.forwardRef<
   HTMLButtonElement,
   React.ButtonHTMLAttributes<HTMLButtonElement> & { active?: boolean }
@@ -116,7 +116,7 @@ export const PaneIconButton = React.forwardRef<
     type="button"
     className={cn(
       paneIconButtonClass,
-      "focus-ring",
+      "focus-ring inline-flex items-center justify-center pointer-coarse:min-h-11 pointer-coarse:min-w-11",
       active && "text-primary hover:bg-primary/10 hover:text-primary",
       className,
     )}
