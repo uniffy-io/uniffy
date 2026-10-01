@@ -1,14 +1,16 @@
 import base64
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from uniffy.core.realtime.jobs import save_realtime_snapshot
+from uniffy.core.realtime.snapshot import SnapshotOutcome
 from uniffy.core.types import ContentType, generate_id
 
 
 async def test_save_realtime_snapshot_decodes_payload_and_renders() -> None:
     content_id = generate_id()
     organization_id = generate_id()
-    persist = AsyncMock(return_value=True)
+    persist = AsyncMock(return_value=SnapshotOutcome.RENDERED)
     duration = MagicMock()
 
     with (
@@ -31,15 +33,17 @@ async def test_save_realtime_snapshot_decodes_payload_and_renders() -> None:
         b"update",
         b"state",
         actor_id=None,
+        encoded_at=None,
     )
     duration.labels.assert_called_once_with(content_type=ContentType.NOTE.value)
     duration.labels.return_value.observe.assert_called_once()
-    assert result == {"status": "ok", "content_id": str(content_id)}
+    assert result == {"status": "rendered", "content_id": str(content_id)}
 
 
-async def test_save_realtime_snapshot_passes_the_last_editor_as_actor() -> None:
+async def test_save_realtime_snapshot_passes_the_last_editor_and_encode_time() -> None:
     editor_id = generate_id()
-    persist = AsyncMock(return_value=True)
+    encoded_at = datetime.now(UTC)
+    persist = AsyncMock(return_value=SnapshotOutcome.RENDERED)
 
     with patch("uniffy.core.realtime.jobs.persist_snapshot", persist):
         await save_realtime_snapshot(
@@ -50,14 +54,15 @@ async def test_save_realtime_snapshot_passes_the_last_editor_as_actor() -> None:
             base64.b64encode(b"update").decode("ascii"),
             base64.b64encode(b"state").decode("ascii"),
             str(editor_id),
+            encoded_at.isoformat(),
         )
 
-    assert persist.await_args.kwargs == {"actor_id": editor_id}
+    assert persist.await_args.kwargs == {"actor_id": editor_id, "encoded_at": encoded_at}
 
 
-async def test_save_realtime_snapshot_reports_missing_adapter() -> None:
+async def test_save_realtime_snapshot_reports_the_outcome() -> None:
     content_id = generate_id()
-    persist = AsyncMock(return_value=False)
+    persist = AsyncMock(return_value=SnapshotOutcome.SUPERSEDED)
 
     with patch("uniffy.core.realtime.jobs.persist_snapshot", persist):
         result = await save_realtime_snapshot(
@@ -69,4 +74,4 @@ async def test_save_realtime_snapshot_reports_missing_adapter() -> None:
             base64.b64encode(b"state").decode("ascii"),
         )
 
-    assert result == {"status": "snapshot_only", "content_id": str(content_id)}
+    assert result == {"status": "superseded", "content_id": str(content_id)}

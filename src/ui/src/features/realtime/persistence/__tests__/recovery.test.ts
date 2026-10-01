@@ -84,6 +84,31 @@ describe("realtime local recovery", () => {
     reopened.destroy();
   });
 
+  it("clean close discards the local cache instead of compacting it", async () => {
+    const doc = new Y.Doc();
+    const persistence = attachEncryptedPersistence({
+      contentType: "TASK",
+      contentId: "task",
+      ydoc: doc,
+    });
+    await persistence.hydrate();
+    doc.getText("markdown").insert(0, "synced edits");
+    await persistence.destroy({ discard: true });
+    doc.destroy();
+    expect([...storage.rows.keys()].some((key) => key.includes('"task"'))).toBe(false);
+
+    const reopened = new Y.Doc();
+    const recovery = attachEncryptedPersistence({
+      contentType: "TASK",
+      contentId: "task",
+      ydoc: reopened,
+    });
+    await recovery.hydrate();
+    expect(reopened.getText("markdown").toString()).toBe("");
+    await recovery.destroy();
+    reopened.destroy();
+  });
+
   it("fast reopen waits for previous pending writes and final snapshot", async () => {
     let finishEncryption!: () => void;
     storage.encryptGate = new Promise<void>((resolve) => {

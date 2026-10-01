@@ -4,12 +4,14 @@ import asyncio
 import base64
 import time
 from contextlib import asynccontextmanager, contextmanager
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 from urllib.parse import quote
 from uuid import UUID
 
 import pycrdt
 import pytest
+from sqlalchemy.dialects import postgresql
 from sqlalchemy.sql.dml import Delete
 
 from uniffy.core.jobs import JobEnqueueOutcome, JobEnqueueResult
@@ -17,6 +19,7 @@ from uniffy.core.models.realtime.yjs_snapshot import RealtimeYjsSnapshot
 from uniffy.core.realtime import ydoc_manager as ydoc_manager_module
 from uniffy.core.realtime.adapter import (
     RealtimeRenderConflict,
+    RealtimeRenderSuperseded,
     _adapters,
     get_realtime_adapter,
     register_realtime_adapter,
@@ -30,7 +33,12 @@ from uniffy.core.realtime.auth import (
 )
 from uniffy.core.realtime.job_contracts import SAVE_REALTIME_SNAPSHOT
 from uniffy.core.realtime.metrics import REALTIME_SNAPSHOT_DROPPED_TOTAL
-from uniffy.core.realtime.snapshot import SNAPSHOT_MAX_DELAY, SnapshotWriter, persist_snapshot
+from uniffy.core.realtime.snapshot import (
+    SNAPSHOT_MAX_DELAY,
+    SnapshotOutcome,
+    SnapshotWriter,
+    persist_snapshot,
+)
 from uniffy.core.realtime.wire import create_auth_denied_message
 from uniffy.core.realtime.wire import (
     YMessageType,
@@ -429,7 +437,7 @@ class TestSnapshotForceFlush:
         ydoc = pycrdt.Doc()
         ydoc["markdown"] = pycrdt.Text("pending edits")
         db = MagicMock()
-        db.execute = AsyncMock()
+        db.execute = AsyncMock(return_value=MagicMock(scalar_one_or_none=lambda: None, rowcount=1))
         db.commit = AsyncMock()
         adapter = MagicMock()
         adapter.render_and_persist = AsyncMock(side_effect=RealtimeRenderConflict("contended"))
@@ -446,7 +454,7 @@ class TestSnapshotForceFlush:
             await persist_snapshot(
                 ContentType.TASK, generate_id(), generate_id(), ydoc.get_update(), ydoc.get_state()
             )
-        assert db.execute.await_count == 1
+        assert db.execute.await_count == 2
         assert not isinstance(db.execute.await_args.args[0], Delete)
         db.commit.assert_awaited_once()
 
@@ -470,6 +478,7 @@ class TestSnapshotForceFlush:
             assert args[1] == session.key[1]
             assert args[2] == session.organization_id
             assert args[3]
+            assert isinstance(persist.await_args.kwargs["encoded_at"], datetime)
             enqueue.assert_not_awaited()
 
         await go()
@@ -490,16 +499,23 @@ class TestSnapshotForceFlush:
         ):
             await writer.flush(session, force=True)
 
-        assert persist.await_args.kwargs == {"actor_id": session.last_editor_id}
+        assert persist.await_args.kwargs["actor_id"] == session.last_editor_id
         enqueue.assert_awaited_once()
         assert enqueue.await_args.args[0] is SAVE_REALTIME_SNAPSHOT
         assert enqueue.await_args.args[6] == str(session.last_editor_id)
+        # The queued job carries the same encode time as the in-process attempt.
+        assert (
+            datetime.fromisoformat(enqueue.await_args.args[7])
+            == persist.await_args.kwargs["encoded_at"]
+        )
 
     async def test_missing_target_removes_snapshot_written_by_a_stale_job(self) -> None:
         ydoc = pycrdt.Doc()
         ydoc["markdown"] = pycrdt.Text("stale")
         session = MagicMock()
-        session.execute = AsyncMock()
+        session.execute = AsyncMock(
+            return_value=MagicMock(scalar_one_or_none=lambda: None, rowcount=1)
+        )
         session.commit = AsyncMock()
         adapter = MagicMock()
         adapter.render_and_persist = AsyncMock(return_value=False)
@@ -520,9 +536,9 @@ class TestSnapshotForceFlush:
                 ydoc.get_state(),
             )
 
-        assert rendered is False
-        assert session.execute.await_count == 2
-        cleanup = session.execute.await_args_list[1].args[0]
+        assert rendered is SnapshotOutcome.TARGET_MISSING
+        assert session.execute.await_count == 3
+        cleanup = session.execute.await_args_list[2].args[0]
         assert isinstance(cleanup, Delete)
         assert cleanup.table.name == RealtimeYjsSnapshot.__tablename__
         assert session.commit.await_count == 2
@@ -578,6 +594,149 @@ class TestSnapshotForceFlush:
             assert dropped._value.get() == before
 
         await go()
+
+
+class TestSnapshotOrdering:
+    """An older payload never wins over a newer row or a newer plain write."""
+
+    @staticmethod
+    def _db(*, had_row: bool, upsert_rowcount: int) -> MagicMock:
+        db = MagicMock()
+        db.execute = AsyncMock(
+            side_effect=[
+                MagicMock(scalar_one_or_none=lambda: datetime.now(UTC) if had_row else None),
+                MagicMock(rowcount=upsert_rowcount),
+                MagicMock(),
+            ]
+        )
+        db.commit = AsyncMock()
+        return db
+
+    @staticmethod
+    @contextmanager
+    def _patched(db: MagicMock, adapter: MagicMock):
+        @asynccontextmanager
+        async def fake_open_session():
+            yield db
+
+        with (
+            patch("uniffy.core.realtime.snapshot.open_session", fake_open_session),
+            patch("uniffy.core.realtime.snapshot.get_realtime_adapter", return_value=adapter),
+        ):
+            yield
+
+    @staticmethod
+    def _payload() -> tuple[bytes, bytes]:
+        ydoc = pycrdt.Doc()
+        ydoc["markdown"] = pycrdt.Text("live text")
+        return ydoc.get_update(), ydoc.get_state()
+
+    async def test_older_payload_never_overwrites_a_newer_row(self) -> None:
+        update, state = self._payload()
+        db = self._db(had_row=True, upsert_rowcount=0)
+        adapter = MagicMock()
+        adapter.render_and_persist = AsyncMock(return_value=True)
+        with self._patched(db, adapter):
+            outcome = await persist_snapshot(
+                ContentType.TASK,
+                generate_id(),
+                generate_id(),
+                update,
+                state,
+                encoded_at=datetime.now(UTC) - timedelta(seconds=30),
+            )
+        assert outcome is SnapshotOutcome.SUPERSEDED
+        adapter.render_and_persist.assert_not_awaited()
+        upsert = db.execute.await_args_list[1].args[0]
+        compiled = str(upsert.compile(dialect=postgresql.dialect()))
+        assert "DO UPDATE SET" in compiled
+        assert "WHERE realtime_yjs_snapshots.updated_at <=" in compiled
+
+    async def test_plain_write_after_encode_skips_render_and_drops_the_row(self) -> None:
+        update, state = self._payload()
+        encoded_at = datetime.now(UTC) - timedelta(seconds=30)
+        db = self._db(had_row=False, upsert_rowcount=1)
+        adapter = MagicMock()
+        adapter.render_and_persist = AsyncMock(side_effect=RealtimeRenderSuperseded("newer"))
+        with self._patched(db, adapter):
+            outcome = await persist_snapshot(
+                ContentType.TASK, generate_id(), generate_id(), update, state, encoded_at=encoded_at
+            )
+        assert outcome is SnapshotOutcome.SUPERSEDED
+        assert adapter.render_and_persist.await_args.kwargs["supersede_after"] == encoded_at
+        cleanup = db.execute.await_args_list[2].args[0]
+        assert isinstance(cleanup, Delete)
+        # Only the row this job wrote goes; a newer concurrent snapshot survives.
+        assert "updated_at <=" in str(cleanup.compile(dialect=postgresql.dialect()))
+        assert db.commit.await_count == 2
+
+    async def test_existing_row_disables_the_plain_write_check(self) -> None:
+        update, state = self._payload()
+        encoded_at = datetime.now(UTC)
+        db = self._db(had_row=True, upsert_rowcount=1)
+        adapter = MagicMock()
+        adapter.render_and_persist = AsyncMock(return_value=True)
+        with self._patched(db, adapter):
+            outcome = await persist_snapshot(
+                ContentType.NOTE, generate_id(), generate_id(), update, state, encoded_at=encoded_at
+            )
+        assert outcome is SnapshotOutcome.RENDERED
+        assert adapter.render_and_persist.await_args.kwargs["supersede_after"] is None
+        upsert = db.execute.await_args_list[1].args[0]
+        assert encoded_at in upsert.compile(dialect=postgresql.dialect()).params.values()
+
+
+class TestShutdownFlush:
+    async def test_flushes_every_live_doc_in_process(self) -> None:
+        manager = YDocManager()
+        first = _make_router_session()
+        second = _make_router_session()
+        manager._sessions[first.key] = first
+        manager._sessions[second.key] = second
+        flush = AsyncMock()
+        with patch.object(ydoc_manager_module.snapshot_writer, "flush", flush):
+            await manager.flush_all(timeout=1.0)
+        flushed = [call.args[0] for call in flush.await_args_list]
+        assert any(s is first for s in flushed)
+        assert any(s is second for s in flushed)
+        assert all(call.kwargs == {"force": True} for call in flush.await_args_list)
+
+    async def test_one_failure_does_not_stop_the_others(self) -> None:
+        manager = YDocManager()
+        first = _make_router_session()
+        second = _make_router_session()
+        manager._sessions[first.key] = first
+        manager._sessions[second.key] = second
+        dropped = REALTIME_SNAPSHOT_DROPPED_TOTAL.labels(
+            content_type=first.key[0].value, reason="shutdown_flush_failed"
+        )
+        before = dropped._value.get()
+
+        async def flush(session, *, force=False):
+            if session is first:
+                raise RuntimeError("database gone")
+
+        with patch.object(ydoc_manager_module.snapshot_writer, "flush", flush):
+            await manager.flush_all(timeout=1.0)
+        assert dropped._value.get() == before + 1
+
+    async def test_timeout_is_bounded(self) -> None:
+        manager = YDocManager()
+        session = _make_router_session()
+        manager._sessions[session.key] = session
+        dropped = REALTIME_SNAPSHOT_DROPPED_TOTAL.labels(
+            content_type="all", reason="shutdown_timeout"
+        )
+        before = dropped._value.get()
+
+        async def slow(session, *, force=False):
+            await asyncio.sleep(5)
+
+        with patch.object(ydoc_manager_module.snapshot_writer, "flush", slow):
+            started = time.monotonic()
+            await manager.flush_all(timeout=0.05)
+        assert time.monotonic() - started < 1
+        assert dropped._value.get() == before + 1
 
 
 class TestEvictionFlushOrdering:

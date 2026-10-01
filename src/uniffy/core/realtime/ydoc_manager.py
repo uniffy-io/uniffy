@@ -32,6 +32,7 @@ from uniffy.core.realtime.metrics import (
     REALTIME_FRAMES_DROPPED_TOTAL,
     REALTIME_HYDRATION_DURATION,
     REALTIME_PERMISSION_REJECTIONS_TOTAL,
+    REALTIME_SNAPSHOT_DROPPED_TOTAL,
     REALTIME_UPDATE_MESSAGES_TOTAL,
 )
 from uniffy.core.realtime.multiplex import encode_doc_frame
@@ -51,6 +52,8 @@ from uniffy.infrastructure.database.session import open_session
 __all__ = ["ClientHandle", "DocKey", "WSSession", "YDocManager", "YDocSession", "ydoc_manager"]
 
 IDLE_EVICTION_SECONDS = 15 * 60
+# Bounded so a slow database cannot hold the process past its graceful-shutdown window.
+SHUTDOWN_FLUSH_TIMEOUT_SECONDS = 5.0
 
 LOGGER_COMPONENT = "realtime.manager"
 
@@ -153,6 +156,38 @@ class YDocManager:
         """Tear down every doc attachment on ``ws_session``."""
         for key in list(ws_session.doc_handles.keys()):
             await self.release(key, ws_session.conn_id)
+
+    async def flush_all(self, *, timeout: float = SHUTDOWN_FLUSH_TIMEOUT_SECONDS) -> None:
+        """Force-flush every live doc; a stopping process must not hold the only copy of edits."""
+        sessions = list(self._sessions.values())
+        if not sessions:
+            return
+        try:
+            await asyncio.wait_for(
+                asyncio.gather(*(self._flush_for_shutdown(session) for session in sessions)),
+                timeout,
+            )
+            logger.info(f"flushed {len(sessions)} live docs on shutdown", component=LOGGER_COMPONENT)
+        except TimeoutError:
+            REALTIME_SNAPSHOT_DROPPED_TOTAL.labels(
+                content_type="all", reason="shutdown_timeout"
+            ).inc()
+            logger.warning(
+                f"shutdown flush timed out after {timeout}s with {len(sessions)} live docs",
+                component=LOGGER_COMPONENT,
+            )
+
+    async def _flush_for_shutdown(self, session: YDocSession) -> None:
+        try:
+            await snapshot_writer.flush(session, force=True)
+        except Exception:
+            REALTIME_SNAPSHOT_DROPPED_TOTAL.labels(
+                content_type=session.key[0].value, reason="shutdown_flush_failed"
+            ).inc()
+            logger.exception(
+                f"shutdown flush failed for {session.key[0].value}:{session.key[1]}",
+                component=LOGGER_COMPONENT,
+            )
 
     async def apply_local_update(
         self,

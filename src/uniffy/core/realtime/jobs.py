@@ -2,6 +2,7 @@
 
 import base64
 import time
+from datetime import datetime
 from typing import Any
 from uuid import UUID
 
@@ -20,18 +21,20 @@ async def save_realtime_snapshot(
     update_b64: str,
     state_vector_b64: str,
     actor_id_str: str = "",
+    encoded_at_iso: str = "",
 ) -> dict[str, Any]:
     content_type = ContentType(content_type_str)
     started = time.perf_counter()
 
     try:
-        rendered = await persist_snapshot(
+        outcome = await persist_snapshot(
             content_type,
             UUID(content_id_str),
             UUID(organization_id_str),
             base64.b64decode(update_b64),
             base64.b64decode(state_vector_b64),
             actor_id=UUID(actor_id_str) if actor_id_str else None,
+            encoded_at=datetime.fromisoformat(encoded_at_iso) if encoded_at_iso else None,
         )
     except RealtimeRenderConflict as exc:
         # Seconds, not the usual tens: the loser of a version race only needs the
@@ -42,6 +45,4 @@ async def save_realtime_snapshot(
             time.perf_counter() - started
         )
 
-    if not rendered:
-        return {"status": "snapshot_only", "content_id": content_id_str}
-    return {"status": "ok", "content_id": content_id_str}
+    return {"status": outcome.value, "content_id": content_id_str}

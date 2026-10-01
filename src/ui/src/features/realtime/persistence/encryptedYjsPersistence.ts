@@ -88,7 +88,8 @@ export interface EncryptedPersistenceOptions {
 export interface EncryptedPersistence {
   hydrate: () => Promise<void>;
   compact: () => Promise<void>;
-  destroy: () => Promise<void>;
+  /** `discard` drops this doc's rows instead of compacting them; for closes the server fully holds. */
+  destroy: (options?: { discard?: boolean }) => Promise<void>;
 }
 
 function rangeFor(contentType: string, contentId: string): IDBKeyRange {
@@ -211,14 +212,32 @@ export function attachEncryptedPersistence(
     }
   }
 
-  function destroy(): Promise<void> {
+  // A cache that outlives a clean close is the stale state a later cold open replays
+  // over a plain write the server made in between; dropping it keeps recovery for
+  // offline and crashed closes only.
+  async function clear(): Promise<void> {
+    if (!isStorageEncryptionReady()) return;
+    try {
+      const db = await getDB();
+      const tx = db.transaction(UPDATES_STORE, "readwrite");
+      const store = tx.objectStore(UPDATES_STORE);
+      const keys = await store.getAllKeys(rangeFor(contentType, contentId));
+      await Promise.all([...keys.map((key) => store.delete(key)), tx.done]);
+      hydratedSeqs.clear();
+    } catch (err) {
+      console.warn("[realtime] encrypted persistence clear failed", err);
+    }
+  }
+
+  function destroy(options?: { discard?: boolean }): Promise<void> {
     if (destroyPromise) return destroyPromise;
     destroyed = true;
     ydoc.off("update", onUpdate);
     window.removeEventListener(ENCRYPTION_REKEY_EVENT, handleRekey);
     window.removeEventListener(ENCRYPTION_TEARDOWN_EVENT, handleTeardown);
     window.removeEventListener("beforeunload", handleBeforeUnload);
-    const disposal = Promise.all([...pendingWrites]).then(() => compact());
+    const finish = options?.discard ? clear : compact;
+    const disposal = Promise.all([...pendingWrites]).then(() => finish());
     pendingDisposals.set(docKey, disposal);
     destroyPromise = disposal.finally(() => {
       if (pendingDisposals.get(docKey) === disposal) pendingDisposals.delete(docKey);

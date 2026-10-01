@@ -1,5 +1,6 @@
 """``RealtimeContentAdapter`` for ``ContentType.NOTE``: markdown + canvas."""
 
+from datetime import datetime
 from typing import Any
 from uuid import UUID
 
@@ -106,6 +107,7 @@ class NoteRealtimeAdapter:
         organization_id: UUID,
         *,
         actor_id: UUID | None = None,
+        supersede_after: datetime | None = None,
     ) -> bool:
         note = (
             await session.execute(
@@ -143,6 +145,7 @@ class NoteRealtimeAdapter:
             content=content,
             canvas_content=canvas_content,
             actor_id=actor_id,
+            supersede_after=supersede_after,
         )
         return saved is not None
 

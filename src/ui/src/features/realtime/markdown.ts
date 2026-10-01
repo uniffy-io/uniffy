@@ -41,6 +41,31 @@ function xmlNodeHasContent(node: Y.XmlElement | Y.XmlText | Y.XmlHook): boolean 
   return true;
 }
 
+/** Resolves true once the fragment holds real content, false when the timeout elapses first. */
+export function waitForFragmentContent(
+  fragment: Y.XmlFragment,
+  timeoutMs: number,
+): Promise<boolean> {
+  if (fragmentHasRealContent(fragment)) return Promise.resolve(true);
+  return new Promise((resolve) => {
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const cleanup = () => {
+      fragment.unobserveDeep(observer);
+      if (timer) clearTimeout(timer);
+    };
+    const observer = () => {
+      if (!fragmentHasRealContent(fragment)) return;
+      cleanup();
+      resolve(true);
+    };
+    fragment.observeDeep(observer);
+    timer = setTimeout(() => {
+      cleanup();
+      resolve(false);
+    }, timeoutMs);
+  });
+}
+
 /** Minimal-delta write keeps the Yjs update proportional to the edit, not the doc. */
 export function replaceMarkdownYText(ydoc: Y.Doc, next: string, origin: unknown): void {
   const ytext = getMarkdownYText(ydoc);

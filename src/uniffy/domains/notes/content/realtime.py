@@ -11,9 +11,9 @@ from sqlalchemy import select
 from sqlalchemy import update as sql_update
 
 from uniffy.core.models.notes.note import Note
-from uniffy.core.realtime.adapter import RealtimeRenderConflict
+from uniffy.core.realtime.adapter import RealtimeRenderConflict, check_not_superseded
 from uniffy.core.realtime.metrics import REALTIME_BLANK_CONTENT_OVERWRITES_TOTAL
-from uniffy.core.types import ContentType
+from uniffy.core.types import ContentType, NodeType
 from uniffy.domains.notes.content.fields import extract_content_fields
 
 if TYPE_CHECKING:
@@ -34,6 +34,7 @@ class NoteRealtimePersistence:
         canvas_content: dict[str, Any] | None,
         *,
         actor_id: UUID | None = None,
+        supersede_after: datetime | None = None,
     ) -> Note | None:
         note = await self._load_note(organization_id, note_id)
         if not note:
@@ -45,6 +46,15 @@ class NoteRealtimePersistence:
             canvas_content,
             organization_id,
         )
+        # Canvas content has no plain-write path that publishes a replacement.
+        if note.node_type != NodeType.CANVAS:
+            check_not_superseded(
+                note.updated_at,
+                supersede_after,
+                stored=note.content,
+                rendered=fields.content,
+                label=f"Note {note_id}",
+            )
         if note.content and not fields.content:
             REALTIME_BLANK_CONTENT_OVERWRITES_TOTAL.labels(content_type=ContentType.NOTE.value).inc()
             logger.warning(

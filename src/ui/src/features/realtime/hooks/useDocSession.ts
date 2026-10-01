@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import * as Y from "yjs";
 import { Awareness } from "y-protocols/awareness";
 import { useAppSelector } from "@/app/hooks";
+import { docNameFor } from "@/features/realtime/docNames";
 import { realtimeMultiplexer, type DocSubscription } from "@/features/realtime/multiplexer";
 import {
   attachEncryptedPersistence,
@@ -28,6 +29,10 @@ export interface UseDocSessionOptions {
    * (e.g. the markdown `Y.XmlFragment` the editor binding targets). */
   undoTarget?: Y.AbstractType<unknown> | Y.AbstractType<unknown>[] | null;
   captureTimeout?: number;
+  /** Drop the local encrypted cache when the session closes synced with nothing unsent. The
+   * server then holds everything, and a replayed stale cache can no longer win over a plain
+   * write made before the next open. Offline and crashed closes keep the cache. */
+  discardLocalOnCleanClose?: boolean;
 }
 
 // Seed-time writers gate on the composed promise. Resolving before the IDB
@@ -44,7 +49,14 @@ export function composeWhenSynced(
 }
 
 export function useDocSession(opts: UseDocSessionOptions): DocSession | null {
-  const { contentType, contentId, enabled, undoTarget, captureTimeout } = opts;
+  const {
+    contentType,
+    contentId,
+    enabled,
+    undoTarget,
+    captureTimeout,
+    discardLocalOnCleanClose = false,
+  } = opts;
   const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
 
   const [status, setStatus] = useState<RealtimeStatus>("idle");
@@ -88,14 +100,22 @@ export function useDocSession(opts: UseDocSessionOptions): DocSession | null {
       resolveServerSync = resolve;
     });
     const whenSynced = composeWhenSynced(whenServerSynced, whenHydrated);
+    let serverSynced = false;
+    let transportStatus: RealtimeStatus = "idle";
 
     const subscription = realtimeMultiplexer.attach({
       contentType,
       contentId,
       ydoc,
       awareness,
-      onStatus: (next) => setStatus(next),
-      onSync: () => resolveServerSync(),
+      onStatus: (next) => {
+        transportStatus = next;
+        setStatus(next);
+      },
+      onSync: () => {
+        serverSynced = true;
+        resolveServerSync();
+      },
       onCloseCode: (code) => {
         const mapped = statusFromCloseCode(code);
         if (mapped) setStatus(mapped);
@@ -119,14 +139,20 @@ export function useDocSession(opts: UseDocSessionOptions): DocSession | null {
     setTick((t) => t + 1);
 
     return () => {
+      // Read before detach: the multiplexer forgets the doc's outbound state on destroy.
+      const cleanClose =
+        discardLocalOnCleanClose &&
+        serverSynced &&
+        transportStatus === "connected" &&
+        !realtimeMultiplexer.isOutboundPending(docNameFor(contentType, contentId));
       subscription.destroy();
       undoManager?.destroy();
       awareness.destroy();
-      void persistence.destroy().finally(() => ydoc.destroy());
+      void persistence.destroy({ discard: cleanClose }).finally(() => ydoc.destroy());
       sessionRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabled, contentType, contentId, organizationId]);
+  }, [enabled, contentType, contentId, organizationId, discardLocalOnCleanClose]);
 
   // Y.Doc / Awareness / UndoManager identities must survive every re-render -
   // recreating them would drop the CRDT state and the undo history - so the ref
