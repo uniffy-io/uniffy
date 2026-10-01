@@ -182,6 +182,7 @@ class Action:
     PROJECT_RESTORED = "project.restored"
     PROJECT_ARCHIVED = "project.archived"
     PROJECT_UNARCHIVED = "project.unarchived"
+    PROJECT_EXPORTED = "project.exported"
 
     # Tasks
     TASK_DELETED = "task.deleted"

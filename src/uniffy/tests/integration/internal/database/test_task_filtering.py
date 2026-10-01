@@ -1,5 +1,7 @@
 """The shared view filter and sort cases, compiled to SQL and run on real rows."""
 
+import csv
+import io
 from datetime import datetime
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
@@ -41,9 +43,12 @@ from uniffy.core.models.projects.view_config import ProjectViewVisibility, ViewC
 from uniffy.core.models.tags.tag import Tag, TagAssignment
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import AccessMode, ContentRole, ContentType, SubjectType, generate_id
+from uniffy.domains.projects.export.operations import ProjectExportOperations
+from uniffy.domains.projects.export.plan import ExportRequest
 from uniffy.domains.projects.operations import ProjectViewOperations
 from uniffy.domains.projects.tasks.reader import TaskReader
 from uniffy.domains.projects.tasks.validation import TaskValidator
+from uniffy.infrastructure.database import open_session
 from uniffy.tests.view_filter_cases import (
     CASES,
     CONTEXT,
@@ -568,3 +573,46 @@ async def test_a_blocker_in_another_project_does_not_count(session, env, seeded)
         await session.execute(delete(Task).where(Task.project_id == other.id))
         await session.execute(delete(Project).where(Project.id == other.id))
         await session.commit()
+
+
+async def _exported(env, seeded, **kwargs) -> list[str]:
+    request = ExportRequest(env.org_id, (seeded.project_id,), **kwargs)
+    async with open_session() as export_session:
+        ops = ProjectExportOperations(export_session)
+        plan = await ops.prepare(env.admin_id, request)
+        data = b"".join([chunk async for chunk in ops.stream(plan)])
+    rows = list(csv.reader(io.StringIO(data.decode("utf-8-sig"))))[1:]
+    by_number = {str(row["number"]): row["id"] for row in CASES["tasks"]}
+    return [by_number[row[2].rsplit("-", 1)[1]] for row in rows]
+
+
+async def _listed_now(session, env, seeded, **kwargs) -> list[str]:
+    """The table's rows for the same clock the export runs on."""
+    tasks, _ = await TaskReader(session).list_tasks(
+        user_id=env.admin_id,
+        organization_id=env.org_id,
+        project_id=seeded.project_id,
+        page_size=1000,
+        **kwargs,
+    )
+    return [seeded.names[task.id] for task in tasks]
+
+
+async def test_every_filter_and_sort_case_exports_the_rows_the_table_lists(
+    session, env, seeded
+) -> None:
+    mismatches = {}
+    for case in CASES["filters"]:
+        options = {
+            "task_filter": task_filter(case, seeded.ids),
+            "time_zone": case.get("time_zone", CONTEXT["time_zone"]),
+        }
+        exported = await _exported(env, seeded, **options)
+        if exported != await _listed_now(session, env, seeded, **options):
+            mismatches[case["name"]] = exported
+    for case in CASES["sorts"]:
+        options = {"sort": sort_keys(case, seeded.ids)}
+        exported = await _exported(env, seeded, sort=tuple(options["sort"]))
+        if exported != await _listed_now(session, env, seeded, **options):
+            mismatches[case["name"]] = exported
+    assert mismatches == {}
