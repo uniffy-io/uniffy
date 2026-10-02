@@ -161,10 +161,12 @@ from uniffy.domains.platform.support.consent import (
 )
 from uniffy.domains.platform.support.service import SupportServiceImpl
 from uniffy.domains.presence.handlers import PresenceHandlers
+from uniffy.domains.projects.realtime import register_task_realtime_adapter
 from uniffy.domains.projects.registration import register_project_content
 from uniffy.domains.projects.service import ProjectsServiceImpl
 from uniffy.domains.scheduling.calendar.events.registration import register_calendar_content
 from uniffy.domains.scheduling.calendar.ical.feed import register_calendar_crypto
+from uniffy.domains.scheduling.calendar.realtime import register_event_realtime_adapter
 from uniffy.domains.scheduling.calendar.routes import create_calendar_router
 from uniffy.domains.scheduling.calendar.service import CalendarServiceImpl
 from uniffy.domains.scheduling.rooms.service import RoomsServiceImpl
@@ -462,6 +464,12 @@ async def lifespan(app: FastAPI):
     yield
 
     logger.info("Shutting down UNIFFY application...")
+    try:
+        from uniffy.core.realtime.ydoc_manager import ydoc_manager
+
+        await ydoc_manager.flush_all()
+    except Exception as e:
+        logger.warning(f"Realtime shutdown flush failed: {e}")
     await stream_revoke_coordinator.stop()
     await realtime_pubsub_router.stop()
     signal_pubsub_shutdown()
@@ -488,6 +496,8 @@ def create_app(
     search = WorkspaceSearch(search_engine or MeiliSearchEngine())
     search_indexer = SearchIndexer(search)
     register_note_realtime_adapter(search_indexer)
+    register_task_realtime_adapter(search_indexer)
+    register_event_realtime_adapter(search_indexer)
     register_note_content()
     register_calendar_content()
     register_calendar_crypto()

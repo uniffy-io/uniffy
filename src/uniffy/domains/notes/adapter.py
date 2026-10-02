@@ -1,5 +1,7 @@
 """``RealtimeContentAdapter`` for ``ContentType.NOTE``: markdown + canvas."""
 
+from collections.abc import Awaitable, Callable
+from datetime import datetime
 from typing import Any
 from uuid import UUID
 
@@ -11,8 +13,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from uniffy.core.auth.permissions.checker import PermissionChecker
 from uniffy.core.models.notes.note import Note
 from uniffy.core.realtime.adapter import register_realtime_adapter
+from uniffy.core.realtime.markdown import (
+    markdown_text,
+    replace_external_markdown,
+    seed_markdown,
+)
+from uniffy.core.realtime.state import DocKey
 from uniffy.core.search import SearchIndexer
 from uniffy.core.types import ContentRole, ContentType, NodeType
+from uniffy.domains.notes.content.realtime import NoteRealtimePersistence
 from uniffy.domains.notes.projection import NoteProjectionOperations
 
 LOGGER_COMPONENT = "realtime.notes_adapter"
@@ -34,12 +43,19 @@ class NoteRealtimeAdapter:
     def __init__(self, search_indexer: SearchIndexer) -> None:
         self.search_indexer = search_indexer
 
+    async def policy_key(
+        self, session: AsyncSession, content_id: UUID, organization_id: UUID
+    ) -> DocKey | None:
+        return None
+
     async def authorize(
         self,
         session: AsyncSession,
         user_id: UUID,
         organization_id: UUID,
         content_id: UUID,
+        *,
+        checker: PermissionChecker | None = None,
     ) -> ContentRole | None:
         note = (
             await session.execute(
@@ -52,7 +68,7 @@ class NoteRealtimeAdapter:
         if note is None or note.is_deleted:
             return None
 
-        return await PermissionChecker(session).effective_role(
+        return await (checker or PermissionChecker(session)).effective_role(
             user_id=user_id,
             organization_id=organization_id,
             content_type=ContentType.NOTE,
@@ -71,10 +87,12 @@ class NoteRealtimeAdapter:
     ) -> None:
         note = (
             await session.execute(
-                select(Note).where(
+                select(Note)
+                .where(
                     Note.id == content_id,
                     Note.organization_id == organization_id,
                 )
+                .execution_options(populate_existing=True)
             )
         ).scalar_one_or_none()
         if note is None:
@@ -83,7 +101,7 @@ class NoteRealtimeAdapter:
         if note.node_type == NodeType.CANVAS:
             _seed_canvas_ydoc(ydoc, note.canvas_content)
         else:
-            ydoc["markdown"] = pycrdt.Text(note.content or "")
+            seed_markdown(ydoc, note.content or "")
 
     async def render_and_persist(
         self,
@@ -91,6 +109,9 @@ class NoteRealtimeAdapter:
         ydoc: pycrdt.Doc,
         content_id: UUID,
         organization_id: UUID,
+        *,
+        actor_id: UUID | None = None,
+        supersede_after: datetime | None = None,
     ) -> bool:
         note = (
             await session.execute(
@@ -127,21 +148,46 @@ class NoteRealtimeAdapter:
             note_id=content_id,
             content=content,
             canvas_content=canvas_content,
+            actor_id=actor_id,
+            supersede_after=supersede_after,
         )
         return saved is not None
 
+    async def stage_render(
+        self,
+        session: AsyncSession,
+        ydoc: pycrdt.Doc,
+        content_id: UUID,
+        organization_id: UUID,
+        *,
+        actor_id: UUID | None = None,
+    ) -> Callable[[], Awaitable[None]] | None:
+        note = (
+            await session.execute(
+                select(Note).where(
+                    Note.id == content_id,
+                    Note.organization_id == organization_id,
+                    Note.is_deleted.is_(False),
+                )
+            )
+        ).scalar_one_or_none()
+        if note is None:
+            return None
+        canvas = _render_canvas_content(ydoc) if note.node_type == NodeType.CANVAS else None
+        content = "" if note.node_type == NodeType.CANVAS else _render_markdown(ydoc)
+        staged = await NoteRealtimePersistence(
+            NoteProjectionOperations(session, self.search_indexer)
+        ).stage_save(
+            organization_id,
+            content_id,
+            content,
+            canvas,
+            actor_id=actor_id,
+        )
+        return staged[1] if staged is not None else None
+
     def apply_external_content(self, ydoc: pycrdt.Doc, content: str) -> bool:
-        """Replace ``Y.Text("markdown")`` with a column write from the legacy
-        ``UpdateNote`` path. Markdown docs only; canvas writes never publish
-        a content replace.
-        """
-        ytext = ydoc.get("markdown", type=pycrdt.Text)
-        if str(ytext) == content:
-            return False
-        with ydoc.transaction():
-            del ytext[:]
-            ytext += content
-        return True
+        return replace_external_markdown(ydoc, content)
 
 
 def register_note_realtime_adapter(search_indexer: SearchIndexer) -> None:
@@ -208,10 +254,7 @@ def _build_node_map(node: dict[str, Any]) -> pycrdt.Map:
 
 
 def _render_markdown(ydoc: pycrdt.Doc) -> str:
-    # ``get(..., type=...)`` declares + retrieves so roots seeded purely via
-    # ``apply_update`` are read correctly.
-    ytext = ydoc.get("markdown", type=pycrdt.Text)
-    return str(ytext)
+    return str(markdown_text(ydoc))
 
 
 def _render_canvas_content(ydoc: pycrdt.Doc) -> dict[str, Any] | None:

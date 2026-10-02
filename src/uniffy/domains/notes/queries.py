@@ -13,6 +13,7 @@ from uniffy.core.json_codec import loads
 from uniffy.core.models.notes.note import Note
 from uniffy.core.models.realtime.yjs_snapshot import RealtimeYjsSnapshot
 from uniffy.core.models.shared import ContentType, NodeType
+from uniffy.core.realtime.storage import lock_documents
 from uniffy.core.types import slugify  # noqa: F401 - re-exported, used via queries.slugify
 
 # Inline-tag syntax in markdown: ``[[[tag|tagname]]]``. The ``tag|`` prefix
@@ -118,8 +119,7 @@ async def soft_delete_recursive(
     note.deleted_at = datetime.now(UTC)
     note.updated_at = datetime.now(UTC)
 
-    await session.commit()
-    await session.refresh(note)
+    await session.flush()
     return note
 
 
@@ -141,7 +141,6 @@ async def permanent_delete_recursive(
         )
     )
     await session.delete(note)
-    await session.commit()
 
 
 async def empty_trash(
@@ -152,6 +151,7 @@ async def empty_trash(
     """Hard-delete the already-authorized soft-deleted notes."""
     if not note_ids:
         return 0
+    await lock_documents(session, [(ContentType.NOTE, item) for item in note_ids])
     result = await session.execute(
         select(Note).where(
             Note.id.in_(note_ids),

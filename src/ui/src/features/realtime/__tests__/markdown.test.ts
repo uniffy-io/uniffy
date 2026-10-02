@@ -7,7 +7,8 @@ import {
   getProsemirrorFragment,
   replaceMarkdownYText,
   replaceProsemirrorFragment,
-} from "@/features/notes/realtime/markdown";
+  normalizeSerializedMarkdown,
+} from "@/features/realtime/markdown";
 
 const schema = new Schema({
   nodes: {
@@ -109,5 +110,32 @@ describe("replaceMarkdownYText", () => {
     });
     replaceMarkdownYText(ydoc, "same", "second");
     expect(fired).toBe(0);
+  });
+
+  it("mirrors serializer output without its document terminator", () => {
+    const doc = new Y.Doc();
+    replaceMarkdownYText(doc, normalizeSerializedMarkdown("paragraph\n"), "mirror");
+    expect(doc.getText("markdown").toString()).toBe("paragraph");
+    doc.destroy();
+  });
+
+  it("preserves explicit text-mode newlines", () => {
+    const doc = new Y.Doc();
+    replaceMarkdownYText(doc, "user text\n", "session");
+    expect(doc.getText("markdown").toString()).toBe("user text\n");
+    doc.destroy();
+  });
+});
+
+describe("normalizeSerializedMarkdown", () => {
+  it.each([
+    ["text\n", "text"],
+    ["text\n\n", "text\n"],
+    ["text  \n", "text  "],
+    ["&#x20;leading\n", "&#x20;leading"],
+    ["text", "text"],
+    ["", ""],
+  ])("normalizes %j to %j", (input, expected) => {
+    expect(normalizeSerializedMarkdown(input)).toBe(expected);
   });
 });

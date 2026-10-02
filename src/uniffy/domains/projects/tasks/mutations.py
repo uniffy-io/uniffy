@@ -18,6 +18,9 @@ from uniffy.core.models.projects.field_definition import (
     TaskStatusSemantic,
 )
 from uniffy.core.models.projects.task import Task
+from uniffy.core.models.realtime.yjs_snapshot import RealtimeYjsSnapshot
+from uniffy.core.realtime.publisher import publish_content_replace, publish_perm_change
+from uniffy.core.realtime.storage import lock_document, stage_replacement
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import (
     ContentType,
@@ -50,6 +53,7 @@ class TaskMutationOperations:
         task_id: UUID,
         **kwargs,
     ) -> tuple[Task, Task | None]:
+        await lock_document(self.session, (ContentType.TASK, task_id), organization_id)
         task = await self.content.get_for_edit(user_id, organization_id, task_id)
 
         tag_ids = kwargs.pop("tag_ids", None)
@@ -222,8 +226,12 @@ class TaskMutationOperations:
                         member_ids, organization_id, task.id
                     )
 
+        if "description" in kwargs:  # noqa: PLR2004 - update keyword name
+            await stage_replacement(self.session, (ContentType.TASK, task_id), organization_id)
         await self.session.commit()
         await self.session.refresh(task)
+        if "description" in kwargs:  # noqa: PLR2004 - update keyword name
+            await publish_content_replace(ContentType.TASK, task_id, task.description)
 
         await self.content._sync_task_tags(actor_id=user_id, task=task, tag_ids=tag_ids)
 
@@ -363,11 +371,19 @@ class TaskMutationOperations:
         task_id: UUID,
         permanent: bool = False,
     ) -> bool:
+        await lock_document(self.session, (ContentType.TASK, task_id), organization_id)
         task = await self.content.get_for_delete(user_id, organization_id, task_id)
+        await self.session.execute(
+            delete(RealtimeYjsSnapshot).where(
+                RealtimeYjsSnapshot.content_type == ContentType.TASK,
+                RealtimeYjsSnapshot.content_id == task_id,
+            )
+        )
 
+        staged_tags = None
         if permanent:
             tag_ops = TagOperations(self.session, self.content.search_indexer)
-            await tag_ops.unassign_all_for_urn(
+            staged_tags = await tag_ops.stage_unassign_all_for_urn(
                 actor_id=user_id,
                 organization_id=organization_id,
                 content_urn=build_content_urn(self.content.content_type, task_id),
@@ -399,6 +415,9 @@ class TaskMutationOperations:
         )
 
         await self.session.commit()
+        if staged_tags is not None:
+            await tag_ops.finish_unassign_all_after_commit(staged_tags)
+        await publish_perm_change(ContentType.TASK, task_id, None, None)
         await self.content.search_indexer.remove(
             build_content_urn(self.content.content_type, task_id), organization_id
         )

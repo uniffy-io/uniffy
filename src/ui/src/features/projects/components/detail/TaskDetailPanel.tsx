@@ -30,6 +30,7 @@ import {
   selectTasksMap,
   selectCurrentProject,
   selectTasksForProject,
+  applyLiveDescription,
   optimisticUpdateTask,
 } from "@/features/projects/store/projectsSlice";
 import { updateTask } from "@/features/projects/store/projectsThunks";
@@ -76,6 +77,21 @@ export function TaskDetailPanel({ taskId, variant = "sidebar" }: TaskDetailPanel
   const handleClose = () => {
     dispatch(closeDetailPanel());
     dispatch(selectTask(null));
+  };
+
+  const handleDescriptionDone = (
+    markdown: string,
+    { realtimeOwned }: { realtimeOwned: boolean },
+  ) => {
+    if (!task) return;
+    if (realtimeOwned) {
+      dispatch(applyLiveDescription({ id: task.id, description: markdown }));
+      return;
+    }
+    // Trim-compare because the editor re-serializes markdown and can differ by trailing newlines alone.
+    if (markdown.trim() === task.description.trim()) return;
+    dispatch(optimisticUpdateTask({ id: task.id, description: markdown }));
+    dispatch(updateTask({ id: task.id, description: markdown }));
   };
 
   useOverlayEscape(() => {
@@ -259,13 +275,12 @@ export function TaskDetailPanel({ taskId, variant = "sidebar" }: TaskDetailPanel
             {/* Description - same click-to-open expandable widget the sidebar uses: chip placeholder when empty, full CrepeEditor in an overlay on click. Capped + scrollable preview keeps the modal compact regardless of description length; the Edit button rides the header row so it never overlaps the scrollbar. */}
             {variant === "modal" && (
               <ExpandableEditor
+                key={task.id}
                 contentType={ContentType.TASK}
                 contentId={task.id}
                 value={task.description}
-                onChange={(newDesc) => {
-                  dispatch(optimisticUpdateTask({ id: task.id, description: newDesc }));
-                  dispatch(updateTask({ id: task.id, description: newDesc }));
-                }}
+                realtime
+                onDone={handleDescriptionDone}
                 placeholder="Click to add a description... (type @ to mention)"
                 label="Description"
                 enableUpload
@@ -661,13 +676,12 @@ export function TaskDetailPanel({ taskId, variant = "sidebar" }: TaskDetailPanel
             <>
               {/* Description - same expandable widget the modal uses: capped, scrollable preview with the Edit button on the header row, full CrepeEditor on click. */}
               <ExpandableEditor
+                key={task.id}
                 contentType={ContentType.TASK}
                 contentId={task.id}
                 value={task.description}
-                onChange={(newDesc) => {
-                  dispatch(optimisticUpdateTask({ id: task.id, description: newDesc }));
-                  dispatch(updateTask({ id: task.id, description: newDesc }));
-                }}
+                realtime
+                onDone={handleDescriptionDone}
                 placeholder="Click to add a description... (type @ to mention)"
                 label="Description"
                 enableUpload

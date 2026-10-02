@@ -16,7 +16,11 @@ from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.models.calendar.exception import RecurrenceException
 from uniffy.core.models.calendar.reminder import EventReminder
+from uniffy.core.models.realtime.yjs_snapshot import RealtimeYjsSnapshot
+from uniffy.core.realtime.publisher import publish_perm_change
+from uniffy.core.realtime.storage import lock_document
 from uniffy.core.types import (
+    ContentType,
     RecurrenceEditScope,
 )
 from uniffy.domains.scheduling.calendar.events.recurrence.withdrawal import (
@@ -128,6 +132,12 @@ class EventDeleteOperations:
         affected = [event, *overrides]
         event_ids = [item.id for item in affected]
         await self.session.execute(
+            delete(RealtimeYjsSnapshot).where(
+                RealtimeYjsSnapshot.content_type == ContentType.CALENDAR_EVENT,
+                RealtimeYjsSnapshot.content_id.in_(event_ids),
+            )
+        )
+        await self.session.execute(
             delete(EventReminder).where(EventReminder.event_id.in_(event_ids))
         )
         await EventBookingOperations(self.session).stage_cancel(organization_id, event_ids)
@@ -167,6 +177,7 @@ class EventDeleteOperations:
         )
         await self.session.commit()
 
+        await publish_perm_change(ContentType.CALENDAR_EVENT, event.id, None, None)
         for staged in tag_removals:
             try:
                 await tag_ops.finish_unassign_all_after_commit(staged)
@@ -192,6 +203,7 @@ class EventDeleteOperations:
                 CalendarEvent.id == event_id, CalendarEvent.organization_id == organization_id
             )
         )
+        await lock_document(self.session, (ContentType.CALENDAR_EVENT, master_id or event_id))
         if master_id is not None:
             await get_event_for_update(self.session, master_id, organization_id)
         # Acquire the delete lock before outbox or revision writes can block attendee inserts.

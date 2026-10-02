@@ -6,8 +6,8 @@ import {
   Microphone,
   Image as ImageIcon,
 } from "@phosphor-icons/react";
-import { ToolbarButton } from "@/features/notes/components/editor/toolbar/ToolbarButton";
-import { ToolbarPopover } from "@/features/notes/components/editor/toolbar/ToolbarPopover";
+import { ToolbarButton } from "@/components/editor/toolbar/ToolbarButton";
+import { ToolbarPopover } from "@/components/editor/toolbar/ToolbarPopover";
 import { useEditorHandle } from "@/components/editor/EditorHandle";
 import {
   insertTocBlock,

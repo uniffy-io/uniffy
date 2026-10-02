@@ -2,7 +2,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import * as Y from "yjs";
 import { Awareness } from "y-protocols/awareness";
 import { useAppSelector } from "@/app/hooks";
-import { realtimeMultiplexer, type DocSubscription } from "@/features/realtime/multiplexer";
+import { docNameFor } from "@/features/realtime/docNames";
+import { docGeneration } from "@/features/realtime/docGeneration";
+import {
+  realtimeMultiplexer,
+  type DocSubscription,
+  type FragmentSeeder,
+} from "@/features/realtime/multiplexer";
 import {
   attachEncryptedPersistence,
   type EncryptedPersistence,
@@ -16,6 +22,7 @@ export interface DocSession {
   undoManager: Y.UndoManager | null;
   status: RealtimeStatus;
   sessionId: string;
+  fragmentSeeder: FragmentSeeder;
   /** Resolves once the first server `sync` AND the local IDB replay are done. */
   whenSynced: Promise<void>;
 }
@@ -28,6 +35,10 @@ export interface UseDocSessionOptions {
    * (e.g. the markdown `Y.XmlFragment` the editor binding targets). */
   undoTarget?: Y.AbstractType<unknown> | Y.AbstractType<unknown>[] | null;
   captureTimeout?: number;
+  /** Drop the local encrypted cache when the session closes synced with nothing unsent. The
+   * server then holds everything, and a replayed stale cache can no longer win over a plain
+   * write made before the next open. Offline and crashed closes keep the cache. */
+  discardLocalOnCleanClose?: boolean;
 }
 
 // Seed-time writers gate on the composed promise. Resolving before the IDB
@@ -44,7 +55,14 @@ export function composeWhenSynced(
 }
 
 export function useDocSession(opts: UseDocSessionOptions): DocSession | null {
-  const { contentType, contentId, enabled, undoTarget, captureTimeout } = opts;
+  const {
+    contentType,
+    contentId,
+    enabled,
+    undoTarget,
+    captureTimeout,
+    discardLocalOnCleanClose = false,
+  } = opts;
   const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
 
   const [status, setStatus] = useState<RealtimeStatus>("idle");
@@ -58,6 +76,7 @@ export function useDocSession(opts: UseDocSessionOptions): DocSession | null {
     whenSynced: Promise<void>;
   } | null>(null);
   const [tick, setTick] = useState(0);
+  const [generationReset, setGenerationReset] = useState(0);
 
   useEffect(() => {
     if (!enabled || !contentId || !organizationId) {
@@ -73,7 +92,16 @@ export function useDocSession(opts: UseDocSessionOptions): DocSession | null {
       contentId,
       ydoc,
     });
-    const whenHydrated = persistence.hydrate();
+    let chooseReplay!: (options: { serverGeneration: string | null } | undefined) => void;
+    const replayGate = new Promise<{ serverGeneration: string | null } | undefined>((resolve) => {
+      chooseReplay = resolve;
+    });
+    let hydrationComplete = false;
+    const whenHydrated = replayGate
+      .then((options) => persistence.hydrate(options))
+      .then(() => {
+        hydrationComplete = true;
+      });
 
     const targets = Array.isArray(undoTarget) ? undoTarget : undoTarget ? [undoTarget] : null;
     const undoManager = targets
@@ -88,19 +116,41 @@ export function useDocSession(opts: UseDocSessionOptions): DocSession | null {
       resolveServerSync = resolve;
     });
     const whenSynced = composeWhenSynced(whenServerSynced, whenHydrated);
+    let serverSynced = false;
+    let transportStatus: RealtimeStatus = "idle";
 
     const subscription = realtimeMultiplexer.attach({
       contentType,
       contentId,
       ydoc,
       awareness,
-      onStatus: (next) => setStatus(next),
-      onSync: () => resolveServerSync(),
+      onStatus: (next) => {
+        transportStatus = next;
+        // Once replay starts offline, reconnect cannot unmerge that state.
+        if (next === "disconnected" || next === "offline") chooseReplay(undefined);
+        setStatus(next);
+      },
+      onSync: () => {
+        const options = { serverGeneration: docGeneration(ydoc) };
+        chooseReplay(options);
+        // Offline discovery can be ambiguous. Retry against the server epoch before editing.
+        void whenHydrated
+          .then(() => persistence.hydrate(options))
+          .catch((error) => console.warn("[realtime] persistence hydrate failed", error))
+          .finally(() => {
+            serverSynced = true;
+            resolveServerSync();
+          });
+      },
       onCloseCode: (code) => {
         const mapped = statusFromCloseCode(code);
         if (mapped) setStatus(mapped);
       },
+      // Doc-scoped, unlike a 4403 close: only this editor flips to view-only.
+      onWriteDenied: () => setStatus("permission_lost"),
+      onGenerationMismatch: () => setGenerationReset((value) => value + 1),
     });
+    if (!navigator.onLine) chooseReplay(undefined);
 
     sessionRef.current = {
       ydoc,
@@ -117,21 +167,28 @@ export function useDocSession(opts: UseDocSessionOptions): DocSession | null {
     setTick((t) => t + 1);
 
     return () => {
+      // Read before detach: the multiplexer forgets the doc's outbound state on destroy.
+      const cleanClose =
+        discardLocalOnCleanClose &&
+        serverSynced &&
+        hydrationComplete &&
+        transportStatus === "connected" &&
+        !realtimeMultiplexer.isOutboundPending(docNameFor(contentType, contentId));
       subscription.destroy();
       undoManager?.destroy();
       awareness.destroy();
-      void persistence.destroy();
-      ydoc.destroy();
+      void persistence.destroy({ discard: cleanClose }).finally(() => ydoc.destroy());
       sessionRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabled, contentType, contentId, organizationId]);
+  }, [enabled, contentType, contentId, organizationId, discardLocalOnCleanClose, generationReset]);
 
   // Y.Doc / Awareness / UndoManager identities must survive every re-render -
   // recreating them would drop the CRDT state and the undo history - so the ref
   // holds them and `tick` is the invalidation signal for this memo.
   /* eslint-disable react/react-compiler -- ref-held session republished through `tick` */
   return useMemo<DocSession | null>(() => {
+    if (!enabled) return null;
     const current = sessionRef.current;
     if (!current) return null;
     return {
@@ -139,10 +196,11 @@ export function useDocSession(opts: UseDocSessionOptions): DocSession | null {
       awareness: current.awareness,
       undoManager: current.undoManager,
       sessionId: current.sessionId,
+      fragmentSeeder: current.subscription,
       status,
       whenSynced: current.whenSynced,
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, tick]);
+  }, [status, tick, enabled]);
   /* eslint-enable react/react-compiler */
 }

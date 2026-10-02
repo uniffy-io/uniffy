@@ -1,5 +1,6 @@
 """Concurrency and persistence guards for note writes."""
 
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -8,8 +9,24 @@ from sqlalchemy.sql.dml import Delete, Update
 
 from uniffy.core.errors import ConflictError, StaleContentVersionError
 from uniffy.core.models.notes.note import Note
+from uniffy.core.realtime.adapter import RealtimeRenderConflict, RealtimeRenderSuperseded
 from uniffy.core.types import AccessMode, NodeType, generate_id
 from uniffy.domains.notes.operations import NoteOperations
+
+
+@pytest.fixture(autouse=True)
+def realtime_storage(monkeypatch):
+    monkeypatch.setattr("uniffy.domains.notes.content.updates.lock_document", AsyncMock())
+    monkeypatch.setattr(
+        "uniffy.domains.notes.content.updates.load_snapshot", AsyncMock(return_value=None)
+    )
+    replacement = AsyncMock()
+    monkeypatch.setattr("uniffy.domains.notes.content.updates.stage_replacement", replacement)
+    monkeypatch.setattr("uniffy.domains.notes.content.realtime.stage_inline_tags", AsyncMock())
+    monkeypatch.setattr(
+        "uniffy.domains.notes.content.realtime.finish_inline_tags_after_commit", AsyncMock()
+    )
+    return replacement
 
 
 @pytest.fixture(autouse=True)
@@ -76,7 +93,9 @@ def _select_result(note: Note | None) -> MagicMock:
 
 
 class TestUpdateCas:
-    async def test_content_update_bumps_version_and_deletes_snapshot_row(self) -> None:
+    async def test_content_update_bumps_version_and_stages_replacement(
+        self, realtime_storage
+    ) -> None:
         note = _make_note(version=3)
         ops = _make_ops(note)
         ops.session.execute.side_effect = [MagicMock(rowcount=1), MagicMock()]
@@ -96,9 +115,9 @@ class TestUpdateCas:
         assert params["version_1"] == 3
         assert params["content"] == "new content"
 
-        delete_stmt = ops.session.execute.await_args_list[1].args[0]
-        assert isinstance(delete_stmt, Delete)
-        assert delete_stmt.table.name == "realtime_yjs_snapshots"
+        realtime_storage.assert_awaited_once_with(
+            ops.session, (ops.content_type, note.id), note.organization_id
+        )
 
     async def test_content_update_publishes_content_replace(self, publish_mock) -> None:
         note = _make_note(version=3)
@@ -318,7 +337,7 @@ class TestRealtimeSave:
         assert second["version_1"] == 4
         assert second["version"] == 5
 
-    async def test_returns_none_after_exhausted_cas(self) -> None:
+    async def test_exhausted_cas_raises_retryable_conflict(self) -> None:
         note = _make_note(version=3)
         ops = _make_ops(note)
         ops.session.execute.side_effect = [
@@ -330,13 +349,47 @@ class TestRealtimeSave:
             MagicMock(rowcount=0),
         ]
 
+        with pytest.raises(RealtimeRenderConflict):
+            await ops.realtime_save(
+                organization_id=note.organization_id,
+                note_id=note.id,
+                content="rendered",
+                canvas_content=None,
+            )
+        assert ops.session.execute.await_count == 6
+        ops._index_for_search.assert_not_awaited()
+
+    async def test_plain_write_after_the_encode_is_not_overwritten(self) -> None:
+        note = _make_note(version=3, content="plain write text")
+        note.updated_at = datetime.now(UTC)
+        ops = _make_ops(note)
+        ops.session.execute.side_effect = [_select_result(note)]
+
+        with pytest.raises(RealtimeRenderSuperseded):
+            await ops.realtime_save(
+                organization_id=note.organization_id,
+                note_id=note.id,
+                content="stale live text",
+                canvas_content=None,
+                supersede_after=note.updated_at - timedelta(seconds=5),
+            )
+        ops.session.commit.assert_not_awaited()
+        ops._index_for_search.assert_not_awaited()
+
+    async def test_equal_text_after_the_encode_still_renders(self) -> None:
+        note = _make_note(version=3, content="same text")
+        note.updated_at = datetime.now(UTC)
+        ops = _make_ops(note)
+        ops.session.execute.side_effect = [
+            _select_result(note),
+            MagicMock(rowcount=1),
+        ]
+
         result = await ops.realtime_save(
             organization_id=note.organization_id,
             note_id=note.id,
-            content="rendered",
+            content="same text",
             canvas_content=None,
+            supersede_after=note.updated_at - timedelta(seconds=5),
         )
-
-        assert result is None
-        assert ops.session.execute.await_count == 6
-        ops._index_for_search.assert_not_awaited()
+        assert result is note

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback, useState, useMemo } from "react";
+import { useEffect, useLayoutEffect, useRef, useCallback, useState, useMemo } from "react";
 import { Crepe } from "@milkdown/crepe";
 import { editorViewCtx, parserCtx, serializerCtx } from "@milkdown/core";
 import { Plugin, Selection } from "@milkdown/prose/state";
@@ -11,14 +11,25 @@ import * as Y from "yjs";
 import type { Awareness } from "y-protocols/awareness";
 import {
   MARKDOWN_MIRROR_ORIGIN,
+  MARKDOWN_MIRROR_FIELD,
   MARKDOWN_TEXT_FIELD,
+  MIRROR_ACTIVE_KEY,
   PROSEMIRROR_FRAGMENT_FIELD,
   fragmentHasRealContent,
   replaceMarkdownYText,
   replaceProsemirrorFragment,
-} from "@/features/notes/realtime/markdown";
+  isMarkdownMirrorLeader,
+  normalizeSerializedMarkdown,
+} from "@/features/realtime/markdown";
+import {
+  observeFragmentSeedDuplicates,
+  seedProsemirrorFragment,
+  waitForFragmentSeed,
+} from "@/features/realtime/fragmentSeeding";
+import type { FragmentSeeder } from "@/features/realtime/multiplexer";
 import { HYDRATION_ORIGIN } from "@/features/realtime";
 import { identityPaint } from "@/config/theme/brandGradients";
+import { randomUUID } from "@/shared/utils/uuid";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { languages } from "@codemirror/language-data";
 import { basicSetup } from "codemirror";
@@ -89,6 +100,7 @@ export interface CrepeRealtimeBinding {
   awareness: Awareness;
   undoManager: Y.UndoManager | null;
   sessionId: string;
+  fragmentSeeder: FragmentSeeder;
   /**
    * Resolves on the first ``sync`` event from the provider. Gates
    * cold-start seeding so we never race the SyncStep2 frame.
@@ -115,6 +127,9 @@ interface CrepeEditorProps {
   onFileUploaded?: (fileId: string) => void;
   autoEmbedMedia?: boolean;
   onEditorReady?: (handle: EditorHandle | null) => void;
+  /** Fires once the realtime cold-start seed is settled and the editor accepts input; hosts keep a
+   * read-only preview up until then. Realtime editable editors only. */
+  onRealtimeSeeded?: () => void;
   /** In-doc content rendered above the editor surface (e.g. title, cover) that scrolls with the document. */
   headerSlot?: React.ReactNode;
   /** Default true; notes opt out because they ship their own floating toolbar. */
@@ -131,6 +146,11 @@ const RECORD_ICON_SVG =
   '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 256 256" fill="currentColor"><path d="M128,176a48.05,48.05,0,0,0,48-48V64a48,48,0,0,0-96,0v64A48.05,48.05,0,0,0,128,176ZM96,64a32,32,0,0,1,64,0v64a32,32,0,0,1-64,0Zm40,143.6V232a8,8,0,0,1-16,0V207.6A80.11,80.11,0,0,1,48,128a8,8,0,0,1,16,0,64,64,0,0,0,128,0,8,8,0,0,1,16,0A80.11,80.11,0,0,1,136,207.6Z"/></svg>';
 const TOC_ICON_SVG =
   '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 256 256" fill="currentColor"><path d="M88,64a8,8,0,0,1,8-8H216a8,8,0,0,1,0,16H96A8,8,0,0,1,88,64Zm128,56H96a8,8,0,0,0,0,16H216a8,8,0,0,0,0-16Zm0,64H96a8,8,0,0,0,0,16H216a8,8,0,0,0,0-16ZM44,52A12,12,0,1,0,56,64,12,12,0,0,0,44,52Zm0,64a12,12,0,1,0,12,12A12,12,0,0,0,44,116Zm0,64a12,12,0,1,0,12,12A12,12,0,0,0,44,180Z"/></svg>';
+
+// A missing seeder must not leave the editor read-only indefinitely.
+// An unassigned editor waits this long for the server's seeder before seeding itself.
+// A closing non-leader gives the leader this long to mirror before writing itself.
+const MIRROR_LEAVE_SETTLE_MS = 600;
 
 function clearContainer(container: HTMLElement) {
   while (container.firstChild) {
@@ -160,6 +180,11 @@ function muteSyncBinding(view: EditorView | null | undefined) {
 }
 
 function destroyCrepeAfterPendingViews(crepe: Crepe, view?: EditorView | null) {
+  // Milkdown leaves debounced listener callbacks queued after context teardown.
+  crepe.on((listener) => {
+    listener.listeners.markdownUpdated.length = 0;
+    listener.listeners.updated.length = 0;
+  });
   // Crepe list node views restore their selection in a RAF that their destroy hook does not cancel.
   // Register teardown after those callbacks so they cannot dispatch into a disposed Milkdown context.
   requestAnimationFrame(() => {
@@ -234,9 +259,8 @@ function createCrepeConfig(
       // BlockEdit supplies slash commands; its add and drag handles stay hidden via CSS.
       [Crepe.Feature.BlockEdit]: !readonly,
       [Crepe.Feature.Placeholder]: !readonly,
-      // Floating selection toolbar - notes disables this (ships its own
-      // React-rendered FloatingFormattingToolbar). Other CrepeEditor consumers
-      // (calendar, projects, agents, chat) keep Crepe's default behavior.
+      // Crepe's own selection toolbar. Hosts that mount the React toolbars
+      // (notes, ExpandableEditor) turn it off; the agents surfaces keep it.
       [Crepe.Feature.Toolbar]: !readonly && floatingToolbar,
       [Crepe.Feature.Cursor]: !readonly,
       [Crepe.Feature.Table]: true,
@@ -461,6 +485,7 @@ export function CrepeEditor({
   onFileUploaded,
   autoEmbedMedia = false,
   onEditorReady,
+  onRealtimeSeeded,
   headerSlot,
   floatingToolbar = true,
   allowImages = true,
@@ -509,12 +534,18 @@ export function CrepeEditor({
   const editorRef = useRef<HTMLDivElement>(null);
   const crepeRef = useRef<Crepe | null>(null);
   const viewRef = useRef<EditorView | null>(null);
+  const mirrorFlushRef = useRef<(() => void) | null>(null);
+  const mirrorDisposeRef = useRef<(() => void) | null>(null);
+  useLayoutEffect(() => () => mirrorDisposeRef.current?.(), []);
   const unregisterEditorRef = useRef<(() => void) | null>(null);
   const initializedNoteIdRef = useRef<string | null>(null);
   const handleScopeRef = useRef<object>({});
   const onEditorReadyRef = useRef(onEditorReady);
   // eslint-disable-next-line react/react-compiler -- latest-value ref for the one-shot editor plugins
   onEditorReadyRef.current = onEditorReady;
+  const onRealtimeSeededRef = useRef(onRealtimeSeeded);
+  // eslint-disable-next-line react/react-compiler -- latest-value ref for the one-shot editor plugins
+  onRealtimeSeededRef.current = onRealtimeSeeded;
 
   // Mention popup state
   const [mentionPopup, setMentionPopup] = useState<MentionTriggerEvent | null>(null);
@@ -623,7 +654,7 @@ export function CrepeEditor({
   const handleContentChange = useCallback(
     (markdown: string) => {
       if (readonly) return;
-      onChange?.(markdown);
+      onChange?.(normalizeSerializedMarkdown(markdown));
     },
     [readonly, onChange],
   );
@@ -702,6 +733,7 @@ export function CrepeEditor({
 
     const container = editorRef.current;
     let cancelled = false;
+    const seedAbort = new AbortController();
     // The Y.Text mirror stays off until the cold-start seed confirms the
     // ProseMirror doc reflects ``Y.Text("markdown")``. Mirroring an
     // unseeded (empty) doc would overwrite real markdown with "".
@@ -785,30 +817,68 @@ export function CrepeEditor({
           editor.use($prose(() => yUndoPlugin({ undoManager: rt.undoManager! })));
         }
 
-        // Mirror serialized markdown into ``Y.Text("markdown")`` for
-        // the snapshot pipeline. Milkdown's ``markdownUpdated`` is
-        // filtered for ``ySync``-meta transactions, so we hook
-        // ``view.update`` via a ``$prose`` plugin and debounce 250ms.
-        // Only the origin tab mirrors: ySync-applied transactions (peer
-        // edits, hydration rebuilds) are skipped - their origin peer
-        // already mirrored them, and N tabs re-serializing the same doc
-        // is discarded work. Writes ride ``MARKDOWN_MIRROR_ORIGIN``,
-        // which IDB persistence filters out.
+        // One editor mirrors merged fragment state so simultaneous serializers cannot duplicate text.
         editor.use(
           $prose((ctx) => {
             let timer: ReturnType<typeof setTimeout> | null = null;
+            let settleTimer: ReturnType<typeof setTimeout> | null = null;
             let pendingView: EditorView | null = null;
+            let activeView: EditorView | null = null;
+            let disposed = false;
+            const mirrorOwner = randomUUID();
+            const ownsMirror = () => !readonly && isMarkdownMirrorLeader(rt.awareness);
+            const serialize = (view: EditorView): string | null => {
+              try {
+                return normalizeSerializedMarkdown(ctx.get(serializerCtx)(view.state.doc));
+              } catch {
+                // Serializer not ready yet - next update retries.
+                return null;
+              }
+            };
             const flush = (view: EditorView) => {
               timer = null;
               pendingView = null;
-              if (!markdownMirrorReady) return;
-              try {
-                const serializer = ctx.get(serializerCtx);
-                const markdown = serializer(view.state.doc);
+              if (!markdownMirrorReady || !ownsMirror() || view.isDestroyed) return;
+              const markdown = serialize(view);
+              if (markdown !== null)
                 replaceMarkdownYText(rt.ydoc, markdown, MARKDOWN_MIRROR_ORIGIN);
-              } catch {
-                // Serializer not ready yet - next update retries.
+            };
+            // A closing editor cannot rely on the leader being awake, or the column lags until
+            // the next open. Serialize now; a non-leader gives the leader one settle window to
+            // catch up, then writes itself. The leader's observer reconciles concurrent writes.
+            const flushOnLeave = (settleMs: number) => {
+              if (timer) {
+                clearTimeout(timer);
+                timer = null;
               }
+              pendingView = null;
+              const view = activeView;
+              if (!markdownMirrorReady || readonly || !view || view.isDestroyed) return;
+              const markdown = serialize(view);
+              if (markdown === null) return;
+              const fragmentState = fragment.toString();
+              const ytext = rt.ydoc.getText(MARKDOWN_TEXT_FIELD);
+              const write = () => {
+                if (ytext.toString() !== markdown) {
+                  replaceMarkdownYText(rt.ydoc, markdown, MARKDOWN_MIRROR_ORIGIN);
+                }
+              };
+              if (settleMs === 0 || isMarkdownMirrorLeader(rt.awareness)) {
+                write();
+                return;
+              }
+              if (settleTimer) clearTimeout(settleTimer);
+              settleTimer = setTimeout(() => {
+                settleTimer = null;
+                if (fragment.toString() !== fragmentState) return;
+                write();
+              }, settleMs);
+            };
+            const schedule = () => {
+              if (!activeView || activeView.isDestroyed) return;
+              pendingView = activeView;
+              if (timer) clearTimeout(timer);
+              timer = setTimeout(flushPending, 250);
             };
             const flushPending = () => {
               if (timer) {
@@ -818,25 +888,71 @@ export function CrepeEditor({
               if (pendingView && !pendingView.isDestroyed) flush(pendingView);
               pendingView = null;
             };
+            const leaveFlush = () => flushOnLeave(MIRROR_LEAVE_SETTLE_MS);
+            mirrorFlushRef.current = leaveFlush;
             return new Plugin({
-              view: () => {
-                // Navigation does not destroy React node views before closing the document.
-                window.addEventListener("pagehide", flushPending);
+              view: (view) => {
+                activeView = view;
+                const mirrorMeta = rt.ydoc.getMap(MARKDOWN_MIRROR_FIELD);
+                const markdown = rt.ydoc.getText(MARKDOWN_TEXT_FIELD);
+                const stopSeedHealing = readonly
+                  ? () => {}
+                  : observeFragmentSeedDuplicates(rt.ydoc);
+                const onMarkdown = () => {
+                  if (!markdownMirrorReady || !ownsMirror()) return;
+                  if (mirrorMeta.get(MIRROR_ACTIVE_KEY)) {
+                    schedule();
+                    return;
+                  }
+                  // Column writes and Markdown mode update text without a mirror marker.
+                  const externalMarkdown = markdown.toString();
+                  queueMicrotask(() => {
+                    if (!activeView || activeView.isDestroyed || !ownsMirror()) return;
+                    const node = ctx.get(parserCtx)(externalMarkdown);
+                    if (node) replaceProsemirrorFragment(rt.ydoc, node, HYDRATION_ORIGIN);
+                  });
+                };
+                markdown.observe(onMarkdown);
+                // Awareness changes on every peer caret move; only a leadership
+                // handoff needs the newly elected editor to catch the text up.
+                let leader = false;
+                const onAwareness = () => {
+                  const next = ownsMirror();
+                  if (next === leader) return;
+                  leader = next;
+                  if (next) schedule();
+                };
+                rt.awareness.on("change", onAwareness);
+                if (!readonly) rt.awareness.setLocalStateField("markdownEditor", mirrorOwner);
+                void rt.whenSynced.then(schedule);
+                // Navigation does not destroy React node views before closing the document,
+                // and a closing page cannot wait for the leader.
+                const onPageHide = () => flushOnLeave(0);
+                window.addEventListener("pagehide", onPageHide);
+                const dispose = () => {
+                  if (disposed) return;
+                  window.removeEventListener("pagehide", onPageHide);
+                  leaveFlush();
+                  disposed = true;
+                  stopSeedHealing();
+                  activeView = null;
+                  markdown.unobserve(onMarkdown);
+                  rt.awareness.off("change", onAwareness);
+                  if (rt.awareness.getLocalState()?.markdownEditor === mirrorOwner) {
+                    rt.awareness.setLocalStateField("markdownEditor", null);
+                  }
+                  if (mirrorFlushRef.current === leaveFlush) mirrorFlushRef.current = null;
+                  if (mirrorDisposeRef.current === dispose) mirrorDisposeRef.current = null;
+                };
+                mirrorDisposeRef.current = dispose;
                 return {
                   update: (updatedView, prevState) => {
+                    if (disposed) return;
                     if (updatedView.state.doc.eq(prevState.doc)) return;
-                    const syncState = ySyncPluginKey.getState(updatedView.state) as {
-                      isChangeOrigin?: boolean;
-                    } | null;
-                    if (syncState?.isChangeOrigin) return;
-                    pendingView = updatedView;
-                    if (timer) clearTimeout(timer);
-                    timer = setTimeout(() => flush(updatedView), 250);
+                    activeView = updatedView;
+                    schedule();
                   },
-                  destroy: () => {
-                    window.removeEventListener("pagehide", flushPending);
-                    flushPending();
-                  },
+                  destroy: dispose,
                 };
               },
             });
@@ -969,6 +1085,7 @@ export function CrepeEditor({
                 crepe,
                 view,
                 scope,
+                flushMarkdownMirror: () => mirrorFlushRef.current?.(),
                 run: (fn) => {
                   try {
                     return crepe.editor.action(fn);
@@ -1019,18 +1136,27 @@ export function CrepeEditor({
         });
       }
 
-      // Cold-start seed and reconciliation: ``Y.Text("markdown")`` is the
-      // canonical content by contract. Markdown mode writes only Y.Text, so
-      // the fragment can hold stale content (or the ySync placeholder) when
-      // the editor mounts. Whenever the fragment disagrees with Y.Text it is
-      // rebuilt from Y.Text; showing the stale fragment would let the mirror
-      // overwrite the markdown-mode edits on the next keystroke.
-      // Gated on ``whenSynced`` to avoid racing SyncStep2.
+      // After sync, seed empty blocks or reconcile explicit markdown writes.
+      // Mirror-derived text can lag the fragment during offline recovery.
       const rtBinding = realtimeRef.current;
       if (rtBinding && !readonly) {
-        void rtBinding.whenSynced.then(() => {
+        void rtBinding.whenSynced.then(async () => {
           if (cancelled || !crepeRef.current) return;
           try {
+            const coldFragment = rtBinding.ydoc.get(PROSEMIRROR_FRAGMENT_FIELD, Y.XmlFragment);
+            if (
+              !fragmentHasRealContent(coldFragment) &&
+              rtBinding.ydoc.get(MARKDOWN_TEXT_FIELD, Y.Text).toString()
+            ) {
+              // Hold input until server assignment or peer seed protects these blocks.
+              crepe.setReadonly(true);
+              await waitForFragmentSeed(coldFragment, rtBinding.fragmentSeeder, seedAbort.signal);
+              if (cancelled || !crepeRef.current) return;
+              if (fragmentHasRealContent(coldFragment)) {
+                markdownMirrorReady = true;
+                return;
+              }
+            }
             crepe.editor.action((ctx) => {
               const view = ctx.get(editorViewCtx);
               if (!view || view.isDestroyed) return;
@@ -1047,11 +1173,19 @@ export function CrepeEditor({
               const node = parser(md);
               if (!node) return;
               if (fragmentHasRealContent(fragment)) {
+                // A rendered mirror can lag or conflict after offline merges. Preserve primary blocks.
+                if (rtBinding.ydoc.getMap(MARKDOWN_MIRROR_FIELD).get(MIRROR_ACTIVE_KEY)) {
+                  markdownMirrorReady = true;
+                  return;
+                }
                 // Compare serialize-normalized forms. Markdown dialect
                 // differences (bullet chars, escapes, spacing) make a raw
                 // string compare against Y.Text useless.
                 const serializer = ctx.get(serializerCtx);
-                if (serializer(view.state.doc) === serializer(node)) {
+                if (
+                  normalizeSerializedMarkdown(serializer(view.state.doc)) ===
+                  normalizeSerializedMarkdown(serializer(node))
+                ) {
                   markdownMirrorReady = true;
                   return;
                 }
@@ -1074,17 +1208,26 @@ export function CrepeEditor({
               // throw must not leave the mirror off for a doc that already
               // reflects Y.Text.
               markdownMirrorReady = true;
-              replaceProsemirrorFragment(rtBinding.ydoc, node, HYDRATION_ORIGIN);
+              if (fragmentHasRealContent(fragment)) {
+                replaceProsemirrorFragment(rtBinding.ydoc, node, HYDRATION_ORIGIN);
+              } else {
+                seedProsemirrorFragment(rtBinding.ydoc, node);
+              }
             });
           } catch (err) {
             // Parse or serialize failure: keep showing the fragment with the
             // mirror off rather than risk destroying content in Y.Text.
             console.warn("[CrepeEditor] realtime cold-start seed failed", err);
+          } finally {
+            if (!cancelled && crepeRef.current) {
+              crepe.setReadonly(false);
+              onRealtimeSeededRef.current?.();
+            }
           }
         });
       }
 
-      if (readonly) {
+      if (readonly || rtBinding) {
         crepe.setReadonly(true);
       }
 
@@ -1105,6 +1248,8 @@ export function CrepeEditor({
 
     return () => {
       cancelled = true;
+      seedAbort.abort();
+      mirrorDisposeRef.current?.();
       if (unregisterEditorRef.current) {
         unregisterEditorRef.current();
         unregisterEditorRef.current = null;

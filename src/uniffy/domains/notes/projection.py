@@ -1,5 +1,6 @@
 """Search, mention, and realtime persistence for notes."""
 
+from datetime import datetime
 from typing import Any
 from uuid import UUID
 
@@ -57,12 +58,17 @@ class NoteProjectionOperations(NoteReader):
         note_id: UUID,
         content: str,
         canvas_content: dict[str, Any] | None,
+        *,
+        actor_id: UUID | None = None,
+        supersede_after: datetime | None = None,
     ) -> Note | None:
         return await NoteRealtimePersistence(self).save(
             organization_id,
             note_id,
             content,
             canvas_content,
+            actor_id=actor_id,
+            supersede_after=supersede_after,
         )
 
     async def _sync_tags_after_save(

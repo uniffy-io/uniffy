@@ -1,3 +1,10 @@
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Placeholder and synthetic ids (seed categories, expanded occurrences) fail this; only real rows pass. */
+export function isUuid(value: string): boolean {
+  return UUID_RE.test(value);
+}
+
 /** `crypto.randomUUID()` is secure-context-only; this falls back to `getRandomValues` so plain-HTTP dev origins (raw IPs, `host.docker.internal`) keep working. */
 export function randomUUID(): string {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {

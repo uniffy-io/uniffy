@@ -1480,9 +1480,9 @@
  * Floating Selection Toolbar (Crepe default)
  *
  * Crepe attaches a `<div class="milkdown-toolbar">` next to the ProseMirror
- * surface and positions it via Floating UI (absolute, not in flow). Notes
- * disables this surface entirely (FloatingFormattingToolbar replaces it);
- * other CrepeEditor consumers (calendar, projects, agents) keep Crepe's
+ * surface and positions it via Floating UI (absolute, not in flow). Hosts
+ * that mount the React toolbars (notes, ExpandableEditor) disable this
+ * surface; the remaining CrepeEditor consumers (agents) keep Crepe's
  * default with these themed overrides.
  */
 .crepe-editor .milkdown-toolbar,

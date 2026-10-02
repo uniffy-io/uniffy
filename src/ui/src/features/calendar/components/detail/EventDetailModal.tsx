@@ -11,6 +11,8 @@ import {
 } from "@phosphor-icons/react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { deselectEvent } from "@/features/calendar/store";
+import { applyLiveDescription } from "@/features/calendar/store/calendarSlice";
+import { eventSupportsRealtime } from "@/features/calendar/utils/realtimeEligibility";
 import {
   deleteEvent as deleteEventThunk,
   exportEvent,
@@ -30,7 +32,7 @@ import { useBookmarkStatuses, useBookmarkToggle } from "@/features/bookmarks";
 import { ExpandableEditor } from "@/components/editor/ExpandableEditor";
 import { ContentType } from "@uniffy/proto/common/v1/common_pb";
 import { MentionChipCompact } from "@/components/mention";
-import { formatTimeRange } from "@/features/calendar/utils";
+import { formatTimeRange, masterEventId } from "@/features/calendar/utils";
 import { findConflicts } from "@/features/calendar/utils/eventPositioning";
 import { extractMentionsFromMarkdown } from "@/shared/utils/mentionUtils";
 import { InlineTextField } from "@/features/calendar/components/detail/InlineTextField";
@@ -57,6 +59,8 @@ export function EventDetailModal() {
     useEventCommit(selectedEvent);
 
   const eventUrn = selectedEvent ? `urn:uniffy:content:CALENDAR_EVENT:${selectedEvent.id}` : "";
+  // Attachments and sharing live on the series row; an expanded occurrence id is not a UUID.
+  const seriesEventId = selectedEvent ? masterEventId(selectedEvent.id) : "";
   useBookmarkStatuses(eventUrn ? [eventUrn] : []);
   const {
     isBookmarked,
@@ -111,8 +115,15 @@ export function EventDetailModal() {
     handleClose();
   };
 
-  const handleDescriptionDone = (markdown: string) => {
+  const handleDescriptionDone = (
+    markdown: string,
+    { realtimeOwned }: { realtimeOwned: boolean },
+  ) => {
     if (!selectedEvent) return;
+    if (realtimeOwned) {
+      dispatch(applyLiveDescription({ id: selectedEvent.id, description: markdown }));
+      return;
+    }
     // Trim-compare because the editor re-serializes markdown and can differ by trailing newlines alone.
     if (markdown.trim() === selectedEvent.description.trim()) return;
     commit({ description: markdown });
@@ -211,7 +222,7 @@ export function EventDetailModal() {
                       onClick={() =>
                         openAccessPolicyDialog(
                           ContentType.CALENDAR_EVENT,
-                          selectedEvent.id,
+                          seriesEventId,
                           selectedEvent.title,
                           selectedEvent.userRole,
                         )
@@ -322,9 +333,11 @@ export function EventDetailModal() {
 
               <div className="px-6 py-3 border-b border-border">
                 <ExpandableEditor
+                  key={selectedEvent.id}
                   contentType={ContentType.CALENDAR_EVENT}
-                  contentId={selectedEvent.id}
+                  contentId={seriesEventId}
                   value={selectedEvent.description}
+                  realtime={eventSupportsRealtime(selectedEvent)}
                   onDone={handleDescriptionDone}
                   placeholder="Click to add a description... (type @ to mention)"
                   label="Description"

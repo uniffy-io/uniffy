@@ -1,5 +1,11 @@
 from prometheus_client import Counter, Gauge, Histogram
 
+REALTIME_BLANK_CONTENT_OVERWRITES_TOTAL = Counter(
+    "uniffy_realtime_blank_content_overwrites_total",
+    "Realtime saves that replaced non-empty content with an empty render",
+    ["content_type"],
+)
+
 REALTIME_ACTIVE_DOCS = Gauge(
     "uniffy_realtime_active_docs",
     "Yjs documents currently hydrated in this replica's YDocManager",
@@ -36,6 +42,18 @@ REALTIME_SNAPSHOT_DROPPED_TOTAL = Counter(
     "uniffy_realtime_snapshot_dropped_total",
     "Snapshot attempts that did not result in a persisted row",
     ["content_type", "reason"],
+)
+
+REALTIME_SNAPSHOT_SUPERSEDED_TOTAL = Counter(
+    "uniffy_realtime_snapshot_superseded_total",
+    "Snapshot jobs skipped because a newer snapshot or a newer plain write landed first",
+    ["content_type", "reason"],
+)
+
+REALTIME_RENDER_CONFLICTS_TOTAL = Counter(
+    "uniffy_realtime_render_conflicts_total",
+    "Domain renders that lost their version race and were handed to the worker retry",
+    ["content_type"],
 )
 
 REALTIME_UPDATE_MESSAGES_TOTAL = Counter(

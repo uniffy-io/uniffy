@@ -17,13 +17,13 @@ from uniffy.core.errors import (
 from uniffy.core.events import (
     NotificationEvent,
     emit_notification,
-    extract_mentioned_team_ids,
-    extract_mentioned_user_ids,
 )
 from uniffy.core.events.realtime import ContentAccessAction
 from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.calendar.attendee import EventAttendee
 from uniffy.core.models.calendar.event import CalendarEvent
+from uniffy.core.realtime.publisher import publish_content_replace, publish_perm_change
+from uniffy.core.realtime.storage import lock_document, stage_replacement
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import (
     AttendeeRole,
@@ -166,6 +166,9 @@ class EventUpdateOperations:
                     **updates,
                 )
 
+        await lock_document(
+            self.events.session, (ContentType.CALENDAR_EVENT, event_id), organization_id
+        )
         event = await self.events._fetch_by_id(event_id, organization_id)
         if not event:
             raise NotFoundError("CalendarEvent", event_id)
@@ -179,11 +182,7 @@ class EventUpdateOperations:
 
         title_changed = title is not None and title != event.title
 
-        old_mentioned: set[UUID] = set()
-        old_mentioned_teams: set[UUID] = set()
-        if description is not None:
-            old_mentioned = extract_mentioned_user_ids(event.outgoing_references)
-            old_mentioned_teams = set(extract_mentioned_team_ids(event.outgoing_references))
+        old_references = list(event.outgoing_references) if event.outgoing_references else None
 
         if title is not None:
             event.title = title
@@ -373,8 +372,16 @@ class EventUpdateOperations:
             self.events.session, event.id, removed_attendee_ids, datetime.now(UTC)
         )
 
+        if description is not None:
+            await stage_replacement(
+                self.events.session, (ContentType.CALENDAR_EVENT, event_id), organization_id
+            )
         await self.events.session.commit()
         await self.events.session.refresh(event)
+        if visibility is not None or attendee_ids is not None:
+            await publish_perm_change(ContentType.CALENDAR_EVENT, event.id, None, None)
+        if description is not None:
+            await publish_content_replace(ContentType.CALENDAR_EVENT, event.id, event.description)
 
         if tag_ids is not None:
             tag_ops = TagOperations(
@@ -441,34 +448,12 @@ class EventUpdateOperations:
                 stmt = select(EventAttendee.user_id).where(EventAttendee.event_id == event.id)
                 result = await self.events.session.execute(stmt)
                 current_attendee_ids = set(result.scalars().all())
-            excluded_from_mentions = {user_id} | current_attendee_ids
-
-            new_mentioned = (
-                extract_mentioned_user_ids(event.outgoing_references) - excluded_from_mentions
-            )
-            newly_mentioned = new_mentioned - old_mentioned
-            if newly_mentioned:
-                await emit_notification(
-                    NotificationEvent(
-                        notification_type=NotificationType.CONTENT_MENTIONED,
-                        organization_id=organization_id,
-                        actor_id=user_id,
-                        title=f"Mentioned you in: {event.title}",
-                        source_urn=build_content_urn(ContentType.CALENDAR_EVENT, event.id),
-                        target_user_ids=list(newly_mentioned),
-                    )
-                )
-
-            await self.events._emit_team_mention_notifications(
+            await self.events.emit_mention_notifications(
                 event,
                 user_id,
                 organization_id,
-                [
-                    tid
-                    for tid in extract_mentioned_team_ids(event.outgoing_references)
-                    if tid not in old_mentioned_teams
-                ],
-                excluded_from_mentions | newly_mentioned,
+                old_references,
+                {user_id} | current_attendee_ids,
             )
 
         mention_changes: dict[str, str] = {}

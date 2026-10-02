@@ -10,21 +10,26 @@ the socket even while it sits idle with no doc attached.
 import asyncio
 import contextlib
 
+import pycrdt
 from fastapi import WebSocket, WebSocketDisconnect
 from loguru import logger
-from pycrdt import Decoder
 
 from uniffy.core.auth.permissions import role_can_edit, role_can_view
 from uniffy.core.realtime.adapter import get_realtime_adapter
-from uniffy.core.realtime.auth import WS_CLOSE_FORBIDDEN, WS_CLOSE_UNSUPPORTED_TYPE
+from uniffy.core.realtime.auth import WS_CLOSE_UNSUPPORTED_TYPE
+from uniffy.core.realtime.markdown import DOC_GENERATION_KEY, DOC_META_FIELD
 from uniffy.core.realtime.metrics import (
     REALTIME_AWARENESS_MESSAGES_TOTAL,
     REALTIME_FRAMES_DROPPED_TOTAL,
     REALTIME_PERMISSION_REJECTIONS_TOTAL,
     REALTIME_REAUTH_CLOSES_TOTAL,
-    REALTIME_UPDATE_MESSAGES_TOTAL,
 )
-from uniffy.core.realtime.multiplex import encode_doc_frame, peek_var_string
+from uniffy.core.realtime.multiplex import (
+    encode_doc_frame,
+    peek_var_string,
+    read_var_string,
+    read_var_uint,
+)
 from uniffy.core.realtime.reauth import (
     REAUTH_INTERVAL_SECONDS,
     Denial,
@@ -36,9 +41,15 @@ from uniffy.core.realtime.state import (
     YDocSession,
     parse_doc_name,
 )
+from uniffy.core.realtime.storage import EditDenied, GenerationConflict
 from uniffy.core.realtime.wire import (
+    MESSAGE_DURABLE_UPDATE,
+    Y_MESSAGE_AUTH,
     YMessageType,
     YSyncMessageType,
+    create_ack_message,
+    create_auth_denied_message,
+    create_generation_message,
     create_sync_message,
     handle_sync_message,
     is_sync_write_frame,
@@ -62,8 +73,13 @@ async def run_multiplexed_session(ws: WebSocket, ws_session: WSSession) -> None:
     """Drive one multiplexed WebSocket; releases every attached doc on exit."""
     out_task = asyncio.create_task(_pump_outbound(ws, ws_session))
     reauth_task = asyncio.create_task(_reauth_watchdog(ws, ws_session))
+    in_task = asyncio.create_task(_drive_inbound(ws, ws_session))
     try:
-        await _drive_inbound(ws, ws_session)
+        done, _ = await asyncio.wait(
+            (out_task, reauth_task, in_task), return_when=asyncio.FIRST_COMPLETED
+        )
+        for task in done:
+            await task
     except WebSocketDisconnect:
         pass
     except RuntimeError as exc:
@@ -75,7 +91,7 @@ async def run_multiplexed_session(ws: WebSocket, ws_session: WSSession) -> None:
     except Exception as exc:
         logger.exception(f"session loop crashed: {exc}", component=LOGGER_COMPONENT)
     finally:
-        for task in (out_task, reauth_task):
+        for task in (out_task, reauth_task, in_task):
             task.cancel()
             with contextlib.suppress(BaseException):
                 await task
@@ -88,6 +104,12 @@ async def run_multiplexed_session(ws: WebSocket, ws_session: WSSession) -> None:
 async def _pump_outbound(ws: WebSocket, ws_session: WSSession) -> None:
     while True:
         frame = await ws_session.outbound.get()
+        doc_name, offset = peek_var_string(frame)
+        key = parse_doc_name(doc_name)
+        if key is not None and peek_message_type(frame[offset:]) != Y_MESSAGE_AUTH:
+            await ydoc_manager._reauthorize_docs([key], ws_session.user_id)
+            if key in ws_session.denied_docs:
+                continue
         await ws.send_bytes(frame)
 
 
@@ -102,6 +124,7 @@ async def _reauth_watchdog(ws: WebSocket, ws_session: WSSession) -> None:
         await asyncio.sleep(REAUTH_INTERVAL_SECONDS)
         denial = await connection_denial(ws_session)
         if denial is None:
+            await ydoc_manager._reauthorize_docs(list(ws_session.doc_handles), ws_session.user_id)
             continue
         await _close_denied(ws, ws_session, denial)
         return
@@ -149,12 +172,14 @@ async def _drive_inbound(ws: WebSocket, ws_session: WSSession) -> None:
         payload = frame[payload_offset:]
         if not payload:
             continue
+        if key in ws_session.denied_docs:
+            continue
 
         handle = ws_session.doc_handles.get(key)
         if handle is None:
             handle = await _attach_doc(ws, ws_session, key, doc_name)
             if handle is None:
-                return
+                continue
 
         await _dispatch_doc_frame(ws, ws_session, handle, doc_name, payload)
 
@@ -196,15 +221,25 @@ async def _attach_doc(
             f"per-doc authorize denied for conn {ws_session.conn_id} on {doc_name}",
             component=LOGGER_COMPONENT,
         )
-        await ws.close(code=WS_CLOSE_FORBIDDEN, reason="no view access")
+        ws_session.denied_docs.add(key)
+        await ws_session.outbound.put(
+            encode_doc_frame(doc_name, create_auth_denied_message("no view access", no_view=True))
+        )
         return None
 
     can_edit = role_can_edit(role)
     session, handle = await ydoc_manager.acquire(key, ws_session, can_edit=can_edit)
-    initial = create_sync_message(session.ydoc)
-    framed = encode_doc_frame(doc_name, initial)
+    await ydoc_manager.refresh_fragment_seeder(session)
+    await ydoc_manager.refresh_document(session)
+    generation = session.ydoc.get(DOC_META_FIELD, type=pycrdt.Map).get(DOC_GENERATION_KEY, "")
+    frames: list[bytes] = [encode_doc_frame(doc_name, create_generation_message(str(generation)))]
+    if not can_edit:
+        # Ahead of SyncStep1, so a client holding a stale editable role never replies with a write.
+        frames.append(encode_doc_frame(doc_name, create_auth_denied_message("read only")))
+    frames.append(encode_doc_frame(doc_name, create_sync_message(session.ydoc)))
     try:
-        ws_session.outbound.put_nowait(framed)
+        for framed in frames:
+            ws_session.outbound.put_nowait(framed)
     except asyncio.QueueFull:
         logger.warning(
             f"outbound queue full during attach for conn {ws_session.conn_id}",
@@ -228,8 +263,30 @@ async def _dispatch_doc_frame(
     session = ydoc_manager._sessions.get(handle.doc_key)  # noqa: SLF001
     if session is None:
         return
+    await ydoc_manager._reauthorize_docs([session.key], handle.user_id)
+    if handle.closed:
+        return
 
-    if kind == YMessageType.SYNC:
+    if kind == MESSAGE_DURABLE_UPDATE:
+        generation, offset = read_var_string(payload, 1)
+        update_id, offset = read_var_string(payload, offset)
+        length, offset = read_var_uint(payload, offset)
+        if offset + length != len(payload):
+            raise ValueError("invalid durable update length")
+        try:
+            await ydoc_manager.apply_local_update(
+                session, payload[offset:], source_conn_id=handle.conn_id, generation=generation
+            )
+        except GenerationConflict:
+            await ydoc_manager.refresh_document(session)
+            return
+        except EditDenied:
+            await ws_session.outbound.put(
+                encode_doc_frame(doc_name, create_auth_denied_message("edit denied"))
+            )
+            return
+        await ws_session.outbound.put(encode_doc_frame(doc_name, create_ack_message(update_id)))
+    elif kind == YMessageType.SYNC:
         await _handle_sync_frame(ws, session, handle, doc_name, payload)
     elif kind == YMessageType.AWARENESS:
         REALTIME_AWARENESS_MESSAGES_TOTAL.labels(content_type=handle.doc_key[0].value).inc()
@@ -256,11 +313,15 @@ async def _handle_sync_frame(
         REALTIME_PERMISSION_REJECTIONS_TOTAL.labels(
             content_type=handle.doc_key[0].value, reason="edit_denied"
         ).inc()
-        await ws.close(code=WS_CLOSE_FORBIDDEN, reason="edit denied")
+        if handle.ws_session is not None:
+            await handle.ws_session.outbound.put(
+                encode_doc_frame(doc_name, create_auth_denied_message("edit denied"))
+            )
         return
 
     sub_type = peek_sync_sub_type(frame)
     if sub_type == YSyncMessageType.SYNC_STEP1:
+        await ydoc_manager.refresh_document(session)
         try:
             reply = handle_sync_message(frame[1:], session.ydoc)
         except Exception as exc:
@@ -283,30 +344,8 @@ async def _handle_sync_frame(
         return
 
     if sub_type in (YSyncMessageType.SYNC_STEP2, YSyncMessageType.SYNC_UPDATE):
-        try:
-            decoder = Decoder(frame[2:])
-            update_bytes = decoder.read_message()
-        except Exception as exc:
-            REALTIME_FRAMES_DROPPED_TOTAL.labels(kind="malformed_sync_update").inc()
-            logger.warning(
-                f"malformed sync update from conn {handle.conn_id} on {doc_name}: {exc}",
-                component=LOGGER_COMPONENT,
+        # Untagged writes cannot prove which document generation they belong to.
+        if handle.ws_session is not None:
+            await handle.ws_session.outbound.put(
+                encode_doc_frame(doc_name, create_auth_denied_message("client update required"))
             )
-            await ws.close(code=WS_CLOSE_UNSUPPORTED_TYPE, reason="malformed sync frame")
-            return
-        if update_bytes and update_bytes != b"\x00\x00":
-            REALTIME_UPDATE_MESSAGES_TOTAL.labels(
-                content_type=handle.doc_key[0].value, direction="inbound"
-            ).inc()
-            try:
-                await ydoc_manager.apply_local_update(
-                    session, update_bytes, source_conn_id=handle.conn_id
-                )
-            except Exception as exc:
-                REALTIME_FRAMES_DROPPED_TOTAL.labels(kind="rejected_update").inc()
-                logger.warning(
-                    f"apply_update rejected from conn {handle.conn_id} on {doc_name}: {exc}",
-                    component=LOGGER_COMPONENT,
-                )
-                await ws.close(code=WS_CLOSE_UNSUPPORTED_TYPE, reason="invalid update")
-                return

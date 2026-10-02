@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { isUuid } from "@/shared/utils/uuid";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
@@ -19,8 +20,6 @@ const PANEL_ALIASES: Record<string, AgentPanel> = {
   skills: "capabilities",
 };
 
-const RESOURCE_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
 export function AgentsPage() {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
@@ -36,13 +35,13 @@ export function AgentsPage() {
       return;
     }
     // Search projections and saved links can address the agent before the section segment.
-    if (RESOURCE_ID.test(tab)) {
+    if (isUuid(tab)) {
       const requestedPanel = PANEL_ALIASES[subId ?? ""] ?? subId;
       const agentPanel = AGENT_PANELS.includes(requestedPanel as AgentPanel)
         ? requestedPanel
         : "overview";
       const pathname =
-        subId === "cron" && panel && RESOURCE_ID.test(panel)
+        subId === "cron" && panel && isUuid(panel)
           ? `/agents/automations/${panel}`
           : `/agents/agents/${tab}/${agentPanel}`;
       navigate({ pathname, search, hash }, { replace: true });

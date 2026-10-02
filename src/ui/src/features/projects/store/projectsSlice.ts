@@ -30,6 +30,19 @@ import {
   fetchActivities,
 } from "./projectsThunks";
 
+/**
+ * A live editing session owns the description until the server render lands, so a
+ * server row from an unrelated write must not roll the text back in the meantime.
+ */
+function acceptServerTask(state: ProjectsState, task: Task, descriptionRequested = false): void {
+  const superseded = state.liveDescriptionIds[task.id];
+  const live = state.tasks[task.id]?.description;
+  const preserve =
+    !descriptionRequested && superseded?.includes(task.description) && live !== task.description;
+  if (!preserve) delete state.liveDescriptionIds[task.id];
+  state.tasks[task.id] = preserve ? { ...task, description: live ?? "" } : task;
+}
+
 /** Shared views first, each group in its stored order: the order the server lists them in. */
 function sortViews(views: ViewConfig[]): ViewConfig[] {
   const rank = (view: ViewConfig) => (view.visibility === ViewVisibility.SHARED ? 0 : 1);
@@ -55,6 +68,8 @@ export interface ProjectsState {
   _pendingTaskSnapshot?: Task;
   /** Snapshots of parents whose subtask counts were optimistically adjusted. */
   _pendingParentSnapshots?: Record<string, Task>;
+  /** Tasks whose description a live editing session wrote; server rows keep the local text until a refetch. */
+  liveDescriptionIds: Record<string, string[]>;
 }
 
 const initialState: ProjectsState = {
@@ -63,6 +78,7 @@ const initialState: ProjectsState = {
   currentProjectId: null,
   activities: {},
   taskListLoadedIds: {},
+  liveDescriptionIds: {},
   viewCatalog: null,
   viewCatalogLoading: false,
   loading: {
@@ -142,6 +158,16 @@ export const projectsSlice = createSlice({
         }
         state.tasks[id] = { ...task, ...updates };
       }
+    },
+
+    /** Description persisted by the realtime session; no RPC and no rollback snapshot follow. */
+    applyLiveDescription: (state, action: PayloadAction<{ id: string; description: string }>) => {
+      const task = state.tasks[action.payload.id];
+      if (!task) return;
+      const superseded = state.liveDescriptionIds[task.id] ?? [];
+      if (!superseded.includes(task.description)) superseded.push(task.description);
+      state.liveDescriptionIds[task.id] = superseded;
+      task.description = action.payload.description;
     },
 
     bulkUpdateTasks: (state, action: PayloadAction<{ ids: string[]; changes: Partial<Task> }>) => {
@@ -243,7 +269,8 @@ export const projectsSlice = createSlice({
       .addCase(fetchProjectTasks.fulfilled, (state, action) => {
         state.loading.tasks = false;
         action.payload.forEach((task) => {
-          if (state.projects[task.projectId]) state.tasks[task.id] = task;
+          if (!state.projects[task.projectId]) return;
+          acceptServerTask(state, task);
         });
         const { arg } = action.meta;
         state.taskListLoadedIds[typeof arg === "string" ? arg : arg.projectId] = true;
@@ -334,9 +361,9 @@ export const projectsSlice = createSlice({
       .addCase(updateTask.fulfilled, (state, action) => {
         state.loading.updating = null;
         const { task, updatedParent, spawnedTask } = action.payload;
-        state.tasks[task.id] = task;
+        acceptServerTask(state, task, action.meta.arg.description !== undefined);
         if (updatedParent) {
-          state.tasks[updatedParent.id] = updatedParent;
+          acceptServerTask(state, updatedParent);
         }
         if (spawnedTask) {
           state.tasks[spawnedTask.id] = spawnedTask;
@@ -364,9 +391,9 @@ export const projectsSlice = createSlice({
     builder
       .addCase(moveTask.fulfilled, (state, action) => {
         const { task, updatedParent, spawnedTask } = action.payload;
-        state.tasks[task.id] = task;
+        acceptServerTask(state, task);
         if (updatedParent) {
-          state.tasks[updatedParent.id] = updatedParent;
+          acceptServerTask(state, updatedParent);
         }
         if (spawnedTask) {
           state.tasks[spawnedTask.id] = spawnedTask;
@@ -510,7 +537,7 @@ export const projectsSlice = createSlice({
 
     builder.addCase(bulkUpdateTasksThunk.fulfilled, (state, action) => {
       action.payload.forEach((task) => {
-        state.tasks[task.id] = task;
+        acceptServerTask(state, task);
       });
     });
 
@@ -524,6 +551,7 @@ export const {
   setCurrentProject,
   clearErrors,
   optimisticUpdateTask,
+  applyLiveDescription,
   bulkUpdateTasks,
   addFieldDefinition,
   removeFieldDefinition,

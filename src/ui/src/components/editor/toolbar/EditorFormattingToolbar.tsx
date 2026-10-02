@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   TextB,
   TextItalic,
@@ -17,21 +17,21 @@ import {
   ChatCircle,
 } from "@phosphor-icons/react";
 import { EmojiPicker } from "@/features/chat/components/compose/EmojiPicker";
-import { LinkPrompt } from "@/features/notes/components/editor/toolbar/LinkPrompt";
+import { LinkPrompt } from "@/components/editor/toolbar/LinkPrompt";
 import { useFormattedKeybinding } from "@/features/settings";
 import { editorViewCtx } from "@milkdown/core";
 import { useAppSelector } from "@/app/hooks";
 import { useEditorHandle } from "@/components/editor/EditorHandle";
-import { useActiveMarks } from "@/features/notes/components/editor/toolbar/useActiveMarks";
-import { toolbarCommands } from "@/features/notes/components/editor/toolbar/toolbarCommands";
+import { useActiveMarks } from "@/components/editor/toolbar/useActiveMarks";
+import { toolbarCommands } from "@/components/editor/toolbar/toolbarCommands";
 import {
   ToolbarButton,
   ToolbarGroup,
   ToolbarSeparator,
-} from "@/features/notes/components/editor/toolbar/ToolbarButton";
-import { HeadingDropdown } from "@/features/notes/components/editor/toolbar/HeadingDropdown";
-import { TablePopover } from "@/features/notes/components/editor/toolbar/TablePopover";
-import { InsertExtrasMenu } from "@/features/notes/components/editor/toolbar/InsertExtrasMenu";
+} from "@/components/editor/toolbar/ToolbarButton";
+import { HeadingDropdown } from "@/components/editor/toolbar/HeadingDropdown";
+import { TablePopover } from "@/components/editor/toolbar/TablePopover";
+import { InsertExtrasMenu } from "@/components/editor/toolbar/InsertExtrasMenu";
 import { HighlightPicker } from "@/components/editor/plugins/highlight/HighlightPicker";
 import { highlightMark } from "@/components/editor/plugins/highlight";
 import { createImageUploadHandler } from "@/components/editor/utils/imageUploader";
@@ -41,10 +41,23 @@ import { ContentType } from "@uniffy/proto/common/v1/common_pb";
 import type { EditorView } from "@milkdown/prose/view";
 
 interface EditorFormattingToolbarProps {
-  noteId: string;
+  contentType: ContentType;
+  contentId: string;
+  /** Default true; hosts whose markdown feeds an LLM prompt turn media inserts off. */
+  enableUpload?: boolean;
+  /** Mirrors the editor's own upload hook so a host with no `contentId` yet can defer attachment. */
+  onFileUploaded?: (fileId: string) => void;
+  /** Host actions pinned to the right edge of the bar, e.g. a Done button in an overlay. */
+  trailing?: ReactNode;
 }
 
-export function EditorFormattingToolbar({ noteId }: EditorFormattingToolbarProps) {
+export function EditorFormattingToolbar({
+  contentType,
+  contentId,
+  enableUpload = true,
+  onFileUploaded,
+  trailing,
+}: EditorFormattingToolbarProps) {
   const handle = useEditorHandle();
   const active = useActiveMarks();
   const organizationId = useAppSelector((s) => s.auth.currentOrganizationId);
@@ -56,13 +69,13 @@ export function EditorFormattingToolbar({ noteId }: EditorFormattingToolbarProps
   const redoShortcut = useFormattedKeybinding("editor.redo");
 
   const uploads = useMemo(() => {
-    if (!organizationId) return null;
+    if (!organizationId || !enableUpload) return null;
     return {
-      image: createImageUploadHandler(ContentType.NOTE, noteId, organizationId),
-      video: createVideoUploadHandler(ContentType.NOTE, noteId, organizationId),
-      audio: createAudioUploadHandler(ContentType.NOTE, noteId, organizationId),
+      image: createImageUploadHandler(contentType, contentId, organizationId, onFileUploaded),
+      video: createVideoUploadHandler(contentType, contentId, organizationId, onFileUploaded),
+      audio: createAudioUploadHandler(contentType, contentId, organizationId, onFileUploaded),
     };
-  }, [organizationId, noteId]);
+  }, [organizationId, enableUpload, contentType, contentId, onFileUploaded]);
 
   const ready = handle !== null;
 
@@ -267,6 +280,8 @@ export function EditorFormattingToolbar({ noteId }: EditorFormattingToolbarProps
           <ArrowClockwise size={14} weight="bold" />
         </ToolbarButton>
       </ToolbarGroup>
+
+      {trailing && <div className="ml-auto flex items-center gap-2 pl-2">{trailing}</div>}
 
       {highlightAnchor && (
         <HighlightPicker

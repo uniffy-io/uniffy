@@ -9,9 +9,15 @@ from pycrdt import (
     handle_sync_message,
 )
 
+from uniffy.core.realtime.multiplex import write_var_string, write_var_uint
+
 __all__ = [
+    "Y_MESSAGE_AUTH",
+    "MESSAGE_FRAGMENT_SEEDER",
     "YMessageType",
     "YSyncMessageType",
+    "create_auth_denied_message",
+    "create_fragment_seeder_message",
     "create_awareness_message",
     "create_sync_message",
     "create_update_message",
@@ -20,6 +26,33 @@ __all__ = [
     "peek_message_type",
     "peek_sync_sub_type",
 ]
+
+# y-protocols/auth: pycrdt only models SYNC and AWARENESS.
+Y_MESSAGE_AUTH = 2
+_AUTH_PERMISSION_DENIED = 0
+MESSAGE_FRAGMENT_SEEDER = 4
+MESSAGE_GENERATION = 5
+MESSAGE_DURABLE_UPDATE = 6
+MESSAGE_ACK = 7
+
+
+def create_generation_message(generation: str) -> bytes:
+    return write_var_uint(MESSAGE_GENERATION) + write_var_string(generation)
+
+
+def create_ack_message(update_id: str) -> bytes:
+    return write_var_uint(MESSAGE_ACK) + write_var_string(update_id)
+
+
+def create_fragment_seeder_message(granted: bool) -> bytes:
+    return write_var_uint(MESSAGE_FRAGMENT_SEEDER) + write_var_uint(int(granted))
+
+
+def create_auth_denied_message(reason: str, *, no_view: bool = False) -> bytes:
+    """Tell one client its doc is read-only so it stops emitting write frames."""
+    return (
+        write_var_uint(Y_MESSAGE_AUTH) + write_var_uint(1 if no_view else _AUTH_PERMISSION_DENIED)
+    ) + write_var_string(reason)
 
 
 def peek_message_type(frame: bytes) -> int | None:

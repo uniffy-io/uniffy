@@ -53,10 +53,7 @@ const RNWebSocket = WebSocket as unknown as new (
   options?: { headers?: Record<string, string> },
 ) => WebSocket;
 
-// The empty Yjs update (no structs, no deletions) encodes to exactly [0, 0].
-// The server ignores such updates, and a read-only handle sending ANY
-// SyncStep2 frame gets the whole socket closed with 4403, so a no-op reply
-// must never leave the device.
+// Empty updates carry no content or deletions and need no acknowledgment.
 function isNoopSyncStep2(reply: Uint8Array): boolean {
   const dec = decoding.createDecoder(reply);
   if (decoding.readVarUint(dec) !== MESSAGE_SYNC) return false;
@@ -73,7 +70,9 @@ export interface MultiplexerAttachOptions {
   awareness: Awareness;
   onStatus?: (status: RealtimeStatus) => void;
   onSync?: () => void;
+  onGenerationMismatch?: () => void;
   onCloseCode?: (code: number) => void;
+  onWriteDenied?: (reason: string) => void;
 }
 
 export interface DocSubscription {
@@ -86,12 +85,12 @@ interface DocEntry {
   ydoc: Y.Doc;
   awareness: Awareness;
   resolvedSyncOnce: boolean;
-  // Read-only handles may not emit SYNC write frames; the server closes the
-  // whole socket with 4403 on the first one. SyncStep1 and awareness stay allowed.
+  // Read-only documents retain local drafts but suppress write frames.
   readOnly: boolean;
-  // Local edits were dropped while disconnected; only the reconnect handshake
-  // (our SyncStep2 reply to the server's SyncStep1) replays them.
-  droppedWhileDisconnected: boolean;
+  denied: boolean;
+  generation: string | null;
+  updateCounter: number;
+  unacknowledged: Map<string, Uint8Array>;
   updateHandler: (update: Uint8Array, origin: unknown) => void;
   awarenessHandler: (
     changes: { added: number[]; updated: number[]; removed: number[] },
@@ -133,23 +132,15 @@ class RealtimeMultiplexer {
       awareness: opts.awareness,
       resolvedSyncOnce: false,
       readOnly: false,
-      droppedWhileDisconnected: false,
+      denied: false,
+      generation: null,
+      updateCounter: 0,
+      unacknowledged: new Map(),
       updateHandler: (update, origin) => {
         // Skip echoes of frames we just applied from the wire.
         if (origin === REMOTE_ORIGIN) return;
         // Read-only docs never push state.
-        if (entry.readOnly) return;
-        if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-          entry.droppedWhileDisconnected = true;
-          return;
-        }
-        const enc = encoding.createEncoder();
-        encoding.writeVarUint(enc, MESSAGE_SYNC);
-        syncProtocol.writeUpdate(enc, update);
-        this.sendForDoc(docName, encoding.toUint8Array(enc));
-        if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-          entry.droppedWhileDisconnected = true;
-        }
+        this.queueUpdate(entry, update);
       },
       awarenessHandler: (changes, origin) => {
         if (origin === "remote") return;
@@ -242,11 +233,13 @@ class RealtimeMultiplexer {
     this.emitStatusAll("connecting");
 
     ws.onopen = () => {
+      if (this.ws !== ws) return;
       this.wsConnecting = false;
       this.wsConnected = true;
       this.reconnectDelayMs = RECONNECT_INITIAL_MS;
       for (const entry of this.docs.values()) {
         entry.resolvedSyncOnce = false;
+        entry.generation = null;
         this.bootstrapDoc(entry);
       }
       this.emitStatusAll("connected");
@@ -255,6 +248,7 @@ class RealtimeMultiplexer {
     };
 
     ws.onmessage = (event: MessageEvent) => {
+      if (this.ws !== ws) return;
       const data: unknown = event.data;
       if (data instanceof ArrayBuffer) {
         this.onFrame(new Uint8Array(data));
@@ -262,6 +256,7 @@ class RealtimeMultiplexer {
     };
 
     ws.onclose = (event: CloseEvent) => {
+      if (this.ws !== ws) return;
       const closingForGood = this.destroyed || event.code === WS_CLOSE_NORMAL;
       this.cleanupSocket();
       for (const entry of this.docs.values()) {
@@ -294,11 +289,6 @@ class RealtimeMultiplexer {
     this.wsConnecting = false;
     this.stopResyncTimer();
     this.stopAwarenessKeepaliveTimer();
-    for (const entry of this.docs.values()) {
-      // Teardown loses socket-buffered bytes; the reconnect handshake
-      // re-derives whatever the server is actually missing.
-      entry.droppedWhileDisconnected = true;
-    }
   }
 
   private reconnectAfterRefresh(): void {
@@ -429,13 +419,28 @@ class RealtimeMultiplexer {
       return;
     }
     const entry = this.docs.get(docName);
-    if (!entry) return;
+    if (!entry || entry.denied) return;
     const payload = frame.subarray(payloadOffset);
     if (payload.length === 0) return;
 
     const decoder = decoding.createDecoder(payload);
     const messageType = decoding.readVarUint(decoder);
-    if (messageType === MESSAGE_SYNC) {
+    if (messageType === 5) {
+      const generation = decoding.readVarString(decoder);
+      const local = entry.ydoc.getMap("doc_meta").get("generation");
+      if (typeof local === "string" && local !== generation) {
+        entry.denied = true;
+        entry.options.onGenerationMismatch?.();
+        return;
+      }
+      const reconnecting = entry.generation === null;
+      entry.generation = generation;
+      if (reconnecting)
+        for (const [id, update] of entry.unacknowledged) this.sendDurableUpdate(entry, id, update);
+    } else if (messageType === 7) {
+      entry.unacknowledged.delete(decoding.readVarString(decoder));
+    } else if (messageType === MESSAGE_SYNC) {
+      if (entry.generation === null) return;
       const replyEncoder = encoding.createEncoder();
       encoding.writeVarUint(replyEncoder, MESSAGE_SYNC);
       const syncMessageType = syncProtocol.readSyncMessage(
@@ -461,31 +466,50 @@ class RealtimeMultiplexer {
       applyAwarenessUpdate(entry.awareness, decoding.readVarUint8Array(decoder), "remote");
     } else if (messageType === MESSAGE_QUERY_AWARENESS) {
       this.sendLocalAwareness(entry);
+    } else if (messageType === 2) {
+      const scope = decoding.readVarUint(decoder);
+      if (scope !== 0 && scope !== 1) return;
+      entry.denied = scope === 1;
+      entry.readOnly = true;
+      entry.options.onWriteDenied?.(decoding.readVarString(decoder));
     }
   }
 
   // Our reply to a server SyncStep1 carries every local update the server
   // lacks, including edits dropped while disconnected.
   private replySyncStep2(entry: DocEntry, replyBytes: Uint8Array): void {
-    if (entry.readOnly || isNoopSyncStep2(replyBytes)) {
-      entry.droppedWhileDisconnected = false;
-      return;
-    }
-    this.sendForDoc(entry.docName, replyBytes);
-    if (this.ws?.readyState === WebSocket.OPEN) {
-      entry.droppedWhileDisconnected = false;
-    }
+    if (entry.readOnly || isNoopSyncStep2(replyBytes)) return;
+    const decoder = decoding.createDecoder(replyBytes);
+    decoding.readVarUint(decoder);
+    decoding.readVarUint(decoder);
+    this.queueUpdate(entry, decoding.readVarUint8Array(decoder));
   }
 
-  /** VIEWER handles are flagged after attach so no SYNC write frame ever leaves. */
+  private queueUpdate(entry: DocEntry, update: Uint8Array): void {
+    const id = entry.ydoc.guid + ":" + ++entry.updateCounter;
+    entry.unacknowledged.set(id, update);
+
+    this.sendDurableUpdate(entry, id, update);
+  }
+
+  private sendDurableUpdate(entry: DocEntry, id: string, update: Uint8Array): void {
+    if (entry.generation === null || entry.readOnly) return;
+    const encoder = encoding.createEncoder();
+    encoding.writeVarUint(encoder, 6);
+    encoding.writeVarString(encoder, entry.generation);
+    encoding.writeVarString(encoder, id);
+    encoding.writeVarUint8Array(encoder, update);
+    this.sendForDoc(entry.docName, encoding.toUint8Array(encoder));
+  }
+
   setDocReadOnly(docName: string, readOnly: boolean): void {
     const entry = this.docs.get(docName);
     if (!entry) return;
     entry.readOnly = readOnly;
-    if (readOnly) entry.droppedWhileDisconnected = false;
   }
 
   private sendForDoc(docName: string, payload: Uint8Array): void {
+    if (this.docs.get(docName)?.denied) return;
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
     try {
       this.ws.send(encodeDocFrame(docName, payload));
@@ -516,7 +540,7 @@ class RealtimeMultiplexer {
 
   private emitStatusAll(status: RealtimeStatus): void {
     for (const entry of this.docs.values()) {
-      entry.options.onStatus?.(status);
+      entry.options.onStatus?.(entry.denied ? "permission_lost" : status);
     }
   }
 
