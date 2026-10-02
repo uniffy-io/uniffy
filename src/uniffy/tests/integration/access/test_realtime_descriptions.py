@@ -17,7 +17,10 @@ from uniffy.core.models.projects.project import Project
 from uniffy.core.models.projects.sprint import Sprint as _Sprint  # noqa: F401 - FK metadata
 from uniffy.core.models.projects.task import Task
 from uniffy.core.models.realtime.yjs_snapshot import RealtimeYjsSnapshot
-from uniffy.core.realtime.adapter import RealtimeRenderConflict
+from uniffy.core.realtime.adapter import RealtimeRenderConflict, register_realtime_adapter
+from uniffy.core.realtime.storage import decode_snapshot
+from uniffy.core.realtime.markdown import markdown_text
+from uniffy.domains.projects.realtime import TaskRealtimeAdapter
 from uniffy.core.realtime.state import ClientHandle, YDocSession
 from uniffy.core.realtime.ydoc_manager import YDocManager
 from uniffy.core.types import (
@@ -42,6 +45,8 @@ pytestmark = pytest.mark.asyncio(loop_scope="session")
 
 @pytest_asyncio.fixture(autouse=True, loop_scope="session")
 async def cleanup_realtime_rows(session: AsyncSession, access: SimpleNamespace):
+    register_realtime_adapter(TaskRealtimeAdapter(MagicMock()))
+    register_realtime_adapter(EventRealtimeAdapter(MagicMock()))
     yield
     await session.rollback()
     for content_type, model in (
@@ -271,7 +276,7 @@ async def test_event_render_preserves_metadata_and_only_notifies_new_mentions(
 
 
 @pytest.mark.parametrize("description", [None, "RPC replacement"])
-async def test_event_update_invalidates_only_description_snapshot(
+async def test_event_update_replaces_only_description_snapshot(
     session: AsyncSession, access: SimpleNamespace, description: str | None
 ) -> None:
     event, _ = await _private_event(session, access)
@@ -302,12 +307,14 @@ async def test_event_update_invalidates_only_description_snapshot(
         await session.delete(snapshot)
         await session.commit()
     else:
-        assert snapshot is None
+        assert snapshot is not None
+        assert str(markdown_text(decode_snapshot(snapshot))) == description
+        assert snapshot.revision == snapshot.rendered_revision
         publish.assert_awaited_once_with(*key, description)
 
 
 @pytest.mark.parametrize("description", [None, "RPC replacement"])
-async def test_task_update_invalidates_only_description_snapshot(
+async def test_task_update_replaces_only_description_snapshot(
     session: AsyncSession, access: SimpleNamespace, description: str | None
 ) -> None:
     project = Project(
@@ -356,5 +363,7 @@ async def test_task_update_invalidates_only_description_snapshot(
         await session.delete(snapshot)
         await session.commit()
     else:
-        assert snapshot is None
+        assert snapshot is not None
+        assert str(markdown_text(decode_snapshot(snapshot))) == description
+        assert snapshot.revision == snapshot.rendered_revision
         publish.assert_awaited_once_with(*key, description)

@@ -7,7 +7,6 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
-from sqlalchemy import delete as sql_delete
 from sqlalchemy import select
 from sqlalchemy import update as sql_update
 
@@ -17,8 +16,8 @@ from uniffy.core.errors import ConflictError, NotFoundError, StaleContentVersion
 from uniffy.core.events import NotificationEvent, emit_notification
 from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.notes.note import Note
-from uniffy.core.models.realtime.yjs_snapshot import RealtimeYjsSnapshot
 from uniffy.core.realtime.publisher import publish_content_replace
+from uniffy.core.realtime.storage import load_snapshot, lock_document, stage_replacement
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import AccessMode, ContentType, NodeType, NotificationType
 from uniffy.domains.files.attachments.inline import reconcile_inline_attachments
@@ -48,6 +47,7 @@ class NoteUpdates:
         metadata: dict[str, Any] | None = None,
         expected_content_version: int | None = None,
     ) -> Note:
+        await lock_document(self.operations.session, (ContentType.NOTE, note_id))
         note = await self.operations._fetch_by_id(note_id, organization_id)
         if not note:
             raise NotFoundError("Note", note_id)
@@ -55,6 +55,11 @@ class NoteUpdates:
         content_write_requested = content is not None or canvas_content is not None
         guarded_version = expected_content_version if content_write_requested else None
         if guarded_version is not None:
+            snapshot = await load_snapshot(self.operations.session, (ContentType.NOTE, note_id))
+            if snapshot is not None and snapshot.revision > snapshot.rendered_revision:
+                raise StaleContentVersionError(
+                    "Note", "newer realtime content is awaiting projection"
+                )
             refreshed = (
                 await self.operations.session.execute(
                     select(Note)
@@ -99,6 +104,7 @@ class NoteUpdates:
         attempts = 1 if guarded_version is not None else 3
         for attempt in range(attempts):
             if attempt:
+                await lock_document(self.operations.session, (ContentType.NOTE, note_id))
                 refreshed = (
                     await self.operations.session.execute(
                         select(Note)
@@ -152,11 +158,8 @@ class NoteUpdates:
             )
             if result.rowcount:
                 if content_changed:
-                    await self.operations.session.execute(
-                        sql_delete(RealtimeYjsSnapshot).where(
-                            RealtimeYjsSnapshot.content_type == ContentType.NOTE,
-                            RealtimeYjsSnapshot.content_id == note_id,
-                        )
+                    await stage_replacement(
+                        self.operations.session, (ContentType.NOTE, note_id), organization_id
                     )
                 if parent_changed:
                     await write_audit_event(

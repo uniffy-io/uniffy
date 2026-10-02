@@ -11,9 +11,10 @@ from uniffy.core.jobs import JobRef, QueueName
 from uniffy.core.realtime.job_contracts import (
     REALTIME_JOB_REFS,
     REALTIME_SCHEDULED_JOB_REFS,
+    RECOVER_REALTIME_PROJECTIONS_SCHEDULE,
     SAVE_REALTIME_SNAPSHOT,
 )
-from uniffy.core.realtime.jobs import save_realtime_snapshot
+from uniffy.core.realtime.jobs import recover_realtime_projections, save_realtime_snapshot
 from uniffy.domains.agents.bridge.jobs.contracts import (
     CHAT_INTEGRATION_JOB_REFS,
     CHAT_INTEGRATION_SCHEDULED_JOB_REFS,
@@ -346,6 +347,7 @@ EGRESS_JOB_REGISTRATIONS = (
 )
 
 CORE_SCHEDULED_REGISTRATIONS = (
+    _bind_schedule(RECOVER_REALTIME_PROJECTIONS_SCHEDULE, recover_realtime_projections),
     _bind_schedule(EXPIRE_SKILL_EVALUATIONS_SCHEDULE, expire_skill_evaluations),
     _bind_schedule(EXPIRE_SKILL_DRAFT_GENERATIONS_SCHEDULE, expire_skill_draft_generations),
     _bind_schedule(

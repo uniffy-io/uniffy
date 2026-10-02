@@ -3,20 +3,14 @@
 from datetime import UTC, datetime
 from uuid import UUID
 
-from sqlalchemy import Column, DateTime, Enum, LargeBinary
+from sqlalchemy import BigInteger, Column, DateTime, Enum, LargeBinary
 from sqlmodel import Field, SQLModel
 
 from uniffy.core.types import ContentType
 
 
 class RealtimeYjsSnapshot(SQLModel, table=True):
-    """One compacted Yjs document blob per realtime-collaborated content row.
-
-    The composite primary key ``(content_type, content_id)`` keeps the
-    table domain-agnostic; every content type that adopts realtime
-    editing shares one storage shape and one snapshot pipeline. Rows are
-    overwritten on each debounced flush (no per-edit history).
-    """
+    """Durable CRDT authority and its last projected revision."""
 
     __tablename__ = "realtime_yjs_snapshots"
 
@@ -33,6 +27,15 @@ class RealtimeYjsSnapshot(SQLModel, table=True):
         ),
     )
     content_id: UUID = Field(primary_key=True, nullable=False)
+    organization_id: UUID | None = None
+    generation: str | None = None
+    revision: int = Field(default=0, sa_column=Column(BigInteger, nullable=False))
+    rendered_revision: int = Field(default=0, sa_column=Column(BigInteger, nullable=False))
+    actor_id: UUID | None = None
+    seed_owner: str | None = None
+    seed_expires_at: datetime | None = Field(
+        default=None, sa_column=Column(DateTime(timezone=True), nullable=True)
+    )
     state_vector: bytes = Field(sa_column=Column(LargeBinary, nullable=False))
     updates: bytes = Field(sa_column=Column(LargeBinary, nullable=False))
     created_at: datetime = Field(

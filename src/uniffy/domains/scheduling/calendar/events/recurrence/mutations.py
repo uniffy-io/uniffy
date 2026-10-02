@@ -13,8 +13,10 @@ from uniffy.core.errors import (
 from uniffy.core.models.calendar.attendee import EventAttendee
 from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.models.calendar.exception import RecurrenceException
+from uniffy.core.realtime.storage import lock_document
 from uniffy.core.types import (
     AttendeeStatus,
+    ContentType,
     EventStatus,
     RecurrencePattern,
 )
@@ -54,6 +56,7 @@ class RecurrenceMutationOperations:
         occurrence_date: date,
     ) -> None:
         """Cancel a single occurrence of a recurring event."""
+        await lock_document(self.session, (ContentType.CALENDAR_EVENT, event_id))
         event = await get_event_for_update(self.session, event_id, organization_id)
         if not event:
             raise NotFoundError("CalendarEvent", event_id)
@@ -95,6 +98,7 @@ class RecurrenceMutationOperations:
         **updates: object,
     ) -> CalendarEvent:
         """Materialize an override event for a single recurring occurrence."""
+        await lock_document(self.session, (ContentType.CALENDAR_EVENT, event_id))
         master = await get_event_for_update(self.session, event_id, organization_id)
         if not master:
             raise NotFoundError("CalendarEvent", event_id)
@@ -245,6 +249,7 @@ class RecurrenceMutationOperations:
         **updates: object,
     ) -> CalendarEvent:
         """Split a recurring series at `occurrence_date` and apply updates."""
+        await lock_document(self.session, (ContentType.CALENDAR_EVENT, event_id))
         master = await get_event_for_update(self.session, event_id, organization_id)
         if not master:
             raise NotFoundError("CalendarEvent", event_id)

@@ -76,6 +76,7 @@ export function useDocSession(opts: UseDocSessionOptions): DocSession | null {
     whenSynced: Promise<void>;
   } | null>(null);
   const [tick, setTick] = useState(0);
+  const [generationReset, setGenerationReset] = useState(0);
 
   useEffect(() => {
     if (!enabled || !contentId || !organizationId) {
@@ -130,9 +131,16 @@ export function useDocSession(opts: UseDocSessionOptions): DocSession | null {
         setStatus(next);
       },
       onSync: () => {
-        chooseReplay({ serverGeneration: docGeneration(ydoc) });
-        serverSynced = true;
-        resolveServerSync();
+        const options = { serverGeneration: docGeneration(ydoc) };
+        chooseReplay(options);
+        // Offline discovery can be ambiguous. Retry against the server epoch before editing.
+        void whenHydrated
+          .then(() => persistence.hydrate(options))
+          .catch((error) => console.warn("[realtime] persistence hydrate failed", error))
+          .finally(() => {
+            serverSynced = true;
+            resolveServerSync();
+          });
       },
       onCloseCode: (code) => {
         const mapped = statusFromCloseCode(code);
@@ -140,6 +148,7 @@ export function useDocSession(opts: UseDocSessionOptions): DocSession | null {
       },
       // Doc-scoped, unlike a 4403 close: only this editor flips to view-only.
       onWriteDenied: () => setStatus("permission_lost"),
+      onGenerationMismatch: () => setGenerationReset((value) => value + 1),
     });
     if (!navigator.onLine) chooseReplay(undefined);
 
@@ -172,7 +181,7 @@ export function useDocSession(opts: UseDocSessionOptions): DocSession | null {
       sessionRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabled, contentType, contentId, organizationId, discardLocalOnCleanClose]);
+  }, [enabled, contentType, contentId, organizationId, discardLocalOnCleanClose, generationReset]);
 
   // Y.Doc / Awareness / UndoManager identities must survive every re-render -
   // recreating them would drop the CRDT state and the undo history - so the ref

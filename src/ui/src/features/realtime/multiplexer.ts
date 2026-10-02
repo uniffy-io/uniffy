@@ -44,13 +44,8 @@ const IDLE_CLOSE_MS = 30_000;
 // y-protocols/awareness GCs peer entries after `outdatedTimeout` (30s);
 // without periodic keep-alive, peer cursors vanish on typing pauses.
 const AWARENESS_KEEPALIVE_MS = 15_000;
-// `WebSocket.bufferedAmount` has no drain event, so flushed state is polled.
-const OUTBOUND_DRAIN_POLL_MS = 250;
 
-// The empty Yjs update (no structs, no deletions) encodes to exactly [0, 0].
-// The server ignores such updates, and a read-only handle sending ANY
-// SyncStep2 frame gets the whole socket closed with 4403, so a no-op reply
-// must never leave the tab.
+// Empty updates carry no content or deletions and need no acknowledgment.
 function isNoopSyncStep2(reply: Uint8Array): boolean {
   const dec = decoding.createDecoder(reply);
   if (decoding.readVarUint(dec) !== MESSAGE_SYNC) return false;
@@ -66,6 +61,7 @@ export interface MultiplexerAttachOptions {
   awareness: Awareness;
   onStatus?: (status: RealtimeStatus) => void;
   onSync?: () => void;
+  onGenerationMismatch?: () => void;
   onCloseCode?: (code: number) => void;
   /** The server downgraded this doc to read-only while the client still believed it could edit. */
   onWriteDenied?: (reason: string) => void;
@@ -87,14 +83,14 @@ interface DocEntry {
   resolvedSyncOnce: boolean;
   fragmentSeeder: boolean;
   seederListeners: Set<() => void>;
-  // Read-only handles may not emit SYNC write frames; the server closes the
-  // whole socket with 4403 on the first one. SyncStep1 and awareness stay allowed.
+  // Read-only documents retain local drafts but suppress write frames.
   readOnly: boolean;
-  // Local edits exist that have not been handed to the socket yet.
+  denied: boolean;
+  generation: string | null;
+  updateCounter: number;
+  unacknowledged: Map<string, Uint8Array>;
+  // Local edits remain pending until PostgreSQL commit is acknowledged.
   pendingLocalFrames: boolean;
-  // Pending edits were dropped while disconnected; only the reconnect
-  // handshake (our SyncStep2 reply to the server's SyncStep1) replays them.
-  droppedWhileDisconnected: boolean;
   updateHandler: (update: Uint8Array, origin: unknown) => void;
   awarenessHandler: (
     changes: { added: number[]; updated: number[]; removed: number[] },
@@ -135,27 +131,17 @@ class RealtimeMultiplexer {
       fragmentSeeder: false,
       seederListeners: new Set(),
       readOnly: false,
+      denied: false,
+      generation: null,
+      updateCounter: 0,
+      unacknowledged: new Map(),
       pendingLocalFrames: false,
-      droppedWhileDisconnected: false,
       updateHandler: (update, origin) => {
         // Skip echoes of frames we just applied from the wire.
         if (origin === REMOTE_ORIGIN) return;
         // Read-only docs never push state. IDB hydration replays of
         // server-known content would otherwise leave as write frames.
-        if (entry.readOnly) return;
-        if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-          this.markOutboundDropped(entry);
-          return;
-        }
-        const enc = encoding.createEncoder();
-        encoding.writeVarUint(enc, MESSAGE_SYNC);
-        syncProtocol.writeUpdate(enc, update);
-        this.sendForDoc(docName, encoding.toUint8Array(enc));
-        if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-          this.markOutboundDropped(entry);
-          return;
-        }
-        if (!entry.droppedWhileDisconnected) this.noteLocalFramesHandedToSocket(entry);
+        this.queueUpdate(entry, update);
       },
       awarenessHandler: (changes, origin) => {
         if (origin === "remote") return;
@@ -255,11 +241,13 @@ class RealtimeMultiplexer {
     this.emitStatusAll("connecting");
 
     ws.onopen = () => {
+      if (this.ws !== ws) return;
       this.wsConnecting = false;
       this.wsConnected = true;
       this.reconnectDelayMs = RECONNECT_INITIAL_MS;
       for (const entry of this.docs.values()) {
         entry.resolvedSyncOnce = false;
+        entry.generation = null;
         this.bootstrapDoc(entry);
       }
       this.emitStatusAll("connected");
@@ -268,17 +256,21 @@ class RealtimeMultiplexer {
     };
 
     ws.onmessage = (event: MessageEvent<ArrayBuffer | Blob | string>) => {
+      if (this.ws !== ws) return;
       const data = event.data;
       if (data instanceof ArrayBuffer) {
         this.onFrame(new Uint8Array(data));
         return;
       }
       if (typeof data !== "string" && "arrayBuffer" in data) {
-        void data.arrayBuffer().then((buf) => this.onFrame(new Uint8Array(buf)));
+        void data.arrayBuffer().then((buf) => {
+          if (this.ws === ws) this.onFrame(new Uint8Array(buf));
+        });
       }
     };
 
     ws.onclose = (event: CloseEvent) => {
+      if (this.ws !== ws) return;
       const closingForGood = this.destroyed || event.code === WS_CLOSE_NORMAL;
       this.cleanupSocket();
       for (const entry of this.docs.values()) {
@@ -325,9 +317,6 @@ class RealtimeMultiplexer {
         [...entry.awareness.getStates().keys()].filter((id) => id !== entry.awareness.clientID),
         "remote",
       );
-      // Teardown loses socket-buffered bytes; the reconnect handshake
-      // re-derives whatever the server is actually missing.
-      if (entry.pendingLocalFrames) entry.droppedWhileDisconnected = true;
     }
   }
 
@@ -458,13 +447,29 @@ class RealtimeMultiplexer {
       return;
     }
     const entry = this.docs.get(docName);
-    if (!entry) return;
+    if (!entry || entry.denied) return;
     const payload = frame.subarray(payloadOffset);
     if (payload.length === 0) return;
 
     const decoder = decoding.createDecoder(payload);
     const messageType = decoding.readVarUint(decoder);
-    if (messageType === MESSAGE_SYNC) {
+    if (messageType === 5) {
+      const generation = decoding.readVarString(decoder);
+      const local = entry.ydoc.getMap("doc_meta").get("generation");
+      if (typeof local === "string" && local !== generation) {
+        entry.denied = true;
+        entry.options.onGenerationMismatch?.();
+        return;
+      }
+      const reconnecting = entry.generation === null;
+      entry.generation = generation;
+      if (reconnecting)
+        for (const [id, update] of entry.unacknowledged) this.sendDurableUpdate(entry, id, update);
+    } else if (messageType === 7) {
+      entry.unacknowledged.delete(decoding.readVarString(decoder));
+      this.setOutboundPending(entry, entry.unacknowledged.size > 0);
+    } else if (messageType === MESSAGE_SYNC) {
+      if (entry.generation === null) return;
       const replyEncoder = encoding.createEncoder();
       encoding.writeVarUint(replyEncoder, MESSAGE_SYNC);
       const syncMessageType = syncProtocol.readSyncMessage(
@@ -492,10 +497,11 @@ class RealtimeMultiplexer {
     } else if (messageType === MESSAGE_QUERY_AWARENESS) {
       this.sendLocalAwareness(entry);
     } else if (messageType === MESSAGE_AUTH) {
-      if (decoding.readVarUint(decoder) !== AUTH_PERMISSION_DENIED) return;
+      const scope = decoding.readVarUint(decoder);
+      if (scope !== AUTH_PERMISSION_DENIED && scope !== 1) return;
       const reason = decoding.readVarString(decoder);
-      // A viewer already suppresses writes; only a stale editable doc has to learn it.
-      if (entry.readOnly) return;
+      if (entry.readOnly && scope === AUTH_PERMISSION_DENIED) return;
+      entry.denied = scope === 1;
       this.setDocReadOnly(docName, true);
       entry.options.onWriteDenied?.(reason);
     } else if (messageType === MESSAGE_FRAGMENT_SEEDER) {
@@ -512,32 +518,28 @@ class RealtimeMultiplexer {
   // Our reply to a server SyncStep1 carries every local update the server
   // lacks, including edits dropped while disconnected.
   private replySyncStep2(entry: DocEntry, replyBytes: Uint8Array): void {
-    if (entry.readOnly || isNoopSyncStep2(replyBytes)) {
-      entry.droppedWhileDisconnected = false;
-      this.setOutboundPending(entry, false);
-      return;
-    }
-    this.sendForDoc(entry.docName, replyBytes);
-    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-      this.markOutboundDropped(entry);
-      return;
-    }
-    entry.droppedWhileDisconnected = false;
-    this.noteLocalFramesHandedToSocket(entry);
+    if (entry.readOnly || isNoopSyncStep2(replyBytes)) return;
+    const decoder = decoding.createDecoder(replyBytes);
+    decoding.readVarUint(decoder);
+    decoding.readVarUint(decoder);
+    this.queueUpdate(entry, decoding.readVarUint8Array(decoder));
   }
 
-  private markOutboundDropped(entry: DocEntry): void {
-    entry.droppedWhileDisconnected = true;
+  private queueUpdate(entry: DocEntry, update: Uint8Array): void {
+    const id = entry.ydoc.guid + ":" + ++entry.updateCounter;
+    entry.unacknowledged.set(id, update);
     this.setOutboundPending(entry, true);
+    this.sendDurableUpdate(entry, id, update);
   }
 
-  private noteLocalFramesHandedToSocket(entry: DocEntry): void {
-    if (!this.ws || this.ws.bufferedAmount === 0) {
-      this.setOutboundPending(entry, false);
-      return;
-    }
-    this.setOutboundPending(entry, true);
-    this.startOutboundDrainPoll();
+  private sendDurableUpdate(entry: DocEntry, id: string, update: Uint8Array): void {
+    if (entry.generation === null || entry.readOnly) return;
+    const encoder = encoding.createEncoder();
+    encoding.writeVarUint(encoder, 6);
+    encoding.writeVarString(encoder, entry.generation);
+    encoding.writeVarString(encoder, id);
+    encoding.writeVarUint8Array(encoder, update);
+    this.sendForDoc(entry.docName, encoding.toUint8Array(encoder));
   }
 
   private setOutboundPending(entry: DocEntry, pending: boolean): void {
@@ -546,24 +548,6 @@ class RealtimeMultiplexer {
     const listeners = this.outboundListeners.get(entry.docName);
     if (!listeners) return;
     for (const listener of listeners) listener(pending);
-  }
-
-  private startOutboundDrainPoll(): void {
-    if (this.outboundDrainTimer) return;
-    this.outboundDrainTimer = setInterval(() => {
-      if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-        this.stopOutboundDrainPoll();
-        return;
-      }
-      if (this.ws.bufferedAmount > 0) return;
-      for (const entry of this.docs.values()) {
-        if (entry.pendingLocalFrames && !entry.droppedWhileDisconnected) {
-          this.setOutboundPending(entry, false);
-        }
-      }
-      // Docs still pending are dropped ones; the handshake clears those.
-      this.stopOutboundDrainPoll();
-    }, OUTBOUND_DRAIN_POLL_MS);
   }
 
   private stopOutboundDrainPoll(): void {
@@ -578,10 +562,6 @@ class RealtimeMultiplexer {
     const entry = this.docs.get(docName);
     if (!entry) return;
     entry.readOnly = readOnly;
-    if (readOnly) {
-      entry.droppedWhileDisconnected = false;
-      this.setOutboundPending(entry, false);
-    }
   }
 
   isOutboundPending(docName: string): boolean {
@@ -602,6 +582,7 @@ class RealtimeMultiplexer {
   }
 
   private sendForDoc(docName: string, payload: Uint8Array): void {
+    if (this.docs.get(docName)?.denied) return;
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
     try {
       this.ws.send(encodeDocFrame(docName, payload));
@@ -632,7 +613,7 @@ class RealtimeMultiplexer {
 
   private emitStatusAll(status: RealtimeStatus): void {
     for (const entry of this.docs.values()) {
-      entry.options.onStatus?.(status);
+      entry.options.onStatus?.(entry.denied ? "permission_lost" : status);
     }
   }
 

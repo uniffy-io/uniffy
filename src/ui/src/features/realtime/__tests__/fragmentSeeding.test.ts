@@ -80,6 +80,26 @@ describe("fragment seed arbitration", () => {
     doc.destroy();
   });
 
+  it.each([true, false])("preserves edits inside a duplicate seed block: %s", (lowerFirst) => {
+    const lower = new Y.Doc();
+    const higher = new Y.Doc();
+    lower.clientID = 10;
+    higher.clientID = 20;
+    const stop = observeFragmentSeedDuplicates(higher);
+    seedProsemirrorFragment(lower, node);
+    seedProsemirrorFragment(higher, node);
+    const paragraph = getProsemirrorFragment(higher).get(0) as Y.XmlElement;
+    (paragraph.get(0) as Y.XmlText).insert(9, " later typing");
+    if (!lowerFirst) Y.applyUpdate(lower, Y.encodeStateAsUpdate(higher));
+    Y.applyUpdate(higher, Y.encodeStateAsUpdate(lower));
+    Y.applyUpdate(lower, Y.encodeStateAsUpdate(higher));
+    expect(getProsemirrorFragment(lower).toString()).toContain("later typing");
+    expect(getProsemirrorFragment(higher).toString()).toContain("later typing");
+    stop();
+    lower.destroy();
+    higher.destroy();
+  });
+
   it("wakes on transferred server role and removes its subscriptions", async () => {
     const doc = new Y.Doc();
     let listener: (() => void) | undefined;
@@ -91,7 +111,7 @@ describe("fragment seed arbitration", () => {
         return unsubscribe;
       },
     };
-    const waiting = waitForFragmentSeed(getProsemirrorFragment(doc), role, 1000);
+    const waiting = waitForFragmentSeed(getProsemirrorFragment(doc), role);
     role.isFragmentSeeder = true;
     listener?.();
     await waiting;
@@ -99,14 +119,26 @@ describe("fragment seed arbitration", () => {
     doc.destroy();
   });
 
-  it("wakes on peer content or timeout fallback", async () => {
+  it("waits for peer content and releases subscriptions on cancellation", async () => {
     const doc = new Y.Doc();
     const role = { isFragmentSeeder: false, subscribeFragmentSeeder: () => () => {} };
-    const waiting = waitForFragmentSeed(getProsemirrorFragment(doc), role, 1000);
+    const waiting = waitForFragmentSeed(getProsemirrorFragment(doc), role);
     seedProsemirrorFragment(doc, node);
     await waiting;
     const empty = new Y.Doc();
-    await waitForFragmentSeed(getProsemirrorFragment(empty), role, 1);
+    const controller = new AbortController();
+    const unsubscribe = vi.fn();
+    const cancelled = waitForFragmentSeed(
+      getProsemirrorFragment(empty),
+      {
+        ...role,
+        subscribeFragmentSeeder: () => unsubscribe,
+      },
+      controller.signal,
+    );
+    controller.abort();
+    await cancelled;
+    expect(unsubscribe).toHaveBeenCalledOnce();
     doc.destroy();
     empty.destroy();
   });

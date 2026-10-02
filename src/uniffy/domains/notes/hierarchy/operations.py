@@ -14,6 +14,7 @@ from uniffy.core.audit.actions import Action
 from uniffy.core.errors import NotFoundError, ValidationError
 from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.notes.note import Note
+from uniffy.core.realtime.storage import lock_documents
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import ContentType, NodeType
 from uniffy.domains.files.attachments.purge import purge_attachments_for_content
@@ -71,6 +72,9 @@ class NoteHierarchy:
 
         parent_folder_id = note.parent_id
         removed_ids = await self.operations._collect_descendant_ids(note)
+        await lock_documents(
+            self.operations.session, [(ContentType.NOTE, item) for item in removed_ids]
+        )
         tags = None
         staged_tag_removals = []
         if permanent:

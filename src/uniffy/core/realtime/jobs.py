@@ -6,11 +6,47 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
+from loguru import logger
+from sqlalchemy import select
+
+from uniffy.core.models.realtime.yjs_snapshot import RealtimeYjsSnapshot
 from uniffy.core.realtime.adapter import RealtimeRenderConflict
 from uniffy.core.realtime.metrics import REALTIME_SNAPSHOT_TASK_DURATION
 from uniffy.core.realtime.snapshot import persist_snapshot
 from uniffy.core.types import ContentType
+from uniffy.infrastructure.database.session import open_session
 from uniffy.vendor.arq import Retry
+
+logger = logger.bind(component="core.realtime.jobs")
+
+
+async def recover_realtime_projections(ctx: dict[str, Any]) -> None:
+    async with open_session() as db:
+        pending = (
+            (
+                await db.execute(
+                    select(RealtimeYjsSnapshot)
+                    .where(
+                        RealtimeYjsSnapshot.revision > RealtimeYjsSnapshot.rendered_revision,
+                    )
+                    .order_by(RealtimeYjsSnapshot.updated_at)
+                    .limit(100)
+                )
+            )
+            .scalars()
+            .all()
+        )
+    for snapshot in pending:
+        if snapshot.organization_id is None:
+            continue
+        try:
+            await persist_snapshot(
+                snapshot.content_type, snapshot.content_id, snapshot.organization_id, b"", b""
+            )
+        except Exception:
+            logger.exception(
+                "Realtime projection recovery failed", content_id=str(snapshot.content_id)
+            )
 
 
 async def save_realtime_snapshot(

@@ -10,17 +10,14 @@ import asyncio
 import contextlib
 import time
 from collections.abc import Sequence
-from uuid import UUID, uuid4
+from uuid import UUID
 
 import pycrdt
 from loguru import logger
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.auth.permissions import role_can_edit, role_can_view
 from uniffy.core.auth.permissions.checker import PermissionChecker
-from uniffy.core.models.realtime.yjs_snapshot import RealtimeYjsSnapshot
-from uniffy.core.realtime.adapter import RealtimeContentAdapter, get_realtime_adapter
+from uniffy.core.realtime.adapter import get_realtime_adapter
 from uniffy.core.realtime.auth import (
     WS_CLOSE_FORBIDDEN,
     WS_CLOSE_TOKEN_REVOKED,
@@ -39,7 +36,6 @@ from uniffy.core.realtime.metrics import (
 from uniffy.core.realtime.multiplex import encode_doc_frame
 from uniffy.core.realtime.publisher import publish_doc_update
 from uniffy.core.realtime.router import RouterCallbacks, router
-from uniffy.core.realtime.seeding import fragment_seeder_changes
 from uniffy.core.realtime.snapshot import snapshot_writer
 from uniffy.core.realtime.state import (
     ClientHandle,
@@ -48,11 +44,21 @@ from uniffy.core.realtime.state import (
     YDocSession,
     doc_name_for,
 )
+from uniffy.core.realtime.storage import (
+    accept_update,
+    claim_seed,
+    decode_snapshot,
+    load_snapshot,
+    lock_document,
+    stage_seed,
+)
 from uniffy.core.realtime.wire import (
     create_auth_denied_message,
     create_fragment_seeder_message,
+    create_generation_message,
     create_update_message,
 )
+from uniffy.core.types import ContentRole
 from uniffy.infrastructure.database.session import open_session
 
 __all__ = ["ClientHandle", "DocKey", "WSSession", "YDocManager", "YDocSession", "ydoc_manager"]
@@ -155,7 +161,7 @@ class YDocManager:
                 if handle.ws_session is not None:
                     handle.ws_session.doc_handles.pop(key, None)
                 REALTIME_ACTIVE_CLIENTS.labels(content_type=key[0].value).dec()
-            self.refresh_fragment_seeder(session)
+            await self.refresh_fragment_seeder(session)
             if not session.clients and session.eviction_task is None:
                 session.eviction_task = asyncio.create_task(self._evict_after_idle(key))
 
@@ -164,9 +170,30 @@ class YDocManager:
         for key in list(ws_session.doc_handles.keys()):
             await self.release(key, ws_session.conn_id)
 
-    def refresh_fragment_seeder(self, session: YDocSession) -> None:
-        for handle, granted in fragment_seeder_changes(session):
-            enqueue_for_handle(handle, create_fragment_seeder_message(granted), kind="seeder")
+    async def refresh_fragment_seeder(self, session: YDocSession) -> None:
+        candidates = [
+            f"{self._replica_id}:{handle.conn_id}"
+            for handle in session.clients.values()
+            if handle.can_edit and not handle.closed
+        ]
+        owner = await claim_seed(session.key, session.organization_id, candidates, self._replica_id)
+        selected = next(
+            (
+                handle.conn_id
+                for handle in session.clients.values()
+                if f"{self._replica_id}:{handle.conn_id}" == owner
+            ),
+            None,
+        )
+        previous = session.seeder_conn_id
+        session.seeder_conn_id = selected
+        if previous == selected:
+            return
+        for handle in session.clients.values():
+            if handle.conn_id == selected or handle.conn_id == previous:
+                enqueue_for_handle(
+                    handle, create_fragment_seeder_message(handle.conn_id == selected), kind="seeder"
+                )
 
     async def flush_all(self, *, timeout: float = SHUTDOWN_FLUSH_TIMEOUT_SECONDS) -> None:
         """Force-flush every live doc; a stopping process must not hold the only copy of edits."""
@@ -206,24 +233,19 @@ class YDocManager:
         update_bytes: bytes,
         *,
         source_conn_id: int,
+        generation: str,
     ) -> None:
         """Apply a local client's update, fan out to other local clients, and publish to Valkey."""
         content_type_label = session.key[0].value
         source = session.clients.get(source_conn_id)
         editor_id = source.user_id if source is not None else None
-        if editor_id is not None:
-            session.last_editor_id = editor_id
-        async with session.lock:
-            session.ydoc.apply_update(update_bytes)
-            self.refresh_fragment_seeder(session)
-            frame = create_update_message(update_bytes)
-            for cid, peer in session.clients.items():
-                if cid == source_conn_id:
-                    continue
-                enqueue_for_handle(peer, frame, kind="update")
-                REALTIME_UPDATE_MESSAGES_TOTAL.labels(
-                    content_type=content_type_label, direction="local_fanout"
-                ).inc()
+        if editor_id is None:
+            return
+        await accept_update(
+            session.key, session.organization_id, editor_id, generation, update_bytes
+        )
+        session.last_editor_id = editor_id
+        await self.refresh_document(session)
 
         await publish_doc_update(
             session.key[0],
@@ -263,29 +285,10 @@ class YDocManager:
 
         async with open_session() as db:
             adapter = get_realtime_adapter(content_type)
-            snapshot = (
-                await db.execute(
-                    select(RealtimeYjsSnapshot).where(
-                        RealtimeYjsSnapshot.content_type == content_type,
-                        RealtimeYjsSnapshot.content_id == content_id,
-                    )
-                )
-            ).scalar_one_or_none()
-
-            if snapshot is not None:
-                ydoc.apply_update(snapshot.updates)
-                logger.debug(
-                    f"hydrated {content_type.value}:{content_id} from snapshot",
-                    component=LOGGER_COMPONENT,
-                )
-            else:
-                source = "domain"
-                await adapter.hydrate_ydoc(db, ydoc, content_id, organization_id)
-                ydoc.get(DOC_META_FIELD, type=pycrdt.Map)[DOC_GENERATION_KEY] = str(uuid4())
-                logger.debug(
-                    f"hydrated {content_type.value}:{content_id} from domain row",
-                    component=LOGGER_COMPONENT,
-                )
+            await lock_document(db, key, organization_id)
+            snapshot = await stage_seed(db, key, organization_id)
+            ydoc.apply_update(snapshot.updates)
+            await db.commit()
             policy_key = await adapter.policy_key(db, content_id, organization_id)
 
         REALTIME_HYDRATION_DURATION.labels(content_type=content_type.value, source=source).observe(
@@ -320,6 +323,10 @@ class YDocManager:
                 f"eviction flush failed for {key[0].value}:{key[1]}",
                 component=LOGGER_COMPONENT,
             )
+            async with self._global_lock:
+                if self._sessions.get(key) is session and not session.clients:
+                    session.eviction_task = asyncio.create_task(self._evict_after_idle(key))
+            return
 
         async with self._global_lock:
             session = self._sessions.get(key)
@@ -338,45 +345,29 @@ class YDocManager:
         self, session: YDocSession, update_bytes: bytes, editor_id: UUID | None = None
     ) -> None:
         """Apply a peer-replica update and fan out to local clients without re-publishing."""
-        content_type_label = session.key[0].value
-        if editor_id is not None:
-            session.last_editor_id = editor_id
-        REALTIME_UPDATE_MESSAGES_TOTAL.labels(
-            content_type=content_type_label, direction="pubsub_in"
-        ).inc()
-        async with session.lock:
-            session.ydoc.apply_update(update_bytes)
-            self.refresh_fragment_seeder(session)
-            frame = create_update_message(update_bytes)
-            for peer in session.clients.values():
-                enqueue_for_handle(peer, frame, kind="update")
+        await self.refresh_document(session)
 
-        await snapshot_writer.schedule(session)
+    async def refresh_document(self, session: YDocSession) -> None:
+        async with session.lock:
+            async with open_session() as db:
+                snapshot = await load_snapshot(db, session.key)
+            if snapshot is None:
+                return
+            generation = snapshot.generation or ""
+            current = session.ydoc.get(DOC_META_FIELD, type=pycrdt.Map).get(DOC_GENERATION_KEY, "")
+            if current != generation:
+                session.ydoc = decode_snapshot(snapshot)
+            else:
+                session.ydoc.apply_update(snapshot.updates)
+            for peer in list(session.clients.values()):
+                enqueue_for_handle(peer, create_generation_message(generation), kind="generation")
+                enqueue_for_handle(peer, create_update_message(snapshot.updates), kind="update")
+            await self.refresh_fragment_seeder(session)
 
     async def _apply_content_replace(self, key: DocKey, content: str) -> None:
-        """Graft a domain column write into the live doc and fan it out.
-
-        Keeps the session alive: evicting instead would make every attached
-        client re-push its old CRDT state on reconnect and double the content.
-        """
-        async with self._global_lock:
-            session = self._sessions.get(key)
-        if session is None:
-            return
-        adapter = get_realtime_adapter(key[0])
-        async with session.lock:
-            state_before = session.ydoc.get_state()
-            if not adapter.apply_external_content(session.ydoc, content):
-                return
-            update_bytes = session.ydoc.get_update(state_before)
-            frame = create_update_message(update_bytes)
-            for peer in session.clients.values():
-                enqueue_for_handle(peer, frame, kind="update")
-            REALTIME_UPDATE_MESSAGES_TOTAL.labels(
-                content_type=key[0].value, direction="content_replace"
-            ).inc()
-
-        await snapshot_writer.schedule(session)
+        session = self._sessions.get(key)
+        if session is not None:
+            await self.refresh_document(session)
 
     async def _reauthorize_docs(self, keys: Sequence[DocKey], user_id: UUID | None) -> None:
         """Re-run authorize for attached clients; ``user_id`` narrows to that user's handles.
@@ -399,51 +390,40 @@ class YDocManager:
         if not targets:
             return
 
+        decisions: list[tuple[YDocSession, ClientHandle, ContentRole | None]] = []
         async with open_session() as db:
             checker = PermissionChecker(db)
             for session, handles in targets:
                 adapter = get_realtime_adapter(session.key[0])
                 for handle in handles:
-                    await self._reauthorize_handle(db, checker, adapter, session, handle)
-
-    async def _reauthorize_handle(
-        self,
-        db: AsyncSession,
-        checker: PermissionChecker,
-        adapter: RealtimeContentAdapter,
-        session: YDocSession,
-        handle: ClientHandle,
-    ) -> None:
-        content_type, content_id = session.key
-        try:
-            role = await adapter.authorize(
-                db, handle.user_id, session.organization_id, content_id, checker=checker
-            )
-        except Exception:
-            logger.exception(
-                "reauthorize failed; closing session as forbidden",
-                component=LOGGER_COMPONENT,
-            )
-            REALTIME_PERMISSION_REJECTIONS_TOTAL.labels(
-                content_type=content_type.value, reason="reauthorize_failed"
-            ).inc()
-            await self._close_handle(handle, WS_CLOSE_FORBIDDEN, "reauthorize failed")
-            return
-
-        if role is None or not role_can_view(role):
-            REALTIME_PERMISSION_REJECTIONS_TOTAL.labels(
-                content_type=content_type.value, reason="role_revoked"
-            ).inc()
-            await self._close_handle(handle, WS_CLOSE_FORBIDDEN, "access revoked")
-            return
-        can_edit = role_can_edit(role)
-        if handle.can_edit and not can_edit:
-            # Without this frame the client keeps writing and its next frame closes the socket.
-            enqueue_for_handle(
-                handle, create_auth_denied_message("edit access removed"), kind="auth"
-            )
-        handle.can_edit = can_edit
-        self.refresh_fragment_seeder(session)
+                    try:
+                        role = await adapter.authorize(
+                            db,
+                            handle.user_id,
+                            session.organization_id,
+                            session.key[1],
+                            checker=checker,
+                        )
+                    except Exception:
+                        logger.exception("Realtime authorization failed")
+                        role = None
+                    decisions.append((session, handle, role))
+        for session, handle, role in decisions:
+            if role is None or not role_can_view(role):
+                REALTIME_PERMISSION_REJECTIONS_TOTAL.labels(
+                    content_type=session.key[0].value, reason="role_revoked"
+                ).inc()
+                await self._close_handle(handle, WS_CLOSE_FORBIDDEN, "access revoked")
+                continue
+            can_edit = role_can_edit(role)
+            if handle.can_edit and not can_edit:
+                enqueue_for_handle(
+                    handle, create_auth_denied_message("edit access removed"), kind="auth"
+                )
+            changed = handle.can_edit != can_edit
+            handle.can_edit = can_edit
+            if changed:
+                await self.refresh_fragment_seeder(session)
 
     async def _close_stale_user_sessions(self, user_id: UUID, new_version: int) -> None:
         """Close every handle for ``user_id`` whose ``token_version`` predates ``new_version``."""
@@ -482,11 +462,18 @@ class YDocManager:
     async def _close_handle(self, handle: ClientHandle, code: int, reason: str) -> None:
         if handle.closed:
             return
+        if code == WS_CLOSE_FORBIDDEN and handle.doc_key is not None:
+            enqueue_for_handle(handle, create_auth_denied_message(reason, no_view=True), kind="auth")
+            if handle.ws_session is not None:
+                handle.ws_session.denied_docs.add(handle.doc_key)
+            handle.closed = True
+            await self.release(handle.doc_key, handle.conn_id)
+            return
         handle.closed = True
         if handle.doc_key is not None:
             session = self._sessions.get(handle.doc_key)
             if session is not None:
-                self.refresh_fragment_seeder(session)
+                await self.refresh_fragment_seeder(session)
         with contextlib.suppress(BaseException):
             await handle.ws.close(code=code, reason=reason)
 

@@ -1,10 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { YTextEvent } from "yjs";
-import { getMarkdownYText } from "@features/notes/realtime/markdown";
+import {
+  getMarkdownYText,
+  MARKDOWN_MIRROR_FIELD,
+  MIRROR_ACTIVE_KEY,
+} from "@features/notes/realtime/markdown";
 import { diffStrings } from "@features/notes/realtime/textDiff";
 import { useNoteRealtimeSession } from "@features/notes/realtime/useNoteRealtimeSession";
 import type { DocSession } from "@shared/realtime/useDocSession";
 import type { RealtimeStatus } from "@shared/realtime/protocol";
+import type { MobileRecoveredDraft } from "@shared/realtime/draftStorage";
+import { saveTextDraft } from "@shared/realtime/draftStorage";
+import { useAuth } from "@core/providers/AuthContext";
 
 const PUSH_DEBOUNCE_MS = 120;
 // Remote merges render continuously; the window only coalesces bursts so the
@@ -19,8 +26,10 @@ const TYPING_IDLE_MS = 900;
 export interface NoteCoEditing {
   session: DocSession | null;
   status: RealtimeStatus;
-  /** Realtime owns content persistence once the first sync lands. */
+  recoveredDrafts: MobileRecoveredDraft[];
+  /** The current session has completed its initial merge. */
   live: boolean;
+  ownsContent: boolean;
   scheduleLocalPush(canonical: string): void;
   flushLocalPush(): void;
   /** Commit a deferred remote merge now (call on input blur). */
@@ -57,6 +66,7 @@ export function useNoteCoEditing(
     readOnly?: boolean;
   } & CoEditingCallbacks,
 ): NoteCoEditing {
+  const { user, organizationId } = useAuth();
   const controllerRef = useRef<Controller | null>(null);
   // Flush in-flight local edits while the doc and socket are still live; the
   // controller effect's own cleanup runs after the detach and is too late.
@@ -64,13 +74,16 @@ export function useNoteCoEditing(
     controllerRef.current?.flush();
   }, []);
 
-  const { session, status } = useNoteRealtimeSession({
+  const { session, status, recoveredDrafts } = useNoteRealtimeSession({
     noteId: opts.noteId,
     enabled: opts.enabled,
     readOnly: opts.readOnly,
     onBeforeDetach,
   });
-  const [live, setLive] = useState(false);
+  const [liveSessionId, setLiveSessionId] = useState<string | null>(null);
+  const [draftId] = useState(() => `${Date.now()}.${Math.random().toString(36).slice(2)}`);
+  const live = session !== null && liveSessionId === session.sessionId;
+  const hadLiveSession = useRef(false);
 
   const callbacksRef = useRef<CoEditingCallbacks>(opts);
   useEffect(() => {
@@ -79,18 +92,15 @@ export function useNoteCoEditing(
 
   useEffect(() => {
     if (!session) {
-      // `live` is not derivable: it turns true only after the post-handshake
-      // seed inside whenSynced, and it decides which writer owns the note's
-      // content. Losing the session has to hand ownership back to the RPC
-      // autosave in the same tick, or neither writer saves.
       // eslint-disable-next-line react/react-compiler
-      setLive(false);
+      setLiveSessionId(null);
       controllerRef.current = null;
       return;
     }
 
     const ytext = getMarkdownYText(session.ydoc);
     let cancelled = false;
+    let ready = false;
     let lastPushed: string | null = null;
     let pendingPush: string | null = null;
     let pushTimer: ReturnType<typeof setTimeout> | null = null;
@@ -102,6 +112,7 @@ export function useNoteCoEditing(
     // doc. Pushing a diff computed against a base the doc has moved past
     // would treat every peer insert as a local delete and wipe it.
     const doPush = (canonical: string) => {
+      if (!ready) return;
       const prev = lastPushed ?? "";
       if (canonical === prev) return;
       const dLocal = diffStrings(prev, canonical);
@@ -130,6 +141,7 @@ export function useNoteCoEditing(
       }
       index = Math.min(index, ytext.length);
       session.ydoc.transact(() => {
+        session.ydoc.getMap(MARKDOWN_MIRROR_FIELD).set(MIRROR_ACTIVE_KEY, false);
         if (deleteCount > 0) ytext.delete(index, Math.min(deleteCount, ytext.length - index));
         if (dLocal.insert.length > 0) ytext.insert(index, dLocal.insert);
       }, session.sessionId);
@@ -212,7 +224,8 @@ export function useNoteCoEditing(
       const serverText = ytext.toString();
       const local = callbacksRef.current.getLocalCanonical();
       const loaded = callbacksRef.current.getLoadedCanonical();
-      if (loaded !== null && local !== loaded) {
+      ready = true;
+      if (!hadLiveSession.current && loaded !== null && local !== loaded) {
         // The user typed before the handshake finished. Diff against the
         // RPC-loaded base their input actually grew from - seeding from the
         // server text would turn every character a peer added since that
@@ -227,7 +240,8 @@ export function useNoteCoEditing(
       }
       ytext.observe(observer);
       observing = true;
-      setLive(true);
+      hadLiveSession.current = true;
+      setLiveSessionId(session.sessionId);
     });
 
     return () => {
@@ -239,11 +253,22 @@ export function useNoteCoEditing(
       flush();
       controllerRef.current = null;
     };
-  }, [session]);
+  }, [session, opts.noteId]);
 
-  const scheduleLocalPush = useCallback((canonical: string) => {
-    controllerRef.current?.schedule(canonical);
-  }, []);
+  const scheduleLocalPush = useCallback(
+    (canonical: string) => {
+      if (live) controllerRef.current?.schedule(canonical);
+      else if (user?.id && organizationId && opts.noteId) {
+        saveTextDraft(
+          `realtime.${user.id}.${organizationId}.NOTE.${opts.noteId}`,
+          canonical,
+          callbacksRef.current.getLoadedCanonical(),
+          session?.sessionId ?? draftId,
+        );
+      }
+    },
+    [live, user, organizationId, opts.noteId, session, draftId],
+  );
   const flushLocalPush = useCallback(() => {
     controllerRef.current?.flush();
   }, []);
@@ -251,5 +276,14 @@ export function useNoteCoEditing(
     controllerRef.current?.applyNow();
   }, []);
 
-  return { session, status, live, scheduleLocalPush, flushLocalPush, applyPendingRemote };
+  return {
+    session,
+    status,
+    live,
+    ownsContent: opts.noteId !== undefined,
+    recoveredDrafts,
+    scheduleLocalPush,
+    flushLocalPush,
+    applyPendingRemote,
+  };
 }

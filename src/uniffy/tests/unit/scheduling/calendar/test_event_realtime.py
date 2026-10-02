@@ -177,6 +177,7 @@ async def test_render_persists_description_and_attributes_mentions(editor_known:
         ]
     )
     session.commit = AsyncMock()
+    session.flush = AsyncMock()
     session.refresh = AsyncMock()
     with (
         patch(f"{PERSISTENCE_MODULE}.EventContentOperations") as operations,
@@ -222,6 +223,7 @@ async def test_render_refuses_to_overwrite_a_later_plain_write() -> None:
     session = MagicMock()
     session.execute = AsyncMock(return_value=MagicMock(scalar_one_or_none=lambda: event))
     session.commit = AsyncMock()
+    session.flush = AsyncMock()
     with pytest.raises(RealtimeRenderSuperseded):
         await EventRealtimePersistence(session, MagicMock()).save(
             event.organization_id,
@@ -244,6 +246,7 @@ async def test_render_proceeds_when_the_plain_write_left_equal_text() -> None:
         ]
     )
     session.commit = AsyncMock()
+    session.flush = AsyncMock()
     session.refresh = AsyncMock()
     with (
         patch(f"{PERSISTENCE_MODULE}.EventContentOperations") as operations,

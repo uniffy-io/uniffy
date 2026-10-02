@@ -11,6 +11,7 @@ import { HYDRATION_ORIGIN } from "@/features/realtime/persistence/encryptedYjsPe
 
 export const SEEDED_BY_KEY = "seeded_by";
 const SEED_CLAIM_PREFIX = "seeded_by:";
+const SEED_CONTENT_PREFIX = "seed_content:";
 
 export function seedProsemirrorFragment(ydoc: Y.Doc, node: Node): void {
   const fragment = getProsemirrorFragment(ydoc);
@@ -24,6 +25,10 @@ export function seedProsemirrorFragment(ydoc: Y.Doc, node: Node): void {
       `${SEED_CLAIM_PREFIX}${ydoc.clientID}`,
       fragment.toArray().map((item) => item._item!.id.clock),
     );
+    metadata.set(
+      `${SEED_CONTENT_PREFIX}${ydoc.clientID}`,
+      fragment.toArray().map((item) => item.toString()),
+    );
   }, HYDRATION_ORIGIN);
 }
 
@@ -34,7 +39,8 @@ export function observeFragmentSeedDuplicates(ydoc: Y.Doc): () => void {
   const reconcile = () => {
     if (reconciling) return;
     const ownClocks = metadata.get(`${SEED_CLAIM_PREFIX}${ydoc.clientID}`);
-    if (!Array.isArray(ownClocks)) return;
+    const ownContent = metadata.get(`${SEED_CONTENT_PREFIX}${ydoc.clientID}`);
+    if (!Array.isArray(ownClocks) || !Array.isArray(ownContent)) return;
     const items = fragment.toArray();
     let winner = metadata.get(SEEDED_BY_KEY);
     for (const [key, clocks] of metadata.entries()) {
@@ -54,7 +60,12 @@ export function observeFragmentSeedDuplicates(ydoc: Y.Doc): () => void {
       ydoc.transact(() => {
         for (let index = items.length - 1; index >= 0; index--) {
           const id = items[index]._item?.id;
-          if (id?.client === ydoc.clientID && ownClocks.includes(id.clock))
+          // Edits inside a seed block belong to users even when its seed loses arbitration.
+          if (
+            id?.client === ydoc.clientID &&
+            ownClocks.includes(id.clock) &&
+            items[index].toString() === ownContent[ownClocks.indexOf(id.clock)]
+          )
             fragment.delete(index, 1);
         }
         if (metadata.get(SEEDED_BY_KEY) !== winner) metadata.set(SEEDED_BY_KEY, winner);
@@ -75,14 +86,15 @@ export function observeFragmentSeedDuplicates(ydoc: Y.Doc): () => void {
 export function waitForFragmentSeed(
   fragment: Y.XmlFragment,
   seeder: FragmentSeeder,
-  timeoutMs: number,
+  signal?: AbortSignal,
 ): Promise<void> {
-  if (seeder.isFragmentSeeder || fragmentHasRealContent(fragment)) return Promise.resolve();
+  if (signal?.aborted || seeder.isFragmentSeeder || fragmentHasRealContent(fragment))
+    return Promise.resolve();
   return new Promise((resolve) => {
     const finish = () => {
-      clearTimeout(timer);
       unsubscribe();
       fragment.unobserveDeep(onChange);
+      signal?.removeEventListener("abort", finish);
       resolve();
     };
     const onChange = () => {
@@ -90,6 +102,6 @@ export function waitForFragmentSeed(
     };
     const unsubscribe = seeder.subscribeFragmentSeeder(onChange);
     fragment.observeDeep(onChange);
-    const timer = setTimeout(finish, timeoutMs);
+    signal?.addEventListener("abort", finish, { once: true });
   });
 }

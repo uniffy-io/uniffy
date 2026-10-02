@@ -89,9 +89,6 @@ export function useMarkdownDocSession({
   }, [session, undoManager]);
   const syncing = useOutboundSyncing(docName);
   const baseStatus = session?.status ?? "idle";
-  const status: RealtimeStatus =
-    syncing && ["connected", "connecting", "disconnected"].includes(baseStatus)
-      ? "syncing"
-      : baseStatus;
+  const status: RealtimeStatus = syncing && baseStatus === "connected" ? "syncing" : baseStatus;
   return { binding, status, docName };
 }

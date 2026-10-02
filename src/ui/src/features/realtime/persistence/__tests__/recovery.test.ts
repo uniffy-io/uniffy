@@ -73,7 +73,7 @@ describe("realtime local recovery", () => {
     vi.restoreAllMocks();
   });
 
-  it("wipes rows without generation during schema upgrade", async () => {
+  it("preserves rows without generation during schema upgrade", async () => {
     storage.rows.set(JSON.stringify(["TASK", "task", "legacy:1"]), "legacy-row");
     const doc = new Y.Doc();
     const persistence = attachEncryptedPersistence({
@@ -83,7 +83,7 @@ describe("realtime local recovery", () => {
     });
     await persistence.hydrate({ serverGeneration: "current" });
     expect(storage.version).toBe(3);
-    expect(storage.rows.size).toBe(0);
+    expect(storage.rows.size).toBe(1);
     await persistence.destroy({ discard: true });
     doc.destroy();
   });
@@ -119,7 +119,7 @@ describe("realtime local recovery", () => {
     server.destroy();
   });
 
-  it("drops mismatched cache before its LWW metadata or fragment can merge", async () => {
+  it("retains mismatched cache without merging its LWW metadata or fragment", async () => {
     vi.spyOn(console, "warn").mockImplementation(() => {});
     const stale = new Y.Doc();
     stale.clientID = 4294967294;
@@ -149,12 +149,15 @@ describe("realtime local recovery", () => {
     expect(reopened.getText("markdown").toString()).toBe("new column");
     expect(reopened.getXmlFragment("prosemirror").length).toBe(0);
     expect(reopened.getMap("markdown_mirror").get("active")).toBeUndefined();
-    expect(storage.rows.size).toBe(0);
+    expect(storage.rows.size).toBe(1);
     expect(persistenceRecoveryStats.generationMismatchRows).toBe(1);
-    expect(console.warn).toHaveBeenCalledWith("[realtime] dropped stale generation rows", {
-      docKey: "TASK:task",
-      rows: 1,
-    });
+    expect(console.warn).toHaveBeenCalledWith(
+      "[realtime] retained recovery rows from another generation",
+      {
+        docKey: "TASK:task",
+        rows: 1,
+      },
+    );
     await recovery.destroy({ discard: true });
     stale.destroy();
     reopened.destroy();
@@ -251,5 +254,64 @@ describe("realtime local recovery", () => {
     await reopened.destroy();
     first.destroy();
     second.destroy();
+  });
+  it("clean close preserves unseen updates from another tab", async () => {
+    const first = new Y.Doc();
+    first.getMap(DOC_META_FIELD).set(DOC_GENERATION_KEY, "same");
+    const second = new Y.Doc();
+    Y.applyUpdate(second, Y.encodeStateAsUpdate(first));
+    const left = attachEncryptedPersistence({
+      contentType: "TASK",
+      contentId: "tabs",
+      ydoc: first,
+    });
+    const right = attachEncryptedPersistence({
+      contentType: "TASK",
+      contentId: "tabs",
+      ydoc: second,
+    });
+    await left.hydrate({ serverGeneration: "same" });
+    await right.hydrate({ serverGeneration: "same" });
+    second.getText("markdown").insert(0, "unseen offline work");
+    await right.destroy();
+    await left.destroy({ discard: true });
+    const reopened = new Y.Doc();
+    const recovery = attachEncryptedPersistence({
+      contentType: "TASK",
+      contentId: "tabs",
+      ydoc: reopened,
+    });
+    await recovery.hydrate({ serverGeneration: "same" });
+    expect(reopened.getText("markdown").toString()).toBe("unseen offline work");
+    await recovery.destroy();
+    first.destroy();
+    second.destroy();
+    reopened.destroy();
+  });
+
+  it("does not combine different generations during offline replay", async () => {
+    for (const generation of ["first", "second"]) {
+      const doc = new Y.Doc();
+      doc.getMap(DOC_META_FIELD).set(DOC_GENERATION_KEY, generation);
+      doc.getText("markdown").insert(0, generation);
+      await attachEncryptedPersistence({
+        contentType: "TASK",
+        contentId: "epochs",
+        ydoc: doc,
+      }).destroy();
+      doc.destroy();
+    }
+    const doc = new Y.Doc();
+    const persistence = attachEncryptedPersistence({
+      contentType: "TASK",
+      contentId: "epochs",
+      ydoc: doc,
+    });
+    await persistence.hydrate();
+    expect(doc.getText("markdown").toString()).toBe("");
+    expect(storage.rows.size).toBe(2);
+    await persistence.destroy({ discard: true });
+    expect(storage.rows.size).toBe(2);
+    doc.destroy();
   });
 });
