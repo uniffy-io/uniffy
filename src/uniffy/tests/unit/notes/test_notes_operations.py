@@ -15,6 +15,21 @@ from uniffy.domains.notes.operations import NoteOperations
 
 
 @pytest.fixture(autouse=True)
+def realtime_storage(monkeypatch):
+    monkeypatch.setattr("uniffy.domains.notes.content.updates.lock_document", AsyncMock())
+    monkeypatch.setattr(
+        "uniffy.domains.notes.content.updates.load_snapshot", AsyncMock(return_value=None)
+    )
+    replacement = AsyncMock()
+    monkeypatch.setattr("uniffy.domains.notes.content.updates.stage_replacement", replacement)
+    monkeypatch.setattr("uniffy.domains.notes.content.realtime.stage_inline_tags", AsyncMock())
+    monkeypatch.setattr(
+        "uniffy.domains.notes.content.realtime.finish_inline_tags_after_commit", AsyncMock()
+    )
+    return replacement
+
+
+@pytest.fixture(autouse=True)
 def publish_mock(monkeypatch):
     """Content updates fan out over Valkey; keep unit tests off the wire."""
     mock = AsyncMock()
@@ -78,7 +93,9 @@ def _select_result(note: Note | None) -> MagicMock:
 
 
 class TestUpdateCas:
-    async def test_content_update_bumps_version_and_deletes_snapshot_row(self) -> None:
+    async def test_content_update_bumps_version_and_stages_replacement(
+        self, realtime_storage
+    ) -> None:
         note = _make_note(version=3)
         ops = _make_ops(note)
         ops.session.execute.side_effect = [MagicMock(rowcount=1), MagicMock()]
@@ -98,9 +115,9 @@ class TestUpdateCas:
         assert params["version_1"] == 3
         assert params["content"] == "new content"
 
-        delete_stmt = ops.session.execute.await_args_list[1].args[0]
-        assert isinstance(delete_stmt, Delete)
-        assert delete_stmt.table.name == "realtime_yjs_snapshots"
+        realtime_storage.assert_awaited_once_with(
+            ops.session, (ops.content_type, note.id), note.organization_id
+        )
 
     async def test_content_update_publishes_content_replace(self, publish_mock) -> None:
         note = _make_note(version=3)

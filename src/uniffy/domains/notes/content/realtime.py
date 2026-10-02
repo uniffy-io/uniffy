@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
@@ -13,8 +14,10 @@ from sqlalchemy import update as sql_update
 from uniffy.core.models.notes.note import Note
 from uniffy.core.realtime.adapter import RealtimeRenderConflict, check_not_superseded
 from uniffy.core.realtime.metrics import REALTIME_BLANK_CONTENT_OVERWRITES_TOTAL
+from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import ContentType, NodeType
 from uniffy.domains.notes.content.fields import extract_content_fields
+from uniffy.domains.tags.sync import finish_inline_tags_after_commit, stage_inline_tags
 
 if TYPE_CHECKING:
     from uniffy.domains.notes.operations import NoteOperations
@@ -26,7 +29,7 @@ class NoteRealtimePersistence:
     def __init__(self, operations: NoteOperations) -> None:
         self.operations = operations
 
-    async def save(
+    async def stage_save(
         self,
         organization_id: UUID,
         note_id: UUID,
@@ -35,7 +38,7 @@ class NoteRealtimePersistence:
         *,
         actor_id: UUID | None = None,
         supersede_after: datetime | None = None,
-    ) -> Note | None:
+    ) -> tuple[Note, Callable[[], Awaitable[None]]] | None:
         note = await self._load_note(organization_id, note_id)
         if not note:
             return None
@@ -92,7 +95,6 @@ class NoteRealtimePersistence:
                 )
                 .execution_options(synchronize_session=False)
             )
-            await self.operations.session.commit()
             if result.rowcount:
                 break
         else:
@@ -106,22 +108,50 @@ class NoteRealtimePersistence:
         await self.operations.session.refresh(note)
         # The last live editor stands in for the missing request actor, else the owner.
         actor_id = actor_id or note.owner_id
-        await self.operations._sync_tags_after_save(
-            user_id=actor_id,
+        tags = await stage_inline_tags(
+            self.operations.session,
+            content_urn=build_content_urn(ContentType.NOTE, note.id),
+            actor_id=actor_id,
             organization_id=organization_id,
-            note=note,
-            tag_ids=None,
-            parsed_inline_names=fields.parsed_inline_tag_names,
+            parsed_names=fields.parsed_inline_tag_names or [],
         )
-        await self.operations._index_for_search(note)
-        await self.operations.session.commit()
-        await self.operations._notify_new_mentions(
-            actor_id,
+
+        async def after_commit() -> None:
+            await finish_inline_tags_after_commit(tags)
+            await self.operations._index_for_search(note)
+            await self.operations._notify_new_mentions(
+                actor_id,
+                organization_id,
+                note,
+                old_refs=old_refs,
+                writer_id=None,
+            )
+
+        return note, after_commit
+
+    async def save(
+        self,
+        organization_id: UUID,
+        note_id: UUID,
+        content: str,
+        canvas_content: dict[str, Any] | None,
+        *,
+        actor_id: UUID | None = None,
+        supersede_after: datetime | None = None,
+    ) -> Note | None:
+        staged = await self.stage_save(
             organization_id,
-            note,
-            old_refs=old_refs,
-            writer_id=None,
+            note_id,
+            content,
+            canvas_content,
+            actor_id=actor_id,
+            supersede_after=supersede_after,
         )
+        if staged is None:
+            return None
+        note, after_commit = staged
+        await self.operations.session.commit()
+        await after_commit()
         return note
 
     async def _load_note(

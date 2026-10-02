@@ -31,16 +31,27 @@ __all__ = [
 Y_MESSAGE_AUTH = 2
 _AUTH_PERMISSION_DENIED = 0
 MESSAGE_FRAGMENT_SEEDER = 4
+MESSAGE_GENERATION = 5
+MESSAGE_DURABLE_UPDATE = 6
+MESSAGE_ACK = 7
+
+
+def create_generation_message(generation: str) -> bytes:
+    return write_var_uint(MESSAGE_GENERATION) + write_var_string(generation)
+
+
+def create_ack_message(update_id: str) -> bytes:
+    return write_var_uint(MESSAGE_ACK) + write_var_string(update_id)
 
 
 def create_fragment_seeder_message(granted: bool) -> bytes:
     return write_var_uint(MESSAGE_FRAGMENT_SEEDER) + write_var_uint(int(granted))
 
 
-def create_auth_denied_message(reason: str) -> bytes:
+def create_auth_denied_message(reason: str, *, no_view: bool = False) -> bytes:
     """Tell one client its doc is read-only so it stops emitting write frames."""
     return (
-        write_var_uint(Y_MESSAGE_AUTH) + write_var_uint(_AUTH_PERMISSION_DENIED)
+        write_var_uint(Y_MESSAGE_AUTH) + write_var_uint(1 if no_view else _AUTH_PERMISSION_DENIED)
     ) + write_var_string(reason)
 
 

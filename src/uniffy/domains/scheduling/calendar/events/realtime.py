@@ -1,3 +1,4 @@
+from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
 from uuid import UUID
 
@@ -40,7 +41,7 @@ class EventRealtimePersistence:
         self.session = session
         self.search_indexer = search_indexer
 
-    async def save(
+    async def stage_save(
         self,
         organization_id: UUID,
         event_id: UUID,
@@ -48,7 +49,7 @@ class EventRealtimePersistence:
         *,
         actor_id: UUID | None = None,
         supersede_after: datetime | None = None,
-    ) -> CalendarEvent | None:
+    ) -> tuple[CalendarEvent, Callable[[], Awaitable[None]]] | None:
         event = await load_live_event(self.session, event_id, organization_id, for_update=True)
         if event is None:
             return None
@@ -68,20 +69,41 @@ class EventRealtimePersistence:
         event.description = content
         event.outgoing_references = extract_all_outgoing_references(content, organization_id) or None
         event.updated_at = datetime.now(UTC)
+        await self.session.flush()
+
+        async def after_commit() -> None:
+            operations = EventContentOperations(self.session, self.search_indexer)
+            await operations._index_for_search(event)
+            attendee_ids = set(
+                (
+                    await self.session.execute(
+                        select(EventAttendee.user_id).where(EventAttendee.event_id == event.id)
+                    )
+                ).scalars()
+            )
+            # The last live editor stands in for the missing request actor, else the organizer.
+            actor = actor_id or event.organizer_id
+            await EventNotifications(operations).emit_mention_notifications(
+                event, actor, organization_id, old_references, {actor} | attendee_ids
+            )
+
+        return event, after_commit
+
+    async def save(
+        self,
+        organization_id: UUID,
+        event_id: UUID,
+        content: str,
+        *,
+        actor_id: UUID | None = None,
+        supersede_after: datetime | None = None,
+    ) -> CalendarEvent | None:
+        staged = await self.stage_save(
+            organization_id, event_id, content, actor_id=actor_id, supersede_after=supersede_after
+        )
+        if staged is None:
+            return None
+        event, after_commit = staged
         await self.session.commit()
-        await self.session.refresh(event)
-        operations = EventContentOperations(self.session, self.search_indexer)
-        await operations._index_for_search(event)
-        attendee_ids = set(
-            (
-                await self.session.execute(
-                    select(EventAttendee.user_id).where(EventAttendee.event_id == event.id)
-                )
-            ).scalars()
-        )
-        # The last live editor stands in for the missing request actor, else the organizer.
-        actor = actor_id or event.organizer_id
-        await EventNotifications(operations).emit_mention_notifications(
-            event, actor, organization_id, old_references, {actor} | attendee_ids
-        )
+        await after_commit()
         return event

@@ -149,7 +149,6 @@ const TOC_ICON_SVG =
 
 // A missing seeder must not leave the editor read-only indefinitely.
 // An unassigned editor waits this long for the server's seeder before seeding itself.
-const COLD_SEED_LEADER_TIMEOUT_MS = 4000;
 // A closing non-leader gives the leader this long to mirror before writing itself.
 const MIRROR_LEAVE_SETTLE_MS = 600;
 
@@ -734,6 +733,7 @@ export function CrepeEditor({
 
     const container = editorRef.current;
     let cancelled = false;
+    const seedAbort = new AbortController();
     // The Y.Text mirror stays off until the cold-start seed confirms the
     // ProseMirror doc reflects ``Y.Text("markdown")``. Mirroring an
     // unseeded (empty) doc would overwrite real markdown with "".
@@ -856,6 +856,7 @@ export function CrepeEditor({
               if (!markdownMirrorReady || readonly || !view || view.isDestroyed) return;
               const markdown = serialize(view);
               if (markdown === null) return;
+              const fragmentState = fragment.toString();
               const ytext = rt.ydoc.getText(MARKDOWN_TEXT_FIELD);
               const write = () => {
                 if (ytext.toString() !== markdown) {
@@ -869,6 +870,7 @@ export function CrepeEditor({
               if (settleTimer) clearTimeout(settleTimer);
               settleTimer = setTimeout(() => {
                 settleTimer = null;
+                if (fragment.toString() !== fragmentState) return;
                 write();
               }, settleMs);
             };
@@ -1148,11 +1150,7 @@ export function CrepeEditor({
             ) {
               // Hold input until server assignment or peer seed protects these blocks.
               crepe.setReadonly(true);
-              await waitForFragmentSeed(
-                coldFragment,
-                rtBinding.fragmentSeeder,
-                COLD_SEED_LEADER_TIMEOUT_MS,
-              );
+              await waitForFragmentSeed(coldFragment, rtBinding.fragmentSeeder, seedAbort.signal);
               if (cancelled || !crepeRef.current) return;
               if (fragmentHasRealContent(coldFragment)) {
                 markdownMirrorReady = true;
@@ -1229,7 +1227,7 @@ export function CrepeEditor({
         });
       }
 
-      if (readonly) {
+      if (readonly || rtBinding) {
         crepe.setReadonly(true);
       }
 
@@ -1250,6 +1248,7 @@ export function CrepeEditor({
 
     return () => {
       cancelled = true;
+      seedAbort.abort();
       mirrorDisposeRef.current?.();
       if (unregisterEditorRef.current) {
         unregisterEditorRef.current();

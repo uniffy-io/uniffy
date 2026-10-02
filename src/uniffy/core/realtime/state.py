@@ -54,6 +54,7 @@ class WSSession:
     connected_at: float = field(default_factory=time.time)
     outbound: asyncio.Queue[bytes] = field(default_factory=_new_outbound_queue)
     doc_handles: dict[DocKey, ClientHandle] = field(default_factory=dict)
+    denied_docs: set[DocKey] = field(default_factory=set)
     closed: bool = False
 
 

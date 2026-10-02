@@ -72,7 +72,7 @@ interface CalendarState {
     hasMore: boolean;
   };
   /** Events whose description a live editing session wrote; server rows keep the local text until a refetch. */
-  liveDescriptionIds: Record<string, true>;
+  liveDescriptionIds: Record<string, string[]>;
 }
 
 /**
@@ -84,10 +84,12 @@ function acceptServerEvent(
   event: CalendarEvent,
   descriptionRequested = false,
 ): void {
-  if (!state.events[event.id]) return;
-  if (descriptionRequested) delete state.liveDescriptionIds[event.id];
-  const live = state.liveDescriptionIds[event.id] ? state.events[event.id].description : undefined;
-  state.events[event.id] = live === undefined ? event : { ...event, description: live };
+  const superseded = state.liveDescriptionIds[event.id];
+  const live = state.events[event.id]?.description;
+  const preserve =
+    !descriptionRequested && superseded?.includes(event.description) && live !== event.description;
+  if (!preserve) delete state.liveDescriptionIds[event.id];
+  state.events[event.id] = preserve ? { ...event, description: live ?? "" } : event;
 }
 
 function createDefaultCategories(): Record<string, Category> {
@@ -184,8 +186,10 @@ const calendarSlice = createSlice({
     applyLiveDescription: (state, action: PayloadAction<{ id: string; description: string }>) => {
       const event = state.events[action.payload.id];
       if (!event) return;
+      const superseded = state.liveDescriptionIds[event.id] ?? [];
+      if (!superseded.includes(event.description)) superseded.push(event.description);
+      state.liveDescriptionIds[event.id] = superseded;
       event.description = action.payload.description;
-      state.liveDescriptionIds[event.id] = true;
     },
 
     removeEvent: (state, action: PayloadAction<string>) => {
@@ -254,11 +258,11 @@ const calendarSlice = createSlice({
         // Replace map wholesale so deleted entries drop out.
         const newEvents: Record<string, CalendarEvent> = {};
         action.payload.forEach((event) => {
-          newEvents[event.id] = event;
+          acceptServerEvent(state, event);
+          newEvents[event.id] = state.events[event.id];
         });
         state.events = newEvents;
         state.visibleEventIds = action.payload.map((e) => e.id);
-        state.liveDescriptionIds = {};
       })
       .addCase(fetchEventsInRange.rejected, (state, action) => {
         state.loading.events = false;
@@ -271,8 +275,7 @@ const calendarSlice = createSlice({
       })
       .addCase(fetchEvent.fulfilled, (state, action) => {
         state.loading.eventDetail = false;
-        delete state.liveDescriptionIds[action.payload.id];
-        state.events[action.payload.id] = action.payload;
+        acceptServerEvent(state, action.payload);
         if (!state.visibleEventIds.includes(action.payload.id)) {
           state.visibleEventIds.push(action.payload.id);
         }

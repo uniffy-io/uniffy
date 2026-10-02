@@ -2,8 +2,13 @@ import { useEffect, useRef, useState } from "react";
 import * as Y from "yjs";
 import { Awareness } from "y-protocols/awareness";
 import { useAuth } from "@core/providers/AuthContext";
-import { realtimeMultiplexer, type DocSubscription } from "@shared/realtime/multiplexer";
+import {
+  realtimeMultiplexer,
+  REMOTE_ORIGIN,
+  type DocSubscription,
+} from "@shared/realtime/multiplexer";
 import { statusFromCloseCode, type RealtimeStatus } from "@shared/realtime/protocol";
+import { saveDraft, restoreDraft, type MobileRecoveredDraft } from "@shared/realtime/draftStorage";
 
 /** Stable per-attach handle; identity never changes while the doc stays attached. */
 export interface DocSession {
@@ -19,6 +24,7 @@ export interface DocSessionState {
   session: DocSession | null;
   status: RealtimeStatus;
   synced: boolean;
+  recoveredDrafts: MobileRecoveredDraft[];
 }
 
 export interface UseDocSessionOptions {
@@ -43,11 +49,14 @@ function newSessionId(): string {
 
 export function useDocSession(opts: UseDocSessionOptions): DocSessionState {
   const { contentType, contentId, enabled, readOnly } = opts;
-  const { organizationId } = useAuth();
+  const { organizationId, user } = useAuth();
+  const userId = user?.id;
 
   const [session, setSession] = useState<DocSession | null>(null);
   const [status, setStatus] = useState<RealtimeStatus>("idle");
   const [synced, setSynced] = useState(false);
+  const [reset, setReset] = useState(0);
+  const [recoveredDrafts, setRecoveredDrafts] = useState<MobileRecoveredDraft[]>([]);
 
   const beforeDetachRef = useRef(opts.onBeforeDetach);
   useEffect(() => {
@@ -55,11 +64,17 @@ export function useDocSession(opts: UseDocSessionOptions): DocSessionState {
   });
 
   useEffect(() => {
-    if (!enabled || !contentId || !organizationId) return;
+    if (!enabled || !contentId || !organizationId || !userId) return;
 
     const ydoc = new Y.Doc();
     const awareness = new Awareness(ydoc);
     const sessionId = newSessionId();
+    const storageKey = `realtime.${userId}.${organizationId}.${contentType}.${contentId}`;
+    let disposed = false;
+    const persist = (_update: Uint8Array, origin: unknown) => {
+      if (origin !== REMOTE_ORIGIN) void saveDraft(storageKey, ydoc);
+    };
+    ydoc.on("update", persist);
 
     let resolveServerSync!: () => void;
     const whenSynced = new Promise<void>((resolve) => {
@@ -75,10 +90,23 @@ export function useDocSession(opts: UseDocSessionOptions): DocSessionState {
         ydoc,
         awareness,
         onStatus: (next) => setStatus(next),
-        onSync: () => {
-          setSynced(true);
-          resolveServerSync();
-        },
+        onWriteDenied: () => setStatus("permission_lost"),
+        onSync: () =>
+          void restoreDraft(storageKey, ydoc, sessionId)
+            .then((drafts) => {
+              if (disposed) return;
+              setRecoveredDrafts(drafts);
+              setSynced(true);
+              resolveServerSync();
+            })
+            .catch((error) => console.warn("[realtime] draft recovery failed", error))
+            .finally(() => {
+              if (!disposed) {
+                setSynced(true);
+                resolveServerSync();
+              }
+            }),
+        onGenerationMismatch: () => setReset((value) => value + 1),
         onCloseCode: (code) => {
           const mapped = statusFromCloseCode(code);
           if (mapped) setStatus(mapped);
@@ -101,6 +129,9 @@ export function useDocSession(opts: UseDocSessionOptions): DocSessionState {
 
     return () => {
       beforeDetachRef.current?.();
+      disposed = true;
+      ydoc.off("update", persist);
+      void saveDraft(storageKey, ydoc);
       subscription.destroy();
       awareness.destroy();
       ydoc.destroy();
@@ -108,7 +139,7 @@ export function useDocSession(opts: UseDocSessionOptions): DocSessionState {
       setSynced(false);
       setStatus("idle");
     };
-  }, [enabled, contentType, contentId, organizationId, readOnly]);
+  }, [enabled, contentType, contentId, organizationId, userId, readOnly, reset]);
 
-  return { session, status, synced };
+  return { session, status, synced, recoveredDrafts };
 }

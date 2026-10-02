@@ -18,6 +18,7 @@ from uniffy.core.models.calendar.exception import RecurrenceException
 from uniffy.core.models.calendar.reminder import EventReminder
 from uniffy.core.models.realtime.yjs_snapshot import RealtimeYjsSnapshot
 from uniffy.core.realtime.publisher import publish_perm_change
+from uniffy.core.realtime.storage import lock_document
 from uniffy.core.types import (
     ContentType,
     RecurrenceEditScope,
@@ -202,6 +203,7 @@ class EventDeleteOperations:
                 CalendarEvent.id == event_id, CalendarEvent.organization_id == organization_id
             )
         )
+        await lock_document(self.session, (ContentType.CALENDAR_EVENT, master_id or event_id))
         if master_id is not None:
             await get_event_for_update(self.session, master_id, organization_id)
         # Acquire the delete lock before outbox or revision writes can block attendee inserts.

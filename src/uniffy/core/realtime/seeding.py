@@ -6,13 +6,13 @@ from uniffy.core.realtime.state import ClientHandle, YDocSession
 _PARAGRAPH_TAG = "paragraph"
 
 
-def _has_fragment_content(root: pycrdt.XmlFragment | pycrdt.XmlElement) -> bool:
+def has_fragment_content(root: pycrdt.XmlFragment | pycrdt.XmlElement) -> bool:
     # ySyncPlugin can publish an empty paragraph before the assigned client seeds.
     for child in root.children:
         if isinstance(child, pycrdt.XmlText):
             if str(child):
                 return True
-        elif child.tag != _PARAGRAPH_TAG or _has_fragment_content(child):
+        elif child.tag != _PARAGRAPH_TAG or has_fragment_content(child):
             return True
     return False
 
@@ -23,7 +23,7 @@ def fragment_seeder_changes(session: YDocSession) -> list[tuple[ClientHandle, bo
         session.clients.get(session.seeder_conn_id) if session.seeder_conn_id is not None else None
     )
     selected: ClientHandle | None = None
-    if not _has_fragment_content(fragment):
+    if not has_fragment_content(fragment):
         if previous is not None and previous.can_edit and not previous.closed:
             selected = previous
         else:

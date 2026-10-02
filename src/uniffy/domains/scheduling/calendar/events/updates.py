@@ -4,7 +4,7 @@ from datetime import UTC, date, datetime
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import and_, delete, select
+from sqlalchemy import and_, select
 
 from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import Action
@@ -22,8 +22,8 @@ from uniffy.core.events.realtime import ContentAccessAction
 from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.calendar.attendee import EventAttendee
 from uniffy.core.models.calendar.event import CalendarEvent
-from uniffy.core.models.realtime.yjs_snapshot import RealtimeYjsSnapshot
 from uniffy.core.realtime.publisher import publish_content_replace, publish_perm_change
+from uniffy.core.realtime.storage import lock_document, stage_replacement
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import (
     AttendeeRole,
@@ -166,6 +166,9 @@ class EventUpdateOperations:
                     **updates,
                 )
 
+        await lock_document(
+            self.events.session, (ContentType.CALENDAR_EVENT, event_id), organization_id
+        )
         event = await self.events._fetch_by_id(event_id, organization_id)
         if not event:
             raise NotFoundError("CalendarEvent", event_id)
@@ -370,11 +373,8 @@ class EventUpdateOperations:
         )
 
         if description is not None:
-            await self.events.session.execute(
-                delete(RealtimeYjsSnapshot).where(
-                    RealtimeYjsSnapshot.content_type == ContentType.CALENDAR_EVENT,
-                    RealtimeYjsSnapshot.content_id == event.id,
-                )
+            await stage_replacement(
+                self.events.session, (ContentType.CALENDAR_EVENT, event_id), organization_id
             )
         await self.events.session.commit()
         await self.events.session.refresh(event)

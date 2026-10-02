@@ -1,3 +1,4 @@
+from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
 from uuid import UUID
 
@@ -47,7 +48,7 @@ class TaskRealtimePersistence:
         self.session = session
         self.search_indexer = search_indexer
 
-    async def save(
+    async def stage_save(
         self,
         organization_id: UUID,
         task_id: UUID,
@@ -55,7 +56,7 @@ class TaskRealtimePersistence:
         *,
         actor_id: UUID | None = None,
         supersede_after: datetime | None = None,
-    ) -> Task | None:
+    ) -> tuple[Task, Callable[[], Awaitable[None]]] | None:
         references = extract_urns_from_content(content) or None
         for attempt in range(3):
             task = await load_live_task(
@@ -93,20 +94,41 @@ class TaskRealtimePersistence:
                 )
                 .execution_options(synchronize_session=False)
             )
-            await self.session.commit()
             if result.rowcount:
                 break
         else:
             raise RealtimeRenderConflict(f"Task {task_id} remained contended after three attempts")
 
         await self.session.refresh(task)
-        await TaskContentOperations(
-            self.session, search_indexer=self.search_indexer
-        )._index_for_search(task)
-        project = await self.session.get(Project, task.project_id)
-        if project is not None:
-            # The last live editor stands in for the missing request actor, else the project owner.
-            await TaskNotifications(self.session).emit_mention_notifications(
-                task, actor_id or project.owner_id, old_refs, task.outgoing_references
-            )
+
+        async def after_commit() -> None:
+            await TaskContentOperations(
+                self.session, search_indexer=self.search_indexer
+            )._index_for_search(task)
+            project = await self.session.get(Project, task.project_id)
+            if project is not None:
+                # Attribute mentions to the last live editor, or the project owner.
+                await TaskNotifications(self.session).emit_mention_notifications(
+                    task, actor_id or project.owner_id, old_refs, task.outgoing_references
+                )
+
+        return task, after_commit
+
+    async def save(
+        self,
+        organization_id: UUID,
+        task_id: UUID,
+        content: str,
+        *,
+        actor_id: UUID | None = None,
+        supersede_after: datetime | None = None,
+    ) -> Task | None:
+        staged = await self.stage_save(
+            organization_id, task_id, content, actor_id=actor_id, supersede_after=supersede_after
+        )
+        if staged is None:
+            return None
+        task, after_commit = staged
+        await self.session.commit()
+        await after_commit()
         return task

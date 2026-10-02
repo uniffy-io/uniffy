@@ -1,5 +1,6 @@
 """Extension point between generic realtime state and domain persistence."""
 
+from collections.abc import Awaitable, Callable
 from datetime import datetime
 from typing import Protocol
 from uuid import UUID
@@ -43,6 +44,16 @@ class RealtimeContentAdapter(Protocol):
     """Per-content-type plug-in for the generic realtime stack."""
 
     content_type: ContentType
+
+    async def stage_render(
+        self,
+        session: AsyncSession,
+        ydoc: pycrdt.Doc,
+        content_id: UUID,
+        organization_id: UUID,
+        *,
+        actor_id: UUID | None = None,
+    ) -> Callable[[], Awaitable[None]] | None: ...
 
     async def policy_key(
         self,

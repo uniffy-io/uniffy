@@ -17,6 +17,7 @@ logger = logger.bind(component="infrastructure.valkey.pubsub")
 _CLEANUP_TIMEOUT = 3.0
 
 _pubsub_client: aioredis.Redis | None = None
+_publisher_lock = asyncio.Lock()
 
 # Set during lifespan shutdown so subscriber generators break on the next 1s poll
 # tick instead of waiting for granian's full graceful_timeout.
@@ -64,23 +65,29 @@ def signal_pubsub_shutdown() -> None:
 
 
 async def _ensure_publisher() -> aioredis.Redis | None:
-    """Return the publisher; reconnect once if the existing one is gone."""
+    async with _publisher_lock:
+        return await _reconnect_publisher()
+
+
+async def _reconnect_publisher() -> aioredis.Redis | None:
     global _pubsub_client
 
-    if _pubsub_client is None:
+    if _shutdown_event is None or _shutdown_event.is_set():
         return None
 
     try:
-        await _pubsub_client.ping()
-        return _pubsub_client
+        if _pubsub_client is not None:
+            await _pubsub_client.ping()
+            return _pubsub_client
     except Exception:
         logger.warning(
             "Publisher connection lost, attempting reconnect...",
         )
 
     try:
-        with contextlib.suppress(BaseException):
-            await asyncio.wait_for(_pubsub_client.aclose(), timeout=_CLEANUP_TIMEOUT)
+        if _pubsub_client is not None:
+            with contextlib.suppress(BaseException):
+                await asyncio.wait_for(_pubsub_client.aclose(), timeout=_CLEANUP_TIMEOUT)
 
         url = ValkeyConfig.from_env().to_url()
         _pubsub_client = _build_client(url)
@@ -89,6 +96,9 @@ async def _ensure_publisher() -> aioredis.Redis | None:
         return _pubsub_client
     except Exception as e:
         logger.error(f"Publisher reconnect failed: {e}")
+        if _pubsub_client is not None:
+            with contextlib.suppress(BaseException):
+                await asyncio.wait_for(_pubsub_client.aclose(), timeout=_CLEANUP_TIMEOUT)
         _pubsub_client = None
         return None
 

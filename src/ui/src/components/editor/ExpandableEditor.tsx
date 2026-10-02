@@ -86,6 +86,8 @@ export function ExpandableEditor({
   const realtimeOwned = Boolean(sessionId && syncedSessionId === sessionId);
   useEffect(() => {
     if (!whenSynced || !sessionId) return;
+    // eslint-disable-next-line react/react-compiler -- reset editor readiness with document identity
+    setSeeded(false);
     let cancelled = false;
     void whenSynced.then(() => {
       if (!cancelled) setSyncedSessionId(sessionId);
@@ -100,13 +102,13 @@ export function ExpandableEditor({
   const outboundPending = useOutboundPending(sessionOpen ? docName : null);
   const transportDown = status === "disconnected" || status === "offline";
   useEffect(() => {
-    if (!closing || outboundPending || transportDown) return;
+    if (!closing || ((outboundPending || transportDown) && status !== "permission_lost")) return;
     const timer = setTimeout(() => {
       setSessionOpen(false);
       setClosing(false);
     }, SESSION_CLOSE_GRACE_MS);
     return () => clearTimeout(timer);
-  }, [closing, outboundPending, transportDown]);
+  }, [closing, outboundPending, transportDown, status]);
   useEffect(
     () => () => {
       if (openTimerRef.current) clearTimeout(openTimerRef.current);
@@ -344,7 +346,7 @@ export function ExpandableEditor({
                         )}
                       >
                         <CrepeEditor
-                          key={editorKey}
+                          key={`${editorKey}:${sessionId ?? "local"}`}
                           contentType={contentType}
                           contentId={contentId}
                           value={draftInitial}

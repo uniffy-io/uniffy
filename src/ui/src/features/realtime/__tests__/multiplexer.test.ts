@@ -57,6 +57,7 @@ class FakeWebSocket {
   open(): void {
     this.readyState = FakeWebSocket.OPEN;
     this.onopen?.();
+    for (const doc of attached) this.receive(serverGenerationFrame(doc.docName, ""));
   }
 
   receive(frame: Uint8Array): void {
@@ -88,6 +89,13 @@ function sentSyncSubtypes(ws: FakeWebSocket, docName: string): number[] {
   return subtypes;
 }
 
+function serverGenerationFrame(docName: string, generation: string): Uint8Array {
+  const encoder = encoding.createEncoder();
+  encoding.writeVarUint(encoder, 5);
+  encoding.writeVarString(encoder, generation);
+  return encodeDocFrame(docName, encoding.toUint8Array(encoder));
+}
+
 function serverSyncStep1Frame(docName: string, serverDoc: Y.Doc): Uint8Array {
   const enc = encoding.createEncoder();
   encoding.writeVarUint(enc, MESSAGE_SYNC);
@@ -106,10 +114,14 @@ function serverSyncStep2Frame(
   return encodeDocFrame(docName, encoding.toUint8Array(enc));
 }
 
-function serverAuthDeniedFrame(docName: string, reason: string): Uint8Array {
+function serverAuthDeniedFrame(
+  docName: string,
+  reason: string,
+  scope = AUTH_PERMISSION_DENIED,
+): Uint8Array {
   const enc = encoding.createEncoder();
   encoding.writeVarUint(enc, MESSAGE_AUTH);
-  encoding.writeVarUint(enc, AUTH_PERMISSION_DENIED);
+  encoding.writeVarUint(enc, scope);
   encoding.writeVarString(enc, reason);
   return encodeDocFrame(docName, encoding.toUint8Array(enc));
 }
@@ -126,12 +138,16 @@ function applyClientFramesToServer(ws: FakeWebSocket, docName: string, serverDoc
     const { docName: name, payloadOffset } = peekVarString(bytes);
     if (name !== docName) continue;
     const payload = bytes.subarray(payloadOffset);
-    if (payload[0] !== MESSAGE_SYNC) continue;
-    if (payload[1] !== SYNC_STEP2 && payload[1] !== SYNC_UPDATE) continue;
+    if (payload[0] !== 6) continue;
     const decoder = decoding.createDecoder(payload);
     decoding.readVarUint(decoder);
-    const replyEncoder = encoding.createEncoder();
-    syncProtocol.readSyncMessage(decoder, replyEncoder, serverDoc, "server");
+    decoding.readVarString(decoder);
+    const id = decoding.readVarString(decoder);
+    Y.applyUpdate(serverDoc, decoding.readVarUint8Array(decoder));
+    const ack = encoding.createEncoder();
+    encoding.writeVarUint(ack, 7);
+    encoding.writeVarString(ack, id);
+    ws.receive(encodeDocFrame(docName, encoding.toUint8Array(ack)));
   }
 }
 
@@ -173,11 +189,12 @@ function attachDoc(
 
 beforeAll(() => {
   vi.stubGlobal("WebSocket", FakeWebSocket);
-  vi.stubGlobal("window", {
-    addEventListener: () => {},
-    removeEventListener: () => {},
-    location: { protocol: "http:", host: "test.local" },
-  });
+  vi.stubGlobal(
+    "window",
+    Object.assign(new EventTarget(), {
+      location: { protocol: "http:", host: "test.local" },
+    }),
+  );
   vi.stubGlobal("document", {
     addEventListener: () => {},
     removeEventListener: () => {},
@@ -252,7 +269,7 @@ describe("read-only docs", () => {
     expect(subtypes).toContain(SYNC_STEP1);
     expect(subtypes).not.toContain(SYNC_STEP2);
     expect(subtypes).not.toContain(SYNC_UPDATE);
-    expect(realtimeMultiplexer.isOutboundPending(doc.docName)).toBe(false);
+    expect(realtimeMultiplexer.isOutboundPending(doc.docName)).toBe(true);
   });
 
   it("suppresses the SyncStep2 reply even when the local doc has extra state", () => {
@@ -271,6 +288,29 @@ describe("read-only docs", () => {
 });
 
 describe("auth frames", () => {
+  it("isolates a no-view denial while other documents keep syncing", () => {
+    const denied = attachDoc("denied");
+    const allowed = attachDoc("allowed");
+    const ws = currentWs();
+    ws.open();
+    ws.receive(serverAuthDeniedFrame(denied.docName, "access removed", 1));
+    denied.ydoc.getText("markdown").insert(0, "recoverable");
+    allowed.ydoc.getText("markdown").insert(0, "live peer");
+    const server = new Y.Doc();
+    applyClientFramesToServer(ws, allowed.docName, server);
+    expect(server.getText("markdown").toString()).toBe("live peer");
+    expect(ws.readyState).toBe(FakeWebSocket.OPEN);
+    expect(realtimeMultiplexer.isOutboundPending(denied.docName)).toBe(true);
+    ws.serverClose(1006);
+    window.dispatchEvent(new Event("online"));
+    const replacement = currentWs();
+    replacement.open();
+    expect(replacement.sent.every((bytes) => peekVarString(bytes).docName !== denied.docName)).toBe(
+      true,
+    );
+    server.destroy();
+  });
+
   it("marks a stale editable doc read-only and reports the denial once", () => {
     const onWriteDenied = vi.fn();
     const doc = attachDoc("downgraded", { onWriteDenied });
@@ -281,7 +321,7 @@ describe("auth frames", () => {
 
     doc.ydoc.getText("markdown").insert(0, "typed after the downgrade");
     expect(sentSyncSubtypes(currentWs(), doc.docName)).not.toContain(SYNC_UPDATE);
-    expect(realtimeMultiplexer.isOutboundPending(doc.docName)).toBe(false);
+    expect(realtimeMultiplexer.isOutboundPending(doc.docName)).toBe(true);
 
     currentWs().receive(serverAuthDeniedFrame(doc.docName, "read only"));
     expect(onWriteDenied).toHaveBeenCalledTimes(1);
@@ -323,7 +363,7 @@ describe("handshake replies", () => {
 });
 
 describe("outbound pending tracking", () => {
-  it("marks edits pending while connecting and clears them via the handshake reply", () => {
+  it("retains pending edits until committed acknowledgment after reconnect", () => {
     const doc = attachDoc("offline-edit");
     const pendingStates: boolean[] = [];
     const unsubscribe = realtimeMultiplexer.subscribeOutboundPending(doc.docName, (pending) =>
@@ -338,16 +378,19 @@ describe("outbound pending tracking", () => {
     const serverDoc = new Y.Doc();
     currentWs().receive(serverSyncStep1Frame(doc.docName, serverDoc));
 
-    expect(sentSyncSubtypes(currentWs(), doc.docName)).toContain(SYNC_STEP2);
-    expect(realtimeMultiplexer.isOutboundPending(doc.docName)).toBe(false);
-    expect(pendingStates).toEqual([true, false]);
+    expect(currentWs().sent.some((frame) => frame[peekVarString(frame).payloadOffset] === 6)).toBe(
+      true,
+    );
+    expect(realtimeMultiplexer.isOutboundPending(doc.docName)).toBe(true);
+    expect(pendingStates).toEqual([true]);
 
     applyClientFramesToServer(currentWs(), doc.docName, serverDoc);
     expect(serverDoc.getText("markdown").toString()).toBe("offline edit");
+    expect(realtimeMultiplexer.isOutboundPending(doc.docName)).toBe(false);
     unsubscribe();
   });
 
-  it("stays pending while socket bytes are buffered and clears once drained", () => {
+  it("stays pending after socket drain until a durable acknowledgment", () => {
     vi.useFakeTimers();
     const doc = attachDoc("buffered-edit");
     const ws = currentWs();
@@ -356,10 +399,50 @@ describe("outbound pending tracking", () => {
     ws.bufferedAmount = 64;
     doc.ydoc.getText("markdown").insert(0, "buffered");
     expect(realtimeMultiplexer.isOutboundPending(doc.docName)).toBe(true);
-    expect(sentSyncSubtypes(ws, doc.docName)).toContain(SYNC_UPDATE);
+    expect(ws.sent.some((frame) => frame[peekVarString(frame).payloadOffset] === 6)).toBe(true);
 
     ws.bufferedAmount = 0;
     vi.advanceTimersByTime(300);
-    expect(realtimeMultiplexer.isOutboundPending(doc.docName)).toBe(false);
+    expect(realtimeMultiplexer.isOutboundPending(doc.docName)).toBe(true);
   });
+});
+
+it("ignores delayed callbacks from a replaced socket", () => {
+  vi.useFakeTimers();
+  const doc = attachDoc("replacement-socket");
+  const first = currentWs();
+  first.open();
+  window.dispatchEvent(new Event("uniffy:auth:refreshed"));
+  const second = currentWs();
+  expect(second).not.toBe(first);
+  second.open();
+  first.serverClose(1000);
+  first.receive(serverAuthDeniedFrame(doc.docName, "stale denial"));
+  doc.ydoc.getText("markdown").insert(0, "new socket work");
+  const server = new Y.Doc();
+  applyClientFramesToServer(second, doc.docName, server);
+  expect(server.getText("markdown").toString()).toBe("new socket work");
+  expect(realtimeMultiplexer.isOutboundPending(doc.docName)).toBe(false);
+  server.destroy();
+});
+
+it("requires a matching acknowledgment for deletion-only updates", () => {
+  const doc = attachDoc("delete-ack");
+  const ws = currentWs();
+  ws.open();
+  const server = new Y.Doc();
+  doc.ydoc.getText("markdown").insert(0, "delete me");
+  applyClientFramesToServer(ws, doc.docName, server);
+  const vector = Y.encodeStateVector(doc.ydoc);
+  doc.ydoc.getText("markdown").delete(0, 9);
+  expect(Y.encodeStateVector(doc.ydoc)).toEqual(vector);
+  const ack = encoding.createEncoder();
+  encoding.writeVarUint(ack, 7);
+  encoding.writeVarString(ack, "unrelated");
+  ws.receive(encodeDocFrame(doc.docName, encoding.toUint8Array(ack)));
+  expect(realtimeMultiplexer.isOutboundPending(doc.docName)).toBe(true);
+  applyClientFramesToServer(ws, doc.docName, server);
+  expect(server.getText("markdown").toString()).toBe("");
+  expect(realtimeMultiplexer.isOutboundPending(doc.docName)).toBe(false);
+  server.destroy();
 });

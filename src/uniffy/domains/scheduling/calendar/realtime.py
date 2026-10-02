@@ -1,3 +1,4 @@
+from collections.abc import Awaitable, Callable
 from datetime import datetime
 from uuid import UUID
 
@@ -86,6 +87,23 @@ class EventRealtimeAdapter:
             supersede_after=supersede_after,
         )
         return saved is not None
+
+    async def stage_render(
+        self,
+        session: AsyncSession,
+        ydoc: pycrdt.Doc,
+        content_id: UUID,
+        organization_id: UUID,
+        *,
+        actor_id: UUID | None = None,
+    ) -> Callable[[], Awaitable[None]] | None:
+        staged = await EventRealtimePersistence(session, self.search_indexer).stage_save(
+            organization_id,
+            content_id,
+            str(markdown_text(ydoc)),
+            actor_id=actor_id,
+        )
+        return staged[1] if staged is not None else None
 
     def apply_external_content(self, ydoc: pycrdt.Doc, content: str) -> bool:
         return replace_external_markdown(ydoc, content)

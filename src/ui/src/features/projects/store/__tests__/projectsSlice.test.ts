@@ -207,7 +207,7 @@ describe("live descriptions", () => {
     expect(rejected.tasks.t1.description).toBe("new");
   });
 
-  it("forgets live ownership once the task list is refetched", () => {
+  it("accepts a later peer description from a task list refetch", () => {
     const task = makeTask("t1", { description: "old" });
     const live = reducer(stateWith([task]), applyLiveDescription({ id: "t1", description: "new" }));
     const refetched = reducer(

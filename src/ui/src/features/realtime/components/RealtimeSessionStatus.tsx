@@ -4,6 +4,7 @@ import type { RealtimeStatus } from "@/features/realtime/protocol";
 import { RealtimePresence } from "@/features/realtime/components/RealtimePresence";
 import { RealtimeStatusBadge } from "@/features/realtime/components/RealtimeStatusBadge";
 import { cn } from "@/shared/utils/cn";
+import { RecoveredDrafts } from "@/features/realtime/components/RecoveredDrafts";
 
 interface RealtimeSessionStatusProps {
   status: RealtimeStatus;
@@ -28,6 +29,7 @@ export function RealtimeSessionStatus({
         localHasAvatar={Boolean(user?.hasAvatar)}
       />
       <RealtimeStatusBadge status={status} />
+      <RecoveredDrafts ydoc={awareness.doc} />
     </div>
   );
 }

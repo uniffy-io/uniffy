@@ -9,6 +9,7 @@ import {
   Platform,
   ActivityIndicator,
   Keyboard,
+  Share,
 } from "react-native";
 import {
   ArrowLeft,
@@ -43,7 +44,6 @@ import { FONT } from "@theme/typography";
 import { useNote } from "@features/notes/useNotes";
 import { NodeType } from "@uniffy/proto/notes/v1/notes_pb";
 import { useCreateNote, useAutosave, useUpdateNote } from "@features/notes/useNoteMutations";
-import { notesApi } from "@features/notes/notesApi";
 import { useAuth } from "@core/providers/AuthContext";
 import { useUniffy } from "@core/providers/UniffyContext";
 import { MarkdownRenderer } from "@shared/components/MarkdownRenderer";
@@ -353,26 +353,23 @@ export function NoteEditorScreen() {
   );
 
   const isFocused = useScreenFocused();
-  // A VIEWER can still land here (the edit action renders on view access);
-  // read-only suppresses SYNC write frames, which the server would otherwise
-  // answer by 4403-closing the whole socket on the first keystroke.
   const canEditNote = noteQuery.data ? roleCanEdit(noteQuery.data.userRole) : true;
   const coEdit = useNoteCoEditing({
-    noteId: isEditMode ? noteId : undefined,
+    noteId: isEditMode && !isCanvas && !isFolder ? noteId : undefined,
     enabled: isEditMode && initialized && !isCanvas && !isFolder && isFocused,
     readOnly: !canEditNote,
     getLocalCanonical: () => toCanonical(bodyStateRef.current, mentionsRef.current),
     getLoadedCanonical: () => loadedRef.current?.content ?? null,
     applyRemote,
   });
+  const editAccessLost = coEdit.status === "permission_lost" || coEdit.status === "token_revoked";
+  const editable = canEditNote && !editAccessLost;
 
-  // The pre-sync keystrokes armed the legacy autosave; once realtime owns
-  // content that timer must not fire a stale full-document UpdateNote, which
-  // the server would graft over newer CRDT edits.
+  // Full-document autosaves cannot race realtime writes or pre-sync drafts.
   const autosaveCancel = autosave.cancel;
   useEffect(() => {
-    if (coEdit.live) autosaveCancel();
-  }, [coEdit.live, autosaveCancel]);
+    if (coEdit.ownsContent) autosaveCancel();
+  }, [coEdit.ownsContent, autosaveCancel]);
 
   // Keystrokes queue their push HERE, synchronously with the native event. A
   // remote rebuild can land between the event and React's post-render effect;
@@ -382,7 +379,7 @@ export function NoteEditorScreen() {
     (text: string) => {
       setBody(text);
       bodyStateRef.current = text;
-      if (coEdit.live) coEdit.scheduleLocalPush(toCanonical(text, mentionsRef.current));
+      coEdit.scheduleLocalPush(toCanonical(text, mentionsRef.current));
     },
     [setBody, coEdit, mentionsRef],
   );
@@ -417,22 +414,6 @@ export function NoteEditorScreen() {
     }
   }, [noteId, updateNote]);
 
-  // If the screen closes while the socket is down, the unsent CRDT ops die
-  // with the doc; one legacy UpdateNote carries the text out instead (the
-  // server grafts it into any live web session).
-  const unmountFlushRef = useRef<() => void>(() => {});
-  useEffect(() => {
-    unmountFlushRef.current = () => {
-      if (!isEditMode || !noteId || !organizationId) return;
-      if (!coEdit.live) return;
-      if (coEdit.status === "connected") return;
-      const canonical = toCanonical(bodyStateRef.current, mentionsRef.current);
-      if (loadedRef.current && canonical === loadedRef.current.content) return;
-      notesApi.updateNote({ noteId, organizationId, content: canonical }).catch(() => {});
-    };
-  });
-  useEffect(() => () => unmountFlushRef.current(), []);
-
   // Dismissing the keyboard with the back gesture leaves the input focused, so
   // the tap that brings it back fires no focus event - but the reveal comes
   // again with the keyboard. Pinning on the keyboard itself covers that second
@@ -455,15 +436,9 @@ export function NoteEditorScreen() {
   // against the bar itself when it is down.
   const bottomPad = bottomBarBlockHeight(insets.bottom);
 
-  // Persist on any content change. Typing, formatting, and @-reference
-  // insertion all funnel through body/title, so watching them here covers the
-  // mention path without a per-edit handler. Once the realtime session has
-  // synced it owns content (CRDT push, offline-replay included); the legacy
-  // autosave only runs before/without a sync so an unsynced session never
-  // loses edits. Running both would double-write: the server grafts the
-  // UpdateNote text into the live doc AND the CRDT ops replay on reconnect.
+  // Formatting and mention insertion also flow through this persistence path.
   useEffect(() => {
-    if (!isEditMode || !initialized) return;
+    if (!isEditMode || !initialized || !editable) return;
     if (applyingRemoteRef.current) {
       applyingRemoteRef.current = false;
       return;
@@ -471,19 +446,19 @@ export function NoteEditorScreen() {
     const canonical = toCanonical(body, mentionsRef.current);
     const loaded = loadedRef.current;
     if (loaded && canonical === loaded.content && title === loaded.title) return;
-    if (coEdit.live) {
+    if (coEdit.ownsContent) {
       coEdit.scheduleLocalPush(canonical);
       if (loaded && title !== loaded.title) scheduleTitleSave(title);
     } else {
       autosave.scheduleAutosave(canonical, title);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [body, title, isEditMode, initialized, coEdit.live]);
+  }, [body, title, isEditMode, initialized, coEdit.ownsContent, editable]);
 
   const handleDone = useCallback(async () => {
     const canonicalBody = getCanonicalBody();
     if (isEditMode) {
-      if (coEdit.live) {
+      if (coEdit.ownsContent) {
         coEdit.flushLocalPush();
         flushTitleSave();
       } else {
@@ -822,21 +797,36 @@ export function NoteEditorScreen() {
           <Text style={[styles.headerLabel, { color: T.textDim }]}>
             {!isEditMode
               ? "New note"
-              : coEdit.live
-                ? coEdit.status === "connected"
-                  ? "Live"
-                  : coEdit.status === "connecting"
-                    ? "Syncing"
-                    : "Offline"
-                : autosave.isSaving
-                  ? "Saving..."
-                  : autosave.lastSaved
-                    ? "Saved"
-                    : "Note"}
+              : editAccessLost
+                ? "Edit access removed"
+                : coEdit.ownsContent
+                  ? coEdit.status === "connected"
+                    ? "Live"
+                    : coEdit.status === "connecting"
+                      ? "Syncing"
+                      : "Offline"
+                  : autosave.isSaving
+                    ? "Saving..."
+                    : autosave.lastSaved
+                      ? "Saved"
+                      : "Note"}
           </Text>
           <Text style={[styles.wordCount, { color: T.textDim }]}>{wordCount} words</Text>
         </View>
         <RealtimePresence session={coEdit.session} status={coEdit.status} />
+        {coEdit.recoveredDrafts.length > 0 && (
+          <TouchableOpacity
+            accessibilityRole="button"
+            onPress={() =>
+              void Share.share({
+                title: "Recovered draft",
+                message: coEdit.recoveredDrafts.map((draft) => draft.text).join("\n\n"),
+              })
+            }
+          >
+            <Text style={{ color: T.text }}>Recovered draft</Text>
+          </TouchableOpacity>
+        )}
         <TouchableOpacity
           onPress={togglePreview}
           style={[
@@ -910,6 +900,7 @@ export function NoteEditorScreen() {
           }}
         >
           <TextInput
+            editable={editable}
             value={title}
             onChangeText={setTitle}
             style={[styles.titleInput, { color: T.textBright }]}
@@ -926,6 +917,7 @@ export function NoteEditorScreen() {
               plus our programmatic setBody, and the children mirror body exactly
               so the caret stays aligned. */}
           <TextInput
+            editable={editable}
             ref={bodyRef}
             onChangeText={handleBodyChange}
             onSelectionChange={onMentionSelectionChange}
@@ -1022,7 +1014,7 @@ export function NoteEditorScreen() {
                 },
               ]}
               onPress={onPress}
-              disabled={loading}
+              disabled={loading || !editable}
               activeOpacity={0.7}
             >
               {loading ? (

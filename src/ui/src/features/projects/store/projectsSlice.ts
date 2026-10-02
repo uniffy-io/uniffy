@@ -35,9 +35,12 @@ import {
  * server row from an unrelated write must not roll the text back in the meantime.
  */
 function acceptServerTask(state: ProjectsState, task: Task, descriptionRequested = false): void {
-  if (descriptionRequested) delete state.liveDescriptionIds[task.id];
-  const live = state.liveDescriptionIds[task.id] ? state.tasks[task.id]?.description : undefined;
-  state.tasks[task.id] = live === undefined ? task : { ...task, description: live };
+  const superseded = state.liveDescriptionIds[task.id];
+  const live = state.tasks[task.id]?.description;
+  const preserve =
+    !descriptionRequested && superseded?.includes(task.description) && live !== task.description;
+  if (!preserve) delete state.liveDescriptionIds[task.id];
+  state.tasks[task.id] = preserve ? { ...task, description: live ?? "" } : task;
 }
 
 /** Shared views first, each group in its stored order: the order the server lists them in. */
@@ -66,7 +69,7 @@ export interface ProjectsState {
   /** Snapshots of parents whose subtask counts were optimistically adjusted. */
   _pendingParentSnapshots?: Record<string, Task>;
   /** Tasks whose description a live editing session wrote; server rows keep the local text until a refetch. */
-  liveDescriptionIds: Record<string, true>;
+  liveDescriptionIds: Record<string, string[]>;
 }
 
 const initialState: ProjectsState = {
@@ -161,8 +164,10 @@ export const projectsSlice = createSlice({
     applyLiveDescription: (state, action: PayloadAction<{ id: string; description: string }>) => {
       const task = state.tasks[action.payload.id];
       if (!task) return;
+      const superseded = state.liveDescriptionIds[task.id] ?? [];
+      if (!superseded.includes(task.description)) superseded.push(task.description);
+      state.liveDescriptionIds[task.id] = superseded;
       task.description = action.payload.description;
-      state.liveDescriptionIds[task.id] = true;
     },
 
     bulkUpdateTasks: (state, action: PayloadAction<{ ids: string[]; changes: Partial<Task> }>) => {
@@ -265,8 +270,7 @@ export const projectsSlice = createSlice({
         state.loading.tasks = false;
         action.payload.forEach((task) => {
           if (!state.projects[task.projectId]) return;
-          state.tasks[task.id] = task;
-          delete state.liveDescriptionIds[task.id];
+          acceptServerTask(state, task);
         });
         const { arg } = action.meta;
         state.taskListLoadedIds[typeof arg === "string" ? arg : arg.projectId] = true;

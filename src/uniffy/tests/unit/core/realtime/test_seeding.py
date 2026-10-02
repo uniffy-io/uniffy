@@ -42,11 +42,15 @@ def seed_frame(session: YDocSession, granted: bool) -> bytes:
     return encode_doc_frame(doc_name_for(session.key), create_fragment_seeder_message(granted))
 
 
-def test_first_editable_handle_alone_receives_seed_role() -> None:
+async def test_only_database_owner_receives_seed_role_once() -> None:
     session, handles = session_with_handles()
     manager = YDocManager()
-    manager.refresh_fragment_seeder(session)
-    manager.refresh_fragment_seeder(session)
+    with patch(
+        "uniffy.core.realtime.ydoc_manager.claim_seed",
+        AsyncMock(return_value=f"{manager._replica_id}:2"),
+    ):
+        await manager.refresh_fragment_seeder(session)
+        await manager.refresh_fragment_seeder(session)
     assert session.seeder_conn_id == 2
     assert handles[0].ws_session.outbound.empty()
     assert handles[1].ws_session.outbound.get_nowait() == seed_frame(session, True)
@@ -54,56 +58,26 @@ def test_first_editable_handle_alone_receives_seed_role() -> None:
     assert handles[2].ws_session.outbound.empty()
 
 
-async def test_release_hands_seed_role_to_remaining_editor() -> None:
+async def test_other_replica_owner_prevents_local_seeding() -> None:
     session, handles = session_with_handles()
     manager = YDocManager()
-    manager._sessions[session.key] = session
-    manager.refresh_fragment_seeder(session)
-    await manager.release(session.key, 2)
-    assert session.seeder_conn_id == 3
-    assert handles[2].ws_session.outbound.get_nowait() == seed_frame(session, True)
-    assert handles[0].ws_session.outbound.empty()
-
-
-def test_placeholder_keeps_role_until_fragment_has_text() -> None:
-    session, handles = session_with_handles()
-    manager = YDocManager()
-    manager.refresh_fragment_seeder(session)
-    handles[1].ws_session.outbound.get_nowait()
-    fragment = session.ydoc.get(PROSEMIRROR_FRAGMENT_FIELD, type=pycrdt.XmlFragment)
-    paragraph = pycrdt.XmlElement("paragraph")
-    fragment.children.append(paragraph)
-    manager.refresh_fragment_seeder(session)
-    assert session.seeder_conn_id == 2
-    paragraph.children.append(pycrdt.XmlText("content"))
-    manager.refresh_fragment_seeder(session)
+    with patch("uniffy.core.realtime.ydoc_manager.claim_seed", AsyncMock(return_value="other:2")):
+        await manager.refresh_fragment_seeder(session)
     assert session.seeder_conn_id is None
-    assert handles[1].ws_session.outbound.get_nowait() == seed_frame(session, False)
-    assert handles[2].ws_session.outbound.empty()
+    assert all(handle.ws_session.outbound.empty() for handle in handles)
 
 
-def test_downgrade_hands_seed_role_to_another_editor() -> None:
+async def test_role_transfer_revokes_previous_owner() -> None:
     session, handles = session_with_handles()
     manager = YDocManager()
-    manager.refresh_fragment_seeder(session)
-    handles[1].ws_session.outbound.get_nowait()
-    handles[1].can_edit = False
-    manager.refresh_fragment_seeder(session)
-    assert session.seeder_conn_id == 3
-    assert handles[1].ws_session.outbound.get_nowait() == seed_frame(session, False)
-    assert handles[2].ws_session.outbound.get_nowait() == seed_frame(session, True)
-
-
-async def test_remote_fragment_update_clears_role() -> None:
-    session, handles = session_with_handles()
-    manager = YDocManager()
-    manager.refresh_fragment_seeder(session)
-    handles[1].ws_session.outbound.get_nowait()
-    peer = pycrdt.Doc()
-    peer.get(PROSEMIRROR_FRAGMENT_FIELD, type=pycrdt.XmlFragment).children.append(
-        pycrdt.XmlElement("heading")
-    )
-    with patch("uniffy.core.realtime.ydoc_manager.snapshot_writer.schedule", new=AsyncMock()):
-        await manager._apply_remote_pubsub_update(session, peer.get_update())
-    assert session.seeder_conn_id is None
-    assert handles[1].ws_session.outbound.get_nowait() == seed_frame(session, False)
+    with patch(
+        "uniffy.core.realtime.ydoc_manager.claim_seed",
+        AsyncMock(side_effect=[f"{manager._replica_id}:2", f"{manager._replica_id}:3", None]),
+    ):
+        await manager.refresh_fragment_seeder(session)
+        handles[1].ws_session.outbound.get_nowait()
+        await manager.refresh_fragment_seeder(session)
+        assert handles[1].ws_session.outbound.get_nowait() == seed_frame(session, False)
+        assert handles[2].ws_session.outbound.get_nowait() == seed_frame(session, True)
+        await manager.refresh_fragment_seeder(session)
+        assert handles[2].ws_session.outbound.get_nowait() == seed_frame(session, False)

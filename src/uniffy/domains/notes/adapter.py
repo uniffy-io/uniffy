@@ -1,5 +1,6 @@
 """``RealtimeContentAdapter`` for ``ContentType.NOTE``: markdown + canvas."""
 
+from collections.abc import Awaitable, Callable
 from datetime import datetime
 from typing import Any
 from uuid import UUID
@@ -20,6 +21,7 @@ from uniffy.core.realtime.markdown import (
 from uniffy.core.realtime.state import DocKey
 from uniffy.core.search import SearchIndexer
 from uniffy.core.types import ContentRole, ContentType, NodeType
+from uniffy.domains.notes.content.realtime import NoteRealtimePersistence
 from uniffy.domains.notes.projection import NoteProjectionOperations
 
 LOGGER_COMPONENT = "realtime.notes_adapter"
@@ -85,10 +87,12 @@ class NoteRealtimeAdapter:
     ) -> None:
         note = (
             await session.execute(
-                select(Note).where(
+                select(Note)
+                .where(
                     Note.id == content_id,
                     Note.organization_id == organization_id,
                 )
+                .execution_options(populate_existing=True)
             )
         ).scalar_one_or_none()
         if note is None:
@@ -148,6 +152,39 @@ class NoteRealtimeAdapter:
             supersede_after=supersede_after,
         )
         return saved is not None
+
+    async def stage_render(
+        self,
+        session: AsyncSession,
+        ydoc: pycrdt.Doc,
+        content_id: UUID,
+        organization_id: UUID,
+        *,
+        actor_id: UUID | None = None,
+    ) -> Callable[[], Awaitable[None]] | None:
+        note = (
+            await session.execute(
+                select(Note).where(
+                    Note.id == content_id,
+                    Note.organization_id == organization_id,
+                    Note.is_deleted.is_(False),
+                )
+            )
+        ).scalar_one_or_none()
+        if note is None:
+            return None
+        canvas = _render_canvas_content(ydoc) if note.node_type == NodeType.CANVAS else None
+        content = "" if note.node_type == NodeType.CANVAS else _render_markdown(ydoc)
+        staged = await NoteRealtimePersistence(
+            NoteProjectionOperations(session, self.search_indexer)
+        ).stage_save(
+            organization_id,
+            content_id,
+            content,
+            canvas,
+            actor_id=actor_id,
+        )
+        return staged[1] if staged is not None else None
 
     def apply_external_content(self, ydoc: pycrdt.Doc, content: str) -> bool:
         return replace_external_markdown(ydoc, content)
