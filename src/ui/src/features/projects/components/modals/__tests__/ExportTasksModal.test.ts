@@ -4,9 +4,12 @@ import { ExportTasksModal } from "@/features/projects/components/modals/ExportTa
 
 const hooks = vi.hoisted(() => ({
   dispatch: vi.fn(async (request: unknown) => request),
-  exportTasks: Object.assign(vi.fn((request: unknown) => request), {
-    fulfilled: { match: () => true },
-  }),
+  exportTasks: Object.assign(
+    vi.fn((request: unknown) => request),
+    {
+      fulfilled: { match: () => true },
+    },
+  ),
 }));
 
 vi.mock("react", async (original) => ({
