@@ -6,7 +6,7 @@
     "workspaceFolder": "/app",
     "shutdownAction": "none",
     "remoteUser": "node",
-    "updateRemoteUserUID": false,
+    "updateRemoteUserUID": true,
     "customizations": {
         "vscode": {
             "extensions": [
