@@ -1,9 +1,13 @@
 import { createClient } from "@connectrpc/connect";
-import { unaryTransport } from "@/config/api";
-import { create } from "@bufbuild/protobuf";
+import { transport, unaryTransport } from "@/config/api";
+import { create, type MessageInitShape } from "@bufbuild/protobuf";
 import { timestampDate } from "@bufbuild/protobuf/wkt";
 import { fetchAllPages } from "@/shared/utils/fetchAllPages";
-import { ProjectsService, TypeFieldSchemaSchema } from "@uniffy/proto/projects/v1/projects_pb";
+import {
+  ProjectsService,
+  TypeFieldSchemaSchema,
+  type ExportTasksRequestSchema,
+} from "@uniffy/proto/projects/v1/projects_pb";
 import {
   FieldType as ProtoFieldType,
   ActivityAction as ProtoActivityAction,
@@ -44,6 +48,7 @@ import type { TaskActivity, ActivityAction } from "../types/activity";
 import { frontendViewDefinitionToProto, protoViewConfigToFrontend } from "./viewConverters";
 
 const projectsClient = createClient(ProjectsService, unaryTransport);
+const projectsStreamClient = createClient(ProjectsService, transport);
 
 // The ListTasks handler clamps larger requests to this size.
 const TASK_PAGE_SIZE = 1000;
@@ -563,6 +568,9 @@ export const projectsApi = {
       success: response.success,
     };
   },
+
+  exportTasks: (request: MessageInitShape<typeof ExportTasksRequestSchema>, signal?: AbortSignal) =>
+    projectsStreamClient.exportTasks(request, { signal }),
 
   deleteTasks: async (
     taskIds: string[],

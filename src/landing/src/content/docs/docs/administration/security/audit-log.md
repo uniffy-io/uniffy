@@ -160,7 +160,7 @@ The same four events cover notes, files, calendar events and tasks.
 | Permanently deleted | It is destroyed for good |
 | Moved | It changes folder or parent |
 
-Projects add **Archived** and **Unarchived**. Files add **Uploaded**, which is off unless your operator turns it on, and **Version restored** when an older version of a file is put back. Version restored is not in the filter dropdown yet.
+Projects add **Archived** and **Unarchived**, and **Exported** each time someone downloads a project's tasks as a CSV or a bundle. Files add **Uploaded**, which is off unless your operator turns it on, and **Version restored** when an older version of a file is put back. Version restored is not in the filter dropdown yet.
 
 ### Chat
 

@@ -1,5 +1,5 @@
 import pytest
-from psycopg2.errors import CheckViolation
+from psycopg2 import errorcodes, errors
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
@@ -20,6 +20,9 @@ from uniffy.tests.integration.internal.migrations.test_migration_run import (
     _query,
     _execute,
 )
+
+# psycopg2 builds its exception classes at runtime; look the class up by SQLSTATE.
+CheckViolation = errors.lookup(errorcodes.CHECK_VIOLATION)
 
 
 async def test_skill_cutover_preserves_content_history_and_assignments(scratch_database):
@@ -114,6 +117,7 @@ async def test_skill_cutover_preserves_content_history_and_assignments(scratch_d
 async def test_exact_skill_snapshot_respects_assignment_tenant_and_pin(
     scratch_database, monkeypatch
 ):
+
     await _provision_to(scratch_database, "098")
 
     async def uncached(key, loader, **kwargs):

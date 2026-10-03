@@ -199,6 +199,7 @@ export const ACTION_GROUPS: readonly ActionGroup[] = [
       { value: "project.restored", label: "Restored" },
       { value: "project.archived", label: "Archived" },
       { value: "project.unarchived", label: "Unarchived" },
+      { value: "project.exported", label: "Exported" },
     ],
   },
   {

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
 import { View, Text, StyleSheet, ActivityIndicator } from "react-native";
 import { useVideoPlayer, VideoView } from "expo-video";
 import { PlaybackStatus, TranscodeStatus } from "@uniffy/proto/files/v1/files_pb";
@@ -60,7 +60,9 @@ function VideoContent({ fileId, organizationId }: { fileId: string; organization
     };
   }, []);
 
-  const handleError = useCallback(async () => {
+  // An effect event: the player listener always sees the latest fallback and refetch
+  // without re-subscribing when they change.
+  const handleError = useEffectEvent(async () => {
     if (handlingError.current || !alive.current) return;
     handlingError.current = true;
     try {
@@ -89,7 +91,7 @@ function VideoContent({ fileId, organizationId }: { fileId: string; organization
     } finally {
       handlingError.current = false;
     }
-  }, [fallback, refetch]);
+  });
 
   useEffect(() => {
     const listener = player.addListener("statusChange", ({ status }) => {
@@ -97,7 +99,7 @@ function VideoContent({ fileId, organizationId }: { fileId: string; organization
       if (status === "readyToPlay") setFailed(false);
     });
     return () => listener.remove();
-  }, [player, handleError]);
+  }, [player]);
 
   useEffect(() => {
     let cancelled = false;
@@ -107,7 +109,7 @@ function VideoContent({ fileId, organizationId }: { fileId: string; organization
     return () => {
       cancelled = true;
     };
-  }, [player, source, handleError]);
+  }, [player, source]);
 
   useEffect(() => {
     if (!preparing || unavailable) return;

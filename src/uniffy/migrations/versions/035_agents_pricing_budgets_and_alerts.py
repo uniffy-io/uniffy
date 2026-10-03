@@ -1,33 +1,4 @@
-"""Cost tracking and budget enforcement for the agents domain.
-
-Revision ID: 017
-Revises: 016
-Create Date: 2026-05-01
-
-One logical unit: model pricing rows feed run-log cost columns, which
-are then capped by org-level budgets, per-user quotas, and tracked by
-budget-alert dedupe rows. Partial deploy of any subset would leave
-cost computation broken, so they ship together.
-
-Tables created:
-- ``agents_model_pricing``     - effective-dated price rows per model
-- ``agents_budgets``           - per-org monthly spend + image cap
-- ``agents_user_quotas``       - per-user daily/monthly caps
-- ``agents_budget_alerts``     - dedupe row per (scope, period, threshold)
-
-Columns added to ``agents_run_logs``:
-- ``kind`` ("chat" / "image")
-- ``image_count``
-- ``cost_usd``
-- ``thinking_tokens``
-
-Plus an index on ``agents_run_logs (organization_id, created_at, kind)``
-for the budget-period probes that filter by kind.
-
-Pricing rows are seeded from ``uniffy.domains.agents.pricing_seed``.
-The import is done inside ``upgrade`` so a future rename / removal of
-the seed module never blocks the schema change.
-"""
+"""Add agent pricing, budget, quota and alert tables with run-log cost tracking."""
 
 from collections.abc import Sequence
 
@@ -41,7 +12,6 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
-    """Create pricing/budget tables, extend run_logs, seed pricing."""
     op.create_table(
         "agents_model_pricing",
         sa.Column("id", sa.Uuid(), nullable=False),
@@ -248,80 +218,8 @@ def upgrade() -> None:
             "ON agents_run_logs (organization_id, created_at, kind)"
         )
 
-    try:
-        from datetime import UTC, datetime
-        from uuid import uuid4
-
-        from uniffy.domains.agents.pricing_seed import (
-            IMAGE_PRICING_SEED,
-            TEXT_PRICING_SEED,
-        )
-    except Exception:
-        return
-
-    now = datetime.now(UTC)
-    bind = op.get_bind()
-    table = sa.table(
-        "agents_model_pricing",
-        sa.column("id", sa.Uuid()),
-        sa.column("provider", sa.String()),
-        sa.column("model", sa.String()),
-        sa.column("kind", sa.String()),
-        sa.column("input_per_1m", sa.Numeric(10, 4)),
-        sa.column("output_per_1m", sa.Numeric(10, 4)),
-        sa.column("cached_input_per_1m", sa.Numeric(10, 4)),
-        sa.column("thinking_per_1m", sa.Numeric(10, 4)),
-        sa.column("image_prices", sa.JSON()),
-        sa.column("effective_from", sa.DateTime(timezone=True)),
-        sa.column("effective_to", sa.DateTime(timezone=True)),
-        sa.column("created_at", sa.DateTime(timezone=True)),
-        sa.column("updated_at", sa.DateTime(timezone=True)),
-    )
-
-    rows: list[dict] = []
-    for entry in TEXT_PRICING_SEED:
-        rows.append({
-            "id": uuid4(),
-            "provider": entry["provider"],
-            "model": entry["model"],
-            "kind": "text",
-            "input_per_1m": entry.get("input_per_1m"),
-            "output_per_1m": entry.get("output_per_1m"),
-            "cached_input_per_1m": entry.get("cached_input_per_1m"),
-            "thinking_per_1m": entry.get("thinking_per_1m"),
-            "image_prices": None,
-            "effective_from": now,
-            "effective_to": None,
-            "created_at": now,
-            "updated_at": now,
-        })
-    for img in IMAGE_PRICING_SEED:
-        prices = {
-            size: {quality: str(price) for quality, price in qualities.items()}
-            for size, qualities in img["image_prices"].items()
-        }
-        rows.append({
-            "id": uuid4(),
-            "provider": img["provider"],
-            "model": img["model"],
-            "kind": "image",
-            "input_per_1m": None,
-            "output_per_1m": None,
-            "cached_input_per_1m": None,
-            "thinking_per_1m": None,
-            "image_prices": prices,
-            "effective_from": now,
-            "effective_to": None,
-            "created_at": now,
-            "updated_at": now,
-        })
-
-    if rows:
-        bind.execute(table.insert(), rows)
-
 
 def downgrade() -> None:
-    """Reverse the upgrade in dependency order."""
     with op.get_context().autocommit_block():
         op.execute("DROP INDEX CONCURRENTLY IF EXISTS ix_agents_run_logs_org_created_kind")
     op.drop_column("agents_run_logs", "thinking_tokens")

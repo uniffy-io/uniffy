@@ -1,6 +1,5 @@
-# Devcontainer overlay: a profile-less clone of deps-manager that idles so
-# VS Code can attach its language servers to the fully-installed workspace
-# (full node_modules + .venv volumes) without any host dependencies.
+# Root initializes dependency volumes before dropping to the editor's user.
+# The home volume lets VS Code install its server with a read-only rootfs.
 services:
     devcontainer:
         extends:
@@ -8,4 +7,14 @@ services:
             service: deps-manager
         container_name: uniffy-devcontainer
         profiles: !override []
+        user: "0:0"
+        environment:
+            HOME: /home/node
+            DEPS_HOME: /home/node
+            DEPS_USER: node
+        volumes:
+            - devcontainer-home:/home/node
         command: ["sleep", "infinity"]
+
+volumes:
+    devcontainer-home:

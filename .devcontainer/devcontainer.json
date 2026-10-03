@@ -5,6 +5,8 @@
     "runServices": ["devcontainer"],
     "workspaceFolder": "/app",
     "shutdownAction": "none",
+    "remoteUser": "node",
+    "updateRemoteUserUID": true,
     "customizations": {
         "vscode": {
             "extensions": [

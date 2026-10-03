@@ -3,6 +3,11 @@ set -euo pipefail
 
 cd /app
 
+if [[ "$(id -u)" == "0" && -n "${DEPS_USER:-}" ]]; then
+    HOST_UID="$(id -u "$DEPS_USER")"
+    HOST_GID="$(id -g "$DEPS_USER")"
+fi
+
 # When started as root with HOST_UID set (manage.py exports it on every
 # invocation), fix volume ownership and re-exec as the host user so writes
 # to the bind mount stay host-owned. /app itself is never chowned - it is
@@ -13,12 +18,15 @@ if [[ "$(id -u)" == "0" && -n "${HOST_UID:-}" ]]; then
         /app/src/ui/node_modules /app/src/mobile/node_modules \
         /app/src/landing/node_modules /app/src/proto/gen/typescript/node_modules \
         /app/src/e2e/node_modules; do
-        if [[ -e "$d" && "$(stat -c %u "$d")" != "$HOST_UID" ]]; then
+        if [[ -e "$d" && "$(stat -c %u:%g "$d")" != "$HOST_UID:$HOST_GID" ]]; then
             chown -R "$HOST_UID:$HOST_GID" "$d"
         fi
     done
-    export HOME=/tmp/home
-    mkdir -p "$HOME" && chown "$HOST_UID:$HOST_GID" "$HOME"
+    export HOME="${DEPS_HOME:-/tmp/home}"
+    mkdir -p "$HOME"
+    if [[ "$(stat -c %u:%g "$HOME")" != "$HOST_UID:$HOST_GID" ]]; then
+        chown -R "$HOST_UID:$HOST_GID" "$HOME"
+    fi
     if command -v setpriv >/dev/null 2>&1; then
         exec setpriv --reuid="$HOST_UID" --regid="$HOST_GID" --clear-groups "$0" "$@"
     fi

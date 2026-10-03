@@ -116,6 +116,7 @@ respect-type-ignore-comments = false
 all = "ignore"
 blanket-ignore-comment = "error"
 missing-argument = "error"
+unresolved-import = "error"
 
 [tool.pytest.ini_options]
 # Coroutine tests run without a marker; a test that forgets one is a silent

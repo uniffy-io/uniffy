@@ -71,6 +71,9 @@ const (
 	// ProjectsServiceDeleteTasksProcedure is the fully-qualified name of the ProjectsService's
 	// DeleteTasks RPC.
 	ProjectsServiceDeleteTasksProcedure = "/projects.v1.ProjectsService/DeleteTasks"
+	// ProjectsServiceExportTasksProcedure is the fully-qualified name of the ProjectsService's
+	// ExportTasks RPC.
+	ProjectsServiceExportTasksProcedure = "/projects.v1.ProjectsService/ExportTasks"
 	// ProjectsServiceCreateFieldProcedure is the fully-qualified name of the ProjectsService's
 	// CreateField RPC.
 	ProjectsServiceCreateFieldProcedure = "/projects.v1.ProjectsService/CreateField"
@@ -144,6 +147,8 @@ type ProjectsServiceClient interface {
 	MoveTask(context.Context, *connect.Request[v1.MoveTaskRequest]) (*connect.Response[v1.MoveTaskResponse], error)
 	BulkUpdateTasks(context.Context, *connect.Request[v1.BulkUpdateTasksRequest]) (*connect.Response[v1.BulkUpdateTasksResponse], error)
 	DeleteTasks(context.Context, *connect.Request[v1.DeleteTasksRequest]) (*connect.Response[v1.DeleteTasksResponse], error)
+	// Every task of one project, or of several, as a CSV or a zip bundle of CSVs.
+	ExportTasks(context.Context, *connect.Request[v1.ExportTasksRequest]) (*connect.ServerStreamForClient[v1.ExportTasksResponse], error)
 	// ----- Field Definitions -----
 	CreateField(context.Context, *connect.Request[v1.CreateFieldRequest]) (*connect.Response[v1.CreateFieldResponse], error)
 	UpdateField(context.Context, *connect.Request[v1.UpdateFieldRequest]) (*connect.Response[v1.UpdateFieldResponse], error)
@@ -256,6 +261,12 @@ func NewProjectsServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			httpClient,
 			baseURL+ProjectsServiceDeleteTasksProcedure,
 			connect.WithSchema(projectsServiceMethods.ByName("DeleteTasks")),
+			connect.WithClientOptions(opts...),
+		),
+		exportTasks: connect.NewClient[v1.ExportTasksRequest, v1.ExportTasksResponse](
+			httpClient,
+			baseURL+ProjectsServiceExportTasksProcedure,
+			connect.WithSchema(projectsServiceMethods.ByName("ExportTasks")),
 			connect.WithClientOptions(opts...),
 		),
 		createField: connect.NewClient[v1.CreateFieldRequest, v1.CreateFieldResponse](
@@ -384,6 +395,7 @@ type projectsServiceClient struct {
 	moveTask              *connect.Client[v1.MoveTaskRequest, v1.MoveTaskResponse]
 	bulkUpdateTasks       *connect.Client[v1.BulkUpdateTasksRequest, v1.BulkUpdateTasksResponse]
 	deleteTasks           *connect.Client[v1.DeleteTasksRequest, v1.DeleteTasksResponse]
+	exportTasks           *connect.Client[v1.ExportTasksRequest, v1.ExportTasksResponse]
 	createField           *connect.Client[v1.CreateFieldRequest, v1.CreateFieldResponse]
 	updateField           *connect.Client[v1.UpdateFieldRequest, v1.UpdateFieldResponse]
 	deleteField           *connect.Client[v1.DeleteFieldRequest, v1.DeleteFieldResponse]
@@ -467,6 +479,11 @@ func (c *projectsServiceClient) BulkUpdateTasks(ctx context.Context, req *connec
 // DeleteTasks calls projects.v1.ProjectsService.DeleteTasks.
 func (c *projectsServiceClient) DeleteTasks(ctx context.Context, req *connect.Request[v1.DeleteTasksRequest]) (*connect.Response[v1.DeleteTasksResponse], error) {
 	return c.deleteTasks.CallUnary(ctx, req)
+}
+
+// ExportTasks calls projects.v1.ProjectsService.ExportTasks.
+func (c *projectsServiceClient) ExportTasks(ctx context.Context, req *connect.Request[v1.ExportTasksRequest]) (*connect.ServerStreamForClient[v1.ExportTasksResponse], error) {
+	return c.exportTasks.CallServerStream(ctx, req)
 }
 
 // CreateField calls projects.v1.ProjectsService.CreateField.
@@ -576,6 +593,8 @@ type ProjectsServiceHandler interface {
 	MoveTask(context.Context, *connect.Request[v1.MoveTaskRequest]) (*connect.Response[v1.MoveTaskResponse], error)
 	BulkUpdateTasks(context.Context, *connect.Request[v1.BulkUpdateTasksRequest]) (*connect.Response[v1.BulkUpdateTasksResponse], error)
 	DeleteTasks(context.Context, *connect.Request[v1.DeleteTasksRequest]) (*connect.Response[v1.DeleteTasksResponse], error)
+	// Every task of one project, or of several, as a CSV or a zip bundle of CSVs.
+	ExportTasks(context.Context, *connect.Request[v1.ExportTasksRequest], *connect.ServerStream[v1.ExportTasksResponse]) error
 	// ----- Field Definitions -----
 	CreateField(context.Context, *connect.Request[v1.CreateFieldRequest]) (*connect.Response[v1.CreateFieldResponse], error)
 	UpdateField(context.Context, *connect.Request[v1.UpdateFieldRequest]) (*connect.Response[v1.UpdateFieldResponse], error)
@@ -684,6 +703,12 @@ func NewProjectsServiceHandler(svc ProjectsServiceHandler, opts ...connect.Handl
 		ProjectsServiceDeleteTasksProcedure,
 		svc.DeleteTasks,
 		connect.WithSchema(projectsServiceMethods.ByName("DeleteTasks")),
+		connect.WithHandlerOptions(opts...),
+	)
+	projectsServiceExportTasksHandler := connect.NewServerStreamHandler(
+		ProjectsServiceExportTasksProcedure,
+		svc.ExportTasks,
+		connect.WithSchema(projectsServiceMethods.ByName("ExportTasks")),
 		connect.WithHandlerOptions(opts...),
 	)
 	projectsServiceCreateFieldHandler := connect.NewUnaryHandler(
@@ -822,6 +847,8 @@ func NewProjectsServiceHandler(svc ProjectsServiceHandler, opts ...connect.Handl
 			projectsServiceBulkUpdateTasksHandler.ServeHTTP(w, r)
 		case ProjectsServiceDeleteTasksProcedure:
 			projectsServiceDeleteTasksHandler.ServeHTTP(w, r)
+		case ProjectsServiceExportTasksProcedure:
+			projectsServiceExportTasksHandler.ServeHTTP(w, r)
 		case ProjectsServiceCreateFieldProcedure:
 			projectsServiceCreateFieldHandler.ServeHTTP(w, r)
 		case ProjectsServiceUpdateFieldProcedure:
@@ -917,6 +944,10 @@ func (UnimplementedProjectsServiceHandler) BulkUpdateTasks(context.Context, *con
 
 func (UnimplementedProjectsServiceHandler) DeleteTasks(context.Context, *connect.Request[v1.DeleteTasksRequest]) (*connect.Response[v1.DeleteTasksResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("projects.v1.ProjectsService.DeleteTasks is not implemented"))
+}
+
+func (UnimplementedProjectsServiceHandler) ExportTasks(context.Context, *connect.Request[v1.ExportTasksRequest], *connect.ServerStream[v1.ExportTasksResponse]) error {
+	return connect.NewError(connect.CodeUnimplemented, errors.New("projects.v1.ProjectsService.ExportTasks is not implemented"))
 }
 
 func (UnimplementedProjectsServiceHandler) CreateField(context.Context, *connect.Request[v1.CreateFieldRequest]) (*connect.Response[v1.CreateFieldResponse], error) {

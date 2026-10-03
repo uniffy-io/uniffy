@@ -16,10 +16,10 @@ from connectrpc.server import ConnectASGIApplication, ConnectWSGIApplication, DE
 from protobuf import DescService
 
 from . import projects_pb
-from .projects_pb import BulkCheckTaskWatchersRequest, BulkCheckTaskWatchersResponse, BulkUpdateTasksRequest, BulkUpdateTasksResponse, CompleteSprintRequest, CompleteSprintResponse, CreateFieldRequest, CreateFieldResponse, CreateProjectRequest, CreateProjectResponse, CreateSprintRequest, CreateSprintResponse, CreateTaskRequest, CreateTaskResponse, CreateViewRequest, CreateViewResponse, DeleteFieldRequest, DeleteFieldResponse, DeleteProjectRequest, DeleteProjectResponse, DeleteSprintRequest, DeleteSprintResponse, DeleteTaskRequest, DeleteTaskResponse, DeleteTasksRequest, DeleteTasksResponse, DeleteViewRequest, DeleteViewResponse, GetProjectRequest, GetProjectResponse, GetTaskRequest, GetTaskResponse, GetViewCatalogRequest, GetViewCatalogResponse, ListActivitiesRequest, ListActivitiesResponse, ListProjectsRequest, ListProjectsResponse, ListSprintsRequest, ListSprintsResponse, ListTaskWatchersRequest, ListTaskWatchersResponse, ListTasksRequest, ListTasksResponse, MoveTaskRequest, MoveTaskResponse, ReorderViewsRequest, ReorderViewsResponse, StartSprintRequest, StartSprintResponse, ToggleTaskWatcherRequest, ToggleTaskWatcherResponse, UpdateFieldRequest, UpdateFieldResponse, UpdateProjectRequest, UpdateProjectResponse, UpdateSprintRequest, UpdateSprintResponse, UpdateTaskRequest, UpdateTaskResponse, UpdateViewRequest, UpdateViewResponse
+from .projects_pb import BulkCheckTaskWatchersRequest, BulkCheckTaskWatchersResponse, BulkUpdateTasksRequest, BulkUpdateTasksResponse, CompleteSprintRequest, CompleteSprintResponse, CreateFieldRequest, CreateFieldResponse, CreateProjectRequest, CreateProjectResponse, CreateSprintRequest, CreateSprintResponse, CreateTaskRequest, CreateTaskResponse, CreateViewRequest, CreateViewResponse, DeleteFieldRequest, DeleteFieldResponse, DeleteProjectRequest, DeleteProjectResponse, DeleteSprintRequest, DeleteSprintResponse, DeleteTaskRequest, DeleteTaskResponse, DeleteTasksRequest, DeleteTasksResponse, DeleteViewRequest, DeleteViewResponse, ExportTasksRequest, ExportTasksResponse, GetProjectRequest, GetProjectResponse, GetTaskRequest, GetTaskResponse, GetViewCatalogRequest, GetViewCatalogResponse, ListActivitiesRequest, ListActivitiesResponse, ListProjectsRequest, ListProjectsResponse, ListSprintsRequest, ListSprintsResponse, ListTaskWatchersRequest, ListTaskWatchersResponse, ListTasksRequest, ListTasksResponse, MoveTaskRequest, MoveTaskResponse, ReorderViewsRequest, ReorderViewsResponse, StartSprintRequest, StartSprintResponse, ToggleTaskWatcherRequest, ToggleTaskWatcherResponse, UpdateFieldRequest, UpdateFieldResponse, UpdateProjectRequest, UpdateProjectResponse, UpdateSprintRequest, UpdateSprintResponse, UpdateTaskRequest, UpdateTaskResponse, UpdateViewRequest, UpdateViewResponse
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator, Iterable, Mapping
+    from collections.abc import AsyncGenerator, AsyncIterator, Iterable, Iterator, Mapping
 
     from connectrpc.codec import Codec
     from connectrpc.compression import Compression
@@ -71,6 +71,12 @@ class ProjectsService(Protocol):
         raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
 
     async def delete_tasks(self, request: DeleteTasksRequest, ctx: RequestContext[DeleteTasksRequest, DeleteTasksResponse], /) -> DeleteTasksResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def export_tasks(self, request: ExportTasksRequest, ctx: RequestContext[ExportTasksRequest, ExportTasksResponse], /) -> AsyncIterator[ExportTasksResponse]:
+        """
+        Every task of one project, or of several, as a CSV or a zip bundle of CSVs.
+        """
         raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
 
     async def create_field(self, request: CreateFieldRequest, ctx: RequestContext[CreateFieldRequest, CreateFieldResponse], /) -> CreateFieldResponse:
@@ -289,6 +295,16 @@ class ProjectsServiceASGIApplication(ConnectASGIApplication[ProjectsService]):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.delete_tasks,
+                ),
+                "/projects.v1.ProjectsService/ExportTasks": Endpoint.server_stream(
+                    method=MethodInfo(
+                        name="ExportTasks",
+                        service_name="projects.v1.ProjectsService",
+                        input=ExportTasksRequest,
+                        output=ExportTasksResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.export_tasks,
                 ),
                 "/projects.v1.ProjectsService/CreateField": Endpoint.unary(
                     method=MethodInfo(
@@ -750,6 +766,29 @@ class ProjectsServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
+    def export_tasks(
+        self,
+        request: ExportTasksRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> AsyncIterator[ExportTasksResponse]:
+        """
+        Every task of one project, or of several, as a CSV or a zip bundle of CSVs.
+        """
+        return self.execute_server_stream(
+            request=request,
+            method=MethodInfo(
+                name="ExportTasks",
+                service_name="projects.v1.ProjectsService",
+                input=ExportTasksRequest,
+                output=ExportTasksResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
     async def create_field(
         self,
         request: CreateFieldRequest,
@@ -1171,6 +1210,12 @@ class ProjectsServiceSync(Protocol):
     def delete_tasks(self, request: DeleteTasksRequest, ctx: RequestContext[DeleteTasksRequest, DeleteTasksResponse], /) -> DeleteTasksResponse:
         raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
 
+    def export_tasks(self, request: ExportTasksRequest, ctx: RequestContext[ExportTasksRequest, ExportTasksResponse], /) -> Iterator[ExportTasksResponse]:
+        """
+        Every task of one project, or of several, as a CSV or a zip bundle of CSVs.
+        """
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
     def create_field(self, request: CreateFieldRequest, ctx: RequestContext[CreateFieldRequest, CreateFieldResponse], /) -> CreateFieldResponse:
         """
         ----- Field Definitions -----
@@ -1385,6 +1430,16 @@ class ProjectsServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.delete_tasks,
+                ),
+                "/projects.v1.ProjectsService/ExportTasks": EndpointSync.server_stream(
+                    method=MethodInfo(
+                        name="ExportTasks",
+                        service_name="projects.v1.ProjectsService",
+                        input=ExportTasksRequest,
+                        output=ExportTasksResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.export_tasks,
                 ),
                 "/projects.v1.ProjectsService/CreateField": EndpointSync.unary(
                     method=MethodInfo(
@@ -1828,6 +1883,28 @@ class ProjectsServiceClientSync(ConnectClientSync):
                 service_name="projects.v1.ProjectsService",
                 input=DeleteTasksRequest,
                 output=DeleteTasksResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def export_tasks(
+        self,
+        request: ExportTasksRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> Iterator[ExportTasksResponse]:
+        """
+        Every task of one project, or of several, as a CSV or a zip bundle of CSVs.
+        """
+        return self.execute_server_stream(
+            request=request,
+            method=MethodInfo(
+                name="ExportTasks",
+                service_name="projects.v1.ProjectsService",
+                input=ExportTasksRequest,
+                output=ExportTasksResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

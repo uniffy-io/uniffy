@@ -235,7 +235,12 @@ jobs:
         run: pnpm --filter uniffy-ui lint
 
       - name: Check formatting
-        run: pnpm --filter uniffy-ui format:check
+        run: |
+          if ! pnpm --filter uniffy-ui format:check; then
+            pnpm --filter uniffy-ui format
+            git diff -- src/ui/src
+            exit 1
+          fi
 
   lint-mobile:
     needs: changes
