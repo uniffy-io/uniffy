@@ -3,10 +3,12 @@
 from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
+
 from uniffy.core.errors import ValidationError
 from uniffy.core.models.rooms.booking import RoomBooking
 from uniffy.core.models.rooms.room import Room
-from uniffy.core.types import BookingStatus, RoomStatus, RoomType, generate_id
+from uniffy.core.types import BookingStatus, ContentRole, RoomStatus, RoomType, generate_id
 from uniffy.domains.agents.tools.builtin.rooms import (
     ROOMS_TOOLS,
     _execute_book_room,
@@ -325,6 +327,15 @@ class TestCancelBookingExecutor:
         assert kwargs["booking_id"] == booking.id
 
 
+@pytest.fixture(autouse=True)
+def _calendar_edit_allowed(monkeypatch):
+    """Event creation checks the target calendar first; these tests are about what follows."""
+    monkeypatch.setattr(
+        "uniffy.domains.scheduling.calendar.events.creation.require_calendar_edit",
+        AsyncMock(return_value=ContentRole.OWNER),
+    )
+
+
 class TestCalendarRoomAtomicityPrecheck:
     """When room_id is provided to create_event, a booking conflict
     must be detected before the event is added to the session - no
@@ -343,8 +354,6 @@ class TestCalendarRoomAtomicityPrecheck:
         session.commit = AsyncMock()
         session.flush = AsyncMock()
         session.refresh = AsyncMock()
-        # create() checks the target calendar belongs to the author first.
-        session.scalar = AsyncMock(return_value=user_id)
 
         ops = CalendarEventOperations(session, MagicMock())
         ops._resolve_access_policy = AsyncMock(return_value=(None, None))
@@ -394,7 +403,6 @@ class TestCalendarRoomAtomicityPrecheck:
         session.add = MagicMock()
         session.commit = AsyncMock()
         session.flush = AsyncMock()
-        session.scalar = AsyncMock(return_value=user_id)
 
         ops = CalendarEventOperations(session, MagicMock())
         ops._resolve_access_policy = AsyncMock(return_value=(None, None))

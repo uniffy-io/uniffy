@@ -27,11 +27,14 @@ from uniffy.core.auth.permissions.roles import (
 )
 from uniffy.core.content.registry import (
     attachment_cascade_loaders,
+    find_access_mode_guard,
     find_child_acl_refresh_hook,
     find_manage_override,
     find_ownership_transfer_hook,
+    find_transfer_guard,
     get_content_loader,
 )
+from uniffy.core.content.roles import resolve_content_role
 from uniffy.core.converters.common_proto import content_type_to_proto
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.events import NotificationEvent, emit_notification
@@ -100,14 +103,8 @@ class ContentMembersOperations:
         """Return all member rows for a content item. Requires VIEW."""
         content = await self._load_content(organization_id, content_type, content_id)
 
-        role = await self.permission_checker.effective_role(
-            user_id=actor_user_id,
-            organization_id=organization_id,
-            content_type=content_type,
-            content_id=content_id,
-            owner_id=content.owner_id,
-            access_mode=content.access_mode,
-            baseline_role=content.baseline_role,
+        role = await self._actor_role(
+            actor_user_id, organization_id, content_type, content_id, content
         )
         if role is None:
             raise PermissionDeniedError("view_members", content_type.value)
@@ -500,10 +497,15 @@ class ContentMembersOperations:
 
         self._validate_access_mode(new_access_mode, new_baseline_role)
 
-        if content_type == ContentType.CALENDAR_EVENT and new_access_mode == AccessMode.OPEN_TO_ORG:
-            raise ValidationError(
-                "access_mode",
-                "Calendar events are invite-only and cannot be opened to the organization.",
+        guard = find_access_mode_guard(content_type)
+        if guard is not None:
+            await guard(
+                self.session,
+                actor_user_id,
+                organization_id,
+                content,
+                new_access_mode,
+                new_baseline_role,
             )
 
         removed_members: list[tuple[SubjectType, UUID]] = []
@@ -728,6 +730,10 @@ class ContentMembersOperations:
                 "New owner is already the current owner",
             )
 
+        transfer_guard = find_transfer_guard(content_type)
+        if transfer_guard is not None:
+            await transfer_guard(self.session, organization_id, content, new_owner_user_id)
+
         if not await self._is_active_org_member(new_owner_user_id, organization_id):
             raise ValidationError(
                 "new_owner_user_id",
@@ -827,14 +833,8 @@ class ContentMembersOperations:
         """Permissions audit events for a content item. Requires VIEW."""
         content = await self._load_content(organization_id, content_type, content_id)
 
-        role = await self.permission_checker.effective_role(
-            user_id=actor_user_id,
-            organization_id=organization_id,
-            content_type=content_type,
-            content_id=content_id,
-            owner_id=content.owner_id,
-            access_mode=content.access_mode,
-            baseline_role=content.baseline_role,
+        role = await self._actor_role(
+            actor_user_id, organization_id, content_type, content_id, content
         )
         if role is None:
             raise PermissionDeniedError("view_member_events", content_type.value)
@@ -900,6 +900,30 @@ class ContentMembersOperations:
         if hook is not None:
             await hook[1](content_id)
 
+    async def _actor_role(
+        self,
+        actor_user_id: UUID,
+        organization_id: UUID,
+        content_type: ContentType,
+        content_id: UUID,
+        content,
+    ) -> ContentRole | None:
+        """The role the actor holds on the item, as its own domain resolves it.
+
+        A content type whose access also derives from a container registers its
+        resolver, so sharing is managed by exactly who the domain says can manage
+        it; every other type resolves through ``effective_role``.
+        """
+        return await resolve_content_role(
+            self.session,
+            user_id=actor_user_id,
+            organization_id=organization_id,
+            content_type=content_type,
+            content_id=content_id,
+            content=content,
+            checker=self.permission_checker,
+        )
+
     async def _require_manage(
         self,
         actor_user_id: UUID,
@@ -908,14 +932,8 @@ class ContentMembersOperations:
         content_id: UUID,
         content,
     ) -> ContentRole:
-        role = await self.permission_checker.effective_role(
-            user_id=actor_user_id,
-            organization_id=organization_id,
-            content_type=content_type,
-            content_id=content_id,
-            owner_id=content.owner_id,
-            access_mode=content.access_mode,
-            baseline_role=content.baseline_role,
+        role = await self._actor_role(
+            actor_user_id, organization_id, content_type, content_id, content
         )
         if not role_can_manage(role):
             override = find_manage_override(content_type)
@@ -932,14 +950,8 @@ class ContentMembersOperations:
         content_id: UUID,
         content,
     ) -> ContentRole:
-        role = await self.permission_checker.effective_role(
-            user_id=actor_user_id,
-            organization_id=organization_id,
-            content_type=content_type,
-            content_id=content_id,
-            owner_id=content.owner_id,
-            access_mode=content.access_mode,
-            baseline_role=content.baseline_role,
+        role = await self._actor_role(
+            actor_user_id, organization_id, content_type, content_id, content
         )
         if not role_can_transfer(role):
             raise PermissionDeniedError("transfer", content_type.value)

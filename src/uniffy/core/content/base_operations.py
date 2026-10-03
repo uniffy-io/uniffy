@@ -32,6 +32,7 @@ from uniffy.core.converters.common_proto import content_type_to_proto
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
 from uniffy.core.events.realtime import ContentAccessAction, publish_content_access_changed
 from uniffy.core.search.indexer import SearchIndexer, build_content_urn
+from uniffy.core.search.policy import SearchContainerAccess
 from uniffy.core.types import AccessMode, ContentRole, ContentType, SubjectType
 
 
@@ -92,6 +93,10 @@ class BaseContentOperations[TModel](ABC):
 
     async def _get_search_attendee_user_ids(self, model: TModel) -> list[UUID] | None:
         """Keep domain-membership grants separate from mutable content-member grants."""
+        return None
+
+    async def _get_search_container_access(self, model: TModel) -> SearchContainerAccess | None:
+        """Access reaching the item through a container it sits in; none by default."""
         return None
 
     async def get_by_id(
@@ -372,6 +377,7 @@ class BaseContentOperations[TModel](ABC):
             blocked_user_ids=blocked_user_ids if blocked_user_ids else None,
             blocked_group_ids=blocked_group_ids if blocked_group_ids else None,
             attendee_user_ids=await self._get_search_attendee_user_ids(model),
+            container=await self._get_search_container_access(model),
             tags=await self._get_search_tags_async(model),
             metadata=metadata,
         )

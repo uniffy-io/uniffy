@@ -7,7 +7,9 @@ from uniffy.core.models.calendar.category import Category
 from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.models.calendar.exception import RecurrenceException
 from uniffy.core.models.calendar.feed_token import CalendarFeedToken
+from uniffy.core.models.calendar.member_settings import CalendarMemberSettings
 from uniffy.core.models.calendar.reminder import EventReminder
+from uniffy.core.models.calendar.search_acl_refresh import CalendarSearchAclRefresh
 from uniffy.core.models.calendar.template import EventTemplate
 
 __all__ = [
@@ -15,6 +17,8 @@ __all__ = [
     "Category",
     "CalendarEvent",
     "CalendarFeedToken",
+    "CalendarMemberSettings",
+    "CalendarSearchAclRefresh",
     "EventActivity",
     "EventAttendee",
     "EventReminder",

@@ -127,6 +127,10 @@ Granting or revoking a `DomainAdmin` row commits the PostgreSQL fact and publish
 
 `ContentMembersOperations._require_manage` consults a per-content-type override when the actor's content role fails: `register_manage_override(content_type, check)` in `core/content/registry.py`. A passing check yields `ContentRole.ADMIN` for that mutation only - member CRUD, `SetAccessMode` - never for transfer, and never inside `effective_role`, so reads/lists/search stay unaffected. Registered: `AGENT` -> `is_agents_builder`. This is the sanctioned shape for domain-level management powers; adding an override for personal-content types would re-introduce god-mode - don't.
 
+### Role resolver (`register_role_resolver`)
+
+Content whose access also derives from a container registers how its role resolves: `register_role_resolver(content_type, resolver)` in `core/content/registry.py`. Every sharing surface resolves the actor through `core/content/roles.py::resolve_content_role` - `ContentMembersOperations` (member CRUD, access mode, member list and events), the access-request reviewer gate, and the caller role the share dialog renders - so none of them can disagree with the domain. Registered: `CALENDAR_EVENT` -> the event's own `_resolve_role` (own grants, calendar-derived role with calendar OWNER mapped to event ADMIN, attendee floor; an event BLOCKED still wins), so a calendar's admins manage sharing on events filed on it exactly as they already edit and delete them. This is not an admin bypass: it only ever yields a role the domain already grants on that item through a real grant. It never touches `effective_role` itself, and `OWNER` (transfer) stays with the item's own owner.
+
 ## Chat (separate access model)
 
 Chat uses channel membership, not `access_mode`. `ChatAccessChecker` (`domains/chat/access.py`): `check_access` (view), `require_send`, `require_elevated` (moderate). PUBLIC channels are open to the org; otherwise membership is required. Org admins and chat domain admins bypass (moderation - the kept exception). Domains with custom membership semantics override `_require_*` on `BaseContentOperations` to delegate to their own checker.

@@ -18,6 +18,7 @@ from uniffy.core.errors import ValidationError
 from uniffy.core.models.login.organization_member import OrganizationRole
 from uniffy.core.types import AccessMode, ContentRole, ContentType, SubjectType, generate_id
 from uniffy.domains.permissions.members import ContentMembersOperations
+from uniffy.domains.scheduling.calendar.calendars.guards import guard_event_access_mode
 
 
 def _make_ops() -> ContentMembersOperations:
@@ -240,12 +241,45 @@ class TestSetAccessModeRejections:
                 remove_members_on_narrow=False,
             )
 
+    async def test_a_registered_guard_refuses_before_any_write(self) -> None:
+        from uniffy.domains.permissions import members as members_module
+
+        ops = _make_ops()
+        content = _fake_content()
+        guard = AsyncMock(side_effect=ValidationError("access_mode", "refused by policy"))
+        p1, p2 = self._patch_prereqs(ops, content)
+        with (
+            p1,
+            p2,
+            patch.object(members_module, "find_access_mode_guard", return_value=guard),
+            pytest.raises(ValidationError, match="refused by policy"),
+        ):
+            await ops.set_access_mode(
+                actor_user_id=generate_id(),
+                organization_id=generate_id(),
+                content_type=ContentType.NOTE,
+                content_id=content.id,
+                new_access_mode=AccessMode.OPEN_TO_ORG,
+                new_baseline_role=ContentRole.VIEWER,
+            )
+        ops.session.commit.assert_not_awaited()
+        assert content.access_mode != AccessMode.OPEN_TO_ORG
+
     async def test_rejects_open_to_org_for_calendar_event(self) -> None:
         """Events are invite-only: OPEN_TO_ORG would leak an event to the whole org."""
+        from uniffy.domains.permissions import members as members_module
+
         ops = _make_ops()
         content = _fake_content()
         p1, p2 = self._patch_prereqs(ops, content)
-        with p1, p2, pytest.raises(ValidationError, match="invite-only"):
+        with (
+            p1,
+            p2,
+            patch.object(
+                members_module, "find_access_mode_guard", return_value=guard_event_access_mode
+            ),
+            pytest.raises(ValidationError, match="invite-only"),
+        ):
             await ops.set_access_mode(
                 actor_user_id=generate_id(),
                 organization_id=generate_id(),
@@ -397,6 +431,31 @@ class TestTransferOwnershipRejections:
                 content_id=content.id,
                 new_owner_user_id=new_owner,
             )
+
+    async def test_a_registered_transfer_guard_refuses_before_any_write(self) -> None:
+        from uniffy.domains.permissions import members as members_module
+
+        ops = _make_ops()
+        owner_id = generate_id()
+        content = _fake_content(owner_id=owner_id)
+        guard = AsyncMock(side_effect=ValidationError("content_id", "not transferable"))
+        p1, p2 = self._patch_prereqs(ops, content)
+        with (
+            p1,
+            p2,
+            patch.object(ops, "_is_active_org_member", AsyncMock(return_value=True)),
+            patch.object(members_module, "find_transfer_guard", return_value=guard),
+            pytest.raises(ValidationError, match="not transferable"),
+        ):
+            await ops.transfer_ownership(
+                actor_user_id=owner_id,
+                organization_id=generate_id(),
+                content_type=ContentType.NOTE,
+                content_id=content.id,
+                new_owner_user_id=generate_id(),
+            )
+        assert content.owner_id == owner_id
+        ops.session.commit.assert_not_awaited()
 
     async def test_registered_hook_runs_before_the_transfer_commit(self) -> None:
         """Domain state tied to the owner must move in the same transaction."""

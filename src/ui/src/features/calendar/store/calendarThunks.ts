@@ -58,7 +58,7 @@ import type {
 } from "@/features/calendar/types";
 import { RecurrenceEditScope as ProtoRecurrenceEditScope } from "@uniffy/proto/cal/v1/calendar_pb";
 
-const getOrganizationId = (state: RootState): string => {
+export const getOrganizationId = (state: RootState): string => {
   const orgId = state.auth.currentOrganizationId;
   if (!orgId) {
     throw new Error("No organization selected");
@@ -66,7 +66,7 @@ const getOrganizationId = (state: RootState): string => {
   return orgId;
 };
 
-const timestampToIso = (ts: Timestamp | undefined): string => {
+export const timestampToIso = (ts: Timestamp | undefined): string => {
   if (!ts) return new Date().toISOString();
   const seconds = typeof ts.seconds === "bigint" ? Number(ts.seconds) : ts.seconds;
   return new Date(seconds * 1000).toISOString();
@@ -330,7 +330,7 @@ export const fetchEventsInRange = createAsyncThunk<
 // The grid renders occurrences the server expands, so anything that changes a
 // series has to re-read the window around the month in view rather than patch
 // a single entity.
-const refreshVisibleRange = async (state: RootState, dispatch: AppDispatch) => {
+export const refreshVisibleRange = async (state: RootState, dispatch: AppDispatch) => {
   const inView = new Date(state.calendarUi.currentDate);
   await dispatch(
     fetchEventsInRange({
@@ -544,7 +544,8 @@ export const updateEvent = createAsyncThunk<
     hydrateEventTags(response.event, dispatch);
     const updated = eventFromProto(response.event);
 
-    if (params.recurrenceEditScope) {
+    // A calendar move re-points the series' edited occurrences too, so redraw the range.
+    if (params.recurrenceEditScope || params.calendarId !== undefined) {
       await refreshVisibleRange(getState(), dispatch);
     }
 

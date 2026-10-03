@@ -30,10 +30,28 @@ import {
   fetchFreeBusy,
   fetchMeetingSuggestions,
 } from "@/features/calendar/store/calendarThunks";
+import {
+  createCalendar,
+  deleteCalendar,
+  fetchCalendarPolicy,
+  fetchCalendars,
+  setCalendarVisibility,
+  updateCalendar,
+  updateCalendarPolicy,
+} from "@/features/calendar/store/calendarsThunks";
 import type { FreeBusyData, MeetingSuggestion } from "@/features/calendar/types/scheduling";
+import type { CalendarInfo, CalendarPolicyInfo } from "@/features/calendar/types";
 
 interface CalendarState {
+  /** The calendars the member can see, in the server's list order. */
+  calendars: Record<string, CalendarInfo>;
+  calendarOrder: string[];
+  calendarPolicy: CalendarPolicyInfo | null;
+  /** Latest visibility request per calendar; an older response must not undo a newer click. */
+  pendingVisibility: Record<string, string>;
   events: Record<string, CalendarEvent>;
+  /** Latest range request, so an older response cannot overwrite a newer grid. */
+  eventsRequestId: string | null;
   visibleEventIds: string[];
   categories: Record<string, Category>;
   templates: Record<string, EventTemplate>;
@@ -47,6 +65,7 @@ interface CalendarState {
     suggestions: MeetingSuggestion[];
   };
   loading: {
+    calendars: boolean;
     events: boolean;
     eventDetail: boolean;
     categories: boolean;
@@ -58,6 +77,7 @@ interface CalendarState {
     suggestions: boolean;
   };
   errors: {
+    calendars: string | null;
     events: string | null;
     categories: string | null;
     templates: string | null;
@@ -90,6 +110,11 @@ function createDefaultCategories(): Record<string, Category> {
 }
 
 const initialState: CalendarState = {
+  calendars: {},
+  calendarOrder: [],
+  pendingVisibility: {},
+  eventsRequestId: null,
+  calendarPolicy: null,
   events: {},
   visibleEventIds: [],
   categories: createDefaultCategories(),
@@ -108,6 +133,7 @@ const initialState: CalendarState = {
     suggestions: [],
   },
   loading: {
+    calendars: false,
     events: false,
     eventDetail: false,
     categories: false,
@@ -119,6 +145,7 @@ const initialState: CalendarState = {
     suggestions: false,
   },
   errors: {
+    calendars: null,
     events: null,
     categories: null,
     templates: null,
@@ -218,12 +245,75 @@ const calendarSlice = createSlice({
     resetCalendarState: () => initialState,
   },
   extraReducers: (builder) => {
+    const storeCalendar = (state: CalendarState, calendar: CalendarInfo) => {
+      state.calendars[calendar.id] = calendar;
+      if (!state.calendarOrder.includes(calendar.id)) state.calendarOrder.push(calendar.id);
+    };
+
     builder
-      .addCase(fetchEventsInRange.pending, (state) => {
+      .addCase(fetchCalendars.pending, (state) => {
+        state.loading.calendars = true;
+        state.errors.calendars = null;
+      })
+      .addCase(fetchCalendars.fulfilled, (state, action) => {
+        state.loading.calendars = false;
+        const previous = state.calendars;
+        state.calendars = Object.fromEntries(
+          action.payload.map((c) => [
+            c.id,
+            // A toggle still in flight wins over the list it raced with.
+            state.pendingVisibility[c.id] && previous[c.id]
+              ? { ...c, isHidden: previous[c.id].isHidden }
+              : c,
+          ]),
+        );
+        state.calendarOrder = action.payload.map((c) => c.id);
+      })
+      .addCase(fetchCalendars.rejected, (state, action) => {
+        state.loading.calendars = false;
+        state.errors.calendars = action.payload || "Failed to load calendars";
+      })
+      .addCase(createCalendar.fulfilled, (state, action) => storeCalendar(state, action.payload))
+      .addCase(updateCalendar.fulfilled, (state, action) => storeCalendar(state, action.payload))
+      .addCase(setCalendarVisibility.pending, (state, action) => {
+        // Optimistic: the eye toggles at once and the events follow the refetch.
+        const { calendarId, hidden } = action.meta.arg;
+        state.pendingVisibility[calendarId] = action.meta.requestId;
+        const calendar = state.calendars[calendarId];
+        if (calendar) calendar.isHidden = hidden;
+      })
+      .addCase(setCalendarVisibility.fulfilled, (state, action) => {
+        const { calendarId } = action.meta.arg;
+        if (state.pendingVisibility[calendarId] !== action.meta.requestId) return;
+        delete state.pendingVisibility[calendarId];
+        storeCalendar(state, action.payload);
+      })
+      .addCase(setCalendarVisibility.rejected, (state, action) => {
+        const { calendarId, hidden } = action.meta.arg;
+        if (state.pendingVisibility[calendarId] !== action.meta.requestId) return;
+        delete state.pendingVisibility[calendarId];
+        const calendar = state.calendars[calendarId];
+        if (calendar) calendar.isHidden = !hidden;
+      })
+      .addCase(deleteCalendar.fulfilled, (state, action) => {
+        delete state.calendars[action.payload.calendarId];
+        state.calendarOrder = state.calendarOrder.filter((id) => id !== action.payload.calendarId);
+      })
+      .addCase(fetchCalendarPolicy.fulfilled, (state, action) => {
+        state.calendarPolicy = action.payload;
+      })
+      .addCase(updateCalendarPolicy.fulfilled, (state, action) => {
+        state.calendarPolicy = action.payload;
+      });
+
+    builder
+      .addCase(fetchEventsInRange.pending, (state, action) => {
         state.loading.events = true;
         state.errors.events = null;
+        state.eventsRequestId = action.meta.requestId;
       })
       .addCase(fetchEventsInRange.fulfilled, (state, action) => {
+        if (state.eventsRequestId !== action.meta.requestId) return;
         state.loading.events = false;
         // Replace map wholesale so deleted entries drop out.
         const newEvents: Record<string, CalendarEvent> = {};
@@ -234,6 +324,7 @@ const calendarSlice = createSlice({
         state.visibleEventIds = action.payload.map((e) => e.id);
       })
       .addCase(fetchEventsInRange.rejected, (state, action) => {
+        if (state.eventsRequestId !== action.meta.requestId) return;
         state.loading.events = false;
         state.errors.events = action.payload || "Failed to fetch events";
       });

@@ -3,11 +3,11 @@ import { CalendarBlank, MapPin, Clock, Users, ArrowsClockwise } from "@phosphor-
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { selectEvent } from "@/features/calendar/store/calendarUiSlice";
 import { useCalendarEvents } from "@/features/calendar/hooks";
-import { ACCENT_EVENT_COLOR } from "@/features/calendar/constants";
 import { formatTimeRange } from "@/features/calendar/utils";
 import { eventDisplayState } from "@/features/calendar/utils/eventDisplay";
 import { formatDateWithWeekday } from "@/shared/utils/dateFormatting";
 import { cn } from "@/shared/utils/cn";
+import { resolveEventColor } from "@/features/calendar/utils/eventColor";
 
 function getDateLabel(dateStr: string): string {
   const today = new Date();
@@ -65,6 +65,7 @@ export function AgendaView() {
   const dispatch = useAppDispatch();
   const { visibleEvents } = useCalendarEvents();
   const categories = useAppSelector((state) => state.calendar.categories);
+  const calendars = useAppSelector((state) => state.calendar.calendars);
   const selectedEventId = useAppSelector((state) => state.calendarUi.selectedEventId);
 
   const dateGroups = useMemo(() => {
@@ -91,7 +92,6 @@ export function AgendaView() {
         });
       }
 
-      const category = event.categoryId ? categories[event.categoryId] : null;
       const display = eventDisplayState(event);
 
       groups.get(dateStr)!.events.push({
@@ -101,7 +101,7 @@ export function AgendaView() {
         endTime: event.endTime,
         isAllDay: event.isAllDay,
         location: event.location,
-        categoryColor: category?.color ?? ACCENT_EVENT_COLOR,
+        categoryColor: resolveEventColor(event, categories, calendars),
         attendeeCount: event.attendees.length,
         isRecurring: event.isRecurring ?? false,
         cancelled: display.cancelled,
@@ -111,7 +111,7 @@ export function AgendaView() {
     }
 
     return Array.from(groups.values());
-  }, [visibleEvents, categories]);
+  }, [visibleEvents, categories, calendars]);
 
   if (dateGroups.length === 0) {
     return (

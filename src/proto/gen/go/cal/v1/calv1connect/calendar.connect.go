@@ -33,6 +33,30 @@ const (
 // reflection-formatted method names, remove the leading slash and convert the remaining slash to a
 // period.
 const (
+	// CalendarServiceListCalendarsProcedure is the fully-qualified name of the CalendarService's
+	// ListCalendars RPC.
+	CalendarServiceListCalendarsProcedure = "/cal.v1.CalendarService/ListCalendars"
+	// CalendarServiceGetCalendarProcedure is the fully-qualified name of the CalendarService's
+	// GetCalendar RPC.
+	CalendarServiceGetCalendarProcedure = "/cal.v1.CalendarService/GetCalendar"
+	// CalendarServiceCreateCalendarProcedure is the fully-qualified name of the CalendarService's
+	// CreateCalendar RPC.
+	CalendarServiceCreateCalendarProcedure = "/cal.v1.CalendarService/CreateCalendar"
+	// CalendarServiceUpdateCalendarProcedure is the fully-qualified name of the CalendarService's
+	// UpdateCalendar RPC.
+	CalendarServiceUpdateCalendarProcedure = "/cal.v1.CalendarService/UpdateCalendar"
+	// CalendarServiceDeleteCalendarProcedure is the fully-qualified name of the CalendarService's
+	// DeleteCalendar RPC.
+	CalendarServiceDeleteCalendarProcedure = "/cal.v1.CalendarService/DeleteCalendar"
+	// CalendarServiceSetCalendarVisibilityProcedure is the fully-qualified name of the
+	// CalendarService's SetCalendarVisibility RPC.
+	CalendarServiceSetCalendarVisibilityProcedure = "/cal.v1.CalendarService/SetCalendarVisibility"
+	// CalendarServiceGetCalendarPolicyProcedure is the fully-qualified name of the CalendarService's
+	// GetCalendarPolicy RPC.
+	CalendarServiceGetCalendarPolicyProcedure = "/cal.v1.CalendarService/GetCalendarPolicy"
+	// CalendarServiceUpdateCalendarPolicyProcedure is the fully-qualified name of the CalendarService's
+	// UpdateCalendarPolicy RPC.
+	CalendarServiceUpdateCalendarPolicyProcedure = "/cal.v1.CalendarService/UpdateCalendarPolicy"
 	// CalendarServiceCreateEventProcedure is the fully-qualified name of the CalendarService's
 	// CreateEvent RPC.
 	CalendarServiceCreateEventProcedure = "/cal.v1.CalendarService/CreateEvent"
@@ -127,6 +151,22 @@ const (
 
 // CalendarServiceClient is a client for the cal.v1.CalendarService service.
 type CalendarServiceClient interface {
+	// List the calendars the caller can see, with their per-member visibility
+	ListCalendars(context.Context, *connect.Request[v1.ListCalendarsRequest]) (*connect.Response[v1.ListCalendarsResponse], error)
+	// Get a calendar by ID
+	GetCalendar(context.Context, *connect.Request[v1.GetCalendarRequest]) (*connect.Response[v1.GetCalendarResponse], error)
+	// Create a calendar; sharing afterwards goes through permissions.v1.MembersService
+	CreateCalendar(context.Context, *connect.Request[v1.CreateCalendarRequest]) (*connect.Response[v1.CreateCalendarResponse], error)
+	// Rename, recolour, or describe a calendar
+	UpdateCalendar(context.Context, *connect.Request[v1.UpdateCalendarRequest]) (*connect.Response[v1.UpdateCalendarResponse], error)
+	// Delete a calendar, moving or deleting its events
+	DeleteCalendar(context.Context, *connect.Request[v1.DeleteCalendarRequest]) (*connect.Response[v1.DeleteCalendarResponse], error)
+	// Show or hide a calendar for the caller only
+	SetCalendarVisibility(context.Context, *connect.Request[v1.SetCalendarVisibilityRequest]) (*connect.Response[v1.SetCalendarVisibilityResponse], error)
+	// Read the organization's calendar policy and what it allows the caller
+	GetCalendarPolicy(context.Context, *connect.Request[v1.GetCalendarPolicyRequest]) (*connect.Response[v1.GetCalendarPolicyResponse], error)
+	// Change the organization's calendar policy; org admins only
+	UpdateCalendarPolicy(context.Context, *connect.Request[v1.UpdateCalendarPolicyRequest]) (*connect.Response[v1.UpdateCalendarPolicyResponse], error)
 	// Create a new calendar event
 	CreateEvent(context.Context, *connect.Request[v1.CreateEventRequest]) (*connect.Response[v1.CreateEventResponse], error)
 	// Get an event by ID
@@ -202,6 +242,54 @@ func NewCalendarServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 	baseURL = strings.TrimRight(baseURL, "/")
 	calendarServiceMethods := v1.File_cal_v1_calendar_proto.Services().ByName("CalendarService").Methods()
 	return &calendarServiceClient{
+		listCalendars: connect.NewClient[v1.ListCalendarsRequest, v1.ListCalendarsResponse](
+			httpClient,
+			baseURL+CalendarServiceListCalendarsProcedure,
+			connect.WithSchema(calendarServiceMethods.ByName("ListCalendars")),
+			connect.WithClientOptions(opts...),
+		),
+		getCalendar: connect.NewClient[v1.GetCalendarRequest, v1.GetCalendarResponse](
+			httpClient,
+			baseURL+CalendarServiceGetCalendarProcedure,
+			connect.WithSchema(calendarServiceMethods.ByName("GetCalendar")),
+			connect.WithClientOptions(opts...),
+		),
+		createCalendar: connect.NewClient[v1.CreateCalendarRequest, v1.CreateCalendarResponse](
+			httpClient,
+			baseURL+CalendarServiceCreateCalendarProcedure,
+			connect.WithSchema(calendarServiceMethods.ByName("CreateCalendar")),
+			connect.WithClientOptions(opts...),
+		),
+		updateCalendar: connect.NewClient[v1.UpdateCalendarRequest, v1.UpdateCalendarResponse](
+			httpClient,
+			baseURL+CalendarServiceUpdateCalendarProcedure,
+			connect.WithSchema(calendarServiceMethods.ByName("UpdateCalendar")),
+			connect.WithClientOptions(opts...),
+		),
+		deleteCalendar: connect.NewClient[v1.DeleteCalendarRequest, v1.DeleteCalendarResponse](
+			httpClient,
+			baseURL+CalendarServiceDeleteCalendarProcedure,
+			connect.WithSchema(calendarServiceMethods.ByName("DeleteCalendar")),
+			connect.WithClientOptions(opts...),
+		),
+		setCalendarVisibility: connect.NewClient[v1.SetCalendarVisibilityRequest, v1.SetCalendarVisibilityResponse](
+			httpClient,
+			baseURL+CalendarServiceSetCalendarVisibilityProcedure,
+			connect.WithSchema(calendarServiceMethods.ByName("SetCalendarVisibility")),
+			connect.WithClientOptions(opts...),
+		),
+		getCalendarPolicy: connect.NewClient[v1.GetCalendarPolicyRequest, v1.GetCalendarPolicyResponse](
+			httpClient,
+			baseURL+CalendarServiceGetCalendarPolicyProcedure,
+			connect.WithSchema(calendarServiceMethods.ByName("GetCalendarPolicy")),
+			connect.WithClientOptions(opts...),
+		),
+		updateCalendarPolicy: connect.NewClient[v1.UpdateCalendarPolicyRequest, v1.UpdateCalendarPolicyResponse](
+			httpClient,
+			baseURL+CalendarServiceUpdateCalendarPolicyProcedure,
+			connect.WithSchema(calendarServiceMethods.ByName("UpdateCalendarPolicy")),
+			connect.WithClientOptions(opts...),
+		),
 		createEvent: connect.NewClient[v1.CreateEventRequest, v1.CreateEventResponse](
 			httpClient,
 			baseURL+CalendarServiceCreateEventProcedure,
@@ -387,6 +475,14 @@ func NewCalendarServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 
 // calendarServiceClient implements CalendarServiceClient.
 type calendarServiceClient struct {
+	listCalendars          *connect.Client[v1.ListCalendarsRequest, v1.ListCalendarsResponse]
+	getCalendar            *connect.Client[v1.GetCalendarRequest, v1.GetCalendarResponse]
+	createCalendar         *connect.Client[v1.CreateCalendarRequest, v1.CreateCalendarResponse]
+	updateCalendar         *connect.Client[v1.UpdateCalendarRequest, v1.UpdateCalendarResponse]
+	deleteCalendar         *connect.Client[v1.DeleteCalendarRequest, v1.DeleteCalendarResponse]
+	setCalendarVisibility  *connect.Client[v1.SetCalendarVisibilityRequest, v1.SetCalendarVisibilityResponse]
+	getCalendarPolicy      *connect.Client[v1.GetCalendarPolicyRequest, v1.GetCalendarPolicyResponse]
+	updateCalendarPolicy   *connect.Client[v1.UpdateCalendarPolicyRequest, v1.UpdateCalendarPolicyResponse]
 	createEvent            *connect.Client[v1.CreateEventRequest, v1.CreateEventResponse]
 	getEvent               *connect.Client[v1.GetEventRequest, v1.GetEventResponse]
 	updateEvent            *connect.Client[v1.UpdateEventRequest, v1.UpdateEventResponse]
@@ -417,6 +513,46 @@ type calendarServiceClient struct {
 	updateEventTemplate    *connect.Client[v1.UpdateEventTemplateRequest, v1.UpdateEventTemplateResponse]
 	deleteEventTemplate    *connect.Client[v1.DeleteEventTemplateRequest, v1.DeleteEventTemplateResponse]
 	listEventTemplates     *connect.Client[v1.ListEventTemplatesRequest, v1.ListEventTemplatesResponse]
+}
+
+// ListCalendars calls cal.v1.CalendarService.ListCalendars.
+func (c *calendarServiceClient) ListCalendars(ctx context.Context, req *connect.Request[v1.ListCalendarsRequest]) (*connect.Response[v1.ListCalendarsResponse], error) {
+	return c.listCalendars.CallUnary(ctx, req)
+}
+
+// GetCalendar calls cal.v1.CalendarService.GetCalendar.
+func (c *calendarServiceClient) GetCalendar(ctx context.Context, req *connect.Request[v1.GetCalendarRequest]) (*connect.Response[v1.GetCalendarResponse], error) {
+	return c.getCalendar.CallUnary(ctx, req)
+}
+
+// CreateCalendar calls cal.v1.CalendarService.CreateCalendar.
+func (c *calendarServiceClient) CreateCalendar(ctx context.Context, req *connect.Request[v1.CreateCalendarRequest]) (*connect.Response[v1.CreateCalendarResponse], error) {
+	return c.createCalendar.CallUnary(ctx, req)
+}
+
+// UpdateCalendar calls cal.v1.CalendarService.UpdateCalendar.
+func (c *calendarServiceClient) UpdateCalendar(ctx context.Context, req *connect.Request[v1.UpdateCalendarRequest]) (*connect.Response[v1.UpdateCalendarResponse], error) {
+	return c.updateCalendar.CallUnary(ctx, req)
+}
+
+// DeleteCalendar calls cal.v1.CalendarService.DeleteCalendar.
+func (c *calendarServiceClient) DeleteCalendar(ctx context.Context, req *connect.Request[v1.DeleteCalendarRequest]) (*connect.Response[v1.DeleteCalendarResponse], error) {
+	return c.deleteCalendar.CallUnary(ctx, req)
+}
+
+// SetCalendarVisibility calls cal.v1.CalendarService.SetCalendarVisibility.
+func (c *calendarServiceClient) SetCalendarVisibility(ctx context.Context, req *connect.Request[v1.SetCalendarVisibilityRequest]) (*connect.Response[v1.SetCalendarVisibilityResponse], error) {
+	return c.setCalendarVisibility.CallUnary(ctx, req)
+}
+
+// GetCalendarPolicy calls cal.v1.CalendarService.GetCalendarPolicy.
+func (c *calendarServiceClient) GetCalendarPolicy(ctx context.Context, req *connect.Request[v1.GetCalendarPolicyRequest]) (*connect.Response[v1.GetCalendarPolicyResponse], error) {
+	return c.getCalendarPolicy.CallUnary(ctx, req)
+}
+
+// UpdateCalendarPolicy calls cal.v1.CalendarService.UpdateCalendarPolicy.
+func (c *calendarServiceClient) UpdateCalendarPolicy(ctx context.Context, req *connect.Request[v1.UpdateCalendarPolicyRequest]) (*connect.Response[v1.UpdateCalendarPolicyResponse], error) {
+	return c.updateCalendarPolicy.CallUnary(ctx, req)
 }
 
 // CreateEvent calls cal.v1.CalendarService.CreateEvent.
@@ -571,6 +707,22 @@ func (c *calendarServiceClient) ListEventTemplates(ctx context.Context, req *con
 
 // CalendarServiceHandler is an implementation of the cal.v1.CalendarService service.
 type CalendarServiceHandler interface {
+	// List the calendars the caller can see, with their per-member visibility
+	ListCalendars(context.Context, *connect.Request[v1.ListCalendarsRequest]) (*connect.Response[v1.ListCalendarsResponse], error)
+	// Get a calendar by ID
+	GetCalendar(context.Context, *connect.Request[v1.GetCalendarRequest]) (*connect.Response[v1.GetCalendarResponse], error)
+	// Create a calendar; sharing afterwards goes through permissions.v1.MembersService
+	CreateCalendar(context.Context, *connect.Request[v1.CreateCalendarRequest]) (*connect.Response[v1.CreateCalendarResponse], error)
+	// Rename, recolour, or describe a calendar
+	UpdateCalendar(context.Context, *connect.Request[v1.UpdateCalendarRequest]) (*connect.Response[v1.UpdateCalendarResponse], error)
+	// Delete a calendar, moving or deleting its events
+	DeleteCalendar(context.Context, *connect.Request[v1.DeleteCalendarRequest]) (*connect.Response[v1.DeleteCalendarResponse], error)
+	// Show or hide a calendar for the caller only
+	SetCalendarVisibility(context.Context, *connect.Request[v1.SetCalendarVisibilityRequest]) (*connect.Response[v1.SetCalendarVisibilityResponse], error)
+	// Read the organization's calendar policy and what it allows the caller
+	GetCalendarPolicy(context.Context, *connect.Request[v1.GetCalendarPolicyRequest]) (*connect.Response[v1.GetCalendarPolicyResponse], error)
+	// Change the organization's calendar policy; org admins only
+	UpdateCalendarPolicy(context.Context, *connect.Request[v1.UpdateCalendarPolicyRequest]) (*connect.Response[v1.UpdateCalendarPolicyResponse], error)
 	// Create a new calendar event
 	CreateEvent(context.Context, *connect.Request[v1.CreateEventRequest]) (*connect.Response[v1.CreateEventResponse], error)
 	// Get an event by ID
@@ -642,6 +794,54 @@ type CalendarServiceHandler interface {
 // and JSON codecs. They also support gzip compression.
 func NewCalendarServiceHandler(svc CalendarServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
 	calendarServiceMethods := v1.File_cal_v1_calendar_proto.Services().ByName("CalendarService").Methods()
+	calendarServiceListCalendarsHandler := connect.NewUnaryHandler(
+		CalendarServiceListCalendarsProcedure,
+		svc.ListCalendars,
+		connect.WithSchema(calendarServiceMethods.ByName("ListCalendars")),
+		connect.WithHandlerOptions(opts...),
+	)
+	calendarServiceGetCalendarHandler := connect.NewUnaryHandler(
+		CalendarServiceGetCalendarProcedure,
+		svc.GetCalendar,
+		connect.WithSchema(calendarServiceMethods.ByName("GetCalendar")),
+		connect.WithHandlerOptions(opts...),
+	)
+	calendarServiceCreateCalendarHandler := connect.NewUnaryHandler(
+		CalendarServiceCreateCalendarProcedure,
+		svc.CreateCalendar,
+		connect.WithSchema(calendarServiceMethods.ByName("CreateCalendar")),
+		connect.WithHandlerOptions(opts...),
+	)
+	calendarServiceUpdateCalendarHandler := connect.NewUnaryHandler(
+		CalendarServiceUpdateCalendarProcedure,
+		svc.UpdateCalendar,
+		connect.WithSchema(calendarServiceMethods.ByName("UpdateCalendar")),
+		connect.WithHandlerOptions(opts...),
+	)
+	calendarServiceDeleteCalendarHandler := connect.NewUnaryHandler(
+		CalendarServiceDeleteCalendarProcedure,
+		svc.DeleteCalendar,
+		connect.WithSchema(calendarServiceMethods.ByName("DeleteCalendar")),
+		connect.WithHandlerOptions(opts...),
+	)
+	calendarServiceSetCalendarVisibilityHandler := connect.NewUnaryHandler(
+		CalendarServiceSetCalendarVisibilityProcedure,
+		svc.SetCalendarVisibility,
+		connect.WithSchema(calendarServiceMethods.ByName("SetCalendarVisibility")),
+		connect.WithHandlerOptions(opts...),
+	)
+	calendarServiceGetCalendarPolicyHandler := connect.NewUnaryHandler(
+		CalendarServiceGetCalendarPolicyProcedure,
+		svc.GetCalendarPolicy,
+		connect.WithSchema(calendarServiceMethods.ByName("GetCalendarPolicy")),
+		connect.WithHandlerOptions(opts...),
+	)
+	calendarServiceUpdateCalendarPolicyHandler := connect.NewUnaryHandler(
+		CalendarServiceUpdateCalendarPolicyProcedure,
+		svc.UpdateCalendarPolicy,
+		connect.WithSchema(calendarServiceMethods.ByName("UpdateCalendarPolicy")),
+		connect.WithHandlerOptions(opts...),
+	)
 	calendarServiceCreateEventHandler := connect.NewUnaryHandler(
 		CalendarServiceCreateEventProcedure,
 		svc.CreateEvent,
@@ -824,6 +1024,22 @@ func NewCalendarServiceHandler(svc CalendarServiceHandler, opts ...connect.Handl
 	)
 	return "/cal.v1.CalendarService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
+		case CalendarServiceListCalendarsProcedure:
+			calendarServiceListCalendarsHandler.ServeHTTP(w, r)
+		case CalendarServiceGetCalendarProcedure:
+			calendarServiceGetCalendarHandler.ServeHTTP(w, r)
+		case CalendarServiceCreateCalendarProcedure:
+			calendarServiceCreateCalendarHandler.ServeHTTP(w, r)
+		case CalendarServiceUpdateCalendarProcedure:
+			calendarServiceUpdateCalendarHandler.ServeHTTP(w, r)
+		case CalendarServiceDeleteCalendarProcedure:
+			calendarServiceDeleteCalendarHandler.ServeHTTP(w, r)
+		case CalendarServiceSetCalendarVisibilityProcedure:
+			calendarServiceSetCalendarVisibilityHandler.ServeHTTP(w, r)
+		case CalendarServiceGetCalendarPolicyProcedure:
+			calendarServiceGetCalendarPolicyHandler.ServeHTTP(w, r)
+		case CalendarServiceUpdateCalendarPolicyProcedure:
+			calendarServiceUpdateCalendarPolicyHandler.ServeHTTP(w, r)
 		case CalendarServiceCreateEventProcedure:
 			calendarServiceCreateEventHandler.ServeHTTP(w, r)
 		case CalendarServiceGetEventProcedure:
@@ -892,6 +1108,38 @@ func NewCalendarServiceHandler(svc CalendarServiceHandler, opts ...connect.Handl
 
 // UnimplementedCalendarServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedCalendarServiceHandler struct{}
+
+func (UnimplementedCalendarServiceHandler) ListCalendars(context.Context, *connect.Request[v1.ListCalendarsRequest]) (*connect.Response[v1.ListCalendarsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("cal.v1.CalendarService.ListCalendars is not implemented"))
+}
+
+func (UnimplementedCalendarServiceHandler) GetCalendar(context.Context, *connect.Request[v1.GetCalendarRequest]) (*connect.Response[v1.GetCalendarResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("cal.v1.CalendarService.GetCalendar is not implemented"))
+}
+
+func (UnimplementedCalendarServiceHandler) CreateCalendar(context.Context, *connect.Request[v1.CreateCalendarRequest]) (*connect.Response[v1.CreateCalendarResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("cal.v1.CalendarService.CreateCalendar is not implemented"))
+}
+
+func (UnimplementedCalendarServiceHandler) UpdateCalendar(context.Context, *connect.Request[v1.UpdateCalendarRequest]) (*connect.Response[v1.UpdateCalendarResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("cal.v1.CalendarService.UpdateCalendar is not implemented"))
+}
+
+func (UnimplementedCalendarServiceHandler) DeleteCalendar(context.Context, *connect.Request[v1.DeleteCalendarRequest]) (*connect.Response[v1.DeleteCalendarResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("cal.v1.CalendarService.DeleteCalendar is not implemented"))
+}
+
+func (UnimplementedCalendarServiceHandler) SetCalendarVisibility(context.Context, *connect.Request[v1.SetCalendarVisibilityRequest]) (*connect.Response[v1.SetCalendarVisibilityResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("cal.v1.CalendarService.SetCalendarVisibility is not implemented"))
+}
+
+func (UnimplementedCalendarServiceHandler) GetCalendarPolicy(context.Context, *connect.Request[v1.GetCalendarPolicyRequest]) (*connect.Response[v1.GetCalendarPolicyResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("cal.v1.CalendarService.GetCalendarPolicy is not implemented"))
+}
+
+func (UnimplementedCalendarServiceHandler) UpdateCalendarPolicy(context.Context, *connect.Request[v1.UpdateCalendarPolicyRequest]) (*connect.Response[v1.UpdateCalendarPolicyResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("cal.v1.CalendarService.UpdateCalendarPolicy is not implemented"))
+}
 
 func (UnimplementedCalendarServiceHandler) CreateEvent(context.Context, *connect.Request[v1.CreateEventRequest]) (*connect.Response[v1.CreateEventResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("cal.v1.CalendarService.CreateEvent is not implemented"))

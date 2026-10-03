@@ -43,6 +43,10 @@ ORG_PERMISSION_DEFAULTS: dict[ContentType, PermissionDefaults] = {
         "default_access_mode": AccessMode.OWNER_ONLY,
         "default_baseline_role": None,
     },
+    ContentType.CALENDAR: {
+        "default_access_mode": AccessMode.OWNER_ONLY,
+        "default_baseline_role": None,
+    },
 }
 
 

@@ -822,6 +822,66 @@ creating. Needs an organizer (A), an attendee (B), a third member (C), an org ad
       selected. On mobile, editing an event now allows removing the last reminder too.
 - [ ] Creating a template no longer logs a Redux serializability error in the console.
 
+## Calendar: shared and team calendars
+
+Calendars are shareable content: a calendar's members reach every event filed on it, a
+per-member show/hide stays with the member, and the org policy decides who may create team
+calendars or open a calendar to the whole organization. Needs an owner (A), a co-admin (D), a
+group containing B but not C, an org admin who is not a member of anything below, a second
+browser for B/C, `db shell`, and mailcatcher. (both products)
+
+- [ ] A clicks `+` on "My calendars" -> New calendar, picks Type "Team", adds D as a
+      co-admin, and creates it. D's sidebar lists it under "Shared with me" and D's row menu
+      offers Edit, Share, Import and Delete.
+- [ ] A shares the calendar with B's group as Viewer (row menu -> Share). B sees its events
+      on the grid (week, month, agenda), in search, and in the `@` picker, in the calendar's
+      colour; B's detail modal offers no edit, delete or calendar move.
+- [ ] C (not in the group) sees nothing: grid, search, `@` picker, a deep link to
+      `/calendar/<event-id>` (not found), and any iCal feed C subscribes to. The org admin sees nothing either
+      - there is no admin bypass.
+- [ ] Remove B from the group: the calendar and its events leave B's grid, search and
+      mentions on the next load.
+- [ ] Promote the group to Editor: B can create an event on the calendar from the
+      quick-create modal's calendar picker and edit events others filed there, but cannot
+      move them to another calendar or change their sharing (both need admin on the event).
+- [ ] D (calendar co-admin) opens the Share dialog on an event A filed on the calendar and
+      gets full controls; a BLOCKED grant for D on that event still wins over the calendar.
+- [ ] Mark one event Private: B (Viewer) sees only "Busy" for it; an Editor sees the details.
+- [ ] A shares their default calendar with B: B sees it named after A (e.g. "Alice Johnson"), not
+      a second "My Calendar", in the sidebar/filter sheet, pickers and the event badge; A still
+      sees "My Calendar".
+- [ ] Conflict flags follow the member's own time: two overlapping meetings on a calendar B only
+      views show side by side with no red border or warning (web week/day, mobile day/week, and
+      no month dot); an event B organizes or attends that overlaps another of B's still flags.
+- [ ] A transfers a personal calendar to B (row menu -> Share -> Transfer). Without closing the
+      dialog, A is listed as Admin and no longer sees Transfer; the calendar moves to B's "My
+      calendars" and to A's "Shared with me". B's dialog shows B as owner with Transfer.
+- [ ] Deactivate A: D still renames, shares and deletes the calendar and manages its events.
+- [ ] B hides the calendar (row click or eye icon): its events leave the grid and stay hidden
+      after a reload and on another device; A's grid is unaffected. An invitation to B on a
+      colleague's calendar B has hidden (or never shared with B) still shows on B's grid.
+- [ ] Mobile (B signed in): the filter sheet reads "Calendars and filters" and lists the same
+      sections with a show/hide switch per calendar; toggling one saves it for web too. The
+      new-event Calendar row offers only calendars B can edit, with B's own default first;
+      events and the detail screen use the calendar's colour and show a calendar badge.
+- [ ] Mobile sharing: A taps the share icon on a calendar row in "Calendars and filters", picks
+      "Specific people" and adds C as Viewer; C's list shows it under "Shared with me". B's share
+      icon on A's calendar opens a read-only "Who has access" view. With "Who can share a
+      calendar with the whole organization" set to "Org and calendar admins", a non-admin's
+      sheet no longer offers "Everyone in org" (unless the calendar is already open to the org).
+- [ ] Delete the calendar choosing "Move the events" to another calendar: attendees, RSVPs,
+      recurrence and edited occurrences survive on the target, and no mail is sent.
+- [ ] Delete another calendar choosing "Delete the events": attendees receive a cancellation
+      in mailcatcher and the events leave every grid. A calendar holding more than 200 series
+      refuses this disposition with a message suggesting a move instead. Default calendars
+      offer no Delete.
+- [ ] Admin -> Calendar: set "Who can create team calendars" to "Org and calendar admins". A
+      non-admin's New calendar dialog loses the Type choice; the org admin keeps it. Set "Who
+      can share a calendar with the whole organization" the same way: a non-admin's Share
+      dialog no longer offers "Everyone in org" and `SetAccessMode` to OPEN_TO_ORG
+      is refused. Each save writes a `calendar.policy_updated` audit row with the
+      previous and new values. Restore both to "Every member".
+
 ## Chat synced drafts
 
 Unsent composer text syncs across devices per channel and per thread. Needs one user logged in

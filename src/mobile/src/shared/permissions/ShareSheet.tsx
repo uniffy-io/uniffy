@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from "react";
+import React, { useState, useMemo, useCallback, useRef } from "react";
 import {
   View,
   Text,
@@ -85,12 +85,15 @@ export function ShareSheet({
   contentType,
   contentId,
   color,
+  hiddenModes,
 }: {
   visible: boolean;
   onClose: () => void;
   contentType: ContentType;
   contentId: string;
   color: string;
+  /** Modes this member may not pick; one already in effect still shows. */
+  hiddenModes?: readonly AccessModeName[];
 }) {
   const T = useTheme();
   const { user } = useAuth();
@@ -100,6 +103,12 @@ export function ShareSheet({
     useMemberMutations(contentType, contentId);
 
   const [search, setSearch] = useState("");
+  const scrollRef = useRef<ScrollView>(null);
+  // Matches render below the search box, which the keyboard pushes to the sheet's
+  // bottom edge; follow them down or they land out of sight.
+  const revealMatches = () => {
+    if (search.trim()) scrollRef.current?.scrollToEnd({ animated: true });
+  };
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const policy = membersQuery.data?.policy ?? null;
@@ -138,7 +147,9 @@ export function ShareSheet({
     <BottomSheet visible={visible} onClose={onClose} style={styles.sheet}>
       <View style={[styles.header, { borderBottomColor: T.border }]}>
         <View style={styles.headerRow}>
-          <Text style={[styles.title, { color: T.textBright }]}>Share</Text>
+          <Text style={[styles.title, { color: T.textBright }]}>
+            {policy && !manage ? "Who has access" : "Share"}
+          </Text>
           <TouchableOpacity onPress={onClose} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
             <X size={20} color={T.textDim} weight="bold" />
           </TouchableOpacity>
@@ -150,10 +161,18 @@ export function ShareSheet({
           <ActivityIndicator color={color} />
         </View>
       ) : (
-        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <ScrollView
+          ref={scrollRef}
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+          onContentSizeChange={revealMatches}
+          onLayout={revealMatches}
+        >
           <Text style={[styles.sectionLabel, { color: T.textDim }]}>WHO CAN ACCESS</Text>
           <View style={styles.modeGroup}>
-            {ACCESS_MODE_META.map((m) => {
+            {ACCESS_MODE_META.filter(
+              (m) => m.key === accessMode || !hiddenModes?.includes(m.key),
+            ).map((m) => {
               const Icon = ACCESS_ICON[m.key];
               const active = accessMode === m.key;
               return (
@@ -178,7 +197,9 @@ export function ShareSheet({
                   />
                   <View style={{ flex: 1 }}>
                     <Text style={[styles.modeLabel, { color: active ? color : T.textBright }]}>
-                      {m.label}
+                      {m.key === "OWNER_ONLY" && policy && policy.ownerId !== user?.id
+                        ? "Only the owner"
+                        : m.label}
                     </Text>
                     <Text style={[styles.modeDesc, { color: T.textDim }]}>{m.description}</Text>
                   </View>

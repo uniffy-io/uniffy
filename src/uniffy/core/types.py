@@ -62,6 +62,7 @@ class ContentType(str, Enum):
     ROOM = "ROOM"
     TAG = "TAG"
     TEAM = "TEAM"
+    CALENDAR = "CALENDAR"
 
 
 class SubjectType(str, Enum):

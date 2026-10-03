@@ -168,10 +168,36 @@ function blocksTime(event: CalendarEvent): boolean {
   return event.status !== "cancelled" && event.transparency !== "transparent";
 }
 
-export function findConflicts(event: CalendarEvent, allEvents: CalendarEvent[]): CalendarEvent[] {
-  if (!blocksTime(event)) return [];
+/** Decides which events on the grid can clash with each other. */
+export type ConflictScope = (event: CalendarEvent) => boolean;
+
+const EVERY_EVENT: ConflictScope = () => true;
+
+/**
+ * A shared calendar puts colleagues' meetings on the grid without making them
+ * the member's commitments, so only what the member organizes, attends (short
+ * of declining) or files on a calendar of their own can double-book them.
+ */
+export function memberCommitments(
+  userId: string | undefined,
+  ownCalendarIds: ReadonlySet<string>,
+): ConflictScope {
+  return (event) =>
+    ownCalendarIds.has(event.calendarId) ||
+    (!!userId &&
+      (event.organizerId === userId ||
+        event.attendees.some((a) => a.id === userId && a.status !== "declined")));
+}
+
+export function findConflicts(
+  event: CalendarEvent,
+  allEvents: CalendarEvent[],
+  scope: ConflictScope = EVERY_EVENT,
+): CalendarEvent[] {
+  const clashes = (e: CalendarEvent) => blocksTime(e) && scope(e);
+  if (!clashes(event)) return [];
   return allEvents.filter(
-    (other) => other.id !== event.id && blocksTime(other) && eventsOverlap(event, other),
+    (other) => other.id !== event.id && clashes(other) && eventsOverlap(event, other),
   );
 }
 
@@ -182,6 +208,7 @@ export function getPositionedEventsForDay(
   startHour: number = GRID.START_HOUR,
   hourHeight: number = GRID.HOUR_HEIGHT,
   columnWidth: number = 100,
+  scope: ConflictScope = EVERY_EVENT,
 ): PositionedEvent[] {
   // All-day events render in a separate row.
   const dayEvents = events.filter((e) => !e.isAllDay && eventSpansDate(e, date));
@@ -205,7 +232,8 @@ export function getPositionedEventsForDay(
 
       const multiDayPosition = getMultiDayPosition(event, date);
 
-      const conflicts = group.filter((e) => e.id !== event.id);
+      // Sharing a column group only means the blocks sit side by side.
+      const conflicts = findConflicts(event, group, scope);
       const hasConflict = conflicts.length > 0;
 
       positionedEvents.push({
@@ -231,13 +259,14 @@ export function getPositionedEventsForWeek(
   weekDates: Date[],
   startHour: number = GRID.START_HOUR,
   hourHeight: number = GRID.HOUR_HEIGHT,
+  scope: ConflictScope = EVERY_EVENT,
 ): Map<string, PositionedEvent[]> {
   const result = new Map<string, PositionedEvent[]>();
 
   for (const date of weekDates) {
     // Key matches dateString from weekColumns (local zone).
     const dateKey = format(date, "yyyy-MM-dd");
-    const dayEvents = getPositionedEventsForDay(events, date, startHour, hourHeight);
+    const dayEvents = getPositionedEventsForDay(events, date, startHour, hourHeight, 100, scope);
     result.set(dateKey, dayEvents);
   }
 

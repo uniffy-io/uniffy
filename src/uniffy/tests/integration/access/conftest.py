@@ -52,6 +52,7 @@ from uniffy.infrastructure.database.session import get_database_url
 from uniffy.domains.files.registration import register_file_content
 from uniffy.domains.notes.registration import register_note_content
 from uniffy.domains.projects.registration import register_project_content
+from uniffy.domains.scheduling.calendar.events.registration import register_calendar_content
 
 
 @pytest_asyncio.fixture(scope="session", loop_scope="session")
@@ -60,6 +61,7 @@ async def database():
     register_file_content()
     register_note_content()
     register_project_content()
+    register_calendar_content()
     try:
         await init_db(skip_migrations=True)
     except Exception as exc:

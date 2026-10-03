@@ -1,7 +1,7 @@
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { selectEvent, startDrag, endDrag } from "@/features/calendar/store";
 import type { PositionedEvent } from "@/features/calendar/types";
-import { ACCENT_EVENT_COLOR, eventTint } from "@/features/calendar/constants";
+import { eventTint } from "@/features/calendar/constants";
 import { formatTimeRange } from "@/features/calendar/utils";
 import { eventDisplayState } from "@/features/calendar/utils/eventDisplay";
 import { cn } from "@/shared/utils/cn";
@@ -9,6 +9,7 @@ import { Warning, Users, ArrowsClockwise, AirplaneTilt, EyeSlash } from "@phosph
 import { SubjectAvatar, SUBJECT_TYPE } from "@/components/subject";
 import { selectActiveCallForChannel } from "@/features/calls/store/callsSlice";
 import { LiveMeetingBadge } from "@/features/calendar/components/shared/LiveMeetingBadge";
+import { resolveEventColor } from "@/features/calendar/utils/eventColor";
 
 interface EventBlockProps {
   event: PositionedEvent;
@@ -19,6 +20,7 @@ export function EventBlock({ event, columnWidth }: EventBlockProps) {
   const dispatch = useAppDispatch();
   const selectedEventId = useAppSelector((state) => state.calendarUi.selectedEventId);
   const categories = useAppSelector((state) => state.calendar.categories);
+  const calendars = useAppSelector((state) => state.calendar.calendars);
   const currentUserId = useAppSelector((state) => state.auth.user?.id);
 
   const isSelected = selectedEventId === event.id;
@@ -44,8 +46,7 @@ export function EventBlock({ event, columnWidth }: EventBlockProps) {
   // nothing to join even when someone is sitting in the bound channel.
   const showLive = !!activeCall && !display.cancelled && !display.detailsHidden;
 
-  const category = event.categoryId ? categories[event.categoryId] : null;
-  const categoryColor = category?.color ?? ACCENT_EVENT_COLOR;
+  const categoryColor = resolveEventColor(event, categories, calendars);
   // Free (transparent) events sit lighter on the grid; they do not block time.
   const backgroundColor = eventTint(categoryColor, display.free ? 4 : isSharedEvent ? 7 : 10);
 

@@ -28,6 +28,8 @@ interface AccessPolicyPanelProps {
   explicitUserRole?: ContentRole | number | null;
   /** One rung above the host: `surface` on an app-frame page, `card` inside a dialog. */
   tone?: "card" | "surface";
+  /** `AccessMode` values to leave out of the selector, e.g. an org policy the viewer is under. */
+  hiddenAccessModes?: number[];
 }
 
 export function AccessPolicyPanel({
@@ -36,6 +38,7 @@ export function AccessPolicyPanel({
   showAuditLink = false,
   explicitUserRole,
   tone = "card",
+  hiddenAccessModes,
 }: AccessPolicyPanelProps) {
   const pane = tone === "surface" ? "bg-surface" : "bg-card";
   const currentUserId = useAppSelector((s) => s.auth.user?.id ?? "");
@@ -130,6 +133,8 @@ export function AccessPolicyPanel({
     setTransferring(true);
     try {
       await transfer(subject.id);
+      // The previous owner stays on as an admin member, which the response does not carry.
+      await refresh();
     } finally {
       setTransferring(false);
     }
@@ -197,7 +202,9 @@ export function AccessPolicyPanel({
             resolvedAccessMode === AccessMode.OPEN_TO_ORG
           }
           hiddenModes={
-            contentType === ContentType.CALENDAR_EVENT ? [AccessMode.OPEN_TO_ORG] : undefined
+            contentType === ContentType.CALENDAR_EVENT
+              ? [AccessMode.OPEN_TO_ORG]
+              : hiddenAccessModes
           }
           tone={tone}
         />

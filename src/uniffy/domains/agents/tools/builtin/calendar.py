@@ -396,12 +396,19 @@ async def _execute_create_event(ctx: ToolContext, args: dict) -> ToolResult:
     if raw_rec_config and isinstance(raw_rec_config, dict):
         kwargs["recurrence_config"] = raw_rec_config
 
-    # Ensure user has a default calendar
-    calendar = await cal_queries.ensure_default_calendar(
-        ctx.session,
-        ctx.organization_id,
-        ctx.user_id,
-    )
+    raw_calendar = args.get("calendar_id")
+    if raw_calendar:
+        calendar_id, err = parse_uuid(str(raw_calendar), "calendar_id")
+        if err:
+            return ToolResult(success=False, data="", error=err)
+    else:
+        calendar_id = (
+            await cal_queries.ensure_default_calendar(
+                ctx.session,
+                ctx.organization_id,
+                ctx.user_id,
+            )
+        ).id
 
     ops = CalendarEventOperations(ctx.session, ctx.required_search)
     event = await ops.create(
@@ -410,7 +417,7 @@ async def _execute_create_event(ctx: ToolContext, args: dict) -> ToolResult:
         title=title,
         start_time=start_time,
         end_time=end_time,
-        calendar_id=calendar.id,
+        calendar_id=calendar_id,
         **kwargs,
     )
 
@@ -666,6 +673,24 @@ async def _execute_rsvp(ctx: ToolContext, args: dict) -> ToolResult:
     )
 
 
+async def _execute_list_calendars(ctx: ToolContext, args: dict) -> ToolResult:
+    from uniffy.domains.scheduling.calendar import queries as cal_queries
+    from uniffy.domains.scheduling.calendar.calendars.reader import CalendarReader
+
+    await cal_queries.ensure_default_calendar(ctx.session, ctx.organization_id, ctx.user_id)
+    listings = await CalendarReader(ctx.session).list_calendars(ctx.user_id, ctx.organization_id)
+    lines = [f"Found {len(listings)} calendars:"]
+    for listing in listings:
+        calendar = listing.calendar
+        flags = [listing.section.value.lower()]
+        if calendar.is_default:
+            flags.append("default")
+        if listing.is_hidden:
+            flags.append("hidden")
+        lines.append(f"- {calendar.name} [{calendar.color}] id={calendar.id} ({', '.join(flags)})")
+    return ToolResult(success=True, data="\n".join(lines))
+
+
 async def _execute_list_categories(ctx: ToolContext, args: dict) -> ToolResult:
     from uniffy.domains.scheduling.calendar.operations import CategoryOperations
 
@@ -798,8 +823,8 @@ create_event = ToolDefinition(
         "Create a single calendar event. For recurring events (daily, weekly, etc.), "
         "set recurrence_pattern on this ONE event - do NOT create multiple events. "
         "Supports title, times, location, attendees, recurrence, categories, "
-        "and reminders. Events are invite-only: attendees and the organizer "
-        "see them, nobody else."
+        "and reminders. An event is seen by its organizer, its attendees, and "
+        "whoever can see the calendar it is filed on."
     ),
     parameter_schema={
         "type": "object",
@@ -844,6 +869,13 @@ create_event = ToolDefinition(
                 "description": (
                     "Category UUID for color coding. "
                     "Use calendar.list_categories to see available categories."
+                ),
+            },
+            "calendar_id": {
+                "type": "string",
+                "description": (
+                    "Calendar UUID to file the event on; defaults to the user's own calendar. "
+                    "Use calendar.list_calendars to find team or shared calendars."
                 ),
             },
             "attendee_ids": _ATTENDEE_IDS_SCHEMA,
@@ -1018,6 +1050,22 @@ rsvp = ToolDefinition(
         "required": ["event_id", "status"],
     },
     executor=_execute_rsvp,
+)
+
+list_calendars = ToolDefinition(
+    name="calendar.list_calendars",
+    display_name="List Calendars",
+    group="Calendar",
+    description=(
+        "List the calendars the user can see: their own, those shared with them, "
+        "and organization-wide ones, with ids to file events on."
+    ),
+    parameter_schema={
+        "type": "object",
+        "properties": {},
+    },
+    executor=_execute_list_calendars,
+    read_only=True,
 )
 
 list_categories = ToolDefinition(
@@ -1310,6 +1358,7 @@ CALENDAR_TOOLS: list[ToolDefinition] = [
     add_attendees,
     remove_attendees,
     rsvp,
+    list_calendars,
     list_categories,
     get_free_busy,
     find_time,

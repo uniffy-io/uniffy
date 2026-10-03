@@ -41,6 +41,7 @@ const (
 	SearchResultType_SEARCH_RESULT_TYPE_AGENT_FOLDER    SearchResultType = 14
 	SearchResultType_SEARCH_RESULT_TYPE_TEAM            SearchResultType = 15
 	SearchResultType_SEARCH_RESULT_TYPE_AGENT_CRON_TASK SearchResultType = 16
+	SearchResultType_SEARCH_RESULT_TYPE_CALENDAR        SearchResultType = 17
 )
 
 // Enum value maps for SearchResultType.
@@ -63,6 +64,7 @@ var (
 		14: "SEARCH_RESULT_TYPE_AGENT_FOLDER",
 		15: "SEARCH_RESULT_TYPE_TEAM",
 		16: "SEARCH_RESULT_TYPE_AGENT_CRON_TASK",
+		17: "SEARCH_RESULT_TYPE_CALENDAR",
 	}
 	SearchResultType_value = map[string]int32{
 		"SEARCH_RESULT_TYPE_UNSPECIFIED":     0,
@@ -82,6 +84,7 @@ var (
 		"SEARCH_RESULT_TYPE_AGENT_FOLDER":    14,
 		"SEARCH_RESULT_TYPE_TEAM":            15,
 		"SEARCH_RESULT_TYPE_AGENT_CRON_TASK": 16,
+		"SEARCH_RESULT_TYPE_CALENDAR":        17,
 	}
 )
 
@@ -1409,7 +1412,7 @@ const file_search_v1_search_proto_rawDesc = "" +
 	"\x12can_request_access\x183 \x01(\bR\x10canRequestAccess\x1a;\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01*\xb6\x04\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01*\xd7\x04\n" +
 	"\x10SearchResultType\x12\"\n" +
 	"\x1eSEARCH_RESULT_TYPE_UNSPECIFIED\x10\x00\x12\x1b\n" +
 	"\x17SEARCH_RESULT_TYPE_NOTE\x10\x01\x12\x1b\n" +
@@ -1428,7 +1431,8 @@ const file_search_v1_search_proto_rawDesc = "" +
 	"\x19SEARCH_RESULT_TYPE_FOLDER\x10\r\x12#\n" +
 	"\x1fSEARCH_RESULT_TYPE_AGENT_FOLDER\x10\x0e\x12\x1b\n" +
 	"\x17SEARCH_RESULT_TYPE_TEAM\x10\x0f\x12&\n" +
-	"\"SEARCH_RESULT_TYPE_AGENT_CRON_TASK\x10\x10*\xb4\x01\n" +
+	"\"SEARCH_RESULT_TYPE_AGENT_CRON_TASK\x10\x10\x12\x1f\n" +
+	"\x1bSEARCH_RESULT_TYPE_CALENDAR\x10\x11*\xb4\x01\n" +
 	"\x0fUrnAvailability\x12 \n" +
 	"\x1cURN_AVAILABILITY_UNSPECIFIED\x10\x00\x12\x1e\n" +
 	"\x1aURN_AVAILABILITY_AVAILABLE\x10\x01\x12\x1f\n" +

@@ -5,6 +5,7 @@ from uuid import UUID
 
 from loguru import logger
 from sqlalchemy import and_, select
+from sqlalchemy import update as sa_update
 
 from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import Action
@@ -37,6 +38,13 @@ from uniffy.core.types import (
     RecurrencePattern,
 )
 from uniffy.domains.chat.lifecycle import ChannelCallLifecycle
+from uniffy.domains.scheduling.calendar.calendars.access import require_calendar_edit
+from uniffy.domains.scheduling.calendar.calendars.relocation import stage_ical_uid_release
+from uniffy.domains.scheduling.calendar.calendars.search import (
+    enqueue_calendar_search_acl_refresh,
+    record_calendar_search_acl_refresh,
+    refresh_series_container_access,
+)
 from uniffy.domains.scheduling.calendar.mail.outbox import (
     CalendarMailKind,
     retire_pending_event_mail,
@@ -47,7 +55,6 @@ from uniffy.domains.scheduling.calendar.mail.staging import (
     stage_cancellation_mail,
     stage_change_mail,
 )
-from uniffy.domains.scheduling.calendar.queries import require_own_calendar
 from uniffy.domains.scheduling.rooms.events import EventBookingOperations
 from uniffy.domains.search.rename import propagate_rename
 from uniffy.domains.tags.operations import TagOperations
@@ -215,11 +222,34 @@ class EventUpdateOperations:
         previous_calendar_id = event.calendar_id
         calendar_moved = calendar_id is not None and calendar_id != event.calendar_id
         if calendar_moved:
-            # Editing an event you organize must not let you file it on a
-            # calendar you do not hold.
-            await require_own_calendar(self.events.session, user_id, organization_id, calendar_id)
+            if event.recurrence_id is not None:
+                # Access resolves through the series' calendar, so one edited
+                # occurrence cannot live on a different one.
+                raise ValidationError("calendar_id", "Move the whole series instead.")
+            # The calendar decides who can read the series, so moving it is a
+            # sharing change: it takes the same role as changing the event's access.
+            await self.events._require_manage(user_id, organization_id, event)
+            await require_calendar_edit(self.events.session, user_id, organization_id, calendar_id)
+            await stage_ical_uid_release(
+                self.events.session,
+                organization_id,
+                select(CalendarEvent.id).where(
+                    CalendarEvent.organization_id == organization_id,
+                    (CalendarEvent.id == event.id) | (CalendarEvent.recurrence_id == event.id),
+                ),
+                calendar_id,
+            )
         if calendar_id is not None:
             event.calendar_id = calendar_id
+        if calendar_moved:
+            await self.events.session.execute(
+                sa_update(CalendarEvent)
+                .where(
+                    CalendarEvent.organization_id == organization_id,
+                    CalendarEvent.recurrence_id == event.id,
+                )
+                .values(calendar_id=calendar_id)
+            )
         if category_id is not None:
             event.category_id = category_id
         if recurrence_config is not None:
@@ -390,6 +420,16 @@ class EventUpdateOperations:
 
         await self.events._index_for_search(event)
         await self.events.session.commit()
+        if calendar_moved:
+            try:
+                await refresh_series_container_access(
+                    self.events.session, self.events.search_indexer, organization_id, event
+                )
+            except Exception:
+                logger.opt(exception=True).warning(
+                    "Failed to refresh moved occurrences in search", event_id=str(event_id)
+                )
+                await self._defer_container_refresh(organization_id, event.calendar_id)
 
         # Rename propagation rewrites mention labels inside other people's
         # documents; a private event's title must not be written there.
@@ -530,3 +570,17 @@ class EventUpdateOperations:
         await self.events._finish_auto_created_room_members(event, staged_room)
 
         return event
+
+    async def _defer_container_refresh(self, organization_id: UUID, calendar_id: UUID) -> None:
+        """Hand a failed in-request refresh to the calendar's durable one."""
+        session = self.events.session
+        try:
+            await record_calendar_search_acl_refresh(session, organization_id, calendar_id)
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            logger.opt(exception=True).error(
+                "Moved occurrences keep stale search access", calendar_id=str(calendar_id)
+            )
+            return
+        await enqueue_calendar_search_acl_refresh(calendar_id)

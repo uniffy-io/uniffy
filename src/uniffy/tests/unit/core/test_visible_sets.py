@@ -37,6 +37,7 @@ class TestComputeVisibleTagIds:
         access_query = MagicMock()
         access_query.is_active_member = AsyncMock(return_value=True)
         access_query.build_accessible_filter = AsyncMock(return_value=true())
+        access_query.build_not_blocked_filter = MagicMock(return_value=true())
         checker = MagicMock()
         checker.is_org_admin = AsyncMock(return_value=False)
         checker.is_domain_admin = AsyncMock(return_value=False)

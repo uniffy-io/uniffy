@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import {
   View,
   Text,
@@ -33,6 +33,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BottomSheet } from "@shared/components/BottomSheet";
 import { RichDescriptionInput } from "@shared/components/RichDescriptionInput";
 import { CalendarPicker } from "@features/calendar/components/CalendarPicker";
+import { CalendarTargetSheet } from "@features/calendar/components/CalendarTargetSheet";
 import { TimePicker } from "@features/calendar/components/TimePicker";
 import { MeetingChannelPicker } from "@features/calendar/components/MeetingChannelPicker";
 import { router, useLocalSearchParams } from "expo-router";
@@ -44,7 +45,15 @@ import { RecurrenceEditScope } from "@uniffy/proto/cal/v1/calendar_pb";
 import { getEffectiveTimeZone } from "@core/datetimePrefs";
 import { instantFromZonedWall, zonedParts } from "@shared/lib/zonedTime";
 import { userFacingError } from "@shared/lib/userFacingError";
-import { useCategories, useEvent, useEventTemplates } from "@features/calendar/useCalendar";
+import {
+  useCalendars,
+  useCategories,
+  useEvent,
+  useEventTemplates,
+} from "@features/calendar/useCalendar";
+import { defaultCalendarFor, writableCalendars } from "@features/calendar/calendarList";
+import { useAuth } from "@core/providers/AuthContext";
+import { roleCanManage } from "@shared/permissions/contentRoles";
 import { useCreateEvent, useUpdateEvent } from "@features/calendar/useCalendarMutations";
 import { SubjectPickerSheet } from "@shared/directory/SubjectPickerSheet";
 import { useDirectory } from "@shared/directory/useDirectory";
@@ -123,7 +132,9 @@ export function CreateEventScreen() {
   }>();
   const isEditing = !!eventId;
 
+  const { user } = useAuth();
   const categoriesQuery = useCategories();
+  const calendarsQuery = useCalendars();
   const eventQuery = useEvent(eventId);
   const createEvent = useCreateEvent();
   const updateEvent = useUpdateEvent();
@@ -146,6 +157,8 @@ export function CreateEventScreen() {
   const [channelAutoCreated, setChannelAutoCreated] = useState(false);
   const [isAllDay, setIsAllDay] = useState(false);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | undefined>(undefined);
+  const [selectedCalendarId, setSelectedCalendarId] = useState("");
+  const [calendarPickerOpen, setCalendarPickerOpen] = useState(false);
   const [attendeeIds, setAttendeeIds] = useState<string[]>([]);
   const [tagIds, setTagIds] = useState<string[]>([]);
   const [isFocusTime, setIsFocusTime] = useState(false);
@@ -194,6 +207,7 @@ export function CreateEventScreen() {
     setMeetingMode(event.channelId ? "channel" : event.meetingUrl ? "link" : "none");
     setIsAllDay(event.isAllDay);
     setSelectedCategoryId(event.categoryId || undefined);
+    setSelectedCalendarId(event.calendarId);
     // Attendees are deliberately not prefilled: adding and removing people on
     // an existing event lives on the detail screen, where roles and responses
     // survive; a replace-the-list save here would drop both.
@@ -221,6 +235,28 @@ export function CreateEventScreen() {
 
   const categories = categoriesQuery.data ?? [];
   const selectedCategory = categories.find((c) => c.id === selectedCategoryId);
+
+  const writable = useMemo(
+    () => writableCalendars(calendarsQuery.data ?? []),
+    [calendarsQuery.data],
+  );
+  const defaultCalendar = defaultCalendarFor(calendarsQuery.data ?? [], user?.id);
+  // The calendar list can land after the screen opened, so an empty pick falls back to the default.
+  const targetCalendarId = selectedCalendarId || defaultCalendar?.id || "";
+  const targetCalendar = calendarsQuery.data?.find((c) => c.id === targetCalendarId);
+  const scopedToOccurrences =
+    recurrenceEditScope === String(RecurrenceEditScope.THIS_EVENT) ||
+    recurrenceEditScope === String(RecurrenceEditScope.THIS_AND_FOLLOWING);
+  // Moving changes who can read the series, so it takes the same role as sharing
+  // it, and it moves the series whole: never from one occurrence or its edited copy.
+  const canPickCalendar = isEditing
+    ? !!event &&
+      roleCanManage(event.userRole) &&
+      !event.recurrenceId &&
+      !scopedToOccurrences &&
+      writable.length > 1 &&
+      writable.some((c) => c.id === event.calendarId)
+    : writable.length > 1;
   const activeMeetingMode = MEETING_MODES.find((m) => m.mode === meetingMode) ?? MEETING_MODES[0];
   const ActiveMeetingIcon = activeMeetingMode.Icon;
 
@@ -330,6 +366,10 @@ export function CreateEventScreen() {
           meetingUrl: meetingMode === "link" ? trimmedUrl : "",
           channelId: desiredChannel !== prevChannelId ? desiredChannel : undefined,
           channelAutoCreated: channelOut ? channelAutoCreated : undefined,
+          calendarId:
+            canPickCalendar && selectedCalendarId !== prev?.calendarId
+              ? selectedCalendarId
+              : undefined,
           recurrenceEditScope: scope,
           occurrenceDate,
           isFocusTime: isFocusTime !== prev?.isFocusTime ? isFocusTime : undefined,
@@ -350,9 +390,9 @@ export function CreateEventScreen() {
             eventState.isOutOfOffice !== prev?.isOutOfOffice ? eventState.isOutOfOffice : undefined,
         });
       } else {
-        // calendarId is omitted - the backend resolves the user's default
-        // calendar (calendar management RPCs are deprecated).
         await createEvent.mutateAsync({
+          // Empty lets the server file it on the member's default calendar.
+          calendarId: targetCalendarId || undefined,
           title: title.trim(),
           description: descriptionRef.current.trim() || undefined,
           startTime: start.toISOString(),
@@ -509,6 +549,28 @@ export function CreateEventScreen() {
             </>
           )}
         </View>
+
+        {targetCalendar && (
+          <View style={[styles.fieldCard, { backgroundColor: T.surface, borderColor: T.border }]}>
+            <TouchableOpacity
+              style={styles.fieldRow}
+              onPress={() => setCalendarPickerOpen(true)}
+              disabled={!canPickCalendar}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: !canPickCalendar }}
+              accessibilityLabel={`Calendar: ${targetCalendar.label}${canPickCalendar ? ". Change" : ""}`}
+            >
+              <CalendarBlank size={18} color={T.textDim} weight="duotone" />
+              <Text style={[styles.fieldLabel, { color: T.textBright }]}>Calendar</Text>
+              <View style={[styles.categoryDot, { backgroundColor: targetCalendar.color }]} />
+              <Text style={[styles.fieldValue, { color: T.textDim }]} numberOfLines={1}>
+                {targetCalendar.label}
+              </Text>
+              {canPickCalendar ? <CaretDown size={14} color={T.textDim} weight="bold" /> : null}
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* Category */}
         {categories.length > 0 && (
@@ -758,6 +820,15 @@ export function CreateEventScreen() {
           );
         })}
       </BottomSheet>
+
+      <CalendarTargetSheet
+        visible={calendarPickerOpen}
+        onClose={() => setCalendarPickerOpen(false)}
+        calendars={writable}
+        selectedId={targetCalendarId}
+        onSelect={setSelectedCalendarId}
+        accentColor={T.accent}
+      />
 
       <BottomSheet visible={meetingPickerOpen} onClose={() => setMeetingPickerOpen(false)}>
         <Text style={[styles.pickerSheetTitle, { color: T.textBright }]}>Online meeting</Text>

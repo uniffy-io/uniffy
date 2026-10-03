@@ -9,6 +9,7 @@ export const UrnType = {
   CHAT_MESSAGE: "chat_message",
   USER: "user",
   TEAM: "team",
+  CALENDAR: "calendar",
   CALENDAR_EVENT: "calendar_event",
   PROJECT: "project",
   TASK: "task",

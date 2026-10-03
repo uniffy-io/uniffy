@@ -146,7 +146,8 @@ class ContentAccessQuery:
         )
 
         # Only meaningful on OPEN_TO_ORG rows: row's baseline wins unless it is
-        # NULL, in which case the org default fills it in.
+        # NULL, in which case the org default fills it in, floored at VIEWER
+        # exactly as resolve_effective_policy floors it.
         effective_baseline = case(
             (access_mode_column.is_(None), default_baseline_scalar),
             (
@@ -154,7 +155,7 @@ class ContentAccessQuery:
                     access_mode_column == AccessMode.OPEN_TO_ORG,
                     baseline_role_column.is_(None),
                 ),
-                default_baseline_scalar,
+                func.coalesce(default_baseline_scalar, ContentRole.VIEWER),
             ),
             else_=baseline_role_column,
         )

@@ -107,10 +107,65 @@ enum EventTransparency {
   EVENT_TRANSPARENCY_TRANSPARENT = 2;
 }
 
+// Kind of calendar; a team calendar belongs to the people it is shared with
+enum CalendarType {
+  CALENDAR_TYPE_UNSPECIFIED = 0;
+  CALENDAR_TYPE_PERSONAL = 1;
+  CALENDAR_TYPE_WORK = 2;
+  CALENDAR_TYPE_TEAM = 3;
+  CALENDAR_TYPE_SHARED = 4;
+}
+
+// Where a calendar sits in the caller's calendar list
+enum CalendarListSection {
+  CALENDAR_LIST_SECTION_UNSPECIFIED = 0;
+  // Calendars the caller owns
+  CALENDAR_LIST_SECTION_MINE = 1;
+  // Calendars shared with the caller directly or through a group
+  CALENDAR_LIST_SECTION_SHARED = 2;
+  // Calendars the caller reaches only because they are open to the organization
+  CALENDAR_LIST_SECTION_ORGANIZATION = 3;
+}
+
+// What happens to a deleted calendar's events
+enum CalendarEventDisposition {
+  CALENDAR_EVENT_DISPOSITION_UNSPECIFIED = 0;
+  // Move every event to another calendar
+  CALENDAR_EVENT_DISPOSITION_MOVE = 1;
+  // Delete every event, notifying attendees as a normal delete would
+  CALENDAR_EVENT_DISPOSITION_DELETE = 2;
+}
+
 // Service Definition
 
 // CalendarService provides calendar and event management functionality
 service CalendarService {
+  // === Calendar Operations ===
+
+  // List the calendars the caller can see, with their per-member visibility
+  rpc ListCalendars(ListCalendarsRequest) returns (ListCalendarsResponse) {}
+
+  // Get a calendar by ID
+  rpc GetCalendar(GetCalendarRequest) returns (GetCalendarResponse) {}
+
+  // Create a calendar; sharing afterwards goes through permissions.v1.MembersService
+  rpc CreateCalendar(CreateCalendarRequest) returns (CreateCalendarResponse) {}
+
+  // Rename, recolour, or describe a calendar
+  rpc UpdateCalendar(UpdateCalendarRequest) returns (UpdateCalendarResponse) {}
+
+  // Delete a calendar, moving or deleting its events
+  rpc DeleteCalendar(DeleteCalendarRequest) returns (DeleteCalendarResponse) {}
+
+  // Show or hide a calendar for the caller only
+  rpc SetCalendarVisibility(SetCalendarVisibilityRequest) returns (SetCalendarVisibilityResponse) {}
+
+  // Read the organization's calendar policy and what it allows the caller
+  rpc GetCalendarPolicy(GetCalendarPolicyRequest) returns (GetCalendarPolicyResponse) {}
+
+  // Change the organization's calendar policy; org admins only
+  rpc UpdateCalendarPolicy(UpdateCalendarPolicyRequest) returns (UpdateCalendarPolicyResponse) {}
+
   // === Event Operations ===
 
   // Create a new calendar event
@@ -623,6 +678,144 @@ message GetEventsInRangeRequest {
 // Response for events in range
 message GetEventsInRangeResponse {
   repeated CalendarEvent events = 1;
+}
+
+// Calendar Messages
+
+// A calendar as the caller sees it
+message Calendar {
+  string id = 1;
+  string organization_id = 2;
+  string owner_id = 3;
+  string name = 4;
+  string description = 5;
+  // Colour (hex)
+  string color = 6;
+  CalendarType calendar_type = 7;
+  // The owner's default calendar; never deletable
+  bool is_default = 8;
+  common.v1.AccessMode access_mode = 9;
+  optional common.v1.ContentRole baseline_role = 10;
+  // The caller's effective role on the calendar
+  common.v1.ContentRole user_role = 11;
+  // Hidden for the caller only; events stay where they are
+  bool is_hidden = 12;
+  CalendarListSection section = 13;
+  google.protobuf.Timestamp created_at = 14;
+  google.protobuf.Timestamp updated_at = 15;
+  // The owner's display name; every default calendar is named alike, so
+  // clients label a colleague's default by whose it is
+  string owner_name = 16;
+}
+
+message ListCalendarsRequest {
+  string organization_id = 1;
+}
+
+message ListCalendarsResponse {
+  repeated Calendar calendars = 1;
+}
+
+message GetCalendarRequest {
+  string calendar_id = 1;
+  string organization_id = 2;
+}
+
+message GetCalendarResponse {
+  Calendar calendar = 1;
+}
+
+message CreateCalendarRequest {
+  string organization_id = 1;
+  string name = 2;
+  optional string description = 3;
+  // Colour (hex)
+  string color = 4;
+  CalendarType calendar_type = 5;
+  // Omitted means private to the creator
+  optional common.v1.AccessMode access_mode = 6;
+  optional common.v1.ContentRole baseline_role = 7;
+  // Granted ADMIN at creation, so a team calendar does not depend on one person
+  repeated string admin_user_ids = 8;
+  repeated string admin_group_ids = 9;
+}
+
+message CreateCalendarResponse {
+  Calendar calendar = 1;
+}
+
+message UpdateCalendarRequest {
+  string calendar_id = 1;
+  string organization_id = 2;
+  optional string name = 3;
+  optional string description = 4;
+  optional string color = 5;
+}
+
+message UpdateCalendarResponse {
+  Calendar calendar = 1;
+}
+
+message DeleteCalendarRequest {
+  string calendar_id = 1;
+  string organization_id = 2;
+  CalendarEventDisposition disposition = 3;
+  // Required with CALENDAR_EVENT_DISPOSITION_MOVE
+  optional string target_calendar_id = 4;
+}
+
+message DeleteCalendarResponse {
+  int32 events_moved = 1;
+  int32 events_deleted = 2;
+}
+
+message SetCalendarVisibilityRequest {
+  string calendar_id = 1;
+  string organization_id = 2;
+  bool hidden = 3;
+}
+
+message SetCalendarVisibilityResponse {
+  Calendar calendar = 1;
+}
+
+// Who a calendar policy capability is open to
+enum CalendarPolicyAudience {
+  CALENDAR_POLICY_AUDIENCE_UNSPECIFIED = 0;
+  // Every member of the organization
+  CALENDAR_POLICY_AUDIENCE_EVERYONE = 1;
+  // Org admins and calendar domain admins
+  CALENDAR_POLICY_AUDIENCE_ADMINS = 2;
+}
+
+message CalendarPolicy {
+  string organization_id = 1;
+  // Who may create team calendars
+  CalendarPolicyAudience team_calendar_creators = 2;
+  // Who may open a calendar to the whole organization
+  CalendarPolicyAudience org_wide_calendar_sharers = 3;
+}
+
+message GetCalendarPolicyRequest {
+  string organization_id = 1;
+}
+
+message GetCalendarPolicyResponse {
+  CalendarPolicy policy = 1;
+  bool can_create_team_calendars = 2;
+  bool can_share_calendars_org_wide = 3;
+}
+
+message UpdateCalendarPolicyRequest {
+  string organization_id = 1;
+  CalendarPolicyAudience team_calendar_creators = 2;
+  CalendarPolicyAudience org_wide_calendar_sharers = 3;
+}
+
+message UpdateCalendarPolicyResponse {
+  CalendarPolicy policy = 1;
+  bool can_create_team_calendars = 2;
+  bool can_share_calendars_org_wide = 3;
 }
 
 // Category Messages

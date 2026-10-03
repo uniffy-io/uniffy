@@ -11,6 +11,7 @@ export const URN_TYPE_HEX_COLORS: Record<UrnType, string> = {
   [UrnType.AGENT_FOLDER]: "#06b6d4", // cyan-500 (container of agent chats)
   [UrnType.USER]: "#10b981", // emerald-500
   [UrnType.TEAM]: "#a855f7", // purple-500 (people-adjacent, near violet)
+  [UrnType.CALENDAR]: "#ec4899", // pink-500 (container of events, beside rose)
   [UrnType.CALENDAR_EVENT]: "#f43f5e", // rose-500
   [UrnType.PROJECT]: "#f97316", // orange-500
   [UrnType.TASK]: "#14b8a6", // teal-500
@@ -99,6 +100,15 @@ export const URN_TYPE_THEMES: Record<UrnType, UrnTypeTheme> = {
     border: "border-purple-500/40 dark:border-purple-500/20",
     borderHover: "hover:border-purple-500/60 dark:hover:border-purple-500/40",
     shadow: "shadow-purple-500/50",
+  },
+  [UrnType.CALENDAR]: {
+    iconBg: "bg-gradient-to-br from-pink-500 to-pink-600",
+    iconBoxAccent: "border border-primary/55 bg-primary/10 text-primary",
+    accentText: "text-pink-600 dark:text-pink-400",
+    badgeBg: "bg-pink-500/10",
+    border: "border-pink-500/40 dark:border-pink-500/20",
+    borderHover: "hover:border-pink-500/60 dark:hover:border-pink-500/40",
+    shadow: "shadow-pink-500/50",
   },
   [UrnType.CALENDAR_EVENT]: {
     iconBg: "bg-gradient-to-br from-rose-500 to-rose-600",
@@ -213,6 +223,7 @@ const BRAND_RAMP_ORDER: readonly UrnType[] = [
   UrnType.FILE,
   UrnType.PROJECT,
   UrnType.TASK,
+  UrnType.CALENDAR,
   UrnType.CALENDAR_EVENT,
   UrnType.ROOM,
   UrnType.CHAT,
@@ -290,6 +301,12 @@ export const URN_TYPE_LEGEND: Array<{
     label: "Agent Chats",
     hexColor: URN_TYPE_HEX_COLORS[UrnType.AGENT_CHAT],
     tailwindBg: "bg-cyan-500",
+  },
+  {
+    type: UrnType.CALENDAR,
+    label: "Calendars",
+    hexColor: URN_TYPE_HEX_COLORS[UrnType.CALENDAR],
+    tailwindBg: "bg-pink-500",
   },
   {
     type: UrnType.CALENDAR_EVENT,

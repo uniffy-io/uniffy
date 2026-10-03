@@ -7,7 +7,7 @@ import pytest
 
 from uniffy.core.errors import NotFoundError
 from uniffy.core.models.calendar.feed_token import CalendarFeedToken
-from uniffy.core.types import generate_id
+from uniffy.core.types import ContentRole, generate_id
 from uniffy.domains.scheduling.calendar.ical import feed as feed_module
 from uniffy.domains.scheduling.calendar.ical.feed import (
     FEED_REFRESH_INTERVAL,
@@ -25,6 +25,18 @@ OWNER = generate_id()
 STRANGER = generate_id()
 ORG = generate_id()
 CALENDAR = generate_id()
+
+
+async def _calendar_gate(session, user_id, organization_id, calendar_id):
+    """Stands in for the role gate: the fake session's owner holds the calendar, nobody else."""
+    if vars(session).get("_owner", user_id) != user_id:
+        raise NotFoundError("Calendar", calendar_id)
+    return ContentRole.OWNER
+
+
+@pytest.fixture(autouse=True)
+def _calendar_role_gate(monkeypatch):
+    monkeypatch.setattr(feed_module, "require_calendar_view", _calendar_gate)
 
 
 class _Session:
@@ -45,9 +57,6 @@ class _Session:
 
     async def scalar(self, statement):
         self.scalars_seen.append(statement)
-        # The ownership gate reads first; everything after wants the stored row.
-        if len(self.scalars_seen) == 1:
-            return self._owner
         return self._existing
 
     async def execute(self, _statement):
@@ -138,9 +147,7 @@ class TestReadingBack:
         )
         session = _Session(existing=existing)
 
-        result = await read_feed(
-            session, user_id=OWNER, organization_id=ORG, calendar_id=CALENDAR
-        )
+        result = await read_feed(session, user_id=OWNER, organization_id=ORG, calendar_id=CALENDAR)
 
         assert result is not None
         raw_token, row = result
@@ -177,10 +184,13 @@ class TestRevoking:
             is False
         )
 
-    async def test_a_stranger_cannot_revoke(self):
+    async def test_losing_the_calendar_still_lets_you_withdraw_your_url(self):
+        # Only the caller's own token is deleted, so no calendar access is needed.
         session = _Session(owner=STRANGER)
-        with pytest.raises(NotFoundError):
+        assert (
             await revoke_feed(session, user_id=OWNER, organization_id=ORG, calendar_id=CALENDAR)
+            is True
+        )
 
 
 class TestResolving:
@@ -206,18 +216,23 @@ class TestResolving:
 
         assert await resolve_feed(session, "never-minted") is None
 
+    async def test_a_deleted_or_unshared_calendar_stops_resolving(self, monkeypatch):
+        row = self._row()
+        session = AsyncMock()
+        session.scalar = AsyncMock(side_effect=[row, OWNER])
+        monkeypatch.setattr(
+            feed_module,
+            "require_calendar_view",
+            AsyncMock(side_effect=NotFoundError("Calendar", CALENDAR)),
+        )
+
+        assert await resolve_feed(session, "live-token") is None
+
     async def test_a_deactivated_subscriber_stops_resolving(self):
         row = self._row()
         session = AsyncMock()
         # Row found, but the membership recheck comes back empty.
         session.scalar = AsyncMock(side_effect=[row, None])
-
-        assert await resolve_feed(session, "live-token") is None
-
-    async def test_a_deleted_calendar_stops_resolving(self):
-        row = self._row()
-        session = AsyncMock()
-        session.scalar = AsyncMock(side_effect=[row, OWNER, None])
 
         assert await resolve_feed(session, "live-token") is None
 

@@ -16,7 +16,7 @@ from connectrpc.server import ConnectASGIApplication, ConnectWSGIApplication, DE
 from protobuf import DescService
 
 from . import calendar_pb
-from .calendar_pb import AddAttendeesRequest, AddAttendeesResponse, ApplyCalendarImportRequest, ApplyCalendarImportResponse, CreateCategoryRequest, CreateCategoryResponse, CreateEventRequest, CreateEventResponse, CreateEventTemplateRequest, CreateEventTemplateResponse, DeleteCategoryRequest, DeleteCategoryResponse, DeleteEventRequest, DeleteEventResponse, DeleteEventTemplateRequest, DeleteEventTemplateResponse, ExportCalendarRequest, ExportCalendarResponse, ExportEventRequest, ExportEventResponse, GetCalendarFeedUrlRequest, GetCalendarFeedUrlResponse, GetCategoryRequest, GetCategoryResponse, GetEventRequest, GetEventResponse, GetEventTemplateRequest, GetEventTemplateResponse, GetEventsInRangeRequest, GetEventsInRangeResponse, GetFreeBusyRequest, GetFreeBusyResponse, ListCategoriesRequest, ListCategoriesResponse, ListEventActivitiesRequest, ListEventActivitiesResponse, ListEventTemplatesRequest, ListEventTemplatesResponse, ListEventsRequest, ListEventsResponse, PreviewCalendarImportRequest, PreviewCalendarImportResponse, RegenerateCalendarFeedRequest, RegenerateCalendarFeedResponse, RemoveAttendeesRequest, RemoveAttendeesResponse, RevokeCalendarFeedRequest, RevokeCalendarFeedResponse, SuggestMeetingTimesRequest, SuggestMeetingTimesResponse, UpdateAttendeeRoleRequest, UpdateAttendeeRoleResponse, UpdateAttendeeStatusRequest, UpdateAttendeeStatusResponse, UpdateCategoryRequest, UpdateCategoryResponse, UpdateEventRequest, UpdateEventResponse, UpdateEventTemplateRequest, UpdateEventTemplateResponse
+from .calendar_pb import AddAttendeesRequest, AddAttendeesResponse, ApplyCalendarImportRequest, ApplyCalendarImportResponse, CreateCalendarRequest, CreateCalendarResponse, CreateCategoryRequest, CreateCategoryResponse, CreateEventRequest, CreateEventResponse, CreateEventTemplateRequest, CreateEventTemplateResponse, DeleteCalendarRequest, DeleteCalendarResponse, DeleteCategoryRequest, DeleteCategoryResponse, DeleteEventRequest, DeleteEventResponse, DeleteEventTemplateRequest, DeleteEventTemplateResponse, ExportCalendarRequest, ExportCalendarResponse, ExportEventRequest, ExportEventResponse, GetCalendarFeedUrlRequest, GetCalendarFeedUrlResponse, GetCalendarPolicyRequest, GetCalendarPolicyResponse, GetCalendarRequest, GetCalendarResponse, GetCategoryRequest, GetCategoryResponse, GetEventRequest, GetEventResponse, GetEventTemplateRequest, GetEventTemplateResponse, GetEventsInRangeRequest, GetEventsInRangeResponse, GetFreeBusyRequest, GetFreeBusyResponse, ListCalendarsRequest, ListCalendarsResponse, ListCategoriesRequest, ListCategoriesResponse, ListEventActivitiesRequest, ListEventActivitiesResponse, ListEventTemplatesRequest, ListEventTemplatesResponse, ListEventsRequest, ListEventsResponse, PreviewCalendarImportRequest, PreviewCalendarImportResponse, RegenerateCalendarFeedRequest, RegenerateCalendarFeedResponse, RemoveAttendeesRequest, RemoveAttendeesResponse, RevokeCalendarFeedRequest, RevokeCalendarFeedResponse, SetCalendarVisibilityRequest, SetCalendarVisibilityResponse, SuggestMeetingTimesRequest, SuggestMeetingTimesResponse, UpdateAttendeeRoleRequest, UpdateAttendeeRoleResponse, UpdateAttendeeStatusRequest, UpdateAttendeeStatusResponse, UpdateCalendarPolicyRequest, UpdateCalendarPolicyResponse, UpdateCalendarRequest, UpdateCalendarResponse, UpdateCategoryRequest, UpdateCategoryResponse, UpdateEventRequest, UpdateEventResponse, UpdateEventTemplateRequest, UpdateEventTemplateResponse
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Iterable, Mapping
@@ -31,8 +31,56 @@ class CalendarService(Protocol):
     """
     CalendarService provides calendar and event management functionality
 
-    === Event Operations ===
+    === Calendar Operations ===
     """
+    async def list_calendars(self, request: ListCalendarsRequest, ctx: RequestContext[ListCalendarsRequest, ListCalendarsResponse], /) -> ListCalendarsResponse:
+        """
+        List the calendars the caller can see, with their per-member visibility
+        """
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def get_calendar(self, request: GetCalendarRequest, ctx: RequestContext[GetCalendarRequest, GetCalendarResponse], /) -> GetCalendarResponse:
+        """
+        Get a calendar by ID
+        """
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def create_calendar(self, request: CreateCalendarRequest, ctx: RequestContext[CreateCalendarRequest, CreateCalendarResponse], /) -> CreateCalendarResponse:
+        """
+        Create a calendar; sharing afterwards goes through permissions.v1.MembersService
+        """
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def update_calendar(self, request: UpdateCalendarRequest, ctx: RequestContext[UpdateCalendarRequest, UpdateCalendarResponse], /) -> UpdateCalendarResponse:
+        """
+        Rename, recolour, or describe a calendar
+        """
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def delete_calendar(self, request: DeleteCalendarRequest, ctx: RequestContext[DeleteCalendarRequest, DeleteCalendarResponse], /) -> DeleteCalendarResponse:
+        """
+        Delete a calendar, moving or deleting its events
+        """
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def set_calendar_visibility(self, request: SetCalendarVisibilityRequest, ctx: RequestContext[SetCalendarVisibilityRequest, SetCalendarVisibilityResponse], /) -> SetCalendarVisibilityResponse:
+        """
+        Show or hide a calendar for the caller only
+        """
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def get_calendar_policy(self, request: GetCalendarPolicyRequest, ctx: RequestContext[GetCalendarPolicyRequest, GetCalendarPolicyResponse], /) -> GetCalendarPolicyResponse:
+        """
+        Read the organization's calendar policy and what it allows the caller
+        """
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def update_calendar_policy(self, request: UpdateCalendarPolicyRequest, ctx: RequestContext[UpdateCalendarPolicyRequest, UpdateCalendarPolicyResponse], /) -> UpdateCalendarPolicyResponse:
+        """
+        Change the organization's calendar policy; org admins only
+        """
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
     async def create_event(self, request: CreateEventRequest, ctx: RequestContext[CreateEventRequest, CreateEventResponse], /) -> CreateEventResponse:
         """
         Create a new calendar event
@@ -233,6 +281,86 @@ class CalendarServiceASGIApplication(ConnectASGIApplication[CalendarService]):
         super().__init__(
             service=service,
             endpoints=lambda svc: {
+                "/cal.v1.CalendarService/ListCalendars": Endpoint.unary(
+                    method=MethodInfo(
+                        name="ListCalendars",
+                        service_name="cal.v1.CalendarService",
+                        input=ListCalendarsRequest,
+                        output=ListCalendarsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.list_calendars,
+                ),
+                "/cal.v1.CalendarService/GetCalendar": Endpoint.unary(
+                    method=MethodInfo(
+                        name="GetCalendar",
+                        service_name="cal.v1.CalendarService",
+                        input=GetCalendarRequest,
+                        output=GetCalendarResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.get_calendar,
+                ),
+                "/cal.v1.CalendarService/CreateCalendar": Endpoint.unary(
+                    method=MethodInfo(
+                        name="CreateCalendar",
+                        service_name="cal.v1.CalendarService",
+                        input=CreateCalendarRequest,
+                        output=CreateCalendarResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.create_calendar,
+                ),
+                "/cal.v1.CalendarService/UpdateCalendar": Endpoint.unary(
+                    method=MethodInfo(
+                        name="UpdateCalendar",
+                        service_name="cal.v1.CalendarService",
+                        input=UpdateCalendarRequest,
+                        output=UpdateCalendarResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.update_calendar,
+                ),
+                "/cal.v1.CalendarService/DeleteCalendar": Endpoint.unary(
+                    method=MethodInfo(
+                        name="DeleteCalendar",
+                        service_name="cal.v1.CalendarService",
+                        input=DeleteCalendarRequest,
+                        output=DeleteCalendarResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.delete_calendar,
+                ),
+                "/cal.v1.CalendarService/SetCalendarVisibility": Endpoint.unary(
+                    method=MethodInfo(
+                        name="SetCalendarVisibility",
+                        service_name="cal.v1.CalendarService",
+                        input=SetCalendarVisibilityRequest,
+                        output=SetCalendarVisibilityResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.set_calendar_visibility,
+                ),
+                "/cal.v1.CalendarService/GetCalendarPolicy": Endpoint.unary(
+                    method=MethodInfo(
+                        name="GetCalendarPolicy",
+                        service_name="cal.v1.CalendarService",
+                        input=GetCalendarPolicyRequest,
+                        output=GetCalendarPolicyResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.get_calendar_policy,
+                ),
+                "/cal.v1.CalendarService/UpdateCalendarPolicy": Endpoint.unary(
+                    method=MethodInfo(
+                        name="UpdateCalendarPolicy",
+                        service_name="cal.v1.CalendarService",
+                        input=UpdateCalendarPolicyRequest,
+                        output=UpdateCalendarPolicyResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.update_calendar_policy,
+                ),
                 "/cal.v1.CalendarService/CreateEvent": Endpoint.unary(
                     method=MethodInfo(
                         name="CreateEvent",
@@ -550,8 +678,192 @@ class CalendarServiceClient(ConnectClient):
     """
     CalendarService provides calendar and event management functionality
 
-    === Event Operations ===
+    === Calendar Operations ===
     """
+    async def list_calendars(
+        self,
+        request: ListCalendarsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> ListCalendarsResponse:
+        """
+        List the calendars the caller can see, with their per-member visibility
+        """
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ListCalendars",
+                service_name="cal.v1.CalendarService",
+                input=ListCalendarsRequest,
+                output=ListCalendarsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def get_calendar(
+        self,
+        request: GetCalendarRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> GetCalendarResponse:
+        """
+        Get a calendar by ID
+        """
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetCalendar",
+                service_name="cal.v1.CalendarService",
+                input=GetCalendarRequest,
+                output=GetCalendarResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def create_calendar(
+        self,
+        request: CreateCalendarRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> CreateCalendarResponse:
+        """
+        Create a calendar; sharing afterwards goes through permissions.v1.MembersService
+        """
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="CreateCalendar",
+                service_name="cal.v1.CalendarService",
+                input=CreateCalendarRequest,
+                output=CreateCalendarResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def update_calendar(
+        self,
+        request: UpdateCalendarRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> UpdateCalendarResponse:
+        """
+        Rename, recolour, or describe a calendar
+        """
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="UpdateCalendar",
+                service_name="cal.v1.CalendarService",
+                input=UpdateCalendarRequest,
+                output=UpdateCalendarResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def delete_calendar(
+        self,
+        request: DeleteCalendarRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> DeleteCalendarResponse:
+        """
+        Delete a calendar, moving or deleting its events
+        """
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="DeleteCalendar",
+                service_name="cal.v1.CalendarService",
+                input=DeleteCalendarRequest,
+                output=DeleteCalendarResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def set_calendar_visibility(
+        self,
+        request: SetCalendarVisibilityRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> SetCalendarVisibilityResponse:
+        """
+        Show or hide a calendar for the caller only
+        """
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="SetCalendarVisibility",
+                service_name="cal.v1.CalendarService",
+                input=SetCalendarVisibilityRequest,
+                output=SetCalendarVisibilityResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def get_calendar_policy(
+        self,
+        request: GetCalendarPolicyRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> GetCalendarPolicyResponse:
+        """
+        Read the organization's calendar policy and what it allows the caller
+        """
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetCalendarPolicy",
+                service_name="cal.v1.CalendarService",
+                input=GetCalendarPolicyRequest,
+                output=GetCalendarPolicyResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def update_calendar_policy(
+        self,
+        request: UpdateCalendarPolicyRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> UpdateCalendarPolicyResponse:
+        """
+        Change the organization's calendar policy; org admins only
+        """
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="UpdateCalendarPolicy",
+                service_name="cal.v1.CalendarService",
+                input=UpdateCalendarPolicyRequest,
+                output=UpdateCalendarPolicyResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
     async def create_event(
         self,
         request: CreateEventRequest,
@@ -1248,8 +1560,56 @@ class CalendarServiceSync(Protocol):
     """
     CalendarService provides calendar and event management functionality
 
-    === Event Operations ===
+    === Calendar Operations ===
     """
+    def list_calendars(self, request: ListCalendarsRequest, ctx: RequestContext[ListCalendarsRequest, ListCalendarsResponse], /) -> ListCalendarsResponse:
+        """
+        List the calendars the caller can see, with their per-member visibility
+        """
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def get_calendar(self, request: GetCalendarRequest, ctx: RequestContext[GetCalendarRequest, GetCalendarResponse], /) -> GetCalendarResponse:
+        """
+        Get a calendar by ID
+        """
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def create_calendar(self, request: CreateCalendarRequest, ctx: RequestContext[CreateCalendarRequest, CreateCalendarResponse], /) -> CreateCalendarResponse:
+        """
+        Create a calendar; sharing afterwards goes through permissions.v1.MembersService
+        """
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def update_calendar(self, request: UpdateCalendarRequest, ctx: RequestContext[UpdateCalendarRequest, UpdateCalendarResponse], /) -> UpdateCalendarResponse:
+        """
+        Rename, recolour, or describe a calendar
+        """
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def delete_calendar(self, request: DeleteCalendarRequest, ctx: RequestContext[DeleteCalendarRequest, DeleteCalendarResponse], /) -> DeleteCalendarResponse:
+        """
+        Delete a calendar, moving or deleting its events
+        """
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def set_calendar_visibility(self, request: SetCalendarVisibilityRequest, ctx: RequestContext[SetCalendarVisibilityRequest, SetCalendarVisibilityResponse], /) -> SetCalendarVisibilityResponse:
+        """
+        Show or hide a calendar for the caller only
+        """
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def get_calendar_policy(self, request: GetCalendarPolicyRequest, ctx: RequestContext[GetCalendarPolicyRequest, GetCalendarPolicyResponse], /) -> GetCalendarPolicyResponse:
+        """
+        Read the organization's calendar policy and what it allows the caller
+        """
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def update_calendar_policy(self, request: UpdateCalendarPolicyRequest, ctx: RequestContext[UpdateCalendarPolicyRequest, UpdateCalendarPolicyResponse], /) -> UpdateCalendarPolicyResponse:
+        """
+        Change the organization's calendar policy; org admins only
+        """
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
     def create_event(self, request: CreateEventRequest, ctx: RequestContext[CreateEventRequest, CreateEventResponse], /) -> CreateEventResponse:
         """
         Create a new calendar event
@@ -1448,6 +1808,86 @@ class CalendarServiceWSGIApplication(ConnectWSGIApplication):
     ) -> None:
         super().__init__(
             endpoints={
+                "/cal.v1.CalendarService/ListCalendars": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="ListCalendars",
+                        service_name="cal.v1.CalendarService",
+                        input=ListCalendarsRequest,
+                        output=ListCalendarsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.list_calendars,
+                ),
+                "/cal.v1.CalendarService/GetCalendar": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="GetCalendar",
+                        service_name="cal.v1.CalendarService",
+                        input=GetCalendarRequest,
+                        output=GetCalendarResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.get_calendar,
+                ),
+                "/cal.v1.CalendarService/CreateCalendar": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="CreateCalendar",
+                        service_name="cal.v1.CalendarService",
+                        input=CreateCalendarRequest,
+                        output=CreateCalendarResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.create_calendar,
+                ),
+                "/cal.v1.CalendarService/UpdateCalendar": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="UpdateCalendar",
+                        service_name="cal.v1.CalendarService",
+                        input=UpdateCalendarRequest,
+                        output=UpdateCalendarResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.update_calendar,
+                ),
+                "/cal.v1.CalendarService/DeleteCalendar": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="DeleteCalendar",
+                        service_name="cal.v1.CalendarService",
+                        input=DeleteCalendarRequest,
+                        output=DeleteCalendarResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.delete_calendar,
+                ),
+                "/cal.v1.CalendarService/SetCalendarVisibility": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="SetCalendarVisibility",
+                        service_name="cal.v1.CalendarService",
+                        input=SetCalendarVisibilityRequest,
+                        output=SetCalendarVisibilityResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.set_calendar_visibility,
+                ),
+                "/cal.v1.CalendarService/GetCalendarPolicy": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="GetCalendarPolicy",
+                        service_name="cal.v1.CalendarService",
+                        input=GetCalendarPolicyRequest,
+                        output=GetCalendarPolicyResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.get_calendar_policy,
+                ),
+                "/cal.v1.CalendarService/UpdateCalendarPolicy": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="UpdateCalendarPolicy",
+                        service_name="cal.v1.CalendarService",
+                        input=UpdateCalendarPolicyRequest,
+                        output=UpdateCalendarPolicyResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.update_calendar_policy,
+                ),
                 "/cal.v1.CalendarService/CreateEvent": EndpointSync.unary(
                     method=MethodInfo(
                         name="CreateEvent",
@@ -1765,8 +2205,184 @@ class CalendarServiceClientSync(ConnectClientSync):
     """
     CalendarService provides calendar and event management functionality
 
-    === Event Operations ===
+    === Calendar Operations ===
     """
+    def list_calendars(
+        self,
+        request: ListCalendarsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> ListCalendarsResponse:
+        """
+        List the calendars the caller can see, with their per-member visibility
+        """
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ListCalendars",
+                service_name="cal.v1.CalendarService",
+                input=ListCalendarsRequest,
+                output=ListCalendarsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def get_calendar(
+        self,
+        request: GetCalendarRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> GetCalendarResponse:
+        """
+        Get a calendar by ID
+        """
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetCalendar",
+                service_name="cal.v1.CalendarService",
+                input=GetCalendarRequest,
+                output=GetCalendarResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def create_calendar(
+        self,
+        request: CreateCalendarRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> CreateCalendarResponse:
+        """
+        Create a calendar; sharing afterwards goes through permissions.v1.MembersService
+        """
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="CreateCalendar",
+                service_name="cal.v1.CalendarService",
+                input=CreateCalendarRequest,
+                output=CreateCalendarResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def update_calendar(
+        self,
+        request: UpdateCalendarRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> UpdateCalendarResponse:
+        """
+        Rename, recolour, or describe a calendar
+        """
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="UpdateCalendar",
+                service_name="cal.v1.CalendarService",
+                input=UpdateCalendarRequest,
+                output=UpdateCalendarResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def delete_calendar(
+        self,
+        request: DeleteCalendarRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> DeleteCalendarResponse:
+        """
+        Delete a calendar, moving or deleting its events
+        """
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="DeleteCalendar",
+                service_name="cal.v1.CalendarService",
+                input=DeleteCalendarRequest,
+                output=DeleteCalendarResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def set_calendar_visibility(
+        self,
+        request: SetCalendarVisibilityRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> SetCalendarVisibilityResponse:
+        """
+        Show or hide a calendar for the caller only
+        """
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="SetCalendarVisibility",
+                service_name="cal.v1.CalendarService",
+                input=SetCalendarVisibilityRequest,
+                output=SetCalendarVisibilityResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def get_calendar_policy(
+        self,
+        request: GetCalendarPolicyRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> GetCalendarPolicyResponse:
+        """
+        Read the organization's calendar policy and what it allows the caller
+        """
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetCalendarPolicy",
+                service_name="cal.v1.CalendarService",
+                input=GetCalendarPolicyRequest,
+                output=GetCalendarPolicyResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def update_calendar_policy(
+        self,
+        request: UpdateCalendarPolicyRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> UpdateCalendarPolicyResponse:
+        """
+        Change the organization's calendar policy; org admins only
+        """
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="UpdateCalendarPolicy",
+                service_name="cal.v1.CalendarService",
+                input=UpdateCalendarPolicyRequest,
+                output=UpdateCalendarPolicyResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
     def create_event(
         self,
         request: CreateEventRequest,

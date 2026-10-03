@@ -1808,6 +1808,787 @@ class GetEventsInRangeResponse(Message[_GetEventsInRangeResponseFields]):
 
         events: list[CalendarEvent]
 
+_CalendarFields: TypeAlias = Literal["id", "organization_id", "owner_id", "name", "description", "color", "calendar_type", "is_default", "access_mode", "baseline_role", "user_role", "is_hidden", "section", "created_at", "updated_at", "owner_name"]
+
+class Calendar(Message[_CalendarFields]):
+    """
+    A calendar as the caller sees it
+
+    ```proto
+    message cal.v1.Calendar
+    ```
+
+    Attributes:
+        id:
+            ```proto
+            string id = 1;
+            ```
+        organization_id:
+            ```proto
+            string organization_id = 2;
+            ```
+        owner_id:
+            ```proto
+            string owner_id = 3;
+            ```
+        name:
+            ```proto
+            string name = 4;
+            ```
+        description:
+            ```proto
+            string description = 5;
+            ```
+        color:
+            Colour (hex)
+
+            ```proto
+            string color = 6;
+            ```
+        calendar_type:
+            ```proto
+            cal.v1.CalendarType calendar_type = 7;
+            ```
+        is_default:
+            The owner's default calendar; never deletable
+
+            ```proto
+            bool is_default = 8;
+            ```
+        access_mode:
+            ```proto
+            common.v1.AccessMode access_mode = 9;
+            ```
+        baseline_role:
+            ```proto
+            optional common.v1.ContentRole baseline_role = 10;
+            ```
+        user_role:
+            The caller's effective role on the calendar
+
+            ```proto
+            common.v1.ContentRole user_role = 11;
+            ```
+        is_hidden:
+            Hidden for the caller only; events stay where they are
+
+            ```proto
+            bool is_hidden = 12;
+            ```
+        section:
+            ```proto
+            cal.v1.CalendarListSection section = 13;
+            ```
+        created_at:
+            ```proto
+            optional google.protobuf.Timestamp created_at = 14;
+            ```
+        updated_at:
+            ```proto
+            optional google.protobuf.Timestamp updated_at = 15;
+            ```
+        owner_name:
+            The owner's display name; every default calendar is named alike, so
+            clients label a colleague's default by whose it is
+
+            ```proto
+            string owner_name = 16;
+            ```
+    """
+
+    __slots__ = ("id", "organization_id", "owner_id", "name", "description", "color", "calendar_type", "is_default", "access_mode", "baseline_role", "user_role", "is_hidden", "section", "created_at", "updated_at", "owner_name")
+
+    if TYPE_CHECKING:
+
+        def __init__(
+            self,
+            *,
+            id: str = "",
+            organization_id: str = "",
+            owner_id: str = "",
+            name: str = "",
+            description: str = "",
+            color: str = "",
+            calendar_type: CalendarType | None = None,
+            is_default: bool = False,
+            access_mode: AccessMode | None = None,
+            baseline_role: ContentRole | None = None,
+            user_role: ContentRole | None = None,
+            is_hidden: bool = False,
+            section: CalendarListSection | None = None,
+            created_at: Timestamp | None = None,
+            updated_at: Timestamp | None = None,
+            owner_name: str = "",
+        ) -> None:
+            pass
+
+        id: str
+        organization_id: str
+        owner_id: str
+        name: str
+        description: str
+        color: str
+        calendar_type: CalendarType
+        is_default: bool
+        access_mode: AccessMode
+        baseline_role: ContentRole
+        user_role: ContentRole
+        is_hidden: bool
+        section: CalendarListSection
+        created_at: Timestamp | None
+        updated_at: Timestamp | None
+        owner_name: str
+
+_ListCalendarsRequestFields: TypeAlias = Literal["organization_id"]
+
+class ListCalendarsRequest(Message[_ListCalendarsRequestFields]):
+    """
+    ```proto
+    message cal.v1.ListCalendarsRequest
+    ```
+
+    Attributes:
+        organization_id:
+            ```proto
+            string organization_id = 1;
+            ```
+    """
+
+    __slots__ = ("organization_id",)
+
+    if TYPE_CHECKING:
+
+        def __init__(
+            self,
+            *,
+            organization_id: str = "",
+        ) -> None:
+            pass
+
+        organization_id: str
+
+_ListCalendarsResponseFields: TypeAlias = Literal["calendars"]
+
+class ListCalendarsResponse(Message[_ListCalendarsResponseFields]):
+    """
+    ```proto
+    message cal.v1.ListCalendarsResponse
+    ```
+
+    Attributes:
+        calendars:
+            ```proto
+            repeated cal.v1.Calendar calendars = 1;
+            ```
+    """
+
+    __slots__ = ("calendars",)
+
+    if TYPE_CHECKING:
+
+        def __init__(
+            self,
+            *,
+            calendars: list[Calendar] | None = None,
+        ) -> None:
+            pass
+
+        calendars: list[Calendar]
+
+_GetCalendarRequestFields: TypeAlias = Literal["calendar_id", "organization_id"]
+
+class GetCalendarRequest(Message[_GetCalendarRequestFields]):
+    """
+    ```proto
+    message cal.v1.GetCalendarRequest
+    ```
+
+    Attributes:
+        calendar_id:
+            ```proto
+            string calendar_id = 1;
+            ```
+        organization_id:
+            ```proto
+            string organization_id = 2;
+            ```
+    """
+
+    __slots__ = ("calendar_id", "organization_id")
+
+    if TYPE_CHECKING:
+
+        def __init__(
+            self,
+            *,
+            calendar_id: str = "",
+            organization_id: str = "",
+        ) -> None:
+            pass
+
+        calendar_id: str
+        organization_id: str
+
+_GetCalendarResponseFields: TypeAlias = Literal["calendar"]
+
+class GetCalendarResponse(Message[_GetCalendarResponseFields]):
+    """
+    ```proto
+    message cal.v1.GetCalendarResponse
+    ```
+
+    Attributes:
+        calendar:
+            ```proto
+            optional cal.v1.Calendar calendar = 1;
+            ```
+    """
+
+    __slots__ = ("calendar",)
+
+    if TYPE_CHECKING:
+
+        def __init__(
+            self,
+            *,
+            calendar: Calendar | None = None,
+        ) -> None:
+            pass
+
+        calendar: Calendar | None
+
+_CreateCalendarRequestFields: TypeAlias = Literal["organization_id", "name", "description", "color", "calendar_type", "access_mode", "baseline_role", "admin_user_ids", "admin_group_ids"]
+
+class CreateCalendarRequest(Message[_CreateCalendarRequestFields]):
+    """
+    ```proto
+    message cal.v1.CreateCalendarRequest
+    ```
+
+    Attributes:
+        organization_id:
+            ```proto
+            string organization_id = 1;
+            ```
+        name:
+            ```proto
+            string name = 2;
+            ```
+        description:
+            ```proto
+            optional string description = 3;
+            ```
+        color:
+            Colour (hex)
+
+            ```proto
+            string color = 4;
+            ```
+        calendar_type:
+            ```proto
+            cal.v1.CalendarType calendar_type = 5;
+            ```
+        access_mode:
+            Omitted means private to the creator
+
+            ```proto
+            optional common.v1.AccessMode access_mode = 6;
+            ```
+        baseline_role:
+            ```proto
+            optional common.v1.ContentRole baseline_role = 7;
+            ```
+        admin_user_ids:
+            Granted ADMIN at creation, so a team calendar does not depend on one person
+
+            ```proto
+            repeated string admin_user_ids = 8;
+            ```
+        admin_group_ids:
+            ```proto
+            repeated string admin_group_ids = 9;
+            ```
+    """
+
+    __slots__ = ("organization_id", "name", "description", "color", "calendar_type", "access_mode", "baseline_role", "admin_user_ids", "admin_group_ids")
+
+    if TYPE_CHECKING:
+
+        def __init__(
+            self,
+            *,
+            organization_id: str = "",
+            name: str = "",
+            description: str | None = None,
+            color: str = "",
+            calendar_type: CalendarType | None = None,
+            access_mode: AccessMode | None = None,
+            baseline_role: ContentRole | None = None,
+            admin_user_ids: list[str] | None = None,
+            admin_group_ids: list[str] | None = None,
+        ) -> None:
+            pass
+
+        organization_id: str
+        name: str
+        description: str
+        color: str
+        calendar_type: CalendarType
+        access_mode: AccessMode
+        baseline_role: ContentRole
+        admin_user_ids: list[str]
+        admin_group_ids: list[str]
+
+_CreateCalendarResponseFields: TypeAlias = Literal["calendar"]
+
+class CreateCalendarResponse(Message[_CreateCalendarResponseFields]):
+    """
+    ```proto
+    message cal.v1.CreateCalendarResponse
+    ```
+
+    Attributes:
+        calendar:
+            ```proto
+            optional cal.v1.Calendar calendar = 1;
+            ```
+    """
+
+    __slots__ = ("calendar",)
+
+    if TYPE_CHECKING:
+
+        def __init__(
+            self,
+            *,
+            calendar: Calendar | None = None,
+        ) -> None:
+            pass
+
+        calendar: Calendar | None
+
+_UpdateCalendarRequestFields: TypeAlias = Literal["calendar_id", "organization_id", "name", "description", "color"]
+
+class UpdateCalendarRequest(Message[_UpdateCalendarRequestFields]):
+    """
+    ```proto
+    message cal.v1.UpdateCalendarRequest
+    ```
+
+    Attributes:
+        calendar_id:
+            ```proto
+            string calendar_id = 1;
+            ```
+        organization_id:
+            ```proto
+            string organization_id = 2;
+            ```
+        name:
+            ```proto
+            optional string name = 3;
+            ```
+        description:
+            ```proto
+            optional string description = 4;
+            ```
+        color:
+            ```proto
+            optional string color = 5;
+            ```
+    """
+
+    __slots__ = ("calendar_id", "organization_id", "name", "description", "color")
+
+    if TYPE_CHECKING:
+
+        def __init__(
+            self,
+            *,
+            calendar_id: str = "",
+            organization_id: str = "",
+            name: str | None = None,
+            description: str | None = None,
+            color: str | None = None,
+        ) -> None:
+            pass
+
+        calendar_id: str
+        organization_id: str
+        name: str
+        description: str
+        color: str
+
+_UpdateCalendarResponseFields: TypeAlias = Literal["calendar"]
+
+class UpdateCalendarResponse(Message[_UpdateCalendarResponseFields]):
+    """
+    ```proto
+    message cal.v1.UpdateCalendarResponse
+    ```
+
+    Attributes:
+        calendar:
+            ```proto
+            optional cal.v1.Calendar calendar = 1;
+            ```
+    """
+
+    __slots__ = ("calendar",)
+
+    if TYPE_CHECKING:
+
+        def __init__(
+            self,
+            *,
+            calendar: Calendar | None = None,
+        ) -> None:
+            pass
+
+        calendar: Calendar | None
+
+_DeleteCalendarRequestFields: TypeAlias = Literal["calendar_id", "organization_id", "disposition", "target_calendar_id"]
+
+class DeleteCalendarRequest(Message[_DeleteCalendarRequestFields]):
+    """
+    ```proto
+    message cal.v1.DeleteCalendarRequest
+    ```
+
+    Attributes:
+        calendar_id:
+            ```proto
+            string calendar_id = 1;
+            ```
+        organization_id:
+            ```proto
+            string organization_id = 2;
+            ```
+        disposition:
+            ```proto
+            cal.v1.CalendarEventDisposition disposition = 3;
+            ```
+        target_calendar_id:
+            Required with CALENDAR_EVENT_DISPOSITION_MOVE
+
+            ```proto
+            optional string target_calendar_id = 4;
+            ```
+    """
+
+    __slots__ = ("calendar_id", "organization_id", "disposition", "target_calendar_id")
+
+    if TYPE_CHECKING:
+
+        def __init__(
+            self,
+            *,
+            calendar_id: str = "",
+            organization_id: str = "",
+            disposition: CalendarEventDisposition | None = None,
+            target_calendar_id: str | None = None,
+        ) -> None:
+            pass
+
+        calendar_id: str
+        organization_id: str
+        disposition: CalendarEventDisposition
+        target_calendar_id: str
+
+_DeleteCalendarResponseFields: TypeAlias = Literal["events_moved", "events_deleted"]
+
+class DeleteCalendarResponse(Message[_DeleteCalendarResponseFields]):
+    """
+    ```proto
+    message cal.v1.DeleteCalendarResponse
+    ```
+
+    Attributes:
+        events_moved:
+            ```proto
+            int32 events_moved = 1;
+            ```
+        events_deleted:
+            ```proto
+            int32 events_deleted = 2;
+            ```
+    """
+
+    __slots__ = ("events_moved", "events_deleted")
+
+    if TYPE_CHECKING:
+
+        def __init__(
+            self,
+            *,
+            events_moved: int = 0,
+            events_deleted: int = 0,
+        ) -> None:
+            pass
+
+        events_moved: int
+        events_deleted: int
+
+_SetCalendarVisibilityRequestFields: TypeAlias = Literal["calendar_id", "organization_id", "hidden"]
+
+class SetCalendarVisibilityRequest(Message[_SetCalendarVisibilityRequestFields]):
+    """
+    ```proto
+    message cal.v1.SetCalendarVisibilityRequest
+    ```
+
+    Attributes:
+        calendar_id:
+            ```proto
+            string calendar_id = 1;
+            ```
+        organization_id:
+            ```proto
+            string organization_id = 2;
+            ```
+        hidden:
+            ```proto
+            bool hidden = 3;
+            ```
+    """
+
+    __slots__ = ("calendar_id", "organization_id", "hidden")
+
+    if TYPE_CHECKING:
+
+        def __init__(
+            self,
+            *,
+            calendar_id: str = "",
+            organization_id: str = "",
+            hidden: bool = False,
+        ) -> None:
+            pass
+
+        calendar_id: str
+        organization_id: str
+        hidden: bool
+
+_SetCalendarVisibilityResponseFields: TypeAlias = Literal["calendar"]
+
+class SetCalendarVisibilityResponse(Message[_SetCalendarVisibilityResponseFields]):
+    """
+    ```proto
+    message cal.v1.SetCalendarVisibilityResponse
+    ```
+
+    Attributes:
+        calendar:
+            ```proto
+            optional cal.v1.Calendar calendar = 1;
+            ```
+    """
+
+    __slots__ = ("calendar",)
+
+    if TYPE_CHECKING:
+
+        def __init__(
+            self,
+            *,
+            calendar: Calendar | None = None,
+        ) -> None:
+            pass
+
+        calendar: Calendar | None
+
+_CalendarPolicyFields: TypeAlias = Literal["organization_id", "team_calendar_creators", "org_wide_calendar_sharers"]
+
+class CalendarPolicy(Message[_CalendarPolicyFields]):
+    """
+    ```proto
+    message cal.v1.CalendarPolicy
+    ```
+
+    Attributes:
+        organization_id:
+            ```proto
+            string organization_id = 1;
+            ```
+        team_calendar_creators:
+            Who may create team calendars
+
+            ```proto
+            cal.v1.CalendarPolicyAudience team_calendar_creators = 2;
+            ```
+        org_wide_calendar_sharers:
+            Who may open a calendar to the whole organization
+
+            ```proto
+            cal.v1.CalendarPolicyAudience org_wide_calendar_sharers = 3;
+            ```
+    """
+
+    __slots__ = ("organization_id", "team_calendar_creators", "org_wide_calendar_sharers")
+
+    if TYPE_CHECKING:
+
+        def __init__(
+            self,
+            *,
+            organization_id: str = "",
+            team_calendar_creators: CalendarPolicyAudience | None = None,
+            org_wide_calendar_sharers: CalendarPolicyAudience | None = None,
+        ) -> None:
+            pass
+
+        organization_id: str
+        team_calendar_creators: CalendarPolicyAudience
+        org_wide_calendar_sharers: CalendarPolicyAudience
+
+_GetCalendarPolicyRequestFields: TypeAlias = Literal["organization_id"]
+
+class GetCalendarPolicyRequest(Message[_GetCalendarPolicyRequestFields]):
+    """
+    ```proto
+    message cal.v1.GetCalendarPolicyRequest
+    ```
+
+    Attributes:
+        organization_id:
+            ```proto
+            string organization_id = 1;
+            ```
+    """
+
+    __slots__ = ("organization_id",)
+
+    if TYPE_CHECKING:
+
+        def __init__(
+            self,
+            *,
+            organization_id: str = "",
+        ) -> None:
+            pass
+
+        organization_id: str
+
+_GetCalendarPolicyResponseFields: TypeAlias = Literal["policy", "can_create_team_calendars", "can_share_calendars_org_wide"]
+
+class GetCalendarPolicyResponse(Message[_GetCalendarPolicyResponseFields]):
+    """
+    ```proto
+    message cal.v1.GetCalendarPolicyResponse
+    ```
+
+    Attributes:
+        policy:
+            ```proto
+            optional cal.v1.CalendarPolicy policy = 1;
+            ```
+        can_create_team_calendars:
+            ```proto
+            bool can_create_team_calendars = 2;
+            ```
+        can_share_calendars_org_wide:
+            ```proto
+            bool can_share_calendars_org_wide = 3;
+            ```
+    """
+
+    __slots__ = ("policy", "can_create_team_calendars", "can_share_calendars_org_wide")
+
+    if TYPE_CHECKING:
+
+        def __init__(
+            self,
+            *,
+            policy: CalendarPolicy | None = None,
+            can_create_team_calendars: bool = False,
+            can_share_calendars_org_wide: bool = False,
+        ) -> None:
+            pass
+
+        policy: CalendarPolicy | None
+        can_create_team_calendars: bool
+        can_share_calendars_org_wide: bool
+
+_UpdateCalendarPolicyRequestFields: TypeAlias = Literal["organization_id", "team_calendar_creators", "org_wide_calendar_sharers"]
+
+class UpdateCalendarPolicyRequest(Message[_UpdateCalendarPolicyRequestFields]):
+    """
+    ```proto
+    message cal.v1.UpdateCalendarPolicyRequest
+    ```
+
+    Attributes:
+        organization_id:
+            ```proto
+            string organization_id = 1;
+            ```
+        team_calendar_creators:
+            ```proto
+            cal.v1.CalendarPolicyAudience team_calendar_creators = 2;
+            ```
+        org_wide_calendar_sharers:
+            ```proto
+            cal.v1.CalendarPolicyAudience org_wide_calendar_sharers = 3;
+            ```
+    """
+
+    __slots__ = ("organization_id", "team_calendar_creators", "org_wide_calendar_sharers")
+
+    if TYPE_CHECKING:
+
+        def __init__(
+            self,
+            *,
+            organization_id: str = "",
+            team_calendar_creators: CalendarPolicyAudience | None = None,
+            org_wide_calendar_sharers: CalendarPolicyAudience | None = None,
+        ) -> None:
+            pass
+
+        organization_id: str
+        team_calendar_creators: CalendarPolicyAudience
+        org_wide_calendar_sharers: CalendarPolicyAudience
+
+_UpdateCalendarPolicyResponseFields: TypeAlias = Literal["policy", "can_create_team_calendars", "can_share_calendars_org_wide"]
+
+class UpdateCalendarPolicyResponse(Message[_UpdateCalendarPolicyResponseFields]):
+    """
+    ```proto
+    message cal.v1.UpdateCalendarPolicyResponse
+    ```
+
+    Attributes:
+        policy:
+            ```proto
+            optional cal.v1.CalendarPolicy policy = 1;
+            ```
+        can_create_team_calendars:
+            ```proto
+            bool can_create_team_calendars = 2;
+            ```
+        can_share_calendars_org_wide:
+            ```proto
+            bool can_share_calendars_org_wide = 3;
+            ```
+    """
+
+    __slots__ = ("policy", "can_create_team_calendars", "can_share_calendars_org_wide")
+
+    if TYPE_CHECKING:
+
+        def __init__(
+            self,
+            *,
+            policy: CalendarPolicy | None = None,
+            can_create_team_calendars: bool = False,
+            can_share_calendars_org_wide: bool = False,
+        ) -> None:
+            pass
+
+        policy: CalendarPolicy | None
+        can_create_team_calendars: bool
+        can_share_calendars_org_wide: bool
+
 _CategoryFields: TypeAlias = Literal["id", "organization_id", "name", "color", "icon", "is_default", "sort_order", "created_at", "updated_at"]
 
 class Category(Message[_CategoryFields]):
@@ -4677,9 +5458,146 @@ class EventTransparency(Enum):
     OPAQUE = 1
     TRANSPARENT = 2
 
+class CalendarType(Enum):
+    """
+    Kind of calendar; a team calendar belongs to the people it is shared with
+
+    ```proto
+    enum cal.v1.CalendarType
+    ```
+
+    Attributes:
+        UNSPECIFIED:
+            ```proto
+            CALENDAR_TYPE_UNSPECIFIED = 0
+            ```
+        PERSONAL:
+            ```proto
+            CALENDAR_TYPE_PERSONAL = 1
+            ```
+        WORK:
+            ```proto
+            CALENDAR_TYPE_WORK = 2
+            ```
+        TEAM:
+            ```proto
+            CALENDAR_TYPE_TEAM = 3
+            ```
+        SHARED:
+            ```proto
+            CALENDAR_TYPE_SHARED = 4
+            ```
+    """
+
+    UNSPECIFIED = 0
+    PERSONAL = 1
+    WORK = 2
+    TEAM = 3
+    SHARED = 4
+
+class CalendarListSection(Enum):
+    """
+    Where a calendar sits in the caller's calendar list
+
+    ```proto
+    enum cal.v1.CalendarListSection
+    ```
+
+    Attributes:
+        UNSPECIFIED:
+            ```proto
+            CALENDAR_LIST_SECTION_UNSPECIFIED = 0
+            ```
+        MINE:
+            Calendars the caller owns
+
+            ```proto
+            CALENDAR_LIST_SECTION_MINE = 1
+            ```
+        SHARED:
+            Calendars shared with the caller directly or through a group
+
+            ```proto
+            CALENDAR_LIST_SECTION_SHARED = 2
+            ```
+        ORGANIZATION:
+            Calendars the caller reaches only because they are open to the organization
+
+            ```proto
+            CALENDAR_LIST_SECTION_ORGANIZATION = 3
+            ```
+    """
+
+    UNSPECIFIED = 0
+    MINE = 1
+    SHARED = 2
+    ORGANIZATION = 3
+
+class CalendarEventDisposition(Enum):
+    """
+    What happens to a deleted calendar's events
+
+    ```proto
+    enum cal.v1.CalendarEventDisposition
+    ```
+
+    Attributes:
+        UNSPECIFIED:
+            ```proto
+            CALENDAR_EVENT_DISPOSITION_UNSPECIFIED = 0
+            ```
+        MOVE:
+            Move every event to another calendar
+
+            ```proto
+            CALENDAR_EVENT_DISPOSITION_MOVE = 1
+            ```
+        DELETE:
+            Delete every event, notifying attendees as a normal delete would
+
+            ```proto
+            CALENDAR_EVENT_DISPOSITION_DELETE = 2
+            ```
+    """
+
+    UNSPECIFIED = 0
+    MOVE = 1
+    DELETE = 2
+
+class CalendarPolicyAudience(Enum):
+    """
+    Who a calendar policy capability is open to
+
+    ```proto
+    enum cal.v1.CalendarPolicyAudience
+    ```
+
+    Attributes:
+        UNSPECIFIED:
+            ```proto
+            CALENDAR_POLICY_AUDIENCE_UNSPECIFIED = 0
+            ```
+        EVERYONE:
+            Every member of the organization
+
+            ```proto
+            CALENDAR_POLICY_AUDIENCE_EVERYONE = 1
+            ```
+        ADMINS:
+            Org admins and calendar domain admins
+
+            ```proto
+            CALENDAR_POLICY_AUDIENCE_ADMINS = 2
+            ```
+    """
+
+    UNSPECIFIED = 0
+    EVERYONE = 1
+    ADMINS = 2
+
 
 _DESC = file_desc(
-    b'\n\x15cal/v1/calendar.proto\x12\x06cal.v1\x1a\x16common/v1/common.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x12tags/v1/tags.proto"\xc6\x0e\n\rCalendarEvent\x12\x0e\n\x02id\x18\x01 \x01(\tR\x02id\x12\'\n\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12\x14\n\x05title\x18\x03 \x01(\tR\x05title\x12 \n\x0bdescription\x18\x04 \x01(\tR\x0bdescription\x129\n\nstart_time\x18\x05 \x01(\x0b2\x1a.google.protobuf.TimestampR\tstartTime\x125\n\x08end_time\x18\x06 \x01(\x0b2\x1a.google.protobuf.TimestampR\x07endTime\x12\x1c\n\nis_all_day\x18\x07 \x01(\x08R\x08isAllDay\x12\x1a\n\x08timezone\x18\x08 \x01(\tR\x08timezone\x12\x1a\n\x08location\x18\t \x01(\tR\x08location\x12$\n\x0bmeeting_url\x18\n \x01(\tH\x00R\nmeetingUrl\x88\x01\x01\x12\x1f\n\x0bcalendar_id\x18\x0b \x01(\tR\ncalendarId\x12\x1f\n\x0bcategory_id\x18\x0c \x01(\tR\ncategoryId\x12.\n\tattendees\x18\r \x03(\x0b2\x10.cal.v1.AttendeeR\tattendees\x12!\n\x0corganizer_id\x18\x0e \x01(\tR\x0borganizerId\x12=\n\nrecurrence\x18\x0f \x01(\x0b2\x18.cal.v1.RecurrenceConfigH\x01R\nrecurrence\x88\x01\x01\x12"\n\ris_focus_time\x18\x10 \x01(\x08R\x0bisFocusTime\x12A\n\x10linked_resources\x18\x11 \x03(\x0b2\x16.cal.v1.LinkedResourceR\x0flinkedResources\x12\x1d\n\nis_deleted\x18\x13 \x01(\x08R\tisDeleted\x12/\n\x13outgoing_references\x18\x14 \x03(\tR\x12outgoingReferences\x129\n\ncreated_at\x18\x15 \x01(\x0b2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n\nupdated_at\x18\x16 \x01(\x0b2\x1a.google.protobuf.TimestampR\tupdatedAt\x12>\n\ndeleted_at\x18\x17 \x01(\x0b2\x1a.google.protobuf.TimestampH\x02R\tdeletedAt\x88\x01\x01\x12\x1c\n\treminders\x18\x18 \x03(\x05R\treminders\x12!\n\x0cis_recurring\x18\x19 \x01(\x08R\x0bisRecurring\x12(\n\rrecurrence_id\x18\x1a \x01(\tH\x03R\x0crecurrenceId\x88\x01\x01\x12,\n\x0foccurrence_date\x18\x1b \x01(\tH\x04R\x0eoccurrenceDate\x88\x01\x01\x12\x1c\n\x07room_id\x18\x1c \x01(\tH\x05R\x06roomId\x88\x01\x01\x12 \n\troom_name\x18\x1d \x01(\tH\x06R\x08roomName\x88\x01\x01\x12(\n\rroom_location\x18\x1e \x01(\tH\x07R\x0croomLocation\x88\x01\x01\x12(\n\rroom_capacity\x18\x1f \x01(\x05H\x08R\x0croomCapacity\x88\x01\x01\x12%\n\x0eroom_amenities\x18  \x03(\tR\rroomAmenities\x12 \n\x04tags\x18" \x03(\x0b2\x0c.tags.v1.TagR\x04tags\x12"\n\nchannel_id\x18# \x01(\tH\tR\tchannelId\x88\x01\x01\x120\n\x14channel_auto_created\x18$ \x01(\x08R\x12channelAutoCreated\x123\n\tuser_role\x18% \x01(\x0e2\x16.common.v1.ContentRoleR\x08userRole\x12+\n\x06status\x18& \x01(\x0e2\x13.cal.v1.EventStatusR\x06status\x127\n\nvisibility\x18\' \x01(\x0e2\x17.cal.v1.EventVisibilityR\nvisibility\x12=\n\x0ctransparency\x18( \x01(\x0e2\x19.cal.v1.EventTransparencyR\x0ctransparency\x12\'\n\x10is_out_of_office\x18) \x01(\x08R\risOutOfOffice\x12%\n\x0edetails_hidden\x18* \x01(\x08R\rdetailsHiddenB\x0e\n\x0c_meeting_urlB\r\n\x0b_recurrenceB\r\n\x0b_deleted_atB\x10\n\x0e_recurrence_idB\x12\n\x10_occurrence_dateB\n\n\x08_room_idB\x0c\n\n_room_nameB\x10\n\x0e_room_locationB\x10\n\x0e_room_capacityB\r\n\x0b_channel_id"\xea\x02\n\x08Attendee\x12\x0e\n\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n\x04name\x18\x02 \x01(\tR\x04name\x12\x14\n\x05email\x18\x03 \x01(\tR\x05email\x12"\n\navatar_url\x18\x04 \x01(\tH\x00R\tavatarUrl\x88\x01\x01\x12\x1a\n\x08initials\x18\x05 \x01(\tR\x08initials\x12.\n\x06status\x18\x06 \x01(\x0e2\x16.cal.v1.AttendeeStatusR\x06status\x12(\n\x04role\x18\x07 \x01(\x0e2\x14.cal.v1.AttendeeRoleR\x04role\x12\x1f\n\x08timezone\x18\x08 \x01(\tH\x01R\x08timezone\x88\x01\x01\x124\n\x14invited_via_group_id\x18\t \x01(\tH\x02R\x11invitedViaGroupId\x88\x01\x01B\r\n\x0b_avatar_urlB\x0b\n\t_timezoneB\x17\n\x15_invited_via_group_id"\xdb\x02\n\x10RecurrenceConfig\x123\n\x07pattern\x18\x01 \x01(\x0e2\x19.cal.v1.RecurrencePatternR\x07pattern\x12\x1a\n\x08interval\x18\x02 \x01(\x05R\x08interval\x123\n\x0cdays_of_week\x18\x03 \x03(\x0e2\x11.cal.v1.DayOfWeekR\ndaysOfWeek\x12%\n\x0cday_of_month\x18\x04 \x01(\x05H\x00R\ndayOfMonth\x88\x01\x01\x12:\n\x08end_date\x18\x05 \x01(\x0b2\x1a.google.protobuf.TimestampH\x01R\x07endDate\x88\x01\x01\x12,\n\x0fmax_occurrences\x18\x06 \x01(\x05H\x02R\x0emaxOccurrences\x88\x01\x01B\x0f\n\r_day_of_monthB\x0b\n\t_end_dateB\x12\n\x10_max_occurrences"}\n\x0eLinkedResource\x12\x0e\n\x02id\x18\x01 \x01(\tR\x02id\x12(\n\x04type\x18\x02 \x01(\x0e2\x14.cal.v1.ResourceTypeR\x04type\x12\x12\n\x04name\x18\x03 \x01(\tR\x04name\x12\x15\n\x03url\x18\x04 \x01(\tH\x00R\x03url\x88\x01\x01B\x06\n\x04_url"\xd4\t\n\x12CreateEventRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x14\n\x05title\x18\x02 \x01(\tR\x05title\x12%\n\x0bdescription\x18\x03 \x01(\tH\x00R\x0bdescription\x88\x01\x01\x129\n\nstart_time\x18\x04 \x01(\x0b2\x1a.google.protobuf.TimestampR\tstartTime\x125\n\x08end_time\x18\x05 \x01(\x0b2\x1a.google.protobuf.TimestampR\x07endTime\x12\x1c\n\nis_all_day\x18\x06 \x01(\x08R\x08isAllDay\x12\x1f\n\x08timezone\x18\x07 \x01(\tH\x01R\x08timezone\x88\x01\x01\x12\x1f\n\x08location\x18\x08 \x01(\tH\x02R\x08location\x88\x01\x01\x12$\n\x0bmeeting_url\x18\t \x01(\tH\x03R\nmeetingUrl\x88\x01\x01\x12\x1f\n\x0bcalendar_id\x18\n \x01(\tR\ncalendarId\x12$\n\x0bcategory_id\x18\x0b \x01(\tH\x04R\ncategoryId\x88\x01\x01\x12!\n\x0cattendee_ids\x18\x0c \x03(\tR\x0battendeeIds\x12=\n\nrecurrence\x18\r \x01(\x0b2\x18.cal.v1.RecurrenceConfigH\x05R\nrecurrence\x88\x01\x01\x12"\n\ris_focus_time\x18\x0e \x01(\x08R\x0bisFocusTime\x120\n\x14linked_resource_urns\x18\x0f \x03(\tR\x12linkedResourceUrns\x12\x1c\n\treminders\x18\x11 \x03(\x05R\treminders\x12\x1c\n\x07room_id\x18\x12 \x01(\tH\x06R\x06roomId\x88\x01\x01\x12\x17\n\x07tag_ids\x18\x14 \x03(\tR\x06tagIds\x12"\n\nchannel_id\x18\x15 \x01(\tH\x07R\tchannelId\x88\x01\x01\x125\n\x14channel_auto_created\x18\x16 \x01(\x08H\x08R\x12channelAutoCreated\x88\x01\x01\x12+\n\x06status\x18\x17 \x01(\x0e2\x13.cal.v1.EventStatusR\x06status\x127\n\nvisibility\x18\x18 \x01(\x0e2\x17.cal.v1.EventVisibilityR\nvisibility\x12=\n\x0ctransparency\x18\x19 \x01(\x0e2\x19.cal.v1.EventTransparencyR\x0ctransparency\x12\'\n\x10is_out_of_office\x18\x1a \x01(\x08R\risOutOfOffice\x123\n\tattendees\x18\x1b \x03(\x0b2\x15.cal.v1.AttendeeInputR\tattendees\x12!\n\x0cno_reminders\x18\x1c \x01(\x08R\x0bnoRemindersB\x0e\n\x0c_descriptionB\x0b\n\t_timezoneB\x0b\n\t_locationB\x0e\n\x0c_meeting_urlB\x0e\n\x0c_category_idB\r\n\x0b_recurrenceB\n\n\x08_room_idB\r\n\x0b_channel_idB\x17\n\x15_channel_auto_created"R\n\rAttendeeInput\x12\x17\n\x07user_id\x18\x01 \x01(\tR\x06userId\x12(\n\x04role\x18\x02 \x01(\x0e2\x14.cal.v1.AttendeeRoleR\x04role"U\n\x0fGetEventRequest\x12\x19\n\x08event_id\x18\x01 \x01(\tR\x07eventId\x12\'\n\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId"\xe1\x0c\n\x12UpdateEventRequest\x12\x19\n\x08event_id\x18\x01 \x01(\tR\x07eventId\x12\'\n\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12\x19\n\x05title\x18\x03 \x01(\tH\x00R\x05title\x88\x01\x01\x12%\n\x0bdescription\x18\x04 \x01(\tH\x01R\x0bdescription\x88\x01\x01\x12>\n\nstart_time\x18\x05 \x01(\x0b2\x1a.google.protobuf.TimestampH\x02R\tstartTime\x88\x01\x01\x12:\n\x08end_time\x18\x06 \x01(\x0b2\x1a.google.protobuf.TimestampH\x03R\x07endTime\x88\x01\x01\x12!\n\nis_all_day\x18\x07 \x01(\x08H\x04R\x08isAllDay\x88\x01\x01\x12\x1f\n\x08timezone\x18\x08 \x01(\tH\x05R\x08timezone\x88\x01\x01\x12\x1f\n\x08location\x18\t \x01(\tH\x06R\x08location\x88\x01\x01\x12$\n\x0bmeeting_url\x18\n \x01(\tH\x07R\nmeetingUrl\x88\x01\x01\x12$\n\x0bcalendar_id\x18\x0b \x01(\tH\x08R\ncalendarId\x88\x01\x01\x12$\n\x0bcategory_id\x18\x0c \x01(\tH\tR\ncategoryId\x88\x01\x01\x12=\n\nrecurrence\x18\r \x01(\x0b2\x18.cal.v1.RecurrenceConfigH\nR\nrecurrence\x88\x01\x01\x12\'\n\ris_focus_time\x18\x0e \x01(\x08H\x0bR\x0bisFocusTime\x88\x01\x01\x120\n\x14linked_resource_urns\x18\x0f \x03(\tR\x12linkedResourceUrns\x12!\n\x0cattendee_ids\x18\x11 \x03(\tR\x0battendeeIds\x12\x1c\n\treminders\x18\x12 \x03(\x05R\treminders\x12T\n\x15recurrence_edit_scope\x18\x13 \x01(\x0e2\x1b.cal.v1.RecurrenceEditScopeH\x0cR\x13recurrenceEditScope\x88\x01\x01\x12,\n\x0foccurrence_date\x18\x14 \x01(\tH\rR\x0eoccurrenceDate\x88\x01\x01\x12\x1c\n\x07room_id\x18\x15 \x01(\tH\x0eR\x06roomId\x88\x01\x01\x121\n\x07tag_ids\x18\x17 \x01(\x0b2\x13.cal.v1.EventTagIdsH\x0fR\x06tagIds\x88\x01\x01\x12"\n\nchannel_id\x18\x18 \x01(\tH\x10R\tchannelId\x88\x01\x01\x125\n\x14channel_auto_created\x18\x19 \x01(\x08H\x11R\x12channelAutoCreated\x88\x01\x01\x120\n\x06status\x18\x1a \x01(\x0e2\x13.cal.v1.EventStatusH\x12R\x06status\x88\x01\x01\x12<\n\nvisibility\x18\x1b \x01(\x0e2\x17.cal.v1.EventVisibilityH\x13R\nvisibility\x88\x01\x01\x12B\n\x0ctransparency\x18\x1c \x01(\x0e2\x19.cal.v1.EventTransparencyH\x14R\x0ctransparency\x88\x01\x01\x12,\n\x10is_out_of_office\x18\x1d \x01(\x08H\x15R\risOutOfOffice\x88\x01\x01\x12\'\n\x0fclear_reminders\x18\x1e \x01(\x08R\x0eclearRemindersB\x08\n\x06_titleB\x0e\n\x0c_descriptionB\r\n\x0b_start_timeB\x0b\n\t_end_timeB\r\n\x0b_is_all_dayB\x0b\n\t_timezoneB\x0b\n\t_locationB\x0e\n\x0c_meeting_urlB\x0e\n\x0c_calendar_idB\x0e\n\x0c_category_idB\r\n\x0b_recurrenceB\x10\n\x0e_is_focus_timeB\x18\n\x16_recurrence_edit_scopeB\x12\n\x10_occurrence_dateB\n\n\x08_room_idB\n\n\x08_tag_idsB\r\n\x0b_channel_idB\x17\n\x15_channel_auto_createdB\t\n\x07_statusB\r\n\x0b_visibilityB\x0f\n\r_transparencyB\x13\n\x11_is_out_of_office"\x1f\n\x0bEventTagIds\x12\x10\n\x03ids\x18\x01 \x03(\tR\x03ids"\xa8\x02\n\x12DeleteEventRequest\x12\x19\n\x08event_id\x18\x01 \x01(\tR\x07eventId\x12\'\n\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12\x1c\n\tpermanent\x18\x03 \x01(\x08R\tpermanent\x12T\n\x15recurrence_edit_scope\x18\x04 \x01(\x0e2\x1b.cal.v1.RecurrenceEditScopeH\x00R\x13recurrenceEditScope\x88\x01\x01\x12,\n\x0foccurrence_date\x18\x05 \x01(\tH\x01R\x0eoccurrenceDate\x88\x01\x01B\x18\n\x16_recurrence_edit_scopeB\x12\n\x10_occurrence_date"I\n\x13DeleteEventResponse\x12\x18\n\x07success\x18\x01 \x01(\x08R\x07success\x12\x18\n\x07message\x18\x02 \x01(\tR\x07message"B\n\x13CreateEventResponse\x12+\n\x05event\x18\x01 \x01(\x0b2\x15.cal.v1.CalendarEventR\x05event"?\n\x10GetEventResponse\x12+\n\x05event\x18\x01 \x01(\x0b2\x15.cal.v1.CalendarEventR\x05event"B\n\x13UpdateEventResponse\x12+\n\x05event\x18\x01 \x01(\x0b2\x15.cal.v1.CalendarEventR\x05event"C\n\x14AddAttendeesResponse\x12+\n\x05event\x18\x01 \x01(\x0b2\x15.cal.v1.CalendarEventR\x05event"\xa2\x01\n\x19UpdateAttendeeRoleRequest\x12\x19\n\x08event_id\x18\x01 \x01(\tR\x07eventId\x12\'\n\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12\x17\n\x07user_id\x18\x03 \x01(\tR\x06userId\x12(\n\x04role\x18\x04 \x01(\x0e2\x14.cal.v1.AttendeeRoleR\x04role"I\n\x1aUpdateAttendeeRoleResponse\x12+\n\x05event\x18\x01 \x01(\x0b2\x15.cal.v1.CalendarEventR\x05event"F\n\x17RemoveAttendeesResponse\x12+\n\x05event\x18\x01 \x01(\x0b2\x15.cal.v1.CalendarEventR\x05event"\x9e\x04\n\x11ListEventsRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12$\n\x0bcalendar_id\x18\x02 \x01(\tH\x00R\ncalendarId\x88\x01\x01\x12$\n\x0bcategory_id\x18\x03 \x01(\tH\x01R\ncategoryId\x88\x01\x01\x12>\n\nstart_date\x18\x04 \x01(\x0b2\x1a.google.protobuf.TimestampH\x02R\tstartDate\x88\x01\x01\x12:\n\x08end_date\x18\x05 \x01(\x0b2\x1a.google.protobuf.TimestampH\x03R\x07endDate\x88\x01\x01\x12\'\n\x0finclude_deleted\x18\x06 \x01(\x08R\x0eincludeDeleted\x12\x12\n\x04page\x18\x07 \x01(\x05R\x04page\x12\x1b\n\tpage_size\x18\x08 \x01(\x05R\x08pageSize\x12\x17\n\x07sort_by\x18\t \x01(\tR\x06sortBy\x12\x1d\n\nsort_order\x18\n \x01(\tR\tsortOrder\x12\x17\n\x07tag_ids\x18\x0b \x03(\tR\x06tagIds\x12"\n\npage_token\x18\x0c \x01(\tH\x04R\tpageToken\x88\x01\x01B\x0e\n\x0c_calendar_idB\x0e\n\x0c_category_idB\r\n\x0b_start_dateB\x0b\n\t_end_dateB\r\n\x0b_page_token"\xde\x01\n\x12ListEventsResponse\x12-\n\x06events\x18\x01 \x03(\x0b2\x15.cal.v1.CalendarEventR\x06events\x12\x1f\n\x0btotal_count\x18\x02 \x01(\x05R\ntotalCount\x12\x12\n\x04page\x18\x03 \x01(\x05R\x04page\x12\x1b\n\tpage_size\x18\x04 \x01(\x05R\x08pageSize\x12\x1f\n\x0btotal_pages\x18\x05 \x01(\x05R\ntotalPages\x12&\n\x0fnext_page_token\x18\x06 \x01(\tR\rnextPageToken"\xad\x02\n\x17GetEventsInRangeRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x129\n\nstart_date\x18\x02 \x01(\x0b2\x1a.google.protobuf.TimestampR\tstartDate\x125\n\x08end_date\x18\x03 \x01(\x0b2\x1a.google.protobuf.TimestampR\x07endDate\x12!\n\x0ccalendar_ids\x18\x04 \x03(\tR\x0bcalendarIds\x12!\n\x0ccategory_ids\x18\x05 \x03(\tR\x0bcategoryIds\x12"\n\nchannel_id\x18\x06 \x01(\tH\x00R\tchannelId\x88\x01\x01B\r\n\x0b_channel_id"I\n\x18GetEventsInRangeResponse\x12-\n\x06events\x18\x01 \x03(\x0b2\x15.cal.v1.CalendarEventR\x06events"\xc3\x02\n\x08Category\x12\x0e\n\x02id\x18\x01 \x01(\tR\x02id\x12\'\n\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12\x12\n\x04name\x18\x03 \x01(\tR\x04name\x12\x14\n\x05color\x18\x04 \x01(\tR\x05color\x12\x17\n\x04icon\x18\x05 \x01(\tH\x00R\x04icon\x88\x01\x01\x12\x1d\n\nis_default\x18\x06 \x01(\x08R\tisDefault\x12\x1d\n\nsort_order\x18\x07 \x01(\x05R\tsortOrder\x129\n\ncreated_at\x18\x08 \x01(\x0b2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n\nupdated_at\x18\t \x01(\x0b2\x1a.google.protobuf.TimestampR\tupdatedAtB\x07\n\x05_icon"\x8c\x01\n\x15CreateCategoryRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x12\n\x04name\x18\x02 \x01(\tR\x04name\x12\x14\n\x05color\x18\x03 \x01(\tR\x05color\x12\x17\n\x04icon\x18\x04 \x01(\tH\x00R\x04icon\x88\x01\x01B\x07\n\x05_icon"^\n\x12GetCategoryRequest\x12\x1f\n\x0bcategory_id\x18\x01 \x01(\tR\ncategoryId\x12\'\n\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId"\xfd\x01\n\x15UpdateCategoryRequest\x12\x1f\n\x0bcategory_id\x18\x01 \x01(\tR\ncategoryId\x12\'\n\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12\x17\n\x04name\x18\x03 \x01(\tH\x00R\x04name\x88\x01\x01\x12\x19\n\x05color\x18\x04 \x01(\tH\x01R\x05color\x88\x01\x01\x12\x17\n\x04icon\x18\x05 \x01(\tH\x02R\x04icon\x88\x01\x01\x12"\n\nsort_order\x18\x06 \x01(\x05H\x03R\tsortOrder\x88\x01\x01B\x07\n\x05_nameB\x08\n\x06_colorB\x07\n\x05_iconB\r\n\x0b_sort_order"a\n\x15DeleteCategoryRequest\x12\x1f\n\x0bcategory_id\x18\x01 \x01(\tR\ncategoryId\x12\'\n\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId"L\n\x16DeleteCategoryResponse\x12\x18\n\x07success\x18\x01 \x01(\x08R\x07success\x12\x18\n\x07message\x18\x02 \x01(\tR\x07message"F\n\x16CreateCategoryResponse\x12,\n\x08category\x18\x01 \x01(\x0b2\x10.cal.v1.CategoryR\x08category"C\n\x13GetCategoryResponse\x12,\n\x08category\x18\x01 \x01(\x0b2\x10.cal.v1.CategoryR\x08category"F\n\x16UpdateCategoryResponse\x12,\n\x08category\x18\x01 \x01(\x0b2\x10.cal.v1.CategoryR\x08category"@\n\x15ListCategoriesRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId"J\n\x16ListCategoriesResponse\x120\n\ncategories\x18\x01 \x03(\x0b2\x10.cal.v1.CategoryR\ncategories"\x91\x01\n\x1bUpdateAttendeeStatusRequest\x12\x19\n\x08event_id\x18\x01 \x01(\tR\x07eventId\x12\'\n\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12.\n\x06status\x18\x03 \x01(\x0e2\x16.cal.v1.AttendeeStatusR\x06status"R\n\x1cUpdateAttendeeStatusResponse\x12\x18\n\x07success\x18\x01 \x01(\x08R\x07success\x12\x18\n\x07message\x18\x02 \x01(\tR\x07message"\x9e\x01\n\x13AddAttendeesRequest\x12\x19\n\x08event_id\x18\x01 \x01(\tR\x07eventId\x12\'\n\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12\x19\n\x08user_ids\x18\x03 \x03(\tR\x07userIds\x12(\n\x04role\x18\x04 \x01(\x0e2\x14.cal.v1.AttendeeRoleR\x04role"w\n\x16RemoveAttendeesRequest\x12\x19\n\x08event_id\x18\x01 \x01(\tR\x07eventId\x12\'\n\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12\x19\n\x08user_ids\x18\x03 \x03(\tR\x07userIds"\xe0\x02\n\rEventActivity\x12\x0e\n\x02id\x18\x01 \x01(\tR\x02id\x12\x19\n\x08event_id\x18\x02 \x01(\tR\x07eventId\x12\x19\n\x08actor_id\x18\x03 \x01(\tR\x07actorId\x123\n\x06action\x18\x04 \x01(\x0e2\x1b.cal.v1.EventActivityActionR\x06action\x128\n\ttimestamp\x18\x05 \x01(\x0b2\x1a.google.protobuf.TimestampR\ttimestamp\x12\x1e\n\x08field_id\x18\x06 \x01(\tH\x00R\x07fieldId\x88\x01\x01\x12*\n\x0eprevious_value\x18\x07 \x01(\tH\x01R\rpreviousValue\x88\x01\x01\x12 \n\tnew_value\x18\x08 \x01(\tH\x02R\x08newValue\x88\x01\x01B\x0b\n\t_field_idB\x11\n\x0f_previous_valueB\x0c\n\n_new_value"\xb2\x01\n\x1aListEventActivitiesRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x19\n\x08event_id\x18\x02 \x01(\tR\x07eventId\x12A\n\npagination\x18\x03 \x01(\x0b2\x1c.common.v1.PaginationRequestH\x00R\npagination\x88\x01\x01B\r\n\x0b_pagination"\x93\x01\n\x1bListEventActivitiesResponse\x125\n\nactivities\x18\x01 \x03(\x0b2\x15.cal.v1.EventActivityR\nactivities\x12=\n\npagination\x18\x02 \x01(\x0b2\x1d.common.v1.PaginationResponseR\npagination"\xbe\x04\n\rEventTemplate\x12\x0e\n\x02id\x18\x01 \x01(\tR\x02id\x12\'\n\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12\x14\n\x05title\x18\x03 \x01(\tR\x05title\x12 \n\x0bdescription\x18\x04 \x01(\tR\x0bdescription\x12)\n\x10duration_minutes\x18\x05 \x01(\x05R\x0fdurationMinutes\x12\x1a\n\x08location\x18\x06 \x01(\tR\x08location\x12\x1f\n\x0bmeeting_url\x18\x07 \x01(\tR\nmeetingUrl\x12\x1f\n\x0bcategory_id\x18\x08 \x01(\tR\ncategoryId\x12\x12\n\x04tags\x18\t \x03(\tR\x04tags\x126\n\x0baccess_mode\x18\n \x01(\x0e2\x15.common.v1.AccessModeR\naccessMode\x12\x1d\n\ncreated_by\x18\x0b \x01(\tR\tcreatedBy\x129\n\ncreated_at\x18\x0c \x01(\x0b2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n\nupdated_at\x18\r \x01(\x0b2\x1a.google.protobuf.TimestampR\tupdatedAt\x12@\n\rbaseline_role\x18\x0e \x01(\x0e2\x16.common.v1.ContentRoleH\x00R\x0cbaselineRole\x88\x01\x01B\x10\n\x0e_baseline_role"\xa6\x03\n\x1aCreateEventTemplateRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x14\n\x05title\x18\x02 \x01(\tR\x05title\x12 \n\x0bdescription\x18\x03 \x01(\tR\x0bdescription\x12)\n\x10duration_minutes\x18\x04 \x01(\x05R\x0fdurationMinutes\x12\x1a\n\x08location\x18\x05 \x01(\tR\x08location\x12\x1f\n\x0bmeeting_url\x18\x06 \x01(\tR\nmeetingUrl\x12\x1f\n\x0bcategory_id\x18\x07 \x01(\tR\ncategoryId\x12\x12\n\x04tags\x18\x08 \x03(\tR\x04tags\x126\n\x0baccess_mode\x18\t \x01(\x0e2\x15.common.v1.AccessModeR\naccessMode\x12@\n\rbaseline_role\x18\n \x01(\x0e2\x16.common.v1.ContentRoleH\x00R\x0cbaselineRole\x88\x01\x01B\x10\n\x0e_baseline_role"c\n\x17GetEventTemplateRequest\x12\x1f\n\x0btemplate_id\x18\x01 \x01(\tR\ntemplateId\x12\'\n\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId"\xd6\x04\n\x1aUpdateEventTemplateRequest\x12\x1f\n\x0btemplate_id\x18\x01 \x01(\tR\ntemplateId\x12\'\n\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12\x19\n\x05title\x18\x03 \x01(\tH\x00R\x05title\x88\x01\x01\x12%\n\x0bdescription\x18\x04 \x01(\tH\x01R\x0bdescription\x88\x01\x01\x12.\n\x10duration_minutes\x18\x05 \x01(\x05H\x02R\x0fdurationMinutes\x88\x01\x01\x12\x1f\n\x08location\x18\x06 \x01(\tH\x03R\x08location\x88\x01\x01\x12$\n\x0bmeeting_url\x18\x07 \x01(\tH\x04R\nmeetingUrl\x88\x01\x01\x12$\n\x0bcategory_id\x18\x08 \x01(\tH\x05R\ncategoryId\x88\x01\x01\x12\x12\n\x04tags\x18\t \x03(\tR\x04tags\x12;\n\x0baccess_mode\x18\n \x01(\x0e2\x15.common.v1.AccessModeH\x06R\naccessMode\x88\x01\x01\x12@\n\rbaseline_role\x18\x0b \x01(\x0e2\x16.common.v1.ContentRoleH\x07R\x0cbaselineRole\x88\x01\x01B\x08\n\x06_titleB\x0e\n\x0c_descriptionB\x13\n\x11_duration_minutesB\x0b\n\t_locationB\x0e\n\x0c_meeting_urlB\x0e\n\x0c_category_idB\x0e\n\x0c_access_modeB\x10\n\x0e_baseline_role"f\n\x1aDeleteEventTemplateRequest\x12\x1f\n\x0btemplate_id\x18\x01 \x01(\tR\ntemplateId\x12\'\n\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId"Q\n\x1bDeleteEventTemplateResponse\x12\x18\n\x07success\x18\x01 \x01(\x08R\x07success\x12\x18\n\x07message\x18\x02 \x01(\tR\x07message"P\n\x1bCreateEventTemplateResponse\x121\n\x08template\x18\x01 \x01(\x0b2\x15.cal.v1.EventTemplateR\x08template"M\n\x18GetEventTemplateResponse\x121\n\x08template\x18\x01 \x01(\x0b2\x15.cal.v1.EventTemplateR\x08template"P\n\x1bUpdateEventTemplateResponse\x121\n\x08template\x18\x01 \x01(\x0b2\x15.cal.v1.EventTemplateR\x08template"D\n\x19ListEventTemplatesRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId"Q\n\x1aListEventTemplatesResponse\x123\n\ttemplates\x18\x01 \x03(\x0b2\x15.cal.v1.EventTemplateR\ttemplates"\xa9\x01\n\x0cBusyInterval\x129\n\nstart_time\x18\x01 \x01(\x0b2\x1a.google.protobuf.TimestampR\tstartTime\x125\n\x08end_time\x18\x02 \x01(\x0b2\x1a.google.protobuf.TimestampR\x07endTime\x12\'\n\x10is_out_of_office\x18\x03 \x01(\x08R\risOutOfOffice"\xd9\x01\n\x0cUserFreeBusy\x12\x17\n\x07user_id\x18\x01 \x01(\tR\x06userId\x122\n\tintervals\x18\x02 \x03(\x0b2\x14.cal.v1.BusyIntervalR\tintervals\x12\x1a\n\x08timezone\x18\x03 \x01(\tR\x08timezone\x12#\n\rworkday_start\x18\x04 \x01(\tR\x0cworkdayStart\x12\x1f\n\x0bworkday_end\x18\x05 \x01(\tR\nworkdayEnd\x12\x1a\n\x08workdays\x18\x06 \x03(\tR\x08workdays"\xfc\x01\n\x12GetFreeBusyRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x19\n\x08user_ids\x18\x02 \x03(\tR\x07userIds\x12=\n\x0cwindow_start\x18\x03 \x01(\x0b2\x1a.google.protobuf.TimestampR\x0bwindowStart\x129\n\nwindow_end\x18\x04 \x01(\x0b2\x1a.google.protobuf.TimestampR\twindowEnd\x12\x1c\n\x07room_id\x18\x05 \x01(\tH\x00R\x06roomId\x88\x01\x01B\n\n\x08_room_id"t\n\x13GetFreeBusyResponse\x12*\n\x05users\x18\x01 \x03(\x0b2\x14.cal.v1.UserFreeBusyR\x05users\x121\n\troom_busy\x18\x02 \x03(\x0b2\x14.cal.v1.BusyIntervalR\x08roomBusy"\x8d\x03\n\x1aSuggestMeetingTimesRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12*\n\x11required_user_ids\x18\x02 \x03(\tR\x0frequiredUserIds\x12*\n\x11optional_user_ids\x18\x03 \x03(\tR\x0foptionalUserIds\x12=\n\x0cwindow_start\x18\x04 \x01(\x0b2\x1a.google.protobuf.TimestampR\x0bwindowStart\x129\n\nwindow_end\x18\x05 \x01(\x0b2\x1a.google.protobuf.TimestampR\twindowEnd\x12)\n\x10duration_minutes\x18\x06 \x01(\x05R\x0fdurationMinutes\x12\x1c\n\x07room_id\x18\x07 \x01(\tH\x00R\x06roomId\x88\x01\x01\x12\x1f\n\x0bmax_results\x18\x08 \x01(\x05R\nmaxResultsB\n\n\x08_room_id"\xcc\x01\n\x15MeetingTimeSuggestion\x129\n\nstart_time\x18\x01 \x01(\x0b2\x1a.google.protobuf.TimestampR\tstartTime\x125\n\x08end_time\x18\x02 \x01(\x0b2\x1a.google.protobuf.TimestampR\x07endTime\x12A\n\x1dunavailable_optional_user_ids\x18\x03 \x03(\tR\x1aunavailableOptionalUserIds"^\n\x1bSuggestMeetingTimesResponse\x12?\n\x0bsuggestions\x18\x01 \x03(\x0b2\x1d.cal.v1.MeetingTimeSuggestionR\x0bsuggestions"X\n\x12ExportEventRequest\x12\x19\n\x08event_id\x18\x01 \x01(\tR\x07eventId\x12\'\n\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId"K\n\x13ExportEventResponse\x12\x18\n\x07content\x18\x01 \x01(\x0cR\x07content\x12\x1a\n\x08filename\x18\x02 \x01(\tR\x08filename"\xf9\x01\n\x15ExportCalendarRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1f\n\x0bcalendar_id\x18\x02 \x01(\tR\ncalendarId\x12>\n\nstart_time\x18\x03 \x01(\x0b2\x1a.google.protobuf.TimestampH\x00R\tstartTime\x88\x01\x01\x12:\n\x08end_time\x18\x04 \x01(\x0b2\x1a.google.protobuf.TimestampH\x01R\x07endTime\x88\x01\x01B\r\n\x0b_start_timeB\x0b\n\t_end_time"o\n\x16ExportCalendarResponse\x12\x18\n\x07content\x18\x01 \x01(\x0cR\x07content\x12\x1a\n\x08filename\x18\x02 \x01(\tR\x08filename\x12\x1f\n\x0bevent_count\x18\x03 \x01(\x05R\neventCount"\xd6\x01\n\x14ImportedEventPreview\x12\x14\n\x05title\x18\x01 \x01(\tR\x05title\x129\n\nstart_time\x18\x02 \x01(\x0b2\x1a.google.protobuf.TimestampR\tstartTime\x125\n\x08end_time\x18\x03 \x01(\x0b2\x1a.google.protobuf.TimestampR\x07endTime\x12\x1c\n\nis_all_day\x18\x04 \x01(\x08R\x08isAllDay\x12\x18\n\x07repeats\x18\x05 \x01(\x08R\x07repeats"B\n\x12SkippedImportEntry\x12\x14\n\x05label\x18\x01 \x01(\tR\x05label\x12\x16\n\x06reason\x18\x02 \x01(\tR\x06reason"\x82\x01\n\x1cPreviewCalendarImportRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1f\n\x0bcalendar_id\x18\x02 \x01(\tR\ncalendarId\x12\x18\n\x07content\x18\x03 \x01(\x0cR\x07content"\xba\x01\n\x1dPreviewCalendarImportResponse\x12:\n\tcreatable\x18\x01 \x03(\x0b2\x1c.cal.v1.ImportedEventPreviewR\tcreatable\x12\'\n\x0fduplicate_count\x18\x02 \x01(\x05R\x0eduplicateCount\x124\n\x07skipped\x18\x03 \x03(\x0b2\x1a.cal.v1.SkippedImportEntryR\x07skipped"\x80\x01\n\x1aApplyCalendarImportRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1f\n\x0bcalendar_id\x18\x02 \x01(\tR\ncalendarId\x12\x18\n\x07content\x18\x03 \x01(\x0cR\x07content"\xa1\x01\n\x1bApplyCalendarImportResponse\x12#\n\rcreated_count\x18\x01 \x01(\x05R\x0ccreatedCount\x12\'\n\x0fduplicate_count\x18\x02 \x01(\x05R\x0eduplicateCount\x124\n\x07skipped\x18\x03 \x03(\x0b2\x1a.cal.v1.SkippedImportEntryR\x07skipped"e\n\x19GetCalendarFeedUrlRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1f\n\x0bcalendar_id\x18\x02 \x01(\tR\ncalendarId"\xd1\x01\n\x1aGetCalendarFeedUrlResponse\x12\x10\n\x03url\x18\x01 \x01(\tR\x03url\x12>\n\ncreated_at\x18\x02 \x01(\x0b2\x1a.google.protobuf.TimestampH\x00R\tcreatedAt\x88\x01\x01\x12A\n\x0clast_used_at\x18\x03 \x01(\x0b2\x1a.google.protobuf.TimestampH\x01R\nlastUsedAt\x88\x01\x01B\r\n\x0b_created_atB\x0f\n\r_last_used_at"i\n\x1dRegenerateCalendarFeedRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1f\n\x0bcalendar_id\x18\x02 \x01(\tR\ncalendarId"m\n\x1eRegenerateCalendarFeedResponse\x12\x10\n\x03url\x18\x01 \x01(\tR\x03url\x129\n\ncreated_at\x18\x02 \x01(\x0b2\x1a.google.protobuf.TimestampR\tcreatedAt"e\n\x19RevokeCalendarFeedRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1f\n\x0bcalendar_id\x18\x02 \x01(\tR\ncalendarId"6\n\x1aRevokeCalendarFeedResponse\x12\x18\n\x07revoked\x18\x01 \x01(\x08R\x07revoked*\xf1\x01\n\x11RecurrencePattern\x12"\n\x1eRECURRENCE_PATTERN_UNSPECIFIED\x10\x00\x12\x1b\n\x17RECURRENCE_PATTERN_NONE\x10\x01\x12\x1c\n\x18RECURRENCE_PATTERN_DAILY\x10\x02\x12\x1d\n\x19RECURRENCE_PATTERN_WEEKLY\x10\x03\x12\x1f\n\x1bRECURRENCE_PATTERN_BIWEEKLY\x10\x04\x12\x1e\n\x1aRECURRENCE_PATTERN_MONTHLY\x10\x05\x12\x1d\n\x19RECURRENCE_PATTERN_YEARLY\x10\x06*\xd8\x01\n\tDayOfWeek\x12\x1b\n\x17DAY_OF_WEEK_UNSPECIFIED\x10\x00\x12\x16\n\x12DAY_OF_WEEK_MONDAY\x10\x01\x12\x17\n\x13DAY_OF_WEEK_TUESDAY\x10\x02\x12\x19\n\x15DAY_OF_WEEK_WEDNESDAY\x10\x03\x12\x18\n\x14DAY_OF_WEEK_THURSDAY\x10\x04\x12\x16\n\x12DAY_OF_WEEK_FRIDAY\x10\x05\x12\x18\n\x14DAY_OF_WEEK_SATURDAY\x10\x06\x12\x16\n\x12DAY_OF_WEEK_SUNDAY\x10\x07*\xa9\x01\n\x0eAttendeeStatus\x12\x1f\n\x1bATTENDEE_STATUS_UNSPECIFIED\x10\x00\x12\x1b\n\x17ATTENDEE_STATUS_PENDING\x10\x01\x12\x1c\n\x18ATTENDEE_STATUS_ACCEPTED\x10\x02\x12\x1d\n\x19ATTENDEE_STATUS_TENTATIVE\x10\x03\x12\x1c\n\x18ATTENDEE_STATUS_DECLINED\x10\x04*\x9a\x05\n\x13EventActivityAction\x12%\n!EVENT_ACTIVITY_ACTION_UNSPECIFIED\x10\x00\x12!\n\x1dEVENT_ACTIVITY_ACTION_CREATED\x10\x01\x12\'\n#EVENT_ACTIVITY_ACTION_TITLE_CHANGED\x10\x02\x12*\n&EVENT_ACTIVITY_ACTION_SCHEDULE_CHANGED\x10\x03\x12*\n&EVENT_ACTIVITY_ACTION_LOCATION_CHANGED\x10\x04\x12)\n%EVENT_ACTIVITY_ACTION_MEETING_CHANGED\x10\x05\x12-\n)EVENT_ACTIVITY_ACTION_DESCRIPTION_CHANGED\x10\x06\x12*\n&EVENT_ACTIVITY_ACTION_CATEGORY_CHANGED\x10\x07\x12*\n&EVENT_ACTIVITY_ACTION_CALENDAR_CHANGED\x10\x08\x12,\n(EVENT_ACTIVITY_ACTION_RECURRENCE_CHANGED\x10\t\x12+\n\'EVENT_ACTIVITY_ACTION_REMINDERS_CHANGED\x10\n\x12)\n%EVENT_ACTIVITY_ACTION_ATTENDEES_ADDED\x10\x0b\x12+\n\'EVENT_ACTIVITY_ACTION_ATTENDEES_REMOVED\x10\x0c\x12*\n&EVENT_ACTIVITY_ACTION_RESPONSE_CHANGED\x10\r\x12\'\n#EVENT_ACTIVITY_ACTION_FIELD_UPDATED\x10\x0e*\x82\x01\n\x0cAttendeeRole\x12\x1d\n\x19ATTENDEE_ROLE_UNSPECIFIED\x10\x00\x12\x1b\n\x17ATTENDEE_ROLE_ORGANIZER\x10\x01\x12\x1a\n\x16ATTENDEE_ROLE_REQUIRED\x10\x02\x12\x1a\n\x16ATTENDEE_ROLE_OPTIONAL\x10\x03*u\n\x0cResourceType\x12\x1d\n\x19RESOURCE_TYPE_UNSPECIFIED\x10\x00\x12\x16\n\x12RESOURCE_TYPE_NOTE\x10\x01\x12\x16\n\x12RESOURCE_TYPE_FILE\x10\x02\x12\x16\n\x12RESOURCE_TYPE_CHAT\x10\x03*\xb6\x01\n\x13RecurrenceEditScope\x12%\n!RECURRENCE_EDIT_SCOPE_UNSPECIFIED\x10\x00\x12$\n RECURRENCE_EDIT_SCOPE_THIS_EVENT\x10\x01\x12$\n RECURRENCE_EDIT_SCOPE_ALL_EVENTS\x10\x02\x12,\n(RECURRENCE_EDIT_SCOPE_THIS_AND_FOLLOWING\x10\x03*\x7f\n\x0bEventStatus\x12\x1c\n\x18EVENT_STATUS_UNSPECIFIED\x10\x00\x12\x1a\n\x16EVENT_STATUS_CONFIRMED\x10\x01\x12\x1a\n\x16EVENT_STATUS_TENTATIVE\x10\x02\x12\x1a\n\x16EVENT_STATUS_CANCELLED\x10\x03*p\n\x0fEventVisibility\x12 \n\x1cEVENT_VISIBILITY_UNSPECIFIED\x10\x00\x12\x1d\n\x19EVENT_VISIBILITY_STANDARD\x10\x01\x12\x1c\n\x18EVENT_VISIBILITY_PRIVATE\x10\x02*z\n\x11EventTransparency\x12"\n\x1eEVENT_TRANSPARENCY_UNSPECIFIED\x10\x00\x12\x1d\n\x19EVENT_TRANSPARENCY_OPAQUE\x10\x01\x12"\n\x1eEVENT_TRANSPARENCY_TRANSPARENT\x10\x022\xc9\x14\n\x0fCalendarService\x12H\n\x0bCreateEvent\x12\x1a.cal.v1.CreateEventRequest\x1a\x1b.cal.v1.CreateEventResponse"\x00\x12?\n\x08GetEvent\x12\x17.cal.v1.GetEventRequest\x1a\x18.cal.v1.GetEventResponse"\x00\x12H\n\x0bUpdateEvent\x12\x1a.cal.v1.UpdateEventRequest\x1a\x1b.cal.v1.UpdateEventResponse"\x00\x12H\n\x0bDeleteEvent\x12\x1a.cal.v1.DeleteEventRequest\x1a\x1b.cal.v1.DeleteEventResponse"\x00\x12E\n\nListEvents\x12\x19.cal.v1.ListEventsRequest\x1a\x1a.cal.v1.ListEventsResponse"\x00\x12W\n\x10GetEventsInRange\x12\x1f.cal.v1.GetEventsInRangeRequest\x1a .cal.v1.GetEventsInRangeResponse"\x00\x12H\n\x0bExportEvent\x12\x1a.cal.v1.ExportEventRequest\x1a\x1b.cal.v1.ExportEventResponse"\x00\x12Q\n\x0eExportCalendar\x12\x1d.cal.v1.ExportCalendarRequest\x1a\x1e.cal.v1.ExportCalendarResponse"\x00\x12f\n\x15PreviewCalendarImport\x12$.cal.v1.PreviewCalendarImportRequest\x1a%.cal.v1.PreviewCalendarImportResponse"\x00\x12`\n\x13ApplyCalendarImport\x12".cal.v1.ApplyCalendarImportRequest\x1a#.cal.v1.ApplyCalendarImportResponse"\x00\x12]\n\x12GetCalendarFeedUrl\x12!.cal.v1.GetCalendarFeedUrlRequest\x1a".cal.v1.GetCalendarFeedUrlResponse"\x00\x12i\n\x16RegenerateCalendarFeed\x12%.cal.v1.RegenerateCalendarFeedRequest\x1a&.cal.v1.RegenerateCalendarFeedResponse"\x00\x12]\n\x12RevokeCalendarFeed\x12!.cal.v1.RevokeCalendarFeedRequest\x1a".cal.v1.RevokeCalendarFeedResponse"\x00\x12Q\n\x0eCreateCategory\x12\x1d.cal.v1.CreateCategoryRequest\x1a\x1e.cal.v1.CreateCategoryResponse"\x00\x12H\n\x0bGetCategory\x12\x1a.cal.v1.GetCategoryRequest\x1a\x1b.cal.v1.GetCategoryResponse"\x00\x12Q\n\x0eUpdateCategory\x12\x1d.cal.v1.UpdateCategoryRequest\x1a\x1e.cal.v1.UpdateCategoryResponse"\x00\x12Q\n\x0eDeleteCategory\x12\x1d.cal.v1.DeleteCategoryRequest\x1a\x1e.cal.v1.DeleteCategoryResponse"\x00\x12Q\n\x0eListCategories\x12\x1d.cal.v1.ListCategoriesRequest\x1a\x1e.cal.v1.ListCategoriesResponse"\x00\x12c\n\x14UpdateAttendeeStatus\x12#.cal.v1.UpdateAttendeeStatusRequest\x1a$.cal.v1.UpdateAttendeeStatusResponse"\x00\x12K\n\x0cAddAttendees\x12\x1b.cal.v1.AddAttendeesRequest\x1a\x1c.cal.v1.AddAttendeesResponse"\x00\x12]\n\x12UpdateAttendeeRole\x12!.cal.v1.UpdateAttendeeRoleRequest\x1a".cal.v1.UpdateAttendeeRoleResponse"\x00\x12T\n\x0fRemoveAttendees\x12\x1e.cal.v1.RemoveAttendeesRequest\x1a\x1f.cal.v1.RemoveAttendeesResponse"\x00\x12H\n\x0bGetFreeBusy\x12\x1a.cal.v1.GetFreeBusyRequest\x1a\x1b.cal.v1.GetFreeBusyResponse"\x00\x12`\n\x13SuggestMeetingTimes\x12".cal.v1.SuggestMeetingTimesRequest\x1a#.cal.v1.SuggestMeetingTimesResponse"\x00\x12`\n\x13ListEventActivities\x12".cal.v1.ListEventActivitiesRequest\x1a#.cal.v1.ListEventActivitiesResponse"\x00\x12`\n\x13CreateEventTemplate\x12".cal.v1.CreateEventTemplateRequest\x1a#.cal.v1.CreateEventTemplateResponse"\x00\x12W\n\x10GetEventTemplate\x12\x1f.cal.v1.GetEventTemplateRequest\x1a .cal.v1.GetEventTemplateResponse"\x00\x12`\n\x13UpdateEventTemplate\x12".cal.v1.UpdateEventTemplateRequest\x1a#.cal.v1.UpdateEventTemplateResponse"\x00\x12`\n\x13DeleteEventTemplate\x12".cal.v1.DeleteEventTemplateRequest\x1a#.cal.v1.DeleteEventTemplateResponse"\x00\x12]\n\x12ListEventTemplates\x12!.cal.v1.ListEventTemplatesRequest\x1a".cal.v1.ListEventTemplatesResponse"\x00B3Z1github.com/uniffy-io/uniffy-proto-go/cal/v1;calv1b\x06proto3',
+    b'\n\x15cal/v1/calendar.proto\x12\x06cal.v1\x1a\x16common/v1/common.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x12tags/v1/tags.proto"\xc6\x0e\n\rCalendarEvent\x12\x0e\n\x02id\x18\x01 \x01(\tR\x02id\x12\'\n\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12\x14\n\x05title\x18\x03 \x01(\tR\x05title\x12 \n\x0bdescription\x18\x04 \x01(\tR\x0bdescription\x129\n\nstart_time\x18\x05 \x01(\x0b2\x1a.google.protobuf.TimestampR\tstartTime\x125\n\x08end_time\x18\x06 \x01(\x0b2\x1a.google.protobuf.TimestampR\x07endTime\x12\x1c\n\nis_all_day\x18\x07 \x01(\x08R\x08isAllDay\x12\x1a\n\x08timezone\x18\x08 \x01(\tR\x08timezone\x12\x1a\n\x08location\x18\t \x01(\tR\x08location\x12$\n\x0bmeeting_url\x18\n \x01(\tH\x00R\nmeetingUrl\x88\x01\x01\x12\x1f\n\x0bcalendar_id\x18\x0b \x01(\tR\ncalendarId\x12\x1f\n\x0bcategory_id\x18\x0c \x01(\tR\ncategoryId\x12.\n\tattendees\x18\r \x03(\x0b2\x10.cal.v1.AttendeeR\tattendees\x12!\n\x0corganizer_id\x18\x0e \x01(\tR\x0borganizerId\x12=\n\nrecurrence\x18\x0f \x01(\x0b2\x18.cal.v1.RecurrenceConfigH\x01R\nrecurrence\x88\x01\x01\x12"\n\ris_focus_time\x18\x10 \x01(\x08R\x0bisFocusTime\x12A\n\x10linked_resources\x18\x11 \x03(\x0b2\x16.cal.v1.LinkedResourceR\x0flinkedResources\x12\x1d\n\nis_deleted\x18\x13 \x01(\x08R\tisDeleted\x12/\n\x13outgoing_references\x18\x14 \x03(\tR\x12outgoingReferences\x129\n\ncreated_at\x18\x15 \x01(\x0b2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n\nupdated_at\x18\x16 \x01(\x0b2\x1a.google.protobuf.TimestampR\tupdatedAt\x12>\n\ndeleted_at\x18\x17 \x01(\x0b2\x1a.google.protobuf.TimestampH\x02R\tdeletedAt\x88\x01\x01\x12\x1c\n\treminders\x18\x18 \x03(\x05R\treminders\x12!\n\x0cis_recurring\x18\x19 \x01(\x08R\x0bisRecurring\x12(\n\rrecurrence_id\x18\x1a \x01(\tH\x03R\x0crecurrenceId\x88\x01\x01\x12,\n\x0foccurrence_date\x18\x1b \x01(\tH\x04R\x0eoccurrenceDate\x88\x01\x01\x12\x1c\n\x07room_id\x18\x1c \x01(\tH\x05R\x06roomId\x88\x01\x01\x12 \n\troom_name\x18\x1d \x01(\tH\x06R\x08roomName\x88\x01\x01\x12(\n\rroom_location\x18\x1e \x01(\tH\x07R\x0croomLocation\x88\x01\x01\x12(\n\rroom_capacity\x18\x1f \x01(\x05H\x08R\x0croomCapacity\x88\x01\x01\x12%\n\x0eroom_amenities\x18  \x03(\tR\rroomAmenities\x12 \n\x04tags\x18" \x03(\x0b2\x0c.tags.v1.TagR\x04tags\x12"\n\nchannel_id\x18# \x01(\tH\tR\tchannelId\x88\x01\x01\x120\n\x14channel_auto_created\x18$ \x01(\x08R\x12channelAutoCreated\x123\n\tuser_role\x18% \x01(\x0e2\x16.common.v1.ContentRoleR\x08userRole\x12+\n\x06status\x18& \x01(\x0e2\x13.cal.v1.EventStatusR\x06status\x127\n\nvisibility\x18\' \x01(\x0e2\x17.cal.v1.EventVisibilityR\nvisibility\x12=\n\x0ctransparency\x18( \x01(\x0e2\x19.cal.v1.EventTransparencyR\x0ctransparency\x12\'\n\x10is_out_of_office\x18) \x01(\x08R\risOutOfOffice\x12%\n\x0edetails_hidden\x18* \x01(\x08R\rdetailsHiddenB\x0e\n\x0c_meeting_urlB\r\n\x0b_recurrenceB\r\n\x0b_deleted_atB\x10\n\x0e_recurrence_idB\x12\n\x10_occurrence_dateB\n\n\x08_room_idB\x0c\n\n_room_nameB\x10\n\x0e_room_locationB\x10\n\x0e_room_capacityB\r\n\x0b_channel_id"\xea\x02\n\x08Attendee\x12\x0e\n\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n\x04name\x18\x02 \x01(\tR\x04name\x12\x14\n\x05email\x18\x03 \x01(\tR\x05email\x12"\n\navatar_url\x18\x04 \x01(\tH\x00R\tavatarUrl\x88\x01\x01\x12\x1a\n\x08initials\x18\x05 \x01(\tR\x08initials\x12.\n\x06status\x18\x06 \x01(\x0e2\x16.cal.v1.AttendeeStatusR\x06status\x12(\n\x04role\x18\x07 \x01(\x0e2\x14.cal.v1.AttendeeRoleR\x04role\x12\x1f\n\x08timezone\x18\x08 \x01(\tH\x01R\x08timezone\x88\x01\x01\x124\n\x14invited_via_group_id\x18\t \x01(\tH\x02R\x11invitedViaGroupId\x88\x01\x01B\r\n\x0b_avatar_urlB\x0b\n\t_timezoneB\x17\n\x15_invited_via_group_id"\xdb\x02\n\x10RecurrenceConfig\x123\n\x07pattern\x18\x01 \x01(\x0e2\x19.cal.v1.RecurrencePatternR\x07pattern\x12\x1a\n\x08interval\x18\x02 \x01(\x05R\x08interval\x123\n\x0cdays_of_week\x18\x03 \x03(\x0e2\x11.cal.v1.DayOfWeekR\ndaysOfWeek\x12%\n\x0cday_of_month\x18\x04 \x01(\x05H\x00R\ndayOfMonth\x88\x01\x01\x12:\n\x08end_date\x18\x05 \x01(\x0b2\x1a.google.protobuf.TimestampH\x01R\x07endDate\x88\x01\x01\x12,\n\x0fmax_occurrences\x18\x06 \x01(\x05H\x02R\x0emaxOccurrences\x88\x01\x01B\x0f\n\r_day_of_monthB\x0b\n\t_end_dateB\x12\n\x10_max_occurrences"}\n\x0eLinkedResource\x12\x0e\n\x02id\x18\x01 \x01(\tR\x02id\x12(\n\x04type\x18\x02 \x01(\x0e2\x14.cal.v1.ResourceTypeR\x04type\x12\x12\n\x04name\x18\x03 \x01(\tR\x04name\x12\x15\n\x03url\x18\x04 \x01(\tH\x00R\x03url\x88\x01\x01B\x06\n\x04_url"\xd4\t\n\x12CreateEventRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x14\n\x05title\x18\x02 \x01(\tR\x05title\x12%\n\x0bdescription\x18\x03 \x01(\tH\x00R\x0bdescription\x88\x01\x01\x129\n\nstart_time\x18\x04 \x01(\x0b2\x1a.google.protobuf.TimestampR\tstartTime\x125\n\x08end_time\x18\x05 \x01(\x0b2\x1a.google.protobuf.TimestampR\x07endTime\x12\x1c\n\nis_all_day\x18\x06 \x01(\x08R\x08isAllDay\x12\x1f\n\x08timezone\x18\x07 \x01(\tH\x01R\x08timezone\x88\x01\x01\x12\x1f\n\x08location\x18\x08 \x01(\tH\x02R\x08location\x88\x01\x01\x12$\n\x0bmeeting_url\x18\t \x01(\tH\x03R\nmeetingUrl\x88\x01\x01\x12\x1f\n\x0bcalendar_id\x18\n \x01(\tR\ncalendarId\x12$\n\x0bcategory_id\x18\x0b \x01(\tH\x04R\ncategoryId\x88\x01\x01\x12!\n\x0cattendee_ids\x18\x0c \x03(\tR\x0battendeeIds\x12=\n\nrecurrence\x18\r \x01(\x0b2\x18.cal.v1.RecurrenceConfigH\x05R\nrecurrence\x88\x01\x01\x12"\n\ris_focus_time\x18\x0e \x01(\x08R\x0bisFocusTime\x120\n\x14linked_resource_urns\x18\x0f \x03(\tR\x12linkedResourceUrns\x12\x1c\n\treminders\x18\x11 \x03(\x05R\treminders\x12\x1c\n\x07room_id\x18\x12 \x01(\tH\x06R\x06roomId\x88\x01\x01\x12\x17\n\x07tag_ids\x18\x14 \x03(\tR\x06tagIds\x12"\n\nchannel_id\x18\x15 \x01(\tH\x07R\tchannelId\x88\x01\x01\x125\n\x14channel_auto_created\x18\x16 \x01(\x08H\x08R\x12channelAutoCreated\x88\x01\x01\x12+\n\x06status\x18\x17 \x01(\x0e2\x13.cal.v1.EventStatusR\x06status\x127\n\nvisibility\x18\x18 \x01(\x0e2\x17.cal.v1.EventVisibilityR\nvisibility\x12=\n\x0ctransparency\x18\x19 \x01(\x0e2\x19.cal.v1.EventTransparencyR\x0ctransparency\x12\'\n\x10is_out_of_office\x18\x1a \x01(\x08R\risOutOfOffice\x123\n\tattendees\x18\x1b \x03(\x0b2\x15.cal.v1.AttendeeInputR\tattendees\x12!\n\x0cno_reminders\x18\x1c \x01(\x08R\x0bnoRemindersB\x0e\n\x0c_descriptionB\x0b\n\t_timezoneB\x0b\n\t_locationB\x0e\n\x0c_meeting_urlB\x0e\n\x0c_category_idB\r\n\x0b_recurrenceB\n\n\x08_room_idB\r\n\x0b_channel_idB\x17\n\x15_channel_auto_created"R\n\rAttendeeInput\x12\x17\n\x07user_id\x18\x01 \x01(\tR\x06userId\x12(\n\x04role\x18\x02 \x01(\x0e2\x14.cal.v1.AttendeeRoleR\x04role"U\n\x0fGetEventRequest\x12\x19\n\x08event_id\x18\x01 \x01(\tR\x07eventId\x12\'\n\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId"\xe1\x0c\n\x12UpdateEventRequest\x12\x19\n\x08event_id\x18\x01 \x01(\tR\x07eventId\x12\'\n\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12\x19\n\x05title\x18\x03 \x01(\tH\x00R\x05title\x88\x01\x01\x12%\n\x0bdescription\x18\x04 \x01(\tH\x01R\x0bdescription\x88\x01\x01\x12>\n\nstart_time\x18\x05 \x01(\x0b2\x1a.google.protobuf.TimestampH\x02R\tstartTime\x88\x01\x01\x12:\n\x08end_time\x18\x06 \x01(\x0b2\x1a.google.protobuf.TimestampH\x03R\x07endTime\x88\x01\x01\x12!\n\nis_all_day\x18\x07 \x01(\x08H\x04R\x08isAllDay\x88\x01\x01\x12\x1f\n\x08timezone\x18\x08 \x01(\tH\x05R\x08timezone\x88\x01\x01\x12\x1f\n\x08location\x18\t \x01(\tH\x06R\x08location\x88\x01\x01\x12$\n\x0bmeeting_url\x18\n \x01(\tH\x07R\nmeetingUrl\x88\x01\x01\x12$\n\x0bcalendar_id\x18\x0b \x01(\tH\x08R\ncalendarId\x88\x01\x01\x12$\n\x0bcategory_id\x18\x0c \x01(\tH\tR\ncategoryId\x88\x01\x01\x12=\n\nrecurrence\x18\r \x01(\x0b2\x18.cal.v1.RecurrenceConfigH\nR\nrecurrence\x88\x01\x01\x12\'\n\ris_focus_time\x18\x0e \x01(\x08H\x0bR\x0bisFocusTime\x88\x01\x01\x120\n\x14linked_resource_urns\x18\x0f \x03(\tR\x12linkedResourceUrns\x12!\n\x0cattendee_ids\x18\x11 \x03(\tR\x0battendeeIds\x12\x1c\n\treminders\x18\x12 \x03(\x05R\treminders\x12T\n\x15recurrence_edit_scope\x18\x13 \x01(\x0e2\x1b.cal.v1.RecurrenceEditScopeH\x0cR\x13recurrenceEditScope\x88\x01\x01\x12,\n\x0foccurrence_date\x18\x14 \x01(\tH\rR\x0eoccurrenceDate\x88\x01\x01\x12\x1c\n\x07room_id\x18\x15 \x01(\tH\x0eR\x06roomId\x88\x01\x01\x121\n\x07tag_ids\x18\x17 \x01(\x0b2\x13.cal.v1.EventTagIdsH\x0fR\x06tagIds\x88\x01\x01\x12"\n\nchannel_id\x18\x18 \x01(\tH\x10R\tchannelId\x88\x01\x01\x125\n\x14channel_auto_created\x18\x19 \x01(\x08H\x11R\x12channelAutoCreated\x88\x01\x01\x120\n\x06status\x18\x1a \x01(\x0e2\x13.cal.v1.EventStatusH\x12R\x06status\x88\x01\x01\x12<\n\nvisibility\x18\x1b \x01(\x0e2\x17.cal.v1.EventVisibilityH\x13R\nvisibility\x88\x01\x01\x12B\n\x0ctransparency\x18\x1c \x01(\x0e2\x19.cal.v1.EventTransparencyH\x14R\x0ctransparency\x88\x01\x01\x12,\n\x10is_out_of_office\x18\x1d \x01(\x08H\x15R\risOutOfOffice\x88\x01\x01\x12\'\n\x0fclear_reminders\x18\x1e \x01(\x08R\x0eclearRemindersB\x08\n\x06_titleB\x0e\n\x0c_descriptionB\r\n\x0b_start_timeB\x0b\n\t_end_timeB\r\n\x0b_is_all_dayB\x0b\n\t_timezoneB\x0b\n\t_locationB\x0e\n\x0c_meeting_urlB\x0e\n\x0c_calendar_idB\x0e\n\x0c_category_idB\r\n\x0b_recurrenceB\x10\n\x0e_is_focus_timeB\x18\n\x16_recurrence_edit_scopeB\x12\n\x10_occurrence_dateB\n\n\x08_room_idB\n\n\x08_tag_idsB\r\n\x0b_channel_idB\x17\n\x15_channel_auto_createdB\t\n\x07_statusB\r\n\x0b_visibilityB\x0f\n\r_transparencyB\x13\n\x11_is_out_of_office"\x1f\n\x0bEventTagIds\x12\x10\n\x03ids\x18\x01 \x03(\tR\x03ids"\xa8\x02\n\x12DeleteEventRequest\x12\x19\n\x08event_id\x18\x01 \x01(\tR\x07eventId\x12\'\n\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12\x1c\n\tpermanent\x18\x03 \x01(\x08R\tpermanent\x12T\n\x15recurrence_edit_scope\x18\x04 \x01(\x0e2\x1b.cal.v1.RecurrenceEditScopeH\x00R\x13recurrenceEditScope\x88\x01\x01\x12,\n\x0foccurrence_date\x18\x05 \x01(\tH\x01R\x0eoccurrenceDate\x88\x01\x01B\x18\n\x16_recurrence_edit_scopeB\x12\n\x10_occurrence_date"I\n\x13DeleteEventResponse\x12\x18\n\x07success\x18\x01 \x01(\x08R\x07success\x12\x18\n\x07message\x18\x02 \x01(\tR\x07message"B\n\x13CreateEventResponse\x12+\n\x05event\x18\x01 \x01(\x0b2\x15.cal.v1.CalendarEventR\x05event"?\n\x10GetEventResponse\x12+\n\x05event\x18\x01 \x01(\x0b2\x15.cal.v1.CalendarEventR\x05event"B\n\x13UpdateEventResponse\x12+\n\x05event\x18\x01 \x01(\x0b2\x15.cal.v1.CalendarEventR\x05event"C\n\x14AddAttendeesResponse\x12+\n\x05event\x18\x01 \x01(\x0b2\x15.cal.v1.CalendarEventR\x05event"\xa2\x01\n\x19UpdateAttendeeRoleRequest\x12\x19\n\x08event_id\x18\x01 \x01(\tR\x07eventId\x12\'\n\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12\x17\n\x07user_id\x18\x03 \x01(\tR\x06userId\x12(\n\x04role\x18\x04 \x01(\x0e2\x14.cal.v1.AttendeeRoleR\x04role"I\n\x1aUpdateAttendeeRoleResponse\x12+\n\x05event\x18\x01 \x01(\x0b2\x15.cal.v1.CalendarEventR\x05event"F\n\x17RemoveAttendeesResponse\x12+\n\x05event\x18\x01 \x01(\x0b2\x15.cal.v1.CalendarEventR\x05event"\x9e\x04\n\x11ListEventsRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12$\n\x0bcalendar_id\x18\x02 \x01(\tH\x00R\ncalendarId\x88\x01\x01\x12$\n\x0bcategory_id\x18\x03 \x01(\tH\x01R\ncategoryId\x88\x01\x01\x12>\n\nstart_date\x18\x04 \x01(\x0b2\x1a.google.protobuf.TimestampH\x02R\tstartDate\x88\x01\x01\x12:\n\x08end_date\x18\x05 \x01(\x0b2\x1a.google.protobuf.TimestampH\x03R\x07endDate\x88\x01\x01\x12\'\n\x0finclude_deleted\x18\x06 \x01(\x08R\x0eincludeDeleted\x12\x12\n\x04page\x18\x07 \x01(\x05R\x04page\x12\x1b\n\tpage_size\x18\x08 \x01(\x05R\x08pageSize\x12\x17\n\x07sort_by\x18\t \x01(\tR\x06sortBy\x12\x1d\n\nsort_order\x18\n \x01(\tR\tsortOrder\x12\x17\n\x07tag_ids\x18\x0b \x03(\tR\x06tagIds\x12"\n\npage_token\x18\x0c \x01(\tH\x04R\tpageToken\x88\x01\x01B\x0e\n\x0c_calendar_idB\x0e\n\x0c_category_idB\r\n\x0b_start_dateB\x0b\n\t_end_dateB\r\n\x0b_page_token"\xde\x01\n\x12ListEventsResponse\x12-\n\x06events\x18\x01 \x03(\x0b2\x15.cal.v1.CalendarEventR\x06events\x12\x1f\n\x0btotal_count\x18\x02 \x01(\x05R\ntotalCount\x12\x12\n\x04page\x18\x03 \x01(\x05R\x04page\x12\x1b\n\tpage_size\x18\x04 \x01(\x05R\x08pageSize\x12\x1f\n\x0btotal_pages\x18\x05 \x01(\x05R\ntotalPages\x12&\n\x0fnext_page_token\x18\x06 \x01(\tR\rnextPageToken"\xad\x02\n\x17GetEventsInRangeRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x129\n\nstart_date\x18\x02 \x01(\x0b2\x1a.google.protobuf.TimestampR\tstartDate\x125\n\x08end_date\x18\x03 \x01(\x0b2\x1a.google.protobuf.TimestampR\x07endDate\x12!\n\x0ccalendar_ids\x18\x04 \x03(\tR\x0bcalendarIds\x12!\n\x0ccategory_ids\x18\x05 \x03(\tR\x0bcategoryIds\x12"\n\nchannel_id\x18\x06 \x01(\tH\x00R\tchannelId\x88\x01\x01B\r\n\x0b_channel_id"I\n\x18GetEventsInRangeResponse\x12-\n\x06events\x18\x01 \x03(\x0b2\x15.cal.v1.CalendarEventR\x06events"\xae\x05\n\x08Calendar\x12\x0e\n\x02id\x18\x01 \x01(\tR\x02id\x12\'\n\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12\x19\n\x08owner_id\x18\x03 \x01(\tR\x07ownerId\x12\x12\n\x04name\x18\x04 \x01(\tR\x04name\x12 \n\x0bdescription\x18\x05 \x01(\tR\x0bdescription\x12\x14\n\x05color\x18\x06 \x01(\tR\x05color\x129\n\rcalendar_type\x18\x07 \x01(\x0e2\x14.cal.v1.CalendarTypeR\x0ccalendarType\x12\x1d\n\nis_default\x18\x08 \x01(\x08R\tisDefault\x126\n\x0baccess_mode\x18\t \x01(\x0e2\x15.common.v1.AccessModeR\naccessMode\x12@\n\rbaseline_role\x18\n \x01(\x0e2\x16.common.v1.ContentRoleH\x00R\x0cbaselineRole\x88\x01\x01\x123\n\tuser_role\x18\x0b \x01(\x0e2\x16.common.v1.ContentRoleR\x08userRole\x12\x1b\n\tis_hidden\x18\x0c \x01(\x08R\x08isHidden\x125\n\x07section\x18\r \x01(\x0e2\x1b.cal.v1.CalendarListSectionR\x07section\x129\n\ncreated_at\x18\x0e \x01(\x0b2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n\nupdated_at\x18\x0f \x01(\x0b2\x1a.google.protobuf.TimestampR\tupdatedAt\x12\x1d\n\nowner_name\x18\x10 \x01(\tR\townerNameB\x10\n\x0e_baseline_role"?\n\x14ListCalendarsRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId"G\n\x15ListCalendarsResponse\x12.\n\tcalendars\x18\x01 \x03(\x0b2\x10.cal.v1.CalendarR\tcalendars"^\n\x12GetCalendarRequest\x12\x1f\n\x0bcalendar_id\x18\x01 \x01(\tR\ncalendarId\x12\'\n\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId"C\n\x13GetCalendarResponse\x12,\n\x08calendar\x18\x01 \x01(\x0b2\x10.cal.v1.CalendarR\x08calendar"\xcb\x03\n\x15CreateCalendarRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x12\n\x04name\x18\x02 \x01(\tR\x04name\x12%\n\x0bdescription\x18\x03 \x01(\tH\x00R\x0bdescription\x88\x01\x01\x12\x14\n\x05color\x18\x04 \x01(\tR\x05color\x129\n\rcalendar_type\x18\x05 \x01(\x0e2\x14.cal.v1.CalendarTypeR\x0ccalendarType\x12;\n\x0baccess_mode\x18\x06 \x01(\x0e2\x15.common.v1.AccessModeH\x01R\naccessMode\x88\x01\x01\x12@\n\rbaseline_role\x18\x07 \x01(\x0e2\x16.common.v1.ContentRoleH\x02R\x0cbaselineRole\x88\x01\x01\x12$\n\x0eadmin_user_ids\x18\x08 \x03(\tR\x0cadminUserIds\x12&\n\x0fadmin_group_ids\x18\t \x03(\tR\radminGroupIdsB\x0e\n\x0c_descriptionB\x0e\n\x0c_access_modeB\x10\n\x0e_baseline_role"F\n\x16CreateCalendarResponse\x12,\n\x08calendar\x18\x01 \x01(\x0b2\x10.cal.v1.CalendarR\x08calendar"\xdf\x01\n\x15UpdateCalendarRequest\x12\x1f\n\x0bcalendar_id\x18\x01 \x01(\tR\ncalendarId\x12\'\n\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12\x17\n\x04name\x18\x03 \x01(\tH\x00R\x04name\x88\x01\x01\x12%\n\x0bdescription\x18\x04 \x01(\tH\x01R\x0bdescription\x88\x01\x01\x12\x19\n\x05color\x18\x05 \x01(\tH\x02R\x05color\x88\x01\x01B\x07\n\x05_nameB\x0e\n\x0c_descriptionB\x08\n\x06_color"F\n\x16UpdateCalendarResponse\x12,\n\x08calendar\x18\x01 \x01(\x0b2\x10.cal.v1.CalendarR\x08calendar"\xef\x01\n\x15DeleteCalendarRequest\x12\x1f\n\x0bcalendar_id\x18\x01 \x01(\tR\ncalendarId\x12\'\n\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12B\n\x0bdisposition\x18\x03 \x01(\x0e2 .cal.v1.CalendarEventDispositionR\x0bdisposition\x121\n\x12target_calendar_id\x18\x04 \x01(\tH\x00R\x10targetCalendarId\x88\x01\x01B\x15\n\x13_target_calendar_id"b\n\x16DeleteCalendarResponse\x12!\n\x0cevents_moved\x18\x01 \x01(\x05R\x0beventsMoved\x12%\n\x0eevents_deleted\x18\x02 \x01(\x05R\reventsDeleted"\x80\x01\n\x1cSetCalendarVisibilityRequest\x12\x1f\n\x0bcalendar_id\x18\x01 \x01(\tR\ncalendarId\x12\'\n\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12\x16\n\x06hidden\x18\x03 \x01(\x08R\x06hidden"M\n\x1dSetCalendarVisibilityResponse\x12,\n\x08calendar\x18\x01 \x01(\x0b2\x10.cal.v1.CalendarR\x08calendar"\xea\x01\n\x0eCalendarPolicy\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12T\n\x16team_calendar_creators\x18\x02 \x01(\x0e2\x1e.cal.v1.CalendarPolicyAudienceR\x14teamCalendarCreators\x12Y\n\x19org_wide_calendar_sharers\x18\x03 \x01(\x0e2\x1e.cal.v1.CalendarPolicyAudienceR\x16orgWideCalendarSharers"C\n\x18GetCalendarPolicyRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId"\xc6\x01\n\x19GetCalendarPolicyResponse\x12.\n\x06policy\x18\x01 \x01(\x0b2\x16.cal.v1.CalendarPolicyR\x06policy\x129\n\x19can_create_team_calendars\x18\x02 \x01(\x08R\x16canCreateTeamCalendars\x12>\n\x1ccan_share_calendars_org_wide\x18\x03 \x01(\x08R\x18canShareCalendarsOrgWide"\xf7\x01\n\x1bUpdateCalendarPolicyRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12T\n\x16team_calendar_creators\x18\x02 \x01(\x0e2\x1e.cal.v1.CalendarPolicyAudienceR\x14teamCalendarCreators\x12Y\n\x19org_wide_calendar_sharers\x18\x03 \x01(\x0e2\x1e.cal.v1.CalendarPolicyAudienceR\x16orgWideCalendarSharers"\xc9\x01\n\x1cUpdateCalendarPolicyResponse\x12.\n\x06policy\x18\x01 \x01(\x0b2\x16.cal.v1.CalendarPolicyR\x06policy\x129\n\x19can_create_team_calendars\x18\x02 \x01(\x08R\x16canCreateTeamCalendars\x12>\n\x1ccan_share_calendars_org_wide\x18\x03 \x01(\x08R\x18canShareCalendarsOrgWide"\xc3\x02\n\x08Category\x12\x0e\n\x02id\x18\x01 \x01(\tR\x02id\x12\'\n\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12\x12\n\x04name\x18\x03 \x01(\tR\x04name\x12\x14\n\x05color\x18\x04 \x01(\tR\x05color\x12\x17\n\x04icon\x18\x05 \x01(\tH\x00R\x04icon\x88\x01\x01\x12\x1d\n\nis_default\x18\x06 \x01(\x08R\tisDefault\x12\x1d\n\nsort_order\x18\x07 \x01(\x05R\tsortOrder\x129\n\ncreated_at\x18\x08 \x01(\x0b2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n\nupdated_at\x18\t \x01(\x0b2\x1a.google.protobuf.TimestampR\tupdatedAtB\x07\n\x05_icon"\x8c\x01\n\x15CreateCategoryRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x12\n\x04name\x18\x02 \x01(\tR\x04name\x12\x14\n\x05color\x18\x03 \x01(\tR\x05color\x12\x17\n\x04icon\x18\x04 \x01(\tH\x00R\x04icon\x88\x01\x01B\x07\n\x05_icon"^\n\x12GetCategoryRequest\x12\x1f\n\x0bcategory_id\x18\x01 \x01(\tR\ncategoryId\x12\'\n\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId"\xfd\x01\n\x15UpdateCategoryRequest\x12\x1f\n\x0bcategory_id\x18\x01 \x01(\tR\ncategoryId\x12\'\n\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12\x17\n\x04name\x18\x03 \x01(\tH\x00R\x04name\x88\x01\x01\x12\x19\n\x05color\x18\x04 \x01(\tH\x01R\x05color\x88\x01\x01\x12\x17\n\x04icon\x18\x05 \x01(\tH\x02R\x04icon\x88\x01\x01\x12"\n\nsort_order\x18\x06 \x01(\x05H\x03R\tsortOrder\x88\x01\x01B\x07\n\x05_nameB\x08\n\x06_colorB\x07\n\x05_iconB\r\n\x0b_sort_order"a\n\x15DeleteCategoryRequest\x12\x1f\n\x0bcategory_id\x18\x01 \x01(\tR\ncategoryId\x12\'\n\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId"L\n\x16DeleteCategoryResponse\x12\x18\n\x07success\x18\x01 \x01(\x08R\x07success\x12\x18\n\x07message\x18\x02 \x01(\tR\x07message"F\n\x16CreateCategoryResponse\x12,\n\x08category\x18\x01 \x01(\x0b2\x10.cal.v1.CategoryR\x08category"C\n\x13GetCategoryResponse\x12,\n\x08category\x18\x01 \x01(\x0b2\x10.cal.v1.CategoryR\x08category"F\n\x16UpdateCategoryResponse\x12,\n\x08category\x18\x01 \x01(\x0b2\x10.cal.v1.CategoryR\x08category"@\n\x15ListCategoriesRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId"J\n\x16ListCategoriesResponse\x120\n\ncategories\x18\x01 \x03(\x0b2\x10.cal.v1.CategoryR\ncategories"\x91\x01\n\x1bUpdateAttendeeStatusRequest\x12\x19\n\x08event_id\x18\x01 \x01(\tR\x07eventId\x12\'\n\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12.\n\x06status\x18\x03 \x01(\x0e2\x16.cal.v1.AttendeeStatusR\x06status"R\n\x1cUpdateAttendeeStatusResponse\x12\x18\n\x07success\x18\x01 \x01(\x08R\x07success\x12\x18\n\x07message\x18\x02 \x01(\tR\x07message"\x9e\x01\n\x13AddAttendeesRequest\x12\x19\n\x08event_id\x18\x01 \x01(\tR\x07eventId\x12\'\n\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12\x19\n\x08user_ids\x18\x03 \x03(\tR\x07userIds\x12(\n\x04role\x18\x04 \x01(\x0e2\x14.cal.v1.AttendeeRoleR\x04role"w\n\x16RemoveAttendeesRequest\x12\x19\n\x08event_id\x18\x01 \x01(\tR\x07eventId\x12\'\n\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12\x19\n\x08user_ids\x18\x03 \x03(\tR\x07userIds"\xe0\x02\n\rEventActivity\x12\x0e\n\x02id\x18\x01 \x01(\tR\x02id\x12\x19\n\x08event_id\x18\x02 \x01(\tR\x07eventId\x12\x19\n\x08actor_id\x18\x03 \x01(\tR\x07actorId\x123\n\x06action\x18\x04 \x01(\x0e2\x1b.cal.v1.EventActivityActionR\x06action\x128\n\ttimestamp\x18\x05 \x01(\x0b2\x1a.google.protobuf.TimestampR\ttimestamp\x12\x1e\n\x08field_id\x18\x06 \x01(\tH\x00R\x07fieldId\x88\x01\x01\x12*\n\x0eprevious_value\x18\x07 \x01(\tH\x01R\rpreviousValue\x88\x01\x01\x12 \n\tnew_value\x18\x08 \x01(\tH\x02R\x08newValue\x88\x01\x01B\x0b\n\t_field_idB\x11\n\x0f_previous_valueB\x0c\n\n_new_value"\xb2\x01\n\x1aListEventActivitiesRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x19\n\x08event_id\x18\x02 \x01(\tR\x07eventId\x12A\n\npagination\x18\x03 \x01(\x0b2\x1c.common.v1.PaginationRequestH\x00R\npagination\x88\x01\x01B\r\n\x0b_pagination"\x93\x01\n\x1bListEventActivitiesResponse\x125\n\nactivities\x18\x01 \x03(\x0b2\x15.cal.v1.EventActivityR\nactivities\x12=\n\npagination\x18\x02 \x01(\x0b2\x1d.common.v1.PaginationResponseR\npagination"\xbe\x04\n\rEventTemplate\x12\x0e\n\x02id\x18\x01 \x01(\tR\x02id\x12\'\n\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12\x14\n\x05title\x18\x03 \x01(\tR\x05title\x12 \n\x0bdescription\x18\x04 \x01(\tR\x0bdescription\x12)\n\x10duration_minutes\x18\x05 \x01(\x05R\x0fdurationMinutes\x12\x1a\n\x08location\x18\x06 \x01(\tR\x08location\x12\x1f\n\x0bmeeting_url\x18\x07 \x01(\tR\nmeetingUrl\x12\x1f\n\x0bcategory_id\x18\x08 \x01(\tR\ncategoryId\x12\x12\n\x04tags\x18\t \x03(\tR\x04tags\x126\n\x0baccess_mode\x18\n \x01(\x0e2\x15.common.v1.AccessModeR\naccessMode\x12\x1d\n\ncreated_by\x18\x0b \x01(\tR\tcreatedBy\x129\n\ncreated_at\x18\x0c \x01(\x0b2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n\nupdated_at\x18\r \x01(\x0b2\x1a.google.protobuf.TimestampR\tupdatedAt\x12@\n\rbaseline_role\x18\x0e \x01(\x0e2\x16.common.v1.ContentRoleH\x00R\x0cbaselineRole\x88\x01\x01B\x10\n\x0e_baseline_role"\xa6\x03\n\x1aCreateEventTemplateRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x14\n\x05title\x18\x02 \x01(\tR\x05title\x12 \n\x0bdescription\x18\x03 \x01(\tR\x0bdescription\x12)\n\x10duration_minutes\x18\x04 \x01(\x05R\x0fdurationMinutes\x12\x1a\n\x08location\x18\x05 \x01(\tR\x08location\x12\x1f\n\x0bmeeting_url\x18\x06 \x01(\tR\nmeetingUrl\x12\x1f\n\x0bcategory_id\x18\x07 \x01(\tR\ncategoryId\x12\x12\n\x04tags\x18\x08 \x03(\tR\x04tags\x126\n\x0baccess_mode\x18\t \x01(\x0e2\x15.common.v1.AccessModeR\naccessMode\x12@\n\rbaseline_role\x18\n \x01(\x0e2\x16.common.v1.ContentRoleH\x00R\x0cbaselineRole\x88\x01\x01B\x10\n\x0e_baseline_role"c\n\x17GetEventTemplateRequest\x12\x1f\n\x0btemplate_id\x18\x01 \x01(\tR\ntemplateId\x12\'\n\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId"\xd6\x04\n\x1aUpdateEventTemplateRequest\x12\x1f\n\x0btemplate_id\x18\x01 \x01(\tR\ntemplateId\x12\'\n\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12\x19\n\x05title\x18\x03 \x01(\tH\x00R\x05title\x88\x01\x01\x12%\n\x0bdescription\x18\x04 \x01(\tH\x01R\x0bdescription\x88\x01\x01\x12.\n\x10duration_minutes\x18\x05 \x01(\x05H\x02R\x0fdurationMinutes\x88\x01\x01\x12\x1f\n\x08location\x18\x06 \x01(\tH\x03R\x08location\x88\x01\x01\x12$\n\x0bmeeting_url\x18\x07 \x01(\tH\x04R\nmeetingUrl\x88\x01\x01\x12$\n\x0bcategory_id\x18\x08 \x01(\tH\x05R\ncategoryId\x88\x01\x01\x12\x12\n\x04tags\x18\t \x03(\tR\x04tags\x12;\n\x0baccess_mode\x18\n \x01(\x0e2\x15.common.v1.AccessModeH\x06R\naccessMode\x88\x01\x01\x12@\n\rbaseline_role\x18\x0b \x01(\x0e2\x16.common.v1.ContentRoleH\x07R\x0cbaselineRole\x88\x01\x01B\x08\n\x06_titleB\x0e\n\x0c_descriptionB\x13\n\x11_duration_minutesB\x0b\n\t_locationB\x0e\n\x0c_meeting_urlB\x0e\n\x0c_category_idB\x0e\n\x0c_access_modeB\x10\n\x0e_baseline_role"f\n\x1aDeleteEventTemplateRequest\x12\x1f\n\x0btemplate_id\x18\x01 \x01(\tR\ntemplateId\x12\'\n\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId"Q\n\x1bDeleteEventTemplateResponse\x12\x18\n\x07success\x18\x01 \x01(\x08R\x07success\x12\x18\n\x07message\x18\x02 \x01(\tR\x07message"P\n\x1bCreateEventTemplateResponse\x121\n\x08template\x18\x01 \x01(\x0b2\x15.cal.v1.EventTemplateR\x08template"M\n\x18GetEventTemplateResponse\x121\n\x08template\x18\x01 \x01(\x0b2\x15.cal.v1.EventTemplateR\x08template"P\n\x1bUpdateEventTemplateResponse\x121\n\x08template\x18\x01 \x01(\x0b2\x15.cal.v1.EventTemplateR\x08template"D\n\x19ListEventTemplatesRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId"Q\n\x1aListEventTemplatesResponse\x123\n\ttemplates\x18\x01 \x03(\x0b2\x15.cal.v1.EventTemplateR\ttemplates"\xa9\x01\n\x0cBusyInterval\x129\n\nstart_time\x18\x01 \x01(\x0b2\x1a.google.protobuf.TimestampR\tstartTime\x125\n\x08end_time\x18\x02 \x01(\x0b2\x1a.google.protobuf.TimestampR\x07endTime\x12\'\n\x10is_out_of_office\x18\x03 \x01(\x08R\risOutOfOffice"\xd9\x01\n\x0cUserFreeBusy\x12\x17\n\x07user_id\x18\x01 \x01(\tR\x06userId\x122\n\tintervals\x18\x02 \x03(\x0b2\x14.cal.v1.BusyIntervalR\tintervals\x12\x1a\n\x08timezone\x18\x03 \x01(\tR\x08timezone\x12#\n\rworkday_start\x18\x04 \x01(\tR\x0cworkdayStart\x12\x1f\n\x0bworkday_end\x18\x05 \x01(\tR\nworkdayEnd\x12\x1a\n\x08workdays\x18\x06 \x03(\tR\x08workdays"\xfc\x01\n\x12GetFreeBusyRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x19\n\x08user_ids\x18\x02 \x03(\tR\x07userIds\x12=\n\x0cwindow_start\x18\x03 \x01(\x0b2\x1a.google.protobuf.TimestampR\x0bwindowStart\x129\n\nwindow_end\x18\x04 \x01(\x0b2\x1a.google.protobuf.TimestampR\twindowEnd\x12\x1c\n\x07room_id\x18\x05 \x01(\tH\x00R\x06roomId\x88\x01\x01B\n\n\x08_room_id"t\n\x13GetFreeBusyResponse\x12*\n\x05users\x18\x01 \x03(\x0b2\x14.cal.v1.UserFreeBusyR\x05users\x121\n\troom_busy\x18\x02 \x03(\x0b2\x14.cal.v1.BusyIntervalR\x08roomBusy"\x8d\x03\n\x1aSuggestMeetingTimesRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12*\n\x11required_user_ids\x18\x02 \x03(\tR\x0frequiredUserIds\x12*\n\x11optional_user_ids\x18\x03 \x03(\tR\x0foptionalUserIds\x12=\n\x0cwindow_start\x18\x04 \x01(\x0b2\x1a.google.protobuf.TimestampR\x0bwindowStart\x129\n\nwindow_end\x18\x05 \x01(\x0b2\x1a.google.protobuf.TimestampR\twindowEnd\x12)\n\x10duration_minutes\x18\x06 \x01(\x05R\x0fdurationMinutes\x12\x1c\n\x07room_id\x18\x07 \x01(\tH\x00R\x06roomId\x88\x01\x01\x12\x1f\n\x0bmax_results\x18\x08 \x01(\x05R\nmaxResultsB\n\n\x08_room_id"\xcc\x01\n\x15MeetingTimeSuggestion\x129\n\nstart_time\x18\x01 \x01(\x0b2\x1a.google.protobuf.TimestampR\tstartTime\x125\n\x08end_time\x18\x02 \x01(\x0b2\x1a.google.protobuf.TimestampR\x07endTime\x12A\n\x1dunavailable_optional_user_ids\x18\x03 \x03(\tR\x1aunavailableOptionalUserIds"^\n\x1bSuggestMeetingTimesResponse\x12?\n\x0bsuggestions\x18\x01 \x03(\x0b2\x1d.cal.v1.MeetingTimeSuggestionR\x0bsuggestions"X\n\x12ExportEventRequest\x12\x19\n\x08event_id\x18\x01 \x01(\tR\x07eventId\x12\'\n\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId"K\n\x13ExportEventResponse\x12\x18\n\x07content\x18\x01 \x01(\x0cR\x07content\x12\x1a\n\x08filename\x18\x02 \x01(\tR\x08filename"\xf9\x01\n\x15ExportCalendarRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1f\n\x0bcalendar_id\x18\x02 \x01(\tR\ncalendarId\x12>\n\nstart_time\x18\x03 \x01(\x0b2\x1a.google.protobuf.TimestampH\x00R\tstartTime\x88\x01\x01\x12:\n\x08end_time\x18\x04 \x01(\x0b2\x1a.google.protobuf.TimestampH\x01R\x07endTime\x88\x01\x01B\r\n\x0b_start_timeB\x0b\n\t_end_time"o\n\x16ExportCalendarResponse\x12\x18\n\x07content\x18\x01 \x01(\x0cR\x07content\x12\x1a\n\x08filename\x18\x02 \x01(\tR\x08filename\x12\x1f\n\x0bevent_count\x18\x03 \x01(\x05R\neventCount"\xd6\x01\n\x14ImportedEventPreview\x12\x14\n\x05title\x18\x01 \x01(\tR\x05title\x129\n\nstart_time\x18\x02 \x01(\x0b2\x1a.google.protobuf.TimestampR\tstartTime\x125\n\x08end_time\x18\x03 \x01(\x0b2\x1a.google.protobuf.TimestampR\x07endTime\x12\x1c\n\nis_all_day\x18\x04 \x01(\x08R\x08isAllDay\x12\x18\n\x07repeats\x18\x05 \x01(\x08R\x07repeats"B\n\x12SkippedImportEntry\x12\x14\n\x05label\x18\x01 \x01(\tR\x05label\x12\x16\n\x06reason\x18\x02 \x01(\tR\x06reason"\x82\x01\n\x1cPreviewCalendarImportRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1f\n\x0bcalendar_id\x18\x02 \x01(\tR\ncalendarId\x12\x18\n\x07content\x18\x03 \x01(\x0cR\x07content"\xba\x01\n\x1dPreviewCalendarImportResponse\x12:\n\tcreatable\x18\x01 \x03(\x0b2\x1c.cal.v1.ImportedEventPreviewR\tcreatable\x12\'\n\x0fduplicate_count\x18\x02 \x01(\x05R\x0eduplicateCount\x124\n\x07skipped\x18\x03 \x03(\x0b2\x1a.cal.v1.SkippedImportEntryR\x07skipped"\x80\x01\n\x1aApplyCalendarImportRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1f\n\x0bcalendar_id\x18\x02 \x01(\tR\ncalendarId\x12\x18\n\x07content\x18\x03 \x01(\x0cR\x07content"\xa1\x01\n\x1bApplyCalendarImportResponse\x12#\n\rcreated_count\x18\x01 \x01(\x05R\x0ccreatedCount\x12\'\n\x0fduplicate_count\x18\x02 \x01(\x05R\x0eduplicateCount\x124\n\x07skipped\x18\x03 \x03(\x0b2\x1a.cal.v1.SkippedImportEntryR\x07skipped"e\n\x19GetCalendarFeedUrlRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1f\n\x0bcalendar_id\x18\x02 \x01(\tR\ncalendarId"\xd1\x01\n\x1aGetCalendarFeedUrlResponse\x12\x10\n\x03url\x18\x01 \x01(\tR\x03url\x12>\n\ncreated_at\x18\x02 \x01(\x0b2\x1a.google.protobuf.TimestampH\x00R\tcreatedAt\x88\x01\x01\x12A\n\x0clast_used_at\x18\x03 \x01(\x0b2\x1a.google.protobuf.TimestampH\x01R\nlastUsedAt\x88\x01\x01B\r\n\x0b_created_atB\x0f\n\r_last_used_at"i\n\x1dRegenerateCalendarFeedRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1f\n\x0bcalendar_id\x18\x02 \x01(\tR\ncalendarId"m\n\x1eRegenerateCalendarFeedResponse\x12\x10\n\x03url\x18\x01 \x01(\tR\x03url\x129\n\ncreated_at\x18\x02 \x01(\x0b2\x1a.google.protobuf.TimestampR\tcreatedAt"e\n\x19RevokeCalendarFeedRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1f\n\x0bcalendar_id\x18\x02 \x01(\tR\ncalendarId"6\n\x1aRevokeCalendarFeedResponse\x12\x18\n\x07revoked\x18\x01 \x01(\x08R\x07revoked*\xf1\x01\n\x11RecurrencePattern\x12"\n\x1eRECURRENCE_PATTERN_UNSPECIFIED\x10\x00\x12\x1b\n\x17RECURRENCE_PATTERN_NONE\x10\x01\x12\x1c\n\x18RECURRENCE_PATTERN_DAILY\x10\x02\x12\x1d\n\x19RECURRENCE_PATTERN_WEEKLY\x10\x03\x12\x1f\n\x1bRECURRENCE_PATTERN_BIWEEKLY\x10\x04\x12\x1e\n\x1aRECURRENCE_PATTERN_MONTHLY\x10\x05\x12\x1d\n\x19RECURRENCE_PATTERN_YEARLY\x10\x06*\xd8\x01\n\tDayOfWeek\x12\x1b\n\x17DAY_OF_WEEK_UNSPECIFIED\x10\x00\x12\x16\n\x12DAY_OF_WEEK_MONDAY\x10\x01\x12\x17\n\x13DAY_OF_WEEK_TUESDAY\x10\x02\x12\x19\n\x15DAY_OF_WEEK_WEDNESDAY\x10\x03\x12\x18\n\x14DAY_OF_WEEK_THURSDAY\x10\x04\x12\x16\n\x12DAY_OF_WEEK_FRIDAY\x10\x05\x12\x18\n\x14DAY_OF_WEEK_SATURDAY\x10\x06\x12\x16\n\x12DAY_OF_WEEK_SUNDAY\x10\x07*\xa9\x01\n\x0eAttendeeStatus\x12\x1f\n\x1bATTENDEE_STATUS_UNSPECIFIED\x10\x00\x12\x1b\n\x17ATTENDEE_STATUS_PENDING\x10\x01\x12\x1c\n\x18ATTENDEE_STATUS_ACCEPTED\x10\x02\x12\x1d\n\x19ATTENDEE_STATUS_TENTATIVE\x10\x03\x12\x1c\n\x18ATTENDEE_STATUS_DECLINED\x10\x04*\x9a\x05\n\x13EventActivityAction\x12%\n!EVENT_ACTIVITY_ACTION_UNSPECIFIED\x10\x00\x12!\n\x1dEVENT_ACTIVITY_ACTION_CREATED\x10\x01\x12\'\n#EVENT_ACTIVITY_ACTION_TITLE_CHANGED\x10\x02\x12*\n&EVENT_ACTIVITY_ACTION_SCHEDULE_CHANGED\x10\x03\x12*\n&EVENT_ACTIVITY_ACTION_LOCATION_CHANGED\x10\x04\x12)\n%EVENT_ACTIVITY_ACTION_MEETING_CHANGED\x10\x05\x12-\n)EVENT_ACTIVITY_ACTION_DESCRIPTION_CHANGED\x10\x06\x12*\n&EVENT_ACTIVITY_ACTION_CATEGORY_CHANGED\x10\x07\x12*\n&EVENT_ACTIVITY_ACTION_CALENDAR_CHANGED\x10\x08\x12,\n(EVENT_ACTIVITY_ACTION_RECURRENCE_CHANGED\x10\t\x12+\n\'EVENT_ACTIVITY_ACTION_REMINDERS_CHANGED\x10\n\x12)\n%EVENT_ACTIVITY_ACTION_ATTENDEES_ADDED\x10\x0b\x12+\n\'EVENT_ACTIVITY_ACTION_ATTENDEES_REMOVED\x10\x0c\x12*\n&EVENT_ACTIVITY_ACTION_RESPONSE_CHANGED\x10\r\x12\'\n#EVENT_ACTIVITY_ACTION_FIELD_UPDATED\x10\x0e*\x82\x01\n\x0cAttendeeRole\x12\x1d\n\x19ATTENDEE_ROLE_UNSPECIFIED\x10\x00\x12\x1b\n\x17ATTENDEE_ROLE_ORGANIZER\x10\x01\x12\x1a\n\x16ATTENDEE_ROLE_REQUIRED\x10\x02\x12\x1a\n\x16ATTENDEE_ROLE_OPTIONAL\x10\x03*u\n\x0cResourceType\x12\x1d\n\x19RESOURCE_TYPE_UNSPECIFIED\x10\x00\x12\x16\n\x12RESOURCE_TYPE_NOTE\x10\x01\x12\x16\n\x12RESOURCE_TYPE_FILE\x10\x02\x12\x16\n\x12RESOURCE_TYPE_CHAT\x10\x03*\xb6\x01\n\x13RecurrenceEditScope\x12%\n!RECURRENCE_EDIT_SCOPE_UNSPECIFIED\x10\x00\x12$\n RECURRENCE_EDIT_SCOPE_THIS_EVENT\x10\x01\x12$\n RECURRENCE_EDIT_SCOPE_ALL_EVENTS\x10\x02\x12,\n(RECURRENCE_EDIT_SCOPE_THIS_AND_FOLLOWING\x10\x03*\x7f\n\x0bEventStatus\x12\x1c\n\x18EVENT_STATUS_UNSPECIFIED\x10\x00\x12\x1a\n\x16EVENT_STATUS_CONFIRMED\x10\x01\x12\x1a\n\x16EVENT_STATUS_TENTATIVE\x10\x02\x12\x1a\n\x16EVENT_STATUS_CANCELLED\x10\x03*p\n\x0fEventVisibility\x12 \n\x1cEVENT_VISIBILITY_UNSPECIFIED\x10\x00\x12\x1d\n\x19EVENT_VISIBILITY_STANDARD\x10\x01\x12\x1c\n\x18EVENT_VISIBILITY_PRIVATE\x10\x02*z\n\x11EventTransparency\x12"\n\x1eEVENT_TRANSPARENCY_UNSPECIFIED\x10\x00\x12\x1d\n\x19EVENT_TRANSPARENCY_OPAQUE\x10\x01\x12"\n\x1eEVENT_TRANSPARENCY_TRANSPARENT\x10\x02*\x93\x01\n\x0cCalendarType\x12\x1d\n\x19CALENDAR_TYPE_UNSPECIFIED\x10\x00\x12\x1a\n\x16CALENDAR_TYPE_PERSONAL\x10\x01\x12\x16\n\x12CALENDAR_TYPE_WORK\x10\x02\x12\x16\n\x12CALENDAR_TYPE_TEAM\x10\x03\x12\x18\n\x14CALENDAR_TYPE_SHARED\x10\x04*\xa6\x01\n\x13CalendarListSection\x12%\n!CALENDAR_LIST_SECTION_UNSPECIFIED\x10\x00\x12\x1e\n\x1aCALENDAR_LIST_SECTION_MINE\x10\x01\x12 \n\x1cCALENDAR_LIST_SECTION_SHARED\x10\x02\x12&\n"CALENDAR_LIST_SECTION_ORGANIZATION\x10\x03*\x92\x01\n\x18CalendarEventDisposition\x12*\n&CALENDAR_EVENT_DISPOSITION_UNSPECIFIED\x10\x00\x12#\n\x1fCALENDAR_EVENT_DISPOSITION_MOVE\x10\x01\x12%\n!CALENDAR_EVENT_DISPOSITION_DELETE\x10\x02*\x8e\x01\n\x16CalendarPolicyAudience\x12(\n$CALENDAR_POLICY_AUDIENCE_UNSPECIFIED\x10\x00\x12%\n!CALENDAR_POLICY_AUDIENCE_EVERYONE\x10\x01\x12#\n\x1fCALENDAR_POLICY_AUDIENCE_ADMINS\x10\x022\x85\x1a\n\x0fCalendarService\x12N\n\rListCalendars\x12\x1c.cal.v1.ListCalendarsRequest\x1a\x1d.cal.v1.ListCalendarsResponse"\x00\x12H\n\x0bGetCalendar\x12\x1a.cal.v1.GetCalendarRequest\x1a\x1b.cal.v1.GetCalendarResponse"\x00\x12Q\n\x0eCreateCalendar\x12\x1d.cal.v1.CreateCalendarRequest\x1a\x1e.cal.v1.CreateCalendarResponse"\x00\x12Q\n\x0eUpdateCalendar\x12\x1d.cal.v1.UpdateCalendarRequest\x1a\x1e.cal.v1.UpdateCalendarResponse"\x00\x12Q\n\x0eDeleteCalendar\x12\x1d.cal.v1.DeleteCalendarRequest\x1a\x1e.cal.v1.DeleteCalendarResponse"\x00\x12f\n\x15SetCalendarVisibility\x12$.cal.v1.SetCalendarVisibilityRequest\x1a%.cal.v1.SetCalendarVisibilityResponse"\x00\x12Z\n\x11GetCalendarPolicy\x12 .cal.v1.GetCalendarPolicyRequest\x1a!.cal.v1.GetCalendarPolicyResponse"\x00\x12c\n\x14UpdateCalendarPolicy\x12#.cal.v1.UpdateCalendarPolicyRequest\x1a$.cal.v1.UpdateCalendarPolicyResponse"\x00\x12H\n\x0bCreateEvent\x12\x1a.cal.v1.CreateEventRequest\x1a\x1b.cal.v1.CreateEventResponse"\x00\x12?\n\x08GetEvent\x12\x17.cal.v1.GetEventRequest\x1a\x18.cal.v1.GetEventResponse"\x00\x12H\n\x0bUpdateEvent\x12\x1a.cal.v1.UpdateEventRequest\x1a\x1b.cal.v1.UpdateEventResponse"\x00\x12H\n\x0bDeleteEvent\x12\x1a.cal.v1.DeleteEventRequest\x1a\x1b.cal.v1.DeleteEventResponse"\x00\x12E\n\nListEvents\x12\x19.cal.v1.ListEventsRequest\x1a\x1a.cal.v1.ListEventsResponse"\x00\x12W\n\x10GetEventsInRange\x12\x1f.cal.v1.GetEventsInRangeRequest\x1a .cal.v1.GetEventsInRangeResponse"\x00\x12H\n\x0bExportEvent\x12\x1a.cal.v1.ExportEventRequest\x1a\x1b.cal.v1.ExportEventResponse"\x00\x12Q\n\x0eExportCalendar\x12\x1d.cal.v1.ExportCalendarRequest\x1a\x1e.cal.v1.ExportCalendarResponse"\x00\x12f\n\x15PreviewCalendarImport\x12$.cal.v1.PreviewCalendarImportRequest\x1a%.cal.v1.PreviewCalendarImportResponse"\x00\x12`\n\x13ApplyCalendarImport\x12".cal.v1.ApplyCalendarImportRequest\x1a#.cal.v1.ApplyCalendarImportResponse"\x00\x12]\n\x12GetCalendarFeedUrl\x12!.cal.v1.GetCalendarFeedUrlRequest\x1a".cal.v1.GetCalendarFeedUrlResponse"\x00\x12i\n\x16RegenerateCalendarFeed\x12%.cal.v1.RegenerateCalendarFeedRequest\x1a&.cal.v1.RegenerateCalendarFeedResponse"\x00\x12]\n\x12RevokeCalendarFeed\x12!.cal.v1.RevokeCalendarFeedRequest\x1a".cal.v1.RevokeCalendarFeedResponse"\x00\x12Q\n\x0eCreateCategory\x12\x1d.cal.v1.CreateCategoryRequest\x1a\x1e.cal.v1.CreateCategoryResponse"\x00\x12H\n\x0bGetCategory\x12\x1a.cal.v1.GetCategoryRequest\x1a\x1b.cal.v1.GetCategoryResponse"\x00\x12Q\n\x0eUpdateCategory\x12\x1d.cal.v1.UpdateCategoryRequest\x1a\x1e.cal.v1.UpdateCategoryResponse"\x00\x12Q\n\x0eDeleteCategory\x12\x1d.cal.v1.DeleteCategoryRequest\x1a\x1e.cal.v1.DeleteCategoryResponse"\x00\x12Q\n\x0eListCategories\x12\x1d.cal.v1.ListCategoriesRequest\x1a\x1e.cal.v1.ListCategoriesResponse"\x00\x12c\n\x14UpdateAttendeeStatus\x12#.cal.v1.UpdateAttendeeStatusRequest\x1a$.cal.v1.UpdateAttendeeStatusResponse"\x00\x12K\n\x0cAddAttendees\x12\x1b.cal.v1.AddAttendeesRequest\x1a\x1c.cal.v1.AddAttendeesResponse"\x00\x12]\n\x12UpdateAttendeeRole\x12!.cal.v1.UpdateAttendeeRoleRequest\x1a".cal.v1.UpdateAttendeeRoleResponse"\x00\x12T\n\x0fRemoveAttendees\x12\x1e.cal.v1.RemoveAttendeesRequest\x1a\x1f.cal.v1.RemoveAttendeesResponse"\x00\x12H\n\x0bGetFreeBusy\x12\x1a.cal.v1.GetFreeBusyRequest\x1a\x1b.cal.v1.GetFreeBusyResponse"\x00\x12`\n\x13SuggestMeetingTimes\x12".cal.v1.SuggestMeetingTimesRequest\x1a#.cal.v1.SuggestMeetingTimesResponse"\x00\x12`\n\x13ListEventActivities\x12".cal.v1.ListEventActivitiesRequest\x1a#.cal.v1.ListEventActivitiesResponse"\x00\x12`\n\x13CreateEventTemplate\x12".cal.v1.CreateEventTemplateRequest\x1a#.cal.v1.CreateEventTemplateResponse"\x00\x12W\n\x10GetEventTemplate\x12\x1f.cal.v1.GetEventTemplateRequest\x1a .cal.v1.GetEventTemplateResponse"\x00\x12`\n\x13UpdateEventTemplate\x12".cal.v1.UpdateEventTemplateRequest\x1a#.cal.v1.UpdateEventTemplateResponse"\x00\x12`\n\x13DeleteEventTemplate\x12".cal.v1.DeleteEventTemplateRequest\x1a#.cal.v1.DeleteEventTemplateResponse"\x00\x12]\n\x12ListEventTemplates\x12!.cal.v1.ListEventTemplatesRequest\x1a".cal.v1.ListEventTemplatesResponse"\x00B3Z1github.com/uniffy-io/uniffy-proto-go/cal/v1;calv1b\x06proto3',
     [
         common_pb.desc(),
         timestamp_pb.desc(),
@@ -4708,6 +5626,24 @@ _DESC = file_desc(
         "ListEventsResponse": ListEventsResponse,
         "GetEventsInRangeRequest": GetEventsInRangeRequest,
         "GetEventsInRangeResponse": GetEventsInRangeResponse,
+        "Calendar": Calendar,
+        "ListCalendarsRequest": ListCalendarsRequest,
+        "ListCalendarsResponse": ListCalendarsResponse,
+        "GetCalendarRequest": GetCalendarRequest,
+        "GetCalendarResponse": GetCalendarResponse,
+        "CreateCalendarRequest": CreateCalendarRequest,
+        "CreateCalendarResponse": CreateCalendarResponse,
+        "UpdateCalendarRequest": UpdateCalendarRequest,
+        "UpdateCalendarResponse": UpdateCalendarResponse,
+        "DeleteCalendarRequest": DeleteCalendarRequest,
+        "DeleteCalendarResponse": DeleteCalendarResponse,
+        "SetCalendarVisibilityRequest": SetCalendarVisibilityRequest,
+        "SetCalendarVisibilityResponse": SetCalendarVisibilityResponse,
+        "CalendarPolicy": CalendarPolicy,
+        "GetCalendarPolicyRequest": GetCalendarPolicyRequest,
+        "GetCalendarPolicyResponse": GetCalendarPolicyResponse,
+        "UpdateCalendarPolicyRequest": UpdateCalendarPolicyRequest,
+        "UpdateCalendarPolicyResponse": UpdateCalendarPolicyResponse,
         "Category": Category,
         "CreateCategoryRequest": CreateCategoryRequest,
         "GetCategoryRequest": GetCategoryRequest,
@@ -4770,6 +5706,10 @@ _DESC = file_desc(
         "EventStatus": EventStatus,
         "EventVisibility": EventVisibility,
         "EventTransparency": EventTransparency,
+        "CalendarType": CalendarType,
+        "CalendarListSection": CalendarListSection,
+        "CalendarEventDisposition": CalendarEventDisposition,
+        "CalendarPolicyAudience": CalendarPolicyAudience,
     },
 )
 
