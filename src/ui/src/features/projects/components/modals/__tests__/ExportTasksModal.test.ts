@@ -33,7 +33,7 @@ it.each([
   { allowCurrentView: undefined, viewBlockedReason: null, expected: "project" },
   { allowCurrentView: true, viewBlockedReason: null, expected: "view" },
   { allowCurrentView: true, viewBlockedReason: "Field deleted", expected: "project" },
-])("exports $expected with current-view availability $allowCurrentView", async (options) => {
+])("uses $expected scope", async (options) => {
   const tree = elements(
     ExportTasksModal({
       projectIds: ["project"],
