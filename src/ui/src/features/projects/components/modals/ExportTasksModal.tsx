@@ -11,6 +11,7 @@ import type { ExportScope } from "@/features/projects/utils/exportTasks";
 interface ExportTasksModalProps {
   projectIds: string[];
   onClose: () => void;
+  allowCurrentView?: boolean;
   /** Why the current view cannot be exported, e.g. its filter names a deleted field. */
   viewBlockedReason?: string | null;
 }
@@ -18,12 +19,14 @@ interface ExportTasksModalProps {
 export function ExportTasksModal({
   projectIds,
   onClose,
+  allowCurrentView = false,
   viewBlockedReason = null,
 }: ExportTasksModalProps) {
   const dispatch = useAppDispatch();
   const single = projectIds.length === 1;
+  const hasCurrentView = single && allowCurrentView;
   const [scope, setScope] = useState<ExportScope>(
-    single && !viewBlockedReason ? "view" : "project",
+    hasCurrentView && !viewBlockedReason ? "view" : "project",
   );
   const [includeBundle, setIncludeBundle] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
@@ -31,7 +34,11 @@ export function ExportTasksModal({
   const submit = async () => {
     setIsExporting(true);
     const result = await dispatch(
-      exportProjectTasks({ projectIds, scope: single ? scope : "project", includeBundle }),
+      exportProjectTasks({
+        projectIds,
+        scope: hasCurrentView && !viewBlockedReason ? scope : "project",
+        includeBundle,
+      }),
     );
     setIsExporting(false);
     if (exportProjectTasks.fulfilled.match(result)) onClose();
@@ -49,7 +56,7 @@ export function ExportTasksModal({
       />
       <ModalBody>
         <div className="space-y-5">
-          {single && (
+          {hasCurrentView && (
             <div role="radiogroup" aria-label="What to export" className="grid gap-2">
               <OptionTile
                 selected={scope === "view"}

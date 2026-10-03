@@ -264,4 +264,3 @@ async def test_an_export_records_one_audit_event_per_project(session, env, seede
     assert len(events) == 1
     assert events[0].resource_id == seeded.project_id
     assert events[0].details == {"rows": TASK_COUNT, "projects": 1, "scope": "project", "bundle": True}
-

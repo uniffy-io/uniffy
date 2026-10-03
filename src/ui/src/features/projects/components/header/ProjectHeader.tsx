@@ -582,6 +582,7 @@ export function ProjectHeader({ project }: ProjectHeaderProps) {
 
       {isExportOpen && (
         <ExportTasksModal
+          allowCurrentView
           projectIds={[project.id]}
           viewBlockedReason={
             filterBlocksSave ? "This view's filter names a deleted field or option." : null

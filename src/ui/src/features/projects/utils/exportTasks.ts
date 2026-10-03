@@ -1,6 +1,9 @@
 import type { MessageInitShape } from "@bufbuild/protobuf";
 import {
+  FilterLogic,
   TaskExportLayout,
+  TaskFilterOperator,
+  TaskPseudoField,
   type ExportTasksRequestSchema,
 } from "@uniffy/proto/projects/v1/projects_pb";
 import { frontendViewDefinitionToProto } from "@/features/projects/api/viewConverters";
@@ -13,13 +16,30 @@ type ViewNarrowing = Pick<
   "filter" | "sort" | "layout"
 >;
 
-/**
- * The filter, sort and row shape the view renders, so the export holds what the table shows.
- * The outline table filters top-level tasks and nests every child under them; every other
- * layout lists matching tasks flat.
- */
+/** Preserve each layout's task scope alongside its filter and sort. */
 export function exportNarrowingFromDefinition(definition: ViewDefinition): ViewNarrowing {
-  const proto = frontendViewDefinitionToProto(definition);
+  const rootsOnly = definition.layout.type === "backlog" || definition.layout.type === "resources";
+  const proto = frontendViewDefinitionToProto(
+    rootsOnly
+      ? {
+          ...definition,
+          filter: {
+            logic: FilterLogic.AND,
+            nodes: [
+              ...(definition.filter ? [{ kind: "group" as const, group: definition.filter }] : []),
+              {
+                kind: "condition",
+                condition: {
+                  field: { kind: "pseudo", pseudo: TaskPseudoField.DEPTH },
+                  operator: TaskFilterOperator.IS,
+                  value: { kind: "number", number: 0 },
+                },
+              },
+            ],
+          },
+        }
+      : definition,
+  );
   const outline = definition.layout.type === "table" && !definition.layout.flat;
   return {
     filter: proto.filter,

@@ -97,11 +97,8 @@ def as_id_list(value: Any) -> list[str]:
 def build_custom_columns(
     projects: Sequence[Project], fields_by_project: dict[UUID, list[FieldDefinition]]
 ) -> list[CustomColumn]:
-    """Union of custom fields by case-insensitive name, in project order then field order.
-
-    A name repeated inside one project gets a ` (2)` suffix so neither field is dropped.
-    """
-    columns: dict[str, tuple[str, dict[UUID, str]]] = {}
+    """Merge matching names and occurrences without colliding with literal suffixed names."""
+    columns: dict[tuple[str, int], tuple[str, dict[UUID, str]]] = {}
     for project in projects:
         seen: dict[str, int] = {}
         fields = sorted(fields_by_project.get(project.id, []), key=lambda f: f.sort_order)
@@ -111,13 +108,20 @@ def build_custom_columns(
             base = field.name.strip() or field.id
             occurrence = seen.get(base.casefold(), 0) + 1
             seen[base.casefold()] = occurrence
-            name = base if occurrence == 1 else f"{base} ({occurrence})"
-            _, field_ids = columns.setdefault(name.casefold(), (name, {}))
+            _, field_ids = columns.setdefault((base.casefold(), occurrence), (base, {}))
             field_ids[project.id] = field.id
-    return [
-        CustomColumn(header=f"{CUSTOM_COLUMN_PREFIX}{name}", field_ids=field_ids)
-        for name, field_ids in columns.values()
-    ]
+    reserved = {base for base, _ in columns}
+    result: list[CustomColumn] = []
+    for (_, occurrence), (base, field_ids) in columns.items():
+        name = base
+        if occurrence > 1:
+            name = f"{base} ({occurrence})"
+            while name.casefold() in reserved:
+                occurrence += 1
+                name = f"{base} ({occurrence})"
+        reserved.add(name.casefold())
+        result.append(CustomColumn(header=f"{CUSTOM_COLUMN_PREFIX}{name}", field_ids=field_ids))
+    return result
 
 
 def field_cell(field: FieldDefinition, value: Any, labels: ExportLabels) -> str:
@@ -135,8 +139,6 @@ def field_cell(field: FieldDefinition, value: Any, labels: ExportLabels) -> str:
         )
     if field_type == ProjectFieldType.PERSON:
         return safe_text(join_values(labels.subject_label(raw) for raw in as_id_list(value)))
-    if field_type in (ProjectFieldType.DATE, ProjectFieldType.REFERENCE):
-        return str(value)
     return safe_text(str(value))
 
 
@@ -149,24 +151,26 @@ def task_row(
     project_id = project.id
     fixed = [
         safe_text(project.name),
-        project.slug,
-        labels.key(project.slug, task.number),
+        safe_text(project.slug),
+        safe_text(labels.key(project.slug, task.number)),
         safe_text(task.title),
-        labels.task_type_label(task.task_type),
+        safe_text(labels.task_type_label(task.task_type)),
         safe_text(labels.status_label(project_id, task.status)),
         safe_text(labels.priority_label(project_id, task.priority)),
         safe_text(join_values(labels.subject_label(raw) for raw in task.assignee_ids or [])),
-        labels.email(task.owner_id),
-        task.start_date or "",
-        task.due_date or "",
+        safe_text(labels.email(task.owner_id)),
+        safe_text(task.start_date),
+        safe_text(task.due_date),
         format_timestamp(task.completed_at),
         format_number(task.estimated_minutes),
         format_number(task.time_spent_minutes),
         safe_text(labels.sprint_name(task.sprint_id)),
-        labels.task_key(task.parent_id),
+        safe_text(labels.task_key(task.parent_id)),
         str(labels.depth(task.id)),
         format_bool(task.is_milestone),
-        join_values(labels.task_key_from_text(raw) for raw in task.blocked_by_task_ids or []),
+        safe_text(
+            join_values(labels.task_key_from_text(raw) for raw in task.blocked_by_task_ids or [])
+        ),
         safe_text(join_values(labels.tags(task.id))),
         format_timestamp(task.created_at),
         format_timestamp(task.updated_at),

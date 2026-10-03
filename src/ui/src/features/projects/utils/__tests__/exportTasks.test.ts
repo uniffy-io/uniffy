@@ -1,5 +1,16 @@
+import { create } from "@bufbuild/protobuf";
 import { describe, expect, it } from "vitest";
-import { SortDirection, TaskExportLayout } from "@uniffy/proto/projects/v1/projects_pb";
+import {
+  FilterLogic,
+  SortDirection,
+  TaskExportLayout,
+  TaskFilterOperator,
+  TaskPseudoField,
+  ViewDefinitionSchema,
+} from "@uniffy/proto/projects/v1/projects_pb";
+import { protoViewDefinitionToFrontend } from "@/features/projects/api/viewConverters";
+import { makeTask } from "@/features/projects/utils/__tests__/taskFixtures";
+import { applyFilters, buildTaskHierarchyIndex } from "@/features/projects/utils/filterTasks";
 import {
   buildExportFilename,
   exportNarrowingFromDefinition,
@@ -68,4 +79,47 @@ describe("exportNarrowingFromDefinition", () => {
     expect(narrowing.sort).toHaveLength(1);
     expect(narrowing.filter).toBeUndefined();
   });
+
+  it.each(["backlog", "resources"] as const)(
+    "exports only matching roots from %s while preserving OR filters",
+    (type) => {
+      const tasks = [
+        makeTask({ id: "first", number: 1 }),
+        makeTask({ id: "second", number: 2 }),
+        makeTask({ id: "excluded", number: 3 }),
+        makeTask({ id: "child", parentId: "first", number: 1 }),
+      ];
+      const definition: ViewDefinition = {
+        ...withLayout({ type }),
+        filter: {
+          logic: FilterLogic.OR,
+          nodes: [1, 2].map((number) => ({
+            kind: "condition",
+            condition: {
+              field: { kind: "pseudo", pseudo: TaskPseudoField.NUMBER },
+              operator: TaskFilterOperator.IS,
+              value: { kind: "number", number },
+            },
+          })),
+        },
+      };
+      const narrowing = exportNarrowingFromDefinition(definition);
+      const { filter } = protoViewDefinitionToFrontend(
+        create(ViewDefinitionSchema, { filter: narrowing.filter }),
+      );
+      const rows = applyFilters(tasks, filter, {
+        hierarchy: buildTaskHierarchyIndex(tasks),
+        fieldsById: new Map(),
+        lookup: (id) => tasks.find((task) => task.id === id),
+        currentUserId: null,
+        activeSprintId: null,
+        today: "2026-10-03",
+        weekStartsOn: 1,
+      });
+
+      expect(rows.map((task) => task.id)).toEqual(["first", "second"]);
+      expect(narrowing.layout).toBe(TaskExportLayout.FLAT);
+      expect(definition.filter?.logic).toBe(FilterLogic.OR);
+    },
+  );
 });

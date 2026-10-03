@@ -70,8 +70,7 @@ async def stream_bundle(
     tasks_csv: AsyncIterator[bytes],
     task_ids: Select,
 ) -> AsyncIterator[bytes]:
-    """`tasks_csv` and `task_ids` come from the same plan and snapshot, so every task key in the
-    secondary files is a row of tasks.csv."""
+    """Keep secondary files within the task IDs and snapshot of tasks.csv."""
     members: Sequence[tuple[str, AsyncIterator[bytes]]] = (
         ("tasks.csv", tasks_csv),
         ("sprints.csv", _sprints_csv(plan, labels)),
@@ -104,9 +103,9 @@ async def _sprints_csv(plan: ExportPlan, labels: ExportLabels) -> AsyncIterator[
                 safe_text(project.name),
                 safe_text(sprint.name),
                 safe_text(sprint.goal),
-                str(sprint.status),
-                sprint.start_date or "",
-                sprint.end_date or "",
+                safe_text(str(sprint.status)),
+                safe_text(sprint.start_date),
+                safe_text(sprint.end_date),
             )
             if chunk := chunker.row(row):
                 yield chunk
@@ -140,9 +139,9 @@ async def _activities_csv(
                 field_id = activity.field_id
                 before, after = activity.previous_value, activity.new_value
                 row = (
-                    labels.key(labels.slug(project_id), number),
-                    labels.email(activity.actor_id),
-                    activity.action,
+                    safe_text(labels.key(labels.slug(project_id), number)),
+                    safe_text(labels.email(activity.actor_id)),
+                    safe_text(activity.action),
                     safe_text(labels.field_name(project_id, field_id)),
                     safe_text(_activity_value(labels, project_id, field_id, before)),
                     safe_text(_activity_value(labels, project_id, field_id, after)),
@@ -187,8 +186,8 @@ async def _comments_csv(
         await labels.load_task_keys(row.content_id for row in batch)
         for comment in batch:
             row = (
-                labels.task_key(comment.content_id),
-                labels.email(comment.author_id),
+                safe_text(labels.task_key(comment.content_id)),
+                safe_text(labels.email(comment.author_id)),
                 safe_text(comment.body),
                 format_timestamp(comment.created_at),
                 format_bool(comment.is_resolved),
@@ -212,7 +211,7 @@ async def _fields_csv(plan: ExportPlan, labels: ExportLabels) -> AsyncIterator[b
             ]
             row = (
                 safe_text(project.name),
-                field.id,
+                safe_text(field.id),
                 safe_text(field.name),
                 str(field.type),
                 format_bool(field.is_required),

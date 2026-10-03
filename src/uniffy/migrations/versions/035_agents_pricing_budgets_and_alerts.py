@@ -1,33 +1,4 @@
-"""Cost tracking and budget enforcement for the agents domain.
-
-Revision ID: 017
-Revises: 016
-Create Date: 2026-05-01
-
-One logical unit: model pricing rows feed run-log cost columns, which
-are then capped by org-level budgets, per-user quotas, and tracked by
-budget-alert dedupe rows. Partial deploy of any subset would leave
-cost computation broken, so they ship together.
-
-Tables created:
-- ``agents_model_pricing``     - effective-dated price rows per model
-- ``agents_budgets``           - per-org monthly spend + image cap
-- ``agents_user_quotas``       - per-user daily/monthly caps
-- ``agents_budget_alerts``     - dedupe row per (scope, period, threshold)
-
-Columns added to ``agents_run_logs``:
-- ``kind`` ("chat" / "image")
-- ``image_count``
-- ``cost_usd``
-- ``thinking_tokens``
-
-Plus an index on ``agents_run_logs (organization_id, created_at, kind)``
-for the budget-period probes that filter by kind.
-
-Pricing rows are seeded from ``uniffy.domains.agents.pricing_seed``.
-The import is done inside ``upgrade`` so a future rename / removal of
-the seed module never blocks the schema change.
-"""
+"""Add agent pricing, budget, quota and alert tables with run-log cost tracking."""
 
 from collections.abc import Sequence
 
@@ -41,7 +12,6 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
-    """Create pricing/budget tables, extend run_logs, seed pricing."""
     op.create_table(
         "agents_model_pricing",
         sa.Column("id", sa.Uuid(), nullable=False),
@@ -250,7 +220,6 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    """Reverse the upgrade in dependency order."""
     with op.get_context().autocommit_block():
         op.execute("DROP INDEX CONCURRENTLY IF EXISTS ix_agents_run_logs_org_created_kind")
     op.drop_column("agents_run_logs", "thinking_tokens")

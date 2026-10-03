@@ -6,6 +6,8 @@ from datetime import UTC, datetime
 from unittest.mock import MagicMock
 from uuid import UUID
 
+import pytest
+
 from uniffy.core.models.projects.field_definition import FieldDefinition, ProjectFieldType
 from uniffy.core.models.projects.project import Project
 from uniffy.core.models.projects.sprint import Sprint
@@ -263,6 +265,49 @@ def test_custom_field_values_export_labels_people_dates_and_references() -> None
     row = task_row(_task(project, 1, field_values=values), project, labels, columns)
 
     assert row[-4:] == ["Prod;Staging", "ann@example.com", "2026-10-01", urn]
+
+
+@pytest.mark.parametrize("names", [("Risk", "Risk", "Risk (2)"), ("Risk (2)", "Risk", "Risk")])
+def test_literal_suffixes_cannot_overwrite_duplicate_field_values(names: tuple[str, ...]) -> None:
+    first, second = _project("Alpha", "ALP"), _project("Beta", "BET")
+    fields = {
+        first.id: [
+            _field(first, f"f{index}", name, ProjectFieldType.TEXT, sort_order=index)
+            for index, name in enumerate(names)
+        ],
+        second.id: [_field(second, "b1", "risk (2)", ProjectFieldType.TEXT)],
+    }
+    columns = build_custom_columns([first, second], fields)
+    labels = _Labels([first, second], fields)
+    values = {f"f{index}": f"value{index}" for index in range(len(names))}
+
+    row = task_row(_task(first, 1, field_values=values), first, labels, columns)
+    other = task_row(_task(second, 1, field_values={"b1": "literal"}), second, labels, columns)
+
+    assert len(columns) == 3
+    assert len({column.header.casefold() for column in columns}) == 3
+    assert row[-3:] == ["value0", "value1", "value2"]
+    literal_index = next(i for i, column in enumerate(columns) if column.header == "field:Risk (2)")
+    assert other[len(TASK_COLUMNS) + literal_index] == "literal"
+
+
+def test_task_types_dates_and_emails_are_safe_in_serialized_csv() -> None:
+    project = _project("Alpha", "ALP")
+    labels = _Labels([project], {project.id: []})
+    task = _task(project, 1, task_type="=1+1", start_date="=2+2", due_date="+3+3")
+    labels._emails[task.owner_id] = "=formula@example.com"
+    chunker = CsvChunker()
+    chunker.header(TASK_COLUMNS)
+    chunker.row(task_row(task, project, labels, []))
+    payload = chunker.flush()
+    assert payload is not None
+
+    row = next(csv.DictReader(io.StringIO(payload.decode("utf-8-sig"))))
+
+    assert row["type"] == "'=1+1"
+    assert row["start_date"] == "'=2+2"
+    assert row["due_date"] == "'+3+3"
+    assert row["creator_email"] == "'=formula@example.com"
 
 
 def test_text_that_a_spreadsheet_would_run_as_a_formula_is_defused() -> None:

@@ -1,5 +1,6 @@
 """Task export preparation: refusals before any read, the project gate and the row cap."""
 
+import csv
 import io
 import zipfile
 from unittest.mock import AsyncMock, MagicMock
@@ -8,12 +9,15 @@ import pytest
 from protobuf import Oneof
 from sqlalchemy import select, true
 from uniffy_proto.projects.v1.projects_pb import (
+    FilterLogic,
     SortDirection,
     TaskFieldRef,
     TaskFilterCondition,
     TaskFilterGroup,
     TaskFilterNode,
     TaskFilterOperator,
+    TaskFilterValue,
+    TaskPseudoField,
     TaskSort,
 )
 
@@ -23,10 +27,10 @@ from uniffy.core.models.projects.project import Project
 from uniffy.core.models.projects.sprint import Sprint
 from uniffy.core.models.projects.task import Task
 from uniffy.core.types import generate_id
-from uniffy.domains.projects.export.bundle import _activity_value, _ZipSink
+from uniffy.domains.projects.export.bundle import _activity_value, _sprints_csv, _ZipSink
 from uniffy.domains.projects.export.labels import ExportLabels
-from uniffy.domains.projects.export.operations import ProjectExportOperations
-from uniffy.domains.projects.export.plan import ExportLayout, ExportRequest, ExportScope
+from uniffy.domains.projects.export.operations import ProjectExportOperations, _split_root_filter
+from uniffy.domains.projects.export.plan import ExportLayout, ExportPlan, ExportRequest, ExportScope
 from uniffy.domains.projects.export.rows import MAX_EXPORT_PROJECTS, MAX_EXPORT_ROWS
 from uniffy.domains.projects.tasks.reader import TaskReader
 
@@ -185,6 +189,57 @@ async def test_projects_export_in_name_order(open_access: None) -> None:
 def test_an_outline_export_counts_as_a_view() -> None:
     request = ExportRequest(ORG, (generate_id(),), layout=ExportLayout.OUTLINE)
     assert request.scope is ExportScope.VIEW
+
+
+@pytest.mark.parametrize("logic", [FilterLogic.AND, FilterLogic.OR])
+def test_layout_root_constraint_does_not_consume_saved_filter_depth(logic: FilterLogic) -> None:
+    saved = _a_filter()
+    for _ in range(2):
+        saved = TaskFilterGroup(
+            logic=logic, nodes=[TaskFilterNode(node=Oneof(field="group", value=saved))]
+        )
+    root = TaskFilterNode(
+        node=Oneof(
+            field="condition",
+            value=TaskFilterCondition(
+                field=TaskFieldRef(ref=Oneof(field="pseudo", value=TaskPseudoField.DEPTH)),
+                operator=TaskFilterOperator.IS,
+                value=TaskFilterValue(value=Oneof(field="number", value=0)),
+            ),
+        )
+    )
+    wrapper = TaskFilterGroup(
+        logic=FilterLogic.AND,
+        nodes=[TaskFilterNode(node=Oneof(field="group", value=saved)), root],
+    )
+
+    remaining, roots_only = _split_root_filter(wrapper)
+
+    assert remaining == saved
+    assert roots_only
+    wrapper.logic = FilterLogic.OR
+    assert _split_root_filter(wrapper) == (wrapper, False)
+
+
+async def test_sprint_dates_are_escaped_in_bundle_csv() -> None:
+    project = _project("Alpha")
+    labels = ExportLabels(MagicMock(), organization_id=ORG, user_id=USER)
+    sprint = Sprint(
+        id=generate_id(),
+        project_id=project.id,
+        organization_id=ORG,
+        name="Sprint",
+        start_date="=1+1",
+        end_date="+2+2",
+    )
+    labels._sprints = {sprint.id: sprint}
+    plan = ExportPlan(USER, ExportRequest(ORG, (project.id,)), [project])
+
+    payload = b"".join([chunk async for chunk in _sprints_csv(plan, labels)])
+    row = next(csv.DictReader(io.StringIO(payload.decode("utf-8-sig"))))
+
+    assert row["start_date"] == "'=1+1"
+    assert row["end_date"] == "'+2+2"
 
 
 def test_the_zip_sink_streams_a_valid_archive() -> None:

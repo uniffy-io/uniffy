@@ -4,10 +4,20 @@ from collections.abc import AsyncIterator, Sequence
 from uuid import UUID
 
 from loguru import logger
+from protobuf import Oneof
 from sqlalchemy import CTE, Select, and_, func, literal, select, union_all
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.ext.asyncio import AsyncSession
-from uniffy_proto.projects.v1.projects_pb import TaskSort
+from uniffy_proto.projects.v1.projects_pb import (
+    FilterLogic,
+    TaskFieldRef,
+    TaskFilterCondition,
+    TaskFilterGroup,
+    TaskFilterOperator,
+    TaskFilterValue,
+    TaskPseudoField,
+    TaskSort,
+)
 
 from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import Action
@@ -32,6 +42,7 @@ from uniffy.domains.projects.export.rows import (
 )
 from uniffy.domains.projects.tasks.expressions import MAX_ANCESTRY_DEPTH
 from uniffy.domains.projects.tasks.reader import TaskReader
+from uniffy.domains.projects.views.definition import NodeCase
 
 logger = logger.bind(component="projects.export.operations")
 
@@ -67,16 +78,19 @@ class ProjectExportOperations:
         reader = TaskReader(self.session)
         # An empty sort lets a named view's own sort apply.
         sort: list[TaskSort] | None = list(request.sort) or (None if request.view_id else [])
+        task_filter, roots_only = _split_root_filter(request.task_filter)
         for project in projects:
             query = await reader.list_query(
                 user_id,
                 request.organization_id,
                 project.id,
-                task_filter=request.task_filter,
+                task_filter=task_filter,
                 sort=sort,
                 view=request.view_id,
                 time_zone=request.time_zone,
             )
+            if roots_only:
+                query = query.where(Task.parent_id.is_(None))
             if request.layout is ExportLayout.OUTLINE:
                 query = query.where(Task.parent_id.is_(None))
                 tree = _outline_tree(project, _ids(query), "export_outline")
@@ -179,8 +193,7 @@ class ProjectExportOperations:
             await rows.close()
 
     async def _outline_batches(self, project: Project, roots: Select) -> AsyncIterator[list[Task]]:
-        """Each root followed depth-first by all its live children, siblings by number, the way
-        the outline table nests them."""
+        """Match the outline table's depth-first order, with siblings ordered by number."""
         rows = await self.session.stream_scalars(roots.execution_options(yield_per=EXPORT_BATCH))
         try:
             async for partition in rows.partitions(EXPORT_BATCH):
@@ -206,6 +219,26 @@ class ProjectExportOperations:
         for task, root_id in result.all():
             grouped.setdefault(root_id, []).append(task)
         return grouped
+
+
+def _split_root_filter(group: TaskFilterGroup | None) -> tuple[TaskFilterGroup | None, bool]:
+    """Keep a layout's root constraint outside the saved filter's depth and node limits."""
+    if group is None or group.logic != FilterLogic.AND or len(group.nodes) not in (1, 2):
+        return group, False
+    root = group.nodes[-1].node
+    condition = TaskFilterCondition(
+        field=TaskFieldRef(ref=Oneof(field="pseudo", value=TaskPseudoField.DEPTH)),
+        operator=TaskFilterOperator.IS,
+        value=TaskFilterValue(value=Oneof(field="number", value=0)),
+    )
+    if root is None or root.field != NodeCase.CONDITION or root.value != condition:
+        return group, False
+    if len(group.nodes) == 1:
+        return TaskFilterGroup(logic=FilterLogic.AND), True
+    inner = group.nodes[0].node
+    if inner is not None and inner.field == NodeCase.GROUP:
+        return inner.value, True
+    return group, False
 
 
 def _ids(query: Select) -> Select:
