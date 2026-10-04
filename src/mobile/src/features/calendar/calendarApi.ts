@@ -9,6 +9,9 @@ import {
   DeleteCategoryRequestSchema,
   DeleteEventRequestSchema,
   GetCalendarPolicyRequestSchema,
+  GrantCalendarDelegationRequestSchema,
+  ListMyCalendarDelegationsRequestSchema,
+  RevokeCalendarDelegationRequestSchema,
   GetEventRequestSchema,
   GetEventsInRangeRequestSchema,
   ListCalendarsRequestSchema,
@@ -67,6 +70,18 @@ export const calendarApi = {
 
   updateAttendeeStatus: (request: MessageInitShape<typeof UpdateAttendeeStatusRequestSchema>) =>
     client.updateAttendeeStatus(request),
+
+  listMyCalendarDelegations: (
+    request: MessageInitShape<typeof ListMyCalendarDelegationsRequestSchema>,
+  ) => client.listMyCalendarDelegations(request),
+
+  grantCalendarDelegation: (
+    request: MessageInitShape<typeof GrantCalendarDelegationRequestSchema>,
+  ) => client.grantCalendarDelegation(request),
+
+  revokeCalendarDelegation: (
+    request: MessageInitShape<typeof RevokeCalendarDelegationRequestSchema>,
+  ) => client.revokeCalendarDelegation(request),
 
   addAttendees: (request: MessageInitShape<typeof AddAttendeesRequestSchema>) =>
     client.addAttendees(request),

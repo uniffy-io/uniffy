@@ -386,11 +386,12 @@ export function useUpdateAttendeeStatus() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (args: { eventId: string; status: number }) =>
+    mutationFn: (args: { eventId: string; status: number; onBehalfOfUserId?: string }) =>
       calendarApi.updateAttendeeStatus({
         eventId: args.eventId,
         organizationId: organizationId!,
         status: args.status,
+        onBehalfOfUserId: args.onBehalfOfUserId,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["events-range"] });

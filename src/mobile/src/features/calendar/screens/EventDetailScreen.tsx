@@ -57,6 +57,8 @@ import {
 import { BottomSheet } from "@shared/components/BottomSheet";
 import { SheetHeader } from "@shared/components/SheetHeader";
 import { ReminderChips, reminderLabel } from "@features/calendar/components/ReminderChips";
+import { answerableAttendees } from "@features/calendar/calendarList";
+import { useMyDelegations } from "@features/calendar/useCalendarDelegation";
 import { EventActivityList } from "@features/calendar/components/EventActivityList";
 import { useIsBookmarked, useToggleBookmark } from "@features/bookmarks/useBookmarks";
 import { useCall } from "@features/calls/CallContext";
@@ -80,6 +82,7 @@ export function EventDetailScreen() {
   const eventQuery = useEvent(id);
   const categoriesQuery = useCategories();
   const calendarsQuery = useCalendars();
+  const delegationsQuery = useMyDelegations();
   const deleteEvent = useDeleteEvent();
   const addAttendees = useAddAttendees();
   const removeAttendees = useRemoveAttendees();
@@ -166,6 +169,11 @@ export function EventDetailScreen() {
   const canEdit = roleCanEdit(event.userRole);
   const canDelete = roleCanDelete(event.userRole);
   const ownAttendee = event.attendees.find((a) => a.id === user?.id);
+  // Colleagues on this event whose calendar the member runs as their delegate.
+  const answerableFor = answerableAttendees(
+    event.attendees,
+    delegationsQuery.data?.grantedToMe ?? [],
+  );
 
   const display = eventDisplayState(event);
   const hasMeetingUrl = !!event.meetingUrl;
@@ -226,9 +234,9 @@ export function EventDetailScreen() {
     );
   };
 
-  const respond = (status: AttendeeStatus) => {
+  const respond = (status: AttendeeStatus, onBehalfOfUserId?: string) => {
     updateAttendeeStatus.mutate(
-      { eventId: event.id, status },
+      { eventId: event.id, status, onBehalfOfUserId },
       {
         onError: (error) =>
           Alert.alert("Could not respond", userFacingError(error, "Your response was not saved.")),
@@ -481,33 +489,33 @@ export function EventDetailScreen() {
         {ownAttendee && !display.cancelled && (
           <View style={{ gap: 10 }}>
             <Text style={[styles.sectionLabel, { color: T.textDim }]}>YOUR RESPONSE</Text>
-            <View style={styles.rsvpRow}>
-              {RSVP_OPTIONS.map((option) => {
-                const active = ownAttendee.status === option.status;
-                const color = RSVP_COLORS[option.status];
-                return (
-                  <TouchableOpacity
-                    key={option.status}
-                    style={[
-                      styles.rsvpOption,
-                      {
-                        borderColor: active ? color : T.border,
-                        backgroundColor: active ? color + "18" : T.surface,
-                      },
-                    ]}
-                    onPress={() => respond(option.proto)}
-                    disabled={updateAttendeeStatus.isPending}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={[styles.rsvpOptionText, { color: active ? color : T.textBright }]}>
-                      {option.label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
+            <RsvpBar
+              current={ownAttendee.status}
+              onPick={(status) => respond(status)}
+              disabled={updateAttendeeStatus.isPending}
+            />
           </View>
         )}
+
+        {!display.cancelled &&
+          answerableFor.map((attendee) => (
+            <View key={attendee.id} style={{ gap: 10 }}>
+              <Text style={[styles.sectionLabel, { color: T.textDim }]}>
+                RESPOND FOR {attendee.name.toUpperCase()}
+              </Text>
+              <RsvpBar
+                current={attendee.status}
+                onPick={(status) => respond(status, attendee.id)}
+                disabled={updateAttendeeStatus.isPending}
+              />
+            </View>
+          ))}
+
+        {event.arrangedByName ? (
+          <Text style={[styles.attribution, { color: T.textDim }]}>
+            Booked by {event.arrangedByName} on the organizer's behalf
+          </Text>
+        ) : null}
 
         {event.attendees.length > 0 && (
           <View style={{ gap: 10 }}>
@@ -523,7 +531,14 @@ export function EventDetailScreen() {
                       {att.initials}
                     </Text>
                   </View>
-                  <Text style={[styles.attendeeName, { color: T.textBright }]}>{att.name}</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.attendeeName, { color: T.textBright }]}>{att.name}</Text>
+                    {att.respondedByName ? (
+                      <Text style={[styles.attribution, { color: T.textDim }]}>
+                        answered by {att.respondedByName}
+                      </Text>
+                    ) : null}
+                  </View>
                   <View style={[styles.rsvpBadge, { backgroundColor: statusColor + "20" }]}>
                     <Text style={[styles.rsvpText, { color: statusColor }]}>{att.status}</Text>
                   </View>
@@ -805,6 +820,7 @@ const styles = StyleSheet.create({
   rsvpBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
   rsvpText: { fontSize: 11, fontFamily: FONT.medium },
   rsvpRow: { flexDirection: "row", gap: 8 },
+  attribution: { fontSize: 12, fontFamily: FONT.regular },
   rsvpOption: {
     flex: 1,
     alignItems: "center",
@@ -861,3 +877,43 @@ const styles = StyleSheet.create({
   activityToggle: { flexDirection: "row", alignItems: "center", gap: 6 },
   reminderSheetBody: { paddingHorizontal: 16, paddingBottom: 16, gap: 8 },
 });
+
+function RsvpBar({
+  current,
+  onPick,
+  disabled,
+}: {
+  current: string;
+  onPick: (status: AttendeeStatus) => void;
+  disabled: boolean;
+}) {
+  const T = useTheme();
+  return (
+    <View style={styles.rsvpRow}>
+      {RSVP_OPTIONS.map((option) => {
+        const active = current === option.status;
+        const color = RSVP_COLORS[option.status];
+        return (
+          <TouchableOpacity
+            key={option.status}
+            style={[
+              styles.rsvpOption,
+              {
+                borderColor: active ? color : T.border,
+                backgroundColor: active ? color + "18" : T.surface,
+              },
+            ]}
+            onPress={() => onPick(option.proto)}
+            disabled={disabled}
+            activeOpacity={0.7}
+            accessibilityState={{ selected: active }}
+          >
+            <Text style={[styles.rsvpOptionText, { color: active ? color : T.textBright }]}>
+              {option.label}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+}

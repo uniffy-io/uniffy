@@ -54,7 +54,10 @@ export function EventActivityList({ eventId, enabled }: { eventId: string; enabl
               <Text style={[styles.line, { color: T.text }]} numberOfLines={2}>
                 <Text style={[styles.actor, { color: T.textBright }]}>
                   {actor?.name || "Someone"}
-                </Text>{" "}
+                </Text>
+                {activity.onBehalfOfId
+                  ? ` for ${byId.get(activity.onBehalfOfId)?.name || "a colleague"}`
+                  : ""}{" "}
                 {ACTION_LABELS[activity.action] ?? "updated the event"}
               </Text>
               <Text style={[styles.time, { color: T.textDim }]}>{activity.timeLabel}</Text>

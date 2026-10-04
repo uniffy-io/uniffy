@@ -136,7 +136,10 @@ export function useCalendarPolicy() {
     queryKey: ["calendar-policy", organizationId],
     queryFn: async () => {
       const response = await calendarApi.getCalendarPolicy({ organizationId: organizationId! });
-      return { canShareCalendarsOrgWide: response.canShareCalendarsOrgWide };
+      return {
+        canShareCalendarsOrgWide: response.canShareCalendarsOrgWide,
+        canDelegate: response.canDelegate,
+      };
     },
     enabled: !!organizationId,
   });
