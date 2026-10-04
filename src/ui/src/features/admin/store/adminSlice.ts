@@ -14,6 +14,7 @@ import {
   updatePermissionDefaults,
   fetchOrganizationOverview,
   fetchMembers,
+  fetchMemberPage,
   updateMemberRole,
   removeMember,
   fetchGroups,
@@ -230,6 +231,9 @@ export interface AdminState {
   membersLoading: boolean;
   membersFetched: boolean;
   membersTotalCount: number;
+  memberPage: SerializedMemberInfo[];
+  memberPageLoading: boolean;
+  memberPageTotalCount: number;
 
   groups: SerializedGroupInfo[];
   groupsLoading: boolean;
@@ -266,6 +270,9 @@ const initialState: AdminState = {
   membersLoading: false,
   membersFetched: false,
   membersTotalCount: 0,
+  memberPage: [],
+  memberPageLoading: false,
+  memberPageTotalCount: 0,
   groups: [],
   groupsLoading: false,
   groupsFetched: false,
@@ -348,16 +355,32 @@ const adminSlice = createSlice({
       state.error = action.error.message || "Failed to fetch members";
     });
 
+    builder.addCase(fetchMemberPage.pending, (state) => {
+      state.memberPageLoading = true;
+    });
+    builder.addCase(fetchMemberPage.fulfilled, (state, action) => {
+      state.memberPageLoading = false;
+      state.memberPage = action.payload.members;
+      state.memberPageTotalCount = action.payload.totalCount;
+    });
+    builder.addCase(fetchMemberPage.rejected, (state, action) => {
+      state.memberPageLoading = false;
+      state.error = action.error.message || "Failed to fetch members";
+    });
+
     builder.addCase(updateMemberRole.fulfilled, (state, action) => {
-      const index = state.members.findIndex((m) => m.userId === action.payload.userId);
-      if (index !== -1) {
-        state.members[index] = action.payload;
+      for (const list of [state.members, state.memberPage]) {
+        const index = list.findIndex((m) => m.userId === action.payload.userId);
+        if (index !== -1) list[index] = action.payload;
       }
     });
 
     builder.addCase(removeMember.fulfilled, (state, action) => {
-      state.members = state.members.filter((m) => m.userId !== action.meta.arg.userId);
-      state.membersTotalCount -= 1;
+      const { userId } = action.meta.arg;
+      if (state.members.some((m) => m.userId === userId)) state.membersTotalCount -= 1;
+      if (state.memberPage.some((m) => m.userId === userId)) state.memberPageTotalCount -= 1;
+      state.members = state.members.filter((m) => m.userId !== userId);
+      state.memberPage = state.memberPage.filter((m) => m.userId !== userId);
     });
 
     builder.addCase(fetchGroups.pending, (state) => {
