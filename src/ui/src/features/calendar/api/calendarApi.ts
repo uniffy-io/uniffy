@@ -3,6 +3,13 @@ import { unaryTransport } from "@/config/api";
 import {
   CalendarService,
   AddAttendeesRequestSchema,
+  AdminRevokeCalendarDelegationRequestSchema,
+  GrantCalendarDelegationRequestSchema,
+  ListMyCalendarDelegationsRequestSchema,
+  ListOrgCalendarDelegationsRequestSchema,
+  ListOrgSharedCalendarsRequestSchema,
+  RestrictCalendarToMembersRequestSchema,
+  RevokeCalendarDelegationRequestSchema,
   CreateCalendarRequestSchema,
   DeleteCalendarRequestSchema,
   GetCalendarPolicyRequestSchema,
@@ -68,6 +75,7 @@ function activityFromProto(proto: ProtoEventActivity): EventActivity {
     id: proto.id,
     eventId: proto.eventId,
     actorId: proto.actorId,
+    onBehalfOfId: proto.onBehalfOfUserId || undefined,
     action: ACTIVITY_ACTION_FROM_PROTO[proto.action] ?? "field_updated",
     timestamp: proto.timestamp
       ? timestampDate(proto.timestamp).toISOString()
@@ -114,6 +122,48 @@ export const calendarApi = {
     request: MessageInitShape<typeof UpdateCalendarPolicyRequestSchema>,
   ) => {
     return calendarClient.updateCalendarPolicy(request);
+  },
+
+  listMyCalendarDelegations: async (
+    request: MessageInitShape<typeof ListMyCalendarDelegationsRequestSchema>,
+  ) => {
+    return calendarClient.listMyCalendarDelegations(request);
+  },
+
+  grantCalendarDelegation: async (
+    request: MessageInitShape<typeof GrantCalendarDelegationRequestSchema>,
+  ) => {
+    return calendarClient.grantCalendarDelegation(request);
+  },
+
+  revokeCalendarDelegation: async (
+    request: MessageInitShape<typeof RevokeCalendarDelegationRequestSchema>,
+  ) => {
+    return calendarClient.revokeCalendarDelegation(request);
+  },
+
+  listOrgCalendarDelegations: async (
+    request: MessageInitShape<typeof ListOrgCalendarDelegationsRequestSchema>,
+  ) => {
+    return calendarClient.listOrgCalendarDelegations(request);
+  },
+
+  adminRevokeCalendarDelegation: async (
+    request: MessageInitShape<typeof AdminRevokeCalendarDelegationRequestSchema>,
+  ) => {
+    return calendarClient.adminRevokeCalendarDelegation(request);
+  },
+
+  listOrgSharedCalendars: async (
+    request: MessageInitShape<typeof ListOrgSharedCalendarsRequestSchema>,
+  ) => {
+    return calendarClient.listOrgSharedCalendars(request);
+  },
+
+  restrictCalendarToMembers: async (
+    request: MessageInitShape<typeof RestrictCalendarToMembersRequestSchema>,
+  ) => {
+    return calendarClient.restrictCalendarToMembers(request);
   },
 
   listEvents: async (request: MessageInitShape<typeof ListEventsRequestSchema>) => {

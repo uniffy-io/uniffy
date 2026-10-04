@@ -293,14 +293,22 @@ export function useNotificationStream() {
               }
             }
 
-            // A shared project view changed. Nobody's access moved, so the
-            // member and mention caches stay; only the open project refetches.
+            // A shared project view changed, or a delegate changed something
+            // for this user. Nobody's access moved, so the member and mention
+            // caches stay; only the open page refetches.
+            const contentOnly = (action: string) =>
+              action === "views_changed" || action === "acted_on_behalf";
             if (
               event.eventType === StreamNotificationsResponse_EventType.CONTENT_ACCESS_CHANGED &&
-              event.contentAccessChanged?.action === "views_changed"
+              event.contentAccessChanged &&
+              contentOnly(event.contentAccessChanged.action)
             ) {
-              const { contentType, contentId } = event.contentAccessChanged;
-              emitContentAccessChanged({ contentType, contentId, action: "views_changed" });
+              const { contentType, contentId, action } = event.contentAccessChanged;
+              emitContentAccessChanged({
+                contentType,
+                contentId,
+                action: action as ContentAccessAction,
+              });
             }
 
             // CONTENT_ACCESS_CHANGED: the user's accessible-content set
@@ -312,7 +320,7 @@ export function useNotificationStream() {
             if (
               event.eventType === StreamNotificationsResponse_EventType.CONTENT_ACCESS_CHANGED &&
               event.contentAccessChanged &&
-              event.contentAccessChanged.action !== "views_changed"
+              !contentOnly(event.contentAccessChanged.action)
             ) {
               const { contentType, contentId, action } = event.contentAccessChanged;
               // Membership changed server-side, so a cached member list for

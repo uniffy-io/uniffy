@@ -29,6 +29,16 @@ export {
 } from "@/features/calendar/store/calendarsThunks";
 
 export {
+  fetchMyDelegations,
+  grantDelegation,
+  revokeDelegation,
+  fetchOrgDelegations,
+  adminRevokeDelegation,
+  fetchSharedCalendars,
+  restrictCalendarToMembers,
+} from "@/features/calendar/store/delegationThunks";
+
+export {
   setEvents,
   addEvent,
   updateEvent,

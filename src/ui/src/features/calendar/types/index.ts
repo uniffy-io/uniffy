@@ -43,7 +43,10 @@ export type {
   CalendarInfo,
   CalendarKind,
   CalendarSection,
+  CalendarDelegationInfo,
+  CalendarDelegationLevel,
   CalendarEventDisposition,
   CalendarPolicyAudience,
   CalendarPolicyInfo,
+  SharedCalendarSummaryInfo,
 } from "@/features/calendar/types/calendarInfo";

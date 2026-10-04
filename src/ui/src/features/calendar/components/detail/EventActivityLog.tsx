@@ -55,6 +55,7 @@ export function EventActivityLog({ eventId }: EventActivityLogProps) {
     const ids = new Set<string>();
     for (const activity of visible) {
       ids.add(activity.actorId);
+      if (activity.onBehalfOfId) ids.add(activity.onBehalfOfId);
       for (const id of attendeeIdsFrom(activity)) {
         ids.add(id);
       }
@@ -136,6 +137,11 @@ function ActivityItem({ activity, actor, subjectMap }: ActivityItemProps) {
           <span className="font-medium text-foreground text-xs">
             {actor?.name || "Unknown user"}
           </span>
+          {activity.onBehalfOfId && (
+            <span className="text-muted-foreground text-xs">
+              for {subjectMap[activity.onBehalfOfId]?.name || "a colleague"}
+            </span>
+          )}
           <span className="text-subtle-foreground shrink-0">
             <ActivityIcon activity={activity} />
           </span>

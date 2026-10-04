@@ -30,6 +30,7 @@ export type SidebarSectionId =
   | "mini_calendar"
   | "calendars"
   | "shared_calendars"
+  | "delegated_calendars"
   | "organization"
   | "categories"
   | "templates"

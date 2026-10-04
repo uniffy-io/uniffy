@@ -6,33 +6,39 @@ import {
   Plus,
   Rss,
   ShareNetwork,
+  SignOut,
   Trash,
   UploadSimple,
+  UserSwitch,
 } from "@phosphor-icons/react";
 import { AccessMode, ContentType } from "@uniffy/proto/common/v1/common_pb";
+import { toast } from "sonner";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { ActionMenu, ActionMenuItem, ActionMenuSeparator } from "@/components/ui/action-menu";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Modal, ModalBody, ModalHeader } from "@/components/ui/modal";
 import { useAccessPolicyDialog } from "@/features/permissions";
 import { CalendarFormModal } from "@/features/calendar/components/calendars/CalendarFormModal";
 import { DeleteCalendarDialog } from "@/features/calendar/components/calendars/DeleteCalendarDialog";
+import { DelegatesModal } from "@/features/calendar/components/delegation/DelegatesModal";
 import { CalendarFeedPanel } from "@/features/calendar/components/interop/CalendarFeedPanel";
 import { ImportCalendarModal } from "@/features/calendar/components/interop/ImportCalendarModal";
 import { SidebarSection } from "@/features/calendar/components/sidebar/SidebarSection";
 import { useCalendarLabel, useCalendars } from "@/features/calendar/hooks/useCalendars";
-import { setCalendarVisibility } from "@/features/calendar/store";
+import { revokeDelegation, setCalendarVisibility } from "@/features/calendar/store";
 import { exportCalendar } from "@/features/calendar/store/calendarThunks";
 import type { CalendarInfo, CalendarSection, SidebarSectionId } from "@/features/calendar/types";
 import { roleCanDelete, roleCanEdit, roleCanManage } from "@/shared/utils/contentRoles";
 import { cn } from "@/shared/utils/cn";
 
-type Dialog =
-  | { kind: "create" }
-  | { kind: "edit" | "delete" | "import" | "subscribe"; calendar: CalendarInfo };
+type Dialog = { kind: "create" | "delegates" } | { kind: RowDialogKind; calendar: CalendarInfo };
+
+type RowDialogKind = "edit" | "delete" | "import" | "subscribe" | "stopDelegating";
 
 const SECTIONS: { section: CalendarSection; id: SidebarSectionId; title: string }[] = [
   { section: "mine", id: "calendars", title: "My calendars" },
   { section: "shared", id: "shared_calendars", title: "Shared with me" },
+  { section: "delegated", id: "delegated_calendars", title: "Delegated to me" },
   { section: "organization", id: "organization", title: "Organization" },
 ];
 
@@ -79,9 +85,13 @@ export function CalendarList() {
       })}
 
       {dialog?.kind === "create" && <CalendarFormModal onClose={close} />}
+      {dialog?.kind === "delegates" && <DelegatesModal onClose={close} />}
       {dialog?.kind === "edit" && <CalendarFormModal calendar={dialog.calendar} onClose={close} />}
       {dialog?.kind === "delete" && (
         <DeleteCalendarDialog calendar={dialog.calendar} onClose={close} />
+      )}
+      {dialog?.kind === "stopDelegating" && (
+        <StopDelegatingDialog calendar={dialog.calendar} onClose={close} />
       )}
       {dialog?.kind === "import" && (
         <ImportCalendarModal calendarId={dialog.calendar.id} onClose={close} />
@@ -104,7 +114,7 @@ export function CalendarList() {
 
 interface CalendarRowProps {
   calendar: CalendarInfo;
-  onOpen: (kind: "edit" | "delete" | "import" | "subscribe") => void;
+  onOpen: (kind: RowDialogKind | "delegates") => void;
 }
 
 function CalendarRow({ calendar, onOpen }: CalendarRowProps) {
@@ -114,7 +124,16 @@ function CalendarRow({ calendar, onOpen }: CalendarRowProps) {
   const triggerRef = useRef<HTMLButtonElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
 
-  const canEdit = roleCanEdit(calendar.userRole);
+  const currentUserId = useAppSelector((state) => state.auth.user?.id);
+  const delegationsToMe = useAppSelector((state) => state.calendar.delegationsToMe);
+  // A delegate files events on the calendar but does not own its name, colour or sharing.
+  const isDelegated = calendar.section === "delegated";
+  const isOwnDefault = calendar.isDefault && calendar.ownerId === currentUserId;
+  const delegation = isDelegated
+    ? delegationsToMe.find((d) => d.grantorId === calendar.ownerId)
+    : undefined;
+  const canEdit = roleCanEdit(calendar.userRole) && !isDelegated;
+  const canImport = roleCanEdit(calendar.userRole);
   const canManage = roleCanManage(calendar.userRole);
   const canDelete = roleCanDelete(calendar.userRole) && !calendar.isDefault;
   const hidden = calendar.isHidden;
@@ -197,10 +216,24 @@ function CalendarRow({ calendar, onOpen }: CalendarRowProps) {
             Edit
           </ActionMenuItem>
         )}
-        <ActionMenuItem onClick={pick(openAccess)}>
-          <ShareNetwork size={16} weight="duotone" />
-          {canManage ? "Share" : "Who has access"}
-        </ActionMenuItem>
+        {!isDelegated && (
+          <ActionMenuItem onClick={pick(openAccess)}>
+            <ShareNetwork size={16} weight="duotone" />
+            {canManage ? "Share" : "Who has access"}
+          </ActionMenuItem>
+        )}
+        {isOwnDefault && (
+          <ActionMenuItem onClick={pick(() => onOpen("delegates"))}>
+            <UserSwitch size={16} weight="duotone" />
+            Delegates...
+          </ActionMenuItem>
+        )}
+        {delegation && (
+          <ActionMenuItem onClick={pick(() => onOpen("stopDelegating"))}>
+            <SignOut size={16} weight="duotone" />
+            Stop managing this calendar
+          </ActionMenuItem>
+        )}
         <ActionMenuSeparator />
         <ActionMenuItem
           onClick={pick(() => void dispatch(exportCalendar({ calendarId: calendar.id })))}
@@ -208,7 +241,7 @@ function CalendarRow({ calendar, onOpen }: CalendarRowProps) {
           <DownloadSimple size={16} weight="duotone" />
           Export as .ics
         </ActionMenuItem>
-        {canEdit && (
+        {canImport && (
           <ActionMenuItem onClick={pick(() => onOpen("import"))}>
             <UploadSimple size={16} weight="duotone" />
             Import a .ics file
@@ -229,5 +262,45 @@ function CalendarRow({ calendar, onOpen }: CalendarRowProps) {
         )}
       </ActionMenu>
     </div>
+  );
+}
+
+/** A delegate steps down from managing a grantor's calendar. */
+function StopDelegatingDialog({
+  calendar,
+  onClose,
+}: {
+  calendar: CalendarInfo;
+  onClose: () => void;
+}) {
+  const dispatch = useAppDispatch();
+  const delegation = useAppSelector((state) =>
+    state.calendar.delegationsToMe.find((d) => d.grantorId === calendar.ownerId),
+  );
+  const [stopping, setStopping] = useState(false);
+  const grantorName = delegation?.grantorName ?? "the owner";
+
+  const stop = async () => {
+    if (!delegation) return;
+    setStopping(true);
+    const outcome = await dispatch(revokeDelegation(delegation.id));
+    setStopping(false);
+    if (revokeDelegation.fulfilled.match(outcome)) {
+      toast.success(`You no longer manage ${grantorName}'s calendar`);
+    }
+    onClose();
+  };
+
+  return (
+    <ConfirmDialog
+      isOpen
+      onClose={onClose}
+      onConfirm={() => void stop()}
+      title="Stop managing this calendar?"
+      message={`You will lose access to ${grantorName}'s calendar. Only ${grantorName} can make you a delegate again.`}
+      confirmLabel="Stop managing"
+      variant="danger"
+      loading={stopping}
+    />
   );
 }

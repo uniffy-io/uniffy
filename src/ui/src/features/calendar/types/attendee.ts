@@ -13,4 +13,7 @@ export interface Attendee {
   timezone?: string;
   /** Group whose invite produced this row (snapshot); absent for direct invites. */
   invitedViaGroupId?: string;
+  /** The delegate who answered for this attendee, when one did. */
+  respondedById?: string;
+  respondedByName?: string;
 }
