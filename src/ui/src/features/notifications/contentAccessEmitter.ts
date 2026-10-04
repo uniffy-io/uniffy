@@ -7,7 +7,8 @@ export type ContentAccessAction =
   | "revoked"
   | "access_mode_changed"
   | "child_added"
-  | "views_changed";
+  | "views_changed"
+  | "acted_on_behalf";
 
 export interface ContentAccessChange {
   contentType: ContentType;

@@ -12,6 +12,7 @@ from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.models.calendar.exception import RecurrenceException
 from uniffy.core.types import AccessMode, EventTransparency
 from uniffy.domains.scheduling.calendar.calendars.access import require_calendar_edit
+from uniffy.domains.scheduling.calendar.delegation.access import booking_organizer
 from uniffy.domains.scheduling.calendar.ical.parse import (
     ParsedEvent,
     SkippedEntry,
@@ -73,13 +74,20 @@ async def apply_import(
         payload=payload,
     )
 
+    # A delegate importing into the grantor's personal calendar files the events in their name.
+    organizer_id = await booking_organizer(session, user_id, organization_id, calendar_id)
+    booking = {
+        "organizer_id": organizer_id,
+        "arranged_by_id": user_id if organizer_id != user_id else None,
+    }
+
     created: list[CalendarEvent] = []
     try:
         for parsed in preview.creatable:
             master = _stage_event(
                 session,
                 parsed,
-                user_id=user_id,
+                **booking,
                 organization_id=organization_id,
                 calendar_id=calendar_id,
             )
@@ -99,7 +107,7 @@ async def apply_import(
                 moved = _stage_event(
                     session,
                     override.event,
-                    user_id=user_id,
+                    **booking,
                     organization_id=organization_id,
                     calendar_id=calendar_id,
                     recurrence_id=master.id,
@@ -135,7 +143,8 @@ def _stage_event(
     session: AsyncSession,
     parsed: ParsedEvent,
     *,
-    user_id: UUID,
+    organizer_id: UUID,
+    arranged_by_id: UUID | None,
     organization_id: UUID,
     calendar_id: UUID,
     recurrence_id: UUID | None = None,
@@ -143,7 +152,8 @@ def _stage_event(
 ) -> CalendarEvent:
     event = CalendarEvent(
         organization_id=organization_id,
-        organizer_id=user_id,
+        organizer_id=organizer_id,
+        arranged_by_id=arranged_by_id,
         calendar_id=calendar_id,
         title=parsed.title,
         description=parsed.description,

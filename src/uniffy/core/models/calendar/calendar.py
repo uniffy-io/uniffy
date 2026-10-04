@@ -21,6 +21,13 @@ class Calendar(SQLModel, table=True):
             unique=True,
             postgresql_where=text("is_default AND NOT is_deleted"),
         ),
+        Index(
+            "ix_calendar_calendars_org_created",
+            "organization_id",
+            "created_at",
+            "id",
+            postgresql_where=text("NOT is_deleted"),
+        ),
     )
 
     id: UUID = Field(default_factory=generate_id, primary_key=True, nullable=False)

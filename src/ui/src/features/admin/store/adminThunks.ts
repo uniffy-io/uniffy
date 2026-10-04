@@ -95,12 +95,31 @@ export const fetchOrganizationOverview = createAsyncThunk<
 /** `fetchMembers` replaces the member list with its page, so every directory loader asks for this size. */
 export const DIRECTORY_MEMBERS_PAGE_SIZE = 200;
 
+interface MemberListArgs {
+  page?: number;
+  pageSize?: number;
+  roleFilter?: number;
+  search?: string;
+}
+
 export const fetchMembers = createAsyncThunk<
   { members: SerializedMemberInfo[]; totalCount: number },
-  { page?: number; pageSize?: number; roleFilter?: number; search?: string },
+  MemberListArgs,
   { state: RootState }
->("admin/fetchMembers", async (args, { getState }) => {
-  const { auth } = getState();
+>("admin/fetchMembers", async (args, { getState }) => listMembers(getState(), args));
+
+/** The Members page's filtered, paged view; kept apart so it never truncates the directory. */
+export const fetchMemberPage = createAsyncThunk<
+  { members: SerializedMemberInfo[]; totalCount: number },
+  MemberListArgs,
+  { state: RootState }
+>("admin/fetchMemberPage", async (args, { getState }) => listMembers(getState(), args));
+
+async function listMembers(
+  state: RootState,
+  args: MemberListArgs,
+): Promise<{ members: SerializedMemberInfo[]; totalCount: number }> {
+  const { auth } = state;
   const organizationId = auth.currentOrganizationId;
 
   if (!organizationId) {
@@ -121,7 +140,7 @@ export const fetchMembers = createAsyncThunk<
     members: response.members.map(serializeMemberInfo),
     totalCount: response.pagination?.totalCount || 0,
   };
-});
+}
 
 export const updateMemberRole = createAsyncThunk<
   SerializedMemberInfo,

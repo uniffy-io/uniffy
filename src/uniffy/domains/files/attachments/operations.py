@@ -468,7 +468,7 @@ class AttachmentOperations:
             keys=keys,
             purpose=ResourceAccessPurpose.LIST,
         )
-        accessible_ids = [key.content_id for key in keys if decisions[key].can_view]
+        accessible_ids = [key.content_id for key in keys if decisions[key].can_read_details]
 
         if not accessible_ids:
             return {}
@@ -716,7 +716,7 @@ class AttachmentOperations:
         )[key]
         if decision.row_state != ResourceRowState.LIVE:
             raise NotFoundError(content_type.value, str(content_id))
-        if not decision.can_view:
+        if not decision.can_read_details:
             raise PermissionDeniedError("access", "content")
 
     async def _verify_content_edit_access(

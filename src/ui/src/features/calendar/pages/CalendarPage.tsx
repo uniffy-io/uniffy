@@ -27,6 +27,7 @@ import {
   fetchCalendars,
   setCalendarVisibility,
 } from "@/features/calendar/store/calendarsThunks";
+import { fetchMyDelegations } from "@/features/calendar/store/delegationThunks";
 import { displayParts, instantDayKey, parseISO } from "@/features/calendar/utils";
 import { useContentAccessRefetch } from "@/features/notifications/hooks/useContentAccessRefetch";
 import { ContentType } from "@uniffy/proto/common/v1/common_pb";
@@ -74,6 +75,7 @@ export function CalendarPage() {
     dispatch(fetchCategories());
     dispatch(fetchCalendars());
     dispatch(fetchCalendarPolicy());
+    dispatch(fetchMyDelegations());
   }, [dispatch, currentOrganizationId]);
 
   // /calendar?calendar={id} opens from a calendar mention: make sure it is shown.
@@ -154,6 +156,7 @@ export function CalendarPage() {
   // list and which events the grid holds.
   const refetchCalendars = useCallback(() => {
     dispatch(fetchCalendars());
+    dispatch(fetchMyDelegations());
     refetchVisibleEvents();
   }, [dispatch, refetchVisibleEvents]);
   useContentAccessRefetch(ContentType.CALENDAR, refetchCalendars);

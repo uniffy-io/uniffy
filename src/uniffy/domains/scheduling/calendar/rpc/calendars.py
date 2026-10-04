@@ -28,15 +28,17 @@ from uniffy.core.converters.common_proto import access_mode_from_proto, content_
 from uniffy.core.errors import ValidationError
 from uniffy.core.models.login.user import User
 from uniffy.core.search import SearchIndexer
-from uniffy.core.types import ContentType
+from uniffy.core.types import ContentRole, ContentType
 from uniffy.domains.permissions.access import ResourceAccessResolver, ResourceKey
 from uniffy.domains.scheduling.calendar import queries
+from uniffy.domains.scheduling.calendar.calendars.access import higher_role
 from uniffy.domains.scheduling.calendar.calendars.converters import (
     calendar_to_proto,
     calendar_type_from_proto,
 )
 from uniffy.domains.scheduling.calendar.calendars.operations import CalendarOperations
 from uniffy.domains.scheduling.calendar.calendars.reader import CalendarListing, CalendarReader
+from uniffy.domains.scheduling.calendar.delegation.access import DELEGATED_CALENDAR_ROLE
 from uniffy.domains.scheduling.calendar.rpc.support import map_domain_error, parse_uuid
 from uniffy.infrastructure.database import open_session
 
@@ -227,6 +229,17 @@ async def _to_proto(
         ).all()
     }
     return [
-        calendar_to_proto(listing, decisions[key].role, owners.get(listing.calendar.owner_id, ""))
+        calendar_to_proto(
+            listing,
+            _listed_role(listing, decisions[key].role),
+            owners.get(listing.calendar.owner_id, ""),
+        )
         for listing, key in zip(listings, keys, strict=True)
     ]
+
+
+def _listed_role(listing: CalendarListing, role: ContentRole | None) -> ContentRole | None:
+    # A delegate files events on the calendar, so clients offer it as writable.
+    if listing.delegation_level is None:
+        return role
+    return higher_role(role, DELEGATED_CALENDAR_ROLE)

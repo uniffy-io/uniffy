@@ -33,6 +33,7 @@ class CalendarPolicyAudience(StrEnum):
 
 DEFAULT_TEAM_CALENDAR_CREATORS = CalendarPolicyAudience.EVERYONE
 DEFAULT_ORG_WIDE_CALENDAR_SHARERS = CalendarPolicyAudience.EVERYONE
+DEFAULT_DELEGATORS = CalendarPolicyAudience.EVERYONE
 
 
 @dataclass(frozen=True)
@@ -42,6 +43,8 @@ class ResolvedCalendarPolicy:
     organization_id: UUID
     team_calendar_creators: CalendarPolicyAudience = DEFAULT_TEAM_CALENDAR_CREATORS
     org_wide_calendar_sharers: CalendarPolicyAudience = DEFAULT_ORG_WIDE_CALENDAR_SHARERS
+    # Gates new grants only; existing delegations stay until someone revokes them.
+    delegators: CalendarPolicyAudience = DEFAULT_DELEGATORS
 
 
 @dataclass(frozen=True)
@@ -51,6 +54,7 @@ class CalendarPolicyView:
     policy: ResolvedCalendarPolicy
     can_create_team_calendars: bool
     can_share_calendars_org_wide: bool
+    can_delegate: bool
 
 
 def _audience(blob: dict, key: str, default: CalendarPolicyAudience) -> CalendarPolicyAudience:
@@ -76,6 +80,7 @@ async def resolve_calendar_policy(
         org_wide_calendar_sharers=_audience(
             row.value, "org_wide_calendar_sharers", DEFAULT_ORG_WIDE_CALENDAR_SHARERS
         ),
+        delegators=_audience(row.value, "delegators", DEFAULT_DELEGATORS),
     )
 
 
@@ -118,6 +123,14 @@ async def require_can_open_calendar_to_org(
         )
 
 
+async def require_can_delegate(session: AsyncSession, user_id: UUID, organization_id: UUID) -> None:
+    policy = await resolve_calendar_policy(session, organization_id)
+    if not await _admits(session, policy.delegators, user_id, organization_id):
+        raise PermissionDeniedError(
+            "delegate", "calendar - your organization limits delegation to calendar admins"
+        )
+
+
 async def get_calendar_policy_view(
     session: AsyncSession, user_id: UUID, organization_id: UUID
 ) -> CalendarPolicyView:
@@ -132,6 +145,7 @@ async def get_calendar_policy_view(
         can_share_calendars_org_wide=await _admits(
             session, policy.org_wide_calendar_sharers, user_id, organization_id
         ),
+        can_delegate=await _admits(session, policy.delegators, user_id, organization_id),
     )
 
 
@@ -142,7 +156,9 @@ async def update_calendar_policy(
     *,
     team_calendar_creators: CalendarPolicyAudience,
     org_wide_calendar_sharers: CalendarPolicyAudience,
+    delegators: CalendarPolicyAudience | None = None,
 ) -> CalendarPolicyView:
+    """``delegators=None`` keeps the stored value when the caller leaves it unspecified."""
     if not await PermissionChecker(session).is_org_admin(user_id, organization_id):
         raise PermissionDeniedError("update", "calendar policy")
     previous = await resolve_calendar_policy(session, organization_id)
@@ -150,6 +166,7 @@ async def update_calendar_policy(
         organization_id=organization_id,
         team_calendar_creators=team_calendar_creators,
         org_wide_calendar_sharers=org_wide_calendar_sharers,
+        delegators=delegators or previous.delegators,
     )
     await OrgSettingsOperations(session).set(
         organization_id=organization_id,
@@ -158,6 +175,7 @@ async def update_calendar_policy(
         value={
             "team_calendar_creators": policy.team_calendar_creators.value,
             "org_wide_calendar_sharers": policy.org_wide_calendar_sharers.value,
+            "delegators": policy.delegators.value,
         },
         updated_by_user_id=user_id,
     )
@@ -173,10 +191,15 @@ async def update_calendar_policy(
             "org_wide_calendar_sharers": policy.org_wide_calendar_sharers.value,
             "previous_team_calendar_creators": previous.team_calendar_creators.value,
             "previous_org_wide_calendar_sharers": previous.org_wide_calendar_sharers.value,
+            "delegators": policy.delegators.value,
+            "previous_delegators": previous.delegators.value,
         },
     )
     await session.commit()
-    # The updater is an org admin, whom both audiences admit.
+    # The updater is an org admin, whom every audience admits.
     return CalendarPolicyView(
-        policy=policy, can_create_team_calendars=True, can_share_calendars_org_wide=True
+        policy=policy,
+        can_create_team_calendars=True,
+        can_share_calendars_org_wide=True,
+        can_delegate=True,
     )

@@ -62,6 +62,9 @@ export interface CalendarEvent {
   categoryId: string;
   attendees: Attendee[];
   organizerId: string;
+  /** The delegate who booked the event for its organizer, when one did. */
+  arrangedById?: string;
+  arrangedByName?: string;
   recurrence?: RecurrenceConfig;
   isFocusTime: boolean;
   /** Unified-tag ids resolved via the tags slice cache. */

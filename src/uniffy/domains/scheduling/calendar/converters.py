@@ -254,6 +254,8 @@ def activity_to_proto(activity: EventActivity) -> ProtoEventActivity:
         timestamp=datetime_to_timestamp(activity.timestamp),
     )
 
+    if activity.on_behalf_of_id:
+        proto.on_behalf_of_user_id = str(activity.on_behalf_of_id)
     if activity.field_id:
         proto.field_id = activity.field_id
     if activity.previous_value:
@@ -275,6 +277,7 @@ def event_to_proto(
     room_amenities: list[str] | None = None,
     user_role: ContentRole | None = None,
     details_hidden: bool = False,
+    arranged_by_name: str = "",
 ) -> ProtoCalendarEvent:
     """Convert a ``CalendarEvent`` row to its proto representation.
 
@@ -410,10 +413,17 @@ def event_to_proto(
                 proto_attendee.timezone = user_info["timezone"]
             if attendee.invited_via_group_id:
                 proto_attendee.invited_via_group_id = str(attendee.invited_via_group_id)
+            if attendee.responded_by_id:
+                proto_attendee.responded_by_id = str(attendee.responded_by_id)
+                proto_attendee.responded_by_name = user_info.get("responded_by_name", "")
             proto_event.attendees.append(proto_attendee)
 
     if details_hidden:
         return proto_event
+
+    if event.arranged_by_id:
+        proto_event.arranged_by_id = str(event.arranged_by_id)
+        proto_event.arranged_by_name = arranged_by_name
 
     if room_id:
         proto_event.room_id = room_id

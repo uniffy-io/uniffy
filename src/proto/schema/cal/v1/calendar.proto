@@ -125,6 +125,17 @@ enum CalendarListSection {
   CALENDAR_LIST_SECTION_SHARED = 2;
   // Calendars the caller reaches only because they are open to the organization
   CALENDAR_LIST_SECTION_ORGANIZATION = 3;
+  // Colleagues' calendars the caller runs as their delegate
+  CALENDAR_LIST_SECTION_DELEGATED = 4;
+}
+
+// How much of a grantor's calendar a delegate may act on
+enum CalendarDelegationLevel {
+  CALENDAR_DELEGATION_LEVEL_UNSPECIFIED = 0;
+  // Create, edit, cancel and respond; private events stay busy-only
+  CALENDAR_DELEGATION_LEVEL_EVENTS = 1;
+  // As EVENTS, and private event details are visible too
+  CALENDAR_DELEGATION_LEVEL_EVENTS_AND_PRIVATE = 2;
 }
 
 // What happens to a deleted calendar's events
@@ -165,6 +176,31 @@ service CalendarService {
 
   // Change the organization's calendar policy; org admins only
   rpc UpdateCalendarPolicy(UpdateCalendarPolicyRequest) returns (UpdateCalendarPolicyResponse) {}
+
+  // === Delegation ===
+
+  // Delegations the caller has granted and those granted to the caller
+  rpc ListMyCalendarDelegations(ListMyCalendarDelegationsRequest) returns (ListMyCalendarDelegationsResponse) {}
+
+  // Let a colleague act on the caller's personal calendars, or change their level
+  rpc GrantCalendarDelegation(GrantCalendarDelegationRequest) returns (GrantCalendarDelegationResponse) {}
+
+  // End a delegation; the grantor or the delegate may
+  rpc RevokeCalendarDelegation(RevokeCalendarDelegationRequest) returns (RevokeCalendarDelegationResponse) {}
+
+  // === Organization oversight (org admins only) ===
+
+  // Every delegation in the organization, newest first
+  rpc ListOrgCalendarDelegations(ListOrgCalendarDelegationsRequest) returns (ListOrgCalendarDelegationsResponse) {}
+
+  // End any delegation in the organization
+  rpc AdminRevokeCalendarDelegation(AdminRevokeCalendarDelegationRequest) returns (AdminRevokeCalendarDelegationResponse) {}
+
+  // Calendars shared beyond their owner; metadata only, never events
+  rpc ListOrgSharedCalendars(ListOrgSharedCalendarsRequest) returns (ListOrgSharedCalendarsResponse) {}
+
+  // Withdraw organization-wide access from a calendar, keeping its named members
+  rpc RestrictCalendarToMembers(RestrictCalendarToMembersRequest) returns (RestrictCalendarToMembersResponse) {}
 
   // === Event Operations ===
 
@@ -358,6 +394,9 @@ message CalendarEvent {
   // caller is not organizer/attendee/editor): title, description, location,
   // meeting, channel, category, and attendees are stripped.
   bool details_hidden = 42;
+  // The delegate who booked the event for its organizer, when one did
+  optional string arranged_by_id = 43;
+  optional string arranged_by_name = 44;
 }
 
 // Event attendee
@@ -380,6 +419,9 @@ message Attendee {
   optional string timezone = 8;
   // Group that produced this attendee row at invite time (snapshot; empty for direct invites)
   optional string invited_via_group_id = 9;
+  // The delegate who answered for this attendee, when one did
+  optional string responded_by_id = 10;
+  optional string responded_by_name = 11;
 }
 
 // Recurrence configuration
@@ -706,6 +748,8 @@ message Calendar {
   // The owner's display name; every default calendar is named alike, so
   // clients label a colleague's default by whose it is
   string owner_name = 16;
+  // Set when the caller reaches the calendar as the owner's delegate
+  optional CalendarDelegationLevel delegation_level = 17;
 }
 
 message ListCalendarsRequest {
@@ -794,6 +838,8 @@ message CalendarPolicy {
   CalendarPolicyAudience team_calendar_creators = 2;
   // Who may open a calendar to the whole organization
   CalendarPolicyAudience org_wide_calendar_sharers = 3;
+  // Who may make a colleague their calendar delegate
+  CalendarPolicyAudience delegators = 4;
 }
 
 message GetCalendarPolicyRequest {
@@ -804,18 +850,119 @@ message GetCalendarPolicyResponse {
   CalendarPolicy policy = 1;
   bool can_create_team_calendars = 2;
   bool can_share_calendars_org_wide = 3;
+  bool can_delegate = 4;
 }
 
 message UpdateCalendarPolicyRequest {
   string organization_id = 1;
   CalendarPolicyAudience team_calendar_creators = 2;
   CalendarPolicyAudience org_wide_calendar_sharers = 3;
+  // Unspecified keeps the current value
+  CalendarPolicyAudience delegators = 4;
 }
 
 message UpdateCalendarPolicyResponse {
   CalendarPolicy policy = 1;
   bool can_create_team_calendars = 2;
   bool can_share_calendars_org_wide = 3;
+  bool can_delegate = 4;
+}
+
+// Delegation Messages
+
+message CalendarDelegation {
+  string id = 1;
+  string organization_id = 2;
+  string grantor_id = 3;
+  string grantor_name = 4;
+  string delegate_id = 5;
+  string delegate_name = 6;
+  CalendarDelegationLevel level = 7;
+  google.protobuf.Timestamp created_at = 8;
+  google.protobuf.Timestamp updated_at = 9;
+  // Either party is deactivated; the grant confers nothing until both are active again
+  bool inactive = 10;
+}
+
+message ListMyCalendarDelegationsRequest {
+  string organization_id = 1;
+}
+
+message ListMyCalendarDelegationsResponse {
+  repeated CalendarDelegation granted_by_me = 1;
+  repeated CalendarDelegation granted_to_me = 2;
+}
+
+message GrantCalendarDelegationRequest {
+  string organization_id = 1;
+  string delegate_id = 2;
+  CalendarDelegationLevel level = 3;
+}
+
+message GrantCalendarDelegationResponse {
+  CalendarDelegation delegation = 1;
+}
+
+message RevokeCalendarDelegationRequest {
+  string organization_id = 1;
+  string delegation_id = 2;
+}
+
+message RevokeCalendarDelegationResponse {}
+
+message ListOrgCalendarDelegationsRequest {
+  string organization_id = 1;
+  // Only delegations where this member is grantor or delegate
+  optional string user_id = 2;
+  int32 page_size = 3;
+  string page_token = 4;
+}
+
+message ListOrgCalendarDelegationsResponse {
+  repeated CalendarDelegation delegations = 1;
+  string next_page_token = 2;
+}
+
+message AdminRevokeCalendarDelegationRequest {
+  string organization_id = 1;
+  string delegation_id = 2;
+}
+
+message AdminRevokeCalendarDelegationResponse {}
+
+// A shared calendar as an org admin sees it: who it reaches, never what is on it
+message SharedCalendarSummary {
+  string calendar_id = 1;
+  string name = 2;
+  string owner_id = 3;
+  string owner_name = 4;
+  CalendarType calendar_type = 5;
+  // The effective mode, with an inherited policy resolved
+  common.v1.AccessMode access_mode = 6;
+  optional common.v1.ContentRole baseline_role = 7;
+  int32 user_grant_count = 8;
+  int32 group_grant_count = 9;
+  google.protobuf.Timestamp created_at = 10;
+}
+
+message ListOrgSharedCalendarsRequest {
+  string organization_id = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+}
+
+message ListOrgSharedCalendarsResponse {
+  repeated SharedCalendarSummary calendars = 1;
+  string next_page_token = 2;
+}
+
+message RestrictCalendarToMembersRequest {
+  string organization_id = 1;
+  string calendar_id = 2;
+}
+
+message RestrictCalendarToMembersResponse {
+  SharedCalendarSummary calendar = 1;
 }
 
 // Category Messages
@@ -928,6 +1075,8 @@ message UpdateAttendeeStatusRequest {
   string organization_id = 2;
   // New status
   AttendeeStatus status = 3;
+  // Answer for this attendee as their calendar delegate instead of for the caller
+  optional string on_behalf_of_user_id = 4;
 }
 
 // Response for update attendee status
@@ -978,6 +1127,8 @@ message EventActivity {
   optional string previous_value = 7;
   // Value after the change
   optional string new_value = 8;
+  // The person the actor acted for as their calendar delegate
+  optional string on_behalf_of_user_id = 9;
 }
 
 // Request to list an event's activity log

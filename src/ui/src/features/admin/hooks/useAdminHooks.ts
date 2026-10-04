@@ -5,7 +5,7 @@ import {
   fetchPermissionDefaults,
   updatePermissionDefaults,
   fetchOrganizationOverview,
-  fetchMembers,
+  fetchMemberPage,
   updateMemberRole,
   removeMember,
   fetchGroups,
@@ -107,14 +107,14 @@ export function useOrganizationOverview() {
 
 export function useOrgMembers() {
   const dispatch = useAppDispatch();
-  const members = useAppSelector((state) => state.admin.members);
-  const loading = useAppSelector((state) => state.admin.membersLoading);
-  const totalCount = useAppSelector((state) => state.admin.membersTotalCount);
+  const members = useAppSelector((state) => state.admin.memberPage);
+  const loading = useAppSelector((state) => state.admin.memberPageLoading);
+  const totalCount = useAppSelector((state) => state.admin.memberPageTotalCount);
   const error = useAppSelector((state) => state.admin.error);
 
   const refresh = useCallback(
     (options?: { page?: number; pageSize?: number; roleFilter?: number; search?: string }) => {
-      dispatch(fetchMembers(options || {}));
+      dispatch(fetchMemberPage(options || {}));
     },
     [dispatch],
   );

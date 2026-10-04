@@ -16,6 +16,7 @@ FULL_CONTEXT: dict = {
     "organization_name": "Acme",
     "title": "Quarterly review",
     "organizer_name": "Ada Lovelace",
+    "arranger_name": "Grace Hopper",
     "when": "Wednesday 18 March 2026, 09:00 - 09:30",
     "when_short": "18 Mar 09:00",
     "recurrence": "Repeats weekly on Wednesday",
@@ -36,6 +37,7 @@ FULL_CONTEXT: dict = {
 EMPTY_OPTIONAL = {
     **FULL_CONTEXT,
     "organizer_name": "",
+    "arranger_name": "",
     "recurrence": "",
     "location": "",
     "attendee_summary": "",

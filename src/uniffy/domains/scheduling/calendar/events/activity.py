@@ -11,7 +11,9 @@ from uniffy.core.errors import (
     PermissionDeniedError,
 )
 from uniffy.core.models.calendar.activity import EventActivity
+from uniffy.core.models.calendar.calendar import Calendar
 from uniffy.core.models.calendar.event import CalendarEvent
+from uniffy.domains.scheduling.calendar.delegation.access import active_delegation, is_delegable
 from uniffy.domains.scheduling.calendar.events.state import _activity_value, event_details_hidden
 
 logger = logger.bind(component="scheduling.calendar.events.activity")
@@ -98,10 +100,18 @@ class EventActivityOperations:
         field_id: str | None = None,
         previous_value: str | None = None,
         new_value: str | None = None,
+        on_behalf_of_id: UUID | None = None,
+        *,
+        infer_on_behalf: bool = True,
     ) -> EventActivity:
+        """``infer_on_behalf=False`` when the caller already knows who the change was for."""
+        master_id = self.events._parse_master_event_id(event_id)
+        if on_behalf_of_id is None and infer_on_behalf:
+            on_behalf_of_id = await self._acting_for(master_id, actor_id)
         activity = EventActivity(
-            event_id=self.events._parse_master_event_id(event_id),
+            event_id=master_id,
             actor_id=actor_id,
+            on_behalf_of_id=on_behalf_of_id,
             action=action,
             field_id=field_id,
             previous_value=previous_value,
@@ -110,6 +120,41 @@ class EventActivityOperations:
         self.session.add(activity)
         await self.session.flush()
         return activity
+
+    async def _acting_for(self, master_id: UUID, actor_id: UUID) -> UUID | None:
+        """The organizer, when the actor changed the event as the organizer's delegate."""
+        # Readers log nothing; only mutation operations carry the memo.
+        memo: dict = getattr(self.events, "acting_for", {})
+        key = (master_id, actor_id)
+        if key in memo:
+            return memo[key]
+        row = (
+            await self.session.execute(
+                select(
+                    CalendarEvent.organizer_id,
+                    CalendarEvent.organization_id,
+                    Calendar.owner_id,
+                    Calendar.calendar_type,
+                )
+                .join(Calendar, Calendar.id == CalendarEvent.calendar_id)
+                .where(CalendarEvent.id == master_id)
+            )
+        ).one_or_none()
+        grantor_id = None
+        # Delegation covers the organizer's own personal calendars; anywhere else the actor
+        # reached the event in their own right.
+        if (
+            row is not None
+            and row.organizer_id != actor_id
+            and row.owner_id == row.organizer_id
+            and is_delegable(row.calendar_type)
+        ):
+            delegation = await active_delegation(
+                self.session, row.organization_id, row.organizer_id, actor_id
+            )
+            grantor_id = row.organizer_id if delegation is not None else None
+        memo[key] = grantor_id
+        return grantor_id
 
     async def _log_field_changes(
         self,

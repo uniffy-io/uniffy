@@ -1,4 +1,5 @@
 from collections.abc import Collection
+from dataclasses import replace
 from datetime import UTC, datetime
 from uuid import UUID
 
@@ -6,10 +7,12 @@ from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
+from uniffy.core.auth.permissions.roles import role_can_edit
 from uniffy.core.models.calendar.attendee import EventAttendee
+from uniffy.core.models.calendar.delegation import CalendarDelegationLevel
 from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.models.permissions.content_member import ContentMember
-from uniffy.core.types import ContentRole, ContentType, SubjectType
+from uniffy.core.types import ContentRole, ContentType, EventVisibility, SubjectType
 from uniffy.domains.permissions.access.standard import (
     StandardPolicyRow,
     resolve_direct,
@@ -24,6 +27,12 @@ from uniffy.domains.permissions.access.types import (
 from uniffy.domains.scheduling.calendar.calendars.access import (
     event_role_from_calendar,
     higher_role,
+)
+from uniffy.domains.scheduling.calendar.delegation.access import (
+    delegated_event_role,
+    delegation_levels,
+    invited_grantors,
+    private_detail_stand_ins,
 )
 
 
@@ -40,9 +49,12 @@ async def resolve_calendar_events(
             select(
                 CalendarEvent.id,
                 CalendarEvent.is_deleted.label("event_deleted"),
+                CalendarEvent.visibility.label("event_visibility"),
                 master.id.label("master_id"),
                 master.calendar_id,
                 master.organizer_id,
+                master.arranged_by_id,
+                master.visibility.label("master_visibility"),
                 master.access_mode,
                 master.baseline_role,
                 master.is_deleted.label("master_deleted"),
@@ -87,10 +99,13 @@ async def resolve_calendar_events(
             target_policy=(parent.target_policy if row_state == ResourceRowState.LIVE else None),
         )
     if not subject.is_active_member:
-        return decisions
+        return await _mark_hidden_details(session, subject, rows, decisions)
 
     master_calendars = {row.master_id: row.calendar_id for row in rows}
     calendar_roles = await resolve_calendar_roles(session, subject, set(master_calendars.values()))
+    levels = await delegation_levels(
+        session, subject.user_id, subject.organization_id, set(master_calendars.values())
+    )
     denied_masters = {
         row.master_id
         for row in rows
@@ -110,10 +125,43 @@ async def resolve_calendar_events(
                 )
             ).scalars()
         )
+    # The private cap needs to know whether a delegate was invited to a private event.
+    capped_candidates = {
+        row.master_id
+        for row in rows
+        if master_calendars[row.master_id] in levels
+        and _is_private(row)
+        and subject.user_id not in (row.organizer_id, row.arranged_by_id)
+    } - denied_masters
+    if capped_candidates:
+        attendee_ids |= set(
+            (
+                await session.execute(
+                    select(EventAttendee.event_id).where(
+                        EventAttendee.event_id.in_(capped_candidates),
+                        EventAttendee.user_id == subject.user_id,
+                    )
+                )
+            ).scalars()
+        )
+    unexplained = {
+        master_id
+        for master_id in denied_masters
+        if master_id not in attendee_ids
+        and master_calendars[master_id] not in calendar_roles
+        and master_calendars[master_id] not in levels
+    }
+    # What a grantor is invited to, their delegate may see and answer for.
+    grantor_invited = await invited_grantors(
+        session, subject.user_id, subject.organization_id, unexplained
+    )
     liftable = {
         master_id
         for master_id in denied_masters
-        if master_id in attendee_ids or master_calendars[master_id] in calendar_roles
+        if master_id in attendee_ids
+        or master_id in grantor_invited
+        or master_calendars[master_id] in calendar_roles
+        or master_calendars[master_id] in levels
     }
     blocked_ids = await _blocked_event_ids(session, subject, liftable)
 
@@ -122,7 +170,10 @@ async def resolve_calendar_events(
         decision = decisions[key]
         if decision.row_state != ResourceRowState.LIVE:
             continue
-        from_calendar = calendar_roles.get(master_calendars[row.master_id])
+        from_calendar = higher_role(
+            calendar_roles.get(master_calendars[row.master_id]),
+            _delegated_role(levels, master_calendars[row.master_id], row, subject, attendee_ids),
+        )
         if decision.can_view:
             lifted = higher_role(decision.role, from_calendar)
         elif row.master_id in liftable and row.master_id not in blocked_ids:
@@ -141,7 +192,68 @@ async def resolve_calendar_events(
             request_target=decision.request_target,
             target_policy=decision.target_policy,
         )
+    return await _mark_hidden_details(session, subject, rows, decisions)
+
+
+async def _mark_hidden_details(
+    session: AsyncSession,
+    subject: AccessSubject,
+    rows,
+    decisions: dict[ResourceKey, ResourceAccessDecision],
+) -> dict[ResourceKey, ResourceAccessDecision]:
+    """Flag private events the viewer sees only as busy, by the rule of ``event_details_hidden``."""
+    candidates: dict[ResourceKey, UUID] = {}
+    for row in rows:
+        key = ResourceKey(ContentType.CALENDAR_EVENT, row.id)
+        decision = decisions[key]
+        if (
+            decision.can_view
+            and _is_private(row)
+            and not role_can_edit(decision.role)
+            and subject.user_id not in (row.organizer_id, row.arranged_by_id)
+        ):
+            candidates[key] = row.master_id
+    if not candidates:
+        return decisions
+    stand_ins = await private_detail_stand_ins(session, subject.user_id, subject.organization_id)
+    attending = set(
+        (
+            await session.execute(
+                select(EventAttendee.event_id).where(
+                    EventAttendee.event_id.in_(set(candidates.values())),
+                    EventAttendee.user_id.in_(stand_ins),
+                )
+            )
+        ).scalars()
+    )
+    for key, master_id in candidates.items():
+        if master_id not in attending:
+            decisions[key] = replace(decisions[key], details_hidden=True)
     return decisions
+
+
+def _is_private(row) -> bool:
+    return EventVisibility.PRIVATE in (row.event_visibility, row.master_visibility)
+
+
+def _delegated_role(
+    levels: dict[UUID, CalendarDelegationLevel],
+    calendar_id: UUID,
+    row,
+    subject: AccessSubject,
+    attendee_ids: set[UUID],
+) -> ContentRole | None:
+    level = levels.get(calendar_id)
+    if level is None:
+        return None
+    return delegated_event_role(
+        level,
+        row.organizer_id,
+        subject.user_id,
+        private=_is_private(row),
+        is_attendee=row.master_id in attendee_ids,
+        arranged_by_id=row.arranged_by_id,
+    )
 
 
 async def _blocked_event_ids(

@@ -28,6 +28,7 @@ export const SIDEBAR_SECTIONS = {
   mini_calendar: true,
   calendars: true,
   shared_calendars: true,
+  delegated_calendars: true,
   organization: true,
   categories: true,
   templates: true,

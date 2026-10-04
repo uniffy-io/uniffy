@@ -147,6 +147,7 @@ class EventMutationHandlers:
                 )
 
                 attendees = await queries.get_event_attendees(session, event.id)
+                arrangers = await queries.arranger_names(session, [event])
                 room_info = await get_event_room_info(session, event.id)
                 tags_by_urn = await hydrate_event_tags(session, organization_id, [event.id])
                 return CreateEventResponse(
@@ -158,6 +159,7 @@ class EventMutationHandlers:
                             [],
                         ),
                         user_role=await operations._resolve_role(user_id, organization_id, event),
+                        arranged_by_name=arrangers.get(event.arranged_by_id, ""),
                         **room_info,
                     )
                 )
@@ -247,6 +249,7 @@ class EventMutationHandlers:
                     call_lifecycle=self.call_lifecycle,
                 )
                 attendees = await queries.get_event_attendees(session, event.id)
+                arrangers = await queries.arranger_names(session, [event])
                 room_info = await get_event_room_info(session, event.id)
                 tags_by_urn = await hydrate_event_tags(session, organization_id, [event.id])
                 return UpdateEventResponse(
@@ -258,6 +261,7 @@ class EventMutationHandlers:
                             [],
                         ),
                         user_role=await operations._resolve_role(user_id, organization_id, event),
+                        arranged_by_name=arrangers.get(event.arranged_by_id, ""),
                         **room_info,
                     )
                 )

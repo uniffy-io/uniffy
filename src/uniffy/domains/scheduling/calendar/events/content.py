@@ -7,6 +7,7 @@ from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import InstrumentedAttribute
 
+from uniffy.core.auth.permissions.calendar_delegation import grantor_invitation_event_ids
 from uniffy.core.content.base_operations import BaseContentOperations
 from uniffy.core.converters.common_proto import content_type_to_proto
 from uniffy.core.events.realtime import ContentAccessAction, publish_content_access_changed
@@ -17,15 +18,21 @@ from uniffy.core.search.policy import SearchContainerAccess
 from uniffy.core.types import (
     ContentRole,
     ContentType,
+    EventVisibility,
 )
 from uniffy.domains.scheduling.calendar.calendars.access import (
     accessible_calendar_ids,
-    calendar_role,
+    calendar_acl_role,
     event_calendar_id,
     event_role_from_calendar,
     higher_role,
 )
 from uniffy.domains.scheduling.calendar.calendars.search import calendar_search_access
+from uniffy.domains.scheduling.calendar.delegation.access import (
+    delegated_event_role,
+    delegation_levels,
+    invited_grantors,
+)
 from uniffy.domains.scheduling.calendar.events.state import _master_event_id
 from uniffy.domains.tags.reader import TagReader
 
@@ -134,8 +141,10 @@ class EventContentOperations(BaseContentOperations[CalendarEvent]):
 
         # effective_role answers None both for "no grant" and for "blocked", so
         # a lift from the calendar or the invitation needs the explicit check.
-        if from_calendar is None and not await self._is_attendee(
-            user_id, organization_id, master_id
+        if (
+            from_calendar is None
+            and not await self._is_attendee(user_id, organization_id, master_id)
+            and not await self._grantor_invited(user_id, organization_id, master_id)
         ):
             return None
         if await self.permission_checker.is_blocked(
@@ -150,15 +159,40 @@ class EventContentOperations(BaseContentOperations[CalendarEvent]):
         organization_id: UUID,
         content: CalendarEvent,
     ) -> ContentRole | None:
-        return event_role_from_calendar(
-            await calendar_role(
+        calendar_id = await event_calendar_id(self.session, content)
+        from_sharing = event_role_from_calendar(
+            await calendar_acl_role(
                 self.session,
                 self.permission_checker,
                 user_id,
                 organization_id,
-                await event_calendar_id(self.session, content),
+                calendar_id,
             )
         )
+        levels = await delegation_levels(self.session, user_id, organization_id, [calendar_id])
+        if calendar_id not in levels:
+            return from_sharing
+        master_id = _master_event_id(content)
+        private = content.visibility == EventVisibility.PRIVATE
+        if not private and content.recurrence_id is not None:
+            private = (
+                await self.session.scalar(
+                    select(CalendarEvent.visibility).where(CalendarEvent.id == master_id)
+                )
+            ) == EventVisibility.PRIVATE
+        from_delegation = delegated_event_role(
+            levels[calendar_id],
+            content.organizer_id,
+            user_id,
+            private=private,
+            is_attendee=private and await self._is_attendee(user_id, organization_id, master_id),
+            arranged_by_id=content.arranged_by_id,
+        )
+        return higher_role(from_sharing, from_delegation)
+
+    async def _grantor_invited(self, user_id: UUID, organization_id: UUID, event_id: UUID) -> bool:
+        """Someone the user is a calendar delegate for is invited to the event."""
+        return bool(await invited_grantors(self.session, user_id, organization_id, [event_id]))
 
     async def _is_attendee(self, user_id: UUID, organization_id: UUID, event_id: UUID) -> bool:
         """An invitation is a grant only while the invitee is still an active
@@ -210,7 +244,7 @@ class EventContentOperations(BaseContentOperations[CalendarEvent]):
         )
 
     async def event_access_filter(self, user_id: UUID, organization_id: UUID):
-        """WHERE clause for every event list: own grants, attendance, or the calendar.
+        """WHERE clause for every event list: own grants, attendance, the calendar, or delegation.
 
         An explicit BLOCKED on the series removes every row of it, edited
         occurrences included, whichever branch let it in.
@@ -227,11 +261,16 @@ class EventContentOperations(BaseContentOperations[CalendarEvent]):
         calendar_access = CalendarEvent.calendar_id.in_(
             await accessible_calendar_ids(self.access_query, user_id, organization_id)
         )
+        # A delegate sees what the grantor is invited to; the resolver confirms each row.
+        grantor_invited = CalendarEvent.id.in_(
+            grantor_invitation_event_ids(user_id, organization_id)
+        )
         return and_(
             or_(
                 own_access,
                 await self.attendee_access_filter(user_id, organization_id),
                 calendar_access,
+                grantor_invited,
             ),
             self._not_blocked_on_series(user_id, organization_id),
         )

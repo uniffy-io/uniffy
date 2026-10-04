@@ -8,8 +8,10 @@ from uuid import UUID
 from sqlalchemy import ColumnElement, and_, exists, func, not_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from uniffy.core.auth.permissions.calendar_delegation import delegated_calendar_ids
 from uniffy.core.content.base_operations import BaseContentOperations
 from uniffy.core.models.calendar.calendar import Calendar
+from uniffy.core.models.calendar.delegation import CalendarDelegationLevel
 from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.models.calendar.member_settings import CalendarMemberSettings
 from uniffy.core.models.login.group import Group
@@ -17,6 +19,7 @@ from uniffy.core.models.login.group_member import GroupMember
 from uniffy.core.models.permissions.content_member import ContentMember
 from uniffy.core.search import SearchIndexer
 from uniffy.core.types import ContentRole, ContentType, SubjectType
+from uniffy.domains.scheduling.calendar.delegation.access import delegation_levels
 from uniffy.domains.scheduling.calendar.events.registration import register_calendar_content
 
 # A member sees their own calendars, those shared with them, and whatever is open
@@ -27,6 +30,8 @@ MAX_LISTED_CALENDARS = 500
 class CalendarSection(StrEnum):
     MINE = "MINE"
     SHARED = "SHARED"
+    # Reached as the owner's calendar delegate, and not through sharing.
+    DELEGATED = "DELEGATED"
     ORGANIZATION = "ORGANIZATION"
 
 
@@ -35,6 +40,7 @@ class CalendarListing:
     calendar: Calendar
     section: CalendarSection
     is_hidden: bool
+    delegation_level: CalendarDelegationLevel | None = None
 
 
 class CalendarReader(BaseContentOperations[Calendar]):
@@ -75,6 +81,7 @@ class CalendarReader(BaseContentOperations[Calendar]):
             access_mode_column=Calendar.access_mode,
             baseline_role_column=Calendar.baseline_role,
         )
+        delegated = delegated_calendar_ids(user_id, organization_id)
         rows = (
             await self.session.execute(
                 select(
@@ -92,28 +99,37 @@ class CalendarReader(BaseContentOperations[Calendar]):
                 .where(
                     Calendar.organization_id == organization_id,
                     Calendar.is_deleted == False,  # noqa: E712
-                    access_filter,
+                    or_(access_filter, Calendar.id.in_(delegated)),
                 )
+                # Delegated calendars rank right after the member's own, so the cap
+                # never drops one.
                 .order_by(
                     (Calendar.owner_id != user_id).asc(),
+                    Calendar.id.in_(delegated).desc(),
                     Calendar.is_default.desc(),
                     Calendar.name.asc(),
                 )
                 .limit(MAX_LISTED_CALENDARS)
             )
         ).all()
+        levels = await delegation_levels(
+            self.session, user_id, organization_id, [row[0].id for row in rows]
+        )
         listings: list[CalendarListing] = []
         for calendar, is_hidden, shared in rows:
+            level = levels.get(calendar.id)
             if calendar.owner_id == user_id:
                 section = CalendarSection.MINE
             elif shared:
                 section = CalendarSection.SHARED
+            elif level is not None:
+                section = CalendarSection.DELEGATED
             else:
                 section = CalendarSection.ORGANIZATION
             # Organization-wide calendars stay out of the grid until a member opts
             # in, so a tenant with many team calendars does not flood everyone.
             hidden = is_hidden if is_hidden is not None else section == CalendarSection.ORGANIZATION
-            listings.append(CalendarListing(calendar, section, hidden))
+            listings.append(CalendarListing(calendar, section, hidden, level))
         return listings
 
     async def get_listing(
@@ -122,11 +138,12 @@ class CalendarReader(BaseContentOperations[Calendar]):
         organization_id: UUID,
         calendar_id: UUID,
     ) -> CalendarListing:
-        calendar = await self.get_by_id(user_id, organization_id, calendar_id)
         for listing in await self.list_calendars(user_id, organization_id):
-            if listing.calendar.id == calendar.id:
+            if listing.calendar.id == calendar_id:
                 return listing
-        # Reachable but past the list cap: still describe it truthfully.
+        # Reachable but past the list cap: still describe it truthfully. A delegated
+        # calendar is always in the list, so the shared gate is the right one here.
+        calendar = await self.get_by_id(user_id, organization_id, calendar_id)
         section = CalendarSection.MINE if calendar.owner_id == user_id else CalendarSection.SHARED
         return CalendarListing(calendar, section, False)
 
@@ -157,6 +174,7 @@ class CalendarReader(BaseContentOperations[Calendar]):
             and_(
                 Calendar.owner_id != user_id,
                 not_(self._explicitly_shared(user_id, organization_id)),
+                Calendar.id.notin_(delegated_calendar_ids(user_id, organization_id)),
             ),
         )
         listed = (
@@ -171,7 +189,10 @@ class CalendarReader(BaseContentOperations[Calendar]):
             .where(
                 Calendar.organization_id == organization_id,
                 Calendar.is_deleted == False,  # noqa: E712
-                access_filter,
+                or_(
+                    access_filter,
+                    Calendar.id.in_(delegated_calendar_ids(user_id, organization_id)),
+                ),
             )
         )
         default_hidden = await self.session.scalar(

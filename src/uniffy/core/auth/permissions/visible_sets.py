@@ -225,13 +225,17 @@ async def _event_extra_access(
     user_id: UUID,
     organization_id: UUID,
 ):
-    """Events are also readable through their calendar and through an invitation.
+    """Events are also readable through their calendar, a delegation, and an invitation.
 
     Mirrors the calendar domain's event filter, which core cannot import; an
     explicit BLOCKED on the series beats both lifts, edited occurrences included.
     """
     from sqlalchemy import and_, func, or_
 
+    from uniffy.core.auth.permissions.calendar_delegation import (
+        delegated_calendar_ids,
+        grantor_invitation_event_ids,
+    )
     from uniffy.core.models.calendar.attendee import EventAttendee
     from uniffy.core.models.calendar.calendar import Calendar
     from uniffy.core.models.calendar.event import CalendarEvent
@@ -254,7 +258,9 @@ async def _event_extra_access(
     return and_(
         or_(
             CalendarEvent.calendar_id.in_(readable_calendars),
+            CalendarEvent.calendar_id.in_(delegated_calendar_ids(user_id, organization_id)),
             CalendarEvent.id.in_(invited),
+            CalendarEvent.id.in_(grantor_invitation_event_ids(user_id, organization_id)),
         ),
         access_query.build_not_blocked_filter(
             user_id=user_id,
