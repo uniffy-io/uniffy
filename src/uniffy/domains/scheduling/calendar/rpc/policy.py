@@ -39,6 +39,7 @@ def _policy_to_proto(policy: ResolvedCalendarPolicy) -> CalendarPolicy:
         organization_id=str(policy.organization_id),
         team_calendar_creators=_AUDIENCE_TO_PROTO[policy.team_calendar_creators],
         org_wide_calendar_sharers=_AUDIENCE_TO_PROTO[policy.org_wide_calendar_sharers],
+        delegators=_AUDIENCE_TO_PROTO[policy.delegators],
     )
 
 
@@ -63,6 +64,7 @@ class CalendarPolicyHandlers:
             policy=_policy_to_proto(view.policy),
             can_create_team_calendars=view.can_create_team_calendars,
             can_share_calendars_org_wide=view.can_share_calendars_org_wide,
+            can_delegate=view.can_delegate,
         )
 
     async def update_calendar_policy(
@@ -78,6 +80,7 @@ class CalendarPolicyHandlers:
         org_wide_calendar_sharers = _audience_from_proto(
             request.org_wide_calendar_sharers, "org_wide_calendar_sharers"
         )
+        delegators = _AUDIENCE_FROM_PROTO.get(request.delegators)
         try:
             async with open_session() as session:
                 view = await calendar_policy.update_calendar_policy(
@@ -86,6 +89,7 @@ class CalendarPolicyHandlers:
                     organization_id,
                     team_calendar_creators=team_calendar_creators,
                     org_wide_calendar_sharers=org_wide_calendar_sharers,
+                    delegators=delegators,
                 )
         except ConnectError:
             raise
@@ -95,4 +99,5 @@ class CalendarPolicyHandlers:
             policy=_policy_to_proto(view.policy),
             can_create_team_calendars=view.can_create_team_calendars,
             can_share_calendars_org_wide=view.can_share_calendars_org_wide,
+            can_delegate=view.can_delegate,
         )

@@ -42,6 +42,11 @@ class CalendarEvent(SQLModel, table=True):
     id: UUID = Field(default_factory=generate_id, primary_key=True, nullable=False)
     organization_id: UUID = Field(foreign_key="login_organizations.id", nullable=False, index=True)
     organizer_id: UUID = Field(foreign_key="login_users.id", nullable=False, index=True)
+    # Set when a delegate booked the event for the organizer.
+    arranged_by_id: UUID | None = Field(
+        default=None,
+        sa_column=Column(ForeignKey("login_users.id", ondelete="SET NULL"), nullable=True),
+    )
     calendar_id: UUID = Field(foreign_key="calendar_calendars.id", nullable=False, index=True)
     category_id: UUID | None = Field(default=None, foreign_key="calendar_categories.id", index=True)
     title: str = Field(max_length=500, nullable=False)

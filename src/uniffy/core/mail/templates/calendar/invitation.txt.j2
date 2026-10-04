@@ -3,7 +3,7 @@
 {{ organization_name }}
 
 {{ title }}
-{% if organizer_name %}Invited by {{ organizer_name }}
+{% if organizer_name %}Invited by {{ organizer_name }}{% if arranger_name %} (sent by {{ arranger_name }} on their behalf){% endif %}
 {% endif %}
 When:  {{ when }}
 {% if recurrence %}       {{ recurrence }}

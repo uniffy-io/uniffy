@@ -48,6 +48,8 @@ class EventMailBundle:
 
     event: CalendarEvent
     organizer_name: str
+    # The delegate who booked the meeting for the organizer, when one did.
+    arranger_name: str = ""
     attendee_ids: set[UUID] = field(default_factory=set)
     attendee_names: list[str] = field(default_factory=list)
     exports: list[EventExport] = field(default_factory=list)
@@ -60,6 +62,7 @@ async def load_bundle(session: AsyncSession, event_id: UUID) -> EventMailBundle 
         return None
 
     organizer = await session.get(User, event.organizer_id)
+    arranger = await session.get(User, event.arranged_by_id) if event.arranged_by_id else None
     roster = (
         await session.execute(
             select(User.id, User.full_name, User.username, User.email)
@@ -71,6 +74,7 @@ async def load_bundle(session: AsyncSession, event_id: UUID) -> EventMailBundle 
     return EventMailBundle(
         event=event,
         organizer_name=_display_name(organizer),
+        arranger_name=_display_name(arranger) if arranger else "",
         attendee_ids={user_id for user_id, _, _, _ in roster},
         attendee_names=[full or username or email for _, full, username, email in roster],
         # The document describes the meeting as its organizer sees it,
@@ -130,6 +134,7 @@ async def send_event_mail(
         bundle.event,
         organization_name=recipient.organization.name,
         organizer_name=bundle.organizer_name,
+        arranger_name=bundle.arranger_name,
         recipient_timezone=str(resolve_timezone(recipient.timezone)),
         attendee_names=bundle.attendee_names,
         respond=_respond_links_for(request),

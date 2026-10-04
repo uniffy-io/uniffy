@@ -51,6 +51,13 @@ class ResourceAccessDecision:
     role: ContentRole | None = None
     request_target: RequestTarget | None = None
     target_policy: ResolvedResourcePolicy | None = None
+    # Visible as a row but not in substance (a private calendar event shown as busy): its
+    # comments, attachments and other side surfaces stay closed.
+    details_hidden: bool = False
+
+    @property
+    def can_read_details(self) -> bool:
+        return self.can_view and not self.details_hidden
 
 
 def missing_decision(key: ResourceKey) -> ResourceAccessDecision:

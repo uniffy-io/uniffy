@@ -474,6 +474,12 @@ class EventUpdateOperations:
         if became_cancelled:
             await self.events._emit_cancellation_notification(event, user_id, organization_id)
 
+        acted_for = [grantor for grantor in self.events.acting_for.values() if grantor]
+        if acted_for:
+            await self.events._publish_attendee_access_change(
+                event, acted_for, ContentAccessAction.ACTED_ON_BEHALF
+            )
+
         if description is not None:
             if attendee_ids is not None:
                 current_attendee_ids = set(attendee_ids)

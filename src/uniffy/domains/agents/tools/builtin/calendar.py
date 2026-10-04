@@ -659,12 +659,19 @@ async def _execute_rsvp(ctx: ToolContext, args: dict) -> ToolResult:
             error=f"Invalid status: {raw_status}. Must be one of: {', '.join(_RSVP_VALUES)}",
         )
 
+    on_behalf_of = None
+    if args.get("on_behalf_of_user_id"):
+        on_behalf_of, err = parse_uuid(args["on_behalf_of_user_id"], "on_behalf_of_user_id")
+        if err:
+            return ToolResult(success=False, data="", error=err)
+
     ops = CalendarEventOperations(ctx.session, ctx.required_search)
     await ops.update_attendee_status(
         user_id=ctx.user_id,
         organization_id=ctx.organization_id,
         event_id=event_id,  # type: ignore[arg-type]
         status=AttendeeStatus(status_upper),
+        on_behalf_of=on_behalf_of,
     )
 
     return ToolResult(
@@ -1045,6 +1052,13 @@ rsvp = ToolDefinition(
                 "type": "string",
                 "enum": list(_RSVP_VALUES),
                 "description": "Attendance status: ACCEPTED, TENTATIVE, or DECLINED.",
+            },
+            "on_behalf_of_user_id": {
+                "type": "string",
+                "description": (
+                    "Answer for this colleague instead, when the current user is their "
+                    "calendar delegate."
+                ),
             },
         },
         "required": ["event_id", "status"],

@@ -4,6 +4,7 @@ from uniffy.core.models.calendar.activity import EventActivity
 from uniffy.core.models.calendar.attendee import EventAttendee
 from uniffy.core.models.calendar.calendar import Calendar
 from uniffy.core.models.calendar.category import Category
+from uniffy.core.models.calendar.delegation import CalendarDelegation, CalendarDelegationLevel
 from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.models.calendar.exception import RecurrenceException
 from uniffy.core.models.calendar.feed_token import CalendarFeedToken
@@ -15,6 +16,8 @@ from uniffy.core.models.calendar.template import EventTemplate
 __all__ = [
     "Calendar",
     "Category",
+    "CalendarDelegation",
+    "CalendarDelegationLevel",
     "CalendarEvent",
     "CalendarFeedToken",
     "CalendarMemberSettings",

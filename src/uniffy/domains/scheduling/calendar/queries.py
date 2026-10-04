@@ -4,9 +4,10 @@ from collections.abc import Sequence
 from datetime import UTC, datetime
 from uuid import UUID
 
-from sqlalchemy import and_, select
+from sqlalchemy import and_, func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import aliased
 
 from uniffy.core.errors import NotFoundError
 from uniffy.core.models.calendar.attendee import EventAttendee
@@ -68,16 +69,35 @@ async def get_attendees_for_events(
     if not event_ids:
         return {}
 
+    responder = aliased(User)
     result = await session.execute(
-        select(EventAttendee, User)
+        select(EventAttendee, User, func.coalesce(responder.full_name, responder.email))
         .join(User, EventAttendee.user_id == User.id)
+        .outerjoin(responder, responder.id == EventAttendee.responded_by_id)
         .where(EventAttendee.event_id.in_(event_ids))
     )
 
     by_event: dict[UUID, list[tuple[EventAttendee, dict]]] = {}
-    for attendee, user in result.all():
-        by_event.setdefault(attendee.event_id, []).append((attendee, _attendee_user_info(user)))
+    for attendee, user, responded_by_name in result.all():
+        info = _attendee_user_info(user)
+        if responded_by_name:
+            info["responded_by_name"] = responded_by_name
+        by_event.setdefault(attendee.event_id, []).append((attendee, info))
     return by_event
+
+
+async def arranger_names(
+    session: AsyncSession,
+    events: Sequence[CalendarEvent],
+) -> dict[UUID, str]:
+    """Display names of the delegates who booked any of ``events``."""
+    arranger_ids = {event.arranged_by_id for event in events if event.arranged_by_id}
+    if not arranger_ids:
+        return {}
+    rows = await session.execute(
+        select(User.id, func.coalesce(User.full_name, User.email)).where(User.id.in_(arranger_ids))
+    )
+    return {user_id: name for user_id, name in rows.all()}
 
 
 async def get_event_attendees(

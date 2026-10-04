@@ -20,6 +20,7 @@ from uniffy.core.models.permissions.content_member import ContentMember
 from uniffy.core.search.indexer import SearchIndexer, build_content_urn
 from uniffy.core.search.policy import SearchContainerAccess, build_document_id
 from uniffy.core.types import AccessMode, ContentRole, ContentType, SubjectType
+from uniffy.domains.scheduling.calendar.delegation.access import active_delegate_ids, is_delegable
 from uniffy.domains.scheduling.calendar.jobs.contracts import REFRESH_CALENDAR_SEARCH_ACL
 
 logger = logger.bind(component="scheduling.calendar.calendars.search")
@@ -30,7 +31,7 @@ async def calendar_search_access(
     organization_id: UUID,
     calendar_id: UUID,
 ) -> SearchContainerAccess:
-    """The calendar's owner and non-blocked members; a deleted calendar grants nothing.
+    """Owner, delegates and non-blocked members; a deleted calendar grants nothing.
 
     A member blocked on the calendar but reached through a group or the org
     stays a candidate here; the resolver drops the hit.
@@ -60,6 +61,8 @@ async def calendar_search_access(
         )
     ).all()
     user_ids = [calendar.owner_id]
+    if is_delegable(calendar.calendar_type):
+        user_ids.extend(await active_delegate_ids(session, organization_id, calendar.owner_id))
     group_ids: list[UUID] = []
     for subject_type, subject_id in member_rows:
         if subject_type == SubjectType.USER:

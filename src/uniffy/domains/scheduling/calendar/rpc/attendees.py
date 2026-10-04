@@ -46,6 +46,11 @@ class AttendeeHandlers:
         user_id = current_user_id()
         organization_id = resolve_organization_id(request.organization_id)
         event_id = parse_event_id(request.event_id)
+        on_behalf_of = (
+            parse_uuid(request.on_behalf_of_user_id, "on_behalf_of_user_id")
+            if request.has_field("on_behalf_of_user_id")
+            else None
+        )
 
         try:
             async with open_session() as session:
@@ -54,6 +59,7 @@ class AttendeeHandlers:
                     organization_id=organization_id,
                     event_id=event_id,
                     status=attendee_status_from_proto(request.status),
+                    on_behalf_of=on_behalf_of,
                 )
                 return UpdateAttendeeStatusResponse(success=True, message="Status updated")
         except ConnectError:

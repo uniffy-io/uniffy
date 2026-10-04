@@ -3,16 +3,17 @@
 from collections.abc import Sequence
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.auth.permissions import ContentAccessQuery
+from uniffy.core.models.calendar.attendee import EventAttendee
 from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.models.notes.note import Note
 from uniffy.core.models.projects.project import Project
 from uniffy.core.models.projects.task import Task
 from uniffy.core.search.indexer import build_content_urn
-from uniffy.core.types import ContentType
+from uniffy.core.types import ContentType, EventVisibility
 from uniffy.domains.scheduling.calendar.operations import CalendarEventReader
 
 GRAPH_MAX_ROWS_PER_TYPE = 1000
@@ -142,6 +143,14 @@ async def build_content_graph(
                     CalendarEvent.is_deleted == False,  # noqa: E712
                     CalendarEvent.outgoing_references.isnot(None),
                     event_filter,
+                    # What a private event links to is part of its details.
+                    or_(
+                        CalendarEvent.visibility != EventVisibility.PRIVATE,
+                        CalendarEvent.organizer_id == user_id,
+                        CalendarEvent.id.in_(
+                            select(EventAttendee.event_id).where(EventAttendee.user_id == user_id)
+                        ),
+                    ),
                 )
                 .order_by(CalendarEvent.updated_at.desc())
                 .limit(query_limit)

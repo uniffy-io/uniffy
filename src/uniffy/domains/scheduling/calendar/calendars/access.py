@@ -2,9 +2,10 @@
 
 from uuid import UUID
 
-from sqlalchemy import Select, select
+from sqlalchemy import Select, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from uniffy.core.auth.permissions.calendar_delegation import delegated_calendar_ids
 from uniffy.core.auth.permissions.checker import PermissionChecker
 from uniffy.core.auth.permissions.queries import ContentAccessQuery
 from uniffy.core.auth.permissions.roles import ROLE_ORDINAL, role_can_edit, role_can_view
@@ -12,6 +13,10 @@ from uniffy.core.errors import NotFoundError, PermissionDeniedError
 from uniffy.core.models.calendar.calendar import Calendar
 from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.types import ContentRole, ContentType
+from uniffy.domains.scheduling.calendar.delegation.access import (
+    DELEGATED_CALENDAR_ROLE,
+    delegation_levels,
+)
 
 # Owning a calendar makes you its keeper, not the organizer of what others filed
 # on it: the event's own organizer stays its OWNER and alone can transfer it.
@@ -47,6 +52,26 @@ async def calendar_role(
     *,
     hold: bool = False,
 ) -> ContentRole | None:
+    """The calendar's own role, lifted to EDITOR for the owner's calendar delegate."""
+    role = await calendar_acl_role(
+        session, checker, user_id, organization_id, calendar_id, hold=hold
+    )
+    if role_can_edit(role):
+        return role
+    levels = await delegation_levels(session, user_id, organization_id, [calendar_id])
+    return higher_role(role, DELEGATED_CALENDAR_ROLE) if calendar_id in levels else role
+
+
+async def calendar_acl_role(
+    session: AsyncSession,
+    checker: PermissionChecker,
+    user_id: UUID,
+    organization_id: UUID,
+    calendar_id: UUID,
+    *,
+    hold: bool = False,
+) -> ContentRole | None:
+    """The role the calendar's sharing grants, without delegation."""
     query = select(Calendar.owner_id, Calendar.access_mode, Calendar.baseline_role).where(
         Calendar.id == calendar_id,
         Calendar.organization_id == organization_id,
@@ -118,7 +143,7 @@ async def accessible_calendar_ids(
     user_id: UUID,
     organization_id: UUID,
 ) -> Select:
-    """Ids of the live calendars the user can view, as a subquery for event filters."""
+    """Ids of the live calendars the user can view, delegated ones included, for event filters."""
     access_filter = await access_query.build_accessible_filter(
         user_id=user_id,
         organization_id=organization_id,
@@ -131,5 +156,5 @@ async def accessible_calendar_ids(
     return select(Calendar.id).where(
         Calendar.organization_id == organization_id,
         Calendar.is_deleted == False,  # noqa: E712
-        access_filter,
+        or_(access_filter, Calendar.id.in_(delegated_calendar_ids(user_id, organization_id))),
     )

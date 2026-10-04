@@ -23,6 +23,8 @@ class ContentAccessAction(StrEnum):
     ACCESS_MODE_CHANGED = "access_mode_changed"
     CHILD_ADDED = "child_added"
     VIEWS_CHANGED = "views_changed"
+    # Someone acting for the recipient (a calendar delegate) changed it; nobody's access moved.
+    ACTED_ON_BEHALF = "acted_on_behalf"
 
 
 def notification_channel(user_id: UUID) -> str:

@@ -97,5 +97,5 @@ class CommentTargetAccess:
         )[key]
         if decision.row_state != ResourceRowState.LIVE:
             raise NotFoundError("Content", str(content_id))
-        if not predicate(decision.role):
+        if not predicate(decision.role) or decision.details_hidden:
             raise PermissionDeniedError(action, "content")
