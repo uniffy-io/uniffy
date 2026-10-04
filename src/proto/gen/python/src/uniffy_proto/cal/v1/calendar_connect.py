@@ -16,7 +16,7 @@ from connectrpc.server import ConnectASGIApplication, ConnectWSGIApplication, DE
 from protobuf import DescService
 
 from . import calendar_pb
-from .calendar_pb import AddAttendeesRequest, AddAttendeesResponse, ApplyCalendarImportRequest, ApplyCalendarImportResponse, CreateCalendarRequest, CreateCalendarResponse, CreateCategoryRequest, CreateCategoryResponse, CreateEventRequest, CreateEventResponse, CreateEventTemplateRequest, CreateEventTemplateResponse, DeleteCalendarRequest, DeleteCalendarResponse, DeleteCategoryRequest, DeleteCategoryResponse, DeleteEventRequest, DeleteEventResponse, DeleteEventTemplateRequest, DeleteEventTemplateResponse, ExportCalendarRequest, ExportCalendarResponse, ExportEventRequest, ExportEventResponse, GetCalendarFeedUrlRequest, GetCalendarFeedUrlResponse, GetCalendarPolicyRequest, GetCalendarPolicyResponse, GetCalendarRequest, GetCalendarResponse, GetCategoryRequest, GetCategoryResponse, GetEventRequest, GetEventResponse, GetEventTemplateRequest, GetEventTemplateResponse, GetEventsInRangeRequest, GetEventsInRangeResponse, GetFreeBusyRequest, GetFreeBusyResponse, ListCalendarsRequest, ListCalendarsResponse, ListCategoriesRequest, ListCategoriesResponse, ListEventActivitiesRequest, ListEventActivitiesResponse, ListEventTemplatesRequest, ListEventTemplatesResponse, ListEventsRequest, ListEventsResponse, PreviewCalendarImportRequest, PreviewCalendarImportResponse, RegenerateCalendarFeedRequest, RegenerateCalendarFeedResponse, RemoveAttendeesRequest, RemoveAttendeesResponse, RevokeCalendarFeedRequest, RevokeCalendarFeedResponse, SetCalendarVisibilityRequest, SetCalendarVisibilityResponse, SuggestMeetingTimesRequest, SuggestMeetingTimesResponse, UpdateAttendeeRoleRequest, UpdateAttendeeRoleResponse, UpdateAttendeeStatusRequest, UpdateAttendeeStatusResponse, UpdateCalendarPolicyRequest, UpdateCalendarPolicyResponse, UpdateCalendarRequest, UpdateCalendarResponse, UpdateCategoryRequest, UpdateCategoryResponse, UpdateEventRequest, UpdateEventResponse, UpdateEventTemplateRequest, UpdateEventTemplateResponse
+from .calendar_pb import AddAttendeesRequest, AddAttendeesResponse, AdminRevokeCalendarDelegationRequest, AdminRevokeCalendarDelegationResponse, ApplyCalendarImportRequest, ApplyCalendarImportResponse, CreateCalendarRequest, CreateCalendarResponse, CreateCategoryRequest, CreateCategoryResponse, CreateEventRequest, CreateEventResponse, CreateEventTemplateRequest, CreateEventTemplateResponse, DeleteCalendarRequest, DeleteCalendarResponse, DeleteCategoryRequest, DeleteCategoryResponse, DeleteEventRequest, DeleteEventResponse, DeleteEventTemplateRequest, DeleteEventTemplateResponse, ExportCalendarRequest, ExportCalendarResponse, ExportEventRequest, ExportEventResponse, GetCalendarFeedUrlRequest, GetCalendarFeedUrlResponse, GetCalendarPolicyRequest, GetCalendarPolicyResponse, GetCalendarRequest, GetCalendarResponse, GetCategoryRequest, GetCategoryResponse, GetEventRequest, GetEventResponse, GetEventTemplateRequest, GetEventTemplateResponse, GetEventsInRangeRequest, GetEventsInRangeResponse, GetFreeBusyRequest, GetFreeBusyResponse, GrantCalendarDelegationRequest, GrantCalendarDelegationResponse, ListCalendarsRequest, ListCalendarsResponse, ListCategoriesRequest, ListCategoriesResponse, ListEventActivitiesRequest, ListEventActivitiesResponse, ListEventTemplatesRequest, ListEventTemplatesResponse, ListEventsRequest, ListEventsResponse, ListMyCalendarDelegationsRequest, ListMyCalendarDelegationsResponse, ListOrgCalendarDelegationsRequest, ListOrgCalendarDelegationsResponse, ListOrgSharedCalendarsRequest, ListOrgSharedCalendarsResponse, PreviewCalendarImportRequest, PreviewCalendarImportResponse, RegenerateCalendarFeedRequest, RegenerateCalendarFeedResponse, RemoveAttendeesRequest, RemoveAttendeesResponse, RestrictCalendarToMembersRequest, RestrictCalendarToMembersResponse, RevokeCalendarDelegationRequest, RevokeCalendarDelegationResponse, RevokeCalendarFeedRequest, RevokeCalendarFeedResponse, SetCalendarVisibilityRequest, SetCalendarVisibilityResponse, SuggestMeetingTimesRequest, SuggestMeetingTimesResponse, UpdateAttendeeRoleRequest, UpdateAttendeeRoleResponse, UpdateAttendeeStatusRequest, UpdateAttendeeStatusResponse, UpdateCalendarPolicyRequest, UpdateCalendarPolicyResponse, UpdateCalendarRequest, UpdateCalendarResponse, UpdateCategoryRequest, UpdateCategoryResponse, UpdateEventRequest, UpdateEventResponse, UpdateEventTemplateRequest, UpdateEventTemplateResponse
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Iterable, Mapping
@@ -78,6 +78,48 @@ class CalendarService(Protocol):
     async def update_calendar_policy(self, request: UpdateCalendarPolicyRequest, ctx: RequestContext[UpdateCalendarPolicyRequest, UpdateCalendarPolicyResponse], /) -> UpdateCalendarPolicyResponse:
         """
         Change the organization's calendar policy; org admins only
+        """
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def list_my_calendar_delegations(self, request: ListMyCalendarDelegationsRequest, ctx: RequestContext[ListMyCalendarDelegationsRequest, ListMyCalendarDelegationsResponse], /) -> ListMyCalendarDelegationsResponse:
+        """
+        Delegations the caller has granted and those granted to the caller
+        """
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def grant_calendar_delegation(self, request: GrantCalendarDelegationRequest, ctx: RequestContext[GrantCalendarDelegationRequest, GrantCalendarDelegationResponse], /) -> GrantCalendarDelegationResponse:
+        """
+        Let a colleague act on the caller's personal calendars, or change their level
+        """
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def revoke_calendar_delegation(self, request: RevokeCalendarDelegationRequest, ctx: RequestContext[RevokeCalendarDelegationRequest, RevokeCalendarDelegationResponse], /) -> RevokeCalendarDelegationResponse:
+        """
+        End a delegation; the grantor or the delegate may
+        """
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def list_org_calendar_delegations(self, request: ListOrgCalendarDelegationsRequest, ctx: RequestContext[ListOrgCalendarDelegationsRequest, ListOrgCalendarDelegationsResponse], /) -> ListOrgCalendarDelegationsResponse:
+        """
+        Every delegation in the organization, newest first
+        """
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def admin_revoke_calendar_delegation(self, request: AdminRevokeCalendarDelegationRequest, ctx: RequestContext[AdminRevokeCalendarDelegationRequest, AdminRevokeCalendarDelegationResponse], /) -> AdminRevokeCalendarDelegationResponse:
+        """
+        End any delegation in the organization
+        """
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def list_org_shared_calendars(self, request: ListOrgSharedCalendarsRequest, ctx: RequestContext[ListOrgSharedCalendarsRequest, ListOrgSharedCalendarsResponse], /) -> ListOrgSharedCalendarsResponse:
+        """
+        Calendars shared beyond their owner; metadata only, never events
+        """
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def restrict_calendar_to_members(self, request: RestrictCalendarToMembersRequest, ctx: RequestContext[RestrictCalendarToMembersRequest, RestrictCalendarToMembersResponse], /) -> RestrictCalendarToMembersResponse:
+        """
+        Withdraw organization-wide access from a calendar, keeping its named members
         """
         raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
 
@@ -360,6 +402,76 @@ class CalendarServiceASGIApplication(ConnectASGIApplication[CalendarService]):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.update_calendar_policy,
+                ),
+                "/cal.v1.CalendarService/ListMyCalendarDelegations": Endpoint.unary(
+                    method=MethodInfo(
+                        name="ListMyCalendarDelegations",
+                        service_name="cal.v1.CalendarService",
+                        input=ListMyCalendarDelegationsRequest,
+                        output=ListMyCalendarDelegationsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.list_my_calendar_delegations,
+                ),
+                "/cal.v1.CalendarService/GrantCalendarDelegation": Endpoint.unary(
+                    method=MethodInfo(
+                        name="GrantCalendarDelegation",
+                        service_name="cal.v1.CalendarService",
+                        input=GrantCalendarDelegationRequest,
+                        output=GrantCalendarDelegationResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.grant_calendar_delegation,
+                ),
+                "/cal.v1.CalendarService/RevokeCalendarDelegation": Endpoint.unary(
+                    method=MethodInfo(
+                        name="RevokeCalendarDelegation",
+                        service_name="cal.v1.CalendarService",
+                        input=RevokeCalendarDelegationRequest,
+                        output=RevokeCalendarDelegationResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.revoke_calendar_delegation,
+                ),
+                "/cal.v1.CalendarService/ListOrgCalendarDelegations": Endpoint.unary(
+                    method=MethodInfo(
+                        name="ListOrgCalendarDelegations",
+                        service_name="cal.v1.CalendarService",
+                        input=ListOrgCalendarDelegationsRequest,
+                        output=ListOrgCalendarDelegationsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.list_org_calendar_delegations,
+                ),
+                "/cal.v1.CalendarService/AdminRevokeCalendarDelegation": Endpoint.unary(
+                    method=MethodInfo(
+                        name="AdminRevokeCalendarDelegation",
+                        service_name="cal.v1.CalendarService",
+                        input=AdminRevokeCalendarDelegationRequest,
+                        output=AdminRevokeCalendarDelegationResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.admin_revoke_calendar_delegation,
+                ),
+                "/cal.v1.CalendarService/ListOrgSharedCalendars": Endpoint.unary(
+                    method=MethodInfo(
+                        name="ListOrgSharedCalendars",
+                        service_name="cal.v1.CalendarService",
+                        input=ListOrgSharedCalendarsRequest,
+                        output=ListOrgSharedCalendarsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.list_org_shared_calendars,
+                ),
+                "/cal.v1.CalendarService/RestrictCalendarToMembers": Endpoint.unary(
+                    method=MethodInfo(
+                        name="RestrictCalendarToMembers",
+                        service_name="cal.v1.CalendarService",
+                        input=RestrictCalendarToMembersRequest,
+                        output=RestrictCalendarToMembersResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.restrict_calendar_to_members,
                 ),
                 "/cal.v1.CalendarService/CreateEvent": Endpoint.unary(
                     method=MethodInfo(
@@ -858,6 +970,167 @@ class CalendarServiceClient(ConnectClient):
                 service_name="cal.v1.CalendarService",
                 input=UpdateCalendarPolicyRequest,
                 output=UpdateCalendarPolicyResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def list_my_calendar_delegations(
+        self,
+        request: ListMyCalendarDelegationsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> ListMyCalendarDelegationsResponse:
+        """
+        Delegations the caller has granted and those granted to the caller
+        """
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ListMyCalendarDelegations",
+                service_name="cal.v1.CalendarService",
+                input=ListMyCalendarDelegationsRequest,
+                output=ListMyCalendarDelegationsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def grant_calendar_delegation(
+        self,
+        request: GrantCalendarDelegationRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> GrantCalendarDelegationResponse:
+        """
+        Let a colleague act on the caller's personal calendars, or change their level
+        """
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GrantCalendarDelegation",
+                service_name="cal.v1.CalendarService",
+                input=GrantCalendarDelegationRequest,
+                output=GrantCalendarDelegationResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def revoke_calendar_delegation(
+        self,
+        request: RevokeCalendarDelegationRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> RevokeCalendarDelegationResponse:
+        """
+        End a delegation; the grantor or the delegate may
+        """
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="RevokeCalendarDelegation",
+                service_name="cal.v1.CalendarService",
+                input=RevokeCalendarDelegationRequest,
+                output=RevokeCalendarDelegationResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def list_org_calendar_delegations(
+        self,
+        request: ListOrgCalendarDelegationsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> ListOrgCalendarDelegationsResponse:
+        """
+        Every delegation in the organization, newest first
+        """
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ListOrgCalendarDelegations",
+                service_name="cal.v1.CalendarService",
+                input=ListOrgCalendarDelegationsRequest,
+                output=ListOrgCalendarDelegationsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def admin_revoke_calendar_delegation(
+        self,
+        request: AdminRevokeCalendarDelegationRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> AdminRevokeCalendarDelegationResponse:
+        """
+        End any delegation in the organization
+        """
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="AdminRevokeCalendarDelegation",
+                service_name="cal.v1.CalendarService",
+                input=AdminRevokeCalendarDelegationRequest,
+                output=AdminRevokeCalendarDelegationResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def list_org_shared_calendars(
+        self,
+        request: ListOrgSharedCalendarsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> ListOrgSharedCalendarsResponse:
+        """
+        Calendars shared beyond their owner; metadata only, never events
+        """
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ListOrgSharedCalendars",
+                service_name="cal.v1.CalendarService",
+                input=ListOrgSharedCalendarsRequest,
+                output=ListOrgSharedCalendarsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def restrict_calendar_to_members(
+        self,
+        request: RestrictCalendarToMembersRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> RestrictCalendarToMembersResponse:
+        """
+        Withdraw organization-wide access from a calendar, keeping its named members
+        """
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="RestrictCalendarToMembers",
+                service_name="cal.v1.CalendarService",
+                input=RestrictCalendarToMembersRequest,
+                output=RestrictCalendarToMembersResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -1610,6 +1883,48 @@ class CalendarServiceSync(Protocol):
         """
         raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
 
+    def list_my_calendar_delegations(self, request: ListMyCalendarDelegationsRequest, ctx: RequestContext[ListMyCalendarDelegationsRequest, ListMyCalendarDelegationsResponse], /) -> ListMyCalendarDelegationsResponse:
+        """
+        Delegations the caller has granted and those granted to the caller
+        """
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def grant_calendar_delegation(self, request: GrantCalendarDelegationRequest, ctx: RequestContext[GrantCalendarDelegationRequest, GrantCalendarDelegationResponse], /) -> GrantCalendarDelegationResponse:
+        """
+        Let a colleague act on the caller's personal calendars, or change their level
+        """
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def revoke_calendar_delegation(self, request: RevokeCalendarDelegationRequest, ctx: RequestContext[RevokeCalendarDelegationRequest, RevokeCalendarDelegationResponse], /) -> RevokeCalendarDelegationResponse:
+        """
+        End a delegation; the grantor or the delegate may
+        """
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def list_org_calendar_delegations(self, request: ListOrgCalendarDelegationsRequest, ctx: RequestContext[ListOrgCalendarDelegationsRequest, ListOrgCalendarDelegationsResponse], /) -> ListOrgCalendarDelegationsResponse:
+        """
+        Every delegation in the organization, newest first
+        """
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def admin_revoke_calendar_delegation(self, request: AdminRevokeCalendarDelegationRequest, ctx: RequestContext[AdminRevokeCalendarDelegationRequest, AdminRevokeCalendarDelegationResponse], /) -> AdminRevokeCalendarDelegationResponse:
+        """
+        End any delegation in the organization
+        """
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def list_org_shared_calendars(self, request: ListOrgSharedCalendarsRequest, ctx: RequestContext[ListOrgSharedCalendarsRequest, ListOrgSharedCalendarsResponse], /) -> ListOrgSharedCalendarsResponse:
+        """
+        Calendars shared beyond their owner; metadata only, never events
+        """
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def restrict_calendar_to_members(self, request: RestrictCalendarToMembersRequest, ctx: RequestContext[RestrictCalendarToMembersRequest, RestrictCalendarToMembersResponse], /) -> RestrictCalendarToMembersResponse:
+        """
+        Withdraw organization-wide access from a calendar, keeping its named members
+        """
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
     def create_event(self, request: CreateEventRequest, ctx: RequestContext[CreateEventRequest, CreateEventResponse], /) -> CreateEventResponse:
         """
         Create a new calendar event
@@ -1887,6 +2202,76 @@ class CalendarServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.update_calendar_policy,
+                ),
+                "/cal.v1.CalendarService/ListMyCalendarDelegations": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="ListMyCalendarDelegations",
+                        service_name="cal.v1.CalendarService",
+                        input=ListMyCalendarDelegationsRequest,
+                        output=ListMyCalendarDelegationsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.list_my_calendar_delegations,
+                ),
+                "/cal.v1.CalendarService/GrantCalendarDelegation": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="GrantCalendarDelegation",
+                        service_name="cal.v1.CalendarService",
+                        input=GrantCalendarDelegationRequest,
+                        output=GrantCalendarDelegationResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.grant_calendar_delegation,
+                ),
+                "/cal.v1.CalendarService/RevokeCalendarDelegation": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="RevokeCalendarDelegation",
+                        service_name="cal.v1.CalendarService",
+                        input=RevokeCalendarDelegationRequest,
+                        output=RevokeCalendarDelegationResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.revoke_calendar_delegation,
+                ),
+                "/cal.v1.CalendarService/ListOrgCalendarDelegations": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="ListOrgCalendarDelegations",
+                        service_name="cal.v1.CalendarService",
+                        input=ListOrgCalendarDelegationsRequest,
+                        output=ListOrgCalendarDelegationsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.list_org_calendar_delegations,
+                ),
+                "/cal.v1.CalendarService/AdminRevokeCalendarDelegation": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="AdminRevokeCalendarDelegation",
+                        service_name="cal.v1.CalendarService",
+                        input=AdminRevokeCalendarDelegationRequest,
+                        output=AdminRevokeCalendarDelegationResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.admin_revoke_calendar_delegation,
+                ),
+                "/cal.v1.CalendarService/ListOrgSharedCalendars": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="ListOrgSharedCalendars",
+                        service_name="cal.v1.CalendarService",
+                        input=ListOrgSharedCalendarsRequest,
+                        output=ListOrgSharedCalendarsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.list_org_shared_calendars,
+                ),
+                "/cal.v1.CalendarService/RestrictCalendarToMembers": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="RestrictCalendarToMembers",
+                        service_name="cal.v1.CalendarService",
+                        input=RestrictCalendarToMembersRequest,
+                        output=RestrictCalendarToMembersResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.restrict_calendar_to_members,
                 ),
                 "/cal.v1.CalendarService/CreateEvent": EndpointSync.unary(
                     method=MethodInfo(
@@ -2378,6 +2763,160 @@ class CalendarServiceClientSync(ConnectClientSync):
                 service_name="cal.v1.CalendarService",
                 input=UpdateCalendarPolicyRequest,
                 output=UpdateCalendarPolicyResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def list_my_calendar_delegations(
+        self,
+        request: ListMyCalendarDelegationsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> ListMyCalendarDelegationsResponse:
+        """
+        Delegations the caller has granted and those granted to the caller
+        """
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ListMyCalendarDelegations",
+                service_name="cal.v1.CalendarService",
+                input=ListMyCalendarDelegationsRequest,
+                output=ListMyCalendarDelegationsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def grant_calendar_delegation(
+        self,
+        request: GrantCalendarDelegationRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> GrantCalendarDelegationResponse:
+        """
+        Let a colleague act on the caller's personal calendars, or change their level
+        """
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GrantCalendarDelegation",
+                service_name="cal.v1.CalendarService",
+                input=GrantCalendarDelegationRequest,
+                output=GrantCalendarDelegationResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def revoke_calendar_delegation(
+        self,
+        request: RevokeCalendarDelegationRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> RevokeCalendarDelegationResponse:
+        """
+        End a delegation; the grantor or the delegate may
+        """
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="RevokeCalendarDelegation",
+                service_name="cal.v1.CalendarService",
+                input=RevokeCalendarDelegationRequest,
+                output=RevokeCalendarDelegationResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def list_org_calendar_delegations(
+        self,
+        request: ListOrgCalendarDelegationsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> ListOrgCalendarDelegationsResponse:
+        """
+        Every delegation in the organization, newest first
+        """
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ListOrgCalendarDelegations",
+                service_name="cal.v1.CalendarService",
+                input=ListOrgCalendarDelegationsRequest,
+                output=ListOrgCalendarDelegationsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def admin_revoke_calendar_delegation(
+        self,
+        request: AdminRevokeCalendarDelegationRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> AdminRevokeCalendarDelegationResponse:
+        """
+        End any delegation in the organization
+        """
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="AdminRevokeCalendarDelegation",
+                service_name="cal.v1.CalendarService",
+                input=AdminRevokeCalendarDelegationRequest,
+                output=AdminRevokeCalendarDelegationResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def list_org_shared_calendars(
+        self,
+        request: ListOrgSharedCalendarsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> ListOrgSharedCalendarsResponse:
+        """
+        Calendars shared beyond their owner; metadata only, never events
+        """
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ListOrgSharedCalendars",
+                service_name="cal.v1.CalendarService",
+                input=ListOrgSharedCalendarsRequest,
+                output=ListOrgSharedCalendarsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def restrict_calendar_to_members(
+        self,
+        request: RestrictCalendarToMembersRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> RestrictCalendarToMembersResponse:
+        """
+        Withdraw organization-wide access from a calendar, keeping its named members
+        """
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="RestrictCalendarToMembers",
+                service_name="cal.v1.CalendarService",
+                input=RestrictCalendarToMembersRequest,
+                output=RestrictCalendarToMembersResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

@@ -57,6 +57,27 @@ const (
 	// CalendarServiceUpdateCalendarPolicyProcedure is the fully-qualified name of the CalendarService's
 	// UpdateCalendarPolicy RPC.
 	CalendarServiceUpdateCalendarPolicyProcedure = "/cal.v1.CalendarService/UpdateCalendarPolicy"
+	// CalendarServiceListMyCalendarDelegationsProcedure is the fully-qualified name of the
+	// CalendarService's ListMyCalendarDelegations RPC.
+	CalendarServiceListMyCalendarDelegationsProcedure = "/cal.v1.CalendarService/ListMyCalendarDelegations"
+	// CalendarServiceGrantCalendarDelegationProcedure is the fully-qualified name of the
+	// CalendarService's GrantCalendarDelegation RPC.
+	CalendarServiceGrantCalendarDelegationProcedure = "/cal.v1.CalendarService/GrantCalendarDelegation"
+	// CalendarServiceRevokeCalendarDelegationProcedure is the fully-qualified name of the
+	// CalendarService's RevokeCalendarDelegation RPC.
+	CalendarServiceRevokeCalendarDelegationProcedure = "/cal.v1.CalendarService/RevokeCalendarDelegation"
+	// CalendarServiceListOrgCalendarDelegationsProcedure is the fully-qualified name of the
+	// CalendarService's ListOrgCalendarDelegations RPC.
+	CalendarServiceListOrgCalendarDelegationsProcedure = "/cal.v1.CalendarService/ListOrgCalendarDelegations"
+	// CalendarServiceAdminRevokeCalendarDelegationProcedure is the fully-qualified name of the
+	// CalendarService's AdminRevokeCalendarDelegation RPC.
+	CalendarServiceAdminRevokeCalendarDelegationProcedure = "/cal.v1.CalendarService/AdminRevokeCalendarDelegation"
+	// CalendarServiceListOrgSharedCalendarsProcedure is the fully-qualified name of the
+	// CalendarService's ListOrgSharedCalendars RPC.
+	CalendarServiceListOrgSharedCalendarsProcedure = "/cal.v1.CalendarService/ListOrgSharedCalendars"
+	// CalendarServiceRestrictCalendarToMembersProcedure is the fully-qualified name of the
+	// CalendarService's RestrictCalendarToMembers RPC.
+	CalendarServiceRestrictCalendarToMembersProcedure = "/cal.v1.CalendarService/RestrictCalendarToMembers"
 	// CalendarServiceCreateEventProcedure is the fully-qualified name of the CalendarService's
 	// CreateEvent RPC.
 	CalendarServiceCreateEventProcedure = "/cal.v1.CalendarService/CreateEvent"
@@ -167,6 +188,20 @@ type CalendarServiceClient interface {
 	GetCalendarPolicy(context.Context, *connect.Request[v1.GetCalendarPolicyRequest]) (*connect.Response[v1.GetCalendarPolicyResponse], error)
 	// Change the organization's calendar policy; org admins only
 	UpdateCalendarPolicy(context.Context, *connect.Request[v1.UpdateCalendarPolicyRequest]) (*connect.Response[v1.UpdateCalendarPolicyResponse], error)
+	// Delegations the caller has granted and those granted to the caller
+	ListMyCalendarDelegations(context.Context, *connect.Request[v1.ListMyCalendarDelegationsRequest]) (*connect.Response[v1.ListMyCalendarDelegationsResponse], error)
+	// Let a colleague act on the caller's personal calendars, or change their level
+	GrantCalendarDelegation(context.Context, *connect.Request[v1.GrantCalendarDelegationRequest]) (*connect.Response[v1.GrantCalendarDelegationResponse], error)
+	// End a delegation; the grantor or the delegate may
+	RevokeCalendarDelegation(context.Context, *connect.Request[v1.RevokeCalendarDelegationRequest]) (*connect.Response[v1.RevokeCalendarDelegationResponse], error)
+	// Every delegation in the organization, newest first
+	ListOrgCalendarDelegations(context.Context, *connect.Request[v1.ListOrgCalendarDelegationsRequest]) (*connect.Response[v1.ListOrgCalendarDelegationsResponse], error)
+	// End any delegation in the organization
+	AdminRevokeCalendarDelegation(context.Context, *connect.Request[v1.AdminRevokeCalendarDelegationRequest]) (*connect.Response[v1.AdminRevokeCalendarDelegationResponse], error)
+	// Calendars shared beyond their owner; metadata only, never events
+	ListOrgSharedCalendars(context.Context, *connect.Request[v1.ListOrgSharedCalendarsRequest]) (*connect.Response[v1.ListOrgSharedCalendarsResponse], error)
+	// Withdraw organization-wide access from a calendar, keeping its named members
+	RestrictCalendarToMembers(context.Context, *connect.Request[v1.RestrictCalendarToMembersRequest]) (*connect.Response[v1.RestrictCalendarToMembersResponse], error)
 	// Create a new calendar event
 	CreateEvent(context.Context, *connect.Request[v1.CreateEventRequest]) (*connect.Response[v1.CreateEventResponse], error)
 	// Get an event by ID
@@ -288,6 +323,48 @@ func NewCalendarServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			httpClient,
 			baseURL+CalendarServiceUpdateCalendarPolicyProcedure,
 			connect.WithSchema(calendarServiceMethods.ByName("UpdateCalendarPolicy")),
+			connect.WithClientOptions(opts...),
+		),
+		listMyCalendarDelegations: connect.NewClient[v1.ListMyCalendarDelegationsRequest, v1.ListMyCalendarDelegationsResponse](
+			httpClient,
+			baseURL+CalendarServiceListMyCalendarDelegationsProcedure,
+			connect.WithSchema(calendarServiceMethods.ByName("ListMyCalendarDelegations")),
+			connect.WithClientOptions(opts...),
+		),
+		grantCalendarDelegation: connect.NewClient[v1.GrantCalendarDelegationRequest, v1.GrantCalendarDelegationResponse](
+			httpClient,
+			baseURL+CalendarServiceGrantCalendarDelegationProcedure,
+			connect.WithSchema(calendarServiceMethods.ByName("GrantCalendarDelegation")),
+			connect.WithClientOptions(opts...),
+		),
+		revokeCalendarDelegation: connect.NewClient[v1.RevokeCalendarDelegationRequest, v1.RevokeCalendarDelegationResponse](
+			httpClient,
+			baseURL+CalendarServiceRevokeCalendarDelegationProcedure,
+			connect.WithSchema(calendarServiceMethods.ByName("RevokeCalendarDelegation")),
+			connect.WithClientOptions(opts...),
+		),
+		listOrgCalendarDelegations: connect.NewClient[v1.ListOrgCalendarDelegationsRequest, v1.ListOrgCalendarDelegationsResponse](
+			httpClient,
+			baseURL+CalendarServiceListOrgCalendarDelegationsProcedure,
+			connect.WithSchema(calendarServiceMethods.ByName("ListOrgCalendarDelegations")),
+			connect.WithClientOptions(opts...),
+		),
+		adminRevokeCalendarDelegation: connect.NewClient[v1.AdminRevokeCalendarDelegationRequest, v1.AdminRevokeCalendarDelegationResponse](
+			httpClient,
+			baseURL+CalendarServiceAdminRevokeCalendarDelegationProcedure,
+			connect.WithSchema(calendarServiceMethods.ByName("AdminRevokeCalendarDelegation")),
+			connect.WithClientOptions(opts...),
+		),
+		listOrgSharedCalendars: connect.NewClient[v1.ListOrgSharedCalendarsRequest, v1.ListOrgSharedCalendarsResponse](
+			httpClient,
+			baseURL+CalendarServiceListOrgSharedCalendarsProcedure,
+			connect.WithSchema(calendarServiceMethods.ByName("ListOrgSharedCalendars")),
+			connect.WithClientOptions(opts...),
+		),
+		restrictCalendarToMembers: connect.NewClient[v1.RestrictCalendarToMembersRequest, v1.RestrictCalendarToMembersResponse](
+			httpClient,
+			baseURL+CalendarServiceRestrictCalendarToMembersProcedure,
+			connect.WithSchema(calendarServiceMethods.ByName("RestrictCalendarToMembers")),
 			connect.WithClientOptions(opts...),
 		),
 		createEvent: connect.NewClient[v1.CreateEventRequest, v1.CreateEventResponse](
@@ -475,44 +552,51 @@ func NewCalendarServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 
 // calendarServiceClient implements CalendarServiceClient.
 type calendarServiceClient struct {
-	listCalendars          *connect.Client[v1.ListCalendarsRequest, v1.ListCalendarsResponse]
-	getCalendar            *connect.Client[v1.GetCalendarRequest, v1.GetCalendarResponse]
-	createCalendar         *connect.Client[v1.CreateCalendarRequest, v1.CreateCalendarResponse]
-	updateCalendar         *connect.Client[v1.UpdateCalendarRequest, v1.UpdateCalendarResponse]
-	deleteCalendar         *connect.Client[v1.DeleteCalendarRequest, v1.DeleteCalendarResponse]
-	setCalendarVisibility  *connect.Client[v1.SetCalendarVisibilityRequest, v1.SetCalendarVisibilityResponse]
-	getCalendarPolicy      *connect.Client[v1.GetCalendarPolicyRequest, v1.GetCalendarPolicyResponse]
-	updateCalendarPolicy   *connect.Client[v1.UpdateCalendarPolicyRequest, v1.UpdateCalendarPolicyResponse]
-	createEvent            *connect.Client[v1.CreateEventRequest, v1.CreateEventResponse]
-	getEvent               *connect.Client[v1.GetEventRequest, v1.GetEventResponse]
-	updateEvent            *connect.Client[v1.UpdateEventRequest, v1.UpdateEventResponse]
-	deleteEvent            *connect.Client[v1.DeleteEventRequest, v1.DeleteEventResponse]
-	listEvents             *connect.Client[v1.ListEventsRequest, v1.ListEventsResponse]
-	getEventsInRange       *connect.Client[v1.GetEventsInRangeRequest, v1.GetEventsInRangeResponse]
-	exportEvent            *connect.Client[v1.ExportEventRequest, v1.ExportEventResponse]
-	exportCalendar         *connect.Client[v1.ExportCalendarRequest, v1.ExportCalendarResponse]
-	previewCalendarImport  *connect.Client[v1.PreviewCalendarImportRequest, v1.PreviewCalendarImportResponse]
-	applyCalendarImport    *connect.Client[v1.ApplyCalendarImportRequest, v1.ApplyCalendarImportResponse]
-	getCalendarFeedUrl     *connect.Client[v1.GetCalendarFeedUrlRequest, v1.GetCalendarFeedUrlResponse]
-	regenerateCalendarFeed *connect.Client[v1.RegenerateCalendarFeedRequest, v1.RegenerateCalendarFeedResponse]
-	revokeCalendarFeed     *connect.Client[v1.RevokeCalendarFeedRequest, v1.RevokeCalendarFeedResponse]
-	createCategory         *connect.Client[v1.CreateCategoryRequest, v1.CreateCategoryResponse]
-	getCategory            *connect.Client[v1.GetCategoryRequest, v1.GetCategoryResponse]
-	updateCategory         *connect.Client[v1.UpdateCategoryRequest, v1.UpdateCategoryResponse]
-	deleteCategory         *connect.Client[v1.DeleteCategoryRequest, v1.DeleteCategoryResponse]
-	listCategories         *connect.Client[v1.ListCategoriesRequest, v1.ListCategoriesResponse]
-	updateAttendeeStatus   *connect.Client[v1.UpdateAttendeeStatusRequest, v1.UpdateAttendeeStatusResponse]
-	addAttendees           *connect.Client[v1.AddAttendeesRequest, v1.AddAttendeesResponse]
-	updateAttendeeRole     *connect.Client[v1.UpdateAttendeeRoleRequest, v1.UpdateAttendeeRoleResponse]
-	removeAttendees        *connect.Client[v1.RemoveAttendeesRequest, v1.RemoveAttendeesResponse]
-	getFreeBusy            *connect.Client[v1.GetFreeBusyRequest, v1.GetFreeBusyResponse]
-	suggestMeetingTimes    *connect.Client[v1.SuggestMeetingTimesRequest, v1.SuggestMeetingTimesResponse]
-	listEventActivities    *connect.Client[v1.ListEventActivitiesRequest, v1.ListEventActivitiesResponse]
-	createEventTemplate    *connect.Client[v1.CreateEventTemplateRequest, v1.CreateEventTemplateResponse]
-	getEventTemplate       *connect.Client[v1.GetEventTemplateRequest, v1.GetEventTemplateResponse]
-	updateEventTemplate    *connect.Client[v1.UpdateEventTemplateRequest, v1.UpdateEventTemplateResponse]
-	deleteEventTemplate    *connect.Client[v1.DeleteEventTemplateRequest, v1.DeleteEventTemplateResponse]
-	listEventTemplates     *connect.Client[v1.ListEventTemplatesRequest, v1.ListEventTemplatesResponse]
+	listCalendars                 *connect.Client[v1.ListCalendarsRequest, v1.ListCalendarsResponse]
+	getCalendar                   *connect.Client[v1.GetCalendarRequest, v1.GetCalendarResponse]
+	createCalendar                *connect.Client[v1.CreateCalendarRequest, v1.CreateCalendarResponse]
+	updateCalendar                *connect.Client[v1.UpdateCalendarRequest, v1.UpdateCalendarResponse]
+	deleteCalendar                *connect.Client[v1.DeleteCalendarRequest, v1.DeleteCalendarResponse]
+	setCalendarVisibility         *connect.Client[v1.SetCalendarVisibilityRequest, v1.SetCalendarVisibilityResponse]
+	getCalendarPolicy             *connect.Client[v1.GetCalendarPolicyRequest, v1.GetCalendarPolicyResponse]
+	updateCalendarPolicy          *connect.Client[v1.UpdateCalendarPolicyRequest, v1.UpdateCalendarPolicyResponse]
+	listMyCalendarDelegations     *connect.Client[v1.ListMyCalendarDelegationsRequest, v1.ListMyCalendarDelegationsResponse]
+	grantCalendarDelegation       *connect.Client[v1.GrantCalendarDelegationRequest, v1.GrantCalendarDelegationResponse]
+	revokeCalendarDelegation      *connect.Client[v1.RevokeCalendarDelegationRequest, v1.RevokeCalendarDelegationResponse]
+	listOrgCalendarDelegations    *connect.Client[v1.ListOrgCalendarDelegationsRequest, v1.ListOrgCalendarDelegationsResponse]
+	adminRevokeCalendarDelegation *connect.Client[v1.AdminRevokeCalendarDelegationRequest, v1.AdminRevokeCalendarDelegationResponse]
+	listOrgSharedCalendars        *connect.Client[v1.ListOrgSharedCalendarsRequest, v1.ListOrgSharedCalendarsResponse]
+	restrictCalendarToMembers     *connect.Client[v1.RestrictCalendarToMembersRequest, v1.RestrictCalendarToMembersResponse]
+	createEvent                   *connect.Client[v1.CreateEventRequest, v1.CreateEventResponse]
+	getEvent                      *connect.Client[v1.GetEventRequest, v1.GetEventResponse]
+	updateEvent                   *connect.Client[v1.UpdateEventRequest, v1.UpdateEventResponse]
+	deleteEvent                   *connect.Client[v1.DeleteEventRequest, v1.DeleteEventResponse]
+	listEvents                    *connect.Client[v1.ListEventsRequest, v1.ListEventsResponse]
+	getEventsInRange              *connect.Client[v1.GetEventsInRangeRequest, v1.GetEventsInRangeResponse]
+	exportEvent                   *connect.Client[v1.ExportEventRequest, v1.ExportEventResponse]
+	exportCalendar                *connect.Client[v1.ExportCalendarRequest, v1.ExportCalendarResponse]
+	previewCalendarImport         *connect.Client[v1.PreviewCalendarImportRequest, v1.PreviewCalendarImportResponse]
+	applyCalendarImport           *connect.Client[v1.ApplyCalendarImportRequest, v1.ApplyCalendarImportResponse]
+	getCalendarFeedUrl            *connect.Client[v1.GetCalendarFeedUrlRequest, v1.GetCalendarFeedUrlResponse]
+	regenerateCalendarFeed        *connect.Client[v1.RegenerateCalendarFeedRequest, v1.RegenerateCalendarFeedResponse]
+	revokeCalendarFeed            *connect.Client[v1.RevokeCalendarFeedRequest, v1.RevokeCalendarFeedResponse]
+	createCategory                *connect.Client[v1.CreateCategoryRequest, v1.CreateCategoryResponse]
+	getCategory                   *connect.Client[v1.GetCategoryRequest, v1.GetCategoryResponse]
+	updateCategory                *connect.Client[v1.UpdateCategoryRequest, v1.UpdateCategoryResponse]
+	deleteCategory                *connect.Client[v1.DeleteCategoryRequest, v1.DeleteCategoryResponse]
+	listCategories                *connect.Client[v1.ListCategoriesRequest, v1.ListCategoriesResponse]
+	updateAttendeeStatus          *connect.Client[v1.UpdateAttendeeStatusRequest, v1.UpdateAttendeeStatusResponse]
+	addAttendees                  *connect.Client[v1.AddAttendeesRequest, v1.AddAttendeesResponse]
+	updateAttendeeRole            *connect.Client[v1.UpdateAttendeeRoleRequest, v1.UpdateAttendeeRoleResponse]
+	removeAttendees               *connect.Client[v1.RemoveAttendeesRequest, v1.RemoveAttendeesResponse]
+	getFreeBusy                   *connect.Client[v1.GetFreeBusyRequest, v1.GetFreeBusyResponse]
+	suggestMeetingTimes           *connect.Client[v1.SuggestMeetingTimesRequest, v1.SuggestMeetingTimesResponse]
+	listEventActivities           *connect.Client[v1.ListEventActivitiesRequest, v1.ListEventActivitiesResponse]
+	createEventTemplate           *connect.Client[v1.CreateEventTemplateRequest, v1.CreateEventTemplateResponse]
+	getEventTemplate              *connect.Client[v1.GetEventTemplateRequest, v1.GetEventTemplateResponse]
+	updateEventTemplate           *connect.Client[v1.UpdateEventTemplateRequest, v1.UpdateEventTemplateResponse]
+	deleteEventTemplate           *connect.Client[v1.DeleteEventTemplateRequest, v1.DeleteEventTemplateResponse]
+	listEventTemplates            *connect.Client[v1.ListEventTemplatesRequest, v1.ListEventTemplatesResponse]
 }
 
 // ListCalendars calls cal.v1.CalendarService.ListCalendars.
@@ -553,6 +637,41 @@ func (c *calendarServiceClient) GetCalendarPolicy(ctx context.Context, req *conn
 // UpdateCalendarPolicy calls cal.v1.CalendarService.UpdateCalendarPolicy.
 func (c *calendarServiceClient) UpdateCalendarPolicy(ctx context.Context, req *connect.Request[v1.UpdateCalendarPolicyRequest]) (*connect.Response[v1.UpdateCalendarPolicyResponse], error) {
 	return c.updateCalendarPolicy.CallUnary(ctx, req)
+}
+
+// ListMyCalendarDelegations calls cal.v1.CalendarService.ListMyCalendarDelegations.
+func (c *calendarServiceClient) ListMyCalendarDelegations(ctx context.Context, req *connect.Request[v1.ListMyCalendarDelegationsRequest]) (*connect.Response[v1.ListMyCalendarDelegationsResponse], error) {
+	return c.listMyCalendarDelegations.CallUnary(ctx, req)
+}
+
+// GrantCalendarDelegation calls cal.v1.CalendarService.GrantCalendarDelegation.
+func (c *calendarServiceClient) GrantCalendarDelegation(ctx context.Context, req *connect.Request[v1.GrantCalendarDelegationRequest]) (*connect.Response[v1.GrantCalendarDelegationResponse], error) {
+	return c.grantCalendarDelegation.CallUnary(ctx, req)
+}
+
+// RevokeCalendarDelegation calls cal.v1.CalendarService.RevokeCalendarDelegation.
+func (c *calendarServiceClient) RevokeCalendarDelegation(ctx context.Context, req *connect.Request[v1.RevokeCalendarDelegationRequest]) (*connect.Response[v1.RevokeCalendarDelegationResponse], error) {
+	return c.revokeCalendarDelegation.CallUnary(ctx, req)
+}
+
+// ListOrgCalendarDelegations calls cal.v1.CalendarService.ListOrgCalendarDelegations.
+func (c *calendarServiceClient) ListOrgCalendarDelegations(ctx context.Context, req *connect.Request[v1.ListOrgCalendarDelegationsRequest]) (*connect.Response[v1.ListOrgCalendarDelegationsResponse], error) {
+	return c.listOrgCalendarDelegations.CallUnary(ctx, req)
+}
+
+// AdminRevokeCalendarDelegation calls cal.v1.CalendarService.AdminRevokeCalendarDelegation.
+func (c *calendarServiceClient) AdminRevokeCalendarDelegation(ctx context.Context, req *connect.Request[v1.AdminRevokeCalendarDelegationRequest]) (*connect.Response[v1.AdminRevokeCalendarDelegationResponse], error) {
+	return c.adminRevokeCalendarDelegation.CallUnary(ctx, req)
+}
+
+// ListOrgSharedCalendars calls cal.v1.CalendarService.ListOrgSharedCalendars.
+func (c *calendarServiceClient) ListOrgSharedCalendars(ctx context.Context, req *connect.Request[v1.ListOrgSharedCalendarsRequest]) (*connect.Response[v1.ListOrgSharedCalendarsResponse], error) {
+	return c.listOrgSharedCalendars.CallUnary(ctx, req)
+}
+
+// RestrictCalendarToMembers calls cal.v1.CalendarService.RestrictCalendarToMembers.
+func (c *calendarServiceClient) RestrictCalendarToMembers(ctx context.Context, req *connect.Request[v1.RestrictCalendarToMembersRequest]) (*connect.Response[v1.RestrictCalendarToMembersResponse], error) {
+	return c.restrictCalendarToMembers.CallUnary(ctx, req)
 }
 
 // CreateEvent calls cal.v1.CalendarService.CreateEvent.
@@ -723,6 +842,20 @@ type CalendarServiceHandler interface {
 	GetCalendarPolicy(context.Context, *connect.Request[v1.GetCalendarPolicyRequest]) (*connect.Response[v1.GetCalendarPolicyResponse], error)
 	// Change the organization's calendar policy; org admins only
 	UpdateCalendarPolicy(context.Context, *connect.Request[v1.UpdateCalendarPolicyRequest]) (*connect.Response[v1.UpdateCalendarPolicyResponse], error)
+	// Delegations the caller has granted and those granted to the caller
+	ListMyCalendarDelegations(context.Context, *connect.Request[v1.ListMyCalendarDelegationsRequest]) (*connect.Response[v1.ListMyCalendarDelegationsResponse], error)
+	// Let a colleague act on the caller's personal calendars, or change their level
+	GrantCalendarDelegation(context.Context, *connect.Request[v1.GrantCalendarDelegationRequest]) (*connect.Response[v1.GrantCalendarDelegationResponse], error)
+	// End a delegation; the grantor or the delegate may
+	RevokeCalendarDelegation(context.Context, *connect.Request[v1.RevokeCalendarDelegationRequest]) (*connect.Response[v1.RevokeCalendarDelegationResponse], error)
+	// Every delegation in the organization, newest first
+	ListOrgCalendarDelegations(context.Context, *connect.Request[v1.ListOrgCalendarDelegationsRequest]) (*connect.Response[v1.ListOrgCalendarDelegationsResponse], error)
+	// End any delegation in the organization
+	AdminRevokeCalendarDelegation(context.Context, *connect.Request[v1.AdminRevokeCalendarDelegationRequest]) (*connect.Response[v1.AdminRevokeCalendarDelegationResponse], error)
+	// Calendars shared beyond their owner; metadata only, never events
+	ListOrgSharedCalendars(context.Context, *connect.Request[v1.ListOrgSharedCalendarsRequest]) (*connect.Response[v1.ListOrgSharedCalendarsResponse], error)
+	// Withdraw organization-wide access from a calendar, keeping its named members
+	RestrictCalendarToMembers(context.Context, *connect.Request[v1.RestrictCalendarToMembersRequest]) (*connect.Response[v1.RestrictCalendarToMembersResponse], error)
 	// Create a new calendar event
 	CreateEvent(context.Context, *connect.Request[v1.CreateEventRequest]) (*connect.Response[v1.CreateEventResponse], error)
 	// Get an event by ID
@@ -840,6 +973,48 @@ func NewCalendarServiceHandler(svc CalendarServiceHandler, opts ...connect.Handl
 		CalendarServiceUpdateCalendarPolicyProcedure,
 		svc.UpdateCalendarPolicy,
 		connect.WithSchema(calendarServiceMethods.ByName("UpdateCalendarPolicy")),
+		connect.WithHandlerOptions(opts...),
+	)
+	calendarServiceListMyCalendarDelegationsHandler := connect.NewUnaryHandler(
+		CalendarServiceListMyCalendarDelegationsProcedure,
+		svc.ListMyCalendarDelegations,
+		connect.WithSchema(calendarServiceMethods.ByName("ListMyCalendarDelegations")),
+		connect.WithHandlerOptions(opts...),
+	)
+	calendarServiceGrantCalendarDelegationHandler := connect.NewUnaryHandler(
+		CalendarServiceGrantCalendarDelegationProcedure,
+		svc.GrantCalendarDelegation,
+		connect.WithSchema(calendarServiceMethods.ByName("GrantCalendarDelegation")),
+		connect.WithHandlerOptions(opts...),
+	)
+	calendarServiceRevokeCalendarDelegationHandler := connect.NewUnaryHandler(
+		CalendarServiceRevokeCalendarDelegationProcedure,
+		svc.RevokeCalendarDelegation,
+		connect.WithSchema(calendarServiceMethods.ByName("RevokeCalendarDelegation")),
+		connect.WithHandlerOptions(opts...),
+	)
+	calendarServiceListOrgCalendarDelegationsHandler := connect.NewUnaryHandler(
+		CalendarServiceListOrgCalendarDelegationsProcedure,
+		svc.ListOrgCalendarDelegations,
+		connect.WithSchema(calendarServiceMethods.ByName("ListOrgCalendarDelegations")),
+		connect.WithHandlerOptions(opts...),
+	)
+	calendarServiceAdminRevokeCalendarDelegationHandler := connect.NewUnaryHandler(
+		CalendarServiceAdminRevokeCalendarDelegationProcedure,
+		svc.AdminRevokeCalendarDelegation,
+		connect.WithSchema(calendarServiceMethods.ByName("AdminRevokeCalendarDelegation")),
+		connect.WithHandlerOptions(opts...),
+	)
+	calendarServiceListOrgSharedCalendarsHandler := connect.NewUnaryHandler(
+		CalendarServiceListOrgSharedCalendarsProcedure,
+		svc.ListOrgSharedCalendars,
+		connect.WithSchema(calendarServiceMethods.ByName("ListOrgSharedCalendars")),
+		connect.WithHandlerOptions(opts...),
+	)
+	calendarServiceRestrictCalendarToMembersHandler := connect.NewUnaryHandler(
+		CalendarServiceRestrictCalendarToMembersProcedure,
+		svc.RestrictCalendarToMembers,
+		connect.WithSchema(calendarServiceMethods.ByName("RestrictCalendarToMembers")),
 		connect.WithHandlerOptions(opts...),
 	)
 	calendarServiceCreateEventHandler := connect.NewUnaryHandler(
@@ -1040,6 +1215,20 @@ func NewCalendarServiceHandler(svc CalendarServiceHandler, opts ...connect.Handl
 			calendarServiceGetCalendarPolicyHandler.ServeHTTP(w, r)
 		case CalendarServiceUpdateCalendarPolicyProcedure:
 			calendarServiceUpdateCalendarPolicyHandler.ServeHTTP(w, r)
+		case CalendarServiceListMyCalendarDelegationsProcedure:
+			calendarServiceListMyCalendarDelegationsHandler.ServeHTTP(w, r)
+		case CalendarServiceGrantCalendarDelegationProcedure:
+			calendarServiceGrantCalendarDelegationHandler.ServeHTTP(w, r)
+		case CalendarServiceRevokeCalendarDelegationProcedure:
+			calendarServiceRevokeCalendarDelegationHandler.ServeHTTP(w, r)
+		case CalendarServiceListOrgCalendarDelegationsProcedure:
+			calendarServiceListOrgCalendarDelegationsHandler.ServeHTTP(w, r)
+		case CalendarServiceAdminRevokeCalendarDelegationProcedure:
+			calendarServiceAdminRevokeCalendarDelegationHandler.ServeHTTP(w, r)
+		case CalendarServiceListOrgSharedCalendarsProcedure:
+			calendarServiceListOrgSharedCalendarsHandler.ServeHTTP(w, r)
+		case CalendarServiceRestrictCalendarToMembersProcedure:
+			calendarServiceRestrictCalendarToMembersHandler.ServeHTTP(w, r)
 		case CalendarServiceCreateEventProcedure:
 			calendarServiceCreateEventHandler.ServeHTTP(w, r)
 		case CalendarServiceGetEventProcedure:
@@ -1139,6 +1328,34 @@ func (UnimplementedCalendarServiceHandler) GetCalendarPolicy(context.Context, *c
 
 func (UnimplementedCalendarServiceHandler) UpdateCalendarPolicy(context.Context, *connect.Request[v1.UpdateCalendarPolicyRequest]) (*connect.Response[v1.UpdateCalendarPolicyResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("cal.v1.CalendarService.UpdateCalendarPolicy is not implemented"))
+}
+
+func (UnimplementedCalendarServiceHandler) ListMyCalendarDelegations(context.Context, *connect.Request[v1.ListMyCalendarDelegationsRequest]) (*connect.Response[v1.ListMyCalendarDelegationsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("cal.v1.CalendarService.ListMyCalendarDelegations is not implemented"))
+}
+
+func (UnimplementedCalendarServiceHandler) GrantCalendarDelegation(context.Context, *connect.Request[v1.GrantCalendarDelegationRequest]) (*connect.Response[v1.GrantCalendarDelegationResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("cal.v1.CalendarService.GrantCalendarDelegation is not implemented"))
+}
+
+func (UnimplementedCalendarServiceHandler) RevokeCalendarDelegation(context.Context, *connect.Request[v1.RevokeCalendarDelegationRequest]) (*connect.Response[v1.RevokeCalendarDelegationResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("cal.v1.CalendarService.RevokeCalendarDelegation is not implemented"))
+}
+
+func (UnimplementedCalendarServiceHandler) ListOrgCalendarDelegations(context.Context, *connect.Request[v1.ListOrgCalendarDelegationsRequest]) (*connect.Response[v1.ListOrgCalendarDelegationsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("cal.v1.CalendarService.ListOrgCalendarDelegations is not implemented"))
+}
+
+func (UnimplementedCalendarServiceHandler) AdminRevokeCalendarDelegation(context.Context, *connect.Request[v1.AdminRevokeCalendarDelegationRequest]) (*connect.Response[v1.AdminRevokeCalendarDelegationResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("cal.v1.CalendarService.AdminRevokeCalendarDelegation is not implemented"))
+}
+
+func (UnimplementedCalendarServiceHandler) ListOrgSharedCalendars(context.Context, *connect.Request[v1.ListOrgSharedCalendarsRequest]) (*connect.Response[v1.ListOrgSharedCalendarsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("cal.v1.CalendarService.ListOrgSharedCalendars is not implemented"))
+}
+
+func (UnimplementedCalendarServiceHandler) RestrictCalendarToMembers(context.Context, *connect.Request[v1.RestrictCalendarToMembersRequest]) (*connect.Response[v1.RestrictCalendarToMembersResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("cal.v1.CalendarService.RestrictCalendarToMembers is not implemented"))
 }
 
 func (UnimplementedCalendarServiceHandler) CreateEvent(context.Context, *connect.Request[v1.CreateEventRequest]) (*connect.Response[v1.CreateEventResponse], error) {
