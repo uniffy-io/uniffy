@@ -44,6 +44,7 @@ import { useAuth } from "@core/providers/AuthContext";
 import { useUpdateEvent, useSetCalendarVisibility } from "@features/calendar/useCalendarMutations";
 import { blocksTime, eventDisplayState } from "@features/calendar/eventDisplay";
 import { CalendarFilterSheet } from "@features/calendar/components/CalendarFilterSheet";
+import { DelegatesSheet } from "@features/calendar/components/DelegatesSheet";
 import { AgendaList } from "@features/calendar/components/AgendaList";
 import { AllDayEventChip } from "@features/calendar/components/AllDayEventChip";
 import { PeriodRail } from "@features/calendar/components/PeriodRail";
@@ -870,6 +871,7 @@ export function CalendarScreen() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
   const [sharedCalendar, setSharedCalendar] = useState<SerializedCalendar | null>(null);
+  const [delegatesOpen, setDelegatesOpen] = useState(false);
   const dayScrollRef = useRef<ScrollView>(null);
   const tagsQuery = useTags("");
   const activeCalls = useActiveCalls();
@@ -1743,6 +1745,10 @@ export function CalendarScreen() {
           setFilterSheetOpen(false);
           setSharedCalendar(calendar);
         }}
+        onManageDelegates={() => {
+          setFilterSheetOpen(false);
+          setDelegatesOpen(true);
+        }}
         categories={categories}
         activeCategoryIds={activeCategoryIds}
         onToggle={toggleCategory}
@@ -1756,10 +1762,20 @@ export function CalendarScreen() {
         onClear={clearFilters}
       />
 
+      <DelegatesSheet
+        visible={delegatesOpen}
+        onClose={() => {
+          setDelegatesOpen(false);
+          setFilterSheetOpen(true);
+        }}
+      />
+
       <ShareSheet
         visible={sharedCalendar !== null}
         onClose={() => {
           setSharedCalendar(null);
+          // Both sheets open from the filter sheet; closing one returns there.
+          setFilterSheetOpen(true);
           // Leaving a calendar, or opening it to the org, changes this member's list and grid.
           queryClient.invalidateQueries({ queryKey: ["calendars"] });
           queryClient.invalidateQueries({ queryKey: ["events-range"] });
