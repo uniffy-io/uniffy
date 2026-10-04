@@ -179,8 +179,22 @@ export const ACTION_GROUPS: readonly ActionGroup[] = [
     ],
   },
   {
+    domain: "calendar",
+    label: "Calendars",
+    badgeClass: "bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-400",
+    actions: [
+      { value: "calendar.created", label: "Created" },
+      { value: "calendar.updated", label: "Updated" },
+      { value: "calendar.deleted", label: "Deleted" },
+      { value: "calendar.policy_updated", label: "Policy updated" },
+      { value: "calendar.delegation_granted", label: "Delegate added" },
+      { value: "calendar.delegation_updated", label: "Delegate level changed" },
+      { value: "calendar.delegation_revoked", label: "Delegate removed" },
+    ],
+  },
+  {
     domain: "calendar_event",
-    label: "Calendar",
+    label: "Calendar events",
     badgeClass: "bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-400",
     actions: [
       { value: "calendar_event.deleted", label: "Deleted" },
@@ -331,6 +345,8 @@ export function actionLabel(action: string): string {
 export const RESOURCE_TYPES: readonly { value: string; label: string }[] = [
   { value: "NOTE", label: "Note" },
   { value: "FILE", label: "File" },
+  { value: "CALENDAR", label: "Calendar" },
+  { value: "CALENDAR_DELEGATION", label: "Calendar delegation" },
   { value: "CALENDAR_EVENT", label: "Calendar event" },
   { value: "PROJECT", label: "Project" },
   { value: "TASK", label: "Task" },

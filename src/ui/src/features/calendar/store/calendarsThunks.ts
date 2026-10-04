@@ -7,6 +7,7 @@ import {
   timestampToIso,
 } from "@/features/calendar/store/calendarThunks";
 import type {
+  CalendarDelegationLevel,
   CalendarEventDisposition,
   CalendarInfo,
   CalendarKind,
@@ -15,6 +16,7 @@ import type {
   CalendarSection,
 } from "@/features/calendar/types";
 import {
+  CalendarDelegationLevel as ProtoCalendarDelegationLevel,
   CalendarEventDisposition as ProtoCalendarEventDisposition,
   CalendarListSection as ProtoCalendarListSection,
   CalendarPolicyAudience as ProtoCalendarPolicyAudience,
@@ -25,7 +27,7 @@ import type {
   CalendarPolicy as ProtoCalendarPolicy,
 } from "@uniffy/proto/cal/v1/calendar_pb";
 
-const KIND_FROM_PROTO: Record<number, CalendarKind> = {
+export const KIND_FROM_PROTO: Record<number, CalendarKind> = {
   [ProtoCalendarType.PERSONAL]: "personal",
   [ProtoCalendarType.WORK]: "work",
   [ProtoCalendarType.TEAM]: "team",
@@ -43,6 +45,20 @@ const SECTION_FROM_PROTO: Record<number, CalendarSection> = {
   [ProtoCalendarListSection.MINE]: "mine",
   [ProtoCalendarListSection.SHARED]: "shared",
   [ProtoCalendarListSection.ORGANIZATION]: "organization",
+  [ProtoCalendarListSection.DELEGATED]: "delegated",
+};
+
+export const DELEGATION_LEVEL_FROM_PROTO: Record<number, CalendarDelegationLevel> = {
+  [ProtoCalendarDelegationLevel.EVENTS]: "events",
+  [ProtoCalendarDelegationLevel.EVENTS_AND_PRIVATE]: "events_and_private",
+};
+
+export const DELEGATION_LEVEL_TO_PROTO: Record<
+  CalendarDelegationLevel,
+  ProtoCalendarDelegationLevel
+> = {
+  events: ProtoCalendarDelegationLevel.EVENTS,
+  events_and_private: ProtoCalendarDelegationLevel.EVENTS_AND_PRIVATE,
 };
 
 const AUDIENCE_FROM_PROTO: Record<number, CalendarPolicyAudience> = {
@@ -70,22 +86,31 @@ export const calendarFromProto = (proto: ProtoCalendar): CalendarInfo => ({
   userRole: proto.userRole,
   isHidden: proto.isHidden,
   section: SECTION_FROM_PROTO[proto.section] ?? "mine",
+  delegationLevel:
+    proto.delegationLevel !== undefined
+      ? DELEGATION_LEVEL_FROM_PROTO[proto.delegationLevel]
+      : undefined,
   createdAt: timestampToIso(proto.createdAt),
   updatedAt: timestampToIso(proto.updatedAt),
 });
 
-const policyFromProto = (
-  policy: ProtoCalendarPolicy | undefined,
-  canCreateTeamCalendars: boolean,
-  canShareCalendarsOrgWide: boolean,
-): CalendarPolicyInfo => ({
-  teamCalendarCreators: AUDIENCE_FROM_PROTO[policy?.teamCalendarCreators ?? 0] ?? "everyone",
-  orgWideCalendarSharers: AUDIENCE_FROM_PROTO[policy?.orgWideCalendarSharers ?? 0] ?? "everyone",
-  canCreateTeamCalendars,
-  canShareCalendarsOrgWide,
+const policyFromProto = (response: {
+  policy?: ProtoCalendarPolicy;
+  canCreateTeamCalendars: boolean;
+  canShareCalendarsOrgWide: boolean;
+  canDelegate: boolean;
+}): CalendarPolicyInfo => ({
+  teamCalendarCreators:
+    AUDIENCE_FROM_PROTO[response.policy?.teamCalendarCreators ?? 0] ?? "everyone",
+  orgWideCalendarSharers:
+    AUDIENCE_FROM_PROTO[response.policy?.orgWideCalendarSharers ?? 0] ?? "everyone",
+  delegators: AUDIENCE_FROM_PROTO[response.policy?.delegators ?? 0] ?? "everyone",
+  canCreateTeamCalendars: response.canCreateTeamCalendars,
+  canShareCalendarsOrgWide: response.canShareCalendarsOrgWide,
+  canDelegate: response.canDelegate,
 });
 
-const message = (error: unknown, fallback: string) =>
+export const message = (error: unknown, fallback: string) =>
   error instanceof Error ? error.message : fallback;
 
 export const fetchCalendars = createAsyncThunk<
@@ -218,12 +243,7 @@ export const fetchCalendarPolicy = createAsyncThunk<
 >("calendar/fetchCalendarPolicy", async (_, { getState, rejectWithValue }) => {
   try {
     const organizationId = getOrganizationId(getState());
-    const response = await calendarApi.getCalendarPolicy({ organizationId });
-    return policyFromProto(
-      response.policy,
-      response.canCreateTeamCalendars,
-      response.canShareCalendarsOrgWide,
-    );
+    return policyFromProto(await calendarApi.getCalendarPolicy({ organizationId }));
   } catch (error) {
     return rejectWithValue(message(error, "Failed to load calendar policy"));
   }
@@ -231,7 +251,11 @@ export const fetchCalendarPolicy = createAsyncThunk<
 
 export const updateCalendarPolicy = createAsyncThunk<
   CalendarPolicyInfo,
-  { teamCalendarCreators: CalendarPolicyAudience; orgWideCalendarSharers: CalendarPolicyAudience },
+  {
+    teamCalendarCreators: CalendarPolicyAudience;
+    orgWideCalendarSharers: CalendarPolicyAudience;
+    delegators: CalendarPolicyAudience;
+  },
   { state: RootState; rejectValue: string }
 >("calendar/updateCalendarPolicy", async (params, { getState, rejectWithValue }) => {
   try {
@@ -240,12 +264,9 @@ export const updateCalendarPolicy = createAsyncThunk<
       organizationId,
       teamCalendarCreators: AUDIENCE_TO_PROTO[params.teamCalendarCreators],
       orgWideCalendarSharers: AUDIENCE_TO_PROTO[params.orgWideCalendarSharers],
+      delegators: AUDIENCE_TO_PROTO[params.delegators],
     });
-    return policyFromProto(
-      response.policy,
-      response.canCreateTeamCalendars,
-      response.canShareCalendarsOrgWide,
-    );
+    return policyFromProto(response);
   } catch (error) {
     return rejectWithValue(message(error, "Failed to save calendar policy"));
   }
