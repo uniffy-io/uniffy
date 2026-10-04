@@ -33,6 +33,7 @@ def test_access_decisions_cannot_carry_display_metadata() -> None:
         "role",
         "request_target",
         "target_policy",
+        "details_hidden",
     }
 
 

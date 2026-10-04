@@ -30,6 +30,7 @@ from uniffy.core.types import (
     RecurrencePattern,
 )
 from uniffy.domains.scheduling.calendar.calendars.access import require_calendar_edit
+from uniffy.domains.scheduling.calendar.delegation.access import booking_organizer
 from uniffy.domains.scheduling.calendar.events.notifications import publish_event_change
 from uniffy.domains.scheduling.calendar.events.state import _StagedCalendarEventCreate
 from uniffy.domains.scheduling.calendar.mail.outbox import CalendarMailKind, stage_event_mail
@@ -84,6 +85,8 @@ class EventCreateOperations:
         edit may receive the event, which also keeps it inside the tenant.
         """
         await require_calendar_edit(self.session, user_id, organization_id, calendar_id)
+        organizer_id = await booking_organizer(self.session, user_id, organization_id, calendar_id)
+        arranged_by_id = user_id if organizer_id != user_id else None
 
         if transparency is None:
             # All-day entries have never blocked time; an out-of-office period
@@ -123,11 +126,12 @@ class EventCreateOperations:
         )
 
         if reminders is None:
-            reminders = await get_user_reminder_defaults(self.session, user_id)
+            reminders = await get_user_reminder_defaults(self.session, organizer_id)
 
         event = CalendarEvent(
             organization_id=organization_id,
-            organizer_id=user_id,
+            organizer_id=organizer_id,
+            arranged_by_id=arranged_by_id,
             calendar_id=calendar_id,
             title=title,
             description=description,
@@ -161,7 +165,7 @@ class EventCreateOperations:
             self.session.add(
                 EventAttendee(
                     event_id=event.id,
-                    user_id=user_id,
+                    user_id=organizer_id,
                     status=AttendeeStatus.ACCEPTED,
                     role=AttendeeRole.ORGANIZER,
                     responded_at=datetime.now(UTC),
@@ -169,7 +173,7 @@ class EventCreateOperations:
             )
 
             for attendee_id in attendee_ids or []:
-                if attendee_id == user_id:
+                if attendee_id == organizer_id:
                     continue
                 requested_role = (attendee_roles or {}).get(attendee_id, AttendeeRole.REQUIRED)
                 self.session.add(
@@ -187,8 +191,8 @@ class EventCreateOperations:
                 )
 
             if reminders:
-                reminder_user_ids = [user_id]
-                reminder_user_ids.extend(aid for aid in attendee_ids or [] if aid != user_id)
+                reminder_user_ids = [organizer_id]
+                reminder_user_ids.extend(aid for aid in attendee_ids or [] if aid != organizer_id)
                 await self.events._create_reminder_rows(event, reminder_user_ids, reminders)
 
             await self.events._log_activity(event.id, user_id, "created")
@@ -198,7 +202,7 @@ class EventCreateOperations:
                 organization_id=organization_id,
                 event_id=event.id,
                 title=event.title,
-                recipient_ids=[aid for aid in attendee_ids or [] if aid != user_id],
+                recipient_ids=[aid for aid in attendee_ids or [] if aid != organizer_id],
                 kind=CalendarMailKind.INVITATION,
                 actor_user_id=user_id,
             )
@@ -263,6 +267,12 @@ class EventCreateOperations:
                 event_id=str(event.id),
             )
 
+        if event.arranged_by_id is not None:
+            # The grantor's open calendar learns about a booking made in their name.
+            await self.events._publish_attendee_access_change(
+                event, [event.organizer_id], ContentAccessAction.ACTED_ON_BEHALF
+            )
+
         invited = [
             attendee_id for attendee_id in staged.attendee_ids if attendee_id != event.owner_id
         ]
@@ -289,13 +299,15 @@ class EventCreateOperations:
                     event_id=str(event.id),
                 )
 
+        # The delegate who booked wrote the description, so the mention is theirs.
+        author_id = event.arranged_by_id or event.owner_id
         try:
             await self.events.emit_mention_notifications(
                 event,
-                event.owner_id,
+                author_id,
                 event.organization_id,
                 None,
-                {event.owner_id, *staged.attendee_ids},
+                {event.owner_id, author_id, *staged.attendee_ids},
             )
         except Exception:
             logger.opt(exception=True).warning(

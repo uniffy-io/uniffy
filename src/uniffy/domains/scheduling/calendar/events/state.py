@@ -39,10 +39,10 @@ def event_details_hidden(
     role: ContentRole | None,
     is_attendee: bool,
 ) -> bool:
-    """Private details stay limited to organizers, attendees, and editors."""
+    """Private details stay with the organizer, the delegate who booked, attendees, and editors."""
     if event.visibility != EventVisibility.PRIVATE:
         return False
-    if event.organizer_id == viewer_id or is_attendee:
+    if viewer_id in (event.organizer_id, event.arranged_by_id) or is_attendee:
         return False
     return not role_can_edit(role)
 

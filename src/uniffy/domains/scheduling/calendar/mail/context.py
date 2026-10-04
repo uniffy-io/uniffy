@@ -72,6 +72,7 @@ def build_context(
     organization_name: str,
     organizer_name: str,
     recipient_timezone: str | None,
+    arranger_name: str = "",
     attendee_names: Sequence[str] = (),
     respond: RespondLinks | None = None,
     changes: Sequence[str] = (),
@@ -86,6 +87,7 @@ def build_context(
         "organization_name": organization_name,
         "title": event.title,
         "organizer_name": organizer_name,
+        "arranger_name": arranger_name,
         "when": _format_when(event, start, zone),
         "when_short": start.strftime("%-d %b %H:%M")
         if not event.is_all_day

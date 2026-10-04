@@ -38,6 +38,10 @@ def _make_ops() -> tuple[CalendarEventOperations, list[EventActivity]]:
     ops.session = MagicMock()
     ops.session.add = added.append
     ops.session.flush = AsyncMock()
+    # No organizer row resolves, so no entry is attributed to a delegation.
+    no_row = MagicMock()
+    no_row.one_or_none.return_value = None
+    ops.session.execute = AsyncMock(return_value=no_row)
 
     return ops, added
 

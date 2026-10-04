@@ -85,6 +85,13 @@ class StagedAccessModeChange:
     new_effective_mode: AccessMode
 
 
+# Content an org admin may pull back from the whole organization; personal content
+# stays out of reach. Calendars are listed because the org decides who may share one
+# org-wide in the first place.
+ADMIN_RESTRICTABLE_TYPES = frozenset({ContentType.CALENDAR})
+ADMIN_RESTRICTION_NOTE = "Restricted by an organization admin"
+
+
 class ContentMembersOperations:
     """Canonical audited mutations for content membership and access policy."""
 
@@ -508,6 +515,66 @@ class ContentMembersOperations:
                 new_baseline_role,
             )
 
+        return await self._stage_access_mode_change(
+            actor_user_id=actor_user_id,
+            organization_id=organization_id,
+            content_type=content_type,
+            content_id=content_id,
+            content=content,
+            new_access_mode=new_access_mode,
+            new_baseline_role=new_baseline_role,
+            remove_members_on_narrow=remove_members_on_narrow,
+            note=note,
+        )
+
+    async def stage_admin_restriction(
+        self,
+        actor_user_id: UUID,
+        organization_id: UUID,
+        content_type: ContentType,
+        content_id: UUID,
+    ) -> StagedAccessModeChange:
+        """An org admin withdraws organization-wide access, keeping the named members.
+
+        The only admin write to an access policy. It can only remove reach: the target is
+        always EXPLICIT_MEMBERS from an effective OPEN_TO_ORG, it adds no member, and it
+        is limited to the content types in ``ADMIN_RESTRICTABLE_TYPES``.
+        """
+        if content_type not in ADMIN_RESTRICTABLE_TYPES:
+            raise PermissionDeniedError("restrict", content_type.value)
+        if not await self.permission_checker.is_org_admin(actor_user_id, organization_id):
+            raise PermissionDeniedError("restrict", content_type.value)
+        content = await self._load_content(organization_id, content_type, content_id)
+        effective = await self._resolve_effective_mode(
+            organization_id, content_type, content.access_mode
+        )
+        if effective != AccessMode.OPEN_TO_ORG:
+            raise ValidationError("access_mode", "Only an organization-wide item can be restricted")
+        return await self._stage_access_mode_change(
+            actor_user_id=actor_user_id,
+            organization_id=organization_id,
+            content_type=content_type,
+            content_id=content_id,
+            content=content,
+            new_access_mode=AccessMode.EXPLICIT_MEMBERS,
+            new_baseline_role=None,
+            remove_members_on_narrow=False,
+            note=ADMIN_RESTRICTION_NOTE,
+        )
+
+    async def _stage_access_mode_change(
+        self,
+        *,
+        actor_user_id: UUID,
+        organization_id: UUID,
+        content_type: ContentType,
+        content_id: UUID,
+        content,
+        new_access_mode: AccessMode | None,
+        new_baseline_role: ContentRole | None,
+        remove_members_on_narrow: bool,
+        note: str,
+    ) -> StagedAccessModeChange:
         removed_members: list[tuple[SubjectType, UUID]] = []
         if new_access_mode == AccessMode.OWNER_ONLY:
             member_rows = (

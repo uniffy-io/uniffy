@@ -53,6 +53,8 @@ class CalendarEventOperations(CalendarEventReader):
         super().__init__(session, _search_indexer=search_indexer)
         # Accepted realtime edits that description writes and occurrence copies include.
         self.buffer = buffer
+        # (master event, actor) -> the grantor the actor stands in for, per operation.
+        self.acting_for: dict[tuple[UUID, UUID], UUID | None] = {}
 
     async def create(
         self,
@@ -387,12 +389,14 @@ class CalendarEventOperations(CalendarEventReader):
         organization_id: UUID,
         event_id: UUID,
         status: AttendeeStatus,
+        on_behalf_of: UUID | None = None,
     ) -> bool:
         return await AttendeeOperations(self).update_attendee_status(
             user_id,
             organization_id,
             event_id,
             status,
+            on_behalf_of,
         )
 
     async def _expand_group_attendees(
@@ -453,6 +457,9 @@ class CalendarEventOperations(CalendarEventReader):
         field_id: str | None = None,
         previous_value: str | None = None,
         new_value: str | None = None,
+        on_behalf_of_id: UUID | None = None,
+        *,
+        infer_on_behalf: bool = True,
     ) -> EventActivity:
         return await EventActivityOperations(self)._log_activity(
             event_id,
@@ -461,6 +468,8 @@ class CalendarEventOperations(CalendarEventReader):
             field_id,
             previous_value,
             new_value,
+            on_behalf_of_id,
+            infer_on_behalf=infer_on_behalf,
         )
 
     async def _log_field_changes(

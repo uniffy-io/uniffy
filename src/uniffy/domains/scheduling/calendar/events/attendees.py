@@ -37,6 +37,7 @@ from uniffy.core.types import (
 )
 from uniffy.domains.chat.lifecycle import ChannelCallLifecycle
 from uniffy.domains.chat.rooms import RoomMembership, StagedRoomMembershipSync
+from uniffy.domains.scheduling.calendar.delegation.access import active_delegation
 from uniffy.domains.scheduling.calendar.mail.outbox import (
     CalendarMailKind,
     retire_pending_event_mail,
@@ -275,16 +276,29 @@ class AttendeeOperations:
         organization_id: UUID,
         event_id: UUID,
         status: AttendeeStatus,
+        on_behalf_of: UUID | None = None,
     ) -> bool:
-        """Update the current user's attendee status for an event."""
+        """Answer an invitation for the caller, or for a grantor as their calendar delegate."""
         event = await self.events._fetch_by_id(event_id, organization_id)
         if not event:
             raise NotFoundError("CalendarEvent", event_id)
 
+        respondent_id = user_id
+        responded_by_id: UUID | None = None
+        if on_behalf_of is not None and on_behalf_of != user_id:
+            if await active_delegation(self.session, organization_id, on_behalf_of, user_id) is None:
+                raise PermissionDeniedError("respond", "calendar event")
+            respondent_id = on_behalf_of
+            responded_by_id = user_id
+
         # The attendee row alone authorises nothing: removal leaves it behind,
         # so a response rides the same resolver as a read, where the invitation
-        # floor rechecks active membership.
-        await self.events._require_view(user_id, organization_id, event)
+        # floor rechecks active membership. A delegate answers only what the
+        # grantor could answer themselves.
+        await self.events._require_view(respondent_id, organization_id, event)
+        if responded_by_id is not None:
+            # A delegate blocked from the event cannot reach it through the grantor either.
+            await self.events._require_view(user_id, organization_id, event)
 
         if event.status == EventStatus.CANCELLED:
             raise ValidationError("event", "Cannot respond to a cancelled event")
@@ -293,27 +307,28 @@ class AttendeeOperations:
             select(EventAttendee).where(
                 and_(
                     EventAttendee.event_id == event_id,
-                    EventAttendee.user_id == user_id,
+                    EventAttendee.user_id == respondent_id,
                 )
             )
         )
         attendee = result.scalar_one_or_none()
         if not attendee:
-            raise NotFoundError("EventAttendee", user_id)
+            raise NotFoundError("EventAttendee", respondent_id)
 
         old_status = attendee.status
         attendee.status = status
         attendee.responded_at = datetime.now(UTC)
         attendee.updated_at = datetime.now(UTC)
+        attendee.responded_by_id = responded_by_id
 
         if status == AttendeeStatus.DECLINED:
-            await self.events._delete_reminder_rows(event_id, user_ids=[user_id])
+            await self.events._delete_reminder_rows(event_id, user_ids=[respondent_id])
         elif (
             old_status == AttendeeStatus.DECLINED
             and status in (AttendeeStatus.ACCEPTED, AttendeeStatus.TENTATIVE)
             and event.reminders
         ):
-            await self.events._create_reminder_rows(event, [user_id], event.reminders)
+            await self.events._create_reminder_rows(event, [respondent_id], event.reminders)
 
         if old_status != status:
             await self.events._log_activity(
@@ -323,18 +338,28 @@ class AttendeeOperations:
                 field_id="status",
                 previous_value=old_status.value,
                 new_value=status.value,
+                on_behalf_of_id=respondent_id if responded_by_id else None,
+                infer_on_behalf=False,
             )
 
         await self.session.commit()
 
-        if event.organizer_id != user_id:
+        if responded_by_id is not None:
+            await self.events._publish_attendee_access_change(
+                event, [respondent_id], ContentAccessAction.ACTED_ON_BEHALF
+            )
+
+        if event.organizer_id != respondent_id:
             status_label = status.value.lower()
+            title = f"RSVP {status_label}: {event.title}"
+            if responded_by_id is not None:
+                title = f"RSVP {status_label} (by a delegate): {event.title}"
             await emit_notification(
                 NotificationEvent(
                     notification_type=NotificationType.CALENDAR_RESPONSE,
                     organization_id=organization_id,
                     actor_id=user_id,
-                    title=f"RSVP {status_label}: {event.title}",
+                    title=title,
                     source_urn=build_content_urn(ContentType.CALENDAR_EVENT, event.id),
                     target_user_ids=[event.organizer_id],
                 )

@@ -47,6 +47,11 @@ class EventAttendee(SQLModel, table=True):
         sa_column=Column(ForeignKey("login_groups.id", ondelete="SET NULL"), nullable=True),
     )
     responded_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True)))
+    # Set when a delegate answered for this attendee.
+    responded_by_id: UUID | None = Field(
+        default=None,
+        sa_column=Column(ForeignKey("login_users.id", ondelete="SET NULL"), nullable=True),
+    )
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
         sa_column=Column(DateTime(timezone=True), nullable=False),

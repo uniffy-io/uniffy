@@ -3,7 +3,7 @@
 from datetime import UTC, datetime
 from uuid import UUID
 
-from sqlalchemy import Column, DateTime
+from sqlalchemy import Column, DateTime, ForeignKey
 from sqlmodel import Field, SQLModel
 
 from uniffy.core.types import generate_id
@@ -17,6 +17,11 @@ class EventActivity(SQLModel, table=True):
     id: UUID = Field(default_factory=generate_id, primary_key=True, nullable=False)
     event_id: UUID = Field(foreign_key="calendar_events.id", nullable=False, index=True)
     actor_id: UUID = Field(foreign_key="login_users.id", nullable=False)
+    # The person the actor stood in for as their calendar delegate.
+    on_behalf_of_id: UUID | None = Field(
+        default=None,
+        sa_column=Column(ForeignKey("login_users.id", ondelete="SET NULL"), nullable=True),
+    )
     action: str = Field(max_length=50, nullable=False)
     field_id: str | None = Field(default=None, max_length=100)
     previous_value: str | None = Field(default=None)

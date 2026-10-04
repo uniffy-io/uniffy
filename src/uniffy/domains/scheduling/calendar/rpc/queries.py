@@ -21,6 +21,7 @@ from uniffy.domains.permissions.access import ResourceAccessResolver, ResourceKe
 from uniffy.domains.scheduling.calendar import queries
 from uniffy.domains.scheduling.calendar.calendars.reader import CalendarReader
 from uniffy.domains.scheduling.calendar.converters import event_to_proto
+from uniffy.domains.scheduling.calendar.delegation.access import private_detail_stand_ins
 from uniffy.domains.scheduling.calendar.events.reader import CalendarEventReader
 from uniffy.domains.scheduling.calendar.events.state import event_details_hidden
 from uniffy.domains.scheduling.calendar.rpc.support import (
@@ -54,6 +55,7 @@ class EventQueryHandlers:
         try:
             async with open_session() as session:
                 operations = CalendarEventReader(session)
+                stand_ins = await private_detail_stand_ins(session, user_id, organization_id)
                 event, attendees = await operations.get_event_with_attendees(
                     user_id, organization_id, request.event_id
                 )
@@ -61,6 +63,7 @@ class EventQueryHandlers:
                 room_info = await get_event_room_info(session, event_id)
                 tags_by_urn = await hydrate_event_tags(session, organization_id, [event_id])
                 user_role = await operations._resolve_role(user_id, organization_id, event)
+                arrangers = await queries.arranger_names(session, [event])
                 return GetEventResponse(
                     event=event_to_proto(
                         event,
@@ -70,11 +73,12 @@ class EventQueryHandlers:
                             [],
                         ),
                         user_role=user_role,
+                        arranged_by_name=arrangers.get(event.arranged_by_id, ""),
                         details_hidden=event_details_hidden(
                             event,
                             user_id,
                             user_role,
-                            any(attendee.user_id == user_id for attendee, _ in attendees),
+                            any(attendee.user_id in stand_ins for attendee, _ in attendees),
                         ),
                         **room_info,
                     )
@@ -175,6 +179,8 @@ class EventQueryHandlers:
                 )
                 attendees_by_event = await queries.get_attendees_for_events(session, event_ids)
                 room_info_by_event = await get_room_info_for_events(session, event_ids)
+                stand_ins = await private_detail_stand_ins(session, user_id, organization_id)
+                arrangers = await queries.arranger_names(session, events)
 
                 proto_events = []
                 for event in events:
@@ -194,11 +200,12 @@ class EventQueryHandlers:
                                 [],
                             ),
                             user_role=user_role,
+                            arranged_by_name=arrangers.get(event.arranged_by_id, ""),
                             details_hidden=event_details_hidden(
                                 event,
                                 user_id,
                                 user_role,
-                                any(attendee.user_id == user_id for attendee, _ in attendees),
+                                any(attendee.user_id in stand_ins for attendee, _ in attendees),
                             ),
                             **room_info,
                         )
@@ -273,6 +280,8 @@ class EventQueryHandlers:
                 )
                 attendees_by_event = await queries.get_attendees_for_events(session, master_ids)
                 room_info_by_event = await get_room_info_for_events(session, master_ids)
+                stand_ins = await private_detail_stand_ins(session, user_id, organization_id)
+                arrangers = await queries.arranger_names(session, events)
 
                 proto_events = []
                 for event in events:
@@ -291,11 +300,12 @@ class EventQueryHandlers:
                                 [],
                             ),
                             user_role=user_role,
+                            arranged_by_name=arrangers.get(event.arranged_by_id, ""),
                             details_hidden=event_details_hidden(
                                 event,
                                 user_id,
                                 user_role,
-                                any(attendee.user_id == user_id for attendee, _ in attendees),
+                                any(attendee.user_id in stand_ins for attendee, _ in attendees),
                             ),
                             **room_info_by_event.get(real_id, {}),
                         )

@@ -1,9 +1,11 @@
 from uniffy_proto.cal.v1.calendar_pb import Calendar as ProtoCalendar
+from uniffy_proto.cal.v1.calendar_pb import CalendarDelegationLevel as ProtoDelegationLevel
 from uniffy_proto.cal.v1.calendar_pb import CalendarListSection as ProtoCalendarListSection
 from uniffy_proto.cal.v1.calendar_pb import CalendarType as ProtoCalendarType
 
 from uniffy.core.converters.common_proto import access_mode_to_proto, content_role_to_proto
 from uniffy.core.converters.proto import datetime_to_timestamp
+from uniffy.core.models.calendar.delegation import CalendarDelegationLevel
 from uniffy.core.types import AccessMode, CalendarType, ContentRole
 from uniffy.domains.scheduling.calendar.calendars.reader import CalendarListing, CalendarSection
 
@@ -19,7 +21,15 @@ _SECTION_TO_PROTO: dict[CalendarSection, ProtoCalendarListSection] = {
     CalendarSection.MINE: ProtoCalendarListSection.MINE,
     CalendarSection.SHARED: ProtoCalendarListSection.SHARED,
     CalendarSection.ORGANIZATION: ProtoCalendarListSection.ORGANIZATION,
+    CalendarSection.DELEGATED: ProtoCalendarListSection.DELEGATED,
 }
+
+
+DELEGATION_LEVEL_TO_PROTO: dict[CalendarDelegationLevel, ProtoDelegationLevel] = {
+    CalendarDelegationLevel.EVENTS: ProtoDelegationLevel.EVENTS,
+    CalendarDelegationLevel.EVENTS_AND_PRIVATE: ProtoDelegationLevel.EVENTS_AND_PRIVATE,
+}
+DELEGATION_LEVEL_FROM_PROTO = {value: key for key, value in DELEGATION_LEVEL_TO_PROTO.items()}
 
 
 def calendar_type_from_proto(value: ProtoCalendarType) -> CalendarType:
@@ -50,4 +60,6 @@ def calendar_to_proto(
         message.baseline_role = content_role_to_proto(calendar.baseline_role)
     if user_role is not None:
         message.user_role = content_role_to_proto(user_role)
+    if listing.delegation_level is not None:
+        message.delegation_level = DELEGATION_LEVEL_TO_PROTO[listing.delegation_level]
     return message
