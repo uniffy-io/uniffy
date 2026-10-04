@@ -19,44 +19,51 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	CalendarService_ListCalendars_FullMethodName          = "/cal.v1.CalendarService/ListCalendars"
-	CalendarService_GetCalendar_FullMethodName            = "/cal.v1.CalendarService/GetCalendar"
-	CalendarService_CreateCalendar_FullMethodName         = "/cal.v1.CalendarService/CreateCalendar"
-	CalendarService_UpdateCalendar_FullMethodName         = "/cal.v1.CalendarService/UpdateCalendar"
-	CalendarService_DeleteCalendar_FullMethodName         = "/cal.v1.CalendarService/DeleteCalendar"
-	CalendarService_SetCalendarVisibility_FullMethodName  = "/cal.v1.CalendarService/SetCalendarVisibility"
-	CalendarService_GetCalendarPolicy_FullMethodName      = "/cal.v1.CalendarService/GetCalendarPolicy"
-	CalendarService_UpdateCalendarPolicy_FullMethodName   = "/cal.v1.CalendarService/UpdateCalendarPolicy"
-	CalendarService_CreateEvent_FullMethodName            = "/cal.v1.CalendarService/CreateEvent"
-	CalendarService_GetEvent_FullMethodName               = "/cal.v1.CalendarService/GetEvent"
-	CalendarService_UpdateEvent_FullMethodName            = "/cal.v1.CalendarService/UpdateEvent"
-	CalendarService_DeleteEvent_FullMethodName            = "/cal.v1.CalendarService/DeleteEvent"
-	CalendarService_ListEvents_FullMethodName             = "/cal.v1.CalendarService/ListEvents"
-	CalendarService_GetEventsInRange_FullMethodName       = "/cal.v1.CalendarService/GetEventsInRange"
-	CalendarService_ExportEvent_FullMethodName            = "/cal.v1.CalendarService/ExportEvent"
-	CalendarService_ExportCalendar_FullMethodName         = "/cal.v1.CalendarService/ExportCalendar"
-	CalendarService_PreviewCalendarImport_FullMethodName  = "/cal.v1.CalendarService/PreviewCalendarImport"
-	CalendarService_ApplyCalendarImport_FullMethodName    = "/cal.v1.CalendarService/ApplyCalendarImport"
-	CalendarService_GetCalendarFeedUrl_FullMethodName     = "/cal.v1.CalendarService/GetCalendarFeedUrl"
-	CalendarService_RegenerateCalendarFeed_FullMethodName = "/cal.v1.CalendarService/RegenerateCalendarFeed"
-	CalendarService_RevokeCalendarFeed_FullMethodName     = "/cal.v1.CalendarService/RevokeCalendarFeed"
-	CalendarService_CreateCategory_FullMethodName         = "/cal.v1.CalendarService/CreateCategory"
-	CalendarService_GetCategory_FullMethodName            = "/cal.v1.CalendarService/GetCategory"
-	CalendarService_UpdateCategory_FullMethodName         = "/cal.v1.CalendarService/UpdateCategory"
-	CalendarService_DeleteCategory_FullMethodName         = "/cal.v1.CalendarService/DeleteCategory"
-	CalendarService_ListCategories_FullMethodName         = "/cal.v1.CalendarService/ListCategories"
-	CalendarService_UpdateAttendeeStatus_FullMethodName   = "/cal.v1.CalendarService/UpdateAttendeeStatus"
-	CalendarService_AddAttendees_FullMethodName           = "/cal.v1.CalendarService/AddAttendees"
-	CalendarService_UpdateAttendeeRole_FullMethodName     = "/cal.v1.CalendarService/UpdateAttendeeRole"
-	CalendarService_RemoveAttendees_FullMethodName        = "/cal.v1.CalendarService/RemoveAttendees"
-	CalendarService_GetFreeBusy_FullMethodName            = "/cal.v1.CalendarService/GetFreeBusy"
-	CalendarService_SuggestMeetingTimes_FullMethodName    = "/cal.v1.CalendarService/SuggestMeetingTimes"
-	CalendarService_ListEventActivities_FullMethodName    = "/cal.v1.CalendarService/ListEventActivities"
-	CalendarService_CreateEventTemplate_FullMethodName    = "/cal.v1.CalendarService/CreateEventTemplate"
-	CalendarService_GetEventTemplate_FullMethodName       = "/cal.v1.CalendarService/GetEventTemplate"
-	CalendarService_UpdateEventTemplate_FullMethodName    = "/cal.v1.CalendarService/UpdateEventTemplate"
-	CalendarService_DeleteEventTemplate_FullMethodName    = "/cal.v1.CalendarService/DeleteEventTemplate"
-	CalendarService_ListEventTemplates_FullMethodName     = "/cal.v1.CalendarService/ListEventTemplates"
+	CalendarService_ListCalendars_FullMethodName                 = "/cal.v1.CalendarService/ListCalendars"
+	CalendarService_GetCalendar_FullMethodName                   = "/cal.v1.CalendarService/GetCalendar"
+	CalendarService_CreateCalendar_FullMethodName                = "/cal.v1.CalendarService/CreateCalendar"
+	CalendarService_UpdateCalendar_FullMethodName                = "/cal.v1.CalendarService/UpdateCalendar"
+	CalendarService_DeleteCalendar_FullMethodName                = "/cal.v1.CalendarService/DeleteCalendar"
+	CalendarService_SetCalendarVisibility_FullMethodName         = "/cal.v1.CalendarService/SetCalendarVisibility"
+	CalendarService_GetCalendarPolicy_FullMethodName             = "/cal.v1.CalendarService/GetCalendarPolicy"
+	CalendarService_UpdateCalendarPolicy_FullMethodName          = "/cal.v1.CalendarService/UpdateCalendarPolicy"
+	CalendarService_ListMyCalendarDelegations_FullMethodName     = "/cal.v1.CalendarService/ListMyCalendarDelegations"
+	CalendarService_GrantCalendarDelegation_FullMethodName       = "/cal.v1.CalendarService/GrantCalendarDelegation"
+	CalendarService_RevokeCalendarDelegation_FullMethodName      = "/cal.v1.CalendarService/RevokeCalendarDelegation"
+	CalendarService_ListOrgCalendarDelegations_FullMethodName    = "/cal.v1.CalendarService/ListOrgCalendarDelegations"
+	CalendarService_AdminRevokeCalendarDelegation_FullMethodName = "/cal.v1.CalendarService/AdminRevokeCalendarDelegation"
+	CalendarService_ListOrgSharedCalendars_FullMethodName        = "/cal.v1.CalendarService/ListOrgSharedCalendars"
+	CalendarService_RestrictCalendarToMembers_FullMethodName     = "/cal.v1.CalendarService/RestrictCalendarToMembers"
+	CalendarService_CreateEvent_FullMethodName                   = "/cal.v1.CalendarService/CreateEvent"
+	CalendarService_GetEvent_FullMethodName                      = "/cal.v1.CalendarService/GetEvent"
+	CalendarService_UpdateEvent_FullMethodName                   = "/cal.v1.CalendarService/UpdateEvent"
+	CalendarService_DeleteEvent_FullMethodName                   = "/cal.v1.CalendarService/DeleteEvent"
+	CalendarService_ListEvents_FullMethodName                    = "/cal.v1.CalendarService/ListEvents"
+	CalendarService_GetEventsInRange_FullMethodName              = "/cal.v1.CalendarService/GetEventsInRange"
+	CalendarService_ExportEvent_FullMethodName                   = "/cal.v1.CalendarService/ExportEvent"
+	CalendarService_ExportCalendar_FullMethodName                = "/cal.v1.CalendarService/ExportCalendar"
+	CalendarService_PreviewCalendarImport_FullMethodName         = "/cal.v1.CalendarService/PreviewCalendarImport"
+	CalendarService_ApplyCalendarImport_FullMethodName           = "/cal.v1.CalendarService/ApplyCalendarImport"
+	CalendarService_GetCalendarFeedUrl_FullMethodName            = "/cal.v1.CalendarService/GetCalendarFeedUrl"
+	CalendarService_RegenerateCalendarFeed_FullMethodName        = "/cal.v1.CalendarService/RegenerateCalendarFeed"
+	CalendarService_RevokeCalendarFeed_FullMethodName            = "/cal.v1.CalendarService/RevokeCalendarFeed"
+	CalendarService_CreateCategory_FullMethodName                = "/cal.v1.CalendarService/CreateCategory"
+	CalendarService_GetCategory_FullMethodName                   = "/cal.v1.CalendarService/GetCategory"
+	CalendarService_UpdateCategory_FullMethodName                = "/cal.v1.CalendarService/UpdateCategory"
+	CalendarService_DeleteCategory_FullMethodName                = "/cal.v1.CalendarService/DeleteCategory"
+	CalendarService_ListCategories_FullMethodName                = "/cal.v1.CalendarService/ListCategories"
+	CalendarService_UpdateAttendeeStatus_FullMethodName          = "/cal.v1.CalendarService/UpdateAttendeeStatus"
+	CalendarService_AddAttendees_FullMethodName                  = "/cal.v1.CalendarService/AddAttendees"
+	CalendarService_UpdateAttendeeRole_FullMethodName            = "/cal.v1.CalendarService/UpdateAttendeeRole"
+	CalendarService_RemoveAttendees_FullMethodName               = "/cal.v1.CalendarService/RemoveAttendees"
+	CalendarService_GetFreeBusy_FullMethodName                   = "/cal.v1.CalendarService/GetFreeBusy"
+	CalendarService_SuggestMeetingTimes_FullMethodName           = "/cal.v1.CalendarService/SuggestMeetingTimes"
+	CalendarService_ListEventActivities_FullMethodName           = "/cal.v1.CalendarService/ListEventActivities"
+	CalendarService_CreateEventTemplate_FullMethodName           = "/cal.v1.CalendarService/CreateEventTemplate"
+	CalendarService_GetEventTemplate_FullMethodName              = "/cal.v1.CalendarService/GetEventTemplate"
+	CalendarService_UpdateEventTemplate_FullMethodName           = "/cal.v1.CalendarService/UpdateEventTemplate"
+	CalendarService_DeleteEventTemplate_FullMethodName           = "/cal.v1.CalendarService/DeleteEventTemplate"
+	CalendarService_ListEventTemplates_FullMethodName            = "/cal.v1.CalendarService/ListEventTemplates"
 )
 
 // CalendarServiceClient is the client API for CalendarService service.
@@ -81,6 +88,20 @@ type CalendarServiceClient interface {
 	GetCalendarPolicy(ctx context.Context, in *GetCalendarPolicyRequest, opts ...grpc.CallOption) (*GetCalendarPolicyResponse, error)
 	// Change the organization's calendar policy; org admins only
 	UpdateCalendarPolicy(ctx context.Context, in *UpdateCalendarPolicyRequest, opts ...grpc.CallOption) (*UpdateCalendarPolicyResponse, error)
+	// Delegations the caller has granted and those granted to the caller
+	ListMyCalendarDelegations(ctx context.Context, in *ListMyCalendarDelegationsRequest, opts ...grpc.CallOption) (*ListMyCalendarDelegationsResponse, error)
+	// Let a colleague act on the caller's personal calendars, or change their level
+	GrantCalendarDelegation(ctx context.Context, in *GrantCalendarDelegationRequest, opts ...grpc.CallOption) (*GrantCalendarDelegationResponse, error)
+	// End a delegation; the grantor or the delegate may
+	RevokeCalendarDelegation(ctx context.Context, in *RevokeCalendarDelegationRequest, opts ...grpc.CallOption) (*RevokeCalendarDelegationResponse, error)
+	// Every delegation in the organization, newest first
+	ListOrgCalendarDelegations(ctx context.Context, in *ListOrgCalendarDelegationsRequest, opts ...grpc.CallOption) (*ListOrgCalendarDelegationsResponse, error)
+	// End any delegation in the organization
+	AdminRevokeCalendarDelegation(ctx context.Context, in *AdminRevokeCalendarDelegationRequest, opts ...grpc.CallOption) (*AdminRevokeCalendarDelegationResponse, error)
+	// Calendars shared beyond their owner; metadata only, never events
+	ListOrgSharedCalendars(ctx context.Context, in *ListOrgSharedCalendarsRequest, opts ...grpc.CallOption) (*ListOrgSharedCalendarsResponse, error)
+	// Withdraw organization-wide access from a calendar, keeping its named members
+	RestrictCalendarToMembers(ctx context.Context, in *RestrictCalendarToMembersRequest, opts ...grpc.CallOption) (*RestrictCalendarToMembersResponse, error)
 	// Create a new calendar event
 	CreateEvent(ctx context.Context, in *CreateEventRequest, opts ...grpc.CallOption) (*CreateEventResponse, error)
 	// Get an event by ID
@@ -227,6 +248,76 @@ func (c *calendarServiceClient) UpdateCalendarPolicy(ctx context.Context, in *Up
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(UpdateCalendarPolicyResponse)
 	err := c.cc.Invoke(ctx, CalendarService_UpdateCalendarPolicy_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *calendarServiceClient) ListMyCalendarDelegations(ctx context.Context, in *ListMyCalendarDelegationsRequest, opts ...grpc.CallOption) (*ListMyCalendarDelegationsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListMyCalendarDelegationsResponse)
+	err := c.cc.Invoke(ctx, CalendarService_ListMyCalendarDelegations_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *calendarServiceClient) GrantCalendarDelegation(ctx context.Context, in *GrantCalendarDelegationRequest, opts ...grpc.CallOption) (*GrantCalendarDelegationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GrantCalendarDelegationResponse)
+	err := c.cc.Invoke(ctx, CalendarService_GrantCalendarDelegation_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *calendarServiceClient) RevokeCalendarDelegation(ctx context.Context, in *RevokeCalendarDelegationRequest, opts ...grpc.CallOption) (*RevokeCalendarDelegationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RevokeCalendarDelegationResponse)
+	err := c.cc.Invoke(ctx, CalendarService_RevokeCalendarDelegation_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *calendarServiceClient) ListOrgCalendarDelegations(ctx context.Context, in *ListOrgCalendarDelegationsRequest, opts ...grpc.CallOption) (*ListOrgCalendarDelegationsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListOrgCalendarDelegationsResponse)
+	err := c.cc.Invoke(ctx, CalendarService_ListOrgCalendarDelegations_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *calendarServiceClient) AdminRevokeCalendarDelegation(ctx context.Context, in *AdminRevokeCalendarDelegationRequest, opts ...grpc.CallOption) (*AdminRevokeCalendarDelegationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AdminRevokeCalendarDelegationResponse)
+	err := c.cc.Invoke(ctx, CalendarService_AdminRevokeCalendarDelegation_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *calendarServiceClient) ListOrgSharedCalendars(ctx context.Context, in *ListOrgSharedCalendarsRequest, opts ...grpc.CallOption) (*ListOrgSharedCalendarsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListOrgSharedCalendarsResponse)
+	err := c.cc.Invoke(ctx, CalendarService_ListOrgSharedCalendars_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *calendarServiceClient) RestrictCalendarToMembers(ctx context.Context, in *RestrictCalendarToMembersRequest, opts ...grpc.CallOption) (*RestrictCalendarToMembersResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RestrictCalendarToMembersResponse)
+	err := c.cc.Invoke(ctx, CalendarService_RestrictCalendarToMembers_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -555,6 +646,20 @@ type CalendarServiceServer interface {
 	GetCalendarPolicy(context.Context, *GetCalendarPolicyRequest) (*GetCalendarPolicyResponse, error)
 	// Change the organization's calendar policy; org admins only
 	UpdateCalendarPolicy(context.Context, *UpdateCalendarPolicyRequest) (*UpdateCalendarPolicyResponse, error)
+	// Delegations the caller has granted and those granted to the caller
+	ListMyCalendarDelegations(context.Context, *ListMyCalendarDelegationsRequest) (*ListMyCalendarDelegationsResponse, error)
+	// Let a colleague act on the caller's personal calendars, or change their level
+	GrantCalendarDelegation(context.Context, *GrantCalendarDelegationRequest) (*GrantCalendarDelegationResponse, error)
+	// End a delegation; the grantor or the delegate may
+	RevokeCalendarDelegation(context.Context, *RevokeCalendarDelegationRequest) (*RevokeCalendarDelegationResponse, error)
+	// Every delegation in the organization, newest first
+	ListOrgCalendarDelegations(context.Context, *ListOrgCalendarDelegationsRequest) (*ListOrgCalendarDelegationsResponse, error)
+	// End any delegation in the organization
+	AdminRevokeCalendarDelegation(context.Context, *AdminRevokeCalendarDelegationRequest) (*AdminRevokeCalendarDelegationResponse, error)
+	// Calendars shared beyond their owner; metadata only, never events
+	ListOrgSharedCalendars(context.Context, *ListOrgSharedCalendarsRequest) (*ListOrgSharedCalendarsResponse, error)
+	// Withdraw organization-wide access from a calendar, keeping its named members
+	RestrictCalendarToMembers(context.Context, *RestrictCalendarToMembersRequest) (*RestrictCalendarToMembersResponse, error)
 	// Create a new calendar event
 	CreateEvent(context.Context, *CreateEventRequest) (*CreateEventResponse, error)
 	// Get an event by ID
@@ -650,6 +755,27 @@ func (UnimplementedCalendarServiceServer) GetCalendarPolicy(context.Context, *Ge
 }
 func (UnimplementedCalendarServiceServer) UpdateCalendarPolicy(context.Context, *UpdateCalendarPolicyRequest) (*UpdateCalendarPolicyResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateCalendarPolicy not implemented")
+}
+func (UnimplementedCalendarServiceServer) ListMyCalendarDelegations(context.Context, *ListMyCalendarDelegationsRequest) (*ListMyCalendarDelegationsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListMyCalendarDelegations not implemented")
+}
+func (UnimplementedCalendarServiceServer) GrantCalendarDelegation(context.Context, *GrantCalendarDelegationRequest) (*GrantCalendarDelegationResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GrantCalendarDelegation not implemented")
+}
+func (UnimplementedCalendarServiceServer) RevokeCalendarDelegation(context.Context, *RevokeCalendarDelegationRequest) (*RevokeCalendarDelegationResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RevokeCalendarDelegation not implemented")
+}
+func (UnimplementedCalendarServiceServer) ListOrgCalendarDelegations(context.Context, *ListOrgCalendarDelegationsRequest) (*ListOrgCalendarDelegationsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListOrgCalendarDelegations not implemented")
+}
+func (UnimplementedCalendarServiceServer) AdminRevokeCalendarDelegation(context.Context, *AdminRevokeCalendarDelegationRequest) (*AdminRevokeCalendarDelegationResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method AdminRevokeCalendarDelegation not implemented")
+}
+func (UnimplementedCalendarServiceServer) ListOrgSharedCalendars(context.Context, *ListOrgSharedCalendarsRequest) (*ListOrgSharedCalendarsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListOrgSharedCalendars not implemented")
+}
+func (UnimplementedCalendarServiceServer) RestrictCalendarToMembers(context.Context, *RestrictCalendarToMembersRequest) (*RestrictCalendarToMembersResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RestrictCalendarToMembers not implemented")
 }
 func (UnimplementedCalendarServiceServer) CreateEvent(context.Context, *CreateEventRequest) (*CreateEventResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateEvent not implemented")
@@ -902,6 +1028,132 @@ func _CalendarService_UpdateCalendarPolicy_Handler(srv interface{}, ctx context.
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(CalendarServiceServer).UpdateCalendarPolicy(ctx, req.(*UpdateCalendarPolicyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CalendarService_ListMyCalendarDelegations_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListMyCalendarDelegationsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CalendarServiceServer).ListMyCalendarDelegations(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CalendarService_ListMyCalendarDelegations_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CalendarServiceServer).ListMyCalendarDelegations(ctx, req.(*ListMyCalendarDelegationsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CalendarService_GrantCalendarDelegation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GrantCalendarDelegationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CalendarServiceServer).GrantCalendarDelegation(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CalendarService_GrantCalendarDelegation_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CalendarServiceServer).GrantCalendarDelegation(ctx, req.(*GrantCalendarDelegationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CalendarService_RevokeCalendarDelegation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RevokeCalendarDelegationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CalendarServiceServer).RevokeCalendarDelegation(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CalendarService_RevokeCalendarDelegation_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CalendarServiceServer).RevokeCalendarDelegation(ctx, req.(*RevokeCalendarDelegationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CalendarService_ListOrgCalendarDelegations_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListOrgCalendarDelegationsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CalendarServiceServer).ListOrgCalendarDelegations(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CalendarService_ListOrgCalendarDelegations_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CalendarServiceServer).ListOrgCalendarDelegations(ctx, req.(*ListOrgCalendarDelegationsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CalendarService_AdminRevokeCalendarDelegation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AdminRevokeCalendarDelegationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CalendarServiceServer).AdminRevokeCalendarDelegation(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CalendarService_AdminRevokeCalendarDelegation_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CalendarServiceServer).AdminRevokeCalendarDelegation(ctx, req.(*AdminRevokeCalendarDelegationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CalendarService_ListOrgSharedCalendars_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListOrgSharedCalendarsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CalendarServiceServer).ListOrgSharedCalendars(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CalendarService_ListOrgSharedCalendars_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CalendarServiceServer).ListOrgSharedCalendars(ctx, req.(*ListOrgSharedCalendarsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CalendarService_RestrictCalendarToMembers_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RestrictCalendarToMembersRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CalendarServiceServer).RestrictCalendarToMembers(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CalendarService_RestrictCalendarToMembers_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CalendarServiceServer).RestrictCalendarToMembers(ctx, req.(*RestrictCalendarToMembersRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1484,6 +1736,34 @@ var CalendarService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UpdateCalendarPolicy",
 			Handler:    _CalendarService_UpdateCalendarPolicy_Handler,
+		},
+		{
+			MethodName: "ListMyCalendarDelegations",
+			Handler:    _CalendarService_ListMyCalendarDelegations_Handler,
+		},
+		{
+			MethodName: "GrantCalendarDelegation",
+			Handler:    _CalendarService_GrantCalendarDelegation_Handler,
+		},
+		{
+			MethodName: "RevokeCalendarDelegation",
+			Handler:    _CalendarService_RevokeCalendarDelegation_Handler,
+		},
+		{
+			MethodName: "ListOrgCalendarDelegations",
+			Handler:    _CalendarService_ListOrgCalendarDelegations_Handler,
+		},
+		{
+			MethodName: "AdminRevokeCalendarDelegation",
+			Handler:    _CalendarService_AdminRevokeCalendarDelegation_Handler,
+		},
+		{
+			MethodName: "ListOrgSharedCalendars",
+			Handler:    _CalendarService_ListOrgSharedCalendars_Handler,
+		},
+		{
+			MethodName: "RestrictCalendarToMembers",
+			Handler:    _CalendarService_RestrictCalendarToMembers_Handler,
 		},
 		{
 			MethodName: "CreateEvent",
