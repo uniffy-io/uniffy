@@ -1,23 +1,30 @@
 # Integration tests
 
-Tests that need something running behind them. Local-only: CI provisions no
-services, so the unit runner targets `src/uniffy/tests/unit/` and never
-collects this tree. Run these deliberately.
+Tests that need running services. GitHub Actions runs every suite except
+`agents/providers/`, with PostgreSQL, Valkey, RustFS and FFmpeg provisioned for
+the job. Unit tests run separately.
+
+Application, migration and media suites run in parallel CI jobs. Migration
+tests use four pytest workers, each with isolated scratch databases. Image
+builds wait for every integration job to pass. Each job uploads its own JUnit
+report and prints the ten slowest tests.
 
 ## Layout
 
 `{area}/{suite}/`. The area says whose contract is under test, the suite says
-what has to be running. Each suite owns its `conftest.py`; this folder's only
-loads the repo-root `.env`.
+what has to be running. Each suite owns its `conftest.py`; this folder loads
+the repo-root `.env` and runs migration tests before the other suites.
 
 | Suite | Needs | Covers |
 |---|---|---|
 | `agents/providers/` | A paid API key per provider | Anthropic, OpenAI, Google, OpenRouter and xAI: tool round trips and the deferred tool-loading contract |
-| `internal/database/` | Postgres | Integrations-slice security: `OrgCipher` round trips, cross-org isolation, unique constraints, admin-gate ordering, and what an error string leaks |
+| `internal/database/` | Postgres; playback tests also need S3 storage and FFmpeg | Transactions, constraints, content queries, encryption, notifications and file lifecycle |
 | `internal/migrations/` | Postgres, plus rights to `CREATE DATABASE` | The whole Alembic chain applied to an empty database: reaches head, builds every table the models declare, and survives a second pass |
+| `internal/media/` | Valkey, S3 storage, FFmpeg and fixture encoders | Queue admission, video conversion, thumbnails and object range reads |
+| `access/`, `chat/`, `directory/people/` | Postgres | Content access, chat behavior and directory queries |
 
-`internal/migrations/` is the one that makes wiring CI worth it. Every other
-check runs against a database that is already at head, where `upgrade head`
+`internal/migrations/` checks fresh installs. Other database suites run
+against a database that is already at head, where `upgrade head`
 does nothing and reports success; that suite creates a scratch database per
 test so a broken or missing migration fails before a deploy finds it. The
 static half of the same question (one head, no duplicate ids, no dangling
@@ -28,10 +35,10 @@ New suites go under the matching area (`internal/valkey/`,
 `internal/meilisearch/`, `agents/embeddings/`) rather than growing an
 existing one.
 
-**A suite whose service is absent skips rather than fails.** `providers/`
-skips per missing key, `database/` skips whole when nothing answers on
-`DATABASE_URL`. A run with nothing up reports skips, not a wall of
-connection errors.
+Provider tests skip missing keys. Database suites can skip when PostgreSQL is
+unavailable locally. CI requires healthy services and successful migrations;
+`REQUIRE_DATABASE_TESTS=1` also makes access and internal database fixture
+failures fatal. Media tests require working storage and native tools.
 
 ## Cost
 
@@ -44,6 +51,12 @@ mean one:
 ./manage.py test -s integration                          # everything
 uv run pytest src/uniffy/tests/integration/internal/     # free half
 uv run pytest src/uniffy/tests/integration/agents/ -k anthropic -v
+```
+
+Run the same selection as CI, including access, chat and directory suites:
+
+```bash
+uv run pytest src/uniffy/tests/integration/ --ignore=src/uniffy/tests/integration/agents/providers/
 ```
 
 ## Running

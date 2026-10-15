@@ -1,10 +1,4 @@
-"""A scratch database per test, so migrations run against something empty.
-
-Running `upgrade head` on the dev database proves nothing: it is already at
-head, so Alembic does no work and reports success. The only way to know the
-chain applies is to apply it to an empty database, which is what this fixture
-provides.
-"""
+"""Isolated empty databases exercise the migration chain from scratch."""
 
 from collections.abc import Iterator
 
@@ -32,12 +26,8 @@ def database_reachable() -> None:
 
 @pytest.fixture
 def scratch_database(database_reachable, monkeypatch: pytest.MonkeyPatch) -> Iterator[str]:
-    """Create an empty database, point POSTGRES_DB at it, drop it after.
-
-    Pointing the env var rather than passing a URL means the code under test
-    resolves its own connection exactly as it does on boot.
-    """
-    name = f"uniffy_migtest_{generate_id().hex[:12]}"
+    """Use the application's database configuration for each isolated migration run."""
+    name = f"uniffy_migtest_{generate_id().hex}"
     conn = _maintenance_connection()
     try:
         with conn.cursor() as cur:
