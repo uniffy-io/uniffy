@@ -80,6 +80,14 @@ backend, workers, web and mobile protocol support; schema migration precedes wri
 
 Both multiplexers retain unacknowledged updates, including delete-only changes, and resend them on
 reconnect. Only an exact type-7 ID removes a pending update. Socket buffering is not durability.
+Local update bytes batch per document for 250 ms from the first edit. Later typing does not reset
+the deadline. Observer transactions stay together, including rich Markdown mirrors. Buffered edits
+count as pending immediately; an older ACK cannot clear them. At 64 KiB, backgrounding or detach,
+flush early. Separate previous transaction chains before a new chain would exceed the frame budget.
+Sync replies absorb buffered bytes and cancel their separate timer. Authentication teardown cancels
+timers and observers. Generation and permission gates still suppress writes. Local recovery writes
+remain independent of network batching. This bounds ordinary typing frames per client, not total
+writes across all editors; seed, sync and lifecycle frames can send outside the timer.
 Generation mismatch stops replay into the active document and creates a fresh session while keeping
 the incompatible draft recoverable. Ignore incoming synchronization until generation is known.
 
@@ -128,6 +136,8 @@ Deployment limits use REALTIME_MAX_DOCUMENT_BYTES (524288), REALTIME_MAX_SNAPSHO
 REALTIME_MAX_DOCS_PER_SOCKET (32), REALTIME_MAX_SOCKETS_PER_USER (16 per backend process), and
 REALTIME_MAX_MESSAGES_PER_SECOND (120). Awareness has a 64 KiB cap. Awareness identity comes from
 the authenticated account. A connection publishes only its own awareness client ID.
+Socket admission reserves capacity before awaiting acceptance and releases it on every exit,
+including failed acceptance and cancellation. The counter is per global user, across organizations.
 
 ## Authorization
 
@@ -140,6 +150,10 @@ Upgrade validates Origin, access-token type, token organization, user and sessio
 and active membership. Web passes bearer in `Sec-WebSocket-Protocol` alongside
 `uniffy.realtime.v1`; server echoes only that canonical protocol. Mobile can pass Authorization.
 Never echo bearer data through the selected protocol.
+`core/auth/revocation.py` reads account status/token version and session ownership/revocation from
+PostgreSQL in one fresh query. RPC and asset authentication use the same check. Valkey markers are
+not evidence of validity. Missing or revoked session rows deny access; database failures produce
+retryable unavailable responses. Live sockets repeat the durable check through their watchdog.
 
 Fresh PostgreSQL authorization runs at inbound document handling, durable mutation and outbound
 disclosure. Scalar statement structures are reused with bound actor, resource and check-time values.
