@@ -4284,9 +4284,11 @@ type UpdateTaskRequest struct {
 	TimeSpentMinutes *int32            `protobuf:"varint,19,opt,name=time_spent_minutes,json=timeSpentMinutes,proto3,oneof" json:"time_spent_minutes,omitempty"`
 	// Replacement set of unified-tag ids. Empty list clears all manual
 	// tags; field unset (HasField=false) leaves them untouched.
-	TagIds        *TaskTagIds `protobuf:"bytes,20,opt,name=tag_ids,json=tagIds,proto3,oneof" json:"tag_ids,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	TagIds *TaskTagIds `protobuf:"bytes,20,opt,name=tag_ids,json=tagIds,proto3,oneof" json:"tag_ids,omitempty"`
+	// Original description read by the caller. Required when description is set.
+	BaseDescription *string `protobuf:"bytes,21,opt,name=base_description,json=baseDescription,proto3,oneof" json:"base_description,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *UpdateTaskRequest) Reset() {
@@ -4457,6 +4459,13 @@ func (x *UpdateTaskRequest) GetTagIds() *TaskTagIds {
 		return x.TagIds
 	}
 	return nil
+}
+
+func (x *UpdateTaskRequest) GetBaseDescription() string {
+	if x != nil && x.BaseDescription != nil {
+		return *x.BaseDescription
+	}
+	return ""
 }
 
 // Wrapper so callers can distinguish "leave tags alone" from
@@ -8184,7 +8193,7 @@ const file_projects_v1_projects_proto_rawDesc = "" +
 	"\x13_time_spent_minutes\"R\n" +
 	"\x0eGetTaskRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x17\n" +
-	"\atask_id\x18\x02 \x01(\tR\x06taskId\"\x94\t\n" +
+	"\atask_id\x18\x02 \x01(\tR\x06taskId\"\xd9\t\n" +
 	"\x11UpdateTaskRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x17\n" +
 	"\atask_id\x18\x02 \x01(\tR\x06taskId\x12\x19\n" +
@@ -8209,7 +8218,8 @@ const file_projects_v1_projects_proto_rawDesc = "" +
 	"\tsprint_id\x18\x11 \x01(\tH\fR\bsprintId\x88\x01\x01\x120\n" +
 	"\x11estimated_minutes\x18\x12 \x01(\x05H\rR\x10estimatedMinutes\x88\x01\x01\x121\n" +
 	"\x12time_spent_minutes\x18\x13 \x01(\x05H\x0eR\x10timeSpentMinutes\x88\x01\x01\x125\n" +
-	"\atag_ids\x18\x14 \x01(\v2\x17.projects.v1.TaskTagIdsH\x0fR\x06tagIds\x88\x01\x01\x1a>\n" +
+	"\atag_ids\x18\x14 \x01(\v2\x17.projects.v1.TaskTagIdsH\x0fR\x06tagIds\x88\x01\x01\x12.\n" +
+	"\x10base_description\x18\x15 \x01(\tH\x10R\x0fbaseDescription\x88\x01\x01\x1a>\n" +
 	"\x10FieldValuesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01B\b\n" +
@@ -8232,7 +8242,8 @@ const file_projects_v1_projects_proto_rawDesc = "" +
 	"\x12_estimated_minutesB\x15\n" +
 	"\x13_time_spent_minutesB\n" +
 	"\n" +
-	"\b_tag_ids\"\x1e\n" +
+	"\b_tag_idsB\x13\n" +
+	"\x11_base_description\"\x1e\n" +
 	"\n" +
 	"TaskTagIds\x12\x10\n" +
 	"\x03ids\x18\x01 \x03(\tR\x03ids\"#\n" +

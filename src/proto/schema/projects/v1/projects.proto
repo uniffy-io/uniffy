@@ -610,6 +610,8 @@ message UpdateTaskRequest {
   // Replacement set of unified-tag ids. Empty list clears all manual
   // tags; field unset (HasField=false) leaves them untouched.
   optional TaskTagIds tag_ids = 20;
+  // Original description read by the caller. Required when description is set.
+  optional string base_description = 21;
 }
 
 // Wrapper so callers can distinguish "leave tags alone" from

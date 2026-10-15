@@ -80,6 +80,8 @@ def update_task_arguments(request: UpdateTaskRequest) -> dict[str, Any]:
         updates["title"] = request.title
     if request.has_field("description"):
         updates["description"] = request.description
+    if request.has_field("base_description"):
+        updates["base_description"] = request.base_description
     if request.has_field("status"):
         updates["status"] = request.status
     if request.has_field("priority"):

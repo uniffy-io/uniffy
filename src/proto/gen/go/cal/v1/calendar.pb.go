@@ -1730,8 +1730,10 @@ type UpdateEventRequest struct {
 	// Remove every reminder. Otherwise an empty `reminders` list leaves them
 	// untouched, since proto3 cannot tell an empty repeated apart from an unset one.
 	ClearReminders bool `protobuf:"varint,30,opt,name=clear_reminders,json=clearReminders,proto3" json:"clear_reminders,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	// Original description read by the caller. Required when description is set.
+	BaseDescription *string `protobuf:"bytes,31,opt,name=base_description,json=baseDescription,proto3,oneof" json:"base_description,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *UpdateEventRequest) Reset() {
@@ -1958,6 +1960,13 @@ func (x *UpdateEventRequest) GetClearReminders() bool {
 		return x.ClearReminders
 	}
 	return false
+}
+
+func (x *UpdateEventRequest) GetBaseDescription() string {
+	if x != nil && x.BaseDescription != nil {
+		return *x.BaseDescription
+	}
+	return ""
 }
 
 // Wrapper so the caller can distinguish "leave tags alone" from
@@ -6401,7 +6410,7 @@ const file_cal_v1_calendar_proto_rawDesc = "" +
 	"\x04role\x18\x02 \x01(\x0e2\x14.cal.v1.AttendeeRoleR\x04role\"U\n" +
 	"\x0fGetEventRequest\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12'\n" +
-	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\"\xe1\f\n" +
+	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\"\xa6\r\n" +
 	"\x12UpdateEventRequest\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12'\n" +
 	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12\x19\n" +
@@ -6442,7 +6451,8 @@ const file_cal_v1_calendar_proto_rawDesc = "" +
 	"visibility\x88\x01\x01\x12B\n" +
 	"\ftransparency\x18\x1c \x01(\x0e2\x19.cal.v1.EventTransparencyH\x14R\ftransparency\x88\x01\x01\x12,\n" +
 	"\x10is_out_of_office\x18\x1d \x01(\bH\x15R\risOutOfOffice\x88\x01\x01\x12'\n" +
-	"\x0fclear_reminders\x18\x1e \x01(\bR\x0eclearRemindersB\b\n" +
+	"\x0fclear_reminders\x18\x1e \x01(\bR\x0eclearReminders\x12.\n" +
+	"\x10base_description\x18\x1f \x01(\tH\x16R\x0fbaseDescription\x88\x01\x01B\b\n" +
 	"\x06_titleB\x0e\n" +
 	"\f_descriptionB\r\n" +
 	"\v_start_timeB\v\n" +
@@ -6466,7 +6476,8 @@ const file_cal_v1_calendar_proto_rawDesc = "" +
 	"\a_statusB\r\n" +
 	"\v_visibilityB\x0f\n" +
 	"\r_transparencyB\x13\n" +
-	"\x11_is_out_of_office\"\x1f\n" +
+	"\x11_is_out_of_officeB\x13\n" +
+	"\x11_base_description\"\x1f\n" +
 	"\vEventTagIds\x12\x10\n" +
 	"\x03ids\x18\x01 \x03(\tR\x03ids\"\xa8\x02\n" +
 	"\x12DeleteEventRequest\x12\x19\n" +

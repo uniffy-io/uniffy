@@ -1,7 +1,9 @@
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pycrdt
+import pytest
 
+from uniffy.core.errors import ValidationError
 from uniffy.core.models.realtime.yjs_snapshot import RealtimeYjsSnapshot
 from uniffy.core.realtime.markdown import (
     DOC_GENERATION_KEY,
@@ -18,6 +20,13 @@ from uniffy.core.types import ContentType, generate_id
 
 
 class TestMergePlainText:
+    def test_missing_base_rejected_even_when_live_equals_incoming(self) -> None:
+        with pytest.raises(ValidationError, match="Original content"):
+            merge_plain_text(base=None, live="same", incoming="same")
+
+    def test_clear_keeps_concurrent_insert(self) -> None:
+        assert merge_plain_text(base="base", live="base human", incoming="") == " human"
+
     def test_live_insert_outside_changed_region_survives(self) -> None:
         merged = merge_plain_text(
             base="alpha beta gamma",
@@ -151,6 +160,7 @@ class TestStageTextMerge:
                 snapshot.organization_id,
                 actor,
                 base="base",
+                stored="base human",
                 incoming="base agent",
             )
         assert merged == "base human agent"
@@ -175,6 +185,7 @@ class TestStageTextMerge:
                 snapshot.organization_id,
                 generate_id(),
                 base="base",
+                stored="base human",
                 incoming="base agent",
             )
         before = client.get_state()
@@ -182,7 +193,7 @@ class TestStageTextMerge:
         text = _text_of(pycrdt.merge_updates(snapshot.updates, client.get_update(before)))
         assert text == "base more human agent"
 
-    async def test_without_snapshot_row_leaves_column_write_alone(self) -> None:
+    async def test_without_snapshot_merges_against_stored_text(self) -> None:
         db = MagicMock()
         with patch("uniffy.core.realtime.storage.load_snapshot", AsyncMock(return_value=None)):
             merged = await stage_text_merge(
@@ -191,9 +202,10 @@ class TestStageTextMerge:
                 generate_id(),
                 generate_id(),
                 base="base",
+                stored="base human",
                 incoming="base agent",
             )
-        assert merged is None
+        assert merged == "base human agent"
         db.add.assert_not_called()
 
     async def test_unchanged_text_marks_projected_without_new_bytes(self) -> None:
@@ -206,6 +218,7 @@ class TestStageTextMerge:
                 snapshot.organization_id,
                 generate_id(),
                 base="base",
+                stored="base human",
                 incoming="base",
             )
         assert merged == "base human"

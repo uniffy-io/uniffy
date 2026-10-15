@@ -137,19 +137,17 @@ async def stage_text_merge(
     organization_id: UUID,
     actor_id: UUID,
     *,
-    base: str,
+    base: str | None,
+    stored: str,
     incoming: str,
-) -> str | None:
-    """Graft a plain markdown write into the live generation; the caller stores the result.
-
-    ``base`` is the column text the writer saw. Returns ``None`` when no snapshot row exists:
-    nothing is live, the column write stands and a later cold open hydrates from it.
-    Call under ``lock_document`` before committing the domain transaction.
-    """
+) -> str:
+    """Merge against the caller's original text while holding the document lock."""
     validate_document_size(incoming)
     snapshot = await load_snapshot(db, key)
     if snapshot is None:
-        return None
+        merged = merge_plain_text(base=base, live=stored, incoming=incoming)
+        validate_document_size(merged)
+        return merged
     doc = decode_snapshot(snapshot)
     merged = merge_plain_text(base=base, live=str(markdown_text(doc)), incoming=incoming)
     validate_document_size(merged)

@@ -84,6 +84,7 @@ class NoteOperations(NoteProjectionOperations):
         tag_ids: list[UUID] | None = None,
         metadata: dict[str, Any] | None = None,
         expected_content_version: int | None = None,
+        base_content: str | None = None,
     ) -> Note:
         return await NoteUpdates(self).update(
             user_id=user_id,
@@ -97,6 +98,7 @@ class NoteOperations(NoteProjectionOperations):
             tag_ids=tag_ids,
             metadata=metadata,
             expected_content_version=expected_content_version,
+            base_content=base_content,
         )
 
     async def delete(

@@ -183,6 +183,7 @@ class EventMutationHandlers:
         optional_fields = (
             "title",
             "description",
+            "base_description",
             "is_all_day",
             "timezone",
             "location",

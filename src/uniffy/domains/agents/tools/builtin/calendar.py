@@ -433,7 +433,7 @@ async def _execute_update_event(ctx: ToolContext, args: dict) -> ToolResult:
 
     kwargs: dict = {}
 
-    for field in ("title", "description", "location", "meeting_url", "timezone"):
+    for field in ("title", "description", "base_description", "location", "meeting_url", "timezone"):
         if field in args:
             kwargs[field] = args[field]
     if "description" in kwargs:  # noqa: PLR2004
@@ -885,6 +885,12 @@ update_event = ToolDefinition(
             "description": {
                 "type": "string",
                 "description": MARKDOWN_CONTENT_DOC,
+            },
+            "base_description": {
+                "type": "string",
+                "description": (
+                    "Exact original description read before editing. Required with description."
+                ),
             },
             "start_time": {
                 "type": "string",

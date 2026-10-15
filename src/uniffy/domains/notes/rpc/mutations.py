@@ -173,6 +173,7 @@ class NoteMutationHandlers:
                         if request.has_field("expected_content_version")
                         else None
                     ),
+                    base_content=request.base_content if request.has_field("base_content") else None,
                 )
                 return UpdateNoteResponse(
                     note=await _note_proto(session, user_id, organization_id, note)

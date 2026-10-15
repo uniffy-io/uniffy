@@ -30,7 +30,7 @@ interface ExpandableEditorProps {
   /** Fires on every keystroke. Hosts that only want one write per edit can skip it and use `onDone`. */
   onChange?: (markdown: string) => void;
   /** Fires once when the overlay closes, carrying the final markdown. */
-  onDone?: (markdown: string, meta: { realtimeOwned: boolean }) => void;
+  onDone?: (markdown: string, meta: { realtimeOwned: boolean; baseContent: string }) => void;
   realtime?: boolean;
   placeholder?: string;
   /** Defaults to true when `contentId` is provided. */
@@ -182,8 +182,20 @@ export function ExpandableEditor({
       return;
     editorHandle?.flushMarkdownMirror?.();
     const markdown = editorHandle?.run(serializeEditorMarkdown) ?? latestMarkdownRef.current;
-    onDone?.(markdown, { realtimeOwned: realtimeActive && realtimeOwned });
-  }, [onDone, editorHandle, realtimeOwned, realtimeActive, seeded, editWithoutLive, status]);
+    onDone?.(markdown, {
+      realtimeOwned: realtimeActive && realtimeOwned,
+      baseContent: draftInitial,
+    });
+  }, [
+    onDone,
+    editorHandle,
+    realtimeOwned,
+    realtimeActive,
+    seeded,
+    editWithoutLive,
+    status,
+    draftInitial,
+  ]);
 
   const handleRealtimeSeeded = useCallback(() => setSeeded(true), []);
 

@@ -56,12 +56,14 @@ class NoteUpdates:
         tag_ids: list[UUID] | None = None,
         metadata: dict[str, Any] | None = None,
         expected_content_version: int | None = None,
+        base_content: str | None = None,
     ) -> Note:
         await lock_document(self.operations.session, (ContentType.NOTE, note_id))
         note = await self.operations._fetch_by_id(note_id, organization_id)
         if not note:
             raise NotFoundError("Note", note_id)
 
+        await self.operations.session.refresh(note)
         content_write_requested = content is not None or canvas_content is not None
         guarded_version = expected_content_version if content_write_requested else None
         if guarded_version is not None:
@@ -131,11 +133,11 @@ class NoteUpdates:
                         (ContentType.NOTE, note_id),
                         organization_id,
                         user_id,
-                        base=note.content or "",
+                        base=(note.content or "") if guarded_version is not None else base_content,
+                        stored=note.content or "",
                         incoming=stored_content,
                     )
-                    if merged is not None:
-                        stored_content = merged
+                    stored_content = merged
                 fields = extract_content_fields(
                     note.node_type, stored_content, canvas_content, organization_id
                 )

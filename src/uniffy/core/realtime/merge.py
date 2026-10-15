@@ -4,6 +4,8 @@ import re
 from difflib import SequenceMatcher
 from itertools import accumulate
 
+from uniffy.core.errors import ValidationError
+
 # Bound diff work on repetitive documents while preserving unchanged prefix and suffix identities.
 TEXT_MERGE_LIMIT = 256 * 1024
 
@@ -22,11 +24,7 @@ def _starts(parts: list[str]) -> list[int]:
 
 
 def text_edits(a: str, b: str) -> list[TextEdit]:
-    """Character-offset edits turning ``a`` into ``b``, ordered and non-overlapping.
-
-    Lines align first because they are near-unique and cheap to match; only changed line
-    ranges are refined at token level, which keeps whole words intact across a merge.
-    """
+    """Align lines before tokens to bound diff work and preserve whole words."""
     if max(len(a), len(b)) > TEXT_MERGE_LIMIT:
         start = 0
         while start < min(len(a), len(b)) and a[start] == b[start]:
@@ -59,12 +57,10 @@ def text_edits(a: str, b: str) -> list[TextEdit]:
     return edits
 
 
-def merge_plain_text(*, base: str, live: str, incoming: str) -> str:
-    """Apply the ``base`` to ``incoming`` edits onto ``live``.
-
-    Text present only in ``live`` is never removed. Where both sides changed the same base
-    range the live text stays and the incoming text lands right after it.
-    """
+def merge_plain_text(*, base: str | None, live: str, incoming: str) -> str:
+    """Preserve live-only text and keep both insertions when edits overlap."""
+    if base is None:
+        raise ValidationError("base_content", "Original content is required when saving text")
     if base == live or live == incoming:
         return incoming
     if base == incoming:

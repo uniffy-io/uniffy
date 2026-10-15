@@ -5,11 +5,12 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from sqlalchemy.dialects import postgresql
-from sqlalchemy.sql.dml import Delete, Update
+from sqlalchemy.sql.dml import Update
 
 from uniffy.core.errors import ConflictError, StaleContentVersionError
 from uniffy.core.models.notes.note import Note
 from uniffy.core.realtime.adapter import RealtimeRenderConflict, RealtimeRenderSuperseded
+from uniffy.core.realtime.merge import merge_plain_text
 from uniffy.core.types import AccessMode, NodeType, generate_id
 from uniffy.domains.notes.operations import NoteOperations
 
@@ -32,7 +33,11 @@ def realtime_storage(monkeypatch):
 @pytest.fixture(autouse=True)
 def text_merge(monkeypatch):
     """Text writes graft into a live document; these tests start with no snapshot row."""
-    mock = AsyncMock(return_value=None)
+
+    async def merge(*_args, base, stored, incoming):
+        return merge_plain_text(base=base, live=stored, incoming=incoming)
+
+    mock = AsyncMock(side_effect=merge)
     monkeypatch.setattr("uniffy.domains.notes.content.updates.stage_text_merge", mock)
     return mock
 
@@ -113,6 +118,7 @@ class TestUpdateCas:
             organization_id=note.organization_id,
             note_id=note.id,
             content="new content",
+            base_content="old content",
         )
 
         assert result is note
@@ -129,6 +135,7 @@ class TestUpdateCas:
             note.organization_id,
             note.owner_id,
             base="old content",
+            stored="old content",
             incoming="new content",
         )
         realtime_storage.assert_not_awaited()
@@ -137,6 +144,7 @@ class TestUpdateCas:
         note = _make_note(version=3)
         ops = _make_ops(note)
         ops.session.execute.side_effect = [MagicMock(rowcount=1), MagicMock()]
+        text_merge.side_effect = None
         text_merge.return_value = "old content, a live edit, and new content"
 
         await ops.update(
@@ -144,6 +152,7 @@ class TestUpdateCas:
             organization_id=note.organization_id,
             note_id=note.id,
             content="new content",
+            base_content="old content",
         )
 
         params = _params(ops.session.execute.await_args_list[0].args[0])
@@ -182,6 +191,7 @@ class TestUpdateCas:
             organization_id=note.organization_id,
             note_id=note.id,
             content="new content",
+            base_content="old content",
         )
 
         publish_mock.assert_awaited_once()
@@ -223,6 +233,7 @@ class TestUpdateCas:
             organization_id=note.organization_id,
             note_id=note.id,
             content="new content",
+            base_content="old content",
             expected_content_version=3,
         )
 
@@ -288,6 +299,7 @@ class TestUpdateCas:
             organization_id=note.organization_id,
             note_id=note.id,
             content="new content",
+            base_content="old content",
         )
 
         assert result is refreshed

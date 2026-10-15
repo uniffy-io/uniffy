@@ -159,6 +159,7 @@ export function useUpdateTask() {
       projectId: string;
       title?: string;
       description?: string;
+      baseDescription?: string;
       status?: string;
       priority?: string;
       assigneeIds?: string[];
@@ -179,6 +180,7 @@ export function useUpdateTask() {
         taskId: args.taskId,
         title: args.title,
         description: args.description,
+        baseDescription: args.baseDescription,
         status: args.status,
         priority: args.priority,
         assigneeIds: args.assigneeIds ? { ids: args.assigneeIds } : undefined,

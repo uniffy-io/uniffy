@@ -123,7 +123,7 @@ export function EventDetailModal() {
 
   const handleDescriptionDone = (
     markdown: string,
-    { realtimeOwned }: { realtimeOwned: boolean },
+    { realtimeOwned, baseContent }: { realtimeOwned: boolean; baseContent: string },
   ) => {
     if (!selectedEvent) return;
     if (realtimeOwned) {
@@ -131,8 +131,8 @@ export function EventDetailModal() {
       return;
     }
     // Trim-compare because the editor re-serializes markdown and can differ by trailing newlines alone.
-    if (markdown.trim() === selectedEvent.description.trim()) return;
-    commit({ description: markdown });
+    if (markdown.trim() === baseContent.trim()) return;
+    commit({ description: markdown, baseDescription: baseContent });
   };
 
   return (

@@ -306,6 +306,7 @@ async def test_event_update_merges_only_description_into_snapshot(
             access.org_id,
             event.id,
             description=description,
+            base_description=event.description,
             call_lifecycle=MagicMock(),
         )
     snapshot = await load_snapshot(session, key)
@@ -356,7 +357,11 @@ async def test_task_update_merges_only_description_into_snapshot(
             new_callable=AsyncMock,
         ) as publish,
     ):
-        fields = {} if description is None else {"description": description}
+        fields = (
+            {}
+            if description is None
+            else {"description": description, "base_description": task.description}
+        )
         await TaskMutationOperations(session, content).update(
             access.member_id,
             access.org_id,

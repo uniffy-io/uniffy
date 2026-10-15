@@ -148,6 +148,7 @@ class CalendarEventOperations(CalendarEventReader):
         is_out_of_office: bool | None = None,
         *,
         call_lifecycle: ChannelCallLifecycle,
+        base_description: str | None = None,
     ) -> CalendarEvent:
         return await EventUpdateOperations(self).update(
             user_id=user_id,
@@ -155,6 +156,7 @@ class CalendarEventOperations(CalendarEventReader):
             event_id=event_id,
             title=title,
             description=description,
+            base_description=base_description,
             start_time=start_time,
             end_time=end_time,
             is_all_day=is_all_day,

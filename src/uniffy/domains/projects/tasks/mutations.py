@@ -53,10 +53,12 @@ class TaskMutationOperations:
         user_id: UUID,
         organization_id: UUID,
         task_id: UUID,
+        base_description: str | None = None,
         **kwargs,
     ) -> tuple[Task, Task | None]:
         await lock_document(self.session, (ContentType.TASK, task_id), organization_id)
         task = await self.content.get_for_edit(user_id, organization_id, task_id)
+        await self.session.refresh(task)
 
         tag_ids = kwargs.pop("tag_ids", None)
         status_semantics = await load_task_status_semantics(self.session, task.project_id)
@@ -112,7 +114,7 @@ class TaskMutationOperations:
             )
 
         old_references = list(task.outgoing_references) if task.outgoing_references else None
-        base_description = task.description or ""
+        stored_description = task.description or ""
 
         title_changed = "title" in kwargs and kwargs["title"] != task.title  # noqa: PLR2004
         old_status = task.status
@@ -205,9 +207,10 @@ class TaskMutationOperations:
                 organization_id,
                 user_id,
                 base=base_description,
+                stored=stored_description,
                 incoming=task.description or "",
             )
-            if merged is not None and merged != (task.description or ""):
+            if merged != (task.description or ""):
                 task.description = merged
             task.outgoing_references = queries.extract_urns_from_content(task.description) or None
 

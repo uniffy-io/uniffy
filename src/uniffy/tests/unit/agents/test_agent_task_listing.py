@@ -9,7 +9,7 @@ from uniffy_proto.projects.v1.projects_pb import (
 )
 
 from uniffy.core.types import generate_id
-from uniffy.domains.agents.tools.builtin.projects import _execute_list_tasks
+from uniffy.domains.agents.tools.builtin.projects import _execute_list_tasks, _execute_read_task
 from uniffy.domains.agents.tools.definitions import ToolContext
 from uniffy.domains.projects.operations import TaskReader
 
@@ -94,3 +94,14 @@ async def test_a_malformed_filter_is_reported_to_the_model(reader: MagicMock) ->
     assert not result.success
     assert "Invalid filter or sort" in (result.error or "")
     reader.list_tasks.assert_not_awaited()
+
+
+async def test_read_task_returns_exact_description_for_later_merge(monkeypatch):
+    ctx = _context()
+    task = MagicMock(description=" original \n", title="Task", id=generate_id())
+    reader = AsyncMock(return_value=task)
+    monkeypatch.setattr(TaskReader, "get_by_id", reader)
+    result = await _execute_read_task(ctx, {"task_id": str(task.id)})
+    assert result.success
+    assert result.data.endswith("Description:  original \n")
+    reader.assert_awaited_once_with(ctx.user_id, ctx.organization_id, task.id)

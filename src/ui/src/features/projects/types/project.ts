@@ -162,6 +162,7 @@ export interface UpdateTaskRequest {
   id: string;
   title?: string;
   description?: string;
+  baseDescription?: string;
   status?: string;
   priority?: string;
   assigneeIds?: string[];

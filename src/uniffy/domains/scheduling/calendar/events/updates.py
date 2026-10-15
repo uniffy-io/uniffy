@@ -93,6 +93,7 @@ class EventUpdateOperations:
         is_out_of_office: bool | None = None,
         *,
         call_lifecycle: ChannelCallLifecycle,
+        base_description: str | None = None,
     ) -> CalendarEvent:
         """Update an existing event.
 
@@ -158,6 +159,7 @@ class EventUpdateOperations:
                         organization_id,
                         real_event_id,
                         occurrence_date,
+                        base_description=base_description,
                         **updates,
                     )
                 return await self.events.edit_this_and_following(
@@ -165,6 +167,7 @@ class EventUpdateOperations:
                     organization_id,
                     real_event_id,
                     occurrence_date,
+                    base_description=base_description,
                     **updates,
                 )
 
@@ -175,6 +178,7 @@ class EventUpdateOperations:
         if not event:
             raise NotFoundError("CalendarEvent", event_id)
 
+        await self.events.session.refresh(event)
         await self.events._require_edit(user_id, organization_id, event)
 
         old_title = event.title
@@ -195,10 +199,11 @@ class EventUpdateOperations:
                 (ContentType.CALENDAR_EVENT, event_id),
                 organization_id,
                 user_id,
-                base=event.description or "",
+                base=base_description,
+                stored=event.description or "",
                 incoming=description,
             )
-            event.description = description if merged is None else merged
+            event.description = merged
             event.outgoing_references = (
                 extract_all_outgoing_references(event.description, organization_id) or None
             )

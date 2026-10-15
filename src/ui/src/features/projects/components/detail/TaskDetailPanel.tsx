@@ -89,7 +89,7 @@ export function TaskDetailPanel({ taskId, variant = "sidebar" }: TaskDetailPanel
 
   const handleDescriptionDone = (
     markdown: string,
-    { realtimeOwned }: { realtimeOwned: boolean },
+    { realtimeOwned, baseContent }: { realtimeOwned: boolean; baseContent: string },
   ) => {
     if (!task) return;
     if (realtimeOwned) {
@@ -97,9 +97,9 @@ export function TaskDetailPanel({ taskId, variant = "sidebar" }: TaskDetailPanel
       return;
     }
     // Trim-compare because the editor re-serializes markdown and can differ by trailing newlines alone.
-    if (markdown.trim() === task.description.trim()) return;
+    if (markdown.trim() === baseContent.trim()) return;
     dispatch(optimisticUpdateTask({ id: task.id, description: markdown }));
-    dispatch(updateTask({ id: task.id, description: markdown }));
+    dispatch(updateTask({ id: task.id, description: markdown, baseDescription: baseContent }));
   };
 
   useOverlayEscape(() => {

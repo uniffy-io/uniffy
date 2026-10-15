@@ -15,6 +15,7 @@ import type {
 export interface EventPatch {
   title?: string;
   description?: string;
+  baseDescription?: string;
   startTime?: string;
   endTime?: string;
   isAllDay?: boolean;
@@ -45,6 +46,7 @@ export interface EventPatch {
 const OCCURRENCE_SCOPABLE_FIELDS: (keyof EventPatch)[] = [
   "title",
   "description",
+  "baseDescription",
   "startTime",
   "endTime",
   "isAllDay",

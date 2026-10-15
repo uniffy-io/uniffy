@@ -42,8 +42,7 @@ import { bottomBarBlockHeight } from "@shared/components/BottomNav";
 import { FONT } from "@theme/typography";
 import { useNote } from "@features/notes/useNotes";
 import { NodeType } from "@uniffy/proto/notes/v1/notes_pb";
-import { useCreateNote, useAutosave, useUpdateNote } from "@features/notes/useNoteMutations";
-import { useAuth } from "@core/providers/AuthContext";
+import { useCreateNote, useUpdateNote } from "@features/notes/useNoteMutations";
 import { useUniffy } from "@core/providers/UniffyContext";
 import { MarkdownRenderer } from "@shared/components/MarkdownRenderer";
 import { useMentionInput, toCanonical, parseMentions } from "@shared/mentions/useMentionInput";
@@ -215,14 +214,12 @@ export function NoteEditorScreen() {
     initialTitle?: string;
     initialContent?: string;
   }>();
-  const { organizationId } = useAuth();
   const { openAt } = useUniffy();
   const { attach: attachFile, uploading: attachUploading } = useInsertFileReference();
   const isEditMode = !!noteId;
 
   const noteQuery = useNote(isEditMode ? noteId : undefined);
   const createNote = useCreateNote();
-  const autosave = useAutosave(isEditMode ? noteId : undefined, organizationId);
   const updateNote = useUpdateNote();
 
   const {
@@ -379,12 +376,6 @@ export function NoteEditorScreen() {
   ].includes(coEdit.status);
   const editable = canEditNote && !editAccessLost;
 
-  // Full-document autosaves cannot race realtime writes or pre-sync drafts.
-  const autosaveCancel = autosave.cancel;
-  useEffect(() => {
-    if (coEdit.ownsContent) autosaveCancel();
-  }, [coEdit.ownsContent, autosaveCancel]);
-
   // Keystrokes queue their push HERE, synchronously with the native event. A
   // remote rebuild can land between the event and React's post-render effect;
   // scheduling in the effect alone let that rebuild overwrite a not-yet-queued
@@ -471,8 +462,6 @@ export function NoteEditorScreen() {
     if (coEdit.ownsContent) {
       coEdit.scheduleLocalPush(canonical);
       if (loaded && title !== loaded.title) scheduleTitleSave(title);
-    } else {
-      autosave.scheduleAutosave(canonical, title);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [body, title, isEditMode, initialized, coEdit.ownsContent, editable]);
@@ -483,8 +472,6 @@ export function NoteEditorScreen() {
       if (coEdit.ownsContent) {
         coEdit.flushLocalPush();
         flushTitleSave();
-      } else {
-        autosave.flush();
       }
       router.back();
     } else {
@@ -507,7 +494,6 @@ export function NoteEditorScreen() {
     }
   }, [
     isEditMode,
-    autosave,
     coEdit,
     flushTitleSave,
     createNote,
@@ -833,11 +819,7 @@ export function NoteEditorScreen() {
                     : coEdit.status === "connecting" || coEdit.status === "syncing"
                       ? "Syncing"
                       : "Offline"
-                  : autosave.isSaving
-                    ? "Saving..."
-                    : autosave.lastSaved
-                      ? "Saved"
-                      : "Note"}
+                  : "Note"}
           </Text>
           <Text style={[styles.wordCount, { color: T.textDim }]}>{wordCount} words</Text>
         </View>
