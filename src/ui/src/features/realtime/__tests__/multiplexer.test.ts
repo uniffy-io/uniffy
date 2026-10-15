@@ -1,4 +1,4 @@
-import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import * as Y from "yjs";
 import { Awareness } from "y-protocols/awareness";
 import * as syncProtocol from "y-protocols/sync";
@@ -140,6 +140,7 @@ function serverSeederFrame(docName: string, granted: boolean): Uint8Array {
 }
 
 function applyClientFramesToServer(ws: FakeWebSocket, docName: string, serverDoc: Y.Doc): void {
+  vi.advanceTimersByTime(250);
   for (const bytes of ws.sent) {
     const { docName: name, payloadOffset } = peekVarString(bytes);
     if (name !== docName) continue;
@@ -166,6 +167,8 @@ interface AttachedDoc {
 }
 
 let attached: AttachedDoc[] = [];
+
+beforeEach(() => vi.useFakeTimers());
 
 function attachDoc(
   contentId: string,
@@ -411,6 +414,7 @@ describe("outbound pending tracking", () => {
     ws.bufferedAmount = 64;
     doc.ydoc.getText("markdown").insert(0, "buffered");
     expect(realtimeMultiplexer.isOutboundPending(doc.docName)).toBe(true);
+    vi.advanceTimersByTime(250);
     expect(ws.sent.some((frame) => frame[peekVarString(frame).payloadOffset] === 6)).toBe(true);
 
     ws.bufferedAmount = 0;
@@ -644,6 +648,7 @@ it("sends observer-generated projection in the same durable frame", () => {
   const source = doc.ydoc.getText("source");
   source.observe(() => doc.ydoc.getText("markdown").insert(0, "projected"));
   source.insert(0, "rich");
+  vi.advanceTimersByTime(250);
   const updates = ws.sent.filter((frame) => frame[peekVarString(frame).payloadOffset] === 6);
   expect(updates).toHaveLength(1);
   const server = new Y.Doc();
@@ -661,7 +666,142 @@ it("reconnects a socket whose initial sync never receives a reply", async () => 
   expect(FakeWebSocket.instances).toHaveLength(2);
 });
 
-// Last on purpose: the revoked handler retires the shared multiplexer for this file.
+function durableFrames(ws: FakeWebSocket, docName: string): Uint8Array[] {
+  return ws.sent.filter((frame) => {
+    const prefix = peekVarString(frame);
+    return prefix.docName === docName && frame[prefix.payloadOffset] === 6;
+  });
+}
+
+function acknowledgeFrame(ws: FakeWebSocket, frame: Uint8Array): Uint8Array {
+  const { docName, payloadOffset } = peekVarString(frame);
+  const decoder = decoding.createDecoder(frame.subarray(payloadOffset));
+  decoding.readVarUint(decoder);
+  decoding.readVarString(decoder);
+  const id = decoding.readVarString(decoder);
+  const update = decoding.readVarUint8Array(decoder);
+  const ack = encoding.createEncoder();
+  encoding.writeVarUint(ack, 7);
+  encoding.writeVarString(ack, id);
+  ws.receive(encodeDocFrame(docName, encoding.toUint8Array(ack)));
+  return update;
+}
+
+it("batches sustained typing without postponing the first deadline", () => {
+  const doc = attachDoc("typing-batches");
+  const ws = currentWs();
+  ws.open();
+  const server = new Y.Doc();
+  for (let i = 0; i < 20; i++) {
+    doc.ydoc.getText("markdown").insert(i, "x");
+    expect(realtimeMultiplexer.isOutboundPending(doc.docName)).toBe(true);
+    vi.advanceTimersByTime(50);
+    expect(durableFrames(ws, doc.docName)).toHaveLength(Math.floor((i + 1) / 5));
+  }
+  for (const frame of durableFrames(ws, doc.docName)) {
+    Y.applyUpdate(server, acknowledgeFrame(ws, frame));
+  }
+  expect(server.getText("markdown").toString()).toBe("x".repeat(20));
+  expect(realtimeMultiplexer.isOutboundPending(doc.docName)).toBe(false);
+  server.destroy();
+});
+
+it("keeps a buffered deletion pending when the preceding insertion is acknowledged", () => {
+  const doc = attachDoc("buffered-delete");
+  const ws = currentWs();
+  ws.open();
+  const text = doc.ydoc.getText("markdown");
+  text.insert(0, "delete me");
+  vi.advanceTimersByTime(250);
+  text.delete(0, text.length);
+  const server = new Y.Doc();
+  Y.applyUpdate(server, acknowledgeFrame(ws, durableFrames(ws, doc.docName)[0]));
+  expect(realtimeMultiplexer.isOutboundPending(doc.docName)).toBe(true);
+  vi.advanceTimersByTime(249);
+  expect(durableFrames(ws, doc.docName)).toHaveLength(1);
+  vi.advanceTimersByTime(1);
+  Y.applyUpdate(server, acknowledgeFrame(ws, durableFrames(ws, doc.docName)[1]));
+  expect(server.getText("markdown").toString()).toBe("");
+  expect(realtimeMultiplexer.isOutboundPending(doc.docName)).toBe(false);
+  server.destroy();
+});
+
+it.each(["detach", "pagehide"])("flushes buffered typing on %s and cancels its timer", (event) => {
+  const doc = attachDoc(`flush-${event}`);
+  const ws = currentWs();
+  ws.open();
+  doc.ydoc.getText("markdown").insert(0, "last edit");
+  expect(durableFrames(ws, doc.docName)).toHaveLength(0);
+  if (event === "detach") doc.subscription.destroy();
+  else window.dispatchEvent(new Event("pagehide"));
+  expect(durableFrames(ws, doc.docName)).toHaveLength(1);
+  vi.advanceTimersByTime(500);
+  expect(durableFrames(ws, doc.docName)).toHaveLength(1);
+});
+
+it.each(["permission", "generation"])("does not send a buffered batch after %s loss", (reason) => {
+  const doc = attachDoc(`denied-batch-${reason}`);
+  const ws = currentWs();
+  ws.open();
+  doc.ydoc.getMap("doc_meta").set("generation", "old");
+  doc.ydoc.getText("markdown").insert(0, "recover me");
+  if (reason === "permission") ws.receive(serverAuthDeniedFrame(doc.docName, "revoked"));
+  else ws.receive(serverGenerationFrame(doc.docName, "new"));
+  vi.advanceTimersByTime(500);
+  expect(durableFrames(ws, doc.docName)).toHaveLength(0);
+  expect(realtimeMultiplexer.isOutboundPending(doc.docName)).toBe(true);
+  expect(doc.ydoc.getText("markdown").toString()).toBe("recover me");
+});
+
+it("combines buffered edits with sync recovery without a later duplicate send", () => {
+  const doc = attachDoc("sync-buffer");
+  const ws = currentWs();
+  ws.open();
+  doc.ydoc.getText("markdown").insert(0, "recover");
+  const server = new Y.Doc();
+  ws.receive(serverSyncStep1Frame(doc.docName, server));
+  expect(durableFrames(ws, doc.docName)).toHaveLength(1);
+  Y.applyUpdate(server, acknowledgeFrame(ws, durableFrames(ws, doc.docName)[0]));
+  vi.advanceTimersByTime(500);
+  expect(durableFrames(ws, doc.docName)).toHaveLength(1);
+  expect(server.getText("markdown").toString()).toBe("recover");
+  expect(realtimeMultiplexer.isOutboundPending(doc.docName)).toBe(false);
+  server.destroy();
+});
+
+it("sends a large transaction separately instead of rejecting a combined oversized batch", () => {
+  const denied = vi.fn();
+  const doc = attachDoc("large-batch", { onWriteDenied: denied });
+  const ws = currentWs();
+  ws.open();
+  doc.ydoc.getText("first").insert(0, "x".repeat(32 * 1024));
+  doc.ydoc.getText("second").insert(0, "y".repeat(1024 * 1024 - 8192));
+  expect(denied).not.toHaveBeenCalled();
+  expect(durableFrames(ws, doc.docName)).toHaveLength(2);
+  const server = new Y.Doc();
+  applyClientFramesToServer(ws, doc.docName, server);
+  expect(server.getText("first").length).toBe(32 * 1024);
+  expect(server.getText("second").length).toBe(1024 * 1024 - 8192);
+  expect(realtimeMultiplexer.isOutboundPending(doc.docName)).toBe(false);
+  server.destroy();
+});
+
+it("keeps a second document on its own batching deadline", () => {
+  const first = attachDoc("batch-first");
+  const second = attachDoc("batch-second");
+  const ws = currentWs();
+  ws.open();
+  first.ydoc.getText("markdown").insert(0, "first");
+  vi.advanceTimersByTime(150);
+  second.ydoc.getText("markdown").insert(0, "second");
+  vi.advanceTimersByTime(100);
+  expect(durableFrames(ws, first.docName)).toHaveLength(1);
+  expect(durableFrames(ws, second.docName)).toHaveLength(0);
+  vi.advanceTimersByTime(150);
+  expect(durableFrames(ws, second.docName)).toHaveLength(1);
+});
+
+// Auth revocation retires the shared multiplexer used by the preceding tests.
 it("emits token_revoked to every session before dropping docs on auth revocation", () => {
   const statuses: string[] = [];
   const doc = attachDoc("logout", { onStatus: (s) => statuses.push(s) });

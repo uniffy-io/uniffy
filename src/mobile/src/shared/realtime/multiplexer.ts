@@ -3,7 +3,7 @@
 // Public entrypoint: `realtimeMultiplexer.attach()`.
 
 import { AppState } from "react-native";
-import type * as Y from "yjs";
+import * as Y from "yjs";
 import type { Awareness } from "y-protocols/awareness";
 import {
   encodeAwarenessUpdate,
@@ -42,6 +42,9 @@ const RECONNECT_MAX_MS = 15_000;
 const RECONNECT_MULTIPLIER = 1.5;
 const RESYNC_INTERVAL_MS = 30_000;
 const IDLE_CLOSE_MS = 30_000;
+const UPDATE_BATCH_MS = 250;
+const UPDATE_BATCH_BYTES = 64 * 1024;
+const MAX_UPDATE_BYTES = 1024 * 1024 - 4096;
 // y-protocols/awareness GCs peer entries after `outdatedTimeout` (30s);
 // without periodic keep-alive, peer presence vanishes on typing pauses.
 const AWARENESS_KEEPALIVE_MS = 15_000;
@@ -83,6 +86,12 @@ export interface DocSubscription {
 }
 
 interface DocEntry {
+  localBatch: Uint8Array[];
+  localBatchBytes: number;
+  batchBoundary: number;
+  batchTimer: ReturnType<typeof setTimeout> | null;
+  scheduleBatch: () => void;
+  flushBatch: () => void;
   rejected: boolean;
   syncDeadline: ReturnType<typeof setTimeout> | null;
   docName: string;
@@ -117,6 +126,7 @@ class RealtimeMultiplexer {
   private awarenessKeepaliveTimer: ReturnType<typeof setInterval> | null = null;
   private destroyed = false;
   private listenersAttached = false;
+  private backgrounded = AppState.currentState === "background";
 
   attach(opts: MultiplexerAttachOptions): DocSubscription {
     const docName = `${opts.contentType}:${opts.contentId}`;
@@ -132,6 +142,37 @@ class RealtimeMultiplexer {
     this.organizationId = opts.organizationId;
 
     const entry: DocEntry = {
+      localBatch: [],
+      localBatchBytes: 0,
+      batchBoundary: 0,
+      batchTimer: null,
+      scheduleBatch: () => {
+        if (!entry.localBatch.length || entry.rejected || entry.denied) return;
+        if (entry.localBatchBytes > MAX_UPDATE_BYTES && entry.batchBoundary > 0) {
+          // Separate prior edits without splitting this transaction's mirror updates.
+          const transaction = entry.localBatch.splice(entry.batchBoundary);
+          entry.flushBatch();
+          entry.localBatch = transaction;
+          entry.localBatchBytes = transaction.reduce((sum, update) => sum + update.length, 0);
+        }
+        if (entry.localBatchBytes >= UPDATE_BATCH_BYTES || this.backgrounded) {
+          entry.flushBatch();
+        } else if (entry.batchTimer === null) {
+          // Keep the first deadline so continuous typing cannot postpone a save.
+          entry.batchTimer = setTimeout(entry.flushBatch, UPDATE_BATCH_MS);
+        }
+        entry.batchBoundary = entry.localBatch.length;
+      },
+      flushBatch: () => {
+        if (entry.batchTimer !== null) clearTimeout(entry.batchTimer);
+        entry.batchTimer = null;
+        if (!entry.localBatch.length) return;
+        const updates = entry.localBatch;
+        entry.localBatch = [];
+        entry.localBatchBytes = 0;
+        entry.batchBoundary = 0;
+        this.queueUpdate(entry, Y.mergeUpdates(updates));
+      },
       rejected: false,
       syncDeadline: null,
       docName,
@@ -147,8 +188,15 @@ class RealtimeMultiplexer {
       updateHandler: (update, origin) => {
         // Skip echoes of frames we just applied from the wire.
         if (origin === REMOTE_ORIGIN) return;
+        if (entry.rejected || entry.denied) {
+          this.setOutboundPending(entry, true);
+          this.queueUpdate(entry, update);
+          return;
+        }
         // Read-only docs never push state.
-        this.queueUpdate(entry, update);
+        entry.localBatch.push(update);
+        entry.localBatchBytes += update.length;
+        this.setOutboundPending(entry, true);
       },
       awarenessHandler: (changes, origin) => {
         if (origin === "remote") return;
@@ -162,6 +210,7 @@ class RealtimeMultiplexer {
     };
 
     opts.ydoc.on("update", entry.updateHandler);
+    opts.ydoc.on("afterAllTransactions", entry.scheduleBatch);
     opts.awareness.on("change", entry.awarenessHandler);
     this.docs.set(docName, entry);
     this.cancelIdleClose();
@@ -186,8 +235,10 @@ class RealtimeMultiplexer {
   private detach(docName: string): void {
     const entry = this.docs.get(docName);
     if (!entry) return;
+    entry.flushBatch();
     if (entry.syncDeadline) clearTimeout(entry.syncDeadline);
     entry.ydoc.off("update", entry.updateHandler);
+    entry.ydoc.off("afterAllTransactions", entry.scheduleBatch);
     entry.awareness.off("change", entry.awarenessHandler);
     // Announce departure so peers drop our presence now, rather than waiting
     // for y-protocols' 30s outdatedTimeout GC. The change handler is already
@@ -454,7 +505,7 @@ class RealtimeMultiplexer {
         for (const [id, update] of entry.unacknowledged) this.sendDurableUpdate(entry, id, update);
     } else if (messageType === 7) {
       entry.unacknowledged.delete(decoding.readVarString(decoder));
-      this.setOutboundPending(entry, entry.unacknowledged.size > 0);
+      this.setOutboundPending(entry, this.isOutboundPending(docName));
     } else if (messageType === MESSAGE_SYNC) {
       if (entry.syncDeadline) clearTimeout(entry.syncDeadline);
       entry.syncDeadline = null;
@@ -505,7 +556,15 @@ class RealtimeMultiplexer {
     const decoder = decoding.createDecoder(replyBytes);
     decoding.readVarUint(decoder);
     decoding.readVarUint(decoder);
-    this.queueUpdate(entry, decoding.readVarUint8Array(decoder));
+    // The handshake includes buffered local edits. Cancel their separate send.
+    const update = decoding.readVarUint8Array(decoder);
+    if (entry.batchTimer !== null) clearTimeout(entry.batchTimer);
+    entry.batchTimer = null;
+    const updates = entry.localBatch;
+    entry.localBatch = [];
+    entry.localBatchBytes = 0;
+    entry.batchBoundary = 0;
+    this.queueUpdate(entry, Y.mergeUpdates([...updates, update]));
   }
 
   isAttached(docName: string): boolean {
@@ -514,7 +573,9 @@ class RealtimeMultiplexer {
 
   isOutboundPending(docName: string): boolean {
     const entry = this.docs.get(docName);
-    return !!entry && (entry.rejected || entry.unacknowledged.size > 0);
+    return (
+      !!entry && (entry.rejected || entry.unacknowledged.size > 0 || entry.localBatch.length > 0)
+    );
   }
 
   private setOutboundPending(entry: DocEntry, pending: boolean): void {
@@ -537,7 +598,7 @@ class RealtimeMultiplexer {
       (sum, item) => sum + item.length,
       0,
     );
-    if (update.length > 1024 * 1024 - 4096 || queuedBytes + update.length > 8 * 1024 * 1024) {
+    if (update.length > MAX_UPDATE_BYTES || queuedBytes + update.length > 8 * 1024 * 1024) {
       this.setOutboundPending(entry, true);
       this.rejectOversized(entry);
       return;
@@ -626,7 +687,9 @@ class RealtimeMultiplexer {
     if (this.listenersAttached) return;
     this.listenersAttached = true;
     AppState.addEventListener("change", (state) => {
+      this.backgrounded = state === "background";
       if (state === "background") {
+        for (const entry of this.docs.values()) entry.flushBatch();
         // A pocketed device must not keep the radio busy with resync probes
         // and awareness keep-alives; the socket may stay open, but periodic
         // traffic stops until the app is foregrounded again.
@@ -678,7 +741,9 @@ class RealtimeMultiplexer {
       }
       for (const entry of this.docs.values()) {
         if (entry.syncDeadline) clearTimeout(entry.syncDeadline);
+        if (entry.batchTimer !== null) clearTimeout(entry.batchTimer);
         entry.ydoc.off("update", entry.updateHandler);
+        entry.ydoc.off("afterAllTransactions", entry.scheduleBatch);
         entry.awareness.off("change", entry.awarenessHandler);
       }
       this.docs.clear();

@@ -44,6 +44,9 @@ const RECONNECT_MAX_MS = 15_000;
 const RECONNECT_MULTIPLIER = 1.5;
 const RESYNC_INTERVAL_MS = 30_000;
 const IDLE_CLOSE_MS = 30_000;
+const UPDATE_BATCH_MS = 250;
+const UPDATE_BATCH_BYTES = 64 * 1024;
+const MAX_UPDATE_BYTES = 1024 * 1024 - 4096;
 // y-protocols/awareness GCs peer entries after `outdatedTimeout` (30s);
 // without periodic keep-alive, peer cursors vanish on typing pauses.
 const AWARENESS_KEEPALIVE_MS = 15_000;
@@ -86,6 +89,10 @@ export type FragmentSeeder = Pick<
 
 interface DocEntry {
   localBatch: Uint8Array[];
+  localBatchBytes: number;
+  batchBoundary: number;
+  batchTimer: ReturnType<typeof setTimeout> | null;
+  scheduleBatch: () => void;
   flushBatch: () => void;
   rejected: boolean;
   syncDeadline: ReturnType<typeof setTimeout> | null;
@@ -145,10 +152,34 @@ class RealtimeMultiplexer {
       rejected: false,
       syncDeadline: null,
       localBatch: [],
+      localBatchBytes: 0,
+      batchBoundary: 0,
+      batchTimer: null,
+      scheduleBatch: () => {
+        if (!entry.localBatch.length || entry.rejected || entry.denied) return;
+        if (entry.localBatchBytes > MAX_UPDATE_BYTES && entry.batchBoundary > 0) {
+          // Separate prior edits without splitting this transaction's mirror updates.
+          const transaction = entry.localBatch.splice(entry.batchBoundary);
+          entry.flushBatch();
+          entry.localBatch = transaction;
+          entry.localBatchBytes = transaction.reduce((sum, update) => sum + update.length, 0);
+        }
+        if (entry.localBatchBytes >= UPDATE_BATCH_BYTES || document.visibilityState === "hidden") {
+          entry.flushBatch();
+        } else if (entry.batchTimer === null) {
+          // Keep the first deadline so continuous typing cannot postpone a save.
+          entry.batchTimer = setTimeout(entry.flushBatch, UPDATE_BATCH_MS);
+        }
+        entry.batchBoundary = entry.localBatch.length;
+      },
       flushBatch: () => {
+        if (entry.batchTimer !== null) clearTimeout(entry.batchTimer);
+        entry.batchTimer = null;
         if (!entry.localBatch.length) return;
         const updates = entry.localBatch;
         entry.localBatch = [];
+        entry.localBatchBytes = 0;
+        entry.batchBoundary = 0;
         this.queueUpdate(entry, Y.mergeUpdates(updates));
       },
       docName,
@@ -169,9 +200,16 @@ class RealtimeMultiplexer {
       updateHandler: (update, origin) => {
         // Skip echoes of frames we just applied from the wire.
         if (origin === REMOTE_ORIGIN) return;
+        if (entry.rejected || entry.denied) {
+          this.setOutboundPending(entry, true);
+          this.queueUpdate(entry, update);
+          return;
+        }
         // Read-only docs never push state. IDB hydration replays of
         // server-known content would otherwise leave as write frames.
         entry.localBatch.push(update);
+        entry.localBatchBytes += update.length;
+        this.setOutboundPending(entry, true);
       },
       awarenessHandler: (changes, origin) => {
         if (origin === "remote") return;
@@ -185,7 +223,7 @@ class RealtimeMultiplexer {
     };
 
     opts.ydoc.on("update", entry.updateHandler);
-    opts.ydoc.on("afterAllTransactions", entry.flushBatch);
+    opts.ydoc.on("afterAllTransactions", entry.scheduleBatch);
     opts.awareness.on("change", entry.awarenessHandler);
     this.docs.set(docName, entry);
     this.cancelIdleClose();
@@ -222,10 +260,11 @@ class RealtimeMultiplexer {
   private detach(docName: string): void {
     const entry = this.docs.get(docName);
     if (!entry) return;
+    entry.flushBatch();
     if (entry.canSeed) this.sendForDoc(docName, new Uint8Array([10, 0]));
     if (entry.syncDeadline) clearTimeout(entry.syncDeadline);
     entry.ydoc.off("update", entry.updateHandler);
-    entry.ydoc.off("afterAllTransactions", entry.flushBatch);
+    entry.ydoc.off("afterAllTransactions", entry.scheduleBatch);
     entry.awareness.off("change", entry.awarenessHandler);
     // Announce departure so peers drop our cursor now, rather than waiting for
     // y-protocols' 30s outdatedTimeout GC. The change handler is already
@@ -538,7 +577,10 @@ class RealtimeMultiplexer {
       const id = decoding.readVarString(decoder);
       entry.seedRequests.get(id)?.(true);
       entry.unacknowledged.delete(id);
-      this.setOutboundPending(entry, entry.unacknowledged.size > 0);
+      this.setOutboundPending(
+        entry,
+        entry.rejected || entry.unacknowledged.size > 0 || entry.localBatch.length > 0,
+      );
     } else if (messageType === 9) {
       entry.seedRequests.get(decoding.readVarString(decoder))?.(false);
     } else if (messageType === MESSAGE_SYNC) {
@@ -643,7 +685,15 @@ class RealtimeMultiplexer {
     const decoder = decoding.createDecoder(replyBytes);
     decoding.readVarUint(decoder);
     decoding.readVarUint(decoder);
-    this.queueUpdate(entry, decoding.readVarUint8Array(decoder));
+    // The handshake includes buffered local edits. Cancel their separate send.
+    const update = decoding.readVarUint8Array(decoder);
+    if (entry.batchTimer !== null) clearTimeout(entry.batchTimer);
+    entry.batchTimer = null;
+    const updates = entry.localBatch;
+    entry.localBatch = [];
+    entry.localBatchBytes = 0;
+    entry.batchBoundary = 0;
+    this.queueUpdate(entry, Y.mergeUpdates([...updates, update]));
   }
 
   private rejectOversized(entry: DocEntry): void {
@@ -661,7 +711,7 @@ class RealtimeMultiplexer {
       (sum, item) => sum + item.length,
       0,
     );
-    if (update.length > 1024 * 1024 - 4096 || queuedBytes + update.length > 8 * 1024 * 1024) {
+    if (update.length > MAX_UPDATE_BYTES || queuedBytes + update.length > 8 * 1024 * 1024) {
       this.setOutboundPending(entry, true);
       this.rejectOversized(entry);
       return;
@@ -806,6 +856,7 @@ class RealtimeMultiplexer {
     this.listenersAttached = true;
     window.addEventListener("online", this.handleOnline);
     window.addEventListener("offline", this.handleOffline);
+    window.addEventListener("pagehide", this.flushBatches);
     document.addEventListener("visibilitychange", this.handleVisibility);
     window.addEventListener(AUTH_REFRESHED_EVENT, this.handleAuthRefreshed);
     window.addEventListener(AUTH_REVOKED_EVENT, this.handleAuthRevoked);
@@ -829,7 +880,10 @@ class RealtimeMultiplexer {
   };
 
   private handleVisibility = (): void => {
-    if (document.visibilityState !== "visible") return;
+    if (document.visibilityState !== "visible") {
+      this.flushBatches();
+      return;
+    }
     if (this.docs.size === 0) return;
     if (!this.wsConnected && !this.wsConnecting) this.forceReconnect();
   };
@@ -841,6 +895,10 @@ class RealtimeMultiplexer {
     this.authAttempts = 0;
     // Close idle sockets too, so a later attachment cannot reuse another org's connection.
     this.forceReconnect();
+  };
+
+  private flushBatches = (): void => {
+    for (const entry of this.docs.values()) entry.flushBatch();
   };
 
   private handleAuthRevoked = (): void => {
@@ -857,7 +915,9 @@ class RealtimeMultiplexer {
       // Sessions must not read a dropped doc as a clean, connected close.
       entry.options.onStatus?.("token_revoked");
       if (entry.syncDeadline) clearTimeout(entry.syncDeadline);
+      if (entry.batchTimer !== null) clearTimeout(entry.batchTimer);
       entry.ydoc.off("update", entry.updateHandler);
+      entry.ydoc.off("afterAllTransactions", entry.scheduleBatch);
       entry.awareness.off("change", entry.awarenessHandler);
     }
     this.docs.clear();

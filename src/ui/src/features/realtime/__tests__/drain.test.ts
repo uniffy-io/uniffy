@@ -268,6 +268,9 @@ describe("realtime drain", () => {
 
     expect(realtimeMultiplexer.isOutboundPending(docName)).toBe(true);
     expect(hasPendingDoc("TASK", "drained")).toBe(true);
+    await vi.waitFor(() => {
+      expect(ws.sent.some((frame) => frame[peekVarString(frame).payloadOffset] === 6)).toBe(true);
+    });
     expect(applyClientFramesToServer(ws, docName, server)).toBeGreaterThan(0);
     await flush();
 
