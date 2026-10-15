@@ -58,6 +58,9 @@ export const authSlice = createSlice({
       state.isAuthenticated = true;
       state.isRehydrating = false;
     },
+    syncRefreshToken: (state, action: PayloadAction<string | null>) => {
+      state.refreshToken = action.payload;
+    },
     startRehydrating: (state) => {
       state.isRehydrating = true;
     },

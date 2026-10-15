@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import * as Y from "yjs";
 import { Schema } from "@milkdown/prose/model";
 import {
+  initializeFragment,
   observeFragmentSeedDuplicates,
   seedProsemirrorFragment,
   SEEDED_BY_KEY,
@@ -142,4 +143,60 @@ describe("fragment seed arbitration", () => {
     doc.destroy();
     empty.destroy();
   });
+});
+
+it("never mutates active document while a seed proposal awaits acceptance", async () => {
+  const doc = new Y.Doc();
+  doc.getText("markdown").insert(0, "base");
+  let finish!: (accepted: boolean) => void;
+  let proposed!: Uint8Array;
+  const submitSeed = vi.fn((update: Uint8Array) => {
+    proposed = update;
+    return new Promise<boolean>((resolve) => {
+      finish = resolve;
+    });
+  });
+  const signal = new AbortController();
+  const initialized = initializeFragment(
+    doc,
+    {
+      isFragmentSeeder: true,
+      subscribeFragmentSeeder: () => () => {},
+      submitSeed,
+    },
+    () => node,
+    signal.signal,
+  );
+  await Promise.resolve();
+  expect(submitSeed).toHaveBeenCalledOnce();
+  expect(getProsemirrorFragment(doc).length).toBe(0);
+  Y.applyUpdate(doc, proposed);
+  finish(true);
+  await initialized;
+  expect(getProsemirrorFragment(doc).toString()).toContain("seed text");
+  doc.destroy();
+});
+
+it("abandons a rejected seed without inserting duplicate blocks or losing peer typing", async () => {
+  const doc = new Y.Doc();
+  doc.getText("markdown").insert(0, "base");
+  const submitSeed = vi.fn(async () => {
+    seedProsemirrorFragment(doc, node);
+    const paragraph = getProsemirrorFragment(doc).get(0) as Y.XmlElement;
+    (paragraph.get(0) as Y.XmlText).insert(9, " peer typing");
+    return false;
+  });
+  await initializeFragment(
+    doc,
+    {
+      isFragmentSeeder: true,
+      subscribeFragmentSeeder: () => () => {},
+      submitSeed,
+    },
+    () => node,
+    new AbortController().signal,
+  );
+  expect(getProsemirrorFragment(doc).length).toBe(1);
+  expect(getProsemirrorFragment(doc).toString()).toContain("peer typing");
+  doc.destroy();
 });

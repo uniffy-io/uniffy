@@ -173,7 +173,9 @@ async def test_render_persists_description_and_attributes_mentions(editor_known:
     session.execute = AsyncMock(
         side_effect=[
             MagicMock(scalar_one_or_none=lambda: event),
+            MagicMock(),
             MagicMock(scalars=lambda: [attendee]),
+            MagicMock(scalar_one_or_none=lambda: event),
         ]
     )
     session.commit = AsyncMock()
@@ -242,7 +244,9 @@ async def test_render_proceeds_when_the_plain_write_left_equal_text() -> None:
     session.execute = AsyncMock(
         side_effect=[
             MagicMock(scalar_one_or_none=lambda: event),
+            MagicMock(),
             MagicMock(scalars=lambda: []),
+            MagicMock(scalar_one_or_none=lambda: event),
         ]
     )
     session.commit = AsyncMock()

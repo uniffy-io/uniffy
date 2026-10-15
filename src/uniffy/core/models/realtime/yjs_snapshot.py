@@ -31,6 +31,7 @@ class RealtimeYjsSnapshot(SQLModel, table=True):
     generation: str | None = None
     revision: int = Field(default=0, sa_column=Column(BigInteger, nullable=False))
     rendered_revision: int = Field(default=0, sa_column=Column(BigInteger, nullable=False))
+    effects_pending: bool = Field(default=False)
     actor_id: UUID | None = None
     seed_owner: str | None = None
     seed_expires_at: datetime | None = Field(

@@ -11,11 +11,14 @@ from loguru import logger
 from sqlalchemy import select
 from sqlalchemy import update as sql_update
 
+from uniffy.core.events import NotificationEvent, emit_notification
+from uniffy.core.events.bus import stage_notification_events
 from uniffy.core.models.notes.note import Note
 from uniffy.core.realtime.adapter import RealtimeRenderConflict, check_not_superseded
 from uniffy.core.realtime.metrics import REALTIME_BLANK_CONTENT_OVERWRITES_TOTAL
 from uniffy.core.search.indexer import build_content_urn
-from uniffy.core.types import ContentType, NodeType
+from uniffy.core.types import AccessMode, ContentType, NodeType, NotificationType
+from uniffy.domains.files.attachments.inline import stage_inline_reconciliation
 from uniffy.domains.notes.content.fields import extract_content_fields
 from uniffy.domains.tags.sync import finish_inline_tags_after_commit, stage_inline_tags
 
@@ -49,7 +52,6 @@ class NoteRealtimePersistence:
             canvas_content,
             organization_id,
         )
-        # Canvas content has no plain-write path that publishes a replacement.
         if note.node_type != NodeType.CANVAS:
             check_not_superseded(
                 note.updated_at,
@@ -78,6 +80,19 @@ class NoteRealtimePersistence:
                     return None
 
             old_refs = note.outgoing_references
+            content_changed = (
+                note.content != fields.content or note.canvas_content != fields.canvas_content
+            )
+            if (
+                note.node_type != NodeType.CANVAS
+                and not content_changed
+                and (note.outgoing_references or []) == (fields.outgoing_references or [])
+            ):
+
+                async def refresh_projection() -> None:
+                    await self.after_projection(organization_id, note_id)
+
+                return note, refresh_projection
             result = await self.operations.session.execute(
                 sql_update(Note)
                 .where(
@@ -116,18 +131,41 @@ class NoteRealtimePersistence:
             parsed_names=fields.parsed_inline_tag_names or [],
         )
 
-        async def after_commit() -> None:
-            await finish_inline_tags_after_commit(tags)
-            await self.operations._index_for_search(note)
+        await stage_inline_reconciliation(
+            self.operations.session, ContentType.NOTE, note_id, organization_id
+        )
+        with stage_notification_events(self.operations.session):
             await self.operations._notify_new_mentions(
                 actor_id,
                 organization_id,
                 note,
                 old_refs=old_refs,
-                writer_id=None,
+                writer_id=actor_id,
             )
+            effective_mode, _ = await self.operations._effective_policy(organization_id, note)
+            if content_changed and effective_mode != AccessMode.OWNER_ONLY:
+                await emit_notification(
+                    NotificationEvent(
+                        notification_type=NotificationType.CONTENT_EDITED,
+                        organization_id=organization_id,
+                        actor_id=actor_id,
+                        title=f"Edited note: {note.title}",
+                        source_urn=build_content_urn(ContentType.NOTE, note.id),
+                        content_type=ContentType.NOTE,
+                        content_id=note.id,
+                    )
+                )
+
+        async def after_commit() -> None:
+            await finish_inline_tags_after_commit(tags)
+            await self.after_projection(organization_id, note_id)
 
         return note, after_commit
+
+    async def after_projection(self, organization_id: UUID, note_id: UUID) -> None:
+        note = await self._load_note(organization_id, note_id, populate_existing=True)
+        if note is not None:
+            await self.operations._index_for_search(note)
 
     async def save(
         self,

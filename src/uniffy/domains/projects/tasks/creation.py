@@ -13,6 +13,7 @@ from uniffy.core.models.projects.field_definition import (
     TaskStatusSemantic,
 )
 from uniffy.core.models.projects.task import Task
+from uniffy.core.realtime.limits import validate_document_size
 from uniffy.core.types import ContentType
 from uniffy.domains.projects import queries
 from uniffy.domains.projects.audience import resolve_project_audience
@@ -81,6 +82,7 @@ class TaskCreateOperations:
             )
 
         description = kwargs.get("description", "")
+        validate_document_size(description or "")
         outgoing_references = queries.extract_urns_from_content(description) if description else []
 
         max_sort_order = await self.session.execute(

@@ -1,3 +1,5 @@
+import { useContentRefresh } from "@/features/notifications/hooks/useContentRefresh";
+import { fetchTask } from "@/features/projects/store/projectsThunks";
 import { useState, useRef, useEffect, useMemo } from "react";
 import {
   X,
@@ -62,6 +64,12 @@ export function TaskDetailPanel({ taskId, variant = "sidebar" }: TaskDetailPanel
   const dispatch = useAppDispatch();
   const { isMobileOrTablet } = useBreakpoint();
   const task = useAppSelector((state) => selectTasksMap(state)[taskId]);
+  useEffect(() => {
+    void dispatch(fetchTask(taskId));
+  }, [dispatch, taskId]);
+  useContentRefresh(ContentType.TASK, taskId, () => {
+    void dispatch(fetchTask(taskId));
+  });
   const project = useAppSelector(selectCurrentProject);
   const projectId = project?.id;
   const allProjectTasks = useAppSelector(

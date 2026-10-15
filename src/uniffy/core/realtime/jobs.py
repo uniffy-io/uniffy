@@ -2,16 +2,21 @@
 
 import base64
 import time
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import select
+from sqlalchemy import func, or_, select
+from sqlalchemy.orm import load_only
 
 from uniffy.core.models.realtime.yjs_snapshot import RealtimeYjsSnapshot
 from uniffy.core.realtime.adapter import RealtimeRenderConflict
-from uniffy.core.realtime.metrics import REALTIME_SNAPSHOT_TASK_DURATION
+from uniffy.core.realtime.metrics import (
+    REALTIME_BACKLOG_DEPTH,
+    REALTIME_PROJECTION_OUTCOMES,
+    REALTIME_SNAPSHOT_TASK_DURATION,
+)
 from uniffy.core.realtime.snapshot import persist_snapshot
 from uniffy.core.types import ContentType
 from uniffy.infrastructure.database.session import open_session
@@ -19,31 +24,62 @@ from uniffy.vendor.arq import Retry
 
 logger = logger.bind(component="core.realtime.jobs")
 
+RECOVERY_BATCH_SIZE = 100
+
 
 async def recover_realtime_projections(ctx: dict[str, Any]) -> None:
     async with open_session() as db:
+        depth = await db.scalar(
+            select(func.count())
+            .select_from(RealtimeYjsSnapshot)
+            .where(
+                or_(
+                    RealtimeYjsSnapshot.revision > RealtimeYjsSnapshot.rendered_revision,
+                    RealtimeYjsSnapshot.effects_pending.is_(True),
+                )
+            )
+        )
+        REALTIME_BACKLOG_DEPTH.labels(kind="projection").set(depth or 0)
         pending = (
             (
                 await db.execute(
                     select(RealtimeYjsSnapshot)
                     .where(
-                        RealtimeYjsSnapshot.revision > RealtimeYjsSnapshot.rendered_revision,
+                        or_(
+                            RealtimeYjsSnapshot.revision > RealtimeYjsSnapshot.rendered_revision,
+                            RealtimeYjsSnapshot.effects_pending.is_(True),
+                        ),
+                        RealtimeYjsSnapshot.organization_id.is_not(None),
+                    )
+                    .options(
+                        load_only(
+                            RealtimeYjsSnapshot.organization_id,
+                            RealtimeYjsSnapshot.updated_at,
+                        )
                     )
                     .order_by(RealtimeYjsSnapshot.updated_at)
-                    .limit(100)
+                    .limit(RECOVERY_BATCH_SIZE)
+                    .with_for_update(skip_locked=True)
                 )
             )
             .scalars()
             .all()
         )
+        # Rotate attempts before rendering so failed or trashed rows cannot starve later work.
+        attempted_at = datetime.now(UTC)
+        for snapshot in pending:
+            snapshot.updated_at = attempted_at
+        await db.commit()
     for snapshot in pending:
         if snapshot.organization_id is None:
             continue
         try:
-            await persist_snapshot(
+            outcome = await persist_snapshot(
                 snapshot.content_type, snapshot.content_id, snapshot.organization_id, b"", b""
             )
+            REALTIME_PROJECTION_OUTCOMES.labels(outcome=outcome.value).inc()
         except Exception:
+            REALTIME_PROJECTION_OUTCOMES.labels(outcome="failed").inc()
             logger.exception(
                 "Realtime projection recovery failed", content_id=str(snapshot.content_id)
             )
@@ -81,4 +117,5 @@ async def save_realtime_snapshot(
             time.perf_counter() - started
         )
 
+    REALTIME_PROJECTION_OUTCOMES.labels(outcome=outcome.value).inc()
     return {"status": outcome.value, "content_id": content_id_str}

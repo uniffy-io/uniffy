@@ -85,6 +85,24 @@ export const fetchProject = createAsyncThunk<
   }
 });
 
+export const fetchTask = createAsyncThunk<
+  Task | null,
+  string,
+  { state: RootState; dispatch: AppDispatch; rejectValue: string }
+>("projects/fetchTask", async (taskId, { getState, dispatch, rejectWithValue }) => {
+  const orgId = getState().auth.currentOrganizationId;
+  if (!orgId) return rejectWithValue("No organization selected");
+  try {
+    const response = await projectsApi.getTask(taskId, orgId);
+    if (getState().auth.currentOrganizationId !== orgId)
+      return rejectWithValue("Organization changed");
+    hydrateTaskTags(dispatch, [response.protoTask ?? undefined]);
+    return response.task;
+  } catch (error) {
+    return rejectWithValue(error instanceof Error ? error.message : "Failed to fetch task");
+  }
+});
+
 export const fetchProjectTasks = createAsyncThunk<
   Task[],
   string | { projectId: string; firstPageOnly?: boolean },

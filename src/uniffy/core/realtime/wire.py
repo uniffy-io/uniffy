@@ -34,6 +34,9 @@ MESSAGE_FRAGMENT_SEEDER = 4
 MESSAGE_GENERATION = 5
 MESSAGE_DURABLE_UPDATE = 6
 MESSAGE_ACK = 7
+MESSAGE_SEED_UPDATE = 8
+MESSAGE_SEED_REJECTED = 9
+MESSAGE_SEED_CAPABILITY = 10
 
 
 def create_generation_message(generation: str) -> bytes:
@@ -44,8 +47,13 @@ def create_ack_message(update_id: str) -> bytes:
     return write_var_uint(MESSAGE_ACK) + write_var_string(update_id)
 
 
-def create_fragment_seeder_message(granted: bool) -> bytes:
-    return write_var_uint(MESSAGE_FRAGMENT_SEEDER) + write_var_uint(int(granted))
+def create_fragment_seeder_message(granted: bool, token: str = "") -> bytes:
+    frame = write_var_uint(MESSAGE_FRAGMENT_SEEDER) + write_var_uint(int(granted))
+    return frame + write_var_string(token) if token else frame
+
+
+def create_seed_rejected_message(update_id: str) -> bytes:
+    return write_var_uint(MESSAGE_SEED_REJECTED) + write_var_string(update_id)
 
 
 def create_auth_denied_message(reason: str, *, no_view: bool = False) -> bytes:

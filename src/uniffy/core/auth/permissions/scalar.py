@@ -1,8 +1,22 @@
+from collections.abc import Collection
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from uuid import UUID
 
-from sqlalchemy import and_, case, exists, func, or_, select, true
+from sqlalchemy import (
+    DateTime,
+    Row,
+    Select,
+    Uuid,
+    and_,
+    bindparam,
+    case,
+    exists,
+    func,
+    or_,
+    select,
+    true,
+)
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.auth.permissions.roles import ROLE_ORDINAL
@@ -38,15 +52,12 @@ class ScalarAuthorizationFacts:
     granted_role: ContentRole | None
 
 
-async def load_scalar_authorization_facts(
-    session: AsyncSession,
-    *,
-    user_id: UUID,
-    organization_id: UUID,
-    content_type: ContentType,
-    content_id: UUID,
-) -> ScalarAuthorizationFacts | None:
-    now = datetime.now(UTC)
+def _authorization_statement(*, audience: bool) -> Select:
+    user_id = User.id if audience else bindparam("actor_id", type_=Uuid())
+    organization_id = bindparam("organization_id", type_=Uuid())
+    content_id = bindparam("content_id", type_=Uuid())
+    content_type = bindparam("content_type")
+    now = bindparam("checked_at", type_=DateTime(timezone=True))
     organization_is_active = exists(
         select(Organization.id).where(
             Organization.id == organization_id,
@@ -65,6 +76,7 @@ async def load_scalar_authorization_facts(
             Organization.is_suspended.is_(False),
         )
         .limit(1)
+        .correlate(User)
         .scalar_subquery()
     )
     support = (
@@ -78,6 +90,7 @@ async def load_scalar_authorization_facts(
         )
         .order_by(SupportSession.granted_at.desc())
         .limit(1)
+        .correlate(User)
         .lateral("active_support")
     )
     defaults = (
@@ -100,6 +113,7 @@ async def load_scalar_authorization_facts(
             GroupMember.is_active.is_(True),
             Group.organization_id == organization_id,
         )
+        .correlate(User)
     )
     subject_match = or_(
         and_(
@@ -134,10 +148,12 @@ async def load_scalar_authorization_facts(
                 ContentMember.expires_at > now,
             ),
         )
+        .correlate(User)
         .lateral("applicable_grants")
     )
-    statement = (
+    return (
         select(
+            User.id.label("user_id"),
             User.is_active,
             User.is_system_admin,
             membership_role.label("organization_role"),
@@ -152,11 +168,71 @@ async def load_scalar_authorization_facts(
         .outerjoin(support, true())
         .outerjoin(defaults, true())
         .join(grants, true())
-        .where(User.id == user_id)
+        .where(
+            User.id.in_(bindparam("actor_ids", expanding=True, type_=Uuid()))
+            if audience
+            else User.id == user_id
+        )
     )
-    row = (await session.execute(statement)).one_or_none()
-    if row is None:
-        return None
+
+
+_SCALAR_STATEMENT = _authorization_statement(audience=False)
+_AUDIENCE_STATEMENT = _authorization_statement(audience=True)
+MAX_AUTHORIZATION_ACTORS = 256
+
+
+async def load_scalar_authorization_facts(
+    session: AsyncSession,
+    *,
+    user_id: UUID,
+    organization_id: UUID,
+    content_type: ContentType,
+    content_id: UUID,
+) -> ScalarAuthorizationFacts | None:
+    row = (
+        await session.execute(
+            _SCALAR_STATEMENT,
+            {
+                "actor_id": user_id,
+                "organization_id": organization_id,
+                "content_type": content_type,
+                "content_id": content_id,
+                "checked_at": datetime.now(UTC),
+            },
+        )
+    ).one_or_none()
+    return _facts(row) if row is not None else None
+
+
+async def load_audience_authorization_facts(
+    session: AsyncSession,
+    *,
+    user_ids: Collection[UUID],
+    organization_id: UUID,
+    content_type: ContentType,
+    content_id: UUID,
+) -> dict[UUID, ScalarAuthorizationFacts]:
+    actors = tuple(dict.fromkeys(user_ids))
+    if len(actors) > MAX_AUTHORIZATION_ACTORS:
+        raise ValueError("Authorization audience exceeds batch limit")
+    if not actors:
+        return {}
+    rows = (
+        await session.execute(
+            _AUDIENCE_STATEMENT,
+            {
+                "actor_ids": actors,
+                "organization_id": organization_id,
+                "content_type": content_type,
+                "content_id": content_id,
+                "checked_at": datetime.now(UTC),
+            },
+        )
+    ).all()
+    return {row.user_id: _facts(row) for row in rows}
+
+
+def _facts(row: Row) -> ScalarAuthorizationFacts:
     return ScalarAuthorizationFacts(
         is_active_user=row.is_active,
         is_system_admin=row.is_system_admin,

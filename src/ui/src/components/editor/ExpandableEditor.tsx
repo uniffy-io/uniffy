@@ -10,12 +10,14 @@ import { dialogShellClass } from "@/components/ui/popover";
 import { useOverlayEscape } from "@/shared/hooks/useOverlayEscape";
 import { ContentType } from "@uniffy/proto/common/v1/common_pb";
 import { cn } from "@/shared/utils/cn";
+import { RealtimeConnectionNotice } from "@/features/realtime/components/RealtimeConnectionNotice";
 import { serializeEditorMarkdown } from "@/features/realtime/markdown";
 import {
   docContentTypeName,
   RealtimeSessionStatus,
   useMarkdownDocSession,
   useOutboundPending,
+  usePendingDocSync,
 } from "@/features/realtime";
 
 // Reopening inside this window resumes the same session instead of re-hydrating.
@@ -44,6 +46,19 @@ interface ExpandableEditorProps {
   showHeader?: boolean;
 }
 
+function PendingSyncChip({ waitingForNetwork }: { waitingForNetwork: boolean }) {
+  return (
+    <span
+      className="inline-flex items-center gap-1.5 text-xs text-muted-foreground"
+      role="status"
+      aria-live="polite"
+    >
+      <span className="h-1.5 w-1.5 rounded-full bg-current opacity-80" />
+      {waitingForNetwork ? "Will sync when online" : "Syncing..."}
+    </span>
+  );
+}
+
 export function ExpandableEditor({
   contentType,
   contentId,
@@ -66,20 +81,26 @@ export function ExpandableEditor({
   const [draftInitial, setDraftInitial] = useState(value);
   const latestMarkdownRef = useRef(value);
   const openTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [editWithoutLive, setEditWithoutLive] = useState(false);
   const [sessionOpen, setSessionOpen] = useState(false);
   const [closing, setClosing] = useState(false);
   // The cold-start seed is elected after sync; the read-only preview stays up until then.
   const [seeded, setSeeded] = useState(false);
   const [syncedSessionId, setSyncedSessionId] = useState<string | null>(null);
-  const realtimeActive = Boolean(realtime && contentId);
+  // Set when the server replaced the document mid-session; "draft" when this session typed.
+  const [replacedNotice, setReplacedNotice] = useState<"plain" | "draft" | null>(null);
+  const realtimeConfigured = Boolean(realtime && contentId);
+  const realtimeActive = realtimeConfigured && !editWithoutLive;
+  const realtimeContentType = docContentTypeName(contentType);
   const { binding, status, docName } = useMarkdownDocSession({
-    contentType: docContentTypeName(contentType),
+    contentType: realtimeContentType,
     contentId,
     enabled: realtimeActive && sessionOpen,
     canEdit: !readonly,
     // Descriptions have many plain writers (mobile, agents, API); a cache kept past a
     // clean close would replay over their later writes on the next open.
     discardLocalOnCleanClose: true,
+    onGenerationReset: (info) => setReplacedNotice(info.hasLocalEdits ? "draft" : "plain"),
   });
   const whenSynced = binding?.whenSynced;
   const sessionId = binding?.sessionId;
@@ -100,9 +121,17 @@ export function ExpandableEditor({
   // Unsent edits only reach the server through this attached doc. Hold the session while
   // frames are pending or the transport is down; a parent unmount still falls back to IDB.
   const outboundPending = useOutboundPending(sessionOpen ? docName : null);
+  const strandedSync = usePendingDocSync(realtimeContentType, realtimeActive ? contentId : null);
   const transportDown = status === "disconnected" || status === "offline";
   useEffect(() => {
-    if (!closing || ((outboundPending || transportDown) && status !== "permission_lost")) return;
+    if (
+      !closing ||
+      ((outboundPending || transportDown) &&
+        status !== "permission_lost" &&
+        status !== "access_lost" &&
+        status !== "update_rejected")
+    )
+      return;
     const timer = setTimeout(() => {
       setSessionOpen(false);
       setClosing(false);
@@ -122,7 +151,9 @@ export function ExpandableEditor({
     if (openTimerRef.current) clearTimeout(openTimerRef.current);
     setClosing(false);
     setSessionOpen(true);
+    setEditWithoutLive(false);
     setSeeded(false);
+    setReplacedNotice(null);
     setDraftInitial(value);
     latestMarkdownRef.current = value;
     setEditorReady(false);
@@ -140,13 +171,19 @@ export function ExpandableEditor({
     setEditorReady(false);
     if (openTimerRef.current) clearTimeout(openTimerRef.current);
     setClosing(true);
+    if (editWithoutLive) setSessionOpen(false);
     // Before the seed lands the editor holds nothing of the user's; reporting it would blank
     // the host's description.
     if (realtimeActive && !seeded) return;
+    if (
+      realtimeActive &&
+      ["access_lost", "permission_lost", "token_revoked", "update_rejected"].includes(status)
+    )
+      return;
     editorHandle?.flushMarkdownMirror?.();
     const markdown = editorHandle?.run(serializeEditorMarkdown) ?? latestMarkdownRef.current;
-    onDone?.(markdown, { realtimeOwned });
-  }, [onDone, editorHandle, realtimeOwned, realtimeActive, seeded]);
+    onDone?.(markdown, { realtimeOwned: realtimeActive && realtimeOwned });
+  }, [onDone, editorHandle, realtimeOwned, realtimeActive, seeded, editWithoutLive, status]);
 
   const handleRealtimeSeeded = useCallback(() => setSeeded(true), []);
 
@@ -172,12 +209,22 @@ export function ExpandableEditor({
   useOverlayEscape(handleClose, isExpanded);
 
   const hasContent = value && value.trim().length > 0;
+  const waitingForNetwork =
+    transportDown || (typeof navigator !== "undefined" && navigator.onLine === false);
+  const pendingAfterDone = !isExpanded && (outboundPending || strandedSync);
 
   const connectingPreview = (
     <div className="h-full overflow-y-auto p-6">
-      <p className="text-sm text-muted-foreground mb-4">
-        {status === "permission_lost" ? "Edit access removed." : "Connecting..."}
-      </p>
+      <RealtimeConnectionNotice
+        key={editorKey}
+        waiting
+        status={status}
+        onEditWithoutLive={
+          !readonly && !realtimeOwned && !replacedNotice && !outboundPending && !strandedSync
+            ? () => setEditWithoutLive(true)
+            : undefined
+        }
+      />
       <CrepeEditor
         contentType={contentType}
         contentId={contentId}
@@ -188,6 +235,13 @@ export function ExpandableEditor({
       />
     </div>
   );
+  // After a generation change the open-time text is stale; the new session lands in a moment,
+  // so the gap stays blank rather than flashing old content under "Connecting...".
+  const waitingBody = replacedNotice ? (
+    <RealtimeConnectionNotice key={editorKey} waiting status={status} />
+  ) : (
+    connectingPreview
+  );
 
   return (
     <>
@@ -196,16 +250,19 @@ export function ExpandableEditor({
           <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
             {label}
           </h3>
-          {!readonly && hasContent && (
-            <button
-              type="button"
-              onClick={handleOpen}
-              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <PencilSimple size={12} />
-              Edit
-            </button>
-          )}
+          <div className="flex items-center gap-3">
+            {pendingAfterDone && <PendingSyncChip waitingForNetwork={waitingForNetwork} />}
+            {!readonly && hasContent && (
+              <button
+                type="button"
+                onClick={handleOpen}
+                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <PencilSimple size={12} />
+                Edit
+              </button>
+            )}
+          </div>
         </div>
       )}
       {/* Collapsed preview - clickable area with rendered content */}
@@ -244,15 +301,20 @@ export function ExpandableEditor({
           )}
 
           {/* Edit button - floats at top-right only when the host did not opt into showHeader; otherwise the header renders it next to the label so it never sits over the preview scrollbar */}
-          {!showHeader && !readonly && hasContent && (
-            <button
-              type="button"
-              onClick={handleOpen}
-              className="absolute top-0 right-0 flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors opacity-0 group-hover:opacity-100"
-            >
-              <PencilSimple size={12} />
-              Edit
-            </button>
+          {!showHeader && (
+            <div className="absolute top-0 right-0 flex items-center gap-3">
+              {pendingAfterDone && <PendingSyncChip waitingForNetwork={waitingForNetwork} />}
+              {!readonly && hasContent && (
+                <button
+                  type="button"
+                  onClick={handleOpen}
+                  className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors opacity-0 group-hover:opacity-100"
+                >
+                  <PencilSimple size={12} />
+                  Edit
+                </button>
+              )}
+            </div>
           )}
         </div>
       ) : (
@@ -292,7 +354,8 @@ export function ExpandableEditor({
 
           {/* Expand icon */}
           {!readonly && (
-            <div className="absolute top-2 right-2">
+            <div className="absolute top-2 right-2 flex items-center gap-3">
+              {pendingAfterDone && <PendingSyncChip waitingForNetwork={waitingForNetwork} />}
               <ArrowsOut size={16} weight="bold" className="text-muted-foreground" />
             </div>
           )}
@@ -322,9 +385,22 @@ export function ExpandableEditor({
                     onFileUploaded={onFileUploaded}
                     trailing={
                       <>
+                        {replacedNotice && (
+                          <span className="text-xs text-muted-foreground" role="status">
+                            {replacedNotice === "draft"
+                              ? `This ${label.toLowerCase()} was changed elsewhere. Your unsaved text is under Recovered draft.`
+                              : `This ${label.toLowerCase()} was changed elsewhere.`}
+                          </span>
+                        )}
+                        {editWithoutLive && (
+                          <span className="text-xs text-muted-foreground">
+                            Live updates unavailable. Done saves changes.
+                          </span>
+                        )}
                         <RealtimeSessionStatus
                           status={status}
                           awareness={binding?.awareness ?? null}
+                          whenSynced={binding?.whenSynced}
                         />
                         <Button type="button" size="md" onClick={handleClose}>
                           <Check size={14} weight="bold" />
@@ -350,9 +426,13 @@ export function ExpandableEditor({
                           contentType={contentType}
                           contentId={contentId}
                           value={draftInitial}
-                          realtime={binding ?? undefined}
+                          realtime={realtimeActive ? (binding ?? undefined) : undefined}
                           readonly={
-                            readonly || status === "permission_lost" || status === "token_revoked"
+                            readonly ||
+                            status === "permission_lost" ||
+                            status === "access_lost" ||
+                            status === "update_rejected" ||
+                            status === "token_revoked"
                           }
                           onChange={handleEditorChange}
                           onEditorReady={handleEditorReady}
@@ -364,10 +444,10 @@ export function ExpandableEditor({
                           className="pt-6"
                         />
                       </div>
-                      {realtimeActive && !seeded && connectingPreview}
+                      {realtimeActive && !seeded && waitingBody}
                     </>
                   ) : realtimeActive ? (
-                    connectingPreview
+                    waitingBody
                   ) : (
                     <div className="flex items-center justify-center h-full">
                       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />

@@ -1,5 +1,6 @@
 """Staged uploads link in place, derive read access from their parent, and die with it."""
 
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -11,11 +12,13 @@ from uniffy.core.models.files.file import File
 from uniffy.core.models.files.file_version import FileVersion
 from uniffy.core.models.files.folder import Folder
 from uniffy.core.models.files.media_info import FileMediaInfo
+from uniffy.core.models.files.reconciliation import InlineAttachmentReconciliation
 from uniffy.core.models.files.storage_usage import StorageUsage
 from uniffy.core.models.notes.note import Note
 from uniffy.core.models.permissions.content_member import ContentMember
 from uniffy.core.models.realtime.yjs_snapshot import RealtimeYjsSnapshot
-from uniffy.core.search.indexer import SearchIndexer
+from uniffy.core.search.indexer import SEARCH_INDEXER_CTX_KEY, SearchIndexer
+from uniffy.core.storage import OBJECT_STORAGE_CTX_KEY
 from uniffy.core.types import (
     AccessMode,
     ContentRole,
@@ -23,8 +26,11 @@ from uniffy.core.types import (
     SubjectType,
     generate_id,
 )
+from uniffy.domains.files.attachments.inline import stage_inline_reconciliation
 from uniffy.domains.files.attachments.operations import AttachmentOperations
+from uniffy.domains.files.jobs.attachments import _reconcile
 from uniffy.domains.files.operations import FileOperations
+from uniffy.domains.notes.adapter import register_note_realtime_adapter
 from uniffy.domains.notes.operations import NoteOperations
 from uniffy.domains.permissions.access import (
     ResourceAccessPurpose,
@@ -461,4 +467,56 @@ async def test_reconcile_detaches_only_unreferenced_linked_attachments(
         assert await session.get(Attachment, picked_copy.id) is not None
         assert await session.get(File, picked_copy.file_id) is not None
     finally:
+        await _cleanup(session, env.org_id)
+
+
+@pytest.mark.parametrize("url_projected", [False, True])
+async def test_inline_upload_grace_retains_pending_cleanup(
+    session, env, s3_mock, quiet_search, url_projected
+):
+    register_note_realtime_adapter(quiet_search)
+    ops = AttachmentOperations(session, s3_mock, quiet_search)
+    try:
+        note = _note(env, access_mode=AccessMode.OWNER_ONLY)
+        session.add(note)
+        await session.commit()
+        note_id = note.id
+        _, upload = await _staged_setup(session, env, ops)
+        link = await ops.attach_file(env.admin_id, env.org_id, ContentType.NOTE, note_id, upload.id)
+        link_id, upload_id = link.id, upload.id
+        if url_projected:
+            note.outgoing_references = [f"urn:uniffy:content:FILE:{upload_id}"]
+        await stage_inline_reconciliation(session, ContentType.NOTE, note_id, env.org_id)
+        await session.commit()
+        item = await session.get(InlineAttachmentReconciliation, (ContentType.NOTE.value, note_id))
+        session.expunge(item)
+        await session.rollback()
+        ctx = {OBJECT_STORAGE_CTX_KEY: s3_mock, SEARCH_INDEXER_CTX_KEY: quiet_search}
+        await _reconcile(ctx, item)
+        session.expire_all()
+        assert await session.get(Attachment, link_id) is not None
+        assert await session.get(File, upload_id) is not None
+        pending = await session.get(
+            InlineAttachmentReconciliation, (ContentType.NOTE.value, note_id)
+        )
+        assert (pending is None) == url_projected
+        if not url_projected:
+            await session.execute(
+                update(Attachment)
+                .where(Attachment.id == link_id)
+                .values(attached_at=datetime.now(UTC) - timedelta(days=2))
+            )
+            await session.commit()
+            await _reconcile(ctx, item)
+            session.expire_all()
+            assert await session.get(Attachment, link_id) is None
+            assert await session.get(File, upload_id) is None
+    finally:
+        await session.rollback()
+        await session.execute(
+            delete(InlineAttachmentReconciliation).where(
+                InlineAttachmentReconciliation.organization_id == env.org_id
+            )
+        )
+        await session.commit()
         await _cleanup(session, env.org_id)

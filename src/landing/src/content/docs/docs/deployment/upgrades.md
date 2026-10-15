@@ -66,6 +66,25 @@ Use the Deployment names from your rendered manifests if they differ. Update any
 
 Mirror the new pinset first with `mirror.sh` if you run a private registry. Platform components move less often; when a pinset bumps one, the release notes say so and the same pinned `helm upgrade` commands from the install page apply.
 
+### Live editing durability upgrade
+
+Use a maintenance window for this upgrade. Old and new realtime backends and workers must never overlap.
+
+1. Pause editing and new realtime connections at ingress. Ask users to finish edits and close editing sessions while old backends and workers still run.
+2. Allow at least 30 seconds for backend debounce work to flush. Confirm queued and running realtime snapshot jobs have finished. An empty queue alone is insufficient while backends still hold pending edits.
+3. Stop every old backend and worker. Keep the maintenance gate closed.
+4. Apply migrations through 110. Start matching worker fleets and backends. Keep worker-core running for projection recovery.
+5. Deploy matching web and mobile clients. Reload open tabs before reopening editing traffic.
+6. Edit a note, task and event. Confirm saved content after reopening each item.
+
+Old snapshot jobs carry document bytes. New workers recover from committed PostgreSQL snapshots instead. Mixing versions can lose edits or overwrite newer state. The rolling commands above require this quiesce and full stop when crossing this protocol change.
+
+Migration 110 uses LZ4 for newly written realtime snapshots when PostgreSQL supports it. Existing bytes are unchanged. Builds without LZ4 retain their current compression. It also replaces two recovery indexes with one index matching the recovery scan.
+
+Mobile clients need a native rebuild with `expo-crypto` and `expo-sqlite`. Draft payloads use encrypted SQLite records with a SecureStore key that stays on the device. Existing SecureStore drafts stay readable and move into SQLite when saved in the same generation. Unreadable records remain retained.
+
+Older mobile builds cannot read SQLite drafts. Sync pending edits before replacing the app with an older build.
+
 ### Moving media work off core
 
 When upgrading from a release that processes media on core workers, pause new uploads and recordings. Let queued and running core media jobs finish before stopping those workers. This prevents job names from being handed to a fleet that no longer registers them.

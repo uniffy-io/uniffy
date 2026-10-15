@@ -24,7 +24,7 @@ import {
 import { authApi } from "@core/auth/authApi";
 import { isTokenExpiring } from "@core/auth/jwt";
 import { isAuthRejection, refreshSession } from "@core/auth/refresh";
-import { onSessionExpired } from "@core/auth/sessionEvents";
+import { onSessionExpired, clearUserSessionData } from "@core/auth/sessionEvents";
 import { resetSessionScope } from "@core/auth/sessionScope";
 import { hydrateServerUrl } from "@core/config/serverUrl";
 
@@ -372,6 +372,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const logout = useCallback(async () => {
+    if (state.user?.id) await clearUserSessionData(state.user.id);
     const refreshToken = await getRefreshToken();
     if (refreshToken) {
       try {
@@ -383,7 +384,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await clearAuthStorage();
     clearSessionCaches();
     dispatch({ type: "LOGOUT" });
-  }, []);
+  }, [state.user]);
 
   const value: AuthContextValue = {
     ...state,

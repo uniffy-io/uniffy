@@ -2,7 +2,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as Y from "yjs";
 import {
   attachEncryptedPersistence,
+  discoverStoredPendingDocs,
+  discardRecoveredDraft,
+  HYDRATION_ORIGIN,
   MARKDOWN_MIRROR_ORIGIN,
+  readRecoveredDrafts,
   REMOTE_ORIGIN,
   persistenceRecoveryStats,
 } from "@/features/realtime/persistence/encryptedYjsPersistence";
@@ -16,15 +20,24 @@ const storage = vi.hoisted(() => ({
   rows: new Map<string, unknown>(),
   encryptGate: Promise.resolve(),
   version: 2,
+  // Blobs remember the DEK that wrote them; any other DEK fails like AES-GCM would.
+  currentKey: "dek-1",
+  userId: "alice",
+}));
+vi.mock("@/app/storeRef", () => ({
+  getStoreRef: () => ({ getState: () => ({ auth: { user: { id: storage.userId } } }) }),
 }));
 vi.mock("@/shared/crypto/storageEncryption", () => ({
   registerEncryptedDatabase: vi.fn(),
   isStorageEncryptionReady: () => true,
   encryptForStorage: async (value: unknown) => {
     await storage.encryptGate;
-    return value;
+    return { key: storage.currentKey, payload: value };
   },
-  decryptFromStorage: async (value: unknown) => value,
+  decryptFromStorage: async (blob: { key?: string; payload?: unknown }) => {
+    if (!blob || blob.key !== storage.currentKey) throw new Error("decrypt failed");
+    return blob.payload;
+  },
   ENCRYPTION_REKEY_EVENT: "rekey",
   ENCRYPTION_TEARDOWN_EVENT: "teardown",
 }));
@@ -38,10 +51,10 @@ vi.mock("idb", () => ({
       });
       storage.version = version;
     }
-    const matching = (range: { lower: string[] }) =>
+    const matching = (range?: { lower: string[] }) =>
       [...storage.rows.keys()]
         .map((key) => JSON.parse(key) as string[])
-        .filter((key) => key[0] === range.lower[0] && key[1] === range.lower[1]);
+        .filter((key) => !range || (key[0] === range.lower[0] && key[1] === range.lower[1]));
     const put = async (_name: string, value: unknown, key: unknown) =>
       storage.rows.set(JSON.stringify(key), value);
     return {
@@ -49,8 +62,8 @@ vi.mock("idb", () => ({
       transaction: () => ({
         done: Promise.resolve(),
         objectStore: () => ({
-          getAllKeys: async (range: { lower: string[] }) => matching(range),
-          getAll: async (range: { lower: string[] }) =>
+          getAllKeys: async (range?: { lower: string[] }) => matching(range),
+          getAll: async (range?: { lower: string[] }) =>
             matching(range).map((key) => storage.rows.get(JSON.stringify(key))),
           delete: async (key: unknown) => storage.rows.delete(JSON.stringify(key)),
           put: (value: unknown, key: unknown) => put("updates", value, key),
@@ -64,6 +77,8 @@ describe("realtime local recovery", () => {
   beforeEach(() => {
     storage.rows.clear();
     storage.encryptGate = Promise.resolve();
+    storage.currentKey = "dek-1";
+    storage.userId = "alice";
     persistenceRecoveryStats.generationMismatchRows = 0;
     vi.stubGlobal("window", new EventTarget());
     vi.stubGlobal("IDBKeyRange", { bound: (lower: unknown) => ({ lower }) });
@@ -71,6 +86,49 @@ describe("realtime local recovery", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
+  });
+
+  it("discovers the first dirty edit without cleanup and clears only after ACK", async () => {
+    const doc = new Y.Doc();
+    doc.getMap("doc_meta").set("generation", "g");
+    let acknowledged = true;
+    const persistence = attachEncryptedPersistence({
+      contentType: "TASK",
+      contentId: "crash",
+      ydoc: doc,
+      scope: {
+        contentType: "TASK",
+        contentId: "crash",
+        organizationId: "org",
+        userId: "alice",
+        discardOnClean: false,
+      },
+      isAcknowledged: () => acknowledged,
+    });
+    doc.getText("markdown").insert(0, "first offline edit");
+    acknowledged = false;
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(await discoverStoredPendingDocs("alice")).toBe(true);
+    expect(await discoverStoredPendingDocs("other")).toBe(false);
+    acknowledged = true;
+    await persistence.acknowledge();
+    expect(await discoverStoredPendingDocs("alice")).toBe(false);
+    await persistence.destroy({ acknowledged: true });
+    doc.destroy();
+  });
+
+  it("does not mark an unacknowledged close clean after transport detach", async () => {
+    const doc = new Y.Doc();
+    const persistence = attachEncryptedPersistence({
+      contentType: "TASK",
+      contentId: "detach",
+      ydoc: doc,
+      isAcknowledged: () => true,
+    });
+    doc.getText("markdown").insert(0, "pending");
+    await persistence.destroy();
+    expect([...storage.rows.values()].some((blob: any) => blob.payload.dirty)).toBe(true);
+    doc.destroy();
   });
 
   it("preserves rows without generation during schema upgrade", async () => {
@@ -123,14 +181,14 @@ describe("realtime local recovery", () => {
     vi.spyOn(console, "warn").mockImplementation(() => {});
     const stale = new Y.Doc();
     stale.clientID = 4294967294;
-    stale.getMap(DOC_META_FIELD).set(DOC_GENERATION_KEY, "old");
-    stale.getMap("markdown_mirror").set("active", true);
-    stale.getXmlFragment("prosemirror").insert(0, [new Y.XmlText("old blocks")]);
     const cached = attachEncryptedPersistence({
       contentType: "TASK",
       contentId: "task",
       ydoc: stale,
     });
+    stale.getMap(DOC_META_FIELD).set(DOC_GENERATION_KEY, "old");
+    stale.getMap("markdown_mirror").set("active", true);
+    stale.getXmlFragment("prosemirror").insert(0, [new Y.XmlText("old blocks")]);
     await cached.destroy();
 
     const server = new Y.Doc();
@@ -292,13 +350,14 @@ describe("realtime local recovery", () => {
   it("does not combine different generations during offline replay", async () => {
     for (const generation of ["first", "second"]) {
       const doc = new Y.Doc();
-      doc.getMap(DOC_META_FIELD).set(DOC_GENERATION_KEY, generation);
-      doc.getText("markdown").insert(0, generation);
-      await attachEncryptedPersistence({
+      const persistence = attachEncryptedPersistence({
         contentType: "TASK",
         contentId: "epochs",
         ydoc: doc,
-      }).destroy();
+      });
+      doc.getMap(DOC_META_FIELD).set(DOC_GENERATION_KEY, generation);
+      doc.getText("markdown").insert(0, generation);
+      await persistence.destroy();
       doc.destroy();
     }
     const doc = new Y.Doc();
@@ -313,5 +372,215 @@ describe("realtime local recovery", () => {
     await persistence.destroy({ discard: true });
     expect(storage.rows.size).toBe(2);
     doc.destroy();
+  });
+
+  function serverDoc(generation: string, text: string): Y.Doc {
+    const doc = new Y.Doc();
+    doc.getMap(DOC_META_FIELD).set(DOC_GENERATION_KEY, generation);
+    doc.getText("markdown").insert(0, text);
+    return doc;
+  }
+
+  function rowKeys(): string[][] {
+    return [...storage.rows.keys()].map((key) => JSON.parse(key) as string[]);
+  }
+
+  async function openUnder(generation: string, text: string) {
+    const doc = new Y.Doc();
+    Y.applyUpdate(doc, Y.encodeStateAsUpdate(serverDoc(generation, text)), REMOTE_ORIGIN);
+    const persistence = attachEncryptedPersistence({
+      contentType: "TASK",
+      contentId: "task",
+      ydoc: doc,
+    });
+    await persistence.hydrate({ serverGeneration: generation });
+    return { doc, persistence };
+  }
+
+  it("writes no row for a session closed before its first sync", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const doc = new Y.Doc();
+    const persistence = attachEncryptedPersistence({
+      contentType: "TASK",
+      contentId: "task",
+      ydoc: doc,
+    });
+    await persistence.destroy();
+    doc.destroy();
+    expect(storage.rows.size).toBe(0);
+
+    const { doc: next, persistence: reopened } = await openUnder("G", "server text");
+    expect(await readRecoveredDrafts(next)).toEqual([]);
+    await reopened.destroy({ discard: true });
+    next.destroy();
+  });
+
+  it("offers no draft for rows written under a lost DEK", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { doc, persistence } = await openUnder("G", "baseline");
+    doc.getText("markdown").insert(8, " offline work");
+    await persistence.destroy();
+    doc.destroy();
+    expect(storage.rows.size).toBeGreaterThan(0);
+
+    storage.currentKey = "dek-2";
+    const { doc: later, persistence: reopened } = await openUnder("H", "replacement");
+    expect(persistenceRecoveryStats.generationMismatchRows).toBeGreaterThan(0);
+    expect(await readRecoveredDrafts(later)).toEqual([]);
+    await reopened.destroy({ discard: true });
+    later.destroy();
+  });
+
+  it("offers no draft for a session that only seeded, normalized and mirrored", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { doc, persistence } = await openUnder("G", "server text");
+    const fragment = doc.getXmlFragment("prosemirror");
+    doc.transact(() => {
+      const paragraph = new Y.XmlElement("paragraph");
+      const text = new Y.XmlText();
+      paragraph.insert(0, [text]);
+      fragment.insert(0, [paragraph]);
+      text.insert(0, "server text");
+    }, HYDRATION_ORIGIN);
+    // ySyncPlugin writeback of a trailing empty paragraph carries a persisted origin.
+    doc.transact(() => fragment.insert(fragment.length, [new Y.XmlElement("paragraph")]), "ysync");
+    doc.transact(() => doc.getMap("markdown_mirror").set("active", true), MARKDOWN_MIRROR_ORIGIN);
+    expect(persistence.isDirty()).toBe(false);
+    await persistence.destroy();
+    doc.destroy();
+    expect(storage.rows.size).toBeGreaterThan(0);
+
+    const { doc: later, persistence: reopened } = await openUnder("H", "replacement");
+    expect(await readRecoveredDrafts(later)).toEqual([]);
+    await reopened.destroy({ discard: true });
+    later.destroy();
+  });
+
+  it("offers a typed session as a draft and discards it on request", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { doc, persistence } = await openUnder("G", "server text");
+    doc.transact(() => doc.getText("markdown").insert(11, " typed by me"), "session-id");
+    expect(persistence.isDirty()).toBe(true);
+    await persistence.destroy();
+    doc.destroy();
+
+    const { doc: later, persistence: reopened } = await openUnder("H", "replacement");
+    const drafts = await readRecoveredDrafts(later);
+    expect(drafts).toHaveLength(1);
+    expect(drafts[0]).toMatchObject({ generation: "G", text: "server text typed by me" });
+
+    await discardRecoveredDraft(later, "G");
+    expect(rowKeys().some((key) => key[2] === "G")).toBe(false);
+    expect(await readRecoveredDrafts(later)).toEqual([]);
+    await reopened.destroy({ discard: true });
+    later.destroy();
+  });
+
+  it("hides recovery until the current generation is known", async () => {
+    const { doc, persistence } = await openUnder("G", "server text");
+    doc.getText("markdown").insert(11, " local");
+    await persistence.destroy();
+    const pending = new Y.Doc();
+    const reopened = attachEncryptedPersistence({
+      contentType: "TASK",
+      contentId: "task",
+      ydoc: pending,
+    });
+    expect(await readRecoveredDrafts(pending)).toEqual([]);
+    pending.getMap(DOC_META_FIELD).set(DOC_GENERATION_KEY, "H");
+    expect((await readRecoveredDrafts(pending)).map((draft) => draft.text)).toEqual([
+      "server text local",
+    ]);
+    await reopened.destroy({ discard: true });
+    pending.destroy();
+    doc.destroy();
+  });
+
+  it("never lists a draft whose text is empty", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { doc, persistence } = await openUnder("G", "server text");
+    doc.transact(() => doc.getText("markdown").delete(0, 11), "session-id");
+    expect(persistence.isDirty()).toBe(true);
+    await persistence.destroy();
+    doc.destroy();
+
+    const { doc: later, persistence: reopened } = await openUnder("H", "replacement");
+    expect(await readRecoveredDrafts(later)).toEqual([]);
+    await reopened.destroy({ discard: true });
+    later.destroy();
+  });
+
+  it("keeps an acknowledged close as a cache row, never as a draft", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { doc, persistence } = await openUnder("G", "server text");
+    doc.transact(() => doc.getText("markdown").insert(11, " synced later"), "session-id");
+    await persistence.destroy({ acknowledged: true });
+    doc.destroy();
+    expect(rowKeys().filter((key) => key[2] === "G")).toHaveLength(1);
+
+    const { doc: later, persistence: reopened } = await openUnder("H", "replacement");
+    expect(await readRecoveredDrafts(later)).toEqual([]);
+    await reopened.destroy({ discard: true });
+    later.destroy();
+  });
+
+  it("does not recreate an explicitly discarded active recovery copy on close", async () => {
+    const { doc, persistence } = await openUnder("discard-rejected", "server text");
+    doc.getText("markdown").insert(11, " oversized draft");
+    await persistence.quarantine();
+    const [draft] = await readRecoveredDrafts(doc);
+    expect(draft.text).toContain("oversized draft");
+    await discardRecoveredDraft(doc, draft.generation);
+    await persistence.destroy();
+    expect(rowKeys().some((key) => key[2] === draft.generation)).toBe(false);
+    expect(await readRecoveredDrafts(doc)).toEqual([]);
+    doc.destroy();
+  });
+
+  it("isolates a rejected seed branch without losing edits or replaying it into current generation", async () => {
+    const doc = new Y.Doc();
+    doc.getMap(DOC_META_FIELD).set(DOC_GENERATION_KEY, "server");
+    const persistence = attachEncryptedPersistence({
+      contentType: "NOTE",
+      contentId: "rejected-seed",
+      ydoc: doc,
+    });
+    doc.getText("markdown").insert(0, "typing attached to rejected seed");
+    expect(await persistence.quarantine()).toBe(true);
+    await persistence.destroy();
+    const fresh = new Y.Doc();
+    const next = attachEncryptedPersistence({
+      contentType: "NOTE",
+      contentId: "rejected-seed",
+      ydoc: fresh,
+    });
+    await next.hydrate();
+    expect(fresh.getText("markdown").toString()).toBe("");
+    fresh.getMap(DOC_META_FIELD).set(DOC_GENERATION_KEY, "server");
+    fresh.getText("markdown").insert(0, "accepted peer document");
+    await next.hydrate({ serverGeneration: "server" });
+    expect(fresh.getText("markdown").toString()).toBe("accepted peer document");
+    const drafts = await readRecoveredDrafts(fresh);
+    expect(drafts).toHaveLength(1);
+    expect(drafts[0].text).toBe("typing attached to rejected seed");
+    storage.userId = "bob";
+    storage.currentKey = "bob-key";
+    const other = new Y.Doc();
+    other.getMap(DOC_META_FIELD).set(DOC_GENERATION_KEY, "server");
+    const otherPersistence = attachEncryptedPersistence({
+      contentType: "NOTE",
+      contentId: "rejected-seed",
+      ydoc: other,
+    });
+    expect(await readRecoveredDrafts(other)).toEqual([]);
+    await otherPersistence.destroy();
+    other.destroy();
+    storage.userId = "alice";
+    storage.currentKey = "dek-1";
+    await discardRecoveredDraft(fresh, drafts[0].generation);
+    expect(await readRecoveredDrafts(fresh)).toEqual([]);
+    await next.destroy();
+    doc.destroy();
+    fresh.destroy();
   });
 });

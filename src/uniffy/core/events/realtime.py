@@ -5,10 +5,13 @@ from enum import StrEnum
 from typing import Any
 from uuid import UUID
 
+from uniffy.core.converters.common_proto import CONTENT_TYPE_TO_PROTO
+from uniffy.core.types import ContentType
 from uniffy.infrastructure.valkey.pubsub import publish_to_channel
 
 
 class NotificationPayloadType(StrEnum):
+    CONTENT_CHANGED = "content_changed"
     FILE_UPDATED = "file_updated"
     PRESENCE_CHANGED = "presence_changed"
     PERMISSIONS_CHANGED = "permissions_changed"
@@ -71,3 +74,16 @@ async def publish_access_request_changed(
     if can_request_again_at is not None:
         payload["can_request_again_at"] = can_request_again_at.isoformat()
     await publish_notification(user_id, payload)
+
+
+async def publish_content_changed(
+    content_type: ContentType, content_id: UUID, organization_id: UUID
+) -> None:
+    await publish_to_channel(
+        f"content:{organization_id}",
+        {
+            "_type": NotificationPayloadType.CONTENT_CHANGED,
+            "content_type": int(CONTENT_TYPE_TO_PROTO[content_type]),
+            "content_id": str(content_id),
+        },
+    )

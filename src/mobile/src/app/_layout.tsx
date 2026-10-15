@@ -47,11 +47,13 @@ import { CallEndedNotice } from "@features/calls/components/CallEndedNotice";
 import { CallRestorePrompt } from "@features/calls/components/CallRestorePrompt";
 import { LoginSplash } from "@shared/components/LoginSplash";
 import { BRAND } from "@theme/theme";
+import { useRealtimeDrain } from "@shared/realtime/useRealtimeDrain";
 
 SplashScreen.preventAutoHideAsync();
 installConnectivityHooks();
 
 function AuthGate({ children }: { children: React.ReactNode }) {
+  useRealtimeDrain();
   const { isAuthenticated, isRehydrating, organizationId, holdNavigation } = useAuth();
   const segments = useSegments();
   const router = useRouter();

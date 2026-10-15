@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { composeWhenSynced } from "@/features/realtime/hooks/useDocSession";
+import { composeWhenSynced, resolveCloseDisposal } from "@/features/realtime/hooks/useDocSession";
 
 function flush(): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, 0));
@@ -59,5 +59,65 @@ describe("composeWhenSynced", () => {
       "[realtime] persistence hydrate failed",
       expect.any(Error),
     );
+  });
+});
+
+describe("resolveCloseDisposal", () => {
+  const clean = {
+    discardLocalOnCleanClose: true,
+    serverSynced: true,
+    hydrationComplete: true,
+    transportStatus: "connected" as const,
+    outboundPending: false,
+    readOnly: false,
+    generationChanged: false,
+    denied: false,
+  };
+
+  it("discards only an acknowledged close of an opt-in session", () => {
+    expect(resolveCloseDisposal(clean)).toEqual({
+      acknowledged: true,
+      discard: true,
+      drain: false,
+    });
+    expect(resolveCloseDisposal({ ...clean, discardLocalOnCleanClose: false })).toMatchObject({
+      acknowledged: true,
+      discard: false,
+    });
+  });
+
+  it("never treats a generation change as a clean close", () => {
+    expect(resolveCloseDisposal({ ...clean, generationChanged: true })).toEqual({
+      acknowledged: false,
+      discard: false,
+      drain: false,
+    });
+  });
+
+  it("keeps rows after a revoked or forbidden close", () => {
+    expect(resolveCloseDisposal({ ...clean, transportStatus: "token_revoked" }).discard).toBe(
+      false,
+    );
+    expect(resolveCloseDisposal({ ...clean, transportStatus: "permission_lost" }).discard).toBe(
+      false,
+    );
+    expect(resolveCloseDisposal({ ...clean, transportStatus: "disconnected" }).discard).toBe(false);
+  });
+
+  it("records pending editable docs for the drain, not denied or replaced ones", () => {
+    expect(resolveCloseDisposal({ ...clean, outboundPending: true })).toEqual({
+      acknowledged: false,
+      discard: false,
+      drain: true,
+    });
+    expect(resolveCloseDisposal({ ...clean, outboundPending: true, readOnly: true }).drain).toBe(
+      false,
+    );
+    expect(resolveCloseDisposal({ ...clean, outboundPending: true, denied: true }).drain).toBe(
+      false,
+    );
+    expect(
+      resolveCloseDisposal({ ...clean, outboundPending: true, generationChanged: true }).drain,
+    ).toBe(false);
   });
 });

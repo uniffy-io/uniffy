@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useMemo, useRef } from "react";
+import React, { useState, useCallback, useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import {
   View,
   Text,
@@ -9,7 +9,6 @@ import {
   Platform,
   ActivityIndicator,
   Keyboard,
-  Share,
 } from "react-native";
 import {
   ArrowLeft,
@@ -50,9 +49,10 @@ import { MarkdownRenderer } from "@shared/components/MarkdownRenderer";
 import { useMentionInput, toCanonical, parseMentions } from "@shared/mentions/useMentionInput";
 import { useScreenFocused } from "@shared/hooks/useScreenFocused";
 import { useNoteCoEditing } from "@features/notes/realtime/useNoteCoEditing";
+import { RecoveredDrafts } from "@shared/realtime/RecoveredDrafts";
 import { RealtimePresence } from "@features/notes/realtime/RealtimePresence";
 import { roleCanEdit } from "@shared/permissions/contentRoles";
-import { diffStrings } from "@features/notes/realtime/textDiff";
+import { createCompositionTracker } from "@features/notes/realtime/composition";
 import { useInsertFileReference } from "@features/mentions/useInsertFileReference";
 import {
   tokenizeLine,
@@ -326,31 +326,39 @@ export function NoteEditorScreen() {
   // Consumed by the body-change effect so a remote rebuild is not mistaken for
   // local typing (which would push the merged text back as a local edit).
   const applyingRemoteRef = useRef(false);
+  const [composition] = useState(createCompositionTracker);
+  const pendingCaretRef = useRef<number | null>(null);
 
-  // Rebuild the visible input from the merged doc, keeping the caret anchored
-  // relative to where the remote change landed.
+  // Rebuild the visible input from the merged doc. The caret lives in display
+  // coordinates and the remote deltas in canonical ones, so the prefix is
+  // converted in, mapped, and converted back.
   const applyRemote = useCallback(
-    (canonical: string) => {
+    (canonical: string, mapIndex: (index: number) => number) => {
       const oldDisplay = bodyStateRef.current;
       const { display: newDisplay } = parseMentions(canonical);
       if (newDisplay === oldDisplay) return;
+      if (bodyFocusedRef.current) {
+        const caret = selectionRef.current.start;
+        const canonicalCaret = toCanonical(oldDisplay.slice(0, caret), mentionsRef.current).length;
+        const mapped = parseMentions(canonical.slice(0, mapIndex(canonicalCaret))).display.length;
+        pendingCaretRef.current = Math.min(mapped, newDisplay.length);
+      }
       applyingRemoteRef.current = true;
       initFromCanonical(canonical);
       bodyStateRef.current = newDisplay;
-      if (bodyFocusedRef.current) {
-        const delta = diffStrings(oldDisplay, newDisplay);
-        if (delta) {
-          let caret = selectionRef.current.start;
-          if (caret > delta.index) {
-            caret = Math.max(delta.index, caret + delta.insert.length - delta.deleteCount);
-          }
-          const clamped = Math.min(caret, newDisplay.length);
-          setTimeout(() => bodyRef.current?.setSelection(clamped, clamped), 0);
-        }
-      }
     },
-    [initFromCanonical, bodyRef],
+    [initFromCanonical, mentionsRef],
   );
+
+  // Place the caret in the same commit that shows the merged text. Deferred
+  // to a timer, iOS keeps it pinned relative to the end of the input until
+  // the correction lands.
+  useLayoutEffect(() => {
+    const caret = pendingCaretRef.current;
+    if (caret === null) return;
+    pendingCaretRef.current = null;
+    bodyRef.current?.setSelection(caret, caret);
+  }, [body, bodyRef]);
 
   const isFocused = useScreenFocused();
   const canEditNote = noteQuery.data ? roleCanEdit(noteQuery.data.userRole) : true;
@@ -361,8 +369,14 @@ export function NoteEditorScreen() {
     getLocalCanonical: () => toCanonical(bodyStateRef.current, mentionsRef.current),
     getLoadedCanonical: () => loadedRef.current?.content ?? null,
     applyRemote,
+    isComposing: () => composition.isComposing(Date.now()),
   });
-  const editAccessLost = coEdit.status === "permission_lost" || coEdit.status === "token_revoked";
+  const editAccessLost = [
+    "permission_lost",
+    "access_lost",
+    "token_revoked",
+    "update_rejected",
+  ].includes(coEdit.status);
   const editable = canEditNote && !editAccessLost;
 
   // Full-document autosaves cannot race realtime writes or pre-sync drafts.
@@ -377,11 +391,19 @@ export function NoteEditorScreen() {
   // keystroke and the character was lost before it ever reached the doc.
   const handleBodyChange = useCallback(
     (text: string) => {
+      composition.textChanged(bodyStateRef.current, text, Date.now());
       setBody(text);
       bodyStateRef.current = text;
       coEdit.scheduleLocalPush(toCanonical(text, mentionsRef.current));
     },
-    [setBody, coEdit, mentionsRef],
+    [setBody, coEdit, mentionsRef, composition],
+  );
+  const handleSelectionChange = useCallback(
+    (e: { nativeEvent: { selection: { start: number; end: number } } }) => {
+      onMentionSelectionChange(e);
+      composition.selectionChanged(e.nativeEvent.selection.start, e.nativeEvent.selection.end);
+    },
+    [onMentionSelectionChange, composition],
   );
 
   // The title lives outside the Y doc; it rides UpdateNote (metadata-only
@@ -798,11 +820,17 @@ export function NoteEditorScreen() {
             {!isEditMode
               ? "New note"
               : editAccessLost
-                ? "Edit access removed"
+                ? coEdit.status === "access_lost"
+                  ? "Access lost"
+                  : coEdit.status === "token_revoked"
+                    ? "Session ended"
+                    : coEdit.status === "update_rejected"
+                      ? "Edit too large to sync"
+                      : "Edit access removed"
                 : coEdit.ownsContent
                   ? coEdit.status === "connected"
                     ? "Live"
-                    : coEdit.status === "connecting"
+                    : coEdit.status === "connecting" || coEdit.status === "syncing"
                       ? "Syncing"
                       : "Offline"
                   : autosave.isSaving
@@ -814,19 +842,12 @@ export function NoteEditorScreen() {
           <Text style={[styles.wordCount, { color: T.textDim }]}>{wordCount} words</Text>
         </View>
         <RealtimePresence session={coEdit.session} status={coEdit.status} />
-        {coEdit.recoveredDrafts.length > 0 && (
-          <TouchableOpacity
-            accessibilityRole="button"
-            onPress={() =>
-              void Share.share({
-                title: "Recovered draft",
-                message: coEdit.recoveredDrafts.map((draft) => draft.text).join("\n\n"),
-              })
-            }
-          >
-            <Text style={{ color: T.text }}>Recovered draft</Text>
-          </TouchableOpacity>
-        )}
+        <RecoveredDrafts
+          drafts={coEdit.recoveredDrafts}
+          editable={editable}
+          onRestore={coEdit.restoreRecoveredDraft}
+          onDiscard={coEdit.discardRecoveredDraft}
+        />
         <TouchableOpacity
           onPress={togglePreview}
           style={[
@@ -920,7 +941,7 @@ export function NoteEditorScreen() {
             editable={editable}
             ref={bodyRef}
             onChangeText={handleBodyChange}
-            onSelectionChange={onMentionSelectionChange}
+            onSelectionChange={handleSelectionChange}
             onFocus={() => {
               bodyFocusedRef.current = true;
               // Armed here rather than on touch, so that only a tap that lands
@@ -933,8 +954,9 @@ export function NoteEditorScreen() {
             }}
             onBlur={() => {
               bodyFocusedRef.current = false;
-              // Blur ends the typing burst; land any peer edits held back by
-              // the idle gate.
+              // Blur ends the typing burst and any composition; land the peer
+              // edits held back by those gates.
+              composition.reset();
               coEdit.applyPendingRemote();
             }}
             style={[styles.bodyInput, { color: T.textBright }]}

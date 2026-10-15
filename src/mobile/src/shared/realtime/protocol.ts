@@ -19,7 +19,9 @@ export type RealtimeStatus =
   | "syncing"
   | "disconnected"
   | "offline"
+  | "access_lost"
   | "permission_lost"
+  | "update_rejected"
   | "token_revoked";
 
 export function statusFromCloseCode(code: number): RealtimeStatus | null {

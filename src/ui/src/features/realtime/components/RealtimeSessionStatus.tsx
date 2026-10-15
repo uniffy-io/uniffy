@@ -9,6 +9,7 @@ import { RecoveredDrafts } from "@/features/realtime/components/RecoveredDrafts"
 interface RealtimeSessionStatusProps {
   status: RealtimeStatus;
   awareness: Awareness | null;
+  whenSynced?: Promise<void>;
   className?: string;
 }
 
@@ -16,6 +17,7 @@ interface RealtimeSessionStatusProps {
 export function RealtimeSessionStatus({
   status,
   awareness,
+  whenSynced,
   className,
 }: RealtimeSessionStatusProps) {
   const user = useAppSelector((state) => state.auth.user);
@@ -29,7 +31,7 @@ export function RealtimeSessionStatus({
         localHasAvatar={Boolean(user?.hasAvatar)}
       />
       <RealtimeStatusBadge status={status} />
-      <RecoveredDrafts ydoc={awareness.doc} />
+      <RecoveredDrafts ydoc={awareness.doc} whenSynced={whenSynced} />
     </div>
   );
 }

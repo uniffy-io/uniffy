@@ -1,32 +1,23 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { YTextEvent } from "yjs";
 import {
-  getMarkdownYText,
-  MARKDOWN_MIRROR_FIELD,
-  MIRROR_ACTIVE_KEY,
-} from "@features/notes/realtime/markdown";
-import { diffStrings } from "@features/notes/realtime/textDiff";
+  createTextBinding,
+  type TextBinding,
+  type TextBindingCallbacks,
+} from "@features/notes/realtime/textBinding";
 import { useNoteRealtimeSession } from "@features/notes/realtime/useNoteRealtimeSession";
 import type { DocSession } from "@shared/realtime/useDocSession";
 import type { RealtimeStatus } from "@shared/realtime/protocol";
 import type { MobileRecoveredDraft } from "@shared/realtime/draftStorage";
-import { saveTextDraft } from "@shared/realtime/draftStorage";
+import { saveTextDraft, saveDraft, readStoredDrafts } from "@shared/realtime/draftStorage";
+import { hydrateOfflineDraft, offlineReplayBase } from "@features/notes/realtime/draftRecovery";
 import { useAuth } from "@core/providers/AuthContext";
-
-const PUSH_DEBOUNCE_MS = 120;
-// Remote merges render continuously; the window only coalesces bursts so the
-// input is not rebuilt per keystroke of a fast-typing peer.
-const APPLY_COALESCE_MS = 200;
-// Rebuilding the controlled TextInput while the local user is mid-typing drops
-// the keystrokes that sit between the native event and the JS rebuild - there
-// is no delta API, every apply replaces the whole native buffer. Hold applies
-// until this much silence; blur and teardown still force-apply.
-const TYPING_IDLE_MS = 900;
 
 export interface NoteCoEditing {
   session: DocSession | null;
   status: RealtimeStatus;
   recoveredDrafts: MobileRecoveredDraft[];
+  restoreRecoveredDraft(draft: MobileRecoveredDraft): Promise<void>;
+  discardRecoveredDraft(id: string): Promise<void>;
   /** The current session has completed its initial merge. */
   live: boolean;
   ownsContent: boolean;
@@ -36,45 +27,26 @@ export interface NoteCoEditing {
   applyPendingRemote(): void;
 }
 
-interface CoEditingCallbacks {
-  getLocalCanonical: () => string;
-  getLoadedCanonical: () => string | null;
-  /** Rebuild the visible input from the merged doc text. */
-  applyRemote: (canonical: string) => void;
-}
-
-interface Controller {
-  schedule(canonical: string): void;
-  flush(): void;
-  applyNow(): void;
-}
-
-/**
- * Two-way binding between the plain-text markdown editor and the note's
- * `Y.Text("markdown")`.
- *
- * Local edits push as minimal deltas diffed against the user's LAST LOCAL
- * string, transformed onto the live doc when peers moved it. Remote merges
- * rebuild the visible input as soon as the local user pauses typing, with the
- * local caret mapped across each change. Both sides' inserts survive
- * concurrent typing.
- */
+/** Binds the plain-text markdown editor to the note's live doc for one session at a time. */
 export function useNoteCoEditing(
   opts: {
     noteId: string | undefined;
     enabled: boolean;
     readOnly?: boolean;
-  } & CoEditingCallbacks,
+  } & TextBindingCallbacks,
 ): NoteCoEditing {
   const { user, organizationId } = useAuth();
-  const controllerRef = useRef<Controller | null>(null);
+  const controllerRef = useRef<TextBinding | null>(null);
+  const inputBase = useRef<{ noteId: string | undefined; text: string } | null>(null);
   // Flush in-flight local edits while the doc and socket are still live; the
-  // controller effect's own cleanup runs after the detach and is too late.
+  // binding effect's own cleanup runs after the detach and is too late.
   const onBeforeDetach = useCallback(() => {
     controllerRef.current?.flush();
-  }, []);
+    const text = controllerRef.current?.getInputBase();
+    if (text !== null && text !== undefined) inputBase.current = { noteId: opts.noteId, text };
+  }, [opts.noteId]);
 
-  const { session, status, recoveredDrafts } = useNoteRealtimeSession({
+  const { session, status, recoveredDrafts, discardRecoveredDraft } = useNoteRealtimeSession({
     noteId: opts.noteId,
     enabled: opts.enabled,
     readOnly: opts.readOnly,
@@ -82,10 +54,10 @@ export function useNoteCoEditing(
   });
   const [liveSessionId, setLiveSessionId] = useState<string | null>(null);
   const [draftId] = useState(() => `${Date.now()}.${Math.random().toString(36).slice(2)}`);
+  const draftLineage = useRef(draftId);
   const live = session !== null && liveSessionId === session.sessionId;
-  const hadLiveSession = useRef(false);
 
-  const callbacksRef = useRef<CoEditingCallbacks>(opts);
+  const callbacksRef = useRef<TextBindingCallbacks>(opts);
   useEffect(() => {
     callbacksRef.current = opts;
   });
@@ -97,177 +69,93 @@ export function useNoteCoEditing(
       controllerRef.current = null;
       return;
     }
-
-    const ytext = getMarkdownYText(session.ydoc);
     let cancelled = false;
-    let ready = false;
-    let lastPushed: string | null = null;
-    let pendingPush: string | null = null;
-    let pushTimer: ReturnType<typeof setTimeout> | null = null;
-    let remotePending = false;
-    let remoteTimer: ReturnType<typeof setTimeout> | null = null;
-    let lastLocalInputAt = 0;
-
-    // `lastPushed` mirrors the string the INPUT is based on, not the merged
-    // doc. Pushing a diff computed against a base the doc has moved past
-    // would treat every peer insert as a local delete and wipe it.
-    const doPush = (canonical: string) => {
-      if (!ready) return;
-      const prev = lastPushed ?? "";
-      if (canonical === prev) return;
-      const dLocal = diffStrings(prev, canonical);
-      if (!dLocal) return;
-      const current = ytext.toString();
-      let index = dLocal.index;
-      let deleteCount = dLocal.deleteCount;
-      if (current !== prev) {
-        // Remote edits landed since the input last rebased; transform the
-        // local delta onto the live doc instead of trusting stale indices.
-        const dRemote = diffStrings(prev, current);
-        if (dRemote) {
-          const remoteEnd = dRemote.index + dRemote.deleteCount;
-          const localEnd = dLocal.index + dLocal.deleteCount;
-          if (index >= remoteEnd) {
-            index += dRemote.insert.length - dRemote.deleteCount;
-          } else if (localEnd > dRemote.index) {
-            // Overlapping regions: never delete peer text on a guess - keep
-            // the local insert and land it right after the remote edit.
-            deleteCount = 0;
-            index = dRemote.index + dRemote.insert.length;
+    let consumedText: string | null = null;
+    let restoredDraft: MobileRecoveredDraft | null = null;
+    let replayed = true;
+    const prepared = session.initialDrafts
+      .then((drafts) => {
+        if (cancelled || opts.readOnly) return;
+        const restored = hydrateOfflineDraft(drafts, callbacksRef.current);
+        restoredDraft = restored;
+        if (restored) draftLineage.current = restored.generation.slice("unmerged:".length);
+      })
+      .catch((error) => console.warn("[realtime] offline draft recovery failed", error));
+    const binding = createTextBinding({
+      ydoc: session.ydoc,
+      origin: session.sessionId,
+      whenSynced: Promise.all([session.whenSynced, prepared]).then(() => {}),
+      // Read through the ref so the screen's per-render callbacks stay current.
+      callbacks: {
+        getLocalCanonical: () => {
+          const text = callbacksRef.current.getLocalCanonical();
+          consumedText = text;
+          return text;
+        },
+        getLoadedCanonical: () => {
+          if (restoredDraft) {
+            const base = offlineReplayBase(
+              restoredDraft,
+              session.ydoc.getText("markdown").toString(),
+            );
+            if (base !== null) return base;
+            replayed = false;
+            return callbacksRef.current.getLocalCanonical();
           }
+          return inputBase.current && inputBase.current.noteId === opts.noteId
+            ? inputBase.current.text
+            : callbacksRef.current.getLoadedCanonical();
+        },
+        applyRemote: (canonical, mapIndex) => callbacksRef.current.applyRemote(canonical, mapIndex),
+        isComposing: () => callbacksRef.current.isComposing?.() ?? false,
+      },
+      onLive: (localPreserved) => {
+        setLiveSessionId(session.sessionId);
+        if (
+          !opts.readOnly &&
+          replayed &&
+          localPreserved &&
+          (restoredDraft !== null || consumedText !== callbacksRef.current.getLoadedCanonical())
+        ) {
+          const lineage = draftLineage.current;
+          const text = consumedText;
+          // Retire text copies only after the merged causal document is durable.
+          void saveDraft(session.storageKey, session.ydoc)
+            .then(async () => {
+              const drafts = await readStoredDrafts(session.storageKey);
+              for (const draft of drafts) {
+                if (draft.generation === `unmerged:${lineage}` && draft.text === text)
+                  await discardRecoveredDraft(draft.id);
+              }
+            })
+            .catch((error) => console.warn("[realtime] merged draft storage failed", error));
         }
-        // The input still lags the doc; queue a rebase.
-        remotePending = true;
-      }
-      index = Math.min(index, ytext.length);
-      session.ydoc.transact(() => {
-        session.ydoc.getMap(MARKDOWN_MIRROR_FIELD).set(MIRROR_ACTIVE_KEY, false);
-        if (deleteCount > 0) ytext.delete(index, Math.min(deleteCount, ytext.length - index));
-        if (dLocal.insert.length > 0) ytext.insert(index, dLocal.insert);
-      }, session.sessionId);
-      lastPushed = canonical;
-      if (remotePending) scheduleApply();
-    };
-
-    const flush = () => {
-      if (pushTimer) {
-        clearTimeout(pushTimer);
-        pushTimer = null;
-      }
-      if (pendingPush !== null) {
-        const c = pendingPush;
-        pendingPush = null;
-        doPush(c);
-      }
-    };
-
-    const schedule = (canonical: string) => {
-      lastLocalInputAt = Date.now();
-      pendingPush = canonical;
-      if (pushTimer) clearTimeout(pushTimer);
-      pushTimer = setTimeout(() => {
-        pushTimer = null;
-        if (pendingPush !== null) {
-          const c = pendingPush;
-          pendingPush = null;
-          doPush(c);
-        }
-      }, PUSH_DEBOUNCE_MS);
-    };
-
-    const applyNow = () => {
-      if (remoteTimer) {
-        clearTimeout(remoteTimer);
-        remoteTimer = null;
-      }
-      if (!remotePending || cancelled) return;
-      remotePending = false;
-      // Commit in-flight keystrokes before reading the merged doc, so the
-      // rebuild below cannot silently drop them.
-      flush();
-      const merged = ytext.toString();
-      lastPushed = merged;
-      if (merged !== callbacksRef.current.getLocalCanonical()) {
-        callbacksRef.current.applyRemote(merged);
-      }
-    };
-
-    const armApply = (delay: number) => {
-      remoteTimer = setTimeout(() => {
-        remoteTimer = null;
-        if (cancelled) return;
-        const sinceLocal = Date.now() - lastLocalInputAt;
-        if (sinceLocal < TYPING_IDLE_MS) {
-          armApply(TYPING_IDLE_MS - sinceLocal);
-          return;
-        }
-        applyNow();
-      }, delay);
-    };
-
-    const scheduleApply = () => {
-      if (remoteTimer || cancelled) return;
-      armApply(APPLY_COALESCE_MS);
-    };
-
-    const observer = (event: YTextEvent) => {
-      if (event.transaction.origin === session.sessionId) return;
-      remotePending = true;
-      scheduleApply();
-    };
-
-    controllerRef.current = { schedule, flush, applyNow };
-
-    let observing = false;
-    void session.whenSynced.then(() => {
-      if (cancelled) return;
-      const serverText = ytext.toString();
-      const local = callbacksRef.current.getLocalCanonical();
-      const loaded = callbacksRef.current.getLoadedCanonical();
-      ready = true;
-      if (!hadLiveSession.current && loaded !== null && local !== loaded) {
-        // The user typed before the handshake finished. Diff against the
-        // RPC-loaded base their input actually grew from - seeding from the
-        // server text would turn every character a peer added since that
-        // load into a local delete and broadcast it.
-        lastPushed = loaded;
-        doPush(local);
-      } else {
-        lastPushed = serverText;
-        if (serverText !== local) {
-          callbacksRef.current.applyRemote(serverText);
-        }
-      }
-      ytext.observe(observer);
-      observing = true;
-      hadLiveSession.current = true;
-      setLiveSessionId(session.sessionId);
+      },
     });
-
+    controllerRef.current = binding;
     return () => {
       cancelled = true;
-      if (observing) ytext.unobserve(observer);
-      if (remoteTimer) clearTimeout(remoteTimer);
-      // The pre-detach hook already flushed while the doc was live; this
-      // covers effect re-runs where the session survives.
-      flush();
+      binding.dispose();
       controllerRef.current = null;
     };
-  }, [session, opts.noteId]);
+  }, [session, opts.noteId, opts.readOnly, discardRecoveredDraft]);
 
   const scheduleLocalPush = useCallback(
     (canonical: string) => {
+      if (opts.readOnly) return;
       if (live) controllerRef.current?.schedule(canonical);
       else if (user?.id && organizationId && opts.noteId) {
-        saveTextDraft(
+        void saveTextDraft(
           `realtime.${user.id}.${organizationId}.NOTE.${opts.noteId}`,
           canonical,
-          callbacksRef.current.getLoadedCanonical(),
-          session?.sessionId ?? draftId,
+          inputBase.current && inputBase.current.noteId === opts.noteId
+            ? inputBase.current.text
+            : callbacksRef.current.getLoadedCanonical(),
+          draftLineage.current,
         );
       }
     },
-    [live, user, organizationId, opts.noteId, session, draftId],
+    [live, user, organizationId, opts.noteId, opts.readOnly],
   );
   const flushLocalPush = useCallback(() => {
     controllerRef.current?.flush();
@@ -276,12 +164,47 @@ export function useNoteCoEditing(
     controllerRef.current?.applyNow();
   }, []);
 
+  const restoreRecoveredDraft = useCallback(
+    async (draft: MobileRecoveredDraft) => {
+      if (
+        !session ||
+        opts.readOnly ||
+        status === "permission_lost" ||
+        status === "access_lost" ||
+        status === "update_rejected" ||
+        status === "token_revoked"
+      )
+        return;
+      controllerRef.current?.flush();
+      controllerRef.current?.applyNow();
+      const current = callbacksRef.current.getLocalCanonical();
+      const text = current ? `${current}\n\n${draft.text}` : draft.text;
+      callbacksRef.current.applyRemote(text, (index) => Math.min(index, text.length));
+      if (live) {
+        controllerRef.current?.schedule(text);
+        controllerRef.current?.flush();
+        controllerRef.current?.applyNow();
+        await saveDraft(session.storageKey, session.ydoc);
+      } else {
+        await saveTextDraft(
+          session.storageKey,
+          text,
+          callbacksRef.current.getLoadedCanonical(),
+          draftLineage.current,
+        );
+      }
+    },
+    [session, live, opts.readOnly, status],
+  );
+
   return {
     session,
     status,
     live,
     ownsContent: opts.noteId !== undefined,
     recoveredDrafts,
+    restoreRecoveredDraft,
+    discardRecoveredDraft,
     scheduleLocalPush,
     flushLocalPush,
     applyPendingRemote,

@@ -388,6 +388,52 @@ jobs:
           comment: false
           job_summary: true
 
+  test-realtime-database:
+    needs: changes
+    if: >
+      needs.changes.outputs.run_checks == 'true' &&
+      (needs.changes.outputs.backend == 'true' || needs.changes.outputs.proto == 'true')
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: uniffy
+          POSTGRES_PASSWORD: uniffy
+          POSTGRES_DB: uniffy
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U uniffy"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+      valkey:
+        image: valkey/valkey:8
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "valkey-cli ping"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+    env:
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: "5432"
+      POSTGRES_USER: uniffy
+      POSTGRES_PASSWORD: uniffy
+      POSTGRES_DB: uniffy
+      VALKEY_HOST: localhost
+      VALKEY_PORT: "6379"
+      VALKEY_PASSWORD: ""
+      REQUIRE_DATABASE_TESTS: "1"
+    steps:
+      - name: Generate test keys
+        run: echo "APP_MASTER_KEY=$(openssl rand -base64 32)" >> "$GITHUB_ENV"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version-file: ".python-version"
+      - run: uv sync --frozen
+      - run: uv run alembic -c src/uniffy/alembic.ini upgrade head
+      - run: uv run pytest src/uniffy/tests/integration/access -q --tb=short
+      - run: uv run pytest src/uniffy/tests/integration/internal/database/test_attachment_lifecycle.py -q --tb=short
+
   test-frontend:
     needs: changes
     if: >

@@ -1,15 +1,4 @@
-"""SQLModel definitions for tags and tag assignments.
-
-The ``tags`` table is the per-organization tag namespace. The
-``tag_assignments`` table is the polymorphic link between a tag and an
-arbitrary URN-addressable content row. ``sources`` is a string array so
-a tag attached both via the manual picker and via inline markdown lives
-in a single row instead of two.
-
-There is no denormalized ``usage_count`` column. Counts are computed
-from ``tag_assignments`` and cached in Valkey to avoid row-lock
-contention on hot tags.
-"""
+"""Organization tags and their shared manual and inline content assignments."""
 
 from datetime import UTC, datetime
 from uuid import UUID
@@ -20,6 +9,8 @@ from sqlmodel import Field, SQLModel
 
 from uniffy.core.types import generate_id
 
+TAG_NAME_MAX_LENGTH = 120
+
 
 class Tag(SQLModel, table=True):
     """A single tag in an organization's tag namespace."""
@@ -29,7 +20,7 @@ class Tag(SQLModel, table=True):
 
     id: UUID = Field(default_factory=generate_id, primary_key=True, nullable=False)
     organization_id: UUID = Field(foreign_key="login_organizations.id", nullable=False, index=True)
-    name: str = Field(max_length=120, nullable=False)
+    name: str = Field(max_length=TAG_NAME_MAX_LENGTH, nullable=False)
     slug: str = Field(max_length=64, nullable=False)
     color: str | None = Field(default=None, max_length=24)
     description: str | None = Field(default=None, max_length=500)

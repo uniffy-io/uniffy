@@ -10,6 +10,7 @@ from uuid import UUID
 from loguru import logger
 
 from uniffy.core.models.notes.note import Note
+from uniffy.core.realtime.limits import validate_document_size
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import AccessMode, ContentRole, ContentType, NodeType, SubjectType
 from uniffy.domains.notes import queries
@@ -65,6 +66,8 @@ class NoteCreation:
             baseline_role,
         )
         slug = await self.unique_slug(slug or queries.slugify(title), organization_id)
+        if node_type != NodeType.CANVAS:
+            validate_document_size(content)
         fields = extract_content_fields(node_type, content, canvas_content, organization_id)
 
         note = Note(

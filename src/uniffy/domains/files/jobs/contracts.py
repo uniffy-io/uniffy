@@ -129,6 +129,14 @@ RECOVER_PENDING_FILE_PROCESSING_SCHEDULE = JobRef(
     ),
 )
 
+RECONCILE_INLINE_ATTACHMENTS_SCHEDULE = JobRef(
+    name="cron:reconcile_pending_inline_attachments",
+    queue=QueueName.CORE,
+    workload=JobWorkload.CONTROL,
+    reliability=JobReliability.DURABLE,
+    recovery=JobRecovery(fact="files_inline_reconciliations row", trigger="minute core schedule"),
+)
+
 FILE_JOB_REFS = (
     GENERATE_IMAGE_THUMBNAIL,
     GENERATE_PDF_THUMBNAIL,
@@ -142,6 +150,7 @@ FILE_JOB_REFS = (
     REAP_EXPIRED_MULTIPART_UPLOADS,
 )
 FILE_SCHEDULED_JOB_REFS = (
+    RECONCILE_INLINE_ATTACHMENTS_SCHEDULE,
     RECALCULATE_ALL_STORAGE_USAGE_SCHEDULE,
     REAP_EXPIRED_MULTIPART_UPLOADS_SCHEDULE,
     RECOVER_PENDING_FILE_PROCESSING_SCHEDULE,

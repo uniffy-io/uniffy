@@ -7,10 +7,10 @@ export { RealtimeStatusBadge } from "@/features/realtime/components/RealtimeStat
 export { RealtimeSessionStatus } from "@/features/realtime/components/RealtimeSessionStatus";
 export type { DocSession, UseDocSessionOptions } from "@/features/realtime/hooks/useDocSession";
 export { useDocAwareness, setLocalAwareness } from "@/features/realtime/hooks/useDocAwareness";
-export {
-  useOutboundPending,
-  useOutboundSyncing,
-} from "@/features/realtime/hooks/useOutboundSyncing";
+export { useOutboundPending } from "@/features/realtime/hooks/useOutboundPending";
+export { useRealtimeDrain, usePendingDocSync } from "@/features/realtime/hooks/useRealtimeDrain";
+export { hasUnsyncedEdits } from "@/features/realtime/unsyncedEdits";
+export { clearPendingDocsFor } from "@/features/realtime/pendingDocs";
 export type { AwarenessPeer } from "@/features/realtime/hooks/useDocAwareness";
 export { RealtimePresence } from "@/features/realtime/components/RealtimePresence";
 export {

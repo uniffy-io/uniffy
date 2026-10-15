@@ -193,6 +193,10 @@ uniffy/
 
 - For production deployments, it is recommended to support HTTP/2 at all levels of the stack. This is especially important for large deployments, as ConnectRPC benefits significantly from HTTP/2 multiplexing to avoid head-of-line blocking and reduce connection overhead.
 
+- **Live editing:** Reverse proxies must forward WebSocket upgrades on `/api/realtime`, including `Upgrade`, `Connection`, and `Sec-WebSocket-Protocol` headers, and allow long-lived connections. Use HTTPS in production so browsers can encrypt device drafts. If live editing cannot connect, notes remain readable with a Retry action. Task and event descriptions offer editing without live updates and save through ConnectRPC on Done.
+
+- **Live editing upgrades:** Use a maintenance window. Pause edits and close active editing sessions while old backends and workers still run. Wait at least 30 seconds for backend debounce work to flush, then confirm queued and running realtime jobs have finished. Stop every old backend and worker before applying migrations. Start matching workers, backends, web and mobile clients, then reopen traffic and reload existing tabs. Never overlap old and new realtime processes: their snapshot job payloads have different durability semantics. Keep worker-core running for projection recovery. Migration 109 adds durable projection effects, notification events and inline attachment cleanup.
+
 - **Note on Valkey:** While Redis should in theory work as a drop-in replacement for Valkey, this has not been tested and is not recommended by us. We only support and test against Valkey.
 
 - **Note on Calls:** LiveKit is the SFU for audio/video/screen. It reuses the existing Valkey on a separate database (DB 1; the app uses DB 0) for its room registry. All app traffic and call signaling enter through the same reverse proxy on a single TLS endpoint; the proxy routes `/livekit/*` to the LiveKit signaling port (7880). The backend calls LiveKit's admin REST API server-to-server, and LiveKit posts signed webhooks back to the backend at `/internal/webhooks/livekit`. WebRTC media cannot ride HTTP and takes one of two paths depending on the deployment:

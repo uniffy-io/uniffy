@@ -8,6 +8,7 @@ import { cn } from "@/shared/utils/cn";
 
 interface ResizableImageProps {
   src: string;
+  alt?: string;
   caption: string;
   ratio: number;
   selected: boolean;
@@ -22,6 +23,7 @@ function clampScale(ratio: number) {
 
 export function ResizableImage({
   src,
+  alt,
   caption,
   ratio,
   selected,
@@ -109,7 +111,7 @@ export function ResizableImage({
         <img
           ref={imageRef}
           src={src}
-          alt={caption}
+          alt={alt ?? caption}
           data-type="image-block"
           draggable={false}
           onLoad={(event) => {

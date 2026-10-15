@@ -168,6 +168,11 @@ class NoteMutationHandlers:
                     parent_id=parent_id,
                     tag_ids=tag_ids,
                     metadata=metadata,
+                    expected_content_version=(
+                        request.expected_content_version
+                        if request.has_field("expected_content_version")
+                        else None
+                    ),
                 )
                 return UpdateNoteResponse(
                     note=await _note_proto(session, user_id, organization_id, note)

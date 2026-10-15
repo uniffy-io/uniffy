@@ -111,6 +111,10 @@ message UpdateNoteRequest {
   // Replacement set of unified-tag ids. Empty list clears all manual tags.
   // Field is unset (HasField=false) to leave manual tags untouched.
   optional NoteTagIds tag_ids = 9;
+  // Note version the caller last read. A content write is rejected when the note
+  // moved past it or live edits are still awaiting projection. Unset merges the
+  // content into the live document instead.
+  optional int64 expected_content_version = 10;
 }
 
 // Wrapper so the caller can distinguish "leave tags alone" from

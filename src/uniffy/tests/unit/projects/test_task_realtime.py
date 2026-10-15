@@ -1,4 +1,5 @@
 from datetime import UTC, datetime, timedelta
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pycrdt
@@ -24,7 +25,22 @@ def _task() -> Task:
 
 def _session(task: Task | None, project_owner_id=None) -> MagicMock:
     session = MagicMock()
-    session.execute = AsyncMock(return_value=MagicMock(scalar_one_or_none=lambda: task))
+    project = (
+        SimpleNamespace(
+            id=task.project_id,
+            owner_id=project_owner_id or generate_id(),
+            access_mode=None,
+            baseline_role=None,
+        )
+        if task is not None
+        else None
+    )
+    session.execute = AsyncMock(
+        return_value=MagicMock(
+            scalar_one_or_none=lambda: task,
+            one_or_none=lambda: project,
+        )
+    )
     session.commit = AsyncMock()
     session.refresh = AsyncMock()
     session.get = AsyncMock(return_value=MagicMock(owner_id=project_owner_id or generate_id()))
@@ -50,31 +66,28 @@ async def test_authorization_uses_parent_role() -> None:
     task = _task()
     session = _session(task)
     adapter = TaskRealtimeAdapter(MagicMock())
-    with patch(
-        "uniffy.domains.projects.realtime.TaskContentOperations._resolve_role",
-        AsyncMock(return_value=ContentRole.EDITOR),
-    ) as resolve:
-        user_id = generate_id()
-        assert (
-            await adapter.authorize(session, user_id, task.organization_id, task.id)
-            == ContentRole.EDITOR
+    checker = MagicMock(effective_role=AsyncMock(return_value=ContentRole.EDITOR))
+    user_id = generate_id()
+    assert (
+        await adapter.authorize(
+            session,
+            user_id,
+            task.organization_id,
+            task.id,
+            checker=checker,
         )
-        resolve.assert_awaited_once_with(user_id, task.organization_id, task)
-
-
-async def test_authorization_threads_a_shared_checker_through() -> None:
-    task = _task()
-    session = _session(task)
-    checker = MagicMock()
-    with patch("uniffy.domains.projects.realtime.TaskContentOperations") as operations:
-        operations.return_value._resolve_role = AsyncMock(return_value=ContentRole.VIEWER)
-        assert (
-            await TaskRealtimeAdapter(MagicMock()).authorize(
-                session, generate_id(), task.organization_id, task.id, checker=checker
-            )
-            == ContentRole.VIEWER
-        )
-        operations.assert_called_once_with(session, permission_checker=checker)
+        == ContentRole.EDITOR
+    )
+    project = session.execute.return_value.one_or_none()
+    checker.effective_role.assert_awaited_once_with(
+        user_id,
+        task.organization_id,
+        ContentType.PROJECT,
+        task.project_id,
+        owner_id=project.owner_id,
+        access_mode=project.access_mode,
+        baseline_role=project.baseline_role,
+    )
 
 
 async def test_missing_task_denies_and_skips_render() -> None:
@@ -119,6 +132,8 @@ async def test_render_retries_then_indexes_and_attributes_mentions(editor_known:
         MagicMock(rowcount=0),
         MagicMock(scalar_one_or_none=lambda: task),
         MagicMock(rowcount=1),
+        MagicMock(),
+        MagicMock(scalar_one_or_none=lambda: task),
     ]
     with (
         patch("uniffy.domains.projects.tasks.realtime.TaskContentOperations") as operations,

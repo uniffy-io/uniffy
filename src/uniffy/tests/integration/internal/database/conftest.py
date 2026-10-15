@@ -12,6 +12,7 @@ why every fixture and test in this suite shares one session-scoped loop.
 The schema is expected to be at head already; the dev stack migrates on boot.
 """
 
+import os
 from types import SimpleNamespace as NS
 from unittest.mock import MagicMock
 
@@ -37,9 +38,9 @@ from uniffy.core.models.rooms.room import Room
 from uniffy.core.search import SearchIndexer
 from uniffy.core.types import generate_id
 from uniffy.domains.files.registration import register_file_content
+from uniffy.domains.notes.registration import register_note_content
 from uniffy.infrastructure.database import close_db, init_db, open_session
 from uniffy.infrastructure.database.session import get_database_url
-from uniffy.domains.notes.registration import register_note_content
 
 
 @pytest_asyncio.fixture(scope="session", loop_scope="session")
@@ -50,6 +51,8 @@ async def database():
     try:
         await init_db(skip_migrations=True)
     except Exception as exc:
+        if os.getenv("REQUIRE_DATABASE_TESTS"):
+            raise
         pytest.skip(f"no database at {get_database_url()}: {exc}")
     try:
         yield

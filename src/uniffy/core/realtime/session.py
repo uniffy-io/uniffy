@@ -1,14 +1,8 @@
-"""Per-WebSocket session loop for the multiplexed realtime channel.
-
-Inbound: peek docname, lazy authorize on first sight, dispatch payload. Outbound:
-drain pre-framed bytes from ``WSSession.outbound``. VIEWER handles are read-only;
-a write frame on ``can_edit=False`` closes the socket with ``4403``. A third task
-re-authorizes the connection on a timer so a revoke or an expiring token closes
-the socket even while it sits idle with no doc attached.
-"""
+"""Authenticated document traffic over one multiplexed WebSocket."""
 
 import asyncio
 import contextlib
+import time
 
 import pycrdt
 from fastapi import WebSocket, WebSocketDisconnect
@@ -17,12 +11,19 @@ from loguru import logger
 from uniffy.core.auth.permissions import role_can_edit, role_can_view
 from uniffy.core.realtime.adapter import get_realtime_adapter
 from uniffy.core.realtime.auth import WS_CLOSE_UNSUPPORTED_TYPE
+from uniffy.core.realtime.awareness import authenticated_awareness
+from uniffy.core.realtime.limits import (
+    MAX_AWARENESS_BYTES,
+    MAX_DOCS_PER_SOCKET,
+    MAX_MESSAGES_PER_SECOND,
+)
 from uniffy.core.realtime.markdown import DOC_GENERATION_KEY, DOC_META_FIELD
 from uniffy.core.realtime.metrics import (
     REALTIME_AWARENESS_MESSAGES_TOTAL,
     REALTIME_FRAMES_DROPPED_TOTAL,
     REALTIME_PERMISSION_REJECTIONS_TOTAL,
     REALTIME_REAUTH_CLOSES_TOTAL,
+    REALTIME_WRITE_REJECTIONS,
 )
 from uniffy.core.realtime.multiplex import (
     encode_doc_frame,
@@ -41,16 +42,25 @@ from uniffy.core.realtime.state import (
     YDocSession,
     parse_doc_name,
 )
-from uniffy.core.realtime.storage import EditDenied, GenerationConflict
+from uniffy.core.realtime.storage import (
+    DocumentTooLarge,
+    EditDenied,
+    GenerationConflict,
+    SeedConflict,
+)
 from uniffy.core.realtime.wire import (
     MESSAGE_DURABLE_UPDATE,
+    MESSAGE_SEED_CAPABILITY,
+    MESSAGE_SEED_UPDATE,
     Y_MESSAGE_AUTH,
     YMessageType,
     YSyncMessageType,
     create_ack_message,
     create_auth_denied_message,
     create_generation_message,
+    create_seed_rejected_message,
     create_sync_message,
+    create_update_message,
     handle_sync_message,
     is_sync_write_frame,
     peek_message_type,
@@ -80,6 +90,10 @@ async def run_multiplexed_session(ws: WebSocket, ws_session: WSSession) -> None:
         )
         for task in done:
             await task
+    except asyncio.QueueFull:
+        REALTIME_FRAMES_DROPPED_TOTAL.labels(kind="slow_consumer").inc()
+        with contextlib.suppress(Exception):
+            await ws.close(code=1013, reason="slow consumer")
     except WebSocketDisconnect:
         pass
     except RuntimeError as exc:
@@ -107,8 +121,11 @@ async def _pump_outbound(ws: WebSocket, ws_session: WSSession) -> None:
         doc_name, offset = peek_var_string(frame)
         key = parse_doc_name(doc_name)
         if key is not None and peek_message_type(frame[offset:]) != Y_MESSAGE_AUTH:
-            await ydoc_manager._reauthorize_docs([key], ws_session.user_id)
-            if key in ws_session.denied_docs:
+            handle = ws_session.doc_handles.get(key)
+            if handle is None or handle.closed:
+                continue
+            await ydoc_manager.authorize_outbound(key, ws_session.user_id)
+            if handle.closed or key in ws_session.denied_docs:
                 continue
         await ws.send_bytes(frame)
 
@@ -141,12 +158,34 @@ async def _close_denied(ws: WebSocket, ws_session: WSSession, denial: Denial) ->
 
 
 async def _drive_inbound(ws: WebSocket, ws_session: WSSession) -> None:
+    tokens = float(MAX_MESSAGES_PER_SECOND * 2)
+    checked_at = time.monotonic()
     while True:
         frame = await ws.receive_bytes()
+        now = time.monotonic()
+        tokens = min(
+            MAX_MESSAGES_PER_SECOND * 2, tokens + (now - checked_at) * MAX_MESSAGES_PER_SECOND
+        )
+        checked_at = now
+        if tokens < 1:
+            REALTIME_FRAMES_DROPPED_TOTAL.labels(kind="rate_limit").inc()
+            await ws.close(code=1013, reason="rate limit")
+            return
+        tokens -= 1
         if len(frame) > MAX_FRAME_BYTES:
             REALTIME_FRAMES_DROPPED_TOTAL.labels(kind="oversized").inc()
-            await ws.close(code=WS_CLOSE_MESSAGE_TOO_BIG, reason="frame too large")
-            return
+            try:
+                name, _ = peek_var_string(frame)
+                key = parse_doc_name(name)
+                if key is None:
+                    raise ValueError("invalid document")
+            except ValueError:
+                await ws.close(code=WS_CLOSE_MESSAGE_TOO_BIG, reason="frame too large")
+                return
+            await ws_session.outbound.put(
+                encode_doc_frame(name, create_auth_denied_message("update too large"))
+            )
+            continue
 
         try:
             doc_name, payload_offset = peek_var_string(frame)
@@ -177,6 +216,11 @@ async def _drive_inbound(ws: WebSocket, ws_session: WSSession) -> None:
 
         handle = ws_session.doc_handles.get(key)
         if handle is None:
+            if len(ws_session.doc_handles) >= MAX_DOCS_PER_SOCKET:
+                await ws_session.outbound.put(
+                    encode_doc_frame(doc_name, create_auth_denied_message("too many open documents"))
+                )
+                continue
             handle = await _attach_doc(ws, ws_session, key, doc_name)
             if handle is None:
                 continue
@@ -228,7 +272,14 @@ async def _attach_doc(
         return None
 
     can_edit = role_can_edit(role)
-    session, handle = await ydoc_manager.acquire(key, ws_session, can_edit=can_edit)
+    try:
+        session, handle = await ydoc_manager.acquire(key, ws_session, can_edit=can_edit)
+    except EditDenied:
+        ws_session.denied_docs.add(key)
+        await ws_session.outbound.put(
+            encode_doc_frame(doc_name, create_auth_denied_message("no view access", no_view=True))
+        )
+        return None
     await ydoc_manager.refresh_fragment_seeder(session)
     await ydoc_manager.refresh_document(session)
     generation = session.ydoc.get(DOC_META_FIELD, type=pycrdt.Map).get(DOC_GENERATION_KEY, "")
@@ -267,20 +318,69 @@ async def _dispatch_doc_frame(
     if handle.closed:
         return
 
-    if kind == MESSAGE_DURABLE_UPDATE:
-        generation, offset = read_var_string(payload, 1)
-        update_id, offset = read_var_string(payload, offset)
-        length, offset = read_var_uint(payload, offset)
-        if offset + length != len(payload):
-            raise ValueError("invalid durable update length")
+    if kind == MESSAGE_SEED_CAPABILITY:
+        if len(payload) != 2 or payload[1] not in (0, 1):
+            return
+        handle.can_seed = bool(payload[1]) and handle.can_edit
+        await ydoc_manager.refresh_fragment_seeder(session)
+    elif kind in (MESSAGE_DURABLE_UPDATE, MESSAGE_SEED_UPDATE):
         try:
+            generation, offset = read_var_string(payload, 1)
+            update_id, offset = read_var_string(payload, offset)
+            seed_token = seed_base = None
+            if kind == MESSAGE_SEED_UPDATE:
+                seed_token, offset = read_var_string(payload, offset)
+                seed_base, offset = read_var_string(payload, offset, max_bytes=MAX_FRAME_BYTES)
+            length, offset = read_var_uint(payload, offset)
+            if offset + length != len(payload):
+                raise ValueError("invalid durable update length")
             await ydoc_manager.apply_local_update(
-                session, payload[offset:], source_conn_id=handle.conn_id, generation=generation
+                session,
+                payload[offset:],
+                source_conn_id=handle.conn_id,
+                generation=generation,
+                **(
+                    {"seed_token": seed_token, "seed_base": seed_base}
+                    if seed_token is not None
+                    else {}
+                ),
             )
+        except DocumentTooLarge:
+            REALTIME_WRITE_REJECTIONS.labels(reason="too_large").inc()
+            REALTIME_FRAMES_DROPPED_TOTAL.labels(kind="document_too_large").inc()
+            await ws_session.outbound.put(
+                encode_doc_frame(doc_name, create_auth_denied_message("update too large"))
+            )
+            return
+        except ValueError:
+            REALTIME_WRITE_REJECTIONS.labels(reason="invalid_update").inc()
+            await ws_session.outbound.put(
+                encode_doc_frame(doc_name, create_auth_denied_message("invalid update"))
+            )
+            return
         except GenerationConflict:
+            REALTIME_WRITE_REJECTIONS.labels(reason="generation").inc()
             await ydoc_manager.refresh_document(session)
+            current = session.ydoc.get(DOC_META_FIELD, type=pycrdt.Map).get(DOC_GENERATION_KEY, "")
+            await ws_session.outbound.put(
+                encode_doc_frame(doc_name, create_generation_message(str(current)))
+            )
+            await ws_session.outbound.put(
+                encode_doc_frame(doc_name, create_update_message(session.ydoc.get_update()))
+            )
+            return
+        except SeedConflict:
+            REALTIME_WRITE_REJECTIONS.labels(reason="seed").inc()
+            await ydoc_manager.refresh_document(session)
+            frame = (
+                create_seed_rejected_message(update_id)
+                if kind == MESSAGE_SEED_UPDATE
+                else create_auth_denied_message("seed_conflict")
+            )
+            await ws_session.outbound.put(encode_doc_frame(doc_name, frame))
             return
         except EditDenied:
+            REALTIME_WRITE_REJECTIONS.labels(reason="edit_denied").inc()
             await ws_session.outbound.put(
                 encode_doc_frame(doc_name, create_auth_denied_message("edit denied"))
             )
@@ -289,6 +389,14 @@ async def _dispatch_doc_frame(
     elif kind == YMessageType.SYNC:
         await _handle_sync_frame(ws, session, handle, doc_name, payload)
     elif kind == YMessageType.AWARENESS:
+        if len(payload) > MAX_AWARENESS_BYTES:
+            REALTIME_FRAMES_DROPPED_TOTAL.labels(kind="awareness_too_large").inc()
+            return
+        try:
+            payload = await authenticated_awareness(payload, handle)
+        except ValueError, UnicodeDecodeError:
+            REALTIME_FRAMES_DROPPED_TOTAL.labels(kind="invalid_awareness").inc()
+            return
         REALTIME_AWARENESS_MESSAGES_TOTAL.labels(content_type=handle.doc_key[0].value).inc()
         await ydoc_manager.broadcast_awareness(session, payload, source_conn_id=handle.conn_id)
     elif kind == MSG_QUERY_AWARENESS:
@@ -322,6 +430,11 @@ async def _handle_sync_frame(
     sub_type = peek_sync_sub_type(frame)
     if sub_type == YSyncMessageType.SYNC_STEP1:
         await ydoc_manager.refresh_document(session)
+        generation = session.ydoc.get(DOC_META_FIELD, type=pycrdt.Map).get(DOC_GENERATION_KEY, "")
+        if handle.ws_session is not None:
+            await handle.ws_session.outbound.put(
+                encode_doc_frame(doc_name, create_generation_message(str(generation)))
+            )
         try:
             reply = handle_sync_message(frame[1:], session.ydoc)
         except Exception as exc:

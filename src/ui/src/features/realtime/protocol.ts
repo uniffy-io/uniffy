@@ -1,4 +1,10 @@
+export const SEED_CONFLICT_REASON = "seed_conflict";
+
 export const CANONICAL_SUBPROTOCOL = "uniffy.realtime.v1";
+
+// Window events the auth layer fires; transport and the pending-doc drain reconnect on them.
+export const AUTH_REFRESHED_EVENT = "uniffy:auth:refreshed";
+export const AUTH_REVOKED_EVENT = "uniffy:auth:revoked";
 
 export const WS_CLOSE_NORMAL = 1000;
 export const WS_CLOSE_MESSAGE_TOO_BIG = 1009;
@@ -20,6 +26,8 @@ export type RealtimeStatus =
   | "disconnected"
   | "offline"
   | "permission_lost"
+  | "access_lost"
+  | "update_rejected"
   | "token_revoked";
 
 export function statusFromCloseCode(code: number): RealtimeStatus | null {

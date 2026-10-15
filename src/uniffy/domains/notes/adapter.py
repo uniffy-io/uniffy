@@ -1,18 +1,18 @@
 """``RealtimeContentAdapter`` for ``ContentType.NOTE``: markdown + canvas."""
 
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Collection
 from datetime import datetime
 from typing import Any
 from uuid import UUID
 
 import pycrdt
 from loguru import logger
-from sqlalchemy import select
+from sqlalchemy import bindparam, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.auth.permissions.checker import PermissionChecker
 from uniffy.core.models.notes.note import Note
-from uniffy.core.realtime.adapter import register_realtime_adapter
+from uniffy.core.realtime.adapter import DeferredProjection, register_realtime_adapter
 from uniffy.core.realtime.markdown import (
     markdown_text,
     replace_external_markdown,
@@ -33,6 +33,12 @@ _NODE_TEXT_FIELDS: dict[str, str] = {
     "shape": "label",
     "mindmap": "label",
 }
+
+_POLICY_STATEMENT = select(Note.owner_id, Note.access_mode, Note.baseline_role).where(
+    Note.id == bindparam("content_id"),
+    Note.organization_id == bindparam("organization_id"),
+    Note.is_deleted.is_(False),
+)
 
 
 class NoteRealtimeAdapter:
@@ -59,13 +65,11 @@ class NoteRealtimeAdapter:
     ) -> ContentRole | None:
         note = (
             await session.execute(
-                select(Note).where(
-                    Note.id == content_id,
-                    Note.organization_id == organization_id,
-                )
+                _POLICY_STATEMENT,
+                {"content_id": content_id, "organization_id": organization_id},
             )
-        ).scalar_one_or_none()
-        if note is None or note.is_deleted:
+        ).one_or_none()
+        if note is None:
             return None
 
         return await (checker or PermissionChecker(session)).effective_role(
@@ -73,6 +77,31 @@ class NoteRealtimeAdapter:
             organization_id=organization_id,
             content_type=ContentType.NOTE,
             content_id=content_id,
+            owner_id=note.owner_id,
+            access_mode=note.access_mode,
+            baseline_role=note.baseline_role,
+        )
+
+    async def authorize_many(
+        self,
+        session: AsyncSession,
+        user_ids: Collection[UUID],
+        organization_id: UUID,
+        content_id: UUID,
+    ) -> dict[UUID, ContentRole | None]:
+        note = (
+            await session.execute(
+                _POLICY_STATEMENT,
+                {"content_id": content_id, "organization_id": organization_id},
+            )
+        ).one_or_none()
+        if note is None:
+            return dict.fromkeys(user_ids)
+        return await PermissionChecker(session).effective_roles(
+            user_ids,
+            organization_id,
+            ContentType.NOTE,
+            content_id,
             owner_id=note.owner_id,
             access_mode=note.access_mode,
             baseline_role=note.baseline_role,
@@ -161,18 +190,19 @@ class NoteRealtimeAdapter:
         organization_id: UUID,
         *,
         actor_id: UUID | None = None,
-    ) -> Callable[[], Awaitable[None]] | None:
+    ) -> Callable[[], Awaitable[None]] | DeferredProjection | None:
         note = (
             await session.execute(
                 select(Note).where(
                     Note.id == content_id,
                     Note.organization_id == organization_id,
-                    Note.is_deleted.is_(False),
                 )
             )
         ).scalar_one_or_none()
         if note is None:
             return None
+        if note.is_deleted:
+            return DeferredProjection.SOFT_DELETED
         canvas = _render_canvas_content(ydoc) if note.node_type == NodeType.CANVAS else None
         content = "" if note.node_type == NodeType.CANVAS else _render_markdown(ydoc)
         staged = await NoteRealtimePersistence(
@@ -185,6 +215,13 @@ class NoteRealtimeAdapter:
             actor_id=actor_id,
         )
         return staged[1] if staged is not None else None
+
+    async def after_projection(
+        self, session: AsyncSession, content_id: UUID, organization_id: UUID
+    ) -> None:
+        await NoteRealtimePersistence(
+            NoteProjectionOperations(session, self.search_indexer)
+        ).after_projection(organization_id, content_id)
 
     def apply_external_content(self, ydoc: pycrdt.Doc, content: str) -> bool:
         return replace_external_markdown(ydoc, content)

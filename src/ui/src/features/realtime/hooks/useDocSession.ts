@@ -1,19 +1,27 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { abortDrain } from "@/features/realtime/drain";
 import * as Y from "yjs";
 import { Awareness } from "y-protocols/awareness";
 import { useAppSelector } from "@/app/hooks";
 import { docNameFor } from "@/features/realtime/docNames";
 import { docGeneration } from "@/features/realtime/docGeneration";
+import { useOutboundPending } from "@/features/realtime/hooks/useOutboundPending";
 import {
   realtimeMultiplexer,
   type DocSubscription,
   type FragmentSeeder,
 } from "@/features/realtime/multiplexer";
+import { clearPendingDoc } from "@/features/realtime/pendingDocs";
 import {
   attachEncryptedPersistence,
   type EncryptedPersistence,
 } from "@/features/realtime/persistence/encryptedYjsPersistence";
-import { type RealtimeStatus, statusFromCloseCode } from "@/features/realtime/protocol";
+import {
+  SEED_CONFLICT_REASON,
+  type RealtimeStatus,
+  statusFromCloseCode,
+} from "@/features/realtime/protocol";
+import { useUnloadGuard } from "@/shared/hooks/useUnloadGuard";
 import { randomUUID } from "@/shared/utils/uuid";
 
 export interface DocSession {
@@ -25,6 +33,8 @@ export interface DocSession {
   fragmentSeeder: FragmentSeeder;
   /** Resolves once the first server `sync` AND the local IDB replay are done. */
   whenSynced: Promise<void>;
+  /** Count of server generation changes for this content; each one recreated the session. */
+  generationResets: number;
 }
 
 export interface UseDocSessionOptions {
@@ -39,6 +49,9 @@ export interface UseDocSessionOptions {
    * server then holds everything, and a replayed stale cache can no longer win over a plain
    * write made before the next open. Offline and crashed closes keep the cache. */
   discardLocalOnCleanClose?: boolean;
+  /** The server replaced the document under this session; `hasLocalEdits` says whether the
+   * closing session holds user text that will surface as a recovered draft. */
+  onGenerationReset?: (info: { hasLocalEdits: boolean }) => void;
 }
 
 // Seed-time writers gate on the composed promise. Resolving before the IDB
@@ -54,6 +67,43 @@ export function composeWhenSynced(
   return Promise.all([serverSynced, hydrationComplete]).then(() => undefined);
 }
 
+export interface CloseDisposalInput {
+  discardLocalOnCleanClose: boolean;
+  serverSynced: boolean;
+  hydrationComplete: boolean;
+  transportStatus: RealtimeStatus;
+  outboundPending: boolean;
+  readOnly: boolean;
+  generationChanged: boolean;
+  denied: boolean;
+}
+
+export interface CloseDisposal {
+  /** Every local frame reached the server under the current generation. */
+  acknowledged: boolean;
+  /** Drop this session's rows; only an acknowledged close of an opt-in session. */
+  discard: boolean;
+  /** Record the doc so the drain replays its rows on the next connection. */
+  drain: boolean;
+}
+
+// A generation change or a denial means the server never took this session's bytes, so
+// neither counts as a clean close no matter what the transport reports.
+export function resolveCloseDisposal(input: CloseDisposalInput): CloseDisposal {
+  const acknowledged =
+    input.serverSynced &&
+    input.hydrationComplete &&
+    input.transportStatus === "connected" &&
+    !input.outboundPending &&
+    !input.generationChanged &&
+    !input.denied;
+  return {
+    acknowledged,
+    discard: input.discardLocalOnCleanClose && acknowledged,
+    drain: input.outboundPending && !input.readOnly && !input.generationChanged && !input.denied,
+  };
+}
+
 export function useDocSession(opts: UseDocSessionOptions): DocSession | null {
   const {
     contentType,
@@ -62,8 +112,10 @@ export function useDocSession(opts: UseDocSessionOptions): DocSession | null {
     undoTarget,
     captureTimeout,
     discardLocalOnCleanClose = false,
+    onGenerationReset,
   } = opts;
   const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
+  const userId = useAppSelector((state) => state.auth.user?.id ?? null);
 
   const [status, setStatus] = useState<RealtimeStatus>("idle");
   const sessionRef = useRef<{
@@ -77,20 +129,49 @@ export function useDocSession(opts: UseDocSessionOptions): DocSession | null {
   } | null>(null);
   const [tick, setTick] = useState(0);
   const [generationReset, setGenerationReset] = useState(0);
+  const onGenerationResetRef = useRef(onGenerationReset);
+  // eslint-disable-next-line react/react-compiler -- latest-value ref read from a transport callback
+  onGenerationResetRef.current = onGenerationReset;
+
+  // Unsent edits live only in this tab's memory until acknowledged.
+  useUnloadGuard(
+    useOutboundPending(enabled && contentId ? docNameFor(contentType, contentId) : null),
+  );
 
   useEffect(() => {
     if (!enabled || !contentId || !organizationId) {
       return;
     }
 
+    const docName = docNameFor(contentType, contentId);
+    abortDrain(docName);
     const ydoc = new Y.Doc();
     const awareness = new Awareness(ydoc);
     const sessionId = randomUUID();
+    let serverSynced = false;
+    let transportStatus: RealtimeStatus = "idle";
+    let generationChanged = false;
+    let denied = false;
+    let disposed = false;
 
     const persistence = attachEncryptedPersistence({
       contentType,
       contentId,
       ydoc,
+      scope: userId
+        ? {
+            contentType,
+            contentId,
+            organizationId,
+            userId,
+            discardOnClean: discardLocalOnCleanClose,
+          }
+        : undefined,
+      isAcknowledged: () =>
+        serverSynced &&
+        transportStatus === "connected" &&
+        !generationChanged &&
+        !realtimeMultiplexer.isOutboundPending(docName),
     });
     let chooseReplay!: (options: { serverGeneration: string | null } | undefined) => void;
     const replayGate = new Promise<{ serverGeneration: string | null } | undefined>((resolve) => {
@@ -116,8 +197,6 @@ export function useDocSession(opts: UseDocSessionOptions): DocSession | null {
       resolveServerSync = resolve;
     });
     const whenSynced = composeWhenSynced(whenServerSynced, whenHydrated);
-    let serverSynced = false;
-    let transportStatus: RealtimeStatus = "idle";
 
     const subscription = realtimeMultiplexer.attach({
       contentType,
@@ -143,12 +222,48 @@ export function useDocSession(opts: UseDocSessionOptions): DocSession | null {
           });
       },
       onCloseCode: (code) => {
+        // Any close leaves the transport down until the next "connected" status.
         const mapped = statusFromCloseCode(code);
+        transportStatus = mapped ?? "disconnected";
         if (mapped) setStatus(mapped);
       },
       // Doc-scoped, unlike a 4403 close: only this editor flips to view-only.
-      onWriteDenied: () => setStatus("permission_lost"),
-      onGenerationMismatch: () => setGenerationReset((value) => value + 1),
+      onWriteDenied: (reason, noView) => {
+        denied = true;
+        setStatus(
+          reason.includes("too large")
+            ? "update_rejected"
+            : noView
+              ? "access_lost"
+              : "permission_lost",
+        );
+        if (reason === SEED_CONFLICT_REASON) {
+          void persistence.quarantine().then((retained) => {
+            if (!retained || disposed) return;
+            generationChanged = true;
+            onGenerationResetRef.current?.({ hasLocalEdits: true });
+            setGenerationReset((value) => value + 1);
+          });
+        } else {
+          // Hydration can trigger rejection before its dirty marker is recorded.
+          queueMicrotask(() => {
+            if (reason.includes("too large") || persistence.isDirty())
+              void persistence.quarantine();
+          });
+        }
+      },
+      onGenerationMismatch: () => {
+        generationChanged = true;
+        onGenerationResetRef.current?.({ hasLocalEdits: persistence.isDirty() });
+        setGenerationReset((value) => value + 1);
+      },
+    });
+    const unsubscribePending = realtimeMultiplexer.subscribeOutboundPending(docName, (pending) => {
+      if (pending) return;
+      void persistence.acknowledge().then(() => {
+        if (!disposed && !realtimeMultiplexer.isOutboundPending(docName))
+          clearPendingDoc(contentType, contentId);
+      });
     });
     if (!navigator.onLine) chooseReplay(undefined);
 
@@ -167,21 +282,38 @@ export function useDocSession(opts: UseDocSessionOptions): DocSession | null {
     setTick((t) => t + 1);
 
     return () => {
+      disposed = true;
+      unsubscribePending();
       // Read before detach: the multiplexer forgets the doc's outbound state on destroy.
-      const cleanClose =
-        discardLocalOnCleanClose &&
-        serverSynced &&
-        hydrationComplete &&
-        transportStatus === "connected" &&
-        !realtimeMultiplexer.isOutboundPending(docNameFor(contentType, contentId));
+      const disposal = resolveCloseDisposal({
+        discardLocalOnCleanClose,
+        serverSynced,
+        hydrationComplete,
+        transportStatus,
+        outboundPending: realtimeMultiplexer.isOutboundPending(docName),
+        readOnly: realtimeMultiplexer.isDocReadOnly(docName),
+        generationChanged,
+        denied,
+      });
+      if (disposal.acknowledged) clearPendingDoc(contentType, contentId);
       subscription.destroy();
       undoManager?.destroy();
       awareness.destroy();
-      void persistence.destroy({ discard: cleanClose }).finally(() => ydoc.destroy());
+      void persistence
+        .destroy({ discard: disposal.discard, acknowledged: disposal.acknowledged })
+        .finally(() => ydoc.destroy());
       sessionRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabled, contentType, contentId, organizationId, discardLocalOnCleanClose, generationReset]);
+  }, [
+    enabled,
+    contentType,
+    contentId,
+    organizationId,
+    userId,
+    discardLocalOnCleanClose,
+    generationReset,
+  ]);
 
   // Y.Doc / Awareness / UndoManager identities must survive every re-render -
   // recreating them would drop the CRDT state and the undo history - so the ref
@@ -199,8 +331,9 @@ export function useDocSession(opts: UseDocSessionOptions): DocSession | null {
       fragmentSeeder: current.subscription,
       status,
       whenSynced: current.whenSynced,
+      generationResets: generationReset,
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, tick, enabled]);
+  }, [status, tick, enabled, generationReset]);
   /* eslint-enable react/react-compiler */
 }

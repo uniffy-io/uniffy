@@ -6,10 +6,21 @@ import type { Ctx } from "@milkdown/ctx";
 import type { Node } from "@milkdown/prose/model";
 import { MARKDOWN_MIRROR_ORIGIN } from "@/features/realtime/persistence/encryptedYjsPersistence";
 
-export const MARKDOWN_TEXT_FIELD = "markdown";
-export const PROSEMIRROR_FRAGMENT_FIELD = "prosemirror";
-export const MARKDOWN_MIRROR_FIELD = "markdown_mirror";
-export const MIRROR_ACTIVE_KEY = "active";
+import {
+  MARKDOWN_MIRROR_FIELD,
+  MARKDOWN_TEXT_FIELD,
+  MIRROR_ACTIVE_KEY,
+  PROSEMIRROR_FRAGMENT_FIELD,
+  fragmentHasRealContent,
+} from "@/features/realtime/docContent";
+
+export {
+  MARKDOWN_MIRROR_FIELD,
+  MARKDOWN_TEXT_FIELD,
+  MIRROR_ACTIVE_KEY,
+  PROSEMIRROR_FRAGMENT_FIELD,
+  fragmentHasRealContent,
+} from "@/features/realtime/docContent";
 
 // Origin for the editor's Y.Text("markdown") mirror. Lives in the persistence
 // module because IDB writes filter on it; editor code imports it from here.
@@ -21,24 +32,6 @@ export function getMarkdownYText(ydoc: Y.Doc): Y.Text {
 
 export function getProsemirrorFragment(ydoc: Y.Doc): Y.XmlFragment {
   return ydoc.get(PROSEMIRROR_FRAGMENT_FIELD, Y.XmlFragment);
-}
-
-/**
- * True when the fragment holds user-visible content. ySyncPlugin writes one
- * empty paragraph into an empty fragment on bind, so a bare length check
- * mistakes that placeholder for real content.
- */
-export function fragmentHasRealContent(fragment: Y.XmlFragment): boolean {
-  return fragment.toArray().some(xmlNodeHasContent);
-}
-
-function xmlNodeHasContent(node: Y.XmlElement | Y.XmlText | Y.XmlHook): boolean {
-  if (node instanceof Y.XmlText) return node.length > 0;
-  if (node instanceof Y.XmlElement) {
-    if (node.nodeName !== "paragraph") return true;
-    return node.toArray().some(xmlNodeHasContent);
-  }
-  return true;
 }
 
 /** Resolves true once the fragment holds real content, false when the timeout elapses first. */
@@ -88,14 +81,10 @@ export function isMarkdownMirrorLeader(awareness: {
   return true;
 }
 
-/**
- * Rebuilds the fragment from a ProseMirror node in one transaction so
- * ySyncPlugin peers see a single replace instead of a delete then a grow.
- */
+// Keep unchanged Yjs nodes and relative positions when projecting Markdown edits.
 export function replaceProsemirrorFragment(ydoc: Y.Doc, node: Node, origin: unknown): void {
   const fragment = getProsemirrorFragment(ydoc);
   ydoc.transact(() => {
-    if (fragment.length > 0) fragment.delete(0, fragment.length);
     prosemirrorToYXmlFragment(node, fragment);
   }, origin);
 }
@@ -107,6 +96,7 @@ export function serializeEditorMarkdown(ctx: Ctx): string {
 }
 
 export function normalizeSerializedMarkdown(markdown: string): string {
+  if (/^\n*$/.test(markdown)) return "";
   // Milkdown appends one document terminator. Preserve content whitespace.
   return markdown.endsWith("\n") ? markdown.slice(0, -1) : markdown;
 }
@@ -120,5 +110,6 @@ export function fragmentToProsemirrorNode(
   fragment: Y.XmlFragment,
   schema: Parameters<typeof yXmlFragmentToProseMirrorRootNode>[1],
 ): Node {
-  return yXmlFragmentToProseMirrorRootNode(fragment, schema) as Node;
+  const node = yXmlFragmentToProseMirrorRootNode(fragment, schema) as Node;
+  return node.childCount === 0 ? (node.type.createAndFill() ?? node) : node;
 }

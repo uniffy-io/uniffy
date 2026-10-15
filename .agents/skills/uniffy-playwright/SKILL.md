@@ -83,15 +83,12 @@ For anything that needs two users at once - sharing, permission grants, live cro
 - Both browsers hit the same dev UI (`http://host.docker.internal:5173`) and each opens its own notification stream, so a server push fired by A's action arrives in B's browser independently.
 - If the `playwright-b` tools are missing, the `-b` container is not up or MCP has not reconnected - see "Operating the containers".
 
-### Fallback: two tabs in one browser (only if the 2nd container is unavailable)
+### Browser isolation
 
-A single Chromium shares one cookie jar + `localStorage`, so two users in two tabs is fragile - reach for this only when you can't use the second container.
-
-- The **access token lives in-memory per tab** (`memoryAccessToken` in `config/api.ts`, never persisted); the **refresh token + auth state live in shared `localStorage` (`persist:root`)** via redux-persist. No cross-tab `storage` listener, so two tabs hold independent in-memory tokens during a live session.
-- **Recipe:** log in user A in tab 0; `browser_tabs new` opens tab 1 (rehydrates A from `persist:root`); in tab 1 `localStorage.removeItem('persist:root')` -> `browser_navigate` to reload -> `/auth` -> log in user B. Now tab 0 = A, tab 1 = B.
-- **THE TRAP:** every tab keeps overwriting the shared `persist:root`, so any **full page load** (`browser_navigate`, reload) rehydrates that tab as whoever wrote it last - silently swapping identity. After both are logged in, **navigate ONLY via in-app SPA clicks** (`document.querySelector('a[href="/projects"]').click()`), never `browser_navigate`, and re-confirm identity before each critical action by reading the header avatar initials (`AJ` = Alice Johnson, `BS` = Bob Smith). Keep the test under the ~15 min access-token life so no silent refresh fires off the (now-shared) refresh token.
-
-The two-container path is what to reach for; the live content-access refresh feature (share / org-create / task-in-project -> recipient's sidebar/board updating without a reload) was first verified via the two-tab fallback before this second container existed.
+Use separate browser contexts or the two containers for separate users. Auth rotation lives in
+`uniffy:auth` storage and synchronizes across tabs. A login as another user retires the first tab's
+session, so two tabs in one browser profile cannot represent independent users. Same-user multi-tab
+tests remain supported. Never print tokens or cache-key seeds in tool output.
 
 ## Login recipe
 

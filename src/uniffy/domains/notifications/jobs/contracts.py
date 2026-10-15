@@ -49,10 +49,29 @@ DISPATCH_NOTIFICATION_EMAILS_SCHEDULE = JobRef(
     ),
 )
 
+DELIVER_NOTIFICATION_OUTBOX = JobRef(
+    name="deliver_notification_outbox",
+    queue=QueueName.CORE,
+    workload=JobWorkload.DELIVERY,
+    reliability=JobReliability.DURABLE,
+    recovery=JobRecovery(fact="notification_outbox row", trigger="10-second recovery schedule"),
+)
+RECOVER_NOTIFICATION_EVENTS_SCHEDULE = JobRef(
+    name="cron:recover_notification_events",
+    queue=QueueName.CORE,
+    workload=JobWorkload.DELIVERY,
+    reliability=JobReliability.DURABLE,
+    recovery=JobRecovery(fact="notification_outbox row", trigger="10-second recovery schedule"),
+)
+
 NOTIFICATION_JOB_REFS = (
+    DELIVER_NOTIFICATION_OUTBOX,
     DELIVER_PUSH_NOTIFICATION,
     SEND_NOTIFICATION_EMAIL,
     SEND_NOTIFICATION_DIGEST,
     DISPATCH_NOTIFICATION_EMAILS,
 )
-NOTIFICATION_SCHEDULED_JOB_REFS = (DISPATCH_NOTIFICATION_EMAILS_SCHEDULE,)
+NOTIFICATION_SCHEDULED_JOB_REFS = (
+    DISPATCH_NOTIFICATION_EMAILS_SCHEDULE,
+    RECOVER_NOTIFICATION_EVENTS_SCHEDULE,
+)

@@ -1,3 +1,4 @@
+import asyncio
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -8,6 +9,7 @@ import pytest_asyncio
 from sqlalchemy import Update, delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from uniffy.core.converters.common_proto import CONTENT_TYPE_TO_PROTO
 from uniffy.core.models.calendar.attendee import EventAttendee
 from uniffy.core.models.calendar.calendar import Calendar
 from uniffy.core.models.calendar.event import CalendarEvent
@@ -18,10 +20,9 @@ from uniffy.core.models.projects.sprint import Sprint as _Sprint  # noqa: F401 -
 from uniffy.core.models.projects.task import Task
 from uniffy.core.models.realtime.yjs_snapshot import RealtimeYjsSnapshot
 from uniffy.core.realtime.adapter import RealtimeRenderConflict, register_realtime_adapter
-from uniffy.core.realtime.storage import decode_snapshot
 from uniffy.core.realtime.markdown import markdown_text
-from uniffy.domains.projects.realtime import TaskRealtimeAdapter
 from uniffy.core.realtime.state import ClientHandle, YDocSession
+from uniffy.core.realtime.storage import decode_snapshot, load_snapshot, lock_document, stage_seed
 from uniffy.core.realtime.ydoc_manager import YDocManager
 from uniffy.core.types import (
     AccessMode,
@@ -31,7 +32,9 @@ from uniffy.core.types import (
     SubjectType,
     generate_id,
 )
+from uniffy.domains.notifications.content import project_content_change
 from uniffy.domains.projects.defaults import stage_default_project_fields
+from uniffy.domains.projects.realtime import TaskRealtimeAdapter
 from uniffy.domains.projects.tasks.content import TaskContentOperations
 from uniffy.domains.projects.tasks.mutations import TaskMutationOperations
 from uniffy.domains.projects.tasks.realtime import TaskRealtimePersistence
@@ -275,16 +278,21 @@ async def test_event_render_preserves_metadata_and_only_notifies_new_mentions(
     assert await persistence.save(access.org_id, event.id, "Deleted") is None
 
 
+async def _seeded(session: AsyncSession, key, organization_id) -> SimpleNamespace:
+    """Seed the shared document; return scalars, since the row object itself is what mutates."""
+    await lock_document(session, key)
+    seed = await stage_seed(session, key, organization_id)
+    await session.commit()
+    return SimpleNamespace(generation=seed.generation, revision=seed.revision)
+
+
 @pytest.mark.parametrize("description", [None, "RPC replacement"])
-async def test_event_update_replaces_only_description_snapshot(
+async def test_event_update_merges_only_description_into_snapshot(
     session: AsyncSession, access: SimpleNamespace, description: str | None
 ) -> None:
     event, _ = await _private_event(session, access)
     key = ContentType.CALENDAR_EVENT, event.id
-    session.add(
-        RealtimeYjsSnapshot(content_type=key[0], content_id=key[1], updates=b"x", state_vector=b"x")
-    )
-    await session.commit()
+    seed = await _seeded(session, key, access.org_id)
     operations = CalendarEventOperations(session, MagicMock())
     with (
         patch.object(operations, "_index_for_search", new_callable=AsyncMock),
@@ -300,21 +308,22 @@ async def test_event_update_replaces_only_description_snapshot(
             description=description,
             call_lifecycle=MagicMock(),
         )
-    snapshot = await session.get(RealtimeYjsSnapshot, key)
+    snapshot = await load_snapshot(session, key)
+    assert snapshot is not None
+    assert snapshot.generation == seed.generation
     if description is None:
-        assert snapshot is not None
+        assert snapshot.revision == seed.revision
         publish.assert_not_awaited()
         await session.delete(snapshot)
         await session.commit()
     else:
-        assert snapshot is not None
         assert str(markdown_text(decode_snapshot(snapshot))) == description
-        assert snapshot.revision == snapshot.rendered_revision
+        assert snapshot.revision == snapshot.rendered_revision == seed.revision + 1
         publish.assert_awaited_once_with(*key, description)
 
 
 @pytest.mark.parametrize("description", [None, "RPC replacement"])
-async def test_task_update_replaces_only_description_snapshot(
+async def test_task_update_merges_only_description_into_snapshot(
     session: AsyncSession, access: SimpleNamespace, description: str | None
 ) -> None:
     project = Project(
@@ -336,11 +345,9 @@ async def test_task_update_replaces_only_description_snapshot(
         description="Initial",
     )
     session.add(task)
-    key = ContentType.TASK, task.id
-    session.add(
-        RealtimeYjsSnapshot(content_type=key[0], content_id=key[1], updates=b"x", state_vector=b"x")
-    )
     await session.commit()
+    key = ContentType.TASK, task.id
+    seed = await _seeded(session, key, access.org_id)
     content = TaskContentOperations(session, search_indexer=MagicMock())
     with (
         patch.object(content, "_index_for_search", new_callable=AsyncMock),
@@ -356,14 +363,161 @@ async def test_task_update_replaces_only_description_snapshot(
             task.id,
             **fields,
         )
-    snapshot = await session.get(RealtimeYjsSnapshot, key)
+    snapshot = await load_snapshot(session, key)
+    assert snapshot is not None
+    assert snapshot.generation == seed.generation
     if description is None:
-        assert snapshot is not None
+        assert snapshot.revision == seed.revision
         publish.assert_not_awaited()
         await session.delete(snapshot)
         await session.commit()
     else:
-        assert snapshot is not None
         assert str(markdown_text(decode_snapshot(snapshot))) == description
-        assert snapshot.revision == snapshot.rendered_revision
+        assert snapshot.revision == snapshot.rendered_revision == seed.revision + 1
         publish.assert_awaited_once_with(*key, description)
+
+
+async def test_description_hint_checks_current_project_access(
+    session: AsyncSession, access: SimpleNamespace
+) -> None:
+    project = Project(
+        organization_id=access.org_id,
+        owner_id=access.member_id,
+        name="Hint project",
+        slug=f"hint-{generate_id().hex[-12:]}",
+        access_mode=AccessMode.OWNER_ONLY,
+    )
+    session.add(project)
+    await session.flush()
+    task = Task(
+        organization_id=access.org_id,
+        project_id=project.id,
+        owner_id=access.member_id,
+        title="Hint task",
+        number=1,
+        description="Initial",
+    )
+    session.add(task)
+    await session.commit()
+    payload = {
+        "content_type": int(CONTENT_TYPE_TO_PROTO[ContentType.TASK]),
+        "content_id": str(task.id),
+    }
+    recipients = [access.member_id, access.admin_id, access.peer_id, access.outsider_id]
+    results = await asyncio.gather(
+        *(
+            project_content_change(payload, actor, access.org_id, open_session)
+            for actor in recipients
+        )
+    )
+    assert [result is not None for result in results] == [True, False, False, False]
+    assert (
+        await project_content_change(payload, access.member_id, access.org_id, open_session)
+        is not None
+    )
+    assert (
+        await project_content_change(payload, access.admin_id, access.org_id, open_session) is None
+    )
+    assert (
+        await project_content_change(payload, access.member_id, generate_id(), open_session) is None
+    )
+    grant = ContentMember(
+        organization_id=access.org_id,
+        content_type=ContentType.PROJECT,
+        content_id=project.id,
+        subject_type=SubjectType.USER,
+        subject_id=access.peer_id,
+        role=ContentRole.VIEWER,
+        added_by_user_id=access.member_id,
+    )
+    session.add(grant)
+    await session.commit()
+    assert (
+        await project_content_change(payload, access.peer_id, access.org_id, open_session)
+        is not None
+    )
+    grant.role = ContentRole.BLOCKED
+    session.add(grant)
+    await session.commit()
+    assert await project_content_change(payload, access.peer_id, access.org_id, open_session) is None
+
+
+async def test_calendar_audience_keeps_attendee_blocks_and_private_details(
+    session: AsyncSession,
+    access: SimpleNamespace,
+) -> None:
+    event, grant = await _private_event(session, access)
+    adapter = EventRealtimeAdapter(MagicMock())
+    actors = access.user_ids
+
+    async def compare():
+        roles = await adapter.authorize_many(session, actors, access.org_id, event.id)
+        for actor in actors:
+            assert roles[actor] == await adapter.authorize(session, actor, access.org_id, event.id)
+        return roles
+
+    assert (await compare())[access.peer_id] == ContentRole.EDITOR
+    grant.role = ContentRole.VIEWER
+    session.add(grant)
+    await session.commit()
+    assert (await compare())[access.peer_id] is None
+    session.add(EventAttendee(event_id=event.id, user_id=access.peer_id))
+    await session.commit()
+    assert (await compare())[access.peer_id] == ContentRole.VIEWER
+    grant.role = ContentRole.BLOCKED
+    session.add(grant)
+    await session.commit()
+    assert (await compare())[access.peer_id] is None
+
+
+@pytest.mark.parametrize("content_type", [ContentType.TASK, ContentType.CALENDAR_EVENT])
+async def test_projection_hint_follows_committed_description(
+    session: AsyncSession, access: SimpleNamespace, content_type: ContentType
+) -> None:
+    if content_type == ContentType.CALENDAR_EVENT:
+        row, _grant = await _private_event(session, access)
+        persistence = EventRealtimePersistence(session, MagicMock())
+        module = "uniffy.domains.scheduling.calendar.events.realtime"
+        operations = "EventContentOperations"
+        notifications = "EventNotifications"
+    else:
+        project = Project(
+            organization_id=access.org_id,
+            owner_id=access.member_id,
+            name="Committed hint",
+            slug=f"hint-{generate_id().hex[-12:]}",
+            access_mode=AccessMode.OWNER_ONLY,
+        )
+        session.add(project)
+        await session.flush()
+        row = Task(
+            organization_id=access.org_id,
+            project_id=project.id,
+            owner_id=access.member_id,
+            title="Committed hint task",
+            number=1,
+            description="Initial",
+        )
+        session.add(row)
+        await session.commit()
+        persistence = TaskRealtimePersistence(session, MagicMock())
+        module = "uniffy.domains.projects.tasks.realtime"
+        operations = "TaskContentOperations"
+        notifications = "TaskNotifications"
+    observed = []
+
+    async def published(kind, content_id, organization_id):
+        async with open_session() as reader:
+            stored = await reader.get(type(row), content_id)
+            observed.append((kind, organization_id, stored.description))
+
+    with (
+        patch(f"{module}.publish_content_changed", side_effect=published),
+        patch(f"{module}.{operations}._index_for_search", new_callable=AsyncMock),
+        patch(f"{module}.{notifications}.emit_mention_notifications", new_callable=AsyncMock),
+    ):
+        staged = await persistence.stage_save(access.org_id, row.id, "Committed preview")
+        assert observed == []
+        await session.commit()
+        await staged[1]()
+    assert observed == [(content_type, access.org_id, "Committed preview")]

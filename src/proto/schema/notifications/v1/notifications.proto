@@ -257,6 +257,7 @@ message StreamNotificationsResponse {
     EVENT_TYPE_CONTENT_ACCESS_CHANGED = 7;
     // A persisted access request changed independently of notification preferences
     EVENT_TYPE_ACCESS_REQUEST_CHANGED = 8;
+    EVENT_TYPE_CONTENT_CHANGED = 9;
   }
 
   // Type of this event
@@ -275,6 +276,7 @@ message StreamNotificationsResponse {
   ContentAccessChangedPayload content_access_changed = 7;
   // Access request payload (present for ACCESS_REQUEST_CHANGED events)
   AccessRequestChangedPayload access_request_changed = 8;
+  ContentChangedPayload content_changed = 9;
 }
 
 // Payload for presence change events
@@ -422,4 +424,11 @@ message BulkDeleteNotificationsRequest {
 message BulkDeleteNotificationsResponse {
   // Number of notifications deleted
   int32 deleted_count = 1;
+}
+
+
+// Invalidation hint. Clients refetch content through its permission-gated RPC.
+message ContentChangedPayload {
+  common.v1.ContentType content_type = 1;
+  string content_id = 2;
 }

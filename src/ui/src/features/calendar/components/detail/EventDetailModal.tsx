@@ -1,3 +1,5 @@
+import { useContentRefresh } from "@/features/notifications/hooks/useContentRefresh";
+import { fetchEvent } from "@/features/calendar/store/calendarThunks";
 import { useState, useMemo, useCallback } from "react";
 import {
   BookmarkSimple,
@@ -86,6 +88,10 @@ export function EventDetailModal() {
 
   const category = selectedEvent?.categoryId ? categories[selectedEvent.categoryId] : null;
   const categoryColor = category?.color ?? ACCENT_EVENT_COLOR;
+
+  useContentRefresh(ContentType.CALENDAR_EVENT, selectedEvent?.id ?? null, () => {
+    if (selectedEvent) void dispatch(fetchEvent(selectedEvent.id));
+  });
 
   const handleDeleteClick = () => {
     if (isRecurring) {
@@ -332,6 +338,12 @@ export function EventDetailModal() {
               )}
 
               <div className="px-6 py-3 border-b border-border">
+                {!eventSupportsRealtime(selectedEvent) && (
+                  <p className="mb-2 text-xs text-muted-foreground">
+                    Recurring description. Changes save on Done after you choose which events to
+                    update.
+                  </p>
+                )}
                 <ExpandableEditor
                   key={selectedEvent.id}
                   contentType={ContentType.CALENDAR_EVENT}

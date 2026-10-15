@@ -3,7 +3,7 @@
 from datetime import UTC, datetime
 from uuid import UUID
 
-from sqlalchemy import Column, DateTime, Index, String, Text
+from sqlalchemy import Column, DateTime, Index, String, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, SQLModel
 
@@ -16,6 +16,7 @@ class Notification(SQLModel, table=True):
 
     __tablename__ = "notifications"
     __table_args__ = (
+        UniqueConstraint("event_id", "user_id", name="uq_notification_event_user"),
         Index(
             "ix_notifications_user_org_unread",
             "user_id",
@@ -31,6 +32,7 @@ class Notification(SQLModel, table=True):
     )
 
     id: UUID = Field(default_factory=generate_id, primary_key=True, nullable=False)
+    event_id: UUID | None = Field(default=None)
     organization_id: UUID = Field(foreign_key="login_organizations.id", nullable=False, index=True)
     user_id: UUID = Field(foreign_key="login_users.id", nullable=False, index=True)
     notification_type: NotificationType = Field(

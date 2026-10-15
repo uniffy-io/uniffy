@@ -60,6 +60,7 @@ from uniffy.core.events.realtime import NotificationPayloadType
 from uniffy.core.models.login.user import User
 from uniffy.core.realtime.reauth import REAUTH_INTERVAL_SECONDS
 from uniffy.core.streaming.disconnect import get_disconnect_event
+from uniffy.domains.notifications.content import project_content_change
 from uniffy.domains.notifications.converters import (
     notification_to_proto,
     notification_type_from_proto,
@@ -588,6 +589,18 @@ class NotificationsHandlers:
                             yield StreamNotificationsResponse(
                                 event_type=StreamNotificationsResponse.EventType.HEARTBEAT,
                                 timestamp=ts,
+                            )
+                            last_send = now
+                        continue
+
+                    if payload.get("_type") == NotificationPayloadType.CONTENT_CHANGED:
+                        changed = await project_content_change(
+                            payload, user_id, organization_id, open_session
+                        )
+                        if changed is not None:
+                            yield StreamNotificationsResponse(
+                                event_type=StreamNotificationsResponse.EventType.CONTENT_CHANGED,
+                                content_changed=changed,
                             )
                             last_send = now
                         continue

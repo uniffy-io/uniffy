@@ -12,11 +12,17 @@ import { roleCanEdit, roleCanManage } from "@/shared/utils/contentRoles";
 import { ContentType } from "@uniffy/proto/common/v1/common_pb";
 import { NodeType } from "@uniffy/proto/notes/v1/notes_pb";
 import { findHeadingBySlug } from "@/components/editor/utils/headingScroll";
-import { EditorHandleContext } from "@/components/editor/EditorHandle";
+import {
+  EditorHandleContext,
+  MarkdownRecoveryContext,
+  type MarkdownRecoveryActions,
+} from "@/components/editor/EditorHandle";
 import type { EditorHandle } from "@/components/editor/EditorHandle";
 import { NoteTitleBlock } from "@/features/notes/components/editor/NoteTitleBlock";
 import { FloatingFormattingToolbar } from "@/components/editor/toolbar/FloatingFormattingToolbar";
 import { useNoteRealtimeSession } from "@/features/notes/realtime/useNoteRealtimeSession";
+import { useInitialSync } from "@/features/realtime/hooks/useInitialSync";
+import { RealtimeConnectionNotice } from "@/features/realtime/components/RealtimeConnectionNotice";
 import { useCanvasRealtimeSession } from "@/features/notes/realtime/useCanvasRealtimeSession";
 import { ErrorBoundary } from "@/components/feedback";
 import { isNoteLoading } from "@/features/notes/utils/noteLoading";
@@ -61,9 +67,14 @@ export function NotesEditor() {
     currentNoteId ?? null,
     Boolean(currentNoteId) && roleAllowsEdit && isCanvas,
   );
+  const initiallySynced = useInitialSync(realtimeBinding?.whenSynced);
   const activeStatus = isCanvas ? canvasRealtimeStatus : realtimeStatus;
   const canEdit =
-    roleAllowsEdit && activeStatus !== "permission_lost" && activeStatus !== "token_revoked";
+    roleAllowsEdit &&
+    activeStatus !== "permission_lost" &&
+    activeStatus !== "access_lost" &&
+    activeStatus !== "update_rejected" &&
+    activeStatus !== "token_revoked";
   const editorMode = canEdit ? userSelectedMode : "readonly";
 
   const noteContent = currentNote?.content ?? "";
@@ -106,6 +117,7 @@ export function NotesEditor() {
 
   const editorContainerRef = useRef<HTMLDivElement>(null);
 
+  const [recoveryActions, setRecoveryActions] = useState<MarkdownRecoveryActions | null>(null);
   const [editorHandle, setEditorHandle] = useState<EditorHandle | null>(null);
   const handleEditorReady = useCallback((handle: EditorHandle | null) => {
     setEditorHandle(handle);
@@ -159,6 +171,7 @@ export function NotesEditor() {
             isCanvas
             realtimeStatus={canvasRealtimeStatus}
             realtimeAwareness={canvasRealtimeBinding?.awareness ?? null}
+            realtimeWhenSynced={canvasRealtimeBinding?.whenSynced}
           />
         )}
         {!isZenMode && !canvasTitleHidden && compactTitleBlock}
@@ -178,6 +191,8 @@ export function NotesEditor() {
   }
 
   const renderEditor = () => {
+    if (!initiallySynced)
+      return <ReadOnlyViewer note={currentNote} content={noteContent} titleSlot={titleBlock} />;
     switch (editorMode) {
       case "crepe":
         return (
@@ -196,6 +211,7 @@ export function NotesEditor() {
         return (
           <MarkdownSplitEditor
             note={currentNote}
+            onRecoveryReady={setRecoveryActions}
             titleSlot={titleBlock}
             realtime={realtimeBinding ?? undefined}
           />
@@ -226,27 +242,37 @@ export function NotesEditor() {
   };
 
   return (
-    <EditorHandleContext.Provider value={editorHandle}>
-      <div
-        className="flex flex-col h-full bg-surface"
-        data-toolbar-pinned={toolbarPinned ? "true" : "false"}
-      >
-        {!isZenMode && (
-          <EditorHeader
-            note={currentNote}
-            canEdit={canEdit}
-            canShare={canShare}
-            realtimeStatus={realtimeStatus}
-            realtimeAwareness={realtimeBinding?.awareness ?? null}
+    <MarkdownRecoveryContext.Provider
+      value={canEdit && editorMode === "markdown" ? recoveryActions : null}
+    >
+      <EditorHandleContext.Provider value={editorHandle}>
+        <div
+          className="flex flex-col h-full bg-surface"
+          data-toolbar-pinned={toolbarPinned ? "true" : "false"}
+        >
+          {!isZenMode && (
+            <EditorHeader
+              note={currentNote}
+              canEdit={canEdit}
+              canShare={canShare}
+              realtimeStatus={realtimeStatus}
+              realtimeAwareness={realtimeBinding?.awareness ?? null}
+              realtimeWhenSynced={realtimeBinding?.whenSynced}
+            />
+          )}
+          <RealtimeConnectionNotice
+            key={currentNote.id}
+            waiting={!initiallySynced}
+            status={realtimeStatus}
           />
-        )}
-        <div ref={editorContainerRef} className="flex-1 overflow-hidden">
-          <ErrorBoundary fallback={renderEditorErrorFallback}>{renderEditor()}</ErrorBoundary>
+          <div ref={editorContainerRef} className="flex-1 overflow-hidden">
+            <ErrorBoundary fallback={renderEditorErrorFallback}>{renderEditor()}</ErrorBoundary>
+          </div>
+          {canEdit && initiallySynced && editorMode === "crepe" && (
+            <FloatingFormattingToolbar showOnSelection={!toolbarPinned} />
+          )}
         </div>
-        {canEdit && editorMode === "crepe" && (
-          <FloatingFormattingToolbar showOnSelection={!toolbarPinned} />
-        )}
-      </div>
-    </EditorHandleContext.Provider>
+      </EditorHandleContext.Provider>
+    </MarkdownRecoveryContext.Provider>
   );
 }

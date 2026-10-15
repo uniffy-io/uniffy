@@ -1,3 +1,4 @@
+import type { MarkdownRecoveryActions } from "@/components/editor/EditorHandle";
 import { useRef, useEffect, useCallback, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { sanitizeMentionLabel } from "@/shared/utils/mentionUtils";
@@ -29,6 +30,7 @@ interface MarkdownSplitEditorProps {
   titleSlot?: ReactNode;
   // Both panes share Y.Text("markdown") so editor + preview cannot drift.
   realtime?: CrepeRealtimeBinding;
+  onRecoveryReady?: (actions: MarkdownRecoveryActions | null) => void;
 }
 
 const MIN_PANE_WIDTH = 200;
@@ -42,7 +44,12 @@ const defaultSettings = {
   spellCheck: true,
 };
 
-export function MarkdownSplitEditor({ note, titleSlot, realtime }: MarkdownSplitEditorProps) {
+export function MarkdownSplitEditor({
+  note,
+  titleSlot,
+  realtime,
+  onRecoveryReady,
+}: MarkdownSplitEditorProps) {
   const editorState = useAppSelector((state) => state.editor);
   const settings = editorState?.settings ?? defaultSettings;
   const showMarkdownPreview = settings.showMarkdownPreview ?? true;
@@ -216,11 +223,28 @@ export function MarkdownSplitEditor({ note, titleSlot, realtime }: MarkdownSplit
         });
         unbind = bindCodeMirrorMarkdown(view, text, realtime.sessionId);
         ready = true;
+        const apply = (recovered: string, replace: boolean) => {
+          if (disposed || !view.state.facet(EditorView.editable))
+            throw new Error("Editor is not editable");
+          const selection = view.state.selection.main;
+          const from = replace ? 0 : selection.from;
+          const to = replace ? view.state.doc.length : selection.to;
+          view.dispatch({
+            changes: { from, to, insert: recovered },
+            selection: { anchor: from + recovered.length },
+          });
+          view.focus();
+        };
+        onRecoveryReady?.({
+          insert: (recovered) => apply(recovered, false),
+          replace: (recovered) => apply(recovered, true),
+        });
       });
     }
 
     return () => {
       disposed = true;
+      onRecoveryReady?.(null);
       unbind?.();
       if (codemirrorViewRef.current) {
         codemirrorViewRef.current.destroy();

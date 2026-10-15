@@ -1,7 +1,5 @@
-/** `beforeunload` guard while a recording or upload is in flight; browser shows its native confirm (message text is not customizable). */
-
-import { useEffect } from "react";
 import { useAppSelector } from "@/app/hooks";
+import { useUnloadGuard } from "@/shared/hooks/useUnloadGuard";
 
 const ACTIVE_STATES = new Set([
   "requesting",
@@ -13,19 +11,8 @@ const ACTIVE_STATES = new Set([
   "completing",
 ]);
 
+/** Guards the page while a recording or its upload is in flight. */
 export function useBeforeUnloadGuard(): void {
   const recordingState = useAppSelector((state) => state.recording.state);
-  const isActive = ACTIVE_STATES.has(recordingState);
-
-  useEffect(() => {
-    if (!isActive) return;
-    const handler = (event: BeforeUnloadEvent) => {
-      event.preventDefault();
-      event.returnValue = "";
-    };
-    window.addEventListener("beforeunload", handler);
-    return () => {
-      window.removeEventListener("beforeunload", handler);
-    };
-  }, [isActive]);
+  useUnloadGuard(ACTIVE_STATES.has(recordingState));
 }

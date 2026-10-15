@@ -10,9 +10,15 @@ import {
   type MultiplexerAttachOptions,
 } from "@/features/realtime/multiplexer";
 import { encodeDocFrame, peekVarString } from "@/features/realtime/multiplex";
+import { resolveCloseDisposal } from "@/features/realtime/hooks/useDocSession";
 
+const auth = vi.hoisted(() => ({ refresh: vi.fn(), org: "org-1" }));
 vi.mock("@/config/api", () => ({
   getAccessToken: () => "test-token",
+  refreshAccessToken: auth.refresh,
+}));
+vi.mock("@/features/auth/store/credentialStorage", () => ({
+  readStoredAuth: () => ({ currentOrganizationId: auth.org }),
 }));
 
 const MESSAGE_SYNC = 0;
@@ -163,7 +169,12 @@ let attached: AttachedDoc[] = [];
 
 function attachDoc(
   contentId: string,
-  options: Partial<Pick<MultiplexerAttachOptions, "onWriteDenied" | "onStatus">> = {},
+  options: Partial<
+    Pick<
+      MultiplexerAttachOptions,
+      "onWriteDenied" | "onStatus" | "onGenerationMismatch" | "onCloseCode"
+    >
+  > = {},
 ): AttachedDoc {
   const ydoc = new Y.Doc();
   const awareness = new Awareness(ydoc);
@@ -188,6 +199,7 @@ function attachDoc(
 }
 
 beforeAll(() => {
+  vi.spyOn(Math, "random").mockReturnValue(0.5);
   vi.stubGlobal("WebSocket", FakeWebSocket);
   vi.stubGlobal(
     "window",
@@ -317,7 +329,7 @@ describe("auth frames", () => {
     currentWs().open();
 
     currentWs().receive(serverAuthDeniedFrame(doc.docName, "edit access removed"));
-    expect(onWriteDenied).toHaveBeenCalledWith("edit access removed");
+    expect(onWriteDenied).toHaveBeenCalledWith("edit access removed", false);
 
     doc.ydoc.getText("markdown").insert(0, "typed after the downgrade");
     expect(sentSyncSubtypes(currentWs(), doc.docName)).not.toContain(SYNC_UPDATE);
@@ -445,4 +457,218 @@ it("requires a matching acknowledgment for deletion-only updates", () => {
   expect(server.getText("markdown").toString()).toBe("");
   expect(realtimeMultiplexer.isOutboundPending(doc.docName)).toBe(false);
   server.destroy();
+});
+
+describe("generation change", () => {
+  it("after acknowledged edits reports a mismatch that the session must not read as a clean close", () => {
+    const statuses: string[] = [];
+    const onGenerationMismatch = vi.fn();
+    const doc = attachDoc("replaced", { onStatus: (s) => statuses.push(s), onGenerationMismatch });
+    const ws = currentWs();
+    ws.open();
+    const server = new Y.Doc();
+    server.getMap("doc_meta").set("generation", "G");
+    server.getText("markdown").insert(0, "server text");
+    ws.receive(serverSyncStep2Frame(doc.docName, server, Y.encodeStateVector(doc.ydoc)));
+    doc.ydoc.getText("markdown").insert(11, " my paragraph");
+    applyClientFramesToServer(ws, doc.docName, server);
+    expect(realtimeMultiplexer.isOutboundPending(doc.docName)).toBe(false);
+
+    ws.receive(serverGenerationFrame(doc.docName, "H"));
+    expect(onGenerationMismatch).toHaveBeenCalledTimes(1);
+    expect(statuses.at(-1)).toBe("connected");
+    // Further local edits never leave on the replaced generation.
+    const framesBefore = ws.sent.length;
+    doc.ydoc.getText("markdown").insert(0, "x");
+    expect(ws.sent.length).toBe(framesBefore);
+
+    const disposal = resolveCloseDisposal({
+      discardLocalOnCleanClose: true,
+      serverSynced: true,
+      hydrationComplete: true,
+      transportStatus: "connected",
+      outboundPending: realtimeMultiplexer.isOutboundPending(doc.docName),
+      readOnly: false,
+      generationChanged: onGenerationMismatch.mock.calls.length > 0,
+      denied: false,
+    });
+    expect(disposal.discard).toBe(false);
+    server.destroy();
+  });
+});
+
+describe("close codes", () => {
+  it("delivers 4410 to the session and stops reconnecting", () => {
+    vi.useFakeTimers();
+    const closeCodes: number[] = [];
+    const doc = attachDoc("revoked", { onCloseCode: (code) => closeCodes.push(code) });
+    const ws = currentWs();
+    ws.open();
+    doc.ydoc.getText("markdown").insert(0, "in flight");
+    ws.serverClose(4410);
+    expect(closeCodes).toEqual([4410]);
+    expect(realtimeMultiplexer.isOutboundPending(doc.docName)).toBe(true);
+    vi.advanceTimersByTime(60_000);
+    expect(FakeWebSocket.instances).toHaveLength(1);
+    expect(
+      resolveCloseDisposal({
+        discardLocalOnCleanClose: true,
+        serverSynced: true,
+        hydrationComplete: true,
+        transportStatus: "token_revoked",
+        outboundPending: false,
+        readOnly: false,
+        generationChanged: false,
+        denied: false,
+      }).discard,
+    ).toBe(false);
+  });
+});
+
+it("retries a blocked connection immediately without dropping attached content", () => {
+  const doc = attachDoc("retry");
+  const first = FakeWebSocket.instances.at(-1)!;
+  doc.ydoc.getText("markdown").insert(0, "local draft");
+  const count = FakeWebSocket.instances.length;
+  realtimeMultiplexer.retryConnection();
+  expect(first.readyState).toBe(FakeWebSocket.CLOSED);
+  expect(FakeWebSocket.instances).toHaveLength(count + 1);
+  expect(doc.ydoc.getText("markdown").toString()).toBe("local draft");
+  expect(doc.onSync).not.toHaveBeenCalled();
+});
+
+it("retries token refresh without opening unauthenticated sockets or dropping edits", async () => {
+  vi.useFakeTimers();
+  auth.refresh.mockReset().mockResolvedValueOnce(null).mockResolvedValueOnce("fresh");
+  const doc = attachDoc("refresh-retry");
+  const first = currentWs();
+  first.open();
+  doc.ydoc.getText("markdown").insert(0, "pending during expiry");
+  first.serverClose(4409);
+  await vi.advanceTimersByTimeAsync(500);
+  expect(auth.refresh).toHaveBeenCalledTimes(1);
+  expect(FakeWebSocket.instances).toHaveLength(1);
+  await vi.advanceTimersByTimeAsync(750);
+  expect(auth.refresh).toHaveBeenCalledTimes(2);
+  const second = currentWs();
+  expect(second).not.toBe(first);
+  second.open();
+  const server = new Y.Doc();
+  applyClientFramesToServer(second, doc.docName, server);
+  expect(server.getText("markdown").toString()).toBe("pending during expiry");
+  server.destroy();
+});
+
+it("bounds invalid-token retries and explicit Retry restarts refresh", async () => {
+  vi.useFakeTimers();
+  auth.refresh.mockReset().mockResolvedValue(null);
+  const doc = attachDoc("invalid-token");
+  const first = currentWs();
+  first.open();
+  doc.ydoc.getText("markdown").insert(0, "retained");
+  first.serverClose(4401);
+  await vi.advanceTimersByTimeAsync(120_000);
+  expect(auth.refresh).toHaveBeenCalledTimes(5);
+  expect(FakeWebSocket.instances).toHaveLength(1);
+  expect(realtimeMultiplexer.isOutboundPending(doc.docName)).toBe(true);
+  auth.refresh.mockResolvedValue("valid");
+  realtimeMultiplexer.retryConnection();
+  await vi.advanceTimersByTimeAsync(0);
+  expect(FakeWebSocket.instances).toHaveLength(2);
+  currentWs().open();
+});
+
+it("closes an idle old-org socket before attaching in another workspace", () => {
+  const firstDoc = attachDoc("old-org");
+  const first = currentWs();
+  first.open();
+  firstDoc.subscription.destroy();
+  attached = attached.filter((item) => item !== firstDoc);
+  firstDoc.awareness.destroy();
+  firstDoc.ydoc.destroy();
+  auth.org = "org-2";
+  window.dispatchEvent(new Event("uniffy:auth:refreshed"));
+  attachDoc("new-org");
+  expect(first.readyState).toBe(FakeWebSocket.CLOSED);
+  expect(currentWs().url).toContain("org_id=org-2");
+  auth.org = "org-1";
+});
+
+it("keeps seed proposals separate from pending user updates and settles rejection", async () => {
+  const doc = attachDoc("seed-proposal");
+  const ws = currentWs();
+  ws.open();
+  const encoder = encoding.createEncoder();
+  encoding.writeVarUint(encoder, 4);
+  encoding.writeVarUint(encoder, 1);
+  encoding.writeVarString(encoder, "lease-token");
+  ws.receive(encodeDocFrame(doc.docName, encoding.toUint8Array(encoder)));
+  const result = doc.subscription.submitSeed(new Uint8Array([0, 0]), "base");
+  const frame = ws.sent.at(-1)!;
+  const decoder = decoding.createDecoder(frame.subarray(peekVarString(frame).payloadOffset));
+  expect(decoding.readVarUint(decoder)).toBe(8);
+  decoding.readVarString(decoder);
+  const id = decoding.readVarString(decoder);
+  expect(decoding.readVarString(decoder)).toBe("lease-token");
+  expect(decoding.readVarString(decoder)).toBe("base");
+  expect(realtimeMultiplexer.isOutboundPending(doc.docName)).toBe(false);
+  const rejection = encoding.createEncoder();
+  encoding.writeVarUint(rejection, 9);
+  encoding.writeVarString(rejection, id);
+  ws.receive(encodeDocFrame(doc.docName, encoding.toUint8Array(rejection)));
+  expect(await result).toBe(false);
+});
+
+it("rejects an oversized local update without disconnecting another document", () => {
+  const denied = vi.fn();
+  const large = attachDoc("large", { onWriteDenied: denied });
+  const other = attachDoc("small");
+  const ws = currentWs();
+  ws.open();
+  large.ydoc.getText("markdown").insert(0, "x".repeat(1024 * 1024));
+  expect(denied).toHaveBeenCalledWith("update too large", false);
+  for (let i = 0; i < 3; i++) ws.receive(serverSyncStep1Frame(large.docName, new Y.Doc()));
+  other.ydoc.getText("markdown").insert(0, "still live");
+  expect(ws.readyState).toBe(FakeWebSocket.OPEN);
+  expect(ws.sent.every((frame) => frame.length <= 1024 * 1024)).toBe(true);
+  const server = new Y.Doc();
+  applyClientFramesToServer(ws, other.docName, server);
+  expect(server.getText("markdown").toString()).toBe("still live");
+  server.destroy();
+});
+
+it("sends observer-generated projection in the same durable frame", () => {
+  const doc = attachDoc("atomic");
+  const ws = currentWs();
+  ws.open();
+  const source = doc.ydoc.getText("source");
+  source.observe(() => doc.ydoc.getText("markdown").insert(0, "projected"));
+  source.insert(0, "rich");
+  const updates = ws.sent.filter((frame) => frame[peekVarString(frame).payloadOffset] === 6);
+  expect(updates).toHaveLength(1);
+  const server = new Y.Doc();
+  applyClientFramesToServer(ws, doc.docName, server);
+  expect(server.getText("source").toString()).toBe("rich");
+  expect(server.getText("markdown").toString()).toBe("projected");
+  server.destroy();
+});
+
+it("reconnects a socket whose initial sync never receives a reply", async () => {
+  vi.useFakeTimers();
+  attachDoc("half-open");
+  currentWs().open();
+  await vi.advanceTimersByTimeAsync(10_001);
+  expect(FakeWebSocket.instances).toHaveLength(2);
+});
+
+// Last on purpose: the revoked handler retires the shared multiplexer for this file.
+it("emits token_revoked to every session before dropping docs on auth revocation", () => {
+  const statuses: string[] = [];
+  const doc = attachDoc("logout", { onStatus: (s) => statuses.push(s) });
+  const ws = currentWs();
+  ws.open();
+  doc.ydoc.getText("markdown").insert(0, "typed, never committed");
+  window.dispatchEvent(new Event("uniffy:auth:revoked"));
+  expect(statuses.at(-1)).toBe("token_revoked");
+  expect(realtimeMultiplexer.isAttached(doc.docName)).toBe(false);
 });

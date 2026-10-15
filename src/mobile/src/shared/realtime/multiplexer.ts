@@ -23,6 +23,7 @@ import {
   CANONICAL_SUBPROTOCOL,
   WS_CLOSE_NORMAL,
   WS_CLOSE_REAUTH_REQUIRED,
+  WS_CLOSE_UNAUTHENTICATED,
   WS_CLOSE_TOKEN_REVOKED,
   type RealtimeStatus,
 } from "@shared/realtime/protocol";
@@ -72,7 +73,8 @@ export interface MultiplexerAttachOptions {
   onSync?: () => void;
   onGenerationMismatch?: () => void;
   onCloseCode?: (code: number) => void;
-  onWriteDenied?: (reason: string) => void;
+  onWriteDenied?: (reason: string, noView?: boolean) => void;
+  onPending?: (pending: boolean) => void;
 }
 
 export interface DocSubscription {
@@ -81,12 +83,15 @@ export interface DocSubscription {
 }
 
 interface DocEntry {
+  rejected: boolean;
+  syncDeadline: ReturnType<typeof setTimeout> | null;
   docName: string;
   ydoc: Y.Doc;
   awareness: Awareness;
   resolvedSyncOnce: boolean;
   // Read-only documents retain local drafts but suppress write frames.
   readOnly: boolean;
+  requestedReadOnly: boolean;
   denied: boolean;
   generation: string | null;
   updateCounter: number;
@@ -127,11 +132,14 @@ class RealtimeMultiplexer {
     this.organizationId = opts.organizationId;
 
     const entry: DocEntry = {
+      rejected: false,
+      syncDeadline: null,
       docName,
       ydoc: opts.ydoc,
       awareness: opts.awareness,
       resolvedSyncOnce: false,
       readOnly: false,
+      requestedReadOnly: false,
       denied: false,
       generation: null,
       updateCounter: 0,
@@ -178,6 +186,7 @@ class RealtimeMultiplexer {
   private detach(docName: string): void {
     const entry = this.docs.get(docName);
     if (!entry) return;
+    if (entry.syncDeadline) clearTimeout(entry.syncDeadline);
     entry.ydoc.off("update", entry.updateHandler);
     entry.awareness.off("change", entry.awarenessHandler);
     // Announce departure so peers drop our presence now, rather than waiting
@@ -213,6 +222,7 @@ class RealtimeMultiplexer {
       this.scheduleReconnect();
       return;
     }
+    this.wsConnecting = true;
     const url = `${getServerUrl().replace(/^http/, "ws")}/api/realtime?org_id=${encodeURIComponent(orgId)}`;
 
     let ws: WebSocket;
@@ -240,6 +250,7 @@ class RealtimeMultiplexer {
       for (const entry of this.docs.values()) {
         entry.resolvedSyncOnce = false;
         entry.generation = null;
+        entry.readOnly = entry.requestedReadOnly;
         this.bootstrapDoc(entry);
       }
       this.emitStatusAll("connected");
@@ -257,7 +268,7 @@ class RealtimeMultiplexer {
 
     ws.onclose = (event: CloseEvent) => {
       if (this.ws !== ws) return;
-      const closingForGood = this.destroyed || event.code === WS_CLOSE_NORMAL;
+      const closingForGood = this.destroyed;
       this.cleanupSocket();
       for (const entry of this.docs.values()) {
         entry.options.onCloseCode?.(event.code);
@@ -268,7 +279,7 @@ class RealtimeMultiplexer {
         // the app back to login. Do not reconnect.
         return;
       }
-      if (event.code === WS_CLOSE_REAUTH_REQUIRED) {
+      if (event.code === WS_CLOSE_REAUTH_REQUIRED || event.code === WS_CLOSE_UNAUTHENTICATED) {
         // The socket hit its token's lifetime. Reconnecting with the same
         // memory token would be refused, so refresh first.
         this.reconnectAfterRefresh();
@@ -284,6 +295,10 @@ class RealtimeMultiplexer {
   }
 
   private cleanupSocket(): void {
+    for (const entry of this.docs.values()) {
+      if (entry.syncDeadline) clearTimeout(entry.syncDeadline);
+      entry.syncDeadline = null;
+    }
     this.ws = null;
     this.wsConnected = false;
     this.wsConnecting = false;
@@ -310,7 +325,7 @@ class RealtimeMultiplexer {
     if (this.destroyed) return;
     if (this.reconnectTimer) return;
     if (this.docs.size === 0) return;
-    const delay = this.reconnectDelayMs;
+    const delay = this.reconnectDelayMs * (0.75 + Math.random() * 0.5);
     this.reconnectDelayMs = Math.min(
       this.reconnectDelayMs * RECONNECT_MULTIPLIER,
       RECONNECT_MAX_MS,
@@ -439,7 +454,10 @@ class RealtimeMultiplexer {
         for (const [id, update] of entry.unacknowledged) this.sendDurableUpdate(entry, id, update);
     } else if (messageType === 7) {
       entry.unacknowledged.delete(decoding.readVarString(decoder));
+      this.setOutboundPending(entry, entry.unacknowledged.size > 0);
     } else if (messageType === MESSAGE_SYNC) {
+      if (entry.syncDeadline) clearTimeout(entry.syncDeadline);
+      entry.syncDeadline = null;
       if (entry.generation === null) return;
       const replyEncoder = encoding.createEncoder();
       encoding.writeVarUint(replyEncoder, MESSAGE_SYNC);
@@ -471,7 +489,12 @@ class RealtimeMultiplexer {
       if (scope !== 0 && scope !== 1) return;
       entry.denied = scope === 1;
       entry.readOnly = true;
-      entry.options.onWriteDenied?.(decoding.readVarString(decoder));
+      const reason = decoding.readVarString(decoder);
+      if (reason.includes("too large")) {
+        this.rejectOversized(entry);
+        return;
+      }
+      entry.options.onWriteDenied?.(reason, scope === 1);
     }
   }
 
@@ -485,15 +508,49 @@ class RealtimeMultiplexer {
     this.queueUpdate(entry, decoding.readVarUint8Array(decoder));
   }
 
+  isAttached(docName: string): boolean {
+    return this.docs.has(docName);
+  }
+
+  isOutboundPending(docName: string): boolean {
+    const entry = this.docs.get(docName);
+    return !!entry && (entry.rejected || entry.unacknowledged.size > 0);
+  }
+
+  private setOutboundPending(entry: DocEntry, pending: boolean): void {
+    entry.options.onPending?.(pending);
+    if (this.wsConnected && !entry.denied && !entry.rejected)
+      entry.options.onStatus?.(pending ? "syncing" : "connected");
+  }
+
+  private rejectOversized(entry: DocEntry): void {
+    if (entry.rejected) return;
+    entry.rejected = true;
+    entry.readOnly = true;
+    entry.options.onWriteDenied?.("update too large", false);
+    entry.options.onStatus?.("update_rejected");
+  }
+
   private queueUpdate(entry: DocEntry, update: Uint8Array): void {
+    if (entry.rejected) return;
+    const queuedBytes = [...entry.unacknowledged.values()].reduce(
+      (sum, item) => sum + item.length,
+      0,
+    );
+    if (update.length > 1024 * 1024 - 4096 || queuedBytes + update.length > 8 * 1024 * 1024) {
+      this.setOutboundPending(entry, true);
+      this.rejectOversized(entry);
+      return;
+    }
     const id = entry.ydoc.guid + ":" + ++entry.updateCounter;
     entry.unacknowledged.set(id, update);
+    this.setOutboundPending(entry, true);
 
     this.sendDurableUpdate(entry, id, update);
   }
 
   private sendDurableUpdate(entry: DocEntry, id: string, update: Uint8Array): void {
-    if (entry.generation === null || entry.readOnly) return;
+    if (entry.generation === null || entry.readOnly || entry.rejected) return;
     const encoder = encoding.createEncoder();
     encoding.writeVarUint(encoder, 6);
     encoding.writeVarString(encoder, entry.generation);
@@ -506,13 +563,20 @@ class RealtimeMultiplexer {
     const entry = this.docs.get(docName);
     if (!entry) return;
     entry.readOnly = readOnly;
+    entry.requestedReadOnly = readOnly;
   }
 
   private sendForDoc(docName: string, payload: Uint8Array): void {
     if (this.docs.get(docName)?.denied) return;
+    const frame = encodeDocFrame(docName, payload);
+    if (frame.length > 1024 * 1024) {
+      const entry = this.docs.get(docName);
+      if (entry) this.rejectOversized(entry);
+      return;
+    }
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
     try {
-      this.ws.send(encodeDocFrame(docName, payload));
+      this.ws.send(frame);
     } catch (err) {
       console.warn("[realtime] send failed; reconnecting", err);
       this.forceReconnect();
@@ -532,6 +596,12 @@ class RealtimeMultiplexer {
   }
 
   private sendInitialSync(entry: DocEntry): void {
+    if (entry.rejected || entry.denied) return;
+    if (!entry.syncDeadline)
+      entry.syncDeadline = setTimeout(() => {
+        entry.syncDeadline = null;
+        this.forceReconnect();
+      }, 10_000);
     const enc = encoding.createEncoder();
     encoding.writeVarUint(enc, MESSAGE_SYNC);
     syncProtocol.writeSyncStep1(enc, entry.ydoc);
@@ -540,7 +610,15 @@ class RealtimeMultiplexer {
 
   private emitStatusAll(status: RealtimeStatus): void {
     for (const entry of this.docs.values()) {
-      entry.options.onStatus?.(entry.denied ? "permission_lost" : status);
+      entry.options.onStatus?.(
+        entry.rejected
+          ? "update_rejected"
+          : entry.denied
+            ? "access_lost"
+            : status === "connected" && entry.unacknowledged.size
+              ? "syncing"
+              : status,
+      );
     }
   }
 
@@ -599,6 +677,7 @@ class RealtimeMultiplexer {
         this.cleanupSocket();
       }
       for (const entry of this.docs.values()) {
+        if (entry.syncDeadline) clearTimeout(entry.syncDeadline);
         entry.ydoc.off("update", entry.updateHandler);
         entry.awareness.off("change", entry.awarenessHandler);
       }

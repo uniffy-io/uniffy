@@ -30,6 +30,14 @@ def realtime_storage(monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def text_merge(monkeypatch):
+    """Text writes graft into a live document; these tests start with no snapshot row."""
+    mock = AsyncMock(return_value=None)
+    monkeypatch.setattr("uniffy.domains.notes.content.updates.stage_text_merge", mock)
+    return mock
+
+
+@pytest.fixture(autouse=True)
 def publish_mock(monkeypatch):
     """Content updates fan out over Valkey; keep unit tests off the wire."""
     mock = AsyncMock()
@@ -93,8 +101,8 @@ def _select_result(note: Note | None) -> MagicMock:
 
 
 class TestUpdateCas:
-    async def test_content_update_bumps_version_and_stages_replacement(
-        self, realtime_storage
+    async def test_content_update_bumps_version_and_merges_into_live_document(
+        self, realtime_storage, text_merge
     ) -> None:
         note = _make_note(version=3)
         ops = _make_ops(note)
@@ -115,9 +123,54 @@ class TestUpdateCas:
         assert params["version_1"] == 3
         assert params["content"] == "new content"
 
+        text_merge.assert_awaited_once_with(
+            ops.session,
+            (ops.content_type, note.id),
+            note.organization_id,
+            note.owner_id,
+            base="old content",
+            incoming="new content",
+        )
+        realtime_storage.assert_not_awaited()
+
+    async def test_merged_text_is_stored_and_published(self, text_merge, publish_mock) -> None:
+        note = _make_note(version=3)
+        ops = _make_ops(note)
+        ops.session.execute.side_effect = [MagicMock(rowcount=1), MagicMock()]
+        text_merge.return_value = "old content, a live edit, and new content"
+
+        await ops.update(
+            user_id=note.owner_id,
+            organization_id=note.organization_id,
+            note_id=note.id,
+            content="new content",
+        )
+
+        params = _params(ops.session.execute.await_args_list[0].args[0])
+        assert params["content"] == "old content, a live edit, and new content"
+        publish_mock.assert_awaited_once_with(
+            ops.content_type, note.id, "old content, a live edit, and new content"
+        )
+
+    async def test_canvas_content_update_stages_replacement(
+        self, realtime_storage, text_merge
+    ) -> None:
+        note = _make_note(version=3, content="")
+        note.node_type = NodeType.CANVAS
+        ops = _make_ops(note)
+        ops.session.execute.side_effect = [MagicMock(rowcount=1), MagicMock()]
+
+        await ops.update(
+            user_id=note.owner_id,
+            organization_id=note.organization_id,
+            note_id=note.id,
+            canvas_content={"nodes": [], "edges": []},
+        )
+
         realtime_storage.assert_awaited_once_with(
             ops.session, (ops.content_type, note.id), note.organization_id
         )
+        text_merge.assert_not_awaited()
 
     async def test_content_update_publishes_content_replace(self, publish_mock) -> None:
         note = _make_note(version=3)
@@ -272,6 +325,8 @@ class TestRealtimeSave:
         ops.session.execute.side_effect = [
             _select_result(note),
             MagicMock(rowcount=1),
+            MagicMock(),
+            _select_result(note),
         ]
 
         with patch(
@@ -297,6 +352,8 @@ class TestRealtimeSave:
         ops.session.execute.side_effect = [
             _select_result(note),
             MagicMock(rowcount=1),
+            MagicMock(),
+            _select_result(note),
         ]
 
         with patch(
@@ -323,6 +380,8 @@ class TestRealtimeSave:
             MagicMock(rowcount=0),
             _select_result(refreshed),
             MagicMock(rowcount=1),
+            MagicMock(),
+            _select_result(refreshed),
         ]
 
         result = await ops.realtime_save(
@@ -383,6 +442,8 @@ class TestRealtimeSave:
         ops.session.execute.side_effect = [
             _select_result(note),
             MagicMock(rowcount=1),
+            MagicMock(),
+            _select_result(note),
         ]
 
         result = await ops.realtime_save(

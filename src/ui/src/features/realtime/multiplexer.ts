@@ -12,14 +12,19 @@ import {
 import * as syncProtocol from "y-protocols/sync";
 import * as encoding from "lib0/encoding";
 import * as decoding from "lib0/decoding";
+import { getStoreRef } from "@/app/storeRef";
+import { readStoredAuth } from "@/features/auth/store/credentialStorage";
 import { getAccessToken, refreshAccessToken } from "@/config/api";
 import { encodeDocFrame, peekVarString } from "@/features/realtime/multiplex";
 import { REMOTE_ORIGIN } from "@/features/realtime/persistence/encryptedYjsPersistence";
 import {
+  AUTH_REFRESHED_EVENT,
+  AUTH_REVOKED_EVENT,
   CANONICAL_SUBPROTOCOL,
   WS_CLOSE_FORBIDDEN,
   WS_CLOSE_NORMAL,
   WS_CLOSE_REAUTH_REQUIRED,
+  WS_CLOSE_UNAUTHENTICATED,
   WS_CLOSE_TOKEN_REVOKED,
   type RealtimeStatus,
 } from "@/features/realtime/protocol";
@@ -33,10 +38,8 @@ const MESSAGE_QUERY_AWARENESS = 3;
 const MESSAGE_FRAGMENT_SEEDER = 4;
 const AUTH_PERMISSION_DENIED = 0;
 
-const AUTH_REFRESHED_EVENT = "uniffy:auth:refreshed";
-const AUTH_REVOKED_EVENT = "uniffy:auth:revoked";
-
 const RECONNECT_INITIAL_MS = 500;
+const AUTH_RETRY_LIMIT = 5;
 const RECONNECT_MAX_MS = 15_000;
 const RECONNECT_MULTIPLIER = 1.5;
 const RESYNC_INTERVAL_MS = 30_000;
@@ -64,24 +67,36 @@ export interface MultiplexerAttachOptions {
   onGenerationMismatch?: () => void;
   onCloseCode?: (code: number) => void;
   /** The server downgraded this doc to read-only while the client still believed it could edit. */
-  onWriteDenied?: (reason: string) => void;
+  onWriteDenied?: (reason: string, noView: boolean) => void;
 }
 
 export interface DocSubscription {
+  setSeedCapability?: (capable: boolean) => void;
   readonly docName: string;
   readonly isFragmentSeeder: boolean;
+  submitSeed(update: Uint8Array, base: string, signal?: AbortSignal): Promise<boolean>;
   subscribeFragmentSeeder(listener: () => void): () => void;
   destroy(): void;
 }
 
-export type FragmentSeeder = Pick<DocSubscription, "isFragmentSeeder" | "subscribeFragmentSeeder">;
+export type FragmentSeeder = Pick<
+  DocSubscription,
+  "isFragmentSeeder" | "subscribeFragmentSeeder" | "submitSeed" | "setSeedCapability"
+>;
 
 interface DocEntry {
+  localBatch: Uint8Array[];
+  flushBatch: () => void;
+  rejected: boolean;
+  syncDeadline: ReturnType<typeof setTimeout> | null;
   docName: string;
   ydoc: Y.Doc;
   awareness: Awareness;
   resolvedSyncOnce: boolean;
   fragmentSeeder: boolean;
+  canSeed: boolean;
+  seedToken: string;
+  seedRequests: Map<string, (accepted: boolean) => void>;
   seederListeners: Set<() => void>;
   // Read-only documents retain local drafts but suppress write frames.
   readOnly: boolean;
@@ -111,6 +126,9 @@ class RealtimeMultiplexer {
   private awarenessKeepaliveTimer: ReturnType<typeof setInterval> | null = null;
   private outboundDrainTimer: ReturnType<typeof setInterval> | null = null;
   private outboundListeners = new Map<string, Set<(pending: boolean) => void>>();
+  private refreshRequired = false;
+  private refreshing = false;
+  private authAttempts = 0;
   private destroyed = false;
   private listenersAttached = false;
 
@@ -124,11 +142,23 @@ class RealtimeMultiplexer {
     this.ensureListeners();
 
     const entry: DocEntry = {
+      rejected: false,
+      syncDeadline: null,
+      localBatch: [],
+      flushBatch: () => {
+        if (!entry.localBatch.length) return;
+        const updates = entry.localBatch;
+        entry.localBatch = [];
+        this.queueUpdate(entry, Y.mergeUpdates(updates));
+      },
       docName,
       ydoc: opts.ydoc,
       awareness: opts.awareness,
       resolvedSyncOnce: false,
       fragmentSeeder: false,
+      canSeed: false,
+      seedToken: "",
+      seedRequests: new Map(),
       seederListeners: new Set(),
       readOnly: false,
       denied: false,
@@ -141,7 +171,7 @@ class RealtimeMultiplexer {
         if (origin === REMOTE_ORIGIN) return;
         // Read-only docs never push state. IDB hydration replays of
         // server-known content would otherwise leave as write frames.
-        this.queueUpdate(entry, update);
+        entry.localBatch.push(update);
       },
       awarenessHandler: (changes, origin) => {
         if (origin === "remote") return;
@@ -155,6 +185,7 @@ class RealtimeMultiplexer {
     };
 
     opts.ydoc.on("update", entry.updateHandler);
+    opts.ydoc.on("afterAllTransactions", entry.flushBatch);
     opts.awareness.on("change", entry.awarenessHandler);
     this.docs.set(docName, entry);
     this.cancelIdleClose();
@@ -175,6 +206,11 @@ class RealtimeMultiplexer {
       get isFragmentSeeder() {
         return entry.fragmentSeeder;
       },
+      submitSeed: (update, base, signal) => this.submitSeed(entry, update, base, signal),
+      setSeedCapability: (capable) => {
+        entry.canSeed = capable;
+        this.sendForDoc(docName, new Uint8Array([10, Number(capable)]));
+      },
       subscribeFragmentSeeder: (listener) => {
         entry.seederListeners.add(listener);
         return () => entry.seederListeners.delete(listener);
@@ -186,7 +222,10 @@ class RealtimeMultiplexer {
   private detach(docName: string): void {
     const entry = this.docs.get(docName);
     if (!entry) return;
+    if (entry.canSeed) this.sendForDoc(docName, new Uint8Array([10, 0]));
+    if (entry.syncDeadline) clearTimeout(entry.syncDeadline);
     entry.ydoc.off("update", entry.updateHandler);
+    entry.ydoc.off("afterAllTransactions", entry.flushBatch);
     entry.awareness.off("change", entry.awarenessHandler);
     // Announce departure so peers drop our cursor now, rather than waiting for
     // y-protocols' 30s outdatedTimeout GC. The change handler is already
@@ -201,6 +240,7 @@ class RealtimeMultiplexer {
       );
       this.sendForDoc(docName, encoding.toUint8Array(enc));
     }
+    for (const settle of entry.seedRequests.values()) settle(false);
     this.docs.delete(docName);
     entry.seederListeners.clear();
     if (this.docs.size === 0) this.scheduleIdleClose();
@@ -216,7 +256,11 @@ class RealtimeMultiplexer {
   }
 
   private connectNow(): void {
-    if (this.destroyed) return;
+    if (this.destroyed || this.ws || this.refreshing) return;
+    if (this.refreshRequired || !getAccessToken()) {
+      this.reconnectAfterRefresh();
+      return;
+    }
     const orgId = this.resolveOrgId();
     if (!orgId) {
       // No org context yet (rehydration in flight); retry shortly.
@@ -281,10 +325,11 @@ class RealtimeMultiplexer {
         // Server-side logout-all-devices; let the app shell redirect.
         return;
       }
-      if (event.code === WS_CLOSE_REAUTH_REQUIRED) {
+      if (event.code === WS_CLOSE_REAUTH_REQUIRED || event.code === WS_CLOSE_UNAUTHENTICATED) {
         // The socket hit its token's lifetime. Reconnecting with the same
         // memory token would be refused, so refresh first.
-        this.reconnectAfterRefresh();
+        this.refreshRequired = true;
+        this.scheduleReconnect();
         return;
       }
       if (event.code === WS_CLOSE_FORBIDDEN) {
@@ -303,6 +348,10 @@ class RealtimeMultiplexer {
   }
 
   private cleanupSocket(): void {
+    for (const entry of this.docs.values()) {
+      if (entry.syncDeadline) clearTimeout(entry.syncDeadline);
+      entry.syncDeadline = null;
+    }
     this.ws = null;
     this.wsConnected = false;
     this.wsConnecting = false;
@@ -310,6 +359,7 @@ class RealtimeMultiplexer {
     this.stopAwarenessKeepaliveTimer();
     this.stopOutboundDrainPoll();
     for (const entry of this.docs.values()) {
+      for (const settle of entry.seedRequests.values()) settle(false);
       this.setFragmentSeeder(entry, false);
       // Disconnected peers cannot maintain presence or coordinate local mirror writes.
       removeAwarenessStates(
@@ -321,16 +371,27 @@ class RealtimeMultiplexer {
   }
 
   private reconnectAfterRefresh(): void {
-    if (this.destroyed || this.docs.size === 0) return;
+    if (this.destroyed || this.docs.size === 0 || this.refreshing) return;
+    if (this.authAttempts >= AUTH_RETRY_LIMIT) {
+      this.emitStatusAll("disconnected");
+      return;
+    }
+    this.authAttempts += 1;
+    this.refreshing = true;
+    this.refreshRequired = true;
     this.emitStatusAll("connecting");
     void refreshAccessToken()
       .catch(() => null)
-      .finally(() => {
+      .then((token) => {
+        this.refreshing = false;
         if (this.destroyed || this.docs.size === 0) return;
-        // A failed refresh falls through to normal backoff: the interceptor
-        // retries on the next RPC and `uniffy:auth:refreshed` reconnects us.
-        this.reconnectDelayMs = RECONNECT_INITIAL_MS;
-        this.connectNow();
+        if (token) {
+          this.refreshRequired = false;
+          this.connectNow();
+        } else {
+          this.emitStatusAll("disconnected");
+          this.scheduleReconnect();
+        }
       });
   }
 
@@ -338,7 +399,7 @@ class RealtimeMultiplexer {
     if (this.destroyed) return;
     if (this.reconnectTimer) return;
     if (this.docs.size === 0) return;
-    const delay = this.reconnectDelayMs;
+    const delay = this.reconnectDelayMs * (0.75 + Math.random() * 0.5);
     this.reconnectDelayMs = Math.min(
       this.reconnectDelayMs * RECONNECT_MULTIPLIER,
       RECONNECT_MAX_MS,
@@ -347,6 +408,13 @@ class RealtimeMultiplexer {
       this.reconnectTimer = null;
       this.connectNow();
     }, delay);
+  }
+
+  retryConnection(): void {
+    if (!this.destroyed) {
+      this.authAttempts = 0;
+      this.forceReconnect();
+    }
   }
 
   private forceReconnect(): void {
@@ -448,6 +516,7 @@ class RealtimeMultiplexer {
     }
     const entry = this.docs.get(docName);
     if (!entry || entry.denied) return;
+    this.authAttempts = 0;
     const payload = frame.subarray(payloadOffset);
     if (payload.length === 0) return;
 
@@ -466,9 +535,15 @@ class RealtimeMultiplexer {
       if (reconnecting)
         for (const [id, update] of entry.unacknowledged) this.sendDurableUpdate(entry, id, update);
     } else if (messageType === 7) {
-      entry.unacknowledged.delete(decoding.readVarString(decoder));
+      const id = decoding.readVarString(decoder);
+      entry.seedRequests.get(id)?.(true);
+      entry.unacknowledged.delete(id);
       this.setOutboundPending(entry, entry.unacknowledged.size > 0);
+    } else if (messageType === 9) {
+      entry.seedRequests.get(decoding.readVarString(decoder))?.(false);
     } else if (messageType === MESSAGE_SYNC) {
+      if (entry.syncDeadline) clearTimeout(entry.syncDeadline);
+      entry.syncDeadline = null;
       if (entry.generation === null) return;
       const replyEncoder = encoding.createEncoder();
       encoding.writeVarUint(replyEncoder, MESSAGE_SYNC);
@@ -500,19 +575,65 @@ class RealtimeMultiplexer {
       const scope = decoding.readVarUint(decoder);
       if (scope !== AUTH_PERMISSION_DENIED && scope !== 1) return;
       const reason = decoding.readVarString(decoder);
+      if (reason.includes("too large")) {
+        this.rejectOversized(entry);
+        return;
+      }
       if (entry.readOnly && scope === AUTH_PERMISSION_DENIED) return;
       entry.denied = scope === 1;
       this.setDocReadOnly(docName, true);
-      entry.options.onWriteDenied?.(reason);
+      entry.options.onWriteDenied?.(reason, scope === 1);
     } else if (messageType === MESSAGE_FRAGMENT_SEEDER) {
-      this.setFragmentSeeder(entry, decoding.readVarUint(decoder) === 1);
+      const granted = decoding.readVarUint(decoder) === 1;
+      const token = decoding.hasContent(decoder) ? decoding.readVarString(decoder) : "";
+      this.setFragmentSeeder(entry, granted, token);
     }
   }
 
-  private setFragmentSeeder(entry: DocEntry, granted: boolean): void {
-    if (entry.fragmentSeeder === granted) return;
+  private setFragmentSeeder(entry: DocEntry, granted: boolean, token = ""): void {
+    if (entry.fragmentSeeder === granted && entry.seedToken === token) return;
+    for (const settle of entry.seedRequests.values()) settle(false);
     entry.fragmentSeeder = granted;
+    entry.seedToken = token;
     for (const listener of entry.seederListeners) listener();
+  }
+
+  private submitSeed(
+    entry: DocEntry,
+    update: Uint8Array,
+    base: string,
+    signal?: AbortSignal,
+  ): Promise<boolean> {
+    if (
+      !entry.fragmentSeeder ||
+      !entry.seedToken ||
+      entry.generation === null ||
+      entry.readOnly ||
+      signal?.aborted ||
+      !this.wsConnected
+    )
+      return Promise.resolve(false);
+    return new Promise((resolve) => {
+      const id = `${entry.ydoc.guid}:seed:${++entry.updateCounter}`;
+      const settle = (accepted: boolean) => {
+        clearTimeout(timer);
+        entry.seedRequests.delete(id);
+        signal?.removeEventListener("abort", abort);
+        resolve(accepted);
+      };
+      const abort = () => settle(false);
+      const timer = setTimeout(abort, 10_000);
+      entry.seedRequests.set(id, settle);
+      signal?.addEventListener("abort", abort, { once: true });
+      const encoder = encoding.createEncoder();
+      encoding.writeVarUint(encoder, 8);
+      encoding.writeVarString(encoder, entry.generation!);
+      encoding.writeVarString(encoder, id);
+      encoding.writeVarString(encoder, entry.seedToken);
+      encoding.writeVarString(encoder, base);
+      encoding.writeVarUint8Array(encoder, update);
+      this.sendForDoc(entry.docName, encoding.toUint8Array(encoder));
+    });
   }
 
   // Our reply to a server SyncStep1 carries every local update the server
@@ -525,7 +646,26 @@ class RealtimeMultiplexer {
     this.queueUpdate(entry, decoding.readVarUint8Array(decoder));
   }
 
+  private rejectOversized(entry: DocEntry): void {
+    if (entry.rejected) return;
+    entry.rejected = true;
+    this.setFragmentSeeder(entry, false);
+    entry.readOnly = true;
+    entry.options.onWriteDenied?.("update too large", false);
+    entry.options.onStatus?.("update_rejected");
+  }
+
   private queueUpdate(entry: DocEntry, update: Uint8Array): void {
+    if (entry.rejected) return;
+    const queuedBytes = [...entry.unacknowledged.values()].reduce(
+      (sum, item) => sum + item.length,
+      0,
+    );
+    if (update.length > 1024 * 1024 - 4096 || queuedBytes + update.length > 8 * 1024 * 1024) {
+      this.setOutboundPending(entry, true);
+      this.rejectOversized(entry);
+      return;
+    }
     const id = entry.ydoc.guid + ":" + ++entry.updateCounter;
     entry.unacknowledged.set(id, update);
     this.setOutboundPending(entry, true);
@@ -533,7 +673,7 @@ class RealtimeMultiplexer {
   }
 
   private sendDurableUpdate(entry: DocEntry, id: string, update: Uint8Array): void {
-    if (entry.generation === null || entry.readOnly) return;
+    if (entry.generation === null || entry.readOnly || entry.rejected) return;
     const encoder = encoding.createEncoder();
     encoding.writeVarUint(encoder, 6);
     encoding.writeVarString(encoder, entry.generation);
@@ -568,6 +708,22 @@ class RealtimeMultiplexer {
     return this.docs.get(docName)?.pendingLocalFrames ?? false;
   }
 
+  /** Any editable attached doc still waiting for a durable acknowledgment. */
+  hasOutboundPending(): boolean {
+    for (const entry of this.docs.values()) {
+      if (entry.pendingLocalFrames && !entry.readOnly) return true;
+    }
+    return false;
+  }
+
+  isDocReadOnly(docName: string): boolean {
+    return this.docs.get(docName)?.readOnly ?? false;
+  }
+
+  isAttached(docName: string): boolean {
+    return this.docs.has(docName);
+  }
+
   subscribeOutboundPending(docName: string, listener: (pending: boolean) => void): () => void {
     let set = this.outboundListeners.get(docName);
     if (!set) {
@@ -583,9 +739,15 @@ class RealtimeMultiplexer {
 
   private sendForDoc(docName: string, payload: Uint8Array): void {
     if (this.docs.get(docName)?.denied) return;
+    const frame = encodeDocFrame(docName, payload);
+    if (frame.length > 1024 * 1024) {
+      const entry = this.docs.get(docName);
+      if (entry) this.rejectOversized(entry);
+      return;
+    }
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
     try {
-      this.ws.send(encodeDocFrame(docName, payload));
+      this.ws.send(frame);
     } catch (err) {
       console.warn("[realtime] send failed; reconnecting", err);
       this.forceReconnect();
@@ -593,6 +755,7 @@ class RealtimeMultiplexer {
   }
 
   private bootstrapDoc(entry: DocEntry): void {
+    if (entry.canSeed) this.sendForDoc(entry.docName, new Uint8Array([10, 1]));
     this.sendInitialSync(entry);
     // Push our awareness so peers see us immediately...
     this.sendLocalAwareness(entry);
@@ -605,6 +768,12 @@ class RealtimeMultiplexer {
   }
 
   private sendInitialSync(entry: DocEntry): void {
+    if (entry.rejected || entry.denied) return;
+    if (!entry.syncDeadline)
+      entry.syncDeadline = setTimeout(() => {
+        entry.syncDeadline = null;
+        this.forceReconnect();
+      }, 10_000);
     const enc = encoding.createEncoder();
     encoding.writeVarUint(enc, MESSAGE_SYNC);
     syncProtocol.writeSyncStep1(enc, entry.ydoc);
@@ -613,7 +782,9 @@ class RealtimeMultiplexer {
 
   private emitStatusAll(status: RealtimeStatus): void {
     for (const entry of this.docs.values()) {
-      entry.options.onStatus?.(entry.denied ? "permission_lost" : status);
+      entry.options.onStatus?.(
+        entry.rejected ? "update_rejected" : entry.denied ? "access_lost" : status,
+      );
     }
   }
 
@@ -623,15 +794,11 @@ class RealtimeMultiplexer {
   }
 
   private resolveOrgId(): string | null {
-    try {
-      const persisted = localStorage.getItem("persist:root");
-      if (!persisted) return null;
-      const root = JSON.parse(persisted);
-      const auth = JSON.parse(root.auth || "{}");
-      return (auth.currentOrganizationId as string | null) ?? null;
-    } catch {
-      return null;
-    }
+    return (
+      getStoreRef()?.getState().auth.currentOrganizationId ??
+      readStoredAuth()?.currentOrganizationId ??
+      null
+    );
   }
 
   private ensureListeners(): void {
@@ -645,6 +812,7 @@ class RealtimeMultiplexer {
   }
 
   private handleOnline = (): void => {
+    this.authAttempts = 0;
     if (this.docs.size > 0) this.forceReconnect();
   };
 
@@ -667,8 +835,11 @@ class RealtimeMultiplexer {
   };
 
   private handleAuthRefreshed = (): void => {
-    if (this.docs.size === 0) return;
-    // Reconnect so the subprotocol carries the fresh bearer.
+    this.destroyed = false;
+    this.refreshRequired = false;
+    if (this.refreshing) return;
+    this.authAttempts = 0;
+    // Close idle sockets too, so a later attachment cannot reuse another org's connection.
     this.forceReconnect();
   };
 
@@ -683,6 +854,9 @@ class RealtimeMultiplexer {
       this.cleanupSocket();
     }
     for (const entry of this.docs.values()) {
+      // Sessions must not read a dropped doc as a clean, connected close.
+      entry.options.onStatus?.("token_revoked");
+      if (entry.syncDeadline) clearTimeout(entry.syncDeadline);
       entry.ydoc.off("update", entry.updateHandler);
       entry.awareness.off("change", entry.awarenessHandler);
     }

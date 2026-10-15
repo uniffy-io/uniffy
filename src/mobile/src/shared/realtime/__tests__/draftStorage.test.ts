@@ -1,15 +1,23 @@
+import { nativeStorage } from "@shared/realtime/__tests__/storageHarness";
 import { beforeEach, expect, it, vi } from "vitest";
 import * as Y from "yjs";
-import { restoreDraft, saveDraft } from "@shared/realtime/draftStorage";
+import { toBase64 } from "lib0/buffer";
+import {
+  restoreDraft,
+  saveDraft,
+  saveTextDraft,
+  readStoredDrafts,
+  discardDraft,
+} from "@shared/realtime/draftStorage";
 
-const storage = vi.hoisted(() => new Map<string, string>());
-vi.mock("expo-secure-store", () => ({
-  AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY: 1,
-  getItemAsync: async (key: string) => storage.get(key) ?? null,
-  setItemAsync: async (key: string, value: string) => storage.set(key, value),
-  deleteItemAsync: async (key: string) => storage.delete(key),
-}));
-beforeEach(() => storage.clear());
+import { clearEncryptedDrafts } from "@shared/realtime/encryptedDraftStore";
+const storage = nativeStorage.secure;
+beforeEach(async () => {
+  for (const user of ["test", "alice", "bob"]) await clearEncryptedDrafts(user);
+  storage.clear();
+  nativeStorage.failInsert = false;
+  nativeStorage.failDelete = false;
+});
 
 function draft(generation: string, text: string): Y.Doc {
   const doc = new Y.Doc();
@@ -23,10 +31,10 @@ it("restores offline changes with causal base and chunks intact", async () => {
   const local = new Y.Doc();
   Y.applyUpdate(local, Y.encodeStateAsUpdate(server));
   local.getText("markdown").insert(4, " long edit".repeat(400));
-  await saveDraft("chunks", local);
+  await saveDraft("realtime.test.org.NOTE.chunks", local);
   const reopened = new Y.Doc();
   Y.applyUpdate(reopened, Y.encodeStateAsUpdate(server));
-  expect(await restoreDraft("chunks", reopened, "recovery")).toEqual([]);
+  expect(await restoreDraft("realtime.test.org.NOTE.chunks", reopened, "recovery")).toEqual([]);
   expect(reopened.getText("markdown").toString()).toBe(local.getText("markdown").toString());
   server.destroy();
   local.destroy();
@@ -35,13 +43,13 @@ it("restores offline changes with causal base and chunks intact", async () => {
 
 it("retains replaced generations for recovery without merging into current text", async () => {
   const old = draft("old", "offline work");
-  await saveDraft("versions", old);
+  await saveDraft("realtime.test.org.NOTE.versions", old);
   const current = draft("current", "replacement");
-  const recovered = await restoreDraft("versions", current, "recovery");
+  const recovered = await restoreDraft("realtime.test.org.NOTE.versions", current, "recovery");
   expect(recovered.map((item) => item.text)).toEqual(["offline work"]);
   expect(current.getText("markdown").toString()).toBe("replacement");
-  await saveDraft("versions", current);
-  expect(JSON.parse(storage.get("versions")!)).toHaveLength(2);
+  await saveDraft("realtime.test.org.NOTE.versions", current);
+  expect(await readStoredDrafts("realtime.test.org.NOTE.versions")).toHaveLength(2);
   old.destroy();
   current.destroy();
 });
@@ -51,15 +59,15 @@ it("preserves offline edits when an unhydrated session closes over the same gene
   const offline = new Y.Doc();
   Y.applyUpdate(offline, Y.encodeStateAsUpdate(server));
   offline.getText("markdown").insert(4, " offline");
-  await saveDraft("early-close", offline);
-  await saveDraft("early-close", server);
+  await saveDraft("realtime.test.org.NOTE.early-close", offline);
+  await saveDraft("realtime.test.org.NOTE.early-close", server);
   const reopened = new Y.Doc();
   Y.applyUpdate(reopened, Y.encodeStateAsUpdate(server));
-  const restoring = restoreDraft("early-close", reopened, "recovery");
-  const closing = saveDraft("early-close", server);
+  const restoring = restoreDraft("realtime.test.org.NOTE.early-close", reopened, "recovery");
+  const closing = saveDraft("realtime.test.org.NOTE.early-close", server);
   await Promise.all([restoring, closing]);
   expect(reopened.getText("markdown").toString()).toBe("base offline");
-  expect(JSON.parse(storage.get("early-close")!)).toHaveLength(1);
+  expect(await readStoredDrafts("realtime.test.org.NOTE.early-close")).toHaveLength(1);
   server.destroy();
   offline.destroy();
   reopened.destroy();
@@ -68,16 +76,225 @@ it("preserves offline edits when an unhydrated session closes over the same gene
 it("continues after a damaged draft record", async () => {
   vi.spyOn(console, "warn").mockImplementation(() => {});
   const old = draft("damaged", "lost chunk");
-  await saveDraft("damage", old);
+  await saveDraft("realtime.test.org.NOTE.damage", old);
   const current = draft("current", "recoverable");
-  await saveDraft("damage", current);
-  const records = JSON.parse(storage.get("damage")!);
-  storage.delete(`damage.${records[0].id}.0`);
+  await saveDraft("realtime.test.org.NOTE.damage", current);
+  const db = nativeStorage.databases.get("realtime-test.db")!;
+  db.prepare("UPDATE drafts SET ciphertext = ? WHERE generation = ?").run(
+    new Uint8Array([0]),
+    "damaged",
+  );
   const reopened = new Y.Doc();
-  const recovered = await restoreDraft("damage", reopened, "recovery");
+  const recovered = await restoreDraft("realtime.test.org.NOTE.damage", reopened, "recovery");
   expect(recovered.map((item) => item.text)).toEqual(["recoverable"]);
   old.destroy();
   current.destroy();
   reopened.destroy();
   vi.restoreAllMocks();
+});
+
+it("does not save a document before its server generation arrives", async () => {
+  const empty = new Y.Doc();
+  await saveDraft("realtime.test.org.NOTE.empty", empty);
+  expect(storage.has("realtime.test.org.NOTE.empty")).toBe(false);
+  empty.destroy();
+});
+
+it("loads text drafts offline, including an intentional deletion", async () => {
+  await saveTextDraft("realtime.test.org.NOTE.offline", "", "original", "edit");
+  const drafts = await readStoredDrafts("realtime.test.org.NOTE.offline");
+  expect(drafts).toMatchObject([{ generation: "unmerged:edit", base: "original", text: "" }]);
+});
+
+it("discards one exact record without deleting a later edit in its lineage", async () => {
+  await saveTextDraft("realtime.test.org.NOTE.discard", "first", "base", "edit");
+  const [first] = await readStoredDrafts("realtime.test.org.NOTE.discard");
+  await saveTextDraft("realtime.test.org.NOTE.discard", "second", "base", "edit");
+  await discardDraft("realtime.test.org.NOTE.discard", first.id);
+  const [second] = await readStoredDrafts("realtime.test.org.NOTE.discard");
+  expect(second.text).toBe("second");
+  await discardDraft("realtime.test.org.NOTE.discard", second.id);
+  expect(await readStoredDrafts("realtime.test.org.NOTE.discard")).toEqual([]);
+  expect(await readStoredDrafts("realtime.test.org.NOTE.discard")).toEqual([]);
+});
+
+it("leaves recovery bytes intact when session closes during storage read", async () => {
+  const local = draft("same", "offline work");
+  await saveDraft("realtime.test.org.NOTE.closed", local);
+  const current = draft("same", "server");
+  await restoreDraft("realtime.test.org.NOTE.closed", current, "recovery", () => false);
+  expect(current.getText("markdown").toString()).toBe("server");
+  expect((await readStoredDrafts("realtime.test.org.NOTE.closed"))[0].text).toBe("offline work");
+  local.destroy();
+  current.destroy();
+});
+
+it("keeps a corrupt manifest and allows subsequent drafts to save", async () => {
+  storage.set("realtime.test.org.NOTE.corrupt-draft", "broken-json");
+  await saveTextDraft("realtime.test.org.NOTE.corrupt-draft", "new typing", "base", "current");
+  expect((await readStoredDrafts("realtime.test.org.NOTE.corrupt-draft"))[0].text).toBe(
+    "new typing",
+  );
+  expect(
+    [...storage.entries()].some(
+      ([key, value]) =>
+        key.startsWith("realtime.test.org.NOTE.corrupt-draft.corrupt.") && value === "broken-json",
+    ),
+  ).toBe(true);
+});
+
+it("coalesces queued typing without losing either writer's causal updates", async () => {
+  const doc = new Y.Doc();
+  doc.getMap("doc_meta").set("generation", "g");
+  const pending = [];
+  for (let i = 0; i < 100; i++) {
+    doc.getText("markdown").insert(i, "a");
+    pending.push(saveDraft("realtime.test.org.NOTE.burst", doc));
+  }
+  await Promise.all(pending);
+  expect((await readStoredDrafts("realtime.test.org.NOTE.burst"))[0].text).toBe("a".repeat(100));
+  expect(new Set(pending).size).toBe(1);
+  doc.destroy();
+});
+
+it("indexes pending documents and deletes user-scoped chunks on sign-out", async () => {
+  const { listDraftKeys, clearUserDrafts, resumeDraftStorage, discardGeneration } =
+    await import("@shared/realtime/draftStorage");
+  resumeDraftStorage("alice");
+  const key = "realtime.alice.org.NOTE.note";
+  const doc = draft("g", "pending");
+  await saveDraft(key, doc);
+  expect(await listDraftKeys("alice")).toEqual([key]);
+  await discardGeneration(key, "g");
+  expect(await readStoredDrafts(key)).toEqual([]);
+  await saveDraft(key, doc);
+  await clearUserDrafts("alice");
+  expect([...storage.keys()].filter((value) => value.startsWith("realtime."))).toEqual([]);
+  await saveDraft(key, doc);
+  expect(await readStoredDrafts(key)).toEqual([]);
+  resumeDraftStorage("alice");
+  doc.destroy();
+});
+
+it("migrates readable chunks only after replacement commits", async () => {
+  const key = "realtime.test.org.NOTE.migration";
+  const doc = draft("g", "offline work");
+  storage.set(
+    key,
+    JSON.stringify([
+      { id: "readable", generation: "g", chunks: 1 },
+      { id: "damaged", generation: "g", chunks: 1 },
+      { id: "other", generation: "other", chunks: 1 },
+    ]),
+  );
+  storage.set(`${key}.readable.0`, toBase64(Y.encodeStateAsUpdate(doc)));
+  storage.set(`${key}.other.0`, toBase64(Y.encodeStateAsUpdate(draft("other", "older work"))));
+  vi.spyOn(console, "warn").mockImplementation(() => {});
+  nativeStorage.failInsert = true;
+  await expect(saveDraft(key, doc)).rejects.toThrow("Disk failure");
+  expect(storage.has(`${key}.readable.0`)).toBe(true);
+  nativeStorage.failInsert = false;
+  await saveDraft(key, doc);
+  expect(storage.has(`${key}.readable.0`)).toBe(false);
+  expect(JSON.parse(storage.get(key)!)).toHaveLength(2);
+  expect((await readStoredDrafts(key)).map((record) => record.text)).toEqual([
+    "older work",
+    "offline work",
+  ]);
+  vi.restoreAllMocks();
+  doc.destroy();
+});
+
+it("rolls back replacement if retiring previous encrypted record fails", async () => {
+  const key = "realtime.test.org.NOTE.rollback";
+  await saveTextDraft(key, "first", "base", "typing");
+  nativeStorage.failDelete = true;
+  vi.spyOn(console, "warn").mockImplementation(() => {});
+  await expect(saveTextDraft(key, "second", "base", "typing")).rejects.toThrow("Disk failure");
+  nativeStorage.failDelete = false;
+  expect((await readStoredDrafts(key)).map((record) => record.text)).toEqual(["first"]);
+  vi.restoreAllMocks();
+});
+
+it("authenticates ciphertext scope and retains damaged unmerged drafts", async () => {
+  const first = "realtime.test.org.NOTE.first";
+  const second = "realtime.test.org.NOTE.second";
+  await saveTextDraft(first, "private text", "base", "typing");
+  const db = nativeStorage.databases.get("realtime-test.db")!;
+  const row = db.prepare("SELECT * FROM drafts").get()!;
+  expect(Buffer.from(row.ciphertext as Uint8Array).includes(Buffer.from("private text"))).toBe(
+    false,
+  );
+  db.prepare("UPDATE drafts SET document = ?").run(second);
+  vi.spyOn(console, "warn").mockImplementation(() => {});
+  expect(await readStoredDrafts(second)).toEqual([]);
+  await saveTextDraft(second, "new text", "base", "typing");
+  expect(db.prepare("SELECT id FROM drafts").all()).toHaveLength(2);
+  expect((await readStoredDrafts(second)).map((record) => record.text)).toEqual(["new text"]);
+  vi.restoreAllMocks();
+});
+
+it("keeps native call counts constant as snapshots grow", async () => {
+  const counts = [];
+  for (const size of [8192, 131072, 460800]) {
+    const key = `realtime.test.org.NOTE.size-${size}`;
+    const doc = draft("g", "x".repeat(size));
+    await saveDraft(key, doc);
+    doc.getText("markdown").insert(size, "!");
+    const before = { ...nativeStorage.calls };
+    await saveDraft(key, doc);
+    counts.push(
+      Object.fromEntries(
+        Object.entries(nativeStorage.calls).map(([kind, count]) => [
+          kind,
+          count - before[kind as keyof typeof before],
+        ]),
+      ),
+    );
+    expect((await readStoredDrafts(key))[0].text.length).toBe(size + 1);
+    doc.destroy();
+  }
+  expect(counts).toEqual(
+    Array(3).fill({ get: 1, set: 0, delete: 0, sql: 3, encrypt: 1, decrypt: 1 }),
+  );
+});
+
+it("serializes concurrent document writes and waits for them on sign-out", async () => {
+  const { clearUserDrafts, resumeDraftStorage, listDraftKeys } =
+    await import("@shared/realtime/draftStorage");
+  resumeDraftStorage("bob");
+  const before = nativeStorage.calls.set;
+  await Promise.all(
+    Array.from({ length: 8 }, (_, index) =>
+      saveTextDraft(`realtime.bob.org.NOTE.${index}`, `text ${index}`, "base", "typing"),
+    ),
+  );
+  expect(nativeStorage.calls.set - before).toBe(1);
+  expect(await listDraftKeys("bob")).toHaveLength(8);
+  const saving = saveTextDraft("realtime.bob.org.NOTE.pending", "last edit", "base", "typing");
+  await clearUserDrafts("bob");
+  await saving;
+  expect(nativeStorage.databases.has("realtime-bob.db")).toBe(false);
+  expect(storage.has("realtime.key.bob")).toBe(false);
+  resumeDraftStorage("bob");
+});
+
+it("reloads encryption key after restart and preserves records when key is missing", async () => {
+  const key = "realtime.test.org.NOTE.restart";
+  await saveTextDraft(key, "survives restart", "base", "typing");
+  vi.resetModules();
+  const restarted = await import("@shared/realtime/encryptedDraftStore");
+  const [record] = await restarted.encryptedDraftRecords(key);
+  const doc = new Y.Doc();
+  const { fromBase64 } = await import("lib0/buffer");
+  Y.applyUpdate(doc, fromBase64(await restarted.decryptDraft(key, record)));
+  expect(doc.getText("markdown").toString()).toBe("survives restart");
+  storage.delete("realtime.key.test");
+  vi.resetModules();
+  const locked = await import("@shared/realtime/encryptedDraftStore");
+  await expect(locked.decryptDraft(key, record)).rejects.toThrow("key unavailable");
+  expect(await locked.encryptedDraftRecords(key)).toHaveLength(1);
+  expect(storage.has("realtime.key.test")).toBe(false);
+  await locked.clearEncryptedDrafts("test");
+  doc.destroy();
 });

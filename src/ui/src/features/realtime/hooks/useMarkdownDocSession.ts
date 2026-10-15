@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import * as Y from "yjs";
+import { ySyncPluginKey } from "y-prosemirror";
 import { useAppSelector } from "@/app/hooks";
 import { realtimeMultiplexer } from "@/features/realtime/multiplexer";
 import { docNameFor } from "@/features/realtime/docNames";
 import { useDocSession } from "@/features/realtime/hooks/useDocSession";
-import { useOutboundSyncing } from "@/features/realtime/hooks/useOutboundSyncing";
 import { PROSEMIRROR_FRAGMENT_FIELD } from "@/features/realtime/markdown";
 import type { RealtimeStatus } from "@/features/realtime/protocol";
 import type { CrepeRealtimeBinding } from "@/components/editor/CrepeEditor";
@@ -16,6 +16,8 @@ interface MarkdownDocSessionOptions {
   canEdit?: boolean;
   /** See `UseDocSessionOptions.discardLocalOnCleanClose`. */
   discardLocalOnCleanClose?: boolean;
+  /** See `UseDocSessionOptions.onGenerationReset`. */
+  onGenerationReset?: (info: { hasLocalEdits: boolean }) => void;
 }
 
 export function useMarkdownDocSession({
@@ -24,16 +26,19 @@ export function useMarkdownDocSession({
   enabled,
   canEdit = true,
   discardLocalOnCleanClose = false,
+  onGenerationReset,
 }: MarkdownDocSessionOptions): {
   binding: CrepeRealtimeBinding | null;
   status: RealtimeStatus;
   docName: string | null;
+  generationResets: number;
 } {
   const session = useDocSession({
     contentType,
     contentId,
     enabled: enabled && Boolean(contentId),
     discardLocalOnCleanClose,
+    onGenerationReset,
   });
   const user = useAppSelector((state) => state.auth.user);
   const [undoManager, setUndoManager] = useState<Y.UndoManager | null>(null);
@@ -52,7 +57,7 @@ export function useMarkdownDocSession({
   useEffect(() => {
     if (!ydoc || !sessionId || !canEdit) return;
     const manager = new Y.UndoManager([ydoc.get(PROSEMIRROR_FRAGMENT_FIELD, Y.XmlFragment)], {
-      trackedOrigins: new Set([sessionId]),
+      trackedOrigins: new Set([sessionId, ySyncPluginKey]),
       captureTimeout: 500,
     });
     // Publish effect-owned Yjs resource.
@@ -87,8 +92,7 @@ export function useMarkdownDocSession({
       whenSynced: session.whenSynced,
     };
   }, [session, undoManager]);
-  const syncing = useOutboundSyncing(docName);
   const baseStatus = session?.status ?? "idle";
-  const status: RealtimeStatus = syncing && baseStatus === "connected" ? "syncing" : baseStatus;
-  return { binding, status, docName };
+  const status: RealtimeStatus = baseStatus;
+  return { binding, status, docName, generationResets: session?.generationResets ?? 0 };
 }

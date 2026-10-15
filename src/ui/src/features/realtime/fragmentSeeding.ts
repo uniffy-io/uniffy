@@ -1,4 +1,6 @@
 import * as Y from "yjs";
+import { digest } from "lib0/hash/sha256";
+import { toHexString } from "lib0/buffer";
 import type { Node } from "@milkdown/prose/model";
 import type { FragmentSeeder } from "@/features/realtime/multiplexer";
 import {
@@ -12,6 +14,7 @@ import { HYDRATION_ORIGIN } from "@/features/realtime/persistence/encryptedYjsPe
 export const SEEDED_BY_KEY = "seeded_by";
 const SEED_CLAIM_PREFIX = "seeded_by:";
 const SEED_CONTENT_PREFIX = "seed_content:";
+const seedHash = (text: string) => `sha256:${toHexString(digest(new TextEncoder().encode(text)))}`;
 
 export function seedProsemirrorFragment(ydoc: Y.Doc, node: Node): void {
   const fragment = getProsemirrorFragment(ydoc);
@@ -27,7 +30,7 @@ export function seedProsemirrorFragment(ydoc: Y.Doc, node: Node): void {
     );
     metadata.set(
       `${SEED_CONTENT_PREFIX}${ydoc.clientID}`,
-      fragment.toArray().map((item) => item.toString()),
+      fragment.toArray().map((item) => seedHash(item.toString())),
     );
   }, HYDRATION_ORIGIN);
 }
@@ -64,7 +67,8 @@ export function observeFragmentSeedDuplicates(ydoc: Y.Doc): () => void {
           if (
             id?.client === ydoc.clientID &&
             ownClocks.includes(id.clock) &&
-            items[index].toString() === ownContent[ownClocks.indexOf(id.clock)]
+            (seedHash(items[index].toString()) === ownContent[ownClocks.indexOf(id.clock)] ||
+              items[index].toString() === ownContent[ownClocks.indexOf(id.clock)])
           )
             fragment.delete(index, 1);
         }
@@ -85,7 +89,7 @@ export function observeFragmentSeedDuplicates(ydoc: Y.Doc): () => void {
 
 export function waitForFragmentSeed(
   fragment: Y.XmlFragment,
-  seeder: FragmentSeeder,
+  seeder: Pick<FragmentSeeder, "isFragmentSeeder" | "subscribeFragmentSeeder">,
   signal?: AbortSignal,
 ): Promise<void> {
   if (signal?.aborted || seeder.isFragmentSeeder || fragmentHasRealContent(fragment))
@@ -104,4 +108,51 @@ export function waitForFragmentSeed(
     fragment.observeDeep(onChange);
     signal?.addEventListener("abort", finish, { once: true });
   });
+}
+
+export async function initializeFragment(
+  ydoc: Y.Doc,
+  seeder: FragmentSeeder,
+  parse: (markdown: string) => Node | null | undefined,
+  signal: AbortSignal,
+): Promise<void> {
+  seeder.setSeedCapability?.(true);
+  signal.addEventListener("abort", () => seeder.setSeedCapability?.(false), { once: true });
+  const fragment = getProsemirrorFragment(ydoc);
+  while (!signal.aborted && !fragmentHasRealContent(fragment)) {
+    const base = ydoc.getText("markdown").toString();
+    if (!base) return;
+    await waitForFragmentSeed(fragment, seeder, signal);
+    if (signal.aborted || fragmentHasRealContent(fragment)) return;
+    const current = ydoc.getText("markdown").toString();
+    if (!current) return;
+    const node = parse(current);
+    if (!node) throw new Error("Document could not be parsed");
+    // No speculative seed reaches the editable document or its recovery rows.
+    const proposal = new Y.Doc();
+    try {
+      Y.applyUpdate(proposal, Y.encodeStateAsUpdate(ydoc));
+      const vector = Y.encodeStateVector(proposal);
+      seedProsemirrorFragment(proposal, node);
+      const accepted = await seeder.submitSeed(
+        Y.encodeStateAsUpdate(proposal, vector),
+        current,
+        signal,
+      );
+      if (accepted) return;
+    } finally {
+      proposal.destroy();
+    }
+    if (!signal.aborted && !fragmentHasRealContent(fragment)) {
+      await new Promise<void>((resolve) => {
+        const finish = () => {
+          clearTimeout(timer);
+          signal.removeEventListener("abort", finish);
+          resolve();
+        };
+        const timer = setTimeout(finish, 1000);
+        signal.addEventListener("abort", finish, { once: true });
+      });
+    }
+  }
 }

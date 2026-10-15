@@ -16,6 +16,7 @@ from uniffy.core.events import (
 from uniffy.core.events.realtime import ContentAccessAction
 from uniffy.core.models.calendar.attendee import EventAttendee
 from uniffy.core.models.calendar.event import CalendarEvent
+from uniffy.core.realtime.limits import validate_document_size
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import (
     AccessMode,
@@ -117,6 +118,7 @@ class EventCreateOperations:
                 user_id, organization_id, attendee_ids
             )
 
+        validate_document_size(description)
         outgoing_refs = (
             extract_all_outgoing_references(description, organization_id) if description else None
         )

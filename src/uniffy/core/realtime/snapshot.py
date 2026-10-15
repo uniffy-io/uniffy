@@ -1,7 +1,6 @@
 """Debounced snapshot writer; ``schedule`` arms a 5s timer, ``flush`` runs synchronously."""
 
 import asyncio
-import base64
 import contextlib
 import hashlib
 import time
@@ -13,6 +12,7 @@ from loguru import logger
 
 from uniffy.core.jobs import JobEnqueueOutcome, enqueue_job_reconnecting
 from uniffy.core.realtime.adapter import (
+    DeferredProjection,
     RealtimeRenderConflict,
     get_realtime_adapter,
 )
@@ -22,7 +22,12 @@ from uniffy.core.realtime.metrics import (
     REALTIME_SNAPSHOT_DURATION,
 )
 from uniffy.core.realtime.state import DocKey, YDocSession
-from uniffy.core.realtime.storage import decode_snapshot, load_snapshot, lock_document
+from uniffy.core.realtime.storage import (
+    compact_update,
+    decode_snapshot,
+    load_snapshot,
+    lock_document,
+)
 from uniffy.core.types import ContentType
 from uniffy.infrastructure.database.session import open_session
 
@@ -58,6 +63,12 @@ async def persist_snapshot(
         if snapshot is None or snapshot.organization_id != organization_id:
             return SnapshotOutcome.SUPERSEDED
         if snapshot.rendered_revision >= snapshot.revision:
+            if snapshot.effects_pending:
+                await get_realtime_adapter(content_type).after_projection(
+                    db, content_id, organization_id
+                )
+                snapshot.effects_pending = False
+                await db.commit()
             return SnapshotOutcome.RENDERED
         adapter = get_realtime_adapter(content_type)
         after_commit = await adapter.stage_render(
@@ -67,14 +78,39 @@ async def persist_snapshot(
             organization_id,
             actor_id=snapshot.actor_id,
         )
+        if after_commit is DeferredProjection.SOFT_DELETED:
+            return SnapshotOutcome.SNAPSHOT_ONLY
         if after_commit is None:
             await db.delete(snapshot)
             await db.commit()
             return SnapshotOutcome.TARGET_MISSING
+        snapshot.updates = compact_update(snapshot.updates)
+        snapshot.effects_pending = True
         snapshot.rendered_revision = snapshot.revision
         await db.commit()
-        await after_commit()
+        # Serialize effect delivery with newer projections so search cannot regress.
+        await lock_document(db, key, organization_id)
+        current = await load_snapshot(db, key)
+        if current is not None and current.effects_pending:
+            await after_commit()
+            current.effects_pending = False
+            await db.commit()
         return SnapshotOutcome.RENDERED
+
+
+async def deliver_projection_effects(key: DocKey, organization_id: UUID) -> None:
+    async with open_session() as db:
+        await lock_document(db, key, organization_id)
+        snapshot = await load_snapshot(db, key)
+        if (
+            snapshot is None
+            or snapshot.organization_id != organization_id
+            or not snapshot.effects_pending
+        ):
+            return
+        await get_realtime_adapter(key[0]).after_projection(db, key[1], organization_id)
+        snapshot.effects_pending = False
+        await db.commit()
 
 
 class SnapshotWriter:
@@ -165,8 +201,8 @@ class SnapshotWriter:
             content_type.value,
             str(content_id),
             str(session.organization_id),
-            base64.b64encode(update_bytes).decode("ascii"),
-            base64.b64encode(state_vector).decode("ascii"),
+            "",
+            "",
             str(actor_id) if actor_id is not None else "",
             encoded_at.isoformat(),
             _job_id=f"snapshot:{content_type_label}:{content_id}:{content_hash}",

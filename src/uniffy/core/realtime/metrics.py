@@ -103,3 +103,13 @@ REALTIME_REAUTH_CLOSES_TOTAL = Counter(
     "Live realtime sockets closed by periodic re-authorization",
     ["reason"],
 )
+
+REALTIME_WRITE_REJECTIONS = Counter(
+    "uniffy_realtime_write_rejections_total", "Rejected durable document writes", ["reason"]
+)
+REALTIME_PROJECTION_OUTCOMES = Counter(
+    "uniffy_realtime_projection_outcomes_total", "Worker projection attempts", ["outcome"]
+)
+REALTIME_BACKLOG_DEPTH = Gauge(
+    "uniffy_realtime_backlog_depth", "Pending durable work rows", ["kind"]
+)

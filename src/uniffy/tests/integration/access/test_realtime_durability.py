@@ -9,30 +9,54 @@ import pytest_asyncio
 from sqlalchemy import delete, select, update
 
 from uniffy.core.errors import StaleContentVersionError
+from uniffy.core.events.bus import emit_notification, event_from_json, stage_notification_events
+from uniffy.core.events.types import NotificationEvent
+from uniffy.core.models.files.reconciliation import InlineAttachmentReconciliation
 from uniffy.core.models.notes.note import Note
+from uniffy.core.models.notifications.notification import Notification
+from uniffy.core.models.notifications.outbox import NotificationOutbox
 from uniffy.core.models.permissions.content_member import ContentMember
 from uniffy.core.models.projects.project import Project
-from uniffy.core.models.projects.task import Task
 from uniffy.core.models.projects.sprint import Sprint as _Sprint  # noqa: F401
+from uniffy.core.models.projects.task import Task
 from uniffy.core.models.realtime.yjs_snapshot import RealtimeYjsSnapshot
 from uniffy.core.realtime.markdown import markdown_text
+from uniffy.core.realtime.rename import stage_mention_rename
 from uniffy.core.realtime.snapshot import persist_snapshot
 from uniffy.core.realtime.storage import (
+    DocumentTooLarge,
     EditDenied,
-    claim_seed,
     GenerationConflict,
+    SeedConflict,
     accept_update,
+    claim_seed,
     decode_snapshot,
     load_snapshot,
     lock_document,
-    stage_seed,
     stage_replacement,
+    stage_seed,
 )
-from uniffy.core.types import AccessMode, ContentType, ContentRole, SubjectType, generate_id
+from uniffy.core.realtime.ydoc_manager import YDocManager
+from uniffy.core.types import (
+    AccessMode,
+    ContentRole,
+    ContentType,
+    NotificationType,
+    SubjectType,
+    generate_id,
+)
+from uniffy.domains.files.attachments.inline import stage_inline_reconciliation
+from uniffy.domains.files.jobs.attachments import _reconcile
 from uniffy.domains.notes.adapter import NoteRealtimeAdapter
 from uniffy.domains.notes.operations import NoteOperations
+from uniffy.domains.notifications.delivery.app import InAppAdapter
+from uniffy.domains.notifications.jobs.events import deliver_notification_outbox
 from uniffy.domains.projects.realtime import TaskRealtimeAdapter
+from uniffy.domains.projects.tasks.notifications import TaskNotifications
+from uniffy.domains.search.rename import propagate_rename
 from uniffy.infrastructure.database.session import open_session
+
+emit_mentions = TaskNotifications.emit_mention_notifications
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
@@ -219,13 +243,13 @@ async def test_replicas_hydrate_one_shared_seed(document):
 
 async def test_seed_lease_has_one_owner_and_recovers_after_expiry(document):
     org = document.access.org_id
-    assert await claim_seed(document.key, org, ["left:1"], "left") == "left:1"
-    assert await claim_seed(document.key, org, ["right:2"], "right") == "left:1"
+    assert (await claim_seed(document.key, org, ["left:1"], "left")).owner == "left:1"
+    assert (await claim_seed(document.key, org, ["right:2"], "right")).owner == "left:1"
     async with open_session() as db:
         snapshot = await load_snapshot(db, document.key)
         snapshot.seed_expires_at = datetime.now(UTC) - timedelta(seconds=1)
         await db.commit()
-    assert await claim_seed(document.key, org, ["right:2"], "right") == "right:2"
+    assert (await claim_seed(document.key, org, ["right:2"], "right")).owner == "right:2"
 
 
 async def test_deleted_parent_rejects_update_without_pubsub(document):
@@ -369,3 +393,396 @@ async def test_missing_causal_predecessor_survives_durable_acceptance(document):
         predecessor,
     )
     assert str(markdown_text(decode_snapshot(accepted))) == "base first second"
+
+
+def fragment_proposal(snapshot):
+    proposal = decode_snapshot(snapshot)
+    proposal["prosemirror"] = pycrdt.XmlFragment([
+        pycrdt.XmlElement("paragraph", contents=[pycrdt.XmlText("base")])
+    ])
+    proposal.get("markdown_mirror", type=pycrdt.Map)["seeded_by:proposal"] = [0]
+    return proposal.get_update()
+
+
+async def test_expired_seed_cannot_duplicate_successor_content(document):
+    org = document.access.org_id
+    actor = document.access.member_id
+    first = await claim_seed(document.key, org, ["left:1"], "left")
+    stale = fragment_proposal(document.seed)
+    async with open_session() as db:
+        snapshot = await load_snapshot(db, document.key)
+        snapshot.seed_expires_at = datetime.now(UTC) - timedelta(seconds=1)
+        await db.commit()
+    second = await claim_seed(document.key, org, ["right:2"], "right")
+    winner = fragment_proposal(document.seed)
+    accepted = await accept_update(
+        document.key,
+        org,
+        actor,
+        document.seed.generation,
+        winner,
+        seed_owner=second.owner,
+        seed_token=second.token,
+        seed_base="base",
+    )
+    with pytest.raises(SeedConflict):
+        await accept_update(
+            document.key,
+            org,
+            actor,
+            document.seed.generation,
+            stale,
+            seed_owner=first.owner,
+            seed_token=first.token,
+            seed_base="base",
+        )
+    replay = await accept_update(
+        document.key,
+        org,
+        actor,
+        document.seed.generation,
+        winner,
+        seed_owner=second.owner,
+        seed_token=second.token,
+        seed_base="base",
+    )
+    assert replay.revision == accepted.revision
+    assert (
+        str(decode_snapshot(replay).get("prosemirror", type=pycrdt.XmlFragment))
+        == "<paragraph>base</paragraph>"
+    )
+
+
+async def test_seed_checks_source_and_normal_updates_cannot_bypass_lease(document):
+    org = document.access.org_id
+    actor = document.access.member_id
+    lease = await claim_seed(document.key, org, ["left:1"], "left")
+    proposal = fragment_proposal(document.seed)
+    with pytest.raises(SeedConflict):
+        await accept_update(document.key, org, actor, document.seed.generation, proposal)
+    edit = decode_snapshot(document.seed)
+    markdown_text(edit).insert(4, " mobile edit")
+    accepted = await accept_update(
+        document.key, org, actor, document.seed.generation, edit.get_update()
+    )
+    with pytest.raises(SeedConflict):
+        await accept_update(
+            document.key,
+            org,
+            actor,
+            document.seed.generation,
+            proposal,
+            seed_owner=lease.owner,
+            seed_token=lease.token,
+            seed_base="base",
+        )
+    async with open_session() as db:
+        saved = await load_snapshot(db, document.key)
+        assert saved.updates == accepted.updates
+        assert str(markdown_text(decode_snapshot(saved))) == "base mobile edit"
+
+
+@pytest.mark.parametrize("expired", [True, False])
+async def test_seed_checks_lease_expiry_and_identity_before_any_peer_seed(document, expired):
+    org = document.access.org_id
+    lease = await claim_seed(document.key, org, ["left:1"], "left")
+    if expired:
+        async with open_session() as db:
+            snapshot = await load_snapshot(db, document.key)
+            snapshot.seed_expires_at = datetime.now(UTC) - timedelta(seconds=1)
+            await db.commit()
+    with pytest.raises(SeedConflict):
+        await accept_update(
+            document.key,
+            org,
+            document.access.member_id,
+            document.seed.generation,
+            fragment_proposal(document.seed),
+            seed_owner=lease.owner,
+            seed_token=lease.token if expired else "expired-lease-token",
+            seed_base="base",
+        )
+    async with open_session() as db:
+        snapshot = await load_snapshot(db, document.key)
+        assert snapshot.updates == document.seed.updates
+        assert snapshot.revision == document.seed.revision
+
+
+@pytest.mark.parametrize("proposal_kind", ["text_edit", "missing_claim", "missing_predecessor"])
+async def test_seed_rejects_text_edits_and_incomplete_initialization(document, proposal_kind):
+    org = document.access.org_id
+    lease = await claim_seed(document.key, org, ["left:1"], "left")
+    proposal = decode_snapshot(document.seed)
+    proposal.apply_update(fragment_proposal(document.seed))
+    if proposal_kind == "text_edit":
+        markdown_text(proposal).insert(4, " bundled typing")
+        update = proposal.get_update()
+    elif proposal_kind == "missing_claim":
+        del proposal.get("markdown_mirror", type=pycrdt.Map)["seeded_by:proposal"]
+        update = proposal.get_update()
+    else:
+        proposal.get("markdown_mirror", type=pycrdt.Map)["predecessor"] = True
+        before = proposal.get_state()
+        proposal.get("markdown_mirror", type=pycrdt.Map)["seeded_by:incomplete"] = [0]
+        update = proposal.get_update(before)
+    with pytest.raises(SeedConflict):
+        await accept_update(
+            document.key,
+            org,
+            document.access.member_id,
+            document.seed.generation,
+            update,
+            seed_owner=lease.owner,
+            seed_token=lease.token,
+            seed_base="base",
+        )
+    async with open_session() as db:
+        snapshot = await load_snapshot(db, document.key)
+        assert snapshot.updates == document.seed.updates
+        assert snapshot.revision == document.seed.revision
+
+
+async def test_projection_failure_retains_original_mentions_and_retries_search(document):
+    doc = decode_snapshot(document.seed)
+    mention = f" [[[Peer|urn:uniffy:content:USER:{document.access.peer_id}]]]"
+    markdown_text(doc).insert(4, mention)
+    await accepted(document, doc)
+    with (
+        patch.object(TaskNotifications, "emit_mention_notifications", new=emit_mentions),
+        patch(
+            "uniffy.domains.projects.tasks.realtime.TaskContentOperations._index_for_search",
+            AsyncMock(side_effect=OSError("search down")),
+        ),
+    ):
+        with pytest.raises(OSError, match="search down"):
+            await project(document)
+    async with open_session() as db:
+        snapshot = await load_snapshot(db, document.key)
+        assert snapshot.effects_pending
+        assert snapshot.rendered_revision == snapshot.revision
+        task = await db.get(Task, document.key[1])
+        assert task.description == "base" + mention
+        outbox = (
+            (
+                await db.execute(
+                    select(NotificationOutbox).where(
+                        NotificationOutbox.organization_id == document.access.org_id
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
+        assert len(outbox) == 1
+        event = event_from_json(outbox[0].payload)
+        assert event.target_user_ids == [document.access.peer_id]
+        event_id = event.event_id
+    await project(document)
+    async with open_session() as db:
+        snapshot = await load_snapshot(db, document.key)
+        assert not snapshot.effects_pending
+        outbox = (
+            (
+                await db.execute(
+                    select(NotificationOutbox).where(
+                        NotificationOutbox.organization_id == document.access.org_id
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
+        assert [row.event_id for row in outbox] == [event_id]
+        adapter = InAppAdapter()
+        first = await adapter.deliver_with_session(db, document.access.peer_id, event)
+        await db.commit()
+        duplicate = await adapter.deliver_with_session(db, document.access.peer_id, event)
+        await db.commit()
+        assert first is not None
+        assert duplicate is None
+        rows = (
+            (await db.execute(select(Notification).where(Notification.event_id == event_id)))
+            .scalars()
+            .all()
+        )
+        assert len(rows) == 1
+        await db.delete(rows[0])
+        await db.commit()
+
+
+async def test_rename_grafts_live_text_and_survives_late_typing(document):
+    urn = f"urn:uniffy:content:USER:{document.access.peer_id}"
+    doc = decode_snapshot(document.seed)
+    markdown_text(doc).insert(4, f" [[[Old|{urn}]]] human")
+    await accepted(document, doc)
+    # Column references have not projected yet; rename must still discover this document.
+    async with open_session() as db:
+        with (
+            patch("uniffy.domains.search.rename.enqueue_job", AsyncMock()),
+            patch("uniffy.domains.search.rename.publish_content_replace", AsyncMock()),
+        ):
+            assert await propagate_rename(db, document.access.org_id, urn, "Renamed") == 1
+    markdown_text(doc).insert(len(markdown_text(doc)), " offline")
+    snapshot = await accepted(document, doc)
+    assert snapshot.generation == document.seed.generation
+    await project(document)
+    async with open_session() as db:
+        task = await db.get(Task, document.key[1])
+        assert task.description == f"base [[[Renamed|{urn}]]] human offline"
+
+
+async def test_notification_delivery_failure_keeps_original_outbox(document):
+    doc = decode_snapshot(document.seed)
+    markdown_text(doc).insert(4, f" [[[Peer|urn:uniffy:content:USER:{document.access.peer_id}]]]")
+    await accepted(document, doc)
+    with patch.object(TaskNotifications, "emit_mention_notifications", new=emit_mentions):
+        await project(document)
+    async with open_session() as db:
+        event = (
+            await db.execute(
+                select(NotificationOutbox).where(
+                    NotificationOutbox.organization_id == document.access.org_id
+                )
+            )
+        ).scalar_one()
+        event_id, payload = event.event_id, event.payload
+    with patch(
+        "uniffy.domains.notifications.jobs.events.process_notification_event",
+        AsyncMock(return_value={"status": "error"}),
+    ):
+        with pytest.raises(RuntimeError):
+            await deliver_notification_outbox({}, str(event_id))
+    async with open_session() as db:
+        assert (await db.get(NotificationOutbox, event_id)).payload == payload
+    delivered = AsyncMock(return_value={"status": "success"})
+    with patch("uniffy.domains.notifications.jobs.events.process_notification_event", delivered):
+        await deliver_notification_outbox({}, str(event_id))
+        await deliver_notification_outbox({}, str(event_id))
+    delivered.assert_awaited_once_with({}, payload)
+
+
+async def test_continuous_edit_notifications_coalesce_per_actor(document):
+    access = document.access
+    async with open_session() as db:
+        for actor in (access.member_id, access.member_id, access.peer_id):
+            with stage_notification_events(db):
+                await emit_notification(
+                    NotificationEvent(
+                        notification_type=NotificationType.CONTENT_EDITED,
+                        organization_id=access.org_id,
+                        actor_id=actor,
+                        title="Edited",
+                        source_urn=f"urn:uniffy:content:TASK:{document.key[1]}",
+                    )
+                )
+            await db.commit()
+        rows = (
+            await db.scalars(
+                select(NotificationOutbox).where(
+                    NotificationOutbox.organization_id == access.org_id,
+                )
+            )
+        ).all()
+        assert len(rows) == 2
+        assert {event_from_json(row.payload).actor_id for row in rows} == {
+            access.member_id,
+            access.peer_id,
+        }
+
+
+async def test_inline_cleanup_waits_for_projection_and_retries_failed_effect(document):
+    file_id = generate_id()
+    doc = decode_snapshot(document.seed)
+    markdown_text(doc).insert(4, f" ![image](/api/files/{document.access.org_id}/{file_id})")
+    await accepted(document, doc)
+    async with open_session() as db:
+        await stage_inline_reconciliation(db, *document.key, document.access.org_id)
+        await db.rollback()
+        assert (
+            await db.get(InlineAttachmentReconciliation, (document.key[0].value, document.key[1]))
+            is None
+        )
+        await stage_inline_reconciliation(db, *document.key, document.access.org_id)
+        await db.commit()
+        item = await db.get(InlineAttachmentReconciliation, (document.key[0].value, document.key[1]))
+    from_ctx = {"object_storage": MagicMock(), "search_indexer": MagicMock()}
+    effect = AsyncMock()
+    with patch("uniffy.domains.files.jobs.attachments.reconcile_inline_attachments", effect):
+        await _reconcile(from_ctx, item)
+        effect.assert_not_awaited()
+        await project(document)
+        effect.side_effect = OSError("storage down")
+        with pytest.raises(OSError):
+            await _reconcile(from_ctx, item)
+        async with open_session() as db:
+            assert (
+                await db.get(InlineAttachmentReconciliation, (item.content_type, item.content_id))
+                is not None
+            )
+        effect.side_effect = None
+        await _reconcile(from_ctx, item)
+        assert effect.await_args.kwargs["referenced_file_ids"] == {file_id}
+        async with open_session() as db:
+            assert (
+                await db.get(InlineAttachmentReconciliation, (item.content_type, item.content_id))
+                is None
+            )
+
+
+async def test_locked_hydration_refuses_deleted_content_without_orphan(document):
+    async with open_session() as db:
+        await db.execute(
+            delete(RealtimeYjsSnapshot).where(RealtimeYjsSnapshot.content_id == document.key[1])
+        )
+        task = await db.get(Task, document.key[1])
+        task.is_deleted = True
+        await db.commit()
+    with patch(
+        "uniffy.core.realtime.ydoc_manager.get_realtime_adapter", return_value=document.adapter
+    ):
+        with pytest.raises(EditDenied):
+            await YDocManager()._hydrate(
+                document.key, document.access.org_id, document.access.member_id
+            )
+    async with open_session() as db:
+        assert await load_snapshot(db, document.key) is None
+
+
+async def test_canvas_rename_keeps_other_fields_and_concurrent_text(document):
+    urn = f"urn:uniffy:content:USER:{document.access.peer_id}"
+    doc = decode_snapshot(document.seed)
+    doc.get("nodes", type=pycrdt.Map)["node"] = pycrdt.Map({
+        "data": pycrdt.Map({"content": pycrdt.Text(f"é [[[Old|{urn}]]]"), "color": "red"}),
+        "x": 22,
+    })
+    await accepted(document, doc)
+    async with open_session() as db:
+        await lock_document(db, document.key)
+        assert await stage_mention_rename(db, document.key, document.access.org_id, urn, "Renamed")
+        await db.commit()
+    node = doc.get("nodes", type=pycrdt.Map)["node"]
+    node["data"]["content"].insert(len(node["data"]["content"]), " peer")
+    snapshot = await accepted(document, doc)
+    merged = decode_snapshot(snapshot).get("nodes", type=pycrdt.Map)["node"]
+    assert str(merged["data"]["content"]) == f"é [[[Renamed|{urn}]]] peer"
+    assert merged["data"]["color"] == "red"
+    assert merged["x"] == 22
+
+
+async def test_document_limit_rejection_keeps_previous_durable_bytes(document):
+    doc = decode_snapshot(document.seed)
+    before = doc.get_state()
+    markdown_text(doc).insert(0, "oversized")
+    with patch("uniffy.core.realtime.storage.MAX_DOCUMENT_BYTES", 4):
+        with pytest.raises(DocumentTooLarge):
+            await accept_update(
+                document.key,
+                document.access.org_id,
+                document.access.member_id,
+                document.seed.generation,
+                doc.get_update(before),
+            )
+    async with open_session() as db:
+        stored = await load_snapshot(db, document.key)
+        assert stored.updates == document.seed.updates
+        assert stored.revision == document.seed.revision

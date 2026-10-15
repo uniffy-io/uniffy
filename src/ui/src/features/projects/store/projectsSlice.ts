@@ -11,6 +11,7 @@ import {
   fetchProjects,
   fetchProject,
   fetchProjectTasks,
+  fetchTask,
   createProject,
   updateProject,
   deleteProject,
@@ -266,6 +267,9 @@ export const projectsSlice = createSlice({
     });
 
     builder
+      .addCase(fetchTask.fulfilled, (state, action) => {
+        if (action.payload) acceptServerTask(state, action.payload);
+      })
       .addCase(fetchProjectTasks.pending, (state) => {
         state.loading.tasks = true;
         state.errors.tasks = null;

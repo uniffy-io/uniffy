@@ -6,12 +6,15 @@ from loguru import logger
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from uniffy.core.events.bus import stage_notification_events
+from uniffy.core.events.realtime import publish_content_changed
 from uniffy.core.models.projects.project import Project
 from uniffy.core.models.projects.task import Task
 from uniffy.core.realtime.adapter import RealtimeRenderConflict, check_not_superseded
 from uniffy.core.realtime.metrics import REALTIME_BLANK_CONTENT_OVERWRITES_TOTAL
 from uniffy.core.search import SearchIndexer
 from uniffy.core.types import ContentType
+from uniffy.domains.files.attachments.inline import stage_inline_reconciliation
 from uniffy.domains.projects.queries import extract_urns_from_content
 from uniffy.domains.projects.tasks.content import TaskContentOperations
 from uniffy.domains.projects.tasks.notifications import TaskNotifications
@@ -73,6 +76,12 @@ class TaskRealtimePersistence:
                     label=f"Task {task_id}",
                 )
             old_refs = task.outgoing_references
+            if (task.description or "") == content and (old_refs or []) == (references or []):
+
+                async def refresh_projection() -> None:
+                    await self.after_projection(organization_id, task_id)
+
+                return task, refresh_projection
             if not attempt and task.description and not content:
                 REALTIME_BLANK_CONTENT_OVERWRITES_TOTAL.labels(
                     content_type=ContentType.TASK.value
@@ -101,18 +110,27 @@ class TaskRealtimePersistence:
 
         await self.session.refresh(task)
 
-        async def after_commit() -> None:
-            await TaskContentOperations(
-                self.session, search_indexer=self.search_indexer
-            )._index_for_search(task)
+        await stage_inline_reconciliation(self.session, ContentType.TASK, task_id, organization_id)
+        with stage_notification_events(self.session):
             project = await self.session.get(Project, task.project_id)
             if project is not None:
-                # Attribute mentions to the last live editor, or the project owner.
                 await TaskNotifications(self.session).emit_mention_notifications(
                     task, actor_id or project.owner_id, old_refs, task.outgoing_references
                 )
 
+        async def after_commit() -> None:
+            await self.after_projection(organization_id, task_id)
+
         return task, after_commit
+
+    async def after_projection(self, organization_id: UUID, task_id: UUID) -> None:
+        task = await load_live_task(self.session, task_id, organization_id, populate_existing=True)
+        if task is None:
+            return
+        await TaskContentOperations(
+            self.session, search_indexer=self.search_indexer
+        )._index_for_search(task)
+        await publish_content_changed(ContentType.TASK, task.id, organization_id)
 
     async def save(
         self,

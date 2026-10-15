@@ -14,7 +14,7 @@ from uniffy.core.audit.actions import Action
 from uniffy.core.errors import NotFoundError, ValidationError
 from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.notes.note import Note
-from uniffy.core.realtime.storage import lock_documents
+from uniffy.core.realtime.storage import lock_document, lock_documents
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import ContentType, NodeType
 from uniffy.domains.files.attachments.purge import purge_attachments_for_content
@@ -144,6 +144,7 @@ class NoteHierarchy:
         organization_id: UUID,
         note_id: UUID,
     ) -> Note:
+        await lock_document(self.operations.session, (ContentType.NOTE, note_id))
         note = await self.operations._fetch_by_id(note_id, organization_id)
         if not note:
             raise NotFoundError("Note", note_id)

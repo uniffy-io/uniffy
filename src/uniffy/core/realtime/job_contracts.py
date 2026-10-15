@@ -8,7 +8,7 @@ SAVE_REALTIME_SNAPSHOT = JobRef(
     workload=JobWorkload.CONTROL,
     reliability=JobReliability.DURABLE,
     recovery=JobRecovery(
-        fact="realtime_yjs_snapshots revision > rendered_revision",
+        fact="realtime_yjs_snapshots revision > rendered_revision or effects_pending",
         trigger="minute projection recovery schedule",
     ),
 )
@@ -19,7 +19,7 @@ RECOVER_REALTIME_PROJECTIONS_SCHEDULE = JobRef(
     workload=JobWorkload.CONTROL,
     reliability=JobReliability.DURABLE,
     recovery=JobRecovery(
-        fact="realtime_yjs_snapshots revision > rendered_revision",
+        fact="realtime_yjs_snapshots revision > rendered_revision or effects_pending",
         trigger="minute projection recovery schedule",
     ),
 )

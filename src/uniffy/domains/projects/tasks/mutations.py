@@ -11,6 +11,7 @@ from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import Action
 from uniffy.core.content.mentions import publish_mention_state
 from uniffy.core.errors import ValidationError
+from uniffy.core.events.realtime import publish_content_changed
 from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.projects.activity import TaskActivity
 from uniffy.core.models.projects.field_definition import (
@@ -20,11 +21,12 @@ from uniffy.core.models.projects.field_definition import (
 from uniffy.core.models.projects.task import Task
 from uniffy.core.models.realtime.yjs_snapshot import RealtimeYjsSnapshot
 from uniffy.core.realtime.publisher import publish_content_replace, publish_perm_change
-from uniffy.core.realtime.storage import lock_document, stage_replacement
+from uniffy.core.realtime.storage import lock_document, stage_text_merge
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import (
     ContentType,
 )
+from uniffy.domains.files.attachments.inline import stage_inline_reconciliation
 from uniffy.domains.files.attachments.purge import purge_attachments_for_content
 from uniffy.domains.projects import queries
 from uniffy.domains.projects.statuses import (
@@ -110,6 +112,7 @@ class TaskMutationOperations:
             )
 
         old_references = list(task.outgoing_references) if task.outgoing_references else None
+        base_description = task.description or ""
 
         title_changed = "title" in kwargs and kwargs["title"] != task.title  # noqa: PLR2004
         old_status = task.status
@@ -196,6 +199,16 @@ class TaskMutationOperations:
                 )
 
         if "description" in kwargs:  # noqa: PLR2004
+            merged = await stage_text_merge(
+                self.session,
+                (ContentType.TASK, task_id),
+                organization_id,
+                user_id,
+                base=base_description,
+                incoming=task.description or "",
+            )
+            if merged is not None and merged != (task.description or ""):
+                task.description = merged
             task.outgoing_references = queries.extract_urns_from_content(task.description) or None
 
         task.version += 1
@@ -227,11 +240,14 @@ class TaskMutationOperations:
                     )
 
         if "description" in kwargs:  # noqa: PLR2004 - update keyword name
-            await stage_replacement(self.session, (ContentType.TASK, task_id), organization_id)
+            await stage_inline_reconciliation(
+                self.session, ContentType.TASK, task_id, organization_id
+            )
         await self.session.commit()
         await self.session.refresh(task)
         if "description" in kwargs:  # noqa: PLR2004 - update keyword name
-            await publish_content_replace(ContentType.TASK, task_id, task.description)
+            await publish_content_changed(ContentType.TASK, task_id, organization_id)
+            await publish_content_replace(ContentType.TASK, task_id, task.description or "")
 
         await self.content._sync_task_tags(actor_id=user_id, task=task, tag_ids=tag_ids)
 

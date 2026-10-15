@@ -1,6 +1,5 @@
 """Projects query helpers."""
 
-import re
 from collections import defaultdict
 from datetime import UTC, datetime
 from typing import NamedTuple
@@ -9,6 +8,7 @@ from uuid import UUID
 from sqlalchemy import Select, and_, case, delete, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from uniffy.core.content.references import extract_all_outgoing_references
 from uniffy.core.models.permissions.content_member import ContentMember
 from uniffy.core.models.projects.activity import TaskActivity
 from uniffy.core.models.projects.field_definition import FieldDefinition
@@ -308,18 +308,4 @@ async def delete_project_cascade(
 
 
 def extract_urns_from_content(content: str) -> list[str]:
-    """Returns unique URNs from ``[[[label|urn:...]]]`` mentions, preserving order."""
-    if not content:
-        return []
-
-    pattern = r"\[\[\[[^\[\]|]*?\|(urn:uniffy:content:\w+:[a-f0-9-]+)\]\]\]"
-    matches = re.findall(pattern, content, re.IGNORECASE)
-
-    seen = set()
-    urns = []
-    for urn in matches:
-        if urn not in seen:
-            seen.add(urn)
-            urns.append(urn)
-
-    return urns
+    return extract_all_outgoing_references(content)

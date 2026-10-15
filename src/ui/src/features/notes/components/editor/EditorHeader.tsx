@@ -51,6 +51,7 @@ interface EditorHeaderProps {
   isCanvas?: boolean;
   realtimeStatus?: RealtimeStatus;
   realtimeAwareness?: Awareness | null;
+  realtimeWhenSynced?: Promise<void>;
 }
 
 export function EditorHeader({
@@ -60,6 +61,7 @@ export function EditorHeader({
   isCanvas = false,
   realtimeStatus = "idle",
   realtimeAwareness = null,
+  realtimeWhenSynced,
 }: EditorHeaderProps) {
   const dispatch = useAppDispatch();
   const editorState = useAppSelector((state) => state.editor);
@@ -106,7 +108,8 @@ export function EditorHeader({
           <RealtimeSessionStatus
             status={realtimeStatus}
             awareness={realtimeAwareness}
-            className="hidden sm:flex ml-2 md:ml-4"
+            whenSynced={realtimeWhenSynced}
+            className="flex shrink-0 ml-2 md:ml-4"
           />
         </div>
 

@@ -13,6 +13,7 @@ import { WarningCircle, CheckCircle, Warning, Info } from "@phosphor-icons/react
 import { useAppSelector } from "@/app/hooks";
 import { rehydrateAuth } from "@/config";
 import { useTheme } from "@/config/theme/themeContext";
+import { Button } from "@/components/ui/button";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { AdminRoute } from "@/features/admin/components/AdminRoute";
 import { AgentsBuilderRoute } from "@/features/agents/components/AgentsBuilderRoute";
@@ -232,30 +233,50 @@ function ThemedToaster() {
   );
 }
 
-/**
- * AuthInitializer - Handles auth token rehydration on app startup.
- *
- * Security: Access tokens are stored in memory only (not localStorage).
- * On page reload, we use the persisted refresh token to get a new access token.
- * This validates the user is still active and their tokens haven't been revoked.
- */
 function AuthInitializer({ children }: { children: React.ReactNode }) {
   const [isInitialized, setIsInitialized] = useState(false);
+  const [initializationFailed, setInitializationFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
   const refreshToken = useAppSelector((state) => state.auth?.refreshToken);
   const isRehydrating = useAppSelector((state) => state.auth?.isRehydrating ?? false);
 
   useEffect(() => {
     const initAuth = async () => {
-      if (refreshToken) {
-        // We have a refresh token from localStorage, get a new access token
-        await rehydrateAuth();
+      try {
+        if (refreshToken) await rehydrateAuth();
+      } catch {
+        setInitializationFailed(true);
+      } finally {
+        setIsInitialized(true);
       }
-      setIsInitialized(true);
     };
 
     initAuth();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally only run once on mount, using initial refreshToken value
-  }, []);
+    // Credential rotation must not restart initialization after it succeeds.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [attempt]);
+
+  if (initializationFailed) {
+    return (
+      <div
+        role="status"
+        className="flex min-h-screen flex-col items-center justify-center gap-3 bg-background"
+      >
+        <p className="text-muted-foreground">
+          Can’t reconnect to your session. Check your connection and retry.
+        </p>
+        <Button
+          onClick={() => {
+            setInitializationFailed(false);
+            setIsInitialized(false);
+            setAttempt((value) => value + 1);
+          }}
+        >
+          Retry
+        </Button>
+      </div>
+    );
+  }
 
   // Show loading while initializing auth
   if (!isInitialized || isRehydrating) {

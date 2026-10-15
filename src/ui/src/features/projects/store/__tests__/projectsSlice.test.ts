@@ -12,6 +12,7 @@ import {
   deleteTasks,
   fetchProjects,
   fetchProjectTasks,
+  fetchTask,
   updateTask,
 } from "@/features/projects/store/projectsThunks";
 
@@ -247,4 +248,14 @@ describe("live descriptions", () => {
     expect(refetched.tasks.t1.description).toBe("rendered");
     expect(refetched.liveDescriptionIds.t1).toBeUndefined();
   });
+});
+
+it("updates a collapsed task description after a content-change refetch", () => {
+  const initial = stateWith([makeTask("t1", { description: "before" })]);
+  const next = reducer(
+    initial,
+    fetchTask.fulfilled(makeTask("t1", { description: "peer edit" }), "request", "t1"),
+  );
+  expect(next.tasks.t1.description).toBe("peer edit");
+  expect(next.loading.tasks).toBe(false);
 });

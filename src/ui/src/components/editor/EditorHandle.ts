@@ -19,3 +19,10 @@ export const EditorHandleContext = createContext<EditorHandle | null>(null);
 export function useEditorHandle(): EditorHandle | null {
   return useContext(EditorHandleContext);
 }
+
+export interface MarkdownRecoveryActions {
+  insert(markdown: string): void;
+  replace(markdown: string): void;
+}
+
+export const MarkdownRecoveryContext = createContext<MarkdownRecoveryActions | null>(null);

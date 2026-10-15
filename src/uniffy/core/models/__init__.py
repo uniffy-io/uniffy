@@ -55,6 +55,7 @@ from uniffy.core.models.files.file_version import FileVersion
 from uniffy.core.models.files.folder import Folder
 from uniffy.core.models.files.media_info import FileMediaInfo
 from uniffy.core.models.files.multipart_upload import MultipartUpload, UploadStatus
+from uniffy.core.models.files.reconciliation import InlineAttachmentReconciliation
 from uniffy.core.models.files.rendition import FileRendition
 from uniffy.core.models.integrations.connection import IntegrationConnection
 from uniffy.core.models.login.group import Group, GroupKind
@@ -77,6 +78,7 @@ from uniffy.core.models.notifications.email_delivery import (
     NotificationEmailStatus,
 )
 from uniffy.core.models.notifications.notification import Notification
+from uniffy.core.models.notifications.outbox import NotificationOutbox
 from uniffy.core.models.notifications.push_subscription import PushSubscription
 from uniffy.core.models.people.identity import IdentityLink, IdentitySource, IdentitySourceKind
 from uniffy.core.models.people.profile import PeopleProfile
@@ -192,6 +194,8 @@ __all__ = [
     "CommentReaction",
     "EmailComposer",
     "Notification",
+    "NotificationOutbox",
+    "InlineAttachmentReconciliation",
     "NotificationEmailDelivery",
     "NotificationEmailStatus",
     "NotificationType",

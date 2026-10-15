@@ -25,9 +25,12 @@ from uniffy.core.realtime.auth import (
     get_ws_origin_allowlist,
     origin_is_allowed,
 )
+from uniffy.core.realtime.limits import MAX_SOCKETS_PER_USER
 from uniffy.core.realtime.metrics import REALTIME_AUTH_FAILURES_TOTAL
 from uniffy.core.realtime.session import run_multiplexed_session
 from uniffy.core.realtime.state import WSSession
+
+_active_sockets: dict[UUID, int] = {}
 
 LOGGER_COMPONENT = "realtime.ws"
 
@@ -56,7 +59,7 @@ async def realtime(
     if token is None:
         REALTIME_AUTH_FAILURES_TOTAL.labels(reason="missing_token").inc()
         logger.warning(
-            f"realtime upgrade rejected: missing token (subprotocol_header={subprotocol_header!r})",
+            "realtime upgrade rejected: missing token",
             component=LOGGER_COMPONENT,
         )
         await ws.close(code=WS_CLOSE_UNAUTHENTICATED, reason="missing token")
@@ -132,6 +135,9 @@ async def realtime(
         await ws.close(code=WS_CLOSE_FORBIDDEN, reason="not a member")
         return
 
+    if _active_sockets.get(user_id, 0) >= MAX_SOCKETS_PER_USER:
+        await ws.close(code=1013, reason="too many connections")
+        return
     await ws.accept(subprotocol=CANONICAL_SUBPROTOCOL)
 
     ws_session = WSSession(
@@ -143,4 +149,12 @@ async def realtime(
         session_id=session_id,
         expires_at=expires_at,
     )
-    await run_multiplexed_session(ws, ws_session)
+    _active_sockets[user_id] = _active_sockets.get(user_id, 0) + 1
+    try:
+        await run_multiplexed_session(ws, ws_session)
+    finally:
+        remaining = _active_sockets[user_id] - 1
+        if remaining:
+            _active_sockets[user_id] = remaining
+        else:
+            _active_sockets.pop(user_id, None)

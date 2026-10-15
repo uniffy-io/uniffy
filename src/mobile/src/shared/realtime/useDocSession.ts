@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import * as Y from "yjs";
 import { Awareness } from "y-protocols/awareness";
 import { useAuth } from "@core/providers/AuthContext";
@@ -7,8 +7,16 @@ import {
   REMOTE_ORIGIN,
   type DocSubscription,
 } from "@shared/realtime/multiplexer";
+import { abortMobileDrain } from "@shared/realtime/drain";
 import { statusFromCloseCode, type RealtimeStatus } from "@shared/realtime/protocol";
-import { saveDraft, restoreDraft, type MobileRecoveredDraft } from "@shared/realtime/draftStorage";
+import {
+  saveDraft,
+  restoreDraft,
+  readStoredDrafts,
+  discardDraft,
+  discardGeneration,
+  type MobileRecoveredDraft,
+} from "@shared/realtime/draftStorage";
 
 /** Stable per-attach handle; identity never changes while the doc stays attached. */
 export interface DocSession {
@@ -18,6 +26,8 @@ export interface DocSession {
   sessionId: string;
   /** Resolves on the first server SyncStep2 for this doc. */
   whenSynced: Promise<void>;
+  initialDrafts: Promise<MobileRecoveredDraft[]>;
+  storageKey: string;
 }
 
 export interface DocSessionState {
@@ -25,6 +35,7 @@ export interface DocSessionState {
   status: RealtimeStatus;
   synced: boolean;
   recoveredDrafts: MobileRecoveredDraft[];
+  discardRecoveredDraft: (id: string) => Promise<void>;
 }
 
 export interface UseDocSessionOptions {
@@ -66,13 +77,27 @@ export function useDocSession(opts: UseDocSessionOptions): DocSessionState {
   useEffect(() => {
     if (!enabled || !contentId || !organizationId || !userId) return;
 
+    abortMobileDrain(`${contentType}:${contentId}`);
     const ydoc = new Y.Doc();
     const awareness = new Awareness(ydoc);
     const sessionId = newSessionId();
     const storageKey = `realtime.${userId}.${organizationId}.${contentType}.${contentId}`;
     let disposed = false;
+    let dirty = false;
+    let serverSynced = false;
+    let transportStatus: RealtimeStatus = "idle";
+    let denied = false;
+    const initialDrafts = readStoredDrafts(storageKey);
+    void initialDrafts
+      .then((drafts) => {
+        if (!disposed) setRecoveredDrafts(drafts);
+      })
+      .catch((error) => console.warn("[realtime] draft recovery failed", error));
     const persist = (_update: Uint8Array, origin: unknown) => {
-      if (origin !== REMOTE_ORIGIN) void saveDraft(storageKey, ydoc);
+      if (origin !== REMOTE_ORIGIN && !readOnly && ydoc.getMap("doc_meta").get("generation")) {
+        dirty = true;
+        void saveDraft(storageKey, ydoc);
+      }
     };
     ydoc.on("update", persist);
 
@@ -89,13 +114,30 @@ export function useDocSession(opts: UseDocSessionOptions): DocSessionState {
         organizationId,
         ydoc,
         awareness,
-        onStatus: (next) => setStatus(next),
-        onWriteDenied: () => setStatus("permission_lost"),
+        onStatus: (next) => {
+          transportStatus = next;
+          setStatus(next);
+        },
+        onWriteDenied: (reason, noView) => {
+          denied = true;
+          setStatus(
+            reason.includes("too large")
+              ? "update_rejected"
+              : noView
+                ? "access_lost"
+                : "permission_lost",
+          );
+        },
         onSync: () =>
-          void restoreDraft(storageKey, ydoc, sessionId)
+          void (
+            readOnly
+              ? readStoredDrafts(storageKey)
+              : restoreDraft(storageKey, ydoc, sessionId, () => !disposed)
+          )
             .then((drafts) => {
               if (disposed) return;
               setRecoveredDrafts(drafts);
+              serverSynced = true;
               setSynced(true);
               resolveServerSync();
             })
@@ -113,6 +155,7 @@ export function useDocSession(opts: UseDocSessionOptions): DocSessionState {
         },
       });
     } catch (err) {
+      disposed = true;
       // Double-attach or a torn-down multiplexer; stay idle instead of taking
       // the screen down from inside a passive effect.
       console.warn(`[realtime] attach failed for ${contentType}:${contentId}`, err);
@@ -125,21 +168,42 @@ export function useDocSession(opts: UseDocSessionOptions): DocSessionState {
     // The handle can only exist after the attach side effect succeeds; there
     // is nothing to derive during render.
     // eslint-disable-next-line react/react-compiler
-    setSession({ ydoc, awareness, sessionId, whenSynced });
+    setSession({ ydoc, awareness, sessionId, whenSynced, initialDrafts, storageKey });
 
     return () => {
       beforeDetachRef.current?.();
       disposed = true;
       ydoc.off("update", persist);
-      void saveDraft(storageKey, ydoc);
+      const clean =
+        !readOnly &&
+        serverSynced &&
+        !denied &&
+        transportStatus === "connected" &&
+        !realtimeMultiplexer.isOutboundPending(subscription.docName);
+      if (clean)
+        void discardGeneration(
+          storageKey,
+          String(ydoc.getMap("doc_meta").get("generation") ?? ""),
+        ).catch(console.warn);
+      else if (dirty) void saveDraft(storageKey, ydoc);
       subscription.destroy();
       awareness.destroy();
       ydoc.destroy();
       setSession(null);
       setSynced(false);
       setStatus("idle");
+      setRecoveredDrafts([]);
     };
   }, [enabled, contentType, contentId, organizationId, userId, readOnly, reset]);
 
-  return { session, status, synced, recoveredDrafts };
+  const discardRecoveredDraft = useCallback(
+    async (id: string) => {
+      if (!session) return;
+      await discardDraft(session.storageKey, id);
+      setRecoveredDrafts((drafts) => drafts.filter((draft) => draft.id !== id));
+    },
+    [session],
+  );
+
+  return { session, status, synced, recoveredDrafts, discardRecoveredDraft };
 }

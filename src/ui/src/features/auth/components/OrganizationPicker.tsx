@@ -18,6 +18,9 @@ import { Card } from "@/components/ui/card";
 import { getAvatarGradientStyle, getInitials } from "@/components/subject/utils";
 import { cn } from "@/shared/utils/cn";
 import { unaryTransport, setMemoryAccessToken } from "@/config";
+import { publicUnaryTransport } from "@/config/api";
+import { withAuthLock } from "@/features/auth/authLock";
+import { readStoredAuth } from "@/features/auth/store/credentialStorage";
 import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 import {
   Buildings,
@@ -68,6 +71,7 @@ export function OrganizationPicker() {
   const user = useAppSelector((state) => state.auth?.user);
   const recordingState = useAppSelector((state) => state.recording.state);
   const [pendingOrgSlug, setPendingOrgSlug] = useState<string | null>(null);
+  const [confirmingUnsynced, setConfirmingUnsynced] = useState(false);
 
   useEffect(() => {
     if (!accessToken) {
@@ -123,45 +127,52 @@ export function OrganizationPicker() {
     }
     setSelectingSlug(orgSlug);
     try {
-      const client = createClient(AuthService, unaryTransport);
-      const response = await client.switchOrganization({
-        refreshToken,
-        organizationSlug: orgSlug,
+      await withAuthLock(async () => {
+        const current = readStoredAuth();
+        if (!current?.refreshToken || current.user?.id !== user?.id)
+          throw new Error("Session changed");
+        const client = createClient(AuthService, publicUnaryTransport);
+        const response = await client.switchOrganization({
+          refreshToken: current.refreshToken,
+          organizationSlug: orgSlug,
+        });
+        if (readStoredAuth()?.refreshToken !== current.refreshToken)
+          throw new Error("Session changed");
+        const r = response.authResult;
+        if (!r) {
+          setError("Failed to switch to organization.");
+          setSelectingSlug(null);
+          return;
+        }
+
+        clearSessionCaches(dispatch);
+        dispatch(resetOrganizationScope());
+        setMemoryAccessToken(r.accessToken);
+
+        if (user) {
+          if (user.accentColor) {
+            dispatch(setAccentColor(user.accentColor));
+          }
+          if (user.fontFamily) {
+            dispatch(setFontFamily(user.fontFamily));
+          }
+
+          dispatch(
+            setCredentials({
+              user: user,
+              accessToken: r.accessToken,
+              refreshToken: r.refreshToken,
+              organizationId: r.organizationId,
+              organizationSlug: r.organizationSlug || orgSlug,
+              organizationRole: r.organizationRole,
+              sessionId: r.sessionId,
+              domainAdminDomains: Array.from(r.domainAdminDomains),
+            }),
+          );
+        }
+
+        navigate("/");
       });
-      const r = response.authResult;
-      if (!r) {
-        setError("Failed to switch to organization.");
-        setSelectingSlug(null);
-        return;
-      }
-
-      clearSessionCaches(dispatch);
-      dispatch(resetOrganizationScope());
-      setMemoryAccessToken(r.accessToken);
-
-      if (user) {
-        if (user.accentColor) {
-          dispatch(setAccentColor(user.accentColor));
-        }
-        if (user.fontFamily) {
-          dispatch(setFontFamily(user.fontFamily));
-        }
-
-        dispatch(
-          setCredentials({
-            user: user,
-            accessToken: r.accessToken,
-            refreshToken: r.refreshToken,
-            organizationId: r.organizationId,
-            organizationSlug: r.organizationSlug || orgSlug,
-            organizationRole: r.organizationRole,
-            sessionId: r.sessionId,
-            domainAdminDomains: Array.from(r.domainAdminDomains),
-          }),
-        );
-      }
-
-      navigate("/");
     } catch {
       setError("Failed to switch to organization.");
       setSelectingSlug(null);
@@ -199,6 +210,20 @@ export function OrganizationPicker() {
         variant="warning"
       />
 
+      <ConfirmDialog
+        isOpen={confirmingUnsynced}
+        onClose={() => setConfirmingUnsynced(false)}
+        onConfirm={() => {
+          setConfirmingUnsynced(false);
+          handleLogout({ discardUnsynced: true });
+        }}
+        title="Discard unsynced edits?"
+        message="Some edits have not reached the server yet. Signing out now discards them."
+        confirmLabel="Discard and sign out"
+        cancelLabel="Stay"
+        variant="warning"
+      />
+
       <div className="flex min-h-screen items-center justify-center px-6 py-12 bg-background">
         <div className="w-full max-w-md">
           <div
@@ -219,7 +244,11 @@ export function OrganizationPicker() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={handleLogout}
+              onClick={() => {
+                void handleLogout().then((signedOut) => {
+                  if (!signedOut) setConfirmingUnsynced(true);
+                });
+              }}
               className="gap-1.5 text-muted-foreground"
             >
               <SignOut className="h-4 w-4" />

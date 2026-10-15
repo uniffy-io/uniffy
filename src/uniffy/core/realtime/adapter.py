@@ -1,7 +1,8 @@
 """Extension point between generic realtime state and domain persistence."""
 
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Collection
 from datetime import datetime
+from enum import Enum, auto
 from typing import Protocol
 from uuid import UUID
 
@@ -19,6 +20,10 @@ class RealtimeRenderConflict(Exception):
 
 class RealtimeRenderSuperseded(Exception):
     """A plain write changed the row after this snapshot was encoded; the column is newer."""
+
+
+class DeferredProjection(Enum):
+    SOFT_DELETED = auto()
 
 
 def check_not_superseded(
@@ -53,7 +58,11 @@ class RealtimeContentAdapter(Protocol):
         organization_id: UUID,
         *,
         actor_id: UUID | None = None,
-    ) -> Callable[[], Awaitable[None]] | None: ...
+    ) -> Callable[[], Awaitable[None]] | DeferredProjection | None: ...
+
+    async def after_projection(
+        self, session: AsyncSession, content_id: UUID, organization_id: UUID
+    ) -> None: ...
 
     async def policy_key(
         self,
@@ -76,6 +85,14 @@ class RealtimeContentAdapter(Protocol):
         A fanout passes one ``checker`` so authorization facts load once per user.
         """
         ...
+
+    async def authorize_many(
+        self,
+        session: AsyncSession,
+        user_ids: Collection[UUID],
+        organization_id: UUID,
+        content_id: UUID,
+    ) -> dict[UUID, ContentRole | None]: ...
 
     async def hydrate_ydoc(
         self,

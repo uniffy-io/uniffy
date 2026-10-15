@@ -16,12 +16,22 @@ from uniffy.core.errors import ConflictError, NotFoundError, StaleContentVersion
 from uniffy.core.events import NotificationEvent, emit_notification
 from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.notes.note import Note
+from uniffy.core.realtime.limits import validate_document_size
 from uniffy.core.realtime.publisher import publish_content_replace
-from uniffy.core.realtime.storage import load_snapshot, lock_document, stage_replacement
+from uniffy.core.realtime.storage import (
+    load_snapshot,
+    lock_document,
+    stage_replacement,
+    stage_text_merge,
+)
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import AccessMode, ContentType, NodeType, NotificationType
 from uniffy.domains.files.attachments.inline import reconcile_inline_attachments
-from uniffy.domains.notes.content.fields import extract_content_fields, referenced_file_ids
+from uniffy.domains.notes.content.fields import (
+    NoteContentFields,
+    extract_content_fields,
+    referenced_file_ids,
+)
 from uniffy.domains.tags.context import ContentTagMutations
 from uniffy.domains.tags.sync import sync_inline_tags
 
@@ -84,18 +94,10 @@ class NoteUpdates:
             await self.operations._require_moveable_under(note_id, parent_id, organization_id)
 
         is_canvas = note.node_type == NodeType.CANVAS
+        if not is_canvas and content is not None:
+            validate_document_size(content)
         content_changed = canvas_content is not None if is_canvas else content is not None
-        fields = (
-            extract_content_fields(
-                note.node_type,
-                content or "",
-                canvas_content,
-                organization_id,
-            )
-            if content_changed
-            else None
-        )
-        parsed_inline_names = fields.parsed_inline_tag_names if fields else None
+        fields: NoteContentFields | None = None
         title_changed = False
         old_refs: list[str] | None = None
         previous_parent_id = note.parent_id
@@ -121,6 +123,22 @@ class NoteUpdates:
 
             title_changed = title is not None and title != note.title
             old_refs = note.outgoing_references if content_changed else None
+            if content_changed:
+                stored_content = content or ""
+                if not is_canvas:
+                    merged = await stage_text_merge(
+                        self.operations.session,
+                        (ContentType.NOTE, note_id),
+                        organization_id,
+                        user_id,
+                        base=note.content or "",
+                        incoming=stored_content,
+                    )
+                    if merged is not None:
+                        stored_content = merged
+                fields = extract_content_fields(
+                    note.node_type, stored_content, canvas_content, organization_id
+                )
             previous_parent_id = note.parent_id
             parent_changed = False
             values: dict[str, Any] = {"updated_at": datetime.now(UTC)}
@@ -157,7 +175,7 @@ class NoteUpdates:
                 .execution_options(synchronize_session=False)
             )
             if result.rowcount:
-                if content_changed:
+                if content_changed and is_canvas:
                     await stage_replacement(
                         self.operations.session, (ContentType.NOTE, note_id), organization_id
                     )
@@ -188,7 +206,8 @@ class NoteUpdates:
             raise ConflictError("Note", f"concurrent edits on {note_id}")
 
         await self.operations.session.refresh(note)
-        if content_changed and not is_canvas and fields is not None:
+        parsed_inline_names = fields.parsed_inline_tag_names if fields is not None else None
+        if content_changed and fields is not None:
             await publish_content_replace(ContentType.NOTE, note_id, fields.content)
 
         if content_changed and fields is not None:
