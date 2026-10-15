@@ -1,0 +1,630 @@
+{
+  "description": "Realtime wire frames the backend, web and mobile codecs must reproduce byte for byte, plus ordered frame sequences for the client coverage state machine.",
+  "frame": "Bytes after the multiplex document name: a varuint message type, then the fields in the order listed below. A string is a varuint byte length and UTF-8 of at most 128 bytes. An integer is a varuint from 0 through 9007199254740991. A frame is malformed when its type differs, a field is truncated, a string exceeds 128 bytes or is not UTF-8, an integer exceeds the maximum, bytes trail the last field, accepted_sequence is 0 or checkpoint_sequence is above head_sequence.",
+  "messages": {
+    "5": [
+      "generation"
+    ],
+    "7": [
+      "update_id"
+    ],
+    "11": [
+      "update_id",
+      "generation",
+      "epoch",
+      "accepted_sequence"
+    ],
+    "12": [
+      "generation",
+      "epoch",
+      "covered_sequence",
+      "checkpoint_revision"
+    ],
+    "13": [
+      "generation",
+      "epoch",
+      "head_sequence",
+      "checkpoint_sequence",
+      "checkpoint_revision"
+    ]
+  },
+  "fields": {
+    "update_id": "Minted by the client for one durable write. The server echoes it in messages 7 and 11.",
+    "generation": "Minted by the server in PostgreSQL. Changes only on intentional replacement. Empty for historical snapshots.",
+    "epoch": "Minted by the server in PostgreSQL when the edit buffer is initialized or reset. The generation stays the same. Opaque and compared only for equality.",
+    "accepted_sequence": "Issued by the server for one accepted update. Strictly increasing within one generation and epoch, starting at 1.",
+    "covered_sequence": "Highest accepted sequence of the generation and epoch that PostgreSQL has committed. 0 covers nothing.",
+    "head_sequence": "Highest accepted sequence issued in the generation and epoch. 0 before the first update.",
+    "checkpoint_sequence": "The covered sequence reported when a client attaches. Never above head_sequence.",
+    "checkpoint_revision": "PostgreSQL snapshot revision that holds the checkpoint."
+  },
+  "coverage": {
+    "local": "The device holds the edit and the server has not confirmed it. Retry and local recovery keep it.",
+    "accepted": "The server appended the edit to its buffer. Routine retransmission stops. Local recovery keeps it.",
+    "checkpointed": "A PostgreSQL commit includes the edit. Its retry bytes and local dirty marker can retire."
+  },
+  "rules": [
+    "Session state sets the current generation and epoch.",
+    "A receipt with the current generation and epoch moves its update from local to accepted.",
+    "Progress or session state with the current generation and epoch checkpoints every accepted update whose accepted_sequence is at or below its covered_sequence or checkpoint_sequence.",
+    "Progress that arrives before a receipt stays as the epoch watermark and checkpoints the update when its receipt arrives.",
+    "Session state with a new epoch returns every accepted update that is not checkpointed to local. Those updates replay and get receipts in the new epoch.",
+    "A frame for another generation or epoch never changes coverage.",
+    "Message 7 still means committed. The server sends it only for synchronous writes such as fragment seed proposals, never for a buffer append."
+  ],
+  "cases": [
+    {
+      "name": "generation",
+      "type": 5,
+      "fields": {
+        "generation": "3f9c1a52-7d4e-4b8a-9c61-0e2f5d8b7a14"
+      },
+      "hex": "052433663963316135322d376434652d346238612d396336312d306532663564386237613134"
+    },
+    {
+      "name": "generation_empty_historical",
+      "type": 5,
+      "fields": {
+        "generation": ""
+      },
+      "hex": "0500"
+    },
+    {
+      "name": "ack_committed",
+      "type": 7,
+      "fields": {
+        "update_id": "6b2d9e41-3c8f-4a07-b5d2-91e8f0a4c637"
+      },
+      "hex": "072436623264396534312d336338662d346130372d623564322d393165386630613463363337"
+    },
+    {
+      "name": "accepted_receipt",
+      "type": 11,
+      "fields": {
+        "update_id": "6b2d9e41-3c8f-4a07-b5d2-91e8f0a4c637",
+        "generation": "3f9c1a52-7d4e-4b8a-9c61-0e2f5d8b7a14",
+        "epoch": "0193a6c2-5b7e-7f10-8d42-6a9e3c1b2f75",
+        "accepted_sequence": 42
+      },
+      "hex": "0b2436623264396534312d336338662d346130372d623564322d3931653866306134633633372433663963316135322d376434652d346238612d396336312d3065326635643862376131342430313933613663322d356237652d376631302d386434322d3661396533633162326637352a"
+    },
+    {
+      "name": "accepted_receipt_first_sequence",
+      "type": 11,
+      "fields": {
+        "update_id": "6b2d9e41-3c8f-4a07-b5d2-91e8f0a4c637",
+        "generation": "3f9c1a52-7d4e-4b8a-9c61-0e2f5d8b7a14",
+        "epoch": "0193a6c2-5b7e-7f10-8d42-6a9e3c1b2f75",
+        "accepted_sequence": 1
+      },
+      "hex": "0b2436623264396534312d336338662d346130372d623564322d3931653866306134633633372433663963316135322d376434652d346238612d396336312d3065326635643862376131342430313933613663322d356237652d376631302d386434322d36613965336331623266373501"
+    },
+    {
+      "name": "accepted_receipt_maximum",
+      "type": 11,
+      "fields": {
+        "update_id": "uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu",
+        "generation": "€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€gg",
+        "epoch": "éééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé",
+        "accepted_sequence": 9007199254740991
+      },
+      "hex": "0b800175757575757575757575757575757575757575757575757575757575757575757575757575757575757575757575757575757575757575757575757575757575757575757575757575757575757575757575757575757575757575757575757575757575757575757575757575757575757575757575757575757575757575758001e282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ac67678001c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9ffffffffffffff0f"
+    },
+    {
+      "name": "checkpoint_progress",
+      "type": 12,
+      "fields": {
+        "generation": "3f9c1a52-7d4e-4b8a-9c61-0e2f5d8b7a14",
+        "epoch": "0193a6c2-5b7e-7f10-8d42-6a9e3c1b2f75",
+        "covered_sequence": 41,
+        "checkpoint_revision": 17
+      },
+      "hex": "0c2433663963316135322d376434652d346238612d396336312d3065326635643862376131342430313933613663322d356237652d376631302d386434322d3661396533633162326637352911"
+    },
+    {
+      "name": "checkpoint_progress_nothing_covered",
+      "type": 12,
+      "fields": {
+        "generation": "3f9c1a52-7d4e-4b8a-9c61-0e2f5d8b7a14",
+        "epoch": "0193a6c2-5b7e-7f10-8d42-6a9e3c1b2f75",
+        "covered_sequence": 0,
+        "checkpoint_revision": 0
+      },
+      "hex": "0c2433663963316135322d376434652d346238612d396336312d3065326635643862376131342430313933613663322d356237652d376631302d386434322d3661396533633162326637350000"
+    },
+    {
+      "name": "checkpoint_progress_varint_boundaries",
+      "type": 12,
+      "fields": {
+        "generation": "3f9c1a52-7d4e-4b8a-9c61-0e2f5d8b7a14",
+        "epoch": "0193a6c2-5b7e-7f10-8d42-6a9e3c1b2f75",
+        "covered_sequence": 127,
+        "checkpoint_revision": 128
+      },
+      "hex": "0c2433663963316135322d376434652d346238612d396336312d3065326635643862376131342430313933613663322d356237652d376631302d386434322d3661396533633162326637357f8001"
+    },
+    {
+      "name": "checkpoint_progress_maximum",
+      "type": 12,
+      "fields": {
+        "generation": "€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€gg",
+        "epoch": "éééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé",
+        "covered_sequence": 9007199254740991,
+        "checkpoint_revision": 9007199254740991
+      },
+      "hex": "0c8001e282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ac67678001c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9ffffffffffffff0fffffffffffffff0f"
+    },
+    {
+      "name": "session_state",
+      "type": 13,
+      "fields": {
+        "generation": "3f9c1a52-7d4e-4b8a-9c61-0e2f5d8b7a14",
+        "epoch": "0193a6c2-5b7e-7f10-8d42-6a9e3c1b2f75",
+        "head_sequence": 45,
+        "checkpoint_sequence": 41,
+        "checkpoint_revision": 17
+      },
+      "hex": "0d2433663963316135322d376434652d346238612d396336312d3065326635643862376131342430313933613663322d356237652d376631302d386434322d3661396533633162326637352d2911"
+    },
+    {
+      "name": "session_state_minimum",
+      "type": 13,
+      "fields": {
+        "generation": "",
+        "epoch": "",
+        "head_sequence": 0,
+        "checkpoint_sequence": 0,
+        "checkpoint_revision": 0
+      },
+      "hex": "0d0000000000"
+    },
+    {
+      "name": "session_state_varint_boundaries",
+      "type": 13,
+      "fields": {
+        "generation": "3f9c1a52-7d4e-4b8a-9c61-0e2f5d8b7a14",
+        "epoch": "0193a6c2-5b7e-7f10-8d42-6a9e3c1b2f75",
+        "head_sequence": 16384,
+        "checkpoint_sequence": 16383,
+        "checkpoint_revision": 2097152
+      },
+      "hex": "0d2433663963316135322d376434652d346238612d396336312d3065326635643862376131342430313933613663322d356237652d376631302d386434322d366139653363316232663735808001ff7f80808001"
+    },
+    {
+      "name": "session_state_maximum",
+      "type": 13,
+      "fields": {
+        "generation": "€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€gg",
+        "epoch": "éééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé",
+        "head_sequence": 9007199254740991,
+        "checkpoint_sequence": 9007199254740991,
+        "checkpoint_revision": 9007199254740991
+      },
+      "hex": "0d8001e282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ace282ac67678001c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9ffffffffffffff0fffffffffffffff0fffffffffffffff0f"
+    },
+    {
+      "name": "generation_truncated",
+      "type": 5,
+      "error": "string runs past the frame",
+      "hex": "052433663963316135322d37"
+    },
+    {
+      "name": "ack_truncated",
+      "type": 7,
+      "error": "string runs past the frame",
+      "hex": "0724"
+    },
+    {
+      "name": "accepted_receipt_empty_frame",
+      "type": 11,
+      "error": "empty frame",
+      "hex": ""
+    },
+    {
+      "name": "accepted_receipt_wrong_type",
+      "type": 11,
+      "error": "message type 12 where 11 is expected",
+      "hex": "0c2433663963316135322d376434652d346238612d396336312d3065326635643862376131342430313933613663322d356237652d376631302d386434322d3661396533633162326637352911"
+    },
+    {
+      "name": "accepted_receipt_missing_sequence",
+      "type": 11,
+      "error": "frame ends before accepted_sequence",
+      "hex": "0b2436623264396534312d336338662d346130372d623564322d3931653866306134633633372433663963316135322d376434652d346238612d396336312d3065326635643862376131342430313933613663322d356237652d376631302d386434322d366139653363316232663735"
+    },
+    {
+      "name": "accepted_receipt_unterminated_varint",
+      "type": 11,
+      "error": "accepted_sequence varint has no final byte",
+      "hex": "0b2436623264396534312d336338662d346130372d623564322d3931653866306134633633372433663963316135322d376434652d346238612d396336312d3065326635643862376131342430313933613663322d356237652d376631302d386434322d366139653363316232663735ffff"
+    },
+    {
+      "name": "accepted_receipt_string_past_end",
+      "type": 11,
+      "error": "update_id length runs past the frame",
+      "hex": "0b2436623264396534312d33"
+    },
+    {
+      "name": "accepted_receipt_trailing_byte",
+      "type": 11,
+      "error": "trailing byte after the last field",
+      "hex": "0b2436623264396534312d336338662d346130372d623564322d3931653866306134633633372433663963316135322d376434652d346238612d396336312d3065326635643862376131342430313933613663322d356237652d376631302d386434322d3661396533633162326637352a00"
+    },
+    {
+      "name": "accepted_receipt_invalid_utf8",
+      "type": 11,
+      "error": "update_id is not UTF-8",
+      "hex": "0b02fffe2433663963316135322d376434652d346238612d396336312d3065326635643862376131342430313933613663322d356237652d376631302d386434322d3661396533633162326637352a"
+    },
+    {
+      "name": "accepted_receipt_zero_sequence",
+      "type": 11,
+      "error": "accepted_sequence starts at 1",
+      "fields": {
+        "update_id": "6b2d9e41-3c8f-4a07-b5d2-91e8f0a4c637",
+        "generation": "3f9c1a52-7d4e-4b8a-9c61-0e2f5d8b7a14",
+        "epoch": "0193a6c2-5b7e-7f10-8d42-6a9e3c1b2f75",
+        "accepted_sequence": 0
+      },
+      "hex": "0b2436623264396534312d336338662d346130372d623564322d3931653866306134633633372433663963316135322d376434652d346238612d396336312d3065326635643862376131342430313933613663322d356237652d376631302d386434322d36613965336331623266373500"
+    },
+    {
+      "name": "accepted_receipt_update_id_too_long",
+      "type": 11,
+      "error": "update_id is 129 bytes",
+      "fields": {
+        "update_id": "uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu",
+        "generation": "3f9c1a52-7d4e-4b8a-9c61-0e2f5d8b7a14",
+        "epoch": "0193a6c2-5b7e-7f10-8d42-6a9e3c1b2f75",
+        "accepted_sequence": 42
+      },
+      "hex": "0b81017575757575757575757575757575757575757575757575757575757575757575757575757575757575757575757575757575757575757575757575757575757575757575757575757575757575757575757575757575757575757575757575757575757575757575757575757575757575757575757575757575757575757575752433663963316135322d376434652d346238612d396336312d3065326635643862376131342430313933613663322d356237652d376631302d386434322d3661396533633162326637352a"
+    },
+    {
+      "name": "accepted_receipt_sequence_too_large",
+      "type": 11,
+      "error": "accepted_sequence is 2^53",
+      "fields": {
+        "update_id": "6b2d9e41-3c8f-4a07-b5d2-91e8f0a4c637",
+        "generation": "3f9c1a52-7d4e-4b8a-9c61-0e2f5d8b7a14",
+        "epoch": "0193a6c2-5b7e-7f10-8d42-6a9e3c1b2f75",
+        "accepted_sequence": 9007199254740992
+      },
+      "hex": "0b2436623264396534312d336338662d346130372d623564322d3931653866306134633633372433663963316135322d376434652d346238612d396336312d3065326635643862376131342430313933613663322d356237652d376631302d386434322d3661396533633162326637358080808080808010"
+    },
+    {
+      "name": "checkpoint_progress_epoch_too_long_multibyte",
+      "type": 12,
+      "error": "epoch is 65 characters but 129 bytes",
+      "fields": {
+        "generation": "3f9c1a52-7d4e-4b8a-9c61-0e2f5d8b7a14",
+        "epoch": "éééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééée",
+        "covered_sequence": 41,
+        "checkpoint_revision": 17
+      },
+      "hex": "0c2433663963316135322d376434652d346238612d396336312d3065326635643862376131348101c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9c3a9652911"
+    },
+    {
+      "name": "checkpoint_progress_revision_too_large",
+      "type": 12,
+      "error": "checkpoint_revision is 2^53",
+      "fields": {
+        "generation": "3f9c1a52-7d4e-4b8a-9c61-0e2f5d8b7a14",
+        "epoch": "0193a6c2-5b7e-7f10-8d42-6a9e3c1b2f75",
+        "covered_sequence": 41,
+        "checkpoint_revision": 9007199254740992
+      },
+      "hex": "0c2433663963316135322d376434652d346238612d396336312d3065326635643862376131342430313933613663322d356237652d376631302d386434322d366139653363316232663735298080808080808010"
+    },
+    {
+      "name": "checkpoint_progress_ten_byte_varint",
+      "type": 12,
+      "error": "covered_sequence varint is longer than any representable value",
+      "hex": "0c2433663963316135322d376434652d346238612d396336312d3065326635643862376131342430313933613663322d356237652d376631302d386434322d366139653363316232663735ffffffffffffffffff0111"
+    },
+    {
+      "name": "checkpoint_progress_missing_revision",
+      "type": 12,
+      "error": "frame ends before checkpoint_revision",
+      "hex": "0c2433663963316135322d376434652d346238612d396336312d3065326635643862376131342430313933613663322d356237652d376631302d386434322d36613965336331623266373529"
+    },
+    {
+      "name": "session_state_checkpoint_ahead_of_head",
+      "type": 13,
+      "error": "checkpoint_sequence is above head_sequence",
+      "fields": {
+        "generation": "3f9c1a52-7d4e-4b8a-9c61-0e2f5d8b7a14",
+        "epoch": "0193a6c2-5b7e-7f10-8d42-6a9e3c1b2f75",
+        "head_sequence": 5,
+        "checkpoint_sequence": 6,
+        "checkpoint_revision": 17
+      },
+      "hex": "0d2433663963316135322d376434652d346238612d396336312d3065326635643862376131342430313933613663322d356237652d376631302d386434322d366139653363316232663735050611"
+    },
+    {
+      "name": "session_state_head_too_large",
+      "type": 13,
+      "error": "head_sequence is 2^53",
+      "fields": {
+        "generation": "3f9c1a52-7d4e-4b8a-9c61-0e2f5d8b7a14",
+        "epoch": "0193a6c2-5b7e-7f10-8d42-6a9e3c1b2f75",
+        "head_sequence": 9007199254740992,
+        "checkpoint_sequence": 41,
+        "checkpoint_revision": 17
+      },
+      "hex": "0d2433663963316135322d376434652d346238612d396336312d3065326635643862376131342430313933613663322d356237652d376631302d386434322d36613965336331623266373580808080808080102911"
+    },
+    {
+      "name": "session_state_trailing_byte",
+      "type": 13,
+      "error": "trailing byte after the last field",
+      "hex": "0d2433663963316135322d376434652d346238612d396336312d3065326635643862376131342430313933613663322d356237652d376631302d386434322d3661396533633162326637352d291101"
+    }
+  ],
+  "sequences": [
+    {
+      "name": "receipt_then_checkpoint",
+      "description": "Two edits are accepted in order; progress covers the first one only.",
+      "steps": [
+        {
+          "frame": {
+            "type": 13,
+            "fields": {
+              "generation": "3f9c1a52-7d4e-4b8a-9c61-0e2f5d8b7a14",
+              "epoch": "0193a6c2-5b7e-7f10-8d42-6a9e3c1b2f75",
+              "head_sequence": 0,
+              "checkpoint_sequence": 0,
+              "checkpoint_revision": 1
+            },
+            "hex": "0d2433663963316135322d376434652d346238612d396336312d3065326635643862376131342430313933613663322d356237652d376631302d386434322d366139653363316232663735000001"
+          }
+        },
+        {
+          "local": "edit-a"
+        },
+        {
+          "local": "edit-b"
+        },
+        {
+          "frame": {
+            "type": 11,
+            "fields": {
+              "update_id": "edit-a",
+              "generation": "3f9c1a52-7d4e-4b8a-9c61-0e2f5d8b7a14",
+              "epoch": "0193a6c2-5b7e-7f10-8d42-6a9e3c1b2f75",
+              "accepted_sequence": 1
+            },
+            "hex": "0b06656469742d612433663963316135322d376434652d346238612d396336312d3065326635643862376131342430313933613663322d356237652d376631302d386434322d36613965336331623266373501"
+          }
+        },
+        {
+          "frame": {
+            "type": 11,
+            "fields": {
+              "update_id": "edit-b",
+              "generation": "3f9c1a52-7d4e-4b8a-9c61-0e2f5d8b7a14",
+              "epoch": "0193a6c2-5b7e-7f10-8d42-6a9e3c1b2f75",
+              "accepted_sequence": 2
+            },
+            "hex": "0b06656469742d622433663963316135322d376434652d346238612d396336312d3065326635643862376131342430313933613663322d356237652d376631302d386434322d36613965336331623266373502"
+          }
+        },
+        {
+          "frame": {
+            "type": 12,
+            "fields": {
+              "generation": "3f9c1a52-7d4e-4b8a-9c61-0e2f5d8b7a14",
+              "epoch": "0193a6c2-5b7e-7f10-8d42-6a9e3c1b2f75",
+              "covered_sequence": 1,
+              "checkpoint_revision": 2
+            },
+            "hex": "0c2433663963316135322d376434652d346238612d396336312d3065326635643862376131342430313933613663322d356237652d376631302d386434322d3661396533633162326637350102"
+          }
+        }
+      ],
+      "coverage": {
+        "edit-a": "checkpointed",
+        "edit-b": "accepted"
+      }
+    },
+    {
+      "name": "checkpoint_before_receipt",
+      "description": "Progress overtakes the receipt it covers; the receipt then lands checkpointed, a later receipt stays accepted and a later edit stays local.",
+      "steps": [
+        {
+          "frame": {
+            "type": 13,
+            "fields": {
+              "generation": "3f9c1a52-7d4e-4b8a-9c61-0e2f5d8b7a14",
+              "epoch": "0193a6c2-5b7e-7f10-8d42-6a9e3c1b2f75",
+              "head_sequence": 0,
+              "checkpoint_sequence": 0,
+              "checkpoint_revision": 1
+            },
+            "hex": "0d2433663963316135322d376434652d346238612d396336312d3065326635643862376131342430313933613663322d356237652d376631302d386434322d366139653363316232663735000001"
+          }
+        },
+        {
+          "local": "edit-a"
+        },
+        {
+          "local": "edit-b"
+        },
+        {
+          "frame": {
+            "type": 12,
+            "fields": {
+              "generation": "3f9c1a52-7d4e-4b8a-9c61-0e2f5d8b7a14",
+              "epoch": "0193a6c2-5b7e-7f10-8d42-6a9e3c1b2f75",
+              "covered_sequence": 1,
+              "checkpoint_revision": 2
+            },
+            "hex": "0c2433663963316135322d376434652d346238612d396336312d3065326635643862376131342430313933613663322d356237652d376631302d386434322d3661396533633162326637350102"
+          }
+        },
+        {
+          "frame": {
+            "type": 11,
+            "fields": {
+              "update_id": "edit-a",
+              "generation": "3f9c1a52-7d4e-4b8a-9c61-0e2f5d8b7a14",
+              "epoch": "0193a6c2-5b7e-7f10-8d42-6a9e3c1b2f75",
+              "accepted_sequence": 1
+            },
+            "hex": "0b06656469742d612433663963316135322d376434652d346238612d396336312d3065326635643862376131342430313933613663322d356237652d376631302d386434322d36613965336331623266373501"
+          }
+        },
+        {
+          "frame": {
+            "type": 11,
+            "fields": {
+              "update_id": "edit-b",
+              "generation": "3f9c1a52-7d4e-4b8a-9c61-0e2f5d8b7a14",
+              "epoch": "0193a6c2-5b7e-7f10-8d42-6a9e3c1b2f75",
+              "accepted_sequence": 2
+            },
+            "hex": "0b06656469742d622433663963316135322d376434652d346238612d396336312d3065326635643862376131342430313933613663322d356237652d376631302d386434322d36613965336331623266373502"
+          }
+        },
+        {
+          "local": "edit-c"
+        }
+      ],
+      "coverage": {
+        "edit-a": "checkpointed",
+        "edit-b": "accepted",
+        "edit-c": "local"
+      }
+    },
+    {
+      "name": "older_epoch_progress_after_newer_edits",
+      "description": "The buffer resets to a new epoch with the same generation. Accepted edits replay and get new receipts. Late progress from the retired epoch carries larger sequences and must not cover anything.",
+      "steps": [
+        {
+          "frame": {
+            "type": 13,
+            "fields": {
+              "generation": "3f9c1a52-7d4e-4b8a-9c61-0e2f5d8b7a14",
+              "epoch": "0193a6c2-5b7e-7f10-8d42-6a9e3c1b2f75",
+              "head_sequence": 4,
+              "checkpoint_sequence": 4,
+              "checkpoint_revision": 5
+            },
+            "hex": "0d2433663963316135322d376434652d346238612d396336312d3065326635643862376131342430313933613663322d356237652d376631302d386434322d366139653363316232663735040405"
+          }
+        },
+        {
+          "local": "edit-a"
+        },
+        {
+          "frame": {
+            "type": 11,
+            "fields": {
+              "update_id": "edit-a",
+              "generation": "3f9c1a52-7d4e-4b8a-9c61-0e2f5d8b7a14",
+              "epoch": "0193a6c2-5b7e-7f10-8d42-6a9e3c1b2f75",
+              "accepted_sequence": 5
+            },
+            "hex": "0b06656469742d612433663963316135322d376434652d346238612d396336312d3065326635643862376131342430313933613663322d356237652d376631302d386434322d36613965336331623266373505"
+          }
+        },
+        {
+          "local": "edit-b"
+        },
+        {
+          "frame": {
+            "type": 11,
+            "fields": {
+              "update_id": "edit-b",
+              "generation": "3f9c1a52-7d4e-4b8a-9c61-0e2f5d8b7a14",
+              "epoch": "0193a6c2-5b7e-7f10-8d42-6a9e3c1b2f75",
+              "accepted_sequence": 6
+            },
+            "hex": "0b06656469742d622433663963316135322d376434652d346238612d396336312d3065326635643862376131342430313933613663322d356237652d376631302d386434322d36613965336331623266373506"
+          }
+        },
+        {
+          "frame": {
+            "type": 13,
+            "fields": {
+              "generation": "3f9c1a52-7d4e-4b8a-9c61-0e2f5d8b7a14",
+              "epoch": "0193a6d8-1c04-7a22-9b13-4e7f0d5c8a96",
+              "head_sequence": 0,
+              "checkpoint_sequence": 0,
+              "checkpoint_revision": 7
+            },
+            "hex": "0d2433663963316135322d376434652d346238612d396336312d3065326635643862376131342430313933613664382d316330342d376132322d396231332d346537663064356338613936000007"
+          }
+        },
+        {
+          "frame": {
+            "type": 11,
+            "fields": {
+              "update_id": "edit-a",
+              "generation": "3f9c1a52-7d4e-4b8a-9c61-0e2f5d8b7a14",
+              "epoch": "0193a6d8-1c04-7a22-9b13-4e7f0d5c8a96",
+              "accepted_sequence": 1
+            },
+            "hex": "0b06656469742d612433663963316135322d376434652d346238612d396336312d3065326635643862376131342430313933613664382d316330342d376132322d396231332d34653766306435633861393601"
+          }
+        },
+        {
+          "frame": {
+            "type": 11,
+            "fields": {
+              "update_id": "edit-b",
+              "generation": "3f9c1a52-7d4e-4b8a-9c61-0e2f5d8b7a14",
+              "epoch": "0193a6d8-1c04-7a22-9b13-4e7f0d5c8a96",
+              "accepted_sequence": 2
+            },
+            "hex": "0b06656469742d622433663963316135322d376434652d346238612d396336312d3065326635643862376131342430313933613664382d316330342d376132322d396231332d34653766306435633861393602"
+          }
+        },
+        {
+          "local": "edit-c"
+        },
+        {
+          "frame": {
+            "type": 11,
+            "fields": {
+              "update_id": "edit-c",
+              "generation": "3f9c1a52-7d4e-4b8a-9c61-0e2f5d8b7a14",
+              "epoch": "0193a6d8-1c04-7a22-9b13-4e7f0d5c8a96",
+              "accepted_sequence": 3
+            },
+            "hex": "0b06656469742d632433663963316135322d376434652d346238612d396336312d3065326635643862376131342430313933613664382d316330342d376132322d396231332d34653766306435633861393603"
+          }
+        },
+        {
+          "frame": {
+            "type": 12,
+            "fields": {
+              "generation": "3f9c1a52-7d4e-4b8a-9c61-0e2f5d8b7a14",
+              "epoch": "0193a6c2-5b7e-7f10-8d42-6a9e3c1b2f75",
+              "covered_sequence": 6,
+              "checkpoint_revision": 6
+            },
+            "hex": "0c2433663963316135322d376434652d346238612d396336312d3065326635643862376131342430313933613663322d356237652d376631302d386434322d3661396533633162326637350606"
+          }
+        },
+        {
+          "frame": {
+            "type": 12,
+            "fields": {
+              "generation": "3f9c1a52-7d4e-4b8a-9c61-0e2f5d8b7a14",
+              "epoch": "0193a6d8-1c04-7a22-9b13-4e7f0d5c8a96",
+              "covered_sequence": 1,
+              "checkpoint_revision": 8
+            },
+            "hex": "0c2433663963316135322d376434652d346238612d396336312d3065326635643862376131342430313933613664382d316330342d376132322d396231332d3465376630643563386139360108"
+          }
+        }
+      ],
+      "coverage": {
+        "edit-a": "checkpointed",
+        "edit-b": "accepted",
+        "edit-c": "accepted"
+      }
+    }
+  ]
+}

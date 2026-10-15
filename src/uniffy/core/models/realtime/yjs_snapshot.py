@@ -3,7 +3,7 @@
 from datetime import UTC, datetime
 from uuid import UUID
 
-from sqlalchemy import BigInteger, Column, DateTime, Enum, LargeBinary
+from sqlalchemy import BigInteger, Column, DateTime, Enum, LargeBinary, Text
 from sqlmodel import Field, SQLModel
 
 from uniffy.core.types import ContentType
@@ -32,6 +32,10 @@ class RealtimeYjsSnapshot(SQLModel, table=True):
     revision: int = Field(default=0, sa_column=Column(BigInteger, nullable=False))
     rendered_revision: int = Field(default=0, sa_column=Column(BigInteger, nullable=False))
     effects_pending: bool = Field(default=False)
+    # NULL means the update buffer was never initialized for this document.
+    buffer_epoch: str | None = Field(default=None, sa_column=Column(Text, nullable=True))
+    valkey_run_id: str | None = Field(default=None, sa_column=Column(Text, nullable=True))
+    checkpoint_seq: int = Field(default=0, sa_column=Column(BigInteger, nullable=False))
     actor_id: UUID | None = None
     seed_owner: str | None = None
     seed_expires_at: datetime | None = Field(
