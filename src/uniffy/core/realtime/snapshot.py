@@ -84,6 +84,7 @@ async def persist_snapshot(
             await db.delete(snapshot)
             await db.commit()
             return SnapshotOutcome.TARGET_MISSING
+        # Accepted frames merge raw bytes; this pass collects their deleted content.
         snapshot.updates = compact_update(snapshot.updates)
         snapshot.effects_pending = True
         snapshot.rendered_revision = snapshot.revision

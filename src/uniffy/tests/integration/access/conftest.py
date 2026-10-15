@@ -12,6 +12,7 @@ expected to be at head already; the dev stack migrates on boot.
 """
 
 import os
+from collections.abc import AsyncIterator
 from types import SimpleNamespace as NS
 from unittest.mock import MagicMock
 
@@ -54,6 +55,11 @@ from uniffy.domains.projects.registration import register_project_content
 from uniffy.domains.scheduling.calendar.realtime import register_event_realtime_adapter
 from uniffy.infrastructure.database import close_db, init_db, open_session
 from uniffy.infrastructure.database.session import get_database_url
+from uniffy.infrastructure.valkey.binary import (
+    close_binary_client,
+    get_binary_client,
+    init_binary_client,
+)
 from uniffy.infrastructure.valkey.ops import close_ops_client, init_ops_client
 
 
@@ -78,15 +84,33 @@ async def database():
 
 @pytest_asyncio.fixture(scope="session", loop_scope="session", autouse=True)
 async def valkey_backend():
+    """Bring up the Valkey clients, or run without them unless Valkey is required."""
     try:
         await init_ops_client()
+        await init_binary_client()
     except Exception:
+        if os.getenv("REQUIRE_VALKEY_TESTS"):
+            raise
+    try:
         yield
-    else:
-        try:
-            yield
-        finally:
-            await close_ops_client()
+    finally:
+        await close_binary_client()
+        await close_ops_client()
+
+
+@pytest_asyncio.fixture(loop_scope="session")
+async def valkey_namespace(valkey_backend) -> AsyncIterator[str]:
+    """A unique key prefix; teardown deletes only keys under it on the shared server."""
+    client = get_binary_client()
+    if client is None:
+        pytest.skip("no Valkey")
+    prefix = f"test:{generate_id().hex}:"
+    try:
+        yield prefix
+    finally:
+        keys = [key async for key in client.scan_iter(match=f"{prefix}*", count=1000)]
+        if keys:
+            await client.delete(*keys)
 
 
 @pytest_asyncio.fixture(loop_scope="session")

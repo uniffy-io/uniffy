@@ -87,6 +87,7 @@ from uniffy.core.crypto import (
 )
 from uniffy.core.jobs import QueueName
 from uniffy.core.realtime import realtime_router
+from uniffy.core.realtime.preflight import ensure_buffer_ready, preflight_result
 from uniffy.core.realtime.router import router as realtime_pubsub_router
 from uniffy.core.search import SearchIndexer, WorkspaceSearch
 from uniffy.core.search.engine import SearchEngine
@@ -182,6 +183,7 @@ from uniffy.infrastructure.observability.logger import configure_logging
 from uniffy.infrastructure.observability.prometheus import get_metrics
 from uniffy.infrastructure.search import MeiliSearchEngine
 from uniffy.infrastructure.storage import S3Storage
+from uniffy.infrastructure.valkey.binary import close_binary_client
 from uniffy.infrastructure.valkey.ops import close_ops_client, init_ops_client
 from uniffy.infrastructure.valkey.pubsub import (
     close_pubsub,
@@ -396,6 +398,9 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"Valkey streams client not available: {e}")
 
+    # A failed start is retried later by the realtime buffer calls themselves.
+    await ensure_buffer_ready()
+
     try:
         await init_provider_invalidation_subscriber()
     except Exception as e:
@@ -478,6 +483,7 @@ async def lifespan(app: FastAPI):
     await close_dek_invalidation_subscriber()
     await close_deployment_dek_invalidation_subscriber()
     await close_streams_client()
+    await close_binary_client()
     await close_ops_client()
     await close_pubsub()
     await close_queue(QueueName.CORE)
@@ -541,7 +547,12 @@ def create_app(
 
     @app.get("/healthz")
     async def health_check():
-        return {"status": "ok", "service": "uniffy"}
+        preflight = preflight_result()
+        return {
+            "status": "ok",
+            "service": "uniffy",
+            "realtime_buffer": preflight.verdict if preflight else "not_run",
+        }
 
     @app.get("/metrics")
     async def metrics():

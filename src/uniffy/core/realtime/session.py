@@ -15,6 +15,7 @@ from uniffy.core.realtime.awareness import authenticated_awareness
 from uniffy.core.realtime.limits import (
     MAX_AWARENESS_BYTES,
     MAX_DOCS_PER_SOCKET,
+    MAX_FRAME_BYTES,
     MAX_MESSAGES_PER_SECOND,
 )
 from uniffy.core.realtime.markdown import DOC_GENERATION_KEY, DOC_META_FIELD
@@ -71,8 +72,6 @@ from uniffy.infrastructure.database.session import open_session
 
 # No server-side awareness map; a query is relayed so live peers re-announce.
 MSG_QUERY_AWARENESS = 3
-
-MAX_FRAME_BYTES = 1 * 1024 * 1024
 
 WS_CLOSE_MESSAGE_TOO_BIG = 1009
 

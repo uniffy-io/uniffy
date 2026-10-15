@@ -13,6 +13,7 @@ from uniffy.core.crypto import (
 )
 from uniffy.core.database import SESSION_FACTORY_CTX_KEY
 from uniffy.core.jobs import QueueName
+from uniffy.core.realtime.preflight import ensure_buffer_ready
 from uniffy.core.search import (
     SEARCH_INDEXER_CTX_KEY,
     WORKSPACE_SEARCH_CTX_KEY,
@@ -49,6 +50,7 @@ from uniffy.domains.scheduling.calendar.realtime import register_event_realtime_
 from uniffy.infrastructure.database import close_db, init_db, open_session
 from uniffy.infrastructure.search import MeiliSearchEngine
 from uniffy.infrastructure.storage import S3Storage
+from uniffy.infrastructure.valkey.binary import close_binary_client
 from uniffy.infrastructure.valkey.ops import close_ops_client, init_ops_client
 from uniffy.infrastructure.valkey.pubsub import close_pubsub, init_pubsub
 from uniffy.infrastructure.valkey.queue import close_queue, init_queue
@@ -76,6 +78,7 @@ class WorkerResource(StrEnum):
     QUEUE = "queue"
     PUBSUB = "pubsub"
     OPS = "ops"
+    BINARY = "binary"
     DEK_INVALIDATIONS = "dek_invalidations"
     VAPID = "vapid"
     AUDIT_PARTITIONS = "audit_partitions"
@@ -99,6 +102,7 @@ _SHARED_RESOURCES = (
     WorkerResource.QUEUE,
     WorkerResource.PUBSUB,
     WorkerResource.OPS,
+    WorkerResource.BINARY,
     WorkerResource.DEK_INVALIDATIONS,
 )
 CORE_RESOURCE_PROFILE = FleetResourceProfile(
@@ -178,6 +182,9 @@ async def _on_startup_shared(
     except Exception as e:
         logger.warning(f"Worker: Valkey ops client not available: {e}")
 
+    # A failed start is retried later by the realtime buffer calls themselves.
+    await ensure_buffer_ready()
+
     try:
         await subscribe_dek_invalidations()
         logger.info("Worker: Org DEK invalidation subscriber started")
@@ -213,6 +220,7 @@ async def _on_shutdown_shared(ctx: dict[str, Any]) -> None:
             logger.warning(f"Failed to close search engine during shutdown: {exc}")
 
     for name, coro in [
+        ("binary_client", close_binary_client()),
         ("ops_client", close_ops_client()),
         ("queue", close_queue(queue_name)),
         ("pubsub", close_pubsub()),

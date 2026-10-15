@@ -113,3 +113,79 @@ REALTIME_PROJECTION_OUTCOMES = Counter(
 REALTIME_BACKLOG_DEPTH = Gauge(
     "uniffy_realtime_backlog_depth", "Pending durable work rows", ["kind"]
 )
+
+REALTIME_VALKEY_PREFLIGHT = Gauge(
+    "uniffy_realtime_valkey_preflight",
+    "Valkey deployment preflight verdict for buffered realtime edits; the current verdict reads 1",
+    ["verdict"],
+    multiprocess_mode="livemax",
+)
+
+# Buffered checkpoint metrics never carry document labels; buckets are the fixed buffer shards.
+REALTIME_CHECKPOINT_DURATION = Histogram(
+    "uniffy_realtime_checkpoint_duration_seconds",
+    "Buffered document checkpoint passes by outcome",
+    ["outcome"],
+)
+REALTIME_CHECKPOINT_AGE = Histogram(
+    "uniffy_realtime_checkpoint_age_seconds",
+    "Age of the oldest accepted edit a checkpoint commit covered",
+    buckets=(1, 2.5, 5, 10, 15, 20, 30, 60, 120, 300, 900),
+)
+REALTIME_CHECKPOINT_RETRIES_TOTAL = Counter(
+    "uniffy_realtime_checkpoint_retries_total",
+    "Checkpoint commits recaptured because a competing write changed the checkpoint",
+    ["reason"],
+)
+REALTIME_CHECKPOINT_TRIM_DEBT_TOTAL = Counter(
+    "uniffy_realtime_checkpoint_trim_debt_total",
+    "Committed buffered records left in Valkey by a failed cleanup, and records maintenance cleaned",
+    ["event"],
+)
+REALTIME_CHECKPOINT_POISON_TOTAL = Counter(
+    "uniffy_realtime_checkpoint_poison_total",
+    "Checkpoint passes stopped by a stored update that cannot be read or merged",
+    ["reason"],
+)
+REALTIME_CHECKPOINT_DISPATCH_BATCH = Histogram(
+    "uniffy_realtime_checkpoint_dispatch_batch",
+    "Checkpoint jobs enqueued per dispatcher tick",
+    buckets=(0, 1, 2, 4, 8, 16, 32, 64),
+)
+REALTIME_CHECKPOINT_QUEUE_AGE = Gauge(
+    "uniffy_realtime_checkpoint_queue_age_seconds",
+    "How long the oldest due checkpoint has waited past its due time",
+    multiprocess_mode="livemax",
+)
+REALTIME_BUFFER_OLDEST_PENDING_SECONDS = Gauge(
+    "uniffy_realtime_buffer_oldest_pending_seconds",
+    "Age of the oldest uncheckpointed edit; a backed-off document counts from its retry",
+    multiprocess_mode="livemax",
+)
+REALTIME_BUFFER_PENDING_BYTES = Gauge(
+    "uniffy_realtime_buffer_pending_bytes",
+    "Accepted update bytes awaiting checkpoint per buffer bucket",
+    ["bucket"],
+    multiprocess_mode="livemax",
+)
+REALTIME_BUFFER_PENDING_RECORDS = Gauge(
+    "uniffy_realtime_buffer_pending_records",
+    "Accepted update records awaiting checkpoint per buffer bucket",
+    ["bucket"],
+    multiprocess_mode="livemax",
+)
+REALTIME_BUFFER_MAINTENANCE_CYCLE_SECONDS = Gauge(
+    "uniffy_realtime_buffer_maintenance_cycle_seconds",
+    "Duration of the last complete buffer maintenance walk over the key space",
+    multiprocess_mode="livemax",
+)
+REALTIME_BUFFER_ADMISSIONS_TOTAL = Counter(
+    "uniffy_realtime_buffer_admissions_total",
+    "Buffered realtime update admissions by outcome",
+    ["outcome"],
+)
+REALTIME_BUFFER_EPOCH_RESETS_TOTAL = Counter(
+    "uniffy_realtime_buffer_epoch_resets_total",
+    "Buffer epochs replaced, by the condition that forced the reset",
+    ["reason"],
+)

@@ -9,12 +9,24 @@ from uniffy.core.events.job_contracts import (
 )
 from uniffy.core.jobs import JobRef, QueueName
 from uniffy.core.realtime.job_contracts import (
+    CHECKPOINT_REALTIME_DOCUMENT,
+    DISPATCH_REALTIME_CHECKPOINTS_SCHEDULE,
+    MAINTAIN_REALTIME_BUFFER_SCHEDULE,
     REALTIME_JOB_REFS,
     REALTIME_SCHEDULED_JOB_REFS,
     RECOVER_REALTIME_PROJECTIONS_SCHEDULE,
     SAVE_REALTIME_SNAPSHOT,
 )
-from uniffy.core.realtime.jobs import recover_realtime_projections, save_realtime_snapshot
+from uniffy.core.realtime.jobs import (
+    CHECKPOINT_JOB_TIMEOUT_SECONDS,
+    DISPATCH_JOB_TIMEOUT_SECONDS,
+    MAINTENANCE_JOB_TIMEOUT_SECONDS,
+    checkpoint_realtime_document,
+    dispatch_realtime_checkpoints,
+    maintain_realtime_buffer,
+    recover_realtime_projections,
+    save_realtime_snapshot,
+)
 from uniffy.domains.agents.bridge.jobs.contracts import (
     CHAT_INTEGRATION_JOB_REFS,
     CHAT_INTEGRATION_SCHEDULED_JOB_REFS,
@@ -311,6 +323,14 @@ CORE_JOB_REGISTRATIONS = (
     ),
     _bind(REINDEX_ORG_CONTENT_FOR_DEFAULTS, reindex_org_content_for_defaults),
     _bind(SAVE_REALTIME_SNAPSHOT, save_realtime_snapshot),
+    # Retries come from the dispatcher; a kept result would also dedupe the next pass.
+    _bind(
+        CHECKPOINT_REALTIME_DOCUMENT,
+        checkpoint_realtime_document,
+        timeout=CHECKPOINT_JOB_TIMEOUT_SECONDS,
+        keep_result=0,
+        max_tries=1,
+    ),
     _bind(REINDEX_RENAMED_CONTENT, reindex_renamed_content),
     _bind(
         FLUSH_SEARCH_REMOVALS,
@@ -357,6 +377,18 @@ EGRESS_JOB_REGISTRATIONS = (
 
 CORE_SCHEDULED_REGISTRATIONS = (
     _bind_schedule(RECOVER_REALTIME_PROJECTIONS_SCHEDULE, recover_realtime_projections),
+    _bind_schedule(
+        DISPATCH_REALTIME_CHECKPOINTS_SCHEDULE,
+        dispatch_realtime_checkpoints,
+        second=None,
+        timeout=DISPATCH_JOB_TIMEOUT_SECONDS,
+    ),
+    _bind_schedule(
+        MAINTAIN_REALTIME_BUFFER_SCHEDULE,
+        maintain_realtime_buffer,
+        second=(40,),
+        timeout=MAINTENANCE_JOB_TIMEOUT_SECONDS,
+    ),
     _bind_schedule(RECONCILE_INLINE_ATTACHMENTS_SCHEDULE, reconcile_pending_inline_attachments),
     _bind_schedule(
         RECOVER_NOTIFICATION_EVENTS_SCHEDULE,

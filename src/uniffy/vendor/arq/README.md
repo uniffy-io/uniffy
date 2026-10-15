@@ -16,6 +16,9 @@ Vendored from [arq](https://github.com/samuelcolvin/arq) **0.28.0**, with its Re
   but is vestigial — the worker logs via the adapter.)
 - `log_valkey_info` logs `valkey_version` (Valkey advertises a fixed `redis_version` compatibility value, so
   upstream's startup line read e.g. `7.2.4` against a 9.x server).
+- `finish_failed_job` applies the function's own `keep_result` / `keep_result_forever` when a job is rejected
+  for exceeding `max_tries` (upstream always used the worker default, so a `keep_result=0` function kept a
+  result that deduplicated its job id for an hour), and keeps a forever result without a zero expiry.
 
 The API is renamed to Valkey terms (no longer a drop-in for upstream's Redis names). To pull upstream
 changes, re-diff against the tagged release and re-apply the import swap + the renames above.

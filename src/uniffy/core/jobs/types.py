@@ -24,7 +24,20 @@ class JobWorkload(StrEnum):
 
 class JobReliability(StrEnum):
     DURABLE = "durable"
+    # Recovers from a Valkey fact, so losing that buffer loses the work with it.
+    BUFFERED = "buffered"
     BEST_EFFORT = "best_effort"
+
+
+class RecoveryStore(StrEnum):
+    POSTGRESQL = "postgresql"
+    VALKEY = "valkey"
+
+
+_REQUIRED_RECOVERY_STORES = {
+    JobReliability.DURABLE: RecoveryStore.POSTGRESQL,
+    JobReliability.BUFFERED: RecoveryStore.VALKEY,
+}
 
 
 class JobEnqueueOutcome(StrEnum):
@@ -38,12 +51,15 @@ class JobEnqueueOutcome(StrEnum):
 class JobRecovery:
     fact: str
     trigger: str
+    store: RecoveryStore = RecoveryStore.POSTGRESQL
 
     def __post_init__(self) -> None:
         if not self.fact.strip():
-            raise ValueError("A durable job recovery fact must be non-empty")
+            raise ValueError("A job recovery fact must be non-empty")
         if not self.trigger.strip():
-            raise ValueError("A durable job recovery trigger must be non-empty")
+            raise ValueError("A job recovery trigger must be non-empty")
+        if not isinstance(self.store, RecoveryStore):
+            raise TypeError("Job recovery store must be a RecoveryStore")
 
 
 @dataclass(frozen=True, slots=True)
@@ -63,7 +79,11 @@ class JobRef:
             raise TypeError("Job workload must be a JobWorkload")
         if not isinstance(self.reliability, JobReliability):
             raise TypeError("Job reliability must be a JobReliability")
-        if self.reliability is JobReliability.DURABLE and self.recovery is None:
-            raise ValueError("Durable jobs must declare their recovery fact and trigger")
         if self.recovery is not None and not isinstance(self.recovery, JobRecovery):
             raise TypeError("Job recovery metadata must be a JobRecovery")
+        store = _REQUIRED_RECOVERY_STORES.get(self.reliability)
+        if store is not None and (self.recovery is None or self.recovery.store is not store):
+            raise ValueError(
+                f"{self.reliability.value} jobs must declare a {store.value} recovery fact "
+                "and the sweep that retries it"
+            )

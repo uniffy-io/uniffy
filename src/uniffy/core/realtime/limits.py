@@ -8,6 +8,8 @@ MAX_DOCS_PER_SOCKET = int(os.getenv("REALTIME_MAX_DOCS_PER_SOCKET", "32"))
 MAX_SOCKETS_PER_USER = int(os.getenv("REALTIME_MAX_SOCKETS_PER_USER", "16"))
 MAX_MESSAGES_PER_SECOND = int(os.getenv("REALTIME_MAX_MESSAGES_PER_SECOND", "120"))
 MAX_AWARENESS_BYTES = 64 * 1024
+# Inbound socket frames; one buffered update record carries at most one frame.
+MAX_FRAME_BYTES = 1024 * 1024
 
 
 def validate_document_size(text: str) -> None:

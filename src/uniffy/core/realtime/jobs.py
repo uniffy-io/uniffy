@@ -1,5 +1,6 @@
-"""Persist realtime snapshots through registered content adapters."""
+"""Realtime jobs: buffered checkpoints, their scheduling, and projection persistence."""
 
+import asyncio
 import base64
 import time
 from datetime import UTC, datetime
@@ -12,6 +13,9 @@ from sqlalchemy.orm import load_only
 
 from uniffy.core.models.realtime.yjs_snapshot import RealtimeYjsSnapshot
 from uniffy.core.realtime.adapter import RealtimeRenderConflict
+from uniffy.core.realtime.buffer import BufferUnavailable, UpdateBuffer
+from uniffy.core.realtime.dispatch import dispatch_due, run_checkpoint_job
+from uniffy.core.realtime.maintenance import maintain_buffer
 from uniffy.core.realtime.metrics import (
     REALTIME_BACKLOG_DEPTH,
     REALTIME_PROJECTION_OUTCOMES,
@@ -25,6 +29,55 @@ from uniffy.vendor.arq import Retry
 logger = logger.bind(component="core.realtime.jobs")
 
 RECOVERY_BATCH_SIZE = 100
+CHECKPOINT_JOB_TIMEOUT_SECONDS = 120
+DISPATCH_JOB_TIMEOUT_SECONDS = 30
+MAINTENANCE_JOB_TIMEOUT_SECONDS = 120
+CHECKPOINT_CONCURRENCY = 2
+CHECKPOINT_SLOTS = asyncio.Semaphore(CHECKPOINT_CONCURRENCY)
+_BUSY_DEFER_SECONDS = 1
+
+_dispatch_skipping = False
+
+
+async def checkpoint_realtime_document(
+    ctx: dict[str, Any], member: str, claim: str
+) -> dict[str, Any]:
+    # Waiting for a slot would hold one of the fleet's shared job slots; requeue without a try.
+    if CHECKPOINT_SLOTS.locked():
+        raise Retry(defer=_BUSY_DEFER_SECONDS, count_attempt=False)
+    async with CHECKPOINT_SLOTS:
+        result = await run_checkpoint_job(UpdateBuffer(), member, claim)
+    return {"status": result.status.value, "covered": result.covered}
+
+
+async def dispatch_realtime_checkpoints(ctx: dict[str, Any]) -> dict[str, int]:
+    global _dispatch_skipping
+
+    try:
+        report = await dispatch_due(UpdateBuffer())
+    except BufferUnavailable:
+        # The dispatcher ticks every second; one line per outage is enough.
+        if not _dispatch_skipping:
+            logger.opt(exception=True).warning(
+                "Realtime checkpoint dispatch skips while Valkey is down"
+            )
+        _dispatch_skipping = True
+        return {"enqueued": 0}
+    if _dispatch_skipping:
+        logger.info("Realtime checkpoint dispatch resumed")
+    _dispatch_skipping = False
+    return {"due": report.due, "early": report.early, "enqueued": report.enqueued}
+
+
+async def maintain_realtime_buffer(ctx: dict[str, Any]) -> dict[str, int]:
+    try:
+        report = await maintain_buffer(UpdateBuffer())
+    except BufferUnavailable:
+        logger.warning("Realtime buffer maintenance skipped: Valkey is unavailable")
+        return {"streams": 0}
+    return {"streams": report.streams} | {
+        action.value: count for action, count in report.actions.items()
+    }
 
 
 async def recover_realtime_projections(ctx: dict[str, Any]) -> None:

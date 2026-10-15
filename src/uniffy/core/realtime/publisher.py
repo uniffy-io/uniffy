@@ -30,6 +30,7 @@ class RealtimeChannelKind(StrEnum):
 
 class RealtimePayloadKind(StrEnum):
     CONTENT_REPLACE = "content_replace"
+    CHECKPOINT_PROGRESS = "checkpoint_progress"
 
 
 def doc_channel(content_type: ContentType, content_id: UUID) -> str:
@@ -96,7 +97,7 @@ async def publish_content_replace(
     """Graft a domain column write into any live doc.
 
     Session-holding replicas apply the content as a CRDT edit on their in-memory
-    doc, so a legacy write path (mobile autosave, agent tools) cannot be
+    doc, so a plain write path (mobile autosave, agent tools) cannot be
     clobbered by a later stale-doc snapshot flush. Not origin-deduped: the
     publishing process may itself hold the live session.
     """
@@ -106,6 +107,30 @@ async def publish_content_replace(
             "kind": RealtimePayloadKind.CONTENT_REPLACE,
             "origin_replica": replica_id(),
             "content": content,
+            "published_at": time.time(),
+        },
+    )
+
+
+async def publish_checkpoint_progress(
+    content_type: ContentType,
+    content_id: UUID,
+    *,
+    generation: str,
+    epoch: str,
+    covered_sequence: int,
+    checkpoint_revision: int,
+) -> None:
+    """Announce on the document channel which accepted sequence of one epoch PostgreSQL covers."""
+    await publish_to_channel(
+        doc_channel(content_type, content_id),
+        {
+            "kind": RealtimePayloadKind.CHECKPOINT_PROGRESS,
+            "origin_replica": replica_id(),
+            "generation": generation,
+            "epoch": epoch,
+            "covered_sequence": covered_sequence,
+            "checkpoint_revision": checkpoint_revision,
             "published_at": time.time(),
         },
     )
