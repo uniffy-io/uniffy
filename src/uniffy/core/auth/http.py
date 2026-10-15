@@ -8,8 +8,8 @@ from loguru import logger
 
 from uniffy.core.auth.cookies import resolve_asset_cookie_config
 from uniffy.core.auth.revocation import (
-    is_access_token_revoked,
-    is_session_revoked,
+    RevocationUnavailableError,
+    token_revocation,
 )
 from uniffy.core.auth.tokens import (
     decode_access_token,
@@ -27,16 +27,10 @@ _UNAUTHORIZED = HTTPException(
 
 async def _validate(payload: dict[str, Any]) -> UUID:
     user_id = UUID(payload["sub"])
-    if await is_access_token_revoked(user_id, payload.get("tkv")):
-        raise _UNAUTHORIZED
     sid_raw = payload.get("sid")
-    if sid_raw:
-        try:
-            session_id: UUID | None = UUID(sid_raw)
-        except TypeError, ValueError:
-            session_id = None
-        if session_id is not None and await is_session_revoked(session_id):
-            raise _UNAUTHORIZED
+    session_id = UUID(sid_raw) if sid_raw is not None else None
+    if await token_revocation(user_id, payload.get("tkv"), session_id) is not None:
+        raise _UNAUTHORIZED
     return user_id
 
 
@@ -56,6 +50,10 @@ async def get_current_user_id(
     try:
         payload = decode(token)
         return await _validate(payload)
+    except RevocationUnavailableError as exc:
+        raise HTTPException(
+            status_code=503, detail="Authentication temporarily unavailable"
+        ) from exc
     except HTTPException:
         raise
     except Exception as exc:

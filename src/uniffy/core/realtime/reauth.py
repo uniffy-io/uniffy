@@ -1,10 +1,4 @@
-"""Re-authorization of a live realtime socket.
-
-Upgrade auth binds one JWT to a socket that then outlives it: revoking a
-session, removing the member, or the token simply expiring has no effect on
-frames already flowing. Every signal the upgrade checked is re-checked here,
-on a timer and on every doc attach.
-"""
+"""Recheck durable credentials and membership for live realtime sockets."""
 
 from __future__ import annotations
 
@@ -12,7 +6,7 @@ import time
 from dataclasses import dataclass
 
 from uniffy.core.auth.membership import is_active_member
-from uniffy.core.auth.revocation import is_access_token_revoked, is_session_revoked
+from uniffy.core.auth.revocation import RevocationUnavailableError, token_revocation
 from uniffy.core.realtime.auth import (
     WS_CLOSE_FORBIDDEN,
     WS_CLOSE_REAUTH_REQUIRED,
@@ -49,22 +43,18 @@ async def connection_denial(
     *,
     now: float | None = None,
 ) -> Denial | None:
-    """``None`` while the socket may keep running, otherwise how to close it.
-
-    The lifetime check runs first because it needs no I/O. Per-session revoke
-    is checked separately from the ``min_tkv`` watermark: "log out this device"
-    deliberately does not bump ``token_version``, so the watermark alone leaves
-    that device a live channel.
-    """
     moment = time.time() if now is None else now
     if moment >= socket_deadline(ws_session):
         return Denial(WS_CLOSE_REAUTH_REQUIRED, "reauth required", "token_expired")
 
-    if await is_access_token_revoked(ws_session.user_id, ws_session.token_version):
-        return Denial(WS_CLOSE_TOKEN_REVOKED, "token revoked", "token_revoked")
-
-    if await is_session_revoked(ws_session.session_id):
-        return Denial(WS_CLOSE_TOKEN_REVOKED, "session revoked", "session_revoked")
+    try:
+        revoked = await token_revocation(
+            ws_session.user_id, ws_session.token_version, ws_session.session_id
+        )
+    except RevocationUnavailableError:
+        return Denial(1013, "authentication temporarily unavailable", "auth_unavailable")
+    if revoked is not None:
+        return Denial(WS_CLOSE_TOKEN_REVOKED, "credentials revoked", revoked.value)
 
     if not await is_active_member(ws_session.user_id, ws_session.organization_id):
         return Denial(WS_CLOSE_FORBIDDEN, "not a member", "membership_revoked")

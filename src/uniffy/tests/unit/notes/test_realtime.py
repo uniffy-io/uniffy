@@ -14,6 +14,7 @@ import pytest
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.sql.dml import Delete
 
+from uniffy.core.auth.revocation import TokenRevocation
 from uniffy.core.jobs import JobEnqueueOutcome, JobEnqueueResult
 from uniffy.core.models.realtime.yjs_snapshot import RealtimeYjsSnapshot
 from uniffy.core.realtime import ydoc_manager as ydoc_manager_module
@@ -1436,8 +1437,17 @@ def _revocation_patches(
     import uniffy.core.realtime.reauth as reauth_mod
 
     return (
-        patch.object(reauth_mod, "is_access_token_revoked", AsyncMock(return_value=token_revoked)),
-        patch.object(reauth_mod, "is_session_revoked", AsyncMock(return_value=session_revoked)),
+        patch.object(
+            reauth_mod,
+            "token_revocation",
+            AsyncMock(
+                return_value=TokenRevocation.TOKEN
+                if token_revoked
+                else TokenRevocation.SESSION
+                if session_revoked
+                else None
+            ),
+        ),
         patch.object(reauth_mod, "is_active_member", AsyncMock(return_value=active_member)),
     )
 
@@ -1449,10 +1459,10 @@ class TestConnectionReauth:
     async def _denial(self, ws_session, **flags):
         from uniffy.core.realtime.reauth import connection_denial
 
-        token, sid, member = _revocation_patches(**flags)
+        revocation, member = _revocation_patches(**flags)
 
         async def go():
-            with token, sid, member:
+            with revocation, member:
                 return await connection_denial(ws_session)
 
         return await go()
@@ -1514,10 +1524,10 @@ class TestConnectionReauth:
 
         ws = AsyncMock()
         ws_session = _ws_session(session_id=generate_id(), expires_at=time.time() + 600)
-        token, sid, member = _revocation_patches(session_revoked=True)
+        revocation, member = _revocation_patches(session_revoked=True)
 
         async def go():
-            with token, sid, member:
+            with revocation, member:
                 return await _attach_doc(ws, ws_session, (ContentType.NOTE, generate_id()), "NOTE:x")
 
         assert await go() is None
@@ -1528,10 +1538,10 @@ class TestConnectionReauth:
 
         ws = AsyncMock()
         ws_session = _ws_session(expires_at=time.time() + 600)
-        token, sid, member = _revocation_patches(token_revoked=True)
+        revocation, member = _revocation_patches(token_revoked=True)
 
         async def go():
-            with token, sid, member, patch.object(session_mod, "REAUTH_INTERVAL_SECONDS", 0):
+            with revocation, member, patch.object(session_mod, "REAUTH_INTERVAL_SECONDS", 0):
                 await session_mod._reauth_watchdog(ws, ws_session)
 
         await go()
@@ -1559,8 +1569,11 @@ class TestUpgradeChecksRevokedSession:
         with (
             patch.object(ws_routes, "origin_is_allowed", lambda *_a, **_k: True),
             patch.object(ws_routes, "decode_access_token", lambda _t: payload),
-            patch.object(ws_routes, "is_access_token_revoked", AsyncMock(return_value=False)),
-            patch.object(ws_routes, "is_session_revoked", AsyncMock(return_value=session_revoked)),
+            patch.object(
+                ws_routes,
+                "token_revocation",
+                AsyncMock(return_value=TokenRevocation.SESSION if session_revoked else None),
+            ),
             patch.object(ws_routes, "is_active_member", AsyncMock(return_value=True)),
             patch.object(ws_routes, "run_multiplexed_session", AsyncMock()),
         ):

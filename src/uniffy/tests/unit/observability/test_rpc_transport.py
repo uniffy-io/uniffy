@@ -45,12 +45,8 @@ from uniffy.transport.rpc import strict_request_codecs
 def _rpc_client(monkeypatch: pytest.MonkeyPatch) -> TestClient:
     monkeypatch.setenv("JWT_SECRET_KEY", "rpc-transport-test-secret-at-least-32-bytes")
     monkeypatch.setattr(
-        "uniffy.domains.auth.interceptors.is_access_token_revoked",
-        AsyncMock(return_value=False),
-    )
-    monkeypatch.setattr(
-        "uniffy.domains.auth.interceptors.is_session_revoked",
-        AsyncMock(return_value=False),
+        "uniffy.domains.auth.interceptors.token_revocation",
+        AsyncMock(return_value=None),
     )
     search = WorkspaceSearch(MagicMock(spec=SearchEngine))
     dispatcher = _create_api_dispatcher(MagicMock(spec=ObjectStorage), search, SearchIndexer(search))

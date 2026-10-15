@@ -36,6 +36,9 @@ ORG_B = generate_id()
 def _jwt_secret(monkeypatch):
     # The unit tier signs its own token: it must not depend on a developer's .env.
     monkeypatch.setenv("JWT_SECRET_KEY", "unit-test-secret-of-at-least-32-bytes")
+    monkeypatch.setattr(
+        "uniffy.domains.auth.interceptors.token_revocation", AsyncMock(return_value=None)
+    )
 
 
 def _token(organization_id=None) -> str:

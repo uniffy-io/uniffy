@@ -34,7 +34,7 @@ _current_principal: ContextVar[AuthenticatedPrincipal | None] = ContextVar(
 
 def _optional_uuid(claims: dict[str, Any], name: str) -> UUID | None:
     value = claims.get(name)
-    return UUID(str(value)) if value else None
+    return UUID(str(value)) if value is not None else None
 
 
 def principal_from_access_token(token: str) -> AuthenticatedPrincipal:

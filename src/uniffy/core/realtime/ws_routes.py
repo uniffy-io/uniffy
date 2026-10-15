@@ -1,11 +1,4 @@
-"""FastAPI WebSocket route for the multiplexed realtime channel.
-
-One WS per browser tab, all docs multiplexed onto it. Upgrade enforces, in order:
-origin allowlist, bearer JWT, ``type==access``, ``org_id`` match, ``min_tkv``
-watermark and per-session revoke (both catch the "connect with an already-revoked
-token" race), active membership. Per-doc role resolution runs lazily inside
-``run_multiplexed_session``, which also re-checks all of it on a timer.
-"""
+"""Authenticate and admit multiplexed realtime connections."""
 
 from typing import Annotated
 from uuid import UUID
@@ -14,7 +7,7 @@ from fastapi import APIRouter, Query, WebSocket
 from loguru import logger
 
 from uniffy.core.auth.membership import is_active_member
-from uniffy.core.auth.revocation import is_access_token_revoked, is_session_revoked
+from uniffy.core.auth.revocation import RevocationUnavailableError, token_revocation
 from uniffy.core.auth.tokens import decode_access_token
 from uniffy.core.realtime.auth import (
     CANONICAL_SUBPROTOCOL,
@@ -82,10 +75,7 @@ async def realtime(
         exp_raw = payload.get("exp")
         expires_at = float(exp_raw) if isinstance(exp_raw, (int, float)) else None
         sid_raw = payload.get("sid")
-        try:
-            session_id = UUID(sid_raw) if sid_raw else None
-        except TypeError, ValueError:
-            session_id = None
+        session_id = UUID(sid_raw) if sid_raw is not None else None
     except Exception as exc:
         REALTIME_AUTH_FAILURES_TOTAL.labels(reason="decode_error").inc()
         logger.warning(
@@ -105,25 +95,14 @@ async def realtime(
         await ws.close(code=WS_CLOSE_FORBIDDEN, reason="org mismatch")
         return
 
-    if await is_access_token_revoked(user_id, token_version):
-        REALTIME_AUTH_FAILURES_TOTAL.labels(reason="token_revoked").inc()
-        logger.warning(
-            f"realtime upgrade rejected: token revoked (user={user_id})",
-            component=LOGGER_COMPONENT,
-        )
-        await ws.close(code=WS_CLOSE_UNAUTHENTICATED, reason="token revoked")
+    try:
+        revoked = await token_revocation(user_id, token_version, session_id)
+    except RevocationUnavailableError:
+        await ws.close(code=1013, reason="authentication temporarily unavailable")
         return
-
-    # Per-session revoke does not bump token_version, so the watermark above
-    # cannot see it: without this check "log out this device" leaves that device
-    # able to open a fresh realtime channel.
-    if await is_session_revoked(session_id):
-        REALTIME_AUTH_FAILURES_TOTAL.labels(reason="session_revoked").inc()
-        logger.warning(
-            f"realtime upgrade rejected: session revoked (user={user_id}, sid={session_id})",
-            component=LOGGER_COMPONENT,
-        )
-        await ws.close(code=WS_CLOSE_UNAUTHENTICATED, reason="session revoked")
+    if revoked is not None:
+        REALTIME_AUTH_FAILURES_TOTAL.labels(reason=revoked.value).inc()
+        await ws.close(code=WS_CLOSE_UNAUTHENTICATED, reason="credentials revoked")
         return
 
     if not await is_active_member(user_id, org_id):
@@ -138,19 +117,19 @@ async def realtime(
     if _active_sockets.get(user_id, 0) >= MAX_SOCKETS_PER_USER:
         await ws.close(code=1013, reason="too many connections")
         return
-    await ws.accept(subprotocol=CANONICAL_SUBPROTOCOL)
-
-    ws_session = WSSession(
-        user_id=user_id,
-        organization_id=org_id,
-        token_version=token_version,
-        conn_id=id(ws),
-        ws=ws,
-        session_id=session_id,
-        expires_at=expires_at,
-    )
+    # Reserve before acceptance yields so concurrent upgrades cannot take the same slot.
     _active_sockets[user_id] = _active_sockets.get(user_id, 0) + 1
     try:
+        await ws.accept(subprotocol=CANONICAL_SUBPROTOCOL)
+        ws_session = WSSession(
+            user_id=user_id,
+            organization_id=org_id,
+            token_version=token_version,
+            conn_id=id(ws),
+            ws=ws,
+            session_id=session_id,
+            expires_at=expires_at,
+        )
         await run_multiplexed_session(ws, ws_session)
     finally:
         remaining = _active_sockets[user_id] - 1

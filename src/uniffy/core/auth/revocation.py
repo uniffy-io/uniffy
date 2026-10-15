@@ -1,13 +1,18 @@
-"""Cluster-wide access-token revocation watermarks backed by Valkey."""
+"""Durable credential checks and best-effort revocation signals."""
 
 from __future__ import annotations
 
 import os
 from collections.abc import Iterable
+from enum import StrEnum
 from uuid import UUID
 
 from loguru import logger
+from sqlalchemy import select
 
+from uniffy.core.models.login.user import User
+from uniffy.core.models.login.user_session import UserSession
+from uniffy.infrastructure.database import open_session
 from uniffy.infrastructure.valkey.ops import get_ops_client, ops_call
 
 logger = logger.bind(component="core.auth.revocation")
@@ -27,13 +32,7 @@ def _session_key(session_id: UUID) -> str:
 
 
 def _ttl_seconds() -> int:
-    """TTL that covers the longest plausible access-token lifetime.
-
-    Reads ``JWT_ACCESS_TOKEN_EXPIRE_MINUTES`` (the lifetime of any
-    token we ever issued) and adds a 5-minute cushion so a clock skew
-    between issuer and validator does not let a stale token slip past
-    the watermark.
-    """
+    """Keep revocation hints beyond the longest issued access-token lifetime."""
     try:
         minutes = int(os.getenv("JWT_ACCESS_TOKEN_EXPIRE_MINUTES", "15"))
     except ValueError:
@@ -42,12 +41,7 @@ def _ttl_seconds() -> int:
 
 
 async def mark_token_version_revoked(user_id: UUID, new_version: int) -> None:
-    """Publish the user's new ``token_version`` as the revocation watermark.
-
-    Idempotent; callers may write the same value repeatedly. The TTL is
-    re-armed on every write so a long-running session that keeps
-    bumping the version never lets the key expire mid-flight.
-    """
+    """Publish a best-effort account revocation hint."""
     client = get_ops_client()
     if client is None:
         return
@@ -61,41 +55,54 @@ async def mark_token_version_revoked(user_id: UUID, new_version: int) -> None:
         )
 
 
-async def is_access_token_revoked(user_id: UUID, token_version: int | None) -> bool:
-    """True when ``token_version`` is below the published watermark.
+class TokenRevocation(StrEnum):
+    TOKEN = "token_revoked"
+    SESSION = "session_revoked"
 
-    Tokens issued before ``token_version`` was ever tracked carry no
-    ``tkv`` claim. We treat ``None`` as "older than any watermark" so a
-    legacy token is rejected the moment any bump is published; if no
-    watermark exists, the token is allowed (no information to act on).
-    """
-    client = get_ops_client()
-    if client is None:
-        return False
+
+class RevocationUnavailableError(RuntimeError):
+    """Authentication cannot proceed without fresh durable revocation facts."""
+
+
+async def token_revocation(
+    user_id: UUID, token_version: int | None, session_id: UUID | None
+) -> TokenRevocation | None:
+    """Read fresh account and session facts together without trusting cache absence."""
     try:
-        async with ops_call(_NAMESPACE, "get_min_tkv"):
-            raw = await client.get(_key(user_id))
-    except Exception:  # noqa: BLE001
-        return False
-    if raw is None:
-        return False
-    try:
-        min_tkv = int(raw)
-    except TypeError, ValueError:
-        return False
-    if token_version is None:
-        return True
-    return int(token_version) < min_tkv
+        async with open_session() as session:
+            row = (
+                await session.execute(
+                    select(
+                        User.is_active,
+                        User.token_version,
+                        UserSession.id.label("session_id"),
+                        UserSession.user_id.label("session_user_id"),
+                        UserSession.is_revoked,
+                    )
+                    .select_from(User)
+                    .outerjoin(UserSession, UserSession.id == session_id)
+                    .where(User.id == user_id)
+                )
+            ).one_or_none()
+    except Exception as exc:
+        logger.opt(exception=True).warning("Durable credential check failed")
+        raise RevocationUnavailableError("Authentication temporarily unavailable") from exc
+
+    if row is None or not row.is_active:
+        return TokenRevocation.TOKEN
+    # Tokens without a version predate account-wide revocation and only match initial state.
+    version = 1 if token_version is None else token_version
+    if version != row.token_version:
+        return TokenRevocation.TOKEN
+    if session_id is not None and (
+        row.session_id is None or row.session_user_id != user_id or row.is_revoked
+    ):
+        return TokenRevocation.SESSION
+    return None
 
 
 async def mark_session_revoked(session_id: UUID) -> None:
-    """Mark one session as revoked so its outstanding access tokens are rejected.
-
-    Used by logout, "log out this device", refresh-token reuse
-    detection, admin MFA reset, and the platform force-logout flow.
-    Idempotent; the TTL is re-armed on every write so a long-lived
-    session that bumps repeatedly never lets the key expire mid-flight.
-    """
+    """Publish a best-effort session revocation hint."""
     client = get_ops_client()
     if client is None:
         return
@@ -131,29 +138,10 @@ async def mark_sessions_revoked(session_ids: Iterable[UUID]) -> None:
         )
 
 
-async def is_session_revoked(session_id: UUID | None) -> bool:
-    """True when the session has been explicitly revoked since the JWT was issued.
-
-    ``None`` (no ``sid`` claim) returns ``False`` - legacy tokens
-    without session tracking can only be killed via the user-level
-    ``min_tkv`` watermark.
-    """
-    if session_id is None:
-        return False
-    client = get_ops_client()
-    if client is None:
-        return False
-    try:
-        async with ops_call(_NAMESPACE, "get_revoked_sid"):
-            raw = await client.get(_session_key(session_id))
-    except Exception:  # noqa: BLE001
-        return False
-    return raw is not None
-
-
 __all__ = [
-    "is_access_token_revoked",
-    "is_session_revoked",
+    "RevocationUnavailableError",
+    "TokenRevocation",
+    "token_revocation",
     "mark_session_revoked",
     "mark_sessions_revoked",
     "mark_token_version_revoked",

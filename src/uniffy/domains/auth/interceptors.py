@@ -15,7 +15,7 @@ from uniffy.core.auth.principal import (
     reset_current_principal,
     set_current_principal,
 )
-from uniffy.core.auth.revocation import is_access_token_revoked, is_session_revoked
+from uniffy.core.auth.revocation import RevocationUnavailableError, token_revocation
 from uniffy.core.auth.tokens import decode_token_unsafe
 
 PUBLIC_METHODS: frozenset[str] = frozenset({
@@ -77,10 +77,20 @@ class AuthenticationInterceptor:
 
     @staticmethod
     async def _enforce_principal_revocation(principal: AuthenticatedPrincipal) -> None:
-        if await is_access_token_revoked(principal.user_id, principal.token_version):
-            raise ConnectError(Code.UNAUTHENTICATED, "Token has been revoked")
-        if await is_session_revoked(principal.session_id):
-            raise ConnectError(Code.UNAUTHENTICATED, "Session has been revoked")
+        await AuthenticationInterceptor._enforce_revocation(
+            principal.user_id, principal.token_version, principal.session_id
+        )
+
+    @staticmethod
+    async def _enforce_revocation(
+        user_id: UUID, token_version: int | None, session_id: UUID | None
+    ) -> None:
+        try:
+            revoked = await token_revocation(user_id, token_version, session_id)
+        except RevocationUnavailableError as exc:
+            raise ConnectError(Code.UNAVAILABLE, "Authentication temporarily unavailable") from exc
+        if revoked is not None:
+            raise ConnectError(Code.UNAUTHENTICATED, "Credentials have been revoked")
 
     @staticmethod
     async def _enforce_public_token_revocation(token: str) -> None:
@@ -90,17 +100,11 @@ class AuthenticationInterceptor:
         except Exception:
             return
 
-        if await is_access_token_revoked(user_id, claims.get("tkv")):
-            raise ConnectError(Code.UNAUTHENTICATED, "Token has been revoked")
-
-        session_id: UUID | None = None
-        if claims.get("sid"):
-            try:
-                session_id = UUID(str(claims["sid"]))
-            except ValueError:
-                return
-        if await is_session_revoked(session_id):
-            raise ConnectError(Code.UNAUTHENTICATED, "Session has been revoked")
+        try:
+            session_id = UUID(str(claims["sid"])) if claims.get("sid") is not None else None
+        except ValueError as exc:
+            raise ConnectError(Code.UNAUTHENTICATED, "Invalid session") from exc
+        await AuthenticationInterceptor._enforce_revocation(user_id, claims.get("tkv"), session_id)
 
 
 __all__ = ["AuthenticationInterceptor", "PUBLIC_METHODS"]
