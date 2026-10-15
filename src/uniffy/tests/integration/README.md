@@ -1,7 +1,7 @@
 # Integration tests
 
 Tests that need running services. GitHub Actions runs every suite except
-`agents/providers/`, with PostgreSQL, Valkey, RustFS and FFmpeg provisioned for
+`agents/providers/`, with PostgreSQL, Valkey, Meilisearch, RustFS and FFmpeg provisioned for
 the job. Unit tests run separately.
 
 Application, migration and media suites run in parallel CI jobs. Migration

@@ -440,6 +440,15 @@ jobs:
         options: >-
           --health-cmd "curl -f http://localhost:9000/health"
           --health-interval 5s --health-timeout 5s --health-retries 12
+      meilisearch:
+        image: getmeili/meilisearch:v1.54
+        env:
+          MEILI_ENV: development
+          MEILI_NO_ANALYTICS: "true"
+        ports: ["7700:7700"]
+        options: >-
+          --health-cmd "curl -f http://localhost:7700/health"
+          --health-interval 5s --health-timeout 5s --health-retries 12
     env:
       POSTGRES_HOST: localhost
       POSTGRES_PORT: "5432"
@@ -455,16 +464,21 @@ jobs:
       S3_BUCKET_NAME: uniffy-integration
       S3_REGION: us-east-1
       S3_USE_SSL: "false"
+      MEILISEARCH_URL: http://localhost:7700
+      MEILISEARCH_MASTER_KEY: ""
       REQUIRE_DATABASE_TESTS: "1"
     steps:
-      - name: Generate test keys
-        run: echo "APP_MASTER_KEY=$(openssl rand -base64 32)" >> "$GITHUB_ENV"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version-file: ".python-version"
       - run: uv sync --frozen
+      - name: Generate test keys
+        shell: bash
+        run: |
+          echo "APP_MASTER_KEY=$(openssl rand -base64 32)" >> "$GITHUB_ENV"
+          echo "JWT_SECRET_KEY=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
       - name: Install media test tools
         if: matrix.suite == 'media'
         shell: bash
@@ -475,8 +489,8 @@ jobs:
           mkdir -p "$RUNNER_TEMP/media-bin"
           docker cp "$media_container:/ffmpeg" "$RUNNER_TEMP/media-bin/ffmpeg"
           docker cp "$media_container:/ffprobe" "$RUNNER_TEMP/media-bin/ffprobe"
-          ln -s ffmpeg "$RUNNER_TEMP/media-bin/ffmpeg-fixtures"
-          echo "$RUNNER_TEMP/media-bin" >> "$GITHUB_PATH"
+          sudo install -m 755 "$RUNNER_TEMP/media-bin/ffmpeg" "$RUNNER_TEMP/media-bin/ffprobe" /usr/local/bin/
+          sudo ln -s ffmpeg /usr/local/bin/ffmpeg-fixtures
       - run: uv run alembic -c src/uniffy/alembic.ini upgrade head
         if: matrix.suite != 'migrations'
       - name: Integration tests
@@ -772,6 +786,7 @@ jobs:
       - typecheck-mobile
       - lint-docker
       - test-python
+      - test-integration
       - test-frontend
       - test-mobile
       - benchmark-python

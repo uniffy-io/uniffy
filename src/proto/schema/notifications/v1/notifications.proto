@@ -426,7 +426,6 @@ message BulkDeleteNotificationsResponse {
   int32 deleted_count = 1;
 }
 
-
 // Invalidation hint. Clients refetch content through its permission-gated RPC.
 message ContentChangedPayload {
   common.v1.ContentType content_type = 1;
