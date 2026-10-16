@@ -17,7 +17,9 @@ logger = logger.bind(component="infrastructure.valkey.pubsub")
 _CLEANUP_TIMEOUT = 3.0
 
 _pubsub_client: aioredis.Redis | None = None
-_publisher_lock = asyncio.Lock()
+# A lock binds to the loop that first waits on it and keeps that loop alive. A restarted worker
+# runs a fresh loop, so only the running loop's lock is kept and earlier loops can be freed.
+_loop_publisher_lock: tuple[asyncio.AbstractEventLoop, asyncio.Lock] | None = None
 
 # Set during lifespan shutdown so subscriber generators break on the next 1s poll
 # tick instead of waiting for granian's full graceful_timeout.
@@ -64,8 +66,16 @@ def signal_pubsub_shutdown() -> None:
         logger.info("Pub/Sub shutdown signalled")
 
 
+def _publisher_lock() -> asyncio.Lock:
+    global _loop_publisher_lock
+    loop = asyncio.get_running_loop()
+    if _loop_publisher_lock is None or _loop_publisher_lock[0] is not loop:
+        _loop_publisher_lock = (loop, asyncio.Lock())
+    return _loop_publisher_lock[1]
+
+
 async def _ensure_publisher() -> aioredis.Redis | None:
-    async with _publisher_lock:
+    async with _publisher_lock():
         return await _reconnect_publisher()
 
 

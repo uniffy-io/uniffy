@@ -8,7 +8,7 @@ import os
 import threading
 import time
 from collections import Counter
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 from uuid import UUID
@@ -19,10 +19,22 @@ import valkey.asyncio as avalkey
 
 from uniffy.core.jobs.types import QueueName
 from uniffy.scripts.realtime_qualification.report import distribution
+from uniffy.scripts.realtime_qualification.samplers import (
+    DRIVER_APPLICATION,
+    SAMPLER_COMMANDS,
+    TIMELINE_COLUMNS,
+    Samples,
+    buffer_key_census,
+    buffer_reading,
+    buffer_result,
+    buffer_summary,
+    connection_result,
+    connection_rows,
+    connection_summary,
+)
 
 TRACKED_TABLES = ["realtime_yjs_snapshots", "notes_notes"]
 SAMPLE_SECONDS = 0.5
-SAMPLER_COMMANDS = 4
 ADVISORY_LOCK_CALL = "pg_advisory"
 TOP_STATEMENTS = 20
 TOP_QUERY_CHARS = 240
@@ -38,17 +50,6 @@ class Endpoint:
     def parse(cls, value: str) -> Endpoint:
         host, _, port = value.rpartition(":")
         return cls(host, int(port))
-
-
-@dataclass
-class Samples:
-    clients: list[int] = field(default_factory=list)
-    used_memory: list[int] = field(default_factory=list)
-    queue_depth: list[int] = field(default_factory=list)
-    queue_age_ms: list[float] = field(default_factory=list)
-    container_memory: dict[str, list[int]] = field(default_factory=dict)
-    probe_ms: list[float] = field(default_factory=list)
-    probe_errors: int = 0
 
 
 class Probes:
@@ -71,6 +72,9 @@ class Probes:
         self.checkpoint = checkpoint
         self.run_id = run_id
         self.database: asyncpg.Connection | None = None
+        # The sampler reads connection counts while the window runs; asyncpg runs one query
+        # per connection at a time.
+        self.sampler_db: asyncpg.Connection | None = None
         self.cache: avalkey.Valkey | None = None
         self.statements_available = False
 
@@ -82,19 +86,24 @@ class Probes:
             "db": int(os.environ.get("VALKEY_DATABASE", "0")),
         }
 
-    async def connect(self) -> dict[str, Any]:
-        self.database = await asyncpg.connect(
+    async def _connect_database(self, purpose: str) -> asyncpg.Connection:
+        return await asyncpg.connect(
             host=self.postgres.host,
             port=self.postgres.port,
             user=os.environ.get("POSTGRES_USER", "uniffy"),
             password=os.environ.get("POSTGRES_PASSWORD"),
             database=os.environ.get("POSTGRES_DB", "uniffy"),
-            server_settings={"application_name": "realtime-qualification"},
+            server_settings={"application_name": f"{DRIVER_APPLICATION}-{purpose}"},
         )
+
+    async def connect(self) -> dict[str, Any]:
+        self.database = await self._connect_database("counters")
+        self.sampler_db = await self._connect_database("sampler")
         try:
             await self.database.execute("CREATE EXTENSION IF NOT EXISTS pg_stat_statements")
             # Keeps the probe's own queries out of the application statement counts.
-            await self.database.execute("SET pg_stat_statements.track = 'none'")
+            for connection in (self.database, self.sampler_db):
+                await connection.execute("SET pg_stat_statements.track = 'none'")
             self.statements_available = True
         except asyncpg.PostgresError:
             self.statements_available = False
@@ -102,18 +111,22 @@ class Probes:
         server = await self.cache.info("server")
         persistence = await self.cache.info("persistence")
         policy = await self.cache.config_get("maxmemory-policy")
+        maxmemory = await self.cache.config_get("maxmemory")
         return {
             "postgres_version": await self.database.fetchval("SHOW server_version"),
+            "postgres_max_connections": int(await self.database.fetchval("SHOW max_connections")),
             "valkey_version": server.get("valkey_version") or server.get("redis_version"),
             "valkey_aof_enabled": persistence.get("aof_enabled"),
             "valkey_maxmemory_policy": policy.get("maxmemory-policy"),
+            "valkey_maxmemory": int(maxmemory.get("maxmemory") or 0),
             "pg_stat_statements": self.statements_available,
             "checkpoint_around_window": self.checkpoint,
         }
 
     async def close(self) -> None:
-        if self.database is not None:
-            await self.database.close()
+        for connection in (self.database, self.sampler_db):
+            if connection is not None:
+                await connection.close()
         if self.cache is not None:
             await self.cache.aclose()
 
@@ -240,6 +253,8 @@ class WindowProbe:
         self.cpu: dict[str, dict[str, int]] = {}
         self.started = 0.0
         self.sampler: asyncio.Task[None] | None = None
+        # Stopping between ticks never cancels a query on the shared sampler connection.
+        self.stop_sampler = asyncio.Event()
         self.stop_probe = threading.Event()
         self.probe_thread: threading.Thread | None = None
 
@@ -250,23 +265,39 @@ class WindowProbe:
             self.probe_thread.start()
 
     async def _sample(self) -> None:
-        cache = self.probes.cache
-        if cache is None:
+        cache, sampler_db = self.probes.cache, self.probes.sampler_db
+        if cache is None or sampler_db is None:
             return
         queue = QueueName.CORE.valkey_name
-        while True:
-            clients = await cache.info("clients")
+        samples = self.samples
+        while not self.stop_sampler.is_set():
+            elapsed = round(time.perf_counter() - self.started, 2)
+            clients = int((await cache.info("clients"))["connected_clients"])
             memory = await cache.info("memory")
-            self.samples.clients.append(int(clients["connected_clients"]))
-            self.samples.used_memory.append(int(memory["used_memory"]))
-            self.samples.queue_depth.append(int(await cache.zcard(queue)))
+            samples.clients.append(clients)
+            samples.used_memory.append(int(memory["used_memory"]))
+            depth = int(await cache.zcard(queue))
+            samples.queue_depth.append(depth)
             oldest = await cache.zrange(queue, 0, 0, withscores=True)
             if oldest:
                 # ARQ scores a queued job by the epoch millisecond it becomes runnable.
-                self.samples.queue_age_ms.append(max(0.0, time.time() * 1000 - oldest[0][1]))
+                samples.queue_age_ms.append(max(0.0, time.time() * 1000 - oldest[0][1]))
+            connections = samples.record_connections(await connection_rows(sampler_db))
+            buffer = await buffer_reading(cache)
+            samples.buffer.append(buffer)
+            samples.timeline.append((
+                elapsed,
+                connections,
+                clients,
+                buffer.pending_documents,
+                buffer.pending_records,
+                round(buffer.oldest_pending_seconds, 2),
+                depth,
+            ))
             for name, reading in self.probes.cpu_readings().items():
-                self.samples.container_memory.setdefault(name, []).append(reading["memory"])
-            await asyncio.sleep(SAMPLE_SECONDS)
+                samples.container_memory.setdefault(name, []).append(reading["memory"])
+            with contextlib.suppress(TimeoutError):
+                await asyncio.wait_for(self.stop_sampler.wait(), SAMPLE_SECONDS)
 
     def _competing_workload(self) -> None:
         # A separate thread keeps the driver's event loop lag out of these timings.
@@ -294,6 +325,9 @@ class WindowProbe:
                 client.delete(*keys)
             client.close()
 
+    def timeline(self) -> dict[str, Any]:
+        return {"columns": list(TIMELINE_COLUMNS), "rows": self.samples.timeline}
+
     async def finish(self) -> tuple[float, dict[str, Any], dict[str, Any], dict[str, Any]]:
         probes = self.probes
         if probes.database is None or probes.cache is None:
@@ -301,10 +335,9 @@ class WindowProbe:
         self.stop_probe.set()
         if self.probe_thread is not None:
             await asyncio.to_thread(self.probe_thread.join)
+        self.stop_sampler.set()
         if self.sampler is not None:
-            self.sampler.cancel()
-            with contextlib.suppress(asyncio.CancelledError):
-                await self.sampler
+            await self.sampler
         if probes.checkpoint:
             await probes.database.execute("CHECKPOINT")
         window = time.perf_counter() - self.started
@@ -348,13 +381,17 @@ class WindowProbe:
         wal = delta("wal")
         io = delta("io")
         maintenance = delta("maintenance")
+        connections = connection_result(self.samples)
         summary = {
+            **connection_summary(connections),
             "wal_bytes (pg_current_wal_lsn delta)": int(wal_bytes),
             "wal_records": wal.get("wal_records"),
             "wal_full_page_images": wal.get("wal_fpi"),
             "blocks_written (pg_stat_io relation writes)": io.get("blocks_written"),
             "blocks_read (pg_stat_database)": database.get("blks_read"),
-            "transactions committed": database.get("xact_commit"),
+            "transactions committed (connection sampler share)": (
+                f"{database.get('xact_commit')} ({connections['sampler_transactions']})"
+            ),
             "snapshot row revisions": snapshots.get("revisions"),
             "snapshot rendered revisions": snapshots.get("rendered_revisions"),
             "snapshot blob bytes at end": after["snapshots"].get("blob_bytes"),
@@ -367,6 +404,7 @@ class WindowProbe:
         }
         return {
             "summary": summary,
+            "connections": connections,
             "wal_lsn_bytes": int(wal_bytes),
             "pg_stat_database": database,
             "pg_stat_wal": wal,
@@ -396,21 +434,29 @@ class WindowProbe:
         samples = self.samples
         probe = distribution(samples.probe_ms)
         processed = int(stats.get("total_commands_processed", 0))
-        # Each probe sample is one command; each sampler tick issues four.
+        # Each probe sample is one command; each sampler tick issues SAMPLER_COMMANDS.
         driver_commands = len(samples.probe_ms) + SAMPLER_COMMANDS * len(samples.clients)
+        clients = distribution([float(count) for count in samples.clients])
+        buffer = buffer_result(samples)
+        census = await buffer_key_census(cache)
         summary = {
             "commands processed (driver share)": f"{processed} ({driver_commands})",
             "used_memory MiB start/end/max": (
                 f"{self.memory / MIB:.1f} / {memory / MIB:.1f} / "
                 f"{max(samples.used_memory or [memory]) / MIB:.1f}"
             ),
-            "connected_clients max": max(samples.clients or [0]),
+            "connected_clients min/p50/max": (
+                f"{min(samples.clients or [0])} / {clients.get('p50', '-')} / "
+                f"{max(samples.clients or [0])}"
+            ),
             "aof growth bytes": aof - self.aof_bytes,
             "core queue depth max": max(samples.queue_depth or [0]),
             "core queue oldest job age ms max": round(max(samples.queue_age_ms or [0.0]), 1),
             "competing probe p50/p95/p99 ms": (
                 f"{probe.get('p50', '-')} / {probe.get('p95', '-')} / {probe.get('p99', '-')}"
             ),
+            "competing probe errors": samples.probe_errors,
+            **buffer_summary(buffer, census),
         }
         return {
             "summary": summary,
@@ -429,6 +475,7 @@ class WindowProbe:
             },
             "connected_clients": {
                 "min": min(samples.clients or [0]),
+                "p50": clients.get("p50"),
                 "max": max(samples.clients or [0]),
             },
             "aof_growth_bytes": aof - self.aof_bytes,
@@ -437,4 +484,6 @@ class WindowProbe:
                 "oldest_age_ms": distribution(samples.queue_age_ms),
                 "samples": len(samples.queue_depth),
             },
+            "buffer": buffer,
+            "buffer_keys_at_end": census,
         }

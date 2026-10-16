@@ -575,7 +575,12 @@ Snapshot writes coalesce while storage is busy and replace earlier rows of the s
 While edits continue, a full snapshot goes at most every two seconds (`SNAPSHOT_INTERVAL_MS`); a
 flush, pagehide, a hidden tab, close and compaction write one at once. Between snapshots each
 transport batch's pending row holds its edits: once it lands and the transport has nothing unsent,
-those edits count as stored on the device. Other tabs retain their own rows.
+those edits count as stored on the device. Other tabs retain their own rows. Each persistence
+session also claims, through Web Locks (`claimDocumentRows`), the writers whose rows it reads,
+writes or adopts, until its close has written them; a session never replays rows a live session in
+another tab still claims. When a tab closes with pending rows, an open editor in another tab adopts
+them under their original ids and shows their original edit times, so Saving delayed can appear for
+edits that tab never typed.
 
 Online hydration replays only the generation the server confirmed. Offline hydration replays a
 single known lineage; ambiguous lineages wait for server identity. Other generations and
@@ -644,7 +649,8 @@ registry changes and every 30 seconds. A kick skips documents an editor holds an
 waiting out their backoff. Across tabs of one origin, `documentLocks.ts` uses Web Locks: an open
 editor holds `uniffy:realtime:<docName>` shared from attach until its close has written its rows,
 and a drain runs only when it takes that lock exclusively at once, finishing `held` otherwise. So no
-tab replays the rows of an editor or a drain in another tab. Plain HTTP origins have no Web Locks;
+tab replays the rows of an editor or a drain in another tab, and the per-writer row claims above
+keep a reconnecting editor from replaying another tab's live rows. Plain HTTP origins have no Web Locks;
 there a tab skips only its own editors and the server's deduplication keeps the data right. Opening
 an editor cancels its drain before attaching, including one still waiting for its lock, and waits
 for prior persistence disposal.

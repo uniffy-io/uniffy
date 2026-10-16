@@ -4,14 +4,17 @@ from __future__ import annotations
 
 import asyncio
 import random
+from collections import Counter
 from dataclasses import dataclass, field
+from typing import Any
 from uuid import UUID
 
+from connectrpc.errors import ConnectError
 from uniffy_proto.auth.v1.auth_connect import AuthServiceClient
 from uniffy_proto.auth.v1.auth_pb import AuthResult, LoginRequest, SwitchOrganizationRequest
 from uniffy_proto.common.v1.common_pb import AccessMode, ContentRole
 from uniffy_proto.notes.v1.notes_connect import NotesServiceClient
-from uniffy_proto.notes.v1.notes_pb import CreateNoteRequest
+from uniffy_proto.notes.v1.notes_pb import CreateNoteRequest, GetNoteRequest, UpdateNoteRequest
 from uniffy_proto.organizations.v1.organizations_connect import OrganizationsServiceClient
 from uniffy_proto.organizations.v1.organizations_pb import ListMyOrganizationsRequest
 
@@ -115,3 +118,39 @@ async def create_notes(
             return UUID(response.note.id)
 
         return list(await asyncio.gather(*(create(index) for index in range(count))))
+
+
+async def append_line_through_rpc(
+    api_url: str, owner: Identity, note_ids: list[UUID], line: str
+) -> dict[str, Any]:
+    """Ordinary text writes as the web host sends them, then a read back of each note.
+
+    Outcomes are ``ok`` or the Connect code of a refused write; ``stored`` counts notes whose
+    content reads back with the line, which a merge with live edits keeps.
+    """
+    headers = {"authorization": f"Bearer {owner.token}"}
+    outcomes: Counter[str] = Counter()
+    stored = 0
+    async with NotesServiceClient(api_url) as client:
+        for note_id in note_ids:
+            read = GetNoteRequest(note_id=str(note_id), organization_id=owner.organization_id)
+            before = await client.get_note(read, headers=headers)
+            base = before.note.content if before.note is not None else ""
+            written = f"{base}\n{line}"
+            try:
+                await client.update_note(
+                    UpdateNoteRequest(
+                        note_id=str(note_id),
+                        organization_id=owner.organization_id,
+                        content=written,
+                        base_content=base,
+                    ),
+                    headers=headers,
+                )
+            except ConnectError as exc:
+                outcomes[exc.code.value] += 1
+                continue
+            outcomes["ok"] += 1
+            after = await client.get_note(read, headers=headers)
+            stored += after.note is not None and line in after.note.content
+    return {"writes": len(note_ids), "outcomes": dict(outcomes), "stored": stored}

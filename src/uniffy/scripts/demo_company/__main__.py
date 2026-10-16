@@ -15,6 +15,7 @@ from loguru import logger
 from sqlalchemy import select
 
 from uniffy.core.jobs import QueueName
+from uniffy.core.realtime.buffer import UpdateBuffer
 from uniffy.core.realtime.preflight import ensure_buffer_ready
 from uniffy.core.search import SearchIndexer, WorkspaceSearch
 from uniffy.domains.chat.limits import (
@@ -132,6 +133,7 @@ async def main() -> None:
             storage=storage,
             search=search,
             search_indexer=search_indexer,
+            buffer=UpdateBuffer(),
             content_dir=args.content_dir,
             org_slug=args.org_slug,
             actor_email=args.actor_email,

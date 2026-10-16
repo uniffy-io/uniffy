@@ -3,6 +3,7 @@ import { getStoreRef } from "@/app/storeRef";
 import { openDB, type IDBPDatabase, type IDBPObjectStore } from "idb";
 import { docNameFor } from "@/features/realtime/docNames";
 import { docGeneration } from "@/features/realtime/docGeneration";
+import { claimDocumentRows } from "@/features/realtime/documentLocks";
 import {
   MARKDOWN_MIRROR_FIELD,
   MARKDOWN_TEXT_FIELD,
@@ -160,6 +161,14 @@ function decodeRow(bytes: Uint8Array): StoredRow | null {
 
 async function readRow(blob: unknown): Promise<StoredRow | null> {
   return decodeRow(await decryptBytesFromStorage(blob as ArrayBuffer));
+}
+
+// The session that wrote a row: the epoch of a snapshot row, the ydoc guid that begins the update
+// id of a pending row. Adopted rows keep their writer, so claims follow the rows.
+function rowWriter(key: UpdateKey): string {
+  const seq = isPendingKey(key) ? key[3].slice(PENDING_SEQ_PREFIX.length) : key[3];
+  const end = seq.indexOf(":");
+  return end < 0 ? seq : seq.slice(0, end);
 }
 
 function isPendingKey(key: UpdateKey | string[]): boolean {
@@ -561,6 +570,29 @@ export function attachEncryptedPersistence(
   let writeLoop: Promise<void> | null = null;
   let lastWriteFailed = false;
   let unsubscribeCoverage = () => {};
+  // Writers whose rows this session reads, writes or adopts. Another tab's live session keeps its
+  // own, so hydration never replays them; they go when this session's close has written its rows.
+  const claimedRows = new Map<string, () => Promise<void>>();
+  let rowClaimsReleased = false;
+  async function claimRows(writer: string): Promise<boolean> {
+    if (claimedRows.has(writer)) return true;
+    const unclaim = await claimDocumentRows(docKey, writer);
+    if (!unclaim) return false;
+    if (rowClaimsReleased) {
+      void unclaim();
+      return false;
+    }
+    claimedRows.set(writer, unclaim);
+    return true;
+  }
+  async function releaseRows(): Promise<void> {
+    rowClaimsReleased = true;
+    const unclaims = [...claimedRows.values()];
+    claimedRows.clear();
+    await Promise.all(unclaims.map((unclaim) => unclaim()));
+  }
+  // Own rows are claimed before the first of them is written.
+  const ownRowsClaimed = Promise.all([claimRows(epoch), claimRows(ydoc.guid)]);
 
   const transport = () => recoveryTransports.get(docKey);
   const checkpointedNow = () =>
@@ -723,6 +755,7 @@ export function attachEncryptedPersistence(
     const loop = (async () => {
       // Every update listener runs first, so the transport already counts this edit as pending.
       await Promise.resolve();
+      await ownRowsClaimed;
       while (snapshotDue() || rowChanges.size > 0) {
         if (!(await writeBatch())) break;
       }
@@ -841,6 +874,7 @@ export function attachEncryptedPersistence(
     serverGeneration: string | null;
   }): Promise<string | null> {
     await previousDisposal;
+    await ownRowsClaimed;
     if (destroyed || released) return null;
     if (!isStorageEncryptionReady()) {
       finishHydration([]);
@@ -873,15 +907,17 @@ export function attachEncryptedPersistence(
       const rejected = (keys as UpdateKey[]).filter(
         (key) => key.length === 4 && key[2] !== replayGeneration,
       );
+      const replayable = (key: UpdateKey) =>
+        key.length === 4 &&
+        key[2] === replayGeneration &&
+        !key[2].startsWith(RECOVERY_GENERATION_PREFIX);
+      const writers = [...new Set((keys as UpdateKey[]).filter(replayable).map(rowWriter))];
+      const claimed = await Promise.all(writers.map(claimRows));
+      const readable = new Set(writers.filter((_, index) => claimed[index]));
       const restored: RetainedUpdate[] = [];
       for (let i = 0; i < blobs.length; i++) {
         const key = keys[i] as UpdateKey;
-        if (
-          key.length !== 4 ||
-          key[2] !== replayGeneration ||
-          key[2].startsWith(RECOVERY_GENERATION_PREFIX)
-        )
-          continue;
+        if (!replayable(key) || !readable.has(rowWriter(key))) continue;
         try {
           const row = await readRow(blobs[i]);
           if (destroyed || released) return null;
@@ -1140,7 +1176,9 @@ export function attachEncryptedPersistence(
           !storageFailed
         )
           handOffPendingDoc(opts.scope);
-      });
+      })
+      // Another session may claim this one's rows once its last write has landed.
+      .finally(releaseRows);
     pendingDisposals.set(docKey, disposal);
     destroyPromise = disposal.finally(() => {
       if (pendingDisposals.get(docKey) === disposal) pendingDisposals.delete(docKey);

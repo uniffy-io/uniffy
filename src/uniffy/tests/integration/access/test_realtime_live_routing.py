@@ -4,12 +4,14 @@ import asyncio
 import time
 from collections.abc import AsyncIterator, Callable
 from typing import Any
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 import pytest_asyncio
 from prometheus_client import REGISTRY
+from uniffy_proto.notes.v1.notes_pb import UpdateNoteRequest, UpdateNoteResponse
 
-from uniffy.core.realtime.buffer_keys import BufferScope
+from uniffy.core.realtime.buffer_keys import DUE_DELAY_MS, BufferScope
 from uniffy.core.realtime.checkpoint import CheckpointStatus, checkpoint_document
 from uniffy.core.realtime.markdown import markdown_text
 from uniffy.core.realtime.multiplex import write_var_string
@@ -36,7 +38,10 @@ from uniffy.core.realtime.wire import (
     sync_step1_state_vector,
 )
 from uniffy.core.realtime.ydoc_manager import YDocManager
+from uniffy.core.search.indexer import SearchIndexer
+from uniffy.core.storage import ObjectStorage
 from uniffy.core.types import ContentType
+from uniffy.domains.notes.service import NotesServiceImpl
 from uniffy.infrastructure.database.session import open_session
 from uniffy.tests.integration.access.realtime_documents import discard
 from uniffy.tests.integration.access.realtime_live import (
@@ -67,6 +72,7 @@ from uniffy.tests.integration.access.realtime_sockets import (
     step,
     subscribed,
 )
+from uniffy.tests.integration.access.rpc_calls import call_rpc
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
@@ -310,6 +316,62 @@ async def test_worker_checkpoint_reaches_attached_client_as_progress(
         assert parse_session_state_message(frame) == SessionState(
             receipt.generation, receipt.epoch, 1, 1, row.revision
         )
+
+
+async def update_note(note: BufferedDocument, **fields: str) -> UpdateNoteResponse:
+    """The UpdateNote RPC as the note's owner, served by an ordinary backend request."""
+    service = NotesServiceImpl(
+        MagicMock(spec=ObjectStorage), AsyncMock(spec=SearchIndexer), note.buffer
+    )
+    request = UpdateNoteRequest(note_id=str(note.key[1]), organization_id=str(note.org), **fields)
+    return await call_rpc(service.update_note, request, user_id=note.owner, organization_id=note.org)
+
+
+async def test_text_rpc_moves_a_peer_holding_accepted_receipts_to_saved_without_a_worker(
+    live_note: BufferedDocument,
+) -> None:
+    async with (
+        routed(live_note, 1) as (manager,),
+        attached(manager, live_note) as (peer, frames),
+    ):
+        state = session_state(frames)
+        await subscribed(peer, state)
+        alice = typed(live_note.base, suffix=" Alice")
+        peer.write_own("edit-1", alice, live_note.generation)
+        first = await peer.receipt()
+        peer.write_own("edit-2", typed(live_note.base, alice, suffix=" Bob"), live_note.generation)
+        second = await peer.receipt()
+        # PostgreSQL holds neither edit yet, so the peer can only show them as accepted.
+        assert (await stored(live_note.key)).checkpoint_seq == 0
+
+        started = time.monotonic()
+        response = await update_note(live_note, content="base agent", base_content="base")
+        frame, _ = await peer.until(MESSAGE_CHECKPOINT_PROGRESS, covering)
+        waited = time.monotonic() - started
+        row = await stored(live_note.key)
+        progress = parse_checkpoint_progress_message(frame)
+
+        assert progress == CheckpointProgress(
+            state.generation, state.epoch, second.accepted_sequence, row.revision
+        )
+        # Saved: the progress names the epoch of both receipts and covers each of their sequences.
+        assert all(
+            (receipt.generation, receipt.epoch) == (progress.generation, progress.epoch)
+            and receipt.accepted_sequence <= progress.covered_sequence
+            for receipt in (first, second)
+        )
+        # No worker serves this namespace; the RPC commit alone covered the edits, well before
+        # the window after which a buffered edit becomes due for a worker checkpoint.
+        assert waited < DUE_DELAY_MS / 1000
+        assert response.note.content == "base Alice Bob agent"
+        assert (row.checkpoint_seq, row.rendered_revision) == (2, row.revision)
+        assert await live_note.buffer_state() == {
+            "stream": [],
+            "control": 1,
+            "receipts": [],
+            "due": None,
+        }
+        await peer.text("base Alice Bob agent")
 
 
 async def test_lost_control_record_sends_fresh_session_state_then_receipt_in_new_epoch(

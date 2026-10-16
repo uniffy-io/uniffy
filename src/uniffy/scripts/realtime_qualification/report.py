@@ -104,6 +104,13 @@ def _scenario_markdown(scenario: dict[str, Any]) -> list[str]:
         )
     if scenario["errors"]:
         lines += ["", "Errors: " + ", ".join(f"{k}={v}" for k, v in scenario["errors"].items())]
+    for target, writes in scenario.get("rpc_writes", {}).items():
+        outcomes = ", ".join(f"{k}={v}" for k, v in writes["outcomes"].items()) or "none"
+        lines += [
+            "",
+            f"RPC text writes, {target.replace('_', ' ')} notes: {writes['writes']} sent, "
+            f"outcomes {outcomes}, {writes['stored']} read back with the written line.",
+        ]
     return [*lines, ""]
 
 

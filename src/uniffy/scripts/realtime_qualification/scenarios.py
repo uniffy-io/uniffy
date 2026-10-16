@@ -27,7 +27,12 @@ from uniffy.scripts.realtime_qualification.client import (
 )
 from uniffy.scripts.realtime_qualification.probes import Probes
 from uniffy.scripts.realtime_qualification.report import distribution
-from uniffy.scripts.realtime_qualification.stack import Identity, create_notes, document_text
+from uniffy.scripts.realtime_qualification.stack import (
+    Identity,
+    append_line_through_rpc,
+    create_notes,
+    document_text,
+)
 
 OPEN_CONCURRENCY = 16
 SYNC_TIMEOUT_SECONDS = 60
@@ -69,6 +74,9 @@ class Settings:
     settle: float
     drain_timeout: float
     seed: int
+    # Notes written through UpdateNote after the window: this many never attached, and this many
+    # of the scenario's attached documents.
+    rpc_writes: int
 
 
 @dataclass
@@ -233,6 +241,7 @@ async def run_scenario(
     drain_seconds = await _drain(layout, settings.drain_timeout)
     await asyncio.sleep(settings.settle)
     window_seconds, postgres, valkey, cpu = await window.finish()
+    timeline = window.timeline()
     driver_cpu = time.process_time() - driver_cpu
     lag_task.cancel()
 
@@ -240,7 +249,7 @@ async def run_scenario(
         name: {str(item.text) for item in items} for name, items in layout.replicas_by_doc.items()
     }
     replicas = [item for items in layout.replicas_by_doc.values() for item in items]
-    result = {
+    result: dict[str, Any] = {
         "name": scenario.name,
         "workload": {
             "documents": scenario.documents,
@@ -282,6 +291,34 @@ async def run_scenario(
         "cpu": cpu,
         "driver": {"cpu_seconds": round(driver_cpu, 2), "loop_lag_ms": distribution(lag)},
         "errors": dict(recorder.errors),
+        "timeline": timeline,
     }
     await asyncio.gather(*(socket.close() for socket, _ in layout.sockets))
+    if settings.rpc_writes > 0:
+        result["rpc_writes"] = await _rpc_writes(scenario, settings, identities[0], doc_ids, api_url)
     return result
+
+
+async def _rpc_writes(
+    scenario: Scenario, settings: Settings, owner: Identity, attached: list[UUID], api_url: str
+) -> dict[str, Any]:
+    """Text writes through the RPC to fresh notes and to documents the scenario attached."""
+    rng = random.Random(f"{settings.seed}:{scenario.name}:rpc")
+    fresh = await create_notes(
+        api_url,
+        owner,
+        settings.rpc_writes,
+        f"Qualification {scenario.name} rpc",
+        document_text(settings.doc_bytes, rng),
+    )
+    return {
+        "never_attached": await append_line_through_rpc(
+            api_url, owner, fresh, f"rpc write to a fresh note {rng.random()}"
+        ),
+        "attached": await append_line_through_rpc(
+            api_url,
+            owner,
+            attached[: settings.rpc_writes],
+            f"rpc write to an attached note {rng.random()}",
+        ),
+    }

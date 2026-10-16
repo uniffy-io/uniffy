@@ -13,7 +13,17 @@ logger = logger.bind(component="infrastructure.valkey.queue")
 
 
 _pools: dict[QueueName, ArqValkey | None] = {name: None for name in QueueName}
-_reinit_locks: dict[QueueName, asyncio.Lock] = {name: asyncio.Lock() for name in QueueName}
+# A lock binds to the loop that first waits on it and keeps that loop alive. A restarted worker
+# runs a fresh loop, so only the running loop's locks are kept and earlier loops can be freed.
+_loop_reinit_locks: tuple[asyncio.AbstractEventLoop, dict[QueueName, asyncio.Lock]] | None = None
+
+
+def _reinit_lock(name: QueueName) -> asyncio.Lock:
+    global _loop_reinit_locks
+    loop = asyncio.get_running_loop()
+    if _loop_reinit_locks is None or _loop_reinit_locks[0] is not loop:
+        _loop_reinit_locks = (loop, {queue: asyncio.Lock() for queue in QueueName})
+    return _loop_reinit_locks[1][name]
 
 
 async def init_queue(name: QueueName) -> ArqValkey:
@@ -41,7 +51,7 @@ async def close_queue(name: QueueName) -> None:
 
 
 async def _try_reinit_queue(name: QueueName) -> ArqValkey | None:
-    async with _reinit_locks[name]:
+    async with _reinit_lock(name):
         pool = _pools[name]
         if pool is not None:
             try:

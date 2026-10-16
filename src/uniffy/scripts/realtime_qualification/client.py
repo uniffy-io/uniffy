@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import time
-from collections import Counter
+from collections import Counter, deque
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from urllib.parse import quote
@@ -50,8 +50,11 @@ from uniffy.core.realtime.wire import (
 # The web client sends a batch before its timer once it holds this many bytes.
 BATCH_FLUSH_BYTES = 64 * 1024
 MAX_INBOUND_BYTES = 16 * 1024 * 1024
-# Clients resend a retryably refused update after a backoff.
-UNAVAILABLE_RETRY_SECONDS = 1.0
+# Clients keep a retryably refused update and resend it after a backoff that grows by half up to
+# fifteen seconds; a receipt or commit while that backoff runs resends it at once.
+UNAVAILABLE_RETRY_SECONDS = 5.0
+UNAVAILABLE_RETRY_GROWTH = 1.5
+UNAVAILABLE_RETRY_MAX_SECONDS = 15.0
 COUNTED_MESSAGES = frozenset({
     MESSAGE_COMMITTED,
     MESSAGE_ACCEPTED_RECEIPT,
@@ -134,6 +137,9 @@ class DocReplica:
         self.batch_edits: list[int] = []
         self.batch_timer: asyncio.TimerHandle | None = None
         self.retry_timer: asyncio.TimerHandle | None = None
+        self.retry_delay = UNAVAILABLE_RETRY_SECONDS
+        # Ids sent and not yet answered, oldest first; the server answers writes in order.
+        self.awaiting: deque[str] = deque()
         self.updates: dict[str, OwnUpdate] = {}
         self.delivered: dict[int, int] = {}
 
@@ -197,6 +203,7 @@ class DocReplica:
 
         self.recorder.frames += 1
         self.socket.send(encode_doc_frame(self.name, own.body), on_sent=stamp)
+        self.awaiting.append(update_id)
 
     def receive(self, payload: bytes, now: float) -> None:
         kind = payload[0]
@@ -214,8 +221,10 @@ class DocReplica:
                 self._adopt_epoch(state.epoch, state.checkpoint_sequence, now)
         elif kind == MESSAGE_ACCEPTED_RECEIPT:
             receipt = parse_accepted_receipt_message(payload)
+            self._answered(receipt.update_id)
             if receipt.generation == self.generation:
                 self._accept(receipt.update_id, receipt.epoch, receipt.accepted_sequence, now)
+            self._resume_saving()
         elif kind == MESSAGE_CHECKPOINT_PROGRESS:
             progress = parse_checkpoint_progress_message(payload)
             if (progress.generation, progress.epoch) == (self.generation, self.epoch):
@@ -223,8 +232,10 @@ class DocReplica:
                 self._retire_covered(now)
         elif kind == MESSAGE_COMMITTED:
             update_id = parse_committed_message(payload)
+            self._answered(update_id)
             if self._accept(update_id, self.epoch, 0, now):
                 self._retire(update_id, now)
+            self._resume_saving()
         elif kind == YMessageType.SYNC:
             # Own edits travel as updates under their ids, so a server SyncStep1 needs no reply.
             if payload[1] == YSyncMessageType.SYNC_STEP1:
@@ -237,10 +248,8 @@ class DocReplica:
             _, offset = read_var_uint(payload, 1)
             reason = read_var_string(payload, offset)[0]
             self.recorder.errors[f"denied:{reason}"] += 1
-            if reason == UNAVAILABLE_REASON and self.retry_timer is None:
-                self.retry_timer = asyncio.get_running_loop().call_later(
-                    UNAVAILABLE_RETRY_SECONDS, self._resend_unaccepted
-                )
+            if reason == UNAVAILABLE_REASON:
+                self._refuse_unavailable()
 
     def _adopt_epoch(self, epoch: str, checkpoint_sequence: int, now: float) -> None:
         changed = self.epoch is not None and epoch != self.epoch
@@ -289,10 +298,35 @@ class DocReplica:
             (now - self.log.edited_at[index]) * 1000 for index in own.edits
         )
 
-    def _resend_unaccepted(self) -> None:
-        self.retry_timer = None
+    def _answered(self, update_id: str) -> None:
+        with contextlib.suppress(ValueError):
+            self.awaiting.remove(update_id)
+
+    def _refuse_unavailable(self) -> None:
+        # The refusal answers the oldest write in flight; later ones may still be accepted.
+        if self.awaiting:
+            self.awaiting.popleft()
+        if self.retry_timer is not None:
+            return
+        self.retry_timer = asyncio.get_running_loop().call_later(
+            self.retry_delay, self._resend_refused
+        )
+        self.retry_delay = min(
+            self.retry_delay * UNAVAILABLE_RETRY_GROWTH, UNAVAILABLE_RETRY_MAX_SECONDS
+        )
+
+    def _resume_saving(self) -> None:
+        # The server takes writes again, so refused updates need not wait out their backoff.
+        self.retry_delay = UNAVAILABLE_RETRY_SECONDS
+        if self.retry_timer is not None:
+            self._resend_refused()
+
+    def _resend_refused(self) -> None:
+        if self.retry_timer is not None:
+            self.retry_timer.cancel()
+            self.retry_timer = None
         for update_id, own in self.updates.items():
-            if not own.accepted:
+            if not own.accepted and update_id not in self.awaiting:
                 self._send(update_id)
 
     def unaccepted(self) -> int:

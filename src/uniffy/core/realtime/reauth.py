@@ -11,6 +11,7 @@ from uniffy.core.realtime.auth import (
     WS_CLOSE_FORBIDDEN,
     WS_CLOSE_REAUTH_REQUIRED,
     WS_CLOSE_TOKEN_REVOKED,
+    WS_CLOSE_TRY_AGAIN_LATER,
 )
 from uniffy.core.realtime.state import WSSession
 
@@ -52,7 +53,9 @@ async def connection_denial(
             ws_session.user_id, ws_session.token_version, ws_session.session_id
         )
     except RevocationUnavailableError:
-        return Denial(1013, "authentication temporarily unavailable", "auth_unavailable")
+        return Denial(
+            WS_CLOSE_TRY_AGAIN_LATER, "authentication temporarily unavailable", "auth_unavailable"
+        )
     if revoked is not None:
         return Denial(WS_CLOSE_TOKEN_REVOKED, "credentials revoked", revoked.value)
 

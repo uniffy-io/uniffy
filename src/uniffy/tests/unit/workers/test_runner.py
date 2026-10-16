@@ -1,19 +1,19 @@
 import asyncio
+import gc
+import weakref
 from typing import Any
 from unittest.mock import patch
 
 import pytest
+from prometheus_client import REGISTRY
 from valkey.exceptions import ConnectionError as ValkeyConnectionError
 from valkey.exceptions import TimeoutError as ValkeyTimeoutError
 
 from uniffy.core.jobs import QueueName
+from uniffy.infrastructure.valkey import pubsub, queue
 from uniffy.vendor.arq import func
 from uniffy.workers import runner
-from uniffy.workers.metrics import (
-    WORKER_READY,
-    WORKER_RESTARTS_TOTAL,
-    WorkerRestartReason,
-)
+from uniffy.workers.metrics import WorkerRestartReason
 
 
 class _Pipeline:
@@ -97,7 +97,7 @@ def fleet(pool: ValkeyPool, lifecycle: list[tuple[str, asyncio.AbstractEventLoop
     )
 
 
-def restart_after(settings: type, pool: ValkeyPool, queue: QueueName) -> list[float]:
+def restart_after(settings: type, pool: ValkeyPool, queue_name: QueueName) -> list[float]:
     """Run the fleet until it finishes; Valkey answers again during the restart backoff."""
     pauses: list[float] = []
 
@@ -110,12 +110,18 @@ def restart_after(settings: type, pool: ValkeyPool, queue: QueueName) -> list[fl
         patch.object(runner, "start_worker_metrics_server"),
         patch.object(runner.time, "sleep", side_effect=backoff),
     ):
-        runner.run_worker_with_restart(settings, app_name="test-worker", metrics_port=0, queue=queue)
+        runner.run_worker_with_restart(
+            settings, app_name="test-worker", metrics_port=0, queue=queue_name
+        )
     return pauses
 
 
+def sample(name: str, labels: dict[str, str]) -> float:
+    return REGISTRY.get_sample_value(name, labels) or 0.0
+
+
 @pytest.mark.parametrize(
-    ("lost", "queue", "reason"),
+    ("lost", "queue_name", "reason"),
     [
         (ValkeyConnectionError("lost"), QueueName.CORE, WorkerRestartReason.VALKEY_CONNECTION),
         (
@@ -127,14 +133,14 @@ def restart_after(settings: type, pool: ValkeyPool, queue: QueueName) -> list[fl
     ],
 )
 def test_worker_restarted_after_losing_valkey_reopens_its_clients_on_a_fresh_loop(
-    lost: Exception, queue: QueueName, reason: WorkerRestartReason
+    lost: Exception, queue_name: QueueName, reason: WorkerRestartReason
 ) -> None:
-    restarts = WORKER_RESTARTS_TOTAL.labels(queue=queue, reason=reason)
-    before = restarts._value.get()
+    restarts = {"queue": queue_name, "reason": reason}
+    before = sample("uniffy_worker_restarts_total", restarts)
     pool = ValkeyPool(lost)
     lifecycle: list[tuple[str, asyncio.AbstractEventLoop]] = []
 
-    pauses = restart_after(fleet(pool, lifecycle), pool, queue)
+    pauses = restart_after(fleet(pool, lifecycle), pool, queue_name)
 
     # The lost run released its clients on their own loop before the restart opened new ones.
     assert [event for event, _ in lifecycle] == ["startup", "shutdown", "startup", "shutdown"]
@@ -143,5 +149,120 @@ def test_worker_restarted_after_losing_valkey_reopens_its_clients_on_a_fresh_loo
     assert second is not first and second_closer is second
     assert first.is_closed() and second.is_closed()
     assert pauses == [1.0]
-    assert restarts._value.get() == before + 1
-    assert WORKER_READY.labels(queue=queue)._value.get() == 0
+    assert sample("uniffy_worker_restarts_total", restarts) == before + 1
+    assert sample("uniffy_worker_ready", {"queue": queue_name}) == 0
+
+
+class QueuePool:
+    """An ARQ pool that answers every command."""
+
+    async def ping(self) -> bool:
+        return True
+
+    async def aclose(self, close_connection_pool: bool = False) -> None:
+        return None
+
+
+async def connecting_pool(*args: Any, **kwargs: Any) -> QueuePool:
+    # Connecting yields, so a second caller waits for the reconnect already under way.
+    await asyncio.sleep(0.01)
+    return QueuePool()
+
+
+def test_queue_reconnects_wait_their_turn_on_every_loop_a_restarted_worker_runs(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(queue, "create_pool", connecting_pool)
+
+    async def reconnect_twice() -> list[Any]:
+        with pytest.raises(RuntimeError):
+            queue.get_queue(QueueName.CORE)
+        pools = await asyncio.gather(*(queue.get_queue_safe(QueueName.CORE) for _ in range(2)))
+        await queue.close_queue(QueueName.CORE)
+        return pools
+
+    for _ in range(2):
+        with asyncio.Runner() as restart:
+            first, second = restart.run(reconnect_twice())
+        assert first is not None and second is first
+
+
+class Publisher:
+    """The publisher connection; its ping yields, so concurrent publishes contend for it."""
+
+    def __init__(self, published: list[tuple[str, bytes]]) -> None:
+        self.published = published
+
+    async def ping(self) -> bool:
+        await asyncio.sleep(0.01)
+        return True
+
+    async def publish(self, channel: str, payload: bytes) -> None:
+        self.published.append((channel, payload))
+
+    async def aclose(self) -> None:
+        return None
+
+
+def test_publishes_wait_their_turn_on_every_loop_a_restarted_worker_runs(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    published: list[tuple[str, bytes]] = []
+    monkeypatch.setattr(pubsub.aioredis, "from_url", lambda url, **_: Publisher(published))
+
+    async def publish_twice() -> None:
+        await pubsub.init_pubsub()
+        await asyncio.gather(pubsub.publish_bytes("doc", b"1"), pubsub.publish_bytes("doc", b"2"))
+        await pubsub.close_pubsub()
+
+    for _ in range(2):
+        with asyncio.Runner() as restart:
+            restart.run(publish_twice())
+
+    assert sorted(published) == [("doc", b"1"), ("doc", b"1"), ("doc", b"2"), ("doc", b"2")]
+
+
+def released(loops: list[weakref.ref[asyncio.AbstractEventLoop]]) -> list[bool]:
+    gc.collect()
+    return [loop() is None for loop in loops]
+
+
+def test_a_restarted_worker_does_not_keep_the_loops_its_queue_reconnects_waited_on(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(queue, "create_pool", connecting_pool)
+    loops: list[weakref.ref[asyncio.AbstractEventLoop]] = []
+
+    async def reconnect_twice() -> None:
+        loops.append(weakref.ref(asyncio.get_running_loop()))
+        await asyncio.gather(*(queue.get_queue_safe(QueueName.CORE) for _ in range(2)))
+        await queue.close_queue(QueueName.CORE)
+
+    for _ in range(5):
+        with asyncio.Runner() as restart:
+            restart.run(reconnect_twice())
+
+    # Only the latest loop may stay reachable, so a worker restarting on every lost connection
+    # does not grow with each restart.
+    assert released(loops)[:-1] == [True] * 4
+
+
+def test_a_restarted_worker_does_not_keep_the_loops_its_publishes_waited_on(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    published: list[tuple[str, bytes]] = []
+    monkeypatch.setattr(pubsub.aioredis, "from_url", lambda url, **_: Publisher(published))
+    loops: list[weakref.ref[asyncio.AbstractEventLoop]] = []
+
+    async def publish_twice() -> None:
+        loops.append(weakref.ref(asyncio.get_running_loop()))
+        await pubsub.init_pubsub()
+        await asyncio.gather(pubsub.publish_bytes("doc", b"1"), pubsub.publish_bytes("doc", b"2"))
+        await pubsub.close_pubsub()
+
+    for _ in range(5):
+        with asyncio.Runner() as restart:
+            restart.run(publish_twice())
+
+    assert len(published) == 10
+    assert released(loops)[:-1] == [True] * 4

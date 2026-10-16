@@ -709,7 +709,7 @@ def _create_api_dispatcher(
     add_rpc(
         "/superadmin.v1.SystemConfigService",
         SystemConfigServiceASGIApplication,
-        SystemConfigServiceImpl(),
+        SystemConfigServiceImpl(buffer),
     )
     add_rpc(
         "/superadmin.v1.SystemOrganizationsService",

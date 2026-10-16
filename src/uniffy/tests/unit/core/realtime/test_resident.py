@@ -1,11 +1,13 @@
 import random
+import statistics
+import time
 from uuid import UUID
 
 import pycrdt
 import pytest
 
 from uniffy.core.realtime.buffer_keys import BufferedUpdate, BufferHead, BufferScope, LatestState
-from uniffy.core.realtime.limits import MAX_DOCUMENT_BYTES
+from uniffy.core.realtime.limits import MAX_DOCUMENT_BYTES, MAX_SNAPSHOT_BYTES
 from uniffy.core.realtime.markdown import (
     DOC_GENERATION_KEY,
     DOC_META_FIELD,
@@ -323,10 +325,15 @@ def test_checks_follow_every_resident_change_and_forget_refused_updates() -> Non
     assert session.head_seq == 3
 
 
+# Every item's origin carries its writer's client id, which pycrdt draws at random from 53 bits.
+# A fixed full-width id keeps the encoded size of the long-lived note the same on every run.
+LONG_LIVED_WRITER = 2**53 - 1
+
+
 def long_lived_note(edits: int) -> pycrdt.Doc:
     """A note grown by scattered inserts and deletions, whose encoding is far larger than its text."""
     rng = random.Random(7)
-    doc = pycrdt.Doc()
+    doc = pycrdt.Doc(client_id=LONG_LIVED_WRITER)
     doc.get(DOC_META_FIELD, type=pycrdt.Map)[DOC_GENERATION_KEY] = GENERATION
     text = markdown_text(doc)
     text.insert(0, "base")
@@ -340,26 +347,67 @@ def long_lived_note(edits: int) -> pycrdt.Doc:
     return doc
 
 
+def decode_seconds(encoded: bytes) -> float:
+    """The fastest of three full decodes, the cost a check must not pay per update."""
+    timings: list[float] = []
+    for _ in range(3):
+        started = time.perf_counter()
+        decoded(encoded)
+        timings.append(time.perf_counter() - started)
+    return min(timings)
+
+
 def test_admission_checks_cost_the_update_not_the_document() -> None:
     writer = long_lived_note(10_000)
-    session = resident(latest(writer.get_update()))
-    encoded = len(session.ydoc.get_update())
-    assert encoded > 500 * 1024
-    updates: list[bytes] = []
-    shadows: list[pycrdt.Doc | None] = []
+    encoded = writer.get_update()
+    assert len(encoded) > 500 * 1024
+    session = resident(latest(encoded))
+    decode = decode_seconds(encoded)
+    costs: list[float] = []
+    update = b""
 
     for index in range(40):
         before = writer.get_state()
         markdown_text(writer).insert(index * 7, "k")
-        updates.append(writer.get_update(before))
-        assert check_update(session, GENERATION, updates[-1]) is True
-        accept_update(session, updates[-1], index + 1)
-        shadows.append(session.shadow)
+        update = writer.get_update(before)
+        started = time.perf_counter()
+        assert check_update(session, GENERATION, update) is True
+        accept_update(session, update, index + 1)
+        costs.append(time.perf_counter() - started)
 
-    # One decode of the document serves every check: the same shadow takes each accepted update,
-    # and the size bound grows by the update instead of re-encoding the document.
-    first = shadows[0]
-    assert first is not None and all(shadow is first for shadow in shadows)
-    assert first.get_state() == session.ydoc.get_state()
-    assert session.encoded_bound == encoded + sum(len(update) for update in updates)
+    # The first check may read the whole document once; every later one costs its update.
+    assert statistics.median(costs[1:]) < decode / 4
     assert text_of(session.ydoc) == text_of(writer)
+    assert session.head_seq == 40
+    # Every accepted update stays known to the checks, so repeating one adds nothing.
+    assert check_update(session, GENERATION, update) is False
+    assert text_of(session.ydoc) == text_of(writer)
+
+
+def canvas_node(*history: bytes, node: str, size: int) -> bytes:
+    """An update adding one canvas node whose payload holds ``size`` bytes outside the Markdown."""
+    doc = decoded(*history)
+    before = doc.get_state()
+    doc.get("nodes", type=pycrdt.Map)[node] = "n" * size
+    return doc.get_update(before)
+
+
+def test_accepted_updates_count_toward_the_snapshot_cap() -> None:
+    # Each update fits one frame; the checkpoint leaves room for one of them but not two.
+    part = MAX_SNAPSHOT_BYTES // 16
+    base = baseline()
+    checkpoint = pycrdt.merge_updates(
+        base, canvas_node(base, node="kept", size=MAX_SNAPSHOT_BYTES - part - part // 2)
+    )
+    session = resident(latest(checkpoint))
+    first = canvas_node(checkpoint, node="first", size=part)
+    second = canvas_node(checkpoint, first, node="second", size=part)
+    small = canvas_node(checkpoint, first, node="small", size=1024)
+
+    assert check_update(session, GENERATION, first) is True
+    accept_update(session, first, 1)
+
+    with pytest.raises(DocumentTooLarge):
+        check_update(session, GENERATION, second)
+    assert sorted(session.ydoc.get("nodes", type=pycrdt.Map).keys()) == ["first", "kept"]
+    assert check_update(session, GENERATION, small) is True

@@ -95,6 +95,13 @@ def _parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--valkey-probe-hz", type=float, default=20, help="0 disables")
     parser.add_argument(
+        "--rpc-writes",
+        type=int,
+        default=0,
+        help="After each window, write this many fresh notes and this many attached documents "
+        "through UpdateNote and read them back",
+    )
+    parser.add_argument(
         "--no-checkpoint",
         action="store_true",
         help="Skip the PostgreSQL CHECKPOINT that bounds each window's block writes",
@@ -140,6 +147,7 @@ async def _run(args: argparse.Namespace) -> None:
         settle=args.settle,
         drain_timeout=args.drain_timeout,
         seed=args.seed,
+        rpc_writes=args.rpc_writes,
     )
     cgroups = {name: Path(path) for name, path in _pairs(args.cgroup, "--cgroup").items()}
     run_id = uuid.uuid4().hex[:12]

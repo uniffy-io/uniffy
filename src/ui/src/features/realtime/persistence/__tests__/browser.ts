@@ -122,6 +122,10 @@ export function installBrowser(): void {
     setItem: (key: string, value: string) => void local.set(key, String(value)),
     removeItem: (key: string) => void local.delete(key),
   });
+  connectSession();
+}
+
+function connectSession(): void {
   setStoreRef({
     getState: () => ({
       auth: { user: { id: signedInUser }, currentOrganizationId: currentOrganization },
@@ -158,6 +162,14 @@ export async function storeRawRow(key: string[], payload: unknown, version = 4):
 export async function signInDevice(userId = "alice"): Promise<void> {
   switchAccount(userId);
   teardownStorageEncryption();
+  await initStorageEncryption(DEVICE_SEED, userId);
+}
+
+/** The account in another tab of a signed-in device: it unwraps the stored key, so it reads the
+ * rows every tab of the origin writes. */
+export async function unlockDevice(userId = "alice"): Promise<void> {
+  switchAccount(userId);
+  connectSession();
   await initStorageEncryption(DEVICE_SEED, userId);
 }
 

@@ -17,9 +17,8 @@ from uniffy.domains.platform.config.handlers import SystemConfigHandlers
 
 
 class SystemConfigServiceImpl:
-    def __init__(self) -> None:
-        # The default buffer reads the deployment key namespace through the process binary client.
-        self._handlers = SystemConfigHandlers(UpdateBuffer())
+    def __init__(self, buffer: UpdateBuffer) -> None:
+        self._handlers = SystemConfigHandlers(buffer)
 
     async def get_system_config(
         self,
