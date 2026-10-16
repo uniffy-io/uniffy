@@ -41,10 +41,12 @@ is stored both in the snapshot column and `doc_meta.generation`. Existing snapsh
 encoded generation, including the empty marker for historical snapshots. Independent replicas must
 never invent independent CRDT baselines for the same generation.
 
-`accept_update` resolves edit access from PostgreSQL while holding the document lock, validates
-generation and merges encoded bytes with `pycrdt.merge_updates`. Merging raw updates preserves
-causal dependencies that have not arrived yet. Re-encoding only the visible Y.Doc can discard those
-pending bytes. Commit precedes acknowledgment and fanout. Duplicate updates do not advance revision.
+`admission.admit_update` resolves edit access from PostgreSQL while holding the document lock,
+validates generation, size and seed claims against the resident document, then appends the update
+to the Valkey buffer. Merging raw updates preserves causal dependencies that have not arrived yet.
+Re-encoding only the visible Y.Doc can discard those pending bytes. Acceptance precedes the receipt
+and fanout. An update that adds nothing appends no record and answers at the current head, or with
+type 7 when the checkpoint already holds the whole document.
 
 ## Wire and transport
 
@@ -148,7 +150,7 @@ and synthetic occurrences do not attach.
 
 Upgrade validates Origin, access-token type, token organization, user and session revocation facts,
 and active membership. Web passes bearer in `Sec-WebSocket-Protocol` alongside
-`uniffy.realtime.v1`; server echoes only that canonical protocol. Mobile can pass Authorization.
+`uniffy.realtime.v2`; server echoes only that canonical protocol. Mobile can pass Authorization.
 Never echo bearer data through the selected protocol.
 `core/auth/revocation.py` reads account status/token version and session ownership/revocation from
 PostgreSQL in one fresh query. RPC and asset authentication use the same check. Valkey markers are
@@ -174,7 +176,8 @@ Transient authorization failures stop disclosure and close the connection for re
 an infrastructure exception into a permanent document denial or continue using a cached allow.
 
 Close codes: 1009 unidentifiable oversized frame; 1013 rate/connection/slow-consumer limits;
-4401 invalid token; 4403 connection forbidden; 4409 refresh required; 4410 token revoked.
+4401 invalid token; 4403 connection forbidden; 4409 refresh required; 4410 token revoked;
+4426 upgrade required, reload and never reconnect.
 4404 and 4408 remain reserved client compatibility constants. Keep 4409 and 4410 distinct: expiry
 refreshes and reconnects, revocation stops until app authentication changes. Socket lifetime is
 bounded even without content attached. Inbound, outbound and watchdog tasks supervise each other;
@@ -182,7 +185,8 @@ any task failure retires the connection.
 
 ## Projection and replacement
 
-`SnapshotWriter` schedules domain projection after a 5-second debounce capped at 30 seconds.
+The due-index checkpoint worker commits buffered edits about ten seconds after the first pending
+one, then enqueues projection of the committed revision.
 Queued snapshot bytes and encode timestamps are hints only. `persist_snapshot` loads the current
 committed snapshot under the document lock, calls adapter `stage_render`, then commits domain
 columns and `rendered_revision` together. Timestamp last-writer-wins is not safe for CRDT state.

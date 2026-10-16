@@ -49,7 +49,7 @@ export const wireCorpus = JSON.parse(
     new URL("../../../../../proto/tests/fixtures/realtime_wire_frames.json", import.meta.url),
     "utf8",
   ),
-) as { cases: CorpusCase[]; sequences: CorpusSequence[] };
+) as { cases: CorpusCase[]; denials: CorpusCase[]; sequences: CorpusSequence[] };
 
 export function fromHex(hex: string): Uint8Array {
   return Uint8Array.from(hex.match(/../g) ?? [], (byte) => Number.parseInt(byte, 16));

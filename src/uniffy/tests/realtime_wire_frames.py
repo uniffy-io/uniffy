@@ -49,6 +49,8 @@ UNENCODABLE_CASES: list[dict[str, Any]] = [
     for case in MALFORMED_CASES
     if "fields" in case  # noqa: PLR2004 - corpus key
 ]
+# Document denials whose exact reason both clients act on, keyed by case name.
+DENIALS: dict[str, dict[str, Any]] = {case["name"]: case for case in CORPUS["denials"]}
 SEQUENCE_FRAMES: list[dict[str, Any]] = [
     {"name": f"{sequence['name']}[{index}]", **step["frame"]}
     for sequence in CORPUS["sequences"]

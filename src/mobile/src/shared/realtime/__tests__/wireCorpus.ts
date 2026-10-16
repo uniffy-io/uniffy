@@ -18,7 +18,11 @@ export interface CorpusSequence {
 }
 
 /** The frames and coverage sequences the backend and web codecs are held to as well. */
-export const wireCorpus: { cases: CorpusFrame[]; sequences: CorpusSequence[] } = JSON.parse(
+export const wireCorpus: {
+  cases: CorpusFrame[];
+  denials: CorpusFrame[];
+  sequences: CorpusSequence[];
+} = JSON.parse(
   readFileSync(
     new URL("../../../../../proto/tests/fixtures/realtime_wire_frames.json", import.meta.url),
     "utf8",

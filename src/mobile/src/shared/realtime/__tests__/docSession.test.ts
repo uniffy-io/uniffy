@@ -181,14 +181,49 @@ it("lets Offline outrank Saving delayed when the socket drops", async () => {
   expect(persistence()).toBe("offline");
 });
 
+function denial(reason: string): Uint8Array {
+  const encoder = encoding.createEncoder();
+  encoding.writeVarUint(encoder, 2);
+  encoding.writeVarUint(encoder, 0);
+  encoding.writeVarString(encoder, reason);
+  return encoding.toUint8Array(encoder);
+}
+
+it("shows Saving unavailable over Saving delayed until the first receipt", async () => {
+  const { socket, send, persistence } = await openNote();
+  const updateId = send(" edit");
+  socket.deliver(denial("unavailable"));
+  expect(persistence()).toBe("unavailable");
+  vi.advanceTimersByTime(30_000);
+  expect(persistence()).toBe("unavailable");
+  socket.deliver(receipt(updateId, 1));
+  vi.advanceTimersByTime(1_000);
+  expect(persistence()).toBe("delayed");
+  socket.deliver(progress(1));
+  expect(persistence()).toBe("saved");
+});
+
+it("shows the rejected state when the server holds other bytes for an edit", async () => {
+  const { socket, send, persistence } = await openNote();
+  send(" edit");
+  socket.deliver(denial("update conflict"));
+  expect(persistence()).toBe("rejected");
+});
+
+it("asks for an app update after close 4426", async () => {
+  const { handle, socket, type, persistence } = await openNote();
+  type(" edit");
+  socket.close(4426);
+  expect(persistence()).toBe("upgrade_required");
+  expect(handle.getSnapshot().status).toBe("upgrade_required");
+  await vi.advanceTimersByTimeAsync(60_000);
+  expect(FakeSocket.sockets).toHaveLength(1);
+});
+
 it("keeps View-only after a denial even when an earlier edit commits", async () => {
   const { handle, socket, send, persistence } = await openNote();
   const updateId = send(" edit");
-  const denial = encoding.createEncoder();
-  encoding.writeVarUint(denial, 2);
-  encoding.writeVarUint(denial, 0);
-  encoding.writeVarString(denial, "edit access removed");
-  socket.deliver(encoding.toUint8Array(denial));
+  socket.deliver(denial("edit access removed"));
   socket.deliver(encodeCommitted(updateId));
   expect(persistence()).toBe("view_only");
   expect(handle.getSnapshot().status).toBe("permission_lost");

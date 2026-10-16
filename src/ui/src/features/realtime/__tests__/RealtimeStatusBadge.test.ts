@@ -6,21 +6,23 @@ import type { SaveState } from "@/features/realtime/hooks/useDocSaveState";
 import type { DeviceStorage } from "@/features/realtime/persistence/encryptedYjsPersistence";
 import type { RealtimeStatus } from "@/features/realtime/protocol";
 
-const SAVE_STATES: SaveState[] = ["syncing", "synced", "delayed", "saved"];
+const SAVE_STATES: SaveState[] = ["syncing", "synced", "delayed", "unavailable", "saved"];
 const SAVE_LABELS: Record<SaveState, string> = {
   syncing: "Syncing",
   synced: "Synced",
   delayed: "Saving delayed",
+  unavailable: "Saving unavailable",
   saved: "Saved",
 };
 const EXCEPTIONAL: [RealtimeStatus, string][] = [
   ["connecting", "Connecting"],
   ["disconnected", "Offline"],
   ["offline", "Offline"],
-  ["update_rejected", "Edit too large to sync"],
+  ["update_rejected", "Edit not synced"],
   ["permission_lost", "View-only - edit access removed"],
   ["access_lost", "Access lost"],
   ["token_revoked", "Session ended - reload"],
+  ["upgrade_required", "Reload to keep saving"],
 ];
 
 function render(
@@ -72,6 +74,17 @@ describe("persistence chip", () => {
     },
   );
 
+  it("says Saving unavailable keeps edits on this device and resumes on its own", () => {
+    const html = render("connected", "unavailable");
+    expect(html).toContain("Your edits stay on this device");
+    expect(html).toContain("Saving resumes automatically");
+    expect(render("connected", "unavailable", "unavailable")).not.toContain("stay on this device");
+  });
+
+  it("asks for a reload when the app is out of date", () => {
+    expect(render("upgrade_required")).toContain("Reload this page");
+  });
+
   it("says the device cannot store edits while saving is delayed without storage", () => {
     expect(render("connected", "delayed", "unavailable")).toContain(
       "This device cannot store your edits",
@@ -80,7 +93,7 @@ describe("persistence chip", () => {
 
   it("shows a failed device copy ahead of the connection and every unsaved state", () => {
     for (const status of ["connected", "connecting", "offline", "disconnected"] as const) {
-      for (const save of ["syncing", "synced", "delayed"] as const) {
+      for (const save of ["syncing", "synced", "delayed", "unavailable"] as const) {
         const html = render(status, save, "failed");
         expect(html).toContain(">Not saved on device<");
         expect(html).not.toContain(`>${SAVE_LABELS[save]}<`);

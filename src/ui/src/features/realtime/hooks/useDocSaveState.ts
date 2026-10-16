@@ -7,7 +7,7 @@ import {
 } from "@/features/realtime/persistence/encryptedYjsPersistence";
 
 /** What the persistence chip tells the user about their own edits on one document. */
-export type SaveState = "syncing" | "synced" | "delayed" | "saved";
+export type SaveState = "syncing" | "synced" | "delayed" | "unavailable" | "saved";
 
 export const SAVE_DELAYED_AFTER_MS = 30_000;
 // Receipts arrive per transport batch, so without a hold the label would flip several times a
@@ -18,6 +18,7 @@ const NO_DOC_STATE: RealtimeDocState = Object.freeze({
   transportPending: false,
   checkpointPending: false,
   oldestUncheckpointedAt: null,
+  savingUnavailable: false,
 });
 
 export function useRealtimeDocState(docName: string | null): RealtimeDocState {
@@ -58,6 +59,7 @@ export function createSaveStateStore(docName: string): SaveStateStore {
 
   const getSnapshot = (): SaveState => {
     const state = realtimeMultiplexer.getDocState(docName);
+    if (state.savingUnavailable) return "unavailable";
     if (state.oldestUncheckpointedAt !== null && state.oldestUncheckpointedAt === delayedFor)
       return "delayed";
     if (state.transportPending || settling) return "syncing";

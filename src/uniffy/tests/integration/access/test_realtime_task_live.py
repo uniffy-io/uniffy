@@ -1,4 +1,4 @@
-"""Task description writes and task or project deletion over live buffered tails."""
+"""Task description writes, recurring copies and deletions over live buffered tails."""
 
 from collections.abc import AsyncIterator, Awaitable, Callable
 from dataclasses import dataclass
@@ -13,12 +13,7 @@ from connectrpc.errors import ConnectError
 from sqlalchemy import delete, select
 from uniffy_proto.projects.v1.projects_pb import UpdateTaskRequest
 
-from uniffy.core.auth.principal import (
-    AuthenticatedPrincipal,
-    reset_current_principal,
-    set_current_principal,
-)
-from uniffy.core.models.projects.field_definition import FieldDefinition
+from uniffy.core.models.projects.field_definition import FieldDefinition, TaskStatusSemantic
 from uniffy.core.models.projects.project import Project
 from uniffy.core.models.projects.sprint import Sprint as _Sprint  # noqa: F401 - FK metadata
 from uniffy.core.models.projects.task import Task
@@ -27,20 +22,16 @@ from uniffy.core.realtime.adapter import register_realtime_adapter
 from uniffy.core.realtime.buffer import UpdateBuffer
 from uniffy.core.realtime.buffer_keys import AdmissionStatus
 from uniffy.core.realtime.live import LiveStateUnavailable
-from uniffy.core.realtime.storage import (
-    EditDenied,
-    accept_update,
-    load_snapshot,
-    lock_document,
-    stage_seed,
-)
+from uniffy.core.realtime.storage import EditDenied, load_snapshot, lock_document, stage_seed
 from uniffy.core.search.indexer import SearchIndexer
 from uniffy.core.storage import ObjectStorage
 from uniffy.core.types import AccessMode, ContentType, generate_id
 from uniffy.domains.projects.defaults import stage_default_project_fields
 from uniffy.domains.projects.projects import ProjectOperations
 from uniffy.domains.projects.realtime import TaskRealtimeAdapter
+from uniffy.domains.projects.recurrence import serialize_recurrence_config
 from uniffy.domains.projects.service import ProjectsServiceImpl
+from uniffy.domains.projects.statuses import load_task_status_semantics
 from uniffy.domains.projects.tasks.content import TaskContentOperations
 from uniffy.domains.projects.tasks.mutations import TaskMutationOperations
 from uniffy.infrastructure.database.session import open_session
@@ -56,6 +47,7 @@ from uniffy.tests.integration.access.realtime_live import (
     typed,
     unreachable,
 )
+from uniffy.tests.integration.access.rpc_calls import call_rpc
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
@@ -81,6 +73,7 @@ async def live_project(access, valkey_namespace) -> AsyncIterator[LiveProject]:
             name="Live project",
             slug=f"live-{generate_id().hex[-12:]}",
             access_mode=AccessMode.OWNER_ONLY,
+            task_counter=2,
         )
         db.add(project)
         await db.flush()
@@ -163,20 +156,7 @@ async def update_task_rpc(task: BufferedDocument, **fields: Any) -> None:
     """Call the UpdateTask RPC as the task's owner, against the process buffer."""
     service = ProjectsServiceImpl(MagicMock(spec=ObjectStorage), AsyncMock(spec=SearchIndexer))
     request = UpdateTaskRequest(task_id=str(task.key[1]), organization_id=str(task.org), **fields)
-    token = set_current_principal(
-        AuthenticatedPrincipal(
-            user_id=task.owner,
-            organization_id=task.org,
-            session_id=None,
-            token_version=None,
-            full_name="",
-            avatar_key="",
-        )
-    )
-    try:
-        await service.update_task(request, MagicMock())
-    finally:
-        reset_current_principal(token)
+    await call_rpc(service.update_task, request, user_id=task.owner, organization_id=task.org)
 
 
 async def task_row(task: BufferedDocument) -> Task:
@@ -356,7 +336,7 @@ async def test_deletion_retires_pending_task_tails_and_refuses_later_appends(
         )
         assert refused.status is AdmissionStatus.RECOVERY_REQUIRED
         with pytest.raises(EditDenied):
-            await accept_update(task.key, task.org, task.owner, task.generation, late)
+            await task.admit_live("u-late", late)
 
 
 @pytest.mark.parametrize("deleter", [delete_first_task, delete_project], ids=["task", "project"])
@@ -371,11 +351,53 @@ async def test_deletion_commits_while_valkey_is_unreachable(
     for task in deleted:
         async with open_session() as db:
             assert await load_snapshot(db, task.key) is None
+        # The tails could not be retired, so PostgreSQL authorization alone refuses the append.
         with pytest.raises(EditDenied):
-            await accept_update(
-                task.key,
-                task.org,
-                task.owner,
-                task.generation,
-                typed(task.base, suffix=" late"),
-            )
+            await task.admit_live("u-late", typed(task.base, suffix=" late"))
+
+
+async def spawn_after(task: BufferedDocument, buffer: UpdateBuffer) -> Task:
+    """Complete ``task`` as a daily series through an ordinary update against ``buffer``."""
+    async with open_session() as db:
+        series = await db.get(Task, task.key[1])
+        assert series is not None
+        series.recurrence_rule = serialize_recurrence_config({"pattern": "DAILY"})
+        series.due_date = "2026-12-01"
+        await db.commit()
+        semantics = await load_task_status_semantics(db, series.project_id)
+        content = TaskContentOperations(db, storage=MagicMock(), search_indexer=AsyncMock())
+        _, spawned = await TaskMutationOperations(db, content, buffer).update(
+            task.owner, task.org, task.key[1], status=semantics.id_for(TaskStatusSemantic.COMPLETED)
+        )
+    assert spawned is not None
+    return spawned
+
+
+async def test_recurring_spawn_copies_the_buffered_description_and_leaves_the_tail_pending(
+    live_project: LiveProject,
+) -> None:
+    task = live_project.tasks[0]
+    await task.admit("u-bob", typed(task.base, suffix=" Bob"), task.peer)
+    before = await stored(task.key)
+    buffered = await task.buffer_state()
+
+    spawned = await spawn_after(task, task.buffer)
+
+    assert (spawned.due_date, spawned.description) == ("2026-12-02", "base Bob")
+    assert (await task_row(task)).description == "base"
+    assert checkpoint_of(await stored(task.key)) == checkpoint_of(before)
+    assert await task.buffer_state() == buffered
+
+
+async def test_recurring_spawn_starts_from_the_stored_description_while_valkey_is_unreachable(
+    live_project: LiveProject, project_outage: UpdateBuffer
+) -> None:
+    task = live_project.tasks[0]
+    await task.admit("u-bob", typed(task.base, suffix=" Bob"), task.peer)
+    buffered = await task.buffer_state()
+
+    spawned = await spawn_after(task, project_outage)
+
+    # The series continues; the completed task keeps Bob's edit for its own checkpoint.
+    assert spawned.description == "base"
+    assert await task.buffer_state() == buffered

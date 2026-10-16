@@ -415,7 +415,7 @@ class RecurrenceMutationOperations:
         withdrawn_overrides = []
         if master.status != EventStatus.CANCELLED and new_event.status == EventStatus.CANCELLED:
             withdrawn_overrides = await stage_following_overrides(
-                self.session, master, occurrence_date
+                self.session, master, occurrence_date, self.events.buffer
             )
             await stage_withdrawal_mail(
                 self.session,

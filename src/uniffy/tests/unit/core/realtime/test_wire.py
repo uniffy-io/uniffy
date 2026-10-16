@@ -1,6 +1,9 @@
 import pytest
 
+from uniffy.core.realtime.session import UNAVAILABLE_REASON, UPDATE_CONFLICT_REASON
+from uniffy.core.realtime.wire import create_auth_denied_message
 from uniffy.tests.realtime_wire_frames import (
+    DENIALS,
     MALFORMED_CASES,
     SEQUENCE_FRAMES,
     UNENCODABLE_CASES,
@@ -34,3 +37,11 @@ def test_malformed_frame_is_rejected(case):
 def test_out_of_contract_fields_cannot_be_encoded(case):
     with pytest.raises(ValueError):
         encode(case)
+
+
+@pytest.mark.parametrize(
+    ("name", "reason"),
+    [("denial_unavailable", UNAVAILABLE_REASON), ("denial_update_conflict", UPDATE_CONFLICT_REASON)],
+)
+def test_server_denial_reasons_produce_the_corpus_bytes(name, reason):
+    assert create_auth_denied_message(reason) == frame_bytes(DENIALS[name])

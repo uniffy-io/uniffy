@@ -1,3 +1,5 @@
+"""Realtime edits stay durable through admission, checkpoint, projection and their effects."""
+
 import asyncio
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
@@ -8,11 +10,9 @@ import pytest
 import pytest_asyncio
 from sqlalchemy import delete, select, update
 
-from uniffy.core.errors import StaleContentVersionError
 from uniffy.core.events.bus import emit_notification, event_from_json, stage_notification_events
 from uniffy.core.events.types import NotificationEvent
 from uniffy.core.models.files.reconciliation import InlineAttachmentReconciliation
-from uniffy.core.models.notes.note import Note
 from uniffy.core.models.notifications.notification import Notification
 from uniffy.core.models.notifications.outbox import NotificationOutbox
 from uniffy.core.models.permissions.content_member import ContentMember
@@ -21,19 +21,18 @@ from uniffy.core.models.projects.sprint import Sprint as _Sprint  # noqa: F401
 from uniffy.core.models.projects.task import Task
 from uniffy.core.models.realtime.yjs_snapshot import RealtimeYjsSnapshot
 from uniffy.core.realtime.adapter import register_realtime_adapter
-from uniffy.core.realtime.buffer import UpdateBuffer
+from uniffy.core.realtime.buffer_keys import Receipt
 from uniffy.core.realtime.job_contracts import SAVE_REALTIME_SNAPSHOT
 from uniffy.core.realtime.lifecycle import stage_replacement
+from uniffy.core.realtime.live import accept_seed, claim_seed
 from uniffy.core.realtime.markdown import markdown_text
 from uniffy.core.realtime.rename import stage_mention_rename
 from uniffy.core.realtime.snapshot import persist_snapshot
+from uniffy.core.realtime.state import WSSession
 from uniffy.core.realtime.storage import (
-    DocumentTooLarge,
     EditDenied,
     GenerationConflict,
     SeedConflict,
-    accept_update,
-    claim_seed,
     decode_snapshot,
     load_snapshot,
     lock_document,
@@ -51,14 +50,13 @@ from uniffy.core.types import (
 )
 from uniffy.domains.files.attachments.inline import stage_inline_reconciliation
 from uniffy.domains.files.jobs.attachments import _reconcile
-from uniffy.domains.notes.adapter import NoteRealtimeAdapter
-from uniffy.domains.notes.operations import NoteOperations
 from uniffy.domains.notifications.delivery.app import InAppAdapter
 from uniffy.domains.notifications.jobs.events import deliver_notification_outbox
 from uniffy.domains.projects.realtime import TaskRealtimeAdapter
 from uniffy.domains.projects.tasks.notifications import TaskNotifications
 from uniffy.infrastructure.database.session import open_session
-from uniffy.tests.integration.access.realtime_live import Recorder
+from uniffy.tests.integration.access.realtime_live import Recorder, buffered, stored, text_of
+from uniffy.tests.integration.access.test_realtime_live_routing import Socket
 
 emit_mentions = TaskNotifications.emit_mention_notifications
 
@@ -66,7 +64,7 @@ pytestmark = pytest.mark.asyncio(loop_scope="session")
 
 
 @pytest_asyncio.fixture(loop_scope="session")
-async def document(session, access):
+async def document(session, access, valkey_namespace):
     project = Project(
         organization_id=access.org_id,
         owner_id=access.member_id,
@@ -94,11 +92,15 @@ async def document(session, access):
         "uniffy.domains.projects.tasks.realtime.TaskNotifications.emit_mention_notifications",
         new_callable=AsyncMock,
     ):
-        async with open_session() as db:
-            await lock_document(db, key)
-            seed = await stage_seed(db, key, access.org_id)
-            await db.commit()
-        yield SimpleNamespace(key=key, seed=seed, access=access, adapter=adapter, indexer=indexer)
+        live = await buffered(key, access, valkey_namespace)
+        yield SimpleNamespace(
+            key=key,
+            seed=await stored(key),
+            access=access,
+            adapter=adapter,
+            indexer=indexer,
+            live=live,
+        )
     await session.rollback()
     await session.execute(
         delete(RealtimeYjsSnapshot).where(RealtimeYjsSnapshot.content_id == task.id)
@@ -109,24 +111,25 @@ async def document(session, access):
 
 
 async def accepted(document, doc):
-    return await accept_update(
-        document.key,
-        document.access.org_id,
-        document.access.member_id,
-        document.seed.generation,
-        doc.get_update(),
-    )
+    """Admit the editor's whole state like a live socket, then checkpoint it unprojected."""
+    admitted = await document.live.admit_live(f"u-{generate_id().hex}", doc.get_update())
+    assert admitted.applied
+    return await document.live.checkpointed()
 
 
 async def project(document):
     await persist_snapshot(*document.key, document.access.org_id, b"", b"")
 
 
-async def test_replica_updates_survive_without_pubsub(document):
+async def test_admissions_from_two_replicas_both_reach_projection_without_pubsub(document):
     left, right = decode_snapshot(document.seed), decode_snapshot(document.seed)
     markdown_text(left).insert(4, " Alice")
     markdown_text(right).insert(4, " Bob")
-    await asyncio.gather(accepted(document, left), accepted(document, right))
+    await asyncio.gather(
+        document.live.admit_live("u-left", left.get_update()),
+        document.live.admit_live("u-right", right.get_update()),
+    )
+    await document.live.checkpointed()
     await project(document)
     async with open_session() as db:
         snapshot = await load_snapshot(db, document.key)
@@ -137,15 +140,22 @@ async def test_replica_updates_survive_without_pubsub(document):
         assert snapshot.rendered_revision == snapshot.revision
 
 
-async def test_delete_only_update_is_durable_and_idempotent(document):
+async def test_delete_only_update_is_buffered_once_and_its_replay_appends_nothing(document):
     doc = decode_snapshot(document.seed)
     before = doc.get_state()
     del markdown_text(doc)[0:4]
     assert doc.get_state() == before
-    first = await accepted(document, doc)
-    second = await accepted(document, doc)
-    assert first.revision == second.revision
-    assert str(markdown_text(decode_snapshot(second))) == ""
+    deletion = doc.get_update(before)
+    first = await document.live.admit_live("u-delete", deletion)
+    replay = await document.live.admit_live("u-replay", deletion)
+    assert first.applied and first.receipt is not None
+    scope = document.live.head.scope
+    assert (replay.applied, replay.receipt) == (
+        False,
+        Receipt(scope.generation, scope.epoch, first.receipt.seq, "u-replay"),
+    )
+    assert await document.live.stream_ids() == [b"1-0"]
+    assert text_of((await document.live.checkpointed()).updates) == ""
 
 
 async def test_metadata_write_does_not_supersede_content(document):
@@ -162,7 +172,7 @@ async def test_metadata_write_does_not_supersede_content(document):
         assert task.title == "renamed"
 
 
-async def test_external_replacement_fences_resident_and_queued_state(document):
+async def test_external_replacement_fences_stale_admission_and_projection_payloads(document):
     stale = decode_snapshot(document.seed)
     markdown_text(stale).insert(4, " stale")
     async with open_session() as db:
@@ -170,12 +180,12 @@ async def test_external_replacement_fences_resident_and_queued_state(document):
         task = await db.get(Task, document.key[1])
         task.description = "external replacement"
         after_commit = await stage_replacement(
-            UpdateBuffer(), db, document.key, document.access.org_id
+            document.live.buffer, db, document.key, document.access.org_id
         )
         await db.commit()
     await after_commit()
     with pytest.raises(GenerationConflict):
-        await accepted(document, stale)
+        await document.live.admit_live("u-stale", stale.get_update())
     await persist_snapshot(
         *document.key, document.access.org_id, stale.get_update(), stale.get_state()
     )
@@ -220,6 +230,7 @@ async def test_projection_lock_prevents_older_render_from_finishing_last(documen
         await entered.wait()
         second = decode_snapshot(document.seed)
         markdown_text(second).insert(4, " second")
+        # Admission takes the document lock that projection holds while it renders.
         accepting = asyncio.create_task(accepted(document, second))
         await asyncio.sleep(0.05)
         assert not accepting.done()
@@ -242,18 +253,24 @@ async def test_replicas_hydrate_one_shared_seed(document):
         assert second.updates == document.seed.updates
 
 
+async def lease(document, candidate: str):
+    replica = candidate.split(":")[0]
+    return await claim_seed(
+        document.live.buffer, document.key, document.access.org_id, [candidate], replica
+    )
+
+
 async def test_seed_lease_has_one_owner_and_recovers_after_expiry(document):
-    org = document.access.org_id
-    assert (await claim_seed(document.key, org, ["left:1"], "left")).owner == "left:1"
-    assert (await claim_seed(document.key, org, ["right:2"], "right")).owner == "left:1"
+    assert (await lease(document, "left:1")).owner == "left:1"
+    assert (await lease(document, "right:2")).owner == "left:1"
     async with open_session() as db:
         snapshot = await load_snapshot(db, document.key)
         snapshot.seed_expires_at = datetime.now(UTC) - timedelta(seconds=1)
         await db.commit()
-    assert (await claim_seed(document.key, org, ["right:2"], "right")).owner == "right:2"
+    assert (await lease(document, "right:2")).owner == "right:2"
 
 
-async def test_deleted_parent_rejects_update_without_pubsub(document):
+async def test_deleted_parent_refuses_admission_without_pubsub(document):
     doc = decode_snapshot(document.seed)
     markdown_text(doc).insert(4, " denied")
     async with open_session() as db:
@@ -262,10 +279,9 @@ async def test_deleted_parent_rejects_update_without_pubsub(document):
         parent.is_deleted = True
         await db.commit()
     with pytest.raises(EditDenied):
-        await accepted(document, doc)
-    async with open_session() as db:
-        snapshot = await load_snapshot(db, document.key)
-        assert snapshot.updates == document.seed.updates
+        await document.live.admit_live("u-denied", doc.get_update())
+    assert await document.live.stream_ids() == []
+    assert (await stored(document.key)).updates == document.seed.updates
 
 
 async def test_failed_external_replacement_rolls_back_domain_and_generation(document):
@@ -273,7 +289,7 @@ async def test_failed_external_replacement_rolls_back_domain_and_generation(docu
         await lock_document(db, document.key)
         task = await db.get(Task, document.key[1])
         task.description = "never committed"
-        await stage_replacement(UpdateBuffer(), db, document.key, document.access.org_id)
+        await stage_replacement(document.live.buffer, db, document.key, document.access.org_id)
         await db.rollback()
     async with open_session() as db:
         task = await db.get(Task, document.key[1])
@@ -294,7 +310,7 @@ async def test_missing_target_removes_pending_snapshot(document):
         assert await load_snapshot(db, document.key) is None
 
 
-async def test_expired_editor_grant_cannot_commit_without_revocation_fanout(document):
+async def test_expired_editor_grant_cannot_append_without_revocation_fanout(document):
     async with open_session() as db:
         task = await db.get(Task, document.key[1])
         grant = ContentMember(
@@ -311,67 +327,20 @@ async def test_expired_editor_grant_cannot_commit_without_revocation_fanout(docu
         await db.commit()
         doc = decode_snapshot(document.seed)
         markdown_text(doc).insert(4, " allowed")
-        await accept_update(
-            document.key,
-            document.access.org_id,
-            document.access.peer_id,
-            document.seed.generation,
-            doc.get_update(),
-        )
+        peer = document.access.peer_id
+        assert (await document.live.admit_live("u-allowed", doc.get_update(), peer)).applied
         grant.expires_at = datetime.now(UTC) - timedelta(seconds=1)
         await db.commit()
         markdown_text(doc).insert(len(markdown_text(doc)), " forbidden")
         with pytest.raises(EditDenied):
-            await accept_update(
-                document.key,
-                document.access.org_id,
-                document.access.peer_id,
-                document.seed.generation,
-                doc.get_update(),
-            )
-        snapshot = await load_snapshot(db, document.key)
-        assert str(markdown_text(decode_snapshot(snapshot))) == "base allowed"
+            await document.live.admit_live("u-forbidden", doc.get_update(), peer)
+        assert await document.live.stream_ids() == [b"1-0"]
+        assert text_of((await document.live.checkpointed()).updates) == "base allowed"
         await db.delete(grant)
         await db.commit()
 
 
-async def test_guarded_note_replacement_rejects_accepted_unprojected_human_edits(session, access):
-    note = Note(
-        organization_id=access.org_id,
-        owner_id=access.member_id,
-        title="Guarded",
-        slug=f"guard-{generate_id().hex}",
-        content="base",
-    )
-    session.add(note)
-    await session.commit()
-    key = ContentType.NOTE, note.id
-    adapter = NoteRealtimeAdapter(MagicMock())
-    with patch("uniffy.core.realtime.storage.get_realtime_adapter", return_value=adapter):
-        await lock_document(session, key)
-        seed = await stage_seed(session, key, access.org_id)
-        await session.commit()
-        doc = decode_snapshot(seed)
-        markdown_text(doc).insert(4, " human work")
-        await accept_update(key, access.org_id, access.member_id, seed.generation, doc.get_update())
-        operations = NoteOperations(session, MagicMock(), MagicMock())
-        with pytest.raises(StaleContentVersionError):
-            await operations.update(
-                access.member_id,
-                access.org_id,
-                note.id,
-                content="stale agent output",
-                expected_content_version=note.version,
-            )
-        await session.rollback()
-        snapshot = await load_snapshot(session, key)
-        assert str(markdown_text(decode_snapshot(snapshot))) == "base human work"
-        await session.delete(snapshot)
-        await session.execute(delete(Note).where(Note.id == key[1]))
-        await session.commit()
-
-
-async def test_missing_causal_predecessor_survives_durable_acceptance(document):
+async def test_successor_admitted_before_its_predecessor_is_appended_not_dropped(document):
     doc = decode_snapshot(document.seed)
     before = doc.get_state()
     markdown_text(doc).insert(4, " first")
@@ -379,21 +348,13 @@ async def test_missing_causal_predecessor_survives_durable_acceptance(document):
     middle = doc.get_state()
     markdown_text(doc).insert(len(markdown_text(doc)), " second")
     successor = doc.get_update(middle)
-    await accept_update(
-        document.key,
-        document.access.org_id,
-        document.access.member_id,
-        document.seed.generation,
-        successor,
-    )
-    accepted = await accept_update(
-        document.key,
-        document.access.org_id,
-        document.access.member_id,
-        document.seed.generation,
-        predecessor,
-    )
-    assert str(markdown_text(decode_snapshot(accepted))) == "base first second"
+
+    early = await document.live.admit_live("u-successor", successor)
+    late = await document.live.admit_live("u-predecessor", predecessor)
+
+    assert (early.applied, late.applied) == (True, True)
+    assert await document.live.stream_ids() == [b"1-0", b"2-0"]
+    assert text_of((await document.live.checkpointed()).updates) == "base first second"
 
 
 def fragment_proposal(snapshot):
@@ -405,48 +366,34 @@ def fragment_proposal(snapshot):
     return proposal.get_update()
 
 
+async def propose(document, update: bytes, held, *, token: str | None = None):
+    return await accept_seed(
+        document.live.buffer,
+        document.key,
+        document.access.org_id,
+        document.access.member_id,
+        document.seed.generation,
+        update,
+        seed_owner=held.owner,
+        seed_token=held.token if token is None else token,
+        seed_base="base",
+        enqueue=document.live.jobs,
+    )
+
+
 async def test_expired_seed_cannot_duplicate_successor_content(document):
-    org = document.access.org_id
-    actor = document.access.member_id
-    first = await claim_seed(document.key, org, ["left:1"], "left")
+    first = await lease(document, "left:1")
     stale = fragment_proposal(document.seed)
     async with open_session() as db:
         snapshot = await load_snapshot(db, document.key)
         snapshot.seed_expires_at = datetime.now(UTC) - timedelta(seconds=1)
         await db.commit()
-    second = await claim_seed(document.key, org, ["right:2"], "right")
+    second = await lease(document, "right:2")
     winner = fragment_proposal(document.seed)
-    accepted = await accept_update(
-        document.key,
-        org,
-        actor,
-        document.seed.generation,
-        winner,
-        seed_owner=second.owner,
-        seed_token=second.token,
-        seed_base="base",
-    )
+    accepted = await propose(document, winner, second)
     with pytest.raises(SeedConflict):
-        await accept_update(
-            document.key,
-            org,
-            actor,
-            document.seed.generation,
-            stale,
-            seed_owner=first.owner,
-            seed_token=first.token,
-            seed_base="base",
-        )
-    replay = await accept_update(
-        document.key,
-        org,
-        actor,
-        document.seed.generation,
-        winner,
-        seed_owner=second.owner,
-        seed_token=second.token,
-        seed_base="base",
-    )
+        await propose(document, stale, first)
+    replay = await propose(document, winner, second)
     assert replay.revision == accepted.revision
     assert (
         str(decode_snapshot(replay).get("prosemirror", type=pycrdt.XmlFragment))
@@ -454,54 +401,35 @@ async def test_expired_seed_cannot_duplicate_successor_content(document):
     )
 
 
-async def test_seed_checks_source_and_normal_updates_cannot_bypass_lease(document):
-    org = document.access.org_id
-    actor = document.access.member_id
-    lease = await claim_seed(document.key, org, ["left:1"], "left")
+async def test_seed_checks_source_and_live_updates_cannot_bypass_the_lease(document):
+    held = await lease(document, "left:1")
     proposal = fragment_proposal(document.seed)
     with pytest.raises(SeedConflict):
-        await accept_update(document.key, org, actor, document.seed.generation, proposal)
+        await document.live.admit_live("u-claim", proposal)
     edit = decode_snapshot(document.seed)
     markdown_text(edit).insert(4, " mobile edit")
-    accepted = await accept_update(
-        document.key, org, actor, document.seed.generation, edit.get_update()
-    )
+    assert (await document.live.admit_live("u-mobile", edit.get_update())).applied
     with pytest.raises(SeedConflict):
-        await accept_update(
-            document.key,
-            org,
-            actor,
-            document.seed.generation,
-            proposal,
-            seed_owner=lease.owner,
-            seed_token=lease.token,
-            seed_base="base",
-        )
-    async with open_session() as db:
-        saved = await load_snapshot(db, document.key)
-        assert saved.updates == accepted.updates
-        assert str(markdown_text(decode_snapshot(saved))) == "base mobile edit"
+        await propose(document, proposal, held)
+    assert (await stored(document.key)).updates == document.seed.updates
+    assert await document.live.stream_ids() == [b"1-0"]
+    assert text_of((await document.live.checkpointed()).updates) == "base mobile edit"
 
 
 @pytest.mark.parametrize("expired", [True, False])
 async def test_seed_checks_lease_expiry_and_identity_before_any_peer_seed(document, expired):
-    org = document.access.org_id
-    lease = await claim_seed(document.key, org, ["left:1"], "left")
+    held = await lease(document, "left:1")
     if expired:
         async with open_session() as db:
             snapshot = await load_snapshot(db, document.key)
             snapshot.seed_expires_at = datetime.now(UTC) - timedelta(seconds=1)
             await db.commit()
     with pytest.raises(SeedConflict):
-        await accept_update(
-            document.key,
-            org,
-            document.access.member_id,
-            document.seed.generation,
+        await propose(
+            document,
             fragment_proposal(document.seed),
-            seed_owner=lease.owner,
-            seed_token=lease.token if expired else "expired-lease-token",
-            seed_base="base",
+            held,
+            token=None if expired else "expired-lease-token",
         )
     async with open_session() as db:
         snapshot = await load_snapshot(db, document.key)
@@ -511,8 +439,7 @@ async def test_seed_checks_lease_expiry_and_identity_before_any_peer_seed(docume
 
 @pytest.mark.parametrize("proposal_kind", ["text_edit", "missing_claim", "missing_predecessor"])
 async def test_seed_rejects_text_edits_and_incomplete_initialization(document, proposal_kind):
-    org = document.access.org_id
-    lease = await claim_seed(document.key, org, ["left:1"], "left")
+    held = await lease(document, "left:1")
     proposal = decode_snapshot(document.seed)
     proposal.apply_update(fragment_proposal(document.seed))
     if proposal_kind == "text_edit":
@@ -527,16 +454,7 @@ async def test_seed_rejects_text_edits_and_incomplete_initialization(document, p
         proposal.get("markdown_mirror", type=pycrdt.Map)["seeded_by:incomplete"] = [0]
         update = proposal.get_update(before)
     with pytest.raises(SeedConflict):
-        await accept_update(
-            document.key,
-            org,
-            document.access.member_id,
-            document.seed.generation,
-            update,
-            seed_owner=lease.owner,
-            seed_token=lease.token,
-            seed_base="base",
-        )
+        await propose(document, update, held)
     async with open_session() as db:
         snapshot = await load_snapshot(db, document.key)
         assert snapshot.updates == document.seed.updates
@@ -612,7 +530,13 @@ async def rename(document, urn: str) -> Recorder:
     async with open_session() as db:
         await lock_document(db, document.key)
         after_commit = await stage_mention_rename(
-            UpdateBuffer(), db, document.key, document.access.org_id, urn, "Renamed", enqueue=jobs
+            document.live.buffer,
+            db,
+            document.key,
+            document.access.org_id,
+            urn,
+            "Renamed",
+            enqueue=jobs,
         )
         assert after_commit is not None
         await db.commit()
@@ -713,20 +637,21 @@ async def test_inline_cleanup_waits_for_projection_and_retries_failed_effect(doc
         item = await db.get(InlineAttachmentReconciliation, (document.key[0].value, document.key[1]))
     from_ctx = {"object_storage": MagicMock(), "search_indexer": MagicMock()}
     effect = AsyncMock()
+    buffer = document.live.buffer
     with patch("uniffy.domains.files.jobs.attachments.reconcile_inline_attachments", effect):
-        await _reconcile(from_ctx, item)
+        await _reconcile(from_ctx, item, buffer)
         effect.assert_not_awaited()
         await project(document)
         effect.side_effect = OSError("storage down")
         with pytest.raises(OSError):
-            await _reconcile(from_ctx, item)
+            await _reconcile(from_ctx, item, buffer)
         async with open_session() as db:
             assert (
                 await db.get(InlineAttachmentReconciliation, (item.content_type, item.content_id))
                 is not None
             )
         effect.side_effect = None
-        await _reconcile(from_ctx, item)
+        await _reconcile(from_ctx, item, buffer)
         assert effect.await_args.kwargs["referenced_file_ids"] == {file_id}
         async with open_session() as db:
             assert (
@@ -743,13 +668,18 @@ async def test_locked_hydration_refuses_deleted_content_without_orphan(document)
         task = await db.get(Task, document.key[1])
         task.is_deleted = True
         await db.commit()
-    with patch(
-        "uniffy.core.realtime.ydoc_manager.get_realtime_adapter", return_value=document.adapter
-    ):
-        with pytest.raises(EditDenied):
-            await YDocManager()._hydrate(
-                document.key, document.access.org_id, document.access.member_id
-            )
+    socket = Socket()
+    attaching = WSSession(
+        user_id=document.access.member_id,
+        organization_id=document.access.org_id,
+        token_version=1,
+        conn_id=id(socket),
+        ws=socket,
+    )
+    with pytest.raises(EditDenied):
+        await YDocManager(buffer=document.live.buffer).acquire(
+            document.key, attaching, can_edit=True
+        )
     async with open_session() as db:
         assert await load_snapshot(db, document.key) is None
 
@@ -770,22 +700,3 @@ async def test_canvas_rename_keeps_other_fields_and_concurrent_text(document):
     assert str(merged["data"]["content"]) == f"é [[[Renamed|{urn}]]] peer"
     assert merged["data"]["color"] == "red"
     assert merged["x"] == 22
-
-
-async def test_document_limit_rejection_keeps_previous_durable_bytes(document):
-    doc = decode_snapshot(document.seed)
-    before = doc.get_state()
-    markdown_text(doc).insert(0, "oversized")
-    with patch("uniffy.core.realtime.storage.MAX_DOCUMENT_BYTES", 4):
-        with pytest.raises(DocumentTooLarge):
-            await accept_update(
-                document.key,
-                document.access.org_id,
-                document.access.member_id,
-                document.seed.generation,
-                doc.get_update(before),
-            )
-    async with open_session() as db:
-        stored = await load_snapshot(db, document.key)
-        assert stored.updates == document.seed.updates
-        assert stored.revision == document.seed.revision

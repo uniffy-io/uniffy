@@ -16,7 +16,7 @@ from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.models.calendar.exception import RecurrenceException
 from uniffy.core.models.calendar.reminder import EventReminder
-from uniffy.core.models.realtime.yjs_snapshot import RealtimeYjsSnapshot
+from uniffy.core.realtime.lifecycle import stage_hard_delete
 from uniffy.core.realtime.publisher import publish_perm_change
 from uniffy.core.realtime.storage import lock_document
 from uniffy.core.types import (
@@ -44,6 +44,7 @@ class EventDeleteOperations:
         self.session = events.session
         self.content_type = events.content_type
         self.search_indexer = events.search_indexer
+        self.buffer = events.buffer
 
     async def delete(
         self,
@@ -83,7 +84,9 @@ class EventDeleteOperations:
                 master.recurrence_config = config
                 master.updated_at = datetime.now(UTC)
                 await self.events._reschedule_master_reminder_rows(master)
-                overrides = await stage_following_overrides(self.session, master, occurrence_date)
+                overrides = await stage_following_overrides(
+                    self.session, master, occurrence_date, self.buffer
+                )
                 await write_audit_event(
                     self.session,
                     organization_id=organization_id,
@@ -131,12 +134,11 @@ class EventDeleteOperations:
         )
         affected = [event, *overrides]
         event_ids = [item.id for item in affected]
-        await self.session.execute(
-            delete(RealtimeYjsSnapshot).where(
-                RealtimeYjsSnapshot.content_type == ContentType.CALENDAR_EVENT,
-                RealtimeYjsSnapshot.content_id.in_(event_ids),
-            )
-        )
+        # Events have no restore path, so trash removes their live descriptions as well.
+        retirements = [
+            await stage_hard_delete(self.buffer, self.session, (ContentType.CALENDAR_EVENT, item.id))
+            for item in affected
+        ]
         await self.session.execute(
             delete(EventReminder).where(EventReminder.event_id.in_(event_ids))
         )
@@ -176,6 +178,8 @@ class EventDeleteOperations:
             },
         )
         await self.session.commit()
+        for retire in retirements:
+            await retire()
 
         await publish_perm_change(ContentType.CALENDAR_EVENT, event.id, None, None)
         for staged in tag_removals:

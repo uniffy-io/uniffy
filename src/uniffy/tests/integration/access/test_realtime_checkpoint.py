@@ -697,23 +697,32 @@ async def test_commit_publishes_progress_and_enqueues_projection_for_the_new_rev
     jobs = Recorder()
 
     result = await checkpoint_document(env.buffer, head.scope, enqueue=jobs)
-    message = None
+    payloads = []
     for _ in range(50):
         message = await doc_messages.get_message(ignore_subscribe_messages=True, timeout=0.1)
         if message is not None:
+            payloads.append(loads(message["data"]))
+        if len(payloads) == 2:
             break
 
-    assert message is not None
-    payload = loads(message["data"])
-    assert {
-        key: payload[key] for key in payload if key not in {"origin_replica", "published_at"}
-    } == {
-        "kind": "checkpoint_progress",
-        "generation": head.scope.generation,
-        "epoch": head.scope.epoch,
-        "covered_sequence": 1,
-        "checkpoint_revision": result.revision,
-    }
+    def progress(covered: int, revision: int) -> dict:
+        return {
+            "kind": "checkpoint_progress",
+            "generation": head.scope.generation,
+            "epoch": head.scope.epoch,
+            "covered_sequence": covered,
+            "checkpoint_revision": revision,
+        }
+
+    # Binding the first epoch announces it before the checkpoint covers anything.
+    assert [
+        {
+            key: value
+            for key, value in payload.items()
+            if key not in {"origin_replica", "published_at"}
+        }
+        for payload in payloads
+    ] == [progress(0, head.checkpoint_revision), progress(1, result.revision)]
     assert jobs.jobs == [
         (
             SAVE_REALTIME_SNAPSHOT.name,

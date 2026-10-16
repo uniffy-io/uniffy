@@ -10,17 +10,19 @@ export type PersistenceState =
   | "synced"
   | "syncing"
   | "delayed"
+  | "unavailable"
   | "connecting"
   | "offline"
   | "storage_failed"
-  | "too_large"
+  | "rejected"
   | "view_only"
   | "access_lost"
-  | "session_ended";
+  | "session_ended"
+  | "upgrade_required";
 
 type CoverageState = Pick<
   RealtimeDocState,
-  "transportPending" | "checkpointPending" | "oldestUncheckpointedAt"
+  "transportPending" | "checkpointPending" | "oldestUncheckpointedAt" | "savingUnavailable"
 >;
 
 export interface PersistenceInput {
@@ -54,12 +56,14 @@ export function persistenceState({
 }: PersistenceInput): PersistenceState {
   if (status === "access_lost") return "access_lost";
   if (status === "token_revoked") return "session_ended";
+  if (status === "upgrade_required") return "upgrade_required";
   if (status === "permission_lost") return "view_only";
-  if (status === "update_rejected") return "too_large";
+  if (status === "update_rejected") return "rejected";
   // A missing device copy matters only while some edit is not in a checkpoint.
   if (storageFailed && (!synced || doc.checkpointPending)) return "storage_failed";
   if (status === "offline" || status === "disconnected") return "offline";
   if (readOnly) return "view_only";
+  if (doc.savingUnavailable) return "unavailable";
   const delayedAt = saveDelayedAt(doc);
   if (delayedAt !== null && now >= delayedAt) return "delayed";
   if (

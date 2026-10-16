@@ -7,7 +7,11 @@ import * as encoding from "lib0/encoding";
 import { setMemoryAccessToken } from "@/config/api";
 import { AUTH_STORAGE_KEY } from "@/features/auth/store/credentialStorage";
 import { encodeDocFrame, peekVarString } from "@/features/realtime/multiplex";
-import { realtimeMultiplexer, type DocSubscription } from "@/features/realtime/multiplexer";
+import {
+  realtimeMultiplexer,
+  type DocSubscription,
+  type MultiplexerAttachOptions,
+} from "@/features/realtime/multiplexer";
 import {
   MESSAGE_DURABLE_UPDATE,
   encodeAcceptedReceipt,
@@ -52,6 +56,11 @@ export class FakeWebSocket {
   receive(docName: string, payload: Uint8Array): void {
     this.onmessage?.({ data: encodeDocFrame(docName, payload).slice().buffer } as MessageEvent);
   }
+
+  serverClose(code: number): void {
+    this.readyState = FakeWebSocket.CLOSED;
+    this.onclose?.({ code } as CloseEvent);
+  }
 }
 
 /** Browser globals the transport touches; the server side is the fake socket above. */
@@ -83,13 +92,17 @@ export interface AttachedDoc {
 
 const attached: AttachedDoc[] = [];
 
-export function attachDoc(contentId: string): AttachedDoc {
+export function attachDoc(
+  contentId: string,
+  callbacks: Pick<MultiplexerAttachOptions, "onStatus" | "onCloseCode"> = {},
+): AttachedDoc {
   const ydoc = new Y.Doc();
   const subscription = realtimeMultiplexer.attach({
     contentType: "TASK",
     contentId,
     ydoc,
     awareness: new Awareness(ydoc),
+    ...callbacks,
   });
   const doc = { docName: subscription.docName, ydoc, subscription };
   attached.push(doc);
@@ -157,4 +170,13 @@ export function progress(coveredSequence: number): Uint8Array {
     coveredSequence,
     checkpointRevision: coveredSequence,
   });
+}
+
+/** Document-scoped write denial, as the server sends it for a refused update. */
+export function denial(reason: string): Uint8Array {
+  const encoder = encoding.createEncoder();
+  encoding.writeVarUint(encoder, 2);
+  encoding.writeVarUint(encoder, 0);
+  encoding.writeVarString(encoder, reason);
+  return encoding.toUint8Array(encoder);
 }

@@ -2,6 +2,10 @@
   "description": "Realtime wire frames the backend, web and mobile codecs must reproduce byte for byte, plus ordered frame sequences for the client coverage state machine.",
   "frame": "Bytes after the multiplex document name: a varuint message type, then the fields in the order listed below. A string is a varuint byte length and UTF-8 of at most 128 bytes. An integer is a varuint from 0 through 9007199254740991. A frame is malformed when its type differs, a field is truncated, a string exceeds 128 bytes or is not UTF-8, an integer exceeds the maximum, bytes trail the last field, accepted_sequence is 0 or checkpoint_sequence is above head_sequence.",
   "messages": {
+    "2": [
+      "scope",
+      "reason"
+    ],
     "5": [
       "generation"
     ],
@@ -36,7 +40,9 @@
     "covered_sequence": "Highest accepted sequence of the generation and epoch that PostgreSQL has committed. 0 covers nothing.",
     "head_sequence": "Highest accepted sequence issued in the generation and epoch. 0 before the first update.",
     "checkpoint_sequence": "The covered sequence reported when a client attaches. Never above head_sequence.",
-    "checkpoint_revision": "PostgreSQL snapshot revision that holds the checkpoint."
+    "checkpoint_revision": "PostgreSQL snapshot revision that holds the checkpoint.",
+    "scope": "Document denial scope. 0 refuses writes and keeps the document readable; 1 removes view access.",
+    "reason": "Why the server refused. Clients match the reasons in denials exactly."
   },
   "coverage": {
     "local": "The device holds the edit and the server has not confirmed it. Retry and local recovery keep it.",
@@ -50,7 +56,7 @@
     "Progress that arrives before a receipt stays as the epoch watermark and checkpoints the update when its receipt arrives.",
     "Session state with a new epoch returns every accepted update that is not checkpointed to local. Those updates replay and get receipts in the new epoch.",
     "A frame for another generation or epoch never changes coverage.",
-    "Message 7 still means committed. The server sends it only for synchronous writes such as fragment seed proposals, never for a buffer append."
+    "Message 7 still means committed. The server sends it for synchronous writes such as fragment seed proposals and for an update whose bytes the checkpoint already holds, never for a buffer append."
   ],
   "cases": [
     {
@@ -359,6 +365,28 @@
       "type": 13,
       "error": "trailing byte after the last field",
       "hex": "0d2433663963316135322d376434652d346238612d396336312d3065326635643862376131342430313933613663322d356237652d376631302d386434322d3661396533633162326637352d291101"
+    }
+  ],
+  "denials": [
+    {
+      "name": "denial_unavailable",
+      "description": "Retryable refusal. The client keeps the update and resends its id after a backoff.",
+      "type": 2,
+      "fields": {
+        "scope": 0,
+        "reason": "unavailable"
+      },
+      "hex": "02000b756e617661696c61626c65"
+    },
+    {
+      "name": "denial_update_conflict",
+      "description": "The update id already names other bytes. The client drops that id as rejected.",
+      "type": 2,
+      "fields": {
+        "scope": 0,
+        "reason": "update conflict"
+      },
+      "hex": "02000f75706461746520636f6e666c696374"
     }
   ],
   "sequences": [

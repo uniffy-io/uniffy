@@ -17,10 +17,11 @@ from uniffy.core.json_codec import loads
 from uniffy.core.models.notes.note import Note
 from uniffy.core.models.realtime.yjs_snapshot import RealtimeYjsSnapshot
 from uniffy.core.realtime.adapter import register_realtime_adapter
+from uniffy.core.realtime.admission import Admitted, admit_update
 from uniffy.core.realtime.buffer import UpdateBuffer
 from uniffy.core.realtime.buffer_keys import AdmissionStatus, BufferHead, BufferKeys, buffer_keys
-from uniffy.core.realtime.checkpoint import stage_recovered
-from uniffy.core.realtime.epoch import ensure_epoch
+from uniffy.core.realtime.checkpoint import CheckpointStatus, checkpoint_document, stage_recovered
+from uniffy.core.realtime.epoch import ensure_epoch, row_scope
 from uniffy.core.realtime.markdown import (
     MARKDOWN_MIRROR_FIELD,
     PROSEMIRROR_FRAGMENT_FIELD,
@@ -28,7 +29,7 @@ from uniffy.core.realtime.markdown import (
 )
 from uniffy.core.realtime.preflight import PreflightMode, run_preflight
 from uniffy.core.realtime.publisher import RealtimePayloadKind, doc_channel
-from uniffy.core.realtime.state import DocKey
+from uniffy.core.realtime.state import DocKey, YDocSession
 from uniffy.core.realtime.storage import load_snapshot, lock_document, stage_seed
 from uniffy.core.types import ContentType, generate_id
 from uniffy.domains.notes.adapter import NoteRealtimeAdapter
@@ -129,6 +130,26 @@ class BufferedDocument:
         assert outcome.receipt is not None
         return outcome.receipt.seq
 
+    async def admit_live(self, update_id: str, update: bytes, actor: UUID | None = None) -> Admitted:
+        """Admit ``update`` the way a live socket does: fresh PostgreSQL checks, then the buffer."""
+        session = YDocSession(key=self.key, ydoc=pycrdt.Doc(), organization_id=self.org)
+        return await admit_update(
+            self.buffer,
+            session,
+            actor or self.owner,
+            self.generation,
+            update_id,
+            update,
+            lambda *_: None,
+        )
+
+    async def checkpointed(self) -> RealtimeYjsSnapshot:
+        """Let the checkpoint worker commit the buffered tail; projection stays pending."""
+        scope = row_scope(await stored(self.key))
+        result = await checkpoint_document(self.buffer, scope, enqueue=self.jobs)
+        assert result.status is CheckpointStatus.COMMITTED
+        return await stored(self.key)
+
     async def stream_ids(self) -> list[bytes]:
         return [entry_id for entry_id, _ in await valkey().xrange(self.keys.stream)]
 
@@ -151,6 +172,28 @@ async def establish(buffer: UpdateBuffer, key: DocKey, organization_id: UUID) ->
     return head
 
 
+async def buffered(key: DocKey, access: Any, namespace: str) -> BufferedDocument:
+    """Seed ``key`` for the access fixture's member and bind it to a fresh epoch in ``namespace``."""
+    async with open_session() as db:
+        await lock_document(db, key, access.org_id)
+        row = await stage_seed(db, key, access.org_id)
+        await db.commit()
+        base, generation = row.updates, row.generation
+    assert generation is not None
+    buffer = UpdateBuffer(namespace=namespace, pending_budget_bytes=BUDGET)
+    return BufferedDocument(
+        key=key,
+        org=access.org_id,
+        owner=access.member_id,
+        peer=access.peer_id,
+        namespace=namespace,
+        buffer=buffer,
+        base=base,
+        generation=generation,
+        head=await establish(buffer, key, access.org_id),
+    )
+
+
 @pytest_asyncio.fixture(loop_scope="session")
 async def live_note(access, valkey_namespace) -> AsyncIterator[BufferedDocument]:
     """A member's note whose snapshot row is seeded and bound to a fresh buffer epoch."""
@@ -166,24 +209,8 @@ async def live_note(access, valkey_namespace) -> AsyncIterator[BufferedDocument]
         db.add(note)
         await db.commit()
         key = (ContentType.NOTE, note.id)
-        await lock_document(db, key, access.org_id)
-        row = await stage_seed(db, key, access.org_id)
-        await db.commit()
-        base, generation = row.updates, row.generation
-    assert generation is not None
-    buffer = UpdateBuffer(namespace=valkey_namespace, pending_budget_bytes=BUDGET)
     try:
-        yield BufferedDocument(
-            key=key,
-            org=access.org_id,
-            owner=access.member_id,
-            peer=access.peer_id,
-            namespace=valkey_namespace,
-            buffer=buffer,
-            base=base,
-            generation=generation,
-            head=await establish(buffer, key, access.org_id),
-        )
+        yield await buffered(key, access, valkey_namespace)
     finally:
         async with open_session() as db:
             await db.execute(

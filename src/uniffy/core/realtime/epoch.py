@@ -26,6 +26,7 @@ from uniffy.core.realtime.buffer_keys import (
 )
 from uniffy.core.realtime.metrics import REALTIME_BUFFER_EPOCH_RESETS_TOTAL
 from uniffy.core.realtime.preflight import ensure_buffer_ready
+from uniffy.core.realtime.publisher import publish_checkpoint_progress
 from uniffy.core.realtime.state import DocKey
 from uniffy.core.realtime.storage import load_snapshot, lock_document
 from uniffy.infrastructure.valkey.binary import ValkeyIdentity, server_identity
@@ -194,8 +195,24 @@ async def _reset(
         reason=reason.value,
         count=len(recovered),
     )
+    await _announce(fresh, row.revision)
     if previous is not None:
         try:
             await buffer.retire(previous, retire_through)
         except BufferUnavailable, RecoveryRequired:
             logger.opt(exception=True).warning("Retired buffer epoch keys left for maintenance")
+
+
+async def _announce(scope: BufferScope, revision: int) -> None:
+    """Replicas on the retired epoch reload into the fresh one; resync repairs a lost message."""
+    try:
+        await publish_checkpoint_progress(
+            scope.content_type,
+            scope.content_id,
+            generation=scope.generation,
+            epoch=scope.epoch,
+            covered_sequence=0,
+            checkpoint_revision=revision,
+        )
+    except Exception:
+        logger.opt(exception=True).warning("Fresh buffer epoch was not announced")

@@ -59,8 +59,9 @@ function describeAlert(status: RealtimeStatus): StatusCopy | null {
   switch (status) {
     case "update_rejected":
       return {
-        label: "Edit too large to sync",
-        title: "Keep or export your local draft, then reduce its size.",
+        label: "Edit not synced",
+        title:
+          "This edit could not be synced. Keep or export your local draft. Very large edits must be smaller to sync.",
         tone: ALERT_TONE,
       };
     case "permission_lost":
@@ -74,6 +75,12 @@ function describeAlert(status: RealtimeStatus): StatusCopy | null {
       };
     case "token_revoked":
       return { label: "Session ended - reload", tone: ALERT_TONE };
+    case "upgrade_required":
+      return {
+        label: "Reload to keep saving",
+        title: "Uniffy was updated. Reload this page to keep saving your edits.",
+        tone: ALERT_TONE,
+      };
     default:
       return null;
   }
@@ -89,6 +96,15 @@ function describeSave(save: SaveState, storage: DeviceStorage): StatusCopy {
         tone: QUIET_TONE,
         title: "Shared with collaborators, saving shortly.",
       };
+    case "unavailable":
+      return {
+        label: "Saving unavailable",
+        tone: DELAYED_TONE,
+        title:
+          storage === "available"
+            ? "Your edits stay on this device. Saving resumes automatically."
+            : "Saving resumes automatically. This device cannot store your edits, so keep this editor open.",
+      };
     case "delayed":
       return {
         label: "Saving delayed",
@@ -103,8 +119,8 @@ function describeSave(save: SaveState, storage: DeviceStorage): StatusCopy {
   }
 }
 
-/** Persistence chip: access and size problems first, then an unsaved device copy, the
- * connection and the save state. */
+/** Persistence chip: access, rejection and reload problems first, then an unsaved device copy,
+ * the connection and the save state. */
 export function RealtimeStatusBadge({
   status,
   save = null,

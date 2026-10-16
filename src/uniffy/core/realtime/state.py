@@ -115,14 +115,18 @@ class YDocSession:
     ydoc: pycrdt.Doc
     organization_id: UUID
     policy_key: DocKey | None = None
-    # Snapshots carry no request actor; the last live editor attributes their side effects.
-    last_editor_id: UUID | None = None
     seeder_conn_id: int | None = None
     seed_token: str = ""
     seed_expires_at: datetime | None = None
     seed_task: asyncio.Task[None] | None = None
     seed_lock: asyncio.Lock = field(default_factory=asyncio.Lock)
-    revision: int = -1
+    generation: str = ""
+    # The buffer epoch ``ydoc`` follows; ``None`` while the buffer could not be read.
+    epoch: str | None = None
+    # Highest accepted sequence of ``epoch`` already applied to ``ydoc``.
+    head_seq: int = 0
+    checkpoint_seq: int = 0
+    checkpoint_revision: int = -1
     clients: dict[int, ClientHandle] = field(default_factory=dict)
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
     eviction_task: asyncio.Task[None] | None = None

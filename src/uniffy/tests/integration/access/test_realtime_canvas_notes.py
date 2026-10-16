@@ -17,12 +17,7 @@ from uniffy.core.realtime.job_contracts import SAVE_REALTIME_SNAPSHOT
 from uniffy.core.realtime.lifecycle import stage_replacement
 from uniffy.core.realtime.live import load_live_document
 from uniffy.core.realtime.snapshot import SnapshotOutcome, persist_snapshot
-from uniffy.core.realtime.storage import (
-    GenerationConflict,
-    accept_update,
-    lock_document,
-    stage_seed,
-)
+from uniffy.core.realtime.storage import GenerationConflict, lock_document, stage_seed
 from uniffy.core.types import ContentType, NodeType, generate_id
 from uniffy.infrastructure.database.session import open_session
 from uniffy.tests.integration.access.realtime_live import (
@@ -212,6 +207,4 @@ async def test_canvas_replacement_rotates_generation_while_a_buffered_edit_waits
     )
     assert late.status is AdmissionStatus.RECOVERY_REQUIRED
     with pytest.raises(GenerationConflict):
-        await accept_update(
-            live_canvas.key, live_canvas.org, live_canvas.owner, live_canvas.generation, alice
-        )
+        await live_canvas.admit_live("u-stale", alice)

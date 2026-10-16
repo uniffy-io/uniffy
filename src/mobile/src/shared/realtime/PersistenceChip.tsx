@@ -16,6 +16,11 @@ const COPY: Record<PersistenceState, ChipCopy> = {
   saved: { label: "Saved", title: "All your edits are saved.", dot: "green" },
   synced: { label: "Synced", title: "Shared with collaborators, saving shortly.", dot: "textDim" },
   syncing: { label: "Syncing", title: "Sending your latest edits.", dot: "textDim" },
+  unavailable: {
+    label: "Saving unavailable",
+    title: "Your edits stay on this device. Saving resumes automatically.",
+    dot: "orange",
+  },
   delayed: {
     label: "Saving delayed",
     title:
@@ -35,9 +40,10 @@ const COPY: Record<PersistenceState, ChipCopy> = {
     dot: "red",
     alert: true,
   },
-  too_large: {
-    label: "Edit too large to sync",
-    title: "Keep or export your local draft, then reduce its size.",
+  rejected: {
+    label: "Edit not synced",
+    title:
+      "This edit could not be synced. Your local draft is kept. Very large edits must be smaller to sync.",
     dot: "red",
     alert: true,
   },
@@ -56,6 +62,12 @@ const COPY: Record<PersistenceState, ChipCopy> = {
   session_ended: {
     label: "Session ended",
     title: "Sign in again to keep editing.",
+    dot: "red",
+    alert: true,
+  },
+  upgrade_required: {
+    label: "Update to keep saving",
+    title: "This version of Uniffy can no longer save edits. Update the app to keep saving.",
     dot: "red",
     alert: true,
   },

@@ -4,13 +4,14 @@ from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import pycrdt
 import pytest
 import pytest_asyncio
 from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from uniffy.core.errors import StaleContentVersionError, ValidationError
+from uniffy.core.errors import ValidationError
 from uniffy.core.models.calendar.calendar import Calendar
 from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.models.notes.note import Note
@@ -29,13 +30,7 @@ from uniffy.core.realtime.live import (
 )
 from uniffy.core.realtime.markdown import markdown_text
 from uniffy.core.realtime.snapshot import SnapshotOutcome, persist_snapshot
-from uniffy.core.realtime.storage import (
-    accept_update,
-    decode_snapshot,
-    load_snapshot,
-    lock_document,
-    stage_seed,
-)
+from uniffy.core.realtime.storage import load_snapshot, lock_document
 from uniffy.core.types import (
     AccessMode,
     ContentType,
@@ -44,6 +39,7 @@ from uniffy.core.types import (
     generate_id,
 )
 from uniffy.domains.notes.adapter import NoteRealtimeAdapter
+from uniffy.domains.notes.content.updates import NoteUpdates
 from uniffy.domains.notes.operations import NoteOperations
 from uniffy.domains.projects.defaults import stage_default_project_fields
 from uniffy.domains.projects.realtime import TaskRealtimeAdapter
@@ -54,6 +50,7 @@ from uniffy.domains.scheduling.calendar.realtime import EventRealtimeAdapter
 from uniffy.infrastructure.database import open_session
 from uniffy.tests.integration.access.realtime_live import (
     BufferedDocument,
+    buffered,
     doc_messages,  # noqa: F401 - fixture
     doc_subscription,
     establish,
@@ -80,59 +77,45 @@ def adapters() -> None:
     register_realtime_adapter(NoteRealtimeAdapter(AsyncMock()))
 
 
-async def _seeded(session: AsyncSession, key, organization_id) -> SimpleNamespace:
-    """Seed the shared document; return scalars, since the row object itself is what mutates."""
-    await lock_document(session, key)
-    seed = await stage_seed(session, key, organization_id)
-    await session.commit()
-    return SimpleNamespace(generation=seed.generation, revision=seed.revision, updates=seed.updates)
-
-
-async def _type_live(document: SimpleNamespace, access: SimpleNamespace):
-    """Accept one client edit the way a keystroke arrives; projection has not run."""
-    client = decode_snapshot(document.seed)
+async def _type_live(document: SimpleNamespace) -> pycrdt.Doc:
+    """Buffer one client edit the way a keystroke arrives; nothing has checkpointed it yet."""
+    client = pycrdt.Doc()
+    client.apply_update(document.live.base)
     before = client.get_state()
     markdown_text(client).insert(len("base"), " human")
-    await accept_update(
-        document.key,
-        access.org_id,
-        access.member_id,
-        document.seed.generation,
-        client.get_update(before),
-    )
+    await document.live.admit("u-human", client.get_update(before))
     return client
 
 
-async def _assert_merged_snapshot(document: SimpleNamespace, actor_id) -> None:
+async def _live_text(document: SimpleNamespace) -> str:
     async with open_session() as db:
-        snapshot = await load_snapshot(db, document.key)
-    assert snapshot is not None
-    assert str(markdown_text(decode_snapshot(snapshot))) == MERGED
-    assert snapshot.generation == document.seed.generation
-    assert snapshot.revision == 2
-    assert snapshot.rendered_revision == 2
+        live = await load_live_document(document.live.buffer, db, document.key)
+    assert live is not None
+    return live.text()
+
+
+async def _assert_merged_snapshot(document: SimpleNamespace, actor_id, revision: int) -> None:
+    snapshot = await stored(document.key)
+    assert text_of(snapshot.updates) == MERGED
+    assert snapshot.generation == document.live.generation
+    assert snapshot.revision == snapshot.rendered_revision == revision + 1
     assert snapshot.actor_id == actor_id
 
 
 async def _assert_same_generation_update_accepted(
-    document: SimpleNamespace, access: SimpleNamespace, client
+    document: SimpleNamespace, client: pycrdt.Doc
 ) -> None:
     before = client.get_state()
     markdown_text(client).insert(len(LIVE), " more")
-    accepted = await accept_update(
-        document.key,
-        access.org_id,
-        access.member_id,
-        document.seed.generation,
-        client.get_update(before),
-    )
-    text = str(markdown_text(decode_snapshot(accepted)))
+    admitted = await document.live.admit_live("u-more", client.get_update(before))
+    assert admitted.applied
+    text = text_of((await document.live.checkpointed()).updates)
     assert text.startswith("base human")
     assert "agent" in text and "more" in text
 
 
 @pytest_asyncio.fixture(loop_scope="session")
-async def task_document(session: AsyncSession, access: SimpleNamespace):
+async def task_document(session: AsyncSession, access: SimpleNamespace, valkey_namespace: str):
     project = Project(
         organization_id=access.org_id,
         owner_id=access.member_id,
@@ -154,9 +137,9 @@ async def task_document(session: AsyncSession, access: SimpleNamespace):
     session.add(task)
     await session.commit()
     key = ContentType.TASK, task.id
-    seed = await _seeded(session, key, access.org_id)
+    live = await buffered(key, access, valkey_namespace)
     project_id = project.id
-    yield SimpleNamespace(key=key, seed=seed, row=task)
+    yield SimpleNamespace(key=key, live=live, row=task)
     await session.rollback()
     await session.execute(
         delete(RealtimeYjsSnapshot).where(RealtimeYjsSnapshot.content_id == key[1])
@@ -168,7 +151,7 @@ async def task_document(session: AsyncSession, access: SimpleNamespace):
 
 
 @pytest_asyncio.fixture(loop_scope="session")
-async def event_document(session: AsyncSession, access: SimpleNamespace):
+async def event_document(session: AsyncSession, access: SimpleNamespace, valkey_namespace: str):
     calendar = Calendar(organization_id=access.org_id, owner_id=access.member_id, name="Merge")
     session.add(calendar)
     await session.flush()
@@ -186,8 +169,8 @@ async def event_document(session: AsyncSession, access: SimpleNamespace):
     session.add(event)
     await session.commit()
     key = ContentType.CALENDAR_EVENT, event.id
-    seed = await _seeded(session, key, access.org_id)
-    yield SimpleNamespace(key=key, seed=seed, row=event)
+    live = await buffered(key, access, valkey_namespace)
+    yield SimpleNamespace(key=key, live=live, row=event)
     await session.rollback()
     await session.execute(
         delete(RealtimeYjsSnapshot).where(RealtimeYjsSnapshot.content_id == key[1])
@@ -196,7 +179,7 @@ async def event_document(session: AsyncSession, access: SimpleNamespace):
 
 
 @pytest_asyncio.fixture(loop_scope="session")
-async def note_document(session: AsyncSession, access: SimpleNamespace):
+async def note_document(session: AsyncSession, access: SimpleNamespace, valkey_namespace: str):
     note = Note(
         organization_id=access.org_id,
         owner_id=access.member_id,
@@ -207,8 +190,8 @@ async def note_document(session: AsyncSession, access: SimpleNamespace):
     session.add(note)
     await session.commit()
     key = ContentType.NOTE, note.id
-    seed = await _seeded(session, key, access.org_id)
-    yield SimpleNamespace(key=key, seed=seed, row=note)
+    live = await buffered(key, access, valkey_namespace)
+    yield SimpleNamespace(key=key, live=live, row=note)
     await session.rollback()
     await session.execute(
         delete(RealtimeYjsSnapshot).where(RealtimeYjsSnapshot.content_id == key[1])
@@ -231,9 +214,10 @@ async def _column(document: SimpleNamespace) -> str | None:
 async def test_plain_write_merges_into_live_generation_and_tells_resident_replicas(
     session: AsyncSession, access: SimpleNamespace, document: SimpleNamespace, projected: bool
 ) -> None:
-    client = await _type_live(document, access)
+    client = await _type_live(document)
     if projected:
         await _project(document, access)
+    revision = (await stored(document.key)).revision
 
     async with doc_subscription(document.key) as messages:
         with patch("uniffy.domains.notes.content.updates.emit_notification", new_callable=AsyncMock):
@@ -243,48 +227,31 @@ async def test_plain_write_merges_into_live_generation_and_tells_resident_replic
     assert getattr(row, next(iter(_fields(document, "")))) == MERGED
     assert await _column(document) == MERGED
     assert replacements == [MERGED]
-    await _assert_merged_snapshot(document, access.member_id)
-    await _assert_same_generation_update_accepted(document, access, client)
-
-
-async def test_note_content_write_with_version_still_rejects_unprojected_edits(
-    session: AsyncSession, access: SimpleNamespace, note_document: SimpleNamespace
-) -> None:
-    await _type_live(note_document, access)
-    operations = NoteOperations(session, MagicMock(), AsyncMock())
-    with pytest.raises(StaleContentVersionError):
-        await operations.update(
-            access.member_id,
-            access.org_id,
-            note_document.row.id,
-            content="agent replacement",
-            expected_content_version=note_document.row.version,
-        )
-    await session.rollback()
-    async with open_session() as db:
-        snapshot = await load_snapshot(db, note_document.key)
-    assert str(markdown_text(decode_snapshot(snapshot))) == LIVE
-    assert snapshot.generation == note_document.seed.generation
+    await _assert_merged_snapshot(document, access.member_id, revision)
+    await _assert_same_generation_update_accepted(document, client)
 
 
 async def _project(document: SimpleNamespace, access: SimpleNamespace) -> None:
+    await document.live.checkpointed()
     outcome = await persist_snapshot(*document.key, access.org_id, b"", b"")
     assert outcome == SnapshotOutcome.RENDERED
 
 
 async def _write(session, access, document, **fields):
     kind, content_id = document.key
+    buffer = document.live.buffer
     if kind == ContentType.TASK:
         content = TaskContentOperations(session, search_indexer=AsyncMock())
-        row, _ = await TaskMutationOperations(session, content).update(
+        row, _ = await TaskMutationOperations(session, content, buffer).update(
             access.member_id, access.org_id, content_id, **fields
         )
         return row
     if kind == ContentType.CALENDAR_EVENT:
-        return await CalendarEventOperations(session, AsyncMock()).update(
+        return await CalendarEventOperations(session, AsyncMock(), buffer).update(
             access.member_id, access.org_id, content_id, call_lifecycle=MagicMock(), **fields
         )
-    return await NoteOperations(session, MagicMock(), AsyncMock()).update(
+    operations = NoteOperations(session, MagicMock(), AsyncMock())
+    return await NoteUpdates(operations, buffer).update(
         access.member_id, access.org_id, content_id, **fields
     )
 
@@ -316,7 +283,7 @@ async def test_no_snapshot_preserves_concurrent_plain_write(session, access, doc
 
 @pytest.mark.parametrize("projected", [False, True])
 async def test_missing_base_rejects_entire_write(session, access, document, projected):
-    await _type_live(document, access)
+    await _type_live(document)
     if projected:
         await _project(document, access)
     with pytest.raises(ValidationError, match="Original content"):
@@ -326,18 +293,16 @@ async def test_missing_base_rejects_entire_write(session, access, document, proj
     await session.rollback()
     await session.refresh(document.row)
     assert document.row.title == "Merge"
-    snapshot = await load_snapshot(session, document.key)
-    assert str(markdown_text(decode_snapshot(snapshot))) == LIVE
+    assert await _live_text(document) == LIVE
 
 
 async def test_metadata_write_preserves_peer_text(session, access, document):
-    await _type_live(document, access)
+    await _type_live(document)
     await _project(document, access)
     row = await _write(session, access, document, title="Changed")
     assert row.title == "Changed"
     assert getattr(row, next(iter(_fields(document, "")))) == LIVE
-    snapshot = await load_snapshot(session, document.key)
-    assert str(markdown_text(decode_snapshot(snapshot))) == LIVE
+    assert await _live_text(document) == LIVE
 
 
 @pytest.mark.parametrize(
@@ -347,7 +312,7 @@ async def test_metadata_write_preserves_peer_text(session, access, document):
 async def test_scoped_event_copy_preserves_unprojected_text(
     session, access, event_document, scope, edit_description
 ):
-    await _type_live(event_document, access)
+    await _type_live(event_document)
     event_document.row.recurrence_pattern = RecurrencePattern.DAILY
     await session.commit()
     fields = _fields(event_document, "base agent") if edit_description else {}
@@ -362,8 +327,7 @@ async def test_scoped_event_copy_preserves_unprojected_text(
     )
     assert row.description == (MERGED if edit_description else LIVE)
     assert row.id != event_document.key[1]
-    snapshot = await load_snapshot(session, event_document.key)
-    assert str(markdown_text(decode_snapshot(snapshot))) == LIVE
+    assert await _live_text(event_document) == LIVE
 
 
 async def _merge(note: BufferedDocument, *, base: str, incoming: str) -> TextMerge:

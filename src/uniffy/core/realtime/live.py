@@ -15,7 +15,7 @@ from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.auth.permissions import role_can_edit
-from uniffy.core.errors import UNIFFYError
+from uniffy.core.errors import UnavailableError
 from uniffy.core.models.realtime.yjs_snapshot import RealtimeYjsSnapshot
 from uniffy.core.realtime.adapter import get_realtime_adapter
 from uniffy.core.realtime.buffer import (
@@ -58,6 +58,7 @@ from uniffy.core.realtime.metrics import (
     REALTIME_CHECKPOINT_TRIM_DEBT_TOTAL,
 )
 from uniffy.core.realtime.preflight import PreflightVerdict, ensure_buffer_ready, preflight_result
+from uniffy.core.realtime.resident import merge_change
 from uniffy.core.realtime.seeding import has_fragment_content, seed_allowed
 from uniffy.core.realtime.state import DocKey
 from uniffy.core.realtime.storage import (
@@ -77,13 +78,11 @@ from uniffy.infrastructure.valkey.binary import server_identity
 logger = logger.bind(component="core.realtime.live")
 
 _READ_ATTEMPTS = 3
-# What ``pycrdt.get_state`` reports for an update that holds no structs.
-_NO_STRUCTS = pycrdt.get_state(b"\x00\x00")
 
 type AfterCommit = Callable[[], Awaitable[None]]
 
 
-class LiveStateUnavailable(UNIFFYError):
+class LiveStateUnavailable(UnavailableError):
     """Retryable: buffered edits cannot be verified, so content writes wait rather than lose them."""
 
 
@@ -382,12 +381,6 @@ async def claim_seed(
         return lease
 
 
-def _changes(before: pycrdt.Doc, after: pycrdt.Doc, update: bytes) -> bool:
-    # Unknown structs, even ones still waiting on predecessors, or new deletions change it.
-    unknown = pycrdt.get_update(update, before.get_state())
-    return pycrdt.get_state(unknown) != _NO_STRUCTS or after.get_update() != before.get_update()
-
-
 async def accept_seed(
     buffer: UpdateBuffer,
     key: DocKey,
@@ -419,7 +412,7 @@ async def accept_seed(
         after.apply_update(update)
         if after.get(DOC_META_FIELD, type=pycrdt.Map).get(DOC_GENERATION_KEY, "") != generation:
             raise GenerationConflict
-        if not _changes(before, after, update):
+        if merge_change(before.get_update(), update) is None:
             await db.commit()
             return live.row
         merged = pycrdt.merge_updates(live.updates, update)

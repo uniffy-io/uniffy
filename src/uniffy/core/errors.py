@@ -52,6 +52,10 @@ class StaleContentVersionError(ConflictError):
     """Content changed after the caller observed its version."""
 
 
+class UnavailableError(UNIFFYError):
+    """A dependency cannot answer right now; nothing was written and the same request may retry."""
+
+
 class AuthenticationError(UNIFFYError):
     """Authentication failed (invalid credentials, expired token, etc.)."""
 

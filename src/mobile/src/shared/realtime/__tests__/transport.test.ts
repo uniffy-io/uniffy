@@ -37,7 +37,11 @@ class Socket {
   onclose?: (event: { code: number }) => void;
   onmessage?: (event: { data: ArrayBuffer }) => void;
   sent: Uint8Array[] = [];
-  constructor() {
+  constructor(
+    public url: string,
+    public protocols: string[],
+    public options: { headers?: Record<string, string> },
+  ) {
     Socket.instances.push(this);
   }
   send(bytes: Uint8Array) {
@@ -171,6 +175,14 @@ function acknowledge(socket: Socket, frame: Uint8Array): Uint8Array {
   const { docName, id, update } = readWrite(frame);
   socket.deliver(docName, encodeCommitted(id));
   return update;
+}
+
+function denial(reason: string): Uint8Array {
+  const encoder = encoding.createEncoder();
+  encoding.writeVarUint(encoder, 2);
+  encoding.writeVarUint(encoder, 0);
+  encoding.writeVarString(encoder, reason);
+  return encoding.toUint8Array(encoder);
 }
 
 const session = (epoch: string, headSequence = 0, checkpointSequence = 0) =>
@@ -543,5 +555,122 @@ it("replays a previous session's updates under their ids for the confirmed gener
   h.socket.deliver(h.sub.docName, encodeCommitted("earlier:1"));
   expect(h.state().checkpointPending).toBe(false);
   earlier.destroy();
+  h.destroy();
+});
+
+it("offers only the v2 subprotocol and carries the bearer in a header", async () => {
+  const h = await openDocument("offer");
+  expect(h.socket.protocols).toEqual(["uniffy.realtime.v2"]);
+  expect(h.socket.options.headers).toEqual({ Authorization: "Bearer token" });
+  h.destroy();
+});
+
+it("asks for an update on close 4426 and never reconnects", async () => {
+  const h = await openDocument("upgrade");
+  const { addOnlineListener } = await import("@core/api/connectivity");
+  const online = vi.mocked(addOnlineListener).mock.calls.at(-1)![0];
+  h.doc.getText("markdown").insert(0, "kept on this device");
+  vi.advanceTimersByTime(50);
+
+  h.socket.close(4426);
+  expect(h.statuses.at(-1)).toBe("upgrade_required");
+  online(true);
+  lifecycle.onChange?.("active");
+  await vi.advanceTimersByTimeAsync(120_000);
+  expect(Socket.instances).toHaveLength(1);
+  expect(h.state().transportPending).toBe(true);
+
+  const later: RealtimeStatus[] = [];
+  const doc = new Y.Doc();
+  const sub = h.realtimeMultiplexer.attach({
+    contentType: "NOTE",
+    contentId: "opened-later",
+    organizationId: "org",
+    ydoc: doc,
+    awareness: new Awareness(doc),
+    onStatus: (status) => later.push(status),
+  });
+  expect(later).toEqual(["upgrade_required"]);
+  expect(Socket.instances).toHaveLength(1);
+  sub.destroy();
+  doc.destroy();
+  h.destroy();
+});
+
+it("keeps refused updates local and resends them under the same ids after five seconds", async () => {
+  const h = await openDocument("unavailable");
+  h.socket.deliver(h.sub.docName, session("e1"));
+  h.doc.getText("markdown").insert(0, "first");
+  vi.advanceTimersByTime(50);
+  h.doc.getText("markdown").insert(5, " second");
+  vi.advanceTimersByTime(50);
+  const refused = writes(h.socket).map((frame) => [...frame]);
+  h.socket.deliver(h.sub.docName, denial("unavailable"));
+  h.socket.deliver(h.sub.docName, denial("unavailable"));
+  expect(h.state()).toMatchObject({
+    transportPending: true,
+    checkpointPending: true,
+    savingUnavailable: true,
+  });
+
+  h.doc.getText("markdown").insert(0, "sent after the refusal ");
+  vi.advanceTimersByTime(50);
+  const sent = writes(h.socket).length;
+  vi.advanceTimersByTime(4_949);
+  expect(writes(h.socket)).toHaveLength(sent);
+  vi.advanceTimersByTime(1);
+  expect(
+    writes(h.socket)
+      .slice(sent)
+      .map((frame) => [...frame]),
+  ).toEqual(refused);
+  h.destroy();
+});
+
+it.each(["receipt", "commit"])("clears Saving unavailable on the first %s", async (answer) => {
+  const h = await openDocument(`unavailable-${answer}`);
+  h.socket.deliver(h.sub.docName, session("e1"));
+  h.doc.getText("markdown").insert(0, "refused");
+  vi.advanceTimersByTime(50);
+  const refused = readWrite(writes(h.socket)[0]).id;
+  h.socket.deliver(h.sub.docName, denial("unavailable"));
+  h.doc.getText("markdown").insert(0, "accepted ");
+  vi.advanceTimersByTime(50);
+  const accepted = readWrite(writes(h.socket)[1]).id;
+  expect(h.state().savingUnavailable).toBe(true);
+  h.socket.deliver(
+    h.sub.docName,
+    answer === "receipt" ? receipt(accepted, "e1", 1) : encodeCommitted(accepted),
+  );
+  expect(h.state()).toMatchObject({ transportPending: true, savingUnavailable: false });
+  vi.advanceTimersByTime(5_000);
+  expect(readWrite(writes(h.socket).at(-1)!).id).toBe(refused);
+  h.destroy();
+});
+
+it("rejects only the conflicting update and keeps syncing the others", async () => {
+  const h = await openDocument("conflict");
+  h.socket.deliver(h.sub.docName, session("e1"));
+  h.doc.getText("markdown").insert(0, "conflicting");
+  vi.advanceTimersByTime(50);
+  h.doc.getText("markdown").insert(0, "other ");
+  vi.advanceTimersByTime(50);
+  const [conflicting, other] = writes(h.socket).map((frame) => readWrite(frame).id);
+  h.socket.deliver(h.sub.docName, denial("update conflict"));
+  h.socket.deliver(h.sub.docName, denial("unavailable"));
+  expect(h.statuses.at(-1)).toBe("update_rejected");
+
+  vi.advanceTimersByTime(5_000);
+  expect(writes(h.socket).map((frame) => readWrite(frame).id)).toEqual([conflicting, other, other]);
+  h.socket.deliver(h.sub.docName, receipt(other, "e1", 1));
+  h.socket.deliver(h.sub.docName, progress("e1", 1));
+  expect(
+    h.events.filter((event) => event.coverage === "checkpointed").map((event) => event.updateId),
+  ).toEqual([other]);
+  expect(h.state().transportPending).toBe(true);
+
+  const second = await reconnect(h);
+  expect(writes(second)).toHaveLength(0);
+  expect(h.statuses.at(-1)).toBe("update_rejected");
   h.destroy();
 });

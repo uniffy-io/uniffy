@@ -1,29 +1,31 @@
-"""Calendar descriptions merge with, copy and keep accepted realtime edits waiting in the buffer."""
+"""Calendar descriptions merge with, copy, keep and retire accepted realtime edits in the buffer."""
 
 from collections.abc import AsyncIterator
 from datetime import UTC, datetime, timedelta
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock
+from uuid import UUID
 
 import pytest
 import pytest_asyncio
 from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from sqlalchemy import delete, select, update
-from uniffy_proto.cal.v1.calendar_pb import RecurrenceEditScope as ProtoRecurrenceEditScope
-from uniffy_proto.cal.v1.calendar_pb import UpdateEventRequest, UpdateEventResponse
-
-from uniffy.core.auth.principal import (
-    AuthenticatedPrincipal,
-    reset_current_principal,
-    set_current_principal,
+from uniffy_proto.cal.v1.calendar_pb import (
+    DeleteEventRequest,
+    UpdateEventRequest,
+    UpdateEventResponse,
 )
+from uniffy_proto.cal.v1.calendar_pb import EventStatus as ProtoEventStatus
+from uniffy_proto.cal.v1.calendar_pb import RecurrenceEditScope as ProtoRecurrenceEditScope
+
 from uniffy.core.models.calendar.calendar import Calendar
 from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.models.realtime.yjs_snapshot import RealtimeYjsSnapshot
 from uniffy.core.realtime.adapter import register_realtime_adapter
 from uniffy.core.realtime.buffer import UpdateBuffer
-from uniffy.core.realtime.storage import accept_update, lock_document, stage_seed
+from uniffy.core.realtime.buffer_keys import AdmissionStatus
+from uniffy.core.realtime.storage import load_snapshot, lock_document, stage_seed
 from uniffy.core.search.indexer import SearchIndexer
 from uniffy.core.types import AccessMode, ContentType, RecurrencePattern
 from uniffy.domains.agents.tools.builtin.calendar import _execute_read_event
@@ -43,6 +45,7 @@ from uniffy.tests.integration.access.realtime_live import (
     typed,
     unreachable,
 )
+from uniffy.tests.integration.access.rpc_calls import call_rpc
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
@@ -114,29 +117,76 @@ async def event_messages(live_event) -> AsyncIterator[Any]:
         yield subscription
 
 
+def calendar_service(buffer: UpdateBuffer) -> CalendarServiceImpl:
+    service = CalendarServiceImpl(AsyncMock(spec=SearchIndexer), MagicMock())
+    service.buffer = buffer
+    return service
+
+
 async def update_event(
     event: BufferedDocument, buffer: UpdateBuffer, **fields: Any
 ) -> UpdateEventResponse:
     """Call the UpdateEvent RPC as the organizer, against ``buffer``."""
-    service = CalendarServiceImpl(AsyncMock(spec=SearchIndexer), MagicMock())
-    service.buffer = buffer
     request = UpdateEventRequest(
         event_id=str(event.key[1]), organization_id=str(event.org), **fields
     )
-    token = set_current_principal(
-        AuthenticatedPrincipal(
-            user_id=event.owner,
-            organization_id=event.org,
-            session_id=None,
-            token_version=None,
-            full_name="",
-            avatar_key="",
-        )
+    return await call_rpc(
+        calendar_service(buffer).update_event,
+        request,
+        user_id=event.owner,
+        organization_id=event.org,
     )
-    try:
-        return await service.update_event(request, MagicMock())
-    finally:
-        reset_current_principal(token)
+
+
+async def delete_event(event: BufferedDocument, buffer: UpdateBuffer, **fields: Any) -> None:
+    """Call the DeleteEvent RPC as the organizer, against ``buffer``."""
+    request = DeleteEventRequest(
+        event_id=str(event.key[1]), organization_id=str(event.org), **fields
+    )
+    await call_rpc(
+        calendar_service(buffer).delete_event,
+        request,
+        user_id=event.owner,
+        organization_id=event.org,
+    )
+
+
+async def seeded_occurrence(master: BufferedDocument, event_id: UUID) -> BufferedDocument:
+    """A moved occurrence whose own description document is seeded and bound to an epoch."""
+    key = (ContentType.CALENDAR_EVENT, event_id)
+    async with open_session() as db:
+        await lock_document(db, key, master.org)
+        row = await stage_seed(db, key, master.org)
+        await db.commit()
+        base, generation = row.updates, row.generation
+    assert generation is not None
+    return BufferedDocument(
+        key=key,
+        org=master.org,
+        owner=master.owner,
+        peer=master.peer,
+        namespace=master.namespace,
+        buffer=master.buffer,
+        base=base,
+        generation=generation,
+        head=await establish(master.buffer, key, master.org),
+    )
+
+
+async def assert_retired(event: BufferedDocument, late: bytes) -> None:
+    """No snapshot row and no buffer keys remain, and an append under the old head is refused."""
+    async with open_session() as db:
+        assert await load_snapshot(db, event.key) is None
+    assert await event.buffer_state() == {
+        "stream": [],
+        "control": 0,
+        "receipts": [],
+        "due": None,
+    }
+    refused = await event.buffer.admit(
+        event.head, update_id="u-late", update=late, actor_id=event.owner
+    )
+    assert refused.status is AdmissionStatus.RECOVERY_REQUIRED
 
 
 async def event_row(event: BufferedDocument) -> CalendarEvent:
@@ -343,7 +393,9 @@ async def test_agent_read_shows_accepted_text_that_the_stored_description_lacks(
         assert result.success
         return result.data.splitlines()
 
-    # Accepted without a buffer epoch, so the production buffer has nothing to consult.
+    await live_event.admit("u-human", typed(live_event.base, suffix=" human"))
+    await live_event.checkpointed()
+    # The agent reads through the process buffer namespace, so leave it no epoch to consult.
     async with open_session() as db:
         await db.execute(
             update(RealtimeYjsSnapshot)
@@ -351,14 +403,6 @@ async def test_agent_read_shows_accepted_text_that_the_stored_description_lacks(
             .values(buffer_epoch=None, valkey_run_id=None)
         )
         await db.commit()
-    assert "Description: base" in await read()
-    await accept_update(
-        live_event.key,
-        live_event.org,
-        live_event.owner,
-        live_event.generation,
-        typed(live_event.base, suffix=" human"),
-    )
 
     assert "Description: base human" in await read()
     assert (await event_row(live_event)).description == "base"
@@ -382,3 +426,84 @@ async def test_agent_read_keeps_the_stored_description_while_live_edits_cannot_b
     # The stored text is what the agent sees; a later description merge keeps Alice's edit.
     assert result.success
     assert "Description: base" in result.data.splitlines()
+
+
+@pytest.mark.parametrize("permanent", [False, True], ids=["trash", "permanent"])
+async def test_event_deletion_retires_the_pending_description_and_refuses_later_appends(
+    live_event: BufferedDocument, permanent: bool
+) -> None:
+    pending = typed(live_event.base, suffix=" pending")
+    await live_event.admit("u-pending", pending, live_event.peer)
+
+    await delete_event(live_event, live_event.buffer, permanent=permanent)
+
+    await assert_retired(live_event, typed(live_event.base, pending, suffix=" late"))
+
+
+async def test_event_deletion_commits_while_valkey_is_unreachable(
+    live_event: BufferedDocument, event_outage: UpdateBuffer
+) -> None:
+    await live_event.admit("u-pending", typed(live_event.base, suffix=" pending"), live_event.peer)
+
+    await delete_event(live_event, event_outage)
+
+    assert (await event_row(live_event)).is_deleted
+    async with open_session() as db:
+        assert await load_snapshot(db, live_event.key) is None
+
+
+async def test_withdrawing_following_occurrences_retires_a_moved_occurrence_description(
+    live_event: BufferedDocument,
+) -> None:
+    occurrence = await make_recurring(live_event)
+    moved = await update_event(
+        live_event,
+        live_event.buffer,
+        title="Moved",
+        recurrence_edit_scope=ProtoRecurrenceEditScope.THIS_EVENT,
+        occurrence_date=occurrence,
+    )
+    override = await seeded_occurrence(live_event, UUID(moved.event.id))
+    pending = typed(override.base, suffix=" pending")
+    await override.admit("u-pending", pending, override.peer)
+    master = await live_event.buffer_state()
+
+    await delete_event(
+        live_event,
+        live_event.buffer,
+        recurrence_edit_scope=ProtoRecurrenceEditScope.THIS_AND_FOLLOWING,
+        occurrence_date=occurrence,
+    )
+
+    assert (await event_row(override)).is_deleted
+    await assert_retired(override, typed(override.base, pending, suffix=" late"))
+    # The series keeps its own description document up to the withdrawn range.
+    assert not (await event_row(live_event)).is_deleted
+    assert await live_event.buffer_state() == master
+
+
+async def test_cancelling_following_occurrences_retires_a_moved_occurrence_description(
+    live_event: BufferedDocument,
+) -> None:
+    occurrence = await make_recurring(live_event)
+    moved = await update_event(
+        live_event,
+        live_event.buffer,
+        title="Moved",
+        recurrence_edit_scope=ProtoRecurrenceEditScope.THIS_EVENT,
+        occurrence_date=occurrence,
+    )
+    override = await seeded_occurrence(live_event, UUID(moved.event.id))
+    pending = typed(override.base, suffix=" pending")
+    await override.admit("u-pending", pending, override.peer)
+
+    await update_event(
+        live_event,
+        live_event.buffer,
+        status=ProtoEventStatus.CANCELLED,
+        recurrence_edit_scope=ProtoRecurrenceEditScope.THIS_AND_FOLLOWING,
+        occurrence_date=occurrence,
+    )
+
+    assert (await event_row(override)).is_deleted
+    await assert_retired(override, typed(override.base, pending, suffix=" late"))

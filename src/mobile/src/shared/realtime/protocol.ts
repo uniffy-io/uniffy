@@ -1,7 +1,12 @@
 import * as encoding from "lib0/encoding";
 import { decodeUtf8, encodeUtf8 } from "lib0/string";
 
-export const CANONICAL_SUBPROTOCOL = "uniffy.realtime.v1";
+export const CANONICAL_SUBPROTOCOL = "uniffy.realtime.v2";
+
+// The server refused a write it may accept later; the client keeps it and retries.
+export const UNAVAILABLE_REASON = "unavailable";
+// The server already holds different bytes under this update id.
+export const UPDATE_CONFLICT_REASON = "update conflict";
 
 export const WS_CLOSE_NORMAL = 1000;
 export const WS_CLOSE_MESSAGE_TOO_BIG = 1009;
@@ -13,6 +18,8 @@ export const WS_CLOSE_IDLE = 4408;
 // Refresh, then reconnect - this is not a revocation.
 export const WS_CLOSE_REAUTH_REQUIRED = 4409;
 export const WS_CLOSE_TOKEN_REVOKED = 4410;
+// The server speaks a protocol this build does not; only an app update can fix that.
+export const WS_CLOSE_UPGRADE_REQUIRED = 4426;
 
 export type RealtimeStatus =
   | "idle"
@@ -25,7 +32,8 @@ export type RealtimeStatus =
   | "access_lost"
   | "permission_lost"
   | "update_rejected"
-  | "token_revoked";
+  | "token_revoked"
+  | "upgrade_required";
 
 export function statusFromCloseCode(code: number): RealtimeStatus | null {
   switch (code) {
@@ -34,6 +42,8 @@ export function statusFromCloseCode(code: number): RealtimeStatus | null {
       return "permission_lost";
     case WS_CLOSE_TOKEN_REVOKED:
       return "token_revoked";
+    case WS_CLOSE_UPGRADE_REQUIRED:
+      return "upgrade_required";
     default:
       return null;
   }

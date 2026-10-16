@@ -26,10 +26,13 @@ import {
   MESSAGE_COMMITTED,
   MESSAGE_GENERATION,
   MESSAGE_SESSION_STATE,
+  UNAVAILABLE_REASON,
+  UPDATE_CONFLICT_REASON,
   WS_CLOSE_NORMAL,
   WS_CLOSE_REAUTH_REQUIRED,
   WS_CLOSE_UNAUTHENTICATED,
   WS_CLOSE_TOKEN_REVOKED,
+  WS_CLOSE_UPGRADE_REQUIRED,
   decodeAcceptedReceipt,
   decodeCheckpointProgress,
   decodeCommitted,
@@ -51,6 +54,8 @@ const MESSAGE_QUERY_AWARENESS = 3;
 const RECONNECT_INITIAL_MS = 500;
 const RECONNECT_MAX_MS = 15_000;
 const RECONNECT_MULTIPLIER = 1.5;
+// First resend after the server refuses a write it may take later; later ones back off.
+const UNAVAILABLE_RETRY_MS = 5_000;
 const RESYNC_INTERVAL_MS = 30_000;
 const IDLE_CLOSE_MS = 30_000;
 const UPDATE_BATCH_MS = 50;
@@ -95,6 +100,8 @@ export interface RealtimeDocState {
   readonly oldestUncheckpointedAt: number | null;
   /** Last generation the server announced for this document. */
   readonly generation: string | null;
+  /** The server refused an own edit it may take later; edits stay local and resend on their own. */
+  readonly savingUnavailable: boolean;
 }
 
 const DETACHED_DOC_STATE: RealtimeDocState = Object.freeze({
@@ -102,6 +109,7 @@ const DETACHED_DOC_STATE: RealtimeDocState = Object.freeze({
   checkpointPending: false,
   oldestUncheckpointedAt: null,
   generation: null,
+  savingUnavailable: false,
 });
 
 function sameState(a: RealtimeDocState, b: RealtimeDocState): boolean {
@@ -163,6 +171,14 @@ interface DocEntry {
   coverage: UpdateCoverage;
   // Raw bytes of every own update until a checkpoint covers it, delete-only updates included.
   retained: Map<string, Uint8Array>;
+  // Write ids sent on this socket, oldest first. The server answers them in order, so a denial
+  // without an id belongs to the head.
+  awaiting: string[];
+  // Ids the server holds different bytes for. They stay local and are never sent again.
+  conflicted: Set<string>;
+  savingUnavailable: boolean;
+  retryTimer: ReturnType<typeof setTimeout> | null;
+  retryDelayMs: number;
   state: RealtimeDocState;
   updateHandler: (update: Uint8Array, origin: unknown) => void;
   awarenessHandler: (
@@ -185,6 +201,8 @@ class RealtimeMultiplexer {
   private awarenessKeepaliveTimer: ReturnType<typeof setInterval> | null = null;
   private stateListeners = new Map<string, Set<(state: RealtimeDocState) => void>>();
   private destroyed = false;
+  // Set by close 4426 and kept until the app runs a build that speaks the server's protocol.
+  private upgradeRequired = false;
   private listenersAttached = false;
   private backgrounded = isLeaving(AppState.currentState);
 
@@ -250,6 +268,11 @@ class RealtimeMultiplexer {
       serverGeneration: null,
       coverage: new UpdateCoverage(),
       retained: new Map(),
+      awaiting: [],
+      conflicted: new Set(),
+      savingUnavailable: false,
+      retryTimer: null,
+      retryDelayMs: UNAVAILABLE_RETRY_MS,
       state: DETACHED_DOC_STATE,
       updateHandler: (update, origin) => {
         // Skip echoes of frames we just applied from the wire.
@@ -291,6 +314,8 @@ class RealtimeMultiplexer {
     } else if (this.wsConnecting) {
       // Late attach mid-handshake; surface the in-flight state immediately.
       opts.onStatus?.("connecting");
+    } else if (this.upgradeRequired) {
+      opts.onStatus?.("upgrade_required");
     }
 
     return {
@@ -304,6 +329,7 @@ class RealtimeMultiplexer {
     if (!entry) return;
     entry.flushBatch();
     if (entry.syncDeadline) clearTimeout(entry.syncDeadline);
+    if (entry.retryTimer !== null) clearTimeout(entry.retryTimer);
     entry.ydoc.off("update", entry.updateHandler);
     entry.ydoc.off("afterAllTransactions", entry.scheduleBatch);
     entry.awareness.off("change", entry.awarenessHandler);
@@ -327,13 +353,13 @@ class RealtimeMultiplexer {
 
   private openIfNeeded(): void {
     if (this.ws || this.wsConnecting) return;
-    if (this.destroyed) return;
+    if (this.destroyed || this.upgradeRequired) return;
     this.wsConnecting = true;
     this.connectNow();
   }
 
   private connectNow(): void {
-    if (this.destroyed) return;
+    if (this.destroyed || this.upgradeRequired) return;
     const orgId = this.organizationId;
     const token = getAccessToken();
     if (!orgId || !token) {
@@ -402,6 +428,12 @@ class RealtimeMultiplexer {
         // the app back to login. Do not reconnect.
         return;
       }
+      if (event.code === WS_CLOSE_UPGRADE_REQUIRED) {
+        // Every reconnect would be refused the same way; edits stay local until an update.
+        this.upgradeRequired = true;
+        this.emitStatusAll("upgrade_required");
+        return;
+      }
       if (event.code === WS_CLOSE_REAUTH_REQUIRED || event.code === WS_CLOSE_UNAUTHENTICATED) {
         // The socket hit its token's lifetime. Reconnecting with the same
         // memory token would be refused, so refresh first.
@@ -421,6 +453,8 @@ class RealtimeMultiplexer {
     for (const entry of this.docs.values()) {
       if (entry.syncDeadline) clearTimeout(entry.syncDeadline);
       entry.syncDeadline = null;
+      // Answers to writes sent on the old socket never arrive.
+      entry.awaiting = [];
     }
     this.ws = null;
     this.wsConnected = false;
@@ -580,9 +614,13 @@ class RealtimeMultiplexer {
           this.sendDurableUpdate(entry, id, entry.retained.get(id)!);
       this.publishState(entry);
     } else if (messageType === MESSAGE_COMMITTED) {
-      this.applyCoverage(entry, entry.coverage.applyCommitted(decodeCommitted(payload)));
+      const id = decodeCommitted(payload);
+      this.resumeSaving(entry, id);
+      this.applyCoverage(entry, entry.coverage.applyCommitted(id));
     } else if (messageType === MESSAGE_ACCEPTED_RECEIPT) {
-      this.applyCoverage(entry, entry.coverage.applyReceipt(decodeAcceptedReceipt(payload)));
+      const receipt = decodeAcceptedReceipt(payload);
+      this.resumeSaving(entry, receipt.updateId);
+      this.applyCoverage(entry, entry.coverage.applyReceipt(receipt));
     } else if (messageType === MESSAGE_CHECKPOINT_PROGRESS) {
       this.applyCoverage(entry, entry.coverage.applyProgress(decodeCheckpointProgress(payload)));
     } else if (messageType === MESSAGE_SESSION_STATE) {
@@ -628,9 +666,17 @@ class RealtimeMultiplexer {
     } else if (messageType === 2) {
       const scope = decoding.readVarUint(decoder);
       if (scope !== 0 && scope !== 1) return;
+      const reason = decoding.readVarString(decoder);
+      if (reason === UNAVAILABLE_REASON) {
+        this.refuseUnavailable(entry);
+        return;
+      }
+      if (reason === UPDATE_CONFLICT_REASON) {
+        this.rejectConflict(entry);
+        return;
+      }
       entry.denied = scope === 1;
       entry.readOnly = true;
-      const reason = decoding.readVarString(decoder);
       if (reason.includes("too large")) {
         this.rejectOversized(entry);
         return;
@@ -657,6 +703,37 @@ class RealtimeMultiplexer {
     entry.batchBoundary = 0;
     this.queueUpdate(entry, Y.mergeUpdates([...updates, update]), editedAt);
     this.publishState(entry);
+  }
+
+  // A receipt or commit answers its write and shows the server takes writes again.
+  private resumeSaving(entry: DocEntry, id: string): void {
+    const index = entry.awaiting.indexOf(id);
+    if (index >= 0) entry.awaiting.splice(index, 1);
+    entry.savingUnavailable = false;
+    entry.retryDelayMs = UNAVAILABLE_RETRY_MS;
+  }
+
+  // Every local update stays local. A timer resends them, and every reconnect does too.
+  private refuseUnavailable(entry: DocEntry): void {
+    entry.awaiting.shift();
+    entry.savingUnavailable = true;
+    this.publishState(entry);
+    if (entry.retryTimer !== null) return;
+    entry.retryTimer = setTimeout(() => {
+      entry.retryTimer = null;
+      for (const id of entry.coverage.localIds())
+        if (!entry.awaiting.includes(id))
+          this.sendDurableUpdate(entry, id, entry.retained.get(id)!);
+    }, entry.retryDelayMs);
+    entry.retryDelayMs = Math.min(entry.retryDelayMs * RECONNECT_MULTIPLIER, RECONNECT_MAX_MS);
+  }
+
+  // Only the refused update stops. It stays local and in recovery while the others keep syncing.
+  private rejectConflict(entry: DocEntry): void {
+    const id = entry.awaiting.shift();
+    if (id === undefined) return;
+    entry.conflicted.add(id);
+    if (entry.conflicted.size === 1) entry.options.onStatus?.("update_rejected");
   }
 
   isAttached(docName: string): boolean {
@@ -724,6 +801,7 @@ class RealtimeMultiplexer {
           ? entry.batchStartedAt
           : tracked,
       generation: entry.serverGeneration,
+      savingUnavailable: entry.savingUnavailable,
     });
     const previous = entry.state;
     if (sameState(previous, state)) return;
@@ -732,7 +810,8 @@ class RealtimeMultiplexer {
       state.transportPending !== previous.transportPending &&
       this.wsConnected &&
       !entry.denied &&
-      !entry.rejected
+      !entry.rejected &&
+      entry.conflicted.size === 0
     )
       entry.options.onStatus?.(state.transportPending ? "syncing" : "connected");
     this.notifyState(entry.docName, state);
@@ -784,13 +863,14 @@ class RealtimeMultiplexer {
   }
 
   private sendDurableUpdate(entry: DocEntry, id: string, update: Uint8Array): void {
-    if (entry.generation === null || entry.readOnly || entry.rejected) return;
+    if (entry.generation === null || entry.readOnly || entry.rejected || entry.conflicted.has(id))
+      return;
     const encoder = encoding.createEncoder();
     encoding.writeVarUint(encoder, 6);
     encoding.writeVarString(encoder, entry.generation);
     encoding.writeVarString(encoder, id);
     encoding.writeVarUint8Array(encoder, update);
-    this.sendForDoc(entry.docName, encoding.toUint8Array(encoder));
+    if (this.sendForDoc(entry.docName, encoding.toUint8Array(encoder))) entry.awaiting.push(id);
   }
 
   setDocReadOnly(docName: string, readOnly: boolean): void {
@@ -800,20 +880,23 @@ class RealtimeMultiplexer {
     entry.requestedReadOnly = readOnly;
   }
 
-  private sendForDoc(docName: string, payload: Uint8Array): void {
-    if (this.docs.get(docName)?.denied) return;
+  /** True once the frame is handed to an open socket. */
+  private sendForDoc(docName: string, payload: Uint8Array): boolean {
+    if (this.docs.get(docName)?.denied) return false;
     const frame = encodeDocFrame(docName, payload);
     if (frame.length > 1024 * 1024) {
       const entry = this.docs.get(docName);
       if (entry) this.rejectOversized(entry);
-      return;
+      return false;
     }
-    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return false;
     try {
       this.ws.send(frame);
+      return true;
     } catch (err) {
       console.warn("[realtime] send failed; reconnecting", err);
       this.forceReconnect();
+      return false;
     }
   }
 
@@ -845,13 +928,15 @@ class RealtimeMultiplexer {
   private emitStatusAll(status: RealtimeStatus): void {
     for (const entry of this.docs.values()) {
       entry.options.onStatus?.(
-        entry.rejected
+        entry.rejected || entry.conflicted.size > 0
           ? "update_rejected"
           : entry.denied
             ? "access_lost"
-            : status === "connected" && entry.state.transportPending
-              ? "syncing"
-              : status,
+            : this.upgradeRequired
+              ? "upgrade_required"
+              : status === "connected" && entry.state.transportPending
+                ? "syncing"
+                : status,
       );
     }
   }
@@ -916,6 +1001,7 @@ class RealtimeMultiplexer {
       for (const entry of this.docs.values()) {
         if (entry.syncDeadline) clearTimeout(entry.syncDeadline);
         if (entry.batchTimer !== null) clearTimeout(entry.batchTimer);
+        if (entry.retryTimer !== null) clearTimeout(entry.retryTimer);
         entry.ydoc.off("update", entry.updateHandler);
         entry.ydoc.off("afterAllTransactions", entry.scheduleBatch);
         entry.awareness.off("change", entry.awarenessHandler);

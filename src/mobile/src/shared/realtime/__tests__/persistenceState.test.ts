@@ -8,11 +8,17 @@ import {
 } from "@shared/realtime/persistenceState";
 
 const EDITED_AT = 1_000_000;
-const clean = { transportPending: false, checkpointPending: false, oldestUncheckpointedAt: null };
+const clean = {
+  transportPending: false,
+  checkpointPending: false,
+  oldestUncheckpointedAt: null,
+  savingUnavailable: false,
+};
 const local = {
   transportPending: true,
   checkpointPending: true,
   oldestUncheckpointedAt: EDITED_AT,
+  savingUnavailable: false,
 };
 const accepted = { ...local, transportPending: false };
 
@@ -55,12 +61,21 @@ it("never claims Saved before the first sync or while connecting", () => {
 });
 
 const delayed = { doc: accepted, now: EDITED_AT + SAVE_DELAYED_AFTER_MS };
+const refused = {
+  doc: { ...local, savingUnavailable: true },
+  now: EDITED_AT + SAVE_DELAYED_AFTER_MS,
+};
 
 it.each<[string, Partial<PersistenceInput>, PersistenceState]>([
   ["access loss over everything", { status: "access_lost", storageFailed: true }, "access_lost"],
   ["ended session over storage", { status: "token_revoked", storageFailed: true }, "session_ended"],
   ["edit denial over storage", { status: "permission_lost", storageFailed: true }, "view_only"],
-  ["oversized edit over storage", { status: "update_rejected", storageFailed: true }, "too_large"],
+  ["rejected edit over storage", { status: "update_rejected", storageFailed: true }, "rejected"],
+  [
+    "required update over storage",
+    { status: "upgrade_required", storageFailed: true },
+    "upgrade_required",
+  ],
   ["storage failure over offline", { status: "offline", storageFailed: true }, "storage_failed"],
   ["offline over delay", { status: "offline" }, "offline"],
   ["dropped socket over delay", { status: "disconnected" }, "offline"],
@@ -68,6 +83,15 @@ it.each<[string, Partial<PersistenceInput>, PersistenceState]>([
   ["requested view-only over delay", { readOnly: true }, "view_only"],
 ])("ranks %s", (_case, overrides, expected) => {
   expect(state({ ...delayed, ...overrides })).toBe(expected);
+});
+
+it.each<[string, Partial<PersistenceInput>, PersistenceState]>([
+  ["access loss over refused saving", { status: "access_lost" }, "access_lost"],
+  ["offline over refused saving", { status: "offline" }, "offline"],
+  ["storage failure over refused saving", { storageFailed: true }, "storage_failed"],
+  ["refused saving over delay", {}, "unavailable"],
+])("ranks %s", (_case, overrides, expected) => {
+  expect(state({ ...refused, ...overrides })).toBe(expected);
 });
 
 it("drops a device storage failure once every edit is checkpointed", () => {

@@ -8,11 +8,6 @@ from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from uniffy_proto.notes.v1.notes_pb import UpdateNoteRequest, UpdateNoteResponse
 
-from uniffy.core.auth.principal import (
-    AuthenticatedPrincipal,
-    reset_current_principal,
-    set_current_principal,
-)
 from uniffy.core.errors import StaleContentVersionError
 from uniffy.core.models.notes.note import Note
 from uniffy.core.realtime.buffer import UpdateBuffer
@@ -36,6 +31,7 @@ from uniffy.tests.integration.access.realtime_live import (
     typed,
     unreachable_buffer,  # noqa: F401 - fixture
 )
+from uniffy.tests.integration.access.rpc_calls import call_rpc
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
@@ -47,20 +43,7 @@ async def update_note(
     service = NotesServiceImpl(MagicMock(spec=ObjectStorage), AsyncMock(spec=SearchIndexer))
     service.buffer = buffer
     request = UpdateNoteRequest(note_id=str(note.key[1]), organization_id=str(note.org), **fields)
-    token = set_current_principal(
-        AuthenticatedPrincipal(
-            user_id=note.owner,
-            organization_id=note.org,
-            session_id=None,
-            token_version=None,
-            full_name="",
-            avatar_key="",
-        )
-    )
-    try:
-        return await service.update_note(request, MagicMock())
-    finally:
-        reset_current_principal(token)
+    return await call_rpc(service.update_note, request, user_id=note.owner, organization_id=note.org)
 
 
 async def note_row(note: BufferedDocument) -> Note:
@@ -141,7 +124,7 @@ async def test_stale_base_clear_keeps_text_that_only_the_buffered_tail_holds(
     assert (await live_note.buffer_state())["stream"] == []
 
 
-async def test_versioned_write_is_stale_while_only_a_buffered_tail_is_pending(
+async def test_versioned_write_is_stale_until_buffered_edits_are_projected(
     live_note: BufferedDocument,
 ) -> None:
     async def versioned_write(content: str, version: int) -> Note:
@@ -171,6 +154,11 @@ async def test_versioned_write_is_stale_while_only_a_buffered_tail_is_pending(
         live_note.buffer, live_note.head.scope, enqueue=live_note.jobs
     )
     assert result.status is CheckpointStatus.COMMITTED
+    checkpointed = await stored(live_note.key)
+    assert checkpointed.revision > checkpointed.rendered_revision
+    with pytest.raises(StaleContentVersionError):
+        await versioned_write("agent rewrite", read.version)
+    assert text_of((await stored(live_note.key)).updates) == "base Alice"
     assert await persist_snapshot(*live_note.key, live_note.org, b"", b"") == (
         SnapshotOutcome.RENDERED
     )

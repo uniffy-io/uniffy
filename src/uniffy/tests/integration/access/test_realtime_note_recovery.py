@@ -1,3 +1,5 @@
+"""Trash, restore, purge and projection recovery keep accepted note edits."""
+
 import asyncio
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
@@ -11,21 +13,17 @@ from uniffy.core.models.notes.note import Note
 from uniffy.core.models.realtime.yjs_snapshot import RealtimeYjsSnapshot
 from uniffy.core.models.tags.tag import TAG_NAME_MAX_LENGTH, Tag, TagAssignment
 from uniffy.core.realtime import jobs
+from uniffy.core.realtime.adapter import register_realtime_adapter
 from uniffy.core.realtime.markdown import markdown_text
 from uniffy.core.realtime.snapshot import SnapshotOutcome, persist_snapshot
-from uniffy.core.realtime.storage import (
-    EditDenied,
-    accept_update,
-    decode_snapshot,
-    load_snapshot,
-    lock_document,
-    stage_seed,
-)
+from uniffy.core.realtime.storage import EditDenied, decode_snapshot, load_snapshot, lock_document
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import ContentType, generate_id
 from uniffy.domains.notes.adapter import NoteRealtimeAdapter
+from uniffy.domains.notes.hierarchy.operations import NoteHierarchy
 from uniffy.domains.notes.operations import NoteOperations
 from uniffy.infrastructure.database.session import open_session
+from uniffy.tests.integration.access.realtime_live import buffered, typed
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
@@ -34,16 +32,15 @@ ACCEPTED_SUFFIX = " accepted before delete"
 
 
 @pytest_asyncio.fixture(loop_scope="session")
-async def note_document(session, access):
+async def note_document(session, access, valkey_namespace):
     key = ContentType.NOTE, access.private_note_id
     await session.execute(update(Note).where(Note.id == key[1]).values(content=BASE_CONTENT))
     await session.commit()
     indexer = MagicMock()
     indexer.remove = AsyncMock()
     adapter = NoteRealtimeAdapter(indexer)
+    register_realtime_adapter(adapter)
     with (
-        patch("uniffy.core.realtime.storage.get_realtime_adapter", return_value=adapter),
-        patch("uniffy.core.realtime.snapshot.get_realtime_adapter", return_value=adapter),
         patch(
             "uniffy.domains.notes.projection.NoteProjectionOperations._index_for_search",
             new_callable=AsyncMock,
@@ -57,14 +54,9 @@ async def note_document(session, access):
             new_callable=AsyncMock,
         ),
     ):
-        await lock_document(session, key)
-        seed = await stage_seed(session, key, access.org_id)
-        await session.commit()
-        doc = decode_snapshot(seed)
-        markdown_text(doc).insert(len(BASE_CONTENT), ACCEPTED_SUFFIX)
-        accepted = await accept_update(
-            key, access.org_id, access.member_id, seed.generation, doc.get_update()
-        )
+        live = await buffered(key, access, valkey_namespace)
+        await live.admit("u-accepted", typed(live.base, suffix=ACCEPTED_SUFFIX))
+        accepted = await live.checkpointed()
         try:
             yield SimpleNamespace(
                 key=key,
@@ -72,6 +64,7 @@ async def note_document(session, access):
                 accepted=accepted,
                 indexer=indexer,
                 adapter=adapter,
+                live=live,
             )
         finally:
             await session.rollback()
@@ -83,10 +76,15 @@ async def note_document(session, access):
             await session.commit()
 
 
+def hierarchy(session, document) -> NoteHierarchy:
+    operations = NoteOperations(session, MagicMock(), document.indexer)
+    return NoteHierarchy(operations, document.live.buffer, enqueue=document.live.jobs)
+
+
 async def test_trash_preserves_accepted_edits_until_restore(session, note_document):
     document = note_document
     access = document.access
-    operations = NoteOperations(session, MagicMock(), document.indexer)
+    operations = hierarchy(session, document)
     await operations.delete(access.member_id, access.org_id, document.key[1])
 
     outcome = await persist_snapshot(*document.key, access.org_id, b"", b"")
@@ -102,13 +100,7 @@ async def test_trash_preserves_accepted_edits_until_restore(session, note_docume
     denied = decode_snapshot(document.accepted)
     markdown_text(denied).insert(0, "denied ")
     with pytest.raises(EditDenied):
-        await accept_update(
-            document.key,
-            access.org_id,
-            access.member_id,
-            document.accepted.generation,
-            denied.get_update(),
-        )
+        await document.live.admit_live("u-denied", denied.get_update())
 
     await operations.restore(access.member_id, access.org_id, document.key[1])
     outcome = await persist_snapshot(*document.key, access.org_id, b"", b"")
@@ -155,13 +147,8 @@ async def test_recovery_projects_new_content_while_search_is_unavailable(note_do
             await persist_snapshot(*document.key, org_id, b"", b"")
         doc = decode_snapshot(document.accepted)
         markdown_text(doc).insert(0, "latest ")
-        await accept_update(
-            document.key,
-            org_id,
-            document.access.member_id,
-            document.accepted.generation,
-            doc.get_update(),
-        )
+        await document.live.admit("u-latest", doc.get_update())
+        await document.live.checkpointed()
         await jobs.recover_realtime_projections({})
     async with open_session() as db:
         note = await db.get(Note, document.key[1])
@@ -179,7 +166,7 @@ async def test_restore_waits_for_document_transaction(session, note_document):
 
     async def restore():
         async with open_session() as db:
-            operations = NoteOperations(db, MagicMock(), document.indexer)
+            operations = hierarchy(db, document)
             return await operations.restore(access.member_id, access.org_id, document.key[1])
 
     async with open_session() as db:
@@ -197,7 +184,7 @@ async def test_restore_waits_for_document_transaction(session, note_document):
 async def test_hard_purge_removes_preserved_snapshot(session, note_document):
     document = note_document
     access = document.access
-    operations = NoteOperations(session, MagicMock(), document.indexer)
+    operations = hierarchy(session, document)
     await operations.delete(access.member_id, access.org_id, document.key[1])
     await persist_snapshot(*document.key, access.org_id, b"", b"")
     await operations.empty_trash(access.member_id, access.org_id)
@@ -217,13 +204,8 @@ async def test_inline_tag_length_cannot_block_projection(note_document, tag_leng
     markdown = markdown_text(doc)
     del markdown[:]
     markdown.insert(0, text)
-    await accept_update(
-        document.key,
-        access.org_id,
-        access.member_id,
-        document.accepted.generation,
-        doc.get_update(),
-    )
+    await document.live.admit("u-tags", doc.get_update())
+    await document.live.checkpointed()
     assert await persist_snapshot(*document.key, access.org_id, b"", b"") is SnapshotOutcome.RENDERED
     async with open_session() as db:
         note = await db.get(Note, document.key[1])

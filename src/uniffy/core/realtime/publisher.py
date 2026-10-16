@@ -1,8 +1,8 @@
 """Outbound fanout for realtime Yjs updates, permission changes, and token
 revokes over Valkey pubsub.
 
-Doc-update payloads carry ``origin_replica`` and ``source_conn_id`` so subscribers
-can drop echoes of their own writes.
+Accepted-update payloads carry ``origin_replica`` so subscribers can drop echoes of their own
+writes.
 """
 
 import base64
@@ -29,6 +29,7 @@ class RealtimeChannelKind(StrEnum):
 
 
 class RealtimePayloadKind(StrEnum):
+    ACCEPTED_UPDATE = "accepted_update"
     CONTENT_REPLACE = "content_replace"
     CHECKPOINT_PROGRESS = "checkpoint_progress"
 
@@ -73,16 +74,20 @@ async def publish_doc_update(
     content_id: UUID,
     update: bytes,
     *,
-    source_conn_id: int,
-    editor_id: UUID | None = None,
+    generation: str,
+    epoch: str,
+    sequence: int,
+    origin_replica: str | None = None,
 ) -> None:
-    """Broadcast a Yjs update blob to peers across replicas."""
+    """Hand an accepted update to peer replicas; one that misses it reloads the buffered tail."""
     await publish_to_channel(
         doc_channel(content_type, content_id),
         {
-            "origin_replica": replica_id(),
-            "source_conn_id": source_conn_id,
-            "editor_id": str(editor_id) if editor_id is not None else None,
+            "kind": RealtimePayloadKind.ACCEPTED_UPDATE,
+            "origin_replica": origin_replica or replica_id(),
+            "generation": generation,
+            "epoch": epoch,
+            "sequence": sequence,
             "update": base64.b64encode(update).decode("ascii"),
             "published_at": time.time(),
         },
@@ -94,12 +99,9 @@ async def publish_content_replace(
     content_id: UUID,
     content: str,
 ) -> None:
-    """Graft a domain column write into any live doc.
+    """Tell replicas holding the document to reload checkpoint plus buffered tail after a write.
 
-    Session-holding replicas apply the content as a CRDT edit on their in-memory
-    doc, so a plain write path (mobile autosave, agent tools) cannot be
-    clobbered by a later stale-doc snapshot flush. Not origin-deduped: the
-    publishing process may itself hold the live session.
+    Not origin-deduped, because the publishing process may itself hold the live session.
     """
     await publish_to_channel(
         doc_channel(content_type, content_id),

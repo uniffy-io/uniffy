@@ -1,8 +1,10 @@
+import asyncio
 import time
 from collections.abc import AsyncIterator
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
+import pycrdt
 import pytest
 import pytest_asyncio
 from connectrpc.code import Code
@@ -21,12 +23,21 @@ from uniffy.core.auth.tokens import create_access_token, create_asset_read_token
 from uniffy.core.models.audit.event import AuditEvent
 from uniffy.core.models.login.user import User
 from uniffy.core.models.login.user_session import UserSession
+from uniffy.core.realtime import session as realtime_session
 from uniffy.core.realtime import ws_routes
+from uniffy.core.realtime.auth import (
+    CANONICAL_SUBPROTOCOL,
+    WS_CLOSE_TOKEN_REVOKED,
+    WS_CLOSE_UNAUTHENTICATED,
+)
+from uniffy.core.realtime.multiplex import encode_doc_frame
 from uniffy.core.realtime.reauth import connection_denial
-from uniffy.core.realtime.state import WSSession
-from uniffy.core.types import generate_id
+from uniffy.core.realtime.state import WSSession, doc_name_for
+from uniffy.core.realtime.wire import create_sync_message
+from uniffy.core.types import ContentType, generate_id
 from uniffy.domains.auth.interceptors import AuthenticationInterceptor
 from uniffy.domains.auth.operations import AuthOperations
+from uniffy.tests.integration.access.test_realtime_live_routing import Socket
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
@@ -85,9 +96,6 @@ async def test_committed_logout_rejects_old_credentials_without_cache(
         "uniffy.core.realtime.publisher.publish_session_revoke",
         AsyncMock(side_effect=ConnectionError("notification lost")),
     )
-    monkeypatch.setattr(ws_routes, "origin_is_allowed", lambda *_: True)
-    run = AsyncMock()
-    monkeypatch.setattr(ws_routes, "run_multiplexed_session", run)
     bearer = create_access_token(
         access.member_id, access.org_id, token_version=1, session_id=login.id
     )
@@ -95,8 +103,9 @@ async def test_committed_logout_rejects_old_credentials_without_cache(
         access.member_id, access.org_id, token_version=1, session_id=login.id
     )
     cookie = f"{resolve_asset_cookie_config().name}={asset}"
-    socket = AsyncMock()
-    socket.headers = {"authorization": f"Bearer {bearer}"}
+    headers = {"authorization": f"Bearer {bearer}", "sec-websocket-protocol": CANONICAL_SUBPROTOCOL}
+    socket = Socket(headers)
+    socket.hang_up()
     live = WSSession(
         user_id=access.member_id,
         organization_id=access.org_id,
@@ -113,10 +122,9 @@ async def test_committed_logout_rejects_old_credentials_without_cache(
     assert await get_current_user_id(asset_request(cookie)) == access.member_id
     assert await connection_denial(live) is None
     await ws_routes.realtime(socket, access.org_id)
-    socket.accept.assert_awaited_once()
-    run.assert_awaited_once()
-    socket.reset_mock()
-    run.reset_mock()
+    # The session ran until the client hung up.
+    assert socket.subprotocols == [CANONICAL_SUBPROTOCOL]
+    assert socket.closes == [(1011, "session ended")]
 
     assert await AuthOperations(session, AsyncMock()).revoke_session(access.member_id, login.id)
 
@@ -132,13 +140,65 @@ async def test_committed_logout_rejects_old_credentials_without_cache(
         assert asset_error.value.status_code == 401
     denial = await connection_denial(live)
     assert denial is not None and denial.code == 4410
-    await ws_routes.realtime(socket, access.org_id)
-    socket.accept.assert_not_awaited()
-    run.assert_not_awaited()
-    assert socket.close.await_args.kwargs["code"] == 4401
+    revoked = Socket(headers)
+    await ws_routes.realtime(revoked, access.org_id)
+    assert revoked.subprotocols == []
+    assert revoked.closes == [(WS_CLOSE_UNAUTHENTICATED, "credentials revoked")]
     await session.refresh(login)
     assert login.is_revoked
     cache.get.assert_not_awaited()
+
+
+async def test_open_socket_closes_once_its_session_is_revoked_without_notification(
+    session: AsyncSession, access: SimpleNamespace, login: UserSession, monkeypatch
+) -> None:
+    monkeypatch.setattr(realtime_session, "REAUTH_INTERVAL_SECONDS", 0.05)
+    monkeypatch.setattr(
+        "uniffy.core.realtime.publisher.publish_session_revoke",
+        AsyncMock(side_effect=ConnectionError("notification lost")),
+    )
+    bearer = create_access_token(
+        access.member_id, access.org_id, token_version=1, session_id=login.id
+    )
+    socket = Socket({
+        "authorization": f"Bearer {bearer}",
+        "sec-websocket-protocol": CANONICAL_SUBPROTOCOL,
+    })
+    running = asyncio.create_task(ws_routes.realtime(socket, access.org_id))
+    await asyncio.wait_for(socket.accepting.wait(), 5)
+
+    assert await AuthOperations(session, AsyncMock()).revoke_session(access.member_id, login.id)
+
+    await asyncio.wait_for(running, 5)
+    assert socket.subprotocols == [CANONICAL_SUBPROTOCOL]
+    assert socket.closes[0][0] == WS_CLOSE_TOKEN_REVOKED
+
+
+async def test_idle_socket_cannot_attach_a_document_once_its_session_is_revoked(
+    session: AsyncSession, access: SimpleNamespace, login: UserSession, monkeypatch
+) -> None:
+    monkeypatch.setattr(
+        "uniffy.core.realtime.publisher.publish_session_revoke",
+        AsyncMock(side_effect=ConnectionError("notification lost")),
+    )
+    bearer = create_access_token(
+        access.member_id, access.org_id, token_version=1, session_id=login.id
+    )
+    socket = Socket({
+        "authorization": f"Bearer {bearer}",
+        "sec-websocket-protocol": CANONICAL_SUBPROTOCOL,
+    })
+    running = asyncio.create_task(ws_routes.realtime(socket, access.org_id))
+    await asyncio.wait_for(socket.accepting.wait(), 5)
+    assert await AuthOperations(session, AsyncMock()).revoke_session(access.member_id, login.id)
+
+    # Long before the watchdog runs, the first document frame must not attach.
+    note = doc_name_for((ContentType.NOTE, access.private_note_id))
+    socket.deliver(encode_doc_frame(note, create_sync_message(pycrdt.Doc())))
+
+    await asyncio.wait_for(running, 5)
+    assert socket.closes[0][0] == WS_CLOSE_TOKEN_REVOKED
+    assert socket.sent.empty()
 
 
 async def test_session_must_exist_belong_to_actor_and_remain_live(session, access, login):

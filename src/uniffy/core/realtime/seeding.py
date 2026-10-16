@@ -26,6 +26,14 @@ def has_fragment_content(root: pycrdt.XmlFragment | pycrdt.XmlElement) -> bool:
     return False
 
 
+def adds_seed_claim(before: pycrdt.Doc, after: pycrdt.Doc) -> bool:
+    previous = before.get(MARKDOWN_MIRROR_FIELD, type=pycrdt.Map)
+    return any(
+        key.startswith(_SEED_CLAIM_PREFIX) and key not in previous
+        for key in after.get(MARKDOWN_MIRROR_FIELD, type=pycrdt.Map)
+    )
+
+
 def seed_allowed(
     row: RealtimeYjsSnapshot,
     before: pycrdt.Doc,
@@ -36,11 +44,7 @@ def seed_allowed(
     base: str | None,
 ) -> bool:
     """Only the live lease holder adds a seed claim, onto an empty fragment over unchanged source."""
-    previous = before.get(MARKDOWN_MIRROR_FIELD, type=pycrdt.Map)
-    claimed = any(
-        key.startswith(_SEED_CLAIM_PREFIX) and key not in previous
-        for key in after.get(MARKDOWN_MIRROR_FIELD, type=pycrdt.Map)
-    )
+    claimed = adds_seed_claim(before, after)
     if owner is None:
         return not claimed
     return (

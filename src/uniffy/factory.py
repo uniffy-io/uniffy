@@ -472,9 +472,9 @@ async def lifespan(app: FastAPI):
     try:
         from uniffy.core.realtime.ydoc_manager import ydoc_manager
 
-        await ydoc_manager.flush_all()
+        await ydoc_manager.stop_for_shutdown()
     except Exception as e:
-        logger.warning(f"Realtime shutdown flush failed: {e}")
+        logger.warning(f"Realtime shutdown hint drain failed: {e}")
     await stream_revoke_coordinator.stop()
     await realtime_pubsub_router.stop()
     signal_pubsub_shutdown()

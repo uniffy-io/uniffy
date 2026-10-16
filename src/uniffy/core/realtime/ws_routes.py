@@ -13,9 +13,11 @@ from uniffy.core.realtime.auth import (
     CANONICAL_SUBPROTOCOL,
     WS_CLOSE_FORBIDDEN,
     WS_CLOSE_UNAUTHENTICATED,
+    WS_CLOSE_UPGRADE_REQUIRED,
     extract_bearer,
     extract_bearer_from_auth_header,
     get_ws_origin_allowlist,
+    offered_subprotocols,
     origin_is_allowed,
 )
 from uniffy.core.realtime.limits import MAX_SOCKETS_PER_USER
@@ -112,6 +114,15 @@ async def realtime(
             component=LOGGER_COMPONENT,
         )
         await ws.close(code=WS_CLOSE_FORBIDDEN, reason="not a member")
+        return
+
+    offered = offered_subprotocols(subprotocol_header)
+    if CANONICAL_SUBPROTOCOL not in offered:
+        # Complete the handshake so the close code reaches the client; a browser fails a
+        # handshake that selects none of the protocols it offered.
+        REALTIME_AUTH_FAILURES_TOTAL.labels(reason="upgrade_required").inc()
+        await ws.accept(subprotocol=offered[0] if offered else None)
+        await ws.close(code=WS_CLOSE_UPGRADE_REQUIRED, reason="upgrade required")
         return
 
     if _active_sockets.get(user_id, 0) >= MAX_SOCKETS_PER_USER:

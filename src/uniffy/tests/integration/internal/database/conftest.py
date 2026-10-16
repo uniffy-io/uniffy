@@ -39,6 +39,8 @@ from uniffy.core.search import SearchIndexer
 from uniffy.core.types import generate_id
 from uniffy.domains.files.registration import register_file_content
 from uniffy.domains.notes.registration import register_note_content
+from uniffy.domains.projects.registration import register_project_content
+from uniffy.domains.scheduling.calendar.realtime import register_event_realtime_adapter
 from uniffy.infrastructure.database import close_db, init_db, open_session
 from uniffy.infrastructure.database.session import get_database_url
 
@@ -48,6 +50,8 @@ async def database():
     """Bring up the real engine once, or skip the suite when nothing answers."""
     register_file_content()
     register_note_content()
+    register_project_content()
+    register_event_realtime_adapter(MagicMock())
     try:
         await init_db(skip_migrations=True)
     except Exception as exc:
@@ -73,7 +77,7 @@ def search_indexer() -> SearchIndexer:
 
 async def seed_env(db_session: AsyncSession) -> NS:
     """One org with an admin, a member, and a provisioned DEK."""
-    suffix = generate_id().hex[:12]
+    suffix = generate_id().hex[-12:]
     admin = User(
         email=f"itdb-admin-{suffix}@test.local",
         username=f"itdb-admin-{suffix}",

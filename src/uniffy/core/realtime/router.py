@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import binascii
 import contextlib
 import time
 from collections.abc import Awaitable, Callable, Sequence
@@ -23,6 +24,7 @@ from uniffy.core.realtime.publisher import (
     RealtimePayloadKind,
 )
 from uniffy.core.realtime.state import ClientHandle, DocKey, YDocSession
+from uniffy.core.realtime.wire import MAX_WIRE_INTEGER, MAX_WIRE_STRING_BYTES, CheckpointProgress
 from uniffy.core.types import ContentType
 from uniffy.infrastructure.valkey.pubsub import subscribe_patterns
 
@@ -37,11 +39,22 @@ _RECONNECT_DELAY_INITIAL = 1.0
 _RECONNECT_DELAY_MAX = 30.0
 
 
+@dataclass(frozen=True, slots=True)
+class RemoteUpdate:
+    """An update another replica accepted, with its place in the buffer epoch."""
+
+    update: bytes
+    generation: str
+    epoch: str
+    sequence: int
+
+
 @dataclass
 class RouterCallbacks:
     """Hooks the ``YDocManager`` registers to receive routed payloads."""
 
-    apply_remote_update: Callable[[YDocSession, bytes, UUID | None], Awaitable[None]]
+    apply_remote_update: Callable[[YDocSession, RemoteUpdate], Awaitable[None]]
+    apply_checkpoint_progress: Callable[[DocKey, CheckpointProgress], Awaitable[None]]
     apply_content_replace: Callable[[DocKey, str], Awaitable[None]]
     close_stale_user_sessions: Callable[[UUID, int], Awaitable[None]]
     close_user_session_by_sid: Callable[[UUID, UUID], Awaitable[None]]
@@ -49,14 +62,40 @@ class RouterCallbacks:
     reauthorize_docs: Callable[[Sequence[DocKey], UUID | None], Awaitable[None]]
 
 
-def _parse_editor_id(payload: dict[str, object]) -> UUID | None:
-    raw = payload.get("editor_id")
-    if not raw:
+def _wire_string(value: object) -> str | None:
+    if isinstance(value, str) and len(value.encode()) <= MAX_WIRE_STRING_BYTES:
+        return value
+    return None
+
+
+def _wire_integer(value: object) -> int | None:
+    if isinstance(value, int) and not isinstance(value, bool) and 0 <= value <= MAX_WIRE_INTEGER:
+        return value
+    return None
+
+
+def _parse_remote_update(payload: dict[str, object]) -> RemoteUpdate | None:
+    generation = _wire_string(payload.get("generation"))
+    epoch = _wire_string(payload.get("epoch"))
+    sequence = _wire_integer(payload.get("sequence"))
+    encoded = payload.get("update")
+    if generation is None or not epoch or not sequence or not isinstance(encoded, str):
         return None
     try:
-        return UUID(str(raw))
-    except ValueError:
+        update = base64.b64decode(encoded, validate=True)
+    except binascii.Error:
         return None
+    return RemoteUpdate(update, generation, epoch, sequence)
+
+
+def _parse_progress(payload: dict[str, object]) -> CheckpointProgress | None:
+    generation = _wire_string(payload.get("generation"))
+    epoch = _wire_string(payload.get("epoch"))
+    covered = _wire_integer(payload.get("covered_sequence"))
+    revision = _wire_integer(payload.get("checkpoint_revision"))
+    if generation is None or not epoch or covered is None or revision is None:
+        return None
+    return CheckpointProgress(generation, epoch, covered, revision)
 
 
 def _parse_doc_channel(channel: str) -> DocKey | None:
@@ -145,14 +184,14 @@ def _parse_defaults_channel(channel: str) -> tuple[UUID, ContentType] | None:
 class RealtimeRouter:
     """Singleton process-wide dispatcher for the realtime pubsub channels."""
 
-    def __init__(self) -> None:
+    def __init__(self, replica: str | None = None) -> None:
         self._callbacks: RouterCallbacks | None = None
         # Keyed by ``conn_id`` because ``ClientHandle`` is non-frozen and unhashable.
         self._doc_handles: dict[DocKey, dict[int, ClientHandle]] = {}
         self._user_handles: dict[UUID, dict[int, ClientHandle]] = {}
         self._doc_sessions: dict[DocKey, YDocSession] = {}
         self._policy_docs: dict[DocKey, set[DocKey]] = {}
-        self._self_replica = replica_id()
+        self._self_replica = replica or replica_id()
         self._tasks: list[asyncio.Task[None]] = []
         self._running = False
 
@@ -274,39 +313,40 @@ class RealtimeRouter:
             delay = _RECONNECT_DELAY_INITIAL
 
     async def _handle_doc_message(self, channel: str, payload: dict[str, object]) -> None:
-        if payload.get("kind") == RealtimePayloadKind.CONTENT_REPLACE:
+        key = _parse_doc_channel(channel)
+        callbacks = self._callbacks
+        session = None if key is None else self._doc_sessions.get(key)
+        if key is None or session is None or callbacks is None:
+            return
+        kind = payload.get("kind")
+        if kind == RealtimePayloadKind.CONTENT_REPLACE:
             # Not origin-deduped: the publishing process may hold the session.
-            key = _parse_doc_channel(channel)
-            if key is None or key not in self._doc_sessions:
-                return
-            callbacks = self._callbacks
-            content = payload.get("content")
-            if callbacks is None or not isinstance(content, str):
+            if not isinstance(payload.get("content"), str):
                 return
             _observe_pubsub_latency("doc", payload)
-            await callbacks.apply_content_replace(key, content)
+            await callbacks.apply_content_replace(key, str(payload["content"]))
+            return
+        if kind == RealtimePayloadKind.CHECKPOINT_PROGRESS:
+            # Not origin-deduped either: barriers in this process commit checkpoints too.
+            progress = _parse_progress(payload)
+            if progress is None:
+                logger.warning(
+                    f"router: malformed progress on {channel}", component=LOGGER_COMPONENT
+                )
+                return
+            _observe_pubsub_latency("doc", payload)
+            await callbacks.apply_checkpoint_progress(key, progress)
+            return
+        if kind != RealtimePayloadKind.ACCEPTED_UPDATE:
             return
         if payload.get("origin_replica") == self._self_replica:
             return
-        key = _parse_doc_channel(channel)
-        if key is None:
-            return
-        session = self._doc_sessions.get(key)
-        if session is None:
-            return
-        update_b64 = payload.get("update")
-        if not isinstance(update_b64, str):
-            return
-        try:
-            update = base64.b64decode(update_b64)
-        except Exception:
+        remote = _parse_remote_update(payload)
+        if remote is None:
             logger.warning(f"router: malformed update on {channel}", component=LOGGER_COMPONENT)
             return
-        callbacks = self._callbacks
-        if callbacks is None:
-            return
         _observe_pubsub_latency("doc", payload)
-        await callbacks.apply_remote_update(session, update, _parse_editor_id(payload))
+        await callbacks.apply_remote_update(session, remote)
 
     async def _handle_perm_message(self, channel: str, payload: dict[str, object]) -> None:
         if payload.get("origin_replica") == self._self_replica:

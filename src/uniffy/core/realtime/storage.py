@@ -1,4 +1,4 @@
-"""PostgreSQL serializes shared document generations and accepted update bytes."""
+"""PostgreSQL document locks, shared generation seeding and fragment seed leases."""
 
 from collections.abc import Iterable
 from dataclasses import dataclass
@@ -9,19 +9,10 @@ import pycrdt
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from uniffy.core.auth.permissions import role_can_edit
 from uniffy.core.models.realtime.yjs_snapshot import RealtimeYjsSnapshot
 from uniffy.core.realtime.adapter import get_realtime_adapter
-from uniffy.core.realtime.limits import MAX_DOCUMENT_BYTES, MAX_SNAPSHOT_BYTES
-from uniffy.core.realtime.markdown import (
-    DOC_GENERATION_KEY,
-    DOC_META_FIELD,
-    PROSEMIRROR_FRAGMENT_FIELD,
-    markdown_text,
-)
-from uniffy.core.realtime.seeding import has_fragment_content, seed_allowed
+from uniffy.core.realtime.markdown import DOC_GENERATION_KEY, DOC_META_FIELD
 from uniffy.core.realtime.state import DocKey
-from uniffy.infrastructure.database.session import open_session
 
 SEED_LEASE = timedelta(seconds=45)
 
@@ -148,70 +139,3 @@ def elect_seed_owner(
         if snapshot.seed_owner and snapshot.seed_expires_at
         else None
     )
-
-
-async def claim_seed(
-    key: DocKey, organization_id: UUID, candidates: list[str], replica: str
-) -> SeedLease | None:
-    async with open_session() as db:
-        await lock_document(db, key)
-        snapshot = await load_snapshot(db, key)
-        if snapshot is None:
-            return None
-        fragment = decode_snapshot(snapshot).get(PROSEMIRROR_FRAGMENT_FIELD, type=pycrdt.XmlFragment)
-        lease = elect_seed_owner(
-            snapshot,
-            initialized=has_fragment_content(fragment),
-            candidates=candidates,
-            replica=replica,
-        )
-        await db.commit()
-        return lease
-
-
-async def accept_update(
-    key: DocKey,
-    organization_id: UUID,
-    actor_id: UUID,
-    generation: str,
-    update: bytes,
-    *,
-    seed_owner: str | None = None,
-    seed_token: str | None = None,
-    seed_base: str | None = None,
-) -> RealtimeYjsSnapshot:
-    async with open_session() as db:
-        await lock_document(db, key, organization_id)
-        role = await get_realtime_adapter(key[0]).authorize(db, actor_id, organization_id, key[1])
-        if not role_can_edit(role):
-            raise EditDenied
-        snapshot = await stage_seed(db, key, organization_id)
-        if snapshot.generation != generation:
-            raise GenerationConflict
-        # Merging encoded bytes retains updates whose causal predecessors arrive later.
-        merged = pycrdt.merge_updates(snapshot.updates, update)
-        if len(merged) > MAX_SNAPSHOT_BYTES:
-            raise DocumentTooLarge
-        doc = pycrdt.Doc()
-        doc.apply_update(merged)
-        if len(str(markdown_text(doc)).encode()) > MAX_DOCUMENT_BYTES:
-            raise DocumentTooLarge
-        if doc.get(DOC_META_FIELD, type=pycrdt.Map).get(DOC_GENERATION_KEY, "") != generation:
-            raise GenerationConflict
-        if merged != snapshot.updates:
-            if not seed_allowed(
-                snapshot,
-                decode_snapshot(snapshot),
-                doc,
-                owner=seed_owner,
-                token=seed_token,
-                base=seed_base,
-            ):
-                raise SeedConflict
-            snapshot.updates = merged
-            snapshot.state_vector = doc.get_state()
-            snapshot.revision += 1
-            snapshot.actor_id = actor_id
-            snapshot.updated_at = datetime.now(UTC)
-        await db.commit()
-        return snapshot

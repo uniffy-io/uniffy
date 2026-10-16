@@ -396,6 +396,7 @@ class TaskMutationOperations:
                 task,
                 organization_id,
                 status_semantics,
+                buffer=self.buffer,
             )
 
         return task, spawned_task

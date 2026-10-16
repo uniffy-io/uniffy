@@ -21,6 +21,7 @@ from uniffy.core.errors import (
     PermissionDeniedError,
     RateLimitExceededError,
     RuntimeDeadlineExceededError,
+    UnavailableError,
     UNIFFYError,
     ValidationError,
 )
@@ -52,6 +53,7 @@ DOMAIN_ERROR_CODES: dict[type[UNIFFYError], Code] = {
     RateLimitExceededError: Code.RESOURCE_EXHAUSTED,
     BudgetExceededError: Code.RESOURCE_EXHAUSTED,
     RuntimeDeadlineExceededError: Code.DEADLINE_EXCEEDED,
+    UnavailableError: Code.UNAVAILABLE,
 }
 
 

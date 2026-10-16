@@ -2,8 +2,12 @@ import * as decoding from "lib0/decoding";
 import * as encoding from "lib0/encoding";
 
 export const SEED_CONFLICT_REASON = "seed_conflict";
+// The server refused a write it may accept later; the client keeps it and retries.
+export const UNAVAILABLE_REASON = "unavailable";
+// The server already holds different bytes under this update id.
+export const UPDATE_CONFLICT_REASON = "update conflict";
 
-export const CANONICAL_SUBPROTOCOL = "uniffy.realtime.v1";
+export const CANONICAL_SUBPROTOCOL = "uniffy.realtime.v2";
 
 // Window events the auth layer fires; transport and the pending-doc drain reconnect on them.
 export const AUTH_REFRESHED_EVENT = "uniffy:auth:refreshed";
@@ -19,6 +23,8 @@ export const WS_CLOSE_IDLE = 4408;
 // Refresh, then reconnect - this is not a revocation.
 export const WS_CLOSE_REAUTH_REQUIRED = 4409;
 export const WS_CLOSE_TOKEN_REVOKED = 4410;
+// The server speaks a protocol this bundle does not; only a reload can fix that.
+export const WS_CLOSE_UPGRADE_REQUIRED = 4426;
 
 export type RealtimeStatus =
   | "idle"
@@ -31,7 +37,8 @@ export type RealtimeStatus =
   | "permission_lost"
   | "access_lost"
   | "update_rejected"
-  | "token_revoked";
+  | "token_revoked"
+  | "upgrade_required";
 
 export function statusFromCloseCode(code: number): RealtimeStatus | null {
   switch (code) {
@@ -40,6 +47,8 @@ export function statusFromCloseCode(code: number): RealtimeStatus | null {
       return "permission_lost";
     case WS_CLOSE_TOKEN_REVOKED:
       return "token_revoked";
+    case WS_CLOSE_UPGRADE_REQUIRED:
+      return "upgrade_required";
     default:
       return null;
   }

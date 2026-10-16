@@ -11,6 +11,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from uniffy.core.models.projects.field_definition import TaskStatusSemantic
 from uniffy.core.models.projects.project import Project
 from uniffy.core.models.projects.task import Task
+from uniffy.core.realtime.buffer import UpdateBuffer
+from uniffy.core.realtime.live import LiveStateUnavailable, load_live_document
+from uniffy.core.realtime.storage import lock_document
+from uniffy.core.types import ContentType
 from uniffy.domains.projects.recurrence import (
     compute_next_occurrence,
     parse_recurrence_config,
@@ -22,12 +26,32 @@ from uniffy.domains.projects.tasks.notifications import TaskNotifications
 logger = logger.bind(component="projects.tasks.recurrence")
 
 
+async def _live_description(
+    session: AsyncSession, buffer: UpdateBuffer, task: Task, organization_id: UUID
+) -> str:
+    """The completed task's text including accepted edits that have not reached the column."""
+    key = (ContentType.TASK, task.id)
+    await lock_document(session, key, organization_id)
+    try:
+        live = await load_live_document(buffer, session, key)
+    except LiveStateUnavailable:
+        # The completion has already committed, so refusing here would end the series; the
+        # completed task keeps its pending edits either way.
+        logger.opt(exception=True).warning(
+            "Recurring copy starts from the stored description", task_id=str(task.id)
+        )
+        return task.description or ""
+    return live.text() if live is not None else task.description or ""
+
+
 async def spawn_next_recurring_instance(
     session: AsyncSession,
     index_task: Callable[[Task], Awaitable[None]],
     completed_task: Task,
     organization_id: UUID,
     status_semantics: TaskStatusSemantics,
+    *,
+    buffer: UpdateBuffer,
 ) -> Task | None:
     config = parse_recurrence_config(completed_task.recurrence_rule)
     if not config:
@@ -46,6 +70,7 @@ async def spawn_next_recurring_instance(
     config["occurrences_created"] = config.get("occurrences_created", 1) + 1
     next_rule = serialize_recurrence_config(config)
 
+    description = await _live_description(session, buffer, completed_task, organization_id)
     counter_result = await session.execute(
         text(
             "UPDATE projects_projects "
@@ -62,7 +87,7 @@ async def spawn_next_recurring_instance(
         organization_id=completed_task.organization_id,
         owner_id=completed_task.owner_id,
         title=completed_task.title,
-        description=completed_task.description or "",
+        description=description,
         status=status_semantics.id_for(TaskStatusSemantic.TODO),
         priority=completed_task.priority,
         assignee_ids=(list(completed_task.assignee_ids) if completed_task.assignee_ids else None),

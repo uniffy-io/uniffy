@@ -13,6 +13,7 @@ import { encodeCommitted } from "@/features/realtime/protocol";
 import {
   attachDoc,
   connect,
+  denial,
   detachAll,
   installRealtimeGlobals,
   lastUpdateId,
@@ -122,6 +123,26 @@ describe("save state through the transport", () => {
 
     ws.receive(doc.docName, progress(2));
     expect(chip.current()).toBe("saved");
+    chip.unsubscribe();
+  });
+
+  it("shows Saving unavailable over Saving delayed until the first receipt", () => {
+    const doc = attachDoc("unavailable");
+    const chip = watch(doc);
+    const ws = connect(doc);
+    type(doc, "draft");
+    vi.advanceTimersByTime(50);
+    const id = lastUpdateId(ws, doc);
+    ws.receive(doc.docName, denial("unavailable"));
+    expect(chip.current()).toBe("unavailable");
+    vi.advanceTimersByTime(SAVE_DELAYED_AFTER_MS);
+    expect(chip.current()).toBe("unavailable");
+
+    ws.receive(doc.docName, receipt(id, 1));
+    vi.advanceTimersByTime(SYNCING_SETTLE_MS);
+    expect(chip.current()).toBe("delayed");
+    ws.receive(doc.docName, progress(1));
+    expect(chip.seen).toEqual(["saved", "syncing", "unavailable", "delayed", "saved"]);
     chip.unsubscribe();
   });
 

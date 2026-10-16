@@ -134,7 +134,7 @@ async def _seed_access(db_session: AsyncSession) -> NS:
     """An org with an admin who owns nothing, and a member who owns private
     content - the exact shape an admin bypass would leak.
     """
-    suffix = generate_id().hex[:12]
+    suffix = generate_id().hex[-12:]
 
     def _user(handle: str) -> User:
         return User(

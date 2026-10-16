@@ -17,6 +17,7 @@ import {
   encodeCheckpointProgress,
   encodeCommitted,
   encodeSessionState,
+  type RealtimeStatus,
 } from "@/features/realtime/protocol";
 import { hasUnsyncedEdits } from "@/features/realtime/unsyncedEdits";
 import { resolveCloseDisposal } from "@/features/realtime/hooks/useDocSession";
@@ -936,6 +937,7 @@ describe("checkpoint coverage", () => {
       transportPending: true,
       checkpointPending: true,
       oldestUncheckpointedAt: 1_000,
+      savingUnavailable: false,
     });
     vi.advanceTimersByTime(50);
     const { id } = readDurable(durableFrames(ws, doc.docName).at(-1)!);
@@ -1099,6 +1101,83 @@ describe("checkpoint coverage", () => {
     const inFlight = edit(doc, ws, "sent once");
     ws.receive(sessionState(doc, "E1", 0, 0));
     expect(durableIds(ws, doc)).toEqual([inFlight.id]);
+  });
+
+  it("keeps refused updates local and resends them under the same ids after five seconds", () => {
+    const doc = attachDoc("unavailable");
+    const ws = currentWs();
+    ws.open(GENERATION);
+    ws.receive(sessionState(doc, "E1", 0, 0));
+    const first = edit(doc, ws, "first");
+    const second = edit(doc, ws, "second");
+    ws.receive(serverAuthDeniedFrame(doc.docName, "unavailable"));
+    ws.receive(serverAuthDeniedFrame(doc.docName, "unavailable"));
+    expect(realtimeMultiplexer.getDocState(doc.docName)).toMatchObject({
+      transportPending: true,
+      checkpointPending: true,
+      savingUnavailable: true,
+    });
+    expect(realtimeMultiplexer.isDocReadOnly(doc.docName)).toBe(false);
+
+    edit(doc, ws, "sent after the refusal");
+    const sent = durableFrames(ws, doc.docName).length;
+    vi.advanceTimersByTime(4_949);
+    expect(durableFrames(ws, doc.docName)).toHaveLength(sent);
+    vi.advanceTimersByTime(1);
+    const resent = durableFrames(ws, doc.docName).slice(sent).map(readDurable);
+    expect(resent).toEqual([first, second]);
+  });
+
+  it.each(["receipt", "commit"])("clears Saving unavailable on the first %s", (answer) => {
+    const doc = attachDoc(`unavailable-cleared-${answer}`);
+    const ws = currentWs();
+    ws.open(GENERATION);
+    ws.receive(sessionState(doc, "E1", 0, 0));
+    const refused = edit(doc, ws, "refused");
+    ws.receive(serverAuthDeniedFrame(doc.docName, "unavailable"));
+    const accepted = edit(doc, ws, "accepted");
+    expect(realtimeMultiplexer.getDocState(doc.docName).savingUnavailable).toBe(true);
+    ws.receive(
+      answer === "receipt"
+        ? receipt(doc, accepted.id, "E1", 1)
+        : encodeDocFrame(doc.docName, encodeCommitted(accepted.id)),
+    );
+    expect(realtimeMultiplexer.getDocState(doc.docName)).toMatchObject({
+      transportPending: true,
+      savingUnavailable: false,
+    });
+    vi.advanceTimersByTime(5_000);
+    expect(durableIds(ws, doc).at(-1)).toBe(refused.id);
+  });
+
+  it("rejects only the conflicting update and keeps syncing the others", () => {
+    const statuses: RealtimeStatus[] = [];
+    const doc = attachDoc("conflict", { onStatus: (status) => statuses.push(status) });
+    const events = recordCoverage(doc);
+    const ws = currentWs();
+    ws.open(GENERATION);
+    ws.receive(sessionState(doc, "E1", 0, 0));
+    const conflicting = edit(doc, ws, "conflicting");
+    const other = edit(doc, ws, "other");
+    ws.receive(serverAuthDeniedFrame(doc.docName, "update conflict"));
+    ws.receive(serverAuthDeniedFrame(doc.docName, "unavailable"));
+    expect(statuses.at(-1)).toBe("update_rejected");
+
+    vi.advanceTimersByTime(5_000);
+    expect(durableIds(ws, doc)).toEqual([conflicting.id, other.id, other.id]);
+    ws.receive(receipt(doc, other.id, "E1", 1));
+    ws.receive(progress(doc, "E1", 1));
+    expect(
+      events.filter((event) => event.coverage === "checkpointed").map((event) => event.updateId),
+    ).toEqual([other.id]);
+    expect(realtimeMultiplexer.getDocState(doc.docName).transportPending).toBe(true);
+
+    ws.serverClose(1006);
+    window.dispatchEvent(new Event("online"));
+    const replacement = currentWs();
+    replacement.open(GENERATION);
+    expect(durableIds(replacement, doc)).toEqual([]);
+    expect(statuses.at(-1)).toBe("update_rejected");
   });
 });
 

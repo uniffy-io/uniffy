@@ -26,22 +26,10 @@ REALTIME_HYDRATION_DURATION = Histogram(
     ["content_type", "source"],
 )
 
-REALTIME_SNAPSHOT_DURATION = Histogram(
-    "uniffy_realtime_snapshot_duration_seconds",
-    "Time to encode and enqueue a debounced snapshot",
-    ["content_type"],
-)
-
 REALTIME_SNAPSHOT_TASK_DURATION = Histogram(
     "uniffy_realtime_snapshot_task_duration_seconds",
     "End-to-end duration of the realtime snapshot job",
     ["content_type"],
-)
-
-REALTIME_SNAPSHOT_DROPPED_TOTAL = Counter(
-    "uniffy_realtime_snapshot_dropped_total",
-    "Snapshot attempts that did not result in a persisted row",
-    ["content_type", "reason"],
 )
 
 REALTIME_SNAPSHOT_SUPERSEDED_TOTAL = Counter(
@@ -188,4 +176,15 @@ REALTIME_BUFFER_EPOCH_RESETS_TOTAL = Counter(
     "uniffy_realtime_buffer_epoch_resets_total",
     "Buffer epochs replaced, by the condition that forced the reset",
     ["reason"],
+)
+REALTIME_RECEIPT_LATENCY = Histogram(
+    "uniffy_realtime_receipt_latency_seconds",
+    "Time from a live update frame arriving to its accepted receipt",
+    buckets=(0.005, 0.01, 0.025, 0.05, 0.1, 0.15, 0.25, 0.5, 1, 2.5),
+)
+REALTIME_GAP_REPAIRS_TOTAL = Counter(
+    "uniffy_realtime_gap_repairs_total",
+    "Resident documents reloaded from checkpoint and buffer because an update hint did not "
+    "continue their head",
+    ["cause"],
 )

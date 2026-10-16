@@ -40,7 +40,6 @@ from uniffy.core.realtime.storage import (
     EditDenied,
     GenerationConflict,
     SeedConflict,
-    accept_update,
     load_snapshot,
     lock_document,
 )
@@ -107,9 +106,7 @@ async def test_replacement_retires_the_older_generation_tail_after_commit(
     )
     assert late.status is AdmissionStatus.RECOVERY_REQUIRED
     with pytest.raises(GenerationConflict):
-        await accept_update(
-            live_note.key, live_note.org, live_note.owner, live_note.generation, alice
-        )
+        await live_note.admit_live("u-stale", alice)
 
 
 async def test_checkpoint_captured_before_replacement_never_commits_into_the_new_generation(
@@ -230,9 +227,7 @@ async def test_hard_delete_retires_the_buffer_and_refuses_later_appends(
                 live_note.buffer, db, live_note.key, live_note.org, stage_recovered=stage_recovered
             )
     with pytest.raises(EditDenied):
-        await accept_update(
-            live_note.key, live_note.org, live_note.owner, live_note.generation, late
-        )
+        await live_note.admit_live("u-late", late)
 
 
 async def test_seed_proposal_validates_against_the_tail_and_commits_it_before_acknowledgment(
