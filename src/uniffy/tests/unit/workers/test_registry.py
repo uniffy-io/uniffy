@@ -163,3 +163,16 @@ def test_media_jobs_are_consumed_only_by_media_workers() -> None:
             assert ref.name in media.functions
             assert ref.name not in core.functions
             assert ref.name not in egress.functions
+
+
+@pytest.mark.parametrize(
+    "settings", [CoreWorkerSettings, EgressWorkerSettings, MediaWorkerSettings]
+)
+def test_every_fleet_reads_and_writes_jobs_through_the_json_codec(settings: type) -> None:
+    from uniffy.core.jobs.codec import deserialize_job_payload, serialize_job_payload
+    from uniffy.vendor.arq.worker import get_kwargs
+
+    kwargs = get_kwargs(settings)
+
+    assert kwargs["job_serializer"] is serialize_job_payload
+    assert kwargs["job_deserializer"] is deserialize_job_payload

@@ -4,6 +4,7 @@ import os
 from datetime import UTC
 
 from uniffy.core.jobs import QueueName
+from uniffy.core.jobs.codec import deserialize_job_payload, serialize_job_payload
 from uniffy.infrastructure.valkey.config import ValkeyConfig
 from uniffy.workers.lifecycle import (
     MEDIA_RESOURCE_PROFILE,
@@ -29,6 +30,8 @@ class MediaWorkerSettings:
     on_job_rejected = on_job_rejected
     on_health_check = on_health_check
     valkey_settings = ValkeyConfig.from_env().to_arq_valkey_settings()
+    job_serializer = serialize_job_payload
+    job_deserializer = deserialize_job_payload
     max_jobs = max(1, int(os.getenv("MEDIA_WORKER_MAX_JOBS", "2")))
     job_timeout = int(os.getenv("MEDIA_WORKER_JOB_TIMEOUT", "300"))
     keep_result = 0

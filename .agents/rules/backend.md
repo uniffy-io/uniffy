@@ -332,7 +332,10 @@ manages their resources, and renders the executable inventory.
    to satisfy the label. Use `BEST_EFFORT` only when losing the job cannot leave authoritative state
    incomplete or incorrect.
 4. **Keep the handler domain-shaped.** Handlers are async, accept ARQ `ctx` first, and receive only
-   primitive values or JSON strings. Reload authoritative rows inside the job, carry
+   primitive values or JSON strings. The queue codec (`core/jobs/codec.py`) encodes every payload
+   as JSON and refuses at enqueue any argument that is not a string, number, boolean, None, list or
+   string-keyed dict; ids travel as `str`. Workers parse JSON only, so a queue entry can name a
+   registered handler but never carry code. Reload authoritative rows inside the job, carry
    `organization_id` for tenant work unless a single canonical payload row supplies it, enforce the
    actor identity when work runs on a user's behalf, never invent an admin/content bypass, and make
    repeated execution safe. Use `raise Retry(defer=ctx["job_try"] * 10)` only when replaying the same

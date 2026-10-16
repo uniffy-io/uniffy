@@ -4,6 +4,7 @@ import asyncio
 
 from loguru import logger
 
+from uniffy.core.jobs.codec import deserialize_job_payload, serialize_job_payload
 from uniffy.core.jobs.types import QueueName
 from uniffy.infrastructure.valkey.config import ValkeyConfig
 from uniffy.vendor.arq import create_pool
@@ -31,6 +32,8 @@ async def init_queue(name: QueueName) -> ArqValkey:
     pool = await create_pool(
         config.to_arq_valkey_settings(),
         default_queue_name=name.valkey_name,
+        job_serializer=serialize_job_payload,
+        job_deserializer=deserialize_job_payload,
     )
     _pools[name] = pool
     logger.info(
