@@ -106,6 +106,24 @@ export function resolveCloseDisposal(input: CloseDisposalInput): CloseDisposal {
   };
 }
 
+/** A write denial keeps a recovered draft only of edits the server never accepted. What it
+ * accepted before the denial is still checkpointed, so it is no draft. */
+export function denialRetainsDraft(
+  reason: string,
+  doc: Pick<RealtimeDocState, "transportPending">,
+): boolean {
+  return reason.includes("too large") || doc.transportPending;
+}
+
+/** A denial on attach arrives before local recovery reads the device. Edits it restores into a
+ * read-only document can never be sent, so they become a recovered draft too. */
+export function hydrationRetainsDraft(docName: string): boolean {
+  return (
+    realtimeMultiplexer.isDocReadOnly(docName) &&
+    realtimeMultiplexer.getDocState(docName).transportPending
+  );
+}
+
 /** A closing editor holds its session for edits the server has not accepted, and for accepted
  * ones this device failed to store: the drain only finishes what local recovery holds. Waiting
  * for the checkpoint otherwise belongs to the drain. Denied documents release at once. */
@@ -164,6 +182,8 @@ export function useDocSession(opts: UseDocSessionOptions): DocSession | null {
     let generationChanged = false;
     let denied = false;
     let disposed = false;
+    // One recovery copy per session: a later check would find the same unsent edits again.
+    let draftRetained = false;
 
     const persistence = attachEncryptedPersistence({
       contentType,
@@ -194,6 +214,11 @@ export function useDocSession(opts: UseDocSessionOptions): DocSession | null {
       .then(() => {
         hydrationComplete = true;
       });
+    const retainDraft = () => {
+      if (draftRetained) return;
+      draftRetained = true;
+      void persistence.quarantine();
+    };
 
     const targets = Array.isArray(undoTarget) ? undoTarget : undoTarget ? [undoTarget] : null;
     const undoManager = targets
@@ -226,6 +251,9 @@ export function useDocSession(opts: UseDocSessionOptions): DocSession | null {
         // Offline discovery can be ambiguous. Retry against the server epoch before editing.
         void whenHydrated
           .then(() => persistence.hydrate(options))
+          .then(() => {
+            if (!disposed && hydrationRetainsDraft(docName)) retainDraft();
+          })
           .catch((error) => console.warn("[realtime] persistence hydrate failed", error))
           .finally(() => {
             serverSynced = true;
@@ -255,12 +283,8 @@ export function useDocSession(opts: UseDocSessionOptions): DocSession | null {
             onGenerationResetRef.current?.({ hasLocalEdits: true });
             setGenerationReset((value) => value + 1);
           });
-        } else {
-          // Hydration can trigger rejection before its dirty marker is recorded.
-          queueMicrotask(() => {
-            if (reason.includes("too large") || persistence.isDirty())
-              void persistence.quarantine();
-          });
+        } else if (denialRetainsDraft(reason, realtimeMultiplexer.getDocState(docName))) {
+          retainDraft();
         }
       },
       onGenerationMismatch: () => {

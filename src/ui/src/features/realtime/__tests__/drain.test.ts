@@ -11,7 +11,7 @@ import {
   openEditor,
   signInDevice,
 } from "@/features/realtime/persistence/__tests__/browser";
-import { encodeDocFrame } from "@/features/realtime/multiplex";
+import { encodeDocFrame, peekVarString } from "@/features/realtime/multiplex";
 import { realtimeMultiplexer } from "@/features/realtime/multiplexer";
 import {
   attachEncryptedPersistence,
@@ -84,6 +84,17 @@ function deniedFrame(docName: string, reason: string): Uint8Array {
   encoding.writeVarUint(encoder, 0);
   encoding.writeVarString(encoder, reason);
   return encodeDocFrame(docName, encoding.toUint8Array(encoder));
+}
+
+// What a later editor of the document would offer as recovered drafts.
+async function offeredDrafts(server: FakeRealtimeServer, contentId: string): Promise<string[]> {
+  const doc = new Y.Doc();
+  Y.applyUpdate(doc, Y.encodeStateAsUpdate(server.doc), REMOTE_ORIGIN);
+  const persistence = attachEncryptedPersistence({ contentType: "TASK", contentId, ydoc: doc });
+  const drafts = await readRecoveredDrafts(doc);
+  await persistence.destroy();
+  doc.destroy();
+  return drafts.map(({ text }) => text);
 }
 
 // Starts a drain and answers its attach; resolves once the replay has been sent.
@@ -221,18 +232,45 @@ describe("realtime drain", () => {
     unsubscribe();
   });
 
-  it("leaves the rows as a draft and drops the entry when the server denies writes", async () => {
-    const server = new FakeRealtimeServer("TASK:denied", GENERATION);
-    await strandRows(server, "denied", "typed offline");
-    recordPendingDoc(entryFor("denied"));
-    const outcome = drainDoc(entryFor("denied"));
-    const ws = currentSocket();
-    if (ws.readyState !== WebSocket.OPEN) ws.open();
-    server.attach(ws);
-    ws.receive(deniedFrame(server.docName, "read only"));
-    expect(await outcome).toBe("retained");
-    expect(hasPendingDoc("TASK", "denied")).toBe(false);
-    expect(await discoverStoredPendingDocs("alice")).toBe(true);
+  it.each([
+    ["after", false],
+    ["before", true],
+  ])(
+    "offers unaccepted rows as a recovered draft and drops the entry when writes are denied %s the handshake",
+    async (_, denialFirst) => {
+      const contentId = `denied-${String(denialFirst)}`;
+      const server = new FakeRealtimeServer(`TASK:${contentId}`, GENERATION);
+      await strandRows(server, contentId, "typed offline");
+      recordPendingDoc(entryFor(contentId));
+      const outcome = drainDoc(entryFor(contentId));
+      const ws = currentSocket();
+      if (ws.readyState !== WebSocket.OPEN) ws.open();
+      if (denialFirst) ws.receive(deniedFrame(server.docName, "read only"));
+      server.attach(ws);
+      if (!denialFirst) ws.receive(deniedFrame(server.docName, "read only"));
+      expect(await outcome).toBe("retained");
+      expect(hasPendingDoc("TASK", contentId)).toBe(false);
+      expect(durableWrites(ws, server.docName)).toEqual([]);
+      expect(await discoverStoredPendingDocs("alice")).toBe(true);
+      expect(await offeredDrafts(server, contentId)).toEqual(["typed offline"]);
+    },
+  );
+
+  it("attaches without presence and never asks peers to announce theirs", async () => {
+    const server = new FakeRealtimeServer("TASK:headless", GENERATION);
+    await strandRows(server, "headless", "typed offline");
+    recordPendingDoc(entryFor("headless"));
+    const { outcome, ws } = await startDrain(server, entryFor("headless"));
+    const messageTypes = ws.sent.flatMap((frame) => {
+      const { docName, payloadOffset } = peekVarString(frame);
+      return docName === server.docName ? [frame[payloadOffset]] : [];
+    });
+    expect(messageTypes[0]).toBe(0);
+    expect(messageTypes).not.toContain(1);
+    expect(messageTypes).not.toContain(3);
+    server.accept(ws);
+    server.checkpoint([ws]);
+    expect(await outcome).toBe("drained");
   });
 
   it("keeps the rows as a draft when the server generation moved on", async () => {

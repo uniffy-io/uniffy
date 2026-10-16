@@ -20,7 +20,7 @@ const schema = new Schema({
 const docs: Y.Doc[] = [];
 afterEach(() => docs.splice(0).forEach((doc) => doc.destroy()));
 
-function setup(initial: string, clientID?: number, source?: Y.Doc) {
+function setup(initial: string, clientID?: number, source?: Y.Doc, leader = true) {
   const doc = new Y.Doc();
   if (clientID !== undefined) doc.clientID = clientID;
   docs.push(doc);
@@ -44,7 +44,7 @@ function setup(initial: string, clientID?: number, source?: Y.Doc) {
     replaceMarkdownYText(doc, initial, MARKDOWN_MIRROR_ORIGIN);
     replaceProsemirrorFragment(doc, parse(initial), "seed");
   }
-  const reconciler = new MarkdownReconciler(doc, { parse, serialize, read });
+  const reconciler = new MarkdownReconciler(doc, { parse, serialize, read }, () => leader);
   doc
     .getText("markdown")
     .observe((event) =>
@@ -162,6 +162,19 @@ describe("Markdown reconciliation", () => {
     editor.typeRich("R2 base");
     editor.reconciler.flush();
     expect(editor.rich()).toBe("R2 base M");
+  });
+
+  it("mirrors a non-leader's rich edit onto pending external text and leaves projection to the leader", () => {
+    const editor = setup("one\n\ntwo", undefined, undefined, false);
+    const stop = editor.reconciler.bindLocalMirror(() => true);
+    editor.typeMarkdown("one\n\ntwo mobile");
+    editor.typeRich("one rich\n\ntwo");
+    expect(editor.doc.getText("markdown").toString()).toBe("one rich\n\ntwo mobile");
+    expect(editor.rich()).toBe("one rich\n\ntwo");
+    editor.reconciler.flush();
+    expect(editor.doc.getText("markdown").toString()).toBe("one rich\n\ntwo mobile");
+    expect(editor.rich()).toBe("one rich\n\ntwo");
+    stop();
   });
 
   it("keeps Yjs text identity and relative cursor anchors across projection", () => {

@@ -31,7 +31,7 @@ afterEach(() => {
 
 function watch(doc: AttachedDoc) {
   const store = createSaveStateStore(doc.docName);
-  const seen: SaveState[] = [store.getSnapshot()];
+  const seen: (SaveState | null)[] = [store.getSnapshot()];
   const unsubscribe = store.subscribe(() => {
     const state = store.getSnapshot();
     if (state !== seen.at(-1)) seen.push(state);
@@ -44,6 +44,24 @@ function type(doc: AttachedDoc, text: string) {
 }
 
 describe("save state through the transport", () => {
+  it("shows no save state until session state arrives, then Saved", () => {
+    const doc = attachDoc("before-session-state");
+    const chip = watch(doc);
+    expect(chip.current()).toBeNull();
+    connect(doc);
+    expect(chip.seen).toEqual([null, "saved"]);
+    chip.unsubscribe();
+  });
+
+  it("shows Syncing for an edit made before session state arrives", () => {
+    const doc = attachDoc("edit-before-session-state");
+    const chip = watch(doc);
+    type(doc, "draft");
+    vi.advanceTimersByTime(50);
+    expect(chip.seen).toEqual([null, "syncing"]);
+    chip.unsubscribe();
+  });
+
   it("shows Syncing for a local edit, Synced after its receipt and Saved after progress", () => {
     const doc = attachDoc("receipt-then-progress");
     const chip = watch(doc);
@@ -60,7 +78,7 @@ describe("save state through the transport", () => {
 
     ws.receive(doc.docName, progress(1));
     expect(chip.current()).toBe("saved");
-    expect(chip.seen).toEqual(["saved", "syncing", "synced", "saved"]);
+    expect(chip.seen).toEqual([null, "saved", "syncing", "synced", "saved"]);
     chip.unsubscribe();
   });
 
@@ -72,7 +90,7 @@ describe("save state through the transport", () => {
     vi.advanceTimersByTime(50);
     ws.receive(doc.docName, encodeCommitted(lastUpdateId(ws, doc)));
     vi.advanceTimersByTime(SYNCING_SETTLE_MS);
-    expect(chip.seen).toEqual(["saved", "syncing", "saved"]);
+    expect(chip.seen).toEqual([null, "saved", "syncing", "saved"]);
     chip.unsubscribe();
   });
 
@@ -84,7 +102,7 @@ describe("save state through the transport", () => {
     vi.advanceTimersByTime(50);
     ws.receive(doc.docName, receipt(lastUpdateId(ws, doc), 1));
     vi.advanceTimersByTime(SAVE_DELAYED_AFTER_MS - 100);
-    expect(chip.seen).toEqual(["saved", "syncing", "synced"]);
+    expect(chip.seen).toEqual([null, "saved", "syncing", "synced"]);
     chip.unsubscribe();
   });
 
@@ -98,9 +116,9 @@ describe("save state through the transport", () => {
       ws.receive(doc.docName, receipt(lastUpdateId(ws, doc), sequence));
       vi.advanceTimersByTime(SYNCING_SETTLE_MS / 2);
     }
-    expect(chip.seen).toEqual(["saved", "syncing"]);
+    expect(chip.seen).toEqual([null, "saved", "syncing"]);
     vi.advanceTimersByTime(SYNCING_SETTLE_MS / 2);
-    expect(chip.seen).toEqual(["saved", "syncing", "synced"]);
+    expect(chip.seen).toEqual([null, "saved", "syncing", "synced"]);
     chip.unsubscribe();
   });
 
@@ -142,7 +160,7 @@ describe("save state through the transport", () => {
     vi.advanceTimersByTime(SYNCING_SETTLE_MS);
     expect(chip.current()).toBe("delayed");
     ws.receive(doc.docName, progress(1));
-    expect(chip.seen).toEqual(["saved", "syncing", "unavailable", "delayed", "saved"]);
+    expect(chip.seen).toEqual([null, "saved", "syncing", "unavailable", "delayed", "saved"]);
     chip.unsubscribe();
   });
 

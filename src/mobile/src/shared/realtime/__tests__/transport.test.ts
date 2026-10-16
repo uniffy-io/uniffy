@@ -674,3 +674,155 @@ it("rejects only the conflicting update and keeps syncing the others", async () 
   expect(h.statuses.at(-1)).toBe("update_rejected");
   h.destroy();
 });
+
+function syncFrame(write: (encoder: encoding.Encoder) => void): Uint8Array {
+  const encoder = encoding.createEncoder();
+  encoding.writeVarUint(encoder, 0);
+  write(encoder);
+  return encoding.toUint8Array(encoder);
+}
+
+/** The rest of an attach after message 5, in the server's order: session state and the server's
+ * SyncStep1, then the answer to the client's SyncStep1. */
+function finishAttach(socket: Socket, name: string, server: Y.Doc, state: Uint8Array) {
+  socket.deliver(name, state);
+  socket.deliver(
+    name,
+    syncFrame((encoder) => syncProtocol.writeSyncStep1(encoder, server)),
+  );
+  socket.receive(name, 5, "g");
+  socket.deliver(name, state);
+  socket.deliver(
+    name,
+    syncFrame((encoder) => syncProtocol.writeSyncStep2(encoder, server)),
+  );
+}
+
+/** Buffers every write sent on `socket` into `server` and answers each with a receipt. */
+function acceptAll(socket: Socket, server: Y.Doc, epoch: string, firstSequence = 1) {
+  const accepted = writes(socket).map(readWrite);
+  accepted.forEach(({ docName, id, update }, index) => {
+    Y.applyUpdate(server, update);
+    socket.deliver(docName, receipt(id, epoch, firstSequence + index));
+  });
+  return accepted;
+}
+
+it("resends nothing after a reconnect whose session state shows every accepted update checkpointed", async () => {
+  const h = await openDocument("restart-covered");
+  const server = new Y.Doc();
+  finishAttach(h.socket, h.sub.docName, server, session("e1"));
+  h.doc.getText("markdown").insert(0, "first draft");
+  vi.advanceTimersByTime(50);
+  h.doc.getText("markdown").delete(0, "first ".length);
+  vi.advanceTimersByTime(50);
+  acceptAll(h.socket, server, "e1");
+  expect(h.state()).toMatchObject({ transportPending: false, checkpointPending: true });
+
+  // The worker checkpoints the buffer while no backend serves the socket.
+  const second = await reconnect(h);
+  finishAttach(second, h.sub.docName, server, session("e1", 2, 2));
+  expect(writes(second)).toHaveLength(0);
+  expect(h.state()).toMatchObject({ transportPending: false, checkpointPending: false });
+  server.destroy();
+  h.destroy();
+});
+
+it("replays accepted updates once under their original ids when the session state names a new epoch", async () => {
+  const h = await openDocument("restart-new-epoch");
+  const server = new Y.Doc();
+  finishAttach(h.socket, h.sub.docName, server, session("e1"));
+  h.doc.getText("markdown").insert(0, "base one");
+  vi.advanceTimersByTime(50);
+  h.doc.getText("markdown").delete(0, "base ".length);
+  vi.advanceTimersByTime(50);
+  const accepted = acceptAll(h.socket, server, "e1");
+
+  // The buffer is lost: the server falls back to an empty checkpoint under a new epoch.
+  const checkpoint = new Y.Doc();
+  const second = await reconnect(h);
+  finishAttach(second, h.sub.docName, checkpoint, session("e2"));
+  const resent = writes(second).map(readWrite);
+  for (const original of accepted)
+    expect(resent.filter((write) => write.id === original.id)).toEqual([original]);
+  acceptAll(second, checkpoint, "e2");
+  second.deliver(h.sub.docName, progress("e2", resent.length));
+  expect(checkpoint.getText("markdown").toString()).toBe("one");
+  expect(h.state()).toMatchObject({ transportPending: false, checkpointPending: false });
+  checkpoint.destroy();
+  server.destroy();
+  h.destroy();
+});
+
+it.each(["e1", "e2"])(
+  "resends an update that never got a receipt exactly once after a reconnect into epoch %s",
+  async (epoch) => {
+    const h = await openDocument(`unanswered-${epoch}`);
+    const server = new Y.Doc();
+    finishAttach(h.socket, h.sub.docName, server, session("e1"));
+    h.doc.getText("markdown").insert(0, "unanswered");
+    vi.advanceTimersByTime(50);
+    const [sent] = writes(h.socket).map(readWrite);
+
+    const second = await reconnect(h);
+    finishAttach(second, h.sub.docName, server, session(epoch));
+    const resent = writes(second).map(readWrite);
+    expect(resent.filter((write) => write.id === sent.id)).toEqual([sent]);
+    // Within one epoch the buffer lost nothing, so the sync answer adds no write of its own.
+    if (epoch === "e1") expect(resent).toEqual([sent]);
+    server.destroy();
+    h.destroy();
+  },
+);
+
+it("sends an edit made while offline once under its own id, never again inside the sync answer", async () => {
+  const h = await openDocument("offline-edit");
+  const server = new Y.Doc();
+  finishAttach(h.socket, h.sub.docName, server, session("e1"));
+  h.doc.getText("markdown").insert(0, "saved");
+  vi.advanceTimersByTime(50);
+  acceptAll(h.socket, server, "e1");
+  h.socket.deliver(h.sub.docName, progress("e1", 1));
+
+  h.socket.close(1006);
+  h.doc.getText("markdown").insert(5, " offline");
+  await vi.advanceTimersByTimeAsync(500);
+  const second = Socket.instances.at(-1)!;
+  second.open();
+  second.receive(h.sub.docName, 5, "g");
+  finishAttach(second, h.sub.docName, server, session("e1", 1, 1));
+  expect(writes(second)).toHaveLength(1);
+  acceptAll(second, server, "e1", 2);
+  expect(server.getText("markdown").toString()).toBe("saved offline");
+  server.destroy();
+  h.destroy();
+});
+
+it("treats the session state a periodic resync repeats as no change", async () => {
+  const h = await openDocument("resync");
+  const server = new Y.Doc();
+  finishAttach(h.socket, h.sub.docName, server, session("e1"));
+  h.doc.getText("markdown").insert(0, "accepted");
+  vi.advanceTimersByTime(50);
+  h.doc.getText("markdown").delete(0, 1);
+  vi.advanceTimersByTime(50);
+  acceptAll(h.socket, server, "e1");
+  const sent = writes(h.socket).length;
+  const transitions = h.events.length;
+  const state = h.state();
+
+  for (let round = 0; round < 3; round++) {
+    vi.advanceTimersByTime(30_000);
+    h.socket.receive(h.sub.docName, 5, "g");
+    h.socket.deliver(h.sub.docName, session("e1", 2, 0));
+    h.socket.deliver(
+      h.sub.docName,
+      syncFrame((encoder) => syncProtocol.writeSyncStep2(encoder, server)),
+    );
+  }
+  expect(writes(h.socket)).toHaveLength(sent);
+  expect(h.events).toHaveLength(transitions);
+  expect(h.state()).toBe(state);
+  server.destroy();
+  h.destroy();
+});

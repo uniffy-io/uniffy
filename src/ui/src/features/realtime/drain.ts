@@ -52,6 +52,8 @@ export function drainDoc(entry: PendingDoc): Promise<DrainOutcome> {
     });
     let settled = false;
     let hydrating = false;
+    let hydrated = false;
+    let retaining = false;
     let unsubscribeState = () => {};
     const timeout = setTimeout(() => finish("retry"), DRAIN_TIMEOUT_MS);
     const finish = (outcome: DrainOutcome) => {
@@ -69,12 +71,23 @@ export function drainDoc(entry: PendingDoc): Promise<DrainOutcome> {
           acknowledged: outcome === "drained",
         })
         .finally(() => {
+          // Disposal records a denied doc again for unsent updates only its recovered draft holds.
+          if (outcome === "retained") clearPendingDoc(contentType, contentId);
           ydoc.destroy();
           resolve(outcome);
         });
     };
     const settleOnCheckpoint = (state: RealtimeDocState) => {
       if (!state.checkpointPending) finish("drained");
+    };
+    // A denied doc keeps as a draft what the server never accepted; what it accepted is still
+    // checkpointed.
+    const retainDenied = () => {
+      if (settled || retaining) return;
+      retaining = true;
+      if (realtimeMultiplexer.getDocState(docName).transportPending)
+        void persistence.quarantine().then(() => finish("retained"));
+      else finish("retained");
     };
     const subscription = realtimeMultiplexer.attach({
       contentType,
@@ -88,6 +101,11 @@ export function drainDoc(entry: PendingDoc): Promise<DrainOutcome> {
         void persistence.hydrate({ serverGeneration: docGeneration(ydoc) }).then(
           () => {
             if (settled) return;
+            hydrated = true;
+            if (realtimeMultiplexer.isDocReadOnly(docName)) {
+              retainDenied();
+              return;
+            }
             unsubscribeState = realtimeMultiplexer.subscribeDocState(docName, settleOnCheckpoint);
             settleOnCheckpoint(realtimeMultiplexer.getDocState(docName));
           },
@@ -97,10 +115,17 @@ export function drainDoc(entry: PendingDoc): Promise<DrainOutcome> {
           },
         );
       },
-      onWriteDenied: (reason) => {
+      onWriteDenied: (reason, noView) => {
         if (reason === SEED_CONFLICT_REASON) {
           void persistence.quarantine().then(() => finish("retained"));
-        } else finish("retained");
+        } else if (hydrated) {
+          // Read once the transport has recorded the refusal.
+          queueMicrotask(retainDenied);
+        } else if (noView && !hydrating) {
+          // Nothing synced and nothing will: the rows stay for a later attach that may see them.
+          finish("retained");
+        }
+        // Otherwise a read-only doc still syncs, and local recovery reads the device first.
       },
       onGenerationMismatch: () => finish("retained"),
       onCloseCode: (code) => {

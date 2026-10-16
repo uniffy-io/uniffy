@@ -18,6 +18,7 @@ import { getAccessToken, refreshAccessToken } from "@/config/api";
 import { encodeDocFrame, peekVarString } from "@/features/realtime/multiplex";
 import {
   REMOTE_ORIGIN,
+  isRecoveryHydrated,
   linkRecovery,
 } from "@/features/realtime/persistence/encryptedYjsPersistence";
 import {
@@ -124,6 +125,9 @@ export interface RealtimeDocState {
   oldestUncheckpointedAt: number | null;
   /** The server refused an own edit it may take later; edits stay local and resend on their own. */
   savingUnavailable: boolean;
+  /** This socket's session state has been compared with every own edit local recovery holds.
+   * Until then nothing proves the document synced or saved. */
+  coverageKnown: boolean;
 }
 
 /** One own update changed coverage. `local` carries the bytes a retry or recovery replays. */
@@ -145,6 +149,7 @@ const DETACHED_DOC_STATE: RealtimeDocState = Object.freeze({
   checkpointPending: false,
   oldestUncheckpointedAt: null,
   savingUnavailable: false,
+  coverageKnown: false,
 });
 
 interface DocEntry {
@@ -170,6 +175,11 @@ interface DocEntry {
   denied: boolean;
   // Null until this socket hears message 5; gates every write.
   generation: string | null;
+  // Epoch of the latest session state on this socket, null until the first.
+  socketEpoch: string | null;
+  // The epoch changed under remote updates this doc may hold, so the server's next SyncStep1 is
+  // answered with full state.
+  owesState: boolean;
   updateCounter: number;
   // Raw bytes per own update id until a checkpoint covers it, delete-only updates included.
   retained: Map<string, Uint8Array>;
@@ -293,6 +303,8 @@ class RealtimeMultiplexer {
       readOnly: false,
       denied: false,
       generation: null,
+      socketEpoch: null,
+      owesState: false,
       updateCounter: 0,
       retained: new Map(),
       coverage: new UpdateCoverage(),
@@ -516,6 +528,10 @@ class RealtimeMultiplexer {
       entry.syncDeadline = null;
       // Answers to writes sent on the old socket never arrive.
       entry.awaiting = [];
+      // A checkpoint can land while no socket is open; the next socket's session state proves
+      // what the server holds before the chip may say Synced or Saved again.
+      entry.socketEpoch = null;
+      this.publishState(entry);
     }
     this.ws = null;
     this.wsConnected = false;
@@ -718,13 +734,18 @@ class RealtimeMultiplexer {
       const state = decodeFrame(payload, decodeSessionState);
       // Message 5 owns generation changes; state for another generation proves nothing here.
       if (!state || state.generation !== entry.generation) return;
-      const previousEpoch = entry.coverage.epoch;
-      const inFlight = entry.coverage.localIds();
+      // The server reads a write sent on this socket only after the socket's first session state.
+      // A later epoch change can still answer earlier writes with receipts of the retired epoch,
+      // which coverage ignores, so those go out again; the server deduplicates by id.
+      const inFlight =
+        entry.socketEpoch !== null && entry.socketEpoch !== state.epoch
+          ? entry.coverage.localIds()
+          : [];
+      if (entry.coverage.epoch !== null && entry.coverage.epoch !== state.epoch)
+        entry.owesState = true;
+      entry.socketEpoch = state.epoch;
       this.applyCoverage(entry, entry.coverage.applySessionState(state));
-      // A receipt for a write sent before the reset would carry the retired epoch and be ignored,
-      // so writes still in flight go out again; the server deduplicates by id.
-      if (previousEpoch !== null && previousEpoch !== state.epoch)
-        for (const id of inFlight) this.sendRetained(entry, id);
+      for (const id of inFlight) this.sendRetained(entry, id);
     } else if (messageType === 9) {
       const id = decoding.readVarString(decoder);
       this.answered(entry, id);
@@ -745,7 +766,7 @@ class RealtimeMultiplexer {
       );
       const replyBytes = encoding.toUint8Array(replyEncoder);
       if (syncMessageType === syncProtocol.messageYjsSyncStep1) {
-        this.replySyncStep2(entry, replyBytes);
+        this.answerSyncStep1(entry, replyBytes);
       } else if (replyBytes.length > 1) {
         // `readSyncMessage` always writes the SYNC type byte; a body-less
         // reply leaves just that byte - skip the echo.
@@ -876,10 +897,17 @@ class RealtimeMultiplexer {
     if (entry.conflicted.size === 1) entry.options.onStatus?.("update_rejected");
   }
 
-  // Our reply to a server SyncStep1 carries every local update the server
-  // lacks, including edits dropped while disconnected.
-  private replySyncStep2(entry: DocEntry, replyBytes: Uint8Array): void {
-    if (entry.readOnly || isNoopSyncStep2(replyBytes)) return;
+  // The server asks for state on attach and after a buffer reset. Own updates reach it under their
+  // ids through coverage, and a Yjs reply always repeats the whole delete set, so only a reset,
+  // which can lose remote updates this doc holds, gets the full reply. Otherwise the answer is
+  // the unsent local batch.
+  private answerSyncStep1(entry: DocEntry, replyBytes: Uint8Array): void {
+    const owed = entry.owesState;
+    entry.owesState = false;
+    if (!owed || entry.readOnly || isNoopSyncStep2(replyBytes)) {
+      entry.flushBatch();
+      return;
+    }
     const decoder = decoding.createDecoder(replyBytes);
     decoding.readVarUint(decoder);
     decoding.readVarUint(decoder);
@@ -936,6 +964,8 @@ class RealtimeMultiplexer {
       entry.retained.set(updateId, update);
       this.applyCoverage(entry, entry.coverage.add(updateId, editedAt, receipt));
     }
+    // An empty restore still reports that local recovery has read this device.
+    this.publishState(entry);
   }
 
   // Every update that becomes local is sent: new edits, restored ones, and accepted ones whose
@@ -983,13 +1013,15 @@ class RealtimeMultiplexer {
       checkpointPending: transportPending || coverage.checkpointPending,
       oldestUncheckpointedAt: oldest.length ? Math.min(...oldest) : null,
       savingUnavailable: entry.savingUnavailable,
+      coverageKnown: entry.socketEpoch !== null && isRecoveryHydrated(entry.docName),
     };
     const previous = entry.state;
     if (
       previous.transportPending === next.transportPending &&
       previous.checkpointPending === next.checkpointPending &&
       previous.oldestUncheckpointedAt === next.oldestUncheckpointedAt &&
-      previous.savingUnavailable === next.savingUnavailable
+      previous.savingUnavailable === next.savingUnavailable &&
+      previous.coverageKnown === next.coverageKnown
     )
       return;
     entry.state = Object.freeze(next);
@@ -1054,8 +1086,12 @@ class RealtimeMultiplexer {
   }
 
   private bootstrapDoc(entry: DocEntry): void {
-    if (entry.canSeed) this.sendForDoc(entry.docName, new Uint8Array([10, 1]));
+    // The first frame naming a doc attaches it with the full handshake. SyncStep1 goes first, or
+    // the server takes it for a resync and repeats that handshake.
     this.sendInitialSync(entry);
+    if (entry.canSeed) this.sendForDoc(entry.docName, new Uint8Array([10, 1]));
+    // A headless session, such as a drain, has no presence to show or to watch.
+    if (entry.awareness.getLocalState() === null) return;
     // Push our awareness so peers see us immediately...
     this.sendLocalAwareness(entry);
     // ...and ask peers to re-announce theirs. The backend keeps no awareness

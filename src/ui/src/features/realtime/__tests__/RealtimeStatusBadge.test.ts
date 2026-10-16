@@ -81,6 +81,12 @@ describe("persistence chip", () => {
     expect(render("connected", "unavailable", "unavailable")).not.toContain("stay on this device");
   });
 
+  it("explains Access lost without promising a local draft", () => {
+    const html = render("access_lost", "saved");
+    expect(html).toContain('title="This item was deleted or is no longer shared with you."');
+    expect(html).not.toMatch(/draft/i);
+  });
+
   it("asks for a reload when the app is out of date", () => {
     expect(render("upgrade_required")).toContain("Reload this page");
   });

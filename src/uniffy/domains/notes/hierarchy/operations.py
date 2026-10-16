@@ -11,18 +11,26 @@ from sqlalchemy import select
 
 from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import Action
+from uniffy.core.auth.permissions.defaults import (
+    resolve_content_defaults,
+    resolve_effective_policy,
+)
+from uniffy.core.converters.common_proto import content_type_to_proto
 from uniffy.core.errors import NotFoundError, ValidationError
+from uniffy.core.events.realtime import ContentAccessAction, publish_content_access_changed
 from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.notes.note import Note
 from uniffy.core.realtime.buffer import UpdateBuffer
 from uniffy.core.realtime.checkpoint import Enqueue, enqueue_core
 from uniffy.core.realtime.lifecycle import stage_hard_delete, stage_restore, stage_trash
 from uniffy.core.realtime.live import AfterCommit
+from uniffy.core.realtime.publisher import publish_perm_change
 from uniffy.core.realtime.storage import lock_document, lock_documents
 from uniffy.core.search.indexer import build_content_urn
-from uniffy.core.types import ContentType, NodeType
+from uniffy.core.types import AccessMode, ContentType, NodeType
 from uniffy.domains.files.attachments.purge import purge_attachments_for_content
 from uniffy.domains.notes import queries
+from uniffy.domains.permissions.access import ResourceAudienceResolver
 from uniffy.domains.tags.context import ContentTagMutations
 
 if TYPE_CHECKING:
@@ -87,6 +95,8 @@ class NoteHierarchy:
         removed_ids = await self.collect_descendant_ids(note, include_deleted=permanent)
         keys = [(ContentType.NOTE, item) for item in removed_ids]
         await lock_documents(self.operations.session, keys)
+        # Read before the rows go, so the fanout reaches everyone who could open them.
+        audiences = await self._audiences(organization_id, removed_ids)
         tags = None
         staged_tag_removals = []
         settle: list[AfterCommit] = []
@@ -138,6 +148,7 @@ class NoteHierarchy:
         await self.operations.session.commit()
         for after_commit in settle:
             await after_commit()
+        await self._publish_access(organization_id, audiences, ContentAccessAction.REVOKED)
         if tags is not None:
             for staged in staged_tag_removals:
                 try:
@@ -194,8 +205,70 @@ class NoteHierarchy:
         await self.operations.session.refresh(note)
         await self.operations._index_for_search(note)
         await self.operations.session.commit()
+        await self._publish_access(
+            organization_id,
+            await self._audiences(organization_id, [note_id]),
+            ContentAccessAction.GRANTED,
+        )
         await self.operations._refresh_parent_folder(note.parent_id, organization_id)
         return note
+
+    async def _audiences(
+        self, organization_id: UUID, note_ids: list[UUID]
+    ) -> dict[UUID, list[UUID] | None]:
+        """Who can open each note; None sends an OPEN_TO_ORG note org-wide, a private id never."""
+        session = self.operations.session
+        default_mode, default_baseline = await resolve_content_defaults(
+            session, organization_id, ContentType.NOTE
+        )
+        rows = (
+            await session.execute(
+                select(Note.id, Note.owner_id, Note.access_mode, Note.baseline_role).where(
+                    Note.id.in_(note_ids), Note.organization_id == organization_id
+                )
+            )
+        ).all()
+        resolver = ResourceAudienceResolver(session)
+        audiences: dict[UUID, list[UUID] | None] = {}
+        for note_id, owner_id, access_mode, baseline_role in rows:
+            mode, _ = resolve_effective_policy(
+                access_mode, baseline_role, default_mode, default_baseline
+            )
+            audiences[note_id] = (
+                None
+                if mode == AccessMode.OPEN_TO_ORG
+                else await resolver.standard_audience(
+                    organization_id=organization_id,
+                    content_type=ContentType.NOTE,
+                    content_id=note_id,
+                    owner_id=owner_id,
+                    access_mode=access_mode,
+                    baseline_role=baseline_role,
+                )
+            )
+        return audiences
+
+    async def _publish_access(
+        self,
+        organization_id: UUID,
+        audiences: dict[UUID, list[UUID] | None],
+        action: ContentAccessAction,
+    ) -> None:
+        """Runs after commit; a failed publish leaves live sessions to their periodic recheck."""
+        for note_id, audience in audiences.items():
+            try:
+                await publish_perm_change(ContentType.NOTE, note_id, None, None)
+                await publish_content_access_changed(
+                    content_type=content_type_to_proto(ContentType.NOTE),
+                    content_id=note_id,
+                    action=action,
+                    organization_id=organization_id,
+                    target_user_ids=audience,
+                )
+            except Exception:
+                logger.opt(exception=True).warning(
+                    "Note access change was not published", note_id=str(note_id)
+                )
 
     async def empty_trash(self, user_id: UUID, organization_id: UUID) -> int:
         access_filter = await self.operations.access_query.build_accessible_filter(

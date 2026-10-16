@@ -831,11 +831,15 @@ export function CrepeEditor({
             let disposed = false;
             const mirrorOwner = randomUUID();
             const ownsMirror = () => !readonly && isMarkdownMirrorLeader(rt.awareness);
-            const reconciler = new MarkdownReconciler(rt.ydoc, {
-              parse: (markdown) => ctx.get(parserCtx)(markdown),
-              serialize: (node) => normalizeSerializedMarkdown(ctx.get(serializerCtx)(node)),
-              read: () => fragmentToProsemirrorNode(fragment, ctx.get(schemaCtx)),
-            });
+            const reconciler = new MarkdownReconciler(
+              rt.ydoc,
+              {
+                parse: (markdown) => ctx.get(parserCtx)(markdown),
+                serialize: (node) => normalizeSerializedMarkdown(ctx.get(serializerCtx)(node)),
+                read: () => fragmentToProsemirrorNode(fragment, ctx.get(schemaCtx)),
+              },
+              ownsMirror,
+            );
             const flush = (view: EditorView) => {
               timer = null;
               if (maxTimer) clearTimeout(maxTimer);

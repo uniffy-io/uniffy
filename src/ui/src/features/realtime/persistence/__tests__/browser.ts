@@ -1,4 +1,5 @@
 import "fake-indexeddb/auto";
+import { openDB } from "idb";
 import { vi } from "vitest";
 import * as Y from "yjs";
 import * as syncProtocol from "y-protocols/sync";
@@ -11,6 +12,7 @@ import { Awareness } from "y-protocols/awareness";
 import { setMemoryAccessToken } from "@/config/api";
 import { docGeneration } from "@/features/realtime/docGeneration";
 import { docNameFor } from "@/features/realtime/docNames";
+import { denialRetainsDraft, hydrationRetainsDraft } from "@/features/realtime/hooks/useDocSession";
 import { encodeDocFrame, peekVarString } from "@/features/realtime/multiplex";
 import { realtimeMultiplexer, type DocSubscription } from "@/features/realtime/multiplexer";
 import { clearPendingDoc } from "@/features/realtime/pendingDocs";
@@ -77,6 +79,14 @@ export function currentSocket(): FakeWebSocket {
   return ws;
 }
 
+/** The socket the browser's online event opens after a drop. */
+export function reopenSocket(): FakeWebSocket {
+  window.dispatchEvent(new Event("online"));
+  const ws = currentSocket();
+  ws.open();
+  return ws;
+}
+
 export function closeSockets(): void {
   for (const ws of FakeWebSocket.instances) {
     if (ws.readyState !== FakeWebSocket.CLOSED) ws.serverClose(1000);
@@ -120,6 +130,17 @@ export function installBrowser(): void {
 }
 
 const DEVICE_SEED = new Uint8Array(32).fill(7);
+
+/** Writes a row straight into the device database, bypassing local recovery. */
+export async function storeRawRow(key: string[], payload: unknown, version = 3): Promise<void> {
+  const db = await openDB("uniffy-realtime-yjs", version, {
+    upgrade(database) {
+      if (!database.objectStoreNames.contains("updates")) database.createObjectStore("updates");
+    },
+  });
+  await db.put("updates", payload, key);
+  db.close();
+}
 
 /** A fresh device key for the account. Like a new login it wipes every encrypted row. */
 export async function signInDevice(userId = "alice"): Promise<void> {
@@ -205,13 +226,22 @@ export class FakeRealtimeServer {
     ws.receive(encodeDocFrame(this.docName, payload));
   }
 
-  /** What an attach hears: generation, document state, then buffer head and watermark. */
+  /** What an attach hears, in the server's order: the attaching frame draws generation, session
+   * state and the server's SyncStep1; the client's SyncStep1 draws them again with SyncStep2. */
   attach(ws: FakeWebSocket): void {
+    this.handshake(ws);
+    this.sync(ws, (encoder) => syncProtocol.writeSyncStep1(encoder, this.doc));
+    this.resync(ws);
+  }
+
+  /** The answer to the client's periodic SyncStep1. */
+  resync(ws: FakeWebSocket): void {
+    this.handshake(ws);
+    this.sync(ws, (encoder) => syncProtocol.writeSyncStep2(encoder, this.doc));
+  }
+
+  private handshake(ws: FakeWebSocket): void {
     this.send(ws, encodeGeneration(this.generation));
-    const encoder = encoding.createEncoder();
-    encoding.writeVarUint(encoder, 0);
-    syncProtocol.writeSyncStep2(encoder, this.doc);
-    this.send(ws, encoding.toUint8Array(encoder));
     this.send(
       ws,
       encodeSessionState({
@@ -222,6 +252,13 @@ export class FakeRealtimeServer {
         checkpointRevision: this.revision,
       }),
     );
+  }
+
+  private sync(ws: FakeWebSocket, write: (encoder: encoding.Encoder) => void): void {
+    const encoder = encoding.createEncoder();
+    encoding.writeVarUint(encoder, 0);
+    write(encoder);
+    this.send(ws, encoding.toUint8Array(encoder));
   }
 
   private unread(ws: FakeWebSocket): DurableWrite[] {
@@ -263,6 +300,15 @@ export class FakeRealtimeServer {
     }
     this.checkpointState = Y.encodeStateAsUpdate(this.doc);
     return writes;
+  }
+
+  /** The user keeps view access but may no longer edit this document. */
+  removeEditAccess(ws: FakeWebSocket, reason = "edit access removed"): void {
+    const encoder = encoding.createEncoder();
+    encoding.writeVarUint(encoder, 2);
+    encoding.writeVarUint(encoder, 0);
+    encoding.writeVarString(encoder, reason);
+    this.send(ws, encoding.toUint8Array(encoder));
   }
 
   /** Checkpoints the buffer through `covered` and reports progress to each socket. */
@@ -346,13 +392,25 @@ export function openEditor(contentId: string, options: { discardOnClean?: boolea
   const hydrated = new Promise<void>((resolve) => {
     markHydrated = resolve;
   });
+  let draftRetained = false;
+  const retainDraft = () => {
+    if (draftRetained) return;
+    draftRetained = true;
+    void persistence.quarantine();
+  };
   const subscription = realtimeMultiplexer.attach({
     contentType,
     contentId,
     ydoc,
     awareness,
     onSync: () => {
-      void persistence.hydrate({ serverGeneration: docGeneration(ydoc) }).then(markHydrated);
+      void persistence.hydrate({ serverGeneration: docGeneration(ydoc) }).then(() => {
+        if (hydrationRetainsDraft(docName)) retainDraft();
+        markHydrated();
+      });
+    },
+    onWriteDenied: (reason) => {
+      if (denialRetainsDraft(reason, realtimeMultiplexer.getDocState(docName))) retainDraft();
     },
   });
   return {

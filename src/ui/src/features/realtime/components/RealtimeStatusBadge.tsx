@@ -67,10 +67,10 @@ function describeAlert(status: RealtimeStatus): StatusCopy | null {
     case "permission_lost":
       return { label: "View-only - edit access removed", tone: ALERT_TONE };
     case "access_lost":
+      // A draft exists only for edits the server never accepted; RecoveredDrafts shows it then.
       return {
         label: "Access lost",
-        title:
-          "This item was deleted or is no longer shared with you. Your local draft is retained.",
+        title: "This item was deleted or is no longer shared with you.",
         tone: ALERT_TONE,
       };
     case "token_revoked":

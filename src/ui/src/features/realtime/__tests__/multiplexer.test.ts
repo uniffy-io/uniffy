@@ -938,6 +938,7 @@ describe("checkpoint coverage", () => {
       checkpointPending: true,
       oldestUncheckpointedAt: 1_000,
       savingUnavailable: false,
+      coverageKnown: true,
     });
     vi.advanceTimersByTime(50);
     const { id } = readDurable(durableFrames(ws, doc.docName).at(-1)!);

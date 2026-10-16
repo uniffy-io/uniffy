@@ -19,6 +19,7 @@ const NO_DOC_STATE: RealtimeDocState = Object.freeze({
   checkpointPending: false,
   oldestUncheckpointedAt: null,
   savingUnavailable: false,
+  coverageKnown: false,
 });
 
 export function useRealtimeDocState(docName: string | null): RealtimeDocState {
@@ -48,21 +49,24 @@ export function useDeviceRecoveryState(docName: string | null): DeviceRecoverySt
 
 export interface SaveStateStore {
   subscribe: (onChange: () => void) => () => void;
-  getSnapshot: () => SaveState;
+  getSnapshot: () => SaveState | null;
 }
 
-/** Save state of one document for a single subscriber; its timers run only while subscribed. */
+/** Save state of one document for a single subscriber; its timers run only while subscribed.
+ * Null while nothing is unsent yet coverage is unknown: only the current socket's session state
+ * can show Synced or Saved. */
 export function createSaveStateStore(docName: string): SaveStateStore {
   let settling = false;
   // The oldest-edit timestamp whose thirty seconds ran out without a checkpoint.
   let delayedFor: number | null = null;
 
-  const getSnapshot = (): SaveState => {
+  const getSnapshot = (): SaveState | null => {
     const state = realtimeMultiplexer.getDocState(docName);
     if (state.savingUnavailable) return "unavailable";
     if (state.oldestUncheckpointedAt !== null && state.oldestUncheckpointedAt === delayedFor)
       return "delayed";
     if (state.transportPending || settling) return "syncing";
+    if (!state.coverageKnown) return null;
     return state.checkpointPending ? "synced" : "saved";
   };
 
@@ -109,12 +113,13 @@ export function createSaveStateStore(docName: string): SaveStateStore {
   return { subscribe, getSnapshot };
 }
 
-const NO_SAVE_STATE = {
+const NO_SAVE_STATE: SaveStateStore = {
   subscribe: () => () => {},
   getSnapshot: () => null,
 };
 
-/** Null without a document; viewers pass null because they have no edits to save. */
+/** Null without a document or before its coverage is known; viewers pass null because they have
+ * no edits to save. */
 export function useDocSaveState(docName: string | null): SaveState | null {
   const store = useMemo(() => (docName ? createSaveStateStore(docName) : NO_SAVE_STATE), [docName]);
   return useSyncExternalStore<SaveState | null>(

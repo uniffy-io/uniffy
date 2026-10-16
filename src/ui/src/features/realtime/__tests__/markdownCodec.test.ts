@@ -176,11 +176,15 @@ describe("editor Markdown fidelity", () => {
     const node = parse(source);
     replaceMarkdownYText(doc, source, "seed");
     replaceProsemirrorFragment(doc, node, "seed");
-    const reconciler = new MarkdownReconciler(doc, {
-      parse,
-      serialize,
-      read: () => fragmentToProsemirrorNode(getProsemirrorFragment(doc), node.type.schema),
-    });
+    const reconciler = new MarkdownReconciler(
+      doc,
+      {
+        parse,
+        serialize,
+        read: () => fragmentToProsemirrorNode(getProsemirrorFragment(doc), node.type.schema),
+      },
+      () => true,
+    );
     reconciler.flush();
     expect(doc.getText("markdown").toString()).toBe(source);
     doc.destroy();

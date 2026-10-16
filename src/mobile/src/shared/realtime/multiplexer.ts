@@ -165,6 +165,11 @@ interface DocEntry {
   requestedReadOnly: boolean;
   denied: boolean;
   generation: string | null;
+  // Epoch of the latest session state on this socket, null until the first.
+  socketEpoch: string | null;
+  // The epoch changed under remote updates this doc may hold, so the server's next SyncStep1 is
+  // answered with full state.
+  owesState: boolean;
   updateCounter: number;
   // Survives reconnects, unlike `generation`, which gates writes until message 5 repeats.
   serverGeneration: string | null;
@@ -264,6 +269,8 @@ class RealtimeMultiplexer {
       requestedReadOnly: false,
       denied: false,
       generation: null,
+      socketEpoch: null,
+      owesState: false,
       updateCounter: 0,
       serverGeneration: null,
       coverage: new UpdateCoverage(),
@@ -395,6 +402,7 @@ class RealtimeMultiplexer {
       for (const entry of this.docs.values()) {
         entry.resolvedSyncOnce = false;
         entry.generation = null;
+        entry.socketEpoch = null;
         entry.readOnly = entry.requestedReadOnly;
         this.bootstrapDoc(entry);
       }
@@ -627,13 +635,18 @@ class RealtimeMultiplexer {
       const state = decodeSessionState(payload);
       // Message 5 owns generation changes; state for another generation proves nothing here.
       if (entry.generation !== null && state.generation !== entry.generation) return;
-      const previousEpoch = entry.coverage.epoch;
-      const inFlight = entry.coverage.localIds();
+      // The server reads a write sent on this socket only after the socket's first session state.
+      // A later epoch change can still answer earlier writes with receipts of the retired epoch,
+      // which coverage ignores, so those go out again; the server deduplicates by id.
+      const inFlight =
+        entry.socketEpoch !== null && entry.socketEpoch !== state.epoch
+          ? entry.coverage.localIds()
+          : [];
+      if (entry.coverage.epoch !== null && entry.coverage.epoch !== state.epoch)
+        entry.owesState = true;
+      entry.socketEpoch = state.epoch;
       this.applyCoverage(entry, entry.coverage.applySessionState(state));
-      // A receipt for a write sent before the reset would carry the retired epoch and be ignored,
-      // so writes still in flight go out again; the server deduplicates by id.
-      if (previousEpoch !== null && previousEpoch !== state.epoch)
-        for (const id of inFlight) this.sendDurableUpdate(entry, id, entry.retained.get(id)!);
+      for (const id of inFlight) this.sendDurableUpdate(entry, id, entry.retained.get(id)!);
     } else if (messageType === MESSAGE_SYNC) {
       if (entry.syncDeadline) clearTimeout(entry.syncDeadline);
       entry.syncDeadline = null;
@@ -649,7 +662,7 @@ class RealtimeMultiplexer {
       );
       const replyBytes = encoding.toUint8Array(replyEncoder);
       if (syncMessageType === syncProtocol.messageYjsSyncStep1) {
-        this.replySyncStep2(entry, replyBytes);
+        this.answerSyncStep1(entry, replyBytes);
       } else if (replyBytes.length > 1) {
         // `readSyncMessage` always writes the SYNC type byte; a body-less
         // reply leaves just that byte - skip the echo.
@@ -685,10 +698,17 @@ class RealtimeMultiplexer {
     }
   }
 
-  // Our reply to a server SyncStep1 carries every local update the server
-  // lacks, including edits dropped while disconnected.
-  private replySyncStep2(entry: DocEntry, replyBytes: Uint8Array): void {
-    if (entry.readOnly || isNoopSyncStep2(replyBytes)) return;
+  // The server asks for state on attach and after a buffer reset. Own updates reach it under their
+  // ids through coverage, and a Yjs reply always repeats the whole delete set, so only a reset,
+  // which can lose remote updates this doc holds, gets the full reply. Otherwise the answer is
+  // the unsent local batch.
+  private answerSyncStep1(entry: DocEntry, replyBytes: Uint8Array): void {
+    const owed = entry.owesState;
+    entry.owesState = false;
+    if (!owed || entry.readOnly || isNoopSyncStep2(replyBytes)) {
+      entry.flushBatch();
+      return;
+    }
     const decoder = decoding.createDecoder(replyBytes);
     decoding.readVarUint(decoder);
     decoding.readVarUint(decoder);

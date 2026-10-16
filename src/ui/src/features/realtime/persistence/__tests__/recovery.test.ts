@@ -4,6 +4,7 @@ import { openDB } from "idb";
 import {
   installBrowser,
   signInDevice,
+  storeRawRow,
   switchAccount,
 } from "@/features/realtime/persistence/__tests__/browser";
 import {
@@ -80,17 +81,6 @@ function toBase64(bytes: Uint8Array): string {
   return btoa(String.fromCharCode(...bytes));
 }
 
-// Writes a row straight into the device database, bypassing local recovery.
-async function storeRawRow(key: string[], payload: unknown, version = 3): Promise<void> {
-  const db = await openDB(DB_NAME, version, {
-    upgrade(database) {
-      if (!database.objectStoreNames.contains("updates")) database.createObjectStore("updates");
-    },
-  });
-  await db.put("updates", payload, key);
-  db.close();
-}
-
 async function storedKeys(): Promise<string[][]> {
   const db = await openDB(DB_NAME, 3);
   const keys = (await db.getAllKeys("updates")) as string[][];
@@ -133,20 +123,6 @@ describe("realtime local recovery", () => {
     doc.getText("markdown").insert(0, "pending");
     await persistence.destroy();
     expect(await discoverStoredPendingDocs("alice")).toBe(true);
-    doc.destroy();
-  });
-
-  it("preserves rows without a generation through the schema upgrade", async () => {
-    await storeRawRow(["TASK", "task", "seq-1"], "row-without-generation", 2);
-    const doc = new Y.Doc();
-    const persistence = attachEncryptedPersistence({
-      contentType: "TASK",
-      contentId: "task",
-      ydoc: doc,
-    });
-    await persistence.hydrate({ serverGeneration: "current" });
-    await persistence.destroy({ discard: true });
-    expect(await storedKeys()).toEqual([["TASK", "task", "seq-1"]]);
     doc.destroy();
   });
 
@@ -552,54 +528,29 @@ describe("realtime local recovery", () => {
 });
 
 describe("rows without coverage identity", () => {
-  it("offers a dirty row without coverage identity as a draft without replaying or clearing it, and leaves other users and organizations alone", async () => {
-    const unreconciled = serverDoc("G", "typed without coverage");
-    const update = toBase64(Y.encodeStateAsUpdate(unreconciled));
-    const scope = scopeFor("migrated", { contentType: "NOTE" });
+  it("never replays, offers or drains them, dirty or clean, in any generation", async () => {
+    const stale = serverDoc("G", "typed without coverage");
+    const update = toBase64(Y.encodeStateAsUpdate(stale));
+    const scope = scopeFor("task");
     await storeRawRow(
       ["TASK", "task", "G", "old-tab:0000000001"],
-      await encryptForStorage({ update, dirty: true, scope: scopeFor("task") }),
+      await encryptForStorage({ update, dirty: true, scope }),
     );
     await storeRawRow(
-      ["NOTE", "theirs", "G", "old-tab:0000000001"],
-      await encryptForStorage({ update, dirty: true, scope: { ...scope, userId: "bob" } }),
+      ["TASK", "task", "G", "old-tab:0000000002"],
+      await encryptForStorage({ update, dirty: false, scope }),
     );
-    await storeRawRow(
-      ["NOTE", "elsewhere", "G", "old-tab:0000000001"],
-      await encryptForStorage({
-        update,
-        dirty: true,
-        scope: { ...scope, organizationId: "org-2" },
-      }),
-    );
+    await storeRawRow(["TASK", "task", "F", "old-tab:0000000001"], await encryptForStorage(update));
+    await storeRawRow(["TASK", "task", "old-tab:0000000001"], await encryptForStorage(update));
 
     const { doc, persistence } = await openUnder("G", "server text");
     expect(doc.getText("markdown").toString()).toBe("server text");
-    expect(await readRecoveredDrafts(doc)).toEqual([
-      expect.objectContaining({ generation: "unreconciled:G", text: "typed without coverage" }),
-    ]);
-    expect(await discoverStoredPendingDocs("alice")).toBe(true);
+    expect(await readRecoveredDrafts(doc)).toEqual([]);
+    expect(await discoverStoredPendingDocs("alice")).toBe(false);
     expect(listPendingDocs()).toEqual([]);
     await persistence.destroy({ discard: true, acknowledged: true });
     doc.destroy();
-
-    const { doc: later, persistence: reopened } = await openUnder("G", "server text");
-    expect((await readRecoveredDrafts(later)).map((draft) => draft.generation)).toEqual([
-      "unreconciled:G",
-    ]);
-    await discardRecoveredDraft(later, "unreconciled:G");
-    expect(await readRecoveredDrafts(later)).toEqual([]);
-    await reopened.destroy({ discard: true, acknowledged: true });
-    later.destroy();
-
-    expect(await storedKeys()).toEqual(
-      expect.arrayContaining([
-        ["NOTE", "elsewhere", "G", "old-tab:0000000001"],
-        ["NOTE", "theirs", "G", "old-tab:0000000001"],
-      ]),
-    );
-    expect(await discoverStoredPendingDocs("bob")).toBe(true);
-    unreconciled.destroy();
+    stale.destroy();
   });
 });
 

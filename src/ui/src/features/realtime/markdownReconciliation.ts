@@ -76,37 +76,104 @@ export class MarkdownReconciler {
   constructor(
     private readonly doc: Y.Doc,
     private readonly codec: MarkdownCodec,
+    // Only the leader projects external text; a second projection of the same text duplicates it.
+    private readonly leader: () => boolean,
   ) {
     this.observed = getMarkdownYText(doc).toString();
   }
 
   bindLocalMirror(ready: () => boolean): () => void {
     const fragment = getProsemirrorFragment(this.doc);
+    const text = getMarkdownYText(this.doc);
     let mirroring = false;
-    const observe = (_events: Y.YEvent<Y.AbstractType<unknown>>[], transaction: Y.Transaction) => {
+    // A non-leader's rich content before its own edit while external text awaits projection.
+    const before = new WeakMap<Y.Transaction, string>();
+    const capture = (transaction: Y.Transaction) => {
       if (
         mirroring ||
-        !ready() ||
         !transaction.local ||
+        this.pendingBase === null ||
         transaction.origin === HYDRATION_ORIGIN ||
-        transaction.origin === MARKDOWN_MIRROR_ORIGIN
+        transaction.origin === MARKDOWN_MIRROR_ORIGIN ||
+        !ready() ||
+        this.leader()
       )
         return;
+      before.set(transaction, this.codec.serialize(this.codec.read()));
+    };
+    const observe = (_events: Y.YEvent<Y.AbstractType<unknown>>[], transaction: Y.Transaction) => {
+      if (mirroring || !ready()) return;
+      if (!transaction.local) {
+        // A peer's projection of the pending text change catches this fragment up.
+        if (this.pendingBase !== null && this.fragmentMatches(text.toString()))
+          this.pendingBase = null;
+        return;
+      }
+      if (transaction.origin === HYDRATION_ORIGIN || transaction.origin === MARKDOWN_MIRROR_ORIGIN)
+        return;
+      const base = before.get(transaction);
       mirroring = true;
       try {
-        this.flush();
+        // Mirror only this edit onto the text, which still holds the change the leader projects.
+        if (base !== undefined) {
+          const rich = this.codec.serialize(this.codec.read());
+          replaceMarkdownYText(
+            this.doc,
+            mergeMarkdownEdits(base, rich, text.toString()),
+            MARKDOWN_MIRROR_ORIGIN,
+          );
+        } else this.flush();
       } finally {
         mirroring = false;
       }
     };
+    this.doc.on("beforeTransaction", capture);
     fragment.observeDeep(observe);
-    return () => fragment.unobserveDeep(observe);
+    return () => {
+      this.doc.off("beforeTransaction", capture);
+      fragment.unobserveDeep(observe);
+    };
   }
 
   observe(internal: boolean, ready: boolean): void {
-    if (!ready || internal) this.pendingBase = null;
-    else if (this.pendingBase === null) this.pendingBase = this.observed;
-    this.observed = getMarkdownYText(this.doc).toString();
+    const text = getMarkdownYText(this.doc).toString();
+    // A rich writer's frame carries its fragment change and its mirror together. Merging that
+    // text again counts its keystrokes twice wherever serializer and parser disagree, as they
+    // do on a trailing space. A mirror write keeps the base while the fragment still lags.
+    if (!ready || this.fragmentMatches(text)) this.pendingBase = null;
+    else if (!internal && this.pendingBase === null) this.pendingBase = this.observed;
+    this.observed = text;
+  }
+
+  private fragmentMatches(text: string): boolean {
+    const rich = this.codec.serialize(this.codec.read());
+    if (rich === text) return true;
+    const node = this.codec.parse(text);
+    return node !== null && this.codec.serialize(node) === rich;
+  }
+
+  // Serialized and parsed again, as the block reads once it round-trips through Markdown.
+  private render(doc: Node, block: Node): string {
+    const markdown = this.codec.serialize(doc.type.create(doc.attrs, block));
+    const node = this.codec.parse(markdown);
+    return node ? this.codec.serialize(node) : markdown;
+  }
+
+  // Parsing drops what Markdown cannot hold, such as the trailing space a peer is typing past.
+  // Blocks that read the same keep the fragment's version, so the projection leaves them alone.
+  private keepEquivalentBlocks(parsed: Node): Node {
+    const current = this.codec.read();
+    if (current.childCount !== parsed.childCount) return parsed;
+    const blocks: Node[] = [];
+    parsed.forEach((block, _offset, index) => {
+      const existing = current.child(index);
+      blocks.push(
+        existing.eq(block) || this.render(current, existing) === this.render(parsed, block)
+          ? existing
+          : block,
+      );
+    });
+    return parsed.type.create(parsed.attrs, blocks);
   }
 
   reconcile(): boolean {
@@ -118,8 +185,9 @@ export class MarkdownReconciler {
     const rich = this.codec.serialize(this.codec.read());
     const projectedIncoming = this.codec.serialize(incomingNode);
     const merged = mergeMarkdownEdits(this.codec.serialize(baseNode), rich, projectedIncoming);
-    const node = merged === projectedIncoming ? incomingNode : this.codec.parse(merged);
-    if (!node) return false;
+    const parsed = merged === projectedIncoming ? incomingNode : this.codec.parse(merged);
+    if (!parsed) return false;
+    const node = this.keepEquivalentBlocks(parsed);
     this.pendingBase = null;
     this.doc.transact(() => {
       replaceProsemirrorFragment(this.doc, node, HYDRATION_ORIGIN);
@@ -132,6 +200,9 @@ export class MarkdownReconciler {
   }
 
   pendingMarkdown(): string | null {
+    // A non-leader's text already holds its own edits, and the fragment lags until the leader
+    // projects the external change.
+    if (this.pendingBase !== null && !this.leader()) return null;
     if (!this.reconcile()) return null;
     const rich = this.codec.serialize(this.codec.read());
     const incoming = this.codec.parse(getMarkdownYText(this.doc).toString());

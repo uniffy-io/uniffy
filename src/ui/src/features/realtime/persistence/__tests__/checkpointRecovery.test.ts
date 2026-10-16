@@ -1,16 +1,30 @@
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  onTestFinished,
+  vi,
+} from "vitest";
+import * as Y from "yjs";
 import {
   FakeRealtimeServer,
   beforeUnloadPrevented,
   closeSockets,
   currentSocket,
   durableWrites,
+  eventually,
   installBrowser,
   openEditor,
   signInDevice,
+  storeRawRow,
   type Editor,
 } from "@/features/realtime/persistence/__tests__/browser";
 import { canReleaseSession } from "@/features/realtime/hooks/useDocSession";
+import { createSaveStateStore, type SaveState } from "@/features/realtime/hooks/useDocSaveState";
 import { peekVarString } from "@/features/realtime/multiplex";
 import { realtimeMultiplexer, type UpdateCoverageEvent } from "@/features/realtime/multiplexer";
 import { hasPendingDoc } from "@/features/realtime/pendingDocs";
@@ -21,7 +35,7 @@ import {
   subscribeDeviceRecovery,
   type DeviceRecoveryState,
 } from "@/features/realtime/persistence/encryptedYjsPersistence";
-import { teardownStorageEncryption } from "@/shared/crypto/storageEncryption";
+import { encryptForStorage, teardownStorageEncryption } from "@/shared/crypto/storageEncryption";
 
 const GENERATION = "3f9c1a52-7d4e-4b8a-9c61-0e2f5d8b7a14";
 const BATCH_MS = 50;
@@ -56,6 +70,18 @@ async function connect(contentId: string, text = "") {
   server.attach(ws);
   await editor.hydrated;
   return { server, editor, ws };
+}
+
+/** Every chip save state from now on, starting with the current one. */
+function watchChip(docName: string): (SaveState | null)[] {
+  const store = createSaveStateStore(docName);
+  const seen = [store.getSnapshot()];
+  const unsubscribe = store.subscribe(() => {
+    const next = store.getSnapshot();
+    if (next !== seen.at(-1)) seen.push(next);
+  });
+  onTestFinished(unsubscribe);
+  return seen;
 }
 
 function pending(editor: Editor) {
@@ -116,6 +142,40 @@ describe("checkpoint coverage in local recovery", () => {
     await restarted.persistence.acknowledge();
     expect(await discoverStoredPendingDocs("alice")).toBe(false);
     await restarted.close();
+  });
+
+  it("shows Synced after a reload with an accepted edit and never Saved until progress covers it", async () => {
+    const { server, editor, ws } = await connect("reload-accepted", "base");
+    editor.type(" accepted");
+    vi.advanceTimersByTime(BATCH_MS);
+    server.accept(ws);
+    await editor.persistence.flush();
+    await editor.close();
+
+    const chip = watchChip(editor.docName);
+    const reloaded = openEditor("reload-accepted");
+    server.attach(ws);
+    // Session state is in, but local recovery has not read this device's rows yet.
+    expect(chip).toEqual([null]);
+    await reloaded.hydrated;
+    expect(chip).toEqual([null, "synced"]);
+    server.checkpoint([ws]);
+    expect(chip).toEqual([null, "synced", "saved"]);
+    await reloaded.close();
+  });
+
+  it("shows Saved after a reload with nothing pending only once local recovery has read the device", async () => {
+    const { editor } = await connect("reload-clean", "base");
+    await editor.close();
+
+    const chip = watchChip(editor.docName);
+    const reloaded = openEditor("reload-clean");
+    const server = new FakeRealtimeServer(reloaded.docName, GENERATION, "base");
+    server.attach(currentSocket());
+    expect(chip).toEqual([null]);
+    await reloaded.hydrated;
+    expect(chip).toEqual([null, "saved"]);
+    await reloaded.close();
   });
 
   it("retires only the entries a checkpoint covers, even when the close claims a clean acknowledgment", async () => {
@@ -322,6 +382,88 @@ describe("device storage failure", () => {
       { storage: "available", unpersisted: false },
     ]);
     unsubscribe();
+    await editor.close();
+  });
+});
+
+describe("edit access removed", () => {
+  it("offers no recovered draft once a checkpoint covers the edits accepted before it, beside rows without coverage identity", async () => {
+    const stale = new Y.Doc();
+    stale.getText("markdown").insert(0, "typed before coverage identity");
+    const update = btoa(String.fromCharCode(...Y.encodeStateAsUpdate(stale)));
+    await storeRawRow(
+      ["NOTE", "revoked", GENERATION, "old-tab:0000000001"],
+      await encryptForStorage({ update, dirty: true }),
+    );
+    await storeRawRow(["NOTE", "revoked", "old-tab:0000000001"], await encryptForStorage(update));
+    const { server, editor, ws } = await connect("revoked", "Shared note.");
+    editor.type(" Bob before revoke.");
+    vi.advanceTimersByTime(BATCH_MS);
+    server.accept(ws);
+    server.removeEditAccess(ws);
+    server.checkpoint([ws]);
+    expect(pending(editor)).toEqual({ transportPending: false, checkpointPending: false });
+    await editor.persistence.acknowledge();
+    expect(await readRecoveredDrafts(editor.ydoc)).toEqual([]);
+    expect(await discoverStoredPendingDocs("alice")).toBe(false);
+    await editor.close({ acknowledged: false, discard: false });
+
+    const reopened = openEditor("revoked");
+    server.attach(ws);
+    await reopened.hydrated;
+    server.removeEditAccess(ws, "read only");
+    expect(reopened.ydoc.getText("markdown").toString()).toBe("Shared note. Bob before revoke.");
+    expect(await readRecoveredDrafts(reopened.ydoc)).toEqual([]);
+    await reopened.close();
+    stale.destroy();
+  });
+
+  it("offers edits typed offline as a recovered draft when the reopened document is read-only before local recovery reads them", async () => {
+    const { server, editor, ws } = await connect("offline-then-viewer", "Shared note.");
+    ws.serverClose(1006);
+    editor.type(" Typed offline.");
+    vi.advanceTimersByTime(BATCH_MS);
+    await editor.persistence.flush();
+    await editor.close();
+
+    const reopened = openEditor("offline-then-viewer");
+    const replacement = currentSocket();
+    replacement.open();
+    // The server refuses writes ahead of the handshake that starts local recovery.
+    server.removeEditAccess(replacement, "read only");
+    server.attach(replacement);
+    await reopened.hydrated;
+    expect(reopened.ydoc.getText("markdown").toString()).toBe("Shared note. Typed offline.");
+    vi.advanceTimersByTime(BATCH_MS);
+    expect(durableWrites(replacement, reopened.docName)).toEqual([]);
+    await eventually(async () =>
+      expect((await readRecoveredDrafts(reopened.ydoc)).map((draft) => draft.text)).toEqual([
+        "Shared note. Typed offline.",
+      ]),
+    );
+    await reopened.close();
+
+    const later = openEditor("offline-then-viewer");
+    server.removeEditAccess(replacement, "read only");
+    server.attach(replacement);
+    await later.hydrated;
+    expect((await readRecoveredDrafts(later.ydoc)).map((draft) => draft.text)).toEqual([
+      "Shared note. Typed offline.",
+    ]);
+    await later.close();
+  });
+
+  it("keeps edits the server never accepted as a recovered draft", async () => {
+    const { server, editor, ws } = await connect("refused", "Shared note.");
+    editor.type(" Typed as access went.");
+    server.removeEditAccess(ws);
+    vi.advanceTimersByTime(BATCH_MS);
+    await eventually(async () =>
+      expect((await readRecoveredDrafts(editor.ydoc)).map((draft) => draft.text)).toEqual([
+        "Shared note. Typed as access went.",
+      ]),
+    );
+    expect(durableWrites(ws, editor.docName)).toEqual([]);
     await editor.close();
   });
 });

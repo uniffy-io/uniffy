@@ -1,6 +1,7 @@
 """Note trash, restore, deletion and inline cleanup while accepted edits wait in the buffer."""
 
 import asyncio
+import contextlib
 import dataclasses
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
@@ -10,15 +11,23 @@ from uuid import UUID
 
 import pytest
 import pytest_asyncio
+import valkey.asyncio as aioredis
 from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.audit.actions import Action
+from uniffy.core.events.realtime import (
+    ContentAccessAction,
+    NotificationPayloadType,
+    notification_channel,
+)
+from uniffy.core.json_codec import loads
 from uniffy.core.models.audit.event import AuditEvent
 from uniffy.core.models.files.attachment import Attachment
 from uniffy.core.models.files.file import File
 from uniffy.core.models.files.reconciliation import InlineAttachmentReconciliation
 from uniffy.core.models.notes.note import Note
+from uniffy.core.models.permissions.content_member import ContentMember
 from uniffy.core.models.realtime.yjs_snapshot import RealtimeYjsSnapshot
 from uniffy.core.realtime.buffer import UpdateBuffer
 from uniffy.core.realtime.buffer_keys import AdmissionStatus
@@ -26,17 +35,27 @@ from uniffy.core.realtime.checkpoint import CheckpointStatus, checkpoint_documen
 from uniffy.core.realtime.epoch import ensure_epoch
 from uniffy.core.realtime.job_contracts import SAVE_REALTIME_SNAPSHOT
 from uniffy.core.realtime.live import LiveStateUnavailable
+from uniffy.core.realtime.publisher import perm_channel
 from uniffy.core.realtime.snapshot import SnapshotOutcome, persist_snapshot
 from uniffy.core.realtime.storage import load_snapshot, lock_document, stage_seed
 from uniffy.core.search.indexer import SEARCH_INDEXER_CTX_KEY, SearchIndexer, build_content_urn
 from uniffy.core.storage import OBJECT_STORAGE_CTX_KEY
-from uniffy.core.types import AccessMode, ContentType, NodeType, generate_id
+from uniffy.core.types import (
+    AccessMode,
+    ContentRole,
+    ContentType,
+    NodeType,
+    SubjectType,
+    generate_id,
+)
 from uniffy.domains.files.attachments.inline import stage_inline_reconciliation
 from uniffy.domains.files.jobs.attachments import INLINE_UPLOAD_GRACE, _reconcile
 from uniffy.domains.notes.content.updates import NoteUpdates
 from uniffy.domains.notes.hierarchy.operations import NoteHierarchy
 from uniffy.domains.notes.operations import NoteOperations
 from uniffy.infrastructure.database.session import open_session
+from uniffy.infrastructure.valkey.config import ValkeyConfig
+from uniffy.infrastructure.valkey.pubsub import close_pubsub, init_pubsub
 from uniffy.tests.integration.access.realtime_live import (
     BufferedDocument,
     doc_messages,  # noqa: F401 - fixture
@@ -101,6 +120,65 @@ async def assert_purged(note: BufferedDocument) -> None:
         assert await load_snapshot(db, note.key) is None
         with pytest.raises(LookupError):
             await ensure_epoch(note.buffer, db, note.key, note.org, stage_recovered=stage_recovered)
+
+
+@contextlib.asynccontextmanager
+async def listening(*channels: str) -> AsyncIterator[aioredis.client.PubSub]:
+    """Everything published on these channels from now on."""
+    await init_pubsub()
+    client = aioredis.from_url(ValkeyConfig.from_env().to_url())
+    subscription = client.pubsub()
+    await subscription.subscribe(*channels)
+    try:
+        yield subscription
+    finally:
+        await subscription.aclose()
+        await client.aclose()
+        await close_pubsub()
+
+
+async def heard(subscription: aioredis.client.PubSub) -> list[tuple[str, dict]]:
+    """Channel and payload of each message so far, oldest first."""
+    found = []
+    for _ in range(20):
+        message = await subscription.get_message(ignore_subscribe_messages=True, timeout=0.1)
+        if message is not None:
+            found.append((message["channel"].decode(), loads(message["data"])))
+    return found
+
+
+def access_changes(messages: list[tuple[str, dict]]) -> set[tuple[str, str, str]]:
+    return {
+        (channel, payload["content_id"], payload["action"])
+        for channel, payload in messages
+        if payload.get("_type") == NotificationPayloadType.CONTENT_ACCESS_CHANGED
+    }
+
+
+def access_rechecks(messages: list[tuple[str, dict]], note_id: UUID) -> list[str | None]:
+    channel = perm_channel(ContentType.NOTE, note_id)
+    return [payload["user_id"] for name, payload in messages if name == channel]
+
+
+async def share_with_peer(note: BufferedDocument) -> None:
+    async with open_session() as db:
+        await db.execute(
+            update(Note)
+            .where(Note.id == note.key[1])
+            .values(access_mode=AccessMode.EXPLICIT_MEMBERS)
+        )
+        db.add(
+            ContentMember(
+                organization_id=note.org,
+                content_type=ContentType.NOTE,
+                content_id=note.key[1],
+                subject_type=SubjectType.USER,
+                subject_id=note.peer,
+                role=ContentRole.EDITOR,
+                added_by_user_id=note.owner,
+            )
+        )
+        await db.commit()
 
 
 @dataclass
@@ -271,6 +349,95 @@ async def test_folder_trash_folds_every_child_tail(tree: Tree) -> None:
         note = await note_row(child)
         assert note is not None and (note.is_deleted, note.content) == (True, "base")
     assert await audited(tree.first, tree.folder) == [(Action.NOTE_DELETED, 2)]
+
+
+@pytest.mark.parametrize("permanent", [False, True])
+async def test_deleting_a_shared_note_rechecks_live_sessions_and_tells_only_its_audience(
+    live_note: BufferedDocument, access, permanent: bool
+) -> None:
+    await share_with_peer(live_note)
+    note_id = live_note.key[1]
+    org_channel = f"content:{live_note.org}"
+    owner, peer, outsider = (
+        notification_channel(live_note.owner),
+        notification_channel(live_note.peer),
+        notification_channel(access.admin_id),
+    )
+
+    async with listening(
+        perm_channel(ContentType.NOTE, note_id), org_channel, owner, peer, outsider
+    ) as subscription:
+        async with open_session() as db:
+            await hierarchy(db, live_note).delete(
+                live_note.owner, live_note.org, note_id, permanent=permanent
+            )
+        messages = await heard(subscription)
+
+    assert access_rechecks(messages, note_id) == [None]
+    revoked = str(ContentAccessAction.REVOKED)
+    assert access_changes(messages) == {
+        (owner, str(note_id), revoked),
+        (peer, str(note_id), revoked),
+    }
+
+
+async def test_restoring_a_shared_note_tells_its_audience_it_is_back(
+    live_note: BufferedDocument, access
+) -> None:
+    await share_with_peer(live_note)
+    note_id = live_note.key[1]
+    async with open_session() as db:
+        await hierarchy(db, live_note).delete(live_note.owner, live_note.org, note_id)
+    owner, peer, outsider = (
+        notification_channel(live_note.owner),
+        notification_channel(live_note.peer),
+        notification_channel(access.admin_id),
+    )
+
+    async with listening(f"content:{live_note.org}", owner, peer, outsider) as subscription:
+        async with open_session() as db:
+            await hierarchy(db, live_note).restore(live_note.owner, live_note.org, note_id)
+        messages = await heard(subscription)
+
+    granted = str(ContentAccessAction.GRANTED)
+    assert access_changes(messages) == {
+        (owner, str(note_id), granted),
+        (peer, str(note_id), granted),
+    }
+
+
+async def test_deleting_an_org_wide_note_announces_it_on_the_org_channel(
+    live_note: BufferedDocument,
+) -> None:
+    note_id = live_note.key[1]
+    org_channel = f"content:{live_note.org}"
+
+    async with listening(
+        perm_channel(ContentType.NOTE, note_id), org_channel, notification_channel(live_note.peer)
+    ) as subscription:
+        async with open_session() as db:
+            await hierarchy(db, live_note).delete(live_note.owner, live_note.org, note_id)
+        messages = await heard(subscription)
+
+    assert access_rechecks(messages, note_id) == [None]
+    assert access_changes(messages) == {
+        (org_channel, str(note_id), str(ContentAccessAction.REVOKED))
+    }
+
+
+async def test_folder_trash_rechecks_every_descendant(tree: Tree) -> None:
+    removed = [tree.folder, tree.first.key[1], tree.second.key[1]]
+
+    async with listening(
+        *(perm_channel(ContentType.NOTE, note_id) for note_id in removed)
+    ) as subscription:
+        async with open_session() as db:
+            await hierarchy(db, tree.first).delete(tree.first.owner, tree.first.org, tree.folder)
+        messages = await heard(subscription)
+
+    assert sorted(channel for channel, _ in messages) == sorted(
+        perm_channel(ContentType.NOTE, note_id) for note_id in removed
+    )
 
 
 async def _append_holding_lock(
