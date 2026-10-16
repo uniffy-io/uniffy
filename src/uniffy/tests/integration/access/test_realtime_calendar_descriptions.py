@@ -73,7 +73,9 @@ async def live_event(access, valkey_namespace) -> AsyncIterator[BufferedDocument
         await db.commit()
         key = (ContentType.CALENDAR_EVENT, event.id)
         await lock_document(db, key, access.org_id)
-        row = await stage_seed(db, key, access.org_id)
+        await stage_seed(db, key, access.org_id)
+        row = await load_snapshot(db, key)
+        assert row is not None
         await db.commit()
         base, generation = row.updates, row.generation
     assert generation is not None
@@ -118,9 +120,7 @@ async def event_messages(live_event) -> AsyncIterator[Any]:
 
 
 def calendar_service(buffer: UpdateBuffer) -> CalendarServiceImpl:
-    service = CalendarServiceImpl(AsyncMock(spec=SearchIndexer), MagicMock())
-    service.buffer = buffer
-    return service
+    return CalendarServiceImpl(AsyncMock(spec=SearchIndexer), MagicMock(), buffer)
 
 
 async def update_event(
@@ -156,7 +156,9 @@ async def seeded_occurrence(master: BufferedDocument, event_id: UUID) -> Buffere
     key = (ContentType.CALENDAR_EVENT, event_id)
     async with open_session() as db:
         await lock_document(db, key, master.org)
-        row = await stage_seed(db, key, master.org)
+        await stage_seed(db, key, master.org)
+        row = await load_snapshot(db, key)
+        assert row is not None
         await db.commit()
         base, generation = row.updates, row.generation
     assert generation is not None

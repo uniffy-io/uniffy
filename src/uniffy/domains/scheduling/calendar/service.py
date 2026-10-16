@@ -12,7 +12,8 @@ class CalendarServiceImpl(CalendarHandlers, SchedulingHandlers):
         self,
         search_indexer: SearchIndexer,
         call_lifecycle: ChannelCallLifecycle,
+        buffer: UpdateBuffer,
     ) -> None:
         self.search_indexer = search_indexer
         self.call_lifecycle = call_lifecycle
-        self.buffer = UpdateBuffer()
+        self.buffer = buffer

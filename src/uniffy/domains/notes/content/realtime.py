@@ -14,7 +14,7 @@ from sqlalchemy import update as sql_update
 from uniffy.core.events import NotificationEvent, emit_notification
 from uniffy.core.events.bus import stage_notification_events
 from uniffy.core.models.notes.note import Note
-from uniffy.core.realtime.adapter import RealtimeRenderConflict, check_not_superseded
+from uniffy.core.realtime.adapter import RealtimeRenderConflict
 from uniffy.core.realtime.metrics import REALTIME_BLANK_CONTENT_OVERWRITES_TOTAL
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import AccessMode, ContentType, NodeType, NotificationType
@@ -40,7 +40,6 @@ class NoteRealtimePersistence:
         canvas_content: dict[str, Any] | None,
         *,
         actor_id: UUID | None = None,
-        supersede_after: datetime | None = None,
     ) -> tuple[Note, Callable[[], Awaitable[None]]] | None:
         note = await self._load_note(organization_id, note_id)
         if not note:
@@ -52,14 +51,6 @@ class NoteRealtimePersistence:
             canvas_content,
             organization_id,
         )
-        if note.node_type != NodeType.CANVAS:
-            check_not_superseded(
-                note.updated_at,
-                supersede_after,
-                stored=note.content,
-                rendered=fields.content,
-                label=f"Note {note_id}",
-            )
         if note.content and not fields.content:
             REALTIME_BLANK_CONTENT_OVERWRITES_TOTAL.labels(content_type=ContentType.NOTE.value).inc()
             logger.warning(
@@ -166,31 +157,6 @@ class NoteRealtimePersistence:
         note = await self._load_note(organization_id, note_id, populate_existing=True)
         if note is not None:
             await self.operations._index_for_search(note)
-
-    async def save(
-        self,
-        organization_id: UUID,
-        note_id: UUID,
-        content: str,
-        canvas_content: dict[str, Any] | None,
-        *,
-        actor_id: UUID | None = None,
-        supersede_after: datetime | None = None,
-    ) -> Note | None:
-        staged = await self.stage_save(
-            organization_id,
-            note_id,
-            content,
-            canvas_content,
-            actor_id=actor_id,
-            supersede_after=supersede_after,
-        )
-        if staged is None:
-            return None
-        note, after_commit = staged
-        await self.operations.session.commit()
-        await after_commit()
-        return note
 
     async def _load_note(
         self,

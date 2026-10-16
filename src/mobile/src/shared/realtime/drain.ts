@@ -42,7 +42,7 @@ export async function replayRetainedUpdates(key: string, docName: string): Promi
   const { generation } = realtimeMultiplexer.getDocState(docName);
   if (!generation) return;
   const updates = await readRetainedUpdates(key, generation);
-  if (updates.length) realtimeMultiplexer.restorePending(docName, generation, updates);
+  realtimeMultiplexer.restorePending(docName, generation, updates);
 }
 
 export async function runMobileDrain(

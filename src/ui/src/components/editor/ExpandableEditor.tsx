@@ -12,16 +12,16 @@ import { ContentType } from "@uniffy/proto/common/v1/common_pb";
 import { cn } from "@/shared/utils/cn";
 import { RealtimeConnectionNotice } from "@/features/realtime/components/RealtimeConnectionNotice";
 import { serializeEditorMarkdown } from "@/features/realtime/markdown";
-import { canReleaseSession } from "@/features/realtime/hooks/useDocSession";
 import {
   docContentTypeName,
   RealtimeSessionStatus,
   RealtimeStatusBadge,
-  useDeviceRecoveryState,
+  useCheckpointPending,
+  useDeviceStorage,
   useDocSaveState,
   useMarkdownDocSession,
   usePendingDocSync,
-  useRealtimeDocState,
+  useSessionReleasable,
 } from "@/features/realtime";
 
 // Reopening inside this window resumes the same session instead of re-hydrating.
@@ -109,16 +109,17 @@ export function ExpandableEditor({
     };
   }, [whenSynced, sessionId]);
 
-  // Follows whichever attachment holds the doc: this session, then the drain after Done.
-  const docState = useRealtimeDocState(realtimeActive ? docName : null);
+  // Follows whichever attachment holds the doc: this session, then the drain after Done. Each value
+  // changes rarely, so typing does not re-render the editor tree on every batch and receipt.
+  const checkpointPending = useCheckpointPending(realtimeActive ? docName : null);
   const saveState = useDocSaveState(realtimeActive && !readonly ? docName : null);
-  const device = useDeviceRecoveryState(realtimeActive ? docName : null);
+  const storage = useDeviceStorage(realtimeActive ? docName : null);
   const strandedSync = usePendingDocSync(realtimeContentType, realtimeActive ? contentId : null);
   const transportDown = status === "disconnected" || status === "offline";
   // Unaccepted edits only reach the server through this attached doc, so Done holds the session
   // for them, and for accepted ones this device has not stored. Other accepted edits wait for
   // their checkpoint in the drain; a parent unmount still falls back to IDB.
-  const releasable = canReleaseSession(status, docState, device);
+  const releasable = useSessionReleasable(realtimeActive && closing ? docName : null, status);
   useEffect(() => {
     if (!closing || !releasable) return;
     const timer = setTimeout(() => {
@@ -214,11 +215,11 @@ export function ExpandableEditor({
     transportDown || (typeof navigator !== "undefined" && navigator.onLine === false);
   // After Done the chip follows the held session, then the drain; a registry entry with nothing
   // attached is still waiting to be sent.
-  const afterDoneChip = !isExpanded && (docState.checkpointPending || strandedSync) && (
+  const afterDoneChip = !isExpanded && (checkpointPending || strandedSync) && (
     <RealtimeStatusBadge
       status={waitingForNetwork ? "offline" : sessionOpen ? status : "idle"}
-      save={docState.checkpointPending ? saveState : "syncing"}
-      storage={device.storage}
+      save={checkpointPending ? saveState : "syncing"}
+      storage={storage}
     />
   );
 
@@ -229,11 +230,7 @@ export function ExpandableEditor({
         waiting
         status={status}
         onEditWithoutLive={
-          !readonly &&
-          !realtimeOwned &&
-          !replacedNotice &&
-          !docState.checkpointPending &&
-          !strandedSync
+          !readonly && !realtimeOwned && !replacedNotice && !checkpointPending && !strandedSync
             ? () => setEditWithoutLive(true)
             : undefined
         }
@@ -416,6 +413,7 @@ export function ExpandableEditor({
                           docName={docName}
                           readOnly={readonly}
                           whenSynced={binding?.whenSynced}
+                          compact
                         />
                         <Button type="button" size="md" onClick={handleClose}>
                           <Check size={14} weight="bold" />

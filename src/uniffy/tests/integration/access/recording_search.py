@@ -20,14 +20,26 @@ from uniffy.core.search.indexer import SearchIndexer, build_content_urn
 from uniffy.core.search.workspace import WorkspaceSearch
 from uniffy.core.types import ContentType
 
+_MISSING = object()
+
+
+def _lookup(document: SearchDocument, field: str) -> Any:
+    """The value at a dotted path, as Meilisearch filters address nested fields."""
+    found: Any = document
+    for part in field.split("."):
+        if not isinstance(found, dict) or part not in found:
+            return _MISSING
+        found = found[part]
+    return found
+
 
 def _matches(document: SearchDocument, expression: SearchFilter) -> bool:
     match expression:
         case SearchTerm(field, value):
-            found = document.get(field)
+            found = _lookup(document, field)
             return value in found if isinstance(found, list) else found == value
         case SearchExists(field):
-            return field in document
+            return _lookup(document, field) is not _MISSING
         case SearchNot(inner):
             return not _matches(document, inner)
         case SearchAll(expressions):
@@ -47,11 +59,15 @@ class RecordingSearchEngine:
         if not self.available:
             raise SearchEngineError("search unavailable")
 
+    def indexed(self, content_type: ContentType, content_id: Any) -> SearchDocument | None:
+        """The document indexed for one content item, or ``None`` when it is not indexed."""
+        urn = build_content_urn(content_type, content_id)
+        return next((doc for doc in self.documents.values() if doc["urn"] == urn), None)
+
     def indexed_text(self, content_type: ContentType, content_id: Any) -> str | None:
         """Searchable text indexed for one content item, or ``None`` when it is not indexed."""
-        urn = build_content_urn(content_type, content_id)
-        found = [doc for doc in self.documents.values() if doc["urn"] == urn]
-        return found[0]["content"] if found else None
+        found = self.indexed(content_type, content_id)
+        return found["content"] if found else None
 
     async def startup(self, schema: SearchSchema) -> None:
         self._reachable()

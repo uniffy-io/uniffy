@@ -249,6 +249,9 @@ class RealtimeMultiplexer {
   private destroyed = false;
   // Set by close 4426 and kept until the page reloads with a bundle that speaks the server's protocol.
   private upgradeRequired = false;
+  // Set by close 4403 and kept until new credentials arrive. The server refuses this account,
+  // workspace or origin the same way on every reconnect until then.
+  private connectionForbidden = false;
   private listenersAttached = false;
 
   attach(opts: MultiplexerAttachOptions): DocSubscription {
@@ -351,9 +354,10 @@ class RealtimeMultiplexer {
       subscribeCoverage: (listener) => this.subscribeCoverage(docName, listener),
       restorePending: (updates) => this.restorePending(entry, updates),
       isCheckpointPending: () => entry.state.checkpointPending,
+      hasUnsentEdits: () => entry.localBatch.length > 0 || entry.unsentSince !== null,
     });
     this.cancelIdleClose();
-    this.openIfNeeded(opts.contentType, opts.contentId);
+    this.openIfNeeded();
 
     if (this.wsConnected) {
       // WS was already open before this attach; push status + SyncStep1
@@ -363,6 +367,8 @@ class RealtimeMultiplexer {
     } else if (this.wsConnecting) {
       // Late attach mid-handshake; surface the in-flight state immediately.
       opts.onStatus?.("connecting");
+    } else if (this.connectionForbidden) {
+      opts.onStatus?.("access_lost");
     } else if (this.upgradeRequired) {
       opts.onStatus?.("upgrade_required");
     }
@@ -415,17 +421,22 @@ class RealtimeMultiplexer {
     if (this.docs.size === 0) this.scheduleIdleClose();
   }
 
-  private openIfNeeded(contentTypeHint: string, contentIdHint: string): void {
+  private openIfNeeded(): void {
     if (this.ws || this.wsConnecting) return;
-    if (this.destroyed || this.upgradeRequired) return;
-    void contentTypeHint;
-    void contentIdHint;
+    if (this.destroyed || this.upgradeRequired || this.connectionForbidden) return;
     this.wsConnecting = true;
     this.connectNow();
   }
 
   private connectNow(): void {
-    if (this.destroyed || this.ws || this.refreshing || this.upgradeRequired) return;
+    if (
+      this.destroyed ||
+      this.ws ||
+      this.refreshing ||
+      this.upgradeRequired ||
+      this.connectionForbidden
+    )
+      return;
     if (this.refreshRequired || !getAccessToken()) {
       this.reconnectAfterRefresh();
       return;
@@ -508,12 +519,13 @@ class RealtimeMultiplexer {
         return;
       }
       if (event.code === WS_CLOSE_FORBIDDEN) {
-        // Auth/permission lost; surface as disconnected but still try to
-        // reconnect (the user may regain access via an org switch).
-        this.emitStatusAll("disconnected");
-      } else {
-        this.emitStatusAll("disconnected");
+        // Edits stay local. A sign-in, refresh or workspace switch brings the credentials that
+        // may be accepted again.
+        this.connectionForbidden = true;
+        this.emitStatusAll("access_lost");
+        return;
       }
+      this.emitStatusAll("disconnected");
       this.scheduleReconnect();
     };
 
@@ -1120,7 +1132,7 @@ class RealtimeMultiplexer {
       entry.options.onStatus?.(
         entry.rejected || entry.conflicted.size > 0
           ? "update_rejected"
-          : entry.denied
+          : entry.denied || this.connectionForbidden
             ? "access_lost"
             : this.upgradeRequired
               ? "upgrade_required"
@@ -1182,6 +1194,7 @@ class RealtimeMultiplexer {
   private handleAuthRefreshed = (): void => {
     this.destroyed = false;
     this.refreshRequired = false;
+    this.connectionForbidden = false;
     if (this.refreshing) return;
     this.authAttempts = 0;
     // Close idle sockets too, so a later attachment cannot reuse another org's connection.

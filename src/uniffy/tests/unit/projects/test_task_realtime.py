@@ -1,4 +1,3 @@
-from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
@@ -6,7 +5,7 @@ import pycrdt
 import pytest
 
 from uniffy.core.models.projects.task import Task
-from uniffy.core.realtime.adapter import RealtimeRenderConflict, RealtimeRenderSuperseded
+from uniffy.core.realtime.adapter import RealtimeRenderConflict
 from uniffy.core.types import ContentRole, ContentType, generate_id
 from uniffy.domains.projects.realtime import TaskRealtimeAdapter
 from uniffy.domains.projects.tasks.realtime import TaskRealtimePersistence
@@ -94,16 +93,7 @@ async def test_missing_task_denies_and_skips_render() -> None:
     adapter = TaskRealtimeAdapter(MagicMock())
     session = _session(None)
     assert await adapter.authorize(session, generate_id(), generate_id(), generate_id()) is None
-    assert not await adapter.render_and_persist(session, pycrdt.Doc(), generate_id(), generate_id())
-
-
-def test_external_content_is_idempotent() -> None:
-    adapter = TaskRealtimeAdapter(MagicMock())
-    doc = pycrdt.Doc()
-    doc["markdown"] = pycrdt.Text("Initial")
-    assert adapter.apply_external_content(doc, "Replacement")
-    assert str(doc.get("markdown", type=pycrdt.Text)) == "Replacement"
-    assert not adapter.apply_external_content(doc, "Replacement")
+    assert await adapter.stage_render(session, pycrdt.Doc(), generate_id(), generate_id()) is None
 
 
 async def test_render_exhaustion_preserves_snapshot_as_retryable_failure() -> None:
@@ -115,21 +105,7 @@ async def test_render_exhaustion_preserves_snapshot_as_retryable_failure() -> No
         for item in (MagicMock(scalar_one_or_none=lambda: task), MagicMock(rowcount=0))
     ]
     with pytest.raises(RealtimeRenderConflict):
-        await TaskRealtimePersistence(session, MagicMock()).save(
+        await TaskRealtimePersistence(session, MagicMock()).stage_save(
             task.organization_id, task.id, "Pending"
         )
     session.refresh.assert_not_awaited()
-
-
-async def test_render_refuses_to_overwrite_a_later_plain_write() -> None:
-    task = _task()
-    task.updated_at = datetime.now(UTC)
-    session = _session(task)
-    with pytest.raises(RealtimeRenderSuperseded):
-        await TaskRealtimePersistence(session, MagicMock()).save(
-            task.organization_id,
-            task.id,
-            "Stale live text",
-            supersede_after=task.updated_at - timedelta(seconds=5),
-        )
-    session.commit.assert_not_awaited()

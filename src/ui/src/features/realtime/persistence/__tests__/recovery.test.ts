@@ -82,7 +82,7 @@ function toBase64(bytes: Uint8Array): string {
 }
 
 async function storedKeys(): Promise<string[][]> {
-  const db = await openDB(DB_NAME, 3);
+  const db = await openDB(DB_NAME, 4);
   const keys = (await db.getAllKeys("updates")) as string[][];
   db.close();
   return keys;

@@ -1,8 +1,7 @@
 """Data contract of the realtime update buffer: key layout, records, limits and results."""
 
-import contextlib
 import hashlib
-from collections.abc import Collection, Iterable, Sequence
+from collections.abc import Sequence
 from dataclasses import dataclass
 from enum import StrEnum
 from uuid import UUID
@@ -23,10 +22,21 @@ RECORD_FORMAT = 1
 MAX_PENDING_DOCUMENT_BYTES = 16 * _MIB
 MAX_PENDING_DOCUMENT_RECORDS = 4096
 DUE_DELAY_MS = 10_000
+# A document past either threshold checkpoints before its due time.
+EARLY_PENDING_BYTES = 1 * _MIB
+EARLY_PENDING_RECORDS = 1024
+# Measured Valkey memory of one record beyond its update and id bytes: stream entry fields and
+# receipt hash entry. Budgets and limits count stored bytes, not payload alone.
+RECORD_OVERHEAD_BYTES = 256
 
 # ':' separates identity segments and braces delimit the hash tag.
 _SEGMENT_RESERVED = frozenset(":{}")
 _NAMESPACE_RESERVED = frozenset("{}*?[]\\")
+
+
+def stored_bytes(update_id: str, update: bytes) -> int:
+    """What one buffered record counts against its document limit and the pending budget."""
+    return len(update) + 2 * len(update_id.encode()) + RECORD_OVERHEAD_BYTES
 
 
 def bucket_for(organization_id: UUID, content_type: ContentType, content_id: UUID) -> int:
@@ -100,6 +110,8 @@ class BufferKeys:
     receipts: str
     due: str
     accounting: str
+    early: str
+    scopes: str
 
 
 def validate_namespace(namespace: str) -> None:
@@ -123,14 +135,14 @@ def accounting_key(bucket: int, namespace: str = "") -> str:
     return f"{bucket_prefix(bucket, namespace)}:accounting"
 
 
-def key_pattern(kind: KeyKind | None, namespace: str = "", bucket: int | None = None) -> str:
-    """Glob over one kind of per-document key, or every buffer key, in one bucket or all."""
-    prefix = (
-        f"{namespace}rtbuf:{{v{LAYOUT_VERSION}:*}}"
-        if bucket is None
-        else bucket_prefix(bucket, namespace)
-    )
-    return f"{prefix}:*" if kind is None else f"{prefix}:{kind}:*"
+def early_key(bucket: int, namespace: str = "") -> str:
+    """Documents past an early checkpoint threshold, scored by when they crossed it."""
+    return f"{bucket_prefix(bucket, namespace)}:early"
+
+
+def scopes_key(bucket: int, namespace: str = "") -> str:
+    """Every scope of the bucket that holds a control record or records, for maintenance walks."""
+    return f"{bucket_prefix(bucket, namespace)}:scopes"
 
 
 def _document_key(scope: BufferScope, kind: KeyKind, namespace: str) -> str:
@@ -144,28 +156,9 @@ def buffer_keys(scope: BufferScope, namespace: str = "") -> BufferKeys:
         receipts=_document_key(scope, KeyKind.RECEIPTS, namespace),
         due=due_key(scope.bucket, namespace),
         accounting=accounting_key(scope.bucket, namespace),
+        early=early_key(scope.bucket, namespace),
+        scopes=scopes_key(scope.bucket, namespace),
     )
-
-
-def scope_of_key(key: bytes | str, kind: KeyKind, namespace: str = "") -> BufferScope:
-    """The scope a per-document key of ``kind`` names; ``ValueError`` for any other key."""
-    text = key.decode() if isinstance(key, bytes) else key
-    scope = parse_member(text.partition(f":{kind}:")[2])
-    if text != _document_key(scope, kind, namespace):
-        raise ValueError(f"{text!r} is not a {kind} key in namespace {namespace!r}")
-    return scope
-
-
-def scopes_of_keys(
-    keys: Iterable[bytes | str], kinds: Collection[KeyKind], namespace: str
-) -> list[BufferScope]:
-    """Scopes named by well-formed keys of ``kinds``, in a stable order; other keys are skipped."""
-    scopes: set[BufferScope] = set()
-    for key in keys:
-        for kind in kinds:
-            with contextlib.suppress(ValueError):
-                scopes.add(scope_of_key(key, kind, namespace))
-    return sorted(scopes, key=lambda scope: scope.member)
 
 
 def validate_update(update_id: str, update: bytes) -> None:
@@ -227,12 +220,33 @@ class LatestState:
         return len(self.checkpoint) + sum(len(record.update) for record in self.tail)
 
 
+@dataclass(frozen=True, slots=True)
+class HeldState:
+    """What a resident document already holds: one checkpoint and the records through a head."""
+
+    generation: str
+    epoch: str
+    checkpoint_revision: int
+    checkpoint_seq: int
+    head_seq: int
+
+
+@dataclass(frozen=True, slots=True)
+class LatestTail:
+    """The records past a :class:`HeldState`, while the row still names the held checkpoint."""
+
+    head: BufferHead
+    tail: tuple[BufferedUpdate, ...]
+
+
 class AdmissionStatus(StrEnum):
     ACCEPTED = "accepted"
     DUPLICATE = "duplicate"
     ID_CONFLICT = "id_conflict"
     DOCUMENT_LIMIT = "document_limit"
     BUDGET_EXHAUSTED = "budget_exhausted"
+    # The document's organization holds its share of the bucket budget.
+    ORGANIZATION_LIMIT = "organization_limit"
     TYPE_ERROR = "type_error"
     # The epoch is missing, stale or bound to another instance: run ensure_epoch, then retry.
     RECOVERY_REQUIRED = "recovery_required"

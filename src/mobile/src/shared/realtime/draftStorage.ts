@@ -24,7 +24,10 @@ import type {
 } from "@shared/realtime/multiplexer";
 
 const writes = new Map<string, Promise<void>>();
-const pendingWrites = new Map<string, { update: Uint8Array; promise: Promise<void> }>();
+// A queued draft write encodes its documents when it runs, once per write; bytes come from callers
+// that destroy their document right after saving it.
+type DraftSource = { doc: Y.Doc; generation: string } | Uint8Array;
+const pendingWrites = new Map<string, { sources: DraftSource[]; promise: Promise<void> }>();
 const coverageWrites = new Map<
   string,
   { writes: Map<string, UpdateRecordWrite>; promise: Promise<void> | null }
@@ -215,33 +218,73 @@ export function saveTextDraft(
   draft.getMap("doc_meta").set("generation", `unmerged:${lineage}`);
   draft.getMap("draft_meta").set("base", base);
   draft.getText("markdown").insert(0, text);
-  const saved = saveDraft(key, draft);
+  const saved = saveDraftNow(key, draft);
   draft.destroy();
   return saved;
 }
 
+function docGeneration(doc: Y.Doc): string {
+  return String(doc.getMap("doc_meta").get("generation") ?? "");
+}
+
+/** Saves the document as it stands when the queued write runs, so typing that keeps saving
+ * while a write is in flight costs one encode per write. The caller keeps `doc` alive until the
+ * returned promise settles; use {@link saveDraftNow} for a document about to be destroyed. */
 export function saveDraft(key: string, doc: Y.Doc): Promise<void> {
+  return queueDraft(key, docGeneration(doc), doc.guid, { doc, generation: docGeneration(doc) });
+}
+
+/** Encodes now, for a caller that destroys the document right after saving it. */
+export function saveDraftNow(key: string, doc: Y.Doc): Promise<void> {
+  return queueDraft(key, docGeneration(doc), doc.guid, Y.encodeStateAsUpdate(doc));
+}
+
+function encodeSources(sources: readonly DraftSource[]): Uint8Array | null {
+  const updates: Uint8Array[] = [];
+  for (const source of sources) {
+    if (source instanceof Uint8Array) updates.push(source);
+    // A document that moved to another generation belongs to that generation's own write.
+    else if (docGeneration(source.doc) === source.generation)
+      updates.push(Y.encodeStateAsUpdate(source.doc));
+  }
+  if (updates.length === 0) return null;
+  return updates.length === 1 ? updates[0] : Y.mergeUpdates(updates);
+}
+
+function queueDraft(
+  key: string,
+  generation: string,
+  guid: string,
+  source: DraftSource,
+): Promise<void> {
   if (signedOut.has(draftUser(key))) return Promise.resolve();
-  const update = Y.encodeStateAsUpdate(doc);
-  const generation = String(doc.getMap("doc_meta").get("generation") ?? "");
   if (!generation) return Promise.resolve();
   const pendingKey = `${key}:${generation}`;
   const queued = pendingWrites.get(pendingKey);
   if (queued) {
-    queued.update = generation.startsWith("unmerged:")
-      ? update
-      : Y.mergeUpdates([queued.update, update]);
+    // An unmerged lineage keeps only its newest text; a known generation merges every writer.
+    if (generation.startsWith("unmerged:")) queued.sources = [source];
+    else if (
+      source instanceof Uint8Array ||
+      !queued.sources.some((each) => !(each instanceof Uint8Array) && each.doc === source.doc)
+    )
+      queued.sources.push(source);
     return queued.promise;
   }
-  const pending = { update, promise: Promise.resolve() };
-  const id = `${doc.guid}.${Date.now()}.${Math.random().toString(36).slice(2)}`;
+  const pending: { sources: DraftSource[]; promise: Promise<void> } = {
+    sources: [source],
+    promise: Promise.resolve(),
+  };
+  const id = `${guid}.${Date.now()}.${Math.random().toString(36).slice(2)}`;
   const write = (writes.get(key) ?? Promise.resolve())
     .catch(() => {})
     .then(async () => {
       pendingWrites.delete(pendingKey);
+      const update = encodeSources(pending.sources);
+      if (!update) return;
       const records = await readRecords(key);
       const replaced: DraftRecord[] = [];
-      let merged = pending.update;
+      let merged = update;
       for (const record of records.filter((item) => item.generation === generation)) {
         try {
           // Closing before hydration must not replace the only offline copy with server state.

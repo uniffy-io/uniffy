@@ -15,6 +15,7 @@ from uniffy.infrastructure.valkey.binary import (
     get_binary_client,
     identity_from_info,
     init_binary_client,
+    server_identity,
 )
 
 logger = logger.bind(component="core.realtime.preflight")
@@ -85,10 +86,28 @@ def preflight_result() -> PreflightResult | None:
 
 
 async def ensure_buffer_ready() -> None:
-    """Bring up the binary client and preflight that a failed process start left missing."""
-    global _ready_attempted_at, _ready_failing
+    """Bring up the binary client and preflight that a failed process start left missing.
 
-    if get_binary_client() is not None and _result is not None:
+    A verdict holds only for the instance it read. Once the client adopts another instance, a
+    restart or a failover that may run another eviction policy, the preflight runs again at once.
+    """
+    global _ready_attempted_at, _ready_failing, _result
+
+    client = get_binary_client()
+    if client is not None and _result is not None:
+        identity = server_identity()
+        if identity is None or identity.run_id == _result.run_id:
+            return
+        try:
+            await run_preflight(client)
+        except Exception:
+            # Without a verdict for the serving instance, admission refuses until one is read.
+            _result = None
+            _ready_attempted_at = monotonic()
+            _ready_failing = True
+            logger.opt(exception=True).warning(
+                "Valkey instance changed and its preflight failed; buffered acceptance waits"
+            )
         return
     now = monotonic()
     if _ready_attempted_at is not None and now - _ready_attempted_at < READY_RETRY_SECONDS:

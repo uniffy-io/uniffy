@@ -4,9 +4,11 @@ import asyncio
 import contextlib
 from collections.abc import Mapping
 from dataclasses import dataclass
+from typing import Any
 
 import valkey.asyncio as aioredis
 from loguru import logger
+from prometheus_client import Counter
 from valkey.asyncio.connection import AbstractConnection, Connection
 from valkey.exceptions import ConnectionError as ValkeyConnectionError
 
@@ -16,6 +18,15 @@ logger = logger.bind(component="infrastructure.valkey.binary")
 
 _INIT_PING_TIMEOUT_SECONDS = 1.0
 _CLOSE_TIMEOUT_SECONDS = 1.0
+# A burst waits this long for a pooled connection instead of failing at once. Admission holds the
+# document lock while it waits, so the wait stays well under its 150 ms deadline.
+POOL_WAIT_SECONDS = 0.05
+
+VALKEY_BINARY_POOL_WAITS_TOTAL = Counter(
+    "uniffy_valkey_binary_pool_waits_total",
+    "Binary client calls that found every pooled connection busy, by whether one freed in time",
+    ["outcome"],
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -62,6 +73,31 @@ class _VerifiedConnection(Connection):
             )
 
 
+class _WaitingPool(aioredis.BlockingConnectionPool):
+    async def get_connection(self, command_name: object, *keys: object, **options: object) -> Any:
+        if self.can_get_connection():
+            return await super().get_connection(command_name, *keys, **options)
+        try:
+            connection = await super().get_connection(command_name, *keys, **options)
+        except ValkeyConnectionError as exc:
+            if isinstance(exc.__cause__, TimeoutError):
+                VALKEY_BINARY_POOL_WAITS_TOTAL.labels(outcome="timeout").inc()
+            raise
+        VALKEY_BINARY_POOL_WAITS_TOTAL.labels(outcome="served").inc()
+        return connection
+
+
+def binary_client(config: ValkeyConfig) -> aioredis.Redis:
+    """A client whose pool serves only connections to the verified instance and waits briefly."""
+    pool = _WaitingPool.from_url(
+        config.to_url(),
+        connection_class=_VerifiedConnection,
+        timeout=POOL_WAIT_SECONDS,
+        **config.to_binary_kwargs(),
+    )
+    return aioredis.Redis.from_pool(pool)
+
+
 async def _probe_identity(client: aioredis.Redis) -> ValkeyIdentity:
     connection = Connection(**client.connection_pool.connection_kwargs)
     try:
@@ -83,12 +119,7 @@ async def init_binary_client() -> None:
         except Exception:
             await close_binary_client()
 
-    config = ValkeyConfig.from_env()
-    client = aioredis.from_url(
-        config.to_url(),
-        **config.to_binary_kwargs(),
-        connection_class=_VerifiedConnection,
-    )
+    client = binary_client(ValkeyConfig.from_env())
     try:
         async with asyncio.timeout(_INIT_PING_TIMEOUT_SECONDS):
             _identity = await _probe_identity(client)

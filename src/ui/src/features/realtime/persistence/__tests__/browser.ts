@@ -133,7 +133,7 @@ export function installBrowser(): void {
 const DEVICE_SEED = new Uint8Array(32).fill(7);
 
 /** Writes a row straight into the device database, bypassing local recovery. */
-export async function storeRawRow(key: string[], payload: unknown, version = 3): Promise<void> {
+export async function storeRawRow(key: string[], payload: unknown, version = 4): Promise<void> {
   const db = await openDB("uniffy-realtime-yjs", version, {
     upgrade(database) {
       if (!database.objectStoreNames.contains("updates")) database.createObjectStore("updates");

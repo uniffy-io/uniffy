@@ -2,9 +2,11 @@ export { useDocSession } from "@/features/realtime/hooks/useDocSession";
 export { useMarkdownDocSession } from "@/features/realtime/hooks/useMarkdownDocSession";
 export { useDocAwareness } from "@/features/realtime/hooks/useDocAwareness";
 export {
+  useCheckpointPending,
   useDeviceRecoveryState,
+  useDeviceStorage,
   useDocSaveState,
-  useRealtimeDocState,
+  useSessionReleasable,
   type SaveState,
 } from "@/features/realtime/hooks/useDocSaveState";
 export { usePendingDocSync } from "@/features/realtime/hooks/useRealtimeDrain";

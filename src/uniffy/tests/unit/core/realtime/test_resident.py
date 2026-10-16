@@ -1,3 +1,6 @@
+import random
+import statistics
+import time
 from uuid import UUID
 
 import pycrdt
@@ -13,11 +16,13 @@ from uniffy.core.realtime.markdown import (
 )
 from uniffy.core.realtime.resident import (
     Continuity,
+    accept_update,
     check_update,
     follow,
     follow_record,
     holds_unknown_updates,
     merge_change,
+    release_update,
     session_state_message,
 )
 from uniffy.core.realtime.state import YDocSession
@@ -294,3 +299,64 @@ def test_session_state_waits_for_an_epoch_and_never_reports_watermark_above_head
     assert parse_session_state_message(session_state_message(session) or b"") == SessionState(
         GENERATION, "epoch-1", 4, 4, 7
     )
+
+
+def test_checks_follow_every_resident_change_and_forget_refused_updates() -> None:
+    base = baseline()
+    session = resident(latest(base))
+    near_limit = typed(base, suffix="x" * (MAX_DOCUMENT_BYTES - 10))
+    small = typed(base, suffix=" small")
+    remote = typed(base, small, suffix=" remote")
+
+    assert check_update(session, GENERATION, near_limit) is True
+    release_update(session)
+    # The released update left no trace, so this one is measured against the resident text.
+    assert check_update(session, GENERATION, small) is True
+    # A peer replica's record lands while admission waits for the buffer; both orders converge.
+    assert follow_record(session, GENERATION, "epoch-1", 1, remote) is Continuity.APPLIED
+    accept_update(session, small, 2)
+    later = typed(base, small, remote, suffix=" later")
+    assert check_update(session, GENERATION, later) is True
+    accept_update(session, later, 3)
+    with pytest.raises(DocumentTooLarge):
+        check_update(session, GENERATION, typed(base, small, remote, later, suffix=near_limit.hex()))
+
+    assert text_of(session.ydoc) == "base small remote later"
+    assert session.head_seq == 3
+
+
+def long_lived_note(edits: int) -> pycrdt.Doc:
+    """A note grown by scattered inserts and deletions, whose encoding is far larger than its text."""
+    rng = random.Random(7)
+    doc = pycrdt.Doc()
+    doc.get(DOC_META_FIELD, type=pycrdt.Map)[DOC_GENERATION_KEY] = GENERATION
+    text = markdown_text(doc)
+    text.insert(0, "base")
+    for _ in range(edits):
+        size = len(text)
+        if size > 40 and rng.random() < 0.1:
+            start = rng.randrange(size - 8)
+            del text[start : start + 8]
+        else:
+            text.insert(rng.randrange(size + 1), "typed words ")
+    return doc
+
+
+def test_admission_checks_cost_the_update_not_the_document() -> None:
+    writer = long_lived_note(10_000)
+    session = resident(latest(writer.get_update()))
+    assert len(session.ydoc.get_update()) > 500 * 1024
+
+    timings: list[float] = []
+    for index in range(40):
+        before = writer.get_state()
+        markdown_text(writer).insert(index * 7, "k")
+        update = writer.get_update(before)
+        started = time.perf_counter()
+        assert check_update(session, GENERATION, update) is True
+        accept_update(session, update, index + 1)
+        timings.append(time.perf_counter() - started)
+
+    assert text_of(session.ydoc) == text_of(writer)
+    # A full encode, merge and decode of this document takes tens of milliseconds per update.
+    assert statistics.median(timings) < 0.005

@@ -4,6 +4,7 @@ import asyncio
 import contextlib
 import dataclasses
 import hashlib
+from collections import defaultdict
 from collections.abc import AsyncIterator
 from enum import StrEnum
 from uuid import UUID
@@ -15,6 +16,8 @@ from valkey.exceptions import OutOfMemoryError, ValkeyError
 from uniffy.core.realtime.buffer_keys import (
     BUCKET_COUNT,
     DUE_DELAY_MS,
+    EARLY_PENDING_BYTES,
+    EARLY_PENDING_RECORDS,
     MAX_PENDING_DOCUMENT_BYTES,
     MAX_PENDING_DOCUMENT_RECORDS,
     RECORD_FORMAT,
@@ -23,18 +26,18 @@ from uniffy.core.realtime.buffer_keys import (
     BufferedUpdate,
     BufferHead,
     BufferScope,
-    KeyKind,
+    HeldState,
     LatestState,
+    LatestTail,
     PendingUsage,
     Receipt,
     TrimResult,
     accounting_key,
     buffer_keys,
     due_key,
-    key_pattern,
     parse_member,
     parse_record,
-    scopes_of_keys,
+    scopes_key,
     validate_namespace,
     validate_update,
 )
@@ -56,7 +59,10 @@ from uniffy.core.realtime.latest import (
     read_facts,
 )
 from uniffy.core.realtime.limits import MAX_FRAME_BYTES
-from uniffy.core.realtime.metrics import REALTIME_BUFFER_ADMISSIONS_TOTAL
+from uniffy.core.realtime.metrics import (
+    REALTIME_BUFFER_ADMISSIONS_TOTAL,
+    REALTIME_LATEST_READS_TOTAL,
+)
 from uniffy.core.realtime.preflight import (
     PreflightVerdict,
     ensure_buffer_ready,
@@ -72,9 +78,13 @@ from uniffy.infrastructure.valkey.binary import (
     verify_server_identity,
 )
 
+# Worker context key for the process buffer that job handlers share.
+UPDATE_BUFFER_CTX_KEY = "update_buffer"
 ADMISSION_DEADLINE_SECONDS = 0.15
-# One document may fill a quarter of its bucket at most, so it cannot starve the others.
+# One document may fill a quarter of its bucket and one organization half of it, so neither can
+# starve the others. Several organizations under one person's control can still fill a bucket.
 _DOCUMENT_BUDGET_DIVISOR = 4
+_ORGANIZATION_BUDGET_DIVISOR = 2
 _ATTEMPTS = 3
 _PAGE_RECORDS = 512
 _SCAN_COUNT = 1000
@@ -133,14 +143,15 @@ class UpdateBuffer:
         self._client = client
 
     def bucket_budget(self) -> int:
+        """Bytes one bucket may hold; refuses until the serving instance passed its preflight."""
         result = preflight_result()
-        if result is not None and result.verdict is PreflightVerdict.DISABLED:
+        if result is None:
+            raise BufferUnavailable("Valkey preflight has not run for the serving instance")
+        if result.verdict is PreflightVerdict.DISABLED:
             raise BufferUnavailable("Valkey eviction policy can drop pending edits")
         total = self._pending_budget_bytes
-        if total is None and result is not None:
-            total = result.pending_budget_bytes
         if total is None:
-            raise BufferUnavailable("Valkey preflight has not run")
+            total = result.pending_budget_bytes
         return total // BUCKET_COUNT
 
     async def admit(
@@ -172,6 +183,9 @@ class UpdateBuffer:
             MAX_FRAME_BYTES,
             MAX_WIRE_STRING_BYTES,
             RECORD_FORMAT,
+            budget // _ORGANIZATION_BUDGET_DIVISOR,
+            EARLY_PENDING_BYTES,
+            EARLY_PENDING_RECORDS,
         ]
         connection = self._valkey().client()
         try:
@@ -191,7 +205,15 @@ class UpdateBuffer:
                 reply = await run_script(
                     connection,
                     ADMIT_SCRIPT,
-                    [keys.stream, keys.control, keys.receipts, keys.due, keys.accounting],
+                    [
+                        keys.stream,
+                        keys.control,
+                        keys.receipts,
+                        keys.due,
+                        keys.accounting,
+                        keys.early,
+                        keys.scopes,
+                    ],
                     args,
                 )
         except OutOfMemoryError:
@@ -227,6 +249,35 @@ class UpdateBuffer:
                 if await read_facts(db, key) == facts:
                     raise
         raise failure or BufferUnavailable("realtime checkpoint kept changing during the read")
+
+    async def read_since(self, db: AsyncSession, key: DocKey, held: HeldState) -> LatestTail | None:
+        """The records past what a resident document holds, without reading its checkpoint.
+
+        ``None`` once the row names another generation, epoch, instance, revision or watermark;
+        read :meth:`load_latest` then. Raises :class:`RecoveryRequired` for a hole in the tail.
+        """
+        await ensure_buffer_ready()
+        facts = await read_facts(db, key)
+        identity = server_identity()
+        if (
+            facts is None
+            or identity is None
+            or facts.organization_id is None
+            or facts.generation is None
+            or facts.epoch is None
+            or facts.run_id != identity.run_id
+            or (facts.generation, facts.epoch, facts.revision, facts.checkpoint_seq)
+            != (held.generation, held.epoch, held.checkpoint_revision, held.checkpoint_seq)
+        ):
+            return None
+        scope = BufferScope(facts.organization_id, key[0], key[1], facts.generation, facts.epoch)
+        head_seq = await self.control_head(scope)
+        if head_seq is None or head_seq < max(facts.checkpoint_seq, held.head_seq):
+            return None
+        tail = await self.read_updates(scope, after=held.head_seq, through=head_seq)
+        REALTIME_LATEST_READS_TOTAL.labels(source="resident").inc()
+        head = BufferHead(scope, head_seq, facts.checkpoint_seq, facts.revision, identity.run_id)
+        return LatestTail(head, tail)
 
     async def read_updates(
         self, scope: BufferScope, *, after: int, through: int
@@ -274,12 +325,13 @@ class UpdateBuffer:
 
     async def initialize(self, scope: BufferScope, revision: int) -> None:
         """Create the control record of a fresh epoch; an existing record is left alone."""
+        keys = buffer_keys(scope, self.namespace)
         async with self._valkey_call():
             await run_script(
                 self._valkey(),
                 INITIALIZE_SCRIPT,
-                [buffer_keys(scope, self.namespace).control],
-                [revision],
+                [keys.control, keys.scopes],
+                [revision, scope.member],
             )
 
     async def trim_committed(self, scope: BufferScope, through: int) -> TrimResult:
@@ -305,7 +357,15 @@ class UpdateBuffer:
             reclaimed = await run_script(
                 self._valkey(),
                 RECLAIM_SCRIPT,
-                [keys.stream, keys.control, keys.receipts, keys.due, keys.accounting],
+                [
+                    keys.stream,
+                    keys.control,
+                    keys.receipts,
+                    keys.due,
+                    keys.accounting,
+                    keys.early,
+                    keys.scopes,
+                ],
                 [checkpoint_seq, scope.member, max(idle_before_ms, 0)],
             )
         return bool(reclaimed)
@@ -318,8 +378,8 @@ class UpdateBuffer:
             dropped_bytes, dropped_records = await run_script(
                 self._valkey(),
                 DROP_RETIRED_SCRIPT,
-                [keys.stream, keys.control, keys.accounting],
-                [max(older_than_ms, 0)],
+                [keys.stream, keys.control, keys.accounting, keys.scopes],
+                [max(older_than_ms, 0), scope.member],
             )
         return PendingUsage(dropped_bytes, dropped_records)
 
@@ -353,11 +413,37 @@ class UpdateBuffer:
             )
         return PendingUsage(int(pending_bytes or 0), int(records or 0))
 
+    async def scopes(self, bucket: int) -> list[BufferScope]:
+        """Every scope of one bucket that holds a control record or records."""
+        await ensure_buffer_ready()
+        page: list[BufferScope] = []
+        cursor = 0
+        while True:
+            cursor, members = await self.scope_page(bucket, cursor)
+            page.extend(members)
+            if cursor == 0:
+                return page
+
+    async def scope_page(self, bucket: int, cursor: int) -> tuple[int, list[BufferScope]]:
+        """One SSCAN page of a bucket's scopes and the cursor that continues it, zero at the end."""
+        async with self._valkey_call():
+            cursor, members = await self._valkey().sscan(
+                scopes_key(bucket, self.namespace), cursor, count=_SCAN_COUNT
+            )
+        found: list[BufferScope] = []
+        for member in members:
+            with contextlib.suppress(ValueError):
+                scope = parse_member(member)
+                if scope.bucket == bucket:
+                    found.append(scope)
+        return int(cursor), found
+
     async def repair_accounting(self, bucket: int) -> PendingUsage:
         """Recompute one bucket's counters from its streams.
 
-        Each document is corrected atomically. The bucket total is replaced only when no append
-        or trim ran during the pass; under constant traffic only per-document corrections apply.
+        Each document is corrected atomically. The bucket and organization totals are replaced
+        only when no append or trim ran during the pass; under constant traffic only per-document
+        corrections apply.
         """
         await ensure_buffer_ready()
         client = self._valkey()
@@ -365,27 +451,45 @@ class UpdateBuffer:
         for _ in range(_ATTEMPTS):
             async with self._valkey_call():
                 changes = await client.hget(accounting, "changes") or b"0"
-                streams = [
-                    key
-                    async for key in client.scan_iter(
-                        match=key_pattern(KeyKind.STREAM, self.namespace, bucket),
-                        count=_SCAN_COUNT,
-                    )
-                ]
-                total_bytes = total_records = 0
-                for scope in scopes_of_keys(streams, (KeyKind.STREAM,), self.namespace):
+            scopes = await self.scopes(bucket)
+            total_bytes = total_records = 0
+            organizations: dict[UUID, int] = defaultdict(int)
+            async with self._valkey_call():
+                for scope in sorted(scopes, key=lambda each: each.member):
                     keys = buffer_keys(scope, self.namespace)
                     found_bytes, found_records = await run_script(
-                        client, REPAIR_SCRIPT, [keys.stream, keys.control, keys.accounting], []
+                        client,
+                        REPAIR_SCRIPT,
+                        [keys.stream, keys.control, keys.accounting],
+                        [scope.member],
                     )
                     total_bytes += found_bytes
                     total_records += found_records
+                    if found_bytes:
+                        organizations[scope.organization_id] += found_bytes
+                totals = [
+                    item
+                    for organization, spent in sorted(organizations.items())
+                    for item in (str(organization), spent)
+                ]
                 rebased = await run_script(
-                    client, REBASE_SCRIPT, [accounting], [changes, total_bytes, total_records]
+                    client,
+                    REBASE_SCRIPT,
+                    [accounting],
+                    [changes, total_bytes, total_records, *totals],
                 )
             if rebased:
                 return PendingUsage(total_bytes, total_records)
         return await self.bucket_usage(bucket)
+
+    async def organization_usage(self, bucket: int, organization_id: UUID) -> int:
+        """Stored bytes one organization holds in a bucket."""
+        await ensure_buffer_ready()
+        async with self._valkey_call():
+            spent = await self._valkey().hget(
+                accounting_key(bucket, self.namespace), f"o:{organization_id}"
+            )
+        return int(spent or 0)
 
     async def adopt_identity(self) -> ValkeyIdentity:
         """Record the instance now serving, after a connection reported a different one."""
@@ -437,6 +541,7 @@ class UpdateBuffer:
             and dataclasses.replace(cached.head, head_seq=head_seq) == head
             and cached.head.head_seq <= head_seq
         ):
+            REALTIME_LATEST_READS_TOTAL.labels(source="cache").inc()
             if cached.head.head_seq == head_seq:
                 return cached
             checkpoint = cached.checkpoint
@@ -444,6 +549,7 @@ class UpdateBuffer:
                 scope, after=cached.head.head_seq, through=head_seq
             )
         else:
+            REALTIME_LATEST_READS_TOTAL.labels(source="checkpoint").inc()
             checkpoint = await read_checkpoint(db, key, facts)
             tail = await self.read_updates(scope, after=facts.checkpoint_seq, through=head_seq)
         state = LatestState(head, checkpoint, tail)
@@ -456,7 +562,22 @@ class UpdateBuffer:
             removed_bytes, removed_records, remaining = await run_script(
                 self._valkey(),
                 TRIM_SCRIPT,
-                [keys.stream, keys.control, keys.receipts, keys.due, keys.accounting],
-                [through, scope.member, int(retire)],
+                [
+                    keys.stream,
+                    keys.control,
+                    keys.receipts,
+                    keys.due,
+                    keys.accounting,
+                    keys.early,
+                    keys.scopes,
+                ],
+                [
+                    through,
+                    scope.member,
+                    int(retire),
+                    DUE_DELAY_MS,
+                    EARLY_PENDING_BYTES,
+                    EARLY_PENDING_RECORDS,
+                ],
             )
         return TrimResult(removed_bytes, removed_records, remaining)

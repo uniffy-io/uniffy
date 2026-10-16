@@ -1,15 +1,19 @@
 """Binary Valkey client against the live server: raw bytes and verified instance identity."""
 
+import asyncio
 from time import monotonic
 
 import pytest
 import valkey.asyncio as aioredis
+from prometheus_client import REGISTRY
+from valkey.exceptions import ConnectionError as ValkeyConnectionError
 
 from uniffy.core.realtime import preflight
 from uniffy.core.realtime.buffer import BufferUnavailable, UpdateBuffer
 from uniffy.core.realtime.buffer_keys import PendingUsage
 from uniffy.core.realtime.preflight import READY_RETRY_SECONDS, preflight_result, run_preflight
 from uniffy.infrastructure.valkey.binary import (
+    POOL_WAIT_SECONDS,
     close_binary_client,
     get_binary_client,
     init_binary_client,
@@ -92,3 +96,41 @@ async def test_buffer_calls_bring_the_client_back_after_a_failed_start_at_a_boun
     assert get_binary_client() is not None
     assert server_identity() is not None
     assert preflight_result() is not None
+
+
+def pool_waits(outcome: str) -> float:
+    return (
+        REGISTRY.get_sample_value("uniffy_valkey_binary_pool_waits_total", {"outcome": outcome})
+        or 0.0
+    )
+
+
+async def test_a_call_waits_for_a_busy_pool_and_fails_only_when_nothing_frees_in_time(
+    valkey_namespace: str,
+) -> None:
+    pool = client().connection_pool
+    held = [await pool.get_connection("PING") for _ in range(pool.max_connections)]
+    served, timed_out = pool_waits("served"), pool_waits("timeout")
+
+    async def release_one() -> None:
+        await asyncio.sleep(POOL_WAIT_SECONDS / 2)
+        await pool.release(held.pop())
+
+    try:
+        freed = asyncio.create_task(release_one())
+        waited = await client().ping()
+        await freed
+        # The released connection now serves the waiting call, so every slot is busy again.
+        held.append(await pool.get_connection("PING"))
+        started = monotonic()
+        with pytest.raises(ValkeyConnectionError):
+            await client().ping()
+        gave_up_after = monotonic() - started
+    finally:
+        for connection in held:
+            await pool.release(connection)
+
+    assert waited is True
+    assert pool_waits("served") == served + 1
+    assert pool_waits("timeout") == timed_out + 1
+    assert POOL_WAIT_SECONDS <= gave_up_after < 1.0

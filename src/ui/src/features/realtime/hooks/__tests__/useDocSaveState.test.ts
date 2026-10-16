@@ -5,12 +5,17 @@ import { RealtimeStatusBadge } from "@/features/realtime/components/RealtimeStat
 import {
   SAVE_DELAYED_AFTER_MS,
   SYNCING_SETTLE_MS,
+  checkpointPendingStore,
   createSaveStateStore,
+  releasableStore,
   useDocSaveState,
+  type DocValueStore,
   type SaveState,
 } from "@/features/realtime/hooks/useDocSaveState";
+import { realtimeMultiplexer } from "@/features/realtime/multiplexer";
 import { encodeCommitted } from "@/features/realtime/protocol";
 import {
+  FakeWebSocket,
   attachDoc,
   connect,
   denial,
@@ -164,6 +169,27 @@ describe("save state through the transport", () => {
     chip.unsubscribe();
   });
 
+  it("never reports Saving delayed before the reconnected socket's session state", () => {
+    vi.setSystemTime(10_000);
+    const doc = attachDoc("delayed-reconnect");
+    const chip = watch(doc);
+    const ws = connect(doc);
+    type(doc, "draft");
+    vi.advanceTimersByTime(50);
+    ws.receive(doc.docName, receipt(lastUpdateId(ws, doc), 1));
+    ws.serverClose(1006);
+    vi.advanceTimersByTime(SAVE_DELAYED_AFTER_MS);
+    const reopened = FakeWebSocket.instances.at(-1);
+    expect(reopened).not.toBe(ws);
+    reopened!.readyState = FakeWebSocket.OPEN;
+    reopened!.onopen?.();
+
+    // The checkpoint may have covered the edit while the socket was down; only 13 can say.
+    expect(chip.current()).not.toBe("delayed");
+    expect(chip.seen).not.toContain("delayed");
+    chip.unsubscribe();
+  });
+
   it("reports Saving delayed for an edit the server never accepts", () => {
     const doc = attachDoc("never-accepted");
     const chip = watch(doc);
@@ -196,5 +222,47 @@ describe("useDocSaveState", () => {
 
   it("renders nothing without a document", () => {
     expect(renderToStaticMarkup(createElement(Chip, { docName: null }))).toBe("");
+  });
+});
+
+describe("narrow document values for editor hosts", () => {
+  function heard<T>(store: DocValueStore<T>) {
+    const values: T[] = [store.getSnapshot()];
+    const unsubscribe = store.subscribe(() => values.push(store.getSnapshot()));
+    return { values, unsubscribe };
+  }
+
+  it("hears checkpoint pending flip at the first edit and the checkpoint, not on every batch", () => {
+    const doc = attachDoc("narrow-typing");
+    const ws = connect(doc);
+    let fullStateChanges = 0;
+    const stopFull = realtimeMultiplexer.subscribeDocState(doc.docName, () => fullStateChanges++);
+    const pending = heard(checkpointPendingStore(doc.docName));
+    for (let sequence = 1; sequence <= 5; sequence++) {
+      type(doc, "x");
+      vi.advanceTimersByTime(50);
+      ws.receive(doc.docName, receipt(lastUpdateId(ws, doc), sequence));
+    }
+    ws.receive(doc.docName, progress(5));
+
+    expect(pending.values).toEqual([false, true, false]);
+    // Each batch and receipt changes the full document state.
+    expect(fullStateChanges).toBeGreaterThanOrEqual(10);
+    pending.unsubscribe();
+    stopFull();
+  });
+
+  it("decides the hand-off from the document only while a closing editor asks", () => {
+    const doc = attachDoc("narrow-closing");
+    const ws = connect(doc);
+    type(doc, "x");
+    expect(releasableStore(null, "connected").getSnapshot()).toBe(true);
+    const closing = heard(releasableStore(doc.docName, "connected"));
+    expect(closing.values).toEqual([false]);
+    vi.advanceTimersByTime(50);
+    ws.receive(doc.docName, receipt(lastUpdateId(ws, doc), 1));
+    ws.receive(doc.docName, progress(1));
+    expect(closing.values).toEqual([false, true]);
+    closing.unsubscribe();
   });
 });

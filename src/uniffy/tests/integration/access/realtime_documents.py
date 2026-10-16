@@ -18,7 +18,7 @@ from uniffy.core.models.realtime.yjs_snapshot import RealtimeYjsSnapshot
 from uniffy.core.realtime.adapter import register_realtime_adapter
 from uniffy.core.realtime.buffer import UpdateBuffer
 from uniffy.core.realtime.state import DocKey
-from uniffy.core.realtime.storage import lock_document, stage_seed
+from uniffy.core.realtime.storage import load_snapshot, lock_document, stage_seed
 from uniffy.core.types import AccessMode, ContentRole, ContentType, SubjectType, generate_id
 from uniffy.domains.calls.channels import CallsLifecycle
 from uniffy.domains.notes.adapter import NoteRealtimeAdapter
@@ -106,7 +106,9 @@ async def create_document(
         await db.commit()
         key = (content_type, row.id)
         await lock_document(db, key, org)
-        seeded = await stage_seed(db, key, org)
+        await stage_seed(db, key, org)
+        seeded = await load_snapshot(db, key)
+        assert seeded is not None
         await db.commit()
         base, generation = seeded.updates, seeded.generation
     assert generation is not None

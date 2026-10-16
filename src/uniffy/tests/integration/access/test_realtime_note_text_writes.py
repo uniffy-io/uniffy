@@ -47,8 +47,7 @@ async def update_note(
     note: BufferedDocument, buffer: UpdateBuffer, **fields: Any
 ) -> UpdateNoteResponse:
     """Call the UpdateNote RPC as the note's owner, against ``buffer``."""
-    service = NotesServiceImpl(MagicMock(spec=ObjectStorage), AsyncMock(spec=SearchIndexer))
-    service.buffer = buffer
+    service = NotesServiceImpl(MagicMock(spec=ObjectStorage), AsyncMock(spec=SearchIndexer), buffer)
     request = UpdateNoteRequest(note_id=str(note.key[1]), organization_id=str(note.org), **fields)
     return await call_rpc(service.update_note, request, user_id=note.owner, organization_id=note.org)
 

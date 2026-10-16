@@ -46,6 +46,7 @@ def _stub_session() -> MagicMock:
     session.add = MagicMock()
     session.execute = AsyncMock(return_value=MagicMock(scalar_one_or_none=lambda: None))
     session.commit = AsyncMock()
+    session.rollback = AsyncMock()
     return session
 
 

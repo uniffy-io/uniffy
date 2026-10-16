@@ -209,6 +209,25 @@ async def test_awareness_query_reaches_peers_but_not_its_sender(
         assert MESSAGE_QUERY_AWARENESS not in kinds(await asker.drain())
 
 
+async def test_awareness_query_relays_only_the_canonical_byte_once_per_handle(
+    live_note: BufferedDocument, manager: YDocManager
+) -> None:
+    query = bytes([MESSAGE_QUERY_AWARENESS])
+    async with (
+        attached(manager, live_note) as (viewer, _),
+        attached(manager, live_note) as (padded, _),
+        attached(manager, live_note) as (peer, _),
+    ):
+        padded.send(query + b"x" * 60_000)
+        viewer.send(query)
+        for _ in range(20):
+            viewer.send(query)
+
+        relayed = [frame for frame in await peer.drain() if frame[0] == MESSAGE_QUERY_AWARENESS]
+        assert relayed == [query]
+        assert viewer.socket.closes == padded.socket.closes == peer.socket.closes == []
+
+
 async def test_slow_reader_drops_frames_past_its_outbound_budget_without_holding_up_peers(
     live_note: BufferedDocument, manager: YDocManager
 ) -> None:

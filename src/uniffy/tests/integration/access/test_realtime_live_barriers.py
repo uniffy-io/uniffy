@@ -19,7 +19,7 @@ from uniffy.core.realtime.checkpoint import (
     stage_recovered,
 )
 from uniffy.core.realtime.epoch import ensure_epoch
-from uniffy.core.realtime.job_contracts import SAVE_REALTIME_SNAPSHOT
+from uniffy.core.realtime.job_contracts import PROJECT_REALTIME_DOCUMENT
 from uniffy.core.realtime.lifecycle import (
     stage_hard_delete,
     stage_replacement,
@@ -63,7 +63,7 @@ pytestmark = pytest.mark.asyncio(loop_scope="session")
 
 def projection_job(note: BufferedDocument, revision: int) -> tuple[str, str, tuple[str, ...]]:
     return (
-        SAVE_REALTIME_SNAPSHOT.name,
+        PROJECT_REALTIME_DOCUMENT.name,
         f"{note.namespace}projection:{ContentType.NOTE.value}:{note.key[1]}:{revision}",
         (ContentType.NOTE.value, str(note.key[1]), str(note.org)),
     )

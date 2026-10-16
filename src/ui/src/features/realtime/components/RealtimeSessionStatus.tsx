@@ -14,6 +14,8 @@ interface RealtimeSessionStatusProps {
   /** Viewers have no edits to save, so only connection and access problems show. */
   readOnly?: boolean;
   whenSynced?: Promise<void>;
+  /** Shows only the chip's dot on phone widths, for toolbars that must stay on one row. */
+  compact?: boolean;
   className?: string;
 }
 
@@ -24,6 +26,7 @@ export function RealtimeSessionStatus({
   docName,
   readOnly = false,
   whenSynced,
+  compact = false,
   className,
 }: RealtimeSessionStatusProps) {
   const user = useAppSelector((state) => state.auth.user);
@@ -38,7 +41,7 @@ export function RealtimeSessionStatus({
         localUserName={user?.fullName || user?.username || null}
         localHasAvatar={Boolean(user?.hasAvatar)}
       />
-      <RealtimeStatusBadge status={status} save={save} storage={device.storage} />
+      <RealtimeStatusBadge status={status} save={save} storage={device.storage} compact={compact} />
       <RecoveredDrafts ydoc={awareness.doc} whenSynced={whenSynced} />
     </div>
   );

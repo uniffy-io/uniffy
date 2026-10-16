@@ -23,9 +23,8 @@ from uniffy.core.realtime.multiplex import (
     write_var_uint,
 )
 from uniffy.core.realtime.publisher import publish_checkpoint_progress
-from uniffy.core.realtime.router import RealtimeRouter
 from uniffy.core.realtime.session import run_multiplexed_session
-from uniffy.core.realtime.state import DocKey, WSSession, doc_name_for
+from uniffy.core.realtime.state import DocKey, TokenBucket, WSSession, doc_name_for
 from uniffy.core.realtime.wire import (
     MESSAGE_ACCEPTED_RECEIPT,
     MESSAGE_CHECKPOINT_PROGRESS,
@@ -237,6 +236,7 @@ def connect(
     *,
     token_version: int | None = 1,
     socket: Socket | None = None,
+    resyncs: TokenBucket | None = None,
 ) -> Client:
     """A socket that has not attached ``key`` yet; its first frame for it attaches."""
     socket = socket or Socket()
@@ -247,6 +247,8 @@ def connect(
         conn_id=id(socket),
         ws=socket,
     )
+    if resyncs is not None:
+        session.resyncs = resyncs
     task = asyncio.create_task(run_multiplexed_session(socket, session, manager))
     return Client(socket, task, key)
 
@@ -280,12 +282,8 @@ async def evicted(manager: YDocManager, key: DocKey) -> None:
 
 
 def replica(buffer: UpdateBuffer) -> YDocManager:
-    name = f"replica-{generate_id().hex}"
     return YDocManager(
-        buffer=buffer,
-        realtime_router=RealtimeRouter(name),
-        replica=name,
-        idle_eviction_seconds=0.05,
+        buffer=buffer, replica=f"replica-{generate_id().hex}", idle_eviction_seconds=0.05
     )
 
 
@@ -300,7 +298,7 @@ async def routed(document: BufferedDocument, count: int) -> AsyncIterator[list[Y
     try:
         for _ in range(count):
             replicas.append(replica(document.buffer))
-            replicas[-1].realtime_router.register_callbacks(replicas[-1].router_callbacks())
+            replicas[-1].install()
             await replicas[-1].realtime_router.start()
         yield replicas
         for each in replicas:

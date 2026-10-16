@@ -209,6 +209,9 @@ class CompletionToolLoop:
                 turn_traces[call_id]["success"] = tool_result.success
             for tool_call in write_calls:
                 tool_results[tool_call.id] = await executor.execute(tool_call)
+                # A later write that fails rolls the shared session back, so this one's rows
+                # and audit fact commit first, as the streaming loop's writer does.
+                await executor.context.session.commit()
                 turn_traces[tool_call.id]["success"] = tool_results[tool_call.id].success
 
             tool_result_blocks: list[dict] = []

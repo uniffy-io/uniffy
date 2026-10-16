@@ -1,5 +1,4 @@
 from collections.abc import Awaitable, Callable, Collection
-from datetime import datetime
 from uuid import UUID
 
 import pycrdt
@@ -10,7 +9,7 @@ from uniffy.core.auth.permissions.checker import PermissionChecker
 from uniffy.core.models.projects.project import Project
 from uniffy.core.models.projects.task import Task
 from uniffy.core.realtime.adapter import register_realtime_adapter
-from uniffy.core.realtime.markdown import markdown_text, replace_external_markdown, seed_markdown
+from uniffy.core.realtime.markdown import markdown_text, seed_markdown
 from uniffy.core.realtime.state import DocKey
 from uniffy.core.search import SearchIndexer
 from uniffy.core.types import ContentRole, ContentType
@@ -105,25 +104,6 @@ class TaskRealtimeAdapter:
         if task is not None:
             seed_markdown(ydoc, task.description or "")
 
-    async def render_and_persist(
-        self,
-        session: AsyncSession,
-        ydoc: pycrdt.Doc,
-        content_id: UUID,
-        organization_id: UUID,
-        *,
-        actor_id: UUID | None = None,
-        supersede_after: datetime | None = None,
-    ) -> bool:
-        saved = await TaskRealtimePersistence(session, self.search_indexer).save(
-            organization_id,
-            content_id,
-            str(markdown_text(ydoc)),
-            actor_id=actor_id,
-            supersede_after=supersede_after,
-        )
-        return saved is not None
-
     async def stage_render(
         self,
         session: AsyncSession,
@@ -147,9 +127,6 @@ class TaskRealtimeAdapter:
         await TaskRealtimePersistence(session, self.search_indexer).after_projection(
             organization_id, content_id
         )
-
-    def apply_external_content(self, ydoc: pycrdt.Doc, content: str) -> bool:
-        return replace_external_markdown(ydoc, content)
 
 
 def register_task_realtime_adapter(search_indexer: SearchIndexer) -> None:

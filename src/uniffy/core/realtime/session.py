@@ -14,6 +14,7 @@ from uniffy.core.realtime.auth import WS_CLOSE_UNSUPPORTED_TYPE
 from uniffy.core.realtime.awareness import authenticated_awareness
 from uniffy.core.realtime.fanout import broadcast_awareness
 from uniffy.core.realtime.limits import (
+    AWARENESS_QUERY_INTERVAL_SECONDS,
     MAX_AWARENESS_BYTES,
     MAX_DOCS_PER_SOCKET,
     MAX_FRAME_BYTES,
@@ -41,6 +42,7 @@ from uniffy.core.realtime.reauth import (
 from uniffy.core.realtime.resident import handshake_messages, holds_unknown_updates
 from uniffy.core.realtime.state import (
     ClientHandle,
+    TokenBucket,
     WSSession,
     YDocSession,
     parse_doc_name,
@@ -72,7 +74,7 @@ from uniffy.core.realtime.wire import (
     peek_sync_sub_type,
     sync_step1_state_vector,
 )
-from uniffy.core.realtime.ydoc_manager import YDocManager, ydoc_manager
+from uniffy.core.realtime.ydoc_manager import YDocManager
 from uniffy.infrastructure.database.session import open_session
 
 logger = logger.bind(component="core.realtime.session")
@@ -83,10 +85,12 @@ WS_CLOSE_MESSAGE_TOO_BIG = 1009
 UNAVAILABLE_REASON = "unavailable"
 # The id already names other bytes; the client drops that id as rejected.
 UPDATE_CONFLICT_REASON = "update conflict"
+# Clients send the awareness query as this one byte; peers answer it, so nothing else is relayed.
+AWARENESS_QUERY = bytes([MESSAGE_QUERY_AWARENESS])
 
 
 async def run_multiplexed_session(
-    ws: WebSocket, ws_session: WSSession, manager: YDocManager = ydoc_manager
+    ws: WebSocket, ws_session: WSSession, manager: YDocManager
 ) -> None:
     """Drive one multiplexed WebSocket; releases every attached doc on exit."""
     out_task = asyncio.create_task(_pump_outbound(ws, ws_session, manager))
@@ -162,20 +166,13 @@ async def _close_denied(ws: WebSocket, ws_session: WSSession, denial: Denial) ->
 
 
 async def _drive_inbound(ws: WebSocket, ws_session: WSSession, manager: YDocManager) -> None:
-    tokens = float(MAX_MESSAGES_PER_SECOND * 2)
-    checked_at = time.monotonic()
+    frames = TokenBucket(capacity=MAX_MESSAGES_PER_SECOND * 2, per_second=MAX_MESSAGES_PER_SECOND)
     while True:
         frame = await ws.receive_bytes()
-        now = time.monotonic()
-        tokens = min(
-            MAX_MESSAGES_PER_SECOND * 2, tokens + (now - checked_at) * MAX_MESSAGES_PER_SECOND
-        )
-        checked_at = now
-        if tokens < 1:
+        if not frames.take():
             REALTIME_FRAMES_DROPPED_TOTAL.labels(kind="rate_limit").inc()
             await ws.close(code=1013, reason="rate limit")
             return
-        tokens -= 1
         if len(frame) > MAX_FRAME_BYTES:
             REALTIME_FRAMES_DROPPED_TOTAL.labels(kind="oversized").inc()
             try:
@@ -311,7 +308,16 @@ async def _dispatch_doc_frame(
     session = manager.resident(handle.doc_key)
     if session is None:
         return
-    await manager.access.recheck([session.key], handle.user_id)
+    if (
+        kind == YMessageType.SYNC
+        and not attached
+        and peek_sync_sub_type(payload) == YSyncMessageType.SYNC_STEP1
+    ):
+        # The attaching SyncStep1 creates the handle and stays unthrottled.
+        await handle.ws_session.resyncs.wait()
+    if kind != MESSAGE_UPDATE:
+        # Admission reads the writer's role under the document lock and applies it to the handle.
+        await manager.access.recheck([session.key], handle.user_id)
     if handle.closed:
         return
 
@@ -336,8 +342,17 @@ async def _dispatch_doc_frame(
         REALTIME_AWARENESS_MESSAGES_TOTAL.labels(content_type=handle.doc_key[0].value).inc()
         broadcast_awareness(session, payload, source_conn_id=handle.conn_id)
     elif kind == MESSAGE_QUERY_AWARENESS:
-        # Relay to peers so each re-announces its awareness to the asker.
-        broadcast_awareness(session, payload, source_conn_id=handle.conn_id)
+        # Every peer answers a query with its own awareness, so relay only the canonical byte and
+        # only once per handle and interval; clients ask once when they attach.
+        now = time.monotonic()
+        if payload != AWARENESS_QUERY or (
+            handle.awareness_queried_at is not None
+            and now - handle.awareness_queried_at < AWARENESS_QUERY_INTERVAL_SECONDS
+        ):
+            REALTIME_FRAMES_DROPPED_TOTAL.labels(kind="awareness_query").inc()
+            return
+        handle.awareness_queried_at = now
+        broadcast_awareness(session, AWARENESS_QUERY, source_conn_id=handle.conn_id)
     else:
         logger.debug(f"unknown message type {kind} on {doc_name}, dropping")
 
@@ -419,6 +434,9 @@ async def _handle_write(
         )
     except EditDenied:
         REALTIME_WRITE_REJECTIONS.labels(reason="edit_denied").inc()
+        if handle.closed:
+            # The writer lost view access and its handle already received the document denial.
+            return
         reply = create_auth_denied_message("edit denied")
     except UpdateConflict:
         REALTIME_WRITE_REJECTIONS.labels(reason="update_conflict").inc()

@@ -17,11 +17,8 @@ from uniffy.core.realtime.buffer_keys import (
     LAYOUT_VERSION,
     BufferedUpdate,
     BufferScope,
-    KeyKind,
     buffer_keys,
-    key_pattern,
     parse_record,
-    scopes_of_keys,
 )
 from uniffy.core.realtime.checkpoint import (
     CheckpointStatus,
@@ -45,6 +42,7 @@ from uniffy.infrastructure.valkey.binary import server_identity
 
 logger = logger.bind(component="core.realtime.maintenance")
 
+# A walk reads the per-bucket scope sets, so its length follows buffered documents, not keys.
 MAINTENANCE_SCAN_CALLS = 20
 MAINTENANCE_DOCUMENTS = 1000
 # Each pass recounts one bucket's pending totals; the bucket advances once per period.
@@ -54,8 +52,6 @@ REPAIR_ROTATION_MS = 60_000
 IDLE_RECLAIM_MS = 60 * 60 * 1000
 # Records a retired epoch kept past a gap stay this long for investigation, then go and are counted.
 RETIRED_RETENTION_MS = 7 * 24 * 60 * 60 * 1000
-_SCAN_COUNT = 1000
-_DOCUMENT_KEYS = (KeyKind.STREAM, KeyKind.CONTROL)
 _RETIRED_STATUSES = (CheckpointStatus.STALE, CheckpointStatus.OBSOLETE)
 
 
@@ -276,23 +272,31 @@ async def maintain_buffer(
     found: set[BufferScope] = set()
     async with buffer_errors():
         now = now_ms if now_ms is not None else await valkey_now(client)
-        cursor_raw, started_raw = await client.hmget(state_key, ["cursor", "started_ms"])
-        cursor, started = int(cursor_raw or 0), int(started_raw or now)
-        for _ in range(scan_calls):
-            cursor, page = await client.scan(
-                cursor, match=key_pattern(None, buffer.namespace), count=_SCAN_COUNT
-            )
-            found.update(scopes_of_keys(page, _DOCUMENT_KEYS, buffer.namespace))
-            if cursor == 0 or len(found) >= MAINTENANCE_DOCUMENTS:
-                break
+        bucket_raw, cursor_raw, started_raw = await client.hmget(
+            state_key, ["bucket", "cursor", "started_ms"]
+        )
+    bucket, cursor = int(bucket_raw or 0) % BUCKET_COUNT, int(cursor_raw or 0)
+    started = int(started_raw or now)
+    complete = False
+    for _ in range(scan_calls):
+        cursor, page = await buffer.scope_page(bucket, cursor)
+        found.update(page)
         if cursor == 0:
+            bucket += 1
+            complete = bucket == BUCKET_COUNT
+        if complete or len(found) >= MAINTENANCE_DOCUMENTS:
+            break
+    async with buffer_errors():
+        if complete:
             await client.delete(state_key)
             REALTIME_BUFFER_MAINTENANCE_CYCLE_SECONDS.set((now - started) / 1000)
         else:
-            await client.hset(state_key, mapping={"cursor": cursor, "started_ms": started})
+            await client.hset(
+                state_key, mapping={"bucket": bucket, "cursor": cursor, "started_ms": started}
+            )
     scopes = sorted(found, key=lambda scope: scope.member)
     actions = await _maintain(buffer, scopes, now) if scopes else {}
     # Counters drift when a stream disappears outside a trim; no other path recounts them.
     with contextlib.suppress(BufferUnavailable, RecoveryRequired):
         await buffer.repair_accounting(now // REPAIR_ROTATION_MS % BUCKET_COUNT)
-    return MaintenanceReport(len(scopes), cursor == 0, actions)
+    return MaintenanceReport(len(scopes), complete, actions)

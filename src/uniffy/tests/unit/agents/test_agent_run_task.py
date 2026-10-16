@@ -13,6 +13,7 @@ import pytest
 
 from uniffy.core.database import SESSION_FACTORY_CTX_KEY
 from uniffy.core.models.agents.message import AgentMessage
+from uniffy.core.realtime.buffer import UPDATE_BUFFER_CTX_KEY
 from uniffy.core.search import SEARCH_INDEXER_CTX_KEY
 from uniffy.core.storage import OBJECT_STORAGE_CTX_KEY
 from uniffy.core.types import generate_id
@@ -202,6 +203,7 @@ def _worker_ctx(valkey: _FakeValkey | None = None) -> dict[str, Any]:
         OBJECT_STORAGE_CTX_KEY: object(),
         SEARCH_INDEXER_CTX_KEY: object(),
         CALL_LIFECYCLE_CTX_KEY: object(),
+        UPDATE_BUFFER_CTX_KEY: object(),
     }
 
 

@@ -86,9 +86,10 @@ from uniffy.core.crypto import (
     subscribe_deployment_dek_invalidations,
 )
 from uniffy.core.jobs import QueueName
-from uniffy.core.realtime import realtime_router
+from uniffy.core.realtime import create_realtime_router
+from uniffy.core.realtime.buffer import UpdateBuffer
 from uniffy.core.realtime.preflight import ensure_buffer_ready, preflight_result
-from uniffy.core.realtime.router import router as realtime_pubsub_router
+from uniffy.core.realtime.ydoc_manager import YDocManager
 from uniffy.core.search import SearchIndexer, WorkspaceSearch
 from uniffy.core.search.engine import SearchEngine
 from uniffy.core.storage import ObjectStorage
@@ -338,6 +339,7 @@ async def lifespan(app: FastAPI):
     storage: ObjectStorage = app.state.object_storage
     search: WorkspaceSearch = app.state.workspace_search
     search_indexer: SearchIndexer = app.state.search_indexer
+    realtime: YDocManager = app.state.realtime
     logger.info("Starting UNIFFY application...")
 
     try:
@@ -422,9 +424,7 @@ async def lifespan(app: FastAPI):
         logger.warning(f"Deployment DEK invalidation subscriber not available: {e}")
 
     try:
-        from uniffy.core.realtime import ydoc_manager as _rt_manager  # noqa: F401
-
-        await realtime_pubsub_router.start()
+        await realtime.realtime_router.start()
         logger.info("Realtime router started successfully")
     except Exception as e:
         logger.warning(f"Realtime router not available: {e}")
@@ -470,13 +470,11 @@ async def lifespan(app: FastAPI):
 
     logger.info("Shutting down UNIFFY application...")
     try:
-        from uniffy.core.realtime.ydoc_manager import ydoc_manager
-
-        await ydoc_manager.drain_for_shutdown()
+        await realtime.drain_for_shutdown()
     except Exception as e:
         logger.warning(f"Realtime shutdown drain failed: {e}")
     await stream_revoke_coordinator.stop()
-    await realtime_pubsub_router.stop()
+    await realtime.realtime_router.stop()
     signal_pubsub_shutdown()
     await close_provider_invalidation_subscriber()
     await close_integration_invalidation_subscriber()
@@ -501,6 +499,9 @@ def create_app(
     storage = storage or S3Storage()
     search = WorkspaceSearch(search_engine or MeiliSearchEngine())
     search_indexer = SearchIndexer(search)
+    buffer = UpdateBuffer()
+    realtime = YDocManager(buffer=buffer)
+    realtime.install()
     register_note_realtime_adapter(search_indexer)
     register_task_realtime_adapter(search_indexer)
     register_event_realtime_adapter(search_indexer)
@@ -520,6 +521,7 @@ def create_app(
     app.state.object_storage = storage
     app.state.workspace_search = search
     app.state.search_indexer = search_indexer
+    app.state.realtime = realtime
 
     cors_origins = _get_cors_origins()
     app.add_middleware(
@@ -534,7 +536,7 @@ def create_app(
     app.add_middleware(SecurityHeadersMiddleware)
     app.add_middleware(AuditRequestContextMiddleware)
 
-    api_dispatcher = _create_api_dispatcher(storage, search, search_indexer)
+    api_dispatcher = _create_api_dispatcher(storage, search, search_indexer, buffer, realtime)
     app.mount("/api", api_dispatcher)
 
     # Signature-verified inbound webhooks; reached directly on the internal
@@ -569,6 +571,8 @@ def _create_api_dispatcher(
     storage: ObjectStorage,
     search: WorkspaceSearch,
     search_indexer: SearchIndexer,
+    buffer: UpdateBuffer,
+    realtime: YDocManager,
 ) -> ConnectRPCDispatcher:
     logging_interceptor = LoggingInterceptor()
     authentication_interceptor = AuthenticationInterceptor()
@@ -626,7 +630,7 @@ def _create_api_dispatcher(
     add_rpc(
         "/notes.v1.NotesService",
         NotesServiceASGIApplication,
-        NotesServiceImpl(storage, search_indexer),
+        NotesServiceImpl(storage, search_indexer, buffer),
     )
     add_rpc("/search.v1.SearchService", SearchServiceASGIApplication, SearchServiceImpl(search))
     add_rpc("/settings.v1.SettingsService", SettingsServiceASGIApplication, SettingsHandlers())
@@ -676,13 +680,13 @@ def _create_api_dispatcher(
     add_rpc(
         "/cal.v1.CalendarService",
         CalendarServiceASGIApplication,
-        CalendarServiceImpl(search_indexer, call_lifecycle),
+        CalendarServiceImpl(search_indexer, call_lifecycle, buffer),
         read_max_bytes=CALENDAR_RPC_READ_MAX_BYTES,
     )
     add_rpc(
         "/files.v1.FilesService",
         FilesServiceASGIApplication,
-        FilesServiceImpl(storage, search_indexer),
+        FilesServiceImpl(storage, search_indexer, buffer),
         read_max_bytes=FILES_RPC_READ_MAX_BYTES,
     )
     add_rpc("/audit.v1.AuditService", AuditServiceASGIApplication, AuditServiceImpl())
@@ -741,7 +745,7 @@ def _create_api_dispatcher(
     add_rpc(
         "/projects.v1.ProjectsService",
         ProjectsServiceASGIApplication,
-        ProjectsServiceImpl(storage, search_indexer),
+        ProjectsServiceImpl(storage, search_indexer, buffer),
     )
     add_rpc("/rooms.v1.RoomsService", RoomsServiceASGIApplication, RoomsServiceImpl(search_indexer))
     add_rpc("/calls.v1.CallService", CallServiceASGIApplication, CallHandlers())
@@ -784,7 +788,7 @@ def _create_api_dispatcher(
     add_streaming_rpc(
         "/agents.v1.RuntimeService",
         RuntimeServiceASGIApplication,
-        RuntimeServiceImpl(storage, search_indexer),
+        RuntimeServiceImpl(storage, search_indexer, buffer),
     )
     add_rpc(
         "/agents.v1.RuntimeSettingsService",
@@ -795,7 +799,7 @@ def _create_api_dispatcher(
     http_app = FastAPI()
     setup_request_logging(http_app)
     thumbnails_router, files_router, media_router = create_file_routers(storage)
-    calendar_router = create_calendar_router(search_indexer)
+    calendar_router = create_calendar_router(search_indexer, buffer)
     avatars_router = create_avatars_router(storage)
     agent_avatars_router = create_agent_avatars_router(storage)
     http_app.include_router(thumbnails_router)
@@ -804,7 +808,7 @@ def _create_api_dispatcher(
     http_app.include_router(calendar_router)
     http_app.include_router(avatars_router)
     http_app.include_router(agent_avatars_router)
-    http_app.include_router(realtime_router)
+    http_app.include_router(create_realtime_router(realtime))
     dispatcher.add_service("/thumbnails", http_app)
     dispatcher.add_service("/files", http_app)
     dispatcher.add_service("/media", http_app)

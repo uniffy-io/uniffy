@@ -13,6 +13,7 @@ import {
   readStoredDrafts,
   restoreDraft,
   saveDraft,
+  saveDraftNow,
   type MobileRecoveredDraft,
 } from "@shared/realtime/draftStorage";
 import {
@@ -54,7 +55,7 @@ export interface OpenDocSessionOptions {
   contentId: string;
   organizationId: string;
   userId: string;
-  /** Suppresses every SYNC write frame; VIEWER roles get 4403-closed otherwise. */
+  /** Suppresses every write frame, which the server refuses from a viewer anyway. */
   readOnly?: boolean;
   onGenerationMismatch?: () => void;
 }
@@ -73,7 +74,7 @@ export interface DocSessionHandle {
 }
 
 // Uniqueness per mount is all an origin tag needs; Hermes lacks crypto.randomUUID.
-function newSessionId(): string {
+function createSessionId(): string {
   return `rt-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
@@ -84,7 +85,7 @@ export function openDocSession(options: OpenDocSessionOptions): DocSessionHandle
   abortMobileDrain(docName);
   const ydoc = new Y.Doc();
   const awareness = new Awareness(ydoc);
-  const sessionId = newSessionId();
+  const sessionId = createSessionId();
   const storageKey = `realtime.${userId}.${organizationId}.${contentType}.${contentId}`;
   const listeners = new Set<() => void>();
   let snapshot = DETACHED_SESSION_SNAPSHOT;
@@ -280,7 +281,7 @@ export function openDocSession(options: OpenDocSessionOptions): DocSessionHandle
       closing = clean
         ? discardGeneration(storageKey, generation).catch(console.warn)
         : dirty
-          ? saveDraft(storageKey, ydoc).catch(() => {})
+          ? saveDraftNow(storageKey, ydoc).catch(() => {})
           : Promise.resolve();
       if (wakeTimer !== null) clearTimeout(wakeTimer);
       ydoc.off("update", persist);

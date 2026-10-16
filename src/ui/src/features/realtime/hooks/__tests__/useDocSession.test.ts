@@ -108,9 +108,7 @@ describe("resolveCloseDisposal", () => {
     expect(resolveCloseDisposal({ ...clean, transportStatus: "token_revoked" }).discard).toBe(
       false,
     );
-    expect(resolveCloseDisposal({ ...clean, transportStatus: "permission_lost" }).discard).toBe(
-      false,
-    );
+    expect(resolveCloseDisposal({ ...clean, transportStatus: "access_lost" }).discard).toBe(false);
     expect(resolveCloseDisposal({ ...clean, transportStatus: "disconnected" }).discard).toBe(false);
   });
 

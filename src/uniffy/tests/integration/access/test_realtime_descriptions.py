@@ -9,7 +9,6 @@ from typing import Any
 from unittest.mock import MagicMock, patch
 from uuid import UUID
 
-import pycrdt
 import pytest
 import pytest_asyncio
 import valkey.asyncio as aioredis
@@ -31,7 +30,6 @@ from uniffy.core.models.projects.task import Task
 from uniffy.core.models.realtime.yjs_snapshot import RealtimeYjsSnapshot
 from uniffy.core.realtime.adapter import (
     RealtimeRenderConflict,
-    RealtimeRenderSuperseded,
     register_realtime_adapter,
 )
 from uniffy.core.realtime.buffer import UpdateBuffer
@@ -272,9 +270,10 @@ async def test_task_render_contends_with_metadata_write(
         persistence = TaskRealtimePersistence(session, recording_indexer())
         if races == 3:
             with pytest.raises(RealtimeRenderConflict):
-                await persistence.save(access.org_id, task.id, "Merged description")
+                await persistence.stage_save(access.org_id, task.id, "Merged description")
         else:
-            await persistence.save(access.org_id, task.id, "Merged description")
+            await persistence.stage_save(access.org_id, task.id, "Merged description")
+            await session.commit()
     stored = (
         await original_execute(
             select(Task).where(Task.id == task.id).execution_options(populate_existing=True)
@@ -319,10 +318,10 @@ async def test_event_render_preserves_metadata_and_only_notifies_new_mentions(
     assert event.description == description
     assert len(event.outgoing_references) == 3
     assert (event.title, event.start_time, event.end_time, event.ical_sequence) == initial
-    assert await persistence.save(generate_id(), event.id, "Wrong tenant") is None
+    assert await persistence.stage_save(generate_id(), event.id, "Wrong tenant") is None
     event.is_deleted = True
     await session.commit()
-    assert await persistence.save(access.org_id, event.id, "Deleted") is None
+    assert await persistence.stage_save(access.org_id, event.id, "Deleted") is None
 
 
 @pytest.mark.parametrize("visibility", [EventVisibility.PRIVATE, EventVisibility.STANDARD])
@@ -398,42 +397,6 @@ async def test_render_attributes_a_new_mention_to_its_editor_or_the_owner(
     assert described == content
     author = access.peer_id if editor_known else access.member_id
     assert mentions == [(author, [access.admin_id])]
-
-
-@pytest.mark.parametrize("content_type", [ContentType.TASK, ContentType.CALENDAR_EVENT])
-async def test_render_equal_to_a_later_plain_write_still_lands(
-    session: AsyncSession, access: SimpleNamespace, content_type: ContentType
-) -> None:
-    row, persistence = await _rendered(session, access, content_type)
-    written, text = row.updated_at, row.description
-
-    saved = await persistence.save(
-        access.org_id, row.id, text, supersede_after=written - timedelta(seconds=5)
-    )
-
-    assert saved is not None
-    assert saved.description == text
-
-
-async def test_task_adapter_render_keeps_a_plain_write_newer_than_its_floor(
-    session: AsyncSession, access: SimpleNamespace
-) -> None:
-    task = await _task(session, access)
-    task_id, written = task.id, task.updated_at
-    doc = pycrdt.Doc()
-    doc["markdown"] = pycrdt.Text("Stale live text")
-    adapter = TaskRealtimeAdapter(recording_indexer())
-
-    with pytest.raises(RealtimeRenderSuperseded):
-        await adapter.render_and_persist(
-            session, doc, task_id, access.org_id, supersede_after=written - timedelta(seconds=5)
-        )
-    await session.rollback()
-
-    async with open_session() as reader:
-        stored = await reader.get(Task, task_id)
-    assert stored is not None
-    assert stored.description == "Initial"
 
 
 async def _occurrence(
@@ -528,7 +491,9 @@ async def test_occurrence_access_resolves_on_its_row_under_the_master_privacy_fl
 async def _seeded(session: AsyncSession, key, organization_id) -> SimpleNamespace:
     """Seed the shared document; return scalars, since the row object itself is what mutates."""
     await lock_document(session, key)
-    seed = await stage_seed(session, key, organization_id)
+    await stage_seed(session, key, organization_id)
+    seed = await load_snapshot(session, key)
+    assert seed is not None
     await session.commit()
     return SimpleNamespace(generation=seed.generation, revision=seed.revision)
 

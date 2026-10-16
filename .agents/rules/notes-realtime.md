@@ -39,7 +39,10 @@ rendered revision, last actor, fragment seed lease, `buffer_epoch`, `valkey_run_
 `checkpoint_seq`. The Valkey update buffer holds the edits accepted since that checkpoint. Live
 state is the checkpoint plus the verified contiguous buffered tail. A replica's resident Y.Doc and
 the per-process latest-state cache (`latest.py`, 64 MiB) are caches of live state, valid only for
-the same generation, epoch, Valkey instance and checkpoint revision.
+the same generation, epoch, Valkey instance and checkpoint revision. Admission reads only the
+records past the resident head while the row still names the checkpoint the resident document
+follows (`UpdateBuffer.read_since`); the cache serves other readers.
+`uniffy_realtime_latest_reads_total{source}` counts resident, cache and checkpoint reads.
 
 Losing Valkey data can lose accepted edits that no checkpoint holds yet. That tradeoff is accepted.
 It never permits silent deletion in normal operation, a save indicator that claims more than the
@@ -91,7 +94,7 @@ ids, generations, epochs and seed tokens hold at most 128 UTF-8 bytes and intege
 | 0 | both | y-protocols sync. A client SyncStep1 asks for state and is answered with SyncStep2 after the handshake frames. Server SyncUpdate frames carry accepted updates and realignments. The server sends SyncStep1 to an editor whose attaching state vector holds structs the resident document lacks, and to every client after an epoch reset. |
 | 1 | both | Awareness update, capped at 64 KiB. |
 | 2 | server | Document denial: scope 0 refuses writes, scope 1 means no view access, followed by a reason. |
-| 3 | both | Awareness query. The server relays it and live peers re-announce. |
+| 3 | both | Awareness query, exactly one byte. Peers answer with their awareness, so the server relays only that byte and at most once per handle every five seconds. Clients send it once per attach. |
 | 4 | server | Fragment seed role: varuint 1 granted or 0 revoked, then an optional lease token. |
 | 5 | server | Authoritative generation. Sent before synchronization on attach, on every resync and on a generation change. |
 | 6 | client | Generation, update id, update bytes. Every client write, including replies derived from sync. |
@@ -199,28 +202,37 @@ authorization. Acquire hydrates the resident document from checkpoint plus verif
 epoch, and sends no type 13 until a later refresh succeeds. Attach then realigns, sends 5 and 13,
 and sends `read only` to a viewer before any sync frame. A later SyncStep1 is a resync: the server
 realigns from checkpoint plus tail and resends 5 and 13 before answering, so missed hints and
-progress frames repair there.
+progress frames repair there. Each answer encodes a whole document, so resyncs draw on a socket
+budget of twice `REALTIME_MAX_DOCS_PER_SOCKET` that refills by that limit every 30 seconds; an
+empty budget delays the socket's next frame instead of dropping it. The attaching SyncStep1 is
+free.
 
 Type 6 runs `admission.admit_update` under the resident session lock and a PostgreSQL document lock:
 
-1. Edit access is read fresh from PostgreSQL.
-2. Latest state comes from narrow row facts, the control head and the cached or read checkpoint plus
-   tail. An unusable epoch settles through `ensure_epoch` first. That commits and retakes the lock,
-   so access is checked again. A vanished row is seeded again under a fresh generation.
+1. Edit access is read fresh from PostgreSQL. The role also applies to the writer's handle, so a
+   type 6 frame needs no separate inbound recheck: a downgrade sends `edit access removed`, a lost
+   view detaches the document.
+2. Latest state comes from narrow row facts, the control head and, unless the resident document
+   already holds the checkpoint, the cached or read checkpoint plus tail. An unusable epoch settles
+   through `ensure_epoch` first. That commits and retakes the lock, so access is checked again. A
+   vanished row is seeded again under a fresh generation.
 3. `resident.follow` realigns the resident document and broadcasts what changed, including a fresh
    type 13 after an epoch reset, before any receipt of the new epoch.
 4. `resident.check_update` validates against the resident document, never a fresh PostgreSQL decode:
    generation, merged bytes against `REALTIME_MAX_SNAPSHOT_BYTES`, rendered Markdown against
-   `REALTIME_MAX_DOCUMENT_BYTES`, `doc_meta.generation` and seed claims. An ordinary update that
-   adds a seed claim is `seed_conflict`. Raw merges keep delete sets and structs whose predecessors
-   have not arrived; validating only visible text would lose them.
+   `REALTIME_MAX_DOCUMENT_BYTES`, `doc_meta.generation` and seed claims. It applies the update to a
+   shadow copy that takes every update the resident document takes, so its cost follows the update,
+   not the document; a refused or unaccepted update drops the shadow, and the next check rebuilds
+   it. An ordinary update that adds a seed claim is `seed_conflict`. When the shadow shows no change
+   and no new structs, a raw merge decides: it keeps delete sets and structs whose predecessors have
+   not arrived; validating only visible text would lose them.
 5. An update that adds nothing appends no record. It answers type 11 at the current head, or type 7
    when the head equals the checkpoint.
 6. The admit script appends the next sequence, records the receipt as sequence plus SHA-256
-   digest, counts bytes and records, sets `first_ms` once and `last_ms` always, and adds the due
-   entry at first pending time plus ten seconds without moving an existing one. A repeated id with
-   the same digest answers its original sequence. A recovery-required answer resets the epoch once
-   and retries.
+   digest, counts stored bytes and records, sets `first_ms` once and `last_ms` always, and adds the
+   due entry at first pending time plus ten seconds without moving an existing one. A repeated id
+   with the same digest answers its original sequence. A recovery-required answer resets the epoch
+   once and retries.
 7. Only a confirmed append applies the update to the resident document, sends it to local peers and
    answers type 11. Publication to other replicas runs afterwards, in sequence order, and never
    delays the receipt.
@@ -242,11 +254,14 @@ that continues its resident head and otherwise reloads checkpoint plus tail. Che
 content-replace hints are not origin-deduped. Progress for a newer revision, another epoch or a
 sequence beyond the resident head reloads first. Progress for the resident generation and epoch
 then raises the resident watermark and goes to attached clients as type 12. A content-replace hint
-carries no content and reloads. Publisher reconnect retries after a missing client.
+carries no content and reloads. Publisher reconnect retries after a missing client. The subscriber
+only parses: each document's messages run in order on that document's own task, so a reload waiting
+on one document's lock holds up no other document. Queued progress collapses to the newest, a
+queued reload absorbs the records behind it, and more than 1024 queued records become one reload.
 
 Outbound queues retain at most 1024 frames and 8 MiB per socket; a full queue drops frames for that
 socket only. Incoming frames are capped at 1 MiB and 120 messages per second with a burst of twice
-that. Resident documents evict after 15 idle minutes. Eviction and shutdown write no document state:
+that; resyncs and awareness queries carry the tighter budgets above. Resident documents evict after 15 idle minutes. Eviction and shutdown write no document state:
 `drain_for_shutdown` stops seed timers and gives queued peer hints five seconds. PostgreSQL
 authorization still gates each disclosure and mutation.
 
@@ -264,13 +279,19 @@ organization, type and id. A bucket's keys share the hash tag `rtbuf:{v1:NN}`, s
 single slot. Each document generation and epoch has a stream of `<seq>-0` records (update id,
 bytes, actor, acceptance time, format), a control hash (head, pending bytes and records, committed
 hint, first and last append time, starting revision) and a receipts hash. Each bucket has a due
-sorted set and an accounting hash. Pending keys carry no TTL and are never trimmed by length. Every
-script checks argument and key types before its first write.
+sorted set, an early sorted set, a scope set and an accounting hash. The early set names documents
+past 1 MiB or 1024 pending records; a trim below both removes them. The scope set names every scope
+with a control record or records: initialization and appends add it, reclaim, a dropped retired
+stream and a retire that empties the stream remove it, so maintenance walks buffered documents
+instead of the keyspace. Pending keys carry no TTL and are never trimmed by length. Every script
+checks argument and key types before its first write.
 
 `infrastructure/valkey/binary.py` is the binary-safe client: no retries, 200 ms connect and 150 ms
-socket timeouts, and a pool capped by `VALKEY_BINARY_MAX_CONNECTIONS` (10). Each new connection
-reads `INFO server` and refuses to serve when the `run_id` differs from the identity recorded at
-startup. The caller adopts the new identity and treats the epoch as unproven.
+socket timeouts, and a pool capped by `VALKEY_BINARY_MAX_CONNECTIONS` (10). A call that finds every
+connection busy waits up to 50 ms, well inside the admission deadline, and
+`uniffy_valkey_binary_pool_waits_total{outcome}` counts waits served and timed out. Each new
+connection reads `INFO server` and refuses to serve when the `run_id` differs from the identity
+recorded at startup. The caller adopts the new identity and treats the epoch as unproven.
 
 The row binds each epoch to the `run_id` that issued its sequences, so a restarted or restored
 Valkey can never reissue a sequence a client holds a receipt for. `epoch.ensure_epoch` runs under
@@ -288,9 +309,12 @@ resets each document this way after checkpointing its surviving tail. In-place d
 restart, such as FLUSHALL or a manual DEL, shows up as a missing control record or a gap. Restoring
 older keys inside a running instance is unsupported.
 
-The deployment pending budget splits evenly across the 16 buckets. One document may hold the
-smaller of 16 MiB and a quarter of its bucket's budget, and at most 4096 records. Exceeding either,
-or a Valkey OOM, refuses the append retryably and trims nothing already accepted.
+The deployment pending budget splits evenly across the 16 buckets. Every limit counts stored
+bytes: a record's update, twice its id and 256 bytes of entry overhead (`stored_bytes`), close to
+what Valkey spends on it. One document may hold the smaller of 16 MiB and a quarter of its bucket's
+budget, and at most 4096 records. One organization may hold half of a bucket, tracked as `o:<org>`
+in the accounting hash; organizations under one person's control can still fill a bucket. Exceeding
+any limit, or a Valkey OOM, refuses the append retryably and trims nothing already accepted.
 
 ## Checkpoints and maintenance
 
@@ -298,25 +322,30 @@ Buffer jobs run on core workers with `JobReliability.BUFFERED` and a Valkey reco
 (`job_contracts.py`). Projection stays `DURABLE`.
 
 `cron:dispatch_realtime_checkpoints` is a unique schedule on the core fleet: one run per second,
-taken by any core worker, with quiet logging. Per bucket it reads up to 64 due entries, and up to
-32 entries not yet due of which it takes those whose document holds more than 1 MiB or 1024 pending
-records. It skips claimed documents, takes a five-second claim, and enqueues at most 16 documents
-per bucket and 64 per tick across the fleet. The job id
+taken by any core worker, with quiet logging. Per bucket it reads up to 64 due entries and up to 32
+entries of the early set, oldest first; a backoff moves an entry's score in both sets. It skips
+claimed documents, takes a five-second claim, and enqueues at most 16 documents per bucket and 64
+per tick across the fleet. The job id
 `checkpoint:<scope>:<window>` is unique per epoch and due window, so a retained result never
 suppresses a later window. Due entries stay until cleanup proves coverage, so a lost job is
-dispatched again. Continued typing never moves the deadline.
+dispatched again. Continued typing never moves the deadline; a record waits at most about ten
+seconds after its own acceptance.
 
 `checkpoint_realtime_document` runs once per dispatch (no retries, no kept result, 120 s timeout),
 two at a time per worker process; a busy process requeues after one second without using a try.
 
 1. Under the lock, capture a contiguous prefix of at most 1024 records or 4 MiB. A larger single
    first record goes alone.
-2. Merge and compact outside the lock in a thread, keeping unresolved causal structs.
+2. Merge and compact outside the lock, keeping unresolved causal structs. The thread only keeps
+   that work outside the lock: pycrdt holds the GIL, so it still occupies the worker's event loop,
+   and the two slots of a process share one core. Plan checkpoint capacity as one core per core
+   worker process.
 3. Commit bytes, state vector, `checkpoint_seq`, revision and last actor only while generation,
    epoch, revision and watermark still match. A competing commit recaptures, up to three attempts.
 4. Under the lock again, trim through the PostgreSQL watermark (`XTRIM MINID` at watermark plus
    one), drop those receipts and release their accounting. The due entry goes only when nothing
-   remains. A newer tail keeps its original first pending time.
+   remains. A surviving tail becomes due ten seconds after its oldest record, so a document edited
+   during its pass is not due again at once; a later backoff score stays.
 5. Publish progress and enqueue projection with job id `projection:<type>:<id>:<revision>`.
 
 A record that cannot be decoded marks the document poisoned: its bytes stay, the document backs off
@@ -324,8 +353,8 @@ from 15 s doubling to ten minutes, and other documents continue. Other errors ba
 way, except an unavailable Valkey, which a later dispatch retries once the claim expires. Checkpoint
 success never depends on rendering.
 
-`cron:maintain_realtime_buffer` runs each minute at second 40. It walks a rotating SCAN slice of
-stream and control keys (20 calls, up to 1000 documents) and, per scope:
+`cron:maintain_realtime_buffer` runs each minute at second 40. It walks a rotating slice of the
+bucket scope sets (20 SSCAN calls, up to 1000 documents) and, per scope:
 
 - skips claimed documents;
 - settles a scope that is not its row's healthy epoch: a gone row or generation is obsolete, a
@@ -340,12 +369,15 @@ stream and control keys (20 calls, up to 1000 documents) and, per scope:
 - trims committed prefixes a lost cleanup left;
 - restores a missing due entry from the original first pending time.
 
-Each pass also recounts the accounting of one bucket, rotating once per minute.
+Each pass also recounts the accounting of one bucket from its scope set, organization shares
+included, rotating once per minute.
 
 ## Deployment preflight
 
 `preflight.py` runs at backend and worker startup through `ensure_buffer_ready`; after a failed
-start, buffer calls retry it at most every five seconds. It reads `INFO server`, `INFO persistence`
+start, buffer calls retry it at most every five seconds. A verdict holds for the instance it read:
+once the binary client adopts another `run_id`, the next buffer call reruns the preflight at once,
+and admission refuses until that read succeeds. It reads `INFO server`, `INFO persistence`
 and `CONFIG GET` for maxmemory-policy, maxmemory, save and appendfsync. The single requirement is an
 eviction policy outside `allkeys-*`. `noeviction` and `volatile-*` are safe because pending keys
 carry no TTL.
@@ -362,7 +394,7 @@ defaults to a quarter of maxmemory capped at 512 MiB, or 256 MiB when maxmemory 
 ## Projection and effects
 
 Worker checkpoints, seed acceptance, renames and restores that leave a revision unrendered enqueue
-`save_realtime_snapshot`, a `DURABLE` job carrying only content type, id and organization, one job id
+`project_realtime_document`, a `DURABLE` job carrying only content type, id and organization, one job id
 per revision. Plain text merges and replacements write the domain column themselves and mark the
 revision rendered. `persist_snapshot` loads the committed checkpoint under the document lock, calls
 adapter `stage_render`, then commits domain columns, `rendered_revision` and `effects_pending`
@@ -471,7 +503,7 @@ retryable unavailable responses. Live sockets repeat the durable check through t
 watchdog.
 
 Fresh PostgreSQL authorization runs at inbound document handling, admission and outbound
-disclosure. Scalar statement structures are reused with bound actor, resource and check-time values.
+disclosure; a type 6 frame takes its inbound read from admission. Scalar statement structures are reused with bound actor, resource and check-time values.
 Outbound frames and content hints coalesce waiting recipients into fresh batches of at most 256
 requests, with eight concurrent batches and 4096 pending recipients per process and delivery class.
 Each batch seals before database I/O. Later requests start a separate read, even while an earlier
@@ -495,9 +527,11 @@ an infrastructure exception into a permanent document denial or continue using a
 `whenSynced` waits for server synchronization and local hydration. Rich and Markdown editors remain
 read-only until their binding is initialized. Never seed from a placeholder before this gate.
 
-Encrypted IDB uses database `uniffy-realtime-yjs`, version 3, with one `updates` store keyed
-`[contentType, contentId, generation, seq]`. Rows carry encrypted user, organization and document
-scope and come in two kinds. A snapshot row holds a full encoded document and `dirty`, keyed by a
+Encrypted IDB uses database `uniffy-realtime-yjs`, version 4, with one `updates` store keyed
+`[contentType, contentId, generation, seq]`. Each row is AES-GCM over a small JSON header followed
+by the raw update bytes, so no base64 or JSON encoding touches the update; opening version 4 drops
+rows of the earlier layout. Rows carry encrypted user, organization and document scope and come in
+two kinds. A snapshot row holds a full encoded document and `dirty`, keyed by a
 random per-attach epoch and counter. A pending row (`pending:<updateId>`) holds one own update's raw
 bytes, edit time and receipt identity until a checkpoint covers it. Rows of no known kind and keys
 without a generation predate coverage identity: they are ignored, never replayed, listed as drafts
@@ -508,7 +542,10 @@ validate encrypted recovery. A failed database open is not cached, so a later re
 deletes a pending row; only a checkpointed transition deletes one. After hydration, `restorePending`
 hands back the updates an earlier session left unconfirmed, under their original ids and receipts.
 Snapshot writes coalesce while storage is busy and replace earlier rows of the same epoch only.
-Other tabs retain their own rows.
+While edits continue, a full snapshot goes at most every two seconds (`SNAPSHOT_INTERVAL_MS`); a
+flush, pagehide, a hidden tab, close and compaction write one at once. Between snapshots each
+transport batch's pending row holds its edits: once it lands and the transport has nothing unsent,
+those edits count as stored on the device. Other tabs retain their own rows.
 
 Online hydration replays only the generation the server confirmed. Offline hydration replays a
 single known lineage; ambiguous lineages wait for server identity. Other generations and
@@ -579,8 +616,9 @@ match:
 3. Connection: Connecting, or Offline for a disconnected or offline transport. The Offline title
    promises a device copy only when storage is available.
 4. Save state from `useDocSaveState`: Saving unavailable, then Saving delayed (oldest uncheckpointed
-   own edit thirty seconds old), then Syncing (transport pending, held one second after it settles),
-   then nothing until coverage is known, then Synced (accepted, awaiting checkpoint) or Saved.
+   own edit thirty seconds old, once coverage is known, so a reconnect that missed a checkpoint never
+   flashes it), then Syncing (transport pending, held one second after it settles), then nothing
+   until coverage is known, then Synced (accepted, awaiting checkpoint) or Saved.
 
 On web, coverage is known once this socket's type 13 arrived and local recovery has read the device.
 Viewers get no save state. Only checkpoint coverage (12, 13 or 7) reaches Saved; a receipt stops at
@@ -588,7 +626,9 @@ Synced. No toast or flash per batch, and product copy never names Valkey, epochs
 
 `ExpandableEditor` owns realtime while expanded. After Done (`canReleaseSession`) it holds the
 session while own edits are unaccepted, the transport is down, or accepted edits are not stored on
-the device; otherwise the drain takes over. Access loss and rejection release at once. While the
+the device; otherwise the drain takes over. It reads narrow values (`useCheckpointPending`,
+`useDeviceStorage`, and `useSessionReleasable` only while closing), so typing does not re-render the
+editor tree on every batch, and its toolbar chip shows only the colored dot on phone widths. Access loss and rejection release at once. While the
 document is checkpoint pending or in the registry, the collapsed editor shows the chip. Its host
 must suppress full-string RPC content writes once realtime owns the session. Task/calendar preview
 slices remember superseded visible strings to avoid reverting on stale metadata responses; an equal
@@ -695,8 +735,9 @@ clears it, and the chip shows Connecting until then. `PersistenceChip` runs on t
 `persistenceState` takes the first match: Access lost, Session ended, Update to keep saving,
 View-only for lost edit access, Edit not synced, Not saved on device (a device write failed before
 first sync or while an edit is checkpoint pending), Offline, View-only for read-only, Saving
-unavailable, Saving delayed, Syncing (held one second), Connecting, Synced, Saved. Mobile task and
-event descriptions save through ordinary RPC with an explicit Save button and keep that indicator.
+unavailable, Saving delayed (once coverage is known), Syncing (held one second), Connecting, Synced,
+Saved. Mobile task and event descriptions save through ordinary RPC with an explicit Save button and
+keep that indicator.
 
 Draft payloads use AES-256-GCM ciphertext in per-user Expo SQLite databases. SecureStore holds the
 device-only key. AAD binds user/organization/document key, record ID and generation. Fresh nonces come
@@ -773,6 +814,8 @@ Web and mobile reconnect delays include jitter. Mobile proxy close code 1000 rec
 remain attached; explicit teardown does not. Mobile reconnect clears server read-only latches while
 retaining caller-requested read-only mode.
 Draft storage coalesces queued same-generation writes and preserves unreadable source records.
-An in-progress write finishes before the next queued write. Full snapshot encoding, encryption and
-SQLite blob writes still cost work proportional to document size. Physical-device latency and crash
+An in-progress write finishes before the next queued write. A queued write encodes its document once
+when it runs (`saveDraft`), so saves while a write is in flight cost nothing; a caller that destroys
+the document right after saving uses `saveDraftNow`. Encryption and SQLite blob writes still cost
+work proportional to document size. Physical-device latency and crash
 qualification remain required before claiming large-draft readiness.

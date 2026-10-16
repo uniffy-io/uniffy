@@ -83,15 +83,20 @@ afterEach(async () => {
   vi.unstubAllGlobals();
 });
 
+function syncStep2From(server: Y.Doc): Uint8Array {
+  const encoder = encoding.createEncoder();
+  encoding.writeVarUint(encoder, 0);
+  syncProtocol.writeSyncStep2(encoder, server);
+  return encoding.toUint8Array(encoder);
+}
+
 function syncStep2(): Uint8Array {
   const server = new Y.Doc();
   server.getMap("doc_meta").set("generation", "G");
   server.getText("markdown").insert(0, "base");
-  const encoder = encoding.createEncoder();
-  encoding.writeVarUint(encoder, 0);
-  syncProtocol.writeSyncStep2(encoder, server);
+  const step = syncStep2From(server);
   server.destroy();
-  return encoding.toUint8Array(encoder);
+  return step;
 }
 
 const receipt = (updateId: string, acceptedSequence: number) =>
@@ -158,6 +163,50 @@ it("shows Connecting, never Saved, until the socket's session state arrives", as
   expect(persistence()).toBe("connecting");
   socket.deliver(sessionState());
   expect(persistence()).toBe("saved");
+});
+
+it("shows no save state until the device's retained edits reach this socket", async () => {
+  const first = await openNote();
+  const updateId = first.send(" edit");
+  first.socket.deliver(receipt(updateId, 1));
+  expect(await first.handle.persistLocally()).toBe(true);
+  // The server buffered the edit; no checkpoint holds it yet.
+  const server = new Y.Doc();
+  Y.applyUpdate(server, Y.encodeStateAsUpdate(first.handle.session.ydoc));
+  await first.handle.close();
+
+  const { openDocSession } = await import("@shared/realtime/docSession");
+  const handle = openDocSession({
+    contentType: "NOTE",
+    contentId: "note",
+    organizationId: "org",
+    userId: "user",
+  })!;
+  handles.push(handle);
+  const persistence = () => handle.getSnapshot().persistence;
+  first.socket.deliver(encodeGeneration("G"));
+  first.socket.deliver(sessionState(1, 0));
+  first.socket.deliver(syncStep2From(server));
+  // The socket drops before local recovery hands the retained edit back.
+  first.socket.close(1006);
+  vi.advanceTimersByTime(1_000);
+  const replacement = FakeSocket.sockets.at(-1)!;
+  expect(replacement).not.toBe(first.socket);
+  replacement.open();
+  await handle.session.whenSynced;
+  replacement.deliver(encodeGeneration("G"));
+  replacement.deliver(sessionState(1, 0));
+  expect(persistence()).toBe("connecting");
+
+  replacement.deliver(syncStep2From(server));
+  await vi.waitFor(() => expect(replacement.writtenIds()).toEqual([updateId]));
+  expect(persistence()).toBe("syncing");
+  replacement.deliver(receipt(updateId, 1));
+  vi.advanceTimersByTime(1_000);
+  expect(persistence()).toBe("synced");
+  replacement.deliver(progress(1));
+  expect(persistence()).toBe("saved");
+  server.destroy();
 });
 
 it("waits for the new socket's session state before Synced or Saved after a reconnect", async () => {
@@ -235,6 +284,17 @@ it("asks for an app update after close 4426", async () => {
   expect(persistence()).toBe("upgrade_required");
   expect(handle.getSnapshot().status).toBe("upgrade_required");
   await vi.advanceTimersByTimeAsync(60_000);
+  expect(FakeSocket.sockets).toHaveLength(1);
+});
+
+it("shows Access lost after close 4403 and stays there instead of reconnecting", async () => {
+  const { handle, socket, type, persistence } = await openNote();
+  type(" edit");
+  socket.close(4403);
+  expect(persistence()).toBe("access_lost");
+  expect(handle.getSnapshot().status).toBe("access_lost");
+  await vi.advanceTimersByTimeAsync(60_000);
+  expect(persistence()).toBe("access_lost");
   expect(FakeSocket.sockets).toHaveLength(1);
 });
 

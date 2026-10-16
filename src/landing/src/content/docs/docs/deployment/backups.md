@@ -43,7 +43,7 @@ An edit is gone for good only when its author never returns to that device, sign
 
 That is why Valkey needs no backup. Pick its persistence for how much of the last few seconds you can afford to lose, and keep backing up PostgreSQL.
 
-Valkey holds document text in memory and in its persistence files. Uniffy does not encrypt those bytes, so protect Valkey, its disk and its files the way you protect PostgreSQL. Never give it an `allkeys-*` eviction policy; [Configure Uniffy](/docs/deployment/configure/#valkey) explains why.
+Valkey holds document text in memory and in its persistence files. Uniffy does not encrypt those bytes, so protect Valkey, its disk and its files the way you protect PostgreSQL. Only Uniffy backends, workers and their operators hold its password. LiveKit keeps its room registry on a Valkey of its own; a separate logical database on the same instance is no boundary. Never give Uniffy's Valkey an `allkeys-*` eviction policy; [Configure Uniffy](/docs/deployment/configure/#valkey) explains why.
 
 ## Continuous Postgres backups to S3
 

@@ -79,7 +79,7 @@ async function leaveStoredEdit(contentId: string): Promise<void> {
 
 /** A device database a newer app version left behind; this version cannot open it. */
 function leaveNewerDatabase(): Promise<void> {
-  return storeRawRow(["NOTE", "newer", "G", "pending:1"], {}, 4);
+  return storeRawRow(["NOTE", "newer", "G", "pending:1"], {}, 5);
 }
 
 function deleteDatabase(): Promise<void> {

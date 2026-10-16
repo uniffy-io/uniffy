@@ -20,12 +20,26 @@ from uniffy.core.realtime.buffer import (
     RecoveryRequired,
     UpdateBuffer,
 )
-from uniffy.core.realtime.buffer_keys import AdmissionStatus, BufferHead, LatestState, Receipt
+from uniffy.core.realtime.buffer_keys import (
+    AdmissionStatus,
+    BufferHead,
+    LatestState,
+    LatestTail,
+    Receipt,
+)
 from uniffy.core.realtime.checkpoint import stage_recovered
 from uniffy.core.realtime.epoch import ensure_epoch
-from uniffy.core.realtime.resident import check_update, follow
+from uniffy.core.realtime.resident import (
+    accept_update,
+    check_update,
+    follow,
+    follow_tail,
+    held_state,
+    release_update,
+)
 from uniffy.core.realtime.state import DocKey, YDocSession
 from uniffy.core.realtime.storage import EditDenied, lock_document, stage_seed
+from uniffy.core.types import ContentRole
 from uniffy.infrastructure.database.session import open_session
 
 _SETTLE_ATTEMPTS = 3
@@ -35,6 +49,14 @@ type Broadcast = Callable[[YDocSession, Sequence[bytes]], None]
 
 class UpdateConflict(Exception):
     """The update id already names different bytes in this epoch."""
+
+
+class RoleRefused(EditDenied):
+    """The writer's fresh role refused the update; attached handles should adopt that role."""
+
+    def __init__(self, role: ContentRole | None) -> None:
+        super().__init__(role)
+        self.role = role
 
 
 class SavingUnavailable(Exception):
@@ -51,11 +73,14 @@ class Admitted:
     receipt: Receipt | None
     # False for a duplicate or an update the resident document already holds.
     applied: bool
+    # The writer's role, read fresh under the document lock.
+    role: ContentRole
 
 
 _REFUSALS = {
     AdmissionStatus.DOCUMENT_LIMIT: "document_limit",
     AdmissionStatus.BUDGET_EXHAUSTED: "budget_exhausted",
+    AdmissionStatus.ORGANIZATION_LIMIT: "organization_limit",
     AdmissionStatus.RECOVERY_REQUIRED: "recovery_required",
 }
 
@@ -121,19 +146,30 @@ async def read_latest(
             return state
 
 
-async def _require_edit(db: AsyncSession, session: YDocSession, actor_id: UUID) -> None:
+async def _require_edit(db: AsyncSession, session: YDocSession, actor_id: UUID) -> ContentRole:
     role = await get_realtime_adapter(session.key[0]).authorize(
         db, actor_id, session.organization_id, session.key[1]
     )
-    if not role_can_edit(role):
-        raise EditDenied
+    if role is None or not role_can_edit(role):
+        raise RoleRefused(role)
+    return role
 
 
 async def _latest(
     buffer: UpdateBuffer, db: AsyncSession, session: YDocSession
-) -> tuple[LatestState, bool]:
-    """The latest state, and whether reaching it may have committed an epoch move."""
+) -> tuple[LatestState | LatestTail, bool]:
+    """The latest state, and whether reaching it may have committed an epoch move.
+
+    While the row still names the checkpoint the resident document follows, only the records
+    past its head are read; the process cache and PostgreSQL serve every other case.
+    """
     key, organization_id = session.key, session.organization_id
+    held = held_state(session)
+    if held is not None:
+        with contextlib.suppress(RecoveryRequired):
+            tail = await buffer.read_since(db, key, held)
+            if tail is not None:
+                return tail, False
     try:
         state = await buffer.load_latest(db, key)
     except RecoveryRequired as exc:
@@ -150,11 +186,11 @@ async def _latest(
 
 
 async def _reset_after_refusal(
-    buffer: UpdateBuffer, db: AsyncSession, session: YDocSession, refused: LatestState
+    buffer: UpdateBuffer, db: AsyncSession, session: YDocSession, refused: BufferHead
 ) -> LatestState:
     key, organization_id = session.key, session.organization_id
     state = await latest_under_lock(buffer, db, key, organization_id)
-    if state.head.scope == refused.head.scope:
+    if state.head.scope == refused.scope:
         # The probe found the epoch healthy although it refused the append.
         state = await latest_under_lock(
             buffer, db, key, organization_id, reset=RecoveryReason.STALE_TAIL
@@ -162,13 +198,14 @@ async def _reset_after_refusal(
     return state
 
 
-def _already_held(head: BufferHead, update_id: str) -> Admitted:
+def _already_held(head: BufferHead, update_id: str, role: ContentRole) -> Admitted:
     """The resident document equals checkpoint plus tail, so ``head`` already covers the update."""
     if head.head_seq == head.checkpoint_seq:
         # A receipt names a sequence above zero; the checkpoint alone answers as committed.
-        return Admitted(None, applied=False)
+        return Admitted(None, applied=False, role=role)
     scope = head.scope
-    return Admitted(Receipt(scope.generation, scope.epoch, head.head_seq, update_id), applied=False)
+    receipt = Receipt(scope.generation, scope.epoch, head.head_seq, update_id)
+    return Admitted(receipt, applied=False, role=role)
 
 
 async def admit_update(
@@ -185,24 +222,45 @@ async def admit_update(
     The caller holds ``session.lock``. Frames that realign the resident document, including a
     fresh session state after an epoch reset, reach every attached client before any receipt
     of the new epoch. An update that adds nothing, such as a sync reply carrying only known
-    deletions, appends no record. Raises ``ValueError`` for undecodable bytes.
+    deletions, appends no record. Raises ``ValueError`` for undecodable bytes and
+    :class:`RoleRefused` with the fresh role when the writer may not edit.
     """
+    try:
+        return await _admit(buffer, session, actor_id, generation, update_id, update, broadcast)
+    finally:
+        release_update(session)
+
+
+async def _admit(
+    buffer: UpdateBuffer,
+    session: YDocSession,
+    actor_id: UUID,
+    generation: str,
+    update_id: str,
+    update: bytes,
+    broadcast: Broadcast,
+) -> Admitted:
     async with open_session() as db:
         await lock_document(db, session.key, session.organization_id)
-        await _require_edit(db, session, actor_id)
+        role = await _require_edit(db, session, actor_id)
         async with _unverified():
             state, settled = await _latest(buffer, db, session)
         for attempt in range(2):
             if attempt:
                 async with _unverified():
-                    state = await _reset_after_refusal(buffer, db, session, state)
+                    state = await _reset_after_refusal(buffer, db, session, state.head)
             if attempt or settled:
                 # Settling an epoch committed under the lock; check access again after it.
-                await _require_edit(db, session, actor_id)
-            broadcast(session, follow(session, state))
+                role = await _require_edit(db, session, actor_id)
+            broadcast(
+                session,
+                follow_tail(session, state)
+                if isinstance(state, LatestTail)
+                else follow(session, state),
+            )
             if not check_update(session, generation, update):
                 await db.commit()
-                return _already_held(state.head, update_id)
+                return _already_held(state.head, update_id, role)
             async with _unverified():
                 outcome = await buffer.admit(
                     state.head, update_id=update_id, update=update, actor_id=actor_id
@@ -219,6 +277,5 @@ async def admit_update(
         raise SavingUnavailable(_REFUSALS.get(status, "recovery_required"))
     applied = status is AdmissionStatus.ACCEPTED
     if applied:
-        session.ydoc.apply_update(update)
-        session.head_seq = max(session.head_seq, receipt.seq)
-    return Admitted(receipt, applied)
+        accept_update(session, update, receipt.seq)
+    return Admitted(receipt, applied, role)

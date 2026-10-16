@@ -29,7 +29,7 @@ import {
   loadLastOpenedNote,
   clearLastOpenedNote,
 } from "@/features/notes/utils/lastOpenedNote";
-import { chooseNotesLanding } from "@/features/notes/utils/landing";
+import { chooseNotesLanding, leavesRoutedNote } from "@/features/notes/utils/landing";
 import { useShortcutHandler, useAppearanceSettings } from "@/features/settings";
 import { useNotesCacheSync } from "@/features/notes/hooks/useNotesCacheSync";
 import { recordRecentItem } from "@/features/search/utils/recentItems";
@@ -118,6 +118,7 @@ export function NotesPage() {
 
   // Always refetch on noteId change or remount - returning from /chat would serve stale content and autosave could clobber concurrent edits.
   const loadedRouteNoteRef = useRef<string | null>(null);
+  const openedFromTrashRef = useRef(false);
   useEffect(() => {
     if (!noteId) return;
 
@@ -125,8 +126,9 @@ export function NotesPage() {
     dispatch(setCurrentNote(noteId));
     dispatch(fetchNote(noteId))
       .unwrap()
-      .then(() => {
+      .then((loaded) => {
         loadedRouteNoteRef.current = noteId;
+        openedFromTrashRef.current = Boolean(loaded.isDeleted);
         if (organizationId && userId) {
           saveLastOpenedNote(organizationId, userId, noteId);
         }
@@ -141,8 +143,15 @@ export function NotesPage() {
       });
   }, [noteId, organizationId, userId, dispatch, navigate]);
 
+  // Trashing the open note keeps it in state, so its route must go too, or the page shows no note
+  // under a URL that still names it.
   useEffect(() => {
-    if (!noteId || loadedRouteNoteRef.current !== noteId || notesState.notes[noteId]) return;
+    if (
+      !noteId ||
+      loadedRouteNoteRef.current !== noteId ||
+      !leavesRoutedNote(notesState.notes, noteId, openedFromTrashRef.current)
+    )
+      return;
     if (organizationId && userId && loadLastOpenedNote(organizationId, userId) === noteId) {
       clearLastOpenedNote(organizationId, userId);
     }

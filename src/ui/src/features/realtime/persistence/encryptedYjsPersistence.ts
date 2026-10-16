@@ -23,15 +23,18 @@ import {
   ENCRYPTION_READY_EVENT,
   ENCRYPTION_REKEY_EVENT,
   ENCRYPTION_TEARDOWN_EVENT,
-  decryptFromStorage,
-  encryptForStorage,
+  decryptBytesFromStorage,
+  encryptBytesForStorage,
   isStorageEncryptionReady,
   registerEncryptedDatabase,
 } from "@/shared/crypto/storageEncryption";
 
 const DB_NAME = "uniffy-realtime-yjs";
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 const UPDATES_STORE = "updates";
+// While edits continue, at most one full snapshot per interval; each batch already lands as a
+// pending row. Page hide, a hidden tab, flush, close and compaction write one at once.
+export const SNAPSHOT_INTERVAL_MS = 2000;
 const RECOVERY_GENERATION_PREFIX = "recovery:";
 const PENDING_SEQ_PREFIX = "pending:";
 type UpdateKey = [string, string, string, string];
@@ -72,21 +75,46 @@ export interface RecoveredDraft {
 }
 
 /** Full document state from one session. `dirty` marks own edits no checkpoint is known to hold. */
-interface SnapshotRow {
+interface SnapshotHeader {
   kind: "snapshot";
-  update: string;
   dirty: boolean;
   scope?: PendingDoc;
 }
 
 /** One own update the server has not checkpointed, kept under its update id until it is. */
-interface PendingRow {
+interface PendingHeader {
   kind: "pending";
-  update: string;
   scope?: PendingDoc;
   updateId: string;
   editedAt: number;
   receipt: ReceiptIdentity | null;
+}
+
+const HEADER_LENGTH_BYTES = 4;
+
+/** [4-byte header length | JSON header | update bytes], so the update needs no text encoding. */
+function encodeRow(header: SnapshotHeader | PendingHeader, update: Uint8Array): Uint8Array {
+  const encoded = new TextEncoder().encode(JSON.stringify(header));
+  const row = new Uint8Array(HEADER_LENGTH_BYTES + encoded.length + update.length);
+  new DataView(row.buffer).setUint32(0, encoded.length);
+  row.set(encoded, HEADER_LENGTH_BYTES);
+  row.set(update, HEADER_LENGTH_BYTES + encoded.length);
+  return row;
+}
+
+function splitRow(row: Uint8Array): { header: unknown; update: Uint8Array } | null {
+  if (row.length < HEADER_LENGTH_BYTES) return null;
+  const length = new DataView(row.buffer, row.byteOffset, row.byteLength).getUint32(0);
+  const end = HEADER_LENGTH_BYTES + length;
+  if (end > row.length) return null;
+  try {
+    const header: unknown = JSON.parse(
+      new TextDecoder().decode(row.subarray(HEADER_LENGTH_BYTES, end)),
+    );
+    return { header, update: row.subarray(end) };
+  } catch {
+    return null;
+  }
 }
 
 type StoredRow =
@@ -107,11 +135,11 @@ function isReceipt(value: unknown): value is ReceiptIdentity | null {
 
 // A row without a known kind carries no coverage identity, so nothing says what the server holds
 // of it: it is never replayed, offered as a draft or drained.
-function decodeRow(payload: unknown): StoredRow | null {
-  if (!payload || typeof payload !== "object") return null;
-  const row = payload as Record<string, unknown>;
-  if (typeof row.update !== "string") return null;
-  const update = base64ToBytes(row.update);
+function decodeRow(bytes: Uint8Array): StoredRow | null {
+  const split = splitRow(bytes);
+  if (!split || !split.header || typeof split.header !== "object") return null;
+  const row = split.header as Record<string, unknown>;
+  const update = split.update;
   const scope = row.scope as PendingDoc | undefined;
   if (row.kind === "snapshot")
     return { kind: "snapshot", update, dirty: Boolean(row.dirty), scope };
@@ -131,7 +159,7 @@ function decodeRow(payload: unknown): StoredRow | null {
 }
 
 async function readRow(blob: unknown): Promise<StoredRow | null> {
-  return decodeRow(await decryptFromStorage(blob as ArrayBuffer));
+  return decodeRow(await decryptBytesFromStorage(blob as ArrayBuffer));
 }
 
 function isPendingKey(key: UpdateKey | string[]): boolean {
@@ -249,8 +277,10 @@ function getDB(): Promise<IDBPDatabase> {
   if (!dbPromise) {
     const opening = openDB(DB_NAME, DB_VERSION, {
       upgrade(db) {
-        if (!Array.from(db.objectStoreNames).includes(UPDATES_STORE))
-          db.createObjectStore(UPDATES_STORE);
+        // Rows of an earlier layout cannot be decoded, so they go instead of lingering unread.
+        if (Array.from(db.objectStoreNames).includes(UPDATES_STORE))
+          db.deleteObjectStore(UPDATES_STORE);
+        db.createObjectStore(UPDATES_STORE);
       },
       blocking() {
         const pending = dbPromise;
@@ -307,7 +337,7 @@ export function isPersistedOrigin(origin: unknown): boolean {
 
 // A random epoch per attach keys this session's rows, so a fresh attach or a
 // concurrent tab can never overwrite another session's rows.
-export function newPersistenceEpoch(): string {
+export function createPersistenceEpoch(): string {
   return randomUUID();
 }
 
@@ -342,6 +372,8 @@ export interface RecoveryTransport {
   restorePending(updates: readonly RetainedUpdate[]): void;
   /** Some own edit, buffered ones included, is not in a checkpoint yet. */
   isCheckpointPending(): boolean;
+  /** Some own edit has not left the transport batch as an update with an id yet. */
+  hasUnsentEdits(): boolean;
 }
 
 export type DeviceStorage = "available" | "unavailable" | "failed";
@@ -478,11 +510,19 @@ export function attachEncryptedPersistence(
   const previousDisposal = pendingDisposals.get(docKey);
   const compactEvery = opts.compactEvery ?? 100;
 
-  const epoch = newPersistenceEpoch();
+  const epoch = createPersistenceEpoch();
   let counter = 0;
   let localUpdates = 0;
-  // `localUpdates` at the moment the newest stored snapshot was encoded.
+  // How many local updates this device holds: a snapshot or the pending rows of their batches.
   let persistedUpdates = 0;
+  // `localUpdates` when a batch left the transport with nothing else unsent; reached once its
+  // pending row lands, since that row and the rows of earlier batches hold every one of them.
+  const batchMarks = new Map<string, number>();
+  let lastSnapshotAt = 0;
+  // A flush, close or hidden page wants the snapshot now; an elapsed interval allows the next one.
+  let snapshotUrgent = false;
+  let intervalElapsed = false;
+  let snapshotTimer: ReturnType<typeof setTimeout> | null = null;
   let storageFailed = false;
   let recoveryGeneration: string | null = null;
   const storageGeneration = () => recoveryGeneration ?? docGeneration(ydoc) ?? "";
@@ -550,7 +590,15 @@ export function attachEncryptedPersistence(
   const onCoverage = (event: UpdateCoverageEvent) => {
     if (destroyed) return;
     const known = tracked.get(event.updateId);
+    if (event.coverage === "local" && !known) {
+      // Read once the transport finished: a batch split in two leaves the later half unsent.
+      queueMicrotask(() => {
+        if (!destroyed && !transport()?.hasUnsentEdits())
+          batchMarks.set(event.updateId, localUpdates);
+      });
+    }
     if (event.coverage === "checkpointed") {
+      batchMarks.delete(event.updateId);
       if (!known) return;
       tracked.delete(event.updateId);
       retiring.add(event.updateId);
@@ -600,24 +648,50 @@ export function attachEncryptedPersistence(
     transport()?.restorePending(restored);
   }
 
-  function snapshotRow(update: Uint8Array): SnapshotRow {
-    return {
+  function snapshotRow(update: Uint8Array): Uint8Array {
+    const header: SnapshotHeader = {
       kind: "snapshot",
-      update: bytesToBase64(update),
       dirty: (dirty || hydratedDirty) && !checkpointedNow(),
       scope: opts.scope,
     };
+    return encodeRow(header, update);
   }
 
-  function pendingRow(updateId: string, update: TrackedUpdate): PendingRow {
-    return {
+  function pendingRow(updateId: string, update: TrackedUpdate): Uint8Array {
+    const header: PendingHeader = {
       kind: "pending",
-      update: bytesToBase64(update.update),
       scope: opts.scope,
       updateId,
       editedAt: update.editedAt,
       receipt: update.receipt,
     };
+    return encodeRow(header, update.update);
+  }
+
+  function snapshotDue(): boolean {
+    return (
+      snapshotRequested &&
+      (snapshotUrgent ||
+        intervalElapsed ||
+        destroyed ||
+        Date.now() - lastSnapshotAt >= SNAPSHOT_INTERVAL_MS)
+    );
+  }
+
+  function scheduleSnapshot(): void {
+    if (!snapshotRequested || snapshotTimer !== null || destroyed) return;
+    const wait = Math.max(0, lastSnapshotAt + SNAPSHOT_INTERVAL_MS - Date.now());
+    snapshotTimer = setTimeout(() => {
+      snapshotTimer = null;
+      intervalElapsed = true;
+      requestWrite();
+    }, wait);
+  }
+
+  function snapshotStored(): void {
+    lastSnapshotAt = Date.now();
+    snapshotUrgent = false;
+    intervalElapsed = false;
   }
 
   function pendingKey(generation: string, updateId: string): UpdateKey {
@@ -626,11 +700,14 @@ export function attachEncryptedPersistence(
 
   function requestWrite(): void {
     if (writeLoop || !isStorageEncryptionReady()) return;
-    if (!snapshotRequested && rowChanges.size === 0) return;
+    if (!snapshotDue() && rowChanges.size === 0) {
+      scheduleSnapshot();
+      return;
+    }
     const loop = (async () => {
       // Every update listener runs first, so the transport already counts this edit as pending.
       await Promise.resolve();
-      while (snapshotRequested || rowChanges.size > 0) {
+      while (snapshotDue() || rowChanges.size > 0) {
         if (!(await writeBatch())) break;
       }
     })();
@@ -653,8 +730,9 @@ export function attachEncryptedPersistence(
 
   async function writeBatch(): Promise<boolean> {
     const generation = storageGeneration();
-    const writeSnapshot = snapshotRequested && !discardedRecovery.get(ydoc)?.has(generation);
-    snapshotRequested = false;
+    const due = snapshotDue();
+    const writeSnapshot = due && !discardedRecovery.get(ydoc)?.has(generation);
+    if (due) snapshotRequested = false;
     const changes = [...rowChanges];
     rowChanges.clear();
     const encodedAt = localUpdates;
@@ -662,13 +740,14 @@ export function attachEncryptedPersistence(
     // is inside its snapshot.
     const allocated = writeSnapshot ? ++counter : counter;
     const snapshot = writeSnapshot ? snapshotRow(Y.encodeStateAsUpdate(ydoc)) : null;
+    let stored: string[] = [];
     try {
-      const snapshotBlob = snapshot && (await encryptForStorage(snapshot));
+      const snapshotBlob = snapshot && (await encryptBytesForStorage(snapshot));
       const puts = await Promise.all(
         changes.flatMap(([updateId, change]) =>
           change.row && !discardedRecovery.get(ydoc)?.has(change.generation)
             ? [
-                encryptForStorage(pendingRow(updateId, change.row)).then((blob) => ({
+                encryptBytesForStorage(pendingRow(updateId, change.row)).then((blob) => ({
                   key: pendingKey(change.generation, updateId),
                   blob,
                 })),
@@ -676,6 +755,7 @@ export function attachEncryptedPersistence(
             : [],
         ),
       );
+      stored = puts.map(({ key }) => key[3].slice(PENDING_SEQ_PREFIX.length));
       await writeRows(async (store, requests) => {
         if (snapshotBlob) {
           const keys = (await store.getAllKeys(rangeFor(contentType, contentId))) as UpdateKey[];
@@ -713,7 +793,16 @@ export function attachEncryptedPersistence(
     }
     storageFailed = false;
     lastWriteFailed = false;
-    if (snapshot) persistedUpdates = Math.max(persistedUpdates, encodedAt);
+    if (snapshot) {
+      persistedUpdates = Math.max(persistedUpdates, encodedAt);
+      snapshotStored();
+    }
+    for (const updateId of stored) {
+      const mark = batchMarks.get(updateId);
+      if (mark === undefined) continue;
+      batchMarks.delete(updateId);
+      persistedUpdates = Math.max(persistedUpdates, mark);
+    }
     for (const [updateId, change] of changes) if (!change.row) retiring.delete(updateId);
     if (opts.scope && holdsUncheckpointed()) recordPendingDoc(opts.scope);
     if (writeSnapshot && allocated % compactEvery === 0 && !pendingCompact) {
@@ -823,7 +912,8 @@ export function attachEncryptedPersistence(
       tracked.delete(updateId);
       rowChanges.delete(updateId);
     }
-    const update = bytesToBase64(Y.encodeStateAsUpdate(ydoc));
+    const encoded = Y.encodeStateAsUpdate(ydoc);
+    const update = bytesToBase64(encoded);
     const retained = memoryRecovery.get(recoveryKey) ?? new Map<string, RecoveredDraft>();
     memoryRecovery.set(recoveryKey, retained);
     retained.set(recoveryGeneration, {
@@ -838,11 +928,9 @@ export function attachEncryptedPersistence(
     try {
       await settleWrites();
       if (isStorageEncryptionReady()) {
-        const blob = await encryptForStorage({
-          kind: "snapshot",
-          update,
-          dirty: true,
-        } satisfies SnapshotRow);
+        const blob = await encryptBytesForStorage(
+          encodeRow({ kind: "snapshot", dirty: true }, encoded),
+        );
         const target = recoveryGeneration;
         await writeRows(async (store, requests) => {
           const keys = (await store.getAllKeys(rangeFor(contentType, contentId))) as UpdateKey[];
@@ -886,7 +974,7 @@ export function attachEncryptedPersistence(
     const encodedAt = localUpdates;
     const generation = storageGeneration();
     try {
-      const blob = await encryptForStorage(snapshotRow(Y.encodeStateAsUpdate(ydoc)));
+      const blob = await encryptBytesForStorage(snapshotRow(Y.encodeStateAsUpdate(ydoc)));
       if (generation !== storageGeneration()) return;
       let removable: string[] = [];
       await writeRows(async (store, requests) => {
@@ -906,6 +994,7 @@ export function attachEncryptedPersistence(
       for (const seq of removable) hydratedSeqs.delete(seq);
       storageFailed = false;
       persistedUpdates = Math.max(persistedUpdates, encodedAt);
+      snapshotStored();
     } catch (err) {
       console.warn("[realtime] encrypted persistence compact failed", err);
       storageFailed = true;
@@ -937,6 +1026,7 @@ export function attachEncryptedPersistence(
 
   async function flush(): Promise<void> {
     if (localUpdates > persistedUpdates) snapshotRequested = true;
+    snapshotUrgent = snapshotRequested;
     lastWriteFailed = false;
     requestWrite();
     await settleWrites();
@@ -953,6 +1043,9 @@ export function attachEncryptedPersistence(
     window.removeEventListener(ENCRYPTION_READY_EVENT, handleReady);
     window.removeEventListener(ENCRYPTION_TEARDOWN_EVENT, publishDevice);
     window.removeEventListener("pagehide", handlePageHide);
+    document.removeEventListener("visibilitychange", handleVisibility);
+    if (snapshotTimer !== null) clearTimeout(snapshotTimer);
+    snapshotTimer = null;
     requestWrite();
     const finish = options?.discard ? clear : compact;
     const disposal = settleWrites()
@@ -994,6 +1087,9 @@ export function attachEncryptedPersistence(
   const handlePageHide = () => {
     void flush();
   };
+  const handleVisibility = () => {
+    if (document.visibilityState === "hidden") void flush();
+  };
   const handleBeforeUnload = (event: BeforeUnloadEvent) => {
     void flush();
     if (!atRisk()) return;
@@ -1007,6 +1103,7 @@ export function attachEncryptedPersistence(
   window.addEventListener(ENCRYPTION_READY_EVENT, handleReady);
   window.addEventListener(ENCRYPTION_TEARDOWN_EVENT, publishDevice);
   window.addEventListener("pagehide", handlePageHide);
+  document.addEventListener("visibilitychange", handleVisibility);
   window.addEventListener("beforeunload", handleBeforeUnload);
   const sessions = recoverySessions.get(docKey) ?? new Set<RecoverySession>();
   recoverySessions.set(docKey, sessions);
@@ -1036,13 +1133,4 @@ function bytesToBase64(bytes: Uint8Array): string {
     binary += String.fromCharCode(...bytes.subarray(i, i + 8192));
   }
   return btoa(binary);
-}
-
-function base64ToBytes(encoded: string): Uint8Array {
-  const binary = atob(encoded);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) {
-    bytes[i] = binary.charCodeAt(i);
-  }
-  return bytes;
 }

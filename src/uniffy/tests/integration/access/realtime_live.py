@@ -33,7 +33,7 @@ from uniffy.core.realtime.storage import load_snapshot, lock_document, stage_see
 from uniffy.core.types import ContentType, generate_id
 from uniffy.domains.notes.adapter import NoteRealtimeAdapter
 from uniffy.infrastructure.database.session import open_session
-from uniffy.infrastructure.valkey.binary import get_binary_client
+from uniffy.infrastructure.valkey.binary import get_binary_client, server_identity
 from uniffy.infrastructure.valkey.config import ValkeyConfig
 from uniffy.infrastructure.valkey.pubsub import close_pubsub, init_pubsub
 from uniffy.tests.integration.access.recording_search import recording_indexer
@@ -176,7 +176,9 @@ async def buffered(key: DocKey, access: Any, namespace: str) -> BufferedDocument
     """Seed ``key`` for the access fixture's member and bind it to a fresh epoch in ``namespace``."""
     async with open_session() as db:
         await lock_document(db, key, access.org_id)
-        row = await stage_seed(db, key, access.org_id)
+        await stage_seed(db, key, access.org_id)
+        row = await load_snapshot(db, key)
+        assert row is not None
         await db.commit()
         base, generation = row.updates, row.generation
     assert generation is not None
@@ -231,13 +233,18 @@ async def unreachable(namespace: str) -> AsyncIterator[UpdateBuffer]:
 
 
 class _EvictingValkey:
-    """A serving Valkey whose allkeys eviction policy keeps buffered acceptance disabled."""
+    """The serving Valkey, reporting an allkeys eviction policy that disables buffered acceptance.
+
+    It names the serving instance, because a verdict only holds for the instance it read.
+    """
 
     config = {"maxmemory-policy": "allkeys-lru", "maxmemory": "0"}
 
     async def info(self, section: str) -> dict[str, object]:
         if section == "server":
-            return {"run_id": "0" * 40, "valkey_version": "9.1.2"}
+            identity = server_identity()
+            assert identity is not None
+            return {"run_id": identity.run_id, "valkey_version": identity.version}
         return {"aof_enabled": 1}
 
     async def config_get(self, pattern: str) -> dict[str, str]:

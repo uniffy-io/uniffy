@@ -15,8 +15,8 @@ from uniffy.core.realtime.buffer_keys import (
     BufferScope,
     accounting_key,
     bucket_prefix,
-    buffer_keys,
     due_key,
+    early_key,
     parse_member,
 )
 from uniffy.core.realtime.checkpoint import (
@@ -40,9 +40,6 @@ from uniffy.core.realtime.preflight import ensure_buffer_ready
 
 logger = logger.bind(component="core.realtime.dispatch")
 
-_MIB = 1024 * 1024
-EARLY_PENDING_BYTES = 1 * _MIB
-EARLY_PENDING_RECORDS = 1024
 # Claims outlive one dispatcher interval plus queue pickup; ARQ job ids dedupe longer waits.
 CLAIM_TTL_SECONDS = 5
 BACKOFF_BASE_SECONDS = 15
@@ -94,10 +91,12 @@ async def back_off(buffer: UpdateBuffer, scope: BufferScope) -> None:
         seconds = backoff_seconds(failures)
         retry_at = await valkey_now(client) + seconds * 1000
         await client.set(claim_key(scope, buffer.namespace), "backoff", ex=seconds)
-        # Dispatch reads only the oldest due entries, so a held document moves out of their way.
-        await client.zadd(
-            due_key(scope.bucket, buffer.namespace), {scope.member: retry_at}, xx=True, gt=True
-        )
+        # Dispatch reads only the oldest due and early entries, so a held document moves out of
+        # their way.
+        for index in (due_key, early_key):
+            await client.zadd(
+                index(scope.bucket, buffer.namespace), {scope.member: retry_at}, xx=True, gt=True
+            )
 
 
 async def run_checkpoint_job(
@@ -153,32 +152,34 @@ async def dispatch_due(
                 pipe.zrange(due, 0, 0, withscores=True)
                 pipe.hmget(accounting_key(bucket, namespace), ["bytes", "records"])
                 pipe.zrangebyscore(due, "-inf", now, start=0, num=DUE_SCAN, withscores=True)
-                pipe.zrevrangebyscore(
-                    due, "+inf", f"({now}", start=0, num=EARLY_SCAN, withscores=True
+                pipe.zrangebyscore(
+                    early_key(bucket, namespace), "-inf", now, start=0, num=EARLY_SCAN
                 )
             replies = await pipe.execute()
     firsts: list[float] = []
     due_found: list[tuple[BufferScope, int]] = []
-    upcoming: list[tuple[BufferScope, int]] = []
+    oversized: list[BufferScope] = []
     # Rotating the first bucket keeps one busy bucket from always filling the batch.
     start = now // 1000 % BUCKET_COUNT
     for bucket in (*range(start, BUCKET_COUNT), *range(start)):
-        first, usage, due, later = replies[bucket * 4 : bucket * 4 + 4]
+        first, usage, due, early = replies[bucket * 4 : bucket * 4 + 4]
         REALTIME_BUFFER_PENDING_BYTES.labels(bucket=str(bucket)).set(int(usage[0] or 0))
         REALTIME_BUFFER_PENDING_RECORDS.labels(bucket=str(bucket)).set(int(usage[1] or 0))
         firsts.extend(score for _, score in first)
-        for found, entries in ((due_found, due), (upcoming, later)):
-            found.extend(
-                (scope, int(score))
-                for member, score in entries
-                if (scope := _due_scope(member, bucket)) is not None
-            )
+        due_found.extend(
+            (scope, int(score))
+            for member, score in due
+            if (scope := _due_scope(member, bucket)) is not None
+        )
+        oversized.extend(
+            scope for member in early if (scope := _due_scope(member, bucket)) is not None
+        )
     oldest = min(firsts, default=None)
     REALTIME_BUFFER_OLDEST_PENDING_SECONDS.set(
         0 if oldest is None else max(0, now - oldest + DUE_DELAY_MS) / 1000
     )
     REALTIME_CHECKPOINT_QUEUE_AGE.set(0 if oldest is None else max(0, now - oldest) / 1000)
-    selected, early = await _select(client, due_found, upcoming, namespace)
+    selected, early = await _select(client, due_found, oversized, namespace)
     claimed = enqueued = 0
     for scope, window in selected[:DISPATCH_LIMIT]:
         async with buffer_errors():
@@ -203,30 +204,37 @@ async def dispatch_due(
 async def _select(
     client: aioredis.Redis,
     due: list[tuple[BufferScope, int]],
-    upcoming: list[tuple[BufferScope, int]],
+    oversized: list[BufferScope],
     namespace: str,
 ) -> tuple[list[tuple[BufferScope, int]], int]:
-    """Due documents plus oversized early ones; claimed documents never crowd out their bucket."""
-    candidates = [*((*entry, False) for entry in due), *((*entry, True) for entry in upcoming)]
-    if not candidates:
+    """Due documents, then oversized ones before their window; claimed ones never crowd a bucket.
+
+    An oversized document keeps the job id of its due window.
+    """
+    due_members = {scope.member for scope, _ in due}
+    early = [scope for scope in oversized if scope.member not in due_members]
+    if not due and not early:
         return [], 0
     async with buffer_errors(), client.pipeline(transaction=False) as pipe:
-        for scope, _, _ in candidates:
+        for scope, _ in due:
             pipe.exists(claim_key(scope, namespace))
-            pipe.hmget(buffer_keys(scope, namespace).control, ["bytes", "records"])
+        for scope in early:
+            pipe.exists(claim_key(scope, namespace))
+            pipe.zscore(due_key(scope.bucket, namespace), scope.member)
         replies = await pipe.execute()
+    candidates = [
+        (scope, window, bool(held))
+        for (scope, window), held in zip(due, replies[: len(due)], strict=True)
+    ]
+    offset = len(due)
+    for index, scope in enumerate(early):
+        held, window = replies[offset + index * 2 : offset + index * 2 + 2]
+        if window is not None:
+            candidates.append((scope, int(window), bool(held)))
     taken: dict[int, int] = {}
     selected = []
-    early = 0
-    for index, (scope, window, ahead) in enumerate(candidates):
-        held, (pending_bytes, records) = replies[index * 2 : index * 2 + 2]
-        if ahead:
-            if int(pending_bytes or 0) <= EARLY_PENDING_BYTES and int(records or 0) <= (
-                EARLY_PENDING_RECORDS
-            ):
-                continue
-            early += 1
+    for scope, window, held in candidates:
         if not held and taken.get(scope.bucket, 0) < DUE_BATCH:
             taken[scope.bucket] = taken.get(scope.bucket, 0) + 1
             selected.append((scope, window))
-    return selected, early
+    return selected, len(early)

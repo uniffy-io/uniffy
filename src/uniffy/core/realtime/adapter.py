@@ -1,7 +1,6 @@
 """Extension point between generic realtime state and domain persistence."""
 
 from collections.abc import Awaitable, Callable, Collection
-from datetime import datetime
 from enum import Enum, auto
 from typing import Protocol
 from uuid import UUID
@@ -18,31 +17,8 @@ class RealtimeRenderConflict(Exception):
     """Transient domain contention must preserve the persisted CRDT snapshot."""
 
 
-class RealtimeRenderSuperseded(Exception):
-    """A plain write changed the row after this snapshot was encoded; the column is newer."""
-
-
 class DeferredProjection(Enum):
     SOFT_DELETED = auto()
-
-
-def check_not_superseded(
-    updated_at: datetime | None,
-    supersede_after: datetime | None,
-    *,
-    stored: str | None,
-    rendered: str,
-    label: str,
-) -> None:
-    """Raise when a plain write landed after the encode and left different text behind.
-
-    Equal text means the live doc already grafted that write, so rendering is a no-op
-    and may proceed.
-    """
-    if supersede_after is None or updated_at is None:
-        return
-    if updated_at > supersede_after and (stored or "") != rendered:
-        raise RealtimeRenderSuperseded(f"{label} changed after the snapshot was encoded")
 
 
 class RealtimeContentAdapter(Protocol):
@@ -102,34 +78,6 @@ class RealtimeContentAdapter(Protocol):
         organization_id: UUID,
     ) -> None:
         """Seed Y types from domain storage on cold start (snapshot row empty)."""
-        ...
-
-    async def render_and_persist(
-        self,
-        session: AsyncSession,
-        ydoc: pycrdt.Doc,
-        content_id: UUID,
-        organization_id: UUID,
-        *,
-        actor_id: UUID | None = None,
-        supersede_after: datetime | None = None,
-    ) -> bool:
-        """Persist the rendered shape, or return false when the target no longer exists.
-
-        ``actor_id`` is the last live editor when known; side effects attribute to it.
-        ``supersede_after`` is the snapshot's encode time when no snapshot row existed before
-        this write; a domain row a plain write updated later with different text must raise
-        :class:`RealtimeRenderSuperseded` (see :func:`check_not_superseded`) instead of
-        being overwritten.
-        """
-        ...
-
-    def apply_external_content(self, ydoc: pycrdt.Doc, content: str) -> bool:
-        """Graft a domain column write into the live doc as a CRDT edit.
-
-        Returns ``False`` when the doc already matches (no update to fan out).
-        Caller holds the session lock.
-        """
         ...
 
 

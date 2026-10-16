@@ -1,10 +1,13 @@
 import { useCallback, useMemo, useSyncExternalStore } from "react";
+import { canReleaseSession } from "@/features/realtime/hooks/useDocSession";
 import { realtimeMultiplexer, type RealtimeDocState } from "@/features/realtime/multiplexer";
 import {
   getDeviceRecoveryState,
   subscribeDeviceRecovery,
   type DeviceRecoveryState,
+  type DeviceStorage,
 } from "@/features/realtime/persistence/encryptedYjsPersistence";
+import type { RealtimeStatus } from "@/features/realtime/protocol";
 
 /** What the persistence chip tells the user about their own edits on one document. */
 export type SaveState = "syncing" | "synced" | "delayed" | "unavailable" | "saved";
@@ -22,20 +25,81 @@ const NO_DOC_STATE: RealtimeDocState = Object.freeze({
   coverageKnown: false,
 });
 
-export function useRealtimeDocState(docName: string | null): RealtimeDocState {
-  const subscribe = useCallback(
-    (onChange: () => void) =>
-      docName ? realtimeMultiplexer.subscribeDocState(docName, onChange) : () => {},
-    [docName],
-  );
-  const getSnapshot = () => (docName ? realtimeMultiplexer.getDocState(docName) : NO_DOC_STATE);
-  return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
-}
-
 const NO_DEVICE_STATE: DeviceRecoveryState = Object.freeze({
   storage: "available",
   unpersisted: false,
 });
+
+/** One value derived from a document's transport and device state. Subscribers hear only its
+ * changes, so a host re-renders when that value flips, not on every batch and receipt. */
+export interface DocValueStore<T> {
+  subscribe: (onChange: () => void) => () => void;
+  getSnapshot: () => T;
+}
+
+function derivedStore<T>(docName: string | null, read: () => T): DocValueStore<T> {
+  return {
+    subscribe: (onChange) => {
+      if (!docName) return () => {};
+      let last = read();
+      const notify = () => {
+        const next = read();
+        if (Object.is(next, last)) return;
+        last = next;
+        onChange();
+      };
+      const stopDoc = realtimeMultiplexer.subscribeDocState(docName, notify);
+      const stopDevice = subscribeDeviceRecovery(docName, notify);
+      return () => {
+        stopDoc();
+        stopDevice();
+      };
+    },
+    getSnapshot: read,
+  };
+}
+
+const docState = (docName: string | null) =>
+  docName ? realtimeMultiplexer.getDocState(docName) : NO_DOC_STATE;
+const deviceState = (docName: string | null) =>
+  docName ? getDeviceRecoveryState(docName) : NO_DEVICE_STATE;
+
+/** Some own edit is not in a checkpoint yet; flips at the first edit and at the checkpoint. */
+export function checkpointPendingStore(docName: string | null): DocValueStore<boolean> {
+  return derivedStore(docName, () => docState(docName).checkpointPending);
+}
+
+export function deviceStorageStore(docName: string | null): DocValueStore<DeviceStorage> {
+  return derivedStore(docName, () => deviceState(docName).storage);
+}
+
+/** Whether a closing editor may hand its document to the drain, per `canReleaseSession`. */
+export function releasableStore(
+  docName: string | null,
+  status: RealtimeStatus,
+): DocValueStore<boolean> {
+  return derivedStore(docName, () =>
+    canReleaseSession(status, docState(docName), deviceState(docName)),
+  );
+}
+
+function useDocValue<T>(store: DocValueStore<T>): T {
+  return useSyncExternalStore(store.subscribe, store.getSnapshot, store.getSnapshot);
+}
+
+export function useCheckpointPending(docName: string | null): boolean {
+  return useDocValue(useMemo(() => checkpointPendingStore(docName), [docName]));
+}
+
+export function useDeviceStorage(docName: string | null): DeviceStorage {
+  return useDocValue(useMemo(() => deviceStorageStore(docName), [docName]));
+}
+
+/** Pass a document only while it matters, such as while an editor closes; without one the status
+ * alone decides. */
+export function useSessionReleasable(docName: string | null, status: RealtimeStatus): boolean {
+  return useDocValue(useMemo(() => releasableStore(docName, status), [docName, status]));
+}
 
 /** What this device holds of a document's own edits, for the chip and the Done hand-off. */
 export function useDeviceRecoveryState(docName: string | null): DeviceRecoveryState {
@@ -43,7 +107,7 @@ export function useDeviceRecoveryState(docName: string | null): DeviceRecoverySt
     (onChange: () => void) => (docName ? subscribeDeviceRecovery(docName, onChange) : () => {}),
     [docName],
   );
-  const getSnapshot = () => (docName ? getDeviceRecoveryState(docName) : NO_DEVICE_STATE);
+  const getSnapshot = () => deviceState(docName);
   return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 }
 
@@ -63,7 +127,14 @@ export function createSaveStateStore(docName: string): SaveStateStore {
   const getSnapshot = (): SaveState | null => {
     const state = realtimeMultiplexer.getDocState(docName);
     if (state.savingUnavailable) return "unavailable";
-    if (state.oldestUncheckpointedAt !== null && state.oldestUncheckpointedAt === delayedFor)
+    const oldest = state.oldestUncheckpointedAt;
+    // Only this socket's session state says whether that edit is still waiting: a reconnect
+    // that missed its checkpoint must not flash a delay. A restored old edit is late at once.
+    if (
+      oldest !== null &&
+      state.coverageKnown &&
+      (oldest === delayedFor || Date.now() >= oldest + SAVE_DELAYED_AFTER_MS)
+    )
       return "delayed";
     if (state.transportPending || settling) return "syncing";
     if (!state.coverageKnown) return null;

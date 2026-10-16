@@ -13,11 +13,16 @@ from uniffy.core.models.notes.note import Note
 from uniffy.core.models.realtime.yjs_snapshot import RealtimeYjsSnapshot
 from uniffy.core.realtime.buffer_keys import AdmissionStatus
 from uniffy.core.realtime.checkpoint import CheckpointStatus, checkpoint_document
-from uniffy.core.realtime.job_contracts import SAVE_REALTIME_SNAPSHOT
+from uniffy.core.realtime.job_contracts import PROJECT_REALTIME_DOCUMENT
 from uniffy.core.realtime.lifecycle import stage_replacement
 from uniffy.core.realtime.live import load_live_document
 from uniffy.core.realtime.snapshot import SnapshotOutcome, persist_snapshot
-from uniffy.core.realtime.storage import GenerationConflict, lock_document, stage_seed
+from uniffy.core.realtime.storage import (
+    GenerationConflict,
+    load_snapshot,
+    lock_document,
+    stage_seed,
+)
 from uniffy.core.types import ContentType, NodeType, generate_id
 from uniffy.infrastructure.database.session import open_session
 from uniffy.tests.integration.access.realtime_live import (
@@ -92,7 +97,9 @@ async def live_canvas(live_note) -> AsyncIterator[BufferedDocument]:
         await db.commit()
         key = (ContentType.NOTE, note.id)
         await lock_document(db, key, live_note.org)
-        row = await stage_seed(db, key, live_note.org)
+        await stage_seed(db, key, live_note.org)
+        row = await load_snapshot(db, key)
+        assert row is not None
         await db.commit()
     assert row.generation is not None
     try:
@@ -156,7 +163,7 @@ async def test_canvas_checkpoint_commits_both_edits_and_projection_renders_them(
     assert (await live_canvas.buffer_state())["stream"] == []
     assert live_canvas.jobs.jobs == [
         (
-            SAVE_REALTIME_SNAPSHOT.name,
+            PROJECT_REALTIME_DOCUMENT.name,
             f"{live_canvas.namespace}projection:{ContentType.NOTE.value}:"
             f"{live_canvas.key[1]}:{row.revision}",
             (ContentType.NOTE.value, str(live_canvas.key[1]), str(live_canvas.org)),

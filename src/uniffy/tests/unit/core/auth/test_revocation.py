@@ -10,7 +10,9 @@ from starlette.requests import Request
 
 from uniffy.core.auth import http, principal, revocation
 from uniffy.core.realtime import reauth, ws_routes
+from uniffy.core.realtime.buffer import UpdateBuffer
 from uniffy.core.realtime.state import WSSession
+from uniffy.core.realtime.ydoc_manager import YDocManager
 from uniffy.core.types import generate_id
 from uniffy.domains.auth.interceptors import AuthenticationInterceptor
 from uniffy.transport.rpc import code_for_domain_error
@@ -55,7 +57,7 @@ async def test_unavailable_database_denies_with_retryable_transport_errors(monke
     ws.headers = {"authorization": "Bearer token"}
     monkeypatch.setattr(ws_routes, "origin_is_allowed", lambda *_: True)
     monkeypatch.setattr(ws_routes, "decode_access_token", lambda _: payload)
-    await ws_routes.realtime(ws, org_id)
+    await ws_routes.serve_realtime(ws, org_id, YDocManager(buffer=UpdateBuffer()))
     ws.accept.assert_not_awaited()
     assert ws.close.await_args.kwargs["code"] == 1013
     assert user_id not in ws_routes._active_sockets
@@ -96,6 +98,6 @@ async def test_malformed_session_claim_cannot_become_sessionless(monkeypatch, si
     monkeypatch.setattr(ws_routes, "origin_is_allowed", lambda *_: True)
     monkeypatch.setattr(ws_routes, "decode_access_token", lambda _: payload)
     monkeypatch.setattr(ws_routes, "token_revocation", check)
-    await ws_routes.realtime(ws, org_id)
+    await ws_routes.serve_realtime(ws, org_id, YDocManager(buffer=UpdateBuffer()))
     ws.accept.assert_not_awaited()
     check.assert_not_awaited()

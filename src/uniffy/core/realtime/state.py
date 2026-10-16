@@ -11,6 +11,7 @@ from uuid import UUID
 import pycrdt
 from fastapi import WebSocket
 
+from uniffy.core.realtime.limits import MAX_DOCS_PER_SOCKET, RESYNC_INTERVAL_SECONDS
 from uniffy.core.types import ContentType
 
 DocKey = tuple[ContentType, UUID]
@@ -52,6 +53,42 @@ def _new_outbound_queue() -> asyncio.Queue[bytes]:
     return OutboundQueue()
 
 
+@dataclass
+class TokenBucket:
+    """Tokens refill continuously at ``per_second`` up to ``capacity``; a fresh bucket is full."""
+
+    capacity: float
+    per_second: float
+    tokens: float = field(init=False)
+    checked_at: float = field(default_factory=time.monotonic)
+
+    def __post_init__(self) -> None:
+        self.tokens = self.capacity
+
+    def take(self) -> bool:
+        now = time.monotonic()
+        self.tokens = min(self.capacity, self.tokens + (now - self.checked_at) * self.per_second)
+        self.checked_at = now
+        if self.tokens < 1:
+            return False
+        self.tokens -= 1
+        return True
+
+    async def wait(self) -> None:
+        """Take a token, sleeping until one refills."""
+        while not self.take():
+            await asyncio.sleep((1 - self.tokens) / self.per_second)
+
+
+def _resync_budget() -> TokenBucket:
+    # Clients resync every attached document once per interval, plus once on attach or app
+    # foreground, so twice the document limit never makes a legitimate resync wait.
+    return TokenBucket(
+        capacity=2 * MAX_DOCS_PER_SOCKET,
+        per_second=MAX_DOCS_PER_SOCKET / RESYNC_INTERVAL_SECONDS,
+    )
+
+
 def doc_name_for(key: DocKey) -> str:
     """Canonical docname (``"NOTE:<uuid>"``) for multiplex frames."""
     content_type, content_id = key
@@ -84,6 +121,8 @@ class WSSession:
     outbound: asyncio.Queue[bytes] = field(default_factory=_new_outbound_queue)
     doc_handles: dict[DocKey, ClientHandle] = field(default_factory=dict)
     denied_docs: set[DocKey] = field(default_factory=set)
+    # Each answered resync encodes a whole document, so a flood waits instead of stalling the loop.
+    resyncs: TokenBucket = field(default_factory=_resync_budget)
     closed: bool = False
 
 
@@ -101,6 +140,8 @@ class ClientHandle:
     can_seed: bool = False
     awareness_client_id: int | None = None
     awareness_user: dict | None = None
+    # Monotonic time of the last awareness query relayed for this handle.
+    awareness_queried_at: float | None = None
     session_id: UUID | None = None
     closed: bool = False
 
@@ -128,3 +169,12 @@ class YDocSession:
     clients: dict[int, ClientHandle] = field(default_factory=dict)
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
     eviction_task: asyncio.Task[None] | None = None
+    # Validation copy of ``ydoc``. Every update ``ydoc`` takes reaches it too, so admission checks
+    # an incoming update in time proportional to the update. ``None`` until the next check
+    # rebuilds it from ``ydoc``.
+    shadow: pycrdt.Doc | None = None
+    # The shadow holds a checked update that ``ydoc`` has not taken yet.
+    shadow_ahead: bool = False
+    # Upper bound on the encoded size of ``ydoc``: exact when the shadow was built, plus every
+    # update applied since.
+    encoded_bound: int = 0

@@ -70,7 +70,8 @@ export function persistenceState({
   if (readOnly) return "view_only";
   if (doc.savingUnavailable) return "unavailable";
   const delayedAt = saveDelayedAt(doc);
-  if (delayedAt !== null && now >= delayedAt) return "delayed";
+  // Only this socket's session state says whether that edit is still waiting.
+  if (delayedAt !== null && doc.coverageKnown && now >= delayedAt) return "delayed";
   if (
     doc.transportPending ||
     (transportSettledAt !== null && now < transportSettledAt + SYNCING_SETTLE_MS)

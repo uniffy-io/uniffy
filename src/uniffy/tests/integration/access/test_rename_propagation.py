@@ -16,7 +16,7 @@ from uniffy.core.models.realtime.yjs_snapshot import RealtimeYjsSnapshot
 from uniffy.core.realtime.adapter import register_realtime_adapter
 from uniffy.core.realtime.buffer import UpdateBuffer
 from uniffy.core.realtime.checkpoint import CheckpointStatus, checkpoint_document
-from uniffy.core.realtime.job_contracts import SAVE_REALTIME_SNAPSHOT
+from uniffy.core.realtime.job_contracts import PROJECT_REALTIME_DOCUMENT
 from uniffy.core.realtime.rename import RENAME_BATCH_DOCUMENTS
 from uniffy.core.realtime.state import DocKey
 from uniffy.core.realtime.storage import lock_document, stage_seed
@@ -152,7 +152,7 @@ async def test_rename_keeps_a_pending_tail_and_relabels_every_mentioning_documen
         seeded: (f"see {mention(urn, 'Renamed')}", 2),
     }
     projected = {
-        args[1] for name, _, args in live_note.jobs.jobs if name == SAVE_REALTIME_SNAPSHOT.name
+        args[1] for name, _, args in live_note.jobs.jobs if name == PROJECT_REALTIME_DOCUMENT.name
     }
     assert projected == {str(live_note.key[1]), str(seeded[1])}
     assert [sorted(ids) for ids in reindexed(live_note.jobs)] == [

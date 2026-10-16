@@ -14,8 +14,8 @@ from uniffy.core.realtime import storage
 from uniffy.core.realtime.adapter import get_realtime_adapter, register_realtime_adapter
 from uniffy.core.realtime.buffer_keys import BufferScope
 from uniffy.core.realtime.checkpoint import CheckpointStatus, checkpoint_document
-from uniffy.core.realtime.job_contracts import SAVE_REALTIME_SNAPSHOT
-from uniffy.core.realtime.jobs import recover_realtime_projections, save_realtime_snapshot
+from uniffy.core.realtime.job_contracts import PROJECT_REALTIME_DOCUMENT
+from uniffy.core.realtime.jobs import project_realtime_document, recover_realtime_projections
 from uniffy.core.realtime.multiplex import read_var_string
 from uniffy.core.realtime.publisher import publish_content_replace
 from uniffy.core.realtime.wire import (
@@ -241,7 +241,7 @@ async def note_content(note: BufferedDocument) -> str | None:
 async def projected(note: BufferedDocument) -> RealtimeYjsSnapshot:
     """Run the projection recovery sweep until it has rendered the note's checkpoint."""
     for _ in range(RECOVERY_PASSES):
-        await recover_realtime_projections({})
+        await recover_realtime_projections({}, organization_id=note.org)
         row = await stored(note.key)
         if row.rendered_revision == row.revision and not row.effects_pending:
             return row
@@ -280,10 +280,10 @@ async def test_projection_failure_after_worker_checkpoint_keeps_coverage_and_rec
 
             # The worker's projection job runs after the commit and its renderer fails.
             [(name, _, args)] = note.jobs.jobs
-            assert name == SAVE_REALTIME_SNAPSHOT.name
+            assert name == PROJECT_REALTIME_DOCUMENT.name
             with pytest.raises(RenderFailed):
-                await save_realtime_snapshot({}, *args)
-            await recover_realtime_projections({})
+                await project_realtime_document({}, *args)
+            await recover_realtime_projections({}, organization_id=note.org)
             row = await stored(note.key)
             assert row.rendered_revision < row.revision
             assert text_of(row.updates) == "base one two"

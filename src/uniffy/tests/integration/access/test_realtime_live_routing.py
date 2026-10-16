@@ -1,17 +1,20 @@
 """Real in-process sockets against resident replicas whose live edits go through the buffer."""
 
 import asyncio
+import time
 from collections.abc import AsyncIterator, Callable
 from typing import Any
 
 import pytest
 import pytest_asyncio
+from prometheus_client import REGISTRY
 
 from uniffy.core.realtime.buffer_keys import BufferScope
 from uniffy.core.realtime.checkpoint import CheckpointStatus, checkpoint_document
 from uniffy.core.realtime.markdown import markdown_text
 from uniffy.core.realtime.multiplex import write_var_string
 from uniffy.core.realtime.publisher import publish_checkpoint_progress
+from uniffy.core.realtime.state import TokenBucket
 from uniffy.core.realtime.storage import lock_document
 from uniffy.core.realtime.wire import (
     MESSAGE_ACCEPTED_RECEIPT,
@@ -120,6 +123,38 @@ async def test_attach_and_resync_send_generation_then_session_state_before_sync(
         assert client.markdown == "base"
 
 
+async def test_resync_flood_waits_for_its_socket_budget_and_every_resync_is_answered(
+    live_note: BufferedDocument, manager: YDocManager
+) -> None:
+    # One spare resync, then one every 0.2 seconds.
+    client = connect(
+        manager,
+        live_note.key,
+        live_note.org,
+        live_note.owner,
+        resyncs=TokenBucket(capacity=1, per_second=5),
+    )
+    try:
+        started = time.monotonic()
+        client.sync()
+        await client.until(YMessageType.SYNC, step(YSyncMessageType.SYNC_STEP2))
+        client.sync()
+        await client.until(YMessageType.SYNC, step(YSyncMessageType.SYNC_STEP2))
+        unthrottled = time.monotonic() - started
+        for _ in range(3):
+            client.sync()
+        for _ in range(3):
+            await client.until(YMessageType.SYNC, step(YSyncMessageType.SYNC_STEP2))
+        flooded = time.monotonic() - started - unthrottled
+    finally:
+        await client.leave()
+
+    # The attach and the spare resync answer at once; the next three wait for refills.
+    assert unthrottled < 0.2
+    assert flooded >= 0.5
+    assert client.socket.closes == [(1011, "session ended")]
+
+
 async def test_edit_answers_receipt_and_leaves_snapshot_row_unchanged(
     live_note: BufferedDocument, manager: YDocManager
 ) -> None:
@@ -138,6 +173,38 @@ async def test_edit_answers_receipt_and_leaves_snapshot_row_unchanged(
         )
         assert await live_note.stream_ids() == [b"1-0"]
         assert resident_text(manager, live_note.key) == "base typed"
+
+
+def latest_reads(source: str) -> float:
+    return REGISTRY.get_sample_value("uniffy_realtime_latest_reads_total", {"source": source}) or 0.0
+
+
+async def test_admission_reads_only_the_records_past_the_resident_head_until_a_checkpoint(
+    live_note: BufferedDocument, manager: YDocManager
+) -> None:
+    async with attached(manager, live_note) as (client, frames):
+        # Nothing cached: every byte of the checkpoint the resident document holds stays unread.
+        live_note.buffer.forget(live_note.key)
+        before = {source: latest_reads(source) for source in ("resident", "cache", "checkpoint")}
+        history: list[bytes] = [live_note.base]
+        for index, name in enumerate((" one", " two", " three"), start=1):
+            edit = typed(*history, suffix=name)
+            history.append(edit)
+            client.write(f"edit-{index}", edit, live_note.generation)
+            assert (await client.receipt()).accepted_sequence == index
+        during = {source: latest_reads(source) - before[source] for source in before}
+
+        checkpointed = await checkpoint_document(live_note.buffer, live_note.head.scope)
+        after_pass = latest_reads("checkpoint")
+        client.write("edit-4", typed(*history, suffix=" four"), live_note.generation)
+        receipt = await client.receipt()
+
+    assert during == {"resident": 3, "cache": 0, "checkpoint": 0}
+    assert checkpointed.status is CheckpointStatus.COMMITTED
+    # The resident document never heard of that checkpoint, so admission reads it once.
+    assert latest_reads("checkpoint") == after_pass + 1
+    assert receipt.accepted_sequence == 4
+    assert resident_text(manager, live_note.key) == "base one two three four"
 
 
 async def test_duplicate_update_id_answers_the_same_sequence(

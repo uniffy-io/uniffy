@@ -24,19 +24,25 @@ from uniffy.core.realtime.limits import MAX_SOCKETS_PER_USER
 from uniffy.core.realtime.metrics import REALTIME_AUTH_FAILURES_TOTAL
 from uniffy.core.realtime.session import run_multiplexed_session
 from uniffy.core.realtime.state import WSSession
+from uniffy.core.realtime.ydoc_manager import YDocManager
 
 logger = logger.bind(component="core.realtime.ws_routes")
 
 _active_sockets: dict[UUID, int] = {}
 
-router = APIRouter(prefix="/realtime", tags=["realtime"])
+
+def create_realtime_router(manager: YDocManager) -> APIRouter:
+    router = APIRouter(prefix="/realtime", tags=["realtime"])
+
+    @router.websocket("")
+    async def realtime(ws: WebSocket, org_id: Annotated[UUID, Query(...)]) -> None:
+        await serve_realtime(ws, org_id, manager)
+
+    return router
 
 
-@router.websocket("")
-async def realtime(
-    ws: WebSocket,
-    org_id: Annotated[UUID, Query(...)],
-) -> None:
+async def serve_realtime(ws: WebSocket, org_id: UUID, manager: YDocManager) -> None:
+    """Authenticate one upgrade, then run its multiplexed session against ``manager``."""
     origin = ws.headers.get("origin")
     if not origin_is_allowed(origin, get_ws_origin_allowlist()):
         REALTIME_AUTH_FAILURES_TOTAL.labels(reason="origin_denied").inc()
@@ -127,7 +133,7 @@ async def realtime(
             session_id=session_id,
             expires_at=expires_at,
         )
-        await run_multiplexed_session(ws, ws_session)
+        await run_multiplexed_session(ws, ws_session, manager)
     finally:
         remaining = _active_sockets[user_id] - 1
         if remaining:

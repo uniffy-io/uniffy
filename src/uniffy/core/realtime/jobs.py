@@ -1,9 +1,9 @@
-"""Realtime jobs: buffered checkpoints, their scheduling, and projection persistence."""
+"""Realtime jobs: buffered checkpoints, their scheduling, and projection of committed checkpoints."""
 
 import asyncio
 import time
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 from loguru import logger
@@ -12,7 +12,7 @@ from sqlalchemy.orm import load_only
 
 from uniffy.core.models.realtime.yjs_snapshot import RealtimeYjsSnapshot
 from uniffy.core.realtime.adapter import RealtimeRenderConflict
-from uniffy.core.realtime.buffer import BufferUnavailable, UpdateBuffer
+from uniffy.core.realtime.buffer import UPDATE_BUFFER_CTX_KEY, BufferUnavailable, UpdateBuffer
 from uniffy.core.realtime.dispatch import dispatch_due, run_checkpoint_job
 from uniffy.core.realtime.maintenance import maintain_buffer
 from uniffy.core.realtime.metrics import (
@@ -35,7 +35,16 @@ CHECKPOINT_CONCURRENCY = 2
 CHECKPOINT_SLOTS = asyncio.Semaphore(CHECKPOINT_CONCURRENCY)
 _BUSY_DEFER_SECONDS = 1
 
+_PROJECTION_PENDING = or_(
+    RealtimeYjsSnapshot.revision > RealtimeYjsSnapshot.rendered_revision,
+    RealtimeYjsSnapshot.effects_pending.is_(True),
+)
+
 _dispatch_skipping = False
+
+
+def _buffer(ctx: dict[str, Any]) -> UpdateBuffer:
+    return cast(UpdateBuffer, ctx[UPDATE_BUFFER_CTX_KEY])
 
 
 async def checkpoint_realtime_document(
@@ -45,7 +54,7 @@ async def checkpoint_realtime_document(
     if CHECKPOINT_SLOTS.locked():
         raise Retry(defer=_BUSY_DEFER_SECONDS, count_attempt=False)
     async with CHECKPOINT_SLOTS:
-        result = await run_checkpoint_job(UpdateBuffer(), member, claim)
+        result = await run_checkpoint_job(_buffer(ctx), member, claim)
     return {"status": result.status.value, "covered": result.covered}
 
 
@@ -53,7 +62,7 @@ async def dispatch_realtime_checkpoints(ctx: dict[str, Any]) -> dict[str, int]:
     global _dispatch_skipping
 
     try:
-        report = await dispatch_due(UpdateBuffer())
+        report = await dispatch_due(_buffer(ctx))
     except BufferUnavailable:
         # The dispatcher ticks every second; one line per outage is enough.
         if not _dispatch_skipping:
@@ -70,7 +79,7 @@ async def dispatch_realtime_checkpoints(ctx: dict[str, Any]) -> dict[str, int]:
 
 async def maintain_realtime_buffer(ctx: dict[str, Any]) -> dict[str, int]:
     try:
-        report = await maintain_buffer(UpdateBuffer())
+        report = await maintain_buffer(_buffer(ctx))
     except BufferUnavailable:
         logger.warning("Realtime buffer maintenance skipped: Valkey is unavailable")
         return {"documents": 0}
@@ -79,29 +88,30 @@ async def maintain_realtime_buffer(ctx: dict[str, Any]) -> dict[str, int]:
     }
 
 
-async def recover_realtime_projections(ctx: dict[str, Any]) -> None:
+async def recover_realtime_projections(
+    ctx: dict[str, Any], *, organization_id: UUID | None = None
+) -> None:
+    """Render a batch of unprojected checkpoints; ``organization_id`` narrows it to one tenant.
+
+    The schedule sweeps every organization and reports the whole backlog.
+    """
+    scope = (
+        () if organization_id is None else (RealtimeYjsSnapshot.organization_id == organization_id,)
+    )
     async with open_session() as db:
-        depth = await db.scalar(
-            select(func.count())
-            .select_from(RealtimeYjsSnapshot)
-            .where(
-                or_(
-                    RealtimeYjsSnapshot.revision > RealtimeYjsSnapshot.rendered_revision,
-                    RealtimeYjsSnapshot.effects_pending.is_(True),
-                )
+        if organization_id is None:
+            depth = await db.scalar(
+                select(func.count()).select_from(RealtimeYjsSnapshot).where(_PROJECTION_PENDING)
             )
-        )
-        REALTIME_BACKLOG_DEPTH.labels(kind="projection").set(depth or 0)
+            REALTIME_BACKLOG_DEPTH.labels(kind="projection").set(depth or 0)
         pending = (
             (
                 await db.execute(
                     select(RealtimeYjsSnapshot)
                     .where(
-                        or_(
-                            RealtimeYjsSnapshot.revision > RealtimeYjsSnapshot.rendered_revision,
-                            RealtimeYjsSnapshot.effects_pending.is_(True),
-                        ),
+                        _PROJECTION_PENDING,
                         RealtimeYjsSnapshot.organization_id.is_not(None),
+                        *scope,
                     )
                     .options(
                         load_only(
@@ -137,7 +147,7 @@ async def recover_realtime_projections(ctx: dict[str, Any]) -> None:
             )
 
 
-async def save_realtime_snapshot(
+async def project_realtime_document(
     ctx: dict[str, Any], content_type: str, content_id: str, organization_id: str
 ) -> dict[str, Any]:
     kind = ContentType(content_type)

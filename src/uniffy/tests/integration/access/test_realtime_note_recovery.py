@@ -148,7 +148,7 @@ async def test_recovery_projects_new_content_while_search_is_unavailable(note_do
     await document.live.checkpointed()
     await first_in_line(document.key)
 
-    await recover_realtime_projections({})
+    await recover_realtime_projections({}, organization_id=org_id)
 
     async with open_session() as db:
         note = await db.get(Note, document.key[1])
@@ -160,7 +160,7 @@ async def test_recovery_projects_new_content_while_search_is_unavailable(note_do
 
     document.engine.available = True
     await first_in_line(document.key)
-    await recover_realtime_projections({})
+    await recover_realtime_projections({}, organization_id=org_id)
     async with open_session() as db:
         assert not (await load_snapshot(db, document.key)).effects_pending
     assert note.content in (document.engine.indexed_text(*document.key) or "")
@@ -291,7 +291,7 @@ async def test_recovery_batch_advances_past_unrenderable_rows(session, access, d
             return row.rendered_revision == row.revision
 
     try:
-        await recover_realtime_projections({})
+        await recover_realtime_projections({}, organization_id=access.org_id)
         assert not await rendered()
         # The stuck rows moved behind the waiting one without losing their revision.
         async with open_session() as db:
@@ -308,7 +308,7 @@ async def test_recovery_batch_advances_past_unrenderable_rows(session, access, d
             (1, 0, unrenderable)
         }
 
-        await recover_realtime_projections({})
+        await recover_realtime_projections({}, organization_id=access.org_id)
         assert await rendered()
         async with open_session() as db:
             assert (await db.get(Note, waiting.id)).content == "rendered"

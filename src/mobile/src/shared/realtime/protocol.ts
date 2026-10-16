@@ -34,7 +34,7 @@ export type RealtimeStatus =
 export function statusFromCloseCode(code: number): RealtimeStatus | null {
   switch (code) {
     case WS_CLOSE_FORBIDDEN:
-      return "permission_lost";
+      return "access_lost";
     case WS_CLOSE_TOKEN_REVOKED:
       return "token_revoked";
     case WS_CLOSE_UPGRADE_REQUIRED:

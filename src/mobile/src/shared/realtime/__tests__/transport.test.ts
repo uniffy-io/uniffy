@@ -553,10 +553,13 @@ it("publishes the oldest uncheckpointed edit to listeners subscribed before atta
   stop();
 });
 
-it("knows coverage only from the current socket's session state", async () => {
+it("knows coverage once this socket's session state and the device's retained updates are in", async () => {
   const h = await openDocument("coverage-known");
   expect(h.state().coverageKnown).toBe(false);
   h.socket.deliver(h.sub.docName, session("e1"));
+  expect(h.state().coverageKnown).toBe(false);
+  // Local recovery found nothing to hand back, which still settles what the device holds.
+  expect(h.realtimeMultiplexer.restorePending(h.sub.docName, "g", [])).toBe(true);
   expect(h.state().coverageKnown).toBe(true);
 
   const second = await reconnect(h);
@@ -568,6 +571,7 @@ it("knows coverage only from the current socket's session state", async () => {
 
 it("ignores session state heard before this socket names the generation", async () => {
   const h = await openDocument("state-before-generation");
+  h.realtimeMultiplexer.restorePending(h.sub.docName, "g", []);
   h.socket.close(1006);
   await vi.advanceTimersByTimeAsync(500);
   const socket = Socket.instances.at(-1)!;
@@ -630,6 +634,47 @@ it("asks for an update on close 4426 and never reconnects", async () => {
   });
   expect(later).toEqual(["upgrade_required"]);
   expect(Socket.instances).toHaveLength(1);
+  sub.destroy();
+  doc.destroy();
+  h.destroy();
+});
+
+it("shows access lost on close 4403 and reconnects only with a new access token", async () => {
+  const h = await openDocument("forbidden");
+  h.doc.getText("markdown").insert(0, "kept on this device");
+  vi.advanceTimersByTime(50);
+  const [sent] = writes(h.socket).map(readWrite);
+
+  h.socket.close(4403);
+  expect(h.statuses.at(-1)).toBe("access_lost");
+  lifecycle.onChange?.("active");
+  await vi.advanceTimersByTimeAsync(120_000);
+  expect(Socket.instances).toHaveLength(1);
+  expect(h.statuses.at(-1)).toBe("access_lost");
+  expect(h.state().transportPending).toBe(true);
+
+  const later: RealtimeStatus[] = [];
+  const doc = new Y.Doc();
+  const sub = h.realtimeMultiplexer.attach({
+    contentType: "NOTE",
+    contentId: "opened-while-forbidden",
+    organizationId: "org",
+    ydoc: doc,
+    awareness: new Awareness(doc),
+    onStatus: (status) => later.push(status),
+  });
+  expect(later).toEqual(["access_lost"]);
+  expect(Socket.instances).toHaveLength(1);
+
+  (await import("@core/auth/auth")).setAccessToken("refreshed");
+  lifecycle.onChange?.("active");
+  expect(Socket.instances).toHaveLength(2);
+  const second = Socket.instances[1];
+  expect(second.options.headers).toEqual({ Authorization: "Bearer refreshed" });
+  second.open();
+  expect(h.statuses.at(-1)).toBe("connected");
+  second.receive(h.sub.docName, 5, "g");
+  expect(writes(second).map(readWrite)).toMatchObject([{ id: sent.id, generation: "g" }]);
   sub.destroy();
   doc.destroy();
   h.destroy();

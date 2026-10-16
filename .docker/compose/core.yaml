@@ -1,6 +1,6 @@
-# Core services - postgres, valkey (cache + LiveKit registry), meilisearch,
-# livekit (SFU with embedded TURN; room registry on valkey DB 1, app uses DB 0),
-# rustfs (S3-compatible object storage for the Files domain).
+# Core services - postgres, valkey (queues, cache, pub/sub and unsaved live edits), meilisearch,
+# livekit (SFU with embedded TURN) with its own registry valkey, rustfs (S3-compatible object
+# storage for the Files domain).
 # Profile: core. Run standalone: docker compose -f .docker/compose/core.yaml --profile core up
 
 x-defaults: &defaults
@@ -74,6 +74,17 @@ services:
       <<: *hc-defaults
       test: ["CMD", "valkey-cli", "-a", "uniffy-valkey-dev", "ping"]
 
+  # LiveKit's room registry. The app Valkey holds unsaved document text, so its password stays
+  # with Uniffy backends and workers; a logical database on it would be no boundary.
+  livekit-valkey:
+    <<: *defaults
+    image: valkey/valkey:9-alpine
+    container_name: uniffy-livekit-valkey
+    command: valkey-server --save "" --appendonly no --requirepass uniffy-livekit-valkey-dev
+    healthcheck:
+      <<: *hc-defaults
+      test: ["CMD", "valkey-cli", "-a", "uniffy-livekit-valkey-dev", "ping"]
+
   meilisearch:
     <<: *defaults
     image: getmeili/meilisearch:v1.54
@@ -121,7 +132,7 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
-      valkey:
+      livekit-valkey:
         condition: service_healthy
     healthcheck:
       <<: *hc-defaults
@@ -156,9 +167,8 @@ configs:
         ${LIVEKIT_API_KEY:-devkey}: ${LIVEKIT_API_SECRET:-}
 
       redis:
-        address: valkey:6379
-        password: uniffy-valkey-dev
-        db: 1
+        address: livekit-valkey:6379
+        password: uniffy-livekit-valkey-dev
 
       turn:
         enabled: true

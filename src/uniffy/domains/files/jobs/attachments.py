@@ -12,7 +12,7 @@ from uniffy.core.models.files.attachment import Attachment
 from uniffy.core.models.files.reconciliation import InlineAttachmentReconciliation
 from uniffy.core.models.notes.note import Note
 from uniffy.core.models.projects.task import Task
-from uniffy.core.realtime.buffer import UpdateBuffer
+from uniffy.core.realtime.buffer import UPDATE_BUFFER_CTX_KEY, UpdateBuffer
 from uniffy.core.realtime.live import may_have_unprojected_edits
 from uniffy.core.realtime.metrics import REALTIME_BACKLOG_DEPTH
 from uniffy.core.realtime.storage import lock_document
@@ -28,7 +28,7 @@ INLINE_UPLOAD_GRACE = timedelta(hours=24)
 
 
 async def reconcile_pending_inline_attachments(ctx: dict[str, Any]) -> None:
-    buffer = UpdateBuffer()
+    buffer = cast(UpdateBuffer, ctx[UPDATE_BUFFER_CTX_KEY])
     storage = cast(ObjectStorage, ctx[OBJECT_STORAGE_CTX_KEY])
     search_indexer = cast(SearchIndexer, ctx[SEARCH_INDEXER_CTX_KEY])
     async with open_session() as db:

@@ -122,6 +122,13 @@ class AccessGates:
             )
         return {actor: (session, roles.get(actor)) for actor in actors}
 
+    async def apply_role(
+        self, session: YDocSession, handle: ClientHandle, role: ContentRole | None
+    ) -> None:
+        """Adopt a role read fresh elsewhere, such as by admission under the document lock."""
+        if not handle.closed:
+            await self._apply_role(session, handle, role)
+
     async def _apply_role(
         self,
         session: YDocSession,

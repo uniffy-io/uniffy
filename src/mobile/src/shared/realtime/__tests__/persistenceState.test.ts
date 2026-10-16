@@ -55,10 +55,13 @@ it("reads Saving delayed once the oldest uncheckpointed edit is thirty seconds o
   expect(state({ doc: local, now: EDITED_AT + SAVE_DELAYED_AFTER_MS })).toBe("delayed");
 });
 
-it("never claims Synced or Saved before the current socket's session state", () => {
+it("never claims Synced, Saved or Saving delayed before the current socket's session state", () => {
   expect(state({ doc: { ...clean, coverageKnown: false } })).toBe("connecting");
   expect(state({ doc: { ...accepted, coverageKnown: false } })).toBe("connecting");
   expect(state({ doc: { ...local, coverageKnown: false } })).toBe("syncing");
+  // A reconnect may have missed the checkpoint that covers an old edit.
+  const late = EDITED_AT + SAVE_DELAYED_AFTER_MS;
+  expect(state({ doc: { ...accepted, coverageKnown: false }, now: late })).toBe("connecting");
 });
 
 it("never claims Saved before the first sync or while connecting", () => {

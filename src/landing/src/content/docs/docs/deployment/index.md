@@ -36,7 +36,7 @@ Uniffy never calls home, fetches nothing from third party CDNs at runtime, and k
 - [Admins and Operators](/docs/deployment/admins-and-operators/): the two admin jobs, the wall between them, one account or two.
 - [Harden the Edge](/docs/deployment/hardening/): lock the operator API to your private network.
 - [Behind an Edge](/docs/deployment/edges/): Cloudflare, CDNs, and corporate load balancers in front of Uniffy.
-- [Account Recovery](/docs/deployment/recovery/): the break glass command for a locked out admin.
+- [Account Recovery](/docs/deployment/recovery/): the break glass command for a locked out admin, and [unsaved edits after a Valkey restart](/docs/deployment/recovery/#unsaved-edits-after-a-valkey-restart), including planned Valkey maintenance.
 - [Licensing](/docs/deployment/licensing/): what open source means here.
 
 When you evaluate Uniffy against anything else, ask the other vendor one question. If I run this on my own hardware, fully isolated, do I get the same product you sell in your cloud? Our answer is yes, and these pages are the proof.

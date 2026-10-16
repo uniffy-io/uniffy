@@ -8,6 +8,7 @@ from uuid import UUID, uuid4
 import pycrdt
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import defer
 
 from uniffy.core.models.realtime.yjs_snapshot import RealtimeYjsSnapshot
 from uniffy.core.realtime.adapter import get_realtime_adapter
@@ -61,14 +62,33 @@ async def lock_document(db: AsyncSession, key: DocKey, organization_id: UUID | N
     )
 
 
+def _snapshot_of(key: DocKey) -> tuple:
+    return (
+        RealtimeYjsSnapshot.content_type == key[0],
+        RealtimeYjsSnapshot.content_id == key[1],
+    )
+
+
 async def load_snapshot(db: AsyncSession, key: DocKey) -> RealtimeYjsSnapshot | None:
     return (
         await db.execute(
             select(RealtimeYjsSnapshot)
-            .where(
-                RealtimeYjsSnapshot.content_type == key[0],
-                RealtimeYjsSnapshot.content_id == key[1],
-            )
+            .where(*_snapshot_of(key))
+            .execution_options(populate_existing=True)
+        )
+    ).scalar_one_or_none()
+
+
+async def load_snapshot_row(db: AsyncSession, key: DocKey) -> RealtimeYjsSnapshot | None:
+    """The row without its Yjs bytes, which can reach megabytes.
+
+    ``await db.refresh(row, ["updates"])`` before reading or replacing ``updates``.
+    """
+    return (
+        await db.execute(
+            select(RealtimeYjsSnapshot)
+            .options(defer(RealtimeYjsSnapshot.updates))
+            .where(*_snapshot_of(key))
             .execution_options(populate_existing=True)
         )
     ).scalar_one_or_none()
@@ -93,8 +113,14 @@ def compact_update(raw: bytes) -> bytes:
     return pycrdt.merge_updates(doc.get_update(), pending)
 
 
-async def stage_seed(db: AsyncSession, key: DocKey, organization_id: UUID) -> RealtimeYjsSnapshot:
-    snapshot = await load_snapshot(db, key)
+async def stage_seed(db: AsyncSession, key: DocKey, organization_id: UUID) -> None:
+    """Stage the shared baseline once; a seeded row keeps its bytes unread."""
+    existing = (
+        await db.execute(select(RealtimeYjsSnapshot.generation).where(*_snapshot_of(key)))
+    ).one_or_none()
+    if existing is not None and existing.generation is not None:
+        return
+    snapshot = None if existing is None else await load_snapshot(db, key)
     if snapshot is None:
         doc = pycrdt.Doc()
         await get_realtime_adapter(key[0]).hydrate_ydoc(db, doc, key[1], organization_id)
@@ -114,7 +140,6 @@ async def stage_seed(db: AsyncSession, key: DocKey, organization_id: UUID) -> Re
         generation = doc.get(DOC_META_FIELD, type=pycrdt.Map).get(DOC_GENERATION_KEY)
         snapshot.generation = str(generation) if generation else ""
         snapshot.organization_id = organization_id
-    return snapshot
 
 
 def elect_seed_owner(

@@ -29,6 +29,7 @@ import { peekVarString } from "@/features/realtime/multiplex";
 import { realtimeMultiplexer, type UpdateCoverageEvent } from "@/features/realtime/multiplexer";
 import { hasPendingDoc } from "@/features/realtime/pendingDocs";
 import {
+  SNAPSHOT_INTERVAL_MS,
   discoverStoredPendingDocs,
   getDeviceRecoveryState,
   readRecoveredDrafts,
@@ -305,6 +306,45 @@ describe("checkpoint coverage in local recovery", () => {
     expect(getDeviceRecoveryState(editor.docName).unpersisted).toBe(false);
     expect(pending(editor)).toEqual({ transportPending: true, checkpointPending: true });
     await editor.close();
+  });
+});
+
+describe("device copy while typing", () => {
+  /** Row keys of every full snapshot written to the device from now on. */
+  function snapshotWrites(): string[] {
+    const written: string[] = [];
+    const put = IDBObjectStore.prototype.put;
+    vi.spyOn(IDBObjectStore.prototype, "put").mockImplementation(function (
+      this: IDBObjectStore,
+      value: unknown,
+      key?: IDBValidKey,
+    ) {
+      const seq = (key as string[])[3];
+      if (!seq.startsWith("pending:")) written.push(seq);
+      return put.call(this, value, key);
+    });
+    return written;
+  }
+
+  it("keeps each batch on the device as it lands and writes one full snapshot per interval", async () => {
+    const { editor } = await connect("typing-burst");
+    onTestFinished(() => editor.close());
+    const snapshots = snapshotWrites();
+    const stored = () => expect(getDeviceRecoveryState(editor.docName).unpersisted).toBe(false);
+
+    for (const letter of ["a", "b", "c", "d"]) {
+      editor.type(letter);
+      expect(getDeviceRecoveryState(editor.docName).unpersisted).toBe(true);
+      vi.advanceTimersByTime(BATCH_MS);
+      // The batch's own row covers the edit, so nothing waits for the next snapshot.
+      await eventually(stored);
+    }
+    expect(snapshots).toHaveLength(1);
+
+    vi.advanceTimersByTime(SNAPSHOT_INTERVAL_MS);
+    await eventually(() => expect(snapshots).toHaveLength(2));
+    // Leaving now risks nothing: the device holds every edit.
+    expect(beforeUnloadPrevented()).toBe(false);
   });
 });
 

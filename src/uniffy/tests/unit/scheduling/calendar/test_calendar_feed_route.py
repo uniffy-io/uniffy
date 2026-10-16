@@ -66,9 +66,7 @@ async def _fetch(
             "uniffy.domains.scheduling.calendar.routes.render_feed",
             AsyncMock(return_value=document),
         ),
-        patch(
-            "uniffy.domains.scheduling.calendar.routes.record_fetch", AsyncMock()
-        ) as recorder,
+        patch("uniffy.domains.scheduling.calendar.routes.record_fetch", AsyncMock()) as recorder,
         patch(
             "uniffy.domains.scheduling.calendar.routes.check_rate_limit",
             limiter or AsyncMock(),
@@ -162,12 +160,8 @@ class TestRefusal:
                 "uniffy.domains.scheduling.calendar.routes.resolve_feed",
                 AsyncMock(return_value=None),
             ),
-            patch(
-                "uniffy.domains.scheduling.calendar.routes.render_feed", AsyncMock()
-            ) as renderer,
-            patch(
-                "uniffy.domains.scheduling.calendar.routes.check_rate_limit", AsyncMock()
-            ),
+            patch("uniffy.domains.scheduling.calendar.routes.render_feed", AsyncMock()) as renderer,
+            patch("uniffy.domains.scheduling.calendar.routes.check_rate_limit", AsyncMock()),
             patch(
                 "uniffy.domains.scheduling.calendar.routes.client_ip_for_rate_limit",
                 return_value=None,
@@ -206,9 +200,7 @@ class TestRateLimit:
     async def test_the_limit_is_checked_before_anything_is_resolved(self):
         limiter = AsyncMock(side_effect=HTTPException(status_code=429))
         with (
-            patch(
-                "uniffy.domains.scheduling.calendar.routes.resolve_feed", AsyncMock()
-            ) as resolver,
+            patch("uniffy.domains.scheduling.calendar.routes.resolve_feed", AsyncMock()) as resolver,
             patch("uniffy.domains.scheduling.calendar.routes.check_rate_limit", limiter),
             patch(
                 "uniffy.domains.scheduling.calendar.routes.client_ip_for_rate_limit",
@@ -223,13 +215,13 @@ class TestRateLimit:
 
 class TestMethod:
     def test_a_feed_is_read_only(self):
-        router = create_calendar_router(MagicMock())
+        router = create_calendar_router(MagicMock(), MagicMock())
 
         route = next(r for r in router.routes if r.path.endswith(FEED_PATH))
         assert route.methods == {"GET"}
 
     def test_the_feed_and_the_rsvp_route_stay_separate(self):
-        router = create_calendar_router(MagicMock())
+        router = create_calendar_router(MagicMock(), MagicMock())
 
         paths = {r.path for r in router.routes}
         assert any(path.endswith(FEED_PATH) for path in paths)

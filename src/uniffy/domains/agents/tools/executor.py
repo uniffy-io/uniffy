@@ -1,6 +1,7 @@
 """Tool executor for agent runtime."""
 
 import asyncio
+import contextlib
 import time
 
 from loguru import logger
@@ -224,9 +225,28 @@ class ToolExecutor:
         ).inc()
 
         if not tool_def.read_only:
+            if error_reason is not None:
+                await self._discard_failed_write(tool_def)
             await self._emit_tool_call_audit(tool_def, result, error_reason)
 
         return result
+
+    async def _discard_failed_write(self, tool_def: ToolDefinition) -> None:
+        """End the transaction a raising write left open on the shared runtime session.
+
+        Its staged rows and transaction locks, document advisory locks included, would
+        otherwise last until the runtime's next commit.
+        """
+        session = self._context.session
+        try:
+            await session.rollback()
+        except Exception:
+            logger.opt(exception=True).warning(
+                "Rollback after a failed write tool failed; dropping its connection",
+                tool=tool_def.name,
+            )
+            with contextlib.suppress(Exception):
+                await session.invalidate()
 
     async def _emit_tool_call_audit(
         self,

@@ -232,13 +232,16 @@ export function isStorageEncryptionReady(): boolean {
 }
 
 /** Returns ArrayBuffer of [12-byte IV | AES-GCM ciphertext]. */
-export async function encryptForStorage(data: unknown): Promise<ArrayBuffer> {
+export async function encryptBytesForStorage(plaintext: Uint8Array): Promise<ArrayBuffer> {
   if (!activeDEK) {
     throw new Error("Storage encryption not initialized");
   }
   const iv = crypto.getRandomValues(new Uint8Array(12));
-  const plaintext = new TextEncoder().encode(JSON.stringify(data));
-  const ciphertext = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, activeDEK, plaintext);
+  const ciphertext = await crypto.subtle.encrypt(
+    { name: "AES-GCM", iv },
+    activeDEK,
+    plaintext as Uint8Array<ArrayBuffer>,
+  );
 
   const result = new Uint8Array(iv.length + ciphertext.byteLength);
   result.set(iv);
@@ -247,15 +250,24 @@ export async function encryptForStorage(data: unknown): Promise<ArrayBuffer> {
 }
 
 /** Expects [12-byte IV | AES-GCM ciphertext]. */
-export async function decryptFromStorage<T = unknown>(buffer: ArrayBuffer): Promise<T> {
+export async function decryptBytesFromStorage(buffer: ArrayBuffer): Promise<Uint8Array> {
   if (!activeDEK) {
     throw new Error("Storage encryption not initialized");
   }
   const data = new Uint8Array(buffer);
   const iv = data.slice(0, 12);
   const ciphertext = data.slice(12);
-  const plaintext = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, activeDEK, ciphertext);
-  return JSON.parse(new TextDecoder().decode(plaintext)) as T;
+  return new Uint8Array(
+    await crypto.subtle.decrypt({ name: "AES-GCM", iv }, activeDEK, ciphertext),
+  );
+}
+
+export async function encryptForStorage(data: unknown): Promise<ArrayBuffer> {
+  return encryptBytesForStorage(new TextEncoder().encode(JSON.stringify(data)));
+}
+
+export async function decryptFromStorage<T = unknown>(buffer: ArrayBuffer): Promise<T> {
+  return JSON.parse(new TextDecoder().decode(await decryptBytesFromStorage(buffer))) as T;
 }
 
 /** Local-only wipe (no backend call): deletes encrypted IDB stores and generates a fresh DEK. */

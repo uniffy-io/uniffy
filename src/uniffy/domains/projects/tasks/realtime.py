@@ -10,7 +10,7 @@ from uniffy.core.events.bus import stage_notification_events
 from uniffy.core.events.realtime import publish_content_changed
 from uniffy.core.models.projects.project import Project
 from uniffy.core.models.projects.task import Task
-from uniffy.core.realtime.adapter import RealtimeRenderConflict, check_not_superseded
+from uniffy.core.realtime.adapter import RealtimeRenderConflict
 from uniffy.core.realtime.metrics import REALTIME_BLANK_CONTENT_OVERWRITES_TOTAL
 from uniffy.core.search import SearchIndexer
 from uniffy.core.types import ContentType
@@ -58,7 +58,6 @@ class TaskRealtimePersistence:
         content: str,
         *,
         actor_id: UUID | None = None,
-        supersede_after: datetime | None = None,
     ) -> tuple[Task, Callable[[], Awaitable[None]]] | None:
         references = extract_urns_from_content(content) or None
         for attempt in range(3):
@@ -67,14 +66,6 @@ class TaskRealtimePersistence:
             )
             if task is None:
                 return None
-            if not attempt:
-                check_not_superseded(
-                    task.updated_at,
-                    supersede_after,
-                    stored=task.description,
-                    rendered=content,
-                    label=f"Task {task_id}",
-                )
             old_refs = task.outgoing_references
             if (task.description or "") == content and (old_refs or []) == (references or []):
 
@@ -131,22 +122,3 @@ class TaskRealtimePersistence:
             self.session, search_indexer=self.search_indexer
         )._index_for_search(task)
         await publish_content_changed(ContentType.TASK, task.id, organization_id)
-
-    async def save(
-        self,
-        organization_id: UUID,
-        task_id: UUID,
-        content: str,
-        *,
-        actor_id: UUID | None = None,
-        supersede_after: datetime | None = None,
-    ) -> Task | None:
-        staged = await self.stage_save(
-            organization_id, task_id, content, actor_id=actor_id, supersede_after=supersede_after
-        )
-        if staged is None:
-            return None
-        task, after_commit = staged
-        await self.session.commit()
-        await after_commit()
-        return task

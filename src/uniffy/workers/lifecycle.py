@@ -13,6 +13,7 @@ from uniffy.core.crypto import (
 )
 from uniffy.core.database import SESSION_FACTORY_CTX_KEY
 from uniffy.core.jobs import QueueName
+from uniffy.core.realtime.buffer import UPDATE_BUFFER_CTX_KEY, UpdateBuffer
 from uniffy.core.realtime.preflight import ensure_buffer_ready
 from uniffy.core.search import (
     SEARCH_INDEXER_CTX_KEY,
@@ -159,6 +160,7 @@ async def _on_startup_shared(
     search_indexer = SearchIndexer(search)
     ctx[SEARCH_INDEXER_CTX_KEY] = search_indexer
     ctx[CALL_LIFECYCLE_CTX_KEY] = CallsLifecycle(open_session)
+    ctx[UPDATE_BUFFER_CTX_KEY] = UpdateBuffer()
     register_note_realtime_adapter(search_indexer)
     register_task_realtime_adapter(search_indexer)
     register_event_realtime_adapter(search_indexer)
@@ -211,6 +213,7 @@ async def _on_shutdown_shared(ctx: dict[str, Any]) -> None:
 
     ctx.pop(SEARCH_INDEXER_CTX_KEY, None)
     ctx.pop(CALL_LIFECYCLE_CTX_KEY, None)
+    ctx.pop(UPDATE_BUFFER_CTX_KEY, None)
     ctx.pop(SESSION_FACTORY_CTX_KEY, None)
     search: WorkspaceSearch | None = ctx.pop(WORKSPACE_SEARCH_CTX_KEY, None)
     if search is not None:

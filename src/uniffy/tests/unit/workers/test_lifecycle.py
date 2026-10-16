@@ -3,6 +3,7 @@ from dataclasses import replace
 from unittest.mock import AsyncMock, MagicMock
 
 from uniffy.core.database import SESSION_FACTORY_CTX_KEY
+from uniffy.core.realtime.buffer import UPDATE_BUFFER_CTX_KEY, UpdateBuffer
 from uniffy.core.search import SEARCH_INDEXER_CTX_KEY, WORKSPACE_SEARCH_CTX_KEY
 from uniffy.core.jobs import QueueName
 from uniffy.domains.files.jobs.slots import MEDIA_SLOTS_CTX_KEY
@@ -71,6 +72,7 @@ async def test_core_lifecycle_opens_and_closes_its_runtime_resources(monkeypatch
     ctx = {}
 
     await lifecycle.core_on_startup(ctx)
+    assert isinstance(ctx[UPDATE_BUFFER_CTX_KEY], UpdateBuffer)
     assert WORKER_READY.labels(queue=QueueName.CORE)._value.get() == 1
     await lifecycle.core_on_shutdown(ctx)
 
@@ -89,6 +91,7 @@ async def test_core_lifecycle_opens_and_closes_its_runtime_resources(monkeypatch
     assert WORKSPACE_SEARCH_CTX_KEY not in ctx
     assert SEARCH_INDEXER_CTX_KEY not in ctx
     assert SESSION_FACTORY_CTX_KEY not in ctx
+    assert UPDATE_BUFFER_CTX_KEY not in ctx
     assert DELIVERY_ADAPTERS_CTX_KEY not in ctx
     register_realtime.assert_called_once()
     resources["init_queue"].assert_awaited_once_with(QueueName.CORE)

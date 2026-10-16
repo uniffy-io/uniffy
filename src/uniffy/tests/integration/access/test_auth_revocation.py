@@ -73,6 +73,12 @@ from uniffy.tests.integration.access.realtime_sockets import (
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
 
+async def serve(socket: Socket, organization: UUID) -> None:
+    """Run one upgrade on a replica of its own; these sockets attach no document."""
+    buffer = UpdateBuffer(namespace=f"test:{generate_id().hex}:")
+    await ws_routes.serve_realtime(socket, organization, YDocManager(buffer=buffer))
+
+
 @pytest_asyncio.fixture(loop_scope="session")
 async def login(
     session: AsyncSession, access: SimpleNamespace, monkeypatch
@@ -151,7 +157,7 @@ async def test_committed_logout_rejects_old_credentials_whatever_the_cache_holds
     await interceptor.on_end(principal_token, context, None)
     assert await get_current_user_id(asset_request(cookie)) == access.member_id
     assert await connection_denial(live) is None
-    await ws_routes.realtime(socket, access.org_id)
+    await serve(socket, access.org_id)
     # The session ran until the client hung up.
     assert socket.subprotocols == [CANONICAL_SUBPROTOCOL]
     assert socket.closes == [(1011, "session ended")]
@@ -175,7 +181,7 @@ async def test_committed_logout_rejects_old_credentials_whatever_the_cache_holds
         assert denial is not None
         assert (denial.code, denial.metric_reason) == (WS_CLOSE_TOKEN_REVOKED, "session_revoked")
         revoked = Socket(headers)
-        await ws_routes.realtime(revoked, access.org_id)
+        await serve(revoked, access.org_id)
         assert revoked.subprotocols == []
         assert revoked.closes == [(WS_CLOSE_UNAUTHENTICATED, "credentials revoked")]
     finally:
@@ -195,7 +201,7 @@ async def test_open_socket_closes_once_its_session_is_revoked_without_notificati
         "authorization": f"Bearer {token}",
         "sec-websocket-protocol": CANONICAL_SUBPROTOCOL,
     })
-    running = asyncio.create_task(ws_routes.realtime(socket, access.org_id))
+    running = asyncio.create_task(serve(socket, access.org_id))
     await asyncio.wait_for(socket.accepting.wait(), 5)
 
     # No router runs in this process, so only the durable check can close the socket.
@@ -216,7 +222,7 @@ async def test_idle_socket_cannot_attach_a_document_once_its_session_is_revoked(
         "authorization": f"Bearer {token}",
         "sec-websocket-protocol": CANONICAL_SUBPROTOCOL,
     })
-    running = asyncio.create_task(ws_routes.realtime(socket, access.org_id))
+    running = asyncio.create_task(serve(socket, access.org_id))
     await asyncio.wait_for(socket.accepting.wait(), 5)
     await revoke(session, access.member_id, login)
 
@@ -403,7 +409,7 @@ async def upgrades_held(user: UUID, organization: UUID, count: int) -> AsyncIter
             socket = upgrade_socket(bearer(user, organization))
             socket.hold_accept = release
             sockets.append(socket)
-            tasks.append(asyncio.create_task(ws_routes.realtime(socket, organization)))
+            tasks.append(asyncio.create_task(serve(socket, organization)))
             await asyncio.wait_for(socket.accepting.wait(), FRAME_TIMEOUT)
         yield sockets
     finally:
@@ -417,7 +423,7 @@ async def admitted(user: UUID, organization: UUID) -> bool:
     """Whether a fresh upgrade for ``user`` is accepted; it hangs up straight away."""
     socket = upgrade_socket(bearer(user, organization))
     socket.hang_up()
-    await ws_routes.realtime(socket, organization)
+    await serve(socket, organization)
     return socket.subprotocols == [CANONICAL_SUBPROTOCOL]
 
 
@@ -426,7 +432,7 @@ async def test_overlapping_upgrades_cannot_claim_the_same_slot(access: SimpleNam
     async with upgrades_held(user, org, MAX_SOCKETS_PER_USER - 1):
         async with upgrades_held(user, org, 1) as (first,):
             second = upgrade_socket(bearer(user, org))
-            await ws_routes.realtime(second, org)
+            await serve(second, org)
             assert second.subprotocols == []
             assert second.closes == [(1013, "too many connections")]
         assert first.subprotocols == [CANONICAL_SUBPROTOCOL]
@@ -452,7 +458,7 @@ async def test_failed_or_cancelled_upgrades_release_their_slot(
             socket.hold_accept = asyncio.Event()
             if phase == "session_cancelled":
                 socket.hold_accept.set()
-        pending = asyncio.create_task(ws_routes.realtime(socket, org))
+        pending = asyncio.create_task(serve(socket, org))
         await asyncio.wait_for(socket.accepting.wait(), FRAME_TIMEOUT)
         if phase == "accept_fails":
             with pytest.raises(RuntimeError):
@@ -480,7 +486,7 @@ async def test_authenticated_upgrade_without_v2_is_closed_with_upgrade_required(
     socket = Socket(headers)
 
     async with upgrades_held(user, org, MAX_SOCKETS_PER_USER - 1):
-        await ws_routes.realtime(socket, org)
+        await serve(socket, org)
         assert await admitted(user, org)
 
     # The handshake selects a protocol the client offered so a browser receives the code.
@@ -493,7 +499,7 @@ async def test_unauthenticated_upgrade_without_v2_gets_no_handshake(
 ) -> None:
     socket = Socket({"sec-websocket-protocol": "uniffy.realtime.v1, bearer.not-a-token"})
 
-    await ws_routes.realtime(socket, access.org_id)
+    await serve(socket, access.org_id)
 
     assert socket.subprotocols == []
     assert socket.closes == [(WS_CLOSE_UNAUTHENTICATED, "invalid token")]

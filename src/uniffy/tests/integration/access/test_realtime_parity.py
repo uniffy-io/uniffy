@@ -228,7 +228,7 @@ async def test_retained_replay_after_losing_access_is_refused_and_appends_nothin
 
     if loss == "membership_removed":
         socket = upgrade_socket(bearer(doc.peer, doc.org))
-        await ws_routes.realtime(socket, doc.org)
+        await ws_routes.serve_realtime(socket, doc.org, manager)
         assert socket.subprotocols == []
         assert socket.closes == [(WS_CLOSE_FORBIDDEN, "not a member")]
     else:
@@ -338,6 +338,33 @@ async def test_task_under_a_private_project_is_not_disclosed(
         await evicted(manager, task.key)
     finally:
         await discard(task.key)
+
+
+@pytest.mark.parametrize("loss", ["downgraded", "removed"])
+async def test_editor_learns_lost_access_from_the_role_its_own_write_reads(
+    shared: SharedDocument, manager: YDocManager, loss: str
+) -> None:
+    doc = shared.doc
+    await share(shared, ContentRole.EDITOR)
+    async with attached(manager, doc, doc.peer) as (editor, frames):
+        assert Y_MESSAGE_AUTH not in kinds(frames)
+        # PostgreSQL changes alone: no signal, no disclosure and no watchdog pass in between.
+        if loss == "downgraded":
+            await change_role(shared, ContentRole.VIEWER)
+        else:
+            await unshare(shared)
+        editor.write("edit-1", typed(doc.base, suffix=" late"), doc.generation)
+
+        first, seen = await editor.until(Y_MESSAGE_AUTH)
+        if loss == "downgraded":
+            assert denial(first) == (0, "edit access removed")
+            second, _ = await editor.until(Y_MESSAGE_AUTH)
+            assert denial(second) == (0, "edit denied")
+        else:
+            assert denial(first) == (1, "access revoked")
+            assert Y_MESSAGE_AUTH not in kinds(await editor.drain())
+        assert MESSAGE_ACCEPTED_RECEIPT not in kinds(seen)
+        assert await doc.stream_ids() == []
 
 
 async def test_published_role_is_reread_instead_of_trusted(shared: SharedDocument) -> None:

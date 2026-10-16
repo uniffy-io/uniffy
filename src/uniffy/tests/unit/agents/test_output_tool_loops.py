@@ -42,7 +42,7 @@ async def test_each_tool_turn_uses_producing_model_after_fallback(monkeypatch, s
     registry.register(ToolDefinition(name="notes.write", description="", executor=write))
     monkeypatch.setattr(tools_mod, "get_tool_registry", lambda: registry)
     ctx = ToolContext(
-        session=MagicMock(),
+        session=MagicMock(commit=AsyncMock()),
         user_id=generate_id(),
         organization_id=generate_id(),
         buffer=UpdateBuffer(),

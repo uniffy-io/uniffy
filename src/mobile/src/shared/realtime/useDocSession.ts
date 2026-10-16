@@ -19,7 +19,7 @@ export interface UseDocSessionOptions {
   contentType: string;
   contentId: string | null | undefined;
   enabled: boolean;
-  /** Suppresses every SYNC write frame; VIEWER roles get 4403-closed otherwise. */
+  /** Suppresses every write frame, which the server refuses from a viewer anyway. */
   readOnly?: boolean;
   /**
    * Runs at the top of the detach cleanup, while the doc and the multiplexer

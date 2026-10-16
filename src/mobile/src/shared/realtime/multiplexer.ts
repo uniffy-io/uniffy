@@ -29,6 +29,7 @@ import {
   MESSAGE_UPDATE,
   UNAVAILABLE_REASON,
   UPDATE_CONFLICT_REASON,
+  WS_CLOSE_FORBIDDEN,
   WS_CLOSE_NORMAL,
   WS_CLOSE_REAUTH_REQUIRED,
   WS_CLOSE_UNAUTHENTICATED,
@@ -103,8 +104,9 @@ export interface RealtimeDocState {
   readonly generation: string | null;
   /** The server refused an own edit it may take later; edits stay local and resend on their own. */
   readonly savingUnavailable: boolean;
-  /** This socket's session state has arrived. Until then nothing proves the document synced or
-   * saved, because a checkpoint can land while no socket is open. */
+  /** This socket's session state has arrived and local recovery has handed back every own edit
+   * the device holds. Until then nothing proves the document synced or saved, because a
+   * checkpoint can land while no socket is open. */
   readonly coverageKnown: boolean;
 }
 
@@ -181,6 +183,8 @@ interface DocEntry {
   coverage: UpdateCoverage;
   // Raw bytes of every own update until a checkpoint covers it, delete-only updates included.
   retained: Map<string, Uint8Array>;
+  // Local recovery has handed back what the device holds for the server's generation.
+  recoveryRead: boolean;
   // Write ids sent on this socket, oldest first. The server answers them in order, so a denial
   // without an id belongs to the head.
   awaiting: string[];
@@ -213,6 +217,9 @@ class RealtimeMultiplexer {
   private destroyed = false;
   // Set by close 4426 and kept until the app runs a build that speaks the server's protocol.
   private upgradeRequired = false;
+  // The access token close 4403 refused. The server refuses it the same way on every reconnect,
+  // so the transport waits for a refresh, a sign-in or a workspace switch to replace it.
+  private forbiddenToken: string | null = null;
   private listenersAttached = false;
   private backgrounded = isLeaving(AppState.currentState);
 
@@ -280,6 +287,7 @@ class RealtimeMultiplexer {
       serverGeneration: null,
       coverage: new UpdateCoverage(),
       retained: new Map(),
+      recoveryRead: false,
       awaiting: [],
       conflicted: new Set(),
       savingUnavailable: false,
@@ -326,6 +334,8 @@ class RealtimeMultiplexer {
     } else if (this.wsConnecting) {
       // Late attach mid-handshake; surface the in-flight state immediately.
       opts.onStatus?.("connecting");
+    } else if (this.connectionForbidden()) {
+      opts.onStatus?.("access_lost");
     } else if (this.upgradeRequired) {
       opts.onStatus?.("upgrade_required");
     }
@@ -365,13 +375,17 @@ class RealtimeMultiplexer {
 
   private openIfNeeded(): void {
     if (this.ws || this.wsConnecting) return;
-    if (this.destroyed || this.upgradeRequired) return;
+    if (this.destroyed || this.upgradeRequired || this.connectionForbidden()) return;
     this.wsConnecting = true;
     this.connectNow();
   }
 
+  private connectionForbidden(): boolean {
+    return this.forbiddenToken !== null && this.forbiddenToken === getAccessToken();
+  }
+
   private connectNow(): void {
-    if (this.destroyed || this.upgradeRequired) return;
+    if (this.destroyed || this.upgradeRequired || this.connectionForbidden()) return;
     const orgId = this.organizationId;
     const token = getAccessToken();
     if (!orgId || !token) {
@@ -444,6 +458,11 @@ class RealtimeMultiplexer {
         // Every reconnect would be refused the same way; edits stay local until an update.
         this.upgradeRequired = true;
         this.emitStatusAll("upgrade_required");
+        return;
+      }
+      if (event.code === WS_CLOSE_FORBIDDEN) {
+        this.forbiddenToken = token;
+        this.emitStatusAll("access_lost");
         return;
       }
       if (event.code === WS_CLOSE_REAUTH_REQUIRED || event.code === WS_CLOSE_UNAUTHENTICATED) {
@@ -799,11 +818,13 @@ class RealtimeMultiplexer {
   /**
    * Re-sends updates an earlier session left uncheckpointed, under their original ids so the
    * server can deduplicate them. Only the generation the server confirmed for this connection
-   * replays; other lineages stay explicit recovery.
+   * replays; other lineages stay explicit recovery. An empty restore still reports that local
+   * recovery has read this device.
    */
   restorePending(docName: string, generation: string, updates: readonly RetainedUpdate[]): boolean {
     const entry = this.docs.get(docName);
     if (!entry || entry.readOnly || entry.denied || entry.generation !== generation) return false;
+    entry.recoveryRead = true;
     for (const { updateId, update, editedAt } of updates) {
       if (entry.retained.has(updateId)) continue;
       Y.applyUpdate(entry.ydoc, update, REMOTE_ORIGIN);
@@ -827,7 +848,7 @@ class RealtimeMultiplexer {
           : tracked,
       generation: entry.serverGeneration,
       savingUnavailable: entry.savingUnavailable,
-      coverageKnown: entry.socketEpoch !== null,
+      coverageKnown: entry.socketEpoch !== null && entry.recoveryRead,
     });
     if (sameState(entry.state, state)) return;
     entry.state = state;
@@ -949,7 +970,7 @@ class RealtimeMultiplexer {
       entry.options.onStatus?.(
         entry.rejected || entry.conflicted.size > 0
           ? "update_rejected"
-          : entry.denied
+          : entry.denied || this.connectionForbidden()
             ? "access_lost"
             : this.upgradeRequired
               ? "upgrade_required"

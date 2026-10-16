@@ -11,6 +11,7 @@ import {
   recordCoverage,
   restoreDraft,
   saveDraft,
+  saveDraftNow,
   saveTextDraft,
 } from "@shared/realtime/draftStorage";
 import type { UpdateCoverageEvent } from "@shared/realtime/multiplexer";
@@ -160,6 +161,33 @@ it("coalesces queued typing without losing either writer's causal updates", asyn
   expect((await readStoredDrafts("realtime.test.org.NOTE.burst"))[0].text).toBe("a".repeat(100));
   expect(new Set(pending).size).toBe(1);
   doc.destroy();
+});
+
+it("encodes a document when its queued write runs, so saves during a write cost nothing", async () => {
+  const key = "realtime.test.org.NOTE.queued-encode";
+  const doc = draft("g", "first");
+  const inFlight = saveDraft(key, doc);
+  doc.getText("markdown").insert(5, " second");
+  const queued = saveDraft(key, doc);
+  // Typing after the last save call still reaches the queued write.
+  doc.getText("markdown").insert(12, " third");
+  await Promise.all([inFlight, queued]);
+  expect((await readStoredDrafts(key)).map((stored) => stored.text)).toEqual([
+    "first second third",
+  ]);
+  doc.destroy();
+});
+
+it("keeps a document saved right before it is destroyed", async () => {
+  const key = "realtime.test.org.NOTE.destroyed";
+  const busy = draft("g", "busy");
+  const inFlight = saveDraft(key, busy);
+  const closing = draft("g", "closing");
+  const saved = saveDraftNow(key, closing);
+  closing.destroy();
+  await Promise.all([inFlight, saved]);
+  expect((await readStoredDrafts(key))[0].text).toContain("closing");
+  busy.destroy();
 });
 
 it("indexes pending documents and deletes user-scoped chunks on sign-out", async () => {

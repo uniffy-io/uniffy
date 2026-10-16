@@ -198,11 +198,11 @@ async def serve_feed(
     )
 
 
-def create_calendar_router(search_indexer: SearchIndexer) -> APIRouter:
+def create_calendar_router(search_indexer: SearchIndexer, buffer: UpdateBuffer) -> APIRouter:
     router = APIRouter(prefix="/calendar", tags=["calendar"])
     router.add_api_route(
         RESPOND_PATH,
-        partial(respond_from_mail, search_indexer, UpdateBuffer()),
+        partial(respond_from_mail, search_indexer, buffer),
         methods=["POST"],
         response_model=RespondResponse,
     )

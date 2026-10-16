@@ -28,7 +28,7 @@ from uniffy.core.realtime.metrics import REALTIME_BUFFER_EPOCH_RESETS_TOTAL
 from uniffy.core.realtime.preflight import ensure_buffer_ready
 from uniffy.core.realtime.publisher import publish_checkpoint_progress
 from uniffy.core.realtime.state import DocKey
-from uniffy.core.realtime.storage import load_snapshot, lock_document
+from uniffy.core.realtime.storage import load_snapshot_row, lock_document
 from uniffy.infrastructure.valkey.binary import ValkeyIdentity, server_identity
 
 logger = logger.bind(component="core.realtime.epoch")
@@ -66,7 +66,8 @@ async def ensure_epoch(
     """
     await ensure_buffer_ready()
     for _ in range(_SETTLE_ATTEMPTS):
-        row = await load_snapshot(db, key)
+        # Health needs the facts only; a reset loads the bytes it folds into.
+        row = await load_snapshot_row(db, key)
         if row is None or row.generation is None:
             raise LookupError(f"{key[0].value}:{key[1]} has no seeded realtime checkpoint")
         if row.organization_id not in (None, organization_id):
@@ -178,6 +179,7 @@ async def _reset(
     if previous is not None:
         recovered, retire_through = await surviving_prefix(buffer, row)
     if recovered:
+        await db.refresh(row, ["updates"])
         await stage_recovered(db, row, recovered)
     fresh = await start_epoch(buffer, row, organization_id, identity)
     try:

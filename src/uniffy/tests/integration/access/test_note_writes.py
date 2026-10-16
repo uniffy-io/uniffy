@@ -2,10 +2,10 @@
 
 import contextlib
 from collections.abc import AsyncIterator, Iterator
-from datetime import timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import UUID
 
+import pycrdt
 import pytest
 import pytest_asyncio
 from prometheus_client import REGISTRY
@@ -17,12 +17,13 @@ from uniffy.core.errors import ConflictError
 from uniffy.core.models.audit.event import AuditEvent
 from uniffy.core.models.files.reconciliation import InlineAttachmentReconciliation
 from uniffy.core.models.notes.note import Note
-from uniffy.core.realtime.adapter import RealtimeRenderConflict, RealtimeRenderSuperseded
+from uniffy.core.realtime.adapter import RealtimeRenderConflict
+from uniffy.core.realtime.markdown import seed_markdown
 from uniffy.core.search.indexer import SearchIndexer
 from uniffy.core.storage import ObjectStorage
 from uniffy.core.types import AccessMode, NodeType, generate_id
+from uniffy.domains.notes.adapter import NoteRealtimeAdapter
 from uniffy.domains.notes.operations import NoteOperations
-from uniffy.domains.notes.projection import NoteProjectionOperations
 from uniffy.infrastructure.database.session import open_session
 from uniffy.tests.integration.access.realtime_live import unreachable
 
@@ -90,13 +91,18 @@ async def stored(note: Note) -> Note:
     return row
 
 
-async def render(note: Note, content: str, *, races: int = 0, **options) -> Note | None:
+async def render(note: Note, content: str, *, races: int = 0) -> None:
+    """Project a checkpoint holding ``content`` the way the projection job does."""
+    doc = pycrdt.Doc()
+    seed_markdown(doc, content)
+    adapter = NoteRealtimeAdapter(AsyncMock(spec=SearchIndexer))
     async with open_session() as db:
-        operations = NoteProjectionOperations(db, AsyncMock(spec=SearchIndexer))
         with contended(db, note.id, races):
-            return await operations.realtime_save(
-                note.organization_id, note.id, content, None, **options
-            )
+            after_commit = await adapter.stage_render(db, doc, note.id, note.organization_id)
+        await db.commit()
+        # Effects run on the projection's own session, as persist_snapshot runs them.
+        assert callable(after_commit)
+        await after_commit()
 
 
 def blank_overwrites() -> float:
@@ -133,28 +139,6 @@ async def test_render_retries_a_lost_version_race_and_gives_up_after_three(
     assert row.title == "Peer title"
     assert row.content == ("existing text" if races == 3 else "rendered")
     assert row.version == 1 + races + (races == 1)
-
-
-async def test_render_encoded_before_a_differing_plain_write_never_overwrites_it(
-    note: Note,
-) -> None:
-    written = (await stored(note)).updated_at
-
-    with pytest.raises(RealtimeRenderSuperseded):
-        await render(note, "stale live text", supersede_after=written - timedelta(seconds=5))
-
-    row = await stored(note)
-    assert (row.content, row.version) == ("existing text", 1)
-
-
-async def test_render_equal_to_a_later_plain_write_still_lands(note: Note) -> None:
-    written = (await stored(note)).updated_at
-
-    saved = await render(note, "existing text", supersede_after=written - timedelta(seconds=5))
-
-    assert saved is not None
-    row = await stored(note)
-    assert (row.content, row.version) == ("existing text", 1)
 
 
 async def test_metadata_write_gives_up_after_three_lost_version_races(note: Note) -> None:

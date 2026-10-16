@@ -9,6 +9,9 @@ interface RealtimeStatusBadgeProps {
   save?: SaveState | null;
   /** Whether this device holds the edits; copy promises a device copy only when it does. */
   storage: DeviceStorage;
+  /** On phone widths only the colored dot shows; the label stays for screen readers and the title.
+   * For crowded bars such as an editor toolbar, where a label would push the body down a row. */
+  compact?: boolean;
   className?: string;
 }
 
@@ -125,6 +128,7 @@ export function RealtimeStatusBadge({
   status,
   save = null,
   storage,
+  compact = false,
   className,
 }: RealtimeStatusBadgeProps) {
   const copy =
@@ -143,7 +147,7 @@ export function RealtimeStatusBadge({
       )}
       role="status"
       aria-live="polite"
-      title={copy.title}
+      title={compact ? [copy.label, copy.title].filter(Boolean).join(". ") : copy.title}
     >
       <span
         className={cn(
@@ -151,7 +155,7 @@ export function RealtimeStatusBadge({
           copy.dotPulse ? "animate-pulse" : "opacity-80",
         )}
       />
-      <span className="min-w-0 truncate">{copy.label}</span>
+      <span className={cn("min-w-0 truncate", compact && "max-sm:sr-only")}>{copy.label}</span>
     </span>
   );
 }

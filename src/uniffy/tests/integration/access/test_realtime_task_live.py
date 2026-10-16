@@ -1,5 +1,6 @@
 """Task description writes, recurring copies and deletions over live buffered tails."""
 
+import asyncio
 from collections.abc import AsyncIterator, Awaitable, Callable
 from dataclasses import dataclass
 from typing import Any
@@ -26,6 +27,11 @@ from uniffy.core.realtime.storage import EditDenied, load_snapshot, lock_documen
 from uniffy.core.search.indexer import SearchIndexer
 from uniffy.core.storage import ObjectStorage
 from uniffy.core.types import AccessMode, ContentType, generate_id
+from uniffy.domains.agents.providers.base import ToolCall
+from uniffy.domains.agents.tools.builtin.projects import update_task as update_task_tool
+from uniffy.domains.agents.tools.definitions import ToolContext
+from uniffy.domains.agents.tools.executor import ToolExecutor
+from uniffy.domains.agents.tools.registry import ToolRegistry
 from uniffy.domains.projects.defaults import stage_default_project_fields
 from uniffy.domains.projects.projects import ProjectOperations
 from uniffy.domains.projects.realtime import TaskRealtimeAdapter
@@ -47,6 +53,7 @@ from uniffy.tests.integration.access.realtime_live import (
     typed,
     unreachable,
 )
+from uniffy.tests.integration.access.recording_search import recording_indexer
 from uniffy.tests.integration.access.rpc_calls import call_rpc
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
@@ -98,7 +105,9 @@ async def live_project(access, valkey_namespace) -> AsyncIterator[LiveProject]:
         key = (ContentType.TASK, task_id)
         async with open_session() as db:
             await lock_document(db, key, access.org_id)
-            seeded = await stage_seed(db, key, access.org_id)
+            await stage_seed(db, key, access.org_id)
+            seeded = await load_snapshot(db, key)
+            assert seeded is not None
             await db.commit()
             base, generation = seeded.updates, seeded.generation
         assert generation is not None
@@ -154,8 +163,9 @@ async def update_task(task: BufferedDocument, buffer: UpdateBuffer, **fields: An
 
 async def update_task_rpc(task: BufferedDocument, **fields: Any) -> None:
     """Call the UpdateTask RPC as the task's owner, against the task's buffer."""
-    service = ProjectsServiceImpl(MagicMock(spec=ObjectStorage), AsyncMock(spec=SearchIndexer))
-    service.buffer = task.buffer
+    service = ProjectsServiceImpl(
+        MagicMock(spec=ObjectStorage), AsyncMock(spec=SearchIndexer), task.buffer
+    )
     request = UpdateTaskRequest(task_id=str(task.key[1]), organization_id=str(task.org), **fields)
     await call_rpc(service.update_task, request, user_id=task.owner, organization_id=task.org)
 
@@ -279,6 +289,41 @@ async def test_update_task_rpc_answers_retryably_while_live_edits_cannot_be_veri
     )
     assert checkpoint_of(await stored(task.key)) == checkpoint_of(before)
     assert await task.buffer_state() == buffered
+
+
+async def test_a_second_writer_proceeds_right_after_a_failing_agent_write(
+    live_project: LiveProject, project_outage: UpdateBuffer
+) -> None:
+    task = live_project.tasks[0]
+    registry = ToolRegistry()
+    registry.register(update_task_tool)
+    call = ToolCall(
+        id="call-1",
+        name=update_task_tool.name,
+        input={"task_id": str(task.key[1]), "description": "Agent text"},
+    )
+
+    # The run keeps its session open across tools, as an agent turn does.
+    async with open_session() as runtime:
+        context = ToolContext(
+            session=runtime,
+            user_id=task.owner,
+            organization_id=task.org,
+            buffer=project_outage,
+            storage=MagicMock(spec=ObjectStorage),
+            search_indexer=recording_indexer(),
+            allowed_tools=frozenset({update_task_tool.name}),
+        )
+        failed = await ToolExecutor(registry, context).execute(call)
+        async with asyncio.timeout(5):
+            written = await update_task(
+                task, task.buffer, description="Human text", base_description="base"
+            )
+
+    assert not failed.success
+    assert failed.error is not None and "No content was changed" in failed.error
+    assert written.description == "Human text"
+    assert (await task_row(task)).description == "Human text"
 
 
 async def delete_first_task(

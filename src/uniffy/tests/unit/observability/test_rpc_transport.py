@@ -27,6 +27,8 @@ from uniffy_proto.users.v1.users_pb import UploadAvatarRequest, UploadAvatarResp
 from uniffy.core.auth.principal import current_principal
 from uniffy.core.auth.tokens import create_access_token
 from uniffy.core.avatars import MAX_AVATAR_BYTES
+from uniffy.core.realtime.buffer import UpdateBuffer
+from uniffy.core.realtime.ydoc_manager import YDocManager
 from uniffy.core.search import SearchIndexer, WorkspaceSearch
 from uniffy.core.search.engine import SearchEngine
 from uniffy.core.storage import ObjectStorage
@@ -49,7 +51,14 @@ def _rpc_client(monkeypatch: pytest.MonkeyPatch) -> TestClient:
         AsyncMock(return_value=None),
     )
     search = WorkspaceSearch(MagicMock(spec=SearchEngine))
-    dispatcher = _create_api_dispatcher(MagicMock(spec=ObjectStorage), search, SearchIndexer(search))
+    buffer = UpdateBuffer()
+    dispatcher = _create_api_dispatcher(
+        MagicMock(spec=ObjectStorage),
+        search,
+        SearchIndexer(search),
+        buffer,
+        YDocManager(buffer=buffer),
+    )
     return TestClient(
         dispatcher,
         headers={

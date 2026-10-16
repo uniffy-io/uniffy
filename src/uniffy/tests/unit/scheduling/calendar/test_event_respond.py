@@ -184,7 +184,7 @@ class TestMethod:
     def test_responding_is_a_post_and_never_a_get(self) -> None:
         """A mail scanner opening every link in a message must not be able to
         accept a meeting on somebody's behalf."""
-        router = create_calendar_router(MagicMock())
+        router = create_calendar_router(MagicMock(), MagicMock())
 
         route = next(r for r in router.routes if r.path.endswith(RESPOND_PATH))
         assert route.methods == {"POST"}

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { NodeType } from "@uniffy/proto/notes/v1/notes_pb";
 import type { SerializedNote } from "@/features/notes/store/notesThunks";
-import { chooseNotesLanding } from "@/features/notes/utils/landing";
+import { chooseNotesLanding, leavesRoutedNote } from "@/features/notes/utils/landing";
 
 function note(id: string, nodeType = NodeType.NOTE, isDeleted = false): SerializedNote {
   return { id, nodeType, isDeleted } as SerializedNote;
@@ -26,5 +26,21 @@ describe("chooseNotesLanding", () => {
 
   it("returns null for an empty notes workspace", () => {
     expect(chooseNotesLanding({ deleted: note("deleted", NodeType.NOTE, true) }, null)).toBeNull();
+  });
+});
+
+describe("leavesRoutedNote", () => {
+  it("leaves a note that is gone or was trashed while open", () => {
+    expect(leavesRoutedNote({}, "gone", false)).toBe(true);
+    expect(
+      leavesRoutedNote({ trashed: note("trashed", NodeType.NOTE, true) }, "trashed", false),
+    ).toBe(true);
+    expect(leavesRoutedNote({ open: note("open") }, "open", false)).toBe(false);
+  });
+
+  it("stays on a note opened from the trash", () => {
+    expect(
+      leavesRoutedNote({ trashed: note("trashed", NodeType.NOTE, true) }, "trashed", true),
+    ).toBe(false);
   });
 });

@@ -76,8 +76,8 @@ export class UpdateCoverage {
 
   /** Accepted updates the server can no longer vouch for return to local and must replay. */
   applySessionState(state: SessionState): CoverageTransition[] {
-    const newEpoch = !this.isCurrent(state);
-    if (newEpoch) {
+    const epochChanged = !this.isCurrent(state);
+    if (epochChanged) {
       this.generation = state.generation;
       this.epoch = state.epoch;
       this.covered = 0;
@@ -85,7 +85,7 @@ export class UpdateCoverage {
     const transitions: CoverageTransition[] = [];
     for (const [updateId, update] of this.updates) {
       // A receipt above the head names an update the buffer lost.
-      if (update.sequence !== null && (newEpoch || update.sequence > state.headSequence)) {
+      if (update.sequence !== null && (epochChanged || update.sequence > state.headSequence)) {
         update.sequence = null;
         transitions.push({ updateId, coverage: "local", editedAt: update.editedAt });
       }

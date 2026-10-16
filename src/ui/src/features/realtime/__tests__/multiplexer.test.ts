@@ -27,6 +27,7 @@ import {
   encodeCheckpointProgress,
   encodeCommitted,
   encodeSessionState,
+  statusFromCloseCode,
   type RealtimeStatus,
 } from "@/features/realtime/protocol";
 import { hasUnsyncedEdits } from "@/features/realtime/unsyncedEdits";
@@ -602,6 +603,45 @@ describe("close codes", () => {
       }).discard,
     ).toBe(false);
   });
+
+  it("shows access lost on close 4403 and reconnects only once new credentials arrive", () => {
+    const statuses: RealtimeStatus[] = [];
+    const closeCodes: number[] = [];
+    const doc = attachDoc("forbidden", {
+      onStatus: (status) => statuses.push(status),
+      onCloseCode: (code) => closeCodes.push(code),
+    });
+    const first = currentWs();
+    first.open();
+    doc.ydoc.getText("markdown").insert(0, "kept on this device");
+    vi.advanceTimersByTime(50);
+
+    first.serverClose(4403);
+    expect(closeCodes.map(statusFromCloseCode)).toEqual(["access_lost"]);
+    expect(statuses.at(-1)).toBe("access_lost");
+    window.dispatchEvent(new Event("offline"));
+    window.dispatchEvent(new Event("online"));
+    realtimeMultiplexer.retryConnection();
+    vi.advanceTimersByTime(120_000);
+    expect(FakeWebSocket.instances).toHaveLength(1);
+    expect(statuses.at(-1)).toBe("access_lost");
+    expect(isTransportPending(doc)).toBe(true);
+
+    const later: RealtimeStatus[] = [];
+    attachDoc("opened-while-forbidden", { onStatus: (status) => later.push(status) });
+    expect(later).toEqual(["access_lost"]);
+    expect(FakeWebSocket.instances).toHaveLength(1);
+
+    signIn("org-1");
+    const second = currentWs();
+    expect(second).not.toBe(first);
+    second.open();
+    expect(statuses.at(-1)).toBe("connected");
+    const server = new Y.Doc();
+    applyClientFramesToServer(second, doc.docName, server);
+    expect(server.getText("markdown").toString()).toBe("kept on this device");
+    server.destroy();
+  });
 });
 
 it("retries a blocked connection immediately without dropping attached content", () => {
@@ -658,8 +698,8 @@ it("bounds invalid-token retries and explicit Retry restarts refresh", async () 
   currentWs().open();
 });
 
-it("closes an idle old-org socket before attaching in another workspace", () => {
-  const firstDoc = attachDoc("old-org");
+it("closes an idle socket of the previous workspace before attaching in another", () => {
+  const firstDoc = attachDoc("first-workspace");
   const first = currentWs();
   first.open();
   firstDoc.subscription.destroy();
@@ -667,7 +707,7 @@ it("closes an idle old-org socket before attaching in another workspace", () => 
   firstDoc.awareness.destroy();
   firstDoc.ydoc.destroy();
   signIn("org-2");
-  attachDoc("new-org");
+  attachDoc("second-workspace");
   expect(first.readyState).toBe(FakeWebSocket.CLOSED);
   expect(currentWs().url).toContain("org_id=org-2");
   signIn("org-1");

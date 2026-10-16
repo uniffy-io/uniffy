@@ -32,7 +32,7 @@ from uniffy.core.models.realtime.yjs_snapshot import RealtimeYjsSnapshot
 from uniffy.core.realtime.buffer_keys import AdmissionStatus
 from uniffy.core.realtime.checkpoint import CheckpointStatus, checkpoint_document, stage_recovered
 from uniffy.core.realtime.epoch import ensure_epoch
-from uniffy.core.realtime.job_contracts import SAVE_REALTIME_SNAPSHOT
+from uniffy.core.realtime.job_contracts import PROJECT_REALTIME_DOCUMENT
 from uniffy.core.realtime.live import LiveStateUnavailable
 from uniffy.core.realtime.publisher import perm_channel
 from uniffy.core.realtime.snapshot import SnapshotOutcome, persist_snapshot
@@ -77,7 +77,7 @@ def hierarchy(db: AsyncSession, note: BufferedDocument) -> NoteHierarchy:
 
 def projection_job(note: BufferedDocument, revision: int) -> tuple[str, str, tuple[str, ...]]:
     return (
-        SAVE_REALTIME_SNAPSHOT.name,
+        PROJECT_REALTIME_DOCUMENT.name,
         f"{note.namespace}projection:{ContentType.NOTE.value}:{note.key[1]}:{revision}",
         (ContentType.NOTE.value, str(note.key[1]), str(note.org)),
     )
@@ -209,7 +209,9 @@ async def tree(live_note) -> AsyncIterator[Tree]:
         await db.commit()
         folder_id, key = folder.id, (ContentType.NOTE, second.id)
         await lock_document(db, key, live_note.org)
-        row = await stage_seed(db, key, live_note.org)
+        await stage_seed(db, key, live_note.org)
+        row = await load_snapshot(db, key)
+        assert row is not None
         await db.commit()
     assert row.generation is not None
     sibling = dataclasses.replace(

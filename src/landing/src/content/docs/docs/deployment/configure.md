@@ -75,19 +75,19 @@ Valkey backs the ARQ job queue, pub/sub channels, the operational cache, and the
 | `VALKEY_PORT` | `6380` | TCP port. The local compose maps Valkey to 6380 to avoid collision with a host Redis on 6379. |
 | `VALKEY_PASSWORD` | `uniffy-valkey-dev` | Auth password. |
 | `VALKEY_DATABASE` | `0` | Logical DB used by app code. |
-| `VALKEY_BINARY_MAX_CONNECTIONS` | `10` | Connection cap per process for the pool that stores live edits not yet saved. Connections open on demand. |
+| `VALKEY_BINARY_MAX_CONNECTIONS` | `10` | Connection cap per process for the pool that stores live edits not yet saved. Connections open on demand, and a call that finds them all busy waits up to 50 ms for one. |
 | `REALTIME_VALKEY_PREFLIGHT` | `strict` | Startup check of the eviction policy. `strict` stops accepting live edits into Valkey when the policy is `allkeys-*`. `warn` only logs. |
-| `REALTIME_PENDING_BUDGET_BYTES` | empty | Bytes of unsaved live edits Valkey may hold across all documents. Empty means a quarter of `maxmemory` capped at 512 MiB, or 256 MiB when `maxmemory` is 0 or unreadable. |
+| `REALTIME_PENDING_BUDGET_BYTES` | empty | Stored bytes of unsaved live edits Valkey may hold across all documents. Each edit counts its bytes, twice its id and 256 bytes of entry overhead, which is close to the memory Valkey spends on it. Empty means a quarter of `maxmemory` capped at 512 MiB, or 256 MiB when `maxmemory` is 0 or unreadable. |
 
 Queue, pub/sub, and cache connection profiles are set in code. Cache calls have a 150 ms deadline, so a slow Valkey becomes a cache miss instead of stalling the request. Live edit calls have the same deadline but never fall back to PostgreSQL. The edit stays on the editor's device, the chip reads Saving unavailable, and the editor sends it again a few seconds later.
 
 **Eviction requirement.** Valkey's eviction policy must not be one of the `allkeys-*` policies. Under those, Valkey can silently delete edits that are waiting for their save when memory runs low. `noeviction`, the Valkey default, and every `volatile-*` policy are safe. Waiting edits carry no expiry, so caches go first, and a full instance refuses new edits instead of dropping old ones. Editors show that as Saving unavailable and keep the edits on the device.
 
-The backend and every worker read the eviction policy, `maxmemory` and the persistence settings at startup. With `REALTIME_VALKEY_PREFLIGHT=strict`, a confirmed `allkeys-*` policy turns live edit acceptance off. Editors keep working on their device copies and show Saving unavailable, content writes through the API to documents that currently hold a live edit buffer fail with a retryable error, and the log names the setting to change. A document holds that buffer from the moment someone opens it in a live editor until an hour passes without new edits. `warn` accepts edits anyway and logs the risk.
+The backend and every worker read the eviction policy, `maxmemory` and the persistence settings at startup, and again as soon as they reach a restarted or replaced Valkey. With `REALTIME_VALKEY_PREFLIGHT=strict`, a confirmed `allkeys-*` policy turns live edit acceptance off. Editors keep working on their device copies and show Saving unavailable, content writes through the API to documents that currently hold a live edit buffer fail with a retryable error, and the log names the setting to change. A document holds that buffer from the moment someone opens it in a live editor until an hour passes without new edits. `warn` accepts edits anyway and logs the risk.
 
 Some managed services hide `CONFIG`. The policy is then unknown: Uniffy logs the requirement at startup and carries on, so check the policy yourself. `GET /healthz` reports the outcome as `realtime_buffer`, one of `enabled`, `disabled`, `unknown` or `not_run`, and the `uniffy_realtime_valkey_preflight` metric carries the same verdict. Persistence is never required. [Backups and Restore](/docs/deployment/backups/#valkey-and-edits-not-yet-saved) lists what each persistence setting can lose.
 
-The budget is a ceiling, not a reservation. It is split evenly across sixteen fixed buckets, and one document may use at most a quarter of its bucket's share, up to 16 MiB, and 4096 waiting edits. An edit over any of these limits is refused for now and kept on the device until saves catch up.
+The budget is a ceiling, not a reservation. It is split evenly across sixteen fixed buckets. One document may use at most a quarter of its bucket's share, up to 16 MiB, and 4096 waiting edits, and one organization at most half of it, so a single tenant cannot fill a bucket for everyone else. An edit over any of these limits is refused for now and kept on the device until saves catch up. On a deployment with open sign up, someone who creates several organizations can still fill a bucket; keep `ALLOW_PUBLIC_REGISTRATION` off unless you watch `uniffy_realtime_buffer_pending_bytes`.
 
 ## Realtime editing
 
@@ -273,7 +273,7 @@ Set CPU, memory, and ephemeral storage budgets in Kubernetes. Raise them alongsi
 
 ## Calls (LiveKit)
 
-LiveKit is the SFU for audio and video calls. Server config lives in LiveKit's own config file; only the credentials and URLs come from the env.
+LiveKit is the SFU for audio and video calls. Server config lives in LiveKit's own config file; only the credentials and URLs come from the env. Point LiveKit's `redis` block at a Valkey instance of its own, never at Uniffy's: Uniffy's Valkey holds unsaved document text, and its password stays with Uniffy backends and workers.
 
 | Variable | Default | Purpose |
 |---|---|---|
@@ -281,7 +281,6 @@ LiveKit is the SFU for audio and video calls. Server config lives in LiveKit's o
 | `LIVEKIT_HOST` | `http://localhost:7880` | HTTP URL the **backend** uses for LiveKit admin REST API (server-to-server). |
 | `LIVEKIT_API_KEY` | `devkey` | Shared API key. Rotate together with the secret. |
 | `LIVEKIT_API_SECRET` | none | Shared secret, yours to generate: `openssl rand -hex 32`. At least 32 characters, and never one published in the repository. Calls stay disabled until it is set on both the backend and the LiveKit server. |
-| `LIVEKIT_VALKEY_DATABASE` | `1` | Valkey logical DB used by LiveKit for its room registry. Kept separate from the app's DB (`VALKEY_DATABASE`) to avoid eviction or pub/sub cross-impact. |
 
 ## TURN relay
 

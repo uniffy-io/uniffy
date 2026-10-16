@@ -129,6 +129,29 @@ Each backend and worker logs `Valkey instance changed` with the old and new iden
 
 ### Planned Valkey maintenance
 
-Restarting or upgrading Valkey with its persistence intact loses nothing. Wiping its data is different: the server's copy of every waiting edit goes with it. There is no command that saves every waiting edit on demand. To wipe safely, stop the backend pods so no new edits arrive, keep the core workers running, and wait until `uniffy_realtime_buffer_oldest_pending_seconds` reads 0 on the core worker metrics. Do not wait on `uniffy_realtime_buffer_pending_records` instead. After keys disappear it also counts the edits Uniffy keeps for investigation for up to seven days, and no save clears those. Then wipe Valkey and start the backends again. Editors keep their unsaved edits on the device in the meantime and send them when the backends return.
+Restarting or upgrading Valkey with its persistence intact loses nothing. Wiping its data is different. The server's copy of every waiting edit goes with it, so save those edits to PostgreSQL first.
+
+Stop the backend pods so no new edits arrive, and keep the core workers running. Then run the checkpoint command once from a core worker pod. It uses the database and Valkey settings of the pod it runs in.
+
+```bash
+kubectl exec -n uniffy deploy/uniffy-worker-core \
+  -- python -m uniffy --realtime-checkpoint-now
+```
+
+The command saves every document that still has edits waiting in Valkey, including documents the regular save schedule lost track of. It prints how many documents it saved and how many edits that covered. It also counts the waiting buffers of documents that were replaced or deleted since, and clears them. Connection settings and credentials never appear in the report.
+
+The exit status is 0 only when nothing is left behind. Otherwise the report lists every buffer it could not save, with the organization, content type and document id, a reason, and the records left.
+
+`pending` means edits arrived while it ran. Make sure every backend pod is stopped and run it again.
+
+`gap` and `stale` mean Uniffy could not prove that buffer complete. It saved the unbroken run it could prove. The rest stays only for investigation, and maintenance drops it after seven days.
+
+`malformed` and `undecodable` mean a stored edit cannot be read. Its bytes stay in Valkey and the document keeps retrying.
+
+Any other reason means the command could not finish that document. Run it again.
+
+Wiping while lines remain removes those records from the server. Editors that never saw those edits saved still hold them on the device and send them again when their authors next open Uniffy.
+
+Confirm on the core worker metrics that `uniffy_realtime_buffer_oldest_pending_seconds` reads 0. That gauge only sees documents on the save schedule, which is why the command comes first. Do not wait on `uniffy_realtime_buffer_pending_records` instead. After keys disappear it also counts the edits Uniffy keeps for investigation for up to seven days, and no save clears those. Then wipe Valkey and start the backends again. Editors keep their unsaved edits on the device in the meantime and send them when the backends return.
 
 Never restore or delete Uniffy's keys inside a running Valkey. Load a different data set only by restarting Valkey, so it gets a new identity. If keys vanish while it keeps running, Uniffy notices on the next touch and starts that document afresh, but edits that lived only in those keys are gone from the server.

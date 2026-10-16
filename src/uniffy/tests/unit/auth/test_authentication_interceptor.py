@@ -13,6 +13,8 @@ from connectrpc.request import Headers, RequestContext
 from uniffy.core.auth.principal import current_principal
 from uniffy.core.auth.revocation import TokenRevocation
 from uniffy.core.auth.tokens import create_access_token, create_refresh_token, decode_access_token
+from uniffy.core.realtime.buffer import UpdateBuffer
+from uniffy.core.realtime.ydoc_manager import YDocManager
 from uniffy.core.search import SearchIndexer, WorkspaceSearch
 from uniffy.core.search.engine import SearchEngine
 from uniffy.core.storage import ObjectStorage
@@ -97,10 +99,13 @@ async def test_malformed_tokens_are_denied(bearer: str) -> None:
 
 def test_every_mounted_service_authenticates_before_parsing() -> None:
     search = WorkspaceSearch(MagicMock(spec=SearchEngine))
+    buffer = UpdateBuffer()
     dispatcher = _create_api_dispatcher(
         MagicMock(spec=ObjectStorage),
         search,
         SearchIndexer(search),
+        buffer,
+        YDocManager(buffer=buffer),
     )
 
     unguarded: list[str] = []

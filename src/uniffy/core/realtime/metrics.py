@@ -179,3 +179,9 @@ REALTIME_GAP_REPAIRS_TOTAL = Counter(
     "continue their head",
     ["cause"],
 )
+REALTIME_LATEST_READS_TOTAL = Counter(
+    "uniffy_realtime_latest_reads_total",
+    "Latest-state reads by what supplied the checkpoint: the resident document, the process "
+    "cache or PostgreSQL",
+    ["source"],
+)

@@ -12,7 +12,6 @@ from uniffy.core.events.realtime import publish_content_changed
 from uniffy.core.models.calendar.activity import EventActivity
 from uniffy.core.models.calendar.attendee import EventAttendee
 from uniffy.core.models.calendar.event import CalendarEvent
-from uniffy.core.realtime.adapter import check_not_superseded
 from uniffy.core.realtime.metrics import REALTIME_BLANK_CONTENT_OVERWRITES_TOTAL
 from uniffy.core.search import SearchIndexer
 from uniffy.core.types import ContentType
@@ -56,18 +55,10 @@ class EventRealtimePersistence:
         content: str,
         *,
         actor_id: UUID | None = None,
-        supersede_after: datetime | None = None,
     ) -> tuple[CalendarEvent, Callable[[], Awaitable[None]]] | None:
         event = await load_live_event(self.session, event_id, organization_id, for_update=True)
         if event is None:
             return None
-        check_not_superseded(
-            event.updated_at,
-            supersede_after,
-            stored=event.description,
-            rendered=content,
-            label=f"Event {event_id}",
-        )
         if event.description and not content:
             REALTIME_BLANK_CONTENT_OVERWRITES_TOTAL.labels(
                 content_type=ContentType.CALENDAR_EVENT.value
@@ -124,22 +115,3 @@ class EventRealtimePersistence:
             return
         await EventContentOperations(self.session, self.search_indexer)._index_for_search(event)
         await publish_content_changed(ContentType.CALENDAR_EVENT, event.id, organization_id)
-
-    async def save(
-        self,
-        organization_id: UUID,
-        event_id: UUID,
-        content: str,
-        *,
-        actor_id: UUID | None = None,
-        supersede_after: datetime | None = None,
-    ) -> CalendarEvent | None:
-        staged = await self.stage_save(
-            organization_id, event_id, content, actor_id=actor_id, supersede_after=supersede_after
-        )
-        if staged is None:
-            return None
-        event, after_commit = staged
-        await self.session.commit()
-        await after_commit()
-        return event

@@ -14,3 +14,14 @@ export function chooseNotesLanding(
     accessible.find((note) => note.nodeType !== NodeType.FOLDER)?.id ?? accessible[0]?.id ?? null
   );
 }
+
+/** Whether the page should leave the routed note it loaded: the note is gone, or was moved to the
+ * trash while open. A note opened from the trash stays, so it can be read and restored. */
+export function leavesRoutedNote(
+  notes: Record<string, SerializedNote>,
+  noteId: string,
+  openedFromTrash: boolean,
+): boolean {
+  const note = notes[noteId];
+  return !note || (Boolean(note.isDeleted) && !openedFromTrash);
+}

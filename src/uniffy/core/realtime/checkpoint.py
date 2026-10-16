@@ -29,18 +29,16 @@ from uniffy.core.realtime.buffer import (
     UpdateBuffer,
 )
 from uniffy.core.realtime.buffer_keys import (
+    BUCKET_COUNT,
     MAX_PENDING_DOCUMENT_RECORDS,
     BufferedUpdate,
     BufferScope,
-    KeyKind,
     TrimResult,
     buffer_keys,
-    key_pattern,
     merge_tail,
-    scopes_of_keys,
 )
 from uniffy.core.realtime.epoch import ensure_epoch
-from uniffy.core.realtime.job_contracts import SAVE_REALTIME_SNAPSHOT
+from uniffy.core.realtime.job_contracts import PROJECT_REALTIME_DOCUMENT
 from uniffy.core.realtime.metrics import (
     REALTIME_CHECKPOINT_AGE,
     REALTIME_CHECKPOINT_DURATION,
@@ -67,7 +65,6 @@ CAPTURE_MAX_BYTES = 4 * _MIB
 CAPTURE_MAX_RECORDS = 1024
 _COMMIT_ATTEMPTS = 3
 _DRAIN_PASSES = MAX_PENDING_DOCUMENT_RECORDS // CAPTURE_MAX_RECORDS + 1
-_SCAN_COUNT = 1000
 _VALKEY_FAILURES = (ValkeyError, OSError, TimeoutError)
 
 type Enqueue = Callable[[JobRef, str, tuple[str, ...]], Awaitable[JobEnqueueOutcome]]
@@ -388,7 +385,7 @@ async def enqueue_projection(
     """One projection job per committed revision; projection recovery covers a lost one."""
     try:
         await enqueue(
-            SAVE_REALTIME_SNAPSHOT,
+            PROJECT_REALTIME_DOCUMENT,
             f"{buffer.namespace}projection:{key[0].value}:{key[1]}:{revision}",
             (key[0].value, str(key[1]), str(organization_id)),
         )
@@ -453,19 +450,27 @@ async def _drain(
     return result, covered
 
 
+async def _buffered_streams(buffer: UpdateBuffer) -> list[BufferScope]:
+    """Scopes whose stream holds records, from every bucket's scope set."""
+    known = [scope for bucket in range(BUCKET_COUNT) for scope in await buffer.scopes(bucket)]
+    if not known:
+        return []
+    async with buffer_errors(), buffer_client().pipeline(transaction=False) as pipe:
+        for scope in known:
+            pipe.exists(buffer_keys(scope, buffer.namespace).stream)
+        present = await pipe.execute()
+    return sorted(
+        (scope for scope, exists in zip(known, present, strict=True) if exists),
+        key=lambda scope: scope.member,
+    )
+
+
 async def checkpoint_all_pending(
     buffer: UpdateBuffer, *, enqueue: Enqueue = enqueue_core
 ) -> CheckpointReport:
     """Checkpoint every buffered stream, scheduled or not, and list what remains unproven."""
     await ensure_buffer_ready()
-    async with buffer_errors():
-        found = [
-            key
-            async for key in buffer_client().scan_iter(
-                match=key_pattern(KeyKind.STREAM, buffer.namespace), count=_SCAN_COUNT
-            )
-        ]
-    scopes = scopes_of_keys(found, (KeyKind.STREAM,), buffer.namespace)
+    scopes = await _buffered_streams(buffer)
     checkpointed = records = 0
     unreadable: list[UnreadableStream] = []
     for scope in scopes:

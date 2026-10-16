@@ -2,12 +2,13 @@
 
 import asyncio
 from datetime import UTC, datetime
+from uuid import UUID
 
 import pycrdt
 from loguru import logger
 
 from uniffy.core.realtime.access import AccessGates
-from uniffy.core.realtime.admission import SavingUnavailable, admit_update
+from uniffy.core.realtime.admission import Admitted, RoleRefused, SavingUnavailable, admit_update
 from uniffy.core.realtime.buffer import UpdateBuffer
 from uniffy.core.realtime.buffer_keys import Receipt
 from uniffy.core.realtime.fanout import (
@@ -26,7 +27,7 @@ from uniffy.core.realtime.metrics import (
     REALTIME_GAP_REPAIRS_TOTAL,
 )
 from uniffy.core.realtime.resident import Continuity, follow_record
-from uniffy.core.realtime.router import RealtimeRouter, RemoteUpdate, RouterCallbacks, router
+from uniffy.core.realtime.router import RealtimeRouter, RemoteUpdate, RouterCallbacks
 from uniffy.core.realtime.seeding import has_fragment_content
 from uniffy.core.realtime.state import ClientHandle, DocKey, WSSession, YDocSession
 from uniffy.core.realtime.storage import EditDenied
@@ -39,7 +40,7 @@ from uniffy.core.realtime.wire import (
 
 logger = logger.bind(component="core.realtime.ydoc_manager")
 
-__all__ = ["YDocManager", "ydoc_manager"]
+__all__ = ["YDocManager"]
 
 IDLE_EVICTION_SECONDS = 15 * 60
 # Bounded so a slow pubsub cannot hold the process past its graceful-shutdown window.
@@ -48,13 +49,12 @@ SEED_RETRY_SECONDS = 1.0
 
 
 class YDocManager:
-    """Process-wide registry of live ``YDocSession`` instances."""
+    """Registry of the live ``YDocSession`` instances one replica holds."""
 
     def __init__(
         self,
         *,
         buffer: UpdateBuffer,
-        realtime_router: RealtimeRouter = router,
         replica: str | None = None,
         idle_eviction_seconds: float = IDLE_EVICTION_SECONDS,
     ) -> None:
@@ -64,7 +64,8 @@ class YDocManager:
         self._global_lock = asyncio.Lock()
         self._replica_id = replica or replica_id()
         self._buffer = buffer
-        self._router = realtime_router
+        # Shares the replica id so the router drops exactly this manager's own echoes.
+        self._router = RealtimeRouter(self._replica_id)
         self._idle_eviction_seconds = idle_eviction_seconds
         self._effects = AcceptedEffects(self._replica_id, self.refresh_fragment_seeder)
         self.access = AccessGates(
@@ -79,14 +80,17 @@ class YDocManager:
     def realtime_router(self) -> RealtimeRouter:
         return self._router
 
-    def router_callbacks(self) -> RouterCallbacks:
-        return RouterCallbacks(
-            apply_remote_update=self._apply_remote_update,
-            apply_checkpoint_progress=self._apply_checkpoint_progress,
-            reload_document=self._reload_document,
-            close_stale_user_sessions=self.access.close_stale_user_sessions,
-            close_user_session_by_sid=self.access.close_user_session_by_sid,
-            recheck_access=self.access.recheck,
+    def install(self) -> None:
+        """Route this process's document, permission and auth signals to this manager."""
+        self._router.register_callbacks(
+            RouterCallbacks(
+                apply_remote_update=self._apply_remote_update,
+                apply_checkpoint_progress=self._apply_checkpoint_progress,
+                reload_document=self._reload_document,
+                close_stale_user_sessions=self.access.close_stale_user_sessions,
+                close_user_session_by_sid=self.access.close_user_session_by_sid,
+                recheck_access=self.access.recheck,
+            )
         )
 
     def resident(self, key: DocKey) -> YDocSession | None:
@@ -280,23 +284,22 @@ class YDocManager:
     ) -> Receipt | None:
         """Admit a client's update into the buffer; local peers receive it once it is accepted.
 
-        ``None`` means PostgreSQL already holds every byte of the update.
+        ``None`` means PostgreSQL already holds every byte of the update. The role admission read
+        under the document lock also applies to the writer's handle, so a write frame needs no
+        separate access read.
         """
         source = session.clients.get(source_conn_id)
         if source is None:
             raise EditDenied
         async with session.lock:
-            admitted = await admit_update(
-                self._buffer,
-                session,
-                source.user_id,
-                generation,
-                update_id,
-                update_bytes,
-                broadcast,
+            admitted = await self._admit(
+                session, source.user_id, generation, update_id, update_bytes
             )
-            if admitted.applied:
+            if isinstance(admitted, Admitted) and admitted.applied:
                 broadcast(session, [create_update_message(update_bytes)], skip=source_conn_id)
+        await self.access.apply_role(session, source, admitted.role)
+        if isinstance(admitted, RoleRefused):
+            raise admitted
         receipt = admitted.receipt
         accepted = (
             AcceptedUpdate(update_bytes, receipt)
@@ -305,6 +308,21 @@ class YDocManager:
         )
         self._effects.queue(session, accepted)
         return receipt
+
+    async def _admit(
+        self,
+        session: YDocSession,
+        actor_id: UUID,
+        generation: str,
+        update_id: str,
+        update_bytes: bytes,
+    ) -> Admitted | RoleRefused:
+        try:
+            return await admit_update(
+                self._buffer, session, actor_id, generation, update_id, update_bytes, broadcast
+            )
+        except RoleRefused as refused:
+            return refused
 
     async def apply_seed_update(
         self,
@@ -407,7 +425,3 @@ class YDocManager:
         session = self._sessions.get(key)
         if session is not None:
             await self.refresh_document(session)
-
-
-ydoc_manager = YDocManager(buffer=UpdateBuffer())
-router.register_callbacks(ydoc_manager.router_callbacks())

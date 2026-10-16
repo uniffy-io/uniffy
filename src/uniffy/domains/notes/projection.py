@@ -1,7 +1,5 @@
 """Search, mention, and realtime persistence for notes."""
 
-from datetime import datetime
-from typing import Any
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,7 +11,6 @@ from uniffy.core.types import ContentType
 from uniffy.domains.notes.content.fields import extract_canvas_text
 from uniffy.domains.notes.content.notifications import NoteNotifications
 from uniffy.domains.notes.content.projections import NoteProjections
-from uniffy.domains.notes.content.realtime import NoteRealtimePersistence
 from uniffy.domains.notes.reader import NoteReader
 from uniffy.domains.tags.context import ContentTagMutations
 from uniffy.domains.tags.sync import sync_inline_tags
@@ -54,25 +51,6 @@ class NoteProjectionOperations(NoteReader):
     @staticmethod
     def _extract_canvas_text(canvas_data: dict) -> list[str]:
         return extract_canvas_text(canvas_data)
-
-    async def realtime_save(
-        self,
-        organization_id: UUID,
-        note_id: UUID,
-        content: str,
-        canvas_content: dict[str, Any] | None,
-        *,
-        actor_id: UUID | None = None,
-        supersede_after: datetime | None = None,
-    ) -> Note | None:
-        return await NoteRealtimePersistence(self).save(
-            organization_id,
-            note_id,
-            content,
-            canvas_content,
-            actor_id=actor_id,
-            supersede_after=supersede_after,
-        )
 
     async def _sync_tags_after_save(
         self,

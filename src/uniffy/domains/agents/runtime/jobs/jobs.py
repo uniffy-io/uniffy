@@ -15,7 +15,7 @@ from loguru import logger
 
 from uniffy.core.database import SESSION_FACTORY_CTX_KEY, SessionFactory
 from uniffy.core.jobs.locks import acquire_owned_job_lock, release_owned_job_lock
-from uniffy.core.realtime.buffer import UpdateBuffer
+from uniffy.core.realtime.buffer import UPDATE_BUFFER_CTX_KEY, UpdateBuffer
 from uniffy.core.search import SEARCH_INDEXER_CTX_KEY
 from uniffy.core.storage import OBJECT_STORAGE_CTX_KEY, ObjectStorage
 from uniffy.domains.agents.metrics import (
@@ -170,7 +170,7 @@ async def run_agent_session(
                 session,
                 storage,
                 ctx[SEARCH_INDEXER_CTX_KEY],
-                UpdateBuffer(),
+                cast(UpdateBuffer, ctx[UPDATE_BUFFER_CTX_KEY]),
                 session_factory,
                 cast(ChannelCallLifecycle, ctx[CALL_LIFECYCLE_CTX_KEY]),
             )

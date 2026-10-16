@@ -4,21 +4,21 @@ import {
   MARKDOWN_MIRROR_ORIGIN,
   REMOTE_ORIGIN,
   isPersistedOrigin,
-  newPersistenceEpoch,
+  createPersistenceEpoch,
   selectCompactableSeqs,
   updateRowSeq,
 } from "@/features/realtime/persistence/encryptedYjsPersistence";
 
-describe("newPersistenceEpoch", () => {
+describe("createPersistenceEpoch", () => {
   it("produces a distinct epoch per attach", () => {
-    expect(newPersistenceEpoch()).not.toBe(newPersistenceEpoch());
+    expect(createPersistenceEpoch()).not.toBe(createPersistenceEpoch());
   });
 });
 
 describe("updateRowSeq", () => {
   it("never collides across epochs for the same counter", () => {
-    const a = newPersistenceEpoch();
-    const b = newPersistenceEpoch();
+    const a = createPersistenceEpoch();
+    const b = createPersistenceEpoch();
     expect(updateRowSeq(a, 1)).not.toBe(updateRowSeq(b, 1));
   });
 
@@ -33,8 +33,8 @@ describe("updateRowSeq", () => {
   });
 
   it("gives two sessions on the same doc fully disjoint row keys", () => {
-    const a = newPersistenceEpoch();
-    const b = newPersistenceEpoch();
+    const a = createPersistenceEpoch();
+    const b = createPersistenceEpoch();
     const rows = new Map<string, string>();
     for (let n = 1; n <= 3; n++) rows.set(updateRowSeq(a, n), `a${n}`);
     for (let n = 1; n <= 3; n++) rows.set(updateRowSeq(b, n), `b${n}`);
@@ -81,7 +81,7 @@ describe("selectCompactableSeqs", () => {
 
   it("leaves a prior uncompacted session intact for a fresh attach that has not hydrated", () => {
     const priorRows = [1, 2, 3].map((n) => updateRowSeq(other, n));
-    const picked = selectCompactableSeqs(priorRows, newPersistenceEpoch(), 100, new Set());
+    const picked = selectCompactableSeqs(priorRows, createPersistenceEpoch(), 100, new Set());
     expect(picked).toEqual([]);
   });
 });

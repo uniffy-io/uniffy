@@ -1,30 +1,22 @@
 """``RealtimeContentAdapter`` for ``ContentType.NOTE``: markdown + canvas."""
 
 from collections.abc import Awaitable, Callable, Collection
-from datetime import datetime
 from typing import Any
 from uuid import UUID
 
 import pycrdt
-from loguru import logger
 from sqlalchemy import bindparam, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.auth.permissions.checker import PermissionChecker
 from uniffy.core.models.notes.note import Note
 from uniffy.core.realtime.adapter import DeferredProjection, register_realtime_adapter
-from uniffy.core.realtime.markdown import (
-    markdown_text,
-    replace_external_markdown,
-    seed_markdown,
-)
+from uniffy.core.realtime.markdown import markdown_text, seed_markdown
 from uniffy.core.realtime.state import DocKey
 from uniffy.core.search import SearchIndexer
 from uniffy.core.types import ContentRole, ContentType, NodeType
 from uniffy.domains.notes.content.realtime import NoteRealtimePersistence
 from uniffy.domains.notes.projection import NoteProjectionOperations
-
-LOGGER_COMPONENT = "realtime.notes_adapter"
 
 # Per-node text fields stored as ``Y.Text``; mirrors ``NODE_TEXT_FIELDS``
 # in the frontend ``canvasBinding.ts`` and must stay in lockstep.
@@ -132,56 +124,6 @@ class NoteRealtimeAdapter:
         else:
             seed_markdown(ydoc, note.content or "")
 
-    async def render_and_persist(
-        self,
-        session: AsyncSession,
-        ydoc: pycrdt.Doc,
-        content_id: UUID,
-        organization_id: UUID,
-        *,
-        actor_id: UUID | None = None,
-        supersede_after: datetime | None = None,
-    ) -> bool:
-        note = (
-            await session.execute(
-                select(Note).where(
-                    Note.id == content_id,
-                    Note.organization_id == organization_id,
-                    Note.is_deleted == False,  # noqa: E712
-                )
-            )
-        ).scalar_one_or_none()
-        if note is None:
-            logger.debug(
-                f"snapshot for missing or soft-deleted note {content_id}; skipping render",
-                component=LOGGER_COMPONENT,
-            )
-            return False
-
-        if note.node_type == NodeType.CANVAS:
-            content = ""
-            canvas_content = _render_canvas_content(ydoc)
-            # ``None`` here would NULL ``canvas_content`` on disk; skip the write.
-            if canvas_content is None:
-                logger.debug(
-                    f"skipping canvas render for {content_id}: empty YDoc",
-                    component=LOGGER_COMPONENT,
-                )
-                return True
-        else:
-            content = _render_markdown(ydoc)
-            canvas_content = None
-
-        saved = await NoteProjectionOperations(session, self.search_indexer).realtime_save(
-            organization_id=organization_id,
-            note_id=content_id,
-            content=content,
-            canvas_content=canvas_content,
-            actor_id=actor_id,
-            supersede_after=supersede_after,
-        )
-        return saved is not None
-
     async def stage_render(
         self,
         session: AsyncSession,
@@ -222,9 +164,6 @@ class NoteRealtimeAdapter:
         await NoteRealtimePersistence(
             NoteProjectionOperations(session, self.search_indexer)
         ).after_projection(organization_id, content_id)
-
-    def apply_external_content(self, ydoc: pycrdt.Doc, content: str) -> bool:
-        return replace_external_markdown(ydoc, content)
 
 
 def register_note_realtime_adapter(search_indexer: SearchIndexer) -> None:

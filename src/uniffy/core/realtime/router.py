@@ -37,6 +37,8 @@ _REVOKE_PATTERN = f"{RealtimeChannelNamespace.AUTH}:{RealtimeChannelKind.REVOKE}
 _REVOKE_SID_PATTERN = f"{RealtimeChannelNamespace.AUTH}:{RealtimeChannelKind.REVOKE_SESSION}:*"
 _RECONNECT_DELAY_INITIAL = 1.0
 _RECONNECT_DELAY_MAX = 30.0
+# Records past this many queued for one document collapse into one reload of checkpoint plus tail.
+_DOC_QUEUE_LIMIT = 1024
 
 
 @dataclass(frozen=True, slots=True)
@@ -47,6 +49,15 @@ class RemoteUpdate:
     generation: str
     epoch: str
     sequence: int
+
+
+@dataclass(frozen=True, slots=True)
+class _DocWork:
+    """One routed document message waiting for that document's earlier messages."""
+
+    kind: RealtimePayloadKind
+    remote: RemoteUpdate | None = None
+    progress: CheckpointProgress | None = None
 
 
 @dataclass
@@ -164,7 +175,7 @@ def _parse_defaults_channel(channel: str) -> tuple[UUID, ContentType] | None:
 
 
 class RealtimeRouter:
-    """Singleton process-wide dispatcher for the realtime pubsub channels."""
+    """Dispatches the realtime pubsub channels to the documents one replica holds."""
 
     def __init__(self, replica: str | None = None) -> None:
         self._callbacks: RouterCallbacks | None = None
@@ -175,6 +186,10 @@ class RealtimeRouter:
         self._policy_docs: dict[DocKey, set[DocKey]] = {}
         self._self_replica = replica or replica_id()
         self._tasks: list[asyncio.Task[None]] = []
+        # Each document's messages run in order on its own task, so a reload that waits on one
+        # document's lock never holds up hints for the others.
+        self._doc_work: dict[DocKey, list[_DocWork]] = {}
+        self._doc_tasks: dict[DocKey, asyncio.Task[None]] = {}
         self._running = False
 
     def register_callbacks(self, callbacks: RouterCallbacks) -> None:
@@ -213,12 +228,15 @@ class RealtimeRouter:
         if not self._running:
             return
         self._running = False
-        for task in self._tasks:
+        tasks = [*self._tasks, *self._doc_tasks.values()]
+        for task in tasks:
             task.cancel()
-        for task in self._tasks:
+        for task in tasks:
             with contextlib.suppress(asyncio.CancelledError):
                 await task
         self._tasks = []
+        self._doc_tasks.clear()
+        self._doc_work.clear()
         logger.info("realtime router stopped")
 
     def register_doc_session(self, key: DocKey, session: YDocSession) -> None:
@@ -289,35 +307,81 @@ class RealtimeRouter:
 
     async def _handle_doc_message(self, channel: str, payload: dict[str, object]) -> None:
         key = _parse_content_channel(channel, RealtimeChannelKind.DOC)
-        callbacks = self._callbacks
-        session = None if key is None else self._doc_sessions.get(key)
-        if key is None or session is None or callbacks is None:
+        if key is None or key not in self._doc_sessions or self._callbacks is None:
             return
         kind = payload.get("kind")
         if kind == RealtimePayloadKind.CONTENT_REPLACE:
             # Not origin-deduped: the publishing process may hold the session.
-            _observe_pubsub_latency("doc", payload)
-            await callbacks.reload_document(key)
-            return
-        if kind == RealtimePayloadKind.CHECKPOINT_PROGRESS:
+            work = _DocWork(RealtimePayloadKind.CONTENT_REPLACE)
+        elif kind == RealtimePayloadKind.CHECKPOINT_PROGRESS:
             # Not origin-deduped either: barriers in this process commit checkpoints too.
             progress = _parse_progress(payload)
             if progress is None:
                 logger.warning(f"router: malformed progress on {channel}")
                 return
-            _observe_pubsub_latency("doc", payload)
-            await callbacks.apply_checkpoint_progress(key, progress)
-            return
-        if kind != RealtimePayloadKind.ACCEPTED_UPDATE:
-            return
-        if payload.get("origin_replica") == self._self_replica:
-            return
-        remote = _parse_remote_update(payload)
-        if remote is None:
-            logger.warning(f"router: malformed update on {channel}")
+            work = _DocWork(RealtimePayloadKind.CHECKPOINT_PROGRESS, progress=progress)
+        elif kind == RealtimePayloadKind.ACCEPTED_UPDATE:
+            if payload.get("origin_replica") == self._self_replica:
+                return
+            remote = _parse_remote_update(payload)
+            if remote is None:
+                logger.warning(f"router: malformed update on {channel}")
+                return
+            work = _DocWork(RealtimePayloadKind.ACCEPTED_UPDATE, remote=remote)
+        else:
             return
         _observe_pubsub_latency("doc", payload)
-        await callbacks.apply_remote_update(session, remote)
+        self._queue_doc_work(key, work)
+
+    def _queue_doc_work(self, key: DocKey, work: _DocWork) -> None:
+        """Queue behind the document's earlier messages, dropping what later work makes moot.
+
+        A queued reload reads checkpoint plus tail when it runs, so it covers every record
+        published before it ran; only the newest checkpoint progress matters.
+        """
+        queue = self._doc_work.setdefault(key, [])
+        reload_queued = any(item.kind is RealtimePayloadKind.CONTENT_REPLACE for item in queue)
+        if work.kind is RealtimePayloadKind.ACCEPTED_UPDATE:
+            if reload_queued:
+                return
+            if len(queue) >= _DOC_QUEUE_LIMIT:
+                work = _DocWork(RealtimePayloadKind.CONTENT_REPLACE)
+        if work.kind is RealtimePayloadKind.CONTENT_REPLACE:
+            queue[:] = [
+                item for item in queue if item.kind is RealtimePayloadKind.CHECKPOINT_PROGRESS
+            ]
+        elif work.kind is RealtimePayloadKind.CHECKPOINT_PROGRESS:
+            queue[:] = [item for item in queue if item.kind is not work.kind]
+        queue.append(work)
+        if key not in self._doc_tasks:
+            self._doc_tasks[key] = asyncio.create_task(
+                self._run_doc_work(key), name="realtime-router-document"
+            )
+
+    async def _run_doc_work(self, key: DocKey) -> None:
+        try:
+            while queue := self._doc_work.get(key):
+                work = queue.pop(0)
+                if not queue:
+                    self._doc_work.pop(key, None)
+                try:
+                    await self._apply_doc_work(key, work)
+                except Exception as exc:
+                    logger.warning(f"router document handler error on {key[0].value}: {exc}")
+        finally:
+            self._doc_tasks.pop(key, None)
+
+    async def _apply_doc_work(self, key: DocKey, work: _DocWork) -> None:
+        callbacks = self._callbacks
+        session = self._doc_sessions.get(key)
+        if callbacks is None or session is None:
+            return
+        if work.kind is RealtimePayloadKind.CONTENT_REPLACE:
+            await callbacks.reload_document(key)
+        elif work.progress is not None:
+            await callbacks.apply_checkpoint_progress(key, work.progress)
+        elif work.remote is not None:
+            await callbacks.apply_remote_update(session, work.remote)
 
     async def _handle_perm_message(self, channel: str, payload: dict[str, object]) -> None:
         # Not origin-deduped: local sessions learn of a committed change only through this bounce.
@@ -400,6 +464,3 @@ class RealtimeRouter:
             return
         _observe_pubsub_latency("revoke_sid", payload)
         await callbacks.close_user_session_by_sid(user_id, session_id)
-
-
-router = RealtimeRouter()

@@ -12,10 +12,10 @@ from uniffy.core.realtime.job_contracts import (
     CHECKPOINT_REALTIME_DOCUMENT,
     DISPATCH_REALTIME_CHECKPOINTS_SCHEDULE,
     MAINTAIN_REALTIME_BUFFER_SCHEDULE,
+    PROJECT_REALTIME_DOCUMENT,
     REALTIME_JOB_REFS,
     REALTIME_SCHEDULED_JOB_REFS,
     RECOVER_REALTIME_PROJECTIONS_SCHEDULE,
-    SAVE_REALTIME_SNAPSHOT,
 )
 from uniffy.core.realtime.jobs import (
     CHECKPOINT_JOB_TIMEOUT_SECONDS,
@@ -24,8 +24,8 @@ from uniffy.core.realtime.jobs import (
     checkpoint_realtime_document,
     dispatch_realtime_checkpoints,
     maintain_realtime_buffer,
+    project_realtime_document,
     recover_realtime_projections,
-    save_realtime_snapshot,
 )
 from uniffy.domains.agents.bridge.jobs.contracts import (
     CHAT_INTEGRATION_JOB_REFS,
@@ -322,7 +322,7 @@ CORE_JOB_REGISTRATIONS = (
         timeout=REAP_MULTIPART_UPLOADS_JOB_TIMEOUT_SECONDS,
     ),
     _bind(REINDEX_ORG_CONTENT_FOR_DEFAULTS, reindex_org_content_for_defaults),
-    _bind(SAVE_REALTIME_SNAPSHOT, save_realtime_snapshot),
+    _bind(PROJECT_REALTIME_DOCUMENT, project_realtime_document),
     # Retries come from the dispatcher; a kept result would also dedupe the next pass.
     _bind(
         CHECKPOINT_REALTIME_DOCUMENT,

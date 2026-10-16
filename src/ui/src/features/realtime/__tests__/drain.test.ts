@@ -3,6 +3,7 @@ import * as Y from "yjs";
 import * as encoding from "lib0/encoding";
 import {
   FakeRealtimeServer,
+  FakeWebSocket,
   closeSockets,
   currentSocket,
   updateWrites,
@@ -12,6 +13,7 @@ import {
   signInDevice,
 } from "@/features/realtime/persistence/__tests__/browser";
 import { encodeDocFrame, peekVarString } from "@/features/realtime/multiplex";
+import { AUTH_REFRESHED_EVENT } from "@/features/realtime/protocol";
 import { realtimeMultiplexer } from "@/features/realtime/multiplexer";
 import {
   attachEncryptedPersistence,
@@ -196,7 +198,7 @@ describe("realtime drain", () => {
     expect(hasPendingDoc("TASK", "slow")).toBe(false);
   });
 
-  it("keeps the entry and every row when the server forbids the connection", async () => {
+  it("keeps the entry and every row while the server forbids the connection, then drains with new credentials", async () => {
     const server = new FakeRealtimeServer("TASK:forbidden", GENERATION);
     await strandRows(server, "forbidden", "typed offline");
     recordPendingDoc(entryFor("forbidden"));
@@ -205,6 +207,27 @@ describe("realtime drain", () => {
     expect(await outcome).toBe("retry");
     expect(hasPendingDoc("TASK", "forbidden")).toBe(true);
     expect(await discoverStoredPendingDocs("alice")).toBe(true);
+
+    // The same credentials would be refused again, so a later drain opens no socket.
+    const opened = FakeWebSocket.instances.length;
+    const second = drainDoc(entryFor("forbidden"));
+    expect(FakeWebSocket.instances).toHaveLength(opened);
+
+    window.dispatchEvent(new Event(AUTH_REFRESHED_EVENT));
+    const fresh = currentSocket();
+    expect(fresh).not.toBe(ws);
+    fresh.open();
+    server.attach(fresh);
+    // Local recovery has handed back every stored row, including the update the refused socket
+    // carried.
+    await eventually(() =>
+      expect(realtimeMultiplexer.getDocState(server.docName).coverageKnown).toBe(true),
+    );
+    vi.advanceTimersByTime(BATCH_MS);
+    server.commit(fresh);
+    expect(await second).toBe("drained");
+    expect(server.text).toBe("typed offline");
+    expect(hasPendingDoc("TASK", "forbidden")).toBe(false);
   });
 
   it("hands a closed editor's accepted edits to the drain and holds sign-out until the checkpoint", async () => {

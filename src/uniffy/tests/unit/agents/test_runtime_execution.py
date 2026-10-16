@@ -68,6 +68,7 @@ async def test_completion_loop_preserves_order_and_session_isolation(
     import uniffy.domains.agents.tools.executor as executor_mod
 
     main_session = MagicMock(name="main_session")
+    main_session.commit = AsyncMock()
     read_sessions: list[object] = []
     read_active = 0
     read_peak = 0
