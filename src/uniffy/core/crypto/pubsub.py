@@ -8,7 +8,7 @@ from uuid import UUID
 
 from loguru import logger
 
-from uniffy.core.crypto.cache import get_deployment_dek_cache, get_org_dek_lru
+from uniffy.core.crypto.cache import get_deployment_dek_cache, invalidate_org_dek_caches
 from uniffy.core.json_codec import JSONDecodeError, loads
 from uniffy.infrastructure.valkey.pubsub import (
     publish_to_channel,
@@ -121,9 +121,9 @@ async def _handle_invalidate_message(raw: object) -> None:
     except ValueError:
         logger.warning(f"Org DEK invalidate message invalid organization_id: {raw_id!r}")
         return
-    dropped = await get_org_dek_lru().invalidate(organization_id)
+    dropped = await invalidate_org_dek_caches(organization_id)
     if dropped:
-        logger.debug(f"Org DEK LRU dropped {dropped} entries for {organization_id}")
+        logger.debug(f"Org DEK caches dropped {dropped} entries for {organization_id}")
 
 
 async def publish_deployment_dek_invalidation() -> None:

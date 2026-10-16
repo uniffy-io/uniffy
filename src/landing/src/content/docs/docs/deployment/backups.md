@@ -45,11 +45,11 @@ An edit is gone for good only when its author never returns to that device, sign
 
 So pick Valkey's persistence for how much of the last few seconds you can afford to lose on a crash, keep its data volume on storage you trust, and keep backing up PostgreSQL.
 
-A file backup of Valkey adds little for edits. Saves follow within seconds, so a backup taken minutes or hours ago holds an edit PostgreSQL lacks only when saves were stalled at that moment, for example while the core workers were down. It holds document text, so guard it like a PostgreSQL backup.
+A file backup of Valkey adds little for edits. Saves follow within seconds, so a backup taken minutes or hours ago holds an edit PostgreSQL lacks only when saves were stalled at that moment, for example while the core workers were down. Its edits stay encrypted with your organization's key. It also holds queued jobs and a record of who edited which document and when, so guard it like a PostgreSQL backup.
 
 If you restore one, start Valkey on the restored files; never load keys into a running instance. The restart gives Valkey a new identity. On the next touch of each document, Uniffy saves the restored edits that continue what PostgreSQL already holds and sets the rest aside until maintenance clears it a week after its newest edit. The restored files also bring back the job queue as it was, so jobs that ran after the backup can run again.
 
-Valkey holds document text in memory and in its persistence files. Uniffy does not encrypt those bytes, so protect Valkey, its disk and its files the way you protect PostgreSQL. Never give it an `allkeys-*` eviction policy; [Configure Uniffy](/docs/deployment/configure/#valkey) explains why.
+Edits waiting in Valkey are encrypted with your organization's key, in memory and in its persistence files. The key never reaches Valkey. Valkey still holds queued jobs, caches, and a record of who edited which document and when. Protect Valkey, its disk and its files the way you protect PostgreSQL. Never give it an `allkeys-*` eviction policy; [Configure Uniffy](/docs/deployment/configure/#valkey) explains why.
 
 ## Continuous Postgres backups to S3
 

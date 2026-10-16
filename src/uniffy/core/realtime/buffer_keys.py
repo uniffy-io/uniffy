@@ -2,23 +2,27 @@
 
 import hashlib
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import StrEnum
 from uuid import UUID
 
 import pycrdt
 
+from uniffy.core.crypto import SEAL_OVERHEAD_BYTES
 from uniffy.core.realtime.limits import MAX_FRAME_BYTES
 from uniffy.core.realtime.wire import MAX_WIRE_STRING_BYTES
 from uniffy.core.types import ContentType
 
 _MIB = 1024 * 1024
 
-# Bucket count and key shape are a storage format. Changing either bumps the version so new keys
-# never alias pending data written under the previous layout.
-LAYOUT_VERSION = 1
+# Bucket count, key shape and record encoding are a storage format. Changing any of them bumps
+# the version so new keys never alias pending data written under another layout.
+LAYOUT_VERSION = 2
 BUCKET_COUNT = 16
-RECORD_FORMAT = 1
+# Records hold their update sealed under the organization key, never in plaintext.
+RECORD_FORMAT = 2
+# A full frame still fits once sealed.
+MAX_STORED_UPDATE_BYTES = MAX_FRAME_BYTES + SEAL_OVERHEAD_BYTES
 MAX_PENDING_DOCUMENT_BYTES = 16 * _MIB
 MAX_PENDING_DOCUMENT_RECORDS = 4096
 DUE_DELAY_MS = 10_000
@@ -35,8 +39,8 @@ _NAMESPACE_RESERVED = frozenset("{}*?[]\\")
 
 
 def stored_bytes(update_id: str, update: bytes) -> int:
-    """What one buffered record counts against its document limit and the pending budget."""
-    return len(update) + 2 * len(update_id.encode()) + RECORD_OVERHEAD_BYTES
+    """What one record of a plaintext ``update`` counts against its limits, once sealed."""
+    return len(update) + SEAL_OVERHEAD_BYTES + 2 * len(update_id.encode()) + RECORD_OVERHEAD_BYTES
 
 
 def bucket_for(organization_id: UUID, content_type: ContentType, content_id: UUID) -> int:
@@ -161,6 +165,15 @@ def buffer_keys(scope: BufferScope, namespace: str = "") -> BufferKeys:
     )
 
 
+def record_aad(scope: BufferScope, update_id: str, actor_id: UUID) -> bytes:
+    """Associated data that binds a sealed record to its document, epoch, update id and actor.
+
+    Unambiguous although an update id may hold ':', since the member has a fixed number of
+    segments and the actor a fixed length.
+    """
+    return f"{scope.member}:{update_id}:{actor_id}".encode()
+
+
 def validate_update(update_id: str, update: bytes) -> None:
     """Refuse what the admission script would refuse, before any Valkey round trip."""
     if not isinstance(update_id, str) or not isinstance(update, bytes):
@@ -256,6 +269,9 @@ class AdmissionStatus(StrEnum):
 class AdmissionOutcome:
     status: AdmissionStatus
     receipt: Receipt | None = None
+    # What this call sealed, set when accepted or duplicate; an accepted one is the stored record.
+    # A fresh nonce makes it differ per call, so it takes no part in equality.
+    sealed: bytes | None = field(default=None, compare=False, repr=False)
 
 
 @dataclass(frozen=True, slots=True)
@@ -272,6 +288,7 @@ class TrimResult:
 
 
 def parse_record(entry_id: bytes, fields: dict[bytes, bytes]) -> BufferedUpdate | None:
+    """One stream entry as stored: ``update`` holds the sealed bytes, which only the buffer opens."""
     try:
         seq, separator, suffix = entry_id.partition(b"-")
         if separator != b"-" or suffix != b"0" or fields[b"v"] != str(RECORD_FORMAT).encode():

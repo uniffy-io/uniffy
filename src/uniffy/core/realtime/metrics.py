@@ -154,6 +154,11 @@ REALTIME_BUFFER_ADMISSIONS_TOTAL = Counter(
     "Buffered realtime update admissions by outcome",
     ["outcome"],
 )
+REALTIME_BUFFER_UNSEAL_FAILURES_TOTAL = Counter(
+    "uniffy_realtime_buffer_unseal_failures_total",
+    "Sealed buffered updates that failed to open, read from the stream or a peer replica's hint",
+    ["source"],
+)
 REALTIME_BUFFER_EPOCH_RESETS_TOTAL = Counter(
     "uniffy_realtime_buffer_epoch_resets_total",
     "Buffer epochs replaced, by the condition that forced the reset",

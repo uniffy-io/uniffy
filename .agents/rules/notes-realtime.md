@@ -243,8 +243,8 @@ Type 6 runs `admission.admit_update` under the resident session lock and a Postg
    not arrived; validating only visible text would lose them.
 5. An update that adds nothing appends no record. It answers type 11 at the current head, or type 7
    when the head equals the checkpoint.
-6. The admit script appends the next sequence, records the receipt as sequence plus SHA-256
-   digest, counts stored bytes and records, sets `first_ms` once and `last_ms` always, and adds the
+6. The admit script appends the sealed record at the next sequence, records the receipt as
+   sequence plus the HMAC digest of the plaintext (below), counts stored bytes and records, sets `first_ms` once and `last_ms` always, and adds the
    due entry at first pending time plus ten seconds without moving an existing one. A repeated id
    with the same digest answers its original sequence. A recovery-required answer resets the epoch
    once and retries.
@@ -263,8 +263,9 @@ client retries against current state without inserting speculative blocks. A com
 answers type 7.
 
 One process-wide `RealtimeRouter` subscribes to document, permission, defaults and auth signals.
-Never create a Valkey subscription per document or user. Accepted-update hints carry bytes,
-generation, epoch and sequence; replica IDs drop a process's own echoes. A replica applies a record
+Never create a Valkey subscription per document or user. Accepted-update hints carry the sealed
+record with its update id and actor, generation, epoch and sequence (payload below); replica IDs
+drop a process's own echoes. A replica applies a record
 that continues its resident head and otherwise reloads checkpoint plus tail. Checkpoint progress and
 content-replace hints are not origin-deduped. Progress for a newer revision, another epoch or a
 sequence beyond the resident head reloads first. Progress for the resident generation and epoch
@@ -289,10 +290,11 @@ including failed acceptance and cancellation. The counter is per global user, ac
 
 ## Valkey buffer and epochs
 
-`buffer_keys.py` owns the layout, version 1. Documents map to 16 fixed buckets by SHA-256 of
-organization, type and id. A bucket's keys share the hash tag `rtbuf:{v1:NN}`, so every script stays
-single slot. Each document generation and epoch has a stream of `<seq>-0` records (update id,
-bytes, actor, acceptance time, format), a control hash (head, pending bytes and records, committed
+`buffer_keys.py` owns the layout, `LAYOUT_VERSION` 2. Documents map to 16 fixed buckets by SHA-256
+of organization, type and id. A bucket's keys share the hash tag `rtbuf:{v2:NN}`, so every script
+stays single slot; maintenance state is `rtbuf:v2:maintenance`. Each document generation and epoch
+has a stream of `<seq>-0` records (`i` update id, `u` sealed update, `a` actor, `t` acceptance
+time, `v` format `RECORD_FORMAT` 2), a control hash (head, pending bytes and records, committed
 hint, first and last append time, starting revision) and a receipts hash. Each bucket has a due
 sorted set, an early sorted set, a scope set and an accounting hash. The early set names documents
 past 1 MiB or 1024 pending records; a trim below both removes them. The scope set names every scope
@@ -307,6 +309,45 @@ connection busy waits up to 50 ms, well inside the admission deadline, and
 `uniffy_valkey_binary_pool_waits_total{outcome}` counts waits served and timed out. Each new
 connection reads `INFO server` and refuses to serve when the `run_id` differs from the identity
 recorded at startup. The caller adopts the new identity and treats the epoch as unproven.
+
+Field `u` never holds plaintext. `UpdateBuffer.admit` seals each update with `OrgDataCipher`
+(`core/crypto/org_data_cipher.py`, AES-256-GCM) after the preflight and budget checks, before the
+150 ms deadline starts. The blob is format byte `0x01`, the 4-byte big-endian DEK version, a 12-byte
+random nonce, then ciphertext and the 16-byte tag: `SEAL_OVERHEAD_BYTES` is 33. The key is
+HKDF-SHA256 of the organization's DEK with info `uniffy-realtime-buffer-v1`, so it rotates with
+`OrgCipher` and never enters Valkey. GCM associated data is the 5-byte header plus `record_aad`,
+`<scope.member>:<update id>:<actor id>`, which binds organization, type, id, generation, epoch,
+update id and actor. A record copied to another scope, or with an edited id, actor, version or
+format byte, fails to open. Nonces are random, so one DEK version stays well under 2^32 sealed
+records; a very busy organization needs DEK rotation, and no doc may claim an unbounded budget.
+
+The receipt digest is `receipt_digest`: HMAC-SHA256 of the plaintext under a key derived with info
+`uniffy-realtime-receipt-v1` from the active DEK version, 64 hex characters. It is computed with the
+seal, so a retry across a DEK rotation that reaches the script carries a digest under the new
+version and answers `update conflict`. The window is the retry window, or up to 60 s while a process
+that missed the invalidation still caches the old active version (`OrgActiveDekVersions`); a retry
+on the live path usually finds the update held and answers type 11 before the script.
+`invalidate_org_dek_caches` drops the derived keys and the active version on rotation. Concurrent
+misses for one key share a single load, because each load opens a database session while its
+callers hold the document lock and a connection. A header version outside 1 to 2^31 - 1, the range
+of `org_encryption_keys.version`, refuses to open without a lookup.
+
+`read_prefix` unseals every record, so every `BufferedUpdate.update` a consumer sees is plaintext;
+only maintenance reads `parse_record` output, for sequences and times. A record that does not
+unseal is `RecoveryReason.MALFORMED` with its poison semantics. A remote hint that does not unseal,
+or whose generation or epoch cannot form a scope, reloads checkpoint plus tail like a gap and is
+never broadcast. Both count in `uniffy_realtime_buffer_unseal_failures_total{source}` (`stream` or
+`remote`). A key that cannot load (no active DEK, master key or database failure) raises
+`BufferUnavailable`, so the client gets `unavailable` and nothing is written. Logs carry the
+sequence and scope or the error type, never bytes. Valkey still sees metadata: which documents
+change, actor ids, times and sizes. Queues, caches and pub/sub control messages are not sealed, and
+checkpoint progress hints are not authenticated.
+
+`publish_doc_update` sends kind `accepted_update` with `origin_replica`, `generation`, `epoch`,
+`sequence`, `update_id`, `actor_id` (UUID string), `sealed` (standard base64) and `published_at`.
+There is no plaintext `update` field. The receiving replica's `_parse_remote_update` requires a
+non-empty `update_id` within `MAX_WIRE_STRING_BYTES`, a UUID `actor_id` and valid base64 `sealed`,
+then opens the record with `unseal_record` under the hint's scope.
 
 The row binds each epoch to the `run_id` that issued its sequences, so a restarted or restored
 Valkey can never reissue a sequence a client holds a receipt for. `epoch.ensure_epoch` runs under
@@ -325,8 +366,10 @@ restart, such as FLUSHALL or a manual DEL, shows up as a missing control record 
 older keys inside a running instance is unsupported.
 
 The deployment pending budget splits evenly across the 16 buckets. Every limit counts stored
-bytes: a record's update, twice its id and 256 bytes of entry overhead (`stored_bytes`), close to
-what Valkey spends on it. One document may hold the smaller of 16 MiB and a quarter of its bucket's
+bytes: a record's sealed update (plaintext plus `SEAL_OVERHEAD_BYTES`), twice its id and 256 bytes
+of entry overhead, close to what Valkey spends on it. `stored_bytes` takes the plaintext and adds
+the seal overhead, which equals what the script counts over the sealed record. The script's
+`max_record` (`ARGV[11]`) is `MAX_STORED_UPDATE_BYTES`, the 1 MiB frame cap plus 33. One document may hold the smaller of 16 MiB and a quarter of its bucket's
 budget, and at most 4096 records. One organization may hold half of a bucket, tracked as `o:<org>`
 in the accounting hash; organizations under one person's control can still fill a bucket. Exceeding
 any limit, or a Valkey OOM, refuses the append retryably and trims nothing already accepted.
@@ -368,7 +411,7 @@ core fleet's process count, not `CORE_WORKER_MAX_JOBS`, is the capacity lever.
    during its pass is not due again at once; a later backoff score stays.
 5. Publish progress and enqueue projection with job id `projection:<type>:<id>:<revision>`.
 
-A record that cannot be decoded marks the document poisoned: its bytes stay, the document backs off
+A record that cannot be decoded or unsealed marks the document poisoned: its bytes stay, the document backs off
 from 15 s doubling to ten minutes, and other documents continue. Other errors back off the same
 way, except an unavailable Valkey, which a later dispatch retries once the claim expires. Checkpoint
 success never depends on rendering.

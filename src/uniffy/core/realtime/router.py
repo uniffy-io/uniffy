@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import asyncio
 import base64
-import binascii
 import contextlib
 import time
 from collections.abc import Awaitable, Callable, Sequence
@@ -43,12 +42,14 @@ _DOC_QUEUE_LIMIT = 1024
 
 @dataclass(frozen=True, slots=True)
 class RemoteUpdate:
-    """An update another replica accepted, with its place in the buffer epoch."""
+    """A record another replica accepted, still sealed, with its place in the buffer epoch."""
 
-    update: bytes
+    sealed: bytes
     generation: str
     epoch: str
     sequence: int
+    update_id: str
+    actor_id: UUID
 
 
 @dataclass(frozen=True, slots=True)
@@ -89,14 +90,25 @@ def _parse_remote_update(payload: dict[str, object]) -> RemoteUpdate | None:
     generation = _wire_string(payload.get("generation"))
     epoch = _wire_string(payload.get("epoch"))
     sequence = _wire_integer(payload.get("sequence"))
-    encoded = payload.get("update")
-    if generation is None or not epoch or not sequence or not isinstance(encoded, str):
+    update_id = _wire_string(payload.get("update_id"))
+    actor = _wire_string(payload.get("actor_id"))
+    encoded = payload.get("sealed")
+    if (
+        generation is None
+        or not epoch
+        or not sequence
+        or not update_id
+        or actor is None
+        or not isinstance(encoded, str)
+    ):
         return None
     try:
-        update = base64.b64decode(encoded, validate=True)
-    except binascii.Error:
+        sealed = base64.b64decode(encoded, validate=True)
+        actor_id = UUID(actor)
+    except ValueError:
+        # Covers ``binascii.Error`` from the base64 decode as well.
         return None
-    return RemoteUpdate(update, generation, epoch, sequence)
+    return RemoteUpdate(sealed, generation, epoch, sequence, update_id, actor_id)
 
 
 def _parse_progress(payload: dict[str, object]) -> CheckpointProgress | None:

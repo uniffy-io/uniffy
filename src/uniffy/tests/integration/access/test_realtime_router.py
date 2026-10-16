@@ -100,7 +100,14 @@ async def progress(key: DocKey, covered: int) -> None:
 
 async def record(key: DocKey, sequence: int) -> None:
     await publish_doc_update(
-        *key, b"\x00\x00", generation="g", epoch="e", sequence=sequence, origin_replica="other"
+        *key,
+        b"sealed",
+        generation="g",
+        epoch="e",
+        sequence=sequence,
+        update_id=f"u-{sequence}",
+        actor_id=generate_id(),
+        origin_replica="other",
     )
 
 

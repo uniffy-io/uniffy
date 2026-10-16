@@ -7,10 +7,11 @@ from uuid import UUID
 import pycrdt
 from loguru import logger
 
+from uniffy.core.crypto import SealedDataError
 from uniffy.core.realtime.access import AccessGates
 from uniffy.core.realtime.admission import Admitted, RoleRefused, SavingUnavailable, admit_update
 from uniffy.core.realtime.buffer import UpdateBuffer
-from uniffy.core.realtime.buffer_keys import Receipt
+from uniffy.core.realtime.buffer_keys import BufferScope, Receipt
 from uniffy.core.realtime.fanout import (
     AcceptedEffects,
     AcceptedUpdate,
@@ -24,6 +25,7 @@ from uniffy.core.realtime.markdown import PROSEMIRROR_FRAGMENT_FIELD
 from uniffy.core.realtime.metrics import (
     REALTIME_ACTIVE_CLIENTS,
     REALTIME_ACTIVE_DOCS,
+    REALTIME_BUFFER_UNSEAL_FAILURES_TOTAL,
     REALTIME_GAP_REPAIRS_TOTAL,
 )
 from uniffy.core.realtime.resident import Continuity, follow_record
@@ -302,8 +304,8 @@ class YDocManager:
             raise admitted
         receipt = admitted.receipt
         accepted = (
-            AcceptedUpdate(update_bytes, receipt)
-            if admitted.applied and receipt is not None
+            AcceptedUpdate(admitted.sealed, receipt, source.user_id)
+            if admitted.sealed is not None and receipt is not None
             else None
         )
         self._effects.queue(session, accepted)
@@ -381,12 +383,32 @@ class YDocManager:
         logger.info(f"evicted idle session {key[0].value}:{key[1]}")
 
     async def _apply_remote_update(self, session: YDocSession, remote: RemoteUpdate) -> None:
-        """Apply a peer replica's record when it continues the head; otherwise reload the tail."""
-        continuity = follow_record(
-            session, remote.generation, remote.epoch, remote.sequence, remote.update
-        )
+        """Apply a peer replica's record when it continues the head; otherwise reload the tail.
+
+        A record that does not unseal is treated as a gap: the reload reads the stored record,
+        which either opens or poisons the document.
+        """
+        try:
+            scope = BufferScope(
+                session.organization_id, *session.key, remote.generation, remote.epoch
+            )
+            update = await self._buffer.unseal_record(
+                scope, remote.update_id, remote.actor_id, remote.sealed
+            )
+        except (SealedDataError, ValueError) as exc:
+            REALTIME_BUFFER_UNSEAL_FAILURES_TOTAL.labels(source="remote").inc()
+            logger.warning(
+                "Peer record {sequence} of {kind}:{id} does not unseal: {error}",
+                sequence=remote.sequence,
+                kind=session.key[0].value,
+                id=session.key[1],
+                error=type(exc).__name__,
+            )
+            await self.refresh_document(session)
+            return
+        continuity = follow_record(session, remote.generation, remote.epoch, remote.sequence, update)
         if continuity is Continuity.APPLIED:
-            broadcast(session, [create_update_message(remote.update)])
+            broadcast(session, [create_update_message(update)])
         elif continuity is Continuity.GAP:
             same_epoch = (remote.generation, remote.epoch) == (session.generation, session.epoch)
             REALTIME_GAP_REPAIRS_TOTAL.labels(cause="sequence" if same_epoch else "epoch").inc()

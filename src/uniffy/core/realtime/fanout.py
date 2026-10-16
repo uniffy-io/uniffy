@@ -4,6 +4,7 @@ import asyncio
 import contextlib
 from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass
+from uuid import UUID
 
 from loguru import logger
 
@@ -43,8 +44,11 @@ def broadcast_awareness(session: YDocSession, frame: bytes, *, source_conn_id: i
 
 @dataclass(frozen=True, slots=True)
 class AcceptedUpdate:
-    update: bytes
+    """The record the buffer stored, still sealed, with what its associated data names."""
+
+    sealed: bytes
     receipt: Receipt
+    actor_id: UUID
 
 
 class AcceptedEffects:
@@ -84,10 +88,12 @@ class AcceptedEffects:
                         publish_doc_update(
                             key[0],
                             key[1],
-                            accepted.update,
+                            accepted.sealed,
                             generation=accepted.receipt.generation,
                             epoch=accepted.receipt.epoch,
                             sequence=accepted.receipt.seq,
+                            update_id=accepted.receipt.update_id,
+                            actor_id=accepted.actor_id,
                             origin_replica=self._replica_id,
                         )
                     )

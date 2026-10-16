@@ -3,16 +3,18 @@
 import asyncio
 import contextlib
 import dataclasses
-import hashlib
 from collections import defaultdict
 from collections.abc import AsyncIterator
 from enum import StrEnum
 from uuid import UUID
 
 import valkey.asyncio as aioredis
+from loguru import logger
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 from valkey.exceptions import OutOfMemoryError, ValkeyError
 
+from uniffy.core.crypto import CryptoError, OrgDataCipher, SealedDataError
 from uniffy.core.realtime.buffer_keys import (
     BUCKET_COUNT,
     DUE_DELAY_MS,
@@ -20,6 +22,7 @@ from uniffy.core.realtime.buffer_keys import (
     EARLY_PENDING_RECORDS,
     MAX_PENDING_DOCUMENT_BYTES,
     MAX_PENDING_DOCUMENT_RECORDS,
+    MAX_STORED_UPDATE_BYTES,
     RECORD_FORMAT,
     AdmissionOutcome,
     AdmissionStatus,
@@ -37,6 +40,7 @@ from uniffy.core.realtime.buffer_keys import (
     due_key,
     parse_member,
     parse_record,
+    record_aad,
     scopes_key,
     validate_namespace,
     validate_update,
@@ -58,9 +62,9 @@ from uniffy.core.realtime.latest import (
     read_checkpoint,
     read_facts,
 )
-from uniffy.core.realtime.limits import MAX_FRAME_BYTES
 from uniffy.core.realtime.metrics import (
     REALTIME_BUFFER_ADMISSIONS_TOTAL,
+    REALTIME_BUFFER_UNSEAL_FAILURES_TOTAL,
     REALTIME_LATEST_READS_TOTAL,
 )
 from uniffy.core.realtime.preflight import (
@@ -78,6 +82,8 @@ from uniffy.infrastructure.valkey.binary import (
     verify_server_identity,
 )
 
+logger = logger.bind(component="core.realtime.buffer")
+
 # Worker context key for the process buffer that job handlers share.
 UPDATE_BUFFER_CTX_KEY = "update_buffer"
 ADMISSION_DEADLINE_SECONDS = 0.15
@@ -90,10 +96,14 @@ _PAGE_RECORDS = 512
 _SCAN_COUNT = 1000
 _CACHE_MAX_BYTES = 64 * 1024 * 1024
 _VALKEY_FAILURES = (ValkeyError, OSError, TimeoutError)
+# Loading an organization key reads PostgreSQL; failing to is as retryable as an unreachable Valkey.
+_KEY_FAILURES = (CryptoError, SQLAlchemyError, OSError)
 
 
 class BufferUnavailable(Exception):
-    """Retryable: Valkey is unreachable or buffered acceptance is disabled; nothing was written."""
+    """Retryable: Valkey or the organization key cannot be reached, or buffered acceptance is
+    disabled; nothing was written.
+    """
 
 
 class AdmissionUnknown(Exception):
@@ -127,7 +137,8 @@ _latest_cache = LatestCache(_CACHE_MAX_BYTES)
 class UpdateBuffer:
     """Admission, latest-state reads, cleanup and accounting in one key namespace.
 
-    Budget and client default to the preflight budget and the process binary client.
+    Budget, client and cipher default to the preflight budget, the process binary client and the
+    organization keys in PostgreSQL. Records rest sealed; every read hands out plaintext.
     """
 
     def __init__(
@@ -136,11 +147,13 @@ class UpdateBuffer:
         namespace: str = "",
         pending_budget_bytes: int | None = None,
         client: aioredis.Redis | None = None,
+        cipher: OrgDataCipher | None = None,
     ) -> None:
         validate_namespace(namespace)
         self.namespace = namespace
         self._pending_budget_bytes = pending_budget_bytes
         self._client = client
+        self._cipher = cipher or OrgDataCipher()
 
     def bucket_budget(self) -> int:
         """Bytes one bucket may hold; refuses until the serving instance passed its preflight."""
@@ -169,10 +182,11 @@ class UpdateBuffer:
         budget = self.bucket_budget()
         scope = head.scope
         keys = buffer_keys(scope, self.namespace)
+        sealed, digest = await self._seal(scope, update_id, update, actor_id)
         args = [
             update_id.encode(),
-            update,
-            hashlib.sha256(update).hexdigest(),
+            sealed,
+            digest,
             str(actor_id),
             scope.member,
             head.checkpoint_seq,
@@ -180,7 +194,7 @@ class UpdateBuffer:
             MAX_PENDING_DOCUMENT_RECORDS,
             budget,
             DUE_DELAY_MS,
-            MAX_FRAME_BYTES,
+            MAX_STORED_UPDATE_BYTES,
             MAX_WIRE_STRING_BYTES,
             RECORD_FORMAT,
             budget // _ORGANIZATION_BUDGET_DIVISOR,
@@ -226,8 +240,21 @@ class UpdateBuffer:
         status = AdmissionStatus(reply[0].decode())
         if status in (AdmissionStatus.ACCEPTED, AdmissionStatus.DUPLICATE):
             receipt = Receipt(scope.generation, scope.epoch, int(reply[1]), update_id)
-            return self._outcome(status, receipt)
+            return self._outcome(status, receipt, sealed)
         return self._outcome(status)
+
+    async def unseal_record(
+        self, scope: BufferScope, update_id: str, actor_id: UUID, sealed: bytes
+    ) -> bytes:
+        """The plaintext of a record sealed for exactly this scope, update id and actor.
+
+        Raises ``SealedDataError`` for bytes that do not open, and :class:`BufferUnavailable`
+        when the organization key cannot be loaded.
+        """
+        aad = record_aad(scope, update_id, actor_id)
+        async with self._key_call(scope):
+            update = await self._cipher.unseal(scope.organization_id, sealed, aad=aad)
+        return update
 
     async def load_latest(self, db: AsyncSession, key: DocKey) -> LatestState | None:
         """Checkpoint plus the verified tail through the head; ``None`` when no row exists.
@@ -311,7 +338,19 @@ class UpdateBuffer:
                     return tuple(updates), RecoveryReason.MALFORMED
                 if record.seq != expected:
                     return tuple(updates), RecoveryReason.GAP
-                updates.append(record)
+                try:
+                    update = await self.unseal_record(
+                        scope, record.update_id, record.actor_id, record.update
+                    )
+                except SealedDataError:
+                    REALTIME_BUFFER_UNSEAL_FAILURES_TOTAL.labels(source="stream").inc()
+                    logger.warning(
+                        "Buffered record {seq} of {member} does not unseal",
+                        seq=record.seq,
+                        member=scope.member,
+                    )
+                    return tuple(updates), RecoveryReason.MALFORMED
+                updates.append(dataclasses.replace(record, update=update))
                 expected += 1
         if through is not None and expected <= through:
             return tuple(updates), RecoveryReason.GAP
@@ -498,9 +537,42 @@ class UpdateBuffer:
         except _VALKEY_FAILURES as exc:
             raise BufferUnavailable("Valkey is unreachable") from exc
 
-    def _outcome(self, status: AdmissionStatus, receipt: Receipt | None = None) -> AdmissionOutcome:
+    def _outcome(
+        self,
+        status: AdmissionStatus,
+        receipt: Receipt | None = None,
+        sealed: bytes | None = None,
+    ) -> AdmissionOutcome:
         REALTIME_BUFFER_ADMISSIONS_TOTAL.labels(outcome=status.value).inc()
-        return AdmissionOutcome(status, receipt)
+        return AdmissionOutcome(status, receipt, sealed)
+
+    async def _seal(
+        self, scope: BufferScope, update_id: str, update: bytes, actor_id: UUID
+    ) -> tuple[bytes, str]:
+        """The sealed record and its receipt digest, both computed before Valkey is reached."""
+        organization_id = scope.organization_id
+        async with self._key_call(scope):
+            sealed = await self._cipher.seal(
+                organization_id, update, aad=record_aad(scope, update_id, actor_id)
+            )
+            # Keyed by the active DEK, so a retry across a rotation answers id_conflict.
+            digest = await self._cipher.receipt_digest(organization_id, update)
+        return sealed, digest
+
+    @contextlib.asynccontextmanager
+    async def _key_call(self, scope: BufferScope) -> AsyncIterator[None]:
+        try:
+            yield
+        except SealedDataError:
+            raise
+        except _KEY_FAILURES as exc:
+            # Only the error type: tracebacks would show plaintext held by the frames.
+            logger.warning(
+                "Organization key for {member} is unavailable: {error}",
+                member=scope.member,
+                error=type(exc).__name__,
+            )
+            raise BufferUnavailable("organization key is unavailable") from exc
 
     def _valkey(self) -> aioredis.Redis:
         client = self._client or get_binary_client()

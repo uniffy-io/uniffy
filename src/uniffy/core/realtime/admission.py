@@ -75,6 +75,8 @@ class Admitted:
     applied: bool
     # The writer's role, read fresh under the document lock.
     role: ContentRole
+    # The stored record, still sealed, for peer replicas; set only when applied.
+    sealed: bytes | None = None
 
 
 _REFUSALS = {
@@ -278,4 +280,4 @@ async def _admit(
     applied = status is AdmissionStatus.ACCEPTED
     if applied:
         accept_update(session, update, receipt.seq)
-    return Admitted(receipt, applied, role)
+    return Admitted(receipt, applied, role, outcome.sealed if applied else None)

@@ -14,11 +14,14 @@ import valkey.asyncio as aioredis
 from prometheus_client import REGISTRY
 from sqlalchemy import delete, update
 
+from uniffy.core.crypto import OrgCipher
 from uniffy.core.jobs import JobEnqueueOutcome, JobRef
+from uniffy.core.models.login.organization import Organization
 from uniffy.core.models.realtime.yjs_snapshot import RealtimeYjsSnapshot
 from uniffy.core.realtime.adapter import register_realtime_adapter
 from uniffy.core.realtime.buffer import RecoveryReason, UpdateBuffer
 from uniffy.core.realtime.buffer_keys import (
+    RECORD_OVERHEAD_BYTES,
     AdmissionOutcome,
     AdmissionStatus,
     BufferHead,
@@ -26,7 +29,6 @@ from uniffy.core.realtime.buffer_keys import (
     Receipt,
     bucket_for,
     buffer_keys,
-    stored_bytes,
 )
 from uniffy.core.realtime.checkpoint import stage_recovered
 from uniffy.core.realtime.dispatch import run_checkpoint_job
@@ -36,7 +38,7 @@ from uniffy.core.realtime.maintenance import maintain_buffer
 from uniffy.core.realtime.markdown import DOC_GENERATION_KEY, DOC_META_FIELD, markdown_text
 from uniffy.core.realtime.state import DocKey
 from uniffy.core.realtime.storage import load_snapshot, lock_document
-from uniffy.core.types import ContentType
+from uniffy.core.types import ContentType, generate_id
 from uniffy.domains.notes.adapter import NoteRealtimeAdapter
 from uniffy.infrastructure.database.session import open_session
 from uniffy.infrastructure.valkey.binary import close_binary_client, init_binary_client
@@ -120,6 +122,29 @@ async def env(access, valkey_namespace) -> AsyncIterator[SimpleNamespace]:
 
 
 @pytest_asyncio.fixture(loop_scope="session")
+async def foreign_organizations(database) -> AsyncIterator[tuple[UUID, UUID]]:
+    """Two more organizations with a DEK each, so their documents can buffer sealed edits."""
+    suffix = generate_id().hex[-12:]
+    organizations = [
+        Organization(name=f"ita foreign {index} {suffix}", slug=f"ita-foreign-{index}-{suffix}")
+        for index in range(2)
+    ]
+    async with open_session() as db:
+        db.add_all(organizations)
+        await db.flush()
+        for organization in organizations:
+            await OrgCipher(db).provision(organization.id, None)
+        await db.commit()
+    first, second = (organization.id for organization in organizations)
+    try:
+        yield first, second
+    finally:
+        async with open_session() as db:
+            await db.execute(delete(Organization).where(Organization.id.in_([first, second])))
+            await db.commit()
+
+
+@pytest_asyncio.fixture(loop_scope="session")
 async def bucket_mates(env) -> AsyncIterator[Callable[..., Awaitable[list[DocKey]]]]:
     """Seeds extra documents that hash into one buffer bucket; teardown deletes their rows.
 
@@ -164,8 +189,13 @@ async def establish(
 
 
 def stored_cost(entries: list[tuple[bytes, dict[bytes, bytes]]]) -> int:
-    """What stream entries count against the document limit and the pending budget."""
-    return sum(stored_bytes(fields[b"i"].decode(), fields[b"u"]) for _, fields in entries)
+    """What stream entries count against the document limit and the pending budget.
+
+    Entries hold their update sealed, so the cost is counted from the stored bytes directly.
+    """
+    return sum(
+        len(fields[b"u"]) + 2 * len(fields[b"i"]) + RECORD_OVERHEAD_BYTES for _, fields in entries
+    )
 
 
 async def offer(

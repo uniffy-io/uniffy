@@ -1,5 +1,6 @@
 """Resident replicas share accepted edits, revocations, reload hints and the fragment seed lease."""
 
+import base64
 from collections.abc import AsyncIterator
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -17,7 +18,7 @@ from uniffy.core.realtime.checkpoint import CheckpointStatus, checkpoint_documen
 from uniffy.core.realtime.job_contracts import PROJECT_REALTIME_DOCUMENT
 from uniffy.core.realtime.jobs import project_realtime_document, recover_realtime_projections
 from uniffy.core.realtime.multiplex import read_var_string
-from uniffy.core.realtime.publisher import publish_content_replace
+from uniffy.core.realtime.publisher import RealtimePayloadKind, publish_content_replace
 from uniffy.core.realtime.wire import (
     MESSAGE_CHECKPOINT_PROGRESS,
     MESSAGE_COMMITTED,
@@ -35,6 +36,7 @@ from uniffy.core.realtime.wire import (
 from uniffy.core.realtime.ydoc_manager import YDocManager
 from uniffy.core.types import ContentRole, ContentType, generate_id
 from uniffy.infrastructure.database.session import open_session
+from uniffy.tests.integration.access.realtime_buffers import gauge
 from uniffy.tests.integration.access.realtime_documents import (
     SharedDocument,
     make_private,
@@ -44,9 +46,11 @@ from uniffy.tests.integration.access.realtime_documents import (
 from uniffy.tests.integration.access.realtime_live import (
     BufferedDocument,
     buffering_disabled,
+    channel_messages,
     fragment_edit,
     fragment_of,
     live_note,  # noqa: F401 - fixture
+    published,
     stored,
     text_of,
     typed,
@@ -69,6 +73,7 @@ from uniffy.tests.integration.access.realtime_sockets import (
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
 RECOVERY_PASSES = 20
+UNSEAL_FAILURES = "uniffy_realtime_buffer_unseal_failures_total"
 
 
 def checkpoint_of(row: RealtimeYjsSnapshot) -> tuple:
@@ -112,6 +117,42 @@ async def test_writers_on_two_replicas_converge_before_any_checkpoint(
         assert resident_text(right, doc.key) == converged
         assert await doc.stream_ids() == [b"1-0", b"2-0"]
         assert checkpoint_of(await stored(doc.key)) == checkpoint_of(before)
+
+
+async def test_peer_hints_carry_only_sealed_records_that_the_other_replica_opens(
+    shared: SharedDocument,
+) -> None:
+    doc = shared.doc
+    await share(shared, ContentRole.EDITOR)
+    failures = gauge(UNSEAL_FAILURES, {"source": "remote"})
+    async with (
+        routed(doc, 2) as (left, right),
+        attached(left, doc) as (alice, frames),
+        attached(right, doc, doc.peer) as (bob, _),
+    ):
+        state = session_state(frames)
+        await subscribed(alice, state)
+        await subscribed(bob, state)
+
+        async with channel_messages(doc.key) as channel:
+            alice.write_own("alice-1", typed(doc.base, suffix=" confidential"), doc.generation)
+            assert (await alice.receipt()).accepted_sequence == 1
+            await bob.holding("confidential")
+            hints = [
+                payload
+                for payload in await published(channel)
+                if payload.get("kind") == RealtimePayloadKind.ACCEPTED_UPDATE
+            ]
+
+        assert resident_text(right, doc.key) == bob.markdown
+    (hint,) = hints
+    sealed = base64.b64decode(hint["sealed"])
+    assert "update" not in hint
+    assert (hint["sequence"], hint["update_id"], hint["actor_id"]) == (1, "alice-1", str(doc.owner))
+    assert sealed[0] == 0x01
+    assert b"confidential" not in sealed
+    # The peer opened the hint itself; a record that failed to open would reload the tail.
+    assert gauge(UNSEAL_FAILURES, {"source": "remote"}) == failures
 
 
 async def test_dropped_hint_is_repaired_by_resync_before_any_checkpoint(

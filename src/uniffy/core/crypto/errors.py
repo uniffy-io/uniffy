@@ -21,3 +21,7 @@ class OrgDekVersionMismatchError(CryptoError):
 
 class CiphertextFormatError(CryptoError):
     """Ciphertext is missing the ``v{n}:`` version prefix or payload."""
+
+
+class SealedDataError(CryptoError):
+    """Sealed bytes have an unknown format or key version, or fail authentication."""

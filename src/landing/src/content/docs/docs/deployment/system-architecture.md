@@ -141,7 +141,9 @@ The edit buffer is where live edits wait for their save. When someone types in a
 
 That makes Valkey part of how editing works. A slow or unreachable Valkey pauses saving and collaboration: editors keep typing, keep their edits on the device and show Saving unavailable until it answers again. Losing Valkey data loses the server's copy of the edits it had not saved yet, and editors still holding those edits send them again. [Backups and Restore](/docs/deployment/backups/#valkey-and-edits-not-yet-saved) covers what each persistence setting can lose.
 
-The buffer adds one requirement on Valkey: an eviction policy outside `allkeys-*`. Every backend and worker checks it at startup, and again whenever Valkey comes back as a different instance, and backends report the result on `/healthz`; [Configure Uniffy](/docs/deployment/configure/#valkey) has the details. It also holds document text in memory and in its persistence files without encryption from Uniffy, so Valkey belongs in the same trust zone as Postgres.
+The buffer adds one requirement on Valkey: an eviction policy outside `allkeys-*`. Every backend and worker checks it at startup, and again whenever Valkey comes back as a different instance, and backends report the result on `/healthz`; [Configure Uniffy](/docs/deployment/configure/#valkey) has the details.
+
+Live edits in the buffer are encrypted with your organization's key. That holds in memory, in Valkey's persistence files, and on the way from one backend to another. The key never reaches Valkey. Valkey still sees which documents change, who changes them, when, and how much. Queues, caches and the messages backends send each other are not encrypted. So Valkey still belongs in the same trust zone as Postgres.
 
 Every Valkey restart gives the instance a new identity. Uniffy notices on the next touch of each document, saves what survived, and starts that document's buffer afresh. [Account Recovery](/docs/deployment/recovery/#unsaved-edits-after-a-valkey-restart) walks through what you see.
 

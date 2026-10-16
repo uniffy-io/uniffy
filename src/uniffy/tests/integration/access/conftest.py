@@ -16,6 +16,7 @@ from sqlalchemy import delete, or_, select, text
 from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from uniffy.core.crypto import OrgCipher
 from uniffy.core.jobs.types import QueueName
 from uniffy.core.models.audit.event import AuditEvent
 from uniffy.core.models.bookmarks.bookmark import Bookmark
@@ -198,6 +199,9 @@ async def _seed_access(db_session: AsyncSession) -> NS:
     other_org = Organization(name=f"ita other {suffix}", slug=f"ita-other-{suffix}")
     db_session.add_all([owner, admin, member, peer, ghost, outsider, org, other_org])
     await db_session.flush()
+    # Organization creation provisions a DEK, and the realtime buffer seals under it.
+    await OrgCipher(db_session).provision(org.id, owner.id)
+    await OrgCipher(db_session).provision(other_org.id, outsider.id)
 
     db_session.add_all([
         OrganizationMember(user_id=owner.id, organization_id=org.id, role=OrganizationRole.OWNER),

@@ -1,11 +1,16 @@
 """Update buffer admission, limits and accounting on live Valkey in a disposable namespace."""
 
-import hashlib
 from uuid import uuid4
 
 import pytest
 
-from uniffy.core.realtime.buffer import AdmissionUnknown, BufferUnavailable, UpdateBuffer
+from uniffy.core.crypto import SEAL_OVERHEAD_BYTES, OrgDataCipher
+from uniffy.core.realtime.buffer import (
+    AdmissionUnknown,
+    BufferUnavailable,
+    RecoveryReason,
+    UpdateBuffer,
+)
 from uniffy.core.realtime.buffer_keys import (
     BUCKET_COUNT,
     DUE_DELAY_MS,
@@ -27,6 +32,8 @@ from uniffy.tests.integration.access.realtime_buffers import (
     edit,
     env,  # noqa: F401 - fixture
     establish,
+    foreign_organizations,  # noqa: F401 - fixture
+    gauge,
     offer,
     proxied,  # noqa: F401 - fixture
     receipt,
@@ -75,9 +82,9 @@ async def test_accepted_update_stores_record_receipt_due_entry_and_counters(env)
     fields = entries[0][1]
     assert (fields[b"i"], fields[b"u"], fields[b"a"], fields[b"v"]) == (
         b"u-1",
-        alice,
+        first.sealed,
         str(env.actor).encode(),
-        b"1",
+        b"2",
     )
     first_pending = int(control[b"first_ms"])
     assert int(fields[b"t"]) == first_pending
@@ -91,9 +98,8 @@ async def test_accepted_update_stores_record_receipt_due_entry_and_counters(env)
     assert int(after[b"bytes"]) == stored
     # The latest append time marks the epoch busy for idle reclaim.
     assert int(after[b"last_ms"]) == int(entries[1][1][b"t"])
-    assert await valkey().hget(keys.receipts, "u-2") == (
-        f"2:{hashlib.sha256(bob).hexdigest()}".encode()
-    )
+    digest = await OrgDataCipher().receipt_digest(env.org, bob)
+    assert await valkey().hget(keys.receipts, "u-2") == f"2:{digest}".encode()
     assert await valkey().zscore(keys.due, head.scope.member) == first_pending + DUE_DELAY_MS
     assert await env.buffer.bucket_usage(head.scope.bucket) == PendingUsage(stored, 2)
     assert await env.buffer.organization_usage(head.scope.bucket, env.org) == stored
@@ -121,11 +127,12 @@ async def test_duplicate_update_id_with_changed_bytes_is_an_id_conflict(env) -> 
     original, changed = edit(env.base, " original"), edit(env.base, " changed")
     keys = buffer_keys(head.scope, env.namespace)
 
-    await offer(env, head, "u-1", original)
+    stored = await offer(env, head, "u-1", original)
     conflict = await offer(env, head, "u-1", changed)
 
     assert conflict == AdmissionOutcome(AdmissionStatus.ID_CONFLICT)
-    assert [fields[b"u"] for _, fields in await valkey().xrange(keys.stream)] == [original]
+    assert conflict.sealed is None
+    assert [fields[b"u"] for _, fields in await valkey().xrange(keys.stream)] == [stored.sealed]
 
 
 @pytest.mark.parametrize(
@@ -209,13 +216,13 @@ BUCKET_BUDGET = 1200
 
 
 async def test_one_document_holds_a_quarter_of_its_bucket_and_one_organization_half_of_it(
-    env, bucket_mates
+    env, bucket_mates, foreign_organizations
 ) -> None:
     small = UpdateBuffer(namespace=env.namespace, pending_budget_bytes=BUCKET_COUNT * BUCKET_BUDGET)
     owner = await establish(env)
     bucket = owner.scope.bucket
     sibling, third = [await establish(env, key) for key in await bucket_mates(bucket, 2)]
-    other_org = uuid4()
+    other_org, _ = foreign_organizations
     (stranger,) = [
         await establish(env, key, organization=other_org)
         for key in await bucket_mates(bucket, 1, other_org)
@@ -240,12 +247,14 @@ async def test_one_document_holds_a_quarter_of_its_bucket_and_one_organization_h
     assert await small.bucket_usage(bucket) == PendingUsage(900, 3)
 
 
-async def test_the_bucket_refuses_at_budget_once_organizations_fill_it(env, bucket_mates) -> None:
+async def test_the_bucket_refuses_at_budget_once_organizations_fill_it(
+    env, bucket_mates, foreign_organizations
+) -> None:
     small = UpdateBuffer(namespace=env.namespace, pending_budget_bytes=BUCKET_COUNT * BUCKET_BUDGET)
     owner = await establish(env)
     bucket = owner.scope.bucket
     (sibling,) = [await establish(env, key) for key in await bucket_mates(bucket, 1)]
-    other_org, third_org = uuid4(), uuid4()
+    other_org, third_org = foreign_organizations
     strangers = [
         await establish(env, key, organization=other_org)
         for key in await bucket_mates(bucket, 2, other_org)
@@ -292,10 +301,9 @@ async def test_timeout_after_append_raises_unknown_and_retry_returns_the_same_se
 
     assert unknown.value.update_id == "u-2"
     entries = await valkey().xrange(keys.stream)
-    assert [(entry_id, fields[b"u"]) for entry_id, fields in entries] == [
-        (b"1-0", first),
-        (b"2-0", second),
-    ]
+    assert [entry_id for entry_id, _ in entries] == [b"1-0", b"2-0"]
+    stored = await env.buffer.read_updates(head.scope, after=0, through=2)
+    assert [record.update for record in stored] == [first, second]
     retried = await offer(env, head, "u-2", second)
     assert retried == AdmissionOutcome(AdmissionStatus.DUPLICATE, receipt(head, 2, "u-2"))
 
@@ -371,3 +379,43 @@ async def test_accounting_repair_recomputes_counters_from_the_streams(env) -> No
         control = await valkey().hgetall(keys.control)
         assert int(control[b"bytes"]) == stored_cost(entries)
         assert int(control[b"records"]) == len(entries)
+
+
+async def test_a_buffered_record_rests_sealed_and_reads_back_as_plaintext(env) -> None:
+    head = await establish(env)
+    keys = buffer_keys(head.scope, env.namespace)
+    typed = " quarterly numbers"
+    payload = edit(env.base, typed)
+
+    outcome = await offer(env, head, "u-1", payload)
+
+    ((_, fields),) = await valkey().xrange(keys.stream)
+    assert fields[b"v"] == b"2"
+    assert typed.encode() not in fields[b"u"]
+    assert fields[b"u"] == outcome.sealed
+    assert fields[b"u"][0] == 0x01
+    assert len(fields[b"u"]) == len(payload) + SEAL_OVERHEAD_BYTES
+    (record,) = await env.buffer.read_updates(head.scope, after=0, through=1)
+    assert record.update == payload
+
+
+async def test_a_record_rewritten_to_another_actor_reads_back_as_malformed(env) -> None:
+    head = await establish(env)
+    keys = buffer_keys(head.scope, env.namespace)
+    await offer(env, head, "u-1", edit(env.base, " kept"))
+    await offer(env, head, "u-2", edit(env.base, " forged"))
+    entries = await valkey().xrange(keys.stream)
+    # A stream entry cannot change in place, so the stream is rebuilt under the same ids.
+    await valkey().delete(keys.stream)
+    for entry_id, fields in entries:
+        actor = str(env.bob).encode() if entry_id == b"2-0" else fields[b"a"]
+        await valkey().xadd(keys.stream, {**fields, b"a": actor}, id=entry_id)
+    failures = gauge("uniffy_realtime_buffer_unseal_failures_total", {"source": "stream"})
+
+    kept, broken = await env.buffer.read_prefix(head.scope, 0, 2)
+
+    assert broken is RecoveryReason.MALFORMED
+    assert [record.seq for record in kept] == [1]
+    assert gauge("uniffy_realtime_buffer_unseal_failures_total", {"source": "stream"}) == (
+        failures + 1
+    )

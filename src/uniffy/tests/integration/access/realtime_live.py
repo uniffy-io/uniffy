@@ -264,9 +264,8 @@ async def buffering_disabled() -> AsyncIterator[None]:
 
 
 @contextlib.asynccontextmanager
-async def doc_subscription(key: DocKey) -> AsyncIterator[Any]:
-    """Everything published on one document's channel from now on."""
-    await init_pubsub()
+async def channel_messages(key: DocKey) -> AsyncIterator[Any]:
+    """Everything published on one document's channel from now on, by publishers already set up."""
     client = aioredis.from_url(ValkeyConfig.from_env().to_url())
     subscription = client.pubsub()
     await subscription.subscribe(doc_channel(*key))
@@ -275,6 +274,16 @@ async def doc_subscription(key: DocKey) -> AsyncIterator[Any]:
     finally:
         await subscription.aclose()
         await client.aclose()
+
+
+@contextlib.asynccontextmanager
+async def doc_subscription(key: DocKey) -> AsyncIterator[Any]:
+    """Everything published on one document's channel from now on."""
+    await init_pubsub()
+    try:
+        async with channel_messages(key) as subscription:
+            yield subscription
+    finally:
         await close_pubsub()
 
 

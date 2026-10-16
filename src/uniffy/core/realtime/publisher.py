@@ -72,14 +72,20 @@ def session_revoke_channel(user_id: UUID) -> str:
 async def publish_doc_update(
     content_type: ContentType,
     content_id: UUID,
-    update: bytes,
+    sealed: bytes,
     *,
     generation: str,
     epoch: str,
     sequence: int,
+    update_id: str,
+    actor_id: UUID,
     origin_replica: str | None = None,
 ) -> None:
-    """Hand an accepted update to peer replicas; one that misses it reloads the buffered tail."""
+    """Hand an accepted record to peer replicas; one that misses it reloads the buffered tail.
+
+    The record stays sealed on the channel, so update id and actor travel along for the
+    receiver to rebuild its associated data.
+    """
     await publish_to_channel(
         doc_channel(content_type, content_id),
         {
@@ -88,7 +94,9 @@ async def publish_doc_update(
             "generation": generation,
             "epoch": epoch,
             "sequence": sequence,
-            "update": base64.b64encode(update).decode("ascii"),
+            "update_id": update_id,
+            "actor_id": str(actor_id),
+            "sealed": base64.b64encode(sealed).decode("ascii"),
             "published_at": time.time(),
         },
     )
