@@ -92,7 +92,10 @@ export function useMarkdownDocSession({
       whenSynced: session.whenSynced,
     };
   }, [session, undoManager]);
-  const baseStatus = session?.status ?? "idle";
-  const status: RealtimeStatus = baseStatus;
-  return { binding, status, docName, generationResets: session?.generationResets ?? 0 };
+  return {
+    binding,
+    status: session?.status ?? "idle",
+    docName,
+    generationResets: session?.generationResets ?? 0,
+  };
 }

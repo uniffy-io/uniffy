@@ -49,6 +49,7 @@ import { useMentionInput, toCanonical, parseMentions } from "@shared/mentions/us
 import { useScreenFocused } from "@shared/hooks/useScreenFocused";
 import { useNoteCoEditing } from "@features/notes/realtime/useNoteCoEditing";
 import { RecoveredDrafts } from "@shared/realtime/RecoveredDrafts";
+import { PersistenceChip } from "@shared/realtime/PersistenceChip";
 import { RealtimePresence } from "@features/notes/realtime/RealtimePresence";
 import { roleCanEdit } from "@shared/permissions/contentRoles";
 import { createCompositionTracker } from "@features/notes/realtime/composition";
@@ -466,12 +467,19 @@ export function NoteEditorScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [body, title, isEditMode, initialized, coEdit.ownsContent, editable]);
 
+  const persistingRef = useRef(false);
   const handleDone = useCallback(async () => {
     const canonicalBody = getCanonicalBody();
     if (isEditMode) {
       if (coEdit.ownsContent) {
+        if (persistingRef.current) return;
+        persistingRef.current = true;
         coEdit.flushLocalPush();
         flushTitleSave();
+        // The background drain finishes server saves once the device copy exists.
+        const stored = await coEdit.persistLocally();
+        persistingRef.current = false;
+        if (!stored) return;
       }
       router.back();
     } else {
@@ -802,28 +810,16 @@ export function NoteEditorScreen() {
           <ArrowLeft size={20} color={T.text} weight="bold" />
         </TouchableOpacity>
         <View style={styles.headerMeta}>
-          <Text style={[styles.headerLabel, { color: T.textDim }]}>
-            {!isEditMode
-              ? "New note"
-              : editAccessLost
-                ? coEdit.status === "access_lost"
-                  ? "Access lost"
-                  : coEdit.status === "token_revoked"
-                    ? "Session ended"
-                    : coEdit.status === "update_rejected"
-                      ? "Edit too large to sync"
-                      : "Edit access removed"
-                : coEdit.ownsContent
-                  ? coEdit.status === "connected"
-                    ? "Live"
-                    : coEdit.status === "connecting" || coEdit.status === "syncing"
-                      ? "Syncing"
-                      : "Offline"
-                  : "Note"}
-          </Text>
+          {coEdit.ownsContent ? (
+            <PersistenceChip state={coEdit.persistence} />
+          ) : (
+            <Text style={[styles.headerLabel, { color: T.textDim }]}>
+              {isEditMode ? "Note" : "New note"}
+            </Text>
+          )}
           <Text style={[styles.wordCount, { color: T.textDim }]}>{wordCount} words</Text>
         </View>
-        <RealtimePresence session={coEdit.session} status={coEdit.status} />
+        <RealtimePresence session={coEdit.session} />
         <RecoveredDrafts
           drafts={coEdit.recoveredDrafts}
           editable={editable}

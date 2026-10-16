@@ -5,15 +5,16 @@ import { Awareness } from "y-protocols/awareness";
 import { useAppSelector } from "@/app/hooks";
 import { docNameFor } from "@/features/realtime/docNames";
 import { docGeneration } from "@/features/realtime/docGeneration";
-import { useOutboundPending } from "@/features/realtime/hooks/useOutboundPending";
 import {
   realtimeMultiplexer,
   type DocSubscription,
   type FragmentSeeder,
+  type RealtimeDocState,
 } from "@/features/realtime/multiplexer";
 import { clearPendingDoc } from "@/features/realtime/pendingDocs";
 import {
   attachEncryptedPersistence,
+  type DeviceRecoveryState,
   type EncryptedPersistence,
 } from "@/features/realtime/persistence/encryptedYjsPersistence";
 import {
@@ -21,7 +22,6 @@ import {
   type RealtimeStatus,
   statusFromCloseCode,
 } from "@/features/realtime/protocol";
-import { useUnloadGuard } from "@/shared/hooks/useUnloadGuard";
 import { randomUUID } from "@/shared/utils/uuid";
 
 export interface DocSession {
@@ -72,36 +72,52 @@ export interface CloseDisposalInput {
   serverSynced: boolean;
   hydrationComplete: boolean;
   transportStatus: RealtimeStatus;
-  outboundPending: boolean;
+  /** Some own edit is not in a checkpoint yet, accepted or not. */
+  checkpointPending: boolean;
   readOnly: boolean;
   generationChanged: boolean;
   denied: boolean;
 }
 
 export interface CloseDisposal {
-  /** Every local frame reached the server under the current generation. */
+  /** A checkpoint covers every own edit under the current generation; the rows are a cache. */
   acknowledged: boolean;
   /** Drop this session's rows; only an acknowledged close of an opt-in session. */
   discard: boolean;
-  /** Record the doc so the drain replays its rows on the next connection. */
+  /** Leave the rows to the drain, which resends what the server lacks and awaits the checkpoint. */
   drain: boolean;
 }
 
 // A generation change or a denial means the server never took this session's bytes, so
-// neither counts as a clean close no matter what the transport reports.
+// neither counts as a clean close no matter what the transport reports. A receipt alone is no
+// clean close either: until a checkpoint covers the edit, the device copy is its only backup.
 export function resolveCloseDisposal(input: CloseDisposalInput): CloseDisposal {
   const acknowledged =
     input.serverSynced &&
     input.hydrationComplete &&
     input.transportStatus === "connected" &&
-    !input.outboundPending &&
+    !input.checkpointPending &&
     !input.generationChanged &&
     !input.denied;
   return {
     acknowledged,
     discard: input.discardLocalOnCleanClose && acknowledged,
-    drain: input.outboundPending && !input.readOnly && !input.generationChanged && !input.denied,
+    drain: input.checkpointPending && !input.readOnly && !input.generationChanged && !input.denied,
   };
+}
+
+/** A closing editor holds its session for edits the server has not accepted, and for accepted
+ * ones this device failed to store: the drain only finishes what local recovery holds. Waiting
+ * for the checkpoint otherwise belongs to the drain. Denied documents release at once. */
+export function canReleaseSession(
+  status: RealtimeStatus,
+  doc: Pick<RealtimeDocState, "transportPending" | "checkpointPending">,
+  device: DeviceRecoveryState,
+): boolean {
+  if (status === "permission_lost" || status === "access_lost" || status === "update_rejected")
+    return true;
+  if (doc.transportPending || status === "disconnected" || status === "offline") return false;
+  return !doc.checkpointPending || (device.storage === "available" && !device.unpersisted);
 }
 
 export function useDocSession(opts: UseDocSessionOptions): DocSession | null {
@@ -132,11 +148,6 @@ export function useDocSession(opts: UseDocSessionOptions): DocSession | null {
   const onGenerationResetRef = useRef(onGenerationReset);
   // eslint-disable-next-line react/react-compiler -- latest-value ref read from a transport callback
   onGenerationResetRef.current = onGenerationReset;
-
-  // Unsent edits live only in this tab's memory until acknowledged.
-  useUnloadGuard(
-    useOutboundPending(enabled && contentId ? docNameFor(contentType, contentId) : null),
-  );
 
   useEffect(() => {
     if (!enabled || !contentId || !organizationId) {
@@ -171,7 +182,7 @@ export function useDocSession(opts: UseDocSessionOptions): DocSession | null {
         serverSynced &&
         transportStatus === "connected" &&
         !generationChanged &&
-        !realtimeMultiplexer.isOutboundPending(docName),
+        !realtimeMultiplexer.getDocState(docName).checkpointPending,
     });
     let chooseReplay!: (options: { serverGeneration: string | null } | undefined) => void;
     const replayGate = new Promise<{ serverGeneration: string | null } | undefined>((resolve) => {
@@ -258,10 +269,14 @@ export function useDocSession(opts: UseDocSessionOptions): DocSession | null {
         setGenerationReset((value) => value + 1);
       },
     });
-    const unsubscribePending = realtimeMultiplexer.subscribeOutboundPending(docName, (pending) => {
-      if (pending) return;
+    // Only a checkpoint may retire the dirty marker and the drain entry.
+    let checkpointPending = realtimeMultiplexer.getDocState(docName).checkpointPending;
+    const unsubscribePending = realtimeMultiplexer.subscribeDocState(docName, (state) => {
+      const checkpointed = checkpointPending && !state.checkpointPending;
+      checkpointPending = state.checkpointPending;
+      if (!checkpointed) return;
       void persistence.acknowledge().then(() => {
-        if (!disposed && !realtimeMultiplexer.isOutboundPending(docName))
+        if (!disposed && !realtimeMultiplexer.getDocState(docName).checkpointPending)
           clearPendingDoc(contentType, contentId);
       });
     });
@@ -284,13 +299,13 @@ export function useDocSession(opts: UseDocSessionOptions): DocSession | null {
     return () => {
       disposed = true;
       unsubscribePending();
-      // Read before detach: the multiplexer forgets the doc's outbound state on destroy.
+      // Read before detach: the multiplexer forgets the doc's pending state on destroy.
       const disposal = resolveCloseDisposal({
         discardLocalOnCleanClose,
         serverSynced,
         hydrationComplete,
         transportStatus,
-        outboundPending: realtimeMultiplexer.isOutboundPending(docName),
+        checkpointPending: realtimeMultiplexer.getDocState(docName).checkpointPending,
         readOnly: realtimeMultiplexer.isDocReadOnly(docName),
         generationChanged,
         denied,

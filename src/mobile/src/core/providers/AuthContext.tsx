@@ -24,7 +24,7 @@ import {
 import { authApi } from "@core/auth/authApi";
 import { isTokenExpiring } from "@core/auth/jwt";
 import { isAuthRejection, refreshSession } from "@core/auth/refresh";
-import { onSessionExpired, clearUserSessionData } from "@core/auth/sessionEvents";
+import { onSessionExpired, clearUserSessionData, hasUnsyncedEdits } from "@core/auth/sessionEvents";
 import { resetSessionScope } from "@core/auth/sessionScope";
 import { hydrateServerUrl } from "@core/config/serverUrl";
 
@@ -132,7 +132,9 @@ interface AuthContextValue extends AuthState {
   beginForcedEnrollment: (enrollmentToken: string) => void;
   completeEnrollment: (tokens: AuthTokens) => Promise<void>;
   selectOrganization: (slug: string) => Promise<void>;
-  logout: () => Promise<void>;
+  /** Resolves false without signing out while edits only this device holds would be deleted;
+   * callers confirm and retry with `discardUnsynced`. */
+  logout: (options?: { discardUnsynced?: boolean }) => Promise<boolean>;
   holdNavigation: boolean;
   setHoldNavigation: (v: boolean) => void;
   loginSplashVisible: boolean;
@@ -371,20 +373,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
-  const logout = useCallback(async () => {
-    if (state.user?.id) await clearUserSessionData(state.user.id);
-    const refreshToken = await getRefreshToken();
-    if (refreshToken) {
-      try {
-        await authApi.logout(refreshToken);
-      } catch {
-        // Non-fatal: clear local state even if server revocation fails
+  const logout = useCallback(
+    async (options?: { discardUnsynced?: boolean }) => {
+      const userId = state.user?.id;
+      if (userId && !options?.discardUnsynced && (await hasUnsyncedEdits(userId))) return false;
+      if (userId) await clearUserSessionData(userId);
+      const refreshToken = await getRefreshToken();
+      if (refreshToken) {
+        try {
+          await authApi.logout(refreshToken);
+        } catch {
+          // Non-fatal: clear local state even if server revocation fails
+        }
       }
-    }
-    await clearAuthStorage();
-    clearSessionCaches();
-    dispatch({ type: "LOGOUT" });
-  }, [state.user]);
+      await clearAuthStorage();
+      clearSessionCaches();
+      dispatch({ type: "LOGOUT" });
+      return true;
+    },
+    [state.user],
+  );
 
   const value: AuthContextValue = {
     ...state,

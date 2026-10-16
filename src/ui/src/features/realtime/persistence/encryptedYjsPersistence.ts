@@ -1,6 +1,6 @@
 import * as Y from "yjs";
 import { getStoreRef } from "@/app/storeRef";
-import { openDB, type IDBPDatabase } from "idb";
+import { openDB, type IDBPDatabase, type IDBPObjectStore } from "idb";
 import { docNameFor } from "@/features/realtime/docNames";
 import { docGeneration } from "@/features/realtime/docGeneration";
 import {
@@ -11,9 +11,16 @@ import {
   changedUnprojectedRoots,
   contentProjection,
 } from "@/features/realtime/docContent";
+import type { RetainedUpdate, UpdateCoverageEvent } from "@/features/realtime/multiplexer";
+import type { ReceiptIdentity } from "@/features/realtime/updateCoverage";
 import { randomUUID } from "@/shared/utils/uuid";
-import { recordPendingDoc, type PendingDoc } from "@/features/realtime/pendingDocs";
 import {
+  handOffPendingDoc,
+  recordPendingDoc,
+  type PendingDoc,
+} from "@/features/realtime/pendingDocs";
+import {
+  ENCRYPTION_READY_EVENT,
   ENCRYPTION_REKEY_EVENT,
   ENCRYPTION_TEARDOWN_EVENT,
   decryptFromStorage,
@@ -26,7 +33,16 @@ const DB_NAME = "uniffy-realtime-yjs";
 const DB_VERSION = 3;
 const UPDATES_STORE = "updates";
 const RECOVERY_GENERATION_PREFIX = "recovery:";
+// Rows without coverage identity form their own draft lineage; they never replay.
+const UNRECONCILED_LINEAGE_PREFIX = "unreconciled:";
+const PENDING_SEQ_PREFIX = "pending:";
 type UpdateKey = [string, string, string, string];
+type WriteStore = IDBPObjectStore<
+  unknown,
+  [typeof UPDATES_STORE],
+  typeof UPDATES_STORE,
+  "readwrite"
+>;
 
 export const persistenceRecoveryStats = { generationMismatchRows: 0 };
 
@@ -50,60 +66,128 @@ const recoveryKeys = new WeakMap<
 >();
 
 export interface RecoveredDraft {
+  /** Draft lineage: a generation, a `recovery:` copy, or `unreconciled:` plus the generation. */
   generation: string;
   text: string;
   update: string;
   hasFragment?: boolean;
 }
 
-// `dirty` records that a local user edit went into this row's document, as opposed to
-// hydration, seed, mirror or editor normalization writes. Only dirty rows are offered as drafts.
-interface RowPayload {
+/** Full document state from one session. `dirty` marks own edits no checkpoint is known to hold. */
+interface SnapshotRow {
+  kind: "snapshot";
   update: string;
   dirty: boolean;
   scope?: PendingDoc;
 }
 
-export async function discoverStoredPendingDocs(userId: string): Promise<boolean> {
-  if (!isStorageEncryptionReady()) return false;
-  const db = await getDB();
-  const tx = db.transaction(UPDATES_STORE, "readonly");
-  const blobs = await tx.objectStore(UPDATES_STORE).getAll();
-  await tx.done;
-  let pending = false;
-  for (const blob of blobs) {
-    try {
-      const payload = await decryptFromStorage<RowPayload>(blob);
-      const decoded = decodeRowPayload(payload);
-      if (!decoded?.dirty || (payload.scope && payload.scope.userId !== userId)) continue;
-      pending = true;
-      if (payload.scope) recordPendingDoc(payload.scope);
-    } catch {
-      // Another user's encrypted rows cannot authorize a replay in this session.
-    }
-  }
-  return pending;
+/** One own update the server has not checkpointed, kept under its update id until it is. */
+interface PendingRow {
+  kind: "pending";
+  update: string;
+  scope?: PendingDoc;
+  updateId: string;
+  editedAt: number;
+  receipt: ReceiptIdentity | null;
 }
 
-function decodeRowPayload(payload: unknown): { update: Uint8Array; dirty: boolean } | null {
-  // Rows written before the marker existed carry a bare string; they stay recoverable.
-  if (typeof payload === "string") return { update: base64ToBytes(payload), dirty: true };
-  if (
-    payload &&
-    typeof payload === "object" &&
-    typeof (payload as RowPayload).update === "string"
-  ) {
-    const row = payload as RowPayload;
-    return { update: base64ToBytes(row.update), dirty: Boolean(row.dirty) };
+type StoredRow =
+  | { kind: "snapshot" | "unreconciled"; update: Uint8Array; dirty: boolean; scope?: PendingDoc }
+  | { kind: "pending"; update: Uint8Array; scope?: PendingDoc; retained: RetainedUpdate };
+
+function isReceipt(value: unknown): value is ReceiptIdentity | null {
+  if (value === null) return true;
+  if (!value || typeof value !== "object") return false;
+  const receipt = value as Record<string, unknown>;
+  return (
+    typeof receipt.generation === "string" &&
+    typeof receipt.epoch === "string" &&
+    Number.isSafeInteger(receipt.sequence) &&
+    (receipt.sequence as number) >= 1
+  );
+}
+
+function decodeRow(payload: unknown): StoredRow | null {
+  // A bare string or a payload without `kind` says nothing about what the server holds.
+  if (typeof payload === "string") {
+    return { kind: "unreconciled", update: base64ToBytes(payload), dirty: true };
   }
-  return null;
+  if (!payload || typeof payload !== "object") return null;
+  const row = payload as Record<string, unknown>;
+  if (typeof row.update !== "string") return null;
+  const update = base64ToBytes(row.update);
+  const scope = row.scope as PendingDoc | undefined;
+  if (row.kind === "pending") {
+    if (
+      typeof row.updateId !== "string" ||
+      typeof row.editedAt !== "number" ||
+      !isReceipt(row.receipt)
+    )
+      return null;
+    return {
+      kind: "pending",
+      update,
+      scope,
+      retained: { updateId: row.updateId, update, editedAt: row.editedAt, receipt: row.receipt },
+    };
+  }
+  return {
+    kind: row.kind === "snapshot" ? "snapshot" : "unreconciled",
+    update,
+    dirty: Boolean(row.dirty),
+    scope,
+  };
+}
+
+async function readRow(blob: unknown): Promise<StoredRow | null> {
+  return decodeRow(await decryptFromStorage(blob as ArrayBuffer));
 }
 
 function rowGeneration(key: UpdateKey | string[]): string {
   return key.length === 4 ? key[2] : "";
 }
 
-/** Drafts from other generations that hold a local user edit. Undecryptable rows and text-less documents are never listed. */
+function rowLineage(key: UpdateKey | string[], row: StoredRow): string {
+  return row.kind === "unreconciled"
+    ? `${UNRECONCILED_LINEAGE_PREFIX}${rowGeneration(key)}`
+    : rowGeneration(key);
+}
+
+function isPendingKey(key: UpdateKey | string[]): boolean {
+  return key.length === 4 && key[3].startsWith(PENDING_SEQ_PREFIX);
+}
+
+function snapshotSeqs(keys: UpdateKey[], generation: string): string[] {
+  return keys
+    .filter((key) => key.length === 4 && key[2] === generation && !isPendingKey(key))
+    .map((key) => key[3]);
+}
+
+/** True when stored rows hold work for this user that no checkpoint covers; records drainable docs. */
+export async function discoverStoredPendingDocs(userId: string): Promise<boolean> {
+  if (!isStorageEncryptionReady()) return false;
+  const db = await getDB();
+  const blobs = await db.getAll(UPDATES_STORE);
+  let pending = false;
+  for (const blob of blobs) {
+    let row: StoredRow | null;
+    try {
+      row = await readRow(blob);
+    } catch {
+      // Another user's encrypted rows cannot authorize a replay in this session.
+      continue;
+    }
+    if (!row || (row.scope && row.scope.userId !== userId)) continue;
+    if (row.kind !== "pending" && !row.dirty) continue;
+    pending = true;
+    // An unreconciled draft waits for the recovered-drafts flow; a drain cannot tell what it holds.
+    if (row.scope && row.kind !== "unreconciled") recordPendingDoc(row.scope);
+  }
+  return pending;
+}
+
+/** Drafts that hold a local user edit and cannot replay into the current generation.
+ * Undecryptable rows and text-less documents are never listed. */
 export async function readRecoveredDrafts(ydoc: Y.Doc): Promise<RecoveredDraft[]> {
   const key = recoveryKeys.get(ydoc);
   if (!key || docGeneration(ydoc) === null) return [];
@@ -122,34 +206,37 @@ export async function readRecoveredDrafts(ydoc: Y.Doc): Promise<RecoveredDraft[]
   if (current === null) return [];
   const documents = new Map<string, { doc: Y.Doc; dirty: boolean }>();
   for (let index = 0; index < keys.length; index++) {
-    const generation = rowGeneration(keys[index] as UpdateKey);
-    if (generation === current) continue;
-    let decoded: ReturnType<typeof decodeRowPayload>;
+    const rowKey = keys[index] as UpdateKey;
+    // Pending rows of the live generation replay; only its unreconciled rows can be a draft.
+    if (rowGeneration(rowKey) === current && isPendingKey(rowKey)) continue;
+    let row: StoredRow | null;
     try {
-      decoded = decodeRowPayload(await decryptFromStorage(blobs[index]));
+      row = await readRow(blobs[index]);
     } catch {
       // Retain unreadable rows for later recovery with the matching key.
       continue;
     }
-    if (!decoded) continue;
-    const entry = documents.get(generation) ?? { doc: new Y.Doc(), dirty: false };
-    documents.set(generation, entry);
+    if (!row) continue;
+    const lineage = rowLineage(rowKey, row);
+    if (lineage === current) continue;
+    const entry = documents.get(lineage) ?? { doc: new Y.Doc(), dirty: false };
+    documents.set(lineage, entry);
     try {
-      Y.applyUpdate(entry.doc, decoded.update);
-      entry.dirty ||= decoded.dirty;
+      Y.applyUpdate(entry.doc, row.update);
+      entry.dirty ||= row.kind === "pending" || row.dirty;
     } catch {
       // Corrupt bytes contribute nothing to the draft.
     }
   }
   const drafts: RecoveredDraft[] = [];
-  for (const [generation, entry] of documents) {
+  for (const [lineage, entry] of documents) {
     const text = entry.doc.getText(MARKDOWN_TEXT_FIELD).toString();
     const hasFragment =
       entry.doc.getMap(MARKDOWN_MIRROR_FIELD).get(MIRROR_ACTIVE_KEY) !== false &&
       entry.doc.getXmlFragment(PROSEMIRROR_FRAGMENT_FIELD).length > 0;
     if (entry.dirty && (text.trim().length > 0 || hasFragment)) {
       drafts.push({
-        generation,
+        generation: lineage,
         text,
         hasFragment,
         update: bytesToBase64(Y.encodeStateAsUpdate(entry.doc)),
@@ -163,25 +250,37 @@ export async function readRecoveredDrafts(ydoc: Y.Doc): Promise<RecoveredDraft[]
   ];
 }
 
-/** Deletes every row of one generation for the document bound to `ydoc`. */
-export async function discardRecoveredDraft(ydoc: Y.Doc, generation: string): Promise<void> {
+/** Deletes every row of one draft lineage for the document bound to `ydoc`. */
+export async function discardRecoveredDraft(ydoc: Y.Doc, lineage: string): Promise<void> {
   const key = recoveryKeys.get(ydoc);
   if (!key) return;
   const discarded = discardedRecovery.get(ydoc) ?? new Set<string>();
-  discarded.add(generation);
+  discarded.add(lineage);
   discardedRecovery.set(ydoc, discarded);
-  memoryRecovery
-    .get(`${key.owner}:${docNameFor(key.contentType, key.contentId)}`)
-    ?.delete(generation);
+  memoryRecovery.get(`${key.owner}:${docNameFor(key.contentType, key.contentId)}`)?.delete(lineage);
   if (!isStorageEncryptionReady()) return;
+  const unreconciled = lineage.startsWith(UNRECONCILED_LINEAGE_PREFIX);
+  const generation = unreconciled ? lineage.slice(UNRECONCILED_LINEAGE_PREFIX.length) : lineage;
   const db = await getDB();
-  const tx = db.transaction(UPDATES_STORE, "readwrite");
+  const tx = db.transaction(UPDATES_STORE, "readonly");
   const store = tx.objectStore(UPDATES_STORE);
-  const keys = (await store.getAllKeys(rangeFor(key.contentType, key.contentId))) as UpdateKey[];
-  await Promise.all([
-    ...keys.filter((row) => rowGeneration(row) === generation).map((row) => store.delete(row)),
-    tx.done,
-  ]);
+  const range = rangeFor(key.contentType, key.contentId);
+  const [keys, blobs] = await Promise.all([store.getAllKeys(range), store.getAll(range), tx.done]);
+  const doomed: UpdateKey[] = [];
+  for (let index = 0; index < keys.length; index++) {
+    const rowKey = keys[index] as UpdateKey;
+    if (rowGeneration(rowKey) !== generation) continue;
+    let row: StoredRow | null = null;
+    try {
+      row = await readRow(blobs[index]);
+    } catch {
+      // An unreadable row belongs to no unreconciled lineage.
+    }
+    if ((row?.kind === "unreconciled") === unreconciled) doomed.push(rowKey);
+  }
+  await writeRows((target, requests) => {
+    for (const rowKey of doomed) requests.push(target.delete(rowKey));
+  });
 }
 
 function getDB(): Promise<IDBPDatabase> {
@@ -202,6 +301,28 @@ function getDB(): Promise<IDBPDatabase> {
     });
   }
   return dbPromise;
+}
+
+// One readwrite transaction that lands whole or not at all.
+async function writeRows(
+  build: (store: WriteStore, requests: Promise<unknown>[]) => Promise<void> | void,
+): Promise<void> {
+  const db = await getDB();
+  const tx = db.transaction(UPDATES_STORE, "readwrite");
+  const requests: Promise<unknown>[] = [];
+  try {
+    await build(tx.objectStore(UPDATES_STORE), requests);
+    await Promise.all([...requests, tx.done]);
+  } catch (error) {
+    // A request that throws leaves the earlier ones queued; aborting rolls them back.
+    for (const request of [...requests, tx.done]) void request.catch(() => {});
+    try {
+      tx.abort();
+    } catch {
+      // The failed request already aborted it.
+    }
+    throw error;
+  }
 }
 
 export const HYDRATION_ORIGIN = Symbol("uniffy.realtime.hydration");
@@ -246,13 +367,97 @@ export function selectCompactableSeqs(
   });
 }
 
+/** What local recovery needs from the realtime transport attached to the same document. */
+export interface RecoveryTransport {
+  subscribeCoverage(listener: (event: UpdateCoverageEvent) => void): () => void;
+  /** Re-registers updates a previous session left unconfirmed, under their original ids. */
+  restorePending(updates: readonly RetainedUpdate[]): void;
+  /** Some own edit, buffered ones included, is not in a checkpoint yet. */
+  isCheckpointPending(): boolean;
+}
+
+export type DeviceStorage = "available" | "unavailable" | "failed";
+
+/** What this device holds of a document's own edits. */
+export interface DeviceRecoveryState {
+  /** `unavailable` without a storage key; `failed` after a write error until a write succeeds. */
+  storage: DeviceStorage;
+  /** Some own edit is not written to this device yet. */
+  unpersisted: boolean;
+}
+
+interface RecoverySession {
+  link: (transport: RecoveryTransport) => void;
+  device: () => DeviceRecoveryState;
+}
+
+const recoverySessions = new Map<string, Set<RecoverySession>>();
+const recoveryTransports = new Map<string, RecoveryTransport>();
+const DEVICE_IDLE: DeviceRecoveryState = Object.freeze({
+  storage: "available",
+  unpersisted: false,
+});
+const deviceStates = new Map<string, DeviceRecoveryState>();
+const deviceListeners = new Map<string, Set<(state: DeviceRecoveryState) => void>>();
+const STORAGE_SEVERITY: Record<DeviceStorage, number> = { available: 0, unavailable: 1, failed: 2 };
+
+/** Called when the transport attaches a document: its local recovery follows every coverage
+ * transition and hands back what an earlier session left unconfirmed. */
+export function linkRecovery(docName: string, transport: RecoveryTransport): () => void {
+  recoveryTransports.set(docName, transport);
+  for (const session of recoverySessions.get(docName) ?? []) session.link(transport);
+  return () => {
+    if (recoveryTransports.get(docName) === transport) recoveryTransports.delete(docName);
+  };
+}
+
+/** Stable snapshot for `useSyncExternalStore`; a document without local recovery reports idle. */
+export function getDeviceRecoveryState(docName: string): DeviceRecoveryState {
+  return deviceStates.get(docName) ?? DEVICE_IDLE;
+}
+
+export function subscribeDeviceRecovery(
+  docName: string,
+  listener: (state: DeviceRecoveryState) => void,
+): () => void {
+  const listeners = deviceListeners.get(docName) ?? new Set();
+  deviceListeners.set(docName, listeners);
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+    if (listeners.size === 0) deviceListeners.delete(docName);
+  };
+}
+
+function publishDeviceState(docName: string): void {
+  let storage: DeviceStorage = "available";
+  let unpersisted = false;
+  for (const session of recoverySessions.get(docName) ?? []) {
+    const state = session.device();
+    if (STORAGE_SEVERITY[state.storage] > STORAGE_SEVERITY[storage]) storage = state.storage;
+    unpersisted ||= state.unpersisted;
+  }
+  const previous = getDeviceRecoveryState(docName);
+  if (previous.storage === storage && previous.unpersisted === unpersisted) return;
+  const next =
+    storage === "available" && !unpersisted ? DEVICE_IDLE : Object.freeze({ storage, unpersisted });
+  if (next === DEVICE_IDLE) deviceStates.delete(docName);
+  else deviceStates.set(docName, next);
+  for (const listener of deviceListeners.get(docName) ?? []) listener(next);
+}
+
+function sameReceipt(a: ReceiptIdentity | null, b: ReceiptIdentity | null): boolean {
+  if (a === null || b === null) return a === b;
+  return a.generation === b.generation && a.epoch === b.epoch && a.sequence === b.sequence;
+}
+
 export interface EncryptedPersistenceOptions {
   contentType: string;
   contentId: string;
   ydoc: Y.Doc;
   compactEvery?: number;
   scope?: PendingDoc;
-  /** True while the server holds every local frame; snapshots taken then are a cache, not a draft. */
+  /** True while a checkpoint covers every local edit; snapshots taken then are a cache, not a draft. */
   isAcknowledged?: () => boolean;
 }
 
@@ -260,12 +465,23 @@ export interface EncryptedPersistence {
   acknowledge: () => Promise<void>;
   hydrate: (options?: { serverGeneration: string | null }) => Promise<void>;
   compact: () => Promise<void>;
+  /** Writes queued edits and coverage now; resolves once they are on this device or failed. */
+  flush: () => Promise<void>;
   quarantine: () => Promise<boolean>;
   /** True once a local user edit changed document content in this session or in a hydrated row. */
   isDirty: () => boolean;
-  /** `discard` drops this doc's rows instead of compacting them; `acknowledged` marks the
-   * compacted snapshot as server-held so it is never offered as a draft. */
+  /** `discard` drops this doc's snapshot rows instead of compacting them; `acknowledged` marks
+   * the compacted snapshot as checkpointed so it is never offered as a draft. Updates no
+   * checkpoint covers keep their rows either way. */
   destroy: (options?: { discard?: boolean; acknowledged?: boolean }) => Promise<void>;
+}
+
+interface TrackedUpdate {
+  /** Generation the update's row is stored under. */
+  generation: string;
+  update: Uint8Array;
+  editedAt: number;
+  receipt: ReceiptIdentity | null;
 }
 
 function rangeFor(contentType: string, contentId: string): IDBKeyRange {
@@ -288,6 +504,9 @@ export function attachEncryptedPersistence(
   const epoch = newPersistenceEpoch();
   let counter = 0;
   let localUpdates = 0;
+  // `localUpdates` at the moment the newest stored snapshot was encoded.
+  let persistedUpdates = 0;
+  let storageFailed = false;
   let recoveryGeneration: string | null = null;
   const storageGeneration = () => recoveryGeneration ?? docGeneration(ydoc) ?? "";
   let dirty = false;
@@ -295,14 +514,35 @@ export function attachEncryptedPersistence(
   let beforeText: string | null = null;
   let acknowledgedClose = false;
   const hydratedSeqs = new Set<string>();
+  // Own updates no checkpoint covers yet; their rows go only when a checkpoint covers them.
+  const tracked = new Map<string, TrackedUpdate>();
+  // Checkpointed ids whose row deletion has not landed; hydration must not restore them.
+  const retiring = new Set<string>();
+  const rowChanges = new Map<string, { generation: string; row: TrackedUpdate | null }>();
+  let snapshotRequested = false;
   let pendingCompact = false;
   let destroyed = false;
   let destroyPromise: Promise<void> | null = null;
   const pendingWrites = new Set<Promise<void>>();
-  let writeRequested = false;
   let writeLoop: Promise<void> | null = null;
+  let lastWriteFailed = false;
+  let unsubscribeCoverage = () => {};
 
-  const rowDirty = (acknowledged: boolean) => (dirty || hydratedDirty) && !acknowledged;
+  const transport = () => recoveryTransports.get(docKey);
+  const acknowledgedNow = () =>
+    acknowledgedClose ||
+    (!destroyed &&
+      (opts.isAcknowledged?.() ?? false) &&
+      !(transport()?.isCheckpointPending() ?? false));
+  const holdsUncheckpointed = () =>
+    tracked.size > 0 || ((dirty || hydratedDirty) && !acknowledgedNow());
+  // Closing now could lose an edit: it is not on this device and no checkpoint holds it.
+  const atRisk = () => {
+    if (localUpdates <= persistedUpdates) return false;
+    const attached = destroyed ? undefined : transport();
+    return attached ? attached.isCheckpointPending() : !acknowledgedNow();
+  };
+  const publishDevice = () => publishDeviceState(docKey);
 
   const onBeforeTransaction = (transaction: Y.Transaction) => {
     if (destroyed || dirty || !isPersistedOrigin(transaction.origin)) return;
@@ -324,66 +564,182 @@ export function attachEncryptedPersistence(
         changedUnprojectedRoots(ydoc, transaction);
     }
     beforeText = null;
-    if (!isStorageEncryptionReady()) return;
-    writeRequested = true;
-    if (writeLoop) return;
-    const pending = (async () => {
-      do {
-        writeRequested = false;
-        await writeUpdate(Y.encodeStateAsUpdate(ydoc));
-      } while (writeRequested);
-    })();
-    writeLoop = pending;
-    pendingWrites.add(pending);
-    allPendingWrites.add(pending);
-    void pending.finally(() => {
-      pendingWrites.delete(pending);
-      allPendingWrites.delete(pending);
-      writeLoop = null;
-    });
+    snapshotRequested = true;
+    requestWrite();
+    publishDevice();
   };
 
-  function encodeRow(
-    update: Uint8Array,
-    acknowledged = acknowledgedClose || (!destroyed && (opts.isAcknowledged?.() ?? false)),
-  ): RowPayload {
-    return { update: bytesToBase64(update), dirty: rowDirty(acknowledged), scope: opts.scope };
+  const onCoverage = (event: UpdateCoverageEvent) => {
+    if (destroyed) return;
+    const known = tracked.get(event.updateId);
+    if (event.coverage === "checkpointed") {
+      if (!known) return;
+      tracked.delete(event.updateId);
+      retiring.add(event.updateId);
+      rowChanges.set(event.updateId, { generation: known.generation, row: null });
+    } else {
+      const update = event.coverage === "local" ? event.update : known?.update;
+      const receipt = event.coverage === "accepted" ? event.receipt : null;
+      if (!update || (known && sameReceipt(known.receipt, receipt))) return;
+      const next = {
+        generation: known?.generation ?? storageGeneration(),
+        update,
+        editedAt: event.editedAt,
+        receipt,
+      };
+      tracked.set(event.updateId, next);
+      rowChanges.set(event.updateId, { generation: next.generation, row: next });
+    }
+    requestWrite();
+  };
+
+  const retainedUpdates = (): RetainedUpdate[] =>
+    [...tracked].map(([updateId, update]) => ({
+      updateId,
+      update: update.update,
+      editedAt: update.editedAt,
+      receipt: update.receipt,
+    }));
+
+  const session: RecoverySession = {
+    link: (next) => {
+      // A closing session's updates belong to its own generation. Its rows reach the next
+      // session through hydration, which replays only the generation the server confirms.
+      if (destroyed) return;
+      unsubscribeCoverage();
+      unsubscribeCoverage = next.subscribeCoverage(onCoverage);
+      if (tracked.size > 0) next.restorePending(retainedUpdates());
+    },
+    device: () => ({
+      storage: !isStorageEncryptionReady() ? "unavailable" : storageFailed ? "failed" : "available",
+      unpersisted: localUpdates > persistedUpdates,
+    }),
+  };
+
+  function snapshotRow(update: Uint8Array): SnapshotRow {
+    return {
+      kind: "snapshot",
+      update: bytesToBase64(update),
+      dirty: (dirty || hydratedDirty) && !acknowledgedNow(),
+      scope: opts.scope,
+    };
   }
 
-  async function writeUpdate(update: Uint8Array): Promise<void> {
-    // Counter allocation stays synchronous with the doc update, so any own
-    // row at or below the counter compact() captures is inside its snapshot.
-    const allocated = ++counter;
-    const generation = storageGeneration();
-    if (discardedRecovery.get(ydoc)?.has(generation)) return;
-    try {
-      const blob = await encryptForStorage(encodeRow(update, false));
-      const db = await getDB();
-      const tx = db.transaction(UPDATES_STORE, "readwrite");
-      const store = tx.objectStore(UPDATES_STORE);
-      const keys = (await store.getAllKeys(rangeFor(contentType, contentId))) as UpdateKey[];
-      const prior = selectCompactableSeqs(
-        keys.filter((key) => key[2] === generation).map((key) => key[3]),
-        epoch,
-        allocated,
-        new Set(),
-      );
-      await Promise.all([
-        ...prior.map((seq) => store.delete([contentType, contentId, generation, seq])),
-        store.put(blob, [contentType, contentId, generation, updateRowSeq(epoch, allocated)]),
-        tx.done,
-      ]);
-      if (opts.scope && (dirty || hydratedDirty)) recordPendingDoc(opts.scope);
-      if (allocated % compactEvery === 0 && !pendingCompact) {
-        pendingCompact = true;
-        queueMicrotask(() => {
-          pendingCompact = false;
-          void compact();
-        });
+  function pendingRow(updateId: string, update: TrackedUpdate): PendingRow {
+    return {
+      kind: "pending",
+      update: bytesToBase64(update.update),
+      scope: opts.scope,
+      updateId,
+      editedAt: update.editedAt,
+      receipt: update.receipt,
+    };
+  }
+
+  function pendingKey(generation: string, updateId: string): UpdateKey {
+    return [contentType, contentId, generation, `${PENDING_SEQ_PREFIX}${updateId}`];
+  }
+
+  function requestWrite(): void {
+    if (writeLoop || !isStorageEncryptionReady()) return;
+    if (!snapshotRequested && rowChanges.size === 0) return;
+    const loop = (async () => {
+      // Every update listener runs first, so the transport already counts this edit as pending.
+      await Promise.resolve();
+      while (snapshotRequested || rowChanges.size > 0) {
+        if (!(await writeBatch())) break;
       }
+    })();
+    writeLoop = loop;
+    pendingWrites.add(loop);
+    allPendingWrites.add(loop);
+    void loop.finally(() => {
+      pendingWrites.delete(loop);
+      allPendingWrites.delete(loop);
+      writeLoop = null;
+      publishDevice();
+      // Work queued while the loop wound down; a failed write waits for the next trigger.
+      if (!lastWriteFailed) requestWrite();
+    });
+  }
+
+  async function settleWrites(): Promise<void> {
+    while (writeLoop) await writeLoop;
+  }
+
+  async function writeBatch(): Promise<boolean> {
+    const generation = storageGeneration();
+    const writeSnapshot = snapshotRequested && !discardedRecovery.get(ydoc)?.has(generation);
+    snapshotRequested = false;
+    const changes = [...rowChanges];
+    rowChanges.clear();
+    const encodedAt = localUpdates;
+    // Allocated with the encode, so any own row at or below the counter a compaction captures
+    // is inside its snapshot.
+    const allocated = writeSnapshot ? ++counter : counter;
+    const snapshot = writeSnapshot ? snapshotRow(Y.encodeStateAsUpdate(ydoc)) : null;
+    try {
+      const snapshotBlob = snapshot && (await encryptForStorage(snapshot));
+      const puts = await Promise.all(
+        changes.flatMap(([updateId, change]) =>
+          change.row && !discardedRecovery.get(ydoc)?.has(change.generation)
+            ? [
+                encryptForStorage(pendingRow(updateId, change.row)).then((blob) => ({
+                  key: pendingKey(change.generation, updateId),
+                  blob,
+                })),
+              ]
+            : [],
+        ),
+      );
+      await writeRows(async (store, requests) => {
+        if (snapshotBlob) {
+          const keys = (await store.getAllKeys(rangeFor(contentType, contentId))) as UpdateKey[];
+          const prior = selectCompactableSeqs(
+            snapshotSeqs(keys, generation),
+            epoch,
+            allocated,
+            new Set(),
+          );
+          for (const seq of prior)
+            requests.push(store.delete([contentType, contentId, generation, seq]));
+          requests.push(
+            store.put(snapshotBlob, [
+              contentType,
+              contentId,
+              generation,
+              updateRowSeq(epoch, allocated),
+            ]),
+          );
+        }
+        for (const { key, blob } of puts) requests.push(store.put(blob, key));
+        for (const [updateId, change] of changes) {
+          if (!change.row) requests.push(store.delete(pendingKey(change.generation, updateId)));
+        }
+      });
     } catch (err) {
       console.warn("[realtime] encrypted persistence write failed", err);
+      if (writeSnapshot) snapshotRequested = true;
+      for (const [updateId, change] of changes) {
+        if (!rowChanges.has(updateId)) rowChanges.set(updateId, change);
+      }
+      storageFailed = true;
+      lastWriteFailed = true;
+      return false;
     }
+    storageFailed = false;
+    lastWriteFailed = false;
+    if (snapshot) persistedUpdates = Math.max(persistedUpdates, encodedAt);
+    for (const [updateId, change] of changes) if (!change.row) retiring.delete(updateId);
+    if (opts.scope && holdsUncheckpointed()) recordPendingDoc(opts.scope);
+    if (writeSnapshot && allocated % compactEvery === 0 && !pendingCompact) {
+      pendingCompact = true;
+      queueMicrotask(() => {
+        pendingCompact = false;
+        void compact();
+      });
+    }
+    return true;
   }
 
   let hydration = Promise.resolve();
@@ -423,14 +779,8 @@ export function attachEncryptedPersistence(
       const rejected = (keys as UpdateKey[]).filter(
         (key) => key.length !== 4 || key[2] !== replayGeneration,
       );
-      if (rejected.length > 0) {
-        persistenceRecoveryStats.generationMismatchRows += rejected.length;
-        console.warn("[realtime] retained recovery rows from another generation", {
-          docKey,
-          rows: rejected.length,
-        });
-        window.dispatchEvent(new Event(RECOVERY_AVAILABLE_EVENT));
-      }
+      let unreconciledDrafts = 0;
+      const restored: RetainedUpdate[] = [];
       for (let i = 0; i < blobs.length; i++) {
         const key = keys[i] as UpdateKey;
         if (
@@ -440,18 +790,41 @@ export function attachEncryptedPersistence(
         )
           continue;
         try {
-          const decoded = decodeRowPayload(await decryptFromStorage(blobs[i]));
+          const row = await readRow(blobs[i]);
           if (destroyed) return;
-          if (!decoded) continue;
-          if (decoded.update.length > 0) Y.applyUpdate(ydoc, decoded.update, HYDRATION_ORIGIN);
-          hydratedSeqs.add(key[3]);
-          hydratedDirty ||= decoded.dirty;
+          if (!row) continue;
+          // Nothing proves which of its edits the server has; the user reconciles it by hand.
+          if (row.kind === "unreconciled" && row.dirty) {
+            unreconciledDrafts++;
+            continue;
+          }
+          if (row.update.length > 0) Y.applyUpdate(ydoc, row.update, HYDRATION_ORIGIN);
+          if (row.kind === "pending") {
+            hydratedDirty = true;
+            const { updateId, editedAt, receipt } = row.retained;
+            if (tracked.has(updateId) || retiring.has(updateId)) continue;
+            tracked.set(updateId, { generation: key[2], update: row.update, editedAt, receipt });
+            restored.push(row.retained);
+          } else {
+            hydratedSeqs.add(key[3]);
+            hydratedDirty ||= row.dirty;
+          }
         } catch {
           // Skip rows that fail to decrypt (rotated DEK, corruption). They
           // also stay out of hydratedSeqs, so compact never deletes content
           // this session has not applied.
         }
       }
+      if (rejected.length > 0 || unreconciledDrafts > 0) {
+        persistenceRecoveryStats.generationMismatchRows += rejected.length;
+        console.warn("[realtime] retained recovery rows", {
+          docKey,
+          otherGenerations: rejected.length,
+          unreconciledDrafts,
+        });
+        window.dispatchEvent(new Event(RECOVERY_AVAILABLE_EVENT));
+      }
+      if (restored.length > 0) transport()?.restorePending(restored);
     } catch (err) {
       console.warn("[realtime] encrypted persistence hydrate failed", err);
       throw err;
@@ -462,6 +835,14 @@ export function attachEncryptedPersistence(
     await hydration.catch(() => {});
     const previousGeneration = storageGeneration();
     recoveryGeneration = `${RECOVERY_GENERATION_PREFIX}${randomUUID()}`;
+    // The recovery copy holds these updates, so their rows leave the lineage they would replay into.
+    const moved = [...tracked.keys()].filter(
+      (updateId) => tracked.get(updateId)?.generation === previousGeneration,
+    );
+    for (const updateId of moved) {
+      tracked.delete(updateId);
+      rowChanges.delete(updateId);
+    }
     const update = bytesToBase64(Y.encodeStateAsUpdate(ydoc));
     const retained = memoryRecovery.get(recoveryKey) ?? new Map<string, RecoveredDraft>();
     memoryRecovery.set(recoveryKey, retained);
@@ -475,31 +856,30 @@ export function attachEncryptedPersistence(
     });
     dirty = true;
     try {
-      await Promise.all([...pendingWrites]);
+      await settleWrites();
       if (isStorageEncryptionReady()) {
-        const blob = await encryptForStorage({ update, dirty: true });
-        const db = await getDB();
-        const tx = db.transaction(UPDATES_STORE, "readwrite");
-        const store = tx.objectStore(UPDATES_STORE);
-        const keys = (await store.getAllKeys(rangeFor(contentType, contentId))) as UpdateKey[];
-        const removable = selectCompactableSeqs(
-          keys.filter((key) => key[2] === previousGeneration).map((key) => key[3]),
-          epoch,
-          counter,
-          hydratedSeqs,
-        );
-        await Promise.all([
-          ...removable.map((seq) =>
-            store.delete([contentType, contentId, previousGeneration, seq]),
-          ),
-          store.put(blob, [
-            contentType,
-            contentId,
-            recoveryGeneration,
-            updateRowSeq(epoch, ++counter),
-          ]),
-          tx.done,
-        ]);
+        const blob = await encryptForStorage({
+          kind: "snapshot",
+          update,
+          dirty: true,
+        } satisfies SnapshotRow);
+        const target = recoveryGeneration;
+        await writeRows(async (store, requests) => {
+          const keys = (await store.getAllKeys(rangeFor(contentType, contentId))) as UpdateKey[];
+          const removable = selectCompactableSeqs(
+            snapshotSeqs(keys, previousGeneration),
+            epoch,
+            counter,
+            hydratedSeqs,
+          );
+          for (const seq of removable)
+            requests.push(store.delete([contentType, contentId, previousGeneration, seq]));
+          for (const updateId of moved)
+            requests.push(store.delete(pendingKey(previousGeneration, updateId)));
+          requests.push(
+            store.put(blob, [contentType, contentId, target, updateRowSeq(epoch, ++counter)]),
+          );
+        });
         hydratedSeqs.clear();
       }
       window.dispatchEvent(new Event(RECOVERY_AVAILABLE_EVENT));
@@ -517,60 +897,69 @@ export function attachEncryptedPersistence(
     // Nothing local happened: no edit, no hydrated row. A snapshot would only
     // add a row of server state that later reads as a phantom draft.
     if (localUpdates === 0 && hydratedSeqs.size === 0) return;
+    // Captured with the encode: any own row at or below this counter was
+    // applied to the ydoc first, so the snapshot subsumes it. Rows outside
+    // the selection (another tab's live writes, an own write landing after
+    // this transaction, pending updates) stay in place and are re-applied by
+    // a later hydrate, which is safe because Yjs updates are idempotent.
+    const snapshotCounter = counter;
+    const encodedAt = localUpdates;
+    const generation = storageGeneration();
     try {
-      // Captured before the encode: any own row at or below this counter was
-      // applied to the ydoc first, so the snapshot subsumes it. Rows outside
-      // the selection (another tab's live writes, an own write landing after
-      // this transaction) are left in place and re-applied by a later
-      // hydrate, which is safe because Yjs updates are idempotent.
-      const snapshotCounter = counter;
-      const generation = storageGeneration();
-      const snapshot = Y.encodeStateAsUpdate(ydoc);
-      const blob = await encryptForStorage(encodeRow(snapshot));
+      const blob = await encryptForStorage(snapshotRow(Y.encodeStateAsUpdate(ydoc)));
       if (generation !== storageGeneration()) return;
-      const db = await getDB();
-      const tx = db.transaction(UPDATES_STORE, "readwrite");
-      const store = tx.objectStore(UPDATES_STORE);
-      const keys = (await store.getAllKeys(rangeFor(contentType, contentId))) as UpdateKey[];
-      const removable = selectCompactableSeqs(
-        keys.filter((key) => key[2] === generation).map((key) => key[3]),
-        epoch,
-        snapshotCounter,
-        hydratedSeqs,
-      );
-      await Promise.all([
-        ...removable.map((seq) => store.delete([contentType, contentId, generation, seq])),
-        store.put(blob, [contentType, contentId, generation, updateRowSeq(epoch, ++counter)]),
-        tx.done,
-      ]);
+      let removable: string[] = [];
+      await writeRows(async (store, requests) => {
+        const keys = (await store.getAllKeys(rangeFor(contentType, contentId))) as UpdateKey[];
+        removable = selectCompactableSeqs(
+          snapshotSeqs(keys, generation),
+          epoch,
+          snapshotCounter,
+          hydratedSeqs,
+        );
+        for (const seq of removable)
+          requests.push(store.delete([contentType, contentId, generation, seq]));
+        requests.push(
+          store.put(blob, [contentType, contentId, generation, updateRowSeq(epoch, ++counter)]),
+        );
+      });
       for (const seq of removable) hydratedSeqs.delete(seq);
+      storageFailed = false;
+      persistedUpdates = Math.max(persistedUpdates, encodedAt);
     } catch (err) {
       console.warn("[realtime] encrypted persistence compact failed", err);
+      storageFailed = true;
     }
+    publishDevice();
   }
 
   async function clear(): Promise<void> {
     if (!isStorageEncryptionReady()) return;
     try {
-      const db = await getDB();
-      const tx = db.transaction(UPDATES_STORE, "readwrite");
-      const store = tx.objectStore(UPDATES_STORE);
       const generation = storageGeneration();
-      const keys = (await store.getAllKeys(rangeFor(contentType, contentId))) as UpdateKey[];
-      const removable = selectCompactableSeqs(
-        keys.filter((key) => key[2] === generation).map((key) => key[3]),
-        epoch,
-        counter,
-        hydratedSeqs,
-      );
-      await Promise.all([
-        ...removable.map((seq) => store.delete([contentType, contentId, generation, seq])),
-        tx.done,
-      ]);
+      await writeRows(async (store, requests) => {
+        const keys = (await store.getAllKeys(rangeFor(contentType, contentId))) as UpdateKey[];
+        const removable = selectCompactableSeqs(
+          snapshotSeqs(keys, generation),
+          epoch,
+          counter,
+          hydratedSeqs,
+        );
+        for (const seq of removable)
+          requests.push(store.delete([contentType, contentId, generation, seq]));
+      });
       hydratedSeqs.clear();
     } catch (err) {
       console.warn("[realtime] encrypted persistence clear failed", err);
+      storageFailed = true;
     }
+  }
+
+  async function flush(): Promise<void> {
+    if (localUpdates > persistedUpdates) snapshotRequested = true;
+    lastWriteFailed = false;
+    requestWrite();
+    await settleWrites();
   }
 
   function destroy(options?: { discard?: boolean; acknowledged?: boolean }): Promise<void> {
@@ -579,45 +968,82 @@ export function attachEncryptedPersistence(
     acknowledgedClose = Boolean(options?.acknowledged);
     ydoc.off("beforeTransaction", onBeforeTransaction);
     ydoc.off("update", onUpdate);
+    unsubscribeCoverage();
     window.removeEventListener(ENCRYPTION_REKEY_EVENT, handleRekey);
-    window.removeEventListener(ENCRYPTION_TEARDOWN_EVENT, handleTeardown);
-    window.removeEventListener("beforeunload", handleBeforeUnload);
+    window.removeEventListener(ENCRYPTION_READY_EVENT, handleReady);
+    window.removeEventListener(ENCRYPTION_TEARDOWN_EVENT, publishDevice);
+    window.removeEventListener("pagehide", handlePageHide);
+    requestWrite();
     const finish = options?.discard ? clear : compact;
-    const disposal = Promise.all([...pendingWrites]).then(() => finish());
+    const disposal = settleWrites()
+      .then(finish)
+      .then(() => {
+        // Whatever no checkpoint covers stays with the drain until one does.
+        if (opts.scope && tracked.size > 0 && isStorageEncryptionReady() && !storageFailed)
+          handOffPendingDoc(opts.scope);
+      });
     pendingDisposals.set(docKey, disposal);
     destroyPromise = disposal.finally(() => {
       if (pendingDisposals.get(docKey) === disposal) pendingDisposals.delete(docKey);
+      // The unload guard stays until the final write has landed.
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      sessions.delete(session);
+      if (sessions.size === 0 && recoverySessions.get(docKey) === sessions)
+        recoverySessions.delete(docKey);
+      publishDevice();
     });
     return destroyPromise;
   }
 
+  const requeueAll = () => {
+    if (localUpdates > 0) snapshotRequested = true;
+    for (const [updateId, update] of tracked) {
+      rowChanges.set(updateId, { generation: update.generation, row: update });
+    }
+    lastWriteFailed = false;
+    requestWrite();
+    publishDevice();
+  };
   const handleRekey = () => {
     // The rekey path wipes the whole DB, so seqs recorded by hydrate no
-    // longer exist; a fresh snapshot re-seeds the store under the new DEK.
+    // longer exist; this session's edits and pending updates re-seed it.
     hydratedSeqs.clear();
-    void compact();
+    requeueAll();
   };
-  const handleTeardown = () => {
-    // DEK gone; further writes are no-ops via isStorageEncryptionReady.
+  const handleReady = () => requeueAll();
+  const handlePageHide = () => {
+    void flush();
   };
-  const handleBeforeUnload = () => {
-    void compact();
+  const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+    void flush();
+    if (!atRisk()) return;
+    event.preventDefault();
+    event.returnValue = "";
   };
 
   ydoc.on("beforeTransaction", onBeforeTransaction);
   ydoc.on("update", onUpdate);
   window.addEventListener(ENCRYPTION_REKEY_EVENT, handleRekey);
-  window.addEventListener(ENCRYPTION_TEARDOWN_EVENT, handleTeardown);
+  window.addEventListener(ENCRYPTION_READY_EVENT, handleReady);
+  window.addEventListener(ENCRYPTION_TEARDOWN_EVENT, publishDevice);
+  window.addEventListener("pagehide", handlePageHide);
   window.addEventListener("beforeunload", handleBeforeUnload);
+  const sessions = recoverySessions.get(docKey) ?? new Set<RecoverySession>();
+  recoverySessions.set(docKey, sessions);
+  sessions.add(session);
+  const attached = transport();
+  if (attached) session.link(attached);
+  publishDevice();
 
   const acknowledge = async () => {
-    await Promise.all([...pendingWrites]);
-    if (!destroyed && opts.isAcknowledged?.()) await compact();
+    await settleWrites();
+    if (!destroyed && acknowledgedNow()) await compact();
   };
   return {
     hydrate,
     compact,
     acknowledge,
+    flush,
     quarantine,
     isDirty: () => dirty || hydratedDirty,
     destroy,

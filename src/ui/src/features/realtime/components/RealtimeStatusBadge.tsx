@@ -1,9 +1,14 @@
 import { cn } from "@/shared/utils/cn";
 import type { RealtimeStatus } from "@/features/realtime/protocol";
-import { isStorageEncryptionReady } from "@/shared/crypto/storageEncryption";
+import type { SaveState } from "@/features/realtime/hooks/useDocSaveState";
+import type { DeviceStorage } from "@/features/realtime/persistence/encryptedYjsPersistence";
 
 interface RealtimeStatusBadgeProps {
   status: RealtimeStatus;
+  /** Save progress of own edits, shown while the connection has nothing more urgent to say. */
+  save?: SaveState | null;
+  /** Whether this device holds the edits; copy promises a device copy only when it does. */
+  storage: DeviceStorage;
   className?: string;
 }
 
@@ -14,61 +19,108 @@ interface StatusCopy {
   title?: string;
 }
 
-// Device persistence needs Web Crypto; without it only the open editor holds the edits.
-function offlineCopy(): StatusCopy {
+const QUIET_TONE = "bg-muted text-muted-foreground";
+const ALERT_TONE = "bg-red-500/15 text-red-600 dark:text-red-300";
+const DELAYED_TONE = "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400";
+
+const STORAGE_FAILED: StatusCopy = {
+  label: "Not saved on device",
+  title:
+    "This device could not store your latest edits. Keep this editor open until it shows Saved.",
+  tone: ALERT_TONE,
+};
+
+// Without a working device copy only the open editor holds the edits.
+function offlineCopy(storage: DeviceStorage): StatusCopy {
   return {
     label: "Offline",
-    tone: "bg-muted text-muted-foreground",
-    title: isStorageEncryptionReady()
-      ? "Edits stay on this device and sync when the connection returns."
-      : "Edits sync when the connection returns. This device cannot store them, so keep this editor open.",
+    tone: QUIET_TONE,
+    title:
+      storage === "available"
+        ? "Edits stay on this device and sync when the connection returns."
+        : "Edits sync when the connection returns. This device cannot store them, so keep this editor open.",
   };
 }
 
-// Presence supplies the connected signal.
-function describeStatus(status: RealtimeStatus): StatusCopy | null {
+function describeConnection(status: RealtimeStatus, storage: DeviceStorage): StatusCopy | null {
   switch (status) {
     case "connecting":
-      return { label: "Connecting", tone: "bg-muted text-muted-foreground", dotPulse: true };
+      return { label: "Connecting", tone: QUIET_TONE, dotPulse: true };
     case "disconnected":
-      return { ...offlineCopy(), dotPulse: true };
+      return { ...offlineCopy(storage), dotPulse: true };
     case "offline":
-      return offlineCopy();
-    case "update_rejected":
-      return {
-        label: "Edit too large to sync",
-        title: "Keep or export your local draft, then reduce its size.",
-        tone: "bg-red-500/15 text-red-600 dark:text-red-300",
-      };
-    case "permission_lost":
-      return {
-        label: "View-only - edit access removed",
-        tone: "bg-red-500/15 text-red-600 dark:text-red-300",
-      };
-    case "access_lost":
-      return {
-        label: "Access lost",
-        title:
-          "This item was deleted or is no longer shared with you. Your local draft is retained.",
-        tone: "bg-red-500/15 text-red-600 dark:text-red-300",
-      };
-    case "token_revoked":
-      return {
-        label: "Session ended - reload",
-        tone: "bg-red-500/15 text-red-600 dark:text-red-300",
-      };
+      return offlineCopy(storage);
     default:
       return null;
   }
 }
 
-export function RealtimeStatusBadge({ status, className }: RealtimeStatusBadgeProps) {
-  const copy = describeStatus(status);
+function describeAlert(status: RealtimeStatus): StatusCopy | null {
+  switch (status) {
+    case "update_rejected":
+      return {
+        label: "Edit too large to sync",
+        title: "Keep or export your local draft, then reduce its size.",
+        tone: ALERT_TONE,
+      };
+    case "permission_lost":
+      return { label: "View-only - edit access removed", tone: ALERT_TONE };
+    case "access_lost":
+      return {
+        label: "Access lost",
+        title:
+          "This item was deleted or is no longer shared with you. Your local draft is retained.",
+        tone: ALERT_TONE,
+      };
+    case "token_revoked":
+      return { label: "Session ended - reload", tone: ALERT_TONE };
+    default:
+      return null;
+  }
+}
+
+function describeSave(save: SaveState, storage: DeviceStorage): StatusCopy {
+  switch (save) {
+    case "syncing":
+      return { label: "Syncing", tone: QUIET_TONE, title: "Sending your latest edits." };
+    case "synced":
+      return {
+        label: "Synced",
+        tone: QUIET_TONE,
+        title: "Shared with collaborators, saving shortly.",
+      };
+    case "delayed":
+      return {
+        label: "Saving delayed",
+        tone: DELAYED_TONE,
+        title:
+          storage === "available"
+            ? "Saving is taking longer than usual. Your edits stay on this device until they are saved."
+            : "Saving is taking longer than usual. This device cannot store your edits, so keep this editor open.",
+      };
+    case "saved":
+      return { label: "Saved", tone: QUIET_TONE, title: "All your edits are saved." };
+  }
+}
+
+/** Persistence chip: access and size problems first, then an unsaved device copy, the
+ * connection and the save state. */
+export function RealtimeStatusBadge({
+  status,
+  save = null,
+  storage,
+  className,
+}: RealtimeStatusBadgeProps) {
+  const copy =
+    describeAlert(status) ??
+    (storage === "failed" && save !== null && save !== "saved" ? STORAGE_FAILED : null) ??
+    describeConnection(status, storage) ??
+    (save ? describeSave(save, storage) : null);
   if (!copy) return null;
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium",
+        "inline-flex max-w-full shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium",
         "transition-colors duration-300",
         copy.tone,
         className,
@@ -79,11 +131,11 @@ export function RealtimeStatusBadge({ status, className }: RealtimeStatusBadgePr
     >
       <span
         className={cn(
-          "h-1.5 w-1.5 rounded-full bg-current",
+          "h-1.5 w-1.5 shrink-0 rounded-full bg-current",
           copy.dotPulse ? "animate-pulse" : "opacity-80",
         )}
       />
-      {copy.label}
+      <span className="min-w-0 truncate">{copy.label}</span>
     </span>
   );
 }

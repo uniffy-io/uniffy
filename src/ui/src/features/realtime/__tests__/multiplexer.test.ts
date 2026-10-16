@@ -8,9 +8,19 @@ import {
   realtimeMultiplexer,
   type DocSubscription,
   type MultiplexerAttachOptions,
+  type RealtimeDocState,
+  type UpdateCoverageEvent,
 } from "@/features/realtime/multiplexer";
 import { encodeDocFrame, peekVarString } from "@/features/realtime/multiplex";
+import {
+  encodeAcceptedReceipt,
+  encodeCheckpointProgress,
+  encodeCommitted,
+  encodeSessionState,
+} from "@/features/realtime/protocol";
+import { hasUnsyncedEdits } from "@/features/realtime/unsyncedEdits";
 import { resolveCloseDisposal } from "@/features/realtime/hooks/useDocSession";
+import { encodeCorpusFrame, fromHex, wireCorpus } from "@/features/realtime/__tests__/wireCorpus";
 
 const auth = vi.hoisted(() => ({ refresh: vi.fn(), org: "org-1" }));
 vi.mock("@/config/api", () => ({
@@ -60,10 +70,10 @@ class FakeWebSocket {
     this.readyState = FakeWebSocket.CLOSED;
   }
 
-  open(): void {
+  open(generation = ""): void {
     this.readyState = FakeWebSocket.OPEN;
     this.onopen?.();
-    for (const doc of attached) this.receive(serverGenerationFrame(doc.docName, ""));
+    for (const doc of attached) this.receive(serverGenerationFrame(doc.docName, generation));
   }
 
   receive(frame: Uint8Array): void {
@@ -93,6 +103,10 @@ function sentSyncSubtypes(ws: FakeWebSocket, docName: string): number[] {
     subtypes.push(payload[1]);
   }
   return subtypes;
+}
+
+function isTransportPending(doc: { docName: string }): boolean {
+  return realtimeMultiplexer.getDocState(doc.docName).transportPending;
 }
 
 function serverGenerationFrame(docName: string, generation: string): Uint8Array {
@@ -140,7 +154,7 @@ function serverSeederFrame(docName: string, granted: boolean): Uint8Array {
 }
 
 function applyClientFramesToServer(ws: FakeWebSocket, docName: string, serverDoc: Y.Doc): void {
-  vi.advanceTimersByTime(250);
+  vi.advanceTimersByTime(50);
   for (const bytes of ws.sent) {
     const { docName: name, payloadOffset } = peekVarString(bytes);
     if (name !== docName) continue;
@@ -284,7 +298,7 @@ describe("read-only docs", () => {
     expect(subtypes).toContain(SYNC_STEP1);
     expect(subtypes).not.toContain(SYNC_STEP2);
     expect(subtypes).not.toContain(SYNC_UPDATE);
-    expect(realtimeMultiplexer.isOutboundPending(doc.docName)).toBe(true);
+    expect(isTransportPending(doc)).toBe(true);
   });
 
   it("suppresses the SyncStep2 reply even when the local doc has extra state", () => {
@@ -315,7 +329,7 @@ describe("auth frames", () => {
     applyClientFramesToServer(ws, allowed.docName, server);
     expect(server.getText("markdown").toString()).toBe("live peer");
     expect(ws.readyState).toBe(FakeWebSocket.OPEN);
-    expect(realtimeMultiplexer.isOutboundPending(denied.docName)).toBe(true);
+    expect(isTransportPending(denied)).toBe(true);
     ws.serverClose(1006);
     window.dispatchEvent(new Event("online"));
     const replacement = currentWs();
@@ -336,7 +350,7 @@ describe("auth frames", () => {
 
     doc.ydoc.getText("markdown").insert(0, "typed after the downgrade");
     expect(sentSyncSubtypes(currentWs(), doc.docName)).not.toContain(SYNC_UPDATE);
-    expect(realtimeMultiplexer.isOutboundPending(doc.docName)).toBe(true);
+    expect(isTransportPending(doc)).toBe(true);
 
     currentWs().receive(serverAuthDeniedFrame(doc.docName, "read only"));
     expect(onWriteDenied).toHaveBeenCalledTimes(1);
@@ -381,12 +395,13 @@ describe("outbound pending tracking", () => {
   it("retains pending edits until committed acknowledgment after reconnect", () => {
     const doc = attachDoc("offline-edit");
     const pendingStates: boolean[] = [];
-    const unsubscribe = realtimeMultiplexer.subscribeOutboundPending(doc.docName, (pending) =>
-      pendingStates.push(pending),
-    );
+    const unsubscribe = realtimeMultiplexer.subscribeDocState(doc.docName, (state) => {
+      if (state.transportPending !== pendingStates.at(-1))
+        pendingStates.push(state.transportPending);
+    });
 
     doc.ydoc.getText("markdown").insert(0, "offline edit");
-    expect(realtimeMultiplexer.isOutboundPending(doc.docName)).toBe(true);
+    expect(isTransportPending(doc)).toBe(true);
     expect(pendingStates).toEqual([true]);
 
     currentWs().open();
@@ -396,12 +411,12 @@ describe("outbound pending tracking", () => {
     expect(currentWs().sent.some((frame) => frame[peekVarString(frame).payloadOffset] === 6)).toBe(
       true,
     );
-    expect(realtimeMultiplexer.isOutboundPending(doc.docName)).toBe(true);
+    expect(isTransportPending(doc)).toBe(true);
     expect(pendingStates).toEqual([true]);
 
     applyClientFramesToServer(currentWs(), doc.docName, serverDoc);
     expect(serverDoc.getText("markdown").toString()).toBe("offline edit");
-    expect(realtimeMultiplexer.isOutboundPending(doc.docName)).toBe(false);
+    expect(isTransportPending(doc)).toBe(false);
     unsubscribe();
   });
 
@@ -413,13 +428,13 @@ describe("outbound pending tracking", () => {
 
     ws.bufferedAmount = 64;
     doc.ydoc.getText("markdown").insert(0, "buffered");
-    expect(realtimeMultiplexer.isOutboundPending(doc.docName)).toBe(true);
-    vi.advanceTimersByTime(250);
+    expect(isTransportPending(doc)).toBe(true);
+    vi.advanceTimersByTime(50);
     expect(ws.sent.some((frame) => frame[peekVarString(frame).payloadOffset] === 6)).toBe(true);
 
     ws.bufferedAmount = 0;
     vi.advanceTimersByTime(300);
-    expect(realtimeMultiplexer.isOutboundPending(doc.docName)).toBe(true);
+    expect(isTransportPending(doc)).toBe(true);
   });
 });
 
@@ -438,7 +453,7 @@ it("ignores delayed callbacks from a replaced socket", () => {
   const server = new Y.Doc();
   applyClientFramesToServer(second, doc.docName, server);
   expect(server.getText("markdown").toString()).toBe("new socket work");
-  expect(realtimeMultiplexer.isOutboundPending(doc.docName)).toBe(false);
+  expect(isTransportPending(doc)).toBe(false);
   server.destroy();
 });
 
@@ -456,10 +471,10 @@ it("requires a matching acknowledgment for deletion-only updates", () => {
   encoding.writeVarUint(ack, 7);
   encoding.writeVarString(ack, "unrelated");
   ws.receive(encodeDocFrame(doc.docName, encoding.toUint8Array(ack)));
-  expect(realtimeMultiplexer.isOutboundPending(doc.docName)).toBe(true);
+  expect(isTransportPending(doc)).toBe(true);
   applyClientFramesToServer(ws, doc.docName, server);
   expect(server.getText("markdown").toString()).toBe("");
-  expect(realtimeMultiplexer.isOutboundPending(doc.docName)).toBe(false);
+  expect(isTransportPending(doc)).toBe(false);
   server.destroy();
 });
 
@@ -476,7 +491,7 @@ describe("generation change", () => {
     ws.receive(serverSyncStep2Frame(doc.docName, server, Y.encodeStateVector(doc.ydoc)));
     doc.ydoc.getText("markdown").insert(11, " my paragraph");
     applyClientFramesToServer(ws, doc.docName, server);
-    expect(realtimeMultiplexer.isOutboundPending(doc.docName)).toBe(false);
+    expect(isTransportPending(doc)).toBe(false);
 
     ws.receive(serverGenerationFrame(doc.docName, "H"));
     expect(onGenerationMismatch).toHaveBeenCalledTimes(1);
@@ -491,7 +506,7 @@ describe("generation change", () => {
       serverSynced: true,
       hydrationComplete: true,
       transportStatus: "connected",
-      outboundPending: realtimeMultiplexer.isOutboundPending(doc.docName),
+      checkpointPending: realtimeMultiplexer.getDocState(doc.docName).checkpointPending,
       readOnly: false,
       generationChanged: onGenerationMismatch.mock.calls.length > 0,
       denied: false,
@@ -511,7 +526,7 @@ describe("close codes", () => {
     doc.ydoc.getText("markdown").insert(0, "in flight");
     ws.serverClose(4410);
     expect(closeCodes).toEqual([4410]);
-    expect(realtimeMultiplexer.isOutboundPending(doc.docName)).toBe(true);
+    expect(isTransportPending(doc)).toBe(true);
     vi.advanceTimersByTime(60_000);
     expect(FakeWebSocket.instances).toHaveLength(1);
     expect(
@@ -520,7 +535,7 @@ describe("close codes", () => {
         serverSynced: true,
         hydrationComplete: true,
         transportStatus: "token_revoked",
-        outboundPending: false,
+        checkpointPending: false,
         readOnly: false,
         generationChanged: false,
         denied: false,
@@ -574,7 +589,7 @@ it("bounds invalid-token retries and explicit Retry restarts refresh", async () 
   await vi.advanceTimersByTimeAsync(120_000);
   expect(auth.refresh).toHaveBeenCalledTimes(5);
   expect(FakeWebSocket.instances).toHaveLength(1);
-  expect(realtimeMultiplexer.isOutboundPending(doc.docName)).toBe(true);
+  expect(isTransportPending(doc)).toBe(true);
   auth.refresh.mockResolvedValue("valid");
   realtimeMultiplexer.retryConnection();
   await vi.advanceTimersByTimeAsync(0);
@@ -615,7 +630,7 @@ it("keeps seed proposals separate from pending user updates and settles rejectio
   const id = decoding.readVarString(decoder);
   expect(decoding.readVarString(decoder)).toBe("lease-token");
   expect(decoding.readVarString(decoder)).toBe("base");
-  expect(realtimeMultiplexer.isOutboundPending(doc.docName)).toBe(false);
+  expect(isTransportPending(doc)).toBe(false);
   const rejection = encoding.createEncoder();
   encoding.writeVarUint(rejection, 9);
   encoding.writeVarString(rejection, id);
@@ -648,7 +663,7 @@ it("sends observer-generated projection in the same durable frame", () => {
   const source = doc.ydoc.getText("source");
   source.observe(() => doc.ydoc.getText("markdown").insert(0, "projected"));
   source.insert(0, "rich");
-  vi.advanceTimersByTime(250);
+  vi.advanceTimersByTime(50);
   const updates = ws.sent.filter((frame) => frame[peekVarString(frame).payloadOffset] === 6);
   expect(updates).toHaveLength(1);
   const server = new Y.Doc();
@@ -687,22 +702,22 @@ function acknowledgeFrame(ws: FakeWebSocket, frame: Uint8Array): Uint8Array {
   return update;
 }
 
-it("batches sustained typing without postponing the first deadline", () => {
+it("sends one frame per 50 ms window of sustained typing", () => {
   const doc = attachDoc("typing-batches");
   const ws = currentWs();
   ws.open();
   const server = new Y.Doc();
   for (let i = 0; i < 20; i++) {
     doc.ydoc.getText("markdown").insert(i, "x");
-    expect(realtimeMultiplexer.isOutboundPending(doc.docName)).toBe(true);
-    vi.advanceTimersByTime(50);
+    expect(isTransportPending(doc)).toBe(true);
+    vi.advanceTimersByTime(10);
     expect(durableFrames(ws, doc.docName)).toHaveLength(Math.floor((i + 1) / 5));
   }
   for (const frame of durableFrames(ws, doc.docName)) {
     Y.applyUpdate(server, acknowledgeFrame(ws, frame));
   }
   expect(server.getText("markdown").toString()).toBe("x".repeat(20));
-  expect(realtimeMultiplexer.isOutboundPending(doc.docName)).toBe(false);
+  expect(isTransportPending(doc)).toBe(false);
   server.destroy();
 });
 
@@ -712,17 +727,17 @@ it("keeps a buffered deletion pending when the preceding insertion is acknowledg
   ws.open();
   const text = doc.ydoc.getText("markdown");
   text.insert(0, "delete me");
-  vi.advanceTimersByTime(250);
+  vi.advanceTimersByTime(50);
   text.delete(0, text.length);
   const server = new Y.Doc();
   Y.applyUpdate(server, acknowledgeFrame(ws, durableFrames(ws, doc.docName)[0]));
-  expect(realtimeMultiplexer.isOutboundPending(doc.docName)).toBe(true);
-  vi.advanceTimersByTime(249);
+  expect(isTransportPending(doc)).toBe(true);
+  vi.advanceTimersByTime(49);
   expect(durableFrames(ws, doc.docName)).toHaveLength(1);
   vi.advanceTimersByTime(1);
   Y.applyUpdate(server, acknowledgeFrame(ws, durableFrames(ws, doc.docName)[1]));
   expect(server.getText("markdown").toString()).toBe("");
-  expect(realtimeMultiplexer.isOutboundPending(doc.docName)).toBe(false);
+  expect(isTransportPending(doc)).toBe(false);
   server.destroy();
 });
 
@@ -749,7 +764,7 @@ it.each(["permission", "generation"])("does not send a buffered batch after %s l
   else ws.receive(serverGenerationFrame(doc.docName, "new"));
   vi.advanceTimersByTime(500);
   expect(durableFrames(ws, doc.docName)).toHaveLength(0);
-  expect(realtimeMultiplexer.isOutboundPending(doc.docName)).toBe(true);
+  expect(isTransportPending(doc)).toBe(true);
   expect(doc.ydoc.getText("markdown").toString()).toBe("recover me");
 });
 
@@ -765,7 +780,7 @@ it("combines buffered edits with sync recovery without a later duplicate send", 
   vi.advanceTimersByTime(500);
   expect(durableFrames(ws, doc.docName)).toHaveLength(1);
   expect(server.getText("markdown").toString()).toBe("recover");
-  expect(realtimeMultiplexer.isOutboundPending(doc.docName)).toBe(false);
+  expect(isTransportPending(doc)).toBe(false);
   server.destroy();
 });
 
@@ -782,7 +797,7 @@ it("sends a large transaction separately instead of rejecting a combined oversiz
   applyClientFramesToServer(ws, doc.docName, server);
   expect(server.getText("first").length).toBe(32 * 1024);
   expect(server.getText("second").length).toBe(1024 * 1024 - 8192);
-  expect(realtimeMultiplexer.isOutboundPending(doc.docName)).toBe(false);
+  expect(isTransportPending(doc)).toBe(false);
   server.destroy();
 });
 
@@ -792,13 +807,299 @@ it("keeps a second document on its own batching deadline", () => {
   const ws = currentWs();
   ws.open();
   first.ydoc.getText("markdown").insert(0, "first");
-  vi.advanceTimersByTime(150);
+  vi.advanceTimersByTime(30);
   second.ydoc.getText("markdown").insert(0, "second");
-  vi.advanceTimersByTime(100);
+  vi.advanceTimersByTime(20);
   expect(durableFrames(ws, first.docName)).toHaveLength(1);
   expect(durableFrames(ws, second.docName)).toHaveLength(0);
-  vi.advanceTimersByTime(150);
+  vi.advanceTimersByTime(30);
   expect(durableFrames(ws, second.docName)).toHaveLength(1);
+});
+
+describe("checkpoint coverage", () => {
+  const GENERATION = "3f9c1a52-7d4e-4b8a-9c61-0e2f5d8b7a14";
+
+  function readDurable(frame: Uint8Array): { id: string; update: Uint8Array } {
+    const decoder = decoding.createDecoder(frame.subarray(peekVarString(frame).payloadOffset));
+    decoding.readVarUint(decoder);
+    decoding.readVarString(decoder);
+    const id = decoding.readVarString(decoder);
+    return { id, update: decoding.readVarUint8Array(decoder) };
+  }
+
+  function edit(doc: AttachedDoc, ws: FakeWebSocket, text: string) {
+    doc.ydoc.getText("markdown").insert(0, text);
+    vi.advanceTimersByTime(50);
+    return readDurable(durableFrames(ws, doc.docName).at(-1)!);
+  }
+
+  function durableIds(ws: FakeWebSocket, doc: AttachedDoc): string[] {
+    return durableFrames(ws, doc.docName).map((frame) => readDurable(frame).id);
+  }
+
+  function sessionState(doc: AttachedDoc, epoch: string, head: number, checkpoint: number) {
+    return encodeDocFrame(
+      doc.docName,
+      encodeSessionState({
+        generation: GENERATION,
+        epoch,
+        headSequence: head,
+        checkpointSequence: checkpoint,
+        checkpointRevision: 1,
+      }),
+    );
+  }
+
+  function receipt(doc: AttachedDoc, updateId: string, epoch: string, sequence: number) {
+    return encodeDocFrame(
+      doc.docName,
+      encodeAcceptedReceipt({
+        updateId,
+        generation: GENERATION,
+        epoch,
+        acceptedSequence: sequence,
+      }),
+    );
+  }
+
+  function progress(doc: AttachedDoc, epoch: string, covered: number) {
+    return encodeDocFrame(
+      doc.docName,
+      encodeCheckpointProgress({
+        generation: GENERATION,
+        epoch,
+        coveredSequence: covered,
+        checkpointRevision: covered + 1,
+      }),
+    );
+  }
+
+  function recordCoverage(doc: AttachedDoc): UpdateCoverageEvent[] {
+    const events: UpdateCoverageEvent[] = [];
+    realtimeMultiplexer.subscribeCoverage(doc.docName, (event) => events.push(event));
+    return events;
+  }
+
+  function pendingFlags(doc: AttachedDoc) {
+    const { transportPending, checkpointPending } = realtimeMultiplexer.getDocState(doc.docName);
+    return { transportPending, checkpointPending };
+  }
+
+  it.each(wireCorpus.sequences.map((sequence) => [sequence.name, sequence] as const))(
+    "ends %s with the corpus coverage",
+    (_, sequence) => {
+      const doc = attachDoc(`corpus-${sequence.name}`);
+      const events = recordCoverage(doc);
+      const ws = currentWs();
+      ws.open(GENERATION);
+      const ids = new Map<string, string>();
+      for (const step of sequence.steps) {
+        if ("local" in step) {
+          ids.set(step.local, edit(doc, ws, step.local).id);
+          continue;
+        }
+        const { type, fields, hex } = step.frame;
+        const updateId = fields.update_id;
+        const payload =
+          typeof updateId === "string"
+            ? encodeCorpusFrame(type, { ...fields, update_id: ids.get(updateId)! })
+            : fromHex(hex);
+        ws.receive(encodeDocFrame(doc.docName, payload));
+      }
+      const final = Object.fromEntries(
+        [...ids].map(([name, id]) => [
+          name,
+          events.filter((event) => event.updateId === id).at(-1)?.coverage,
+        ]),
+      );
+      expect(final).toEqual(sequence.coverage);
+      const expected = Object.values(sequence.coverage);
+      expect(pendingFlags(doc)).toEqual({
+        transportPending: expected.includes("local"),
+        checkpointPending: expected.some((coverage) => coverage !== "checkpointed"),
+      });
+    },
+  );
+
+  it("separates transport pending from checkpoint pending and tracks the oldest edit", () => {
+    vi.setSystemTime(1_000);
+    const doc = attachDoc("doc-state");
+    const ws = currentWs();
+    ws.open(GENERATION);
+    ws.receive(sessionState(doc, "E1", 0, 0));
+    const states: RealtimeDocState[] = [];
+    const unsubscribe = realtimeMultiplexer.subscribeDocState(doc.docName, (state) =>
+      states.push(state),
+    );
+    doc.ydoc.getText("markdown").insert(0, "typed");
+    expect(states.at(-1)).toEqual({
+      transportPending: true,
+      checkpointPending: true,
+      oldestUncheckpointedAt: 1_000,
+    });
+    vi.advanceTimersByTime(50);
+    const { id } = readDurable(durableFrames(ws, doc.docName).at(-1)!);
+
+    ws.receive(receipt(doc, id, "E1", 1));
+    expect(isTransportPending(doc)).toBe(false);
+    expect(pendingFlags(doc)).toEqual({ transportPending: false, checkpointPending: true });
+    expect(realtimeMultiplexer.getDocState(doc.docName).oldestUncheckpointedAt).toBe(1_000);
+    expect(hasUnsyncedEdits(null)).toBe(true);
+
+    ws.receive(progress(doc, "E1", 1));
+    expect(realtimeMultiplexer.getDocState(doc.docName)).toBe(states.at(-1));
+    expect(states.at(-1)).toMatchObject({
+      transportPending: false,
+      checkpointPending: false,
+      oldestUncheckpointedAt: null,
+    });
+    expect(hasUnsyncedEdits(null)).toBe(false);
+    unsubscribe();
+  });
+
+  it("reports every coverage transition of an update with its bytes and receipt", () => {
+    const doc = attachDoc("coverage-events");
+    const events = recordCoverage(doc);
+    const ws = currentWs();
+    ws.open(GENERATION);
+    ws.receive(sessionState(doc, "E1", 0, 0));
+    const { id, update } = edit(doc, ws, "tracked");
+    ws.receive(receipt(doc, id, "E1", 1));
+    ws.receive(progress(doc, "E1", 1));
+    expect(events).toEqual([
+      { updateId: id, coverage: "local", editedAt: expect.any(Number), update },
+      {
+        updateId: id,
+        coverage: "accepted",
+        editedAt: expect.any(Number),
+        receipt: { generation: GENERATION, epoch: "E1", sequence: 1 },
+      },
+      { updateId: id, coverage: "checkpointed", editedAt: expect.any(Number) },
+    ]);
+  });
+
+  it("checkpoints an accepted update on a committed message", () => {
+    const doc = attachDoc("committed");
+    const ws = currentWs();
+    ws.open(GENERATION);
+    ws.receive(sessionState(doc, "E1", 0, 0));
+    const { id } = edit(doc, ws, "seeded");
+    ws.receive(receipt(doc, id, "E1", 1));
+    expect(pendingFlags(doc)).toEqual({ transportPending: false, checkpointPending: true });
+    ws.receive(encodeDocFrame(doc.docName, encodeCommitted(id)));
+    expect(pendingFlags(doc)).toEqual({ transportPending: false, checkpointPending: false });
+  });
+
+  it("retains a delete-only update until a checkpoint covers it", () => {
+    const doc = attachDoc("delete-only");
+    const ws = currentWs();
+    ws.open(GENERATION);
+    ws.receive(sessionState(doc, "E1", 0, 0));
+    const inserted = edit(doc, ws, "delete me");
+    ws.receive(receipt(doc, inserted.id, "E1", 1));
+    ws.receive(progress(doc, "E1", 1));
+    const server = new Y.Doc();
+    Y.applyUpdate(server, inserted.update);
+
+    const vector = Y.encodeStateVector(doc.ydoc);
+    doc.ydoc.getText("markdown").delete(0, "delete me".length);
+    vi.advanceTimersByTime(50);
+    expect(Y.encodeStateVector(doc.ydoc)).toEqual(vector);
+    const deletion = readDurable(durableFrames(ws, doc.docName).at(-1)!);
+    ws.receive(receipt(doc, deletion.id, "E1", 2));
+    expect(pendingFlags(doc)).toEqual({ transportPending: false, checkpointPending: true });
+
+    ws.receive(sessionState(doc, "E2", 0, 0));
+    const replay = readDurable(durableFrames(ws, doc.docName).at(-1)!);
+    expect(replay).toEqual(deletion);
+    Y.applyUpdate(server, replay.update);
+    expect(server.getText("markdown").toString()).toBe("");
+
+    ws.receive(receipt(doc, deletion.id, "E2", 1));
+    ws.receive(progress(doc, "E2", 1));
+    expect(pendingFlags(doc)).toEqual({ transportPending: false, checkpointPending: false });
+    const sent = durableFrames(ws, doc.docName).length;
+    ws.receive(sessionState(doc, "E3", 0, 0));
+    expect(durableFrames(ws, doc.docName)).toHaveLength(sent);
+    server.destroy();
+  });
+
+  it("resends only local updates on reconnect and keeps accepted ones the server still holds", () => {
+    const doc = attachDoc("reconnect-local");
+    const ws = currentWs();
+    ws.open(GENERATION);
+    ws.receive(sessionState(doc, "E1", 0, 0));
+    const accepted = edit(doc, ws, "accepted");
+    ws.receive(receipt(doc, accepted.id, "E1", 1));
+    const local = edit(doc, ws, "local");
+    ws.serverClose(1006);
+    window.dispatchEvent(new Event("online"));
+    const replacement = currentWs();
+    expect(replacement).not.toBe(ws);
+    replacement.open(GENERATION);
+    expect(durableIds(replacement, doc)).toEqual([local.id]);
+    replacement.receive(sessionState(doc, "E1", 1, 0));
+    expect(durableIds(replacement, doc)).toEqual([local.id]);
+    expect(pendingFlags(doc)).toEqual({ transportPending: true, checkpointPending: true });
+  });
+
+  it("replays accepted updates under their original ids after the epoch changes", () => {
+    const doc = attachDoc("epoch-replay");
+    const events = recordCoverage(doc);
+    const ws = currentWs();
+    ws.open(GENERATION);
+    ws.receive(sessionState(doc, "E1", 0, 0));
+    const first = edit(doc, ws, "first");
+    const second = edit(doc, ws, "second");
+    ws.receive(receipt(doc, first.id, "E1", 1));
+    ws.receive(receipt(doc, second.id, "E1", 2));
+    const before = durableFrames(ws, doc.docName).length;
+
+    ws.receive(sessionState(doc, "E2", 0, 0));
+    const replays = durableFrames(ws, doc.docName).slice(before).map(readDurable);
+    expect(replays).toEqual([first, second]);
+    expect(events.slice(-2)).toEqual([
+      { updateId: first.id, coverage: "local", editedAt: expect.any(Number), update: first.update },
+      {
+        updateId: second.id,
+        coverage: "local",
+        editedAt: expect.any(Number),
+        update: second.update,
+      },
+    ]);
+
+    ws.receive(receipt(doc, first.id, "E2", 1));
+    ws.receive(receipt(doc, second.id, "E2", 2));
+    ws.receive(progress(doc, "E2", 2));
+    expect(pendingFlags(doc)).toEqual({ transportPending: false, checkpointPending: false });
+  });
+
+  it("resends a write still awaiting its receipt when the epoch changes on a live socket", () => {
+    const doc = attachDoc("epoch-in-flight");
+    const ws = currentWs();
+    ws.open(GENERATION);
+    ws.receive(sessionState(doc, "E1", 0, 0));
+    const inFlight = edit(doc, ws, "sent before the reset");
+    expect(durableIds(ws, doc)).toEqual([inFlight.id]);
+
+    ws.receive(sessionState(doc, "E2", 0, 0));
+    expect(durableFrames(ws, doc.docName).map(readDurable)).toEqual([inFlight, inFlight]);
+    ws.receive(receipt(doc, inFlight.id, "E1", 1));
+    expect(pendingFlags(doc)).toEqual({ transportPending: true, checkpointPending: true });
+    ws.receive(receipt(doc, inFlight.id, "E2", 1));
+    ws.receive(progress(doc, "E2", 1));
+    expect(pendingFlags(doc)).toEqual({ transportPending: false, checkpointPending: false });
+  });
+
+  it("does not resend writes in flight when session state keeps the epoch", () => {
+    const doc = attachDoc("epoch-kept");
+    const ws = currentWs();
+    ws.open(GENERATION);
+    ws.receive(sessionState(doc, "E1", 0, 0));
+    const inFlight = edit(doc, ws, "sent once");
+    ws.receive(sessionState(doc, "E1", 0, 0));
+    expect(durableIds(ws, doc)).toEqual([inFlight.id]);
+  });
 });
 
 // Auth revocation retires the shared multiplexer used by the preceding tests.

@@ -1,5 +1,5 @@
-// Docs closed with local edits the server has not acknowledged. The drain replays them from
-// IndexedDB on the next connection, whichever editor is open then.
+// Docs closed with own edits no checkpoint covers yet. The drain replays them from IndexedDB
+// and keeps the entry until a checkpoint does, whichever editor is open then.
 
 import { docNameFor } from "@/features/realtime/docNames";
 
@@ -10,7 +10,7 @@ export interface PendingDoc {
   contentId: string;
   organizationId: string;
   userId: string;
-  /** Mirrors the session's `discardLocalOnCleanClose`: drop the rows once the server holds them. */
+  /** Mirrors the session's `discardLocalOnCleanClose`: drop the rows once a checkpoint holds them. */
   discardOnClean: boolean;
 }
 
@@ -73,12 +73,32 @@ export function hasPendingDocs(userId: string): boolean {
   return listPendingDocs().some((entry) => entry.userId === userId);
 }
 
+// Every stored write re-records its doc; an unchanged entry must not wake the drain again.
 export function recordPendingDoc(entry: PendingDoc): void {
   const docName = docNameFor(entry.contentType, entry.contentId);
-  const rest = listPendingDocs().filter(
-    (existing) => docNameFor(existing.contentType, existing.contentId) !== docName,
+  const current = listPendingDocs();
+  const existing = current.find(
+    (candidate) => docNameFor(candidate.contentType, candidate.contentId) === docName,
   );
-  write([...rest, entry]);
+  if (
+    existing &&
+    existing.organizationId === entry.organizationId &&
+    existing.userId === entry.userId &&
+    existing.discardOnClean === entry.discardOnClean
+  )
+    return;
+  write([...current.filter((candidate) => candidate !== existing), entry]);
+}
+
+/** Records the doc and wakes the drain even when it was recorded already: its editor just closed. */
+export function handOffPendingDoc(entry: PendingDoc): void {
+  const docName = docNameFor(entry.contentType, entry.contentId);
+  write([
+    ...listPendingDocs().filter(
+      (candidate) => docNameFor(candidate.contentType, candidate.contentId) !== docName,
+    ),
+    entry,
+  ]);
 }
 
 export function clearPendingDoc(contentType: string, contentId: string): void {

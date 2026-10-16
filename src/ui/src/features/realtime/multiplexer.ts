@@ -16,19 +16,39 @@ import { getStoreRef } from "@/app/storeRef";
 import { readStoredAuth } from "@/features/auth/store/credentialStorage";
 import { getAccessToken, refreshAccessToken } from "@/config/api";
 import { encodeDocFrame, peekVarString } from "@/features/realtime/multiplex";
-import { REMOTE_ORIGIN } from "@/features/realtime/persistence/encryptedYjsPersistence";
+import {
+  REMOTE_ORIGIN,
+  linkRecovery,
+} from "@/features/realtime/persistence/encryptedYjsPersistence";
 import {
   AUTH_REFRESHED_EVENT,
   AUTH_REVOKED_EVENT,
   CANONICAL_SUBPROTOCOL,
+  MESSAGE_ACCEPTED_RECEIPT,
+  MESSAGE_COMMITTED,
+  MESSAGE_CHECKPOINT_PROGRESS,
+  MESSAGE_DURABLE_UPDATE,
+  MESSAGE_GENERATION,
+  MESSAGE_SESSION_STATE,
   WS_CLOSE_FORBIDDEN,
   WS_CLOSE_NORMAL,
   WS_CLOSE_REAUTH_REQUIRED,
   WS_CLOSE_UNAUTHENTICATED,
   WS_CLOSE_TOKEN_REVOKED,
+  decodeAcceptedReceipt,
+  decodeCommitted,
+  decodeCheckpointProgress,
+  decodeGeneration,
+  decodeSessionState,
   type RealtimeStatus,
 } from "@/features/realtime/protocol";
 import { docNameFor } from "@/features/realtime/docNames";
+import { docGeneration } from "@/features/realtime/docGeneration";
+import {
+  UpdateCoverage,
+  type CoverageTransition,
+  type ReceiptIdentity,
+} from "@/features/realtime/updateCoverage";
 
 // y-protocols message-type constants - upstream exposes them only as numeric literals.
 const MESSAGE_SYNC = 0;
@@ -44,9 +64,11 @@ const RECONNECT_MAX_MS = 15_000;
 const RECONNECT_MULTIPLIER = 1.5;
 const RESYNC_INTERVAL_MS = 30_000;
 const IDLE_CLOSE_MS = 30_000;
-const UPDATE_BATCH_MS = 250;
+const UPDATE_BATCH_MS = 50;
 const UPDATE_BATCH_BYTES = 64 * 1024;
 const MAX_UPDATE_BYTES = 1024 * 1024 - 4096;
+// Bounds what a reconnect would retransmit. Accepted bytes wait for a checkpoint, not the socket.
+const MAX_LOCAL_BYTES = 8 * 1024 * 1024;
 // y-protocols/awareness GCs peer entries after `outdatedTimeout` (30s);
 // without periodic keep-alive, peer cursors vanish on typing pauses.
 const AWARENESS_KEEPALIVE_MS = 15_000;
@@ -87,6 +109,36 @@ export type FragmentSeeder = Pick<
   "isFragmentSeeder" | "subscribeFragmentSeeder" | "submitSeed" | "setSeedCapability"
 >;
 
+/** Save progress of one attached document's own edits. Replaced, never mutated, on change. */
+export interface RealtimeDocState {
+  /** Some own edit is buffered, unsent or lacks a server receipt. */
+  transportPending: boolean;
+  /** Some own edit is not yet in a PostgreSQL checkpoint. Implies nothing about the socket. */
+  checkpointPending: boolean;
+  /** Epoch milliseconds of the oldest own edit not yet checkpointed. */
+  oldestUncheckpointedAt: number | null;
+}
+
+/** One own update changed coverage. `local` carries the bytes a retry or recovery replays. */
+export type UpdateCoverageEvent =
+  | { updateId: string; coverage: "local"; editedAt: number; update: Uint8Array }
+  | { updateId: string; coverage: "accepted"; editedAt: number; receipt: ReceiptIdentity }
+  | { updateId: string; coverage: "checkpointed"; editedAt: number };
+
+/** An uncheckpointed update kept by local recovery, handed back after a restart. */
+export interface RetainedUpdate {
+  updateId: string;
+  update: Uint8Array;
+  editedAt: number;
+  receipt: ReceiptIdentity | null;
+}
+
+const DETACHED_DOC_STATE: RealtimeDocState = Object.freeze({
+  transportPending: false,
+  checkpointPending: false,
+  oldestUncheckpointedAt: null,
+});
+
 interface DocEntry {
   localBatch: Uint8Array[];
   localBatchBytes: number;
@@ -108,17 +160,49 @@ interface DocEntry {
   // Read-only documents retain local drafts but suppress write frames.
   readOnly: boolean;
   denied: boolean;
+  // Null until this socket hears message 5; gates every write.
   generation: string | null;
   updateCounter: number;
-  unacknowledged: Map<string, Uint8Array>;
-  // Local edits remain pending until PostgreSQL commit is acknowledged.
-  pendingLocalFrames: boolean;
+  // Raw bytes per own update id until a checkpoint covers it, delete-only updates included.
+  retained: Map<string, Uint8Array>;
+  coverage: UpdateCoverage;
+  // First buffered edit that has no update id yet.
+  unsentSince: number | null;
+  state: RealtimeDocState;
+  unlinkRecovery: () => void;
   updateHandler: (update: Uint8Array, origin: unknown) => void;
   awarenessHandler: (
     changes: { added: number[]; updated: number[]; removed: number[] },
     origin: unknown,
   ) => void;
   options: MultiplexerAttachOptions;
+}
+
+function addListener<T>(
+  registry: Map<string, Set<(value: T) => void>>,
+  docName: string,
+  listener: (value: T) => void,
+): () => void {
+  let set = registry.get(docName);
+  if (!set) {
+    set = new Set();
+    registry.set(docName, set);
+  }
+  set.add(listener);
+  return () => {
+    set.delete(listener);
+    if (set.size === 0) registry.delete(docName);
+  };
+}
+
+// A malformed frame changes nothing; the socket stays up for the other documents.
+function decodeFrame<T>(payload: Uint8Array, decode: (frame: Uint8Array) => T): T | null {
+  try {
+    return decode(payload);
+  } catch (err) {
+    console.warn("[realtime] malformed frame", err);
+    return null;
+  }
 }
 
 class RealtimeMultiplexer {
@@ -131,8 +215,8 @@ class RealtimeMultiplexer {
   private resyncTimer: ReturnType<typeof setInterval> | null = null;
   private idleCloseTimer: ReturnType<typeof setTimeout> | null = null;
   private awarenessKeepaliveTimer: ReturnType<typeof setInterval> | null = null;
-  private outboundDrainTimer: ReturnType<typeof setInterval> | null = null;
-  private outboundListeners = new Map<string, Set<(pending: boolean) => void>>();
+  private stateListeners = new Map<string, Set<(state: RealtimeDocState) => void>>();
+  private coverageListeners = new Map<string, Set<(event: UpdateCoverageEvent) => void>>();
   private refreshRequired = false;
   private refreshing = false;
   private authAttempts = 0;
@@ -163,6 +247,7 @@ class RealtimeMultiplexer {
           entry.flushBatch();
           entry.localBatch = transaction;
           entry.localBatchBytes = transaction.reduce((sum, update) => sum + update.length, 0);
+          entry.unsentSince = Date.now();
         }
         if (entry.localBatchBytes >= UPDATE_BATCH_BYTES || document.visibilityState === "hidden") {
           entry.flushBatch();
@@ -176,11 +261,7 @@ class RealtimeMultiplexer {
         if (entry.batchTimer !== null) clearTimeout(entry.batchTimer);
         entry.batchTimer = null;
         if (!entry.localBatch.length) return;
-        const updates = entry.localBatch;
-        entry.localBatch = [];
-        entry.localBatchBytes = 0;
-        entry.batchBoundary = 0;
-        this.queueUpdate(entry, Y.mergeUpdates(updates));
+        this.queueUpdate(entry, Y.mergeUpdates(this.takeBatch(entry)), this.takeUnsentSince(entry));
       },
       docName,
       ydoc: opts.ydoc,
@@ -195,21 +276,24 @@ class RealtimeMultiplexer {
       denied: false,
       generation: null,
       updateCounter: 0,
-      unacknowledged: new Map(),
-      pendingLocalFrames: false,
+      retained: new Map(),
+      coverage: new UpdateCoverage(),
+      unsentSince: null,
+      state: DETACHED_DOC_STATE,
+      unlinkRecovery: () => {},
       updateHandler: (update, origin) => {
         // Skip echoes of frames we just applied from the wire.
         if (origin === REMOTE_ORIGIN) return;
         if (entry.rejected || entry.denied) {
-          this.setOutboundPending(entry, true);
-          this.queueUpdate(entry, update);
+          this.queueUpdate(entry, update, Date.now());
           return;
         }
         // Read-only docs never push state. IDB hydration replays of
         // server-known content would otherwise leave as write frames.
         entry.localBatch.push(update);
         entry.localBatchBytes += update.length;
-        this.setOutboundPending(entry, true);
+        entry.unsentSince ??= Date.now();
+        if (!entry.state.transportPending) this.publishState(entry);
       },
       awarenessHandler: (changes, origin) => {
         if (origin === "remote") return;
@@ -226,6 +310,13 @@ class RealtimeMultiplexer {
     opts.ydoc.on("afterAllTransactions", entry.scheduleBatch);
     opts.awareness.on("change", entry.awarenessHandler);
     this.docs.set(docName, entry);
+    // Local recovery keeps every update until a checkpoint covers it and hands back what an
+    // earlier session of this doc left unconfirmed.
+    entry.unlinkRecovery = linkRecovery(docName, {
+      subscribeCoverage: (listener) => this.subscribeCoverage(docName, listener),
+      restorePending: (updates) => this.restorePending(entry, updates),
+      isCheckpointPending: () => entry.state.checkpointPending,
+    });
     this.cancelIdleClose();
     this.openIfNeeded(opts.contentType, opts.contentId);
 
@@ -280,6 +371,7 @@ class RealtimeMultiplexer {
       this.sendForDoc(docName, encoding.toUint8Array(enc));
     }
     for (const settle of entry.seedRequests.values()) settle(false);
+    entry.unlinkRecovery();
     this.docs.delete(docName);
     entry.seederListeners.clear();
     if (this.docs.size === 0) this.scheduleIdleClose();
@@ -396,7 +488,6 @@ class RealtimeMultiplexer {
     this.wsConnecting = false;
     this.stopResyncTimer();
     this.stopAwarenessKeepaliveTimer();
-    this.stopOutboundDrainPoll();
     for (const entry of this.docs.values()) {
       for (const settle of entry.seedRequests.values()) settle(false);
       this.setFragmentSeeder(entry, false);
@@ -561,26 +652,42 @@ class RealtimeMultiplexer {
 
     const decoder = decoding.createDecoder(payload);
     const messageType = decoding.readVarUint(decoder);
-    if (messageType === 5) {
-      const generation = decoding.readVarString(decoder);
-      const local = entry.ydoc.getMap("doc_meta").get("generation");
-      if (typeof local === "string" && local !== generation) {
+    if (messageType === MESSAGE_GENERATION) {
+      const generation = decodeFrame(payload, decodeGeneration);
+      if (generation === null) return;
+      const local = docGeneration(entry.ydoc);
+      if (local !== null && local !== generation) {
         entry.denied = true;
         entry.options.onGenerationMismatch?.();
         return;
       }
       const reconnecting = entry.generation === null;
       entry.generation = generation;
-      if (reconnecting)
-        for (const [id, update] of entry.unacknowledged) this.sendDurableUpdate(entry, id, update);
-    } else if (messageType === 7) {
-      const id = decoding.readVarString(decoder);
+      // Accepted updates wait for session state to prove or refute their presence.
+      if (reconnecting) for (const id of entry.coverage.localIds()) this.sendRetained(entry, id);
+      this.publishState(entry);
+    } else if (messageType === MESSAGE_COMMITTED) {
+      const id = decodeFrame(payload, decodeCommitted);
+      if (id === null) return;
       entry.seedRequests.get(id)?.(true);
-      entry.unacknowledged.delete(id);
-      this.setOutboundPending(
-        entry,
-        entry.rejected || entry.unacknowledged.size > 0 || entry.localBatch.length > 0,
-      );
+      this.applyCoverage(entry, entry.coverage.applyCommitted(id));
+    } else if (messageType === MESSAGE_ACCEPTED_RECEIPT) {
+      const receipt = decodeFrame(payload, decodeAcceptedReceipt);
+      if (receipt) this.applyCoverage(entry, entry.coverage.applyReceipt(receipt));
+    } else if (messageType === MESSAGE_CHECKPOINT_PROGRESS) {
+      const progress = decodeFrame(payload, decodeCheckpointProgress);
+      if (progress) this.applyCoverage(entry, entry.coverage.applyProgress(progress));
+    } else if (messageType === MESSAGE_SESSION_STATE) {
+      const state = decodeFrame(payload, decodeSessionState);
+      // Message 5 owns generation changes; state for another generation proves nothing here.
+      if (!state || state.generation !== entry.generation) return;
+      const previousEpoch = entry.coverage.epoch;
+      const inFlight = entry.coverage.localIds();
+      this.applyCoverage(entry, entry.coverage.applySessionState(state));
+      // A receipt for a write sent before the reset would carry the retired epoch and be ignored,
+      // so writes still in flight go out again; the server deduplicates by id.
+      if (previousEpoch !== null && previousEpoch !== state.epoch)
+        for (const id of inFlight) this.sendRetained(entry, id);
     } else if (messageType === 9) {
       entry.seedRequests.get(decoding.readVarString(decoder))?.(false);
     } else if (messageType === MESSAGE_SYNC) {
@@ -689,62 +796,110 @@ class RealtimeMultiplexer {
     const update = decoding.readVarUint8Array(decoder);
     if (entry.batchTimer !== null) clearTimeout(entry.batchTimer);
     entry.batchTimer = null;
+    const updates = this.takeBatch(entry);
+    this.queueUpdate(entry, Y.mergeUpdates([...updates, update]), this.takeUnsentSince(entry));
+  }
+
+  private takeBatch(entry: DocEntry): Uint8Array[] {
     const updates = entry.localBatch;
     entry.localBatch = [];
     entry.localBatchBytes = 0;
     entry.batchBoundary = 0;
-    this.queueUpdate(entry, Y.mergeUpdates([...updates, update]));
+    return updates;
+  }
+
+  private takeUnsentSince(entry: DocEntry): number {
+    const since = entry.unsentSince ?? Date.now();
+    entry.unsentSince = null;
+    return since;
   }
 
   private rejectOversized(entry: DocEntry): void {
-    if (entry.rejected) return;
-    entry.rejected = true;
-    this.setFragmentSeeder(entry, false);
-    entry.readOnly = true;
-    entry.options.onWriteDenied?.("update too large", false);
-    entry.options.onStatus?.("update_rejected");
+    if (!entry.rejected) {
+      entry.rejected = true;
+      this.setFragmentSeeder(entry, false);
+      entry.readOnly = true;
+      entry.options.onWriteDenied?.("update too large", false);
+      entry.options.onStatus?.("update_rejected");
+    }
+    this.publishState(entry);
   }
 
-  private queueUpdate(entry: DocEntry, update: Uint8Array): void {
-    if (entry.rejected) return;
-    const queuedBytes = [...entry.unacknowledged.values()].reduce(
-      (sum, item) => sum + item.length,
-      0,
-    );
-    if (update.length > MAX_UPDATE_BYTES || queuedBytes + update.length > 8 * 1024 * 1024) {
-      this.setOutboundPending(entry, true);
+  private queueUpdate(entry: DocEntry, update: Uint8Array, editedAt: number): void {
+    let localBytes = update.length;
+    for (const id of entry.coverage.localIds()) localBytes += entry.retained.get(id)?.length ?? 0;
+    if (entry.rejected || update.length > MAX_UPDATE_BYTES || localBytes > MAX_LOCAL_BYTES) {
+      // The edit stays in the Y.Doc and local recovery; transport drops it.
+      entry.unsentSince = Math.min(entry.unsentSince ?? editedAt, editedAt);
       this.rejectOversized(entry);
       return;
     }
     const id = entry.ydoc.guid + ":" + ++entry.updateCounter;
-    entry.unacknowledged.set(id, update);
-    this.setOutboundPending(entry, true);
-    this.sendDurableUpdate(entry, id, update);
+    entry.retained.set(id, update);
+    this.applyCoverage(entry, entry.coverage.add(id, editedAt));
+  }
+
+  private restorePending(entry: DocEntry, updates: readonly RetainedUpdate[]): void {
+    for (const { updateId, update, editedAt, receipt } of updates) {
+      if (entry.retained.has(updateId)) continue;
+      entry.retained.set(updateId, update);
+      this.applyCoverage(entry, entry.coverage.add(updateId, editedAt, receipt));
+    }
+  }
+
+  // Every update that becomes local is sent: new edits, restored ones, and accepted ones whose
+  // presence the server can no longer prove. Replays keep the original id.
+  private applyCoverage(entry: DocEntry, transitions: CoverageTransition[]): void {
+    const listeners = this.coverageListeners.get(entry.docName) ?? [];
+    for (const transition of transitions) {
+      const update = entry.retained.get(transition.updateId);
+      if (transition.coverage === "checkpointed") entry.retained.delete(transition.updateId);
+      if (transition.coverage !== "local") {
+        for (const listener of listeners) listener(transition);
+      } else if (update) {
+        for (const listener of listeners) listener({ ...transition, update });
+        this.sendDurableUpdate(entry, transition.updateId, update);
+      }
+    }
+    this.publishState(entry);
+  }
+
+  private sendRetained(entry: DocEntry, id: string): void {
+    const update = entry.retained.get(id);
+    if (update) this.sendDurableUpdate(entry, id, update);
   }
 
   private sendDurableUpdate(entry: DocEntry, id: string, update: Uint8Array): void {
     if (entry.generation === null || entry.readOnly || entry.rejected) return;
     const encoder = encoding.createEncoder();
-    encoding.writeVarUint(encoder, 6);
+    encoding.writeVarUint(encoder, MESSAGE_DURABLE_UPDATE);
     encoding.writeVarString(encoder, entry.generation);
     encoding.writeVarString(encoder, id);
     encoding.writeVarUint8Array(encoder, update);
     this.sendForDoc(entry.docName, encoding.toUint8Array(encoder));
   }
 
-  private setOutboundPending(entry: DocEntry, pending: boolean): void {
-    if (entry.pendingLocalFrames === pending) return;
-    entry.pendingLocalFrames = pending;
-    const listeners = this.outboundListeners.get(entry.docName);
-    if (!listeners) return;
-    for (const listener of listeners) listener(pending);
-  }
-
-  private stopOutboundDrainPoll(): void {
-    if (this.outboundDrainTimer) {
-      clearInterval(this.outboundDrainTimer);
-      this.outboundDrainTimer = null;
-    }
+  private publishState(entry: DocEntry): void {
+    const coverage = entry.coverage.summary();
+    const unsent = entry.rejected || entry.localBatch.length > 0;
+    const transportPending = unsent || coverage.transportPending;
+    const oldest = [entry.unsentSince, coverage.oldestUncheckpointedAt].filter(
+      (time): time is number => time !== null,
+    );
+    const next: RealtimeDocState = {
+      transportPending,
+      checkpointPending: transportPending || coverage.checkpointPending,
+      oldestUncheckpointedAt: oldest.length ? Math.min(...oldest) : null,
+    };
+    const previous = entry.state;
+    if (
+      previous.transportPending === next.transportPending &&
+      previous.checkpointPending === next.checkpointPending &&
+      previous.oldestUncheckpointedAt === next.oldestUncheckpointedAt
+    )
+      return;
+    entry.state = Object.freeze(next);
+    for (const listener of this.stateListeners.get(entry.docName) ?? []) listener(entry.state);
   }
 
   /** VIEWER handles are flagged after attach so no SYNC write frame ever leaves. */
@@ -754,14 +909,15 @@ class RealtimeMultiplexer {
     entry.readOnly = readOnly;
   }
 
-  isOutboundPending(docName: string): boolean {
-    return this.docs.get(docName)?.pendingLocalFrames ?? false;
+  /** Stable snapshot for `useSyncExternalStore`; a detached doc reports nothing pending. */
+  getDocState(docName: string): RealtimeDocState {
+    return this.docs.get(docName)?.state ?? DETACHED_DOC_STATE;
   }
 
-  /** Any editable attached doc still waiting for a durable acknowledgment. */
-  hasOutboundPending(): boolean {
+  /** Any editable attached doc with an own edit no checkpoint covers yet. */
+  hasCheckpointPending(): boolean {
     for (const entry of this.docs.values()) {
-      if (entry.pendingLocalFrames && !entry.readOnly) return true;
+      if (entry.state.checkpointPending && !entry.readOnly) return true;
     }
     return false;
   }
@@ -774,17 +930,13 @@ class RealtimeMultiplexer {
     return this.docs.has(docName);
   }
 
-  subscribeOutboundPending(docName: string, listener: (pending: boolean) => void): () => void {
-    let set = this.outboundListeners.get(docName);
-    if (!set) {
-      set = new Set();
-      this.outboundListeners.set(docName, set);
-    }
-    set.add(listener);
-    return () => {
-      set.delete(listener);
-      if (set.size === 0) this.outboundListeners.delete(docName);
-    };
+  subscribeDocState(docName: string, listener: (state: RealtimeDocState) => void): () => void {
+    return addListener(this.stateListeners, docName, listener);
+  }
+
+  /** Fires on every coverage transition of an own update, before the doc state changes. */
+  subscribeCoverage(docName: string, listener: (event: UpdateCoverageEvent) => void): () => void {
+    return addListener(this.coverageListeners, docName, listener);
   }
 
   private sendForDoc(docName: string, payload: Uint8Array): void {
@@ -919,6 +1071,7 @@ class RealtimeMultiplexer {
       entry.ydoc.off("update", entry.updateHandler);
       entry.ydoc.off("afterAllTransactions", entry.scheduleBatch);
       entry.awareness.off("change", entry.awarenessHandler);
+      entry.unlinkRecovery();
     }
     this.docs.clear();
   };

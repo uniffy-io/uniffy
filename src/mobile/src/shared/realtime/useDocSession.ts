@@ -1,41 +1,18 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import * as Y from "yjs";
-import { Awareness } from "y-protocols/awareness";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useAuth } from "@core/providers/AuthContext";
 import {
-  realtimeMultiplexer,
-  REMOTE_ORIGIN,
-  type DocSubscription,
-} from "@shared/realtime/multiplexer";
-import { abortMobileDrain } from "@shared/realtime/drain";
-import { statusFromCloseCode, type RealtimeStatus } from "@shared/realtime/protocol";
-import {
-  saveDraft,
-  restoreDraft,
-  readStoredDrafts,
-  discardDraft,
-  discardGeneration,
-  type MobileRecoveredDraft,
-} from "@shared/realtime/draftStorage";
+  DETACHED_SESSION_SNAPSHOT,
+  openDocSession,
+  type DocSession,
+  type DocSessionHandle,
+  type DocSessionSnapshot,
+} from "@shared/realtime/docSession";
 
-/** Stable per-attach handle; identity never changes while the doc stays attached. */
-export interface DocSession {
-  ydoc: Y.Doc;
-  awareness: Awareness;
-  /** Origin tag for this mount's local transactions. */
-  sessionId: string;
-  /** Resolves on the first server SyncStep2 for this doc. */
-  whenSynced: Promise<void>;
-  initialDrafts: Promise<MobileRecoveredDraft[]>;
-  storageKey: string;
-}
-
-export interface DocSessionState {
+export interface DocSessionState extends DocSessionSnapshot {
   session: DocSession | null;
-  status: RealtimeStatus;
-  synced: boolean;
-  recoveredDrafts: MobileRecoveredDraft[];
   discardRecoveredDraft: (id: string) => Promise<void>;
+  trackDraftWrite: (write: Promise<void>) => Promise<boolean>;
+  persistLocally: () => Promise<boolean>;
 }
 
 export interface UseDocSessionOptions {
@@ -53,21 +30,16 @@ export interface UseDocSessionOptions {
   onBeforeDetach?: () => void;
 }
 
-// Uniqueness per mount is all an origin tag needs; Hermes lacks crypto.randomUUID.
-function newSessionId(): string {
-  return `rt-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
-}
+const subscribeDetached = () => () => {};
+const detachedSnapshot = () => DETACHED_SESSION_SNAPSHOT;
 
 export function useDocSession(opts: UseDocSessionOptions): DocSessionState {
   const { contentType, contentId, enabled, readOnly } = opts;
   const { organizationId, user } = useAuth();
   const userId = user?.id;
 
-  const [session, setSession] = useState<DocSession | null>(null);
-  const [status, setStatus] = useState<RealtimeStatus>("idle");
-  const [synced, setSynced] = useState(false);
+  const [handle, setHandle] = useState<DocSessionHandle | null>(null);
   const [reset, setReset] = useState(0);
-  const [recoveredDrafts, setRecoveredDrafts] = useState<MobileRecoveredDraft[]>([]);
 
   const beforeDetachRef = useRef(opts.onBeforeDetach);
   useEffect(() => {
@@ -76,134 +48,56 @@ export function useDocSession(opts: UseDocSessionOptions): DocSessionState {
 
   useEffect(() => {
     if (!enabled || !contentId || !organizationId || !userId) return;
-
-    abortMobileDrain(`${contentType}:${contentId}`);
-    const ydoc = new Y.Doc();
-    const awareness = new Awareness(ydoc);
-    const sessionId = newSessionId();
-    const storageKey = `realtime.${userId}.${organizationId}.${contentType}.${contentId}`;
-    let disposed = false;
-    let dirty = false;
-    let serverSynced = false;
-    let transportStatus: RealtimeStatus = "idle";
-    let denied = false;
-    const initialDrafts = readStoredDrafts(storageKey);
-    void initialDrafts
-      .then((drafts) => {
-        if (!disposed) setRecoveredDrafts(drafts);
-      })
-      .catch((error) => console.warn("[realtime] draft recovery failed", error));
-    const persist = (_update: Uint8Array, origin: unknown) => {
-      if (origin !== REMOTE_ORIGIN && !readOnly && ydoc.getMap("doc_meta").get("generation")) {
-        dirty = true;
-        void saveDraft(storageKey, ydoc);
-      }
-    };
-    ydoc.on("update", persist);
-
-    let resolveServerSync!: () => void;
-    const whenSynced = new Promise<void>((resolve) => {
-      resolveServerSync = resolve;
+    const opened = openDocSession({
+      contentType,
+      contentId,
+      organizationId,
+      userId,
+      readOnly,
+      onGenerationMismatch: () => setReset((value) => value + 1),
     });
-
-    let subscription: DocSubscription;
-    try {
-      subscription = realtimeMultiplexer.attach({
-        contentType,
-        contentId,
-        organizationId,
-        ydoc,
-        awareness,
-        onStatus: (next) => {
-          transportStatus = next;
-          setStatus(next);
-        },
-        onWriteDenied: (reason, noView) => {
-          denied = true;
-          setStatus(
-            reason.includes("too large")
-              ? "update_rejected"
-              : noView
-                ? "access_lost"
-                : "permission_lost",
-          );
-        },
-        onSync: () =>
-          void (
-            readOnly
-              ? readStoredDrafts(storageKey)
-              : restoreDraft(storageKey, ydoc, sessionId, () => !disposed)
-          )
-            .then((drafts) => {
-              if (disposed) return;
-              setRecoveredDrafts(drafts);
-              serverSynced = true;
-              setSynced(true);
-              resolveServerSync();
-            })
-            .catch((error) => console.warn("[realtime] draft recovery failed", error))
-            .finally(() => {
-              if (!disposed) {
-                setSynced(true);
-                resolveServerSync();
-              }
-            }),
-        onGenerationMismatch: () => setReset((value) => value + 1),
-        onCloseCode: (code) => {
-          const mapped = statusFromCloseCode(code);
-          if (mapped) setStatus(mapped);
-        },
-      });
-    } catch (err) {
-      disposed = true;
-      // Double-attach or a torn-down multiplexer; stay idle instead of taking
-      // the screen down from inside a passive effect.
-      console.warn(`[realtime] attach failed for ${contentType}:${contentId}`, err);
-      awareness.destroy();
-      ydoc.destroy();
-      return;
-    }
-    if (readOnly) realtimeMultiplexer.setDocReadOnly(subscription.docName, true);
-
+    if (!opened) return;
     // The handle can only exist after the attach side effect succeeds; there
     // is nothing to derive during render.
     // eslint-disable-next-line react/react-compiler
-    setSession({ ydoc, awareness, sessionId, whenSynced, initialDrafts, storageKey });
-
+    setHandle(opened);
     return () => {
       beforeDetachRef.current?.();
-      disposed = true;
-      ydoc.off("update", persist);
-      const clean =
-        !readOnly &&
-        serverSynced &&
-        !denied &&
-        transportStatus === "connected" &&
-        !realtimeMultiplexer.isOutboundPending(subscription.docName);
-      if (clean)
-        void discardGeneration(
-          storageKey,
-          String(ydoc.getMap("doc_meta").get("generation") ?? ""),
-        ).catch(console.warn);
-      else if (dirty) void saveDraft(storageKey, ydoc);
-      subscription.destroy();
-      awareness.destroy();
-      ydoc.destroy();
-      setSession(null);
-      setSynced(false);
-      setStatus("idle");
-      setRecoveredDrafts([]);
+      void opened.close();
+      setHandle(null);
     };
   }, [enabled, contentType, contentId, organizationId, userId, readOnly, reset]);
 
-  const discardRecoveredDraft = useCallback(
-    async (id: string) => {
-      if (!session) return;
-      await discardDraft(session.storageKey, id);
-      setRecoveredDrafts((drafts) => drafts.filter((draft) => draft.id !== id));
-    },
-    [session],
+  const snapshot = useSyncExternalStore(
+    handle?.subscribe ?? subscribeDetached,
+    handle?.getSnapshot ?? detachedSnapshot,
   );
 
-  return { session, status, synced, recoveredDrafts, discardRecoveredDraft };
+  const discardRecoveredDraft = useCallback(
+    async (id: string) => {
+      await handle?.discardRecoveredDraft(id);
+    },
+    [handle],
+  );
+  const trackDraftWrite = useCallback(
+    (write: Promise<void>) =>
+      handle?.trackDraftWrite(write) ??
+      write.then(
+        () => true,
+        () => false,
+      ),
+    [handle],
+  );
+  const persistLocally = useCallback(
+    () => handle?.persistLocally() ?? Promise.resolve(true),
+    [handle],
+  );
+
+  return {
+    ...snapshot,
+    session: handle?.session ?? null,
+    discardRecoveredDraft,
+    trackDraftWrite,
+    persistLocally,
+  };
 }

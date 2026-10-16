@@ -1,14 +1,19 @@
 import { nativeStorage } from "@shared/realtime/__tests__/storageHarness";
-import { beforeEach, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as Y from "yjs";
 import { toBase64 } from "lib0/buffer";
 import {
+  discardDraft,
+  discardGeneration,
+  listDraftKeys,
+  readRetainedUpdates,
+  readStoredDrafts,
+  recordCoverage,
   restoreDraft,
   saveDraft,
   saveTextDraft,
-  readStoredDrafts,
-  discardDraft,
 } from "@shared/realtime/draftStorage";
+import type { UpdateCoverageEvent } from "@shared/realtime/multiplexer";
 
 import { clearEncryptedDrafts } from "@shared/realtime/encryptedDraftStore";
 const storage = nativeStorage.secure;
@@ -297,4 +302,103 @@ it("reloads encryption key after restart and preserves records when key is missi
   expect(storage.has("realtime.key.test")).toBe(false);
   await locked.clearEncryptedDrafts("test");
   doc.destroy();
+});
+
+describe("retained updates", () => {
+  const key = "realtime.test.org.NOTE.retained";
+  const event = (
+    updateId: string,
+    coverage: "local" | "accepted" | "checkpointed",
+    update: Uint8Array = new Uint8Array(),
+  ): UpdateCoverageEvent => ({ updateId, coverage, editedAt: Number(updateId.at(-1)), update });
+
+  function deletion(): Uint8Array {
+    const doc = draft("g", "remove me");
+    const before = Y.encodeStateVector(doc);
+    doc.getText("markdown").delete(0, 9);
+    const update = Y.encodeStateAsUpdate(doc, before);
+    doc.destroy();
+    return update;
+  }
+
+  it("keeps raw bytes across a restart until a checkpoint retires them", async () => {
+    const insert = Y.encodeStateAsUpdate(draft("g", "typed"));
+    const removal = deletion();
+    await recordCoverage(key, "g", [event("u1", "local", insert), event("u2", "local", removal)]);
+    await recordCoverage(key, "g", [event("u1", "accepted")]);
+    await recordCoverage(key, "other", [event("u3", "local", insert)]);
+    vi.resetModules();
+    const restarted = await import("@shared/realtime/draftStorage");
+    expect(await restarted.readRetainedUpdates(key, "g")).toEqual([
+      { updateId: "u1", update: insert, editedAt: 1 },
+      { updateId: "u2", update: removal, editedAt: 2 },
+    ]);
+    await restarted.recordCoverage(key, "g", [event("u1", "checkpointed")]);
+    expect(await restarted.readRetainedUpdates(key, "g")).toEqual([
+      { updateId: "u2", update: removal, editedAt: 2 },
+    ]);
+  });
+
+  it("survives draft compaction and a clean close until its own checkpoint", async () => {
+    const doc = draft("g", "base");
+    await saveDraft(key, doc);
+    await recordCoverage(key, "g", [event("u1", "local", deletion())]);
+    doc.getText("markdown").insert(4, " more");
+    await saveDraft(key, doc);
+    await discardGeneration(key, "g");
+    expect((await readStoredDrafts(key)).map((stored) => stored.text)).toEqual(["base more"]);
+    expect((await readRetainedUpdates(key, "g")).map((update) => update.updateId)).toEqual(["u1"]);
+    await recordCoverage(key, "g", [event("u1", "checkpointed")]);
+    await discardGeneration(key, "g");
+    expect(await readStoredDrafts(key)).toEqual([]);
+    expect(await listDraftKeys("test")).toEqual([]);
+    doc.destroy();
+  });
+
+  it("rolls back an interrupted batch and stores it with the next one", async () => {
+    const ids = async () => (await readRetainedUpdates(key, "g")).map((update) => update.updateId);
+    await recordCoverage(key, "g", [event("u0", "local", deletion())]);
+    nativeStorage.failInsert = true;
+    const failed = recordCoverage(key, "g", [
+      event("u0", "checkpointed"),
+      event("u1", "local", deletion()),
+    ]);
+    await expect(failed).rejects.toThrow("Disk failure");
+    nativeStorage.failInsert = false;
+    expect(await ids()).toEqual(["u0"]);
+    await recordCoverage(key, "g", [event("u2", "local", deletion())]);
+    expect(await ids()).toEqual(["u1", "u2"]);
+  });
+
+  it("binds each update to its document and keeps unreadable rows", async () => {
+    await recordCoverage(key, "g", [event("u1", "local", deletion())]);
+    const db = nativeStorage.databases.get("realtime-test.db")!;
+    db.prepare("UPDATE updates SET document = ?").run("realtime.test.org.NOTE.elsewhere");
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    expect(await readRetainedUpdates("realtime.test.org.NOTE.elsewhere", "g")).toEqual([]);
+    expect(db.prepare("SELECT update_id FROM updates").all()).toHaveLength(1);
+    expect(await readRetainedUpdates(key, "g")).toEqual([]);
+    vi.restoreAllMocks();
+  });
+
+  it("offers a generation only retained updates hold as a recoverable draft", async () => {
+    await recordCoverage(key, "old", [
+      event("u1", "local", Y.encodeStateAsUpdate(draft("old", "stranded"))),
+    ]);
+    const [stranded] = await readStoredDrafts(key);
+    expect(stranded).toMatchObject({ generation: "old", text: "stranded" });
+    await discardDraft(key, stranded.id);
+    expect(await readRetainedUpdates(key, "old")).toEqual([]);
+    expect(await listDraftKeys("test")).toEqual([]);
+  });
+
+  it("drops a discarded generation's retained updates with its last draft", async () => {
+    const old = draft("old", "replaced");
+    await saveDraft(key, old);
+    await recordCoverage(key, "old", [event("u1", "local", deletion())]);
+    const [stored] = await readStoredDrafts(key);
+    await discardDraft(key, stored.id);
+    expect(await readRetainedUpdates(key, "old")).toEqual([]);
+    old.destroy();
+  });
 });

@@ -12,12 +12,16 @@ import { ContentType } from "@uniffy/proto/common/v1/common_pb";
 import { cn } from "@/shared/utils/cn";
 import { RealtimeConnectionNotice } from "@/features/realtime/components/RealtimeConnectionNotice";
 import { serializeEditorMarkdown } from "@/features/realtime/markdown";
+import { canReleaseSession } from "@/features/realtime/hooks/useDocSession";
 import {
   docContentTypeName,
   RealtimeSessionStatus,
+  RealtimeStatusBadge,
+  useDeviceRecoveryState,
+  useDocSaveState,
   useMarkdownDocSession,
-  useOutboundPending,
   usePendingDocSync,
+  useRealtimeDocState,
 } from "@/features/realtime";
 
 // Reopening inside this window resumes the same session instead of re-hydrating.
@@ -44,19 +48,6 @@ interface ExpandableEditorProps {
   previewMaxHeight?: string;
   /** When true, render the label as a header row with Edit aligned right; otherwise the host owns the heading. */
   showHeader?: boolean;
-}
-
-function PendingSyncChip({ waitingForNetwork }: { waitingForNetwork: boolean }) {
-  return (
-    <span
-      className="inline-flex items-center gap-1.5 text-xs text-muted-foreground"
-      role="status"
-      aria-live="polite"
-    >
-      <span className="h-1.5 w-1.5 rounded-full bg-current opacity-80" />
-      {waitingForNetwork ? "Will sync when online" : "Syncing..."}
-    </span>
-  );
 }
 
 export function ExpandableEditor({
@@ -118,26 +109,24 @@ export function ExpandableEditor({
     };
   }, [whenSynced, sessionId]);
 
-  // Unsent edits only reach the server through this attached doc. Hold the session while
-  // frames are pending or the transport is down; a parent unmount still falls back to IDB.
-  const outboundPending = useOutboundPending(sessionOpen ? docName : null);
+  // Follows whichever attachment holds the doc: this session, then the drain after Done.
+  const docState = useRealtimeDocState(realtimeActive ? docName : null);
+  const saveState = useDocSaveState(realtimeActive && !readonly ? docName : null);
+  const device = useDeviceRecoveryState(realtimeActive ? docName : null);
   const strandedSync = usePendingDocSync(realtimeContentType, realtimeActive ? contentId : null);
   const transportDown = status === "disconnected" || status === "offline";
+  // Unaccepted edits only reach the server through this attached doc, so Done holds the session
+  // for them, and for accepted ones this device has not stored. Other accepted edits wait for
+  // their checkpoint in the drain; a parent unmount still falls back to IDB.
+  const releasable = canReleaseSession(status, docState, device);
   useEffect(() => {
-    if (
-      !closing ||
-      ((outboundPending || transportDown) &&
-        status !== "permission_lost" &&
-        status !== "access_lost" &&
-        status !== "update_rejected")
-    )
-      return;
+    if (!closing || !releasable) return;
     const timer = setTimeout(() => {
       setSessionOpen(false);
       setClosing(false);
     }, SESSION_CLOSE_GRACE_MS);
     return () => clearTimeout(timer);
-  }, [closing, outboundPending, transportDown, status]);
+  }, [closing, releasable]);
   useEffect(
     () => () => {
       if (openTimerRef.current) clearTimeout(openTimerRef.current);
@@ -223,7 +212,15 @@ export function ExpandableEditor({
   const hasContent = value && value.trim().length > 0;
   const waitingForNetwork =
     transportDown || (typeof navigator !== "undefined" && navigator.onLine === false);
-  const pendingAfterDone = !isExpanded && (outboundPending || strandedSync);
+  // After Done the chip follows the held session, then the drain; a registry entry with nothing
+  // attached is still waiting to be sent.
+  const afterDoneChip = !isExpanded && (docState.checkpointPending || strandedSync) && (
+    <RealtimeStatusBadge
+      status={waitingForNetwork ? "offline" : sessionOpen ? status : "idle"}
+      save={docState.checkpointPending ? saveState : "syncing"}
+      storage={device.storage}
+    />
+  );
 
   const connectingPreview = (
     <div className="h-full overflow-y-auto p-6">
@@ -232,7 +229,11 @@ export function ExpandableEditor({
         waiting
         status={status}
         onEditWithoutLive={
-          !readonly && !realtimeOwned && !replacedNotice && !outboundPending && !strandedSync
+          !readonly &&
+          !realtimeOwned &&
+          !replacedNotice &&
+          !docState.checkpointPending &&
+          !strandedSync
             ? () => setEditWithoutLive(true)
             : undefined
         }
@@ -263,7 +264,7 @@ export function ExpandableEditor({
             {label}
           </h3>
           <div className="flex items-center gap-3">
-            {pendingAfterDone && <PendingSyncChip waitingForNetwork={waitingForNetwork} />}
+            {afterDoneChip}
             {!readonly && hasContent && (
               <button
                 type="button"
@@ -315,7 +316,7 @@ export function ExpandableEditor({
           {/* Edit button - floats at top-right only when the host did not opt into showHeader; otherwise the header renders it next to the label so it never sits over the preview scrollbar */}
           {!showHeader && (
             <div className="absolute top-0 right-0 flex items-center gap-3">
-              {pendingAfterDone && <PendingSyncChip waitingForNetwork={waitingForNetwork} />}
+              {afterDoneChip}
               {!readonly && hasContent && (
                 <button
                   type="button"
@@ -367,7 +368,7 @@ export function ExpandableEditor({
           {/* Expand icon */}
           {!readonly && (
             <div className="absolute top-2 right-2 flex items-center gap-3">
-              {pendingAfterDone && <PendingSyncChip waitingForNetwork={waitingForNetwork} />}
+              {afterDoneChip}
               <ArrowsOut size={16} weight="bold" className="text-muted-foreground" />
             </div>
           )}
@@ -412,6 +413,8 @@ export function ExpandableEditor({
                         <RealtimeSessionStatus
                           status={status}
                           awareness={binding?.awareness ?? null}
+                          docName={docName}
+                          readOnly={readonly}
                           whenSynced={binding?.whenSynced}
                         />
                         <Button type="button" size="md" onClick={handleClose}>

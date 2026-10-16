@@ -1,94 +1,105 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import * as Y from "yjs";
+import { openDB } from "idb";
+import {
+  installBrowser,
+  signInDevice,
+  switchAccount,
+} from "@/features/realtime/persistence/__tests__/browser";
 import {
   attachEncryptedPersistence,
-  discoverStoredPendingDocs,
   discardRecoveredDraft,
+  discoverStoredPendingDocs,
+  getDeviceRecoveryState,
   HYDRATION_ORIGIN,
   MARKDOWN_MIRROR_ORIGIN,
   readRecoveredDrafts,
   REMOTE_ORIGIN,
-  persistenceRecoveryStats,
 } from "@/features/realtime/persistence/encryptedYjsPersistence";
 import {
   DOC_GENERATION_KEY,
   DOC_META_FIELD,
   docGeneration,
 } from "@/features/realtime/docGeneration";
+import {
+  clearPendingDocsFor,
+  listPendingDocs,
+  type PendingDoc,
+} from "@/features/realtime/pendingDocs";
+import { encryptForStorage, teardownStorageEncryption } from "@/shared/crypto/storageEncryption";
 
-const storage = vi.hoisted(() => ({
-  rows: new Map<string, unknown>(),
-  encryptGate: Promise.resolve(),
-  version: 2,
-  // Blobs remember the DEK that wrote them; any other DEK fails like AES-GCM would.
-  currentKey: "dek-1",
-  userId: "alice",
-}));
-vi.mock("@/app/storeRef", () => ({
-  getStoreRef: () => ({ getState: () => ({ auth: { user: { id: storage.userId } } }) }),
-}));
-vi.mock("@/shared/crypto/storageEncryption", () => ({
-  registerEncryptedDatabase: vi.fn(),
-  isStorageEncryptionReady: () => true,
-  encryptForStorage: async (value: unknown) => {
-    await storage.encryptGate;
-    return { key: storage.currentKey, payload: value };
-  },
-  decryptFromStorage: async (blob: { key?: string; payload?: unknown }) => {
-    if (!blob || blob.key !== storage.currentKey) throw new Error("decrypt failed");
-    return blob.payload;
-  },
-  ENCRYPTION_REKEY_EVENT: "rekey",
-  ENCRYPTION_TEARDOWN_EVENT: "teardown",
-}));
-vi.mock("idb", () => ({
-  openDB: async (_dbName: string, version: number, options: { upgrade: (db: unknown) => void }) => {
-    if (storage.version < version) {
-      options.upgrade({
-        objectStoreNames: ["updates"],
-        deleteObjectStore: () => storage.rows.clear(),
-        createObjectStore: () => {},
-      });
-      storage.version = version;
-    }
-    const matching = (range?: { lower: string[] }) =>
-      [...storage.rows.keys()]
-        .map((key) => JSON.parse(key) as string[])
-        .filter((key) => !range || (key[0] === range.lower[0] && key[1] === range.lower[1]));
-    const put = async (_name: string, value: unknown, key: unknown) =>
-      storage.rows.set(JSON.stringify(key), value);
-    return {
-      put,
-      transaction: () => ({
-        done: Promise.resolve(),
-        objectStore: () => ({
-          getAllKeys: async (range?: { lower: string[] }) => matching(range),
-          getAll: async (range?: { lower: string[] }) =>
-            matching(range).map((key) => storage.rows.get(JSON.stringify(key))),
-          delete: async (key: unknown) => storage.rows.delete(JSON.stringify(key)),
-          put: (value: unknown, key: unknown) => put("updates", value, key),
-        }),
-      }),
-    };
-  },
-}));
+const DB_NAME = "uniffy-realtime-yjs";
+
+beforeAll(() => installBrowser());
+
+// One server document per generation and text, so every reopen sees the same server state.
+const servers = new Map<string, Y.Doc>();
+
+beforeEach(async () => {
+  servers.clear();
+  vi.spyOn(console, "warn").mockImplementation(() => {});
+  await signInDevice("alice");
+  clearPendingDocsFor("alice");
+  clearPendingDocsFor("bob");
+});
+
+afterEach(() => vi.restoreAllMocks());
+
+afterAll(() => teardownStorageEncryption());
+
+function scopeFor(contentId: string, overrides: Partial<PendingDoc> = {}): PendingDoc {
+  return {
+    contentType: "TASK",
+    contentId,
+    organizationId: "org-1",
+    userId: "alice",
+    discardOnClean: false,
+    ...overrides,
+  };
+}
+
+function serverDoc(generation: string, text: string): Y.Doc {
+  const doc = new Y.Doc();
+  doc.getMap(DOC_META_FIELD).set(DOC_GENERATION_KEY, generation);
+  doc.getText("markdown").insert(0, text);
+  return doc;
+}
+
+async function openUnder(generation: string, text: string, contentId = "task") {
+  const key = `${generation}:${text}`;
+  const server = servers.get(key) ?? serverDoc(generation, text);
+  servers.set(key, server);
+  const doc = new Y.Doc();
+  Y.applyUpdate(doc, Y.encodeStateAsUpdate(server), REMOTE_ORIGIN);
+  const persistence = attachEncryptedPersistence({ contentType: "TASK", contentId, ydoc: doc });
+  await persistence.hydrate({ serverGeneration: generation });
+  return { doc, persistence };
+}
+
+function toBase64(bytes: Uint8Array): string {
+  return btoa(String.fromCharCode(...bytes));
+}
+
+// Writes a row straight into the device database, bypassing local recovery.
+async function storeRawRow(key: string[], payload: unknown, version = 3): Promise<void> {
+  const db = await openDB(DB_NAME, version, {
+    upgrade(database) {
+      if (!database.objectStoreNames.contains("updates")) database.createObjectStore("updates");
+    },
+  });
+  await db.put("updates", payload, key);
+  db.close();
+}
+
+async function storedKeys(): Promise<string[][]> {
+  const db = await openDB(DB_NAME, 3);
+  const keys = (await db.getAllKeys("updates")) as string[][];
+  db.close();
+  return keys;
+}
 
 describe("realtime local recovery", () => {
-  beforeEach(() => {
-    storage.rows.clear();
-    storage.encryptGate = Promise.resolve();
-    storage.currentKey = "dek-1";
-    storage.userId = "alice";
-    persistenceRecoveryStats.generationMismatchRows = 0;
-    vi.stubGlobal("window", new EventTarget());
-    vi.stubGlobal("IDBKeyRange", { bound: (lower: unknown) => ({ lower }) });
-  });
-  afterEach(() => {
-    vi.unstubAllGlobals();
-    vi.restoreAllMocks();
-  });
-
-  it("discovers the first dirty edit without cleanup and clears only after ACK", async () => {
+  it("records an edit for discovery before any acknowledgment and stops counting it once acknowledged", async () => {
     const doc = new Y.Doc();
     doc.getMap("doc_meta").set("generation", "g");
     let acknowledged = true;
@@ -96,20 +107,14 @@ describe("realtime local recovery", () => {
       contentType: "TASK",
       contentId: "crash",
       ydoc: doc,
-      scope: {
-        contentType: "TASK",
-        contentId: "crash",
-        organizationId: "org",
-        userId: "alice",
-        discardOnClean: false,
-      },
+      scope: scopeFor("crash"),
       isAcknowledged: () => acknowledged,
     });
     doc.getText("markdown").insert(0, "first offline edit");
     acknowledged = false;
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    await persistence.flush();
     expect(await discoverStoredPendingDocs("alice")).toBe(true);
-    expect(await discoverStoredPendingDocs("other")).toBe(false);
+    expect(await discoverStoredPendingDocs("bob")).toBe(false);
     acknowledged = true;
     await persistence.acknowledge();
     expect(await discoverStoredPendingDocs("alice")).toBe(false);
@@ -117,7 +122,7 @@ describe("realtime local recovery", () => {
     doc.destroy();
   });
 
-  it("does not mark an unacknowledged close clean after transport detach", async () => {
+  it("keeps an unacknowledged close dirty after the transport detached", async () => {
     const doc = new Y.Doc();
     const persistence = attachEncryptedPersistence({
       contentType: "TASK",
@@ -127,12 +132,12 @@ describe("realtime local recovery", () => {
     });
     doc.getText("markdown").insert(0, "pending");
     await persistence.destroy();
-    expect([...storage.rows.values()].some((blob: any) => blob.payload.dirty)).toBe(true);
+    expect(await discoverStoredPendingDocs("alice")).toBe(true);
     doc.destroy();
   });
 
-  it("preserves rows without generation during schema upgrade", async () => {
-    storage.rows.set(JSON.stringify(["TASK", "task", "legacy:1"]), "legacy-row");
+  it("preserves rows without a generation through the schema upgrade", async () => {
+    await storeRawRow(["TASK", "task", "seq-1"], "row-without-generation", 2);
     const doc = new Y.Doc();
     const persistence = attachEncryptedPersistence({
       contentType: "TASK",
@@ -140,16 +145,13 @@ describe("realtime local recovery", () => {
       ydoc: doc,
     });
     await persistence.hydrate({ serverGeneration: "current" });
-    expect(storage.version).toBe(3);
-    expect(storage.rows.size).toBe(1);
     await persistence.destroy({ discard: true });
+    expect(await storedKeys()).toEqual([["TASK", "task", "seq-1"]]);
     doc.destroy();
   });
 
   it("replays matching generation updates after server hydration", async () => {
-    const server = new Y.Doc();
-    server.getMap(DOC_META_FIELD).set(DOC_GENERATION_KEY, "same");
-    server.getText("markdown").insert(0, "baseline");
+    const server = serverDoc("same", "baseline");
     const local = new Y.Doc();
     Y.applyUpdate(local, Y.encodeStateAsUpdate(server), REMOTE_ORIGIN);
     const cached = attachEncryptedPersistence({
@@ -170,15 +172,13 @@ describe("realtime local recovery", () => {
     });
     await recovery.hydrate({ serverGeneration: docGeneration(reopened) });
     expect(reopened.getText("markdown").toString()).toBe("baseline offline edit");
-    expect(persistenceRecoveryStats.generationMismatchRows).toBe(0);
     await recovery.destroy({ discard: true });
     local.destroy();
     reopened.destroy();
     server.destroy();
   });
 
-  it("retains mismatched cache without merging its LWW metadata or fragment", async () => {
-    vi.spyOn(console, "warn").mockImplementation(() => {});
+  it("retains a mismatched cache without merging its metadata or fragment", async () => {
     const stale = new Y.Doc();
     stale.clientID = 4294967294;
     const cached = attachEncryptedPersistence({
@@ -191,10 +191,8 @@ describe("realtime local recovery", () => {
     stale.getXmlFragment("prosemirror").insert(0, [new Y.XmlText("old blocks")]);
     await cached.destroy();
 
-    const server = new Y.Doc();
+    const server = serverDoc("new", "new column");
     server.clientID = 1;
-    server.getMap(DOC_META_FIELD).set(DOC_GENERATION_KEY, "new");
-    server.getText("markdown").insert(0, "new column");
     const reopened = new Y.Doc();
     Y.applyUpdate(reopened, Y.encodeStateAsUpdate(server), REMOTE_ORIGIN);
     const recovery = attachEncryptedPersistence({
@@ -207,22 +205,14 @@ describe("realtime local recovery", () => {
     expect(reopened.getText("markdown").toString()).toBe("new column");
     expect(reopened.getXmlFragment("prosemirror").length).toBe(0);
     expect(reopened.getMap("markdown_mirror").get("active")).toBeUndefined();
-    expect(storage.rows.size).toBe(1);
-    expect(persistenceRecoveryStats.generationMismatchRows).toBe(1);
-    expect(console.warn).toHaveBeenCalledWith(
-      "[realtime] retained recovery rows from another generation",
-      {
-        docKey: "TASK:task",
-        rows: 1,
-      },
-    );
+    expect((await readRecoveredDrafts(reopened)).map((draft) => draft.generation)).toEqual(["old"]);
     await recovery.destroy({ discard: true });
     stale.destroy();
     reopened.destroy();
     server.destroy();
   });
 
-  it("replays offline fragment and flushed markdown after disposal", async () => {
+  it("replays an offline fragment and flushed markdown after disposal", async () => {
     const doc = new Y.Doc();
     doc.getMap(DOC_META_FIELD).set(DOC_GENERATION_KEY, "offline-generation");
     const persistence = attachEncryptedPersistence({
@@ -255,7 +245,7 @@ describe("realtime local recovery", () => {
     reopened.destroy();
   });
 
-  it("clean close discards the local cache instead of compacting it", async () => {
+  it("discards the local cache on a clean close instead of compacting it", async () => {
     const doc = new Y.Doc();
     const persistence = attachEncryptedPersistence({
       contentType: "TASK",
@@ -266,7 +256,6 @@ describe("realtime local recovery", () => {
     doc.getText("markdown").insert(0, "synced edits");
     await persistence.destroy({ discard: true });
     doc.destroy();
-    expect([...storage.rows.keys()].some((key) => key.includes('"task"'))).toBe(false);
 
     const reopened = new Y.Doc();
     const recovery = attachEncryptedPersistence({
@@ -280,11 +269,7 @@ describe("realtime local recovery", () => {
     reopened.destroy();
   });
 
-  it("fast reopen waits for previous pending writes and final snapshot", async () => {
-    let finishEncryption!: () => void;
-    storage.encryptGate = new Promise<void>((resolve) => {
-      finishEncryption = resolve;
-    });
+  it("hydrates a fast reopen only after the previous session's final write lands", async () => {
     const first = new Y.Doc();
     const persistence = attachEncryptedPersistence({
       contentType: "TASK",
@@ -300,20 +285,14 @@ describe("realtime local recovery", () => {
       contentId: "task",
       ydoc: second,
     });
-    let hydrated = false;
-    const hydration = reopened.hydrate().then(() => {
-      hydrated = true;
-    });
-    await Promise.resolve();
-    expect(hydrated).toBe(false);
-    finishEncryption();
-    await Promise.all([closed, hydration]);
+    await reopened.hydrate();
     expect(second.getText("markdown").toString()).toBe("last characters");
-    await reopened.destroy();
+    await Promise.all([closed, reopened.destroy()]);
     first.destroy();
     second.destroy();
   });
-  it("clean close preserves unseen updates from another tab", async () => {
+
+  it("keeps another tab's unseen rows through a clean close", async () => {
     const first = new Y.Doc();
     first.getMap(DOC_META_FIELD).set(DOC_GENERATION_KEY, "same");
     const second = new Y.Doc();
@@ -368,37 +347,14 @@ describe("realtime local recovery", () => {
     });
     await persistence.hydrate();
     expect(doc.getText("markdown").toString()).toBe("");
-    expect(storage.rows.size).toBe(2);
     await persistence.destroy({ discard: true });
-    expect(storage.rows.size).toBe(2);
+    doc.getMap(DOC_META_FIELD).set(DOC_GENERATION_KEY, "third");
+    const drafts = await readRecoveredDrafts(doc);
+    expect(drafts.map((draft) => draft.text).sort()).toEqual(["first", "second"]);
     doc.destroy();
   });
 
-  function serverDoc(generation: string, text: string): Y.Doc {
-    const doc = new Y.Doc();
-    doc.getMap(DOC_META_FIELD).set(DOC_GENERATION_KEY, generation);
-    doc.getText("markdown").insert(0, text);
-    return doc;
-  }
-
-  function rowKeys(): string[][] {
-    return [...storage.rows.keys()].map((key) => JSON.parse(key) as string[]);
-  }
-
-  async function openUnder(generation: string, text: string) {
-    const doc = new Y.Doc();
-    Y.applyUpdate(doc, Y.encodeStateAsUpdate(serverDoc(generation, text)), REMOTE_ORIGIN);
-    const persistence = attachEncryptedPersistence({
-      contentType: "TASK",
-      contentId: "task",
-      ydoc: doc,
-    });
-    await persistence.hydrate({ serverGeneration: generation });
-    return { doc, persistence };
-  }
-
   it("writes no row for a session closed before its first sync", async () => {
-    vi.spyOn(console, "warn").mockImplementation(() => {});
     const doc = new Y.Doc();
     const persistence = attachEncryptedPersistence({
       contentType: "TASK",
@@ -407,7 +363,7 @@ describe("realtime local recovery", () => {
     });
     await persistence.destroy();
     doc.destroy();
-    expect(storage.rows.size).toBe(0);
+    expect(await discoverStoredPendingDocs("alice")).toBe(false);
 
     const { doc: next, persistence: reopened } = await openUnder("G", "server text");
     expect(await readRecoveredDrafts(next)).toEqual([]);
@@ -415,24 +371,21 @@ describe("realtime local recovery", () => {
     next.destroy();
   });
 
-  it("offers no draft for rows written under a lost DEK", async () => {
-    vi.spyOn(console, "warn").mockImplementation(() => {});
+  it("leaves no draft behind a new device key", async () => {
     const { doc, persistence } = await openUnder("G", "baseline");
     doc.getText("markdown").insert(8, " offline work");
     await persistence.destroy();
     doc.destroy();
-    expect(storage.rows.size).toBeGreaterThan(0);
+    expect(await discoverStoredPendingDocs("alice")).toBe(true);
 
-    storage.currentKey = "dek-2";
+    await signInDevice("alice");
     const { doc: later, persistence: reopened } = await openUnder("H", "replacement");
-    expect(persistenceRecoveryStats.generationMismatchRows).toBeGreaterThan(0);
     expect(await readRecoveredDrafts(later)).toEqual([]);
     await reopened.destroy({ discard: true });
     later.destroy();
   });
 
   it("offers no draft for a session that only seeded, normalized and mirrored", async () => {
-    vi.spyOn(console, "warn").mockImplementation(() => {});
     const { doc, persistence } = await openUnder("G", "server text");
     const fragment = doc.getXmlFragment("prosemirror");
     doc.transact(() => {
@@ -448,7 +401,6 @@ describe("realtime local recovery", () => {
     expect(persistence.isDirty()).toBe(false);
     await persistence.destroy();
     doc.destroy();
-    expect(storage.rows.size).toBeGreaterThan(0);
 
     const { doc: later, persistence: reopened } = await openUnder("H", "replacement");
     expect(await readRecoveredDrafts(later)).toEqual([]);
@@ -457,7 +409,6 @@ describe("realtime local recovery", () => {
   });
 
   it("offers a typed session as a draft and discards it on request", async () => {
-    vi.spyOn(console, "warn").mockImplementation(() => {});
     const { doc, persistence } = await openUnder("G", "server text");
     doc.transact(() => doc.getText("markdown").insert(11, " typed by me"), "session-id");
     expect(persistence.isDirty()).toBe(true);
@@ -470,8 +421,8 @@ describe("realtime local recovery", () => {
     expect(drafts[0]).toMatchObject({ generation: "G", text: "server text typed by me" });
 
     await discardRecoveredDraft(later, "G");
-    expect(rowKeys().some((key) => key[2] === "G")).toBe(false);
     expect(await readRecoveredDrafts(later)).toEqual([]);
+    expect((await storedKeys()).some((key) => key[2] === "G")).toBe(false);
     await reopened.destroy({ discard: true });
     later.destroy();
   });
@@ -497,7 +448,6 @@ describe("realtime local recovery", () => {
   });
 
   it("never lists a draft whose text is empty", async () => {
-    vi.spyOn(console, "warn").mockImplementation(() => {});
     const { doc, persistence } = await openUnder("G", "server text");
     doc.transact(() => doc.getText("markdown").delete(0, 11), "session-id");
     expect(persistence.isDirty()).toBe(true);
@@ -510,13 +460,17 @@ describe("realtime local recovery", () => {
     later.destroy();
   });
 
-  it("keeps an acknowledged close as a cache row, never as a draft", async () => {
-    vi.spyOn(console, "warn").mockImplementation(() => {});
+  it("keeps an acknowledged close as a cache, never as a draft", async () => {
     const { doc, persistence } = await openUnder("G", "server text");
     doc.transact(() => doc.getText("markdown").insert(11, " synced later"), "session-id");
     await persistence.destroy({ acknowledged: true });
     doc.destroy();
-    expect(rowKeys().filter((key) => key[2] === "G")).toHaveLength(1);
+    expect(await discoverStoredPendingDocs("alice")).toBe(false);
+
+    const { doc: cached, persistence: same } = await openUnder("G", "server text");
+    expect(cached.getText("markdown").toString()).toBe("server text synced later");
+    await same.destroy({ acknowledged: true });
+    cached.destroy();
 
     const { doc: later, persistence: reopened } = await openUnder("H", "replacement");
     expect(await readRecoveredDrafts(later)).toEqual([]);
@@ -524,7 +478,7 @@ describe("realtime local recovery", () => {
     later.destroy();
   });
 
-  it("does not recreate an explicitly discarded active recovery copy on close", async () => {
+  it("does not recreate an explicitly discarded recovery copy on close", async () => {
     const { doc, persistence } = await openUnder("discard-rejected", "server text");
     doc.getText("markdown").insert(11, " oversized draft");
     await persistence.quarantine();
@@ -532,12 +486,12 @@ describe("realtime local recovery", () => {
     expect(draft.text).toContain("oversized draft");
     await discardRecoveredDraft(doc, draft.generation);
     await persistence.destroy();
-    expect(rowKeys().some((key) => key[2] === draft.generation)).toBe(false);
     expect(await readRecoveredDrafts(doc)).toEqual([]);
+    expect((await storedKeys()).some((key) => key[2] === draft.generation)).toBe(false);
     doc.destroy();
   });
 
-  it("isolates a rejected seed branch without losing edits or replaying it into current generation", async () => {
+  it("isolates a rejected seed branch without losing edits or replaying it into the current generation", async () => {
     const doc = new Y.Doc();
     doc.getMap(DOC_META_FIELD).set(DOC_GENERATION_KEY, "server");
     const persistence = attachEncryptedPersistence({
@@ -563,24 +517,151 @@ describe("realtime local recovery", () => {
     const drafts = await readRecoveredDrafts(fresh);
     expect(drafts).toHaveLength(1);
     expect(drafts[0].text).toBe("typing attached to rejected seed");
-    storage.userId = "bob";
-    storage.currentKey = "bob-key";
-    const other = new Y.Doc();
-    other.getMap(DOC_META_FIELD).set(DOC_GENERATION_KEY, "server");
-    const otherPersistence = attachEncryptedPersistence({
-      contentType: "NOTE",
-      contentId: "rejected-seed",
-      ydoc: other,
-    });
-    expect(await readRecoveredDrafts(other)).toEqual([]);
-    await otherPersistence.destroy();
-    other.destroy();
-    storage.userId = "alice";
-    storage.currentKey = "dek-1";
     await discardRecoveredDraft(fresh, drafts[0].generation);
     expect(await readRecoveredDrafts(fresh)).toEqual([]);
     await next.destroy();
     doc.destroy();
     fresh.destroy();
+  });
+
+  it("never shows one account's in-memory recovery copy to another account", async () => {
+    const doc = new Y.Doc();
+    doc.getMap(DOC_META_FIELD).set(DOC_GENERATION_KEY, "server");
+    const persistence = attachEncryptedPersistence({
+      contentType: "NOTE",
+      contentId: "rejected-copy",
+      ydoc: doc,
+    });
+    doc.getText("markdown").insert(0, "alice's rejected typing");
+    await persistence.quarantine();
+    await persistence.destroy();
+
+    await signInDevice("bob");
+    const other = new Y.Doc();
+    other.getMap(DOC_META_FIELD).set(DOC_GENERATION_KEY, "server");
+    const otherPersistence = attachEncryptedPersistence({
+      contentType: "NOTE",
+      contentId: "rejected-copy",
+      ydoc: other,
+    });
+    expect(await readRecoveredDrafts(other)).toEqual([]);
+    await otherPersistence.destroy();
+    other.destroy();
+    doc.destroy();
+  });
+});
+
+describe("rows without coverage identity", () => {
+  it("offers a dirty row without coverage identity as a draft without replaying or clearing it, and leaves other users and organizations alone", async () => {
+    const unreconciled = serverDoc("G", "typed without coverage");
+    const update = toBase64(Y.encodeStateAsUpdate(unreconciled));
+    const scope = scopeFor("migrated", { contentType: "NOTE" });
+    await storeRawRow(
+      ["TASK", "task", "G", "old-tab:0000000001"],
+      await encryptForStorage({ update, dirty: true, scope: scopeFor("task") }),
+    );
+    await storeRawRow(
+      ["NOTE", "theirs", "G", "old-tab:0000000001"],
+      await encryptForStorage({ update, dirty: true, scope: { ...scope, userId: "bob" } }),
+    );
+    await storeRawRow(
+      ["NOTE", "elsewhere", "G", "old-tab:0000000001"],
+      await encryptForStorage({
+        update,
+        dirty: true,
+        scope: { ...scope, organizationId: "org-2" },
+      }),
+    );
+
+    const { doc, persistence } = await openUnder("G", "server text");
+    expect(doc.getText("markdown").toString()).toBe("server text");
+    expect(await readRecoveredDrafts(doc)).toEqual([
+      expect.objectContaining({ generation: "unreconciled:G", text: "typed without coverage" }),
+    ]);
+    expect(await discoverStoredPendingDocs("alice")).toBe(true);
+    expect(listPendingDocs()).toEqual([]);
+    await persistence.destroy({ discard: true, acknowledged: true });
+    doc.destroy();
+
+    const { doc: later, persistence: reopened } = await openUnder("G", "server text");
+    expect((await readRecoveredDrafts(later)).map((draft) => draft.generation)).toEqual([
+      "unreconciled:G",
+    ]);
+    await discardRecoveredDraft(later, "unreconciled:G");
+    expect(await readRecoveredDrafts(later)).toEqual([]);
+    await reopened.destroy({ discard: true, acknowledged: true });
+    later.destroy();
+
+    expect(await storedKeys()).toEqual(
+      expect.arrayContaining([
+        ["NOTE", "elsewhere", "G", "old-tab:0000000001"],
+        ["NOTE", "theirs", "G", "old-tab:0000000001"],
+      ]),
+    );
+    expect(await discoverStoredPendingDocs("bob")).toBe(true);
+    unreconciled.destroy();
+  });
+});
+
+describe("device storage boundaries", () => {
+  it("rolls back an interrupted write so the previous device copy survives", async () => {
+    const { doc, persistence } = await openUnder("G", "server text", "interrupted");
+    doc.transact(() => doc.getText("markdown").insert(11, " kept"), "session-id");
+    await persistence.flush();
+    const put = vi.spyOn(IDBObjectStore.prototype, "put").mockImplementation(() => {
+      throw new DOMException("The quota has been exceeded.", "QuotaExceededError");
+    });
+    doc.transact(() => doc.getText("markdown").insert(16, " lost"), "session-id");
+    await persistence.flush();
+    expect(getDeviceRecoveryState("TASK:interrupted")).toEqual({
+      storage: "failed",
+      unpersisted: true,
+    });
+    put.mockRestore();
+
+    const { doc: reopened, persistence: recovery } = await openUnder(
+      "G",
+      "server text",
+      "interrupted",
+    );
+    expect(reopened.getText("markdown").toString()).toBe("server text kept");
+    await recovery.destroy();
+    await persistence.destroy();
+    reopened.destroy();
+    doc.destroy();
+  });
+
+  it("records each organization's pending docs under that organization and ignores other users", async () => {
+    const owners: [string, string, string][] = [
+      ["alice", "org-1", "first-org"],
+      ["alice", "org-2", "second-org"],
+      ["bob", "org-1", "bobs"],
+    ];
+    for (const [userId, organizationId, contentId] of owners) {
+      switchAccount(userId, organizationId);
+      const doc = serverDoc("G", "server text");
+      const persistence = attachEncryptedPersistence({
+        contentType: "TASK",
+        contentId,
+        ydoc: doc,
+        scope: scopeFor(contentId, { userId, organizationId }),
+      });
+      doc.transact(() => doc.getText("markdown").insert(0, "draft "), "session-id");
+      await persistence.destroy();
+      doc.destroy();
+    }
+    switchAccount("alice", "org-1");
+    clearPendingDocsFor("alice");
+    clearPendingDocsFor("bob");
+
+    expect(await discoverStoredPendingDocs("alice")).toBe(true);
+    expect(
+      listPendingDocs()
+        .map((entry) => [entry.contentId, entry.organizationId, entry.userId])
+        .sort(),
+    ).toEqual([
+      ["first-org", "org-1", "alice"],
+      ["second-org", "org-2", "alice"],
+    ]);
   });
 });

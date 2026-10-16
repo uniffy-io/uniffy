@@ -18,7 +18,12 @@ import {
   toggleMetadataPanel,
   toggleToolbarPin,
 } from "@/features/notes/store/editorSlice";
-import { RealtimeSessionStatus, type RealtimeStatus } from "@/features/realtime";
+import {
+  docContentTypeName,
+  docNameFor,
+  RealtimeSessionStatus,
+  type RealtimeStatus,
+} from "@/features/realtime";
 import type { Awareness } from "y-protocols/awareness";
 import { buildBreadcrumbPath } from "@/features/notes/utils/notesTreeUtils";
 import { NoteBreadcrumbs } from "@/features/notes/components/NoteBreadcrumbs";
@@ -108,6 +113,8 @@ export function EditorHeader({
           <RealtimeSessionStatus
             status={realtimeStatus}
             awareness={realtimeAwareness}
+            docName={docNameFor(docContentTypeName(ContentType.NOTE), note.id)}
+            readOnly={!canEdit}
             whenSynced={realtimeWhenSynced}
             className="flex shrink-0 ml-2 md:ml-4"
           />

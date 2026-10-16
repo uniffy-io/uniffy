@@ -5,8 +5,9 @@ import {
   type TextBindingCallbacks,
 } from "@features/notes/realtime/textBinding";
 import { useNoteRealtimeSession } from "@features/notes/realtime/useNoteRealtimeSession";
-import type { DocSession } from "@shared/realtime/useDocSession";
+import type { DocSession } from "@shared/realtime/docSession";
 import type { RealtimeStatus } from "@shared/realtime/protocol";
+import type { PersistenceState } from "@shared/realtime/persistenceState";
 import type { MobileRecoveredDraft } from "@shared/realtime/draftStorage";
 import { saveTextDraft, saveDraft, readStoredDrafts } from "@shared/realtime/draftStorage";
 import { hydrateOfflineDraft, offlineReplayBase } from "@features/notes/realtime/draftRecovery";
@@ -15,6 +16,7 @@ import { useAuth } from "@core/providers/AuthContext";
 export interface NoteCoEditing {
   session: DocSession | null;
   status: RealtimeStatus;
+  persistence: PersistenceState;
   recoveredDrafts: MobileRecoveredDraft[];
   restoreRecoveredDraft(draft: MobileRecoveredDraft): Promise<void>;
   discardRecoveredDraft(id: string): Promise<void>;
@@ -25,6 +27,8 @@ export interface NoteCoEditing {
   flushLocalPush(): void;
   /** Commit a deferred remote merge now (call on input blur). */
   applyPendingRemote(): void;
+  /** Resolves false while some edit exists only in memory, so Done must stay open. */
+  persistLocally(): Promise<boolean>;
 }
 
 /** Binds the plain-text markdown editor to the note's live doc for one session at a time. */
@@ -46,7 +50,15 @@ export function useNoteCoEditing(
     if (text !== null && text !== undefined) inputBase.current = { noteId: opts.noteId, text };
   }, [opts.noteId]);
 
-  const { session, status, recoveredDrafts, discardRecoveredDraft } = useNoteRealtimeSession({
+  const {
+    session,
+    status,
+    persistence,
+    recoveredDrafts,
+    discardRecoveredDraft,
+    trackDraftWrite,
+    persistLocally,
+  } = useNoteRealtimeSession({
     noteId: opts.noteId,
     enabled: opts.enabled,
     readOnly: opts.readOnly,
@@ -145,17 +157,19 @@ export function useNoteCoEditing(
       if (opts.readOnly) return;
       if (live) controllerRef.current?.schedule(canonical);
       else if (user?.id && organizationId && opts.noteId) {
-        void saveTextDraft(
-          `realtime.${user.id}.${organizationId}.NOTE.${opts.noteId}`,
-          canonical,
-          inputBase.current && inputBase.current.noteId === opts.noteId
-            ? inputBase.current.text
-            : callbacksRef.current.getLoadedCanonical(),
-          draftLineage.current,
+        void trackDraftWrite(
+          saveTextDraft(
+            `realtime.${user.id}.${organizationId}.NOTE.${opts.noteId}`,
+            canonical,
+            inputBase.current && inputBase.current.noteId === opts.noteId
+              ? inputBase.current.text
+              : callbacksRef.current.getLoadedCanonical(),
+            draftLineage.current,
+          ),
         );
       }
     },
-    [live, user, organizationId, opts.noteId, opts.readOnly],
+    [live, user, organizationId, opts.noteId, opts.readOnly, trackDraftWrite],
   );
   const flushLocalPush = useCallback(() => {
     controllerRef.current?.flush();
@@ -200,6 +214,7 @@ export function useNoteCoEditing(
   return {
     session,
     status,
+    persistence,
     live,
     ownsContent: opts.noteId !== undefined,
     recoveredDrafts,
@@ -208,5 +223,6 @@ export function useNoteCoEditing(
     scheduleLocalPush,
     flushLocalPush,
     applyPendingRemote,
+    persistLocally,
   };
 }
