@@ -28,12 +28,11 @@ This page maps Uniffy's services, storage, and traffic. Read it before sizing in
       +----------+ +----+----+ +---------+----------+
                         |                |
         +--------+------+------+------+  | room registry
-        |        |             |      |  +-----------+
-        v        v             v      v              v
-   +----------+ +------------+ +----+ +--------+ +---------+
-   | Postgres | | Meilisearch| | S3 | | Valkey | | LiveKit |
-   +----------+ +------------+ +----+ +--------+ | Valkey  |
-                                                 +---------+
+        |        |             |      |  | (valkey db 1)
+        v        v             v      v  v
+   +----------+ +------------+ +----+ +--------+
+   | Postgres | | Meilisearch| | S3 | | Valkey |
+   +----------+ +------------+ +----+ +--------+
         ^        ^              ^       ^
         |        |              |       | queue + pub/sub
       +-+--------+--------------+-------+-+
@@ -59,7 +58,6 @@ One deployment serves any number of organizations. A new organization is a datab
 | PostgreSQL 18 | CloudNativePG cluster, or external | Primary data store. All durable state, live edits included once saved. |
 | Meilisearch | Single pod | Typo tolerant index behind universal `@` mention lookup and search. |
 | Valkey | Single pod | Job queue, pub/sub, operational cache, and the edit buffer that holds live edits until they are saved. |
-| LiveKit Valkey | Single pod | LiveKit's room registry, on an instance and password of its own. Uniffy never reads it. |
 | Object storage | Yours (S3 compatible) | File bytes. Private network only; browsers never reach it. |
 | LiveKit | Single pod, scales to a cluster | Audio and video calls. Forwards media between participants. |
 
@@ -145,22 +143,9 @@ That makes Valkey part of how editing works. A slow or unreachable Valkey pauses
 
 The buffer adds one requirement on Valkey: an eviction policy outside `allkeys-*`. Every backend and worker checks it at startup, and again whenever Valkey comes back as a different instance, and backends report the result on `/healthz`; [Configure Uniffy](/docs/deployment/configure/#valkey) has the details. It also holds document text in memory and in its persistence files without encryption from Uniffy, so Valkey belongs in the same trust zone as Postgres.
 
-That trust zone holds only Uniffy backends, Uniffy workers and the operators who run them. Nothing else gets the Valkey password. Logical databases are no boundary: any client with the password can select every database, read unsaved text, write edits under any author's name that the next save commits to Postgres, and announce saves that never happened.
-
 Every Valkey restart gives the instance a new identity. Uniffy notices on the next touch of each document, saves what survived, and starts that document's buffer afresh. [Account Recovery](/docs/deployment/recovery/#unsaved-edits-after-a-valkey-restart) walks through what you see.
 
-### Two Valkey instances
-
-Run two Valkey instances, and never let them share one:
-
-| Instance | Used by | Holds | Password known to |
-|---|---|---|---|
-| Uniffy's Valkey | Backends and workers | Queues, pub/sub, cache, and live edits not saved yet | Uniffy backends, workers and their operators |
-| LiveKit's Valkey | LiveKit pods | LiveKit's room registry | LiveKit and its operators |
-
-The split follows from the trust zone above. LiveKit is a third party media server facing call traffic, so it stays outside that zone. Sharing Uniffy's instance, even through a separate logical database, would hand it the password that reads unsaved text.
-
-Uniffy never reads the registry; the backend reaches LiveKit through its admin API. LiveKit's `redis.address` and `redis.password` accept any instance, so point them at LiveKit's own. [Configure Uniffy](/docs/deployment/configure/#calls-livekit) has the settings. The compose stack shows the shape: a `livekit-valkey` service with its own password and no persistence.
+LiveKit keeps its room registry in a separate Valkey database (db 1) so registry pressure and app caches cannot evict each other.
 
 ### Object storage
 
@@ -184,7 +169,7 @@ Storage includes uploaded originals, retained file versions, thumbnails, and com
 
 ### Scaling LiveKit
 
-The unit of LiveKit scaling is the room, not the participant. Raising `livekit.replicas` puts the pods in distributed mode over their shared Valkey registry and spreads rooms across them, so many concurrent calls scale horizontally. One giant call does not: a room is homed on a single pod, and its ceiling is that pod's CPU and bandwidth. If your usage pattern is all hands meetings rather than many small calls, scale the LiveKit pods vertically and put them on your fastest network nodes.
+The unit of LiveKit scaling is the room, not the participant. Raising `livekit.replicas` puts the pods in distributed mode over the shared Valkey registry and spreads rooms across them, so many concurrent calls scale horizontally. One giant call does not: a room is homed on a single pod, and its ceiling is that pod's CPU and bandwidth. If your usage pattern is all hands meetings rather than many small calls, scale the LiveKit pods vertically and put them on your fastest network nodes.
 
 Bandwidth math is what actually bites. An SFU forwards every publisher's stream to every subscriber, so a 20 person call with cameras on multiplies quickly, and screen shares are the expensive stream. The org level screen share quality ceiling (`CALLS_DEFAULT_SCREEN_SHARE_QUALITY`, default `BALANCED`) exists exactly to protect a modest media node; raise it when the node has bandwidth to spare, not before. For load numbers per core, defer to LiveKit's own benchmarks; our wiring adds STUNner in the media path, which shifts relay bandwidth onto the gateway pods, and those scale horizontally as ordinary stateless workloads.
 
@@ -203,7 +188,7 @@ Cluster internal, never exposed:
 |---|---|
 | 8000 | Backend HTTP (the chart maps it behind the gateway). |
 | 5432 | PostgreSQL. |
-| 6379 | Valkey, and LiveKit's own Valkey on its own address. |
+| 6379 | Valkey. |
 | 7700 | Meilisearch. |
 | 7880 | LiveKit signaling, reached only through the `/livekit` route. |
 | 7881/7882 | LiveKit media, reached only through STUNner. |
@@ -215,14 +200,14 @@ Cluster internal, never exposed:
 2. The data stores come up with their probes: the Postgres cluster, Valkey, Meilisearch.
 3. Backend pods boot, run migrations, then open the listener. A pod answering `GET /healthz` is ready; the chart wires that into the probes, so an unhealthy pod never receives traffic. The same response reports the Valkey eviction check as `realtime_buffer`; an `allkeys-*` policy turns live edit saving off but does not fail the probe.
 4. Workers connect to Valkey, run the same eviction check and start consuming. Liveness rides ARQ's built in health check every `WORKER_HEALTH_CHECK_INTERVAL` seconds.
-5. LiveKit is independent of the backend and of Uniffy's Valkey; it needs only its own registry Valkey.
+5. LiveKit is independent of the backend; they share only the Valkey room registry.
 
 ## Stateless vs stateful
 
 | Stateless, replace freely | Stateful, back up |
 |---|---|
 | Backend, worker fleets, frontend, gateway pods, STUNner pods. | PostgreSQL, object storage, `APP_MASTER_KEY`. |
-| | Meilisearch and Valkey sit in between. Losing Meilisearch costs a reindex window. Losing Valkey's data costs its queued jobs plus the edits not saved yet that their authors' devices no longer hold; its persistence setting decides when that happens. LiveKit's Valkey holds only LiveKit's room registry. |
+| | Meilisearch and Valkey sit in between. Losing Meilisearch costs a reindex window. Losing Valkey's data costs its queued jobs plus the edits not saved yet that their authors' devices no longer hold; its persistence setting decides when that happens. |
 
 Postgres, the master key, and object storage are the non negotiable three. [Backups and Restore](/docs/deployment/backups/) covers all of them, including the continuous archive that makes Postgres restorable to a point in time.
 

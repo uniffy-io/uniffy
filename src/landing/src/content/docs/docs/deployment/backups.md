@@ -18,7 +18,6 @@ Back up three things to restore Uniffy: PostgreSQL, object storage, and `APP_MAS
 | Media scratch | Temporary conversion outputs | No backup. Disk backed `emptyDir` can be discarded when a pod is removed. |
 | Meilisearch | Search index | Nothing. Rebuilt from Postgres by a background job. |
 | Valkey | Queues, caches, and edits accepted in the last few seconds that PostgreSQL does not hold yet | Choose its persistence and keep its data volume on durable storage. Persistence decides what a crash costs; a file backup is optional and returns little. [Below](#valkey-and-edits-not-yet-saved). |
-| LiveKit's Valkey | LiveKit's room registry for calls in progress | Nothing of Uniffy's lives here. The compose stack runs it without persistence. |
 
 A database backup without the master key leaves stored credentials unreadable. Without object storage, file metadata can return while downloads and videos stay missing. Storage durability protects against hardware failure; it does not replace a recovery plan for deleted or overwritten objects.
 
@@ -50,7 +49,7 @@ A file backup of Valkey adds little for edits. Saves follow within seconds, so a
 
 If you restore one, start Valkey on the restored files; never load keys into a running instance. The restart gives Valkey a new identity. On the next touch of each document, Uniffy saves the restored edits that continue what PostgreSQL already holds and sets the rest aside until maintenance clears it a week after its newest edit. The restored files also bring back the job queue as it was, so jobs that ran after the backup can run again.
 
-Valkey holds document text in memory and in its persistence files. Uniffy does not encrypt those bytes, so protect Valkey, its disk and its files the way you protect PostgreSQL. Only Uniffy backends, workers and their operators hold its password. LiveKit keeps its room registry on a Valkey of its own; a separate logical database on the same instance is no boundary. Never give Uniffy's Valkey an `allkeys-*` eviction policy; [Configure Uniffy](/docs/deployment/configure/#valkey) explains why.
+Valkey holds document text in memory and in its persistence files. Uniffy does not encrypt those bytes, so protect Valkey, its disk and its files the way you protect PostgreSQL. Never give it an `allkeys-*` eviction policy; [Configure Uniffy](/docs/deployment/configure/#valkey) explains why.
 
 ## Continuous Postgres backups to S3
 

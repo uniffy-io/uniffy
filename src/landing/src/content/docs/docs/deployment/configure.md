@@ -69,8 +69,6 @@ These settings control the first database seed and whether registration is open.
 
 Valkey backs the ARQ job queue, pub/sub channels, the operational cache, and the buffer of live edits that PostgreSQL does not hold yet.
 
-These settings point at Uniffy's own Valkey. LiveKit keeps its room registry on a second instance, because this one holds document text that is not saved yet and its password stays with Uniffy backends and workers. [Calls](#calls-livekit) explains the split.
-
 | Variable | Default | Purpose |
 |---|---|---|
 | `VALKEY_HOST` | `localhost` | Hostname. |
@@ -279,18 +277,13 @@ Set CPU, memory, and ephemeral storage budgets in Kubernetes. Raise them alongsi
 
 LiveKit is the SFU for audio and video calls. Server config lives in LiveKit's own config file; only the credentials and URLs come from the env.
 
-LiveKit keeps its room registry in Valkey, and it gets an instance of its own, never Uniffy's. Uniffy's Valkey holds edits that are not saved yet. Any client with its password can read that text, append edits under any author's name and announce saves that never happened, so that password stays with Uniffy backends and workers.
-
-LiveKit is a third party media server facing call traffic, so it stays outside that circle. A separate logical database on Uniffy's instance would not keep it out, because the password opens every database. Uniffy never reads the registry; the backend reaches LiveKit through its admin API, so no Uniffy variable points at it.
-
-Set the registry's address and password in LiveKit's `redis` block. The compose stack runs it as the `livekit-valkey` service at `livekit-valkey:6379`, with its own password and no persistence. On Kubernetes, check the manifests your chart version renders. If LiveKit's `redis` block points at the chart's Valkey, add a second Valkey with its own password for LiveKit alone and point `redis.address` and `redis.password` at it.
-
 | Variable | Default | Purpose |
 |---|---|---|
 | `LIVEKIT_WS_URL` | `ws://localhost:7880` | WebSocket URL the **browser** uses to reach LiveKit signaling. |
 | `LIVEKIT_HOST` | `http://localhost:7880` | HTTP URL the **backend** uses for LiveKit admin REST API (server-to-server). |
 | `LIVEKIT_API_KEY` | `devkey` | Shared API key. Rotate together with the secret. |
 | `LIVEKIT_API_SECRET` | none | Shared secret, yours to generate: `openssl rand -hex 32`. At least 32 characters, and never one published in the repository. Calls stay disabled until it is set on both the backend and the LiveKit server. |
+| `LIVEKIT_VALKEY_DATABASE` | `1` | Valkey logical DB used by LiveKit for its room registry. Kept separate from the app's DB (`VALKEY_DATABASE`) to avoid eviction or pub/sub cross-impact. |
 
 ## TURN relay
 
