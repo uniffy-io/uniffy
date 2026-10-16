@@ -10,7 +10,7 @@ from signal import Signals
 from time import time
 from typing import TYPE_CHECKING, Any, Callable, Final, Optional, Union, cast
 
-from valkey.exceptions import ResponseError, WatchError
+from valkey.exceptions import ResponseError, ValkeyError, WatchError
 
 from .cron import CronJob
 from .jobs import Deserializer, JobResult, SerializationError, Serializer, deserialize_job_raw, serialize_result
@@ -1090,12 +1090,22 @@ class Worker:
             self.handle_sig(signal.SIGUSR1)
         if not self._pool:
             return
-        await asyncio.gather(*self.tasks.values())
-        await self.pool.delete(self.health_check_key)
-        if self.on_shutdown:
-            await self.on_shutdown(self.ctx)
-        await self.pool.close(close_connection_pool=True)
-        self._pool = None
+        # A worker stopping because Valkey went away still runs on_shutdown and closes its pool, so
+        # clients on_startup bound to this loop never survive into an in-process restart.
+        try:
+            for outcome in await asyncio.gather(*self.tasks.values(), return_exceptions=True):
+                if isinstance(outcome, Exception):
+                    logger.warning('Job task failed while the worker closed: %r', outcome)
+            try:
+                await self.pool.delete(self.health_check_key)
+            except (ValkeyError, OSError) as exc:
+                logger.warning('Health check key not cleared while closing: %r', exc)
+            if self.on_shutdown:
+                await self.on_shutdown(self.ctx)
+        finally:
+            with contextlib.suppress(ValkeyError, OSError):
+                await self.pool.close(close_connection_pool=True)
+            self._pool = None
 
     def __repr__(self) -> str:
         return (

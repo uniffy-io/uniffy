@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useRef } from "react";
+import { useEffect, useCallback, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 import { AppHeader } from "@/components/layout/AppHeader";
@@ -29,7 +29,8 @@ import {
   loadLastOpenedNote,
   clearLastOpenedNote,
 } from "@/features/notes/utils/lastOpenedNote";
-import { chooseNotesLanding, leavesRoutedNote } from "@/features/notes/utils/landing";
+import { chooseNotesLanding, viewRoutedNote } from "@/features/notes/utils/landing";
+import type { SerializedNote } from "@/features/notes/store/notesThunks";
 import { useShortcutHandler, useAppearanceSettings } from "@/features/settings";
 import { useNotesCacheSync } from "@/features/notes/hooks/useNotesCacheSync";
 import { recordRecentItem } from "@/features/search/utils/recentItems";
@@ -54,7 +55,33 @@ export function NotesPage() {
   const isMetadataPanelOpen = editorState?.isMetadataPanelOpen ?? false;
 
   const currentNote = currentNoteId ? notesState?.notes[currentNoteId] : null;
-  useDocumentTitle(currentNote?.title || "Notes");
+
+  // The routed note once its fetch landed, and whether it was opened from the trash.
+  const [loadedRoute, setLoadedRoute] = useState<{ noteId: string; fromTrash: boolean } | null>(
+    null,
+  );
+  const [shownNote, setShownNote] = useState<SerializedNote | null>(null);
+  const routedView =
+    noteId && loadedRoute?.noteId === noteId
+      ? viewRoutedNote(notesState.notes, noteId, loadedRoute.fromTrash, shownNote)
+      : null;
+  // The row on screen while the note is open; a deletion or lost access leaves it in place.
+  if (routedView && !routedView.lost && routedView.note !== shownNote)
+    setShownNote(routedView.note);
+  const routeLost = Boolean(routedView?.lost);
+  const routeOpen = Boolean(routedView && !routedView.lost);
+  const lostNote =
+    routedView?.lost && routedView.note?.nodeType !== NodeType.FOLDER ? routedView.note : null;
+  // A lost note that comes back, restored or shared again, reopens with a fresh session in place
+  // of the denied one.
+  const [lostNoteId, setLostNoteId] = useState<string | null>(null);
+  const [editorEpoch, setEditorEpoch] = useState(0);
+  if (routeLost && noteId && lostNoteId !== noteId) setLostNoteId(noteId);
+  else if (routeOpen && lostNoteId === noteId) {
+    setLostNoteId(null);
+    setEditorEpoch((epoch) => epoch + 1);
+  }
+  useDocumentTitle((currentNote ?? lostNote)?.title || "Notes");
 
   const handleToggleSidebar = useCallback(() => {
     dispatch(toggleSidebar());
@@ -117,18 +144,14 @@ export function NotesPage() {
   }, [noteId, treeLoaded, organizationId, userId, notesState.notes, navigate]);
 
   // Always refetch on noteId change or remount - returning from /chat would serve stale content and autosave could clobber concurrent edits.
-  const loadedRouteNoteRef = useRef<string | null>(null);
-  const openedFromTrashRef = useRef(false);
   useEffect(() => {
     if (!noteId) return;
 
-    loadedRouteNoteRef.current = null;
     dispatch(setCurrentNote(noteId));
     dispatch(fetchNote(noteId))
       .unwrap()
       .then((loaded) => {
-        loadedRouteNoteRef.current = noteId;
-        openedFromTrashRef.current = Boolean(loaded.isDeleted);
+        setLoadedRoute({ noteId, fromTrash: Boolean(loaded.isDeleted) });
         if (organizationId && userId) {
           saveLastOpenedNote(organizationId, userId, noteId);
         }
@@ -143,21 +166,20 @@ export function NotesPage() {
       });
   }, [noteId, organizationId, userId, dispatch, navigate]);
 
-  // Trashing the open note keeps it in state, so its route must go too, or the page shows no note
-  // under a URL that still names it.
+  // A lost note stays on screen read-only until the user navigates. A lost folder has no editor
+  // to keep, so its route goes, or the page would show nothing under a URL that names it.
   useEffect(() => {
-    if (
-      !noteId ||
-      loadedRouteNoteRef.current !== noteId ||
-      !leavesRoutedNote(notesState.notes, noteId, openedFromTrashRef.current)
-    )
-      return;
+    if (!noteId || !routeLost) return;
     if (organizationId && userId && loadLastOpenedNote(organizationId, userId) === noteId) {
       clearLastOpenedNote(organizationId, userId);
     }
-    loadedRouteNoteRef.current = null;
-    navigate("/notes", { replace: true });
-  }, [noteId, notesState.notes, organizationId, userId, navigate]);
+    if (!lostNote) navigate("/notes", { replace: true });
+  }, [noteId, routeLost, lostNote, organizationId, userId, navigate]);
+
+  // Losing the note cleared the store's selection; a note that comes back takes it again.
+  useEffect(() => {
+    if (noteId && routeOpen && currentNoteId !== noteId) dispatch(setCurrentNote(noteId));
+  }, [noteId, routeOpen, currentNoteId, dispatch]);
 
   return (
     <>
@@ -168,7 +190,7 @@ export function NotesPage() {
           currentNote?.nodeType === NodeType.FOLDER ? (
             <NoteFolderView key="folder-view" />
           ) : (
-            <NotesEditor key="note-editor" />
+            <NotesEditor key={`note-editor:${editorEpoch}`} lostNote={lostNote} />
           )
         }
         metadataPanel={currentNoteId ? <NotesMetadataPanel /> : null}

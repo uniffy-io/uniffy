@@ -14,19 +14,19 @@ interface RealtimeSessionStatusProps {
   /** Viewers have no edits to save, so only connection and access problems show. */
   readOnly?: boolean;
   whenSynced?: Promise<void>;
-  /** Shows only the chip's dot on phone widths, for toolbars that must stay on one row. */
-  compact?: boolean;
   className?: string;
 }
 
-/** Editor-header slot for a live doc: the active-editor avatar stack, the persistence chip and recoverable drafts. Renders nothing until a session is attached. */
+/** Editor-header slot for a live doc: the active-editor avatar stack, the persistence chip and
+ * recoverable drafts. Its hosts are crowded bars, so on phone widths the chip shows its dot and
+ * the drafts trigger its icon, keeping the bar on its row. Renders nothing until a session is
+ * attached. */
 export function RealtimeSessionStatus({
   status,
   awareness,
   docName,
   readOnly = false,
   whenSynced,
-  compact = false,
   className,
 }: RealtimeSessionStatusProps) {
   const user = useAppSelector((state) => state.auth.user);
@@ -41,7 +41,7 @@ export function RealtimeSessionStatus({
         localUserName={user?.fullName || user?.username || null}
         localHasAvatar={Boolean(user?.hasAvatar)}
       />
-      <RealtimeStatusBadge status={status} save={save} storage={device.storage} compact={compact} />
+      <RealtimeStatusBadge status={status} save={save} storage={device.storage} compact />
       <RecoveredDrafts ydoc={awareness.doc} whenSynced={whenSynced} />
     </div>
   );

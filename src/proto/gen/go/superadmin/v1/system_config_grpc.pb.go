@@ -19,10 +19,11 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	SystemConfigService_GetSystemConfig_FullMethodName       = "/superadmin.v1.SystemConfigService/GetSystemConfig"
-	SystemConfigService_SetPublicRegistration_FullMethodName = "/superadmin.v1.SystemConfigService/SetPublicRegistration"
-	SystemConfigService_GetMfaPolicy_FullMethodName          = "/superadmin.v1.SystemConfigService/GetMfaPolicy"
-	SystemConfigService_SetMfaPolicy_FullMethodName          = "/superadmin.v1.SystemConfigService/SetMfaPolicy"
+	SystemConfigService_GetSystemConfig_FullMethodName         = "/superadmin.v1.SystemConfigService/GetSystemConfig"
+	SystemConfigService_SetPublicRegistration_FullMethodName   = "/superadmin.v1.SystemConfigService/SetPublicRegistration"
+	SystemConfigService_GetMfaPolicy_FullMethodName            = "/superadmin.v1.SystemConfigService/GetMfaPolicy"
+	SystemConfigService_SetMfaPolicy_FullMethodName            = "/superadmin.v1.SystemConfigService/SetMfaPolicy"
+	SystemConfigService_GetRealtimeBufferStatus_FullMethodName = "/superadmin.v1.SystemConfigService/GetRealtimeBufferStatus"
 )
 
 // SystemConfigServiceClient is the client API for SystemConfigService service.
@@ -34,7 +35,8 @@ const (
 // row (operator-edited) > env default (set at deploy time) > coded default.
 // The first call without an env value or DB row returns the coded default;
 // the operator's first edit creates the DB row, after which env becomes
-// irrelevant.
+// irrelevant. Env-only deployment facts that operators cannot edit here are
+// surfaced read-only.
 //
 // All RPCs require “User.is_system_admin=true“.
 type SystemConfigServiceClient interface {
@@ -49,6 +51,11 @@ type SystemConfigServiceClient interface {
 	// Partial update to the MFA policy. Only fields explicitly set in
 	// the request are written. Audits as “auth.mfa_policy_changed“.
 	SetMfaPolicy(ctx context.Context, in *SetMfaPolicyRequest, opts ...grpc.CallOption) (*SetMfaPolicyResponse, error)
+	// Read the Valkey buffer that holds accepted realtime edits until their
+	// PostgreSQL checkpoint: the preflight the answering backend recorded and
+	// deployment-wide pending totals. Carries no document, organization or
+	// credential detail, so it is safe to poll.
+	GetRealtimeBufferStatus(ctx context.Context, in *GetRealtimeBufferStatusRequest, opts ...grpc.CallOption) (*GetRealtimeBufferStatusResponse, error)
 }
 
 type systemConfigServiceClient struct {
@@ -99,6 +106,16 @@ func (c *systemConfigServiceClient) SetMfaPolicy(ctx context.Context, in *SetMfa
 	return out, nil
 }
 
+func (c *systemConfigServiceClient) GetRealtimeBufferStatus(ctx context.Context, in *GetRealtimeBufferStatusRequest, opts ...grpc.CallOption) (*GetRealtimeBufferStatusResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetRealtimeBufferStatusResponse)
+	err := c.cc.Invoke(ctx, SystemConfigService_GetRealtimeBufferStatus_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // SystemConfigServiceServer is the server API for SystemConfigService service.
 // All implementations must embed UnimplementedSystemConfigServiceServer
 // for forward compatibility.
@@ -108,7 +125,8 @@ func (c *systemConfigServiceClient) SetMfaPolicy(ctx context.Context, in *SetMfa
 // row (operator-edited) > env default (set at deploy time) > coded default.
 // The first call without an env value or DB row returns the coded default;
 // the operator's first edit creates the DB row, after which env becomes
-// irrelevant.
+// irrelevant. Env-only deployment facts that operators cannot edit here are
+// surfaced read-only.
 //
 // All RPCs require “User.is_system_admin=true“.
 type SystemConfigServiceServer interface {
@@ -123,6 +141,11 @@ type SystemConfigServiceServer interface {
 	// Partial update to the MFA policy. Only fields explicitly set in
 	// the request are written. Audits as “auth.mfa_policy_changed“.
 	SetMfaPolicy(context.Context, *SetMfaPolicyRequest) (*SetMfaPolicyResponse, error)
+	// Read the Valkey buffer that holds accepted realtime edits until their
+	// PostgreSQL checkpoint: the preflight the answering backend recorded and
+	// deployment-wide pending totals. Carries no document, organization or
+	// credential detail, so it is safe to poll.
+	GetRealtimeBufferStatus(context.Context, *GetRealtimeBufferStatusRequest) (*GetRealtimeBufferStatusResponse, error)
 	mustEmbedUnimplementedSystemConfigServiceServer()
 }
 
@@ -144,6 +167,9 @@ func (UnimplementedSystemConfigServiceServer) GetMfaPolicy(context.Context, *Get
 }
 func (UnimplementedSystemConfigServiceServer) SetMfaPolicy(context.Context, *SetMfaPolicyRequest) (*SetMfaPolicyResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method SetMfaPolicy not implemented")
+}
+func (UnimplementedSystemConfigServiceServer) GetRealtimeBufferStatus(context.Context, *GetRealtimeBufferStatusRequest) (*GetRealtimeBufferStatusResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetRealtimeBufferStatus not implemented")
 }
 func (UnimplementedSystemConfigServiceServer) mustEmbedUnimplementedSystemConfigServiceServer() {}
 func (UnimplementedSystemConfigServiceServer) testEmbeddedByValue()                             {}
@@ -238,6 +264,24 @@ func _SystemConfigService_SetMfaPolicy_Handler(srv interface{}, ctx context.Cont
 	return interceptor(ctx, in, info, handler)
 }
 
+func _SystemConfigService_GetRealtimeBufferStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetRealtimeBufferStatusRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SystemConfigServiceServer).GetRealtimeBufferStatus(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SystemConfigService_GetRealtimeBufferStatus_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SystemConfigServiceServer).GetRealtimeBufferStatus(ctx, req.(*GetRealtimeBufferStatusRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // SystemConfigService_ServiceDesc is the grpc.ServiceDesc for SystemConfigService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -260,6 +304,10 @@ var SystemConfigService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SetMfaPolicy",
 			Handler:    _SystemConfigService_SetMfaPolicy_Handler,
+		},
+		{
+			MethodName: "GetRealtimeBufferStatus",
+			Handler:    _SystemConfigService_GetRealtimeBufferStatus_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

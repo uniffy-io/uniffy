@@ -37,6 +37,13 @@ const signedOut = new Set<string>();
 const saveListeners = new Set<(key: string) => void>();
 // Recovered-draft id of a generation that only retained updates still hold.
 const RETAINED_DRAFT_PREFIX = "retained.";
+// Lineage of a document copy kept after view access went; it waits for the user, never a drain.
+const RECOVERY_GENERATION_PREFIX = "recovery:";
+
+/** Lineages a drain may replay: neither pre-sync text nor a copy kept after lost access. */
+export function isDrainableGeneration(generation: string): boolean {
+  return !generation.startsWith("unmerged:") && !generation.startsWith(RECOVERY_GENERATION_PREFIX);
+}
 
 export function isDraftStorageActive(userId: string): boolean {
   return !signedOut.has(userId);
@@ -138,6 +145,44 @@ export function recordCoverage(
   });
   batch.promise = promise;
   return promise;
+}
+
+/**
+ * The user can no longer view the document, and the server keeps what it accepted. With every own
+ * update known to be accepted the generation's device copy goes; otherwise it moves whole to a
+ * recovery lineage that stays a recovered draft. Either way no drain replays it again, and a copy
+ * that cannot be read stays where it is.
+ */
+export function settleLostAccess(
+  key: string,
+  generation: string,
+  keepDraft: boolean,
+): Promise<void> {
+  if (signedOut.has(draftUser(key))) return Promise.resolve();
+  return queue(key, async () => {
+    const records = await readRecords(key);
+    const lineage = records.filter((record) => record.generation === generation);
+    if (keepDraft) {
+      const updates: Uint8Array[] = [];
+      for (const record of lineage) updates.push(fromBase64(await readRecord(key, record)));
+      for (const record of await updateRecords(key))
+        if (record.generation === generation) updates.push(await decryptUpdate(key, record));
+      if (updates.length) {
+        const id = `${RECOVERY_GENERATION_PREFIX}${Date.now()}.${Math.random().toString(36).slice(2)}`;
+        await replaceEncryptedDraft(
+          key,
+          { id, generation: id },
+          Y.mergeUpdates(updates),
+          lineage.filter((record) => "ciphertext" in record).map((record) => record.id),
+        );
+        await removeChunkedRecords(key, records, lineage);
+        await deleteUpdateRecords(key, generation);
+        return;
+      }
+    }
+    await removeRecords(key, records, lineage);
+    await deleteUpdateRecords(key, generation);
+  });
 }
 
 /** Uncheckpointed own updates of one generation in creation order, for replay under their ids. */

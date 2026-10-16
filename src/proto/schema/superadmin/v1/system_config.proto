@@ -9,7 +9,8 @@ option go_package = "github.com/uniffy-io/uniffy-proto-go/superadmin/v1;superadm
 // row (operator-edited) > env default (set at deploy time) > coded default.
 // The first call without an env value or DB row returns the coded default;
 // the operator's first edit creates the DB row, after which env becomes
-// irrelevant.
+// irrelevant. Env-only deployment facts that operators cannot edit here are
+// surfaced read-only.
 //
 // All RPCs require ``User.is_system_admin=true``.
 service SystemConfigService {
@@ -27,6 +28,12 @@ service SystemConfigService {
   // Partial update to the MFA policy. Only fields explicitly set in
   // the request are written. Audits as ``auth.mfa_policy_changed``.
   rpc SetMfaPolicy(SetMfaPolicyRequest) returns (SetMfaPolicyResponse) {}
+
+  // Read the Valkey buffer that holds accepted realtime edits until their
+  // PostgreSQL checkpoint: the preflight the answering backend recorded and
+  // deployment-wide pending totals. Carries no document, organization or
+  // credential detail, so it is safe to poll.
+  rpc GetRealtimeBufferStatus(GetRealtimeBufferStatusRequest) returns (GetRealtimeBufferStatusResponse) {}
 }
 
 // One configuration flag's effective state.
@@ -74,4 +81,70 @@ message SetMfaPolicyRequest {
 
 message SetMfaPolicyResponse {
   MfaPolicy policy = 1;
+}
+
+// Whether the serving Valkey instance may hold accepted realtime edits.
+enum RealtimeBufferVerdict {
+  REALTIME_BUFFER_VERDICT_UNSPECIFIED = 0;
+  // The answering backend has not read the serving Valkey instance yet.
+  REALTIME_BUFFER_VERDICT_NOT_RUN = 1;
+  REALTIME_BUFFER_VERDICT_ENABLED = 2;
+  // A confirmed allkeys-* eviction policy in strict mode; edits are refused.
+  REALTIME_BUFFER_VERDICT_DISABLED = 3;
+  // CONFIG is renamed or denied; edits are accepted and the requirement is logged.
+  REALTIME_BUFFER_VERDICT_UNKNOWN = 4;
+}
+
+// Facts the deployment preflight read from the serving Valkey instance.
+message RealtimeBufferPreflight {
+  // maxmemory-policy; unset when CONFIG is renamed or denied.
+  optional string eviction_policy = 1;
+  // maxmemory in bytes, 0 when unlimited; unset when unreadable.
+  optional int64 maxmemory_bytes = 2;
+  // Unset when INFO persistence does not report it.
+  optional bool aof_enabled = 3;
+  // Whether RDB snapshots are scheduled; unset when unreadable.
+  optional bool rdb_snapshots_configured = 4;
+  // What a Valkey crash or restart loses, in the words the preflight logs.
+  string loss_window = 5;
+  string valkey_version = 6;
+  // Leading characters of the instance run id; a change marks a restart or failover.
+  string valkey_run_id_prefix = 7;
+  // Stored bytes every pending edit together may hold, split evenly across buckets.
+  int64 pending_budget_bytes = 8;
+}
+
+// Edits accepted across the deployment and not yet checkpointed.
+message RealtimeBufferTotals {
+  // Stored bytes as the budget counts them: update, id and per-record overhead.
+  int64 pending_bytes = 1;
+  int64 pending_records = 2;
+  int64 pending_documents = 3;
+  // Age of the oldest pending edit, 0 when none waits. A document backing off
+  // after a failed checkpoint counts from its retry.
+  double oldest_pending_seconds = 4;
+}
+
+message RealtimeBufferStatus {
+  RealtimeBufferVerdict verdict = 1;
+  // REALTIME_VALKEY_PREFLIGHT: "strict" or "warn".
+  string preflight_mode = 2;
+  // True when REALTIME_PENDING_BUDGET_BYTES sets the budget instead of maxmemory.
+  bool pending_budget_from_env = 3;
+  // Unset until the answering backend has read the serving Valkey instance.
+  RealtimeBufferPreflight preflight = 4;
+  // Unset when Valkey could not be read for this request.
+  RealtimeBufferTotals totals = 5;
+  // Epoch resets by reason, counted by the answering backend process since
+  // it started. Workers count their own on their metrics endpoint.
+  map<string, int64> epoch_resets = 6;
+  // Checkpoint passes stopped by an unreadable stored edit, by reason,
+  // counted the same way as epoch_resets.
+  map<string, int64> poisoned_checkpoints = 7;
+}
+
+message GetRealtimeBufferStatusRequest {}
+
+message GetRealtimeBufferStatusResponse {
+  RealtimeBufferStatus status = 1;
 }

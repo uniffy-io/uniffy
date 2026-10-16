@@ -126,10 +126,17 @@ Keep 4409 and 4410 distinct: expiry refreshes and reconnects, revocation stops u
 authentication changes. Socket lifetime is bounded even without content attached. Inbound,
 outbound and watchdog tasks supervise each other; any task failure retires the connection.
 
-Upgrade checks run before the protocol check. A client that does not offer `uniffy.realtime.v2`
-gets the handshake completed with its own protocol, then close 4426. Web stops reconnecting and
-shows Reload to keep saving; mobile shows Update to keep saving. Backend, workers, web and mobile
-ship protocol support together. No server serves two protocols.
+Upgrade checks run in order: origin, token, token type, token organization, revocation, membership,
+protocol, then the per-user socket limit. A refusal completes the handshake and then closes with its
+code, so clients read the code instead of an HTTP 403: 4403 forbidden origin, organization mismatch
+or inactive membership; 4401 undecodable or wrong-type token; 4410 revoked credentials; 1013
+authentication outage or socket limit; 4426 when `uniffy.realtime.v2` is not offered. The handshake
+selects `uniffy.realtime.v2` when offered, otherwise the first protocol offered, never the bearer
+entry. Two upgrades are refused before acceptance, as HTTP 403: a missing or malformed `org_id`
+query parameter, which FastAPI's request validation closes with 1008 before the route runs, and an
+upgrade from an allowed origin with no token. Clients always send both. On 4426 web stops
+reconnecting and shows Reload to keep saving; mobile shows Update to keep saving. Backend, workers,
+web and mobile ship protocol support together. No server serves two protocols.
 
 ## Client transport
 
@@ -169,7 +176,8 @@ coverage epoch changed under it; a Yjs reply always repeats the whole delete set
 client only flushes its unsent batch. Read-only documents never answer.
 
 `unavailable` keeps every local id local and shows Saving unavailable. The ids resend after 5 s,
-growing by 1.5 up to 15 s, and again on reconnect; any receipt or type 7 ends the state.
+growing by 1.5 up to 15 s, and again on reconnect. Any receipt or type 7 ends the state and resends
+the refused ids at once, since the server takes writes again.
 `update conflict` stops only the oldest awaited id.
 
 Generation mismatch stops replay into the active document and creates a fresh session while
@@ -179,14 +187,21 @@ shared transport state. Old callbacks must not clear a replacement socket or its
 
 Transport owns exponential reconnect with jitter, periodic 30-second resync, 15-second awareness
 keepalive, 30-second idle close and a reconnect when a sync request stays unanswered for ten
-seconds. Web listens for online/offline, visibility, pagehide and auth refresh/revoke events.
-Mobile uses AppState and connectivity listeners. Disconnect removes remote awareness so offline
-mirror ownership can settle locally. Detach sends awareness removal where possible. Headless
-sessions such as drains carry no local awareness and send no awareness or awareness query frames.
+seconds. The reconnect delay grows from 500 ms by 1.5 up to 15 s. An inbound frame resets it, and so
+does a forced reconnect (online, foreground or visibility, Retry, auth refresh), but opening never
+does: a refused upgrade opens and closes before any frame. Web listens for online/offline,
+visibility, pagehide and auth refresh/revoke events. Mobile uses AppState and connectivity
+listeners. Disconnect removes remote awareness so offline mirror ownership can settle locally.
+Detach sends awareness removal where possible. Headless sessions such as drains carry no local
+awareness and send no awareness or awareness query frames.
 
 Web closes 4401 and 4409 enter refresh with exponential backoff and a five-attempt cap. No socket
-opens without an access token. Retry or returning online resets the cap. Temporary refresh errors
-retain credentials; startup offers Retry. Authentication rejection remains a sign-out condition.
+opens without an access token. Retry or returning online resets the cap. Mobile refreshes at once on
+4401 and 4409; only a fresh token reconnects at once, and a refresh that fails or returns nothing
+takes the normal reconnect backoff. Mobile caps refreshes at five in a row; foreground or regained
+connectivity resets the cap. On both clients an inbound frame resets it too.
+Temporary refresh errors retain credentials; startup offers Retry. Authentication rejection remains
+a sign-out condition.
 Refresh and organization switch share a cross-tab lock: Web Locks on secure origins, an IndexedDB
 transaction otherwise. Read the refresh token after acquiring the lock, persist rotated credentials
 before releasing it, and ignore responses superseded by another login. Dedicated `uniffy:auth`
@@ -325,14 +340,19 @@ Buffer jobs run on core workers with `JobReliability.BUFFERED` and a Valkey reco
 taken by any core worker, with quiet logging. Per bucket it reads up to 64 due entries and up to 32
 entries of the early set, oldest first; a backoff moves an entry's score in both sets. It skips
 claimed documents, takes a five-second claim, and enqueues at most 16 documents per bucket and 64
-per tick across the fleet. The job id
-`checkpoint:<scope>:<window>` is unique per epoch and due window, so a retained result never
-suppresses a later window. Due entries stay until cleanup proves coverage, so a lost job is
-dispatched again. Continued typing never moves the deadline; a record waits at most about ten
-seconds after its own acceptance.
+per tick across the fleet. The job id `checkpoint:<scope>:<claim>` is unique per dispatch, so
+neither a kept result nor the in-progress key of a worker that died mid-pass refuses a later one.
+The job extends its claim while it runs and on every busy requeue. A job whose claim another
+dispatch or a backoff holds runs no pass (`superseded`). A worker killed mid-checkpoint frees its
+document within the five-second claim, and the next tick dispatches it again; a stalled pass that
+lost its claim still commits only through the guarded commit below. Due entries stay until cleanup
+proves coverage, so a lost job is dispatched again. Continued typing never moves the deadline; a
+record waits at most about ten seconds after its own acceptance.
 
 `checkpoint_realtime_document` runs once per dispatch (no retries, no kept result, 120 s timeout),
-two at a time per worker process; a busy process requeues after one second without using a try.
+two at a time per worker process; a busy process requeues after one second without using a try and
+keeps the job's claim. Those two slots bound checkpoint throughput per core worker process, so the
+core fleet's process count, not `CORE_WORKER_MAX_JOBS`, is the capacity lever.
 
 1. Under the lock, capture a contiguous prefix of at most 1024 records or 4 MiB. A larger single
    first record goes alone.
@@ -390,6 +410,15 @@ is logged and acceptance continues. Persistence never gates; the log states the 
 implies. The verdict is the `uniffy_realtime_valkey_preflight{verdict}` gauge and the `/healthz`
 field `realtime_buffer` (enabled, disabled, unknown or not_run). `REALTIME_PENDING_BUDGET_BYTES`
 defaults to a quarter of maxmemory capped at 512 MiB, or 256 MiB when maxmemory is 0 or unreadable.
+
+Platform admins read the buffer through `superadmin.v1.SystemConfigService.GetRealtimeBufferStatus`
+(`domains/platform/config/realtime.py`), shown on the `/platform` overview: the verdict and mode,
+whether the budget comes from the environment, the preflight facts with the loss window, and
+deployment-wide pending bytes, records, documents and oldest pending age. It requires a system
+admin and names no document, organization or secret. Totals come from the bucket accounting hashes
+and due sets in one pipelined round trip; when Valkey cannot be read the call answers without them.
+Its epoch reset and poison counts are the answering backend process's own counters since it
+started.
 
 ## Projection and effects
 
@@ -494,8 +523,9 @@ and synthetic occurrences do not attach.
 
 Upgrade validates Origin, access-token type, token organization, user and session revocation facts,
 and active membership. Web passes bearer in `Sec-WebSocket-Protocol` alongside
-`uniffy.realtime.v2`; server echoes only that canonical protocol. Mobile passes Authorization.
-Never echo bearer data through the selected protocol.
+`uniffy.realtime.v2`; server selects that canonical protocol, or on a refusal of a client that lacks
+it the first protocol offered. Mobile passes Authorization. Never echo bearer data through the
+selected protocol.
 `core/auth/revocation.py` reads account status/token version and session ownership/revocation from
 PostgreSQL in one fresh query. RPC and asset authentication use the same check. Valkey markers are
 not evidence of validity. Missing or revoked session rows deny access; database failures produce
@@ -574,7 +604,12 @@ the preceding disposal. Registered databases close and await pending writes befo
 out of the live generation. It runs on `seed_conflict`, which then starts a fresh authoritative
 session; on a write denial while own edits are unaccepted or oversized (`denialRetainsDraft`); and
 when a read-only reopen hydrates unsent edits (`hydrationRetainsDraft`). Edits the server accepted
-before a denial are no draft: they still checkpoint. Failed encrypted storage keeps a user-scoped
+before a denial are no draft: they still checkpoint. A `no view access` or `access revoked` denial
+runs `settleLostAccess` instead, in a live session and in a drain alike. With an edit the server
+never accepted, or one the transport still holds, the whole document first moves to a `recovery:`
+draft; otherwise this session's accepted pending rows and the snapshots it wrote or hydrated of the
+live lineage are deleted, because the server keeps what it accepted. After it nothing more is written
+for the document and nothing is handed to the drain. Failed encrypted storage keeps a user-scoped
 in-memory copy for the current tab. Restore keeps the source until explicit Discard.
 
 Unload rule: each persistence session registers one `beforeunload` handler. It flushes and warns
@@ -584,19 +619,35 @@ are written only after their rows land.
 
 `pendingDocs.ts` keeps a localStorage registry of content type, id, organization, user and discard
 policy. A storage write records the document while its session holds uncheckpointed work, and close
-hands it off again. `drain.ts` attaches a headless Y.Doc per entry, with no presence and no seed
-claim, and hydrates from IDB, which hands unconfirmed updates back to the transport. It finishes as:
+hands it off again. `drain.ts` gives each entry a headless Y.Doc, with no presence and no seed
+claim, and hydrates it from IDB before attaching, so the attaching SyncStep1 carries what the
+device holds and the server answers only the difference. A single stored lineage also goes to the
+multiplexer as `heldGeneration`, so a server generation that differs is a mismatch; rows of more
+than one lineage wait for the server's generation and hydrate on sync. Hydration hands unconfirmed
+updates back to the transport. A drain finishes as:
 
 - drained once no own edit is checkpoint pending: close as checkpointed, discard per policy, drop
   the entry;
-- retained on a write denial or generation mismatch: the rows stay a recoverable draft, unaccepted
-  edits move to a recovery lineage, and the entry is dropped;
-- retry after 60 s or on close 4401, 4403 or 4410: rows and entry wait for the next trigger.
+- retained on a write denial or generation mismatch: unaccepted edits move to a recovery lineage,
+  accepted rows stay because they still checkpoint, and the entry is dropped. A view denial
+  settles lost access as above;
+- retry on close 4401, 4403 or 4410, or when an editor takes over: rows and entry wait for the next
+  trigger;
+- retry with backoff when 60 s pass without a checkpoint or hydration fails: the document's next
+  attach waits 1 minute, doubling up to 15 minutes. Opening its editor or the `online` event clears
+  the wait; a drained or retained finish forgets it.
 
 Acceptance alone never drains. `useRealtimeDrain`, mounted in `ProtectedRoute`, rebuilds the
-registry from stored rows on mount and when encryption becomes ready. It kicks drains on mount,
-`online`, auth refresh, registry changes and every 30 seconds, and skips documents an editor holds.
-Opening an editor cancels its drain before attaching and waits for prior persistence disposal.
+registry from stored rows on mount and when encryption becomes ready; that discovery skips
+`recovery:` lineages, which wait for the user. It kicks drains on mount, `online`, auth refresh,
+registry changes and every 30 seconds. A kick skips documents an editor holds and documents still
+waiting out their backoff. Across tabs of one origin, `documentLocks.ts` uses Web Locks: an open
+editor holds `uniffy:realtime:<docName>` shared from attach until its close has written its rows,
+and a drain runs only when it takes that lock exclusively at once, finishing `held` otherwise. So no
+tab replays the rows of an editor or a drain in another tab. Plain HTTP origins have no Web Locks;
+there a tab skips only its own editors and the server's deduplication keeps the data right. Opening
+an editor cancels its drain before attaching, including one still waiting for its lock, and waits
+for prior persistence disposal.
 
 Sign-out: `useSignOut` returns false without signing out while any editable attached document is
 checkpoint pending, the registry holds an entry for the user, or stored pending or dirty rows exist
@@ -656,9 +707,14 @@ boolean.
 already render it: the serialized fragment equals the text, or the text parses and serializes to
 the same Markdown. A rich peer's own mirror write is therefore never external, even though
 Milkdown's serializer keeps a trailing space its parser drops. The leader merges the pending base,
-its serialized rich content and the incoming text (`mergeMarkdownEdits`), keeps fragment blocks that
-read the same after a Markdown round trip, and writes fragment and mirror in one `HYDRATION_ORIGIN`
-transaction. While external text awaits projection, a non-leader mirrors only its own keystroke
+its serialized rich content and the incoming text (`mergeMarkdownEdits`). The incoming text leaves
+out the Y.Text insertions of every client whose same transaction also changed the fragment. Two rich
+writers appending at the end of the document anchor to the same character of Y.Text, which then
+orders their keystrokes by client instead of by paragraph, while the fragment keeps each paragraph
+its own type; their edits therefore come from the fragment alone. The leader keeps fragment blocks
+that read the same after a Markdown round trip, leaves a fragment that already reads as the merge
+untouched, and writes fragment and mirror in one `HYDRATION_ORIGIN` transaction. The mirror repair
+goes in separate small edits, so a concurrent writer's anchors survive. While external text awaits projection, a non-leader mirrors only its own keystroke
 onto that text and never projects; its leave flush writes nothing. A peer projection that makes the
 fragment match clears the pending base. Reconciliation runs in a microtask after external text.
 Idle mirror flushes run 250 ms after the last change with a two-second maximum. Leave flush on
@@ -747,10 +803,14 @@ SecureStore chunked drafts stay readable. A same-generation save merges readable
 the encrypted replacement, then retires old chunk records. Unreadable chunks and ciphertext remain
 recoverable records; a missing key never silently resets a populated database.
 
-An `updates` table keeps every own update from its first local event until a checkpoint covers it;
-a receipt changes nothing on the device. After sync a session or drain replays every retained
-update of the server's generation under its original id. A generation keeps its draft while any of
-its updates is retained.
+An `updates` table keeps every own update from its first local event until a checkpoint covers it
+or view access is lost; a receipt changes nothing on the device. After sync a session or drain
+replays every retained update of the server's generation under its original id. A generation keeps
+its draft while any of its updates is retained. A `no view access` or `access revoked` denial runs
+`settleLostAccess` for the generation. When this socket's coverage is known and nothing is transport
+pending, the server holds every own update, so the generation's records and retained updates are
+deleted; otherwise they move whole to a `recovery:` lineage that stays a recovered draft. Neither a
+session nor a drain saves or replays the document afterwards.
 
 Same-generation saves merge prior raw bytes before replacing records, even if current session has
 not hydrated. Serialize recovery reads with writes so a writer cannot remove chunks under an active
@@ -769,8 +829,13 @@ preservation.
 A close is clean when the session is synced, connected, not read-only, not denied and has no
 checkpoint-pending edit; a clean close discards that generation's device copy. Otherwise a dirty
 session saves its draft and the drain finishes the work. Drains run per stored draft on mount,
-foreground, connectivity regained, every 30 seconds and after each stored save of a closed editor.
-They end once no own edit is checkpoint pending, then discard the generation, or after 60 seconds.
+foreground, connectivity regained, every 30 seconds and after each stored save of a closed editor,
+and skip `unmerged:` and `recovery:` lineages. A drain hydrates a single stored lineage before
+attaching and passes it as `heldGeneration`; drafts of several lineages wait for the server's
+generation. It ends once no own edit is checkpoint pending, then discards the generation. A drain
+that sees no checkpoint within 60 seconds, a write denial, a generation mismatch or a failed replay
+ends and backs off the document: 1 minute, doubling up to 15 minutes, cleared by opening its editor
+or by regained connectivity. A view denial settles lost access as above.
 
 Sign-out goes through `useSignOut`. `settleUnsyncedEdits` flushes batches and waits up to 15 seconds
 for attached documents to checkpoint, then reports whether any stored draft is more than a cache of

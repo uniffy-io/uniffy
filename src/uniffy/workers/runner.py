@@ -57,11 +57,13 @@ def run_worker_with_restart(
 
     backoff = 1.0
     while True:
-        asyncio.set_event_loop(asyncio.new_event_loop())
-
         started_at = time.monotonic()
         try:
-            run_worker(settings_cls)
+            # The worker binds to the current loop. Closing it after each run cancels what the run
+            # left behind, so a restart opens its clients on a fresh loop.
+            with asyncio.Runner() as runner:
+                runner.get_loop()
+                run_worker(settings_cls)
             break
         # A Valkey stall surfaces as a timeout, which is a ValkeyError but no ConnectionError.
         except (ValkeyError, ConnectionError, OSError, RuntimeError) as exc:

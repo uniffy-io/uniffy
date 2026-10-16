@@ -52,7 +52,11 @@ x-backend-base: &backend-base
     image: uniffy-dev-backend
     pull_policy: never
     # docker-init as PID 1 reaps and forwards signals to watchfiles and its child.
+    # It stays root while the workload runs under the host uid, so forwarding
+    # the stop signal needs KILL; without it docker stop kills the process
+    # before any graceful shutdown.
     init: true
+    cap_add: [CHOWN, DAC_OVERRIDE, FOWNER, SETGID, SETUID, KILL]
     restart: unless-stopped
     networks: [uniffy-network]
     env_file:

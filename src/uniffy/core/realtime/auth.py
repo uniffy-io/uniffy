@@ -12,6 +12,8 @@ from urllib.parse import unquote
 
 _BEARER_PREFIX = "bearer."
 
+# Rate limit, socket limit, slow consumer or a temporary authentication outage; reconnect later.
+WS_CLOSE_TRY_AGAIN_LATER = 1013
 WS_CLOSE_UNSUPPORTED_TYPE = 4400
 WS_CLOSE_UNAUTHENTICATED = 4401
 WS_CLOSE_FORBIDDEN = 4403

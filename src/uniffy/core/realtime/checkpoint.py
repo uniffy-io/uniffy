@@ -88,6 +88,8 @@ class CheckpointStatus(StrEnum):
     POISONED = "poisoned"
     # Nothing durable changed; the next dispatch runs the pass again.
     DEFERRED = "deferred"
+    # A later dispatch or a backoff holds the document's claim, so this job runs no pass.
+    SUPERSEDED = "superseded"
 
 
 @dataclass(frozen=True, slots=True)

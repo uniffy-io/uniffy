@@ -17,6 +17,7 @@
 
 name: uniffy-qual
 
+# Same containment as dev.yaml.
 x-contained: &contained
     security_opt:
         - no-new-privileges:true
@@ -71,7 +72,10 @@ x-backend: &backend
     <<: *contained
     image: uniffy-dev-backend
     pull_policy: never
+    # KILL lets docker-init forward the stop signal to the process the
+    # entrypoint dropped to the host uid.
     init: true
+    cap_add: [CHOWN, DAC_OVERRIDE, FOWNER, SETGID, SETUID, KILL]
     restart: unless-stopped
     environment: *environment
     volumes:

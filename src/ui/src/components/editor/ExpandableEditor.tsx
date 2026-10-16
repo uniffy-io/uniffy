@@ -252,6 +252,14 @@ export function ExpandableEditor({
   ) : (
     connectingPreview
   );
+  const notices = [
+    replacedNotice === "draft"
+      ? `This ${label.toLowerCase()} was changed elsewhere. Your unsaved text is under Recovered draft.`
+      : replacedNotice === "plain"
+        ? `This ${label.toLowerCase()} was changed elsewhere.`
+        : null,
+    editWithoutLive ? "Live updates unavailable. Done saves changes." : null,
+  ].filter((notice): notice is string => notice !== null);
 
   return (
     <>
@@ -395,25 +403,22 @@ export function ExpandableEditor({
                     onFileUploaded={onFileUploaded}
                     trailing={
                       <>
-                        {replacedNotice && (
-                          <span className="text-xs text-muted-foreground" role="status">
-                            {replacedNotice === "draft"
-                              ? `This ${label.toLowerCase()} was changed elsewhere. Your unsaved text is under Recovered draft.`
-                              : `This ${label.toLowerCase()} was changed elsewhere.`}
+                        {/* Phones show these under the bar, so the chip and Done keep their row. */}
+                        {notices.map((notice) => (
+                          <span
+                            key={notice}
+                            className="hidden text-xs text-muted-foreground sm:inline"
+                            role="status"
+                          >
+                            {notice}
                           </span>
-                        )}
-                        {editWithoutLive && (
-                          <span className="text-xs text-muted-foreground">
-                            Live updates unavailable. Done saves changes.
-                          </span>
-                        )}
+                        ))}
                         <RealtimeSessionStatus
                           status={status}
                           awareness={binding?.awareness ?? null}
                           docName={docName}
                           readOnly={readonly}
                           whenSynced={binding?.whenSynced}
-                          compact
                         />
                         <Button type="button" size="md" onClick={handleClose}>
                           <Check size={14} weight="bold" />
@@ -422,6 +427,14 @@ export function ExpandableEditor({
                       </>
                     }
                   />
+                  {notices.length > 0 && (
+                    <p
+                      className="border-b border-border/50 px-3 py-1.5 text-xs text-muted-foreground sm:hidden"
+                      role="status"
+                    >
+                      {notices.join(" ")}
+                    </p>
+                  )}
                 </div>
 
                 {/* Editor body - let CrepeEditor's own wrapper handle scrolling */}

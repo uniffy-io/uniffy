@@ -176,12 +176,14 @@ function snapshotSeqs(keys: UpdateKey[], generation: string): string[] {
 export async function discoverStoredPendingDocs(userId: string): Promise<boolean> {
   if (!isStorageEncryptionReady()) return false;
   const db = await getDB();
-  const blobs = await db.getAll(UPDATES_STORE);
+  const tx = db.transaction(UPDATES_STORE, "readonly");
+  const store = tx.objectStore(UPDATES_STORE);
+  const [keys, blobs] = await Promise.all([store.getAllKeys(), store.getAll(), tx.done]);
   let pending = false;
-  for (const blob of blobs) {
+  for (let index = 0; index < blobs.length; index++) {
     let row: StoredRow | null;
     try {
-      row = await readRow(blob);
+      row = await readRow(blobs[index]);
     } catch {
       // Another user's encrypted rows cannot authorize a replay in this session.
       continue;
@@ -189,9 +191,14 @@ export async function discoverStoredPendingDocs(userId: string): Promise<boolean
     if (!row || (row.scope && row.scope.userId !== userId)) continue;
     if (row.kind !== "pending" && !row.dirty) continue;
     pending = true;
-    if (row.scope) recordPendingDoc(row.scope);
+    // A recovered draft waits for the user, never for the drain.
+    if (row.scope && !isRecoveryKey(keys[index] as UpdateKey)) recordPendingDoc(row.scope);
   }
   return pending;
+}
+
+function isRecoveryKey(key: UpdateKey): boolean {
+  return key.length === 4 && key[2].startsWith(RECOVERY_GENERATION_PREFIX);
 }
 
 /** Drafts that hold a local user edit and cannot replay into the current generation.
@@ -472,11 +479,18 @@ export interface EncryptedPersistenceOptions {
 
 export interface EncryptedPersistence {
   markCheckpointed: () => Promise<void>;
-  hydrate: (options?: { serverGeneration: string | null }) => Promise<void>;
+  /** Replays this device's rows of the server's generation, or offline of the single lineage the
+   * rows hold. Resolves with the lineage it replayed, null when the rows wait for server identity. */
+  hydrate: (options?: { serverGeneration: string | null }) => Promise<string | null>;
   compact: () => Promise<void>;
   /** Writes queued edits and coverage now; resolves once they are on this device or failed. */
   flush: () => Promise<void>;
   quarantine: () => Promise<boolean>;
+  /** The user can no longer view the document. The server keeps what it accepted, so this
+   * session's rows of the live lineage go; with `keepDraft`, or any edit the server never
+   * accepted, the document first moves to a recovered draft. Nothing is written for the document
+   * afterwards. True when this session had read the device's rows, so none of them still waits. */
+  settleLostAccess: (options: { keepDraft: boolean }) => Promise<boolean>;
   /** True once a local user edit changed document content in this session or in a hydrated row. */
   isDirty: () => boolean;
   /** `discard` drops this doc's snapshot rows instead of compacting them; `checkpointed` marks
@@ -539,6 +553,8 @@ export function attachEncryptedPersistence(
   let snapshotRequested = false;
   let pendingCompact = false;
   let destroyed = false;
+  // Set once view access is gone: the device keeps nothing more of the live lineage.
+  let released = false;
   let rowsRead = false;
   let destroyPromise: Promise<void> | null = null;
   const pendingWrites = new Set<Promise<void>>();
@@ -563,7 +579,7 @@ export function attachEncryptedPersistence(
   const publishDevice = () => publishDeviceState(docKey);
 
   const onBeforeTransaction = (transaction: Y.Transaction) => {
-    if (destroyed || dirty || !isPersistedOrigin(transaction.origin)) return;
+    if (destroyed || released || dirty || !isPersistedOrigin(transaction.origin)) return;
     beforeText = contentProjection(ydoc);
   };
 
@@ -573,7 +589,7 @@ export function attachEncryptedPersistence(
     _doc: Y.Doc,
     transaction: Y.Transaction,
   ) => {
-    if (destroyed) return;
+    if (destroyed || released) return;
     if (!isPersistedOrigin(origin)) return;
     localUpdates++;
     if (!dirty) {
@@ -588,7 +604,7 @@ export function attachEncryptedPersistence(
   };
 
   const onCoverage = (event: UpdateCoverageEvent) => {
-    if (destroyed) return;
+    if (destroyed || released) return;
     const known = tracked.get(event.updateId);
     if (event.coverage === "local" && !known) {
       // Read once the transport finished: a batch split in two leaves the later half unsent.
@@ -640,7 +656,7 @@ export function attachEncryptedPersistence(
       storage: !isStorageEncryptionReady() ? "unavailable" : storageFailed ? "failed" : "available",
       unpersisted: localUpdates > persistedUpdates,
     }),
-    hydrated: () => rowsRead || destroyed,
+    hydrated: () => rowsRead || destroyed || released,
   };
 
   function finishHydration(restored: RetainedUpdate[]): void {
@@ -699,7 +715,7 @@ export function attachEncryptedPersistence(
   }
 
   function requestWrite(): void {
-    if (writeLoop || !isStorageEncryptionReady()) return;
+    if (writeLoop || released || !isStorageEncryptionReady()) return;
     if (!snapshotDue() && rowChanges.size === 0) {
       scheduleSnapshot();
       return;
@@ -804,7 +820,7 @@ export function attachEncryptedPersistence(
       persistedUpdates = Math.max(persistedUpdates, mark);
     }
     for (const [updateId, change] of changes) if (!change.row) retiring.delete(updateId);
-    if (opts.scope && holdsUncheckpointed()) recordPendingDoc(opts.scope);
+    if (opts.scope && !released && holdsUncheckpointed()) recordPendingDoc(opts.scope);
     if (writeSnapshot && allocated % compactEvery === 0 && !pendingCompact) {
       pendingCompact = true;
       queueMicrotask(() => {
@@ -815,18 +831,20 @@ export function attachEncryptedPersistence(
     return true;
   }
 
-  let hydration = Promise.resolve();
-  function hydrate(options?: { serverGeneration: string | null }): Promise<void> {
+  let hydration: Promise<string | null> = Promise.resolve(null);
+  function hydrate(options?: { serverGeneration: string | null }): Promise<string | null> {
     hydration = hydration.then(() => hydrateRows(options));
     return hydration;
   }
 
-  async function hydrateRows(options?: { serverGeneration: string | null }): Promise<void> {
+  async function hydrateRows(options?: {
+    serverGeneration: string | null;
+  }): Promise<string | null> {
     await previousDisposal;
-    if (destroyed) return;
+    if (destroyed || released) return null;
     if (!isStorageEncryptionReady()) {
       finishHydration([]);
-      return;
+      return null;
     }
     try {
       const db = await getDB();
@@ -847,7 +865,7 @@ export function attachEncryptedPersistence(
         const current = docGeneration(ydoc);
         if (current !== null) options = { serverGeneration: current };
         else if (generations.size === 1) options = { serverGeneration: [...generations][0] };
-        else return;
+        else return null;
       }
       // The server value was captured before replay. Reading the merged map
       // here would let a stale local LWW entry decide whether it is current.
@@ -866,7 +884,7 @@ export function attachEncryptedPersistence(
           continue;
         try {
           const row = await readRow(blobs[i]);
-          if (destroyed) return;
+          if (destroyed || released) return null;
           if (!row) continue;
           if (row.update.length > 0) Y.applyUpdate(ydoc, row.update, HYDRATION_ORIGIN);
           if (row.kind === "pending") {
@@ -894,6 +912,7 @@ export function attachEncryptedPersistence(
         window.dispatchEvent(new Event(RECOVERY_AVAILABLE_EVENT));
       }
       finishHydration(restored);
+      return replayGeneration;
     } catch (err) {
       console.warn("[realtime] encrypted persistence hydrate failed", err);
       throw err;
@@ -901,7 +920,8 @@ export function attachEncryptedPersistence(
   }
 
   async function quarantine(): Promise<boolean> {
-    await hydration.catch(() => {});
+    await hydration.catch(() => null);
+    if (released) return false;
     const previousGeneration = storageGeneration();
     recoveryGeneration = `${RECOVERY_GENERATION_PREFIX}${randomUUID()}`;
     // The recovery copy holds these updates, so their rows leave the lineage they would replay into.
@@ -959,8 +979,68 @@ export function attachEncryptedPersistence(
     }
   }
 
+  async function settleLostAccess(options: { keepDraft: boolean }): Promise<boolean> {
+    await hydration.catch(() => null);
+    if (destroyed || released) return false;
+    const read = rowsRead;
+    const generation = storageGeneration();
+    const unaccepted = [...tracked.values()].some(
+      (update) => update.generation === generation && update.receipt === null,
+    );
+    if (options.keepDraft || unaccepted) {
+      // The recovery copy takes this session's rows of the live lineage with it.
+      await quarantine();
+      release();
+      await settleWrites();
+      return read;
+    }
+    release();
+    await settleWrites();
+    if (!read) return false;
+    const accepted = [...tracked]
+      .filter(([, update]) => update.generation === generation)
+      .map(([updateId]) => updateId);
+    for (const updateId of accepted) {
+      tracked.delete(updateId);
+      rowChanges.delete(updateId);
+    }
+    if (!isStorageEncryptionReady()) return true;
+    try {
+      await writeRows(async (store, requests) => {
+        const keys = (await store.getAllKeys(rangeFor(contentType, contentId))) as UpdateKey[];
+        const snapshots = selectCompactableSeqs(
+          snapshotSeqs(keys, generation),
+          epoch,
+          counter,
+          hydratedSeqs,
+        );
+        for (const seq of snapshots)
+          requests.push(store.delete([contentType, contentId, generation, seq]));
+        for (const updateId of accepted)
+          requests.push(store.delete(pendingKey(generation, updateId)));
+      });
+      hydratedSeqs.clear();
+      return true;
+    } catch (err) {
+      console.warn("[realtime] could not drop the rows of a document without access", err);
+      storageFailed = true;
+      publishDevice();
+      return false;
+    }
+  }
+
+  // Edits are on the server or in a recovered draft from here on, so none counts as unsaved.
+  function release(): void {
+    released = true;
+    persistedUpdates = localUpdates;
+    batchMarks.clear();
+    if (snapshotTimer !== null) clearTimeout(snapshotTimer);
+    snapshotTimer = null;
+    publishDevice();
+  }
+
   async function compact(): Promise<void> {
-    if (!isStorageEncryptionReady()) return;
+    if (released || !isStorageEncryptionReady()) return;
     if (discardedRecovery.get(ydoc)?.has(storageGeneration())) return;
     // Nothing local happened: no edit, no hydrated row. A snapshot would only
     // add a row of server state that later reads as a phantom draft.
@@ -1003,7 +1083,7 @@ export function attachEncryptedPersistence(
   }
 
   async function clear(): Promise<void> {
-    if (!isStorageEncryptionReady()) return;
+    if (released || !isStorageEncryptionReady()) return;
     try {
       const generation = storageGeneration();
       await writeRows(async (store, requests) => {
@@ -1052,7 +1132,13 @@ export function attachEncryptedPersistence(
       .then(finish)
       .then(() => {
         // Whatever no checkpoint covers stays with the drain until one does.
-        if (opts.scope && tracked.size > 0 && isStorageEncryptionReady() && !storageFailed)
+        if (
+          opts.scope &&
+          !released &&
+          tracked.size > 0 &&
+          isStorageEncryptionReady() &&
+          !storageFailed
+        )
           handOffPendingDoc(opts.scope);
       });
     pendingDisposals.set(docKey, disposal);
@@ -1069,6 +1155,7 @@ export function attachEncryptedPersistence(
   }
 
   const requeueAll = () => {
+    if (released) return;
     if (localUpdates > 0) snapshotRequested = true;
     for (const [updateId, update] of tracked) {
       rowChanges.set(updateId, { generation: update.generation, row: update });
@@ -1122,6 +1209,7 @@ export function attachEncryptedPersistence(
     markCheckpointed,
     flush,
     quarantine,
+    settleLostAccess,
     isDirty: () => dirty || hydratedDirty,
     destroy,
   };

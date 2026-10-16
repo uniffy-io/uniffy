@@ -215,6 +215,8 @@ async def live_note(access, valkey_namespace) -> AsyncIterator[BufferedDocument]
         yield await buffered(key, access, valkey_namespace)
     finally:
         async with open_session() as db:
+            # A dev worker's projection locks the document, then writes the note and its snapshot.
+            await lock_document(db, key)
             await db.execute(
                 delete(RealtimeYjsSnapshot).where(RealtimeYjsSnapshot.content_id == key[1])
             )

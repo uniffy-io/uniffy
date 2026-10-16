@@ -94,18 +94,17 @@ def test_compaction_refuses_an_undecodable_record() -> None:
         compact_checkpoint(doc.get_update(), [record(1, b"not a yjs update")])
 
 
-def test_job_ids_differ_for_every_due_window_and_epoch() -> None:
+def test_job_ids_differ_for_every_dispatch_and_epoch() -> None:
     scope = BufferScope(generate_id(), ContentType.NOTE, generate_id(), "generation", "epoch-a")
     next_epoch = replace(scope, epoch="epoch-b")
 
     ids = {
-        checkpoint_job_id(scope, 10_000),
-        checkpoint_job_id(scope, 20_000),
-        checkpoint_job_id(next_epoch, 10_000),
+        checkpoint_job_id(scope, "claim-1"),
+        checkpoint_job_id(scope, "claim-2"),
+        checkpoint_job_id(next_epoch, "claim-1"),
     }
 
     assert len(ids) == 3
-    assert checkpoint_job_id(scope, 10_000) == checkpoint_job_id(scope, 10_000)
 
 
 def test_backoff_doubles_per_failure_up_to_the_cap() -> None:

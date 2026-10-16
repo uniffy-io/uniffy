@@ -59,6 +59,7 @@ One deployment serves any number of organizations. A new organization is a datab
 | PostgreSQL 18 | CloudNativePG cluster, or external | Primary data store. All durable state, live edits included once saved. |
 | Meilisearch | Single pod | Typo tolerant index behind universal `@` mention lookup and search. |
 | Valkey | Single pod | Job queue, pub/sub, operational cache, and the edit buffer that holds live edits until they are saved. |
+| LiveKit Valkey | Single pod | LiveKit's room registry, on an instance and password of its own. Uniffy never reads it. |
 | Object storage | Yours (S3 compatible) | File bytes. Private network only; browsers never reach it. |
 | LiveKit | Single pod, scales to a cluster | Audio and video calls. Forwards media between participants. |
 
@@ -148,7 +149,18 @@ That trust zone holds only Uniffy backends, Uniffy workers and the operators who
 
 Every Valkey restart gives the instance a new identity. Uniffy notices on the next touch of each document, saves what survived, and starts that document's buffer afresh. [Account Recovery](/docs/deployment/recovery/#unsaved-edits-after-a-valkey-restart) walks through what you see.
 
-LiveKit therefore keeps its room registry on a Valkey instance of its own, with its own password. LiveKit is a third party media server facing call traffic, so it stays outside that zone. Its `redis.address` and `password` accept any instance, and Uniffy never reads the registry; the backend talks to LiveKit through its admin API.
+### Two Valkey instances
+
+Run two Valkey instances, and never let them share one:
+
+| Instance | Used by | Holds | Password known to |
+|---|---|---|---|
+| Uniffy's Valkey | Backends and workers | Queues, pub/sub, cache, and live edits not saved yet | Uniffy backends, workers and their operators |
+| LiveKit's Valkey | LiveKit pods | LiveKit's room registry | LiveKit and its operators |
+
+The split follows from the trust zone above. LiveKit is a third party media server facing call traffic, so it stays outside that zone. Sharing Uniffy's instance, even through a separate logical database, would hand it the password that reads unsaved text.
+
+Uniffy never reads the registry; the backend reaches LiveKit through its admin API. LiveKit's `redis.address` and `redis.password` accept any instance, so point them at LiveKit's own. [Configure Uniffy](/docs/deployment/configure/#calls-livekit) has the settings. The compose stack shows the shape: a `livekit-valkey` service with its own password and no persistence.
 
 ### Object storage
 
@@ -161,7 +173,7 @@ Storage includes uploaded originals, retained file versions, thumbnails, and com
 | Component | Bottleneck | Scaling pattern |
 |---|---|---|
 | Backend | CPU on RPC handlers, Postgres pool, upload bandwidth | Horizontal. Stateless pods. Watch the connection budget. |
-| Core worker | Local I/O | Horizontal, or raise `CORE_WORKER_MAX_JOBS`. |
+| Core worker | Live edit saves, two at a time per process; local I/O | Horizontal. Add processes when `uniffy_realtime_buffer_oldest_pending_seconds` stays above fifteen seconds; `CORE_WORKER_MAX_JOBS` adds no save slots. |
 | Egress worker | External API latency | Horizontal. Default concurrency of 50 is high on purpose. |
 | Media worker | CPU, memory, scratch capacity and disk I/O | Horizontal. Each pod adds its own encode slots. Size resources and scratch for each pod's concurrency. |
 | PostgreSQL | Connections, write throughput | Vertical first, then read replicas. |
@@ -191,7 +203,7 @@ Cluster internal, never exposed:
 |---|---|
 | 8000 | Backend HTTP (the chart maps it behind the gateway). |
 | 5432 | PostgreSQL. |
-| 6379 | Valkey. |
+| 6379 | Valkey, and LiveKit's own Valkey on its own address. |
 | 7700 | Meilisearch. |
 | 7880 | LiveKit signaling, reached only through the `/livekit` route. |
 | 7881/7882 | LiveKit media, reached only through STUNner. |
@@ -210,7 +222,7 @@ Cluster internal, never exposed:
 | Stateless, replace freely | Stateful, back up |
 |---|---|
 | Backend, worker fleets, frontend, gateway pods, STUNner pods. | PostgreSQL, object storage, `APP_MASTER_KEY`. |
-| | Meilisearch and Valkey sit in between. Losing Meilisearch costs a reindex window. Losing Valkey costs a queue drain plus edits from the last few seconds that their authors' devices no longer hold. |
+| | Meilisearch and Valkey sit in between. Losing Meilisearch costs a reindex window. Losing Valkey's data costs its queued jobs plus the edits not saved yet that their authors' devices no longer hold; its persistence setting decides when that happens. LiveKit's Valkey holds only LiveKit's room registry. |
 
 Postgres, the master key, and object storage are the non negotiable three. [Backups and Restore](/docs/deployment/backups/) covers all of them, including the continuous archive that makes Postgres restorable to a point in time.
 

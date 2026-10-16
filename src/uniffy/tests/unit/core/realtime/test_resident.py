@@ -1,6 +1,4 @@
 import random
-import statistics
-import time
 from uuid import UUID
 
 import pycrdt
@@ -345,18 +343,23 @@ def long_lived_note(edits: int) -> pycrdt.Doc:
 def test_admission_checks_cost_the_update_not_the_document() -> None:
     writer = long_lived_note(10_000)
     session = resident(latest(writer.get_update()))
-    assert len(session.ydoc.get_update()) > 500 * 1024
+    encoded = len(session.ydoc.get_update())
+    assert encoded > 500 * 1024
+    updates: list[bytes] = []
+    shadows: list[pycrdt.Doc | None] = []
 
-    timings: list[float] = []
     for index in range(40):
         before = writer.get_state()
         markdown_text(writer).insert(index * 7, "k")
-        update = writer.get_update(before)
-        started = time.perf_counter()
-        assert check_update(session, GENERATION, update) is True
-        accept_update(session, update, index + 1)
-        timings.append(time.perf_counter() - started)
+        updates.append(writer.get_update(before))
+        assert check_update(session, GENERATION, updates[-1]) is True
+        accept_update(session, updates[-1], index + 1)
+        shadows.append(session.shadow)
 
+    # One decode of the document serves every check: the same shadow takes each accepted update,
+    # and the size bound grows by the update instead of re-encoding the document.
+    first = shadows[0]
+    assert first is not None and all(shadow is first for shadow in shadows)
+    assert first.get_state() == session.ydoc.get_state()
+    assert session.encoded_bound == encoded + sum(len(update) for update in updates)
     assert text_of(session.ydoc) == text_of(writer)
-    # A full encode, merge and decode of this document takes tens of milliseconds per update.
-    assert statistics.median(timings) < 0.005

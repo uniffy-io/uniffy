@@ -165,7 +165,7 @@ function attachRichEditor(doc: Y.Doc, leader: boolean): void {
     const internal =
       event.transaction.origin === MARKDOWN_MIRROR_ORIGIN ||
       event.transaction.origin === HYDRATION_ORIGIN;
-    reconciler.observe(internal, true);
+    reconciler.observe(event.transaction, internal, true);
     if (!leader) return;
     if (internal) return schedule();
     if (queued) return;
@@ -192,6 +192,25 @@ function typeRich(doc: Y.Doc, paragraph: number, character: string): void {
     );
   });
   replaceProsemirrorFragment(doc, current.type.create(null, blocks), ySyncPluginKey);
+}
+
+/** Enter at the end of the document: an empty paragraph, which Markdown does not hold yet. */
+function appendRichParagraph(doc: Y.Doc): Y.XmlElement {
+  const paragraph = new Y.XmlElement("paragraph");
+  doc.transact(() => getProsemirrorFragment(doc).push([paragraph]), ySyncPluginKey);
+  return paragraph;
+}
+
+/** One keystroke at the end of the writer's own paragraph, wherever peers' paragraphs put it. */
+function typeInto(doc: Y.Doc, paragraph: Y.XmlElement, character: string): void {
+  doc.transact(() => {
+    let content = paragraph.get(0);
+    if (!(content instanceof Y.XmlText)) {
+      content = new Y.XmlText();
+      paragraph.insert(0, [content]);
+    }
+    content.insert(content.length, character);
+  }, ySyncPluginKey);
 }
 
 /** One keystroke at the end of a paragraph from a client that edits only Y.Text. */
@@ -357,6 +376,94 @@ describe("markdown mirror convergence across batched peers", () => {
     for (const doc of [alice, bob, phone]) {
       expect(text(doc)).toBe(expected);
       expect(rich(doc)).toBe(expected);
+    }
+  });
+
+  it.each([
+    ["the leader", 1, 2],
+    ["a non-leader", 2, 1],
+  ])(
+    "keeps each line whole when %s appends a paragraph while the other types at the end",
+    async (_, aliceClient, bobClient) => {
+      vi.useFakeTimers();
+      const alice = createDoc(aliceClient, undefined, "Base line one.");
+      const bob = createDoc(bobClient, alice);
+      attachRichEditor(alice, aliceClient < bobClient);
+      attachRichEditor(bob, bobClient < aliceClient);
+      connect([alice, bob]);
+
+      const bobLine = appendRichParagraph(bob);
+      await type((_paragraph, character) => typeInto(bob, bobLine, character), 0, "Bob con");
+      const aliceLine = appendRichParagraph(alice);
+      await typeTogether([
+        [
+          (_paragraph, character) => typeInto(alice, aliceLine, character),
+          0,
+          "Alice concurrent line.",
+        ],
+        [(_paragraph, character) => typeInto(bob, bobLine, character), 0, "current line."],
+      ]);
+      await vi.advanceTimersByTimeAsync(3000);
+
+      const expected = "Base line one.\n\nBob concurrent line.\n\nAlice concurrent line.";
+      for (const doc of [alice, bob]) {
+        expect(rich(doc)).toBe(expected);
+        expect(text(doc)).toBe(expected);
+      }
+    },
+  );
+
+  it("keeps each line whole when both writers press Enter at the end at once and type", async () => {
+    vi.useFakeTimers();
+    const alice = createDoc(1, undefined, "Base line one.");
+    const bob = createDoc(2, alice);
+    attachRichEditor(alice, true);
+    attachRichEditor(bob, false);
+    connect([alice, bob]);
+
+    const aliceLine = appendRichParagraph(alice);
+    const bobLine = appendRichParagraph(bob);
+    await typeTogether([
+      [
+        (_paragraph, character) => typeInto(alice, aliceLine, character),
+        0,
+        "Alice concurrent line.",
+      ],
+      [(_paragraph, character) => typeInto(bob, bobLine, character), 0, "Bob concurrent line."],
+    ]);
+    await vi.advanceTimersByTimeAsync(3000);
+
+    // Concurrent paragraphs at one position order by client, so Alice's comes first everywhere.
+    const expected = "Base line one.\n\nAlice concurrent line.\n\nBob concurrent line.";
+    for (const doc of [alice, bob]) {
+      expect(rich(doc)).toBe(expected);
+      expect(text(doc)).toBe(expected);
+    }
+  });
+
+  it("keeps each line whole when an idle leader watches one writer append past another's typing", async () => {
+    vi.useFakeTimers();
+    const leader = createDoc(1, undefined, "Base line one.");
+    const bob = createDoc(2, leader);
+    const carol = createDoc(3, leader);
+    attachRichEditor(leader, true);
+    attachRichEditor(bob, false);
+    attachRichEditor(carol, false);
+    connect([leader, bob, carol]);
+
+    const carolLine = appendRichParagraph(carol);
+    await type((_paragraph, character) => typeInto(carol, carolLine, character), 0, "Carol con");
+    const bobLine = appendRichParagraph(bob);
+    await typeTogether([
+      [(_paragraph, character) => typeInto(bob, bobLine, character), 0, "Bob concurrent line."],
+      [(_paragraph, character) => typeInto(carol, carolLine, character), 0, "current line."],
+    ]);
+    await vi.advanceTimersByTimeAsync(3000);
+
+    const expected = "Base line one.\n\nCarol concurrent line.\n\nBob concurrent line.";
+    for (const doc of [leader, bob, carol]) {
+      expect(rich(doc)).toBe(expected);
+      expect(text(doc)).toBe(expected);
     }
   });
 });

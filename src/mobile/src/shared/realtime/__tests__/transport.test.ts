@@ -1,5 +1,7 @@
 import { nativeStorage } from "@shared/realtime/__tests__/storageHarness";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { create, toBinary } from "@bufbuild/protobuf";
+import { RefreshTokenResponseSchema } from "@uniffy/proto/auth/v1/auth_pb";
 import * as Y from "yjs";
 import { Awareness } from "y-protocols/awareness";
 import * as encoding from "lib0/encoding";
@@ -66,6 +68,11 @@ class Socket {
     this.readyState = 3;
     this.onclose?.({ code });
   }
+  /** The server completes the handshake and closes before any frame, as an upgrade refusal does. */
+  refuse(code: number) {
+    this.open();
+    this.close(code);
+  }
   deliver(name: string, payload: Uint8Array) {
     const frame = encodeDocFrame(name, payload);
     this.onmessage?.({ data: frame.buffer as ArrayBuffer });
@@ -77,6 +84,33 @@ class Socket {
     encoding.writeVarString(enc, text);
     this.deliver(name, encoding.toUint8Array(enc));
   }
+}
+
+/** The auth server behind the refresh endpoint, installed before the transport loads. */
+function refreshEndpoint(answer: "unavailable" | "issued") {
+  const endpoint = { requests: 0, answer };
+  nativeStorage.secure.set("uniffy_refresh_token", "refresh");
+  vi.stubGlobal("fetch", async () => {
+    endpoint.requests += 1;
+    if (endpoint.answer === "unavailable")
+      return new Response(
+        JSON.stringify({ code: "unavailable", message: "database unavailable" }),
+        {
+          status: 503,
+          headers: { "Content-Type": "application/json" },
+        },
+      );
+    const issued = create(RefreshTokenResponseSchema, {
+      accessToken: `fresh-${endpoint.requests}`,
+      refreshToken: `refresh-${endpoint.requests}`,
+      organizationId: "org",
+    });
+    return new Response(toBinary(RefreshTokenResponseSchema, issued), {
+      status: 200,
+      headers: { "Content-Type": "application/proto" },
+    });
+  });
+  return endpoint;
 }
 
 beforeEach(() => {
@@ -710,26 +744,35 @@ it("keeps refused updates local and resends them under the same ids after five s
   h.destroy();
 });
 
-it.each(["receipt", "commit"])("clears Saving unavailable on the first %s", async (answer) => {
-  const h = await openDocument(`unavailable-${answer}`);
-  h.socket.deliver(h.sub.docName, session("e1"));
-  h.doc.getText("markdown").insert(0, "refused");
-  vi.advanceTimersByTime(50);
-  const refused = readWrite(writes(h.socket)[0]).id;
-  h.socket.deliver(h.sub.docName, denial("unavailable"));
-  h.doc.getText("markdown").insert(0, "accepted ");
-  vi.advanceTimersByTime(50);
-  const accepted = readWrite(writes(h.socket)[1]).id;
-  expect(h.state().savingUnavailable).toBe(true);
-  h.socket.deliver(
-    h.sub.docName,
-    answer === "receipt" ? receipt(accepted, "e1", 1) : encodeCommitted(accepted),
-  );
-  expect(h.state()).toMatchObject({ transportPending: true, savingUnavailable: false });
-  vi.advanceTimersByTime(5_000);
-  expect(readWrite(writes(h.socket).at(-1)!).id).toBe(refused);
-  h.destroy();
-});
+it.each(["receipt", "commit"])(
+  "clears Saving unavailable and resends refused updates once, at once, on the first %s",
+  async (answer) => {
+    const h = await openDocument(`unavailable-${answer}`);
+    h.socket.deliver(h.sub.docName, session("e1"));
+    h.doc.getText("markdown").insert(0, "refused");
+    vi.advanceTimersByTime(50);
+    const refused = readWrite(writes(h.socket)[0]).id;
+    h.socket.deliver(h.sub.docName, denial("unavailable"));
+    h.doc.getText("markdown").insert(0, "accepted ");
+    vi.advanceTimersByTime(50);
+    const accepted = readWrite(writes(h.socket)[1]).id;
+    expect(h.state().savingUnavailable).toBe(true);
+    const sent = writes(h.socket).length;
+    h.socket.deliver(
+      h.sub.docName,
+      answer === "receipt" ? receipt(accepted, "e1", 1) : encodeCommitted(accepted),
+    );
+    expect(h.state()).toMatchObject({ transportPending: true, savingUnavailable: false });
+    const resent = () =>
+      writes(h.socket)
+        .slice(sent)
+        .map((frame) => readWrite(frame).id);
+    expect(resent()).toEqual([refused]);
+    vi.advanceTimersByTime(15_000);
+    expect(resent()).toEqual([refused]);
+    h.destroy();
+  },
+);
 
 it("rejects only the conflicting update and keeps syncing the others", async () => {
   const h = await openDocument("conflict");
@@ -905,5 +948,66 @@ it("treats the session state a periodic resync repeats as no change", async () =
   expect(h.events).toHaveLength(transitions);
   expect(h.state()).toBe(state);
   server.destroy();
+  h.destroy();
+});
+
+it("backs off to fifteen seconds while the server refuses every socket after its handshake", async () => {
+  const h = await openDocument("refused");
+  h.socket.close(1013);
+  for (let refusal = 0; refusal < 12; refusal++) {
+    await vi.advanceTimersByTimeAsync(15_000);
+    Socket.instances.at(-1)!.refuse(1013);
+  }
+  const sockets = Socket.instances.length;
+  await vi.advanceTimersByTimeAsync(14_999);
+  expect(Socket.instances).toHaveLength(sockets);
+  await vi.advanceTimersByTimeAsync(1);
+  expect(Socket.instances).toHaveLength(sockets + 1);
+
+  // A session that answers starts the backoff over.
+  const answered = Socket.instances.at(-1)!;
+  answered.open();
+  answered.receive(h.sub.docName, 5, "g");
+  answered.close(1006);
+  await vi.advanceTimersByTimeAsync(499);
+  expect(Socket.instances).toHaveLength(sockets + 1);
+  await vi.advanceTimersByTimeAsync(1);
+  expect(Socket.instances).toHaveLength(sockets + 2);
+  h.destroy();
+});
+
+it("backs off between refreshes the server cannot answer and stops after five", async () => {
+  const refresh = refreshEndpoint("unavailable");
+  const h = await openDocument("expired");
+  h.doc.getText("markdown").insert(0, "kept on this device");
+  vi.advanceTimersByTime(50);
+  const [sent] = writes(h.socket).map(readWrite);
+
+  h.socket.close(4401);
+  await vi.advanceTimersByTimeAsync(0);
+  expect(refresh.requests).toBe(1);
+  expect(Socket.instances).toHaveLength(1);
+  // Every later socket carries the same expired token, which the server refuses the same way.
+  for (let second = 0; second < 120; second++) {
+    await vi.advanceTimersByTimeAsync(1_000);
+    const socket = Socket.instances.at(-1)!;
+    if (socket.readyState === 0) socket.refuse(4401);
+  }
+  expect(refresh.requests).toBe(5);
+  expect(Socket.instances).toHaveLength(6);
+  expect(h.statuses.at(-1)).toBe("disconnected");
+  expect(h.state().transportPending).toBe(true);
+
+  // The foreground starts over, and only a fresh token reconnects at once.
+  refresh.answer = "issued";
+  lifecycle.onChange?.("active");
+  Socket.instances.at(-1)!.refuse(4401);
+  await vi.advanceTimersByTimeAsync(0);
+  expect(refresh.requests).toBe(6);
+  const fresh = Socket.instances.at(-1)!;
+  expect(fresh.options.headers).toEqual({ Authorization: "Bearer fresh-6" });
+  fresh.open();
+  fresh.receive(h.sub.docName, 5, "g");
+  expect(writes(fresh).map(readWrite)).toMatchObject([{ id: sent.id, generation: "g" }]);
   h.destroy();
 });

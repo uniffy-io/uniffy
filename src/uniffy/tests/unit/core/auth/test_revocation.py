@@ -58,7 +58,7 @@ async def test_unavailable_database_denies_with_retryable_transport_errors(monke
     monkeypatch.setattr(ws_routes, "origin_is_allowed", lambda *_: True)
     monkeypatch.setattr(ws_routes, "decode_access_token", lambda _: payload)
     await ws_routes.serve_realtime(ws, org_id, YDocManager(buffer=UpdateBuffer()))
-    ws.accept.assert_not_awaited()
+    ws.accept.assert_awaited_once()
     assert ws.close.await_args.kwargs["code"] == 1013
     assert user_id not in ws_routes._active_sockets
     live = WSSession(
@@ -99,5 +99,6 @@ async def test_malformed_session_claim_cannot_become_sessionless(monkeypatch, si
     monkeypatch.setattr(ws_routes, "decode_access_token", lambda _: payload)
     monkeypatch.setattr(ws_routes, "token_revocation", check)
     await ws_routes.serve_realtime(ws, org_id, YDocManager(buffer=UpdateBuffer()))
-    ws.accept.assert_not_awaited()
+    ws.accept.assert_awaited_once()
+    assert ws.close.await_args.kwargs["code"] == 4401
     check.assert_not_awaited()

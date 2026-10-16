@@ -10,7 +10,7 @@ from loguru import logger
 from uniffy.core.auth.permissions import role_can_edit, role_can_view
 from uniffy.core.realtime.adapter import get_realtime_adapter
 from uniffy.core.realtime.admission import SavingUnavailable, UpdateConflict
-from uniffy.core.realtime.auth import WS_CLOSE_UNSUPPORTED_TYPE
+from uniffy.core.realtime.auth import WS_CLOSE_TRY_AGAIN_LATER, WS_CLOSE_UNSUPPORTED_TYPE
 from uniffy.core.realtime.awareness import authenticated_awareness
 from uniffy.core.realtime.fanout import broadcast_awareness
 from uniffy.core.realtime.limits import (
@@ -105,7 +105,7 @@ async def run_multiplexed_session(
     except asyncio.QueueFull:
         REALTIME_FRAMES_DROPPED_TOTAL.labels(kind="slow_consumer").inc()
         with contextlib.suppress(Exception):
-            await ws.close(code=1013, reason="slow consumer")
+            await ws.close(code=WS_CLOSE_TRY_AGAIN_LATER, reason="slow consumer")
     except WebSocketDisconnect:
         pass
     except RuntimeError as exc:
@@ -171,7 +171,7 @@ async def _drive_inbound(ws: WebSocket, ws_session: WSSession, manager: YDocMana
         frame = await ws.receive_bytes()
         if not frames.take():
             REALTIME_FRAMES_DROPPED_TOTAL.labels(kind="rate_limit").inc()
-            await ws.close(code=1013, reason="rate limit")
+            await ws.close(code=WS_CLOSE_TRY_AGAIN_LATER, reason="rate limit")
             return
         if len(frame) > MAX_FRAME_BYTES:
             REALTIME_FRAMES_DROPPED_TOTAL.labels(kind="oversized").inc()

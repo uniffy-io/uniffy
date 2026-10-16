@@ -898,7 +898,7 @@ export function CrepeEditor({
                   const internal =
                     event.transaction.origin === MARKDOWN_MIRROR_ORIGIN ||
                     event.transaction.origin === HYDRATION_ORIGIN;
-                  reconciler.observe(internal, markdownMirrorReady);
+                  reconciler.observe(event.transaction, internal, markdownMirrorReady);
                   if (!markdownMirrorReady || !ownsMirror()) return;
                   if (internal) {
                     schedule();

@@ -6,12 +6,14 @@ is expected at head because the dev stack migrates on boot.
 """
 
 import os
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Sequence
 from types import SimpleNamespace as NS
+from uuid import UUID
 
 import pytest
 import pytest_asyncio
-from sqlalchemy import delete, select, text
+from sqlalchemy import delete, or_, select, text
+from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.jobs.types import QueueName
@@ -36,15 +38,22 @@ from uniffy.core.models.login.organization import Organization
 from uniffy.core.models.login.organization_member import OrganizationMember, OrganizationRole
 from uniffy.core.models.login.user import User
 from uniffy.core.models.notes.note import Note
+from uniffy.core.models.notifications.notification import Notification
 from uniffy.core.models.permissions.content_access_request import ContentAccessRequest
 from uniffy.core.models.permissions.content_member import ContentMember
 from uniffy.core.models.permissions.domain_admin import DomainAdmin
 from uniffy.core.models.permissions.org_permission_defaults import OrganizationPermissionDefaults
 from uniffy.core.models.platform.support_session import SupportSession
+from uniffy.core.models.projects.field_definition import FieldDefinition
 from uniffy.core.models.projects.project import Project
+from uniffy.core.models.projects.search_acl_refresh import ProjectSearchAclRefresh
+from uniffy.core.models.projects.sprint import Sprint
 from uniffy.core.models.projects.task import Task
+from uniffy.core.models.projects.view_config import ViewConfig
+from uniffy.core.models.realtime.yjs_snapshot import RealtimeYjsSnapshot
 from uniffy.core.models.tags.tag import Tag
 from uniffy.core.realtime.buffer import UpdateBuffer
+from uniffy.core.realtime.storage import lock_documents
 from uniffy.core.types import AccessMode, ContentRole, ContentType, SubjectType, generate_id
 from uniffy.domains.files.registration import register_file_content
 from uniffy.domains.notes.registration import register_note_content
@@ -71,6 +80,10 @@ from uniffy.vendor.arq.constants import job_key_prefix
 
 # No worker consumes queues in this logical database.
 UNREAD_QUEUE_DATABASE = 15
+# The dev stack's workers act on the shared database while a suite runs: a deadlock with one of
+# them, or a row one added after its table was cleared, aborts only that teardown attempt.
+_RACED_BY_WORKERS = {"40P01", "23503"}
+_TEARDOWN_ATTEMPTS = 3
 
 
 @pytest_asyncio.fixture(scope="session", loop_scope="session")
@@ -316,28 +329,68 @@ async def _seed_access(db_session: AsyncSession) -> NS:
     )
 
 
-async def _teardown_access(db_session: AsyncSession, env: NS) -> None:
-    await db_session.rollback()
-    await db_session.execute(delete(Bookmark).where(Bookmark.organization_id.in_(env.org_ids)))
+async def teardown_organizations(
+    db_session: AsyncSession, org_ids: Sequence[UUID], user_ids: Sequence[UUID]
+) -> None:
+    """Delete test organizations, their users and every row the suite or a dev worker gave them."""
+    for attempt in range(_TEARDOWN_ATTEMPTS):
+        await db_session.rollback()
+        try:
+            await _delete_organizations(db_session, list(org_ids), list(user_ids))
+            await db_session.commit()
+            return
+        except DBAPIError as exc:
+            raced = getattr(exc.orig, "sqlstate", None) in _RACED_BY_WORKERS
+            if not raced or attempt == _TEARDOWN_ATTEMPTS - 1:
+                raise
+
+
+async def _delete_organizations(
+    db_session: AsyncSession, org_ids: list[UUID], user_ids: list[UUID]
+) -> None:
+    # Projection takes the document lock before it writes the domain row and then the snapshot,
+    # so holding every document lock first keeps these deletes from crossing a projection.
+    documents = (
+        await db_session.execute(
+            select(RealtimeYjsSnapshot.content_type, RealtimeYjsSnapshot.content_id).where(
+                RealtimeYjsSnapshot.organization_id.in_(org_ids)
+            )
+        )
+    ).all()
+    await lock_documents(db_session, [(row.content_type, row.content_id) for row in documents])
+    await db_session.execute(
+        delete(RealtimeYjsSnapshot).where(RealtimeYjsSnapshot.organization_id.in_(org_ids))
+    )
+    # Dev workers deliver notifications, due-date and reminder alerts for these rows.
+    await db_session.execute(
+        delete(Notification).where(
+            or_(
+                Notification.organization_id.in_(org_ids),
+                Notification.user_id.in_(user_ids),
+                Notification.actor_id.in_(user_ids),
+            )
+        )
+    )
+    await db_session.execute(delete(Bookmark).where(Bookmark.organization_id.in_(org_ids)))
     comment_ids = (
-        await db_session.execute(select(Comment.id).where(Comment.organization_id.in_(env.org_ids)))
+        await db_session.execute(select(Comment.id).where(Comment.organization_id.in_(org_ids)))
     ).scalars()
     await db_session.execute(
         delete(CommentReaction).where(CommentReaction.comment_id.in_(comment_ids))
     )
-    await db_session.execute(delete(Comment).where(Comment.organization_id.in_(env.org_ids)))
+    await db_session.execute(delete(Comment).where(Comment.organization_id.in_(org_ids)))
     await db_session.execute(
-        delete(SupportSession).where(SupportSession.organization_id.in_(env.org_ids))
+        delete(SupportSession).where(SupportSession.organization_id.in_(org_ids))
     )
     await db_session.execute(
-        delete(ChatAgentFolder).where(ChatAgentFolder.organization_id.in_(env.org_ids))
+        delete(ChatAgentFolder).where(ChatAgentFolder.organization_id.in_(org_ids))
     )
-    await db_session.execute(delete(Tag).where(Tag.organization_id.in_(env.org_ids)))
+    await db_session.execute(delete(Tag).where(Tag.organization_id.in_(org_ids)))
     # Tests grant domain-admin rows, open channels and change defaults; all hold FKs on the org.
     channel_ids = (
         (
             await db_session.execute(
-                select(ChatChannel.id).where(ChatChannel.organization_id.in_(env.org_ids))
+                select(ChatChannel.id).where(ChatChannel.organization_id.in_(org_ids))
             )
         )
         .scalars()
@@ -348,25 +401,27 @@ async def _teardown_access(db_session: AsyncSession, env: NS) -> None:
             delete(ChatChannelMember).where(ChatChannelMember.channel_id.in_(channel_ids))
         )
         await db_session.execute(delete(ChatChannel).where(ChatChannel.id.in_(channel_ids)))
-    await db_session.execute(delete(DomainAdmin).where(DomainAdmin.organization_id.in_(env.org_ids)))
+    await db_session.execute(delete(DomainAdmin).where(DomainAdmin.organization_id.in_(org_ids)))
     await db_session.execute(
         delete(OrganizationPermissionDefaults).where(
-            OrganizationPermissionDefaults.organization_id.in_(env.org_ids)
+            OrganizationPermissionDefaults.organization_id.in_(org_ids)
         )
     )
+    await db_session.execute(delete(ContentMember).where(ContentMember.organization_id.in_(org_ids)))
     await db_session.execute(
-        delete(ContentMember).where(ContentMember.organization_id.in_(env.org_ids))
+        delete(ContentAccessRequest).where(ContentAccessRequest.organization_id.in_(org_ids))
     )
-    await db_session.execute(
-        delete(ContentAccessRequest).where(ContentAccessRequest.organization_id.in_(env.org_ids))
-    )
-    await db_session.execute(delete(Note).where(Note.organization_id.in_(env.org_ids)))
-    await db_session.execute(delete(Task).where(Task.organization_id.in_(env.org_ids)))
-    await db_session.execute(delete(Project).where(Project.organization_id.in_(env.org_ids)))
+    await db_session.execute(delete(Note).where(Note.organization_id.in_(org_ids)))
+    await db_session.execute(delete(Task).where(Task.organization_id.in_(org_ids)))
+    # Project creation adds fields and views; a test that fails before its own cleanup leaves them.
+    project_ids = select(Project.id).where(Project.organization_id.in_(org_ids))
+    for child in (FieldDefinition, ViewConfig, Sprint, ProjectSearchAclRefresh):
+        await db_session.execute(delete(child).where(child.project_id.in_(project_ids)))
+    await db_session.execute(delete(Project).where(Project.organization_id.in_(org_ids)))
     event_ids = (
         (
             await db_session.execute(
-                select(CalendarEvent.id).where(CalendarEvent.organization_id.in_(env.org_ids))
+                select(CalendarEvent.id).where(CalendarEvent.organization_id.in_(org_ids))
             )
         )
         .scalars()
@@ -377,26 +432,25 @@ async def _teardown_access(db_session: AsyncSession, env: NS) -> None:
         await db_session.execute(delete(EventReminder).where(EventReminder.event_id.in_(event_ids)))
         await db_session.execute(delete(EventAttendee).where(EventAttendee.event_id.in_(event_ids)))
         await db_session.execute(delete(CalendarEvent).where(CalendarEvent.id.in_(event_ids)))
+    await db_session.execute(delete(EventTemplate).where(EventTemplate.organization_id.in_(org_ids)))
+    await db_session.execute(delete(Calendar).where(Calendar.organization_id.in_(org_ids)))
     await db_session.execute(
-        delete(EventTemplate).where(EventTemplate.organization_id.in_(env.org_ids))
+        delete(GroupMember).where(
+            GroupMember.group_id.in_(select(Group.id).where(Group.organization_id.in_(org_ids)))
+        )
     )
-    await db_session.execute(delete(Calendar).where(Calendar.organization_id.in_(env.org_ids)))
-    await db_session.execute(delete(GroupMember).where(GroupMember.group_id.in_(env.group_ids)))
-    await db_session.execute(delete(Group).where(Group.organization_id.in_(env.org_ids)))
-    await db_session.execute(delete(Folder).where(Folder.organization_id.in_(env.org_ids)))
+    await db_session.execute(delete(Group).where(Group.organization_id.in_(org_ids)))
+    await db_session.execute(delete(Folder).where(Folder.organization_id.in_(org_ids)))
     # Removing an inline upload books its bytes off the uploader's usage row.
-    await db_session.execute(
-        delete(StorageUsage).where(StorageUsage.organization_id.in_(env.org_ids))
-    )
+    await db_session.execute(delete(StorageUsage).where(StorageUsage.organization_id.in_(org_ids)))
     # audit_events is append-only; teardown is maintenance, so it opts out.
     await db_session.execute(text("SET LOCAL uniffy.audit_maintenance = 'on'"))
-    await db_session.execute(delete(AuditEvent).where(AuditEvent.organization_id.in_(env.org_ids)))
+    await db_session.execute(delete(AuditEvent).where(AuditEvent.organization_id.in_(org_ids)))
     await db_session.execute(
-        delete(OrganizationMember).where(OrganizationMember.organization_id.in_(env.org_ids))
+        delete(OrganizationMember).where(OrganizationMember.organization_id.in_(org_ids))
     )
-    await db_session.execute(delete(Organization).where(Organization.id.in_(env.org_ids)))
-    await db_session.execute(delete(User).where(User.id.in_(env.user_ids)))
-    await db_session.commit()
+    await db_session.execute(delete(Organization).where(Organization.id.in_(org_ids)))
+    await db_session.execute(delete(User).where(User.id.in_(user_ids)))
 
 
 @pytest_asyncio.fixture(loop_scope="session")
@@ -405,7 +459,7 @@ async def access(session):
     try:
         yield seeded
     finally:
-        await _teardown_access(session, seeded)
+        await teardown_organizations(session, seeded.org_ids, seeded.user_ids)
 
 
 @pytest_asyncio.fixture(loop_scope="session")

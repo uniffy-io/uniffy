@@ -6,7 +6,12 @@ import * as Y from "yjs";
 import { Awareness } from "y-protocols/awareness";
 import { docGeneration } from "@/features/realtime/docGeneration";
 import { docNameFor } from "@/features/realtime/docNames";
-import { realtimeMultiplexer, type RealtimeDocState } from "@/features/realtime/multiplexer";
+import { whenDocumentFree } from "@/features/realtime/documentLocks";
+import {
+  realtimeMultiplexer,
+  type DocSubscription,
+  type RealtimeDocState,
+} from "@/features/realtime/multiplexer";
 import { clearPendingDoc, listPendingDocs, type PendingDoc } from "@/features/realtime/pendingDocs";
 import { attachEncryptedPersistence } from "@/features/realtime/persistence/encryptedYjsPersistence";
 import {
@@ -20,19 +25,56 @@ import { isStorageEncryptionReady } from "@/shared/crypto/storageEncryption";
 // Checkpoints land about ten seconds after the first pending edit; a drain still waiting after
 // this long keeps everything and tries again on a later trigger.
 export const DRAIN_TIMEOUT_MS = 60_000;
+// Each drain that ends without a checkpoint doubles the wait before that document attaches
+// again, so a document whose checkpoint is stuck reattaches about every quarter hour instead of
+// every minute.
+export const DRAIN_BACKOFF_MS = 60_000;
+export const DRAIN_BACKOFF_MAX_MS = 15 * 60_000;
 
 const active = new Set<string>();
 const cancellations = new Map<string, () => void>();
+const backoff = new Map<
+  string,
+  { attempts: number; waiting: ReturnType<typeof setTimeout> | null }
+>();
 
+function forgetBackoff(docName: string): void {
+  const entry = backoff.get(docName);
+  if (entry?.waiting) clearTimeout(entry.waiting);
+  backoff.delete(docName);
+}
+
+function delayNextAttempt(docName: string): void {
+  const attempts = (backoff.get(docName)?.attempts ?? 0) + 1;
+  forgetBackoff(docName);
+  const entry = { attempts, waiting: null as ReturnType<typeof setTimeout> | null };
+  entry.waiting = setTimeout(
+    () => {
+      entry.waiting = null;
+    },
+    Math.min(DRAIN_BACKOFF_MS * 2 ** (attempts - 1), DRAIN_BACKOFF_MAX_MS),
+  );
+  backoff.set(docName, entry);
+}
+
+/** An editor opening the doc takes over; the drain its close hands off to starts at once. */
 export function abortDrain(docName: string): void {
+  forgetBackoff(docName);
   cancellations.get(docName)?.();
+}
+
+/** Connectivity came back, which may be what held the checkpoints: every drain may run now. */
+export function resumeDrains(): void {
+  for (const entry of backoff.values()) if (entry.waiting) clearTimeout(entry.waiting);
+  backoff.clear();
 }
 
 // "drained": a checkpoint covers every own edit. "retained": the server refused the doc or
 // generation; the rows stay a recoverable draft and the entry is dropped. "retry": the
 // connection failed or the checkpoint did not arrive in time; rows and entry wait for the next
-// trigger. Acceptance alone never drains.
-export type DrainOutcome = "drained" | "retained" | "retry";
+// trigger. "held": an editor or a drain in another tab holds the doc, so nothing ran. Acceptance
+// alone never drains.
+export type DrainOutcome = "drained" | "retained" | "retry" | "held";
 
 export function drainDoc(entry: PendingDoc): Promise<DrainOutcome> {
   return new Promise((resolve) => {
@@ -49,20 +91,25 @@ export function drainDoc(entry: PendingDoc): Promise<DrainOutcome> {
       scope: entry,
       isCheckpointed: () => !realtimeMultiplexer.getDocState(docName).checkpointPending,
     });
+    let subscription: DocSubscription | null = null;
     let settled = false;
-    let hydrating = false;
-    let hydrated = false;
+    let synced = false;
+    // Lineage of the rows hydrated before attach; null while they wait for the server's.
+    let held: string | null = null;
+    let rowsRead = false;
     let retaining = false;
     let unsubscribeState = () => {};
-    const timeout = setTimeout(() => finish("retry"), DRAIN_TIMEOUT_MS);
-    const finish = (outcome: DrainOutcome) => {
+    const timeout = setTimeout(() => finish("retry", true), DRAIN_TIMEOUT_MS);
+    const finish = (outcome: DrainOutcome, backOff = false) => {
       if (settled) return;
       settled = true;
       clearTimeout(timeout);
       cancellations.delete(docName);
       unsubscribeState();
+      if (backOff) delayNextAttempt(docName);
+      else if (outcome !== "retry") forgetBackoff(docName);
       if (outcome !== "retry") clearPendingDoc(contentType, contentId);
-      subscription.destroy();
+      subscription?.destroy();
       awareness.destroy();
       void persistence
         .destroy({
@@ -79,76 +126,128 @@ export function drainDoc(entry: PendingDoc): Promise<DrainOutcome> {
     const settleOnCheckpoint = (state: RealtimeDocState) => {
       if (!state.checkpointPending) finish("drained");
     };
-    // A denied doc keeps as a draft what the server never accepted; what it accepted is still
-    // checkpointed.
-    const retainDenied = () => {
+    // A refused doc keeps as a draft only what the server never accepted. Accepted edits still
+    // checkpoint, so they stay on this device while the doc is viewable and go once it is not.
+    const retainDenied = (noView: boolean) => {
       if (settled || retaining) return;
       retaining = true;
-      if (realtimeMultiplexer.getDocState(docName).transportPending)
-        void persistence.quarantine().then(() => finish("retained"));
-      else finish("retained");
+      const keepDraft = realtimeMultiplexer.getDocState(docName).transportPending;
+      const settle = noView
+        ? persistence.settleLostAccess({ keepDraft })
+        : keepDraft
+          ? persistence.quarantine()
+          : Promise.resolve(true);
+      void settle.finally(() => finish("retained"));
     };
-    const subscription = realtimeMultiplexer.attach({
-      contentType,
-      contentId,
-      ydoc,
-      awareness,
-      onSync: () => {
-        // A reconnect syncs again; the first hydration already restored everything.
-        if (hydrating) return;
-        hydrating = true;
-        void persistence.hydrate({ serverGeneration: docGeneration(ydoc) }).then(
-          () => {
-            if (settled) return;
-            hydrated = true;
-            if (realtimeMultiplexer.isDocReadOnly(docName)) {
-              retainDenied();
-              return;
-            }
-            unsubscribeState = realtimeMultiplexer.subscribeDocState(docName, settleOnCheckpoint);
-            settleOnCheckpoint(realtimeMultiplexer.getDocState(docName));
-          },
-          (error) => {
-            console.warn("[realtime] drain hydrate failed", error);
+    const attach = () =>
+      realtimeMultiplexer.attach({
+        contentType,
+        contentId,
+        ydoc,
+        awareness,
+        heldGeneration: held,
+        onSync: () => {
+          // A reconnect syncs again; local recovery already read the device.
+          if (synced) return;
+          synced = true;
+          // Rows of more than one lineage waited for the generation the server names.
+          const read = rowsRead
+            ? Promise.resolve()
+            : persistence.hydrate({ serverGeneration: docGeneration(ydoc) }).then(() => {
+                rowsRead = true;
+              });
+          void read.then(
+            () => {
+              if (settled) return;
+              if (realtimeMultiplexer.isDocReadOnly(docName)) {
+                retainDenied(false);
+                return;
+              }
+              unsubscribeState = realtimeMultiplexer.subscribeDocState(docName, settleOnCheckpoint);
+              settleOnCheckpoint(realtimeMultiplexer.getDocState(docName));
+            },
+            (error) => {
+              console.warn("[realtime] drain hydrate failed", error);
+              finish("retry", true);
+            },
+          );
+        },
+        onWriteDenied: (reason, noView) => {
+          if (reason === SEED_CONFLICT_REASON) {
+            void persistence.quarantine().then(() => finish("retained"));
+          } else if (rowsRead) {
+            // Read once the transport has recorded the refusal.
+            queueMicrotask(() => retainDenied(noView));
+          } else if (noView) {
+            // Nothing synced and nothing will: the rows stay for a later attach that may see them.
+            finish("retained");
+          }
+          // Otherwise a read-only doc still syncs, and local recovery reads the device first.
+        },
+        onGenerationMismatch: () => finish("retained"),
+        onCloseCode: (code) => {
+          if (
+            code === WS_CLOSE_UNAUTHENTICATED ||
+            code === WS_CLOSE_FORBIDDEN ||
+            code === WS_CLOSE_TOKEN_REVOKED
+          )
             finish("retry");
-          },
-        );
-      },
-      onWriteDenied: (reason, noView) => {
-        if (reason === SEED_CONFLICT_REASON) {
-          void persistence.quarantine().then(() => finish("retained"));
-        } else if (hydrated) {
-          // Read once the transport has recorded the refusal.
-          queueMicrotask(retainDenied);
-        } else if (noView && !hydrating) {
-          // Nothing synced and nothing will: the rows stay for a later attach that may see them.
-          finish("retained");
-        }
-        // Otherwise a read-only doc still syncs, and local recovery reads the device first.
-      },
-      onGenerationMismatch: () => finish("retained"),
-      onCloseCode: (code) => {
-        if (
-          code === WS_CLOSE_UNAUTHENTICATED ||
-          code === WS_CLOSE_FORBIDDEN ||
-          code === WS_CLOSE_TOKEN_REVOKED
-        )
-          finish("retry");
-      },
-    });
+        },
+      });
     cancellations.set(docName, () => finish("retry"));
+    // Hydrating first makes the attaching SyncStep1 carry what this device holds, so the server
+    // answers with what changed since instead of the whole document.
+    void persistence.hydrate().then(
+      (lineage) => {
+        if (settled) return;
+        if (realtimeMultiplexer.isAttached(docName)) {
+          finish("retry");
+          return;
+        }
+        held = lineage;
+        rowsRead = lineage !== null;
+        subscription = attach();
+      },
+      (error) => {
+        console.warn("[realtime] drain hydrate failed", error);
+        finish("retry", true);
+      },
+    );
   });
 }
 
-/** Starts a drain for every recorded doc of this user and organization that no editor holds. */
-export function runRealtimeDrain(scope: { userId: string; organizationId: string }): void {
-  if (typeof navigator !== "undefined" && navigator.onLine === false) return;
-  if (!isStorageEncryptionReady()) return;
+/** Starts a drain for every recorded doc of this user and organization that no editor holds and
+ * that is not waiting out its backoff; returns the drains it started by doc name. */
+export function runRealtimeDrain(scope: {
+  userId: string;
+  organizationId: string;
+}): Map<string, Promise<DrainOutcome>> {
+  const started = new Map<string, Promise<DrainOutcome>>();
+  if (typeof navigator !== "undefined" && navigator.onLine === false) return started;
+  if (!isStorageEncryptionReady()) return started;
   for (const entry of listPendingDocs()) {
     if (entry.userId !== scope.userId || entry.organizationId !== scope.organizationId) continue;
     const docName = docNameFor(entry.contentType, entry.contentId);
     if (active.has(docName) || realtimeMultiplexer.isAttached(docName)) continue;
+    if (backoff.get(docName)?.waiting) continue;
     active.add(docName);
-    void drainDoc(entry).finally(() => active.delete(docName));
+    // An editor opening here before the lock is granted cancels the drain before it reads rows.
+    let cancelled = false;
+    const cancel = () => {
+      cancelled = true;
+    };
+    cancellations.set(docName, cancel);
+    started.set(
+      docName,
+      whenDocumentFree(docName, () =>
+        cancelled ? Promise.resolve<DrainOutcome>("retry") : drainDoc(entry),
+      )
+        .then((outcome) => outcome ?? "held")
+        .finally(() => {
+          active.delete(docName);
+          if (cancellations.get(docName) === cancel) cancellations.delete(docName);
+        }),
+    );
   }
+  return started;
 }

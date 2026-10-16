@@ -21,10 +21,15 @@ import {
   openEditor,
   signInDevice,
   storeRawRow,
+  storedRowKeys,
   type Editor,
 } from "@/features/realtime/persistence/__tests__/browser";
 import { canReleaseSession } from "@/features/realtime/hooks/useDocSession";
-import { createSaveStateStore, type SaveState } from "@/features/realtime/hooks/useDocSaveState";
+import {
+  SAVE_DELAYED_AFTER_MS,
+  createSaveStateStore,
+  type SaveState,
+} from "@/features/realtime/hooks/useDocSaveState";
 import { peekVarString } from "@/features/realtime/multiplex";
 import { realtimeMultiplexer, type UpdateCoverageEvent } from "@/features/realtime/multiplexer";
 import { hasPendingDoc } from "@/features/realtime/pendingDocs";
@@ -40,11 +45,13 @@ import { encryptForStorage, teardownStorageEncryption } from "@/shared/crypto/st
 
 const GENERATION = "3f9c1a52-7d4e-4b8a-9c61-0e2f5d8b7a14";
 const BATCH_MS = 50;
+const EDITED_AT = 1_800_000_000_000;
+const TIMERS = ["setTimeout", "clearTimeout", "setInterval", "clearInterval"] as const;
 
 beforeAll(() => installBrowser());
 
 beforeEach(async () => {
-  vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "setInterval", "clearInterval"] });
+  vi.useFakeTimers({ toFake: [...TIMERS] });
   vi.spyOn(console, "warn").mockImplementation(() => {});
   await signInDevice("alice");
 });
@@ -160,6 +167,61 @@ describe("checkpoint coverage in local recovery", () => {
     expect(chip).toEqual([null, "synced"]);
     server.checkpoint([ws]);
     expect(chip).toEqual([null, "synced", "saved"]);
+    await reloaded.close();
+  });
+
+  /** A note whose accepted edit no checkpoint covered yet, closed a minute before a reload. */
+  async function closeAMinuteAgo(contentId: string) {
+    vi.useFakeTimers({ toFake: [...TIMERS, "Date"] });
+    vi.setSystemTime(EDITED_AT);
+    const { server, editor, ws } = await connect(contentId, "base");
+    editor.type(" accepted");
+    vi.advanceTimersByTime(BATCH_MS);
+    server.accept(ws);
+    await editor.persistence.flush();
+    await editor.close();
+    vi.setSystemTime(EDITED_AT + 2 * SAVE_DELAYED_AFTER_MS);
+    return { server, ws, docName: editor.docName };
+  }
+
+  it("shows Saving delayed at once after a reload for an edit the session state shows still waiting, never Synced first", async () => {
+    const { server, ws, docName } = await closeAMinuteAgo("reload-late");
+    const chip = watchChip(docName);
+    const reloaded = openEditor("reload-late");
+    server.attach(ws);
+    // Session state is in, but local recovery has not read the old edit yet.
+    expect(chip).toEqual([null]);
+    await reloaded.hydrated;
+    expect(chip).toEqual([null, "delayed"]);
+    server.checkpoint([ws]);
+    expect(chip).toEqual([null, "delayed", "saved"]);
+    await reloaded.close();
+  });
+
+  it("goes straight to Saved after a reload when a checkpoint covered the old edit while the page was away", async () => {
+    const { server, ws, docName } = await closeAMinuteAgo("reload-covered");
+    server.checkpoint([]);
+    const chip = watchChip(docName);
+    const reloaded = openEditor("reload-covered");
+    server.attach(ws);
+    await reloaded.hydrated;
+    expect(chip).toEqual([null, "saved"]);
+    await reloaded.close();
+  });
+
+  it("never shows Saving delayed after an offline reload before this socket's session state arrives", async () => {
+    const { server, ws, docName } = await closeAMinuteAgo("reload-offline");
+    const chip = watchChip(docName);
+    const reloaded = openEditor("reload-offline");
+    // Offline, local recovery reads the device before any socket answers.
+    await reloaded.persistence.hydrate();
+    expect(realtimeMultiplexer.getDocState(docName).oldestUncheckpointedAt).toBe(EDITED_AT);
+    vi.advanceTimersByTime(BATCH_MS);
+    expect(chip).not.toContain("delayed");
+
+    server.attach(ws);
+    await reloaded.hydrated;
+    expect(chip.at(-1)).toBe("delayed");
     await reloaded.close();
   });
 
@@ -503,6 +565,49 @@ describe("edit access removed", () => {
     );
     expect(updateWrites(ws, editor.docName)).toEqual([]);
     await editor.close();
+  });
+});
+
+describe("view access removed", () => {
+  it("drops the rows of accepted edits and leaves nothing to drain or recover", async () => {
+    const { server, editor, ws } = await connect("unshared-live", "Shared note.");
+    editor.type(" Accepted before revoke.");
+    vi.advanceTimersByTime(BATCH_MS);
+    server.accept(ws);
+    await editor.persistence.flush();
+    expect(hasPendingDoc("NOTE", "unshared-live")).toBe(true);
+
+    server.denyView(ws, "access revoked");
+    await eventually(async () => expect(await storedRowKeys("NOTE", "unshared-live")).toEqual([]));
+    expect(hasPendingDoc("NOTE", "unshared-live")).toBe(false);
+    expect(await readRecoveredDrafts(editor.ydoc)).toEqual([]);
+    expect(await discoverStoredPendingDocs("alice")).toBe(false);
+    expect(beforeUnloadPrevented()).toBe(false);
+    await editor.close();
+    expect(await storedRowKeys("NOTE", "unshared-live")).toEqual([]);
+    expect(hasPendingDoc("NOTE", "unshared-live")).toBe(false);
+  });
+
+  it("keeps only an edit the server never accepted, as a recovered draft", async () => {
+    const { server, editor, ws } = await connect("unshared-unsent", "Shared note.");
+    editor.type(" Accepted.");
+    vi.advanceTimersByTime(BATCH_MS);
+    server.accept(ws);
+    editor.type(" Not yet sent.");
+    server.denyView(ws, "access revoked");
+    await eventually(async () =>
+      expect((await readRecoveredDrafts(editor.ydoc)).map((draft) => draft.text)).toEqual([
+        "Shared note. Accepted. Not yet sent.",
+      ]),
+    );
+    vi.advanceTimersByTime(BATCH_MS);
+    await editor.close();
+    const stored = await storedRowKeys("NOTE", "unshared-unsent");
+    expect(stored.length).toBeGreaterThan(0);
+    for (const key of stored) expect(key[2]).toMatch(/^recovery:/);
+    expect(updateWrites(ws, editor.docName)).toHaveLength(1);
+    expect(await discoverStoredPendingDocs("alice")).toBe(true);
+    expect(hasPendingDoc("NOTE", "unshared-unsent")).toBe(false);
   });
 });
 

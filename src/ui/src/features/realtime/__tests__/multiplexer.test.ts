@@ -139,6 +139,13 @@ class FakeWebSocket {
     this.readyState = FakeWebSocket.CLOSED;
     this.onclose?.({ code } as CloseEvent);
   }
+
+  /** The server completes the handshake and closes before any frame, as an upgrade refusal does. */
+  refuse(code: number): void {
+    this.readyState = FakeWebSocket.OPEN;
+    this.onopen?.();
+    this.serverClose(code);
+  }
 }
 
 function currentWs(): FakeWebSocket {
@@ -641,6 +648,38 @@ describe("close codes", () => {
     applyClientFramesToServer(second, doc.docName, server);
     expect(server.getText("markdown").toString()).toBe("kept on this device");
     server.destroy();
+  });
+
+  it("backs off to fifteen seconds while the server refuses every socket after its handshake", () => {
+    attachDoc("refused");
+    for (let refusal = 0; refusal < 12; refusal++) {
+      currentWs().refuse(1013);
+      vi.advanceTimersByTime(15_000);
+    }
+    const sockets = FakeWebSocket.instances.length;
+
+    currentWs().refuse(1013);
+    vi.advanceTimersByTime(14_999);
+    expect(FakeWebSocket.instances).toHaveLength(sockets);
+    vi.advanceTimersByTime(1);
+    expect(FakeWebSocket.instances).toHaveLength(sockets + 1);
+  });
+
+  it("reconnects after the shortest delay once a session has answered", () => {
+    attachDoc("answered");
+    for (let refusal = 0; refusal < 12; refusal++) {
+      currentWs().refuse(1013);
+      vi.advanceTimersByTime(15_000);
+    }
+    // The server answers the attaching SyncStep1 with the generation first.
+    currentWs().open();
+    const sockets = FakeWebSocket.instances.length;
+
+    currentWs().serverClose(1006);
+    vi.advanceTimersByTime(499);
+    expect(FakeWebSocket.instances).toHaveLength(sockets);
+    vi.advanceTimersByTime(1);
+    expect(FakeWebSocket.instances).toHaveLength(sockets + 1);
   });
 });
 
@@ -1227,27 +1266,32 @@ describe("checkpoint coverage", () => {
     expect(resent).toEqual([first, second]);
   });
 
-  it.each(["receipt", "commit"])("clears Saving unavailable on the first %s", (answer) => {
-    const doc = attachDoc(`unavailable-cleared-${answer}`);
-    const ws = currentWs();
-    ws.open(GENERATION);
-    ws.receive(sessionState(doc, "E1", 0, 0));
-    const refused = edit(doc, ws, "refused");
-    ws.receive(serverAuthDeniedFrame(doc.docName, "unavailable"));
-    const accepted = edit(doc, ws, "accepted");
-    expect(realtimeMultiplexer.getDocState(doc.docName).savingUnavailable).toBe(true);
-    ws.receive(
-      answer === "receipt"
-        ? receipt(doc, accepted.id, "E1", 1)
-        : encodeDocFrame(doc.docName, encodeCommitted(accepted.id)),
-    );
-    expect(realtimeMultiplexer.getDocState(doc.docName)).toMatchObject({
-      transportPending: true,
-      savingUnavailable: false,
-    });
-    vi.advanceTimersByTime(5_000);
-    expect(updateIds(ws, doc).at(-1)).toBe(refused.id);
-  });
+  it.each(["receipt", "commit"])(
+    "clears Saving unavailable and resends refused updates once, at once, on the first %s",
+    (answer) => {
+      const doc = attachDoc(`unavailable-cleared-${answer}`);
+      const ws = currentWs();
+      ws.open(GENERATION);
+      ws.receive(sessionState(doc, "E1", 0, 0));
+      const refused = edit(doc, ws, "refused");
+      ws.receive(serverAuthDeniedFrame(doc.docName, "unavailable"));
+      const accepted = edit(doc, ws, "accepted");
+      expect(realtimeMultiplexer.getDocState(doc.docName).savingUnavailable).toBe(true);
+      const sent = updateIds(ws, doc).length;
+      ws.receive(
+        answer === "receipt"
+          ? receipt(doc, accepted.id, "E1", 1)
+          : encodeDocFrame(doc.docName, encodeCommitted(accepted.id)),
+      );
+      expect(realtimeMultiplexer.getDocState(doc.docName)).toMatchObject({
+        transportPending: true,
+        savingUnavailable: false,
+      });
+      expect(updateIds(ws, doc).slice(sent)).toEqual([refused.id]);
+      vi.advanceTimersByTime(15_000);
+      expect(updateIds(ws, doc).slice(sent)).toEqual([refused.id]);
+    },
+  );
 
   it("rejects only the conflicting update and keeps syncing the others", () => {
     const statuses: RealtimeStatus[] = [];

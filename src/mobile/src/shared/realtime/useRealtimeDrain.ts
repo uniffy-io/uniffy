@@ -6,6 +6,7 @@ import { addOnlineListener } from "@core/api/connectivity";
 import { resumeDraftStorage } from "@shared/realtime/draftStorage";
 import {
   handOffSavedDrafts,
+  resumeMobileDrains,
   runMobileDrain,
   settleUnsyncedEdits,
   signOutDrafts,
@@ -28,7 +29,9 @@ export function useRealtimeDrain(): void {
       if (state === "active") kick();
     });
     const online = addOnlineListener((connected) => {
-      if (connected) kick();
+      if (!connected) return;
+      resumeMobileDrains();
+      kick();
     });
     const interval = setInterval(kick, 30_000);
     return () => {

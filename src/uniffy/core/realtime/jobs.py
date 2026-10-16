@@ -13,7 +13,8 @@ from sqlalchemy.orm import load_only
 from uniffy.core.models.realtime.yjs_snapshot import RealtimeYjsSnapshot
 from uniffy.core.realtime.adapter import RealtimeRenderConflict
 from uniffy.core.realtime.buffer import UPDATE_BUFFER_CTX_KEY, BufferUnavailable, UpdateBuffer
-from uniffy.core.realtime.dispatch import dispatch_due, run_checkpoint_job
+from uniffy.core.realtime.checkpoint import CheckpointStatus
+from uniffy.core.realtime.dispatch import dispatch_due, hold_queued_claim, run_checkpoint_job
 from uniffy.core.realtime.maintenance import maintain_buffer
 from uniffy.core.realtime.metrics import (
     REALTIME_BACKLOG_DEPTH,
@@ -50,11 +51,14 @@ def _buffer(ctx: dict[str, Any]) -> UpdateBuffer:
 async def checkpoint_realtime_document(
     ctx: dict[str, Any], member: str, claim: str
 ) -> dict[str, Any]:
+    buffer = _buffer(ctx)
     # Waiting for a slot would hold one of the fleet's shared job slots; requeue without a try.
     if CHECKPOINT_SLOTS.locked():
+        if not await hold_queued_claim(buffer, member, claim):
+            return {"status": CheckpointStatus.SUPERSEDED.value, "covered": 0}
         raise Retry(defer=_BUSY_DEFER_SECONDS, count_attempt=False)
     async with CHECKPOINT_SLOTS:
-        result = await run_checkpoint_job(_buffer(ctx), member, claim)
+        result = await run_checkpoint_job(buffer, member, claim)
     return {"status": result.status.value, "covered": result.covered}
 
 

@@ -1,12 +1,13 @@
 import { useEffect, useSyncExternalStore } from "react";
 import { useAppSelector } from "@/app/hooks";
-import { runRealtimeDrain } from "@/features/realtime/drain";
+import { resumeDrains, runRealtimeDrain } from "@/features/realtime/drain";
 import { hasPendingDoc, subscribePendingDocs } from "@/features/realtime/pendingDocs";
 import { AUTH_REFRESHED_EVENT } from "@/features/realtime/protocol";
 import { ENCRYPTION_READY_EVENT } from "@/shared/crypto/storageEncryption";
 import { discoverStoredPendingDocs } from "@/features/realtime/persistence/encryptedYjsPersistence";
 
-// A drain that timed out waiting for its checkpoint keeps the entry; this retries it.
+// A drain that timed out waiting for its checkpoint keeps the entry; this retries it once its
+// backoff has passed.
 const DRAIN_RETRY_MS = 30_000;
 
 /** Mount once in the authenticated shell: replays stranded edits whenever a connection becomes
@@ -22,6 +23,10 @@ export function useRealtimeDrain(): void {
     const kick = () => {
       if (!cancelled) runRealtimeDrain({ userId, organizationId });
     };
+    const reconnected = () => {
+      resumeDrains();
+      kick();
+    };
     const discover = () =>
       void discoverStoredPendingDocs(userId)
         .then(kick)
@@ -29,14 +34,14 @@ export function useRealtimeDrain(): void {
     discover();
     kick();
     const retry = setInterval(kick, DRAIN_RETRY_MS);
-    window.addEventListener("online", kick);
+    window.addEventListener("online", reconnected);
     window.addEventListener(AUTH_REFRESHED_EVENT, kick);
     window.addEventListener(ENCRYPTION_READY_EVENT, discover);
     const unsubscribe = subscribePendingDocs(kick);
     return () => {
       cancelled = true;
       clearInterval(retry);
-      window.removeEventListener("online", kick);
+      window.removeEventListener("online", reconnected);
       window.removeEventListener(AUTH_REFRESHED_EVENT, kick);
       window.removeEventListener(ENCRYPTION_READY_EVENT, discover);
       unsubscribe();

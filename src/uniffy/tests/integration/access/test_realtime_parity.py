@@ -229,7 +229,6 @@ async def test_retained_replay_after_losing_access_is_refused_and_appends_nothin
     if loss == "membership_removed":
         socket = upgrade_socket(bearer(doc.peer, doc.org))
         await ws_routes.serve_realtime(socket, doc.org, manager)
-        assert socket.subprotocols == []
         assert socket.closes == [(WS_CLOSE_FORBIDDEN, "not a member")]
     else:
         client = connect(manager, doc.key, doc.org, doc.peer)

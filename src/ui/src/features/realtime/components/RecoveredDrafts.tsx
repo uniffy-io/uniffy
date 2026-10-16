@@ -1,5 +1,6 @@
 import { useCallback, useContext, useEffect, useState } from "react";
 import type * as Y from "yjs";
+import { ClockCounterClockwise } from "@phosphor-icons/react";
 import { ContentType } from "@uniffy/proto/common/v1/common_pb";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -142,6 +143,23 @@ function DraftItem({
   );
 }
 
+/** Opens the drafts dialog. On phone widths only its icon shows, so the bar it sits in keeps its
+ * row; the label stays for screen readers and the title. */
+export function RecoveredDraftsTrigger({ onOpen }: { onOpen: () => void }) {
+  return (
+    <Button
+      variant="ghost"
+      size="sm"
+      onClick={onOpen}
+      title="Recovered draft"
+      className="shrink-0 whitespace-nowrap"
+    >
+      <ClockCounterClockwise size={14} weight="bold" className="shrink-0" />
+      <span className="max-sm:sr-only">Recovered draft</span>
+    </Button>
+  );
+}
+
 export function RecoveredDrafts({ ydoc, whenSynced }: { ydoc: Y.Doc; whenSynced?: Promise<void> }) {
   const [drafts, setDrafts] = useState<RecoveredDraft[]>([]);
   const [open, setOpen] = useState(false);
@@ -200,9 +218,7 @@ export function RecoveredDrafts({ ydoc, whenSynced }: { ydoc: Y.Doc; whenSynced?
   if (!synced || !drafts.length) return null;
   return (
     <>
-      <Button variant="ghost" size="sm" onClick={() => setOpen(true)}>
-        Recovered draft
-      </Button>
+      <RecoveredDraftsTrigger onOpen={() => setOpen(true)} />
       {open && (
         <Modal onClose={() => setOpen(false)}>
           <ModalHeader

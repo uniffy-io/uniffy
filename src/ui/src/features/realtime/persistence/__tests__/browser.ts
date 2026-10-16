@@ -132,6 +132,17 @@ export function installBrowser(): void {
 
 const DEVICE_SEED = new Uint8Array(32).fill(7);
 
+/** Keys of every row the device database holds for one document. */
+export async function storedRowKeys(contentType: string, contentId: string): Promise<string[][]> {
+  const db = await openDB("uniffy-realtime-yjs", 4);
+  const keys = await db.getAllKeys(
+    "updates",
+    IDBKeyRange.bound([contentType, contentId], [contentType, contentId, []]),
+  );
+  db.close();
+  return keys as string[][];
+}
+
 /** Writes a row straight into the device database, bypassing local recovery. */
 export async function storeRawRow(key: string[], payload: unknown, version = 4): Promise<void> {
   const db = await openDB("uniffy-realtime-yjs", version, {
@@ -208,6 +219,8 @@ export class FakeRealtimeServer {
   private covered = 0;
   private revision = 1;
   private consumed = new WeakMap<FakeWebSocket, number>();
+  /** Every update this server sent in a SyncStep2, oldest first. */
+  readonly downloads: Uint8Array[] = [];
 
   constructor(
     readonly docName: string,
@@ -227,18 +240,60 @@ export class FakeRealtimeServer {
     ws.receive(encodeDocFrame(this.docName, payload));
   }
 
-  /** What an attach hears, in the server's order: the client's first SyncStep1 draws generation,
-   * session state and the server's SyncStep1 once, then the SyncStep2 that answers it. */
-  attach(ws: FakeWebSocket): void {
+  /** What an attach hears, in the server's order: the client's first SyncStep1 draws generation
+   * and session state, `read only` for a viewer, the server's SyncStep1 when an editor's state
+   * vector holds structs this server lacks, then the SyncStep2 with what the client lacks. */
+  attach(ws: FakeWebSocket, options: { viewer?: boolean } = {}): void {
     this.handshake(ws);
-    this.sync(ws, (encoder) => syncProtocol.writeSyncStep1(encoder, this.doc));
-    this.sync(ws, (encoder) => syncProtocol.writeSyncStep2(encoder, this.doc));
+    const clientState = this.clientStateVector(ws);
+    if (options.viewer) this.removeEditAccess(ws, "read only");
+    else if (!clientState || this.lacksStructsOf(clientState))
+      this.sync(ws, (encoder) => syncProtocol.writeSyncStep1(encoder, this.doc));
+    this.answer(ws, clientState);
   }
 
   /** The answer to the client's periodic SyncStep1. */
   resync(ws: FakeWebSocket): void {
     this.handshake(ws);
-    this.sync(ws, (encoder) => syncProtocol.writeSyncStep2(encoder, this.doc));
+    this.answer(ws, this.clientStateVector(ws));
+  }
+
+  /** The document is deleted or no longer shared with the user. */
+  denyView(ws: FakeWebSocket, reason = "no view access"): void {
+    const encoder = encoding.createEncoder();
+    encoding.writeVarUint(encoder, 2);
+    encoding.writeVarUint(encoder, 1);
+    encoding.writeVarString(encoder, reason);
+    this.send(ws, encoding.toUint8Array(encoder));
+  }
+
+  private answer(ws: FakeWebSocket, clientState: Uint8Array | undefined): void {
+    const update = Y.encodeStateAsUpdate(this.doc, clientState);
+    this.downloads.push(update);
+    this.sync(ws, (encoder) => {
+      encoding.writeVarUint(encoder, syncProtocol.messageYjsSyncStep2);
+      encoding.writeVarUint8Array(encoder, update);
+    });
+  }
+
+  /** State vector of the latest SyncStep1 the client sent for this document. */
+  private clientStateVector(ws: FakeWebSocket): Uint8Array | undefined {
+    for (let index = ws.sent.length - 1; index >= 0; index--) {
+      const { docName, payloadOffset } = peekVarString(ws.sent[index]);
+      if (docName !== this.docName) continue;
+      const decoder = decoding.createDecoder(ws.sent[index].subarray(payloadOffset));
+      if (decoding.readVarUint(decoder) !== 0) continue;
+      if (decoding.readVarUint(decoder) !== syncProtocol.messageYjsSyncStep1) continue;
+      return decoding.readVarUint8Array(decoder);
+    }
+    return undefined;
+  }
+
+  private lacksStructsOf(clientState: Uint8Array): boolean {
+    const held = Y.decodeStateVector(Y.encodeStateVector(this.doc));
+    for (const [client, clock] of Y.decodeStateVector(clientState))
+      if (clock > (held.get(client) ?? 0)) return true;
+    return false;
   }
 
   private handshake(ws: FakeWebSocket): void {
@@ -410,8 +465,13 @@ export function openEditor(contentId: string, options: { discardOnClean?: boolea
         markHydrated();
       });
     },
-    onWriteDenied: (reason) => {
-      if (denialRetainsDraft(reason, realtimeMultiplexer.getDocState(docName))) retainDraft();
+    onWriteDenied: (reason, noView) => {
+      const keepDraft = denialRetainsDraft(reason, realtimeMultiplexer.getDocState(docName));
+      if (noView)
+        void persistence.settleLostAccess({ keepDraft }).then((settled) => {
+          if (settled) clearPendingDoc(contentType, contentId);
+        });
+      else if (keepDraft) retainDraft();
     },
   });
   return {

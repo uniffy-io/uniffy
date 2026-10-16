@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Literal, NoReturn, TYPE_CHECKING, TypeAlias
 
-from protobuf import Message
+from protobuf import Enum, Message
 from protobuf._codegen import file_desc
 
 if TYPE_CHECKING:
@@ -319,9 +319,315 @@ class SetMfaPolicyResponse(Message[_SetMfaPolicyResponseFields]):
 
         policy: MfaPolicy | None
 
+_RealtimeBufferPreflightFields: TypeAlias = Literal["eviction_policy", "maxmemory_bytes", "aof_enabled", "rdb_snapshots_configured", "loss_window", "valkey_version", "valkey_run_id_prefix", "pending_budget_bytes"]
+
+class RealtimeBufferPreflight(Message[_RealtimeBufferPreflightFields]):
+    """
+    Facts the deployment preflight read from the serving Valkey instance.
+
+    ```proto
+    message superadmin.v1.RealtimeBufferPreflight
+    ```
+
+    Attributes:
+        eviction_policy:
+            maxmemory-policy; unset when CONFIG is renamed or denied.
+
+            ```proto
+            optional string eviction_policy = 1;
+            ```
+        maxmemory_bytes:
+            maxmemory in bytes, 0 when unlimited; unset when unreadable.
+
+            ```proto
+            optional int64 maxmemory_bytes = 2;
+            ```
+        aof_enabled:
+            Unset when INFO persistence does not report it.
+
+            ```proto
+            optional bool aof_enabled = 3;
+            ```
+        rdb_snapshots_configured:
+            Whether RDB snapshots are scheduled; unset when unreadable.
+
+            ```proto
+            optional bool rdb_snapshots_configured = 4;
+            ```
+        loss_window:
+            What a Valkey crash or restart loses, in the words the preflight logs.
+
+            ```proto
+            string loss_window = 5;
+            ```
+        valkey_version:
+            ```proto
+            string valkey_version = 6;
+            ```
+        valkey_run_id_prefix:
+            Leading characters of the instance run id; a change marks a restart or failover.
+
+            ```proto
+            string valkey_run_id_prefix = 7;
+            ```
+        pending_budget_bytes:
+            Stored bytes every pending edit together may hold, split evenly across buckets.
+
+            ```proto
+            int64 pending_budget_bytes = 8;
+            ```
+    """
+
+    __slots__ = ("eviction_policy", "maxmemory_bytes", "aof_enabled", "rdb_snapshots_configured", "loss_window", "valkey_version", "valkey_run_id_prefix", "pending_budget_bytes")
+
+    if TYPE_CHECKING:
+
+        def __init__(
+            self,
+            *,
+            eviction_policy: str | None = None,
+            maxmemory_bytes: int | None = None,
+            aof_enabled: bool | None = None,
+            rdb_snapshots_configured: bool | None = None,
+            loss_window: str = "",
+            valkey_version: str = "",
+            valkey_run_id_prefix: str = "",
+            pending_budget_bytes: int = 0,
+        ) -> None:
+            pass
+
+        eviction_policy: str
+        maxmemory_bytes: int
+        aof_enabled: bool
+        rdb_snapshots_configured: bool
+        loss_window: str
+        valkey_version: str
+        valkey_run_id_prefix: str
+        pending_budget_bytes: int
+
+_RealtimeBufferTotalsFields: TypeAlias = Literal["pending_bytes", "pending_records", "pending_documents", "oldest_pending_seconds"]
+
+class RealtimeBufferTotals(Message[_RealtimeBufferTotalsFields]):
+    """
+    Edits accepted across the deployment and not yet checkpointed.
+
+    ```proto
+    message superadmin.v1.RealtimeBufferTotals
+    ```
+
+    Attributes:
+        pending_bytes:
+            Stored bytes as the budget counts them: update, id and per-record overhead.
+
+            ```proto
+            int64 pending_bytes = 1;
+            ```
+        pending_records:
+            ```proto
+            int64 pending_records = 2;
+            ```
+        pending_documents:
+            ```proto
+            int64 pending_documents = 3;
+            ```
+        oldest_pending_seconds:
+            Age of the oldest pending edit, 0 when none waits. A document backing off
+            after a failed checkpoint counts from its retry.
+
+            ```proto
+            double oldest_pending_seconds = 4;
+            ```
+    """
+
+    __slots__ = ("pending_bytes", "pending_records", "pending_documents", "oldest_pending_seconds")
+
+    if TYPE_CHECKING:
+
+        def __init__(
+            self,
+            *,
+            pending_bytes: int = 0,
+            pending_records: int = 0,
+            pending_documents: int = 0,
+            oldest_pending_seconds: float = 0,
+        ) -> None:
+            pass
+
+        pending_bytes: int
+        pending_records: int
+        pending_documents: int
+        oldest_pending_seconds: float
+
+_RealtimeBufferStatusFields: TypeAlias = Literal["verdict", "preflight_mode", "pending_budget_from_env", "preflight", "totals", "epoch_resets", "poisoned_checkpoints"]
+
+class RealtimeBufferStatus(Message[_RealtimeBufferStatusFields]):
+    """
+    ```proto
+    message superadmin.v1.RealtimeBufferStatus
+    ```
+
+    Attributes:
+        verdict:
+            ```proto
+            superadmin.v1.RealtimeBufferVerdict verdict = 1;
+            ```
+        preflight_mode:
+            REALTIME_VALKEY_PREFLIGHT: "strict" or "warn".
+
+            ```proto
+            string preflight_mode = 2;
+            ```
+        pending_budget_from_env:
+            True when REALTIME_PENDING_BUDGET_BYTES sets the budget instead of maxmemory.
+
+            ```proto
+            bool pending_budget_from_env = 3;
+            ```
+        preflight:
+            Unset until the answering backend has read the serving Valkey instance.
+
+            ```proto
+            optional superadmin.v1.RealtimeBufferPreflight preflight = 4;
+            ```
+        totals:
+            Unset when Valkey could not be read for this request.
+
+            ```proto
+            optional superadmin.v1.RealtimeBufferTotals totals = 5;
+            ```
+        epoch_resets:
+            Epoch resets by reason, counted by the answering backend process since
+            it started. Workers count their own on their metrics endpoint.
+
+            ```proto
+            map<string, int64> epoch_resets = 6;
+            ```
+        poisoned_checkpoints:
+            Checkpoint passes stopped by an unreadable stored edit, by reason,
+            counted the same way as epoch_resets.
+
+            ```proto
+            map<string, int64> poisoned_checkpoints = 7;
+            ```
+    """
+
+    __slots__ = ("verdict", "preflight_mode", "pending_budget_from_env", "preflight", "totals", "epoch_resets", "poisoned_checkpoints")
+
+    if TYPE_CHECKING:
+
+        def __init__(
+            self,
+            *,
+            verdict: RealtimeBufferVerdict | None = None,
+            preflight_mode: str = "",
+            pending_budget_from_env: bool = False,
+            preflight: RealtimeBufferPreflight | None = None,
+            totals: RealtimeBufferTotals | None = None,
+            epoch_resets: dict[str, int] | None = None,
+            poisoned_checkpoints: dict[str, int] | None = None,
+        ) -> None:
+            pass
+
+        verdict: RealtimeBufferVerdict
+        preflight_mode: str
+        pending_budget_from_env: bool
+        preflight: RealtimeBufferPreflight | None
+        totals: RealtimeBufferTotals | None
+        epoch_resets: dict[str, int]
+        poisoned_checkpoints: dict[str, int]
+
+_GetRealtimeBufferStatusRequestFields: TypeAlias = NoReturn
+
+class GetRealtimeBufferStatusRequest(Message[_GetRealtimeBufferStatusRequestFields]):
+    """
+    ```proto
+    message superadmin.v1.GetRealtimeBufferStatusRequest
+    ```
+    """
+
+    __slots__ = ()
+
+    if TYPE_CHECKING:
+
+        def __init__(
+            self,
+        ) -> None:
+            pass
+
+_GetRealtimeBufferStatusResponseFields: TypeAlias = Literal["status"]
+
+class GetRealtimeBufferStatusResponse(Message[_GetRealtimeBufferStatusResponseFields]):
+    """
+    ```proto
+    message superadmin.v1.GetRealtimeBufferStatusResponse
+    ```
+
+    Attributes:
+        status:
+            ```proto
+            optional superadmin.v1.RealtimeBufferStatus status = 1;
+            ```
+    """
+
+    __slots__ = ("status",)
+
+    if TYPE_CHECKING:
+
+        def __init__(
+            self,
+            *,
+            status: RealtimeBufferStatus | None = None,
+        ) -> None:
+            pass
+
+        status: RealtimeBufferStatus | None
+
+class RealtimeBufferVerdict(Enum):
+    """
+    Whether the serving Valkey instance may hold accepted realtime edits.
+
+    ```proto
+    enum superadmin.v1.RealtimeBufferVerdict
+    ```
+
+    Attributes:
+        UNSPECIFIED:
+            ```proto
+            REALTIME_BUFFER_VERDICT_UNSPECIFIED = 0
+            ```
+        NOT_RUN:
+            The answering backend has not read the serving Valkey instance yet.
+
+            ```proto
+            REALTIME_BUFFER_VERDICT_NOT_RUN = 1
+            ```
+        ENABLED:
+            ```proto
+            REALTIME_BUFFER_VERDICT_ENABLED = 2
+            ```
+        DISABLED:
+            A confirmed allkeys-* eviction policy in strict mode; edits are refused.
+
+            ```proto
+            REALTIME_BUFFER_VERDICT_DISABLED = 3
+            ```
+        UNKNOWN:
+            CONFIG is renamed or denied; edits are accepted and the requirement is logged.
+
+            ```proto
+            REALTIME_BUFFER_VERDICT_UNKNOWN = 4
+            ```
+    """
+
+    UNSPECIFIED = 0
+    NOT_RUN = 1
+    ENABLED = 2
+    DISABLED = 3
+    UNKNOWN = 4
+
 
 _DESC = file_desc(
-    b'\n!superadmin/v1/system_config.proto\x12\rsuperadmin.v1">\n\nSystemFlag\x12\x18\n\x07enabled\x18\x01 \x01(\x08R\x07enabled\x12\x16\n\x06source\x18\x02 \x01(\tR\x06source"Z\n\x0cSystemConfig\x12J\n\x13public_registration\x18\x01 \x01(\x0b2\x19.superadmin.v1.SystemFlagR\x12publicRegistration"\x18\n\x16GetSystemConfigRequest"N\n\x17GetSystemConfigResponse\x123\n\x06config\x18\x01 \x01(\x0b2\x1b.superadmin.v1.SystemConfigR\x06config"8\n\x1cSetPublicRegistrationRequest\x12\x18\n\x07enabled\x18\x01 \x01(\x08R\x07enabled"T\n\x1dSetPublicRegistrationResponse\x123\n\x06config\x18\x01 \x01(\x0b2\x1b.superadmin.v1.SystemConfigR\x06config"H\n\tMfaPolicy\x12;\n\x1arequired_for_system_admins\x18\x01 \x01(\x08R\x17requiredForSystemAdmins"\x15\n\x13GetMfaPolicyRequest"H\n\x14GetMfaPolicyResponse\x120\n\x06policy\x18\x01 \x01(\x0b2\x18.superadmin.v1.MfaPolicyR\x06policy"R\n\x13SetMfaPolicyRequest\x12;\n\x1arequired_for_system_admins\x18\x01 \x01(\x08R\x17requiredForSystemAdmins"H\n\x14SetMfaPolicyResponse\x120\n\x06policy\x18\x01 \x01(\x0b2\x18.superadmin.v1.MfaPolicyR\x06policy2\xa5\x03\n\x13SystemConfigService\x12b\n\x0fGetSystemConfig\x12%.superadmin.v1.GetSystemConfigRequest\x1a&.superadmin.v1.GetSystemConfigResponse"\x00\x12t\n\x15SetPublicRegistration\x12+.superadmin.v1.SetPublicRegistrationRequest\x1a,.superadmin.v1.SetPublicRegistrationResponse"\x00\x12Y\n\x0cGetMfaPolicy\x12".superadmin.v1.GetMfaPolicyRequest\x1a#.superadmin.v1.GetMfaPolicyResponse"\x00\x12Y\n\x0cSetMfaPolicy\x12".superadmin.v1.SetMfaPolicyRequest\x1a#.superadmin.v1.SetMfaPolicyResponse"\x00BAZ?github.com/uniffy-io/uniffy-proto-go/superadmin/v1;superadminv1b\x06proto3',
+    b'\n!superadmin/v1/system_config.proto\x12\rsuperadmin.v1">\n\nSystemFlag\x12\x18\n\x07enabled\x18\x01 \x01(\x08R\x07enabled\x12\x16\n\x06source\x18\x02 \x01(\tR\x06source"Z\n\x0cSystemConfig\x12J\n\x13public_registration\x18\x01 \x01(\x0b2\x19.superadmin.v1.SystemFlagR\x12publicRegistration"\x18\n\x16GetSystemConfigRequest"N\n\x17GetSystemConfigResponse\x123\n\x06config\x18\x01 \x01(\x0b2\x1b.superadmin.v1.SystemConfigR\x06config"8\n\x1cSetPublicRegistrationRequest\x12\x18\n\x07enabled\x18\x01 \x01(\x08R\x07enabled"T\n\x1dSetPublicRegistrationResponse\x123\n\x06config\x18\x01 \x01(\x0b2\x1b.superadmin.v1.SystemConfigR\x06config"H\n\tMfaPolicy\x12;\n\x1arequired_for_system_admins\x18\x01 \x01(\x08R\x17requiredForSystemAdmins"\x15\n\x13GetMfaPolicyRequest"H\n\x14GetMfaPolicyResponse\x120\n\x06policy\x18\x01 \x01(\x0b2\x18.superadmin.v1.MfaPolicyR\x06policy"R\n\x13SetMfaPolicyRequest\x12;\n\x1arequired_for_system_admins\x18\x01 \x01(\x08R\x17requiredForSystemAdmins"H\n\x14SetMfaPolicyResponse\x120\n\x06policy\x18\x01 \x01(\x0b2\x18.superadmin.v1.MfaPolicyR\x06policy"\xda\x03\n\x17RealtimeBufferPreflight\x12,\n\x0feviction_policy\x18\x01 \x01(\tH\x00R\x0eevictionPolicy\x88\x01\x01\x12,\n\x0fmaxmemory_bytes\x18\x02 \x01(\x03H\x01R\x0emaxmemoryBytes\x88\x01\x01\x12$\n\x0baof_enabled\x18\x03 \x01(\x08H\x02R\naofEnabled\x88\x01\x01\x12=\n\x18rdb_snapshots_configured\x18\x04 \x01(\x08H\x03R\x16rdbSnapshotsConfigured\x88\x01\x01\x12\x1f\n\x0bloss_window\x18\x05 \x01(\tR\nlossWindow\x12%\n\x0evalkey_version\x18\x06 \x01(\tR\rvalkeyVersion\x12/\n\x14valkey_run_id_prefix\x18\x07 \x01(\tR\x11valkeyRunIdPrefix\x120\n\x14pending_budget_bytes\x18\x08 \x01(\x03R\x12pendingBudgetBytesB\x12\n\x10_eviction_policyB\x12\n\x10_maxmemory_bytesB\x0e\n\x0c_aof_enabledB\x1b\n\x19_rdb_snapshots_configured"\xc7\x01\n\x14RealtimeBufferTotals\x12#\n\rpending_bytes\x18\x01 \x01(\x03R\x0cpendingBytes\x12\'\n\x0fpending_records\x18\x02 \x01(\x03R\x0ependingRecords\x12+\n\x11pending_documents\x18\x03 \x01(\x03R\x10pendingDocuments\x124\n\x16oldest_pending_seconds\x18\x04 \x01(\x01R\x14oldestPendingSeconds"\x89\x05\n\x14RealtimeBufferStatus\x12>\n\x07verdict\x18\x01 \x01(\x0e2$.superadmin.v1.RealtimeBufferVerdictR\x07verdict\x12%\n\x0epreflight_mode\x18\x02 \x01(\tR\rpreflightMode\x125\n\x17pending_budget_from_env\x18\x03 \x01(\x08R\x14pendingBudgetFromEnv\x12D\n\tpreflight\x18\x04 \x01(\x0b2&.superadmin.v1.RealtimeBufferPreflightR\tpreflight\x12;\n\x06totals\x18\x05 \x01(\x0b2#.superadmin.v1.RealtimeBufferTotalsR\x06totals\x12W\n\x0cepoch_resets\x18\x06 \x03(\x0b24.superadmin.v1.RealtimeBufferStatus.EpochResetsEntryR\x0bepochResets\x12o\n\x14poisoned_checkpoints\x18\x07 \x03(\x0b2<.superadmin.v1.RealtimeBufferStatus.PoisonedCheckpointsEntryR\x13poisonedCheckpoints\x1a>\n\x10EpochResetsEntry\x12\x10\n\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n\x05value\x18\x02 \x01(\x03R\x05value:\x028\x01\x1aF\n\x18PoisonedCheckpointsEntry\x12\x10\n\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n\x05value\x18\x02 \x01(\x03R\x05value:\x028\x01" \n\x1eGetRealtimeBufferStatusRequest"^\n\x1fGetRealtimeBufferStatusResponse\x12;\n\x06status\x18\x01 \x01(\x0b2#.superadmin.v1.RealtimeBufferStatusR\x06status*\xd5\x01\n\x15RealtimeBufferVerdict\x12\'\n#REALTIME_BUFFER_VERDICT_UNSPECIFIED\x10\x00\x12#\n\x1fREALTIME_BUFFER_VERDICT_NOT_RUN\x10\x01\x12#\n\x1fREALTIME_BUFFER_VERDICT_ENABLED\x10\x02\x12$\n REALTIME_BUFFER_VERDICT_DISABLED\x10\x03\x12#\n\x1fREALTIME_BUFFER_VERDICT_UNKNOWN\x10\x042\xa1\x04\n\x13SystemConfigService\x12b\n\x0fGetSystemConfig\x12%.superadmin.v1.GetSystemConfigRequest\x1a&.superadmin.v1.GetSystemConfigResponse"\x00\x12t\n\x15SetPublicRegistration\x12+.superadmin.v1.SetPublicRegistrationRequest\x1a,.superadmin.v1.SetPublicRegistrationResponse"\x00\x12Y\n\x0cGetMfaPolicy\x12".superadmin.v1.GetMfaPolicyRequest\x1a#.superadmin.v1.GetMfaPolicyResponse"\x00\x12Y\n\x0cSetMfaPolicy\x12".superadmin.v1.SetMfaPolicyRequest\x1a#.superadmin.v1.SetMfaPolicyResponse"\x00\x12z\n\x17GetRealtimeBufferStatus\x12-.superadmin.v1.GetRealtimeBufferStatusRequest\x1a..superadmin.v1.GetRealtimeBufferStatusResponse"\x00BAZ?github.com/uniffy-io/uniffy-proto-go/superadmin/v1;superadminv1b\x06proto3',
     [],
     {
         "SystemFlag": SystemFlag,
@@ -335,6 +641,12 @@ _DESC = file_desc(
         "GetMfaPolicyResponse": GetMfaPolicyResponse,
         "SetMfaPolicyRequest": SetMfaPolicyRequest,
         "SetMfaPolicyResponse": SetMfaPolicyResponse,
+        "RealtimeBufferPreflight": RealtimeBufferPreflight,
+        "RealtimeBufferTotals": RealtimeBufferTotals,
+        "RealtimeBufferStatus": RealtimeBufferStatus,
+        "GetRealtimeBufferStatusRequest": GetRealtimeBufferStatusRequest,
+        "GetRealtimeBufferStatusResponse": GetRealtimeBufferStatusResponse,
+        "RealtimeBufferVerdict": RealtimeBufferVerdict,
     },
 )
 

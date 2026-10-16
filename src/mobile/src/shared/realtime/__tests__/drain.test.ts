@@ -62,6 +62,16 @@ class FakeSocket {
   types(): number[] {
     return this.sent.map((frame) => frame[peekVarString(frame).payloadOffset]);
   }
+  /** State vector of the latest SyncStep1 the client sent. */
+  stateVector(): Uint8Array | undefined {
+    for (const frame of [...this.sent].reverse()) {
+      const decoder = decoding.createDecoder(frame.subarray(peekVarString(frame).payloadOffset));
+      if (decoding.readVarUint(decoder) !== 0) continue;
+      if (decoding.readVarUint(decoder) !== syncProtocol.messageYjsSyncStep1) continue;
+      return decoding.readVarUint8Array(decoder);
+    }
+    return undefined;
+  }
   writes(): { id: string; update: Uint8Array }[] {
     return this.sent.flatMap((frame) => {
       const decoder = decoding.createDecoder(frame.subarray(peekVarString(frame).payloadOffset));
@@ -78,6 +88,7 @@ beforeEach(() => {
     toFake: ["setTimeout", "clearTimeout", "setInterval", "clearInterval", "Date"],
   });
   FakeSocket.sockets = [];
+  downloads = [];
   vi.stubGlobal("WebSocket", FakeSocket);
   nativeStorage.secure.clear();
   for (const database of nativeStorage.databases.values()) database.close();
@@ -103,7 +114,18 @@ const receipt = (updateId: string, epoch: string, acceptedSequence: number) =>
 const progress = (epoch: string, coveredSequence: number) =>
   encodeCheckpointProgress({ generation: "G", epoch, coveredSequence, checkpointRevision: 2 });
 
-/** Answers the client's SyncStep1 the way the server does: generation, buffer state, document. */
+// Every update the server sent in a SyncStep2, oldest first.
+let downloads: Uint8Array[] = [];
+
+function holdsStructsMissingFrom(server: Y.Doc, clientState: Uint8Array): boolean {
+  const held = Y.decodeStateVector(Y.encodeStateVector(server));
+  for (const [client, clock] of Y.decodeStateVector(clientState))
+    if (clock > (held.get(client) ?? 0)) return true;
+  return false;
+}
+
+/** Answers the client's SyncStep1 the way the server does: generation, buffer state, its own
+ * SyncStep1 when the client holds structs it lacks, then what the client lacks. */
 function serve(socket: FakeSocket, server: Y.Doc, epoch?: string, head = 0, checkpoint = 0): void {
   if (socket.readyState !== FakeSocket.OPEN) socket.open();
   socket.deliver(encodeGeneration("G"));
@@ -117,10 +139,28 @@ function serve(socket: FakeSocket, server: Y.Doc, epoch?: string, head = 0, chec
         checkpointRevision: 1,
       }),
     );
+  const clientState = socket.stateVector();
+  if (!clientState || holdsStructsMissingFrom(server, clientState)) {
+    const ask = encoding.createEncoder();
+    encoding.writeVarUint(ask, 0);
+    syncProtocol.writeSyncStep1(ask, server);
+    socket.deliver(encoding.toUint8Array(ask));
+  }
+  const update = Y.encodeStateAsUpdate(server, clientState);
+  downloads.push(update);
   const encoder = encoding.createEncoder();
   encoding.writeVarUint(encoder, 0);
-  syncProtocol.writeSyncStep2(encoder, server);
+  encoding.writeVarUint(encoder, syncProtocol.messageYjsSyncStep2);
+  encoding.writeVarUint8Array(encoder, update);
   socket.deliver(encoding.toUint8Array(encoder));
+}
+
+function viewDenial(): Uint8Array {
+  const encoder = encoding.createEncoder();
+  encoding.writeVarUint(encoder, 2);
+  encoding.writeVarUint(encoder, 1);
+  encoding.writeVarString(encoder, "no view access");
+  return encoding.toUint8Array(encoder);
 }
 
 /** The editor contract: snapshot every local edit and retain the coverage of every own update. */
@@ -250,6 +290,7 @@ it("hands a closed editor's accepted edits to a drain that clears only on checkp
   const server = serverDoc("base");
   const editor = await openEditor(server, "E1");
   const accepted = editor.send(() => editor.text.insert(4, " accepted"));
+  Y.applyUpdate(server, editor.socket.writes()[0].update);
   editor.socket.deliver(receipt(accepted, "E1", 1));
   await editor.stored();
   expect(realtimeMultiplexer.getDocState(NAME)).toMatchObject({ checkpointPending: true });
@@ -282,13 +323,18 @@ it("attaches without presence and never asks peers to announce theirs", async ()
   kill();
 
   const app = await restart();
+  const [retained] = await app.readRetainedUpdates(KEY, "G");
   await app.runMobileDrain("user", "org", () => true);
   const socket = FakeSocket.sockets.at(-1)!;
   serve(socket, server, "E1");
-  await vi.waitFor(() => expect(socket.writes()).toHaveLength(1));
+  await vi.waitFor(() =>
+    expect(socket.writes().map((write) => write.id)).toContain(retained.updateId),
+  );
   expect(socket.types()[0]).toBe(0);
   expect(socket.types()).not.toContain(1);
   expect(socket.types()).not.toContain(3);
+  for (const write of socket.writes()) socket.deliver(encodeCommitted(write.id));
+  await vi.waitFor(async () => expect(await app.listDraftKeys("user")).toEqual([]));
 });
 
 it("detaches after a drain timeout with the draft intact and finishes on the next run", async () => {
@@ -301,17 +347,21 @@ it("detaches after a drain timeout with the draft intact and finishes on the nex
   const app = await restart();
   await app.runMobileDrain("user", "org", () => true);
   serve(FakeSocket.sockets.at(-1)!, server);
-  await vi.waitFor(() => expect(FakeSocket.sockets.at(-1)!.writes()).toHaveLength(1));
-  vi.advanceTimersByTime(60_000);
+  await vi.waitFor(() => expect(FakeSocket.sockets.at(-1)!.writes().length).toBeGreaterThan(0));
+  vi.advanceTimersByTime(app.DRAIN_TIMEOUT_MS);
   expect(app.realtimeMultiplexer.isAttached(NAME)).toBe(false);
   expect((await app.readStoredDrafts(KEY)).map((draft) => draft.text)).toEqual([
     "base unacknowledged",
   ]);
 
+  vi.advanceTimersByTime(app.DRAIN_BACKOFF_MS);
+  const [retained] = await app.readRetainedUpdates(KEY, "G");
   await app.runMobileDrain("user", "org", () => true);
   const socket = FakeSocket.sockets.at(-1)!;
   serve(socket, server);
-  await vi.waitFor(() => expect(socket.writes().length).toBeGreaterThan(0));
+  await vi.waitFor(() =>
+    expect(socket.writes().map((write) => write.id)).toContain(retained.updateId),
+  );
   for (const write of socket.writes()) {
     Y.applyUpdate(server, write.update);
     socket.deliver(encodeCommitted(write.id));
@@ -432,7 +482,7 @@ it.each(["denial", "handoff"])("keeps the draft when a drain ends by %s", async 
   await app.runMobileDrain("user", "org", () => true);
   const socket = FakeSocket.sockets.at(-1)!;
   serve(socket, server);
-  await vi.waitFor(() => expect(socket.writes()).toHaveLength(1));
+  await vi.waitFor(() => expect(socket.writes().length).toBeGreaterThan(0));
   if (reason === "denial") {
     const denial = encoding.createEncoder();
     encoding.writeVarUint(denial, 2);
@@ -442,4 +492,131 @@ it.each(["denial", "handoff"])("keeps the draft when a drain ends by %s", async 
   } else app.abortMobileDrain(NAME);
   expect(app.realtimeMultiplexer.isAttached(NAME)).toBe(false);
   expect((await app.readStoredDrafts(KEY)).map((draft) => draft.text)).toEqual(["base kept"]);
+});
+
+it("keeps the device copy as a recovered draft no drain replays once the document answers no view access", async () => {
+  const server = serverDoc("base");
+  const editor = await openEditor(server, "E1");
+  const kept = editor.send(() => editor.text.insert(4, " kept"));
+  editor.socket.deliver(receipt(kept, "E1", 1));
+  await editor.stored();
+  kill();
+
+  const app = await restart();
+  await app.runMobileDrain("user", "org", () => true);
+  const socket = FakeSocket.sockets.at(-1)!;
+  socket.open();
+  // Deleted or unshared: the server answers the attach with a denial and nothing else.
+  socket.deliver(viewDenial());
+  expect(app.realtimeMultiplexer.isAttached(NAME)).toBe(false);
+  // The device never learned which of its edits the server accepted, so it keeps them all.
+  await vi.waitFor(async () =>
+    expect(
+      (await app.readStoredDrafts(KEY)).map((draft) => [
+        draft.generation.split(":")[0],
+        draft.text,
+      ]),
+    ).toEqual([["recovery", "base kept"]]),
+  );
+  expect(await app.readRetainedUpdates(KEY, "G")).toEqual([]);
+  expect(socket.writes()).toEqual([]);
+
+  await app.runMobileDrain("user", "org", () => true);
+  expect(app.realtimeMultiplexer.isAttached(NAME)).toBe(false);
+  expect(await app.listDraftKeys("user")).toEqual([KEY]);
+});
+
+it("drops the device copy once the document answers no view access after this socket showed every edit accepted", async () => {
+  const server = serverDoc("base");
+  const editor = await openEditor(server, "E1");
+  const accepted = editor.send(() => editor.text.insert(4, " accepted"));
+  Y.applyUpdate(server, editor.socket.writes()[0].update);
+  editor.socket.deliver(receipt(accepted, "E1", 1));
+  await editor.stored();
+  kill();
+
+  const app = await restart();
+  await app.runMobileDrain("user", "org", () => true);
+  const socket = FakeSocket.sockets.at(-1)!;
+  serve(socket, server, "E1", 1);
+  await vi.waitFor(() => expect(socket.writes().map((write) => write.id)).toEqual([accepted]));
+  socket.deliver(receipt(accepted, "E1", 1));
+  socket.deliver(viewDenial());
+  await vi.waitFor(async () => expect(await app.listDraftKeys("user")).toEqual([]));
+  expect(await app.readStoredDrafts(KEY)).toEqual([]);
+});
+
+it("re-attaches a stuck document only after a doubling backoff and downloads only what changed", async () => {
+  const server = serverDoc("base");
+  const editor = await openEditor(server, "E1");
+  const accepted = editor.send(() => editor.text.insert(4, " accepted, never checkpointed"));
+  Y.applyUpdate(server, editor.socket.writes()[0].update);
+  editor.socket.deliver(receipt(accepted, "E1", 1));
+  await editor.stored();
+  kill();
+
+  const app = await restart();
+  const attempt = async (checkpoint: boolean) => {
+    await app.runMobileDrain("user", "org", () => true);
+    expect(app.realtimeMultiplexer.isAttached(NAME)).toBe(true);
+    const socket = FakeSocket.sockets.at(-1)!;
+    serve(socket, server, "E1", 1);
+    // The attaching SyncStep1 carried the device copy, so the answer holds no struct it has.
+    expect(Y.decodeUpdate(downloads.at(-1)!).structs).toEqual([]);
+    await vi.waitFor(() => expect(socket.writes().map((write) => write.id)).toContain(accepted));
+    socket.deliver(receipt(accepted, "E1", 1));
+    if (checkpoint) socket.deliver(progress("E1", 1));
+    else vi.advanceTimersByTime(app.DRAIN_TIMEOUT_MS);
+    await vi.waitFor(() => expect(app.realtimeMultiplexer.isAttached(NAME)).toBe(false));
+  };
+  const waiting = async () => {
+    await app.runMobileDrain("user", "org", () => true);
+    return !app.realtimeMultiplexer.isAttached(NAME);
+  };
+
+  await attempt(false);
+  expect(await waiting()).toBe(true);
+  vi.advanceTimersByTime(app.DRAIN_BACKOFF_MS);
+  await attempt(false);
+  vi.advanceTimersByTime(app.DRAIN_BACKOFF_MS);
+  expect(await waiting()).toBe(true);
+  vi.advanceTimersByTime(app.DRAIN_BACKOFF_MS);
+  await attempt(true);
+  await vi.waitFor(async () => expect(await app.listDraftKeys("user")).toEqual([]));
+});
+
+it("stops at a replaced generation when its device copy names no generation, sending nothing", async () => {
+  const { deleteEncryptedDrafts, encryptedDraftRecords } =
+    await import("@shared/realtime/encryptedDraftStore");
+  const server = serverDoc("base");
+  const editor = await openEditor(server, "E1");
+  editor.send(() => editor.text.insert(4, " typed for G"));
+  await editor.stored();
+  // Only the retained update survives, as after a crash before the full copy landed.
+  await deleteEncryptedDrafts(
+    KEY,
+    (await encryptedDraftRecords(KEY)).map((record) => record.id),
+  );
+  kill();
+
+  const app = await restart();
+  expect((await app.readStoredDrafts(KEY)).map((draft) => [draft.id, draft.generation])).toEqual([
+    ["retained.G", "G"],
+  ]);
+  await app.runMobileDrain("user", "org", () => true);
+  const socket = FakeSocket.sockets.at(-1)!;
+  socket.open();
+  const replacement = new Y.Doc();
+  replacement.getMap("doc_meta").set("generation", "H");
+  replacement.getText("markdown").insert(0, "replacement");
+  socket.deliver(encodeGeneration("H"));
+  const ask = encoding.createEncoder();
+  encoding.writeVarUint(ask, 0);
+  syncProtocol.writeSyncStep1(ask, replacement);
+  socket.deliver(encoding.toUint8Array(ask));
+  vi.advanceTimersByTime(50);
+  expect(socket.writes()).toEqual([]);
+  expect(app.realtimeMultiplexer.isAttached(NAME)).toBe(false);
+  expect((await app.readRetainedUpdates(KEY, "G")).length).toBe(1);
+  replacement.destroy();
 });

@@ -14,6 +14,7 @@ import {
   restoreDraft,
   saveDraft,
   saveDraftNow,
+  settleLostAccess,
   type MobileRecoveredDraft,
 } from "@shared/realtime/draftStorage";
 import {
@@ -103,6 +104,8 @@ export function openDocSession(options: OpenDocSessionOptions): DocSessionHandle
   let transportPending = false;
   let transportSettledAt: number | null = null;
   let wakeTimer: ReturnType<typeof setTimeout> | null = null;
+  // Settles the device copy once view access is gone; nothing is saved for the doc afterwards.
+  let lostAccess: Promise<void> | null = null;
 
   const publish = () => {
     if (closing) return;
@@ -155,6 +158,7 @@ export function openDocSession(options: OpenDocSessionOptions): DocSessionHandle
   };
 
   const persist = (_update: Uint8Array, origin: unknown) => {
+    if (lostAccess) return;
     if (origin !== REMOTE_ORIGIN && !readOnly && ydoc.getMap("doc_meta").get("generation")) {
       dirty = true;
       void trackDraftWrite(saveDraft(storageKey, ydoc));
@@ -197,10 +201,11 @@ export function openDocSession(options: OpenDocSessionOptions): DocSessionHandle
           : noView
             ? "access_lost"
             : "permission_lost";
+        if (noView && !readOnly) settleLost();
         publish();
       },
       onCoverage: (events) => {
-        if (!readOnly) void trackDraftWrite(retain(events));
+        if (!readOnly && !lostAccess) void trackDraftWrite(retain(events));
       },
       onSync: () =>
         void (
@@ -247,6 +252,25 @@ export function openDocSession(options: OpenDocSessionOptions): DocSessionHandle
   if (readOnly) realtimeMultiplexer.setDocReadOnly(subscription.docName, true);
   publish();
 
+  // The server keeps what it accepted. Once this socket has shown every own update accepted the
+  // device copy goes; otherwise it becomes a recovered draft. No drain replays it afterwards.
+  function settleLost(): void {
+    const state = realtimeMultiplexer.getDocState(docName);
+    const generation = state.generation ?? String(ydoc.getMap("doc_meta").get("generation") ?? "");
+    if (lostAccess || !generation) return;
+    const keepDraft = !state.coverageKnown || state.transportPending;
+    lostAccess = (dirty ? saveDraftNow(storageKey, ydoc) : Promise.resolve())
+      .then(() => settleLostAccess(storageKey, generation, keepDraft))
+      .then(() => readStoredDrafts(storageKey))
+      .then((drafts) => {
+        recoveredDrafts = drafts;
+        publish();
+      })
+      .catch((error) =>
+        console.warn("[realtime] could not settle a document without access", error),
+      );
+  }
+
   return {
     session: { ydoc, awareness, sessionId, whenSynced, initialDrafts, storageKey },
     subscribe: (listener) => {
@@ -263,6 +287,8 @@ export function openDocSession(options: OpenDocSessionOptions): DocSessionHandle
     },
     trackDraftWrite,
     persistLocally: async () => {
+      // The edits are on the server or in the recovered draft the settle kept.
+      if (lostAccess) return lostAccess.then(() => true);
       if (dirty && !readOnly && realtimeMultiplexer.getDocState(docName).checkpointPending)
         void trackDraftWrite(saveDraft(storageKey, ydoc));
       const stored = await lastWrite;
@@ -278,11 +304,13 @@ export function openDocSession(options: OpenDocSessionOptions): DocSessionHandle
         !realtimeMultiplexer.getDocState(docName).checkpointPending;
       const generation = String(ydoc.getMap("doc_meta").get("generation") ?? "");
       // Accepted-only edits keep their device copy; the drain finishes them after detach.
-      closing = clean
-        ? discardGeneration(storageKey, generation).catch(console.warn)
-        : dirty
-          ? saveDraftNow(storageKey, ydoc).catch(() => {})
-          : Promise.resolve();
+      closing = lostAccess
+        ? lostAccess
+        : clean
+          ? discardGeneration(storageKey, generation).catch(console.warn)
+          : dirty
+            ? saveDraftNow(storageKey, ydoc).catch(() => {})
+            : Promise.resolve();
       if (wakeTimer !== null) clearTimeout(wakeTimer);
       ydoc.off("update", persist);
       unsubscribeState();

@@ -45,6 +45,9 @@ const (
 	// SystemConfigServiceSetMfaPolicyProcedure is the fully-qualified name of the SystemConfigService's
 	// SetMfaPolicy RPC.
 	SystemConfigServiceSetMfaPolicyProcedure = "/superadmin.v1.SystemConfigService/SetMfaPolicy"
+	// SystemConfigServiceGetRealtimeBufferStatusProcedure is the fully-qualified name of the
+	// SystemConfigService's GetRealtimeBufferStatus RPC.
+	SystemConfigServiceGetRealtimeBufferStatusProcedure = "/superadmin.v1.SystemConfigService/GetRealtimeBufferStatus"
 )
 
 // SystemConfigServiceClient is a client for the superadmin.v1.SystemConfigService service.
@@ -60,6 +63,11 @@ type SystemConfigServiceClient interface {
 	// Partial update to the MFA policy. Only fields explicitly set in
 	// the request are written. Audits as ``auth.mfa_policy_changed``.
 	SetMfaPolicy(context.Context, *connect.Request[v1.SetMfaPolicyRequest]) (*connect.Response[v1.SetMfaPolicyResponse], error)
+	// Read the Valkey buffer that holds accepted realtime edits until their
+	// PostgreSQL checkpoint: the preflight the answering backend recorded and
+	// deployment-wide pending totals. Carries no document, organization or
+	// credential detail, so it is safe to poll.
+	GetRealtimeBufferStatus(context.Context, *connect.Request[v1.GetRealtimeBufferStatusRequest]) (*connect.Response[v1.GetRealtimeBufferStatusResponse], error)
 }
 
 // NewSystemConfigServiceClient constructs a client for the superadmin.v1.SystemConfigService
@@ -97,15 +105,22 @@ func NewSystemConfigServiceClient(httpClient connect.HTTPClient, baseURL string,
 			connect.WithSchema(systemConfigServiceMethods.ByName("SetMfaPolicy")),
 			connect.WithClientOptions(opts...),
 		),
+		getRealtimeBufferStatus: connect.NewClient[v1.GetRealtimeBufferStatusRequest, v1.GetRealtimeBufferStatusResponse](
+			httpClient,
+			baseURL+SystemConfigServiceGetRealtimeBufferStatusProcedure,
+			connect.WithSchema(systemConfigServiceMethods.ByName("GetRealtimeBufferStatus")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // systemConfigServiceClient implements SystemConfigServiceClient.
 type systemConfigServiceClient struct {
-	getSystemConfig       *connect.Client[v1.GetSystemConfigRequest, v1.GetSystemConfigResponse]
-	setPublicRegistration *connect.Client[v1.SetPublicRegistrationRequest, v1.SetPublicRegistrationResponse]
-	getMfaPolicy          *connect.Client[v1.GetMfaPolicyRequest, v1.GetMfaPolicyResponse]
-	setMfaPolicy          *connect.Client[v1.SetMfaPolicyRequest, v1.SetMfaPolicyResponse]
+	getSystemConfig         *connect.Client[v1.GetSystemConfigRequest, v1.GetSystemConfigResponse]
+	setPublicRegistration   *connect.Client[v1.SetPublicRegistrationRequest, v1.SetPublicRegistrationResponse]
+	getMfaPolicy            *connect.Client[v1.GetMfaPolicyRequest, v1.GetMfaPolicyResponse]
+	setMfaPolicy            *connect.Client[v1.SetMfaPolicyRequest, v1.SetMfaPolicyResponse]
+	getRealtimeBufferStatus *connect.Client[v1.GetRealtimeBufferStatusRequest, v1.GetRealtimeBufferStatusResponse]
 }
 
 // GetSystemConfig calls superadmin.v1.SystemConfigService.GetSystemConfig.
@@ -128,6 +143,11 @@ func (c *systemConfigServiceClient) SetMfaPolicy(ctx context.Context, req *conne
 	return c.setMfaPolicy.CallUnary(ctx, req)
 }
 
+// GetRealtimeBufferStatus calls superadmin.v1.SystemConfigService.GetRealtimeBufferStatus.
+func (c *systemConfigServiceClient) GetRealtimeBufferStatus(ctx context.Context, req *connect.Request[v1.GetRealtimeBufferStatusRequest]) (*connect.Response[v1.GetRealtimeBufferStatusResponse], error) {
+	return c.getRealtimeBufferStatus.CallUnary(ctx, req)
+}
+
 // SystemConfigServiceHandler is an implementation of the superadmin.v1.SystemConfigService service.
 type SystemConfigServiceHandler interface {
 	// Read every known flag's effective value + source.
@@ -141,6 +161,11 @@ type SystemConfigServiceHandler interface {
 	// Partial update to the MFA policy. Only fields explicitly set in
 	// the request are written. Audits as ``auth.mfa_policy_changed``.
 	SetMfaPolicy(context.Context, *connect.Request[v1.SetMfaPolicyRequest]) (*connect.Response[v1.SetMfaPolicyResponse], error)
+	// Read the Valkey buffer that holds accepted realtime edits until their
+	// PostgreSQL checkpoint: the preflight the answering backend recorded and
+	// deployment-wide pending totals. Carries no document, organization or
+	// credential detail, so it is safe to poll.
+	GetRealtimeBufferStatus(context.Context, *connect.Request[v1.GetRealtimeBufferStatusRequest]) (*connect.Response[v1.GetRealtimeBufferStatusResponse], error)
 }
 
 // NewSystemConfigServiceHandler builds an HTTP handler from the service implementation. It returns
@@ -174,6 +199,12 @@ func NewSystemConfigServiceHandler(svc SystemConfigServiceHandler, opts ...conne
 		connect.WithSchema(systemConfigServiceMethods.ByName("SetMfaPolicy")),
 		connect.WithHandlerOptions(opts...),
 	)
+	systemConfigServiceGetRealtimeBufferStatusHandler := connect.NewUnaryHandler(
+		SystemConfigServiceGetRealtimeBufferStatusProcedure,
+		svc.GetRealtimeBufferStatus,
+		connect.WithSchema(systemConfigServiceMethods.ByName("GetRealtimeBufferStatus")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/superadmin.v1.SystemConfigService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case SystemConfigServiceGetSystemConfigProcedure:
@@ -184,6 +215,8 @@ func NewSystemConfigServiceHandler(svc SystemConfigServiceHandler, opts ...conne
 			systemConfigServiceGetMfaPolicyHandler.ServeHTTP(w, r)
 		case SystemConfigServiceSetMfaPolicyProcedure:
 			systemConfigServiceSetMfaPolicyHandler.ServeHTTP(w, r)
+		case SystemConfigServiceGetRealtimeBufferStatusProcedure:
+			systemConfigServiceGetRealtimeBufferStatusHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -207,4 +240,8 @@ func (UnimplementedSystemConfigServiceHandler) GetMfaPolicy(context.Context, *co
 
 func (UnimplementedSystemConfigServiceHandler) SetMfaPolicy(context.Context, *connect.Request[v1.SetMfaPolicyRequest]) (*connect.Response[v1.SetMfaPolicyResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("superadmin.v1.SystemConfigService.SetMfaPolicy is not implemented"))
+}
+
+func (UnimplementedSystemConfigServiceHandler) GetRealtimeBufferStatus(context.Context, *connect.Request[v1.GetRealtimeBufferStatusRequest]) (*connect.Response[v1.GetRealtimeBufferStatusResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("superadmin.v1.SystemConfigService.GetRealtimeBufferStatus is not implemented"))
 }

@@ -48,7 +48,11 @@ function setup(initial: string, clientID?: number, source?: Y.Doc, leader = true
   doc
     .getText("markdown")
     .observe((event) =>
-      reconciler.observe(event.transaction.origin === MARKDOWN_MIRROR_ORIGIN, true),
+      reconciler.observe(
+        event.transaction,
+        event.transaction.origin === MARKDOWN_MIRROR_ORIGIN,
+        true,
+      ),
     );
   return {
     doc,

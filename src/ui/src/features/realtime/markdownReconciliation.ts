@@ -1,6 +1,6 @@
 import { diffChars } from "diff";
 import type { Node } from "@milkdown/prose/model";
-import type * as Y from "yjs";
+import * as Y from "yjs";
 import {
   getMarkdownYText,
   getProsemirrorFragment,
@@ -44,6 +44,48 @@ function edits(base: string, next: string): TextEdit[] {
   return result;
 }
 
+// Separate small edits keep the items a concurrent writer anchors to; one replaced span would not.
+function writeMarkdownEdits(doc: Y.Doc, next: string): void {
+  const text = getMarkdownYText(doc);
+  for (const edit of edits(text.toString(), next).reverse()) {
+    if (edit.end > edit.start) text.delete(edit.start, edit.end - edit.start);
+    if (edit.insert) text.insert(edit.start, edit.insert);
+  }
+}
+
+function withinFragment(item: Y.Item, fragment: Y.XmlFragment): boolean {
+  let parent = item.parent;
+  while (parent instanceof Y.AbstractType) {
+    if (parent === fragment) return true;
+    parent = parent._item?.parent ?? null;
+  }
+  return false;
+}
+
+/** Clock ranges of the Y.Text items a transaction inserted for clients whose same frame also
+ * changed the fragment: a rich writer's mirror of its own fragment edit. */
+function richMirrorInsertions(doc: Y.Doc, transaction: Y.Transaction): [number, number, number][] {
+  const text = getMarkdownYText(doc);
+  const fragment = getProsemirrorFragment(doc);
+  const richClients = new Set<number>();
+  const inserted: Y.Item[] = [];
+  for (const [client, after] of transaction.afterState) {
+    const before = transaction.beforeState.get(client) ?? 0;
+    if (after <= before) continue;
+    const structs = doc.store.clients.get(client) ?? [];
+    for (let index = structs.length - 1; index >= 0; index--) {
+      const struct = structs[index];
+      if (struct.id.clock + struct.length <= before) break;
+      if (!(struct instanceof Y.Item)) continue;
+      if (struct.parent === text) inserted.push(struct);
+      else if (withinFragment(struct, fragment)) richClients.add(client);
+    }
+  }
+  return inserted
+    .filter((item) => richClients.has(item.id.client))
+    .map((item) => [item.id.client, item.id.clock, item.id.clock + item.length]);
+}
+
 export function mergeMarkdownEdits(base: string, rich: string, incoming: string): string {
   if (rich === incoming || rich === base) return incoming;
   if (incoming === base) return rich;
@@ -72,6 +114,11 @@ interface MarkdownCodec {
 export class MarkdownReconciler {
   private observed: string;
   private pendingBase: string | null = null;
+  // Rich writers' mirror insertions since `pendingBase`. Two writers appending at the end of the
+  // document anchor to the same character of Y.Text, so the text can order their keystrokes
+  // differently from the fragment, where each paragraph is its own type. Their fragment edits
+  // are already in place; reconciling takes them from there and never from the text.
+  private richMirrors: [number, number, number][] = [];
 
   constructor(
     private readonly doc: Y.Doc,
@@ -135,14 +182,45 @@ export class MarkdownReconciler {
     };
   }
 
-  observe(internal: boolean, ready: boolean): void {
+  observe(transaction: Y.Transaction, internal: boolean, ready: boolean): void {
     const text = getMarkdownYText(this.doc).toString();
     // A rich writer's frame carries its fragment change and its mirror together. Merging that
     // text again counts its keystrokes twice wherever serializer and parser disagree, as they
     // do on a trailing space. A mirror write keeps the base while the fragment still lags.
-    if (!ready || this.fragmentMatches(text)) this.pendingBase = null;
-    else if (!internal && this.pendingBase === null) this.pendingBase = this.observed;
+    if (!ready || this.fragmentMatches(text)) {
+      this.pendingBase = null;
+      this.richMirrors = [];
+    } else if (!internal) {
+      if (this.pendingBase === null) this.pendingBase = this.observed;
+      // Only the leader reconciles; it does so a microtask later, so the list stays short.
+      if (this.leader()) this.richMirrors.push(...richMirrorInsertions(this.doc, transaction));
+    }
     this.observed = text;
+  }
+
+  // The text as it would read without rich writers' mirror insertions since `pendingBase`.
+  private externalText(): string {
+    const text = getMarkdownYText(this.doc);
+    if (!this.richMirrors.length) return text.toString();
+    const parts: string[] = [];
+    for (let item = text._start; item !== null; item = item.right) {
+      if (item.deleted || !(item.content instanceof Y.ContentString)) continue;
+      const { client, clock } = item.id;
+      const content = item.content.str;
+      const cuts = this.richMirrors
+        .filter(
+          ([owner, from, to]) => owner === client && to > clock && from < clock + content.length,
+        )
+        .sort((a, b) => a[1] - b[1]);
+      let start = 0;
+      for (const [, from, to] of cuts) {
+        const cut = Math.max(from - clock, start);
+        if (cut > start) parts.push(content.slice(start, cut));
+        start = Math.max(start, Math.min(to - clock, content.length));
+      }
+      if (start < content.length) parts.push(content.slice(start));
+    }
+    return parts.join("");
   }
 
   private fragmentMatches(text: string): boolean {
@@ -178,22 +256,25 @@ export class MarkdownReconciler {
 
   reconcile(): boolean {
     if (this.pendingBase === null) return true;
-    const incoming = getMarkdownYText(this.doc).toString();
+    const current = getMarkdownYText(this.doc).toString();
+    const incoming = this.externalText();
     const baseNode = this.codec.parse(this.pendingBase);
     const incomingNode = this.codec.parse(incoming);
+    const currentNode = incoming === current ? incomingNode : this.codec.parse(current);
     if (!baseNode || !incomingNode) return false;
     const rich = this.codec.serialize(this.codec.read());
     const projectedIncoming = this.codec.serialize(incomingNode);
     const merged = mergeMarkdownEdits(this.codec.serialize(baseNode), rich, projectedIncoming);
     const parsed = merged === projectedIncoming ? incomingNode : this.codec.parse(merged);
     if (!parsed) return false;
-    const node = this.keepEquivalentBlocks(parsed);
     this.pendingBase = null;
+    this.richMirrors = [];
     this.doc.transact(() => {
-      replaceProsemirrorFragment(this.doc, node, HYDRATION_ORIGIN);
-      if (merged !== projectedIncoming) {
-        replaceMarkdownYText(this.doc, merged, MARKDOWN_MIRROR_ORIGIN);
-      }
+      // A fragment that already reads as the merge keeps its blocks, empty paragraphs included.
+      if (merged !== rich)
+        replaceProsemirrorFragment(this.doc, this.keepEquivalentBlocks(parsed), HYDRATION_ORIGIN);
+      if (!currentNode || merged !== this.codec.serialize(currentNode))
+        writeMarkdownEdits(this.doc, merged);
       this.doc.getMap(MARKDOWN_MIRROR_FIELD).set(MIRROR_ACTIVE_KEY, true);
     }, HYDRATION_ORIGIN);
     return true;

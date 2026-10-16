@@ -1,6 +1,8 @@
-"""Turn due buffered documents into checkpoint jobs, one claim and one job id per due window."""
+"""Turn due buffered documents into checkpoint jobs, one claim and one job id per dispatch."""
 
+import asyncio
 import contextlib
+from collections.abc import AsyncIterator
 from dataclasses import dataclass
 
 import valkey.asyncio as aioredis
@@ -40,8 +42,10 @@ from uniffy.core.realtime.preflight import ensure_buffer_ready
 
 logger = logger.bind(component="core.realtime.dispatch")
 
-# Claims outlive one dispatcher interval plus queue pickup; ARQ job ids dedupe longer waits.
+# A claim outlives one dispatcher interval plus queue pickup. Its job renews it while running and on
+# every busy requeue, so the claim of a dead worker lapses within this time and dispatch runs again.
 CLAIM_TTL_SECONDS = 5
+_CLAIM_RENEW_SECONDS = CLAIM_TTL_SECONDS / 3
 BACKOFF_BASE_SECONDS = 15
 BACKOFF_MAX_SECONDS = 600
 DUE_SCAN = 64
@@ -49,6 +53,20 @@ DUE_BATCH = 16
 EARLY_SCAN = 32
 DISPATCH_LIMIT = 64
 _FAILURE_MEMORY_SECONDS = 3600
+
+# Extends the caller's claim. With ARGV[3] set it also takes back a lapsed one; a claim another
+# dispatch or a backoff holds always stays.
+_HOLD_CLAIM = """
+local held = redis.call('GET', KEYS[1])
+if held == ARGV[1] then
+    return redis.call('PEXPIRE', KEYS[1], ARGV[2])
+end
+if not held and ARGV[3] == '1' then
+    redis.call('SET', KEYS[1], ARGV[1], 'PX', ARGV[2])
+    return 1
+end
+return 0
+"""
 
 
 @dataclass(frozen=True, slots=True)
@@ -67,9 +85,9 @@ def _failures_key(scope: BufferScope, namespace: str) -> str:
     return f"{bucket_prefix(scope.bucket, namespace)}:failures:{scope.member}"
 
 
-def checkpoint_job_id(scope: BufferScope, window_ms: int, namespace: str = "") -> str:
-    """One id per epoch and due window, so a retained result never suppresses a later window."""
-    return f"{namespace}checkpoint:{scope.member}:{window_ms}"
+def checkpoint_job_id(scope: BufferScope, claim: str, namespace: str = "") -> str:
+    """One id per dispatch, so no earlier job's result or in-progress key can refuse the next."""
+    return f"{namespace}checkpoint:{scope.member}:{claim}"
 
 
 def backoff_seconds(failures: int) -> int:
@@ -99,13 +117,63 @@ async def back_off(buffer: UpdateBuffer, scope: BufferScope) -> None:
             )
 
 
+async def hold_claim(
+    buffer: UpdateBuffer, scope: BufferScope, claim: str, *, retake: bool = False
+) -> bool:
+    """Extend this dispatch's claim, or with ``retake`` its lapsed one; ``False`` once it is lost."""
+    async with buffer_errors():
+        held = await buffer_client().eval(
+            _HOLD_CLAIM,
+            1,
+            claim_key(scope, buffer.namespace),
+            claim,
+            CLAIM_TTL_SECONDS * 1000,
+            int(retake),
+        )
+    return bool(held)
+
+
+async def hold_queued_claim(buffer: UpdateBuffer, member: str, claim: str) -> bool:
+    """Keep a requeued job's claim, so the dispatcher does not queue its document again.
+
+    ``False`` once another dispatch holds it. An unreachable Valkey leaves the claim to lapse.
+    """
+    try:
+        return await hold_claim(buffer, parse_member(member), claim, retake=True)
+    except BufferUnavailable:
+        return True
+
+
+@contextlib.asynccontextmanager
+async def _renewing(buffer: UpdateBuffer, scope: BufferScope, claim: str) -> AsyncIterator[None]:
+    async def renew() -> None:
+        while True:
+            await asyncio.sleep(_CLAIM_RENEW_SECONDS)
+            with contextlib.suppress(BufferUnavailable):
+                if not await hold_claim(buffer, scope, claim):
+                    return
+
+    renewal = asyncio.create_task(renew())
+    try:
+        yield
+    finally:
+        renewal.cancel()
+        await asyncio.wait([renewal])
+
+
 async def run_checkpoint_job(
     buffer: UpdateBuffer, member: str, claim: str, *, enqueue: Enqueue = enqueue_core
 ) -> CheckpointResult:
-    """Checkpoint one dispatched document; success releases its claim, failure backs it off."""
+    """Checkpoint one dispatched document; success releases its claim, failure backs it off.
+
+    The pass renews the claim while it runs, so only a dead worker lets it lapse.
+    """
     scope = parse_member(member)
+    if not await hold_claim(buffer, scope, claim, retake=True):
+        return CheckpointResult(CheckpointStatus.SUPERSEDED, scope)
     try:
-        result = await checkpoint_document(buffer, scope, enqueue=enqueue)
+        async with _renewing(buffer, scope, claim):
+            result = await checkpoint_document(buffer, scope, enqueue=enqueue)
     except BufferUnavailable, RecoveryRequired:
         raise
     except Exception:
@@ -157,7 +225,7 @@ async def dispatch_due(
                 )
             replies = await pipe.execute()
     firsts: list[float] = []
-    due_found: list[tuple[BufferScope, int]] = []
+    due_found: list[BufferScope] = []
     oversized: list[BufferScope] = []
     # Rotating the first bucket keeps one busy bucket from always filling the batch.
     start = now // 1000 % BUCKET_COUNT
@@ -167,9 +235,7 @@ async def dispatch_due(
         REALTIME_BUFFER_PENDING_RECORDS.labels(bucket=str(bucket)).set(int(usage[1] or 0))
         firsts.extend(score for _, score in first)
         due_found.extend(
-            (scope, int(score))
-            for member, score in due
-            if (scope := _due_scope(member, bucket)) is not None
+            scope for member, _ in due if (scope := _due_scope(member, bucket)) is not None
         )
         oversized.extend(
             scope for member in early if (scope := _due_scope(member, bucket)) is not None
@@ -181,7 +247,7 @@ async def dispatch_due(
     REALTIME_CHECKPOINT_QUEUE_AGE.set(0 if oldest is None else max(0, now - oldest) / 1000)
     selected, early = await _select(client, due_found, oversized, namespace)
     claimed = enqueued = 0
-    for scope, window in selected[:DISPATCH_LIMIT]:
+    for scope in selected[:DISPATCH_LIMIT]:
         async with buffer_errors():
             token = await acquire_owned_job_lock(client, claim_key(scope, namespace), claim_seconds)
         if token is None:
@@ -190,7 +256,7 @@ async def dispatch_due(
         try:
             outcome = await enqueue(
                 CHECKPOINT_REALTIME_DOCUMENT,
-                checkpoint_job_id(scope, window, namespace),
+                checkpoint_job_id(scope, token, namespace),
                 (scope.member, token),
             )
         except Exception:
@@ -203,38 +269,24 @@ async def dispatch_due(
 
 async def _select(
     client: aioredis.Redis,
-    due: list[tuple[BufferScope, int]],
+    due: list[BufferScope],
     oversized: list[BufferScope],
     namespace: str,
-) -> tuple[list[tuple[BufferScope, int]], int]:
-    """Due documents, then oversized ones before their window; claimed ones never crowd a bucket.
-
-    An oversized document keeps the job id of its due window.
-    """
-    due_members = {scope.member for scope, _ in due}
+) -> tuple[list[BufferScope], int]:
+    """Due documents, then oversized ones before their window; claimed ones never crowd a bucket."""
+    due_members = {scope.member for scope in due}
     early = [scope for scope in oversized if scope.member not in due_members]
-    if not due and not early:
+    candidates = [*due, *early]
+    if not candidates:
         return [], 0
     async with buffer_errors(), client.pipeline(transaction=False) as pipe:
-        for scope, _ in due:
+        for scope in candidates:
             pipe.exists(claim_key(scope, namespace))
-        for scope in early:
-            pipe.exists(claim_key(scope, namespace))
-            pipe.zscore(due_key(scope.bucket, namespace), scope.member)
-        replies = await pipe.execute()
-    candidates = [
-        (scope, window, bool(held))
-        for (scope, window), held in zip(due, replies[: len(due)], strict=True)
-    ]
-    offset = len(due)
-    for index, scope in enumerate(early):
-        held, window = replies[offset + index * 2 : offset + index * 2 + 2]
-        if window is not None:
-            candidates.append((scope, int(window), bool(held)))
+        claims = await pipe.execute()
     taken: dict[int, int] = {}
     selected = []
-    for scope, window, held in candidates:
+    for scope, held in zip(candidates, claims, strict=True):
         if not held and taken.get(scope.bucket, 0) < DUE_BATCH:
             taken[scope.bucket] = taken.get(scope.bucket, 0) + 1
-            selected.append((scope, window))
+            selected.append(scope)
     return selected, len(early)

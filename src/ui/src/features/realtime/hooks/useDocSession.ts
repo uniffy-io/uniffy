@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { abortDrain } from "@/features/realtime/drain";
+import { holdOpenDocument } from "@/features/realtime/documentLocks";
 import * as Y from "yjs";
 import { Awareness } from "y-protocols/awareness";
 import { useAppSelector } from "@/app/hooks";
@@ -107,7 +108,8 @@ export function resolveCloseDisposal(input: CloseDisposalInput): CloseDisposal {
 }
 
 /** A write denial keeps a recovered draft only of edits the server never accepted. What it
- * accepted before the denial is still checkpointed, so it is no draft. */
+ * accepted before the denial is still checkpointed, so it is no draft, and once view access is
+ * gone it leaves this device. */
 export function denialRetainsDraft(
   reason: string,
   doc: Pick<RealtimeDocState, "transportPending">,
@@ -174,6 +176,7 @@ export function useDocSession(opts: UseDocSessionOptions): DocSession | null {
 
     const docName = docNameFor(contentType, contentId);
     abortDrain(docName);
+    const releaseHold = holdOpenDocument(docName);
     const ydoc = new Y.Doc();
     const awareness = new Awareness(ydoc);
     const sessionId = randomUUID();
@@ -276,6 +279,7 @@ export function useDocSession(opts: UseDocSessionOptions): DocSession | null {
               ? "access_lost"
               : "permission_lost",
         );
+        const keepDraft = denialRetainsDraft(reason, realtimeMultiplexer.getDocState(docName));
         if (reason === SEED_CONFLICT_REASON) {
           void persistence.quarantine().then((retained) => {
             if (!retained || disposed) return;
@@ -283,7 +287,12 @@ export function useDocSession(opts: UseDocSessionOptions): DocSession | null {
             onGenerationResetRef.current?.({ hasLocalEdits: true });
             setGenerationReset((value) => value + 1);
           });
-        } else if (denialRetainsDraft(reason, realtimeMultiplexer.getDocState(docName))) {
+        } else if (noView) {
+          // The server keeps what it accepted; nothing of the doc waits for the drain anymore.
+          void persistence.settleLostAccess({ keepDraft }).then((settled) => {
+            if (settled) clearPendingDoc(contentType, contentId);
+          });
+        } else if (keepDraft) {
           retainDraft();
         }
       },
@@ -338,9 +347,13 @@ export function useDocSession(opts: UseDocSessionOptions): DocSession | null {
       subscription.destroy();
       undoManager?.destroy();
       awareness.destroy();
+      // Drains in other tabs wait until the rows this close writes have landed.
       void persistence
         .destroy({ discard: disposal.discard, checkpointed: disposal.checkpointed })
-        .finally(() => ydoc.destroy());
+        .finally(() => {
+          ydoc.destroy();
+          releaseHold();
+        });
       sessionRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps

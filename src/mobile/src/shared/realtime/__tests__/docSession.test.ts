@@ -355,3 +355,75 @@ it("keeps the device copy when the server replaced the generation", async () => 
   const drafts = await readStoredDrafts(KEY);
   expect(drafts.map((draft) => [draft.generation, draft.text])).toEqual([["G", "base edit"]]);
 });
+
+function viewDenial(): Uint8Array {
+  const encoder = encoding.createEncoder();
+  encoding.writeVarUint(encoder, 2);
+  encoding.writeVarUint(encoder, 1);
+  encoding.writeVarString(encoder, "access revoked");
+  return encoding.toUint8Array(encoder);
+}
+
+it("never shows Saving delayed after a reopen before this socket's session state, then shows it at once for an old edit", async () => {
+  const first = await openNote();
+  const updateId = first.send(" edit");
+  first.socket.deliver(receipt(updateId, 1));
+  expect(await first.handle.persistLocally()).toBe(true);
+  const server = new Y.Doc();
+  Y.applyUpdate(server, Y.encodeStateAsUpdate(first.handle.session.ydoc));
+  await first.handle.close();
+
+  // The app reopens the note a minute later.
+  vi.setSystemTime(Date.now() + 60_000);
+  const { openDocSession } = await import("@shared/realtime/docSession");
+  const handle = openDocSession({
+    contentType: "NOTE",
+    contentId: "note",
+    organizationId: "org",
+    userId: "user",
+  })!;
+  handles.push(handle);
+  const seen: string[] = [];
+  handle.subscribe(() => seen.push(handle.getSnapshot().persistence));
+  first.socket.deliver(encodeGeneration("G"));
+  first.socket.deliver(syncStep2From(server));
+  await handle.session.whenSynced;
+  await vi.waitFor(() => expect(first.socket.writtenIds()).toEqual([updateId, updateId]));
+  expect(seen).not.toContain("delayed");
+
+  first.socket.deliver(sessionState(1, 0));
+  expect(handle.getSnapshot().persistence).toBe("delayed");
+  first.socket.deliver(receipt(updateId, 1));
+  first.socket.deliver(progress(1));
+  vi.advanceTimersByTime(1_000);
+  expect(handle.getSnapshot().persistence).toBe("saved");
+  server.destroy();
+});
+
+it("drops the device copy once the document answers no view access with every edit accepted", async () => {
+  const { listDraftKeys, readStoredDrafts } = await import("@shared/realtime/draftStorage");
+  const { handle, socket, send } = await openNote();
+  socket.deliver(receipt(send(" accepted"), 1));
+  expect(await handle.persistLocally()).toBe(true);
+  expect((await readStoredDrafts(KEY)).length).toBeGreaterThan(0);
+
+  socket.deliver(viewDenial());
+  expect(handle.getSnapshot().persistence).toBe("access_lost");
+  await vi.waitFor(async () => expect(await listDraftKeys("user")).toEqual([]));
+  await handle.close();
+  expect(await listDraftKeys("user")).toEqual([]);
+});
+
+it("keeps an edit the server never accepted as a recovered draft once view access goes", async () => {
+  const { readStoredDrafts } = await import("@shared/realtime/draftStorage");
+  const { handle, socket, type } = await openNote();
+  type(" unsent");
+  socket.deliver(viewDenial());
+  const stored = async () =>
+    (await readStoredDrafts(KEY)).map((draft) => [draft.generation.split(":")[0], draft.text]);
+  await vi.waitFor(async () => expect(await stored()).toEqual([["recovery", "base unsent"]]));
+  expect(handle.getSnapshot().recoveredDrafts.map((draft) => draft.text)).toEqual(["base unsent"]);
+  await handle.close();
+  expect(await stored()).toEqual([["recovery", "base unsent"]]);
+  expect(socket.writtenIds()).toEqual([]);
+});

@@ -34,6 +34,7 @@ from uniffy.core.realtime.auth import (
     WS_CLOSE_FORBIDDEN,
     WS_CLOSE_REAUTH_REQUIRED,
     WS_CLOSE_TOKEN_REVOKED,
+    WS_CLOSE_TRY_AGAIN_LATER,
     WS_CLOSE_UNAUTHENTICATED,
     WS_CLOSE_UPGRADE_REQUIRED,
 )
@@ -182,8 +183,8 @@ async def test_committed_logout_rejects_old_credentials_whatever_the_cache_holds
         assert (denial.code, denial.metric_reason) == (WS_CLOSE_TOKEN_REVOKED, "session_revoked")
         revoked = Socket(headers)
         await serve(revoked, access.org_id)
-        assert revoked.subprotocols == []
-        assert revoked.closes == [(WS_CLOSE_UNAUTHENTICATED, "credentials revoked")]
+        assert revoked.subprotocols == [CANONICAL_SUBPROTOCOL]
+        assert revoked.closes == [(WS_CLOSE_TOKEN_REVOKED, "credentials revoked")]
     finally:
         await init_ops_client()
     await session.refresh(login)
@@ -420,11 +421,11 @@ async def upgrades_held(user: UUID, organization: UUID, count: int) -> AsyncIter
 
 
 async def admitted(user: UUID, organization: UUID) -> bool:
-    """Whether a fresh upgrade for ``user`` is accepted; it hangs up straight away."""
+    """Whether a fresh upgrade for ``user`` runs a session; it hangs up straight away."""
     socket = upgrade_socket(bearer(user, organization))
     socket.hang_up()
     await serve(socket, organization)
-    return socket.subprotocols == [CANONICAL_SUBPROTOCOL]
+    return socket.closes == [(1011, "session ended")]
 
 
 async def test_overlapping_upgrades_cannot_claim_the_same_slot(access: SimpleNamespace) -> None:
@@ -433,8 +434,8 @@ async def test_overlapping_upgrades_cannot_claim_the_same_slot(access: SimpleNam
         async with upgrades_held(user, org, 1) as (first,):
             second = upgrade_socket(bearer(user, org))
             await serve(second, org)
-            assert second.subprotocols == []
-            assert second.closes == [(1013, "too many connections")]
+            assert second.subprotocols == [CANONICAL_SUBPROTOCOL]
+            assert second.closes == [(WS_CLOSE_TRY_AGAIN_LATER, "too many connections")]
         assert first.subprotocols == [CANONICAL_SUBPROTOCOL]
         assert await admitted(user, org)
 
@@ -494,12 +495,13 @@ async def test_authenticated_upgrade_without_v2_is_closed_with_upgrade_required(
     assert socket.closes == [(WS_CLOSE_UPGRADE_REQUIRED, "upgrade required")]
 
 
-async def test_unauthenticated_upgrade_without_v2_gets_no_handshake(
+async def test_unauthenticated_upgrade_without_v2_is_refused_as_unauthenticated(
     access: SimpleNamespace,
 ) -> None:
     socket = Socket({"sec-websocket-protocol": "uniffy.realtime.v1, bearer.not-a-token"})
 
     await serve(socket, access.org_id)
 
-    assert socket.subprotocols == []
+    # Authentication runs first, and the handshake echoes the old protocol so the code arrives.
+    assert socket.subprotocols == ["uniffy.realtime.v1"]
     assert socket.closes == [(WS_CLOSE_UNAUTHENTICATED, "invalid token")]

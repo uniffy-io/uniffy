@@ -93,6 +93,9 @@ export interface MultiplexerAttachOptions {
   contentId: string;
   ydoc: Y.Doc;
   awareness: Awareness;
+  /** Lineage of the device rows the doc was hydrated from before attaching, for content that
+   * cannot name its generation itself. A server generation that differs is a mismatch. */
+  heldGeneration?: string | null;
   onStatus?: (status: RealtimeStatus) => void;
   onSync?: () => void;
   onGenerationMismatch?: () => void;
@@ -177,8 +180,9 @@ interface DocEntry {
   generation: string | null;
   // Epoch of the latest session state on this socket, null until the first.
   socketEpoch: string | null;
-  // The epoch changed under remote updates this doc may hold, so the server's next SyncStep1 is
-  // answered with full state.
+  // The doc may hold updates the server lacks, so the server's next SyncStep1 is answered with
+  // full state: it attached already holding device state, or the epoch changed under remote
+  // updates it holds.
   owesState: boolean;
   updateCounter: number;
   // Raw bytes per own update id until a checkpoint covers it, delete-only updates included.
@@ -307,7 +311,8 @@ class RealtimeMultiplexer {
       denied: false,
       generation: null,
       socketEpoch: null,
-      owesState: false,
+      // An empty state vector encodes as one byte.
+      owesState: Y.encodeStateVector(opts.ydoc).length > 1,
       updateCounter: 0,
       retained: new Map(),
       coverage: new UpdateCoverage(),
@@ -468,7 +473,6 @@ class RealtimeMultiplexer {
       if (this.ws !== ws) return;
       this.wsConnecting = false;
       this.wsConnected = true;
-      this.reconnectDelayMs = RECONNECT_INITIAL_MS;
       for (const entry of this.docs.values()) {
         entry.resolvedSyncOnce = false;
         entry.generation = null;
@@ -708,7 +712,9 @@ class RealtimeMultiplexer {
     }
     const entry = this.docs.get(docName);
     if (!entry || entry.denied) return;
+    // A refused upgrade also opens, then closes before any frame; only a frame proves a session.
     this.authAttempts = 0;
+    this.reconnectDelayMs = RECONNECT_INITIAL_MS;
     const payload = frame.subarray(payloadOffset);
     if (payload.length === 0) return;
 
@@ -717,7 +723,7 @@ class RealtimeMultiplexer {
     if (messageType === MESSAGE_GENERATION) {
       const generation = decodeFrame(payload, decodeGeneration);
       if (generation === null) return;
-      const local = docGeneration(entry.ydoc);
+      const local = docGeneration(entry.ydoc) ?? entry.options.heldGeneration ?? null;
       if (local !== null && local !== generation) {
         entry.denied = true;
         entry.options.onGenerationMismatch?.();
@@ -734,11 +740,14 @@ class RealtimeMultiplexer {
       this.resumeSaving(entry, id);
       entry.seedRequests.get(id)?.(true);
       this.applyCoverage(entry, entry.coverage.applyCommitted(id));
+      if (entry.retryTimer !== null) this.resendRefused(entry);
     } else if (messageType === MESSAGE_ACCEPTED_RECEIPT) {
       const receipt = decodeFrame(payload, decodeAcceptedReceipt);
       if (!receipt) return;
       this.resumeSaving(entry, receipt.updateId);
       this.applyCoverage(entry, entry.coverage.applyReceipt(receipt));
+      // The server takes writes again, so refused updates need not wait out their backoff.
+      if (entry.retryTimer !== null) this.resendRefused(entry);
     } else if (messageType === MESSAGE_CHECKPOINT_PROGRESS) {
       const progress = decodeFrame(payload, decodeCheckpointProgress);
       if (progress) this.applyCoverage(entry, entry.coverage.applyProgress(progress));
@@ -888,12 +897,15 @@ class RealtimeMultiplexer {
     entry.savingUnavailable = true;
     this.publishState(entry);
     if (entry.retryTimer !== null) return;
-    entry.retryTimer = setTimeout(() => {
-      entry.retryTimer = null;
-      for (const localId of entry.coverage.localIds())
-        if (!entry.awaiting.includes(localId)) this.sendRetained(entry, localId);
-    }, entry.retryDelayMs);
+    entry.retryTimer = setTimeout(() => this.resendRefused(entry), entry.retryDelayMs);
     entry.retryDelayMs = Math.min(entry.retryDelayMs * RECONNECT_MULTIPLIER, RECONNECT_MAX_MS);
+  }
+
+  private resendRefused(entry: DocEntry): void {
+    if (entry.retryTimer !== null) clearTimeout(entry.retryTimer);
+    entry.retryTimer = null;
+    for (const localId of entry.coverage.localIds())
+      if (!entry.awaiting.includes(localId)) this.sendRetained(entry, localId);
   }
 
   // Only the refused update stops. It stays local and in recovery while the others keep syncing.
@@ -910,9 +922,8 @@ class RealtimeMultiplexer {
   }
 
   // The server asks for state on attach and after a buffer reset. Own updates reach it under their
-  // ids through coverage, and a Yjs reply always repeats the whole delete set, so only a reset,
-  // which can lose remote updates this doc holds, gets the full reply. Otherwise the answer is
-  // the unsent local batch.
+  // ids through coverage, and a Yjs reply always repeats the whole delete set, so only a doc that
+  // owes state gets the full reply. Otherwise the answer is the unsent local batch.
   private answerSyncStep1(entry: DocEntry, replyBytes: Uint8Array): void {
     const owed = entry.owesState;
     entry.owesState = false;

@@ -8,7 +8,7 @@ import { ReadOnlyViewer } from "@/features/notes/components/editor/ReadOnlyViewe
 import { CanvasEditor } from "@/features/notes/canvas/CanvasEditor";
 import { parseCanvasContent } from "@/features/notes/canvas/types";
 import { useMyContentRole } from "@/features/permissions";
-import { roleCanEdit, roleCanManage } from "@/shared/utils/contentRoles";
+import { roleCanEdit } from "@/shared/utils/contentRoles";
 import { ContentType } from "@uniffy/proto/common/v1/common_pb";
 import { NodeType } from "@uniffy/proto/notes/v1/notes_pb";
 import { findHeadingBySlug } from "@/components/editor/utils/headingScroll";
@@ -26,26 +26,35 @@ import { RealtimeConnectionNotice } from "@/features/realtime/components/Realtim
 import { useCanvasRealtimeSession } from "@/features/notes/realtime/useCanvasRealtimeSession";
 import { ErrorBoundary } from "@/components/feedback";
 import { isNoteLoading } from "@/features/notes/utils/noteLoading";
+import { noteAffordances } from "@/features/notes/utils/noteAffordances";
 import { EditorErrorFallback } from "@/features/notes/components/editor/EditorErrorFallback";
+import type { SerializedNote } from "@/features/notes/store/notesThunks";
 
 function renderEditorErrorFallback({ reset }: { error: Error; reset: () => void }) {
   return <EditorErrorFallback onRetry={reset} />;
 }
 
-export function NotesEditor() {
+interface NotesEditorProps {
+  /** The open note was deleted or its access went: it stays on screen read-only, as last shown,
+   * with the Access lost chip until the user navigates. */
+  lostNote?: SerializedNote | null;
+}
+
+export function NotesEditor({ lostNote = null }: NotesEditorProps) {
   const location = useLocation();
   const notesState = useAppSelector((state) => state.notes);
   const editorState = useAppSelector((state) => state.editor);
 
   const isZenMode = useAppSelector((state) => state.zenMode.isActive);
 
-  const currentNoteId = notesState?.currentNoteId;
+  const lost = lostNote !== null;
+  const currentNoteId = lostNote?.id ?? notesState?.currentNoteId;
   const notes = notesState?.notes || {};
   const loadingNoteId = notesState?.loadingNoteId;
   const settings = editorState?.settings;
   const userSelectedMode = settings?.editorMode || "crepe";
 
-  const currentNote = currentNoteId ? notes[currentNoteId] : null;
+  const currentNote = lostNote ?? (currentNoteId ? notes[currentNoteId] : null);
   const isLoadingCurrentNote = isNoteLoading(loadingNoteId ?? null, currentNoteId);
   const canvasTitleHidden = settings?.canvasTitleHidden ?? false;
 
@@ -53,28 +62,25 @@ export function NotesEditor() {
   const role = useMyContentRole(ContentType.NOTE, currentNoteId ?? "", currentNote?.userRole);
 
   const roleAllowsEdit = role === null ? true : roleCanEdit(role);
-  const canShare = roleCanManage(role);
 
   const isCanvas = currentNote?.nodeType === NodeType.CANVAS;
   // Viewers attach too so read-only shares render the live Y.Text; the
   // multiplexer suppresses write frames for read-only docs.
-  const { binding: realtimeBinding, status: realtimeStatus } = useNoteRealtimeSession(
+  // A lost note keeps its session read-only, so the server's denial still settles local recovery.
+  const { binding: realtimeBinding, status: liveStatus } = useNoteRealtimeSession(
     currentNoteId ?? null,
     Boolean(currentNoteId) && !isCanvas,
-    roleAllowsEdit,
+    roleAllowsEdit && !lost,
   );
-  const { binding: canvasRealtimeBinding, status: canvasRealtimeStatus } = useCanvasRealtimeSession(
+  const { binding: canvasRealtimeBinding, status: canvasLiveStatus } = useCanvasRealtimeSession(
     currentNoteId ?? null,
     Boolean(currentNoteId) && roleAllowsEdit && isCanvas,
   );
+  const realtimeStatus = lost ? "access_lost" : liveStatus;
+  const canvasRealtimeStatus = lost ? "access_lost" : canvasLiveStatus;
   const initiallySynced = useInitialSync(realtimeBinding?.whenSynced);
   const activeStatus = isCanvas ? canvasRealtimeStatus : realtimeStatus;
-  const canEdit =
-    roleAllowsEdit &&
-    activeStatus !== "permission_lost" &&
-    activeStatus !== "access_lost" &&
-    activeStatus !== "update_rejected" &&
-    activeStatus !== "token_revoked";
+  const { canEdit, canShare } = noteAffordances(role, lost, activeStatus);
   const editorMode = canEdit ? userSelectedMode : "readonly";
 
   const noteContent = currentNote?.content ?? "";
@@ -175,6 +181,7 @@ export function NotesEditor() {
           />
         )}
         {!isZenMode && !canvasTitleHidden && compactTitleBlock}
+        {lost && <RealtimeConnectionNotice waiting status="access_lost" />}
         <div className="flex-1 overflow-hidden">
           <ErrorBoundary fallback={renderEditorErrorFallback}>
             <CanvasEditor
@@ -262,7 +269,7 @@ export function NotesEditor() {
           )}
           <RealtimeConnectionNotice
             key={currentNote.id}
-            waiting={!initiallySynced}
+            waiting={!initiallySynced || lost}
             status={realtimeStatus}
           />
           <div ref={editorContainerRef} className="flex-1 overflow-hidden">

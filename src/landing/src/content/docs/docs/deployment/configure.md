@@ -20,7 +20,7 @@ This page documents every variable.
 | `LOG_LEVEL` | `info` | One of `debug`, `info`, `warning`, `error`, `critical`. |
 | `LOG_FORMAT` | `console` | Use `console` for human readable output or `json` for structured logs. |
 | `ENVIRONMENT` | `development` | One of `development`, `staging`, `production`. Controls deployment sensitive safety defaults. |
-| `CORS_ORIGINS` | `*` | Comma separated list of allowed origins, or `*`. Use `*` only in development. |
+| `CORS_ORIGINS` | `*` | Comma separated list of allowed origins, or `*`. Use `*` only in development. Live editing connections from any other origin are closed with code 4403. |
 
 ## PostgreSQL
 
@@ -69,6 +69,8 @@ These settings control the first database seed and whether registration is open.
 
 Valkey backs the ARQ job queue, pub/sub channels, the operational cache, and the buffer of live edits that PostgreSQL does not hold yet.
 
+These settings point at Uniffy's own Valkey. LiveKit keeps its room registry on a second instance, because this one holds document text that is not saved yet and its password stays with Uniffy backends and workers. [Calls](#calls-livekit) explains the split.
+
 | Variable | Default | Purpose |
 |---|---|---|
 | `VALKEY_HOST` | `localhost` | Hostname. |
@@ -85,7 +87,7 @@ Queue, pub/sub, and cache connection profiles are set in code. Cache calls have 
 
 The backend and every worker read the eviction policy, `maxmemory` and the persistence settings at startup, and again as soon as they reach a restarted or replaced Valkey. With `REALTIME_VALKEY_PREFLIGHT=strict`, a confirmed `allkeys-*` policy turns live edit acceptance off. Editors keep working on their device copies and show Saving unavailable, content writes through the API to documents that currently hold a live edit buffer fail with a retryable error, and the log names the setting to change. A document holds that buffer from the moment someone opens it in a live editor until an hour passes without new edits. `warn` accepts edits anyway and logs the risk.
 
-Some managed services hide `CONFIG`. The policy is then unknown: Uniffy logs the requirement at startup and carries on, so check the policy yourself. `GET /healthz` reports the outcome as `realtime_buffer`, one of `enabled`, `disabled`, `unknown` or `not_run`, and the `uniffy_realtime_valkey_preflight` metric carries the same verdict. Persistence is never required. [Backups and Restore](/docs/deployment/backups/#valkey-and-edits-not-yet-saved) lists what each persistence setting can lose.
+Some managed services hide `CONFIG`. The policy is then unknown: Uniffy logs the requirement at startup and carries on, so check the policy yourself. `GET /healthz` reports the outcome as `realtime_buffer`, one of `enabled`, `disabled`, `unknown` or `not_run`, and the `uniffy_realtime_valkey_preflight` metric carries the same verdict. Platform admins see it on the Realtime edit buffer card of the platform overview, together with the persistence Valkey reports, the budget and where it came from, and how many edits are waiting across the deployment, refreshed every 15 seconds. Persistence is never required. [Backups and Restore](/docs/deployment/backups/#valkey-and-edits-not-yet-saved) lists what each persistence setting can lose.
 
 The budget is a ceiling, not a reservation. It is split evenly across sixteen fixed buckets. One document may use at most a quarter of its bucket's share, up to 16 MiB, and 4096 waiting edits, and one organization at most half of it, so a single tenant cannot fill a bucket for everyone else. An edit over any of these limits is refused for now and kept on the device until saves catch up. On a deployment with open sign up, someone who creates several organizations can still fill a bucket; keep `ALLOW_PUBLIC_REGISTRATION` off unless you watch `uniffy_realtime_buffer_pending_bytes`.
 
@@ -98,7 +100,7 @@ Limits for live editing of notes, task descriptions and event descriptions. Each
 | `REALTIME_MAX_DOCUMENT_BYTES` | `524288` | Largest rendered text of one document, in UTF-8 bytes. Larger live edits are refused and stay on the editor's device. Content writes through the API use the same cap. |
 | `REALTIME_MAX_SNAPSHOT_BYTES` | `8388608` | Largest stored CRDT state of one live document, in bytes. |
 | `REALTIME_MAX_DOCS_PER_SOCKET` | `32` | Documents one browser tab or mobile app may have open live at once. |
-| `REALTIME_MAX_SOCKETS_PER_USER` | `16` | Live connections one user may hold on each backend process. |
+| `REALTIME_MAX_SOCKETS_PER_USER` | `16` | Live connections one user may hold on each backend process. A connection over the limit is closed with code 1013 and tries again later. |
 | `REALTIME_MAX_MESSAGES_PER_SECOND` | `120` | Messages per second one connection may send, with bursts up to twice that. A client above it is disconnected and reconnects. |
 
 ## Meilisearch
@@ -115,13 +117,15 @@ Backs universal `@` mention lookup and full text search.
 
 Uniffy runs three ARQ worker fleets. Each has its own queue and concurrency settings.
 
-The **core worker** handles notifications, reminders, storage cleanup and recovery schedules. The **egress worker** handles agent runtime, conversation compaction, cron and external API integrations.
+The **core worker** handles notifications, reminders, saving live edits to PostgreSQL, storage cleanup and recovery schedules. The **egress worker** handles agent runtime, conversation compaction, cron and external API integrations.
+
+Each core worker process saves at most two documents at a time, whatever `CORE_WORKER_MAX_JOBS` allows. When many documents are edited at once, add core worker processes rather than job slots. `uniffy_realtime_buffer_oldest_pending_seconds` on the core worker metrics stays near ten seconds while saves keep up; when it stays above fifteen, the fleet is too small.
 
 The **media worker** handles video conversion, thumbnails, metadata and document extraction. Its separate `uniffy-media-worker` image contains FFmpeg and ffprobe. PDF and Office parsers also remain in the backend image for agent document reads.
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `CORE_WORKER_MAX_JOBS` | `10` | Concurrent jobs per core worker. |
+| `CORE_WORKER_MAX_JOBS` | `10` | Concurrent jobs per core worker. Live edit saves stay at two per process regardless. |
 | `CORE_WORKER_POLL_DELAY` | `0.5` | Seconds between queue polls. |
 | `EGRESS_WORKER_MAX_JOBS` | `50` | Concurrent jobs per egress worker. Higher because most jobs are I/O waiting. |
 | `EGRESS_WORKER_POLL_DELAY` | `0.05` | Aggressive polling for low queue latency. |
@@ -273,7 +277,13 @@ Set CPU, memory, and ephemeral storage budgets in Kubernetes. Raise them alongsi
 
 ## Calls (LiveKit)
 
-LiveKit is the SFU for audio and video calls. Server config lives in LiveKit's own config file; only the credentials and URLs come from the env. Point LiveKit's `redis` block at a Valkey instance of its own, never at Uniffy's: Uniffy's Valkey holds unsaved document text, and its password stays with Uniffy backends and workers.
+LiveKit is the SFU for audio and video calls. Server config lives in LiveKit's own config file; only the credentials and URLs come from the env.
+
+LiveKit keeps its room registry in Valkey, and it gets an instance of its own, never Uniffy's. Uniffy's Valkey holds edits that are not saved yet. Any client with its password can read that text, append edits under any author's name and announce saves that never happened, so that password stays with Uniffy backends and workers.
+
+LiveKit is a third party media server facing call traffic, so it stays outside that circle. A separate logical database on Uniffy's instance would not keep it out, because the password opens every database. Uniffy never reads the registry; the backend reaches LiveKit through its admin API, so no Uniffy variable points at it.
+
+Set the registry's address and password in LiveKit's `redis` block. The compose stack runs it as the `livekit-valkey` service at `livekit-valkey:6379`, with its own password and no persistence. On Kubernetes, check the manifests your chart version renders. If LiveKit's `redis` block points at the chart's Valkey, add a second Valkey with its own password for LiveKit alone and point `redis.address` and `redis.password` at it.
 
 | Variable | Default | Purpose |
 |---|---|---|
